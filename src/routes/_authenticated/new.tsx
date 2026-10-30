@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
-  BASE_CURRENCY, CATEGORIES, CURRENCIES, PAYMENT_LABEL, PAYMENT_METHODS, convert, money,
+  BASE_CURRENCY, CATEGORIES, CURRENCIES, PAYMENT_LABEL, PAYMENT_METHODS, convert, money, splitEvenly,
   type Category, type PaymentMethod, type Scope,
 } from "@/lib/expenses";
 import { useStore } from "@/lib/store";
@@ -54,6 +54,8 @@ function NewExpense() {
   const editing = edit ? expenses.find((e) => e.id === edit) : undefined;
   const [scope, setScope] = useState<Scope>("personal");
   const [memberId, setMemberId] = useState<string>("me");
+  const [splitOn, setSplitOn] = useState(false);
+  const [shares, setShares] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
   const [title, setTitle] = useState("");
   const [merchant, setMerchant] = useState("");
@@ -76,6 +78,8 @@ function NewExpense() {
     setTitle(editing.title); setMerchant(editing.merchant ?? ""); setAmount(String(editing.originalAmount)); setCurrency(editing.currency);
     setPaymentMethod(editing.paymentMethod); setCategory(editing.category); setDate(editing.date); setDescription(editing.description);
     setScope(editing.scope); setMemberId(editing.memberId ?? "me");
+    setSplitOn(editing.splits.length > 0);
+    setShares(Object.fromEntries(editing.splits.map((x) => [x.memberId ?? "me", String(x.amount)])));
   }, [editing]);
 
   // Live rate for the bill date
@@ -141,7 +145,8 @@ function NewExpense() {
     try {
       await save(
         { title: title.trim(), amount: Number(amount), currency, paymentMethod, category, date, description, merchant: merchant.trim() || null,
-          scope, memberId: memberId === "me" ? null : memberId },
+          scope, memberId: memberId === "me" ? null : memberId,
+          splits: splitOn ? Object.entries(shares).map(([k, v]) => ({ memberId: k === "me" ? null : k, amount: Number(v) })) : [] },
         { ...(editing ? { id: editing.id } : {}), files: receipts.map((r) => r.file) },
       );
       toast.success(editing ? "Expense updated" : "Expense saved");
@@ -153,6 +158,8 @@ function NewExpense() {
     }
   };
 
+  const people = [{ id: "me", name: "Me" }, ...members];
+  const splitLeft = Math.round(((Number(amount) || 0) - Object.values(shares).reduce((a, v) => a + (Number(v) || 0), 0)) * 100) / 100;
   const af = (k: string) => autoFilled.has(k) && <Sparkles className="ml-1 inline h-3 w-3 text-primary" aria-label="Auto-filled" />;
   const converted = fx && "rate" in fx && Number(amount) > 0 ? convert(Number(amount), fx.rate) : null;
 
@@ -213,16 +220,52 @@ function NewExpense() {
             <ScopeToggle value={scope} onChange={setScope} />
           </div>
           <div className="grid gap-2">
-            <Label>For whom</Label>
-            <div className="flex flex-wrap gap-2" role="radiogroup" aria-label="For whom">
-              {[{ id: "me", name: "Me" }, ...members].map((m) => (
-                <button key={m.id} type="button" role="radio" aria-checked={memberId === m.id} onClick={() => setMemberId(m.id)}
-                  className={cn("rounded-full border px-3 py-1.5 text-xs font-medium transition", memberId === m.id ? "border-primary bg-primary text-primary-foreground" : "bg-background hover:bg-secondary")}>
-                  {m.name}
-                </button>
-              ))}
+            <div className="flex items-center justify-between">
+              <Label>For whom</Label>
+              <label className="flex items-center gap-2 text-xs font-medium">
+                <input type="checkbox" checked={splitOn} className="accent-[var(--primary)]"
+                  onChange={(e) => { setSplitOn(e.target.checked); if (e.target.checked && !Object.keys(shares).length) setShares({ [memberId]: "" }); }} />
+                Split between people
+              </label>
+            </div>
+            <div className="flex flex-wrap gap-2" role={splitOn ? "group" : "radiogroup"} aria-label="For whom">
+              {people.map((m) => {
+                const on = splitOn ? m.id in shares : memberId === m.id;
+                return (
+                  <button key={m.id} type="button" role={splitOn ? "checkbox" : "radio"} aria-checked={on}
+                    onClick={() => {
+                      if (!splitOn) return setMemberId(m.id);
+                      setShares((x) => { const n = { ...x }; if (m.id in n) delete n[m.id]; else n[m.id] = ""; return n; });
+                    }}
+                    className={cn("rounded-full border px-3 py-1.5 text-xs font-medium transition", on ? "border-primary bg-primary text-primary-foreground" : "bg-background hover:bg-secondary")}>
+                    {m.name}
+                  </button>
+                );
+              })}
               <Link to="/family" className="rounded-full border border-dashed px-3 py-1.5 text-xs text-muted-foreground">+ Family</Link>
             </div>
+            {splitOn && (
+              <div className="space-y-2 rounded-2xl border bg-secondary/40 p-3">
+                {Object.keys(shares).length === 0 && <p className="text-xs text-muted-foreground">Tap people above to add them.</p>}
+                {Object.entries(shares).map(([id, v]) => (
+                  <div key={id} className="flex items-center gap-2">
+                    <span className="flex-1 text-sm">{people.find((p) => p.id === id)?.name ?? "Family"}</span>
+                    <span className="text-xs text-muted-foreground">{currency}</span>
+                    <Input aria-label={`Share for ${people.find((p) => p.id === id)?.name}`} type="number" step="0.01" min="0" className="h-8 w-28 font-mono"
+                      value={v} onChange={(e) => setShares((x) => ({ ...x, [id]: e.target.value }))} />
+                  </div>
+                ))}
+                <div className="flex items-center justify-between pt-1 text-xs">
+                  <span className={cn("font-mono", Math.abs(splitLeft) > 0.009 ? "text-destructive" : "text-muted-foreground")}>
+                    {Math.abs(splitLeft) > 0.009 ? `${splitLeft > 0 ? "Left to assign" : "Over by"}: ${Math.abs(splitLeft).toFixed(2)}` : "Shares add up ✓"}
+                  </span>
+                  <Button type="button" size="sm" variant="outline" disabled={!(Number(amount) > 0) || !Object.keys(shares).length}
+                    onClick={() => setShares(Object.fromEntries(splitEvenly(Number(amount), Object.keys(shares)).map((x) => [x.memberId, String(x.amount)])))}>
+                    Split evenly
+                  </Button>
+                </div>
+              </div>
+            )}
           </div>
           <div className="grid gap-2"><Label htmlFor="t">Title{af("title")}</Label><Input id="t" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Client lunch – Acme" /></div>
           <div className="grid gap-2"><Label htmlFor="m">Merchant{af("merchant")}</Label><Input id="m" value={merchant} onChange={(e) => setMerchant(e.target.value)} /></div>
