@@ -45,6 +45,10 @@ export interface Expense {
   date: string;
   description: string;
   receipts: Receipt[];
+  txnType?: import("./ledger").TxnType;
+  accountId?: string | null;
+  toAccountId?: string | null;
+  tags?: string[];
 }
 
 export interface Split { memberId: string | null; amount: number }
