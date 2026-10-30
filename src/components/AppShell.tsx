@@ -36,6 +36,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           <span className="font-display text-xl font-extrabold tracking-tight text-primary">Ledgerline</span>
           <span className="hidden font-mono text-[11px] uppercase tracking-[0.2em] text-muted-foreground sm:inline">personal · family · business</span>
           <div className="ml-auto flex gap-1 lg:hidden">
+            <Link to="/budgets" aria-label="Budgets" className="rounded-xl p-2 text-muted-foreground" activeProps={{ className: "!text-primary bg-secondary" }}><PiggyBank className="h-5 w-5" /></Link>
             <Link to="/reconcile" aria-label="Bank reconciliation" className="rounded-xl p-2 text-muted-foreground" activeProps={{ className: "!text-primary bg-secondary" }}><Landmark className="h-5 w-5" /></Link>
             <Link to="/family" aria-label="Family" className="rounded-xl p-2 text-muted-foreground" activeProps={{ className: "!text-primary bg-secondary" }}><Users className="h-5 w-5" /></Link>
           </div>
