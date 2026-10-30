@@ -11,7 +11,7 @@ import { CATEGORIES, createExpense, type Category, type Receipt } from "@/lib/ex
 import { useStore } from "@/lib/store";
 import { extractReceipt } from "@/lib/receipt-extract.functions";
 
-export const Route = createFileRoute("/new")({
+export const Route = createFileRoute("/_authenticated/new")({
   head: () => ({
     meta: [
       { title: "Submit an expense — Ledgerline" },

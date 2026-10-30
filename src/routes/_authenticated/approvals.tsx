@@ -5,7 +5,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { canReview } from "@/lib/expenses";
 import { useStore } from "@/lib/store";
 
-export const Route = createFileRoute("/approvals")({
+export const Route = createFileRoute("/_authenticated/approvals")({
   head: () => ({
     meta: [
       { title: "Approvals — Ledgerline" },

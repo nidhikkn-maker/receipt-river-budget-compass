@@ -4,7 +4,7 @@ import { ExpenseTable } from "@/components/ExpenseTable";
 import { canReview, money } from "@/lib/expenses";
 import { useStore } from "@/lib/store";
 
-export const Route = createFileRoute("/")({
+export const Route = createFileRoute("/_authenticated/dashboard")({
   head: () => ({
     meta: [
       { title: "Overview — Ledgerline Expenses" },

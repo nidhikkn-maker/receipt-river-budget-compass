@@ -5,7 +5,7 @@ import { CATEGORIES, DEPARTMENTS, departmentSpend, money } from "@/lib/expenses"
 import { useStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
 
-export const Route = createFileRoute("/analytics")({
+export const Route = createFileRoute("/_authenticated/analytics")({
   head: () => ({
     meta: [
       { title: "Department budgets — Ledgerline" },
