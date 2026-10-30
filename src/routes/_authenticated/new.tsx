@@ -136,7 +136,7 @@ function NewExpense() {
     if (!scan.merchant.trim()) { toast.error("Enter the merchant"); return; }
     if (!(Number(scan.amount) > 0)) { toast.error("Enter an amount greater than zero"); return; }
     if (!isDate(scan.date)) { toast.error("Enter the date"); return; }
-    setMerchant(scan.merchant.trim());
+    setMerchant(scan.merchant.trim()); rememberMerchant(scan.merchant.trim());
     if (!title.trim()) setTitle(scan.merchant.trim());
     setAmount(scan.amount);
     setDate(scan.date);
