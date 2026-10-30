@@ -26,7 +26,7 @@ function Family() {
   const { members, expenses, addMember, removeMember } = useStore();
   const [name, setName] = useState("");
   const [relation, setRelation] = useState("");
-  const totals = totalsBy(expenses, (e) => e.memberId ?? "me");
+  const totals = totalsByMember(expenses);
 
   const add = async (ev: React.FormEvent) => {
     ev.preventDefault();
