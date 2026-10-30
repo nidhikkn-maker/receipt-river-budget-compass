@@ -14,6 +14,36 @@ export type Database = {
   }
   public: {
     Tables: {
+      accounts: {
+        Row: {
+          archived: boolean
+          created_at: string
+          id: string
+          kind: string
+          name: string
+          opening_balance: number
+          owner_id: string
+        }
+        Insert: {
+          archived?: boolean
+          created_at?: string
+          id?: string
+          kind?: string
+          name: string
+          opening_balance?: number
+          owner_id: string
+        }
+        Update: {
+          archived?: boolean
+          created_at?: string
+          id?: string
+          kind?: string
+          name?: string
+          opening_balance?: number
+          owner_id?: string
+        }
+        Relationships: []
+      }
       category_budgets: {
         Row: {
           category: string
@@ -90,6 +120,7 @@ export type Database = {
       }
       expenses: {
         Row: {
+          account_id: string | null
           amount: number
           category: string
           created_at: string
@@ -112,10 +143,14 @@ export type Database = {
           splits: Json
           statement_ref: string | null
           status: string
+          tags: string[]
           title: string
+          to_account_id: string | null
+          txn_type: string
           updated_at: string
         }
         Insert: {
+          account_id?: string | null
           amount: number
           category: string
           created_at?: string
@@ -138,10 +173,14 @@ export type Database = {
           splits?: Json
           statement_ref?: string | null
           status?: string
+          tags?: string[]
           title: string
+          to_account_id?: string | null
+          txn_type?: string
           updated_at?: string
         }
         Update: {
+          account_id?: string | null
           amount?: number
           category?: string
           created_at?: string
@@ -164,15 +203,32 @@ export type Database = {
           splits?: Json
           statement_ref?: string | null
           status?: string
+          tags?: string[]
           title?: string
+          to_account_id?: string | null
+          txn_type?: string
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "expenses_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "expenses_member_id_fkey"
             columns: ["member_id"]
             isOneToOne: false
             referencedRelation: "family_members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expenses_to_account_id_fkey"
+            columns: ["to_account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
             referencedColumns: ["id"]
           },
         ]

@@ -4,6 +4,7 @@ import { Stat } from "@/components/AppShell";
 import { ExpenseTable } from "@/components/ExpenseTable";
 import { money, totalsByMember, totalsByScope } from "@/lib/expenses";
 import { useStore } from "@/lib/store";
+import { accountBalance, cashflow, isLiability } from "@/lib/ledger";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
   head: () => ({
@@ -20,13 +21,17 @@ export const Route = createFileRoute("/_authenticated/dashboard")({
 });
 
 function Overview() {
-  const { expenses, members, memberName } = useStore();
+  const { expenses, members, memberName, transactions, accounts } = useStore();
   const month = new Date().toISOString().slice(0, 7);
   const thisMonth = expenses.filter((e) => e.date.startsWith(month));
   const t = totalsByScope(thisMonth);
   const byMember = totalsByMember(thisMonth);
   const memberRows = [{ id: "me", name: "Me" }, ...members].map((m) => ({ name: m.id === "me" ? "Me" : memberName(m.id), value: byMember[m.id] ?? 0 })).filter((r) => r.value > 0);
   const unmatched = expenses.filter((e) => !e.reconciledAt && ["upi", "credit_card", "debit_card", "forex_card", "bank_transfer"].includes(e.paymentMethod)).length;
+  const live = accounts.filter((a) => !a.archived);
+  const cash = live.filter((a) => !isLiability(a.kind) && ["savings", "current", "cash", "wallet"].includes(a.kind)).reduce((s, a) => s + accountBalance(a, transactions), 0);
+  const cardDue = live.filter((a) => a.kind === "credit_card").reduce((s, a) => s + accountBalance(a, transactions), 0);
+  const flow = cashflow(transactions, `${month}-01`, `${month}-31`);
   const pct = t.total ? Math.round((t.business / t.total) * 100) : 0;
 
   return (
@@ -47,6 +52,12 @@ function Overview() {
         </div>
       </section>
 
+      <div className="mb-3 grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <Link to="/wealth"><Stat label="Cash in accounts" value={money(cash)} hint={live.length ? undefined : "Add accounts"} /></Link>
+        <Stat label="Income this month" value={money(flow.income)} />
+        <Stat label="Net this month" value={money(flow.net)} hint="Income − spending, transfers excluded" />
+        <Link to="/wealth"><Stat label="Card dues" value={money(cardDue)} /></Link>
+      </div>
       <div className="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
         <Stat tone="business" label="Business (all time)" value={money(totalsByScope(expenses).business)} />
         <Stat tone="personal" label="Personal (all time)" value={money(totalsByScope(expenses).personal)} />

@@ -42,6 +42,10 @@ const SaveInput = z.object({
   description: z.string().max(2000),
   paymentMethod: z.enum(["cash", "upi", "credit_card", "debit_card", "forex_card", "company_card", "bank_transfer", "other"]),
   receipts: z.array(z.object({ name: z.string(), type: z.string(), path: z.string() })).max(10).optional(),
+  txnType: z.enum(["expense", "income", "transfer", "refund", "adjustment"]).default("expense"),
+  accountId: z.string().uuid().nullable().default(null),
+  toAccountId: z.string().uuid().nullable().default(null),
+  tags: z.array(z.string().trim().min(1).max(40)).max(20).default([]),
 });
 
 /** Adds or updates an expense, converting to INR server-side with the rate for the bill date. */
@@ -55,6 +59,9 @@ export const saveExpense = createServerFn({ method: "POST" })
       const sum = Math.round(data.splits.reduce((a, x) => a + x.amount, 0) * 100) / 100;
       if (data.splits.length < 2 || Math.abs(sum - data.originalAmount) > 0.009) return { ok: false as const, error: "Shares must add up to the bill total" };
     }
+    if (data.txnType === "transfer" && (!data.accountId || !data.toAccountId || data.accountId === data.toAccountId)) {
+      return { ok: false as const, error: "Pick two different accounts for a transfer" };
+    }
     let fx: { rate: number; date: string };
     try {
       fx = await fetchRate(data.currency, data.date);
@@ -66,6 +73,7 @@ export const saveExpense = createServerFn({ method: "POST" })
       currency: data.currency, original_amount: data.originalAmount, fx_rate: fx.rate, fx_date: fx.date,
       amount: Math.max(Math.round(data.originalAmount * fx.rate * 100) / 100, 0.01),
       payment_method: data.paymentMethod, expense_date: data.date, description: data.description,
+      txn_type: data.txnType, account_id: data.accountId, to_account_id: data.txnType === "transfer" ? data.toAccountId : null, tags: data.tags,
       updated_at: new Date().toISOString(),
       ...(data.receipts ? { receipts: data.receipts } : {}),
     };

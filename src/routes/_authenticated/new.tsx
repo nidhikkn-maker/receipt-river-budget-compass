@@ -17,6 +17,7 @@ import { useStore } from "@/lib/store";
 import { extractReceipt } from "@/lib/receipt-extract.functions";
 import { getFxRate } from "@/lib/fx.functions";
 import { cn } from "@/lib/utils";
+import { ACCOUNT_LABEL, TXN_LABEL, TXN_TYPES, type TxnType } from "@/lib/ledger";
 
 type LocalReceipt = { file: File; name: string; type: string; dataUrl: string };
 
@@ -48,11 +49,16 @@ const isDate = (s: string | null | undefined): s is string => !!s && /^\d{4}-\d{
 interface Scan { merchant: string; date: string; amount: string; currency: string }
 
 function NewExpense() {
-  const { save, expenses, members } = useStore();
+  const { save, transactions: expenses, members, accounts } = useStore();
+  const liveAccounts = accounts.filter((a) => !a.archived);
   const nav = useNavigate();
   const { edit } = Route.useSearch();
   const editing = edit ? expenses.find((e) => e.id === edit) : undefined;
   const [scope, setScope] = useState<Scope>("personal");
+  const [txnType, setTxnType] = useState<TxnType>("expense");
+  const [accountId, setAccountId] = useState<string>("none");
+  const [toAccountId, setToAccountId] = useState<string>("none");
+  const [tags, setTags] = useState("");
   const [memberId, setMemberId] = useState<string>("me");
   const [splitOn, setSplitOn] = useState(false);
   const [shares, setShares] = useState<Record<string, string>>({});
@@ -78,6 +84,7 @@ function NewExpense() {
     setTitle(editing.title); setMerchant(editing.merchant ?? ""); setAmount(String(editing.originalAmount)); setCurrency(editing.currency);
     setPaymentMethod(editing.paymentMethod); setCategory(editing.category); setDate(editing.date); setDescription(editing.description);
     setScope(editing.scope); setMemberId(editing.memberId ?? "me");
+    setTxnType(editing.txnType ?? "expense"); setAccountId(editing.accountId ?? "none"); setToAccountId(editing.toAccountId ?? "none"); setTags((editing.tags ?? []).join(", "));
     setSplitOn(editing.splits.length > 0);
     setShares(Object.fromEntries(editing.splits.map((x) => [x.memberId ?? "me", String(x.amount)])));
   }, [editing]);
@@ -146,10 +153,12 @@ function NewExpense() {
       await save(
         { title: title.trim(), amount: Number(amount), currency, paymentMethod, category, date, description, merchant: merchant.trim() || null,
           scope, memberId: memberId === "me" ? null : memberId,
+          txnType, accountId: accountId === "none" ? null : accountId, toAccountId: toAccountId === "none" ? null : toAccountId,
+          tags: [...new Set(tags.split(",").map((t) => t.trim()).filter(Boolean))],
           splits: splitOn ? Object.entries(shares).map(([k, v]) => ({ memberId: k === "me" ? null : k, amount: Number(v) })) : [] },
         { ...(editing ? { id: editing.id } : {}), files: receipts.map((r) => r.file) },
       );
-      toast.success(editing ? "Expense updated" : "Expense saved");
+      toast.success(editing ? "Entry updated" : `${TXN_LABEL[txnType]} saved`);
       nav({ to: editing ? "/expenses" : "/dashboard" });
     } catch (e) {
       toast.error((e as Error).message);
@@ -215,6 +224,47 @@ function NewExpense() {
 
         {/* Details column */}
         <div className={cn("grid content-start gap-4 rounded-3xl border bg-card p-5 sm:p-6", !confirmed && "pointer-events-none opacity-50")}>
+          <div className="grid gap-2">
+            <Label>Type</Label>
+            <div className="flex flex-wrap gap-2" role="radiogroup" aria-label="Transaction type">
+              {TXN_TYPES.map((t) => (
+                <button key={t} type="button" role="radio" aria-checked={txnType === t} onClick={() => setTxnType(t)}
+                  className={cn("min-h-11 rounded-full border px-4 text-sm font-medium transition", txnType === t ? "border-primary bg-primary text-primary-foreground" : "bg-background hover:bg-secondary")}>
+                  {TXN_LABEL[t]}
+                </button>
+              ))}
+            </div>
+            {txnType === "transfer" && <p className="text-xs text-muted-foreground">Moving money between your own accounts (or paying a card bill) isn't counted as spending or income.</p>}
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="grid gap-2">
+              <Label>{txnType === "transfer" ? "From account" : "Account"}</Label>
+              <Select value={accountId} onValueChange={setAccountId}>
+                <SelectTrigger aria-label="Account"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Not set</SelectItem>
+                  {liveAccounts.map((a) => <SelectItem key={a.id} value={a.id}>{a.name} · {ACCOUNT_LABEL[a.kind]}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            {txnType === "transfer" && (
+              <div className="grid gap-2">
+              <Label>To account</Label>
+              <Select value={toAccountId} onValueChange={setToAccountId}>
+                <SelectTrigger aria-label="To account"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Not set</SelectItem>
+                  {liveAccounts.map((a) => <SelectItem key={a.id} value={a.id}>{a.name} · {ACCOUNT_LABEL[a.kind]}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            )}
+          </div>
+          {!liveAccounts.length && <p className="-mt-2 text-xs text-muted-foreground">Add your bank, card and cash accounts on the <Link to="/wealth" className="text-primary underline">Wealth</Link> page.</p>}
+          <div className="grid gap-2">
+            <Label htmlFor="tags">Tags</Label>
+            <Input id="tags" placeholder="e.g. VEI, reimbursable, essential" value={tags} onChange={(e) => setTags(e.target.value)} />
+          </div>
           <div className="grid gap-2">
             <Label>Business or personal?{af("scope")}</Label>
             <ScopeToggle value={scope} onChange={setScope} />
