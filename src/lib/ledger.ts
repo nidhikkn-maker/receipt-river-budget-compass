@@ -74,3 +74,21 @@ export function validateTransfer(t: Pick<Txn, "accountId" | "toAccountId">) {
   if (!t.accountId || !t.toAccountId) throw new Error("Pick both accounts for a transfer");
   if (t.accountId === t.toAccountId) throw new Error("Choose two different accounts");
 }
+
+export interface MerchantMemory { category: string; tags: string[]; accountId: string | null; paymentMethod: string; scope: string }
+const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, "");
+
+/** Most recent choices used for the same merchant (case/spacing-insensitive). */
+export function suggestForMerchant<T extends { merchant: string | null; date: string; category: string; tags?: string[]; accountId?: string | null; paymentMethod: string; scope: string }>(merchant: string, history: T[]): MerchantMemory | null {
+  const key = norm(merchant);
+  if (!key) return null;
+  const hit = history.filter((h) => h.merchant && norm(h.merchant) === key).sort((a, b) => b.date.localeCompare(a.date))[0];
+  return hit ? { category: hit.category, tags: hit.tags ?? [], accountId: hit.accountId ?? null, paymentMethod: hit.paymentMethod, scope: hit.scope } : null;
+}
+
+/** Distinct merchants, most used first. */
+export function frequentMerchants(history: { merchant: string | null }[], limit = 30): string[] {
+  const n = new Map<string, number>();
+  for (const h of history) if (h.merchant?.trim()) n.set(h.merchant.trim(), (n.get(h.merchant.trim()) ?? 0) + 1);
+  return [...n.entries()].sort((a, b) => b[1] - a[1]).slice(0, limit).map(([m]) => m);
+}

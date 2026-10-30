@@ -53,7 +53,7 @@ function Overview() {
       </section>
 
       <div className="mb-3 grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <Link to="/wealth"><Stat label="Cash in accounts" value={money(cash)} hint={live.length ? undefined : "Add accounts"} /></Link>
+        <Link to="/wealth"><Stat label="Cash in accounts" value={money(cash)} {...(live.length ? {} : { hint: "Add accounts" })} /></Link>
         <Stat label="Income this month" value={money(flow.income)} />
         <Stat label="Net this month" value={money(flow.net)} hint="Income − spending, transfers excluded" />
         <Link to="/wealth"><Stat label="Card dues" value={money(cardDue)} /></Link>

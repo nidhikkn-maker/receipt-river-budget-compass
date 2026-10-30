@@ -39,3 +39,17 @@ describe("ledger", () => {
     expect(() => validateTransfer({ accountId: "bank", toAccountId: "bank" })).toThrow();
   });
 });
+
+import { frequentMerchants, suggestForMerchant } from "./ledger";
+describe("merchant memory", () => {
+  const h = [
+    { merchant: "Swiggy", date: "2026-09-01", category: "Dining", tags: ["self"], accountId: "a", paymentMethod: "upi", scope: "personal" },
+    { merchant: "SWIGGY ", date: "2026-10-01", category: "Client & Business Meals", tags: ["VEI"], accountId: "b", paymentMethod: "credit_card", scope: "business" },
+    { merchant: "Amazon", date: "2026-10-02", category: "Shopping", accountId: null, paymentMethod: "upi", scope: "personal" },
+  ];
+  it("suggests the latest choices for the same merchant", () => {
+    expect(suggestForMerchant("swiggy", h)).toEqual({ category: "Client & Business Meals", tags: ["VEI"], accountId: "b", paymentMethod: "credit_card", scope: "business" });
+  });
+  it("returns nothing for a new merchant", () => { expect(suggestForMerchant("Zomato", h)).toBeNull(); });
+  it("lists most-used merchants first", () => { expect(frequentMerchants([...h, { merchant: "Amazon" }])[0]).toBe("Amazon"); });
+});
