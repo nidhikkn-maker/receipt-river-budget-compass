@@ -69,6 +69,10 @@ export interface ExpenseInput {
   paymentMethod: PaymentMethod;
   date: string;
   description: string;
+  txnType?: import("./ledger").TxnType;
+  accountId?: string | null;
+  toAccountId?: string | null;
+  tags?: string[];
 }
 
 export function validateExpense(s: ExpenseInput) {
@@ -76,6 +80,10 @@ export function validateExpense(s: ExpenseInput) {
   if (!(s.amount > 0)) throw new ValidationError("Amount must be greater than zero");
   if (!/^\d{4}-\d{2}-\d{2}$/.test(s.date)) throw new ValidationError("Add the expense date");
   if (!SCOPES.includes(s.scope)) throw new ValidationError("Choose business or personal");
+  if (s.txnType === "transfer") {
+    if (!s.accountId || !s.toAccountId) throw new ValidationError("Pick both accounts for a transfer");
+    if (s.accountId === s.toAccountId) throw new ValidationError("Choose two different accounts");
+  }
   if (s.splits?.length) validateSplits(s.splits, s.amount);
 }
 
