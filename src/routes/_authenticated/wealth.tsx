@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ACCOUNT_KINDS, ACCOUNT_LABEL, accountBalance, isLiability, netWorth, type AccountKind } from "@/lib/ledger";
 import { money } from "@/lib/expenses";
 import { useStore } from "@/lib/store";
+import { CardDetails, GoalsPanel, LoansPanel } from "@/components/WealthPanels";
 
 export const Route = createFileRoute("/_authenticated/wealth")({
   head: () => ({
@@ -26,14 +27,16 @@ export const Route = createFileRoute("/_authenticated/wealth")({
 });
 
 function Wealth() {
-  const { accounts, transactions, addAccount, setArchived } = useStore();
+  const { accounts, transactions, addAccount, setArchived, updateAccount, loans } = useStore();
   const [name, setName] = useState("");
   const [kind, setKind] = useState<AccountKind>("savings");
   const [opening, setOpening] = useState("0");
   const [busy, setBusy] = useState(false);
   const [showArchived, setShowArchived] = useState(false);
   const live = accounts.filter((a) => !a.archived);
-  const nw = netWorth(live, transactions);
+  const nwRaw = netWorth(live, transactions);
+  const loanOwed = loans.reduce((s, l) => s + l.principal, 0);
+  const nw = { assets: nwRaw.assets, liabilities: nwRaw.liabilities + loanOwed, net: nwRaw.net - loanOwed };
   const list = accounts.filter((a) => showArchived || !a.archived);
 
   const add = async (e: React.FormEvent) => {
@@ -65,7 +68,8 @@ function Wealth() {
           {list.map((a) => {
             const bal = accountBalance(a, transactions);
             return (
-              <div key={a.id} className={"flex items-center gap-3 rounded-2xl border bg-card p-4 " + (a.archived ? "opacity-60" : "")}>
+              <div key={a.id} className={"rounded-2xl border bg-card p-4 " + (a.archived ? "opacity-60" : "")}>
+              <div className="flex items-center gap-3">
                 <div className="min-w-0 flex-1">
                   <div className="truncate font-medium">{a.name}</div>
                   <div className="text-xs text-muted-foreground">{ACCOUNT_LABEL[a.kind]}{isLiability(a.kind) ? " · owed" : ""}</div>
@@ -75,6 +79,14 @@ function Wealth() {
                   onClick={() => setArchived(a.id, !a.archived).catch((e) => toast.error(e.message))}>
                   {a.archived ? <ArchiveRestore className="h-4 w-4" /> : <Archive className="h-4 w-4" />}
                 </Button>
+              </div>
+              {a.kind === "credit_card" && !a.archived && <CardDetails a={a} />}
+              {(a.kind === "savings" || a.kind === "current") && !a.archived && (
+                <label className="mt-2 flex items-center gap-2 border-t pt-2 text-xs text-muted-foreground">Keep at least ₹
+                  <input type="number" defaultValue={a.minBalance ?? 0} aria-label={`Minimum balance for ${a.name}`} className="w-24 rounded-md border bg-background px-2 py-1 font-mono"
+                    onBlur={(e) => updateAccount(a.id, { minBalance: Number(e.target.value) || 0 }).catch((er) => toast.error(er.message))} />
+                </label>
+              )}
               </div>
             );
           })}
@@ -96,6 +108,10 @@ function Wealth() {
           </div>
           <Button type="submit" disabled={busy}>{busy ? "Adding…" : "Add account"}</Button>
         </form>
+      </div>
+      <div className="mt-8 grid gap-6 lg:grid-cols-2">
+        <LoansPanel />
+        <GoalsPanel />
       </div>
     </>
   );
