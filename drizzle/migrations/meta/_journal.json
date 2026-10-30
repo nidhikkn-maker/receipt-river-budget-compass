@@ -36,6 +36,13 @@
       "when": 1793389529162,
       "tag": "0004_expense_splits",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1793390531907,
+      "tag": "0005_accounts_and_ledger",
+      "breakpoints": true
     }
   ]
 }
