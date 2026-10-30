@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { applyFilters, autoMatch, budgetUsage, convert, parseStatementCsv, totalsByScope, validateBudget, validateExpense, type Expense } from "./expenses";
 
 const exp = (o: Partial<Expense> = {}): Expense => ({
-  id: "x", title: "t", merchant: null, category: "Groceries", scope: "personal", memberId: null, amount: 100,
+  id: "x", title: "t", merchant: null, category: "Groceries", scope: "personal", memberId: null, splits: [], amount: 100,
   currency: "INR", originalAmount: 100, fxRate: 1, paymentMethod: "upi", reconciledAt: null, statementRef: null,
   date: "2026-10-01", description: "", receipts: [], ...o,
 });
