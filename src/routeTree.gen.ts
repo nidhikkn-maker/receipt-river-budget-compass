@@ -16,6 +16,7 @@ import { Route as AuthenticatedDashboardRouteImport } from './routes/_authentica
 import { Route as AuthenticatedExpensesRouteImport } from './routes/_authenticated/expenses'
 import { Route as AuthenticatedFamilyRouteImport } from './routes/_authenticated/family'
 import { Route as AuthenticatedNewRouteImport } from './routes/_authenticated/new'
+import { Route as AuthenticatedPlanRouteImport } from './routes/_authenticated/plan'
 import { Route as AuthenticatedReconcileRouteImport } from './routes/_authenticated/reconcile'
 import { Route as AuthenticatedReportsRouteImport } from './routes/_authenticated/reports'
 import { Route as AuthenticatedWealthRouteImport } from './routes/_authenticated/wealth'
@@ -54,6 +55,11 @@ const AuthenticatedNewRoute = AuthenticatedNewRouteImport.update({
   path: '/new',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedPlanRoute = AuthenticatedPlanRouteImport.update({
+  id: '/plan',
+  path: '/plan',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedReconcileRoute = AuthenticatedReconcileRouteImport.update({
   id: '/reconcile',
   path: '/reconcile',
@@ -77,6 +83,7 @@ export interface FileRoutesByFullPath {
   '/expenses': typeof AuthenticatedExpensesRoute
   '/family': typeof AuthenticatedFamilyRoute
   '/new': typeof AuthenticatedNewRoute
+  '/plan': typeof AuthenticatedPlanRoute
   '/reconcile': typeof AuthenticatedReconcileRoute
   '/reports': typeof AuthenticatedReportsRoute
   '/wealth': typeof AuthenticatedWealthRoute
@@ -88,6 +95,7 @@ export interface FileRoutesByTo {
   '/expenses': typeof AuthenticatedExpensesRoute
   '/family': typeof AuthenticatedFamilyRoute
   '/new': typeof AuthenticatedNewRoute
+  '/plan': typeof AuthenticatedPlanRoute
   '/reconcile': typeof AuthenticatedReconcileRoute
   '/reports': typeof AuthenticatedReportsRoute
   '/wealth': typeof AuthenticatedWealthRoute
@@ -101,6 +109,7 @@ export interface FileRoutesById {
   '/_authenticated/expenses': typeof AuthenticatedExpensesRoute
   '/_authenticated/family': typeof AuthenticatedFamilyRoute
   '/_authenticated/new': typeof AuthenticatedNewRoute
+  '/_authenticated/plan': typeof AuthenticatedPlanRoute
   '/_authenticated/reconcile': typeof AuthenticatedReconcileRoute
   '/_authenticated/reports': typeof AuthenticatedReportsRoute
   '/_authenticated/wealth': typeof AuthenticatedWealthRoute
@@ -114,6 +123,7 @@ export interface FileRouteTypes {
     | '/expenses'
     | '/family'
     | '/new'
+    | '/plan'
     | '/reconcile'
     | '/reports'
     | '/wealth'
@@ -125,6 +135,7 @@ export interface FileRouteTypes {
     | '/expenses'
     | '/family'
     | '/new'
+    | '/plan'
     | '/reconcile'
     | '/reports'
     | '/wealth'
@@ -137,6 +148,7 @@ export interface FileRouteTypes {
     | '/_authenticated/expenses'
     | '/_authenticated/family'
     | '/_authenticated/new'
+    | '/_authenticated/plan'
     | '/_authenticated/reconcile'
     | '/_authenticated/reports'
     | '/_authenticated/wealth'
@@ -198,6 +210,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedNewRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/plan': {
+      id: '/_authenticated/plan'
+      path: '/plan'
+      fullPath: '/plan'
+      preLoaderRoute: typeof AuthenticatedPlanRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/reconcile': {
       id: '/_authenticated/reconcile'
       path: '/reconcile'
@@ -228,6 +247,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedExpensesRoute: typeof AuthenticatedExpensesRoute
   AuthenticatedFamilyRoute: typeof AuthenticatedFamilyRoute
   AuthenticatedNewRoute: typeof AuthenticatedNewRoute
+  AuthenticatedPlanRoute: typeof AuthenticatedPlanRoute
   AuthenticatedReconcileRoute: typeof AuthenticatedReconcileRoute
   AuthenticatedReportsRoute: typeof AuthenticatedReportsRoute
   AuthenticatedWealthRoute: typeof AuthenticatedWealthRoute
@@ -239,6 +259,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedExpensesRoute: AuthenticatedExpensesRoute,
   AuthenticatedFamilyRoute: AuthenticatedFamilyRoute,
   AuthenticatedNewRoute: AuthenticatedNewRoute,
+  AuthenticatedPlanRoute: AuthenticatedPlanRoute,
   AuthenticatedReconcileRoute: AuthenticatedReconcileRoute,
   AuthenticatedReportsRoute: AuthenticatedReportsRoute,
   AuthenticatedWealthRoute: AuthenticatedWealthRoute,
