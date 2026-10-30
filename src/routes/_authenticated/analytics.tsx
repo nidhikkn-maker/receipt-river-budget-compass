@@ -22,11 +22,11 @@ export const Route = createFileRoute("/_authenticated/analytics")({
 const COLORS = ["var(--chart-1)", "var(--chart-2)", "var(--chart-3)", "var(--chart-4)", "var(--chart-5)", "var(--muted-foreground)", "var(--accent)"];
 
 function Analytics() {
-  const { user, expenses } = useStore();
+  const { user, expenses, budgets } = useStore();
   if (user.role === "employee") return <PageTitle title="Budgets" sub="Switch to a manager or finance role to view analytics." />;
   const depts = user.role === "manager" ? [user.department] : DEPARTMENTS;
   const scoped = expenses.filter((e) => depts.includes(e.department) && e.status !== "rejected");
-  const rows = depts.map((d) => ({ dept: d, ...departmentSpend(expenses, d) }));
+  const rows = depts.map((d) => ({ dept: d, ...departmentSpend(expenses, d, budgets) }));
   const byCat = CATEGORIES.map((c) => ({ name: c, value: scoped.filter((e) => e.category === c).reduce((s, e) => s + e.amount, 0) })).filter((x) => x.value > 0);
   const totals = rows.reduce((a, r) => ({ c: a.c + r.committed, p: a.p + r.pending, b: a.b + r.budget }), { c: 0, p: 0, b: 0 });
   const outstanding = scoped.filter((e) => e.status === "approved").reduce((s, e) => s + e.amount, 0);
