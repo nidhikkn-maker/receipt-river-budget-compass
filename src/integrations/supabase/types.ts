@@ -72,13 +72,21 @@ export type Database = {
           amount: number
           category: string
           created_at: string
+          currency: string
           department: string
           description: string
           employee_id: string
           expense_date: string
+          fx_date: string | null
+          fx_rate: number
           id: string
           merchant: string | null
+          original_amount: number | null
+          payment_method: string
           receipts: Json
+          reconciled_at: string | null
+          reconciled_by: string | null
+          statement_ref: string | null
           status: string
           title: string
         }
@@ -86,13 +94,21 @@ export type Database = {
           amount: number
           category: string
           created_at?: string
+          currency?: string
           department: string
           description?: string
           employee_id: string
           expense_date: string
+          fx_date?: string | null
+          fx_rate?: number
           id?: string
           merchant?: string | null
+          original_amount?: number | null
+          payment_method?: string
           receipts?: Json
+          reconciled_at?: string | null
+          reconciled_by?: string | null
+          statement_ref?: string | null
           status?: string
           title: string
         }
@@ -100,13 +116,21 @@ export type Database = {
           amount?: number
           category?: string
           created_at?: string
+          currency?: string
           department?: string
           description?: string
           employee_id?: string
           expense_date?: string
+          fx_date?: string | null
+          fx_rate?: number
           id?: string
           merchant?: string | null
+          original_amount?: number | null
+          payment_method?: string
           receipts?: Json
+          reconciled_at?: string | null
+          reconciled_by?: string | null
+          statement_ref?: string | null
           status?: string
           title?: string
         }
@@ -164,6 +188,10 @@ export type Database = {
         Returns: boolean
       }
       my_department: { Args: never; Returns: string }
+      reconcile_expense: {
+        Args: { _expense_id: string; _statement_ref: string }
+        Returns: undefined
+      }
       review_expense: {
         Args: { _decision: string; _expense_id: string; _note?: string }
         Returns: string

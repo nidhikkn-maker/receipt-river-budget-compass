@@ -8,6 +8,13 @@
       "when": 1793388304747,
       "tag": "0000_expenses_core",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1793388660243,
+      "tag": "0001_multicurrency_payment_reconcile",
+      "breakpoints": true
     }
   ]
 }
