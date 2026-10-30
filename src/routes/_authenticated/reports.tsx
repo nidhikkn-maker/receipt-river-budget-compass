@@ -55,14 +55,14 @@ function Reports() {
   return (
     <>
       <PageTitle title="Reports" sub={`Download reports for ${scope}.`} />
-      <div className="mb-6 flex flex-wrap items-end gap-4 rounded-md border bg-card p-4">
+      <div className="mb-6 flex flex-wrap items-end gap-4 rounded-2xl border bg-card p-4">
         <div className="grid gap-1"><Label htmlFor="from">From</Label><Input id="from" type="date" value={from} onChange={(e) => setFrom(e.target.value)} /></div>
         <div className="grid gap-1"><Label htmlFor="to">To</Label><Input id="to" type="date" value={to} onChange={(e) => setTo(e.target.value)} /></div>
         <p className="text-sm text-muted-foreground">{inRange.length} expense{inRange.length === 1 ? "" : "s"} in range</p>
       </div>
       <div className="grid gap-4 md:grid-cols-3">
         {KINDS.filter((k) => !k.reviewerOnly || user.role !== "employee").map((k) => (
-          <div key={k.kind} className="flex flex-col rounded-md border bg-card p-5">
+          <div key={k.kind} className="flex flex-col rounded-2xl border bg-card p-5">
             <h2 className="font-display text-xl">{k.title}</h2>
             <p className="mt-1 flex-1 text-sm text-muted-foreground">{k.desc}</p>
             <div className="mt-4 flex gap-2">

@@ -70,13 +70,13 @@ function AuthPage() {
           <p className="mt-2 text-muted-foreground">Team expenses, approvals and reimbursements.</p>
         </div>
         {sent ? (
-          <div className="rounded-md border bg-card p-6 text-center">
+          <div className="rounded-2xl border bg-card p-6 text-center">
             <h1 className="font-display text-2xl">Check your email</h1>
             <p className="mt-2 text-sm text-muted-foreground">We sent a confirmation link to {email}. Click it, then sign in.</p>
             <Button variant="outline" className="mt-4" onClick={() => { setSent(false); setMode("in"); }}>Back to sign in</Button>
           </div>
         ) : (
-          <form onSubmit={submit} className="grid gap-4 rounded-md border bg-card p-6">
+          <form onSubmit={submit} className="grid gap-4 rounded-2xl border bg-card p-6">
             <h1 className="font-display text-2xl">{mode === "in" ? "Sign in" : "Create your account"}</h1>
             {mode === "up" && (
               <>

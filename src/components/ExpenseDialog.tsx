@@ -88,7 +88,7 @@ export function ExpenseDialog({ expense, onClose }: { expense: Expense | null; o
         </div>
 
         {reviewable && (
-          <div className="space-y-2 rounded-md border bg-muted/50 p-3">
+          <div className="space-y-2 rounded-2xl border bg-muted/50 p-3">
             <div className="text-sm font-medium">{e.status === "pending_manager" ? "Department manager review" : "Finance sign-off"}</div>
             <Textarea placeholder="Note (required to reject)" value={note} onChange={(ev) => setNote(ev.target.value)} />
             <div className="flex justify-end gap-2">

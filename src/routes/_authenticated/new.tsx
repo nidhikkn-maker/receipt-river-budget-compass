@@ -108,12 +108,12 @@ function NewExpense() {
   return (
     <>
       <PageTitle title="Submit an expense" sub={`Routes to the ${user.department} manager, then Finance.`} />
-      <form onSubmit={submit} className="grid max-w-2xl gap-5 rounded-md border bg-card p-6">
+      <form onSubmit={submit} className="grid max-w-2xl gap-5 rounded-2xl border bg-card p-6">
         <div className="grid gap-2">
           <Label htmlFor="r">Receipt — we'll read the merchant, date and amount for you</Label>
           {reading && <p className="text-sm text-muted-foreground animate-pulse">Reading receipt…</p>}
           {scan && !reading && !confirmed && (
-            <div className="space-y-3 rounded-md border border-accent bg-accent/20 p-4" role="group" aria-label="Review scanned details">
+            <div className="space-y-3 rounded-2xl border border-accent bg-accent/20 p-4" role="group" aria-label="Review scanned details">
               <div>
                 <div className="text-sm font-medium">Review scanned details</div>
                 <p className="text-xs text-muted-foreground">We read these from your receipt. Correct anything that's wrong, then confirm.</p>

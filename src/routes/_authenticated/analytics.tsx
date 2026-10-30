@@ -74,7 +74,7 @@ function Analytics() {
         <Stat label="Owed to employees" value={money(outstanding)} />
       </div>
 
-      <div className="mb-8 space-y-4 rounded-md border bg-card p-6">
+      <div className="mb-8 space-y-4 rounded-2xl border bg-card p-6">
         {rows.map((r) => {
           const cp = (r.committed / r.budget) * 100;
           const pp = (r.pending / r.budget) * 100;
@@ -101,7 +101,7 @@ function Analytics() {
       </div>
 
       <div className="grid gap-6 md:grid-cols-2">
-        <div className="rounded-md border bg-card p-6">
+        <div className="rounded-2xl border bg-card p-6">
           <h3 className="mb-4 font-display text-lg">Spend vs budget</h3>
           <ResponsiveContainer width="100%" height={260}>
             <BarChart data={rows}>
@@ -115,7 +115,7 @@ function Analytics() {
             </BarChart>
           </ResponsiveContainer>
         </div>
-        <div className="rounded-md border bg-card p-6">
+        <div className="rounded-2xl border bg-card p-6">
           <h3 className="mb-4 font-display text-lg">By category</h3>
           <ResponsiveContainer width="100%" height={260}>
             <PieChart>
