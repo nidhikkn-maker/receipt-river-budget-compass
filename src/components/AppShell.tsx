@@ -1,19 +1,20 @@
 import { Link } from "@tanstack/react-router";
 import type { ReactNode } from "react";
-import { FileDown, Home, Landmark, ListFilter, PiggyBank, Plus, Users } from "lucide-react";
+import { BarChart3, Gem, Home, Landmark, ListFilter, PiggyBank, Plus, Users } from "lucide-react";
 import { useStore } from "@/lib/store";
 
 const LINKS = [
   { to: "/dashboard", label: "Home", icon: Home },
-  { to: "/expenses", label: "Expenses", icon: ListFilter },
+  { to: "/expenses", label: "Activity", icon: ListFilter },
   { to: "/new", label: "Add", icon: Plus, primary: true },
+  { to: "/reports", label: "Insights", icon: BarChart3 },
+  { to: "/wealth", label: "Wealth", icon: Gem },
   { to: "/budgets", label: "Budgets", icon: PiggyBank },
   { to: "/reconcile", label: "Bank", icon: Landmark },
   { to: "/family", label: "Family", icon: Users },
-  { to: "/reports", label: "Reports", icon: FileDown },
 ] as const;
-// Mobile bar has room for five
-const MOBILE = ["/dashboard", "/expenses", "/new", "/budgets", "/reports"];
+// Mobile bar: the five primary sections
+const MOBILE = ["/dashboard", "/expenses", "/new", "/reports", "/wealth"];
 
 export function AppShell({ children }: { children: ReactNode }) {
   const { loading } = useStore();
