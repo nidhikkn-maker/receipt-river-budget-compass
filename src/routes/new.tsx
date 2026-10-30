@@ -43,6 +43,8 @@ function NewExpense() {
 
   const [reading, setReading] = useState(false);
   const [merchant, setMerchant] = useState("");
+  const [scan, setScan] = useState<{ merchant: string; date: string; amount: string } | null>(null);
+  const [confirmed, setConfirmed] = useState(true);
   const onFiles = async (files: FileList | null) => {
     if (!files) return;
     const big = Array.from(files).find((f) => f.size > 2 * 1024 * 1024);
@@ -56,11 +58,14 @@ function NewExpense() {
       const res = await extractReceipt({ data: { dataUrl: first.dataUrl, mimeType: first.type } });
       if (!res.ok) { toast.error(res.error); return; }
       const x = res.result;
-      if (x.merchant) { setMerchant(x.merchant); if (!title) setTitle(x.merchant); }
-      if (x.amount != null) setAmount(String(x.amount));
-      if (x.date && /^\d{4}-\d{2}-\d{2}$/.test(x.date)) setDate(x.date);
+      setScan({
+        merchant: x.merchant ?? "",
+        date: x.date && /^\d{4}-\d{2}-\d{2}$/.test(x.date) ? x.date : date,
+        amount: x.amount != null ? String(x.amount) : "",
+      });
+      setConfirmed(false);
       if (x.category) setCategory(x.category);
-      toast.success("Receipt read — check the details below");
+      toast.success("Receipt read — please review the details");
     } catch {
       toast.error("Receipt reading failed");
     } finally {
@@ -70,6 +75,7 @@ function NewExpense() {
 
   const submit = (ev: React.FormEvent) => {
     ev.preventDefault();
+    if (!confirmed) { toast.error("Confirm the scanned receipt details first"); return; }
     if (!title.trim()) { toast.error("Add a title"); return; }
     try {
       upsert(createExpense(user, { title: title.trim(), amount: Number(amount), category, date, description: description || (merchant ? `Merchant: ${merchant}` : ""), receipts }));
@@ -80,6 +86,19 @@ function NewExpense() {
     }
   };
 
+  const confirmScan = () => {
+    if (!scan) return;
+    if (!scan.merchant.trim()) { toast.error("Enter the merchant"); return; }
+    if (!(Number(scan.amount) > 0)) { toast.error("Enter an amount greater than zero"); return; }
+    if (!scan.date) { toast.error("Enter the date"); return; }
+    setMerchant(scan.merchant.trim());
+    if (!title.trim()) setTitle(scan.merchant.trim());
+    setAmount(scan.amount);
+    setDate(scan.date);
+    setConfirmed(true);
+    toast.success("Receipt details confirmed");
+  };
+
   return (
     <>
       <PageTitle title="Submit an expense" sub={`Routes to the ${user.department} manager, then Finance.`} />
@@ -87,7 +106,24 @@ function NewExpense() {
         <div className="grid gap-2">
           <Label htmlFor="r">Receipt — we'll read the merchant, date and amount for you</Label>
           {reading && <p className="text-sm text-muted-foreground animate-pulse">Reading receipt…</p>}
-          {merchant && !reading && <p className="text-xs text-muted-foreground">Merchant detected: <span className="font-medium text-foreground">{merchant}</span></p>}
+          {scan && !reading && !confirmed && (
+            <div className="space-y-3 rounded-md border border-accent bg-accent/20 p-4" role="group" aria-label="Review scanned details">
+              <div>
+                <div className="text-sm font-medium">Review scanned details</div>
+                <p className="text-xs text-muted-foreground">We read these from your receipt. Correct anything that's wrong, then confirm.</p>
+              </div>
+              <div className="grid gap-3 sm:grid-cols-3">
+                <div className="grid gap-1"><Label htmlFor="sm">Merchant</Label><Input id="sm" value={scan.merchant} onChange={(e) => setScan({ ...scan, merchant: e.target.value })} /></div>
+                <div className="grid gap-1"><Label htmlFor="sd">Date</Label><Input id="sd" type="date" value={scan.date} onChange={(e) => setScan({ ...scan, date: e.target.value })} /></div>
+                <div className="grid gap-1"><Label htmlFor="sa">Amount (USD)</Label><Input id="sa" type="number" step="0.01" min="0" className="font-mono" value={scan.amount} onChange={(e) => setScan({ ...scan, amount: e.target.value })} /></div>
+              </div>
+              <div className="flex justify-end gap-2">
+                <Button type="button" variant="ghost" size="sm" onClick={() => { setScan(null); setConfirmed(true); }}>Discard scan</Button>
+                <Button type="button" size="sm" onClick={confirmScan}>Confirm details</Button>
+              </div>
+            </div>
+          )}
+          {merchant && confirmed && !reading && <p className="text-xs text-muted-foreground">Confirmed merchant: <span className="font-medium text-foreground">{merchant}</span></p>}
           <Input id="r" type="file" multiple accept="image/*,application/pdf" onChange={(e) => onFiles(e.target.files)} />
           {receipts.length > 0 && (
             <ul className="flex flex-wrap gap-2 text-xs">
@@ -113,7 +149,7 @@ function NewExpense() {
           <div className="grid gap-2"><Label htmlFor="d">Date</Label><Input id="d" type="date" value={date} onChange={(e) => setDate(e.target.value)} /></div>
         </div>
         <div className="grid gap-2"><Label htmlFor="desc">Business purpose</Label><Textarea id="desc" value={description} onChange={(e) => setDescription(e.target.value)} /></div>
-        <div className="flex justify-end"><Button type="submit" disabled={reading}>Submit for approval</Button></div>
+        <div className="flex justify-end"><Button type="submit" disabled={reading || !confirmed}>Submit for approval</Button></div>
       </form>
     </>
   );
