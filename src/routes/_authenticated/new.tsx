@@ -1,5 +1,6 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
+import { ScopeToggle } from "@/components/ScopeBadge";
 import { toast } from "sonner";
 import { ScanLine, Sparkles, X } from "lucide-react";
 import { PageTitle } from "@/components/AppShell";
@@ -10,7 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   BASE_CURRENCY, CATEGORIES, CURRENCIES, PAYMENT_LABEL, PAYMENT_METHODS, convert, money,
-  type Category, type PaymentMethod,
+  type Category, type PaymentMethod, type Scope,
 } from "@/lib/expenses";
 import { useStore } from "@/lib/store";
 import { extractReceipt } from "@/lib/receipt-extract.functions";
@@ -20,12 +21,13 @@ import { cn } from "@/lib/utils";
 type LocalReceipt = { file: File; name: string; type: string; dataUrl: string };
 
 export const Route = createFileRoute("/_authenticated/new")({
+  validateSearch: (s: Record<string, unknown>): { edit?: string } => (typeof s["edit"] === "string" ? { edit: s["edit"] } : {}),
   head: () => ({
     meta: [
-      { title: "Submit an expense — Ledgerline" },
-      { name: "description", content: "Scan a bill in any currency and submit it for approval." },
-      { property: "og:title", content: "Submit an expense — Ledgerline" },
-      { property: "og:description", content: "Scan a bill in any currency and submit it for approval." },
+      { title: "Add expense — Ledgerline" },
+      { name: "description", content: "Scan a bill in any currency and tag it business or personal." },
+      { property: "og:title", content: "Add expense — Ledgerline" },
+      { property: "og:description", content: "Scan a bill in any currency and tag it business or personal." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
     ],
@@ -46,15 +48,19 @@ const isDate = (s: string | null | undefined): s is string => !!s && /^\d{4}-\d{
 interface Scan { merchant: string; date: string; amount: string; currency: string }
 
 function NewExpense() {
-  const { user, submit: submitExpense } = useStore();
+  const { save, expenses, members } = useStore();
   const nav = useNavigate();
+  const { edit } = Route.useSearch();
+  const editing = edit ? expenses.find((e) => e.id === edit) : undefined;
+  const [scope, setScope] = useState<Scope>("personal");
+  const [memberId, setMemberId] = useState<string>("me");
   const [saving, setSaving] = useState(false);
   const [title, setTitle] = useState("");
   const [merchant, setMerchant] = useState("");
   const [amount, setAmount] = useState("");
   const [currency, setCurrency] = useState<string>("INR");
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("upi");
-  const [category, setCategory] = useState<Category>("Travel");
+  const [category, setCategory] = useState<Category>("Groceries");
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
   const [description, setDescription] = useState("");
   const [receipts, setReceipts] = useState<LocalReceipt[]>([]);
@@ -64,6 +70,13 @@ function NewExpense() {
   const [autoFilled, setAutoFilled] = useState<Set<string>>(new Set());
   const [fx, setFx] = useState<{ rate: number; date: string } | { error: string } | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (!editing) return;
+    setTitle(editing.title); setMerchant(editing.merchant ?? ""); setAmount(String(editing.originalAmount)); setCurrency(editing.currency);
+    setPaymentMethod(editing.paymentMethod); setCategory(editing.category); setDate(editing.date); setDescription(editing.description);
+    setScope(editing.scope); setMemberId(editing.memberId ?? "me");
+  }, [editing]);
 
   // Live rate for the bill date
   useEffect(() => {
@@ -94,6 +107,7 @@ function NewExpense() {
       if (x.category) { setCategory(x.category); filled.add("category"); }
       if (x.payment_method) { setPaymentMethod(x.payment_method); filled.add("payment"); }
       if (x.description && !description) { setDescription(x.description); filled.add("description"); }
+      if (x.scope) { setScope(x.scope); filled.add("scope"); }
       const cur = x.currency && /^[A-Z]{3}$/.test(x.currency.toUpperCase()) ? x.currency.toUpperCase() : currency;
       setScan({ merchant: x.merchant ?? "", date: isDate(x.date) ? x.date : date, amount: x.amount != null ? String(x.amount) : "", currency: cur });
       setAutoFilled(filled);
@@ -125,12 +139,13 @@ function NewExpense() {
     if (!confirmed) { toast.error("Confirm the scanned bill details first"); return; }
     setSaving(true);
     try {
-      await submitExpense(
-        { title: title.trim(), amount: Number(amount), currency, paymentMethod, category, date, description, merchant: merchant.trim() || null },
-        receipts.map((r) => r.file),
+      await save(
+        { title: title.trim(), amount: Number(amount), currency, paymentMethod, category, date, description, merchant: merchant.trim() || null,
+          scope, memberId: memberId === "me" ? null : memberId },
+        { ...(editing ? { id: editing.id } : {}), files: receipts.map((r) => r.file) },
       );
-      toast.success("Submitted to your department manager");
-      nav({ to: "/dashboard" });
+      toast.success(editing ? "Expense updated" : "Expense saved");
+      nav({ to: editing ? "/expenses" : "/dashboard" });
     } catch (e) {
       toast.error((e as Error).message);
     } finally {
@@ -143,7 +158,7 @@ function NewExpense() {
 
   return (
     <>
-      <PageTitle eyebrow="New expense" title="Scan a bill" sub={`Any currency. Routes to the ${user.department} manager, then Finance.`} />
+      <PageTitle eyebrow={editing ? "Edit expense" : "New expense"} title={editing ? editing.title : "Scan a bill"} sub="Any currency — we convert to ₹ with that day's rate." />
       <form onSubmit={submit} className="grid gap-5 lg:grid-cols-[1fr_1.3fr]">
         {/* Scan column */}
         <div className="space-y-4">
@@ -193,6 +208,22 @@ function NewExpense() {
 
         {/* Details column */}
         <div className={cn("grid content-start gap-4 rounded-3xl border bg-card p-5 sm:p-6", !confirmed && "pointer-events-none opacity-50")}>
+          <div className="grid gap-2">
+            <Label>Business or personal?{af("scope")}</Label>
+            <ScopeToggle value={scope} onChange={setScope} />
+          </div>
+          <div className="grid gap-2">
+            <Label>For whom</Label>
+            <div className="flex flex-wrap gap-2" role="radiogroup" aria-label="For whom">
+              {[{ id: "me", name: "Me" }, ...members].map((m) => (
+                <button key={m.id} type="button" role="radio" aria-checked={memberId === m.id} onClick={() => setMemberId(m.id)}
+                  className={cn("rounded-full border px-3 py-1.5 text-xs font-medium transition", memberId === m.id ? "border-primary bg-primary text-primary-foreground" : "bg-background hover:bg-secondary")}>
+                  {m.name}
+                </button>
+              ))}
+              <Link to="/family" className="rounded-full border border-dashed px-3 py-1.5 text-xs text-muted-foreground">+ Family</Link>
+            </div>
+          </div>
           <div className="grid gap-2"><Label htmlFor="t">Title{af("title")}</Label><Input id="t" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Client lunch – Acme" /></div>
           <div className="grid gap-2"><Label htmlFor="m">Merchant{af("merchant")}</Label><Input id="m" value={merchant} onChange={(e) => setMerchant(e.target.value)} /></div>
           <div className="grid grid-cols-[110px_1fr] gap-3">
@@ -211,7 +242,7 @@ function NewExpense() {
                 : "error" in fx ? <span className="text-destructive">{fx.error}</span>
                 : <>
                     <span className="font-mono font-semibold">{converted != null ? money(converted) : "—"}</span>
-                    <span className="ml-2 text-xs text-muted-foreground">1 {currency} = {fx.rate.toFixed(6)} USD · rate of {fx.date}</span>
+                    <span className="ml-2 text-xs text-muted-foreground">1 {currency} = {fx.rate.toFixed(4)} INR · rate of {fx.date}</span>
                   </>}
             </div>
           )}
@@ -237,8 +268,8 @@ function NewExpense() {
             </div>
           </div>
           <div className="grid gap-2"><Label htmlFor="desc">Business purpose{af("description")}</Label><Textarea id="desc" value={description} onChange={(e) => setDescription(e.target.value)} /></div>
-          <Button type="submit" size="lg" className="rounded-2xl" disabled={reading || saving || !confirmed || receipts.length === 0}>
-            {saving ? "Submitting…" : receipts.length === 0 ? "Add a bill to submit" : "Submit for approval"}
+          <Button type="submit" size="lg" className="rounded-2xl" disabled={reading || saving || !confirmed}>
+            {saving ? "Saving…" : editing ? "Save changes" : "Save expense"}
           </Button>
         </div>
       </form>

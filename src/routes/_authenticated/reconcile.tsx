@@ -1,0 +1,134 @@
+import { createFileRoute } from "@tanstack/react-router";
+import { useMemo, useState } from "react";
+import { toast } from "sonner";
+import { BadgeCheck, Upload } from "lucide-react";
+import { PageTitle, Stat } from "@/components/AppShell";
+import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { BASE_CURRENCY, CURRENCIES, autoMatch, money, parseStatementCsv, type Match, type StatementLine } from "@/lib/expenses";
+import { useStore } from "@/lib/store";
+
+export const Route = createFileRoute("/_authenticated/reconcile")({
+  head: () => ({
+    meta: [
+      { title: "Bank reconciliation — Ledgerline" },
+      { name: "description", content: "Upload a bank or card statement and match it to your expenses automatically." },
+      { property: "og:title", content: "Bank reconciliation — Ledgerline" },
+      { property: "og:description", content: "Upload a bank or card statement and match it to your expenses automatically." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
+    ],
+  }),
+  component: Reconcile,
+});
+
+function Reconcile() {
+  const { expenses, reconcile } = useStore();
+  const [lines, setLines] = useState<StatementLine[]>([]);
+  const [fileName, setFileName] = useState("");
+  const [currency, setCurrency] = useState<string>(BASE_CURRENCY);
+  const [overrides, setOverrides] = useState<Record<string, string>>({});
+  const [busy, setBusy] = useState(false);
+
+  const matches: Match[] = useMemo(() => {
+    const auto = autoMatch(lines, expenses, currency);
+    return auto.map((m) => {
+      const o = overrides[m.line.ref];
+      if (o === undefined) return m;
+      return { ...m, expense: o === "none" ? null : expenses.find((e) => e.id === o) ?? null, score: 1 };
+    });
+  }, [lines, expenses, currency, overrides]);
+
+  const onFile = async (f: File | undefined) => {
+    if (!f) return;
+    try {
+      const parsed = parseStatementCsv(await f.text());
+      setLines(parsed); setFileName(f.name); setOverrides({});
+      toast.success(`${parsed.length} debit lines found`);
+    } catch (e) { toast.error((e as Error).message); }
+  };
+
+  const matched = matches.filter((m) => m.expense);
+  const confirmAll = async () => {
+    setBusy(true);
+    try {
+      for (const m of matched) await reconcile(m.expense!.id, `${fileName} · ${m.line.date} · ${m.line.description}`.slice(0, 300));
+      toast.success(`${matched.length} expenses marked as matched`);
+      setLines([]);
+    } catch (e) { toast.error((e as Error).message); } finally { setBusy(false); }
+  };
+
+  const reconciled = expenses.filter((e) => e.reconciledAt);
+  const open = expenses.filter((e) => !e.reconciledAt);
+
+  return (
+    <>
+      <PageTitle eyebrow="Bank" title="Reconcile statements" sub="Upload a CSV from your bank or card. We match each debit to an expense by amount, date and merchant." />
+      <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-3">
+        <Stat label="Matched" value={String(reconciled.length)} />
+        <Stat label="Not matched yet" value={String(open.length)} hint={money(open.reduce((s, e) => s + e.amount, 0))} />
+      </div>
+
+      <div className="mb-6 flex flex-wrap items-center gap-3 rounded-3xl border-2 border-dashed border-primary/40 bg-secondary/50 p-5">
+        <label className="inline-flex cursor-pointer items-center gap-2 rounded-2xl bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground">
+          <Upload className="h-4 w-4" /> Upload statement CSV
+          <input type="file" accept=".csv,text/csv" className="sr-only" onChange={(e) => onFile(e.target.files?.[0])} aria-label="Statement file" />
+        </label>
+        <div className="flex items-center gap-2 text-sm">
+          Statement currency
+          <Select value={currency} onValueChange={setCurrency}>
+            <SelectTrigger className="w-24" aria-label="Statement currency"><SelectValue /></SelectTrigger>
+            <SelectContent>{CURRENCIES.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
+          </Select>
+        </div>
+        <p className="w-full text-xs text-muted-foreground">Needs columns for date, description/narration, and debit (or amount). Dates like 01/10/2026 are read as day/month/year.</p>
+      </div>
+
+      {lines.length > 0 && (
+        <>
+          <div className="mb-3 flex items-center justify-between">
+            <h2 className="font-display text-xl font-bold">{matched.length} of {lines.length} matched</h2>
+            <Button onClick={confirmAll} disabled={busy || matched.length === 0}>Confirm {matched.length} matches</Button>
+          </div>
+          <ul className="space-y-2">
+            {matches.map((m) => (
+              <li key={m.line.ref} className="grid gap-2 rounded-2xl border bg-card p-3 sm:grid-cols-[1fr_1.2fr] sm:items-center">
+                <div className="min-w-0">
+                  <div className="truncate text-sm font-medium">{m.line.description || "—"}</div>
+                  <div className="font-mono text-xs text-muted-foreground">{m.line.date} · {money(m.line.amount, currency)}</div>
+                </div>
+                <div className="flex items-center gap-2">
+                  {m.expense && <BadgeCheck className="h-4 w-4 shrink-0 text-success" />}
+                  <Select value={m.expense?.id ?? "none"} onValueChange={(v) => setOverrides({ ...overrides, [m.line.ref]: v })}>
+                    <SelectTrigger aria-label={`Match for ${m.line.description}`} className="min-w-0"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">No match</SelectItem>
+                      {(m.expense ? [m.expense, ...open.filter((e) => e.id !== m.expense!.id)] : open).slice(0, 50).map((e) => (
+                        <SelectItem key={e.id} value={e.id}>{e.date} · {e.title} · {money(e.originalAmount, e.currency)}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
+
+      {lines.length === 0 && reconciled.length > 0 && (
+        <>
+          <h2 className="mb-3 mt-2 font-display text-xl font-bold">Recently matched</h2>
+          <ul className="space-y-2">
+            {reconciled.slice(0, 10).map((e) => (
+              <li key={e.id} className="flex items-center gap-3 rounded-2xl border bg-card p-3 text-sm">
+                <BadgeCheck className="h-4 w-4 text-success" />
+                <div className="min-w-0 flex-1"><div className="truncate font-medium">{e.title}</div><div className="truncate text-xs text-muted-foreground">{e.statementRef}</div></div>
+                <Button variant="ghost" size="sm" onClick={() => reconcile(e.id, null)}>Unmatch</Button>
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
+    </>
+  );
+}

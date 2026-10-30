@@ -9,7 +9,9 @@
 > the editor, so keep the branch in a working state.
 <!-- LOVABLE:END -->
 
-- Approval transitions are enforced in the database (review_expense function + RLS); src/lib/expenses.ts mirrors them as pure, tested functions for the UI — the server is the source of truth.
-- Data lives in Lovable Cloud; src/lib/store.tsx is the single client data layer for signed-in pages under src/routes/_authenticated.
+- Personal/family tracker, no approvals: expense rules live as pure tested functions in src/lib/expenses.ts.
+- No sign-in screen: src/routes/_authenticated/route.tsx starts a silent per-browser anonymous session; RLS scopes all rows to it.
+- Data lives in Lovable Cloud; src/lib/store.tsx is the single client data layer for pages under src/routes/_authenticated.
+- Currency conversion happens server-side in src/lib/fx.functions.ts (Frankfurter/ECB rates for the bill date) so stored INR amounts can't be faked by the client.
 - Reports are generated in the browser (src/lib/reports.ts) from data the user can already see, so RLS scoping applies automatically.
 - Receipt reading runs in a server function (src/lib/receipt-extract.functions.ts) so the AI key stays server-side.

@@ -5,7 +5,8 @@ import { PageTitle } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { DEPARTMENTS } from "@/lib/expenses";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { applyFilters } from "@/lib/expenses";
 import { buildReport, downloadBlob, toCsv, toPdf, type ReportKind } from "@/lib/reports";
 import { useStore } from "@/lib/store";
 
@@ -13,9 +14,9 @@ export const Route = createFileRoute("/_authenticated/reports")({
   head: () => ({
     meta: [
       { title: "Reports — Ledgerline" },
-      { name: "description", content: "Download expense, reimbursement and department spending reports as CSV or PDF." },
+      { name: "description", content: "Download business, personal and category reports as CSV or PDF." },
       { property: "og:title", content: "Reports — Ledgerline" },
-      { property: "og:description", content: "Download expense, reimbursement and department spending reports as CSV or PDF." },
+      { property: "og:description", content: "Download business, personal and category reports as CSV or PDF." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
     ],
@@ -23,51 +24,53 @@ export const Route = createFileRoute("/_authenticated/reports")({
   component: Reports,
 });
 
-const KINDS: { kind: ReportKind; title: string; desc: string; reviewerOnly?: boolean }[] = [
-  { kind: "expenses", title: "Expenses", desc: "Every expense with employee, merchant, category, status and amount." },
-  { kind: "reimbursements", title: "Reimbursements", desc: "Approved and paid expenses, with payment date and who paid." },
-  { kind: "departments", title: "Department spending", desc: "Budget, approved, pending and remaining per department.", reviewerOnly: true },
+const KINDS: { kind: ReportKind; title: string; desc: string }[] = [
+  { kind: "business", title: "Business expenses", desc: "Only business-tagged spend — ready to claim or hand to your accountant." },
+  { kind: "expenses", title: "All expenses", desc: "Everything, with type, family member, payment method and currency conversion." },
+  { kind: "categories", title: "By category", desc: "Business vs personal totals per category, with monthly budgets." },
 ];
 
 function Reports() {
-  const { user, expenses, people, budgets } = useStore();
+  const { expenses, memberName, members, budgets } = useStore();
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
-  const inRange = expenses.filter((e) => (!from || e.date >= from) && (!to || e.date <= to));
-  const depts = user.role === "manager" ? [user.department] : DEPARTMENTS;
-  const scope = user.role === "employee" ? "your expenses" : user.role === "manager" ? `${user.department} department` : "all departments";
+  const [member, setMember] = useState("all");
+  const list = applyFilters(expenses, { from, to, memberId: member });
   const stamp = new Date().toISOString().slice(0, 10);
-  const subtitle = `${scope} · ${from || "start"} to ${to || "today"} · generated ${stamp}`;
+  const subtitle = `${member === "all" ? "Everyone" : memberName(member === "me" ? null : member)} · ${from || "start"} to ${to || "today"} · amounts in INR · generated ${stamp}`;
 
-  const csv = (k: ReportKind) => {
-    const r = buildReport(k, inRange, people, budgets, depts);
-    downloadBlob(new Blob([toCsv(r)], { type: "text/csv;charset=utf-8" }), `ledgerline-${k}-${stamp}.csv`);
-  };
+  const csv = (k: ReportKind) => downloadBlob(new Blob([toCsv(buildReport(k, list, memberName, budgets))], { type: "text/csv;charset=utf-8" }), `ledgerline-${k}-${stamp}.csv`);
   const pdf = async (k: ReportKind) => {
-    try {
-      const r = buildReport(k, inRange, people, budgets, depts);
-      downloadBlob(await toPdf(r, subtitle), `ledgerline-${k}-${stamp}.pdf`);
-    } catch {
-      toast.error("Couldn't create the PDF");
-    }
+    try { downloadBlob(await toPdf(buildReport(k, list, memberName, budgets), subtitle), `ledgerline-${k}-${stamp}.pdf`); } catch { toast.error("Couldn't create the PDF"); }
   };
 
   return (
     <>
-      <PageTitle title="Reports" sub={`Download reports for ${scope}.`} />
-      <div className="mb-6 flex flex-wrap items-end gap-4 rounded-2xl border bg-card p-4">
+      <PageTitle eyebrow="Reports" title="Export" sub="CSV for spreadsheets, PDF for sharing." />
+      <div className="mb-6 grid gap-3 rounded-3xl border bg-card p-5 sm:grid-cols-4 sm:items-end">
         <div className="grid gap-1"><Label htmlFor="from">From</Label><Input id="from" type="date" value={from} onChange={(e) => setFrom(e.target.value)} /></div>
         <div className="grid gap-1"><Label htmlFor="to">To</Label><Input id="to" type="date" value={to} onChange={(e) => setTo(e.target.value)} /></div>
-        <p className="text-sm text-muted-foreground">{inRange.length} expense{inRange.length === 1 ? "" : "s"} in range</p>
+        <div className="grid gap-1">
+          <Label>For</Label>
+          <Select value={member} onValueChange={setMember}>
+            <SelectTrigger aria-label="Family member"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Everyone</SelectItem>
+              <SelectItem value="me">Me</SelectItem>
+              {members.map((m) => <SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        </div>
+        <p className="text-sm text-muted-foreground">{list.length} expense{list.length === 1 ? "" : "s"} in range</p>
       </div>
       <div className="grid gap-4 md:grid-cols-3">
-        {KINDS.filter((k) => !k.reviewerOnly || user.role !== "employee").map((k) => (
-          <div key={k.kind} className="flex flex-col rounded-2xl border bg-card p-5">
-            <h2 className="font-display text-xl">{k.title}</h2>
+        {KINDS.map((k) => (
+          <div key={k.kind} className="flex flex-col rounded-3xl border bg-card p-5">
+            <h2 className="font-display text-xl font-bold">{k.title}</h2>
             <p className="mt-1 flex-1 text-sm text-muted-foreground">{k.desc}</p>
             <div className="mt-4 flex gap-2">
-              <Button variant="outline" size="sm" onClick={() => csv(k.kind)}>Download CSV</Button>
-              <Button size="sm" onClick={() => void pdf(k.kind)}>Download PDF</Button>
+              <Button variant="outline" size="sm" onClick={() => csv(k.kind)}>CSV</Button>
+              <Button size="sm" onClick={() => void pdf(k.kind)}>PDF</Button>
             </div>
           </div>
         ))}

@@ -12,7 +12,8 @@ const Extracted = z.object({
   currency: z.string().nullable().describe("ISO 4217 code, e.g. INR, USD, EUR"),
   payment_method: z.enum(["cash", "upi", "credit_card", "debit_card", "forex_card", "company_card", "bank_transfer", "other"]).nullable(),
   description: z.string().nullable().describe("One-line business purpose guess from the items"),
-  category: z.enum(["Travel", "Meals", "Software", "Equipment", "Training", "Office", "Other"]).nullable(),
+  category: z.enum(["Groceries", "Dining", "Travel", "Fuel & Transport", "Shopping", "Bills & Utilities", "Rent & Home", "Health", "Education", "Entertainment", "Software & Subscriptions", "Office & Supplies", "Client & Business Meals", "Other"]).nullable(),
+  scope: z.enum(["personal", "business"]).nullable().describe("business if it looks like a work/company expense (GST invoice to a company, office supplies, software, client meals, business travel), otherwise personal"),
 });
 export type ExtractedReceipt = z.infer<typeof Extracted>;
 
@@ -38,7 +39,7 @@ export const extractReceipt = createServerFn({ method: "POST" })
           {
             role: "user",
             content: [
-              { type: "text", text: "Read this receipt or bill. Extract: a short expense title, merchant name, transaction date (YYYY-MM-DD), grand total paid as a number in the bill's own currency, the ISO currency code (infer from symbols like ₹, €, £, ¥, AED, S$ or the country/address), the payment method if shown (UPI ref/VPA → upi, card last-4 with credit/debit wording, cash, etc.), the best-fitting category, and a one-line description of what was bought. Use null for anything not visible." },
+              { type: "text", text: "Read this receipt or bill. Extract: a short expense title, merchant name, transaction date (YYYY-MM-DD), grand total paid as a number in the bill's own currency, the ISO currency code (infer from symbols like ₹, €, £, ¥, AED, S$ or the country/address), the payment method if shown (UPI ref/VPA → upi, card last-4 with credit/debit wording, cash, etc.), the best-fitting category, whether it is likely a business or personal expense, and a one-line description of what was bought. Use null for anything not visible." },
               isPdf
                 ? { type: "file", data: data.dataUrl, mediaType: "application/pdf", filename: "receipt.pdf" }
                 : { type: "image", image: data.dataUrl, mediaType: data.mimeType },

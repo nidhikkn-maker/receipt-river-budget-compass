@@ -1,12 +1,13 @@
 # Roadmap
 - [ ] Review https://yaba--staging.vercel.app/actual_expenses — blocked: page requires Google sign-in
 - [x] Receipt reading + review step, Cloud sign-in + storage, CSV/PDF reports
-- [ ] PIVOT: personal + family expense tracker — remove approval workflow and roles
-- [ ] Family members (who the expense was for/by)
-- [ ] Business vs personal tag on every expense, with separate totals/filters/reports
-- [ ] Multi-currency bills: detect currency, convert with that date's live rate
-- [ ] Auto-fill all fields from receipt (title, category, currency, payment method, scope…)
-- [ ] Payment method: cash, UPI, credit/debit/forex/company card, bank transfer, other
-- [ ] Bank statement reconciliation (upload CSV, auto-match, confirm)
-- [ ] Category budgets (replaces department budgets)
-- [ ] New distinctive blue design (mobile friendly)
+- [x] Remove sign-in screen (app opens directly; private per-device session)
+- [x] PIVOT: personal + family expense tracker — remove approval workflow and roles
+- [x] Family members (who the expense was for/by)
+- [x] Business vs personal tag on every expense, with separate totals/filters/reports
+- [x] Multi-currency bills: detect currency, convert with that date's live rate
+- [x] Auto-fill all fields from receipt (title, category, currency, payment method, scope…)
+- [x] Payment method: cash, UPI, credit/debit/forex/company card, bank transfer, other
+- [x] Bank statement reconciliation (upload CSV, auto-match, confirm)
+- [x] Category budgets (replaces department budgets)
+- [x] New distinctive blue design (mobile friendly)

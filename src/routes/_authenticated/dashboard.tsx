@@ -1,16 +1,17 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { Bar, BarChart, ResponsiveContainer, Tooltip, XAxis } from "recharts";
 import { Stat } from "@/components/AppShell";
 import { ExpenseTable } from "@/components/ExpenseTable";
-import { canReview, money } from "@/lib/expenses";
+import { money, totalsBy, totalsByScope } from "@/lib/expenses";
 import { useStore } from "@/lib/store";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
   head: () => ({
     meta: [
-      { title: "Overview — Ledgerline Expenses" },
-      { name: "description", content: "Track team expenses, approvals and reimbursements in one ledger." },
-      { property: "og:title", content: "Overview — Ledgerline Expenses" },
-      { property: "og:description", content: "Track team expenses, approvals and reimbursements in one ledger." },
+      { title: "Home — Ledgerline" },
+      { name: "description", content: "Your personal, family and business spending at a glance." },
+      { property: "og:title", content: "Home — Ledgerline" },
+      { property: "og:description", content: "Your personal, family and business spending at a glance." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
     ],
@@ -19,35 +20,61 @@ export const Route = createFileRoute("/_authenticated/dashboard")({
 });
 
 function Overview() {
-  const { user, expenses } = useStore();
-  const mine = expenses.filter((e) => e.employeeId === user.id);
-  const sum = (s: string[]) => mine.filter((e) => s.includes(e.status)).reduce((a, e) => a + e.amount, 0);
-  const queue = expenses.filter((e) => canReview(user, e));
+  const { expenses, members, memberName } = useStore();
+  const month = new Date().toISOString().slice(0, 7);
+  const thisMonth = expenses.filter((e) => e.date.startsWith(month));
+  const t = totalsByScope(thisMonth);
+  const byMember = totalsBy(thisMonth, (e) => e.memberId ?? "me");
+  const memberRows = [{ id: "me", name: "Me" }, ...members].map((m) => ({ name: m.id === "me" ? "Me" : memberName(m.id), value: byMember[m.id] ?? 0 })).filter((r) => r.value > 0);
+  const unmatched = expenses.filter((e) => !e.reconciledAt && ["upi", "credit_card", "debit_card", "forex_card", "bank_transfer"].includes(e.paymentMethod)).length;
+  const pct = t.total ? Math.round((t.business / t.total) * 100) : 0;
 
-  const inReview = sum(["pending_manager", "pending_finance"]);
-  const owed = sum(["approved"]);
   return (
     <>
       <section className="relative mb-6 overflow-hidden rounded-3xl bg-hero p-6 text-primary-foreground shadow-float sm:p-8">
         <div className="pointer-events-none absolute -right-16 -top-16 h-56 w-56 rounded-full border-[28px] border-primary-foreground/10" />
-        <div className="font-mono text-[11px] uppercase tracking-[0.2em] opacity-80">{user.department} · {user.role === "manager" ? "Department manager" : user.role === "finance" ? "Finance" : "Employee"}</div>
-        <h1 className="mt-1 font-display text-3xl font-extrabold tracking-tight sm:text-5xl">Hi {user.name.split(" ")[0]}.</h1>
-        <div className="mt-6 grid grid-cols-2 gap-4 sm:max-w-lg">
-          <div><div className="text-xs opacity-80">In review</div><div className="font-mono text-2xl">{money(inReview)}</div></div>
-          <div><div className="text-xs opacity-80">Owed to you</div><div className="font-mono text-2xl">{money(owed)}</div></div>
+        <div className="font-mono text-[11px] uppercase tracking-[0.2em] opacity-80">{new Date().toLocaleString("en", { month: "long", year: "numeric" })}</div>
+        <div className="mt-1 font-display text-4xl font-extrabold tracking-tight sm:text-6xl">{money(t.total)}</div>
+        <div className="text-sm opacity-80">spent this month</div>
+        <div className="mt-6 sm:max-w-md">
+          <div className="flex h-3 overflow-hidden rounded-full bg-primary-foreground/20">
+            <div className="bg-primary-foreground" style={{ width: `${pct}%` }} />
+          </div>
+          <div className="mt-2 flex justify-between text-sm">
+            <span><b className="font-mono">{money(t.business)}</b> business</span>
+            <span><b className="font-mono">{money(t.personal)}</b> personal</span>
+          </div>
         </div>
-        {user.role !== "employee" && queue.length > 0 && (
-          <Link to="/approvals" className="mt-6 inline-flex items-center gap-2 rounded-full bg-primary-foreground px-4 py-2 text-sm font-semibold text-primary">
-            {queue.length} waiting for your {user.role === "manager" ? "review" : "sign-off"} →
-          </Link>
-        )}
       </section>
-      <div className="mb-8 grid grid-cols-2 gap-3 sm:grid-cols-2">
-        <Stat label="Reimbursed" value={money(sum(["reimbursed"]))} />
-        <Stat label="Rejected" value={money(sum(["rejected"]))} />
+
+      <div className="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <Stat tone="business" label="Business (all time)" value={money(totalsByScope(expenses).business)} />
+        <Stat tone="personal" label="Personal (all time)" value={money(totalsByScope(expenses).personal)} />
+        <Stat label="Expenses this month" value={String(thisMonth.length)} />
+        <Link to="/reconcile"><Stat label="Not yet matched to bank" value={String(unmatched)} hint="Tap to reconcile" /></Link>
       </div>
-      <h2 className="mb-3 font-display text-xl font-bold">My expenses</h2>
-      <ExpenseTable items={mine} showEmployee={false} empty="You haven't submitted any expenses yet." />
+
+      {memberRows.length > 0 && (
+        <div className="mb-8 rounded-3xl border bg-card p-5">
+          <div className="mb-2 flex items-center justify-between">
+            <h2 className="font-display text-lg font-bold">Who spent this month</h2>
+            <Link to="/family" className="text-sm text-primary">Manage family</Link>
+          </div>
+          <ResponsiveContainer width="100%" height={160}>
+            <BarChart data={memberRows}>
+              <XAxis dataKey="name" fontSize={12} tickLine={false} axisLine={false} />
+              <Tooltip cursor={{ fill: "var(--secondary)" }} formatter={(v: number) => money(v)} />
+              <Bar dataKey="value" fill="var(--chart-1)" radius={[10, 10, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      )}
+
+      <div className="mb-3 flex items-center justify-between">
+        <h2 className="font-display text-xl font-bold">Recent</h2>
+        <Link to="/expenses" className="text-sm text-primary">See all</Link>
+      </div>
+      <ExpenseTable items={expenses.slice(0, 6)} empty="No expenses yet — tap Add to scan your first bill." />
     </>
   );
 }
