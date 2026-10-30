@@ -25,7 +25,7 @@ export interface HistoryEntry {
   at: string;
   by: string;
   action: "submitted" | "manager_approved" | "finance_approved" | "rejected" | "reimbursed";
-  note?: string;
+  note?: string | undefined;
 }
 
 export interface Receipt {
