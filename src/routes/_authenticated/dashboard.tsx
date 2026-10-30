@@ -63,7 +63,7 @@ function Overview() {
           <ResponsiveContainer width="100%" height={160}>
             <BarChart data={memberRows}>
               <XAxis dataKey="name" fontSize={12} tickLine={false} axisLine={false} />
-              <Tooltip formatter={(v: number) => money(v)} />
+              <Tooltip cursor={{ fill: "var(--secondary)" }} formatter={(v: number) => money(v)} />
               <Bar dataKey="value" fill="var(--chart-1)" radius={[10, 10, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
