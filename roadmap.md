@@ -1,6 +1,7 @@
 # Roadmap
 - [ ] Review https://yaba--staging.vercel.app/actual_expenses — blocked: page requires Google sign-in
 - [x] Receipt reading + review step, Cloud sign-in + storage, CSV/PDF reports
+- [ ] Remove sign-in screen (app opens directly; private per-device session)
 - [ ] PIVOT: personal + family expense tracker — remove approval workflow and roles
 - [ ] Family members (who the expense was for/by)
 - [ ] Business vs personal tag on every expense, with separate totals/filters/reports
