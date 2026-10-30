@@ -1,8 +1,9 @@
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { submitExpense } from "./fx.functions";
 import {
   DEPARTMENTS, validateBudget, validateSubmission,
-  type Budgets, type Category, type Department, type Expense, type HistoryAction, type Receipt, type Role, type Status, type Submission, type User,
+  type Budgets, type Category, type PaymentMethod, type Department, type Expense, type HistoryAction, type Receipt, type Role, type Status, type Submission, type User,
 } from "./expenses";
 
 interface Ctx {
@@ -13,6 +14,7 @@ interface Ctx {
   loading: boolean;
   refresh: () => Promise<void>;
   submit: (s: Omit<Submission, "receiptCount">, files: File[]) => Promise<void>;
+  reconcile: (id: string, ref: string | null) => Promise<void>;
   review: (id: string, decision: "approve" | "reject" | "reimburse", note?: string) => Promise<void>;
   setBudget: (dept: Department, amount: number) => Promise<void>;
   signedUrl: (path: string) => Promise<string | null>;
@@ -49,7 +51,9 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
     setExpenses(
       (e.data ?? []).map((x) => ({
         id: x.id, employeeId: x.employee_id, department: x.department as Department, title: x.title, merchant: x.merchant,
-        category: x.category as Category, amount: Number(x.amount), date: x.expense_date, description: x.description,
+        category: x.category as Category, amount: Number(x.amount),
+        currency: x.currency, originalAmount: Number(x.original_amount ?? x.amount), fxRate: Number(x.fx_rate),
+        paymentMethod: x.payment_method as PaymentMethod, reconciledAt: x.reconciled_at, statementRef: x.statement_ref, date: x.expense_date, description: x.description,
         receipts: (x.receipts as unknown as Receipt[]) ?? [], status: x.status as Status, history: hist[x.id] ?? [],
       })),
     );
@@ -74,16 +78,22 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
       if (error) throw new Error(`Couldn't upload ${f.name}`);
       receipts.push({ name: f.name, type: f.type, path });
     }
-    const { error } = await supabase.from("expenses").insert({
-      employee_id: userId, department: user.department, title: s.title.trim(), merchant: s.merchant, category: s.category,
-      amount: s.amount, expense_date: s.date, description: s.description, receipts: receipts as never, status: "pending_manager",
-    });
-    if (error) throw new Error(error.message);
+    const res = await submitExpense({ data: {
+      title: s.title.trim(), merchant: s.merchant, category: s.category, currency: s.currency, originalAmount: s.amount,
+      date: s.date, description: s.description, paymentMethod: s.paymentMethod, receipts,
+    } });
+    if (!res.ok) throw new Error(res.error);
     await refresh();
   };
 
   const review: Ctx["review"] = async (id, decision, note) => {
     const { error } = await supabase.rpc("review_expense", { _expense_id: id, _decision: decision, _note: note ?? "" });
+    if (error) throw new Error(error.message);
+    await refresh();
+  };
+
+  const reconcile: Ctx["reconcile"] = async (id, ref) => {
+    const { error } = await supabase.rpc("reconcile_expense", { _expense_id: id, _statement_ref: ref as string });
     if (error) throw new Error(error.message);
     await refresh();
   };
@@ -101,7 +111,7 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
   };
 
   return (
-    <StoreCtx.Provider value={{ user, people, expenses, budgets, loading, refresh, submit, review, setBudget, signedUrl }}>
+    <StoreCtx.Provider value={{ user, people, expenses, budgets, loading, refresh, submit, reconcile, review, setBudget, signedUrl }}>
       {children}
     </StoreCtx.Provider>
   );
