@@ -112,7 +112,7 @@ function Plan() {
                 <div className="min-w-0 flex-1">
                   <div className="truncate font-medium">{u.name}</div>
                   <div className="flex gap-1 text-[11px]">
-                    {u.overdue && <span className={cn("rounded-full px-2", STATUS_STYLE.overdue)}>Overdue</span>}
+                    {u.overdue && <span className={cn("rounded-full px-2", STATUS_STYLE["overdue"])}>Overdue</span>}
                     {u.direction === "in" && !u.confirmed && <span className="rounded-full bg-muted px-2">Unconfirmed</span>}
                   </div>
                 </div>
