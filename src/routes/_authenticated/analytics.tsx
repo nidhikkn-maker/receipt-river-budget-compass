@@ -4,6 +4,39 @@ import { PageTitle, Stat } from "@/components/AppShell";
 import { CATEGORIES, DEPARTMENTS, departmentSpend, money } from "@/lib/expenses";
 import { useStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
+import { useState } from "react";
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import type { Department } from "@/lib/expenses";
+
+function BudgetEditor({ dept, current }: { dept: Department; current: number }) {
+  const { setBudget } = useStore();
+  const [editing, setEditing] = useState(false);
+  const [value, setValue] = useState(String(current));
+  const [busy, setBusy] = useState(false);
+  if (!editing)
+    return <Button variant="ghost" size="sm" className="h-6 px-2 text-xs" onClick={() => { setValue(String(current)); setEditing(true); }}>Edit budget</Button>;
+  const save = async () => {
+    setBusy(true);
+    try {
+      await setBudget(dept, Number(value));
+      toast.success(`${dept} budget updated`);
+      setEditing(false);
+    } catch (e) {
+      toast.error((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <span className="inline-flex items-center gap-1">
+      <Input aria-label={`${dept} budget`} type="number" min="0" step="100" value={value} onChange={(e) => setValue(e.target.value)} className="h-7 w-32 font-mono text-xs" />
+      <Button size="sm" className="h-7 px-2 text-xs" disabled={busy} onClick={save}>Save</Button>
+      <Button variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={() => setEditing(false)}>Cancel</Button>
+    </span>
+  );
+}
 
 export const Route = createFileRoute("/_authenticated/analytics")({
   head: () => ({
@@ -49,7 +82,7 @@ function Analytics() {
           return (
             <div key={r.dept}>
               <div className="mb-1 flex justify-between text-sm">
-                <span className="font-medium">{r.dept}</span>
+                <span className="flex items-center gap-2 font-medium">{r.dept}{user.role === "finance" && <BudgetEditor dept={r.dept} current={r.budget} />}</span>
                 <span className={cn("font-mono", over && "text-destructive")}>
                   {money(r.committed)} <span className="text-muted-foreground">+ {money(r.pending)} pending / {money(r.budget)}</span>
                 </span>
