@@ -13,7 +13,7 @@ interface Ctx {
 const StoreCtx = createContext<Ctx | null>(null);
 
 export function StoreProvider({ children }: { children: ReactNode }) {
-  const [userId, setUserId] = useState(USERS[0].id);
+  const [userId, setUserId] = useState(USERS[0]!.id);
   const [expenses, setExpenses] = useState<Expense[]>(SEED);
   const [loaded, setLoaded] = useState(false);
 
@@ -35,7 +35,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     } catch {}
   }, [userId, expenses, loaded]);
 
-  const user = USERS.find((u) => u.id === userId) ?? USERS[0];
+  const user = USERS.find((u) => u.id === userId) ?? USERS[0]!;
   return (
     <StoreCtx.Provider
       value={{

@@ -43,14 +43,14 @@ function NewExpense() {
   const onFiles = async (files: FileList | null) => {
     if (!files) return;
     const big = Array.from(files).find((f) => f.size > 2 * 1024 * 1024);
-    if (big) return toast.error(`${big.name} is larger than 2 MB`);
+    if (big) { toast.error(`${big.name} is larger than 2 MB`); return; }
     const read = await Promise.all(Array.from(files).map(readFile));
     setReceipts((r) => [...r, ...read]);
   };
 
   const submit = (ev: React.FormEvent) => {
     ev.preventDefault();
-    if (!title.trim()) return toast.error("Add a title");
+    if (!title.trim()) { toast.error("Add a title"); return; }
     try {
       upsert(createExpense(user, { title: title.trim(), amount: Number(amount), category, date, description, receipts }));
       toast.success("Submitted to your department manager");
