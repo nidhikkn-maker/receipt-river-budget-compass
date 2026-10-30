@@ -84,7 +84,7 @@ function NewExpense() {
       setSaving(true);
       await submitExpense({ title: title.trim(), amount: Number(amount), category, date, description, merchant: merchant || null }, receipts.map((r) => r.file));
       toast.success("Submitted to your department manager");
-      nav({ to: "/" });
+      nav({ to: "/dashboard" });
     } catch (e) {
       toast.error((e as Error).message);
     } finally {
