@@ -60,50 +60,60 @@
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-success: var(--success);
+  --color-ink: var(--ink);
+  --color-ink-foreground: var(--ink-foreground);
+  --color-ink-muted: var(--ink-muted);
+  --color-primary-glow: var(--primary-glow);
   --color-warning: var(--warning);
   --color-info: var(--info);
-  --font-sans: "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
-  --font-mono: "IBM Plex Mono", ui-monospace, monospace;
-  --font-display: "Fraunces", Georgia, serif;
+  --font-sans: "Instrument Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+  --font-display: "Bricolage Grotesque", ui-sans-serif, sans-serif;
 }
 
 :root {
-  --radius: 0.375rem;
-  --background: oklch(0.975 0.01 85);
-  --foreground: oklch(0.22 0.02 160);
-  --card: oklch(0.99 0.006 85);
-  --card-foreground: oklch(0.22 0.02 160);
-  --popover: oklch(0.99 0.006 85);
-  --popover-foreground: oklch(0.22 0.02 160);
-  --primary: oklch(0.38 0.08 160);
-  --primary-foreground: oklch(0.98 0.01 85);
-  --secondary: oklch(0.93 0.02 85);
-  --secondary-foreground: oklch(0.25 0.03 160);
-  --muted: oklch(0.94 0.014 85);
-  --muted-foreground: oklch(0.5 0.02 160);
-  --accent: oklch(0.88 0.09 80);
-  --accent-foreground: oklch(0.25 0.04 60);
-  --destructive: oklch(0.55 0.19 28);
-  --destructive-foreground: oklch(0.98 0.01 85);
-  --success: oklch(0.55 0.13 150);
-  --warning: oklch(0.72 0.14 70);
-  --info: oklch(0.55 0.1 240);
-  --border: oklch(0.87 0.02 85);
-  --input: oklch(0.87 0.02 85);
-  --ring: oklch(0.38 0.08 160);
-  --chart-1: oklch(0.38 0.08 160);
-  --chart-2: oklch(0.72 0.14 70);
-  --chart-3: oklch(0.55 0.1 240);
-  --chart-4: oklch(0.55 0.19 28);
-  --chart-5: oklch(0.6 0.09 120);
-  --sidebar: oklch(0.96 0.012 85);
-  --sidebar-foreground: oklch(0.22 0.02 160);
-  --sidebar-primary: oklch(0.38 0.08 160);
-  --sidebar-primary-foreground: oklch(0.98 0.01 85);
-  --sidebar-accent: oklch(0.93 0.02 85);
-  --sidebar-accent-foreground: oklch(0.22 0.02 160);
-  --sidebar-border: oklch(0.87 0.02 85);
-  --sidebar-ring: oklch(0.38 0.08 160);
+  --radius: 0.9rem;
+  --background: oklch(0.975 0.008 250);
+  --foreground: oklch(0.2 0.05 262);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.2 0.05 262);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.2 0.05 262);
+  --primary: oklch(0.52 0.22 262);
+  --primary-foreground: oklch(0.99 0.005 250);
+  --primary-glow: oklch(0.7 0.17 235);
+  --secondary: oklch(0.94 0.025 255);
+  --secondary-foreground: oklch(0.28 0.08 262);
+  --muted: oklch(0.955 0.012 255);
+  --muted-foreground: oklch(0.5 0.04 260);
+  --accent: oklch(0.86 0.12 215);
+  --accent-foreground: oklch(0.24 0.08 240);
+  --destructive: oklch(0.6 0.21 22);
+  --destructive-foreground: oklch(0.99 0 0);
+  --success: oklch(0.62 0.15 165);
+  --warning: oklch(0.77 0.15 75);
+  --info: oklch(0.6 0.15 230);
+  --border: oklch(0.9 0.02 255);
+  --input: oklch(0.9 0.02 255);
+  --ring: oklch(0.52 0.22 262);
+  --ink: oklch(0.18 0.06 265);
+  --ink-foreground: oklch(0.92 0.03 250);
+  --ink-muted: oklch(0.65 0.06 255);
+  --gradient-hero: linear-gradient(135deg, oklch(0.32 0.14 265) 0%, oklch(0.5 0.2 258) 55%, oklch(0.72 0.15 222) 100%);
+  --shadow-float: 0 18px 40px -18px color-mix(in oklab, var(--primary) 45%, transparent);
+  --chart-1: oklch(0.52 0.22 262);
+  --chart-2: oklch(0.72 0.15 222);
+  --chart-3: oklch(0.36 0.12 268);
+  --chart-4: oklch(0.8 0.12 195);
+  --chart-5: oklch(0.62 0.15 165);
+  --sidebar: oklch(0.18 0.06 265);
+  --sidebar-foreground: oklch(0.92 0.03 250);
+  --sidebar-primary: oklch(0.7 0.17 235);
+  --sidebar-primary-foreground: oklch(0.18 0.06 265);
+  --sidebar-accent: oklch(0.26 0.08 265);
+  --sidebar-accent-foreground: oklch(0.97 0.01 250);
+  --sidebar-border: oklch(0.3 0.06 265);
+  --sidebar-ring: oklch(0.7 0.17 235);
 }
 
 .dark {
@@ -153,4 +163,18 @@
     background-color: var(--color-background);
     color: var(--color-foreground);
   }
+}
+
+@utility bg-hero {
+  background-image: var(--gradient-hero);
+}
+@utility shadow-float {
+  box-shadow: var(--shadow-float);
+}
+/* Perforated "ticket" edge used on expense cards */
+@utility ticket {
+  -webkit-mask: radial-gradient(circle 7px at 0 50%, transparent 98%, #000) left / 51% 100% no-repeat,
+    radial-gradient(circle 7px at 100% 50%, transparent 98%, #000) right / 51% 100% no-repeat;
+  mask: radial-gradient(circle 7px at 0 50%, transparent 98%, #000) left / 51% 100% no-repeat,
+    radial-gradient(circle 7px at 100% 50%, transparent 98%, #000) right / 51% 100% no-repeat;
 }
