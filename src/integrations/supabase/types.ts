@@ -14,6 +14,27 @@ export type Database = {
   }
   public: {
     Tables: {
+      category_budgets: {
+        Row: {
+          category: string
+          monthly_amount: number
+          owner_id: string
+          updated_at: string
+        }
+        Insert: {
+          category: string
+          monthly_amount?: number
+          owner_id: string
+          updated_at?: string
+        }
+        Update: {
+          category?: string
+          monthly_amount?: number
+          owner_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       department_budgets: {
         Row: {
           amount: number
@@ -73,66 +94,107 @@ export type Database = {
           category: string
           created_at: string
           currency: string
-          department: string
+          department: string | null
           description: string
           employee_id: string
           expense_date: string
           fx_date: string | null
           fx_rate: number
           id: string
+          member_id: string | null
           merchant: string | null
           original_amount: number | null
           payment_method: string
           receipts: Json
           reconciled_at: string | null
           reconciled_by: string | null
+          scope: string
           statement_ref: string | null
           status: string
           title: string
+          updated_at: string
         }
         Insert: {
           amount: number
           category: string
           created_at?: string
           currency?: string
-          department: string
+          department?: string | null
           description?: string
           employee_id: string
           expense_date: string
           fx_date?: string | null
           fx_rate?: number
           id?: string
+          member_id?: string | null
           merchant?: string | null
           original_amount?: number | null
           payment_method?: string
           receipts?: Json
           reconciled_at?: string | null
           reconciled_by?: string | null
+          scope?: string
           statement_ref?: string | null
           status?: string
           title: string
+          updated_at?: string
         }
         Update: {
           amount?: number
           category?: string
           created_at?: string
           currency?: string
-          department?: string
+          department?: string | null
           description?: string
           employee_id?: string
           expense_date?: string
           fx_date?: string | null
           fx_rate?: number
           id?: string
+          member_id?: string | null
           merchant?: string | null
           original_amount?: number | null
           payment_method?: string
           receipts?: Json
           reconciled_at?: string | null
           reconciled_by?: string | null
+          scope?: string
           statement_ref?: string | null
           status?: string
           title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "expenses_member_id_fkey"
+            columns: ["member_id"]
+            isOneToOne: false
+            referencedRelation: "family_members"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      family_members: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          owner_id: string
+          relation: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          owner_id: string
+          relation?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          owner_id?: string
+          relation?: string
         }
         Relationships: []
       }

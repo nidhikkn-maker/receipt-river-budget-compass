@@ -15,6 +15,13 @@
       "when": 1793388660243,
       "tag": "0001_multicurrency_payment_reconcile",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1793389001554,
+      "tag": "0002_personal_family_tracker",
+      "breakpoints": true
     }
   ]
 }
