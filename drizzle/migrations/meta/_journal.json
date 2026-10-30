@@ -43,6 +43,13 @@
       "when": 1793390531907,
       "tag": "0005_accounts_and_ledger",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1793391374157,
+      "tag": "0006_commitments_loans_goals",
+      "breakpoints": true
     }
   ]
 }

@@ -18,8 +18,11 @@ export type Database = {
         Row: {
           archived: boolean
           created_at: string
+          credit_limit: number | null
+          due_day: number | null
           id: string
           kind: string
+          min_balance: number
           name: string
           opening_balance: number
           owner_id: string
@@ -27,8 +30,11 @@ export type Database = {
         Insert: {
           archived?: boolean
           created_at?: string
+          credit_limit?: number | null
+          due_day?: number | null
           id?: string
           kind?: string
+          min_balance?: number
           name: string
           opening_balance?: number
           owner_id: string
@@ -36,8 +42,11 @@ export type Database = {
         Update: {
           archived?: boolean
           created_at?: string
+          credit_limit?: number | null
+          due_day?: number | null
           id?: string
           kind?: string
+          min_balance?: number
           name?: string
           opening_balance?: number
           owner_id?: string
@@ -64,6 +73,68 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      commitments: {
+        Row: {
+          account_id: string | null
+          amount: number
+          category: string
+          confirmed: boolean
+          created_at: string
+          direction: string
+          essential: boolean
+          frequency: string
+          id: string
+          interval_days: number | null
+          kind: string
+          name: string
+          next_due: string
+          owner_id: string
+          status: string
+        }
+        Insert: {
+          account_id?: string | null
+          amount: number
+          category?: string
+          confirmed?: boolean
+          created_at?: string
+          direction?: string
+          essential?: boolean
+          frequency?: string
+          id?: string
+          interval_days?: number | null
+          kind?: string
+          name: string
+          next_due: string
+          owner_id: string
+          status?: string
+        }
+        Update: {
+          account_id?: string | null
+          amount?: number
+          category?: string
+          confirmed?: boolean
+          created_at?: string
+          direction?: string
+          essential?: boolean
+          frequency?: string
+          id?: string
+          interval_days?: number | null
+          kind?: string
+          name?: string
+          next_due?: string
+          owner_id?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "commitments_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       department_budgets: {
         Row: {
@@ -254,6 +325,72 @@ export type Database = {
           name?: string
           owner_id?: string
           relation?: string
+        }
+        Relationships: []
+      }
+      goals: {
+        Row: {
+          created_at: string
+          id: string
+          monthly: number
+          name: string
+          owner_id: string
+          reserve: boolean
+          saved: number
+          target: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          monthly?: number
+          name: string
+          owner_id: string
+          reserve?: boolean
+          saved?: number
+          target: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          monthly?: number
+          name?: string
+          owner_id?: string
+          reserve?: boolean
+          saved?: number
+          target?: number
+        }
+        Relationships: []
+      }
+      loans: {
+        Row: {
+          annual_rate: number
+          created_at: string
+          emi: number
+          id: string
+          name: string
+          next_due: string
+          owner_id: string
+          principal_outstanding: number
+        }
+        Insert: {
+          annual_rate: number
+          created_at?: string
+          emi: number
+          id?: string
+          name: string
+          next_due: string
+          owner_id: string
+          principal_outstanding: number
+        }
+        Update: {
+          annual_rate?: number
+          created_at?: string
+          emi?: number
+          id?: string
+          name?: string
+          next_due?: string
+          owner_id?: string
+          principal_outstanding?: number
         }
         Relationships: []
       }
