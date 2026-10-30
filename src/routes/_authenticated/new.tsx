@@ -242,7 +242,7 @@ function NewExpense() {
                 : "error" in fx ? <span className="text-destructive">{fx.error}</span>
                 : <>
                     <span className="font-mono font-semibold">{converted != null ? money(converted) : "—"}</span>
-                    <span className="ml-2 text-xs text-muted-foreground">1 {currency} = {fx.rate.toFixed(6)} USD · rate of {fx.date}</span>
+                    <span className="ml-2 text-xs text-muted-foreground">1 {currency} = {fx.rate.toFixed(4)} INR · rate of {fx.date}</span>
                   </>}
             </div>
           )}
