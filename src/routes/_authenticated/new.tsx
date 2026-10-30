@@ -17,7 +17,7 @@ import { useStore } from "@/lib/store";
 import { extractReceipt } from "@/lib/receipt-extract.functions";
 import { getFxRate } from "@/lib/fx.functions";
 import { cn } from "@/lib/utils";
-import { ACCOUNT_LABEL, TXN_LABEL, TXN_TYPES, type TxnType } from "@/lib/ledger";
+import { ACCOUNT_LABEL, TXN_LABEL, TXN_TYPES, frequentMerchants, suggestForMerchant, type TxnType } from "@/lib/ledger";
 
 type LocalReceipt = { file: File; name: string; type: string; dataUrl: string };
 
@@ -143,6 +143,20 @@ function NewExpense() {
     setCurrency(scan.currency);
     setAutoFilled((s) => new Set([...s, "merchant", "amount", "date", "currency"]));
     setConfirmed(true);
+  };
+
+  const rememberMerchant = (m: string) => {
+    if (editing) return;
+    const hit = suggestForMerchant(m, expenses);
+    if (!hit) return;
+    const filled = new Set(autoFilled);
+    if ((CATEGORIES as readonly string[]).includes(hit.category)) { setCategory(hit.category as Category); filled.add("category"); }
+    if ((PAYMENT_METHODS as readonly string[]).includes(hit.paymentMethod)) { setPaymentMethod(hit.paymentMethod as PaymentMethod); filled.add("paymentMethod"); }
+    if (hit.scope === "business" || hit.scope === "personal") { setScope(hit.scope); filled.add("scope"); }
+    if (hit.accountId && liveAccounts.some((a) => a.id === hit.accountId)) setAccountId(hit.accountId);
+    if (hit.tags.length && !tags.trim()) setTags(hit.tags.join(", "));
+    setAutoFilled(filled);
+    toast.message(`Filled in from your last ${m} entry`);
   };
 
   const submit = async (ev: React.FormEvent) => {
@@ -318,7 +332,8 @@ function NewExpense() {
             )}
           </div>
           <div className="grid gap-2"><Label htmlFor="t">Title{af("title")}</Label><Input id="t" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Client lunch – Acme" /></div>
-          <div className="grid gap-2"><Label htmlFor="m">Merchant{af("merchant")}</Label><Input id="m" value={merchant} onChange={(e) => setMerchant(e.target.value)} /></div>
+          <div className="grid gap-2"><Label htmlFor="m">Merchant{af("merchant")}</Label><Input id="m" list="merchant-list" value={merchant} onChange={(e) => setMerchant(e.target.value)} onBlur={() => rememberMerchant(merchant)} />
+            <datalist id="merchant-list">{frequentMerchants(expenses).map((m) => <option key={m} value={m} />)}</datalist></div>
           <div className="grid grid-cols-[110px_1fr] gap-3">
             <div className="grid gap-2">
               <Label>Currency{af("currency")}</Label>
