@@ -73,6 +73,7 @@ export const saveExpense = createServerFn({ method: "POST" })
       currency: data.currency, original_amount: data.originalAmount, fx_rate: fx.rate, fx_date: fx.date,
       amount: Math.max(Math.round(data.originalAmount * fx.rate * 100) / 100, 0.01),
       payment_method: data.paymentMethod, expense_date: data.date, description: data.description,
+      txn_type: data.txnType, account_id: data.accountId, to_account_id: data.txnType === "transfer" ? data.toAccountId : null, tags: data.tags,
       updated_at: new Date().toISOString(),
       ...(data.receipts ? { receipts: data.receipts } : {}),
     };

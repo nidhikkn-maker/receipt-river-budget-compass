@@ -6,13 +6,20 @@ import {
   type Budgets, type Category, type Expense, type ExpenseInput, type Member, type PaymentMethod, type Receipt, type Scope,
   type Split,
 } from "./expenses";
+import type { Account, AccountKind, TxnType } from "./ledger";
 
 interface Ctx {
   userId: string;
   name: string;
   members: Member[];
   memberName: (id: string | null) => string;
+  /** Spending only (type expense) — used by budgets, family and expense reports. */
   expenses: Expense[];
+  /** Every ledger entry: expenses, income, transfers, refunds, adjustments. */
+  transactions: Expense[];
+  accounts: Account[];
+  addAccount: (a: { name: string; kind: AccountKind; openingBalance: number }) => Promise<void>;
+  setArchived: (id: string, archived: boolean) => Promise<void>;
   budgets: Budgets;
   loading: boolean;
   refresh: () => Promise<void>;
@@ -30,17 +37,21 @@ const StoreCtx = createContext<Ctx | null>(null);
 export function StoreProvider({ userId, children }: { userId: string; children: ReactNode }) {
   const [name, setName] = useState("");
   const [members, setMembers] = useState<Member[]>([]);
-  const [expenses, setExpenses] = useState<Expense[]>([]);
+  const [expenses, setExpensesAll] = useState<Expense[]>([]);
+  const setExpenses = setExpensesAll;
+  const [accounts, setAccounts] = useState<Account[]>([]);
   const [budgets, setBudgets] = useState<Budgets>({});
   const [loading, setLoading] = useState(true);
 
   const refresh = useCallback(async () => {
-    const [p, m, e, b] = await Promise.all([
+    const [p, m, e, b, a] = await Promise.all([
       supabase.from("profiles").select("full_name").eq("id", userId).maybeSingle(),
       supabase.from("family_members").select("id, name, relation").order("created_at"),
       supabase.from("expenses").select("*").order("expense_date", { ascending: false }).order("created_at", { ascending: false }),
       supabase.from("category_budgets").select("category, monthly_amount"),
+      supabase.from("accounts").select("*").order("created_at"),
     ]);
+    setAccounts((a.data ?? []).map((x) => ({ id: x.id, name: x.name, kind: x.kind as AccountKind, openingBalance: Number(x.opening_balance), archived: x.archived })));
     setName(p.data?.full_name ?? "");
     setMembers(m.data ?? []);
     setExpenses(
@@ -49,6 +60,7 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
         amount: Number(x.amount), currency: x.currency, originalAmount: Number(x.original_amount ?? x.amount), fxRate: Number(x.fx_rate),
         paymentMethod: x.payment_method as PaymentMethod, reconciledAt: x.reconciled_at, statementRef: x.statement_ref,
         date: x.expense_date, description: x.description, receipts: (x.receipts as unknown as Receipt[]) ?? [],
+        txnType: x.txn_type as TxnType, accountId: x.account_id, toAccountId: x.to_account_id, tags: x.tags ?? [],
       })),
     );
     const bud: Budgets = {};
@@ -76,6 +88,7 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
     const res = await saveExpense({ data: {
       id: opts?.id ?? null, title: s.title.trim(), merchant: s.merchant, category: s.category, scope: s.scope, memberId: s.memberId, splits: s.splits ?? [],
       currency: s.currency, originalAmount: s.amount, date: s.date, description: s.description, paymentMethod: s.paymentMethod,
+      txnType: s.txnType ?? "expense", accountId: s.accountId ?? null, toAccountId: s.toAccountId ?? null, tags: s.tags ?? [],
       ...(receipts ? { receipts } : {}),
     } });
     if (!res.ok) throw new Error(res.error);
@@ -111,13 +124,23 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
     check((await supabase.from("category_budgets").upsert({ owner_id: userId, category, monthly_amount: amount, updated_at: new Date().toISOString() })).error);
     await refresh();
   };
+  const addAccount: Ctx["addAccount"] = async (x) => {
+    if (!x.name.trim()) throw new Error("Name the account");
+    if (!Number.isFinite(x.openingBalance)) throw new Error("Enter an opening balance");
+    check((await supabase.from("accounts").insert({ owner_id: userId, name: x.name.trim(), kind: x.kind, opening_balance: x.openingBalance })).error);
+    await refresh();
+  };
+  const setArchived: Ctx["setArchived"] = async (id, archived) => {
+    check((await supabase.from("accounts").update({ archived }).eq("id", id)).error);
+    await refresh();
+  };
   const signedUrl = useCallback(async (path: string) => {
     const { data } = await supabase.storage.from("receipts").createSignedUrl(path, 300);
     return data?.signedUrl ?? null;
   }, []);
 
   return (
-    <StoreCtx.Provider value={{ userId, name, members, memberName, expenses, budgets, loading, refresh, save, remove, setScope, reconcile, addMember, removeMember, setBudget, signedUrl }}>
+    <StoreCtx.Provider value={{ userId, name, members, memberName, expenses: expenses.filter((x) => (x.txnType ?? "expense") === "expense"), transactions: expenses, accounts, addAccount, setArchived, budgets, loading, refresh, save, remove, setScope, reconcile, addMember, removeMember, setBudget, signedUrl }}>
       {children}
     </StoreCtx.Provider>
   );
