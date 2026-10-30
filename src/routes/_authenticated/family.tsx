@@ -5,7 +5,7 @@ import { Trash2, UserRound } from "lucide-react";
 import { PageTitle } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { money, totalsBy } from "@/lib/expenses";
+import { money, totalsByMember } from "@/lib/expenses";
 import { useStore } from "@/lib/store";
 
 export const Route = createFileRoute("/_authenticated/family")({
