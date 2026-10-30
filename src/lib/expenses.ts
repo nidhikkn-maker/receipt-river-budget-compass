@@ -32,6 +32,8 @@ export interface Expense {
   category: Category;
   scope: Scope;
   memberId: string | null; // null = myself
+  /** Per-person shares in the bill currency; empty = all for memberId. */
+  splits: Split[];
   /** Amount in the home currency (INR). */
   amount: number;
   currency: string;
@@ -45,6 +47,8 @@ export interface Expense {
   receipts: Receipt[];
 }
 
+export interface Split { memberId: string | null; amount: number }
+
 export type Budgets = Partial<Record<Category, number>>;
 
 export class ValidationError extends Error {}
@@ -55,6 +59,7 @@ export interface ExpenseInput {
   category: Category;
   scope: Scope;
   memberId: string | null;
+  splits?: Split[];
   amount: number;
   currency: string;
   paymentMethod: PaymentMethod;
@@ -67,6 +72,44 @@ export function validateExpense(s: ExpenseInput) {
   if (!(s.amount > 0)) throw new ValidationError("Amount must be greater than zero");
   if (!/^\d{4}-\d{2}-\d{2}$/.test(s.date)) throw new ValidationError("Add the expense date");
   if (!SCOPES.includes(s.scope)) throw new ValidationError("Choose business or personal");
+  if (s.splits?.length) validateSplits(s.splits, s.amount);
+}
+
+const r2 = (n: number) => Math.round(n * 100) / 100;
+
+/** Shares must be positive, one per person, and add up exactly to the bill total. */
+export function validateSplits(splits: Split[], total: number) {
+  if (splits.length < 2) throw new ValidationError("Pick at least two people to split with");
+  const ids = new Set(splits.map((x) => x.memberId ?? "me"));
+  if (ids.size !== splits.length) throw new ValidationError("Each person can appear only once");
+  if (splits.some((x) => !(x.amount > 0))) throw new ValidationError("Every share must be more than zero");
+  const sum = r2(splits.reduce((a, x) => a + x.amount, 0));
+  if (Math.abs(sum - r2(total)) > 0.009) throw new ValidationError(`Shares add up to ${sum}, but the bill is ${r2(total)}`);
+}
+
+/** Splits total evenly; leftover paise go to the first people so it sums exactly. */
+export function splitEvenly(total: number, ids: (string | null)[]): Split[] {
+  const cents = Math.round(total * 100), n = ids.length;
+  if (!n) return [];
+  const base = Math.floor(cents / n), extra = cents - base * n;
+  return ids.map((memberId, i) => ({ memberId, amount: (base + (i < extra ? 1 : 0)) / 100 }));
+}
+
+/** Each person's share of an expense in INR (home currency). */
+export function memberShares(e: Pick<Expense, "memberId" | "splits" | "amount" | "originalAmount">): Split[] {
+  if (!e.splits?.length) return [{ memberId: e.memberId, amount: e.amount }];
+  const ratio = e.originalAmount > 0 ? e.amount / e.originalAmount : 1;
+  const out = e.splits.map((x) => ({ memberId: x.memberId, amount: r2(x.amount * ratio) }));
+  const drift = r2(e.amount - out.reduce((a, x) => a + x.amount, 0));
+  out[0]!.amount = r2(out[0]!.amount + drift);
+  return out;
+}
+
+/** Total INR per person ("me" for yourself), counting split shares. */
+export function totalsByMember(list: Expense[]): Record<string, number> {
+  const out: Record<string, number> = {};
+  for (const e of list) for (const s of memberShares(e)) { const k = s.memberId ?? "me"; out[k] = r2((out[k] ?? 0) + s.amount); }
+  return out;
 }
 
 export function validateBudget(amount: number) {
@@ -80,7 +123,7 @@ export interface Filters { scope?: Scope | "all"; memberId?: string | "all" | "m
 export function applyFilters(list: Expense[], f: Filters): Expense[] {
   return list.filter((e) =>
     (!f.scope || f.scope === "all" || e.scope === f.scope) &&
-    (!f.memberId || f.memberId === "all" || (f.memberId === "me" ? e.memberId === null : e.memberId === f.memberId)) &&
+    (!f.memberId || f.memberId === "all" || memberShares(e).some((x) => (f.memberId === "me" ? x.memberId === null : x.memberId === f.memberId))) &&
     (!f.category || f.category === "all" || e.category === f.category) &&
     (!f.from || e.date >= f.from) && (!f.to || e.date <= f.to));
 }
@@ -199,4 +242,9 @@ export function normalizeDate(s: string): string | null {
   if (m) { const y = m[3]!.length === 2 ? `20${m[3]}` : m[3]; return `${y}-${m[2]!.padStart(2, "0")}-${m[1]!.padStart(2, "0")}`; }
   const d = new Date(t);
   return isNaN(d.getTime()) ? null : d.toISOString().slice(0, 10);
+}
+
+/** "Me" or "Me, Asha (split)" — who an expense is for. */
+export function whoLabel(e: Pick<Expense, "memberId" | "splits">, name: (id: string | null) => string) {
+  return e.splits?.length ? `${e.splits.map((s) => name(s.memberId)).join(", ")} (split)` : name(e.memberId);
 }

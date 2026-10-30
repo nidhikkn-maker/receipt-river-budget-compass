@@ -5,7 +5,7 @@ import { Trash2, UserRound } from "lucide-react";
 import { PageTitle } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { money, totalsBy } from "@/lib/expenses";
+import { money, totalsByMember } from "@/lib/expenses";
 import { useStore } from "@/lib/store";
 
 export const Route = createFileRoute("/_authenticated/family")({
@@ -26,7 +26,7 @@ function Family() {
   const { members, expenses, addMember, removeMember } = useStore();
   const [name, setName] = useState("");
   const [relation, setRelation] = useState("");
-  const totals = totalsBy(expenses, (e) => e.memberId ?? "me");
+  const totals = totalsByMember(expenses);
 
   const add = async (ev: React.FormEvent) => {
     ev.preventDefault();

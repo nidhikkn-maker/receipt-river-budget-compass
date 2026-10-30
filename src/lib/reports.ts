@@ -1,4 +1,4 @@
-import { CATEGORIES, PAYMENT_LABEL, SCOPE_LABEL, budgetUsage, totalsBy, type Budgets, type Expense } from "./expenses";
+import { whoLabel, CATEGORIES, PAYMENT_LABEL, SCOPE_LABEL, budgetUsage, totalsBy, type Budgets, type Expense } from "./expenses";
 
 export type ReportKind = "expenses" | "business" | "categories";
 export interface Report { title: string; headers: string[]; rows: (string | number)[][] }
@@ -6,7 +6,7 @@ export interface Report { title: string; headers: string[]; rows: (string | numb
 const fmt = (n: number) => n.toFixed(2);
 
 export function buildReport(kind: ReportKind, expenses: Expense[], memberName: (id: string | null) => string, budgets: Budgets): Report {
-  const row = (e: Expense) => [e.date, e.title, e.merchant ?? "", e.category, SCOPE_LABEL[e.scope], memberName(e.memberId), PAYMENT_LABEL[e.paymentMethod],
+  const row = (e: Expense) => [e.date, e.title, e.merchant ?? "", e.category, SCOPE_LABEL[e.scope], whoLabel(e, memberName), PAYMENT_LABEL[e.paymentMethod],
     e.currency, fmt(e.originalAmount), fmt(e.fxRate), fmt(e.amount), e.reconciledAt ? "Yes" : "No"];
   const headers = ["Date", "Title", "Merchant", "Category", "Type", "For", "Paid with", "Currency", "Bill amount", "Rate", "Amount (INR)", "Bank matched"];
   if (kind === "expenses") return { title: "All expenses", headers, rows: expenses.map(row) };

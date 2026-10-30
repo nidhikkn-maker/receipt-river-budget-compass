@@ -2,7 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { Bar, BarChart, ResponsiveContainer, Tooltip, XAxis } from "recharts";
 import { Stat } from "@/components/AppShell";
 import { ExpenseTable } from "@/components/ExpenseTable";
-import { money, totalsBy, totalsByScope } from "@/lib/expenses";
+import { money, totalsByMember, totalsByScope } from "@/lib/expenses";
 import { useStore } from "@/lib/store";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
@@ -24,7 +24,7 @@ function Overview() {
   const month = new Date().toISOString().slice(0, 7);
   const thisMonth = expenses.filter((e) => e.date.startsWith(month));
   const t = totalsByScope(thisMonth);
-  const byMember = totalsBy(thisMonth, (e) => e.memberId ?? "me");
+  const byMember = totalsByMember(thisMonth);
   const memberRows = [{ id: "me", name: "Me" }, ...members].map((m) => ({ name: m.id === "me" ? "Me" : memberName(m.id), value: byMember[m.id] ?? 0 })).filter((r) => r.value > 0);
   const unmatched = expenses.filter((e) => !e.reconciledAt && ["upi", "credit_card", "debit_card", "forex_card", "bank_transfer"].includes(e.paymentMethod)).length;
   const pct = t.total ? Math.round((t.business / t.total) * 100) : 0;

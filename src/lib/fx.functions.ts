@@ -35,6 +35,7 @@ const SaveInput = z.object({
   category: z.string().min(1).max(60),
   scope: z.enum(["personal", "business"]),
   memberId: z.string().uuid().nullable(),
+  splits: z.array(z.object({ memberId: z.string().uuid().nullable(), amount: z.number().positive() })).max(20).default([]),
   currency: z.string().regex(/^[A-Z]{3}$/),
   originalAmount: z.number().positive().max(100_000_000),
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
@@ -50,6 +51,10 @@ export const saveExpense = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
     if (data.receipts?.some((r) => !r.path.startsWith(`${userId}/`))) return { ok: false as const, error: "Invalid receipt" };
+    if (data.splits.length) {
+      const sum = Math.round(data.splits.reduce((a, x) => a + x.amount, 0) * 100) / 100;
+      if (data.splits.length < 2 || Math.abs(sum - data.originalAmount) > 0.009) return { ok: false as const, error: "Shares must add up to the bill total" };
+    }
     let fx: { rate: number; date: string };
     try {
       fx = await fetchRate(data.currency, data.date);
@@ -57,7 +62,7 @@ export const saveExpense = createServerFn({ method: "POST" })
       return { ok: false as const, error: (e as Error).message };
     }
     const row = {
-      title: data.title, merchant: data.merchant, category: data.category, scope: data.scope, member_id: data.memberId,
+      title: data.title, merchant: data.merchant, category: data.category, scope: data.scope, member_id: data.memberId, splits: data.splits,
       currency: data.currency, original_amount: data.originalAmount, fx_rate: fx.rate, fx_date: fx.date,
       amount: Math.max(Math.round(data.originalAmount * fx.rate * 100) / 100, 0.01),
       payment_method: data.paymentMethod, expense_date: data.date, description: data.description,

@@ -109,6 +109,7 @@ export type Database = {
           reconciled_at: string | null
           reconciled_by: string | null
           scope: string
+          splits: Json
           statement_ref: string | null
           status: string
           title: string
@@ -134,6 +135,7 @@ export type Database = {
           reconciled_at?: string | null
           reconciled_by?: string | null
           scope?: string
+          splits?: Json
           statement_ref?: string | null
           status?: string
           title: string
@@ -159,6 +161,7 @@ export type Database = {
           reconciled_at?: string | null
           reconciled_by?: string | null
           scope?: string
+          splits?: Json
           statement_ref?: string | null
           status?: string
           title?: string

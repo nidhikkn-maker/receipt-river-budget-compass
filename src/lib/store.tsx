@@ -4,6 +4,7 @@ import { saveExpense } from "./fx.functions";
 import {
   validateBudget, validateExpense,
   type Budgets, type Category, type Expense, type ExpenseInput, type Member, type PaymentMethod, type Receipt, type Scope,
+  type Split,
 } from "./expenses";
 
 interface Ctx {
@@ -44,7 +45,7 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
     setMembers(m.data ?? []);
     setExpenses(
       (e.data ?? []).map((x) => ({
-        id: x.id, title: x.title, merchant: x.merchant, category: x.category as Category, scope: x.scope as Scope, memberId: x.member_id,
+        id: x.id, title: x.title, merchant: x.merchant, category: x.category as Category, scope: x.scope as Scope, memberId: x.member_id, splits: (x.splits as unknown as Split[]) ?? [],
         amount: Number(x.amount), currency: x.currency, originalAmount: Number(x.original_amount ?? x.amount), fxRate: Number(x.fx_rate),
         paymentMethod: x.payment_method as PaymentMethod, reconciledAt: x.reconciled_at, statementRef: x.statement_ref,
         date: x.expense_date, description: x.description, receipts: (x.receipts as unknown as Receipt[]) ?? [],
@@ -73,7 +74,7 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
       }
     }
     const res = await saveExpense({ data: {
-      id: opts?.id ?? null, title: s.title.trim(), merchant: s.merchant, category: s.category, scope: s.scope, memberId: s.memberId,
+      id: opts?.id ?? null, title: s.title.trim(), merchant: s.merchant, category: s.category, scope: s.scope, memberId: s.memberId, splits: s.splits ?? [],
       currency: s.currency, originalAmount: s.amount, date: s.date, description: s.description, paymentMethod: s.paymentMethod,
       ...(receipts ? { receipts } : {}),
     } });

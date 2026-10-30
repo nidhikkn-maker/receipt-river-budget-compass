@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { BadgeCheck } from "lucide-react";
-import { PAYMENT_LABEL, BASE_CURRENCY, money, type Expense } from "@/lib/expenses";
+import { whoLabel, PAYMENT_LABEL, BASE_CURRENCY, money, type Expense } from "@/lib/expenses";
 import { ScopeBadge } from "./ScopeBadge";
 import { ExpenseDialog } from "./ExpenseDialog";
 import { useStore } from "@/lib/store";
@@ -35,7 +35,7 @@ export function ExpenseTable({ items, empty = "Nothing here yet." }: { items: Ex
                   </div>
                   <div className="mt-2 flex items-center gap-2">
                     <ScopeBadge scope={e.scope} />
-                    <span className="rounded-full border px-2 py-0.5 text-[11px] text-muted-foreground">{memberName(e.memberId)}</span>
+                    <span className="rounded-full border px-2 py-0.5 text-[11px] text-muted-foreground">{whoLabel(e, memberName)}</span>
                     {e.reconciledAt && <BadgeCheck className="ml-auto h-4 w-4 text-success" aria-label="Matched to bank statement" />}
                   </div>
                 </div>

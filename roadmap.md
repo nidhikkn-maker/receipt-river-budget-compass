@@ -11,3 +11,4 @@
 - [x] Bank statement reconciliation (upload CSV, auto-match, confirm)
 - [x] Category budgets (replaces department budgets)
 - [x] New distinctive blue design (mobile friendly)
+- [x] Split one expense across multiple family members with per-person shares

@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { applyFilters, autoMatch, budgetUsage, convert, parseStatementCsv, totalsByScope, validateBudget, validateExpense, type Expense } from "./expenses";
 
 const exp = (o: Partial<Expense> = {}): Expense => ({
-  id: "x", title: "t", merchant: null, category: "Groceries", scope: "personal", memberId: null, amount: 100,
+  id: "x", title: "t", merchant: null, category: "Groceries", scope: "personal", memberId: null, splits: [], amount: 100,
   currency: "INR", originalAmount: 100, fxRate: 1, paymentMethod: "upi", reconciledAt: null, statementRef: null,
   date: "2026-10-01", description: "", receipts: [], ...o,
 });
@@ -45,5 +45,23 @@ describe("currency & reconciliation", () => {
   it("does not match when the amount is off by more than 3%", () => {
     const [m] = autoMatch([{ ref: "L1", date: "2026-10-01", description: "UBER", amount: 1200 }], [usd], "INR");
     expect(m!.expense).toBeNull();
+  });
+});
+
+import { splitEvenly as _se, validateSplits as _vs, memberShares as _ms, totalsByMember as _tm } from "./expenses";
+describe("expense splits", () => {
+  it("splits 100 three ways summing exactly", () => {
+    expect(_se(100, [null, "a", "b"]).map((x) => x.amount)).toEqual([33.34, 33.33, 33.33]);
+  });
+  it("rejects shares that don't add up to the bill", () => {
+    expect(() => _vs([{ memberId: null, amount: 40 }, { memberId: "a", amount: 50 }], 100)).toThrow();
+  });
+  it("rejects a split with only one person", () => {
+    expect(() => _vs([{ memberId: null, amount: 100 }], 100)).toThrow();
+  });
+  it("converts shares to INR with the bill rate and credits each person", () => {
+    const e = { memberId: null, splits: [{ memberId: null, amount: 6 }, { memberId: "a", amount: 4 }], amount: 900, originalAmount: 10 };
+    expect(_ms(e)).toEqual([{ memberId: null, amount: 540 }, { memberId: "a", amount: 360 }]);
+    expect(_tm([e as never])).toEqual({ me: 540, a: 360 });
   });
 });
