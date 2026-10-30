@@ -46,7 +46,7 @@ function Expenses() {
             {members.map((m) => <SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>)}
           </SelectContent>
         </Select>
-        <Select value={f.category ?? "all"} onValueChange={(v) => setF({ ...f, category: v as Filters["category"] })}>
+        <Select value={f.category ?? "all"} onValueChange={(v) => setF({ ...f, category: v as NonNullable<Filters["category"]> })}>
           <SelectTrigger aria-label="Category"><SelectValue /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All categories</SelectItem>

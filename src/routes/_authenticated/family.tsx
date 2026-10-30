@@ -45,7 +45,7 @@ function Family() {
         <li className="flex items-center gap-3 rounded-2xl bg-hero p-4 text-primary-foreground">
           <UserRound className="h-9 w-9 rounded-xl bg-primary-foreground/20 p-1.5" />
           <div className="flex-1"><div className="font-semibold">Me</div><div className="text-xs opacity-80">You</div></div>
-          <div className="font-mono">{money(totals.me ?? 0)}</div>
+          <div className="font-mono">{money(totals["me"] ?? 0)}</div>
         </li>
         {members.map((m) => (
           <li key={m.id} className="flex items-center gap-3 rounded-2xl border bg-card p-4">
