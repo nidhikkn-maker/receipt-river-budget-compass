@@ -15,3 +15,4 @@
 - Currency conversion happens server-side in src/lib/fx.functions.ts (Frankfurter/ECB rates for the bill date) so stored INR amounts can't be faked by the client.
 - Reports are generated in the browser (src/lib/reports.ts) from data the user can already see, so RLS scoping applies automatically.
 - Receipt reading runs in a server function (src/lib/receipt-extract.functions.ts) so the AI key stays server-side.
+- Accounts/ledger rules (balances, cashflow, net worth) are pure tested functions in src/lib/ledger.ts; balances are derived from entries, never stored, and transfers/card payments never count as income or spending. store.expenses = expense-type only; store.transactions = all entries.
