@@ -7,7 +7,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { CATEGORIES, createExpense, type Category, type Receipt } from "@/lib/expenses";
+import { CATEGORIES, type Category } from "@/lib/expenses";
+
+type LocalReceipt = { file: File; name: string; type: string; dataUrl: string };
 import { useStore } from "@/lib/store";
 import { extractReceipt } from "@/lib/receipt-extract.functions";
 
@@ -24,22 +26,23 @@ export const Route = createFileRoute("/_authenticated/new")({
 });
 
 const readFile = (f: File) =>
-  new Promise<Receipt>((res, rej) => {
+  new Promise<LocalReceipt>((res, rej) => {
     const r = new FileReader();
-    r.onload = () => res({ name: f.name, type: f.type, dataUrl: r.result as string });
+    r.onload = () => res({ file: f, name: f.name, type: f.type, dataUrl: r.result as string });
     r.onerror = rej;
     r.readAsDataURL(f);
   });
 
 function NewExpense() {
-  const { user, upsert } = useStore();
+  const { user, submit: submitExpense } = useStore();
+  const [saving, setSaving] = useState(false);
   const nav = useNavigate();
   const [title, setTitle] = useState("");
   const [amount, setAmount] = useState("");
   const [category, setCategory] = useState<Category>("Travel");
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
   const [description, setDescription] = useState("");
-  const [receipts, setReceipts] = useState<Receipt[]>([]);
+  const [receipts, setReceipts] = useState<LocalReceipt[]>([]);
 
   const [reading, setReading] = useState(false);
   const [merchant, setMerchant] = useState("");
@@ -73,16 +76,19 @@ function NewExpense() {
     }
   };
 
-  const submit = (ev: React.FormEvent) => {
+  const submit = async (ev: React.FormEvent) => {
     ev.preventDefault();
     if (!confirmed) { toast.error("Confirm the scanned receipt details first"); return; }
     if (!title.trim()) { toast.error("Add a title"); return; }
     try {
-      upsert(createExpense(user, { title: title.trim(), amount: Number(amount), category, date, description: description || (merchant ? `Merchant: ${merchant}` : ""), receipts }));
+      setSaving(true);
+      await submitExpense({ title: title.trim(), amount: Number(amount), category, date, description, merchant: merchant || null }, receipts.map((r) => r.file));
       toast.success("Submitted to your department manager");
       nav({ to: "/" });
     } catch (e) {
       toast.error((e as Error).message);
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -149,7 +155,7 @@ function NewExpense() {
           <div className="grid gap-2"><Label htmlFor="d">Date</Label><Input id="d" type="date" value={date} onChange={(e) => setDate(e.target.value)} /></div>
         </div>
         <div className="grid gap-2"><Label htmlFor="desc">Business purpose</Label><Textarea id="desc" value={description} onChange={(e) => setDescription(e.target.value)} /></div>
-        <div className="flex justify-end"><Button type="submit" disabled={reading || !confirmed}>Submit for approval</Button></div>
+        <div className="flex justify-end"><Button type="submit" disabled={reading || saving || !confirmed}>Submit for approval</Button></div>
       </form>
     </>
   );

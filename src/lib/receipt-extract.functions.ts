@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
+import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 const Input = z.object({ dataUrl: z.string().startsWith("data:").max(4_000_000), mimeType: z.string() });
 
@@ -13,6 +14,7 @@ const Extracted = z.object({
 export type ExtractedReceipt = z.infer<typeof Extracted>;
 
 export const extractReceipt = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => Input.parse(d))
   .handler(async ({ data }): Promise<{ ok: true; result: ExtractedReceipt } | { ok: false; error: string }> => {
     const apiKey = process.env["LOVABLE_API_KEY"];
