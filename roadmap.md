@@ -2,7 +2,8 @@
 - [ ] Review https://yaba--staging.vercel.app/actual_expenses — blocked: page requires Google sign-in
 - [x] Earlier: receipts + review, multi-currency, payment methods, bank reconciliation, family, splits, budgets, reports
 - [x] Phase 1: accounts + ledger, transaction types (expense/income/transfer/refund/adjustment), tags, Wealth page, 5-tab nav
-- [ ] Phase 1 rest: editable categories (rename/merge/archive), grouped tags, merchant memory suggestions
+- [x] Merchant memory suggestions
+- [ ] Phase 1 rest: editable categories (rename/merge/archive), grouped tags
 - [ ] Phase 2: richer scanner (tax, items), screenshot/PDF import, voice entry, Excel/PDF statements
 - [ ] Phase 3: recurring, credit cards, loans/EMI, subscriptions, expected income, calendar
 - [ ] Phase 4: advanced budgets, forecast, safe-to-spend
