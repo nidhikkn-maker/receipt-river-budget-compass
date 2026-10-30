@@ -11,6 +11,8 @@ export const Route = createFileRoute("/")({
       { name: "description", content: "Track team expenses, approvals and reimbursements in one ledger." },
       { property: "og:title", content: "Overview — Ledgerline Expenses" },
       { property: "og:description", content: "Track team expenses, approvals and reimbursements in one ledger." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
     ],
   }),
   component: Overview,

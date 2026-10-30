@@ -12,6 +12,8 @@ export const Route = createFileRoute("/approvals")({
       { name: "description", content: "Review, approve and reimburse submitted expenses." },
       { property: "og:title", content: "Approvals — Ledgerline" },
       { property: "og:description", content: "Review, approve and reimburse submitted expenses." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
     ],
   }),
   component: Approvals,

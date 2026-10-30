@@ -12,6 +12,8 @@ export const Route = createFileRoute("/analytics")({
       { name: "description", content: "Budget usage and spend analytics by department and category." },
       { property: "og:title", content: "Department budgets — Ledgerline" },
       { property: "og:description", content: "Budget usage and spend analytics by department and category." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
     ],
   }),
   component: Analytics,

@@ -40,12 +40,31 @@ function NewExpense() {
   const [description, setDescription] = useState("");
   const [receipts, setReceipts] = useState<Receipt[]>([]);
 
+  const [reading, setReading] = useState(false);
+  const [merchant, setMerchant] = useState("");
   const onFiles = async (files: FileList | null) => {
     if (!files) return;
     const big = Array.from(files).find((f) => f.size > 2 * 1024 * 1024);
     if (big) { toast.error(`${big.name} is larger than 2 MB`); return; }
     const read = await Promise.all(Array.from(files).map(readFile));
     setReceipts((r) => [...r, ...read]);
+    const first = read[0];
+    if (!first) return;
+    setReading(true);
+    try {
+      const res = await extractReceipt({ data: { dataUrl: first.dataUrl, mimeType: first.type } });
+      if (!res.ok) { toast.error(res.error); return; }
+      const x = res.result;
+      if (x.merchant) { setMerchant(x.merchant); if (!title) setTitle(x.merchant); }
+      if (x.amount != null) setAmount(String(x.amount));
+      if (x.date && /^\d{4}-\d{2}-\d{2}$/.test(x.date)) setDate(x.date);
+      if (x.category) setCategory(x.category);
+      toast.success("Receipt read — check the details below");
+    } catch {
+      toast.error("Receipt reading failed");
+    } finally {
+      setReading(false);
+    }
   };
 
   const submit = (ev: React.FormEvent) => {
