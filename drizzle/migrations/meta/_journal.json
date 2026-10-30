@@ -22,6 +22,13 @@
       "when": 1793389001554,
       "tag": "0002_personal_family_tracker",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1793389119156,
+      "tag": "0003_profile_trigger_anonymous",
+      "breakpoints": true
     }
   ]
 }
