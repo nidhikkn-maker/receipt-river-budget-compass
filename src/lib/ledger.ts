@@ -14,7 +14,7 @@ export const TXN_TYPES = ["expense", "income", "transfer", "refund", "adjustment
 export type TxnType = (typeof TXN_TYPES)[number];
 export const TXN_LABEL: Record<TxnType, string> = { expense: "Expense", income: "Income", transfer: "Transfer", refund: "Refund", adjustment: "Adjustment" };
 
-export interface Account { id: string; name: string; kind: AccountKind; openingBalance: number; archived: boolean }
+export interface Account { id: string; name: string; kind: AccountKind; openingBalance: number; archived: boolean; creditLimit?: number | null; dueDay?: number | null; minBalance?: number }
 
 export interface Txn {
   id: string;
