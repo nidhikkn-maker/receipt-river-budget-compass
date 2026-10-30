@@ -1,0 +1,33 @@
+import { describe, expect, it } from "vitest";
+import { assistantFacts, nextDayOfMonth, position } from "./position";
+
+const base = {
+  accounts: [
+    { id: "b", name: "HDFC", kind: "savings" as const, openingBalance: 100000, archived: false, minBalance: 10000 },
+    { id: "c", name: "AMEX", kind: "credit_card" as const, openingBalance: 0, archived: false, creditLimit: 100000, dueDay: 5 },
+  ],
+  transactions: [
+    { id: "1", txnType: "expense" as const, amount: 30000, accountId: "c", date: "2026-11-01", merchant: "Croma", category: "Shopping", paymentMethod: "credit_card", title: "TV" },
+  ],
+  commitments: [], goals: [{ name: "Emergency", target: 100000, saved: 20000, monthly: 5000, reserve: true }], loans: [],
+  today: "2026-11-02", days: 30,
+};
+
+describe("financial position", () => {
+  it("card due date rolls to next month when passed", () => {
+    expect(nextDayOfMonth("2026-11-10", 5)).toBe("2026-12-05");
+    expect(nextDayOfMonth("2026-11-02", 5)).toBe("2026-11-05");
+  });
+  it("safe-to-spend holds back the card bill, minimum balance and reserves", () => {
+    const p = position(base);
+    expect(p.cash).toBe(100000);
+    expect(p.cards[0]!.utilisation).toBe(30);
+    expect(p.safe.amount).toBe(100000 - 30000 - 10000 - 20000);
+  });
+  it("AI facts carry the same numbers as the engine", () => {
+    const f = assistantFacts(base);
+    expect(f.estimated.safeToSpend).toBe(position(base).safe.amount);
+    expect(f.actual.thisMonth.spent).toBe(30000);
+    expect(f.missing).toContain("No expected income recorded.");
+  });
+});
