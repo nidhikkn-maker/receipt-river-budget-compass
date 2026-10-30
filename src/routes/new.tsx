@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { CATEGORIES, createExpense, type Category, type Receipt } from "@/lib/expenses";
 import { useStore } from "@/lib/store";
+import { extractReceipt } from "@/lib/receipt-extract.functions";
 
 export const Route = createFileRoute("/new")({
   head: () => ({
@@ -71,7 +72,7 @@ function NewExpense() {
     ev.preventDefault();
     if (!title.trim()) { toast.error("Add a title"); return; }
     try {
-      upsert(createExpense(user, { title: title.trim(), amount: Number(amount), category, date, description, receipts }));
+      upsert(createExpense(user, { title: title.trim(), amount: Number(amount), category, date, description: description || (merchant ? `Merchant: ${merchant}` : ""), receipts }));
       toast.success("Submitted to your department manager");
       nav({ to: "/" });
     } catch (e) {
@@ -83,6 +84,22 @@ function NewExpense() {
     <>
       <PageTitle title="Submit an expense" sub={`Routes to the ${user.department} manager, then Finance.`} />
       <form onSubmit={submit} className="grid max-w-2xl gap-5 rounded-md border bg-card p-6">
+        <div className="grid gap-2">
+          <Label htmlFor="r">Receipt — we'll read the merchant, date and amount for you</Label>
+          {reading && <p className="text-sm text-muted-foreground animate-pulse">Reading receipt…</p>}
+          {merchant && !reading && <p className="text-xs text-muted-foreground">Merchant detected: <span className="font-medium text-foreground">{merchant}</span></p>}
+          <Input id="r" type="file" multiple accept="image/*,application/pdf" onChange={(e) => onFiles(e.target.files)} />
+          {receipts.length > 0 && (
+            <ul className="flex flex-wrap gap-2 text-xs">
+              {receipts.map((r, i) => (
+                <li key={i} className="flex items-center gap-2 rounded border bg-muted px-2 py-1">
+                  {r.name}
+                  <button type="button" className="text-destructive" onClick={() => setReceipts((x) => x.filter((_, j) => j !== i))}>×</button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
         <div className="grid gap-2"><Label htmlFor="t">Title</Label><Input id="t" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Client lunch – Acme" /></div>
         <div className="grid gap-4 sm:grid-cols-3">
           <div className="grid gap-2"><Label htmlFor="a">Amount (USD)</Label><Input id="a" type="number" step="0.01" min="0" value={amount} onChange={(e) => setAmount(e.target.value)} className="font-mono" /></div>
@@ -96,21 +113,7 @@ function NewExpense() {
           <div className="grid gap-2"><Label htmlFor="d">Date</Label><Input id="d" type="date" value={date} onChange={(e) => setDate(e.target.value)} /></div>
         </div>
         <div className="grid gap-2"><Label htmlFor="desc">Business purpose</Label><Textarea id="desc" value={description} onChange={(e) => setDescription(e.target.value)} /></div>
-        <div className="grid gap-2">
-          <Label htmlFor="r">Receipts (images or PDF, max 2 MB each)</Label>
-          <Input id="r" type="file" multiple accept="image/*,application/pdf" onChange={(e) => onFiles(e.target.files)} />
-          {receipts.length > 0 && (
-            <ul className="flex flex-wrap gap-2 text-xs">
-              {receipts.map((r, i) => (
-                <li key={i} className="flex items-center gap-2 rounded border bg-muted px-2 py-1">
-                  {r.name}
-                  <button type="button" className="text-destructive" onClick={() => setReceipts((x) => x.filter((_, j) => j !== i))}>×</button>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-        <div className="flex justify-end"><Button type="submit">Submit for approval</Button></div>
+        <div className="flex justify-end"><Button type="submit" disabled={reading}>Submit for approval</Button></div>
       </form>
     </>
   );
