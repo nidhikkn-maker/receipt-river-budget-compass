@@ -1,14 +1,11 @@
-# Roadmap
+# Roadmap (Functional Requirements v1.0)
 - [ ] Review https://yaba--staging.vercel.app/actual_expenses — blocked: page requires Google sign-in
-- [x] Receipt reading + review step, Cloud sign-in + storage, CSV/PDF reports
-- [x] Remove sign-in screen (app opens directly; private per-device session)
-- [x] PIVOT: personal + family expense tracker — remove approval workflow and roles
-- [x] Family members (who the expense was for/by)
-- [x] Business vs personal tag on every expense, with separate totals/filters/reports
-- [x] Multi-currency bills: detect currency, convert with that date's live rate
-- [x] Auto-fill all fields from receipt (title, category, currency, payment method, scope…)
-- [x] Payment method: cash, UPI, credit/debit/forex/company card, bank transfer, other
-- [x] Bank statement reconciliation (upload CSV, auto-match, confirm)
-- [x] Category budgets (replaces department budgets)
-- [x] New distinctive blue design (mobile friendly)
-- [x] Split one expense across multiple family members with per-person shares
+- [x] Earlier: receipts + review, multi-currency, payment methods, bank reconciliation, family, splits, budgets, reports
+- [x] Phase 1: accounts + ledger, transaction types (expense/income/transfer/refund/adjustment), tags, Wealth page, 5-tab nav
+- [ ] Phase 1 rest: editable categories (rename/merge/archive), grouped tags, merchant memory suggestions
+- [ ] Phase 2: richer scanner (tax, items), screenshot/PDF import, voice entry, Excel/PDF statements
+- [ ] Phase 3: recurring, credit cards, loans/EMI, subscriptions, expected income, calendar
+- [ ] Phase 4: advanced budgets, forecast, safe-to-spend
+- [ ] Phase 5: customisable Home, Insights drill-down, goals, document vault
+- [ ] Phase 6: AI assistant
+- [ ] Phase 7: real sign-in, passkey lock, settings, export/backup
