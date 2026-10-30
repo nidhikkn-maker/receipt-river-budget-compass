@@ -4,6 +4,7 @@ import { saveExpense } from "./fx.functions";
 import {
   validateBudget, validateExpense,
   type Budgets, type Category, type Expense, type ExpenseInput, type Member, type PaymentMethod, type Receipt, type Scope,
+  type Split,
 } from "./expenses";
 
 interface Ctx {

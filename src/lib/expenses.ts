@@ -243,3 +243,8 @@ export function normalizeDate(s: string): string | null {
   const d = new Date(t);
   return isNaN(d.getTime()) ? null : d.toISOString().slice(0, 10);
 }
+
+/** "Me" or "Me, Asha (split)" — who an expense is for. */
+export function whoLabel(e: Pick<Expense, "memberId" | "splits">, name: (id: string | null) => string) {
+  return e.splits?.length ? `${e.splits.map((s) => name(s.memberId)).join(", ")} (split)` : name(e.memberId);
+}

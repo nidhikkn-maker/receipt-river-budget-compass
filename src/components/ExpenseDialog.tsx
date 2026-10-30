@@ -4,7 +4,7 @@ import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { ScopeToggle } from "./ScopeBadge";
-import { BASE_CURRENCY, PAYMENT_LABEL, money, type Expense } from "@/lib/expenses";
+import { whoLabel, BASE_CURRENCY, PAYMENT_LABEL, money, type Expense } from "@/lib/expenses";
 import { useStore } from "@/lib/store";
 
 function ReceiptThumb({ path, name, type }: { path: string; name: string; type: string }) {
@@ -41,7 +41,7 @@ export function ExpenseDialog({ expense, onClose }: { expense: Expense | null; o
       <DialogContent className="max-h-[90vh] max-w-xl overflow-y-auto rounded-3xl">
         <DialogHeader><DialogTitle className="font-display text-2xl font-bold">{e.title}</DialogTitle></DialogHeader>
         <div className="flex flex-wrap gap-x-3 gap-y-1 text-sm text-muted-foreground">
-          <span>{e.date}</span>·<span>{e.category}</span>·<span>{PAYMENT_LABEL[e.paymentMethod]}</span>·<span>For {memberName(e.memberId)}</span>
+          <span>{e.date}</span>·<span>{e.category}</span>·<span>{PAYMENT_LABEL[e.paymentMethod]}</span>·<span>For {whoLabel(e, memberName)}</span>
           {e.merchant && <>·<span>{e.merchant}</span></>}
         </div>
         <div>
