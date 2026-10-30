@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Bar, BarChart, CartesianGrid, Cell, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { Bar, BarChart, CartesianGrid, Cell, Pie, PieChart, ResponsiveContainer, Tooltip, Legend, XAxis, YAxis } from "recharts";
 import { PageTitle, Stat } from "@/components/AppShell";
 import { CATEGORIES, DEPARTMENTS, departmentSpend, money } from "@/lib/expenses";
 import { useStore } from "@/lib/store";
@@ -86,10 +86,11 @@ function Analytics() {
           <h3 className="mb-4 font-display text-lg">By category</h3>
           <ResponsiveContainer width="100%" height={260}>
             <PieChart>
-              <Pie data={byCat} dataKey="value" nameKey="name" innerRadius={55} outerRadius={95} label={(d) => d.name}>
+              <Pie data={byCat} dataKey="value" nameKey="name" innerRadius={55} outerRadius={95}>
                 {byCat.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
               </Pie>
               <Tooltip formatter={(v: number) => money(v)} />
+              <Legend />
             </PieChart>
           </ResponsiveContainer>
         </div>
