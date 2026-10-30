@@ -1,52 +1,52 @@
-import { Link } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
+import { useQueryClient } from "@tanstack/react-query";
 import type { ReactNode } from "react";
-import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { USERS } from "@/lib/expenses";
+import { supabase } from "@/integrations/supabase/client";
+import { ROLE_LABEL } from "@/lib/expenses";
 import { useStore } from "@/lib/store";
 import { Button } from "@/components/ui/button";
 
-const ROLE_LABEL = { employee: "Employee", manager: "Dept. manager", finance: "Finance" };
-
 export function AppShell({ children }: { children: ReactNode }) {
-  const { user, setUserId, reset } = useStore();
+  const { user, loading } = useStore();
+  const nav = useNavigate();
+  const qc = useQueryClient();
+  const reviewer = user.role !== "employee";
   const links = [
-    { to: "/", label: "Overview" },
+    { to: "/dashboard", label: "Overview" },
     { to: "/new", label: "Submit expense" },
-    ...(user.role !== "employee" ? [{ to: "/approvals", label: "Approvals" }] : []),
-    ...(user.role !== "employee" ? [{ to: "/analytics", label: "Budgets" }] : []),
+    ...(reviewer ? [{ to: "/approvals", label: "Approvals" }, { to: "/analytics", label: "Budgets" }] : []),
+    { to: "/reports", label: "Reports" },
   ] as const;
+  const signOut = async () => {
+    await qc.cancelQueries();
+    qc.clear();
+    await supabase.auth.signOut();
+    nav({ to: "/auth", replace: true });
+  };
   return (
     <div className="min-h-screen">
       <header className="border-b bg-card">
         <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-6 px-6 py-4">
-          <Link to="/" className="font-display text-2xl font-semibold tracking-tight text-primary">Ledgerline</Link>
+          <Link to="/dashboard" className="font-display text-2xl font-semibold tracking-tight text-primary">Ledgerline</Link>
           <nav className="flex flex-wrap gap-1 text-sm">
             {links.map((l) => (
-              <Link key={l.to} to={l.to} activeOptions={{ exact: true }} className="rounded px-3 py-1.5 text-muted-foreground hover:text-foreground" activeProps={{ className: "bg-secondary !text-foreground font-medium" }}>
+              <Link key={l.to} to={l.to} className="rounded px-3 py-1.5 text-muted-foreground hover:text-foreground" activeProps={{ className: "bg-secondary !text-foreground font-medium" }}>
                 {l.label}
               </Link>
             ))}
           </nav>
-          <div className="ml-auto flex items-center gap-2">
-            <span className="text-xs uppercase tracking-wider text-muted-foreground">Viewing as</span>
-            <Select value={user.id} onValueChange={setUserId}>
-              <SelectTrigger className="w-64" aria-label="Switch role"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                {(["employee", "manager", "finance"] as const).map((r) => (
-                  <SelectGroup key={r}>
-                    <SelectLabel>{ROLE_LABEL[r]}</SelectLabel>
-                    {USERS.filter((u) => u.role === r).map((u) => (
-                      <SelectItem key={u.id} value={u.id}>{u.name} · {u.department}</SelectItem>
-                    ))}
-                  </SelectGroup>
-                ))}
-              </SelectContent>
-            </Select>
-            <Button variant="ghost" size="sm" onClick={reset} title="Restore sample data">Reset</Button>
+          <div className="ml-auto flex items-center gap-3 text-sm">
+            {!loading && (
+              <div className="text-right leading-tight">
+                <div className="font-medium">{user.name}</div>
+                <div className="text-xs text-muted-foreground">{ROLE_LABEL[user.role]} · {user.department}</div>
+              </div>
+            )}
+            <Button variant="outline" size="sm" onClick={signOut}>Sign out</Button>
           </div>
         </div>
       </header>
-      <main className="mx-auto max-w-6xl px-6 py-8">{children}</main>
+      <main className="mx-auto max-w-6xl px-6 py-8">{loading ? <p className="text-muted-foreground">Loading…</p> : children}</main>
     </div>
   );
 }

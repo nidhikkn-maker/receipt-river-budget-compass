@@ -1,9 +1,11 @@
 import { useState } from "react";
-import { money, userById, type Expense } from "@/lib/expenses";
+import { money, type Expense } from "@/lib/expenses";
 import { StatusBadge, StageTrack } from "./StatusBadge";
 import { ExpenseDialog } from "./ExpenseDialog";
+import { useStore } from "@/lib/store";
 
 export function ExpenseTable({ items, showEmployee = true, empty = "Nothing here." }: { items: Expense[]; showEmployee?: boolean; empty?: string }) {
+  const { people } = useStore();
   const [open, setOpen] = useState<Expense | null>(null);
   if (items.length === 0) return <div className="rounded-md border border-dashed p-10 text-center text-sm text-muted-foreground">{empty}</div>;
   return (
@@ -28,7 +30,7 @@ export function ExpenseTable({ items, showEmployee = true, empty = "Nothing here
                   <div className="font-medium">{e.title}</div>
                   <div className="text-xs text-muted-foreground">{e.category} · {e.department}</div>
                 </td>
-                {showEmployee && <td className="px-4 py-3">{userById(e.employeeId)?.name}</td>}
+                {showEmployee && <td className="px-4 py-3">{people[e.employeeId]?.name}</td>}
                 <td className="px-4 py-3"><StageTrack status={e.status} /></td>
                 <td className="px-4 py-3"><StatusBadge status={e.status} /></td>
                 <td className="px-4 py-3 text-right font-mono">{money(e.amount)}</td>

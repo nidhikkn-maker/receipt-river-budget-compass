@@ -9,6 +9,7 @@
 > the editor, so keep the branch in a working state.
 <!-- LOVABLE:END -->
 
-- Expense workflow rules live as pure functions in src/lib/expenses.ts (tested); UI only calls them — keeps approval logic in one testable place.
-- App data is demo-only, persisted in browser localStorage via src/lib/store.tsx; no backend yet.
+- Approval transitions are enforced in the database (review_expense function + RLS); src/lib/expenses.ts mirrors them as pure, tested functions for the UI — the server is the source of truth.
+- Data lives in Lovable Cloud; src/lib/store.tsx is the single client data layer for signed-in pages under src/routes/_authenticated.
+- Reports are generated in the browser (src/lib/reports.ts) from data the user can already see, so RLS scoping applies automatically.
 - Receipt reading runs in a server function (src/lib/receipt-extract.functions.ts) so the AI key stays server-side.

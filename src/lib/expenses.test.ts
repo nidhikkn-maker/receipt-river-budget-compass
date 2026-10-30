@@ -1,27 +1,31 @@
 import { describe, expect, it } from "vitest";
-import { approve, canReview, createExpense, reimburse, reject, USERS } from "./expenses";
+import { canReimburse, canReview, departmentSpend, validateBudget, validateSubmission, type Expense, type User } from "./expenses";
 
-const u = (id: string) => USERS.find((x) => x.id === id)!;
-const emp = u("u-emp-1"); // Engineering
-const engMgr = u("u-mgr-1");
-const salesMgr = u("u-mgr-2");
-const fin = u("u-fin-1");
-const receipt = { name: "r.png", type: "image/png", dataUrl: "data:," };
-const fresh = () => createExpense(emp, { title: "x", category: "Meals", amount: 50, date: "2026-10-01", description: "", receipts: [receipt] });
+const emp: User = { id: "e1", name: "E", role: "employee", department: "Engineering" };
+const engMgr: User = { id: "m1", name: "M", role: "manager", department: "Engineering" };
+const salesMgr: User = { id: "m2", name: "S", role: "manager", department: "Sales" };
+const fin: User = { id: "f1", name: "F", role: "finance", department: "Operations" };
+const exp = (status: Expense["status"], amount = 50): Expense => ({
+  id: "x", employeeId: emp.id, department: "Engineering", title: "t", merchant: null, category: "Meals",
+  amount, date: "2026-10-01", description: "", receipts: [], status, history: [],
+});
 
 describe("approval workflow", () => {
-  it("new expense waits for the department manager", () => expect(fresh().status).toBe("pending_manager"));
-  it("requires a receipt", () => expect(() => createExpense(emp, { title: "x", category: "Meals", amount: 5, date: "", description: "", receipts: [] })).toThrow());
-  it("manager of another department cannot review", () => expect(canReview(salesMgr, fresh())).toBe(false));
-  it("finance cannot skip manager review", () => expect(() => approve(fresh(), fin)).toThrow());
-  it("manager approval forwards to finance, then finance approves", () => {
-    const a = approve(fresh(), engMgr);
-    expect(a.status).toBe("pending_finance");
-    expect(approve(a, fin).status).toBe("approved");
+  it("department manager reviews first", () => expect(canReview(engMgr, exp("pending_manager"))).toBe(true));
+  it("manager of another department cannot review", () => expect(canReview(salesMgr, exp("pending_manager"))).toBe(false));
+  it("finance cannot skip manager review", () => expect(canReview(fin, exp("pending_manager"))).toBe(false));
+  it("finance signs off after the manager", () => expect(canReview(fin, exp("pending_finance"))).toBe(true));
+  it("nobody reviews their own expense", () => expect(canReview({ ...engMgr, id: emp.id }, exp("pending_manager"))).toBe(false));
+  it("only finance pays approved expenses", () => {
+    expect(canReimburse(fin, exp("approved"))).toBe(true);
+    expect(canReimburse(fin, exp("pending_finance"))).toBe(false);
+    expect(canReimburse(engMgr, exp("approved"))).toBe(false);
   });
-  it("only approved expenses can be reimbursed", () => {
-    expect(() => reimburse(fresh(), fin)).toThrow();
-    expect(reimburse(approve(approve(fresh(), engMgr), fin), fin).status).toBe("reimbursed");
+  it("a receipt is required", () =>
+    expect(() => validateSubmission({ title: "a", category: "Meals", amount: 5, date: "2026-01-01", description: "", merchant: null, receiptCount: 0 })).toThrow());
+  it("budgets cannot be negative", () => expect(() => validateBudget(-1)).toThrow());
+  it("rejected expenses don't count against budget", () => {
+    const s = departmentSpend([exp("rejected", 100), exp("approved", 40), exp("pending_manager", 10)], "Engineering", { Engineering: 1000, Sales: 0, Marketing: 0, Operations: 0 });
+    expect(s).toMatchObject({ committed: 40, pending: 10, budget: 1000 });
   });
-  it("rejection needs a reason", () => expect(() => reject(fresh(), engMgr, " ")).toThrow());
 });
