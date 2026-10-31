@@ -13,6 +13,7 @@ import { COMMITMENT_KINDS, FREQUENCIES, FREQ_LABEL, KIND_LABEL, dueStatus, month
 import { useStore } from "@/lib/store";
 import { todayISO, usePosition } from "@/lib/use-position";
 import { cn } from "@/lib/utils";
+import { PlanCalendar } from "@/components/PlanCalendar";
 
 export const Route = createFileRoute("/_authenticated/plan")({
   head: () => ({
@@ -39,7 +40,7 @@ function Plan() {
   const [days, setDays] = useState(30);
   const [withUnconfirmed, setWithUnconfirmed] = useState(false);
   const p = usePosition(days, withUnconfirmed);
-  const { commitments, saveCommitment, removeCommitment, confirmCommitment } = useStore();
+  const { commitments, saveCommitment, removeCommitment, confirmCommitment, preferences } = useStore();
   const today = todayISO();
   const short = p.forecast.shortDates;
 
@@ -49,13 +50,14 @@ function Plan() {
 
       <div className="mb-4 flex flex-wrap items-center gap-2">
         {PERIODS.map((d) => (
-          <button key={d} onClick={() => setDays(d)} className={cn("min-h-11 rounded-full border px-4 text-sm font-medium", days === d ? "border-primary bg-primary text-primary-foreground" : "bg-card")}>{d} days</button>
+          <Button key={d} variant={days===d?"default":"outline"} onClick={() => setDays(d)}>{d} days</Button>
         ))}
         <label className="ml-auto flex items-center gap-2 text-sm">
           <input type="checkbox" checked={withUnconfirmed} onChange={(e) => setWithUnconfirmed(e.target.checked)} className="accent-[var(--primary)]" />
           Include unconfirmed income
         </label>
       </div>
+      <div className="mb-4 flex items-center gap-3"><Label htmlFor="forecast-days">Custom forecast days</Label><Input id="forecast-days" className="w-24" type="number" min="1" max="365" value={days} onChange={e=>setDays(Math.min(365,Math.max(1,Number(e.target.value)||1)))}/></div>
 
       <section className="mb-6 grid gap-4 lg:grid-cols-[1fr_1.4fr]">
         <div className="rounded-3xl bg-hero p-6 text-primary-foreground shadow-float">
@@ -100,6 +102,8 @@ function Plan() {
         <Stat label="Overdue" value={String(commitments.filter((c) => dueStatus(c, today) === "overdue").length)} />
       </div>
 
+      <PlanCalendar />
+      <section className="mb-6 grid gap-5 sm:grid-cols-2"><div><h2 className="font-display text-lg font-bold">Income this month</h2><p className="mt-2 text-sm">Received {money(p.income.received)} · expected remaining {money(p.income.expectedRemaining)} · confirmed {money(p.income.expectedConfirmed)}</p><ul className="mt-2 divide-y text-sm">{Object.entries(p.income.bySource).map(([name,amount])=><li key={name} className="flex justify-between py-2"><span>{name}</span><span>{money(amount)}</span></li>)}</ul>{p.income.late.map((x,i)=><p key={i} className="text-sm text-destructive">Late income: {x.name} · {money(x.amount)}</p>)}</div><div><h2 className="font-display text-lg font-bold">Subscriptions</h2><p className="mt-2 text-sm">{p.subscriptions.active} active · {money(p.subscriptions.monthly)}/month · {money(p.subscriptions.annual)}/year</p>{p.subscriptions.summary.increases.map((x,i)=><p key={i} className="mt-2 text-sm">Price increase: {x.name}</p>)}{p.subscriptions.summary.duplicates.map((x,i)=><p key={i} className="mt-2 text-sm text-warning">Review duplicates: {x.names.join(" / ")}</p>)}</div></section>
       <section className="mb-8">
         <h2 className="mb-2 font-display text-lg font-bold">Calendar</h2>
         {!p.upcoming.length && <p className="rounded-2xl border border-dashed p-6 text-center text-sm text-muted-foreground">Nothing scheduled. Add salary, rent, EMIs, insurance or subscriptions below.</p>}
@@ -117,7 +121,7 @@ function Plan() {
                   </div>
                 </div>
                 <div className={cn("font-mono", u.direction === "in" && "text-primary")}>{u.direction === "in" ? "+" : "−"}{money(u.amount)}</div>
-                {c && <PayButton c={c} onPay={confirmCommitment} />}
+                {c && (u.overdue || u.date===c.nextDue) && <PayButton c={c} onPay={confirmCommitment} />}
               </li>
             );
           })}
@@ -136,7 +140,8 @@ function Plan() {
                     <div className="truncate font-medium">{c.name}</div>
                     <div className="text-xs text-muted-foreground">{KIND_LABEL[c.kind]} · {FREQ_LABEL[c.frequency]} · next {c.nextDue} · {money(monthlyCost(c))}/mo</div>
                   </div>
-                  <span className={cn("rounded-full px-2 py-0.5 text-[11px]", STATUS_STYLE[st])}>{STATUS_LABEL[st]}</span>
+                  <span className={cn("rounded-full px-2 py-0.5 text-[11px]", STATUS_STYLE[st])}>{STATUS_LABEL[st] ?? st}</span>
+                  <Button size="sm" variant="ghost" onClick={()=>{const v=window.prompt(`New amount for ${c.name} (₹)`,String(c.amount));if(v!==null)void saveCommitment({...c,amount:Number(v)}).catch(e=>toast.error(e.message));}}>Edit amount</Button>
                   <Button size="icon" variant="ghost" aria-label={c.status === "active" ? `Pause ${c.name}` : `Resume ${c.name}`}
                     onClick={() => saveCommitment({ ...c, status: c.status === "active" ? "paused" : "active" }).catch((e) => toast.error(e.message))}>
                     {c.status === "active" ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
@@ -217,7 +222,7 @@ function CommitmentForm() {
     setBusy(true);
     try {
       await saveCommitment({ name, kind, direction: isIncome ? "in" : "out", amount: Number(amount), frequency, intervalDays: frequency === "custom" ? Number(interval) : null,
-        nextDue, accountId: accountId === "none" ? null : accountId, category: isIncome ? "Other" : category, confirmed: isIncome ? confirmed : true, essential, status: "active" });
+        nextDue, accountId: accountId === "none" ? null : accountId, category: isIncome ? "Income" : category, confirmed: isIncome ? confirmed : true, essential, status: "active" });
       setName(""); setAmount("");
       toast.success("Added to your plan");
     } catch (err) { toast.error((err as Error).message); } finally { setBusy(false); }

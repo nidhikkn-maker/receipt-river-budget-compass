@@ -511,6 +511,27 @@ export type Database = {
         }
         Relationships: []
       }
+      finance_operations: {
+        Row: {
+          created_at: string
+          operation_key: string
+          owner_id: string
+          result: Json
+        }
+        Insert: {
+          created_at?: string
+          operation_key: string
+          owner_id: string
+          result?: Json
+        }
+        Update: {
+          created_at?: string
+          operation_key?: string
+          owner_id?: string
+          result?: Json
+        }
+        Relationships: []
+      }
       finance_preferences: {
         Row: {
           data: Json
@@ -793,6 +814,10 @@ export type Database = {
     }
     Functions: {
       delete_my_finance_data: { Args: never; Returns: undefined }
+      finance_operation: {
+        Args: { action: string; payload: Json }
+        Returns: Json
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]

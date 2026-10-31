@@ -32,6 +32,11 @@ describe("budgets", () => {
 });
 
 describe("currency & reconciliation", () => {
+  it("includes bank credits only when requested and never matches them to expenses",()=>{
+    const lines=parseStatementCsv("Date,Narration,Debit,Credit\n31/10/2026,SALARY,,50000",true);
+    expect(lines[0]).toEqual({ref:"L1",date:"2026-10-31",description:"SALARY",amount:50000,direction:"credit"});
+    expect(autoMatch(lines,[exp({amount:50000,date:"2026-10-31"})],"INR")[0]?.expense).toBeNull();
+  });
   const usd = exp({ currency: "USD", originalAmount: 12, fxRate: 88.5, amount: 1062, merchant: "Uber" });
   it("converts with the day's rate, to paise", () => expect(convert(12, 88.5)).toBe(1062));
   it("parses DD/MM/YYYY bank CSVs with a debit column, skipping credits", () => {

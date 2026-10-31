@@ -6,23 +6,42 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { money } from "@/lib/expenses";
 import { accountBalance, type Account } from "@/lib/ledger";
-import { amortize, goalProgress, prepayment } from "@/lib/planning";
+import { amortize, goalProgress, prepayment, closureDate, addMonths, LOAN_TYPES, LOAN_TYPE_LABEL, type LoanType } from "@/lib/planning";
+import { cardCycle, CARD_STATUS_LABEL } from "@/lib/cards";
+import { cardEmisOf } from "@/lib/position";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { useStore, type Loan } from "@/lib/store";
 import { todayISO } from "@/lib/use-position";
 
 const months = (n: number) => (Number.isFinite(n) ? `${Math.floor(n / 12)}y ${n % 12}m` : "never");
 
 export function CardDetails({ a }: { a: Account }) {
-  const { updateAccount, transactions } = useStore();
+  const { updateAccount, transactions, loans, preferences, accounts, save } = useStore();
+  const [issuer, setIssuer] = useState(a.issuer ?? "");
+  const [digits, setDigits] = useState(a.lastFour ?? "");
+  const [statementDay, setStatementDay] = useState(String(a.statementDay ?? ""));
+  const [rate, setRate] = useState(String(a.interestRate ?? ""));
+  const [busy, setBusy] = useState(false);
   const [limit, setLimit] = useState(a.creditLimit ? String(a.creditLimit) : "");
   const [day, setDay] = useState(a.dueDay ? String(a.dueDay) : "");
   const due = accountBalance(a, transactions);
   const util = a.creditLimit ? Math.round((due / a.creditLimit) * 100) : null;
+  const cycle = cardCycle(a, transactions, cardEmisOf(loans), todayISO(), preferences.cardAlertPct);
+  const [payFrom, setPayFrom] = useState("none");
+  const pay = async () => {
+    const amount = window.prompt("Card payment amount (₹)", String(cycle.remainingDue || Math.max(0, due)));
+    if (!amount || payFrom === "none") return;
+    setBusy(true);
+    try { await save({ title: `${a.name} bill payment`, merchant: a.issuer || null, category: "Card payment", scope: "personal", memberId: null, amount: Number(amount), currency: "INR", date: todayISO(), description: "Credit card settlement", paymentMethod: "bank_transfer", txnType: "transfer", accountId: payFrom, toAccountId: a.id }); toast.success("Card payment recorded"); } catch(e) { toast.error((e as Error).message); } finally { setBusy(false); }
+  };
   return (
     <div className="mt-2 grid grid-cols-[1fr_1fr_auto] items-end gap-2 border-t pt-2">
       <div className="grid gap-1"><Label htmlFor={`l-${a.id}`} className="text-xs">Limit (₹)</Label><Input id={`l-${a.id}`} type="number" value={limit} onChange={(e) => setLimit(e.target.value)} /></div>
       <div className="grid gap-1"><Label htmlFor={`d-${a.id}`} className="text-xs">Due day</Label><Input id={`d-${a.id}`} type="number" min="1" max="31" value={day} onChange={(e) => setDay(e.target.value)} /></div>
-      <Button size="sm" variant="secondary" onClick={() => updateAccount(a.id, { creditLimit: limit ? Number(limit) : null, dueDay: day ? Number(day) : null }).then(() => toast.success("Card updated")).catch((e) => toast.error(e.message))}>Save</Button>
+      <Button size="sm" variant="secondary" onClick={() => updateAccount(a.id, { issuer, lastFour: digits || null, statementDay: statementDay ? Number(statementDay) : null, interestRate: rate ? Number(rate) : null, creditLimit: limit ? Number(limit) : null, dueDay: day ? Number(day) : null }).then(() => toast.success("Card updated")).catch((e) => toast.error(e.message))}>Save</Button>
+      <div className="col-span-3 grid grid-cols-2 gap-2"><div><Label htmlFor={`issuer-${a.id}`}>Bank / issuer</Label><Input id={`issuer-${a.id}`} value={issuer} onChange={e=>setIssuer(e.target.value)}/></div><div><Label htmlFor={`digits-${a.id}`}>Last four digits</Label><Input id={`digits-${a.id}`} maxLength={4} value={digits} onChange={e=>setDigits(e.target.value)}/></div><div><Label htmlFor={`statement-${a.id}`}>Statement day</Label><Input id={`statement-${a.id}`} type="number" min="1" max="31" value={statementDay} onChange={e=>setStatementDay(e.target.value)}/></div><div><Label htmlFor={`rate-${a.id}`}>Annual interest %</Label><Input id={`rate-${a.id}`} type="number" min="0" max="100" value={rate} onChange={e=>setRate(e.target.value)}/></div></div>
+      <div className="col-span-3 grid grid-cols-2 gap-2 border-t pt-3 text-xs"><div>Status: <b>{CARD_STATUS_LABEL[cycle.status]}</b></div><div>Due: {cycle.dueDate ?? "—"}</div><div>Statement: {money(cycle.statementBalance)}</div><div>Remaining due: {money(cycle.remainingDue)}</div><div>Unbilled: {money(cycle.unbilled)}</div><div>Payments: {money(cycle.paymentsSinceStatement)}</div><div>Interest & charges: {money(cycle.interestSinceStatement)}</div><div>EMI principal left: {money(cycle.emiOutstanding)}</div></div>
+      <div className="col-span-3 flex gap-2"><Select value={payFrom} onValueChange={setPayFrom}><SelectTrigger aria-label={`Pay ${a.name} from`}><SelectValue /></SelectTrigger><SelectContent><SelectItem value="none">Payment account</SelectItem>{accounts.filter(x=>!x.archived&&["savings","current","cash","wallet"].includes(x.kind)).map(x=><SelectItem key={x.id} value={x.id}>{x.name}</SelectItem>)}</SelectContent></Select><Button size="sm" disabled={busy||payFrom==="none"} onClick={()=>void pay()}>Record payment</Button></div>
       {util !== null && (
         <div className="col-span-3">
           <div className="h-2 overflow-hidden rounded-full bg-muted"><div className={util >= 70 ? "h-full bg-destructive" : "h-full bg-primary"} style={{ width: `${Math.min(100, Math.max(0, util))}%` }} /></div>
@@ -35,10 +54,10 @@ export function CardDetails({ a }: { a: Account }) {
 
 export function LoansPanel() {
   const { loans, saveLoan, removeLoan } = useStore();
-  const [f, setF] = useState({ name: "", principal: "", rate: "", emi: "", nextDue: todayISO() });
+  const [f, setF] = useState({ name: "", principal: "", rate: "", emi: "", nextDue: todayISO(), provider: "", loanType: "personal" as LoanType, original: "", startDate: "", prepaymentTerms: "", foreclosure: "0" });
   const add = (e: React.FormEvent) => {
     e.preventDefault();
-    saveLoan({ name: f.name, principal: Number(f.principal), rate: Number(f.rate), emi: Number(f.emi), nextDue: f.nextDue, provider: "", loanType: "personal", prepaymentTerms: "", foreclosurePct: 0 })
+    saveLoan({ name: f.name, principal: Number(f.principal), rate: Number(f.rate), emi: Number(f.emi), nextDue: f.nextDue, provider: f.provider, loanType: f.loanType, original: f.original ? Number(f.original) : null, startDate: f.startDate || null, prepaymentTerms: f.prepaymentTerms, foreclosurePct: Number(f.foreclosure) })
       .then(() => { setF({ ...f, name: "", principal: "", rate: "", emi: "" }); toast.success("Loan added"); })
       .catch((err) => toast.error(err.message));
   };
@@ -48,6 +67,9 @@ export function LoansPanel() {
       {loans.map((l) => <LoanCard key={l.id} l={l} onRemove={() => removeLoan(l.id).catch((e) => toast.error(e.message))} />)}
       <form onSubmit={add} className="grid grid-cols-2 gap-2 rounded-3xl border bg-card p-4">
         <div className="col-span-2 grid gap-1"><Label htmlFor="ln">Loan</Label><Input id="ln" placeholder="Home loan — SBI" value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} /></div>
+        <div className="grid gap-1"><Label htmlFor="loan-provider">Provider</Label><Input id="loan-provider" value={f.provider} onChange={e=>setF({...f,provider:e.target.value})}/></div><div className="grid gap-1"><Label>Loan type</Label><Select value={f.loanType} onValueChange={v=>setF({...f,loanType:v as LoanType})}><SelectTrigger aria-label="Loan type"><SelectValue/></SelectTrigger><SelectContent>{LOAN_TYPES.filter(t=>t!=="credit_card_emi").map(t=><SelectItem key={t} value={t}>{LOAN_TYPE_LABEL[t]}</SelectItem>)}</SelectContent></Select></div>
+        <div className="grid gap-1"><Label htmlFor="loan-original">Original principal (₹)</Label><Input id="loan-original" type="number" value={f.original} onChange={e=>setF({...f,original:e.target.value})}/></div><div className="grid gap-1"><Label htmlFor="loan-start">Start date</Label><Input id="loan-start" type="date" value={f.startDate} onChange={e=>setF({...f,startDate:e.target.value})}/></div>
+        <div className="grid gap-1"><Label htmlFor="loan-foreclosure">Foreclosure charge %</Label><Input id="loan-foreclosure" type="number" min="0" max="20" value={f.foreclosure} onChange={e=>setF({...f,foreclosure:e.target.value})}/></div><div className="grid gap-1"><Label htmlFor="loan-terms">Prepayment terms</Label><Input id="loan-terms" value={f.prepaymentTerms} onChange={e=>setF({...f,prepaymentTerms:e.target.value})}/></div>
         <div className="grid gap-1"><Label htmlFor="lp">Outstanding (₹)</Label><Input id="lp" type="number" value={f.principal} onChange={(e) => setF({ ...f, principal: e.target.value })} /></div>
         <div className="grid gap-1"><Label htmlFor="lr">Interest % / yr</Label><Input id="lr" type="number" step="0.01" value={f.rate} onChange={(e) => setF({ ...f, rate: e.target.value })} /></div>
         <div className="grid gap-1"><Label htmlFor="le">EMI (₹)</Label><Input id="le" type="number" value={f.emi} onChange={(e) => setF({ ...f, emi: e.target.value })} /></div>
@@ -59,9 +81,11 @@ export function LoansPanel() {
 }
 
 function LoanCard({ l, onRemove }: { l: Loan; onRemove: () => void }) {
+  const { accounts, recordLoanPayment } = useStore();
+  const [from, setFrom] = useState("none"); const [payDate, setPayDate] = useState(todayISO()); const [busy,setBusy]=useState(false);
   const [extra, setExtra] = useState("");
   const a = amortize(l.principal, l.rate, l.emi);
-  const sim = Number(extra) > 0 ? prepayment(l.principal, l.rate, l.emi, Number(extra)) : null;
+  const sim = Number(extra) > 0 ? prepayment(l.principal, l.rate, l.emi, Number(extra), l.foreclosurePct) : null;
   const first = a.schedule[0];
   return (
     <div className="rounded-2xl border bg-card p-4">
@@ -69,6 +93,7 @@ function LoanCard({ l, onRemove }: { l: Loan; onRemove: () => void }) {
         <div className="flex-1">
           <div className="font-medium">{l.name}</div>
           <div className="text-xs text-muted-foreground">{money(l.principal)} at {l.rate}% · EMI {money(l.emi)} · next {l.nextDue}</div>
+          <div className="text-xs text-muted-foreground">{LOAN_TYPE_LABEL[l.loanType]} · {l.provider || "No provider"} · {l.status} · closes {closureDate(l.nextDue,a.months) ?? "—"}</div>
         </div>
         <Button size="icon" variant="ghost" aria-label={`Delete ${l.name}`} onClick={onRemove}><Trash2 className="h-4 w-4" /></Button>
       </div>
@@ -87,9 +112,11 @@ function LoanCard({ l, onRemove }: { l: Loan; onRemove: () => void }) {
         <div className="mt-2 grid gap-2 rounded-xl bg-secondary p-3 text-sm sm:grid-cols-2">
           <div><b>Keep EMI:</b> finish {months(sim.reduceTenure.monthsSaved)} sooner, save {money(sim.reduceTenure.interestSaved)} interest.</div>
           <div><b>Keep tenure:</b> EMI drops by {money(sim.reduceEmi.emiDrop)} to {money(sim.reduceEmi.newEmi)}, save {money(sim.reduceEmi.interestSaved)}.</div>
-          <div className="text-xs text-muted-foreground sm:col-span-2">Hypothetical — uses the rate and EMI you entered. Your cash today drops by {money(Number(extra))}.</div>
+          <div className="text-xs text-muted-foreground sm:col-span-2">Charge: {money(sim.charge)} · cash needed: {money(sim.cashImpact)} · net savings: {money(sim.reduceTenure.netSaving)}. {l.prepaymentTerms}</div>
         </div>
       )}
+      {l.status!=="closed"&&<div className="mt-4 grid gap-2 border-t pt-3"><Input aria-label={`Payment date for ${l.name}`} type="date" max={todayISO()} value={payDate} onChange={e=>setPayDate(e.target.value)}/>{l.loanType!=="credit_card_emi"&&<Select value={from} onValueChange={setFrom}><SelectTrigger aria-label={`Pay ${l.name} from`}><SelectValue/></SelectTrigger><SelectContent><SelectItem value="none">Payment account</SelectItem>{accounts.filter(x=>!x.archived&&["savings","current","cash","wallet"].includes(x.kind)).map(x=><SelectItem key={x.id} value={x.id}>{x.name}</SelectItem>)}</SelectContent></Select>}<Button size="sm" disabled={busy||(l.loanType!=="credit_card_emi"&&from==="none")} onClick={async()=>{setBusy(true);try{await recordLoanPayment(l,{fromAccountId:from==="none"?null:from,date:payDate});toast.success("EMI recorded");}catch(e){toast.error((e as Error).message);}finally{setBusy(false);}}}>{l.loanType==="credit_card_emi"?"Record billed instalment":"Record EMI payment"}</Button></div>}
+      <details className="mt-3"><summary className="cursor-pointer text-sm">Payment history & full schedule</summary><ul className="mt-2 divide-y text-xs">{l.payments.map((p,i)=><li key={i} className="py-2">{p.date} · principal {money(p.principal)} + interest {money(p.interest)} = {money(p.total)}</li>)}</ul><div className="mt-2 max-h-64 overflow-auto"><table className="w-full text-left text-xs"><thead><tr><th>Date</th><th>Principal</th><th>Interest</th><th>Balance</th></tr></thead><tbody>{a.schedule.map(row=><tr key={row.month} className="border-t"><td className="py-2">{addMonths(l.nextDue,row.month-1)}</td><td>{money(row.principal)}</td><td>{money(row.interest)}</td><td>{money(row.balance)}</td></tr>)}</tbody></table></div></details>
     </div>
   );
 }

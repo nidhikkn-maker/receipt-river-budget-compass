@@ -39,11 +39,19 @@ describe("card cycle", () => {
     expect(cardCycle(card, txns, [], "2026-11-05").status).toBe("pending");
     expect(cardCycle(card, txns, [], "2026-11-09").status).toBe("overdue");
   });
-  it("refunds reduce unbilled and interest is reported separately", () => {
-    const c = cardCycle(card, [...txns, { id: "r", date: "2026-10-26", amount: 1000, accountId: "c", txnType: "refund" }, buy("i", "2026-10-27", 450, { category: "Financial charges" })], [], "2026-10-31");
+  it("refunds linked to current purchases reduce unbilled and interest is separate", () => {
+    const c = cardCycle(card, [...txns, { id: "r", date: "2026-10-26", amount: 1000, accountId: "c", txnType: "refund", refundOfId:"p3" }, buy("i", "2026-10-27", 450, { category: "Financial charges" })], [], "2026-10-31");
     expect(c.unbilled).toBe(2000);
     expect(c.refundsSinceStatement).toBe(1000);
     expect(c.interestSinceStatement).toBe(450);
+  });
+  it("a refund of a billed purchase reduces statement dues, not newer purchases",()=>{
+    const c=cardCycle(card,[...txns,{id:"r",date:"2026-10-26",amount:1000,accountId:"c",txnType:"refund",refundOfId:"p1"}],[],"2026-10-31");
+    expect(c.remainingDue).toBe(14000);expect(c.unbilled).toBe(3000);expect(c.status).toBe("partly_paid");
+  });
+  it("unallocated credits and excess payments settle oldest dues then new purchases",()=>{
+    const c=cardCycle(card,[...txns,pay("pay","2026-10-28",16000),{id:"r",date:"2026-10-26",amount:1000,accountId:"c",txnType:"refund"}],[],"2026-10-31");
+    expect(c.remainingDue).toBe(0);expect(c.unbilled).toBe(1000);expect(c.owed).toBe(1000);
   });
   it("flags utilisation at or above the alert level", () => {
     const c = cardCycle(card, [buy("big", "2026-10-25", 35000)], [], "2026-10-31", 30);

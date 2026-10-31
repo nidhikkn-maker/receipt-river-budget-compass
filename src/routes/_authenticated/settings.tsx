@@ -8,7 +8,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { PasskeySettings } from "@/components/DeviceLock";
 import { FinanceSettings } from "@/components/FinanceSettings";
 import { useStore } from "@/lib/store";
-import { clearOfflineOwner } from "@/lib/offline";
+import { BACKUP_TABLES, createBackupZip, prepareRestore, readBackup, type Backup } from "@/lib/backup";
+import { downloadBlob } from "@/lib/reports";
 
 export const Route = createFileRoute("/_authenticated/settings")({
   head: () => ({
@@ -25,30 +26,34 @@ export const Route = createFileRoute("/_authenticated/settings")({
 });
 
 // Restore order matters: rows that others point to come first.
-const TABLES = ["finance_preferences", "family_members", "accounts", "category_budgets", "commitments", "loans", "goals", "expenses"] as const;
-type T = (typeof TABLES)[number];
-const OWNER: Record<T, string> = { finance_preferences: "owner_id", family_members: "owner_id", accounts: "owner_id", category_budgets: "owner_id", commitments: "owner_id", loans: "owner_id", goals: "owner_id", expenses: "employee_id" };
-
 function Settings() {
-  const { userId, refresh, transactions, accounts } = useStore();
+  const { userId, name, updateName, deleteAll, refresh, transactions, accounts } = useStore();
   const file = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
 
   const backup = async () => {
     setBusy(true);
     try {
-      const out: Record<string, unknown[]> = {};
-      for (const t of TABLES) {
+      const out: Backup["data"] = {};
+      for (const t of BACKUP_TABLES) {
         const { data, error } = await supabase.from(t).select("*");
         if (error) throw new Error(error.message);
         out[t] = data ?? [];
       }
-      const blob = new Blob([JSON.stringify({ app: "ledgerline", version: 1, exportedAt: new Date().toISOString(), data: out }, null, 2)], { type: "application/json" });
-      const a = document.createElement("a");
-      a.href = URL.createObjectURL(blob);
-      a.download = `ledgerline-backup-${new Date().toISOString().slice(0, 10)}.json`;
-      a.click();
-      URL.revokeObjectURL(a.href);
+      const paths = new Set<string>();
+      for (const e of out.expenses ?? []) for (const r of (e["receipts"] ?? []) as { path: string }[]) paths.add(r.path);
+      for (const d of out.documents ?? []) if (typeof d["file_path"] === "string") paths.add(d["file_path"]);
+      const files: Record<string, Uint8Array> = {};
+      let bytes = 0;
+      for (const path of paths) {
+        const { data, error } = await supabase.storage.from("receipts").download(path);
+        if (error || !data) throw Error("Couldn't download one of your files. Backup stopped so nothing is silently omitted.");
+        bytes += data.size;
+        if (bytes > 140 * 1024 * 1024) throw Error("Files exceed the 140 MB backup limit");
+        files[path] = new Uint8Array(await data.arrayBuffer());
+      }
+      const zip = createBackupZip({ app: "ledgerline", version: 2, owner: userId, name, exportedAt: new Date().toISOString(), data: out }, files);
+      downloadBlob(new Blob([new Uint8Array(zip).buffer], { type: "application/zip" }), `ledgerline-backup-${new Date().toISOString().slice(0, 10)}.zip`);
       toast.success("Backup downloaded");
     } catch (e) { toast.error((e as Error).message); } finally { setBusy(false); }
   };
@@ -57,32 +62,40 @@ function Settings() {
     if (!f) return;
     setBusy(true);
     try {
-      const j = JSON.parse(await f.text()) as { app?: string; data?: Record<string, Record<string, unknown>[]> };
-      if (j.app !== "ledgerline" || !j.data) throw new Error("That isn't a Ledgerline backup file");
+      if (f.size > 150 * 1024 * 1024) throw Error("Backup must be under 150 MB");
+      const { backup: j, files } = readBackup(new Uint8Array(await f.arrayBuffer()), /\.zip$/i.test(f.name));
+      const { data: restored, paths } = prepareRestore(j, userId);
+      if (!window.confirm("Restore this backup into your account? Existing matching records will be updated.")) return;
+      for (const [oldPath, newPath] of paths) {
+        const bytes = files[oldPath];
+        if (!bytes) {
+          const { error } = await supabase.storage.from("receipts").download(newPath);
+          if (error) throw Error("This older backup doesn't contain its receipt files. Restore it to the original account or choose a complete ZIP backup.");
+          continue;
+        }
+        const { error } = await supabase.storage.from("receipts").upload(newPath, new Uint8Array(bytes).buffer, { upsert: true });
+        if (error) throw Error("Couldn't restore a file — please try again");
+      }
       let n = 0;
-      for (const t of TABLES) {
-        const rows = (j.data[t] ?? []).map((r) => ({ ...r, [OWNER[t]]: userId }));
+      for (const t of BACKUP_TABLES) {
+        const rows = restored[t] ?? [];
         if (!rows.length) continue;
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const { error } = await supabase.from(t).upsert(rows as any);
         if (error) throw new Error(`Couldn't restore ${t.replace("_", " ")}: ${error.message}`);
         n += rows.length;
       }
+      if (j.name?.trim()) await updateName(j.name);
       await refresh();
       toast.success(`Restored ${n} records`);
     } catch (e) { toast.error((e as Error).message); } finally { setBusy(false); if (file.current) file.current.value = ""; }
   };
 
   const wipe = async () => {
-    if (window.prompt('This deletes all your records on this device. Type DELETE to confirm.') !== "DELETE") return;
+    if (window.prompt('This permanently deletes your financial records across all devices. Type DELETE to confirm.') !== "DELETE") return;
     setBusy(true);
     try {
-      for (const t of [...TABLES].reverse()) {
-        const { error } = await supabase.from(t).delete().eq(OWNER[t] as never, userId as never);
-        if (error) throw new Error(error.message);
-      }
-      await clearOfflineOwner(userId);
-      await refresh();
+      await deleteAll();
       toast.success("All records deleted");
     } catch (e) { toast.error((e as Error).message); } finally { setBusy(false); }
   };
@@ -94,12 +107,12 @@ function Settings() {
       <PasskeySettings />
       <FinanceSettings />
       <div className="grid gap-4 sm:grid-cols-2">
-        <Card title="Back up everything" body="Download one file with all accounts, entries, recurring payments, loans, goals, budgets and family. Receipt images stay in the app.">
+        <Card title="Back up everything" body="Accounts, entries, budgets, valuations, family and original receipt and document files.">
           <Button onClick={backup} disabled={busy}><Download className="h-4 w-4" />Download backup</Button>
         </Card>
         <Card title="Restore from a backup" body="Pick a Ledgerline backup file. Records are added back (or updated if they already exist).">
           <Button variant="secondary" onClick={() => file.current?.click()} disabled={busy}><Upload className="h-4 w-4" />Choose backup file</Button>
-          <input ref={file} type="file" accept="application/json,.json" className="sr-only" aria-label="Backup file" onChange={(e) => restore(e.target.files?.[0])} />
+          <input ref={file} type="file" accept="application/zip,application/json,.zip,.json" className="sr-only" aria-label="Backup file" onChange={(e) => restore(e.target.files?.[0])} />
         </Card>
         <Card title="Export reports" body="CSV and PDF reports of spending, by category, family member and business vs personal.">
           <Button asChild variant="secondary"><Link to="/reports">Open reports</Link></Button>

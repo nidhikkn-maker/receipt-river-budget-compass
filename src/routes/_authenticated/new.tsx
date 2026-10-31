@@ -72,7 +72,7 @@ function NewExpense() {
   const [title, setTitle] = useState("");
   const [merchant, setMerchant] = useState("");
   const [amount, setAmount] = useState("");
-  const [currency, setCurrency] = useState<string>("INR");
+  const [currency, setCurrency] = useState<string>(preferences.defaultCurrency);
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("upi");
   const [category, setCategory] = useState<Category>("Groceries");
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10));

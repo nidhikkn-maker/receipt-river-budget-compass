@@ -1,7 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import type { Json } from "@/integrations/supabase/types";
+import type { Database, Json } from "@/integrations/supabase/types";
 import { queueEntry, pendingEntries, removePending, putSnapshot, getSnapshot, clearOfflineOwner } from "./offline";
 import { saveExpense } from "./fx.functions";
 import {
@@ -282,14 +282,14 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
     check((await supabase.from("expenses").update({ reimbursement_status: status }).eq("id", id)).error);
     setExpenses((xs) => xs.map((x) => (x.id === id ? { ...x, reimbursementStatus: status } : x)));
   };
+  const operation = async (action: string, payload: Record<string, unknown>) => {
+    if (!navigator.onLine) throw Error("Reconnect to record this payment");
+    const { data, error } = await supabase.rpc("finance_operation", { action, payload: payload as Json });
+    check(error); return data;
+  };
   const recordReimbursement: Ctx["recordReimbursement"] = async (ids, accountId, date) => {
-    const items = expenses.filter((x) => ids.includes(x.id) && x.reimbursementStatus === "pending");
-    if (!items.length) throw new Error("Pick at least one pending expense");
-    const total = r2(items.reduce((s, x) => s + x.amount, 0));
-    await save({ title: items.length === 1 ? `Reimbursement — ${items[0]!.title}` : `Reimbursement — ${items.length} expenses`, merchant: null, category: "Reimbursement",
-      scope: items.every((x) => x.scope === "business") ? "business" : "personal", memberId: null, amount: total, currency: "INR", paymentMethod: "bank_transfer", date,
-      description: `Reimbursed: ${items.map((x) => `${x.title} (${x.date})`).join(", ")}`.slice(0, 2000), txnType: "reimbursement", accountId, tags: ["Purpose: Reimbursable"] }, { noRefresh: true });
-    check((await supabase.from("expenses").update({ reimbursement_status: "received" }).in("id", items.map((x) => x.id))).error);
+    const unique=[...new Set(ids)].sort();
+    await operation("reimbursement", { ids:unique, accountId, date, operationId: unique.join(":") });
     await refresh();
   };
   const reconcile: Ctx["reconcile"] = async (id, ref) => {
@@ -327,7 +327,8 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
     }).select("id").single();
     check(error);
     await refresh();
-    return data!.id;
+    if (!data) throw new Error("Account wasn't saved — try again");
+    return data.id;
   };
   const setArchived: Ctx["setArchived"] = async (id, archived) => {
     check((await supabase.from("accounts").update({ archived }).eq("id", id)).error);
@@ -335,7 +336,7 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
   };
   const updateAccount: Ctx["updateAccount"] = async (id, p) => {
     validateCard(p);
-    const row: Record<string, unknown> = {};
+    const row: Database["public"]["Tables"]["accounts"]["Update"] = {};
     if (p.name !== undefined) { if (!p.name.trim()) throw new Error("Name the account"); row["name"] = p.name.trim(); }
     if (p.creditLimit !== undefined) row["credit_limit"] = p.creditLimit;
     if (p.dueDay !== undefined) row["due_day"] = p.dueDay;
@@ -345,7 +346,7 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
     if (p.statementDay !== undefined) row["statement_day"] = p.statementDay;
     if (p.interestRate !== undefined) row["interest_rate"] = p.interestRate;
     if (p.includeInCash !== undefined) row["include_in_cash"] = p.includeInCash;
-    if (p.details !== undefined) row["details"] = p.details;
+    if (p.details !== undefined) row["details"] = p.details as Json;
     check((await supabase.from("accounts").update(row).eq("id", id)).error);
     await refresh();
   };
@@ -370,13 +371,7 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
   };
   const removeCommitment: Ctx["removeCommitment"] = async (id) => { check((await supabase.from("commitments").delete().eq("id", id)).error); await refresh(); };
   const confirmCommitment: Ctx["confirmCommitment"] = async (c, amount, accountId) => {
-    pos(amount, "Amount");
-    const incoming = c.direction === "in";
-    await save({ title: c.name, merchant: c.name, category: c.category || (incoming ? "Other income" : "Miscellaneous"), scope: "personal", memberId: null, amount, currency: "INR",
-      paymentMethod: "bank_transfer", date: today(), description: `${incoming ? "Received" : "Paid"}: ${c.name}`,
-      txnType: incoming ? "income" : "expense", accountId: accountId ?? c.accountId, tags: c.frequency === "once" ? [] : ["Nature: Recurring"] }, { noRefresh: true });
-    const next = nextAfter(c.nextDue, c.frequency, c.intervalDays);
-    check((await supabase.from("commitments").update(c.frequency === "once" ? { status: "completed" } : { next_due: next }).eq("id", c.id)).error);
+    await operation("commitment", { id: c.id, expectedDue: c.nextDue, amount, accountId: accountId ?? c.accountId, date: today() });
     await refresh();
   };
   const saveLoan: Ctx["saveLoan"] = async (x) => {
@@ -392,10 +387,7 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
       check((await supabase.from("loans").update(row).eq("id", x.id)).error);
       if (existing?.accountId && existing.loanType !== "credit_card_emi") await supabase.from("accounts").update({ name: x.name.trim() }).eq("id", existing.accountId);
     } else {
-      pos(x.principal, "Outstanding amount");
-      const acc = await supabase.from("accounts").insert({ owner_id: userId, name: x.name.trim(), kind: x.loanType === "borrowing" ? "other_liability" : "loan", opening_balance: x.principal, issuer: x.provider.trim(), interest_rate: x.rate }).select("id").single();
-      check(acc.error);
-      check((await supabase.from("loans").insert({ ...row, owner_id: userId, principal_outstanding: x.principal, original_principal: x.original ?? x.principal, account_id: acc.data!.id })).error);
+      await operation("create_loan", { ...x, operationId: crypto.randomUUID(), date: today() });
     }
     await refresh();
   };
@@ -406,49 +398,11 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
     await refresh();
   };
   const recordLoanPayment: Ctx["recordLoanPayment"] = async (l, p) => {
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(p.date)) throw new Error("Pick the payment date");
-    await ensureCategory(CHARGES_CATEGORY);
-    let principal: number, interest: number;
-    if (l.loanType === "credit_card_emi") {
-      const inst = nextEmiInstalment({ id: l.id, name: l.name, accountId: l.accountId, sourceTransactionId: l.sourceTransactionId, original: l.original, startDate: l.startDate ?? p.date, emi: l.emi, rate: l.rate, payments: l.payments }, p.date);
-      if (!inst) throw new Error("This EMI is already fully billed");
-      principal = p.principal ?? inst.principal; interest = p.interest ?? inst.interest;
-      if (interest > 0) await save({ title: `${l.name} — EMI interest`, merchant: l.provider || null, category: CHARGES_CATEGORY, scope: "personal", memberId: null, amount: interest, currency: "INR",
-        paymentMethod: "credit_card", date: p.date, description: `EMI instalment billed: principal ₹${principal}, interest ₹${interest}`, txnType: "expense", accountId: l.accountId, tags: ["EMI interest"] }, { noRefresh: true });
-    } else {
-      if (!p.fromAccountId) throw new Error("Choose the account the EMI was paid from");
-      if (!l.accountId) throw new Error("This loan has no linked account");
-      const split = emiSplit(l.principal, l.rate, l.emi);
-      principal = p.principal ?? split.principal; interest = p.interest ?? split.interest;
-      if (principal < 0 || interest < 0 || principal + interest <= 0) throw new Error("Enter the principal and interest paid");
-      if (principal > 0) await save({ title: `${l.name} — principal`, merchant: l.provider || null, category: "Loan repayment", scope: "personal", memberId: null, amount: principal, currency: "INR",
-        paymentMethod: "bank_transfer", date: p.date, description: "EMI principal repayment", txnType: "transfer", accountId: p.fromAccountId, toAccountId: l.accountId, tags: ["Loan principal"] }, { noRefresh: true });
-      if (interest > 0) await save({ title: `${l.name} — interest`, merchant: l.provider || null, category: CHARGES_CATEGORY, scope: "personal", memberId: null, amount: interest, currency: "INR",
-        paymentMethod: "bank_transfer", date: p.date, description: "EMI interest", txnType: "expense", accountId: p.fromAccountId, tags: ["Loan interest"] }, { noRefresh: true });
-    }
-    const payments = [...l.payments, { date: p.date, principal: r2(principal), interest: r2(interest), total: r2(principal + interest) }];
-    const left = Math.max(0, r2(l.principal - principal));
-    check((await supabase.from("loans").update({ payments: payments as unknown as Json, principal_outstanding: left, next_due: addMonths(l.nextDue, 1), status: left <= 0.01 ? "closed" : "active" }).eq("id", l.id)).error);
+    await operation("loan_payment", { id: l.id, expectedDue: l.nextDue, ...p });
     await refresh();
   };
   const convertToEmi: Ctx["convertToEmi"] = async (e, o) => {
-    const card = accounts.find((a) => a.id === e.accountId);
-    if (!card || card.kind !== "credit_card") throw new Error("Only purchases on a credit card can be converted to EMI");
-    if ((e.txnType ?? "expense") !== "expense") throw new Error("Only purchases can be converted to EMI");
-    if (rawLoans.some((l) => l.sourceTransactionId === e.id)) throw new Error("This purchase is already on EMI");
-    if (!(o.months >= 2 && o.months <= 60)) throw new Error("Choose 2–60 months");
-    if (!(o.rate >= 0 && o.rate <= 60)) throw new Error("Interest rate must be 0–60%");
-    if (!(o.fee >= 0)) throw new Error("Processing fee can't be negative");
-    const start = today();
-    const next = card.statementDay ? statementShift(lastStatementDate(start, card.statementDay), card.statementDay, 1) : addMonths(start, 1);
-    check((await supabase.from("loans").insert({ owner_id: userId, name: `${e.title} EMI`, provider: card.issuer || card.name, loan_type: "credit_card_emi", principal_outstanding: e.amount,
-      original_principal: e.amount, annual_rate: o.rate, emi: emiFor(e.amount, o.rate, o.months), next_due: next, start_date: start, account_id: card.id, source_transaction_id: e.id,
-      prepayment_terms: `${o.months}-month card EMI` })).error);
-    if (o.fee > 0) {
-      await ensureCategory(CHARGES_CATEGORY);
-      await save({ title: `${e.title} — EMI processing fee`, merchant: card.issuer || null, category: CHARGES_CATEGORY, scope: e.scope, memberId: null, amount: o.fee, currency: "INR",
-        paymentMethod: "credit_card", date: start, description: "Card EMI processing fee", txnType: "expense", accountId: card.id, tags: ["Card charges"] }, { noRefresh: true });
-    }
+    await operation("convert_emi", { id: e.id, ...o, date: today() });
     await refresh();
   };
   const saveGoal: Ctx["saveGoal"] = async (x) => {
@@ -482,7 +436,7 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
     await refresh();
   };
   const updateDocument: Ctx["updateDocument"] = async (id, m) => {
-    const row: Record<string, unknown> = {};
+    const row: Database["public"]["Tables"]["documents"]["Update"] = {};
     if (m.title !== undefined) { if (!m.title.trim()) throw new Error("Give the document a title"); row["title"] = m.title.trim(); }
     if (m.docType !== undefined) row["doc_type"] = m.docType;
     if (m.docDate !== undefined) row["doc_date"] = m.docDate || null;

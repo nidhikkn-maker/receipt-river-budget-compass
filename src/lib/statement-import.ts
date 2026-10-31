@@ -1,11 +1,11 @@
 import { normalizeDate, parseStatementCsv, type StatementLine } from "./expenses";
 export async function readStatement(file: File): Promise<StatementLine[]> {
  if(file.size>15*1024*1024)throw Error("Statement must be under 15 MB");
- if(/\.csv$/i.test(file.name)) return parseStatementCsv(await file.text());
+ if(/\.csv$/i.test(file.name)) return parseStatementCsv(await file.text(),true);
  if(/\.xlsx$/i.test(file.name)) {
   const {readSheet:read}=await import("read-excel-file/browser");
   const rows=await read(file);const csv=rows.map(row=>row.map(cell=>`"${(cell instanceof Date?cell.toISOString().slice(0,10):String(cell??"")).replaceAll('"','""')}"`).join(",")).join("\n");
-  return parseStatementCsv(csv);
+  return parseStatementCsv(csv,true);
  }
  if(/\.pdf$/i.test(file.name)) {
   const pdfjs=await import("pdfjs-dist");

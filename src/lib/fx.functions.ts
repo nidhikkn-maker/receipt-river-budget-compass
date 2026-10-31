@@ -83,16 +83,19 @@ export const saveExpense = createServerFn({ method: "POST" })
       ...(data.receipts ? { receipts: data.receipts } : {}),
       ...(data.receiptDetails ? { receipt_details: data.receiptDetails } : {}),
     };
-    if (data.createId) {
-      const existing = await supabase.from("expenses").select("id").eq("id", data.createId).maybeSingle();
-      if (existing.data) return { ok: true as const };
-    }
-    const { error } = data.id
-      ? await supabase.from("expenses").update(row).eq("id", data.id)
-      : await supabase.from("expenses").insert({ ...row, ...(data.createId ? { id: data.createId } : {}), employee_id: userId });
+    const result = data.id
+      ? await supabase.from("expenses").update(row).eq("id", data.id).eq("employee_id", userId).select("id").single()
+      : data.createId
+        ? await supabase.from("expenses").upsert({ ...row, id: data.createId, employee_id: userId }, { onConflict: "id", ignoreDuplicates: true }).select("id")
+        : await supabase.from("expenses").insert({ ...row, employee_id: userId }).select("id").single();
+    const { error } = result;
     if (error) {
       console.error(error);
       return { ok: false as const, error: "Couldn't save the expense" };
+    }
+    if (!data.id && data.createId && Array.isArray(result.data) && !result.data.length) {
+      const existing = await supabase.from("expenses").select("id").eq("id", data.createId).eq("employee_id", userId).single();
+      if (existing.error) return { ok: false as const, error: "Couldn't save the expense" };
     }
     return { ok: true as const };
   });

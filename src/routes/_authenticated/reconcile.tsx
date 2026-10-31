@@ -25,7 +25,7 @@ export const Route = createFileRoute("/_authenticated/reconcile")({
 });
 
 function Reconcile() {
-  const { expenses, reconcile } = useStore();
+  const { transactions:expenses, reconcile } = useStore();
   const [lines, setLines] = useState<StatementLine[]>([]);
   const [fileName, setFileName] = useState("");
   const [currency, setCurrency] = useState<string>(BASE_CURRENCY);
@@ -46,7 +46,7 @@ function Reconcile() {
     try {
       const parsed = await readStatement(f);
       setLines(parsed); setFileName(f.name); setOverrides({});
-      toast.success(`${parsed.length} debit lines found`);
+      toast.success(`${parsed.length} statement lines found`);
     } catch (e) { toast.error((e as Error).message); }
   };
 
@@ -98,7 +98,7 @@ function Reconcile() {
               <li key={m.line.ref} className="grid gap-2 rounded-2xl border bg-card p-3 sm:grid-cols-[1fr_1.2fr] sm:items-center">
                 <div className="min-w-0">
                   <div className="truncate text-sm font-medium">{m.line.description || "—"}</div>
-                  <div className="font-mono text-xs text-muted-foreground">{m.line.date} · {money(m.line.amount, currency)}</div>
+                  <div className="font-mono text-xs text-muted-foreground">{m.line.date} · {m.line.direction==="credit"?"Credit · ":"Debit · "}{money(m.line.amount, currency)}</div>
                 </div>
                 <div className="flex items-center gap-2">
                   {m.expense && <BadgeCheck className="h-4 w-4 shrink-0 text-success" />}

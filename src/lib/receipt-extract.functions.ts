@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { normalizePreferences, type FinancePreferences } from "./preferences";
 
 const Input = z.object({ dataUrl: z.string().startsWith("data:").max(4_000_000), mimeType: z.string() });
 
@@ -23,7 +24,11 @@ export type ExtractedReceipt = z.infer<typeof Extracted>;
 export const extractReceipt = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => Input.parse(d))
-  .handler(async ({ data }): Promise<{ ok: true; result: ExtractedReceipt } | { ok: false; error: string }> => {
+  .handler(async ({ data, context }): Promise<{ ok: true; result: ExtractedReceipt } | { ok: false; error: string }> => {
+    const prefs=await context.supabase.from("finance_preferences").select("data").eq("owner_id",context.userId).maybeSingle();
+    if(prefs.error)return {ok:false,error:"Couldn't read your AI privacy settings."};
+    const settings=normalizePreferences(prefs.data?.data as Partial<FinancePreferences>|null);
+    if(!settings.aiEnabled||!settings.aiReadsDocuments)return {ok:false,error:"AI document reading is turned off in Settings."};
     const apiKey = process.env["LOVABLE_API_KEY"];
     if (!apiKey) return { ok: false, error: "Receipt reading is not configured." };
     const { createOpenAI } = await import("@ai-sdk/openai");

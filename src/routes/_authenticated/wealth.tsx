@@ -7,7 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ACCOUNT_KINDS, ACCOUNT_LABEL, accountBalance, isLiability, netWorth, type AccountKind } from "@/lib/ledger";
+import { ACCOUNT_KINDS, ACCOUNT_LABEL, accountValue, isLiability, netWorth, type AccountKind } from "@/lib/ledger";
+import { AccountTools } from "@/components/AccountTools";
 import { money } from "@/lib/expenses";
 import { useStore } from "@/lib/store";
 import { CardDetails, GoalsPanel, LoansPanel } from "@/components/WealthPanels";
@@ -27,14 +28,14 @@ export const Route = createFileRoute("/_authenticated/wealth")({
 });
 
 function Wealth() {
-  const { accounts, transactions, addAccount, setArchived, updateAccount, loans } = useStore();
+  const { accounts, transactions, valuations, addAccount, setArchived, updateAccount, loans } = useStore();
   const [name, setName] = useState("");
   const [kind, setKind] = useState<AccountKind>("savings");
   const [opening, setOpening] = useState("0");
   const [busy, setBusy] = useState(false);
   const [showArchived, setShowArchived] = useState(false);
   const live = accounts.filter((a) => !a.archived);
-  const nwRaw = netWorth(live, transactions);
+  const nwRaw = netWorth(live, transactions, valuations);
   // Loans with a linked account are already in the account balances; only count the rest here.
   const loanOwed = loans.filter((l) => !l.accountId && l.status !== "closed").reduce((s, l) => s + l.principal, 0);
   const nw = { assets: nwRaw.assets, liabilities: nwRaw.liabilities + loanOwed, net: nwRaw.net - loanOwed };
@@ -63,11 +64,11 @@ function Wealth() {
         <section className="space-y-2">
           <div className="flex items-center justify-between">
             <h2 className="font-display text-lg font-bold">Your accounts</h2>
-            <button className="text-xs text-muted-foreground underline" onClick={() => setShowArchived((v) => !v)}>{showArchived ? "Hide archived" : "Show archived"}</button>
+            <Button variant="ghost" size="sm" onClick={() => setShowArchived((v) => !v)}>{showArchived ? "Hide archived" : "Show archived"}</Button>
           </div>
           {!list.length && <p className="rounded-2xl border border-dashed p-6 text-center text-sm text-muted-foreground">No accounts yet. Add your bank, cards and cash to track balances.</p>}
           {list.map((a) => {
-            const bal = accountBalance(a, transactions);
+            const bal = accountValue(a, transactions, valuations).value;
             return (
               <div key={a.id} className={"rounded-2xl border bg-card p-4 " + (a.archived ? "opacity-60" : "")}>
               <div className="flex items-center gap-3">
@@ -82,6 +83,7 @@ function Wealth() {
                 </Button>
               </div>
               {a.kind === "credit_card" && !a.archived && <CardDetails a={a} />}
+              {!a.archived && <AccountTools a={a} />}
               {(a.kind === "savings" || a.kind === "current") && !a.archived && (
                 <label className="mt-2 flex items-center gap-2 border-t pt-2 text-xs text-muted-foreground">Keep at least ₹
                   <input type="number" defaultValue={a.minBalance ?? 0} aria-label={`Minimum balance for ${a.name}`} className="w-24 rounded-md border bg-background px-2 py-1 font-mono"
