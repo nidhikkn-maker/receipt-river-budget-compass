@@ -17,6 +17,8 @@ export function PushSettings() {
   useEffect(()=>{
     let active=true;
     const load=async()=>{
+      const setup=await config();
+      if(!setup.available){if(active)setStatus("Notifications are not configured yet.");return;}
       if (!offlineAppAllowed()) {if(active)setStatus("Device notifications become available in the published app.");return;}
       if (!("Notification" in window) || !("PushManager" in window) || !("serviceWorker" in navigator)) {if(active)setStatus("Notifications aren't supported here. On iPhone, use the installed Home Screen app.");return;}
       if(active)setSupported(true);
@@ -26,7 +28,7 @@ export function PushSettings() {
     };
     void load().catch(()=>{if(active)setStatus("Couldn't check this device. Try again.");});
     return()=>{active=false;};
-  },[userId]);
+  },[userId,config]);
   const enable=async()=>{
     setBusy(true);
     try {
