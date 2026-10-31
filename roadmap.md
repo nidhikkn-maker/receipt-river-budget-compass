@@ -200,8 +200,8 @@
 
 ## V4.7 PDF Reporting & Download Centre (spec: .lovable/requirements-v4.7.md)
 - [x] Reports Centre: 31 report types, filters, colour/printer PDF, preview, download, share, history with regenerate versions
-- [ ] Persistent background report jobs — blocked: no background-job system yet (foreground with "keep page open")
-- [ ] Tamil/other non-Latin text in PDFs — needs an embedded Unicode font; such characters currently show as "?"
+- [x] Report jobs keep running while you use other screens and notify with an Open action (closing the app still stops them)
+- [x] Tamil/non-Latin table text in PDFs drawn via browser-shaped images (src/lib/pdf-unicode.ts); titles and bill-page labels stay Latin
 
 ## V4.8 Detailed Expenditure Statement (spec: .lovable/requirements-v4.8.md)
 - [x] Statement for trips, event/project tags and individual business purchases, with payer/source/reimbursement summaries, register, line items and bills as annexures in one PDF; saved to report history
