@@ -227,4 +227,4 @@
 - [x] Inbox shows unfinished drafts and reports ready this week
 - [x] Already in place: smart quick entry, remembered defaults, drafts + offline recovery, single-flight saves, setup assistant, search, privacy toggle, offline entry
 - [ ] Server-side background jobs that continue after closing the app (reports currently run in the open app)
-- [ ] Transaction templates and saved views
+- [ ] Saved filter views on Transactions (templates covered by Repeat favourites)
