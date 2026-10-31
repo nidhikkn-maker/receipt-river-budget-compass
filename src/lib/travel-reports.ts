@@ -14,6 +14,7 @@ type Row = IntelRow & {
   id: string;
   scope?: Scope;
   splits?: { memberId: string | null; amount: number }[];
+  memberId?: string | null;
   originalAmount?: number | null;
   department?: string | null;
   accountId?: string | null;
