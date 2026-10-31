@@ -112,7 +112,7 @@ export function stressTest(i: StressInput, s: StressScenario): StressResult {
   const shortFrom = f.shortDates[0] ?? null;
   const daysUntilShort = shortFrom ? Math.round((Date.parse(shortFrom) - Date.parse(i.today)) / 864e5) : null;
   const shortfall = r2(Math.max(0, floor - f.lowest.balance));
-  const reserveUsed = r2(Math.min(i.reserves, Math.max(0, i.minBalance + i.reserves - f.lowest.balance) - i.minBalance > 0 ? Math.max(0, f.lowest.balance < i.minBalance + i.reserves ? i.minBalance + i.reserves - f.lowest.balance : 0) : 0));
+  const reserveUsed = r2(Math.min(i.reserves, Math.max(0, floor - f.lowest.balance)));
   const affected = occurrences(commitments, i.today, addDays(i.today, i.days))
     .filter((o) => o.direction === "out" && shortFrom && o.date >= shortFrom)
     .slice(0, 8)
