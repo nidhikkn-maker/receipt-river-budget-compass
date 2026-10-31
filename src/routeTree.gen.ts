@@ -23,6 +23,7 @@ import { Route as AuthenticatedBudgetsRouteImport } from './routes/_authenticate
 import { Route as AuthenticatedConnectionsRouteImport } from './routes/_authenticated/connections'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedDraftsRouteImport } from './routes/_authenticated/drafts'
+import { Route as AuthenticatedExpenditureStatementRouteImport } from './routes/_authenticated/expenditure-statement'
 import { Route as AuthenticatedExpensesRouteImport } from './routes/_authenticated/expenses'
 import { Route as AuthenticatedFamilyRouteImport } from './routes/_authenticated/family'
 import { Route as AuthenticatedForecastRouteImport } from './routes/_authenticated/forecast'
@@ -116,6 +117,12 @@ const AuthenticatedDraftsRoute = AuthenticatedDraftsRouteImport.update({
   path: '/drafts',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedExpenditureStatementRoute =
+  AuthenticatedExpenditureStatementRouteImport.update({
+    id: '/expenditure-statement',
+    path: '/expenditure-statement',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedExpensesRoute = AuthenticatedExpensesRouteImport.update({
   id: '/expenses',
   path: '/expenses',
@@ -239,6 +246,7 @@ export interface FileRoutesByFullPath {
   '/connections': typeof AuthenticatedConnectionsRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/drafts': typeof AuthenticatedDraftsRoute
+  '/expenditure-statement': typeof AuthenticatedExpenditureStatementRoute
   '/expenses': typeof AuthenticatedExpensesRoute
   '/family': typeof AuthenticatedFamilyRoute
   '/forecast': typeof AuthenticatedForecastRoute
@@ -275,6 +283,7 @@ export interface FileRoutesByTo {
   '/connections': typeof AuthenticatedConnectionsRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/drafts': typeof AuthenticatedDraftsRoute
+  '/expenditure-statement': typeof AuthenticatedExpenditureStatementRoute
   '/expenses': typeof AuthenticatedExpensesRoute
   '/family': typeof AuthenticatedFamilyRoute
   '/forecast': typeof AuthenticatedForecastRoute
@@ -313,6 +322,7 @@ export interface FileRoutesById {
   '/_authenticated/connections': typeof AuthenticatedConnectionsRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/drafts': typeof AuthenticatedDraftsRoute
+  '/_authenticated/expenditure-statement': typeof AuthenticatedExpenditureStatementRoute
   '/_authenticated/expenses': typeof AuthenticatedExpensesRoute
   '/_authenticated/family': typeof AuthenticatedFamilyRoute
   '/_authenticated/forecast': typeof AuthenticatedForecastRoute
@@ -351,6 +361,7 @@ export interface FileRouteTypes {
     | '/connections'
     | '/dashboard'
     | '/drafts'
+    | '/expenditure-statement'
     | '/expenses'
     | '/family'
     | '/forecast'
@@ -387,6 +398,7 @@ export interface FileRouteTypes {
     | '/connections'
     | '/dashboard'
     | '/drafts'
+    | '/expenditure-statement'
     | '/expenses'
     | '/family'
     | '/forecast'
@@ -424,6 +436,7 @@ export interface FileRouteTypes {
     | '/_authenticated/connections'
     | '/_authenticated/dashboard'
     | '/_authenticated/drafts'
+    | '/_authenticated/expenditure-statement'
     | '/_authenticated/expenses'
     | '/_authenticated/family'
     | '/_authenticated/forecast'
@@ -556,6 +569,13 @@ declare module '@tanstack/react-router' {
       path: '/drafts'
       fullPath: '/drafts'
       preLoaderRoute: typeof AuthenticatedDraftsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/expenditure-statement': {
+      id: '/_authenticated/expenditure-statement'
+      path: '/expenditure-statement'
+      fullPath: '/expenditure-statement'
+      preLoaderRoute: typeof AuthenticatedExpenditureStatementRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/expenses': {
@@ -717,6 +737,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedConnectionsRoute: typeof AuthenticatedConnectionsRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedDraftsRoute: typeof AuthenticatedDraftsRoute
+  AuthenticatedExpenditureStatementRoute: typeof AuthenticatedExpenditureStatementRoute
   AuthenticatedExpensesRoute: typeof AuthenticatedExpensesRoute
   AuthenticatedFamilyRoute: typeof AuthenticatedFamilyRoute
   AuthenticatedForecastRoute: typeof AuthenticatedForecastRoute
@@ -747,6 +768,8 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedConnectionsRoute: AuthenticatedConnectionsRoute,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedDraftsRoute: AuthenticatedDraftsRoute,
+  AuthenticatedExpenditureStatementRoute:
+    AuthenticatedExpenditureStatementRoute,
   AuthenticatedExpensesRoute: AuthenticatedExpensesRoute,
   AuthenticatedFamilyRoute: AuthenticatedFamilyRoute,
   AuthenticatedForecastRoute: AuthenticatedForecastRoute,
