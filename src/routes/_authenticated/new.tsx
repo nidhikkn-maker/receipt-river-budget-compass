@@ -321,7 +321,7 @@ function NewExpense() {
     try {
       await save(
         { title: title.trim(), amount: Number(amount), currency, paymentMethod, category, date, description, merchant: merchant.trim() || null,
-          receiptDetails, scope, memberId: memberId === "me" ? null : memberId,
+          receiptDetails: { ...receiptDetails, fingerprint: receipts[0]?.fingerprint ?? receiptDetails.fingerprint }, scope, memberId: memberId === "me" ? null : memberId,
           txnType, accountId: accountId === "none" ? null : accountId, toAccountId: toAccountId === "none" ? null : toAccountId,
           tags: [...new Set(tags.split(",").map((t) => t.trim()).filter(Boolean))],
           splits: splitOn ? Object.entries(shares).map(([k, v]) => ({ memberId: k === "me" ? null : k, amount: Number(v) })) : [] },
@@ -583,7 +583,7 @@ function NewExpense() {
             </div>
           </div>
           <div className="grid gap-2"><Label htmlFor="desc">Business purpose{af("description")}</Label><Textarea id="desc" value={description} onChange={(e) => setDescription(e.target.value)} /></div>
-          <Button type="submit" size="lg" variant="gold" className="rounded-2xl" disabled={reading || saving || !confirmed || duplicateBlocked}>
+          <Button type="submit" size="lg" variant="gold" className="rounded-2xl" disabled={reading || saving || !confirmed || duplicateBlocked || receiptBlocked}>
             {saving ? "Saving…" : editing ? "Save changes" : "Save expense"}
           </Button>
         </fieldset>
