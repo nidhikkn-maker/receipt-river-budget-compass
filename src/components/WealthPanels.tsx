@@ -38,7 +38,7 @@ export function LoansPanel() {
   const [f, setF] = useState({ name: "", principal: "", rate: "", emi: "", nextDue: todayISO() });
   const add = (e: React.FormEvent) => {
     e.preventDefault();
-    saveLoan({ name: f.name, principal: Number(f.principal), rate: Number(f.rate), emi: Number(f.emi), nextDue: f.nextDue })
+    saveLoan({ name: f.name, principal: Number(f.principal), rate: Number(f.rate), emi: Number(f.emi), nextDue: f.nextDue, provider: "", loanType: "personal", prepaymentTerms: "", foreclosurePct: 0 })
       .then(() => { setF({ ...f, name: "", principal: "", rate: "", emi: "" }); toast.success("Loan added"); })
       .catch((err) => toast.error(err.message));
   };

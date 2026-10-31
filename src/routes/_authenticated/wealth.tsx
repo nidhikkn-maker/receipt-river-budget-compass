@@ -35,7 +35,8 @@ function Wealth() {
   const [showArchived, setShowArchived] = useState(false);
   const live = accounts.filter((a) => !a.archived);
   const nwRaw = netWorth(live, transactions);
-  const loanOwed = loans.reduce((s, l) => s + l.principal, 0);
+  // Loans with a linked account are already in the account balances; only count the rest here.
+  const loanOwed = loans.filter((l) => !l.accountId && l.status !== "closed").reduce((s, l) => s + l.principal, 0);
   const nw = { assets: nwRaw.assets, liabilities: nwRaw.liabilities + loanOwed, net: nwRaw.net - loanOwed };
   const list = accounts.filter((a) => showArchived || !a.archived);
 
