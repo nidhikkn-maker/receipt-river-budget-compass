@@ -70,6 +70,11 @@ export function normalizePreferences(raw: Partial<FinancePreferences> | null | u
 
 export const tagValue = (t: GroupedTag) => `${t.group}: ${t.name}`;
 export const tagsInGroup = (tags: GroupedTag[], group: string) => tags.filter((t) => t.group === group).map(tagValue);
+/** Only accept a suggestion that names an active saved category. Unknown values require review. */
+export function resolveCategory(categories: CategorySetting[], suggestion: string | null | undefined): string | null {
+  if (!suggestion) return null;
+  return categories.find(c => !c.archived && c.name.toLowerCase() === suggestion.trim().toLowerCase())?.name ?? null;
+}
 export function validateActiveCategory(categories: CategorySetting[], name: string, editing = false) {
   if (!editing && categories.some((c) => c.name === name && c.archived)) throw new Error("Choose an active category");
 }

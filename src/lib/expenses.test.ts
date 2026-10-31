@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { applyFilters, autoMatch, budgetUsage, convert, parseStatementCsv, totalsByScope, validateBudget, validateExpense, type Expense } from "./expenses";
+import { applyFilters, autoMatch, matchScore, budgetUsage, convert, parseStatementCsv, totalsByScope, validateBudget, validateExpense, type Expense } from "./expenses";
 
 const exp = (o: Partial<Expense> = {}): Expense => ({
   id: "x", title: "t", merchant: null, category: "Groceries", scope: "personal", memberId: null, splits: [], amount: 100,
@@ -32,6 +32,17 @@ describe("budgets", () => {
 });
 
 describe("currency & reconciliation", () => {
+  const line = { ref:"1", date:"2026-10-01", description:"BANK", amount:100 };
+  it("leaves indistinguishable same-amount entries for manual review",()=>expect(autoMatch([line],[exp({id:"a"}),exp({id:"b"})],"INR")[0]?.expense).toBeNull());
+  it("does not guess between duplicate statement rows",()=>expect(autoMatch([line,{...line,ref:"2"}],[exp()],"INR").every(m=>m.expense===null)).toBe(true));
+  it("keeps a clearly stronger merchant match",()=>expect(autoMatch([{...line,description:"UBER"}],[exp({id:"uber",merchant:"Uber"}),exp({id:"other"})],"INR")[0]?.expense?.id).toBe("uber"));
+  it("matches transfer credits only to the destination account",()=>{
+    const transfer=exp({txnType:"transfer",accountId:"source",toAccountId:"dest"});
+    expect(matchScore({...line,direction:"credit"},transfer,"INR","source")).toBe(0);
+    expect(matchScore({...line,direction:"credit"},transfer,"INR","dest")).toBe(0.8);
+    expect(matchScore(line,transfer,"INR","source")).toBe(0.8);
+    expect(matchScore(line,transfer,"INR")).toBe(0);
+  });
   it("includes bank credits only when requested and never matches them to expenses",()=>{
     const lines=parseStatementCsv("Date,Narration,Debit,Credit\n31/10/2026,SALARY,,50000",true);
     expect(lines[0]).toEqual({ref:"L1",date:"2026-10-31",description:"SALARY",amount:50000,direction:"credit"});

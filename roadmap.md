@@ -15,6 +15,7 @@
 - [x] Real email/Google/Lovable sign-in and verified passkey device lock; existing anonymous records can upgrade by email
 
 ## Production completion (PRD gap list, Oct 31)
+- [x] Continue: all-or-nothing record restore with staged files; catalog-aware extraction; transfer direction/account matching; signed-in restore and extraction checks
 - [x] Schema: card details (issuer, last four, statement day, interest), loan details (provider, type, original, start, prepayment terms, foreclosure %, linked account, payment log), reimbursement status, documents, valuations, transaction audit trail, push subscriptions
 - [x] Credit card module: billing cycle, statement vs unbilled, payments since statement, paid/partly paid/pending, interest & charges, EMI conversions, utilisation alerts
 - [x] Loans: full details, record EMI (principal vs interest split), foreclosure charges in simulator, full schedule, closure date
@@ -29,19 +30,22 @@
 - [x] Document vault uploads (statements, insurance, loan, warranty) linked to transactions/accounts/loans, expiry reminders
 - [x] Audit history shown per transaction
 - [x] Settings: profile name, default currency, AI language/privacy controls, reminder lead days
-- [ ] Shortcut quick-add parameters and share-sheet intake — web integration not implemented
+- [x] Shortcut quick-add draft parameters (title, merchant, amount, currency, date, payment, account, scope, shared text); never auto-save or auto-send to AI
+- [ ] Native iOS share-sheet file intake — requires a native wrapper; text links can prefill web drafts
 - [x] AI: anomalies, budget recommendations, comparisons and savings ideas in verified facts; server-enforced AI privacy
-- [ ] User category catalogs in receipt/voice extraction — schema still uses fixed categories
+- [x] User category catalogs in receipt/voice extraction — active saved catalog used server-side; custom receipt and voice categories verified
 - [x] Reconciliation: CSV/XLSX credits and debit matching across the unified ledger, review type/account/amount, duplicate warnings
-- [ ] Statement direction/account-specific matching for ambiguous transfers — needs additional rules and tests
+- [x] Statement direction/account-specific matching for transfers; ambiguous near-ties left for review; regression tests
 - [x] Backup ZIP with receipt/document files; same/cross-owner restore mapping tests
-- [ ] Legacy XLS and scanned PDF/screenshot statement extraction — not implemented
-- [ ] Atomic backup restore and every-record restore verification — current restore can partially persist on failure
+- [x] Scanned PDF/screenshot statement extraction with explicit AI consent, saved privacy enforcement and mandatory review; screenshot debit/credit flow verified
+- [ ] Legacy XLS — BIFF-compatible reader and fixtures still required
+- [x] Atomic backup record restore with fresh staged file paths, failed-restore rollback verification and all 10 existing backup records read back; paginated exports
 - [x] Encrypted on-device cache
 - [ ] Web push payment reminders (device subscription, test push, daily dispatch route)
 - [x] Signed-in checks: account creation, loan payment (₹980 principal + ₹120 interest), scheduled bill ₹750, replay without duplicate, document upload/search, ZIP download and AI loan answer
-- [x] AI privacy off/on checked; six screens tested at 402×725 with no overflow or page errors; 100 automated tests passed
-- [ ] Remaining end-to-end checks: receipt OCR after privacy additions, reimbursement/EMI conversion, restore, offline reload/sync and real-device passkeys
+- [x] AI privacy off/on checked; six screens tested at 402×725 with no overflow or page errors; 113 automated tests passed
+- [x] Signed-in checks: ZIP restore, deliberate invalid restore rollback, shortcut drafts, screenshot statement OCR, custom-category receipt OCR, voice category; no page errors
+- [ ] Remaining end-to-end checks: reimbursement/EMI conversion, offline reload/sync and real-device passkeys
 
 ## Waiting on something outside the app
 - [ ] Installed-app offline cold-start — needs publication; app workers intentionally disabled in preview

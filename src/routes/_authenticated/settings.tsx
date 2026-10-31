@@ -10,6 +10,7 @@ import { FinanceSettings } from "@/components/FinanceSettings";
 import { useStore } from "@/lib/store";
 import { BACKUP_TABLES, createBackupZip, prepareRestore, readBackup, type Backup } from "@/lib/backup";
 import { downloadBlob } from "@/lib/reports";
+import type { Json } from "@/integrations/supabase/types";
 
 export const Route = createFileRoute("/_authenticated/settings")({
   head: () => ({
@@ -27,7 +28,7 @@ export const Route = createFileRoute("/_authenticated/settings")({
 
 // Restore order matters: rows that others point to come first.
 function Settings() {
-  const { userId, name, updateName, deleteAll, refresh, transactions, accounts } = useStore();
+  const { userId, name, deleteAll, refresh, transactions, accounts } = useStore();
   const file = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
 
@@ -36,9 +37,14 @@ function Settings() {
     try {
       const out: Backup["data"] = {};
       for (const t of BACKUP_TABLES) {
-        const { data, error } = await supabase.from(t).select("*");
-        if (error) throw new Error(error.message);
-        out[t] = data ?? [];
+        out[t] = [];
+        for (let start = 0; ; start += 500) {
+          const order = t === "finance_preferences" ? "owner_id" : t === "category_budgets" ? "category" : "id";
+          const { data, error } = await supabase.from(t).select("*").order(order).range(start, start + 499);
+          if (error) throw new Error(error.message);
+          out[t]?.push(...(data ?? []));
+          if (!data || data.length < 500) break;
+        }
       }
       const paths = new Set<string>();
       for (const e of out.expenses ?? []) for (const r of (e["receipts"] ?? []) as { path: string }[]) paths.add(r.path);
@@ -61,34 +67,36 @@ function Settings() {
   const restore = async (f: File | undefined) => {
     if (!f) return;
     setBusy(true);
+    const staged: string[] = [];
+    let committed = false;
     try {
       if (f.size > 150 * 1024 * 1024) throw Error("Backup must be under 150 MB");
       const { backup: j, files } = readBackup(new Uint8Array(await f.arrayBuffer()), /\.zip$/i.test(f.name));
-      const { data: restored, paths } = prepareRestore(j, userId);
+      const { data: restored, paths } = prepareRestore(j, userId, undefined, true);
       if (!window.confirm("Restore this backup into your account? Existing matching records will be updated.")) return;
       for (const [oldPath, newPath] of paths) {
-        const bytes = files[oldPath];
+        let bytes = files[oldPath];
         if (!bytes) {
-          const { error } = await supabase.storage.from("receipts").download(newPath);
-          if (error) throw Error("This older backup doesn't contain its receipt files. Restore it to the original account or choose a complete ZIP backup.");
-          continue;
+          if (j.owner !== userId) throw Error("Choose a complete ZIP backup containing its receipt files.");
+          const { data, error } = await supabase.storage.from("receipts").download(oldPath);
+          if (error || !data) throw Error("This older backup doesn't contain its receipt files. Choose a complete ZIP backup.");
+          bytes = new Uint8Array(await data.arrayBuffer());
         }
-        const { error } = await supabase.storage.from("receipts").upload(newPath, new Uint8Array(bytes).buffer, { upsert: true });
+        const { error } = await supabase.storage.from("receipts").upload(newPath, new Uint8Array(bytes).buffer, { upsert: false });
         if (error) throw Error("Couldn't restore a file — please try again");
+        staged.push(newPath);
       }
-      let n = 0;
-      for (const t of BACKUP_TABLES) {
-        const rows = restored[t] ?? [];
-        if (!rows.length) continue;
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const { error } = await supabase.from(t).upsert(rows as any);
-        if (error) throw new Error(`Couldn't restore ${t.replace("_", " ")}: ${error.message}`);
-        n += rows.length;
-      }
-      if (j.name?.trim()) await updateName(j.name);
+      const { data, error } = await supabase.rpc("restore_finance_backup", { payload: restored as Json, ...(j.name?.trim() ? { display_name: j.name.trim() } : {}) });
+      if (error) throw Error("Restore stopped; your existing records are unchanged. Check the backup and try again.");
+      committed = true;
+      const counts = (data as { counts: Record<string, number> }).counts;
+      const n = Object.values(counts).reduce((sum, count) => sum + count, 0);
       await refresh();
       toast.success(`Restored ${n} records`);
-    } catch (e) { toast.error((e as Error).message); } finally { setBusy(false); if (file.current) file.current.value = ""; }
+    } catch (e) { toast.error((e as Error).message); } finally {
+      if (!committed) for (let i = 0; i < staged.length; i += 100) await supabase.storage.from("receipts").remove(staged.slice(i, i + 100));
+      setBusy(false); if (file.current) file.current.value = "";
+    }
   };
 
   const wipe = async () => {

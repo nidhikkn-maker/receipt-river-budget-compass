@@ -834,6 +834,10 @@ export type Database = {
         Args: { _expense_id: string; _statement_ref: string }
         Returns: undefined
       }
+      restore_finance_backup: {
+        Args: { display_name?: string; payload: Json }
+        Returns: Json
+      }
       review_expense: {
         Args: { _decision: string; _expense_id: string; _note?: string }
         Returns: string
