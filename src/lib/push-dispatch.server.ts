@@ -3,7 +3,7 @@ import type { Database } from "@/integrations/supabase/types";
 import { normalizePreferences, type FinancePreferences } from "./preferences";
 import { paymentReminderItems, privateReminderPayload } from "./push-rules";
 import { sendDevicePush } from "./push-crypto.server";
-import type { Account, AccountKind, Txn, TxnType } from "./ledger";
+import { accountBalance, type Account, type AccountKind, type Txn, type TxnType } from "./ledger";
 import type { Commitment } from "./planning";
 import type { PositionLoan } from "./position";
 import type { LoanPayment } from "./cards";
@@ -20,7 +20,7 @@ export async function dispatchPaymentReminders(db: SupabaseClient<Database>, see
       db.from("commitments").select("*").eq("owner_id",owner),
       db.from("loans").select("*").eq("owner_id",owner),
       db.from("accounts").select("*").eq("owner_id",owner),
-      db.from("expenses").select("id,txn_type,amount,account_id,to_account_id,expense_date,adjustment_sign").eq("employee_id",owner),
+      (async()=>{const rows: Database["public"]["Tables"]["expenses"]["Row"][]=[];for(let offset=0;;offset+=500){const result=await db.from("expenses").select("*").eq("employee_id",owner).order("id").range(offset,offset+499);if(result.error)return {data:rows,error:result.error};rows.push(...(result.data ?? []));if((result.data?.length ?? 0)<500)return {data:rows,error:null};}})(),
       db.from("documents").select("id,expires_on").eq("owner_id",owner),
     ]);
     if ([pref,c,l,a,t,d].some(r=>r.error)) { failed++; return; }
@@ -29,11 +29,12 @@ export async function dispatchPaymentReminders(db: SupabaseClient<Database>, see
     const loans: PositionLoan[] = (l.data ?? []).map(x=>({id:x.id,name:x.name,principal:Number(x.principal_outstanding),rate:Number(x.annual_rate),emi:Number(x.emi),nextDue:x.next_due,accountId:x.account_id,loanType:x.loan_type,sourceTransactionId:x.source_transaction_id,original:Number(x.original_principal ?? x.principal_outstanding),startDate:x.start_date,payments:(x.payments ?? []) as unknown as LoanPayment[],status:x.status}));
     const accounts: Account[] = (a.data ?? []).map(x=>({id:x.id,name:x.name,kind:x.kind as AccountKind,openingBalance:Number(x.opening_balance),archived:x.archived,statementDay:x.statement_day,dueDay:x.due_day,creditLimit:x.credit_limit}));
     const transactions: Txn[] = (t.data ?? []).map(x=>({id:x.id,txnType:x.txn_type as TxnType,amount:Number(x.amount),accountId:x.account_id,toAccountId:x.to_account_id,date:x.expense_date,adjustmentSign:x.adjustment_sign === -1 ? -1 : 1}));
+    for(const loan of loans){const account=accounts.find(a=>a.id===loan.accountId);if(account&&loan.loanType!=="credit_card_emi")loan.principal=accountBalance(account,transactions);}
     const items=paymentReminderItems({today,leadDays:p.reminderDays,enabled:p.reminders,commitments,loans,accounts,transactions,documents:(d.data ?? []).map(x=>({id:x.id,expiresOn:x.expires_on}))});
     if (!items.length) { await db.from("push_subscriptions").update({last_sent_at:new Date().toISOString()}).eq("id",device.id); skipped++; return; }
     const key=`device:${device.id}`;
     const { error: claimError } = await db.from("push_reminder_log").insert({owner_id:owner,sent_on:today,item_key:key});
-    if (claimError) { skipped++; return; }
+    if (claimError) { if(claimError.code==="23505")await db.from("push_subscriptions").update({last_sent_at:new Date().toISOString()}).eq("id",device.id);skipped++; return; }
     try {
       const result=await sendDevicePush(seed,device,privateReminderPayload(items.length));
       if (result.expired) { await db.from("push_subscriptions").delete().eq("id",device.id); skipped++; return; }
