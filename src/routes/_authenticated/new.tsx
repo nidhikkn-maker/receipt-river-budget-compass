@@ -4,7 +4,8 @@ import { toast } from "sonner";
 import { ScanLine, Sparkles, X, Camera, Image as ImageIcon, FolderOpen, Inbox, RotateCcw, PencilLine, ChevronDown, Check, Plus } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
-import { dayShortcut, recentFirst, relevantSections } from "@/lib/entry-form";
+import { dayShortcut, recentFirst, relevantSections, repeatCandidates, repeatDraft, smartDefaults } from "@/lib/entry-form";
+import { Repeat, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -194,6 +195,32 @@ function NewExpense() {
     const account = liveAccounts.find(a => a.id === search.account || a.name.toLowerCase() === search.account?.toLowerCase());
     if (account) setAccountId(account.id);
   }, [edit, search.account, accounts]);
+
+  const defaultsApplied = useRef(false);
+  useEffect(() => {
+    if (edit || defaultsApplied.current || !expenses.length) return;
+    defaultsApplied.current = true;
+    const d = smartDefaults(expenses, liveAccounts.map((a) => a.id));
+    if (d.accountId && !search.account) setAccountId((cur) => (cur === "none" ? d.accountId! : cur));
+    if (d.scope && !search.scope && !search.trip) setScope(d.scope);
+  }, [edit, expenses.length]);
+  const [repeatOpen, setRepeatOpen] = useState(false);
+  const [repeatedFrom, setRepeatedFrom] = useState<string | null>(null);
+  const favs = preferences.favouriteEntries ?? [];
+  const repeatList = repeatCandidates(expenses, favs);
+  const toggleFav = (id: string) => void savePreferences({ ...preferences, favouriteEntries: favs.includes(id) ? favs.filter((x) => x !== id) : [...favs, id] });
+  const applyRepeat = (id: string) => {
+    const src = expenses.find((e) => e.id === id); if (!src) return;
+    const d = repeatDraft(src, preferences.trips as TravelTrip[], todayISO());
+    setTxnType("expense"); setTitle(d.title); setMerchant(d.merchant); setCategory(d.category as Category); setScope(d.scope);
+    setAmount(String(d.suggestedAmount)); setCurrency(d.currency); setPaymentMethod(d.paymentMethod as PaymentMethod);
+    setAccountId(liveAccounts.some((a) => a.id === d.accountId) ? d.accountId : "none");
+    setInstrumentId(savedMethods.some((p) => p.id === d.instrumentId) ? d.instrumentId : "none");
+    setTags(d.tags.join(", ")); setDescription(d.description); setTripId(d.tripId); setDate(d.date);
+    setWsSplit({ on: false, method: "fixed", values: {} }); setSplitOn(false); setShares({});
+    setAutoFilled(new Set(["amount", "category", "merchant", "title"])); setRepeatedFrom(src.merchant || src.title); setRepeatOpen(false);
+    requestAnimationFrame(() => { const el = document.getElementById("a") as HTMLInputElement | null; el?.focus(); el?.select(); });
+  };
 
   const applySpoken = async (text: string) => {
     if (!text.trim()) return;
@@ -467,11 +494,37 @@ function NewExpense() {
 
         {/* Quick capture */}
         <div className="grid grid-cols-4 gap-2">
-          <Button type="button" disabled={reading || saving} variant="secondary" className="h-auto flex-col gap-0.5 rounded-2xl py-2" onClick={() => cameraRef.current?.click()}><Camera className="h-5 w-5" /><span className="text-[11px]">Camera</span></Button>
-          <Button type="button" disabled={reading || saving} variant="secondary" className="h-auto flex-col gap-0.5 rounded-2xl py-2" onClick={() => galleryRef.current?.click()}><ImageIcon className="h-5 w-5" /><span className="text-[11px]">Gallery</span></Button>
-          <Button type="button" disabled={reading || saving} variant="secondary" className="h-auto flex-col gap-0.5 rounded-2xl py-2" onClick={() => fileRef.current?.click()}><FolderOpen className="h-5 w-5" /><span className="text-[11px]">Files</span></Button>
+          <Button type="button" disabled={reading || saving} variant="secondary" aria-label="Scan and fill" className="h-auto flex-col gap-0.5 rounded-2xl py-2" onClick={() => cameraRef.current?.click()}><Camera className="h-5 w-5" /><span className="text-[11px]">Scan</span></Button>
+          <Popover>
+            <PopoverTrigger asChild><Button type="button" disabled={reading || saving} variant="secondary" aria-label="Upload a receipt" className="h-auto flex-col gap-0.5 rounded-2xl py-2"><FolderOpen className="h-5 w-5" /><span className="text-[11px]">Upload</span></Button></PopoverTrigger>
+            <PopoverContent className="grid w-44 gap-1 p-1.5">
+              <Button type="button" variant="ghost" className="justify-start" onClick={() => galleryRef.current?.click()}><ImageIcon className="h-4 w-4" />Photos</Button>
+              <Button type="button" variant="ghost" className="justify-start" onClick={() => fileRef.current?.click()}><FolderOpen className="h-4 w-4" />Files / PDF</Button>
+            </PopoverContent>
+          </Popover>
           <Button type="button" disabled={reading || saving} variant={listening ? "default" : "secondary"} aria-label="Speak an entry" className="h-auto flex-col gap-0.5 rounded-2xl py-2" onClick={() => { setVoiceOpen(true); startVoice(); }}><Mic className="h-5 w-5" /><span className="text-[11px]">{listening ? "Listening" : "Voice"}</span></Button>
+          <Button type="button" disabled={reading || saving || !!editing} variant={repeatOpen ? "default" : "secondary"} aria-label="Repeat an expense" aria-expanded={repeatOpen} className="h-auto flex-col gap-0.5 rounded-2xl py-2" onClick={() => setRepeatOpen((o) => !o)}><Repeat className="h-5 w-5" /><span className="text-[11px]">Repeat</span></Button>
         </div>
+        {repeatOpen && (
+          <section aria-label="Repeat an expense" className="rounded-2xl border bg-card p-2 text-sm">
+            {repeatList.favourites.length + repeatList.recent.length === 0 ? <p className="p-2 text-muted-foreground">No past expenses to repeat yet.</p> : (
+              <ul className="divide-y">
+                {[...repeatList.favourites.map((e) => ({ e, fav: true })), ...repeatList.recent.map((e) => ({ e, fav: favs.includes(e.id) }))].map(({ e, fav }) => (
+                  <li key={e.id} className="flex items-center gap-1">
+                    <button type="button" onClick={() => applyRepeat(e.id)} className="min-w-0 flex-1 rounded-lg px-2 py-2 text-left hover:bg-secondary">
+                      <span className="block truncate font-semibold">{e.merchant || e.title}</span>
+                      <span className="block truncate text-xs text-muted-foreground">{e.category} · {money(e.originalAmount, e.currency)} · {e.date}</span>
+                    </button>
+                    <Button type="button" size="icon" variant="ghost" aria-label={fav ? `Remove ${e.merchant || e.title} from favourites` : `Add ${e.merchant || e.title} to favourites`} aria-pressed={fav} onClick={() => toggleFav(e.id)}>
+                      <Star className={cn("h-4 w-4", fav ? "fill-gold text-gold" : "text-muted-foreground")} />
+                    </Button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+        )}
+        {repeatedFrom && !repeatOpen && <p role="status" className="rounded-2xl bg-gold-soft px-3 py-2 text-xs">Copied from your last <b>{repeatedFrom}</b> entry with today's date. Adjust the amount and tap Save — nothing is saved until you do.</p>}
         <input ref={cameraRef} type="file" accept="image/*" capture="environment" className="sr-only" aria-label="Take a photo of a receipt" onChange={(e) => { void onFiles(e.target.files); e.target.value = ""; }} />
         <input ref={galleryRef} type="file" multiple accept="image/*" className="sr-only" aria-label="Choose receipt photos" onChange={(e) => { void onFiles(e.target.files); e.target.value = ""; }} />
         <input ref={fileRef} id="r" type="file" multiple accept="image/*,application/pdf" className="sr-only" aria-label="Choose receipt files" onChange={(e) => { void onFiles(e.target.files); e.target.value = ""; }} />
