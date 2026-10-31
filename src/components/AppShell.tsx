@@ -13,6 +13,7 @@ const LINKS = [
   { to: "/reports", label: "Insights", icon: BarChart3 },
   { to: "/wealth", label: "Wealth", icon: Gem },
   { to: "/plan", label: "Plan", icon: CalendarClock },
+  { to: "/forecast", label: "Predict", icon: TrendingUp },
   { to: "/budgets", label: "Budgets", icon: PiggyBank },
   { to: "/reconcile", label: "Bank", icon: Landmark },
   { to: "/family", label: "Family", icon: Users },
