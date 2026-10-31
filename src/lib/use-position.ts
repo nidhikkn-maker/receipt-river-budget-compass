@@ -8,8 +8,10 @@ export const todayISO = () => {
 };
 
 function useInput(days: number, includeUnconfirmed: boolean): PositionInput {
-  const { accounts, transactions, commitments, goals, loans } = useStore();
-  return useMemo(() => ({ accounts, transactions, commitments, goals, loans, today: todayISO(), days, includeUnconfirmed }), [accounts, transactions, commitments, goals, loans, days, includeUnconfirmed]);
+  const { accounts, transactions, commitments, goals, loans, valuations, budgets, preferences } = useStore();
+  const cardAlertPct = preferences.cardAlertPct;
+  return useMemo(() => ({ accounts, transactions, commitments, goals, loans, valuations, budgets: budgets as Record<string, number>, cardAlertPct, today: todayISO(), days, includeUnconfirmed }),
+    [accounts, transactions, commitments, goals, loans, valuations, budgets, cardAlertPct, days, includeUnconfirmed]);
 }
 
 export function usePosition(days = 30, includeUnconfirmed = false) {
