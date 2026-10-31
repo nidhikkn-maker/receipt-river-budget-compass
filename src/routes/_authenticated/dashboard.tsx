@@ -3,6 +3,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { Bar, BarChart, ResponsiveContainer, Tooltip, XAxis } from "recharts";
 import { StatusStrip } from "@/components/StatusStrip";
 import { PaymentReminders } from "@/components/PaymentReminders";
+import { PaymentReadiness } from "@/components/PaymentReadiness";
 import { Stat } from "@/components/AppShell";
 import { ExpenseTable } from "@/components/ExpenseTable";
 import { money, totalsByMember, totalsByScope } from "@/lib/expenses";
