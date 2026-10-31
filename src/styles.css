@@ -47,6 +47,8 @@
   --color-ring-offset-background: var(--background);
   --color-gold: var(--gold);
   --color-gold-foreground: var(--gold-foreground);
+  --color-gold-strong: var(--gold-strong);
+  --color-gold-soft: var(--gold-soft);
   --color-chart-1: var(--chart-1);
   --color-chart-2: var(--chart-2);
   --color-chart-3: var(--chart-3);
@@ -96,19 +98,23 @@
   --info: oklch(0.56 0.14 240);
   --border: oklch(0.885 0.02 260);
   --input: oklch(0.885 0.02 260);
-  --ring: oklch(0.33 0.12 266);
+  --ring: oklch(0.7 0.13 85);
   --gold: oklch(0.78 0.14 85);
   --gold-foreground: oklch(0.22 0.05 70);
+  --gold-strong: oklch(0.58 0.12 78);
+  --gold-soft: oklch(0.95 0.045 88);
+  --gradient-gold: linear-gradient(135deg, oklch(0.85 0.13 88) 0%, oklch(0.74 0.15 78) 100%);
+  --shadow-gold: 0 16px 34px -16px color-mix(in oklab, var(--gold) 60%, transparent);
   --ink: oklch(0.21 0.085 268);
   --ink-foreground: oklch(0.96 0.015 88);
   --ink-muted: oklch(0.68 0.05 262);
-  --gradient-hero: linear-gradient(135deg, oklch(0.19 0.08 268) 0%, oklch(0.32 0.13 265) 55%, oklch(0.46 0.15 255) 82%, oklch(0.78 0.14 85) 100%);
+  --gradient-hero: linear-gradient(135deg, oklch(0.19 0.08 268) 0%, oklch(0.32 0.13 265) 42%, oklch(0.58 0.14 258) 68%, oklch(0.8 0.15 85) 100%);
   --shadow-float: 0 18px 40px -18px color-mix(in oklab, var(--primary) 45%, transparent);
   --chart-1: oklch(0.33 0.12 266);
   --chart-2: oklch(0.78 0.14 85);
-  --chart-3: oklch(0.52 0.14 255);
+  --chart-3: oklch(0.62 0.12 78);
   --chart-4: oklch(0.42 0.1 268);
-  --chart-5: oklch(0.66 0.11 220);
+  --chart-5: oklch(0.86 0.08 88);
   --sidebar: oklch(0.21 0.085 268);
   --sidebar-foreground: oklch(0.96 0.015 88);
   --sidebar-primary: oklch(0.78 0.14 85);
@@ -122,6 +128,10 @@
 .dark {
   --gold: oklch(0.82 0.14 86);
   --gold-foreground: oklch(0.18 0.05 70);
+  --gold-strong: oklch(0.82 0.14 86);
+  --gold-soft: oklch(0.3 0.06 82);
+  --gradient-gold: linear-gradient(135deg, oklch(0.87 0.14 88) 0%, oklch(0.72 0.15 76) 100%);
+  --shadow-gold: 0 18px 38px -16px color-mix(in oklab, var(--gold) 55%, transparent);
   --background: oklch(0.19 0.075 268);
   --foreground: oklch(0.96 0.012 88);
   --card: oklch(0.24 0.08 268);
@@ -141,10 +151,10 @@
   --destructive-foreground: oklch(0.98 0 0);
   --border: oklch(0.96 0.02 88 / 12%);
   --input: oklch(0.96 0.02 88 / 18%);
-  --ring: oklch(0.68 0.13 252);
+  --ring: oklch(0.82 0.14 86);
   --chart-1: oklch(0.68 0.13 252);
   --chart-2: oklch(0.82 0.14 86);
-  --chart-3: oklch(0.55 0.14 262);
+  --chart-3: oklch(0.7 0.13 80);
   --chart-4: oklch(0.86 0.06 88);
   --chart-5: oklch(0.66 0.1 210);
   --sidebar: oklch(0.16 0.06 268);
@@ -202,6 +212,12 @@
 }
 @utility shadow-float {
   box-shadow: var(--shadow-float);
+}
+@utility bg-gold-hero {
+  background-image: var(--gradient-gold);
+}
+@utility shadow-gold {
+  box-shadow: var(--shadow-gold);
 }
 /* Perforated "ticket" edge used on expense cards */
 @utility ticket {
