@@ -174,7 +174,7 @@ describe("V4 acceptance (Part G)", () => {
     expect(tripFinance(closed, ledger as never).total).toBe(60000);
     expect(travelEntries([closed], ledger as never)).toHaveLength(1);
     expect(JSON.stringify(ledger)).toBe(before); // closing records nothing new
-    const settled: TravelTrip = { ...closed, advances: [{ id: "ad", date: "2026-12-01", amount: 20000, source: "Employer", settledAt: "2026-12-06" }] };
+    const settled: TravelTrip = { ...closed, advances: [{ id: "ad", date: "2026-12-01", amount: 60000, source: "Employer", settledAt: "2026-12-06" }] };
     expect(closeBlockers(settled, [row({ reimbursementStatus: "received" })] as never)).toEqual([]);
   });
 });

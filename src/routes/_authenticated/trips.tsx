@@ -19,7 +19,7 @@ import { todayISO } from "@/lib/use-position";
 import { PlanCalendar } from "@/components/PlanCalendar";
 
 export const Route = createFileRoute("/_authenticated/trips")({
-  validateSearch: (search: Record<string, unknown>): { trip?: string } => ({ trip: typeof search.trip === "string" ? search.trip : undefined }),
+  validateSearch: (search: Record<string, unknown>): { trip?: string } => typeof search["trip"] === "string" ? { trip: search["trip"] } : {},
   head: () => ({
     meta: [
       { title: "Trips — travel spending · Ledgerline" },

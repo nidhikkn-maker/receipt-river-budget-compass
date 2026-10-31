@@ -6,7 +6,7 @@ const trip: TravelTrip = { id: "t", name: "Conference", destination: "Chennai", 
   { id: "hotel", kind: "hotel", provider: "Hotel", ref: "", date: "2026-11-01", dueDate: "2026-10-30", amount: 5000, status: "unpaid", expenseId: "payment" },
   { id: "flight", kind: "flight", provider: "Airline", ref: "", date: "2026-11-02", dueDate: "2026-11-03", amount: 2000, status: "unpaid" },
 ] };
-const txns = [{ id: "payment", amount: 2000, date: "2026-10-29", category: "Travel", tags: [], txnType: "expense" as const }];
+const txns = [{ id: "payment", amount: 2000, date: "2026-10-29", title: "Deposit", merchant: null, category: "Travel", tags: [], txnType: "expense" as const }];
 
 describe("booking reminders", () => {
   it("shows upcoming due dates and overdue balances net of partial payments", () => {
@@ -16,9 +16,9 @@ describe("booking reminders", () => {
     ]);
   });
   it("does not remind for paid, cancelled or fully covered bookings", () => {
-    const settled = { ...trip, bookings: trip.bookings?.map((b, i) => ({ ...b, status: i === 0 ? "paid" as const : "cancelled" as const })) };
+    const settled = { ...trip, bookings: (trip.bookings ?? []).map((b, i) => ({ ...b, status: i === 0 ? "paid" as const : "cancelled" as const })) };
     expect(bookingReminders([settled], txns, "2026-10-31", 30)).toEqual([]);
-    expect(bookingReminders([{ ...trip, bookings: trip.bookings?.slice(0, 1) }], [{ ...txns[0], id: "payment", amount: 5000 }], "2026-10-31", 3)).toEqual([]);
+    expect(bookingReminders([{ ...trip, bookings: (trip.bookings ?? []).slice(0, 1) }], txns.map(x => ({ ...x, amount: 5000 })), "2026-10-31", 3)).toEqual([]);
   });
   it("respects zero lead days while keeping overdue balances visible", () => {
     expect(bookingReminders([trip], txns, "2026-10-31", 0).map((i) => i.id)).toEqual(["booking:t:hotel"]);
