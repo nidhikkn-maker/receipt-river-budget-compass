@@ -230,12 +230,12 @@ function NewExpense() {
       if (!live) return;
       setReceipts(files);
       draftLoaded.current = true; setDraftState("saved");
-      if (files.length && (search.retry || (!x.extracted && !x.amount))) await runExtraction(files[0], false);
+      if (files.length && (search.retry || (!x.extracted && !x.amount))) await runExtraction(files[0]!, false);
     })().catch(() => { draftLoaded.current = true; toast.error("Couldn't open that draft"); });
     return () => { live = false; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [search.draft]);
-  const draftData = (): DraftData => ({ txnType, amount, currency, date, category, merchant, title, accountId, toAccountId, instrumentId, paymentMethod, scope, tripId, tags, description, memberId, principal, interest, wsSplit, splitOn, shares, receiptDetails, extracted: !!scanRead || !!receiptDetails.text, error: readingError || undefined });
+  const draftData = (): DraftData => ({ txnType, amount, currency, date, category, merchant, title, accountId, toAccountId, instrumentId, paymentMethod, scope, tripId, tags, description, memberId, principal, interest, wsSplit, splitOn, shares, receiptDetails, extracted: !!scanRead || !!receiptDetails.text, ...(readingError ? { error: readingError } : {}) });
   const persistDraft = async (): Promise<boolean> => {
     if (editing || !draftLoaded.current) return false;
     const d = draftData();
