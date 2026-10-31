@@ -1,4 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { AccountForm } from "@/components/AccountForm";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { ScanLine, Sparkles, X, Camera, Image as ImageIcon, FolderOpen, Inbox, RotateCcw, PencilLine, ChevronDown, Check, Plus } from "lucide-react";
@@ -115,6 +117,7 @@ function NewExpense() {
   const ctxTrip = (preferences.trips as TravelTrip[]).find((t) => t.id === search.trip);
   const [txnType, setTxnType] = useState<TxnType>("expense");
   const [accountId, setAccountId] = useState<string>("none");
+  const [addAcct, setAddAcct] = useState(false);
   const [toAccountId, setToAccountId] = useState<string>("none");
   const [tripId, setTripId] = useState<string>("none");
   const [principal, setPrincipal] = useState("");
@@ -743,7 +746,12 @@ function NewExpense() {
                   {[...acctOrder.recent, ...acctOrder.rest].map((id) => { const a = acctById.get(id)!; return <SelectItem key={id} value={id}>{a.name} · {ACCOUNT_LABEL[a.kind]}</SelectItem>; })}
                 </SelectContent>
               </Select>
-              {!liveAccounts.length && <p role="status" className="text-xs text-muted-foreground">No accounts yet. Your entry is kept as a draft — <Link to="/wealth" className="font-semibold text-primary underline">Configure account</Link></p>}
+              <button type="button" onClick={() => setAddAcct(true)} className="justify-self-start text-xs font-semibold text-primary underline">+ Add account</button>
+              <Dialog open={addAcct} onOpenChange={setAddAcct}>
+                <DialogContent><DialogHeader><DialogTitle>Add account</DialogTitle></DialogHeader>
+                  <AccountForm compact onCreated={(id) => { setAccountId(id); setAddAcct(false); }} />
+                </DialogContent>
+              </Dialog>
               {methodNote && <p className="text-xs text-muted-foreground">via {instrumentLabel(methodNote)}</p>}
             </div>
             {isMove(txnType) && (
@@ -759,7 +767,7 @@ function NewExpense() {
               </div>
             )}
           </div>
-          {!liveAccounts.length && <p className="rounded-xl bg-secondary px-3 py-2 text-xs">An account is needed to keep balances accurate. <Link to="/wealth" className="font-semibold text-primary underline">Add account</Link> — until then this entry is saved without changing any balance.</p>}
+          {!liveAccounts.length && <p className="rounded-xl bg-secondary px-3 py-2 text-xs">An account is needed to keep balances accurate. <button type="button" onClick={() => setAddAcct(true)} className="font-semibold text-primary underline">Add account</button> — until then this entry is saved without changing any balance.</p>}
           {(txnType === "advance" || txnType === "advance_settlement") && (
             <div className="grid gap-1.5">
               <Label>Trip</Label>

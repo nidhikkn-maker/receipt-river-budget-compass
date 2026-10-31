@@ -45,10 +45,10 @@ export function setupStatus(input: { accounts: Account[]; expenses: Expense[]; p
   items.push({ key: "workspaces", label: "Workspaces", state: "ready", detail: usesBusiness ? "Personal plus business/official in use." : "Personal workspace in use.", action: "Manage workspaces", to: "/settings", hash: "finance", essential: true });
 
   items.push(!usesBusiness
-    ? { key: "organisations", label: "Organisations", state: "optional", detail: "Only needed for business or official expenses.", action: "Add organisations", to: "/settings", hash: "finance", essential: false }
+    ? { key: "organisations", label: "Organisations", state: "optional", detail: "Only needed for business or official expenses.", action: "Add organisations", to: "/settings", hash: "organisations", essential: false }
     : orgTags.length
-      ? { key: "organisations", label: "Organisations", state: "ready", detail: `${orgTags.length} organisation${orgTags.length > 1 ? "s" : ""}.`, action: "Manage organisations", to: "/settings", hash: "finance", essential: false }
-      : { key: "organisations", label: "Organisations", state: "partial", detail: "You record business/official expenses but have no organisations yet.", action: "Add organisations", to: "/settings", hash: "finance", essential: false });
+      ? { key: "organisations", label: "Organisations", state: "ready", detail: `${orgTags.length} organisation${orgTags.length > 1 ? "s" : ""}.`, action: "Manage organisations", to: "/settings", hash: "organisations", essential: false }
+      : { key: "organisations", label: "Organisations", state: "partial", detail: "You record business/official expenses but have no organisations yet.", action: "Add organisations", to: "/settings", hash: "organisations", essential: false });
 
   items.push(activeCats.length
     ? { key: "categories", label: "Categories", state: "ready", detail: `${activeCats.length} active categories.`, action: "Manage categories", to: "/settings", hash: "finance", essential: true }

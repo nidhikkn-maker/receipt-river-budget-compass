@@ -4,6 +4,8 @@ import { AlertTriangle, CheckCircle2, ChevronRight, Circle, CircleDashed, Search
 import { useStore } from "@/lib/store";
 import { SETUP_LABEL, essentialsReady, setupStatus, type SetupState } from "@/lib/setup-status";
 import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { SetupAssistant } from "@/components/SetupAssistant";
 
 const ICON: Record<SetupState, typeof Circle> = { ready: CheckCircle2, attention: AlertTriangle, partial: CircleDashed, not_configured: Circle, optional: CircleDashed };
 const TONE: Record<SetupState, string> = { ready: "text-success", attention: "text-destructive", partial: "text-gold", not_configured: "text-destructive", optional: "text-muted-foreground" };
@@ -14,7 +16,7 @@ const GROUPS: { title: string; items: Dest[] }[] = [
     { label: "Accounts", desc: "Bank, cash, cards, wallets, loans and investments", to: "/wealth" },
     { label: "Payment methods", desc: "UPI, debit/credit cards and wallets linked to accounts", to: "/payment-methods" },
     { label: "Workspaces", desc: "Personal, family, business and official focus", to: "/settings", hash: "finance" },
-    { label: "Organisations", desc: "Organisation tags reused in claims and reports", to: "/settings", hash: "finance" },
+    { label: "Organisations", desc: "Organisation directory reused in claims and reports", to: "/settings", hash: "organisations" },
   ] },
   { title: "Expense configuration", items: [
     { label: "Categories", desc: "Add, rename, move and archive categories", to: "/settings", hash: "finance" },
@@ -52,6 +54,8 @@ export function SettingsDirectory() {
   const ql = q.trim().toLowerCase();
   const groups = GROUPS.map((g) => ({ ...g, items: g.items.filter((d) => !ql || `${g.title} ${d.label} ${d.desc}`.toLowerCase().includes(ql)) })).filter((g) => g.items.length);
   const ok = essentialsReady(items);
+  const [guide, setGuide] = useState(false);
+  const showPrompt = !ok && preferences.setupAssistant !== "done";
 
   return (
     <div className="mb-6 space-y-5">
@@ -71,6 +75,11 @@ export function SettingsDirectory() {
               </Link>
             </li>); })}
         </ul>
+        <div className="mt-2 flex items-center justify-between gap-2 border-t pt-3">
+          <p className="text-xs text-muted-foreground">{showPrompt ? "A short guided setup gets you ready in a few steps." : "Reopen the guided setup any time."}</p>
+          <Button size="sm" variant={showPrompt ? "default" : "outline"} onClick={() => setGuide(true)}>{showPrompt ? "Start setup" : "Setup guide"}</Button>
+        </div>
+        <SetupAssistant open={guide} onOpenChange={setGuide} />
       </section>
       <section aria-label="All settings" className="space-y-3">
         <label className="relative block"><Search className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" aria-hidden />

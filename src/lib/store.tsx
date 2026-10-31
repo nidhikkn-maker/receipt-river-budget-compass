@@ -1,4 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { duplicateAccount } from "@/lib/master-data";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import type { Database, Json } from "@/integrations/supabase/types";
@@ -404,6 +405,7 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
   };
   const addAccount: Ctx["addAccount"] = async (x) => {
     if (!x.name.trim()) throw new Error("Name the account");
+    { const d = duplicateAccount(accounts, { name: x.name, kind: x.kind, lastFour: x.lastFour ?? null }); if (d) throw new Error(`You already have “${d.name}” — use it or choose a different name`); }
     if (!Number.isFinite(x.openingBalance)) throw new Error("Enter an opening balance");
     validateCard(x);
     const { data, error } = await supabase.from("accounts").insert({
@@ -422,7 +424,7 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
   const updateAccount: Ctx["updateAccount"] = async (id, p) => {
     validateCard(p);
     const row: Database["public"]["Tables"]["accounts"]["Update"] = {};
-    if (p.name !== undefined) { if (!p.name.trim()) throw new Error("Name the account"); row["name"] = p.name.trim(); }
+    if (p.name !== undefined) { if (!p.name.trim()) throw new Error("Name the account"); const cur = accounts.find((a) => a.id === id); if (cur && duplicateAccount(accounts, { id, name: p.name, kind: cur.kind })) throw new Error("Another account already has that name"); row["name"] = p.name.trim(); }
     if (p.creditLimit !== undefined) row["credit_limit"] = p.creditLimit;
     if (p.dueDay !== undefined) row["due_day"] = p.dueDay;
     if (p.minBalance !== undefined) { if (!(p.minBalance >= 0)) throw new Error("Minimum balance can't be negative"); row["min_balance"] = p.minBalance; }

@@ -71,6 +71,10 @@ export function validateInstrument(x: PaymentInstrument, accounts: Account[], al
     if (!parent || parent.id === x.id || !["credit_card", "debit_card"].includes(parent.type)) throw new Error("Add-on cards must belong to a main card");
     out.parentId = parent.id;
   }
+  const others = all.filter((p) => p.id !== x.id && !p.archived);
+  if (others.some((p) => p.nickname.trim().toLowerCase() === nickname.toLowerCase())) throw new Error(`A payment method called “${nickname}” already exists`);
+  if (out.handle && others.some((p) => p.handle === out.handle)) throw new Error("This UPI ID is already saved");
+  if (out.lastFour && others.some((p) => p.type === out.type && p.lastFour === out.lastFour && p.accountId === out.accountId)) throw new Error("This card is already saved for that account");
   return out;
 }
 
