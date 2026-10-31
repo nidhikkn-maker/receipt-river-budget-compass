@@ -46,6 +46,8 @@ interface Ctx {
   savePreferences: (p: FinancePreferences) => Promise<void>;
   ensureCategory: (name: string) => Promise<void>;
   moveCategory: (source: string, target: string) => Promise<void>;
+  /** Recategorises many entries at once; clears any category split so it can't contradict the new category. */
+  bulkSetCategory: (ids: string[], category: string) => Promise<void>;
   userId: string;
   name: string;
   updateName: (name: string) => Promise<void>;
