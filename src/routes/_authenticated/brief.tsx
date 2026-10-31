@@ -10,6 +10,8 @@ import { freshnessSummary, inboxCounts, inboxItems } from "@/lib/inbox";
 import { briefDue, weeklyBrief, type WeeklyBrief } from "@/lib/intelligence";
 import { downloadBlob, toPdf } from "@/lib/reports";
 import { useStore } from "@/lib/store";
+import { useWebMCP } from "use-webmcp-tool";
+import { runWebMCPTool } from "@/lib/webmcp-telemetry";
 import { todayISO, usePosition } from "@/lib/use-position";
 
 export const Route = createFileRoute("/_authenticated/brief")({
@@ -55,6 +57,18 @@ function Brief() {
       ...b.recommendations.map((r, k) => ["Recommendation", `${k + 1}. ${r}`, ""])];
     downloadBlob(await toPdf({ title: `Weekly brief ${b.period.start} – ${b.period.end}`, headers: ["Section", "Item", "Amount"], rows }, "Verified figures from Ledgerline"), `weekly-brief-${b.period.end}.pdf`);
   };
+  useWebMCP({
+    name: "read_weekly_brief",
+    description: "Read the weekly financial brief currently shown: spending, income, upcoming payments, attention items and recommendations.",
+    annotations: { readOnlyHint: true, untrustedContentHint: true },
+    execute: () => runWebMCPTool("read_weekly_brief", () => text()),
+  });
+  useWebMCP({
+    name: "save_weekly_brief",
+    description: "Generate this week's brief from current figures and save it to the brief archive.",
+    enabled: !viewing,
+    execute: () => runWebMCPTool("save_weekly_brief", async () => { const entry = { id: crypto.randomUUID(), generatedAt: new Date().toISOString(), data: live }; await savePreferences({ ...pr, briefs: [entry, ...pr.briefs].slice(0, 26) }); return "Saved this week's brief."; }),
+  });
   const setB = (patch: Partial<typeof pr.brief>) => savePreferences({ ...pr, brief: { ...pr.brief, ...patch } }).catch((e) => toast.error(e.message));
   return (
     <div>

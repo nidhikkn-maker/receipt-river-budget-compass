@@ -12,7 +12,9 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as AuthRouteImport } from './routes/auth'
+import { Route as McpRouteImport } from './routes/mcp'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
+import { Route as Char91DotwellKnownChar93OauthProtectedResourceRouteImport } from './routes/[.well-known]/oauth-protected-resource'
 import { Route as AuthenticatedAssistantRouteImport } from './routes/_authenticated/assistant'
 import { Route as AuthenticatedBriefRouteImport } from './routes/_authenticated/brief'
 import { Route as AuthenticatedBudgetsRouteImport } from './routes/_authenticated/budgets'
@@ -32,6 +34,7 @@ import { Route as AuthenticatedStrategyRouteImport } from './routes/_authenticat
 import { Route as AuthenticatedTripsRouteImport } from './routes/_authenticated/trips'
 import { Route as AuthenticatedVaultRouteImport } from './routes/_authenticated/vault'
 import { Route as AuthenticatedWealthRouteImport } from './routes/_authenticated/wealth'
+import { Route as DotlovableOauthConsentRouteImport } from './routes/[.]lovable.oauth.consent'
 import { Route as ApiPublicJobsPaymentRemindersRouteImport } from './routes/api/public/jobs/payment-reminders'
 
 const IndexRoute = IndexRouteImport.update({
@@ -48,11 +51,22 @@ const AuthRoute = AuthRouteImport.update({
   path: '/auth',
   getParentRoute: () => rootRouteImport,
 } as any)
+const McpRoute = McpRouteImport.update({
+  id: '/mcp',
+  path: '/mcp',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ResetPasswordRoute = ResetPasswordRouteImport.update({
   id: '/reset-password',
   path: '/reset-password',
   getParentRoute: () => rootRouteImport,
 } as any)
+const Char91DotwellKnownChar93OauthProtectedResourceRoute =
+  Char91DotwellKnownChar93OauthProtectedResourceRouteImport.update({
+    id: '/.well-known/oauth-protected-resource',
+    path: '/.well-known/oauth-protected-resource',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const AuthenticatedAssistantRoute = AuthenticatedAssistantRouteImport.update({
   id: '/assistant',
   path: '/assistant',
@@ -148,6 +162,11 @@ const AuthenticatedWealthRoute = AuthenticatedWealthRouteImport.update({
   path: '/wealth',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const DotlovableOauthConsentRoute = DotlovableOauthConsentRouteImport.update({
+  id: '/.lovable/oauth/consent',
+  path: '/.lovable/oauth/consent',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicJobsPaymentRemindersRoute =
   ApiPublicJobsPaymentRemindersRouteImport.update({
     id: '/api/public/jobs/payment-reminders',
@@ -158,7 +177,9 @@ const ApiPublicJobsPaymentRemindersRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/mcp': typeof McpRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/assistant': typeof AuthenticatedAssistantRoute
   '/brief': typeof AuthenticatedBriefRoute
   '/budgets': typeof AuthenticatedBudgetsRoute
@@ -178,12 +199,15 @@ export interface FileRoutesByFullPath {
   '/trips': typeof AuthenticatedTripsRoute
   '/vault': typeof AuthenticatedVaultRoute
   '/wealth': typeof AuthenticatedWealthRoute
+  '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/api/public/jobs/payment-reminders': typeof ApiPublicJobsPaymentRemindersRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/mcp': typeof McpRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/assistant': typeof AuthenticatedAssistantRoute
   '/brief': typeof AuthenticatedBriefRoute
   '/budgets': typeof AuthenticatedBudgetsRoute
@@ -203,6 +227,7 @@ export interface FileRoutesByTo {
   '/trips': typeof AuthenticatedTripsRoute
   '/vault': typeof AuthenticatedVaultRoute
   '/wealth': typeof AuthenticatedWealthRoute
+  '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/api/public/jobs/payment-reminders': typeof ApiPublicJobsPaymentRemindersRoute
 }
 export interface FileRoutesById {
@@ -210,7 +235,9 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRoute
+  '/mcp': typeof McpRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/_authenticated/assistant': typeof AuthenticatedAssistantRoute
   '/_authenticated/brief': typeof AuthenticatedBriefRoute
   '/_authenticated/budgets': typeof AuthenticatedBudgetsRoute
@@ -230,6 +257,7 @@ export interface FileRoutesById {
   '/_authenticated/trips': typeof AuthenticatedTripsRoute
   '/_authenticated/vault': typeof AuthenticatedVaultRoute
   '/_authenticated/wealth': typeof AuthenticatedWealthRoute
+  '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/api/public/jobs/payment-reminders': typeof ApiPublicJobsPaymentRemindersRoute
 }
 export interface FileRouteTypes {
@@ -237,7 +265,9 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/auth'
+    | '/mcp'
     | '/reset-password'
+    | '/.well-known/oauth-protected-resource'
     | '/assistant'
     | '/brief'
     | '/budgets'
@@ -257,12 +287,15 @@ export interface FileRouteTypes {
     | '/trips'
     | '/vault'
     | '/wealth'
+    | '/.lovable/oauth/consent'
     | '/api/public/jobs/payment-reminders'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/auth'
+    | '/mcp'
     | '/reset-password'
+    | '/.well-known/oauth-protected-resource'
     | '/assistant'
     | '/brief'
     | '/budgets'
@@ -282,13 +315,16 @@ export interface FileRouteTypes {
     | '/trips'
     | '/vault'
     | '/wealth'
+    | '/.lovable/oauth/consent'
     | '/api/public/jobs/payment-reminders'
   id:
     | '__root__'
     | '/'
     | '/_authenticated'
     | '/auth'
+    | '/mcp'
     | '/reset-password'
+    | '/.well-known/oauth-protected-resource'
     | '/_authenticated/assistant'
     | '/_authenticated/brief'
     | '/_authenticated/budgets'
@@ -308,6 +344,7 @@ export interface FileRouteTypes {
     | '/_authenticated/trips'
     | '/_authenticated/vault'
     | '/_authenticated/wealth'
+    | '/.lovable/oauth/consent'
     | '/api/public/jobs/payment-reminders'
   fileRoutesById: FileRoutesById
 }
@@ -315,7 +352,10 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
+  McpRoute: typeof McpRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
+  Char91DotwellKnownChar93OauthProtectedResourceRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
+  DotlovableOauthConsentRoute: typeof DotlovableOauthConsentRoute
   ApiPublicJobsPaymentRemindersRoute: typeof ApiPublicJobsPaymentRemindersRoute
 }
 
@@ -342,11 +382,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/mcp': {
+      id: '/mcp'
+      path: '/mcp'
+      fullPath: '/mcp'
+      preLoaderRoute: typeof McpRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/reset-password': {
       id: '/reset-password'
       path: '/reset-password'
       fullPath: '/reset-password'
       preLoaderRoute: typeof ResetPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/.well-known/oauth-protected-resource': {
+      id: '/.well-known/oauth-protected-resource'
+      path: '/.well-known/oauth-protected-resource'
+      fullPath: '/.well-known/oauth-protected-resource'
+      preLoaderRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_authenticated/assistant': {
@@ -482,6 +536,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedWealthRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/.lovable/oauth/consent': {
+      id: '/.lovable/oauth/consent'
+      path: '/.lovable/oauth/consent'
+      fullPath: '/.lovable/oauth/consent'
+      preLoaderRoute: typeof DotlovableOauthConsentRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/jobs/payment-reminders': {
       id: '/api/public/jobs/payment-reminders'
       path: '/api/public/jobs/payment-reminders'
@@ -543,7 +604,11 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRoute,
+  McpRoute: McpRoute,
   ResetPasswordRoute: ResetPasswordRoute,
+  Char91DotwellKnownChar93OauthProtectedResourceRoute:
+    Char91DotwellKnownChar93OauthProtectedResourceRoute,
+  DotlovableOauthConsentRoute: DotlovableOauthConsentRoute,
   ApiPublicJobsPaymentRemindersRoute: ApiPublicJobsPaymentRemindersRoute,
 }
 export const routeTree = rootRouteImport
