@@ -144,9 +144,9 @@ export function classifyStatementLine(line: StatementLine, ctx: StatementContext
 
   if (line.direction === "credit") {
     if (REFUND_CREDIT.test(text)) return { ...base, category, txnType: "refund", reason: "Refund or reversal credited back" };
-    if (INCOME_CREDIT.test(text)) return { ...base, category, txnType: "income", reason: "Money coming in (salary, interest or dividend)" };
+    if (INCOME_CREDIT.test(text)) return { ...base, category, txnType: "income", reason: "Money coming in (salary, interest or dividend)", uncertain };
     if (TRANSFER_CREDIT.test(text)) return { ...base, category, txnType: "transfer", reason: "Money moved in from another account — pick where it came from" };
-    return { ...base, category, txnType: "income", reason: "Credit line — confirm it is income before saving" };
+    return { ...base, category, txnType: "income", reason: "Credit line — confirm it is income before saving", uncertain: true };
   }
 
   if (CARD_OR_LOAN_PAYMENT.test(text)) return { ...base, category, txnType: "transfer", reason: "Card, loan or investment payment — pick the account it went to" };
@@ -154,25 +154,45 @@ export function classifyStatementLine(line: StatementLine, ctx: StatementContext
   if (/\b(CHARGES?|PENALTY|SURCHARGE|MINIMUM BALANCE|AMCC|MARKUP|FOREX FEE|LATE FEE)\b/.test(text)) {
     return { ...base, category: resolveCategory(ctx.categories, "Financial charges") ?? category, txnType: "expense", reason: "Bank or card charge" };
   }
-  return { ...base, category, txnType: "expense", reason: "Regular purchase" };
+  return { ...base, category, txnType: "expense", reason: uncertain ? "Regular purchase — category unsure, please check" : "Regular purchase", uncertain };
 }
 
-/** Split statement lines into auto-register, needs-review and already-recorded. */
+/** Split statement lines into auto-register, needs-review, possible duplicates and already-recorded. */
 export function planStatementRegistration(lines: StatementLine[], matches: Match[], ctx: StatementContext): StatementPlan {
-  const plan: StatementPlan = { register: [], review: [], skipped: [] };
+  const plan: StatementPlan = { register: [], review: [], skipped: [], possibleDuplicates: [], recurringHints: [] };
+  const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, "");
   for (const line of lines) {
     const match = matches.find((m) => m.line.ref === line.ref);
     if (match?.expense) {
       plan.skipped.push({ line, reason: `Already matched to "${match.expense.title}"` });
       continue;
     }
-    if (ctx.transactions.some((t) => matchScore(line, t, ctx.currency) >= 0.7)) {
+    let best = 0;
+    let bestTxn: Expense | null = null;
+    for (const t of ctx.transactions) {
+      const s = matchScore(line, t, ctx.currency);
+      if (s > best) { best = s; bestTxn = t; }
+    }
+    if (best >= 0.7) {
       plan.skipped.push({ line, reason: "Already in your ledger" });
       continue;
     }
     const draft = classifyStatementLine(line, ctx);
+    if (best >= 0.4 && bestTxn) {
+      // Close to an existing record but not clearly the same — the user decides.
+      plan.possibleDuplicates.push({ draft, existing: { id: bestTxn.id, title: bestTxn.title, date: bestTxn.date, amount: bestTxn.amount } });
+      continue;
+    }
     if (draft.txnType === "transfer" || /confirm it is income/.test(draft.reason)) plan.review.push(draft);
     else plan.register.push(draft);
+  }
+  // Recurring hints: a merchant being registered now that already appears 3+ times in history.
+  const seen = new Set<string>();
+  for (const d of plan.register) {
+    const k = norm(d.merchant);
+    if (!k || seen.has(k)) continue;
+    const count = ctx.transactions.filter((t) => t.merchant && norm(t.merchant) === k).length;
+    if (count >= 3) { seen.add(k); plan.recurringHints.push({ merchant: d.merchant, amount: d.line.amount, count }); }
   }
   return plan;
 }
