@@ -30,6 +30,7 @@ import { Mic } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ProcessingPanel, stagesAt } from "@/components/ProcessingPanel";
 import { createLatest } from "@/lib/latest-request";
+import { completeDraft, draftReceiptFile, draftStatus, getDraft, hasDraftContent, upsertDraft, uploadDraftReceipt, type DraftData, type DraftReceipt } from "@/lib/drafts";
 import { ACCOUNT_LABEL, MOVE_TARGET, isMove, TXN_LABEL, TXN_TYPES, frequentMerchants, suggestForMerchant, type TxnType } from "@/lib/ledger";
 
 
@@ -64,7 +65,7 @@ export const Route = createFileRoute("/_authenticated/new")({
   component: NewExpense,
 });
 
-type LocalReceipt = { file: File; name: string; type: string; dataUrl: string; fingerprint: string };
+type LocalReceipt = { file: File; name: string; type: string; dataUrl: string; fingerprint: string; path?: string };
 
 const readFile = async (f: File): Promise<LocalReceipt> => {
   const [dataUrl, fingerprint] = await Promise.all([
@@ -86,7 +87,7 @@ interface SpeechRec { lang: string; interimResults: boolean; start: () => void; 
 interface Scan { merchant: string; date: string; amount: string; currency: string }
 
 function NewExpense() {
-  const { save, transactions: expenses, members, accounts, loans, preferences, savePreferences, documents, addDocument, removeDocument, signedUrl } = useStore();
+  const { userId, save, transactions: expenses, members, accounts, loans, preferences, savePreferences, documents, addDocument, removeDocument, signedUrl } = useStore();
   const PENDING = "pending-receipt";
   const inbox = documents.filter((d) => d.notes === PENDING && !d.transactionId);
   const [fromInbox, setFromInbox] = useState<string[]>([]);
@@ -203,6 +204,71 @@ function NewExpense() {
     if (account) setAccountId(account.id);
   }, [edit, search.account, accounts]);
 
+  // ---- Drafts: autosave, restore, resume later ----
+  const [draftState, setDraftState] = useState<"idle" | "saving" | "saved" | "uploading" | "error">("idle");
+  const draftLoaded = useRef(!search.draft);
+  const draftExists = useRef(false);
+  useEffect(() => {
+    if (!search.draft || edit) return;
+    let live = true;
+    (async () => {
+      const d = await getDraft(search.draft!);
+      if (!live) return;
+      if (!d || d.status === "saved") { draftLoaded.current = true; if (!d) toast.error("That draft is no longer available"); return; }
+      draftId.current = d.id; draftExists.current = true;
+      const x = d.data;
+      if (x.txnType) setTxnType(x.txnType as TxnType); if (x.amount) setAmount(x.amount); if (x.currency) setCurrency(x.currency);
+      if (x.date) setDate(x.date); if (x.category) setCategory(x.category as Category); if (x.merchant) setMerchant(x.merchant); if (x.title) setTitle(x.title);
+      if (x.accountId) setAccountId(x.accountId); if (x.toAccountId) setToAccountId(x.toAccountId); if (x.instrumentId) setInstrumentId(x.instrumentId);
+      if (x.paymentMethod) setPaymentMethod(x.paymentMethod as PaymentMethod); if (x.scope) setScope(x.scope as Scope); if (x.tripId) setTripId(x.tripId);
+      if (x.tags) setTags(x.tags); if (x.description) setDescription(x.description); if (x.memberId) setMemberId(x.memberId);
+      if (x.principal) setPrincipal(x.principal); if (x.interest) setInterest(x.interest);
+      if (x.wsSplit) setWsSplit(x.wsSplit as typeof wsSplit); if (x.splitOn) setSplitOn(true); if (x.shares) setShares(x.shares);
+      if (x.receiptDetails) setReceiptDetails(x.receiptDetails as ReceiptDetails);
+      const files: LocalReceipt[] = [];
+      for (const r of d.receipts) { const f = await draftReceiptFile(r); if (f) files.push({ ...(await readFile(f)), path: r.path }); }
+      if (!live) return;
+      setReceipts(files);
+      draftLoaded.current = true; setDraftState("saved");
+      if (files.length && (search.retry || (!x.extracted && !x.amount))) await runExtraction(files[0], false);
+    })().catch(() => { draftLoaded.current = true; toast.error("Couldn't open that draft"); });
+    return () => { live = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [search.draft]);
+  const draftData = (): DraftData => ({ txnType, amount, currency, date, category, merchant, title, accountId, toAccountId, instrumentId, paymentMethod, scope, tripId, tags, description, memberId, principal, interest, wsSplit, splitOn, shares, receiptDetails, extracted: !!scanRead || !!receiptDetails.text, error: readingError || undefined });
+  const persistDraft = async (): Promise<boolean> => {
+    if (editing || !draftLoaded.current) return false;
+    const d = draftData();
+    if (!hasDraftContent(d, receipts.length) && !draftExists.current) return false;
+    setDraftState("saving");
+    try {
+      const stored: DraftReceipt[] = [];
+      for (const r of receipts) {
+        if (!r.path) { setDraftState("uploading"); r.path = await uploadDraftReceipt(userId, draftId.current, r.file); }
+        stored.push({ name: r.name, type: r.type, path: r.path, fingerprint: r.fingerprint });
+      }
+      await upsertDraft(draftId.current, userId, d, stored, draftStatus(d, stored.length, { processing: reading }));
+      draftExists.current = true; setDraftState("saved"); return true;
+    } catch { setDraftState("error"); return false; }
+  };
+  const draftSig = JSON.stringify([draftData(), receipts.map((r) => r.fingerprint)]);
+  useEffect(() => {
+    if (saving) return;
+    const t = setTimeout(() => { void persistDraft(); }, 900);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [draftSig, reading]);
+  const resumeLater = async () => {
+    const ok = await persistDraft();
+    if (!ok && hasDraftContent(draftData(), receipts.length)) { toast.error("Draft not saved — check your connection and try again"); return; }
+    if (ok) toast.success("Saved to Drafts — finish it any time");
+    if (window.history.length > 1) window.history.back(); else nav({ to: "/drafts" });
+  };
+  const close = async () => {
+    if (!editing && hasDraftContent(draftData(), receipts.length)) { await resumeLater(); return; }
+    if (window.history.length > 1) window.history.back(); else nav({ to: "/dashboard" });
+  };
+
   const defaultsApplied = useRef(false);
   useEffect(() => {
     if (edit || defaultsApplied.current || !expenses.length) return;
@@ -226,7 +292,6 @@ function NewExpense() {
     setTags(d.tags.join(", ")); setDescription(d.description); setTripId(d.tripId); setDate(d.date);
     setWsSplit({ on: false, method: "fixed", values: {} }); setSplitOn(false); setShares({});
     setAutoFilled(new Set(["amount", "category", "merchant", "title"])); setRepeatedFrom(src.merchant || src.title); setRepeatOpen(false);
-    requestAnimationFrame(() => { const el = document.getElementById("a") as HTMLInputElement | null; el?.focus(); el?.select(); });
   };
 
   const applySpoken = async (text: string) => {
@@ -349,9 +414,13 @@ function NewExpense() {
     if (read.length > 1 && !editing) {
       // Bulk upload: one bill per entry — review and save each, the rest wait in line.
       setReceipts([first]);
-      setQueue((q) => [...q, ...read.slice(1)]);
-      setBatch((b) => ({ done: b?.done ?? 0, total: (b?.total ?? 0) + read.length }));
-      toast.message(`${read.length} bills queued — review and save each one`);
+      // Each extra bill becomes its own draft with its own receipt, never merged into this entry.
+      let made = 0;
+      for (const r of read.slice(1)) {
+        try { const id = crypto.randomUUID(); const path = await uploadDraftReceipt(userId, id, r.file); await upsertDraft(id, userId, {}, [{ name: r.name, type: r.type, path, fingerprint: r.fingerprint }], "info_required"); made++; }
+        catch { toast.error(`${r.name} couldn't be saved as a draft — add it again`); }
+      }
+      if (made) toast.message(`${made} more bill${made === 1 ? "" : "s"} saved to Drafts to finish later`);
     } else {
       setReceipts((r) => [...r, ...read]);
     }
@@ -443,6 +512,8 @@ function NewExpense() {
         }) }) });
       }
       for (const id of fromInbox) { const d = documents.find((x) => x.id === id); if (d) await removeDocument(d).catch(() => {}); }
+      if (createId && draftExists.current) await completeDraft({ id: draftId.current, receipts: receipts.filter((r) => r.path).map((r) => ({ name: r.name, type: r.type, path: r.path! })) }, createId).catch(() => {});
+      draftExists.current = false;
       toast.success(editing ? "Entry updated" : `${TXN_LABEL[txnType]} saved successfully`);
       draftId.current = crypto.randomUUID();
       if (!editing && queue.length) {
@@ -483,9 +554,10 @@ function NewExpense() {
   return (
     <>
       <header className="sticky top-0 z-20 -mx-4 mb-3 flex items-center gap-2 border-b bg-background/90 px-3 py-2 backdrop-blur sm:-mx-8 sm:px-6">
-        <Button type="button" size="icon" variant="ghost" aria-label="Close" onClick={() => (window.history.length > 1 ? window.history.back() : nav({ to: "/dashboard" }))}><X className="h-5 w-5" /></Button>
+        <Button type="button" size="icon" variant="ghost" aria-label="Close" onClick={() => close()}><X className="h-5 w-5" /></Button>
         <h1 className="font-display text-lg font-bold">{editing ? "Edit entry" : `New ${TXN_LABEL[txnType].toLowerCase()}`}</h1>
-        <div className="ml-auto w-40">
+        {!editing && <span aria-live="polite" className="hidden text-[11px] text-muted-foreground min-[380px]:inline">{draftState === "saving" ? "Saving draft…" : draftState === "uploading" ? "Uploading receipt…" : draftState === "saved" ? "Draft saved" : draftState === "error" ? <span className="text-destructive">Draft not saved</span> : ""}</span>}
+        <div className="ml-auto w-36">
           <Select value={txnType} onValueChange={(v) => setTxnType(v as TxnType)}>
             <SelectTrigger aria-label="Transaction type" className="h-9 rounded-full"><SelectValue /></SelectTrigger>
             <SelectContent>{TXN_TYPES.map((t) => <SelectItem key={t} value={t}>{TXN_LABEL[t]}</SelectItem>)}</SelectContent>
@@ -499,7 +571,7 @@ function NewExpense() {
           <div className="mt-1 flex items-center justify-center gap-2">
             <select aria-label="Currency" value={currency} onChange={(e) => setCurrency(e.target.value)} disabled={!confirmed || reading || saving}
               className="rounded-lg bg-secondary px-2 py-1 text-sm font-semibold">{[...new Set([currency, ...CURRENCIES])].map((c) => <option key={c} value={c}>{c}</option>)}</select>
-            <input id="a" autoFocus={!editing} inputMode="decimal" type="number" step="0.01" min="0" placeholder="0" value={amount} disabled={!confirmed || reading || saving}
+            <input id="a" inputMode="decimal" enterKeyHint="done" onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); e.currentTarget.blur(); } }} type="number" step="0.01" min="0" placeholder="0" value={amount} disabled={!confirmed || reading || saving}
               onChange={(e) => setAmount(e.target.value)} className="w-full min-w-0 max-w-[14rem] appearance-none bg-transparent [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none text-center font-mono text-4xl font-bold outline-none placeholder:text-muted-foreground/50" />
           </div>
           {Number(amount) > 0 && <p className="mt-1 text-xs text-muted-foreground">{money(Number(amount), currency)}</p>}
@@ -583,7 +655,7 @@ function NewExpense() {
           <p className="text-sm">Your receipt is still attached. No expense has been submitted.</p>
           <div className="flex flex-wrap gap-2">
             <Button type="button" variant="outline" disabled={!readTarget} onClick={() => { if (readTarget) void runExtraction(readTarget, false); }}><RotateCcw className="h-4 w-4" />Retry reading</Button>
-            <Button type="button" onClick={() => { setReadingError(""); setScan(null); setConfirmed(true); requestAnimationFrame(() => document.getElementById("a")?.focus()); }}><PencilLine className="h-4 w-4" />Enter details manually</Button>
+            <Button type="button" onClick={() => { setReadingError(""); setScan(null); setConfirmed(true); }}><PencilLine className="h-4 w-4" />Enter details manually</Button>
           </div>
         </section>}
         {scan && confirmed && !reading && <div className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border bg-card px-3 py-2"><p role="status" className="text-sm font-semibold">Receipt details confirmed</p><Button type="button" variant="ghost" size="sm" onClick={() => { setScan({ merchant, date, amount, currency }); setConfirmed(false); }}><PencilLine className="h-4 w-4" />Review again</Button></div>}
