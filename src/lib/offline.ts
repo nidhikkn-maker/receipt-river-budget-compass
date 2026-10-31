@@ -13,4 +13,20 @@ export async function pendingEntries(owner:string){const rows=await operation<(S
 export const removePending=(id:string)=>operation("entries","readwrite",s=>s.delete(id));
 export const putSnapshot=async(owner:string,data:unknown)=>{const sealed=await encryptOffline(owner,data);return operation("snapshots","readwrite",s=>s.put(sealed,owner));};
 export async function getSnapshot<T>(owner:string):Promise<T|undefined>{const data=await operation<T|Sealed|undefined>("snapshots","readonly",s=>s.get(owner));if(data===undefined)return undefined;if(data&&typeof data==="object"&&"encrypted" in data)return decryptOffline<T>(owner,data as Sealed);await putSnapshot(owner,data);return data as T;}
-export async function clearOfflineOwner(owner:string){const entries=await operation<{id:string;owner:string}[]>("entries","readonly",s=>s.getAll());for(const e of entries.filter(x=>x.owner===owner))await removePending(e.id);await operation("snapshots","readwrite",s=>s.delete(owner));await operation("keys","readwrite",s=>s.delete(owner));keyPromises.delete(owner);}
+export async function clearOfflineOwner(owner:string){const entries=await operation<{id:string;owner:string}[]>("entries","readonly",s=>s.getAll());for(const e of entries.filter(x=>x.owner===owner))await removePending(e.id);await operation("snapshots","readwrite",s=>s.delete(owner));await operation("snapshots","readwrite",s=>s.delete(`drafts:${owner}`));await operation("keys","readwrite",s=>s.delete(owner));keyPromises.delete(owner);}
+
+// ---- Offline expense drafts: one encrypted, owner-bound map per owner in the snapshots store ----
+export interface LocalDraftFile { name: string; type: string; fingerprint?: string; path?: string; bytes: number[] }
+export interface LocalDraft { id: string; data: Record<string, unknown>; files: LocalDraftFile[]; updatedAt: string }
+type DraftMap = Record<string, LocalDraft>;
+const draftKey = (owner: string) => `drafts:${owner}`;
+async function readDraftMap(owner: string): Promise<DraftMap> {
+  const v = await operation<Sealed | undefined>("snapshots", "readonly", (s) => s.get(draftKey(owner)));
+  return v ? decryptOffline<DraftMap>(owner, v) : {};
+}
+const writeDraftMap = async (owner: string, m: DraftMap) => { const sealed = await encryptOffline(owner, m); return operation("snapshots", "readwrite", (s) => s.put(sealed, draftKey(owner))); };
+export async function localDrafts(owner: string): Promise<LocalDraft[]> { return Object.values(await readDraftMap(owner)).sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)); }
+export async function putLocalDraft(owner: string, d: LocalDraft) { const m = await readDraftMap(owner); m[d.id] = d; await writeDraftMap(owner, m); }
+export async function removeLocalDraft(owner: string, id: string) { const m = await readDraftMap(owner); if (!(id in m)) return; delete m[id]; await writeDraftMap(owner, m); }
+export async function fileToLocal(f: File, extra: { fingerprint?: string; path?: string } = {}): Promise<LocalDraftFile> { return { name: f.name, type: f.type, ...extra, bytes: Array.from(new Uint8Array(await f.arrayBuffer())) }; }
+export const localToFile = (f: LocalDraftFile) => new File([new Uint8Array(f.bytes)], f.name, { type: f.type });

@@ -30,6 +30,7 @@ import { Mic } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ProcessingPanel, stagesAt } from "@/components/ProcessingPanel";
 import { createLatest } from "@/lib/latest-request";
+import { fileToLocal, localDrafts, localToFile, putLocalDraft, removeLocalDraft } from "@/lib/offline";
 import { completeDraft, draftReceiptFile, draftStatus, getDraft, hasDraftContent, upsertDraft, uploadDraftReceipt, type DraftData, type DraftReceipt } from "@/lib/drafts";
 import { ACCOUNT_LABEL, MOVE_TARGET, isMove, TXN_LABEL, TXN_TYPES, frequentMerchants, suggestForMerchant, type TxnType } from "@/lib/ledger";
 
@@ -205,15 +206,18 @@ function NewExpense() {
   }, [edit, search.account, accounts]);
 
   // ---- Drafts: autosave, restore, resume later ----
-  const [draftState, setDraftState] = useState<"idle" | "saving" | "saved" | "uploading" | "error">("idle");
+  const [draftState, setDraftState] = useState<"idle" | "saving" | "saved" | "uploading" | "device" | "error">("idle");
   const draftLoaded = useRef(!search.draft);
   const draftExists = useRef(false);
   useEffect(() => {
     if (!search.draft || edit) return;
     let live = true;
     (async () => {
-      const d = await getDraft(search.draft!);
+      const server = navigator.onLine ? await getDraft(search.draft!).catch(() => null) : null;
+      const local = (await localDrafts(userId).catch(() => [])).find((l) => l.id === search.draft);
       if (!live) return;
+      const useLocal = !!local && (!server || (server.status !== "saved" && local.updatedAt > server.updatedAt));
+      const d = useLocal && local ? { id: local.id, data: local.data as DraftData, receipts: [] as DraftReceipt[], status: "draft" as const } : server;
       if (!d || d.status === "saved") { draftLoaded.current = true; if (!d) toast.error("That draft is no longer available"); return; }
       draftId.current = d.id; draftExists.current = true;
       const x = d.data;
@@ -226,11 +230,12 @@ function NewExpense() {
       if (x.wsSplit) setWsSplit(x.wsSplit as typeof wsSplit); if (x.splitOn) setSplitOn(true); if (x.shares) setShares(x.shares);
       if (x.receiptDetails) setReceiptDetails(x.receiptDetails as ReceiptDetails);
       const files: LocalReceipt[] = [];
-      for (const r of d.receipts) { const f = await draftReceiptFile(r); if (f) files.push({ ...(await readFile(f)), path: r.path }); }
+      if (useLocal && local) for (const f of local.files) files.push({ ...(await readFile(localToFile(f))), ...(f.path ? { path: f.path } : {}) });
+      else for (const r of d.receipts) { const f = await draftReceiptFile(r); if (f) files.push({ ...(await readFile(f)), path: r.path }); }
       if (!live) return;
       setReceipts(files);
-      draftLoaded.current = true; setDraftState("saved");
-      if (files.length && (search.retry || (!x.extracted && !x.amount))) await runExtraction(files[0]!, false);
+      draftLoaded.current = true; setDraftState(useLocal ? "device" : "saved");
+      if (files.length && navigator.onLine && (search.retry || (!x.extracted && !x.amount))) await runExtraction(files[0]!, false);
     })().catch(() => { draftLoaded.current = true; toast.error("Couldn't open that draft"); });
     return () => { live = false; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -241,6 +246,11 @@ function NewExpense() {
     const d = draftData();
     if (!hasDraftContent(d, receipts.length) && !draftExists.current) return false;
     setDraftState("saving");
+    // Always keep an encrypted copy on this device first, so edits survive a lost connection or a closed app.
+    try {
+      await putLocalDraft(userId, { id: draftId.current, data: d as Record<string, unknown>, updatedAt: new Date().toISOString(), files: await Promise.all(receipts.map((r) => fileToLocal(r.file, { fingerprint: r.fingerprint, ...(r.path ? { path: r.path } : {}) }))) });
+    } catch { /* device storage unavailable — the account copy below still applies */ }
+    if (!navigator.onLine) { setDraftState("device"); return true; }
     try {
       const stored: DraftReceipt[] = [];
       for (const r of receipts) {
@@ -248,8 +258,13 @@ function NewExpense() {
         stored.push({ name: r.name, type: r.type, path: r.path, fingerprint: r.fingerprint });
       }
       await upsertDraft(draftId.current, userId, d, stored, draftStatus(d, stored.length, { processing: reading }));
-      draftExists.current = true; setDraftState("saved"); return true;
-    } catch { setDraftState("error"); return false; }
+      draftExists.current = true; setDraftState("saved");
+      await removeLocalDraft(userId, draftId.current).catch(() => {});
+      return true;
+    } catch {
+      const kept = (await localDrafts(userId).catch(() => [])).some((l) => l.id === draftId.current);
+      setDraftState(kept ? "device" : "error"); return kept;
+    }
   };
   const draftSig = JSON.stringify([draftData(), receipts.map((r) => r.fingerprint)]);
   useEffect(() => {
@@ -261,7 +276,7 @@ function NewExpense() {
   const resumeLater = async () => {
     const ok = await persistDraft();
     if (!ok && hasDraftContent(draftData(), receipts.length)) { toast.error("Draft not saved — check your connection and try again"); return; }
-    if (ok) toast.success("Saved to Drafts — finish it any time");
+    if (ok) toast.success(navigator.onLine ? "Saved to Drafts — finish it any time" : "Saved on this device — it will sync when you're back online");
     if (window.history.length > 1) window.history.back(); else nav({ to: "/drafts" });
   };
   const close = async () => {
@@ -514,6 +529,7 @@ function NewExpense() {
       for (const id of fromInbox) { const d = documents.find((x) => x.id === id); if (d) await removeDocument(d).catch(() => {}); }
       if (createId && draftExists.current) await completeDraft({ id: draftId.current, receipts: receipts.filter((r) => r.path).map((r) => ({ name: r.name, type: r.type, path: r.path! })) }, createId).catch(() => {});
       draftExists.current = false;
+      await removeLocalDraft(userId, draftId.current).catch(() => {});
       toast.success(editing ? "Entry updated" : `${TXN_LABEL[txnType]} saved successfully`);
       draftId.current = crypto.randomUUID();
       if (!editing && queue.length) {
@@ -556,7 +572,7 @@ function NewExpense() {
       <header className="sticky top-0 z-20 -mx-4 mb-3 flex items-center gap-2 border-b bg-background/90 px-3 py-2 backdrop-blur sm:-mx-8 sm:px-6">
         <Button type="button" size="icon" variant="ghost" aria-label="Close" onClick={() => close()}><X className="h-5 w-5" /></Button>
         <h1 className="font-display text-lg font-bold">{editing ? "Edit entry" : `New ${TXN_LABEL[txnType].toLowerCase()}`}</h1>
-        {!editing && <span aria-live="polite" className="hidden text-[11px] text-muted-foreground min-[380px]:inline">{draftState === "saving" ? "Saving draft…" : draftState === "uploading" ? "Uploading receipt…" : draftState === "saved" ? "Draft saved" : draftState === "error" ? <span className="text-destructive">Draft not saved</span> : ""}</span>}
+        {!editing && <span aria-live="polite" className="hidden text-[11px] text-muted-foreground min-[380px]:inline">{draftState === "saving" ? "Saving draft…" : draftState === "uploading" ? "Uploading receipt…" : draftState === "saved" ? "Draft saved" : draftState === "device" ? "Saved on this device · syncs when online" : draftState === "error" ? <span className="text-destructive">Draft not saved</span> : ""}</span>}
         <div className="ml-auto w-36">
           <Select value={txnType} onValueChange={(v) => setTxnType(v as TxnType)}>
             <SelectTrigger aria-label="Transaction type" className="h-9 rounded-full"><SelectValue /></SelectTrigger>

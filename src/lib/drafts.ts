@@ -2,6 +2,7 @@
 // reports or reimbursements; only the normal Save path turns one into a transaction.
 import { supabase } from "@/integrations/supabase/client";
 import type { Json } from "@/integrations/supabase/types";
+import { localDrafts, localToFile, removeLocalDraft, putLocalDraft, type LocalDraft } from "./offline";
 
 export type DraftStatus = "draft" | "uploading" | "processing" | "ready" | "info_required" | "failed" | "saved";
 export interface DraftReceipt { name: string; type: string; path: string; fingerprint?: string }
@@ -11,7 +12,7 @@ export interface DraftData {
   tags?: string; description?: string; memberId?: string; principal?: string; interest?: string;
   wsSplit?: unknown; splitOn?: boolean; shares?: Record<string, string>; receiptDetails?: unknown; extracted?: boolean; error?: string;
 }
-export interface Draft { id: string; data: DraftData; receipts: DraftReceipt[]; status: DraftStatus; transactionId: string | null; createdAt: string; updatedAt: string }
+export interface Draft { localOnly?: boolean; id: string; data: DraftData; receipts: DraftReceipt[]; status: DraftStatus; transactionId: string | null; createdAt: string; updatedAt: string }
 
 export const DRAFT_STATUS_LABEL: Record<DraftStatus, string> = {
   draft: "Draft", uploading: "Uploading", processing: "Processing", ready: "Ready for review",
@@ -77,4 +78,43 @@ export async function deleteDraft(d: Pick<Draft, "id" | "receipts">) {
 export async function completeDraft(d: Pick<Draft, "id" | "receipts">, transactionId: string | null) {
   await supabase.from("expense_drafts").update({ status: "saved", transaction_id: transactionId, receipts: [] as unknown as Json, updated_at: new Date().toISOString() }).eq("id", d.id);
   if (d.receipts.length) await supabase.storage.from("receipts").remove(d.receipts.map((r) => r.path));
+}
+
+/** Newer copy wins: a device copy only replaces the synced one when it was edited later. */
+export function shouldUploadLocal(local: { updatedAt: string }, server: { updatedAt: string } | null): boolean {
+  return !server || local.updatedAt > server.updatedAt;
+}
+
+export function localAsDraft(l: LocalDraft): Draft {
+  const data = l.data as DraftData;
+  const receipts = l.files.map((f) => ({ name: f.name, type: f.type, path: f.path ?? "", ...(f.fingerprint ? { fingerprint: f.fingerprint } : {}) }));
+  return { localOnly: true, id: l.id, data, receipts, status: draftStatus(data, receipts.length), transactionId: null, createdAt: l.updatedAt, updatedAt: l.updatedAt };
+}
+
+let syncing: Promise<number> | null = null;
+/** Push device-only drafts to the account. Safe to repeat: same draft id, receipts reuse their uploaded path. */
+export function syncLocalDrafts(owner: string): Promise<number> {
+  if (syncing) return syncing;
+  syncing = (async () => {
+    if (typeof navigator !== "undefined" && !navigator.onLine) return 0;
+    let done = 0;
+    for (const l of await localDrafts(owner)) {
+      try {
+        const server = await getDraft(l.id);
+        if (server?.status === "saved") { await removeLocalDraft(owner, l.id); continue; }
+        if (!shouldUploadLocal(l, server)) { await removeLocalDraft(owner, l.id); continue; }
+        const receipts: DraftReceipt[] = [];
+        for (const f of l.files) {
+          if (!f.path) { f.path = await uploadDraftReceipt(owner, l.id, localToFile(f)); await putLocalDraft(owner, l); }
+          receipts.push({ name: f.name, type: f.type, path: f.path, ...(f.fingerprint ? { fingerprint: f.fingerprint } : {}) });
+        }
+        const data = l.data as DraftData;
+        await upsertDraft(l.id, owner, data, receipts, draftStatus(data, receipts.length));
+        await removeLocalDraft(owner, l.id);
+        done++;
+      } catch { /* stays on device; retried next time */ }
+    }
+    return done;
+  })().finally(() => { syncing = null; });
+  return syncing;
 }
