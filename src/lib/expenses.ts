@@ -1,9 +1,14 @@
 // Personal + family expense tracker domain logic (pure, tested).
 
+/** Default categories for new accounts (the 18 from the requirements plus two business ones). Users can rename, merge, archive and add. */
 export const CATEGORIES = [
-  "Groceries", "Dining", "Travel", "Fuel & Transport", "Shopping", "Bills & Utilities", "Rent & Home",
-  "Health", "Education", "Entertainment", "Software & Subscriptions", "Office & Supplies", "Client & Business Meals", "Other",
+  "Food and beverages", "Groceries", "Shopping", "Family and children", "Education", "Medical and healthcare",
+  "Fuel and vehicle expenses", "Travel and accommodation", "Household expenses", "Utility bills", "Digital subscriptions",
+  "Insurance", "Financial charges", "Gifts and occasions", "Domestic staff", "Entertainment", "Personal care", "Miscellaneous",
+  "Office & Supplies", "Client & Business Meals",
 ] as const;
+/** Category used for interest, late fees and other bank/card charges. */
+export const CHARGES_CATEGORY = "Financial charges";
 export type Category = string;
 
 export const SCOPES = ["personal", "business"] as const;
@@ -51,7 +56,13 @@ export interface Expense {
   toAccountId?: string | null;
   tags?: string[];
   receiptDetails?: ReceiptDetails;
+  reimbursementStatus?: ReimbursementStatus;
+  /** Adjustments only: +1 raises the account balance, -1 lowers it. */
+  adjustmentSign?: 1 | -1;
 }
+
+export type ReimbursementStatus = "none" | "pending" | "received";
+export const REIMBURSEMENT_LABEL: Record<ReimbursementStatus, string> = { none: "Not reimbursable", pending: "Reimbursement pending", received: "Reimbursed" };
 
 export interface Split { memberId: string | null; amount: number }
 
@@ -76,6 +87,8 @@ export interface ExpenseInput {
   toAccountId?: string | null;
   tags?: string[];
   receiptDetails?: ReceiptDetails;
+  reimbursementStatus?: ReimbursementStatus;
+  adjustmentSign?: 1 | -1;
 }
 
 export function validateExpense(s: ExpenseInput) {
@@ -133,13 +146,15 @@ export function validateBudget(amount: number) {
 
 export const convert = (amount: number, rate: number) => Math.round(amount * rate * 100) / 100;
 
-export interface Filters { scope?: Scope | "all"; memberId?: string | "all" | "me"; from?: string; to?: string; category?: Category | "all"; accountId?: string; paymentMethod?: string; tag?: string; query?: string; txnType?: string }
+export interface Filters { scope?: Scope | "all"; memberId?: string | "all" | "me"; from?: string; to?: string; category?: Category | "all"; accountId?: string; paymentMethod?: string; tag?: string; query?: string; txnType?: string; merchant?: string; tagAll?: string[] }
 
 export function applyFilters(list: Expense[], f: Filters): Expense[] {
   return list.filter((e) =>
     (!f.accountId || f.accountId === "all" || e.accountId === f.accountId || e.toAccountId === f.accountId) &&
     (!f.paymentMethod || f.paymentMethod === "all" || e.paymentMethod === f.paymentMethod) &&
     (!f.tag || f.tag === "all" || e.tags?.includes(f.tag)) &&
+    (!f.tagAll?.length || f.tagAll.every((t) => e.tags?.includes(t))) &&
+    (!f.merchant || f.merchant === "all" || (e.merchant ?? "").trim().toLowerCase() === f.merchant.trim().toLowerCase()) &&
     (!f.txnType || f.txnType === "all" || (e.txnType ?? "expense") === f.txnType) &&
     (!f.query || `${e.title} ${e.merchant ?? ""} ${e.description} ${(e.tags ?? []).join(" ")}`.toLowerCase().includes(f.query.toLowerCase())) &&
     (!f.scope || f.scope === "all" || e.scope === f.scope) &&
