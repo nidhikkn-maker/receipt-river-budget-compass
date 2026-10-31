@@ -23,3 +23,10 @@ describe("expense drafts", () => {
     expect(pendingDrafts([d("saved"), d("draft")]).map((x) => x.id)).toEqual(["draft"]);
   });
 });
+
+import { shouldUploadLocal } from "./drafts";
+describe("offline draft sync", () => {
+  it("uploads a device draft the account doesn't have", () => { expect(shouldUploadLocal({ updatedAt: "2026-10-31T10:00:00Z" }, null)).toBe(true); });
+  it("uploads when the device copy is newer", () => { expect(shouldUploadLocal({ updatedAt: "2026-10-31T11:00:00Z" }, { updatedAt: "2026-10-31T10:00:00Z" })).toBe(true); });
+  it("keeps the account copy when it was edited later elsewhere", () => { expect(shouldUploadLocal({ updatedAt: "2026-10-31T09:00:00Z" }, { updatedAt: "2026-10-31T10:00:00Z" })).toBe(false); });
+});
