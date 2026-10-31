@@ -87,6 +87,8 @@ export interface FinancePreferences {
   mapLinks: MapLink[];
   /** Saved money-map box positions keyed by node id (layout only). */
   mapPositions: Record<string, { x: number; y: number }>;
+  /** Entry ids marked as favourites for "Repeat expense" (copied as new drafts, never re-saved). */
+  favouriteEntries: string[];
 }
 
 export const DEFAULT_TAGS: GroupedTag[] = [
@@ -103,7 +105,7 @@ export function defaultPreferences(): FinancePreferences {
     theme: "system", themeName: "signature", homeScope: "all", reminders: true, reminderDays: 3, defaultCurrency: "INR", language: "en", aiEnabled: true, aiReadsDocuments: true, cardAlertPct: 30, homePeriod: "month", homeCustomStart: "", homeCustomEnd: "",
     freshness: { reviewDays: 14, outdatedDays: 45, perAccount: {} }, inboxDismissed: [], statementBalances: {}, splitTemplates: [],
     emergency: defaultEmergency(), irregularRejected: [], irregularConfirmed: [], milestones: [], trips: [], merchantAliases: {}, brief: { enabled: true, day: 1, hour: 8 }, briefs: [], paymentInstruments: [],
-    allocationPlans: [], rules: [], ruleDismissed: [], autopilotActions: {}, coolingOff: [], contractObligations: [], decisions: [], mapLinks: [], mapPositions: {},
+    allocationPlans: [], rules: [], ruleDismissed: [], autopilotActions: {}, coolingOff: [], contractObligations: [], decisions: [], mapLinks: [], mapPositions: {}, favouriteEntries: [],
   };
 }
 
@@ -146,6 +148,7 @@ export function normalizePreferences(raw: Partial<FinancePreferences> | null | u
   p.decisions = p.decisions.slice(-300);
   p.mapLinks = p.mapLinks.slice(-500);
   p.mapPositions = cleanMapPositions(p.mapPositions);
+  p.favouriteEntries = Array.isArray(p.favouriteEntries) ? [...new Set(p.favouriteEntries.filter((x): x is string => typeof x === "string"))].slice(-30) : [];
   if (!p.autopilotActions || typeof p.autopilotActions !== "object" || Array.isArray(p.autopilotActions)) p.autopilotActions = {};
   p.autopilotActions = Object.fromEntries(Object.entries(p.autopilotActions).slice(-300));
   p.briefs = p.briefs.slice(0, 26);

@@ -175,3 +175,8 @@
 - [x] Quick entry by default (amount, category, account, workspace, date, note) with compact Camera/Gallery/Files/Voice
 - [x] Compact type selector, searchable categories and tags, compact workspace with optional split, More details section
 - [x] Focused entry screen without header/bottom bar; sticky Save
+
+## V4.4 additions (requirements-v4.4-additional.md)
+- [x] Repeat expense + favourites (new draft dated today, no reimbursement/old-trip copy)
+- [x] Smart default account/workspace from last confirmed expense
+- [x] Scan / Upload / Voice / Repeat capture row; voice recognises all four workspaces
