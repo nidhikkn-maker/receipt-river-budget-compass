@@ -317,7 +317,7 @@ html[data-theme="midnight"].dark {
   --card-foreground: oklch(0.965 0.006 255);
   --popover: oklch(0.27 0.065 267);
   --popover-foreground: oklch(0.965 0.006 255);
-  --primary: oklch(0.42 0.09 268);
+  --primary: oklch(0.56 0.1 266);
   --primary-foreground: oklch(0.96 0.01 255);
   --primary-glow: oklch(0.52 0.1 266);
   --secondary: oklch(0.22 0.05 267);
