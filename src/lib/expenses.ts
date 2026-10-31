@@ -234,7 +234,7 @@ export function autoMatch(lines: StatementLine[], expenses: Expense[], statement
 }
 
 /** Parse a bank statement CSV. Detects date / description / debit (or amount) columns by header. */
-export function parseStatementCsv(text: string): StatementLine[] {
+export function parseStatementCsv(text: string, includeCredits = false): StatementLine[] {
   const rows = text.trim().split(/\r?\n/).map(splitCsvLine);
   if (rows.length < 2) return [];
   const h = rows[0]!.map((x) => x.toLowerCase().trim());
@@ -242,6 +242,7 @@ export function parseStatementCsv(text: string): StatementLine[] {
   const di = find("date");
   const ni = find("description", "narration", "details", "particulars", "merchant", "payee", "remarks");
   const debit = find("debit", "withdrawal", "paid out");
+  const credit = find("credit", "deposit", "paid in");
   const ai = debit >= 0 ? debit : find("amount", "value");
   if (di < 0 || ai < 0) throw new ValidationError("Couldn't find date and amount columns in this file");
   const num = (v: string | undefined) => Number((v ?? "").replace(/[^0-9.\-]/g, ""));
@@ -251,8 +252,11 @@ export function parseStatementCsv(text: string): StatementLine[] {
     const raw = (r[ai] ?? "").trim();
     const amt = num(raw);
     const date = normalizeDate(r[di] ?? "");
+    if (includeCredits && date && credit >= 0 && num(r[credit]) > 0 && (!raw || amt===0)) {
+      out.push({ref:`L${i+1}`,date,description:(ni>=0?r[ni]:"")??"",amount:num(r[credit]),direction:"credit"});return;
+    }
     if (!raw || !Number.isFinite(amt) || amt === 0 || !date) return;
-    if (signed && amt > 0) return; // positive = credit when debits are negative
+    if (signed && amt > 0) {if(includeCredits)out.push({ref:`L${i+1}`,date,description:(ni>=0?r[ni]:"")??"",amount:amt,direction:"credit"});return;}
     out.push({ ref: `L${i + 1}`, date, description: (ni >= 0 ? r[ni] : "") ?? "", amount: Math.abs(amt) });
   });
   return out;
