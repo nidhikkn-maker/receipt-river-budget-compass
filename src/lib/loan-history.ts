@@ -21,3 +21,9 @@ export function loanHistory(accountId: string | null, outstanding: number, txns:
   const totalPrincipal = r2(rows.reduce((s, r) => s + r.principal, 0)), totalInterest = r2(rows.reduce((s, r) => s + r.interest, 0));
   return { rows, totalPrincipal, totalInterest, totalPaid: r2(totalPrincipal + totalInterest) };
 }
+
+/** Chart points for the repayment history: the balance before the first repayment, then the balance left after each one. */
+export function loanBalanceChart(rows: LoanHistoryRow[]) {
+  if (!rows.length) return [] as { label: string; balance: number }[];
+  return [{ label: "Opening", balance: rows[0]!.balanceBefore }, ...rows.map((r) => ({ label: r.date, balance: r.balanceAfter }))];
+}

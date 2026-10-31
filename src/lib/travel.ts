@@ -146,3 +146,17 @@ export function advanceReconciliation(t: TravelTrip, txns: Row[]) {
   const advances = sum("advance"), expenses = sum("expense"), returns = sum("return");
   return { lines, advances, expenses, returns, outstanding: r2(advances - expenses - returns) };
 }
+
+/** CSV rows for the reconciliation: every advance, business/official expense and return in date order, then the four totals. */
+export function advanceReconRows(t: TravelTrip, txns: Row[]): string[][] {
+  const r = advanceReconciliation(t, txns);
+  const KIND: Record<ReconLine["kind"], string> = { advance: "Advance received", expense: "Trip expense (business/official)", return: "Returned to advance" };
+  return [
+    ["Date", "Type", "Item", "Amount"],
+    ...r.lines.map((l) => [l.date, KIND[l.kind], l.label, String(l.amount)]),
+    ["", "Total advances received", "", String(r.advances)],
+    ["", "Total trip expenses", "", String(r.expenses)],
+    ["", "Total returned", "", String(r.returns)],
+    ["", r.outstanding > 0 ? "Outstanding — to return" : r.outstanding < 0 ? "Outstanding — owed to you" : "Outstanding — fully reconciled", "", String(r.outstanding)],
+  ];
+}

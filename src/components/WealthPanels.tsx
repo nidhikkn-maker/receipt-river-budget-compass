@@ -11,7 +11,8 @@ import { cardCycle, CARD_STATUS_LABEL } from "@/lib/cards";
 import { cardEmisOf } from "@/lib/position";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { useStore, type Loan } from "@/lib/store";
-import { loanHistory } from "@/lib/loan-history";
+import { loanHistory, loanBalanceChart } from "@/lib/loan-history";
+import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip } from "recharts";
 import { todayISO } from "@/lib/use-position";
 
 const months = (n: number) => (Number.isFinite(n) ? `${Math.floor(n / 12)}y ${n % 12}m` : "never");
