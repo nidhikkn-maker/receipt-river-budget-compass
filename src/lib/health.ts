@@ -41,7 +41,7 @@ export function healthScore(i: HealthInput): HealthResult {
       : { score: r0(clamp((cash / avgSpend / 6) * 100)), detail: `${(cash / avgSpend).toFixed(1)} months of spending in cash` },
     debt: !hasHistory || avgIncome <= 0 ? { score: null, detail: "Record income for the last 3 months." }
       : (() => { const ratio = i.emis / avgIncome; let s = clamp(((0.5 - ratio) / 0.4) * 100); if (util > 0.3) s = clamp(s - (util - 0.3) * 100); return { score: r0(s), detail: `EMIs are ${(ratio * 100).toFixed(0)}% of income${cards.length ? `, cards ${(util * 100).toFixed(0)}% used` : ""}` }; })(),
-    spending: (() => { const u = budgetUsage(tx, i.budgets, months[0]!).filter((b) => b.budget > 0); if (!u.length) return { score: null, detail: "Set at least one monthly budget." };
+    spending: (() => { const u = budgetUsage(tx.filter((t) => (t.txnType ?? "expense") === "expense"), i.budgets, months[0]!).filter((b) => b.budget > 0); if (!u.length) return { score: null, detail: "Set at least one monthly budget." };
       const ok = u.filter((b) => b.spent <= b.budget).length; return { score: r0((ok / u.length) * 100), detail: `${ok} of ${u.length} budgets kept last month` }; })(),
     savings: !hasHistory || avgIncome <= 0 ? { score: null, detail: "Record income for the last 3 months." }
       : (() => { const rate = (avgIncome - avgSpend) / avgIncome; return { score: r0(clamp((rate / 0.3) * 100)), detail: `Saving ${(rate * 100).toFixed(0)}% of income` }; })(),
