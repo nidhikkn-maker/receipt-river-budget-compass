@@ -51,6 +51,7 @@ const MORE_GROUPS: { title: string; items: { to: string; label: string; icon: ty
     { to: "/vault", label: "Document vault", icon: FileText },
   ] },
   { title: "Insights", items: [
+    { to: "/report-centre", label: "Reports Centre (PDF)", icon: FileText },
     { to: "/reports", label: "Reports", icon: BarChart3 },
     { to: "/brief", label: "Weekly brief", icon: Sparkles },
     { to: "/strategy", label: "What if…", icon: MessageCircleQuestion },

@@ -199,4 +199,6 @@
 - [ ] Not started — saved, awaiting the go-ahead
 
 ## V4.7 PDF Reporting & Download Centre (spec: .lovable/requirements-v4.7.md)
-- [ ] Reports Centre (More → Reports) with filters, preview, PDF, share, history — awaiting go-ahead
+- [x] Reports Centre: 31 report types, filters, colour/printer PDF, preview, download, share, history with regenerate versions
+- [ ] Persistent background report jobs — blocked: no background-job system yet (foreground with "keep page open")
+- [ ] Tamil/other non-Latin text in PDFs — needs an embedded Unicode font; such characters currently show as "?"

@@ -988,6 +988,54 @@ export type Database = {
         }
         Relationships: []
       }
+      report_history: {
+        Row: {
+          created_at: string
+          file_path: string | null
+          file_size: number | null
+          filters: Json
+          id: string
+          kind: string
+          owner_id: string
+          period_from: string | null
+          period_to: string | null
+          status: string
+          title: string
+          version: number
+          workspace: string
+        }
+        Insert: {
+          created_at?: string
+          file_path?: string | null
+          file_size?: number | null
+          filters?: Json
+          id?: string
+          kind: string
+          owner_id?: string
+          period_from?: string | null
+          period_to?: string | null
+          status?: string
+          title: string
+          version?: number
+          workspace?: string
+        }
+        Update: {
+          created_at?: string
+          file_path?: string | null
+          file_size?: number | null
+          filters?: Json
+          id?: string
+          kind?: string
+          owner_id?: string
+          period_from?: string | null
+          period_to?: string | null
+          status?: string
+          title?: string
+          version?: number
+          workspace?: string
+        }
+        Relationships: []
+      }
       statement_line_imports: {
         Row: {
           account_key: string
