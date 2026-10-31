@@ -316,6 +316,7 @@ function NewExpense() {
     ev.preventDefault();
     if (!confirmed) { toast.error("Confirm the scanned bill details first"); return; }
     if (duplicateBlocked) { toast.error("Review the possible duplicate or skip this bill"); return; }
+    if (receiptBlocked) { toast.error("This receipt is already used — review it or choose a different file"); return; }
     setSaving(true);
     try {
       await save(
