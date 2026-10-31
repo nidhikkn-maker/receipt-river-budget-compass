@@ -1,17 +1,20 @@
-// Commitments, forecast, safe-to-spend, loans, goals and subscription detection (pure, tested).
+// Commitments, forecast, safe-to-spend, loans, goals, income and subscription tracking (pure, tested).
 // All money in INR. Dates are YYYY-MM-DD strings.
 
-export const FREQUENCIES = ["daily", "weekly", "monthly", "quarterly", "half_yearly", "yearly", "custom"] as const;
+export const FREQUENCIES = ["once", "daily", "weekly", "monthly", "quarterly", "half_yearly", "yearly", "custom"] as const;
 export type Frequency = (typeof FREQUENCIES)[number];
 export const FREQ_LABEL: Record<Frequency, string> = {
-  daily: "Daily", weekly: "Weekly", monthly: "Monthly", quarterly: "Quarterly", half_yearly: "Half-yearly", yearly: "Yearly", custom: "Custom",
+  once: "One-off", daily: "Daily", weekly: "Weekly", monthly: "Monthly", quarterly: "Quarterly", half_yearly: "Half-yearly", yearly: "Yearly", custom: "Custom",
 };
-export const COMMITMENT_KINDS = ["bill", "subscription", "emi", "insurance", "school_fee", "rent", "income", "other"] as const;
+export const COMMITMENT_KINDS = ["bill", "subscription", "emi", "insurance", "school_fee", "rent", "planned_purchase", "income", "other"] as const;
 export type CommitmentKind = (typeof COMMITMENT_KINDS)[number];
 export const KIND_LABEL: Record<CommitmentKind, string> = {
-  bill: "Bill", subscription: "Subscription", emi: "EMI", insurance: "Insurance", school_fee: "School fee", rent: "Rent", income: "Income", other: "Other",
+  bill: "Bill", subscription: "Subscription", emi: "EMI", insurance: "Insurance premium", school_fee: "School fee", rent: "Rent",
+  planned_purchase: "Planned purchase", income: "Income", other: "Other",
 };
-export type CommitmentStatus = "active" | "paused" | "cancelled";
+/** Income sources (used as the category of income entries and expected income). */
+export const INCOME_SOURCES = ["Salary", "Rental income", "Business distributions", "Interest income", "Dividends", "Refunds", "Gifts", "Asset sale proceeds", "Other income"] as const;
+export type CommitmentStatus = "active" | "paused" | "cancelled" | "completed";
 
 export interface Commitment {
   id: string;
@@ -33,8 +36,9 @@ export interface Commitment {
 const r2 = (n: number) => Math.round(n * 100) / 100;
 const toD = (s: string) => new Date(s + "T00:00:00Z");
 const fromD = (d: Date) => d.toISOString().slice(0, 10);
+export const NEVER = "9999-12-31";
 export const addDays = (s: string, n: number) => { const d = toD(s); d.setUTCDate(d.getUTCDate() + n); return fromD(d); };
-function addMonths(s: string, n: number) {
+export function addMonths(s: string, n: number) {
   const d = toD(s); const day = d.getUTCDate();
   d.setUTCDate(1); d.setUTCMonth(d.getUTCMonth() + n);
   const last = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 0)).getUTCDate();
@@ -42,10 +46,12 @@ function addMonths(s: string, n: number) {
   return fromD(d);
 }
 export const daysBetween = (a: string, b: string) => Math.round((toD(b).getTime() - toD(a).getTime()) / 86400000);
+export const monthEnd = (s: string) => fromD(new Date(Date.UTC(Number(s.slice(0, 4)), Number(s.slice(5, 7)), 0)));
 
-/** The due date after `date` for this frequency. */
+/** The due date after `date` for this frequency. One-off items never come round again. */
 export function nextAfter(date: string, f: Frequency, intervalDays: number | null = null): string {
   switch (f) {
+    case "once": return NEVER;
     case "daily": return addDays(date, 1);
     case "weekly": return addDays(date, 7);
     case "monthly": return addMonths(date, 1);
@@ -56,7 +62,7 @@ export function nextAfter(date: string, f: Frequency, intervalDays: number | nul
   }
 }
 
-export interface Occurrence { commitmentId: string; name: string; date: string; amount: number; direction: "in" | "out"; confirmed: boolean; essential: boolean; overdue: boolean }
+export interface Occurrence { commitmentId: string; name: string; date: string; amount: number; direction: "in" | "out"; confirmed: boolean; essential: boolean; overdue: boolean; kind?: CommitmentKind }
 
 /** Scheduled occurrences from `from` through `to` (inclusive). Overdue unpaid ones are placed on `from`. */
 export function occurrences(list: Commitment[], from: string, to: string): Occurrence[] {
@@ -67,7 +73,7 @@ export function occurrences(list: Commitment[], from: string, to: string): Occur
     let guard = 0;
     while (d <= to && guard++ < 1000) {
       const overdue = d < from;
-      out.push({ commitmentId: c.id, name: c.name, date: overdue ? from : d, amount: c.amount, direction: c.direction, confirmed: c.direction === "out" || c.confirmed, essential: c.essential, overdue });
+      out.push({ commitmentId: c.id, name: c.name, date: overdue ? from : d, amount: c.amount, direction: c.direction, confirmed: c.direction === "out" || c.confirmed, essential: c.essential, overdue, kind: c.kind });
       if (overdue && guard > 1) break; // only the oldest missed one counts as overdue
       d = nextAfter(d, c.frequency, c.intervalDays);
       if (overdue) { while (d < from) d = nextAfter(d, c.frequency, c.intervalDays); }
@@ -77,11 +83,17 @@ export function occurrences(list: Commitment[], from: string, to: string): Occur
 }
 
 /** Status shown in the calendar. Scheduled items are never "paid" until confirmed — paying moves nextDue forward. */
-export function dueStatus(c: Commitment, today: string): "cancelled" | "paused" | "overdue" | "due_soon" | "scheduled" {
+export function dueStatus(c: Commitment, today: string): "cancelled" | "paused" | "completed" | "overdue" | "due_soon" | "scheduled" {
   if (c.status !== "active") return c.status;
   if (c.nextDue < today) return "overdue";
   if (daysBetween(today, c.nextDue) <= 3) return "due_soon";
   return "scheduled";
+}
+
+/** Items to remind about: everything overdue plus anything due within `leadDays`. */
+export function remindersDue<T extends { date: string; overdue: boolean }>(items: T[], today: string, leadDays: number): T[] {
+  const until = addDays(today, Math.max(0, leadDays));
+  return items.filter((x) => x.overdue || (x.date >= today && x.date <= until));
 }
 
 export interface ForecastDay { date: string; balance: number; inflow: number; outflow: number }
@@ -101,7 +113,7 @@ export interface ForecastInput {
 export function forecast(i: ForecastInput) {
   const end = addDays(i.today, i.days);
   const occ = occurrences(i.commitments, i.today, end).filter((o) => o.direction === "out" || o.confirmed || i.includeUnconfirmed);
-  const extra = (i.extraOut ?? []).map((x) => ({ date: x.date < i.today ? i.today : x.date, amount: x.amount, direction: "out" as const }));
+  const extra = (i.extraOut ?? []).filter((x) => x.date <= end).map((x) => ({ date: x.date < i.today ? i.today : x.date, amount: x.amount, direction: "out" as const }));
   const all = [...occ, ...extra];
   const series: ForecastDay[] = [];
   let bal = i.startBalance;
@@ -127,7 +139,8 @@ export interface SafeToSpend { amount: number; lowest: number; lowestDate: strin
 export function safeToSpend(i: ForecastInput & { reserves?: number; minBalance?: number }): SafeToSpend {
   const floor = (i.reserves ?? 0) + (i.minBalance ?? 0);
   const f = forecast({ ...i, floor });
-  const outs = f.occurrences.filter((o) => o.direction === "out").reduce((s, o) => s + o.amount, 0) + (i.extraOut ?? []).reduce((s, x) => s + x.amount, 0);
+  const end = addDays(i.today, i.days);
+  const outs = f.occurrences.filter((o) => o.direction === "out").reduce((s, o) => s + o.amount, 0) + (i.extraOut ?? []).filter((x) => x.date <= end).reduce((s, x) => s + x.amount, 0);
   const ins = f.occurrences.filter((o) => o.direction === "in").reduce((s, o) => s + o.amount, 0);
   const lowest = Math.min(f.lowest.balance, i.startBalance);
   return {
@@ -175,17 +188,36 @@ export function emiFor(principal: number, annualRate: number, months: number) {
   return r2((principal * m * (1 + m) ** months) / ((1 + m) ** months - 1));
 }
 
-/** Compare paying `extra` today: keep EMI (shorter tenure) vs keep tenure (lower EMI). */
-export function prepayment(principal: number, annualRate: number, emi: number, extra: number) {
+/** Split of the next EMI: interest on the outstanding balance, the rest repays principal. */
+export function emiSplit(principal: number, annualRate: number, emi: number) {
+  const interest = r2(Math.max(0, principal) * (annualRate / 1200));
+  const principalPart = r2(Math.min(Math.max(0, principal), Math.max(0, emi - interest)));
+  return { interest, principal: principalPart, total: r2(interest + principalPart) };
+}
+
+/** Projected date of the last EMI. */
+export const closureDate = (nextDue: string, months: number) => (Number.isFinite(months) && months > 0 ? addMonths(nextDue, months - 1) : null);
+
+/** Compare paying `extra` today: keep EMI (shorter tenure) vs keep tenure (lower EMI). Charges use the prepayment %. */
+export function prepayment(principal: number, annualRate: number, emi: number, extra: number, chargePct = 0) {
   const base = amortize(principal, annualRate, emi);
   const after = amortize(Math.max(0, principal - extra), annualRate, emi);
   const lowerEmi = emiFor(Math.max(0, principal - extra), annualRate, base.months);
   const lowerEmiPlan = amortize(Math.max(0, principal - extra), annualRate, lowerEmi);
+  const charge = r2(Math.min(extra, principal) * (chargePct / 100));
   return {
     base,
-    reduceTenure: { monthsSaved: base.months - after.months, interestSaved: r2(base.totalInterest - after.totalInterest), months: after.months },
-    reduceEmi: { newEmi: lowerEmi, emiDrop: r2(emi - lowerEmi), interestSaved: r2(base.totalInterest - lowerEmiPlan.totalInterest) },
+    charge,
+    cashImpact: r2(Math.min(extra, principal) + charge),
+    reduceTenure: { monthsSaved: base.months - after.months, interestSaved: r2(base.totalInterest - after.totalInterest), netSaving: r2(base.totalInterest - after.totalInterest - charge), months: after.months },
+    reduceEmi: { newEmi: lowerEmi, emiDrop: r2(emi - lowerEmi), interestSaved: r2(base.totalInterest - lowerEmiPlan.totalInterest), netSaving: r2(base.totalInterest - lowerEmiPlan.totalInterest - charge) },
   };
+}
+
+/** Cost of closing the loan today: outstanding principal plus foreclosure charges. */
+export function foreclosure(principal: number, chargePct = 0) {
+  const charge = r2(principal * (chargePct / 100));
+  return { charge, total: r2(principal + charge) };
 }
 
 // ---------- Goals ----------
@@ -196,15 +228,39 @@ export function goalProgress(g: { target: number; saved: number; monthly: number
   return { remaining, pct, months, eta: months === null ? null : addMonths(today, months) };
 }
 
+// ---------- Income ----------
+interface FlowRow { txnType?: string; amount: number; date: string; category: string; merchant?: string | null; title?: string }
+
+/** Expected vs received income this month, and expected income that is late. */
+export function incomeTracking(commitments: Commitment[], txns: FlowRow[], today: string) {
+  const start = `${today.slice(0, 7)}-01`, end = monthEnd(today);
+  const received = txns.filter((t) => t.txnType === "income" && t.date >= start && t.date <= today);
+  const bySource: Record<string, number> = {};
+  for (const t of received) bySource[t.category] = r2((bySource[t.category] ?? 0) + t.amount);
+  const incomes = commitments.filter((c) => c.direction === "in" && c.status === "active");
+  const late = incomes.filter((c) => c.nextDue < today).map((c) => ({ id: c.id, name: c.name, amount: c.amount, due: c.nextDue, daysLate: daysBetween(c.nextDue, today), confirmed: c.confirmed }));
+  const upcoming = occurrences(incomes, today, end).filter((o) => !o.overdue);
+  return {
+    received: r2(received.reduce((s, t) => s + t.amount, 0)),
+    bySource,
+    expectedRemaining: r2(upcoming.reduce((s, o) => s + o.amount, 0)),
+    expectedConfirmed: r2(upcoming.filter((o) => o.confirmed).reduce((s, o) => s + o.amount, 0)),
+    upcoming,
+    late,
+    lateAmount: r2(late.reduce((s, l) => s + l.amount, 0)),
+  };
+}
+
 // ---------- Subscriptions ----------
 export interface SubCandidate { merchant: string; avg: number; last: number; count: number; everyDays: number; lastDate: string; increased: boolean }
+const key = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, "");
 
 /** Merchants charged 3+ times at a steady ~weekly/monthly/yearly rhythm look like subscriptions. */
 export function detectSubscriptions(list: { merchant: string | null; amount: number; date: string }[]): SubCandidate[] {
   const by = new Map<string, { name: string; rows: { amount: number; date: string }[] }>();
   for (const e of list) {
     if (!e.merchant?.trim()) continue;
-    const k = e.merchant.toLowerCase().replace(/[^a-z0-9]/g, "");
+    const k = key(e.merchant);
     const g = by.get(k) ?? { name: e.merchant.trim(), rows: [] };
     g.rows.push({ amount: e.amount, date: e.date });
     by.set(k, g);
@@ -224,8 +280,42 @@ export function detectSubscriptions(list: { merchant: string | null; amount: num
   return out.sort((a, b) => b.last - a.last);
 }
 
-/** Monthly cost of a recurring commitment. */
+/** Monthly cost of a recurring commitment. One-off items have no monthly cost. */
 export function monthlyCost(c: Pick<Commitment, "amount" | "frequency" | "intervalDays">) {
-  const per: Record<Frequency, number> = { daily: 30.44, weekly: 4.345, monthly: 1, quarterly: 1 / 3, half_yearly: 1 / 6, yearly: 1 / 12, custom: 30.44 / Math.max(1, c.intervalDays ?? 30) };
+  const per: Record<Frequency, number> = { once: 0, daily: 30.44, weekly: 4.345, monthly: 1, quarterly: 1 / 3, half_yearly: 1 / 6, yearly: 1 / 12, custom: 30.44 / Math.max(1, c.intervalDays ?? 30) };
   return r2(c.amount * per[c.frequency]);
+}
+
+/**
+ * Subscription module: totals, upcoming renewals, price rises (latest charge above the one before, or the plan
+ * price above the last charge) and possible duplicates (same service name, or same price + frequency + category).
+ */
+export function subscriptionSummary(commitments: Commitment[], expenses: { merchant: string | null; title?: string; amount: number; date: string }[], today: string, windowDays = 30) {
+  const subs = commitments.filter((c) => c.kind === "subscription");
+  const active = subs.filter((c) => c.status === "active");
+  const monthly = r2(active.reduce((s, c) => s + monthlyCost(c), 0));
+  const renewals = active.filter((c) => c.nextDue <= addDays(today, windowDays)).sort((a, b) => a.nextDue.localeCompare(b.nextDue));
+  const charges = (c: Commitment) => {
+    const k = key(c.name);
+    return expenses.filter((e) => { const m = key(e.merchant ?? e.title ?? ""); return !!k && !!m && (m.includes(k) || k.includes(m)); }).sort((a, b) => a.date.localeCompare(b.date));
+  };
+  const increases: { id: string; name: string; from: number; to: number }[] = [];
+  for (const c of active) {
+    const h = charges(c);
+    const last = h.at(-1), before = h.at(-2);
+    if (last && before && last.amount > before.amount + 0.009) increases.push({ id: c.id, name: c.name, from: before.amount, to: last.amount });
+    else if (last && c.amount > last.amount + 0.009) increases.push({ id: c.id, name: c.name, from: last.amount, to: c.amount });
+  }
+  const duplicates: { ids: string[]; names: string[]; reason: string }[] = [];
+  for (let i = 0; i < active.length; i++) for (let j = i + 1; j < active.length; j++) {
+    const a = active[i]!, b = active[j]!;
+    const ka = key(a.name), kb = key(b.name);
+    const sameName = ka === kb || (ka.length >= 4 && kb.length >= 4 && (ka.includes(kb) || kb.includes(ka)));
+    const samePlan = Math.abs(a.amount - b.amount) < 0.01 && a.frequency === b.frequency && a.category === b.category;
+    if (sameName || samePlan) duplicates.push({ ids: [a.id, b.id], names: [a.name, b.name], reason: sameName ? "Same service name" : "Same price, frequency and category" });
+  }
+  return {
+    counts: { active: active.length, paused: subs.filter((c) => c.status === "paused").length, cancelled: subs.filter((c) => c.status === "cancelled").length },
+    monthly, annual: r2(monthly * 12), renewals, increases, duplicates,
+  };
 }
