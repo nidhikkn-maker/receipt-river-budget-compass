@@ -186,3 +186,11 @@
 - [x] Entry: receipt/voice stages + cancel, stale-response guard, duplicate-safe retry (stable draft id), save error + Retry
 - [x] Assistant: status, Stop, stale guard; statement import progress panel
 - [ ] Background task records for long jobs (not supported by current architecture)
+
+## V4.4 Drafts & keyboard (requirements-v4.4-drafts.md)
+- [x] No auto keyboard; Done key dismisses amount
+- [x] Autosaved drafts with receipts, Resume later, close saves, restore, retry reading
+- [x] Drafts page (Activity/More), multi-select delete with confirmation, waiting-expenses reminder
+- [x] Extra bills from a multi-file upload become separate drafts
+- [ ] Offline-only drafts on device (drafts currently need a connection; shown as "Draft not saved")
+- [ ] Drafts not yet included in ZIP backups

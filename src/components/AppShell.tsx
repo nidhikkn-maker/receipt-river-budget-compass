@@ -1,3 +1,5 @@
+import { FilePen } from "lucide-react";
+import { DraftsReminder } from "@/components/DraftsReminder";
 import { Link, useRouterState } from "@tanstack/react-router";
 import { useEffect, useState, type ReactNode } from "react";
 import { BarChart3, Bell, CalendarClock, Gem, Home, Landmark, ListFilter, PiggyBank, Plus, Settings, Sparkles, Users, Eye, EyeOff, FileText, UserRound, TrendingUp, Inbox, HeartPulse, Search, SlidersHorizontal, Split, Network, Plane, Wallet, Bot, Menu, X, MessageCircleQuestion } from "lucide-react";
@@ -41,6 +43,7 @@ const MORE_GROUPS: { title: string; items: { to: string; label: string; icon: ty
     { to: "/rules", label: "Financial rules", icon: SlidersHorizontal },
   ] },
   { title: "Activity", items: [
+    { to: "/drafts", label: "Drafts", icon: FilePen },
     { to: "/inbox", label: "Financial inbox", icon: Inbox },
     { to: "/review", label: "Monthly review", icon: HeartPulse },
     { to: "/reconcile", label: "Import & reconcile", icon: Landmark },
@@ -129,6 +132,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       </header>
 
       <main className={focused ? "mx-auto max-w-3xl px-4 pb-6 pt-2 sm:px-8" : "mx-auto max-w-6xl px-4 pb-28 pt-5 sm:px-8 lg:pb-12"}>
+        {!focused && !loading && <DraftsReminder />}
         {loading ? <p className="text-muted-foreground">Loading…</p> : <DeviceLock>{children}</DeviceLock>}
       </main>
 
