@@ -743,6 +743,7 @@ function NewExpense() {
                   {[...acctOrder.recent, ...acctOrder.rest].map((id) => { const a = acctById.get(id)!; return <SelectItem key={id} value={id}>{a.name} · {ACCOUNT_LABEL[a.kind]}</SelectItem>; })}
                 </SelectContent>
               </Select>
+              {!liveAccounts.length && <p role="status" className="text-xs text-muted-foreground">No accounts yet. Your entry is kept as a draft — <Link to="/wealth" className="font-semibold text-primary underline">Configure account</Link></p>}
               {methodNote && <p className="text-xs text-muted-foreground">via {instrumentLabel(methodNote)}</p>}
             </div>
             {isMove(txnType) && (
