@@ -26,7 +26,7 @@ import { parseSpokenEntry } from "@/lib/assistant.functions";
 import { useServerFn } from "@tanstack/react-start";
 import { Mic } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { ACCOUNT_LABEL, TXN_LABEL, TXN_TYPES, frequentMerchants, suggestForMerchant, type TxnType } from "@/lib/ledger";
+import { ACCOUNT_LABEL, MOVE_TARGET, isMove, TXN_LABEL, TXN_TYPES, frequentMerchants, suggestForMerchant, type TxnType } from "@/lib/ledger";
 
 
 import { WorkspacePicker, splitShares } from "@/components/WorkspacePicker";
