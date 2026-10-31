@@ -47,7 +47,9 @@ function Trips() {
     try { await savePreferences({ ...pr, trips: [t, ...pr.trips] }); setOpenId(t.id); toast.success("Trip created"); } catch (e) { toast.error((e as Error).message); }
   };
   const trip = pr.trips.find((t) => t.id === openId);
-  const dash = useMemo(() => advanceDashboard(pr.trips as TravelTrip[], transactions), [pr.trips, transactions]);
+  const dash = useMemo(() => advanceDashboard(pr.trips as TravelTrip[], transactions, today), [pr.trips, transactions, today]);
+  const [dashFilter, setDashFilter] = useState<"all" | "open" | "overdue">("all");
+  const dashRows = dash.rows.filter((r) => dashFilter === "all" || (dashFilter === "open" ? r.outstanding !== 0 : r.overdue));
   const openTrip = (id: string) => { setOpenId(id); requestAnimationFrame(() => document.getElementById("trip-detail")?.scrollIntoView({ behavior: "smooth" })); };
   return (
     <div>
@@ -55,11 +57,18 @@ function Trips() {
       {dash.rows.length > 0 && (
         <Card title="Advance balances" className="mb-4">
           <p className="mb-2 text-xs text-muted-foreground">Outstanding advance money across trips — what you still hold to return, or what's still owed to you.</p>
-          {dash.rows.map((r) => (
+          <div className="mb-2 flex flex-wrap gap-2">
+            {([["all", `All ${dash.rows.length}`], ["open", `Unreconciled ${dash.rows.filter((r) => r.outstanding !== 0).length}`], ["overdue", `Overdue ${dash.rows.filter((r) => r.overdue).length}`]] as const).map(([k, label]) => (
+              <Button key={k} size="sm" variant={dashFilter === k ? "default" : "outline"} aria-pressed={dashFilter === k} onClick={() => setDashFilter(k)}>{label}</Button>
+            ))}
+          </div>
+          {dashRows.length === 0 && <p className="py-2 text-xs text-muted-foreground">{dashFilter === "overdue" ? "Nothing overdue — no balance has waited 30+ days after a trip ended." : "No unreconciled balances."}</p>}
+          {dashRows.map((r) => (
             <div key={r.tripId} className="flex items-center gap-2 border-b py-2 text-sm last:border-0">
               <div className="min-w-0 flex-1">
                 <div className="truncate font-medium">{r.name}{r.closed && <span className="ml-1 text-xs text-muted-foreground">(closed)</span>}</div>
                 <div className="text-xs text-muted-foreground">advances {money(r.advances)} · spent {money(r.expenses)} · returned {money(r.returns)}</div>
+                {r.aging !== "settled" && <div className={`text-xs ${r.overdue ? "font-medium text-destructive" : "text-muted-foreground"}`}>{r.aging === "current" ? (r.ageDays === 0 ? "trip ongoing or just ended" : `${r.ageDays} days since trip ended`) : `Overdue · ${r.ageDays} days since trip ended (${r.aging})`}</div>}
               </div>
               <span className={`shrink-0 font-mono text-sm ${r.outstanding > 0 ? "text-destructive" : r.outstanding < 0 ? "text-primary" : "text-muted-foreground"}`}>
                 {r.outstanding > 0 ? `return ${money(r.outstanding)}` : r.outstanding < 0 ? `owed ${money(-r.outstanding)}` : "settled"}

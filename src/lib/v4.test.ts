@@ -130,3 +130,22 @@ describe("loan history CSV", () => {
     expect(rows[3]).toEqual(["Total", "10000", "9000", "1000", "91000"]);
   });
 });
+
+import { payoffProjection as _pp } from "./loan-history";
+import { advanceAge as _age } from "./travel";
+describe("payoff projection and advance aging", () => {
+  it("uses the average of the last three repayments", () => {
+    const rows = [1, 2, 3, 4].map((i) => ({ id: String(i), date: `2026-0${i}-10`, amount: i === 1 ? 99999 : 1000, principal: 1000, interest: 0, split: true, balanceBefore: 0, balanceAfter: 0 }));
+    const p = _pp(3000, 0, rows, 500, "2026-10-01");
+    expect(p.payment).toBe(1000); expect(p.months).toBe(3); expect(p.payoffDate).toBe("2026-07-10");
+  });
+  it("falls back to EMI and flags payments below interest", () => {
+    expect(_pp(1200, 0, [], 400, "2026-01-31").payoffDate).toBe("2026-04-30");
+    expect(_pp(100000, 12, [], 500, "2026-01-01").payable).toBe(false);
+  });
+  it("marks unsettled balances overdue 30 days after the trip ends", () => {
+    expect(_age("2026-09-01", 500, "2026-09-30").overdue).toBe(false);
+    expect(_age("2026-09-01", 500, "2026-10-01")).toEqual({ ageDays: 30, aging: "30+", overdue: true });
+    expect(_age("2026-01-01", 0, "2026-10-01").overdue).toBe(false);
+  });
+});

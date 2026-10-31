@@ -161,16 +161,23 @@ export function advanceReconRows(t: TravelTrip, txns: Row[]): string[][] {
   ];
 }
 
-export interface AdvanceDashRow { tripId: string; name: string; closed: boolean; advances: number; expenses: number; returns: number; outstanding: number }
+export interface AdvanceDashRow { tripId: string; name: string; closed: boolean; advances: number; expenses: number; returns: number; outstanding: number; end: string; ageDays: number; aging: "current" | "30+" | "60+" | "90+" | "settled"; overdue: boolean }
+/** Days an unreconciled balance has been waiting, counted from the trip's end (0 while the trip is still running). Overdue = still unsettled 30+ days after the trip ended. */
+export function advanceAge(end: string, outstanding: number, today: string) {
+  if (outstanding === 0) return { ageDays: 0, aging: "settled" as const, overdue: false };
+  const ageDays = Math.max(0, Math.floor((Date.parse(`${today}T00:00:00Z`) - Date.parse(`${end}T00:00:00Z`)) / 86400000));
+  const aging = ageDays >= 90 ? "90+" as const : ageDays >= 60 ? "60+" as const : ageDays >= 30 ? "30+" as const : "current" as const;
+  return { ageDays, aging, overdue: ageDays >= 30 };
+}
 /** Advance balances across trips: only trips with any advance activity, oldest outstanding first. Totals keep the sign per trip. */
-export function advanceDashboard(trips: TravelTrip[], txns: Row[]) {
+export function advanceDashboard(trips: TravelTrip[], txns: Row[], today = new Date().toISOString().slice(0, 10)) {
   const rows: AdvanceDashRow[] = [];
   for (const t of trips) {
     const r = advanceReconciliation(t, txns);
     if (r.advances === 0 && r.returns === 0) continue;
-    rows.push({ tripId: t.id, name: t.name, closed: !!t.closedAt, advances: r.advances, expenses: r.expenses, returns: r.returns, outstanding: r.outstanding });
+    rows.push({ tripId: t.id, name: t.name, closed: !!t.closedAt, advances: r.advances, expenses: r.expenses, returns: r.returns, outstanding: r.outstanding, end: t.end, ...advanceAge(t.end, r.outstanding, today) });
   }
-  rows.sort((a, b) => Math.abs(b.outstanding) - Math.abs(a.outstanding));
+  rows.sort((a, b) => b.ageDays - a.ageDays || Math.abs(b.outstanding) - Math.abs(a.outstanding));
   const toReturn = r2(rows.filter((r) => r.outstanding > 0).reduce((s, r) => s + r.outstanding, 0));
   const owedToYou = r2(rows.filter((r) => r.outstanding < 0).reduce((s, r) => s - r.outstanding, 0));
   return { rows, toReturn, owedToYou };
