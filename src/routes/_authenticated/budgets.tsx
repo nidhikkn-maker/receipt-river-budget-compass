@@ -33,7 +33,7 @@ function Budgets() {
   const rows = budgetUsage(expenses, budgets, month);
   const [cat, setCat] = useState<Category>("Groceries");
   const [amt, setAmt] = useState("");
-  const byCat = Object.entries(totalsBy(expenses.filter((e) => e.date.startsWith(month)), (e) => e.category)).map(([name, value]) => ({ name, value }));
+  const byCat = Object.entries(categoryTotals(expenses.filter((e) => e.date.startsWith(month)))).map(([name, value]) => ({ name, value }));
 
   const save = async (c: Category, v: string) => {
     try { await setBudget(c, Number(v)); toast.success(`${c} budget saved`); setAmt(""); } catch (e) { toast.error((e as Error).message); }

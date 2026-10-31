@@ -12,8 +12,8 @@ export function buildReport(kind: ReportKind, expenses: Expense[], memberName: (
   if (kind === "expenses") return { title: "All expenses", headers, rows: expenses.map(row) };
   if (kind === "business") return { title: "Business expenses", headers, rows: expenses.filter((e) => e.scope === "business").map(row) };
   if (kind === "reimbursements") return { title: "Reimbursements", headers, rows: expenses.filter(e=>e.reimbursementStatus && e.reimbursementStatus!=="none").map(row) };
-  const biz = totalsBy(expenses.filter((e) => e.scope === "business"), (e) => e.category);
-  const per = totalsBy(expenses.filter((e) => e.scope === "personal"), (e) => e.category);
+  const biz = categoryTotals(expenses.filter((e) => e.scope === "business"));
+  const per = categoryTotals(expenses.filter((e) => e.scope === "personal"));
   const month = new Date().toISOString().slice(0, 7);
   const usage = Object.fromEntries(budgetUsage(expenses, budgets, month).map((u) => [u.category, u]));
   return {
