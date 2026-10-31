@@ -71,6 +71,13 @@
       "when": 1793414797016,
       "tag": "0009_prd_modules_cards_loans_docs_audit",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1793414853185,
+      "tag": "0010_adjustment_direction",
+      "breakpoints": true
     }
   ]
 }

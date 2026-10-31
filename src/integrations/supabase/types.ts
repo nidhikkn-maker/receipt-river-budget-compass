@@ -366,6 +366,7 @@ export type Database = {
       expenses: {
         Row: {
           account_id: string | null
+          adjustment_sign: number
           amount: number
           category: string
           created_at: string
@@ -398,6 +399,7 @@ export type Database = {
         }
         Insert: {
           account_id?: string | null
+          adjustment_sign?: number
           amount: number
           category: string
           created_at?: string
@@ -430,6 +432,7 @@ export type Database = {
         }
         Update: {
           account_id?: string | null
+          adjustment_sign?: number
           amount?: number
           category?: string
           created_at?: string
