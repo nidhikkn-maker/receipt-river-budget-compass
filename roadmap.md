@@ -197,3 +197,6 @@
 
 ## V4.6 Background processing (requirements-v4.6.md)
 - [ ] Not started — saved, awaiting the go-ahead
+
+## V4.7 PDF Reporting & Download Centre (spec: .lovable/requirements-v4.7.md)
+- [ ] Reports Centre (More → Reports) with filters, preview, PDF, share, history — awaiting go-ahead
