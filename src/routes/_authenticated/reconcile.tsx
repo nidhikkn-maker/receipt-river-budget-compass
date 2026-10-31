@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { filePattern, splitNewLines } from "@/lib/statement-fingerprint";
@@ -123,7 +123,7 @@ function Reconcile() {
         if (remembered && accounts.some((a) => a.id === remembered)) { key = remembered; setStatementAccount(remembered); toast.info(`Using ${accounts.find((a) => a.id === remembered)?.name} like last time`); }
       }
       void key;
-      setLines(parsed); setFileName(f.name); setOverrides({}); setExcluded({}); setShowImported(false);
+      setLines(parsed); setFileName(f.name); setOverrides({}); setExcluded({}); setShowImported(false); setIncludeDups({});
       toast.success(`${parsed.length} statement lines found`);
     } catch (e) { toast.error((e as Error).message); } finally { setReading(false); }
   };
