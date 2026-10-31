@@ -10,7 +10,7 @@ import {
   type Split, type ReceiptDetails,
 } from "./expenses";
 import type { Account, AccountKind, TxnType } from "./ledger";
-import { defaultPreferences, type FinancePreferences } from "./preferences";
+import { defaultPreferences, validateActiveCategory, type FinancePreferences } from "./preferences";
 import { nextAfter, type Commitment, type CommitmentKind, type CommitmentStatus, type Frequency } from "./planning";
 
 export interface Loan { id: string; name: string; principal: number; rate: number; emi: number; nextDue: string }
@@ -122,7 +122,7 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
 
   const save: Ctx["save"] = async (s, opts) => {
     validateExpense(s);
-    if (preferences.categories.some(c=>c.name===s.category&&c.archived) && !opts?.id) throw new Error("Choose an active category");
+    validateActiveCategory(preferences.categories,s.category,!!opts?.id);
     if (!navigator.onLine) {
       if(opts?.id)throw Error("Reconnect to edit an existing transaction");
       await queueEntry({id:opts?.createId ?? crypto.randomUUID(),owner:userId,input:s,files:opts?.files??[],createdAt:new Date().toISOString()});
