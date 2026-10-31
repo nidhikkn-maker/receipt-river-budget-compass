@@ -1,53 +1,91 @@
-import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
-import { supabase } from "@/integrations/supabase/client";
-import { useRef } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { toast } from "sonner";
-import { queueEntry, pendingEntries, removePending, putSnapshot, getSnapshot } from "./offline";
+import { supabase } from "@/integrations/supabase/client";
+import type { Json } from "@/integrations/supabase/types";
+import { queueEntry, pendingEntries, removePending, putSnapshot, getSnapshot, clearOfflineOwner } from "./offline";
 import { saveExpense } from "./fx.functions";
 import {
-  validateBudget, validateExpense,
-  type Budgets, type Category, type Expense, type ExpenseInput, type Member, type PaymentMethod, type Receipt, type Scope,
-  type Split, type ReceiptDetails,
+  CHARGES_CATEGORY, validateBudget, validateExpense,
+  type Budgets, type Category, type Expense, type ExpenseInput, type Member, type PaymentMethod, type Receipt, type ReceiptDetails, type ReimbursementStatus, type Scope, type Split,
 } from "./expenses";
-import type { Account, AccountKind, TxnType } from "./ledger";
-import { defaultPreferences, validateActiveCategory, type FinancePreferences } from "./preferences";
-import { nextAfter, type Commitment, type CommitmentKind, type CommitmentStatus, type Frequency } from "./planning";
+import { accountBalance, adjustmentToMatch, type Account, type AccountDetails, type AccountKind, type TxnType, type Valuation } from "./ledger";
+import { normalizePreferences, defaultPreferences, validateActiveCategory, type FinancePreferences } from "./preferences";
+import { addMonths, emiFor, emiSplit, nextAfter, type Commitment, type CommitmentKind, type CommitmentStatus, type Frequency, type LoanType } from "./planning";
+import { lastStatementDate, nextEmiInstalment, statementShift, type LoanPayment } from "./cards";
+import { validateDocument, type DocType, type VaultDoc } from "./documents";
 
-export interface Loan { id: string; name: string; principal: number; rate: number; emi: number; nextDue: string }
+export interface Loan {
+  id: string; name: string;
+  /** Outstanding principal: the linked loan account's ledger balance, or the instalment log for card EMIs. */
+  principal: number;
+  rate: number; emi: number; nextDue: string;
+  provider: string; loanType: LoanType; original: number; startDate: string | null; prepaymentTerms: string; foreclosurePct: number;
+  accountId: string | null; sourceTransactionId: string | null; payments: LoanPayment[]; status: "active" | "closed";
+}
+export interface LoanInput {
+  id?: string; name: string; principal: number; rate: number; emi: number; nextDue: string;
+  provider: string; loanType: LoanType; original?: number | null; startDate?: string | null; prepaymentTerms: string; foreclosurePct: number;
+}
 export interface Goal { id: string; name: string; target: number; saved: number; monthly: number; reserve: boolean }
+export interface AuditEntry { id: string; action: "created" | "updated" | "deleted"; changes: Record<string, unknown>; summary: string; createdAt: string }
+export interface AccountPatch {
+  name?: string; creditLimit?: number | null; dueDay?: number | null; minBalance?: number; issuer?: string; lastFour?: string | null;
+  statementDay?: number | null; interestRate?: number | null; includeInCash?: boolean; details?: AccountDetails;
+}
+export interface NewAccount { name: string; kind: AccountKind; openingBalance: number; issuer?: string; lastFour?: string | null; creditLimit?: number | null; statementDay?: number | null; dueDay?: number | null; interestRate?: number | null; details?: AccountDetails }
+export interface DocumentMeta { title: string; docType: DocType; docDate: string | null; amount: number | null; currency: string; merchant: string | null; notes: string; text?: string; transactionId: string | null; accountId: string | null; loanId: string | null; expiresOn: string | null }
+
+interface Snapshot { name: string; members: Member[]; expenses: Expense[]; accounts: Account[]; commitments: Commitment[]; rawLoans: Loan[]; goals: Goal[]; budgets: Budgets; preferences: FinancePreferences; valuations: Valuation[]; documents: VaultDoc[] }
 
 interface Ctx {
   pendingCount: number;
   preferences: FinancePreferences;
   savePreferences: (p: FinancePreferences) => Promise<void>;
+  ensureCategory: (name: string) => Promise<void>;
   moveCategory: (source: string, target: string) => Promise<void>;
   userId: string;
   name: string;
+  updateName: (name: string) => Promise<void>;
   members: Member[];
   memberName: (id: string | null) => string;
   /** Spending only (type expense) — used by budgets, family and expense reports. */
   expenses: Expense[];
-  /** Every ledger entry: expenses, income, transfers, refunds, adjustments. */
+  /** Every ledger entry: expenses, income, transfers, refunds, reimbursements, adjustments. */
   transactions: Expense[];
   accounts: Account[];
   commitments: Commitment[];
   loans: Loan[];
   goals: Goal[];
+  valuations: Valuation[];
+  documents: VaultDoc[];
   saveCommitment: (c: Omit<Commitment, "id"> & { id?: string }) => Promise<void>;
   removeCommitment: (id: string) => Promise<void>;
   /** Records the actual payment/receipt as a transaction and moves the due date forward. */
-  confirmCommitment: (c: Commitment, amount: number) => Promise<void>;
-  saveLoan: (l: Omit<Loan, "id"> & { id?: string }) => Promise<void>;
+  confirmCommitment: (c: Commitment, amount: number, accountId?: string | null) => Promise<void>;
+  saveLoan: (l: LoanInput) => Promise<void>;
   removeLoan: (id: string) => Promise<void>;
+  /** Records one EMI: principal as a transfer to the loan account, interest as a financial charge. */
+  recordLoanPayment: (l: Loan, p: { fromAccountId: string | null; date: string; principal?: number; interest?: number }) => Promise<void>;
+  convertToEmi: (e: Expense, o: { months: number; rate: number; fee: number }) => Promise<void>;
   saveGoal: (g: Omit<Goal, "id"> & { id?: string }) => Promise<void>;
   removeGoal: (id: string) => Promise<void>;
-  updateAccount: (id: string, patch: { creditLimit?: number | null; dueDay?: number | null; minBalance?: number }) => Promise<void>;
-  addAccount: (a: { name: string; kind: AccountKind; openingBalance: number }) => Promise<void>;
+  updateAccount: (id: string, patch: AccountPatch) => Promise<void>;
+  addAccount: (a: NewAccount) => Promise<string>;
   setArchived: (id: string, archived: boolean) => Promise<void>;
+  adjustBalance: (a: Account, actual: number, date: string) => Promise<boolean>;
+  addValuation: (v: Omit<Valuation, "id">) => Promise<void>;
+  removeValuation: (id: string) => Promise<void>;
+  addDocument: (file: File, meta: DocumentMeta) => Promise<void>;
+  updateDocument: (id: string, meta: Partial<DocumentMeta>) => Promise<void>;
+  removeDocument: (d: VaultDoc) => Promise<void>;
+  history: (transactionId: string) => Promise<AuditEntry[]>;
+  setReimbursement: (id: string, status: ReimbursementStatus) => Promise<void>;
+  recordReimbursement: (ids: string[], accountId: string | null, date: string) => Promise<void>;
+  deleteAll: () => Promise<void>;
   budgets: Budgets;
   loading: boolean;
   refresh: () => Promise<void>;
-  save: (s: ExpenseInput, opts?: { id?: string; files?: File[]; createId?: string }) => Promise<void>;
+  save: (s: ExpenseInput, opts?: { id?: string; files?: File[]; createId?: string; noRefresh?: boolean }) => Promise<void>;
   remove: (e: Expense) => Promise<void>;
   setScope: (id: string, scope: Scope) => Promise<void>;
   reconcile: (id: string, ref: string | null) => Promise<void>;
@@ -57,16 +95,20 @@ interface Ctx {
   signedUrl: (path: string) => Promise<string | null>;
 }
 const StoreCtx = createContext<Ctx | null>(null);
+const r2 = (n: number) => Math.round(n * 100) / 100;
+const today = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; };
+const safeName = (n: string) => n.replace(/[^\w.-]/g, "_").slice(-120);
 
 export function StoreProvider({ userId, children }: { userId: string; children: ReactNode }) {
   const [name, setName] = useState("");
   const [members, setMembers] = useState<Member[]>([]);
-  const [expenses, setExpensesAll] = useState<Expense[]>([]);
-  const setExpenses = setExpensesAll;
+  const [expenses, setExpenses] = useState<Expense[]>([]);
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [commitments, setCommitments] = useState<Commitment[]>([]);
-  const [loans, setLoans] = useState<Loan[]>([]);
+  const [rawLoans, setLoans] = useState<Loan[]>([]);
   const [goals, setGoals] = useState<Goal[]>([]);
+  const [valuations, setValuations] = useState<Valuation[]>([]);
+  const [documents, setDocuments] = useState<VaultDoc[]>([]);
   const [budgets, setBudgets] = useState<Budgets>({});
   const [loading, setLoading] = useState(true);
   const [pendingCount, setPendingCount] = useState(0);
@@ -75,11 +117,15 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
 
   const refresh = useCallback(async () => {
     if (!navigator.onLine) {
-      const cached = await getSnapshot<{name:string;members:Member[];expenses:Expense[];accounts:Account[];commitments:Commitment[];loans:Loan[];goals:Goal[];budgets:Budgets;preferences:FinancePreferences}>(userId);
-      if(cached){setName(cached.name);setMembers(cached.members);setExpenses(cached.expenses);setAccounts(cached.accounts);setCommitments(cached.commitments);setLoans(cached.loans);setGoals(cached.goals);setBudgets(cached.budgets);setPreferences(cached.preferences);}
+      const cached = await getSnapshot<Snapshot>(userId).catch(() => undefined);
+      if (cached) {
+        setName(cached.name); setMembers(cached.members); setExpenses(cached.expenses); setAccounts(cached.accounts); setCommitments(cached.commitments);
+        setLoans(cached.rawLoans ?? []); setGoals(cached.goals); setBudgets(cached.budgets); setPreferences(normalizePreferences(cached.preferences));
+        setValuations(cached.valuations ?? []); setDocuments(cached.documents ?? []);
+      }
       setLoading(false); return;
     }
-    const [p, m, e, b, a, c, l, g, pref] = await Promise.all([
+    const [p, m, e, b, a, c, l, g, pref, v, d] = await Promise.all([
       supabase.from("profiles").select("full_name").eq("id", userId).maybeSingle(),
       supabase.from("family_members").select("id, name, relation").order("created_at"),
       supabase.from("expenses").select("*").order("expense_date", { ascending: false }).order("created_at", { ascending: false }),
@@ -89,26 +135,45 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
       supabase.from("loans").select("*").order("created_at"),
       supabase.from("goals").select("*").order("created_at"),
       supabase.from("finance_preferences").select("data").eq("owner_id", userId).maybeSingle(),
+      supabase.from("asset_valuations").select("*").order("valued_on", { ascending: false }),
+      supabase.from("documents").select("*").order("created_at", { ascending: false }),
     ]);
-    setPreferences({ ...defaultPreferences(), ...(pref.data?.data as unknown as Partial<FinancePreferences> ?? {}) });
+    const firstError = [e, a, c, l, g, v, d].find((x) => x.error)?.error;
+    if (firstError) toast.error("Some records couldn't load — pull to refresh or try again");
+    setPreferences(normalizePreferences(pref.data?.data as unknown as Partial<FinancePreferences>));
     setCommitments((c.data ?? []).map((x) => ({ id: x.id, name: x.name, kind: x.kind as CommitmentKind, direction: x.direction as "in" | "out", amount: Number(x.amount),
       frequency: x.frequency as Frequency, intervalDays: x.interval_days, nextDue: x.next_due, accountId: x.account_id, category: x.category,
       confirmed: x.confirmed, essential: x.essential, status: x.status as CommitmentStatus })));
-    setLoans((l.data ?? []).map((x) => ({ id: x.id, name: x.name, principal: Number(x.principal_outstanding), rate: Number(x.annual_rate), emi: Number(x.emi), nextDue: x.next_due })));
+    setLoans((l.data ?? []).map((x) => ({
+      id: x.id, name: x.name, principal: Number(x.principal_outstanding), rate: Number(x.annual_rate), emi: Number(x.emi), nextDue: x.next_due,
+      provider: x.provider, loanType: x.loan_type as LoanType, original: Number(x.original_principal ?? x.principal_outstanding), startDate: x.start_date,
+      prepaymentTerms: x.prepayment_terms, foreclosurePct: Number(x.foreclosure_pct), accountId: x.account_id, sourceTransactionId: x.source_transaction_id,
+      payments: (x.payments as unknown as LoanPayment[]) ?? [], status: x.status === "closed" ? "closed" : "active",
+    })));
     setGoals((g.data ?? []).map((x) => ({ id: x.id, name: x.name, target: Number(x.target), saved: Number(x.saved), monthly: Number(x.monthly), reserve: x.reserve })));
-    setAccounts((a.data ?? []).map((x) => ({ id: x.id, name: x.name, kind: x.kind as AccountKind, openingBalance: Number(x.opening_balance), archived: x.archived, creditLimit: x.credit_limit == null ? null : Number(x.credit_limit), dueDay: x.due_day, minBalance: Number(x.min_balance) })));
+    setAccounts((a.data ?? []).map((x) => ({
+      id: x.id, name: x.name, kind: x.kind as AccountKind, openingBalance: Number(x.opening_balance), archived: x.archived,
+      creditLimit: x.credit_limit == null ? null : Number(x.credit_limit), dueDay: x.due_day, minBalance: Number(x.min_balance),
+      issuer: x.issuer, lastFour: x.last_four, statementDay: x.statement_day, interestRate: x.interest_rate == null ? null : Number(x.interest_rate),
+      includeInCash: x.include_in_cash, details: (x.details as unknown as AccountDetails) ?? {},
+    })));
+    setValuations((v.data ?? []).map((x) => ({ id: x.id, accountId: x.account_id, value: Number(x.value), valuedOn: x.valued_on, source: x.source, note: x.note })));
+    setDocuments((d.data ?? []).map((x) => ({
+      id: x.id, title: x.title, docType: x.doc_type as DocType, filePath: x.file_path, fileName: x.file_name, mimeType: x.mime_type, size: x.size_bytes,
+      docDate: x.doc_date, amount: x.amount == null ? null : Number(x.amount), currency: x.currency, merchant: x.merchant, notes: x.notes, text: x.extracted_text,
+      transactionId: x.transaction_id, accountId: x.account_id, loanId: x.loan_id, expiresOn: x.expires_on, createdAt: x.created_at,
+    })));
     setName(p.data?.full_name ?? "");
     setMembers(m.data ?? []);
-    setExpenses(
-      (e.data ?? []).map((x) => ({
-        id: x.id, title: x.title, merchant: x.merchant, category: x.category as Category, scope: x.scope as Scope, memberId: x.member_id, splits: (x.splits as unknown as Split[]) ?? [],
-        amount: Number(x.amount), currency: x.currency, originalAmount: Number(x.original_amount ?? x.amount), fxRate: Number(x.fx_rate),
-        paymentMethod: x.payment_method as PaymentMethod, reconciledAt: x.reconciled_at, statementRef: x.statement_ref,
-        date: x.expense_date, description: x.description, receipts: (x.receipts as unknown as Receipt[]) ?? [],
-        txnType: x.txn_type as TxnType, accountId: x.account_id, toAccountId: x.to_account_id, tags: x.tags ?? [],
-        receiptDetails: x.receipt_details as unknown as ReceiptDetails,
-      })),
-    );
+    setExpenses((e.data ?? []).map((x) => ({
+      id: x.id, title: x.title, merchant: x.merchant, category: x.category as Category, scope: x.scope as Scope, memberId: x.member_id, splits: (x.splits as unknown as Split[]) ?? [],
+      amount: Number(x.amount), currency: x.currency, originalAmount: Number(x.original_amount ?? x.amount), fxRate: Number(x.fx_rate),
+      paymentMethod: x.payment_method as PaymentMethod, reconciledAt: x.reconciled_at, statementRef: x.statement_ref,
+      date: x.expense_date, description: x.description, receipts: (x.receipts as unknown as Receipt[]) ?? [],
+      txnType: x.txn_type as TxnType, accountId: x.account_id, toAccountId: x.to_account_id, tags: x.tags ?? [],
+      receiptDetails: x.receipt_details as unknown as ReceiptDetails, reimbursementStatus: x.reimbursement_status as ReimbursementStatus,
+      adjustmentSign: x.adjustment_sign === -1 ? -1 : 1,
+    })));
     const bud: Budgets = {};
     for (const x of b.data ?? []) bud[x.category as Category] = Number(x.monthly_amount);
     setBudgets(bud);
@@ -116,53 +181,92 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
   }, [userId]);
 
   useEffect(() => { void refresh(); }, [refresh]);
-  useEffect(()=>{if(!loading&&navigator.onLine)void putSnapshot(userId,{name,members,expenses,accounts,commitments,loans,goals,budgets,preferences}).catch(()=>{});},[loading,userId,name,members,expenses,accounts,commitments,loans,goals,budgets,preferences]);
+  useEffect(() => {
+    if (!loading && navigator.onLine) void putSnapshot(userId, { name, members, expenses, accounts, commitments, rawLoans, goals, budgets, preferences, valuations, documents } satisfies Snapshot).catch(() => {});
+  }, [loading, userId, name, members, expenses, accounts, commitments, rawLoans, goals, budgets, preferences, valuations, documents]);
+
+  // Loan principal comes from the linked loan account's ledger, so EMI transfers keep it right.
+  const loans = useMemo(() => rawLoans.map((l) => {
+    const acc = accounts.find((a) => a.id === l.accountId);
+    if (l.loanType !== "credit_card_emi" && acc && (acc.kind === "loan" || acc.kind === "other_liability")) return { ...l, principal: Math.max(0, accountBalance(acc, expenses)) };
+    return l;
+  }), [rawLoans, accounts, expenses]);
 
   const memberName = (id: string | null) => (id ? members.find((m) => m.id === id)?.name ?? "Family" : "Me");
+  const check = (error: { message: string } | null) => { if (error) throw new Error(error.message); };
 
   const save: Ctx["save"] = async (s, opts) => {
     validateExpense(s);
-    validateActiveCategory(preferences.categories,s.category,!!opts?.id);
+    validateActiveCategory(preferences.categories, s.category, !!opts?.id);
     if (!navigator.onLine) {
-      if(opts?.id)throw Error("Reconnect to edit an existing transaction");
-      await queueEntry({id:opts?.createId ?? crypto.randomUUID(),owner:userId,input:s,files:opts?.files??[],createdAt:new Date().toISOString()});
+      if (opts?.id) throw Error("Reconnect to edit an existing transaction");
+      await queueEntry({ id: opts?.createId ?? crypto.randomUUID(), owner: userId, input: s, files: opts?.files ?? [], createdAt: new Date().toISOString() });
       setPendingCount((await pendingEntries(userId)).length);
-      toast.message("Saved offline — waiting to sync");return;
+      toast.message("Saved offline — waiting to sync"); return;
     }
     let receipts: Receipt[] | undefined;
     if (opts?.files?.length) {
-      receipts = [];
+      const existing = opts.id ? expenses.find((x) => x.id === opts.id)?.receipts ?? [] : [];
+      receipts = [...existing];
       for (const f of opts.files) {
-        const path = `${userId}/${crypto.randomUUID()}-${f.name.replace(/[^\w.-]/g, "_")}`;
+        const path = `${userId}/${crypto.randomUUID()}-${safeName(f.name)}`;
         const { error } = await supabase.storage.from("receipts").upload(path, f, { contentType: f.type });
         if (error) throw new Error(`Couldn't upload ${f.name}`);
         receipts.push({ name: f.name, type: f.type, path });
       }
     }
     const res = await saveExpense({ data: {
-      id: opts?.id ?? null, ...(opts?.createId ? {createId:opts.createId}:{}), title: s.title.trim(), merchant: s.merchant, category: s.category, scope: s.scope, memberId: s.memberId, splits: s.splits ?? [],
+      id: opts?.id ?? null, ...(opts?.createId ? { createId: opts.createId } : {}), title: s.title.trim(), merchant: s.merchant, category: s.category, scope: s.scope, memberId: s.memberId, splits: s.splits ?? [],
       currency: s.currency, originalAmount: s.amount, date: s.date, description: s.description, paymentMethod: s.paymentMethod,
       txnType: s.txnType ?? "expense", accountId: s.accountId ?? null, toAccountId: s.toAccountId ?? null, tags: s.tags ?? [],
-      receiptDetails: s.receiptDetails,
+      receiptDetails: s.receiptDetails, reimbursementStatus: s.reimbursementStatus ?? "none", adjustmentSign: s.adjustmentSign ?? 1,
       ...(receipts ? { receipts } : {}),
     } });
     if (!res.ok) throw new Error(res.error);
-    await refresh();
+    if (!opts?.noRefresh) await refresh();
   };
 
-  useEffect(()=>{
-    let active=true;
-    const sync=async()=>{const entries=await pendingEntries(userId);if(active)setPendingCount(entries.length);if(!navigator.onLine||syncing.current)return;syncing.current=true;try{for(const entry of entries){if(!navigator.onLine)break;await save(entry.input,{createId:entry.id,files:entry.files});if(!navigator.onLine)break;await removePending(entry.id);}if(active)setPendingCount((await pendingEntries(userId)).length);}catch{toast.error("Offline entry is still waiting — reconnect to retry");}finally{syncing.current=false;}};
-    void sync();window.addEventListener("online",sync);return()=>{active=false;window.removeEventListener("online",sync);};
-  },[userId]);
-  const check = (error: { message: string } | null) => { if (error) throw new Error(error.message); };
+  useEffect(() => {
+    let active = true;
+    const sync = async () => {
+      const entries = await pendingEntries(userId).catch(() => []);
+      if (active) setPendingCount(entries.length);
+      if (!navigator.onLine || syncing.current || !entries.length) return;
+      syncing.current = true;
+      try {
+        for (const entry of entries) {
+          if (!navigator.onLine) break;
+          await save(entry.input, { createId: entry.id, files: entry.files });
+          if (!navigator.onLine) break;
+          await removePending(entry.id);
+        }
+        if (active) setPendingCount((await pendingEntries(userId)).length);
+        toast.success("Offline entries synced");
+      } catch { toast.error("Offline entry is still waiting — reconnect to retry"); } finally { syncing.current = false; }
+    };
+    void sync(); window.addEventListener("online", sync);
+    return () => { active = false; window.removeEventListener("online", sync); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userId]);
+
   const savePreferences: Ctx["savePreferences"] = async (p) => {
-    check((await supabase.from("finance_preferences").upsert({ owner_id: userId, data: p as unknown as import("@/integrations/supabase/types").Json, updated_at: new Date().toISOString() })).error);
+    check((await supabase.from("finance_preferences").upsert({ owner_id: userId, data: p as unknown as Json, updated_at: new Date().toISOString() })).error);
     setPreferences(p);
+  };
+  const ensureCategory: Ctx["ensureCategory"] = async (cat) => {
+    if (preferences.categories.some((c) => c.name === cat)) return;
+    await savePreferences({ ...preferences, categories: [...preferences.categories, { name: cat, archived: false }] });
   };
   const moveCategory: Ctx["moveCategory"] = async (source, target) => {
     check((await supabase.rpc("move_expense_category", { source, target })).error);
     await refresh();
+  };
+  const updateName: Ctx["updateName"] = async (n) => {
+    const v = n.trim();
+    if (!v) throw new Error("Enter your name");
+    if (v.length > 80) throw new Error("Keep your name under 80 characters");
+    check((await supabase.from("profiles").update({ full_name: v }).eq("id", userId)).error);
+    setName(v);
   };
 
   const remove: Ctx["remove"] = async (e) => {
@@ -173,6 +277,20 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
   const setScope: Ctx["setScope"] = async (id, scope) => {
     check((await supabase.from("expenses").update({ scope }).eq("id", id)).error);
     setExpenses((xs) => xs.map((x) => (x.id === id ? { ...x, scope } : x)));
+  };
+  const setReimbursement: Ctx["setReimbursement"] = async (id, status) => {
+    check((await supabase.from("expenses").update({ reimbursement_status: status }).eq("id", id)).error);
+    setExpenses((xs) => xs.map((x) => (x.id === id ? { ...x, reimbursementStatus: status } : x)));
+  };
+  const recordReimbursement: Ctx["recordReimbursement"] = async (ids, accountId, date) => {
+    const items = expenses.filter((x) => ids.includes(x.id) && x.reimbursementStatus === "pending");
+    if (!items.length) throw new Error("Pick at least one pending expense");
+    const total = r2(items.reduce((s, x) => s + x.amount, 0));
+    await save({ title: items.length === 1 ? `Reimbursement — ${items[0]!.title}` : `Reimbursement — ${items.length} expenses`, merchant: null, category: "Reimbursement",
+      scope: items.every((x) => x.scope === "business") ? "business" : "personal", memberId: null, amount: total, currency: "INR", paymentMethod: "bank_transfer", date,
+      description: `Reimbursed: ${items.map((x) => `${x.title} (${x.date})`).join(", ")}`.slice(0, 2000), txnType: "reimbursement", accountId, tags: ["Purpose: Reimbursable"] }, { noRefresh: true });
+    check((await supabase.from("expenses").update({ reimbursement_status: "received" }).in("id", items.map((x) => x.id))).error);
+    await refresh();
   };
   const reconcile: Ctx["reconcile"] = async (id, ref) => {
     check((await supabase.from("expenses").update({ statement_ref: ref, reconciled_at: ref ? new Date().toISOString() : null }).eq("id", id)).error);
@@ -192,43 +310,147 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
     check((await supabase.from("category_budgets").upsert({ owner_id: userId, category, monthly_amount: amount, updated_at: new Date().toISOString() })).error);
     await refresh();
   };
+  const validateCard = (x: { lastFour?: string | null; statementDay?: number | null; dueDay?: number | null; creditLimit?: number | null; interestRate?: number | null }) => {
+    if (x.lastFour && !/^\d{4}$/.test(x.lastFour)) throw new Error("Last four digits must be 4 numbers");
+    if (x.statementDay != null && !(x.statementDay >= 1 && x.statementDay <= 31)) throw new Error("Statement day must be 1–31");
+    if (x.dueDay != null && !(x.dueDay >= 1 && x.dueDay <= 31)) throw new Error("Due day must be 1–31");
+    if (x.creditLimit != null && !(x.creditLimit >= 0)) throw new Error("Credit limit can't be negative");
+    if (x.interestRate != null && !(x.interestRate >= 0 && x.interestRate <= 100)) throw new Error("Interest rate must be 0–100%");
+  };
   const addAccount: Ctx["addAccount"] = async (x) => {
     if (!x.name.trim()) throw new Error("Name the account");
     if (!Number.isFinite(x.openingBalance)) throw new Error("Enter an opening balance");
-    check((await supabase.from("accounts").insert({ owner_id: userId, name: x.name.trim(), kind: x.kind, opening_balance: x.openingBalance })).error);
+    validateCard(x);
+    const { data, error } = await supabase.from("accounts").insert({
+      owner_id: userId, name: x.name.trim(), kind: x.kind, opening_balance: x.openingBalance, issuer: x.issuer?.trim() ?? "", last_four: x.lastFour || null,
+      credit_limit: x.creditLimit ?? null, statement_day: x.statementDay ?? null, due_day: x.dueDay ?? null, interest_rate: x.interestRate ?? null, details: (x.details ?? {}) as Json,
+    }).select("id").single();
+    check(error);
     await refresh();
+    return data!.id;
   };
   const setArchived: Ctx["setArchived"] = async (id, archived) => {
     check((await supabase.from("accounts").update({ archived }).eq("id", id)).error);
     await refresh();
   };
+  const updateAccount: Ctx["updateAccount"] = async (id, p) => {
+    validateCard(p);
+    const row: Record<string, unknown> = {};
+    if (p.name !== undefined) { if (!p.name.trim()) throw new Error("Name the account"); row["name"] = p.name.trim(); }
+    if (p.creditLimit !== undefined) row["credit_limit"] = p.creditLimit;
+    if (p.dueDay !== undefined) row["due_day"] = p.dueDay;
+    if (p.minBalance !== undefined) { if (!(p.minBalance >= 0)) throw new Error("Minimum balance can't be negative"); row["min_balance"] = p.minBalance; }
+    if (p.issuer !== undefined) row["issuer"] = p.issuer.trim();
+    if (p.lastFour !== undefined) row["last_four"] = p.lastFour || null;
+    if (p.statementDay !== undefined) row["statement_day"] = p.statementDay;
+    if (p.interestRate !== undefined) row["interest_rate"] = p.interestRate;
+    if (p.includeInCash !== undefined) row["include_in_cash"] = p.includeInCash;
+    if (p.details !== undefined) row["details"] = p.details;
+    check((await supabase.from("accounts").update(row).eq("id", id)).error);
+    await refresh();
+  };
+  const adjustBalance: Ctx["adjustBalance"] = async (a, actual, date) => {
+    if (!Number.isFinite(actual)) throw new Error("Enter the balance you see at the bank");
+    const adj = adjustmentToMatch(a, expenses.filter((t) => t.date <= date), actual);
+    if (!adj) return false;
+    await save({ title: `Balance adjustment — ${a.name}`, merchant: null, category: "Adjustment", scope: "personal", memberId: null, amount: adj.amount, currency: "INR",
+      paymentMethod: "other", date, description: `Set balance to ₹${actual} on ${date} to match the statement`, txnType: "adjustment", accountId: a.id, adjustmentSign: adj.sign });
+    return true;
+  };
   const pos = (n: number, what: string) => { if (!(n > 0)) throw new Error(`${what} must be greater than zero`); };
   const saveCommitment: Ctx["saveCommitment"] = async (x) => {
     if (!x.name.trim()) throw new Error("Give it a name");
     pos(x.amount, "Amount");
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(x.nextDue)) throw new Error("Pick the date");
+    if (x.frequency === "custom" && !((x.intervalDays ?? 0) >= 1)) throw new Error("Repeat every 1 day or more");
     const row = { owner_id: userId, name: x.name.trim(), kind: x.kind, direction: x.direction, amount: x.amount, frequency: x.frequency, interval_days: x.intervalDays,
       next_due: x.nextDue, account_id: x.accountId, category: x.category, confirmed: x.confirmed, essential: x.essential, status: x.status };
     check((x.id ? await supabase.from("commitments").update(row).eq("id", x.id) : await supabase.from("commitments").insert(row)).error);
     await refresh();
   };
   const removeCommitment: Ctx["removeCommitment"] = async (id) => { check((await supabase.from("commitments").delete().eq("id", id)).error); await refresh(); };
-  const confirmCommitment: Ctx["confirmCommitment"] = async (c, amount) => {
+  const confirmCommitment: Ctx["confirmCommitment"] = async (c, amount, accountId) => {
     pos(amount, "Amount");
-    await save({ title: c.name, merchant: c.name, category: (c.category as Category), scope: "personal", memberId: null, amount, currency: "INR",
-      paymentMethod: "bank_transfer", date: new Date().toISOString().slice(0, 10), description: `Recurring: ${c.name}`,
-      txnType: c.direction === "in" ? "income" : "expense", accountId: c.accountId, tags: ["recurring"] });
-    check((await supabase.from("commitments").update({ next_due: nextAfter(c.nextDue, c.frequency, c.intervalDays) }).eq("id", c.id)).error);
+    const incoming = c.direction === "in";
+    await save({ title: c.name, merchant: c.name, category: c.category || (incoming ? "Other income" : "Miscellaneous"), scope: "personal", memberId: null, amount, currency: "INR",
+      paymentMethod: "bank_transfer", date: today(), description: `${incoming ? "Received" : "Paid"}: ${c.name}`,
+      txnType: incoming ? "income" : "expense", accountId: accountId ?? c.accountId, tags: c.frequency === "once" ? [] : ["Nature: Recurring"] }, { noRefresh: true });
+    const next = nextAfter(c.nextDue, c.frequency, c.intervalDays);
+    check((await supabase.from("commitments").update(c.frequency === "once" ? { status: "completed" } : { next_due: next }).eq("id", c.id)).error);
     await refresh();
   };
   const saveLoan: Ctx["saveLoan"] = async (x) => {
     if (!x.name.trim()) throw new Error("Name the loan");
-    pos(x.principal, "Outstanding amount"); pos(x.emi, "EMI");
-    if (!(x.rate >= 0)) throw new Error("Enter the interest rate");
-    const row = { owner_id: userId, name: x.name.trim(), principal_outstanding: x.principal, annual_rate: x.rate, emi: x.emi, next_due: x.nextDue };
-    check((x.id ? await supabase.from("loans").update(row).eq("id", x.id) : await supabase.from("loans").insert(row)).error);
+    pos(x.emi, "EMI");
+    if (!(x.rate >= 0 && x.rate <= 60)) throw new Error("Interest rate must be 0–60%");
+    if (!(x.foreclosurePct >= 0 && x.foreclosurePct <= 20)) throw new Error("Foreclosure charge must be 0–20%");
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(x.nextDue)) throw new Error("Pick the next EMI date");
+    const row = { name: x.name.trim(), annual_rate: x.rate, emi: x.emi, next_due: x.nextDue, provider: x.provider.trim(), loan_type: x.loanType,
+      start_date: x.startDate || null, prepayment_terms: x.prepaymentTerms.trim(), foreclosure_pct: x.foreclosurePct, original_principal: x.original ?? null };
+    if (x.id) {
+      const existing = rawLoans.find((l) => l.id === x.id);
+      check((await supabase.from("loans").update(row).eq("id", x.id)).error);
+      if (existing?.accountId && existing.loanType !== "credit_card_emi") await supabase.from("accounts").update({ name: x.name.trim() }).eq("id", existing.accountId);
+    } else {
+      pos(x.principal, "Outstanding amount");
+      const acc = await supabase.from("accounts").insert({ owner_id: userId, name: x.name.trim(), kind: x.loanType === "borrowing" ? "other_liability" : "loan", opening_balance: x.principal, issuer: x.provider.trim(), interest_rate: x.rate }).select("id").single();
+      check(acc.error);
+      check((await supabase.from("loans").insert({ ...row, owner_id: userId, principal_outstanding: x.principal, original_principal: x.original ?? x.principal, account_id: acc.data!.id })).error);
+    }
     await refresh();
   };
-  const removeLoan: Ctx["removeLoan"] = async (id) => { check((await supabase.from("loans").delete().eq("id", id)).error); await refresh(); };
+  const removeLoan: Ctx["removeLoan"] = async (id) => {
+    const l = rawLoans.find((x) => x.id === id);
+    check((await supabase.from("loans").delete().eq("id", id)).error);
+    if (l?.accountId && l.loanType !== "credit_card_emi") await supabase.from("accounts").update({ archived: true }).eq("id", l.accountId);
+    await refresh();
+  };
+  const recordLoanPayment: Ctx["recordLoanPayment"] = async (l, p) => {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(p.date)) throw new Error("Pick the payment date");
+    await ensureCategory(CHARGES_CATEGORY);
+    let principal: number, interest: number;
+    if (l.loanType === "credit_card_emi") {
+      const inst = nextEmiInstalment({ id: l.id, name: l.name, accountId: l.accountId, sourceTransactionId: l.sourceTransactionId, original: l.original, startDate: l.startDate ?? p.date, emi: l.emi, rate: l.rate, payments: l.payments }, p.date);
+      if (!inst) throw new Error("This EMI is already fully billed");
+      principal = p.principal ?? inst.principal; interest = p.interest ?? inst.interest;
+      if (interest > 0) await save({ title: `${l.name} — EMI interest`, merchant: l.provider || null, category: CHARGES_CATEGORY, scope: "personal", memberId: null, amount: interest, currency: "INR",
+        paymentMethod: "credit_card", date: p.date, description: `EMI instalment billed: principal ₹${principal}, interest ₹${interest}`, txnType: "expense", accountId: l.accountId, tags: ["EMI interest"] }, { noRefresh: true });
+    } else {
+      if (!p.fromAccountId) throw new Error("Choose the account the EMI was paid from");
+      if (!l.accountId) throw new Error("This loan has no linked account");
+      const split = emiSplit(l.principal, l.rate, l.emi);
+      principal = p.principal ?? split.principal; interest = p.interest ?? split.interest;
+      if (principal < 0 || interest < 0 || principal + interest <= 0) throw new Error("Enter the principal and interest paid");
+      if (principal > 0) await save({ title: `${l.name} — principal`, merchant: l.provider || null, category: "Loan repayment", scope: "personal", memberId: null, amount: principal, currency: "INR",
+        paymentMethod: "bank_transfer", date: p.date, description: "EMI principal repayment", txnType: "transfer", accountId: p.fromAccountId, toAccountId: l.accountId, tags: ["Loan principal"] }, { noRefresh: true });
+      if (interest > 0) await save({ title: `${l.name} — interest`, merchant: l.provider || null, category: CHARGES_CATEGORY, scope: "personal", memberId: null, amount: interest, currency: "INR",
+        paymentMethod: "bank_transfer", date: p.date, description: "EMI interest", txnType: "expense", accountId: p.fromAccountId, tags: ["Loan interest"] }, { noRefresh: true });
+    }
+    const payments = [...l.payments, { date: p.date, principal: r2(principal), interest: r2(interest), total: r2(principal + interest) }];
+    const left = Math.max(0, r2(l.principal - principal));
+    check((await supabase.from("loans").update({ payments: payments as unknown as Json, principal_outstanding: left, next_due: addMonths(l.nextDue, 1), status: left <= 0.01 ? "closed" : "active" }).eq("id", l.id)).error);
+    await refresh();
+  };
+  const convertToEmi: Ctx["convertToEmi"] = async (e, o) => {
+    const card = accounts.find((a) => a.id === e.accountId);
+    if (!card || card.kind !== "credit_card") throw new Error("Only purchases on a credit card can be converted to EMI");
+    if ((e.txnType ?? "expense") !== "expense") throw new Error("Only purchases can be converted to EMI");
+    if (rawLoans.some((l) => l.sourceTransactionId === e.id)) throw new Error("This purchase is already on EMI");
+    if (!(o.months >= 2 && o.months <= 60)) throw new Error("Choose 2–60 months");
+    if (!(o.rate >= 0 && o.rate <= 60)) throw new Error("Interest rate must be 0–60%");
+    if (!(o.fee >= 0)) throw new Error("Processing fee can't be negative");
+    const start = today();
+    const next = card.statementDay ? statementShift(lastStatementDate(start, card.statementDay), card.statementDay, 1) : addMonths(start, 1);
+    check((await supabase.from("loans").insert({ owner_id: userId, name: `${e.title} EMI`, provider: card.issuer || card.name, loan_type: "credit_card_emi", principal_outstanding: e.amount,
+      original_principal: e.amount, annual_rate: o.rate, emi: emiFor(e.amount, o.rate, o.months), next_due: next, start_date: start, account_id: card.id, source_transaction_id: e.id,
+      prepayment_terms: `${o.months}-month card EMI` })).error);
+    if (o.fee > 0) {
+      await ensureCategory(CHARGES_CATEGORY);
+      await save({ title: `${e.title} — EMI processing fee`, merchant: card.issuer || null, category: CHARGES_CATEGORY, scope: e.scope, memberId: null, amount: o.fee, currency: "INR",
+        paymentMethod: "credit_card", date: start, description: "Card EMI processing fee", txnType: "expense", accountId: card.id, tags: ["Card charges"] }, { noRefresh: true });
+    }
+    await refresh();
+  };
   const saveGoal: Ctx["saveGoal"] = async (x) => {
     if (!x.name.trim()) throw new Error("Name the goal");
     pos(x.target, "Target");
@@ -238,12 +460,58 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
     await refresh();
   };
   const removeGoal: Ctx["removeGoal"] = async (id) => { check((await supabase.from("goals").delete().eq("id", id)).error); await refresh(); };
-  const updateAccount: Ctx["updateAccount"] = async (id, p) => {
-    const row: { credit_limit?: number | null; due_day?: number | null; min_balance?: number } = {};
-    if (p.creditLimit !== undefined) row.credit_limit = p.creditLimit;
-    if (p.dueDay !== undefined) { if (p.dueDay !== null && !(p.dueDay >= 1 && p.dueDay <= 31)) throw new Error("Due day must be 1–31"); row.due_day = p.dueDay; }
-    if (p.minBalance !== undefined) row.min_balance = p.minBalance;
-    check((await supabase.from("accounts").update(row).eq("id", id)).error);
+  const addValuation: Ctx["addValuation"] = async (v) => {
+    if (!(v.value >= 0)) throw new Error("Value can't be negative");
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(v.valuedOn)) throw new Error("Pick the valuation date");
+    if (v.valuedOn > today()) throw new Error("Valuation date can't be in the future");
+    check((await supabase.from("asset_valuations").insert({ owner_id: userId, account_id: v.accountId, value: v.value, valued_on: v.valuedOn, source: v.source.slice(0, 80) || "manual", note: (v.note ?? "").slice(0, 300) })).error);
+    await refresh();
+  };
+  const removeValuation: Ctx["removeValuation"] = async (id) => { check((await supabase.from("asset_valuations").delete().eq("id", id)).error); await refresh(); };
+  const addDocument: Ctx["addDocument"] = async (file, meta) => {
+    validateDocument({ title: meta.title, size: file.size, docType: meta.docType, amount: meta.amount });
+    const path = `${userId}/docs/${crypto.randomUUID()}-${safeName(file.name)}`;
+    const up = await supabase.storage.from("receipts").upload(path, file, { contentType: file.type || "application/octet-stream" });
+    if (up.error) throw new Error(`Couldn't upload ${file.name}`);
+    const { error } = await supabase.from("documents").insert({
+      owner_id: userId, title: meta.title.trim(), doc_type: meta.docType, file_path: path, file_name: file.name.slice(0, 200), mime_type: file.type, size_bytes: file.size,
+      doc_date: meta.docDate || null, amount: meta.amount, currency: meta.currency, merchant: meta.merchant?.trim() || null, notes: meta.notes.slice(0, 2000), extracted_text: (meta.text ?? "").slice(0, 20000),
+      transaction_id: meta.transactionId, account_id: meta.accountId, loan_id: meta.loanId, expires_on: meta.expiresOn || null,
+    });
+    if (error) { await supabase.storage.from("receipts").remove([path]); throw new Error(error.message); }
+    await refresh();
+  };
+  const updateDocument: Ctx["updateDocument"] = async (id, m) => {
+    const row: Record<string, unknown> = {};
+    if (m.title !== undefined) { if (!m.title.trim()) throw new Error("Give the document a title"); row["title"] = m.title.trim(); }
+    if (m.docType !== undefined) row["doc_type"] = m.docType;
+    if (m.docDate !== undefined) row["doc_date"] = m.docDate || null;
+    if (m.amount !== undefined) row["amount"] = m.amount;
+    if (m.currency !== undefined) row["currency"] = m.currency;
+    if (m.merchant !== undefined) row["merchant"] = m.merchant?.trim() || null;
+    if (m.notes !== undefined) row["notes"] = m.notes.slice(0, 2000);
+    if (m.transactionId !== undefined) row["transaction_id"] = m.transactionId;
+    if (m.accountId !== undefined) row["account_id"] = m.accountId;
+    if (m.loanId !== undefined) row["loan_id"] = m.loanId;
+    if (m.expiresOn !== undefined) row["expires_on"] = m.expiresOn || null;
+    check((await supabase.from("documents").update(row).eq("id", id)).error);
+    await refresh();
+  };
+  const removeDocument: Ctx["removeDocument"] = async (d) => {
+    check((await supabase.from("documents").delete().eq("id", d.id)).error);
+    await supabase.storage.from("receipts").remove([d.filePath]);
+    await refresh();
+  };
+  const history: Ctx["history"] = useCallback(async (id) => {
+    const { data, error } = await supabase.from("transaction_audit").select("*").eq("transaction_id", id).order("created_at", { ascending: false }).limit(50);
+    if (error) throw new Error(error.message);
+    return (data ?? []).map((x) => ({ id: x.id, action: x.action as AuditEntry["action"], changes: (x.changes as Record<string, unknown>) ?? {}, summary: x.summary, createdAt: x.created_at }));
+  }, []);
+  const deleteAll: Ctx["deleteAll"] = async () => {
+    const paths = [...expenses.flatMap((e) => e.receipts.map((r) => r.path)), ...documents.map((d) => d.filePath)];
+    for (let k = 0; k < paths.length; k += 100) await supabase.storage.from("receipts").remove(paths.slice(k, k + 100));
+    check((await supabase.rpc("delete_my_finance_data")).error);
+    await clearOfflineOwner(userId);
     await refresh();
   };
   const signedUrl = useCallback(async (path: string) => {
@@ -252,7 +520,13 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
   }, []);
 
   return (
-    <StoreCtx.Provider value={{ pendingCount, preferences, savePreferences, moveCategory, userId, name, members, memberName, expenses: expenses.filter((x) => (x.txnType ?? "expense") === "expense"), transactions: expenses, accounts, addAccount, setArchived, commitments, loans, goals, saveCommitment, removeCommitment, confirmCommitment, saveLoan, removeLoan, saveGoal, removeGoal, updateAccount, budgets, loading, refresh, save, remove, setScope, reconcile, addMember, removeMember, setBudget, signedUrl }}>
+    <StoreCtx.Provider value={{
+      pendingCount, preferences, savePreferences, ensureCategory, moveCategory, userId, name, updateName, members, memberName,
+      expenses: expenses.filter((x) => (x.txnType ?? "expense") === "expense"), transactions: expenses, accounts, addAccount, setArchived, adjustBalance,
+      commitments, loans, goals, valuations, documents, saveCommitment, removeCommitment, confirmCommitment, saveLoan, removeLoan, recordLoanPayment, convertToEmi,
+      saveGoal, removeGoal, updateAccount, addValuation, removeValuation, addDocument, updateDocument, removeDocument, history, setReimbursement, recordReimbursement, deleteAll,
+      budgets, loading, refresh, save, remove, setScope, reconcile, addMember, removeMember, setBudget, signedUrl,
+    }}>
       {children}
     </StoreCtx.Provider>
   );
