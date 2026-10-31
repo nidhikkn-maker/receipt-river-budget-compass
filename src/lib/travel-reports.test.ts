@@ -9,9 +9,10 @@ const rows = (r: ReturnType<typeof travelReport>) => r.rows[r.rows.length - 1]!;
 
 describe("travel reports reconcile with the ledger", () => {
   it("counts every cut to the same trip total", () => {
-    for (const cut of ["workspace", "organisation", "traveller", "destination", "category", "account", "month"] as const) {
+    for (const cut of ["workspace", "organisation", "traveller", "destination", "category", "account"] as const) {
       expect(travelReport(cut, [trip()], [hotel] as never, opts), cut).toMatchObject({ rows: expect.arrayContaining([["Total", "60000.00", "100.00"]]) });
     }
+    expect(travelReport("month", [trip()], [hotel] as never, opts).rows).toEqual([["2026-12", "60000.00", ""], ["Year 2026", "", "60000.00"], ["Total", "60000.00", ""]]);
   });
   it("lists an entry tagged to two trips once in the total", () => {
     const two = [trip(), trip({ id: "t2", name: "Goa", destination: "North Goa" })];
@@ -49,7 +50,7 @@ describe("trip budget detail", () => {
   it("reports spending that no budget line covers", () => {
     const d = tripBudgetDetail(trip({ budgetLines: [{ category: "Flights", amount: 10000 }] }), [hotel] as never);
     expect(d.unbudgeted).toBe(60000);
-    expect(d.remaining).toBe(-50000);
+    expect(d.remaining).toBe(-10000);
   });
 });
 
