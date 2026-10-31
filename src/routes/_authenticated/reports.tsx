@@ -68,6 +68,16 @@ function Reports() {
   const merchants=spendBy(list,e=>e.merchant||e.title,10);const byAccount=spendBy(list,e=>accounts.find(a=>a.id===e.accountId)?.name??"Unassigned",10);
   const subtitle = `${member === "all" ? "Everyone" : memberName(member === "me" ? null : member)} · ${from || "start"} to ${to || "today"} · ${department === "all" ? "All departments" : department === "unassigned" ? "Unassigned department" : department} · ${status === "all" ? "Any status" : status === "none" ? "Not tracked" : REIMB_STAGE_LABEL[status as keyof typeof REIMB_STAGE_LABEL] ?? status} · amounts in INR · generated ${stamp}`;
 
+  const departmentSummary = (() => {
+    const exps = filtered.filter(e => (e.txnType ?? "expense") === "expense");
+    const names = [...new Set([...exps.map(e => e.department?.trim() || "Unassigned"), ...Object.keys(departmentBudgets)])].sort();
+    return names.map(name => {
+      const entries = exps.filter(e => (e.department?.trim() || "Unassigned") === name && e.date.startsWith(budgetMonth));
+      const spent = Math.round(entries.reduce((s, e) => s + e.amount * 100, 0)) / 100;
+      const limit = departmentBudgets[name];
+      return { name, spent, limit, remaining: limit === undefined ? 0 : Math.round((limit - spent) * 100) / 100, pct: limit && limit > 0 ? Math.round(spent / limit * 1000) / 10 : 0 };
+    });
+  })();
   const report = (k: ReportKind) => buildReport(k, filtered, memberName, budgets, { departmentBudgets, budgetMonth, claims: transactions, accountName: id => accounts.find(a => a.id === id)?.name ?? "Unassigned" });
   const csv = (k: ReportKind) => void deliverFile(new Blob(["\uFEFF", toCsv(report(k))], { type: "text/csv;charset=utf-8" }), `ledgerline-${k}-${stamp}.csv`).catch(() => toast.error("Couldn't download the CSV"));
   const pdf = async (k: ReportKind) => {
