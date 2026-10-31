@@ -110,6 +110,10 @@ function NewExpense() {
   const [autoFilled, setAutoFilled] = useState<Set<string>>(new Set());
   const [fx, setFx] = useState<{ rate: number; date: string } | { error: string } | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+  const reviewRef = useRef<HTMLElement>(null);
+  useEffect(() => {
+    if (!reading && (readingError || (scan && !confirmed))) reviewRef.current?.scrollIntoView({ block: "center", behavior: "instant" });
+  }, [reading, readingError, scan !== null, confirmed]);
   const parseSpoken = useServerFn(parseSpokenEntry);
   const [listening, setListening] = useState(false);
   const [spoken, setSpoken] = useState("");
@@ -366,7 +370,7 @@ function NewExpense() {
           )}
           {receipts.length > 0 && !editing && fromInbox.length === 0 && <Button type="button" disabled={reading || saving} variant="outline" size="sm" onClick={() => void saveForLater()}><Inbox className="mr-1 h-4 w-4" />Save receipts to add later</Button>}
 
-          {readingError && !reading && <section role="alert" className="space-y-3 rounded-lg border border-destructive/40 bg-card p-4">
+          {readingError && !reading && <section ref={reviewRef} role="alert" className="space-y-3 rounded-lg border border-destructive/40 bg-card p-4">
             <h2 className="font-display font-bold">Receipt reading failed</h2>
             <p className="break-words text-sm text-muted-foreground">{readingError}</p>
             <p className="text-sm">Your receipt is still attached. No expense has been submitted.</p>
@@ -385,7 +389,7 @@ function NewExpense() {
           {batch && duplicates.length === 0 && <Button type="button" variant="ghost" size="sm" disabled={reading || saving} onClick={() => void advanceQueue()}>Skip this bill</Button>}
 
           {scan && !reading && !confirmed && (
-            <div className="space-y-3 rounded-3xl border-2 border-primary bg-card p-4 shadow-float" role="group" aria-label="Review scanned details">
+            <section ref={reviewRef} className="space-y-3 rounded-3xl border-2 border-primary bg-card p-4 shadow-float" role="group" aria-label="Review scanned details">
               <div>
                 <div className="font-display font-bold">Check what we read</div>
                 <p className="text-xs text-muted-foreground">Fix anything that's off, then confirm.</p>
@@ -408,7 +412,7 @@ function NewExpense() {
                 <Button type="button" variant="ghost" size="sm" onClick={() => { setScan(null); setConfirmed(true); }}>Enter manually</Button>
                 <Button type="button" size="sm" onClick={confirmScan}>Confirm details</Button>
               </div>
-            </div>
+            </section>
           )}
         </div>
 
