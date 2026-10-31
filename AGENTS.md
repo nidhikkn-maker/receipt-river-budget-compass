@@ -36,3 +36,4 @@
 - Category splits live in expenses.allocations and all category reporting goes through categoryTotals/categoryParts so a split transaction is counted once.
 - Category allocation totals are validated on database writes; partial and full claim receipts and yearly-bill confirmation use finance_operation so retries cannot leave ledger and tracker records out of sync.
 - External assistants connect through the app's MCP server (src/lib/mcp/, OAuth via managed auth, consent at /.lovable/oauth/consent); tools are read-only and query with the caller's token so RLS limits them to the user's own records, and writes stay in the app so currency conversion remains server-side.
+- Department limits are readable only within the caller's department or by verified Finance users; role records are self-readable only, with permission checks handled by the protected database helper.

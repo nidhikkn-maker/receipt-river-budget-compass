@@ -120,6 +120,13 @@
       "when": 1793434582930,
       "tag": "0016_bulk_category_history_undo",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1793435080372,
+      "tag": "0017_restrict_budget_and_role_reads",
+      "breakpoints": true
     }
   ]
 }

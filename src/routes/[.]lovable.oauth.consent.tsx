@@ -23,7 +23,8 @@ export const Route = createFileRoute("/.lovable/oauth/consent")({
     if (!data.session || data.session.user.is_anonymous) throw redirect({ to: "/auth", search: { next: location.pathname + location.searchStr } });
   },
   loader: async ({ location }) => {
-    const id = new URLSearchParams(location.search).get("authorization_id")!;
+    const id = new URLSearchParams(location.search).get("authorization_id");
+    if (!id) throw new Error("This connection link is missing its authorization code.");
     const { data, error } = await oauth.getAuthorizationDetails(id);
     if (error) throw new Error(error.message);
     const immediate = data?.redirect_url ?? data?.redirect_to;

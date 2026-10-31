@@ -8,10 +8,10 @@ import upcomingPayments from "./tools/upcoming-payments";
 const projectRef = import.meta.env["VITE_SUPABASE_PROJECT_ID"] ?? "project-ref-unset";
 
 export default defineMcp({
-  name: "team-expense-flow",
-  title: "Team Expense Flow",
+  name: "receipt-river-budget-compass",
+  title: "Receipt River Budget Compass",
   version: "0.1.0",
   instructions: "Read-only access to the signed-in user's personal finance records: transactions, monthly spending by category, account balances and upcoming payments. Amounts are INR.",
-  auth: auth.oauth.issuer({ issuer: `https://${projectRef}.supabase.co/auth/v1`, acceptedAudiences: "authenticated" }),
+  auth: auth.oauth.issuer({ issuer: `https://${projectRef}.supabase.co/auth/v1`, acceptedAudiences: "authenticated", requireOAuthClientClaim: true }),
   tools: [listTransactions, spendingSummary, listAccounts, upcomingPayments],
 });
