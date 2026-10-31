@@ -1,4 +1,6 @@
 import type { PaymentInstrument } from "./payment-instruments";
+import type { AllocationPlan } from "./allocation";
+import type { FinanceRule } from "./rules-engine";
 import { CATEGORIES, memberShares, type Expense } from "./expenses";
 import { defaultEmergency, type BriefSettings, type EmergencySettings, type MerchantAliases, type Milestone, type Trip, type WeeklyBrief } from "./intelligence";
 
@@ -54,6 +56,12 @@ export interface FinancePreferences {
   briefs: { id: string; generatedAt: string; data: WeeklyBrief }[];
   /** Saved payment methods (UPI IDs, cards, wallets…), each linked to an account. */
   paymentInstruments: PaymentInstrument[];
+  /** Saved income allocation plans (internal plans — they never move money). */
+  allocationPlans: AllocationPlan[];
+  /** Financial monitoring rules (templates + custom). */
+  rules: FinanceRule[];
+  /** Rule-alert keys the user dismissed (ruleId + message hash). */
+  ruleDismissed: string[];
 }
 
 export const DEFAULT_TAGS: GroupedTag[] = [
