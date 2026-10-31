@@ -288,7 +288,8 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
     check(error); return data;
   };
   const recordReimbursement: Ctx["recordReimbursement"] = async (ids, accountId, date) => {
-    await operation("reimbursement", { ids, accountId, date, operationId: [...ids].sort().join(":") });
+    const unique=[...new Set(ids)].sort();
+    await operation("reimbursement", { ids:unique, accountId, date, operationId: unique.join(":") });
     await refresh();
   };
   const reconcile: Ctx["reconcile"] = async (id, ref) => {

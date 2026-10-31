@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { normalizePreferences, LANGUAGES, type FinancePreferences } from "./preferences";
 
 async function provider() {
   const apiKey = process.env["LOVABLE_API_KEY"];
@@ -26,7 +27,7 @@ const AskInput = z.object({
 
 const SYSTEM = `You are Ledgerline's personal finance assistant for an Indian user (amounts in ₹ INR).
 You receive FACTS computed by the app's financial engine. Rules:
-- Use ONLY numbers present in FACTS. Never invent, estimate or do new arithmetic beyond simple comparison/subtraction of two FACTS numbers (show it).
+- Use ONLY numbers present in FACTS. Never invent, estimate or do arithmetic; comparisons are allowed but all computed figures must already be in FACTS.
 - Label figures: "Actual" (recorded), "Estimated" (forecast/safe-to-spend), "Hypothetical" (what-if).
 - If the needed data is missing, say exactly what is missing and how to add it in the app (Wealth tab for accounts/loans/goals, Plan for recurring income & bills, Add for transactions).
 - For "can I afford X": compare X with estimated.safeToSpend and mention the lowest projected balance date.
@@ -39,14 +40,18 @@ export const askAssistant = createServerFn({ method: "POST" })
     if (JSON.stringify(v.facts).length > 60_000) throw new Error("Too much data");
     return v;
   })
-  .handler(async ({ data }): Promise<{ ok: true; text: string } | { ok: false; error: string }> => {
+  .handler(async ({ data, context }): Promise<{ ok: true; text: string } | { ok: false; error: string }> => {
+    const prefs = await context.supabase.from("finance_preferences").select("data").eq("owner_id",context.userId).maybeSingle();
+    if(prefs.error) return {ok:false,error:"Couldn't read your AI privacy settings."};
+    const settings=normalizePreferences(prefs.data?.data as Partial<FinancePreferences>|null);
+    if(!settings.aiEnabled) return {ok:false,error:"AI assistance is turned off in Settings."};
     const p = await provider();
     if (!p) return { ok: false, error: "The assistant is not configured." };
     const { streamText } = await import("ai");
     try {
       const result = streamText({
         model: p.responses("openai/gpt-6-astra"),
-        system: `${SYSTEM}\n\nFACTS (JSON):\n${JSON.stringify(data.facts)}`,
+        system: `${SYSTEM}\nAnswer in ${LANGUAGES[settings.language]}.\n\nFACTS (JSON):\n${JSON.stringify(data.facts)}`,
         messages: data.messages,
         providerOptions: opts,
       });
@@ -75,7 +80,11 @@ export type SpokenEntry = z.infer<typeof Spoken>;
 export const parseSpokenEntry = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => z.object({ text: z.string().trim().min(2).max(500), today: z.string().regex(/^\d{4}-\d{2}-\d{2}$/), accounts: z.array(z.string().max(80)).max(50) }).parse(d))
-  .handler(async ({ data }): Promise<{ ok: true; result: SpokenEntry } | { ok: false; error: string }> => {
+  .handler(async ({ data, context }): Promise<{ ok: true; result: SpokenEntry } | { ok: false; error: string }> => {
+    const prefs=await context.supabase.from("finance_preferences").select("data").eq("owner_id",context.userId).maybeSingle();
+    if(prefs.error)return {ok:false,error:"Couldn't read your AI privacy settings."};
+    const settings=normalizePreferences(prefs.data?.data as Partial<FinancePreferences>|null);
+    if(!settings.aiEnabled)return {ok:false,error:"AI assistance is turned off in Settings."};
     const p = await provider();
     if (!p) return { ok: false, error: "Voice entry is not configured." };
     const { streamText, Output } = await import("ai");
