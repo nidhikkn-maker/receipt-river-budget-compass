@@ -75,6 +75,11 @@ export interface Expense {
   allocations?: Allocation[];
   workspaceAllocations?: import("./workspaces").WorkspaceShare[];
   reimbursement?: import("./reimbursements").ReimbursementInfo;
+  /** Advances/settlements: the trip they belong to (no tag needed). */
+  tripId?: string | null;
+  /** Loan repayments: principal and interest parts; both set or both empty. */
+  principal?: number | null;
+  interest?: number | null;
 }
 
 export interface Allocation { category: string; amount: number; tags?: string[]; memberId?: string | null; note?: string }
@@ -139,6 +144,9 @@ export interface ExpenseInput {
   reimbursementStatus?: ReimbursementStatus;
   adjustmentSign?: 1 | -1;
   workspaceAllocations?: import("./workspaces").WorkspaceShare[];
+  tripId?: string | null;
+  principal?: number | null;
+  interest?: number | null;
 }
 
 export function validateExpense(s: ExpenseInput) {
