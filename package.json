@@ -113,5 +113,8 @@
     "typescript-eslint": "^8.56.1",
     "vite": "8.1.5",
     "vitest": "^4.1.10"
+  },
+  "patchedDependencies": {
+    "tsyringe@4.10.0": "patches/tsyringe@4.10.0.patch"
   }
 }
