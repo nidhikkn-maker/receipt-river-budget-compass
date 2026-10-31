@@ -126,3 +126,17 @@
 - [x] Edit links on money map (record links + own links with reasons)
 - [x] Connection reasons + key details on selection
 - [x] Money map filters
+- [x] Drag and save positions on money map
+
+## Version 4.0 — Unified Expense & Travel (spec: .lovable/requirements-v4.md)
+### Priority 1 — Unified financial foundation
+- [ ] Universal entry: one form, all 11 transaction types, progressive fields, opened from every module with context
+- [ ] Workspaces Personal/Family/Business/Official + organisation; suggestions with confidence, override, learning
+- [ ] Multi-workspace allocation (fixed/%/equal/custom, sums to total, charged once); payment ownership + auto claim
+- [ ] Automated categorisation incl. travel categories
+### Priority 2 — Travel operations
+- [ ] Travel Manager: trips (types, mixed), travellers, bookings, itinerary, travel documents
+### Priority 3 — Travel financial integration
+- [ ] Trip budgets (actual vs committed), booking-to-transaction linking, travel reports, multi-currency, reimbursements, advances/settlement
+### Priority 4 — Intelligence and completion
+- [ ] Trip auto-association, AI travel analysis, reconciliation suggestions, trip closure, advanced reports, acceptance tests (17 criteria)
