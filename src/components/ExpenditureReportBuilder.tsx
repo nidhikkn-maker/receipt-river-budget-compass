@@ -36,6 +36,9 @@ export function ExpenditureReportBuilder({ mode, search }: { mode: "statement" |
   const [claimant, setClaimant] = useState<Claimant>({ name: "", employeeId: "", department: "", designation: "", approver: "", bankDetails: "", email: "" });
   useEffect(() => { try { const v = localStorage.getItem("ledgerline:claimant"); if (v) setClaimant((c) => ({ ...c, ...JSON.parse(v) })); } catch { /* ignore */ } }, []);
   const setC = (k: keyof Claimant, v: string) => setClaimant((c) => { const n = { ...c, [k]: v }; try { localStorage.setItem("ledgerline:claimant", JSON.stringify(n)); } catch { /* ignore */ } return n; });
+  const [claimFormat, setClaimFormat] = useState<"detailed" | "summary">("detailed");
+  useEffect(() => { try { if (localStorage.getItem("ledgerline:claim-format") === "summary") setClaimFormat("summary"); } catch { /* ignore */ } }, []);
+  const pickFormat = (f: "detailed" | "summary") => { setClaimFormat(f); try { localStorage.setItem("ledgerline:claim-format", f); } catch { /* ignore */ } };
   const store = useStore();
   const trips = (store.preferences.trips ?? []) as TravelTrip[];
   const instruments = store.preferences.paymentInstruments ?? [];
@@ -84,7 +87,7 @@ export function ExpenditureReportBuilder({ mode, search }: { mode: "statement" |
       const { renderStatementPdf } = await import("@/lib/expenditure-pdf");
       const { renderClaimPdf } = await import("@/lib/claim-pdf");
       setStage(3);
-      const { blob, missing } = claim ? await renderClaimPdf(claim, files) : await renderStatementPdf(st, files);
+      const { blob, missing } = claim ? await renderClaimPdf(claim, files, claimFormat) : await renderStatementPdf(st, files);
       if (cancelled.current) return;
       const name = `ledgerline-${claim ? "claim" : "expenditure"}-${subjectName.replace(/[^a-z0-9]+/gi, "-").toLowerCase()}-${claim ? claim.reference : reference}.pdf`;
       setResult({ blob, url: URL.createObjectURL(blob), name, missing });
@@ -114,6 +117,16 @@ export function ExpenditureReportBuilder({ mode, search }: { mode: "statement" |
             ))}
           </div>
           <label className="block text-xs">Pay reimbursement to (optional, e.g. bank name and last 4 digits)<input className={cn(sel, "mt-1")} value={claimant.bankDetails} onChange={(e) => setC("bankDetails", e.target.value)} /></label>
+          <div className="space-y-1 text-xs">
+            <p className="font-semibold">Format <span className="font-normal text-muted-foreground">(remembered)</span></p>
+            <div className="grid grid-cols-2 gap-2" role="radiogroup" aria-label="Claim format">
+              {([["detailed", "Detailed + Bills", "Every claimed item listed"], ["summary", "Summary + Bills", "Totals by category, shorter"]] as const).map(([v, l, d]) => (
+                <button key={v} type="button" role="radio" aria-checked={claimFormat === v} onClick={() => pickFormat(v)} className={cn("rounded-md border p-2 text-left", claimFormat === v ? "border-primary bg-primary/10" : "border-input")}>
+                  <span className="block font-medium">{l}</span><span className="text-muted-foreground">{d}</span>
+                </button>
+              ))}
+            </div>
+          </div>
           <p className="text-xs text-muted-foreground">Only expenses you paid personally, marked for reimbursement and still outstanding are claimed. Making this PDF doesn't change any claim status.</p>
         </section>
       )}
