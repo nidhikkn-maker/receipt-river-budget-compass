@@ -1,3 +1,4 @@
+import { useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Download, Eye, FileText, Paperclip, Share2 } from "lucide-react";
@@ -40,6 +41,7 @@ export function ExpenditureReportBuilder({ mode, search }: { mode: "statement" |
   useEffect(() => { try { if (localStorage.getItem("ledgerline:claim-format") === "summary") setClaimFormat("summary"); } catch { /* ignore */ } }, []);
   const pickFormat = (f: "detailed" | "summary") => { setClaimFormat(f); try { localStorage.setItem("ledgerline:claim-format", f); } catch { /* ignore */ } };
   const store = useStore();
+  const navigate = useNavigate();
   const trips = (store.preferences.trips ?? []) as TravelTrip[];
   const instruments = store.preferences.paymentInstruments ?? [];
   const groupTags = useMemo(() => [...new Set(store.transactions.flatMap((e) => e.tags ?? []).filter((t) => GROUP_TAG.test(t) && !t.startsWith("Trip: ")))].sort(), [store.transactions]);
@@ -99,7 +101,7 @@ export function ExpenditureReportBuilder({ mode, search }: { mode: "statement" |
         if (error) await supabase.storage.from("receipts").remove([path]);
         if (error) toast.error("The PDF is ready, but it couldn't be saved to report history.");
       } else toast.error("The PDF is ready, but it couldn't be saved to report history.");
-      setStage(-1); toast.success("Statement ready");
+      setStage(-1); toast.success(claim ? "Claim PDF ready" : "Statement ready", { description: "Saved in Reports Centre history.", action: { label: "Open", onClick: () => void navigate({ to: "/report-centre" }) } });
     } catch (e) { setFailed(true); toast.error(e instanceof Error ? e.message : "Couldn't prepare the statement"); }
   }
   const busy = stage >= 0 && !failed;
@@ -180,7 +182,7 @@ export function ExpenditureReportBuilder({ mode, search }: { mode: "statement" |
 
       <Button className="w-full" onClick={generate} disabled={busy || !included.length}><FileText className="mr-1 h-4 w-4" />{claimMode ? "Generate claim PDF" : "Generate statement PDF"}</Button>
       <p className="text-xs text-muted-foreground">Prepared on this device — keep this page open until it's ready.</p>
-      {stage >= 0 && <ProcessingPanel title={failed ? "Statement not finished" : "Preparing your statement… keep this page open"} stages={stagesAt(STAGES, stage, failed)} {...(busy ? { onCancel: () => { cancelled.current = true; setStage(-1); } } : {})} />}
+      {stage >= 0 && <ProcessingPanel title={failed ? "Statement not finished" : "Preparing your statement… you can keep using the app; we'll tell you when it's ready"} stages={stagesAt(STAGES, stage, failed)} {...(busy ? { onCancel: () => { cancelled.current = true; setStage(-1); } } : {})} />}
 
       {result && (
         <section className="space-y-3 rounded-xl border bg-card p-4">
