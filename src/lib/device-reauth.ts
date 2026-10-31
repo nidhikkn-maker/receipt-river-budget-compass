@@ -7,8 +7,8 @@ export async function verifyDevicePassword(ownerId: string, password: string): P
   if (error || current.user?.id !== ownerId || !current.user.email || current.user.is_anonymous) {
     throw new Error("Sign out and sign in to your account to continue.");
   }
-  const url = import.meta.env.VITE_SUPABASE_URL;
-  const key = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+  const url = import.meta.env['VITE_SUPABASE_URL'];
+  const key = import.meta.env['VITE_SUPABASE_PUBLISHABLE_KEY'];
   if (!url || !key) throw new Error("Sign-in is unavailable. Please try again when connected.");
   const verifier = createClient(url, key, {
     auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false, storageKey: "ledgerline-device-verification" },
