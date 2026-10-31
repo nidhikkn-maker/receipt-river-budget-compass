@@ -10,6 +10,7 @@ import {
 } from "@tanstack/react-router";
 import { useEffect, type ReactNode } from "react";
 
+import { registerOfflineApp } from "@/lib/pwa";
 import { supabase } from "@/integrations/supabase/client";
 import { Toaster } from "@/components/ui/sonner";
 import appCss from "../styles.css?url";
@@ -94,6 +95,8 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
       { rel: "stylesheet", href: "https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Instrument+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" },
       { rel: "icon", href: "/favicon.ico", type: "image/x-icon" },
+      { rel: "manifest", href: "/manifest.webmanifest" },
+      { rel: "apple-touch-icon", href: "/app-icon-large.png" },
     ],
   }),
   shellComponent: RootShell,
@@ -117,6 +120,7 @@ function RootShell({ children }: { children: ReactNode }) {
 }
 
 function AuthListener() {
+  useEffect(()=>{void registerOfflineApp().catch(()=>{});},[]);
   const router = useRouter();
   const { queryClient } = Route.useRouteContext();
   useEffect(() => {

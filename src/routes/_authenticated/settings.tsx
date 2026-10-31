@@ -5,6 +5,7 @@ import { Download, Trash2, Upload } from "lucide-react";
 import { PageTitle } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
+import { PasskeySettings } from "@/components/DeviceLock";
 import { FinanceSettings } from "@/components/FinanceSettings";
 import { useStore } from "@/lib/store";
 
@@ -87,6 +88,8 @@ function Settings() {
   return (
     <>
       <PageTitle eyebrow="Settings" title="Your data" sub={`${transactions.length} entries · ${accounts.length} accounts`} />
+      <div className="mb-5"><Button asChild variant="outline"><Link to="/auth">Sign in / account</Link></Button></div>
+      <PasskeySettings />
       <FinanceSettings />
       <div className="grid gap-4 sm:grid-cols-2">
         <Card title="Back up everything" body="Download one file with all accounts, entries, recurring payments, loans, goals, budgets and family. Receipt images stay in the app.">
