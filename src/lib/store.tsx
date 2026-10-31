@@ -542,7 +542,7 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
   return (
     <StoreCtx.Provider value={{
       departmentBudgets, departmentBudgetError,
-      pendingCount, setTags, preferences, savePreferences, ensureCategory, moveCategory, userId, name, updateName, members, memberName,
+      pendingCount, setTags, preferences, savePreferences, ensureCategory, moveCategory, bulkSetCategory, userId, name, updateName, members, memberName,
       expenses: expenses.filter((x) => (x.txnType ?? "expense") === "expense"), transactions: expenses, accounts, addAccount, setArchived, adjustBalance,
       commitments, loans, goals, valuations, documents, saveCommitment, confirmIrregular, removeCommitment, confirmCommitment, saveLoan, removeLoan, recordLoanPayment, convertToEmi,
       saveGoal, removeGoal, updateAccount, addValuation, removeValuation, addDocument, updateDocument, removeDocument, history, setReimbursement, recordReimbursement, deleteAll,
