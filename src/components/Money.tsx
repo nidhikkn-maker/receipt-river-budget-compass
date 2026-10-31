@@ -18,6 +18,6 @@ export function Row({ label, value, strong, tone }: { label: string; value: Reac
   );
 }
 export function Bar({ pct }: { pct: number }) {
-  return <div className="h-2 overflow-hidden rounded-full bg-muted"><div className="h-full rounded-full bg-gradient-gold" style={{ width: `${Math.max(0, Math.min(100, pct))}%` }} /></div>;
+  return <div className="h-2 overflow-hidden rounded-full bg-muted"><div className="h-full rounded-full bg-gold-hero" style={{ width: `${Math.max(0, Math.min(100, pct))}%` }} /></div>;
 }
 export const fieldCls = "h-11 w-full rounded-xl border bg-background px-3 text-sm";
