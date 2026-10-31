@@ -1,4 +1,4 @@
-import { cell as uCell, loadPdfFonts, plain, withUnicode , textU, drawTextU } from "./pdf-unicode";
+import { cell as uCell, loadPdfFonts, plain, withUnicode , textU } from "./pdf-unicode";
 // Renders a ReportDoc to an A4 PDF with jsPDF. Browser-only: import dynamically.
 import type { ReportDoc } from "./report-centre";
 

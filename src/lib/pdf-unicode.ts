@@ -63,7 +63,7 @@ export function withUnicode<T extends Record<string, any>>(doc: any, opts: T): T
 }
 
 function colorOf(doc: any): [number, number, number] {
-  try { const h = String(doc.getTextColor()); const m = /^#?([0-9a-f]{6})$/i.exec(h); if (m) { const v = parseInt(m[1], 16); return [v >> 16, (v >> 8) & 255, v & 255]; } } catch { /* default */ }
+  try { const h = String(doc.getTextColor()); const m = /^#?([0-9a-f]{6})$/i.exec(h); if (m) { const v = parseInt(m[1]!, 16); return [v >> 16, (v >> 8) & 255, v & 255]; } } catch { /* default */ }
   return [25, 25, 25];
 }
 
