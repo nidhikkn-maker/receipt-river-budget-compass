@@ -15,7 +15,7 @@ export const Route = createFileRoute("/_authenticated/payment-methods")({
   }),
   component: () => (
     <div className="mx-auto max-w-3xl">
-      <PageTitle title="Payment methods" subtitle="Your UPI IDs, cards, wallets and cash. Each one is linked to the account its money comes from." />
+      <PageTitle title="Payment methods" sub="Your UPI IDs, cards, wallets and cash. Each one is linked to the account its money comes from." />
       <div className="rounded-3xl border bg-card p-5"><PaymentMethodsManager /></div>
     </div>
   ),
