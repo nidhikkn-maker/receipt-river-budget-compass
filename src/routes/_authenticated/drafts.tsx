@@ -2,13 +2,12 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { FileText, Plus, RotateCcw, Trash2 } from "lucide-react";
-import { PageTitle } from "@/components/PageTitle";
+import { PageTitle } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { DRAFT_STATUS_LABEL, deleteDraft, draftThumb, listDrafts, pendingDrafts, type Draft } from "@/lib/drafts";
-import { money } from "@/lib/expenses";
-import { WORKSPACE_LABEL } from "@/lib/workspaces";
+import { SCOPE_LABEL, money } from "@/lib/expenses";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_authenticated/drafts")({
@@ -65,7 +64,7 @@ function DraftsPage() {
                   <Thumb d={d} />
                   <div className="min-w-0 flex-1">
                     <p className="truncate font-semibold">{x.merchant || x.title || (d.receipts.length ? "Captured receipt" : "Unfinished entry")}</p>
-                    <p className="truncate text-xs text-muted-foreground">{amt > 0 ? money(amt, x.currency || "INR") : "No amount yet"} · {new Date(d.createdAt).toLocaleDateString()}{x.scope ? ` · ${WORKSPACE_LABEL[x.scope as keyof typeof WORKSPACE_LABEL] ?? x.scope}` : ""}</p>
+                    <p className="truncate text-xs text-muted-foreground">{amt > 0 ? money(amt, x.currency || "INR") : "No amount yet"} · {new Date(d.createdAt).toLocaleDateString()}{x.scope ? ` · ${SCOPE_LABEL[x.scope as keyof typeof SCOPE_LABEL] ?? x.scope}` : ""}</p>
                     <span className={cn("mt-1 inline-block rounded-full px-2 py-0.5 text-[10px] font-bold", d.status === "failed" ? "bg-destructive/15 text-destructive" : d.status === "ready" ? "bg-primary/15 text-primary" : "bg-secondary")}>{DRAFT_STATUS_LABEL[d.status]}</span>
                     <span className="ml-1 text-[10px] text-muted-foreground">Synced to your account</span>
                   </div>
