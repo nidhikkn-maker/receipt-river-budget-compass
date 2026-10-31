@@ -31,3 +31,4 @@
 - Statement transfer matching requires a selected account and its debit/credit side; competing near-equal matches remain manual to prevent arbitrary reconciliation.
 - Excel statements use a dynamically loaded BIFF-capable SheetJS reader and real workbook fixtures so legacy XLS and XLSX share review rules.
 - Mutual fund NAVs are authenticated server-fetched daily quotes; reviewed units create dated valuation snapshots, never income or expense entries, so net worth reuses the ledger engine.
+- Mutual fund portfolio charts use pure tested rules in src/lib/portfolio.ts on owner-visible NAV snapshots; gain is change since the first saved NAV net of ledger flows, not lifetime return, because acquisition cost is not recorded.
