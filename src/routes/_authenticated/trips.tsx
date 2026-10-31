@@ -50,6 +50,7 @@ function Trips() {
   };
   const trip = pr.trips.find((t) => t.id === openId);
   const dash = useMemo(() => advanceDashboard(pr.trips as TravelTrip[], transactions, today), [pr.trips, transactions, today]);
+  const report = useMemo(() => travelReport(cut, pr.trips as TravelTrip[], transactions, { memberName, accountName: (id) => accounts.find((a) => a.id === id)?.name ?? "Unassigned" }), [cut, pr.trips, transactions, memberName, accounts]);
   const [dashFilter, setDashFilter] = useState<"all" | "open" | "overdue">("all");
   const dashRows = dash.rows.filter((r) => dashFilter === "all" || (dashFilter === "open" ? r.outstanding !== 0 : r.overdue));
   const openTrip = (id: string) => { setOpenId(id); requestAnimationFrame(() => document.getElementById("trip-detail")?.scrollIntoView({ behavior: "smooth" })); };
