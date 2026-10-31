@@ -44,8 +44,8 @@ export function AppShell({ children }: { children: ReactNode }) {
 
       <header className="sticky top-0 z-20 border-b bg-background/85 backdrop-blur">
         <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-2 px-4 py-3 sm:px-8">
-          <span className="font-display text-xl font-extrabold tracking-tight text-primary">Ledgerline</span>
-          <span className="hidden font-mono text-[11px] uppercase tracking-[0.2em] text-muted-foreground sm:inline">personal · family · business</span>
+          <span className="font-display text-xl font-bold tracking-tight text-primary">Ledgerline<span className="text-gold">.</span></span>
+          <span className="hidden font-mono text-[11px] font-semibold uppercase tracking-[0.2em] text-muted-foreground sm:inline">personal · family · business</span>
           <Button size="icon" variant="ghost" onClick={() => setHidden((h) => !h)} aria-label={hidden ? "Show amounts" : "Hide amounts"} className="ml-auto rounded-xl p-2 text-muted-foreground">{hidden ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}</Button>
           <Link to="/auth" aria-label={name ? `Account: ${name}` : "Account"} title={name || "Account"} className="p-2 text-muted-foreground"><UserRound className="h-5 w-5" /></Link>
           <div className="flex w-full justify-between gap-1 lg:hidden">
