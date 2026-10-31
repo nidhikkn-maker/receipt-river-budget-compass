@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { supabase } from "@/integrations/supabase/client";
 import { PasskeySettings } from "@/components/DeviceLock";
 import { FinanceSettings } from "@/components/FinanceSettings";
+import { AppearanceSettings } from "@/components/AppearanceSettings";
 import { PushSettings } from "@/components/PushSettings";
 import { useStore } from "@/lib/store";
 import { BACKUP_TABLES, createBackupZip, prepareRestore, readBackup, type Backup } from "@/lib/backup";
@@ -122,6 +123,7 @@ function Settings() {
       <PageTitle eyebrow="Settings" title="Your data" sub={`${transactions.length} entries · ${accounts.length} accounts`} />
       <div className="mb-5"><Button asChild variant="outline"><Link to="/auth">Sign in / account</Link></Button></div>
       <PasskeySettings />
+      <AppearanceSettings />
       <FinanceSettings />
       <PushSettings />
       <div className="grid gap-4 sm:grid-cols-2">
