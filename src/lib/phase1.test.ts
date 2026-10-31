@@ -44,7 +44,7 @@ describe("reimbursements", () => {
   it("net personal cost excludes what is reimbursable", () => {
     const s = reimbursementSummary([ex({ amount: 5000, reimbursementStatus: "pending", reimbursement: { reimbursable: 4000, payer: "VEI" } })], "2026-10-31");
     expect(s.netPersonalCost).toBe(1000);
-    expect(s.byPayer.VEI).toBe(4000);
+    expect(s.byPayer["VEI"]).toBe(4000);
   });
 });
 

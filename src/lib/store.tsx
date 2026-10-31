@@ -311,7 +311,7 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
     // The money received is a reimbursement entry (reduces spending, never counts as earned income), linked by id.
     await save({ title: `Reimbursement: ${e.title}`.slice(0, 200), merchant: e.reimbursement?.payer || null, category: e.category, scope: e.scope, memberId: e.memberId, splits: [],
       amount: r.amount, currency: "INR", date: r.date, description: r.note ?? "", paymentMethod: "bank_transfer", txnType: "reimbursement", accountId: r.accountId, tags: [] } as ExpenseInput, { createId: id, noRefresh: true });
-    const info = { ...(e.reimbursement ?? {}), receipts: [...(e.reimbursement?.receipts ?? []), { id, date: r.date, amount: r.amount, txnId: id, note: r.note }] };
+    const info = { ...(e.reimbursement ?? {}), receipts: [...(e.reimbursement?.receipts ?? []), { id, date: r.date, amount: r.amount, txnId: id, note: r.note ?? "" }] };
     await updateReimbursement(e, info);
     await refresh();
   };
