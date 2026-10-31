@@ -26,6 +26,7 @@ import { Route as AuthenticatedForecastRouteImport } from './routes/_authenticat
 import { Route as AuthenticatedInboxRouteImport } from './routes/_authenticated/inbox'
 import { Route as AuthenticatedNewRouteImport } from './routes/_authenticated/new'
 import { Route as AuthenticatedPatternsRouteImport } from './routes/_authenticated/patterns'
+import { Route as AuthenticatedPaymentMethodsRouteImport } from './routes/_authenticated/payment-methods'
 import { Route as AuthenticatedPlanRouteImport } from './routes/_authenticated/plan'
 import { Route as AuthenticatedReconcileRouteImport } from './routes/_authenticated/reconcile'
 import { Route as AuthenticatedReportsRouteImport } from './routes/_authenticated/reports'
@@ -123,6 +124,12 @@ const AuthenticatedPatternsRoute = AuthenticatedPatternsRouteImport.update({
   path: '/patterns',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedPaymentMethodsRoute =
+  AuthenticatedPaymentMethodsRouteImport.update({
+    id: '/payment-methods',
+    path: '/payment-methods',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedPlanRoute = AuthenticatedPlanRouteImport.update({
   id: '/plan',
   path: '/plan',
@@ -197,6 +204,7 @@ export interface FileRoutesByFullPath {
   '/inbox': typeof AuthenticatedInboxRoute
   '/new': typeof AuthenticatedNewRoute
   '/patterns': typeof AuthenticatedPatternsRoute
+  '/payment-methods': typeof AuthenticatedPaymentMethodsRoute
   '/plan': typeof AuthenticatedPlanRoute
   '/reconcile': typeof AuthenticatedReconcileRoute
   '/reports': typeof AuthenticatedReportsRoute
@@ -226,6 +234,7 @@ export interface FileRoutesByTo {
   '/inbox': typeof AuthenticatedInboxRoute
   '/new': typeof AuthenticatedNewRoute
   '/patterns': typeof AuthenticatedPatternsRoute
+  '/payment-methods': typeof AuthenticatedPaymentMethodsRoute
   '/plan': typeof AuthenticatedPlanRoute
   '/reconcile': typeof AuthenticatedReconcileRoute
   '/reports': typeof AuthenticatedReportsRoute
@@ -257,6 +266,7 @@ export interface FileRoutesById {
   '/_authenticated/inbox': typeof AuthenticatedInboxRoute
   '/_authenticated/new': typeof AuthenticatedNewRoute
   '/_authenticated/patterns': typeof AuthenticatedPatternsRoute
+  '/_authenticated/payment-methods': typeof AuthenticatedPaymentMethodsRoute
   '/_authenticated/plan': typeof AuthenticatedPlanRoute
   '/_authenticated/reconcile': typeof AuthenticatedReconcileRoute
   '/_authenticated/reports': typeof AuthenticatedReportsRoute
@@ -288,6 +298,7 @@ export interface FileRouteTypes {
     | '/inbox'
     | '/new'
     | '/patterns'
+    | '/payment-methods'
     | '/plan'
     | '/reconcile'
     | '/reports'
@@ -317,6 +328,7 @@ export interface FileRouteTypes {
     | '/inbox'
     | '/new'
     | '/patterns'
+    | '/payment-methods'
     | '/plan'
     | '/reconcile'
     | '/reports'
@@ -347,6 +359,7 @@ export interface FileRouteTypes {
     | '/_authenticated/inbox'
     | '/_authenticated/new'
     | '/_authenticated/patterns'
+    | '/_authenticated/payment-methods'
     | '/_authenticated/plan'
     | '/_authenticated/reconcile'
     | '/_authenticated/reports'
@@ -492,6 +505,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedPatternsRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/payment-methods': {
+      id: '/_authenticated/payment-methods'
+      path: '/payment-methods'
+      fullPath: '/payment-methods'
+      preLoaderRoute: typeof AuthenticatedPaymentMethodsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/plan': {
       id: '/_authenticated/plan'
       path: '/plan'
@@ -584,6 +604,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedInboxRoute: typeof AuthenticatedInboxRoute
   AuthenticatedNewRoute: typeof AuthenticatedNewRoute
   AuthenticatedPatternsRoute: typeof AuthenticatedPatternsRoute
+  AuthenticatedPaymentMethodsRoute: typeof AuthenticatedPaymentMethodsRoute
   AuthenticatedPlanRoute: typeof AuthenticatedPlanRoute
   AuthenticatedReconcileRoute: typeof AuthenticatedReconcileRoute
   AuthenticatedReportsRoute: typeof AuthenticatedReportsRoute
@@ -607,6 +628,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedInboxRoute: AuthenticatedInboxRoute,
   AuthenticatedNewRoute: AuthenticatedNewRoute,
   AuthenticatedPatternsRoute: AuthenticatedPatternsRoute,
+  AuthenticatedPaymentMethodsRoute: AuthenticatedPaymentMethodsRoute,
   AuthenticatedPlanRoute: AuthenticatedPlanRoute,
   AuthenticatedReconcileRoute: AuthenticatedReconcileRoute,
   AuthenticatedReportsRoute: AuthenticatedReportsRoute,

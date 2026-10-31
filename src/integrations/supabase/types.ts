@@ -418,6 +418,7 @@ export type Database = {
           member_id: string | null
           merchant: string | null
           original_amount: number | null
+          payment_instrument_id: string | null
           payment_method: string
           receipt_details: Json
           receipts: Json
@@ -454,6 +455,7 @@ export type Database = {
           member_id?: string | null
           merchant?: string | null
           original_amount?: number | null
+          payment_instrument_id?: string | null
           payment_method?: string
           receipt_details?: Json
           receipts?: Json
@@ -490,6 +492,7 @@ export type Database = {
           member_id?: string | null
           merchant?: string | null
           original_amount?: number | null
+          payment_instrument_id?: string | null
           payment_method?: string
           receipt_details?: Json
           receipts?: Json

@@ -101,3 +101,5 @@
 - [x] Receipt audit trail: OCR-read values vs owner corrections stored on the entry and shown in its detail dialog; signed-in correction (321 → 322.50) read back; 232 tests pass
 - [ ] Test Face ID unlock on live site — blocked: needs a real iPhone with Face ID
 - [x] Check published app on mobile for loading errors
+
+- [x] Saved payment methods (UPI IDs, cards, wallets, cash) linked to bank accounts

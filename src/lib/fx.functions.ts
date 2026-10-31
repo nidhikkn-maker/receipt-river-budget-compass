@@ -48,6 +48,7 @@ const SaveInput = z.object({
   adjustmentSign: z.union([z.literal(1), z.literal(-1)]).default(1),
   accountId: z.string().uuid().nullable().default(null),
   toAccountId: z.string().uuid().nullable().default(null),
+  paymentInstrumentId: z.string().regex(/^[A-Za-z0-9-]{1,64}$/).nullable().default(null),
   tags: z.array(z.string().trim().min(1).max(40)).max(20).default([]),
   receiptDetails: z.object({
     tax: z.number().nonnegative().nullable().optional(),
@@ -89,6 +90,7 @@ export const saveExpense = createServerFn({ method: "POST" })
       payment_method: data.paymentMethod, expense_date: data.date, description: data.description,
       reimbursement_status: data.txnType === "expense" ? data.reimbursementStatus : "none", adjustment_sign: data.txnType === "adjustment" ? data.adjustmentSign : 1,
       txn_type: data.txnType, account_id: data.accountId, to_account_id: data.txnType === "transfer" ? data.toAccountId : null, tags: data.tags,
+      payment_instrument_id: data.paymentInstrumentId,
       updated_at: new Date().toISOString(),
       ...(data.receipts ? { receipts: data.receipts } : {}),
       ...(data.receiptDetails ? { receipt_details: data.receiptDetails } : {}),

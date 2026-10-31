@@ -1,3 +1,4 @@
+import { PaymentMethodsManager } from "@/components/PaymentMethodsManager";
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -29,7 +30,7 @@ export const Route = createFileRoute("/_authenticated/wealth")({
 });
 
 function Wealth() {
-  const { accounts, transactions, valuations, addAccount, setArchived, updateAccount, loans } = useStore();
+  const { accounts, transactions, valuations, addAccount, setArchived, updateAccount, loans, preferences } = useStore();
   const [name, setName] = useState("");
   const [kind, setKind] = useState<AccountKind>("savings");
   const [opening, setOpening] = useState("0");
@@ -86,6 +87,9 @@ function Wealth() {
               </div>
               {a.kind === "credit_card" && !a.archived && <CardDetails a={a} />}
               {!a.archived && <AccountTools a={a} />}
+              {!a.archived && ["savings","current","cash","wallet","credit_card"].includes(a.kind) && (
+                <details className="mt-2 border-t pt-2"><summary className="cursor-pointer text-xs font-semibold text-muted-foreground">Linked UPI IDs & cards ({preferences.paymentInstruments.filter(p=>p.accountId===a.id&&!p.archived).length})</summary><div className="mt-2"><PaymentMethodsManager accountId={a.id} /></div></details>
+              )}
               {(a.kind === "savings" || a.kind === "current") && !a.archived && (
                 <label className="mt-2 flex items-center gap-2 border-t pt-2 text-xs text-muted-foreground">Keep at least ₹
                   <input type="number" defaultValue={a.minBalance ?? 0} aria-label={`Minimum balance for ${a.name}`} className="w-24 rounded-md border bg-background px-2 py-1 font-mono"
