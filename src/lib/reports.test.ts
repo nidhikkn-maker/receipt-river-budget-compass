@@ -33,4 +33,10 @@ describe("requested exports", () => {
   it("CSV escapes quotes, commas and spreadsheet formulas", () => {
     expect(toCsv({ title: "Test", headers: ["Value"], rows: [['=SUM(1,2)'], ['a,"b"']] })).toBe('Value\n"\'=SUM(1,2)"\n"a,""b"""');
   });
+  it("department filter keeps only the chosen department, with an explicit unassigned option", () => {
+    const list = [e({}), e({ id: "f", department: "Finance" }), e({ id: "u", department: null }), e({ id: "w", department: "  " })];
+    expect(applyFilters(list, { department: "Sales" }).map((x) => x.id)).toEqual(["expense"]);
+    expect(applyFilters(list, { department: "unassigned" }).map((x) => x.id)).toEqual(["u", "w"]);
+    expect(applyFilters(list, { department: "all" })).toHaveLength(4);
+  });
 });
