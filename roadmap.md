@@ -124,7 +124,7 @@
 ### Acceptance (verify before declaring done)
 - [x] Continue acceptance: capped optional allocation targets at remaining funds; signed-in suggest/save/reload/delete verified, pure-function no-mutation regression passes.
 - [x] Continue acceptance: same-day scheduled payments reserve funds once in stable order; ₹40,000 + ₹8,000 against ₹45,000 available gives ₹3,000 shortfall, independent of input ordering.
-- [ ] Allocations never move money; readiness uses due dates + balances; rules fire only on conditions; search respects authorisation; imports never duplicate; simulations never alter records; autopilot needs approval; family access isolated; contract extraction keeps document refs; memory records outcomes; graph reflects real links; V1/V2 still work
+- [x] V3 calculation regression pass: allocations, readiness, rules, search, repeat imports, simulations, autopilot, contracts, memory and graph checks pass in the full suite; cross-account family/search authorization acceptance still requires separate-account runtime verification, not source assertions.
 - [x] Edit links on money map (record links + own links with reasons)
 - [x] Connection reasons + key details on selection
 - [x] Money map filters
@@ -132,7 +132,7 @@
 
 ## Version 4.0 — Unified Expense & Travel (spec: .lovable/requirements-v4.md)
 ### Priority 1 — Unified financial foundation
-- [x] Universal entry: one form, opened from trips/bookings with context (advances live on trips; dedicated card-payment/loan/investment types still open)
+- [x] Universal entry: one form opened from trips/bookings with context, including dedicated advances, card payments, loan repayments and investments.
 - [x] Workspaces Personal/Family/Business/Official + organisation; suggestions with confidence, override, learning
 - [x] Multi-workspace allocation (fixed/%/equal/custom, sums to total, charged once); payment ownership + auto claim
 - [x] Automated categorisation incl. travel categories (one-tap catalog add, booking/merchant mapping)
@@ -141,7 +141,8 @@
 ### Priority 3 — Travel financial integration
 - [x] Trip budgets (actual vs committed), booking-to-transaction linking, travel reports, multi-currency, reimbursements, advances/settlement
 ### Priority 4 — Intelligence and completion
-- [ ] Complete all Version 4 phases and rerun full automated checks plus signed-in functional checks; report external verification limits.
+- [x] Revisited all four Version 4 phases and completed the in-app gaps found in this pass: workspace/traveller/currency budget plans, primary workspace and organisation, richer booking details and existing payment/refund links, itinerary booking/document references, expanded travel catalog, closure balance checks and corrected reports. Full suite: 403 tests/48 files pass; latest build OK; 17 signed-in screens, saved plans, booking partial/full payments, reminders and calendars verified; six phone screens have no horizontal overflow. Temporary test records removed. Native capture, live-device acceptance and cross-account runtime verification remain outside this pass.
+- [x] Report integrity: partial booking commitments use remaining balances in trip/planned/CSV views; mixed split/unsplit traveller rows and overlapping destinations reconcile; reimbursements use claim/receipt/outstanding amounts, not full expense amounts.
 - [x] Add in-app reminders for upcoming booking payment due dates and overdue unpaid balances; respects saved lead days/toggle, subtracts partial payments, links to the correct trip; signed-in upcoming/overdue verified.
 - [x] Add a calendar showing trip dates, booking due dates, itinerary and scheduled payment deadlines; available on Plan and Trips, month navigation and trip links checked signed-in.
 - [x] Trip auto-association, trip insights, booking-payment match suggestions, trip closure, trip CSV
