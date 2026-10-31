@@ -18,12 +18,12 @@ export function buildReport(kind: ReportKind, transactions: Expense[], memberNam
     const limits = options.departmentBudgets ?? {};
     const month = options.budgetMonth ?? new Date().toISOString().slice(0, 7);
     const names = [...new Set([...expenses.map((e) => e.department?.trim() || "Unassigned"), ...Object.keys(limits)])].sort();
-    return { title: "Department budgets - your spending", headers: ["Department", "Your expenses in range", "Your spending in range (INR)", "Budget month", "Monthly department limit (INR)", "Your filtered monthly spending (INR)", "Limit less your spending (INR)", "Your use (%)"], rows: names.map((name) => {
+    return { title: "Department budgets - your spending", headers: ["Department", "Your expenses in range", "Your spending in range (INR)", "Budget month", "Monthly department limit (INR)", "Your filtered monthly spending (INR)", "Remaining balance (INR)", "Budget used (%)", "Status"], rows: names.map((name) => {
       const entries = expenses.filter((e) => (e.department?.trim() || "Unassigned") === name);
       const sum = (list: Expense[]) => list.reduce((s, e) => s + Math.round(e.amount * 100), 0) / 100;
       const spent = sum(entries.filter((e) => e.date.startsWith(month)));
       const limit = limits[name];
-      return [name, entries.length, fmt(sum(entries)), month, limit === undefined ? "" : fmt(limit), fmt(spent), limit === undefined ? "" : fmt(limit - spent), limit && limit > 0 ? fmt(spent / limit * 100) : ""];
+      return [name, entries.length, fmt(sum(entries)), month, limit === undefined ? "" : fmt(limit), fmt(spent), limit === undefined ? "" : fmt(limit - spent), limit && limit > 0 ? fmt(spent / limit * 100) : "", limit === undefined ? "No limit" : spent > limit ? "Over budget" : "Within budget"];
     }) };
   }
   const row = (e: Expense) => [e.date, e.title, e.merchant ?? "", e.category, SCOPE_LABEL[e.scope], whoLabel(e, memberName), PAYMENT_LABEL[e.paymentMethod],

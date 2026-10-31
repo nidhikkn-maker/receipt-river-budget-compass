@@ -15,6 +15,7 @@ import { tagValue } from "@/lib/preferences";
 import { money, totalsBy, categoryTotals } from "@/lib/expenses";
 import { ExpenseTable } from "@/components/ExpenseTable";
 import { monthlySeries, weeklySpend, netWorthSeries, spendBy, monthToDateCompare, subscriptionSpendSeries, cardUtilisationSeries, loanProgress, savingsTrend } from "@/lib/insights";
+import { isTracked, stageOf, REIMB_STAGES, REIMB_STAGE_LABEL } from "@/lib/reimbursements";
 import { PAYMENT_METHODS, PAYMENT_LABEL, type Scope } from "@/lib/expenses";
 
 export const Route = createFileRoute("/_authenticated/reports")({
@@ -52,7 +53,10 @@ function Reports() {
   const [member, setMember] = useState("all");
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [scope,setScope]=useState<Scope|"all">("all");const [account,setAccount]=useState("all");const [payment,setPayment]=useState("all");const [query,setQuery]=useState("");
-  const filtered = applyFilters(transactions, { from, to, memberId: member, scope, accountId:account, paymentMethod:payment, query, tagAll:Object.values(tagGroup).filter(v=>v!=="all") });
+  const [department,setDepartment]=useState("all");const [status,setStatus]=useState("all");
+  const departmentOptions=[...new Set([...Object.keys(departmentBudgets),...transactions.map(e=>e.department?.trim()||"").filter(Boolean)])].sort();
+  const filtered = applyFilters(transactions, { from, to, memberId: member, scope, accountId:account, paymentMethod:payment, query, tagAll:Object.values(tagGroup).filter(v=>v!=="all"), department })
+    .filter(e=>status==="all"||(status==="none"?!isTracked(e):isTracked(e)&&stageOf(e)===status));
   const list=filtered.filter(e=>(e.txnType??"expense")==="expense");
   const tagGroups=[...new Set(preferences.tags.map(t=>t.group))];
   const drillRows=drill?list.filter(e=>(!drill.from||e.date>=drill.from)&&(!drill.to||e.date<=drill.to)&&(!drill.merchant||(e.merchant||e.title)===drill.merchant)&&(!drill.account||(accounts.find(a=>a.id===e.accountId)?.name??"Unassigned")===drill.account)):[];
@@ -62,8 +66,18 @@ function Reports() {
   const monthly=monthlySeries(filtered,stamp,12);const weekly=weeklySpend(filtered,stamp,8);const worth=netWorthSeries(accounts,transactions,valuations,stamp,12).map(x=>({...x,netWorth:x.net}));const cmp=monthToDateCompare(filtered,stamp);
   const subs=subscriptionSpendSeries(list,commitments,stamp,6);const util=cardUtilisationSeries(accounts,transactions,stamp,6);const cardNames=accounts.filter(a=>a.kind==="credit_card"&&(a.creditLimit??0)>0).map(a=>a.name);const loanRows=loanProgress(loans);const savings=savingsTrend(filtered,stamp,12);
   const merchants=spendBy(list,e=>e.merchant||e.title,10);const byAccount=spendBy(list,e=>accounts.find(a=>a.id===e.accountId)?.name??"Unassigned",10);
-  const subtitle = `${member === "all" ? "Everyone" : memberName(member === "me" ? null : member)} · ${from || "start"} to ${to || "today"} · amounts in INR · generated ${stamp}`;
+  const subtitle = `${member === "all" ? "Everyone" : memberName(member === "me" ? null : member)} · ${from || "start"} to ${to || "today"} · ${department === "all" ? "All departments" : department === "unassigned" ? "Unassigned department" : department} · ${status === "all" ? "Any status" : status === "none" ? "Not tracked" : REIMB_STAGE_LABEL[status as keyof typeof REIMB_STAGE_LABEL] ?? status} · amounts in INR · generated ${stamp}`;
 
+  const departmentSummary = (() => {
+    const exps = filtered.filter(e => (e.txnType ?? "expense") === "expense");
+    const names = [...new Set([...exps.map(e => e.department?.trim() || "Unassigned"), ...Object.keys(departmentBudgets)])].sort();
+    return names.map(name => {
+      const entries = exps.filter(e => (e.department?.trim() || "Unassigned") === name && e.date.startsWith(budgetMonth));
+      const spent = Math.round(entries.reduce((s, e) => s + e.amount * 100, 0)) / 100;
+      const limit = departmentBudgets[name];
+      return { name, spent, limit, remaining: limit === undefined ? 0 : Math.round((limit - spent) * 100) / 100, pct: limit && limit > 0 ? Math.round(spent / limit * 1000) / 10 : 0 };
+    });
+  })();
   const report = (k: ReportKind) => buildReport(k, filtered, memberName, budgets, { departmentBudgets, budgetMonth, claims: transactions, accountName: id => accounts.find(a => a.id === id)?.name ?? "Unassigned" });
   const csv = (k: ReportKind) => void deliverFile(new Blob(["\uFEFF", toCsv(report(k))], { type: "text/csv;charset=utf-8" }), `ledgerline-${k}-${stamp}.csv`).catch(() => toast.error("Couldn't download the CSV"));
   const pdf = async (k: ReportKind) => {
@@ -94,6 +108,7 @@ function Reports() {
         <p className="text-sm text-muted-foreground">{list.length} expense{list.length === 1 ? "" : "s"} in range</p>
       </div>
       <div className="mb-6 grid gap-3 sm:grid-cols-4"><Select value={scope} onValueChange={v=>setScope(v as Scope|"all")}><SelectTrigger aria-label="Insight scope"><SelectValue/></SelectTrigger><SelectContent>{["all","personal","business"].map(v=><SelectItem key={v} value={v}>{v==="all"?"All spending":v}</SelectItem>)}</SelectContent></Select><Select value={account} onValueChange={setAccount}><SelectTrigger aria-label="Insight account"><SelectValue/></SelectTrigger><SelectContent><SelectItem value="all">All accounts</SelectItem>{accounts.map(a=><SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}</SelectContent></Select><Select value={payment} onValueChange={setPayment}><SelectTrigger aria-label="Insight payment method"><SelectValue/></SelectTrigger><SelectContent><SelectItem value="all">All payment methods</SelectItem>{PAYMENT_METHODS.map(v=><SelectItem key={v} value={v}>{PAYMENT_LABEL[v]}</SelectItem>)}</SelectContent></Select><Input aria-label="Search insights" placeholder="Merchant, title or tag" value={query} onChange={e=>setQuery(e.target.value)}/></div>
+      <div className="mb-6 grid gap-3 sm:grid-cols-4"><Select value={department} onValueChange={setDepartment}><SelectTrigger aria-label="Filter by department"><SelectValue/></SelectTrigger><SelectContent><SelectItem value="all">All departments</SelectItem><SelectItem value="unassigned">Unassigned</SelectItem>{departmentOptions.map(d=><SelectItem key={d} value={d}>{d}</SelectItem>)}</SelectContent></Select><Select value={status} onValueChange={setStatus}><SelectTrigger aria-label="Filter by reimbursement status"><SelectValue/></SelectTrigger><SelectContent><SelectItem value="all">Any status</SelectItem><SelectItem value="none">Not tracked</SelectItem>{REIMB_STAGES.map(s=><SelectItem key={s} value={s}>{REIMB_STAGE_LABEL[s]}</SelectItem>)}</SelectContent></Select></div>
       {tagGroups.length>0&&<div className="mb-6 grid gap-3 sm:grid-cols-4">{tagGroups.map(g=><Select key={g} value={tagGroup[g]??"all"} onValueChange={v=>setTagGroup(x=>({...x,[g]:v}))}><SelectTrigger aria-label={`Filter by ${g}`}><SelectValue/></SelectTrigger><SelectContent><SelectItem value="all">Any {g.toLowerCase()}</SelectItem>{preferences.tags.filter(t=>t.group===g).map(t=><SelectItem key={tagValue(t)} value={tagValue(t)}>{t.name}</SelectItem>)}</SelectContent></Select>)}</div>}
       {drill&&<section className="mb-8 rounded-3xl border bg-card p-5"><div className="mb-3 flex items-center justify-between gap-3"><h2 className="font-display text-lg font-bold">Entries: {drill.label}</h2><Button variant="outline" size="sm" onClick={()=>setDrill(null)}>Close</Button></div><ExpenseTable items={drillRows} empty="No matching entries."/></section>}
       <p className="mb-3 text-xs text-muted-foreground">Tap a bar or row to see the entries behind it.</p>
@@ -105,6 +120,22 @@ function Reports() {
         <div className="mt-4"><ExpenseTable items={list.filter(e=>selectedCategory==="all"||e.category===selectedCategory)} empty="No transactions in this range." /></div>
       </section>
       <section className="mb-4 flex flex-wrap items-end gap-3"><div className="grid gap-1"><Label htmlFor="budget-month">Budget comparison month</Label><Input id="budget-month" type="month" value={budgetMonth} onChange={e => setBudgetMonth(e.target.value)} /></div>{departmentBudgetError && <p className="text-sm text-destructive">Department limits couldn't load. Try refreshing before exporting.</p>}</section>
+      <section className="mb-8 rounded-3xl border bg-card p-5">
+        <h2 className="font-display text-xl font-bold">Department budget summary</h2>
+        <p className="mb-3 text-sm text-muted-foreground">Your filtered spending in {budgetMonth} against each saved monthly limit.</p>
+        <ul className="grid gap-3 text-sm">
+          {departmentSummary.map((d) => (
+            <li key={d.name}>
+              <div className="flex flex-wrap justify-between gap-2">
+                <span className="font-semibold">{d.name}</span>
+                <span>{d.limit === undefined ? "No limit saved" : `${money(d.spent)} of ${money(d.limit)} · ${d.pct}% used · ${money(d.remaining)} ${d.remaining < 0 ? "over" : "left"}`}</span>
+              </div>
+              {d.limit !== undefined && <div className="mt-1 h-2 rounded-full bg-muted"><div className={`h-2 rounded-full ${d.remaining < 0 ? "bg-destructive" : "bg-gold"}`} style={{ width: `${Math.min(100, d.pct)}%` }} /></div>}
+            </li>
+          ))}
+          {departmentSummary.length === 0 && <li className="text-muted-foreground">No departments in the current filter. Save department limits in Settings to compare.</li>}
+        </ul>
+      </section>
       <div className="grid gap-4 md:grid-cols-3">
         {KINDS.map((k) => (
           <div key={k.kind} className="flex flex-col rounded-lg border bg-card p-5">

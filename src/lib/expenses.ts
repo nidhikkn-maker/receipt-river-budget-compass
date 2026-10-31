@@ -182,7 +182,7 @@ export function validateBudget(amount: number) {
 
 export const convert = (amount: number, rate: number) => Math.round(amount * rate * 100) / 100;
 
-export interface Filters { scope?: Scope | "all"; memberId?: string | "all" | "me"; from?: string; to?: string; category?: Category | "all"; accountId?: string; paymentMethod?: string; tag?: string; query?: string; txnType?: string; merchant?: string; tagAll?: string[] }
+export interface Filters { scope?: Scope | "all"; memberId?: string | "all" | "me"; from?: string; to?: string; category?: Category | "all"; accountId?: string; paymentMethod?: string; tag?: string; query?: string; txnType?: string; merchant?: string; tagAll?: string[]; department?: string }
 
 export function applyFilters(list: Expense[], f: Filters): Expense[] {
   return list.filter((e) =>
@@ -196,7 +196,14 @@ export function applyFilters(list: Expense[], f: Filters): Expense[] {
     (!f.scope || f.scope === "all" || e.scope === f.scope) &&
     (!f.memberId || f.memberId === "all" || memberShares(e).some((x) => (f.memberId === "me" ? x.memberId === null : x.memberId === f.memberId))) &&
     (!f.category || f.category === "all" || e.category === f.category) &&
+    (!f.department || f.department === "all" || (f.department === "unassigned" ? !e.department?.trim() : (e.department ?? "").trim() === f.department)) &&
     (!f.from || e.date >= f.from) && (!f.to || e.date <= f.to));
+}
+
+/** Bulk recategorisation patches: the chosen category replaces each entry's category and any category split, so a split never contradicts the new single category. Unknown ids are skipped. */
+export function bulkRecategorize(list: Pick<Expense, "id">[], ids: string[], category: string): { id: string; category: string; allocations: never[] }[] {
+  const wanted = new Set(ids);
+  return list.filter((e) => wanted.has(e.id)).map((e) => ({ id: e.id, category, allocations: [] }));
 }
 
 export function totalsByScope(list: Expense[]) {

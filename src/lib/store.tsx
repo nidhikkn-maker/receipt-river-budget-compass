@@ -5,7 +5,7 @@ import type { Database, Json } from "@/integrations/supabase/types";
 import { queueEntry, pendingEntries, removePending, putSnapshot, getSnapshot, clearOfflineOwner } from "./offline";
 import { saveExpense } from "./fx.functions";
 import {
-  CHARGES_CATEGORY, validateAllocations, validateBudget, validateExpense, type Allocation,
+  CHARGES_CATEGORY, bulkRecategorize, validateAllocations, validateBudget, validateExpense, type Allocation,
   type Budgets, type Category, type Expense, type ExpenseInput, type Member, type PaymentMethod, type Receipt, type ReceiptDetails, type ReimbursementStatus, type Scope, type Split,
 } from "./expenses";
 import { accountBalance, adjustmentToMatch, type Account, type AccountDetails, type AccountKind, type TxnType, type Valuation } from "./ledger";
@@ -46,6 +46,8 @@ interface Ctx {
   savePreferences: (p: FinancePreferences) => Promise<void>;
   ensureCategory: (name: string) => Promise<void>;
   moveCategory: (source: string, target: string) => Promise<void>;
+  /** Recategorises many entries at once; clears any category split so it can't contradict the new category. */
+  bulkSetCategory: (ids: string[], category: string) => Promise<void>;
   userId: string;
   name: string;
   updateName: (name: string) => Promise<void>;
@@ -279,6 +281,13 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
   };
   const moveCategory: Ctx["moveCategory"] = async (source, target) => {
     check((await supabase.rpc("move_expense_category", { source, target })).error);
+    await refresh();
+  };
+  const bulkSetCategory: Ctx["bulkSetCategory"] = async (ids, category) => {
+    validateActiveCategory(preferences.categories, category, false);
+    const patches = bulkRecategorize(expenses, ids, category);
+    if (!patches.length) throw new Error("Nothing selected");
+    for (const p of patches) check((await supabase.from("expenses").update({ category: p.category, allocations: p.allocations }).eq("id", p.id)).error);
     await refresh();
   };
   const updateName: Ctx["updateName"] = async (n) => {
@@ -533,7 +542,7 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
   return (
     <StoreCtx.Provider value={{
       departmentBudgets, departmentBudgetError,
-      pendingCount, setTags, preferences, savePreferences, ensureCategory, moveCategory, userId, name, updateName, members, memberName,
+      pendingCount, setTags, preferences, savePreferences, ensureCategory, moveCategory, bulkSetCategory, userId, name, updateName, members, memberName,
       expenses: expenses.filter((x) => (x.txnType ?? "expense") === "expense"), transactions: expenses, accounts, addAccount, setArchived, adjustBalance,
       commitments, loans, goals, valuations, documents, saveCommitment, confirmIrregular, removeCommitment, confirmCommitment, saveLoan, removeLoan, recordLoanPayment, convertToEmi,
       saveGoal, removeGoal, updateAccount, addValuation, removeValuation, addDocument, updateDocument, removeDocument, history, setReimbursement, recordReimbursement, deleteAll,
