@@ -88,7 +88,7 @@ interface Ctx {
   save: (s: ExpenseInput, opts?: { id?: string; files?: File[]; createId?: string; noRefresh?: boolean }) => Promise<void>;
   remove: (e: Expense) => Promise<void>;
   setScope: (id: string, scope: Scope) => Promise<void>;
-  reconcile: (id: string, ref: string | null) => Promise<void>;
+  reconcile: (id: string, ref: string | null, opts?: { noRefresh?: boolean }) => Promise<void>;
   addMember: (name: string, relation: string) => Promise<void>;
   removeMember: (id: string) => Promise<void>;
   setBudget: (c: Category, amount: number) => Promise<void>;
@@ -294,9 +294,9 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
     await operation("reimbursement", { ids:unique, accountId, date, operationId: unique.join(":") });
     await refresh();
   };
-  const reconcile: Ctx["reconcile"] = async (id, ref) => {
+  const reconcile: Ctx["reconcile"] = async (id, ref, opts) => {
     check((await supabase.from("expenses").update({ statement_ref: ref, reconciled_at: ref ? new Date().toISOString() : null }).eq("id", id)).error);
-    await refresh();
+    if (!opts?.noRefresh) await refresh();
   };
   const addMember: Ctx["addMember"] = async (n, relation) => {
     if (!n.trim()) throw new Error("Enter a name");
