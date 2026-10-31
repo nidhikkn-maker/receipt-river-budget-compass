@@ -665,6 +665,7 @@ function NewExpense() {
               </span>
             ))}
             {!editing && fromInbox.length === 0 && <Button type="button" disabled={reading || saving} variant="ghost" size="sm" onClick={() => void saveForLater()}><Inbox className="mr-1 h-4 w-4" />Save for later</Button>}
+            {editing && <Link to="/expenditure-statement" search={{ entry: editing.id }} className="self-center text-xs font-semibold text-primary underline">Generate statement</Link>}
           </div>
         )}
 
