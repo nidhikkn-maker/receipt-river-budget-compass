@@ -6,7 +6,7 @@ import type { Expense } from "./expenses";
 
 const r2 = (n: number) => Math.round(n * 100) / 100;
 export interface LoanHistoryRow { id: string; date: string; amount: number; principal: number; interest: number; split: boolean; balanceBefore: number; balanceAfter: number }
-type Src = Pick<Expense, "id" | "date" | "amount" | "txnType" | "toAccountId" | "principal" | "interest" | "category" | "title">;
+type Src = Pick<Expense, "id" | "date" | "amount" | "txnType" | "toAccountId" | "principal" | "interest"> & Partial<Pick<Expense, "category" | "title">>;
 
 /** Repayments without a saved split count fully as principal, because the ledger moves the whole payment into the loan account. */
 export function loanHistory(accountId: string | null, outstanding: number, txns: Src[], loanName = "") {

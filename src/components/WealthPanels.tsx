@@ -84,7 +84,7 @@ export function LoansPanel() {
 
 function LoanCard({ l, onRemove }: { l: Loan; onRemove: () => void }) {
   const { accounts, recordLoanPayment, transactions } = useStore();
-  const hist = loanHistory(l.accountId, l.principal, transactions);
+  const hist = loanHistory(l.accountId, l.principal, transactions, l.name);
   const chart = loanBalanceChart(hist.rows);
   const [from, setFrom] = useState("none"); const [payDate, setPayDate] = useState(todayISO()); const [busy,setBusy]=useState(false);
   const [extra, setExtra] = useState("");

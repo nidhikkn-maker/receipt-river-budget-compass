@@ -79,3 +79,24 @@ describe("loan balance chart", () => {
     expect(loanBalanceChart(loanHistory("L", 90000, []).rows)).toEqual([]);
   });
 });
+
+describe("loan history with EMI payments recorded from the loan card", () => {
+  const emi = [
+    { id: "p1", date: "2026-08-05", amount: 9000, txnType: "transfer", toAccountId: "L", principal: null, interest: null, category: "Loan repayment", title: "Car — principal" },
+    { id: "i1", date: "2026-08-05", amount: 1000, txnType: "expense", toAccountId: null, principal: null, interest: null, category: "Financial charges", title: "Car — interest" },
+    { id: "p2", date: "2026-09-05", amount: 9100, txnType: "transfer", toAccountId: "L", principal: null, interest: null, category: "Loan repayment", title: "Car — principal" },
+    { id: "i2", date: "2026-09-05", amount: 900, txnType: "expense", toAccountId: null, principal: null, interest: null, category: "Financial charges", title: "Car — interest" },
+    { id: "z", date: "2026-09-06", amount: 500, txnType: "expense", toAccountId: null, principal: null, interest: null, category: "Financial charges", title: "Bike — interest" },
+  ];
+  it("pairs each principal transfer with the interest charged on the same day", () => {
+    const h = loanHistory("L", 90000, emi as never, "Car");
+    expect([h.totalPrincipal, h.totalInterest]).toEqual([18100, 1900]);
+    expect(h.rows.map((r) => [r.date, r.principal, r.interest])).toEqual([["2026-08-05", 9000, 1000], ["2026-09-05", 9100, 900]]);
+    expect(h.rows.map((r) => r.balanceAfter)).toEqual([99100, 90000]);
+  });
+  it("ignores interest charged for a different loan", () => {
+    const h = loanHistory("L", 90000, emi as never, "Bike");
+    expect(h.totalInterest).toBe(500);
+    expect(h.rows.map((r) => [r.date, r.interest])).toEqual([["2026-08-05", 0], ["2026-09-05", 0], ["2026-09-06", 500]]);
+  });
+});
