@@ -133,10 +133,12 @@
 - [x] Universal entry: one form, opened from trips/bookings with context (advances live on trips; dedicated card-payment/loan/investment types still open)
 - [x] Workspaces Personal/Family/Business/Official + organisation; suggestions with confidence, override, learning
 - [x] Multi-workspace allocation (fixed/%/equal/custom, sums to total, charged once); payment ownership + auto claim
-- [ ] Automated categorisation incl. travel categories
+- [x] Automated categorisation incl. travel categories (one-tap catalog add, booking/merchant mapping)
 ### Priority 2 — Travel operations
 - [x] Travel Manager: trips (types, mixed), travellers, bookings, itinerary, travel documents
 ### Priority 3 — Travel financial integration
 - [x] Trip budgets (actual vs committed), booking-to-transaction linking, travel reports, multi-currency, reimbursements, advances/settlement
 ### Priority 4 — Intelligence and completion
-- [ ] Trip auto-association, AI travel analysis, reconciliation suggestions, trip closure, advanced reports, acceptance tests (17 criteria)
+- [x] Trip auto-association, trip insights, booking-payment match suggestions, trip closure, trip CSV
+- [ ] Dedicated advance/card-payment/loan/investment entry types in the shared form
+- [ ] Full 17-point acceptance pass
