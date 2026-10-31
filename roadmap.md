@@ -14,7 +14,7 @@
 - [x] Searchable receipt vault, owner-scoped offline queue, in-app upcoming-payment reminders, theme settings
 - [x] Real email/Google/Lovable sign-in and verified passkey device lock; existing anonymous records can upgrade by email
 - [x] Verified receipt read/correction/save/search, XLSX import, PDF parsing, category rename/archive, offline save/sync and simulated device-passkey unlock
-- [x] All 48 automated tests and current preview build passed; signed-out redirects and mobile layout checked without errors
+- [x] All 49 automated tests and current preview build passed; signed-out redirects and mobile layout checked without errors
 - [ ] Successful real-account sign-in and email upgrade — needs the user's confirmed account or preview sign-in (no matching account available for automatic testing)
 - [ ] Installed-app offline cold-start — needs publication; app workers intentionally disabled in preview
 - [ ] Real iPhone Face ID — needs a compatible device on a stable HTTPS origin; simulated platform passkey verified
