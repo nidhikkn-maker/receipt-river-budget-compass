@@ -1,5 +1,5 @@
 # Roadmap (Functional Requirements v1.0)
-- [ ] Review https://yaba--staging.vercel.app/actual_expenses — blocked: page requires Google sign-in
+- [x] Yaba excluded at the user's request; no further review
 - [x] Earlier: receipts + review, multi-currency, payment methods, bank reconciliation, family, splits, budgets, reports
 - [x] Accounts + ledger, transaction types, tags, merchant memory, 5-tab nav (Home, Activity, AI, Insights, Wealth)
 - [x] Voice/typed entry ("Spent ₹2,500 on dinner using AMEX yesterday")
@@ -8,7 +8,9 @@
 - [x] Forecast (7–90 days, shortfall dates) and safe-to-spend with breakdown
 - [x] AI assistant using engine figures only
 - [x] Backup / restore / delete all; privacy (hide amounts)
-- [ ] Next: editable categories (rename/merge/archive) + grouped tags
-- [ ] Next: receipt tax & line items; Excel/PDF statement import
-- [ ] Next: family/project/annual budgets with carry-forward; Insights drill-down; customisable Home
-- [ ] Next: document vault search; real sign-in + passkey lock; offline queue; reminders/notifications
+- [ ] Editable categories (rename/merge/archive/reorder) + grouped tags
+- [ ] Receipt tax & line items; Excel/PDF statement import
+- [ ] Family/project/annual budgets with carry-forward; Insights drill-down; customisable Home
+- [ ] Searchable document vault; offline entry queue; in-app reminders; theme settings
+- [ ] Optional cross-device account and passkey security — retain direct access, no mandatory sign-in
+- [ ] Audit and verify remaining document acceptance requirements
