@@ -146,3 +146,5 @@
 - [x] Principal/interest split on loan repayments (validated to sum to the payment; EMI split prefill from the linked loan)
 - [x] Trip advance reconciliation (advances vs business/official spend vs returns, outstanding balance)
 - [x] Loan repayment history (principal/interest totals, balance after each repayment)
+- [x] Trip advance reconciliation CSV export (advances, trip expenses, returns, outstanding balance)
+- [x] Loan repayment history chart (balance left after each repayment; EMIs recorded from the loan card count too)
