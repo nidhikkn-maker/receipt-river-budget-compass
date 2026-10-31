@@ -30,9 +30,9 @@ async function authFetch(path: string, method = "GET") {
   const { data } = await supabase.auth.getSession();
   const token = data.session?.access_token;
   if (!token) throw new Error("Please sign in again.");
-  const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/auth/v1${path}`, {
+  const res = await fetch(`${import.meta.env['VITE_SUPABASE_URL']}/auth/v1${path}`, {
     method,
-    headers: { apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY, Authorization: `Bearer ${token}` },
+    headers: { apikey: import.meta.env['VITE_SUPABASE_PUBLISHABLE_KEY'], Authorization: `Bearer ${token}` },
   });
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
