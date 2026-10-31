@@ -49,12 +49,12 @@ export function AppShell({ children }: { children: ReactNode }) {
           <Button size="icon" variant="ghost" onClick={() => setHidden((h) => !h)} aria-label={hidden ? "Show amounts" : "Hide amounts"} className="ml-auto rounded-xl p-2 text-muted-foreground">{hidden ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}</Button>
           <Link to="/auth" aria-label={name ? `Account: ${name}` : "Account"} title={name || "Account"} className="p-2 text-muted-foreground"><UserRound className="h-5 w-5" /></Link>
           <div className="flex w-full justify-between gap-1 lg:hidden">
-            <Link to="/plan" aria-label="Plan" className="rounded-xl p-2 text-muted-foreground" activeProps={{ className: "!text-primary bg-secondary" }}><CalendarClock className="h-5 w-5" /></Link>
-            <Link to="/budgets" aria-label="Budgets" className="rounded-xl p-2 text-muted-foreground" activeProps={{ className: "!text-primary bg-secondary" }}><PiggyBank className="h-5 w-5" /></Link>
-            <Link to="/reconcile" aria-label="Bank reconciliation" className="rounded-xl p-2 text-muted-foreground" activeProps={{ className: "!text-primary bg-secondary" }}><Landmark className="h-5 w-5" /></Link>
-            <Link to="/family" aria-label="Family" className="rounded-xl p-2 text-muted-foreground" activeProps={{ className: "!text-primary bg-secondary" }}><Users className="h-5 w-5" /></Link>
-            <Link to="/vault" aria-label="Document vault" className="rounded-xl p-2 text-muted-foreground"><FileText className="h-5 w-5" /></Link>
-            <Link to="/settings" aria-label="Settings" className="rounded-xl p-2 text-muted-foreground" activeProps={{ className: "!text-primary bg-secondary" }}><Settings className="h-5 w-5" /></Link>
+            <Link to="/plan" aria-label="Plan" className="rounded-xl p-2 text-foreground/70" activeProps={{ className: "!text-gold bg-secondary" }}><CalendarClock className="h-5 w-5" /></Link>
+            <Link to="/budgets" aria-label="Budgets" className="rounded-xl p-2 text-foreground/70" activeProps={{ className: "!text-gold bg-secondary" }}><PiggyBank className="h-5 w-5" /></Link>
+            <Link to="/reconcile" aria-label="Bank reconciliation" className="rounded-xl p-2 text-foreground/70" activeProps={{ className: "!text-gold bg-secondary" }}><Landmark className="h-5 w-5" /></Link>
+            <Link to="/family" aria-label="Family" className="rounded-xl p-2 text-foreground/70" activeProps={{ className: "!text-gold bg-secondary" }}><Users className="h-5 w-5" /></Link>
+            <Link to="/vault" aria-label="Document vault" className="rounded-xl p-2 text-foreground/70"><FileText className="h-5 w-5" /></Link>
+            <Link to="/settings" aria-label="Settings" className="rounded-xl p-2 text-foreground/70" activeProps={{ className: "!text-gold bg-secondary" }}><Settings className="h-5 w-5" /></Link>
           </div>
         </div>
       </header>
