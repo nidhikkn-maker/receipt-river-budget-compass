@@ -1,3 +1,4 @@
+import { cell as uCell, loadPdfFonts, plain, withUnicode } from "./pdf-unicode";
 // Renders a Detailed Expenditure Statement: portrait overview, landscape register, then every
 // original bill as numbered annexures, merged into one PDF. Browser-only: import dynamically.
 import type { Statement } from "./expenditure-statement";
@@ -6,18 +7,19 @@ import { PAYER_LABEL } from "./expenditure-statement";
 export interface AnnexFile { bytes: Uint8Array; type: string }
 const IN = new Intl.NumberFormat("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const n = (v: number) => IN.format(Math.round(v * 100) / 100);
-const ascii = (s: string) => s.replace(/₹/g, "INR ").replace(/[–—]/g, "-").replace(/[‘’]/g, "'").replace(/[“”]/g, '"').replace(/…/g, "...").replace(/··/g, "..").replace(/[^\x20-\x7E\xA0-\xFF]/g, "?");
+const ascii = uCell;
 const INK: [number, number, number] = [22, 44, 110];
 
 export async function renderStatementPdf(s: Statement, files: Record<string, AnnexFile | null>): Promise<{ blob: Blob; missing: string[] }> {
+  await loadPdfFonts();
   const { jsPDF } = await import("jspdf");
   const { default: autoTable } = await import("jspdf-autotable");
   const doc = new jsPDF({ unit: "mm", format: "a4" });
   const M = 14;
   const last = () => (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY;
-  const table = (opts: Parameters<typeof autoTable>[1]) => autoTable(doc, { theme: "grid", margin: { left: M, right: M, top: 16, bottom: 16 }, showHead: "everyPage", rowPageBreak: "avoid",
+  const table = (opts: Parameters<typeof autoTable>[1]) => autoTable(doc, withUnicode(doc, { theme: "grid", margin: { left: M, right: M, top: 16, bottom: 16 }, showHead: "everyPage", rowPageBreak: "avoid",
     styles: { fontSize: 8, cellPadding: 1.5, lineColor: [205, 205, 205], lineWidth: 0.1, textColor: [25, 25, 25], overflow: "linebreak" },
-    headStyles: { fillColor: [236, 239, 246], textColor: INK, fontStyle: "bold" }, footStyles: { fillColor: [245, 245, 245], textColor: [20, 20, 20], fontStyle: "bold" }, ...opts });
+    headStyles: { fillColor: [236, 239, 246], textColor: INK, fontStyle: "bold" }, footStyles: { fillColor: [245, 245, 245], textColor: [20, 20, 20], fontStyle: "bold" }, ...opts }));
 
   // Page 1 — overview
   doc.setFont("helvetica", "bold"); doc.setFontSize(10); doc.setTextColor(...INK); doc.text("LEDGERLINE", M, 15);
@@ -67,8 +69,8 @@ export async function appendAnnexures(body: Uint8Array, s: Statement, files: Rec
   const header = (page: import("pdf-lib").PDFPage, a: Statement["annexures"][number], extra = "") => {
     const { height } = page.getSize();
     page.drawRectangle({ x: 0, y: height - 46, width: page.getWidth(), height: 46, color: rgb(1, 1, 1) });
-    page.drawText(ascii(`Annexure ${a.no} - Original ${a.docType}${extra}`), { x: 36, y: height - 22, size: 11, font: bold, color: rgb(0.086, 0.17, 0.43) });
-    page.drawText(ascii(`Transaction ${a.row} | ${a.merchant} | ${a.date} | ${n(a.amount)} | ${s.reference}`).slice(0, 110), { x: 36, y: height - 36, size: 8, font, color: rgb(0.3, 0.3, 0.3) });
+    page.drawText(plain(`Annexure ${a.no} - Original ${a.docType}${extra}`), { x: 36, y: height - 22, size: 11, font: bold, color: rgb(0.086, 0.17, 0.43) });
+    page.drawText(plain(`Transaction ${a.row} | ${a.merchant} | ${a.date} | ${n(a.amount)} | ${s.reference}`).slice(0, 110), { x: 36, y: height - 36, size: 8, font, color: rgb(0.3, 0.3, 0.3) });
   };
   for (const a of s.annexures) {
     const f = files[a.no];
@@ -90,11 +92,11 @@ export async function appendAnnexures(body: Uint8Array, s: Statement, files: Rec
     } catch {
       missing.push(a.no);
       const page = out.addPage(A4); header(page, a, " - NOT READABLE");
-      page.drawText(ascii(`The attached file "${a.name}" could not be included. It remains stored in Ledgerline.`), { x: 36, y: 760, size: 10, font });
+      page.drawText(plain(`The attached file "${a.name}" could not be included. It remains stored in Ledgerline.`), { x: 36, y: 760, size: 10, font });
     }
   }
   const total = out.getPageCount();
-  out.getPages().forEach((p, i) => p.drawText(ascii(`Ledgerline - ${s.reference} - Page ${i + 1} of ${total}`), { x: 36, y: 14, size: 7, font, color: rgb(0.5, 0.5, 0.5) }));
+  out.getPages().forEach((p, i) => p.drawText(plain(`Ledgerline - ${s.reference} - Page ${i + 1} of ${total}`), { x: 36, y: 14, size: 7, font, color: rgb(0.5, 0.5, 0.5) }));
   const bytes = await out.save();
   return { blob: new Blob([bytes as BlobPart], { type: "application/pdf" }), missing };
 }
