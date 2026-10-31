@@ -35,8 +35,8 @@ export function AppShell({ children }: { children: ReactNode }) {
         <Link to="/dashboard" className="mb-6 flex h-12 w-12 items-center justify-center rounded-2xl bg-hero font-display text-xl font-extrabold text-ink-foreground shadow-float">L</Link>
         {LINKS.map((l) => (
           <Link key={l.to} to={l.to} className="flex w-20 flex-col items-center gap-1 rounded-2xl py-2.5 text-[11px] font-semibold text-ink-muted transition hover:text-ink-foreground"
-            activeProps={{ className: "!text-gold bg-sidebar-accent" }}>
-            <span className={"flex h-9 w-9 items-center justify-center rounded-xl " + ("primary" in l ? "bg-primary text-primary-foreground" : "")}><l.icon className="h-5 w-5" /></span>
+            activeProps={{ className: "!text-gold bg-sidebar-accent ring-1 ring-gold" }}>
+            <span className={"flex h-9 w-9 items-center justify-center rounded-xl " + ("primary" in l ? "bg-gold text-gold-foreground shadow-gold" : "")}><l.icon className="h-5 w-5" /></span>
             {l.label}
           </Link>
         ))}
@@ -49,12 +49,12 @@ export function AppShell({ children }: { children: ReactNode }) {
           <Button size="icon" variant="ghost" onClick={() => setHidden((h) => !h)} aria-label={hidden ? "Show amounts" : "Hide amounts"} className="ml-auto rounded-xl p-2 text-muted-foreground">{hidden ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}</Button>
           <Link to="/auth" aria-label={name ? `Account: ${name}` : "Account"} title={name || "Account"} className="p-2 text-muted-foreground"><UserRound className="h-5 w-5" /></Link>
           <div className="flex w-full justify-between gap-1 lg:hidden">
-            <Link to="/plan" aria-label="Plan" className="rounded-xl p-2 text-foreground/70" activeProps={{ className: "!text-gold bg-secondary" }}><CalendarClock className="h-5 w-5" /></Link>
-            <Link to="/budgets" aria-label="Budgets" className="rounded-xl p-2 text-foreground/70" activeProps={{ className: "!text-gold bg-secondary" }}><PiggyBank className="h-5 w-5" /></Link>
-            <Link to="/reconcile" aria-label="Bank reconciliation" className="rounded-xl p-2 text-foreground/70" activeProps={{ className: "!text-gold bg-secondary" }}><Landmark className="h-5 w-5" /></Link>
-            <Link to="/family" aria-label="Family" className="rounded-xl p-2 text-foreground/70" activeProps={{ className: "!text-gold bg-secondary" }}><Users className="h-5 w-5" /></Link>
-            <Link to="/vault" aria-label="Document vault" className="rounded-xl p-2 text-foreground/70"><FileText className="h-5 w-5" /></Link>
-            <Link to="/settings" aria-label="Settings" className="rounded-xl p-2 text-foreground/70" activeProps={{ className: "!text-gold bg-secondary" }}><Settings className="h-5 w-5" /></Link>
+            <Link to="/plan" aria-label="Plan" className="rounded-xl p-2 text-foreground/70" activeProps={{ className: "!text-gold bg-gold-soft" }}><CalendarClock className="h-5 w-5" /></Link>
+            <Link to="/budgets" aria-label="Budgets" className="rounded-xl p-2 text-foreground/70" activeProps={{ className: "!text-gold bg-gold-soft" }}><PiggyBank className="h-5 w-5" /></Link>
+            <Link to="/reconcile" aria-label="Bank reconciliation" className="rounded-xl p-2 text-foreground/70" activeProps={{ className: "!text-gold bg-gold-soft" }}><Landmark className="h-5 w-5" /></Link>
+            <Link to="/family" aria-label="Family" className="rounded-xl p-2 text-foreground/70" activeProps={{ className: "!text-gold bg-gold-soft" }}><Users className="h-5 w-5" /></Link>
+            <Link to="/vault" aria-label="Document vault" className="rounded-xl p-2 text-foreground/70" activeProps={{ className: "!text-gold bg-gold-soft" }}><FileText className="h-5 w-5" /></Link>
+            <Link to="/settings" aria-label="Settings" className="rounded-xl p-2 text-foreground/70" activeProps={{ className: "!text-gold bg-gold-soft" }}><Settings className="h-5 w-5" /></Link>
           </div>
         </div>
       </header>
@@ -65,9 +65,9 @@ export function AppShell({ children }: { children: ReactNode }) {
 
       <nav className="fixed inset-x-3 bottom-3 z-30 flex items-center justify-around rounded-3xl bg-ink px-2 py-2 text-ink-muted shadow-float lg:hidden">
         {LINKS.filter((l) => MOBILE.includes(l.to)).map((l) => (
-          <Link key={l.to} to={l.to} className="flex flex-1 flex-col items-center gap-0.5 rounded-2xl py-1.5 text-[10px] font-semibold" activeProps={{ className: "!text-gold" }}>
+          <Link key={l.to} to={l.to} className="flex flex-1 flex-col items-center gap-0.5 rounded-2xl py-1.5 text-[10px] font-semibold" activeProps={{ className: "!text-gold bg-gold-soft" }}>
             {"primary" in l ? (
-              <span className="-mt-7 flex h-12 w-12 items-center justify-center rounded-2xl bg-hero text-ink-foreground shadow-float"><l.icon className="h-6 w-6" /></span>
+              <span className="-mt-7 flex h-12 w-12 items-center justify-center rounded-2xl bg-gold-hero text-gold-foreground shadow-gold"><l.icon className="h-6 w-6" /></span>
             ) : <l.icon className="h-5 w-5" />}
             {l.label}
           </Link>
@@ -82,7 +82,7 @@ export function PageTitle({ title, sub, eyebrow }: { title: string; sub?: string
     <div className="mb-6">
       {eyebrow && <div className="mb-1 font-mono text-[11px] font-semibold uppercase tracking-[0.2em] text-primary">{eyebrow}</div>}
       <h1 className="font-display text-3xl font-bold tracking-tight sm:text-4xl">{title}</h1>
-      <span className="mt-2 block h-[3px] w-12 rounded-full bg-gold" aria-hidden="true" />
+      <span className="mt-2 block h-[3px] w-20 rounded-full bg-gold-hero" aria-hidden="true" />
       {sub && <p className="mt-2 font-medium text-muted-foreground">{sub}</p>}
     </div>
   );
@@ -90,9 +90,9 @@ export function PageTitle({ title, sub, eyebrow }: { title: string; sub?: string
 
 export function Stat({ label, value, hint, tone }: { label: string; value: string; hint?: string; tone?: "business" | "personal" }) {
   return (
-    <div className={"min-w-0 rounded-2xl border bg-card p-4 " + (tone === "business" ? "border-l-4 border-l-primary" : tone === "personal" ? "border-l-4 border-l-primary-glow" : "")}>
+    <div className={"min-w-0 rounded-2xl border border-l-4 bg-card p-4 " + (tone === "business" ? "border-l-primary" : tone === "personal" ? "border-l-primary-glow" : "border-l-gold")}>
       <div className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{label}</div>
-      <div className="mt-1 break-all font-mono text-xl font-semibold sm:text-2xl">{value}</div>
+      <div className="mt-1 break-all font-mono text-xl font-semibold text-gold-strong sm:text-2xl">{value}</div>
       {hint && <div className="text-xs text-muted-foreground">{hint}</div>}
     </div>
   );
