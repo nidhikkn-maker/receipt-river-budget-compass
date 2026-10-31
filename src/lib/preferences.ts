@@ -46,7 +46,10 @@ export interface FinancePreferences {
   /** Card utilisation % that raises an alert. */
   cardAlertPct: number;
   /** Home overview period. */
-  homePeriod: "day" | "week" | "month";
+  homePeriod: "day" | "week" | "month" | "custom";
+  /** Custom overview range (ISO dates), used when homePeriod is "custom". */
+  homeCustomStart: string;
+  homeCustomEnd: string;
   /** Days before account data needs review / is outdated; per-account overrides by account id. */
   freshness: { reviewDays: number; outdatedDays: number; perAccount: Record<string, { reviewDays: number; outdatedDays: number }> };
   /** Inbox item keys the user dismissed. */
@@ -97,7 +100,7 @@ export const DEFAULT_TAGS: GroupedTag[] = [
 export function defaultPreferences(): FinancePreferences {
   return {
     categories: CATEGORIES.map((name) => ({ name, archived: false })), tags: DEFAULT_TAGS, budgets: [], homeHidden: [], homeOrder: [...HOME_SECTIONS],
-    theme: "system", reminders: true, reminderDays: 3, defaultCurrency: "INR", language: "en", aiEnabled: true, aiReadsDocuments: true, cardAlertPct: 30, homePeriod: "month",
+    theme: "system", themeName: "signature", homeScope: "all", reminders: true, reminderDays: 3, defaultCurrency: "INR", language: "en", aiEnabled: true, aiReadsDocuments: true, cardAlertPct: 30, homePeriod: "month", homeCustomStart: "", homeCustomEnd: "",
     freshness: { reviewDays: 14, outdatedDays: 45, perAccount: {} }, inboxDismissed: [], statementBalances: {}, splitTemplates: [],
     emergency: defaultEmergency(), irregularRejected: [], irregularConfirmed: [], milestones: [], trips: [], merchantAliases: {}, brief: { enabled: true, day: 1, hour: 8 }, briefs: [], paymentInstruments: [],
     allocationPlans: [], rules: [], ruleDismissed: [], autopilotActions: {}, coolingOff: [], contractObligations: [], decisions: [], mapLinks: [], mapPositions: {},
@@ -118,7 +121,13 @@ export function normalizePreferences(raw: Partial<FinancePreferences> | null | u
   p.cardAlertPct = Number.isFinite(p.cardAlertPct) ? Math.min(100, Math.max(5, Math.round(p.cardAlertPct))) : d.cardAlertPct;
   if (!/^[A-Z]{3}$/.test(p.defaultCurrency ?? "")) p.defaultCurrency = "INR";
   if (!(p.language in LANGUAGES)) p.language = "en";
-  if (!["day", "week", "month"].includes(p.homePeriod)) p.homePeriod = "month";
+  if (!["day", "week", "month", "custom"].includes(p.homePeriod)) p.homePeriod = "month";
+  p.themeName = cleanThemeName(p.themeName);
+  if (p.homeScope !== "all" && !(SCOPES as readonly string[]).includes(p.homeScope)) p.homeScope = "all";
+  const iso = (v: unknown) => (typeof v === "string" && /^\d{4}-\d{2}-\d{2}$/.test(v) ? v : "");
+  p.homeCustomStart = iso(p.homeCustomStart);
+  p.homeCustomEnd = iso(p.homeCustomEnd);
+  if (p.homeCustomStart && p.homeCustomEnd && p.homeCustomStart > p.homeCustomEnd) [p.homeCustomStart, p.homeCustomEnd] = [p.homeCustomEnd, p.homeCustomStart];
   const f = p.freshness ?? d.freshness;
   const days = (n: unknown, def: number) => (Number.isFinite(n) ? Math.min(365, Math.max(1, Math.round(n as number))) : def);
   p.freshness = { reviewDays: days(f.reviewDays, 14), outdatedDays: days(f.outdatedDays, 45), perAccount: f.perAccount && typeof f.perAccount === "object" ? f.perAccount : {} };
