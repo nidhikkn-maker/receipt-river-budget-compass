@@ -2,7 +2,7 @@
 // Loads only the job owner's records, reuses the same pure report builder, and saves to report history.
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { buildReportDoc, reportLabel, type ReportFilters, type ReportType, type DraftLite } from "./report-centre";
+import { REPORT_TYPES, buildReportDoc, reportLabel, type ReportFilters, type ReportType, type DraftLite } from "./report-centre";
 import { accountBalance } from "./ledger";
 import { normalizePreferences } from "./preferences";
 import type { TravelTrip } from "./travel";
@@ -55,6 +55,10 @@ export async function loadOwnerReportData(db: SupabaseClient<any>, owner: string
 
 /** Builds, stores and records one claimed job. Re-running a finished job is a no-op (history id = job id). */
 export async function completeReportJob(db: SupabaseClient<any>, job: { id: string; owner_id: string; kind: string; filters: any; style: string }) {
+  if (!REPORT_TYPES.some((r) => r[0] === job.kind)) {
+    await db.from("report_jobs").update({ status: "failed", error: "Unknown report type", updated_at: new Date().toISOString() }).eq("id", job.id);
+    return;
+  }
   const exists = await db.from("report_history").select("id").eq("id", job.id).maybeSingle();
   if (!exists.data) {
     const today = new Date().toISOString().slice(0, 10);
