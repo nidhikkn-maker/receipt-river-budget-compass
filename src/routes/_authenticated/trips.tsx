@@ -12,6 +12,8 @@ import { CURRENCIES, money } from "@/lib/expenses";
 import { tripSummary, tripTag, type Trip } from "@/lib/intelligence";
 import { downloadBlob, toPdf } from "@/lib/reports";
 import { useStore } from "@/lib/store";
+import { TravelPanel } from "@/components/TravelPanel";
+import { TRIP_TYPES, type TravelTrip, type TripType } from "@/lib/travel";
 import { todayISO } from "@/lib/use-position";
 
 export const Route = createFileRoute("/_authenticated/trips")({
@@ -31,7 +33,7 @@ export const Route = createFileRoute("/_authenticated/trips")({
 function Trips() {
   const { preferences: pr, savePreferences, transactions, setTags } = useStore();
   const today = todayISO();
-  const [form, setForm] = useState({ name: "", destination: "", start: today, end: today, budget: 0, currencies: "INR" });
+  const [form, setForm] = useState({ name: "", destination: "", start: today, end: today, budget: 0, currencies: "INR", type: "personal" as TripType });
   const [openId, setOpenId] = useState<string | null>(pr.trips[0]?.id ?? null);
   const add = async () => {
     if (!form.name.trim()) { toast.error("Name the trip"); return; }
@@ -41,14 +43,15 @@ function Trips() {
     if (transactions.some((e) => (e.tags ?? []).some((tag) => tag.toLowerCase() === `Trip: ${form.name.trim()}`.toLowerCase())) && !pr.trips.some((t) => t.name.toLowerCase() === form.name.trim().toLowerCase())) { toast.error("This name is still attached to earlier entries; choose a new trip name"); return; }
     if (form.end < form.start) { toast.error("End date is before start date"); return; }
     if (pr.trips.some((t) => t.name.toLowerCase() === form.name.trim().toLowerCase())) { toast.error("A trip with this name exists"); return; }
-    const t: Trip = { id: crypto.randomUUID(), name: form.name.trim(), destination: form.destination, start: form.start, end: form.end, budget: form.budget, currencies: [...new Set(currencies)] };
+    const t: TravelTrip = { type: form.type, travellers: [], bookings: [], itinerary: [], advances: [], id: crypto.randomUUID(), name: form.name.trim(), destination: form.destination, start: form.start, end: form.end, budget: form.budget, currencies: [...new Set(currencies)] };
     try { await savePreferences({ ...pr, trips: [t, ...pr.trips] }); setOpenId(t.id); toast.success("Trip created"); } catch (e) { toast.error((e as Error).message); }
   };
   const trip = pr.trips.find((t) => t.id === openId);
   return (
     <div>
-      <PageTitle eyebrow="Travel" title="Trips" sub="Each entry keeps the exchange rate from its bill date. Changing today's rate never rewrites a trip." />
+      <PageTitle eyebrow="Travel" title="Travel Manager" sub="Each entry keeps the exchange rate from its bill date. Changing today's rate never rewrites a trip." />
       {pr.trips.length > 0 && <div className="mb-4 flex gap-2 overflow-x-auto pb-1">{pr.trips.map((t) => <Button key={t.id} variant={t.id === openId ? "default" : "outline"} onClick={() => setOpenId(t.id)}><Plane className="mr-1 h-4 w-4" />{t.name}</Button>)}</div>}
+      {trip && <TravelPanel trip={trip as TravelTrip} />}
       {trip && <TripView trip={trip} txns={transactions} setTags={setTags} onDelete={async () => { if (!confirm("Delete this trip? Entries stay, the trip label is kept on them.")) return; await savePreferences({ ...pr, trips: pr.trips.filter((x) => x.id !== trip.id) }); setOpenId(null); }} />}
       <Card title="New trip">
         <div className="grid gap-3 sm:grid-cols-2">
@@ -57,6 +60,7 @@ function Trips() {
           <div><Label>Start</Label><Input type="date" className="h-11" value={form.start} onChange={(e) => setForm({ ...form, start: e.target.value })} /></div>
           <div><Label>End</Label><Input type="date" className="h-11" value={form.end} onChange={(e) => setForm({ ...form, end: e.target.value })} /></div>
           <div><Label>Budget (₹)</Label><Input type="number" className="h-11" value={form.budget || ""} onChange={(e) => setForm({ ...form, budget: Number(e.target.value) || 0 })} /></div>
+          <div><Label>Trip type</Label><select className="h-11 w-full rounded-xl border bg-background px-2" value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value as TripType })}>{TRIP_TYPES.map((t) => <option key={t} value={t}>{t[0]!.toUpperCase() + t.slice(1)}</option>)}</select></div>
           <div><Label>Currencies (comma separated)</Label><Input className="h-11" value={form.currencies} onChange={(e) => setForm({ ...form, currencies: e.target.value })} /></div>
         </div>
         <Button variant="gold" className="mt-3 w-full" onClick={add}>Create trip</Button>
