@@ -228,7 +228,9 @@ function NewExpense() {
       if (x.description && (fresh || !description)) { setDescription(x.description); filled.add("description"); }
       if (x.scope) { setScope(x.scope); filled.add("scope"); }
       const cur = x.currency && /^[A-Z]{3}$/.test(x.currency.toUpperCase()) ? x.currency.toUpperCase() : currency;
-      setScan({ merchant: x.merchant ?? "", date: isDate(x.date) ? x.date : date, amount: x.amount != null ? String(x.amount) : "", currency: cur });
+      const readValues: ReceiptReadValues = { merchant: x.merchant ?? "", date: isDate(x.date) ? x.date : date, amount: x.amount ?? 0, currency: cur };
+      setScanRead(readValues);
+      setScan({ merchant: readValues.merchant, date: readValues.date, amount: x.amount != null ? String(x.amount) : "", currency: cur });
       setAutoFilled(filled);
       setConfirmed(false);
       toast.success("Bill read — check the key details");
@@ -271,6 +273,10 @@ function NewExpense() {
     setAmount(scan.amount);
     setDate(scan.date);
     setCurrency(scan.currency);
+    if (scanRead) {
+      const audit = buildReceiptAudit(scanRead, { merchant: scan.merchant, date: scan.date, amount: Number(scan.amount), currency: scan.currency }, new Date().toISOString());
+      setReceiptDetails((d) => ({ ...d, audit }));
+    }
     setAutoFilled((s) => new Set([...s, "merchant", "amount", "date", "currency"]));
     setConfirmed(true);
   };
