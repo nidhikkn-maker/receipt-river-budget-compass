@@ -1036,6 +1036,48 @@ export type Database = {
         }
         Relationships: []
       }
+      report_jobs: {
+        Row: {
+          attempts: number
+          created_at: string
+          error: string | null
+          filters: Json
+          id: string
+          kind: string
+          lease_until: string
+          owner_id: string
+          status: string
+          style: string
+          updated_at: string
+        }
+        Insert: {
+          attempts?: number
+          created_at?: string
+          error?: string | null
+          filters?: Json
+          id: string
+          kind: string
+          lease_until?: string
+          owner_id: string
+          status?: string
+          style?: string
+          updated_at?: string
+        }
+        Update: {
+          attempts?: number
+          created_at?: string
+          error?: string | null
+          filters?: Json
+          id?: string
+          kind?: string
+          lease_until?: string
+          owner_id?: string
+          status?: string
+          style?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       statement_line_imports: {
         Row: {
           account_key: string
@@ -1127,6 +1169,28 @@ export type Database = {
         Args: { batch_id: string; items: Json; target: string }
         Returns: string
       }
+      claim_report_jobs: {
+        Args: { _limit: number }
+        Returns: {
+          attempts: number
+          created_at: string
+          error: string | null
+          filters: Json
+          id: string
+          kind: string
+          lease_until: string
+          owner_id: string
+          status: string
+          style: string
+          updated_at: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "report_jobs"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       decide_family_request: {
         Args: { _id: string; _note: string; _status: string }
         Returns: undefined
@@ -1137,6 +1201,7 @@ export type Database = {
         Args: { action: string; payload: Json }
         Returns: Json
       }
+      finish_my_report_job: { Args: { _id: string }; Returns: undefined }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -1177,6 +1242,7 @@ export type Database = {
         Args: { display_name?: string; payload: Json }
         Returns: Json
       }
+      retry_my_report_job: { Args: { _id: string }; Returns: undefined }
       review_expense: {
         Args: { _decision: string; _expense_id: string; _note?: string }
         Returns: string

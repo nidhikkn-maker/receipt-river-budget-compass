@@ -46,6 +46,7 @@ import { Route as AuthenticatedVaultRouteImport } from './routes/_authenticated/
 import { Route as AuthenticatedWealthRouteImport } from './routes/_authenticated/wealth'
 import { Route as DotlovableOauthConsentRouteImport } from './routes/[.]lovable.oauth.consent'
 import { Route as ApiPublicJobsPaymentRemindersRouteImport } from './routes/api/public/jobs/payment-reminders'
+import { Route as ApiPublicJobsReportJobsRouteImport } from './routes/api/public/jobs/report-jobs'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -238,6 +239,11 @@ const ApiPublicJobsPaymentRemindersRoute =
     path: '/api/public/jobs/payment-reminders',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicJobsReportJobsRoute = ApiPublicJobsReportJobsRouteImport.update({
+  id: '/api/public/jobs/report-jobs',
+  path: '/api/public/jobs/report-jobs',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -276,6 +282,7 @@ export interface FileRoutesByFullPath {
   '/wealth': typeof AuthenticatedWealthRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/api/public/jobs/payment-reminders': typeof ApiPublicJobsPaymentRemindersRoute
+  '/api/public/jobs/report-jobs': typeof ApiPublicJobsReportJobsRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -314,6 +321,7 @@ export interface FileRoutesByTo {
   '/wealth': typeof AuthenticatedWealthRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/api/public/jobs/payment-reminders': typeof ApiPublicJobsPaymentRemindersRoute
+  '/api/public/jobs/report-jobs': typeof ApiPublicJobsReportJobsRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -354,6 +362,7 @@ export interface FileRoutesById {
   '/_authenticated/wealth': typeof AuthenticatedWealthRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/api/public/jobs/payment-reminders': typeof ApiPublicJobsPaymentRemindersRoute
+  '/api/public/jobs/report-jobs': typeof ApiPublicJobsReportJobsRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -394,6 +403,7 @@ export interface FileRouteTypes {
     | '/wealth'
     | '/.lovable/oauth/consent'
     | '/api/public/jobs/payment-reminders'
+    | '/api/public/jobs/report-jobs'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -432,6 +442,7 @@ export interface FileRouteTypes {
     | '/wealth'
     | '/.lovable/oauth/consent'
     | '/api/public/jobs/payment-reminders'
+    | '/api/public/jobs/report-jobs'
   id:
     | '__root__'
     | '/'
@@ -471,6 +482,7 @@ export interface FileRouteTypes {
     | '/_authenticated/wealth'
     | '/.lovable/oauth/consent'
     | '/api/public/jobs/payment-reminders'
+    | '/api/public/jobs/report-jobs'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -482,6 +494,7 @@ export interface RootRouteChildren {
   Char91DotwellKnownChar93OauthProtectedResourceRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   DotlovableOauthConsentRoute: typeof DotlovableOauthConsentRoute
   ApiPublicJobsPaymentRemindersRoute: typeof ApiPublicJobsPaymentRemindersRoute
+  ApiPublicJobsReportJobsRoute: typeof ApiPublicJobsReportJobsRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -745,6 +758,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicJobsPaymentRemindersRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/jobs/report-jobs': {
+      id: '/api/public/jobs/report-jobs'
+      path: '/api/public/jobs/report-jobs'
+      fullPath: '/api/public/jobs/report-jobs'
+      preLoaderRoute: typeof ApiPublicJobsReportJobsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -826,6 +846,7 @@ const rootRouteChildren: RootRouteChildren = {
     Char91DotwellKnownChar93OauthProtectedResourceRoute,
   DotlovableOauthConsentRoute: DotlovableOauthConsentRoute,
   ApiPublicJobsPaymentRemindersRoute: ApiPublicJobsPaymentRemindersRoute,
+  ApiPublicJobsReportJobsRoute: ApiPublicJobsReportJobsRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

@@ -1,3 +1,4 @@
+import { BackgroundReports } from "@/components/BackgroundReports";
 import { useNavigate } from "@tanstack/react-router";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -77,6 +78,9 @@ function ReportCentre() {
         const local = await localDrafts(store.userId).catch(() => []);
         drafts = [...local.map((d) => ({ id: d.id, status: "waiting_to_sync", updatedAt: d.updatedAt, data: d.data as DraftLite["data"], localOnly: true })), ...server.filter((s) => !local.some((l) => l.id === s.id)).map((s) => ({ id: s.id, status: s.status, updatedAt: s.updatedAt, data: s.data as DraftLite["data"] }))];
       }
+      // Record the job first: if the app closes before the PDF is saved, the server finishes it.
+      const jobId = crypto.randomUUID();
+      if (navigator.onLine) await supabase.from("report_jobs").insert({ id: jobId, owner_id: store.userId, kind: t, filters: filters as never, style, status: "running", lease_until: new Date(Date.now() + 120e3).toISOString() });
       setStage(1);
       const doc = buildReportDoc(t, filters, {
         transactions: store.transactions, accounts: store.accounts, valuations: store.valuations, commitments: store.commitments, loans: store.loans,
@@ -92,12 +96,13 @@ function ReportCentre() {
       setResult({ blob, url: URL.createObjectURL(blob), name, doc });
       setStage(3);
       if (navigator.onLine) {
-        const id = crypto.randomUUID(), path = `${store.userId}/reports/${id}.pdf`;
+        const id = jobId, path = `${store.userId}/reports/${id}.pdf`;
         const prior = history.filter((h) => h.kind === t && h.period_from === filters.from && h.period_to === filters.to).length;
-        const up = await supabase.storage.from("receipts").upload(path, blob, { contentType: "application/pdf" });
+        const up = await supabase.storage.from("receipts").upload(path, blob, { contentType: "application/pdf", upsert: true });
         if (up.error) throw new Error("The PDF is ready, but it couldn't be saved to report history.");
         const { error } = await supabase.from("report_history").insert({ id, owner_id: store.userId, kind: t, title: reportLabel(t), period_from: filters.from, period_to: filters.to, workspace: filters.workspaces.join(",") || "all", filters: { ...filters, style } as never, file_path: path, file_size: blob.size, version: prior + 1 });
-        if (error) { await supabase.storage.from("receipts").remove([path]); throw new Error("The PDF is ready, but it couldn't be saved to report history."); }
+        if (error && error.code !== "23505") { await supabase.storage.from("receipts").remove([path]); throw new Error("The PDF is ready, but it couldn't be saved to report history."); }
+        await supabase.rpc("finish_my_report_job", { _id: id });
         setReady((r) => ({ ...r, [id]: blob }));
         await loadHistory();
       } else toast.message("You're offline — the PDF is ready but wasn't saved to history.");
@@ -129,6 +134,7 @@ function ReportCentre() {
   return (
     <div className="space-y-5 pb-24">
       <PageTitle title="Reports Centre" sub="Generate PDF reports from your recorded entries, then preview, download or share them." />
+      <BackgroundReports onDone={() => void loadHistory()} />
 
       <Link to="/expenditure-statement" className="flex items-center justify-between rounded-xl border bg-card p-4 text-sm"><span><span className="block font-semibold">Detailed Expenditure Statement</span><span className="text-muted-foreground">One trip, event, project or purchase, with original bills attached</span></span><FileText className="h-5 w-5 text-primary" /></Link>
       <Link to="/claim-submission" className="flex items-center justify-between rounded-xl border bg-card p-4 text-sm"><span><span className="block font-semibold">Expense Claim Submission</span><span className="text-muted-foreground">Formal reimbursement claim with declaration, approval lines and bills</span></span><FileText className="h-5 w-5 text-primary" /></Link>

@@ -226,5 +226,5 @@
 - [x] Daily / Executive / Minimal home modes, restore default layout (reorder/hide existed)
 - [x] Inbox shows unfinished drafts and reports ready this week
 - [x] Already in place: smart quick entry, remembered defaults, drafts + offline recovery, single-flight saves, setup assistant, search, privacy toggle, offline entry
-- [ ] Server-side background jobs that continue after closing the app (reports currently run in the open app)
-- [ ] Transaction templates and saved views
+- [x] Reports Centre jobs recorded before generation; a per-minute server worker finishes abandoned ones (Tamil shows "?" in server-made PDFs; statements/claims with bills stay in-app)
+- [x] Saved filter views on Transactions (templates covered by Repeat favourites)
