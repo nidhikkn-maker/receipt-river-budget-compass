@@ -57,11 +57,12 @@ describe("Detailed Expenditure Statement", () => {
   });
   it("annexures are numbered in register order and missing bills are flagged", () => {
     const s = make();
-    expect(s.annexures.map((a) => [a.no, a.row])).toEqual([["A-01", 1], ["A-02", 1]]);
-    expect(s.rows[0]!.billRef).toBe("A-01, A-02");
+    const hotel = s.rows.find((r) => r.id === "hotel")!;
+    expect(s.annexures.map((a) => [a.no, a.row])).toEqual([["A-01", hotel.sno], ["A-02", hotel.sno]]);
+    expect(hotel.billRef).toBe("A-01, A-02");
     expect(s.rows.filter((r) => r.billRef === "Bill Not Attached").length).toBe(s.rows.length - 1);
   });
-  it("line items reconcile with the bill total", () => expect(make().rows[0]!.itemsReconcile).toBe(true));
+  it("line items reconcile with the bill total", () => expect(make().rows.find((r) => r.id === "hotel")!.itemsReconcile).toBe(true));
   it("supports an individual purchase", () => {
     const s = make({ kind: "entries", ids: ["meal"] });
     expect(s.rows.length).toBe(1); expect(s.summary.total).toBe(2000);
