@@ -1,5 +1,5 @@
 import { normalizeDate, parseStatementCsv, type StatementLine } from "./expenses";
-export async function readStatement(file: File): Promise<StatementLine[]> {
+export async function readStatement(file: Pick<File, "size" | "name" | "text" | "arrayBuffer">): Promise<StatementLine[]> {
  if(file.size>15*1024*1024)throw Error("Statement must be under 15 MB");
  if(/\.csv$/i.test(file.name)) return parseStatementCsv(await file.text(),true);
  if(/\.xlsx?$/i.test(file.name)) {
