@@ -1,4 +1,4 @@
-import { cell as uCell, loadPdfFonts, plain, withUnicode } from "./pdf-unicode";
+import { cell as uCell, loadPdfFonts, plain, withUnicode , textU, drawTextU } from "./pdf-unicode";
 // Renders a Detailed Expenditure Statement: portrait overview, landscape register, then every
 // original bill as numbered annexures, merged into one PDF. Browser-only: import dynamically.
 import type { Statement } from "./expenditure-statement";
@@ -23,7 +23,7 @@ export async function renderStatementPdf(s: Statement, files: Record<string, Ann
 
   // Page 1 — overview
   doc.setFont("helvetica", "bold"); doc.setFontSize(10); doc.setTextColor(...INK); doc.text("LEDGERLINE", M, 15);
-  doc.setFontSize(17); doc.text(s.title, M, 25);
+  doc.setFontSize(17); textU(doc, s.title, M, 25);
   doc.setDrawColor(...INK); doc.setLineWidth(0.4); doc.line(M, 28, 196, 28);
   table({ startY: 32, theme: "plain", styles: { fontSize: 8.5, cellPadding: 1.1 }, columnStyles: { 0: { fontStyle: "bold", cellWidth: 42 } }, body: [
     ["Subject", s.subjectName], ["Workspace", s.workspace], ["Organisation", s.organisation], ["Purpose", s.purpose],
@@ -66,11 +66,11 @@ export async function appendAnnexures(body: Uint8Array, s: Statement, files: Rec
   const font = await out.embedFont(StandardFonts.Helvetica), bold = await out.embedFont(StandardFonts.HelveticaBold);
   const missing: string[] = [];
   const A4: [number, number] = [595.28, 841.89];
-  const header = (page: import("pdf-lib").PDFPage, a: Statement["annexures"][number], extra = "") => {
+  const header = async (page: import("pdf-lib").PDFPage, a: Statement["annexures"][number], extra = "") => {
     const { height } = page.getSize();
     page.drawRectangle({ x: 0, y: height - 46, width: page.getWidth(), height: 46, color: rgb(1, 1, 1) });
-    page.drawText(plain(`Annexure ${a.no} - Original ${a.docType}${extra}`), { x: 36, y: height - 22, size: 11, font: bold, color: rgb(0.086, 0.17, 0.43) });
-    page.drawText(plain(`Transaction ${a.row} | ${a.merchant} | ${a.date} | ${n(a.amount)} | ${s.reference}`).slice(0, 110), { x: 36, y: height - 36, size: 8, font, color: rgb(0.3, 0.3, 0.3) });
+    await drawTextU(out, page, `Annexure ${a.no} - Original ${a.docType}${extra}`, { x: 36, y: height - 22, size: 11, font: bold, color: rgb(0.086, 0.17, 0.43), rgb255: [22, 43, 110] });
+    await drawTextU(out, page, `Transaction ${a.row} | ${a.merchant} | ${a.date} | ${n(a.amount)} | ${s.reference}`, { x: 36, y: height - 36, size: 8, font, color: rgb(0.3, 0.3, 0.3), rgb255: [77, 77, 77], maxChars: 110 });
   };
   for (const a of s.annexures) {
     const f = files[a.no];
@@ -78,7 +78,7 @@ export async function appendAnnexures(body: Uint8Array, s: Statement, files: Rec
       if (!f) throw new Error("missing");
       if (f.type === "application/pdf") {
         const src = await PDFDocument.load(f.bytes, { ignoreEncryption: true });
-        const cover = out.addPage(A4); header(cover, a); cover.drawText(`Original document follows (${src.getPageCount()} page${src.getPageCount() > 1 ? "s" : ""}).`, { x: 36, y: 760, size: 10, font });
+        const cover = out.addPage(A4); await header(cover, a); cover.drawText(`Original document follows (${src.getPageCount()} page${src.getPageCount() > 1 ? "s" : ""}).`, { x: 36, y: 760, size: 10, font });
         for (const p of await out.copyPages(src, src.getPageIndices())) out.addPage(p);
       } else {
         const img = f.type === "image/png" ? await out.embedPng(f.bytes) : await out.embedJpg(f.bytes);
@@ -87,16 +87,16 @@ export async function appendAnnexures(body: Uint8Array, s: Statement, files: Rec
         const { width, height } = page.getSize();
         const sc = Math.min((width - 60) / img.width, (height - 90) / img.height, 2);
         page.drawImage(img, { x: (width - img.width * sc) / 2, y: (height - 56 - img.height * sc) / 2 + 4, width: img.width * sc, height: img.height * sc });
-        header(page, a);
+        await header(page, a);
       }
     } catch {
       missing.push(a.no);
-      const page = out.addPage(A4); header(page, a, " - NOT READABLE");
-      page.drawText(plain(`The attached file "${a.name}" could not be included. It remains stored in Ledgerline.`), { x: 36, y: 760, size: 10, font });
+      const page = out.addPage(A4); await header(page, a, " - NOT READABLE");
+      await drawTextU(out, page, `The attached file "${a.name}" could not be included. It remains stored in Ledgerline.`, { x: 36, y: 760, size: 10, font, color: rgb(0, 0, 0), rgb255: [0, 0, 0] });
     }
   }
   const total = out.getPageCount();
-  out.getPages().forEach((p, i) => p.drawText(plain(`Ledgerline - ${s.reference} - Page ${i + 1} of ${total}`), { x: 36, y: 14, size: 7, font, color: rgb(0.5, 0.5, 0.5) }));
+  for (const [i, p] of out.getPages().entries()) await drawTextU(out, p, `Ledgerline - ${s.reference} - Page ${i + 1} of ${total}`, { x: 36, y: 14, size: 7, font, color: rgb(0.5, 0.5, 0.5), rgb255: [128, 128, 128] });
   const bytes = await out.save();
   return { blob: new Blob([bytes as BlobPart], { type: "application/pdf" }), missing };
 }

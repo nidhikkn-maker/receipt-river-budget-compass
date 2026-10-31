@@ -1,4 +1,4 @@
-import { cell as uCell, loadPdfFonts, plain, withUnicode } from "./pdf-unicode";
+import { cell as uCell, loadPdfFonts, plain, withUnicode , textU } from "./pdf-unicode";
 // Renders a ReportDoc to an A4 PDF with jsPDF. Browser-only: import dynamically.
 import type { ReportDoc } from "./report-centre";
 
@@ -22,10 +22,10 @@ export async function renderReportPdf(r: ReportDoc, style: PdfStyle, generatedAt
   doc.setTextColor(255, 255, 255); doc.setFont("helvetica", "bold"); doc.setFontSize(10); doc.text("L", M + 3.1, 18.2);
   doc.setTextColor(...ink); doc.setFontSize(11); doc.text("LEDGERLINE", M + 12, 18.2);
   doc.setDrawColor(...accent); doc.setLineWidth(0.6); doc.line(M, 24, W - M, 24);
-  doc.setFontSize(18); doc.text(plain(r.title), M, 33);
+  doc.setFontSize(18); textU(doc, r.title, M, 33);
   doc.setFont("helvetica", "normal"); doc.setFontSize(9); doc.setTextColor(70, 70, 70);
   let y = 39;
-  for (const line of [`Reporting period: ${r.period}`, ...r.filterLines, `Generated: ${stamp}`]) { doc.text(plain(line), M, y); y += 4.5; }
+  for (const line of [`Reporting period: ${r.period}`, ...r.filterLines, `Generated: ${stamp}`]) { textU(doc, line, M, y); y += 4.5; }
   y += 2;
 
   if (r.summary.length) {
@@ -36,11 +36,11 @@ export async function renderReportPdf(r: ReportDoc, style: PdfStyle, generatedAt
 
   for (const s of r.sections) {
     if (y > H - 40) { doc.addPage(); y = 20; }
-    doc.setFont("helvetica", "bold"); doc.setFontSize(11); doc.setTextColor(...ink); doc.text(plain(s.title), M, y); y += 2;
+    doc.setFont("helvetica", "bold"); doc.setFontSize(11); doc.setTextColor(...ink); textU(doc, s.title, M, y); y += 2;
     if (s.chart?.some((c) => c.value > 0)) {
       const max = Math.max(...s.chart.map((c) => c.value)), bw = (W - 2 * M) * 0.55;
       doc.setFont("helvetica", "normal"); doc.setFontSize(7.5); doc.setTextColor(60, 60, 60);
-      for (const c of s.chart) { y += 4.6; doc.text(plain(c.label).slice(0, 28), M, y); doc.setFillColor(...(style === "mono" ? [120, 120, 120] as [number, number, number] : accent)); doc.rect(M + 48, y - 2.8, Math.max(0.4, bw * (c.value / max)), 3, "F"); }
+      for (const c of s.chart) { y += 4.6; textU(doc, c.label.slice(0, 28), M, y, { maxW: 46 }); doc.setFillColor(...(style === "mono" ? [120, 120, 120] as [number, number, number] : accent)); doc.rect(M + 48, y - 2.8, Math.max(0.4, bw * (c.value / max)), 3, "F"); }
       y += 4;
     }
     const cols = Object.fromEntries((s.align ?? []).map((a, i) => [i, { halign: a === "r" ? "right" as const : "left" as const }]));
@@ -67,7 +67,7 @@ export async function renderReportPdf(r: ReportDoc, style: PdfStyle, generatedAt
   const pages = doc.getNumberOfPages();
   for (let i = 1; i <= pages; i++) {
     doc.setPage(i); doc.setFont("helvetica", "normal"); doc.setFontSize(7.5); doc.setTextColor(130, 130, 130);
-    doc.text(plain(`Ledgerline - ${r.title} - ${r.period}`), M, H - 8);
+    textU(doc, `Ledgerline - ${r.title} - ${r.period}`, M, H - 8, { maxW: 150 });
     doc.text(`Page ${i} of ${pages}`, W - M, H - 8, { align: "right" });
   }
   return doc.output("blob");
