@@ -21,7 +21,7 @@ export function readBackup(bytes: Uint8Array, zipped: boolean): { backup: Backup
 }
 
 /** Preserve IDs on same-account restores; remap every linked ID when importing another account's backup. */
-export function prepareRestore(backup: Backup, owner: string, uuid = () => crypto.randomUUID()): { data: Backup["data"]; paths: Map<string, string> } {
+export function prepareRestore(backup: Backup, owner: string, uuid: () => string = () => crypto.randomUUID()): { data: Backup["data"]; paths: Map<string, string> } {
   const oldOwner = backup.owner || String(backup.data.expenses?.[0]?.["employee_id"] ?? backup.data.accounts?.[0]?.["owner_id"] ?? "");
   const crossAccount = oldOwner !== owner;
   const ids = new Map<string, string>();

@@ -82,18 +82,18 @@ export function position(i: PositionInput) {
   for (const c of i.commitments.filter((x) => x.status === "active" && x.direction === "out" && x.nextDue < i.today)) alerts.push({ level: "high", text: `${c.name} was due on ${c.nextDue}`, to: "/plan" });
   if (fc.shortDates.length) alerts.push({ level: "high", text: `Money runs short from ${fc.shortDates[0]} — lowest ${Math.round(sts.lowest).toLocaleString("en-IN")}`, to: "/plan" });
   for (const c of cards) {
-    if (c.cycle.status === "overdue") alerts.push({ level: "high", text: `${c.name} bill of ₹${c.cycle.remainingDue.toLocaleString("en-IN")} is overdue`, to: `/accounts/${c.id}` });
-    else if (c.cycle.remainingDue > 0 && c.cycle.dueDate && c.cycle.dueDate <= addDays(i.today, 5)) alerts.push({ level: "medium", text: `${c.name} bill ₹${c.cycle.remainingDue.toLocaleString("en-IN")} due ${c.cycle.dueDate}`, to: `/accounts/${c.id}` });
-    if (c.cycle.highUtilisation) alerts.push({ level: "medium", text: `${c.name} is ${c.utilisation}% used`, to: `/accounts/${c.id}` });
+    if (c.cycle.status === "overdue") alerts.push({ level: "high", text: `${c.name} bill of ₹${c.cycle.remainingDue.toLocaleString("en-IN")} is overdue`, to: "/wealth" });
+    else if (c.cycle.remainingDue > 0 && c.cycle.dueDate && c.cycle.dueDate <= addDays(i.today, 5)) alerts.push({ level: "medium", text: `${c.name} bill ₹${c.cycle.remainingDue.toLocaleString("en-IN")} due ${c.cycle.dueDate}`, to: "/wealth" });
+    if (c.cycle.highUtilisation) alerts.push({ level: "medium", text: `${c.name} is ${c.utilisation}% used`, to: "/wealth" });
   }
   for (const l of income.late) alerts.push({ level: "medium", text: `${l.name} is ${l.daysLate} day${l.daysLate === 1 ? "" : "s"} late`, to: "/plan" });
-  for (const a of cashAccounts) { const b = accountBalance(a, i.transactions); if ((a.minBalance ?? 0) > 0 && b < (a.minBalance ?? 0)) alerts.push({ level: "medium", text: `${a.name} is below its minimum balance`, to: `/accounts/${a.id}` }); }
+  for (const a of cashAccounts) { const b = accountBalance(a, i.transactions); if ((a.minBalance ?? 0) > 0 && b < (a.minBalance ?? 0)) alerts.push({ level: "medium", text: `${a.name} is below its minimum balance`, to: "/wealth" }); }
   if (i.budgets) {
     const spentBy: Record<string, number> = {};
     for (const t of i.transactions) if ((t.txnType ?? "expense") === "expense" && t.date.startsWith(month)) spentBy[t.category] = (spentBy[t.category] ?? 0) + t.amount;
     for (const [cat, b] of Object.entries(i.budgets)) if (b > 0 && (spentBy[cat] ?? 0) >= b * 0.9) alerts.push({ level: (spentBy[cat] ?? 0) > b ? "high" : "medium", text: `${cat}: ${Math.round(((spentBy[cat] ?? 0) / b) * 100)}% of budget used`, to: "/budgets" });
   }
-  for (const d of subs.duplicates) alerts.push({ level: "info", text: `Possible duplicate subscriptions: ${d.names.join(" & ")}`, to: "/subscriptions" });
+  for (const d of subs.duplicates) alerts.push({ level: "info", text: `Possible duplicate subscriptions: ${d.names.join(" & ")}`, to: "/plan" });
   for (const x of anomalies(i.transactions, i.today, 7)) alerts.push({ level: "info", text: `Unusual: ${x.title} — ${x.reason}`, to: "/expenses" });
 
   return {
