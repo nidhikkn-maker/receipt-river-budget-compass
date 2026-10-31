@@ -78,6 +78,13 @@
       "when": 1793414853185,
       "tag": "0010_adjustment_direction",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1793417045477,
+      "tag": "0011_atomic_finance_workflows",
+      "breakpoints": true
     }
   ]
 }
