@@ -112,6 +112,12 @@ function Overview() {
 
   return (
     <>
+      {(scope === "business" || scope === "official") && (
+        <div className="mb-4 flex flex-wrap gap-2 text-sm">
+          <Link to="/expenditure-statement" className="rounded-xl border bg-card px-3 py-2 font-semibold text-primary">Generate {scope} statement</Link>
+          <Link to="/claim-submission" className="rounded-xl border bg-card px-3 py-2 font-semibold text-primary">Expense claim</Link>
+        </div>
+      )}
       {/* §1 — Financial overview */}
       <section hidden={hidden("overview")} style={{ order: order("overview") }} className="mb-5">
         <div className="mb-3 flex flex-wrap items-center gap-2">
