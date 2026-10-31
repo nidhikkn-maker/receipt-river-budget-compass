@@ -61,3 +61,26 @@ export function withUnicode<T extends Record<string, any>>(doc: any, opts: T): T
     },
   };
 }
+
+function colorOf(doc: any): [number, number, number] {
+  try { const h = String(doc.getTextColor()); const m = /^#?([0-9a-f]{6})$/i.exec(h); if (m) { const v = parseInt(m[1], 16); return [v >> 16, (v >> 8) & 255, v & 255]; } } catch { /* default */ }
+  return [25, 25, 25];
+}
+
+/** jsPDF text (titles, headings, footers): Tamil and other scripts drawn as shaped images; y is the baseline. */
+export function textU(doc: any, text: string, x: number, y: number, opts: { align?: "right"; maxW?: number } = {}) {
+  if (!hasComplex(PUNCT(text)) || !canDrawUnicode()) { doc.text(plain(text), x, y, opts.align ? { align: opts.align } : undefined); return; }
+  const pt = doc.getFontSize(); const img = render(PUNCT(text), opts.maxW ?? 180, pt, colorOf(doc));
+  const top = y - pt * 0.3528 * 0.95; const left = opts.align === "right" ? x - img.w : x;
+  doc.addImage(img.url, "PNG", left, top, img.w, img.h);
+}
+
+/** pdf-lib text (bill pages, footers): Tamil drawn as an embedded shaped image. */
+export async function drawTextU(out: any, page: any, text: string, o: { x: number; y: number; size: number; font: any; color: any; rgb255?: [number, number, number]; maxChars?: number }) {
+  const t = o.maxChars ? PUNCT(text).slice(0, o.maxChars) : PUNCT(text);
+  if (!hasComplex(t) || !canDrawUnicode()) { page.drawText(plain(t), { x: o.x, y: o.y, size: o.size, font: o.font, color: o.color }); return; }
+  const img = render(t, (page.getWidth() - o.x - 20) / 2.835, o.size, o.rgb255 ?? [60, 60, 60]);
+  const png = await out.embedPng(img.url);
+  const w = img.w * 2.835, h = img.h * 2.835;
+  page.drawImage(png, { x: o.x, y: o.y + o.size - h + o.size * 0.15, width: w, height: h });
+}
