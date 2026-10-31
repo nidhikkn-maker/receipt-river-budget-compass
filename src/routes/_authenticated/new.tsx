@@ -767,7 +767,7 @@ function NewExpense() {
               </div>
             )}
           </div>
-          {!liveAccounts.length && <p className="rounded-xl bg-secondary px-3 py-2 text-xs">An account is needed to keep balances accurate. <Link to="/wealth" className="font-semibold text-primary underline">Add account</Link> — until then this entry is saved without changing any balance.</p>}
+          {!liveAccounts.length && <p className="rounded-xl bg-secondary px-3 py-2 text-xs">An account is needed to keep balances accurate. <button type="button" onClick={() => setAddAcct(true)} className="font-semibold text-primary underline">Add account</button> — until then this entry is saved without changing any balance.</p>}
           {(txnType === "advance" || txnType === "advance_settlement") && (
             <div className="grid gap-1.5">
               <Label>Trip</Label>
