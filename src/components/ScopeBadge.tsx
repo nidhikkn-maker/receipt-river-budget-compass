@@ -15,8 +15,8 @@ export function ScopeBadge({ scope, className }: { scope: Scope; className?: str
 /** Two-option segmented switch: Personal | Business */
 export function ScopeToggle({ value, onChange, size = "md" }: { value: Scope; onChange: (s: Scope) => void; size?: "sm" | "md" }) {
   return (
-    <div role="radiogroup" aria-label="Business or personal" className={cn("inline-grid grid-cols-2 rounded-2xl bg-secondary p-1", size === "sm" ? "text-xs" : "text-sm")}>
-      {(["personal", "business"] as const).map((s) => {
+    <div role="radiogroup" aria-label="Workspace" className={cn("inline-grid grid-cols-2 sm:grid-cols-4 rounded-2xl bg-secondary p-1", size === "sm" ? "text-xs" : "text-sm")}>
+      {SCOPES.map((s) => {
         const Icon = s === "business" ? Briefcase : Home;
         return (
           <button key={s} type="button" role="radio" aria-checked={value === s} onClick={() => onChange(s)}
