@@ -11,8 +11,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   BASE_CURRENCY, CATEGORIES, CURRENCIES, PAYMENT_LABEL, PAYMENT_METHODS, convert, money, splitEvenly,
-  type Category, type PaymentMethod, type Scope,
+  type Category, type PaymentMethod, type Scope, type ReceiptDetails,
 } from "@/lib/expenses";
+import { tagValue } from "@/lib/preferences";
 import { useStore } from "@/lib/store";
 import { extractReceipt } from "@/lib/receipt-extract.functions";
 import { getFxRate } from "@/lib/fx.functions";
@@ -54,7 +55,7 @@ interface SpeechRec { lang: string; interimResults: boolean; start: () => void; 
 interface Scan { merchant: string; date: string; amount: string; currency: string }
 
 function NewExpense() {
-  const { save, transactions: expenses, members, accounts } = useStore();
+  const { save, transactions: expenses, members, accounts, preferences } = useStore();
   const liveAccounts = accounts.filter((a) => !a.archived);
   const nav = useNavigate();
   const { edit } = Route.useSearch();
@@ -76,6 +77,7 @@ function NewExpense() {
   const [category, setCategory] = useState<Category>("Groceries");
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
   const [description, setDescription] = useState("");
+  const [receiptDetails, setReceiptDetails] = useState<ReceiptDetails>({});
   const [receipts, setReceipts] = useState<LocalReceipt[]>([]);
   const [reading, setReading] = useState(false);
   const [scan, setScan] = useState<Scan | null>(null);
@@ -127,6 +129,7 @@ function NewExpense() {
 
   useEffect(() => {
     if (!editing) return;
+    setReceiptDetails(editing.receiptDetails ?? {});
     setTitle(editing.title); setMerchant(editing.merchant ?? ""); setAmount(String(editing.originalAmount)); setCurrency(editing.currency);
     setPaymentMethod(editing.paymentMethod); setCategory(editing.category); setDate(editing.date); setDescription(editing.description);
     setScope(editing.scope); setMemberId(editing.memberId ?? "me");
@@ -159,6 +162,7 @@ function NewExpense() {
       const res = await extractReceipt({ data: { dataUrl: first.dataUrl, mimeType: first.type } });
       if (!res.ok) { toast.error(res.error); return; }
       const x = res.result;
+      setReceiptDetails({ tax: x.tax, items: x.items, text: x.text });
       const filled = new Set<string>();
       if (x.title && !title) { setTitle(x.title); filled.add("title"); }
       if (x.category) { setCategory(x.category); filled.add("category"); }
@@ -196,7 +200,7 @@ function NewExpense() {
     const hit = suggestForMerchant(m, expenses);
     if (!hit) return;
     const filled = new Set(autoFilled);
-    if ((CATEGORIES as readonly string[]).includes(hit.category)) { setCategory(hit.category as Category); filled.add("category"); }
+    if (preferences.categories.some(c=>c.name===hit.category && !c.archived)) { setCategory(hit.category as Category); filled.add("category"); }
     if ((PAYMENT_METHODS as readonly string[]).includes(hit.paymentMethod)) { setPaymentMethod(hit.paymentMethod as PaymentMethod); filled.add("paymentMethod"); }
     if (hit.scope === "business" || hit.scope === "personal") { setScope(hit.scope); filled.add("scope"); }
     if (hit.accountId && liveAccounts.some((a) => a.id === hit.accountId)) setAccountId(hit.accountId);
@@ -212,7 +216,7 @@ function NewExpense() {
     try {
       await save(
         { title: title.trim(), amount: Number(amount), currency, paymentMethod, category, date, description, merchant: merchant.trim() || null,
-          scope, memberId: memberId === "me" ? null : memberId,
+          receiptDetails, scope, memberId: memberId === "me" ? null : memberId,
           txnType, accountId: accountId === "none" ? null : accountId, toAccountId: toAccountId === "none" ? null : toAccountId,
           tags: [...new Set(tags.split(",").map((t) => t.trim()).filter(Boolean))],
           splits: splitOn ? Object.entries(shares).map(([k, v]) => ({ memberId: k === "me" ? null : k, amount: Number(v) })) : [] },
@@ -280,6 +284,8 @@ function NewExpense() {
                 </div>
               </div>
               <div className="grid gap-1"><Label htmlFor="sa">Total on bill</Label><Input id="sa" type="number" step="0.01" min="0" className="font-mono" value={scan.amount} onChange={(e) => setScan({ ...scan, amount: e.target.value })} /></div>
+              <div className="grid gap-1"><Label htmlFor="receipt-tax">Tax included</Label><Input id="receipt-tax" type="number" min="0" step="0.01" value={receiptDetails.tax ?? ""} onChange={e=>setReceiptDetails({...receiptDetails,tax:e.target.value===""?null:Number(e.target.value)})}/></div>
+              {(receiptDetails.items??[]).map((item,i)=><div key={i} className="grid grid-cols-[1fr_64px_80px] gap-2"><Input aria-label={`Item ${i+1} name`} value={item.name} onChange={e=>setReceiptDetails({...receiptDetails,items:receiptDetails.items?.map((x,j)=>j===i?{...x,name:e.target.value}:x)})}/><Input aria-label={`Item ${i+1} quantity`} type="number" value={item.quantity} onChange={e=>setReceiptDetails({...receiptDetails,items:receiptDetails.items?.map((x,j)=>j===i?{...x,quantity:Number(e.target.value)}:x)})}/><Input aria-label={`Item ${i+1} amount`} type="number" step="0.01" value={item.amount} onChange={e=>setReceiptDetails({...receiptDetails,items:receiptDetails.items?.map((x,j)=>j===i?{...x,amount:Number(e.target.value)}:x)})}/></div>)}
               <div className="flex justify-end gap-2">
                 <Button type="button" variant="ghost" size="sm" onClick={() => { setScan(null); setConfirmed(true); }}>Discard</Button>
                 <Button type="button" size="sm" onClick={confirmScan}>Confirm details</Button>
@@ -329,7 +335,7 @@ function NewExpense() {
           {!liveAccounts.length && <p className="-mt-2 text-xs text-muted-foreground">Add your bank, card and cash accounts on the <Link to="/wealth" className="text-primary underline">Wealth</Link> page.</p>}
           <div className="grid gap-2">
             <Label htmlFor="tags">Tags</Label>
-            <Input id="tags" placeholder="e.g. VEI, reimbursable, essential" value={tags} onChange={(e) => setTags(e.target.value)} />
+            <div className="flex flex-wrap gap-2">{preferences.tags.map(t=>{const v=tagValue(t);const selected=tags.split(",").map(x=>x.trim()).includes(v);return <label key={v} className="flex items-center gap-1 text-xs"><input type="checkbox" checked={selected} onChange={e=>{const xs=tags.split(",").map(x=>x.trim()).filter(Boolean);setTags((e.target.checked?[...xs,v]:xs.filter(x=>x!==v)).join(", "));}}/>{v}</label>})}</div><Input id="tags" placeholder="e.g. VEI, reimbursable, essential" value={tags} onChange={(e) => setTags(e.target.value)} />
           </div>
           <div className="grid gap-2">
             <Label>Business or personal?{af("scope")}</Label>
@@ -412,7 +418,7 @@ function NewExpense() {
               <Label>Category{af("category")}</Label>
               <Select value={category} onValueChange={(v) => setCategory(v as Category)}>
                 <SelectTrigger aria-label="Category"><SelectValue /></SelectTrigger>
-                <SelectContent>{CATEGORIES.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
+                <SelectContent>{[...new Set([category, ...preferences.categories.filter(c=>!c.archived).map(c=>c.name)])].map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
               </Select>
             </div>
           </div>

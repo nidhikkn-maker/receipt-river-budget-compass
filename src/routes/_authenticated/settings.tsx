@@ -5,6 +5,7 @@ import { Download, Trash2, Upload } from "lucide-react";
 import { PageTitle } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
+import { FinanceSettings } from "@/components/FinanceSettings";
 import { useStore } from "@/lib/store";
 
 export const Route = createFileRoute("/_authenticated/settings")({
@@ -22,9 +23,9 @@ export const Route = createFileRoute("/_authenticated/settings")({
 });
 
 // Restore order matters: rows that others point to come first.
-const TABLES = ["family_members", "accounts", "category_budgets", "commitments", "loans", "goals", "expenses"] as const;
+const TABLES = ["finance_preferences", "family_members", "accounts", "category_budgets", "commitments", "loans", "goals", "expenses"] as const;
 type T = (typeof TABLES)[number];
-const OWNER: Record<T, string> = { family_members: "owner_id", accounts: "owner_id", category_budgets: "owner_id", commitments: "owner_id", loans: "owner_id", goals: "owner_id", expenses: "employee_id" };
+const OWNER: Record<T, string> = { finance_preferences: "owner_id", family_members: "owner_id", accounts: "owner_id", category_budgets: "owner_id", commitments: "owner_id", loans: "owner_id", goals: "owner_id", expenses: "employee_id" };
 
 function Settings() {
   const { userId, refresh, transactions, accounts } = useStore();
@@ -86,6 +87,7 @@ function Settings() {
   return (
     <>
       <PageTitle eyebrow="Settings" title="Your data" sub={`${transactions.length} entries · ${accounts.length} accounts`} />
+      <FinanceSettings />
       <div className="grid gap-4 sm:grid-cols-2">
         <Card title="Back up everything" body="Download one file with all accounts, entries, recurring payments, loans, goals, budgets and family. Receipt images stay in the app.">
           <Button onClick={backup} disabled={busy}><Download className="h-4 w-4" />Download backup</Button>
