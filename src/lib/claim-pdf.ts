@@ -31,7 +31,7 @@ export async function renderClaimPdf(c: Claim, files: Record<string, AnnexFile |
   const M = 14;
   const last = () => (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY;
   const table = (o: Parameters<typeof autoTable>[1]) => autoTable(doc, withUnicode(doc, { theme: "grid", margin: { left: M, right: M, top: 16, bottom: 16 }, showHead: "everyPage", rowPageBreak: "avoid",
-    styles: { fontSize: 8, cellPadding: 1.5, lineColor: [200, 200, 200], lineWidth: 0.1, textColor: [25, 25, 25], overflow: "linebreak" },
+    styles: { fontSize: 9, cellPadding: 1.5, lineColor: [200, 200, 200], lineWidth: 0.1, textColor: [25, 25, 25], overflow: "linebreak" },
     headStyles: { fillColor: [236, 239, 246], textColor: INK, fontStyle: "bold" }, footStyles: { fillColor: [245, 245, 245], textColor: [20, 20, 20], fontStyle: "bold" }, ...o }));
 
   doc.setFont("helvetica", "bold"); doc.setFontSize(10); doc.setTextColor(...INK); doc.text("LEDGERLINE", M, 15);
@@ -39,7 +39,7 @@ export async function renderClaimPdf(c: Claim, files: Record<string, AnnexFile |
   doc.setFont("helvetica", "normal"); doc.setFontSize(9); doc.setTextColor(80, 80, 80); textU(doc, `To: ${c.organisation} - Accounts Department`, M, 31);
   doc.setDrawColor(...INK); doc.setLineWidth(0.4); doc.line(M, 34, 196, 34);
   const k = c.claimant;
-  table({ startY: 38, theme: "plain", styles: { fontSize: 8.5, cellPadding: 1.1 }, columnStyles: { 0: { fontStyle: "bold", cellWidth: 38 }, 2: { fontStyle: "bold", cellWidth: 34 } }, body: [
+  table({ startY: 38, theme: "plain", styles: { fontSize: 9, cellPadding: 1.1 }, columnStyles: { 0: { fontStyle: "bold", cellWidth: 38 }, 2: { fontStyle: "bold", cellWidth: 34 } }, body: [
     ["Claimant", k.name, "Claim reference", c.reference], ["Employee ID", k.employeeId || "-", "Date of claim", c.prepared], ["Department", k.department || "-", "Activity", c.subjectName],
     ["Designation", k.designation || "-", "Period", `${c.start} to ${c.end}`], ["Email", k.email || "-", "Purpose", c.purpose],
   ].map((r) => r.map(ascii)) });
@@ -53,7 +53,7 @@ export async function renderClaimPdf(c: Claim, files: Record<string, AnnexFile |
       head: [["No.", "Date", "Particulars", "Category", "Merchant", "Paid via", "Cur.", "Original", "INR", "Received", "Claimed", "Bill"]],
       body: c.items.map((i) => [String(i.claimNo), i.date, i.particulars, i.category, i.merchant, `${i.method} - ${i.source}`, i.currency, n(i.original), n(i.eligible), n(i.reimbursed), n(i.claimed), i.billRef].map(ascii)),
       foot: [["", "", "Total", "", "", "", "", "", n(c.totals.eligible), n(c.totals.received), n(c.totals.claimed), ""]],
-      styles: { fontSize: 6.8, cellPadding: 1.1, lineColor: [200, 200, 200], lineWidth: 0.1, overflow: "linebreak" }, columnStyles: Object.fromEntries([7, 8, 9, 10].map((x) => [x, { halign: "right" as const }])) });
+      styles: { fontSize: 7.5, cellPadding: 1.1, lineColor: [200, 200, 200], lineWidth: 0.1, overflow: "linebreak" }, columnStyles: Object.fromEntries([7, 8, 9, 10].map((x) => [x, { halign: "right" as const }])) });
   }
   if (k.bankDetails.trim()) table({ startY: last() + 4, theme: "plain", head: [["Pay reimbursement to"]], body: [[ascii(k.bankDetails)]] });
   if (format === "detailed" && c.excluded.length) table({ startY: last() + 4, head: [["Not claimed (for reference)", "INR", "Reason"]], columnStyles: { 1: { halign: "right" } }, styles: { fontSize: 7.5, textColor: [90, 90, 90] }, body: c.excluded.map((x) => [ascii(`${x.row.date} ${x.row.merchant}`), n(x.row.inr), x.reason]) });
