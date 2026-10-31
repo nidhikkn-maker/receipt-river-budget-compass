@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { buildStatement, subjectEntries, type Subject } from "./expenditure-statement";
 import { renderStatementPdf } from "./expenditure-pdf";
 import { buildClaim } from "./expense-claim";
-import { renderClaimPdf } from "./claim-pdf";
+import { claimCategoryTotals, renderClaimPdf } from "./claim-pdf";
 import type { Expense } from "./expenses";
 import type { Account } from "./ledger";
 import type { PaymentInstrument } from "./payment-instruments";
@@ -100,5 +100,13 @@ describe("Detailed Expenditure Statement", () => {
     expect(c.reference).toBe("LL-CLM-TEST".replace("TEST", "TEST"));
     const { blob } = await renderClaimPdf(c, {});
     expect(blob.size).toBeGreaterThan(2000);
+  });
+  it("summary format totals by category match the claim and the PDF builds", async () => {
+    const c = buildClaim(make(), who);
+    const t = claimCategoryTotals(c);
+    expect(t.reduce((s, r) => s + r.claimed, 0)).toBeCloseTo(c.totals.claimed, 2);
+    expect(t.reduce((s, r) => s + r.count, 0)).toBe(c.items.length);
+    const { blob } = await renderClaimPdf(c, {}, "summary");
+    expect(blob.size).toBeGreaterThan(1500);
   });
 });
