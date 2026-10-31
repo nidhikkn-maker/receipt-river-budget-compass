@@ -130,7 +130,7 @@
 
 ## Version 4.0 — Unified Expense & Travel (spec: .lovable/requirements-v4.md)
 ### Priority 1 — Unified financial foundation
-- [x] Universal entry: one form, all 11 transaction types, progressive fields, opened from every module with context
+- [x] Universal entry: one form, opened from trips/bookings with context (advances live on trips; dedicated card-payment/loan/investment types still open)
 - [x] Workspaces Personal/Family/Business/Official + organisation; suggestions with confidence, override, learning
 - [x] Multi-workspace allocation (fixed/%/equal/custom, sums to total, charged once); payment ownership + auto claim
 - [ ] Automated categorisation incl. travel categories
