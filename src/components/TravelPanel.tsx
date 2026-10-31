@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { SCOPE_LABEL, money, type Scope } from "@/lib/expenses";
-import { TRAVEL_CATEGORIES, bookingMatches, tripInsights, tripReportRows, BOOKING_KINDS, TRIP_TYPES, closeBlockers, tripFinance, validateBooking, type Booking, type BookingKind, type TravelTrip, type TripType } from "@/lib/travel";
+import { advanceReconciliation, TRAVEL_CATEGORIES, bookingMatches, tripInsights, tripReportRows, BOOKING_KINDS, TRIP_TYPES, closeBlockers, tripFinance, validateBooking, type Booking, type BookingKind, type TravelTrip, type TripType } from "@/lib/travel";
 import { useStore } from "@/lib/store";
 import { downloadBlob } from "@/lib/reports";
 import { todayISO } from "@/lib/use-position";
@@ -21,6 +21,7 @@ export function TravelPanel({ trip }: { trip: TravelTrip }) {
   const insights = useMemo(() => tripInsights(trip, transactions, todayISO()), [trip, transactions]);
   const missingCats = TRAVEL_CATEGORIES.filter((c) => !pr.categories.some((x) => x.name.toLowerCase() === c.toLowerCase()));
   const f = useMemo(() => tripFinance(trip, transactions), [trip, transactions]);
+  const recon = useMemo(() => advanceReconciliation(trip, transactions), [trip, transactions]);
   const blockers = useMemo(() => closeBlockers(trip, transactions), [trip, transactions]);
   const put = async (patch: Partial<TravelTrip>, msg?: string) => {
     try { await savePreferences({ ...pr, trips: (pr.trips as TravelTrip[]).map((t) => (t.id === trip.id ? { ...t, ...patch } : t)) }); if (msg) toast.success(msg); } catch (e) { toast.error((e as Error).message); }
@@ -115,6 +116,20 @@ export function TravelPanel({ trip }: { trip: TravelTrip }) {
           <Input className="h-10" type="date" value={adv.date} onChange={(e) => setAdv({ ...adv, date: e.target.value })} />
           <Button type="button" variant="outline" className="sm:col-span-3" onClick={() => { const n = Number(adv.amount); if (!(n > 0) || !adv.source.trim()) { toast.error("Enter the amount and who gave it"); return; } void put({ advances: [...(trip.advances ?? []), { id: crypto.randomUUID(), date: adv.date, amount: n, source: adv.source.trim().slice(0, 80) }] }, "Advance recorded"); setAdv({ ...adv, amount: "", source: "" }); }}>Record advance</Button>
         </div>}
+      </Card>
+
+      <Card title="Advance reconciliation">
+        {recon.lines.length === 0 ? <p className="text-sm text-muted-foreground">No advances, business or official expenses, or returns on this trip yet.</p> : <>
+          <div className="mb-2 text-xs text-muted-foreground">Advances received, compared with the business and official share of trip spending and anything you've returned.</div>
+          {recon.lines.map((l, i) => <div key={i} className="flex gap-2 border-b py-1.5 text-sm last:border-0"><span className="w-24 shrink-0 text-muted-foreground">{l.date}</span><span className="flex-1 truncate">{l.label}</span><span className="font-mono">{l.kind === "advance" ? "+" : "−"}{money(l.amount)}</span></div>)}
+          <div className="mt-2 border-t pt-2">
+            <Row label="Advances received" value={money(recon.advances)} />
+            <Row label="Trip expenses (business/official)" value={money(recon.expenses)} />
+            <Row label="Returned" value={money(recon.returns)} />
+            <Row label={recon.outstanding > 0 ? "Outstanding — to return" : recon.outstanding < 0 ? "Outstanding — owed to you" : "Fully reconciled"} value={money(Math.abs(recon.outstanding))} />
+          </div>
+          {recon.outstanding > 0 && !closed && <Button asChild variant="outline" size="sm" className="mt-2"><Link to="/new" search={{ type: "advance_settlement", amount: String(recon.outstanding) } as never}>Record return of {money(recon.outstanding)}</Link></Button>}
+        </>}
       </Card>
 
       <Card title={closed ? "Trip closed" : "Close trip"}>

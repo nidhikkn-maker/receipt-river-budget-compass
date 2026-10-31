@@ -11,6 +11,7 @@ import { cardCycle, CARD_STATUS_LABEL } from "@/lib/cards";
 import { cardEmisOf } from "@/lib/position";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { useStore, type Loan } from "@/lib/store";
+import { loanHistory } from "@/lib/loan-history";
 import { todayISO } from "@/lib/use-position";
 
 const months = (n: number) => (Number.isFinite(n) ? `${Math.floor(n / 12)}y ${n % 12}m` : "never");
@@ -81,7 +82,8 @@ export function LoansPanel() {
 }
 
 function LoanCard({ l, onRemove }: { l: Loan; onRemove: () => void }) {
-  const { accounts, recordLoanPayment } = useStore();
+  const { accounts, recordLoanPayment, transactions } = useStore();
+  const hist = loanHistory(l.accountId, l.principal, transactions);
   const [from, setFrom] = useState("none"); const [payDate, setPayDate] = useState(todayISO()); const [busy,setBusy]=useState(false);
   const [extra, setExtra] = useState("");
   const a = amortize(l.principal, l.rate, l.emi);
@@ -104,6 +106,13 @@ function LoanCard({ l, onRemove }: { l: Loan; onRemove: () => void }) {
           <div><div className="text-[11px] text-muted-foreground">Next EMI split</div><div className="font-mono text-xs">{first ? `${money(first.principal)} + ${money(first.interest)} int.` : "—"}</div></div>
         </div>
       ) : <p className="mt-2 text-sm text-destructive">This EMI doesn't cover the monthly interest — the loan would never close.</p>}
+      {hist.rows.length > 0 && <details className="mt-3 rounded-xl border p-2">
+        <summary className="cursor-pointer text-sm font-medium">Repayment history · {hist.rows.length} · principal {money(hist.totalPrincipal)} · interest {money(hist.totalInterest)}</summary>
+        <div className="mt-2 grid grid-cols-5 gap-1 text-[11px] text-muted-foreground"><span>Date</span><span>Paid</span><span>Principal</span><span>Interest</span><span>Balance after</span></div>
+        {hist.rows.map((r) => <div key={r.id} className="grid grid-cols-5 gap-1 border-t py-1 font-mono text-xs"><span>{r.date}</span><span>{money(r.amount)}</span><span>{money(r.principal)}</span><span>{r.split ? money(r.interest) : "—"}</span><span title={`From ${money(r.balanceBefore)}`}>{money(r.balanceAfter)}</span></div>)}
+        <div className="mt-1 grid grid-cols-5 gap-1 border-t pt-1 text-xs font-medium"><span>Total</span><span>{money(hist.totalPaid)}</span><span>{money(hist.totalPrincipal)}</span><span>{money(hist.totalInterest)}</span><span>{money(l.principal)}</span></div>
+        {hist.rows.some((r) => !r.split) && <p className="mt-1 text-[11px] text-muted-foreground">Repayments without a split are counted fully as principal.</p>}
+      </details>}
       <div className="mt-3 grid gap-1">
         <Label htmlFor={`x-${l.id}`} className="text-xs">What if I prepay (₹)?</Label>
         <Input id={`x-${l.id}`} type="number" value={extra} onChange={(e) => setExtra(e.target.value)} placeholder="e.g. 100000" />
