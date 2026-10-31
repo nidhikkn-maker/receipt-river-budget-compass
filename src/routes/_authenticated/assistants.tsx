@@ -97,6 +97,13 @@ function Assistants() {
           <li>Sign in to Ledgerline with the account holding your expenses. Review the request and choose <strong>Approve</strong>, then return to ChatGPT and finish creating the app.</li>
           <li>Start a chat, select Ledgerline from the apps menu and ask: <strong>“Show my spending by category for October 2026.”</strong></li>
         </ol>
+        <h3 className="mt-4 mb-2 font-display text-base font-bold">Verify the connection</h3>
+        <ol className="list-decimal space-y-2 pl-5 text-sm">
+          <li>In ChatGPT, start a new chat and open the apps menu. <strong>Ledgerline</strong> should appear and show as connected.</li>
+          <li>Ask: <strong>“List my five most recent expenses.”</strong> The answer should match the entries on your Expenses page here.</li>
+          <li>Come back to this page and reload it. <strong>ChatGPT should appear in the list below</strong> with the date you approved it.</li>
+          <li>To confirm revoking works, tap <strong>Revoke</strong> below, then ask the same question in ChatGPT—it should no longer return your records. Reconnect by repeating the steps above.</li>
+        </ol>
         <p className="mt-3 text-sm text-muted-foreground">ChatGPT can read your own transactions, spending summaries, balances and upcoming payments—not change them. To disconnect, use <strong>Revoke</strong> below and remove the app in ChatGPT. Information already shared in a chat is not erased by revoking access.</p>
         <p className="mt-3 text-sm text-muted-foreground">If Create or Developer mode is missing, check your ChatGPT plan and workspace permissions. If connection fails, confirm the app is published and the address opens on the published domain.</p>
         <Button asChild variant="link" className="mt-2 h-auto px-0"><a href="https://help.openai.com/en/articles/12584461" target="_blank" rel="noopener noreferrer">OpenAI setup and eligibility guide <ExternalLink className="h-4 w-4" /></a></Button>
