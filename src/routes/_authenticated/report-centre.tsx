@@ -1,3 +1,4 @@
+import { useNavigate } from "@tanstack/react-router";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
@@ -36,6 +37,7 @@ const sel = "h-9 rounded-md border border-input bg-background px-2 text-sm";
 
 function ReportCentre() {
   const store = useStore();
+  const navigate = useNavigate();
   const trips = (store.preferences.trips ?? []) as TravelTrip[];
   const [type, setType] = useState<ReportType>("monthly");
   const [period, setPeriod] = useState<Period>("month");
@@ -100,7 +102,7 @@ function ReportCentre() {
         await loadHistory();
       } else toast.message("You're offline — the PDF is ready but wasn't saved to history.");
       setStage(-1);
-      toast.success(`${doc.title} is ready`);
+      toast.success(`${doc.title} is ready`, { description: "Saved in report history.", action: { label: "Open", onClick: () => void navigate({ to: "/report-centre" }) } });
     } catch (e) {
       setFailed(true); toast.error(e instanceof Error ? e.message : "Couldn't prepare the report");
     }
@@ -182,7 +184,7 @@ function ReportCentre() {
         <p className="text-xs text-muted-foreground">Reports are prepared on this device. Keep this page open until the PDF is ready.</p>
       </section>
 
-      {stage >= 0 && <ProcessingPanel title={failed ? "Report not finished" : `Preparing ${reportLabel(type)}… keep this page open`} stages={stagesAt(STAGES, stage, failed)} {...(busy ? { onCancel: () => { cancelled.current = true; setStage(-1); } } : {})} />}
+      {stage >= 0 && <ProcessingPanel title={failed ? "Report not finished" : `Preparing ${reportLabel(type)}… you can keep using the app; we'll tell you when it's ready`} stages={stagesAt(STAGES, stage, failed)} {...(busy ? { onCancel: () => { cancelled.current = true; setStage(-1); } } : {})} />}
 
       {result && (
         <section className="space-y-3 rounded-xl border bg-card p-4">
