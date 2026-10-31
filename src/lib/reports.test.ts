@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { buildReport, toCsv } from "./reports";
-import type { Expense } from "./expenses";
+import { applyFilters, type Expense } from "./expenses";
 
 const e = (patch: Partial<Expense>): Expense => ({ id: "expense", title: "Lunch", merchant: "Cafe", category: "Meals", scope: "business", memberId: null, splits: [], amount: 100, originalAmount: 100, currency: "INR", fxRate: 1, paymentMethod: "upi", date: "2026-10-31", reconciledAt: null, statementRef: null, receipts: [], description: "", department: "Sales", ...patch });
 const name = () => "Me";
