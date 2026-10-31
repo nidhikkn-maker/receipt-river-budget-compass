@@ -16,7 +16,7 @@ export function quickEntrySearch(raw: Record<string, unknown>): QuickEntrySearch
   const date = raw["date"];
   if (typeof date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(date) && Number.isFinite(Date.parse(date)) && new Date(date).toISOString().slice(0,10) === date) out.date = date;
   if ((PAYMENT_METHODS as readonly unknown[]).includes(raw["payment"])) out.payment = raw["payment"] as PaymentMethod;
-  if (["personal", "family", "business", "official"].includes(raw["scope"] as string)) out.scope = raw["scope"] as QuickEntrySearch["scope"];
+  if (["personal", "family", "business", "official"].includes(raw["scope"] as string)) out.scope = raw["scope"] as Scope;
   if (typeof raw["trip"] === "string" && /^[A-Za-z0-9-]{1,64}$/.test(raw["trip"])) out.trip = raw["trip"];
   if (typeof raw["booking"] === "string" && /^[A-Za-z0-9-]{1,64}$/.test(raw["booking"])) out.booking = raw["booking"];
   return out;
