@@ -153,7 +153,7 @@ function Reconcile() {
           <div className="mb-4 rounded-3xl border bg-card p-4">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div className="min-w-0">
-                <h2 className="flex items-center gap-2 font-display text-lg font-bold"><Sparkles className="h-4 w-4 text-gold" /> Register {queue.length} expenses automatically</h2>
+                <h2 className="flex items-center gap-2 font-display text-lg font-bold"><Sparkles className="h-4 w-4 text-gold" /> Register {queue.length} transactions automatically</h2>
                 <p className="text-xs text-muted-foreground">Merchant, date, amount, category and payment method come from the statement. {queue.length ? `${money(queueTotal)} will be added to your spending.` : "Nothing left to register."}</p>
               </div>
               <Button onClick={registerAll} disabled={busy || queue.length === 0}>Register {queue.length}</Button>

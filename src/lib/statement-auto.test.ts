@@ -36,6 +36,7 @@ describe("statement auto-registration", () => {
     const c = ctx();
     expect(classifyStatementLine(line({ description: "AMAZON INDIA 9911", amount: 1200 }), c).category).toBe("Shopping");
     expect(classifyStatementLine(line({ description: "AIRTEL POSTPAID BILL", amount: 799 }), c).category).toBe("Utility bills");
+    expect(classifyStatementLine(line({ description: "AIRTEL POSTPAID BILL PAYMENT", amount: 799 }), c).txnType).toBe("expense");
     expect(classifyStatementLine(line({ description: "MINIMUM BALANCE CHARGES", amount: 450 }), c).category).toBe("Financial charges");
     expect(classifyStatementLine(line({ description: "SOMEUNKNOWN VENDOR 77", amount: 300 }), c).category).toBe("Miscellaneous");
   });
