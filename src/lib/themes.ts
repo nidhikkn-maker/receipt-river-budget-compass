@@ -65,7 +65,7 @@ export function resolveAppearance(appearance: Appearance, systemDark: boolean): 
  */
 export function applyTheme(themeName: ThemeName, appearance: Appearance, systemDark: boolean) {
   const root = document.documentElement;
-  root.dataset.theme = themeName;
+  root.dataset["theme"] = themeName;
   root.classList.toggle("dark", resolveAppearance(appearance, systemDark) === "dark");
   try {
     localStorage.setItem("ll-theme", JSON.stringify({ themeName, appearance }));

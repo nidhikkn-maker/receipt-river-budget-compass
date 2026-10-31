@@ -178,7 +178,7 @@ function Overview() {
       <section hidden={hidden("metrics")} style={{ order: order("metrics") }} className="mb-5 grid grid-cols-2 gap-3 lg:grid-cols-4">
         <Link to="/wealth"><Stat label="Available cash" value={live.length ? money(cash) : "—"} {...(live.length ? {} : { hint: "Add accounts" })} /></Link>
         <Stat label="Income this month" value={money(flow.income)} />
-        <Link to="/plan"><Stat label="Safe to spend" value={live.length ? money(pos.safe.amount) : "—"} hint={readiness.estimated ? "Estimated" : undefined} /></Link>
+        <Link to="/plan"><Stat label="Safe to spend" value={live.length ? money(pos.safe.amount) : "—"} {...(readiness.estimated ? { hint: "Estimated" } : {})} /></Link>
         <Link to="/wealth"><Stat label="Card dues" value={money(cardDue)} /></Link>
       </section>
 
