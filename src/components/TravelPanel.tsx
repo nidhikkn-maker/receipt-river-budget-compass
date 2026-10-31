@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { SCOPE_LABEL, money, type Scope } from "@/lib/expenses";
-import { advanceReconRows, advanceReconciliation, TRAVEL_CATEGORIES, bookingMatches, tripInsights, tripReportRows, BOOKING_KINDS, TRIP_TYPES, closeBlockers, tripFinance, validateBooking, type Booking, type BookingKind, type TravelTrip, type TripType } from "@/lib/travel";
+import { advanceReconRows, advanceReconciliation, TRAVEL_CATEGORIES, bookingMatches, bookingPaid, bookingOutstanding, tripBudgetDetail, tripInsights, tripReportRows, BOOKING_KINDS, TRIP_TYPES, closeBlockers, tripFinance, validateBooking, type Booking, type BookingKind, type TravelTrip, type TripType } from "@/lib/travel";
 import { useStore } from "@/lib/store";
 import { downloadBlob } from "@/lib/reports";
 import { todayISO } from "@/lib/use-position";
@@ -24,6 +24,7 @@ export function TravelPanel({ trip }: { trip: TravelTrip }) {
   const insights = useMemo(() => tripInsights(trip, transactions, todayISO()), [trip, transactions]);
   const missingCats = TRAVEL_CATEGORIES.filter((c) => !pr.categories.some((x) => x.name.toLowerCase() === c.toLowerCase()));
   const f = useMemo(() => tripFinance(trip, transactions), [trip, transactions]);
+  const bd = useMemo(() => tripBudgetDetail(trip, transactions), [trip, transactions]);
   const recon = useMemo(() => advanceReconciliation(trip, transactions), [trip, transactions]);
   const blockers = useMemo(() => closeBlockers(trip, transactions), [trip, transactions]);
   const put = async (patch: Partial<TravelTrip>, msg?: string) => {
@@ -31,15 +32,16 @@ export function TravelPanel({ trip }: { trip: TravelTrip }) {
   };
   const closed = !!trip.closedAt;
   const [traveller, setTraveller] = useState("");
-  const [bk, setBk] = useState({ kind: "flight" as BookingKind, provider: "", ref: "", date: trip.start, amount: "" });
-  const [it, setIt] = useState({ date: trip.start, time: "", title: "", place: "" });
+  const [bk, setBk] = useState({ kind: "flight" as BookingKind, provider: "", ref: "", date: trip.start, amount: "", due: "", cancel: "" });
+  const [it, setIt] = useState({ date: trip.start, time: "", title: "", place: "", who: "", note: "" });
   const [adv, setAdv] = useState({ amount: "", source: "", date: trip.start });
+  const [bl, setBl] = useState({ category: "", amount: "" });
 
   const addBooking = () => {
-    const b: Booking = { id: crypto.randomUUID(), kind: bk.kind, provider: bk.provider.trim(), ref: bk.ref.trim(), date: bk.date, amount: Number(bk.amount) || 0, status: "unpaid" };
+    const b: Booking = { id: crypto.randomUUID(), kind: bk.kind, provider: bk.provider.trim(), ref: bk.ref.trim(), date: bk.date, amount: Number(bk.amount) || 0, status: "unpaid", dueDate: bk.due || null, cancelTerms: bk.cancel.trim() || null };
     try { validateBooking(b); } catch (e) { toast.error((e as Error).message); return; }
     void put({ bookings: [...(trip.bookings ?? []), b] }, "Booking added — not counted as spent until paid");
-    setBk({ ...bk, provider: "", ref: "", amount: "" });
+    setBk({ ...bk, provider: "", ref: "", amount: "", due: "", cancel: "" });
   };
   const ws = Object.entries(f.byWorkspace) as [Scope, number][];
 
@@ -65,6 +67,32 @@ export function TravelPanel({ trip }: { trip: TravelTrip }) {
         <Row label="Spent + booked" value={money(f.projected)} />
         {trip.budget > 0 && <Row label={f.remainingAfterCommitted >= 0 ? "Left after bookings" : "Over budget after bookings"} value={money(Math.abs(f.remainingAfterCommitted))} />}
         {ws.length > 0 && <div className="mt-2 text-xs text-muted-foreground">By workspace: {ws.map(([w, v]) => `${SCOPE_LABEL[w]} ${money(v)}`).join(" · ")}</div>}
+        {(bd.hasPlan || !closed) && (
+          <div className="mt-3 border-t pt-2">
+            <div className="text-xs font-medium">Category budgets</div>
+            {bd.lines.length === 0 && <p className="text-xs text-muted-foreground">No category budgets yet — add one to see where the trip plan stands line by line.</p>}
+            {bd.lines.map((l) => (
+              <div key={l.category} className="flex items-center gap-2 border-b py-1.5 text-sm last:border-0">
+                <span className="min-w-0 flex-1 truncate">{l.category}</span>
+                <span className="font-mono text-xs text-muted-foreground">{money(l.budget)} plan</span>
+                <span className={`font-mono text-xs ${l.over ? "text-destructive" : "text-muted-foreground"}`}>{l.over ? `${money(-l.left)} over` : `${money(l.left)} left`}</span>
+                {!closed && <Button size="sm" variant="ghost" aria-label={`Remove ${l.category} budget`} onClick={() => void put({ budgetLines: (trip.budgetLines ?? []).filter((x) => x.category !== l.category) })}>×</Button>}
+              </div>
+            ))}
+            {bd.contingency > 0 && <Row label="Contingency allowance" value={money(bd.contingency)} />}
+            {bd.unbudgeted > 0 && <Row label="Spent outside the budget lines" value={money(bd.unbudgeted)} />}
+            {bd.planned > 0 && <Row label={bd.remaining >= 0 ? "Left of the whole plan" : "Over the whole plan"} value={money(Math.abs(bd.remaining))} />}
+            {!closed && (
+              <div className="mt-2 grid gap-2 sm:grid-cols-3">
+                <select className={sel} value={bl.category} onChange={(e) => setBl({ ...bl, category: e.target.value })}><option value="">Category…</option>{pr.categories.filter((c) => !c.archived).map((c) => <option key={c.name} value={c.name}>{c.name}</option>)}</select>
+                <Input className="h-10" type="number" placeholder="Budget ₹" value={bl.amount} onChange={(e) => setBl({ ...bl, amount: e.target.value })} />
+                <Button type="button" variant="outline" onClick={() => { const n = Number(bl.amount); if (!bl.category || !(n > 0)) { toast.error("Pick a category and an amount above zero"); return; } if ((trip.budgetLines ?? []).some((x) => x.category === bl.category)) { toast.error("That category already has a budget"); return; } void put({ budgetLines: [...(trip.budgetLines ?? []), { category: bl.category, amount: n }] }, "Category budget added"); setBl({ category: "", amount: "" }); }}>Add line</Button>
+                <Input className="h-10" type="number" placeholder="Contingency ₹" defaultValue={trip.contingency || ""} onBlur={(e) => { const n = Number(e.target.value) || 0; if (n < 0) { toast.error("Contingency can't be negative"); return; } if (n !== (trip.contingency ?? 0)) void put({ contingency: n }, "Contingency updated"); }} />
+                <p className="text-xs text-muted-foreground sm:col-span-2">Contingency is extra room on top of the trip budget, held back for surprises.</p>
+              </div>
+            )}
+          </div>
+        )}
         <Row label="Reimbursement pending" value={money(f.reimbursablePending)} />
         <Row label="Reimbursement received" value={money(f.reimbursed)} />
         <p className="mt-1 text-xs text-muted-foreground">Reimbursements received settle the original spend; they're never counted as income.</p>
@@ -73,7 +101,7 @@ export function TravelPanel({ trip }: { trip: TravelTrip }) {
       <Card title="Bookings">
         {(trip.bookings ?? []).map((b) => (
           <div key={b.id} className="flex flex-wrap items-center gap-2 border-b py-2 text-sm last:border-0">
-            <div className="min-w-0 flex-1"><b className="capitalize">{b.kind}</b> · {b.provider} {b.ref && <span className="text-muted-foreground">#{b.ref}</span>}<div className="text-xs text-muted-foreground">{b.date} · {money(b.amount)} · {b.status === "unpaid" ? "Not paid (no effect on balances)" : b.status === "paid" ? "Paid — linked to entry" : "Cancelled"}</div></div>
+            <div className="min-w-0 flex-1"><b className="capitalize">{b.kind}</b> · {b.provider} {b.ref && <span className="text-muted-foreground">#{b.ref}</span>}<div className="text-xs text-muted-foreground">{b.date} · {money(b.amount)} · {b.status === "cancelled" ? "Cancelled" : b.status === "paid" ? "Paid — linked to entry" : bookingPaid(b, transactions) > 0 ? `Part paid ${money(bookingPaid(b, transactions))} · ${money(bookingOutstanding(b, transactions))} still due` : "Not paid (no effect on balances)"}</div>{b.dueDate && <div className="text-xs text-muted-foreground">Payment due {b.dueDate}</div>}{b.cancelTerms && <div className="text-xs text-muted-foreground">Cancellation: {b.cancelTerms}</div>}</div>
             {!closed && b.status === "unpaid" && <><Button asChild size="sm" variant="gold"><Link to="/new" search={{ trip: trip.id, booking: b.id }}>Record payment</Link></Button><Button size="sm" variant="ghost" onClick={() => void put({ bookings: (trip.bookings ?? []).map((x) => (x.id === b.id ? { ...x, status: "cancelled" as const } : x)) })}>Cancel</Button></>}
             {b.status === "paid" && b.expenseId && <Button asChild size="sm" variant="outline"><Link to="/new" search={{ edit: b.expenseId }}>View entry</Link></Button>}
           </div>
@@ -90,20 +118,27 @@ export function TravelPanel({ trip }: { trip: TravelTrip }) {
           <Input className="h-10" placeholder="Booking ref" value={bk.ref} onChange={(e) => setBk({ ...bk, ref: e.target.value })} />
           <Input className="h-10" type="date" value={bk.date} onChange={(e) => setBk({ ...bk, date: e.target.value })} />
           <Input className="h-10" type="number" placeholder="Amount ₹" value={bk.amount} onChange={(e) => setBk({ ...bk, amount: e.target.value })} />
+          <Input className="h-10" type="date" aria-label="Payment due date" value={bk.due} onChange={(e) => setBk({ ...bk, due: e.target.value })} placeholder="Payment due" />
+          <Input className="h-10 sm:col-span-4" placeholder="Cancellation terms (e.g. free until 24h before)" value={bk.cancel} onChange={(e) => setBk({ ...bk, cancel: e.target.value })} />
           <Button type="button" variant="outline" className="sm:col-span-5" onClick={addBooking}>Add booking</Button>
         </div>}
       </Card>
 
       <Card title="Itinerary">
         {[...(trip.itinerary ?? [])].sort((a, b) => `${a.date}${a.time ?? ""}`.localeCompare(`${b.date}${b.time ?? ""}`)).map((i) => (
-          <div key={i.id} className="flex items-center gap-2 border-b py-2 text-sm last:border-0"><span className="w-28 text-xs text-muted-foreground">{i.date} {i.time}</span><span className="flex-1">{i.title}{i.place && <span className="text-muted-foreground"> · {i.place}</span>}</span>{!closed && <Button size="sm" variant="ghost" onClick={() => void put({ itinerary: (trip.itinerary ?? []).filter((x) => x.id !== i.id) })}>Remove</Button>}</div>
+          <div key={i.id} className="border-b py-2 text-sm last:border-0">
+            <div className="flex items-start gap-2"><span className="w-28 shrink-0 text-xs text-muted-foreground">{i.date} {i.time}</span><div className="min-w-0 flex-1"><span className="block truncate">{i.title}{i.place && <span className="text-muted-foreground"> · {i.place}</span>}{i.travellers?.length ? <span className="text-muted-foreground"> · {i.travellers.join(", ")}</span> : null}</span>{i.note && <span className="block truncate text-xs text-muted-foreground">{i.note}</span>}</div>{!closed && <Button size="sm" variant="ghost" onClick={() => void put({ itinerary: (trip.itinerary ?? []).filter((x) => x.id !== i.id) })}>Remove</Button>}</div>
+            {(i.travellers?.length || i.note) && <div className="pl-28 text-xs text-muted-foreground">{i.travellers?.length && <span>{i.travellers.join(", ")}{i.note ? " · " : ""}</span>}{i.note}</div>}
+          </div>
         ))}
         {!closed && <div className="mt-2 grid gap-2 sm:grid-cols-4">
           <Input className="h-10" type="date" value={it.date} onChange={(e) => setIt({ ...it, date: e.target.value })} />
           <Input className="h-10" type="time" value={it.time} onChange={(e) => setIt({ ...it, time: e.target.value })} />
           <Input className="h-10" placeholder="What" value={it.title} onChange={(e) => setIt({ ...it, title: e.target.value })} />
           <Input className="h-10" placeholder="Where" value={it.place} onChange={(e) => setIt({ ...it, place: e.target.value })} />
-          <Button type="button" variant="outline" className="sm:col-span-4" onClick={() => { if (!it.title.trim()) { toast.error("Describe the plan"); return; } void put({ itinerary: [...(trip.itinerary ?? []), { id: crypto.randomUUID(), ...it, title: it.title.trim().slice(0, 120) }] }); setIt({ ...it, title: "", place: "", time: "" }); }}>Add to itinerary</Button>
+          <Input className="h-10" placeholder="Who (comma separated)" value={it.who} onChange={(e) => setIt({ ...it, who: e.target.value })} />
+          <Input className="h-10 sm:col-span-3" placeholder="Note (reference, reminder, link)" value={it.note} onChange={(e) => setIt({ ...it, note: e.target.value })} />
+          <Button type="button" variant="outline" className="sm:col-span-4" onClick={() => { if (!it.title.trim()) { toast.error("Describe the plan"); return; } const who = it.who.split(",").map((x) => x.trim()).filter(Boolean).slice(0, 8); void put({ itinerary: [...(trip.itinerary ?? []), { id: crypto.randomUUID(), date: it.date, title: it.title.trim().slice(0, 120), ...(it.time ? { time: it.time } : {}), ...(it.place.trim() ? { place: it.place.trim().slice(0, 120) } : {}), ...(who.length ? { travellers: who } : {}), ...(it.note.trim() ? { note: it.note.trim().slice(0, 300) } : {}) }] }, "Added to itinerary"); setIt({ ...it, title: "", place: "", time: "", who: "", note: "" }); }}>Add to itinerary</Button>
         </div>}
       </Card>
 
