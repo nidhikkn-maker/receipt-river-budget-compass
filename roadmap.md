@@ -205,5 +205,6 @@
 
 ## V4.8 Detailed Expenditure Statement (spec: .lovable/requirements-v4.8.md)
 - [x] Statement for trips, event/project tags and individual business purchases, with payer/source/reimbursement summaries, register, line items and bills as annexures in one PDF; saved to report history
-- [ ] Expense Claim Submission Report — the spec says keep it, but it was never built; waiting on user
+- [x] Expense Claim Submission Report (separate page, shared selection screen, declaration + approval lines, C-xx bill annexures)
+- [ ] V4.8 Universal notes (.lovable/requirements-v4.8-universal.md): Summary + Bills format, remembered format choice, workspace/organisation entry points — not started
 - [ ] Generate Statement buttons in Business/Official workspace views and on a single entry (statement page already accepts a chosen purchase)
