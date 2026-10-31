@@ -21,7 +21,7 @@ export function readBackup(bytes: Uint8Array, zipped: boolean): { backup: Backup
 }
 
 /** Preserve IDs on same-account restores; remap every linked ID when importing another account's backup. */
-export function prepareRestore(backup: Backup, owner: string, uuid: () => string = () => crypto.randomUUID()): { data: Backup["data"]; paths: Map<string, string> } {
+export function prepareRestore(backup: Backup, owner: string, uuid: () => string = () => crypto.randomUUID(), stageFiles = false): { data: Backup["data"]; paths: Map<string, string> } {
   const oldOwner = backup.owner || String(backup.data.expenses?.[0]?.["employee_id"] ?? backup.data.accounts?.[0]?.["owner_id"] ?? "");
   const crossAccount = oldOwner !== owner;
   const ids = new Map<string, string>();
@@ -29,7 +29,7 @@ export function prepareRestore(backup: Backup, owner: string, uuid: () => string
   const paths = new Map<string, string>();
   const pathFor = (path: unknown) => {
     if (typeof path !== "string" || !path || path.includes("..") || path.startsWith("/")) throw Error("Backup contains an invalid file path");
-    const next = crossAccount ? `${owner}/restored/${uuid()}-${path.split("/").at(-1)}` : path;
+    const next = crossAccount || stageFiles ? `${owner}/restored/${uuid()}-${path.split("/").at(-1)}` : path;
     if (!next.startsWith(`${owner}/`)) throw Error("Backup file doesn't belong to this account");
     if (!paths.has(path)) paths.set(path, next);
     return paths.get(path);

@@ -20,4 +20,12 @@ describe("Complete backups", () => {
   it("rejects paths outside owner storage", () => {
     expect(() => prepareRestore({ ...backup, data: { documents: [{ file_path: "a/../private" }] } }, "a")).toThrow("invalid file path");
   });
+  it("stages file replacements without overwriting current receipt paths", () => {
+    let n = 0;
+    const result = prepareRestore(backup, "a", () => `stage-${++n}`, true);
+    expect(result.data.expenses?.[0]?.["id"]).toBe("bill");
+    expect(result.paths.get("a/receipt.jpg")).toBe("a/restored/stage-1-receipt.jpg");
+    expect(result.data.expenses?.[0]?.["receipts"]).toEqual([{ path: "a/restored/stage-1-receipt.jpg" }]);
+    expect(backup.data.expenses?.[0]?.["receipts"]).toEqual([{ path: "a/receipt.jpg" }]);
+  });
 });

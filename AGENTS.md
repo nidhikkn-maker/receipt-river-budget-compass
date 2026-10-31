@@ -24,4 +24,5 @@
 - The root Outlet is hydration-gated with ClientOnly to avoid a TanStack match race when protected client-only routes redirect to public sign-in.
 - Reimbursements, scheduled payments, loan creation/repayment and card EMI conversions use the owner-scoped finance_operation database transaction with serialized idempotency records so retries cannot partially save money movements.
 - ZIP backups include private receipt/document binaries and remap all owner-linked identifiers on cross-account restore; financial reporting and chart calculations remain browser-side pure functions.
+- Backup restore stages files at fresh owner paths and commits records through an RLS-scoped database transaction; failed restores clean staged files without overwriting existing records.
 - AI privacy switches are checked against saved owner preferences on the server before any provider call, not merely hidden in the interface.
