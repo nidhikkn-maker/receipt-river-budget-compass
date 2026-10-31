@@ -45,6 +45,6 @@ describe("Reports Centre totals", () => {
     const many = Array.from({ length: 400 }, (_, i) => e(`x${i}`, 10 + i));
     const blob = await renderReportPdf(buildReportDoc("expense", f, data(many)), "mono", new Date());
     const text = await new Response(blob).text();
-    expect((text.match(/\/Type \/Page\b/g) ?? []).length).toBeGreaterThan(3);
+    expect(text.length).toBeGreaterThan(0); expect(text).toMatch(/Page 4 of \d+/);
   });
 });
