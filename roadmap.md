@@ -202,3 +202,8 @@
 - [x] Reports Centre: 31 report types, filters, colour/printer PDF, preview, download, share, history with regenerate versions
 - [ ] Persistent background report jobs — blocked: no background-job system yet (foreground with "keep page open")
 - [ ] Tamil/other non-Latin text in PDFs — needs an embedded Unicode font; such characters currently show as "?"
+
+## V4.8 Detailed Expenditure Statement (spec: .lovable/requirements-v4.8.md)
+- [x] Statement for trips, event/project tags and individual business purchases, with payer/source/reimbursement summaries, register, line items and bills as annexures in one PDF; saved to report history
+- [ ] Expense Claim Submission Report — the spec says keep it, but it was never built; waiting on user
+- [ ] Generate Statement buttons in Business/Official workspace views and on a single entry (statement page already accepts a chosen purchase)

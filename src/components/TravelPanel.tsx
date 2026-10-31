@@ -176,6 +176,7 @@ export function TravelPanel({ trip }: { trip: TravelTrip }) {
         </div>}
       </Card>
 
+      <Link to="/expenditure-statement" search={{ trip: trip.id }} className="block rounded-xl border bg-card p-3 text-sm font-semibold text-primary">Generate expenditure statement (PDF with bills) →</Link>
       <Card title="Advance reconciliation" action={<Button size="sm" variant="outline" onClick={() => saveCsv(advanceReconRows(trip, transactions), `trip-${slug(trip.name)}-advances.csv`)}>CSV</Button>}>
         {recon.lines.length === 0 ? <p className="text-sm text-muted-foreground">No advances, business or official expenses, or returns on this trip yet.</p> : <>
           <div className="mb-2 text-xs text-muted-foreground">Advances received, compared with the business and official share of trip spending and anything you've returned.</div>
