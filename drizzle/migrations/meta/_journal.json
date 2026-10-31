@@ -85,6 +85,13 @@
       "when": 1793417045477,
       "tag": "0011_atomic_finance_workflows",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1793417357786,
+      "tag": "0012_harden_finance_operation_validation",
+      "breakpoints": true
     }
   ]
 }
