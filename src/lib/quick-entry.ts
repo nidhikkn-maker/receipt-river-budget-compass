@@ -1,6 +1,6 @@
 import { CURRENCIES, PAYMENT_METHODS, type PaymentMethod, type Scope } from "./expenses";
 
-export interface QuickEntrySearch { edit?: string; text?: string; title?: string; merchant?: string; amount?: number; currency?: string; date?: string; payment?: PaymentMethod; account?: string; scope?: Scope }
+export interface QuickEntrySearch { edit?: string; text?: string; title?: string; merchant?: string; amount?: number; currency?: string; date?: string; payment?: PaymentMethod; account?: string; scope?: Scope; trip?: string; booking?: string }
 /** Shortcut URLs prefill only; they never save or trigger AI without confirmation. */
 export function quickEntrySearch(raw: Record<string, unknown>): QuickEntrySearch {
   const out: QuickEntrySearch = {};
