@@ -14,6 +14,7 @@ import {
   type Category, type PaymentMethod, type Scope, type ReceiptDetails,
 } from "@/lib/expenses";
 import { tagValue } from "@/lib/preferences";
+import { quickEntrySearch } from "@/lib/quick-entry";
 import { useStore } from "@/lib/store";
 import { extractReceipt } from "@/lib/receipt-extract.functions";
 import { getFxRate } from "@/lib/fx.functions";
@@ -26,7 +27,7 @@ import { ACCOUNT_LABEL, TXN_LABEL, TXN_TYPES, frequentMerchants, suggestForMerch
 type LocalReceipt = { file: File; name: string; type: string; dataUrl: string };
 
 export const Route = createFileRoute("/_authenticated/new")({
-  validateSearch: (s: Record<string, unknown>): { edit?: string } => (typeof s["edit"] === "string" ? { edit: s["edit"] } : {}),
+  validateSearch: quickEntrySearch,
   head: () => ({
     meta: [
       { title: "Add expense — Ledgerline" },
@@ -58,7 +59,8 @@ function NewExpense() {
   const { save, transactions: expenses, members, accounts, preferences } = useStore();
   const liveAccounts = accounts.filter((a) => !a.archived);
   const nav = useNavigate();
-  const { edit } = Route.useSearch();
+  const search = Route.useSearch();
+  const { edit } = search;
   const editing = edit ? expenses.find((e) => e.id === edit) : undefined;
   const [scope, setScope] = useState<Scope>("personal");
   const [txnType, setTxnType] = useState<TxnType>("expense");
@@ -88,6 +90,25 @@ function NewExpense() {
   const parseSpoken = useServerFn(parseSpokenEntry);
   const [listening, setListening] = useState(false);
   const [spoken, setSpoken] = useState("");
+  const extract = useServerFn(extractReceipt);
+  const intakeApplied = useRef(false);
+  useEffect(() => {
+    if (edit || intakeApplied.current) return;
+    intakeApplied.current = true;
+    if (search.title) setTitle(search.title);
+    if (search.merchant) setMerchant(search.merchant);
+    if (search.amount) setAmount(String(search.amount));
+    if (search.currency) setCurrency(search.currency);
+    if (search.date) setDate(search.date);
+    if (search.payment) setPaymentMethod(search.payment);
+    if (search.scope) setScope(search.scope);
+    if (search.text) setSpoken(search.text);
+  }, [edit, search]);
+  useEffect(() => {
+    if (edit || !search.account) return;
+    const account = liveAccounts.find(a => a.id === search.account || a.name.toLowerCase() === search.account?.toLowerCase());
+    if (account) setAccountId(account.id);
+  }, [edit, search.account, accounts]);
 
   const applySpoken = async (text: string) => {
     if (!text.trim()) return;
@@ -108,7 +129,8 @@ function NewExpense() {
       if (x.category) { setCategory(x.category); filled.add("category"); }
       if (x.payment_method) { setPaymentMethod(x.payment_method); filled.add("paymentMethod"); }
       if (x.scope) { setScope(x.scope); filled.add("scope"); }
-      const acc = x.account_name && liveAccounts.find((a) => a.name.toLowerCase() === x.account_name!.toLowerCase());
+      const accountName = x.account_name;
+      const acc = accountName && liveAccounts.find((a) => a.name.toLowerCase() === accountName.toLowerCase());
       if (acc) setAccountId(acc.id);
       setAutoFilled(filled);
       toast.success("Filled in from what you said — check and save");
@@ -156,10 +178,11 @@ function NewExpense() {
     if (big) { toast.error(`${big.name} is larger than 5 MB`); return; }
     const read = await Promise.all(Array.from(files).map(readFile));
     setReceipts((r) => [...r, ...read]);
-    const first = read[0]!;
+    const first = read[0];
+    if (!first) return;
     setReading(true);
     try {
-      const res = await extractReceipt({ data: { dataUrl: first.dataUrl, mimeType: first.type } });
+      const res = await extract({ data: { dataUrl: first.dataUrl, mimeType: first.type } });
       if (!res.ok) { toast.error(res.error); return; }
       const x = res.result;
       setReceiptDetails({ tax: x.tax, items: x.items, text: x.text });
