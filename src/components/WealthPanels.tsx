@@ -11,7 +11,8 @@ import { cardCycle, CARD_STATUS_LABEL } from "@/lib/cards";
 import { cardEmisOf } from "@/lib/position";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { useStore, type Loan } from "@/lib/store";
-import { loanHistory, loanBalanceChart } from "@/lib/loan-history";
+import { loanHistory, loanBalanceChart, loanHistoryRows } from "@/lib/loan-history";
+import { downloadBlob } from "@/lib/reports";
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip } from "recharts";
 import { todayISO } from "@/lib/use-position";
 
@@ -110,6 +111,7 @@ function LoanCard({ l, onRemove }: { l: Loan; onRemove: () => void }) {
       ) : <p className="mt-2 text-sm text-destructive">This EMI doesn't cover the monthly interest — the loan would never close.</p>}
       {hist.rows.length > 0 && <details className="mt-3 rounded-xl border p-2">
         <summary className="cursor-pointer text-sm font-medium">Repayment history · {hist.rows.length} · principal {money(hist.totalPrincipal)} · interest {money(hist.totalInterest)}</summary>
+        <div className="mt-2 flex justify-end"><Button size="sm" variant="outline" onClick={() => downloadBlob(new Blob([loanHistoryRows(hist, l.principal).map((r) => r.map((c) => `"${c.replace(/"/g, '""')}"`).join(",")).join("\n")], { type: "text/csv" }), `loan-${l.name.replace(/\W+/g, "-")}-repayments.csv`)}>Export CSV</Button></div>
         <div className="mt-2">
           <ResponsiveContainer width="100%" height={180}>
             <LineChart data={chart} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
