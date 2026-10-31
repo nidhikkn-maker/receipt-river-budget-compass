@@ -1,5 +1,5 @@
 # Roadmap (Functional Requirements v1.0)
-- [ ] Place Face ID on sign-in page with remembered-account unlock, secure signed-out fallback and no double biometric prompt; verify on mobile.
+- [x] Face ID on sign-in page: signed-in virtual platform credential registered and verified, dashboard opens without second prompt, biometric failure offers password, signed-out state cannot bypass sign-in; 235 tests pass. Publication and real iPhone verification remain pending.
 - [x] Receipt details review before saving, persistent retry/manual entry; authenticated real OCR retry and corrected merchant/date/amount verified on mobile
 - [x] Secure same-account password fallback; isolated verification, wrong-password lock retention and account-switch rejection tested; 223 automated checks pass; real iPhone verification remains pending
 - [x] Detect possible duplicates in the bulk bill queue with review and skip controls; original-currency matching tested and two-file skip progression verified
