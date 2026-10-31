@@ -21,3 +21,4 @@
 - Offline entries and snapshots use owner-keyed IndexedDB; stable entry UUIDs make server-side synchronization idempotent and currency conversion stays server-side.
 - Passkey device unlock uses SimpleWebAuthn with one-use expiring server challenges, required user verification and stored counters; it supplements account sign-in rather than replacing it.
 - Offline app registration is centralized in src/lib/pwa.ts and refused in development and preview; vite-plugin-pwa generates the production worker with network-first navigation and no OAuth caching.
+- The root Outlet is hydration-gated with ClientOnly to avoid a TanStack match race when protected client-only routes redirect to public sign-in.
