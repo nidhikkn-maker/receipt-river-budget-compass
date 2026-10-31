@@ -165,8 +165,8 @@
 - [x] Full 17-point acceptance pass (Part G): one test per criterion in src/lib/acceptance-v4.test.ts, all 17 passing; 388 automated checks pass, typecheck clean
 
 ## Version 4.3 — UI/UX redesign & multi-theme system (requirements-v4.3.md)
-- [ ] Phase 1: theme tokens — 5 families / 7 styles, light+dark+system, persisted preference
-- [ ] Phase 2: navigation — compact header, Home|Activity|+|AI|More bottom nav, floating + opens Universal Entry
-- [ ] Phase 3: homepage — overview, readiness, 4 metrics, insights, commitments, recent, AI briefing, travel widget
-- [ ] Phase 4: appearance settings UI with previews, responsive iPhone/desktop refinement
-- [ ] Phase 5: validation — theme switching, entry flow, routes, calculations, 22 acceptance checks
+- [x] Phase 1: theme tokens — 5 families / 7 styles, light+dark+system, persisted preference
+- [x] Phase 2: navigation — compact header, Home|Activity|+|AI|More bottom nav, floating + opens Universal Entry
+- [x] Phase 3: homepage — overview, readiness, 4 metrics, insights, commitments, recent, AI briefing, travel widget
+- [x] Phase 4: appearance settings UI with previews, responsive iPhone/desktop refinement
+- [x] Phase 5: validation — theme switching, entry flow, routes, calculations, 22 acceptance checks
