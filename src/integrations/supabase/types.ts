@@ -112,6 +112,41 @@ export type Database = {
           },
         ]
       }
+      category_batches: {
+        Row: {
+          category: string
+          created_at: string
+          entries: Json
+          id: string
+          owner_id: string
+          undone_at: string | null
+        }
+        Insert: {
+          category: string
+          created_at?: string
+          entries: Json
+          id?: string
+          owner_id: string
+          undone_at?: string | null
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          entries?: Json
+          id?: string
+          owner_id?: string
+          undone_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "category_batches_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       category_budgets: {
         Row: {
           category: string
@@ -370,6 +405,7 @@ export type Database = {
           allocations: Json
           amount: number
           category: string
+          category_revision: number
           created_at: string
           currency: string
           department: string | null
@@ -405,6 +441,7 @@ export type Database = {
           allocations?: Json
           amount: number
           category: string
+          category_revision?: number
           created_at?: string
           currency?: string
           department?: string | null
@@ -440,6 +477,7 @@ export type Database = {
           allocations?: Json
           amount?: number
           category?: string
+          category_revision?: number
           created_at?: string
           currency?: string
           department?: string | null
@@ -852,6 +890,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      bulk_category_change: {
+        Args: { batch_id: string; items: Json; target: string }
+        Returns: string
+      }
       delete_my_finance_data: { Args: never; Returns: undefined }
       finance_operation: {
         Args: { action: string; payload: Json }
@@ -891,6 +933,7 @@ export type Database = {
         Args: { _decision: string; _expense_id: string; _note?: string }
         Returns: string
       }
+      undo_category_change: { Args: { batch_id: string }; Returns: undefined }
     }
     Enums: {
       app_role: "employee" | "manager" | "finance"

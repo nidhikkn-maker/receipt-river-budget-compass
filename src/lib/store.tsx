@@ -5,7 +5,7 @@ import type { Database, Json } from "@/integrations/supabase/types";
 import { queueEntry, pendingEntries, removePending, putSnapshot, getSnapshot, clearOfflineOwner } from "./offline";
 import { saveExpense } from "./fx.functions";
 import {
-  CHARGES_CATEGORY, bulkRecategorize, validateAllocations, validateBudget, validateExpense, type Allocation,
+  CHARGES_CATEGORY, validateAllocations, validateBudget, validateExpense, type Allocation,
   type Budgets, type Category, type Expense, type ExpenseInput, type Member, type PaymentMethod, type Receipt, type ReceiptDetails, type ReimbursementStatus, type Scope, type Split,
 } from "./expenses";
 import { accountBalance, adjustmentToMatch, type Account, type AccountDetails, type AccountKind, type TxnType, type Valuation } from "./ledger";
@@ -29,6 +29,7 @@ export interface LoanInput {
 }
 export interface Goal { id: string; name: string; target: number; saved: number; monthly: number; reserve: boolean }
 export interface AuditEntry { id: string; action: "created" | "updated" | "deleted"; changes: Record<string, unknown>; summary: string; createdAt: string }
+export interface CategoryBatch { id: string; category: string; createdAt: string; undoneAt: string | null; entries: { id: string; title: string; from: string; allocations: Allocation[]; revision: number }[] }
 export interface AccountPatch {
   name?: string; creditLimit?: number | null; dueDay?: number | null; minBalance?: number; issuer?: string; lastFour?: string | null;
   statementDay?: number | null; interestRate?: number | null; includeInCash?: boolean; details?: AccountDetails;
@@ -47,7 +48,9 @@ interface Ctx {
   ensureCategory: (name: string) => Promise<void>;
   moveCategory: (source: string, target: string) => Promise<void>;
   /** Recategorises many entries at once; clears any category split so it can't contradict the new category. */
-  bulkSetCategory: (ids: string[], category: string) => Promise<void>;
+  bulkSetCategory: (ids: string[], category: string, batchId: string) => Promise<string>;
+  categoryHistory: () => Promise<CategoryBatch[]>;
+  undoCategoryBatch: (id: string) => Promise<void>;
   userId: string;
   name: string;
   updateName: (name: string) => Promise<void>;
@@ -185,7 +188,7 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
     setName(p.data?.full_name ?? "");
     setMembers(m.data ?? []);
     setExpenses((e.data ?? []).map((x) => ({
-      id: x.id, department: x.department, title: x.title, merchant: x.merchant, category: x.category as Category, scope: x.scope as Scope, memberId: x.member_id, splits: (x.splits as unknown as Split[]) ?? [],
+      id: x.id, categoryRevision: x.category_revision, department: x.department, title: x.title, merchant: x.merchant, category: x.category as Category, scope: x.scope as Scope, memberId: x.member_id, splits: (x.splits as unknown as Split[]) ?? [],
       amount: Number(x.amount), currency: x.currency, originalAmount: Number(x.original_amount ?? x.amount), fxRate: Number(x.fx_rate),
       paymentMethod: x.payment_method as PaymentMethod, reconciledAt: x.reconciled_at, statementRef: x.statement_ref,
       date: x.expense_date, description: x.description, receipts: (x.receipts as unknown as Receipt[]) ?? [],
@@ -283,11 +286,22 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
     check((await supabase.rpc("move_expense_category", { source, target })).error);
     await refresh();
   };
-  const bulkSetCategory: Ctx["bulkSetCategory"] = async (ids, category) => {
+  const bulkSetCategory: Ctx["bulkSetCategory"] = async (ids, category, batchId) => {
     validateActiveCategory(preferences.categories, category, false);
-    const patches = bulkRecategorize(expenses, ids, category);
-    if (!patches.length) throw new Error("Nothing selected");
-    for (const p of patches) check((await supabase.from("expenses").update({ category: p.category, allocations: p.allocations }).eq("id", p.id)).error);
+    const selected = expenses.filter(e => ids.includes(e.id));
+    if (!selected.length) throw new Error("Nothing selected");
+    const { data, error } = await supabase.rpc("bulk_category_change", { batch_id: batchId, target: category, items: selected.map(e => ({ id: e.id, revision: e.categoryRevision ?? 0 })) });
+    check(error);
+    await refresh();
+    return data ?? batchId;
+  };
+  const categoryHistory: Ctx["categoryHistory"] = async () => {
+    const { data, error } = await supabase.from("category_batches").select("*").order("created_at", { ascending: false });
+    check(error);
+    return (data ?? []).map(b => ({ id: b.id, category: b.category, createdAt: b.created_at, undoneAt: b.undone_at, entries: b.entries as unknown as CategoryBatch["entries"] }));
+  };
+  const undoCategoryBatch: Ctx["undoCategoryBatch"] = async id => {
+    check((await supabase.rpc("undo_category_change", { batch_id: id })).error);
     await refresh();
   };
   const updateName: Ctx["updateName"] = async (n) => {
@@ -542,7 +556,7 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
   return (
     <StoreCtx.Provider value={{
       departmentBudgets, departmentBudgetError,
-      pendingCount, setTags, preferences, savePreferences, ensureCategory, moveCategory, bulkSetCategory, userId, name, updateName, members, memberName,
+      pendingCount, setTags, preferences, savePreferences, ensureCategory, moveCategory, bulkSetCategory, categoryHistory, undoCategoryBatch, userId, name, updateName, members, memberName,
       expenses: expenses.filter((x) => (x.txnType ?? "expense") === "expense"), transactions: expenses, accounts, addAccount, setArchived, adjustBalance,
       commitments, loans, goals, valuations, documents, saveCommitment, confirmIrregular, removeCommitment, confirmCommitment, saveLoan, removeLoan, recordLoanPayment, convertToEmi,
       saveGoal, removeGoal, updateAccount, addValuation, removeValuation, addDocument, updateDocument, removeDocument, history, setReimbursement, recordReimbursement, deleteAll,

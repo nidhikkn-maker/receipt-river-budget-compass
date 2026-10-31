@@ -14,6 +14,7 @@ import {
   type Category, type PaymentMethod, type Scope, type ReceiptDetails,
 } from "@/lib/expenses";
 import { tagValue } from "@/lib/preferences";
+import { duplicateBills } from "@/lib/bill-duplicates";
 import { quickEntrySearch } from "@/lib/quick-entry";
 import { useStore } from "@/lib/store";
 import { extractReceipt } from "@/lib/receipt-extract.functions";
@@ -99,6 +100,7 @@ function NewExpense() {
   const [receipts, setReceipts] = useState<LocalReceipt[]>([]);
   const [queue, setQueue] = useState<LocalReceipt[]>([]);
   const [batch, setBatch] = useState<{ done: number; total: number } | null>(null);
+  const [duplicateApproval, setDuplicateApproval] = useState("");
   const [reading, setReading] = useState(false);
   const [scan, setScan] = useState<Scan | null>(null);
   const [confirmed, setConfirmed] = useState(true);
@@ -248,6 +250,19 @@ function NewExpense() {
     setConfirmed(true);
   };
 
+  const billIdentity = { merchant: !confirmed && scan ? scan.merchant : merchant, date: !confirmed && scan ? scan.date : date, amount: Number(!confirmed && scan ? scan.amount : amount), currency: !confirmed && scan ? scan.currency : currency };
+  const duplicates = txnType === "expense" ? duplicateBills(billIdentity, expenses, edit) : [];
+  const duplicateSignature = JSON.stringify([billIdentity, receipts.map(r => r.name), duplicates.map(e => e.id)]);
+  const duplicateBlocked = duplicates.length > 0 && duplicateApproval !== duplicateSignature;
+  const advanceQueue = async () => {
+    const [next, ...rest] = queue;
+    setQueue(rest); setBatch(b => next && b ? { done: b.done + 1, total: b.total } : null);
+    setFromInbox([]); setDuplicateApproval(""); setReceipts(next ? [next] : []);
+    setTitle(""); setMerchant(""); setAmount(""); setDescription(""); setTags("");
+    setReceiptDetails({}); setScan(null); setConfirmed(true); setAutoFilled(new Set()); setSplitOn(false); setShares({});
+    if (next) await runExtraction(next, true);
+  };
+
   const rememberMerchant = (m: string) => {
     if (editing) return;
     const hit = suggestForMerchant(m, expenses);
@@ -265,6 +280,7 @@ function NewExpense() {
   const submit = async (ev: React.FormEvent) => {
     ev.preventDefault();
     if (!confirmed) { toast.error("Confirm the scanned bill details first"); return; }
+    if (duplicateBlocked) { toast.error("Review the possible duplicate or skip this bill"); return; }
     setSaving(true);
     try {
       await save(
@@ -278,14 +294,7 @@ function NewExpense() {
       for (const id of fromInbox) { const d = documents.find((x) => x.id === id); if (d) await removeDocument(d).catch(() => {}); }
       toast.success(editing ? "Entry updated" : `${TXN_LABEL[txnType]} saved`);
       if (!editing && queue.length) {
-        const [next, ...rest] = queue;
-        setQueue(rest);
-        setBatch((b) => b ? { done: b.done + 1, total: b.total } : null);
-        setFromInbox([]);
-        setReceipts([next!]);
-        setTitle(""); setMerchant(""); setAmount(""); setDescription(""); setTags("");
-        setReceiptDetails({}); setScan(null); setAutoFilled(new Set()); setSplitOn(false); setShares({});
-        await runExtraction(next!, true);
+        await advanceQueue();
         return;
       }
       setBatch(null);
@@ -345,6 +354,13 @@ function NewExpense() {
             </ul>
           )}
           {receipts.length > 0 && !editing && fromInbox.length === 0 && <Button type="button" variant="outline" size="sm" onClick={() => void saveForLater()}><Inbox className="mr-1 h-4 w-4" />Save receipts to add later</Button>}
+
+          {duplicates.length > 0 && !reading && <section aria-label="Possible duplicate bills" className="space-y-3 rounded-lg border border-gold bg-gold-soft p-4">
+            <h2 className="font-display font-bold">This bill may already exist</h2>
+            <ul className="space-y-2 text-sm">{duplicates.map(e => <li key={e.id} className="flex flex-wrap items-center justify-between gap-2"><span>{e.merchant} · {e.date} · {e.currency} {e.originalAmount.toFixed(2)}</span><Link to="/new" search={{ edit: e.id }} target="_blank" rel="noopener noreferrer" className="text-primary underline">Review existing entry</Link></li>)}</ul>
+            <div className="flex flex-wrap gap-2"><Button type="button" size="sm" variant="outline" disabled={saving} onClick={() => void advanceQueue()}>Skip this bill</Button><Button type="button" size="sm" variant="secondary" disabled={!duplicateBlocked} onClick={() => setDuplicateApproval(duplicateSignature)}>{duplicateBlocked ? "Keep as a separate bill" : "Separate bill confirmed"}</Button></div>
+          </section>}
+          {batch && duplicates.length === 0 && <Button type="button" variant="ghost" size="sm" disabled={reading || saving} onClick={() => void advanceQueue()}>Skip this bill</Button>}
 
           {scan && !reading && !confirmed && (
             <div className="space-y-3 rounded-3xl border-2 border-primary bg-card p-4 shadow-float" role="group" aria-label="Review scanned details">
@@ -514,7 +530,7 @@ function NewExpense() {
             </div>
           </div>
           <div className="grid gap-2"><Label htmlFor="desc">Business purpose{af("description")}</Label><Textarea id="desc" value={description} onChange={(e) => setDescription(e.target.value)} /></div>
-          <Button type="submit" size="lg" variant="gold" className="rounded-2xl" disabled={reading || saving || !confirmed}>
+          <Button type="submit" size="lg" variant="gold" className="rounded-2xl" disabled={reading || saving || !confirmed || duplicateBlocked}>
             {saving ? "Saving…" : editing ? "Save changes" : "Save expense"}
           </Button>
         </div>
