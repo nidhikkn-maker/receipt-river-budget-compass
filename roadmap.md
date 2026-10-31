@@ -76,4 +76,4 @@
 - [x] Vault scan (camera/gallery/files) with auto-filled details
 - [x] 10-year inflation, category and savings prediction with suggestions
 - [x] Bank statement upload that works out and registers expenses automatically (with review for transfers/cash)
-- [ ] Stronger gold touch across the theme
+- [x] Stronger gold touch across the theme
