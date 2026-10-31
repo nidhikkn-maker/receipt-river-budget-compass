@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
-import { Bot, Loader2, ShieldOff } from "lucide-react";
+import { Bot, Copy, ExternalLink, Loader2, ShieldOff } from "lucide-react";
 import { PageTitle } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
@@ -81,6 +81,26 @@ function Assistants() {
     <>
       <PageTitle eyebrow="Settings" title="Connected assistants" sub="AI assistants you approved can read (never change) your own records." />
       <div className="mb-5"><Button asChild variant="outline"><Link to="/settings">Back to settings</Link></Button></div>
+      <section aria-labelledby="chatgpt-setup" className="mb-6 border-y py-5">
+        <h2 id="chatgpt-setup" className="mb-3 font-display text-lg font-bold">Connect ChatGPT</h2>
+        <p className="mb-3 text-sm text-muted-foreground">Use ChatGPT on the web after this app is published. Preview links cannot be used for this connection.</p>
+        <div className="mb-4 flex items-center gap-2 rounded-lg border bg-secondary p-3">
+          <code className="min-w-0 flex-1 break-all text-sm font-semibold">https://ledgerline.biz/mcp</code>
+          <Button size="icon" variant="outline" aria-label="Copy MCP endpoint" title="Copy MCP endpoint" onClick={async () => {
+            try { await navigator.clipboard.writeText("https://ledgerline.biz/mcp"); toast.success("MCP endpoint copied"); }
+            catch { toast.error("Could not copy. Select the address and copy it manually."); }
+          }}><Copy className="h-4 w-4" /></Button>
+        </div>
+        <ol className="list-decimal space-y-2 pl-5 text-sm">
+          <li>In ChatGPT, open <strong>Settings → Apps</strong>. If available, turn on <strong>Developer mode</strong> in Advanced settings. A workspace administrator may need to enable it.</li>
+          <li>Choose <strong>Create</strong> (workspace administrators: <strong>Workspace settings → Apps → Create</strong>). Name the app <strong>Ledgerline</strong>, enter the address above and select <strong>OAuth</strong>. Use automatic registration if offered; do not paste an account token or API key.</li>
+          <li>Sign in to Ledgerline with the account holding your expenses. Review the request and choose <strong>Approve</strong>, then return to ChatGPT and finish creating the app.</li>
+          <li>Start a chat, select Ledgerline from the apps menu and ask: <strong>“Show my spending by category for October 2026.”</strong></li>
+        </ol>
+        <p className="mt-3 text-sm text-muted-foreground">ChatGPT can read your own transactions, spending summaries, balances and upcoming payments—not change them. To disconnect, use <strong>Revoke</strong> below and remove the app in ChatGPT. Information already shared in a chat is not erased by revoking access.</p>
+        <p className="mt-3 text-sm text-muted-foreground">If Create or Developer mode is missing, check your ChatGPT plan and workspace permissions. If connection fails, confirm the app is published and the address opens on the published domain.</p>
+        <Button asChild variant="link" className="mt-2 h-auto px-0"><a href="https://help.openai.com/en/articles/12584461" target="_blank" rel="noopener noreferrer">OpenAI setup and eligibility guide <ExternalLink className="h-4 w-4" /></a></Button>
+      </section>
       {error && <p role="alert" className="mb-4 rounded-2xl border border-destructive/40 bg-destructive/10 p-4 text-sm font-medium">{error}</p>}
       {grants === null ? (
         <p className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" />Loading…</p>

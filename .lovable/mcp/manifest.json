@@ -5,15 +5,16 @@
   "auth": {
     "type": "oauth",
     "issuer": "https://pacvdtffengkzmtzgnhd.supabase.co/auth/v1",
+    "require_oauth_client_claim": true,
     "accepted_audiences": [
       "authenticated"
     ]
   },
   "mcp": {
     "server": {
-      "name": "team-expense-flow",
+      "name": "receipt-river-budget-compass",
       "version": "0.1.0",
-      "title": "Team Expense Flow"
+      "title": "Receipt River Budget Compass"
     },
     "tools": [
       {
