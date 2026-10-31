@@ -12,6 +12,8 @@ const LINKS = [
   { to: "/assistant", label: "AI", icon: Sparkles },
   { to: "/reports", label: "Insights", icon: BarChart3 },
   { to: "/wealth", label: "Wealth", icon: Gem },
+  { to: "/inbox", label: "Inbox", icon: Inbox },
+  { to: "/review", label: "Review", icon: HeartPulse },
   { to: "/plan", label: "Plan", icon: CalendarClock },
   { to: "/forecast", label: "Predict", icon: TrendingUp },
   { to: "/budgets", label: "Budgets", icon: PiggyBank },
