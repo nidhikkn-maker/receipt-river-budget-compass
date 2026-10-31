@@ -69,6 +69,7 @@
 - [ ] Automatic financial connections — provider availability, consent and bank support must be established before implementation; not a promised live connection
 
 ## User requests (Oct 31, later)
+- [ ] Verify planned payments, yearly bills, trips, merchant merge/unmerge, milestones, category splits and reimbursement receipts through signed-in UI; fix regressions and remove test records
 - [x] Fix alignment issues (mobile 402px)
 - [x] Receipt add: separate Camera / Gallery / Files options
 - [x] Save receipts to add later (pending receipt inbox)
