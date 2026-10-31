@@ -6,13 +6,16 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { SCOPE_LABEL, money, type Scope } from "@/lib/expenses";
-import { advanceReconciliation, TRAVEL_CATEGORIES, bookingMatches, tripInsights, tripReportRows, BOOKING_KINDS, TRIP_TYPES, closeBlockers, tripFinance, validateBooking, type Booking, type BookingKind, type TravelTrip, type TripType } from "@/lib/travel";
+import { advanceReconRows, advanceReconciliation, TRAVEL_CATEGORIES, bookingMatches, tripInsights, tripReportRows, BOOKING_KINDS, TRIP_TYPES, closeBlockers, tripFinance, validateBooking, type Booking, type BookingKind, type TravelTrip, type TripType } from "@/lib/travel";
 import { useStore } from "@/lib/store";
 import { downloadBlob } from "@/lib/reports";
 import { todayISO } from "@/lib/use-position";
 import { tripTag } from "@/lib/intelligence";
 
 const sel = "h-10 rounded-xl border bg-background px-2 text-sm";
+const slug = (name: string) => name.replace(/\W+/g, "-");
+/** Rows to a CSV download, quoting every cell. */
+const saveCsv = (rows: string[][], filename: string) => downloadBlob(new Blob([rows.map((r) => r.map((c) => `"${c.replace(/"/g, '""')}"`).join(",")).join("\n")], { type: "text/csv" }), filename);
 
 /** Travel Manager panel: type, travellers, bookings, itinerary, advances, budget vs committed, closure. Payments always go through the shared entry form. */
 export function TravelPanel({ trip }: { trip: TravelTrip }) {
@@ -56,7 +59,7 @@ export function TravelPanel({ trip }: { trip: TravelTrip }) {
       </Card>
 
       {insights.length > 0 && <Card title="Trip insights"><ul className="list-disc space-y-1 pl-5 text-sm">{insights.map((i) => <li key={i}>{i}</li>)}</ul></Card>}
-      <Card title="Budget and money" action={<Button size="sm" variant="outline" onClick={() => { const csv = tripReportRows(trip, transactions).map((r) => r.map((c) => `"${c.replace(/"/g, '""')}"`).join(",")).join("\n"); downloadBlob(new Blob([csv], { type: "text/csv" }), `trip-${trip.name.replace(/\W+/g, "-")}.csv`); }}>CSV</Button>}>
+      <Card title="Budget and money" action={<Button size="sm" variant="outline" onClick={() => saveCsv(tripReportRows(trip, transactions), `trip-${slug(trip.name)}.csv`)}>CSV</Button>}>
         <Row label="Spent (in your records)" value={money(f.total)} />
         <Row label="Booked, not yet paid" value={money(f.committed)} />
         <Row label="Spent + booked" value={money(f.projected)} />
@@ -118,7 +121,7 @@ export function TravelPanel({ trip }: { trip: TravelTrip }) {
         </div>}
       </Card>
 
-      <Card title="Advance reconciliation">
+      <Card title="Advance reconciliation" action={<Button size="sm" variant="outline" onClick={() => saveCsv(advanceReconRows(trip, transactions), `trip-${slug(trip.name)}-advances.csv`)}>CSV</Button>}>
         {recon.lines.length === 0 ? <p className="text-sm text-muted-foreground">No advances, business or official expenses, or returns on this trip yet.</p> : <>
           <div className="mb-2 text-xs text-muted-foreground">Advances received, compared with the business and official share of trip spending and anything you've returned.</div>
           {recon.lines.map((l, i) => <div key={i} className="flex gap-2 border-b py-1.5 text-sm last:border-0"><span className="w-24 shrink-0 text-muted-foreground">{l.date}</span><span className="flex-1 truncate">{l.label}</span><span className="font-mono">{l.kind === "advance" ? "+" : "−"}{money(l.amount)}</span></div>)}
