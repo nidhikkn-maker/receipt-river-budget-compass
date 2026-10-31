@@ -1,5 +1,6 @@
 import type { AutopilotAction } from "./autopilot";
 import type { CoolingOffItem } from "./cooling-off";
+import type { ContractObligation } from "./contracts";
 import type { PaymentInstrument } from "./payment-instruments";
 import type { AllocationPlan } from "./allocation";
 import type { FinanceRule } from "./rules-engine";
@@ -68,6 +69,8 @@ export interface FinancePreferences {
   autopilotActions: Record<string, AutopilotAction>;
   /** Purchase cooling-off queue (proposals, never expenses). */
   coolingOff: CoolingOffItem[];
+  /** Obligations read from vault documents, pending review or decided. */
+  contractObligations: ContractObligation[];
 }
 
 export const DEFAULT_TAGS: GroupedTag[] = [
@@ -84,7 +87,7 @@ export function defaultPreferences(): FinancePreferences {
     theme: "system", reminders: true, reminderDays: 3, defaultCurrency: "INR", language: "en", aiEnabled: true, aiReadsDocuments: true, cardAlertPct: 30, homePeriod: "month",
     freshness: { reviewDays: 14, outdatedDays: 45, perAccount: {} }, inboxDismissed: [], statementBalances: {}, splitTemplates: [],
     emergency: defaultEmergency(), irregularRejected: [], irregularConfirmed: [], milestones: [], trips: [], merchantAliases: {}, brief: { enabled: true, day: 1, hour: 8 }, briefs: [], paymentInstruments: [],
-    allocationPlans: [], rules: [], ruleDismissed: [], autopilotActions: {}, coolingOff: [],
+    allocationPlans: [], rules: [], ruleDismissed: [], autopilotActions: {}, coolingOff: [], contractObligations: [],
   };
 }
 
@@ -113,10 +116,11 @@ export function normalizePreferences(raw: Partial<FinancePreferences> | null | u
   if (!Array.isArray(p.splitTemplates)) p.splitTemplates = [];
   p.emergency = { ...defaultEmergency(), ...(p.emergency ?? {}) };
   p.emergency.targetMonths = Number.isFinite(p.emergency.targetMonths) ? Math.min(24, Math.max(1, p.emergency.targetMonths)) : 6;
-  for (const k of ["irregularRejected", "irregularConfirmed", "milestones", "trips", "briefs", "paymentInstruments", "allocationPlans", "rules", "ruleDismissed", "coolingOff"] as const) if (!Array.isArray(p[k])) (p as unknown as Record<string, unknown[]>)[k] = [];
+  for (const k of ["irregularRejected", "irregularConfirmed", "milestones", "trips", "briefs", "paymentInstruments", "allocationPlans", "rules", "ruleDismissed", "coolingOff", "contractObligations"] as const) if (!Array.isArray(p[k])) (p as unknown as Record<string, unknown[]>)[k] = [];
   p.allocationPlans = p.allocationPlans.slice(0, 60);
   p.ruleDismissed = p.ruleDismissed.slice(-500);
   p.coolingOff = p.coolingOff.slice(-200);
+  p.contractObligations = p.contractObligations.slice(-300);
   if (!p.autopilotActions || typeof p.autopilotActions !== "object" || Array.isArray(p.autopilotActions)) p.autopilotActions = {};
   p.autopilotActions = Object.fromEntries(Object.entries(p.autopilotActions).slice(-300));
   p.briefs = p.briefs.slice(0, 26);
