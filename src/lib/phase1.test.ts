@@ -12,6 +12,10 @@ const bank: Account = { id: "a1", name: "HDFC", kind: "savings", openingBalance:
 const prefs = defaultPreferences();
 
 describe("category splits", () => {
+  it("rejects non-finite and sub-cent allocations", () => {
+    for (const amount of [Infinity, NaN, 0.001]) expect(() => validateAllocations([{ category: "A", amount }, { category: "B", amount: 1 }], 1)).toThrow();
+    expect(() => validateAllocations([], 123.45)).not.toThrow();
+  });
   it("₹15,000 split must total exactly ₹15,000", () => {
     expect(() => validateAllocations([{ category: "Groceries", amount: 13000 }, { category: "Gifts", amount: 1000 }], 15000)).toThrow();
     expect(() => validateAllocations([{ category: "Groceries", amount: 13000 }, { category: "Gifts", amount: 2000 }], 15000)).not.toThrow();
@@ -28,6 +32,10 @@ describe("category splits", () => {
 });
 
 describe("reimbursements", () => {
+  it("rejects non-finite and sub-cent receipts", () => {
+    for (const amount of [Infinity, NaN, 0.001, 40.001]) expect(() => validateReceipt(ex({ amount: 100, reimbursementStatus: "pending" }), amount)).toThrow();
+    expect(() => validateReceipt(ex({ amount: 100, reimbursementStatus: "pending" }), 40)).not.toThrow();
+  });
   it("partial receipts leave the rest outstanding", () => {
     const e = ex({ amount: 5000, reimbursementStatus: "pending", reimbursement: { stage: "submitted", reimbursable: 4000, payer: "VEI", receipts: [{ id: "r1", date: "2026-10-20", amount: 1500 }] } });
     expect(stageOf(e)).toBe("partial");

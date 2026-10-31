@@ -72,7 +72,7 @@ function Merchants() {
   const [q, setQ] = useState("");
   const [sel, setSel] = useState<string[]>([]);
   const save = async (a: typeof pr.merchantAliases, msg: string) => { try { await savePreferences({ ...pr, merchantAliases: a }); setSel([]); toast.success(msg); } catch (e) { toast.error((e as Error).message); } };
-  const merge = (keys: string[]) => { const ps = profiles.filter((p) => keys.includes(p.key)); const target = ps[0]!.key; save(mergeMerchants(pr.merchantAliases, ps.slice(1).flatMap((p) => p.names), target), `Merged into ${ps[0]!.name}`); };
+  const merge = (keys: string[]) => { const ps = profiles.filter((p) => keys.includes(p.key)); const first = ps[0]; if (!first || ps.length < 2) return; void save(mergeMerchants(pr.merchantAliases, ps.slice(1).flatMap((p) => p.names), first.key), `Merged into ${first.name}`); };
   const shown = profiles.filter((p) => !q || p.names.some((n) => n.toLowerCase().includes(q.toLowerCase())));
   return (
     <>

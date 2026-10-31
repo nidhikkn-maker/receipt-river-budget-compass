@@ -869,6 +869,16 @@ export type Database = {
         Returns: undefined
       }
       my_department: { Args: never; Returns: string }
+      receive_claim_receipt: {
+        Args: {
+          expense_id: string
+          receipt_account: string
+          receipt_amount: number
+          receipt_date: string
+          receipt_note?: string
+        }
+        Returns: Json
+      }
       reconcile_expense: {
         Args: { _expense_id: string; _statement_ref: string }
         Returns: undefined

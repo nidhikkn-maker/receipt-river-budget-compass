@@ -32,4 +32,5 @@
 - Device push uses the generated production worker, allowlisted HTTPS push services, server-derived VAPID keys from a stored signing seed and owner-scoped subscriptions; cron authentication and per-device daily claims prevent public dispatch and duplicate reminders, and lock-screen messages contain no financial details.
 - Vault document scanning uses a server function (src/lib/document-extract.functions.ts) gated by the same AI privacy settings; extracted fields are always reviewed before saving.
 - Category splits live in expenses.allocations and all category reporting goes through categoryTotals/categoryParts so a split transaction is counted once.
+- Category allocation totals are validated on database writes; partial and full claim receipts and yearly-bill confirmation use finance_operation so retries cannot leave ledger and tracker records out of sync.
 - External assistants connect through the app's MCP server (src/lib/mcp/, OAuth via managed auth, consent at /.lovable/oauth/consent); tools are read-only and query with the caller's token so RLS limits them to the user's own records, and writes stay in the app so currency conversion remains server-side.

@@ -18,6 +18,12 @@ export const SCENARIO_LABEL: Record<ScenarioKind, string> = {
   reduce_category: "Cut a spending category", card_payment: "Large card payment", new_recurring: "New recurring expense", goal_allocation: "Put money into a goal",
 };
 export interface Scenario { kind: ScenarioKind; amount: number; date: string; recurring: boolean; postponeTo?: string; loanIndex?: number; goalIndex?: number; months?: number }
+export function plannedScenario(s: Scenario): Omit<Commitment, "id"> | null {
+  if (!["purchase", "postpone", "new_recurring"].includes(s.kind)) return null;
+  const date = s.kind === "postpone" ? s.postponeTo : s.date;
+  if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date) || !Number.isFinite(Date.parse(date)) || new Date(date).toISOString().slice(0, 10) !== date || !Number.isFinite(s.amount) || s.amount <= 0) throw new Error("Enter a positive amount and valid date");
+  return { name: `${SCENARIO_LABEL[s.kind]} (planned)`, kind: "planned_purchase", direction: "out", amount: s.amount, frequency: s.kind === "new_recurring" || (s.kind === "purchase" && s.recurring) ? "monthly" : "once", intervalDays: null, nextDue: date, accountId: null, category: "Miscellaneous", confirmed: true, essential: false, status: "active" };
+}
 export interface SimInput {
   cash: number; floor: number; commitments: Commitment[]; today: string; days: number;
   goals: { name: string; target: number; saved: number; monthly: number }[];
@@ -220,7 +226,15 @@ export function normaliseMerchant(s: string) {
   return s.toLowerCase().replace(/\b(upi|pos|imps|neft|ach|vps|ecom|pvt|ltd|limited|india|inc|llp|www|com|in)\b/g, " ").replace(/[^a-z]+/g, " ").trim().split(/\s+/).slice(0, 3).join(" ");
 }
 export type MerchantAliases = Record<string, string>; // original-normalised key -> profile name
-export const merchantKey = (raw: string, aliases: MerchantAliases) => aliases[normaliseMerchant(raw)] ?? normaliseMerchant(raw);
+export const merchantKey = (raw: string, aliases: MerchantAliases) => {
+  let key = normaliseMerchant(raw); const visited = new Set<string>();
+  while (!visited.has(key)) {
+    const next = aliases[key];
+    if (!next) break;
+    visited.add(key); key = normaliseMerchant(next);
+  }
+  return key;
+};
 
 export function merchantProfiles(txns: Row[], aliases: MerchantAliases, today: string) {
   const cur = monthOf(today), prev = prevMonth(cur);
@@ -238,7 +252,14 @@ export function merchantProfiles(txns: Row[], aliases: MerchantAliases, today: s
 }
 const aliasDisplay = (key: string, names: string[]) => (names.length === 1 ? names[0]! : key.replace(/\b\w/g, (c) => c.toUpperCase()));
 /** Merge: every listed variant points to the target profile key. */
-export function mergeMerchants(aliases: MerchantAliases, variants: string[], target: string): MerchantAliases { const next = { ...aliases }; for (const v of variants) next[normaliseMerchant(v)] = target; return next; }
+export function mergeMerchants(aliases: MerchantAliases, variants: string[], target: string): MerchantAliases {
+  const canonical = merchantKey(target, aliases), next = { ...aliases };
+  const groups = new Set(variants.map((v) => merchantKey(v, aliases)));
+  for (const raw of [...Object.keys(aliases), ...variants.map(normaliseMerchant)]) {
+    if (groups.has(merchantKey(raw, aliases)) && raw !== canonical) next[raw] = canonical;
+  }
+  delete next[canonical]; return next;
+}
 export function unmergeMerchant(aliases: MerchantAliases, variant: string): MerchantAliases { const next = { ...aliases }; delete next[normaliseMerchant(variant)]; return next; }
 /** Suggested merges: different raw names whose normalised forms share a first word of 4+ letters. */
 export function mergeSuggestions(profiles: { key: string; name: string }[]) {

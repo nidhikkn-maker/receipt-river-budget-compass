@@ -35,9 +35,13 @@ function Trips() {
   const [openId, setOpenId] = useState<string | null>(pr.trips[0]?.id ?? null);
   const add = async () => {
     if (!form.name.trim()) { toast.error("Name the trip"); return; }
+    if (!form.start || !form.end || !Number.isFinite(form.budget) || form.budget < 0) { toast.error("Choose dates and a non-negative budget"); return; }
+    const currencies = form.currencies.split(",").map((c) => c.trim().toUpperCase());
+    if (currencies.some((c) => !(CURRENCIES as readonly string[]).includes(c))) { toast.error("Enter supported currency codes"); return; }
+    if (transactions.some((e) => (e.tags ?? []).some((tag) => tag.toLowerCase() === `Trip: ${form.name.trim()}`.toLowerCase())) && !pr.trips.some((t) => t.name.toLowerCase() === form.name.trim().toLowerCase())) { toast.error("This name is still attached to earlier entries; choose a new trip name"); return; }
     if (form.end < form.start) { toast.error("End date is before start date"); return; }
     if (pr.trips.some((t) => t.name.toLowerCase() === form.name.trim().toLowerCase())) { toast.error("A trip with this name exists"); return; }
-    const t: Trip = { id: crypto.randomUUID(), name: form.name.trim(), destination: form.destination, start: form.start, end: form.end, budget: form.budget, currencies: form.currencies.split(",").map((c) => c.trim().toUpperCase()).filter((c) => (CURRENCIES as readonly string[]).includes(c)) };
+    const t: Trip = { id: crypto.randomUUID(), name: form.name.trim(), destination: form.destination, start: form.start, end: form.end, budget: form.budget, currencies: [...new Set(currencies)] };
     try { await savePreferences({ ...pr, trips: [t, ...pr.trips] }); setOpenId(t.id); toast.success("Trip created"); } catch (e) { toast.error((e as Error).message); }
   };
   const trip = pr.trips.find((t) => t.id === openId);
@@ -65,8 +69,8 @@ function TripView({ trip, txns, setTags, onDelete }: { trip: Trip; txns: ReturnT
   const s = useMemo(() => tripSummary(trip, txns), [trip, txns]);
   const tag = tripTag(trip);
   const candidates = txns.filter((t) => (t.txnType ?? "expense") === "expense" && t.date >= trip.start && t.date <= trip.end && !(t.tags ?? []).includes(tag));
-  const toggle = async (id: string, on: boolean) => { const t = txns.find((x) => x.id === id)!; try { await setTags(id, on ? [...(t.tags ?? []), tag] : (t.tags ?? []).filter((x) => x !== tag)); } catch (e) { toast.error((e as Error).message); } };
-  const markReimb = async (id: string) => { const t = txns.find((x) => x.id === id)!; const r = "Purpose: Reimbursable"; await setTags(id, (t.tags ?? []).includes(r) ? (t.tags ?? []).filter((x) => x !== r) : [...(t.tags ?? []), r]); };
+  const toggle = async (id: string, on: boolean) => { const t = txns.find((x) => x.id === id); if (!t) return; try { await setTags(id, on ? [...new Set([...(t.tags ?? []), tag])] : (t.tags ?? []).filter((x) => x !== tag)); } catch (e) { toast.error((e as Error).message); } };
+  const markReimb = async (id: string) => { const t = txns.find((x) => x.id === id); if (!t) return; const r = "Purpose: Reimbursable"; try { await setTags(id, (t.tags ?? []).includes(r) ? (t.tags ?? []).filter((x) => x !== r) : [...(t.tags ?? []), r]); } catch (e) { toast.error((e as Error).message); } };
   const pdf = async () => {
     const rows = [["Summary", "Total", money(s.total)], ["Summary", "Per day", money(s.perDay)], ["Summary", "Budget variance", money(s.variance)], ["Summary", "Reimbursable", money(s.reimbursable)],
       ...s.categories.map((c) => ["Category", c.category, money(c.amount)]), ...s.currencies.map((c) => ["Currency", `${c.currency} ${c.original} @ ${c.rates.join("/") || "1"}`, money(c.inr)]),

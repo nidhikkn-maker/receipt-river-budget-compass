@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { money } from "@/lib/expenses";
-import { METRIC_LABEL, MILESTONE_METRICS, SCENARIOS, SCENARIO_LABEL, irregularCandidates, milestoneProgress, metricValue, provisionFor, recordProgress, simulate, type Milestone, type MilestoneMetric, type Scenario, type ScenarioKind } from "@/lib/intelligence";
+import { METRIC_LABEL, MILESTONE_METRICS, SCENARIOS, SCENARIO_LABEL, irregularCandidates, milestoneProgress, metricValue, plannedScenario, provisionFor, recordProgress, simulate, type Milestone, type MilestoneMetric, type Scenario, type ScenarioKind } from "@/lib/intelligence";
 import { addMonths } from "@/lib/planning";
 import { useIntelligence } from "@/lib/use-intelligence";
 
@@ -52,7 +52,7 @@ function Simulator() {
   const { store, p, today } = useIntelligence();
   const [s, setS] = useState<Scenario>({ kind: "purchase", amount: 0, date: today, recurring: false, loanIndex: 0, goalIndex: 0, postponeTo: addMonths(today, 1) });
   const [account, setAccount] = useState("");
-  const [method, setMethod] = useState("upi");
+  const [saving, setSaving] = useState(false);
   const flow = p.flow;
   const input = useMemo(() => ({
     cash: p.cash, floor: p.minBalance + p.reserves, commitments: store.commitments, today, days: 90,
@@ -61,11 +61,15 @@ function Simulator() {
   const r = s.amount > 0 ? simulate(input, s) : null;
   const set = (patch: Partial<Scenario>) => setS({ ...s, ...patch });
   const savePlan = async () => {
+    if (saving) return;
     if (!r || !confirm(`Save "${SCENARIO_LABEL[s.kind]}" of ${money(s.amount)} as a planned payment? It will appear in your Plan and forecast.`)) return;
+    setSaving(true);
     try {
-      await store.saveCommitment({ name: `${SCENARIO_LABEL[s.kind]} (planned)`, kind: "planned_purchase", direction: "out", amount: s.amount, frequency: s.recurring || s.kind === "new_recurring" || s.kind === "increase_savings" ? "monthly" : "once", intervalDays: null, nextDue: s.kind === "postpone" ? s.postponeTo! : s.date, accountId: account || null, category: "Miscellaneous", confirmed: true, essential: false, status: "active" });
+      const plan = plannedScenario(s);
+      if (!plan) return;
+      await store.saveCommitment({ ...plan, accountId: account || null });
       toast.success("Saved to your plan");
-    } catch (e) { toast.error((e as Error).message); }
+    } catch (e) { toast.error((e as Error).message); } finally { setSaving(false); }
   };
   const showLoan = s.kind === "loan_extra", showGoal = s.kind === "goal_allocation";
   return (
@@ -78,7 +82,6 @@ function Simulator() {
           <div><Label>{s.kind === "postpone" ? "Original date" : "Date"}</Label><Input type="date" className="h-11" value={s.date} onChange={(e) => set({ date: e.target.value })} /></div>
           {s.kind === "postpone" && <div><Label>Postpone to</Label><Input type="date" className="h-11" value={s.postponeTo} onChange={(e) => set({ postponeTo: e.target.value })} /></div>}
           <div><Label>Paid from</Label><select className={fieldCls} value={account} onChange={(e) => setAccount(e.target.value)}><option value="">Any account</option>{store.accounts.filter((a) => !a.archived).map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}</select></div>
-          <div><Label>Payment method</Label><select className={fieldCls} value={method} onChange={(e) => setMethod(e.target.value)}>{["upi", "cash", "debit_card", "credit_card", "bank_transfer"].map((m) => <option key={m} value={m}>{m.replace("_", " ")}</option>)}</select></div>
           {showLoan && <div><Label>Loan</Label><select className={fieldCls} value={s.loanIndex} onChange={(e) => set({ loanIndex: Number(e.target.value) })}>{input.loans.map((l, k) => <option key={k} value={k}>{l.name}</option>)}</select></div>}
           {showGoal && <div><Label>Goal</Label><select className={fieldCls} value={s.goalIndex} onChange={(e) => set({ goalIndex: Number(e.target.value) })}>{input.goals.map((g, k) => <option key={k} value={k}>{g.name}</option>)}</select></div>}
           {!["new_recurring", "increase_savings", "reduce_category", "postpone"].includes(s.kind) && <label className="flex items-center gap-2 text-sm font-medium"><input type="checkbox" checked={s.recurring} onChange={(e) => set({ recurring: e.target.checked })} /> Repeats monthly</label>}
@@ -106,7 +109,7 @@ function Simulator() {
             {r.loan && <><Row label="Loan interest saved" value={money(r.loan.interestSaved)} tone="good" /><Row label="Months saved" value={r.loan.monthsSaved} /></>}
             {r.notes.map((n) => <p key={n} className="mt-2 text-xs text-muted-foreground">{n}</p>)}
             {r.after.shortDays > 0 && <p className="mt-2 text-sm font-semibold text-destructive">This would take you below your safety balance on {r.after.shortDays} days.</p>}
-            <Button variant="gold" className="mt-3 w-full" onClick={savePlan}>Save as planned payment…</Button>
+            {["purchase", "postpone", "new_recurring"].includes(s.kind) && <Button variant="gold" className="mt-3 w-full" disabled={saving} onClick={savePlan}>Save as planned payment…</Button>}
           </Card>
         </>
       )}
@@ -160,17 +163,20 @@ function Emergency() {
 
 function Irregular() {
   const { store, today } = useIntelligence();
-  const { preferences: pr, savePreferences, commitments, saveCommitment } = store;
+  const { preferences: pr, savePreferences, commitments, confirmIrregular } = store;
   const cands = useMemo(() => irregularCandidates(store.transactions, today), [store.transactions, today]);
   const open = cands.filter((c) => !pr.irregularRejected.includes(c.key) && !pr.irregularConfirmed.includes(c.key));
   const [edit, setEdit] = useState<Record<string, { amount: number; date: string }>>({});
+  const [busy, setBusy] = useState(false);
   const confirmed = commitments.filter((c) => c.status === "active" && c.direction === "out" && ["yearly", "half_yearly"].includes(c.frequency));
   const accept = async (k: string) => {
-    const c = cands.find((x) => x.key === k)!; const e = edit[k] ?? { amount: c.estimate, date: c.nextDate };
+    const c = cands.find((x) => x.key === k);
+    if (!c || busy) return;
+    const e = edit[k] ?? { amount: c.estimate, date: c.nextDate };
+    setBusy(true);
     try {
-      await saveCommitment({ name: c.name, kind: c.category === "Insurance" ? "insurance" : c.category === "Education" ? "school_fee" : "other", direction: "out", amount: e.amount, frequency: c.everyMonths === 12 ? "yearly" : "half_yearly", intervalDays: null, nextDue: e.date, accountId: null, category: c.category, confirmed: true, essential: true, status: "active" });
-      await savePreferences({ ...pr, irregularConfirmed: [...pr.irregularConfirmed, k] }); toast.success("Added to your plan and forecast");
-    } catch (er) { toast.error((er as Error).message); }
+      await confirmIrregular(c, e.amount, e.date); toast.success("Added to your plan and forecast");
+    } catch (er) { toast.error((er as Error).message); } finally { setBusy(false); }
   };
   const reject = async (k: string) => { try { await savePreferences({ ...pr, irregularRejected: [...pr.irregularRejected, k] }); } catch (er) { toast.error((er as Error).message); } };
   const totalProvision = confirmed.reduce((s, c) => s + provisionFor(c.amount, c.nextDue, today), 0);
@@ -193,7 +199,7 @@ function Irregular() {
               <Input type="date" className="h-10" value={e.date} onChange={(x) => setEdit({ ...edit, [c.key]: { ...e, date: x.target.value } })} aria-label="Expected date" />
             </div>
             <div className="mt-1 text-xs">Set aside <b className="font-mono">{money(provisionFor(e.amount, e.date, today))}</b> per month</div>
-            <div className="mt-2 flex gap-2"><Button size="sm" variant="gold" onClick={() => accept(c.key)}><Check className="mr-1 h-4 w-4" />Confirm</Button><Button size="sm" variant="outline" onClick={() => reject(c.key)}><X className="mr-1 h-4 w-4" />Not recurring</Button></div>
+            <div className="mt-2 flex gap-2"><Button size="sm" variant="gold" disabled={busy} onClick={() => accept(c.key)}><Check className="mr-1 h-4 w-4" />Confirm</Button><Button size="sm" variant="outline" disabled={busy} onClick={() => reject(c.key)}><X className="mr-1 h-4 w-4" />Not recurring</Button></div>
           </div>
         ); })}
       </Card>
@@ -213,12 +219,15 @@ function Milestones() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [list.length, today]);
   const add = async () => {
-    if (!form.name || form.target < 0) { toast.error("Enter a name and target"); return; }
+    if (!form.name.trim() || !Number.isFinite(form.target) || form.target < 0 || (!["card_debt", "loan_balance"].includes(form.metric) && form.target === 0) || (form.metric === "loan_balance" && !form.loanName)) { toast.error("Enter a name, valid target and loan where needed"); return; }
     const m: Milestone = { id: crypto.randomUUID(), name: form.name, metric: form.metric, target: form.target, targetDate: form.targetDate || null, loanName: form.loanName || undefined, notify: form.notify, history: [], createdAt: today, manual: form.metric === "custom" ? 0 : undefined };
     const start = metricValue(m, metrics);
     try { await savePreferences({ ...pr, milestones: [...list, recordProgress({ ...m, start }, start, today)] }); setForm({ ...form, name: "", target: 0 }); toast.success("Milestone added"); } catch (e) { toast.error((e as Error).message); }
   };
-  const update = (id: string, patch: Partial<Milestone>) => savePreferences({ ...pr, milestones: list.map((m) => (m.id === id ? { ...m, ...patch } : m)) });
+  const update = async (id: string, patch: Partial<Milestone>) => {
+    if (patch.manual !== undefined && (!Number.isFinite(patch.manual) || patch.manual < 0)) { toast.error("Progress cannot be negative"); return; }
+    try { await savePreferences({ ...pr, milestones: list.map((m) => m.id === id ? recordProgress({ ...m, ...patch }, metricValue({ ...m, ...patch }, metrics), today) : m) }); } catch (e) { toast.error((e as Error).message); }
+  };
   const presets: [string, MilestoneMetric, number][] = [["First ₹1 lakh emergency reserve", "emergency_amount", 100000], ["3 months emergency cover", "emergency_months", 3], ["Clear credit card dues", "card_debt", 0], ["₹10 lakh net worth", "net_worth", 1000000]];
   return (
     <>
