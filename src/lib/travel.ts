@@ -3,7 +3,7 @@
 // Unpaid bookings are commitments and never change balances; advances are tracked separately from spending.
 import { tripSummary, tripTag, type Trip } from "./intelligence";
 import { workspaceParts } from "./workspaces";
-import type { Scope } from "./expenses";
+import { categoryParts, type Scope } from "./expenses";
 
 export const TRIP_TYPES = ["personal", "family", "business", "official", "mixed"] as const;
 export type TripType = (typeof TRIP_TYPES)[number];
@@ -66,6 +66,22 @@ export function tripFinance(t: TravelTrip, txns: Row[]) {
   const advanceBalance = advanced ? r2(advanced - businessShare) : 0;
   const projected = r2(s.total + committed);
   return { ...s, committed, projected, remainingAfterCommitted: t.budget ? r2(t.budget - projected) : 0, byWorkspace: ws, advanced, advanceBalance, reimbursablePending, reimbursed, paidUnlinked };
+}
+
+/** Trip plan (§7.1): category-wise budget, contingency allowance and what the plan says against what is actually recorded. */
+export function tripBudgetDetail(t: TravelTrip, txns: Row[]) {
+  const s = tripSummary(t, txns);
+  const spent: Record<string, number> = {};
+  for (const e of s.entries as Row[]) for (const p of categoryParts(e)) spent[p.category] = r2((spent[p.category] ?? 0) + p.amount);
+  const lines = (t.budgetLines ?? []).filter((l) => l.category.trim()).map((l) => {
+    const actual = spent[l.category] ?? 0;
+    return { category: l.category, budget: r2(l.amount), actual, left: r2(l.amount - actual), over: actual > r2(l.amount) };
+  });
+  const budgeted = r2(lines.reduce((a, l) => a + l.budget, 0));
+  const contingency = r2(t.contingency ?? 0);
+  const planned = r2((t.budget ?? 0) + contingency);
+  const unbudgeted = r2(Object.entries(spent).filter(([c]) => !lines.some((l) => l.category === c)).reduce((a, [, v]) => a + v, 0));
+  return { lines, budgeted, contingency, planned, spent: s.total, unbudgeted, remaining: r2(planned - s.total), hasPlan: lines.length > 0 || contingency > 0 };
 }
 
 /** Entries within the trip dates that aren't on the trip yet — suggestions only, never auto-linked. */
