@@ -15,7 +15,7 @@ describe("insights charts", () => {
     const card = { id: "c", name: "AMEX", kind: "credit_card", openingBalance: 0, creditLimit: 100000 } as Account;
     const tx = [t("1", "2026-09-10", 30000, { accountId: "c" }), { ...t("2", "2026-10-05", 20000), txnType: "transfer" as const, accountId: "bank", toAccountId: "c" }] as Txn[];
     const s = cardUtilisationSeries([card], tx, "2026-10-31", 2);
-    expect(s.map((x) => x.AMEX)).toEqual([30, 10]);
+    expect(s.map((x) => x["AMEX"])).toEqual([30, 10]);
   });
   it("loan progress compares outstanding with original", () => {
     expect(loanProgress([{ name: "Car", original: 500000, principal: 375000, status: "active" }, { name: "Bad", original: 0, principal: 1, status: "active" }]))
