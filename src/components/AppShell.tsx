@@ -1,23 +1,29 @@
 import { Link } from "@tanstack/react-router";
-import type { ReactNode } from "react";
-import { BarChart3, Gem, Home, Landmark, ListFilter, PiggyBank, Plus, Users } from "lucide-react";
+import { useEffect, useState, type ReactNode } from "react";
+import { BarChart3, CalendarClock, Gem, Home, Landmark, ListFilter, PiggyBank, Plus, Settings, Sparkles, Users, Eye, EyeOff } from "lucide-react";
 import { useStore } from "@/lib/store";
 
 const LINKS = [
   { to: "/dashboard", label: "Home", icon: Home },
   { to: "/expenses", label: "Activity", icon: ListFilter },
   { to: "/new", label: "Add", icon: Plus, primary: true },
+  { to: "/assistant", label: "AI", icon: Sparkles },
   { to: "/reports", label: "Insights", icon: BarChart3 },
   { to: "/wealth", label: "Wealth", icon: Gem },
+  { to: "/plan", label: "Plan", icon: CalendarClock },
   { to: "/budgets", label: "Budgets", icon: PiggyBank },
   { to: "/reconcile", label: "Bank", icon: Landmark },
   { to: "/family", label: "Family", icon: Users },
+  { to: "/settings", label: "Settings", icon: Settings },
 ] as const;
 // Mobile bar: the five primary sections
-const MOBILE = ["/dashboard", "/expenses", "/new", "/reports", "/wealth"];
+const MOBILE = ["/dashboard", "/expenses", "/new", "/assistant", "/reports", "/wealth"];
 
 export function AppShell({ children }: { children: ReactNode }) {
   const { loading } = useStore();
+  const [hidden, setHidden] = useState(false);
+  useEffect(() => { setHidden(localStorage.getItem("ll-privacy") === "1"); }, []);
+  useEffect(() => { document.documentElement.classList.toggle("privacy", hidden); localStorage.setItem("ll-privacy", hidden ? "1" : "0"); }, [hidden]);
   return (
     <div className="min-h-screen bg-background lg:pl-24">
       <aside className="fixed inset-y-0 left-0 z-30 hidden w-24 flex-col items-center gap-1 bg-ink py-6 text-ink-foreground lg:flex">
@@ -35,10 +41,13 @@ export function AppShell({ children }: { children: ReactNode }) {
         <div className="mx-auto flex max-w-6xl items-center gap-3 px-4 py-3 sm:px-8">
           <span className="font-display text-xl font-extrabold tracking-tight text-primary">Ledgerline</span>
           <span className="hidden font-mono text-[11px] uppercase tracking-[0.2em] text-muted-foreground sm:inline">personal · family · business</span>
-          <div className="ml-auto flex gap-1 lg:hidden">
+          <button onClick={() => setHidden((h) => !h)} aria-label={hidden ? "Show amounts" : "Hide amounts"} className="ml-auto rounded-xl p-2 text-muted-foreground">{hidden ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}</button>
+          <div className="flex gap-1 lg:hidden">
+            <Link to="/plan" aria-label="Plan" className="rounded-xl p-2 text-muted-foreground" activeProps={{ className: "!text-primary bg-secondary" }}><CalendarClock className="h-5 w-5" /></Link>
             <Link to="/budgets" aria-label="Budgets" className="rounded-xl p-2 text-muted-foreground" activeProps={{ className: "!text-primary bg-secondary" }}><PiggyBank className="h-5 w-5" /></Link>
             <Link to="/reconcile" aria-label="Bank reconciliation" className="rounded-xl p-2 text-muted-foreground" activeProps={{ className: "!text-primary bg-secondary" }}><Landmark className="h-5 w-5" /></Link>
             <Link to="/family" aria-label="Family" className="rounded-xl p-2 text-muted-foreground" activeProps={{ className: "!text-primary bg-secondary" }}><Users className="h-5 w-5" /></Link>
+            <Link to="/settings" aria-label="Settings" className="rounded-xl p-2 text-muted-foreground" activeProps={{ className: "!text-primary bg-secondary" }}><Settings className="h-5 w-5" /></Link>
           </div>
         </div>
       </header>

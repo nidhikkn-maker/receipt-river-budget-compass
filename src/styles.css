@@ -178,3 +178,6 @@
   mask: radial-gradient(circle 7px at 0 50%, transparent 98%, #000) left / 51% 100% no-repeat,
     radial-gradient(circle 7px at 100% 50%, transparent 98%, #000) right / 51% 100% no-repeat;
 }
+
+/* Privacy mode: blur amounts */
+.privacy .font-mono { filter: blur(7px); transition: filter .2s; }

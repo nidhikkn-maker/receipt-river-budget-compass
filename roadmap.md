@@ -1,12 +1,14 @@
 # Roadmap (Functional Requirements v1.0)
 - [ ] Review https://yaba--staging.vercel.app/actual_expenses — blocked: page requires Google sign-in
 - [x] Earlier: receipts + review, multi-currency, payment methods, bank reconciliation, family, splits, budgets, reports
-- [x] Phase 1: accounts + ledger, transaction types (expense/income/transfer/refund/adjustment), tags, Wealth page, 5-tab nav
-- [x] Merchant memory suggestions
-- [ ] Phase 1 rest: editable categories (rename/merge/archive), grouped tags
-- [ ] Phase 2: richer scanner (tax, items), screenshot/PDF import, voice entry, Excel/PDF statements
-- [ ] Phase 3: recurring, credit cards, loans/EMI, subscriptions, expected income, calendar
-- [ ] Phase 4: advanced budgets, forecast, safe-to-spend
-- [ ] Phase 5: customisable Home, Insights drill-down, goals, document vault
-- [ ] Phase 6: AI assistant
-- [ ] Phase 7: real sign-in, passkey lock, settings, export/backup
+- [x] Accounts + ledger, transaction types, tags, merchant memory, 5-tab nav (Home, Activity, AI, Insights, Wealth)
+- [x] Voice/typed entry ("Spent ₹2,500 on dinner using AMEX yesterday")
+- [x] Recurring income/bills/subscriptions/EMIs, calendar, mark paid, subscription detection
+- [x] Credit card limit/due day/utilisation; loans with schedule + prepayment simulator; goals & reserves
+- [x] Forecast (7–90 days, shortfall dates) and safe-to-spend with breakdown
+- [x] AI assistant using engine figures only
+- [x] Backup / restore / delete all; privacy (hide amounts)
+- [ ] Next: editable categories (rename/merge/archive) + grouped tags
+- [ ] Next: receipt tax & line items; Excel/PDF statement import
+- [ ] Next: family/project/annual budgets with carry-forward; Insights drill-down; customisable Home
+- [ ] Next: document vault search; real sign-in + passkey lock; offline queue; reminders/notifications

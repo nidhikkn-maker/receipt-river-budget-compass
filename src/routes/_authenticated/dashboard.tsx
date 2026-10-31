@@ -5,6 +5,7 @@ import { ExpenseTable } from "@/components/ExpenseTable";
 import { money, totalsByMember, totalsByScope } from "@/lib/expenses";
 import { useStore } from "@/lib/store";
 import { accountBalance, cashflow, isLiability } from "@/lib/ledger";
+import { usePosition } from "@/lib/use-position";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
   head: () => ({
@@ -32,6 +33,7 @@ function Overview() {
   const cash = live.filter((a) => !isLiability(a.kind) && ["savings", "current", "cash", "wallet"].includes(a.kind)).reduce((s, a) => s + accountBalance(a, transactions), 0);
   const cardDue = live.filter((a) => a.kind === "credit_card").reduce((s, a) => s + accountBalance(a, transactions), 0);
   const flow = cashflow(transactions, `${month}-01`, `${month}-31`);
+  const pos = usePosition(30);
   const pct = t.total ? Math.round((t.business / t.total) * 100) : 0;
 
   return (
@@ -52,6 +54,17 @@ function Overview() {
         </div>
       </section>
 
+      <Link to="/plan" className="mb-3 flex items-center gap-4 rounded-3xl border-2 border-primary bg-card p-4">
+        <div className="flex-1">
+          <div className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Safe to spend · 30 days</div>
+          <div className="font-mono text-2xl">{money(pos.safe.amount)}</div>
+          <div className="text-xs text-muted-foreground">{pos.forecast.shortDates.length ? `Money runs short from ${pos.forecast.shortDates[0]}` : `Lowest point ${money(pos.safe.lowest)} on ${pos.safe.lowestDate}`}</div>
+        </div>
+        <div className="text-right text-xs text-muted-foreground">
+          {pos.upcoming.slice(0, 3).map((u, k) => <div key={k}>{u.date.slice(5)} · {u.name} · <span className="font-mono">{money(u.amount)}</span></div>)}
+          {!pos.upcoming.length && "Add bills & income in Plan"}
+        </div>
+      </Link>
       <div className="mb-3 grid grid-cols-2 gap-3 lg:grid-cols-4">
         <Link to="/wealth"><Stat label="Cash in accounts" value={money(cash)} {...(live.length ? {} : { hint: "Add accounts" })} /></Link>
         <Stat label="Income this month" value={money(flow.income)} />

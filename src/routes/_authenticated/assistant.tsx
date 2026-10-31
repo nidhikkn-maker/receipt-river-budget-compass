@@ -63,7 +63,7 @@ function Assistant() {
         {msgs.map((m, k) => (
           <div key={k} className={cn("max-w-[85%] whitespace-pre-wrap rounded-3xl px-4 py-3 text-sm", m.role === "user" ? "ml-auto bg-primary text-primary-foreground" : m.error ? "border border-destructive text-destructive" : "border bg-card")}>
             {m.role === "assistant" && !m.error && <Sparkles className="mb-1 h-4 w-4 text-primary" />}
-            {m.content}
+            {m.content.replace(/\*\*/g, "")}
           </div>
         ))}
         {busy && <div className="w-fit rounded-3xl border bg-card px-4 py-3 text-sm text-muted-foreground">Thinking…</div>}
