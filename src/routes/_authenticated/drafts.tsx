@@ -46,7 +46,7 @@ function DraftsPage() {
     setDrafts([...local, ...server.filter((d) => !ids.has(d.id))].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)));
   };
   useEffect(() => {
-    void load();
+    void load().then(() => syncLocalDrafts(userId)).then((n) => { if (n) void load(); });
     const on = () => void syncLocalDrafts(userId).then(load); const off = () => void load();
     window.addEventListener("online", on); window.addEventListener("offline", off);
     return () => { window.removeEventListener("online", on); window.removeEventListener("offline", off); };
