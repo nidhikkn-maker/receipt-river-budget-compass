@@ -100,6 +100,12 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { rel: "manifest", href: "/manifest.webmanifest" },
       { rel: "apple-touch-icon", href: "/app-icon-large.png" },
     ],
+    scripts: [
+      {
+        /* Apply the saved theme before first paint to avoid a flash. */
+        children: `try{var t=JSON.parse(localStorage.getItem("ll-theme")||"{}");var e=document.documentElement;e.dataset.theme=t.themeName||"signature";e.classList.toggle("dark",t.appearance==="dark"||(t.appearance!=="light"&&matchMedia("(prefers-color-scheme: dark)").matches));}catch(_){}`,
+      },
+    ],
   }),
   shellComponent: RootShell,
   component: RootComponent,

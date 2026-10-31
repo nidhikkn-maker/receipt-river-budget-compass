@@ -1,9 +1,12 @@
 import { Link } from "@tanstack/react-router";
 import { useEffect, useState, type ReactNode } from "react";
-import { BarChart3, CalendarClock, Gem, Home, Landmark, ListFilter, PiggyBank, Plus, Settings, Sparkles, Users, Eye, EyeOff, FileText, UserRound, TrendingUp, Inbox, HeartPulse, Search, SlidersHorizontal, Split, Network } from "lucide-react";
+import { BarChart3, Bell, CalendarClock, Gem, Home, Landmark, ListFilter, PiggyBank, Plus, Settings, Sparkles, Users, Eye, EyeOff, FileText, UserRound, TrendingUp, Inbox, HeartPulse, Search, SlidersHorizontal, Split, Network, Plane, Wallet, Bot, Menu, X, MessageCircleQuestion } from "lucide-react";
 import { DeviceLock } from "./DeviceLock";
 import { Button } from "./ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "./ui/dialog";
 import { useStore } from "@/lib/store";
+import { applyTheme } from "@/lib/themes";
+import { SCOPES, SCOPE_LABEL, type Scope } from "@/lib/expenses";
 
 const LINKS = [
   { to: "/dashboard", label: "Home", icon: Home },
@@ -23,22 +26,82 @@ const LINKS = [
   { to: "/allocation", label: "Allocate", icon: Split },
   { to: "/connections", label: "Links", icon: Network },
   { to: "/family", label: "Family", icon: Users },
+  { to: "/trips", label: "Trips", icon: Plane },
   { to: "/vault", label: "Vault", icon: FileText },
   { to: "/settings", label: "Settings", icon: Settings },
 ] as const;
-// Mobile bar: the five primary sections
-const MOBILE = ["/dashboard", "/expenses", "/new", "/assistant", "/reports", "/wealth"];
+
+/** "More" sheet groups: every module stays reachable, organised by purpose. */
+const MORE_GROUPS: { title: string; items: { to: string; label: string; icon: typeof Home }[] }[] = [
+  { title: "Money", items: [
+    { to: "/plan", label: "Plan & calendar", icon: CalendarClock },
+    { to: "/budgets", label: "Budgets", icon: PiggyBank },
+    { to: "/forecast", label: "Forecast", icon: TrendingUp },
+    { to: "/allocation", label: "Money allocation", icon: Split },
+    { to: "/rules", label: "Financial rules", icon: SlidersHorizontal },
+  ] },
+  { title: "Activity", items: [
+    { to: "/inbox", label: "Financial inbox", icon: Inbox },
+    { to: "/review", label: "Monthly review", icon: HeartPulse },
+    { to: "/reconcile", label: "Import & reconcile", icon: Landmark },
+    { to: "/search", label: "Search everything", icon: Search },
+    { to: "/vault", label: "Document vault", icon: FileText },
+  ] },
+  { title: "Insights", items: [
+    { to: "/reports", label: "Reports", icon: BarChart3 },
+    { to: "/brief", label: "Weekly brief", icon: Sparkles },
+    { to: "/strategy", label: "What if…", icon: MessageCircleQuestion },
+    { to: "/connections", label: "Money map", icon: Network },
+  ] },
+  { title: "Workspaces & travel", items: [
+    { to: "/trips", label: "Travel Manager", icon: Plane },
+    { to: "/family", label: "Family", icon: Users },
+    { to: "/wealth", label: "Wealth & accounts", icon: Gem },
+  ] },
+  { title: "Account", items: [
+    { to: "/settings", label: "Settings & backup", icon: Settings },
+    { to: "/payment-methods", label: "Payment methods", icon: Wallet },
+    { to: "/assistants", label: "Connected assistants", icon: Bot },
+  ] },
+];
+
+function WorkspaceSelector() {
+  const { preferences, savePreferences } = useStore();
+  const options: ("all" | Scope)[] = ["all", ...SCOPES];
+  return (
+    <div className="flex gap-1 overflow-x-auto pb-0.5" role="group" aria-label="Workspace">
+      {options.map((s) => (
+        <button
+          key={s}
+          type="button"
+          onClick={() => void savePreferences({ ...preferences, homeScope: s })}
+          aria-pressed={preferences.homeScope === s}
+          className={"shrink-0 rounded-full px-3 py-1 text-xs font-semibold transition " + (preferences.homeScope === s ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground hover:bg-accent")}
+        >
+          {s === "all" ? "All workspaces" : SCOPE_LABEL[s]}
+        </button>
+      ))}
+    </div>
+  );
+}
 
 export function AppShell({ children }: { children: ReactNode }) {
-  const { loading, preferences, userId, name } = useStore();
-  useEffect(()=>{const theme=preferences.theme;const media=window.matchMedia("(prefers-color-scheme: dark)");const apply=()=>document.documentElement.classList.toggle("dark",theme==="dark"||(theme==="system"&&media.matches));apply();media.addEventListener("change",apply);return()=>media.removeEventListener("change",apply);},[preferences.theme]);
+  const { loading, preferences, name } = useStore();
+  useEffect(() => {
+    const media = window.matchMedia("(prefers-color-scheme: dark)");
+    const apply = () => applyTheme(preferences.themeName, preferences.theme, media.matches);
+    apply();
+    media.addEventListener("change", apply);
+    return () => media.removeEventListener("change", apply);
+  }, [preferences.theme, preferences.themeName]);
   const [hidden, setHidden] = useState(false);
+  const [moreOpen, setMoreOpen] = useState(false);
   useEffect(() => { setHidden(localStorage.getItem("ll-privacy") === "1"); }, []);
   useEffect(() => { document.documentElement.classList.toggle("privacy", hidden); localStorage.setItem("ll-privacy", hidden ? "1" : "0"); }, [hidden]);
   return (
     <div className="min-h-screen bg-background lg:pl-24">
-      <aside className="fixed inset-y-0 left-0 z-30 hidden w-24 flex-col items-center gap-1 bg-ink py-6 text-ink-foreground lg:flex">
-        <Link to="/dashboard" className="mb-6 flex h-12 w-12 items-center justify-center rounded-2xl bg-hero font-display text-xl font-extrabold text-ink-foreground shadow-float">L</Link>
+      <aside className="fixed inset-y-0 left-0 z-30 hidden w-24 flex-col items-center gap-1 overflow-y-auto bg-ink py-6 text-ink-foreground lg:flex">
+        <Link to="/dashboard" className="mb-6 flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-hero font-display text-xl font-extrabold text-ink-foreground shadow-float">L</Link>
         {LINKS.map((l) => (
           <Link key={l.to} to={l.to} className="flex w-20 flex-col items-center gap-1 rounded-2xl py-2.5 text-[11px] font-semibold text-ink-muted transition hover:text-ink-foreground"
             activeProps={{ className: "!text-gold bg-sidebar-accent ring-1 ring-gold" }}>
@@ -49,41 +112,65 @@ export function AppShell({ children }: { children: ReactNode }) {
       </aside>
 
       <header className="sticky top-0 z-20 border-b bg-background/85 backdrop-blur">
-        <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-2 px-4 py-3 sm:px-8">
-          <span className="font-display text-xl font-bold tracking-tight text-primary">Ledgerline<span className="text-gold">.</span></span>
-          <span className="hidden font-mono text-[11px] font-semibold uppercase tracking-[0.2em] text-muted-foreground sm:inline">personal · family · business</span>
-          <Button size="icon" variant="ghost" onClick={() => setHidden((h) => !h)} aria-label={hidden ? "Show amounts" : "Hide amounts"} className="ml-auto rounded-xl p-2 text-muted-foreground">{hidden ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}</Button>
-          <Link to="/auth" aria-label={name ? `Account: ${name}` : "Account"} title={name || "Account"} className="p-2 text-muted-foreground"><UserRound className="h-5 w-5" /></Link>
-          <div className="flex w-full flex-wrap justify-between gap-1 lg:hidden">
-            <Link to="/inbox" aria-label="Financial inbox" className="rounded-xl p-2 text-foreground/70" activeProps={{ className: "!text-gold bg-gold-soft" }}><Inbox className="h-5 w-5" /></Link>
-            <Link to="/review" aria-label="Monthly review and health score" className="rounded-xl p-2 text-foreground/70" activeProps={{ className: "!text-gold bg-gold-soft" }}><HeartPulse className="h-5 w-5" /></Link>
-            <Link to="/plan" aria-label="Plan" className="rounded-xl p-2 text-foreground/70" activeProps={{ className: "!text-gold bg-gold-soft" }}><CalendarClock className="h-5 w-5" /></Link>
-            <Link to="/budgets" aria-label="Budgets" className="rounded-xl p-2 text-foreground/70" activeProps={{ className: "!text-gold bg-gold-soft" }}><PiggyBank className="h-5 w-5" /></Link>
-            <Link to="/reconcile" aria-label="Bank reconciliation" className="rounded-xl p-2 text-foreground/70" activeProps={{ className: "!text-gold bg-gold-soft" }}><Landmark className="h-5 w-5" /></Link>
-            <Link to="/search" aria-label="Search everything" className="rounded-xl p-2 text-foreground/70" activeProps={{ className: "!text-gold bg-gold-soft" }}><Search className="h-5 w-5" /></Link>
-            <Link to="/rules" aria-label="Financial rules" className="rounded-xl p-2 text-foreground/70" activeProps={{ className: "!text-gold bg-gold-soft" }}><SlidersHorizontal className="h-5 w-5" /></Link>
-            <Link to="/allocation" aria-label="Money allocation" className="rounded-xl p-2 text-foreground/70" activeProps={{ className: "!text-gold bg-gold-soft" }}><Split className="h-5 w-5" /></Link>
-            <Link to="/family" aria-label="Family" className="rounded-xl p-2 text-foreground/70" activeProps={{ className: "!text-gold bg-gold-soft" }}><Users className="h-5 w-5" /></Link>
-            <Link to="/vault" aria-label="Document vault" className="rounded-xl p-2 text-foreground/70" activeProps={{ className: "!text-gold bg-gold-soft" }}><FileText className="h-5 w-5" /></Link>
-            <Link to="/settings" aria-label="Settings" className="rounded-xl p-2 text-foreground/70" activeProps={{ className: "!text-gold bg-gold-soft" }}><Settings className="h-5 w-5" /></Link>
+        <div className="mx-auto flex max-w-6xl items-center gap-1 px-4 py-2.5 sm:px-8">
+          <Link to="/dashboard" className="font-display text-xl font-bold tracking-tight text-primary">Ledgerline<span className="text-gold">.</span></Link>
+          <div className="ml-auto flex items-center">
+            <Link to="/search" aria-label="Search" className="rounded-xl p-2 text-muted-foreground transition hover:text-foreground"><Search className="h-5 w-5" /></Link>
+            <Link to="/inbox" aria-label="Notifications" className="rounded-xl p-2 text-muted-foreground transition hover:text-foreground"><Bell className="h-5 w-5" /></Link>
+            <Button size="icon" variant="ghost" onClick={() => setHidden((h) => !h)} aria-label={hidden ? "Show amounts" : "Hide amounts"} className="rounded-xl text-muted-foreground">{hidden ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}</Button>
+            <Link to="/auth" aria-label={name ? `Account: ${name}` : "Account"} title={name || "Account"} className="rounded-xl p-2 text-muted-foreground transition hover:text-foreground"><UserRound className="h-5 w-5" /></Link>
           </div>
+        </div>
+        <div className="mx-auto max-w-6xl px-4 pb-2 sm:px-8">
+          <WorkspaceSelector />
         </div>
       </header>
 
-      <main className="mx-auto max-w-6xl px-4 pb-28 pt-6 sm:px-8 lg:pb-12">
+      <main className="mx-auto max-w-6xl px-4 pb-28 pt-5 sm:px-8 lg:pb-12">
         {loading ? <p className="text-muted-foreground">Loading…</p> : <DeviceLock>{children}</DeviceLock>}
       </main>
 
-      <nav className="fixed inset-x-3 bottom-3 z-30 flex items-center justify-around rounded-3xl bg-ink px-2 py-2 text-ink-muted shadow-float lg:hidden">
-        {LINKS.filter((l) => MOBILE.includes(l.to)).map((l) => (
-          <Link key={l.to} to={l.to} className="flex flex-1 flex-col items-center gap-0.5 rounded-2xl py-1.5 text-[10px] font-semibold" activeProps={{ className: "!text-gold bg-gold-soft" }}>
-            {"primary" in l ? (
-              <span className="-mt-7 flex h-12 w-12 items-center justify-center rounded-2xl bg-gold-hero text-gold-foreground shadow-gold"><l.icon className="h-6 w-6" /></span>
-            ) : <l.icon className="h-5 w-5" />}
-            {l.label}
-          </Link>
-        ))}
+      <nav aria-label="Primary" className="fixed inset-x-3 bottom-3 z-30 flex items-center justify-around rounded-3xl bg-ink px-2 py-2 text-ink-muted shadow-float backdrop-blur-xl lg:hidden">
+        <Link to="/dashboard" className="flex flex-1 flex-col items-center gap-0.5 rounded-2xl py-1.5 text-[10px] font-semibold" activeProps={{ className: "!text-gold" }}>
+          <Home className="h-5 w-5" />Home
+        </Link>
+        <Link to="/expenses" className="flex flex-1 flex-col items-center gap-0.5 rounded-2xl py-1.5 text-[10px] font-semibold" activeProps={{ className: "!text-gold" }}>
+          <ListFilter className="h-5 w-5" />Activity
+        </Link>
+        <Link to="/new" aria-label="Add entry" className="flex flex-1 flex-col items-center">
+          <span className="-mt-8 flex h-14 w-14 items-center justify-center rounded-full bg-gold-hero text-gold-foreground shadow-gold transition active:scale-95"><Plus className="h-7 w-7" /></span>
+        </Link>
+        <Link to="/assistant" className="flex flex-1 flex-col items-center gap-0.5 rounded-2xl py-1.5 text-[10px] font-semibold" activeProps={{ className: "!text-gold" }}>
+          <Sparkles className="h-5 w-5" />AI
+        </Link>
+        <button type="button" onClick={() => setMoreOpen(true)} aria-label="More modules" aria-expanded={moreOpen} className="flex flex-1 flex-col items-center gap-0.5 rounded-2xl py-1.5 text-[10px] font-semibold">
+          <Menu className="h-5 w-5" />More
+        </button>
       </nav>
+
+      <Dialog open={moreOpen} onOpenChange={setMoreOpen}>
+        <DialogContent className="max-h-[80vh] overflow-y-auto sm:max-w-lg" aria-label="All modules">
+          <DialogHeader>
+            <DialogTitle className="flex items-center justify-between">All modules
+              <Button size="icon" variant="ghost" aria-label="Close" onClick={() => setMoreOpen(false)}><X className="h-5 w-5" /></Button>
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-5 pb-2">
+            {MORE_GROUPS.map((g) => (
+              <div key={g.title}>
+                <div className="mb-1.5 font-mono text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">{g.title}</div>
+                <div className="grid grid-cols-2 gap-1.5">
+                  {g.items.map((item) => (
+                    <Link key={item.to} to={item.to} onClick={() => setMoreOpen(false)} className="flex items-center gap-2.5 rounded-2xl border bg-card px-3 py-2.5 text-sm font-semibold transition hover:bg-accent" activeProps={{ className: "ring-1 ring-gold" }}>
+                      <item.icon className="h-4 w-4 shrink-0 text-primary" />{item.label}
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
