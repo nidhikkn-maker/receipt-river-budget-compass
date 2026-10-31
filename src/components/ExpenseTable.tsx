@@ -7,7 +7,7 @@ import { useStore } from "@/lib/store";
 import { Button } from "./ui/button";
 
 /** Expenses as perforated "ticket" cards. Pass selected/onToggle to turn cards into multi-select rows. */
-export function ExpenseTable({ items, empty = "Nothing here yet.", selected, onToggle }: { items: Expense[]; empty?: string; selected?: Set<string>; onToggle?: (id: string) => void }) {
+export function ExpenseTable({ items, empty = "Nothing here yet.", selected, onToggle }: { items: Expense[]; empty?: string; selected?: Set<string> | undefined; onToggle?: ((id: string) => void) | undefined }) {
   const { memberName } = useStore();
   const [open, setOpen] = useState<Expense | null>(null);
   const selecting = !!onToggle;
