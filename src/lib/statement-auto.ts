@@ -192,8 +192,12 @@ export function planStatementRegistration(lines: StatementLine[], matches: Match
   for (const d of plan.register) {
     const k = norm(d.merchant);
     if (!k || seen.has(k)) continue;
-    const count = ctx.transactions.filter((t) => t.merchant && sameMerchant(t.merchant, d.merchant)).length;
-    if (count >= 3) { seen.add(k); plan.recurringHints.push({ merchant: d.merchant, amount: d.line.amount, count }); }
+    const history = ctx.transactions.filter((t) => t.merchant && sameMerchant(t.merchant, d.merchant));
+    if (history.length >= 3) {
+      seen.add(k);
+      const known = history.sort((a, b) => b.date.localeCompare(a.date))[0]!.merchant!;
+      plan.recurringHints.push({ merchant: known, amount: d.line.amount, count: history.length });
+    }
   }
   return plan;
 }
