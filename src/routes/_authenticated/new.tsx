@@ -376,6 +376,8 @@ function NewExpense() {
         { title: title.trim(), amount: Number(amount), currency, paymentMethod, category, date, description, merchant: merchant.trim() || null,
           receiptDetails: finalDetails, workspaceAllocations, scope: wsSplit.on ? (workspaceAllocations.slice().sort((a, b) => b.amount - a.amount)[0]?.workspace ?? scope) : scope, memberId: memberId === "me" ? null : memberId,
           txnType, accountId: accountId === "none" ? null : accountId, paymentInstrumentId: instrumentId === "none" ? null : instrumentId, toAccountId: toAccountId === "none" ? null : toAccountId,
+          tripId: tripId === "none" ? null : tripId,
+          principal: principal.trim() === "" ? null : Number(principal), interest: interest.trim() === "" ? null : Number(interest),
           tags: [...new Set(tags.split(",").map((t) => t.trim()).filter(Boolean))],
           splits: splitOn ? Object.entries(shares).map(([k, v]) => ({ memberId: k === "me" ? null : k, amount: Number(v) })) : [] },
         { ...(editing ? { id: editing.id } : {}), ...(createId ? { createId } : {}), files: receipts.map((r) => r.file) },
@@ -537,6 +539,38 @@ function NewExpense() {
             </div>
             )}
           </div>
+          {(txnType === "advance" || txnType === "advance_settlement") && (
+            <div className="grid gap-2">
+              <Label>Trip</Label>
+              <Select value={tripId} onValueChange={setTripId}>
+                <SelectTrigger aria-label="Trip"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Not linked to a trip</SelectItem>
+                  {(preferences.trips as TravelTrip[]).map((t) => <SelectItem key={t.id} value={t.id}>{t.name}{t.from ? ` · ${t.from}` : ""}</SelectItem>)}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">Linking a trip tracks this advance against it — no tag needed.</p>
+            </div>
+          )}
+          {txnType === "loan_repayment" && (
+            <div className="grid gap-2">
+              <div className="flex items-center justify-between">
+                <Label>Principal / interest split</Label>
+                {(() => {
+                  const loan = loans.find((l) => l.accountId === toAccountId && l.status === "active");
+                  const amt = Number(amount) || 0;
+                  if (!loan || !(amt > 0)) return null;
+                  const s = emiSplit(loan.principal, loan.rate, amt);
+                  return <button type="button" className="text-xs text-primary underline" onClick={() => { setPrincipal(String(s.principal)); setInterest(String(s.interest)); }}>Use {loan.name}'s split: {money(s.principal)} + {money(s.interest)}</button>;
+                })()}
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <Input aria-label="Principal part" type="number" min="0" step="0.01" placeholder="Principal" value={principal} onChange={(e) => setPrincipal(e.target.value)} />
+                <Input aria-label="Interest part" type="number" min="0" step="0.01" placeholder="Interest" value={interest} onChange={(e) => setInterest(e.target.value)} />
+              </div>
+              <p className="text-xs text-muted-foreground">Optional. If you fill one, fill both — they must add up to the payment.</p>
+            </div>
+          )}
           {!liveAccounts.length && <p className="-mt-2 text-xs text-muted-foreground">Add your bank, card and cash accounts on the <Link to="/wealth" className="text-primary underline">Wealth</Link> page.</p>}
           <div className="grid gap-2">
             <Label htmlFor="tags">Tags</Label>
