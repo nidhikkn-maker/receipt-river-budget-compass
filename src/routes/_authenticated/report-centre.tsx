@@ -129,6 +129,7 @@ function ReportCentre() {
       <PageTitle title="Reports Centre" sub="Generate PDF reports from your recorded entries, then preview, download or share them." />
 
       <Link to="/expenditure-statement" className="flex items-center justify-between rounded-xl border bg-card p-4 text-sm"><span><span className="block font-semibold">Detailed Expenditure Statement</span><span className="text-muted-foreground">One trip, event, project or purchase, with original bills attached</span></span><FileText className="h-5 w-5 text-primary" /></Link>
+      <Link to="/claim-submission" className="flex items-center justify-between rounded-xl border bg-card p-4 text-sm"><span><span className="block font-semibold">Expense Claim Submission</span><span className="text-muted-foreground">Formal reimbursement claim with declaration, approval lines and bills</span></span><FileText className="h-5 w-5 text-primary" /></Link>
 
       <section className="space-y-3 rounded-xl border bg-card p-4">
         <label className="block text-sm font-semibold">Report
@@ -210,7 +211,7 @@ function ReportCentre() {
                 <Button size="sm" variant="outline" disabled={!b} onClick={() => b && downloadBlob(b, name)}><Download className="mr-1 h-3.5 w-3.5" />Download</Button>
                 <Button size="sm" variant="outline" disabled={!b} onClick={() => { if (b) void deliverFile(b, name); }}><Share2 className="mr-1 h-3.5 w-3.5" />Share</Button>
                 {!b && <Button size="sm" variant="ghost" onClick={() => prepare(h)}>Load</Button>}
-                {h.kind !== "expenditure-statement" && <Button size="sm" variant="outline" disabled={busy} onClick={() => { const fl = h.filters as ReportFilters & { style?: "colour" | "mono" }; if (fl.style) setStyle(fl.style); setType(h.kind as ReportType); return generate({ type: h.kind as ReportType, filters: fl }); }}><RefreshCw className="mr-1 h-3.5 w-3.5" />Regenerate</Button>}
+                {h.kind !== "expenditure-statement" && h.kind !== "claim-submission" && <Button size="sm" variant="outline" disabled={busy} onClick={() => { const fl = h.filters as ReportFilters & { style?: "colour" | "mono" }; if (fl.style) setStyle(fl.style); setType(h.kind as ReportType); return generate({ type: h.kind as ReportType, filters: fl }); }}><RefreshCw className="mr-1 h-3.5 w-3.5" />Regenerate</Button>}
                 <Button size="sm" variant="ghost" aria-label="Delete report" onClick={() => setConfirmDel(h)}><Trash2 className="h-3.5 w-3.5" /></Button>
               </div>
             </div>

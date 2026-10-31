@@ -65,9 +65,12 @@ export function ExpenditureReportBuilder({ mode, search }: { mode: "statement" |
       if (!included.length) throw new Error("Choose at least one transaction.");
       const id = crypto.randomUUID(), reference = statementReference(today(), id);
       const st = buildStatement({ subject, subjectName, purpose, organisation: org, entries: included, trips, accounts: store.accounts, instruments, memberName: store.memberName, today: today(), reference });
+      const claim = claimMode ? buildClaim(st, claimant) : null;
+      if (claim && !claimant.name.trim()) throw new Error("Enter the claimant's name.");
+      if (claim && !claim.items.length) throw new Error("Nothing to claim: none of the chosen expenses are personally paid, marked for reimbursement and still outstanding.");
       setStage(1);
       const files: Record<string, AnnexFile | null> = {};
-      for (const a of st.annexures) {
+      for (const a of claim ? claim.annexures : st.annexures) {
         if (cancelled.current) return;
         try {
           const url = await store.signedUrl(a.path); if (!url) throw new Error();
@@ -79,16 +82,17 @@ export function ExpenditureReportBuilder({ mode, search }: { mode: "statement" |
       }
       setStage(2);
       const { renderStatementPdf } = await import("@/lib/expenditure-pdf");
+      const { renderClaimPdf } = await import("@/lib/claim-pdf");
       setStage(3);
-      const { blob, missing } = await renderStatementPdf(st, files);
+      const { blob, missing } = claim ? await renderClaimPdf(claim, files) : await renderStatementPdf(st, files);
       if (cancelled.current) return;
-      const name = `ledgerline-expenditure-${subjectName.replace(/[^a-z0-9]+/gi, "-").toLowerCase()}-${reference}.pdf`;
+      const name = `ledgerline-${claim ? "claim" : "expenditure"}-${subjectName.replace(/[^a-z0-9]+/gi, "-").toLowerCase()}-${claim ? claim.reference : reference}.pdf`;
       setResult({ blob, url: URL.createObjectURL(blob), name, missing });
       setStage(4);
       const path = `${store.userId}/reports/${id}.pdf`;
       const up = await supabase.storage.from("receipts").upload(path, blob, { contentType: "application/pdf" });
       if (!up.error) {
-        const { error } = await supabase.from("report_history").insert({ id, owner_id: store.userId, kind: "expenditure-statement", title: `Detailed Expenditure Statement — ${subjectName}`, period_from: st.start, period_to: st.end, workspace: "all", filters: { subject, excluded, reference } as never, file_path: path, file_size: blob.size, version: 1 });
+        const { error } = await supabase.from("report_history").insert({ id, owner_id: store.userId, kind: claim ? "claim-submission" : "expenditure-statement", title: `${claim ? "Expense Claim Submission" : "Detailed Expenditure Statement"} — ${subjectName}`, period_from: st.start, period_to: st.end, workspace: "all", filters: { subject, excluded, reference } as never, file_path: path, file_size: blob.size, version: 1 });
         if (error) await supabase.storage.from("receipts").remove([path]);
         if (error) toast.error("The PDF is ready, but it couldn't be saved to report history.");
       } else toast.error("The PDF is ready, but it couldn't be saved to report history.");
@@ -100,7 +104,19 @@ export function ExpenditureReportBuilder({ mode, search }: { mode: "statement" |
 
   return (
     <div className="space-y-5 pb-24">
-      <PageTitle title="Detailed Expenditure Statement" sub="A complete record of what was spent, how it was paid and what is still to be reimbursed, with every original bill attached." />
+      <PageTitle title={claimMode ? "Expense Claim Submission" : "Detailed Expenditure Statement"} sub={claimMode ? "A formal reimbursement request for your organisation's accounts team: claimed items, declaration, approval lines and the original bills." : "A complete record of what was spent, how it was paid and what is still to be reimbursed, with every original bill attached."} />
+      {claimMode && (
+        <section className="space-y-2 rounded-xl border bg-card p-4">
+          <h2 className="text-sm font-semibold">Claimant details <span className="font-normal text-muted-foreground">(remembered on this device)</span></h2>
+          <div className="grid grid-cols-2 gap-2 text-xs">
+            {([["name", "Name *"], ["employeeId", "Employee ID"], ["department", "Department"], ["designation", "Designation"], ["email", "Email"], ["approver", "Approving manager"]] as const).map(([k, l]) => (
+              <label key={k}>{l}<input className={cn(sel, "mt-1")} value={claimant[k]} onChange={(e) => setC(k, e.target.value)} /></label>
+            ))}
+          </div>
+          <label className="block text-xs">Pay reimbursement to (optional, e.g. bank name and last 4 digits)<input className={cn(sel, "mt-1")} value={claimant.bankDetails} onChange={(e) => setC("bankDetails", e.target.value)} /></label>
+          <p className="text-xs text-muted-foreground">Only expenses you paid personally, marked for reimbursement and still outstanding are claimed. Making this PDF doesn't change any claim status.</p>
+        </section>
+      )}
       <section className="space-y-3 rounded-xl border bg-card p-4">
         <label className="block text-sm font-semibold">What is this statement for?
           <select className={cn(sel, "mt-1")} value={choice} onChange={(e) => { setChoice(e.target.value); setExcluded([]); }}>
@@ -149,7 +165,7 @@ export function ExpenditureReportBuilder({ mode, search }: { mode: "statement" |
         <p className="text-xs text-muted-foreground">Unticking only leaves an entry out of this statement; your records are not changed. Fix payment details or reimbursement status on the entry itself.</p>
       </section>
 
-      <Button className="w-full" onClick={generate} disabled={busy || !included.length}><FileText className="mr-1 h-4 w-4" />Generate statement PDF</Button>
+      <Button className="w-full" onClick={generate} disabled={busy || !included.length}><FileText className="mr-1 h-4 w-4" />{claimMode ? "Generate claim PDF" : "Generate statement PDF"}</Button>
       <p className="text-xs text-muted-foreground">Prepared on this device — keep this page open until it's ready.</p>
       {stage >= 0 && <ProcessingPanel title={failed ? "Statement not finished" : "Preparing your statement… keep this page open"} stages={stagesAt(STAGES, stage, failed)} {...(busy ? { onCancel: () => { cancelled.current = true; setStage(-1); } } : {})} />}
 
