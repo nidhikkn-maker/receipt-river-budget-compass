@@ -36,6 +36,25 @@ describe("suggestAllocation", () => {
     expect(r.lines.every((l) => ["mandatory", "card", "loan"].includes(l.bucket))).toBe(true);
     expect(r.lines.reduce((s, l) => s + l.amount, 0)).toBeLessThanOrEqual(20000);
   });
+
+  it("caps optional targets at funds left after fixed obligations without changing the inputs", () => {
+    const input = {
+      amount: 20000, today,
+      commitments: [mk({ amount: 15000, name: "Rent" })],
+      cardDues: [], loanEmis: [], householdMonthly: 30000,
+      emergency: { target: 100000, saved: 0 }, goals: [{ name: "Holiday", monthly: 10000 }],
+      investmentsMonthly: 10000,
+    };
+    const before = structuredClone(input);
+    const r = suggestAllocation(input);
+    expect(r.lines.map(({ bucket, amount }) => ({ bucket, amount }))).toEqual([
+      { bucket: "mandatory", amount: 15000 }, { bucket: "household", amount: 5000 },
+    ]);
+    expect(r.total).toBe(20000);
+    expect(r.shortfall).toBe(0);
+    expect(() => validateAllocation(r.lines, input.amount)).not.toThrow();
+    expect(input).toEqual(before);
+  });
 });
 
 describe("validateAllocation", () => {

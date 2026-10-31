@@ -97,11 +97,19 @@ export function suggestAllocation(i: AllocationInput): { lines: AllocationLine[]
   push("mandatory", mandatory, `${due.filter((c) => c.essential).length} essential payments due by ${until}`);
   push("card", card, i.cardDues.map((c) => c.name).join(", "));
   push("loan", loan, i.loanEmis.map((l) => l.name).join(", "));
-  push("household", household, "Monthly living budget");
-  push("emergency", emergency, emergencyGap > 0 ? `Reserve gap ₹${Math.round(emergencyGap).toLocaleString("en-IN")}` : "Reserve target reached");
-  push("annual", annual, "Set aside for yearly/quarterly bills");
-  push("goals", goals, i.goals.filter((g) => g.monthly > 0).map((g) => g.name).join(", "));
-  push("investments", investments);
+  // Optional targets share only what remains after the fixed obligations.
+  // Fund them in the displayed priority order, rounding after each allocation.
+  let remaining = r2(Math.max(0, i.amount - fixed));
+  const flexible = (bucket: Bucket, target: number, note?: string) => {
+    const funded = r2(Math.min(target, remaining));
+    remaining = r2(remaining - funded);
+    push(bucket, funded, note);
+  };
+  flexible("household", household, "Monthly living budget");
+  flexible("emergency", emergency, emergencyGap > 0 ? `Reserve gap ₹${Math.round(emergencyGap).toLocaleString("en-IN")}` : "Reserve target reached");
+  flexible("annual", annual, "Set aside for yearly/quarterly bills");
+  flexible("goals", goals, i.goals.filter((g) => g.monthly > 0).map((g) => g.name).join(", "));
+  flexible("investments", investments);
 
   const total = r2(lines.reduce((s, l) => s + l.amount, 0));
   const unallocated = r2(Math.max(0, i.amount - total));
