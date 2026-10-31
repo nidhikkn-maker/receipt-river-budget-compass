@@ -9,7 +9,20 @@ const n = (v: number) => IN.format(Math.round(v * 100) / 100);
 const ascii = (s: string) => s.replace(/₹/g, "INR ").replace(/[–—]/g, "-").replace(/[‘’]/g, "'").replace(/[“”]/g, '"').replace(/[^\x20-\x7E\xA0-\xFF]/g, "?");
 const INK: [number, number, number] = [22, 44, 110];
 
-export async function renderClaimPdf(c: Claim, files: Record<string, AnnexFile | null>) {
+export type ClaimFormat = "detailed" | "summary";
+
+/** Category totals used by the shorter Summary + Bills format. */
+export function claimCategoryTotals(c: Claim) {
+  const m = new Map<string, { count: number; eligible: number; received: number; claimed: number; bills: string[] }>();
+  for (const i of c.items) {
+    const r = m.get(i.category) ?? { count: 0, eligible: 0, received: 0, claimed: 0, bills: [] };
+    r.count++; r.eligible += i.eligible; r.received += i.reimbursed; r.claimed += i.claimed; if (i.billRef && i.billRef !== "-") r.bills.push(i.billRef);
+    m.set(i.category, r);
+  }
+  return [...m.entries()].sort((a, b) => b[1].claimed - a[1].claimed).map(([category, r]) => ({ category, ...r }));
+}
+
+export async function renderClaimPdf(c: Claim, files: Record<string, AnnexFile | null>, format: ClaimFormat = "detailed") {
   const { jsPDF } = await import("jspdf");
   const { default: autoTable } = await import("jspdf-autotable");
   const doc = new jsPDF({ unit: "mm", format: "a4" });
@@ -29,13 +42,19 @@ export async function renderClaimPdf(c: Claim, files: Record<string, AnnexFile |
     ["Designation", k.designation || "-", "Period", `${c.start} to ${c.end}`], ["Email", k.email || "-", "Purpose", c.purpose],
   ].map((r) => r.map(ascii)) });
   table({ startY: last() + 4, head: [["Claim summary", "INR"]], columnStyles: { 1: { halign: "right" } }, body: [["Eligible personally-funded expenditure", n(c.totals.eligible)], ["Less: already reimbursed", n(c.totals.received)]], foot: [["Amount claimed", n(c.totals.claimed)]] });
-  table({ startY: last() + 4,
-    head: [["No.", "Date", "Particulars", "Category", "Merchant", "Paid via", "Cur.", "Original", "INR", "Received", "Claimed", "Bill"]],
-    body: c.items.map((i) => [String(i.claimNo), i.date, i.particulars, i.category, i.merchant, `${i.method} - ${i.source}`, i.currency, n(i.original), n(i.eligible), n(i.reimbursed), n(i.claimed), i.billRef].map(ascii)),
-    foot: [["", "", "Total", "", "", "", "", "", n(c.totals.eligible), n(c.totals.received), n(c.totals.claimed), ""]],
-    styles: { fontSize: 6.8, cellPadding: 1.1, lineColor: [200, 200, 200], lineWidth: 0.1, overflow: "linebreak" }, columnStyles: Object.fromEntries([7, 8, 9, 10].map((x) => [x, { halign: "right" as const }])) });
+  if (format === "summary") {
+    table({ startY: last() + 4, head: [["Category", "Items", "INR", "Received", "Claimed", "Bills"]], columnStyles: Object.fromEntries([1, 2, 3, 4].map((x) => [x, { halign: "right" as const }])),
+      body: claimCategoryTotals(c).map((r) => [r.category, String(r.count), n(r.eligible), n(r.received), n(r.claimed), r.bills.join(", ") || "-"].map(ascii)),
+      foot: [["Total", String(c.items.length), n(c.totals.eligible), n(c.totals.received), n(c.totals.claimed), ""]] });
+  } else {
+    table({ startY: last() + 4,
+      head: [["No.", "Date", "Particulars", "Category", "Merchant", "Paid via", "Cur.", "Original", "INR", "Received", "Claimed", "Bill"]],
+      body: c.items.map((i) => [String(i.claimNo), i.date, i.particulars, i.category, i.merchant, `${i.method} - ${i.source}`, i.currency, n(i.original), n(i.eligible), n(i.reimbursed), n(i.claimed), i.billRef].map(ascii)),
+      foot: [["", "", "Total", "", "", "", "", "", n(c.totals.eligible), n(c.totals.received), n(c.totals.claimed), ""]],
+      styles: { fontSize: 6.8, cellPadding: 1.1, lineColor: [200, 200, 200], lineWidth: 0.1, overflow: "linebreak" }, columnStyles: Object.fromEntries([7, 8, 9, 10].map((x) => [x, { halign: "right" as const }])) });
+  }
   if (k.bankDetails.trim()) table({ startY: last() + 4, theme: "plain", head: [["Pay reimbursement to"]], body: [[ascii(k.bankDetails)]] });
-  if (c.excluded.length) table({ startY: last() + 4, head: [["Not claimed (for reference)", "INR", "Reason"]], columnStyles: { 1: { halign: "right" } }, styles: { fontSize: 7.5, textColor: [90, 90, 90] }, body: c.excluded.map((x) => [ascii(`${x.row.date} ${x.row.merchant}`), n(x.row.inr), x.reason]) });
+  if (format === "detailed" && c.excluded.length) table({ startY: last() + 4, head: [["Not claimed (for reference)", "INR", "Reason"]], columnStyles: { 1: { halign: "right" } }, styles: { fontSize: 7.5, textColor: [90, 90, 90] }, body: c.excluded.map((x) => [ascii(`${x.row.date} ${x.row.merchant}`), n(x.row.inr), x.reason]) });
 
   let y = last() + 8; if (y > 230) { doc.addPage(); y = 20; }
   doc.setFont("helvetica", "bold"); doc.setFontSize(10); doc.setTextColor(...INK); doc.text("Declaration", M, y);
