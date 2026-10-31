@@ -82,7 +82,7 @@
 - [x] V2 Phase 1: financial inbox, missing-transaction detector, data freshness, advanced reimbursements, category splits, monthly review, health score
 - [x] V2 Phase 2: decision simulator, behaviour analysis, emergency fund, irregular expenses, milestones
 - [x] V2 Phase 3: trips, merchant intelligence (merge/unmerge), weekly brief (in-app schedule)
-- [ ] Insights export filters: date-range (exists), department and status filters scoping all CSV/PDF exports
-- [ ] Department summaries + CSV/PDF exports: budget usage % and remaining balances
+- [x] Insights export filters: date-range, department and status filters scoping all CSV/PDF exports; signed-in check exported exactly the 33 filtered rows
+- [x] Department summaries + CSV/PDF exports: usage %, remaining balance and over/within-budget status column; on-screen summary with progress bars
 - [ ] Bulk categorisation/recategorisation of existing entries
 - [ ] Bulk uploading of bills with categorisation
