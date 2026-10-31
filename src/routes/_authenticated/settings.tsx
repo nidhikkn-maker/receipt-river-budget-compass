@@ -106,7 +106,7 @@ function Settings() {
           <Button variant="destructive" onClick={wipe} disabled={busy}><Trash2 className="h-4 w-4" />Delete everything</Button>
         </Card>
       </div>
-      <p className="mt-6 text-sm text-muted-foreground">Your records are private to this browser's session. Use backups to move them to another device.</p>
+      <p className="mt-6 text-sm text-muted-foreground">Sign in with the same account on each device. Existing browser records stay with an email account upgrade.</p>
     </>
   );
 }

@@ -6,6 +6,7 @@ import { PageTitle, Stat } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { BASE_CURRENCY, CURRENCIES, autoMatch, money, parseStatementCsv, type Match, type StatementLine } from "@/lib/expenses";
+import { StatementEntry } from "@/components/StatementEntry";
 import { readStatement } from "@/lib/statement-import";
 import { useStore } from "@/lib/store";
 
@@ -53,6 +54,7 @@ function Reconcile() {
   const confirmAll = async () => {
     setBusy(true);
     try {
+      const ids=matched.flatMap(m=>m.expense?[m.expense.id]:[]);if(new Set(ids).size!==ids.length)throw Error("Each statement line must match a different transaction");
       for (const m of matched) { if (!m.expense) continue; await reconcile(m.expense.id, `${fileName} · ${m.line.date} · ${m.line.description}`.slice(0, 300)); }
       toast.success(`${matched.length} expenses marked as matched`);
       setLines([]);
@@ -110,6 +112,7 @@ function Reconcile() {
                     </SelectContent>
                   </Select>
                 </div>
+                {!m.expense && <StatementEntry line={m.line} currency={currency} />}
               </li>
             ))}
           </ul>
