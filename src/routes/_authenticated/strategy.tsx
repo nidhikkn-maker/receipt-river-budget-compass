@@ -233,7 +233,7 @@ function Milestones() {
           {m.targetDate && <Row label={`Target date ${m.targetDate}`} value={pg.onTrack ? "On track" : "Behind"} tone={pg.onTrack ? "good" : "bad"} />}
           {m.metric === "custom" && <div className="mt-2 flex gap-2"><Input type="number" className="h-10" placeholder="Update progress ₹" onBlur={(e) => e.target.value && update(m.id, { manual: Number(e.target.value) })} /></div>}
           {m.history.length > 1 && <div className="mt-2 text-[11px] text-muted-foreground">History: {m.history.slice(-5).map((h) => `${h.date.slice(5)} ${fmt(h.value)}`).join(" · ")}</div>}
-          <label className="mt-2 flex items-center gap-2 text-xs"><input type="checkbox" checked={m.notify} onChange={(e) => update(m.id, { notify: e.target.checked })} /> Show in Inbox when achieved</label>
+          <label className="mt-2 flex items-center gap-2 text-xs"><input type="checkbox" checked={m.notify} onChange={(e) => update(m.id, { notify: e.target.checked })} /> Celebrate on Home when achieved</label>
         </Card>
       ); })}
       <Card title="New milestone">

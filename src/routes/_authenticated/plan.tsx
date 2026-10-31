@@ -47,6 +47,12 @@ function Plan() {
   return (
     <>
       <PageTitle eyebrow="Plan" title="What can I spend?" sub="Works through every payment in date order — money arriving later can't pay an earlier bill." />
+      <div className="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
+        <Button asChild variant="outline"><a href="/strategy?tab=simulate">Decision simulator</a></Button>
+        <Button asChild variant="outline"><a href="/strategy?tab=emergency">Emergency fund</a></Button>
+        <Button asChild variant="outline"><a href="/strategy?tab=irregular">Irregular bills</a></Button>
+        <Button asChild variant="outline"><a href="/strategy?tab=milestones">Milestones</a></Button>
+      </div>
 
       <div className="mb-4 flex flex-wrap items-center gap-2">
         {PERIODS.map((d) => (
