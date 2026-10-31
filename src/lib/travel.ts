@@ -16,7 +16,7 @@ export interface Advance { id: string; date: string; amount: number; source: str
 export interface TravelTrip extends Trip { type?: TripType; travellers?: string[]; bookings?: Booking[]; itinerary?: ItineraryItem[]; advances?: Advance[]; closedAt?: string | null; purpose?: string }
 
 const r2 = (n: number) => Math.round(n * 100) / 100;
-type Row = Parameters<typeof tripSummary>[1][number] & { id: string; scope?: Scope; reimbursementStatus?: string; workspaceAllocations?: import("./workspaces").WorkspaceShare[]; originalAmount?: number | null };
+type Row = Parameters<typeof tripSummary>[1][number] & { id: string; scope?: Scope; reimbursementStatus?: string; workspaceAllocations?: import("./workspaces").WorkspaceShare[]; originalAmount?: number | null; tripId?: string | null };
 
 export function validateBooking(b: Booking) {
   if (!b.provider.trim() && !b.ref.trim()) throw new Error("Add the provider or booking reference");
