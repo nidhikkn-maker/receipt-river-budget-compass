@@ -3,14 +3,23 @@
 // ledger: an entry is counted once, and unpaid bookings stay a separate commitment
 // column instead of being mixed into actual spending.
 import { tripSummary, type Row as IntelRow } from "./intelligence";
-import { categoryParts, SCOPE_LABEL, type Expense, type Scope } from "./expenses";
+import { categoryParts, SCOPE_LABEL, type Scope } from "./expenses";
 import { workspaceParts, type WorkspaceShare } from "./workspaces";
 import type { Report } from "./reports";
 import type { TravelTrip } from "./travel";
 
 const r2 = (n: number) => Math.round(n * 100) / 100;
 const fmt = (n: number) => n.toFixed(2);
-type Row = IntelRow & { id: string; scope?: Scope; splits?: { memberId: string | null; amount: number }[]; originalAmount?: number | null; department?: string | null; accountId?: string | null; reimbursementStatus?: string };
+type Row = IntelRow & {
+  id: string;
+  scope?: Scope;
+  splits?: { memberId: string | null; amount: number }[];
+  originalAmount?: number | null;
+  department?: string | null;
+  accountId?: string | null;
+  reimbursementStatus?: string;
+  workspaceAllocations?: WorkspaceShare[];
+};
 
 export const TRAVEL_CUTS = ["trip", "workspace", "organisation", "traveller", "destination", "category", "account", "month", "planned", "reimbursement"] as const;
 export type TravelCut = (typeof TRAVEL_CUTS)[number];
@@ -47,7 +56,13 @@ const group = (rows: [string, number][]) => {
   return Object.entries(o).sort((a, b) => b[1] - a[1]);
 };
 
-/** One report per cut. Amounts are INR; each cut's total equals total trip spending unless the cut says otherwise. */
+const share = (v: number, total: number) => (total ? fmt((v / total) * 100) : "0.00");
+const cutRows = (rows: [string, number][], label: string, total: number): (string | number)[][] => [
+  ...rows.map(([k, v]) => [k, fmt(v), share(v, total)]),
+  ["Total", fmt(total), "100.00"],
+];
+
+/** One report per cut. Amounts are INR; each cut's total equals total trip spending. */
 export function travelReport(cut: TravelCut, trips: TravelTrip[], txns: Row[], opts: TravelReportOptions): Report {
   const entries = travelEntries(trips, txns);
   const total = r2(entries.reduce((s, e) => s + e.amount, 0));
@@ -58,48 +73,46 @@ export function travelReport(cut: TravelCut, trips: TravelTrip[], txns: Row[], o
     const rows = trips.map((t) => {
       const s = tripSummary(t, txns);
       const un = r2((t.bookings ?? []).filter((b) => b.status === "unpaid").reduce((a, b) => a + b.amount, 0));
-      return [t.name, t.destination || "—", t.start, t.end, fmt(s.total), fmt(un), t.budget ? fmt(t.budget) : "", fmt(s.total + un), s.variance ? fmt(s.variance) : ""] as (string | number)[];
+      return [t.name, t.destination || "—", t.start, t.end, fmt(s.total), fmt(un), t.budget ? fmt(t.budget) : "", fmt(s.total + un), s.variance ? fmt(s.variance) : ""];
     });
     return { title, headers: ["Trip", "Destination", "Start", "End", "Spent (INR)", "Booked unpaid (INR)", "Budget (INR)", "Spent + booked (INR)", "Budget variance (INR)"], rows: [...rows, ["Total (each entry once)", "", "", "", fmt(total), fmt(committed), "", fmt(total + committed), ""]] };
   }
 
   if (cut === "workspace") {
-    const rows = group(entries.flatMap((e) => workspaceParts({ scope: e.scope ?? "personal", amount: e.amount, originalAmount: e.originalAmount ?? null, workspaceAllocations: (e as unknown as { workspaceAllocations?: WorkspaceShare[] }).workspaceAllocations ?? []).map((p) => [p.workspace, p.amount] as [string, number]))));
-    return { title, headers: ["Workspace", "Spent (INR)", "Share %"], rows: [...rows.map(([k, v]) => [SCOPE_LABEL[k as Scope] ?? k, fmt(v), total ? fmt((v / total) * 100) : "0"]), ["Total", fmt(total), "100.00"]] };
+    const rows = group(entries.flatMap((e) => workspaceParts({ scope: e.scope ?? "personal", amount: e.amount, originalAmount: e.originalAmount ?? null, workspaceAllocations: e.workspaceAllocations ?? [] }).map((p) => [p.workspace, p.amount] as [string, number])));
+    return { title, headers: ["Workspace", "Spent (INR)", "Share %"], rows: cutRows(rows.map(([k, v]) => [SCOPE_LABEL[k as Scope] ?? k, v] as [string, number]), "Workspace", total) };
   }
 
   if (cut === "organisation") {
     const rows = group(entries.map((e) => [(e.department ?? "").trim() || "No organisation", e.amount]));
-    return { title, headers: ["Organisation / department", "Spent (INR)", "Share %"], rows: [...rows.map(([k, v]) => [k, fmt(v), total ? fmt((v / total) * 100) : "0"]), ["Total", fmt(total), "100.00"]] };
+    return { title, headers: ["Organisation / department", "Spent (INR)", "Share %"], rows: cutRows(rows, "Organisation", total) };
   }
 
   if (cut === "traveller") {
     const split = entries.flatMap((e) => personParts(e));
     const rows = group(split.length ? split.map((p) => [p.person, p.amount] as [string, number]) : entries.map((e) => [e.memberId ?? "Me", e.amount] as [string, number]));
-    const named = rows.map(([k, v]) => [opts.memberName(k === "Me" ? null : k), fmt(v), total ? fmt((v / total) * 100) : "0"]) as (string | number)[][];
-    return { title, headers: ["Traveller", "Spent (INR)", "Share %"], rows: [...named, ["Total", fmt(total), "100.00"]] };
+    return { title, headers: ["Traveller", "Spent (INR)", "Share %"], rows: cutRows(rows.map(([k, v]) => [opts.memberName(k === "Me" ? null : k), v] as [string, number]), "Traveller", total) };
   }
 
   if (cut === "destination") {
     const rows = group(trips.flatMap((t) => (tripSummary(t, txns).entries as Row[]).map((e) => [t.destination.trim() || "No destination", e.amount] as [string, number])));
-    return { title, headers: ["Destination", "Spent (INR)", "Share %"], rows: [...rows.map(([k, v]) => [k, fmt(v), total ? fmt((v / total) * 100) : "0"]), ["Total", fmt(total), "100.00"]] };
+    return { title, headers: ["Destination", "Spent (INR)", "Share %"], rows: cutRows(rows, "Destination", total) };
   }
 
   if (cut === "category") {
     const rows = group(entries.flatMap((e) => categoryParts(e).map((p) => [p.category, p.amount] as [string, number])));
-    return { title, headers: ["Category", "Spent (INR)", "Share %"], rows: [...rows.map(([k, v]) => [k, fmt(v), total ? fmt((v / total) * 100) : "0"]), ["Total", fmt(total), "100.00"]] };
+    return { title, headers: ["Category", "Spent (INR)", "Share %"], rows: cutRows(rows, "Category", total) };
   }
 
   if (cut === "account") {
     const rows = group(entries.map((e) => [opts.accountName(e.accountId ?? null), e.amount]));
-    return { title, headers: ["Payment account", "Spent (INR)", "Share %"], rows: [...rows.map(([k, v]) => [k, fmt(v), total ? fmt((v / total) * 100) : "0"]), ["Total", fmt(total), "100.00"]] };
+    return { title, headers: ["Payment account", "Spent (INR)", "Share %"], rows: cutRows(rows, "Account", total) };
   }
 
   if (cut === "month") {
     const rows = group(entries.map((e) => [e.date.slice(0, 7), e.amount]));
     const years = group(rows.map(([m, v]) => [m.slice(0, 4), v] as [string, number]));
-    const body = rows.map(([m, v]) => [m, fmt(v), ""] as (string | number)[]);
-    return { title, headers: ["Period", "Spent (INR)", "Annual total (INR)"], rows: [...body, ...years.map(([y, v]) => [`Year ${y}`, "", fmt(v)]), ["Total", fmt(total), ""]] };
+    return { title, headers: ["Period", "Spent (INR)", "Annual total (INR)"], rows: [...rows.map(([m, v]) => [m, fmt(v), ""]), ...years.map(([y, v]) => [`Year ${y}`, "", fmt(v)]), ["Total", fmt(total), ""]] };
   }
 
   if (cut === "planned") {
@@ -107,14 +120,14 @@ export function travelReport(cut: TravelCut, trips: TravelTrip[], txns: Row[], o
       const s = tripSummary(t, txns);
       const un = r2((t.bookings ?? []).filter((b) => b.status === "unpaid").reduce((a, b) => a + b.amount, 0));
       const planned = r2((t.budget ?? 0) + (t.contingency ?? 0));
-      return [t.name, planned ? fmt(planned) : "", fmt(s.total), fmt(un), fmt(s.total + un), planned ? fmt(planned - s.total - un) : "", planned ? fmt(((s.total + un) / planned) * 100) : ""] as (string | number)[];
+      return [t.name, planned ? fmt(planned) : "", fmt(s.total), fmt(un), fmt(s.total + un), planned ? fmt(planned - s.total - un) : "", planned ? fmt(((s.total + un) / planned) * 100) : ""];
     });
     return { title, headers: ["Trip", "Planned budget (INR)", "Actual spent (INR)", "Committed unpaid (INR)", "Forecast (INR)", "Budget left (INR)", "Used %"], rows: [...rows, ["Total", fmt(trips.reduce((s, t) => s + (t.budget ?? 0) + (t.contingency ?? 0), 0)), fmt(total), fmt(committed), fmt(total + committed), "", ""]] };
   }
 
   const rows = entries
     .filter((e) => e.reimbursementStatus && e.reimbursementStatus !== "none")
-    .map((e) => [e.date, e.merchant ?? e.title, SCOPE_LABEL[e.scope ?? "personal"], e.reimbursementStatus === "received" ? "Reimbursed" : "Pending", fmt(e.amount)] as (string | number)[]);
+    .map((e) => [e.date, e.merchant ?? e.title, SCOPE_LABEL[e.scope ?? "personal"], e.reimbursementStatus === "received" ? "Reimbursed" : "Pending", fmt(e.amount)]);
   const pending = r2(entries.filter((e) => e.reimbursementStatus === "pending").reduce((s, e) => s + e.amount, 0));
   const got = r2(entries.filter((e) => e.reimbursementStatus === "received").reduce((s, e) => s + e.amount, 0));
   return { title, headers: ["Date", "Item", "Workspace", "Status", "Amount (INR)"], rows: [...rows, ["", "Total pending", "", "", fmt(pending)], ["", "Total reimbursed", "", "", fmt(got)]] };
