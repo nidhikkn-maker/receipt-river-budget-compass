@@ -59,7 +59,7 @@ function Reconcile() {
   }), [lines, matches, expenses, accounts, preferences.categories, accountFilter, currency]);
 
   const queue = plan.register.filter((d) => !excluded[d.line.ref]);
-  const queueTotal = queue.reduce((s, d) => s + d.line.amount, 0);
+  const spendingTotal = queue.filter((d) => d.txnType === "expense").reduce((s, d) => s + d.line.amount, 0);
 
   const onFile = async (f: File | undefined) => {
     if (!f) return;
@@ -145,7 +145,7 @@ function Reconcile() {
       {lines.length > 0 && (
         <>
           <div className="mb-4 grid grid-cols-3 gap-3">
-            <Stat label="New expenses" value={String(plan.register.length)} hint={money(plan.register.reduce((s, d) => s + d.line.amount, 0))} />
+            <Stat label="New entries" value={String(plan.register.length)} hint={money(plan.register.filter((d) => d.txnType === "expense").reduce((s, d) => s + d.line.amount, 0))} />
             <Stat label="Need a look" value={String(plan.review.length)} />
             <Stat label="Already recorded" value={String(plan.skipped.length)} />
           </div>
@@ -154,7 +154,7 @@ function Reconcile() {
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div className="min-w-0">
                 <h2 className="flex items-center gap-2 font-display text-lg font-bold"><Sparkles className="h-4 w-4 text-gold" /> Register {queue.length} transactions automatically</h2>
-                <p className="text-xs text-muted-foreground">Merchant, date, amount, category and payment method come from the statement. {queue.length ? `${money(queueTotal)} will be added to your spending.` : "Nothing left to register."}</p>
+                <p className="text-xs text-muted-foreground">Merchant, date, amount, category and payment method come from the statement. {queue.length ? `${money(spendingTotal)} of spending will be added.` : "Nothing left to register."}</p>
               </div>
               <Button onClick={registerAll} disabled={busy || queue.length === 0}>Register {queue.length}</Button>
             </div>
