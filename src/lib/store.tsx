@@ -151,7 +151,7 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
 
   useEffect(()=>{
     let active=true;
-    const sync=async()=>{const entries=await pendingEntries(userId);if(active)setPendingCount(entries.length);if(!navigator.onLine||syncing.current)return;syncing.current=true;try{for(const entry of entries){await save(entry.input,{createId:entry.id,files:entry.files});await removePending(entry.id);}if(active)setPendingCount((await pendingEntries(userId)).length);}catch{toast.error("Offline entry is still waiting — reconnect to retry");}finally{syncing.current=false;}};
+    const sync=async()=>{const entries=await pendingEntries(userId);if(active)setPendingCount(entries.length);if(!navigator.onLine||syncing.current)return;syncing.current=true;try{for(const entry of entries){if(!navigator.onLine)break;await save(entry.input,{createId:entry.id,files:entry.files});if(!navigator.onLine)break;await removePending(entry.id);}if(active)setPendingCount((await pendingEntries(userId)).length);}catch{toast.error("Offline entry is still waiting — reconnect to retry");}finally{syncing.current=false;}};
     void sync();window.addEventListener("online",sync);return()=>{active=false;window.removeEventListener("online",sync);};
   },[userId]);
   const check = (error: { message: string } | null) => { if (error) throw new Error(error.message); };
