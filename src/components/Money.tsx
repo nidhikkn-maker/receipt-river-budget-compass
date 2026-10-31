@@ -9,7 +9,7 @@ export function Card({ title, children, className, action }: { title?: string; c
     </section>
   );
 }
-export function Row({ label, value, strong, tone }: { label: string; value: ReactNode; strong?: boolean; tone?: "good" | "bad" }) {
+export function Row({ label, value, strong, tone }: { label: string; value: ReactNode; strong?: boolean | undefined; tone?: "good" | "bad" | undefined }) {
   return (
     <div className="flex items-baseline justify-between gap-3 border-b py-1.5 text-sm last:border-0">
       <span className="text-muted-foreground">{label}</span>

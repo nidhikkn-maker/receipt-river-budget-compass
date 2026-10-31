@@ -213,7 +213,7 @@ function Milestones() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [list.length, today]);
   const add = async () => {
-    if (!form.name || form.target < 0) return toast.error("Enter a name and target");
+    if (!form.name || form.target < 0) { toast.error("Enter a name and target"); return; }
     const m: Milestone = { id: crypto.randomUUID(), name: form.name, metric: form.metric, target: form.target, targetDate: form.targetDate || null, loanName: form.loanName || undefined, notify: form.notify, history: [], createdAt: today, manual: form.metric === "custom" ? 0 : undefined };
     const start = metricValue(m, metrics);
     try { await savePreferences({ ...pr, milestones: [...list, recordProgress({ ...m, start }, start, today)] }); setForm({ ...form, name: "", target: 0 }); toast.success("Milestone added"); } catch (e) { toast.error((e as Error).message); }

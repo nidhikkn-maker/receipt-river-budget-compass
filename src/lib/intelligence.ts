@@ -24,7 +24,7 @@ export interface SimInput {
   loans: { name: string; principal: number; rate: number; emi: number }[];
   monthlySavings: number;
 }
-export interface SimSide { cash: number; available: number; lowest: number; lowestDate: string; shortDays: number; endBalance: number; savingsPerMonth: number; goal?: { name: string; pct: number; eta: string | null } }
+export interface SimSide { cash: number; available: number; lowest: number; lowestDate: string; shortDays: number; endBalance: number; savingsPerMonth: number; goal?: { name: string; pct: number; eta: string | null } | undefined }
 
 function side(i: SimInput, extra: Commitment[], cashDelta: number, savingsDelta: number, goalIdx?: number, goalAdd = 0, goalMonthlyAdd = 0): SimSide {
   const f = forecast({ startBalance: i.cash + cashDelta, commitments: [...i.commitments, ...extra], today: i.today, days: i.days, floor: i.floor });
@@ -165,7 +165,7 @@ export const provisionFor = (amount: number, due: string, today: string) => r2(a
 export const MILESTONE_METRICS = ["emergency_amount", "emergency_months", "net_worth", "savings", "card_debt", "loan_balance", "custom"] as const;
 export type MilestoneMetric = (typeof MILESTONE_METRICS)[number];
 export const METRIC_LABEL: Record<MilestoneMetric, string> = { emergency_amount: "Emergency reserve (₹)", emergency_months: "Emergency coverage (months)", net_worth: "Net worth (₹)", savings: "Total cash savings (₹)", card_debt: "Credit card dues down to (₹)", loan_balance: "Loan balance down to (₹)", custom: "Manual progress (₹)" };
-export interface Milestone { id: string; name: string; metric: MilestoneMetric; target: number; targetDate: string | null; loanName?: string; manual?: number; start?: number; notify: boolean; history: { date: string; value: number }[]; createdAt: string }
+export interface Milestone { id: string; name: string; metric: MilestoneMetric; target: number; targetDate: string | null; loanName?: string | undefined; manual?: number | undefined; start?: number | undefined; notify: boolean; history: { date: string; value: number }[]; createdAt: string }
 export interface Metrics { emergencyAmount: number; emergencyMonths: number | null; netWorth: number; savings: number; cardDebt: number; loans: { name: string; principal: number }[] }
 export const isReduction = (m: MilestoneMetric) => m === "card_debt" || m === "loan_balance";
 export function metricValue(m: Milestone, x: Metrics): number {
@@ -274,7 +274,7 @@ export function weeklyBrief(i: BriefInput) {
     highlights: { topCategory: top ? { category: top[0], amount: top[1] } : null, significant, unusual: change !== null && Math.abs(change) > 25 ? `${change > 0 ? "Up" : "Down"} ${Math.abs(change)}% vs the previous week` : null },
     upcoming: { due, income, dueTotal: sum(due.map((x) => x.amount)), incomeTotal: sum(income.map((x) => x.amount)), shortfall, lowest: r2(i.lowest) },
     attention: { staleAccounts: i.staleAccounts, pendingReimbursements: r2(i.pendingReimbursements), missingItems: i.missingItems, budgetWarnings: i.budgetWarnings },
-    recommendations: recs.slice(0, 3), netWorth: netWorth(i.accounts.filter((a) => !a.archived), i.txns, i.valuations ?? []).netWorth,
+    recommendations: recs.slice(0, 3), netWorth: netWorth(i.accounts.filter((a) => !a.archived), i.txns, i.valuations ?? []).net,
   };
 }
 export type WeeklyBrief = ReturnType<typeof weeklyBrief>;

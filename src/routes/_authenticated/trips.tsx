@@ -34,9 +34,9 @@ function Trips() {
   const [form, setForm] = useState({ name: "", destination: "", start: today, end: today, budget: 0, currencies: "INR" });
   const [openId, setOpenId] = useState<string | null>(pr.trips[0]?.id ?? null);
   const add = async () => {
-    if (!form.name.trim()) return toast.error("Name the trip");
-    if (form.end < form.start) return toast.error("End date is before start date");
-    if (pr.trips.some((t) => t.name.toLowerCase() === form.name.trim().toLowerCase())) return toast.error("A trip with this name exists");
+    if (!form.name.trim()) { toast.error("Name the trip"); return; }
+    if (form.end < form.start) { toast.error("End date is before start date"); return; }
+    if (pr.trips.some((t) => t.name.toLowerCase() === form.name.trim().toLowerCase())) { toast.error("A trip with this name exists"); return; }
     const t: Trip = { id: crypto.randomUUID(), name: form.name.trim(), destination: form.destination, start: form.start, end: form.end, budget: form.budget, currencies: form.currencies.split(",").map((c) => c.trim().toUpperCase()).filter((c) => (CURRENCIES as readonly string[]).includes(c)) };
     try { await savePreferences({ ...pr, trips: [t, ...pr.trips] }); setOpenId(t.id); toast.success("Trip created"); } catch (e) { toast.error((e as Error).message); }
   };
