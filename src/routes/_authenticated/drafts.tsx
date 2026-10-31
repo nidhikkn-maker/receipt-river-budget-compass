@@ -87,7 +87,7 @@ function DraftsPage() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={(e) => { e.preventDefault(); if (confirm) return remove(confirm); }}>Delete draft</AlertDialogAction>
+            <AlertDialogAction onClick={(e) => { e.preventDefault(); return confirm ? remove(confirm) : undefined; }}>Delete draft</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
