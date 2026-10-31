@@ -124,6 +124,9 @@ function Settings() {
           <Button variant="secondary" onClick={() => file.current?.click()} disabled={busy}><Upload className="h-4 w-4" />Choose backup file</Button>
           <input ref={file} type="file" accept="application/zip,application/json,.zip,.json" className="sr-only" aria-label="Backup file" onChange={(e) => restore(e.target.files?.[0])} />
         </Card>
+        <Card title="Connected assistants" body="See which AI assistants can read your records and remove their access at any time.">
+          <Button asChild variant="secondary"><Link to="/assistants">Manage assistants</Link></Button>
+        </Card>
         <Card title="Export reports" body="CSV and PDF reports of spending, by category, family member and business vs personal.">
           <Button asChild variant="secondary"><Link to="/reports">Open reports</Link></Button>
         </Card>

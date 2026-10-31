@@ -16,6 +16,7 @@ import { Route as McpRouteImport } from './routes/mcp'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as Char91DotwellKnownChar93OauthProtectedResourceRouteImport } from './routes/[.well-known]/oauth-protected-resource'
 import { Route as AuthenticatedAssistantRouteImport } from './routes/_authenticated/assistant'
+import { Route as AuthenticatedAssistantsRouteImport } from './routes/_authenticated/assistants'
 import { Route as AuthenticatedBriefRouteImport } from './routes/_authenticated/brief'
 import { Route as AuthenticatedBudgetsRouteImport } from './routes/_authenticated/budgets'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
@@ -70,6 +71,11 @@ const Char91DotwellKnownChar93OauthProtectedResourceRoute =
 const AuthenticatedAssistantRoute = AuthenticatedAssistantRouteImport.update({
   id: '/assistant',
   path: '/assistant',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedAssistantsRoute = AuthenticatedAssistantsRouteImport.update({
+  id: '/assistants',
+  path: '/assistants',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedBriefRoute = AuthenticatedBriefRouteImport.update({
@@ -181,6 +187,7 @@ export interface FileRoutesByFullPath {
   '/reset-password': typeof ResetPasswordRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/assistant': typeof AuthenticatedAssistantRoute
+  '/assistants': typeof AuthenticatedAssistantsRoute
   '/brief': typeof AuthenticatedBriefRoute
   '/budgets': typeof AuthenticatedBudgetsRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
@@ -209,6 +216,7 @@ export interface FileRoutesByTo {
   '/reset-password': typeof ResetPasswordRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/assistant': typeof AuthenticatedAssistantRoute
+  '/assistants': typeof AuthenticatedAssistantsRoute
   '/brief': typeof AuthenticatedBriefRoute
   '/budgets': typeof AuthenticatedBudgetsRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
@@ -239,6 +247,7 @@ export interface FileRoutesById {
   '/reset-password': typeof ResetPasswordRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/_authenticated/assistant': typeof AuthenticatedAssistantRoute
+  '/_authenticated/assistants': typeof AuthenticatedAssistantsRoute
   '/_authenticated/brief': typeof AuthenticatedBriefRoute
   '/_authenticated/budgets': typeof AuthenticatedBudgetsRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
@@ -269,6 +278,7 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/.well-known/oauth-protected-resource'
     | '/assistant'
+    | '/assistants'
     | '/brief'
     | '/budgets'
     | '/dashboard'
@@ -297,6 +307,7 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/.well-known/oauth-protected-resource'
     | '/assistant'
+    | '/assistants'
     | '/brief'
     | '/budgets'
     | '/dashboard'
@@ -326,6 +337,7 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/.well-known/oauth-protected-resource'
     | '/_authenticated/assistant'
+    | '/_authenticated/assistants'
     | '/_authenticated/brief'
     | '/_authenticated/budgets'
     | '/_authenticated/dashboard'
@@ -408,6 +420,13 @@ declare module '@tanstack/react-router' {
       path: '/assistant'
       fullPath: '/assistant'
       preLoaderRoute: typeof AuthenticatedAssistantRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/assistants': {
+      id: '/_authenticated/assistants'
+      path: '/assistants'
+      fullPath: '/assistants'
+      preLoaderRoute: typeof AuthenticatedAssistantsRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/brief': {
@@ -555,6 +574,7 @@ declare module '@tanstack/react-router' {
 
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedAssistantRoute: typeof AuthenticatedAssistantRoute
+  AuthenticatedAssistantsRoute: typeof AuthenticatedAssistantsRoute
   AuthenticatedBriefRoute: typeof AuthenticatedBriefRoute
   AuthenticatedBudgetsRoute: typeof AuthenticatedBudgetsRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
@@ -577,6 +597,7 @@ interface AuthenticatedRouteRouteChildren {
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAssistantRoute: AuthenticatedAssistantRoute,
+  AuthenticatedAssistantsRoute: AuthenticatedAssistantsRoute,
   AuthenticatedBriefRoute: AuthenticatedBriefRoute,
   AuthenticatedBudgetsRoute: AuthenticatedBudgetsRoute,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
