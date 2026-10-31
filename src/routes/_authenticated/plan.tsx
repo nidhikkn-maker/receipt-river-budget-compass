@@ -60,13 +60,13 @@ function Plan() {
       <div className="mb-4 flex items-center gap-3"><Label htmlFor="forecast-days">Custom forecast days</Label><Input id="forecast-days" className="w-24" type="number" min="1" max="365" value={days} onChange={e=>setDays(Math.min(365,Math.max(1,Number(e.target.value)||1)))}/></div>
 
       <section className="mb-6 grid gap-4 lg:grid-cols-[1fr_1.4fr]">
-        <div className="rounded-3xl bg-hero p-6 text-primary-foreground shadow-float">
+        <div className="rounded-3xl bg-hero p-6 text-ink-foreground shadow-float">
           <div className="font-mono text-[11px] uppercase tracking-[0.2em] opacity-80">Safe to spend · next {days} days</div>
           <div className="mt-1 font-display text-5xl font-extrabold tracking-tight">{money(p.safe.amount)}</div>
           <div className="mt-1 text-sm opacity-80">Lowest point {money(p.safe.lowest)} on {p.safe.lowestDate}</div>
           <ul className="mt-5 space-y-1.5 text-sm">
             {p.safe.steps.map((s) => (
-              <li key={s.label} className="flex justify-between gap-3 border-b border-primary-foreground/15 pb-1.5"><span className="opacity-85">{s.label}</span><span className="font-mono">{money(s.amount)}</span></li>
+              <li key={s.label} className="flex justify-between gap-3 border-b border-ink-foreground/15 pb-1.5"><span className="opacity-85">{s.label}</span><span className="font-mono">{money(s.amount)}</span></li>
             ))}
           </ul>
           {!withUnconfirmed && <p className="mt-3 text-xs opacity-75">Unconfirmed income is left out to stay on the safe side.</p>}

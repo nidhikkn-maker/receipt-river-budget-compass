@@ -283,7 +283,7 @@ function NewExpense() {
         {/* Scan column */}
         <div className="space-y-4">
           <div className="rounded-3xl border-2 border-dashed border-primary/40 bg-secondary/50 p-5 text-center">
-            <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-hero text-primary-foreground shadow-float"><ScanLine className="h-7 w-7" /></span>
+            <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-hero text-ink-foreground shadow-float"><ScanLine className="h-7 w-7" /></span>
             <p className="mt-2 font-display text-lg font-bold">{reading ? "Reading your bill…" : "Add a bill or receipt"}</p>
             <p className="text-xs text-muted-foreground">Photo or PDF · we fill in the rest</p>
             <div className="mt-4 grid grid-cols-3 gap-2">
@@ -354,7 +354,7 @@ function NewExpense() {
             <div className="flex flex-wrap gap-2" role="radiogroup" aria-label="Transaction type">
               {TXN_TYPES.map((t) => (
                 <button key={t} type="button" role="radio" aria-checked={txnType === t} onClick={() => setTxnType(t)}
-                  className={cn("min-h-11 rounded-full border px-4 text-sm font-medium transition", txnType === t ? "border-primary bg-primary text-primary-foreground" : "bg-background hover:bg-secondary")}>
+                  className={cn("min-h-11 rounded-full border px-4 text-sm font-medium transition", txnType === t ? "border-gold bg-gold text-gold-foreground" : "bg-background hover:bg-secondary")}>
                   {TXN_LABEL[t]}
                 </button>
               ))}
@@ -412,7 +412,7 @@ function NewExpense() {
                       if (!splitOn) return setMemberId(m.id);
                       setShares((x) => { const n = { ...x }; if (m.id in n) delete n[m.id]; else n[m.id] = ""; return n; });
                     }}
-                    className={cn("rounded-full border px-3 py-1.5 text-xs font-medium transition", on ? "border-primary bg-primary text-primary-foreground" : "bg-background hover:bg-secondary")}>
+                    className={cn("rounded-full border px-3 py-1.5 text-xs font-medium transition", on ? "border-gold bg-gold text-gold-foreground" : "bg-background hover:bg-secondary")}>
                     {m.name}
                   </button>
                 );
@@ -480,14 +480,14 @@ function NewExpense() {
             <div className="flex flex-wrap gap-2" role="radiogroup" aria-label="Payment method">
               {PAYMENT_METHODS.map((p) => (
                 <button key={p} type="button" role="radio" aria-checked={paymentMethod === p} onClick={() => setPaymentMethod(p)}
-                  className={cn("rounded-full border px-3 py-1.5 text-xs font-medium transition", paymentMethod === p ? "border-primary bg-primary text-primary-foreground" : "bg-background hover:bg-secondary")}>
+                  className={cn("rounded-full border px-3 py-1.5 text-xs font-medium transition", paymentMethod === p ? "border-gold bg-gold text-gold-foreground" : "bg-background hover:bg-secondary")}>
                   {PAYMENT_LABEL[p]}
                 </button>
               ))}
             </div>
           </div>
           <div className="grid gap-2"><Label htmlFor="desc">Business purpose{af("description")}</Label><Textarea id="desc" value={description} onChange={(e) => setDescription(e.target.value)} /></div>
-          <Button type="submit" size="lg" className="rounded-2xl" disabled={reading || saving || !confirmed}>
+          <Button type="submit" size="lg" variant="gold" className="rounded-2xl" disabled={reading || saving || !confirmed}>
             {saving ? "Saving…" : editing ? "Save changes" : "Save expense"}
           </Button>
         </div>

@@ -65,7 +65,7 @@ function Budgets() {
                   <span className={cn("font-mono text-sm", over && "text-destructive")}>{money(r.spent)} <span className="text-muted-foreground">/ {r.budget ? money(r.budget) : "no budget"}</span></span>
                 </div>
                 <div className="h-2.5 overflow-hidden rounded-full bg-muted">
-                  <div className={cn("h-full rounded-full", over ? "bg-destructive" : "bg-primary")} style={{ width: `${Math.min(pct, 100)}%` }} />
+                  <div className={cn("h-full rounded-full", over ? "bg-destructive" : "bg-gold")} style={{ width: `${Math.min(pct, 100)}%` }} />
                 </div>
                 {r.budget > 0 && <div className="mt-1 text-xs text-muted-foreground">{over ? `${money(r.spent - r.budget)} over` : `${money(r.budget - r.spent)} left`}</div>}
               </div>
