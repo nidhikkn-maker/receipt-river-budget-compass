@@ -89,6 +89,8 @@ interface Ctx {
   save: (s: ExpenseInput, opts?: { id?: string; files?: File[]; createId?: string; noRefresh?: boolean }) => Promise<void>;
   remove: (e: Expense) => Promise<void>;
   setScope: (id: string, scope: Scope) => Promise<void>;
+  /** Changes labels only — amount, currency and stored exchange rate are untouched. */
+  setTags: (id: string, tags: string[]) => Promise<void>;
   reconcile: (id: string, ref: string | null, opts?: { noRefresh?: boolean }) => Promise<void>;
   addMember: (name: string, relation: string) => Promise<void>;
   removeMember: (id: string) => Promise<void>;
@@ -287,6 +289,10 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
   const setScope: Ctx["setScope"] = async (id, scope) => {
     check((await supabase.from("expenses").update({ scope }).eq("id", id)).error);
     setExpenses((xs) => xs.map((x) => (x.id === id ? { ...x, scope } : x)));
+  };
+  const setTags: Ctx["setTags"] = async (id, tags) => {
+    check((await supabase.from("expenses").update({ tags }).eq("id", id)).error);
+    setExpenses((xs) => xs.map((x) => (x.id === id ? { ...x, tags } : x)));
   };
   const setReimbursement: Ctx["setReimbursement"] = async (id, status) => {
     check((await supabase.from("expenses").update({ reimbursement_status: status }).eq("id", id)).error);
@@ -516,7 +522,7 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
 
   return (
     <StoreCtx.Provider value={{
-      pendingCount, preferences, savePreferences, ensureCategory, moveCategory, userId, name, updateName, members, memberName,
+      pendingCount, setTags, preferences, savePreferences, ensureCategory, moveCategory, userId, name, updateName, members, memberName,
       expenses: expenses.filter((x) => (x.txnType ?? "expense") === "expense"), transactions: expenses, accounts, addAccount, setArchived, adjustBalance,
       commitments, loans, goals, valuations, documents, saveCommitment, removeCommitment, confirmCommitment, saveLoan, removeLoan, recordLoanPayment, convertToEmi,
       saveGoal, removeGoal, updateAccount, addValuation, removeValuation, addDocument, updateDocument, removeDocument, history, setReimbursement, recordReimbursement, deleteAll,
