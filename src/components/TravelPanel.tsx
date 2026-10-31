@@ -118,20 +118,27 @@ export function TravelPanel({ trip }: { trip: TravelTrip }) {
           <Input className="h-10" placeholder="Booking ref" value={bk.ref} onChange={(e) => setBk({ ...bk, ref: e.target.value })} />
           <Input className="h-10" type="date" value={bk.date} onChange={(e) => setBk({ ...bk, date: e.target.value })} />
           <Input className="h-10" type="number" placeholder="Amount ₹" value={bk.amount} onChange={(e) => setBk({ ...bk, amount: e.target.value })} />
+          <Input className="h-10" type="date" aria-label="Payment due date" value={bk.due} onChange={(e) => setBk({ ...bk, due: e.target.value })} placeholder="Payment due" />
+          <Input className="h-10 sm:col-span-4" placeholder="Cancellation terms (e.g. free until 24h before)" value={bk.cancel} onChange={(e) => setBk({ ...bk, cancel: e.target.value })} />
           <Button type="button" variant="outline" className="sm:col-span-5" onClick={addBooking}>Add booking</Button>
         </div>}
       </Card>
 
       <Card title="Itinerary">
         {[...(trip.itinerary ?? [])].sort((a, b) => `${a.date}${a.time ?? ""}`.localeCompare(`${b.date}${b.time ?? ""}`)).map((i) => (
-          <div key={i.id} className="flex items-center gap-2 border-b py-2 text-sm last:border-0"><span className="w-28 text-xs text-muted-foreground">{i.date} {i.time}</span><span className="flex-1">{i.title}{i.place && <span className="text-muted-foreground"> · {i.place}</span>}</span>{!closed && <Button size="sm" variant="ghost" onClick={() => void put({ itinerary: (trip.itinerary ?? []).filter((x) => x.id !== i.id) })}>Remove</Button>}</div>
+          <div key={i.id} className="border-b py-2 text-sm last:border-0">
+            <div className="flex items-center gap-2"><span className="w-28 shrink-0 text-xs text-muted-foreground">{i.date} {i.time}</span><span className="min-w-0 flex-1 truncate">{i.title}{i.place && <span className="text-muted-foreground"> · {i.place}</span>}</span>{!closed && <Button size="sm" variant="ghost" onClick={() => void put({ itinerary: (trip.itinerary ?? []).filter((x) => x.id !== i.id) })}>Remove</Button>}</div>
+            {(i.travellers?.length || i.note) && <div className="pl-28 text-xs text-muted-foreground">{i.travellers?.length && <span>{i.travellers.join(", ")}{i.note ? " · " : ""}</span>}{i.note}</div>}
+          </div>
         ))}
         {!closed && <div className="mt-2 grid gap-2 sm:grid-cols-4">
           <Input className="h-10" type="date" value={it.date} onChange={(e) => setIt({ ...it, date: e.target.value })} />
           <Input className="h-10" type="time" value={it.time} onChange={(e) => setIt({ ...it, time: e.target.value })} />
           <Input className="h-10" placeholder="What" value={it.title} onChange={(e) => setIt({ ...it, title: e.target.value })} />
           <Input className="h-10" placeholder="Where" value={it.place} onChange={(e) => setIt({ ...it, place: e.target.value })} />
-          <Button type="button" variant="outline" className="sm:col-span-4" onClick={() => { if (!it.title.trim()) { toast.error("Describe the plan"); return; } void put({ itinerary: [...(trip.itinerary ?? []), { id: crypto.randomUUID(), ...it, title: it.title.trim().slice(0, 120) }] }); setIt({ ...it, title: "", place: "", time: "" }); }}>Add to itinerary</Button>
+          <Input className="h-10" placeholder="Who (comma separated)" value={it.who} onChange={(e) => setIt({ ...it, who: e.target.value })} />
+          <Input className="h-10 sm:col-span-3" placeholder="Note (reference, reminder, link)" value={it.note} onChange={(e) => setIt({ ...it, note: e.target.value })} />
+          <Button type="button" variant="outline" className="sm:col-span-4" onClick={() => { if (!it.title.trim()) { toast.error("Describe the plan"); return; } void put({ itinerary: [...(trip.itinerary ?? []), { id: crypto.randomUUID(), date: it.date, time: it.time || undefined, title: it.title.trim().slice(0, 120), place: it.place.trim().slice(0, 120) || undefined, travellers: it.who.split(",").map((x) => x.trim()).filter(Boolean).slice(0, 8), note: it.note.trim().slice(0, 300) || undefined }] }, "Added to itinerary"); setIt({ ...it, title: "", place: "", time: "", who: "", note: "" }); }}>Add to itinerary</Button>
         </div>}
       </Card>
 
