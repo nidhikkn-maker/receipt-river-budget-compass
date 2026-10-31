@@ -32,7 +32,9 @@ async def main():
         try:
             await page.goto("http://localhost:8080/new?" + urlencode({"title": title, "amount": 123.45, "currency": "INR", "date": "2026-10-31"}))
             await page.get_by_role("button", name="Save expense", exact=True).click()
-            await page.wait_for_url("**/expenses", timeout=30000)
+            await page.wait_for_url(lambda url: "/new" not in url, timeout=30000)
+            await page.goto("http://localhost:8080/expenses")
+            await page.get_by_text(title, exact=True).wait_for()
             fixture = await page.evaluate("""async(title) => {
               const {supabase:s} = await import('/src/integrations/supabase/client.ts');
               const {data:e,error} = await s.from('expenses').select('id').eq('title',title).single();
