@@ -113,6 +113,13 @@
       "when": 1793432385455,
       "tag": "0015_atomic_claim_receipts_and_irregular_confirmation",
       "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1793434582930,
+      "tag": "0016_bulk_category_history_undo",
+      "breakpoints": true
     }
   ]
 }
