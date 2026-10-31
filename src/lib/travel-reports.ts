@@ -141,5 +141,5 @@ export function travelReport(cut: TravelCut, trips: TravelTrip[], txns: Row[], o
   const rows = claims.map(e => [e.date, e.merchant ?? e.title, SCOPE_LABEL[e.scope ?? "personal"], stageOf(e), fmt(reimbursableOf(e)), fmt(receivedOf(e)), fmt(outstandingOf(e))]);
   const pending = r2(claims.reduce((s, e) => s + outstandingOf(e), 0));
   const got = r2(claims.reduce((s, e) => s + receivedOf(e), 0));
-  return { title, headers: ["Date", "Item", "Workspace", "Status", "Amount (INR)"], rows: [...rows, ["", "Total pending", "", "", fmt(pending)], ["", "Total reimbursed", "", "", fmt(got)]] };
+  return { title, headers: ["Date", "Item", "Workspace", "Status", "Claim (INR)", "Received (INR)", "Outstanding (INR)"], rows: [...rows, ["", "Total pending", "", "", "", "", fmt(pending)], ["", "Total reimbursed", "", "", "", fmt(got), ""]] };
 }
