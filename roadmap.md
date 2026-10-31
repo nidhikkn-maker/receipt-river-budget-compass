@@ -95,5 +95,7 @@
 - [x] Bulk bill upload: pick several bills, each OCR-read and reviewed one by one with Bill n of N progress; two-bill signed-in run verified, test entries removed
 
 - [x] Fix receipt reading failure (large phone photos)
+- [ ] Duplicate-receipt detection: warn when a receipt file is already used by another expense (fingerprint + extracted detail match), with explicit override
+- [ ] Receipt audit trail: record OCR-read details vs user corrections before submission; visible in expense history
 - [ ] Test Face ID unlock on live site — blocked: needs a real iPhone with Face ID
 - [x] Check published app on mobile for loading errors
