@@ -1,4 +1,5 @@
 # Roadmap (Functional Requirements v1.0)
+- [ ] Continue document: complete secure device push setup, private test/daily payment reminders, production notification handling and tests; delivery requires publication and device consent
 - [x] Mutual fund portfolio: dated value and cash-flow-adjusted gain charts, fund/date filters and dated history; 25 focused tests pass, saved ₹13,405.87 read back, desktop/mobile checked, build OK
 - [x] Yaba excluded at the user's request; no further review
 - [x] Earlier: receipts + review, multi-currency, payment methods, bank reconciliation, family, splits, budgets, reports
