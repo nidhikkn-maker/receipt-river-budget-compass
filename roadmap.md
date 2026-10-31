@@ -1,4 +1,5 @@
 # Roadmap (Functional Requirements v1.0)
+- [x] Fix Delete Data: in-app typed confirmation, visible errors, complete review/history cleanup and checked owner-file/offline cleanup; signed-in failure/cancel/mobile verified without wiping user data; 241 tests pass. Preview changes need publication.
 - [x] Face ID on sign-in page: signed-in virtual platform credential registered and verified, dashboard opens without second prompt, biometric failure offers password, signed-out state cannot bypass sign-in; 235 tests pass. Publication and real iPhone verification remain pending.
 - [x] Receipt details review before saving, persistent retry/manual entry; authenticated real OCR retry and corrected merchant/date/amount verified on mobile
 - [x] Secure same-account password fallback; isolated verification, wrong-password lock retention and account-switch rejection tested; 223 automated checks pass; real iPhone verification remains pending

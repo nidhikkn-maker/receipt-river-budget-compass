@@ -12,6 +12,7 @@
 - Subdirectories have their own AGENTS.md (src/lib holds finance-rule notes); read it before changing files there.
 - New visitors sign in at /auth; existing anonymous identities may upgrade by email to preserve owner-scoped records, and offline access never creates a new identity.
 - Data lives in Lovable Cloud; src/lib/store.tsx is the single client data layer for pages under src/routes/_authenticated.
+- Data deletion uses an in-app typed confirmation, authenticated owner-scoped atomic record cleanup, then paginated owner-prefix storage and offline cleanup; failures stay visible and files survive failed record deletion.
 - Bulk category changes and undo use owner-checked atomic RPCs with persistent before/split snapshots and revision checks; later edits block restoration rather than being overwritten. Bill duplicate checks compare original currency amounts, merchant and date and require explicit override before saving.
 - Currency conversion happens server-side in src/lib/fx.functions.ts (Frankfurter/ECB rates for the bill date) so stored INR amounts can't be faked by the client.
 - Reports are generated in the browser (src/lib/reports.ts) from data the user can already see, so RLS scoping applies automatically.

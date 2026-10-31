@@ -2,7 +2,8 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import type { Database, Json } from "@/integrations/supabase/types";
-import { queueEntry, pendingEntries, removePending, putSnapshot, getSnapshot, clearOfflineOwner } from "./offline";
+import { queueEntry, pendingEntries, removePending, putSnapshot, getSnapshot } from "./offline";
+import { deleteFinanceData } from "./delete-data";
 import { saveExpense } from "./fx.functions";
 import {
   CHARGES_CATEGORY, validateAllocations, validateBudget, validateExpense, type Allocation,
@@ -132,6 +133,7 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
   const [loading, setLoading] = useState(true);
   const [pendingCount, setPendingCount] = useState(0);
   const syncing = useRef(false);
+  const deleting = useRef(false);
   const [preferences, setPreferences] = useState<FinancePreferences>(defaultPreferences);
 
   const refresh = useCallback(async () => {
@@ -219,6 +221,7 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
   const check = (error: { message: string } | null) => { if (error) throw new Error(error.message); };
 
   const save: Ctx["save"] = async (s, opts) => {
+    if (deleting.current) throw new Error("Please wait until data deletion finishes.");
     validateExpense(s);
     validateActiveCategory(preferences.categories, s.category, !!opts?.id);
     if (!navigator.onLine) {
@@ -254,11 +257,11 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
     const sync = async () => {
       const entries = await pendingEntries(userId).catch(() => []);
       if (active) setPendingCount(entries.length);
-      if (!navigator.onLine || syncing.current || !entries.length) return;
+      if (!navigator.onLine || syncing.current || deleting.current || !entries.length) return;
       syncing.current = true;
       try {
         for (const entry of entries) {
-          if (!navigator.onLine) break;
+          if (!navigator.onLine || deleting.current) break;
           await save(entry.input, { createId: entry.id, files: entry.files });
           if (!navigator.onLine) break;
           await removePending(entry.id);
@@ -542,11 +545,15 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
     return (data ?? []).map((x) => ({ id: x.id, action: x.action as AuditEntry["action"], changes: (x.changes as Record<string, unknown>) ?? {}, summary: x.summary, createdAt: x.created_at }));
   }, []);
   const deleteAll: Ctx["deleteAll"] = async () => {
-    const paths = [...expenses.flatMap((e) => e.receipts.map((r) => r.path)), ...documents.map((d) => d.filePath)];
-    for (let k = 0; k < paths.length; k += 100) await supabase.storage.from("receipts").remove(paths.slice(k, k + 100));
-    check((await supabase.rpc("delete_my_finance_data")).error);
-    await clearOfflineOwner(userId);
-    await refresh();
+    if (deleting.current) return;
+    if (syncing.current) throw new Error("Offline entries are still syncing. Wait for them to finish, then retry deletion.");
+    deleting.current = true;
+    try {
+      await deleteFinanceData(userId);
+      setPendingCount(0);
+    } finally {
+      try { await refresh(); } finally { deleting.current = false; }
+    }
   };
   const signedUrl = useCallback(async (path: string) => {
     const { data } = await supabase.storage.from("receipts").createSignedUrl(path, 300);

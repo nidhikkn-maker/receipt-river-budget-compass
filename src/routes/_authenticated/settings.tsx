@@ -4,6 +4,8 @@ import { toast } from "sonner";
 import { Download, Trash2, Upload } from "lucide-react";
 import { PageTitle } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { PasskeySettings } from "@/components/DeviceLock";
 import { FinanceSettings } from "@/components/FinanceSettings";
@@ -32,6 +34,9 @@ function Settings() {
   const { userId, name, deleteAll, refresh, transactions, accounts } = useStore();
   const file = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleteConfirmation, setDeleteConfirmation] = useState("");
+  const [deleteError, setDeleteError] = useState("");
 
   const backup = async () => {
     setBusy(true);
@@ -101,12 +106,15 @@ function Settings() {
   };
 
   const wipe = async () => {
-    if (window.prompt('This permanently deletes your financial records across all devices. Type DELETE to confirm.') !== "DELETE") return;
+    if (deleteConfirmation !== "DELETE" || busy) return;
+    setDeleteError("");
     setBusy(true);
     try {
       await deleteAll();
+      setDeleteOpen(false);
+      setDeleteConfirmation("");
       toast.success("All records deleted");
-    } catch (e) { toast.error((e as Error).message); } finally { setBusy(false); }
+    } catch (e) { setDeleteError(e instanceof Error ? e.message : "Couldn't delete your data. Please try again."); } finally { setBusy(false); }
   };
 
   return (
@@ -130,10 +138,29 @@ function Settings() {
         <Card title="Export reports" body="CSV and PDF reports of spending, by category, family member and business vs personal.">
           <Button asChild variant="secondary"><Link to="/reports">Open reports</Link></Button>
         </Card>
-        <Card title="Delete all data" body="Removes every record in this account. Download a backup first if you might need it.">
-          <Button variant="destructive" onClick={wipe} disabled={busy}><Trash2 className="h-4 w-4" />Delete everything</Button>
+        <Card title="Delete all data" body="Removes financial records, receipts and documents in this account. Your sign-in account stays available. Download a backup first if you might need it.">
+          <Button variant="destructive" onClick={() => { setDeleteConfirmation(""); setDeleteError(""); setDeleteOpen(true); }} disabled={busy}><Trash2 className="h-4 w-4" />Delete everything</Button>
         </Card>
       </div>
+      <Dialog open={deleteOpen} onOpenChange={(open) => { if (!busy) setDeleteOpen(open); }}>
+        <DialogContent onEscapeKeyDown={(event) => { if (busy) event.preventDefault(); }} onPointerDownOutside={(event) => { if (busy) event.preventDefault(); }}>
+          <DialogHeader>
+            <DialogTitle>Delete your financial data?</DialogTitle>
+            <DialogDescription>This permanently removes your financial records across devices, including receipts, documents and saved reviews. Your sign-in account and name remain. This cannot be undone.</DialogDescription>
+          </DialogHeader>
+          <form onSubmit={(event) => { event.preventDefault(); void wipe(); }} className="space-y-4">
+            <div className="space-y-2">
+              <label htmlFor="delete-confirmation" className="text-sm font-semibold">Type DELETE to confirm</label>
+              <Input id="delete-confirmation" autoComplete="off" autoCapitalize="characters" value={deleteConfirmation} onChange={(event) => setDeleteConfirmation(event.target.value)} disabled={busy} />
+            </div>
+            {deleteError && <p role="alert" className="text-sm font-semibold text-destructive">{deleteError}</p>}
+            <DialogFooter>
+              <Button type="button" variant="outline" disabled={busy} onClick={() => setDeleteOpen(false)}>Cancel</Button>
+              <Button type="submit" variant="destructive" disabled={busy || deleteConfirmation !== "DELETE"}><Trash2 className="h-4 w-4" />{busy ? "Deleting…" : "Permanently delete data"}</Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
       <p className="mt-6 text-sm text-muted-foreground">Sign in with the same account on each device. Existing browser records stay with an email account upgrade.</p>
     </>
   );
