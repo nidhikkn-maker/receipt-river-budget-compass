@@ -15,6 +15,7 @@ import { tagValue } from "@/lib/preferences";
 import { money, totalsBy, categoryTotals } from "@/lib/expenses";
 import { ExpenseTable } from "@/components/ExpenseTable";
 import { monthlySeries, weeklySpend, netWorthSeries, spendBy, monthToDateCompare, subscriptionSpendSeries, cardUtilisationSeries, loanProgress, savingsTrend } from "@/lib/insights";
+import { isTracked, stageOf, REIMB_STAGES, REIMB_STAGE_LABEL } from "@/lib/reimbursements";
 import { PAYMENT_METHODS, PAYMENT_LABEL, type Scope } from "@/lib/expenses";
 
 export const Route = createFileRoute("/_authenticated/reports")({
