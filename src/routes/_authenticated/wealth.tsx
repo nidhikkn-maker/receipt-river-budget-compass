@@ -30,7 +30,7 @@ export const Route = createFileRoute("/_authenticated/wealth")({
 });
 
 function Wealth() {
-  const { accounts, transactions, valuations, addAccount, setArchived, updateAccount, loans } = useStore();
+  const { accounts, transactions, valuations, addAccount, setArchived, updateAccount, loans, preferences } = useStore();
   const [name, setName] = useState("");
   const [kind, setKind] = useState<AccountKind>("savings");
   const [opening, setOpening] = useState("0");
