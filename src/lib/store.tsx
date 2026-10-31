@@ -9,6 +9,7 @@ import {
   type Budgets, type Category, type Expense, type ExpenseInput, type Member, type PaymentMethod, type Receipt, type ReceiptDetails, type ReimbursementStatus, type Scope, type Split,
 } from "./expenses";
 import { accountBalance, adjustmentToMatch, type Account, type AccountDetails, type AccountKind, type TxnType, type Valuation } from "./ledger";
+import { statusColumn, validateReceipt, type ReimbursementInfo } from "./reimbursements";
 import { normalizePreferences, defaultPreferences, validateActiveCategory, type FinancePreferences } from "./preferences";
 import { addMonths, emiFor, emiSplit, nextAfter, type Commitment, type CommitmentKind, type CommitmentStatus, type Frequency, type LoanType } from "./planning";
 import { lastStatementDate, nextEmiInstalment, statementShift, type LoanPayment } from "./cards";
@@ -93,7 +94,13 @@ interface Ctx {
   removeMember: (id: string) => Promise<void>;
   setBudget: (c: Category, amount: number) => Promise<void>;
   signedUrl: (path: string) => Promise<string | null>;
+  setAllocations: (e: Expense, lines: Allocation[]) => Promise<void>;
+  updateReimbursement: (e: Expense, info: ReimbursementInfo) => Promise<void>;
+  addReimbursementReceipt: (e: Expense, r: { amount: number; date: string; accountId: string | null; note?: string }) => Promise<void>;
+  listReviews: () => Promise<SavedReview[]>;
+  saveReview: (r: Omit<SavedReview, "id" | "generatedAt">) => Promise<void>;
 }
+export interface SavedReview { id: string; month: string; figures: unknown; dataHash: string; narrative: string; dataCutoff: string; generatedAt: string }
 const StoreCtx = createContext<Ctx | null>(null);
 const r2 = (n: number) => Math.round(n * 100) / 100;
 const today = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; };
@@ -173,6 +180,7 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
       txnType: x.txn_type as TxnType, accountId: x.account_id, toAccountId: x.to_account_id, tags: x.tags ?? [],
       receiptDetails: x.receipt_details as unknown as ReceiptDetails, reimbursementStatus: x.reimbursement_status as ReimbursementStatus,
       adjustmentSign: x.adjustment_sign === -1 ? -1 : 1,
+      allocations: (x.allocations as unknown as Allocation[]) ?? [], reimbursement: (x.reimbursement as unknown as ReimbursementInfo) ?? {},
     })));
     const bud: Budgets = {};
     for (const x of b.data ?? []) bud[x.category as Category] = Number(x.monthly_amount);
@@ -283,6 +291,37 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
   const setReimbursement: Ctx["setReimbursement"] = async (id, status) => {
     check((await supabase.from("expenses").update({ reimbursement_status: status }).eq("id", id)).error);
     setExpenses((xs) => xs.map((x) => (x.id === id ? { ...x, reimbursementStatus: status } : x)));
+  };
+  const setAllocations: Ctx["setAllocations"] = async (e, lines) => {
+    validateAllocations(lines, e.amount);
+    for (const l of lines) validateActiveCategory(preferences.categories, l.category, false);
+    check((await supabase.from("expenses").update({ allocations: lines as unknown as Json }).eq("id", e.id)).error);
+    setExpenses((xs) => xs.map((x) => (x.id === e.id ? { ...x, allocations: lines } : x)));
+  };
+  const updateReimbursement: Ctx["updateReimbursement"] = async (e, info) => {
+    if (info.reimbursable != null && !(info.reimbursable > 0 && info.reimbursable <= e.amount)) throw new Error("Reimbursable amount must be above zero and no more than the expense");
+    const next = { ...e, reimbursement: info };
+    const status = statusColumn(next);
+    check((await supabase.from("expenses").update({ reimbursement: info as unknown as Json, reimbursement_status: status }).eq("id", e.id)).error);
+    setExpenses((xs) => xs.map((x) => (x.id === e.id ? { ...x, reimbursement: info, reimbursementStatus: status } : x)));
+  };
+  const addReimbursementReceipt: Ctx["addReimbursementReceipt"] = async (e, r) => {
+    validateReceipt(e, r.amount);
+    const id = crypto.randomUUID();
+    // The money received is a reimbursement entry (reduces spending, never counts as earned income), linked by id.
+    await save({ title: `Reimbursement: ${e.title}`.slice(0, 200), merchant: e.reimbursement?.payer || null, category: e.category, scope: e.scope, memberId: e.memberId, splits: [],
+      amount: r.amount, currency: "INR", date: r.date, description: r.note ?? "", paymentMethod: "bank_transfer", txnType: "reimbursement", accountId: r.accountId, tags: [] } as ExpenseInput, { createId: id, noRefresh: true });
+    const info = { ...(e.reimbursement ?? {}), receipts: [...(e.reimbursement?.receipts ?? []), { id, date: r.date, amount: r.amount, txnId: id, note: r.note }] };
+    await updateReimbursement(e, info);
+    await refresh();
+  };
+  const listReviews: Ctx["listReviews"] = async () => {
+    const { data, error } = await supabase.from("monthly_reviews").select("*").order("generated_at", { ascending: false }).limit(60);
+    check(error);
+    return (data ?? []).map((x) => ({ id: x.id, month: x.month, figures: x.figures, dataHash: x.data_hash, narrative: x.narrative, dataCutoff: x.data_cutoff, generatedAt: x.generated_at }));
+  };
+  const saveReview: Ctx["saveReview"] = async (r) => {
+    check((await supabase.from("monthly_reviews").insert({ owner_id: userId, month: r.month, figures: r.figures as Json, data_hash: r.dataHash, narrative: r.narrative, data_cutoff: r.dataCutoff })).error);
   };
   const operation = async (action: string, payload: Record<string, unknown>) => {
     if (!navigator.onLine) throw Error("Reconnect to record this payment");
@@ -482,6 +521,7 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
       commitments, loans, goals, valuations, documents, saveCommitment, removeCommitment, confirmCommitment, saveLoan, removeLoan, recordLoanPayment, convertToEmi,
       saveGoal, removeGoal, updateAccount, addValuation, removeValuation, addDocument, updateDocument, removeDocument, history, setReimbursement, recordReimbursement, deleteAll,
       budgets, loading, refresh, save, remove, setScope, reconcile, addMember, removeMember, setBudget, signedUrl,
+      setAllocations, updateReimbursement, addReimbursementReceipt, listReviews, saveReview,
     }}>
       {children}
     </StoreCtx.Provider>
