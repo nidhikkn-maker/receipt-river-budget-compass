@@ -51,7 +51,7 @@ export function tripFinance(t: TravelTrip, txns: Row[]) {
   const s = tripSummary(t, txns);
   const ids = new Set(s.entries.map((e) => (e as Row).id));
   const bookings = t.bookings ?? [];
-  const committed = r2(bookings.filter((b) => b.status === "unpaid").reduce((a, b) => a + b.amount, 0));
+  const committed = r2(bookings.reduce((a, b) => a + bookingOutstanding(b, txns), 0));
   const paidUnlinked = bookings.filter((b) => b.status === "paid" && b.expenseId && !ids.has(b.expenseId));
   const ws: Record<string, number> = {};
   for (const e of s.entries as Row[]) for (const p of workspaceParts({ scope: e.scope ?? "personal", amount: e.amount, originalAmount: e.originalAmount ?? null, workspaceAllocations: e.workspaceAllocations ?? [] })) ws[p.workspace] = r2((ws[p.workspace] ?? 0) + p.amount);
