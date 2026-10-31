@@ -52,16 +52,16 @@ function Overview() {
       <div className="mb-3 flex gap-2">{(["day","week","month"] as const).map(period=><Button key={period} size="sm" variant={preferences.homePeriod===period?"default":"outline"} onClick={()=>void savePreferences({...preferences,homePeriod:period})}>{period==="day"?"Today":period==="week"?"7 days":"This month"}</Button>)}</div>
       <section className="relative mb-6 overflow-hidden rounded-3xl bg-hero p-6 text-primary-foreground shadow-float sm:p-8">
         <div className="pointer-events-none absolute -right-16 -top-16 h-56 w-56 rounded-full border-[28px] border-primary-foreground/10" />
-        <div className="font-mono text-[11px] uppercase tracking-[0.2em] opacity-80">{new Date().toLocaleString("en", { month: "long", year: "numeric" })}</div>
+        <div className="font-mono text-[11px] font-semibold uppercase tracking-[0.2em] opacity-90">{new Date().toLocaleString("en", { month: "long", year: "numeric" })}</div>
         <div className="mt-1 font-display text-4xl font-extrabold tracking-tight sm:text-6xl">{money(t.total)}</div>
-        <div className="text-sm opacity-80">spent {preferences.homePeriod==="day"?"today":preferences.homePeriod==="week"?"in the last 7 days":"this month"}</div>
+        <div className="text-sm font-semibold opacity-90">spent {preferences.homePeriod==="day"?"today":preferences.homePeriod==="week"?"in the last 7 days":"this month"}</div>
         <div className="mt-6 sm:max-w-md">
           <div className="flex h-3 overflow-hidden rounded-full bg-primary-foreground/20">
-            <div className="bg-primary-foreground" style={{ width: `${pct}%` }} />
+            <div className="bg-gold" style={{ width: `${pct}%` }} />
           </div>
           <div className="mt-2 flex justify-between text-sm">
-            <span><b className="font-mono">{money(t.business)}</b> business</span>
-            <span><b className="font-mono">{money(t.personal)}</b> personal</span>
+            <span><b className="font-mono font-bold">{money(t.business)}</b> business</span>
+            <span><b className="font-mono font-bold">{money(t.personal)}</b> personal</span>
           </div>
         </div>
       </section>
@@ -75,8 +75,8 @@ function Overview() {
       <div hidden={preferences.homeHidden.includes("safe")} style={{order:preferences.homeOrder.indexOf("safe")}}>
       <Link to="/plan" className="mb-3 flex flex-col gap-3 rounded-3xl border-2 border-primary bg-card p-4 sm:flex-row sm:items-center sm:gap-4">
         <div className="min-w-0 flex-1">
-          <div className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Safe to spend · 30 days</div>
-          <div className="break-words font-mono text-2xl">{money(pos.safe.amount)}</div>
+          <div className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Safe to spend · 30 days</div>
+          <div className="break-words font-mono text-2xl font-bold">{money(pos.safe.amount)}</div>
           <div className="text-xs text-muted-foreground">{pos.forecast.shortDates.length ? `Money runs short from ${pos.forecast.shortDates[0]}` : `Lowest point ${money(pos.safe.lowest)} on ${pos.safe.lowestDate}`}</div>
         </div>
         <div className="grid gap-1 border-t pt-2 text-xs text-muted-foreground sm:border-0 sm:pt-0 sm:text-right">
