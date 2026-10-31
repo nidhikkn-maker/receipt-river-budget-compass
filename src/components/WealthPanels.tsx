@@ -85,6 +85,7 @@ export function LoansPanel() {
 function LoanCard({ l, onRemove }: { l: Loan; onRemove: () => void }) {
   const { accounts, recordLoanPayment, transactions } = useStore();
   const hist = loanHistory(l.accountId, l.principal, transactions);
+  const chart = loanBalanceChart(hist.rows);
   const [from, setFrom] = useState("none"); const [payDate, setPayDate] = useState(todayISO()); const [busy,setBusy]=useState(false);
   const [extra, setExtra] = useState("");
   const a = amortize(l.principal, l.rate, l.emi);
@@ -109,6 +110,17 @@ function LoanCard({ l, onRemove }: { l: Loan; onRemove: () => void }) {
       ) : <p className="mt-2 text-sm text-destructive">This EMI doesn't cover the monthly interest — the loan would never close.</p>}
       {hist.rows.length > 0 && <details className="mt-3 rounded-xl border p-2">
         <summary className="cursor-pointer text-sm font-medium">Repayment history · {hist.rows.length} · principal {money(hist.totalPrincipal)} · interest {money(hist.totalInterest)}</summary>
+        <div className="mt-2">
+          <ResponsiveContainer width="100%" height={180}>
+            <LineChart data={chart} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
+              <XAxis dataKey="label" tick={{ fontSize: 11 }} />
+              <YAxis width={56} tick={{ fontSize: 11 }} tickFormatter={(v: number) => (v >= 1e5 ? `${Math.round((v / 1e5) * 100) / 100}L` : v >= 1000 ? `${Math.round(v / 1000)}k` : String(v))} />
+              <Tooltip formatter={(v: number) => money(v)} />
+              <Line type="monotone" dataKey="balance" name="Balance left" stroke="var(--chart-4)" strokeWidth={2} />
+            </LineChart>
+          </ResponsiveContainer>
+          <p className="text-[11px] text-muted-foreground">Balance left after each repayment, starting from {money(chart[0]!.balance)} before the first one.</p>
+        </div>
         <div className="mt-2 grid grid-cols-5 gap-1 text-[11px] text-muted-foreground"><span>Date</span><span>Paid</span><span>Principal</span><span>Interest</span><span>Balance after</span></div>
         {hist.rows.map((r) => <div key={r.id} className="grid grid-cols-5 gap-1 border-t py-1 font-mono text-xs"><span>{r.date}</span><span>{money(r.amount)}</span><span>{money(r.principal)}</span><span>{r.split ? money(r.interest) : "—"}</span><span title={`From ${money(r.balanceBefore)}`}>{money(r.balanceAfter)}</span></div>)}
         <div className="mt-1 grid grid-cols-5 gap-1 border-t pt-1 text-xs font-medium"><span>Total</span><span>{money(hist.totalPaid)}</span><span>{money(hist.totalPrincipal)}</span><span>{money(hist.totalInterest)}</span><span>{money(l.principal)}</span></div>
