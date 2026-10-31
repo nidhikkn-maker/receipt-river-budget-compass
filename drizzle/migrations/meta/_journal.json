@@ -183,6 +183,13 @@
       "when": 1793461648652,
       "tag": "0025_distinct_money_movement_types",
       "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1793461847222,
+      "tag": "0026_expense_trip_and_loan_split",
+      "breakpoints": true
     }
   ]
 }

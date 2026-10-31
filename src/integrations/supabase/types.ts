@@ -415,11 +415,13 @@ export type Database = {
           fx_date: string | null
           fx_rate: number
           id: string
+          interest: number | null
           member_id: string | null
           merchant: string | null
           original_amount: number | null
           payment_instrument_id: string | null
           payment_method: string
+          principal: number | null
           receipt_details: Json
           receipts: Json
           reconciled_at: string | null
@@ -433,6 +435,7 @@ export type Database = {
           tags: string[]
           title: string
           to_account_id: string | null
+          trip_id: string | null
           txn_type: string
           updated_at: string
           workspace_allocations: Json
@@ -453,11 +456,13 @@ export type Database = {
           fx_date?: string | null
           fx_rate?: number
           id?: string
+          interest?: number | null
           member_id?: string | null
           merchant?: string | null
           original_amount?: number | null
           payment_instrument_id?: string | null
           payment_method?: string
+          principal?: number | null
           receipt_details?: Json
           receipts?: Json
           reconciled_at?: string | null
@@ -471,6 +476,7 @@ export type Database = {
           tags?: string[]
           title: string
           to_account_id?: string | null
+          trip_id?: string | null
           txn_type?: string
           updated_at?: string
           workspace_allocations?: Json
@@ -491,11 +497,13 @@ export type Database = {
           fx_date?: string | null
           fx_rate?: number
           id?: string
+          interest?: number | null
           member_id?: string | null
           merchant?: string | null
           original_amount?: number | null
           payment_instrument_id?: string | null
           payment_method?: string
+          principal?: number | null
           receipt_details?: Json
           receipts?: Json
           reconciled_at?: string | null
@@ -509,6 +517,7 @@ export type Database = {
           tags?: string[]
           title?: string
           to_account_id?: string | null
+          trip_id?: string | null
           txn_type?: string
           updated_at?: string
           workspace_allocations?: Json
