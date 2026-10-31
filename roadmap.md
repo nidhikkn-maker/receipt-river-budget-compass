@@ -192,5 +192,8 @@
 - [x] Autosaved drafts with receipts, Resume later, close saves, restore, retry reading
 - [x] Drafts page (Activity/More), multi-select delete with confirmation, waiting-expenses reminder
 - [x] Extra bills from a multi-file upload become separate drafts
-- [ ] Offline-only drafts on device (drafts currently need a connection; shown as "Draft not saved")
+- [x] Offline drafts: encrypted on-device copy, auto-sync when back online
 - [ ] Drafts not yet included in ZIP backups
+
+## V4.6 Background processing (requirements-v4.6.md)
+- [ ] Not started — saved, awaiting the go-ahead
