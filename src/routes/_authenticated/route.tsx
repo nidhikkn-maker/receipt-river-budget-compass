@@ -1,18 +1,21 @@
-import { createFileRoute, Outlet } from "@tanstack/react-router";
+import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { StoreProvider } from "@/lib/store";
 import { AppShell } from "@/components/AppShell";
 
-// No sign-in screen: a private, invisible session is created on first visit.
-// Data stays private to this browser's session (RLS scopes every row to it).
+// Preserve existing browser identities so email account upgrades retain their rows.
+// New visitors sign in; offline access uses only this device's existing session.
 export const Route = createFileRoute("/_authenticated")({
   ssr: false,
   beforeLoad: async () => {
+    if (!navigator.onLine) {
+      const { data } = await supabase.auth.getSession();
+      if (data.session?.user) return { userId: data.session.user.id };
+      throw redirect({ to: "/auth" });
+    }
     const { data } = await supabase.auth.getUser();
     if (data.user) return { userId: data.user.id };
-    const { data: anon, error } = await supabase.auth.signInAnonymously();
-    if (error || !anon.user) throw new Error("Couldn't start your session. Please refresh.");
-    return { userId: anon.user.id };
+    throw redirect({ to: "/auth" });
   },
   component: AuthedLayout,
 });

@@ -1,6 +1,8 @@
 import { Link } from "@tanstack/react-router";
 import { useEffect, useState, type ReactNode } from "react";
-import { BarChart3, CalendarClock, Gem, Home, Landmark, ListFilter, PiggyBank, Plus, Settings, Sparkles, Users, Eye, EyeOff } from "lucide-react";
+import { BarChart3, CalendarClock, Gem, Home, Landmark, ListFilter, PiggyBank, Plus, Settings, Sparkles, Users, Eye, EyeOff, FileText, UserRound } from "lucide-react";
+import { DeviceLock } from "./DeviceLock";
+import { Button } from "./ui/button";
 import { useStore } from "@/lib/store";
 
 const LINKS = [
@@ -14,13 +16,15 @@ const LINKS = [
   { to: "/budgets", label: "Budgets", icon: PiggyBank },
   { to: "/reconcile", label: "Bank", icon: Landmark },
   { to: "/family", label: "Family", icon: Users },
+  { to: "/vault", label: "Vault", icon: FileText },
   { to: "/settings", label: "Settings", icon: Settings },
 ] as const;
 // Mobile bar: the five primary sections
 const MOBILE = ["/dashboard", "/expenses", "/new", "/assistant", "/reports", "/wealth"];
 
 export function AppShell({ children }: { children: ReactNode }) {
-  const { loading } = useStore();
+  const { loading, preferences, userId, name } = useStore();
+  useEffect(()=>{const theme=preferences.theme;const media=window.matchMedia("(prefers-color-scheme: dark)");const apply=()=>document.documentElement.classList.toggle("dark",theme==="dark"||(theme==="system"&&media.matches));apply();media.addEventListener("change",apply);return()=>media.removeEventListener("change",apply);},[preferences.theme]);
   const [hidden, setHidden] = useState(false);
   useEffect(() => { setHidden(localStorage.getItem("ll-privacy") === "1"); }, []);
   useEffect(() => { document.documentElement.classList.toggle("privacy", hidden); localStorage.setItem("ll-privacy", hidden ? "1" : "0"); }, [hidden]);
@@ -38,22 +42,24 @@ export function AppShell({ children }: { children: ReactNode }) {
       </aside>
 
       <header className="sticky top-0 z-20 border-b bg-background/85 backdrop-blur">
-        <div className="mx-auto flex max-w-6xl items-center gap-3 px-4 py-3 sm:px-8">
+        <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-2 px-4 py-3 sm:px-8">
           <span className="font-display text-xl font-extrabold tracking-tight text-primary">Ledgerline</span>
           <span className="hidden font-mono text-[11px] uppercase tracking-[0.2em] text-muted-foreground sm:inline">personal · family · business</span>
-          <button onClick={() => setHidden((h) => !h)} aria-label={hidden ? "Show amounts" : "Hide amounts"} className="ml-auto rounded-xl p-2 text-muted-foreground">{hidden ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}</button>
-          <div className="flex gap-1 lg:hidden">
+          <Button size="icon" variant="ghost" onClick={() => setHidden((h) => !h)} aria-label={hidden ? "Show amounts" : "Hide amounts"} className="ml-auto rounded-xl p-2 text-muted-foreground">{hidden ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}</Button>
+          <Link to="/auth" aria-label={name ? `Account: ${name}` : "Account"} title={name || "Account"} className="p-2 text-muted-foreground"><UserRound className="h-5 w-5" /></Link>
+          <div className="flex w-full justify-between gap-1 lg:hidden">
             <Link to="/plan" aria-label="Plan" className="rounded-xl p-2 text-muted-foreground" activeProps={{ className: "!text-primary bg-secondary" }}><CalendarClock className="h-5 w-5" /></Link>
             <Link to="/budgets" aria-label="Budgets" className="rounded-xl p-2 text-muted-foreground" activeProps={{ className: "!text-primary bg-secondary" }}><PiggyBank className="h-5 w-5" /></Link>
             <Link to="/reconcile" aria-label="Bank reconciliation" className="rounded-xl p-2 text-muted-foreground" activeProps={{ className: "!text-primary bg-secondary" }}><Landmark className="h-5 w-5" /></Link>
             <Link to="/family" aria-label="Family" className="rounded-xl p-2 text-muted-foreground" activeProps={{ className: "!text-primary bg-secondary" }}><Users className="h-5 w-5" /></Link>
+            <Link to="/vault" aria-label="Document vault" className="rounded-xl p-2 text-muted-foreground"><FileText className="h-5 w-5" /></Link>
             <Link to="/settings" aria-label="Settings" className="rounded-xl p-2 text-muted-foreground" activeProps={{ className: "!text-primary bg-secondary" }}><Settings className="h-5 w-5" /></Link>
           </div>
         </div>
       </header>
 
       <main className="mx-auto max-w-6xl px-4 pb-28 pt-6 sm:px-8 lg:pb-12">
-        {loading ? <p className="text-muted-foreground">Loading…</p> : children}
+        {loading ? <p className="text-muted-foreground">Loading…</p> : <DeviceLock>{children}</DeviceLock>}
       </main>
 
       <nav className="fixed inset-x-3 bottom-3 z-30 flex items-center justify-around rounded-3xl bg-ink px-2 py-2 text-ink-muted shadow-float lg:hidden">

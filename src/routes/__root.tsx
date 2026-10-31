@@ -1,6 +1,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   Outlet,
+  ClientOnly,
   Link,
   createRootRouteWithContext,
   useRouter,
@@ -10,6 +11,7 @@ import {
 } from "@tanstack/react-router";
 import { useEffect, type ReactNode } from "react";
 
+import { registerOfflineApp } from "@/lib/pwa";
 import { supabase } from "@/integrations/supabase/client";
 import { Toaster } from "@/components/ui/sonner";
 import appCss from "../styles.css?url";
@@ -80,8 +82,8 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Ledgerline — Team Expenses" },
-      { name: "description", content: "Expense submissions, approvals and budgets for teams." },
+      { title: "Ledgerline — Personal finance" },
+      { name: "description", content: "Private accounts, family spending, budgets and financial planning." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
       { name: "twitter:site", content: "@Lovable" },
@@ -94,6 +96,8 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
       { rel: "stylesheet", href: "https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Instrument+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" },
       { rel: "icon", href: "/favicon.ico", type: "image/x-icon" },
+      { rel: "manifest", href: "/manifest.webmanifest" },
+      { rel: "apple-touch-icon", href: "/app-icon-large.png" },
     ],
   }),
   shellComponent: RootShell,
@@ -117,6 +121,7 @@ function RootShell({ children }: { children: ReactNode }) {
 }
 
 function AuthListener() {
+  useEffect(()=>{void registerOfflineApp().catch(()=>{});},[]);
   const router = useRouter();
   const { queryClient } = Route.useRouteContext();
   useEffect(() => {
@@ -137,7 +142,7 @@ function RootComponent() {
     <QueryClientProvider client={queryClient}>
       {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
       <AuthListener />
-      <Outlet />
+      <ClientOnly fallback={<p className="p-6 text-muted-foreground">Loading Ledgerline…</p>}><Outlet /></ClientOnly>
       <Toaster />
     </QueryClientProvider>
   );

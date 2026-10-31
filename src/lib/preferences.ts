@@ -8,6 +8,9 @@ export function defaultPreferences(): FinancePreferences {
   return { categories: CATEGORIES.map(name => ({ name, archived: false })), tags: ["VEI", "MOVAC", "AK Meridian", "KR Enterprises"].map(name => ({ group: "Organisation", name })), budgets: [], homeHidden: [], homeOrder: ["safe", "accounts", "summary", "family", "recent"], theme: "system", reminders: true };
 }
 export const tagValue = (t: GroupedTag) => `${t.group}: ${t.name}`;
+export function validateActiveCategory(categories: CategorySetting[], name: string, editing = false) {
+  if (!editing && categories.some(c=>c.name===name&&c.archived)) throw new Error("Choose an active category");
+}
 export function budgetSpend(e: Expense, b: ScopedBudget): number {
   if ((e.txnType ?? "expense") !== "expense") return 0;
   if (b.kind === "category") return e.category === b.value ? e.amount : 0;

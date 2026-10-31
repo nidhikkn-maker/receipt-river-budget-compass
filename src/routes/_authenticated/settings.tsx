@@ -5,8 +5,10 @@ import { Download, Trash2, Upload } from "lucide-react";
 import { PageTitle } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
+import { PasskeySettings } from "@/components/DeviceLock";
 import { FinanceSettings } from "@/components/FinanceSettings";
 import { useStore } from "@/lib/store";
+import { clearOfflineOwner } from "@/lib/offline";
 
 export const Route = createFileRoute("/_authenticated/settings")({
   head: () => ({
@@ -79,6 +81,7 @@ function Settings() {
         const { error } = await supabase.from(t).delete().eq(OWNER[t] as never, userId as never);
         if (error) throw new Error(error.message);
       }
+      await clearOfflineOwner(userId);
       await refresh();
       toast.success("All records deleted");
     } catch (e) { toast.error((e as Error).message); } finally { setBusy(false); }
@@ -87,6 +90,8 @@ function Settings() {
   return (
     <>
       <PageTitle eyebrow="Settings" title="Your data" sub={`${transactions.length} entries · ${accounts.length} accounts`} />
+      <div className="mb-5"><Button asChild variant="outline"><Link to="/auth">Sign in / account</Link></Button></div>
+      <PasskeySettings />
       <FinanceSettings />
       <div className="grid gap-4 sm:grid-cols-2">
         <Card title="Back up everything" body="Download one file with all accounts, entries, recurring payments, loans, goals, budgets and family. Receipt images stay in the app.">
@@ -103,7 +108,7 @@ function Settings() {
           <Button variant="destructive" onClick={wipe} disabled={busy}><Trash2 className="h-4 w-4" />Delete everything</Button>
         </Card>
       </div>
-      <p className="mt-6 text-sm text-muted-foreground">Your records are private to this browser's session. Use backups to move them to another device.</p>
+      <p className="mt-6 text-sm text-muted-foreground">Sign in with the same account on each device. Existing browser records stay with an email account upgrade.</p>
     </>
   );
 }

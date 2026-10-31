@@ -1,19 +1,23 @@
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useRef } from "react";
+import { toast } from "sonner";
+import { queueEntry, pendingEntries, removePending, putSnapshot, getSnapshot } from "./offline";
 import { saveExpense } from "./fx.functions";
 import {
   validateBudget, validateExpense,
   type Budgets, type Category, type Expense, type ExpenseInput, type Member, type PaymentMethod, type Receipt, type Scope,
-  type Split,
+  type Split, type ReceiptDetails,
 } from "./expenses";
 import type { Account, AccountKind, TxnType } from "./ledger";
-import { defaultPreferences, type FinancePreferences } from "./preferences";
+import { defaultPreferences, validateActiveCategory, type FinancePreferences } from "./preferences";
 import { nextAfter, type Commitment, type CommitmentKind, type CommitmentStatus, type Frequency } from "./planning";
 
 export interface Loan { id: string; name: string; principal: number; rate: number; emi: number; nextDue: string }
 export interface Goal { id: string; name: string; target: number; saved: number; monthly: number; reserve: boolean }
 
 interface Ctx {
+  pendingCount: number;
   preferences: FinancePreferences;
   savePreferences: (p: FinancePreferences) => Promise<void>;
   moveCategory: (source: string, target: string) => Promise<void>;
@@ -43,7 +47,7 @@ interface Ctx {
   budgets: Budgets;
   loading: boolean;
   refresh: () => Promise<void>;
-  save: (s: ExpenseInput, opts?: { id?: string; files?: File[] }) => Promise<void>;
+  save: (s: ExpenseInput, opts?: { id?: string; files?: File[]; createId?: string }) => Promise<void>;
   remove: (e: Expense) => Promise<void>;
   setScope: (id: string, scope: Scope) => Promise<void>;
   reconcile: (id: string, ref: string | null) => Promise<void>;
@@ -65,9 +69,16 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
   const [goals, setGoals] = useState<Goal[]>([]);
   const [budgets, setBudgets] = useState<Budgets>({});
   const [loading, setLoading] = useState(true);
+  const [pendingCount, setPendingCount] = useState(0);
+  const syncing = useRef(false);
   const [preferences, setPreferences] = useState<FinancePreferences>(defaultPreferences);
 
   const refresh = useCallback(async () => {
+    if (!navigator.onLine) {
+      const cached = await getSnapshot<{name:string;members:Member[];expenses:Expense[];accounts:Account[];commitments:Commitment[];loans:Loan[];goals:Goal[];budgets:Budgets;preferences:FinancePreferences}>(userId);
+      if(cached){setName(cached.name);setMembers(cached.members);setExpenses(cached.expenses);setAccounts(cached.accounts);setCommitments(cached.commitments);setLoans(cached.loans);setGoals(cached.goals);setBudgets(cached.budgets);setPreferences(cached.preferences);}
+      setLoading(false); return;
+    }
     const [p, m, e, b, a, c, l, g, pref] = await Promise.all([
       supabase.from("profiles").select("full_name").eq("id", userId).maybeSingle(),
       supabase.from("family_members").select("id, name, relation").order("created_at"),
@@ -95,7 +106,7 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
         paymentMethod: x.payment_method as PaymentMethod, reconciledAt: x.reconciled_at, statementRef: x.statement_ref,
         date: x.expense_date, description: x.description, receipts: (x.receipts as unknown as Receipt[]) ?? [],
         txnType: x.txn_type as TxnType, accountId: x.account_id, toAccountId: x.to_account_id, tags: x.tags ?? [],
-        receiptDetails: x.receipt_details as unknown as Expense["receiptDetails"],
+        receiptDetails: x.receipt_details as unknown as ReceiptDetails,
       })),
     );
     const bud: Budgets = {};
@@ -105,11 +116,19 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
   }, [userId]);
 
   useEffect(() => { void refresh(); }, [refresh]);
+  useEffect(()=>{if(!loading&&navigator.onLine)void putSnapshot(userId,{name,members,expenses,accounts,commitments,loans,goals,budgets,preferences}).catch(()=>{});},[loading,userId,name,members,expenses,accounts,commitments,loans,goals,budgets,preferences]);
 
   const memberName = (id: string | null) => (id ? members.find((m) => m.id === id)?.name ?? "Family" : "Me");
 
   const save: Ctx["save"] = async (s, opts) => {
     validateExpense(s);
+    validateActiveCategory(preferences.categories,s.category,!!opts?.id);
+    if (!navigator.onLine) {
+      if(opts?.id)throw Error("Reconnect to edit an existing transaction");
+      await queueEntry({id:opts?.createId ?? crypto.randomUUID(),owner:userId,input:s,files:opts?.files??[],createdAt:new Date().toISOString()});
+      setPendingCount((await pendingEntries(userId)).length);
+      toast.message("Saved offline — waiting to sync");return;
+    }
     let receipts: Receipt[] | undefined;
     if (opts?.files?.length) {
       receipts = [];
@@ -121,7 +140,7 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
       }
     }
     const res = await saveExpense({ data: {
-      id: opts?.id ?? null, title: s.title.trim(), merchant: s.merchant, category: s.category, scope: s.scope, memberId: s.memberId, splits: s.splits ?? [],
+      id: opts?.id ?? null, ...(opts?.createId ? {createId:opts.createId}:{}), title: s.title.trim(), merchant: s.merchant, category: s.category, scope: s.scope, memberId: s.memberId, splits: s.splits ?? [],
       currency: s.currency, originalAmount: s.amount, date: s.date, description: s.description, paymentMethod: s.paymentMethod,
       txnType: s.txnType ?? "expense", accountId: s.accountId ?? null, toAccountId: s.toAccountId ?? null, tags: s.tags ?? [],
       receiptDetails: s.receiptDetails,
@@ -131,6 +150,11 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
     await refresh();
   };
 
+  useEffect(()=>{
+    let active=true;
+    const sync=async()=>{const entries=await pendingEntries(userId);if(active)setPendingCount(entries.length);if(!navigator.onLine||syncing.current)return;syncing.current=true;try{for(const entry of entries){if(!navigator.onLine)break;await save(entry.input,{createId:entry.id,files:entry.files});if(!navigator.onLine)break;await removePending(entry.id);}if(active)setPendingCount((await pendingEntries(userId)).length);}catch{toast.error("Offline entry is still waiting — reconnect to retry");}finally{syncing.current=false;}};
+    void sync();window.addEventListener("online",sync);return()=>{active=false;window.removeEventListener("online",sync);};
+  },[userId]);
   const check = (error: { message: string } | null) => { if (error) throw new Error(error.message); };
   const savePreferences: Ctx["savePreferences"] = async (p) => {
     check((await supabase.from("finance_preferences").upsert({ owner_id: userId, data: p as unknown as import("@/integrations/supabase/types").Json, updated_at: new Date().toISOString() })).error);
@@ -228,7 +252,7 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
   }, []);
 
   return (
-    <StoreCtx.Provider value={{ preferences, savePreferences, moveCategory, userId, name, members, memberName, expenses: expenses.filter((x) => (x.txnType ?? "expense") === "expense"), transactions: expenses, accounts, addAccount, setArchived, commitments, loans, goals, saveCommitment, removeCommitment, confirmCommitment, saveLoan, removeLoan, saveGoal, removeGoal, updateAccount, budgets, loading, refresh, save, remove, setScope, reconcile, addMember, removeMember, setBudget, signedUrl }}>
+    <StoreCtx.Provider value={{ pendingCount, preferences, savePreferences, moveCategory, userId, name, members, memberName, expenses: expenses.filter((x) => (x.txnType ?? "expense") === "expense"), transactions: expenses, accounts, addAccount, setArchived, commitments, loans, goals, saveCommitment, removeCommitment, confirmCommitment, saveLoan, removeLoan, saveGoal, removeGoal, updateAccount, budgets, loading, refresh, save, remove, setScope, reconcile, addMember, removeMember, setBudget, signedUrl }}>
       {children}
     </StoreCtx.Provider>
   );

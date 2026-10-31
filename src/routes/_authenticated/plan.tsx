@@ -198,7 +198,7 @@ function PayButton({ c, onPay }: { c: Commitment; onPay: (c: Commitment, amount:
 }
 
 function CommitmentForm() {
-  const { saveCommitment, accounts } = useStore();
+  const { saveCommitment, accounts, preferences } = useStore();
   const [name, setName] = useState("");
   const [kind, setKind] = useState<CommitmentKind>("bill");
   const [amount, setAmount] = useState("");
@@ -260,7 +260,7 @@ function CommitmentForm() {
           <Label>Category</Label>
           <Select value={category} onValueChange={setCategory}>
             <SelectTrigger aria-label="Category"><SelectValue /></SelectTrigger>
-            <SelectContent>{CATEGORIES.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
+            <SelectContent>{[...new Set([category,...preferences.categories.filter(c=>!c.archived).map(c=>c.name)])].map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
           </Select>
         </div>
       )}
