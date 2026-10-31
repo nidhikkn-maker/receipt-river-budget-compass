@@ -8,6 +8,7 @@ import { useStore } from "@/lib/store";
 import { accountValue, reconciledBalance, VALUED_KINDS, type Account } from "@/lib/ledger";
 import { money } from "@/lib/expenses";
 import { todayISO } from "@/lib/use-position";
+import { MutualFundTools } from "./MutualFundTools";
 export function AccountTools({ a }: { a: Account }) {
  const { transactions, valuations, addValuation, removeValuation, adjustBalance, updateAccount } = useStore();
  const [value,setValue]=useState(""); const [date,setDate]=useState(todayISO()); const [source,setSource]=useState("manual"); const [busy,setBusy]=useState(false);
@@ -20,5 +21,6 @@ export function AccountTools({ a }: { a: Account }) {
  {valued&&<><div className="grid gap-2 sm:grid-cols-3"><div><Label htmlFor={`value-${a.id}`}>Market value (₹)</Label><Input id={`value-${a.id}`} type="number" min="0" step="0.01" value={value} onChange={e=>setValue(e.target.value)}/></div><div><Label htmlFor={`value-date-${a.id}`}>Valuation date</Label><Input id={`value-date-${a.id}`} type="date" max={todayISO()} value={date} onChange={e=>setDate(e.target.value)}/></div><div><Label>Source</Label><Select value={source} onValueChange={setSource}><SelectTrigger aria-label={`Valuation source for ${a.name}`}><SelectValue/></SelectTrigger><SelectContent>{["manual","statement","broker"].map(s=><SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent></Select></div></div>
  <Button size="sm" disabled={busy||!value} onClick={()=>void run(async()=>{await addValuation({accountId:a.id,value:Number(value),valuedOn:date,source});setValue("");})}>Save valuation</Button>
  <ul className="divide-y">{valuations.filter(x=>x.accountId===a.id).map(x=><li key={x.id} className="flex items-center justify-between gap-2 py-2 text-xs"><span>{x.valuedOn} · {money(x.value)} · {x.source}</span><Button size="sm" variant="ghost" disabled={busy} onClick={()=>{if(x.id&&window.confirm("Delete this valuation?"))void run(()=>removeValuation(x.id as string));}}>Remove</Button></li>)}</ul></>}
+ {a.kind==="investment"&&<MutualFundTools account={a}/>}
  </div></details>;
 }

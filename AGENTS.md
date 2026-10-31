@@ -29,3 +29,5 @@
 - Receipt and voice categories resolve against the active owner catalog server-side; scanned statement extraction also enforces saved document privacy and requires explicit review.
 - Shortcut search parameters create validated drafts only; they never save entries or call AI automatically.
 - Statement transfer matching requires a selected account and its debit/credit side; competing near-equal matches remain manual to prevent arbitrary reconciliation.
+- Excel statements use a dynamically loaded BIFF-capable SheetJS reader and real workbook fixtures so legacy XLS and XLSX share review rules.
+- Mutual fund NAVs are authenticated server-fetched daily quotes; reviewed units create dated valuation snapshots, never income or expense entries, so net worth reuses the ledger engine.
