@@ -1,5 +1,3 @@
-// Passkey verification (SimpleWebAuthn -> @peculiar/x509 -> tsyringe) needs this polyfill on the edge runtime.
-import "./lib/reflect-polyfill"; // also applied via tsyringe alias in vite.config.ts
 import "./lib/error-capture";
 
 import { consumeLastCapturedError } from "./lib/error-capture";
