@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { PageTitle } from "@/components/AppShell";
+import { ConnectionsMap } from "@/components/ConnectionsMap";
 import { Card } from "@/components/Money";
 import { Button } from "@/components/ui/button";
 import { useStore } from "@/lib/store";
@@ -36,6 +37,7 @@ function Connections() {
   return (
     <div>
       <PageTitle eyebrow="Explore" title="Connections" sub="Pick anything to see what it's linked to. Built from your records; nothing is changed here." />
+      {g.nodes.length > 0 && <ConnectionsMap nodes={g.nodes} edges={g.edges} selected={sel} onSelect={setSel} />}
       {current && <Card title={current.label}>
         {neighbours(g, current.id).length === 0 ? <p className="text-sm text-muted-foreground">Not linked to anything yet.</p> :
           <ul className="space-y-1 text-sm">{neighbours(g, current.id).map((x, i) => <li key={i}><span className="text-muted-foreground">{x.outgoing ? x.label : `← ${x.label}`}</span> <button className="font-semibold text-primary underline-offset-2 hover:underline" onClick={() => setSel(x.node.id)}>{x.node.label}</button> <span className="text-xs text-muted-foreground">({KIND_LABEL[x.node.kind]})</span></li>)}</ul>}

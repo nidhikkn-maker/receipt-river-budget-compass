@@ -534,6 +534,47 @@ export type Database = {
           },
         ]
       }
+      family_invites: {
+        Row: {
+          accepted_at: string | null
+          accepted_by: string | null
+          created_at: string
+          email: string
+          id: string
+          member_id: string
+          owner_id: string
+          revoked: boolean
+        }
+        Insert: {
+          accepted_at?: string | null
+          accepted_by?: string | null
+          created_at?: string
+          email: string
+          id?: string
+          member_id: string
+          owner_id: string
+          revoked?: boolean
+        }
+        Update: {
+          accepted_at?: string | null
+          accepted_by?: string | null
+          created_at?: string
+          email?: string
+          id?: string
+          member_id?: string
+          owner_id?: string
+          revoked?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "family_invites_member_id_fkey"
+            columns: ["member_id"]
+            isOneToOne: false
+            referencedRelation: "family_members"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       family_members: {
         Row: {
           created_at: string
@@ -557,6 +598,68 @@ export type Database = {
           relation?: string
         }
         Relationships: []
+      }
+      family_requests: {
+        Row: {
+          amount: number
+          category: string
+          created_at: string
+          decided_at: string | null
+          decision_note: string
+          evidence_name: string | null
+          evidence_path: string | null
+          id: string
+          invite_id: string
+          needed_by: string | null
+          note: string
+          owner_id: string
+          requester_id: string
+          status: string
+          title: string
+        }
+        Insert: {
+          amount: number
+          category?: string
+          created_at?: string
+          decided_at?: string | null
+          decision_note?: string
+          evidence_name?: string | null
+          evidence_path?: string | null
+          id?: string
+          invite_id: string
+          needed_by?: string | null
+          note?: string
+          owner_id: string
+          requester_id: string
+          status?: string
+          title: string
+        }
+        Update: {
+          amount?: number
+          category?: string
+          created_at?: string
+          decided_at?: string | null
+          decision_note?: string
+          evidence_name?: string | null
+          evidence_path?: string | null
+          id?: string
+          invite_id?: string
+          needed_by?: string | null
+          note?: string
+          owner_id?: string
+          requester_id?: string
+          status?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "family_requests_invite_id_fkey"
+            columns: ["invite_id"]
+            isOneToOne: false
+            referencedRelation: "family_invites"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       finance_operations: {
         Row: {
@@ -926,11 +1029,17 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      accept_family_invite: { Args: { _invite: string }; Returns: undefined }
       bulk_category_change: {
         Args: { batch_id: string; items: Json; target: string }
         Returns: string
       }
+      decide_family_request: {
+        Args: { _id: string; _note: string; _status: string }
+        Returns: undefined
+      }
       delete_my_finance_data: { Args: never; Returns: undefined }
+      family_invite_owner: { Args: { _invite: string }; Returns: string }
       finance_operation: {
         Args: { action: string; payload: Json }
         Returns: Json
@@ -947,6 +1056,16 @@ export type Database = {
         Returns: undefined
       }
       my_department: { Args: never; Returns: string }
+      my_family_invites: {
+        Args: never
+        Returns: {
+          accepted: boolean
+          id: string
+          inviter_email: string
+          member_name: string
+          revoked: boolean
+        }[]
+      }
       receive_claim_receipt: {
         Args: {
           expense_id: string
