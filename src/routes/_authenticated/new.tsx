@@ -2,7 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { ScopeToggle } from "@/components/ScopeBadge";
 import { toast } from "sonner";
-import { ScanLine, Sparkles, X, Camera, Image as ImageIcon, FolderOpen, Inbox } from "lucide-react";
+import { ScanLine, Sparkles, X, Camera, Image as ImageIcon, FolderOpen, Inbox, RotateCcw, PencilLine } from "lucide-react";
 import { PageTitle } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -103,6 +103,8 @@ function NewExpense() {
   const [batch, setBatch] = useState<{ done: number; total: number } | null>(null);
   const [duplicateApproval, setDuplicateApproval] = useState("");
   const [reading, setReading] = useState(false);
+  const [readingError, setReadingError] = useState("");
+  const [readTarget, setReadTarget] = useState<LocalReceipt | null>(null);
   const [scan, setScan] = useState<Scan | null>(null);
   const [confirmed, setConfirmed] = useState(true);
   const [autoFilled, setAutoFilled] = useState<Set<string>>(new Set());
@@ -194,12 +196,16 @@ function NewExpense() {
   }, [currency, date]);
 
   const runExtraction = async (first: LocalReceipt, fresh: boolean) => {
+    setReadTarget(first);
+    setReadingError("");
+    setScan(null);
+    setConfirmed(false);
     setReading(true);
     try {
       const prepared = await prepareForReading(first.dataUrl, first.type);
-      if (prepared.dataUrl.length > 4_000_000) { toast.error("This file is too large to read — try a photo or a smaller PDF."); return; }
+      if (prepared.dataUrl.length > 4_000_000) throw new Error("This file is too large to read. Try a smaller photo or PDF, or enter the details yourself.");
       const res = await extract({ data: prepared });
-      if (!res.ok) { toast.error(res.error); return; }
+      if (!res.ok) throw new Error(res.error);
       const x = res.result;
       setReceiptDetails({ tax: x.tax, items: x.items, text: x.text });
       const filled = new Set<string>();
@@ -213,18 +219,20 @@ function NewExpense() {
       setAutoFilled(filled);
       setConfirmed(false);
       toast.success("Bill read — check the key details");
-    } catch {
-      toast.error("Receipt reading failed");
+    } catch (error) {
+      setReadingError(error instanceof Error ? error.message : "We couldn't read this receipt. Check your connection and try again.");
     } finally {
       setReading(false);
     }
   };
 
   const onFiles = async (files: FileList | null) => {
-    if (!files?.length) return;
+    if (!files?.length || reading || saving) return;
     const big = Array.from(files).find((f) => f.size > 5 * 1024 * 1024);
     if (big) { toast.error(`${big.name} is larger than 5 MB`); return; }
-    const read = await Promise.all(Array.from(files).map(readFile));
+    let read: LocalReceipt[];
+    try { read = await Promise.all(Array.from(files).map(readFile)); }
+    catch { toast.error("Couldn't open that file. Choose it again or enter the details yourself."); return; }
     const first = read[0];
     if (!first) return;
     if (read.length > 1 && !editing) {
@@ -262,7 +270,7 @@ function NewExpense() {
     setQueue(rest); setBatch(b => next && b ? { done: b.done + 1, total: b.total } : null);
     setFromInbox([]); setDuplicateApproval(""); setReceipts(next ? [next] : []);
     setTitle(""); setMerchant(""); setAmount(""); setDescription(""); setTags("");
-    setReceiptDetails({}); setScan(null); setConfirmed(true); setAutoFilled(new Set()); setSplitOn(false); setShares({});
+    setReceiptDetails({}); setScan(null); setConfirmed(true); setReadingError(""); setReadTarget(null); setAutoFilled(new Set()); setSplitOn(false); setShares({});
     if (next) await runExtraction(next, true);
   };
 
@@ -326,9 +334,9 @@ function NewExpense() {
             <p className="text-xs text-muted-foreground">Photo or PDF · we fill in the rest · pick several to review one by one</p>
             {batch && <p className="mt-2 inline-block rounded-full bg-gold px-3 py-1 text-xs font-bold text-gold-foreground">Bill {batch.done + 1} of {batch.total}{queue.length ? ` · ${queue.length} waiting` : ""}</p>}
             <div className="mt-4 grid grid-cols-3 gap-2">
-              <Button type="button" variant="secondary" className="h-auto flex-col gap-1 py-3" onClick={() => cameraRef.current?.click()}><Camera className="h-5 w-5" /><span className="text-xs">Camera</span></Button>
-              <Button type="button" variant="secondary" className="h-auto flex-col gap-1 py-3" onClick={() => galleryRef.current?.click()}><ImageIcon className="h-5 w-5" /><span className="text-xs">Gallery</span></Button>
-              <Button type="button" variant="secondary" className="h-auto flex-col gap-1 py-3" onClick={() => fileRef.current?.click()}><FolderOpen className="h-5 w-5" /><span className="text-xs">Files</span></Button>
+              <Button type="button" disabled={reading || saving} variant="secondary" className="h-auto flex-col gap-1 py-3" onClick={() => cameraRef.current?.click()}><Camera className="h-5 w-5" /><span className="text-xs">Camera</span></Button>
+              <Button type="button" disabled={reading || saving} variant="secondary" className="h-auto flex-col gap-1 py-3" onClick={() => galleryRef.current?.click()}><ImageIcon className="h-5 w-5" /><span className="text-xs">Gallery</span></Button>
+              <Button type="button" disabled={reading || saving} variant="secondary" className="h-auto flex-col gap-1 py-3" onClick={() => fileRef.current?.click()}><FolderOpen className="h-5 w-5" /><span className="text-xs">Files</span></Button>
             </div>
           </div>
           <input ref={cameraRef} type="file" accept="image/*" capture="environment" className="sr-only" aria-label="Take a photo of a receipt" onChange={(e) => { void onFiles(e.target.files); e.target.value = ""; }} />
@@ -356,7 +364,18 @@ function NewExpense() {
               ))}
             </ul>
           )}
-          {receipts.length > 0 && !editing && fromInbox.length === 0 && <Button type="button" variant="outline" size="sm" onClick={() => void saveForLater()}><Inbox className="mr-1 h-4 w-4" />Save receipts to add later</Button>}
+          {receipts.length > 0 && !editing && fromInbox.length === 0 && <Button type="button" disabled={reading || saving} variant="outline" size="sm" onClick={() => void saveForLater()}><Inbox className="mr-1 h-4 w-4" />Save receipts to add later</Button>}
+
+          {readingError && !reading && <section role="alert" className="space-y-3 rounded-lg border border-destructive/40 bg-card p-4">
+            <h2 className="font-display font-bold">Receipt reading failed</h2>
+            <p className="break-words text-sm text-muted-foreground">{readingError}</p>
+            <p className="text-sm">Your receipt is still attached. No expense has been submitted.</p>
+            <div className="flex flex-wrap gap-2">
+              <Button type="button" variant="outline" disabled={!readTarget} onClick={() => { if (readTarget) void runExtraction(readTarget, false); }}><RotateCcw className="h-4 w-4" />Retry reading</Button>
+              <Button type="button" onClick={() => { setReadingError(""); setScan(null); setConfirmed(true); requestAnimationFrame(() => document.getElementById("t")?.focus()); }}><PencilLine className="h-4 w-4" />Enter details manually</Button>
+            </div>
+          </section>}
+          {scan && confirmed && !reading && <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border bg-card p-4"><p role="status" className="text-sm font-semibold">Receipt details confirmed</p><Button type="button" variant="outline" size="sm" onClick={() => { setScan({ merchant, date, amount, currency }); setConfirmed(false); }}><PencilLine className="h-4 w-4" />Review details again</Button></div>}
 
           {duplicates.length > 0 && !reading && <section aria-label="Possible duplicate bills" className="space-y-3 rounded-lg border border-gold bg-gold-soft p-4">
             <h2 className="font-display font-bold">This bill may already exist</h2>
@@ -386,7 +405,7 @@ function NewExpense() {
               <div className="grid gap-1"><Label htmlFor="receipt-tax">Tax included</Label><Input id="receipt-tax" type="number" min="0" step="0.01" value={receiptDetails.tax ?? ""} onChange={e=>setReceiptDetails({...receiptDetails,tax:e.target.value===""?null:Number(e.target.value)})}/></div>
               {(receiptDetails.items??[]).map((item,i)=><div key={i} className="grid grid-cols-[1fr_64px_80px] gap-2"><Input aria-label={`Item ${i+1} name`} value={item.name} onChange={e=>setReceiptDetails({...receiptDetails,items:(receiptDetails.items ?? []).map((x,j)=>j===i?{...x,name:e.target.value}:x)})}/><Input aria-label={`Item ${i+1} quantity`} type="number" value={item.quantity} onChange={e=>setReceiptDetails({...receiptDetails,items:(receiptDetails.items ?? []).map((x,j)=>j===i?{...x,quantity:Number(e.target.value)}:x)})}/><Input aria-label={`Item ${i+1} amount`} type="number" step="0.01" value={item.amount} onChange={e=>setReceiptDetails({...receiptDetails,items:(receiptDetails.items ?? []).map((x,j)=>j===i?{...x,amount:Number(e.target.value)}:x)})}/></div>)}
               <div className="flex justify-end gap-2">
-                <Button type="button" variant="ghost" size="sm" onClick={() => { setScan(null); setConfirmed(true); }}>Discard</Button>
+                <Button type="button" variant="ghost" size="sm" onClick={() => { setScan(null); setConfirmed(true); }}>Enter manually</Button>
                 <Button type="button" size="sm" onClick={confirmScan}>Confirm details</Button>
               </div>
             </div>
@@ -394,7 +413,7 @@ function NewExpense() {
         </div>
 
         {/* Details column */}
-        <div className={cn("grid content-start gap-4 rounded-3xl border bg-card p-5 sm:p-6", !confirmed && "pointer-events-none opacity-50")}>
+        <fieldset disabled={!confirmed || reading || saving} className={cn("grid min-w-0 content-start gap-4 rounded-3xl border bg-card p-5 sm:p-6", !confirmed && "opacity-50")}>
           <div className="grid gap-2">
             <Label>Type</Label>
             <div className="flex flex-wrap gap-2" role="radiogroup" aria-label="Transaction type">
@@ -536,7 +555,7 @@ function NewExpense() {
           <Button type="submit" size="lg" variant="gold" className="rounded-2xl" disabled={reading || saving || !confirmed || duplicateBlocked}>
             {saving ? "Saving…" : editing ? "Save changes" : "Save expense"}
           </Button>
-        </div>
+        </fieldset>
       </form>
     </>
   );
