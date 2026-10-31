@@ -1,0 +1,2 @@
+ALTER TABLE public.expenses ADD COLUMN IF NOT EXISTS payment_instrument_id text;
+ALTER TABLE public.expenses ADD CONSTRAINT expenses_payment_instrument_id_len CHECK (payment_instrument_id IS NULL OR char_length(payment_instrument_id) <= 64);
