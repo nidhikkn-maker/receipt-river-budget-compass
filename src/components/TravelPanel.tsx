@@ -128,7 +128,7 @@ export function TravelPanel({ trip }: { trip: TravelTrip }) {
             <Row label="Returned" value={money(recon.returns)} />
             <Row label={recon.outstanding > 0 ? "Outstanding — to return" : recon.outstanding < 0 ? "Outstanding — owed to you" : "Fully reconciled"} value={money(Math.abs(recon.outstanding))} />
           </div>
-          {recon.outstanding > 0 && !closed && <Button asChild variant="outline" size="sm" className="mt-2"><Link to="/new" search={{ type: "advance_settlement", amount: String(recon.outstanding) } as never}>Record return of {money(recon.outstanding)}</Link></Button>}
+          {recon.outstanding > 0 && !closed && <Button asChild variant="outline" size="sm" className="mt-2"><Link to="/new" search={{ kind: "advance_settlement", amount: recon.outstanding, trip: trip.id }}>Record return of {money(recon.outstanding)}</Link></Button>}
         </>}
       </Card>
 
