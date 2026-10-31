@@ -37,11 +37,13 @@ function Vault() {
     setFile(f); setText(""); if (!f) return;
     const base = { ...form, title: f.name.replace(/\.[^.]+$/, "") }; setForm(base);
     if (!(f.type.startsWith("image/") || f.type === "application/pdf")) return;
-    if (f.size > 3_000_000) { toast.message("File is large — fill the details manually"); return; }
+    if (f.type === "application/pdf" && f.size > 3_000_000) { toast.message("File is large — fill the details manually"); return; }
     setScanning(true);
     try {
-      const dataUrl = await new Promise<string>((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result as string); r.onerror = rej; r.readAsDataURL(f); });
-      const out = await scanFn({ data: { dataUrl, mimeType: f.type } });
+      const raw = await new Promise<string>((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result as string); r.onerror = rej; r.readAsDataURL(f); });
+      const prepared = await (await import("@/lib/image-prep")).prepareForReading(raw, f.type);
+      if (prepared.dataUrl.length > 4_000_000) { toast.message("File is large — fill the details manually"); return; }
+      const out = await scanFn({ data: prepared });
       if (!out.ok) { toast.error(out.error); return; }
       const x = out.result; setText(x.text);
       setForm({ ...base, title: x.title || base.title, docType: x.docType, merchant: x.merchant ?? "", date: isDate(x.date) ? x.date! : base.date, expiry: isDate(x.expiresOn) ? x.expiresOn! : "", amount: x.amount != null ? String(x.amount) : "", notes: x.notes ?? "" });
