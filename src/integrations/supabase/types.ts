@@ -154,6 +154,33 @@ export type Database = {
         }
         Relationships: []
       }
+      device_passkeys: {
+        Row: {
+          counter: number
+          created_at: string
+          credential_id: string
+          owner_id: string
+          public_key: string
+          transports: Json
+        }
+        Insert: {
+          counter?: number
+          created_at?: string
+          credential_id: string
+          owner_id: string
+          public_key: string
+          transports?: Json
+        }
+        Update: {
+          counter?: number
+          created_at?: string
+          credential_id?: string
+          owner_id?: string
+          public_key?: string
+          transports?: Json
+        }
+        Relationships: []
+      }
       expense_history: {
         Row: {
           action: string
@@ -412,6 +439,30 @@ export type Database = {
           next_due?: string
           owner_id?: string
           principal_outstanding?: number
+        }
+        Relationships: []
+      }
+      passkey_challenges: {
+        Row: {
+          challenge: string
+          expires_at: string
+          kind: string
+          origin: string
+          owner_id: string
+        }
+        Insert: {
+          challenge: string
+          expires_at: string
+          kind: string
+          origin: string
+          owner_id: string
+        }
+        Update: {
+          challenge?: string
+          expires_at?: string
+          kind?: string
+          origin?: string
+          owner_id?: string
         }
         Relationships: []
       }

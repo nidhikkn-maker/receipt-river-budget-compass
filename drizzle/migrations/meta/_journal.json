@@ -57,6 +57,13 @@
       "when": 1793413633624,
       "tag": "0007_preferences_and_receipt_details",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1793413839788,
+      "tag": "0008_passkey_device_lock",
+      "breakpoints": true
     }
   ]
 }
