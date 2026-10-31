@@ -137,7 +137,7 @@ describe("V4 acceptance (Part G)", () => {
   });
 
   it("14. keeps every record reachable only by its owner", () => {
-    const sql = readdirSync("drizzle/migrations").map((f) => readFileSync(`drizzle/migrations/${f}`, "utf8")).join("\n");
+    const sql = readdirSync("drizzle/migrations", { recursive: true }).filter((f) => typeof f === "string" && f.endsWith(".sql")).map((f) => readFileSync(`drizzle/migrations/${f}`, "utf8")).join("\n");
     const expensePolicies = [...sql.matchAll(/CREATE POLICY\s+"[^"]*"\s+ON public\.expenses\b[^;]*;/g)].map((m) => m[0]);
     const prefPolicies = [...sql.matchAll(/CREATE POLICY\s+"[^"]*"\s+ON public\.finance_preferences\b[^;]*;/g)].map((m) => m[0]);
     expect(expensePolicies.length).toBeGreaterThan(0);
