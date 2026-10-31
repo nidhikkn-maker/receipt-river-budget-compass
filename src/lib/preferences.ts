@@ -15,10 +15,10 @@ export interface GroupedTag { group: string; name: string }
 export interface ScopedBudget { id: string; name: string; amount: number; period: "monthly" | "annual"; kind: "overall" | "category" | "person" | "project" | "travel"; value: string; start: string; carry: boolean }
 export type Language = "en" | "hi" | "ta" | "te" | "kn" | "ml" | "mr" | "bn" | "gu";
 export const LANGUAGES: Record<Language, string> = { en: "English", hi: "हिन्दी (Hindi)", ta: "தமிழ் (Tamil)", te: "తెలుగు (Telugu)", kn: "ಕನ್ನಡ (Kannada)", ml: "മലയാളം (Malayalam)", mr: "मराठी (Marathi)", bn: "বাংলা (Bengali)", gu: "ગુજરાતી (Gujarati)" };
-export const HOME_SECTIONS = ["quick", "alerts", "briefing", "safe", "accounts", "budget", "summary", "family", "recent"] as const;
+export const HOME_SECTIONS = ["overview", "readiness", "metrics", "insights", "upcoming", "briefing", "travel", "recent"] as const;
 export const HOME_SECTION_LABEL: Record<(typeof HOME_SECTIONS)[number], string> = {
-  quick: "Quick actions", alerts: "Alerts", briefing: "AI briefing", safe: "Safe to spend", accounts: "Cash, income & cards",
-  budget: "Budget use", summary: "Business vs personal", family: "Family spending", recent: "Recent activity",
+  overview: "Financial overview", readiness: "Financial readiness", metrics: "Key figures", insights: "Spending insights",
+  upcoming: "Upcoming commitments", briefing: "AI briefing", travel: "Travel", recent: "Recent activity",
 };
 
 export interface FinancePreferences {
