@@ -52,7 +52,7 @@ export function AppearanceSettings() {
           const styles = THEME_STYLES.filter((t) => t.family === family);
           return (
             <div key={family}>
-              <div className="mb-2 font-mono text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">{family}</div>
+              <div className="mb-2 font-mono text-[11px] font-semibold text-muted-foreground">{family}</div>
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
                 {styles.map((t) => (
                   <button key={t.name} type="button" onClick={() => pick(t.name)} aria-pressed={p.themeName === t.name}

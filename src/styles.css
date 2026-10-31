@@ -69,9 +69,10 @@
   --color-primary-glow: var(--primary-glow);
   --color-warning: var(--warning);
   --color-info: var(--info);
-  --font-sans: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
-  --font-mono: "IBM Plex Mono", ui-monospace, monospace;
-  --font-display: "Space Grotesk", ui-sans-serif, sans-serif;
+  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, "Noto Sans Tamil", sans-serif;
+  --font-mono: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, "Noto Sans Tamil", sans-serif;
+  --font-display: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, "Noto Sans Tamil", sans-serif;
+  --font-brand: "Space Grotesk", ui-sans-serif, sans-serif;
 }
 
 :root {
@@ -764,33 +765,33 @@ html[data-theme="apple-glass"] :where(.bg-card, .bg-popover, .bg-ink) {
   body {
     background-color: var(--color-background);
     color: var(--color-foreground);
-    /* Baseline is medium weight: nothing in the app renders thin/regular. */
-    font-weight: 500;
+    /* V4.10 typography: system font, regular body, semibold hierarchy. */
+    font-weight: 400;
+    font-size: 15px;
+    line-height: 1.45;
     -webkit-font-smoothing: antialiased;
     text-rendering: optimizeLegibility;
   }
 
   h1, h2, h3, h4, h5, h6 {
-    font-weight: 700;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+
+  input, textarea, select { font-size: 16px; }
+
+  .font-display {
+    font-weight: 600;
     letter-spacing: -0.015em;
   }
 
-  /* Display headings and money figures carry weight by default. */
-  .font-display {
-    font-weight: 700;
-  }
-
-  .font-mono {
+  /* Money figures: tabular numerals, semibold, never broken across lines. */
+  .font-mono, .financial-amount {
     font-weight: 600;
     font-variant-numeric: tabular-nums;
+    letter-spacing: -0.01em;
+    white-space: nowrap;
   }
-}
-
-/* Weight scale lifted one notch: medium -> medium-bold, semibold -> strong bold. */
-@layer utilities {
-  .font-medium { font-weight: 600; }
-  .font-semibold { font-weight: 700; }
-  .font-bold { font-weight: 800; }
 }
 
 @utility bg-hero {

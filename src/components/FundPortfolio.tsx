@@ -38,7 +38,7 @@ export function FundPortfolio() {
 
   return <section aria-labelledby="fund-portfolio-title" className="mb-8 border-y py-6">
     <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-      <div><div className="mb-1 flex items-center gap-2 text-primary"><TrendingUp className="h-4 w-4" /><span className="text-xs font-semibold uppercase">Investments</span></div><h2 id="fund-portfolio-title" className="font-display text-2xl font-bold">Mutual fund portfolio</h2></div>
+      <div><div className="mb-1 flex items-center gap-2 text-primary"><TrendingUp className="h-4 w-4" /><span className="text-xs font-semibold">Investments</span></div><h2 id="fund-portfolio-title" className="font-display text-2xl font-bold">Mutual fund portfolio</h2></div>
       {portfolio.latestDate && <p className="text-xs text-muted-foreground">Latest saved NAV · {portfolio.latestDate}</p>}
     </div>
     {!available.length ? <p className="py-6 text-sm text-muted-foreground">No saved mutual fund NAV valuations yet.</p> : <>
