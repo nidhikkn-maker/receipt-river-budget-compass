@@ -103,6 +103,7 @@ function Plan() {
       </div>
 
       <PlanCalendar />
+      <section className="mb-6 grid gap-5 sm:grid-cols-2"><div><h2 className="font-display text-lg font-bold">Income this month</h2><p className="mt-2 text-sm">Received {money(p.income.received)} · expected remaining {money(p.income.expectedRemaining)} · confirmed {money(p.income.expectedConfirmed)}</p><ul className="mt-2 divide-y text-sm">{Object.entries(p.income.bySource).map(([name,amount])=><li key={name} className="flex justify-between py-2"><span>{name}</span><span>{money(amount)}</span></li>)}</ul>{p.income.late.map((x,i)=><p key={i} className="text-sm text-destructive">Late income: {x.name} · {money(x.amount)}</p>)}</div><div><h2 className="font-display text-lg font-bold">Subscriptions</h2><p className="mt-2 text-sm">{p.subscriptions.active} active · {money(p.subscriptions.monthly)}/month · {money(p.subscriptions.annual)}/year</p>{p.subscriptions.summary.increases.map((x,i)=><p key={i} className="mt-2 text-sm">Price increase: {x.name}</p>)}{p.subscriptions.summary.duplicates.map((x,i)=><p key={i} className="mt-2 text-sm text-warning">Review duplicates: {x.names.join(" / ")}</p>)}</div></section>
       <section className="mb-8">
         <h2 className="mb-2 font-display text-lg font-bold">Calendar</h2>
         {!p.upcoming.length && <p className="rounded-2xl border border-dashed p-6 text-center text-sm text-muted-foreground">Nothing scheduled. Add salary, rent, EMIs, insurance or subscriptions below.</p>}

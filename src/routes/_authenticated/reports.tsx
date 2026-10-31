@@ -47,7 +47,7 @@ function Reports() {
   const list=filtered.filter(e=>(e.txnType??"expense")==="expense");
   const categoryRows = Object.entries(totalsBy(list,e=>e.category)).map(([name,amount])=>({name,amount}));
   const stamp = new Date().toISOString().slice(0, 10);
-  const monthly=monthlySeries(filtered,stamp,12);const weekly=weeklySpend(filtered,stamp,8);const worth=netWorthSeries(accounts,transactions,valuations,stamp,12);const cmp=monthToDateCompare(filtered,stamp);
+  const monthly=monthlySeries(filtered,stamp,12);const weekly=weeklySpend(filtered,stamp,8);const worth=netWorthSeries(accounts,transactions,valuations,stamp,12).map(x=>({...x,netWorth:x.net}));const cmp=monthToDateCompare(filtered,stamp);
   const merchants=spendBy(list,e=>e.merchant||e.title,10);const byAccount=spendBy(list,e=>accounts.find(a=>a.id===e.accountId)?.name??"Unassigned",10);
   const subtitle = `${member === "all" ? "Everyone" : memberName(member === "me" ? null : member)} · ${from || "start"} to ${to || "today"} · amounts in INR · generated ${stamp}`;
 
