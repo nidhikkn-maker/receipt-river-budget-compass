@@ -60,7 +60,7 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
     return (
       <button className={cn(buttonVariants({ variant, size, className }), busy && "cursor-progress")} ref={ref} onClick={handle} disabled={disabled || busy} aria-busy={busy || undefined} {...props}>
         {busy && <Spinner />}
-        {busy && loadingText ? loadingText : children}
+        {busy && size === "icon" ? null : busy && loadingText ? loadingText : children}
       </button>
     );
   },
