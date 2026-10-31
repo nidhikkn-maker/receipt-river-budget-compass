@@ -26,3 +26,6 @@
 - ZIP backups include private receipt/document binaries and remap all owner-linked identifiers on cross-account restore; financial reporting and chart calculations remain browser-side pure functions.
 - Backup restore stages files at fresh owner paths and commits records through an RLS-scoped database transaction; failed restores clean staged files without overwriting existing records.
 - AI privacy switches are checked against saved owner preferences on the server before any provider call, not merely hidden in the interface.
+- Receipt and voice categories resolve against the active owner catalog server-side; scanned statement extraction also enforces saved document privacy and requires explicit review.
+- Shortcut search parameters create validated drafts only; they never save entries or call AI automatically.
+- Statement transfer matching requires a selected account and its debit/credit side; competing near-equal matches remain manual to prevent arbitrary reconciliation.
