@@ -53,3 +53,11 @@ describe("knowledge graph", () => {
     expect(() => validateCustomLink({ from: "b", to: "a", note: "" }, [{ id: "1", from: "a", to: "b", note: "" }])).toThrow();
   });
 });
+
+import { cleanMapPositions } from "./preferences";
+describe("map positions", () => {
+  it("drops invalid and clamps out-of-range positions", () => {
+    expect(cleanMapPositions({ a: { x: 12.4, y: 5 }, b: { x: "1", y: 2 }, c: { x: 9999, y: 50 } })).toEqual({ a: { x: 12, y: 30 }, c: { x: 4000, y: 50 } });
+    expect(cleanMapPositions(null)).toEqual({});
+  });
+});
