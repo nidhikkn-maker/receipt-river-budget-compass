@@ -1,5 +1,5 @@
 # Roadmap (Functional Requirements v1.0)
-- [ ] Mutual fund portfolio: dated value and cash-flow-adjusted gain charts, fund/date filters, tested calculations and signed-in checks
+- [x] Mutual fund portfolio: dated value and cash-flow-adjusted gain charts, fund/date filters and dated history; 25 focused tests pass, saved ₹13,405.87 read back, desktop/mobile checked, build OK
 - [x] Yaba excluded at the user's request; no further review
 - [x] Earlier: receipts + review, multi-currency, payment methods, bank reconciliation, family, splits, budgets, reports
 - [x] Accounts + ledger, transaction types, tags, merchant memory, 5-tab nav (Home, Activity, AI, Insights, Wealth)
