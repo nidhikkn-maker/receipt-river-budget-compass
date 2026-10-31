@@ -1,6 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import { useEffect, useState, type ReactNode } from "react";
-import { BarChart3, CalendarClock, Gem, Home, Landmark, ListFilter, PiggyBank, Plus, Settings, Sparkles, Users, Eye, EyeOff, FileText, UserRound } from "lucide-react";
+import { BarChart3, CalendarClock, Gem, Home, Landmark, ListFilter, PiggyBank, Plus, Settings, Sparkles, Users, Eye, EyeOff, FileText, UserRound, TrendingUp } from "lucide-react";
 import { DeviceLock } from "./DeviceLock";
 import { Button } from "./ui/button";
 import { useStore } from "@/lib/store";
