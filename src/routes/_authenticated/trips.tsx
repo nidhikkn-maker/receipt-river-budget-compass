@@ -10,10 +10,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { CURRENCIES, money } from "@/lib/expenses";
 import { tripSummary, tripTag, type Trip } from "@/lib/intelligence";
-import { downloadBlob, toPdf } from "@/lib/reports";
+import { downloadBlob, toCsv, toPdf } from "@/lib/reports";
 import { useStore } from "@/lib/store";
 import { TravelPanel } from "@/components/TravelPanel";
 import { TRIP_TYPES, advanceDashboard, type TravelTrip, type TripType } from "@/lib/travel";
+import { TRAVEL_CUTS, TRAVEL_CUT_LABEL, travelReport, type TravelCut } from "@/lib/travel-reports";
 import { todayISO } from "@/lib/use-position";
 
 export const Route = createFileRoute("/_authenticated/trips")({
@@ -31,8 +32,9 @@ export const Route = createFileRoute("/_authenticated/trips")({
 });
 
 function Trips() {
-  const { preferences: pr, savePreferences, transactions, setTags } = useStore();
+  const { preferences: pr, savePreferences, transactions, setTags, memberName, accounts } = useStore();
   const today = todayISO();
+  const [cut, setCut] = useState<TravelCut>("trip");
   const [form, setForm] = useState({ name: "", destination: "", start: today, end: today, budget: 0, currencies: "INR", type: "personal" as TripType });
   const [openId, setOpenId] = useState<string | null>(pr.trips[0]?.id ?? null);
   const add = async () => {
