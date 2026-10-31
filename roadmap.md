@@ -141,7 +141,7 @@
 ### Priority 4 — Intelligence and completion
 - [x] Trip auto-association, trip insights, booking-payment match suggestions, trip closure, trip CSV
 - [x] Dedicated advance/card-payment/loan/investment entry types in the shared form
-- [ ] Full 17-point acceptance pass
+- [x] Full 17-point acceptance pass
 - [x] Trip picker on travel advances (trip_id column, no tag needed; tagged advances still count)
 - [x] Principal/interest split on loan repayments (validated to sum to the payment; EMI split prefill from the linked loan)
 - [x] Trip advance reconciliation (advances vs business/official spend vs returns, outstanding balance)
@@ -152,3 +152,8 @@
 - [x] Loan repayment history CSV export (payment dates, principal, interest, remaining balance; signed-in download verified)
 - [x] Loan payoff projection (recent repayment average, EMI fallback)
 - [x] Advance dashboard aging indicators and All/Unreconciled/Overdue filters (overdue = unsettled 30+ days after trip end)
+- [x] Cross-trip travel reports (by trip, workspace, organisation/department, traveller, destination, category, payment account, planned vs actual, monthly & annual, reimbursements) with CSV and PDF; signed-in report totals matched the ledger (₹2,500 entry read back in every cut)
+- [x] Trip plan: category budget lines plus a contingency allowance, showing each category's actual, remaining, over-budget flag and unbudgeted spending
+- [x] Booking payment due dates, cancellation terms and part payments — a booking stays outstanding until its linked payments add up, then reads "Paid — linked to entry" (signed-in: ₹2,000 of ₹5,000 → "Part paid ₹2,000.00 · ₹3,000.00 still due" → fully paid)
+- [x] Itinerary entries keep travellers and notes and show them in the plan
+- [x] Full 17-point acceptance pass (Part G): one test per criterion in src/lib/acceptance-v4.test.ts, all 17 passing; 388 automated checks pass, typecheck clean
