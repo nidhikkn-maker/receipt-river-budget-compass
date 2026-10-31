@@ -162,6 +162,13 @@
       "when": 1793460224659,
       "tag": "0022_family_requests",
       "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1793460322412,
+      "tag": "0023_family_invite_owner",
+      "breakpoints": true
     }
   ]
 }

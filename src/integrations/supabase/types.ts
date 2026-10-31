@@ -1039,6 +1039,7 @@ export type Database = {
         Returns: undefined
       }
       delete_my_finance_data: { Args: never; Returns: undefined }
+      family_invite_owner: { Args: { _invite: string }; Returns: string }
       finance_operation: {
         Args: { action: string; payload: Json }
         Returns: Json
