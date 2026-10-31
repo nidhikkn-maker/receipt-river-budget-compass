@@ -1,5 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { filePattern, splitNewLines } from "@/lib/statement-fingerprint";
 import { toast } from "sonner";
 import { BadgeCheck, Sparkles, Upload } from "lucide-react";
 import { PageTitle, Stat } from "@/components/AppShell";
@@ -40,23 +42,60 @@ function Reconcile() {
   const scanStatement = useServerFn(extractStatement);
 
   const accountFilter = statementAccount === "all" ? undefined : statementAccount;
+  const accountKey = statementAccount;
+  const [known, setKnown] = useState<Set<string>>(new Set());
+  const [upTo, setUpTo] = useState<string | null>(null);
+  const [lastBatch, setLastBatch] = useState<string | null>(null);
+  const [showImported, setShowImported] = useState(false);
+
+  const loadKnown = useCallback(async (key: string) => {
+    const set = new Set<string>(); let top: string | null = null; let batch: string | null = null; let latest = "";
+    for (let from = 0; ; from += 1000) {
+      const { data, error } = await supabase.from("statement_line_imports").select("fingerprint,line_date,batch_id,created_at").eq("account_key", key).range(from, from + 999);
+      if (error) { toast.error("Couldn't check earlier uploads"); break; }
+      for (const r of data) { set.add(r.fingerprint); if (!top || r.line_date > top) top = r.line_date; if (r.created_at > latest) { latest = r.created_at; batch = r.batch_id; } }
+      if (data.length < 1000) break;
+    }
+    setKnown(set); setUpTo(top); setLastBatch(batch);
+  }, []);
+  useEffect(() => { void loadKnown(accountKey); }, [accountKey, loadKnown]);
+
+  const split = useMemo(() => splitNewLines(lines, accountKey, known, upTo), [lines, accountKey, known, upTo]);
+  const freshLines = split.fresh;
+
+  const markSeen = async () => {
+    if (!lines.length) return;
+    const batch = crypto.randomUUID(); const label = filePattern(fileName);
+    const rows = lines.map((l) => ({ account_key: accountKey, fingerprint: split.fingerprints.get(l.ref)!, line_date: l.date, batch_id: batch, file_label: label }));
+    for (let i = 0; i < rows.length; i += 500) {
+      const { error } = await supabase.from("statement_line_imports").upsert(rows.slice(i, i + 500), { onConflict: "owner_id,account_key,fingerprint", ignoreDuplicates: true });
+      if (error) { toast.error("Couldn't remember this statement — the same lines may show again next time"); return; }
+    }
+    await loadKnown(accountKey);
+  };
+
+  const forgetLast = async () => {
+    if (!lastBatch || !window.confirm("Forget the last statement upload for this account? Its lines will show as new next time. Saved entries stay.")) return;
+    const { error } = await supabase.from("statement_line_imports").delete().eq("batch_id", lastBatch);
+    if (error) toast.error("Couldn't forget that upload"); else { toast.success("Last upload forgotten"); await loadKnown(accountKey); }
+  };
 
   const matches: Match[] = useMemo(() => {
-    const auto = autoMatch(lines, expenses, currency, 0.4, accountFilter);
+    const auto = autoMatch(freshLines, expenses, currency, 0.4, accountFilter);
     return auto.map((m) => {
       const o = overrides[m.line.ref];
       if (o === undefined) return m;
       return { ...m, expense: o === "none" ? null : expenses.find((e) => e.id === o) ?? null, score: 1 };
     });
-  }, [lines, expenses, currency, overrides, accountFilter]);
+  }, [freshLines, expenses, currency, overrides, accountFilter]);
 
-  const plan = useMemo(() => planStatementRegistration(lines, matches, {
+  const plan = useMemo(() => planStatementRegistration(freshLines, matches, {
     transactions: expenses,
     accounts,
     categories: preferences.categories,
     accountId: accountFilter ?? null,
     currency,
-  }), [lines, matches, expenses, accounts, preferences.categories, accountFilter, currency]);
+  }), [freshLines, matches, expenses, accounts, preferences.categories, accountFilter, currency]);
 
   const queue = plan.register.filter((d) => !excluded[d.line.ref]);
   const spendingTotal = queue.filter((d) => d.txnType === "expense").reduce((s, d) => s + d.line.amount, 0);
@@ -76,7 +115,14 @@ function Reconcile() {
         if (!result.ok) throw Error(result.error);
         parsed = result.lines;
       }
-      setLines(parsed); setFileName(f.name); setOverrides({}); setExcluded({});
+      let key = accountKey;
+      if (statementAccount === "all") {
+        const { data } = await supabase.from("statement_line_imports").select("account_key").eq("file_label", filePattern(f.name)).neq("account_key", "all").order("created_at", { ascending: false }).limit(1);
+        const remembered = data?.[0]?.account_key;
+        if (remembered && accounts.some((a) => a.id === remembered)) { key = remembered; setStatementAccount(remembered); toast.info(`Using ${accounts.find((a) => a.id === remembered)?.name} like last time`); }
+      }
+      void key;
+      setLines(parsed); setFileName(f.name); setOverrides({}); setExcluded({}); setShowImported(false);
       toast.success(`${parsed.length} statement lines found`);
     } catch (e) { toast.error((e as Error).message); } finally { setReading(false); }
   };
@@ -98,6 +144,7 @@ function Reconcile() {
         } catch { failed.push(d.title); }
       }
       await refresh();
+      await markSeen();
       if (done) toast.success(`${done} ${done === 1 ? "expense" : "expenses"} registered from ${fileName}`);
       if (failed.length) toast.error(`${failed.length} couldn't be registered — try again`);
       setLines([]); setExcluded({}); setOverrides({});
@@ -113,6 +160,7 @@ function Reconcile() {
         if (m.expense && !matchScore(m.line, m.expense, currency, accountFilter)) throw Error("A selected transaction doesn't match this account, direction, date or amount");
       }
       for (const m of matched) { if (!m.expense) continue; await reconcile(m.expense.id, `${fileName} · ${m.line.date} · ${m.line.description}`.slice(0, 300)); }
+      await markSeen();
       toast.success(`${matched.length} expenses marked as matched`);
       setLines([]);
     } catch (e) { toast.error((e as Error).message); } finally { setBusy(false); }
@@ -145,11 +193,23 @@ function Reconcile() {
             <SelectContent>{CURRENCIES.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
           </Select>
         </div>
+        {upTo && <p className="w-full text-sm"><span className="font-semibold">Statement imported up to {new Date(upTo).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}</span> for {statementAccount === "all" ? "unassigned uploads" : accounts.find((a) => a.id === statementAccount)?.name}. Just upload the latest statement — lines already brought in are skipped. {lastBatch && <button type="button" className="underline text-muted-foreground" onClick={forgetLast}>Forget last upload</button>}</p>}
         <p className="w-full text-xs text-muted-foreground">Needs columns for date, description/narration, and debit (or amount). Dates like 01/10/2026 are read as day/month/year.</p>
       </div>
 
       {lines.length > 0 && (
         <>
+          <div className="mb-4 rounded-3xl border bg-card p-4 text-sm">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <p><span className="font-semibold">{split.alreadyImported.length} lines already imported</span>{upTo ? ` up to ${upTo}` : ""} · <span className="font-semibold text-gold">{freshLines.length} new</span></p>
+              <div className="flex gap-2">
+                {split.alreadyImported.length > 0 && <Button variant="ghost" size="sm" onClick={() => setShowImported(!showImported)}>{showImported ? "Hide" : "Show"} already-imported lines</Button>}
+                <Button variant="outline" size="sm" disabled={busy} onClick={async () => { await markSeen(); setLines([]); toast.success("Statement remembered — only newer lines will show next time"); }}>Done with this statement</Button>
+              </div>
+            </div>
+            {split.olderUnseen.length > 0 && <p className="mt-2 rounded-xl bg-secondary px-3 py-2 text-xs">{split.olderUnseen.length} older line{split.olderUnseen.length === 1 ? "" : "s"} not seen before (dated before your last import) — included below for a quick look.</p>}
+            {showImported && <ul className="mt-2 max-h-60 space-y-1 overflow-auto text-xs text-muted-foreground">{split.alreadyImported.map((l) => <li key={l.ref} className="font-mono">{l.date} · {l.description} · {money(l.amount, currency)}</li>)}</ul>}
+          </div>
           <div className="mb-4 grid grid-cols-3 gap-3">
             <Stat label="New entries" value={String(plan.register.length)} hint={money(plan.register.filter((d) => d.txnType === "expense").reduce((s, d) => s + d.line.amount, 0))} />
             <Stat label="Need a look" value={String(plan.review.length)} />
@@ -191,7 +251,7 @@ function Reconcile() {
           {matched.length > 0 && (
             <div className="mb-4 rounded-3xl border bg-card p-4">
               <div className="mb-2 flex items-center justify-between gap-3">
-                <h2 className="font-display text-lg font-bold">{matched.length} of {lines.length} already in your ledger</h2>
+                <h2 className="font-display text-lg font-bold">{matched.length} of {freshLines.length} already in your ledger</h2>
                 <Button variant="outline" size="sm" onClick={confirmAll} disabled={busy || matched.length === 0}>Confirm {matched.length} matches</Button>
               </div>
               <ul className="space-y-2">
