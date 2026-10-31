@@ -54,3 +54,21 @@ export function loanHistoryRows(hist: ReturnType<typeof loanHistory>, outstandin
     ["Total", String(hist.totalPaid), String(hist.totalPrincipal), String(hist.totalInterest), String(outstanding)],
   ];
 }
+
+export interface PayoffProjection { payment: number; basis: "recent" | "emi"; months: number; payoffDate: string; interestLeft: number; payable: boolean }
+/** Payoff estimate: average of the last three repayments (or the scheduled EMI when none), applied monthly with interest on the remaining balance. */
+export function payoffProjection(outstanding: number, annualRate: number, rows: LoanHistoryRow[], emi: number, today: string): PayoffProjection {
+  const recent = rows.slice(-3);
+  const basis = recent.length ? "recent" : "emi";
+  const payment = r2(recent.length ? recent.reduce((s, r) => s + r.amount, 0) / recent.length : emi);
+  const start = rows.length ? rows[rows.length - 1]!.date : today;
+  let bal = r2(outstanding), months = 0, interestLeft = 0;
+  const mr = annualRate / 1200;
+  if (bal <= 0) return { payment, basis, months: 0, payoffDate: start, interestLeft: 0, payable: true };
+  if (payment <= bal * mr || payment <= 0) return { payment, basis, months: Infinity, payoffDate: "", interestLeft: Infinity, payable: false };
+  while (bal > 0.005 && months < 1200) { const i = r2(bal * mr); interestLeft = r2(interestLeft + i); bal = r2(bal + i - payment); months++; }
+  const d = new Date(`${start}T00:00:00Z`); const day = d.getUTCDate();
+  d.setUTCDate(1); d.setUTCMonth(d.getUTCMonth() + months);
+  d.setUTCDate(Math.min(day, new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 0)).getUTCDate()));
+  return { payment, basis, months, payoffDate: d.toISOString().slice(0, 10), interestLeft, payable: true };
+}
