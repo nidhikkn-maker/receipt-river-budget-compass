@@ -1,6 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import { useEffect, useState, type ReactNode } from "react";
-import { BarChart3, CalendarClock, Gem, Home, Landmark, ListFilter, PiggyBank, Plus, Settings, Sparkles, Users, Eye, EyeOff, FileText, UserRound, TrendingUp, Inbox, HeartPulse, Search, SlidersHorizontal, Split } from "lucide-react";
+import { BarChart3, CalendarClock, Gem, Home, Landmark, ListFilter, PiggyBank, Plus, Settings, Sparkles, Users, Eye, EyeOff, FileText, UserRound, TrendingUp, Inbox, HeartPulse, Search, SlidersHorizontal, Split, Network } from "lucide-react";
 import { DeviceLock } from "./DeviceLock";
 import { Button } from "./ui/button";
 import { useStore } from "@/lib/store";
@@ -21,6 +21,7 @@ const LINKS = [
   { to: "/search", label: "Search", icon: Search },
   { to: "/rules", label: "Rules", icon: SlidersHorizontal },
   { to: "/allocation", label: "Allocate", icon: Split },
+  { to: "/connections", label: "Links", icon: Network },
   { to: "/family", label: "Family", icon: Users },
   { to: "/vault", label: "Vault", icon: FileText },
   { to: "/settings", label: "Settings", icon: Settings },

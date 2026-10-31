@@ -13,6 +13,7 @@ import { METRIC_LABEL, MILESTONE_METRICS, SCENARIOS, SCENARIO_LABEL, irregularCa
 import { addMonths } from "@/lib/planning";
 import { useIntelligence } from "@/lib/use-intelligence";
 import { CoolingOff, StressTest } from "@/components/StrategyStressCooling";
+import { DecisionMemory } from "@/components/DecisionMemory";
 
 export const Route = createFileRoute("/_authenticated/strategy")({
   head: () => ({
@@ -41,6 +42,7 @@ function Strategy() {
           <TabsTrigger value="milestones">Milestones</TabsTrigger>
           <TabsTrigger value="stress">Stress test</TabsTrigger>
           <TabsTrigger value="cooling">Cooling-off</TabsTrigger>
+          <TabsTrigger value="memory">Decisions</TabsTrigger>
         </TabsList>
         <TabsContent value="simulate"><Simulator /></TabsContent>
         <TabsContent value="emergency"><Emergency /></TabsContent>
@@ -48,6 +50,7 @@ function Strategy() {
         <TabsContent value="milestones"><Milestones /></TabsContent>
         <TabsContent value="stress"><StressTest /></TabsContent>
         <TabsContent value="cooling"><CoolingOff /></TabsContent>
+        <TabsContent value="memory"><DecisionMemory /></TabsContent>
       </Tabs>
     </div>
   );
