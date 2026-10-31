@@ -69,7 +69,7 @@
 - [ ] Automatic financial connections — provider availability, consent and bank support must be established before implementation; not a promised live connection
 
 ## User requests (Oct 31, later)
-- [ ] Fix alignment issues (mobile 402px)
-- [ ] Receipt add: separate Camera / Gallery / Files options
-- [ ] Save receipts to add later (pending receipt inbox)
-- [ ] New fonts; deeper blue palette with gold accent
+- [x] Fix alignment issues (mobile 402px)
+- [x] Receipt add: separate Camera / Gallery / Files options
+- [x] Save receipts to add later (pending receipt inbox)
+- [x] New fonts; deeper blue palette with gold accent
