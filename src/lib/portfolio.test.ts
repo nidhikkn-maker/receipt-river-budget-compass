@@ -30,7 +30,7 @@ describe("NAV portfolio values and gains", () => {
   it("keeps the original gain baseline when filtering dates and excludes future NAVs", () => {
     const p=buildPortfolio([fund],[],[nav("2026-10-01",10000),nav("2026-10-20",11000),nav("2026-11-01",99999)],{asOf:"2026-10-31",from:"2026-10-25",to:"2026-12-01"});
     expect(p.points[0]).toMatchObject({date:"2026-10-25",value:11000,gain:1000});
-    expect(p.holdings[0].latestDate).toBe("2026-10-20");
+    expect(p.holdings[0]?.latestDate).toBe("2026-10-20");
   });
   it("does not double count same-day snapshots or flows already included in that day's NAV", () => {
     const p=run([nav("2026-10-01",12000),nav("2026-10-01",10000),nav("2026-10-30",13000)],[{id:"buy",txnType:"transfer",amount:2000,date:"2026-10-01",toAccountId:"fund"}]);
@@ -41,7 +41,7 @@ describe("NAV portfolio values and gains", () => {
     expect(p.holdings.map(h=>h.accountId)).toEqual(["fund"]);
     expect(p.points.at(-1)?.value).toBe(10000);
   });
-  it("shows genuine negative gains", () => expect(run([nav("2026-10-01",10000),nav("2026-10-30",9000)]).holdings[0].gain).toBe(-1000));
+  it("shows genuine negative gains", () => expect(run([nav("2026-10-01",10000),nav("2026-10-30",9000)]).holdings[0]?.gain).toBe(-1000));
   it("returns empty for missing snapshots, invalid dates or reversed ranges", () => {
     expect(run([]).points).toEqual([]);
     expect(run([nav("2026-02-30",10000)]).points).toEqual([]);

@@ -39,6 +39,7 @@ export function buildPortfolio(accounts: Account[], txns: Txn[], valuations: Val
       baseline, value: current.value, netFlows: flows, reference: round(baseline + flows), gain: round(current.value - baseline - flows), fundCount: 1 };
   };
   const firstDate = funds.map(f => f.first.valuedOn).sort()[0];
+  if (!firstDate) return empty;
   const start = options.from && options.from > firstDate ? options.from : firstDate;
   // NAV and ledger dates only. Carry-forward at the range boundaries, never invent intervening NAVs.
   const dates = new Set<string>([start, end]);

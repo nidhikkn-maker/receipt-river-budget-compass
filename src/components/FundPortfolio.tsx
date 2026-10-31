@@ -12,7 +12,11 @@ import { useStore } from "@/lib/store";
 import { todayISO } from "@/lib/use-position";
 
 const shortDate = (date: string) => new Date(`${date}T00:00:00Z`).toLocaleDateString("en-IN", { day: "numeric", month: "short", timeZone: "UTC" });
-const compactMoney = (value: number) => `₹${new Intl.NumberFormat("en-IN", { notation: "compact", maximumFractionDigits: 1 }).format(value)}`;
+const compactMoney = (value: number) => {
+  const abs = Math.abs(value);
+  const [divisor, suffix] = abs >= 1e7 ? [1e7, "Cr"] as const : abs >= 1e5 ? [1e5, "L"] as const : abs >= 1e3 ? [1e3, "K"] as const : [1, ""] as const;
+  return `₹${new Intl.NumberFormat("en-IN", { maximumFractionDigits: 1 }).format(value / divisor)}${suffix}`;
+};
 const signedMoney = (value: number) => `${value > 0 ? "+" : ""}${money(value)}`;
 const config = {
   value: { label: "Portfolio value", color: "var(--chart-1)" },
@@ -28,7 +32,7 @@ export function FundPortfolio() {
   const [to, setTo] = useState("");
   const available = accounts.filter(a => a.kind === "investment" && !a.archived && valuations.some(v => v.accountId === a.id && isNavValuation(v)));
   const selected = available.some(a => a.id === fund) ? fund : "all";
-  const portfolio = useMemo(() => buildPortfolio(accounts, transactions, valuations, { asOf: today, from, to, accountId: selected === "all" ? undefined : selected }), [accounts, transactions, valuations, today, from, to, selected]);
+  const portfolio = useMemo(() => buildPortfolio(accounts, transactions, valuations, { asOf: today, from, to, ...(selected === "all" ? {} : { accountId: selected }) }), [accounts, transactions, valuations, today, from, to, selected]);
   const latest = portfolio.points.at(-1);
   const invalidRange = !!from && !!to && from > to;
 
