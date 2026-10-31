@@ -418,7 +418,7 @@ function NewExpense() {
               <Label>Category{af("category")}</Label>
               <Select value={category} onValueChange={(v) => setCategory(v as Category)}>
                 <SelectTrigger aria-label="Category"><SelectValue /></SelectTrigger>
-                <SelectContent>{[...new Set([category, ...preferences.categories.filter(c=>!c.archived).map(c=>c.name)])].map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
+                <SelectContent>{[...new Set([...(editing ? [category] : []), ...preferences.categories.filter(c=>!c.archived).map(c=>c.name)])].map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
               </Select>
             </div>
           </div>

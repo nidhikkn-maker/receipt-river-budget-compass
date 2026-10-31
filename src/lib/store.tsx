@@ -122,6 +122,7 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
 
   const save: Ctx["save"] = async (s, opts) => {
     validateExpense(s);
+    if (preferences.categories.some(c=>c.name===s.category&&c.archived) && !opts?.id) throw new Error("Choose an active category");
     if (!navigator.onLine) {
       if(opts?.id)throw Error("Reconnect to edit an existing transaction");
       await queueEntry({id:opts?.createId ?? crypto.randomUUID(),owner:userId,input:s,files:opts?.files??[],createdAt:new Date().toISOString()});
