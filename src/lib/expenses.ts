@@ -195,7 +195,7 @@ export const money = (n: number, currency: string = BASE_CURRENCY) => {
 export const moneyIn = money;
 
 // ---------- Bank statement reconciliation ----------
-export interface StatementLine { ref: string; date: string; description: string; amount: number }
+export interface StatementLine { ref: string; date: string; description: string; amount: number; direction?: "debit" | "credit" }
 export interface Match { line: StatementLine; expense: Expense | null; score: number }
 
 const dayDiff = (a: string, b: string) => Math.abs(new Date(a).getTime() - new Date(b).getTime()) / 864e5;
@@ -203,6 +203,9 @@ const words = (s: string) => s.toLowerCase().split(/[^a-z0-9]+/).filter((w) => w
 
 /** Score how well a statement line matches an expense (amount within 3%, date within 5 days, merchant words). */
 export function matchScore(line: StatementLine, e: Expense, statementCurrency: string): number {
+  const kind=e.txnType??"expense";
+  if(line.direction==="credit" && !["income","refund","reimbursement","transfer"].includes(kind))return 0;
+  if(line.direction!=="credit" && ["income","refund","reimbursement"].includes(kind))return 0;
   const target = statementCurrency === e.currency ? e.originalAmount : statementCurrency === BASE_CURRENCY ? e.amount : NaN;
   if (!Number.isFinite(target)) return 0;
   const diff = Math.abs(line.amount - target) / Math.max(target, 1);
