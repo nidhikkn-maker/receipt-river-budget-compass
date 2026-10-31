@@ -1,3 +1,4 @@
+import { cell as uCell, plain, withUnicode } from "./pdf-unicode";
 // Renders a Detailed Expenditure Statement: portrait overview, landscape register, then every
 // original bill as numbered annexures, merged into one PDF. Browser-only: import dynamically.
 import type { Statement } from "./expenditure-statement";
@@ -6,7 +7,7 @@ import { PAYER_LABEL } from "./expenditure-statement";
 export interface AnnexFile { bytes: Uint8Array; type: string }
 const IN = new Intl.NumberFormat("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const n = (v: number) => IN.format(Math.round(v * 100) / 100);
-const ascii = (s: string) => s.replace(/₹/g, "INR ").replace(/[–—]/g, "-").replace(/[‘’]/g, "'").replace(/[“”]/g, '"').replace(/…/g, "...").replace(/··/g, "..").replace(/[^\x20-\x7E\xA0-\xFF]/g, "?");
+const ascii = uCell;
 const INK: [number, number, number] = [22, 44, 110];
 
 export async function renderStatementPdf(s: Statement, files: Record<string, AnnexFile | null>): Promise<{ blob: Blob; missing: string[] }> {
@@ -15,9 +16,9 @@ export async function renderStatementPdf(s: Statement, files: Record<string, Ann
   const doc = new jsPDF({ unit: "mm", format: "a4" });
   const M = 14;
   const last = () => (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY;
-  const table = (opts: Parameters<typeof autoTable>[1]) => autoTable(doc, { theme: "grid", margin: { left: M, right: M, top: 16, bottom: 16 }, showHead: "everyPage", rowPageBreak: "avoid",
+  const table = (opts: Parameters<typeof autoTable>[1]) => autoTable(doc, withUnicode(doc, { theme: "grid", margin: { left: M, right: M, top: 16, bottom: 16 }, showHead: "everyPage", rowPageBreak: "avoid",
     styles: { fontSize: 8, cellPadding: 1.5, lineColor: [205, 205, 205], lineWidth: 0.1, textColor: [25, 25, 25], overflow: "linebreak" },
-    headStyles: { fillColor: [236, 239, 246], textColor: INK, fontStyle: "bold" }, footStyles: { fillColor: [245, 245, 245], textColor: [20, 20, 20], fontStyle: "bold" }, ...opts });
+    headStyles: { fillColor: [236, 239, 246], textColor: INK, fontStyle: "bold" }, footStyles: { fillColor: [245, 245, 245], textColor: [20, 20, 20], fontStyle: "bold" }, ...opts }));
 
   // Page 1 — overview
   doc.setFont("helvetica", "bold"); doc.setFontSize(10); doc.setTextColor(...INK); doc.text("LEDGERLINE", M, 15);
