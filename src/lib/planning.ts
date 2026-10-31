@@ -159,6 +159,12 @@ export function safeToSpend(i: ForecastInput & { reserves?: number; minBalance?:
 }
 
 // ---------- Loans ----------
+export const LOAN_TYPES = ["home", "vehicle", "personal", "education", "gold", "business", "credit_card_emi", "borrowing", "other"] as const;
+export type LoanType = (typeof LOAN_TYPES)[number];
+export const LOAN_TYPE_LABEL: Record<LoanType, string> = {
+  home: "Home loan", vehicle: "Vehicle loan", personal: "Personal loan", education: "Education loan", gold: "Gold loan", business: "Business loan",
+  credit_card_emi: "Card EMI", borrowing: "Personal borrowing", other: "Other loan",
+};
 export interface Amortization { months: number; totalInterest: number; schedule: { month: number; interest: number; principal: number; balance: number }[]; payable: boolean }
 
 /** Reducing-balance schedule for a fixed EMI. */
