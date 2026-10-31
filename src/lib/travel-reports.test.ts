@@ -90,4 +90,9 @@ describe("booking payments", () => {
     const t = trip({ bookings: [booking({ expenseIds: ["p1"] }), booking({ id: "b2", amount: 12000 })] });
     expect(bookingMatches(t, [paid] as never)).toEqual([]);
   });
+  it("subtracts linked booking refunds from payment coverage", () => {
+    const b = booking({ expenseIds: ["p1", "refund"] });
+    expect(bookingPaid(b, [paid, { ...paid, id: "refund", txnType: "refund", amount: 2000 }] as never)).toBe(10000);
+    expect(bookingOutstanding(b, [paid, { ...paid, id: "refund", txnType: "refund", amount: 2000 }] as never)).toBe(20000);
+  });
 });

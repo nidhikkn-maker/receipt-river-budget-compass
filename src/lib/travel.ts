@@ -38,7 +38,7 @@ export function bookingPaymentIds(b: Booking): string[] {
 /** How much of a booking is already covered by linked ledger entries. */
 export function bookingPaid(b: Booking, txns: Row[]) {
   const ids = new Set(bookingPaymentIds(b));
-  return r2(txns.filter((x) => ids.has(x.id)).reduce((s, x) => s + x.amount, 0));
+  return r2(txns.filter((x) => ids.has(x.id)).reduce((s, x) => s + (x.txnType === "refund" ? -x.amount : x.amount), 0));
 }
 
 /** Still to pay on a booking. Cancelled bookings owe nothing; a paid booking is considered settled. */
@@ -113,10 +113,18 @@ export const BOOKING_CATEGORY: Record<BookingKind, (typeof TRAVEL_CATEGORIES)[nu
 /** Suggest the travel category for a merchant/title. Returns null when nothing clearly matches. */
 export function travelCategory(text: string): (typeof TRAVEL_CATEGORIES)[number] | null {
   const t = text.toLowerCase();
+  if (/airport transfer|airport shuttle/.test(t)) return "Airport transfers";
+  if (/irctc|railway|train/.test(t)) return "Trains";
+  if (/car rental|rent a car|hertz|avis/.test(t)) return "Car rental";
+  if (/fuel|petrol|diesel/.test(t)) return "Fuel";
+  if (/sightseeing|museum|tour ticket/.test(t)) return "Sightseeing";
+  if (/roaming|sim card|mobile data/.test(t)) return "Communication";
+  if (/service charge|booking fee/.test(t)) return "Service charges";
   if (/air|indigo|emirates|vistara|flight|airline|akasa|spicejet/.test(t)) return "Flights";
   if (/hotel|inn|resort|marriott|taj|hyatt|airbnb|oyo|stay|lodge/.test(t)) return "Hotels";
   if (/uber|ola|taxi|cab|metro|rail|irctc|bus|careem|rapido|fuel/.test(t)) return "Local transport";
-  if (/visa|insurance/.test(t)) return "Visa & insurance";
+  if (/visa/.test(t)) return "Visa";
+  if (/insurance/.test(t)) return "Insurance";
   if (/restaurant|cafe|food|swiggy|zomato|dining|meal/.test(t)) return "Travel meals";
   return null;
 }
