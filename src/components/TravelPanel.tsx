@@ -6,14 +6,20 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { SCOPE_LABEL, money, type Scope } from "@/lib/expenses";
-import { BOOKING_KINDS, TRIP_TYPES, closeBlockers, tripFinance, validateBooking, type Booking, type BookingKind, type TravelTrip, type TripType } from "@/lib/travel";
+import { TRAVEL_CATEGORIES, bookingMatches, tripInsights, tripReportRows, BOOKING_KINDS, TRIP_TYPES, closeBlockers, tripFinance, validateBooking, type Booking, type BookingKind, type TravelTrip, type TripType } from "@/lib/travel";
 import { useStore } from "@/lib/store";
+import { downloadBlob } from "@/lib/reports";
+import { todayISO } from "@/lib/use-position";
+import { tripTag } from "@/lib/intelligence";
 
 const sel = "h-10 rounded-xl border bg-background px-2 text-sm";
 
 /** Travel Manager panel: type, travellers, bookings, itinerary, advances, budget vs committed, closure. Payments always go through the shared entry form. */
 export function TravelPanel({ trip }: { trip: TravelTrip }) {
-  const { preferences: pr, savePreferences, transactions } = useStore();
+  const { preferences: pr, savePreferences, transactions, setTags } = useStore();
+  const matches = useMemo(() => bookingMatches(trip, transactions), [trip, transactions]);
+  const insights = useMemo(() => tripInsights(trip, transactions, todayISO()), [trip, transactions]);
+  const missingCats = TRAVEL_CATEGORIES.filter((c) => !pr.categories.some((x) => x.name.toLowerCase() === c.toLowerCase()));
   const f = useMemo(() => tripFinance(trip, transactions), [trip, transactions]);
   const blockers = useMemo(() => closeBlockers(trip, transactions), [trip, transactions]);
   const put = async (patch: Partial<TravelTrip>, msg?: string) => {
@@ -44,10 +50,12 @@ export function TravelPanel({ trip }: { trip: TravelTrip }) {
           <div className="mt-1 flex flex-wrap gap-2">{(trip.travellers ?? []).map((t) => <span key={t} className="rounded-full bg-secondary px-3 py-1 text-xs">{t}{!closed && <button type="button" aria-label={`Remove ${t}`} className="ml-1" onClick={() => void put({ travellers: (trip.travellers ?? []).filter((x) => x !== t) })}>×</button>}</span>)}</div>
           {!closed && <div className="mt-2 flex gap-2"><Input className="h-10" value={traveller} onChange={(e) => setTraveller(e.target.value)} placeholder="Name" list="members" /><datalist id="members">{useStore().members.map((m) => <option key={m.id} value={m.name} />)}</datalist><Button type="button" variant="outline" onClick={() => { const n = traveller.trim(); if (!n || (trip.travellers ?? []).includes(n)) return; void put({ travellers: [...(trip.travellers ?? []), n.slice(0, 60)] }); setTraveller(""); }}>Add</Button></div>}
         </div>
+        {!closed && missingCats.length > 0 && <Button variant="outline" className="mt-3 w-full" onClick={() => void savePreferences({ ...pr, categories: [...pr.categories, ...missingCats.map((name) => ({ name, archived: false }))] }).then(() => toast.success("Travel categories added"))}>Add travel categories ({missingCats.join(", ")})</Button>}
         {!closed && <Button asChild variant="gold" className="mt-3 w-full"><Link to="/new" search={{ trip: trip.id }}>Add an expense to this trip</Link></Button>}
       </Card>
 
-      <Card title="Budget and money">
+      {insights.length > 0 && <Card title="Trip insights"><ul className="list-disc space-y-1 pl-5 text-sm">{insights.map((i) => <li key={i}>{i}</li>)}</ul></Card>}
+      <Card title="Budget and money" action={<Button size="sm" variant="outline" onClick={() => { const csv = tripReportRows(trip, transactions).map((r) => r.map((c) => `"${c.replace(/"/g, '""')}"`).join(",")).join("\n"); downloadBlob(new Blob([csv], { type: "text/csv" }), `trip-${trip.name.replace(/\W+/g, "-")}.csv`); }}>CSV</Button>}>
         <Row label="Spent (in your records)" value={money(f.total)} />
         <Row label="Booked, not yet paid" value={money(f.committed)} />
         <Row label="Spent + booked" value={money(f.projected)} />
@@ -66,6 +74,11 @@ export function TravelPanel({ trip }: { trip: TravelTrip }) {
             {b.status === "paid" && b.expenseId && <Button asChild size="sm" variant="outline"><Link to="/new" search={{ edit: b.expenseId }}>View entry</Link></Button>}
           </div>
         ))}
+        {!closed && matches.map((m) => { const b = trip.bookings!.find((x) => x.id === m.bookingId)!; const e = transactions.find((x) => x.id === m.entryId)!; return (
+          <div key={m.bookingId} className="mt-2 flex flex-wrap items-center gap-2 rounded-xl bg-secondary p-2 text-xs">
+            <span className="flex-1">Looks like the {b.kind} booking was paid: {e.date} · {e.merchant ?? e.title} · {money(e.amount)}</span>
+            <Button size="sm" onClick={async () => { try { await setTags(e.id, [...new Set([...(e.tags ?? []), tripTag(trip)])]); await put({ bookings: (trip.bookings ?? []).map((x) => (x.id === b.id ? { ...x, status: "paid" as const, expenseId: e.id } : x)) }, "Booking linked to the payment"); } catch (err) { toast.error((err as Error).message); } }}>Link</Button>
+          </div>); })}
         {f.paidUnlinked.length > 0 && <p className="text-xs text-destructive">{f.paidUnlinked.length} paid booking(s) point to an entry not tagged to this trip.</p>}
         {!closed && <div className="mt-2 grid gap-2 sm:grid-cols-5">
           <select className={sel} value={bk.kind} onChange={(e) => setBk({ ...bk, kind: e.target.value as BookingKind })}>{BOOKING_KINDS.map((k) => <option key={k}>{k}</option>)}</select>
