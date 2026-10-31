@@ -1,20 +1,23 @@
 import { Link } from "@tanstack/react-router";
 import type { ReactNode } from "react";
-import { BarChart3, Gem, Home, Landmark, ListFilter, PiggyBank, Plus, Users } from "lucide-react";
+import { BarChart3, CalendarClock, Gem, Home, Landmark, ListFilter, PiggyBank, Plus, Settings, Sparkles, Users } from "lucide-react";
 import { useStore } from "@/lib/store";
 
 const LINKS = [
   { to: "/dashboard", label: "Home", icon: Home },
   { to: "/expenses", label: "Activity", icon: ListFilter },
   { to: "/new", label: "Add", icon: Plus, primary: true },
+  { to: "/assistant", label: "AI", icon: Sparkles },
   { to: "/reports", label: "Insights", icon: BarChart3 },
   { to: "/wealth", label: "Wealth", icon: Gem },
+  { to: "/plan", label: "Plan", icon: CalendarClock },
   { to: "/budgets", label: "Budgets", icon: PiggyBank },
   { to: "/reconcile", label: "Bank", icon: Landmark },
   { to: "/family", label: "Family", icon: Users },
+  { to: "/settings", label: "Settings", icon: Settings },
 ] as const;
 // Mobile bar: the five primary sections
-const MOBILE = ["/dashboard", "/expenses", "/new", "/reports", "/wealth"];
+const MOBILE = ["/dashboard", "/expenses", "/new", "/assistant", "/reports", "/wealth"];
 
 export function AppShell({ children }: { children: ReactNode }) {
   const { loading } = useStore();
@@ -36,9 +39,11 @@ export function AppShell({ children }: { children: ReactNode }) {
           <span className="font-display text-xl font-extrabold tracking-tight text-primary">Ledgerline</span>
           <span className="hidden font-mono text-[11px] uppercase tracking-[0.2em] text-muted-foreground sm:inline">personal · family · business</span>
           <div className="ml-auto flex gap-1 lg:hidden">
+            <Link to="/plan" aria-label="Plan" className="rounded-xl p-2 text-muted-foreground" activeProps={{ className: "!text-primary bg-secondary" }}><CalendarClock className="h-5 w-5" /></Link>
             <Link to="/budgets" aria-label="Budgets" className="rounded-xl p-2 text-muted-foreground" activeProps={{ className: "!text-primary bg-secondary" }}><PiggyBank className="h-5 w-5" /></Link>
             <Link to="/reconcile" aria-label="Bank reconciliation" className="rounded-xl p-2 text-muted-foreground" activeProps={{ className: "!text-primary bg-secondary" }}><Landmark className="h-5 w-5" /></Link>
             <Link to="/family" aria-label="Family" className="rounded-xl p-2 text-muted-foreground" activeProps={{ className: "!text-primary bg-secondary" }}><Users className="h-5 w-5" /></Link>
+            <Link to="/settings" aria-label="Settings" className="rounded-xl p-2 text-muted-foreground" activeProps={{ className: "!text-primary bg-secondary" }}><Settings className="h-5 w-5" /></Link>
           </div>
         </div>
       </header>
