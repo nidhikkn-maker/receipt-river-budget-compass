@@ -1,5 +1,5 @@
 // Insights analytics: trends, comparisons, anomalies and budget suggestions (pure, tested). All money in INR.
-import { cashflow, netWorth, type Account, type Txn, type Valuation } from "./ledger";
+import { accountBalance, cashflow, netWorth, type Account, type Txn, type Valuation } from "./ledger";
 import { addDays, monthEnd } from "./planning";
 
 interface Row extends Txn { category: string; merchant: string | null; title: string; paymentMethod?: string }
@@ -131,3 +131,37 @@ export function savingsIdeas(rows: Row[], today: string, subscriptionsMonthly: n
   if (subscriptionsMonthly > 0) ideas.push({ idea: "Review active subscriptions — total monthly cost", amount: r2(subscriptionsMonthly) });
   return ideas;
 }
+
+/** Subscription spending per month: entries whose merchant/title matches an active-or-past subscription name, plus the scheduled monthly cost. */
+export function subscriptionSpendSeries(rows: Row[], subs: { name: string; kind: string; amount: number; frequency: string; status: string }[], today: string, n = 6) {
+  const names = subs.filter((s) => s.kind === "subscription").map((s) => s.name.trim().toLowerCase()).filter((s) => s.length >= 3);
+  const PER_MONTH: Record<string, number> = { daily: 30, weekly: 52 / 12, monthly: 1, quarterly: 1 / 3, half_yearly: 1 / 6, yearly: 1 / 12 };
+  const scheduled = r2(subs.filter((s) => s.kind === "subscription" && s.status === "active").reduce((t, s) => t + s.amount * (PER_MONTH[s.frequency] ?? 0), 0));
+  const isSub = (t: Row) => names.some((nm) => `${t.merchant ?? ""} ${t.title}`.toLowerCase().includes(nm));
+  return lastMonths(today, n).map((month) => ({
+    month, label: monthLabel(month), scheduled,
+    spent: r2(rows.filter((t) => isSpend(t) && t.date.startsWith(month) && isSub(t)).reduce((s, t) => s + t.amount, 0)),
+  }));
+}
+
+/** Card utilisation (% of limit owed) at each month end; cards without a positive limit are skipped. */
+export function cardUtilisationSeries(accounts: Account[], txns: Txn[], today: string, n = 6) {
+  const cards = accounts.filter((a) => a.kind === "credit_card" && (a.creditLimit ?? 0) > 0);
+  return lastMonths(today, n).map((month) => {
+    const end = monthEnd(`${month}-01`); const asOf = end > today ? today : end;
+    const row: Record<string, string | number> = { month, label: monthLabel(month) };
+    for (const c of cards) row[c.name] = Math.max(0, Math.round((accountBalance(c, txns.filter((t) => t.date <= asOf)) / c.creditLimit!) * 100));
+    return row;
+  });
+}
+
+/** Share of each loan repaid (original vs outstanding). */
+export function loanProgress(loans: { name: string; original: number; principal: number; status: string }[]) {
+  return loans.filter((l) => l.original > 0).map((l) => {
+    const paid = r2(Math.min(l.original, Math.max(0, l.original - l.principal)));
+    return { name: l.name, original: l.original, outstanding: r2(Math.max(0, l.principal)), paid, pct: Math.round((paid / l.original) * 100), closed: l.status === "closed" };
+  });
+}
+
+/** Savings per month and cumulative savings (income minus spending). */
+export const savingsTrend = (txns: Txn[], today: string, n = 12) => monthlySeries(txns, today, n).map((m) => ({ month: m.month, label: m.label, saved: m.net, cumulative: m.cumulative, rate: m.savingsRate }));

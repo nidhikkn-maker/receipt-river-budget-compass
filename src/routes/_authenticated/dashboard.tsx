@@ -69,18 +69,18 @@ function Overview() {
       <PaymentReminders />
       <div className="flex flex-col">
       <div hidden={preferences.homeHidden.includes("quick")} style={{order:preferences.homeOrder.indexOf("quick")}} className="mb-5 flex flex-wrap gap-2"><Button asChild><Link to="/new">Add entry</Link></Button><Button asChild variant="outline"><Link to="/vault">Upload document</Link></Button><Button asChild variant="outline"><Link to="/reconcile">Import statement</Link></Button><Button asChild variant="outline"><Link to="/plan">Plan a payment</Link></Button></div>
-      <section hidden={preferences.homeHidden.includes("alerts")} style={{order:preferences.homeOrder.indexOf("alerts")}} className="mb-5"><h2 className="mb-2 font-display text-lg font-bold">Alerts</h2><ul className="divide-y">{pos.alerts.slice(0,6).map((a,i)=><li key={i} className="py-2 text-sm">{a.text}</li>)}</ul>{pos.reimbursements.pendingCount>0&&<p className="text-sm">Pending reimbursements: {money(pos.reimbursements.pendingAmount)} · {pos.reimbursements.pendingCount} claims</p>}</section>
+      <section hidden={preferences.homeHidden.includes("alerts")||(!pos.alerts.length&&!pos.reimbursements.pendingCount)} style={{order:preferences.homeOrder.indexOf("alerts")}} className="mb-5"><h2 className="mb-2 font-display text-lg font-bold">Alerts</h2><ul className="divide-y">{pos.alerts.slice(0,6).map((a,i)=><li key={i} className="py-2 text-sm">{a.text}</li>)}</ul>{pos.reimbursements.pendingCount>0&&<p className="text-sm">Pending reimbursements: {money(pos.reimbursements.pendingAmount)} · {pos.reimbursements.pendingCount} claims</p>}</section>
       <section hidden={preferences.homeHidden.includes("briefing")} style={{order:preferences.homeOrder.indexOf("briefing")}} className="mb-5"><div className="flex items-center justify-between"><h2 className="font-display text-lg font-bold">Your money briefing</h2><Button size="sm" variant="outline" disabled={busy||!preferences.aiEnabled} onClick={async()=>{setBusy(true);try{const r=await ask({data:{facts,messages:[{role:"user",content:"Give a short briefing: recorded spending, upcoming dues, safe-to-spend, and the highest priority alert. Quote only the supplied facts."}]}});setBrief(r.ok?r.text:r.error);}catch{setBrief("Couldn't reach the assistant.");}finally{setBusy(false);}}}>{busy?"Preparing…":"Get briefing"}</Button></div>{brief&&<p className="mt-3 whitespace-pre-wrap text-sm">{brief}</p>}</section>
       <section hidden={preferences.homeHidden.includes("budget")} style={{order:preferences.homeOrder.indexOf("budget")}} className="mb-5"><h2 className="mb-2 font-display text-lg font-bold">Budget use</h2><ul className="divide-y">{preferences.budgets.map(b=>{const u=scopedBudgetUsage(b,expenses,today);return <li key={b.id} className="flex justify-between gap-3 py-2 text-sm"><span>{b.name}</span><span>{money(u.spent)} / {money(u.allowance)}</span></li>;})}</ul><Link to="/budgets" className="text-sm text-primary">View budgets</Link></section>
       <div hidden={preferences.homeHidden.includes("safe")} style={{order:preferences.homeOrder.indexOf("safe")}}>
-      <Link to="/plan" className="mb-3 flex items-center gap-4 rounded-3xl border-2 border-primary bg-card p-4">
-        <div className="flex-1">
+      <Link to="/plan" className="mb-3 flex flex-col gap-3 rounded-3xl border-2 border-primary bg-card p-4 sm:flex-row sm:items-center sm:gap-4">
+        <div className="min-w-0 flex-1">
           <div className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Safe to spend · 30 days</div>
-          <div className="font-mono text-2xl">{money(pos.safe.amount)}</div>
+          <div className="break-words font-mono text-2xl">{money(pos.safe.amount)}</div>
           <div className="text-xs text-muted-foreground">{pos.forecast.shortDates.length ? `Money runs short from ${pos.forecast.shortDates[0]}` : `Lowest point ${money(pos.safe.lowest)} on ${pos.safe.lowestDate}`}</div>
         </div>
-        <div className="text-right text-xs text-muted-foreground">
-          {pos.upcoming.slice(0, 3).map((u, k) => <div key={k}>{u.date.slice(5)} · {u.name} · <span className="font-mono">{money(u.amount)}</span></div>)}
+        <div className="grid gap-1 border-t pt-2 text-xs text-muted-foreground sm:border-0 sm:pt-0 sm:text-right">
+          {pos.upcoming.slice(0, 3).map((u, k) => <div key={k} className="flex justify-between gap-3 sm:block"><span className="min-w-0 truncate">{u.date.slice(5)} · {u.name}</span> <span className="shrink-0 font-mono">{money(u.amount)}</span></div>)}
           {!pos.upcoming.length && "Add bills & income in Plan"}
         </div>
       </Link>

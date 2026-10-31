@@ -61,9 +61,15 @@
 - [ ] Native-only items (Siri voice commands, iOS widgets) — not available to web apps; Shortcut quick-add link offered instead
 
 ## Document audit: additional partial requirements (not blocked externally)
-- [ ] Complete Insights charts: subscription expenditure, card utilisation, loan progress and savings trends
-- [ ] Add explicit tag/person-organisation-project filters to reports and consistent drill-down from charts to the underlying entries
+- [x] Complete Insights charts: subscription expenditure, card utilisation, loan progress and savings trends
+- [x] Add explicit tag/person-organisation-project filters to reports and consistent drill-down from charts to the underlying entries
 - [ ] Add recognised-text extraction for standalone vault documents (attached receipt OCR text already searchable)
 - [ ] Expand AI debt what-if and full sample-question acceptance checks; label hypothetical calculations
 - [ ] Complete developer handover: architecture/data/security notes, integration feasibility, delivery/test plan and ongoing cost assumptions
 - [ ] Automatic financial connections — provider availability, consent and bank support must be established before implementation; not a promised live connection
+
+## User requests (Oct 31, later)
+- [x] Fix alignment issues (mobile 402px)
+- [x] Receipt add: separate Camera / Gallery / Files options
+- [x] Save receipts to add later (pending receipt inbox)
+- [x] New fonts; deeper blue palette with gold accent
