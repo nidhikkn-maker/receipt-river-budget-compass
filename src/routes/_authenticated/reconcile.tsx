@@ -9,6 +9,8 @@ import { BASE_CURRENCY, CURRENCIES, autoMatch, matchScore, money, type Match, ty
 import { StatementEntry } from "@/components/StatementEntry";
 import { readStatement } from "@/lib/statement-import";
 import { useStore } from "@/lib/store";
+import { useServerFn } from "@tanstack/react-start";
+import { extractStatement } from "@/lib/statement-extract.functions";
 
 export const Route = createFileRoute("/_authenticated/reconcile")({
   head: () => ({
@@ -32,6 +34,8 @@ function Reconcile() {
   const [currency, setCurrency] = useState<string>(BASE_CURRENCY);
   const [overrides, setOverrides] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
+  const [reading, setReading] = useState(false);
+  const scanStatement = useServerFn(extractStatement);
 
   const matches: Match[] = useMemo(() => {
     const auto = autoMatch(lines, expenses, currency, 0.4, statementAccount === "all" ? undefined : statementAccount);
@@ -44,11 +48,22 @@ function Reconcile() {
 
   const onFile = async (f: File | undefined) => {
     if (!f) return;
+    setReading(true);
     try {
-      const parsed = await readStatement(f);
+      let parsed: StatementLine[];
+      try { parsed = await readStatement(f); }
+      catch (e) {
+        if (!/\.(pdf|png|jpe?g|webp)$/i.test(f.name) || f.size > 14 * 1024 * 1024) throw e;
+        if (!window.confirm("Read this statement using AI? It may contain private banking details. Review all extracted rows before confirming.")) return;
+        const mimeType = /\.pdf$/i.test(f.name) ? "application/pdf" : /\.png$/i.test(f.name) ? "image/png" : /\.webp$/i.test(f.name) ? "image/webp" : "image/jpeg";
+        const dataUrl = await new Promise<string>((resolve,reject) => { const reader = new FileReader(); reader.onload = () => resolve(String(reader.result)); reader.onerror = reject; reader.readAsDataURL(f); });
+        const result = await scanStatement({ data: { dataUrl, mimeType } });
+        if (!result.ok) throw Error(result.error);
+        parsed = result.lines;
+      }
       setLines(parsed); setFileName(f.name); setOverrides({});
       toast.success(`${parsed.length} statement lines found`);
-    } catch (e) { toast.error((e as Error).message); }
+    } catch (e) { toast.error((e as Error).message); } finally { setReading(false); }
   };
 
   const matched = matches.filter((m) => m.expense);
@@ -78,8 +93,8 @@ function Reconcile() {
 
       <div className="mb-6 flex flex-wrap items-center gap-3 rounded-3xl border-2 border-dashed border-primary/40 bg-secondary/50 p-5">
         <label className="inline-flex cursor-pointer items-center gap-2 rounded-2xl bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground">
-          <Upload className="h-4 w-4" /> Upload statement
-          <input type="file" accept=".csv,.xlsx,.pdf,text/csv,application/pdf" className="sr-only" onChange={(e) => onFile(e.target.files?.[0])} aria-label="Statement file" />
+          <Upload className="h-4 w-4" /> {reading ? "Reading statement…" : "Upload statement"}
+          <input type="file" disabled={reading} accept=".csv,.xlsx,.pdf,.png,.jpg,.jpeg,.webp,text/csv,application/pdf" className="sr-only" onChange={(e) => onFile(e.target.files?.[0])} aria-label="Statement file" />
         </label>
         <div className="flex items-center gap-2 text-sm">
           <Select value={statementAccount} onValueChange={v => { setStatementAccount(v); setOverrides({}); }}>
