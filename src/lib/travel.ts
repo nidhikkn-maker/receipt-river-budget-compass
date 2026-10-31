@@ -61,3 +61,63 @@ export function closeBlockers(t: TravelTrip, txns: Row[]): string[] {
   if (pend > 0) out.push(`₹${pend.toLocaleString("en-IN")} of reimbursements are still pending`);
   return out;
 }
+
+/** Travel categories offered for one-tap adding to the catalog; booking kinds map onto them. */
+export const TRAVEL_CATEGORIES = ["Flights", "Hotels", "Local transport", "Travel meals", "Visa & insurance", "Activities"] as const;
+export const BOOKING_CATEGORY: Record<BookingKind, (typeof TRAVEL_CATEGORIES)[number]> = { flight: "Flights", hotel: "Hotels", train: "Local transport", bus: "Local transport", car: "Local transport", visa: "Visa & insurance", insurance: "Visa & insurance", activity: "Activities", other: "Activities" };
+
+/** Suggest the travel category for a merchant/title. Returns null when nothing clearly matches. */
+export function travelCategory(text: string): (typeof TRAVEL_CATEGORIES)[number] | null {
+  const t = text.toLowerCase();
+  if (/air|indigo|emirates|vistara|flight|airline|akasa|spicejet/.test(t)) return "Flights";
+  if (/hotel|inn|resort|marriott|taj|hyatt|airbnb|oyo|stay|lodge/.test(t)) return "Hotels";
+  if (/uber|ola|taxi|cab|metro|rail|irctc|bus|careem|rapido|fuel/.test(t)) return "Local transport";
+  if (/visa|insurance/.test(t)) return "Visa & insurance";
+  if (/restaurant|cafe|food|swiggy|zomato|dining|meal/.test(t)) return "Travel meals";
+  return null;
+}
+
+/** Open trips whose dates cover the entry date — suggestions only. */
+export function tripsForDate(trips: TravelTrip[], date: string) {
+  return trips.filter((t) => !t.closedAt && date >= t.start && date <= t.end);
+}
+
+/** Ledger entries that look like the payment for an unpaid booking: amount within 2%, within 10 days. Only a single clear match is offered. */
+export function bookingMatches(t: TravelTrip, txns: Row[]): { bookingId: string; entryId: string }[] {
+  const linked = new Set((t.bookings ?? []).map((b) => b.expenseId).filter(Boolean));
+  const out: { bookingId: string; entryId: string }[] = [];
+  for (const b of (t.bookings ?? []).filter((x) => x.status === "unpaid" && x.amount > 0)) {
+    const hits = txns.filter((x) => (x.txnType ?? "expense") === "expense" && !linked.has(x.id) && Math.abs(x.amount - b.amount) <= b.amount * 0.02 && Math.abs(Date.parse(x.date) - Date.parse(b.date)) <= 10 * 864e5);
+    if (hits.length === 1) out.push({ bookingId: b.id, entryId: hits[0]!.id });
+  }
+  return out;
+}
+
+/** Plain-language trip observations computed from the trip's own records. */
+export function tripInsights(t: TravelTrip, txns: Row[], today: string): string[] {
+  const f = tripFinance(t, txns);
+  const out: string[] = [];
+  const days = f.days;
+  if (t.budget > 0) {
+    const elapsed = today < t.start ? 0 : Math.min(days, Math.round((Date.parse(today) - Date.parse(t.start)) / 864e5) + 1);
+    if (f.projected > t.budget) out.push(`Spent plus booked (₹${f.projected.toLocaleString("en-IN")}) is already over the ₹${t.budget.toLocaleString("en-IN")} budget.`);
+    else if (elapsed > 0 && elapsed < days) { const pace = r2(((f.total - 0) / elapsed) * days + f.committed); if (pace > t.budget) out.push(`At the current daily pace the trip would end around ₹${Math.round(pace).toLocaleString("en-IN")}, above budget.`); }
+  }
+  const top = f.categories[0]; if (top && f.total) out.push(`${top.category} is the biggest cost at ${Math.round((top.amount / f.total) * 100)}% of spending.`);
+  if (f.currencies.length > 1) out.push(`Spending is in ${f.currencies.length} currencies; each entry keeps the rate from its bill date.`);
+  if (f.reimbursablePending) out.push(`₹${f.reimbursablePending.toLocaleString("en-IN")} is waiting to be reimbursed.`);
+  if (f.committed) out.push(`₹${f.committed.toLocaleString("en-IN")} of bookings are still unpaid and not yet in your balances.`);
+  return out;
+}
+
+/** Trip report rows that reconcile to the ledger: entries (actual) + unpaid bookings (committed) listed separately. */
+export function tripReportRows(t: TravelTrip, txns: Row[]): string[][] {
+  const f = tripFinance(t, txns);
+  return [
+    ["Section", "Date", "Item", "Workspace", "Currency", "Original", "INR"],
+    ...(f.entries as Row[]).map((e) => ["Spent", e.date, e.merchant ?? e.title ?? "", e.scope ?? "personal", e.currency ?? "INR", String(e.originalAmount ?? e.amount), String(e.amount)]),
+    ...(t.bookings ?? []).filter((b) => b.status === "unpaid").map((b) => ["Booked (unpaid)", b.date, `${b.kind} ${b.provider} ${b.ref}`.trim(), "", "INR", String(b.amount), String(b.amount)]),
+    ["Total spent", "", "", "", "", "", String(f.total)], ["Total booked unpaid", "", "", "", "", "", String(f.committed)],
+    ...Object.entries(f.byWorkspace).map(([w, v]) => [`Workspace ${w}`, "", "", w, "", "", String(v)]),
+  ];
+}
