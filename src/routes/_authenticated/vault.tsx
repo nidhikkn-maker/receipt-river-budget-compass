@@ -2,7 +2,9 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useRef, useState } from "react";
 import { FileText, ExternalLink, Trash2, Upload, Camera, Image as ImageIcon, FolderOpen, ScanLine } from "lucide-react";
 import { useServerFn } from "@tanstack/react-start";
-import { extractDocument } from "@/lib/document-extract.functions";
+import { extractDocument, type ExtractedDocument } from "@/lib/document-extract.functions";
+import { ContractObligations, NoticeDeadlines } from "@/components/ContractObligations";
+import { toObligations } from "@/lib/contracts";
 import { toast } from "sonner";
 import { PageTitle } from "@/components/AppShell";
 import { Input } from "@/components/ui/input";
@@ -16,7 +18,8 @@ import { DOC_TYPES, DOC_LABEL, expiringDocuments, searchVault, vaultItems, type 
 import { todayISO } from "@/lib/use-position";
 export const Route=createFileRoute("/_authenticated/vault")({head:()=>({meta:[{title:"Document vault — Ledgerline"},{name:"description",content:"Search receipts and upload linked financial documents."},{property:"og:title",content:"Document vault — Ledgerline"},{property:"og:description",content:"Receipts, statements, insurance and warranties with renewal dates."},{property:"og:type",content:"website"},{name:"twitter:card",content:"summary"}]}),component:Vault});
 function Vault() {
-  const { transactions, documents, accounts, loans, addDocument, updateDocument, removeDocument, signedUrl } = useStore();
+  const { transactions, documents, accounts, loans, addDocument, updateDocument, removeDocument, signedUrl, preferences, savePreferences } = useStore();
+  const [found, setFound] = useState<ExtractedDocument["obligations"]>([]);
   const [q, setQ] = useState(""); const [from, setFrom] = useState(""); const [to, setTo] = useState("");
   const [type, setType] = useState<DocType | "all">("all"); const [selected, setSelected] = useState<Expense | null>(null);
   const [busy, setBusy] = useState(false); const [file, setFile] = useState<File | null>(null); const input = useRef<HTMLInputElement>(null); const cam = useRef<HTMLInputElement>(null); const gal = useRef<HTMLInputElement>(null);
@@ -27,14 +30,16 @@ function Vault() {
   const upload = async (e: React.FormEvent) => {
     e.preventDefault(); if (!file || busy) return; setBusy(true);
     try {
-      await addDocument(file, { title: form.title, docType: form.docType, docDate: form.date || null, amount: form.amount ? Number(form.amount) : null, currency: "INR", merchant: form.merchant || null, notes: form.notes, text,
+      const docId = await addDocument(file, { title: form.title, docType: form.docType, docDate: form.date || null, amount: form.amount ? Number(form.amount) : null, currency: "INR", merchant: form.merchant || null, notes: form.notes, text,
         transactionId: form.transactionId === "none" ? null : form.transactionId, accountId: form.accountId === "none" ? null : form.accountId, loanId: form.loanId === "none" ? null : form.loanId, expiresOn: form.expiry || null });
-      setFile(null); setText(""); setForm({ ...form, title: "", notes: "", amount: "" }); if (input.current) input.current.value = ""; toast.success("Document saved");
+      const obs = toObligations(docId, found, () => crypto.randomUUID());
+      if (obs.length) { await savePreferences({ ...preferences, contractObligations: [...preferences.contractObligations, ...obs] }); toast.message(`${obs.length} payment obligation${obs.length > 1 ? "s" : ""} found — review them on the document`); }
+      setFound([]); setFile(null); setText(""); setForm({ ...form, title: "", notes: "", amount: "" }); if (input.current) input.current.value = ""; toast.success("Document saved");
     } catch (err) { toast.error((err as Error).message); } finally { setBusy(false); }
   };
   const isDate = (v: string | null) => !!v && /^\d{4}-\d{2}-\d{2}$/.test(v);
   const pick = async (f: File | null) => {
-    setFile(f); setText(""); if (!f) return;
+    setFile(f); setText(""); setFound([]); if (!f) return;
     const base = { ...form, title: f.name.replace(/\.[^.]+$/, "") }; setForm(base);
     if (!(f.type.startsWith("image/") || f.type === "application/pdf")) return;
     if (f.type === "application/pdf" && f.size > 3_000_000) { toast.message("File is large — fill the details manually"); return; }
@@ -45,7 +50,7 @@ function Vault() {
       if (prepared.dataUrl.length > 4_000_000) { toast.message("File is large — fill the details manually"); return; }
       const out = await scanFn({ data: prepared });
       if (!out.ok) { toast.error(out.error); return; }
-      const x = out.result; setText(x.text);
+      const x = out.result; setText(x.text); setFound(x.obligations ?? []);
       setForm({ ...base, title: x.title || base.title, docType: x.docType, merchant: x.merchant ?? "", date: isDate(x.date) ? x.date! : base.date, expiry: isDate(x.expiresOn) ? x.expiresOn! : "", amount: x.amount != null ? String(x.amount) : "", notes: x.notes ?? "" });
       toast.success("Details filled in — please check them");
     } catch { toast.error("Couldn't scan this document"); } finally { setScanning(false); }
@@ -58,6 +63,7 @@ function Vault() {
   };
   return <>
     <PageTitle eyebrow="Documents" title="Document vault" />
+    <NoticeDeadlines />
     {expires.length > 0 && <div className="mb-4 border-l-4 border-destructive bg-secondary p-3 text-sm">{expires.map(d => <p key={d.id}>{d.title} · expires {d.expiresOn}</p>)}</div>}
     <div className="mb-5 grid gap-3 sm:grid-cols-4">
       <Input aria-label="Search documents" placeholder="Merchant, amount, filename or text" value={q} onChange={e => setQ(e.target.value)} />
@@ -69,6 +75,7 @@ function Vault() {
     <div className="mb-8 grid gap-3 sm:grid-cols-2">{items.map(item => <article key={item.key} className="min-w-0 rounded-lg border bg-card p-4">
       <Button variant="ghost" className="h-auto w-full justify-start gap-3 whitespace-normal p-0 text-left" onClick={() => void open(item)}><FileText className="h-6 w-6 shrink-0 text-primary" /><span className="min-w-0"><span className="block break-words font-semibold">{item.title}</span><span className="block text-xs text-muted-foreground">{DOC_LABEL[item.docType]} · {item.date ?? "No date"}{item.amount != null && ` · ${money(item.amount, item.currency)}`}</span><span className="block break-words text-xs text-muted-foreground">{item.fileName}</span></span><ExternalLink className="ml-auto h-4 w-4 shrink-0" /></Button>
       {item.source === "document" && <div className="mt-3 flex justify-end gap-2"><Button size="sm" variant="outline" onClick={() => { const title = window.prompt("Document title", item.title); if (title && item.docId) void updateDocument(item.docId, { title }).then(() => toast.success("Document updated")).catch(e => toast.error(e.message)); }}>Rename</Button><Button size="icon" variant="ghost" aria-label={`Delete document ${item.title}`} onClick={() => { const doc = documents.find(d => d.id === item.docId); if (doc && window.confirm(`Delete ${doc.title} and its file?`)) void removeDocument(doc).then(() => toast.success("Document deleted")).catch(e => toast.error(e.message)); }}><Trash2 className="h-4 w-4" /></Button></div>}
+      {item.docId && <ContractObligations docId={item.docId} />}
     </article>)}</div>
     <form onSubmit={upload} className="grid gap-3 border-t pt-6 sm:grid-cols-2">
       <h2 className="font-display text-xl font-bold sm:col-span-2">Add document</h2>

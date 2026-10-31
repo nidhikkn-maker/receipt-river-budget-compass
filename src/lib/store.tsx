@@ -85,7 +85,7 @@ interface Ctx {
   adjustBalance: (a: Account, actual: number, date: string) => Promise<boolean>;
   addValuation: (v: Omit<Valuation, "id">) => Promise<void>;
   removeValuation: (id: string) => Promise<void>;
-  addDocument: (file: File, meta: DocumentMeta) => Promise<void>;
+  addDocument: (file: File, meta: DocumentMeta) => Promise<string>;
   updateDocument: (id: string, meta: Partial<DocumentMeta>) => Promise<void>;
   removeDocument: (d: VaultDoc) => Promise<void>;
   history: (transactionId: string) => Promise<AuditEntry[]>;
@@ -510,13 +510,15 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
     const path = `${userId}/docs/${crypto.randomUUID()}-${safeName(file.name)}`;
     const up = await supabase.storage.from("receipts").upload(path, file, { contentType: file.type || "application/octet-stream" });
     if (up.error) throw new Error(`Couldn't upload ${file.name}`);
+    const docId = crypto.randomUUID();
     const { error } = await supabase.from("documents").insert({
-      owner_id: userId, title: meta.title.trim(), doc_type: meta.docType, file_path: path, file_name: file.name.slice(0, 200), mime_type: file.type, size_bytes: file.size,
+      id: docId, owner_id: userId, title: meta.title.trim(), doc_type: meta.docType, file_path: path, file_name: file.name.slice(0, 200), mime_type: file.type, size_bytes: file.size,
       doc_date: meta.docDate || null, amount: meta.amount, currency: meta.currency, merchant: meta.merchant?.trim() || null, notes: meta.notes.slice(0, 2000), extracted_text: (meta.text ?? "").slice(0, 20000),
       transaction_id: meta.transactionId, account_id: meta.accountId, loan_id: meta.loanId, expires_on: meta.expiresOn || null,
     });
     if (error) { await supabase.storage.from("receipts").remove([path]); throw new Error(error.message); }
     await refresh();
+    return docId;
   };
   const updateDocument: Ctx["updateDocument"] = async (id, m) => {
     const row: Database["public"]["Tables"]["documents"]["Update"] = {};
