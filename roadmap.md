@@ -103,3 +103,22 @@
 - [x] Check published app on mobile for loading errors
 
 - [x] Saved payment methods (UPI IDs, cards, wallets, cash) linked to bank accounts
+
+## Version 3.0 — Autonomous Financial Intelligence (uploaded doc, Oct 31)
+### Priority 1 — Immediate
+- [ ] Money Allocation Engine: income distribution proposals across buckets, editable, saved plans, planned-vs-actual, carry-forward; never moves money, total ≤ available
+- [ ] Payment Readiness Monitor: per-upcoming-payment projection (balance + confirmed income − earlier obligations − min balance), statuses ready/shortfall/unknown/overdue/paid, full calculation view
+- [ ] Financial Rules Builder: templates + custom rules (name, trigger, threshold, account/category, frequency, priority, notify, enabled), derived alerts
+- [ ] Universal Financial Search: natural-language search across transactions, accounts, merchants, categories, tags, receipts, documents, cards, loans, commitments, reimbursements
+- [ ] AI Statement-to-Action: grouped review (matched/new/duplicates/uncertain/discrepancies/attention), idempotent imports
+### Priority 2 — Advanced intelligence
+- [ ] AI Financial Autopilot: proactive alerts + recommendations with review/accept/dismiss/remind-later; never acts on money
+- [ ] Financial Stress Testing: scenario simulator (delayed salary, medical, income interruption…), compare scenarios, never touches real records
+- [ ] Purchase Cooling-Off Assistant: proposed-purchase queue with waiting period, affordability impact, decision history
+- [ ] Contract & Obligation Intelligence: upload contracts/policies, AI extraction with verification, linked to source document
+### Priority 3 — Extended
+- [ ] Family Financial Requests: controlled member access, expense requests with evidence, approval tracking; no automatic transactions
+- [ ] Financial Memory: decision history with expected vs actual outcome, review dates
+- [ ] Personal Finance Knowledge Graph: entity relationships, optional exploration screen
+### Acceptance (verify before declaring done)
+- [ ] Allocations never move money; readiness uses due dates + balances; rules fire only on conditions; search respects authorisation; imports never duplicate; simulations never alter records; autopilot needs approval; family access isolated; contract extraction keeps document refs; memory records outcomes; graph reflects real links; V1/V2 still work
