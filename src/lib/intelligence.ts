@@ -1,7 +1,7 @@
 // Phase 2 & 3 rules (pure, tested): decision simulator, behaviour patterns, emergency fund, irregular expenses,
 // milestones, trips, merchant intelligence and the weekly brief. All money is INR, rounded to paise.
 import { accountBalance, cashflow, isLiability, netWorth, type Account, type Txn, type Valuation } from "./ledger";
-import { addDays, addMonths, amortize, daysBetween, forecast, monthEnd, nextAfter, prepayment, type Commitment } from "./planning";
+import { addDays, addMonths, daysBetween, forecast, monthEnd, prepayment, type Commitment } from "./planning";
 import { categoryParts } from "./expenses";
 
 const r2 = (n: number) => Math.round(n * 100) / 100;
@@ -287,5 +287,3 @@ export function briefDue(s: BriefSettings, lastGenerated: string | null, now: Da
   if (back === 0 && h < s.hour) return false;
   return !lastGenerated || lastGenerated < slot;
 }
-export { nextAfter };
-export const unusedAmortize = amortize;
