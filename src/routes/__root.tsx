@@ -80,8 +80,8 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Ledgerline — Team Expenses" },
-      { name: "description", content: "Expense submissions, approvals and budgets for teams." },
+      { title: "Ledgerline — Personal finance" },
+      { name: "description", content: "Private accounts, family spending, budgets and financial planning." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
       { name: "twitter:site", content: "@Lovable" },

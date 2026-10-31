@@ -4,7 +4,7 @@ import { PageTitle, Stat } from "@/components/AppShell";
 import { ExpenseTable } from "@/components/ExpenseTable";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { CATEGORIES, applyFilters, money, totalsByScope, type Filters } from "@/lib/expenses";
+import { PAYMENT_METHODS, PAYMENT_LABEL, applyFilters, money, totalsByScope, type Filters } from "@/lib/expenses";
 import { useStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
 
@@ -23,10 +23,10 @@ export const Route = createFileRoute("/_authenticated/expenses")({
 });
 
 function Expenses() {
-  const { expenses, members } = useStore();
+  const { transactions: expenses, members, accounts, preferences } = useStore();
   const [f, setF] = useState<Filters>({ scope: "all", memberId: "all", category: "all" });
   const list = applyFilters(expenses, f);
-  const t = totalsByScope(list);
+  const t = totalsByScope(list.filter(e=>(e.txnType??"expense")==="expense"));
 
   return (
     <>
@@ -37,7 +37,7 @@ function Expenses() {
             className={cn("rounded-xl px-4 py-2 font-semibold capitalize", f.scope === s ? "bg-primary text-primary-foreground" : "text-muted-foreground")}>{s}</button>
         ))}
       </div>
-      <div className="mb-5 grid gap-3 sm:grid-cols-4">
+      <div className="mb-3 grid gap-3 sm:grid-cols-4"><Input aria-label="Search transactions" placeholder="Merchant, description or tags" value={f.query ?? ""} onChange={e=>setF({...f,query:e.target.value})}/><Select value={f.accountId ?? "all"} onValueChange={v=>setF({...f,accountId:v})}><SelectTrigger aria-label="Filter account"><SelectValue/></SelectTrigger><SelectContent><SelectItem value="all">All accounts</SelectItem>{accounts.map(a=><SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}</SelectContent></Select><Select value={f.paymentMethod ?? "all"} onValueChange={v=>setF({...f,paymentMethod:v})}><SelectTrigger aria-label="Filter payment"><SelectValue/></SelectTrigger><SelectContent><SelectItem value="all">All payment methods</SelectItem>{PAYMENT_METHODS.map(v=><SelectItem key={v} value={v}>{PAYMENT_LABEL[v]}</SelectItem>)}</SelectContent></Select><Select value={f.tag ?? "all"} onValueChange={v=>setF({...f,tag:v})}><SelectTrigger aria-label="Filter tag"><SelectValue/></SelectTrigger><SelectContent><SelectItem value="all">All tags</SelectItem>{[...new Set(expenses.flatMap(e=>e.tags??[]))].map(t=><SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent></Select></div><div className="mb-5 grid gap-3 sm:grid-cols-4">
         <Select value={f.memberId ?? "all"} onValueChange={(v) => setF({ ...f, memberId: v })}>
           <SelectTrigger aria-label="Family member"><SelectValue /></SelectTrigger>
           <SelectContent>
@@ -50,7 +50,7 @@ function Expenses() {
           <SelectTrigger aria-label="Category"><SelectValue /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All categories</SelectItem>
-            {CATEGORIES.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+            {[...new Set([...preferences.categories.map(c=>c.name),...expenses.map(e=>e.category)])].map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
           </SelectContent>
         </Select>
         <Input type="date" aria-label="From" value={f.from ?? ""} onChange={(e) => setF({ ...f, from: e.target.value })} />

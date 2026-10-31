@@ -4,7 +4,7 @@ import { saveExpense } from "./fx.functions";
 import {
   validateBudget, validateExpense,
   type Budgets, type Category, type Expense, type ExpenseInput, type Member, type PaymentMethod, type Receipt, type Scope,
-  type Split,
+  type Split, type ReceiptDetails,
 } from "./expenses";
 import type { Account, AccountKind, TxnType } from "./ledger";
 import { defaultPreferences, type FinancePreferences } from "./preferences";
@@ -95,7 +95,7 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
         paymentMethod: x.payment_method as PaymentMethod, reconciledAt: x.reconciled_at, statementRef: x.statement_ref,
         date: x.expense_date, description: x.description, receipts: (x.receipts as unknown as Receipt[]) ?? [],
         txnType: x.txn_type as TxnType, accountId: x.account_id, toAccountId: x.to_account_id, tags: x.tags ?? [],
-        receiptDetails: x.receipt_details as unknown as Expense["receiptDetails"],
+        receiptDetails: x.receipt_details as unknown as ReceiptDetails,
       })),
     );
     const bud: Budgets = {};

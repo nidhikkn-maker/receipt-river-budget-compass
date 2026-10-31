@@ -7,10 +7,10 @@ export const Route = createFileRoute("/")({
   },
   head: () => ({
     meta: [
-      { title: "Ledgerline — Team Expenses" },
-      { name: "description", content: "Expense submissions, approvals and budgets for teams." },
-      { property: "og:title", content: "Ledgerline — Team Expenses" },
-      { property: "og:description", content: "Expense submissions, approvals and budgets for teams." },
+      { title: "Ledgerline — Personal finance" },
+      { name: "description", content: "Accounts, family spending, budgets and cash-flow planning." },
+      { property: "og:title", content: "Ledgerline — Personal finance" },
+      { property: "og:description", content: "Accounts, family spending, budgets and cash-flow planning." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
     ],

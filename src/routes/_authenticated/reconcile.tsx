@@ -6,6 +6,7 @@ import { PageTitle, Stat } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { BASE_CURRENCY, CURRENCIES, autoMatch, money, parseStatementCsv, type Match, type StatementLine } from "@/lib/expenses";
+import { readStatement } from "@/lib/statement-import";
 import { useStore } from "@/lib/store";
 
 export const Route = createFileRoute("/_authenticated/reconcile")({
@@ -42,7 +43,7 @@ function Reconcile() {
   const onFile = async (f: File | undefined) => {
     if (!f) return;
     try {
-      const parsed = parseStatementCsv(await f.text());
+      const parsed = await readStatement(f);
       setLines(parsed); setFileName(f.name); setOverrides({});
       toast.success(`${parsed.length} debit lines found`);
     } catch (e) { toast.error((e as Error).message); }
@@ -52,7 +53,7 @@ function Reconcile() {
   const confirmAll = async () => {
     setBusy(true);
     try {
-      for (const m of matched) await reconcile(m.expense!.id, `${fileName} · ${m.line.date} · ${m.line.description}`.slice(0, 300));
+      for (const m of matched) { if (!m.expense) continue; await reconcile(m.expense.id, `${fileName} · ${m.line.date} · ${m.line.description}`.slice(0, 300)); }
       toast.success(`${matched.length} expenses marked as matched`);
       setLines([]);
     } catch (e) { toast.error((e as Error).message); } finally { setBusy(false); }
@@ -63,7 +64,7 @@ function Reconcile() {
 
   return (
     <>
-      <PageTitle eyebrow="Bank" title="Reconcile statements" sub="Upload a CSV from your bank or card. We match each debit to an expense by amount, date and merchant." />
+      <PageTitle eyebrow="Bank" title="Reconcile statements" sub="Upload a CSV, Excel or text PDF from your bank or card. We match each debit to an expense by amount, date and merchant." />
       <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-3">
         <Stat label="Matched" value={String(reconciled.length)} />
         <Stat label="Not matched yet" value={String(open.length)} hint={money(open.reduce((s, e) => s + e.amount, 0))} />
@@ -71,8 +72,8 @@ function Reconcile() {
 
       <div className="mb-6 flex flex-wrap items-center gap-3 rounded-3xl border-2 border-dashed border-primary/40 bg-secondary/50 p-5">
         <label className="inline-flex cursor-pointer items-center gap-2 rounded-2xl bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground">
-          <Upload className="h-4 w-4" /> Upload statement CSV
-          <input type="file" accept=".csv,text/csv" className="sr-only" onChange={(e) => onFile(e.target.files?.[0])} aria-label="Statement file" />
+          <Upload className="h-4 w-4" /> Upload statement
+          <input type="file" accept=".csv,.xlsx,.pdf,text/csv,application/pdf" className="sr-only" onChange={(e) => onFile(e.target.files?.[0])} aria-label="Statement file" />
         </label>
         <div className="flex items-center gap-2 text-sm">
           Statement currency
@@ -103,7 +104,7 @@ function Reconcile() {
                     <SelectTrigger aria-label={`Match for ${m.line.description}`} className="min-w-0"><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="none">No match</SelectItem>
-                      {(m.expense ? [m.expense, ...open.filter((e) => e.id !== m.expense!.id)] : open).slice(0, 50).map((e) => (
+                      {(m.expense ? [m.expense, ...open.filter((e) => e.id !== m.expense?.id)] : open).slice(0, 50).map((e) => (
                         <SelectItem key={e.id} value={e.id}>{e.date} · {e.title} · {money(e.originalAmount, e.currency)}</SelectItem>
                       ))}
                     </SelectContent>

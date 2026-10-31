@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { budgetSpend, scopedBudgetUsage, type ScopedBudget } from "./preferences";
 import type { Expense } from "./expenses";
-const expense = (patch: Partial<Expense>): Expense => ({ id:"e", title:"Test", merchant:null, category:"Dining", scope:"personal", memberId:null, splits:[], amount:1000, originalAmount:1000, currency:"INR", fxRate:1, paymentMethod:"cash", date:"2026-10-10", description:"", receipts:[], ...patch });
+const expense = (patch: Partial<Expense>): Expense => ({ id:"e", reconciledAt:null, statementRef:null, title:"Test", merchant:null, category:"Dining", scope:"personal", memberId:null, splits:[], amount:1000, originalAmount:1000, currency:"INR", fxRate:1, paymentMethod:"cash", date:"2026-10-10", description:"", receipts:[], ...patch });
 const budget: ScopedBudget={id:"b",name:"Family",kind:"overall",value:"",amount:2000,period:"monthly",start:"2026-09-01",carry:true};
 describe("Scoped budgets",()=>{
   it("attributes only a person's allocated share",()=>expect(budgetSpend(expense({splits:[{memberId:null,amount:300},{memberId:"family",amount:700}]}),{...budget,kind:"person",value:"family"})).toBe(700));
