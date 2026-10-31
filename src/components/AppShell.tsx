@@ -88,9 +88,9 @@ export function PageTitle({ title, sub, eyebrow }: { title: string; sub?: string
 
 export function Stat({ label, value, hint, tone }: { label: string; value: string; hint?: string; tone?: "business" | "personal" }) {
   return (
-    <div className={"rounded-2xl border bg-card p-4 " + (tone === "business" ? "border-l-4 border-l-primary" : tone === "personal" ? "border-l-4 border-l-primary-glow" : "")}>
+    <div className={"min-w-0 rounded-2xl border bg-card p-4 " + (tone === "business" ? "border-l-4 border-l-primary" : tone === "personal" ? "border-l-4 border-l-primary-glow" : "")}>
       <div className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">{label}</div>
-      <div className="mt-1 font-mono text-xl sm:text-2xl">{value}</div>
+      <div className="mt-1 break-all font-mono text-xl sm:text-2xl">{value}</div>
       {hint && <div className="text-xs text-muted-foreground">{hint}</div>}
     </div>
   );

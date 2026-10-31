@@ -18,7 +18,10 @@
 - Accounts/ledger rules (balances, cashflow, net worth) are pure tested functions in src/lib/ledger.ts; balances are derived from entries, never stored, and transfers/card payments never count as income or spending. store.expenses = expense-type only; store.transactions = all entries.
 - Planning math (recurring schedule, forecast, safe-to-spend, loans, goals, subscription detection) lives in src/lib/planning.ts; src/lib/position.ts combines records into screen/AI figures. The AI assistant (src/lib/assistant.functions.ts) only explains facts from position.ts — never let it compute numbers.
 - Owner-scoped finance_preferences holds category and grouped-tag catalogs, scoped budgets and display preferences; category moves use an RLS-protected database function to update ledger and budget references together.
-- Offline entries and snapshots use owner-keyed IndexedDB; stable entry UUIDs make server-side synchronization idempotent and currency conversion stays server-side.
+- Offline entries and snapshots use owner-keyed IndexedDB encrypted with non-exportable AES-GCM device keys and owner-bound authenticated data; stable entry UUIDs make synchronization idempotent and currency conversion stays server-side.
 - Passkey device unlock uses SimpleWebAuthn with one-use expiring server challenges, required user verification and stored counters; it supplements account sign-in rather than replacing it.
 - Offline app registration is centralized in src/lib/pwa.ts and refused in development and preview; vite-plugin-pwa generates the production worker with network-first navigation and no OAuth caching.
 - The root Outlet is hydration-gated with ClientOnly to avoid a TanStack match race when protected client-only routes redirect to public sign-in.
+- Reimbursements, scheduled payments, loan creation/repayment and card EMI conversions use the owner-scoped finance_operation database transaction with serialized idempotency records so retries cannot partially save money movements.
+- ZIP backups include private receipt/document binaries and remap all owner-linked identifiers on cross-account restore; financial reporting and chart calculations remain browser-side pure functions.
+- AI privacy switches are checked against saved owner preferences on the server before any provider call, not merely hidden in the interface.

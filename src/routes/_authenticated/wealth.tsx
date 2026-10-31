@@ -54,7 +54,7 @@ function Wealth() {
   return (
     <>
       <PageTitle eyebrow="Wealth" title="Accounts & net worth" sub="Balances come straight from your recorded entries." />
-      <div className="mb-6 grid grid-cols-3 gap-3">
+      <div className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-3">
         <Stat label="Assets" value={money(nw.assets)} />
         <Stat label="Owed" value={money(nw.liabilities)} />
         <Stat label="Net worth" value={money(nw.net)} />
