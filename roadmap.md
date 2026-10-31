@@ -140,5 +140,5 @@
 - [x] Trip budgets (actual vs committed), booking-to-transaction linking, travel reports, multi-currency, reimbursements, advances/settlement
 ### Priority 4 — Intelligence and completion
 - [x] Trip auto-association, trip insights, booking-payment match suggestions, trip closure, trip CSV
-- [ ] Dedicated advance/card-payment/loan/investment entry types in the shared form
+- [x] Dedicated advance/card-payment/loan/investment entry types in the shared form
 - [ ] Full 17-point acceptance pass

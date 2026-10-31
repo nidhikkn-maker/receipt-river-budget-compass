@@ -648,7 +648,7 @@ function NewExpense() {
           </div>
           <div className="grid gap-2"><Label htmlFor="desc">Business purpose{af("description")}</Label><Textarea id="desc" value={description} onChange={(e) => setDescription(e.target.value)} /></div>
           <Button type="submit" size="lg" variant="gold" className="rounded-2xl" disabled={reading || saving || !confirmed || duplicateBlocked || receiptBlocked}>
-            {saving ? "Saving…" : editing ? "Save changes" : "Save expense"}
+            {saving ? "Saving…" : editing ? "Save changes" : `Save ${TXN_LABEL[txnType].toLowerCase()}`}
           </Button>
         </fieldset>
       </form>
