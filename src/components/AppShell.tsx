@@ -32,7 +32,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   return (
     <div className="min-h-screen bg-background lg:pl-24">
       <aside className="fixed inset-y-0 left-0 z-30 hidden w-24 flex-col items-center gap-1 bg-ink py-6 text-ink-foreground lg:flex">
-        <Link to="/dashboard" className="mb-6 flex h-12 w-12 items-center justify-center rounded-2xl bg-hero font-display text-xl font-extrabold text-primary-foreground shadow-float">L</Link>
+        <Link to="/dashboard" className="mb-6 flex h-12 w-12 items-center justify-center rounded-2xl bg-hero font-display text-xl font-extrabold text-ink-foreground shadow-float">L</Link>
         {LINKS.map((l) => (
           <Link key={l.to} to={l.to} className="flex w-20 flex-col items-center gap-1 rounded-2xl py-2.5 text-[11px] font-semibold text-ink-muted transition hover:text-ink-foreground"
             activeProps={{ className: "!text-gold bg-sidebar-accent" }}>
@@ -67,7 +67,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         {LINKS.filter((l) => MOBILE.includes(l.to)).map((l) => (
           <Link key={l.to} to={l.to} className="flex flex-1 flex-col items-center gap-0.5 rounded-2xl py-1.5 text-[10px] font-semibold" activeProps={{ className: "!text-gold" }}>
             {"primary" in l ? (
-              <span className="-mt-7 flex h-12 w-12 items-center justify-center rounded-2xl bg-hero text-primary-foreground shadow-float"><l.icon className="h-6 w-6" /></span>
+              <span className="-mt-7 flex h-12 w-12 items-center justify-center rounded-2xl bg-hero text-ink-foreground shadow-float"><l.icon className="h-6 w-6" /></span>
             ) : <l.icon className="h-5 w-5" />}
             {l.label}
           </Link>

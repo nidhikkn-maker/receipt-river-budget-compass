@@ -283,7 +283,7 @@ function NewExpense() {
         {/* Scan column */}
         <div className="space-y-4">
           <div className="rounded-3xl border-2 border-dashed border-primary/40 bg-secondary/50 p-5 text-center">
-            <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-hero text-primary-foreground shadow-float"><ScanLine className="h-7 w-7" /></span>
+            <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-hero text-ink-foreground shadow-float"><ScanLine className="h-7 w-7" /></span>
             <p className="mt-2 font-display text-lg font-bold">{reading ? "Reading your bill…" : "Add a bill or receipt"}</p>
             <p className="text-xs text-muted-foreground">Photo or PDF · we fill in the rest</p>
             <div className="mt-4 grid grid-cols-3 gap-2">

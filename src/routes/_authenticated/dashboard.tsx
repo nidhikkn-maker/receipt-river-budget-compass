@@ -50,13 +50,13 @@ function Overview() {
   return (
     <>
       <div className="mb-3 flex gap-2">{(["day","week","month"] as const).map(period=><Button key={period} size="sm" variant={preferences.homePeriod===period?"default":"outline"} onClick={()=>void savePreferences({...preferences,homePeriod:period})}>{period==="day"?"Today":period==="week"?"7 days":"This month"}</Button>)}</div>
-      <section className="relative mb-6 overflow-hidden rounded-3xl bg-hero p-6 text-primary-foreground shadow-float sm:p-8">
-        <div className="pointer-events-none absolute -right-16 -top-16 h-56 w-56 rounded-full border-[28px] border-primary-foreground/10" />
+      <section className="relative mb-6 overflow-hidden rounded-3xl bg-hero p-6 text-ink-foreground shadow-float sm:p-8">
+        <div className="pointer-events-none absolute -right-16 -top-16 h-56 w-56 rounded-full border-[28px] border-ink-foreground/10" />
         <div className="font-mono text-[11px] font-semibold uppercase tracking-[0.2em] opacity-90">{new Date().toLocaleString("en", { month: "long", year: "numeric" })}</div>
         <div className="mt-1 font-display text-4xl font-extrabold tracking-tight sm:text-6xl">{money(t.total)}</div>
         <div className="text-sm font-semibold opacity-90">spent {preferences.homePeriod==="day"?"today":preferences.homePeriod==="week"?"in the last 7 days":"this month"}</div>
         <div className="mt-6 sm:max-w-md">
-          <div className="flex h-3 overflow-hidden rounded-full bg-primary-foreground/20">
+          <div className="flex h-3 overflow-hidden rounded-full bg-ink-foreground/20">
             <div className="bg-gold" style={{ width: `${pct}%` }} />
           </div>
           <div className="mt-2 flex justify-between text-sm">
