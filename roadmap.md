@@ -63,9 +63,9 @@
 ## Document audit: additional partial requirements (not blocked externally)
 - [x] Complete Insights charts: subscription expenditure, card utilisation, loan progress and savings trends
 - [x] Add explicit tag/person-organisation-project filters to reports and consistent drill-down from charts to the underlying entries
-- [ ] Add recognised-text extraction for standalone vault documents (attached receipt OCR text already searchable)
-- [ ] Expand AI debt what-if and full sample-question acceptance checks; label hypothetical calculations
-- [ ] Complete developer handover: architecture/data/security notes, integration feasibility, delivery/test plan and ongoing cost assumptions
+- [x] Add recognised-text extraction for standalone vault documents (attached receipt OCR text already searchable)
+- [x] Expand AI debt what-if and full sample-question acceptance checks; label hypothetical calculations
+- [x] Complete developer handover: architecture/data/security notes, integration feasibility, delivery/test plan and ongoing cost assumptions
 - [ ] Automatic financial connections — provider availability, consent and bank support must be established before implementation; not a promised live connection
 
 ## User requests (Oct 31, later)
