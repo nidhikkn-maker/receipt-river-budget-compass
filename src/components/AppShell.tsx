@@ -73,7 +73,7 @@ function WorkspaceSelector() {
   const { preferences, savePreferences } = useStore();
   const options: ("all" | Scope)[] = ["all", ...SCOPES];
   return (
-    <div className="flex gap-1 overflow-x-auto pb-0.5" role="group" aria-label="Workspace">
+    <div className="flex min-w-0 max-w-full gap-1 overflow-x-auto pb-0.5" role="group" aria-label="Workspace">
       {options.map((s) => (
         <button
           key={s}
