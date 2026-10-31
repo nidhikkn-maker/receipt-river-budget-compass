@@ -23,10 +23,24 @@ export const Route = createFileRoute("/_authenticated/expenses")({
 });
 
 function Expenses() {
-  const { transactions: expenses, members, accounts, preferences } = useStore();
+  const { transactions: expenses, members, accounts, preferences, bulkSetCategory } = useStore();
   const [f, setF] = useState<Filters>({ scope: "all", memberId: "all", category: "all" });
+  const [selecting, setSelecting] = useState(false);
+  const [picked, setPicked] = useState<Set<string>>(new Set());
+  const [bulkCategory, setBulkCategory] = useState("");
+  const [applying, setApplying] = useState(false);
   const list = applyFilters(expenses, f);
   const t = totalsByScope(list.filter(e=>(e.txnType??"expense")==="expense"));
+  const activeCategories = preferences.categories.filter(c=>!c.archived).map(c=>c.name);
+  const togglePick = (id: string) => setPicked(s => { const n = new Set(s); if (n.has(id)) n.delete(id); else n.add(id); return n; });
+  const stopSelecting = () => { setSelecting(false); setPicked(new Set()); };
+  const applyBulk = async () => {
+    if (!bulkCategory || !picked.size) return;
+    setApplying(true);
+    try { await bulkSetCategory([...picked], bulkCategory); toast.success(`${picked.size} ${picked.size === 1 ? "entry" : "entries"} moved to ${bulkCategory}`); stopSelecting(); }
+    catch (e) { toast.error((e as Error).message); }
+    finally { setApplying(false); }
+  };
 
   return (
     <>
@@ -61,7 +75,16 @@ function Expenses() {
         <Stat tone="personal" label="Personal" value={money(t.personal)} />
         <Stat label={`${list.length} total`} value={money(t.total)} />
       </div>
-      <ExpenseTable items={list} empty="No expenses match these filters." />
+      <div className="mb-4 flex flex-wrap items-center gap-2">
+        <Button variant={selecting ? "secondary" : "outline"} size="sm" onClick={() => (selecting ? stopSelecting() : setSelecting(true))}>{selecting ? "Done selecting" : "Select entries"}</Button>
+        {selecting && <>
+          <Button variant="ghost" size="sm" onClick={() => setPicked(new Set(list.map(e => e.id)))}>All {list.length}</Button>
+          <Button variant="ghost" size="sm" onClick={() => setPicked(new Set())}>None</Button>
+          <Select value={bulkCategory} onValueChange={setBulkCategory}><SelectTrigger aria-label="New category for selected" className="w-44"><SelectValue placeholder="New category…" /></SelectTrigger><SelectContent>{activeCategories.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent></Select>
+          <Button size="sm" disabled={!picked.size || !bulkCategory || applying} onClick={() => void applyBulk()}>{applying ? "Applying…" : `Apply to ${picked.size}`}</Button>
+        </>}
+      </div>
+      <ExpenseTable items={list} empty="No expenses match these filters." selected={selecting ? picked : undefined} onToggle={selecting ? togglePick : undefined} />
     </>
   );
 }
