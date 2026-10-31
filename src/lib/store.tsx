@@ -283,6 +283,13 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
     check((await supabase.rpc("move_expense_category", { source, target })).error);
     await refresh();
   };
+  const bulkSetCategory: Ctx["bulkSetCategory"] = async (ids, category) => {
+    validateActiveCategory(preferences.categories, category, false);
+    const patches = bulkRecategorize(expenses, ids, category);
+    if (!patches.length) throw new Error("Nothing selected");
+    for (const p of patches) check((await supabase.from("expenses").update({ category: p.category, allocations: p.allocations }).eq("id", p.id)).error);
+    await refresh();
+  };
   const updateName: Ctx["updateName"] = async (n) => {
     const v = n.trim();
     if (!v) throw new Error("Enter your name");
