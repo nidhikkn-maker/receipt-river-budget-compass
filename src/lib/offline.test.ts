@@ -1,8 +1,14 @@
 import { describe,expect,it } from "vitest";
-import { queueEntry,pendingEntries,removePending,putSnapshot,getSnapshot } from "./offline";
+import { queueEntry,pendingEntries,removePending,putSnapshot,getSnapshot,encryptOffline,decryptOffline } from "./offline";
 import { indexedDB } from "fake-indexeddb";
 globalThis.indexedDB = indexedDB;
 describe("Offline entry isolation",()=>{
+  it("encrypts records and rejects decryption as another owner",async()=>{
+    const sealed=await encryptOffline("owner-a",{balance:78901});
+    expect(new TextDecoder().decode(sealed.bytes)).not.toContain("78901");
+    expect(await decryptOffline("owner-a",sealed)).toEqual({balance:78901});
+    await expect(decryptOffline("owner-b",sealed)).rejects.toThrow();
+  });
   it("retains an entry under its owner and stable id",async()=>{
     await queueEntry({id:"stable-entry",owner:"owner-a",createdAt:"2026-10-31",files:[],input:{title:"Offline dinner",merchant:null,amount:2500,currency:"INR",date:"2026-10-31",category:"Dining",scope:"personal",memberId:null,paymentMethod:"cash",description:""}});
     expect((await pendingEntries("owner-a")).map(e=>e.id)).toEqual(["stable-entry"]);
