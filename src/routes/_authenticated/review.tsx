@@ -166,7 +166,7 @@ function Health() {
   const hist = useMemo(() => healthHistory(base, today), [inputs, today]); // eslint-disable-line react-hooks/exhaustive-deps
   return (
     <div className="space-y-4">
-      <section className="rounded-3xl bg-primary p-5 text-primary-foreground">
+      <section className="rounded-3xl bg-hero p-5 text-ink-foreground ring-1 ring-gold">
         <div className="text-xs font-semibold uppercase tracking-wide opacity-80">Financial health score</div>
         <div className="font-mono text-5xl font-bold text-gold">{h.score ?? "—"}<span className="text-xl opacity-70">/100</span></div>
         <p className="mt-1 text-sm opacity-90">{h.score == null ? "Incomplete assessment — not enough data to score honestly." : h.complete ? "Based on all five components." : "Based on the components that can be measured; others are missing."}</p>

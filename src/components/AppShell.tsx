@@ -51,6 +51,8 @@ export function AppShell({ children }: { children: ReactNode }) {
           <Button size="icon" variant="ghost" onClick={() => setHidden((h) => !h)} aria-label={hidden ? "Show amounts" : "Hide amounts"} className="ml-auto rounded-xl p-2 text-muted-foreground">{hidden ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}</Button>
           <Link to="/auth" aria-label={name ? `Account: ${name}` : "Account"} title={name || "Account"} className="p-2 text-muted-foreground"><UserRound className="h-5 w-5" /></Link>
           <div className="flex w-full justify-between gap-1 lg:hidden">
+            <Link to="/inbox" aria-label="Financial inbox" className="rounded-xl p-2 text-foreground/70" activeProps={{ className: "!text-gold bg-gold-soft" }}><Inbox className="h-5 w-5" /></Link>
+            <Link to="/review" aria-label="Monthly review and health score" className="rounded-xl p-2 text-foreground/70" activeProps={{ className: "!text-gold bg-gold-soft" }}><HeartPulse className="h-5 w-5" /></Link>
             <Link to="/plan" aria-label="Plan" className="rounded-xl p-2 text-foreground/70" activeProps={{ className: "!text-gold bg-gold-soft" }}><CalendarClock className="h-5 w-5" /></Link>
             <Link to="/budgets" aria-label="Budgets" className="rounded-xl p-2 text-foreground/70" activeProps={{ className: "!text-gold bg-gold-soft" }}><PiggyBank className="h-5 w-5" /></Link>
             <Link to="/reconcile" aria-label="Bank reconciliation" className="rounded-xl p-2 text-foreground/70" activeProps={{ className: "!text-gold bg-gold-soft" }}><Landmark className="h-5 w-5" /></Link>
