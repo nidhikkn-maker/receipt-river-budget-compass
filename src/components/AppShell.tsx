@@ -1,6 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import { useEffect, useState, type ReactNode } from "react";
-import { BarChart3, CalendarClock, Gem, Home, Landmark, ListFilter, PiggyBank, Plus, Settings, Sparkles, Users, Eye, EyeOff, FileText, UserRound } from "lucide-react";
+import { BarChart3, CalendarClock, Gem, Home, Landmark, ListFilter, PiggyBank, Plus, Settings, Sparkles, Users, Eye, EyeOff, FileText, UserRound, TrendingUp } from "lucide-react";
 import { DeviceLock } from "./DeviceLock";
 import { Button } from "./ui/button";
 import { useStore } from "@/lib/store";
@@ -13,6 +13,7 @@ const LINKS = [
   { to: "/reports", label: "Insights", icon: BarChart3 },
   { to: "/wealth", label: "Wealth", icon: Gem },
   { to: "/plan", label: "Plan", icon: CalendarClock },
+  { to: "/forecast", label: "Predict", icon: TrendingUp },
   { to: "/budgets", label: "Budgets", icon: PiggyBank },
   { to: "/reconcile", label: "Bank", icon: Landmark },
   { to: "/family", label: "Family", icon: Users },

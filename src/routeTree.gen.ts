@@ -18,6 +18,7 @@ import { Route as AuthenticatedBudgetsRouteImport } from './routes/_authenticate
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedExpensesRouteImport } from './routes/_authenticated/expenses'
 import { Route as AuthenticatedFamilyRouteImport } from './routes/_authenticated/family'
+import { Route as AuthenticatedForecastRouteImport } from './routes/_authenticated/forecast'
 import { Route as AuthenticatedNewRouteImport } from './routes/_authenticated/new'
 import { Route as AuthenticatedPlanRouteImport } from './routes/_authenticated/plan'
 import { Route as AuthenticatedReconcileRouteImport } from './routes/_authenticated/reconcile'
@@ -71,6 +72,11 @@ const AuthenticatedFamilyRoute = AuthenticatedFamilyRouteImport.update({
   path: '/family',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedForecastRoute = AuthenticatedForecastRouteImport.update({
+  id: '/forecast',
+  path: '/forecast',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedNewRoute = AuthenticatedNewRouteImport.update({
   id: '/new',
   path: '/new',
@@ -122,6 +128,7 @@ export interface FileRoutesByFullPath {
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/expenses': typeof AuthenticatedExpensesRoute
   '/family': typeof AuthenticatedFamilyRoute
+  '/forecast': typeof AuthenticatedForecastRoute
   '/new': typeof AuthenticatedNewRoute
   '/plan': typeof AuthenticatedPlanRoute
   '/reconcile': typeof AuthenticatedReconcileRoute
@@ -140,6 +147,7 @@ export interface FileRoutesByTo {
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/expenses': typeof AuthenticatedExpensesRoute
   '/family': typeof AuthenticatedFamilyRoute
+  '/forecast': typeof AuthenticatedForecastRoute
   '/new': typeof AuthenticatedNewRoute
   '/plan': typeof AuthenticatedPlanRoute
   '/reconcile': typeof AuthenticatedReconcileRoute
@@ -160,6 +168,7 @@ export interface FileRoutesById {
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/expenses': typeof AuthenticatedExpensesRoute
   '/_authenticated/family': typeof AuthenticatedFamilyRoute
+  '/_authenticated/forecast': typeof AuthenticatedForecastRoute
   '/_authenticated/new': typeof AuthenticatedNewRoute
   '/_authenticated/plan': typeof AuthenticatedPlanRoute
   '/_authenticated/reconcile': typeof AuthenticatedReconcileRoute
@@ -180,6 +189,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/expenses'
     | '/family'
+    | '/forecast'
     | '/new'
     | '/plan'
     | '/reconcile'
@@ -198,6 +208,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/expenses'
     | '/family'
+    | '/forecast'
     | '/new'
     | '/plan'
     | '/reconcile'
@@ -217,6 +228,7 @@ export interface FileRouteTypes {
     | '/_authenticated/dashboard'
     | '/_authenticated/expenses'
     | '/_authenticated/family'
+    | '/_authenticated/forecast'
     | '/_authenticated/new'
     | '/_authenticated/plan'
     | '/_authenticated/reconcile'
@@ -300,6 +312,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedFamilyRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/forecast': {
+      id: '/_authenticated/forecast'
+      path: '/forecast'
+      fullPath: '/forecast'
+      preLoaderRoute: typeof AuthenticatedForecastRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/new': {
       id: '/_authenticated/new'
       path: '/new'
@@ -365,6 +384,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedExpensesRoute: typeof AuthenticatedExpensesRoute
   AuthenticatedFamilyRoute: typeof AuthenticatedFamilyRoute
+  AuthenticatedForecastRoute: typeof AuthenticatedForecastRoute
   AuthenticatedNewRoute: typeof AuthenticatedNewRoute
   AuthenticatedPlanRoute: typeof AuthenticatedPlanRoute
   AuthenticatedReconcileRoute: typeof AuthenticatedReconcileRoute
@@ -380,6 +400,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedExpensesRoute: AuthenticatedExpensesRoute,
   AuthenticatedFamilyRoute: AuthenticatedFamilyRoute,
+  AuthenticatedForecastRoute: AuthenticatedForecastRoute,
   AuthenticatedNewRoute: AuthenticatedNewRoute,
   AuthenticatedPlanRoute: AuthenticatedPlanRoute,
   AuthenticatedReconcileRoute: AuthenticatedReconcileRoute,
