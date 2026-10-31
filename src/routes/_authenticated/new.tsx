@@ -97,6 +97,8 @@ function NewExpense() {
   const [description, setDescription] = useState("");
   const [receiptDetails, setReceiptDetails] = useState<ReceiptDetails>({});
   const [receipts, setReceipts] = useState<LocalReceipt[]>([]);
+  const [queue, setQueue] = useState<LocalReceipt[]>([]);
+  const [batch, setBatch] = useState<{ done: number; total: number } | null>(null);
   const [reading, setReading] = useState(false);
   const [scan, setScan] = useState<Scan | null>(null);
   const [confirmed, setConfirmed] = useState(true);
@@ -188,14 +190,7 @@ function NewExpense() {
     return () => { live = false; };
   }, [currency, date]);
 
-  const onFiles = async (files: FileList | null) => {
-    if (!files?.length) return;
-    const big = Array.from(files).find((f) => f.size > 5 * 1024 * 1024);
-    if (big) { toast.error(`${big.name} is larger than 5 MB`); return; }
-    const read = await Promise.all(Array.from(files).map(readFile));
-    setReceipts((r) => [...r, ...read]);
-    const first = read[0];
-    if (!first) return;
+  const runExtraction = async (first: LocalReceipt, fresh: boolean) => {
     setReading(true);
     try {
       const res = await extract({ data: { dataUrl: first.dataUrl, mimeType: first.type } });
@@ -203,10 +198,10 @@ function NewExpense() {
       const x = res.result;
       setReceiptDetails({ tax: x.tax, items: x.items, text: x.text });
       const filled = new Set<string>();
-      if (x.title && !title) { setTitle(x.title); filled.add("title"); }
+      if (x.title && (fresh || !title)) { setTitle(x.title); filled.add("title"); }
       if (x.category) { setCategory(x.category); filled.add("category"); }
       if (x.payment_method) { setPaymentMethod(x.payment_method); filled.add("payment"); }
-      if (x.description && !description) { setDescription(x.description); filled.add("description"); }
+      if (x.description && (fresh || !description)) { setDescription(x.description); filled.add("description"); }
       if (x.scope) { setScope(x.scope); filled.add("scope"); }
       const cur = x.currency && /^[A-Z]{3}$/.test(x.currency.toUpperCase()) ? x.currency.toUpperCase() : currency;
       setScan({ merchant: x.merchant ?? "", date: isDate(x.date) ? x.date : date, amount: x.amount != null ? String(x.amount) : "", currency: cur });
@@ -218,6 +213,25 @@ function NewExpense() {
     } finally {
       setReading(false);
     }
+  };
+
+  const onFiles = async (files: FileList | null) => {
+    if (!files?.length) return;
+    const big = Array.from(files).find((f) => f.size > 5 * 1024 * 1024);
+    if (big) { toast.error(`${big.name} is larger than 5 MB`); return; }
+    const read = await Promise.all(Array.from(files).map(readFile));
+    const first = read[0];
+    if (!first) return;
+    if (read.length > 1 && !editing) {
+      // Bulk upload: one bill per entry — review and save each, the rest wait in line.
+      setReceipts([first]);
+      setQueue((q) => [...q, ...read.slice(1)]);
+      setBatch((b) => ({ done: b?.done ?? 0, total: (b?.total ?? 0) + read.length }));
+      toast.message(`${read.length} bills queued — review and save each one`);
+    } else {
+      setReceipts((r) => [...r, ...read]);
+    }
+    await runExtraction(first, false);
   };
 
   const confirmScan = () => {
