@@ -21,6 +21,7 @@ import { Route as AuthenticatedFamilyRouteImport } from './routes/_authenticated
 import { Route as AuthenticatedForecastRouteImport } from './routes/_authenticated/forecast'
 import { Route as AuthenticatedInboxRouteImport } from './routes/_authenticated/inbox'
 import { Route as AuthenticatedNewRouteImport } from './routes/_authenticated/new'
+import { Route as AuthenticatedPatternsRouteImport } from './routes/_authenticated/patterns'
 import { Route as AuthenticatedPlanRouteImport } from './routes/_authenticated/plan'
 import { Route as AuthenticatedReconcileRouteImport } from './routes/_authenticated/reconcile'
 import { Route as AuthenticatedReportsRouteImport } from './routes/_authenticated/reports'
@@ -90,6 +91,11 @@ const AuthenticatedNewRoute = AuthenticatedNewRouteImport.update({
   path: '/new',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedPatternsRoute = AuthenticatedPatternsRouteImport.update({
+  id: '/patterns',
+  path: '/patterns',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedPlanRoute = AuthenticatedPlanRouteImport.update({
   id: '/plan',
   path: '/plan',
@@ -149,6 +155,7 @@ export interface FileRoutesByFullPath {
   '/forecast': typeof AuthenticatedForecastRoute
   '/inbox': typeof AuthenticatedInboxRoute
   '/new': typeof AuthenticatedNewRoute
+  '/patterns': typeof AuthenticatedPatternsRoute
   '/plan': typeof AuthenticatedPlanRoute
   '/reconcile': typeof AuthenticatedReconcileRoute
   '/reports': typeof AuthenticatedReportsRoute
@@ -171,6 +178,7 @@ export interface FileRoutesByTo {
   '/forecast': typeof AuthenticatedForecastRoute
   '/inbox': typeof AuthenticatedInboxRoute
   '/new': typeof AuthenticatedNewRoute
+  '/patterns': typeof AuthenticatedPatternsRoute
   '/plan': typeof AuthenticatedPlanRoute
   '/reconcile': typeof AuthenticatedReconcileRoute
   '/reports': typeof AuthenticatedReportsRoute
@@ -195,6 +203,7 @@ export interface FileRoutesById {
   '/_authenticated/forecast': typeof AuthenticatedForecastRoute
   '/_authenticated/inbox': typeof AuthenticatedInboxRoute
   '/_authenticated/new': typeof AuthenticatedNewRoute
+  '/_authenticated/patterns': typeof AuthenticatedPatternsRoute
   '/_authenticated/plan': typeof AuthenticatedPlanRoute
   '/_authenticated/reconcile': typeof AuthenticatedReconcileRoute
   '/_authenticated/reports': typeof AuthenticatedReportsRoute
@@ -219,6 +228,7 @@ export interface FileRouteTypes {
     | '/forecast'
     | '/inbox'
     | '/new'
+    | '/patterns'
     | '/plan'
     | '/reconcile'
     | '/reports'
@@ -241,6 +251,7 @@ export interface FileRouteTypes {
     | '/forecast'
     | '/inbox'
     | '/new'
+    | '/patterns'
     | '/plan'
     | '/reconcile'
     | '/reports'
@@ -264,6 +275,7 @@ export interface FileRouteTypes {
     | '/_authenticated/forecast'
     | '/_authenticated/inbox'
     | '/_authenticated/new'
+    | '/_authenticated/patterns'
     | '/_authenticated/plan'
     | '/_authenticated/reconcile'
     | '/_authenticated/reports'
@@ -369,6 +381,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedNewRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/patterns': {
+      id: '/_authenticated/patterns'
+      path: '/patterns'
+      fullPath: '/patterns'
+      preLoaderRoute: typeof AuthenticatedPatternsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/plan': {
       id: '/_authenticated/plan'
       path: '/plan'
@@ -444,6 +463,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedForecastRoute: typeof AuthenticatedForecastRoute
   AuthenticatedInboxRoute: typeof AuthenticatedInboxRoute
   AuthenticatedNewRoute: typeof AuthenticatedNewRoute
+  AuthenticatedPatternsRoute: typeof AuthenticatedPatternsRoute
   AuthenticatedPlanRoute: typeof AuthenticatedPlanRoute
   AuthenticatedReconcileRoute: typeof AuthenticatedReconcileRoute
   AuthenticatedReportsRoute: typeof AuthenticatedReportsRoute
@@ -463,6 +483,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedForecastRoute: AuthenticatedForecastRoute,
   AuthenticatedInboxRoute: AuthenticatedInboxRoute,
   AuthenticatedNewRoute: AuthenticatedNewRoute,
+  AuthenticatedPatternsRoute: AuthenticatedPatternsRoute,
   AuthenticatedPlanRoute: AuthenticatedPlanRoute,
   AuthenticatedReconcileRoute: AuthenticatedReconcileRoute,
   AuthenticatedReportsRoute: AuthenticatedReportsRoute,

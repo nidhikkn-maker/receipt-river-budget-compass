@@ -37,7 +37,7 @@ function Patterns() {
         <TabsContent value="behaviour"><Behaviour onOpen={(id) => setOpen(transactions.find((t) => t.id === id) ?? null)} /></TabsContent>
         <TabsContent value="merchants"><Merchants /></TabsContent>
       </Tabs>
-      {open && <ExpenseDialog expense={open} open={!!open} onOpenChange={(o) => !o && setOpen(null)} />}
+      <ExpenseDialog expense={open} onClose={() => setOpen(null)} />
     </div>
   );
 }
