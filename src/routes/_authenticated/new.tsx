@@ -2,7 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { ScopeToggle } from "@/components/ScopeBadge";
 import { toast } from "sonner";
-import { ScanLine, Sparkles, X } from "lucide-react";
+import { ScanLine, Sparkles, X, Camera, Image as ImageIcon, FolderOpen, Inbox } from "lucide-react";
 import { PageTitle } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -56,7 +56,23 @@ interface SpeechRec { lang: string; interimResults: boolean; start: () => void; 
 interface Scan { merchant: string; date: string; amount: string; currency: string }
 
 function NewExpense() {
-  const { save, transactions: expenses, members, accounts, preferences } = useStore();
+  const { save, transactions: expenses, members, accounts, preferences, documents, addDocument, removeDocument, signedUrl } = useStore();
+  const PENDING = "pending-receipt";
+  const inbox = documents.filter((d) => d.notes === PENDING && !d.transactionId);
+  const [fromInbox, setFromInbox] = useState<string[]>([]);
+  const cameraRef = useRef<HTMLInputElement>(null); const galleryRef = useRef<HTMLInputElement>(null);
+  const saveForLater = async () => {
+    try { for (const r of receipts) await addDocument(r.file, { title: `Receipt to add · ${r.name}`.slice(0, 120), docType: "receipt", docDate: null, amount: null, currency: "INR", merchant: null, notes: PENDING, transactionId: null, accountId: null, loanId: null, expiresOn: null });
+      toast.success(`${receipts.length} receipt${receipts.length === 1 ? "" : "s"} saved to add later`); setReceipts([]); setScan(null); setConfirmed(true);
+    } catch (e) { toast.error((e as Error).message); }
+  };
+  const useSaved = async (id: string) => {
+    const d = inbox.find((x) => x.id === id); if (!d) return;
+    const url = await signedUrl(d.filePath); if (!url) { toast.error("Couldn't open the saved receipt"); return; }
+    const blob = await (await fetch(url)).blob();
+    const dt = new DataTransfer(); dt.items.add(new File([blob], d.fileName, { type: d.mimeType || blob.type }));
+    setFromInbox((x) => [...x, id]); await onFiles(dt.files);
+  };
   const liveAccounts = accounts.filter((a) => !a.archived);
   const nav = useNavigate();
   const search = Route.useSearch();
@@ -245,6 +261,7 @@ function NewExpense() {
           splits: splitOn ? Object.entries(shares).map(([k, v]) => ({ memberId: k === "me" ? null : k, amount: Number(v) })) : [] },
         { ...(editing ? { id: editing.id } : {}), files: receipts.map((r) => r.file) },
       );
+      for (const id of fromInbox) { const d = documents.find((x) => x.id === id); if (d) await removeDocument(d).catch(() => {}); }
       toast.success(editing ? "Entry updated" : `${TXN_LABEL[txnType]} saved`);
       nav({ to: editing ? "/expenses" : "/dashboard" });
     } catch (e) {
@@ -265,19 +282,31 @@ function NewExpense() {
       <form onSubmit={submit} className="grid gap-5 lg:grid-cols-[1fr_1.3fr]">
         {/* Scan column */}
         <div className="space-y-4">
-          <button type="button" onClick={() => fileRef.current?.click()}
-            className="flex w-full flex-col items-center justify-center gap-2 rounded-3xl border-2 border-dashed border-primary/40 bg-secondary/50 p-8 text-center transition hover:bg-secondary">
-            <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-hero text-primary-foreground shadow-float"><ScanLine className="h-7 w-7" /></span>
-            <span className="font-display text-lg font-bold">{reading ? "Reading your bill…" : "Upload or snap a bill"}</span>
-            <span className="text-xs text-muted-foreground">Photo or PDF · we fill in the rest</span>
-          </button>
+          <div className="rounded-3xl border-2 border-dashed border-primary/40 bg-secondary/50 p-5 text-center">
+            <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-hero text-primary-foreground shadow-float"><ScanLine className="h-7 w-7" /></span>
+            <p className="mt-2 font-display text-lg font-bold">{reading ? "Reading your bill…" : "Add a bill or receipt"}</p>
+            <p className="text-xs text-muted-foreground">Photo or PDF · we fill in the rest</p>
+            <div className="mt-4 grid grid-cols-3 gap-2">
+              <Button type="button" variant="secondary" className="h-auto flex-col gap-1 py-3" onClick={() => cameraRef.current?.click()}><Camera className="h-5 w-5" /><span className="text-xs">Camera</span></Button>
+              <Button type="button" variant="secondary" className="h-auto flex-col gap-1 py-3" onClick={() => galleryRef.current?.click()}><ImageIcon className="h-5 w-5" /><span className="text-xs">Gallery</span></Button>
+              <Button type="button" variant="secondary" className="h-auto flex-col gap-1 py-3" onClick={() => fileRef.current?.click()}><FolderOpen className="h-5 w-5" /><span className="text-xs">Files</span></Button>
+            </div>
+          </div>
+          <input ref={cameraRef} type="file" accept="image/*" capture="environment" className="sr-only" aria-label="Take a photo of a receipt" onChange={(e) => { void onFiles(e.target.files); e.target.value = ""; }} />
+          <input ref={galleryRef} type="file" multiple accept="image/*" className="sr-only" aria-label="Choose receipt photos" onChange={(e) => { void onFiles(e.target.files); e.target.value = ""; }} />
+          {inbox.length > 0 && (
+            <div className="rounded-3xl border bg-card p-4">
+              <p className="flex items-center gap-2 font-display font-bold"><Inbox className="h-4 w-4 text-gold" />Saved receipts to add ({inbox.length})</p>
+              <ul className="mt-2 divide-y text-sm">{inbox.map((d) => <li key={d.id} className="flex items-center justify-between gap-2 py-2"><span className="min-w-0 truncate">{d.fileName}</span><span className="flex shrink-0 gap-1"><Button type="button" size="sm" variant="outline" disabled={fromInbox.includes(d.id) || reading} onClick={() => void useSaved(d.id)}>Use</Button><Button type="button" size="icon" variant="ghost" aria-label={`Delete ${d.fileName}`} onClick={() => void removeDocument(d)}><X className="h-4 w-4" /></Button></span></li>)}</ul>
+            </div>
+          )}
           <div className="flex gap-2 rounded-3xl border bg-card p-2">
             <Button type="button" size="icon" variant={listening ? "default" : "secondary"} onClick={startVoice} aria-label="Speak an entry" className="h-11 w-11 shrink-0 rounded-2xl"><Mic className="h-5 w-5" /></Button>
             <Input aria-label="Say or type an entry" placeholder='"Spent ₹2,500 on dinner using AMEX yesterday"' value={spoken} onChange={(e) => setSpoken(e.target.value)}
               onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); void applySpoken(spoken); } }} className="border-0 shadow-none focus-visible:ring-0" />
             <Button type="button" variant="ghost" onClick={() => applySpoken(spoken)} disabled={!spoken.trim() || reading}>Fill</Button>
           </div>
-          <input ref={fileRef} id="r" type="file" multiple accept="image/*,application/pdf" capture="environment" className="sr-only" onChange={(e) => onFiles(e.target.files)} />
+          <input ref={fileRef} id="r" type="file" multiple accept="image/*,application/pdf" className="sr-only" aria-label="Choose receipt files" onChange={(e) => { void onFiles(e.target.files); e.target.value = ""; }} />
           {receipts.length > 0 && (
             <ul className="flex flex-wrap gap-2">
               {receipts.map((r, i) => (
@@ -288,6 +317,7 @@ function NewExpense() {
               ))}
             </ul>
           )}
+          {receipts.length > 0 && !editing && fromInbox.length === 0 && <Button type="button" variant="outline" size="sm" onClick={() => void saveForLater()}><Inbox className="mr-1 h-4 w-4" />Save receipts to add later</Button>}
 
           {scan && !reading && !confirmed && (
             <div className="space-y-3 rounded-3xl border-2 border-primary bg-card p-4 shadow-float" role="group" aria-label="Review scanned details">
