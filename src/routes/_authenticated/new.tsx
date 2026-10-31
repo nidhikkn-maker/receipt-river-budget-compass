@@ -285,12 +285,16 @@ function NewExpense() {
   const duplicates = txnType === "expense" ? duplicateBills(billIdentity, expenses, edit) : [];
   const duplicateSignature = JSON.stringify([billIdentity, receipts.map(r => r.name), duplicates.map(e => e.id)]);
   const duplicateBlocked = duplicates.length > 0 && duplicateApproval !== duplicateSignature;
+  // Same receipt file already attached to another entry (by content fingerprint).
+  const receiptReuse = txnType === "expense" && !editing ? receiptFingerprintMatches(receipts[0]?.fingerprint, expenses) : [];
+  const receiptSignature = JSON.stringify([receipts[0]?.fingerprint, receiptReuse.map(e => e.id)]);
+  const receiptBlocked = receiptReuse.length > 0 && receiptApproval !== receiptSignature;
   const advanceQueue = async () => {
     const [next, ...rest] = queue;
     setQueue(rest); setBatch(b => next && b ? { done: b.done + 1, total: b.total } : null);
-    setFromInbox([]); setDuplicateApproval(""); setReceipts(next ? [next] : []);
+    setFromInbox([]); setDuplicateApproval(""); setReceiptApproval(""); setReceipts(next ? [next] : []);
     setTitle(""); setMerchant(""); setAmount(""); setDescription(""); setTags("");
-    setReceiptDetails({}); setScan(null); setConfirmed(true); setReadingError(""); setReadTarget(null); setAutoFilled(new Set()); setSplitOn(false); setShares({});
+    setReceiptDetails({}); setScan(null); setScanRead(null); setConfirmed(true); setReadingError(""); setReadTarget(null); setAutoFilled(new Set()); setSplitOn(false); setShares({});
     if (next) await runExtraction(next, true);
   };
 
