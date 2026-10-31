@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { Expense } from "./expenses";
 import type { Account } from "./ledger";
 import type { Commitment } from "./planning";
-import { behaviour, briefDue, defaultEmergency, emergencyFund, irregularCandidates, mergeMerchants, merchantProfiles, milestoneProgress, normaliseMerchant, recordProgress, simulate, tripSummary, unmergeMerchant, weeklyBrief, type Milestone, type SimInput } from "./intelligence";
+import { behaviour, briefDue, defaultEmergency, emergencyFund, irregularCandidates, mergeMerchants, merchantProfiles, milestoneProgress, normaliseMerchant, plannedScenario, recordProgress, simulate, tripSummary, unmergeMerchant, weeklyBrief, type Milestone, type SimInput } from "./intelligence";
 
 const ex = (o: Partial<Expense>): Expense => ({ id: crypto.randomUUID(), title: "Item", merchant: null, category: "Groceries", scope: "personal", memberId: null, splits: [], amount: 100, currency: "INR", originalAmount: 100, fxRate: 1, paymentMethod: "upi", reconciledAt: null, statementRef: null, date: "2026-10-10", description: "", receipts: [], txnType: "expense", accountId: "a1", ...o });
 const bank: Account = { id: "a1", name: "HDFC", kind: "savings", openingBalance: 100000, archived: false };
@@ -10,6 +10,11 @@ const card: Account = { id: "c1", name: "Card", kind: "credit_card", openingBala
 const TODAY = "2026-10-31";
 
 describe("decision simulator", () => {
+  it("only purchase scenarios can become outgoing planned expenses", () => {
+    for (const kind of ["loan_extra", "increase_savings", "reduce_category", "card_payment", "goal_allocation"] as const) expect(plannedScenario({ kind, amount: 100, date: TODAY, recurring: false })).toBeNull();
+    expect(plannedScenario({ kind: "postpone", amount: 321.45, date: TODAY, postponeTo: "2026-11-15", recurring: true })).toMatchObject({ amount: 321.45, nextDue: "2026-11-15", frequency: "once", direction: "out" });
+    expect(() => plannedScenario({ kind: "purchase", amount: 100, date: "2026-02-30", recurring: false })).toThrow();
+  });
   const base: SimInput = { cash: 50000, floor: 10000, commitments: [], today: TODAY, days: 60, goals: [{ name: "Car", target: 100000, saved: 20000, monthly: 0 }], loans: [{ name: "Home", principal: 1000000, rate: 9, emi: 20000 }], monthlySavings: 5000 };
   it("₹30,000 purchase cuts available funds from ₹40,000 to ₹10,000", () => {
     const r = simulate(base, { kind: "purchase", amount: 30000, date: "2026-11-05", recurring: false });
@@ -95,6 +100,14 @@ describe("trips", () => {
 });
 
 describe("merchants", () => {
+  it("merging an existing group flattens aliases without changing totals", () => {
+    const t = [ex({ merchant: "Alpha Shop", amount: 100 }), ex({ merchant: "Beta Store", amount: 200 }), ex({ merchant: "Gamma Mart", amount: 300 })];
+    let a = mergeMerchants({}, ["Beta Store"], "Alpha Shop");
+    a = mergeMerchants(a, ["Alpha Shop"], "Gamma Mart");
+    expect(merchantProfiles(t, a, TODAY)).toHaveLength(1);
+    expect(merchantProfiles(t, a, TODAY)[0]?.total).toBe(600);
+    expect(merchantProfiles(t, unmergeMerchant(a, "Alpha Shop"), TODAY).map((p) => p.total).sort((x, y) => x - y)).toEqual([100, 500]);
+  });
   it("normalises spelling variants without changing originals", () => {
     expect(normaliseMerchant("UPI-SWIGGY LTD")).toBe(normaliseMerchant("Swiggy"));
   });
