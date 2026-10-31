@@ -8,7 +8,7 @@ import { money } from "@/lib/expenses";
 import { cn } from "@/lib/utils";
 export function PlanCalendar(){
  const {commitments,loans,documents,preferences}=useStore(); const [month,setMonth]=useState(todayISO().slice(0,7)+"-01"); const [selected,setSelected]=useState(todayISO());
- const end=monthEnd(month); const planned=occurrences(commitments,month,end,true).map(x=>({date:x.date,name:x.name,amount:x.amount,direction:x.direction}));
+ const end=monthEnd(month); const planned=occurrences(commitments,month,end).map(x=>({date:x.date,name:x.name,amount:x.amount,direction:x.direction}));
  for(const l of loans.filter(x=>x.status==="active")) {let d=l.nextDue;for(let n=0;n<1200&&d<=end;n++,d=addMonths(d,1)){if(d>=month)planned.push({date:d,name:l.name+" EMI",amount:l.emi,direction:"out"});}}
  for(const d of documents)if(d.expiresOn&&d.expiresOn>=month&&d.expiresOn<=end)planned.push({date:d.expiresOn,name:d.title+" expires",amount:0,direction:"out"});
  const first=(new Date(month+"T00:00:00Z").getUTCDay()+6)%7;
