@@ -14,7 +14,7 @@ export function OrganisationDirectory() {
   const list = useMemo(() => organisationUsage(p.tags, transactions), [p.tags, transactions]);
   const add = async () => {
     const n = name.trim();
-    if (list.some((o) => o.name.toLowerCase() === n.toLowerCase())) return toast.error(`“${n}” is already in your organisations`);
+    if (list.some((o) => o.name.toLowerCase() === n.toLowerCase())) { toast.error(`“${n}” is already in your organisations`); return; }
     await savePreferences({ ...p, tags: [...p.tags, { group: "Organisation", name: n }] }); setName(""); toast.success("Organisation saved");
   };
   return (
