@@ -33,6 +33,7 @@ export interface ReceiptDetails { tax?: number | null; items?: { name: string; q
 
 export interface Expense {
   id: string;
+  department?: string | null;
   title: string;
   merchant: string | null;
   category: Category;
