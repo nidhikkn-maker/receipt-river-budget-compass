@@ -90,7 +90,7 @@ function Connections() {
       <PageTitle eyebrow="Explore" title="Money map" sub="Tap an item to see why it's connected and to add, change or remove links. Changing a record link updates that record." />
       {present.length > 0 && <div className="mb-3 flex flex-wrap items-center gap-2" role="group" aria-label="Show on map">
         <span className="text-xs font-semibold text-muted-foreground">Show:</span>
-        {present.map((k) => <Button key={k} size="sm" variant={kinds.includes(k) ? "default" : "outline"} aria-pressed={kinds.includes(k)} onClick={() => toggle(k)}>{KIND_LABEL[k]}</Button>)}
+        {present.map((k) => <Button key={k} size="sm" variant={kinds.includes(k) ? "default" : "ghost"} className={kinds.includes(k) ? "" : "text-muted-foreground line-through"} aria-pressed={kinds.includes(k)} onClick={() => toggle(k)}>{KIND_LABEL[k]}</Button>)}
         <Button size="sm" variant="ghost" onClick={() => setKinds(ALL_KINDS)}>Show all</Button>
       </div>}
       {view.nodes.length > 0 && <ConnectionsMap nodes={view.nodes} edges={view.edges} selected={sel} onSelect={setSel} />}
