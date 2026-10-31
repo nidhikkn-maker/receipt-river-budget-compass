@@ -148,7 +148,7 @@ function Reconcile() {
       await markSeen();
       if (done) toast.success(`${done} ${done === 1 ? "expense" : "expenses"} registered from ${fileName}`);
       if (failed.length) toast.error(`${failed.length} couldn't be registered — try again`);
-      setLines([]); setExcluded({}); setOverrides({});
+      setLines([]); setExcluded({}); setOverrides({}); setIncludeDups({});
     } finally { setBusy(false); }
   };
 
