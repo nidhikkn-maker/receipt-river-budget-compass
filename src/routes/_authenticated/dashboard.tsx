@@ -70,6 +70,7 @@ function Overview() {
 
       <StatusStrip />
       <PaymentReminders />
+      <PaymentReadiness />
       <div className="flex flex-col">
       <MilestoneBanner />
       <div hidden={preferences.homeHidden.includes("quick")} style={{order:preferences.homeOrder.indexOf("quick")}} className="mb-5 flex flex-wrap gap-2"><Button asChild variant="gold"><Link to="/new">Add entry</Link></Button><Button asChild variant="outline"><Link to="/vault">Upload document</Link></Button><Button asChild variant="outline"><Link to="/reconcile">Import statement</Link></Button><Button asChild variant="outline"><Link to="/plan">Plan a payment</Link></Button><Button asChild variant="outline"><Link to="/strategy">What if…</Link></Button><Button asChild variant="outline"><Link to="/brief">Weekly brief</Link></Button><Button asChild variant="outline"><Link to="/trips">Trips</Link></Button><Button asChild variant="outline"><Link to="/patterns">Patterns</Link></Button></div>

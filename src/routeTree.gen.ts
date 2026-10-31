@@ -15,6 +15,7 @@ import { Route as AuthRouteImport } from './routes/auth'
 import { Route as McpRouteImport } from './routes/mcp'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as Char91DotwellKnownChar93OauthProtectedResourceRouteImport } from './routes/[.well-known]/oauth-protected-resource'
+import { Route as AuthenticatedAllocationRouteImport } from './routes/_authenticated/allocation'
 import { Route as AuthenticatedAssistantRouteImport } from './routes/_authenticated/assistant'
 import { Route as AuthenticatedAssistantsRouteImport } from './routes/_authenticated/assistants'
 import { Route as AuthenticatedBriefRouteImport } from './routes/_authenticated/brief'
@@ -31,6 +32,8 @@ import { Route as AuthenticatedPlanRouteImport } from './routes/_authenticated/p
 import { Route as AuthenticatedReconcileRouteImport } from './routes/_authenticated/reconcile'
 import { Route as AuthenticatedReportsRouteImport } from './routes/_authenticated/reports'
 import { Route as AuthenticatedReviewRouteImport } from './routes/_authenticated/review'
+import { Route as AuthenticatedRulesRouteImport } from './routes/_authenticated/rules'
+import { Route as AuthenticatedSearchRouteImport } from './routes/_authenticated/search'
 import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings'
 import { Route as AuthenticatedStrategyRouteImport } from './routes/_authenticated/strategy'
 import { Route as AuthenticatedTripsRouteImport } from './routes/_authenticated/trips'
@@ -69,6 +72,11 @@ const Char91DotwellKnownChar93OauthProtectedResourceRoute =
     path: '/.well-known/oauth-protected-resource',
     getParentRoute: () => rootRouteImport,
   } as any)
+const AuthenticatedAllocationRoute = AuthenticatedAllocationRouteImport.update({
+  id: '/allocation',
+  path: '/allocation',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedAssistantRoute = AuthenticatedAssistantRouteImport.update({
   id: '/assistant',
   path: '/assistant',
@@ -150,6 +158,16 @@ const AuthenticatedReviewRoute = AuthenticatedReviewRouteImport.update({
   path: '/review',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedRulesRoute = AuthenticatedRulesRouteImport.update({
+  id: '/rules',
+  path: '/rules',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedSearchRoute = AuthenticatedSearchRouteImport.update({
+  id: '/search',
+  path: '/search',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedSettingsRoute = AuthenticatedSettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
@@ -193,6 +211,7 @@ export interface FileRoutesByFullPath {
   '/mcp': typeof McpRoute
   '/reset-password': typeof ResetPasswordRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
+  '/allocation': typeof AuthenticatedAllocationRoute
   '/assistant': typeof AuthenticatedAssistantRoute
   '/assistants': typeof AuthenticatedAssistantsRoute
   '/brief': typeof AuthenticatedBriefRoute
@@ -209,6 +228,8 @@ export interface FileRoutesByFullPath {
   '/reconcile': typeof AuthenticatedReconcileRoute
   '/reports': typeof AuthenticatedReportsRoute
   '/review': typeof AuthenticatedReviewRoute
+  '/rules': typeof AuthenticatedRulesRoute
+  '/search': typeof AuthenticatedSearchRoute
   '/settings': typeof AuthenticatedSettingsRoute
   '/strategy': typeof AuthenticatedStrategyRoute
   '/trips': typeof AuthenticatedTripsRoute
@@ -223,6 +244,7 @@ export interface FileRoutesByTo {
   '/mcp': typeof McpRoute
   '/reset-password': typeof ResetPasswordRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
+  '/allocation': typeof AuthenticatedAllocationRoute
   '/assistant': typeof AuthenticatedAssistantRoute
   '/assistants': typeof AuthenticatedAssistantsRoute
   '/brief': typeof AuthenticatedBriefRoute
@@ -239,6 +261,8 @@ export interface FileRoutesByTo {
   '/reconcile': typeof AuthenticatedReconcileRoute
   '/reports': typeof AuthenticatedReportsRoute
   '/review': typeof AuthenticatedReviewRoute
+  '/rules': typeof AuthenticatedRulesRoute
+  '/search': typeof AuthenticatedSearchRoute
   '/settings': typeof AuthenticatedSettingsRoute
   '/strategy': typeof AuthenticatedStrategyRoute
   '/trips': typeof AuthenticatedTripsRoute
@@ -255,6 +279,7 @@ export interface FileRoutesById {
   '/mcp': typeof McpRoute
   '/reset-password': typeof ResetPasswordRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
+  '/_authenticated/allocation': typeof AuthenticatedAllocationRoute
   '/_authenticated/assistant': typeof AuthenticatedAssistantRoute
   '/_authenticated/assistants': typeof AuthenticatedAssistantsRoute
   '/_authenticated/brief': typeof AuthenticatedBriefRoute
@@ -271,6 +296,8 @@ export interface FileRoutesById {
   '/_authenticated/reconcile': typeof AuthenticatedReconcileRoute
   '/_authenticated/reports': typeof AuthenticatedReportsRoute
   '/_authenticated/review': typeof AuthenticatedReviewRoute
+  '/_authenticated/rules': typeof AuthenticatedRulesRoute
+  '/_authenticated/search': typeof AuthenticatedSearchRoute
   '/_authenticated/settings': typeof AuthenticatedSettingsRoute
   '/_authenticated/strategy': typeof AuthenticatedStrategyRoute
   '/_authenticated/trips': typeof AuthenticatedTripsRoute
@@ -287,6 +314,7 @@ export interface FileRouteTypes {
     | '/mcp'
     | '/reset-password'
     | '/.well-known/oauth-protected-resource'
+    | '/allocation'
     | '/assistant'
     | '/assistants'
     | '/brief'
@@ -303,6 +331,8 @@ export interface FileRouteTypes {
     | '/reconcile'
     | '/reports'
     | '/review'
+    | '/rules'
+    | '/search'
     | '/settings'
     | '/strategy'
     | '/trips'
@@ -317,6 +347,7 @@ export interface FileRouteTypes {
     | '/mcp'
     | '/reset-password'
     | '/.well-known/oauth-protected-resource'
+    | '/allocation'
     | '/assistant'
     | '/assistants'
     | '/brief'
@@ -333,6 +364,8 @@ export interface FileRouteTypes {
     | '/reconcile'
     | '/reports'
     | '/review'
+    | '/rules'
+    | '/search'
     | '/settings'
     | '/strategy'
     | '/trips'
@@ -348,6 +381,7 @@ export interface FileRouteTypes {
     | '/mcp'
     | '/reset-password'
     | '/.well-known/oauth-protected-resource'
+    | '/_authenticated/allocation'
     | '/_authenticated/assistant'
     | '/_authenticated/assistants'
     | '/_authenticated/brief'
@@ -364,6 +398,8 @@ export interface FileRouteTypes {
     | '/_authenticated/reconcile'
     | '/_authenticated/reports'
     | '/_authenticated/review'
+    | '/_authenticated/rules'
+    | '/_authenticated/search'
     | '/_authenticated/settings'
     | '/_authenticated/strategy'
     | '/_authenticated/trips'
@@ -427,6 +463,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/.well-known/oauth-protected-resource'
       preLoaderRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated/allocation': {
+      id: '/_authenticated/allocation'
+      path: '/allocation'
+      fullPath: '/allocation'
+      preLoaderRoute: typeof AuthenticatedAllocationRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/assistant': {
       id: '/_authenticated/assistant'
@@ -540,6 +583,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedReviewRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/rules': {
+      id: '/_authenticated/rules'
+      path: '/rules'
+      fullPath: '/rules'
+      preLoaderRoute: typeof AuthenticatedRulesRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/search': {
+      id: '/_authenticated/search'
+      path: '/search'
+      fullPath: '/search'
+      preLoaderRoute: typeof AuthenticatedSearchRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/settings': {
       id: '/_authenticated/settings'
       path: '/settings'
@@ -593,6 +650,7 @@ declare module '@tanstack/react-router' {
 }
 
 interface AuthenticatedRouteRouteChildren {
+  AuthenticatedAllocationRoute: typeof AuthenticatedAllocationRoute
   AuthenticatedAssistantRoute: typeof AuthenticatedAssistantRoute
   AuthenticatedAssistantsRoute: typeof AuthenticatedAssistantsRoute
   AuthenticatedBriefRoute: typeof AuthenticatedBriefRoute
@@ -609,6 +667,8 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedReconcileRoute: typeof AuthenticatedReconcileRoute
   AuthenticatedReportsRoute: typeof AuthenticatedReportsRoute
   AuthenticatedReviewRoute: typeof AuthenticatedReviewRoute
+  AuthenticatedRulesRoute: typeof AuthenticatedRulesRoute
+  AuthenticatedSearchRoute: typeof AuthenticatedSearchRoute
   AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRoute
   AuthenticatedStrategyRoute: typeof AuthenticatedStrategyRoute
   AuthenticatedTripsRoute: typeof AuthenticatedTripsRoute
@@ -617,6 +677,7 @@ interface AuthenticatedRouteRouteChildren {
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
+  AuthenticatedAllocationRoute: AuthenticatedAllocationRoute,
   AuthenticatedAssistantRoute: AuthenticatedAssistantRoute,
   AuthenticatedAssistantsRoute: AuthenticatedAssistantsRoute,
   AuthenticatedBriefRoute: AuthenticatedBriefRoute,
@@ -633,6 +694,8 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedReconcileRoute: AuthenticatedReconcileRoute,
   AuthenticatedReportsRoute: AuthenticatedReportsRoute,
   AuthenticatedReviewRoute: AuthenticatedReviewRoute,
+  AuthenticatedRulesRoute: AuthenticatedRulesRoute,
+  AuthenticatedSearchRoute: AuthenticatedSearchRoute,
   AuthenticatedSettingsRoute: AuthenticatedSettingsRoute,
   AuthenticatedStrategyRoute: AuthenticatedStrategyRoute,
   AuthenticatedTripsRoute: AuthenticatedTripsRoute,
