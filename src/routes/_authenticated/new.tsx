@@ -487,7 +487,7 @@ function NewExpense() {
             </div>
           </div>
           <div className="grid gap-2"><Label htmlFor="desc">Business purpose{af("description")}</Label><Textarea id="desc" value={description} onChange={(e) => setDescription(e.target.value)} /></div>
-          <Button type="submit" size="lg" className="rounded-2xl" disabled={reading || saving || !confirmed}>
+          <Button type="submit" size="lg" variant="gold" className="rounded-2xl" disabled={reading || saving || !confirmed}>
             {saving ? "Saving…" : editing ? "Save changes" : "Save expense"}
           </Button>
         </div>
