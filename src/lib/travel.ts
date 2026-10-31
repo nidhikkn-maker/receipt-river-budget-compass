@@ -124,3 +124,25 @@ export function tripReportRows(t: TravelTrip, txns: Row[]): string[][] {
     ...Object.entries(f.byWorkspace).map(([w, v]) => [`Workspace ${w}`, "", "", w, "", "", String(v)]),
   ];
 }
+
+export interface ReconLine { date: string; label: string; kind: "advance" | "expense" | "return"; amount: number }
+/** Advance reconciliation: advances received vs business/official trip spending vs money returned. Outstanding > 0 = you still hold (return it); < 0 = still owed to you. */
+export function advanceReconciliation(t: TravelTrip, txns: Row[]) {
+  const tag = tripTag(t);
+  const linked = txns.filter((x) => (x.tripId ? x.tripId === t.id : (x.tags ?? []).includes(tag)));
+  const lines: ReconLine[] = [];
+  for (const a of t.advances ?? []) lines.push({ date: a.date, label: `Advance from ${a.source}`, kind: "advance", amount: r2(a.amount) });
+  for (const x of linked) {
+    const name = (x as Row & { title?: string; merchant?: string }).merchant || (x as Row & { title?: string }).title || "";
+    if (x.txnType === "advance") lines.push({ date: x.date, label: name || "Travel advance", kind: "advance", amount: r2(x.amount) });
+    if (x.txnType === "advance_settlement") lines.push({ date: x.date, label: name || "Advance returned", kind: "return", amount: r2(x.amount) });
+  }
+  for (const e of tripSummary(t, txns).entries as Row[]) {
+    const share = workspaceParts({ scope: e.scope ?? "personal", amount: e.amount, originalAmount: e.originalAmount ?? null, workspaceAllocations: e.workspaceAllocations ?? [] }).filter((p) => p.workspace === "business" || p.workspace === "official").reduce((s, p) => s + p.amount, 0);
+    if (share > 0) lines.push({ date: e.date, label: (e as Row & { merchant?: string; title?: string }).merchant || (e as Row & { title?: string }).title || "Trip expense", kind: "expense", amount: r2(share) });
+  }
+  lines.sort((a, b) => a.date.localeCompare(b.date));
+  const sum = (k: ReconLine["kind"]) => r2(lines.filter((l) => l.kind === k).reduce((s, l) => s + l.amount, 0));
+  const advances = sum("advance"), expenses = sum("expense"), returns = sum("return");
+  return { lines, advances, expenses, returns, outstanding: r2(advances - expenses - returns) };
+}
