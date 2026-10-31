@@ -196,6 +196,7 @@ export function applyFilters(list: Expense[], f: Filters): Expense[] {
     (!f.scope || f.scope === "all" || e.scope === f.scope) &&
     (!f.memberId || f.memberId === "all" || memberShares(e).some((x) => (f.memberId === "me" ? x.memberId === null : x.memberId === f.memberId))) &&
     (!f.category || f.category === "all" || e.category === f.category) &&
+    (!f.department || f.department === "all" || (f.department === "unassigned" ? !e.department?.trim() : (e.department ?? "").trim() === f.department)) &&
     (!f.from || e.date >= f.from) && (!f.to || e.date <= f.to));
 }
 
