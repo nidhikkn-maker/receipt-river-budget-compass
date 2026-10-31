@@ -409,6 +409,12 @@ function NewExpense() {
           </section>}
           {batch && duplicates.length === 0 && <Button type="button" variant="ghost" size="sm" disabled={reading || saving} onClick={() => void advanceQueue()}>Skip this bill</Button>}
 
+          {receiptReuse.length > 0 && !reading && <section aria-label="Receipt already used" className="space-y-3 rounded-lg border border-gold bg-gold-soft p-4">
+            <h2 className="font-display font-bold">This receipt is already attached to another entry</h2>
+            <ul className="space-y-2 text-sm">{receiptReuse.map(e => <li key={e.id} className="flex flex-wrap items-center justify-between gap-2"><span>{e.merchant ?? e.title} · {e.date} · {e.currency} {e.originalAmount.toFixed(2)}</span><Link to="/new" search={{ edit: e.id }} target="_blank" rel="noopener noreferrer" className="text-primary underline">Review existing entry</Link></li>)}</ul>
+            <div className="flex flex-wrap gap-2"><Button type="button" size="sm" variant="outline" disabled={saving} onClick={() => { setReceipts([]); setReceiptDetails({}); setScan(null); setScanRead(null); setConfirmed(true); setReceiptApproval(""); }}>Remove this receipt</Button><Button type="button" size="sm" variant="secondary" disabled={!receiptBlocked} onClick={() => setReceiptApproval(receiptSignature)}>{receiptBlocked ? "Use this receipt anyway" : "Reused receipt confirmed"}</Button></div>
+          </section>}
+
           {scan && !reading && !confirmed && (
             <section ref={reviewRef} className="space-y-3 rounded-3xl border-2 border-primary bg-card p-4 shadow-float" role="group" aria-label="Review scanned details">
               <div>
