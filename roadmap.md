@@ -1,4 +1,6 @@
 # Roadmap (Functional Requirements v1.0)
+- [x] Receipt details review before saving, persistent retry/manual entry; authenticated real OCR retry and corrected merchant/date/amount verified on mobile
+- [x] Secure same-account password fallback; isolated verification, wrong-password lock retention and account-switch rejection tested; 223 automated checks pass; real iPhone verification remains pending
 - [x] Detect possible duplicates in the bulk bill queue with review and skip controls; original-currency matching tested and two-file skip progression verified
 - [x] Bulk categorisation undo and persistent audit history with safe restoration; authenticated apply/undo/reload, split restoration, retries and later-edit conflicts tested; 218 unit tests pass
 - [x] Add a short ChatGPT setup guide to Connected Assistants; signed-in guide and endpoint copying verified

@@ -5,8 +5,72 @@ import type { PublicKeyCredentialCreationOptionsJSON, PublicKeyCredentialRequest
 import { toast } from "sonner";
 import { Fingerprint } from "lucide-react";
 import { Button } from "./ui/button";
+import { Input } from "./ui/input";
+import { Label } from "./ui/label";
+import { useNavigate } from "@tanstack/react-router";
+import { useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { verifyDevicePassword } from "@/lib/device-reauth";
 import { passkeyOptions, verifyPasskey } from "@/lib/passkeys.functions";
 import { useStore } from "@/lib/store";
 export function useDevicePasskey(){const options=useServerFn(passkeyOptions);const verify=useServerFn(verifyPasskey);return async(kind:"register"|"unlock")=>{const res=await options({data:{kind}});const response=kind==="register"?await startRegistration({optionsJSON:JSON.parse(res.options) as PublicKeyCredentialCreationOptionsJSON}):await startAuthentication({optionsJSON:JSON.parse(res.options) as PublicKeyCredentialRequestOptionsJSON});await verify({data:{kind,response:response as unknown as Record<string,unknown>}});};}
 export function PasskeySettings(){const {userId}=useStore();const passkey=useDevicePasskey();return <div className="mb-6 flex flex-wrap gap-3"><Button variant="outline" onClick={async()=>{try{await passkey("register");localStorage.setItem(`ll-lock-${userId}`,"1");toast.success("Face ID / device passkey enabled");}catch(e){toast.error((e as Error).message);}}}><Fingerprint className="h-4 w-4"/>Enable Face ID / device lock</Button><Button variant="ghost" onClick={async()=>{try{await passkey("unlock");localStorage.removeItem(`ll-lock-${userId}`);toast.success("Device lock disabled");}catch(e){toast.error((e as Error).message);}}}>Disable device lock</Button></div>}
-export function DeviceLock({children}:{children:ReactNode}){const {userId}=useStore();const passkey=useDevicePasskey();const [locked,setLocked]=useState(false);const [ready,setReady]=useState(false);const [busy,setBusy]=useState(false);useEffect(()=>{setLocked(localStorage.getItem(`ll-lock-${userId}`)==="1");setReady(true);let timer:ReturnType<typeof setTimeout>|undefined;const change=()=>{if(document.hidden)timer=setTimeout(()=>{if(localStorage.getItem(`ll-lock-${userId}`)==="1")setLocked(true);},60000);else if(timer)clearTimeout(timer);};document.addEventListener("visibilitychange",change);return()=>{if(timer)clearTimeout(timer);document.removeEventListener("visibilitychange",change);};},[userId]);if(!ready)return null;if(!locked)return children;return <div className="flex min-h-[70vh] flex-col items-center justify-center gap-4"><Fingerprint className="h-12 w-12 text-primary"/><h1 className="font-display text-2xl font-bold">Ledgerline is locked</h1><Button disabled={busy} onClick={async()=>{setBusy(true);try{await passkey("unlock");setLocked(false);}catch(e){toast.error((e as Error).message);}finally{setBusy(false);}}}>Unlock with Face ID / passkey</Button><p className="max-w-xs text-center text-xs text-muted-foreground">Device verification requires a connection. Your device may use Face ID, Touch ID or its passcode.</p></div>}
+export function DeviceLock({ children }: { children: ReactNode }) {
+  const { userId } = useStore();
+  const passkey = useDevicePasskey();
+  const nav = useNavigate();
+  const query = useQueryClient();
+  const [locked, setLocked] = useState(false);
+  const [ready, setReady] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [passwordMode, setPasswordMode] = useState(false);
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  useEffect(() => {
+    setLocked(localStorage.getItem(`ll-lock-${userId}`) === "1");
+    setReady(true); setPassword(""); setPasswordMode(false); setError("");
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const change = () => {
+      if (document.hidden) timer = setTimeout(() => { if (localStorage.getItem(`ll-lock-${userId}`) === "1") setLocked(true); }, 60000);
+      else if (timer) clearTimeout(timer);
+    };
+    document.addEventListener("visibilitychange", change);
+    return () => { if (timer) clearTimeout(timer); document.removeEventListener("visibilitychange", change); };
+  }, [userId]);
+  if (!ready) return null;
+  if (!locked) return children;
+  const signInAgain = async () => {
+    setBusy(true); setError("");
+    try {
+      await query.cancelQueries(); query.clear();
+      const result = await supabase.auth.signOut();
+      if (result.error) throw result.error;
+      // Keep device lock enabled: returning to this account still requires verification.
+      await nav({ to: "/auth", replace: true });
+    } catch { setError("Couldn't sign out. Check your connection and try again."); }
+    finally { setBusy(false); }
+  };
+  return <div className="flex min-h-[70vh] flex-col items-center justify-center gap-4 px-4">
+    <Fingerprint className="h-12 w-12 text-primary" />
+    <h1 className="text-center font-display text-2xl font-bold">Ledgerline is locked</h1>
+    <Button disabled={busy} className="max-w-full whitespace-normal" onClick={async () => {
+      setBusy(true); setError("");
+      try { await passkey("unlock"); setLocked(false); setPassword(""); }
+      catch { setError("Face ID wasn't completed or isn't available. Try again, or use your account password."); setPasswordMode(true); }
+      finally { setBusy(false); }
+    }}>Unlock with Face ID / passkey</Button>
+    {error && <p role="alert" className="max-w-sm text-center text-sm text-destructive">{error}</p>}
+    {passwordMode ? <form className="grid w-full max-w-sm gap-3" onSubmit={async e => {
+      e.preventDefault(); setBusy(true); setError("");
+      try { await verifyDevicePassword(userId, password); setLocked(false); }
+      catch (e) { setError(e instanceof Error ? e.message : "Couldn't verify your password. Try again."); }
+      finally { setPassword(""); setBusy(false); }
+    }}>
+      <Label htmlFor="device-password">Account password</Label>
+      <Input id="device-password" type="password" autoComplete="current-password" required value={password} disabled={busy} onChange={e => setPassword(e.target.value)} />
+      <Button disabled={busy || !password}>{busy ? "Verifying…" : "Verify password and unlock"}</Button>
+    </form> : <Button variant="outline" disabled={busy} onClick={() => setPasswordMode(true)}>Use account password</Button>}
+    <Button variant="link" disabled={busy} onClick={() => void signInAgain()}>Sign out and use another sign-in method</Button>
+    <p className="max-w-sm text-center text-xs text-muted-foreground">Use your password to unlock this account. If you normally use Google or Lovable, sign out to use that sign-in method. Device lock stays enabled.</p>
+  </div>;
+}
