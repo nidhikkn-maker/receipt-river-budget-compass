@@ -241,14 +241,42 @@ function Reconcile() {
                       className="h-4 w-4 shrink-0 accent-gold"
                     />
                     <span className="min-w-0 flex-1 truncate">{d.title}</span>
-                    <span className="shrink-0 rounded-full bg-secondary px-2 py-0.5 text-xs text-muted-foreground">{d.category}</span>
+                    <span className={"shrink-0 rounded-full px-2 py-0.5 text-xs " + (d.uncertain ? "bg-gold-soft font-semibold text-gold-strong" : "bg-secondary text-muted-foreground")}>{d.uncertain ? `${d.category} — check` : d.category}</span>
                     <span className="shrink-0 font-mono text-xs">{money(d.line.amount, currency)}</span>
                   </li>
                 ))}
                 {plan.register.length > 8 && <li className="text-xs text-muted-foreground">+ {plan.register.length - 8} more</li>}
               </ul>
             )}
+            {plan.recurringHints.length > 0 && (
+              <p className="mt-3 rounded-xl bg-secondary px-3 py-2 text-xs">
+                <span className="font-semibold">Looks recurring:</span> {plan.recurringHints.map((h) => `${h.merchant} (${h.count + 1} charges)`).join(", ")} — after registering, add them as planned payments so due dates are tracked. <Link to="/plan" className="font-semibold text-primary underline">Open Plan</Link>
+              </p>
+            )}
           </div>
+
+          {plan.possibleDuplicates.length > 0 && (
+            <div className="mb-4 rounded-3xl border-2 border-gold bg-card p-4">
+              <h2 className="font-display text-lg font-bold">Possible duplicates ({plan.possibleDuplicates.length})</h2>
+              <p className="mb-2 text-xs text-muted-foreground">These look like records you already have. They are not registered unless you say so.</p>
+              <ul className="space-y-2">
+                {plan.possibleDuplicates.map((d) => (
+                  <li key={d.draft.line.ref} className="rounded-2xl bg-secondary/60 p-3 text-sm">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="min-w-0">
+                        <div className="truncate font-medium">{d.draft.title}</div>
+                        <div className="font-mono text-xs text-muted-foreground">{d.draft.line.date} · {money(d.draft.line.amount, currency)}</div>
+                      </div>
+                      <div className="flex shrink-0 gap-2">
+                        <Button size="sm" variant="outline" onClick={() => setIncludeDups({ ...includeDups, [d.draft.line.ref]: true })} disabled={!!includeDups[d.draft.line.ref]}>It's new — register</Button>
+                      </div>
+                    </div>
+                    <p className="mt-1 text-xs text-muted-foreground">Already have: {d.existing.title} · {d.existing.date} · {money(d.existing.amount)}{includeDups[d.draft.line.ref] ? " — will be registered as a new entry" : " — left alone"}</p>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
 
           {matched.length > 0 && (
             <div className="mb-4 rounded-3xl border bg-card p-4">
