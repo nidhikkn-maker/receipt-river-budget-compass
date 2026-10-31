@@ -120,7 +120,7 @@ function Plan() {
                   </div>
                 </div>
                 <div className={cn("font-mono", u.direction === "in" && "text-primary")}>{u.direction === "in" ? "+" : "−"}{money(u.amount)}</div>
-                {c && <PayButton c={c} onPay={confirmCommitment} />}
+                {c && (u.overdue || u.date===c.nextDue) && <PayButton c={c} onPay={confirmCommitment} />}
               </li>
             );
           })}
@@ -221,7 +221,7 @@ function CommitmentForm() {
     setBusy(true);
     try {
       await saveCommitment({ name, kind, direction: isIncome ? "in" : "out", amount: Number(amount), frequency, intervalDays: frequency === "custom" ? Number(interval) : null,
-        nextDue, accountId: accountId === "none" ? null : accountId, category: isIncome ? "Other" : category, confirmed: isIncome ? confirmed : true, essential, status: "active" });
+        nextDue, accountId: accountId === "none" ? null : accountId, category: isIncome ? "Income" : category, confirmed: isIncome ? confirmed : true, essential, status: "active" });
       setName(""); setAmount("");
       toast.success("Added to your plan");
     } catch (err) { toast.error((err as Error).message); } finally { setBusy(false); }
