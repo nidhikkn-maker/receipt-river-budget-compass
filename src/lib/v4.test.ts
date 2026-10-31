@@ -79,7 +79,7 @@ describe("trip picker and loan split", () => {
   });
   it("tagged advances still count when no trip id is set", () => {
     const t: TravelTrip = { id: "t1", name: "Goa", destination: "", start: "2026-12-01", end: "2026-12-05", budget: 0, currencies: ["INR"] };
-    const f = tripFinance(t, [{ id: "a", txnType: "advance", amount: 3000, date: "2026-11-28", tags: ["trip:t1"] }] as never);
+    const f = tripFinance(t, [{ id: "a", txnType: "advance", amount: 3000, date: "2026-11-28", tags: ["Trip: Goa"] }] as never);
     expect(f.advanced).toBe(3000);
   });
   it("loan repayment split must add up to the payment", () => {
