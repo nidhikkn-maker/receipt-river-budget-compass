@@ -29,7 +29,7 @@ describe("statement auto-registration", () => {
     expect(draft.category).toBe("Food and beverages");
     expect(draft.paymentMethod).toBe("upi");
     expect(draft.scope).toBe("personal");
-    expect(draft.title).toBe("Upi swiggy order");
+    expect(draft.title).toBe("Upi Swiggy Order");
   });
 
   it("sorts shopping, bills and bank charges into their own categories", () => {
@@ -99,8 +99,8 @@ describe("statement auto-registration", () => {
   });
 
   it("cleans narration into a readable merchant name", () => {
-    expect(cleanMerchant("swiggy order 4512")).toBe("Swiggy order");
-    expect(cleanMerchant("POS PURCHASE SWIGGY 123456789012")).toBe("POS PURCHASE SWIGGY");
+    expect(cleanMerchant("swiggy order 4512")).toBe("Swiggy Order");
+    expect(cleanMerchant("POS PURCHASE SWIGGY 123456789012")).toBe("Pos Purchase Swiggy");
     expect(cleanMerchant("")).toBe("Statement entry");
   });
 
@@ -108,7 +108,7 @@ describe("statement auto-registration", () => {
     const draft = classifyStatementLine(line({ description: "DMART GROCERIES 4512", amount: 2340.55 }), ctx({ currency: "INR" }));
     const input = draftToInput(draft);
     expect(input).toMatchObject({
-      title: "Dmart groceries", category: "Groceries", scope: "personal", amount: 2340.55,
+      title: "Dmart Groceries", category: "Groceries", scope: "personal", amount: 2340.55,
       currency: "INR", paymentMethod: "other", date: "2026-10-05", txnType: "expense",
       accountId: "acc1", description: "Statement import",
     });

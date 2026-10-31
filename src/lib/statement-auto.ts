@@ -86,9 +86,9 @@ export function cleanMerchant(description: string): string {
     .replace(/\s{2,}/g, " ")
     .trim();
   const words = raw.split(/\s+/).filter((w) => !/^\d+$/.test(w) && w.length > 1).slice(0, 4);
-  const out = words.join(" ").trim();
+  const out = words.map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(" ").trim();
   if (!out) return (description || "").trim().slice(0, 40) || "Statement entry";
-  return out.charAt(0).toUpperCase() + out.slice(1);
+  return out;
 }
 
 function paymentMethodFor(description: string, accountKind: AccountKind | undefined): PaymentMethod {
