@@ -19,39 +19,98 @@ export type Database = {
           archived: boolean
           created_at: string
           credit_limit: number | null
+          details: Json
           due_day: number | null
           id: string
+          include_in_cash: boolean
+          interest_rate: number | null
+          issuer: string
           kind: string
+          last_four: string | null
           min_balance: number
           name: string
           opening_balance: number
           owner_id: string
+          statement_day: number | null
         }
         Insert: {
           archived?: boolean
           created_at?: string
           credit_limit?: number | null
+          details?: Json
           due_day?: number | null
           id?: string
+          include_in_cash?: boolean
+          interest_rate?: number | null
+          issuer?: string
           kind?: string
+          last_four?: string | null
           min_balance?: number
           name: string
           opening_balance?: number
           owner_id: string
+          statement_day?: number | null
         }
         Update: {
           archived?: boolean
           created_at?: string
           credit_limit?: number | null
+          details?: Json
           due_day?: number | null
           id?: string
+          include_in_cash?: boolean
+          interest_rate?: number | null
+          issuer?: string
           kind?: string
+          last_four?: string | null
           min_balance?: number
           name?: string
           opening_balance?: number
           owner_id?: string
+          statement_day?: number | null
         }
         Relationships: []
+      }
+      asset_valuations: {
+        Row: {
+          account_id: string
+          created_at: string
+          id: string
+          note: string
+          owner_id: string
+          source: string
+          value: number
+          valued_on: string
+        }
+        Insert: {
+          account_id: string
+          created_at?: string
+          id?: string
+          note?: string
+          owner_id: string
+          source?: string
+          value: number
+          valued_on: string
+        }
+        Update: {
+          account_id?: string
+          created_at?: string
+          id?: string
+          note?: string
+          owner_id?: string
+          source?: string
+          value?: number
+          valued_on?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "asset_valuations_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       category_budgets: {
         Row: {
@@ -181,6 +240,94 @@ export type Database = {
         }
         Relationships: []
       }
+      documents: {
+        Row: {
+          account_id: string | null
+          amount: number | null
+          created_at: string
+          currency: string
+          doc_date: string | null
+          doc_type: string
+          expires_on: string | null
+          extracted_text: string
+          file_name: string
+          file_path: string
+          id: string
+          loan_id: string | null
+          merchant: string | null
+          mime_type: string
+          notes: string
+          owner_id: string
+          size_bytes: number
+          title: string
+          transaction_id: string | null
+        }
+        Insert: {
+          account_id?: string | null
+          amount?: number | null
+          created_at?: string
+          currency?: string
+          doc_date?: string | null
+          doc_type?: string
+          expires_on?: string | null
+          extracted_text?: string
+          file_name: string
+          file_path: string
+          id?: string
+          loan_id?: string | null
+          merchant?: string | null
+          mime_type?: string
+          notes?: string
+          owner_id: string
+          size_bytes?: number
+          title: string
+          transaction_id?: string | null
+        }
+        Update: {
+          account_id?: string | null
+          amount?: number | null
+          created_at?: string
+          currency?: string
+          doc_date?: string | null
+          doc_type?: string
+          expires_on?: string | null
+          extracted_text?: string
+          file_name?: string
+          file_path?: string
+          id?: string
+          loan_id?: string | null
+          merchant?: string | null
+          mime_type?: string
+          notes?: string
+          owner_id?: string
+          size_bytes?: number
+          title?: string
+          transaction_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "documents_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "documents_loan_id_fkey"
+            columns: ["loan_id"]
+            isOneToOne: false
+            referencedRelation: "loans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "documents_transaction_id_fkey"
+            columns: ["transaction_id"]
+            isOneToOne: false
+            referencedRelation: "expenses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       expense_history: {
         Row: {
           action: string
@@ -219,6 +366,7 @@ export type Database = {
       expenses: {
         Row: {
           account_id: string | null
+          adjustment_sign: number
           amount: number
           category: string
           created_at: string
@@ -238,6 +386,7 @@ export type Database = {
           receipts: Json
           reconciled_at: string | null
           reconciled_by: string | null
+          reimbursement_status: string
           scope: string
           splits: Json
           statement_ref: string | null
@@ -250,6 +399,7 @@ export type Database = {
         }
         Insert: {
           account_id?: string | null
+          adjustment_sign?: number
           amount: number
           category: string
           created_at?: string
@@ -269,6 +419,7 @@ export type Database = {
           receipts?: Json
           reconciled_at?: string | null
           reconciled_by?: string | null
+          reimbursement_status?: string
           scope?: string
           splits?: Json
           statement_ref?: string | null
@@ -281,6 +432,7 @@ export type Database = {
         }
         Update: {
           account_id?: string | null
+          adjustment_sign?: number
           amount?: number
           category?: string
           created_at?: string
@@ -300,6 +452,7 @@ export type Database = {
           receipts?: Json
           reconciled_at?: string | null
           reconciled_by?: string | null
+          reimbursement_status?: string
           scope?: string
           splits?: Json
           statement_ref?: string | null
@@ -411,36 +564,81 @@ export type Database = {
       }
       loans: {
         Row: {
+          account_id: string | null
           annual_rate: number
           created_at: string
           emi: number
+          foreclosure_pct: number
           id: string
+          loan_type: string
           name: string
           next_due: string
+          original_principal: number | null
           owner_id: string
+          payments: Json
+          prepayment_terms: string
           principal_outstanding: number
+          provider: string
+          source_transaction_id: string | null
+          start_date: string | null
+          status: string
         }
         Insert: {
+          account_id?: string | null
           annual_rate: number
           created_at?: string
           emi: number
+          foreclosure_pct?: number
           id?: string
+          loan_type?: string
           name: string
           next_due: string
+          original_principal?: number | null
           owner_id: string
+          payments?: Json
+          prepayment_terms?: string
           principal_outstanding: number
+          provider?: string
+          source_transaction_id?: string | null
+          start_date?: string | null
+          status?: string
         }
         Update: {
+          account_id?: string | null
           annual_rate?: number
           created_at?: string
           emi?: number
+          foreclosure_pct?: number
           id?: string
+          loan_type?: string
           name?: string
           next_due?: string
+          original_principal?: number | null
           owner_id?: string
+          payments?: Json
+          prepayment_terms?: string
           principal_outstanding?: number
+          provider?: string
+          source_transaction_id?: string | null
+          start_date?: string | null
+          status?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "loans_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "loans_source_transaction_id_fkey"
+            columns: ["source_transaction_id"]
+            isOneToOne: false
+            referencedRelation: "expenses"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       passkey_challenges: {
         Row: {
@@ -487,6 +685,90 @@ export type Database = {
         }
         Relationships: []
       }
+      push_reminder_log: {
+        Row: {
+          created_at: string
+          item_key: string
+          owner_id: string
+          sent_on: string
+        }
+        Insert: {
+          created_at?: string
+          item_key: string
+          owner_id: string
+          sent_on: string
+        }
+        Update: {
+          created_at?: string
+          item_key?: string
+          owner_id?: string
+          sent_on?: string
+        }
+        Relationships: []
+      }
+      push_subscriptions: {
+        Row: {
+          auth: string
+          created_at: string
+          endpoint: string
+          id: string
+          last_sent_at: string | null
+          owner_id: string
+          p256dh: string
+          user_agent: string
+        }
+        Insert: {
+          auth: string
+          created_at?: string
+          endpoint: string
+          id?: string
+          last_sent_at?: string | null
+          owner_id: string
+          p256dh: string
+          user_agent?: string
+        }
+        Update: {
+          auth?: string
+          created_at?: string
+          endpoint?: string
+          id?: string
+          last_sent_at?: string | null
+          owner_id?: string
+          p256dh?: string
+          user_agent?: string
+        }
+        Relationships: []
+      }
+      transaction_audit: {
+        Row: {
+          action: string
+          changes: Json
+          created_at: string
+          id: string
+          owner_id: string
+          summary: string
+          transaction_id: string
+        }
+        Insert: {
+          action: string
+          changes?: Json
+          created_at?: string
+          id?: string
+          owner_id: string
+          summary?: string
+          transaction_id: string
+        }
+        Update: {
+          action?: string
+          changes?: Json
+          created_at?: string
+          id?: string
+          owner_id?: string
+          summary?: string
+          transaction_id?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           id: string
@@ -510,6 +792,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      delete_my_finance_data: { Args: never; Returns: undefined }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]

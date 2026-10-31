@@ -64,6 +64,20 @@
       "when": 1793413839788,
       "tag": "0008_passkey_device_lock",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1793414797016,
+      "tag": "0009_prd_modules_cards_loans_docs_audit",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1793414853185,
+      "tag": "0010_adjustment_direction",
+      "breakpoints": true
     }
   ]
 }
