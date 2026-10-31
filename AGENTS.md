@@ -39,3 +39,4 @@
 - Category splits live in expenses.allocations and all category reporting goes through categoryTotals/categoryParts so a split transaction is counted once.
 - Reimbursement claim detail lives in expenses.reimbursement (src/lib/reimbursements.ts); money back is a linked reimbursement-type entry, never income, and reimbursement_status is derived from it.
 - Health score (src/lib/health.ts) and monthly review figures (src/lib/monthly-review.ts) are computed by tested rules; the AI only narrates saved reviews, which store a data hash to flag outdated reports.
+- Phase 2/3 rules (simulator, behaviour, emergency fund, irregular bills, milestones, trips, merchants, weekly brief) are pure tested functions in src/lib/intelligence.ts; their settings live in finance_preferences, trips link entries by a 'Trip: <name>' tag so stored INR and exchange rates are never rewritten, and simulations never write records unless the user explicitly saves a planned commitment.
