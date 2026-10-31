@@ -1,4 +1,6 @@
 # Roadmap (Functional Requirements v1.0)
+- [ ] Detect possible duplicates in the bulk bill queue with review and skip controls
+- [ ] Bulk categorisation undo and persistent audit history with safe restoration
 - [x] Answer remaining-document audit: distinguish unbuilt functionality, publication/device validation and excluded native/Yaba scope
 - [x] Continue document: secure device push setup, private test/daily payment reminders, production notification handling and 14 new tests; 146 total tests pass; live delivery still needs publication and device consent
 - [x] Mutual fund portfolio: dated value and cash-flow-adjusted gain charts, fund/date filters and dated history; 25 focused tests pass, saved ₹13,405.87 read back, desktop/mobile checked, build OK
