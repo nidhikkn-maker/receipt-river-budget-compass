@@ -33,6 +33,7 @@ import { WorkspacePicker, splitShares } from "@/components/WorkspacePicker";
 import { suggestWorkspace, validateShares, type AllocationMethod } from "@/lib/workspaces";
 import { tripTag } from "@/lib/intelligence";
 import { BOOKING_CATEGORY, travelCategory, tripsForDate, type TravelTrip } from "@/lib/travel";
+import { emiSplit } from "@/lib/planning";
 import { todayISO } from "@/lib/use-position";
 
 const TYPE_HINT: Partial<Record<TxnType, string>> = {
