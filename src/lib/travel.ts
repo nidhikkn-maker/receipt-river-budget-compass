@@ -3,7 +3,8 @@
 // Unpaid bookings are commitments and never change balances; advances are tracked separately from spending.
 import { tripSummary, tripTag, type Trip } from "./intelligence";
 import { workspaceParts } from "./workspaces";
-import { categoryParts, type Scope } from "./expenses";
+import { categoryParts, type Scope, type ReimbursementStatus } from "./expenses";
+import { isTracked, outstandingOf, receivedOf, type ReimbursementInfo } from "./reimbursements";
 
 export const TRIP_TYPES = ["personal", "family", "business", "official", "mixed"] as const;
 export type TripType = (typeof TRIP_TYPES)[number];
@@ -19,7 +20,7 @@ export interface BudgetLine { category: string; amount: number }
 export interface TravelTrip extends Trip { type?: TripType; travellers?: string[]; bookings?: Booking[]; itinerary?: ItineraryItem[]; advances?: Advance[]; closedAt?: string | null; purpose?: string; budgetLines?: BudgetLine[]; contingency?: number }
 
 const r2 = (n: number) => Math.round(n * 100) / 100;
-type Row = Parameters<typeof tripSummary>[1][number] & { id: string; scope?: Scope; reimbursementStatus?: string; workspaceAllocations?: import("./workspaces").WorkspaceShare[]; originalAmount?: number | null; tripId?: string | null };
+type Row = Parameters<typeof tripSummary>[1][number] & { id: string; title?: string; scope?: Scope; reimbursementStatus?: ReimbursementStatus; reimbursement?: ReimbursementInfo; workspaceAllocations?: import("./workspaces").WorkspaceShare[]; originalAmount?: number | null; tripId?: string | null };
 
 export function validateBooking(b: Booking) {
   if (!b.provider.trim() && !b.ref.trim()) throw new Error("Add the provider or booking reference");
@@ -59,8 +60,9 @@ export function tripFinance(t: TravelTrip, txns: Row[]) {
   const ledgerAdv = txns.filter((x) => (x.tripId ? x.tripId === t.id : (x.tags ?? []).includes(tag))).reduce((a, x) => a + (x.txnType === "advance" ? x.amount : x.txnType === "advance_settlement" ? -x.amount : 0), 0);
   // Advances come from trip notes plus "Travel advance" ledger entries linked to the trip (by picker or tag); returns reduce them.
   const advanced = r2((t.advances ?? []).reduce((a, x) => a + x.amount, 0) + ledgerAdv);
-  const reimbursablePending = r2((s.entries as Row[]).filter((e) => e.reimbursementStatus === "pending").reduce((a, e) => a + e.amount, 0));
-  const reimbursed = r2((s.entries as Row[]).filter((e) => e.reimbursementStatus === "received").reduce((a, e) => a + e.amount, 0));
+  const claims = (s.entries as Row[]).map(e => ({ ...e, title: e.title ?? "Trip expense" })).filter(isTracked);
+  const reimbursablePending = r2(claims.reduce((a, e) => a + outstandingOf(e), 0));
+  const reimbursed = r2(claims.reduce((a, e) => a + receivedOf(e), 0));
   const businessShare = r2((ws["business"] ?? 0) + (ws["official"] ?? 0));
   // Advance balance: money given in advance minus the business/official share spent; positive = to return, negative = still owed to you.
   const advanceBalance = advanced ? r2(advanced - businessShare) : 0;
@@ -124,11 +126,12 @@ export function tripsForDate(trips: TravelTrip[], date: string) {
 
 /** Ledger entries that look like the payment for an unpaid booking: amount within 2%, within 10 days. Only a single clear match is offered. */
 export function bookingMatches(t: TravelTrip, txns: Row[]): { bookingId: string; entryId: string }[] {
-  const linked = new Set((t.bookings ?? []).map((b) => b.expenseId).filter(Boolean));
+  const linked = new Set((t.bookings ?? []).flatMap(bookingPaymentIds));
   const out: { bookingId: string; entryId: string }[] = [];
   for (const b of (t.bookings ?? []).filter((x) => x.status === "unpaid" && x.amount > 0)) {
     const hits = txns.filter((x) => (x.txnType ?? "expense") === "expense" && !linked.has(x.id) && Math.abs(x.amount - b.amount) <= b.amount * 0.02 && Math.abs(Date.parse(x.date) - Date.parse(b.date)) <= 10 * 864e5);
-    if (hits.length === 1) out.push({ bookingId: b.id, entryId: hits[0]!.id });
+    const hit = hits.length === 1 ? hits[0] : undefined;
+    if (hit) out.push({ bookingId: b.id, entryId: hit.id });
   }
   return out;
 }
