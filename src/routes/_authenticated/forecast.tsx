@@ -53,8 +53,8 @@ function Forecast() {
     </div>
     {!baseline.length ? <p className="rounded-2xl border bg-card p-6 text-center text-sm text-muted-foreground">Add a few months of expenses to see predictions.</p> : last && <>
       <div className="mb-5 grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <Stat label="Yearly spend today" value={money(rows[0].spend)} />
-        <Stat label={`Yearly spend in year ${a.years}`} value={money(last.spend)} hint={`${(last.spend / Math.max(1, rows[0].spend)).toFixed(1)}× today`} />
+        <Stat label="Yearly spend today" value={money(rows[0]!.spend)} />
+        <Stat label={`Yearly spend in year ${a.years}`} value={money(last.spend)} hint={`${(last.spend / Math.max(1, rows[0]!.spend)).toFixed(1)}× today`} />
         <Stat label={`Savings in year ${a.years}`} value={money(last.savings)} hint={`Worth ${money(realValue(last.savings, a.generalInflation, a.years))} in today's money`} />
         <Stat label="₹1 lakh today buys" value={money(realValue(100000, a.generalInflation, a.years))} hint={`of goods in year ${a.years}`} />
       </div>
