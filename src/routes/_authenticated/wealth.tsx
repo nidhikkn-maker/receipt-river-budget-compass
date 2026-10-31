@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ACCOUNT_KINDS, ACCOUNT_LABEL, accountValue, isLiability, netWorth, type AccountKind } from "@/lib/ledger";
+import { AccountForm } from "@/components/AccountForm";
 import { AccountTools } from "@/components/AccountTools";
 import { money } from "@/lib/expenses";
 import { useStore } from "@/lib/store";
@@ -30,11 +31,7 @@ export const Route = createFileRoute("/_authenticated/wealth")({
 });
 
 function Wealth() {
-  const { accounts, transactions, valuations, addAccount, setArchived, updateAccount, loans, preferences } = useStore();
-  const [name, setName] = useState("");
-  const [kind, setKind] = useState<AccountKind>("savings");
-  const [opening, setOpening] = useState("0");
-  const [busy, setBusy] = useState(false);
+  const { accounts, transactions, valuations, setArchived, updateAccount, loans, preferences } = useStore();
   const [showArchived, setShowArchived] = useState(false);
   const live = accounts.filter((a) => !a.archived);
   const nwRaw = netWorth(live, transactions, valuations);
@@ -43,15 +40,6 @@ function Wealth() {
   const nw = { assets: nwRaw.assets, liabilities: nwRaw.liabilities + loanOwed, net: nwRaw.net - loanOwed };
   const list = accounts.filter((a) => showArchived || !a.archived);
 
-  const add = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setBusy(true);
-    try {
-      await addAccount({ name, kind, openingBalance: Number(opening) });
-      setName(""); setOpening("0");
-      toast.success("Account added");
-    } catch (err) { toast.error((err as Error).message); } finally { setBusy(false); }
-  };
 
   return (
     <>
@@ -101,22 +89,7 @@ function Wealth() {
           })}
         </section>
 
-        <form onSubmit={add} className="grid content-start gap-3 rounded-3xl border bg-card p-5">
-          <h2 className="font-display text-lg font-bold">Add account</h2>
-          <div className="grid gap-1"><Label htmlFor="an">Name</Label><Input id="an" placeholder="e.g. HDFC Savings, AMEX" value={name} onChange={(e) => setName(e.target.value)} /></div>
-          <div className="grid gap-1">
-            <Label>Type</Label>
-            <Select value={kind} onValueChange={(v) => setKind(v as AccountKind)}>
-              <SelectTrigger aria-label="Account type"><SelectValue /></SelectTrigger>
-              <SelectContent>{ACCOUNT_KINDS.map((k) => <SelectItem key={k} value={k}>{ACCOUNT_LABEL[k]}</SelectItem>)}</SelectContent>
-            </Select>
-          </div>
-          <div className="grid gap-1">
-            <Label htmlFor="ob">{isLiability(kind) ? "Amount owed today (₹)" : "Opening balance (₹)"}</Label>
-            <Input id="ob" type="number" step="0.01" className="font-mono" value={opening} onChange={(e) => setOpening(e.target.value)} />
-          </div>
-          <Button type="submit" disabled={busy}>{busy ? "Adding…" : "Add account"}</Button>
-        </form>
+        <AccountForm />
       </div>
       <div className="mt-8 grid gap-6 lg:grid-cols-2">
         <LoansPanel />
