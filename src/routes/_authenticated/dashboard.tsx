@@ -134,7 +134,7 @@ function Overview() {
               <div className="font-mono text-[11px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
                 {scope === "all" ? "Total expenditure" : `${SCOPE_LABEL[scope]} expenditure`} · {periodLabel}
               </div>
-              <div className="mt-1 font-display text-4xl font-extrabold tracking-tight text-primary sm:text-5xl">{money(total)}</div>
+              <div className="mt-1 font-display text-4xl font-extrabold tracking-tight sm:text-5xl">{money(total)}</div>
               {delta !== null && (
                 <div className="mt-1 text-sm font-semibold text-muted-foreground">
                   {delta > 0 ? "↑" : delta < 0 ? "↓" : "→"} {Math.abs(delta)}% vs the previous {len}-day period
