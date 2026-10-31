@@ -68,3 +68,26 @@ describe("distinct money movement types", () => {
   it("investment moves money into the investment account", () => expect(accountBalance(inv, t)).toBe(10000));
   it("advances change the balance but are not income", () => { expect(accountBalance(bank, t)).toBe(90000); expect(cashflow(t).income).toBe(0); });
 });
+
+import { validateExpense } from "./expenses";
+describe("trip picker and loan split", () => {
+  const baseInput = { title: "X", merchant: null, category: "Travel", scope: "personal" as const, memberId: null, amount: 1000, currency: "INR", paymentMethod: "upi" as const, date: "2026-10-31", description: "" };
+  it("advance linked by trip id counts without a tag", () => {
+    const t: TravelTrip = { id: "t1", name: "Goa", destination: "", start: "2026-12-01", end: "2026-12-05", budget: 0, currencies: ["INR"] };
+    const f = tripFinance(t, [{ id: "a", txnType: "advance", amount: 8000, tripId: "t1", date: "2026-11-28", tags: [] }] as never);
+    expect(f.advanced).toBe(8000);
+  });
+  it("tagged advances still count when no trip id is set", () => {
+    const t: TravelTrip = { id: "t1", name: "Goa", destination: "", start: "2026-12-01", end: "2026-12-05", budget: 0, currencies: ["INR"] };
+    const f = tripFinance(t, [{ id: "a", txnType: "advance", amount: 3000, date: "2026-11-28", tags: ["trip:t1"] }] as never);
+    expect(f.advanced).toBe(3000);
+  });
+  it("loan repayment split must add up to the payment", () => {
+    expect(() => validateExpense({ ...baseInput, txnType: "loan_repayment", accountId: "a", toAccountId: "b", principal: 700, interest: 300 })).not.toThrow();
+    expect(() => validateExpense({ ...baseInput, txnType: "loan_repayment", accountId: "a", toAccountId: "b", principal: 700, interest: 200 })).toThrow(/add up/);
+    expect(() => validateExpense({ ...baseInput, txnType: "loan_repayment", accountId: "a", toAccountId: "b", principal: 700, interest: null })).toThrow(/both/);
+  });
+  it("only loan repayments may carry a split", () => {
+    expect(() => validateExpense({ ...baseInput, txnType: "expense", principal: 700, interest: 300 })).toThrow(/loan repayment/);
+  });
+});
