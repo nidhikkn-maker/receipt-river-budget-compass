@@ -119,7 +119,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
       <header hidden={focused} className="sticky top-0 z-20 border-b bg-background/85 backdrop-blur">
         <div className="mx-auto flex max-w-6xl items-center gap-1 px-4 py-2.5 sm:px-8">
-          <Link to="/dashboard" className="font-display text-xl font-bold tracking-tight text-primary">Ledgerline<span className="text-gold">.</span></Link>
+          <Link to="/dashboard" className="font-brand text-xl font-bold tracking-tight text-primary">Ledgerline<span className="text-gold">.</span></Link>
           <div className="ml-auto flex items-center">
             <Link to="/search" aria-label="Search" className="rounded-xl p-2 text-muted-foreground transition hover:text-foreground"><Search className="h-5 w-5" /></Link>
             <Link to="/inbox" aria-label="Notifications" className="rounded-xl p-2 text-muted-foreground transition hover:text-foreground"><Bell className="h-5 w-5" /></Link>
@@ -165,7 +165,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           <div className="space-y-5 pb-2">
             {MORE_GROUPS.map((g) => (
               <div key={g.title}>
-                <div className="mb-1.5 font-mono text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">{g.title}</div>
+                <div className="mb-1.5 font-mono text-[11px] font-semibold text-muted-foreground">{g.title}</div>
                 <div className="grid grid-cols-2 gap-1.5">
                   {g.items.map((item) => (
                     <Link key={item.to} to={item.to} onClick={() => setMoreOpen(false)} className="flex items-center gap-2.5 rounded-2xl border bg-card px-3 py-2.5 text-sm font-semibold transition hover:bg-accent" activeProps={{ className: "ring-1 ring-gold" }}>
@@ -185,7 +185,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 export function PageTitle({ title, sub, eyebrow }: { title: string; sub?: string; eyebrow?: string }) {
   return (
     <div className="mb-6">
-      {eyebrow && <div className="mb-1 font-mono text-[11px] font-semibold uppercase tracking-[0.2em] text-primary">{eyebrow}</div>}
+      {eyebrow && <div className="mb-1 font-mono text-[11px] font-semibold text-primary">{eyebrow}</div>}
       <h1 className="font-display text-3xl font-bold tracking-tight sm:text-4xl">{title}</h1>
       <span className="mt-2 block h-[3px] w-20 rounded-full bg-gold-hero" aria-hidden="true" />
       {sub && <p className="mt-2 font-medium text-muted-foreground">{sub}</p>}
@@ -196,7 +196,7 @@ export function PageTitle({ title, sub, eyebrow }: { title: string; sub?: string
 export function Stat({ label, value, hint, tone }: { label: string; value: string; hint?: string; tone?: "business" | "personal" }) {
   return (
     <div className={"min-w-0 rounded-2xl border border-l-4 bg-card p-4 " + (tone === "business" ? "border-l-primary" : tone === "personal" ? "border-l-primary-glow" : "border-l-gold")}>
-      <div className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{label}</div>
+      <div className="text-[11px] font-semibold text-muted-foreground">{label}</div>
       <div className="mt-1 break-all font-mono text-xl font-semibold text-gold-strong sm:text-2xl">{value}</div>
       {hint && <div className="text-xs text-muted-foreground">{hint}</div>}
     </div>

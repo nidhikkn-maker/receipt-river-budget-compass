@@ -137,7 +137,7 @@ function Overview() {
         <div className="rounded-3xl border bg-card p-5 sm:p-6">
           <div className="flex flex-wrap items-end justify-between gap-3">
             <div className="min-w-0">
-              <div className="font-mono text-[11px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+              <div className="font-mono text-[11px] font-semibold text-muted-foreground">
                 {scope === "all" ? "Total expenditure" : `${SCOPE_LABEL[scope]} expenditure`} · {periodLabel}
               </div>
               <div className="mt-1 font-display text-4xl font-extrabold tracking-tight sm:text-5xl">{money(total)}</div>
@@ -172,7 +172,7 @@ function Overview() {
             <p className="truncate text-sm text-muted-foreground" title={readiness.detail}>{readiness.detail}</p>
           </div>
           <div className="shrink-0 text-right">
-            <div className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Safe to spend{readiness.estimated && " · est."}</div>
+            <div className="text-[11px] font-semibold text-muted-foreground">Safe to spend{readiness.estimated && " · est."}</div>
             <div className="font-mono text-lg font-bold text-gold-strong">{live.length ? money(pos.safe.amount) : "—"}</div>
           </div>
           <Button asChild variant="outline" size="sm" className="hidden shrink-0 sm:inline-flex"><Link to="/review">Review</Link></Button>

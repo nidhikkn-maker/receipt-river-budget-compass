@@ -23,7 +23,7 @@ export function ExpenseTable({ items, empty = "Nothing here yet.", selected, onT
               <Button variant="ghost" onClick={() => (selecting ? onToggle(e.id) : setOpen(e))} aria-pressed={selecting ? checked : undefined} className={"ticket flex h-auto w-full items-stretch justify-start gap-0 overflow-hidden whitespace-normal rounded-2xl border bg-card p-0 text-left transition hover:shadow-float" + (checked ? " ring-2 ring-gold" : "")}>
                 {selecting && <span className={"flex w-8 shrink-0 items-center justify-center border-r " + (checked ? "bg-gold text-gold-foreground" : "bg-secondary/50 text-muted-foreground")} aria-hidden>{checked ? "✓" : ""}</span>}
                 <div className={"flex w-16 shrink-0 flex-col items-center justify-center border-r border-dashed py-3 " + (e.scope === "business" ? "bg-primary text-primary-foreground" : "bg-secondary/70")}>
-                  <span className="font-mono text-[10px] uppercase opacity-70">{day.toLocaleString("en", { month: "short" })}</span>
+                  <span className="font-mono text-[10px] opacity-70">{day.toLocaleString("en", { month: "short" })}</span>
                   <span className="font-display text-2xl font-extrabold leading-none">{day.getDate()}</span>
                 </div>
                 <div className="min-w-0 flex-1 px-4 py-3">

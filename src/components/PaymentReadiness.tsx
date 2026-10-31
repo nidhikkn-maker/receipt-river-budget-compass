@@ -49,7 +49,7 @@ function ReadinessRow({ r, open, onToggle }: { r: Row; open: boolean; onToggle: 
       </button>
       {open && !!r.steps.length && (
         <div className="mb-2 ml-7 rounded-2xl bg-secondary/50 p-3">
-          <p className="mb-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">The calculation</p>
+          <p className="mb-1 text-xs font-semibold text-muted-foreground">The calculation</p>
           <ul className="text-xs">
             {r.steps.map((s, i) => (
               <li key={i} className="flex justify-between gap-3 py-0.5">

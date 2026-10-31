@@ -219,3 +219,5 @@
 
 - [x] Tamil text in PDF titles, page footers and attached bill pages
 - [ ] Security review before wide sharing
+
+- [x] V4.10 typography: system font stack, regular/medium/semibold weights, tabular non-wrapping amounts, sentence-case labels, logo wordmark kept
