@@ -224,7 +224,8 @@ function NewExpense() {
       setConfirmed(false);
       toast.success("Bill read — check the key details");
     } catch (error) {
-      setReadingError(error instanceof Error ? error.message : "We couldn't read this receipt. Check your connection and try again.");
+      const message = error instanceof Error ? error.message : "";
+      setReadingError(!message || /fetch|network|load failed/i.test(message) ? "Couldn't connect to receipt reading. Check your connection and try again, or enter the details manually." : message);
     } finally {
       setReading(false);
     }
