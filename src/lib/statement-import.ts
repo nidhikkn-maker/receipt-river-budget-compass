@@ -4,7 +4,7 @@ export async function readStatement(file: File): Promise<StatementLine[]> {
  if(/\.csv$/i.test(file.name)) return parseStatementCsv(await file.text(),true);
  if(/\.xlsx?$/i.test(file.name)) {
   const {read,utils}=await import("xlsx");
-  const workbook=read(await file.arrayBuffer(),{type:"array",cellDates:true});
+  const workbook=read(new Uint8Array(await file.arrayBuffer()),{type:"array",cellDates:true});
   for(const name of workbook.SheetNames){
    const sheet=workbook.Sheets[name];if(!sheet)continue;
    const rows=utils.sheet_to_json<unknown[]>(sheet,{header:1,defval:"",raw:true});
