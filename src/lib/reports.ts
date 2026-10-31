@@ -18,7 +18,7 @@ export function buildReport(kind: ReportKind, transactions: Expense[], memberNam
     const limits = options.departmentBudgets ?? {};
     const month = options.budgetMonth ?? new Date().toISOString().slice(0, 7);
     const names = [...new Set([...expenses.map((e) => e.department?.trim() || "Unassigned"), ...Object.keys(limits)])].sort();
-    return { title: "Department budget summary", headers: ["Department", "Expenses in range", "Spending in range (INR)", "Budget month", "Monthly budget (INR)", "Spending in budget month (INR)", "Remaining (INR)", "Used (%)"], rows: names.map((name) => {
+    return { title: "Department budgets - your spending", headers: ["Department", "Your expenses in range", "Your spending in range (INR)", "Budget month", "Monthly department limit (INR)", "Your filtered monthly spending (INR)", "Limit less your spending (INR)", "Your use (%)"], rows: names.map((name) => {
       const entries = expenses.filter((e) => (e.department?.trim() || "Unassigned") === name);
       const sum = (list: Expense[]) => list.reduce((s, e) => s + Math.round(e.amount * 100), 0) / 100;
       const spent = sum(entries.filter((e) => e.date.startsWith(month)));

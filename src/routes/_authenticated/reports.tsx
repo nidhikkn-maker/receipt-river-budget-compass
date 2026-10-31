@@ -37,7 +37,7 @@ const KINDS: { kind: ReportKind; title: string; desc: string }[] = [
   { kind: "categories", title: "By category", desc: "Business vs personal totals per category, with monthly budgets." },
   { kind: "reimbursements", title: "Reimbursements", desc: "Pending and received claims." },
   { kind: "reimbursement-payments", title: "Reimbursement payments", desc: "Money actually received, with linked claims and receiving accounts." },
-  { kind: "departments", title: "Department budgets", desc: "Department spending, saved monthly limits and remaining budgets." },
+  { kind: "departments", title: "Department budgets", desc: "Your filtered spending against saved department limits; excludes other people's records. Missing labels appear as Unassigned." },
 ];
 
 function Reports() {
