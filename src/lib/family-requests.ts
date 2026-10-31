@@ -56,6 +56,7 @@ export async function inviteMember(ownerId: string, memberId: string, email: str
   check((await supabase.from("family_invites").insert({ owner_id: ownerId, member_id: memberId, email: normalizeEmail(email) })).error);
 }
 export async function setInviteRevoked(id: string, revoked: boolean) { check((await supabase.from("family_invites").update({ revoked }).eq("id", id)).error); }
+export async function inviteOwner(id: string): Promise<string | null> { const r = await supabase.rpc("family_invite_owner", { _invite: id }); check(r.error); return (r.data as string | null) ?? null; }
 export async function acceptInvite(id: string) { check((await supabase.rpc("accept_family_invite", { _invite: id })).error); }
 export async function decideRequest(id: string, status: "approved" | "declined" | "withdrawn", note = "") { check((await supabase.rpc("decide_family_request", { _id: id, _status: status, _note: note })).error); }
 

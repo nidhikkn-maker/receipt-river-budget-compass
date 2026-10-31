@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { money } from "@/lib/expenses";
 import { useStore } from "@/lib/store";
-import { acceptInvite, decideRequest, evidenceUrl, inviteMember, loadFamily, sendRequest, setInviteRevoked, type FamilyRequest } from "@/lib/family-requests";
+import { inviteOwner, acceptInvite, decideRequest, evidenceUrl, inviteMember, loadFamily, sendRequest, setInviteRevoked, type FamilyRequest } from "@/lib/family-requests";
 
 type Data = Awaited<ReturnType<typeof loadFamily>>;
 const STATUS: Record<FamilyRequest["status"], string> = { pending: "Waiting", approved: "Approved", declined: "Declined", withdrawn: "Withdrawn" };
@@ -29,7 +29,6 @@ export function FamilyRequests() {
   if (!d) return <p className="text-sm text-muted-foreground">Loading family requests…</p>;
   const accepted = d.invitesForMe.filter((i) => i.accepted && !i.revoked);
   const pendingForMe = d.invitesForMe.filter((i) => !i.accepted && !i.revoked);
-  const ownerOf = (inviteId: string) => d.sent.find((r) => r.inviteId === inviteId)?.ownerId;
 
   return (
     <>
@@ -54,8 +53,7 @@ export function FamilyRequests() {
             <div className="sm:col-span-2"><Label>Evidence (bill, quote, photo)</Label><Input type="file" accept="image/*,.pdf" onChange={(e) => setFile(e.target.files?.[0] ?? null)} /></div>
           </div>
           <Button className="mt-3" disabled={busy || !f.invite} onClick={() => void run(async () => {
-            const known = ownerOf(f.invite);
-            const ownerId = known ?? (await (await import("@/integrations/supabase/client")).supabase.from("family_invites").select("owner_id").eq("id", f.invite).maybeSingle()).data?.owner_id;
+            const ownerId = await inviteOwner(f.invite);
             if (!ownerId) throw new Error("This invitation is no longer available");
             await sendRequest(d.uid, { id: f.invite, ownerId }, { title: f.title, amount: f.amount, category: "Miscellaneous", neededBy: f.neededBy || null, note: f.note, file });
             setF({ ...f, title: "", amount: 0, neededBy: "", note: "" }); setFile(null);
