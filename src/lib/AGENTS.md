@@ -15,3 +15,5 @@
 - Receipt reading runs in a server function (src/lib/receipt-extract.functions.ts) so the AI key stays server-side.
 - Vault document scanning uses a server function (src/lib/document-extract.functions.ts) gated by the same AI privacy settings; extracted fields are always reviewed before saving.
 - Category splits live in expenses.allocations and all category reporting goes through categoryTotals/categoryParts so a split transaction is counted once.
+- Excel statements use a dynamically loaded BIFF-capable SheetJS reader and real workbook fixtures so legacy XLS and XLSX share review rules.
+- Travel calendar/reminder rules live in travel-calendar.ts and budget comparisons in trip-planning.ts; both derive owner-visible records without creating transactions.
