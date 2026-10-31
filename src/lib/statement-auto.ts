@@ -18,6 +18,8 @@ export interface StatementDraft {
   currency: string;
   /** Plain-words reason this line was read this way. */
   reason: string;
+  /** True when the category or payment method was a fallback guess — show it for confirmation. */
+  uncertain?: boolean;
 }
 
 export interface StatementPlan {
@@ -27,6 +29,10 @@ export interface StatementPlan {
   review: StatementDraft[];
   /** Left alone because it is already recorded or matched. */
   skipped: { line: StatementLine; reason: string }[];
+  /** Looks like something already in the ledger — never registered unless the user says so. */
+  possibleDuplicates: { draft: StatementDraft; existing: { id: string; title: string; date: string; amount: number } }[];
+  /** Merchants that look recurring — offered as planned payments after import. */
+  recurringHints: { merchant: string; amount: number; count: number }[];
 }
 
 export interface StatementContext {
@@ -120,16 +126,21 @@ export function classifyStatementLine(line: StatementLine, ctx: StatementContext
   const merchant = cleanMerchant(line.description || "");
   const account = ctx.accounts.find((a) => a.id === ctx.accountId);
   const memory = suggestForMerchant(merchant, ctx.transactions);
+  const method = isPaymentMethod(memory?.paymentMethod) ? memory.paymentMethod : paymentMethodFor(text, account?.kind);
   const base = {
     line,
     title: merchant,
     merchant,
     accountId: ctx.accountId,
     currency: ctx.currency,
-    paymentMethod: isPaymentMethod(memory?.paymentMethod) ? memory.paymentMethod : paymentMethodFor(text, account?.kind),
+    paymentMethod: method,
     scope: (memory?.scope === "business" ? "business" : "personal") as Scope,
   };
-  const category = (memory?.category && resolveCategory(ctx.categories, memory.category)) || categoryFor(text, ctx.categories);
+  const knownCategory = memory?.category && resolveCategory(ctx.categories, memory.category);
+  const ruleCategory = CATEGORY_RULES.some(([re]) => re.test(text));
+  const category = knownCategory || categoryFor(text, ctx.categories);
+  // Unsure when neither merchant memory nor a keyword rule picked the category, or the method is a guess.
+  const uncertain = !knownCategory && !ruleCategory;
 
   if (line.direction === "credit") {
     if (REFUND_CREDIT.test(text)) return { ...base, category, txnType: "refund", reason: "Refund or reversal credited back" };
