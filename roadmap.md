@@ -148,5 +148,5 @@
 - [x] Loan repayment history (principal/interest totals, balance after each repayment)
 - [x] Trip advance reconciliation CSV export (advances, trip expenses, returns, outstanding balance)
 - [x] Loan repayment history chart (balance left after each repayment; EMIs recorded from the loan card count too)
-- [ ] Trip advance dashboard: outstanding advance balances across trips, linking to each trip's reconciliation
-- [ ] Loan repayment history CSV export (payment dates, principal, interest, remaining balance)
+- [x] Trip advance dashboard: outstanding advance balances across trips, linking to each trip's reconciliation (signed-in verified: ₹20,000 advance − ₹12,000 business spend → "return ₹8,000", Reconcile opens the trip)
+- [x] Loan repayment history CSV export (payment dates, principal, interest, remaining balance; signed-in download verified)
