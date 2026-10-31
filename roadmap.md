@@ -15,6 +15,7 @@
 - [x] Real email/Google/Lovable sign-in and verified passkey device lock; existing anonymous records can upgrade by email
 
 ## Production completion (PRD gap list, Oct 31)
+- [ ] Continue: make restores all-or-nothing, finish catalog-aware extraction and transfer matching, then verify signed-in flows
 - [x] Schema: card details (issuer, last four, statement day, interest), loan details (provider, type, original, start, prepayment terms, foreclosure %, linked account, payment log), reimbursement status, documents, valuations, transaction audit trail, push subscriptions
 - [x] Credit card module: billing cycle, statement vs unbilled, payments since statement, paid/partly paid/pending, interest & charges, EMI conversions, utilisation alerts
 - [x] Loans: full details, record EMI (principal vs interest split), foreclosure charges in simulator, full schedule, closure date
