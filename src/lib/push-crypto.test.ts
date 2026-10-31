@@ -1,3 +1,4 @@
+// @vitest-environment node
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { webcrypto } from "node:crypto";
 import { p256 } from "@noble/curves/nist.js";
@@ -17,7 +18,7 @@ describe("Web-standard push encryption",()=>{
     vi.stubGlobal("crypto",webcrypto);
     const pub=p256.getPublicKey(Uint8Array.from({length:32},()=>1),false);
     const encode=(b:Uint8Array)=>btoa(String.fromCharCode(...b)).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/g,"");
-    const fetchMock=vi.fn(async()=>new Response(null,{status:201}));vi.stubGlobal("fetch",fetchMock);
+    const fetchMock=vi.fn(async(_url: string, _init?: RequestInit)=>new Response(null,{status:201}));vi.stubGlobal("fetch",fetchMock);
     expect(await sendDevicePush("test-only-seed-not-a-production-credential",{endpoint:"https://fcm.googleapis.com/a",p256dh:encode(pub),auth:encode(new Uint8Array(16).fill(3))},privateReminderPayload(1))).toEqual({ok:true,expired:false});
     const init=fetchMock.mock.calls[0]?.[1] as RequestInit|undefined;
     expect(init?.redirect).toBe("error");expect((init?.headers as Record<string,string>)["content-encoding"]).toBe("aes128gcm");
