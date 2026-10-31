@@ -37,3 +37,4 @@
 - Department limits are readable only within the caller's department or by verified Finance users; role records are self-readable only, with permission checks handled by the protected database helper.
 - tsyringe (via SimpleWebAuthn/@peculiar/x509) is patched in patches/ to inline a Reflect metadata polyfill; the edge bundle cannot guarantee a separate polyfill import runs first, and without it every published request returns 500.
 - Family members get their own sign-in only through owner email invites accepted by a verified matching account; requests, decisions and evidence access are enforced by RLS and security-definer functions, and approval never creates a transaction.
+- Workspace splits store original-currency shares on the entry itself (never extra entries); travel bookings, itinerary and advances live on trips in preferences, so only paid ledger entries change balances.
