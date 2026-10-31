@@ -33,3 +33,5 @@
 - Mutual fund NAVs are authenticated server-fetched daily quotes; reviewed units create dated valuation snapshots, never income or expense entries, so net worth reuses the ledger engine.
 - Mutual fund portfolio charts use pure tested rules in src/lib/portfolio.ts on owner-visible NAV snapshots; gain is change since the first saved NAV net of ledger flows, not lifetime return, because acquisition cost is not recorded.
 - Device push uses the generated production worker, allowlisted HTTPS push services, server-derived VAPID keys from a stored signing seed and owner-scoped subscriptions; cron authentication and per-device daily claims prevent public dispatch and duplicate reminders, and lock-screen messages contain no financial details.
+- Long-range predictions are pure tested rules in src/lib/projection.ts (editable category inflation assumptions); suggestions are rule-based from those figures, not AI, so numbers stay verifiable.
+- Vault document scanning uses a server function (src/lib/document-extract.functions.ts) gated by the same AI privacy settings; extracted fields are always reviewed before saving.

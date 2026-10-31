@@ -73,3 +73,5 @@
 - [x] Receipt add: separate Camera / Gallery / Files options
 - [x] Save receipts to add later (pending receipt inbox)
 - [x] New fonts; deeper blue palette with gold accent
+- [x] Vault scan (camera/gallery/files) with auto-filled details
+- [x] 10-year inflation, category and savings prediction with suggestions
