@@ -17,3 +17,8 @@ export function organisationUsage(tags: { group: string; name: string }[], entri
     return { name: t.name, uses: entries.filter((e) => (e.tags ?? []).includes(v)).length };
   }).sort((a, b) => a.name.localeCompare(b.name));
 }
+
+/** Replaces one tag value in an entry's tags without duplicating it. */
+export function renameTagIn(tags: string[], from: string, to: string): string[] {
+  return [...new Set(tags.map((t) => (t === from ? to : t)))];
+}
