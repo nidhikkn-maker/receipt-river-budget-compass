@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { useRef, useState } from "react";
+import { History, Undo2 } from "lucide-react";
 import { PageTitle, Stat } from "@/components/AppShell";
 import { ExpenseTable } from "@/components/ExpenseTable";
 import { Button } from "@/components/ui/button";
@@ -7,7 +8,7 @@ import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { PAYMENT_METHODS, PAYMENT_LABEL, applyFilters, money, totalsByScope, type Filters } from "@/lib/expenses";
-import { useStore } from "@/lib/store";
+import { useStore, type CategoryBatch } from "@/lib/store";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_authenticated/expenses")({
@@ -25,12 +26,28 @@ export const Route = createFileRoute("/_authenticated/expenses")({
 });
 
 function Expenses() {
-  const { transactions: expenses, members, accounts, preferences, bulkSetCategory } = useStore();
+  const { transactions: expenses, members, accounts, preferences, bulkSetCategory, categoryHistory, undoCategoryBatch } = useStore();
   const [f, setF] = useState<Filters>({ scope: "all", memberId: "all", category: "all" });
   const [selecting, setSelecting] = useState(false);
   const [picked, setPicked] = useState<Set<string>>(new Set());
   const [bulkCategory, setBulkCategory] = useState("");
   const [applying, setApplying] = useState(false);
+  const [batches, setBatches] = useState<CategoryBatch[]>([]);
+  const [showHistory, setShowHistory] = useState(false);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [lastBatch, setLastBatch] = useState<string | null>(null);
+  const operation = useRef<{ signature: string; id: string } | null>(null);
+  const loadHistory = async () => {
+    setHistoryLoading(true);
+    try { setBatches(await categoryHistory()); } catch(e) { toast.error((e as Error).message); }
+    finally { setHistoryLoading(false); }
+  };
+  const undo = async (id: string) => {
+    setApplying(true);
+    try { await undoCategoryBatch(id); if (lastBatch === id) setLastBatch(null); toast.success("Original categories and splits restored"); await loadHistory(); }
+    catch(e) { toast.error((e as Error).message); }
+    finally { setApplying(false); }
+  };
   const list = applyFilters(expenses, f);
   const t = totalsByScope(list.filter(e=>(e.txnType??"expense")==="expense"));
   const activeCategories = preferences.categories.filter(c=>!c.archived).map(c=>c.name);
@@ -39,7 +56,10 @@ function Expenses() {
   const applyBulk = async () => {
     if (!bulkCategory || !picked.size) return;
     setApplying(true);
-    try { await bulkSetCategory([...picked], bulkCategory); toast.success(`${picked.size} ${picked.size === 1 ? "entry" : "entries"} moved to ${bulkCategory}`); stopSelecting(); }
+    const signature = JSON.stringify([[...picked].sort(), bulkCategory]);
+    if (operation.current?.signature !== signature) operation.current = { signature, id: crypto.randomUUID() };
+    const batchId = operation.current.id;
+    try { const id = await bulkSetCategory([...picked], bulkCategory, batchId); setLastBatch(id); operation.current = null; toast.success(`${picked.size} ${picked.size === 1 ? "entry" : "entries"} moved to ${bulkCategory}`, { action: { label: "Undo", onClick: () => void undo(id) } }); stopSelecting(); if(showHistory) await loadHistory(); }
     catch (e) { toast.error((e as Error).message); }
     finally { setApplying(false); }
   };
@@ -78,6 +98,8 @@ function Expenses() {
         <Stat label={`${list.length} total`} value={money(t.total)} />
       </div>
       <div className="mb-4 flex flex-wrap items-center gap-2">
+        <Button variant="outline" size="sm" onClick={() => { setShowHistory(!showHistory); if (!showHistory) void loadHistory(); }}><History className="mr-1 h-4 w-4" />Category history</Button>
+        {lastBatch && <Button variant="outline" size="sm" disabled={applying} onClick={() => void undo(lastBatch)}><Undo2 className="mr-1 h-4 w-4" />Undo last change</Button>}
         <Button variant={selecting ? "secondary" : "outline"} size="sm" onClick={() => (selecting ? stopSelecting() : setSelecting(true))}>{selecting ? "Done selecting" : "Select entries"}</Button>
         {selecting && <>
           <Button variant="ghost" size="sm" onClick={() => setPicked(new Set(list.map(e => e.id)))}>All {list.length}</Button>
@@ -86,6 +108,10 @@ function Expenses() {
           <Button size="sm" disabled={!picked.size || !bulkCategory || applying} onClick={() => void applyBulk()}>{applying ? "Applying…" : `Apply to ${picked.size}`}</Button>
         </>}
       </div>
+      {showHistory && <section aria-label="Bulk category audit history" className="mb-6 border-y py-4">
+        <h2 className="mb-3 font-display font-bold">Bulk category history</h2>
+        {historyLoading ? <p className="text-sm text-muted-foreground">Loading history…</p> : batches.length === 0 ? <p className="text-sm text-muted-foreground">No bulk category changes yet.</p> : <ul className="divide-y">{batches.map(b => <li key={b.id} className="py-3"><div className="flex flex-wrap items-center justify-between gap-2"><div><p className="text-sm font-bold">{b.entries.length} entries → {b.category}</p><p className="text-xs text-muted-foreground">{new Date(b.createdAt).toLocaleString()}{b.undoneAt ? ` · Undone ${new Date(b.undoneAt).toLocaleString()}` : ""}</p></div>{!b.undoneAt && <Button size="sm" variant="outline" disabled={applying} onClick={() => void undo(b.id)}><Undo2 className="mr-1 h-4 w-4" />Undo</Button>}</div><details className="mt-2 text-sm"><summary className="cursor-pointer text-primary">Changed entries</summary><ul className="mt-2 space-y-1">{b.entries.map(e => <li key={e.id} className="break-words">{e.title} · {e.from}{e.allocations.length ? " (category split)" : ""} → {b.category}</li>)}</ul></details></li>)}</ul>}
+      </section>}
       <ExpenseTable items={list} empty="No expenses match these filters." selected={selecting ? picked : undefined} onToggle={selecting ? togglePick : undefined} />
     </>
   );
