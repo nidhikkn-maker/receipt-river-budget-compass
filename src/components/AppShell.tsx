@@ -1,4 +1,4 @@
-import { Link } from "@tanstack/react-router";
+import { Link, useRouterState } from "@tanstack/react-router";
 import { useEffect, useState, type ReactNode } from "react";
 import { BarChart3, Bell, CalendarClock, Gem, Home, Landmark, ListFilter, PiggyBank, Plus, Settings, Sparkles, Users, Eye, EyeOff, FileText, UserRound, TrendingUp, Inbox, HeartPulse, Search, SlidersHorizontal, Split, Network, Plane, Wallet, Bot, Menu, X, MessageCircleQuestion } from "lucide-react";
 import { DeviceLock } from "./DeviceLock";
@@ -95,6 +95,8 @@ export function AppShell({ children }: { children: ReactNode }) {
     return () => media.removeEventListener("change", apply);
   }, [preferences.theme, preferences.themeName]);
   const [hidden, setHidden] = useState(false);
+  // Version 4.4: the universal entry opens as a focused screen without the global header or bottom bar.
+  const focused = useRouterState({ select: (st) => st.location.pathname === "/new" });
   const [moreOpen, setMoreOpen] = useState(false);
   useEffect(() => { setHidden(localStorage.getItem("ll-privacy") === "1"); }, []);
   useEffect(() => { document.documentElement.classList.toggle("privacy", hidden); localStorage.setItem("ll-privacy", hidden ? "1" : "0"); }, [hidden]);
@@ -111,7 +113,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         ))}
       </aside>
 
-      <header className="sticky top-0 z-20 border-b bg-background/85 backdrop-blur">
+      <header hidden={focused} className="sticky top-0 z-20 border-b bg-background/85 backdrop-blur">
         <div className="mx-auto flex max-w-6xl items-center gap-1 px-4 py-2.5 sm:px-8">
           <Link to="/dashboard" className="font-display text-xl font-bold tracking-tight text-primary">Ledgerline<span className="text-gold">.</span></Link>
           <div className="ml-auto flex items-center">
@@ -126,11 +128,11 @@ export function AppShell({ children }: { children: ReactNode }) {
         </div>
       </header>
 
-      <main className="mx-auto max-w-6xl px-4 pb-28 pt-5 sm:px-8 lg:pb-12">
+      <main className={focused ? "mx-auto max-w-3xl px-4 pb-6 pt-2 sm:px-8" : "mx-auto max-w-6xl px-4 pb-28 pt-5 sm:px-8 lg:pb-12"}>
         {loading ? <p className="text-muted-foreground">Loading…</p> : <DeviceLock>{children}</DeviceLock>}
       </main>
 
-      <nav aria-label="Primary" className="fixed inset-x-3 bottom-3 z-30 flex items-center justify-around rounded-3xl bg-ink px-2 py-2 text-ink-muted shadow-float backdrop-blur-xl lg:hidden">
+      <nav hidden={focused} aria-label="Primary" className="fixed inset-x-3 bottom-3 z-30 flex items-center justify-around rounded-3xl bg-ink px-2 py-2 text-ink-muted shadow-float backdrop-blur-xl lg:hidden">
         <Link to="/dashboard" className="flex flex-1 flex-col items-center gap-0.5 rounded-2xl py-1.5 text-[10px] font-semibold" activeProps={{ className: "!text-gold" }}>
           <Home className="h-5 w-5" />Home
         </Link>
