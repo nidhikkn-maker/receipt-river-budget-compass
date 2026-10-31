@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
+import { Download, FileSpreadsheet, FileText } from "lucide-react";
 import { toast } from "sonner";
 import { PageTitle } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
@@ -7,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { applyFilters } from "@/lib/expenses";
-import { buildReport, downloadBlob, toCsv, toPdf, type ReportKind } from "@/lib/reports";
+import { buildReport, deliverFile, toCsv, toPdf, type ReportKind } from "@/lib/reports";
 import { useStore } from "@/lib/store";
 import { BarChart, Bar, XAxis, Tooltip, ResponsiveContainer, LineChart, Line, YAxis } from "recharts";
 import { tagValue } from "@/lib/preferences";
@@ -20,9 +21,9 @@ export const Route = createFileRoute("/_authenticated/reports")({
   head: () => ({
     meta: [
       { title: "Reports — Ledgerline" },
-      { name: "description", content: "Download business, personal and category reports as CSV or PDF." },
+      { name: "description", content: "Export expenses, actual reimbursement payments and department budget summaries as CSV or PDF." },
       { property: "og:title", content: "Reports — Ledgerline" },
-      { property: "og:description", content: "Download business, personal and category reports as CSV or PDF." },
+      { property: "og:description", content: "Download expense entries, reimbursement payments and department budget summaries." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
     ],
@@ -35,10 +36,15 @@ const KINDS: { kind: ReportKind; title: string; desc: string }[] = [
   { kind: "expenses", title: "All expenses", desc: "Everything, with type, family member, payment method and currency conversion." },
   { kind: "categories", title: "By category", desc: "Business vs personal totals per category, with monthly budgets." },
   { kind: "reimbursements", title: "Reimbursements", desc: "Pending and received claims." },
+  { kind: "reimbursement-payments", title: "Reimbursement payments", desc: "Money actually received, with linked claims and receiving accounts." },
+  { kind: "departments", title: "Department budgets", desc: "Your filtered spending against saved department limits; excludes other people's records. Missing labels appear as Unassigned." },
 ];
 
 function Reports() {
-  const { transactions, accounts, valuations, memberName, members, budgets, commitments, loans, preferences } = useStore();
+  const { transactions, accounts, valuations, memberName, members, budgets, commitments, loans, preferences, departmentBudgets, departmentBudgetError } = useStore();
+  const [budgetMonth, setBudgetMonth] = useState(new Date().toISOString().slice(0, 7));
+  const [prepared, setPrepared] = useState<Record<string, { blob: Blob; key: string }>>({});
+  const [preparing, setPreparing] = useState<ReportKind | null>(null);
   const [tagGroup,setTagGroup]=useState<Record<string,string>>({});
   const [drill,setDrill]=useState<{label:string;from?:string;to?:string;merchant?:string;account?:string}|null>(null);
   const [from, setFrom] = useState("");
@@ -58,9 +64,14 @@ function Reports() {
   const merchants=spendBy(list,e=>e.merchant||e.title,10);const byAccount=spendBy(list,e=>accounts.find(a=>a.id===e.accountId)?.name??"Unassigned",10);
   const subtitle = `${member === "all" ? "Everyone" : memberName(member === "me" ? null : member)} · ${from || "start"} to ${to || "today"} · amounts in INR · generated ${stamp}`;
 
-  const csv = (k: ReportKind) => downloadBlob(new Blob([toCsv(buildReport(k, list, memberName, budgets))], { type: "text/csv;charset=utf-8" }), `ledgerline-${k}-${stamp}.csv`);
+  const report = (k: ReportKind) => buildReport(k, filtered, memberName, budgets, { departmentBudgets, budgetMonth, claims: transactions, accountName: id => accounts.find(a => a.id === id)?.name ?? "Unassigned" });
+  const csv = (k: ReportKind) => void deliverFile(new Blob(["\uFEFF", toCsv(report(k))], { type: "text/csv;charset=utf-8" }), `ledgerline-${k}-${stamp}.csv`).catch(() => toast.error("Couldn't download the CSV"));
   const pdf = async (k: ReportKind) => {
-    try { downloadBlob(await toPdf(buildReport(k, list, memberName, budgets), subtitle), `ledgerline-${k}-${stamp}.pdf`); } catch { toast.error("Couldn't create the PDF"); }
+    const r = report(k), key = JSON.stringify([r, subtitle]);
+    const ready = prepared[k];
+    if (ready?.key === key) { await deliverFile(ready.blob, `ledgerline-${k}-${stamp}.pdf`); return; }
+    setPreparing(k);
+    try { const blob = await toPdf(r, subtitle); setPrepared(p => ({ ...p, [k]: { blob, key } })); } catch { toast.error("Couldn't create the PDF"); } finally { setPreparing(null); }
   };
 
   return (
@@ -93,14 +104,15 @@ function Reports() {
         <Select value={selectedCategory} onValueChange={setSelectedCategory}><SelectTrigger aria-label="Insight category"><SelectValue/></SelectTrigger><SelectContent><SelectItem value="all">All categories</SelectItem>{categoryRows.map(c=><SelectItem key={c.name} value={c.name}>{c.name}</SelectItem>)}</SelectContent></Select>
         <div className="mt-4"><ExpenseTable items={list.filter(e=>selectedCategory==="all"||e.category===selectedCategory)} empty="No transactions in this range." /></div>
       </section>
+      <section className="mb-4 flex flex-wrap items-end gap-3"><div className="grid gap-1"><Label htmlFor="budget-month">Budget comparison month</Label><Input id="budget-month" type="month" value={budgetMonth} onChange={e => setBudgetMonth(e.target.value)} /></div>{departmentBudgetError && <p className="text-sm text-destructive">Department limits couldn't load. Try refreshing before exporting.</p>}</section>
       <div className="grid gap-4 md:grid-cols-3">
         {KINDS.map((k) => (
-          <div key={k.kind} className="flex flex-col rounded-3xl border bg-card p-5">
+          <div key={k.kind} className="flex flex-col rounded-lg border bg-card p-5">
             <h2 className="font-display text-xl font-bold">{k.title}</h2>
             <p className="mt-1 flex-1 text-sm text-muted-foreground">{k.desc}</p>
             <div className="mt-4 flex gap-2">
-              <Button variant="outline" size="sm" onClick={() => csv(k.kind)}>CSV</Button>
-              <Button size="sm" onClick={() => void pdf(k.kind)}>PDF</Button>
+              <Button variant="outline" size="sm" aria-label={`Export ${k.title} CSV`} disabled={k.kind === "departments" && departmentBudgetError} onClick={() => csv(k.kind)}><FileSpreadsheet className="mr-1 h-4 w-4" />CSV</Button>
+              <Button size="sm" aria-label={`${prepared[k.kind]?.key === JSON.stringify([report(k.kind), subtitle]) ? "Download" : "Prepare"} ${k.title} PDF`} disabled={preparing !== null || (k.kind === "departments" && departmentBudgetError)} onClick={() => void pdf(k.kind).catch(() => toast.error("Couldn't download the PDF"))}>{prepared[k.kind]?.key === JSON.stringify([report(k.kind), subtitle]) ? <Download className="mr-1 h-4 w-4" /> : <FileText className="mr-1 h-4 w-4" />}{preparing === k.kind ? "Preparing…" : prepared[k.kind]?.key === JSON.stringify([report(k.kind), subtitle]) ? "Download PDF" : "Prepare PDF"}</Button>
             </div>
           </div>
         ))}

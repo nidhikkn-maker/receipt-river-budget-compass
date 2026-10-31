@@ -69,6 +69,7 @@
 - [ ] Automatic financial connections — provider availability, consent and bank support must be established before implementation; not a promised live connection
 
 ## User requests (Oct 31, later)
+- [x] Add CSV/PDF expense, actual reimbursement-payment and department-limit exports; all six signed-in downloads verified, report rules tested; department totals include only owner-visible filtered spending
 - [x] Verify all seven signed-in flows and reload persistence; fix atomic receipt/yearly confirmation, exact claim remainder, invalid splits, simulator false-expense saving, merchant alias chains and trip input validation; 202 automated tests plus live replay/concurrency/rollback checks pass; temporary financial records removed
 - [x] Fix alignment issues (mobile 402px)
 - [x] Receipt add: separate Camera / Gallery / Files options

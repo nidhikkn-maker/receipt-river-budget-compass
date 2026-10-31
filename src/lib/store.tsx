@@ -39,6 +39,8 @@ export interface DocumentMeta { title: string; docType: DocType; docDate: string
 interface Snapshot { name: string; members: Member[]; expenses: Expense[]; accounts: Account[]; commitments: Commitment[]; rawLoans: Loan[]; goals: Goal[]; budgets: Budgets; preferences: FinancePreferences; valuations: Valuation[]; documents: VaultDoc[] }
 
 interface Ctx {
+  departmentBudgets: Record<string, number>;
+  departmentBudgetError: boolean;
   pendingCount: number;
   preferences: FinancePreferences;
   savePreferences: (p: FinancePreferences) => Promise<void>;
@@ -120,6 +122,8 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
   const [valuations, setValuations] = useState<Valuation[]>([]);
   const [documents, setDocuments] = useState<VaultDoc[]>([]);
   const [budgets, setBudgets] = useState<Budgets>({});
+  const [departmentBudgets, setDepartmentBudgets] = useState<Record<string, number>>({});
+  const [departmentBudgetError, setDepartmentBudgetError] = useState(false);
   const [loading, setLoading] = useState(true);
   const [pendingCount, setPendingCount] = useState(0);
   const syncing = useRef(false);
@@ -135,7 +139,7 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
       }
       setLoading(false); return;
     }
-    const [p, m, e, b, a, c, l, g, pref, v, d] = await Promise.all([
+    const [p, m, e, b, a, c, l, g, pref, v, d, db] = await Promise.all([
       supabase.from("profiles").select("full_name").eq("id", userId).maybeSingle(),
       supabase.from("family_members").select("id, name, relation").order("created_at"),
       supabase.from("expenses").select("*").order("expense_date", { ascending: false }).order("created_at", { ascending: false }),
@@ -147,8 +151,11 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
       supabase.from("finance_preferences").select("data").eq("owner_id", userId).maybeSingle(),
       supabase.from("asset_valuations").select("*").order("valued_on", { ascending: false }),
       supabase.from("documents").select("*").order("created_at", { ascending: false }),
+      supabase.from("department_budgets").select("department,amount"),
     ]);
     const firstError = [e, a, c, l, g, v, d].find((x) => x.error)?.error;
+    setDepartmentBudgetError(!!db.error);
+    setDepartmentBudgets(Object.fromEntries((db.data ?? []).map((x) => [x.department, Number(x.amount)])));
     if (firstError) toast.error("Some records couldn't load — pull to refresh or try again");
     setPreferences(normalizePreferences(pref.data?.data as unknown as Partial<FinancePreferences>));
     setCommitments((c.data ?? []).map((x) => ({ id: x.id, name: x.name, kind: x.kind as CommitmentKind, direction: x.direction as "in" | "out", amount: Number(x.amount),
@@ -176,7 +183,7 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
     setName(p.data?.full_name ?? "");
     setMembers(m.data ?? []);
     setExpenses((e.data ?? []).map((x) => ({
-      id: x.id, title: x.title, merchant: x.merchant, category: x.category as Category, scope: x.scope as Scope, memberId: x.member_id, splits: (x.splits as unknown as Split[]) ?? [],
+      id: x.id, department: x.department, title: x.title, merchant: x.merchant, category: x.category as Category, scope: x.scope as Scope, memberId: x.member_id, splits: (x.splits as unknown as Split[]) ?? [],
       amount: Number(x.amount), currency: x.currency, originalAmount: Number(x.original_amount ?? x.amount), fxRate: Number(x.fx_rate),
       paymentMethod: x.payment_method as PaymentMethod, reconciledAt: x.reconciled_at, statementRef: x.statement_ref,
       date: x.expense_date, description: x.description, receipts: (x.receipts as unknown as Receipt[]) ?? [],
@@ -525,6 +532,7 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
 
   return (
     <StoreCtx.Provider value={{
+      departmentBudgets, departmentBudgetError,
       pendingCount, setTags, preferences, savePreferences, ensureCategory, moveCategory, userId, name, updateName, members, memberName,
       expenses: expenses.filter((x) => (x.txnType ?? "expense") === "expense"), transactions: expenses, accounts, addAccount, setArchived, adjustBalance,
       commitments, loans, goals, valuations, documents, saveCommitment, confirmIrregular, removeCommitment, confirmCommitment, saveLoan, removeLoan, recordLoanPayment, convertToEmi,
