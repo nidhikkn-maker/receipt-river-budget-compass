@@ -86,7 +86,7 @@ function Settings() {
         if (error) throw Error("Couldn't restore a file — please try again");
         staged.push(newPath);
       }
-      const { data, error } = await supabase.rpc("restore_finance_backup", { payload: restored as Json, display_name: j.name?.trim() || undefined });
+      const { data, error } = await supabase.rpc("restore_finance_backup", { payload: restored as Json, ...(j.name?.trim() ? { display_name: j.name.trim() } : {}) });
       if (error) throw Error("Restore stopped; your existing records are unchanged. Check the backup and try again.");
       committed = true;
       const counts = (data as { counts: Record<string, number> }).counts;
