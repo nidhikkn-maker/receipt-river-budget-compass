@@ -453,7 +453,7 @@ function NewExpense() {
             <select aria-label="Currency" value={currency} onChange={(e) => setCurrency(e.target.value)} disabled={!confirmed || reading || saving}
               className="rounded-lg bg-secondary px-2 py-1 text-sm font-semibold">{[...new Set([currency, ...CURRENCIES])].map((c) => <option key={c} value={c}>{c}</option>)}</select>
             <input id="a" autoFocus={!editing} inputMode="decimal" type="number" step="0.01" min="0" placeholder="0" value={amount} disabled={!confirmed || reading || saving}
-              onChange={(e) => setAmount(e.target.value)} className="w-full min-w-0 max-w-[14rem] bg-transparent text-center font-mono text-4xl font-bold outline-none placeholder:text-muted-foreground/50" />
+              onChange={(e) => setAmount(e.target.value)} className="w-full min-w-0 max-w-[14rem] appearance-none bg-transparent [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none text-center font-mono text-4xl font-bold outline-none placeholder:text-muted-foreground/50" />
           </div>
           {Number(amount) > 0 && <p className="mt-1 text-xs text-muted-foreground">{money(Number(amount), currency)}</p>}
           {currency !== BASE_CURRENCY && (
@@ -628,11 +628,11 @@ function NewExpense() {
             </div>
           )}
           {/* Workspace + date */}
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid gap-3">
             <WorkspacePicker compact scope={scope} setScope={setScope} total={Number(amount) || 0} currency={currency} split={wsSplit} setSplit={setWsSplit}
               suggestion={suggestWorkspace({ merchant, tags: tagList, tripType: ctxTrip?.type ?? null, category }, expenses)} />
-            <div className="grid content-start gap-2">
-              <Label htmlFor="d">Date{af("date")}</Label>
+            <div className="grid grid-cols-[auto_1fr] items-center gap-2">
+              <Label htmlFor="d" className="col-span-2">Date{af("date")}</Label>
               <div className="flex gap-1">
                 <Button type="button" size="sm" variant={date === today ? "default" : "outline"} className="h-8 flex-1 rounded-full px-2 text-xs" onClick={() => setDate(today)}>Today</Button>
                 <Button type="button" size="sm" variant={date === yesterday ? "default" : "outline"} className="h-8 flex-1 rounded-full px-2 text-xs" onClick={() => setDate(yesterday)}>Yesterday</Button>
