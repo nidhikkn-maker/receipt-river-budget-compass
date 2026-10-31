@@ -26,7 +26,7 @@ import { parseSpokenEntry } from "@/lib/assistant.functions";
 import { useServerFn } from "@tanstack/react-start";
 import { Mic } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { ACCOUNT_LABEL, TXN_LABEL, TXN_TYPES, frequentMerchants, suggestForMerchant, type TxnType } from "@/lib/ledger";
+import { ACCOUNT_LABEL, MOVE_TARGET, isMove, TXN_LABEL, TXN_TYPES, frequentMerchants, suggestForMerchant, type TxnType } from "@/lib/ledger";
 
 
 import { WorkspacePicker, splitShares } from "@/components/WorkspacePicker";
@@ -34,6 +34,15 @@ import { suggestWorkspace, validateShares, type AllocationMethod } from "@/lib/w
 import { tripTag } from "@/lib/intelligence";
 import { BOOKING_CATEGORY, travelCategory, tripsForDate, type TravelTrip } from "@/lib/travel";
 import { todayISO } from "@/lib/use-position";
+
+const TYPE_HINT: Partial<Record<TxnType, string>> = {
+  transfer: "Moving money between your own accounts isn't counted as spending or income.",
+  card_payment: "Paying a credit card bill lowers what you owe on the card. The purchases were already counted, so this isn't spending again.",
+  loan_repayment: "Lowers the loan balance. Not counted as spending.",
+  investment: "Moves money into an investment account. Not spending; it stays in your net worth.",
+  advance: "Money given to you ahead of travel or work. It raises the account balance but isn't income — it's owed back or settled with expenses.",
+  advance_settlement: "Returning the unused part of an advance. Lowers the balance but isn't spending.",
+};
 
 export const Route = createFileRoute("/_authenticated/new")({
   validateSearch: quickEntrySearch,
@@ -498,11 +507,11 @@ function NewExpense() {
                 </button>
               ))}
             </div>
-            {txnType === "transfer" && <p className="text-xs text-muted-foreground">Moving money between your own accounts (or paying a card bill) isn't counted as spending or income.</p>}
+            {TYPE_HINT[txnType] && <p className="text-xs text-muted-foreground">{TYPE_HINT[txnType]}</p>}
           </div>
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="grid gap-2">
-              <Label>{txnType === "transfer" ? "From account" : "Account"}</Label>
+              <Label>{isMove(txnType) ? "From account" : txnType === "advance" ? "Received into" : txnType === "advance_settlement" ? "Returned from" : "Account"}</Label>
               <Select value={accountId} onValueChange={setAccountId}>
                 <SelectTrigger aria-label="Account"><SelectValue /></SelectTrigger>
                 <SelectContent>
@@ -511,14 +520,14 @@ function NewExpense() {
                 </SelectContent>
               </Select>
             </div>
-            {txnType === "transfer" && (
+            {isMove(txnType) && (
               <div className="grid gap-2">
-              <Label>To account</Label>
+              <Label>{txnType === "card_payment" ? "Card being paid" : txnType === "loan_repayment" ? "Loan being repaid" : txnType === "investment" ? "Invested into" : "To account"}</Label>
               <Select value={toAccountId} onValueChange={setToAccountId}>
                 <SelectTrigger aria-label="To account"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="none">Not set</SelectItem>
-                  {liveAccounts.map((a) => <SelectItem key={a.id} value={a.id}>{a.name} · {ACCOUNT_LABEL[a.kind]}</SelectItem>)}
+                  {liveAccounts.filter((a) => !MOVE_TARGET[txnType] || MOVE_TARGET[txnType]!.includes(a.kind)).map((a) => <SelectItem key={a.id} value={a.id}>{a.name} · {ACCOUNT_LABEL[a.kind]}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
@@ -639,7 +648,7 @@ function NewExpense() {
           </div>
           <div className="grid gap-2"><Label htmlFor="desc">Business purpose{af("description")}</Label><Textarea id="desc" value={description} onChange={(e) => setDescription(e.target.value)} /></div>
           <Button type="submit" size="lg" variant="gold" className="rounded-2xl" disabled={reading || saving || !confirmed || duplicateBlocked || receiptBlocked}>
-            {saving ? "Saving…" : editing ? "Save changes" : "Save expense"}
+            {saving ? "Saving…" : editing ? "Save changes" : `Save ${TXN_LABEL[txnType].toLowerCase()}`}
           </Button>
         </fieldset>
       </form>

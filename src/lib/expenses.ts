@@ -146,7 +146,7 @@ export function validateExpense(s: ExpenseInput) {
   if (!(s.amount > 0)) throw new ValidationError("Amount must be greater than zero");
   if (!/^\d{4}-\d{2}-\d{2}$/.test(s.date)) throw new ValidationError("Add the expense date");
   if (!SCOPES.includes(s.scope)) throw new ValidationError("Choose a workspace");
-  if (s.txnType === "transfer") {
+  if (s.txnType && ["transfer", "card_payment", "loan_repayment", "investment"].includes(s.txnType)) {
     if (!s.accountId || !s.toAccountId) throw new ValidationError("Pick both accounts for a transfer");
     if (s.accountId === s.toAccountId) throw new ValidationError("Choose two different accounts");
   }
@@ -263,11 +263,12 @@ const words = (s: string) => s.toLowerCase().split(/[^a-z0-9]+/).filter((w) => w
 export function matchScore(line: StatementLine, e: Expense, statementCurrency: string, accountId?: string): number {
   const kind=e.txnType??"expense";
   if (accountId) {
-    const side = kind === "transfer" && line.direction === "credit" ? e.toAccountId : e.accountId;
+    const move = ["transfer", "card_payment", "loan_repayment", "investment"].includes(kind);
+    const side = move && line.direction === "credit" ? e.toAccountId : e.accountId;
     if (side !== accountId) return 0;
-  } else if (kind === "transfer") return 0; // A transfer needs its statement-account side.
-  if(line.direction==="credit" && !["income","refund","reimbursement","transfer"].includes(kind))return 0;
-  if(line.direction!=="credit" && ["income","refund","reimbursement"].includes(kind))return 0;
+  } else if (["transfer", "card_payment", "loan_repayment", "investment"].includes(kind)) return 0; // A transfer needs its statement-account side.
+  if(line.direction==="credit" && !["income","refund","reimbursement","transfer","card_payment","loan_repayment","investment","advance"].includes(kind))return 0;
+  if(line.direction!=="credit" && ["income","refund","reimbursement","advance"].includes(kind))return 0;
   const target = statementCurrency === e.currency ? e.originalAmount : statementCurrency === BASE_CURRENCY ? e.amount : NaN;
   if (!Number.isFinite(target)) return 0;
   const diff = Math.abs(line.amount - target) / Math.max(target, 1);

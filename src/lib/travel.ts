@@ -34,7 +34,10 @@ export function tripFinance(t: TravelTrip, txns: Row[]) {
   const paidUnlinked = bookings.filter((b) => b.status === "paid" && b.expenseId && !ids.has(b.expenseId));
   const ws: Record<string, number> = {};
   for (const e of s.entries as Row[]) for (const p of workspaceParts({ scope: e.scope ?? "personal", amount: e.amount, originalAmount: e.originalAmount ?? null, workspaceAllocations: e.workspaceAllocations ?? [] })) ws[p.workspace] = r2((ws[p.workspace] ?? 0) + p.amount);
-  const advanced = r2((t.advances ?? []).reduce((a, x) => a + x.amount, 0));
+  const tag = tripTag(t);
+  const ledgerAdv = txns.filter((x) => (x.tags ?? []).includes(tag)).reduce((a, x) => a + (x.txnType === "advance" ? x.amount : x.txnType === "advance_settlement" ? -x.amount : 0), 0);
+  // Advances come from trip notes plus "Travel advance" ledger entries tagged to the trip; returns reduce them.
+  const advanced = r2((t.advances ?? []).reduce((a, x) => a + x.amount, 0) + ledgerAdv);
   const reimbursablePending = r2((s.entries as Row[]).filter((e) => e.reimbursementStatus === "pending").reduce((a, e) => a + e.amount, 0));
   const reimbursed = r2((s.entries as Row[]).filter((e) => e.reimbursementStatus === "received").reduce((a, e) => a + e.amount, 0));
   const businessShare = r2((ws["business"] ?? 0) + (ws["official"] ?? 0));

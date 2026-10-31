@@ -52,3 +52,19 @@ describe("travel intelligence", () => {
   it("guesses travel categories", () => { expect(travelCategory("IndiGo 6E")).toBe("Flights"); expect(travelCategory("Random shop")).toBeNull(); });
   it("report separates spent and unpaid booked", () => { const r = tripReportRows(t, []); expect(r.find((x) => x[0] === "Total booked unpaid")![6]).toBe("10000"); expect(r.find((x) => x[0] === "Total spent")![6]).toBe("0"); });
 });
+
+import { accountBalance, cashflow, type Account } from "./ledger";
+describe("distinct money movement types", () => {
+  const bank: Account = { id: "b", name: "Bank", kind: "savings", openingBalance: 100000, archived: false };
+  const card: Account = { id: "c", name: "AMEX", kind: "credit_card", openingBalance: 20000, archived: false };
+  const inv: Account = { id: "i", name: "MF", kind: "investment", openingBalance: 0, archived: false };
+  const t = [
+    { id: "1", txnType: "card_payment" as const, amount: 20000, accountId: "b", toAccountId: "c", date: "2026-10-01" },
+    { id: "2", txnType: "investment" as const, amount: 10000, accountId: "b", toAccountId: "i", date: "2026-10-02" },
+    { id: "3", txnType: "advance" as const, amount: 25000, accountId: "b", date: "2026-10-03" },
+    { id: "4", txnType: "advance_settlement" as const, amount: 5000, accountId: "b", date: "2026-10-10" },
+  ];
+  it("card payment clears the card once and isn't spending", () => { expect(accountBalance(card, t)).toBe(0); expect(cashflow(t).spent).toBe(0); });
+  it("investment moves money into the investment account", () => expect(accountBalance(inv, t)).toBe(10000));
+  it("advances change the balance but are not income", () => { expect(accountBalance(bank, t)).toBe(90000); expect(cashflow(t).income).toBe(0); });
+});

@@ -11,7 +11,7 @@ export default defineTool({
   inputSchema: {
     from: date.optional().describe("Start date, inclusive (YYYY-MM-DD)."),
     to: date.optional().describe("End date, inclusive (YYYY-MM-DD)."),
-    type: z.enum(["expense", "income", "transfer", "refund", "reimbursement", "adjustment"]).optional().describe("Entry type."),
+    type: z.enum(["expense", "income", "transfer", "refund", "reimbursement", "adjustment", "card_payment", "loan_repayment", "investment", "advance", "advance_settlement"]).optional().describe("Entry type."),
     category: z.string().max(80).optional().describe("Exact category name, e.g. Groceries."),
     merchant: z.string().max(80).optional().describe("Text the merchant name contains."),
     limit: z.number().int().min(1).max(200).optional().describe("Maximum rows (default 50)."),

@@ -12,10 +12,11 @@ export const isLiability = (k: AccountKind) => LIABILITY_KINDS.includes(k);
 /** Accounts whose worth is set by valuations (market value) rather than only by recorded flows. */
 export const VALUED_KINDS: AccountKind[] = ["investment", "fixed_deposit", "other_asset"];
 
-export const TXN_TYPES = ["expense", "income", "transfer", "refund", "reimbursement", "adjustment"] as const;
+export const TXN_TYPES = ["expense", "income", "transfer", "refund", "reimbursement", "adjustment", "card_payment", "loan_repayment", "investment", "advance", "advance_settlement"] as const;
 export type TxnType = (typeof TXN_TYPES)[number];
 export const TXN_LABEL: Record<TxnType, string> = {
   expense: "Expense", income: "Income", transfer: "Transfer", refund: "Refund", reimbursement: "Reimbursement", adjustment: "Adjustment",
+  card_payment: "Card payment", loan_repayment: "Loan repayment", investment: "Investment", advance: "Travel advance", advance_settlement: "Advance return",
 };
 
 export interface Account {
@@ -53,6 +54,11 @@ export interface Valuation { id?: string; accountId: string; value: number; valu
 
 const r2 = (n: number) => Math.round(n * 100) / 100;
 const type = (t: Txn): TxnType => t.txnType ?? "expense";
+/** Types that move money between two of your own accounts (never income or spending). */
+export const MOVE_TYPES: TxnType[] = ["transfer", "card_payment", "loan_repayment", "investment"];
+export const isMove = (k: TxnType | undefined) => MOVE_TYPES.includes(k ?? "expense");
+/** Destination account kinds allowed for each move type. */
+export const MOVE_TARGET: Partial<Record<TxnType, AccountKind[]>> = { card_payment: ["credit_card"], loan_repayment: ["loan", "other_liability"], investment: ["investment", "fixed_deposit", "other_asset"] };
 
 /**
  * Balance of one account. For asset accounts it's money held; for liabilities it's amount owed.
@@ -67,9 +73,12 @@ export function accountBalance(a: Account, txns: Txn[]): number {
       if (k === "expense") bal -= sign * t.amount;
       else if (k === "income" || k === "refund" || k === "reimbursement") bal += sign * t.amount;
       else if (k === "adjustment") bal += (t.adjustmentSign ?? 1) * t.amount;
-      else if (k === "transfer") bal -= sign * t.amount;
+      else if (isMove(k)) bal -= sign * t.amount;
+      // Advance received: money held, but owed back — not income. Returning it lowers the balance — not spending.
+      else if (k === "advance") bal += sign * t.amount;
+      else if (k === "advance_settlement") bal -= sign * t.amount;
     }
-    if (k === "transfer" && t.toAccountId === a.id) bal += sign * t.amount;
+    if (isMove(k) && t.toAccountId === a.id) bal += sign * t.amount;
   }
   return r2(bal);
 }
