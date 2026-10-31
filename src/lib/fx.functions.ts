@@ -49,7 +49,17 @@ const SaveInput = z.object({
   accountId: z.string().uuid().nullable().default(null),
   toAccountId: z.string().uuid().nullable().default(null),
   tags: z.array(z.string().trim().min(1).max(40)).max(20).default([]),
-  receiptDetails: z.object({ tax: z.number().nonnegative().nullable().optional(), items: z.array(z.object({ name: z.string().max(200), quantity: z.number().nonnegative(), amount: z.number().nonnegative() })).max(100).optional(), text: z.string().max(20000).optional() }).optional(),
+  receiptDetails: z.object({
+    tax: z.number().nonnegative().nullable().optional(),
+    items: z.array(z.object({ name: z.string().max(200), quantity: z.number().nonnegative(), amount: z.number().nonnegative() })).max(100).optional(),
+    text: z.string().max(20000).optional(),
+    fingerprint: z.string().max(128).optional(),
+    audit: z.object({
+      read: z.object({ merchant: z.string().max(200), date: z.string().max(20), amount: z.number().nonnegative(), currency: z.string().max(8) }),
+      corrected: z.object({ merchant: z.string().max(200).optional(), date: z.string().max(20).optional(), amount: z.number().nonnegative().optional(), currency: z.string().max(8).optional() }),
+      confirmedAt: z.string().max(40),
+    }).optional(),
+  }).optional(),
 });
 
 /** Adds or updates an expense, converting to INR server-side with the rate for the bill date. */

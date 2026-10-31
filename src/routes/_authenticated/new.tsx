@@ -15,6 +15,7 @@ import {
 } from "@/lib/expenses";
 import { tagValue } from "@/lib/preferences";
 import { duplicateBills } from "@/lib/bill-duplicates";
+import { buildReceiptAudit, receiptFingerprint, receiptFingerprintMatches, type ReceiptReadValues } from "@/lib/receipt-audit";
 import { quickEntrySearch } from "@/lib/quick-entry";
 import { useStore } from "@/lib/store";
 import { extractReceipt } from "@/lib/receipt-extract.functions";
@@ -26,7 +27,6 @@ import { Mic } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ACCOUNT_LABEL, TXN_LABEL, TXN_TYPES, frequentMerchants, suggestForMerchant, type TxnType } from "@/lib/ledger";
 
-type LocalReceipt = { file: File; name: string; type: string; dataUrl: string };
 
 export const Route = createFileRoute("/_authenticated/new")({
   validateSearch: quickEntrySearch,
@@ -43,13 +43,20 @@ export const Route = createFileRoute("/_authenticated/new")({
   component: NewExpense,
 });
 
-const readFile = (f: File) =>
-  new Promise<LocalReceipt>((res, rej) => {
-    const r = new FileReader();
-    r.onload = () => res({ file: f, name: f.name, type: f.type, dataUrl: r.result as string });
-    r.onerror = rej;
-    r.readAsDataURL(f);
-  });
+type LocalReceipt = { file: File; name: string; type: string; dataUrl: string; fingerprint: string };
+
+const readFile = async (f: File): Promise<LocalReceipt> => {
+  const [dataUrl, fingerprint] = await Promise.all([
+    new Promise<string>((res, rej) => {
+      const r = new FileReader();
+      r.onload = () => res(r.result as string);
+      r.onerror = rej;
+      r.readAsDataURL(f);
+    }),
+    receiptFingerprint(f),
+  ]);
+  return { file: f, name: f.name, type: f.type, dataUrl, fingerprint };
+};
 
 const isDate = (s: string | null | undefined): s is string => !!s && /^\d{4}-\d{2}-\d{2}$/.test(s);
 
@@ -106,7 +113,9 @@ function NewExpense() {
   const [readingError, setReadingError] = useState("");
   const [readTarget, setReadTarget] = useState<LocalReceipt | null>(null);
   const [scan, setScan] = useState<Scan | null>(null);
+  const [scanRead, setScanRead] = useState<ReceiptReadValues | null>(null);
   const [confirmed, setConfirmed] = useState(true);
+  const [receiptApproval, setReceiptApproval] = useState("");
   const [autoFilled, setAutoFilled] = useState<Set<string>>(new Set());
   const [fx, setFx] = useState<{ rate: number; date: string } | { error: string } | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -211,7 +220,7 @@ function NewExpense() {
       const res = await extract({ data: prepared });
       if (!res.ok) throw new Error(res.error);
       const x = res.result;
-      setReceiptDetails({ tax: x.tax, items: x.items, text: x.text });
+      setReceiptDetails({ tax: x.tax, items: x.items, text: x.text, fingerprint: first.fingerprint });
       const filled = new Set<string>();
       if (x.title && (fresh || !title)) { setTitle(x.title); filled.add("title"); }
       if (x.category) { setCategory(x.category); filled.add("category"); }
@@ -219,7 +228,9 @@ function NewExpense() {
       if (x.description && (fresh || !description)) { setDescription(x.description); filled.add("description"); }
       if (x.scope) { setScope(x.scope); filled.add("scope"); }
       const cur = x.currency && /^[A-Z]{3}$/.test(x.currency.toUpperCase()) ? x.currency.toUpperCase() : currency;
-      setScan({ merchant: x.merchant ?? "", date: isDate(x.date) ? x.date : date, amount: x.amount != null ? String(x.amount) : "", currency: cur });
+      const readValues: ReceiptReadValues = { merchant: x.merchant ?? "", date: isDate(x.date) ? x.date : date, amount: x.amount ?? 0, currency: cur };
+      setScanRead(readValues);
+      setScan({ merchant: readValues.merchant, date: readValues.date, amount: x.amount != null ? String(x.amount) : "", currency: cur });
       setAutoFilled(filled);
       setConfirmed(false);
       toast.success("Bill read — check the key details");
@@ -262,6 +273,10 @@ function NewExpense() {
     setAmount(scan.amount);
     setDate(scan.date);
     setCurrency(scan.currency);
+    if (scanRead) {
+      const audit = buildReceiptAudit(scanRead, { merchant: scan.merchant, date: scan.date, amount: Number(scan.amount), currency: scan.currency }, new Date().toISOString());
+      setReceiptDetails((d) => ({ ...d, audit }));
+    }
     setAutoFilled((s) => new Set([...s, "merchant", "amount", "date", "currency"]));
     setConfirmed(true);
   };
@@ -270,12 +285,16 @@ function NewExpense() {
   const duplicates = txnType === "expense" ? duplicateBills(billIdentity, expenses, edit) : [];
   const duplicateSignature = JSON.stringify([billIdentity, receipts.map(r => r.name), duplicates.map(e => e.id)]);
   const duplicateBlocked = duplicates.length > 0 && duplicateApproval !== duplicateSignature;
+  // Same receipt file already attached to another entry (by content fingerprint).
+  const receiptReuse = txnType === "expense" && !editing ? receiptFingerprintMatches(receipts[0]?.fingerprint, expenses) : [];
+  const receiptSignature = JSON.stringify([receipts[0]?.fingerprint, receiptReuse.map(e => e.id)]);
+  const receiptBlocked = receiptReuse.length > 0 && receiptApproval !== receiptSignature;
   const advanceQueue = async () => {
     const [next, ...rest] = queue;
     setQueue(rest); setBatch(b => next && b ? { done: b.done + 1, total: b.total } : null);
-    setFromInbox([]); setDuplicateApproval(""); setReceipts(next ? [next] : []);
+    setFromInbox([]); setDuplicateApproval(""); setReceiptApproval(""); setReceipts(next ? [next] : []);
     setTitle(""); setMerchant(""); setAmount(""); setDescription(""); setTags("");
-    setReceiptDetails({}); setScan(null); setConfirmed(true); setReadingError(""); setReadTarget(null); setAutoFilled(new Set()); setSplitOn(false); setShares({});
+    setReceiptDetails({}); setScan(null); setScanRead(null); setConfirmed(true); setReadingError(""); setReadTarget(null); setAutoFilled(new Set()); setSplitOn(false); setShares({});
     if (next) await runExtraction(next, true);
   };
 
@@ -297,11 +316,15 @@ function NewExpense() {
     ev.preventDefault();
     if (!confirmed) { toast.error("Confirm the scanned bill details first"); return; }
     if (duplicateBlocked) { toast.error("Review the possible duplicate or skip this bill"); return; }
+    if (receiptBlocked) { toast.error("This receipt is already used — review it or choose a different file"); return; }
     setSaving(true);
     try {
+      const finalDetails: ReceiptDetails = { ...receiptDetails };
+      const fp = receipts[0]?.fingerprint ?? receiptDetails.fingerprint;
+      if (fp) finalDetails.fingerprint = fp;
       await save(
         { title: title.trim(), amount: Number(amount), currency, paymentMethod, category, date, description, merchant: merchant.trim() || null,
-          receiptDetails, scope, memberId: memberId === "me" ? null : memberId,
+          receiptDetails: finalDetails, scope, memberId: memberId === "me" ? null : memberId,
           txnType, accountId: accountId === "none" ? null : accountId, toAccountId: toAccountId === "none" ? null : toAccountId,
           tags: [...new Set(tags.split(",").map((t) => t.trim()).filter(Boolean))],
           splits: splitOn ? Object.entries(shares).map(([k, v]) => ({ memberId: k === "me" ? null : k, amount: Number(v) })) : [] },
@@ -388,6 +411,12 @@ function NewExpense() {
             <div className="flex flex-wrap gap-2"><Button type="button" size="sm" variant="outline" disabled={saving} onClick={() => void advanceQueue()}>Skip this bill</Button><Button type="button" size="sm" variant="secondary" disabled={!duplicateBlocked} onClick={() => setDuplicateApproval(duplicateSignature)}>{duplicateBlocked ? "Keep as a separate bill" : "Separate bill confirmed"}</Button></div>
           </section>}
           {batch && duplicates.length === 0 && <Button type="button" variant="ghost" size="sm" disabled={reading || saving} onClick={() => void advanceQueue()}>Skip this bill</Button>}
+
+          {receiptReuse.length > 0 && !reading && <section aria-label="Receipt already used" className="space-y-3 rounded-lg border border-gold bg-gold-soft p-4">
+            <h2 className="font-display font-bold">This receipt is already attached to another entry</h2>
+            <ul className="space-y-2 text-sm">{receiptReuse.map(e => <li key={e.id} className="flex flex-wrap items-center justify-between gap-2"><span>{e.merchant ?? e.title} · {e.date} · {e.currency} {e.originalAmount.toFixed(2)}</span><Link to="/new" search={{ edit: e.id }} target="_blank" rel="noopener noreferrer" className="text-primary underline">Review existing entry</Link></li>)}</ul>
+            <div className="flex flex-wrap gap-2"><Button type="button" size="sm" variant="outline" disabled={saving} onClick={() => { setReceipts([]); setReceiptDetails({}); setScan(null); setScanRead(null); setConfirmed(true); setReceiptApproval(""); }}>Remove this receipt</Button><Button type="button" size="sm" variant="secondary" disabled={!receiptBlocked} onClick={() => setReceiptApproval(receiptSignature)}>{receiptBlocked ? "Use this receipt anyway" : "Reused receipt confirmed"}</Button></div>
+          </section>}
 
           {scan && !reading && !confirmed && (
             <section ref={reviewRef} className="space-y-3 rounded-3xl border-2 border-primary bg-card p-4 shadow-float" role="group" aria-label="Review scanned details">
@@ -557,7 +586,7 @@ function NewExpense() {
             </div>
           </div>
           <div className="grid gap-2"><Label htmlFor="desc">Business purpose{af("description")}</Label><Textarea id="desc" value={description} onChange={(e) => setDescription(e.target.value)} /></div>
-          <Button type="submit" size="lg" variant="gold" className="rounded-2xl" disabled={reading || saving || !confirmed || duplicateBlocked}>
+          <Button type="submit" size="lg" variant="gold" className="rounded-2xl" disabled={reading || saving || !confirmed || duplicateBlocked || receiptBlocked}>
             {saving ? "Saving…" : editing ? "Save changes" : "Save expense"}
           </Button>
         </fieldset>

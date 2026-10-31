@@ -29,7 +29,15 @@ export const CURRENCIES = ["INR", "USD", "EUR", "GBP", "AED", "SGD", "JPY", "AUD
 export interface Member { id: string; name: string; relation: string }
 
 export interface Receipt { name: string; type: string; path: string }
-export interface ReceiptDetails { tax?: number | null; items?: { name: string; quantity: number; amount: number }[]; text?: string }
+export interface ReceiptDetails {
+  tax?: number | null;
+  items?: { name: string; quantity: number; amount: number }[];
+  text?: string;
+  /** SHA-256 fingerprint of the receipt file, for duplicate-receipt detection. */
+  fingerprint?: string;
+  /** What the reader extracted vs what the owner corrected before saving. */
+  audit?: import("./receipt-audit").ReceiptAudit;
+}
 
 export interface Expense {
   id: string;
