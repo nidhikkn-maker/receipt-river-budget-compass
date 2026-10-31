@@ -15,6 +15,7 @@
 - [x] Real email/Google/Lovable sign-in and verified passkey device lock; existing anonymous records can upgrade by email
 
 ## Production completion (PRD gap list, Oct 31)
+- [x] Continue: dated mutual fund NAV valuations, legacy XLS imports and signed-in reimbursement/EMI/offline synchronization checks
 - [x] Continue: all-or-nothing record restore with staged files; catalog-aware extraction; transfer direction/account matching; signed-in restore and extraction checks
 - [x] Schema: card details (issuer, last four, statement day, interest), loan details (provider, type, original, start, prepayment terms, foreclosure %, linked account, payment log), reimbursement status, documents, valuations, transaction audit trail, push subscriptions
 - [x] Credit card module: billing cycle, statement vs unbilled, payments since statement, paid/partly paid/pending, interest & charges, EMI conversions, utilisation alerts
@@ -25,7 +26,7 @@
 - [x] Calendar month view, planned purchases (one-off), configurable advance reminders, custom forecast range
 - [x] Core Insights: monthly income vs spend, weekly trend, month comparison, merchants, accounts and net worth trends; date/person/scope/account/payment/search filters and account-filtered expense exports
 - [x] Wealth: investment valuations with date/source and personal borrowings
-- [ ] Mutual fund NAV feed — external quote integration still required
+- [x] Mutual fund NAV feed — authenticated MFapi daily quotes, explicit fund identity and published date, reviewed units and dated valuation snapshots; real ₹13,405.87 save/readback verified
 - [x] Home: quick actions, day/week/month view, alerts, pending reimbursements, budget use, AI briefing, selected cash accounts
 - [x] Document vault uploads (statements, insurance, loan, warranty) linked to transactions/accounts/loans, expiry reminders
 - [x] Audit history shown per transaction
@@ -38,14 +39,16 @@
 - [x] Statement direction/account-specific matching for transfers; ambiguous near-ties left for review; regression tests
 - [x] Backup ZIP with receipt/document files; same/cross-owner restore mapping tests
 - [x] Scanned PDF/screenshot statement extraction with explicit AI consent, saved privacy enforcement and mandatory review; screenshot debit/credit flow verified
-- [ ] Legacy XLS — BIFF-compatible reader and fixtures still required
+- [x] Legacy XLS — maintained BIFF reader shared with XLSX, real binary fixtures, cover-sheet/header handling, debit and credit rows verified in signed-in review
 - [x] Atomic backup record restore with fresh staged file paths, failed-restore rollback verification and all 10 existing backup records read back; paginated exports
 - [x] Encrypted on-device cache
 - [ ] Web push payment reminders (device subscription, test push, daily dispatch route)
 - [x] Signed-in checks: account creation, loan payment (₹980 principal + ₹120 interest), scheduled bill ₹750, replay without duplicate, document upload/search, ZIP download and AI loan answer
 - [x] AI privacy off/on checked; six screens tested at 402×725 with no overflow or page errors; 113 automated tests passed
 - [x] Signed-in checks: ZIP restore, deliberate invalid restore rollback, shortcut drafts, screenshot statement OCR, custom-category receipt OCR, voice category; no page errors
-- [ ] Remaining end-to-end checks: reimbursement/EMI conversion, offline reload/sync and real-device passkeys
+- [x] Signed-in checks: ₹432.10 reimbursement received/read back, ₹6,000 card purchase converted to 6-month EMI and read back, encrypted ₹123.45 offline entry queued and synced once after reconnect/reload; no page errors
+- [x] 123 automated tests passed; current build OK; XLS review checked at 402×725 with no horizontal overflow
+- [ ] Real-device passkeys — requires a compatible phone on a stable HTTPS origin (see below)
 
 ## Waiting on something outside the app
 - [ ] Installed-app offline cold-start — needs publication; app workers intentionally disabled in preview

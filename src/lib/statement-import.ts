@@ -1,11 +1,20 @@
 import { normalizeDate, parseStatementCsv, type StatementLine } from "./expenses";
-export async function readStatement(file: File): Promise<StatementLine[]> {
+export async function readStatement(file: Pick<File, "size" | "name" | "text" | "arrayBuffer">): Promise<StatementLine[]> {
  if(file.size>15*1024*1024)throw Error("Statement must be under 15 MB");
  if(/\.csv$/i.test(file.name)) return parseStatementCsv(await file.text(),true);
- if(/\.xlsx$/i.test(file.name)) {
-  const {readSheet:read}=await import("read-excel-file/browser");
-  const rows=await read(file);const csv=rows.map(row=>row.map(cell=>`"${(cell instanceof Date?cell.toISOString().slice(0,10):String(cell??"")).replaceAll('"','""')}"`).join(",")).join("\n");
-  return parseStatementCsv(csv,true);
+ if(/\.xlsx?$/i.test(file.name)) {
+  const {read,utils}=await import("xlsx");
+  const workbook=read(new Uint8Array(await file.arrayBuffer()),{type:"array",cellDates:true});
+  for(const name of workbook.SheetNames){
+   const sheet=workbook.Sheets[name];if(!sheet)continue;
+   const rows=utils.sheet_to_json<unknown[]>(sheet,{header:1,defval:"",raw:true});
+   // Bank exports may start with an account summary or have a cover worksheet.
+   const header=rows.findIndex(row=>row.some(c=>/date/i.test(String(c)))&&row.some(c=>/debit|withdrawal|amount|value|paid out/i.test(String(c))));
+   if(header<0)continue;
+   const csv=rows.slice(header).map(row=>row.map(cell=>`"${(cell instanceof Date?cell.toISOString().slice(0,10):String(cell??"")).replaceAll('"','""')}"`).join(",")).join("\n");
+   const lines=parseStatementCsv(csv,true);if(lines.length)return lines;
+  }
+  throw Error("No transactions found in this workbook. Check the date, description and debit/credit columns.");
  }
  if(/\.pdf$/i.test(file.name)) {
   const pdfjs=await import("pdfjs-dist");
@@ -16,5 +25,5 @@ export async function readStatement(file: File): Promise<StatementLine[]> {
   if(!result.length)throw Error("This PDF layout needs a CSV or Excel export. Scanned PDFs are not supported.");return result;
   }finally{await task.destroy();}
  }
- throw Error("Choose CSV, XLSX or a text PDF statement");
+ throw Error("Choose CSV, XLS, XLSX or a PDF statement");
 }
