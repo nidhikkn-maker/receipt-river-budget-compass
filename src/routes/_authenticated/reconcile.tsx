@@ -189,7 +189,7 @@ function Reconcile() {
           {reading ? <Spinner /> : <Upload className="h-4 w-4" />} {reading ? "Reading statement…" : "Upload statement"}
           <input type="file" disabled={reading} accept=".csv,.xls,.xlsx,.pdf,.png,.jpg,.jpeg,.webp,text/csv,application/vnd.ms-excel,application/pdf" className="sr-only" onChange={(e) => onFile(e.target.files?.[0])} aria-label="Statement file" />
         </label>
-        <div className="flex items-center gap-2 text-sm">
+        <div className="flex flex-wrap items-center gap-2 text-sm">
           <Select value={statementAccount} onValueChange={(v) => { setStatementAccount(v); setOverrides({}); }}>
             <SelectTrigger className="w-44" aria-label="Statement account"><SelectValue /></SelectTrigger>
             <SelectContent><SelectItem value="all">All accounts</SelectItem>{accounts.map((a) => <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}</SelectContent>

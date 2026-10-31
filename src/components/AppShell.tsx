@@ -73,7 +73,7 @@ function WorkspaceSelector() {
   const { preferences, savePreferences } = useStore();
   const options: ("all" | Scope)[] = ["all", ...SCOPES];
   return (
-    <div className="flex gap-1 overflow-x-auto pb-0.5" role="group" aria-label="Workspace">
+    <div className="flex min-w-0 max-w-full gap-1 overflow-x-auto pb-0.5" role="group" aria-label="Workspace">
       {options.map((s) => (
         <button
           key={s}
@@ -195,9 +195,9 @@ export function PageTitle({ title, sub, eyebrow }: { title: string; sub?: string
 
 export function Stat({ label, value, hint, tone }: { label: string; value: string; hint?: string; tone?: "business" | "personal" }) {
   return (
-    <div className={"min-w-0 rounded-2xl border border-l-4 bg-card p-4 " + (tone === "business" ? "border-l-primary" : tone === "personal" ? "border-l-primary-glow" : "border-l-gold")}>
+    <div className={"@container min-w-0 rounded-2xl border border-l-4 bg-card p-4 " + (tone === "business" ? "border-l-primary" : tone === "personal" ? "border-l-primary-glow" : "border-l-gold")}>
       <div className="text-[11px] font-semibold text-muted-foreground">{label}</div>
-      <div className="mt-1 break-all font-mono text-xl font-semibold text-gold-strong sm:text-2xl">{value}</div>
+      <div className="mt-1 font-mono text-[min(1.5rem,15cqw)] font-semibold text-gold-strong">{value}</div>
       {hint && <div className="text-xs text-muted-foreground">{hint}</div>}
     </div>
   );

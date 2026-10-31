@@ -18,14 +18,14 @@ export async function renderStatementPdf(s: Statement, files: Record<string, Ann
   const M = 14;
   const last = () => (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY;
   const table = (opts: Parameters<typeof autoTable>[1]) => autoTable(doc, withUnicode(doc, { theme: "grid", margin: { left: M, right: M, top: 16, bottom: 16 }, showHead: "everyPage", rowPageBreak: "avoid",
-    styles: { fontSize: 8, cellPadding: 1.5, lineColor: [205, 205, 205], lineWidth: 0.1, textColor: [25, 25, 25], overflow: "linebreak" },
+    styles: { fontSize: 9, cellPadding: 1.5, lineColor: [205, 205, 205], lineWidth: 0.1, textColor: [25, 25, 25], overflow: "linebreak" },
     headStyles: { fillColor: [236, 239, 246], textColor: INK, fontStyle: "bold" }, footStyles: { fillColor: [245, 245, 245], textColor: [20, 20, 20], fontStyle: "bold" }, ...opts }));
 
   // Page 1 — overview
   doc.setFont("helvetica", "bold"); doc.setFontSize(10); doc.setTextColor(...INK); doc.text("LEDGERLINE", M, 15);
   doc.setFontSize(17); textU(doc, s.title, M, 25);
   doc.setDrawColor(...INK); doc.setLineWidth(0.4); doc.line(M, 28, 196, 28);
-  table({ startY: 32, theme: "plain", styles: { fontSize: 8.5, cellPadding: 1.1 }, columnStyles: { 0: { fontStyle: "bold", cellWidth: 42 } }, body: [
+  table({ startY: 32, theme: "plain", styles: { fontSize: 9, cellPadding: 1.1 }, columnStyles: { 0: { fontStyle: "bold", cellWidth: 42 } }, body: [
     ["Subject", s.subjectName], ["Workspace", s.workspace], ["Organisation", s.organisation], ["Purpose", s.purpose],
     ["Period", `${s.start} to ${s.end}`], ["Prepared on", s.prepared], ["Report reference", s.reference], ["Reporting currency", "INR (original currencies shown in the register)"],
   ].map((r) => r.map(ascii)) });
@@ -42,7 +42,7 @@ export async function renderStatementPdf(s: Statement, files: Record<string, Ann
   // Page 2+ — register (landscape so columns stay readable)
   doc.addPage("a4", "landscape");
   doc.setFont("helvetica", "bold"); doc.setFontSize(12); doc.setTextColor(...INK); doc.text("Detailed expenditure register", M, 14);
-  table({ startY: 18, styles: { fontSize: 7, cellPadding: 1.2, lineColor: [205, 205, 205], lineWidth: 0.1, overflow: "linebreak" },
+  table({ startY: 18, styles: { fontSize: 8, cellPadding: 1.2, lineColor: [205, 205, 205], lineWidth: 0.1, overflow: "linebreak" },
     head: [["S.No", "Date", "Particulars", "Category", "Merchant", "Mode", "Account / card", "Paid by", "Cur.", "Original", "INR", "Allocated", "Eligible", "Reimbursed", "Outstanding", "Bill ref."]],
     body: s.rows.map((r) => [String(r.sno), r.date, r.particulars, r.category, r.merchant, r.method, r.source, r.payer, r.currency, n(r.original), n(r.inr), n(r.allocated), n(r.eligible), n(r.reimbursed), n(r.outstanding), r.billRef].map(ascii)),
     foot: [["", "", "Total", "", "", "", "", "", "", "", n(S.total), n(S.total), n(S.eligible), n(S.reimbursed), n(S.outstanding), ""]],
