@@ -221,3 +221,10 @@
 - [ ] Security review before wide sharing
 
 - [x] V4.10 typography (incl. 18-screen light/dark check at 375/402px, PDF table text 9pt): system font stack, regular/medium/semibold weights, tabular non-wrapping amounts, sentence-case labels, logo wordmark kept
+
+## V5.0 Intelligent Usability (.lovable/requirements-v5.0.md)
+- [x] Daily / Executive / Minimal home modes, restore default layout (reorder/hide existed)
+- [x] Inbox shows unfinished drafts and reports ready this week
+- [x] Already in place: smart quick entry, remembered defaults, drafts + offline recovery, single-flight saves, setup assistant, search, privacy toggle, offline entry
+- [ ] Server-side background jobs that continue after closing the app (reports currently run in the open app)
+- [ ] Transaction templates and saved views
