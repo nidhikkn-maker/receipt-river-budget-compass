@@ -1,4 +1,6 @@
 # Roadmap (Functional Requirements v1.0)
+- [x] Answer remaining-document audit: distinguish unbuilt functionality, publication/device validation and excluded native/Yaba scope
+- [x] Continue document: secure device push setup, private test/daily payment reminders, production notification handling and 14 new tests; 146 total tests pass; live delivery still needs publication and device consent
 - [x] Mutual fund portfolio: dated value and cash-flow-adjusted gain charts, fund/date filters and dated history; 25 focused tests pass, saved ₹13,405.87 read back, desktop/mobile checked, build OK
 - [x] Yaba excluded at the user's request; no further review
 - [x] Earlier: receipts + review, multi-currency, payment methods, bank reconciliation, family, splits, budgets, reports
@@ -43,7 +45,7 @@
 - [x] Legacy XLS — maintained BIFF reader shared with XLSX, real binary fixtures, cover-sheet/header handling, debit and credit rows verified in signed-in review
 - [x] Atomic backup record restore with fresh staged file paths, failed-restore rollback verification and all 10 existing backup records read back; paginated exports
 - [x] Encrypted on-device cache
-- [ ] Web push payment reminders (device subscription, test push, daily dispatch route)
+- [x] Web push implementation (device subscription, test push, authenticated dispatch route, production worker); signed-in Settings and unauthorized 401 checked; real-device delivery unverified
 - [x] Signed-in checks: account creation, loan payment (₹980 principal + ₹120 interest), scheduled bill ₹750, replay without duplicate, document upload/search, ZIP download and AI loan answer
 - [x] AI privacy off/on checked; six screens tested at 402×725 with no overflow or page errors; 113 automated tests passed
 - [x] Signed-in checks: ZIP restore, deliberate invalid restore rollback, shortcut drafts, screenshot statement OCR, custom-category receipt OCR, voice category; no page errors
@@ -54,5 +56,14 @@
 ## Waiting on something outside the app
 - [ ] Installed-app offline cold-start — needs publication; app workers intentionally disabled in preview
 - [ ] Real iPhone Face ID — needs a compatible device on a stable HTTPS origin; simulated platform passkey verified
-- [ ] Daily push schedule — needs the published web address to call
+- [x] Managed reminder schedule prepared every 30 minutes with per-device daily deduplication; callbacks become usable after publication
+- [ ] Live push acceptance — publish, install on a supported device, grant permission and verify real test/daily delivery
 - [ ] Native-only items (Siri voice commands, iOS widgets) — not available to web apps; Shortcut quick-add link offered instead
+
+## Document audit: additional partial requirements (not blocked externally)
+- [ ] Complete Insights charts: subscription expenditure, card utilisation, loan progress and savings trends
+- [ ] Add explicit tag/person-organisation-project filters to reports and consistent drill-down from charts to the underlying entries
+- [ ] Add recognised-text extraction for standalone vault documents (attached receipt OCR text already searchable)
+- [ ] Expand AI debt what-if and full sample-question acceptance checks; label hypothetical calculations
+- [ ] Complete developer handover: architecture/data/security notes, integration feasibility, delivery/test plan and ongoing cost assumptions
+- [ ] Automatic financial connections — provider availability, consent and bank support must be established before implementation; not a promised live connection

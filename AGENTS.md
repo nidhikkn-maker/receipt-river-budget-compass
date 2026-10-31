@@ -32,3 +32,4 @@
 - Excel statements use a dynamically loaded BIFF-capable SheetJS reader and real workbook fixtures so legacy XLS and XLSX share review rules.
 - Mutual fund NAVs are authenticated server-fetched daily quotes; reviewed units create dated valuation snapshots, never income or expense entries, so net worth reuses the ledger engine.
 - Mutual fund portfolio charts use pure tested rules in src/lib/portfolio.ts on owner-visible NAV snapshots; gain is change since the first saved NAV net of ledger flows, not lifetime return, because acquisition cost is not recorded.
+- Device push uses the generated production worker, allowlisted HTTPS push services, server-derived VAPID keys from a stored signing seed and owner-scoped subscriptions; cron authentication and per-device daily claims prevent public dispatch and duplicate reminders, and lock-screen messages contain no financial details.
