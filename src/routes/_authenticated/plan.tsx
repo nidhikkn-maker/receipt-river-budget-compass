@@ -128,15 +128,15 @@ function Plan() {
         </ul>
       </section>
 
-      <section className="grid gap-5 lg:grid-cols-[1.4fr_1fr]">
-        <div>
+      <section className="grid min-w-0 grid-cols-1 gap-5 lg:grid-cols-[1.4fr_1fr]">
+        <div className="min-w-0">
           <h2 className="mb-2 font-display text-lg font-bold">Recurring & subscriptions</h2>
           <ul className="space-y-2">
             {commitments.map((c) => {
               const st = dueStatus(c, today);
               return (
-                <li key={c.id} className="flex items-center gap-2 rounded-2xl border bg-card p-3">
-                  <div className="min-w-0 flex-1">
+                <li key={c.id} className="flex flex-wrap items-center gap-2 rounded-2xl border bg-card p-3">
+                  <div className="min-w-0 basis-1/2 flex-1">
                     <div className="truncate font-medium">{c.name}</div>
                     <div className="text-xs text-muted-foreground">{KIND_LABEL[c.kind]} · {FREQ_LABEL[c.frequency]} · next {c.nextDue} · {money(monthlyCost(c))}/mo</div>
                   </div>
