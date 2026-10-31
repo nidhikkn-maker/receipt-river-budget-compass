@@ -11,6 +11,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { verifyDevicePassword } from "@/lib/device-reauth";
+import { consumeDeviceUnlock } from "@/lib/device-unlock";
 import { passkeyOptions, verifyPasskey } from "@/lib/passkeys.functions";
 import { useStore } from "@/lib/store";
 export function useDevicePasskey(){const options=useServerFn(passkeyOptions);const verify=useServerFn(verifyPasskey);return async(kind:"register"|"unlock")=>{const res=await options({data:{kind}});const response=kind==="register"?await startRegistration({optionsJSON:JSON.parse(res.options) as PublicKeyCredentialCreationOptionsJSON}):await startAuthentication({optionsJSON:JSON.parse(res.options) as PublicKeyCredentialRequestOptionsJSON});await verify({data:{kind,response:response as unknown as Record<string,unknown>}});};}
@@ -27,7 +28,7 @@ export function DeviceLock({ children }: { children: ReactNode }) {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   useEffect(() => {
-    setLocked(localStorage.getItem(`ll-lock-${userId}`) === "1");
+    setLocked(localStorage.getItem(`ll-lock-${userId}`) === "1" && !consumeDeviceUnlock(userId));
     setReady(true); setPassword(""); setPasswordMode(false); setError("");
     let timer: ReturnType<typeof setTimeout> | undefined;
     const change = () => {
