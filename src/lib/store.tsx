@@ -1,7 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import type { Json } from "@/integrations/supabase/types";
+import type { Database, Json } from "@/integrations/supabase/types";
 import { queueEntry, pendingEntries, removePending, putSnapshot, getSnapshot, clearOfflineOwner } from "./offline";
 import { saveExpense } from "./fx.functions";
 import {
@@ -286,7 +286,9 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
     const items = expenses.filter((x) => ids.includes(x.id) && x.reimbursementStatus === "pending");
     if (!items.length) throw new Error("Pick at least one pending expense");
     const total = r2(items.reduce((s, x) => s + x.amount, 0));
-    await save({ title: items.length === 1 ? `Reimbursement — ${items[0]!.title}` : `Reimbursement — ${items.length} expenses`, merchant: null, category: "Reimbursement",
+    const first = items[0];
+    if (!first) return;
+    await save({ title: items.length === 1 ? `Reimbursement — ${first.title}` : `Reimbursement — ${items.length} expenses`, merchant: null, category: "Reimbursement",
       scope: items.every((x) => x.scope === "business") ? "business" : "personal", memberId: null, amount: total, currency: "INR", paymentMethod: "bank_transfer", date,
       description: `Reimbursed: ${items.map((x) => `${x.title} (${x.date})`).join(", ")}`.slice(0, 2000), txnType: "reimbursement", accountId, tags: ["Purpose: Reimbursable"] }, { noRefresh: true });
     check((await supabase.from("expenses").update({ reimbursement_status: "received" }).in("id", items.map((x) => x.id))).error);
@@ -327,7 +329,8 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
     }).select("id").single();
     check(error);
     await refresh();
-    return data!.id;
+    if (!data) throw new Error("Account wasn't saved — try again");
+    return data.id;
   };
   const setArchived: Ctx["setArchived"] = async (id, archived) => {
     check((await supabase.from("accounts").update({ archived }).eq("id", id)).error);
@@ -335,7 +338,7 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
   };
   const updateAccount: Ctx["updateAccount"] = async (id, p) => {
     validateCard(p);
-    const row: Record<string, unknown> = {};
+    const row: Database["public"]["Tables"]["accounts"]["Update"] = {};
     if (p.name !== undefined) { if (!p.name.trim()) throw new Error("Name the account"); row["name"] = p.name.trim(); }
     if (p.creditLimit !== undefined) row["credit_limit"] = p.creditLimit;
     if (p.dueDay !== undefined) row["due_day"] = p.dueDay;
@@ -345,7 +348,7 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
     if (p.statementDay !== undefined) row["statement_day"] = p.statementDay;
     if (p.interestRate !== undefined) row["interest_rate"] = p.interestRate;
     if (p.includeInCash !== undefined) row["include_in_cash"] = p.includeInCash;
-    if (p.details !== undefined) row["details"] = p.details;
+    if (p.details !== undefined) row["details"] = p.details as Json;
     check((await supabase.from("accounts").update(row).eq("id", id)).error);
     await refresh();
   };
@@ -395,7 +398,8 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
       pos(x.principal, "Outstanding amount");
       const acc = await supabase.from("accounts").insert({ owner_id: userId, name: x.name.trim(), kind: x.loanType === "borrowing" ? "other_liability" : "loan", opening_balance: x.principal, issuer: x.provider.trim(), interest_rate: x.rate }).select("id").single();
       check(acc.error);
-      check((await supabase.from("loans").insert({ ...row, owner_id: userId, principal_outstanding: x.principal, original_principal: x.original ?? x.principal, account_id: acc.data!.id })).error);
+      if (!acc.data) throw new Error("Loan account wasn't saved — try again");
+      check((await supabase.from("loans").insert({ ...row, owner_id: userId, principal_outstanding: x.principal, original_principal: x.original ?? x.principal, account_id: acc.data.id })).error);
     }
     await refresh();
   };
@@ -482,7 +486,7 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
     await refresh();
   };
   const updateDocument: Ctx["updateDocument"] = async (id, m) => {
-    const row: Record<string, unknown> = {};
+    const row: Database["public"]["Tables"]["documents"]["Update"] = {};
     if (m.title !== undefined) { if (!m.title.trim()) throw new Error("Give the document a title"); row["title"] = m.title.trim(); }
     if (m.docType !== undefined) row["doc_type"] = m.docType;
     if (m.docDate !== undefined) row["doc_date"] = m.docDate || null;
