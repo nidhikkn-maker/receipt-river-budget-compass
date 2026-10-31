@@ -110,6 +110,22 @@ function Reports() {
         <div className="mt-4"><ExpenseTable items={list.filter(e=>selectedCategory==="all"||e.category===selectedCategory)} empty="No transactions in this range." /></div>
       </section>
       <section className="mb-4 flex flex-wrap items-end gap-3"><div className="grid gap-1"><Label htmlFor="budget-month">Budget comparison month</Label><Input id="budget-month" type="month" value={budgetMonth} onChange={e => setBudgetMonth(e.target.value)} /></div>{departmentBudgetError && <p className="text-sm text-destructive">Department limits couldn't load. Try refreshing before exporting.</p>}</section>
+      <section className="mb-8 rounded-3xl border bg-card p-5">
+        <h2 className="font-display text-xl font-bold">Department budget summary</h2>
+        <p className="mb-3 text-sm text-muted-foreground">Your filtered spending in {budgetMonth} against each saved monthly limit.</p>
+        <ul className="grid gap-3 text-sm">
+          {departmentSummary.map((d) => (
+            <li key={d.name}>
+              <div className="flex flex-wrap justify-between gap-2">
+                <span className="font-semibold">{d.name}</span>
+                <span>{d.limit === undefined ? "No limit saved" : `${money(d.spent)} of ${money(d.limit)} · ${d.pct}% used · ${money(d.remaining)} ${d.remaining < 0 ? "over" : "left"}`}</span>
+              </div>
+              {d.limit !== undefined && <div className="mt-1 h-2 rounded-full bg-muted"><div className={`h-2 rounded-full ${d.remaining < 0 ? "bg-destructive" : "bg-gold"}`} style={{ width: `${Math.min(100, d.pct)}%` }} /></div>}
+            </li>
+          ))}
+          {departmentSummary.length === 0 && <li className="text-muted-foreground">No departments in the current filter. Save department limits in Settings to compare.</li>}
+        </ul>
+      </section>
       <div className="grid gap-4 md:grid-cols-3">
         {KINDS.map((k) => (
           <div key={k.kind} className="flex flex-col rounded-lg border bg-card p-5">
