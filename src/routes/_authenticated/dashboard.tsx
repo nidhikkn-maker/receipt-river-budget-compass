@@ -4,6 +4,7 @@ import { Bar, BarChart, ResponsiveContainer, Tooltip, XAxis } from "recharts";
 import { StatusStrip } from "@/components/StatusStrip";
 import { PaymentReminders } from "@/components/PaymentReminders";
 import { PaymentReadiness } from "@/components/PaymentReadiness";
+import { Autopilot } from "@/components/Autopilot";
 import { Stat } from "@/components/AppShell";
 import { ExpenseTable } from "@/components/ExpenseTable";
 import { money, totalsByMember, totalsByScope } from "@/lib/expenses";
@@ -71,6 +72,7 @@ function Overview() {
 
       <StatusStrip />
       <PaymentReminders />
+      <Autopilot />
       <PaymentReadiness />
       <div className="flex flex-col">
       <MilestoneBanner />

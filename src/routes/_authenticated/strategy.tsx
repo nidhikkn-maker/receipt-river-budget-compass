@@ -12,6 +12,7 @@ import { money } from "@/lib/expenses";
 import { METRIC_LABEL, MILESTONE_METRICS, SCENARIOS, SCENARIO_LABEL, irregularCandidates, milestoneProgress, metricValue, plannedScenario, provisionFor, recordProgress, simulate, type Milestone, type MilestoneMetric, type Scenario, type ScenarioKind } from "@/lib/intelligence";
 import { addMonths } from "@/lib/planning";
 import { useIntelligence } from "@/lib/use-intelligence";
+import { CoolingOff, StressTest } from "@/components/StrategyStressCooling";
 
 export const Route = createFileRoute("/_authenticated/strategy")({
   head: () => ({
@@ -38,11 +39,15 @@ function Strategy() {
           <TabsTrigger value="emergency">Emergency fund</TabsTrigger>
           <TabsTrigger value="irregular">Irregular bills</TabsTrigger>
           <TabsTrigger value="milestones">Milestones</TabsTrigger>
+          <TabsTrigger value="stress">Stress test</TabsTrigger>
+          <TabsTrigger value="cooling">Cooling-off</TabsTrigger>
         </TabsList>
         <TabsContent value="simulate"><Simulator /></TabsContent>
         <TabsContent value="emergency"><Emergency /></TabsContent>
         <TabsContent value="irregular"><Irregular /></TabsContent>
         <TabsContent value="milestones"><Milestones /></TabsContent>
+        <TabsContent value="stress"><StressTest /></TabsContent>
+        <TabsContent value="cooling"><CoolingOff /></TabsContent>
       </Tabs>
     </div>
   );
