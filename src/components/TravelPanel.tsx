@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { SCOPE_LABEL, money, type Scope } from "@/lib/expenses";
-import { advanceReconRows, advanceReconciliation, TRAVEL_CATEGORIES, bookingMatches, tripInsights, tripReportRows, BOOKING_KINDS, TRIP_TYPES, closeBlockers, tripFinance, validateBooking, type Booking, type BookingKind, type TravelTrip, type TripType } from "@/lib/travel";
+import { advanceReconRows, advanceReconciliation, TRAVEL_CATEGORIES, bookingMatches, bookingPaid, bookingOutstanding, tripBudgetDetail, tripInsights, tripReportRows, BOOKING_KINDS, TRIP_TYPES, closeBlockers, tripFinance, validateBooking, type Booking, type BookingKind, type TravelTrip, type TripType } from "@/lib/travel";
 import { useStore } from "@/lib/store";
 import { downloadBlob } from "@/lib/reports";
 import { todayISO } from "@/lib/use-position";
@@ -24,6 +24,7 @@ export function TravelPanel({ trip }: { trip: TravelTrip }) {
   const insights = useMemo(() => tripInsights(trip, transactions, todayISO()), [trip, transactions]);
   const missingCats = TRAVEL_CATEGORIES.filter((c) => !pr.categories.some((x) => x.name.toLowerCase() === c.toLowerCase()));
   const f = useMemo(() => tripFinance(trip, transactions), [trip, transactions]);
+  const bd = useMemo(() => tripBudgetDetail(trip, transactions), [trip, transactions]);
   const recon = useMemo(() => advanceReconciliation(trip, transactions), [trip, transactions]);
   const blockers = useMemo(() => closeBlockers(trip, transactions), [trip, transactions]);
   const put = async (patch: Partial<TravelTrip>, msg?: string) => {
