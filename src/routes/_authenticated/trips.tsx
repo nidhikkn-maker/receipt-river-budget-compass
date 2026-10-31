@@ -89,6 +89,19 @@ function Trips() {
       {pr.trips.length > 0 && <div className="mb-4 flex gap-2 overflow-x-auto pb-1">{pr.trips.map((t) => <Button key={t.id} variant={t.id === openId ? "default" : "outline"} onClick={() => setOpenId(t.id)}><Plane className="mr-1 h-4 w-4" />{t.name}</Button>)}</div>}
       {trip && <div id="trip-detail"><TravelPanel trip={trip as TravelTrip} /></div>}
       {trip && <TripView trip={trip} txns={transactions} setTags={setTags} onDelete={async () => { if (!confirm("Delete this trip? Entries stay, the trip label is kept on them.")) return; await savePreferences({ ...pr, trips: pr.trips.filter((x) => x.id !== trip.id) }); setOpenId(null); }} />}
+      {pr.trips.length > 0 && (
+        <Card title="Travel reports" action={<div className="flex gap-2"><Button size="sm" variant="outline" onClick={() => downloadBlob(new Blob([toCsv(report)], { type: "text/csv" }), `travel-${cut}.csv`)}>CSV</Button><Button size="sm" variant="outline" onClick={() => void toPdf(report, `All trips · generated ${today}`).then((b) => downloadBlob(b, `travel-${cut}.pdf`))}>PDF</Button></div>}>
+          <p className="mb-2 text-xs text-muted-foreground">Every trip's spending, grouped the way you need. Amounts come straight from your records, so each report adds up to the same total.</p>
+          <div className="mb-3 flex gap-2 overflow-x-auto pb-1">{TRAVEL_CUTS.map((k) => <Button key={k} size="sm" variant={cut === k ? "default" : "outline"} onClick={() => setCut(k)}>{TRAVEL_CUT_LABEL[k]}</Button>)}</div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead><tr className="border-b text-left text-xs text-muted-foreground">{report.headers.map((h) => <th key={h} className="whitespace-nowrap py-1 pr-3 font-medium">{h}</th>)}</tr></thead>
+              <tbody>{report.rows.slice(0, 14).map((r, i) => <tr key={i} className={`border-b last:border-0 ${String(r[0]).startsWith("Total") ? "font-semibold" : ""}`}>{r.map((c, j) => <td key={j} className={`whitespace-nowrap py-1.5 pr-3 ${j > 0 ? "text-right font-mono" : ""}`}>{c}</td>)}</tr>)}</tbody>
+            </table>
+            {report.rows.length > 14 && <p className="mt-1 text-xs text-muted-foreground">{report.rows.length - 14} more row(s) in the download.</p>}
+          </div>
+        </Card>
+      )}
       <Card title="New trip">
         <div className="grid gap-3 sm:grid-cols-2">
           <div><Label>Trip name</Label><Input className="h-11" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Dubai Dec 2026" /></div>
