@@ -36,7 +36,7 @@ describe("card cycle", () => {
     expect(cardCycle(card, [...txns, pay("x", "2026-10-28", 15000)], [], "2026-10-31")).toMatchObject({ status: "paid", remainingDue: 0 });
   });
   it("marks an unpaid statement overdue after the due date", () => {
-    expect(cardCycle(card, txns, [], "2026-11-12").status).toBe("pending"); // new statement on 11-20 not yet, still Oct cycle until due passes
+    expect(cardCycle(card, txns, [], "2026-11-05").status).toBe("pending");
     expect(cardCycle(card, txns, [], "2026-11-09").status).toBe("overdue");
   });
   it("refunds reduce unbilled and interest is reported separately", () => {

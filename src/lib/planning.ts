@@ -297,7 +297,7 @@ export function subscriptionSummary(commitments: Commitment[], expenses: { merch
   const renewals = active.filter((c) => c.nextDue <= addDays(today, windowDays)).sort((a, b) => a.nextDue.localeCompare(b.nextDue));
   const charges = (c: Commitment) => {
     const k = key(c.name);
-    return expenses.filter((e) => { const m = key(e.merchant ?? e.title ?? ""); return !!k && !!m && (m.includes(k) || k.includes(m)); }).sort((a, b) => a.date.localeCompare(b.date));
+    return expenses.filter((e) => { const m = key(e.merchant ?? e.title ?? ""); return !!k && !!m && m.includes(k); }).sort((a, b) => a.date.localeCompare(b.date));
   };
   const increases: { id: string; name: string; from: number; to: number }[] = [];
   for (const c of active) {
