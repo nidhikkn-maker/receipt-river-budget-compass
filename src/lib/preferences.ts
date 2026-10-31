@@ -1,4 +1,5 @@
 import { CATEGORIES, memberShares, type Expense } from "./expenses";
+import { defaultEmergency, type BriefSettings, type EmergencySettings, type MerchantAliases, type Milestone, type Trip, type WeeklyBrief } from "./intelligence";
 
 export interface CategorySetting { name: string; archived: boolean }
 export interface GroupedTag { group: string; name: string }
@@ -41,6 +42,15 @@ export interface FinancePreferences {
   statementBalances: Record<string, { balance: number; date: string }>;
   /** Saved category split templates (percentages). */
   splitTemplates: { name: string; lines: { category: string; pct: number }[] }[];
+  emergency: EmergencySettings;
+  /** Irregular-expense predictions the user rejected (by key); confirmed ones become yearly commitments. */
+  irregularRejected: string[];
+  irregularConfirmed: string[];
+  milestones: Milestone[];
+  trips: Trip[];
+  merchantAliases: MerchantAliases;
+  brief: BriefSettings;
+  briefs: { id: string; generatedAt: string; data: WeeklyBrief }[];
 }
 
 export const DEFAULT_TAGS: GroupedTag[] = [
@@ -56,6 +66,7 @@ export function defaultPreferences(): FinancePreferences {
     categories: CATEGORIES.map((name) => ({ name, archived: false })), tags: DEFAULT_TAGS, budgets: [], homeHidden: [], homeOrder: [...HOME_SECTIONS],
     theme: "system", reminders: true, reminderDays: 3, defaultCurrency: "INR", language: "en", aiEnabled: true, aiReadsDocuments: true, cardAlertPct: 30, homePeriod: "month",
     freshness: { reviewDays: 14, outdatedDays: 45, perAccount: {} }, inboxDismissed: [], statementBalances: {}, splitTemplates: [],
+    emergency: defaultEmergency(), irregularRejected: [], irregularConfirmed: [], milestones: [], trips: [], merchantAliases: {}, brief: { enabled: true, day: 1, hour: 8 }, briefs: [],
   };
 }
 
@@ -82,6 +93,12 @@ export function normalizePreferences(raw: Partial<FinancePreferences> | null | u
   p.inboxDismissed = p.inboxDismissed.slice(-500);
   if (!p.statementBalances || typeof p.statementBalances !== "object") p.statementBalances = {};
   if (!Array.isArray(p.splitTemplates)) p.splitTemplates = [];
+  p.emergency = { ...defaultEmergency(), ...(p.emergency ?? {}) };
+  p.emergency.targetMonths = Number.isFinite(p.emergency.targetMonths) ? Math.min(24, Math.max(1, p.emergency.targetMonths)) : 6;
+  for (const k of ["irregularRejected", "irregularConfirmed", "milestones", "trips", "briefs"] as const) if (!Array.isArray(p[k])) (p as unknown as Record<string, unknown[]>)[k] = [];
+  p.briefs = p.briefs.slice(0, 26);
+  if (!p.merchantAliases || typeof p.merchantAliases !== "object") p.merchantAliases = {};
+  p.brief = { ...d.brief, ...(p.brief ?? {}) };
   return p;
 }
 
