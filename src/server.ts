@@ -1,3 +1,5 @@
+// Passkey verification (SimpleWebAuthn -> @peculiar/x509 -> tsyringe) needs this polyfill on the edge runtime.
+import "reflect-metadata";
 import "./lib/error-capture";
 
 import { consumeLastCapturedError } from "./lib/error-capture";
