@@ -319,9 +319,12 @@ function NewExpense() {
     if (receiptBlocked) { toast.error("This receipt is already used — review it or choose a different file"); return; }
     setSaving(true);
     try {
+      const finalDetails: ReceiptDetails = { ...receiptDetails };
+      const fp = receipts[0]?.fingerprint ?? receiptDetails.fingerprint;
+      if (fp) finalDetails.fingerprint = fp;
       await save(
         { title: title.trim(), amount: Number(amount), currency, paymentMethod, category, date, description, merchant: merchant.trim() || null,
-          receiptDetails: { ...receiptDetails, fingerprint: receipts[0]?.fingerprint ?? receiptDetails.fingerprint }, scope, memberId: memberId === "me" ? null : memberId,
+          receiptDetails: finalDetails, scope, memberId: memberId === "me" ? null : memberId,
           txnType, accountId: accountId === "none" ? null : accountId, toAccountId: toAccountId === "none" ? null : toAccountId,
           tags: [...new Set(tags.split(",").map((t) => t.trim()).filter(Boolean))],
           splits: splitOn ? Object.entries(shares).map(([k, v]) => ({ memberId: k === "me" ? null : k, amount: Number(v) })) : [] },
