@@ -4,26 +4,52 @@ export const ACCOUNT_KINDS = ["savings", "current", "cash", "credit_card", "wall
 export type AccountKind = (typeof ACCOUNT_KINDS)[number];
 export const ACCOUNT_LABEL: Record<AccountKind, string> = {
   savings: "Savings", current: "Current", cash: "Cash", credit_card: "Credit card", wallet: "Digital wallet",
-  investment: "Investment", fixed_deposit: "Fixed deposit", loan: "Loan", other_asset: "Other asset", other_liability: "Other liability",
+  investment: "Investment", fixed_deposit: "Fixed deposit", loan: "Loan", other_asset: "Other asset", other_liability: "Borrowing / other liability",
 };
 /** Liability accounts: a positive balance means money owed. */
 export const LIABILITY_KINDS: AccountKind[] = ["credit_card", "loan", "other_liability"];
 export const isLiability = (k: AccountKind) => LIABILITY_KINDS.includes(k);
+/** Accounts whose worth is set by valuations (market value) rather than only by recorded flows. */
+export const VALUED_KINDS: AccountKind[] = ["investment", "fixed_deposit", "other_asset"];
 
-export const TXN_TYPES = ["expense", "income", "transfer", "refund", "adjustment"] as const;
+export const TXN_TYPES = ["expense", "income", "transfer", "refund", "reimbursement", "adjustment"] as const;
 export type TxnType = (typeof TXN_TYPES)[number];
-export const TXN_LABEL: Record<TxnType, string> = { expense: "Expense", income: "Income", transfer: "Transfer", refund: "Refund", adjustment: "Adjustment" };
+export const TXN_LABEL: Record<TxnType, string> = {
+  expense: "Expense", income: "Income", transfer: "Transfer", refund: "Refund", reimbursement: "Reimbursement", adjustment: "Adjustment",
+};
 
-export interface Account { id: string; name: string; kind: AccountKind; openingBalance: number; archived: boolean; creditLimit?: number | null; dueDay?: number | null; minBalance?: number }
+export interface Account {
+  id: string;
+  name: string;
+  kind: AccountKind;
+  openingBalance: number;
+  archived: boolean;
+  creditLimit?: number | null;
+  dueDay?: number | null;
+  minBalance?: number;
+  issuer?: string;
+  lastFour?: string | null;
+  statementDay?: number | null;
+  interestRate?: number | null;
+  /** Counted in "cash available" on Home (savings/current/cash/wallet only). */
+  includeInCash?: boolean;
+  details?: AccountDetails;
+}
+export interface AccountDetails { schemeCode?: string; schemeName?: string; units?: number }
 
 export interface Txn {
   id: string;
   txnType?: TxnType;
-  amount: number; // INR, always positive (adjustment may be negative)
+  amount: number; // INR, always positive
   accountId?: string | null;
   toAccountId?: string | null;
   date: string;
+  /** Adjustments only: +1 raises the balance, -1 lowers it. */
+  adjustmentSign?: 1 | -1;
+  reconciledAt?: string | null;
 }
+
+export interface Valuation { id?: string; accountId: string; value: number; valuedOn: string; source: string; note?: string }
 
 const r2 = (n: number) => Math.round(n * 100) / 100;
 const type = (t: Txn): TxnType => t.txnType ?? "expense";
@@ -39,8 +65,8 @@ export function accountBalance(a: Account, txns: Txn[]): number {
     const k = type(t);
     if (t.accountId === a.id) {
       if (k === "expense") bal -= sign * t.amount;
-      else if (k === "income" || k === "refund") bal += sign * t.amount;
-      else if (k === "adjustment") bal += t.amount;
+      else if (k === "income" || k === "refund" || k === "reimbursement") bal += sign * t.amount;
+      else if (k === "adjustment") bal += (t.adjustmentSign ?? 1) * t.amount;
       else if (k === "transfer") bal -= sign * t.amount;
     }
     if (k === "transfer" && t.toAccountId === a.id) bal += sign * t.amount;
@@ -48,7 +74,39 @@ export function accountBalance(a: Account, txns: Txn[]): number {
   return r2(bal);
 }
 
-/** Income and spending: transfers (incl. card bill payments) and adjustments never count; refunds reduce spending. */
+/** Balance as of the end of a date (inclusive). */
+export const balanceAsOf = (a: Account, txns: Txn[], date: string) => accountBalance(a, txns.filter((t) => t.date <= date));
+
+/** Balance counting only entries matched to a bank/card statement — what the bank should show. */
+export const reconciledBalance = (a: Account, txns: Txn[]) => accountBalance(a, txns.filter((t) => !!t.reconciledAt));
+
+/** Adjustment needed so the app balance equals the real balance you see at the bank. */
+export function adjustmentToMatch(a: Account, txns: Txn[], actual: number): { amount: number; sign: 1 | -1 } | null {
+  const diff = r2(actual - accountBalance(a, txns));
+  if (Math.abs(diff) < 0.005) return null;
+  return { amount: Math.abs(diff), sign: diff > 0 ? 1 : -1 };
+}
+
+/**
+ * Worth of an account. Valued accounts (investments, FDs, other assets) use the latest valuation on or
+ * before `asOf`, plus money moved in or out after that valuation date. Others use the ledger balance.
+ */
+export function accountValue(a: Account, txns: Txn[], valuations: Valuation[] = [], asOf?: string): { value: number; valuedOn: string | null; source: string | null } {
+  const upto = asOf ? txns.filter((t) => t.date <= asOf) : txns;
+  if (!VALUED_KINDS.includes(a.kind)) return { value: accountBalance(a, upto), valuedOn: null, source: null };
+  const latest = valuations
+    .filter((v) => v.accountId === a.id && (!asOf || v.valuedOn <= asOf))
+    .sort((x, y) => y.valuedOn.localeCompare(x.valuedOn))[0];
+  if (!latest) return { value: accountBalance(a, upto), valuedOn: null, source: null };
+  const after = upto.filter((t) => t.date > latest.valuedOn);
+  const flows = accountBalance({ ...a, openingBalance: 0 }, after);
+  return { value: r2(latest.value + flows), valuedOn: latest.valuedOn, source: latest.source };
+}
+
+/**
+ * Income and spending: transfers (incl. card bill payments, investment purchases/redemptions, loan principal)
+ * and adjustments never count; refunds and reimbursements reduce spending.
+ */
 export function cashflow(txns: Txn[], from?: string, to?: string) {
   let income = 0, spent = 0;
   for (const t of txns) {
@@ -56,16 +114,16 @@ export function cashflow(txns: Txn[], from?: string, to?: string) {
     const k = type(t);
     if (k === "income") income += t.amount;
     else if (k === "expense") spent += t.amount;
-    else if (k === "refund") spent -= t.amount;
+    else if (k === "refund" || k === "reimbursement") spent -= t.amount;
   }
   return { income: r2(income), spent: r2(spent), net: r2(income - spent) };
 }
 
-export function netWorth(accounts: Account[], txns: Txn[]) {
+export function netWorth(accounts: Account[], txns: Txn[], valuations: Valuation[] = [], asOf?: string) {
   let assets = 0, liabilities = 0;
   for (const a of accounts) {
-    const b = accountBalance(a, txns);
-    if (isLiability(a.kind)) liabilities += b; else assets += b;
+    const v = accountValue(a, txns, valuations, asOf).value;
+    if (isLiability(a.kind)) liabilities += v; else assets += v;
   }
   return { assets: r2(assets), liabilities: r2(liabilities), net: r2(assets - liabilities) };
 }
@@ -73,6 +131,17 @@ export function netWorth(accounts: Account[], txns: Txn[]) {
 export function validateTransfer(t: Pick<Txn, "accountId" | "toAccountId">) {
   if (!t.accountId || !t.toAccountId) throw new Error("Pick both accounts for a transfer");
   if (t.accountId === t.toAccountId) throw new Error("Choose two different accounts");
+}
+
+/** What a transfer means in plain words, from the account kinds on each side. */
+export function transferMeaning(from: Account | undefined, to: Account | undefined): string {
+  if (!from || !to) return "Transfer between your accounts";
+  if (to.kind === "credit_card") return "Credit card bill payment";
+  if (to.kind === "loan") return "Loan principal repayment";
+  if (to.kind === "investment" || to.kind === "fixed_deposit") return "Investment purchase";
+  if (from.kind === "investment" || from.kind === "fixed_deposit") return "Investment redemption";
+  if (from.kind === "loan") return "Loan disbursement";
+  return "Transfer between your accounts";
 }
 
 export interface MerchantMemory { category: string; tags: string[]; accountId: string | null; paymentMethod: string; scope: string }
