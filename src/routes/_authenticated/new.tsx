@@ -32,7 +32,7 @@ import { ACCOUNT_LABEL, MOVE_TARGET, isMove, TXN_LABEL, TXN_TYPES, frequentMerch
 import { WorkspacePicker, splitShares } from "@/components/WorkspacePicker";
 import { suggestWorkspace, validateShares, type AllocationMethod } from "@/lib/workspaces";
 import { tripTag } from "@/lib/intelligence";
-import { BOOKING_CATEGORY, travelCategory, tripsForDate, type TravelTrip } from "@/lib/travel";
+import { BOOKING_CATEGORY, bookingPaid, bookingPaymentIds, travelCategory, tripsForDate, type TravelTrip } from "@/lib/travel";
 import { emiSplit } from "@/lib/planning";
 import { todayISO } from "@/lib/use-position";
 
@@ -385,7 +385,12 @@ function NewExpense() {
         { ...(editing ? { id: editing.id } : {}), ...(createId ? { createId } : {}), files: receipts.map((r) => r.file) },
       );
       if (createId && ctxTrip && search.booking) {
-        await savePreferences({ ...preferences, trips: (preferences.trips as TravelTrip[]).map((t) => t.id !== ctxTrip.id ? t : { ...t, bookings: (t.bookings ?? []).map((b) => b.id === search.booking ? { ...b, status: "paid" as const, expenseId: createId } : b) }) });
+        // A payment can cover part of a booking: keep every linked entry and only call it paid once they add up.
+        await savePreferences({ ...preferences, trips: (preferences.trips as TravelTrip[]).map((t) => t.id !== ctxTrip.id ? t : { ...t, bookings: (t.bookings ?? []).map((b) => {
+          if (b.id !== search.booking) return b;
+          const covered = bookingPaid(b, expenses) + Number(amount) >= b.amount - 0.005;
+          return { ...b, expenseId: b.expenseId ?? createId, expenseIds: [...new Set([...bookingPaymentIds(b), createId])], status: covered ? "paid" as const : b.status };
+        }) }) });
       }
       for (const id of fromInbox) { const d = documents.find((x) => x.id === id); if (d) await removeDocument(d).catch(() => {}); }
       toast.success(editing ? "Entry updated" : `${TXN_LABEL[txnType]} saved`);

@@ -127,7 +127,7 @@ export function TravelPanel({ trip }: { trip: TravelTrip }) {
       <Card title="Itinerary">
         {[...(trip.itinerary ?? [])].sort((a, b) => `${a.date}${a.time ?? ""}`.localeCompare(`${b.date}${b.time ?? ""}`)).map((i) => (
           <div key={i.id} className="border-b py-2 text-sm last:border-0">
-            <div className="flex items-center gap-2"><span className="w-28 shrink-0 text-xs text-muted-foreground">{i.date} {i.time}</span><span className="min-w-0 flex-1 truncate">{i.title}{i.place && <span className="text-muted-foreground"> · {i.place}</span>}</span>{!closed && <Button size="sm" variant="ghost" onClick={() => void put({ itinerary: (trip.itinerary ?? []).filter((x) => x.id !== i.id) })}>Remove</Button>}</div>
+            <div className="flex items-start gap-2"><span className="w-28 shrink-0 text-xs text-muted-foreground">{i.date} {i.time}</span><div className="min-w-0 flex-1"><span className="block truncate">{i.title}{i.place && <span className="text-muted-foreground"> · {i.place}</span>}{i.travellers?.length ? <span className="text-muted-foreground"> · {i.travellers.join(", ")}</span> : null}</span>{i.note && <span className="block truncate text-xs text-muted-foreground">{i.note}</span>}</div>{!closed && <Button size="sm" variant="ghost" onClick={() => void put({ itinerary: (trip.itinerary ?? []).filter((x) => x.id !== i.id) })}>Remove</Button>}</div>
             {(i.travellers?.length || i.note) && <div className="pl-28 text-xs text-muted-foreground">{i.travellers?.length && <span>{i.travellers.join(", ")}{i.note ? " · " : ""}</span>}{i.note}</div>}
           </div>
         ))}
