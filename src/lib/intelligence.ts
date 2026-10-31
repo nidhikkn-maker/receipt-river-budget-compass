@@ -187,7 +187,7 @@ export function milestoneProgress(m: Milestone, x: Metrics, today: string) {
   const remaining = done ? 0 : r2(Math.abs(m.target - value));
   const h = [...m.history].sort((a, b) => a.date.localeCompare(b.date));
   let eta: string | null = done ? today : null;
-  if (!done && h.length >= 2) { const first = h[0]!, days = daysBetween(first.date, today); const rate = days > 0 ? (red ? first.value - value : value - first.value) / days : 0; if (rate > 0) eta = addDays(today, Math.ceil(remaining / rate)); }
+  if (!done && h.length >= 1 && h[0]!.date < today) { const first = h[0]!, days = daysBetween(first.date, today); const rate = days > 0 ? (red ? first.value - value : value - first.value) / days : 0; if (rate > 0) eta = addDays(today, Math.ceil(remaining / rate)); }
   const onTrack = m.targetDate ? (eta ? eta <= m.targetDate : false) : null;
   return { value, start, pct, remaining, done, eta, onTrack };
 }
