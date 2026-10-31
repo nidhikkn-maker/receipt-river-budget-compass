@@ -141,6 +141,7 @@
 ### Priority 3 — Travel financial integration
 - [x] Trip budgets (actual vs committed), booking-to-transaction linking, travel reports, multi-currency, reimbursements, advances/settlement
 ### Priority 4 — Intelligence and completion
+- [ ] Complete all Version 4 phases and rerun full automated checks plus signed-in functional checks; report external verification limits.
 - [ ] Add in-app reminders for upcoming booking payment due dates and overdue unpaid balances.
 - [ ] Add a calendar showing trip dates, booking due dates and scheduled payment deadlines.
 - [x] Trip auto-association, trip insights, booking-payment match suggestions, trip closure, trip CSV
