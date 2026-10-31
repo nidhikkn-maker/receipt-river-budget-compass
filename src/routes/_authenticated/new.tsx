@@ -547,7 +547,7 @@ function NewExpense() {
                 <SelectTrigger aria-label="Trip"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="none">Not linked to a trip</SelectItem>
-                  {(preferences.trips as TravelTrip[]).map((t) => <SelectItem key={t.id} value={t.id}>{t.name}{t.from ? ` · ${t.from}` : ""}</SelectItem>)}
+                  {(preferences.trips as TravelTrip[]).map((t) => <SelectItem key={t.id} value={t.id}>{t.name}{t.start ? ` · ${t.start}` : ""}</SelectItem>)}
                 </SelectContent>
               </Select>
               <p className="text-xs text-muted-foreground">Linking a trip tracks this advance against it — no tag needed.</p>
