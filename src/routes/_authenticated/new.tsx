@@ -29,6 +29,12 @@ import { cn } from "@/lib/utils";
 import { ACCOUNT_LABEL, TXN_LABEL, TXN_TYPES, frequentMerchants, suggestForMerchant, type TxnType } from "@/lib/ledger";
 
 
+import { WorkspacePicker, splitShares } from "@/components/WorkspacePicker";
+import { suggestWorkspace, validateShares, type AllocationMethod } from "@/lib/workspaces";
+import { tripTag } from "@/lib/intelligence";
+import type { TravelTrip } from "@/lib/travel";
+import { todayISO } from "@/lib/use-position";
+
 export const Route = createFileRoute("/_authenticated/new")({
   validateSearch: quickEntrySearch,
   head: () => ({
@@ -66,7 +72,7 @@ interface SpeechRec { lang: string; interimResults: boolean; start: () => void; 
 interface Scan { merchant: string; date: string; amount: string; currency: string }
 
 function NewExpense() {
-  const { save, transactions: expenses, members, accounts, preferences, documents, addDocument, removeDocument, signedUrl } = useStore();
+  const { save, transactions: expenses, members, accounts, preferences, savePreferences, documents, addDocument, removeDocument, signedUrl } = useStore();
   const PENDING = "pending-receipt";
   const inbox = documents.filter((d) => d.notes === PENDING && !d.transactionId);
   const [fromInbox, setFromInbox] = useState<string[]>([]);
@@ -89,6 +95,8 @@ function NewExpense() {
   const { edit } = search;
   const editing = edit ? expenses.find((e) => e.id === edit) : undefined;
   const [scope, setScope] = useState<Scope>("personal");
+  const [wsSplit, setWsSplit] = useState<{ on: boolean; method: AllocationMethod; values: Partial<Record<Scope, string>> }>({ on: false, method: "fixed", values: {} });
+  const ctxTrip = (preferences.trips as TravelTrip[]).find((t) => t.id === search.trip);
   const [txnType, setTxnType] = useState<TxnType>("expense");
   const [accountId, setAccountId] = useState<string>("none");
   const [toAccountId, setToAccountId] = useState<string>("none");
@@ -155,6 +163,10 @@ function NewExpense() {
     if (search.date) setDate(search.date);
     if (search.payment) setPaymentMethod(search.payment);
     if (search.scope) setScope(search.scope);
+    const tr = (preferences.trips as TravelTrip[]).find((t) => t.id === search.trip);
+    if (tr) { setTags((x) => [...new Set([...x.split(",").map((y) => y.trim()).filter(Boolean), tripTag(tr)])].join(", ")); if (tr.type && tr.type !== "mixed") setScope(tr.type); if (!search.date && todayISO() > tr.end) setDate(tr.start); }
+    const bk = tr?.bookings?.find((b) => b.id === search.booking);
+    if (bk) { if (!search.title) setTitle(`${bk.kind[0]!.toUpperCase()}${bk.kind.slice(1)} — ${bk.provider || bk.ref}`); if (!search.amount && bk.amount) setAmount(String(bk.amount)); if (bk.provider && !search.merchant) setMerchant(bk.provider); if (bk.kind === "flight" || bk.kind === "hotel") setCategory((c) => (preferences.categories.some((x) => x.name === "Travel") ? "Travel" : c)); }
     if (search.text) setSpoken(search.text);
   }, [edit, search]);
   useEffect(() => {
@@ -208,6 +220,8 @@ function NewExpense() {
     setTitle(editing.title); setMerchant(editing.merchant ?? ""); setAmount(String(editing.originalAmount)); setCurrency(editing.currency);
     setPaymentMethod(editing.paymentMethod); setCategory(editing.category); setDate(editing.date); setDescription(editing.description);
     setScope(editing.scope); setMemberId(editing.memberId ?? "me");
+    const wa = editing.workspaceAllocations ?? [];
+    setWsSplit(wa.length > 1 ? { on: true, method: "fixed", values: Object.fromEntries(wa.map((x) => [x.workspace, String(x.amount)])) } : { on: false, method: "fixed", values: {} });
     setTxnType(editing.txnType ?? "expense"); setAccountId(editing.accountId ?? "none"); setInstrumentId(editing.paymentInstrumentId ?? "none"); setToAccountId(editing.toAccountId ?? "none"); setTags((editing.tags ?? []).join(", "));
     setSplitOn(editing.splits.length > 0);
     setShares(Object.fromEntries(editing.splits.map((x) => [x.memberId ?? "me", String(x.amount)])));
@@ -341,14 +355,21 @@ function NewExpense() {
       const finalDetails: ReceiptDetails = { ...receiptDetails };
       const fp = receipts[0]?.fingerprint ?? receiptDetails.fingerprint;
       if (fp) finalDetails.fingerprint = fp;
+      const workspaceAllocations = splitShares(wsSplit, Number(amount));
+      const wsErr = wsSplit.on ? validateShares(workspaceAllocations, Number(amount)) : null;
+      if (wsErr) throw new Error(wsErr);
+      const createId = editing ? undefined : crypto.randomUUID();
       await save(
         { title: title.trim(), amount: Number(amount), currency, paymentMethod, category, date, description, merchant: merchant.trim() || null,
-          receiptDetails: finalDetails, scope, memberId: memberId === "me" ? null : memberId,
+          receiptDetails: finalDetails, workspaceAllocations, scope: wsSplit.on ? (workspaceAllocations.slice().sort((a, b) => b.amount - a.amount)[0]?.workspace ?? scope) : scope, memberId: memberId === "me" ? null : memberId,
           txnType, accountId: accountId === "none" ? null : accountId, paymentInstrumentId: instrumentId === "none" ? null : instrumentId, toAccountId: toAccountId === "none" ? null : toAccountId,
           tags: [...new Set(tags.split(",").map((t) => t.trim()).filter(Boolean))],
           splits: splitOn ? Object.entries(shares).map(([k, v]) => ({ memberId: k === "me" ? null : k, amount: Number(v) })) : [] },
-        { ...(editing ? { id: editing.id } : {}), files: receipts.map((r) => r.file) },
+        { ...(editing ? { id: editing.id } : {}), ...(createId ? { createId } : {}), files: receipts.map((r) => r.file) },
       );
+      if (createId && ctxTrip && search.booking) {
+        await savePreferences({ ...preferences, trips: (preferences.trips as TravelTrip[]).map((t) => t.id !== ctxTrip.id ? t : { ...t, bookings: (t.bookings ?? []).map((b) => b.id === search.booking ? { ...b, status: "paid" as const, expenseId: createId } : b) }) });
+      }
       for (const id of fromInbox) { const d = documents.find((x) => x.id === id); if (d) await removeDocument(d).catch(() => {}); }
       toast.success(editing ? "Entry updated" : `${TXN_LABEL[txnType]} saved`);
       if (!editing && queue.length) {
@@ -509,8 +530,9 @@ function NewExpense() {
             <div className="flex flex-wrap gap-2">{preferences.tags.map(t=>{const v=tagValue(t);const selected=tags.split(",").map(x=>x.trim()).includes(v);return <label key={v} className="flex items-center gap-1 text-xs"><input type="checkbox" checked={selected} onChange={e=>{const xs=tags.split(",").map(x=>x.trim()).filter(Boolean);setTags((e.target.checked?[...xs,v]:xs.filter(x=>x!==v)).join(", "));}}/>{v}</label>})}</div><Input id="tags" placeholder="e.g. VEI, reimbursable, essential" value={tags} onChange={(e) => setTags(e.target.value)} />
           </div>
           <div className="grid gap-2">
-            <Label>Business or personal?{af("scope")}</Label>
-            <ScopeToggle value={scope} onChange={setScope} />
+            {ctxTrip && <p className="text-xs text-primary">Adding to trip: {ctxTrip.name}{search.booking ? " — this payment will be linked to the booking" : ""}</p>}
+            <WorkspacePicker scope={scope} setScope={setScope} total={Number(amount) || 0} currency={currency} split={wsSplit} setSplit={setWsSplit}
+              suggestion={suggestWorkspace({ merchant, tags: tags.split(",").map((t) => t.trim()), tripType: ctxTrip?.type ?? null, category }, expenses)} />{af("scope")}
           </div>
           <div className="grid gap-2">
             <div className="flex items-center justify-between">
