@@ -5,7 +5,7 @@ import { BadgeCheck, Upload } from "lucide-react";
 import { PageTitle, Stat } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { BASE_CURRENCY, CURRENCIES, autoMatch, money, parseStatementCsv, type Match, type StatementLine } from "@/lib/expenses";
+import { BASE_CURRENCY, CURRENCIES, autoMatch, matchScore, money, type Match, type StatementLine } from "@/lib/expenses";
 import { StatementEntry } from "@/components/StatementEntry";
 import { readStatement } from "@/lib/statement-import";
 import { useStore } from "@/lib/store";
@@ -25,7 +25,8 @@ export const Route = createFileRoute("/_authenticated/reconcile")({
 });
 
 function Reconcile() {
-  const { transactions:expenses, reconcile } = useStore();
+  const { transactions:expenses, accounts, reconcile } = useStore();
+  const [statementAccount, setStatementAccount] = useState("all");
   const [lines, setLines] = useState<StatementLine[]>([]);
   const [fileName, setFileName] = useState("");
   const [currency, setCurrency] = useState<string>(BASE_CURRENCY);
@@ -33,13 +34,13 @@ function Reconcile() {
   const [busy, setBusy] = useState(false);
 
   const matches: Match[] = useMemo(() => {
-    const auto = autoMatch(lines, expenses, currency);
+    const auto = autoMatch(lines, expenses, currency, 0.4, statementAccount === "all" ? undefined : statementAccount);
     return auto.map((m) => {
       const o = overrides[m.line.ref];
       if (o === undefined) return m;
       return { ...m, expense: o === "none" ? null : expenses.find((e) => e.id === o) ?? null, score: 1 };
     });
-  }, [lines, expenses, currency, overrides]);
+  }, [lines, expenses, currency, overrides, statementAccount]);
 
   const onFile = async (f: File | undefined) => {
     if (!f) return;
@@ -55,6 +56,9 @@ function Reconcile() {
     setBusy(true);
     try {
       const ids=matched.flatMap(m=>m.expense?[m.expense.id]:[]);if(new Set(ids).size!==ids.length)throw Error("Each statement line must match a different transaction");
+      for (const m of matched) {
+        if (m.expense && !matchScore(m.line, m.expense, currency, statementAccount === "all" ? undefined : statementAccount)) throw Error("A selected transaction doesn't match this account, direction, date or amount");
+      }
       for (const m of matched) { if (!m.expense) continue; await reconcile(m.expense.id, `${fileName} · ${m.line.date} · ${m.line.description}`.slice(0, 300)); }
       toast.success(`${matched.length} expenses marked as matched`);
       setLines([]);
@@ -78,6 +82,10 @@ function Reconcile() {
           <input type="file" accept=".csv,.xlsx,.pdf,text/csv,application/pdf" className="sr-only" onChange={(e) => onFile(e.target.files?.[0])} aria-label="Statement file" />
         </label>
         <div className="flex items-center gap-2 text-sm">
+          <Select value={statementAccount} onValueChange={v => { setStatementAccount(v); setOverrides({}); }}>
+            <SelectTrigger className="w-44" aria-label="Statement account"><SelectValue /></SelectTrigger>
+            <SelectContent><SelectItem value="all">All accounts</SelectItem>{accounts.map(a => <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}</SelectContent>
+          </Select>
           Statement currency
           <Select value={currency} onValueChange={setCurrency}>
             <SelectTrigger className="w-24" aria-label="Statement currency"><SelectValue /></SelectTrigger>
@@ -106,7 +114,7 @@ function Reconcile() {
                     <SelectTrigger aria-label={`Match for ${m.line.description}`} className="min-w-0"><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="none">No match</SelectItem>
-                      {(m.expense ? [m.expense, ...open.filter((e) => e.id !== m.expense?.id)] : open).slice(0, 50).map((e) => (
+                      {(m.expense ? [m.expense, ...open.filter((e) => e.id !== m.expense?.id)] : open).filter(e => matchScore(m.line,e,currency,statementAccount === "all" ? undefined : statementAccount)>0).slice(0, 50).map((e) => (
                         <SelectItem key={e.id} value={e.id}>{e.date} · {e.title} · {money(e.originalAmount, e.currency)}</SelectItem>
                       ))}
                     </SelectContent>

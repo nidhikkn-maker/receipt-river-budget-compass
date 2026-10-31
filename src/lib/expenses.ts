@@ -202,8 +202,12 @@ const dayDiff = (a: string, b: string) => Math.abs(new Date(a).getTime() - new D
 const words = (s: string) => s.toLowerCase().split(/[^a-z0-9]+/).filter((w) => w.length > 2);
 
 /** Score how well a statement line matches an expense (amount within 3%, date within 5 days, merchant words). */
-export function matchScore(line: StatementLine, e: Expense, statementCurrency: string): number {
+export function matchScore(line: StatementLine, e: Expense, statementCurrency: string, accountId?: string): number {
   const kind=e.txnType??"expense";
+  if (accountId) {
+    const side = kind === "transfer" && line.direction === "credit" ? e.toAccountId : e.accountId;
+    if (side !== accountId) return 0;
+  } else if (kind === "transfer") return 0; // A transfer needs its statement-account side.
   if(line.direction==="credit" && !["income","refund","reimbursement","transfer"].includes(kind))return 0;
   if(line.direction!=="credit" && ["income","refund","reimbursement"].includes(kind))return 0;
   const target = statementCurrency === e.currency ? e.originalAmount : statementCurrency === BASE_CURRENCY ? e.amount : NaN;
@@ -218,11 +222,11 @@ export function matchScore(line: StatementLine, e: Expense, statementCurrency: s
 }
 
 /** Greedy one-to-one matching of statement lines to not-yet-reconciled expenses. */
-export function autoMatch(lines: StatementLine[], expenses: Expense[], statementCurrency: string, min = 0.4): Match[] {
+export function autoMatch(lines: StatementLine[], expenses: Expense[], statementCurrency: string, min = 0.4, accountId?: string): Match[] {
   const pool = expenses.filter((e) => !e.reconciledAt);
   const pairs: { li: number; e: Expense; score: number }[] = [];
   lines.forEach((l, li) => pool.forEach((e) => {
-    const score = matchScore(l, e, statementCurrency);
+    const score = matchScore(l, e, statementCurrency, accountId);
     if (score >= min) pairs.push({ li, e, score });
   }));
   pairs.sort((a, b) => b.score - a.score);
@@ -230,8 +234,11 @@ export function autoMatch(lines: StatementLine[], expenses: Expense[], statement
   const out: Match[] = lines.map((line) => ({ line, expense: null, score: 0 }));
   for (const p of pairs) {
     if (usedL.has(p.li) || usedE.has(p.e.id)) continue;
+    if (pairs.some(other => other !== p && (other.li === p.li || other.e.id === p.e.id) && other.score >= p.score - 0.05)) continue;
+    const line = lines[p.li];
+    if (!line) continue;
     usedL.add(p.li); usedE.add(p.e.id);
-    out[p.li] = { line: lines[p.li]!, expense: p.e, score: p.score };
+    out[p.li] = { line, expense: p.e, score: p.score };
   }
   return out;
 }
