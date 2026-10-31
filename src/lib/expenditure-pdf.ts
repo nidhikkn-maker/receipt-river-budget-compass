@@ -1,4 +1,4 @@
-import { cell as uCell, plain, withUnicode } from "./pdf-unicode";
+import { cell as uCell, loadPdfFonts, plain, withUnicode } from "./pdf-unicode";
 // Renders a Detailed Expenditure Statement: portrait overview, landscape register, then every
 // original bill as numbered annexures, merged into one PDF. Browser-only: import dynamically.
 import type { Statement } from "./expenditure-statement";
@@ -11,6 +11,7 @@ const ascii = uCell;
 const INK: [number, number, number] = [22, 44, 110];
 
 export async function renderStatementPdf(s: Statement, files: Record<string, AnnexFile | null>): Promise<{ blob: Blob; missing: string[] }> {
+  await loadPdfFonts();
   const { jsPDF } = await import("jspdf");
   const { default: autoTable } = await import("jspdf-autotable");
   const doc = new jsPDF({ unit: "mm", format: "a4" });
