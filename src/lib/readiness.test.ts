@@ -43,6 +43,16 @@ describe("paymentReadiness", () => {
     expect(r!.status).toBe("ready"); // 50000 + 30000 - 5000 = 75000 ≥ 60000
   });
 
+  it("reserves same-day payments once in stable order regardless of input order", () => {
+    const first = mk({ id: "c1", amount: 40000, nextDue: "2026-11-05" });
+    const second = mk({ id: "c2", amount: 8000, nextDue: "2026-11-05" });
+    const input = { accounts: [acc], transactions: [], today };
+    const forward = paymentReadiness({ ...input, commitments: [first, second] });
+    expect(forward).toEqual(paymentReadiness({ ...input, commitments: [second, first] }));
+    expect(forward[0]).toMatchObject({ commitmentId: "c1", status: "ready", projected: 45000 });
+    expect(forward[1]).toMatchObject({ commitmentId: "c2", status: "shortfall", projected: 5000, shortfall: 3000 });
+  });
+
   it("is unknown when no paying account is designated and there are several cash accounts", () => {
     const acc2: Account = { ...acc, id: "a2", name: "ICICI" };
     const [r] = paymentReadiness({ commitments: [mk({ accountId: null })], accounts: [acc, acc2], transactions: [], today });

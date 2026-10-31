@@ -123,6 +123,7 @@
 - [x] Personal Finance Knowledge Graph: Links page, derived connections + unlinked records; tested
 ### Acceptance (verify before declaring done)
 - [ ] Continue acceptance: cap optional allocation targets at remaining funds; verify signed-in suggestions and save/readback without changing ledger records.
+- [ ] Continue acceptance: prevent same-day scheduled payments from reusing available funds; verify ordering and exact shortfall.
 - [ ] Allocations never move money; readiness uses due dates + balances; rules fire only on conditions; search respects authorisation; imports never duplicate; simulations never alter records; autopilot needs approval; family access isolated; contract extraction keeps document refs; memory records outcomes; graph reflects real links; V1/V2 still work
 - [x] Edit links on money map (record links + own links with reasons)
 - [x] Connection reasons + key details on selection
