@@ -1,3 +1,4 @@
+import { workspaceParts } from "./workspaces";
 // Personal + family expense tracker domain logic (pure, tested).
 
 /** Default categories for new accounts (the 18 from the requirements plus two business ones). Users can rename, merge, archive and add. */
@@ -221,8 +222,8 @@ export function bulkRecategorize(list: Pick<Expense, "id">[], ids: string[], cat
 }
 
 export function totalsByScope(list: Expense[]) {
-  const t = { personal: 0, business: 0, total: 0 };
-  for (const e of list) { t[e.scope] += e.amount; t.total += e.amount; }
+  const t = { personal: 0, family: 0, business: 0, official: 0, total: 0 };
+  for (const e of list) { for (const p of workspaceParts(e)) t[p.workspace] += p.amount; t.total += e.amount; }
   return roundAll(t);
 }
 
