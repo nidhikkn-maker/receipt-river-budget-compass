@@ -150,3 +150,5 @@
 - [x] Loan repayment history chart (balance left after each repayment; EMIs recorded from the loan card count too)
 - [x] Trip advance dashboard: outstanding advance balances across trips, linking to each trip's reconciliation (signed-in verified: ₹20,000 advance − ₹12,000 business spend → "return ₹8,000", Reconcile opens the trip)
 - [x] Loan repayment history CSV export (payment dates, principal, interest, remaining balance; signed-in download verified)
+- [x] Loan payoff projection (recent repayment average, EMI fallback)
+- [x] Advance dashboard aging indicators and All/Unreconciled/Overdue filters (overdue = unsettled 30+ days after trip end)

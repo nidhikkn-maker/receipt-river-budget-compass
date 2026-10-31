@@ -177,7 +177,7 @@ export function advanceDashboard(trips: TravelTrip[], txns: Row[], today = new D
     if (r.advances === 0 && r.returns === 0) continue;
     rows.push({ tripId: t.id, name: t.name, closed: !!t.closedAt, advances: r.advances, expenses: r.expenses, returns: r.returns, outstanding: r.outstanding, end: t.end, ...advanceAge(t.end, r.outstanding, today) });
   }
-  rows.sort((a, b) => b.ageDays - a.ageDays || Math.abs(b.outstanding) - Math.abs(a.outstanding));
+  rows.sort((a, b) => Number(b.overdue) - Number(a.overdue) || Math.abs(b.outstanding) - Math.abs(a.outstanding));
   const toReturn = r2(rows.filter((r) => r.outstanding > 0).reduce((s, r) => s + r.outstanding, 0));
   const owedToYou = r2(rows.filter((r) => r.outstanding < 0).reduce((s, r) => s - r.outstanding, 0));
   return { rows, toReturn, owedToYou };
