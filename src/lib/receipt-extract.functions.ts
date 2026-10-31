@@ -9,6 +9,9 @@ const Extracted = z.object({
   merchant: z.string().nullable(),
   date: z.string().nullable().describe("YYYY-MM-DD"),
   amount: z.number().nullable().describe("Grand total paid"),
+  tax: z.number().nonnegative().nullable().describe("Total tax included on the receipt"),
+  items: z.array(z.object({ name: z.string(), quantity: z.number().nonnegative(), amount: z.number().nonnegative() })).describe("Line items, amount is the line total in bill currency"),
+  text: z.string().describe("Readable text from the receipt for document search"),
   currency: z.string().nullable().describe("ISO 4217 code, e.g. INR, USD, EUR"),
   payment_method: z.enum(["cash", "upi", "credit_card", "debit_card", "forex_card", "company_card", "bank_transfer", "other"]).nullable(),
   description: z.string().nullable().describe("One-line business purpose guess from the items"),
@@ -39,7 +42,7 @@ export const extractReceipt = createServerFn({ method: "POST" })
           {
             role: "user",
             content: [
-              { type: "text", text: "Read this receipt or bill. Extract: a short expense title, merchant name, transaction date (YYYY-MM-DD), grand total paid as a number in the bill's own currency, the ISO currency code (infer from symbols like ₹, €, £, ¥, AED, S$ or the country/address), the payment method if shown (UPI ref/VPA → upi, card last-4 with credit/debit wording, cash, etc.), the best-fitting category, whether it is likely a business or personal expense, and a one-line description of what was bought. Use null for anything not visible." },
+              { type: "text", text: "Read this receipt or bill. Extract title, merchant, YYYY-MM-DD date, grand total in original currency, tax total, individual line items (name, quantity, line total), readable receipt text, ISO currency, payment method, category, business/personal scope and description. Never invent unreadable amounts; return null for unknown scalar fields and an empty items array if unreadable. Tax is part of the grand total, not additional spending." },
               isPdf
                 ? { type: "file", data: data.dataUrl, mediaType: "application/pdf", filename: "receipt.pdf" }
                 : { type: "image", image: data.dataUrl, mediaType: data.mimeType },
