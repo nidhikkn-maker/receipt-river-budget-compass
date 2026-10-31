@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { ScopeToggle } from "./ScopeBadge";
 import { AllocationEditor, ReimbursementEditor } from "./SplitAndClaim";
 import { whoLabel, BASE_CURRENCY, PAYMENT_LABEL, REIMBURSEMENT_LABEL, money, type Expense } from "@/lib/expenses";
+import { hasReceiptAudit, receiptCorrectionLines } from "@/lib/receipt-audit";
 import type { AuditEntry } from "@/lib/store";
 import { useStore } from "@/lib/store";
 
@@ -65,6 +66,21 @@ export function ExpenseDialog({ expense, onClose }: { expense: Expense | null; o
         {(e.txnType??"expense")==="expense"&&<details className="border-t pt-3"><summary className="cursor-pointer text-sm font-semibold">Reimbursement claim details</summary><div className="mt-2"><ReimbursementEditor e={e} onDone={onClose}/></div></details>}
         {e.receipts.length > 0 && (
           <div className="flex flex-wrap gap-3">{e.receipts.map((r) => <ReceiptThumb key={r.path} {...r} />)}</div>
+        )}
+        {hasReceiptAudit(e.receiptDetails) && (
+          <details className="border-t pt-3" open={receiptCorrectionLines(e.receiptDetails.audit).length > 0}>
+            <summary className="cursor-pointer text-sm font-semibold">Receipt reading audit</summary>
+            <div className="mt-2 space-y-1 text-xs">
+              <p className="text-muted-foreground">Read from the receipt on {new Date(e.receiptDetails.audit.confirmedAt).toLocaleString()}:</p>
+              <p className="break-words">{e.receiptDetails.audit.read.merchant || "(no merchant)"} · {e.receiptDetails.audit.read.date} · {e.receiptDetails.audit.read.currency} {e.receiptDetails.audit.read.amount.toFixed(2)}</p>
+              {receiptCorrectionLines(e.receiptDetails.audit).length > 0 ? (
+                <><p className="pt-1 text-muted-foreground">Corrected before submitting:</p>
+                <ul className="list-disc pl-4">{receiptCorrectionLines(e.receiptDetails.audit).map((l) => <li key={l} className="break-words">{l}</li>)}</ul></>
+              ) : (
+                <p className="pt-1 text-muted-foreground">Saved exactly as read — no corrections.</p>
+              )}
+            </div>
+          </details>
         )}
         <div className="flex justify-between gap-2 pt-2">
           <Button variant="ghost" className="text-destructive" onClick={del}>Delete</Button>
