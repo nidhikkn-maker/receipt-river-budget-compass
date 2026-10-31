@@ -12,5 +12,6 @@
 - [ ] Receipt tax & line items; Excel/PDF statement import
 - [ ] Family/project/annual budgets with carry-forward; Insights drill-down; customisable Home
 - [ ] Searchable document vault; offline entry queue; in-app reminders; theme settings
-- [ ] Optional cross-device account and passkey security — retain direct access, no mandatory sign-in
+- [ ] Real sign-in and Face ID/passkey lock requested; preserve existing browser records during account upgrade
+- [ ] Offline entry and upcoming payment reminders explicitly requested
 - [ ] Audit and verify remaining document acceptance requirements
