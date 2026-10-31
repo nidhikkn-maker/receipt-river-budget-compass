@@ -1,4 +1,4 @@
-import { cell as uCell, plain, withUnicode } from "./pdf-unicode";
+import { cell as uCell, loadPdfFonts, plain, withUnicode } from "./pdf-unicode";
 // Renders a ReportDoc to an A4 PDF with jsPDF. Browser-only: import dynamically.
 import type { ReportDoc } from "./report-centre";
 
@@ -7,6 +7,7 @@ const BRAND: [number, number, number] = [22, 44, 110]; // Ledgerline deep blue
 const GOLD: [number, number, number] = [196, 152, 52];
 
 export async function renderReportPdf(r: ReportDoc, style: PdfStyle, generatedAt: Date): Promise<Blob> {
+  await loadPdfFonts();
   const { jsPDF } = await import("jspdf");
   const { default: autoTable } = await import("jspdf-autotable");
   const doc = new jsPDF({ orientation: r.landscape ? "landscape" : "portrait", unit: "mm", format: "a4" });
@@ -60,7 +61,7 @@ export async function renderReportPdf(r: ReportDoc, style: PdfStyle, generatedAt
     if (y > H - 50) { doc.addPage(); y = 20; }
     doc.setFont("helvetica", "bold"); doc.setFontSize(11); doc.setTextColor(...ink); doc.text("Notes and assumptions", M, y); y += 5;
     doc.setFont("helvetica", "normal"); doc.setFontSize(8.5); doc.setTextColor(60, 60, 60);
-    for (const n of r.notes) { const lines = doc.splitTextToSize(`• ${ascii(n)}`.replace("•", "-"), W - 2 * M); if (y + lines.length * 4 > H - 16) { doc.addPage(); y = 20; } doc.text(lines, M, y); y += lines.length * 4 + 1.2; }
+    for (const n of r.notes) { const lines = doc.splitTextToSize(`• ${plain(n)}`.replace("•", "-"), W - 2 * M); if (y + lines.length * 4 > H - 16) { doc.addPage(); y = 20; } doc.text(lines, M, y); y += lines.length * 4 + 1.2; }
   }
 
   const pages = doc.getNumberOfPages();

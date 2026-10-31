@@ -68,8 +68,8 @@ export async function appendAnnexures(body: Uint8Array, s: Statement, files: Rec
   const header = (page: import("pdf-lib").PDFPage, a: Statement["annexures"][number], extra = "") => {
     const { height } = page.getSize();
     page.drawRectangle({ x: 0, y: height - 46, width: page.getWidth(), height: 46, color: rgb(1, 1, 1) });
-    page.drawText(ascii(`Annexure ${a.no} - Original ${a.docType}${extra}`), { x: 36, y: height - 22, size: 11, font: bold, color: rgb(0.086, 0.17, 0.43) });
-    page.drawText(ascii(`Transaction ${a.row} | ${a.merchant} | ${a.date} | ${n(a.amount)} | ${s.reference}`).slice(0, 110), { x: 36, y: height - 36, size: 8, font, color: rgb(0.3, 0.3, 0.3) });
+    page.drawText(plain(`Annexure ${a.no} - Original ${a.docType}${extra}`), { x: 36, y: height - 22, size: 11, font: bold, color: rgb(0.086, 0.17, 0.43) });
+    page.drawText(plain(`Transaction ${a.row} | ${a.merchant} | ${a.date} | ${n(a.amount)} | ${s.reference}`).slice(0, 110), { x: 36, y: height - 36, size: 8, font, color: rgb(0.3, 0.3, 0.3) });
   };
   for (const a of s.annexures) {
     const f = files[a.no];
@@ -91,11 +91,11 @@ export async function appendAnnexures(body: Uint8Array, s: Statement, files: Rec
     } catch {
       missing.push(a.no);
       const page = out.addPage(A4); header(page, a, " - NOT READABLE");
-      page.drawText(ascii(`The attached file "${a.name}" could not be included. It remains stored in Ledgerline.`), { x: 36, y: 760, size: 10, font });
+      page.drawText(plain(`The attached file "${a.name}" could not be included. It remains stored in Ledgerline.`), { x: 36, y: 760, size: 10, font });
     }
   }
   const total = out.getPageCount();
-  out.getPages().forEach((p, i) => p.drawText(ascii(`Ledgerline - ${s.reference} - Page ${i + 1} of ${total}`), { x: 36, y: 14, size: 7, font, color: rgb(0.5, 0.5, 0.5) }));
+  out.getPages().forEach((p, i) => p.drawText(plain(`Ledgerline - ${s.reference} - Page ${i + 1} of ${total}`), { x: 36, y: 14, size: 7, font, color: rgb(0.5, 0.5, 0.5) }));
   const bytes = await out.save();
   return { blob: new Blob([bytes as BlobPart], { type: "application/pdf" }), missing };
 }

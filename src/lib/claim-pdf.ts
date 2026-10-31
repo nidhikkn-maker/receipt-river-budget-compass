@@ -1,4 +1,4 @@
-import { cell as uCell, plain, withUnicode } from "./pdf-unicode";
+import { cell as uCell, loadPdfFonts, plain, withUnicode } from "./pdf-unicode";
 // Renders the Expense Claim Submission Report: claim form, itemised claim, declaration and
 // approval blocks, then the supporting bills as annexures. Browser-only: import dynamically.
 import type { Claim } from "./expense-claim";
@@ -24,6 +24,7 @@ export function claimCategoryTotals(c: Claim) {
 }
 
 export async function renderClaimPdf(c: Claim, files: Record<string, AnnexFile | null>, format: ClaimFormat = "detailed") {
+  await loadPdfFonts();
   const { jsPDF } = await import("jspdf");
   const { default: autoTable } = await import("jspdf-autotable");
   const doc = new jsPDF({ unit: "mm", format: "a4" });
