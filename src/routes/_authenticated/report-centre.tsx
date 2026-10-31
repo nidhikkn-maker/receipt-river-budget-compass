@@ -1,3 +1,4 @@
+import { BackgroundReports } from "@/components/BackgroundReports";
 import { useNavigate } from "@tanstack/react-router";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -133,6 +134,7 @@ function ReportCentre() {
   return (
     <div className="space-y-5 pb-24">
       <PageTitle title="Reports Centre" sub="Generate PDF reports from your recorded entries, then preview, download or share them." />
+      <BackgroundReports onDone={() => void loadHistory()} />
 
       <Link to="/expenditure-statement" className="flex items-center justify-between rounded-xl border bg-card p-4 text-sm"><span><span className="block font-semibold">Detailed Expenditure Statement</span><span className="text-muted-foreground">One trip, event, project or purchase, with original bills attached</span></span><FileText className="h-5 w-5 text-primary" /></Link>
       <Link to="/claim-submission" className="flex items-center justify-between rounded-xl border bg-card p-4 text-sm"><span><span className="block font-semibold">Expense Claim Submission</span><span className="text-muted-foreground">Formal reimbursement claim with declaration, approval lines and bills</span></span><FileText className="h-5 w-5 text-primary" /></Link>
