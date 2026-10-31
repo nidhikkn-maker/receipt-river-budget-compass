@@ -14,6 +14,7 @@
 - Data lives in Lovable Cloud; src/lib/store.tsx is the single client data layer for pages under src/routes/_authenticated.
 - Currency conversion happens server-side in src/lib/fx.functions.ts (Frankfurter/ECB rates for the bill date) so stored INR amounts can't be faked by the client.
 - Reports are generated in the browser (src/lib/reports.ts) from data the user can already see, so RLS scoping applies automatically.
+- Department exports use saved department fields and RLS-visible limits, not personal category budgets; reimbursement payment exports use actual ledger receipts, and PDFs are prepared before a separate user-activated download.
 - Receipt reading runs in a server function (src/lib/receipt-extract.functions.ts) so the AI key stays server-side.
 - Owner-scoped finance_preferences holds category and grouped-tag catalogs, scoped budgets and display preferences; category moves use an RLS-protected database function to update ledger and budget references together.
 - Offline entries and snapshots use owner-keyed IndexedDB encrypted with non-exportable AES-GCM device keys and owner-bound authenticated data; stable entry UUIDs make synchronization idempotent and currency conversion stays server-side.
