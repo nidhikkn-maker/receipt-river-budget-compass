@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { buildStatement, subjectEntries, type Subject } from "./expenditure-statement";
 import { renderStatementPdf } from "./expenditure-pdf";
+import { buildClaim } from "./expense-claim";
+import { renderClaimPdf } from "./claim-pdf";
 import type { Expense } from "./expenses";
 import type { Account } from "./ledger";
 import type { PaymentInstrument } from "./payment-instruments";
@@ -78,5 +80,25 @@ describe("Detailed Expenditure Statement", () => {
   });
   it("does not modify the source records", () => {
     const before = JSON.stringify(tx); make(); expect(JSON.stringify(tx)).toBe(before);
+  });
+
+  const who = { name: "Asha", employeeId: "E1", department: "Ops", designation: "", approver: "Ravi", bankDetails: "", email: "" };
+  it("claim includes only personally paid, eligible, outstanding amounts", () => {
+    const c = buildClaim(make(), who);
+    expect(c.items.map((i) => i.id)).toEqual(["hotel"]);
+    expect(c.totals).toEqual({ eligible: 10000, received: 4000, claimed: 6000 });
+    const reasons = Object.fromEntries(c.excluded.map((x) => [x.row.id, x.reason]));
+    expect(reasons["cab"]).toBe("Paid directly by the organisation");
+    expect(reasons["rej"]).toBe("Rejected / not eligible");
+    expect(reasons["meal"]).toBe("Not marked for reimbursement");
+    expect(reasons["taxi"]).toBe("Paid by Client");
+  });
+  it("claim bills are renumbered to the claim lines and the PDF builds", async () => {
+    const c = buildClaim(make(), who);
+    expect(c.annexures.map((a) => [a.no, a.row])).toEqual([["C-01", 1], ["C-02", 1]]);
+    expect(c.items[0]!.billRef).toBe("C-01, C-02");
+    expect(c.reference).toBe("LL-CLM-TEST".replace("TEST", "TEST"));
+    const { blob } = await renderClaimPdf(c, {});
+    expect(blob.size).toBeGreaterThan(2000);
   });
 });
