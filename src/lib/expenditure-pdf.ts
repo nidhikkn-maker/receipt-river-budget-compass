@@ -53,9 +53,11 @@ export async function renderStatementPdf(s: Statement, files: Record<string, Ann
     body: itemised.flatMap((r) => r.items.map((it, i) => [i ? "" : String(r.sno), ascii(it.name), String(it.quantity), n(it.amount), i ? "" : r.itemsReconcile ? "Yes" : "No - shown as read from the bill"])) });
   table({ startY: last() + 6, theme: "plain", head: [["Notes and disclosures"]], body: s.disclosures.map((d) => ["- " + ascii(d)]), styles: { fontSize: 8 } });
 
-  const pages = doc.getNumberOfPages();
-  const body = new Uint8Array(doc.output("arraybuffer"));
+  return appendAnnexures(new Uint8Array(doc.output("arraybuffer")), s, files);
+}
 
+/** Appends every bill as numbered annexures (in register order) and page-numbers the whole PDF. */
+export async function appendAnnexures(body: Uint8Array, s: Statement, files: Record<string, AnnexFile | null>): Promise<{ blob: Blob; missing: string[] }> {
   // Annexures via pdf-lib
   const { PDFDocument, StandardFonts, rgb } = await import("pdf-lib");
   const out = await PDFDocument.load(body);
@@ -93,7 +95,6 @@ export async function renderStatementPdf(s: Statement, files: Record<string, Ann
   }
   const total = out.getPageCount();
   out.getPages().forEach((p, i) => p.drawText(ascii(`Ledgerline - ${s.reference} - Page ${i + 1} of ${total}`), { x: 36, y: 14, size: 7, font, color: rgb(0.5, 0.5, 0.5) }));
-  void pages;
   const bytes = await out.save();
   return { blob: new Blob([bytes as BlobPart], { type: "application/pdf" }), missing };
 }
