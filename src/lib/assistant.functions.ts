@@ -83,7 +83,7 @@ const Spoken = z.object({
   category: z.string().max(60).nullable(),
   payment_method: z.enum(["cash", "upi", "credit_card", "debit_card", "forex_card", "company_card", "bank_transfer", "other"]).nullable(),
   account_name: z.string().nullable().describe("Exact name from the provided account list if one was mentioned (e.g. AMEX), else null"),
-  scope: z.enum(["personal", "business"]).nullable(),
+  scope: z.enum(["personal", "business", "family", "official"]).nullable().describe("Workspace if said: personal, business (company names like MOVAC count as business), family, or official"),
 });
 export type SpokenEntry = z.infer<typeof Spoken>;
 
