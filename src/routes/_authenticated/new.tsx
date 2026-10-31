@@ -15,6 +15,7 @@ import {
 } from "@/lib/expenses";
 import { tagValue } from "@/lib/preferences";
 import { duplicateBills } from "@/lib/bill-duplicates";
+import { buildReceiptAudit, receiptFingerprint, receiptFingerprintMatches, type ReceiptReadValues } from "@/lib/receipt-audit";
 import { quickEntrySearch } from "@/lib/quick-entry";
 import { useStore } from "@/lib/store";
 import { extractReceipt } from "@/lib/receipt-extract.functions";
@@ -43,13 +44,20 @@ export const Route = createFileRoute("/_authenticated/new")({
   component: NewExpense,
 });
 
-const readFile = (f: File) =>
-  new Promise<LocalReceipt>((res, rej) => {
-    const r = new FileReader();
-    r.onload = () => res({ file: f, name: f.name, type: f.type, dataUrl: r.result as string });
-    r.onerror = rej;
-    r.readAsDataURL(f);
-  });
+type LocalReceipt = { file: File; name: string; type: string; dataUrl: string; fingerprint: string };
+
+const readFile = async (f: File): Promise<LocalReceipt> => {
+  const [dataUrl, fingerprint] = await Promise.all([
+    new Promise<string>((res, rej) => {
+      const r = new FileReader();
+      r.onload = () => res(r.result as string);
+      r.onerror = rej;
+      r.readAsDataURL(f);
+    }),
+    receiptFingerprint(f),
+  ]);
+  return { file: f, name: f.name, type: f.type, dataUrl, fingerprint };
+};
 
 const isDate = (s: string | null | undefined): s is string => !!s && /^\d{4}-\d{2}-\d{2}$/.test(s);
 
