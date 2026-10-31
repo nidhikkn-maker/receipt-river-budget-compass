@@ -208,3 +208,11 @@
 - [x] Expense Claim Submission Report (separate page, shared selection screen, declaration + approval lines, C-xx bill annexures)
 - [ ] V4.8 Universal notes (.lovable/requirements-v4.8-universal.md): Summary + Bills format, remembered format choice, workspace/organisation entry points — not started
 - [ ] Generate Statement buttons in Business/Official workspace views and on a single entry (statement page already accepts a chosen purchase)
+
+## V4.9 Centralised Settings (.lovable/requirements-v4.9.md)
+- [x] Financial Setup Status from real records (src/lib/setup-status.ts) + grouped searchable Settings directory
+- [x] Contextual "Configure account" note in entry form when no accounts
+- [ ] Contextual add-account sheet that returns and auto-selects the new account
+- [ ] Guided setup assistant (skippable, reopenable)
+- [ ] Organisation directory and archive/reactivate controls across master records
+- [ ] Duplicate-record prevention for accounts/methods; acceptance scenarios 1–25
