@@ -46,7 +46,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           <span className="font-display text-xl font-extrabold tracking-tight text-primary">Ledgerline</span>
           <span className="hidden font-mono text-[11px] uppercase tracking-[0.2em] text-muted-foreground sm:inline">personal · family · business</span>
           <Button size="icon" variant="ghost" onClick={() => setHidden((h) => !h)} aria-label={hidden ? "Show amounts" : "Hide amounts"} className="ml-auto rounded-xl p-2 text-muted-foreground">{hidden ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}</Button>
-          <Link to="/auth" aria-label="Account" className="p-2 text-muted-foreground"><UserRound className="h-5 w-5" /></Link>
+          <Link to="/auth" aria-label={name ? `Account: ${name}` : "Account"} title={name || "Account"} className="p-2 text-muted-foreground"><UserRound className="h-5 w-5" /></Link>
           <div className="flex w-full justify-between gap-1 lg:hidden">
             <Link to="/plan" aria-label="Plan" className="rounded-xl p-2 text-muted-foreground" activeProps={{ className: "!text-primary bg-secondary" }}><CalendarClock className="h-5 w-5" /></Link>
             <Link to="/budgets" aria-label="Budgets" className="rounded-xl p-2 text-muted-foreground" activeProps={{ className: "!text-primary bg-secondary" }}><PiggyBank className="h-5 w-5" /></Link>

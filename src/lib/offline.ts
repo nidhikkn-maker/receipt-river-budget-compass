@@ -7,3 +7,4 @@ export const pendingEntries=async(owner:string)=>(await operation<PendingEntry[]
 export const removePending=(id:string)=>operation("entries","readwrite",s=>s.delete(id));
 export const putSnapshot=(owner:string,data:unknown)=>operation("snapshots","readwrite",s=>s.put(data,owner));
 export const getSnapshot=<T>(owner:string)=>operation<T|undefined>("snapshots","readonly",s=>s.get(owner));
+export async function clearOfflineOwner(owner:string){for(const entry of await pendingEntries(owner))await removePending(entry.id);await operation("snapshots","readwrite",s=>s.delete(owner));}

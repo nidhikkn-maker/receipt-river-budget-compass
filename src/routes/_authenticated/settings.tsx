@@ -8,6 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { PasskeySettings } from "@/components/DeviceLock";
 import { FinanceSettings } from "@/components/FinanceSettings";
 import { useStore } from "@/lib/store";
+import { clearOfflineOwner } from "@/lib/offline";
 
 export const Route = createFileRoute("/_authenticated/settings")({
   head: () => ({
@@ -80,6 +81,7 @@ function Settings() {
         const { error } = await supabase.from(t).delete().eq(OWNER[t] as never, userId as never);
         if (error) throw new Error(error.message);
       }
+      await clearOfflineOwner(userId);
       await refresh();
       toast.success("All records deleted");
     } catch (e) { toast.error((e as Error).message); } finally { setBusy(false); }
