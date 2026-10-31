@@ -65,7 +65,7 @@ export async function renderReportPdf(r: ReportDoc, style: PdfStyle, generatedAt
   const pages = doc.getNumberOfPages();
   for (let i = 1; i <= pages; i++) {
     doc.setPage(i); doc.setFont("helvetica", "normal"); doc.setFontSize(7.5); doc.setTextColor(130, 130, 130);
-    doc.text(ascii(`Ledgerline · ${r.title} · ${r.period}`).replace("?", "-").replace("?", "-"), M, H - 8);
+    doc.text(ascii(`Ledgerline - ${r.title} - ${r.period}`), M, H - 8);
     doc.text(`Page ${i} of ${pages}`, W - M, H - 8, { align: "right" });
   }
   return doc.output("blob");
