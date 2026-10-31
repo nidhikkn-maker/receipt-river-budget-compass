@@ -5,7 +5,7 @@
 - [x] Bulk categorisation undo and persistent audit history with safe restoration; authenticated apply/undo/reload, split restoration, retries and later-edit conflicts tested; 218 unit tests pass
 - [x] Add a short ChatGPT setup guide to Connected Assistants; signed-in guide and endpoint copying verified
 - [x] Request publication for ledgerline.biz; OAuth newly activated, four read-only tools extracted, guide checked desktop/mobile, permission checks and 218 unit tests passed
-- [ ] Confirm hosted MCP and ChatGPT approve/revoke end to end — publication is scheduled, not confirmed; requires finished deployment and connection from the user's ChatGPT account
+- [ ] Confirm ChatGPT approve/revoke end to end from the user's ChatGPT account — deployment confirmed serving (home 200, /mcp 401 OAuth challenge); guide with verification steps live on Connected Assistants page
 - [x] Answer remaining-document audit: distinguish unbuilt functionality, publication/device validation and excluded native/Yaba scope
 - [x] Continue document: secure device push setup, private test/daily payment reminders, production notification handling and 14 new tests; 146 total tests pass; live delivery still needs publication and device consent
 - [x] Mutual fund portfolio: dated value and cash-flow-adjusted gain charts, fund/date filters and dated history; 25 focused tests pass, saved ₹13,405.87 read back, desktop/mobile checked, build OK
