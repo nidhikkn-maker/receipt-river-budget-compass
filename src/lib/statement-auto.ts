@@ -174,7 +174,7 @@ export function draftToInput(draft: StatementDraft): ExpenseInput {
     scope: draft.scope,
     memberId: null,
     amount: draft.line.amount,
-    currency: ctx_currency(draft.line),
+    currency: draft.currency,
     paymentMethod: draft.paymentMethod,
     date: draft.line.date,
     description: "Statement import",
@@ -185,7 +185,3 @@ export function draftToInput(draft: StatementDraft): ExpenseInput {
   };
 }
 
-// The line itself carries no currency; the statement's currency is attached at plan time.
-let currentCurrency = "INR";
-export function setDraftCurrency(currency: string) { currentCurrency = currency; }
-function ctx_currency(_line: StatementLine) { return currentCurrency; }
