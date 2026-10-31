@@ -188,10 +188,11 @@ export function planStatementRegistration(lines: StatementLine[], matches: Match
   }
   // Recurring hints: a merchant being registered now that already appears 3+ times in history.
   const seen = new Set<string>();
+  const sameMerchant = (a: string, b: string) => { const x = norm(a), y = norm(b); return x.length >= 4 && y.length >= 4 && (x.includes(y) || y.includes(x)); };
   for (const d of plan.register) {
     const k = norm(d.merchant);
     if (!k || seen.has(k)) continue;
-    const count = ctx.transactions.filter((t) => t.merchant && norm(t.merchant) === k).length;
+    const count = ctx.transactions.filter((t) => t.merchant && sameMerchant(t.merchant, d.merchant)).length;
     if (count >= 3) { seen.add(k); plan.recurringHints.push({ merchant: d.merchant, amount: d.line.amount, count }); }
   }
   return plan;

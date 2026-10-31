@@ -23,8 +23,8 @@ const line = (o: Partial<StatementLine> & { description: string; amount: number 
 
 describe("statement-to-action groups", () => {
   it("holds back a near-match as a possible duplicate instead of registering it", () => {
-    // Same amount one day apart, but no shared merchant words: score below the 0.7 skip bar.
-    const existing = expense({ id: "e1", title: "Village market", merchant: "Village market", amount: 1200, originalAmount: 1200, date: "2026-10-04" });
+    // Same amount five days apart with no shared merchant words: score 0.5, below the 0.7 skip bar.
+    const existing = expense({ id: "e1", title: "Village market", merchant: "Village market", amount: 1200, originalAmount: 1200, date: "2026-09-30" });
     const plan = planStatementRegistration([line({ description: "UPI-LOCALSTORE-9921", amount: 1200 })], [], ctx({ transactions: [existing] }));
     expect(plan.register).toHaveLength(0);
     expect(plan.possibleDuplicates).toHaveLength(1);
