@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { ArrowUp, Archive, Pencil, Plus, Merge, Trash2 } from "lucide-react";
 import { Button } from "./ui/button";
@@ -11,21 +11,23 @@ import { Label } from "./ui/label";
 import { CURRENCIES } from "@/lib/expenses";
 
 export function FinanceSettings() {
-  const { preferences:p, savePreferences, moveCategory, name, updateName }=useStore();
+  const { preferences:p, savePreferences, moveCategory, name, updateName, loading }=useStore();
   const [displayName, setDisplayName] = useState(name);
   const [category,setCategory]=useState(""); const [tag,setTag]=useState(""); const [group,setGroup]=useState("Project");
+  useEffect(()=>setDisplayName(name),[name]);
   const run=async(fn:()=>Promise<void>)=>{try{await fn();toast.success("Saved");}catch(e){toast.error((e as Error).message);}};
+  if(loading)return <p role="status">Loading your settings…</p>;
   return <section className="mb-8 space-y-6">
     <div className="grid gap-3 sm:grid-cols-2">
       <div className="grid gap-1"><Label htmlFor="display-name">Your name</Label><div className="flex gap-2"><Input id="display-name" value={displayName} onChange={e=>setDisplayName(e.target.value)} /><Button variant="outline" onClick={()=>run(()=>updateName(displayName))}>Save name</Button></div></div>
       <div className="grid gap-1"><Label>Default bill currency</Label><Select value={p.defaultCurrency} onValueChange={v=>run(()=>savePreferences({...p,defaultCurrency:v}))}><SelectTrigger aria-label="Default currency"><SelectValue /></SelectTrigger><SelectContent>{CURRENCIES.map(c=><SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent></Select></div>
       <div className="grid gap-1"><Label>AI answer language</Label><Select value={p.language} onValueChange={v=>run(()=>savePreferences({...p,language:v as Language}))}><SelectTrigger aria-label="AI language"><SelectValue /></SelectTrigger><SelectContent>{Object.entries(LANGUAGES).map(([v,label])=><SelectItem key={v} value={v}>{label}</SelectItem>)}</SelectContent></Select></div>
       <div className="grid gap-1"><Label htmlFor="reminder-days">Reminder lead days</Label><Input id="reminder-days" type="number" min="0" max="30" defaultValue={p.reminderDays} onBlur={e=>run(()=>savePreferences({...p,reminderDays:Math.min(30,Math.max(0,Number(e.target.value)||0))}))} /></div>
-      <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={p.aiEnabled} onChange={e=>run(()=>savePreferences({...p,aiEnabled:e.target.checked}))} />Allow AI assistance</label>
-      <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={p.aiReadsDocuments} onChange={e=>run(()=>savePreferences({...p,aiReadsDocuments:e.target.checked}))} />Allow AI to read uploaded documents</label>
+      <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={p.aiEnabled} onChange={e=>run(()=>savePreferences({...p,aiEnabled:!p.aiEnabled}))} />Allow AI assistance</label>
+      <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={p.aiReadsDocuments} onChange={e=>run(()=>savePreferences({...p,aiReadsDocuments:!p.aiReadsDocuments}))} />Allow AI to read uploaded documents</label>
     </div>
     <div className="flex flex-wrap items-center gap-3"><h2 className="font-display text-xl font-bold">Appearance</h2><Select value={p.theme} onValueChange={v=>run(()=>savePreferences({...p,theme:v as typeof p.theme}))}><SelectTrigger className="w-36" aria-label="Theme"><SelectValue/></SelectTrigger><SelectContent>{["light","dark","system"].map(v=><SelectItem key={v} value={v}>{v}</SelectItem>)}</SelectContent></Select>
-    <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={p.reminders} onChange={e=>run(()=>savePreferences({...p,reminders:e.target.checked}))}/>Payment reminders</label></div>
+    <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={p.reminders} onChange={e=>run(()=>savePreferences({...p,reminders:!p.reminders}))}/>Payment reminders</label></div>
     <div><h2 className="mb-3 font-display text-xl font-bold">Categories</h2><div className="mb-3 flex gap-2"><Input aria-label="New category" value={category} onChange={e=>setCategory(e.target.value)} maxLength={60} placeholder="Category name"/><Button size="icon" aria-label="Add category" disabled={!category.trim()} onClick={()=>run(async()=>{if(p.categories.some(c=>c.name.toLowerCase()===category.trim().toLowerCase()))throw Error("Category already exists");await savePreferences({...p,categories:[...p.categories,{name:category.trim(),archived:false}]});setCategory("");})}><Plus/></Button></div>
     <ul className="divide-y">{p.categories.map((c,i)=><li key={c.name} className="flex items-center gap-1 py-2"><span className="min-w-0 flex-1 truncate text-sm">{c.name}{c.archived&&" · archived"}</span>
     <Button size="icon" variant="ghost" aria-label={`Move ${c.name} up`} disabled={i===0} onClick={()=>run(()=>{const cats=[...p.categories];const prior=cats[i-1];if(prior){cats[i-1]=c;cats[i]=prior;}return savePreferences({...p,categories:cats});})}><ArrowUp className="h-4 w-4"/></Button>

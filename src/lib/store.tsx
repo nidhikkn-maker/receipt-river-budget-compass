@@ -250,8 +250,10 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
   }, [userId]);
 
   const savePreferences: Ctx["savePreferences"] = async (p) => {
-    check((await supabase.from("finance_preferences").upsert({ owner_id: userId, data: p as unknown as Json, updated_at: new Date().toISOString() })).error);
+    const previous=preferences;
     setPreferences(p);
+    try { check((await supabase.from("finance_preferences").upsert({ owner_id: userId, data: p as unknown as Json, updated_at: new Date().toISOString() })).error); }
+    catch(e){setPreferences(previous);throw e;}
   };
   const ensureCategory: Ctx["ensureCategory"] = async (cat) => {
     if (preferences.categories.some((c) => c.name === cat)) return;
