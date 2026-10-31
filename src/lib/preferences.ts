@@ -1,3 +1,4 @@
+import type { PaymentInstrument } from "./payment-instruments";
 import { CATEGORIES, memberShares, type Expense } from "./expenses";
 import { defaultEmergency, type BriefSettings, type EmergencySettings, type MerchantAliases, type Milestone, type Trip, type WeeklyBrief } from "./intelligence";
 
@@ -51,6 +52,8 @@ export interface FinancePreferences {
   merchantAliases: MerchantAliases;
   brief: BriefSettings;
   briefs: { id: string; generatedAt: string; data: WeeklyBrief }[];
+  /** Saved payment methods (UPI IDs, cards, wallets…), each linked to an account. */
+  paymentInstruments: PaymentInstrument[];
 }
 
 export const DEFAULT_TAGS: GroupedTag[] = [
@@ -66,7 +69,7 @@ export function defaultPreferences(): FinancePreferences {
     categories: CATEGORIES.map((name) => ({ name, archived: false })), tags: DEFAULT_TAGS, budgets: [], homeHidden: [], homeOrder: [...HOME_SECTIONS],
     theme: "system", reminders: true, reminderDays: 3, defaultCurrency: "INR", language: "en", aiEnabled: true, aiReadsDocuments: true, cardAlertPct: 30, homePeriod: "month",
     freshness: { reviewDays: 14, outdatedDays: 45, perAccount: {} }, inboxDismissed: [], statementBalances: {}, splitTemplates: [],
-    emergency: defaultEmergency(), irregularRejected: [], irregularConfirmed: [], milestones: [], trips: [], merchantAliases: {}, brief: { enabled: true, day: 1, hour: 8 }, briefs: [],
+    emergency: defaultEmergency(), irregularRejected: [], irregularConfirmed: [], milestones: [], trips: [], merchantAliases: {}, brief: { enabled: true, day: 1, hour: 8 }, briefs: [], paymentInstruments: [],
   };
 }
 
@@ -95,7 +98,7 @@ export function normalizePreferences(raw: Partial<FinancePreferences> | null | u
   if (!Array.isArray(p.splitTemplates)) p.splitTemplates = [];
   p.emergency = { ...defaultEmergency(), ...(p.emergency ?? {}) };
   p.emergency.targetMonths = Number.isFinite(p.emergency.targetMonths) ? Math.min(24, Math.max(1, p.emergency.targetMonths)) : 6;
-  for (const k of ["irregularRejected", "irregularConfirmed", "milestones", "trips", "briefs"] as const) if (!Array.isArray(p[k])) (p as unknown as Record<string, unknown[]>)[k] = [];
+  for (const k of ["irregularRejected", "irregularConfirmed", "milestones", "trips", "briefs", "paymentInstruments"] as const) if (!Array.isArray(p[k])) (p as unknown as Record<string, unknown[]>)[k] = [];
   p.briefs = p.briefs.slice(0, 26);
   if (!p.merchantAliases || typeof p.merchantAliases !== "object") p.merchantAliases = {};
   p.brief = { ...d.brief, ...(p.brief ?? {}) };

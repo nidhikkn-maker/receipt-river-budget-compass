@@ -64,6 +64,7 @@ export interface Expense {
   txnType?: import("./ledger").TxnType;
   accountId?: string | null;
   toAccountId?: string | null;
+  paymentInstrumentId?: string | null;
   tags?: string[];
   receiptDetails?: ReceiptDetails;
   reimbursementStatus?: ReimbursementStatus;
@@ -130,6 +131,7 @@ export interface ExpenseInput {
   txnType?: import("./ledger").TxnType;
   accountId?: string | null;
   toAccountId?: string | null;
+  paymentInstrumentId?: string | null;
   tags?: string[];
   receiptDetails?: ReceiptDetails;
   reimbursementStatus?: ReimbursementStatus;
@@ -191,12 +193,13 @@ export function validateBudget(amount: number) {
 
 export const convert = (amount: number, rate: number) => Math.round(amount * rate * 100) / 100;
 
-export interface Filters { scope?: Scope | "all"; memberId?: string | "all" | "me"; from?: string; to?: string; category?: Category | "all"; accountId?: string; paymentMethod?: string; tag?: string; query?: string; txnType?: string; merchant?: string; tagAll?: string[]; department?: string }
+export interface Filters { scope?: Scope | "all"; memberId?: string | "all" | "me"; from?: string; to?: string; category?: Category | "all"; accountId?: string; paymentMethod?: string; paymentInstrumentId?: string; tag?: string; query?: string; txnType?: string; merchant?: string; tagAll?: string[]; department?: string }
 
 export function applyFilters(list: Expense[], f: Filters): Expense[] {
   return list.filter((e) =>
     (!f.accountId || f.accountId === "all" || e.accountId === f.accountId || e.toAccountId === f.accountId) &&
     (!f.paymentMethod || f.paymentMethod === "all" || e.paymentMethod === f.paymentMethod) &&
+    (!f.paymentInstrumentId || f.paymentInstrumentId === "all" || e.paymentInstrumentId === f.paymentInstrumentId) &&
     (!f.tag || f.tag === "all" || e.tags?.includes(f.tag)) &&
     (!f.tagAll?.length || f.tagAll.every((t) => e.tags?.includes(t))) &&
     (!f.merchant || f.merchant === "all" || (e.merchant ?? "").trim().toLowerCase() === f.merchant.trim().toLowerCase()) &&
