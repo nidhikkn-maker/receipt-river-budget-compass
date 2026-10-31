@@ -28,7 +28,7 @@ export const Route = createFileRoute("/_authenticated/reconcile")({
 });
 
 function Reconcile() {
-  const { transactions: expenses, accounts, preferences, save, reconcile } = useStore();
+  const { transactions: expenses, accounts, preferences, save, reconcile, refresh } = useStore();
   const [statementAccount, setStatementAccount] = useState("all");
   const [lines, setLines] = useState<StatementLine[]>([]);
   const [fileName, setFileName] = useState("");
@@ -86,16 +86,22 @@ function Reconcile() {
   const registerAll = async () => {
     if (!queue.length) return;
     setBusy(true);
+    let done = 0;
+    const failed: string[] = [];
     try {
-      for (let i = 0; i < queue.length; i++) {
-        const d = queue[i]!;
+      for (const d of queue) {
         const id = crypto.randomUUID();
-        await save(draftToInput(d), { createId: id, noRefresh: true });
-        await reconcile(id, `${fileName} · ${d.line.date} · ${d.line.description}`.slice(0, 300), { noRefresh: i < queue.length - 1 });
+        try {
+          await save(draftToInput(d), { createId: id, noRefresh: true });
+          await reconcile(id, `${fileName} · ${d.line.date} · ${d.line.description}`.slice(0, 300), { noRefresh: true });
+          done++;
+        } catch { failed.push(d.title); }
       }
-      toast.success(`${queue.length} expenses registered from ${fileName}`);
+      await refresh();
+      if (done) toast.success(`${done} ${done === 1 ? "expense" : "expenses"} registered from ${fileName}`);
+      if (failed.length) toast.error(`${failed.length} couldn't be registered — try again`);
       setLines([]); setExcluded({}); setOverrides({});
-    } catch (e) { toast.error((e as Error).message); } finally { setBusy(false); }
+    } finally { setBusy(false); }
   };
 
   const confirmAll = async () => {
