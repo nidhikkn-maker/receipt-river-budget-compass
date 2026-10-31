@@ -9,6 +9,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { applyFilters } from "@/lib/expenses";
 import { buildReport, downloadBlob, toCsv, toPdf, type ReportKind } from "@/lib/reports";
 import { useStore } from "@/lib/store";
+import { BarChart, Bar, XAxis, Tooltip, ResponsiveContainer } from "recharts";
+import { money, totalsBy } from "@/lib/expenses";
+import { ExpenseTable } from "@/components/ExpenseTable";
 
 export const Route = createFileRoute("/_authenticated/reports")({
   head: () => ({
@@ -35,7 +38,9 @@ function Reports() {
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
   const [member, setMember] = useState("all");
+  const [selectedCategory, setSelectedCategory] = useState("all");
   const list = applyFilters(expenses, { from, to, memberId: member });
+  const categoryRows = Object.entries(totalsBy(list,e=>e.category)).map(([name,amount])=>({name,amount}));
   const stamp = new Date().toISOString().slice(0, 10);
   const subtitle = `${member === "all" ? "Everyone" : memberName(member === "me" ? null : member)} · ${from || "start"} to ${to || "today"} · amounts in INR · generated ${stamp}`;
 
@@ -46,7 +51,7 @@ function Reports() {
 
   return (
     <>
-      <PageTitle eyebrow="Reports" title="Export" sub="CSV for spreadsheets, PDF for sharing." />
+      <PageTitle eyebrow="Insights" title="Spending & reports" />
       <div className="mb-6 grid gap-3 rounded-3xl border bg-card p-5 sm:grid-cols-4 sm:items-end">
         <div className="grid gap-1"><Label htmlFor="from">From</Label><Input id="from" type="date" value={from} onChange={(e) => setFrom(e.target.value)} /></div>
         <div className="grid gap-1"><Label htmlFor="to">To</Label><Input id="to" type="date" value={to} onChange={(e) => setTo(e.target.value)} /></div>
@@ -63,6 +68,12 @@ function Reports() {
         </div>
         <p className="text-sm text-muted-foreground">{list.length} expense{list.length === 1 ? "" : "s"} in range</p>
       </div>
+      <section className="mb-8">
+        <h2 className="font-display text-xl font-bold">Category spending</h2>
+        <ResponsiveContainer width="100%" height={260}><BarChart data={categoryRows}><XAxis dataKey="name" tick={{fontSize:11}}/><Tooltip formatter={(v:number)=>money(v)}/><Bar dataKey="amount" fill="var(--chart-1)" onClick={data=>setSelectedCategory(String(data.name))}/></BarChart></ResponsiveContainer>
+        <Select value={selectedCategory} onValueChange={setSelectedCategory}><SelectTrigger aria-label="Insight category"><SelectValue/></SelectTrigger><SelectContent><SelectItem value="all">All categories</SelectItem>{categoryRows.map(c=><SelectItem key={c.name} value={c.name}>{c.name}</SelectItem>)}</SelectContent></Select>
+        <div className="mt-4"><ExpenseTable items={list.filter(e=>selectedCategory==="all"||e.category===selectedCategory)} empty="No transactions in this range." /></div>
+      </section>
       <div className="grid gap-4 md:grid-cols-3">
         {KINDS.map((k) => (
           <div key={k.kind} className="flex flex-col rounded-3xl border bg-card p-5">
