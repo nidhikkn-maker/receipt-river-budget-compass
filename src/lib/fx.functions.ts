@@ -50,6 +50,9 @@ const SaveInput = z.object({
   accountId: z.string().uuid().nullable().default(null),
   toAccountId: z.string().uuid().nullable().default(null),
   paymentInstrumentId: z.string().regex(/^[A-Za-z0-9-]{1,64}$/).nullable().default(null),
+  tripId: z.string().uuid().nullable().default(null),
+  principal: z.number().nonnegative().max(100_000_000).nullable().default(null),
+  interest: z.number().nonnegative().max(100_000_000).nullable().default(null),
   tags: z.array(z.string().trim().min(1).max(40)).max(20).default([]),
   receiptDetails: z.object({
     tax: z.number().nonnegative().nullable().optional(),
@@ -78,6 +81,13 @@ export const saveExpense = createServerFn({ method: "POST" })
     if (["transfer", "card_payment", "loan_repayment", "investment"].includes(data.txnType) && (!data.accountId || !data.toAccountId || data.accountId === data.toAccountId)) {
       return { ok: false as const, error: "Pick two different accounts for a transfer" };
     }
+    if (data.principal != null || data.interest != null) {
+      if (data.txnType !== "loan_repayment") return { ok: false as const, error: "Only loan repayments have a principal/interest split" };
+      if (data.principal == null || data.interest == null) return { ok: false as const, error: "Fill in both principal and interest, or neither" };
+      if (Math.abs(Math.round((data.principal + data.interest) * 100) - Math.round(data.originalAmount * 100)) > 1) {
+        return { ok: false as const, error: "Principal and interest must add up to the payment" };
+      }
+    }
     let fx: { rate: number; date: string };
     try {
       fx = await fetchRate(data.currency, data.date);
@@ -92,6 +102,9 @@ export const saveExpense = createServerFn({ method: "POST" })
       reimbursement_status: data.txnType === "expense" ? data.reimbursementStatus : "none", adjustment_sign: data.txnType === "adjustment" ? data.adjustmentSign : 1,
       txn_type: data.txnType, account_id: data.accountId, to_account_id: ["transfer", "card_payment", "loan_repayment", "investment"].includes(data.txnType) ? data.toAccountId : null, tags: data.tags,
       payment_instrument_id: data.paymentInstrumentId,
+      trip_id: ["advance", "advance_settlement"].includes(data.txnType) ? data.tripId : null,
+      principal: data.txnType === "loan_repayment" ? data.principal : null,
+      interest: data.txnType === "loan_repayment" ? data.interest : null,
       workspace_allocations: data.workspaceAllocations,
       updated_at: new Date().toISOString(),
       ...(data.receipts ? { receipts: data.receipts } : {}),

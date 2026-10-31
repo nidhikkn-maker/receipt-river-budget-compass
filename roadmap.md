@@ -142,3 +142,5 @@
 - [x] Trip auto-association, trip insights, booking-payment match suggestions, trip closure, trip CSV
 - [x] Dedicated advance/card-payment/loan/investment entry types in the shared form
 - [ ] Full 17-point acceptance pass
+- [x] Trip picker on travel advances (trip_id column, no tag needed; tagged advances still count)
+- [x] Principal/interest split on loan repayments (validated to sum to the payment; EMI split prefill from the linked loan)

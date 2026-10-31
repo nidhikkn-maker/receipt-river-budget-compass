@@ -75,6 +75,11 @@ export interface Expense {
   allocations?: Allocation[];
   workspaceAllocations?: import("./workspaces").WorkspaceShare[];
   reimbursement?: import("./reimbursements").ReimbursementInfo;
+  /** Advances/settlements: the trip they belong to (no tag needed). */
+  tripId?: string | null;
+  /** Loan repayments: principal and interest parts; both set or both empty. */
+  principal?: number | null;
+  interest?: number | null;
 }
 
 export interface Allocation { category: string; amount: number; tags?: string[]; memberId?: string | null; note?: string }
@@ -139,6 +144,9 @@ export interface ExpenseInput {
   reimbursementStatus?: ReimbursementStatus;
   adjustmentSign?: 1 | -1;
   workspaceAllocations?: import("./workspaces").WorkspaceShare[];
+  tripId?: string | null;
+  principal?: number | null;
+  interest?: number | null;
 }
 
 export function validateExpense(s: ExpenseInput) {
@@ -149,6 +157,12 @@ export function validateExpense(s: ExpenseInput) {
   if (s.txnType && ["transfer", "card_payment", "loan_repayment", "investment"].includes(s.txnType)) {
     if (!s.accountId || !s.toAccountId) throw new ValidationError("Pick both accounts for a transfer");
     if (s.accountId === s.toAccountId) throw new ValidationError("Choose two different accounts");
+  }
+  if (s.principal != null || s.interest != null) {
+    if (s.txnType !== "loan_repayment") throw new ValidationError("Only loan repayments have a principal/interest split");
+    if (s.principal == null || s.interest == null) throw new ValidationError("Fill in both principal and interest, or neither");
+    if (!(s.principal >= 0) || !(s.interest >= 0)) throw new ValidationError("Principal and interest can't be negative");
+    if (Math.abs(r2(s.principal + s.interest) - r2(s.amount)) > 0.009) throw new ValidationError(`Principal and interest add up to ${r2(s.principal + s.interest)}, but the payment is ${r2(s.amount)}`);
   }
   if (s.splits?.length) validateSplits(s.splits, s.amount);
 }
