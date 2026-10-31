@@ -325,3 +325,17 @@ export function subscriptionSummary(commitments: Commitment[], expenses: { merch
     monthly, annual: r2(monthly * 12), renewals, increases, duplicates,
   };
 }
+
+/** Hypothetical what-ifs for every payable loan: lump-sum prepayments and a raised EMI. Pure, so the assistant only explains them. */
+export function debtScenarios(loans: { name: string; principal: number; rate: number; emi: number }[], extras = [10000, 50000], emiRaisePct = 10) {
+  return loans.filter((l) => l.principal > 0 && amortize(l.principal, l.rate, l.emi).payable).map((l) => {
+    const base = amortize(l.principal, l.rate, l.emi);
+    const raised = r2(l.emi * (1 + emiRaisePct / 100));
+    const up = amortize(l.principal, l.rate, raised);
+    return {
+      loan: l.name, hypothetical: true as const, baseMonths: base.months, baseInterest: base.totalInterest,
+      prepay: extras.map((x) => { const p = prepayment(l.principal, l.rate, l.emi, x); return { extra: x, monthsSaved: p.reduceTenure.monthsSaved, interestSaved: p.reduceTenure.interestSaved, newEmiIfTenureKept: p.reduceEmi.newEmi }; }),
+      raiseEmi: { pct: emiRaisePct, newEmi: raised, monthsSaved: base.months - up.months, interestSaved: r2(base.totalInterest - up.totalInterest) },
+    };
+  });
+}

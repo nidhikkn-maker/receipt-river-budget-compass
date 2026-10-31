@@ -1,6 +1,6 @@
 // One place that turns raw records into the figures the Home, Plan, Wealth and AI screens show.
 import { accountBalance, accountValue, cashflow, isLiability, netWorth, type Account, type Txn, type Valuation } from "./ledger";
-import { addDays, amortize, closureDate, detectSubscriptions, forecast, goalProgress, incomeTracking, monthEnd, occurrences, safeToSpend, subscriptionSummary, type Commitment } from "./planning";
+import { addDays, amortize, closureDate, debtScenarios, detectSubscriptions, forecast, goalProgress, incomeTracking, monthEnd, occurrences, safeToSpend, subscriptionSummary, type Commitment } from "./planning";
 import { cardCycle, cardDues, type CardEmi, type LoanPayment } from "./cards";
 import { anomalies, budgetRecommendations, lastMonthCompare, monthToDateCompare, savingsIdeas, spendBy } from "./insights";
 
@@ -148,6 +148,7 @@ export function assistantFacts(i: PositionInput) {
       expectedIncomeRestOfMonth: { all: p.income.expectedRemaining, confirmedOnly: p.income.expectedConfirmed },
       subscriptions: { activeCount: p.subscriptions.active, monthlyCost: p.subscriptions.monthly, annualCost: p.subscriptions.annual, priceIncreases: p.subscriptions.summary.increases, possibleDuplicates: p.subscriptions.summary.duplicates.map((d) => d.names), possibleFromHistory: p.subscriptions.detected.slice(0, 10) },
       loans: p.loans.map((l) => ({ name: l.name, outstanding: l.principal, rate: l.rate, emi: l.emi, nextDue: l.nextDue, monthsLeft: Number.isFinite(l.monthsLeft) ? l.monthsLeft : null, interestLeft: Number.isFinite(l.interestLeft) ? l.interestLeft : null, closesOn: l.closesOn, payable: l.payable })),
+      debtWhatIfs_HYPOTHETICAL: debtScenarios(p.loans.map((l) => ({ name: l.name, principal: l.principal, rate: l.rate, emi: l.emi }))),
     },
     insights: {
       monthToDateVsLastMonth: monthToDateCompare(i.transactions, i.today),

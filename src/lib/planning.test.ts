@@ -72,3 +72,18 @@ describe("goals and subscriptions", () => {
     expect(s[0]!.increased).toBe(true);
   });
 });
+
+import { debtScenarios as _ds } from "./planning";
+describe("debtScenarios", () => {
+  it("prepaying ₹50,000 on a ₹5L 9% loan with ₹10,000 EMI saves months and interest, more than ₹10,000 does", () => {
+    const s = _ds([{ name: "Car", principal: 500000, rate: 9, emi: 10000 }])[0]!;
+    expect(s.hypothetical).toBe(true);
+    expect(s.prepay[1]!.monthsSaved).toBeGreaterThan(s.prepay[0]!.monthsSaved);
+    expect(s.prepay[1]!.interestSaved).toBeGreaterThan(0);
+    expect(s.raiseEmi.newEmi).toBe(11000);
+    expect(s.raiseEmi.monthsSaved).toBeGreaterThan(0);
+  });
+  it("skips loans whose EMI cannot cover interest", () => {
+    expect(_ds([{ name: "Bad", principal: 1000000, rate: 24, emi: 1000 }])).toHaveLength(0);
+  });
+});
