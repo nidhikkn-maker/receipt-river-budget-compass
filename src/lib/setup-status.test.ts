@@ -32,3 +32,25 @@ describe("financial setup status", () => {
     expect(get(setupStatus({ accounts: [acc({})], expenses: [], preferences: p }), "methods")).toBe("attention");
   });
 });
+
+import { duplicateAccount, organisationUsage } from "./master-data";
+import { validateInstrument } from "./payment-instruments";
+describe("master record duplicates", () => {
+  it("blocks a second active account with the same name (case/space-insensitive) but allows archived names and self-rename", () => {
+    const list = [acc({ id: "1", name: "HDFC Savings" }), acc({ id: "2", name: "Old", archived: true })];
+    expect(duplicateAccount(list, { name: " hdfc  savings", kind: "savings" })?.id).toBe("1");
+    expect(duplicateAccount(list, { name: "Old", kind: "savings" })).toBeNull();
+    expect(duplicateAccount(list, { id: "1", name: "HDFC Savings", kind: "savings" })).toBeNull();
+  });
+  it("blocks the same card last-4 twice", () => {
+    expect(duplicateAccount([acc({ id: "c", name: "Amex", kind: "credit_card", lastFour: "1234" })], { name: "Amex Gold", kind: "credit_card", lastFour: "1234" })?.id).toBe("c");
+  });
+  it("blocks a duplicate UPI ID", () => {
+    const a = [acc({ id: "a" })];
+    const first = { id: "p1", type: "upi", nickname: "GPay", handle: "me@okhdfc", accountId: "a" } as never;
+    expect(() => validateInstrument({ id: "p2", type: "upi", nickname: "PhonePe", handle: "ME@okhdfc", accountId: "a" } as never, a, [first])).toThrow(/already saved/);
+  });
+  it("organisation usage counts entries that reference it", () => {
+    expect(organisationUsage([{ group: "Organisation", name: "Acme" }, { group: "Person", name: "X" }], [{ tags: ["Organisation: Acme"] }, { tags: [] }])).toEqual([{ name: "Acme", uses: 1 }]);
+  });
+});
