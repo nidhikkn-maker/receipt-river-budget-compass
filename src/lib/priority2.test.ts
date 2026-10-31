@@ -47,8 +47,8 @@ const ap = (o: Partial<AutopilotInput> = {}): AutopilotInput => ({
 describe("autopilot", () => {
   it("ranks a forecast shortfall above a subscription increase", () => {
     const recs = autopilot(ap({ shortDates: ["2026-11-10"], lowestProjected: -500, subscriptions: { monthly: 0, duplicates: [], increases: [{ name: "Netflix", from: 499, to: 649 }] } }));
-    expect(recs[0].priority).toBe("high");
-    expect(recs[1].impact).toBe(1800);
+    expect(recs[0]!.priority).toBe("high");
+    expect(recs[1]!.impact).toBe(1800);
   });
   it("only flags reimbursements waiting 14+ days", () => {
     expect(autopilot(ap({ pendingReimbursements: { count: 1, amount: 900, oldestDays: 13 } }))).toHaveLength(0);
@@ -56,7 +56,7 @@ describe("autopilot", () => {
   });
   it("dismissed items stay hidden; snoozed ones return after their date", () => {
     const recs = autopilot(ap({ overdue: [{ name: "Rent", amount: 1, due: "2026-10-30" }], idleCash: 5000 }));
-    const [a, b] = recs.map((r) => r.key);
+    const [a, b] = recs.map((r) => r.key) as [string, string];
     const acts = { [a]: { status: "dismissed" as const, at: "2026-11-01" }, [b]: { status: "later" as const, at: "2026-11-01", until: "2026-11-08" } };
     expect(applyAutopilotActions(recs, acts, "2026-11-02").active).toHaveLength(0);
     expect(applyAutopilotActions(recs, acts, "2026-11-08").active.map((r) => r.key)).toEqual([b]);
