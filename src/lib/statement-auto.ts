@@ -2,7 +2,7 @@
 // A line is only auto-registered when the rules are confident; anything that needs a
 // person's decision (transfers, cash withdrawals, unclear credits) is returned for review.
 
-import { matchScore, type Expense, type ExpenseInput, type PaymentMethod, type Scope, type StatementLine, type Match } from "./expenses";
+import { matchScore, PAYMENT_METHODS, type Expense, type ExpenseInput, type PaymentMethod, type Scope, type StatementLine, type Match } from "./expenses";
 import { suggestForMerchant, type Account, type AccountKind, type TxnType } from "./ledger";
 import { resolveCategory, type CategorySetting } from "./preferences";
 
@@ -41,40 +41,40 @@ export interface StatementContext {
 /** Keyword -> category. Checked in order, first hit wins. Names must exist in the catalog. */
 const CATEGORY_RULES: [RegExp, string][] = [
   [/\b(PETROL|DIESEL|FUEL|HPCL|BPCL|IOC|INDICAN|SHELL|CASTROL|FASTAG|FAST TAG|TOLL|PARIVAHAN)\b/, "Fuel and vehicle expenses"],
-  [/\b(SWIGGY|ZOMATO|DOMINO|MCDONALD|KFC|BURGER|PIZZA|RESTAURANT|CAFE|COFFEE|BAKERY|BIRYANI|TIFFIN|EATS|BERMICO|SHUTTLER|RAAGA|DINE|BUFFET|ICE ?CREAM|FOOD)\b/, "Food and beverages"],
-  [/\b(BIGBASKET|BLINKIT|ZEPTO|JIO ?MART|DMART|RELIANCE FRESH|LOCALCIRCLE|SUPERMARKET|GROCERY|GROCERS|SPENCERS|METRO|NILGIRIS|LILAVATI|FRESH|KIRANA)\b/, "Groceries"],
-  [/\b(AMAZON|FLIPKART|MYNTRA|AJIO|NYKAA|CROMA|MEESHO|ALIEXPRESS|EBAY|SHOPS?|STORE)\b/, "Shopping"],
-  [/\b(ELECTRICITY|ELECTRIC|POWER|TNEB|BESCOM|MSEB|BESCOM|GAS|LPG|PIPED|WATER|BROADBAND|AIRTEL|VODAFONE|IDEA|BSNL|JIO|POSTPAID|RECHARGE|UTILITY|UTILITIES)\b/, "Utility bills"],
-  [/\b(NETFLIX|SPOTIFY|PRIME|YOUTUBE|APPLE ?\.COM|GOOGLE ?ONE|HOTSTAR|SONYLIV|JIOHOTSTAR|SUBSCRIPTION|MEMBERSHIP|CHAIPPT|TATASCAP|SONIC)\b/, "Digital subscriptions"],
-  [/\b(UBER|OLA|IRCTC|RAIL|INDIGO|AIRASIA|FLIGHT|AIR ?INDIA|MAKEMYTRIP|MAKE MY TRIP|REDBUS|ABHIBUS|AKULE|PARKING|HOTEL|TRAVEL|ACCOMMODATION|VISA)\b/, "Travel and accommodation"],
+  [/\b(SWIGGY|ZOMATO|DOMINO|MCDONALD|KFC|BURGER|PIZZA|RESTAURANT|CAFE|COFFEE|BAKERY|BIRYANI|TIFFIN|EATS|BERMICO|SHUTTLER|RAAGA|DINE|BUFFET|ICE CREAM|FOOD)\b/, "Food and beverages"],
+  [/\b(BIGBASKET|BLINKIT|ZEPTO|JIO MART|DMART|RELIANCE FRESH|LOCALCIRCLE|SUPERMARKET|GROCERY|GROCERS|SPENCERS|METRO|NILGIRIS|LILAVATI|KIRANA)\b/, "Groceries"],
+  [/\b(AMAZON|FLIPKART|MYNTRA|AJIO|NYKAA|CROMA|MEESHO|ALIEXPRESS|EBAY|SHOP|SHOPS|STORE)\b/, "Shopping"],
+  [/\b(ELECTRICITY|ELECTRIC|POWER|TNEB|BESCOM|MSEB|GAS|LPG|PIPED|WATER|BROADBAND|AIRTEL|VODAFONE|IDEA|BSNL|JIO|POSTPAID|RECHARGE|UTILITY|UTILITIES)\b/, "Utility bills"],
+  [/\b(NETFLIX|SPOTIFY|PRIME|YOUTUBE|APPLE COM|APPLE|GOOGLE ONE|HOTSTAR|SONYLIV|JIOHOTSTAR|SUBSCRIPTION|MEMBERSHIP|CHAIPPT|TATASCAP)\b/, "Digital subscriptions"],
+  [/\b(UBER|OLA|IRCTC|RAIL|INDIGO|AIRASIA|FLIGHT|AIR INDIA|MAKEMYTRIP|MAKE MY TRIP|REDBUS|ABHIBUS|AKULE|PARKING|HOTEL|TRAVEL|ACCOMMODATION)\b/, "Travel and accommodation"],
   [/\b(PHARMACY|PHARMA|MEDICINE|MEDICARE|HOSPITAL|CLINIC|DIAGNOSTIC|LAB|APOLLO|1MG|PRACTO|HEALTHCARE|DENTAL|SCAN|THERAPY)\b/, "Medical and healthcare"],
   [/\b(SCHOOL|COLLEGE|UNIVERSITY|TUITION|COACHING|ACADEMY|COURSE|UDEMY|EDUCATION|EXAM|FEES)\b/, "Education"],
-  [/\b(LIC|INSURANCE|POLICY|PREMIUM|HDFC ?LIFE|ICICI ?LIFE|TATTA|HEALTH ?INSURANCE)\b/, "Insurance"],
-  [/\b(PVR|INOX|CINEPOLIS|BOOKMYSHOW|MOVIE|CINEMA|STEAM|CONCERT|GAMES|NETFLIX ?AND ?CHILL)\b/, "Entertainment"],
-  [/\b(SALON|SALON|GROOMING|COSMETIC|GYM|FITNESS|SPA|BARBER|HAIRCUT)\b/, "Personal care"],
-  [/\b(MAID|DOMESTIC|COOK|NANNY|HOUSE ?KEEP|STAFF)\b/, "Domestic staff"],
+  [/\b(LIC|INSURANCE|POLICY|PREMIUM|HDFC LIFE|ICICI LIFE|TATTA|HEALTH INSURANCE)\b/, "Insurance"],
+  [/\b(PVR|INOX|CINEPOLIS|BOOKMYSHOW|MOVIE|CINEMA|STEAM|CONCERT|GAMES)\b/, "Entertainment"],
+  [/\b(SALON|GROOMING|COSMETIC|GYM|FITNESS|SPA|BARBER|HAIRCUT)\b/, "Personal care"],
+  [/\b(MAID|DOMESTIC|COOK|NANNY|HOUSE KEEP|STAFF)\b/, "Domestic staff"],
   [/\b(RENT|RENTAL|LANDLORD|MAINTENANCE|FURNITURE|IKEA|ELECTRONIC|APPLIANCE|CLEANING|HARDWARE|PAINT)\b/, "Household expenses"],
   [/\b(GIFT|FLOWER|DONATION|CHARITY|PUJA|DIWALI|CRACKER)\b/, "Gifts and occasions"],
-  [/\b(KIDS?|CHILD|TOY|DIAPER|BABY|CRèche|CRECHE|DAYCARE)\b/, "Family and children"],
-  [/\b(CHARGE|CHARGES|PENALTY|SURCHARGE|FINE|AMCC|MINIMUM BALANCE|MARKUP|FOREX FEE|ATM FEE|GST)\b/, "Financial charges"],
+  [/\b(KIDS|KID|CHILD|TOY|DIAPER|BABY|CRCHE|CRECHE|DAYCARE)\b/, "Family and children"],
+  [/\b(CHARGE|CHARGES|PENALTY|SURCHARGE|FINE|AMCC|MINIMUM BALANCE|MARKUP|FOREX FEE|ATM FEE|LATE FEE|GST)\b/, "Financial charges"],
   [/\b(OFFICE|STATIONERY|PAPERMARK|CANVA|ADOBE|ZOOM|SLACK|DOMAIN|HOSTING)\b/, "Office & Supplies"],
 ];
 
-/** Keyword -> payment method. */
-const METHOD_RULES: [RegExp, PaymentMethod][] = [
-  [/\b(UPI|VPA|PAYTM|PHONEPE|PHONE ?PE|GPAY|G ?PAY|BHIM|TEZ|GOOGLE ?PAY|APPLE ?PAY|CRED|FUPO|TEZ)\b/, "upi"],
-  [/\b(CASH|ATM|WDL|WDL|CWD|WDL|CASHWDL)\b/, "cash"],
-  [/\b(NEFT|IMPS|RTGS|CHQ|CHEQUE|DD|DRAFT|TRANSFER|FUND ?TRANSFER)\b/, "bank_transfer"],
+/** Keyword -> payment method. "card" resolves to credit or debit from the statement account. */
+const METHOD_RULES: [RegExp, PaymentMethod | "card"][] = [
+  [/\b(UPI|VPA|PAYTM|PHONEPE|PHONE PE|GPAY|G PAY|BHIM|TEZ|GOOGLE PAY|APPLE PAY|CRED|FUPO)\b/, "upi"],
+  [/\b(CASH|ATM|CWD|WDL)\b/, "cash"],
+  [/\b(NEFT|IMPS|RTGS|CHQ|CHEQUE|DD|DRAFT|TRANSFER|FUND TRANSFER)\b/, "bank_transfer"],
   [/\b(CARD|POS|VISA|MASTERCARD|RUPAY|AMEX|EHC|SWIPE|CHIP|ECOM)\b/, "card"],
 ];
 
-const TRANSFER_DEBIT = /\b(TRANSFER|UTDR|UDR|SELF ?A ?C|A ?C ?TRANSFER|FUND ?TRANSFER|NEFT|IMPS|RTGS|CHQ ?WDL|WDL|WDL|CASH ?WDL|ATM)\b/;
-const CARD_OR_LOAN_PAYMENT = /\b(CREDIT ?CARD|CARD)\b.{0,18}\b(PAYMENT|BILL|DUE|OUTSTANDING)\b|\b(BILL|CARD|CREDIT ?CARD)\b.{0,12}\bPAYMENT\b|\bLOAN\b.{0,14}\b(EMI|REPAYMENT|PAYMENT|INSTALLMENT|DUE)\b|\bEMI\b|\bSIP\b|\bMUTUAL ?FUND\b|\bDEMAt\b|\bDEMAT\b|\bFD\b|\bINVESTMENT\b|\bSHARES?\b|\bGOLD ?BEES\b/;
-const REFUND_CREDIT = /\b(REFUND|REVERSAL|REVERSED|CASH ?BACK|CASHBACK|RETURN|CHARGEBACK|DR\.? ?REVERSAL)\b/;
-const INCOME_CREDIT = /\b(SALARY|STIPEND|PAYROLL|INTEREST|DIVIDEND|BONUS|REWARD|CREDIT ?INTEREST|PAYOUT|RENT ?IN)\b/;
-const TRANSFER_CREDIT = /\b(TRANSFER|UTCR|UDR|NEFT|IMPS|RTGS|FUND ?TRANSFER|SELF ?A ?C)\b/;
+const TRANSFER_DEBIT = /\b(TRANSFER|UTDR|UDR|SELF A C|A C TRANSFER|FUND TRANSFER|NEFT|IMPS|RTGS|CHQ WDL|WDL|CWD|CASH WDL|ATM)\b/;
+const CARD_OR_LOAN_PAYMENT = /\b(CREDIT CARD|CARD)\b.{0,18}\b(PAYMENT|BILL|DUE|OUTSTANDING)\b|\b(BILL|CARD|CREDIT CARD)\b.{0,12}\bPAYMENT\b|\bLOAN\b.{0,14}\b(EMI|REPAYMENT|PAYMENT|INSTALLMENT|DUE)\b|\bEMI\b|\bSIP\b|\bMUTUAL FUND\b|\bDEMAT\b|\bFD\b|\bINVESTMENT\b|\bSHARES?\b|\bGOLD BEES\b/;
+const REFUND_CREDIT = /\b(REFUND|REVERSAL|REVERSED|CASH BACK|CASHBACK|RETURN|CHARGEBACK)\b/;
+const INCOME_CREDIT = /\b(SALARY|STIPEND|PAYROLL|INTEREST|DIVIDEND|BONUS|REWARD|PAYOUT|RENT IN)\b/;
+const TRANSFER_CREDIT = /\b(TRANSFER|UTCR|UDR|NEFT|IMPS|RTGS|FUND TRANSFER|SELF A C)\b/;
 
-const norm = (s: string) => s.toUpperCase();
+const up = (s: string) => (s || "").toUpperCase();
 
 /** Turn a bank narration into a readable merchant name. */
 export function cleanMerchant(description: string): string {
@@ -82,7 +82,7 @@ export function cleanMerchant(description: string): string {
     .replace(/\b\d{5,}\b/g, " ")
     .replace(/\b\d{2}[./-]\d{2}[./-]\d{2,4}\b/g, " ")
     .replace(/\b(UTR|NARN|REF|TXN|CRR|CHQ|DR|CR)\b/gi, " ")
-    .replace(/[^\w\s&./-]/g, " ")
+    .replace(/[^\w\s&]/g, " ")
     .replace(/\s{2,}/g, " ")
     .trim();
   const words = raw.split(/\s+/).filter((w) => !/^\d+$/.test(w) && w.length > 1).slice(0, 4);
@@ -92,54 +92,55 @@ export function cleanMerchant(description: string): string {
 }
 
 function paymentMethodFor(description: string, accountKind: AccountKind | undefined): PaymentMethod {
-  const up = norm(description);
+  const text = up(description);
   for (const [re, method] of METHOD_RULES) {
-    if (!re.test(up)) continue;
+    if (!re.test(text)) continue;
     if (method === "card") return accountKind === "credit_card" ? "credit_card" : "debit_card";
     return method;
   }
   return "other";
 }
 
-function categoryFor(description: string, categories: CategorySetting[], fallback: string): string {
-  const up = norm(description);
+function categoryFor(description: string, categories: CategorySetting[]): string {
+  const text = up(description);
   for (const [re, name] of CATEGORY_RULES) {
-    if (!re.test(up)) continue;
+    if (!re.test(text)) continue;
     const resolved = resolveCategory(categories, name);
     if (resolved) return resolved;
   }
-  return resolveCategory(categories, fallback) ?? resolveCategory(categories, "Miscellaneous") ?? categories.find((c) => !c.archived)?.name ?? "Miscellaneous";
+  return resolveCategory(categories, "Miscellaneous") ?? categories.find((c) => !c.archived)?.name ?? "Miscellaneous";
 }
+
+const isPaymentMethod = (v: string | null | undefined): v is PaymentMethod =>
+  !!v && (PAYMENT_METHODS as readonly string[]).includes(v);
 
 /** Read one statement line into a draft entry, or say why a person must decide. */
 export function classifyStatementLine(line: StatementLine, ctx: StatementContext): StatementDraft {
-  const up = norm(line.description || "");
+  const text = up(line.description || "");
   const merchant = cleanMerchant(line.description || "");
   const account = ctx.accounts.find((a) => a.id === ctx.accountId);
-  const memory = suggestForMerchant(merchant, ctx.transactions as never);
+  const memory = suggestForMerchant(merchant, ctx.transactions);
   const base = {
     line,
     title: merchant,
     merchant,
     accountId: ctx.accountId,
     currency: ctx.currency,
-    paymentMethod: (memory?.paymentMethod as PaymentMethod) || paymentMethodFor(up, account?.kind),
+    paymentMethod: isPaymentMethod(memory?.paymentMethod) ? memory.paymentMethod : paymentMethodFor(text, account?.kind),
     scope: (memory?.scope === "business" ? "business" : "personal") as Scope,
   };
-  const category = memory?.category && resolveCategory(ctx.categories, memory.category)
-    ? resolveCategory(ctx.categories, memory.category)!
-    : categoryFor(up, ctx.categories, "Miscellaneous");
+  const category = (memory?.category && resolveCategory(ctx.categories, memory.category)) || categoryFor(text, ctx.categories);
 
   if (line.direction === "credit") {
-    if (REFUND_CREDIT.test(up)) return { ...base, category, txnType: "refund", reason: "Refund or reversal credited back" };
-    if (INCOME_CREDIT.test(up)) return { ...base, category, txnType: "income", reason: "Money coming in (salary, interest or dividend)" };
-    if (TRANSFER_CREDIT.test(up)) return { ...base, category, txnType: "transfer", reason: "Money moved in from another account — pick where it came from" };
+    if (REFUND_CREDIT.test(text)) return { ...base, category, txnType: "refund", reason: "Refund or reversal credited back" };
+    if (INCOME_CREDIT.test(text)) return { ...base, category, txnType: "income", reason: "Money coming in (salary, interest or dividend)" };
+    if (TRANSFER_CREDIT.test(text)) return { ...base, category, txnType: "transfer", reason: "Money moved in from another account — pick where it came from" };
     return { ...base, category, txnType: "income", reason: "Credit line — confirm it is income before saving" };
   }
 
-  if (CARD_OR_LOAN_PAYMENT.test(up)) return { ...base, category, txnType: "transfer", reason: "Card, loan or investment payment — pick the account it went to" };
-  if (TRANSFER_DEBIT.test(up)) return { ...base, category, txnType: "transfer", reason: "Transfer or cash withdrawal — pick where the money went" };
-  if (/\b(CHARGES?|PENALTY|SURCHARGE|MINIMUM BALANCE|AMCC|MARKUP|FOREX FEE|LATE FEE)\b/.test(up)) {
+  if (CARD_OR_LOAN_PAYMENT.test(text)) return { ...base, category, txnType: "transfer", reason: "Card, loan or investment payment — pick the account it went to" };
+  if (TRANSFER_DEBIT.test(text)) return { ...base, category, txnType: "transfer", reason: "Transfer or cash withdrawal — pick where the money went" };
+  if (/\b(CHARGES?|PENALTY|SURCHARGE|MINIMUM BALANCE|AMCC|MARKUP|FOREX FEE|LATE FEE)\b/.test(text)) {
     return { ...base, category: resolveCategory(ctx.categories, "Financial charges") ?? category, txnType: "expense", reason: "Bank or card charge" };
   }
   return { ...base, category, txnType: "expense", reason: "Regular purchase" };
@@ -151,7 +152,7 @@ export function planStatementRegistration(lines: StatementLine[], matches: Match
   for (const line of lines) {
     const match = matches.find((m) => m.line.ref === line.ref);
     if (match?.expense) {
-      plan.skipped.push({ line, reason: `Already matched to “${match.expense.title}”` });
+      plan.skipped.push({ line, reason: `Already matched to "${match.expense.title}"` });
       continue;
     }
     if (ctx.transactions.some((t) => matchScore(line, t, ctx.currency) >= 0.7)) {
@@ -184,4 +185,3 @@ export function draftToInput(draft: StatementDraft): ExpenseInput {
     tags: [],
   };
 }
-
