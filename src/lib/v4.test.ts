@@ -40,3 +40,15 @@ describe("travel", () => {
   it("cannot close with unpaid bookings", () => expect(closeBlockers({ ...base, bookings: [{ id: "b", kind: "hotel", provider: "H", ref: "", date: "2026-12-01", amount: 1, status: "unpaid" }] }, []).length).toBe(1));
   it("paid booking must link an entry", () => expect(() => validateBooking({ id: "b", kind: "hotel", provider: "H", ref: "", date: "2026-12-01", amount: 1, status: "paid" })).toThrow());
 });
+
+import { bookingMatches, travelCategory, tripReportRows, tripsForDate } from "./travel";
+describe("travel intelligence", () => {
+  const t: TravelTrip = { id: "t", name: "Goa", destination: "", start: "2026-12-01", end: "2026-12-05", budget: 0, currencies: ["INR"], bookings: [{ id: "b", kind: "hotel", provider: "Taj", ref: "", date: "2026-11-20", amount: 10000, status: "unpaid" }] };
+  it("offers a single clear booking match only", () => {
+    expect(bookingMatches(t, [{ id: "e", date: "2026-11-22", amount: 10100, txnType: "expense" }] as never)).toEqual([{ bookingId: "b", entryId: "e" }]);
+    expect(bookingMatches(t, [{ id: "e", date: "2026-11-22", amount: 10000 }, { id: "f", date: "2026-11-21", amount: 10000 }] as never)).toEqual([]);
+  });
+  it("suggests trips only for covered dates and open trips", () => { expect(tripsForDate([t], "2026-12-03")).toHaveLength(1); expect(tripsForDate([{ ...t, closedAt: "x" }], "2026-12-03")).toHaveLength(0); });
+  it("guesses travel categories", () => { expect(travelCategory("IndiGo 6E")).toBe("Flights"); expect(travelCategory("Random shop")).toBeNull(); });
+  it("report separates spent and unpaid booked", () => { const r = tripReportRows(t, []); expect(r.find((x) => x[0] === "Total booked unpaid")![6]).toBe("10000"); expect(r.find((x) => x[0] === "Total spent")![6]).toBe("0"); });
+});

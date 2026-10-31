@@ -32,7 +32,7 @@ import { ACCOUNT_LABEL, TXN_LABEL, TXN_TYPES, frequentMerchants, suggestForMerch
 import { WorkspacePicker, splitShares } from "@/components/WorkspacePicker";
 import { suggestWorkspace, validateShares, type AllocationMethod } from "@/lib/workspaces";
 import { tripTag } from "@/lib/intelligence";
-import type { TravelTrip } from "@/lib/travel";
+import { BOOKING_CATEGORY, travelCategory, tripsForDate, type TravelTrip } from "@/lib/travel";
 import { todayISO } from "@/lib/use-position";
 
 export const Route = createFileRoute("/_authenticated/new")({
@@ -166,7 +166,7 @@ function NewExpense() {
     const tr = (preferences.trips as TravelTrip[]).find((t) => t.id === search.trip);
     if (tr) { setTags((x) => [...new Set([...x.split(",").map((y) => y.trim()).filter(Boolean), tripTag(tr)])].join(", ")); if (tr.type && tr.type !== "mixed") setScope(tr.type); if (!search.date && todayISO() > tr.end) setDate(tr.start); }
     const bk = tr?.bookings?.find((b) => b.id === search.booking);
-    if (bk) { if (!search.title) setTitle(`${bk.kind[0]!.toUpperCase()}${bk.kind.slice(1)} — ${bk.provider || bk.ref}`); if (!search.amount && bk.amount) setAmount(String(bk.amount)); if (bk.provider && !search.merchant) setMerchant(bk.provider); if (bk.kind === "flight" || bk.kind === "hotel") setCategory((c) => (preferences.categories.some((x) => x.name === "Travel") ? "Travel" : c)); }
+    if (bk) { if (!search.title) setTitle(`${bk.kind[0]!.toUpperCase()}${bk.kind.slice(1)} — ${bk.provider || bk.ref}`); if (!search.amount && bk.amount) setAmount(String(bk.amount)); if (bk.provider && !search.merchant) setMerchant(bk.provider); if (bk.kind === "flight" || bk.kind === "hotel") { const want = BOOKING_CATEGORY[bk.kind]; setCategory((c) => (preferences.categories.some((x) => x.name === want && !x.archived) ? want : preferences.categories.some((x) => x.name === "Travel") ? "Travel" : c)); } }
     if (search.text) setSpoken(search.text);
   }, [edit, search]);
   useEffect(() => {
@@ -530,6 +530,9 @@ function NewExpense() {
             <div className="flex flex-wrap gap-2">{preferences.tags.map(t=>{const v=tagValue(t);const selected=tags.split(",").map(x=>x.trim()).includes(v);return <label key={v} className="flex items-center gap-1 text-xs"><input type="checkbox" checked={selected} onChange={e=>{const xs=tags.split(",").map(x=>x.trim()).filter(Boolean);setTags((e.target.checked?[...xs,v]:xs.filter(x=>x!==v)).join(", "));}}/>{v}</label>})}</div><Input id="tags" placeholder="e.g. VEI, reimbursable, essential" value={tags} onChange={(e) => setTags(e.target.value)} />
           </div>
           <div className="grid gap-2">
+            {!ctxTrip && !editing && tripsForDate(preferences.trips as TravelTrip[], date).filter((t) => !tags.includes(tripTag(t))).map((t) => (
+              <button key={t.id} type="button" className="text-left text-xs text-primary underline" onClick={() => { setTags((x) => [...new Set([...x.split(",").map((y) => y.trim()).filter(Boolean), tripTag(t)])].join(", ")); if (t.type && t.type !== "mixed") setScope(t.type); const tc = travelCategory(`${merchant} ${title}`); if (tc && preferences.categories.some((c) => c.name === tc && !c.archived)) setCategory(tc); }}>This date is during "{t.name}" — add to that trip?</button>
+            ))}
             {ctxTrip && <p className="text-xs text-primary">Adding to trip: {ctxTrip.name}{search.booking ? " — this payment will be linked to the booking" : ""}</p>}
             <WorkspacePicker scope={scope} setScope={setScope} total={Number(amount) || 0} currency={currency} split={wsSplit} setSplit={setWsSplit}
               suggestion={suggestWorkspace({ merchant, tags: tags.split(",").map((t) => t.trim()), tripType: ctxTrip?.type ?? null, category }, expenses)} />{af("scope")}
