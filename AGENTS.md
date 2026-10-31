@@ -38,3 +38,4 @@
 - tsyringe (via SimpleWebAuthn/@peculiar/x509) is patched in patches/ to inline a Reflect metadata polyfill; the edge bundle cannot guarantee a separate polyfill import runs first, and without it every published request returns 500.
 - Family members get their own sign-in only through owner email invites accepted by a verified matching account; requests, decisions and evidence access are enforced by RLS and security-definer functions, and approval never creates a transaction.
 - Workspace splits store original-currency shares on the entry itself (never extra entries); travel bookings, itinerary and advances live on trips in preferences, so only paid ledger entries change balances.
+- Travel calendar/reminder rules live in travel-calendar.ts and budget comparisons in trip-planning.ts; both derive owner-visible records without creating transactions.

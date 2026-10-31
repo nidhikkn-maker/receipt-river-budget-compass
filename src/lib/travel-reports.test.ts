@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { travelEntries, travelReport } from "./travel-reports";
-import { bookingOutstanding, bookingPaid, tripBudgetDetail, type Booking, type TravelTrip } from "./travel";
+import { bookingMatches, bookingOutstanding, bookingPaid, tripBudgetDetail, tripFinance, type Booking, type TravelTrip } from "./travel";
 
 const trip = (over: Partial<TravelTrip> = {}): TravelTrip => ({ id: "t1", name: "Goa", destination: "Goa", start: "2026-12-01", end: "2026-12-05", budget: 50000, currencies: ["INR"], ...over });
 const opts = { memberName: (id: string | null) => (id === "m1" ? "Asha" : "Me"), accountName: (id: string | null) => (id === "acc1" ? "Amex" : "Unassigned") };
@@ -37,7 +37,26 @@ describe("travel reports reconcile with the ledger", () => {
   });
   it("separates pending from reimbursed", () => {
     const r = travelReport("reimbursement", [trip()], [hotel, { ...hotel, id: "e2", reimbursementStatus: "received" }] as never, opts);
-    expect(r.rows.slice(-2)).toEqual([["", "Total pending", "", "", "60000.00"], ["", "Total reimbursed", "", "", "60000.00"]]);
+    expect(r.rows.slice(-2)).toEqual([["", "Total pending", "", "", "", "", "60000.00"], ["", "Total reimbursed", "", "", "", "60000.00", ""]]);
+  });
+
+  it("retains unsplit entries when other traveller entries have split shares", () => {
+    const r = travelReport("traveller", [trip()], [hotel, { ...hotel, id: "e2", amount: 10000, splits: [], memberId: "m1" }] as never, opts);
+    expect(r.rows).toEqual([["Me", "36000.00", "51.43"], ["Asha", "34000.00", "48.57"], ["Total", "70000.00", "100.00"]]);
+  });
+  it("counts a multiply-associated entry once in destination rows, not only the footer", () => {
+    const r = travelReport("destination", [trip(), trip({ id: "t2", destination: "North Goa" })], [hotel] as never, opts);
+    expect(r.rows).toEqual([["Goa", "60000.00", "100.00"], ["Total", "60000.00", "100.00"]]);
+  });
+  it("reports only the unpaid remainder of a partially paid booking in each commitment cut", () => {
+    const t = trip({ bookings: [{ id: "b", kind: "hotel", provider: "Taj", ref: "", date: "2026-12-03", amount: 100000, status: "unpaid", expenseIds: ["e1"] }] });
+    expect(travelReport("trip", [t], [hotel] as never, opts).rows[0]?.[5]).toBe("40000.00");
+    expect(travelReport("planned", [t], [hotel] as never, opts).rows[0]?.[3]).toBe("40000.00");
+  });
+  it("uses claim shares and partial receipts for trip and reimbursement totals", () => {
+    const e = { ...hotel, reimbursement: { reimbursable: 36000, stage: "partial", receipts: [{ id: "r", date: "2026-12-04", amount: 12000 }] } };
+    expect(tripFinance(trip(), [e] as never)).toMatchObject({ reimbursablePending: 24000, reimbursed: 12000 });
+    expect(travelReport("reimbursement", [trip()], [e] as never, opts).rows[0]?.slice(4)).toEqual(["36000.00", "12000.00", "24000.00"]);
   });
 });
 
@@ -67,4 +86,13 @@ describe("booking payments", () => {
     expect(bookingOutstanding(b, [paid, { ...paid, id: "p2", amount: 18000 }] as never)).toBe(0);
   });
   it("leaves cancelled bookings owing nothing", () => expect(bookingOutstanding(booking({ status: "cancelled", expenseIds: ["p1"] }), [paid] as never)).toBe(0));
+  it("never suggests a payment already linked through the partial-payment list", () => {
+    const t = trip({ bookings: [booking({ expenseIds: ["p1"] }), booking({ id: "b2", amount: 12000 })] });
+    expect(bookingMatches(t, [paid] as never)).toEqual([]);
+  });
+  it("subtracts linked booking refunds from payment coverage", () => {
+    const b = booking({ expenseIds: ["p1", "refund"] });
+    expect(bookingPaid(b, [paid, { ...paid, id: "refund", txnType: "refund", amount: 2000 }] as never)).toBe(10000);
+    expect(bookingOutstanding(b, [paid, { ...paid, id: "refund", txnType: "refund", amount: 2000 }] as never)).toBe(20000);
+  });
 });

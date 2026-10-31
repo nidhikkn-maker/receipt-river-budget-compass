@@ -16,8 +16,10 @@ import { TravelPanel } from "@/components/TravelPanel";
 import { TRIP_TYPES, advanceDashboard, type TravelTrip, type TripType } from "@/lib/travel";
 import { TRAVEL_CUTS, TRAVEL_CUT_LABEL, travelReport, type TravelCut } from "@/lib/travel-reports";
 import { todayISO } from "@/lib/use-position";
+import { PlanCalendar } from "@/components/PlanCalendar";
 
 export const Route = createFileRoute("/_authenticated/trips")({
+  validateSearch: (search: Record<string, unknown>): { trip?: string } => typeof search["trip"] === "string" ? { trip: search["trip"] } : {},
   head: () => ({
     meta: [
       { title: "Trips — travel spending · Ledgerline" },
@@ -36,7 +38,8 @@ function Trips() {
   const today = todayISO();
   const [cut, setCut] = useState<TravelCut>("trip");
   const [form, setForm] = useState({ name: "", destination: "", start: today, end: today, budget: 0, currencies: "INR", type: "personal" as TripType });
-  const [openId, setOpenId] = useState<string | null>(pr.trips[0]?.id ?? null);
+  const search = Route.useSearch();
+  const [openId, setOpenId] = useState<string | null>(search.trip ?? pr.trips[0]?.id ?? null);
   const add = async () => {
     if (!form.name.trim()) { toast.error("Name the trip"); return; }
     if (!form.start || !form.end || !Number.isFinite(form.budget) || form.budget < 0) { toast.error("Choose dates and a non-negative budget"); return; }
@@ -46,17 +49,19 @@ function Trips() {
     if (form.end < form.start) { toast.error("End date is before start date"); return; }
     if (pr.trips.some((t) => t.name.toLowerCase() === form.name.trim().toLowerCase())) { toast.error("A trip with this name exists"); return; }
     const t: TravelTrip = { type: form.type, travellers: [], bookings: [], itinerary: [], advances: [], id: crypto.randomUUID(), name: form.name.trim(), destination: form.destination, start: form.start, end: form.end, budget: form.budget, currencies: [...new Set(currencies)] };
-    try { await savePreferences({ ...pr, trips: [t, ...pr.trips] }); setOpenId(t.id); toast.success("Trip created"); } catch (e) { toast.error((e as Error).message); }
+    try { await savePreferences({ ...pr, trips: [t, ...pr.trips] }); setOpenId(t.id); void navigate({ search: { trip: t.id }, replace: true }); toast.success("Trip created"); } catch (e) { toast.error((e as Error).message); }
   };
-  const trip = pr.trips.find((t) => t.id === openId);
+  const trip = pr.trips.find((t) => t.id === (search.trip ?? openId));
   const dash = useMemo(() => advanceDashboard(pr.trips as TravelTrip[], transactions, today), [pr.trips, transactions, today]);
   const report = useMemo(() => travelReport(cut, pr.trips as TravelTrip[], transactions, { memberName, accountName: (id) => accounts.find((a) => a.id === id)?.name ?? "Unassigned" }), [cut, pr.trips, transactions, memberName, accounts]);
   const [dashFilter, setDashFilter] = useState<"all" | "open" | "overdue">("all");
   const dashRows = dash.rows.filter((r) => dashFilter === "all" || (dashFilter === "open" ? r.outstanding !== 0 : r.overdue));
-  const openTrip = (id: string) => { setOpenId(id); requestAnimationFrame(() => document.getElementById("trip-detail")?.scrollIntoView({ behavior: "smooth" })); };
+  const navigate = Route.useNavigate();
+  const openTrip = (id: string) => { setOpenId(id); void navigate({ search: { trip: id }, replace: true }); requestAnimationFrame(() => document.getElementById("trip-detail")?.scrollIntoView({ behavior: "smooth" })); };
   return (
     <div>
       <PageTitle eyebrow="Travel" title="Travel Manager" sub="Each entry keeps the exchange rate from its bill date. Changing today's rate never rewrites a trip." />
+      <details className="mb-6 border-y py-3"><summary className="cursor-pointer font-display text-lg font-bold">Travel & payment calendar</summary><div className="mt-4"><PlanCalendar /></div></details>
       {dash.rows.length > 0 && (
         <Card title="Advance balances" className="mb-4">
           <p className="mb-2 text-xs text-muted-foreground">Outstanding advance money across trips — what you still hold to return, or what's still owed to you.</p>
@@ -86,9 +91,9 @@ function Trips() {
           </div>
         </Card>
       )}
-      {pr.trips.length > 0 && <div className="mb-4 flex gap-2 overflow-x-auto pb-1">{pr.trips.map((t) => <Button key={t.id} variant={t.id === openId ? "default" : "outline"} onClick={() => setOpenId(t.id)}><Plane className="mr-1 h-4 w-4" />{t.name}</Button>)}</div>}
-      {trip && <div id="trip-detail"><TravelPanel trip={trip as TravelTrip} /></div>}
-      {trip && <TripView trip={trip} txns={transactions} setTags={setTags} onDelete={async () => { if (!confirm("Delete this trip? Entries stay, the trip label is kept on them.")) return; await savePreferences({ ...pr, trips: pr.trips.filter((x) => x.id !== trip.id) }); setOpenId(null); }} />}
+      {pr.trips.length > 0 && <div className="mb-4 flex gap-2 overflow-x-auto pb-1">{pr.trips.map((t) => <Button key={t.id} variant={t.id === trip?.id ? "default" : "outline"} onClick={() => openTrip(t.id)}><Plane className="mr-1 h-4 w-4" />{t.name}</Button>)}</div>}
+      {trip && <div id="trip-detail"><TravelPanel key={trip.id} trip={trip as TravelTrip} /></div>}
+      {trip && <TripView trip={trip} txns={transactions} setTags={setTags} onDelete={async () => { if (!confirm("Delete this trip? Entries stay, the trip label is kept on them.")) return; await savePreferences({ ...pr, trips: pr.trips.filter((x) => x.id !== trip.id) }); setOpenId(null); void navigate({ search: {}, replace: true }); }} />}
       {pr.trips.length > 0 && (
         <Card title="Travel reports" action={<div className="flex gap-2"><Button size="sm" variant="outline" onClick={() => downloadBlob(new Blob([toCsv(report)], { type: "text/csv" }), `travel-${cut}.csv`)}>CSV</Button><Button size="sm" variant="outline" onClick={() => void toPdf(report, `All trips · generated ${today}`).then((b) => downloadBlob(b, `travel-${cut}.pdf`))}>PDF</Button></div>}>
           <p className="mb-2 text-xs text-muted-foreground">Every trip's spending, grouped the way you need. Amounts come straight from your records, so each report adds up to the same total.</p>

@@ -49,7 +49,8 @@ export function paymentReadiness(i: ReadinessInput): PaymentReadiness[] {
   const cashAccounts = i.accounts.filter((a) => !a.archived && ["savings", "current", "cash", "wallet"].includes(a.kind) && a.includeInCash !== false);
   const defaultAccount = cashAccounts[0] ?? null;
   const occ = occurrences(i.commitments, i.today, end);
-  const outs = occ.filter((o) => o.direction === "out");
+  // A stable same-day planning order prevents two bills from reusing the same funds.
+  const outs = occ.filter((o) => o.direction === "out").sort((a, b) => a.date.localeCompare(b.date) || a.commitmentId.localeCompare(b.commitmentId));
   const ins = occ.filter((o) => o.direction === "in" && o.confirmed);
 
   const accountFor = (o: Occurrence): Account | null => {
@@ -60,7 +61,7 @@ export function paymentReadiness(i: ReadinessInput): PaymentReadiness[] {
   };
 
   const results: PaymentReadiness[] = [];
-  for (const o of outs) {
+  for (const [index, o] of outs.entries()) {
     const c = i.commitments.find((x) => x.id === o.commitmentId);
     const account = accountFor(o);
     const base = { commitmentId: o.commitmentId, name: o.name, date: o.date, amount: o.amount, accountId: account?.id ?? null, accountName: account?.name ?? null };
@@ -75,7 +76,7 @@ export function paymentReadiness(i: ReadinessInput): PaymentReadiness[] {
     const balance = accountBalance(account, i.transactions);
     const incomeBefore = ins.filter((x) => x.date <= o.date && (x.commitmentId ? (i.commitments.find((y) => y.id === x.commitmentId)?.accountId ?? (account.id === defaultAccount?.id ? account.id : null)) === account.id : account.id === defaultAccount?.id));
     const income = r2(incomeBefore.reduce((s, x) => s + x.amount, 0));
-    const earlier = outs.filter((x) => x !== o && x.date < o.date && accountFor(x)?.id === account.id);
+    const earlier = outs.slice(0, index).filter((x) => accountFor(x)?.id === account.id);
     const earlierTotal = r2(earlier.reduce((s, x) => s + x.amount, 0));
     const minBalance = account.minBalance ?? 0;
     const projected = r2(balance + income - earlierTotal - minBalance);
@@ -88,7 +89,7 @@ export function paymentReadiness(i: ReadinessInput): PaymentReadiness[] {
       steps: [
         { label: `Latest balance in ${account.name}`, amount: balance },
         { label: "Confirmed income before the due date", amount: income },
-        { label: "Earlier payments from this account", amount: -earlierTotal },
+        { label: "Earlier payments from this account (including same-day commitments)", amount: -earlierTotal },
         { label: "Minimum balance protected", amount: -minBalance },
         { label: "Projected available", amount: projected },
         { label: `This payment`, amount: -o.amount },
