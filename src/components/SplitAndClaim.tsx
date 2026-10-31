@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -60,6 +60,14 @@ export function ReimbursementEditor({ e, onDone }: { e: Expense; onDone?: () => 
   const [rc, setRc] = useState({ amount: "", date: today(), accountId: banks[0]?.id ?? "" });
   const [busy, setBusy] = useState(false);
   const run = async (fn: () => Promise<void>, msg: string) => { setBusy(true); try { await fn(); toast.success(msg); onDone?.(); } catch (err) { toast.error((err as Error).message); } finally { setBusy(false); } };
+  const receiptRequest = useRef<{ key: string; id: string } | null>(null);
+  const receive = async () => {
+    const key = JSON.stringify(rc);
+    if (receiptRequest.current?.key !== key) receiptRequest.current = { key, id: crypto.randomUUID() };
+    const request = receiptRequest.current;
+    if (!request) return;
+    await addReimbursementReceipt(e, { amount: Number(rc.amount), date: rc.date, accountId: rc.accountId || null, operationId: request.id });
+  };
   const tracked = (e.reimbursementStatus ?? "none") !== "none" || !!r.stage;
   const field = "h-9 rounded-md border bg-background px-2 text-sm";
   return (
@@ -83,7 +91,7 @@ export function ReimbursementEditor({ e, onDone }: { e: Expense; onDone?: () => 
           <Input aria-label="Received on" type="date" value={rc.date} onChange={(ev) => setRc({ ...rc, date: ev.target.value })} />
           <select aria-label="Received into" className={field} value={rc.accountId} onChange={(ev) => setRc({ ...rc, accountId: ev.target.value })}><option value="">No account</option>{banks.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}</select>
         </div>
-        <Button size="sm" variant="outline" disabled={busy || !rc.amount} onClick={() => run(() => addReimbursementReceipt(e, { amount: Number(rc.amount), date: rc.date, accountId: rc.accountId || null }), "Receipt recorded")}>Record receipt</Button>
+        <Button size="sm" variant="outline" disabled={busy || !rc.amount || !rc.accountId} onClick={() => run(receive, "Receipt recorded")}>Record receipt</Button>
       </div>}
       {!!r.receipts?.length && <ul className="divide-y text-xs">{r.receipts.map((x) => <li key={x.id} className="flex justify-between py-1"><span>{x.date}</span><span className="font-mono">{money(x.amount)}</span></li>)}</ul>}
     </div>

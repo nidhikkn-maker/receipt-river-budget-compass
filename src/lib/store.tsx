@@ -60,6 +60,7 @@ interface Ctx {
   valuations: Valuation[];
   documents: VaultDoc[];
   saveCommitment: (c: Omit<Commitment, "id"> & { id?: string }) => Promise<void>;
+  confirmIrregular: (c: { key: string; name: string; category: string; everyMonths: number }, amount: number, date: string) => Promise<void>;
   removeCommitment: (id: string) => Promise<void>;
   /** Records the actual payment/receipt as a transaction and moves the due date forward. */
   confirmCommitment: (c: Commitment, amount: number, accountId?: string | null) => Promise<void>;
@@ -98,7 +99,7 @@ interface Ctx {
   signedUrl: (path: string) => Promise<string | null>;
   setAllocations: (e: Expense, lines: Allocation[]) => Promise<void>;
   updateReimbursement: (e: Expense, info: ReimbursementInfo) => Promise<void>;
-  addReimbursementReceipt: (e: Expense, r: { amount: number; date: string; accountId: string | null; note?: string }) => Promise<void>;
+  addReimbursementReceipt: (e: Expense, r: { amount: number; date: string; accountId: string | null; note?: string; operationId: string }) => Promise<void>;
   listReviews: () => Promise<SavedReview[]>;
   saveReview: (r: Omit<SavedReview, "id" | "generatedAt">) => Promise<void>;
 }
@@ -306,6 +307,9 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
   };
   const updateReimbursement: Ctx["updateReimbursement"] = async (e, info) => {
     if (info.reimbursable != null && !(info.reimbursable > 0 && info.reimbursable <= e.amount)) throw new Error("Reimbursable amount must be above zero and no more than the expense");
+    const received = (e.reimbursement?.receipts ?? []).reduce((sum, r) => sum + r.amount, 0);
+    if ((info.reimbursable ?? e.amount) < received) throw new Error("Claimable amount cannot be less than money already received");
+    info = { ...info, receipts: e.reimbursement?.receipts ?? [] };
     const next = { ...e, reimbursement: info };
     const status = statusColumn(next);
     check((await supabase.from("expenses").update({ reimbursement: info as unknown as Json, reimbursement_status: status }).eq("id", e.id)).error);
@@ -313,12 +317,7 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
   };
   const addReimbursementReceipt: Ctx["addReimbursementReceipt"] = async (e, r) => {
     validateReceipt(e, r.amount);
-    const id = crypto.randomUUID();
-    // The money received is a reimbursement entry (reduces spending, never counts as earned income), linked by id.
-    await save({ title: `Reimbursement: ${e.title}`.slice(0, 200), merchant: e.reimbursement?.payer || null, category: e.category, scope: e.scope, memberId: e.memberId, splits: [],
-      amount: r.amount, currency: "INR", date: r.date, description: r.note ?? "", paymentMethod: "bank_transfer", txnType: "reimbursement", accountId: r.accountId, tags: [] } as ExpenseInput, { createId: id, noRefresh: true });
-    const info = { ...(e.reimbursement ?? {}), receipts: [...(e.reimbursement?.receipts ?? []), { id, date: r.date, amount: r.amount, txnId: id, note: r.note ?? "" }] };
-    await updateReimbursement(e, info);
+    await operation("claim_receipt", { id: e.id, ...r });
     await refresh();
   };
   const listReviews: Ctx["listReviews"] = async () => {
@@ -337,6 +336,10 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
   const recordReimbursement: Ctx["recordReimbursement"] = async (ids, accountId, date) => {
     const unique=[...new Set(ids)].sort();
     await operation("reimbursement", { ids:unique, accountId, date, operationId: unique.join(":") });
+    await refresh();
+  };
+  const confirmIrregular: Ctx["confirmIrregular"] = async (c, amount, date) => {
+    await operation("confirm_irregular", { operationId: c.key, candidateKey: c.key, name: c.name, category: c.category, amount, nextDue: date, frequency: c.everyMonths === 12 ? "yearly" : "half_yearly", kind: c.category === "Insurance" ? "insurance" : c.category === "Education" ? "school_fee" : "other" });
     await refresh();
   };
   const reconcile: Ctx["reconcile"] = async (id, ref, opts) => {
@@ -524,7 +527,7 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
     <StoreCtx.Provider value={{
       pendingCount, setTags, preferences, savePreferences, ensureCategory, moveCategory, userId, name, updateName, members, memberName,
       expenses: expenses.filter((x) => (x.txnType ?? "expense") === "expense"), transactions: expenses, accounts, addAccount, setArchived, adjustBalance,
-      commitments, loans, goals, valuations, documents, saveCommitment, removeCommitment, confirmCommitment, saveLoan, removeLoan, recordLoanPayment, convertToEmi,
+      commitments, loans, goals, valuations, documents, saveCommitment, confirmIrregular, removeCommitment, confirmCommitment, saveLoan, removeLoan, recordLoanPayment, convertToEmi,
       saveGoal, removeGoal, updateAccount, addValuation, removeValuation, addDocument, updateDocument, removeDocument, history, setReimbursement, recordReimbursement, deleteAll,
       budgets, loading, refresh, save, remove, setScope, reconcile, addMember, removeMember, setBudget, signedUrl,
       setAllocations, updateReimbursement, addReimbursementReceipt, listReviews, saveReview,

@@ -70,7 +70,7 @@ export interface Allocation { category: string; amount: number; tags?: string[];
 export function validateAllocations(lines: Allocation[], total: number) {
   if (!lines.length) return;
   if (lines.length < 2) throw new Error("A split needs at least two lines");
-  for (const l of lines) { if (!l.category) throw new Error("Choose a category for every line"); if (!(l.amount > 0)) throw new Error("Every line needs an amount above zero"); }
+  for (const l of lines) { if (!l.category) throw new Error("Choose a category for every line"); if (!Number.isFinite(l.amount) || l.amount <= 0 || Math.round(l.amount * 100) / 100 !== l.amount) throw new Error("Every line needs a positive amount with no more than two decimal places"); }
   const sum = Math.round(lines.reduce((s, l) => s + l.amount, 0) * 100);
   if (sum !== Math.round(total * 100)) throw new Error(`Lines add up to ${money(sum / 100)}, but the transaction is ${money(total)}`);
 }

@@ -39,7 +39,7 @@ export const statusColumn = (e: E): ReimbursementStatus => { const s = stageOf(e
 
 /** Validates a new receipt against what is still outstanding. */
 export function validateReceipt(e: E, amount: number) {
-  if (!(amount > 0)) throw new Error("Enter the amount received");
+  if (!Number.isFinite(amount) || amount <= 0 || amount !== r2(amount)) throw new Error("Enter a positive amount with no more than two decimal places");
   const left = outstandingOf(e);
   if (r2(amount) > left) throw new Error(`Only ₹${left.toLocaleString("en-IN")} is outstanding on this claim`);
 }
