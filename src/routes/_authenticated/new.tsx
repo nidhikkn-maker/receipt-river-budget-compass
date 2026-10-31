@@ -81,7 +81,7 @@ interface SpeechRec { lang: string; interimResults: boolean; start: () => void; 
 interface Scan { merchant: string; date: string; amount: string; currency: string }
 
 function NewExpense() {
-  const { save, transactions: expenses, members, accounts, preferences, savePreferences, documents, addDocument, removeDocument, signedUrl } = useStore();
+  const { save, transactions: expenses, members, accounts, loans, preferences, savePreferences, documents, addDocument, removeDocument, signedUrl } = useStore();
   const PENDING = "pending-receipt";
   const inbox = documents.filter((d) => d.notes === PENDING && !d.transactionId);
   const [fromInbox, setFromInbox] = useState<string[]>([]);
@@ -109,6 +109,9 @@ function NewExpense() {
   const [txnType, setTxnType] = useState<TxnType>("expense");
   const [accountId, setAccountId] = useState<string>("none");
   const [toAccountId, setToAccountId] = useState<string>("none");
+  const [tripId, setTripId] = useState<string>("none");
+  const [principal, setPrincipal] = useState("");
+  const [interest, setInterest] = useState("");
   const [tags, setTags] = useState("");
   const [memberId, setMemberId] = useState<string>("me");
   const [splitOn, setSplitOn] = useState(false);
@@ -232,6 +235,7 @@ function NewExpense() {
     const wa = editing.workspaceAllocations ?? [];
     setWsSplit(wa.length > 1 ? { on: true, method: "fixed", values: Object.fromEntries(wa.map((x) => [x.workspace, String(x.amount)])) } : { on: false, method: "fixed", values: {} });
     setTxnType(editing.txnType ?? "expense"); setAccountId(editing.accountId ?? "none"); setInstrumentId(editing.paymentInstrumentId ?? "none"); setToAccountId(editing.toAccountId ?? "none"); setTags((editing.tags ?? []).join(", "));
+    setTripId(editing.tripId ?? "none"); setPrincipal(editing.principal == null ? "" : String(editing.principal)); setInterest(editing.interest == null ? "" : String(editing.interest));
     setSplitOn(editing.splits.length > 0);
     setShares(Object.fromEntries(editing.splits.map((x) => [x.memberId ?? "me", String(x.amount)])));
   }, [editing]);
