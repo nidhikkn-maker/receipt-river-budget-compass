@@ -112,9 +112,9 @@
 - [x] Universal Financial Search: /search page, plain-language parsing (amounts, periods, methods, tags, statuses, record kinds), grouped results with navigation; 12 search tests
 - [x] AI Statement-to-Action: added possible-duplicates group (held back unless user confirms), uncertain-category flags, recurring-payment hints; idempotent repeat-import test; 6 new tests
 ### Priority 2 — Advanced intelligence
-- [ ] AI Financial Autopilot: proactive alerts + recommendations with review/accept/dismiss/remind-later; never acts on money
-- [ ] Financial Stress Testing: scenario simulator (delayed salary, medical, income interruption…), compare scenarios, never touches real records
-- [ ] Purchase Cooling-Off Assistant: proposed-purchase queue with waiting period, affordability impact, decision history
+- [~] AI Financial Autopilot: src/lib/autopilot.ts written (prioritised recommendations with supporting calculations + accept/dismiss/snooze model); tests and Home UI pending
+- [~] Financial Stress Testing: src/lib/stress.ts written (8 scenarios on forecast copies, compare, corrective actions, never touches records); tests and Strategy-tab UI pending
+- [~] Purchase Cooling-Off Assistant: src/lib/cooling-off.ts written (waiting period, affordability vs safe-to-spend, decision history, avoided spending); tests and UI pending
 - [ ] Contract & Obligation Intelligence: upload contracts/policies, AI extraction with verification, linked to source document
 ### Priority 3 — Extended
 - [ ] Family Financial Requests: controlled member access, expense requests with evidence, approval tracking; no automatic transactions
