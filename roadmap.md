@@ -1,4 +1,6 @@
 # Roadmap (Functional Requirements v1.0)
+- [ ] Receipt details review before saving, with persistent reading-error retry and manual-entry options
+- [ ] Secure same-account password fallback when Face ID is unavailable or fails
 - [x] Detect possible duplicates in the bulk bill queue with review and skip controls; original-currency matching tested and two-file skip progression verified
 - [x] Bulk categorisation undo and persistent audit history with safe restoration; authenticated apply/undo/reload, split restoration, retries and later-edit conflicts tested; 218 unit tests pass
 - [x] Add a short ChatGPT setup guide to Connected Assistants; signed-in guide and endpoint copying verified
