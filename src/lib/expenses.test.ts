@@ -87,12 +87,12 @@ describe("bulk recategorisation", () => {
   const list = [{ id: "a" }, { id: "b" }, { id: "c" }];
   it("patches every selected entry with the new category and clears splits", () => {
     expect(_br(list, ["a", "c"], "Travel")).toEqual([
-      { id: "a", category: "Travel", allocations: null },
-      { id: "c", category: "Travel", allocations: null },
+      { id: "a", category: "Travel", allocations: [] },
+      { id: "c", category: "Travel", allocations: [] },
     ]);
   });
   it("skips ids that no longer exist", () => {
-    expect(_br(list, ["a", "gone"], "Meals")).toEqual([{ id: "a", category: "Meals", allocations: null }]);
+    expect(_br(list, ["a", "gone"], "Meals")).toEqual([{ id: "a", category: "Meals", allocations: [] }]);
   });
   it("returns nothing for an empty selection", () => {
     expect(_br(list, [], "Meals")).toEqual([]);

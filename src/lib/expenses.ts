@@ -201,9 +201,9 @@ export function applyFilters(list: Expense[], f: Filters): Expense[] {
 }
 
 /** Bulk recategorisation patches: the chosen category replaces each entry's category and any category split, so a split never contradicts the new single category. Unknown ids are skipped. */
-export function bulkRecategorize(list: Pick<Expense, "id">[], ids: string[], category: string): { id: string; category: string; allocations: null }[] {
+export function bulkRecategorize(list: Pick<Expense, "id">[], ids: string[], category: string): { id: string; category: string; allocations: never[] }[] {
   const wanted = new Set(ids);
-  return list.filter((e) => wanted.has(e.id)).map((e) => ({ id: e.id, category, allocations: null }));
+  return list.filter((e) => wanted.has(e.id)).map((e) => ({ id: e.id, category, allocations: [] }));
 }
 
 export function totalsByScope(list: Expense[]) {
