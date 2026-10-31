@@ -45,3 +45,12 @@ export function loanBalanceChart(rows: LoanHistoryRow[]) {
   if (!rows.length) return [] as { label: string; balance: number }[];
   return [{ label: "Opening", balance: rows[0]!.balanceBefore }, ...rows.map((r) => ({ label: r.date, balance: r.balanceAfter }))];
 }
+
+/** CSV rows for the repayment history: one line per repayment, then the totals and the current outstanding. */
+export function loanHistoryRows(hist: ReturnType<typeof loanHistory>, outstanding: number): string[][] {
+  return [
+    ["Date", "Paid", "Principal", "Interest", "Balance after"],
+    ...hist.rows.map((r) => [r.date, String(r.amount), String(r.principal), r.split ? String(r.interest) : "", String(r.balanceAfter)]),
+    ["Total", String(hist.totalPaid), String(hist.totalPrincipal), String(hist.totalInterest), String(outstanding)],
+  ];
+}

@@ -91,3 +91,42 @@ describe("trip picker and loan split", () => {
     expect(() => validateExpense({ ...baseInput, txnType: "expense", principal: 700, interest: 300 })).toThrow(/loan repayment/);
   });
 });
+
+import { advanceDashboard } from "./travel";
+import { loanHistory, loanHistoryRows } from "./loan-history";
+describe("advance dashboard", () => {
+  const trips: TravelTrip[] = [
+    { id: "t1", name: "Goa", destination: "", start: "2026-12-01", end: "2026-12-05", budget: 0, currencies: ["INR"], advances: [{ id: "a1", date: "2026-11-28", amount: 10000, source: "MOVAC" }] },
+    { id: "t2", name: "Delhi", destination: "", start: "2026-10-01", end: "2026-10-03", budget: 0, currencies: ["INR"], advances: [{ id: "a2", date: "2026-09-28", amount: 5000, source: "MOVAC" }] },
+    { id: "t3", name: "No advances", destination: "", start: "2026-09-01", end: "2026-09-02", budget: 0, currencies: ["INR"] },
+  ];
+  const txns = [
+    { id: "e1", txnType: "expense", amount: 6000, date: "2026-12-02", tags: ["Trip: Goa"], scope: "business" },
+    { id: "e2", txnType: "expense", amount: 7000, date: "2026-10-02", tags: ["Trip: Delhi"], scope: "official" },
+  ] as never;
+  it("lists only trips with advance activity, biggest outstanding first", () => {
+    const d = advanceDashboard(trips, txns);
+    expect(d.rows.map((r) => r.tripId)).toEqual(["t1", "t2"]);
+    expect(d.rows[0]).toMatchObject({ advances: 10000, expenses: 6000, outstanding: 4000 });
+    expect(d.rows[1]!.outstanding).toBe(-2000);
+  });
+  it("totals keep the sign per trip", () => {
+    const d = advanceDashboard(trips, txns);
+    expect(d.toReturn).toBe(4000);
+    expect(d.owedToYou).toBe(2000);
+  });
+});
+describe("loan history CSV", () => {
+  it("exports one row per repayment plus totals and current outstanding", () => {
+    const txns = [
+      { id: "r1", txnType: "loan_repayment", toAccountId: "ln", amount: 5000, principal: 4000, interest: 1000, date: "2026-09-15" },
+      { id: "r2", txnType: "loan_repayment", toAccountId: "ln", amount: 5000, principal: null, interest: null, date: "2026-10-15" },
+    ] as never;
+    const hist = loanHistory("ln", 91000, txns);
+    const rows = loanHistoryRows(hist, 91000);
+    expect(rows[0]).toEqual(["Date", "Paid", "Principal", "Interest", "Balance after"]);
+    expect(rows[1]).toEqual(["2026-09-15", "5000", "4000", "1000", "96000"]);
+    expect(rows[2]).toEqual(["2026-10-15", "5000", "5000", "", "91000"]);
+    expect(rows[3]).toEqual(["Total", "10000", "9000", "1000", "91000"]);
+  });
+});
