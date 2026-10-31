@@ -1,3 +1,4 @@
+import { HomeModePicker } from "@/components/HomeModePicker";
 import { MilestoneBanner } from "@/components/MilestoneBanner";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { ArrowRight, CheckCircle2, AlertTriangle, CircleHelp, ShieldQuestion, Plane } from "lucide-react";
@@ -112,6 +113,7 @@ function Overview() {
 
   return (
     <>
+      <div className="mb-3 flex justify-end"><HomeModePicker compact /></div>
       {(scope === "business" || scope === "official") && (
         <div className="mb-4 flex flex-wrap gap-2 text-sm">
           <Link to="/expenditure-statement" className="rounded-xl border bg-card px-3 py-2 font-semibold text-primary">Generate {scope} statement</Link>
