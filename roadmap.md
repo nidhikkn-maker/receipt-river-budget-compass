@@ -103,3 +103,22 @@
 - [x] Check published app on mobile for loading errors
 
 - [x] Saved payment methods (UPI IDs, cards, wallets, cash) linked to bank accounts
+
+## Version 3.0 — Autonomous Financial Intelligence (uploaded doc, Oct 31)
+### Priority 1 — Immediate
+- [x] Money Allocation Engine: /allocation page, suggested buckets, editable lines, saved plans in preferences, planned-vs-actual comparison, carry-forward; total ≤ funds enforced; signed-in suggest+save verified
+- [x] Payment Readiness Monitor: Home strip with per-payment status (ready/shortfall/unknown/overdue/paid), account-aware projection, tappable full calculation; signed-in verified with seeded data (cleaned up after)
+- [x] Financial Rules Builder: /rules page, 8 templates + custom rules, enable/notify toggles, triggered-now list with dismiss; 10 rule tests
+- [x] Universal Financial Search: /search page, plain-language parsing (amounts, periods, methods, tags, statuses, record kinds), grouped results with navigation; 12 search tests
+- [x] AI Statement-to-Action: added possible-duplicates group (held back unless user confirms), uncertain-category flags, recurring-payment hints; idempotent repeat-import test; 6 new tests
+### Priority 2 — Advanced intelligence
+- [~] AI Financial Autopilot: src/lib/autopilot.ts written (prioritised recommendations with supporting calculations + accept/dismiss/snooze model); tests and Home UI pending
+- [~] Financial Stress Testing: src/lib/stress.ts written (8 scenarios on forecast copies, compare, corrective actions, never touches records); tests and Strategy-tab UI pending
+- [~] Purchase Cooling-Off Assistant: src/lib/cooling-off.ts written (waiting period, affordability vs safe-to-spend, decision history, avoided spending); tests and UI pending
+- [ ] Contract & Obligation Intelligence: upload contracts/policies, AI extraction with verification, linked to source document
+### Priority 3 — Extended
+- [ ] Family Financial Requests: controlled member access, expense requests with evidence, approval tracking; no automatic transactions
+- [ ] Financial Memory: decision history with expected vs actual outcome, review dates
+- [ ] Personal Finance Knowledge Graph: entity relationships, optional exploration screen
+### Acceptance (verify before declaring done)
+- [ ] Allocations never move money; readiness uses due dates + balances; rules fire only on conditions; search respects authorisation; imports never duplicate; simulations never alter records; autopilot needs approval; family access isolated; contract extraction keeps document refs; memory records outcomes; graph reflects real links; V1/V2 still work

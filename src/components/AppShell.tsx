@@ -1,6 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import { useEffect, useState, type ReactNode } from "react";
-import { BarChart3, CalendarClock, Gem, Home, Landmark, ListFilter, PiggyBank, Plus, Settings, Sparkles, Users, Eye, EyeOff, FileText, UserRound, TrendingUp, Inbox, HeartPulse } from "lucide-react";
+import { BarChart3, CalendarClock, Gem, Home, Landmark, ListFilter, PiggyBank, Plus, Settings, Sparkles, Users, Eye, EyeOff, FileText, UserRound, TrendingUp, Inbox, HeartPulse, Search, SlidersHorizontal, Split } from "lucide-react";
 import { DeviceLock } from "./DeviceLock";
 import { Button } from "./ui/button";
 import { useStore } from "@/lib/store";
@@ -18,6 +18,9 @@ const LINKS = [
   { to: "/forecast", label: "Predict", icon: TrendingUp },
   { to: "/budgets", label: "Budgets", icon: PiggyBank },
   { to: "/reconcile", label: "Bank", icon: Landmark },
+  { to: "/search", label: "Search", icon: Search },
+  { to: "/rules", label: "Rules", icon: SlidersHorizontal },
+  { to: "/allocation", label: "Allocate", icon: Split },
   { to: "/family", label: "Family", icon: Users },
   { to: "/vault", label: "Vault", icon: FileText },
   { to: "/settings", label: "Settings", icon: Settings },
@@ -56,6 +59,9 @@ export function AppShell({ children }: { children: ReactNode }) {
             <Link to="/plan" aria-label="Plan" className="rounded-xl p-2 text-foreground/70" activeProps={{ className: "!text-gold bg-gold-soft" }}><CalendarClock className="h-5 w-5" /></Link>
             <Link to="/budgets" aria-label="Budgets" className="rounded-xl p-2 text-foreground/70" activeProps={{ className: "!text-gold bg-gold-soft" }}><PiggyBank className="h-5 w-5" /></Link>
             <Link to="/reconcile" aria-label="Bank reconciliation" className="rounded-xl p-2 text-foreground/70" activeProps={{ className: "!text-gold bg-gold-soft" }}><Landmark className="h-5 w-5" /></Link>
+            <Link to="/search" aria-label="Search everything" className="rounded-xl p-2 text-foreground/70" activeProps={{ className: "!text-gold bg-gold-soft" }}><Search className="h-5 w-5" /></Link>
+            <Link to="/rules" aria-label="Financial rules" className="rounded-xl p-2 text-foreground/70" activeProps={{ className: "!text-gold bg-gold-soft" }}><SlidersHorizontal className="h-5 w-5" /></Link>
+            <Link to="/allocation" aria-label="Money allocation" className="rounded-xl p-2 text-foreground/70" activeProps={{ className: "!text-gold bg-gold-soft" }}><Split className="h-5 w-5" /></Link>
             <Link to="/family" aria-label="Family" className="rounded-xl p-2 text-foreground/70" activeProps={{ className: "!text-gold bg-gold-soft" }}><Users className="h-5 w-5" /></Link>
             <Link to="/vault" aria-label="Document vault" className="rounded-xl p-2 text-foreground/70" activeProps={{ className: "!text-gold bg-gold-soft" }}><FileText className="h-5 w-5" /></Link>
             <Link to="/settings" aria-label="Settings" className="rounded-xl p-2 text-foreground/70" activeProps={{ className: "!text-gold bg-gold-soft" }}><Settings className="h-5 w-5" /></Link>

@@ -18,6 +18,8 @@ export interface StatementDraft {
   currency: string;
   /** Plain-words reason this line was read this way. */
   reason: string;
+  /** True when the category or payment method was a fallback guess — show it for confirmation. */
+  uncertain?: boolean;
 }
 
 export interface StatementPlan {
@@ -27,6 +29,10 @@ export interface StatementPlan {
   review: StatementDraft[];
   /** Left alone because it is already recorded or matched. */
   skipped: { line: StatementLine; reason: string }[];
+  /** Looks like something already in the ledger — never registered unless the user says so. */
+  possibleDuplicates: { draft: StatementDraft; existing: { id: string; title: string; date: string; amount: number } }[];
+  /** Merchants that look recurring — offered as planned payments after import. */
+  recurringHints: { merchant: string; amount: number; count: number }[];
 }
 
 export interface StatementContext {
@@ -120,22 +126,27 @@ export function classifyStatementLine(line: StatementLine, ctx: StatementContext
   const merchant = cleanMerchant(line.description || "");
   const account = ctx.accounts.find((a) => a.id === ctx.accountId);
   const memory = suggestForMerchant(merchant, ctx.transactions);
+  const method = isPaymentMethod(memory?.paymentMethod) ? memory.paymentMethod : paymentMethodFor(text, account?.kind);
   const base = {
     line,
     title: merchant,
     merchant,
     accountId: ctx.accountId,
     currency: ctx.currency,
-    paymentMethod: isPaymentMethod(memory?.paymentMethod) ? memory.paymentMethod : paymentMethodFor(text, account?.kind),
+    paymentMethod: method,
     scope: (memory?.scope === "business" ? "business" : "personal") as Scope,
   };
-  const category = (memory?.category && resolveCategory(ctx.categories, memory.category)) || categoryFor(text, ctx.categories);
+  const knownCategory = memory?.category && resolveCategory(ctx.categories, memory.category);
+  const ruleCategory = CATEGORY_RULES.some(([re]) => re.test(text));
+  const category = knownCategory || categoryFor(text, ctx.categories);
+  // Unsure when neither merchant memory nor a keyword rule picked the category, or the method is a guess.
+  const uncertain = !knownCategory && !ruleCategory;
 
   if (line.direction === "credit") {
     if (REFUND_CREDIT.test(text)) return { ...base, category, txnType: "refund", reason: "Refund or reversal credited back" };
-    if (INCOME_CREDIT.test(text)) return { ...base, category, txnType: "income", reason: "Money coming in (salary, interest or dividend)" };
+    if (INCOME_CREDIT.test(text)) return { ...base, category, txnType: "income", reason: "Money coming in (salary, interest or dividend)", uncertain };
     if (TRANSFER_CREDIT.test(text)) return { ...base, category, txnType: "transfer", reason: "Money moved in from another account — pick where it came from" };
-    return { ...base, category, txnType: "income", reason: "Credit line — confirm it is income before saving" };
+    return { ...base, category, txnType: "income", reason: "Credit line — confirm it is income before saving", uncertain: true };
   }
 
   if (CARD_OR_LOAN_PAYMENT.test(text)) return { ...base, category, txnType: "transfer", reason: "Card, loan or investment payment — pick the account it went to" };
@@ -143,25 +154,50 @@ export function classifyStatementLine(line: StatementLine, ctx: StatementContext
   if (/\b(CHARGES?|PENALTY|SURCHARGE|MINIMUM BALANCE|AMCC|MARKUP|FOREX FEE|LATE FEE)\b/.test(text)) {
     return { ...base, category: resolveCategory(ctx.categories, "Financial charges") ?? category, txnType: "expense", reason: "Bank or card charge" };
   }
-  return { ...base, category, txnType: "expense", reason: "Regular purchase" };
+  return { ...base, category, txnType: "expense", reason: uncertain ? "Regular purchase — category unsure, please check" : "Regular purchase", uncertain };
 }
 
-/** Split statement lines into auto-register, needs-review and already-recorded. */
+/** Split statement lines into auto-register, needs-review, possible duplicates and already-recorded. */
 export function planStatementRegistration(lines: StatementLine[], matches: Match[], ctx: StatementContext): StatementPlan {
-  const plan: StatementPlan = { register: [], review: [], skipped: [] };
+  const plan: StatementPlan = { register: [], review: [], skipped: [], possibleDuplicates: [], recurringHints: [] };
+  const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, "");
   for (const line of lines) {
     const match = matches.find((m) => m.line.ref === line.ref);
     if (match?.expense) {
       plan.skipped.push({ line, reason: `Already matched to "${match.expense.title}"` });
       continue;
     }
-    if (ctx.transactions.some((t) => matchScore(line, t, ctx.currency) >= 0.7)) {
+    let best = 0;
+    let bestTxn: Expense | null = null;
+    for (const t of ctx.transactions) {
+      const s = matchScore(line, t, ctx.currency);
+      if (s > best) { best = s; bestTxn = t; }
+    }
+    if (best >= 0.7) {
       plan.skipped.push({ line, reason: "Already in your ledger" });
       continue;
     }
     const draft = classifyStatementLine(line, ctx);
+    if (best >= 0.4 && bestTxn) {
+      // Close to an existing record but not clearly the same — the user decides.
+      plan.possibleDuplicates.push({ draft, existing: { id: bestTxn.id, title: bestTxn.title, date: bestTxn.date, amount: bestTxn.amount } });
+      continue;
+    }
     if (draft.txnType === "transfer" || /confirm it is income/.test(draft.reason)) plan.review.push(draft);
     else plan.register.push(draft);
+  }
+  // Recurring hints: a merchant being registered now that already appears 3+ times in history.
+  const seen = new Set<string>();
+  const sameMerchant = (a: string, b: string) => { const x = norm(a), y = norm(b); return x.length >= 4 && y.length >= 4 && (x.includes(y) || y.includes(x)); };
+  for (const d of plan.register) {
+    const k = norm(d.merchant);
+    if (!k || seen.has(k)) continue;
+    const history = ctx.transactions.filter((t) => t.merchant && sameMerchant(t.merchant, d.merchant));
+    if (history.length >= 3) {
+      seen.add(k);
+      const known = history.sort((a, b) => b.date.localeCompare(a.date))[0]!.merchant!;
+      plan.recurringHints.push({ merchant: known, amount: d.line.amount, count: history.length });
+    }
   }
   return plan;
 }
