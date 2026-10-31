@@ -216,3 +216,6 @@
 - [x] Guided setup assistant (skippable, reopenable)
 - [x] Organisation directory and archive/reactivate controls across master records
 - [x] Duplicate-record prevention for accounts/methods; acceptance scenarios 1–25
+
+- [ ] Tamil text in PDF titles, page footers and attached bill pages
+- [ ] Security review before wide sharing
