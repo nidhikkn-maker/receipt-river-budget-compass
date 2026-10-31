@@ -91,3 +91,7 @@
 - [x] Department summaries + CSV/PDF exports: usage %, remaining balance and over/within-budget status column; on-screen summary with progress bars
 - [x] Bulk categorisation/recategorisation: select mode on Expenses with all/none, category picker, split-clearing apply; fixed empty-split-list validation; signed-in apply verified and test data restored
 - [x] Bulk bill upload: pick several bills, each OCR-read and reviewed one by one with Bill n of N progress; two-bill signed-in run verified, test entries removed
+
+- [x] Fix receipt reading failure (large phone photos)
+- [ ] Test Face ID unlock on live site — blocked: needs a real iPhone with Face ID
+- [x] Check published app on mobile for loading errors

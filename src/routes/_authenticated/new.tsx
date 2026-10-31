@@ -18,6 +18,7 @@ import { duplicateBills } from "@/lib/bill-duplicates";
 import { quickEntrySearch } from "@/lib/quick-entry";
 import { useStore } from "@/lib/store";
 import { extractReceipt } from "@/lib/receipt-extract.functions";
+import { prepareForReading } from "@/lib/image-prep";
 import { getFxRate } from "@/lib/fx.functions";
 import { parseSpokenEntry } from "@/lib/assistant.functions";
 import { useServerFn } from "@tanstack/react-start";
@@ -195,7 +196,9 @@ function NewExpense() {
   const runExtraction = async (first: LocalReceipt, fresh: boolean) => {
     setReading(true);
     try {
-      const res = await extract({ data: { dataUrl: first.dataUrl, mimeType: first.type } });
+      const prepared = await prepareForReading(first.dataUrl, first.type);
+      if (prepared.dataUrl.length > 4_000_000) { toast.error("This file is too large to read — try a photo or a smaller PDF."); return; }
+      const res = await extract({ data: prepared });
       if (!res.ok) { toast.error(res.error); return; }
       const x = res.result;
       setReceiptDetails({ tax: x.tax, items: x.items, text: x.text });
