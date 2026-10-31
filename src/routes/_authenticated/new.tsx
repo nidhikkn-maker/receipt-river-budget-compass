@@ -28,6 +28,8 @@ import { parseSpokenEntry } from "@/lib/assistant.functions";
 import { useServerFn } from "@tanstack/react-start";
 import { Mic } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { ProcessingPanel, stagesAt } from "@/components/ProcessingPanel";
+import { createLatest } from "@/lib/latest-request";
 import { ACCOUNT_LABEL, MOVE_TARGET, isMove, TXN_LABEL, TXN_TYPES, frequentMerchants, suggestForMerchant, type TxnType } from "@/lib/ledger";
 
 
@@ -120,6 +122,11 @@ function NewExpense() {
   const [splitOn, setSplitOn] = useState(false);
   const [shares, setShares] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState("");
+  // One id per draft: retrying after a timeout re-sends the same id, so the server keeps a single entry.
+  const draftId = useRef<string>(crypto.randomUUID());
+  const latest = useRef(createLatest());
+  const [stage, setStage] = useState<{ kind: "receipt" | "voice"; at: number } | null>(null);
   const [more, setMore] = useState(false);
   const [catOpen, setCatOpen] = useState(false);
   const [tagOpen, setTagOpen] = useState(false);
@@ -224,12 +231,15 @@ function NewExpense() {
 
   const applySpoken = async (text: string) => {
     if (!text.trim()) return;
-    setReading(true);
+    setReading(true); setStage({ kind: "voice", at: 0 });
+    const req = latest.current.begin();
     try {
       const d = new Date();
       const today = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
       const r = await parseSpoken({ data: { text, today, accounts: liveAccounts.map((a) => a.name) } });
+      if (!req.isCurrent()) return;
       if (!r.ok) { toast.error(r.error); return; }
+      setStage({ kind: "voice", at: 1 });
       const x = r.result;
       const filled = new Set<string>();
       setTxnType(x.txn_type);
@@ -246,7 +256,7 @@ function NewExpense() {
       if (acc) setAccountId(acc.id);
       setAutoFilled(filled);
       toast.success("Filled in from what you said — check and save");
-    } catch { toast.error("Couldn't understand that"); } finally { setReading(false); }
+    } catch { if (req.isCurrent()) toast.error("Couldn't understand that — try again or type the details"); } finally { if (req.isCurrent()) { setReading(false); setStage(null); } }
   };
 
   const startVoice = () => {
@@ -292,12 +302,17 @@ function NewExpense() {
     setReadingError("");
     setScan(null);
     setConfirmed(false);
-    setReading(true);
+    setReading(true); setStage({ kind: "receipt", at: 0 });
+    const req = latest.current.begin();
     try {
       const prepared = await prepareForReading(first.dataUrl, first.type);
+      if (!req.isCurrent()) return;
+      setStage({ kind: "receipt", at: 1 });
       if (prepared.dataUrl.length > 4_000_000) throw new Error("This file is too large to read. Try a smaller photo or PDF, or enter the details yourself.");
       const res = await extract({ data: prepared });
+      if (!req.isCurrent()) return;
       if (!res.ok) throw new Error(res.error);
+      setStage({ kind: "receipt", at: 2 });
       const x = res.result;
       setReceiptDetails({ tax: x.tax, items: x.items, text: x.text, fingerprint: first.fingerprint });
       const filled = new Set<string>();
@@ -314,10 +329,11 @@ function NewExpense() {
       setConfirmed(false);
       toast.success("Bill read — check the key details");
     } catch (error) {
+      if (!req.isCurrent()) return;
       const message = error instanceof Error ? error.message : "";
       setReadingError(!message || /fetch|network|load failed/i.test(message) ? "Couldn't connect to receipt reading. Check your connection and try again, or enter the details manually." : message);
     } finally {
-      setReading(false);
+      if (req.isCurrent()) { setReading(false); setStage(null); }
     }
   };
 
@@ -398,7 +414,8 @@ function NewExpense() {
     if (!confirmed) { toast.error("Confirm the scanned bill details first"); return; }
     if (duplicateBlocked) { toast.error("Review the possible duplicate or skip this bill"); return; }
     if (receiptBlocked) { toast.error("This receipt is already used — review it or choose a different file"); return; }
-    setSaving(true);
+    if (saving) return;
+    setSaving(true); setSaveError("");
     try {
       const finalDetails: ReceiptDetails = { ...receiptDetails };
       const fp = receipts[0]?.fingerprint ?? receiptDetails.fingerprint;
@@ -406,7 +423,7 @@ function NewExpense() {
       const workspaceAllocations = splitShares(wsSplit, Number(amount));
       const wsErr = wsSplit.on ? validateShares(workspaceAllocations, Number(amount)) : null;
       if (wsErr) throw new Error(wsErr);
-      const createId = editing ? undefined : crypto.randomUUID();
+      const createId = editing ? undefined : draftId.current;
       await save(
         { title: title.trim(), amount: Number(amount), currency, paymentMethod, category, date, description, merchant: merchant.trim() || null,
           receiptDetails: finalDetails, workspaceAllocations, scope: wsSplit.on ? (workspaceAllocations.slice().sort((a, b) => b.amount - a.amount)[0]?.workspace ?? scope) : scope, memberId: memberId === "me" ? null : memberId,
@@ -426,7 +443,8 @@ function NewExpense() {
         }) }) });
       }
       for (const id of fromInbox) { const d = documents.find((x) => x.id === id); if (d) await removeDocument(d).catch(() => {}); }
-      toast.success(editing ? "Entry updated" : `${TXN_LABEL[txnType]} saved`);
+      toast.success(editing ? "Entry updated" : `${TXN_LABEL[txnType]} saved successfully`);
+      draftId.current = crypto.randomUUID();
       if (!editing && queue.length) {
         await advanceQueue();
         return;
@@ -434,7 +452,9 @@ function NewExpense() {
       setBatch(null);
       nav({ to: editing ? "/expenses" : "/dashboard" });
     } catch (e) {
-      toast.error((e as Error).message);
+      const m = (e as Error).message || "";
+      // A timeout doesn't prove the write failed; retrying re-uses the same id, so it can't duplicate.
+      setSaveError(/fetch|network|timeout|load failed/i.test(m) ? "We couldn't confirm the save. Your details are kept — tap Retry; it won't create a second entry." : m || "Couldn't save. Your details are kept — tap Retry.");
     } finally {
       setSaving(false);
     }
@@ -528,7 +548,9 @@ function NewExpense() {
         <input ref={cameraRef} type="file" accept="image/*" capture="environment" className="sr-only" aria-label="Take a photo of a receipt" onChange={(e) => { void onFiles(e.target.files); e.target.value = ""; }} />
         <input ref={galleryRef} type="file" multiple accept="image/*" className="sr-only" aria-label="Choose receipt photos" onChange={(e) => { void onFiles(e.target.files); e.target.value = ""; }} />
         <input ref={fileRef} id="r" type="file" multiple accept="image/*,application/pdf" className="sr-only" aria-label="Choose receipt files" onChange={(e) => { void onFiles(e.target.files); e.target.value = ""; }} />
-        {reading && <p role="status" className="text-center text-sm font-semibold text-primary"><ScanLine className="mr-1 inline h-4 w-4" />Reading…</p>}
+        {reading && stage?.kind === "receipt" && <ProcessingPanel title="Reading your receipt…" stages={stagesAt(["Preparing image", "Reading document", "Extracting details"], stage.at)} onCancel={() => { latest.current.cancel(); setReading(false); setStage(null); setConfirmed(true); toast.message("Reading cancelled — receipt kept, enter details yourself"); }} />}
+        {reading && stage?.kind === "voice" && <ProcessingPanel title="Understanding your expense…" stages={stagesAt(["Interpreting what you said", "Filling the form"], stage.at)} onCancel={() => { latest.current.cancel(); setReading(false); setStage(null); }} />}
+        {reading && !stage && <p role="status" className="text-center text-sm font-semibold text-primary"><ScanLine className="mr-1 inline h-4 w-4" />Reading…</p>}
         {batch && <p className="text-center"><span className="rounded-full bg-gold px-3 py-1 text-xs font-bold text-gold-foreground">Bill {batch.done + 1} of {batch.total}{queue.length ? ` · ${queue.length} waiting` : ""}</span></p>}
         {(voiceOpen || listening || spoken) && (
           <div className="flex gap-2 rounded-2xl border bg-card p-1.5">
@@ -794,8 +816,9 @@ function NewExpense() {
         </fieldset>
 
         <div className="sticky bottom-0 z-10 -mx-4 bg-background/95 px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-2 backdrop-blur sm:mx-0 sm:px-0">
-          <Button type="submit" size="lg" variant="gold" className="h-12 w-full rounded-2xl text-base" disabled={reading || saving || !confirmed || duplicateBlocked || receiptBlocked || !(Number(amount) > 0)}>
-            {saving ? "Saving…" : editing ? "Save changes" : `Save ${TXN_LABEL[txnType].toLowerCase()}`}
+          {saveError && !saving && <div role="alert" className="mb-2 flex items-center justify-between gap-2 rounded-xl border border-destructive/40 bg-card px-3 py-2 text-xs"><span className="text-destructive">{saveError}</span><Button type="submit" size="sm" variant="outline">Retry</Button></div>}
+          <Button type="submit" size="lg" variant="gold" loading={saving} loadingText={editing ? "Saving changes…" : `Saving your ${TXN_LABEL[txnType].toLowerCase()}…`} className="h-12 w-full rounded-2xl text-base" disabled={reading || saving || !confirmed || duplicateBlocked || receiptBlocked || !(Number(amount) > 0)}>
+            {editing ? "Save changes" : `Save ${TXN_LABEL[txnType].toLowerCase()}`}
           </Button>
         </div>
       </form>

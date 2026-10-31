@@ -1,3 +1,5 @@
+import { ProcessingPanel, stagesAt } from "@/components/ProcessingPanel";
+import { Spinner } from "@/components/ui/button";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -39,6 +41,7 @@ function Reconcile() {
   const [excluded, setExcluded] = useState<Record<string, boolean>>({});
   const [busy, setBusy] = useState(false);
   const [reading, setReading] = useState(false);
+  const [readStage, setReadStage] = useState<{ name: string; ai: boolean; at: number } | null>(null);
   const scanStatement = useServerFn(extractStatement);
 
   const accountFilter = statementAccount === "all" ? undefined : statementAccount;
@@ -103,7 +106,7 @@ function Reconcile() {
 
   const onFile = async (f: File | undefined) => {
     if (!f) return;
-    setReading(true);
+    setReading(true); setReadStage({ name: f.name, ai: false, at: 0 });
     try {
       let parsed: StatementLine[];
       try { parsed = await readStatement(f); }
@@ -112,10 +115,12 @@ function Reconcile() {
         if (!window.confirm("Read this statement using AI? It may contain private banking details. Review all extracted rows before confirming.")) return;
         const mimeType = /\.pdf$/i.test(f.name) ? "application/pdf" : /\.png$/i.test(f.name) ? "image/png" : /\.webp$/i.test(f.name) ? "image/webp" : "image/jpeg";
         const dataUrl = await new Promise<string>((resolve, reject) => { const reader = new FileReader(); reader.onload = () => resolve(String(reader.result)); reader.onerror = reject; reader.readAsDataURL(f); });
+        setReadStage({ name: f.name, ai: true, at: 0 });
         const result = await scanStatement({ data: { dataUrl, mimeType } });
         if (!result.ok) throw Error(result.error);
         parsed = result.lines;
       }
+      setReadStage((x) => x && { ...x, at: 1 });
       let key = accountKey;
       if (statementAccount === "all") {
         const { data } = await supabase.from("statement_line_imports").select("account_key").eq("file_label", filePattern(f.name)).neq("account_key", "all").order("created_at", { ascending: false }).limit(1);
@@ -125,7 +130,7 @@ function Reconcile() {
       void key;
       setLines(parsed); setFileName(f.name); setOverrides({}); setExcluded({}); setShowImported(false); setIncludeDups({});
       toast.success(`${parsed.length} statement lines found`);
-    } catch (e) { toast.error((e as Error).message); } finally { setReading(false); }
+    } catch (e) { toast.error((e as Error).message); } finally { setReading(false); setReadStage(null); }
   };
 
   const matched = matches.filter((m) => m.expense);
@@ -178,9 +183,10 @@ function Reconcile() {
         <Stat label="Not matched yet" value={String(open.length)} hint={money(open.reduce((s, e) => s + e.amount, 0))} />
       </div>
 
+      {readStage && <ProcessingPanel className="mb-3" title={`Reading ${readStage.name}…`} stages={stagesAt([readStage.ai ? "Extracting transactions with AI" : "Reading transactions", "Matching remembered account"], readStage.at)} />}
       <div className="mb-6 flex flex-wrap items-center gap-3 rounded-3xl border-2 border-dashed border-primary/40 bg-secondary/50 p-5">
         <label className="inline-flex cursor-pointer items-center gap-2 rounded-2xl bg-gold px-4 py-2.5 text-sm font-semibold text-gold-foreground shadow-gold">
-          <Upload className="h-4 w-4" /> {reading ? "Reading statement…" : "Upload statement"}
+          {reading ? <Spinner /> : <Upload className="h-4 w-4" />} {reading ? "Reading statement…" : "Upload statement"}
           <input type="file" disabled={reading} accept=".csv,.xls,.xlsx,.pdf,.png,.jpg,.jpeg,.webp,text/csv,application/vnd.ms-excel,application/pdf" className="sr-only" onChange={(e) => onFile(e.target.files?.[0])} aria-label="Statement file" />
         </label>
         <div className="flex items-center gap-2 text-sm">

@@ -180,3 +180,9 @@
 - [x] Repeat expense + favourites (new draft dated today, no reimbursement/old-trip copy)
 - [x] Smart default account/workspace from last confirmed expense
 - [x] Scan / Upload / Voice / Repeat capture row; voice recognises all four workspaces
+
+## V4.5 Processing & feedback (requirements-v4.5.md)
+- [x] Shared spinner/loading Button (async onClick auto single-flight), ProcessingPanel stages, latest-request guard
+- [x] Entry: receipt/voice stages + cancel, stale-response guard, duplicate-safe retry (stable draft id), save error + Retry
+- [x] Assistant: status, Stop, stale guard; statement import progress panel
+- [ ] Background task records for long jobs (not supported by current architecture)
