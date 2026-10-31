@@ -277,6 +277,18 @@ function NewExpense() {
       );
       for (const id of fromInbox) { const d = documents.find((x) => x.id === id); if (d) await removeDocument(d).catch(() => {}); }
       toast.success(editing ? "Entry updated" : `${TXN_LABEL[txnType]} saved`);
+      if (!editing && queue.length) {
+        const [next, ...rest] = queue;
+        setQueue(rest);
+        setBatch((b) => b ? { done: b.done + 1, total: b.total } : null);
+        setFromInbox([]);
+        setReceipts([next!]);
+        setTitle(""); setMerchant(""); setAmount(""); setDescription(""); setTags("");
+        setReceiptDetails({}); setScan(null); setAutoFilled(new Set()); setSplitOn(false); setShares({});
+        await runExtraction(next!, true);
+        return;
+      }
+      setBatch(null);
       nav({ to: editing ? "/expenses" : "/dashboard" });
     } catch (e) {
       toast.error((e as Error).message);
@@ -299,7 +311,8 @@ function NewExpense() {
           <div className="rounded-3xl border-2 border-dashed border-primary/40 bg-secondary/50 p-5 text-center">
             <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-hero text-ink-foreground shadow-float"><ScanLine className="h-7 w-7" /></span>
             <p className="mt-2 font-display text-lg font-bold">{reading ? "Reading your bill…" : "Add a bill or receipt"}</p>
-            <p className="text-xs text-muted-foreground">Photo or PDF · we fill in the rest</p>
+            <p className="text-xs text-muted-foreground">Photo or PDF · we fill in the rest · pick several to review one by one</p>
+            {batch && <p className="mt-2 inline-block rounded-full bg-gold px-3 py-1 text-xs font-bold text-gold-foreground">Bill {batch.done + 1} of {batch.total}{queue.length ? ` · ${queue.length} waiting` : ""}</p>}
             <div className="mt-4 grid grid-cols-3 gap-2">
               <Button type="button" variant="secondary" className="h-auto flex-col gap-1 py-3" onClick={() => cameraRef.current?.click()}><Camera className="h-5 w-5" /><span className="text-xs">Camera</span></Button>
               <Button type="button" variant="secondary" className="h-auto flex-col gap-1 py-3" onClick={() => galleryRef.current?.click()}><ImageIcon className="h-5 w-5" /><span className="text-xs">Gallery</span></Button>
