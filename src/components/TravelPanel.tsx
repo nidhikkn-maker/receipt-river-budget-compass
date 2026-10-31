@@ -32,15 +32,16 @@ export function TravelPanel({ trip }: { trip: TravelTrip }) {
   };
   const closed = !!trip.closedAt;
   const [traveller, setTraveller] = useState("");
-  const [bk, setBk] = useState({ kind: "flight" as BookingKind, provider: "", ref: "", date: trip.start, amount: "" });
-  const [it, setIt] = useState({ date: trip.start, time: "", title: "", place: "" });
+  const [bk, setBk] = useState({ kind: "flight" as BookingKind, provider: "", ref: "", date: trip.start, amount: "", due: "", cancel: "" });
+  const [it, setIt] = useState({ date: trip.start, time: "", title: "", place: "", who: "", note: "" });
   const [adv, setAdv] = useState({ amount: "", source: "", date: trip.start });
+  const [bl, setBl] = useState({ category: "", amount: "" });
 
   const addBooking = () => {
-    const b: Booking = { id: crypto.randomUUID(), kind: bk.kind, provider: bk.provider.trim(), ref: bk.ref.trim(), date: bk.date, amount: Number(bk.amount) || 0, status: "unpaid" };
+    const b: Booking = { id: crypto.randomUUID(), kind: bk.kind, provider: bk.provider.trim(), ref: bk.ref.trim(), date: bk.date, amount: Number(bk.amount) || 0, status: "unpaid", dueDate: bk.due || null, cancelTerms: bk.cancel.trim() || null };
     try { validateBooking(b); } catch (e) { toast.error((e as Error).message); return; }
     void put({ bookings: [...(trip.bookings ?? []), b] }, "Booking added — not counted as spent until paid");
-    setBk({ ...bk, provider: "", ref: "", amount: "" });
+    setBk({ ...bk, provider: "", ref: "", amount: "", due: "", cancel: "" });
   };
   const ws = Object.entries(f.byWorkspace) as [Scope, number][];
 
