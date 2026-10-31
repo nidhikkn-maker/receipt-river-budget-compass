@@ -6,7 +6,7 @@ import { PageTitle } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { CATEGORIES, budgetUsage, money, totalsBy, type Category } from "@/lib/expenses";
+import { CATEGORIES, budgetUsage, money, totalsBy, categoryTotals, type Category } from "@/lib/expenses";
 import { ScopedBudgets } from "@/components/ScopedBudgets";
 import { useStore } from "@/lib/store";
 import { cn } from "@/lib/utils";

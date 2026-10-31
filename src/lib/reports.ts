@@ -1,4 +1,4 @@
-import { whoLabel, PAYMENT_LABEL, SCOPE_LABEL, budgetUsage, totalsBy, type Budgets, type Expense } from "./expenses";
+import { whoLabel, PAYMENT_LABEL, SCOPE_LABEL, budgetUsage, totalsBy, categoryTotals, type Budgets, type Expense } from "./expenses";
 
 export type ReportKind = "expenses" | "business" | "categories" | "reimbursements";
 export interface Report { title: string; headers: string[]; rows: (string | number)[][] }

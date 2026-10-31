@@ -11,7 +11,7 @@ import { buildReport, downloadBlob, toCsv, toPdf, type ReportKind } from "@/lib/
 import { useStore } from "@/lib/store";
 import { BarChart, Bar, XAxis, Tooltip, ResponsiveContainer, LineChart, Line, YAxis } from "recharts";
 import { tagValue } from "@/lib/preferences";
-import { money, totalsBy } from "@/lib/expenses";
+import { money, totalsBy, categoryTotals } from "@/lib/expenses";
 import { ExpenseTable } from "@/components/ExpenseTable";
 import { monthlySeries, weeklySpend, netWorthSeries, spendBy, monthToDateCompare, subscriptionSpendSeries, cardUtilisationSeries, loanProgress, savingsTrend } from "@/lib/insights";
 import { PAYMENT_METHODS, PAYMENT_LABEL, type Scope } from "@/lib/expenses";

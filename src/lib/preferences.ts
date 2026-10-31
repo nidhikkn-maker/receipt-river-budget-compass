@@ -33,6 +33,14 @@ export interface FinancePreferences {
   cardAlertPct: number;
   /** Home overview period. */
   homePeriod: "day" | "week" | "month";
+  /** Days before account data needs review / is outdated; per-account overrides by account id. */
+  freshness: { reviewDays: number; outdatedDays: number; perAccount: Record<string, { reviewDays: number; outdatedDays: number }> };
+  /** Inbox item keys the user dismissed. */
+  inboxDismissed: string[];
+  /** Latest statement balance the user entered per account id. */
+  statementBalances: Record<string, { balance: number; date: string }>;
+  /** Saved category split templates (percentages). */
+  splitTemplates: { name: string; lines: { category: string; pct: number }[] }[];
 }
 
 export const DEFAULT_TAGS: GroupedTag[] = [
@@ -47,6 +55,7 @@ export function defaultPreferences(): FinancePreferences {
   return {
     categories: CATEGORIES.map((name) => ({ name, archived: false })), tags: DEFAULT_TAGS, budgets: [], homeHidden: [], homeOrder: [...HOME_SECTIONS],
     theme: "system", reminders: true, reminderDays: 3, defaultCurrency: "INR", language: "en", aiEnabled: true, aiReadsDocuments: true, cardAlertPct: 30, homePeriod: "month",
+    freshness: { reviewDays: 14, outdatedDays: 45, perAccount: {} }, inboxDismissed: [], statementBalances: {}, splitTemplates: [],
   };
 }
 
@@ -65,6 +74,14 @@ export function normalizePreferences(raw: Partial<FinancePreferences> | null | u
   if (!/^[A-Z]{3}$/.test(p.defaultCurrency ?? "")) p.defaultCurrency = "INR";
   if (!(p.language in LANGUAGES)) p.language = "en";
   if (!["day", "week", "month"].includes(p.homePeriod)) p.homePeriod = "month";
+  const f = p.freshness ?? d.freshness;
+  const days = (n: unknown, def: number) => (Number.isFinite(n) ? Math.min(365, Math.max(1, Math.round(n as number))) : def);
+  p.freshness = { reviewDays: days(f.reviewDays, 14), outdatedDays: days(f.outdatedDays, 45), perAccount: f.perAccount && typeof f.perAccount === "object" ? f.perAccount : {} };
+  if (p.freshness.outdatedDays <= p.freshness.reviewDays) p.freshness.outdatedDays = p.freshness.reviewDays + 1;
+  if (!Array.isArray(p.inboxDismissed)) p.inboxDismissed = [];
+  p.inboxDismissed = p.inboxDismissed.slice(-500);
+  if (!p.statementBalances || typeof p.statementBalances !== "object") p.statementBalances = {};
+  if (!Array.isArray(p.splitTemplates)) p.splitTemplates = [];
   return p;
 }
 
