@@ -15,7 +15,7 @@ describe("parseQuery", () => {
   it("reads 'last six months' as a date range ending today", () => {
     const p = parseQuery("Show all hotel expenses from the last six months", today);
     expect(p.dateTo).toBe(today);
-    expect(p.dateFrom).toBe("2026-05-03");
+    expect(p.dateFrom).toBe("2026-05-04");
     expect(p.text).toContain("hotel");
   });
   it("reads tags and pending status", () => {

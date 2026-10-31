@@ -96,9 +96,9 @@ export function parseQuery(q: string, today: string): ParsedQuery {
     [/\b(income|salary|received)\b/, "income"],
     [/\b(expense|expenses|spending|spent|purchase|purchases)\b/, "expense"],
   ];
-  for (const [re, kind] of kindWords) if (re.test(text) && !out.kinds.includes(kind)) out.kinds.push(kind);
-  if (/\bpending\b/.test(text)) out.status = "pending";
-  if (/\boverdue\b/.test(text)) out.status = "overdue";
+  for (const [re, kind] of kindWords) if (re.test(text)) { if (!out.kinds.includes(kind)) out.kinds.push(kind); text = text.replace(re, " "); }
+  if (/\bpending\b/.test(text)) { out.status = "pending"; text = text.replace(/\bpending\b/, " "); }
+  if (/\boverdue\b/.test(text)) { out.status = "overdue"; text = text.replace(/\boverdue\b/, " "); }
 
   out.text = text.replace(/\b(show|find|all|my|me|the|from|using|with|made|to|get|list|what|which|give)\b/g, " ").replace(/\s+/g, " ").trim();
   return out;
