@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { ArrowUp, Archive, Pencil, Plus, Merge, Trash2 } from "lucide-react";
 import { Button } from "./ui/button";
@@ -11,10 +11,12 @@ import { Label } from "./ui/label";
 import { CURRENCIES } from "@/lib/expenses";
 
 export function FinanceSettings() {
-  const { preferences:p, savePreferences, moveCategory, name, updateName }=useStore();
+  const { preferences:p, savePreferences, moveCategory, name, updateName, loading }=useStore();
   const [displayName, setDisplayName] = useState(name);
   const [category,setCategory]=useState(""); const [tag,setTag]=useState(""); const [group,setGroup]=useState("Project");
+  useEffect(()=>setDisplayName(name),[name]);
   const run=async(fn:()=>Promise<void>)=>{try{await fn();toast.success("Saved");}catch(e){toast.error((e as Error).message);}};
+  if(loading)return <p role="status">Loading your settings…</p>;
   return <section className="mb-8 space-y-6">
     <div className="grid gap-3 sm:grid-cols-2">
       <div className="grid gap-1"><Label htmlFor="display-name">Your name</Label><div className="flex gap-2"><Input id="display-name" value={displayName} onChange={e=>setDisplayName(e.target.value)} /><Button variant="outline" onClick={()=>run(()=>updateName(displayName))}>Save name</Button></div></div>
