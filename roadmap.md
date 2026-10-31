@@ -170,3 +170,8 @@
 - [x] Phase 3: homepage — overview, readiness, 4 metrics, insights, commitments, recent, AI briefing, travel widget
 - [x] Phase 4: appearance settings UI with previews, responsive iPhone/desktop refinement
 - [x] Phase 5: validation — theme switching, entry flow, routes, calculations, 22 acceptance checks
+
+## Version 4.4 — Universal entry redesign
+- [x] Quick entry by default (amount, category, account, workspace, date, note) with compact Camera/Gallery/Files/Voice
+- [x] Compact type selector, searchable categories and tags, compact workspace with optional split, More details section
+- [x] Focused entry screen without header/bottom bar; sticky Save

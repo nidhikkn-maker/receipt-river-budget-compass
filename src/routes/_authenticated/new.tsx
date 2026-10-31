@@ -1,9 +1,10 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
-import { ScopeToggle } from "@/components/ScopeBadge";
 import { toast } from "sonner";
-import { ScanLine, Sparkles, X, Camera, Image as ImageIcon, FolderOpen, Inbox, RotateCcw, PencilLine } from "lucide-react";
-import { PageTitle } from "@/components/AppShell";
+import { ScanLine, Sparkles, X, Camera, Image as ImageIcon, FolderOpen, Inbox, RotateCcw, PencilLine, ChevronDown, Check, Plus } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { dayShortcut, recentFirst, relevantSections } from "@/lib/entry-form";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -118,6 +119,11 @@ function NewExpense() {
   const [splitOn, setSplitOn] = useState(false);
   const [shares, setShares] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
+  const [more, setMore] = useState(false);
+  const [catOpen, setCatOpen] = useState(false);
+  const [tagOpen, setTagOpen] = useState(false);
+  const [tagQuery, setTagQuery] = useState("");
+  const [voiceOpen, setVoiceOpen] = useState(false);
   const [title, setTitle] = useState("");
   const [merchant, setMerchant] = useState("");
   const [amount, setAmount] = useState("");
@@ -412,157 +418,200 @@ function NewExpense() {
   const af = (k: string) => autoFilled.has(k) && <Sparkles className="ml-1 inline h-3 w-3 text-primary" aria-label="Auto-filled" />;
   const converted = fx && "rate" in fx && Number(amount) > 0 ? convert(Number(amount), fx.rate) : null;
 
+  const tagList = tags.split(",").map((t) => t.trim()).filter(Boolean);
+  const toggleTag = (v: string) => setTags((tagList.includes(v) ? tagList.filter((x) => x !== v) : [...tagList, v]).join(", "));
+  const tagCounts = new Map<string, number>();
+  for (const e of expenses) for (const t of e.tags ?? []) tagCounts.set(t, (tagCounts.get(t) ?? 0) + 1);
+  const frequentTags = preferences.tags.map(tagValue).filter((v) => tagCounts.has(v)).sort((a, b) => (tagCounts.get(b) ?? 0) - (tagCounts.get(a) ?? 0)).slice(0, 6);
+  const tagGroups = [...new Set(preferences.tags.map((t) => t.group || "Other"))];
+  const categoryNames = [...new Set([...(editing ? [category] : []), ...preferences.categories.filter((c) => !c.archived).map((c) => c.name)])];
+  const catOrder = recentFirst(categoryNames, expenses, (p) => p.category);
+  const acctOrder = recentFirst(liveAccounts.map((a) => a.id), expenses, (p) => p.accountId);
+  const acctById = new Map(liveAccounts.map((a) => [a.id, a]));
+  const sections = relevantSections({ txnType, scope, split: wsSplit.on, currency, baseCurrency: BASE_CURRENCY, onTrip: !!ctxTrip || tripId !== "none" || tagList.some((t) => t.startsWith("trip:")) });
+  const today = dayShortcut(0); const yesterday = dayShortcut(1);
+  const methodNote = instrumentId !== "none" ? savedMethods.find((p) => p.id === instrumentId) : undefined;
+  const fieldCls = "h-11 rounded-xl";
+
   return (
     <>
-      <PageTitle eyebrow={editing ? "Edit expense" : "New expense"} title={editing ? editing.title : "Scan a bill"} sub="Any currency — we convert to ₹ with that day's rate." />
-      <form onSubmit={submit} className="grid gap-5 lg:grid-cols-[1fr_1.3fr]">
-        {/* Scan column */}
-        <div className="space-y-4">
-          <div className="rounded-3xl border-2 border-dashed border-primary/40 bg-secondary/50 p-5 text-center">
-            <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-hero text-ink-foreground shadow-float"><ScanLine className="h-7 w-7" /></span>
-            <p className="mt-2 font-display text-lg font-bold">{reading ? "Reading your bill…" : "Add a bill or receipt"}</p>
-            <p className="text-xs text-muted-foreground">Photo or PDF · we fill in the rest · pick several to review one by one</p>
-            {batch && <p className="mt-2 inline-block rounded-full bg-gold px-3 py-1 text-xs font-bold text-gold-foreground">Bill {batch.done + 1} of {batch.total}{queue.length ? ` · ${queue.length} waiting` : ""}</p>}
-            <div className="mt-4 grid grid-cols-3 gap-2">
-              <Button type="button" disabled={reading || saving} variant="secondary" className="h-auto flex-col gap-1 py-3" onClick={() => cameraRef.current?.click()}><Camera className="h-5 w-5" /><span className="text-xs">Camera</span></Button>
-              <Button type="button" disabled={reading || saving} variant="secondary" className="h-auto flex-col gap-1 py-3" onClick={() => galleryRef.current?.click()}><ImageIcon className="h-5 w-5" /><span className="text-xs">Gallery</span></Button>
-              <Button type="button" disabled={reading || saving} variant="secondary" className="h-auto flex-col gap-1 py-3" onClick={() => fileRef.current?.click()}><FolderOpen className="h-5 w-5" /><span className="text-xs">Files</span></Button>
-            </div>
+      <header className="sticky top-0 z-20 -mx-4 mb-3 flex items-center gap-2 border-b bg-background/90 px-3 py-2 backdrop-blur sm:-mx-8 sm:px-6">
+        <Button type="button" size="icon" variant="ghost" aria-label="Close" onClick={() => (window.history.length > 1 ? window.history.back() : nav({ to: "/dashboard" }))}><X className="h-5 w-5" /></Button>
+        <h1 className="font-display text-lg font-bold">{editing ? "Edit entry" : `New ${TXN_LABEL[txnType].toLowerCase()}`}</h1>
+        <div className="ml-auto w-40">
+          <Select value={txnType} onValueChange={(v) => setTxnType(v as TxnType)}>
+            <SelectTrigger aria-label="Transaction type" className="h-9 rounded-full"><SelectValue /></SelectTrigger>
+            <SelectContent>{TXN_TYPES.map((t) => <SelectItem key={t} value={t}>{TXN_LABEL[t]}</SelectItem>)}</SelectContent>
+          </Select>
+        </div>
+      </header>
+      <form onSubmit={submit} className="mx-auto grid max-w-xl gap-3">
+        {/* Amount */}
+        <div className="rounded-3xl bg-card p-4 text-center shadow-sm">
+          <Label htmlFor="a" className="text-xs text-muted-foreground">Amount{af("amount")}</Label>
+          <div className="mt-1 flex items-center justify-center gap-2">
+            <select aria-label="Currency" value={currency} onChange={(e) => setCurrency(e.target.value)} disabled={!confirmed || reading || saving}
+              className="rounded-lg bg-secondary px-2 py-1 text-sm font-semibold">{[...new Set([currency, ...CURRENCIES])].map((c) => <option key={c} value={c}>{c}</option>)}</select>
+            <input id="a" autoFocus={!editing} inputMode="decimal" type="number" step="0.01" min="0" placeholder="0" value={amount} disabled={!confirmed || reading || saving}
+              onChange={(e) => setAmount(e.target.value)} className="w-full min-w-0 max-w-[14rem] appearance-none bg-transparent [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none text-center font-mono text-4xl font-bold outline-none placeholder:text-muted-foreground/50" />
           </div>
-          <input ref={cameraRef} type="file" accept="image/*" capture="environment" className="sr-only" aria-label="Take a photo of a receipt" onChange={(e) => { void onFiles(e.target.files); e.target.value = ""; }} />
-          <input ref={galleryRef} type="file" multiple accept="image/*" className="sr-only" aria-label="Choose receipt photos" onChange={(e) => { void onFiles(e.target.files); e.target.value = ""; }} />
-          {inbox.length > 0 && (
-            <div className="rounded-3xl border bg-card p-4">
-              <p className="flex items-center gap-2 font-display font-bold"><Inbox className="h-4 w-4 text-gold" />Saved receipts to add ({inbox.length})</p>
-              <ul className="mt-2 divide-y text-sm">{inbox.map((d) => <li key={d.id} className="flex items-center justify-between gap-2 py-2"><span className="min-w-0 truncate">{d.fileName}</span><span className="flex shrink-0 gap-1"><Button type="button" size="sm" variant="outline" disabled={fromInbox.includes(d.id) || reading} onClick={() => void useSaved(d.id)}>Use</Button><Button type="button" size="icon" variant="ghost" aria-label={`Delete ${d.fileName}`} onClick={() => void removeDocument(d)}><X className="h-4 w-4" /></Button></span></li>)}</ul>
-            </div>
+          {Number(amount) > 0 && <p className="mt-1 text-xs text-muted-foreground">{money(Number(amount), currency)}</p>}
+          {currency !== BASE_CURRENCY && (
+            <p className="mt-1 text-xs" aria-live="polite">
+              {fx === null ? <span className="text-muted-foreground">Fetching rate for {date}…</span>
+                : "error" in fx ? <span className="text-destructive">{fx.error}</span>
+                : <span title={`1 ${currency} = ${fx.rate.toFixed(4)} INR · rate of ${fx.date}`}>≈ <span className="font-mono font-semibold">{converted != null ? money(converted) : "—"}</span> <span className="text-muted-foreground">· rate in More details</span></span>}
+            </p>
           )}
-          <div className="flex gap-2 rounded-3xl border bg-card p-2">
-            <Button type="button" size="icon" variant={listening ? "default" : "secondary"} onClick={startVoice} aria-label="Speak an entry" className="h-11 w-11 shrink-0 rounded-2xl"><Mic className="h-5 w-5" /></Button>
+        </div>
+
+        {/* Quick capture */}
+        <div className="grid grid-cols-4 gap-2">
+          <Button type="button" disabled={reading || saving} variant="secondary" className="h-auto flex-col gap-0.5 rounded-2xl py-2" onClick={() => cameraRef.current?.click()}><Camera className="h-5 w-5" /><span className="text-[11px]">Camera</span></Button>
+          <Button type="button" disabled={reading || saving} variant="secondary" className="h-auto flex-col gap-0.5 rounded-2xl py-2" onClick={() => galleryRef.current?.click()}><ImageIcon className="h-5 w-5" /><span className="text-[11px]">Gallery</span></Button>
+          <Button type="button" disabled={reading || saving} variant="secondary" className="h-auto flex-col gap-0.5 rounded-2xl py-2" onClick={() => fileRef.current?.click()}><FolderOpen className="h-5 w-5" /><span className="text-[11px]">Files</span></Button>
+          <Button type="button" disabled={reading || saving} variant={listening ? "default" : "secondary"} aria-label="Speak an entry" className="h-auto flex-col gap-0.5 rounded-2xl py-2" onClick={() => { setVoiceOpen(true); startVoice(); }}><Mic className="h-5 w-5" /><span className="text-[11px]">{listening ? "Listening" : "Voice"}</span></Button>
+        </div>
+        <input ref={cameraRef} type="file" accept="image/*" capture="environment" className="sr-only" aria-label="Take a photo of a receipt" onChange={(e) => { void onFiles(e.target.files); e.target.value = ""; }} />
+        <input ref={galleryRef} type="file" multiple accept="image/*" className="sr-only" aria-label="Choose receipt photos" onChange={(e) => { void onFiles(e.target.files); e.target.value = ""; }} />
+        <input ref={fileRef} id="r" type="file" multiple accept="image/*,application/pdf" className="sr-only" aria-label="Choose receipt files" onChange={(e) => { void onFiles(e.target.files); e.target.value = ""; }} />
+        {reading && <p role="status" className="text-center text-sm font-semibold text-primary"><ScanLine className="mr-1 inline h-4 w-4" />Reading…</p>}
+        {batch && <p className="text-center"><span className="rounded-full bg-gold px-3 py-1 text-xs font-bold text-gold-foreground">Bill {batch.done + 1} of {batch.total}{queue.length ? ` · ${queue.length} waiting` : ""}</span></p>}
+        {(voiceOpen || listening || spoken) && (
+          <div className="flex gap-2 rounded-2xl border bg-card p-1.5">
             <Input aria-label="Say or type an entry" placeholder='"Spent ₹2,500 on dinner using AMEX yesterday"' value={spoken} onChange={(e) => setSpoken(e.target.value)}
               onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); void applySpoken(spoken); } }} className="border-0 shadow-none focus-visible:ring-0" />
             <Button type="button" variant="ghost" onClick={() => applySpoken(spoken)} disabled={!spoken.trim() || reading}>Fill</Button>
           </div>
-          <input ref={fileRef} id="r" type="file" multiple accept="image/*,application/pdf" className="sr-only" aria-label="Choose receipt files" onChange={(e) => { void onFiles(e.target.files); e.target.value = ""; }} />
-          {receipts.length > 0 && (
-            <ul className="flex flex-wrap gap-2">
-              {receipts.map((r, i) => (
-                <li key={i} className="relative">
-                  {r.type.startsWith("image/") ? <img src={r.dataUrl} alt={r.name} className="h-20 w-16 rounded-xl border object-cover" /> : <div className="flex h-20 w-16 items-center justify-center rounded-xl border bg-muted p-1 text-center text-[10px]">{r.name}</div>}
-                  <button type="button" aria-label={`Remove ${r.name}`} onClick={() => setReceipts((x) => x.filter((_, j) => j !== i))} className="absolute -right-1.5 -top-1.5 rounded-full bg-ink p-0.5 text-ink-foreground"><X className="h-3 w-3" /></button>
-                </li>
-              ))}
-            </ul>
-          )}
-          {receipts.length > 0 && !editing && fromInbox.length === 0 && <Button type="button" disabled={reading || saving} variant="outline" size="sm" onClick={() => void saveForLater()}><Inbox className="mr-1 h-4 w-4" />Save receipts to add later</Button>}
-
-          {readingError && !reading && <section ref={reviewRef} role="alert" className="space-y-3 rounded-lg border border-destructive/40 bg-card p-4">
-            <h2 className="font-display font-bold">Receipt reading failed</h2>
-            <p className="break-words text-sm text-muted-foreground">{readingError}</p>
-            <p className="text-sm">Your receipt is still attached. No expense has been submitted.</p>
-            <div className="flex flex-wrap gap-2">
-              <Button type="button" variant="outline" disabled={!readTarget} onClick={() => { if (readTarget) void runExtraction(readTarget, false); }}><RotateCcw className="h-4 w-4" />Retry reading</Button>
-              <Button type="button" onClick={() => { setReadingError(""); setScan(null); setConfirmed(true); requestAnimationFrame(() => document.getElementById("t")?.focus()); }}><PencilLine className="h-4 w-4" />Enter details manually</Button>
-            </div>
-          </section>}
-          {scan && confirmed && !reading && <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border bg-card p-4"><p role="status" className="text-sm font-semibold">Receipt details confirmed</p><Button type="button" variant="outline" size="sm" onClick={() => { setScan({ merchant, date, amount, currency }); setConfirmed(false); }}><PencilLine className="h-4 w-4" />Review details again</Button></div>}
-
-          {duplicates.length > 0 && !reading && <section aria-label="Possible duplicate bills" className="space-y-3 rounded-lg border border-gold bg-gold-soft p-4">
-            <h2 className="font-display font-bold">This bill may already exist</h2>
-            <ul className="space-y-2 text-sm">{duplicates.map(e => <li key={e.id} className="flex flex-wrap items-center justify-between gap-2"><span>{e.merchant} · {e.date} · {e.currency} {e.originalAmount.toFixed(2)}</span><Link to="/new" search={{ edit: e.id }} target="_blank" rel="noopener noreferrer" className="text-primary underline">Review existing entry</Link></li>)}</ul>
-            <div className="flex flex-wrap gap-2"><Button type="button" size="sm" variant="outline" disabled={saving} onClick={() => void advanceQueue()}>Skip this bill</Button><Button type="button" size="sm" variant="secondary" disabled={!duplicateBlocked} onClick={() => setDuplicateApproval(duplicateSignature)}>{duplicateBlocked ? "Keep as a separate bill" : "Separate bill confirmed"}</Button></div>
-          </section>}
-          {batch && duplicates.length === 0 && <Button type="button" variant="ghost" size="sm" disabled={reading || saving} onClick={() => void advanceQueue()}>Skip this bill</Button>}
-
-          {receiptReuse.length > 0 && !reading && <section aria-label="Receipt already used" className="space-y-3 rounded-lg border border-gold bg-gold-soft p-4">
-            <h2 className="font-display font-bold">This receipt is already attached to another entry</h2>
-            <ul className="space-y-2 text-sm">{receiptReuse.map(e => <li key={e.id} className="flex flex-wrap items-center justify-between gap-2"><span>{e.merchant ?? e.title} · {e.date} · {e.currency} {e.originalAmount.toFixed(2)}</span><Link to="/new" search={{ edit: e.id }} target="_blank" rel="noopener noreferrer" className="text-primary underline">Review existing entry</Link></li>)}</ul>
-            <div className="flex flex-wrap gap-2"><Button type="button" size="sm" variant="outline" disabled={saving} onClick={() => { setReceipts([]); setReceiptDetails({}); setScan(null); setScanRead(null); setConfirmed(true); setReceiptApproval(""); }}>Remove this receipt</Button><Button type="button" size="sm" variant="secondary" disabled={!receiptBlocked} onClick={() => setReceiptApproval(receiptSignature)}>{receiptBlocked ? "Use this receipt anyway" : "Reused receipt confirmed"}</Button></div>
-          </section>}
-
-          {scan && !reading && !confirmed && (
-            <section ref={reviewRef} className="space-y-3 rounded-3xl border-2 border-primary bg-card p-4 shadow-float" role="group" aria-label="Review scanned details">
-              <div>
-                <div className="font-display font-bold">Check what we read</div>
-                <p className="text-xs text-muted-foreground">Fix anything that's off, then confirm.</p>
-              </div>
-              <div className="grid gap-1"><Label htmlFor="sm">Merchant</Label><Input id="sm" value={scan.merchant} onChange={(e) => setScan({ ...scan, merchant: e.target.value })} /></div>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="grid gap-1"><Label htmlFor="sd">Date</Label><Input id="sd" type="date" value={scan.date} onChange={(e) => setScan({ ...scan, date: e.target.value })} /></div>
-                <div className="grid gap-1">
-                  <Label>Currency</Label>
-                  <Select value={scan.currency} onValueChange={(v) => setScan({ ...scan, currency: v })}>
-                    <SelectTrigger aria-label="Scanned currency"><SelectValue /></SelectTrigger>
-                    <SelectContent>{[...new Set([scan.currency, ...CURRENCIES])].map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
-                  </Select>
-                </div>
-              </div>
-              <div className="grid gap-1"><Label htmlFor="sa">Total on bill</Label><Input id="sa" type="number" step="0.01" min="0" className="font-mono" value={scan.amount} onChange={(e) => setScan({ ...scan, amount: e.target.value })} /></div>
-              <div className="grid gap-1"><Label htmlFor="receipt-tax">Tax included</Label><Input id="receipt-tax" type="number" min="0" step="0.01" value={receiptDetails.tax ?? ""} onChange={e=>setReceiptDetails({...receiptDetails,tax:e.target.value===""?null:Number(e.target.value)})}/></div>
-              {(receiptDetails.items??[]).map((item,i)=><div key={i} className="grid grid-cols-[1fr_64px_80px] gap-2"><Input aria-label={`Item ${i+1} name`} value={item.name} onChange={e=>setReceiptDetails({...receiptDetails,items:(receiptDetails.items ?? []).map((x,j)=>j===i?{...x,name:e.target.value}:x)})}/><Input aria-label={`Item ${i+1} quantity`} type="number" value={item.quantity} onChange={e=>setReceiptDetails({...receiptDetails,items:(receiptDetails.items ?? []).map((x,j)=>j===i?{...x,quantity:Number(e.target.value)}:x)})}/><Input aria-label={`Item ${i+1} amount`} type="number" step="0.01" value={item.amount} onChange={e=>setReceiptDetails({...receiptDetails,items:(receiptDetails.items ?? []).map((x,j)=>j===i?{...x,amount:Number(e.target.value)}:x)})}/></div>)}
-              <div className="flex justify-end gap-2">
-                <Button type="button" variant="ghost" size="sm" onClick={() => { setScan(null); setConfirmed(true); }}>Enter manually</Button>
-                <Button type="button" size="sm" onClick={confirmScan}>Confirm details</Button>
-              </div>
-            </section>
-          )}
-        </div>
-
-        {/* Details column */}
-        <fieldset disabled={!confirmed || reading || saving} className={cn("grid min-w-0 content-start gap-4 rounded-3xl border bg-card p-5 sm:p-6", !confirmed && "opacity-50")}>
-          <div className="grid gap-2">
-            <Label>Type</Label>
-            <div className="flex flex-wrap gap-2" role="radiogroup" aria-label="Transaction type">
-              {TXN_TYPES.map((t) => (
-                <button key={t} type="button" role="radio" aria-checked={txnType === t} onClick={() => setTxnType(t)}
-                  className={cn("min-h-11 rounded-full border px-4 text-sm font-medium transition", txnType === t ? "border-gold bg-gold text-gold-foreground" : "bg-background hover:bg-secondary")}>
-                  {TXN_LABEL[t]}
-                </button>
-              ))}
-            </div>
-            {TYPE_HINT[txnType] && <p className="text-xs text-muted-foreground">{TYPE_HINT[txnType]}</p>}
+        )}
+        {inbox.length > 0 && (
+          <details className="rounded-2xl border bg-card px-3 py-2 text-sm">
+            <summary className="flex cursor-pointer items-center gap-2 font-semibold"><Inbox className="h-4 w-4 text-gold" />Saved receipts to add ({inbox.length})</summary>
+            <ul className="mt-1 divide-y">{inbox.map((d) => <li key={d.id} className="flex items-center justify-between gap-2 py-2"><span className="min-w-0 truncate">{d.fileName}</span><span className="flex shrink-0 gap-1"><Button type="button" size="sm" variant="outline" disabled={fromInbox.includes(d.id) || reading} onClick={() => void useSaved(d.id)}>Use</Button><Button type="button" size="icon" variant="ghost" aria-label={`Delete ${d.fileName}`} onClick={() => void removeDocument(d)}><X className="h-4 w-4" /></Button></span></li>)}</ul>
+          </details>
+        )}
+        {receipts.length > 0 && (
+          <div className="flex flex-wrap items-center gap-2">
+            {receipts.map((r, i) => (
+              <span key={i} className="relative">
+                {r.type.startsWith("image/") ? <img src={r.dataUrl} alt={r.name} className="h-14 w-12 rounded-lg border object-cover" /> : <span className="flex h-14 w-12 items-center justify-center rounded-lg border bg-muted p-1 text-center text-[9px]">{r.name}</span>}
+                <button type="button" aria-label={`Remove ${r.name}`} onClick={() => setReceipts((x) => x.filter((_, j) => j !== i))} className="absolute -right-1.5 -top-1.5 rounded-full bg-ink p-0.5 text-ink-foreground"><X className="h-3 w-3" /></button>
+              </span>
+            ))}
+            {!editing && fromInbox.length === 0 && <Button type="button" disabled={reading || saving} variant="ghost" size="sm" onClick={() => void saveForLater()}><Inbox className="mr-1 h-4 w-4" />Save for later</Button>}
           </div>
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div className="grid gap-2">
-              <Label>{isMove(txnType) ? "From account" : txnType === "advance" ? "Received into" : txnType === "advance_settlement" ? "Returned from" : "Account"}</Label>
+        )}
+
+        {readingError && !reading && <section ref={reviewRef} role="alert" className="space-y-3 rounded-2xl border border-destructive/40 bg-card p-4">
+          <h2 className="font-display font-bold">Receipt reading failed</h2>
+          <p className="break-words text-sm text-muted-foreground">{readingError}</p>
+          <p className="text-sm">Your receipt is still attached. No expense has been submitted.</p>
+          <div className="flex flex-wrap gap-2">
+            <Button type="button" variant="outline" disabled={!readTarget} onClick={() => { if (readTarget) void runExtraction(readTarget, false); }}><RotateCcw className="h-4 w-4" />Retry reading</Button>
+            <Button type="button" onClick={() => { setReadingError(""); setScan(null); setConfirmed(true); requestAnimationFrame(() => document.getElementById("a")?.focus()); }}><PencilLine className="h-4 w-4" />Enter details manually</Button>
+          </div>
+        </section>}
+        {scan && confirmed && !reading && <div className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border bg-card px-3 py-2"><p role="status" className="text-sm font-semibold">Receipt details confirmed</p><Button type="button" variant="ghost" size="sm" onClick={() => { setScan({ merchant, date, amount, currency }); setConfirmed(false); }}><PencilLine className="h-4 w-4" />Review again</Button></div>}
+        {duplicates.length > 0 && !reading && <section aria-label="Possible duplicate bills" className="space-y-3 rounded-2xl border border-gold bg-gold-soft p-4">
+          <h2 className="font-display font-bold">This bill may already exist</h2>
+          <ul className="space-y-2 text-sm">{duplicates.map(e => <li key={e.id} className="flex flex-wrap items-center justify-between gap-2"><span>{e.merchant} · {e.date} · {e.currency} {e.originalAmount.toFixed(2)}</span><Link to="/new" search={{ edit: e.id }} target="_blank" rel="noopener noreferrer" className="text-primary underline">Review existing entry</Link></li>)}</ul>
+          <div className="flex flex-wrap gap-2"><Button type="button" size="sm" variant="outline" disabled={saving} onClick={() => void advanceQueue()}>Skip this bill</Button><Button type="button" size="sm" variant="secondary" disabled={!duplicateBlocked} onClick={() => setDuplicateApproval(duplicateSignature)}>{duplicateBlocked ? "Keep as a separate bill" : "Separate bill confirmed"}</Button></div>
+        </section>}
+        {batch && duplicates.length === 0 && <Button type="button" variant="ghost" size="sm" disabled={reading || saving} onClick={() => void advanceQueue()}>Skip this bill</Button>}
+        {receiptReuse.length > 0 && !reading && <section aria-label="Receipt already used" className="space-y-3 rounded-2xl border border-gold bg-gold-soft p-4">
+          <h2 className="font-display font-bold">This receipt is already attached to another entry</h2>
+          <ul className="space-y-2 text-sm">{receiptReuse.map(e => <li key={e.id} className="flex flex-wrap items-center justify-between gap-2"><span>{e.merchant ?? e.title} · {e.date} · {e.currency} {e.originalAmount.toFixed(2)}</span><Link to="/new" search={{ edit: e.id }} target="_blank" rel="noopener noreferrer" className="text-primary underline">Review existing entry</Link></li>)}</ul>
+          <div className="flex flex-wrap gap-2"><Button type="button" size="sm" variant="outline" disabled={saving} onClick={() => { setReceipts([]); setReceiptDetails({}); setScan(null); setScanRead(null); setConfirmed(true); setReceiptApproval(""); }}>Remove this receipt</Button><Button type="button" size="sm" variant="secondary" disabled={!receiptBlocked} onClick={() => setReceiptApproval(receiptSignature)}>{receiptBlocked ? "Use this receipt anyway" : "Reused receipt confirmed"}</Button></div>
+        </section>}
+        {scan && !reading && !confirmed && (
+          <section ref={reviewRef} className="space-y-3 rounded-3xl border-2 border-primary bg-card p-4 shadow-float" role="group" aria-label="Review scanned details">
+            <div><div className="font-display font-bold">Check what we read</div><p className="text-xs text-muted-foreground">Fix anything that's off, then confirm.</p></div>
+            <div className="grid gap-1"><Label htmlFor="sm">Merchant</Label><Input id="sm" value={scan.merchant} onChange={(e) => setScan({ ...scan, merchant: e.target.value })} /></div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="grid gap-1"><Label htmlFor="sd">Date</Label><Input id="sd" type="date" value={scan.date} onChange={(e) => setScan({ ...scan, date: e.target.value })} /></div>
+              <div className="grid gap-1"><Label>Currency</Label>
+                <Select value={scan.currency} onValueChange={(v) => setScan({ ...scan, currency: v })}>
+                  <SelectTrigger aria-label="Scanned currency"><SelectValue /></SelectTrigger>
+                  <SelectContent>{[...new Set([scan.currency, ...CURRENCIES])].map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="grid gap-1"><Label htmlFor="sa">Total on bill</Label><Input id="sa" type="number" step="0.01" min="0" className="font-mono" value={scan.amount} onChange={(e) => setScan({ ...scan, amount: e.target.value })} /></div>
+            <div className="grid gap-1"><Label htmlFor="receipt-tax">Tax included</Label><Input id="receipt-tax" type="number" min="0" step="0.01" value={receiptDetails.tax ?? ""} onChange={e=>setReceiptDetails({...receiptDetails,tax:e.target.value===""?null:Number(e.target.value)})}/></div>
+            {(receiptDetails.items??[]).map((item,i)=><div key={i} className="grid grid-cols-[1fr_64px_80px] gap-2"><Input aria-label={`Item ${i+1} name`} value={item.name} onChange={e=>setReceiptDetails({...receiptDetails,items:(receiptDetails.items ?? []).map((x,j)=>j===i?{...x,name:e.target.value}:x)})}/><Input aria-label={`Item ${i+1} quantity`} type="number" value={item.quantity} onChange={e=>setReceiptDetails({...receiptDetails,items:(receiptDetails.items ?? []).map((x,j)=>j===i?{...x,quantity:Number(e.target.value)}:x)})}/><Input aria-label={`Item ${i+1} amount`} type="number" step="0.01" value={item.amount} onChange={e=>setReceiptDetails({...receiptDetails,items:(receiptDetails.items ?? []).map((x,j)=>j===i?{...x,amount:Number(e.target.value)}:x)})}/></div>)}
+            <div className="flex justify-end gap-2">
+              <Button type="button" variant="ghost" size="sm" onClick={() => { setScan(null); setConfirmed(true); }}>Enter manually</Button>
+              <Button type="button" size="sm" onClick={confirmScan}>Confirm details</Button>
+            </div>
+          </section>
+        )}
+
+        <fieldset disabled={!confirmed || reading || saving} className={cn("grid min-w-0 gap-3 rounded-3xl bg-card p-4", !confirmed && "opacity-50")}>
+          {TYPE_HINT[txnType] && <p className="text-xs text-muted-foreground">{TYPE_HINT[txnType]}</p>}
+          {/* Category */}
+          {!isMove(txnType) && (
+            <div className="grid gap-1.5">
+              <Label>Category{af("category")}</Label>
+              <Popover open={catOpen} onOpenChange={setCatOpen}>
+                <PopoverTrigger asChild>
+                  <Button type="button" variant="outline" aria-label="Category" className={cn(fieldCls, "justify-between font-normal")}>{category}<ChevronDown className="h-4 w-4 opacity-60" /></Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
+                  <Command>
+                    <CommandInput placeholder="Search categories" />
+                    <CommandList>
+                      <CommandEmpty>No category found.</CommandEmpty>
+                      {catOrder.recent.length > 0 && <CommandGroup heading="Recent">{catOrder.recent.map((c) => <CommandItem key={`r-${c}`} value={`recent ${c}`} onSelect={() => { setCategory(c as Category); setCatOpen(false); }}>{c}{c === category && <Check className="ml-auto h-4 w-4" />}</CommandItem>)}</CommandGroup>}
+                      <CommandGroup heading="All categories">{catOrder.rest.map((c) => <CommandItem key={c} value={c} onSelect={() => { setCategory(c as Category); setCatOpen(false); }}>{c}{c === category && <Check className="ml-auto h-4 w-4" />}</CommandItem>)}</CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
+            </div>
+          )}
+          {/* Paid with = the real account affected */}
+          <div className={cn("grid gap-3", isMove(txnType) && "grid-cols-2")}>
+            <div className="grid gap-1.5">
+              <Label>{isMove(txnType) ? "From account" : txnType === "advance" ? "Received into" : txnType === "advance_settlement" ? "Returned from" : txnType === "income" ? "Into account" : "Paid with"}{af("payment")}</Label>
               <Select value={accountId} onValueChange={setAccountId}>
-                <SelectTrigger aria-label="Account"><SelectValue /></SelectTrigger>
+                <SelectTrigger aria-label="Account" className={fieldCls}><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="none">Not set</SelectItem>
-                  {liveAccounts.map((a) => <SelectItem key={a.id} value={a.id}>{a.name} · {ACCOUNT_LABEL[a.kind]}</SelectItem>)}
+                  <SelectItem value="none">Choose account</SelectItem>
+                  {[...acctOrder.recent, ...acctOrder.rest].map((id) => { const a = acctById.get(id)!; return <SelectItem key={id} value={id}>{a.name} · {ACCOUNT_LABEL[a.kind]}</SelectItem>; })}
                 </SelectContent>
               </Select>
+              {methodNote && <p className="text-xs text-muted-foreground">via {instrumentLabel(methodNote)}</p>}
             </div>
             {isMove(txnType) && (
-              <div className="grid gap-2">
-              <Label>{txnType === "card_payment" ? "Card being paid" : txnType === "loan_repayment" ? "Loan being repaid" : txnType === "investment" ? "Invested into" : "To account"}</Label>
-              <Select value={toAccountId} onValueChange={setToAccountId}>
-                <SelectTrigger aria-label="To account"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">Not set</SelectItem>
-                  {liveAccounts.filter((a) => !MOVE_TARGET[txnType] || MOVE_TARGET[txnType]!.includes(a.kind)).map((a) => <SelectItem key={a.id} value={a.id}>{a.name} · {ACCOUNT_LABEL[a.kind]}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
+              <div className="grid gap-1.5">
+                <Label>{txnType === "card_payment" ? "Card being paid" : txnType === "loan_repayment" ? "Loan being repaid" : txnType === "investment" ? "Invested into" : "To account"}</Label>
+                <Select value={toAccountId} onValueChange={setToAccountId}>
+                  <SelectTrigger aria-label="To account" className={fieldCls}><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Not set</SelectItem>
+                    {liveAccounts.filter((a) => !MOVE_TARGET[txnType] || MOVE_TARGET[txnType]!.includes(a.kind)).map((a) => <SelectItem key={a.id} value={a.id}>{a.name} · {ACCOUNT_LABEL[a.kind]}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
             )}
           </div>
+          {!liveAccounts.length && <p className="rounded-xl bg-secondary px-3 py-2 text-xs">An account is needed to keep balances accurate. <Link to="/wealth" className="font-semibold text-primary underline">Add account</Link> — until then this entry is saved without changing any balance.</p>}
           {(txnType === "advance" || txnType === "advance_settlement") && (
-            <div className="grid gap-2">
+            <div className="grid gap-1.5">
               <Label>Trip</Label>
               <Select value={tripId} onValueChange={setTripId}>
-                <SelectTrigger aria-label="Trip"><SelectValue /></SelectTrigger>
+                <SelectTrigger aria-label="Trip" className={fieldCls}><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="none">Not linked to a trip</SelectItem>
                   {(preferences.trips as TravelTrip[]).map((t) => <SelectItem key={t.id} value={t.id}>{t.name}{t.start ? ` · ${t.start}` : ""}</SelectItem>)}
                 </SelectContent>
               </Select>
-              <p className="text-xs text-muted-foreground">Linking a trip tracks this advance against it — no tag needed.</p>
             </div>
           )}
           {txnType === "loan_repayment" && (
-            <div className="grid gap-2">
+            <div className="grid gap-1.5">
               <div className="flex items-center justify-between">
-                <Label>Principal / interest split</Label>
+                <Label>Principal / interest</Label>
                 {(() => {
                   const loan = loans.find((l) => l.accountId === toAccountId && l.status === "active");
                   const amt = Number(amount) || 0;
@@ -578,124 +627,124 @@ function NewExpense() {
               <p className="text-xs text-muted-foreground">Optional. If you fill one, fill both — they must add up to the payment.</p>
             </div>
           )}
-          {!liveAccounts.length && <p className="-mt-2 text-xs text-muted-foreground">Add your bank, card and cash accounts on the <Link to="/wealth" className="text-primary underline">Wealth</Link> page.</p>}
-          <div className="grid gap-2">
-            <Label htmlFor="tags">Tags</Label>
-            <div className="flex flex-wrap gap-2">{preferences.tags.map(t=>{const v=tagValue(t);const selected=tags.split(",").map(x=>x.trim()).includes(v);return <label key={v} className="flex items-center gap-1 text-xs"><input type="checkbox" checked={selected} onChange={e=>{const xs=tags.split(",").map(x=>x.trim()).filter(Boolean);setTags((e.target.checked?[...xs,v]:xs.filter(x=>x!==v)).join(", "));}}/>{v}</label>})}</div><Input id="tags" placeholder="e.g. VEI, reimbursable, essential" value={tags} onChange={(e) => setTags(e.target.value)} />
-          </div>
-          <div className="grid gap-2">
-            {!ctxTrip && !editing && tripsForDate(preferences.trips as TravelTrip[], date).filter((t) => !tags.includes(tripTag(t))).map((t) => (
-              <button key={t.id} type="button" className="text-left text-xs text-primary underline" onClick={() => { setTags((x) => [...new Set([...x.split(",").map((y) => y.trim()).filter(Boolean), tripTag(t)])].join(", ")); if (t.type && t.type !== "mixed") setScope(t.type); const tc = travelCategory(`${merchant} ${title}`); if (tc && preferences.categories.some((c) => c.name === tc && !c.archived)) setCategory(tc); }}>This date is during "{t.name}" — add to that trip?</button>
-            ))}
-            {ctxTrip && <p className="text-xs text-primary">Adding to trip: {ctxTrip.name}{search.booking ? " — this payment will be linked to the booking" : ""}</p>}
-            <WorkspacePicker scope={scope} setScope={setScope} total={Number(amount) || 0} currency={currency} split={wsSplit} setSplit={setWsSplit}
-              suggestion={suggestWorkspace({ merchant, tags: tags.split(",").map((t) => t.trim()), tripType: ctxTrip?.type ?? null, category }, expenses)} />{af("scope")}
-          </div>
-          <div className="grid gap-2">
-            <div className="flex items-center justify-between">
-              <Label>For whom</Label>
-              <label className="flex items-center gap-2 text-xs font-medium">
-                <input type="checkbox" checked={splitOn} className="accent-[var(--primary)]"
-                  onChange={(e) => { setSplitOn(e.target.checked); if (e.target.checked && !Object.keys(shares).length) setShares({ [memberId]: "" }); }} />
-                Split between people
-              </label>
-            </div>
-            <div className="flex flex-wrap gap-2" role={splitOn ? "group" : "radiogroup"} aria-label="For whom">
-              {people.map((m) => {
-                const on = splitOn ? m.id in shares : memberId === m.id;
-                return (
-                  <button key={m.id} type="button" role={splitOn ? "checkbox" : "radio"} aria-checked={on}
-                    onClick={() => {
-                      if (!splitOn) return setMemberId(m.id);
-                      setShares((x) => { const n = { ...x }; if (m.id in n) delete n[m.id]; else n[m.id] = ""; return n; });
-                    }}
-                    className={cn("rounded-full border px-3 py-1.5 text-xs font-medium transition", on ? "border-gold bg-gold text-gold-foreground" : "bg-background hover:bg-secondary")}>
-                    {m.name}
-                  </button>
-                );
-              })}
-              <Link to="/family" className="rounded-full border border-dashed px-3 py-1.5 text-xs text-muted-foreground">+ Family</Link>
-            </div>
-            {splitOn && (
-              <div className="space-y-2 rounded-2xl border bg-secondary/40 p-3">
-                {Object.keys(shares).length === 0 && <p className="text-xs text-muted-foreground">Tap people above to add them.</p>}
-                {Object.entries(shares).map(([id, v]) => (
-                  <div key={id} className="flex items-center gap-2">
-                    <span className="flex-1 text-sm">{people.find((p) => p.id === id)?.name ?? "Family"}</span>
-                    <span className="text-xs text-muted-foreground">{currency}</span>
-                    <Input aria-label={`Share for ${people.find((p) => p.id === id)?.name}`} type="number" step="0.01" min="0" className="h-8 w-28 font-mono"
-                      value={v} onChange={(e) => setShares((x) => ({ ...x, [id]: e.target.value }))} />
-                  </div>
-                ))}
-                <div className="flex items-center justify-between pt-1 text-xs">
-                  <span className={cn("font-mono", Math.abs(splitLeft) > 0.009 ? "text-destructive" : "text-muted-foreground")}>
-                    {Math.abs(splitLeft) > 0.009 ? `${splitLeft > 0 ? "Left to assign" : "Over by"}: ${Math.abs(splitLeft).toFixed(2)}` : "Shares add up ✓"}
-                  </span>
-                  <Button type="button" size="sm" variant="outline" disabled={!(Number(amount) > 0) || !Object.keys(shares).length}
-                    onClick={() => setShares(Object.fromEntries(splitEvenly(Number(amount), Object.keys(shares)).map((x) => [x.memberId, String(x.amount)])))}>
-                    Split evenly
-                  </Button>
-                </div>
+          {/* Workspace + date */}
+          <div className="grid gap-3">
+            <WorkspacePicker compact scope={scope} setScope={setScope} total={Number(amount) || 0} currency={currency} split={wsSplit} setSplit={setWsSplit}
+              suggestion={suggestWorkspace({ merchant, tags: tagList, tripType: ctxTrip?.type ?? null, category }, expenses)} />
+            <div className="grid grid-cols-[auto_1fr] items-center gap-2">
+              <Label htmlFor="d" className="col-span-2">Date{af("date")}</Label>
+              <div className="flex gap-1">
+                <Button type="button" size="sm" variant={date === today ? "default" : "outline"} className="h-8 flex-1 rounded-full px-2 text-xs" onClick={() => setDate(today)}>Today</Button>
+                <Button type="button" size="sm" variant={date === yesterday ? "default" : "outline"} className="h-8 flex-1 rounded-full px-2 text-xs" onClick={() => setDate(yesterday)}>Yesterday</Button>
               </div>
-            )}
-          </div>
-          <div className="grid gap-2"><Label htmlFor="t">Title{af("title")}</Label><Input id="t" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Client lunch – Acme" /></div>
-          <div className="grid gap-2"><Label htmlFor="m">Merchant{af("merchant")}</Label><Input id="m" list="merchant-list" value={merchant} onChange={(e) => setMerchant(e.target.value)} onBlur={() => rememberMerchant(merchant)} />
-            <datalist id="merchant-list">{frequentMerchants(expenses).map((m) => <option key={m} value={m} />)}</datalist></div>
-          <div className="grid grid-cols-[110px_1fr] gap-3">
-            <div className="grid gap-2">
-              <Label>Currency{af("currency")}</Label>
-              <Select value={currency} onValueChange={setCurrency}>
-                <SelectTrigger aria-label="Currency"><SelectValue /></SelectTrigger>
-                <SelectContent>{[...new Set([currency, ...CURRENCIES])].map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
-              </Select>
+              <Input id="d" type="date" value={date} onChange={(e) => setDate(e.target.value)} className="h-9 rounded-xl text-sm" />
             </div>
-            <div className="grid gap-2"><Label htmlFor="a">Amount on bill{af("amount")}</Label><Input id="a" type="number" step="0.01" min="0" value={amount} onChange={(e) => setAmount(e.target.value)} className="font-mono" /></div>
           </div>
-          {currency !== BASE_CURRENCY && (
-            <div className="rounded-2xl bg-secondary px-4 py-3 text-sm" aria-live="polite">
-              {fx === null ? <span className="text-muted-foreground">Fetching the rate for {date}…</span>
-                : "error" in fx ? <span className="text-destructive">{fx.error}</span>
-                : <>
-                    <span className="font-mono font-semibold">{converted != null ? money(converted) : "—"}</span>
-                    <span className="ml-2 text-xs text-muted-foreground">1 {currency} = {fx.rate.toFixed(4)} INR · rate of {fx.date}</span>
-                  </>}
+          {ctxTrip && <p className="text-xs text-primary">Adding to trip: {ctxTrip.name}{search.booking ? " — this payment will be linked to the booking" : ""}</p>}
+          {!ctxTrip && !editing && tripsForDate(preferences.trips as TravelTrip[], date).filter((t) => !tags.includes(tripTag(t))).map((t) => (
+            <button key={t.id} type="button" className="text-left text-xs text-primary underline" onClick={() => { setTags((x) => [...new Set([...x.split(",").map((y) => y.trim()).filter(Boolean), tripTag(t)])].join(", ")); if (t.type && t.type !== "mixed") setScope(t.type); const tc = travelCategory(`${merchant} ${title}`); if (tc && preferences.categories.some((c) => c.name === tc && !c.archived)) setCategory(tc); }}>This date is during "{t.name}" — add to that trip?</button>
+          ))}
+          <div className="grid gap-1.5"><Label htmlFor="t">Note{af("title")}</Label><Input id="t" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Optional — e.g. Dinner with Ravi" className={fieldCls} /></div>
+
+          {/* More details */}
+          <button type="button" aria-expanded={more} onClick={() => setMore((m) => !m)} className="flex items-center justify-between rounded-xl border border-dashed px-3 py-2.5 text-sm font-semibold">
+            <span>More details{(sections.business || sections.travel || sections.fx) && !more ? <span className="ml-2 text-xs font-normal text-muted-foreground">{[sections.business && "business", sections.travel && "travel", sections.fx && "exchange rate"].filter(Boolean).join(" · ")}</span> : null}</span>
+            <ChevronDown className={cn("h-4 w-4 transition-transform", more && "rotate-180")} />
+          </button>
+          {more && (
+            <div className="grid gap-4 border-t pt-3">
+              <div className="grid gap-1.5"><Label htmlFor="m">Merchant{af("merchant")}</Label><Input id="m" list="merchant-list" value={merchant} onChange={(e) => setMerchant(e.target.value)} onBlur={() => rememberMerchant(merchant)} />
+                <datalist id="merchant-list">{frequentMerchants(expenses).map((m) => <option key={m} value={m} />)}</datalist></div>
+              {sections.tags && (
+                <div className="grid gap-1.5">
+                  <Label>Tags</Label>
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    {tagList.map((t) => <span key={t} className="inline-flex items-center gap-1 rounded-full bg-secondary px-2.5 py-1 text-xs font-medium">{t}<button type="button" aria-label={`Remove tag ${t}`} onClick={() => toggleTag(t)}><X className="h-3 w-3" /></button></span>)}
+                    <Popover open={tagOpen} onOpenChange={setTagOpen}>
+                      <PopoverTrigger asChild><Button type="button" size="sm" variant="outline" className="h-7 rounded-full px-2.5 text-xs"><Plus className="h-3 w-3" />Add tag</Button></PopoverTrigger>
+                      <PopoverContent className="w-72 p-0" align="start">
+                        <Command>
+                          <CommandInput placeholder="Search or type a new tag" value={tagQuery} onValueChange={setTagQuery} />
+                          <CommandList>
+                            <CommandEmpty>{tagQuery.trim() ? <button type="button" className="text-primary underline" onClick={() => { toggleTag(tagQuery.trim()); setTagQuery(""); }}>Add "{tagQuery.trim()}"</button> : "No tags yet."}</CommandEmpty>
+                            {frequentTags.length > 0 && <CommandGroup heading="Frequently used">{frequentTags.map((v) => <CommandItem key={`f-${v}`} value={`frequent ${v}`} onSelect={() => toggleTag(v)}>{v}{tagList.includes(v) && <Check className="ml-auto h-4 w-4" />}</CommandItem>)}</CommandGroup>}
+                            {tagGroups.map((g) => <CommandGroup key={g} heading={g}>{preferences.tags.filter((t) => (t.group || "Other") === g).map((t) => { const v = tagValue(t); return <CommandItem key={v} value={v} onSelect={() => toggleTag(v)}>{t.name}{tagList.includes(v) && <Check className="ml-auto h-4 w-4" />}</CommandItem>; })}</CommandGroup>)}
+                          </CommandList>
+                        </Command>
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+                </div>
+              )}
+                            {sections.people && (
+                <div className="grid gap-1.5">
+                  <div className="flex items-center justify-between">
+                    <Label>For whom</Label>
+                    <label className="flex items-center gap-2 text-xs font-medium">
+                      <input type="checkbox" checked={splitOn} className="accent-[var(--primary)]" onChange={(e) => { setSplitOn(e.target.checked); if (e.target.checked && !Object.keys(shares).length) setShares({ [memberId]: "" }); }} />
+                      Split between people
+                    </label>
+                  </div>
+                  <div className="flex flex-wrap gap-2" role={splitOn ? "group" : "radiogroup"} aria-label="For whom">
+                    {people.map((m) => {
+                      const on = splitOn ? m.id in shares : memberId === m.id;
+                      return (
+                        <button key={m.id} type="button" role={splitOn ? "checkbox" : "radio"} aria-checked={on}
+                          onClick={() => { if (!splitOn) return setMemberId(m.id); setShares((x) => { const n = { ...x }; if (m.id in n) delete n[m.id]; else n[m.id] = ""; return n; }); }}
+                          className={cn("rounded-full border px-3 py-1.5 text-xs font-medium transition", on ? "border-gold bg-gold text-gold-foreground" : "bg-background hover:bg-secondary")}>
+                          {m.name}
+                        </button>
+                      );
+                    })}
+                    <Link to="/family" className="rounded-full border border-dashed px-3 py-1.5 text-xs text-muted-foreground">+ Family</Link>
+                  </div>
+                  {splitOn && (
+                    <div className="space-y-2 rounded-2xl border bg-secondary/40 p-3">
+                      {Object.keys(shares).length === 0 && <p className="text-xs text-muted-foreground">Tap people above to add them.</p>}
+                      {Object.entries(shares).map(([id, v]) => (
+                        <div key={id} className="flex items-center gap-2">
+                          <span className="flex-1 text-sm">{people.find((p) => p.id === id)?.name ?? "Family"}</span>
+                          <span className="text-xs text-muted-foreground">{currency}</span>
+                          <Input aria-label={`Share for ${people.find((p) => p.id === id)?.name}`} type="number" step="0.01" min="0" className="h-8 w-28 font-mono" value={v} onChange={(e) => setShares((x) => ({ ...x, [id]: e.target.value }))} />
+                        </div>
+                      ))}
+                      <div className="flex items-center justify-between pt-1 text-xs">
+                        <span className={cn("font-mono", Math.abs(splitLeft) > 0.009 ? "text-destructive" : "text-muted-foreground")}>{Math.abs(splitLeft) > 0.009 ? `${splitLeft > 0 ? "Left to assign" : "Over by"}: ${Math.abs(splitLeft).toFixed(2)}` : "Shares add up ✓"}</span>
+                        <Button type="button" size="sm" variant="outline" disabled={!(Number(amount) > 0) || !Object.keys(shares).length}
+                          onClick={() => setShares(Object.fromEntries(splitEvenly(Number(amount), Object.keys(shares)).map((x) => [x.memberId, String(x.amount)])))}>Split evenly</Button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+              <div className="grid gap-1.5">
+                <Label>Payment method <span className="font-normal text-muted-foreground">(optional detail)</span></Label>
+                <Select value={instrumentId} onValueChange={(v) => v === "none" ? setInstrumentId("none") : pickInstrument(v)}>
+                  <SelectTrigger aria-label="Saved payment method"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">{savedMethods.length ? "Choose a saved UPI ID or card" : "No saved methods yet"}</SelectItem>
+                    {savedMethods.map((p) => <SelectItem key={p.id} value={p.id}>{instrumentLabel(p)} · {accounts.find((a) => a.id === p.accountId)?.name}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+                <div className="flex flex-wrap gap-1.5" role="radiogroup" aria-label="Payment method">
+                  {PAYMENT_METHODS.map((p) => (
+                    <button key={p} type="button" role="radio" aria-checked={paymentMethod === p} onClick={() => { setPaymentMethod(p); setInstrumentId("none"); }}
+                      className={cn("rounded-full border px-3 py-1 text-xs font-medium transition", paymentMethod === p ? "border-gold bg-gold text-gold-foreground" : "bg-background hover:bg-secondary")}>{PAYMENT_LABEL[p]}</button>
+                  ))}
+                </div>
+                <Link to="/payment-methods" className="text-xs font-semibold text-gold-strong underline-offset-2 hover:underline">Manage UPI IDs & cards</Link>
+              </div>
+              {sections.fx && fx && "rate" in fx && <p className="rounded-xl bg-secondary px-3 py-2 text-xs">Exchange rate: 1 {currency} = {fx.rate.toFixed(4)} INR (rate of {fx.date}) · {converted != null ? money(converted) : "—"} recorded. The original {currency} amount is kept too.</p>}
+              <div className="grid gap-1.5"><Label htmlFor="desc">{sections.business ? "Business purpose" : "Description"}{af("description")}</Label><Textarea id="desc" rows={2} value={description} onChange={(e) => setDescription(e.target.value)} /></div>
             </div>
           )}
-          <div className="grid grid-cols-2 gap-3">
-            <div className="grid gap-2"><Label htmlFor="d">Date{af("date")}</Label><Input id="d" type="date" value={date} onChange={(e) => setDate(e.target.value)} /></div>
-            <div className="grid gap-2">
-              <Label>Category{af("category")}</Label>
-              <Select value={category} onValueChange={(v) => setCategory(v as Category)}>
-                <SelectTrigger aria-label="Category"><SelectValue /></SelectTrigger>
-                <SelectContent>{[...new Set([...(editing ? [category] : []), ...preferences.categories.filter(c=>!c.archived).map(c=>c.name)])].map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
-              </Select>
-            </div>
-          </div>
-          <div className="grid gap-2">
-            <Label>Paid with{af("payment")}</Label>
-            <Select value={instrumentId} onValueChange={(v) => v === "none" ? setInstrumentId("none") : pickInstrument(v)}>
-              <SelectTrigger aria-label="Saved payment method"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="none">{savedMethods.length ? "Choose a saved UPI ID or card" : "No saved methods yet"}</SelectItem>
-                {savedMethods.map((p) => <SelectItem key={p.id} value={p.id}>{instrumentLabel(p)} · {accounts.find((a) => a.id === p.accountId)?.name}</SelectItem>)}
-              </SelectContent>
-            </Select>
-            <Link to="/payment-methods" className="text-xs font-semibold text-gold-strong underline-offset-2 hover:underline">Add or manage UPI IDs & cards</Link>
-            <div className="flex flex-wrap gap-2" role="radiogroup" aria-label="Payment method">
-              {PAYMENT_METHODS.map((p) => (
-                <button key={p} type="button" role="radio" aria-checked={paymentMethod === p} onClick={() => { setPaymentMethod(p); setInstrumentId("none"); }}
-                  className={cn("rounded-full border px-3 py-1.5 text-xs font-medium transition", paymentMethod === p ? "border-gold bg-gold text-gold-foreground" : "bg-background hover:bg-secondary")}>
-                  {PAYMENT_LABEL[p]}
-                </button>
-              ))}
-            </div>
-          </div>
-          <div className="grid gap-2"><Label htmlFor="desc">Business purpose{af("description")}</Label><Textarea id="desc" value={description} onChange={(e) => setDescription(e.target.value)} /></div>
-          <Button type="submit" size="lg" variant="gold" className="rounded-2xl" disabled={reading || saving || !confirmed || duplicateBlocked || receiptBlocked}>
+        </fieldset>
+
+        <div className="sticky bottom-0 z-10 -mx-4 bg-background/95 px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-2 backdrop-blur sm:mx-0 sm:px-0">
+          <Button type="submit" size="lg" variant="gold" className="h-12 w-full rounded-2xl text-base" disabled={reading || saving || !confirmed || duplicateBlocked || receiptBlocked || !(Number(amount) > 0)}>
             {saving ? "Saving…" : editing ? "Save changes" : `Save ${TXN_LABEL[txnType].toLowerCase()}`}
           </Button>
-        </fieldset>
+        </div>
       </form>
     </>
   );

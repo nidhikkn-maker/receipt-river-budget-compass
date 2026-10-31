@@ -8,9 +8,10 @@ import { SCOPES, SCOPE_LABEL, type Scope } from "@/lib/expenses";
 import { buildShares, validateShares, type AllocationMethod, type Suggestion, type WorkspaceShare } from "@/lib/workspaces";
 
 /** Workspace choice with an editable suggestion and an optional split of one entry across workspaces (charged once). */
-export function WorkspacePicker({ scope, setScope, suggestion, total, currency, split, setSplit }: {
+export function WorkspacePicker({ scope, setScope, suggestion, total, currency, split, setSplit, compact }: {
   scope: Scope; setScope: (s: Scope) => void; suggestion: Suggestion; total: number; currency: string;
   split: { on: boolean; method: AllocationMethod; values: Partial<Record<Scope, string>> }; setSplit: (s: { on: boolean; method: AllocationMethod; values: Partial<Record<Scope, string>> }) => void;
+  compact?: boolean;
 }) {
   const shares = useMemo(() => splitShares(split, total), [split, total]);
   const err = split.on ? validateShares(shares, total) : null;
@@ -21,7 +22,9 @@ export function WorkspacePicker({ scope, setScope, suggestion, total, currency, 
         <Label>Workspace</Label>
         <label className="flex items-center gap-2 text-xs font-medium"><input type="checkbox" checked={split.on} onChange={(e) => setSplit({ ...split, on: e.target.checked, values: e.target.checked && !Object.keys(split.values).length ? { [scope]: "" } : split.values })} />Split across workspaces</label>
       </div>
-      {!split.on && <ScopeToggle value={scope} onChange={setScope} />}
+      {!split.on && (compact
+        ? <select aria-label="Workspace" value={scope} onChange={(e) => setScope(e.target.value as Scope)} className="h-11 w-full rounded-xl border border-input bg-background px-3 text-sm">{SCOPES.map((w) => <option key={w} value={w}>{SCOPE_LABEL[w]}</option>)}</select>
+        : <ScopeToggle value={scope} onChange={setScope} />)}
       {suggestion.workspace && suggestion.workspace !== scope && !split.on && (
         <button type="button" onClick={() => setScope(suggestion.workspace!)} className={`flex items-center gap-1 text-left text-xs ${tone}`}>
           <Sparkles className="h-3 w-3" />Suggested: {SCOPE_LABEL[suggestion.workspace]} ({suggestion.confidence === "high" ? "confident" : "please check"}) — {suggestion.reason}. Tap to use.
