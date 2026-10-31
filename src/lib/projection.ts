@@ -44,11 +44,11 @@ export const realValue = (amount: number, inflation: number, years: number) => r
 export interface Advice { title: string; why: string }
 export function advice(i: ProjectionInput, rows: YearRow[]): Advice[] {
   const out: Advice[] = []; const last = rows[rows.length - 1]; if (!last) return out;
-  const first = rows[0];
+  const first = rows[0]!;
   const shortYear = rows.find(r => r.saved < 0);
   if (shortYear) out.push({ title: `Spending overtakes income in year ${shortYear.year}`, why: `Expenses grow faster than your assumed ${i.incomeGrowth}% income growth. Raise income growth or cut the fastest-rising categories before then.` });
   const growth = i.categories.map(c => ({ c: c.category, mult: (last.byCategory[c.category] ?? 0) / Math.max(1, c.monthly * 12), add: (last.byCategory[c.category] ?? 0) - c.monthly * 12 })).sort((a, b) => b.add - a.add);
-  if (growth[0]) out.push({ title: `${growth[0].c} is your biggest future cost`, why: `It grows ${growth[0].mult.toFixed(1)}× to ₹${Math.round(last.byCategory[growth[0].c]).toLocaleString("en-IN")}/year. Start a dedicated fund or lock prices (e.g. insurance, prepaid fees) now.` });
+  if (growth[0]) out.push({ title: `${growth[0].c} is your biggest future cost`, why: `It grows ${growth[0].mult.toFixed(1)}× to ₹${Math.round(last.byCategory[growth[0].c] ?? 0).toLocaleString("en-IN")}/year. Start a dedicated fund or lock prices (e.g. insurance, prepaid fees) now.` });
   if (i.savingsReturn <= i.generalInflation) out.push({ title: "Your savings lose value", why: `A ${i.savingsReturn}% return is below ${i.generalInflation}% inflation, so money shrinks in real terms. Consider investments that historically beat inflation, matched to your risk.` });
   const rate = first.income > 0 ? first.saved / first.income : 0;
   if (rate < 0.2) out.push({ title: "Aim to save at least 20% of income", why: `You currently save about ${Math.round(rate * 100)}%. Each extra ₹1,000/month invested at ${i.savingsReturn}% grows to about ₹${Math.round(fv(12000, i.savingsReturn, i.years)).toLocaleString("en-IN")} in ${i.years} years.` });

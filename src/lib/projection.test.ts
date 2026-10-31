@@ -7,9 +7,9 @@ describe("projection", () => {
   it("compounds each category at its own rate", () => {
     const r = project(base);
     expect(r).toHaveLength(10);
-    expect(r[0].byCategory.Education).toBe(12000);
-    expect(r[1].byCategory.Education).toBe(13200);
-    expect(r[1].byCategory.Food).toBe(25560);
+    expect(r[0]!.byCategory["Education"]).toBe(12000);
+    expect(r[1]!.byCategory["Education"]).toBe(13200);
+    expect(r[1]!.byCategory["Food"]).toBe(25560);
   });
   it("falls back to general inflation and honours overrides", () => {
     expect(inflationFor("Pets", 6)).toBe(6);
@@ -17,8 +17,8 @@ describe("projection", () => {
   });
   it("accumulates savings with returns", () => {
     const r = project({ ...base, years: 2, savingsReturn: 10, categories: [], currentSavings: 1000 });
-    expect(r[0].savings).toBe(121100);
-    expect(r[1].savings).toBe(259210);
+    expect(r[0]!.savings).toBe(121100);
+    expect(r[1]!.savings).toBe(259210);
   });
   it("computes real value", () => { expect(realValue(100, 10, 1)).toBe(90.91); });
   it("averages baseline over months", () => {
@@ -26,6 +26,6 @@ describe("projection", () => {
   });
   it("warns when spending overtakes income", () => {
     const a = advice({ ...base, monthlyIncome: 3100, incomeGrowth: 0 }, project({ ...base, monthlyIncome: 3100, incomeGrowth: 0 }));
-    expect(a[0].title).toMatch(/year 2/);
+    expect(a[0]!.title).toMatch(/year 2/);
   });
 });
