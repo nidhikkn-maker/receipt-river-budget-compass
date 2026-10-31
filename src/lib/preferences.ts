@@ -21,7 +21,23 @@ export const HOME_SECTION_LABEL: Record<(typeof HOME_SECTIONS)[number], string> 
   upcoming: "Upcoming commitments", briefing: "AI briefing", travel: "Travel", recent: "Recent activity",
 };
 
+export type HomeMode = "daily" | "executive" | "minimal" | "custom";
+export const HOME_MODE_LABEL: Record<Exclude<HomeMode, "custom">, string> = { daily: "Daily", executive: "Executive", minimal: "Minimal" };
+/** V5.0 §7.1 home arrangements: which sections show, in which order. */
+export const HOME_MODES: Record<Exclude<HomeMode, "custom">, string[]> = {
+  daily: ["overview", "readiness", "upcoming", "recent", "metrics"],
+  executive: ["overview", "metrics", "readiness", "upcoming", "insights", "briefing", "travel"],
+  minimal: ["overview", "recent", "upcoming"],
+};
+/** Applies a home mode: chosen sections first, the rest hidden. */
+export function applyHomeMode(p: FinancePreferences, mode: Exclude<HomeMode, "custom">): FinancePreferences {
+  const shown = HOME_MODES[mode];
+  return { ...p, homeMode: mode, homeOrder: [...shown, ...HOME_SECTIONS.filter((x) => !shown.includes(x))], homeHidden: HOME_SECTIONS.filter((x) => !shown.includes(x)) };
+}
+
 export interface FinancePreferences {
+  /** Home arrangement; "custom" once the user hides or reorders sections themselves. */
+  homeMode: HomeMode;
   categories: CategorySetting[];
   tags: GroupedTag[];
   budgets: ScopedBudget[];
@@ -103,7 +119,7 @@ export const DEFAULT_TAGS: GroupedTag[] = [
 
 export function defaultPreferences(): FinancePreferences {
   return {
-    categories: CATEGORIES.map((name) => ({ name, archived: false })), tags: DEFAULT_TAGS, budgets: [], homeHidden: [], homeOrder: [...HOME_SECTIONS],
+    categories: CATEGORIES.map((name) => ({ name, archived: false })), tags: DEFAULT_TAGS, budgets: [], homeHidden: [], homeOrder: [...HOME_SECTIONS], homeMode: "custom",
     theme: "system", themeName: "signature", homeScope: "all", reminders: true, reminderDays: 3, defaultCurrency: "INR", language: "en", aiEnabled: true, aiReadsDocuments: true, cardAlertPct: 30, homePeriod: "month", homeCustomStart: "", homeCustomEnd: "",
     freshness: { reviewDays: 14, outdatedDays: 45, perAccount: {} }, inboxDismissed: [], statementBalances: {}, splitTemplates: [],
     emergency: defaultEmergency(), irregularRejected: [], irregularConfirmed: [], milestones: [], trips: [], merchantAliases: {}, brief: { enabled: true, day: 1, hour: 8 }, briefs: [], paymentInstruments: [],
@@ -121,6 +137,7 @@ export function normalizePreferences(raw: Partial<FinancePreferences> | null | u
   if (!Array.isArray(p.tags)) p.tags = d.tags;
   if (!Array.isArray(p.budgets)) p.budgets = [];
   if (!Array.isArray(p.homeHidden)) p.homeHidden = [];
+  if (!["daily", "executive", "minimal", "custom"].includes(p.homeMode)) p.homeMode = "custom";
   p.reminderDays = Number.isFinite(p.reminderDays) ? Math.min(30, Math.max(0, Math.round(p.reminderDays))) : d.reminderDays;
   p.cardAlertPct = Number.isFinite(p.cardAlertPct) ? Math.min(100, Math.max(5, Math.round(p.cardAlertPct))) : d.cardAlertPct;
   if (!/^[A-Z]{3}$/.test(p.defaultCurrency ?? "")) p.defaultCurrency = "INR";
