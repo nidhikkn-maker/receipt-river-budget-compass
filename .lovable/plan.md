@@ -8,8 +8,10 @@
 ## What I'll add
 1. **Settings → Payment methods** page: add, rename, set default, archive.
    - Types: UPI ID, Debit card, Credit card, Cash, Forex card, Company card, Wallet.
-   - Fields: nickname, UPI ID or last 4 card digits (never full card numbers), linked account (e.g. UPI ID → HDFC savings, debit card → its bank, credit card → its card account).
-2. **New entry / bill review**: one "Paid with" picker showing your saved methods; choosing one fills the payment type and the linked account automatically, so balances stay correct.
+   - Fields: nickname, UPI ID or last 4 card digits (never full card numbers).
+   - **Linked bank account (required for UPI and debit cards):** every UPI ID and debit card is linked to one of your bank accounts (e.g. kk@okhdfc → HDFC Savings). Credit cards link to their card account. Cash links to your cash wallet.
+   - Each bank account on Wealth lists the UPI IDs and cards linked to it, with an "Add payment method" button there too.
+2. **New entry / bill review**: one "Paid with" picker showing your saved methods; choosing one fills the payment type and the linked bank account automatically, so that bank's balance updates correctly.
 3. Shop memory remembers the method you last used at each shop.
 4. **Expenses filter and reports**: filter and total by a specific UPI ID or card.
 5. Existing entries keep working unchanged.
