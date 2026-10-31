@@ -6,7 +6,8 @@ import type { MapLink } from "./graph";
 import type { PaymentInstrument } from "./payment-instruments";
 import type { AllocationPlan } from "./allocation";
 import type { FinanceRule } from "./rules-engine";
-import { CATEGORIES, memberShares, type Expense } from "./expenses";
+import { CATEGORIES, memberShares, SCOPES, type Expense, type Scope } from "./expenses";
+import { cleanThemeName, type ThemeName } from "./themes";
 import { defaultEmergency, type BriefSettings, type EmergencySettings, type MerchantAliases, type Milestone, type Trip, type WeeklyBrief } from "./intelligence";
 
 export interface CategorySetting { name: string; archived: boolean }
@@ -27,6 +28,10 @@ export interface FinancePreferences {
   homeHidden: string[];
   homeOrder: string[];
   theme: "light" | "dark" | "system";
+  /** Visual style family (Version 4.3 theme system). */
+  themeName: ThemeName;
+  /** Workspace the Home overview focuses on; "all" shows everything. */
+  homeScope: "all" | Scope;
   reminders: boolean;
   /** Days before a due date to start reminding. */
   reminderDays: number;
