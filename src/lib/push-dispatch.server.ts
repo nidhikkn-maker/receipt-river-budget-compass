@@ -6,6 +6,7 @@ import { sendDevicePush } from "./push-crypto.server";
 import type { Account, AccountKind, Txn, TxnType } from "./ledger";
 import type { Commitment } from "./planning";
 import type { PositionLoan } from "./position";
+import type { LoanPayment } from "./cards";
 
 export async function dispatchPaymentReminders(db: SupabaseClient<Database>, seed: string, today: string) {
   // Rotate through devices; the scheduler can safely retry without duplicate daily deliveries.
@@ -19,15 +20,15 @@ export async function dispatchPaymentReminders(db: SupabaseClient<Database>, see
       db.from("commitments").select("*").eq("owner_id",owner),
       db.from("loans").select("*").eq("owner_id",owner),
       db.from("accounts").select("*").eq("owner_id",owner),
-      db.from("expenses").select("id,txn_type,amount_inr,account_id,to_account_id,expense_date,adjustment_sign").eq("owner_id",owner),
+      db.from("expenses").select("id,txn_type,amount,account_id,to_account_id,expense_date,adjustment_sign").eq("employee_id",owner),
       db.from("documents").select("id,expires_on").eq("owner_id",owner),
     ]);
     if ([pref,c,l,a,t,d].some(r=>r.error)) { failed++; return; }
     const p = normalizePreferences(pref.data?.data as Partial<FinancePreferences> | null);
     const commitments = (c.data ?? []).map(x=>({id:x.id,name:x.name,kind:x.kind,direction:x.direction,amount:Number(x.amount),frequency:x.frequency,intervalDays:x.interval_days,nextDue:x.next_due,accountId:x.account_id,category:x.category,confirmed:x.confirmed,essential:x.essential,status:x.status})) as Commitment[];
-    const loans: PositionLoan[] = (l.data ?? []).map(x=>({id:x.id,name:x.name,principal:Number(x.principal_outstanding),rate:Number(x.annual_rate),emi:Number(x.emi),nextDue:x.next_due,accountId:x.account_id,loanType:x.loan_type,sourceTransactionId:x.source_transaction_id,original:Number(x.original_principal ?? x.principal_outstanding),startDate:x.start_date,payments:x.payments as unknown as PositionLoan["payments"],status:x.status}));
+    const loans: PositionLoan[] = (l.data ?? []).map(x=>({id:x.id,name:x.name,principal:Number(x.principal_outstanding),rate:Number(x.annual_rate),emi:Number(x.emi),nextDue:x.next_due,accountId:x.account_id,loanType:x.loan_type,sourceTransactionId:x.source_transaction_id,original:Number(x.original_principal ?? x.principal_outstanding),startDate:x.start_date,payments:(x.payments ?? []) as unknown as LoanPayment[],status:x.status}));
     const accounts: Account[] = (a.data ?? []).map(x=>({id:x.id,name:x.name,kind:x.kind as AccountKind,openingBalance:Number(x.opening_balance),archived:x.archived,statementDay:x.statement_day,dueDay:x.due_day,creditLimit:x.credit_limit}));
-    const transactions: Txn[] = (t.data ?? []).map(x=>({id:x.id,txnType:x.txn_type as TxnType,amount:Number(x.amount_inr),accountId:x.account_id,toAccountId:x.to_account_id,date:x.expense_date,adjustmentSign:x.adjustment_sign === -1 ? -1 : 1}));
+    const transactions: Txn[] = (t.data ?? []).map(x=>({id:x.id,txnType:x.txn_type as TxnType,amount:Number(x.amount),accountId:x.account_id,toAccountId:x.to_account_id,date:x.expense_date,adjustmentSign:x.adjustment_sign === -1 ? -1 : 1}));
     const items=paymentReminderItems({today,leadDays:p.reminderDays,enabled:p.reminders,commitments,loans,accounts,transactions,documents:(d.data ?? []).map(x=>({id:x.id,expiresOn:x.expires_on}))});
     if (!items.length) { await db.from("push_subscriptions").update({last_sent_at:new Date().toISOString()}).eq("id",device.id); skipped++; return; }
     const key=`device:${device.id}`;
