@@ -49,7 +49,12 @@
                 "transfer",
                 "refund",
                 "reimbursement",
-                "adjustment"
+                "adjustment",
+                "card_payment",
+                "loan_repayment",
+                "investment",
+                "advance",
+                "advance_settlement"
               ]
             },
             "category": {
