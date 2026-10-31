@@ -117,7 +117,8 @@
 - [x] Purchase Cooling-Off Assistant: Strategy → Cooling-off tab, queue + decisions saved per owner; tested
 - [x] Contract & Obligation Intelligence: vault reads obligations with quotes; review, notice deadlines, explicit Add to plan; tested
 ### Priority 3 — Extended
-- [ ] Family Financial Requests: BLOCKED — needs user decision on giving family members their own sign-in (security/data access)
+- [~] Family Financial Requests: own sign-in invites, requests with evidence, approve/decline (in progress)
+- [ ] Visual map on Links page connecting accounts, cards, loans, bills
 - [x] Financial Memory: Strategy → Decisions tab, expected vs actual, review dates; tested
 - [x] Personal Finance Knowledge Graph: Links page, derived connections + unlinked records; tested
 ### Acceptance (verify before declaring done)
