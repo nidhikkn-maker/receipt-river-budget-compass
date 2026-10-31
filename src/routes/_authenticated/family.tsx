@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { money, totalsByMember } from "@/lib/expenses";
 import { useStore } from "@/lib/store";
+import { FamilyRequests } from "@/components/FamilyRequests";
 
 export const Route = createFileRoute("/_authenticated/family")({
   head: () => ({
@@ -59,6 +60,7 @@ function Family() {
           </li>
         ))}
       </ul>
+      <div className="mt-8"><FamilyRequests /></div>
     </>
   );
 }
