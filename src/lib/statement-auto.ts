@@ -15,6 +15,7 @@ export interface StatementDraft {
   scope: Scope;
   txnType: TxnType;
   accountId: string | null;
+  currency: string;
   /** Plain-words reason this line was read this way. */
   reason: string;
 }
@@ -121,6 +122,7 @@ export function classifyStatementLine(line: StatementLine, ctx: StatementContext
     title: merchant,
     merchant,
     accountId: ctx.accountId,
+    currency: ctx.currency,
     paymentMethod: (memory?.paymentMethod as PaymentMethod) || paymentMethodFor(up, account?.kind),
     scope: (memory?.scope === "business" ? "business" : "personal") as Scope,
   };
