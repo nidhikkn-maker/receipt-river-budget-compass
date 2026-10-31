@@ -1,3 +1,37 @@
+diff --git a/dist/esm5/index.js b/dist/esm5/index.js
+--- a/dist/esm5/index.js
++++ b/dist/esm5/index.js
+@@ -1,6 +1,28 @@
+-if (typeof Reflect === "undefined" || !Reflect.getMetadata) {
+-    throw new Error("tsyringe requires a reflect polyfill. Please add 'import \"reflect-metadata\"' to the top of your entry point.");
++// Lovable patch: inline Reflect metadata polyfill (edge bundle cannot guarantee polyfill import order)
++(function(){var store = new WeakMap();
++const R = Reflect;
++function map(target, prop, create) {
++  let t = store.get(target);
++  if (!t) { if (!create) return undefined; t = new Map(); store.set(target, t); }
++  let p = t.get(prop);
++  if (!p) { if (!create) return undefined; p = new Map(); t.set(prop, p); }
++  return p;
+ }
++if (typeof R.getMetadata !== "function") {
++  R.defineMetadata = (k, v, target, prop) => { map(target, prop, true).set(k, v); };
++  R.getOwnMetadata = (k, target, prop) => map(target, prop, false)?.get(k);
++  R.hasOwnMetadata = (k, target, prop) => !!map(target, prop, false)?.has(k);
++  R.getMetadata = (k, target, prop) => {
++    for (let o = target; o; o = Object.getPrototypeOf(o)) {
++      const m = map(o, prop, false);
++      if (m?.has(k)) return m.get(k);
++    }
++    return undefined;
++  };
++  R.hasMetadata = (k, target, prop) => (R.getMetadata)(k, target, prop) !== undefined;
++  R.metadata = (k, v) => (target, prop) => { map(target, prop, true).set(k, v); };
++}
++})();
+ export { Lifecycle } from "./types";
+ export * from "./decorators";
+ export * from "./factories";
 diff --git a/dist/esm2015/index.js b/dist/esm2015/index.js
 --- a/dist/esm2015/index.js
 +++ b/dist/esm2015/index.js
@@ -32,3 +66,40 @@ diff --git a/dist/esm2015/index.js b/dist/esm2015/index.js
  export { Lifecycle } from "./types";
  export * from "./decorators";
  export * from "./factories";
+diff --git a/dist/cjs/index.js b/dist/cjs/index.js
+--- a/dist/cjs/index.js
++++ b/dist/cjs/index.js
+@@ -1,9 +1,31 @@
+ "use strict";
+ Object.defineProperty(exports, "__esModule", { value: true });
+ const tslib_1 = require("tslib");
+-if (typeof Reflect === "undefined" || !Reflect.getMetadata) {
+-    throw new Error(`tsyringe requires a reflect polyfill. Please add 'import "reflect-metadata"' to the top of your entry point.`);
++// Lovable patch: inline Reflect metadata polyfill (edge bundle cannot guarantee polyfill import order)
++(function(){var store = new WeakMap();
++const R = Reflect;
++function map(target, prop, create) {
++  let t = store.get(target);
++  if (!t) { if (!create) return undefined; t = new Map(); store.set(target, t); }
++  let p = t.get(prop);
++  if (!p) { if (!create) return undefined; p = new Map(); t.set(prop, p); }
++  return p;
+ }
++if (typeof R.getMetadata !== "function") {
++  R.defineMetadata = (k, v, target, prop) => { map(target, prop, true).set(k, v); };
++  R.getOwnMetadata = (k, target, prop) => map(target, prop, false)?.get(k);
++  R.hasOwnMetadata = (k, target, prop) => !!map(target, prop, false)?.has(k);
++  R.getMetadata = (k, target, prop) => {
++    for (let o = target; o; o = Object.getPrototypeOf(o)) {
++      const m = map(o, prop, false);
++      if (m?.has(k)) return m.get(k);
++    }
++    return undefined;
++  };
++  R.hasMetadata = (k, target, prop) => (R.getMetadata)(k, target, prop) !== undefined;
++  R.metadata = (k, v) => (target, prop) => { map(target, prop, true).set(k, v); };
++}
++})();
+ var types_1 = require("./types");
+ Object.defineProperty(exports, "Lifecycle", { enumerable: true, get: function () { return types_1.Lifecycle; } });
+ tslib_1.__exportStar(require("./decorators"), exports);
