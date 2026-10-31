@@ -97,7 +97,8 @@ function Reconcile() {
     currency,
   }), [freshLines, matches, expenses, accounts, preferences.categories, accountFilter, currency]);
 
-  const queue = plan.register.filter((d) => !excluded[d.line.ref]);
+  const [includeDups, setIncludeDups] = useState<Record<string, boolean>>({});
+  const queue = [...plan.register, ...plan.possibleDuplicates.filter((d) => includeDups[d.draft.line.ref]).map((d) => d.draft)].filter((d) => !excluded[d.line.ref]);
   const spendingTotal = queue.filter((d) => d.txnType === "expense").reduce((s, d) => s + d.line.amount, 0);
 
   const onFile = async (f: File | undefined) => {
@@ -210,9 +211,10 @@ function Reconcile() {
             {split.olderUnseen.length > 0 && <p className="mt-2 rounded-xl bg-secondary px-3 py-2 text-xs">{split.olderUnseen.length} older line{split.olderUnseen.length === 1 ? "" : "s"} not seen before (dated before your last import) — included below for a quick look.</p>}
             {showImported && <ul className="mt-2 max-h-60 space-y-1 overflow-auto text-xs text-muted-foreground">{split.alreadyImported.map((l) => <li key={l.ref} className="font-mono">{l.date} · {l.description} · {money(l.amount, currency)}</li>)}</ul>}
           </div>
-          <div className="mb-4 grid grid-cols-3 gap-3">
+          <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
             <Stat label="New entries" value={String(plan.register.length)} hint={money(plan.register.filter((d) => d.txnType === "expense").reduce((s, d) => s + d.line.amount, 0))} />
             <Stat label="Need a look" value={String(plan.review.length)} />
+            <Stat label="Possible duplicates" value={String(plan.possibleDuplicates.length)} />
             <Stat label="Already recorded" value={String(plan.skipped.length)} />
           </div>
 
