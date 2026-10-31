@@ -1,5 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Bar, BarChart, ResponsiveContainer, Tooltip, XAxis } from "recharts";
+import { PaymentReminders } from "@/components/PaymentReminders";
 import { Stat } from "@/components/AppShell";
 import { ExpenseTable } from "@/components/ExpenseTable";
 import { money, totalsByMember, totalsByScope } from "@/lib/expenses";
@@ -22,7 +23,7 @@ export const Route = createFileRoute("/_authenticated/dashboard")({
 });
 
 function Overview() {
-  const { expenses, members, memberName, transactions, accounts } = useStore();
+  const { expenses, members, memberName, transactions, accounts, preferences } = useStore();
   const month = new Date().toISOString().slice(0, 7);
   const thisMonth = expenses.filter((e) => e.date.startsWith(month));
   const t = totalsByScope(thisMonth);
@@ -54,6 +55,9 @@ function Overview() {
         </div>
       </section>
 
+      <PaymentReminders />
+      <div className="flex flex-col">
+      <div hidden={preferences.homeHidden.includes("safe")} style={{order:preferences.homeOrder.indexOf("safe")}}>
       <Link to="/plan" className="mb-3 flex items-center gap-4 rounded-3xl border-2 border-primary bg-card p-4">
         <div className="flex-1">
           <div className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Safe to spend · 30 days</div>
@@ -65,13 +69,14 @@ function Overview() {
           {!pos.upcoming.length && "Add bills & income in Plan"}
         </div>
       </Link>
-      <div className="mb-3 grid grid-cols-2 gap-3 lg:grid-cols-4">
+      </div>
+      <div hidden={preferences.homeHidden.includes("accounts")} style={{order:preferences.homeOrder.indexOf("accounts")}} className="mb-3 grid grid-cols-2 gap-3 lg:grid-cols-4">
         <Link to="/wealth"><Stat label="Cash in accounts" value={money(cash)} {...(live.length ? {} : { hint: "Add accounts" })} /></Link>
         <Stat label="Income this month" value={money(flow.income)} />
         <Stat label="Net this month" value={money(flow.net)} hint="Income − spending, transfers excluded" />
         <Link to="/wealth"><Stat label="Card dues" value={money(cardDue)} /></Link>
       </div>
-      <div className="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <div hidden={preferences.homeHidden.includes("summary")} style={{order:preferences.homeOrder.indexOf("summary")}} className="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
         <Stat tone="business" label="Business (all time)" value={money(totalsByScope(expenses).business)} />
         <Stat tone="personal" label="Personal (all time)" value={money(totalsByScope(expenses).personal)} />
         <Stat label="Expenses this month" value={String(thisMonth.length)} />
@@ -79,7 +84,7 @@ function Overview() {
       </div>
 
       {memberRows.length > 0 && (
-        <div className="mb-8 rounded-3xl border bg-card p-5">
+        <div hidden={preferences.homeHidden.includes("family")} style={{order:preferences.homeOrder.indexOf("family")}} className="mb-8 rounded-3xl border bg-card p-5">
           <div className="mb-2 flex items-center justify-between">
             <h2 className="font-display text-lg font-bold">Who spent this month</h2>
             <Link to="/family" className="text-sm text-primary">Manage family</Link>
@@ -94,11 +99,13 @@ function Overview() {
         </div>
       )}
 
+      <div hidden={preferences.homeHidden.includes("recent")} style={{order:preferences.homeOrder.indexOf("recent")}}>
       <div className="mb-3 flex items-center justify-between">
         <h2 className="font-display text-xl font-bold">Recent</h2>
         <Link to="/expenses" className="text-sm text-primary">See all</Link>
       </div>
       <ExpenseTable items={expenses.slice(0, 6)} empty="No expenses yet — tap Add to scan your first bill." />
+      </div></div>
     </>
   );
 }

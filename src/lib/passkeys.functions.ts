@@ -9,7 +9,7 @@ export const passkeyOptions=createServerFn({method:"POST"}).middleware([requireS
  const {data:keys,error}=await context.supabase.from("device_passkeys").select("credential_id");if(error)throw Error("Couldn't load passkeys");
  const credentials=(keys??[]).map(k=>({id:k.credential_id}));
  const options=data.kind==="register"?await generateRegistrationOptions({rpName:"Ledgerline",rpID:origin.hostname,userName:context.userId,userID:new TextEncoder().encode(context.userId),attestationType:"none",excludeCredentials:credentials,authenticatorSelection:{authenticatorAttachment:"platform",residentKey:"preferred",userVerification:"required"}}):await generateAuthenticationOptions({rpID:origin.hostname,allowCredentials:credentials,userVerification:"required"});
- const {error:saveError}=await context.supabase.from("passkey_challenges").upsert({owner_id:context.userId,challenge:options.challenge,origin:origin.origin,kind:data.kind,expires_at:new Date(Date.now()+300000).toISOString()});if(saveError)throw Error("Couldn't start Face ID verification");return {kind:data.kind,options};
+ const {error:saveError}=await context.supabase.from("passkey_challenges").upsert({owner_id:context.userId,challenge:options.challenge,origin:origin.origin,kind:data.kind,expires_at:new Date(Date.now()+300000).toISOString()});if(saveError)throw Error("Couldn't start Face ID verification");return {kind:data.kind,options:JSON.stringify(options)};
 });
 export const verifyPasskey=createServerFn({method:"POST"}).middleware([requireSupabaseAuth]).inputValidator((d:unknown)=>z.object({kind:z.enum(["register","unlock"]),response:z.record(z.string(),z.unknown())}).parse(d)).handler(async({data,context})=>{
  const origin=originFromRequest();

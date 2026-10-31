@@ -30,6 +30,7 @@ export const getFxRate = createServerFn({ method: "POST" })
 
 const SaveInput = z.object({
   id: z.string().uuid().nullable(),
+  createId: z.string().uuid().optional(),
   title: z.string().trim().min(1).max(200),
   merchant: z.string().max(200).nullable(),
   category: z.string().min(1).max(60),
@@ -79,9 +80,13 @@ export const saveExpense = createServerFn({ method: "POST" })
       ...(data.receipts ? { receipts: data.receipts } : {}),
       ...(data.receiptDetails ? { receipt_details: data.receiptDetails } : {}),
     };
+    if (data.createId) {
+      const existing = await supabase.from("expenses").select("id").eq("id", data.createId).maybeSingle();
+      if (existing.data) return { ok: true as const };
+    }
     const { error } = data.id
       ? await supabase.from("expenses").update(row).eq("id", data.id)
-      : await supabase.from("expenses").insert({ ...row, employee_id: userId });
+      : await supabase.from("expenses").insert({ ...row, ...(data.createId ? { id: data.createId } : {}), employee_id: userId });
     if (error) {
       console.error(error);
       return { ok: false as const, error: "Couldn't save the expense" };
