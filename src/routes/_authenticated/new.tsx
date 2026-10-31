@@ -27,7 +27,6 @@ import { Mic } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ACCOUNT_LABEL, TXN_LABEL, TXN_TYPES, frequentMerchants, suggestForMerchant, type TxnType } from "@/lib/ledger";
 
-type LocalReceipt = { file: File; name: string; type: string; dataUrl: string };
 
 export const Route = createFileRoute("/_authenticated/new")({
   validateSearch: quickEntrySearch,
