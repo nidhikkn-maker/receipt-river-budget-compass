@@ -16,6 +16,9 @@ import {
 import { useStore } from "@/lib/store";
 import { extractReceipt } from "@/lib/receipt-extract.functions";
 import { getFxRate } from "@/lib/fx.functions";
+import { parseSpokenEntry } from "@/lib/assistant.functions";
+import { useServerFn } from "@tanstack/react-start";
+import { Mic } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ACCOUNT_LABEL, TXN_LABEL, TXN_TYPES, frequentMerchants, suggestForMerchant, type TxnType } from "@/lib/ledger";
 
@@ -45,6 +48,8 @@ const readFile = (f: File) =>
   });
 
 const isDate = (s: string | null | undefined): s is string => !!s && /^\d{4}-\d{2}-\d{2}$/.test(s);
+
+interface SpeechRec { lang: string; interimResults: boolean; start: () => void; onresult: (e: { results: ArrayLike<ArrayLike<{ transcript: string }>> }) => void; onend: () => void; onerror: () => void }
 
 interface Scan { merchant: string; date: string; amount: string; currency: string }
 
@@ -78,6 +83,47 @@ function NewExpense() {
   const [autoFilled, setAutoFilled] = useState<Set<string>>(new Set());
   const [fx, setFx] = useState<{ rate: number; date: string } | { error: string } | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+  const parseSpoken = useServerFn(parseSpokenEntry);
+  const [listening, setListening] = useState(false);
+  const [spoken, setSpoken] = useState("");
+
+  const applySpoken = async (text: string) => {
+    if (!text.trim()) return;
+    setReading(true);
+    try {
+      const d = new Date();
+      const today = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+      const r = await parseSpoken({ data: { text, today, accounts: liveAccounts.map((a) => a.name) } });
+      if (!r.ok) { toast.error(r.error); return; }
+      const x = r.result;
+      const filled = new Set<string>();
+      setTxnType(x.txn_type);
+      if (x.title) { setTitle(x.title); filled.add("title"); }
+      if (x.merchant) { setMerchant(x.merchant); filled.add("merchant"); }
+      if (x.amount && x.amount > 0) { setAmount(String(x.amount)); filled.add("amount"); }
+      if (x.currency && /^[A-Z]{3}$/.test(x.currency)) { setCurrency(x.currency); filled.add("currency"); }
+      if (x.date && isDate(x.date)) { setDate(x.date); filled.add("date"); }
+      if (x.category) { setCategory(x.category); filled.add("category"); }
+      if (x.payment_method) { setPaymentMethod(x.payment_method); filled.add("paymentMethod"); }
+      if (x.scope) { setScope(x.scope); filled.add("scope"); }
+      const acc = x.account_name && liveAccounts.find((a) => a.name.toLowerCase() === x.account_name!.toLowerCase());
+      if (acc) setAccountId(acc.id);
+      setAutoFilled(filled);
+      toast.success("Filled in from what you said — check and save");
+    } catch { toast.error("Couldn't understand that"); } finally { setReading(false); }
+  };
+
+  const startVoice = () => {
+    const W = window as unknown as { SpeechRecognition?: new () => SpeechRec; webkitSpeechRecognition?: new () => SpeechRec };
+    const SR = W.SpeechRecognition ?? W.webkitSpeechRecognition;
+    if (!SR) { toast.message("Voice isn't available in this browser — type it below instead"); return; }
+    const rec = new SR();
+    rec.lang = "en-IN"; rec.interimResults = false;
+    rec.onresult = (e) => { const t = e.results[0]?.[0]?.transcript ?? ""; setSpoken(t); void applySpoken(t); };
+    rec.onend = () => setListening(false);
+    rec.onerror = () => { setListening(false); toast.error("Didn't catch that — try again or type it"); };
+    setListening(true); rec.start();
+  };
 
   useEffect(() => {
     if (!editing) return;
@@ -198,6 +244,12 @@ function NewExpense() {
             <span className="font-display text-lg font-bold">{reading ? "Reading your bill…" : "Upload or snap a bill"}</span>
             <span className="text-xs text-muted-foreground">Photo or PDF · we fill in the rest</span>
           </button>
+          <div className="flex gap-2 rounded-3xl border bg-card p-2">
+            <Button type="button" size="icon" variant={listening ? "default" : "secondary"} onClick={startVoice} aria-label="Speak an entry" className="h-11 w-11 shrink-0 rounded-2xl"><Mic className="h-5 w-5" /></Button>
+            <Input aria-label="Say or type an entry" placeholder='"Spent ₹2,500 on dinner using AMEX yesterday"' value={spoken} onChange={(e) => setSpoken(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); void applySpoken(spoken); } }} className="border-0 shadow-none focus-visible:ring-0" />
+            <Button type="button" variant="ghost" onClick={() => applySpoken(spoken)} disabled={!spoken.trim() || reading}>Fill</Button>
+          </div>
           <input ref={fileRef} id="r" type="file" multiple accept="image/*,application/pdf" capture="environment" className="sr-only" onChange={(e) => onFiles(e.target.files)} />
           {receipts.length > 0 && (
             <ul className="flex flex-wrap gap-2">
