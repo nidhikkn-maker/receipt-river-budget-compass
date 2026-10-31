@@ -113,7 +113,9 @@ function NewExpense() {
   const [readingError, setReadingError] = useState("");
   const [readTarget, setReadTarget] = useState<LocalReceipt | null>(null);
   const [scan, setScan] = useState<Scan | null>(null);
+  const [scanRead, setScanRead] = useState<ReceiptReadValues | null>(null);
   const [confirmed, setConfirmed] = useState(true);
+  const [receiptApproval, setReceiptApproval] = useState("");
   const [autoFilled, setAutoFilled] = useState<Set<string>>(new Set());
   const [fx, setFx] = useState<{ rate: number; date: string } | { error: string } | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -218,7 +220,7 @@ function NewExpense() {
       const res = await extract({ data: prepared });
       if (!res.ok) throw new Error(res.error);
       const x = res.result;
-      setReceiptDetails({ tax: x.tax, items: x.items, text: x.text });
+      setReceiptDetails({ tax: x.tax, items: x.items, text: x.text, fingerprint: first.fingerprint });
       const filled = new Set<string>();
       if (x.title && (fresh || !title)) { setTitle(x.title); filled.add("title"); }
       if (x.category) { setCategory(x.category); filled.add("category"); }
