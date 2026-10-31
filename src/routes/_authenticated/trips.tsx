@@ -13,7 +13,7 @@ import { tripSummary, tripTag, type Trip } from "@/lib/intelligence";
 import { downloadBlob, toPdf } from "@/lib/reports";
 import { useStore } from "@/lib/store";
 import { TravelPanel } from "@/components/TravelPanel";
-import { TRIP_TYPES, type TravelTrip, type TripType } from "@/lib/travel";
+import { TRIP_TYPES, advanceDashboard, type TravelTrip, type TripType } from "@/lib/travel";
 import { todayISO } from "@/lib/use-position";
 
 export const Route = createFileRoute("/_authenticated/trips")({
@@ -47,11 +47,35 @@ function Trips() {
     try { await savePreferences({ ...pr, trips: [t, ...pr.trips] }); setOpenId(t.id); toast.success("Trip created"); } catch (e) { toast.error((e as Error).message); }
   };
   const trip = pr.trips.find((t) => t.id === openId);
+  const dash = useMemo(() => advanceDashboard(pr.trips as TravelTrip[], transactions), [pr.trips, transactions]);
+  const openTrip = (id: string) => { setOpenId(id); requestAnimationFrame(() => document.getElementById("trip-detail")?.scrollIntoView({ behavior: "smooth" })); };
   return (
     <div>
       <PageTitle eyebrow="Travel" title="Travel Manager" sub="Each entry keeps the exchange rate from its bill date. Changing today's rate never rewrites a trip." />
+      {dash.rows.length > 0 && (
+        <Card title="Advance balances" className="mb-4">
+          <p className="mb-2 text-xs text-muted-foreground">Outstanding advance money across trips — what you still hold to return, or what's still owed to you.</p>
+          {dash.rows.map((r) => (
+            <div key={r.tripId} className="flex items-center gap-2 border-b py-2 text-sm last:border-0">
+              <div className="min-w-0 flex-1">
+                <div className="truncate font-medium">{r.name}{r.closed && <span className="ml-1 text-xs text-muted-foreground">(closed)</span>}</div>
+                <div className="text-xs text-muted-foreground">advances {money(r.advances)} · spent {money(r.expenses)} · returned {money(r.returns)}</div>
+              </div>
+              <span className={`shrink-0 font-mono text-sm ${r.outstanding > 0 ? "text-destructive" : r.outstanding < 0 ? "text-primary" : "text-muted-foreground"}`}>
+                {r.outstanding > 0 ? `return ${money(r.outstanding)}` : r.outstanding < 0 ? `owed ${money(-r.outstanding)}` : "settled"}
+              </span>
+              <Button size="sm" variant="outline" onClick={() => openTrip(r.tripId)}>Reconcile</Button>
+            </div>
+          ))}
+          <div className="mt-2 border-t pt-2">
+            {dash.toReturn > 0 && <Row label="Total to return" value={money(dash.toReturn)} />}
+            {dash.owedToYou > 0 && <Row label="Total still owed to you" value={money(dash.owedToYou)} />}
+            {dash.toReturn === 0 && dash.owedToYou === 0 && <p className="text-xs text-muted-foreground">Every advance is fully reconciled.</p>}
+          </div>
+        </Card>
+      )}
       {pr.trips.length > 0 && <div className="mb-4 flex gap-2 overflow-x-auto pb-1">{pr.trips.map((t) => <Button key={t.id} variant={t.id === openId ? "default" : "outline"} onClick={() => setOpenId(t.id)}><Plane className="mr-1 h-4 w-4" />{t.name}</Button>)}</div>}
-      {trip && <TravelPanel trip={trip as TravelTrip} />}
+      {trip && <div id="trip-detail"><TravelPanel trip={trip as TravelTrip} /></div>}
       {trip && <TripView trip={trip} txns={transactions} setTags={setTags} onDelete={async () => { if (!confirm("Delete this trip? Entries stay, the trip label is kept on them.")) return; await savePreferences({ ...pr, trips: pr.trips.filter((x) => x.id !== trip.id) }); setOpenId(null); }} />}
       <Card title="New trip">
         <div className="grid gap-3 sm:grid-cols-2">
