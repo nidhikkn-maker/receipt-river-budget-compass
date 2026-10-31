@@ -10,10 +10,13 @@ export type TripType = (typeof TRIP_TYPES)[number];
 export const BOOKING_KINDS = ["flight", "hotel", "train", "bus", "car", "visa", "insurance", "activity", "other"] as const;
 export type BookingKind = (typeof BOOKING_KINDS)[number];
 
-export interface Booking { id: string; kind: BookingKind; provider: string; ref: string; date: string; amount: number; status: "unpaid" | "paid" | "cancelled"; expenseId?: string | null; note?: string }
-export interface ItineraryItem { id: string; date: string; time?: string; title: string; place?: string; bookingId?: string | null }
+/** A booking is a plan, not a payment. Money reaches it through linked ledger entries; the remainder stays a commitment. */
+export interface Booking { id: string; kind: BookingKind; provider: string; ref: string; date: string; amount: number; status: "unpaid" | "paid" | "cancelled"; expenseId?: string | null; expenseIds?: string[]; dueDate?: string | null; cancelTerms?: string | null; note?: string }
+export interface ItineraryItem { id: string; date: string; time?: string; title: string; place?: string; bookingId?: string | null; travellers?: string[]; note?: string }
 export interface Advance { id: string; date: string; amount: number; source: string; settledAt?: string | null; settlementNote?: string }
-export interface TravelTrip extends Trip { type?: TripType; travellers?: string[]; bookings?: Booking[]; itinerary?: ItineraryItem[]; advances?: Advance[]; closedAt?: string | null; purpose?: string }
+/** One category's share of the trip plan. Category budgets plus a contingency allowance make up the plan. */
+export interface BudgetLine { category: string; amount: number }
+export interface TravelTrip extends Trip { type?: TripType; travellers?: string[]; bookings?: Booking[]; itinerary?: ItineraryItem[]; advances?: Advance[]; closedAt?: string | null; purpose?: string; budgetLines?: BudgetLine[]; contingency?: number }
 
 const r2 = (n: number) => Math.round(n * 100) / 100;
 type Row = Parameters<typeof tripSummary>[1][number] & { id: string; scope?: Scope; reimbursementStatus?: string; workspaceAllocations?: import("./workspaces").WorkspaceShare[]; originalAmount?: number | null; tripId?: string | null };
@@ -21,8 +24,26 @@ type Row = Parameters<typeof tripSummary>[1][number] & { id: string; scope?: Sco
 export function validateBooking(b: Booking) {
   if (!b.provider.trim() && !b.ref.trim()) throw new Error("Add the provider or booking reference");
   if (!/^\d{4}-\d{2}-\d{2}$/.test(b.date)) throw new Error("Add the booking date");
+  if (b.dueDate && !/^\d{4}-\d{2}-\d{2}$/.test(b.dueDate)) throw new Error("Payment due date is not a valid date");
   if (!Number.isFinite(b.amount) || b.amount < 0) throw new Error("Amount can't be negative");
-  if (b.status === "paid" && !b.expenseId) throw new Error("A paid booking must be linked to its payment entry");
+  if (b.status === "paid" && !bookingPaymentIds(b).length) throw new Error("A paid booking must be linked to its payment entry");
+}
+
+/** Entries linked to a booking as payment — one, several partial payments, or none yet. */
+export function bookingPaymentIds(b: Booking): string[] {
+  return [...new Set([b.expenseId, ...(b.expenseIds ?? [])].filter((x): x is string => !!x))];
+}
+
+/** How much of a booking is already covered by linked ledger entries. */
+export function bookingPaid(b: Booking, txns: Row[]) {
+  const ids = new Set(bookingPaymentIds(b));
+  return r2(txns.filter((x) => ids.has(x.id)).reduce((s, x) => s + x.amount, 0));
+}
+
+/** Still to pay on a booking. Cancelled bookings owe nothing; a paid booking is considered settled. */
+export function bookingOutstanding(b: Booking, txns: Row[]) {
+  if (b.status === "cancelled" || b.status === "paid") return 0;
+  return r2(Math.max(0, b.amount - bookingPaid(b, txns)));
 }
 
 /** Trip money picture. Actual = ledger entries tagged to the trip. Committed = unpaid bookings (not yet spent). Nothing is counted twice. */
