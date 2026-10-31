@@ -1,5 +1,6 @@
---- a/dist/esm2015/index.js	2026-10-31 08:51:01.125017210 +0000
-+++ b/dist/esm2015/index.js	2026-10-31 08:51:01.127017210 +0000
+diff --git a/dist/esm2015/index.js b/dist/esm2015/index.js
+--- a/dist/esm2015/index.js
++++ b/dist/esm2015/index.js
 @@ -1,6 +1,28 @@
 -if (typeof Reflect === "undefined" || !Reflect.getMetadata) {
 -    throw new Error(`tsyringe requires a reflect polyfill. Please add 'import "reflect-metadata"' to the top of your entry point.`);
