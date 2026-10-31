@@ -16,3 +16,4 @@
 - Reports are generated in the browser (src/lib/reports.ts) from data the user can already see, so RLS scoping applies automatically.
 - Receipt reading runs in a server function (src/lib/receipt-extract.functions.ts) so the AI key stays server-side.
 - Accounts/ledger rules (balances, cashflow, net worth) are pure tested functions in src/lib/ledger.ts; balances are derived from entries, never stored, and transfers/card payments never count as income or spending. store.expenses = expense-type only; store.transactions = all entries.
+- Planning math (recurring schedule, forecast, safe-to-spend, loans, goals, subscription detection) lives in src/lib/planning.ts; src/lib/position.ts combines records into screen/AI figures. The AI assistant (src/lib/assistant.functions.ts) only explains facts from position.ts — never let it compute numbers.
