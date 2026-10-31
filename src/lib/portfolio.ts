@@ -45,7 +45,7 @@ export function buildPortfolio(accounts: Account[], txns: Txn[], valuations: Val
   const dates = new Set<string>([start, end]);
   for (const fund of funds) {
     for (const v of fund.snapshots) if (v.valuedOn >= start) dates.add(v.valuedOn);
-    for (const t of txns) if (t.date >= start && t.date <= end && (t.accountId === fund.account.id || (t.txnType === "transfer" && t.toAccountId === fund.account.id))) dates.add(t.date);
+    for (const t of txns) if (t.date >= start && t.date <= end && (t.accountId === fund.account.id || ((t.txnType === "transfer" || t.txnType === "investment") && t.toAccountId === fund.account.id))) dates.add(t.date);
   }
   const points = [...dates].sort().map(date => {
     const rows = funds.flatMap(f => { const h = holdingAt(f, date); return h ? [h] : []; });

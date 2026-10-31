@@ -32,7 +32,7 @@ export function CardDetails({ a }: { a: Account }) {
     const amount = window.prompt("Card payment amount (₹)", String(cycle.remainingDue || Math.max(0, due)));
     if (!amount || payFrom === "none") return;
     setBusy(true);
-    try { await save({ title: `${a.name} bill payment`, merchant: a.issuer || null, category: "Card payment", scope: "personal", memberId: null, amount: Number(amount), currency: "INR", date: todayISO(), description: "Credit card settlement", paymentMethod: "bank_transfer", txnType: "transfer", accountId: payFrom, toAccountId: a.id }); toast.success("Card payment recorded"); } catch(e) { toast.error((e as Error).message); } finally { setBusy(false); }
+    try { await save({ title: `${a.name} bill payment`, merchant: a.issuer || null, category: "Card payment", scope: "personal", memberId: null, amount: Number(amount), currency: "INR", date: todayISO(), description: "Credit card settlement", paymentMethod: "bank_transfer", txnType: "card_payment", accountId: payFrom, toAccountId: a.id }); toast.success("Card payment recorded"); } catch(e) { toast.error((e as Error).message); } finally { setBusy(false); }
   };
   return (
     <div className="mt-2 grid grid-cols-[1fr_1fr_auto] items-end gap-2 border-t pt-2">

@@ -126,7 +126,7 @@ export function cardCycle(card: Account, txns: CardTxn[], allEmis: CardEmi[], to
       purchases: sum(spend.filter((t) => !isCharge(t))),
       charges: sum(spend.filter(isCharge)),
       refunds: sum(w.filter((t) => t.accountId === card.id && (type(t) === "refund" || type(t) === "reimbursement"))),
-      payments: sum(w.filter((t) => type(t) === "transfer" && t.toAccountId === card.id)),
+      payments: sum(w.filter((t) => (type(t) === "transfer" || type(t) === "card_payment") && t.toAccountId === card.id)),
       emiPrincipal: r2(emis.flatMap((e) => e.payments).filter((p) => p.date > from && p.date <= to).reduce((a, p) => a + p.principal, 0)),
     };
   };

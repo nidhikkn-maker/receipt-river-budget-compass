@@ -125,7 +125,7 @@ export function evaluateRules(rules: FinanceRule[], d: RuleData): RuleEvent[] {
       }
       case "unverified_old": {
         const cutoff = since(d.today, Math.max(1, r.threshold));
-        const old = d.transactions.filter((t) => !t.reconciledAt && t.date <= cutoff && (t.txnType ?? "expense") !== "transfer");
+        const old = d.transactions.filter((t) => !t.reconciledAt && t.date <= cutoff && !["transfer", "card_payment", "loan_repayment", "investment"].includes(t.txnType ?? "expense"));
         if (old.length) out.push({ ruleId: r.id, ruleName: r.name, priority: r.priority, message: `${old.length} transaction${old.length === 1 ? "" : "s"} older than ${r.threshold} days not yet verified against the bank`, to: "/reconcile" });
         break;
       }

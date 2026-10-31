@@ -132,7 +132,7 @@ function PlanRow({ plan, onDelete }: { plan: AllocationPlan; onDelete: () => voi
     const out = { mandatory: 0, card: 0, loan: 0, household: 0, emergency: 0, annual: 0, goals: 0, investments: 0, discretionary: 0 };
     for (const t of since) {
       const k = t.txnType ?? "expense";
-      if (k === "transfer") {
+      if (["transfer", "card_payment", "loan_repayment", "investment"].includes(k)) {
         if (t.toAccountId && cardIds.has(t.toAccountId)) out.card += t.amount;
         else if (t.toAccountId && loanIds.has(t.toAccountId)) out.loan += t.amount;
         else if (t.toAccountId && investIds.has(t.toAccountId)) out.investments += t.amount;

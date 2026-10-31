@@ -52,7 +52,7 @@ export interface Discrepancy {
 export function duplicatePairs(txns: Expense[]): [Expense, Expense][] {
   const out: [Expense, Expense][] = [], seen = new Map<string, Expense[]>();
   for (const t of txns) {
-    if (t.txnType === "transfer" || t.txnType === "adjustment") continue;
+    if (t.txnType && t.txnType !== "expense" && t.txnType !== "income" && t.txnType !== "refund" && t.txnType !== "reimbursement") continue;
     const k = `${t.txnType ?? "expense"}|${t.accountId ?? ""}|${t.date}|${t.amount.toFixed(2)}`;
     const prev = seen.get(k) ?? [];
     const name = (x: Expense) => (x.merchant || x.title).toLowerCase().replace(/[^a-z]/g, "").slice(0, 6);

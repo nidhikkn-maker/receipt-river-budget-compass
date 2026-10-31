@@ -44,7 +44,7 @@ const SaveInput = z.object({
   description: z.string().max(2000),
   paymentMethod: z.enum(["cash", "upi", "credit_card", "debit_card", "forex_card", "company_card", "bank_transfer", "other"]),
   receipts: z.array(z.object({ name: z.string(), type: z.string(), path: z.string() })).max(10).optional(),
-  txnType: z.enum(["expense", "income", "transfer", "refund", "reimbursement", "adjustment"]).default("expense"),
+  txnType: z.enum(["expense", "income", "transfer", "refund", "reimbursement", "adjustment", "card_payment", "loan_repayment", "investment", "advance", "advance_settlement"]).default("expense"),
   reimbursementStatus: z.enum(["none", "pending", "received"]).default("none"),
   adjustmentSign: z.union([z.literal(1), z.literal(-1)]).default(1),
   accountId: z.string().uuid().nullable().default(null),
@@ -75,7 +75,7 @@ export const saveExpense = createServerFn({ method: "POST" })
       const sum = Math.round(data.splits.reduce((a, x) => a + x.amount, 0) * 100) / 100;
       if (data.splits.length < 2 || Math.abs(sum - data.originalAmount) > 0.009) return { ok: false as const, error: "Shares must add up to the bill total" };
     }
-    if (data.txnType === "transfer" && (!data.accountId || !data.toAccountId || data.accountId === data.toAccountId)) {
+    if (["transfer", "card_payment", "loan_repayment", "investment"].includes(data.txnType) && (!data.accountId || !data.toAccountId || data.accountId === data.toAccountId)) {
       return { ok: false as const, error: "Pick two different accounts for a transfer" };
     }
     let fx: { rate: number; date: string };
@@ -90,7 +90,7 @@ export const saveExpense = createServerFn({ method: "POST" })
       amount: Math.max(Math.round(data.originalAmount * fx.rate * 100) / 100, 0.01),
       payment_method: data.paymentMethod, expense_date: data.date, description: data.description,
       reimbursement_status: data.txnType === "expense" ? data.reimbursementStatus : "none", adjustment_sign: data.txnType === "adjustment" ? data.adjustmentSign : 1,
-      txn_type: data.txnType, account_id: data.accountId, to_account_id: data.txnType === "transfer" ? data.toAccountId : null, tags: data.tags,
+      txn_type: data.txnType, account_id: data.accountId, to_account_id: ["transfer", "card_payment", "loan_repayment", "investment"].includes(data.txnType) ? data.toAccountId : null, tags: data.tags,
       payment_instrument_id: data.paymentInstrumentId,
       workspace_allocations: data.workspaceAllocations,
       updated_at: new Date().toISOString(),
