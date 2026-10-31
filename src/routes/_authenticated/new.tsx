@@ -354,7 +354,7 @@ function NewExpense() {
             <div className="flex flex-wrap gap-2" role="radiogroup" aria-label="Transaction type">
               {TXN_TYPES.map((t) => (
                 <button key={t} type="button" role="radio" aria-checked={txnType === t} onClick={() => setTxnType(t)}
-                  className={cn("min-h-11 rounded-full border px-4 text-sm font-medium transition", txnType === t ? "border-primary bg-primary text-primary-foreground" : "bg-background hover:bg-secondary")}>
+                  className={cn("min-h-11 rounded-full border px-4 text-sm font-medium transition", txnType === t ? "border-gold bg-gold text-gold-foreground" : "bg-background hover:bg-secondary")}>
                   {TXN_LABEL[t]}
                 </button>
               ))}
@@ -412,7 +412,7 @@ function NewExpense() {
                       if (!splitOn) return setMemberId(m.id);
                       setShares((x) => { const n = { ...x }; if (m.id in n) delete n[m.id]; else n[m.id] = ""; return n; });
                     }}
-                    className={cn("rounded-full border px-3 py-1.5 text-xs font-medium transition", on ? "border-primary bg-primary text-primary-foreground" : "bg-background hover:bg-secondary")}>
+                    className={cn("rounded-full border px-3 py-1.5 text-xs font-medium transition", on ? "border-gold bg-gold text-gold-foreground" : "bg-background hover:bg-secondary")}>
                     {m.name}
                   </button>
                 );
@@ -480,7 +480,7 @@ function NewExpense() {
             <div className="flex flex-wrap gap-2" role="radiogroup" aria-label="Payment method">
               {PAYMENT_METHODS.map((p) => (
                 <button key={p} type="button" role="radio" aria-checked={paymentMethod === p} onClick={() => setPaymentMethod(p)}
-                  className={cn("rounded-full border px-3 py-1.5 text-xs font-medium transition", paymentMethod === p ? "border-primary bg-primary text-primary-foreground" : "bg-background hover:bg-secondary")}>
+                  className={cn("rounded-full border px-3 py-1.5 text-xs font-medium transition", paymentMethod === p ? "border-gold bg-gold text-gold-foreground" : "bg-background hover:bg-secondary")}>
                   {PAYMENT_LABEL[p]}
                 </button>
               ))}

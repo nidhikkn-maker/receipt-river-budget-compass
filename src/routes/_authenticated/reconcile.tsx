@@ -130,7 +130,7 @@ function Reconcile() {
       </div>
 
       <div className="mb-6 flex flex-wrap items-center gap-3 rounded-3xl border-2 border-dashed border-primary/40 bg-secondary/50 p-5">
-        <label className="inline-flex cursor-pointer items-center gap-2 rounded-2xl bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground">
+        <label className="inline-flex cursor-pointer items-center gap-2 rounded-2xl bg-gold px-4 py-2.5 text-sm font-semibold text-gold-foreground shadow-gold">
           <Upload className="h-4 w-4" /> {reading ? "Reading statement…" : "Upload statement"}
           <input type="file" disabled={reading} accept=".csv,.xls,.xlsx,.pdf,.png,.jpg,.jpeg,.webp,text/csv,application/vnd.ms-excel,application/pdf" className="sr-only" onChange={(e) => onFile(e.target.files?.[0])} aria-label="Statement file" />
         </label>
