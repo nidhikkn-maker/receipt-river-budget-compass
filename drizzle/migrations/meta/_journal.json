@@ -141,6 +141,20 @@
       "when": 1793452344118,
       "tag": "0019_expense_payment_instrument",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1793456909040,
+      "tag": "0020_statement_line_imports",
+      "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1793456946408,
+      "tag": "0021_delete_statement_imports_with_data",
+      "breakpoints": true
     }
   ]
 }

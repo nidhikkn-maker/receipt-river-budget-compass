@@ -840,6 +840,39 @@ export type Database = {
         }
         Relationships: []
       }
+      statement_line_imports: {
+        Row: {
+          account_key: string
+          batch_id: string
+          created_at: string
+          file_label: string
+          fingerprint: string
+          id: string
+          line_date: string
+          owner_id: string
+        }
+        Insert: {
+          account_key: string
+          batch_id: string
+          created_at?: string
+          file_label?: string
+          fingerprint: string
+          id?: string
+          line_date: string
+          owner_id?: string
+        }
+        Update: {
+          account_key?: string
+          batch_id?: string
+          created_at?: string
+          file_label?: string
+          fingerprint?: string
+          id?: string
+          line_date?: string
+          owner_id?: string
+        }
+        Relationships: []
+      }
       transaction_audit: {
         Row: {
           action: string
