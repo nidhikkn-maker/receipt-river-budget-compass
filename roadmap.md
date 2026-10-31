@@ -106,11 +106,11 @@
 
 ## Version 3.0 — Autonomous Financial Intelligence (uploaded doc, Oct 31)
 ### Priority 1 — Immediate
-- [ ] Money Allocation Engine: income distribution proposals across buckets, editable, saved plans, planned-vs-actual, carry-forward; never moves money, total ≤ available
-- [ ] Payment Readiness Monitor: per-upcoming-payment projection (balance + confirmed income − earlier obligations − min balance), statuses ready/shortfall/unknown/overdue/paid, full calculation view
-- [ ] Financial Rules Builder: templates + custom rules (name, trigger, threshold, account/category, frequency, priority, notify, enabled), derived alerts
-- [ ] Universal Financial Search: natural-language search across transactions, accounts, merchants, categories, tags, receipts, documents, cards, loans, commitments, reimbursements
-- [ ] AI Statement-to-Action: grouped review (matched/new/duplicates/uncertain/discrepancies/attention), idempotent imports
+- [x] Money Allocation Engine: /allocation page, suggested buckets, editable lines, saved plans in preferences, planned-vs-actual comparison, carry-forward; total ≤ funds enforced; signed-in suggest+save verified
+- [x] Payment Readiness Monitor: Home strip with per-payment status (ready/shortfall/unknown/overdue/paid), account-aware projection, tappable full calculation; signed-in verified with seeded data (cleaned up after)
+- [x] Financial Rules Builder: /rules page, 8 templates + custom rules, enable/notify toggles, triggered-now list with dismiss; 10 rule tests
+- [x] Universal Financial Search: /search page, plain-language parsing (amounts, periods, methods, tags, statuses, record kinds), grouped results with navigation; 12 search tests
+- [x] AI Statement-to-Action: added possible-duplicates group (held back unless user confirms), uncertain-category flags, recurring-payment hints; idempotent repeat-import test; 6 new tests
 ### Priority 2 — Advanced intelligence
 - [ ] AI Financial Autopilot: proactive alerts + recommendations with review/accept/dismiss/remind-later; never acts on money
 - [ ] Financial Stress Testing: scenario simulator (delayed salary, medical, income interruption…), compare scenarios, never touches real records
