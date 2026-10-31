@@ -50,6 +50,13 @@
       "when": 1793391374157,
       "tag": "0006_commitments_loans_goals",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1793413633624,
+      "tag": "0007_preferences_and_receipt_details",
+      "breakpoints": true
     }
   ]
 }

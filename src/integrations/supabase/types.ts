@@ -207,6 +207,7 @@ export type Database = {
           merchant: string | null
           original_amount: number | null
           payment_method: string
+          receipt_details: Json
           receipts: Json
           reconciled_at: string | null
           reconciled_by: string | null
@@ -237,6 +238,7 @@ export type Database = {
           merchant?: string | null
           original_amount?: number | null
           payment_method?: string
+          receipt_details?: Json
           receipts?: Json
           reconciled_at?: string | null
           reconciled_by?: string | null
@@ -267,6 +269,7 @@ export type Database = {
           merchant?: string | null
           original_amount?: number | null
           payment_method?: string
+          receipt_details?: Json
           receipts?: Json
           reconciled_at?: string | null
           reconciled_by?: string | null
@@ -325,6 +328,24 @@ export type Database = {
           name?: string
           owner_id?: string
           relation?: string
+        }
+        Relationships: []
+      }
+      finance_preferences: {
+        Row: {
+          data: Json
+          owner_id: string
+          updated_at: string
+        }
+        Insert: {
+          data?: Json
+          owner_id: string
+          updated_at?: string
+        }
+        Update: {
+          data?: Json
+          owner_id?: string
+          updated_at?: string
         }
         Relationships: []
       }
@@ -444,6 +465,10 @@ export type Database = {
           _user_id: string
         }
         Returns: boolean
+      }
+      move_expense_category: {
+        Args: { source: string; target: string }
+        Returns: undefined
       }
       my_department: { Args: never; Returns: string }
       reconcile_expense: {

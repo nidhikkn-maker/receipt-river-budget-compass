@@ -50,6 +50,8 @@ export function ExpenseDialog({ expense, onClose }: { expense: Expense | null; o
             <div className="text-sm text-muted-foreground">≈ <span className="font-mono">{money(e.amount)}</span> at 1 {e.currency} = {e.fxRate.toFixed(4)} {BASE_CURRENCY}</div>
           )}
         </div>
+        {e.receiptDetails?.tax != null && <p className="text-sm">Tax included: <span className="font-mono">{money(e.receiptDetails.tax,e.currency)}</span></p>}
+        {!!e.receiptDetails?.items?.length && <ul className="divide-y">{e.receiptDetails.items.map((item,i)=><li key={i} className="flex justify-between gap-3 py-2 text-sm"><span>{item.name} × {item.quantity}</span><span className="font-mono">{money(item.amount,e.currency)}</span></li>)}</ul>}
         <ScopeToggle value={scope} onChange={changeScope} />
         {e.description && <p className="text-sm">{e.description}</p>}
         {e.reconciledAt && <p className="text-sm text-success">Matched to bank statement: {e.statementRef}</p>}

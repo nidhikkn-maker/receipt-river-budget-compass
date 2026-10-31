@@ -46,6 +46,7 @@ const SaveInput = z.object({
   accountId: z.string().uuid().nullable().default(null),
   toAccountId: z.string().uuid().nullable().default(null),
   tags: z.array(z.string().trim().min(1).max(40)).max(20).default([]),
+  receiptDetails: z.object({ tax: z.number().nonnegative().nullable().optional(), items: z.array(z.object({ name: z.string().max(200), quantity: z.number().nonnegative(), amount: z.number().nonnegative() })).max(100).optional(), text: z.string().max(20000).optional() }).optional(),
 });
 
 /** Adds or updates an expense, converting to INR server-side with the rate for the bill date. */
@@ -76,6 +77,7 @@ export const saveExpense = createServerFn({ method: "POST" })
       txn_type: data.txnType, account_id: data.accountId, to_account_id: data.txnType === "transfer" ? data.toAccountId : null, tags: data.tags,
       updated_at: new Date().toISOString(),
       ...(data.receipts ? { receipts: data.receipts } : {}),
+      ...(data.receiptDetails ? { receipt_details: data.receiptDetails } : {}),
     };
     const { error } = data.id
       ? await supabase.from("expenses").update(row).eq("id", data.id)

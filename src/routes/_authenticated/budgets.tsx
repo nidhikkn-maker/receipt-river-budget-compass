@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { CATEGORIES, budgetUsage, money, totalsBy, type Category } from "@/lib/expenses";
+import { ScopedBudgets } from "@/components/ScopedBudgets";
 import { useStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
 
@@ -27,7 +28,7 @@ export const Route = createFileRoute("/_authenticated/budgets")({
 const COLORS = ["var(--chart-1)", "var(--chart-2)", "var(--chart-3)", "var(--chart-4)", "var(--chart-5)"];
 
 function Budgets() {
-  const { expenses, budgets, setBudget } = useStore();
+  const { expenses, budgets, setBudget, preferences } = useStore();
   const month = new Date().toISOString().slice(0, 7);
   const rows = budgetUsage(expenses, budgets, month);
   const [cat, setCat] = useState<Category>("Groceries");
@@ -41,10 +42,11 @@ function Budgets() {
   return (
     <>
       <PageTitle eyebrow="Budgets" title="Monthly limits" sub="Set a monthly budget per category — business and personal combined." />
+      <ScopedBudgets />
       <div className="mb-6 grid gap-3 rounded-3xl border bg-card p-5 sm:grid-cols-[1fr_1fr_auto]">
         <Select value={cat} onValueChange={(v) => { setCat(v as Category); setAmt(String(budgets[v as Category] ?? "")); }}>
           <SelectTrigger aria-label="Category"><SelectValue /></SelectTrigger>
-          <SelectContent>{CATEGORIES.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
+          <SelectContent>{preferences.categories.filter(c=>!c.archived).map(c=>c.name).map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
         </Select>
         <Input aria-label="Monthly budget" type="number" min="0" step="100" placeholder="Monthly amount (₹)" className="font-mono" value={amt} onChange={(e) => setAmt(e.target.value)} />
         <Button onClick={() => save(cat, amt)} disabled={amt === ""}>Save budget</Button>

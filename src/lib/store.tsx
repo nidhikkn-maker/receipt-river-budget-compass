@@ -7,12 +7,16 @@ import {
   type Split,
 } from "./expenses";
 import type { Account, AccountKind, TxnType } from "./ledger";
+import { defaultPreferences, type FinancePreferences } from "./preferences";
 import { nextAfter, type Commitment, type CommitmentKind, type CommitmentStatus, type Frequency } from "./planning";
 
 export interface Loan { id: string; name: string; principal: number; rate: number; emi: number; nextDue: string }
 export interface Goal { id: string; name: string; target: number; saved: number; monthly: number; reserve: boolean }
 
 interface Ctx {
+  preferences: FinancePreferences;
+  savePreferences: (p: FinancePreferences) => Promise<void>;
+  moveCategory: (source: string, target: string) => Promise<void>;
   userId: string;
   name: string;
   members: Member[];
@@ -61,9 +65,10 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
   const [goals, setGoals] = useState<Goal[]>([]);
   const [budgets, setBudgets] = useState<Budgets>({});
   const [loading, setLoading] = useState(true);
+  const [preferences, setPreferences] = useState<FinancePreferences>(defaultPreferences);
 
   const refresh = useCallback(async () => {
-    const [p, m, e, b, a, c, l, g] = await Promise.all([
+    const [p, m, e, b, a, c, l, g, pref] = await Promise.all([
       supabase.from("profiles").select("full_name").eq("id", userId).maybeSingle(),
       supabase.from("family_members").select("id, name, relation").order("created_at"),
       supabase.from("expenses").select("*").order("expense_date", { ascending: false }).order("created_at", { ascending: false }),
@@ -72,7 +77,9 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
       supabase.from("commitments").select("*").order("next_due"),
       supabase.from("loans").select("*").order("created_at"),
       supabase.from("goals").select("*").order("created_at"),
+      supabase.from("finance_preferences").select("data").eq("owner_id", userId).maybeSingle(),
     ]);
+    setPreferences({ ...defaultPreferences(), ...(pref.data?.data as unknown as Partial<FinancePreferences> ?? {}) });
     setCommitments((c.data ?? []).map((x) => ({ id: x.id, name: x.name, kind: x.kind as CommitmentKind, direction: x.direction as "in" | "out", amount: Number(x.amount),
       frequency: x.frequency as Frequency, intervalDays: x.interval_days, nextDue: x.next_due, accountId: x.account_id, category: x.category,
       confirmed: x.confirmed, essential: x.essential, status: x.status as CommitmentStatus })));
@@ -88,6 +95,7 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
         paymentMethod: x.payment_method as PaymentMethod, reconciledAt: x.reconciled_at, statementRef: x.statement_ref,
         date: x.expense_date, description: x.description, receipts: (x.receipts as unknown as Receipt[]) ?? [],
         txnType: x.txn_type as TxnType, accountId: x.account_id, toAccountId: x.to_account_id, tags: x.tags ?? [],
+        receiptDetails: x.receipt_details as unknown as Expense["receiptDetails"],
       })),
     );
     const bud: Budgets = {};
@@ -116,6 +124,7 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
       id: opts?.id ?? null, title: s.title.trim(), merchant: s.merchant, category: s.category, scope: s.scope, memberId: s.memberId, splits: s.splits ?? [],
       currency: s.currency, originalAmount: s.amount, date: s.date, description: s.description, paymentMethod: s.paymentMethod,
       txnType: s.txnType ?? "expense", accountId: s.accountId ?? null, toAccountId: s.toAccountId ?? null, tags: s.tags ?? [],
+      receiptDetails: s.receiptDetails,
       ...(receipts ? { receipts } : {}),
     } });
     if (!res.ok) throw new Error(res.error);
@@ -123,6 +132,14 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
   };
 
   const check = (error: { message: string } | null) => { if (error) throw new Error(error.message); };
+  const savePreferences: Ctx["savePreferences"] = async (p) => {
+    check((await supabase.from("finance_preferences").upsert({ owner_id: userId, data: p as unknown as import("@/integrations/supabase/types").Json, updated_at: new Date().toISOString() })).error);
+    setPreferences(p);
+  };
+  const moveCategory: Ctx["moveCategory"] = async (source, target) => {
+    check((await supabase.rpc("move_expense_category", { source, target })).error);
+    await refresh();
+  };
 
   const remove: Ctx["remove"] = async (e) => {
     check((await supabase.from("expenses").delete().eq("id", e.id)).error);
@@ -211,7 +228,7 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
   }, []);
 
   return (
-    <StoreCtx.Provider value={{ userId, name, members, memberName, expenses: expenses.filter((x) => (x.txnType ?? "expense") === "expense"), transactions: expenses, accounts, addAccount, setArchived, commitments, loans, goals, saveCommitment, removeCommitment, confirmCommitment, saveLoan, removeLoan, saveGoal, removeGoal, updateAccount, budgets, loading, refresh, save, remove, setScope, reconcile, addMember, removeMember, setBudget, signedUrl }}>
+    <StoreCtx.Provider value={{ preferences, savePreferences, moveCategory, userId, name, members, memberName, expenses: expenses.filter((x) => (x.txnType ?? "expense") === "expense"), transactions: expenses, accounts, addAccount, setArchived, commitments, loans, goals, saveCommitment, removeCommitment, confirmCommitment, saveLoan, removeLoan, saveGoal, removeGoal, updateAccount, budgets, loading, refresh, save, remove, setScope, reconcile, addMember, removeMember, setBudget, signedUrl }}>
       {children}
     </StoreCtx.Provider>
   );

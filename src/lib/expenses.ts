@@ -4,7 +4,7 @@ export const CATEGORIES = [
   "Groceries", "Dining", "Travel", "Fuel & Transport", "Shopping", "Bills & Utilities", "Rent & Home",
   "Health", "Education", "Entertainment", "Software & Subscriptions", "Office & Supplies", "Client & Business Meals", "Other",
 ] as const;
-export type Category = (typeof CATEGORIES)[number];
+export type Category = string;
 
 export const SCOPES = ["personal", "business"] as const;
 export type Scope = (typeof SCOPES)[number];
@@ -24,6 +24,7 @@ export const CURRENCIES = ["INR", "USD", "EUR", "GBP", "AED", "SGD", "JPY", "AUD
 export interface Member { id: string; name: string; relation: string }
 
 export interface Receipt { name: string; type: string; path: string }
+export interface ReceiptDetails { tax?: number | null; items?: { name: string; quantity: number; amount: number }[]; text?: string }
 
 export interface Expense {
   id: string;
@@ -49,6 +50,7 @@ export interface Expense {
   accountId?: string | null;
   toAccountId?: string | null;
   tags?: string[];
+  receiptDetails?: ReceiptDetails;
 }
 
 export interface Split { memberId: string | null; amount: number }
@@ -73,6 +75,7 @@ export interface ExpenseInput {
   accountId?: string | null;
   toAccountId?: string | null;
   tags?: string[];
+  receiptDetails?: ReceiptDetails;
 }
 
 export function validateExpense(s: ExpenseInput) {
@@ -130,10 +133,15 @@ export function validateBudget(amount: number) {
 
 export const convert = (amount: number, rate: number) => Math.round(amount * rate * 100) / 100;
 
-export interface Filters { scope?: Scope | "all"; memberId?: string | "all" | "me"; from?: string; to?: string; category?: Category | "all" }
+export interface Filters { scope?: Scope | "all"; memberId?: string | "all" | "me"; from?: string; to?: string; category?: Category | "all"; accountId?: string; paymentMethod?: string; tag?: string; query?: string; txnType?: string }
 
 export function applyFilters(list: Expense[], f: Filters): Expense[] {
   return list.filter((e) =>
+    (!f.accountId || f.accountId === "all" || e.accountId === f.accountId || e.toAccountId === f.accountId) &&
+    (!f.paymentMethod || f.paymentMethod === "all" || e.paymentMethod === f.paymentMethod) &&
+    (!f.tag || f.tag === "all" || e.tags?.includes(f.tag)) &&
+    (!f.txnType || f.txnType === "all" || (e.txnType ?? "expense") === f.txnType) &&
+    (!f.query || `${e.title} ${e.merchant ?? ""} ${e.description} ${(e.tags ?? []).join(" ")}`.toLowerCase().includes(f.query.toLowerCase())) &&
     (!f.scope || f.scope === "all" || e.scope === f.scope) &&
     (!f.memberId || f.memberId === "all" || memberShares(e).some((x) => (f.memberId === "me" ? x.memberId === null : x.memberId === f.memberId))) &&
     (!f.category || f.category === "all" || e.category === f.category) &&
@@ -158,7 +166,7 @@ const roundAll = <T extends Record<string, number>>(o: T) =>
 /** Month-to-date spend vs monthly budget per category (personal + business combined). */
 export function budgetUsage(list: Expense[], budgets: Budgets, month: string /* YYYY-MM */) {
   const spent = totalsBy(list.filter((e) => e.date.startsWith(month)), (e) => e.category);
-  return CATEGORIES.map((c) => ({ category: c, spent: spent[c] ?? 0, budget: budgets[c] ?? 0 }))
+  return [...new Set([...CATEGORIES, ...Object.keys(budgets), ...Object.keys(spent)])].map((c) => ({ category: c, spent: spent[c] ?? 0, budget: budgets[c] ?? 0 }))
     .filter((r) => r.budget > 0 || r.spent > 0);
 }
 
