@@ -1,3 +1,4 @@
+import { SavedViews } from "@/components/SavedViews";
 import { createFileRoute } from "@tanstack/react-router";
 import { useRef, useState } from "react";
 import { History, Undo2 } from "lucide-react";
@@ -74,6 +75,7 @@ function Expenses() {
             className={cn("rounded-xl px-4 py-2 font-semibold capitalize", f.scope === s ? "bg-gold text-gold-foreground" : "text-muted-foreground")}>{s}</button>
         ))}
       </div>
+      <SavedViews filters={f} onApply={(v) => setF(v as Filters)} />
       <div className="mb-3 grid gap-3 sm:grid-cols-5"><Input aria-label="Search transactions" placeholder="Merchant, description or tags" value={f.query ?? ""} onChange={e=>setF({...f,query:e.target.value})}/><Select value={f.accountId ?? "all"} onValueChange={v=>setF({...f,accountId:v})}><SelectTrigger aria-label="Filter account"><SelectValue/></SelectTrigger><SelectContent><SelectItem value="all">All accounts</SelectItem>{accounts.map(a=><SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}</SelectContent></Select><Select value={f.paymentMethod ?? "all"} onValueChange={v=>setF({...f,paymentMethod:v})}><SelectTrigger aria-label="Filter payment"><SelectValue/></SelectTrigger><SelectContent><SelectItem value="all">All payment methods</SelectItem>{PAYMENT_METHODS.map(v=><SelectItem key={v} value={v}>{PAYMENT_LABEL[v]}</SelectItem>)}</SelectContent></Select><Select value={f.paymentInstrumentId ?? "all"} onValueChange={v=>setF({...f,paymentInstrumentId:v})}><SelectTrigger aria-label="Filter UPI ID or card"><SelectValue/></SelectTrigger><SelectContent><SelectItem value="all">All UPI IDs & cards</SelectItem>{preferences.paymentInstruments.map(p=><SelectItem key={p.id} value={p.id}>{instrumentLabel(p)}</SelectItem>)}</SelectContent></Select><Select value={f.tag ?? "all"} onValueChange={v=>setF({...f,tag:v})}><SelectTrigger aria-label="Filter tag"><SelectValue/></SelectTrigger><SelectContent><SelectItem value="all">All tags</SelectItem>{[...new Set(expenses.flatMap(e=>e.tags??[]))].map(t=><SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent></Select></div><div className="mb-5 grid gap-3 sm:grid-cols-4">
         <Select value={f.memberId ?? "all"} onValueChange={(v) => setF({ ...f, memberId: v })}>
           <SelectTrigger aria-label="Family member"><SelectValue /></SelectTrigger>

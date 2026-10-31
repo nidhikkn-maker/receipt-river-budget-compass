@@ -35,7 +35,17 @@ export function applyHomeMode(p: FinancePreferences, mode: Exclude<HomeMode, "cu
   return { ...p, homeMode: mode, homeOrder: [...shown, ...HOME_SECTIONS.filter((x) => !shown.includes(x))], homeHidden: HOME_SECTIONS.filter((x) => !shown.includes(x)) };
 }
 
+export interface SavedView { id: string; name: string; filters: Record<string, string> }
+/** Keeps saved Transactions views well-formed: named, string-valued filters, at most 20. */
+export function sanitizeSavedViews(raw: unknown): SavedView[] {
+  if (!Array.isArray(raw)) return [];
+  return raw.filter((v) => v && typeof v.id === "string" && typeof v.name === "string" && v.name.trim() && v.filters && typeof v.filters === "object")
+    .slice(0, 20).map((v) => ({ id: v.id, name: String(v.name).trim().slice(0, 40), filters: Object.fromEntries(Object.entries(v.filters).filter(([, x]) => typeof x === "string" && x !== "")) as Record<string, string> }));
+}
+
 export interface FinancePreferences {
+  /** Named Transactions filter combinations (V5.0 saved views). */
+  savedViews: SavedView[];
   /** Home arrangement; "custom" once the user hides or reorders sections themselves. */
   homeMode: HomeMode;
   categories: CategorySetting[];
@@ -119,7 +129,7 @@ export const DEFAULT_TAGS: GroupedTag[] = [
 
 export function defaultPreferences(): FinancePreferences {
   return {
-    categories: CATEGORIES.map((name) => ({ name, archived: false })), tags: DEFAULT_TAGS, budgets: [], homeHidden: [], homeOrder: [...HOME_SECTIONS], homeMode: "custom",
+    categories: CATEGORIES.map((name) => ({ name, archived: false })), tags: DEFAULT_TAGS, budgets: [], homeHidden: [], homeOrder: [...HOME_SECTIONS], homeMode: "custom", savedViews: [],
     theme: "system", themeName: "signature", homeScope: "all", reminders: true, reminderDays: 3, defaultCurrency: "INR", language: "en", aiEnabled: true, aiReadsDocuments: true, cardAlertPct: 30, homePeriod: "month", homeCustomStart: "", homeCustomEnd: "",
     freshness: { reviewDays: 14, outdatedDays: 45, perAccount: {} }, inboxDismissed: [], statementBalances: {}, splitTemplates: [],
     emergency: defaultEmergency(), irregularRejected: [], irregularConfirmed: [], milestones: [], trips: [], merchantAliases: {}, brief: { enabled: true, day: 1, hour: 8 }, briefs: [], paymentInstruments: [],
@@ -137,6 +147,7 @@ export function normalizePreferences(raw: Partial<FinancePreferences> | null | u
   if (!Array.isArray(p.tags)) p.tags = d.tags;
   if (!Array.isArray(p.budgets)) p.budgets = [];
   if (!Array.isArray(p.homeHidden)) p.homeHidden = [];
+  p.savedViews = sanitizeSavedViews(p.savedViews);
   if (!["daily", "executive", "minimal", "custom"].includes(p.homeMode)) p.homeMode = "custom";
   p.reminderDays = Number.isFinite(p.reminderDays) ? Math.min(30, Math.max(0, Math.round(p.reminderDays))) : d.reminderDays;
   p.cardAlertPct = Number.isFinite(p.cardAlertPct) ? Math.min(100, Math.max(5, Math.round(p.cardAlertPct))) : d.cardAlertPct;
