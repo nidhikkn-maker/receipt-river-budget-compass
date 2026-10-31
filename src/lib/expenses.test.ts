@@ -9,7 +9,7 @@ const exp = (o: Partial<Expense> = {}): Expense => ({
 
 describe("business vs personal", () => {
   it("totals are kept separate", () => {
-    expect(totalsByScope([exp({ amount: 100 }), exp({ amount: 250, scope: "business" })])).toEqual({ personal: 100, business: 250, total: 350 });
+    expect(totalsByScope([exp({ amount: 100 }), exp({ amount: 250, scope: "business" })])).toEqual({ personal: 100, family: 0, business: 250, official: 0, total: 350 });
   });
   it("filters to business only", () => {
     expect(applyFilters([exp({ id: "a" }), exp({ id: "b", scope: "business" })], { scope: "business" }).map((e) => e.id)).toEqual(["b"]);

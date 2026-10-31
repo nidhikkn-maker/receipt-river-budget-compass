@@ -435,6 +435,7 @@ export type Database = {
           to_account_id: string | null
           txn_type: string
           updated_at: string
+          workspace_allocations: Json
         }
         Insert: {
           account_id?: string | null
@@ -472,6 +473,7 @@ export type Database = {
           to_account_id?: string | null
           txn_type?: string
           updated_at?: string
+          workspace_allocations?: Json
         }
         Update: {
           account_id?: string | null
@@ -509,6 +511,7 @@ export type Database = {
           to_account_id?: string | null
           txn_type?: string
           updated_at?: string
+          workspace_allocations?: Json
         }
         Relationships: [
           {

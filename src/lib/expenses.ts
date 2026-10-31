@@ -1,3 +1,4 @@
+import { workspaceParts } from "./workspaces";
 // Personal + family expense tracker domain logic (pure, tested).
 
 /** Default categories for new accounts (the 18 from the requirements plus two business ones). Users can rename, merge, archive and add. */
@@ -11,9 +12,9 @@ export const CATEGORIES = [
 export const CHARGES_CATEGORY = "Financial charges";
 export type Category = string;
 
-export const SCOPES = ["personal", "business"] as const;
+export const SCOPES = ["personal", "family", "business", "official"] as const;
 export type Scope = (typeof SCOPES)[number];
-export const SCOPE_LABEL: Record<Scope, string> = { personal: "Personal", business: "Business" };
+export const SCOPE_LABEL: Record<Scope, string> = { personal: "Personal", family: "Family", business: "Business", official: "Official" };
 
 export const PAYMENT_METHODS = ["cash", "upi", "credit_card", "debit_card", "forex_card", "company_card", "bank_transfer", "other"] as const;
 export type PaymentMethod = (typeof PAYMENT_METHODS)[number];
@@ -72,6 +73,7 @@ export interface Expense {
   adjustmentSign?: 1 | -1;
   /** Category split lines in INR; empty = whole amount uses `category`. */
   allocations?: Allocation[];
+  workspaceAllocations?: import("./workspaces").WorkspaceShare[];
   reimbursement?: import("./reimbursements").ReimbursementInfo;
 }
 
@@ -136,13 +138,14 @@ export interface ExpenseInput {
   receiptDetails?: ReceiptDetails;
   reimbursementStatus?: ReimbursementStatus;
   adjustmentSign?: 1 | -1;
+  workspaceAllocations?: import("./workspaces").WorkspaceShare[];
 }
 
 export function validateExpense(s: ExpenseInput) {
   if (!s.title.trim()) throw new ValidationError("Add a title");
   if (!(s.amount > 0)) throw new ValidationError("Amount must be greater than zero");
   if (!/^\d{4}-\d{2}-\d{2}$/.test(s.date)) throw new ValidationError("Add the expense date");
-  if (!SCOPES.includes(s.scope)) throw new ValidationError("Choose business or personal");
+  if (!SCOPES.includes(s.scope)) throw new ValidationError("Choose a workspace");
   if (s.txnType === "transfer") {
     if (!s.accountId || !s.toAccountId) throw new ValidationError("Pick both accounts for a transfer");
     if (s.accountId === s.toAccountId) throw new ValidationError("Choose two different accounts");
@@ -219,8 +222,8 @@ export function bulkRecategorize(list: Pick<Expense, "id">[], ids: string[], cat
 }
 
 export function totalsByScope(list: Expense[]) {
-  const t = { personal: 0, business: 0, total: 0 };
-  for (const e of list) { t[e.scope] += e.amount; t.total += e.amount; }
+  const t = { personal: 0, family: 0, business: 0, official: 0, total: 0 };
+  for (const e of list) { for (const p of workspaceParts(e)) t[p.workspace] += p.amount; t.total += e.amount; }
   return roundAll(t);
 }
 
