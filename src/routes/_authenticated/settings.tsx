@@ -132,6 +132,9 @@ function Settings() {
           <Button variant="secondary" onClick={() => file.current?.click()} disabled={busy}><Upload className="h-4 w-4" />Choose backup file</Button>
           <input ref={file} type="file" accept="application/zip,application/json,.zip,.json" className="sr-only" aria-label="Backup file" onChange={(e) => restore(e.target.files?.[0])} />
         </Card>
+        <Card title="Payment methods" body="Your UPI IDs, debit and credit cards, wallets and cash, each linked to its bank account.">
+          <Button asChild variant="secondary"><Link to="/payment-methods">Manage payment methods</Link></Button>
+        </Card>
         <Card title="Connected assistants" body="See which AI assistants can read your records and remove their access at any time.">
           <Button asChild variant="secondary"><Link to="/assistants">Manage assistants</Link></Button>
         </Card>

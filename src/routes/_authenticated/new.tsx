@@ -18,6 +18,7 @@ import { duplicateBills } from "@/lib/bill-duplicates";
 import { buildReceiptAudit, receiptFingerprint, receiptFingerprintMatches, type ReceiptReadValues } from "@/lib/receipt-audit";
 import { quickEntrySearch } from "@/lib/quick-entry";
 import { useStore } from "@/lib/store";
+import { activeInstruments, applyInstrument, instrumentLabel, lastInstrumentForMerchant } from "@/lib/payment-instruments";
 import { extractReceipt } from "@/lib/receipt-extract.functions";
 import { prepareForReading } from "@/lib/image-prep";
 import { getFxRate } from "@/lib/fx.functions";
@@ -101,6 +102,22 @@ function NewExpense() {
   const [amount, setAmount] = useState("");
   const [currency, setCurrency] = useState<string>(preferences.defaultCurrency);
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("upi");
+  const [instrumentId, setInstrumentId] = useState<string>("none");
+  const savedMethods = activeInstruments(preferences.paymentInstruments, accounts);
+  const pickInstrument = (id: string) => {
+    setInstrumentId(id);
+    const p = savedMethods.find((x) => x.id === id);
+    if (!p) return;
+    const f = applyInstrument(p);
+    setPaymentMethod(f.paymentMethod); setAccountId(f.accountId);
+    if (f.memberId && !splitOn) setMemberId(f.memberId);
+  };
+  useEffect(() => {
+    if (editing || instrumentId !== "none") return;
+    const d = savedMethods.find((p) => p.isDefault);
+    if (d) pickInstrument(d.id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [preferences.paymentInstruments]);
   const [category, setCategory] = useState<Category>("Groceries");
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
   const [description, setDescription] = useState("");
@@ -191,7 +208,7 @@ function NewExpense() {
     setTitle(editing.title); setMerchant(editing.merchant ?? ""); setAmount(String(editing.originalAmount)); setCurrency(editing.currency);
     setPaymentMethod(editing.paymentMethod); setCategory(editing.category); setDate(editing.date); setDescription(editing.description);
     setScope(editing.scope); setMemberId(editing.memberId ?? "me");
-    setTxnType(editing.txnType ?? "expense"); setAccountId(editing.accountId ?? "none"); setToAccountId(editing.toAccountId ?? "none"); setTags((editing.tags ?? []).join(", "));
+    setTxnType(editing.txnType ?? "expense"); setAccountId(editing.accountId ?? "none"); setInstrumentId(editing.paymentInstrumentId ?? "none"); setToAccountId(editing.toAccountId ?? "none"); setTags((editing.tags ?? []).join(", "));
     setSplitOn(editing.splits.length > 0);
     setShares(Object.fromEntries(editing.splits.map((x) => [x.memberId ?? "me", String(x.amount)])));
   }, [editing]);
@@ -307,6 +324,8 @@ function NewExpense() {
     if ((PAYMENT_METHODS as readonly string[]).includes(hit.paymentMethod)) { setPaymentMethod(hit.paymentMethod as PaymentMethod); filled.add("paymentMethod"); }
     if (hit.scope === "business" || hit.scope === "personal") { setScope(hit.scope); filled.add("scope"); }
     if (hit.accountId && liveAccounts.some((a) => a.id === hit.accountId)) setAccountId(hit.accountId);
+    const usual = lastInstrumentForMerchant(m, expenses, savedMethods);
+    if (usual) { pickInstrument(usual.id); filled.add("paymentMethod"); }
     if (hit.tags.length && !tags.trim()) setTags(hit.tags.join(", "));
     setAutoFilled(filled);
     toast.message(`Filled in from your last ${m} entry`);
@@ -325,7 +344,7 @@ function NewExpense() {
       await save(
         { title: title.trim(), amount: Number(amount), currency, paymentMethod, category, date, description, merchant: merchant.trim() || null,
           receiptDetails: finalDetails, scope, memberId: memberId === "me" ? null : memberId,
-          txnType, accountId: accountId === "none" ? null : accountId, toAccountId: toAccountId === "none" ? null : toAccountId,
+          txnType, accountId: accountId === "none" ? null : accountId, paymentInstrumentId: instrumentId === "none" ? null : instrumentId, toAccountId: toAccountId === "none" ? null : toAccountId,
           tags: [...new Set(tags.split(",").map((t) => t.trim()).filter(Boolean))],
           splits: splitOn ? Object.entries(shares).map(([k, v]) => ({ memberId: k === "me" ? null : k, amount: Number(v) })) : [] },
         { ...(editing ? { id: editing.id } : {}), files: receipts.map((r) => r.file) },
@@ -576,9 +595,17 @@ function NewExpense() {
           </div>
           <div className="grid gap-2">
             <Label>Paid with{af("payment")}</Label>
+            <Select value={instrumentId} onValueChange={(v) => v === "none" ? setInstrumentId("none") : pickInstrument(v)}>
+              <SelectTrigger aria-label="Saved payment method"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">{savedMethods.length ? "Choose a saved UPI ID or card" : "No saved methods yet"}</SelectItem>
+                {savedMethods.map((p) => <SelectItem key={p.id} value={p.id}>{instrumentLabel(p)} · {accounts.find((a) => a.id === p.accountId)?.name}</SelectItem>)}
+              </SelectContent>
+            </Select>
+            <Link to="/payment-methods" className="text-xs font-semibold text-gold-strong underline-offset-2 hover:underline">Add or manage UPI IDs & cards</Link>
             <div className="flex flex-wrap gap-2" role="radiogroup" aria-label="Payment method">
               {PAYMENT_METHODS.map((p) => (
-                <button key={p} type="button" role="radio" aria-checked={paymentMethod === p} onClick={() => setPaymentMethod(p)}
+                <button key={p} type="button" role="radio" aria-checked={paymentMethod === p} onClick={() => { setPaymentMethod(p); setInstrumentId("none"); }}
                   className={cn("rounded-full border px-3 py-1.5 text-xs font-medium transition", paymentMethod === p ? "border-gold bg-gold text-gold-foreground" : "bg-background hover:bg-secondary")}>
                   {PAYMENT_LABEL[p]}
                 </button>
