@@ -44,7 +44,7 @@ describe("Reports Centre totals", () => {
   it("renders a multi-page PDF for large reports", async () => {
     const many = Array.from({ length: 400 }, (_, i) => e(`x${i}`, 10 + i));
     const blob = await renderReportPdf(buildReportDoc("expense", f, data(many)), "mono", new Date());
-    const text = await new Response(blob).text();
+    const text = await new Promise<string>((r) => { const fr = new FileReader(); fr.onload = () => r(String(fr.result)); fr.readAsText(blob); });
     expect(text.length).toBeGreaterThan(0); expect(text).toMatch(/Page 4 of \d+/);
   });
 });
