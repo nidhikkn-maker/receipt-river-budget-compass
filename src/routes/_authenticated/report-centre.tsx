@@ -126,7 +126,7 @@ function ReportCentre() {
 
   return (
     <div className="space-y-5 pb-24">
-      <PageTitle title="Reports Centre" subtitle="Generate PDF reports from your recorded entries, then preview, download or share them." />
+      <PageTitle title="Reports Centre" sub="Generate PDF reports from your recorded entries, then preview, download or share them." />
 
       <section className="space-y-3 rounded-xl border bg-card p-4">
         <label className="block text-sm font-semibold">Report
@@ -179,7 +179,7 @@ function ReportCentre() {
         <p className="text-xs text-muted-foreground">Reports are prepared on this device. Keep this page open until the PDF is ready.</p>
       </section>
 
-      {stage >= 0 && <ProcessingPanel title={failed ? "Report not finished" : `Preparing ${reportLabel(type)}… keep this page open`} stages={stagesAt(STAGES, stage, failed)} onCancel={busy ? () => { cancelled.current = true; setStage(-1); } : undefined} />}
+      {stage >= 0 && <ProcessingPanel title={failed ? "Report not finished" : `Preparing ${reportLabel(type)}… keep this page open`} stages={stagesAt(STAGES, stage, failed)} {...(busy ? { onCancel: () => { cancelled.current = true; setStage(-1); } } : {})} />}
 
       {result && (
         <section className="space-y-3 rounded-xl border bg-card p-4">
