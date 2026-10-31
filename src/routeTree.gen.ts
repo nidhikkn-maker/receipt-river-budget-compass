@@ -28,6 +28,7 @@ import { Route as AuthenticatedReportsRouteImport } from './routes/_authenticate
 import { Route as AuthenticatedReviewRouteImport } from './routes/_authenticated/review'
 import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings'
 import { Route as AuthenticatedStrategyRouteImport } from './routes/_authenticated/strategy'
+import { Route as AuthenticatedTripsRouteImport } from './routes/_authenticated/trips'
 import { Route as AuthenticatedVaultRouteImport } from './routes/_authenticated/vault'
 import { Route as AuthenticatedWealthRouteImport } from './routes/_authenticated/wealth'
 import { Route as ApiPublicJobsPaymentRemindersRouteImport } from './routes/api/public/jobs/payment-reminders'
@@ -126,6 +127,11 @@ const AuthenticatedStrategyRoute = AuthenticatedStrategyRouteImport.update({
   path: '/strategy',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedTripsRoute = AuthenticatedTripsRouteImport.update({
+  id: '/trips',
+  path: '/trips',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedVaultRoute = AuthenticatedVaultRouteImport.update({
   id: '/vault',
   path: '/vault',
@@ -162,6 +168,7 @@ export interface FileRoutesByFullPath {
   '/review': typeof AuthenticatedReviewRoute
   '/settings': typeof AuthenticatedSettingsRoute
   '/strategy': typeof AuthenticatedStrategyRoute
+  '/trips': typeof AuthenticatedTripsRoute
   '/vault': typeof AuthenticatedVaultRoute
   '/wealth': typeof AuthenticatedWealthRoute
   '/api/public/jobs/payment-reminders': typeof ApiPublicJobsPaymentRemindersRoute
@@ -185,6 +192,7 @@ export interface FileRoutesByTo {
   '/review': typeof AuthenticatedReviewRoute
   '/settings': typeof AuthenticatedSettingsRoute
   '/strategy': typeof AuthenticatedStrategyRoute
+  '/trips': typeof AuthenticatedTripsRoute
   '/vault': typeof AuthenticatedVaultRoute
   '/wealth': typeof AuthenticatedWealthRoute
   '/api/public/jobs/payment-reminders': typeof ApiPublicJobsPaymentRemindersRoute
@@ -210,6 +218,7 @@ export interface FileRoutesById {
   '/_authenticated/review': typeof AuthenticatedReviewRoute
   '/_authenticated/settings': typeof AuthenticatedSettingsRoute
   '/_authenticated/strategy': typeof AuthenticatedStrategyRoute
+  '/_authenticated/trips': typeof AuthenticatedTripsRoute
   '/_authenticated/vault': typeof AuthenticatedVaultRoute
   '/_authenticated/wealth': typeof AuthenticatedWealthRoute
   '/api/public/jobs/payment-reminders': typeof ApiPublicJobsPaymentRemindersRoute
@@ -235,6 +244,7 @@ export interface FileRouteTypes {
     | '/review'
     | '/settings'
     | '/strategy'
+    | '/trips'
     | '/vault'
     | '/wealth'
     | '/api/public/jobs/payment-reminders'
@@ -258,6 +268,7 @@ export interface FileRouteTypes {
     | '/review'
     | '/settings'
     | '/strategy'
+    | '/trips'
     | '/vault'
     | '/wealth'
     | '/api/public/jobs/payment-reminders'
@@ -282,6 +293,7 @@ export interface FileRouteTypes {
     | '/_authenticated/review'
     | '/_authenticated/settings'
     | '/_authenticated/strategy'
+    | '/_authenticated/trips'
     | '/_authenticated/vault'
     | '/_authenticated/wealth'
     | '/api/public/jobs/payment-reminders'
@@ -430,6 +442,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedStrategyRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/trips': {
+      id: '/_authenticated/trips'
+      path: '/trips'
+      fullPath: '/trips'
+      preLoaderRoute: typeof AuthenticatedTripsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/vault': {
       id: '/_authenticated/vault'
       path: '/vault'
@@ -470,6 +489,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedReviewRoute: typeof AuthenticatedReviewRoute
   AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRoute
   AuthenticatedStrategyRoute: typeof AuthenticatedStrategyRoute
+  AuthenticatedTripsRoute: typeof AuthenticatedTripsRoute
   AuthenticatedVaultRoute: typeof AuthenticatedVaultRoute
   AuthenticatedWealthRoute: typeof AuthenticatedWealthRoute
 }
@@ -490,6 +510,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedReviewRoute: AuthenticatedReviewRoute,
   AuthenticatedSettingsRoute: AuthenticatedSettingsRoute,
   AuthenticatedStrategyRoute: AuthenticatedStrategyRoute,
+  AuthenticatedTripsRoute: AuthenticatedTripsRoute,
   AuthenticatedVaultRoute: AuthenticatedVaultRoute,
   AuthenticatedWealthRoute: AuthenticatedWealthRoute,
 }
