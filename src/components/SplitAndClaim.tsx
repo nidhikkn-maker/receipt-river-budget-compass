@@ -64,7 +64,7 @@ export function ReimbursementEditor({ e, onDone }: { e: Expense; onDone?: () => 
   const field = "h-9 rounded-md border bg-background px-2 text-sm";
   return (
     <div className="space-y-2 rounded-2xl border p-3">
-      <div className="flex items-center justify-between"><b className="text-sm font-bold">Reimbursement claim</b>{tracked && <span className="text-xs font-semibold text-gold-foreground">{REIMB_STAGE_LABEL[stageOf(e)]}</span>}</div>
+      <div className="flex items-center justify-between"><b className="text-sm font-bold">Reimbursement claim</b>{tracked && <span className="text-xs font-semibold text-gold-strong">{REIMB_STAGE_LABEL[stageOf(e)]}</span>}</div>
       {tracked && <div className="grid grid-cols-3 gap-2 text-center text-xs"><div><div className="font-mono text-sm font-bold">{money(reimbursableOf(e))}</div>Claimable</div><div><div className="font-mono text-sm font-bold">{money(receivedOf(e))}</div>Received</div><div><div className="font-mono text-sm font-bold">{money(outstandingOf(e))}</div>Outstanding</div></div>}
       <div className="grid grid-cols-2 gap-2">
         <label className="text-xs">Status<select className={`${field} w-full`} value={f.stage} onChange={(ev) => setF({ ...f, stage: ev.target.value as ReimbStage })}>{REIMB_STAGES.filter((s) => s !== "partial" && s !== "received").map((s) => <option key={s} value={s}>{REIMB_STAGE_LABEL[s]}</option>)}</select></label>
