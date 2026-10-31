@@ -109,12 +109,12 @@ export function TravelPanel({ trip }: { trip: TravelTrip }) {
             {!closed && b.status === "unpaid" && <><Button asChild size="sm" variant="gold"><Link to="/new" search={{ trip: trip.id, booking: b.id }}>Record payment</Link></Button><Button size="sm" variant="ghost" onClick={() => void put({ bookings: (trip.bookings ?? []).map((x) => (x.id === b.id ? { ...x, status: "cancelled" as const } : x)) })}>Cancel</Button></>}
             {b.status === "paid" && b.expenseId && <Button asChild size="sm" variant="outline"><Link to="/new" search={{ edit: b.expenseId }}>View entry</Link></Button>}
             {!closed && b.status !== "cancelled" && <select aria-label={`Confirmation for ${b.provider || b.ref}`} className={sel} value={b.confirmation ?? "pending"} onChange={e => void put({ bookings: (trip.bookings ?? []).map(x => x.id === b.id ? { ...x, confirmation: e.target.value as "pending" | "confirmed" } : x) })}><option value="pending">Unconfirmed</option><option value="confirmed">Confirmed</option></select>}
-            {!closed && b.status === "unpaid" && <select aria-label={`Link existing payment for ${b.provider || b.ref}`} className={`${sel} max-w-full`} value="" onChange={async e => {
+            {!closed && <select aria-label={`Link existing payment for ${b.provider || b.ref}`} className={`${sel} max-w-full`} value="" onChange={async e => {
               const entry = transactions.find(x => x.id === e.target.value); if (!entry) return;
               const ids = [...new Set([...bookingPaymentIds(b), entry.id])];
               await setTags(entry.id, [...new Set([...(entry.tags ?? []), tripTag(trip)])]);
-              await put({ bookings: (trip.bookings ?? []).map(x => x.id === b.id ? { ...x, expenseId: x.expenseId ?? entry.id, expenseIds: ids, status: bookingPaid({ ...b, expenseIds: ids }, transactions) >= b.amount - 0.005 ? "paid" as const : "unpaid" as const } : x) }, "Existing payment linked");
-            }}><option value="">Link existing payment…</option>{transactions.filter(e => (e.txnType ?? "expense") === "expense" && !(trip.bookings ?? []).flatMap(bookingPaymentIds).includes(e.id)).map(e => <option key={e.id} value={e.id}>{e.date} · {e.title} · {money(e.amount)}</option>)}</select>}
+              await put({ bookings: (trip.bookings ?? []).map(x => x.id === b.id ? { ...x, expenseId: x.expenseId ?? entry.id, expenseIds: ids, status: b.status === "cancelled" ? "cancelled" as const : bookingPaid({ ...b, expenseIds: ids }, transactions) >= b.amount - 0.005 ? "paid" as const : "unpaid" as const } : x) }, "Existing payment linked");
+            }}><option value="">Link payment / refund…</option>{transactions.filter(e => ["expense", "refund"].includes(e.txnType ?? "expense") && !(trip.bookings ?? []).flatMap(bookingPaymentIds).includes(e.id)).map(e => <option key={e.id} value={e.id}>{e.date} · {e.title} · {money(e.amount)}</option>)}</select>}
           </div>
         ))}
         {!closed && matches.map((m) => { const b = trip.bookings?.find((x) => x.id === m.bookingId); const e = transactions.find((x) => x.id === m.entryId); if (!b || !e) return null; return (
@@ -145,6 +145,8 @@ export function TravelPanel({ trip }: { trip: TravelTrip }) {
           <div key={i.id} className="border-b py-2 text-sm last:border-0">
             <div className="flex items-start gap-2"><span className="w-28 shrink-0 text-xs text-muted-foreground">{i.date} {i.time}</span><div className="min-w-0 flex-1"><span className="block truncate">{i.title}{i.place && <span className="text-muted-foreground"> · {i.place}</span>}{i.travellers?.length ? <span className="text-muted-foreground"> · {i.travellers.join(", ")}</span> : null}</span>{i.note && <span className="block truncate text-xs text-muted-foreground">{i.note}</span>}</div>{!closed && <Button size="sm" variant="ghost" onClick={() => void put({ itinerary: (trip.itinerary ?? []).filter((x) => x.id !== i.id) })}>Remove</Button>}</div>
             {(i.travellers?.length || i.note) && <div className="pl-28 text-xs text-muted-foreground">{i.travellers?.length && <span>{i.travellers.join(", ")}{i.note ? " · " : ""}</span>}{i.note}</div>}
+            {i.bookingId && <div className="text-xs text-muted-foreground">Booking: {(trip.bookings ?? []).find(b => b.id === i.bookingId)?.ref || (trip.bookings ?? []).find(b => b.id === i.bookingId)?.provider}</div>}
+            {i.documentIds?.map(id => <Link key={id} to="/vault" className="block text-xs text-primary">{documents.find(d => d.id === id)?.title ?? "Linked document"}</Link>)}
           </div>
         ))}
         {!closed && <div className="mt-2 grid gap-2 sm:grid-cols-4">

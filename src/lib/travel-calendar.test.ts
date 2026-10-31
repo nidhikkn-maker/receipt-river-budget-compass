@@ -31,4 +31,8 @@ describe("travel calendar", () => {
     expect(items.filter((i) => i.kind === "trip").map((i) => i.date)).toEqual(["2026-11-01", "2026-11-02"]);
     expect(items.filter((i) => i.kind === "booking")).toMatchObject([{ date: "2026-11-03", amount: 2000, tripId: "t" }]);
   });
+  it("includes operational itinerary activities without adding spending", () => {
+    const items = travelCalendarItems([{ ...trip, itinerary: [{ id: "meeting", date: "2026-11-02", time: "10:00", title: "Client meeting" }] }], txns, "2026-11-01", "2026-11-30");
+    expect(items.filter(i => i.kind === "itinerary")).toMatchObject([{ date: "2026-11-02", name: "10:00 Client meeting · Conference", amount: 0 }]);
+  });
 });

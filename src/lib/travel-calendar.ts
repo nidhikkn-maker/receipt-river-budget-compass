@@ -9,7 +9,7 @@ export interface TravelCalendarItem {
   name: string;
   amount: number;
   direction: "out";
-  kind: "trip" | "booking";
+  kind: "trip" | "booking" | "itinerary";
 }
 
 export function bookingDeadlines(trips: TravelTrip[], transactions: Transactions): TravelCalendarItem[] {
@@ -30,6 +30,7 @@ export function bookingReminders(trips: TravelTrip[], transactions: Transactions
 export function travelCalendarItems(trips: TravelTrip[], transactions: Transactions, from: string, through: string): TravelCalendarItem[] {
   const items = bookingDeadlines(trips, transactions).filter((item) => item.date >= from && item.date <= through);
   for (const trip of trips) {
+    for (const activity of trip.itinerary ?? []) if (activity.date >= from && activity.date <= through) items.push({ id: `itinerary:${trip.id}:${activity.id}`, tripId: trip.id, date: activity.date, name: `${activity.time ?? ""} ${activity.title} · ${trip.name}`.trim(), amount: 0, direction: "out", kind: "itinerary" });
     const end = trip.end < through ? trip.end : through;
     for (let date = trip.start > from ? trip.start : from; date <= end; date = addDays(date, 1)) {
       items.push({ id: `trip:${trip.id}:${date}`, tripId: trip.id, date, name: `${trip.name}${trip.destination ? ` · ${trip.destination}` : ""}`, amount: 0, direction: "out", kind: "trip" });
