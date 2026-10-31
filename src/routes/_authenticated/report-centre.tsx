@@ -73,7 +73,7 @@ function ReportCentre() {
       if (t === "drafts") {
         const server = navigator.onLine ? await listDrafts().catch(() => []) : [];
         const local = await localDrafts(store.userId).catch(() => []);
-        drafts = [...local.map((d) => ({ id: d.id, status: d.status, updatedAt: d.updatedAt, data: d.data as DraftLite["data"], localOnly: true })), ...server.filter((s) => !local.some((l) => l.id === s.id)).map((s) => ({ id: s.id, status: s.status, updatedAt: s.updatedAt, data: s.data as DraftLite["data"] }))];
+        drafts = [...local.map((d) => ({ id: d.id, status: "waiting_to_sync", updatedAt: d.updatedAt, data: d.data as DraftLite["data"], localOnly: true })), ...server.filter((s) => !local.some((l) => l.id === s.id)).map((s) => ({ id: s.id, status: s.status, updatedAt: s.updatedAt, data: s.data as DraftLite["data"] }))];
       }
       setStage(1);
       const doc = buildReportDoc(t, filters, {
