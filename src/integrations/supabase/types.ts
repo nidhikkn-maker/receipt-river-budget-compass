@@ -363,6 +363,39 @@ export type Database = {
           },
         ]
       }
+      expense_drafts: {
+        Row: {
+          created_at: string
+          data: Json
+          id: string
+          owner_id: string
+          receipts: Json
+          status: string
+          transaction_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          data?: Json
+          id: string
+          owner_id?: string
+          receipts?: Json
+          status?: string
+          transaction_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          data?: Json
+          id?: string
+          owner_id?: string
+          receipts?: Json
+          status?: string
+          transaction_id?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       expense_history: {
         Row: {
           action: string
