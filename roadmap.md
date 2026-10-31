@@ -122,8 +122,8 @@
 - [x] Financial Memory: Strategy → Decisions tab, expected vs actual, review dates; tested
 - [x] Personal Finance Knowledge Graph: Links page, derived connections + unlinked records; tested
 ### Acceptance (verify before declaring done)
-- [ ] Continue acceptance: cap optional allocation targets at remaining funds; verify signed-in suggestions and save/readback without changing ledger records.
-- [ ] Continue acceptance: prevent same-day scheduled payments from reusing available funds; verify ordering and exact shortfall.
+- [x] Continue acceptance: capped optional allocation targets at remaining funds; signed-in suggest/save/reload/delete verified, pure-function no-mutation regression passes.
+- [x] Continue acceptance: same-day scheduled payments reserve funds once in stable order; ₹40,000 + ₹8,000 against ₹45,000 available gives ₹3,000 shortfall, independent of input ordering.
 - [ ] Allocations never move money; readiness uses due dates + balances; rules fire only on conditions; search respects authorisation; imports never duplicate; simulations never alter records; autopilot needs approval; family access isolated; contract extraction keeps document refs; memory records outcomes; graph reflects real links; V1/V2 still work
 - [x] Edit links on money map (record links + own links with reasons)
 - [x] Connection reasons + key details on selection
@@ -142,8 +142,8 @@
 - [x] Trip budgets (actual vs committed), booking-to-transaction linking, travel reports, multi-currency, reimbursements, advances/settlement
 ### Priority 4 — Intelligence and completion
 - [ ] Complete all Version 4 phases and rerun full automated checks plus signed-in functional checks; report external verification limits.
-- [ ] Add in-app reminders for upcoming booking payment due dates and overdue unpaid balances.
-- [ ] Add a calendar showing trip dates, booking due dates and scheduled payment deadlines.
+- [x] Add in-app reminders for upcoming booking payment due dates and overdue unpaid balances; respects saved lead days/toggle, subtracts partial payments, links to the correct trip; signed-in upcoming/overdue verified.
+- [x] Add a calendar showing trip dates, booking due dates, itinerary and scheduled payment deadlines; available on Plan and Trips, month navigation and trip links checked signed-in.
 - [x] Trip auto-association, trip insights, booking-payment match suggestions, trip closure, trip CSV
 - [x] Dedicated advance/card-payment/loan/investment entry types in the shared form
 - [x] Full 17-point acceptance pass
