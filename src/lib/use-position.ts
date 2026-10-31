@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import { useStore } from "./store";
+import { freshnessSummary } from "./inbox";
 import { assistantFacts, position, type PositionInput } from "./position";
 
 export const todayISO = () => {
@@ -21,5 +22,10 @@ export function usePosition(days = 30, includeUnconfirmed = false) {
 
 export function useAssistantFacts(days = 30) {
   const i = useInput(days, false);
-  return useMemo(() => assistantFacts(i), [i]);
+  const { preferences, transactions, accounts } = useStore();
+  return useMemo(() => {
+    const f = freshnessSummary(accounts, transactions, preferences, i.today);
+    // Lets the assistant say when figures rest on unverified or outdated account data.
+    return { ...assistantFacts(i), dataFreshness: { summary: f.label, outdatedAccounts: f.outdatedCritical, lowConfidence: f.lowConfidence, accounts: f.rows.map((r) => ({ name: r.name, status: r.status, lastReconciled: r.lastReconciliation })) } };
+  }, [i, preferences, transactions, accounts]);
 }

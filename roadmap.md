@@ -77,3 +77,6 @@
 - [x] 10-year inflation, category and savings prediction with suggestions
 - [x] Bank statement upload that works out and registers expenses automatically (with review for transfers/cash)
 - [x] Stronger gold touch across the theme
+- [x] V2 Phase 1: financial inbox, missing-transaction detector, data freshness, advanced reimbursements, category splits, monthly review, health score
+- [ ] V2 Phase 2 (decision simulator, behaviour analysis, emergency fund, irregular expenses, milestones) — awaiting your go-ahead after Phase 1 review
+- [ ] V2 Phase 3 (travel, merchant intelligence, weekly brief) — after Phase 2

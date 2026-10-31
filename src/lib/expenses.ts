@@ -59,6 +59,41 @@ export interface Expense {
   reimbursementStatus?: ReimbursementStatus;
   /** Adjustments only: +1 raises the account balance, -1 lowers it. */
   adjustmentSign?: 1 | -1;
+  /** Category split lines in INR; empty = whole amount uses `category`. */
+  allocations?: Allocation[];
+  reimbursement?: import("./reimbursements").ReimbursementInfo;
+}
+
+export interface Allocation { category: string; amount: number; tags?: string[]; memberId?: string | null; note?: string }
+
+/** Validates category split lines: at least two, positive, and summing exactly to the transaction amount. */
+export function validateAllocations(lines: Allocation[], total: number) {
+  if (!lines.length) return;
+  if (lines.length < 2) throw new Error("A split needs at least two lines");
+  for (const l of lines) { if (!l.category) throw new Error("Choose a category for every line"); if (!(l.amount > 0)) throw new Error("Every line needs an amount above zero"); }
+  const sum = Math.round(lines.reduce((s, l) => s + l.amount, 0) * 100);
+  if (sum !== Math.round(total * 100)) throw new Error(`Lines add up to ${money(sum / 100)}, but the transaction is ${money(total)}`);
+}
+
+/** Split percentages into amounts that sum exactly to total (rounding remainder goes to the last line). */
+export function allocateByPercent(total: number, lines: { category: string; pct: number }[]): Allocation[] {
+  const pctSum = lines.reduce((s, l) => s + l.pct, 0);
+  if (Math.abs(pctSum - 100) > 0.001) throw new Error("Percentages must add up to 100");
+  let used = 0;
+  return lines.map((l, i) => {
+    const amount = i === lines.length - 1 ? Math.round((total - used) * 100) / 100 : Math.round(total * l.pct) / 100;
+    used += amount; return { category: l.category, amount };
+  });
+}
+
+/** Category amounts for reporting: split transactions count once, through their lines, never also as the parent category. */
+export function categoryParts(e: Pick<Expense, "category" | "amount" | "allocations">): { category: string; amount: number }[] {
+  return e.allocations?.length ? e.allocations.map((a) => ({ category: a.category, amount: a.amount })) : [{ category: e.category, amount: e.amount }];
+}
+export function categoryTotals(list: Pick<Expense, "category" | "amount" | "allocations">[]): Record<string, number> {
+  const o: Record<string, number> = {};
+  for (const e of list) for (const p of categoryParts(e)) o[p.category] = Math.round(((o[p.category] ?? 0) + p.amount) * 100) / 100;
+  return o;
 }
 
 export type ReimbursementStatus = "none" | "pending" | "received";
@@ -180,7 +215,7 @@ const roundAll = <T extends Record<string, number>>(o: T) =>
 
 /** Month-to-date spend vs monthly budget per category (personal + business combined). */
 export function budgetUsage(list: Expense[], budgets: Budgets, month: string /* YYYY-MM */) {
-  const spent = totalsBy(list.filter((e) => e.date.startsWith(month)), (e) => e.category);
+  const spent = categoryTotals(list.filter((e) => e.date.startsWith(month)));
   return [...new Set([...CATEGORIES, ...Object.keys(budgets), ...Object.keys(spent)])].map((c) => ({ category: c, spent: spent[c] ?? 0, budget: budgets[c] ?? 0 }))
     .filter((r) => r.budget > 0 || r.spent > 0);
 }

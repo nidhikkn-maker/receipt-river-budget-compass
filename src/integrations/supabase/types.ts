@@ -367,6 +367,7 @@ export type Database = {
         Row: {
           account_id: string | null
           adjustment_sign: number
+          allocations: Json
           amount: number
           category: string
           created_at: string
@@ -386,6 +387,7 @@ export type Database = {
           receipts: Json
           reconciled_at: string | null
           reconciled_by: string | null
+          reimbursement: Json
           reimbursement_status: string
           scope: string
           splits: Json
@@ -400,6 +402,7 @@ export type Database = {
         Insert: {
           account_id?: string | null
           adjustment_sign?: number
+          allocations?: Json
           amount: number
           category: string
           created_at?: string
@@ -419,6 +422,7 @@ export type Database = {
           receipts?: Json
           reconciled_at?: string | null
           reconciled_by?: string | null
+          reimbursement?: Json
           reimbursement_status?: string
           scope?: string
           splits?: Json
@@ -433,6 +437,7 @@ export type Database = {
         Update: {
           account_id?: string | null
           adjustment_sign?: number
+          allocations?: Json
           amount?: number
           category?: string
           created_at?: string
@@ -452,6 +457,7 @@ export type Database = {
           receipts?: Json
           reconciled_at?: string | null
           reconciled_by?: string | null
+          reimbursement?: Json
           reimbursement_status?: string
           scope?: string
           splits?: Json
@@ -660,6 +666,39 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      monthly_reviews: {
+        Row: {
+          data_cutoff: string
+          data_hash: string
+          figures: Json
+          generated_at: string
+          id: string
+          month: string
+          narrative: string
+          owner_id: string
+        }
+        Insert: {
+          data_cutoff: string
+          data_hash: string
+          figures: Json
+          generated_at?: string
+          id?: string
+          month: string
+          narrative?: string
+          owner_id?: string
+        }
+        Update: {
+          data_cutoff?: string
+          data_hash?: string
+          figures?: Json
+          generated_at?: string
+          id?: string
+          month?: string
+          narrative?: string
+          owner_id?: string
+        }
+        Relationships: []
       }
       passkey_challenges: {
         Row: {

@@ -11,7 +11,7 @@ import { buildReport, downloadBlob, toCsv, toPdf, type ReportKind } from "@/lib/
 import { useStore } from "@/lib/store";
 import { BarChart, Bar, XAxis, Tooltip, ResponsiveContainer, LineChart, Line, YAxis } from "recharts";
 import { tagValue } from "@/lib/preferences";
-import { money, totalsBy } from "@/lib/expenses";
+import { money, totalsBy, categoryTotals } from "@/lib/expenses";
 import { ExpenseTable } from "@/components/ExpenseTable";
 import { monthlySeries, weeklySpend, netWorthSeries, spendBy, monthToDateCompare, subscriptionSpendSeries, cardUtilisationSeries, loanProgress, savingsTrend } from "@/lib/insights";
 import { PAYMENT_METHODS, PAYMENT_LABEL, type Scope } from "@/lib/expenses";
@@ -51,7 +51,7 @@ function Reports() {
   const tagGroups=[...new Set(preferences.tags.map(t=>t.group))];
   const drillRows=drill?list.filter(e=>(!drill.from||e.date>=drill.from)&&(!drill.to||e.date<=drill.to)&&(!drill.merchant||(e.merchant||e.title)===drill.merchant)&&(!drill.account||(accounts.find(a=>a.id===e.accountId)?.name??"Unassigned")===drill.account)):[];
   const monthEndOf=(m:string)=>{const [y,mo]=m.split("-").map(Number);return new Date(Date.UTC(y!,mo!,0)).toISOString().slice(0,10);};
-  const categoryRows = Object.entries(totalsBy(list,e=>e.category)).map(([name,amount])=>({name,amount}));
+  const categoryRows = Object.entries(categoryTotals(list)).map(([name,amount])=>({name,amount}));
   const stamp = new Date().toISOString().slice(0, 10);
   const monthly=monthlySeries(filtered,stamp,12);const weekly=weeklySpend(filtered,stamp,8);const worth=netWorthSeries(accounts,transactions,valuations,stamp,12).map(x=>({...x,netWorth:x.net}));const cmp=monthToDateCompare(filtered,stamp);
   const subs=subscriptionSpendSeries(list,commitments,stamp,6);const util=cardUtilisationSeries(accounts,transactions,stamp,6);const cardNames=accounts.filter(a=>a.kind==="credit_card"&&(a.creditLimit??0)>0).map(a=>a.name);const loanRows=loanProgress(loans);const savings=savingsTrend(filtered,stamp,12);

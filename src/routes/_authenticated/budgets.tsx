@@ -6,7 +6,7 @@ import { PageTitle } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { CATEGORIES, budgetUsage, money, totalsBy, type Category } from "@/lib/expenses";
+import { CATEGORIES, budgetUsage, money, totalsBy, categoryTotals, type Category } from "@/lib/expenses";
 import { ScopedBudgets } from "@/components/ScopedBudgets";
 import { useStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
@@ -33,7 +33,7 @@ function Budgets() {
   const rows = budgetUsage(expenses, budgets, month);
   const [cat, setCat] = useState<Category>("Groceries");
   const [amt, setAmt] = useState("");
-  const byCat = Object.entries(totalsBy(expenses.filter((e) => e.date.startsWith(month)), (e) => e.category)).map(([name, value]) => ({ name, value }));
+  const byCat = Object.entries(categoryTotals(expenses.filter((e) => e.date.startsWith(month)))).map(([name, value]) => ({ name, value }));
 
   const save = async (c: Category, v: string) => {
     try { await setBudget(c, Number(v)); toast.success(`${c} budget saved`); setAmt(""); } catch (e) { toast.error((e as Error).message); }
