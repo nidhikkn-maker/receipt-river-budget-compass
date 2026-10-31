@@ -144,3 +144,5 @@
 - [ ] Full 17-point acceptance pass
 - [x] Trip picker on travel advances (trip_id column, no tag needed; tagged advances still count)
 - [x] Principal/interest split on loan repayments (validated to sum to the payment; EMI split prefill from the linked loan)
+- [x] Trip advance reconciliation (advances vs business/official spend vs returns, outstanding balance)
+- [x] Loan repayment history (principal/interest totals, balance after each repayment)

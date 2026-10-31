@@ -180,6 +180,7 @@ function NewExpense() {
     if (tr) { setTags((x) => [...new Set([...x.split(",").map((y) => y.trim()).filter(Boolean), tripTag(tr)])].join(", ")); if (tr.type && tr.type !== "mixed") setScope(tr.type); if (!search.date && todayISO() > tr.end) setDate(tr.start); }
     const bk = tr?.bookings?.find((b) => b.id === search.booking);
     if (bk) { if (!search.title) setTitle(`${bk.kind[0]!.toUpperCase()}${bk.kind.slice(1)} — ${bk.provider || bk.ref}`); if (!search.amount && bk.amount) setAmount(String(bk.amount)); if (bk.provider && !search.merchant) setMerchant(bk.provider); if (bk.kind === "flight" || bk.kind === "hotel") { const want = BOOKING_CATEGORY[bk.kind]; setCategory((c) => (preferences.categories.some((x) => x.name === want && !x.archived) ? want : preferences.categories.some((x) => x.name === "Travel") ? "Travel" : c)); } }
+    if (search.kind) { setTxnType(search.kind); if (tr) setTripId(tr.id); }
     if (search.text) setSpoken(search.text);
   }, [edit, search]);
   useEffect(() => {
