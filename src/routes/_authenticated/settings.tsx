@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { PasskeySettings } from "@/components/DeviceLock";
 import { FinanceSettings } from "@/components/FinanceSettings";
+import { PushSettings } from "@/components/PushSettings";
 import { useStore } from "@/lib/store";
 import { BACKUP_TABLES, createBackupZip, prepareRestore, readBackup, type Backup } from "@/lib/backup";
 import { downloadBlob } from "@/lib/reports";
@@ -114,6 +115,7 @@ function Settings() {
       <div className="mb-5"><Button asChild variant="outline"><Link to="/auth">Sign in / account</Link></Button></div>
       <PasskeySettings />
       <FinanceSettings />
+      <PushSettings />
       <div className="grid gap-4 sm:grid-cols-2">
         <Card title="Back up everything" body="Accounts, entries, budgets, valuations, family and original receipt and document files.">
           <Button onClick={backup} disabled={busy}><Download className="h-4 w-4" />Download backup</Button>
