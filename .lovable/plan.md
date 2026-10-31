@@ -13,6 +13,8 @@
    - Each bank account on Wealth lists the UPI IDs and cards linked to it, with an "Add payment method" button there too.
 2. **New entry / bill review**: one "Paid with" picker showing your saved methods; choosing one fills the payment type and the linked bank account automatically, so that bank's balance updates correctly.
 3. Shop memory remembers the method you last used at each shop.
+3a. Extra types: wallets (Paytm, Amazon Pay) and UPI Lite with their own balance; RuPay credit card on UPI (counts against the card, not the bank); net banking; cheque.
+3b. Owner per method (you or a family member) and add-on cards linked to the main card.
 4. **Expenses filter and reports**: filter and total by a specific UPI ID or card.
 5. Existing entries keep working unchanged.
 
