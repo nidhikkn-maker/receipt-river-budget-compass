@@ -169,6 +169,13 @@
       "when": 1793460322412,
       "tag": "0023_family_invite_owner",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1793461048936,
+      "tag": "0024_four_workspaces_and_allocations",
+      "breakpoints": true
     }
   ]
 }
