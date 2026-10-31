@@ -1,0 +1,80 @@
+// Expense drafts: unfinished entries kept apart from the ledger. They never touch balances,
+// reports or reimbursements; only the normal Save path turns one into a transaction.
+import { supabase } from "@/integrations/supabase/client";
+import type { Json } from "@/integrations/supabase/types";
+
+export type DraftStatus = "draft" | "uploading" | "processing" | "ready" | "info_required" | "failed" | "saved";
+export interface DraftReceipt { name: string; type: string; path: string; fingerprint?: string }
+export interface DraftData {
+  txnType?: string; amount?: string; currency?: string; date?: string; category?: string; merchant?: string; title?: string;
+  accountId?: string; toAccountId?: string; instrumentId?: string; paymentMethod?: string; scope?: string; tripId?: string;
+  tags?: string; description?: string; memberId?: string; principal?: string; interest?: string;
+  wsSplit?: unknown; splitOn?: boolean; shares?: Record<string, string>; receiptDetails?: unknown; extracted?: boolean; error?: string;
+}
+export interface Draft { id: string; data: DraftData; receipts: DraftReceipt[]; status: DraftStatus; transactionId: string | null; createdAt: string; updatedAt: string }
+
+export const DRAFT_STATUS_LABEL: Record<DraftStatus, string> = {
+  draft: "Draft", uploading: "Uploading", processing: "Processing", ready: "Ready for review",
+  info_required: "Information required", failed: "Processing failed", saved: "Saved as transaction",
+};
+
+/** Opening an empty form must not create a blank draft: something meaningful has to be entered. */
+export function hasDraftContent(d: DraftData, receiptCount: number): boolean {
+  return receiptCount > 0 || Number(d.amount) > 0 || !!d.merchant?.trim() || !!d.title?.trim() || !!d.description?.trim() || !!d.tags?.trim();
+}
+
+/** Status shown on the list, derived from what the draft actually holds. */
+export function draftStatus(d: DraftData, receiptCount: number, opts: { uploading?: boolean; processing?: boolean } = {}): DraftStatus {
+  if (opts.uploading) return "uploading";
+  if (opts.processing) return "processing";
+  if (d.error) return "failed";
+  if (Number(d.amount) > 0 && (d.category || d.txnType && d.txnType !== "expense")) return "ready";
+  if (receiptCount > 0 || d.merchant) return "info_required";
+  return "draft";
+}
+
+/** Drafts waiting for the user (saved ones are kept only as a link to their transaction). */
+export const pendingDrafts = (all: Draft[]) => all.filter((d) => d.status !== "saved");
+
+type Row = { id: string; data: Json; receipts: Json; status: string; transaction_id: string | null; created_at: string; updated_at: string };
+const fromRow = (r: Row): Draft => ({ id: r.id, data: (r.data ?? {}) as DraftData, receipts: (Array.isArray(r.receipts) ? r.receipts : []) as unknown as DraftReceipt[], status: r.status as DraftStatus, transactionId: r.transaction_id, createdAt: r.created_at, updatedAt: r.updated_at });
+
+export async function listDrafts(): Promise<Draft[]> {
+  const { data, error } = await supabase.from("expense_drafts").select("*").order("updated_at", { ascending: false }).limit(200);
+  if (error) throw new Error("Couldn't load your drafts");
+  return (data as Row[]).map(fromRow);
+}
+export async function getDraft(id: string): Promise<Draft | null> {
+  const { data } = await supabase.from("expense_drafts").select("*").eq("id", id).maybeSingle();
+  return data ? fromRow(data as Row) : null;
+}
+export async function upsertDraft(id: string, owner: string, data: DraftData, receipts: DraftReceipt[], status: DraftStatus) {
+  const { error } = await supabase.from("expense_drafts").upsert({ id, owner_id: owner, data: data as Json, receipts: receipts as unknown as Json, status, updated_at: new Date().toISOString() });
+  if (error) throw new Error("Draft not saved");
+}
+/** Upload a receipt into the owner's private draft folder; returns its stored path. */
+export async function uploadDraftReceipt(owner: string, draftId: string, f: File): Promise<string> {
+  const path = `${owner}/drafts/${draftId}/${crypto.randomUUID()}-${f.name.replace(/[^\w.-]+/g, "_").slice(-80)}`;
+  const { error } = await supabase.storage.from("receipts").upload(path, f, { contentType: f.type || "application/octet-stream" });
+  if (error) throw new Error(`Couldn't upload ${f.name}`);
+  return path;
+}
+export async function draftReceiptFile(r: DraftReceipt): Promise<File | null> {
+  const { data } = await supabase.storage.from("receipts").download(r.path);
+  return data ? new File([data], r.name, { type: r.type || data.type }) : null;
+}
+export async function draftThumb(r: DraftReceipt): Promise<string | null> {
+  const { data } = await supabase.storage.from("receipts").createSignedUrl(r.path, 600);
+  return data?.signedUrl ?? null;
+}
+/** Deletes the draft and its receipt files. Files are removed only after the record is gone. */
+export async function deleteDraft(d: Pick<Draft, "id" | "receipts">) {
+  const { error } = await supabase.from("expense_drafts").delete().eq("id", d.id);
+  if (error) throw new Error("Couldn't delete the draft");
+  if (d.receipts.length) await supabase.storage.from("receipts").remove(d.receipts.map((r) => r.path));
+}
+/** After the real Save: mark linked to the new transaction and drop the now-duplicated draft files. */
+export async function completeDraft(d: Pick<Draft, "id" | "receipts">, transactionId: string | null) {
+  await supabase.from("expense_drafts").update({ status: "saved", transaction_id: transactionId, receipts: [] as unknown as Json, updated_at: new Date().toISOString() }).eq("id", d.id);
+  if (d.receipts.length) await supabase.storage.from("receipts").remove(d.receipts.map((r) => r.path));
+}
