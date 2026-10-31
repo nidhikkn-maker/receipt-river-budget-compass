@@ -160,3 +160,18 @@ export function advanceReconRows(t: TravelTrip, txns: Row[]): string[][] {
     ["", r.outstanding > 0 ? "Outstanding — to return" : r.outstanding < 0 ? "Outstanding — owed to you" : "Outstanding — fully reconciled", "", String(r.outstanding)],
   ];
 }
+
+export interface AdvanceDashRow { tripId: string; name: string; closed: boolean; advances: number; expenses: number; returns: number; outstanding: number }
+/** Advance balances across trips: only trips with any advance activity, oldest outstanding first. Totals keep the sign per trip. */
+export function advanceDashboard(trips: TravelTrip[], txns: Row[]) {
+  const rows: AdvanceDashRow[] = [];
+  for (const t of trips) {
+    const r = advanceReconciliation(t, txns);
+    if (r.advances === 0 && r.returns === 0) continue;
+    rows.push({ tripId: t.id, name: t.name, closed: !!t.closedAt, advances: r.advances, expenses: r.expenses, returns: r.returns, outstanding: r.outstanding });
+  }
+  rows.sort((a, b) => Math.abs(b.outstanding) - Math.abs(a.outstanding));
+  const toReturn = r2(rows.filter((r) => r.outstanding > 0).reduce((s, r) => s + r.outstanding, 0));
+  const owedToYou = r2(rows.filter((r) => r.outstanding < 0).reduce((s, r) => s - r.outstanding, 0));
+  return { rows, toReturn, owedToYou };
+}
