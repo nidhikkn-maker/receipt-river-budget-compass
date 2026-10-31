@@ -300,7 +300,7 @@ export function buildReportDoc(type: ReportType, filters: ReportFilters, d: Repo
       break;
     }
     case "trip-travellers": {
-      for (const t of tripsSel) { const by: Record<string, number> = {}; for (const e of tripFinance(t, d.transactions).entries as Expense[]) { const f2 = e.originalAmount ? e.amount / e.originalAmount : 1; for (const s of memberShares(e)) by[d.memberName(s.memberId)] = r2((by[d.memberName(s.memberId)] ?? 0) + s.amount * f2); } doc.sections.push({ title: t.name, headers: ["Traveller", "Share (INR)"], align: ["l", "r"], rows: Object.entries(by).map(([k, v]) => [k, num(v)]) }); }
+      for (const t of tripsSel) { const by: Record<string, number> = {}; for (const e of tripFinance(t, d.transactions).entries as Expense[]) { const f2 = e.splits?.length && e.originalAmount ? e.amount / e.originalAmount : 1; for (const s of memberShares(e)) by[d.memberName(s.memberId)] = r2((by[d.memberName(s.memberId)] ?? 0) + s.amount * f2); } doc.sections.push({ title: t.name, headers: ["Traveller", "Share (INR)"], align: ["l", "r"], rows: Object.entries(by).map(([k, v]) => [k, num(v)]) }); }
       break;
     }
     case "trip-bookings": {
