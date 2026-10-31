@@ -228,7 +228,11 @@ export function normaliseMerchant(s: string) {
 export type MerchantAliases = Record<string, string>; // original-normalised key -> profile name
 export const merchantKey = (raw: string, aliases: MerchantAliases) => {
   let key = normaliseMerchant(raw); const visited = new Set<string>();
-  while (aliases[key] && !visited.has(key)) { visited.add(key); key = normaliseMerchant(aliases[key]); }
+  while (!visited.has(key)) {
+    const next = aliases[key];
+    if (!next) break;
+    visited.add(key); key = normaliseMerchant(next);
+  }
   return key;
 };
 
