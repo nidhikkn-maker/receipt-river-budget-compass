@@ -38,7 +38,7 @@ function RulesPage() {
   const events = useMemo(() => evaluateRules(preferences.rules, {
     transactions, accounts, commitments,
     reserves: goals.filter((g) => g.reserve).map((g) => ({ name: g.name, target: g.target, saved: g.saved })),
-    cardUtilisation: pos.cards.map((c) => ({ accountId: c.id, name: c.name, pct: c.utilisation })),
+    cardUtilisation: pos.cards.map((c) => ({ accountId: c.id, name: c.name, pct: c.utilisation ?? 0 })),
     recurringIncreases: pos.subscriptions.summary.increases,
     readiness, today,
   }).filter((e) => !preferences.ruleDismissed.includes(`${e.ruleId}|${e.message}`)), [preferences.rules, preferences.ruleDismissed, transactions, accounts, commitments, goals, pos, readiness, today]);

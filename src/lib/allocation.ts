@@ -16,7 +16,7 @@ export interface AllocationLine {
   label: string;
   amount: number;
   /** What this line is based on, so the user can check the maths. */
-  note?: string;
+  note?: string | undefined;
 }
 
 export interface AllocationPlan {
