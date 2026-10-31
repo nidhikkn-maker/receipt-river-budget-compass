@@ -746,7 +746,6 @@ function NewExpense() {
                   {[...acctOrder.recent, ...acctOrder.rest].map((id) => { const a = acctById.get(id)!; return <SelectItem key={id} value={id}>{a.name} · {ACCOUNT_LABEL[a.kind]}</SelectItem>; })}
                 </SelectContent>
               </Select>
-              {!liveAccounts.length && <p role="status" className="text-xs text-muted-foreground">No accounts yet — add one here; what you've entered stays as it is.</p>}
               <button type="button" onClick={() => setAddAcct(true)} className="justify-self-start text-xs font-semibold text-primary underline">+ Add account</button>
               <Dialog open={addAcct} onOpenChange={setAddAcct}>
                 <DialogContent><DialogHeader><DialogTitle>Add account</DialogTitle></DialogHeader>
