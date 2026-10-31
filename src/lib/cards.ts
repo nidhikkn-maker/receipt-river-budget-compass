@@ -14,7 +14,7 @@ export interface CardEmi {
   rate: number;
   payments: LoanPayment[];
 }
-export interface CardTxn extends Txn { category?: string; tags?: string[] }
+export interface CardTxn extends Txn { category?: string; tags?: string[]; refundOfId?: string | null }
 
 export type CardStatus = "no_statement" | "no_dues" | "paid" | "partly_paid" | "pending" | "overdue";
 export const CARD_STATUS_LABEL: Record<CardStatus, string> = {
@@ -132,15 +132,21 @@ export function cardCycle(card: Account, txns: CardTxn[], allEmis: CardEmi[], to
   };
   const now = parts(last, today);
   const closed = parts(prev, last);
-  const remainingDue = Math.max(0, r2(statementBalance - now.payments));
+  // Linked refunds follow the original purchase's cycle; unlinked credits settle oldest dues first.
+  const refunds = window(last, today).filter(t=>t.accountId===card.id && ["refund","reimbursement"].includes(type(t)));
+  const currentRefunds = sum(refunds.filter(t=>t.refundOfId && txns.some(x=>x.id===t.refundOfId && x.date>last)));
+  const statementCredits = r2(now.refunds-currentRefunds);
+  const paid = r2(now.payments+statementCredits);
+  const remainingDue = Math.max(0, r2(statementBalance - paid));
+  const excessCredit = Math.max(0,r2(paid-statementBalance));
   const status: CardStatus = statementBalance <= 0.009 ? "no_dues"
     : remainingDue <= 0.009 ? "paid"
     : due && today > due ? "overdue"
-    : now.payments > 0 ? "partly_paid" : "pending";
+    : paid > 0 ? "partly_paid" : "pending";
   return {
     ...base, status, lastStatement: last, nextStatement: next, dueDate: due, nextDueDate: nextDue,
     statementBalance, paymentsSinceStatement: now.payments, remainingDue,
-    unbilled: Math.max(0, r2(now.purchases + now.emiPrincipal - now.refunds)),
+    unbilled: Math.max(0, r2(now.purchases + now.emiPrincipal - currentRefunds - excessCredit)),
     refundsSinceStatement: now.refunds, interestSinceStatement: now.charges, emiPrincipalBilledSinceStatement: now.emiPrincipal,
     cycle: { from: prev, to: last, ...closed },
   };
