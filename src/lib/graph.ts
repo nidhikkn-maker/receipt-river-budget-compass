@@ -10,10 +10,10 @@ export interface GraphEdge { id: string; from: string; to: string; label: string
 export interface MapLink { id: string; from: string; to: string; note: string }
 
 export interface GraphInput {
-  accounts: { id: string; name: string; kind?: string; archived?: boolean; balance?: number }[];
+  accounts: { id: string; name: string; kind?: string; archived?: boolean; balance?: number | undefined }[];
   methods: { id: string; nickname: string; type?: string; accountId: string; memberId?: string | null; parentId?: string | null; archived?: boolean }[];
   members: { id: string; name: string; relation?: string }[];
-  loans: { id: string; name: string; accountId?: string | null; emi?: number; principal?: number; nextDue?: string }[];
+  loans: { id: string; name: string; accountId?: string | null; emi?: number | undefined; principal?: number | undefined; nextDue?: string | undefined }[];
   commitments: { id: string; name: string; accountId: string | null; status?: string; amount?: number; frequency?: string; nextDue?: string; direction?: string }[];
   documents: { id: string; title: string; accountId: string | null; loanId: string | null; docType?: string; expiresOn?: string | null }[];
   custom?: MapLink[];
