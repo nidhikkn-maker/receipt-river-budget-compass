@@ -92,7 +92,7 @@ export function buildStatement(input: {
       allocated: inr, businessShare: r2(sign * biz), personalShare: r2(inr - sign * biz), workspaces: parts.map((x) => `${SCOPE_LABEL[x.workspace as Scope]} ${x.amount.toFixed(2)}`).join(" + "),
       eligible, reimbursed, outstanding, rejected, status: stage ? stage.replace(/_/g, " ") : sign < 0 ? "Refund" : "Not claimed",
       billRef: refs.length ? refs.join(", ") : "Bill Not Attached", refund: sign < 0,
-      items, itemsReconcile: items.length > 0 && Math.abs(itemsTotal - e.originalAmount) < 0.5,
+      items, itemsReconcile: items.length > 0 && (Math.abs(itemsTotal - e.originalAmount) < 0.5 || Math.abs(r2(itemsTotal - (e.receiptDetails?.tax ?? 0)) - e.originalAmount) < 0.5),
     };
   });
   const sumBy = (f: (r: RegisterRow) => number) => r2(rows.reduce((s, r) => s + f(r), 0));
