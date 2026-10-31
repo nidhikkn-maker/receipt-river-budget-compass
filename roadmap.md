@@ -163,3 +163,10 @@
 - [x] Booking payment due dates, cancellation terms and part payments — a booking stays outstanding until its linked payments add up, then reads "Paid — linked to entry" (signed-in: ₹2,000 of ₹5,000 → "Part paid ₹2,000.00 · ₹3,000.00 still due" → fully paid)
 - [x] Itinerary entries keep travellers and notes and show them in the plan
 - [x] Full 17-point acceptance pass (Part G): one test per criterion in src/lib/acceptance-v4.test.ts, all 17 passing; 388 automated checks pass, typecheck clean
+
+## Version 4.3 — UI/UX redesign & multi-theme system (requirements-v4.3.md)
+- [x] Phase 1: theme tokens — 5 families / 7 styles, light+dark+system, persisted preference
+- [x] Phase 2: navigation — compact header, Home|Activity|+|AI|More bottom nav, floating + opens Universal Entry
+- [x] Phase 3: homepage — overview, readiness, 4 metrics, insights, commitments, recent, AI briefing, travel widget
+- [x] Phase 4: appearance settings UI with previews, responsive iPhone/desktop refinement
+- [x] Phase 5: validation — theme switching, entry flow, routes, calculations, 22 acceptance checks

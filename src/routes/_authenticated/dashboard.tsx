@@ -1,13 +1,12 @@
 import { MilestoneBanner } from "@/components/MilestoneBanner";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { Bar, BarChart, ResponsiveContainer, Tooltip, XAxis } from "recharts";
-import { StatusStrip } from "@/components/StatusStrip";
+import { ArrowRight, CheckCircle2, AlertTriangle, CircleHelp, ShieldQuestion, Plane } from "lucide-react";
 import { PaymentReminders } from "@/components/PaymentReminders";
-import { PaymentReadiness } from "@/components/PaymentReadiness";
 import { Autopilot } from "@/components/Autopilot";
 import { Stat } from "@/components/AppShell";
 import { ExpenseTable } from "@/components/ExpenseTable";
-import { money, totalsByMember, totalsByScope } from "@/lib/expenses";
+import { money, totalsByScope, type Expense, type Scope, SCOPE_LABEL, SCOPES } from "@/lib/expenses";
+import { workspaceParts } from "@/lib/workspaces";
 import { useStore } from "@/lib/store";
 import { accountBalance, cashflow, isLiability } from "@/lib/ledger";
 import { usePosition } from "@/lib/use-position";
@@ -16,8 +15,11 @@ import { useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { askAssistant } from "@/lib/assistant.functions";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { scopedBudgetUsage } from "@/lib/preferences";
 import { addDays } from "@/lib/planning";
+import { freshnessSummary } from "@/lib/inbox";
+import { tripSummary } from "@/lib/intelligence";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
   head: () => ({
@@ -33,102 +35,254 @@ export const Route = createFileRoute("/_authenticated/dashboard")({
   component: Overview,
 });
 
+type Readiness = { status: "Healthy" | "Attention required" | "Potential shortfall" | "Verification pending" | "Information incomplete"; detail: string; estimated: boolean };
+
 function Overview() {
-  const { expenses, members, memberName, transactions, accounts, preferences, savePreferences } = useStore();
-  const today=todayISO();
-  const start=preferences.homePeriod==="day"?today:preferences.homePeriod==="week"?addDays(today,-6):today.slice(0,7)+"-01";
-  const month = new Date().toISOString().slice(0, 7);
-  const thisMonth = expenses.filter((e) => e.date>=start&&e.date<=today);
-  const t = totalsByScope(thisMonth);
-  const byMember = totalsByMember(thisMonth);
-  const memberRows = [{ id: "me", name: "Me" }, ...members].map((m) => ({ name: m.id === "me" ? "Me" : memberName(m.id), value: byMember[m.id] ?? 0 })).filter((r) => r.value > 0);
-  const unmatched = expenses.filter((e) => !e.reconciledAt && ["upi", "credit_card", "debit_card", "forex_card", "bank_transfer"].includes(e.paymentMethod)).length;
+  const { expenses, transactions, accounts, preferences, savePreferences } = useStore();
+  const today = todayISO();
+  const scope: Scope | "all" = preferences.homeScope;
+
+  // §1 — period range (Today / 7 days / This month / Custom)
+  const customOk = preferences.homeCustomStart && preferences.homeCustomEnd;
+  const start = preferences.homePeriod === "day" ? today
+    : preferences.homePeriod === "week" ? addDays(today, -6)
+    : preferences.homePeriod === "custom" && customOk ? preferences.homeCustomStart
+    : today.slice(0, 7) + "-01";
+  const end = preferences.homePeriod === "custom" && customOk ? preferences.homeCustomEnd : today;
+  const periodLabel = preferences.homePeriod === "day" ? "today" : preferences.homePeriod === "week" ? "in the last 7 days" : preferences.homePeriod === "custom" ? "in the selected range" : "this month";
+
+  /** Share of an entry that belongs to the selected workspace. */
+  const share = (e: Expense) => (scope === "all" ? e.amount : (workspaceParts(e).find((p) => p.workspace === scope)?.amount ?? 0));
+  const inRange = expenses.filter((e) => e.date >= start && e.date <= end);
+  const scoped = inRange.filter((e) => share(e) > 0);
+  const total = scoped.reduce((s, e) => s + share(e), 0);
+  const byWorkspace = totalsByScope(inRange);
+
+  // Previous-period comparison (same length, immediately before)
+  const len = Math.max(1, Math.round((Date.parse(end) - Date.parse(start)) / 864e5) + 1);
+  const prevEnd = addDays(start, -1);
+  const prevStart = addDays(start, -len);
+  const prevTotal = expenses.filter((e) => e.date >= prevStart && e.date <= prevEnd).reduce((s, e) => s + share(e), 0);
+  const delta = prevTotal > 0 ? Math.round(((total - prevTotal) / prevTotal) * 100) : null;
+
+  // §2 — readiness
+  const pos = usePosition(30);
   const live = accounts.filter((a) => !a.archived);
-  const cash = live.filter((a) => a.includeInCash!==false && !isLiability(a.kind) && ["savings", "current", "cash", "wallet"].includes(a.kind)).reduce((s, a) => s + accountBalance(a, transactions), 0);
+  const fresh = freshnessSummary(accounts, transactions, preferences, today);
+  const unmatched = expenses.filter((e) => !e.reconciledAt && ["upi", "credit_card", "debit_card", "forex_card", "bank_transfer"].includes(e.paymentMethod)).length;
+  const readiness: Readiness = !live.length
+    ? { status: "Information incomplete", detail: "Add your accounts so balances and safe-to-spend can be calculated.", estimated: true }
+    : fresh.lowConfidence
+      ? { status: "Verification pending", detail: `${fresh.label} — confirm ${fresh.outdatedCritical[0] ?? "an account"} to firm up these figures.`, estimated: true }
+      : pos.forecast.shortDates.length
+        ? { status: "Potential shortfall", detail: `Money runs short from ${pos.forecast.shortDates[0]} if planned payments go ahead.`, estimated: false }
+        : pos.alerts.length || pos.reimbursements.pendingCount
+          ? { status: "Attention required", detail: pos.alerts[0]?.text ?? `${pos.reimbursements.pendingCount} reimbursements waiting.`, estimated: false }
+          : { status: "Healthy", detail: "Accounts verified, no shortfall expected in the next 30 days.", estimated: false };
+  const readinessIcon = readiness.status === "Healthy" ? <CheckCircle2 className="h-5 w-5 text-success" />
+    : readiness.status === "Information incomplete" ? <CircleHelp className="h-5 w-5 text-info" />
+    : readiness.status === "Verification pending" ? <ShieldQuestion className="h-5 w-5 text-warning" />
+    : <AlertTriangle className="h-5 w-5 text-warning" />;
+
+  // §3 — metrics
+  const month = today.slice(0, 7);
+  const cash = live.filter((a) => a.includeInCash !== false && !isLiability(a.kind) && ["savings", "current", "cash", "wallet"].includes(a.kind)).reduce((s, a) => s + accountBalance(a, transactions), 0);
   const cardDue = live.filter((a) => a.kind === "credit_card").reduce((s, a) => s + accountBalance(a, transactions), 0);
   const flow = cashflow(transactions, `${month}-01`, `${month}-31`);
-  const pos = usePosition(30);
-  const pct = t.total ? Math.round((t.business / t.total) * 100) : 0;
-  const facts=useAssistantFacts();const ask=useServerFn(askAssistant);const [brief,setBrief]=useState("");const [busy,setBusy]=useState(false);
+
+  // §4 — insights: top categories + budget use
+  const catTotals = new Map<string, number>();
+  for (const e of scoped) catTotals.set(e.category, (catTotals.get(e.category) ?? 0) + share(e));
+  const cats = [...catTotals.entries()].sort((a, b) => b[1] - a[1]).slice(0, 5);
+  const catMax = cats[0]?.[1] ?? 1;
+
+  // §8 — travel widget: nearest current or upcoming trip
+  const trip = preferences.trips.filter((t) => t.end >= today).sort((a, b) => a.start.localeCompare(b.start))[0];
+  const tripSum = trip ? tripSummary(trip, transactions) : null;
+
+  const facts = useAssistantFacts();
+  const ask = useServerFn(askAssistant);
+  const [brief, setBrief] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [briefOpen, setBriefOpen] = useState(false);
+
+  const setPeriod = (homePeriod: typeof preferences.homePeriod) => void savePreferences({ ...preferences, homePeriod });
+  const order = (id: string) => preferences.homeOrder.indexOf(id);
+  const hidden = (id: string) => preferences.homeHidden.includes(id);
 
   return (
     <>
-      <div className="mb-3 flex gap-2">{(["day","week","month"] as const).map(period=><Button key={period} size="sm" variant={preferences.homePeriod===period?"default":"outline"} onClick={()=>void savePreferences({...preferences,homePeriod:period})}>{period==="day"?"Today":period==="week"?"7 days":"This month"}</Button>)}</div>
-      <section className="relative mb-6 overflow-hidden rounded-3xl bg-hero p-6 text-ink-foreground shadow-float sm:p-8">
-        <div className="pointer-events-none absolute -right-16 -top-16 h-56 w-56 rounded-full border-[28px] border-ink-foreground/10" />
-        <div className="font-mono text-[11px] font-semibold uppercase tracking-[0.2em] text-gold">{new Date().toLocaleString("en", { month: "long", year: "numeric" })}</div>
-        <div className="mt-1 font-display text-4xl font-extrabold tracking-tight sm:text-6xl">{money(t.total)}</div>
-        <div className="text-sm font-semibold opacity-90">spent {preferences.homePeriod==="day"?"today":preferences.homePeriod==="week"?"in the last 7 days":"this month"}</div>
-        <div className="mt-6 sm:max-w-md">
-          <div className="flex h-3 overflow-hidden rounded-full bg-ink-foreground/20">
-            <div className="bg-gold" style={{ width: `${pct}%` }} />
-          </div>
-          <div className="mt-2 flex justify-between text-sm">
-            <span><b className="font-mono font-bold">{money(t.business)}</b> business</span>
-            <span><b className="font-mono font-bold">{money(t.personal)}</b> personal</span>
+      {/* §1 — Financial overview */}
+      <section hidden={hidden("overview")} style={{ order: order("overview") }} className="mb-5">
+        <div className="mb-3 flex flex-wrap items-center gap-2">
+          {(["day", "week", "month", "custom"] as const).map((p) => (
+            <Button key={p} size="sm" variant={preferences.homePeriod === p ? "default" : "outline"} onClick={() => setPeriod(p)}>
+              {p === "day" ? "Today" : p === "week" ? "7 days" : p === "month" ? "This month" : "Custom"}
+            </Button>
+          ))}
+          {preferences.homePeriod === "custom" && (
+            <span className="flex items-center gap-1.5">
+              <Input type="date" aria-label="From" className="h-8 w-36" value={preferences.homeCustomStart} onChange={(e) => void savePreferences({ ...preferences, homeCustomStart: e.target.value })} />
+              <span className="text-muted-foreground">–</span>
+              <Input type="date" aria-label="To" className="h-8 w-36" value={preferences.homeCustomEnd} onChange={(e) => void savePreferences({ ...preferences, homeCustomEnd: e.target.value })} />
+            </span>
+          )}
+        </div>
+        <div className="rounded-3xl border bg-card p-5 sm:p-6">
+          <div className="flex flex-wrap items-end justify-between gap-3">
+            <div className="min-w-0">
+              <div className="font-mono text-[11px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+                {scope === "all" ? "Total expenditure" : `${SCOPE_LABEL[scope]} expenditure`} · {periodLabel}
+              </div>
+              <div className="mt-1 font-display text-4xl font-extrabold tracking-tight sm:text-5xl">{money(total)}</div>
+              {delta !== null && (
+                <div className="mt-1 text-sm font-semibold text-muted-foreground">
+                  {delta > 0 ? "↑" : delta < 0 ? "↓" : "→"} {Math.abs(delta)}% vs the previous {len}-day period
+                </div>
+              )}
+            </div>
+            {scope === "all" && byWorkspace.total > 0 && (
+              <div className="flex flex-wrap gap-1.5">
+                {SCOPES.filter((s) => byWorkspace[s] > 0).map((s) => (
+                  <span key={s} className="rounded-full bg-secondary px-3 py-1 text-xs font-semibold text-secondary-foreground">
+                    {SCOPE_LABEL[s]} <b className="font-mono">{money(byWorkspace[s])}</b>
+                  </span>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </section>
 
-      <StatusStrip />
-      <PaymentReminders />
-      <Autopilot />
-      <PaymentReadiness />
-      <div className="flex flex-col">
-      <MilestoneBanner />
-      <div hidden={preferences.homeHidden.includes("quick")} style={{order:preferences.homeOrder.indexOf("quick")}} className="mb-5 flex flex-wrap gap-2"><Button asChild variant="gold"><Link to="/new">Add entry</Link></Button><Button asChild variant="outline"><Link to="/vault">Upload document</Link></Button><Button asChild variant="outline"><Link to="/reconcile">Import statement</Link></Button><Button asChild variant="outline"><Link to="/plan">Plan a payment</Link></Button><Button asChild variant="outline"><Link to="/strategy">What if…</Link></Button><Button asChild variant="outline"><Link to="/brief">Weekly brief</Link></Button><Button asChild variant="outline"><Link to="/trips">Trips</Link></Button><Button asChild variant="outline"><Link to="/patterns">Patterns</Link></Button></div>
-      <section hidden={preferences.homeHidden.includes("alerts")||(!pos.alerts.length&&!pos.reimbursements.pendingCount)} style={{order:preferences.homeOrder.indexOf("alerts")}} className="mb-5"><h2 className="mb-2 font-display text-lg font-bold">Alerts</h2><ul className="divide-y">{pos.alerts.slice(0,6).map((a,i)=><li key={i} className="py-2 text-sm">{a.text}</li>)}</ul>{pos.reimbursements.pendingCount>0&&<p className="text-sm">Pending reimbursements: {money(pos.reimbursements.pendingAmount)} · {pos.reimbursements.pendingCount} claims</p>}</section>
-      <section hidden={preferences.homeHidden.includes("briefing")} style={{order:preferences.homeOrder.indexOf("briefing")}} className="mb-5"><div className="flex items-center justify-between"><h2 className="font-display text-lg font-bold">Your money briefing</h2><Button size="sm" variant="outline" disabled={busy||!preferences.aiEnabled} onClick={async()=>{setBusy(true);try{const r=await ask({data:{facts,messages:[{role:"user",content:"Give a short briefing: recorded spending, upcoming dues, safe-to-spend, and the highest priority alert. Quote only the supplied facts."}]}});setBrief(r.ok?r.text:r.error);}catch{setBrief("Couldn't reach the assistant.");}finally{setBusy(false);}}}>{busy?"Preparing…":"Get briefing"}</Button></div>{brief&&<p className="mt-3 whitespace-pre-wrap text-sm">{brief}</p>}</section>
-      <section hidden={preferences.homeHidden.includes("budget")} style={{order:preferences.homeOrder.indexOf("budget")}} className="mb-5"><h2 className="mb-2 font-display text-lg font-bold">Budget use</h2><ul className="divide-y">{preferences.budgets.map(b=>{const u=scopedBudgetUsage(b,expenses,today);return <li key={b.id} className="flex justify-between gap-3 py-2 text-sm"><span>{b.name}</span><span>{money(u.spent)} / {money(u.allowance)}</span></li>;})}</ul><Link to="/budgets" className="text-sm text-primary">View budgets</Link></section>
-      <div hidden={preferences.homeHidden.includes("safe")} style={{order:preferences.homeOrder.indexOf("safe")}}>
-      <Link to="/plan" className="mb-3 flex flex-col gap-3 rounded-3xl border-2 border-gold bg-card p-4 shadow-gold sm:flex-row sm:items-center sm:gap-4">
-        <div className="min-w-0 flex-1">
-          <div className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Safe to spend · 30 days</div>
-          <div className="break-words font-mono text-2xl font-bold text-gold-strong">{money(pos.safe.amount)}</div>
-          <div className="text-xs text-muted-foreground">{pos.forecast.shortDates.length ? `Money runs short from ${pos.forecast.shortDates[0]}` : `Lowest point ${money(pos.safe.lowest)} on ${pos.safe.lowestDate}`}</div>
-        </div>
-        <div className="grid gap-1 border-t pt-2 text-xs text-muted-foreground sm:border-0 sm:pt-0 sm:text-right">
-          {pos.upcoming.slice(0, 3).map((u, k) => <div key={k} className="flex justify-between gap-3 sm:block"><span className="min-w-0 truncate">{u.date.slice(5)} · {u.name}</span> <span className="shrink-0 font-mono">{money(u.amount)}</span></div>)}
-          {!pos.upcoming.length && "Add bills & income in Plan"}
-        </div>
-      </Link>
-      </div>
-      <div hidden={preferences.homeHidden.includes("accounts")} style={{order:preferences.homeOrder.indexOf("accounts")}} className="mb-3 grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <Link to="/wealth"><Stat label="Cash in accounts" value={money(cash)} {...(live.length ? {} : { hint: "Add accounts" })} /></Link>
-        <Stat label="Income this month" value={money(flow.income)} />
-        <Stat label="Net this month" value={money(flow.net)} hint="Income − spending, transfers excluded" />
-        <Link to="/wealth"><Stat label="Card dues" value={money(cardDue)} /></Link>
-      </div>
-      <div hidden={preferences.homeHidden.includes("summary")} style={{order:preferences.homeOrder.indexOf("summary")}} className="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <Stat tone="business" label="Business (all time)" value={money(totalsByScope(expenses).business)} />
-        <Stat tone="personal" label="Personal (all time)" value={money(totalsByScope(expenses).personal)} />
-        <Stat label="Expenses this month" value={String(thisMonth.length)} />
-        <Link to="/reconcile"><Stat label="Not yet matched to bank" value={String(unmatched)} hint="Tap to reconcile" /></Link>
-      </div>
-
-      {memberRows.length > 0 && (
-        <div hidden={preferences.homeHidden.includes("family")} style={{order:preferences.homeOrder.indexOf("family")}} className="mb-8 rounded-3xl border bg-card p-5">
-          <div className="mb-2 flex items-center justify-between">
-            <h2 className="font-display text-lg font-bold">Who spent this month</h2>
-            <Link to="/family" className="text-sm text-primary">Manage family</Link>
+      {/* §2 — Financial readiness */}
+      <section hidden={hidden("readiness")} style={{ order: order("readiness") }} className="mb-5">
+        <div className="flex items-center gap-3 rounded-3xl border bg-card p-4 sm:p-5">
+          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-secondary">{readinessIcon}</span>
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <h2 className="font-display text-base font-bold">{readiness.status}</h2>
+              {readiness.estimated && <span className="rounded-full border px-2 py-0.5 text-[11px] font-semibold text-muted-foreground">Figures estimated</span>}
+            </div>
+            <p className="truncate text-sm text-muted-foreground" title={readiness.detail}>{readiness.detail}</p>
           </div>
-          <ResponsiveContainer width="100%" height={160}>
-            <BarChart data={memberRows}>
-              <XAxis dataKey="name" fontSize={12} tickLine={false} axisLine={false} />
-              <Tooltip cursor={{ fill: "var(--secondary)" }} formatter={(v: number) => money(v)} />
-              <Bar dataKey="value" fill="var(--chart-1)" radius={[10, 10, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
+          <div className="shrink-0 text-right">
+            <div className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Safe to spend{readiness.estimated && " · est."}</div>
+            <div className="font-mono text-lg font-bold text-gold-strong">{live.length ? money(pos.safe.amount) : "—"}</div>
+          </div>
+          <Button asChild variant="outline" size="sm" className="hidden shrink-0 sm:inline-flex"><Link to="/review">Review</Link></Button>
         </div>
+        <Autopilot />
+      </section>
+
+      {/* §3 — Essential metrics */}
+      <section hidden={hidden("metrics")} style={{ order: order("metrics") }} className="mb-5 grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <Link to="/wealth"><Stat label="Available cash" value={live.length ? money(cash) : "—"} {...(live.length ? {} : { hint: "Add accounts" })} /></Link>
+        <Stat label="Income this month" value={money(flow.income)} />
+        <Link to="/plan"><Stat label="Safe to spend" value={live.length ? money(pos.safe.amount) : "—"} {...(readiness.estimated ? { hint: "Estimated" } : {})} /></Link>
+        <Link to="/wealth"><Stat label="Card dues" value={money(cardDue)} /></Link>
+      </section>
+
+      {/* §4 — Spending insights */}
+      <section hidden={hidden("insights")} style={{ order: order("insights") }} className="mb-5 grid gap-3 lg:grid-cols-2">
+        <div className="rounded-3xl border bg-card p-5">
+          <div className="mb-3 flex items-center justify-between">
+            <h2 className="font-display text-base font-bold">Spending by category</h2>
+            <Link to="/reports" className="flex items-center gap-1 text-sm font-semibold text-primary">Reports <ArrowRight className="h-3.5 w-3.5" /></Link>
+          </div>
+          {cats.length === 0 && <p className="py-4 text-sm text-muted-foreground">No spending in this period yet.</p>}
+          <ul className="space-y-2.5">
+            {cats.map(([cat, amt]) => (
+              <li key={cat}>
+                <div className="mb-1 flex justify-between gap-3 text-sm"><span className="min-w-0 truncate font-medium">{cat}</span><span className="shrink-0 font-mono font-semibold">{money(amt)}</span></div>
+                <div className="h-2 overflow-hidden rounded-full bg-secondary"><div className="h-full rounded-full bg-primary" style={{ width: `${Math.max(3, (amt / catMax) * 100)}%` }} /></div>
+              </li>
+            ))}
+          </ul>
+        </div>
+        <div className="rounded-3xl border bg-card p-5">
+          <div className="mb-3 flex items-center justify-between">
+            <h2 className="font-display text-base font-bold">Budget use</h2>
+            <Link to="/budgets" className="flex items-center gap-1 text-sm font-semibold text-primary">Budgets <ArrowRight className="h-3.5 w-3.5" /></Link>
+          </div>
+          {preferences.budgets.length === 0 && <p className="py-4 text-sm text-muted-foreground">Set a budget to track utilisation here.</p>}
+          <ul className="space-y-2.5">
+            {preferences.budgets.slice(0, 5).map((b) => {
+              const u = scopedBudgetUsage(b, expenses, today);
+              return (
+                <li key={b.id}>
+                  <div className="mb-1 flex justify-between gap-3 text-sm"><span className="min-w-0 truncate font-medium">{b.name}</span><span className="shrink-0 font-mono font-semibold">{money(u.spent)} / {money(u.allowance)}</span></div>
+                  <div className="h-2 overflow-hidden rounded-full bg-secondary"><div className={"h-full rounded-full " + (u.percent > 100 ? "bg-destructive" : u.percent > 80 ? "bg-warning" : "bg-gold")} style={{ width: `${Math.min(100, Math.max(2, u.percent))}%` }} /></div>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      </section>
+
+      {/* §5 — Upcoming commitments */}
+      <section hidden={hidden("upcoming")} style={{ order: order("upcoming") }} className="mb-5">
+        <div className="rounded-3xl border bg-card p-5">
+          <div className="mb-3 flex items-center justify-between">
+            <h2 className="font-display text-base font-bold">Upcoming commitments</h2>
+            <Link to="/plan" className="flex items-center gap-1 text-sm font-semibold text-primary">View all <ArrowRight className="h-3.5 w-3.5" /></Link>
+          </div>
+          {pos.upcoming.length === 0 && <p className="py-2 text-sm text-muted-foreground">Nothing due soon — add bills and income in Plan.</p>}
+          <ul className="divide-y">
+            {pos.upcoming.slice(0, 4).map((u, k) => (
+              <li key={k} className="flex items-center justify-between gap-3 py-2.5 text-sm">
+                <span className="min-w-0 truncate font-medium">{u.name}</span>
+                <span className="shrink-0 text-muted-foreground">{u.date.slice(5)} · <b className="font-mono text-foreground">{money(u.amount)}</b></span>
+              </li>
+            ))}
+          </ul>
+        </div>
+        <PaymentReminders />
+      </section>
+
+      <MilestoneBanner />
+
+      {/* §7 — AI briefing */}
+      <section hidden={hidden("briefing")} style={{ order: order("briefing") }} className="mb-5">
+        <div className="rounded-3xl border bg-card p-5">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h2 className="font-display text-base font-bold">AI briefing</h2>
+            <div className="flex gap-2">
+              <Button size="sm" variant="outline" disabled={busy || !preferences.aiEnabled} onClick={async () => { setBusy(true); try { const r = await ask({ data: { facts, messages: [{ role: "user", content: "Give a short briefing: recorded spending, upcoming dues, safe-to-spend, and the highest priority alert. Quote only the supplied facts." }] } }); setBrief(r.ok ? r.text : r.error); setBriefOpen(true); } catch { setBrief("Couldn't reach the assistant."); setBriefOpen(true); } finally { setBusy(false); } }}>{busy ? "Preparing…" : brief ? "Refresh" : "Get briefing"}</Button>
+              <Button asChild size="sm" variant="ghost"><Link to="/assistant">Ask AI</Link></Button>
+            </div>
+          </div>
+          {brief && (
+            <div className="mt-3">
+              <p className={"whitespace-pre-wrap text-sm " + (briefOpen ? "" : "line-clamp-3")}>{brief}</p>
+              <button type="button" className="mt-1 text-sm font-semibold text-primary" onClick={() => setBriefOpen((o) => !o)}>{briefOpen ? "Collapse" : "View details"}</button>
+            </div>
+          )}
+          {!brief && <p className="mt-2 text-sm text-muted-foreground">A short summary of spending changes, risks and what's next — on demand.</p>}
+        </div>
+      </section>
+
+      {/* §8 — Contextual travel widget */}
+      {trip && (
+        <section hidden={hidden("travel")} style={{ order: order("travel") }} className="mb-5">
+          <Link to="/trips" className="flex items-center gap-3 rounded-3xl border bg-card p-4 transition hover:shadow-float sm:p-5">
+            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gold-soft text-gold-strong"><Plane className="h-5 w-5" /></span>
+            <div className="min-w-0 flex-1">
+              <div className="truncate font-display text-base font-bold">{trip.name}{trip.destination ? ` · ${trip.destination}` : ""}</div>
+              <div className="text-sm text-muted-foreground">{trip.start.slice(5)} → {trip.end.slice(5)}{trip.budget ? ` · ${money(tripSum?.total ?? 0)} of ${money(trip.budget)} spent` : ""}</div>
+            </div>
+            <ArrowRight className="h-4 w-4 shrink-0 text-muted-foreground" />
+          </Link>
+        </section>
       )}
 
-      <div hidden={preferences.homeHidden.includes("recent")} style={{order:preferences.homeOrder.indexOf("recent")}}>
-      <div className="mb-3 flex items-center justify-between">
-        <h2 className="font-display text-xl font-bold">Recent</h2>
-        <Link to="/expenses" className="text-sm text-primary">See all</Link>
-      </div>
-      <ExpenseTable items={expenses.slice(0, 6)} empty="No expenses yet — tap Add to scan your first bill." />
-      </div></div>
+      {/* §6 — Recent activity */}
+      <section hidden={hidden("recent")} style={{ order: order("recent") }}>
+        <div className="mb-3 flex items-center justify-between">
+          <h2 className="font-display text-xl font-bold">Recent activity</h2>
+          <Link to="/expenses" className="flex items-center gap-1 text-sm font-semibold text-primary">View all <ArrowRight className="h-3.5 w-3.5" /></Link>
+        </div>
+        <ExpenseTable items={expenses.slice(0, 6)} empty="No expenses yet — tap + to add your first one." />
+      </section>
     </>
   );
 }
