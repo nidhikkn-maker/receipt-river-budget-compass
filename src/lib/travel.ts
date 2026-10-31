@@ -12,12 +12,12 @@ export const BOOKING_KINDS = ["flight", "hotel", "train", "bus", "car", "visa", 
 export type BookingKind = (typeof BOOKING_KINDS)[number];
 
 /** A booking is a plan, not a payment. Money reaches it through linked ledger entries; the remainder stays a commitment. */
-export interface Booking { id: string; kind: BookingKind; provider: string; ref: string; date: string; amount: number; status: "unpaid" | "paid" | "cancelled"; expenseId?: string | null; expenseIds?: string[]; dueDate?: string | null; cancelTerms?: string | null; note?: string }
-export interface ItineraryItem { id: string; date: string; time?: string; title: string; place?: string; bookingId?: string | null; travellers?: string[]; note?: string }
+export interface Booking { id: string; kind: BookingKind; provider: string; ref: string; date: string; amount: number; status: "unpaid" | "paid" | "cancelled"; expenseId?: string | null; expenseIds?: string[]; dueDate?: string | null; cancelTerms?: string | null; note?: string; traveller?: string; location?: string; currency?: string; originalAmount?: number; planningRate?: number; confirmation?: "pending" | "confirmed"; documentIds?: string[] }
+export interface ItineraryItem { id: string; date: string; time?: string; title: string; place?: string; bookingId?: string | null; travellers?: string[]; note?: string; documentIds?: string[] }
 export interface Advance { id: string; date: string; amount: number; source: string; settledAt?: string | null; settlementNote?: string }
 /** One category's share of the trip plan. Category budgets plus a contingency allowance make up the plan. */
 export interface BudgetLine { category: string; amount: number }
-export interface TravelTrip extends Trip { type?: TripType; travellers?: string[]; bookings?: Booking[]; itinerary?: ItineraryItem[]; advances?: Advance[]; closedAt?: string | null; purpose?: string; budgetLines?: BudgetLine[]; contingency?: number }
+export interface TravelTrip extends Trip { type?: TripType; travellers?: string[]; bookings?: Booking[]; itinerary?: ItineraryItem[]; advances?: Advance[]; closedAt?: string | null; purpose?: string; budgetLines?: BudgetLine[]; contingency?: number; primaryWorkspace?: Scope; organisation?: string; workspaceBudgets?: { workspace: Scope; amount: number }[]; travellerBudgets?: { traveller: string; amount: number }[]; currencyBudgets?: { currency: string; amount: number; planningRate: number }[] }
 
 const r2 = (n: number) => Math.round(n * 100) / 100;
 type Row = Parameters<typeof tripSummary>[1][number] & { id: string; title?: string; scope?: Scope; reimbursementStatus?: ReimbursementStatus; reimbursement?: ReimbursementInfo; workspaceAllocations?: import("./workspaces").WorkspaceShare[]; originalAmount?: number | null; tripId?: string | null };
@@ -95,17 +95,19 @@ export function tripCandidates(t: TravelTrip, txns: Row[]) {
 /** Closing needs every booking paid or cancelled and every advance settled. Closing adds no entries. */
 export function closeBlockers(t: TravelTrip, txns: Row[]): string[] {
   const out: string[] = [];
-  const unpaid = (t.bookings ?? []).filter((b) => b.status === "unpaid").length;
+  const unpaid = (t.bookings ?? []).filter((b) => bookingOutstanding(b, txns) > 0).length;
   if (unpaid) out.push(`${unpaid} booking${unpaid > 1 ? "s are" : " is"} still unpaid — mark paid or cancelled`);
   const open = (t.advances ?? []).filter((a) => !a.settledAt).length;
   if (open) out.push(`${open} advance${open > 1 ? "s aren't" : " isn't"} settled yet`);
+  const recon = advanceReconciliation(t, txns);
+  if ((recon.advances > 0 || recon.returns > 0) && recon.outstanding !== 0 && open === 0) out.push(`Advance reconciliation still has ₹${Math.abs(recon.outstanding).toLocaleString("en-IN")} outstanding`);
   const pend = tripFinance(t, txns).reimbursablePending;
   if (pend > 0) out.push(`₹${pend.toLocaleString("en-IN")} of reimbursements are still pending`);
   return out;
 }
 
 /** Travel categories offered for one-tap adding to the catalog; booking kinds map onto them. */
-export const TRAVEL_CATEGORIES = ["Flights", "Hotels", "Local transport", "Travel meals", "Visa & insurance", "Activities"] as const;
+export const TRAVEL_CATEGORIES = ["Flights", "Hotels", "Trains", "Local transport", "Airport transfers", "Car rental", "Fuel", "Visa", "Insurance", "Travel meals", "Sightseeing", "Activities", "Shopping", "Communication", "Service charges", "Miscellaneous", "Visa & insurance"] as const;
 export const BOOKING_CATEGORY: Record<BookingKind, (typeof TRAVEL_CATEGORIES)[number]> = { flight: "Flights", hotel: "Hotels", train: "Local transport", bus: "Local transport", car: "Local transport", visa: "Visa & insurance", insurance: "Visa & insurance", activity: "Activities", other: "Activities" };
 
 /** Suggest the travel category for a merchant/title. Returns null when nothing clearly matches. */
@@ -159,7 +161,7 @@ export function tripReportRows(t: TravelTrip, txns: Row[]): string[][] {
   return [
     ["Section", "Date", "Item", "Workspace", "Currency", "Original", "INR"],
     ...(f.entries as Row[]).map((e) => ["Spent", e.date, e.merchant ?? e.title ?? "", e.scope ?? "personal", e.currency ?? "INR", String(e.originalAmount ?? e.amount), String(e.amount)]),
-    ...(t.bookings ?? []).filter((b) => b.status === "unpaid").map((b) => ["Booked (unpaid)", b.date, `${b.kind} ${b.provider} ${b.ref}`.trim(), "", "INR", String(b.amount), String(b.amount)]),
+    ...(t.bookings ?? []).filter((b) => bookingOutstanding(b, txns) > 0).map((b) => ["Booked (unpaid)", b.date, `${b.kind} ${b.provider} ${b.ref}`.trim(), "", "INR", String(bookingOutstanding(b, txns)), String(bookingOutstanding(b, txns))]),
     ["Total spent", "", "", "", "", "", String(f.total)], ["Total booked unpaid", "", "", "", "", "", String(f.committed)],
     ...Object.entries(f.byWorkspace).map(([w, v]) => [`Workspace ${w}`, "", "", w, "", "", String(v)]),
   ];
