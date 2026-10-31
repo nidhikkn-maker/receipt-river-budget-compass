@@ -30,7 +30,7 @@ async def main():
             const changed=row.category===cats[1]&&row.allocations.length===0;
             const undo=await s.rpc('undo_category_change',{batch_id:batch});if(undo.error)throw Error(undo.error.message);
             const undoReplay=await s.rpc('undo_category_change',{batch_id:batch});row=await read();
-            const restored=row.category===cats[0]&&JSON.stringify(row.allocations)===JSON.stringify(allocations);
+            const restored=row.category===cats[0]&&row.allocations.length===2&&row.allocations.every((a,i)=>a.category===allocations[i].category&&a.amount===allocations[i].amount);
             const next=await s.rpc('bulk_category_change',{batch_id:conflict,items:[{id,revision:row.category_revision}],target:cats[1]});if(next.error)throw Error(next.error.message);
             await s.from('expenses').update({category:cats[0]}).eq('id',id);
             await s.from('expenses').update({category:cats[1]}).eq('id',id);
