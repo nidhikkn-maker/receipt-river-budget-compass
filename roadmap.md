@@ -8,10 +8,18 @@
 - [x] Forecast (7–90 days, shortfall dates) and safe-to-spend with breakdown
 - [x] AI assistant using engine figures only
 - [x] Backup / restore / delete all; privacy (hide amounts)
-- [ ] Editable categories (rename/merge/archive/reorder) + grouped tags
-- [ ] Receipt tax & line items; Excel/PDF statement import
-- [ ] Family/project/annual budgets with carry-forward; Insights drill-down; customisable Home
-- [ ] Searchable document vault; offline entry queue; in-app reminders; theme settings
-- [ ] Real sign-in and Face ID/passkey lock requested; preserve existing browser records during account upgrade
-- [ ] Offline entry and upcoming payment reminders explicitly requested
-- [ ] Audit and verify remaining document acceptance requirements
+- [x] Editable categories (rename/merge/archive/reorder) + grouped tags
+- [x] Receipt tax & line items; XLSX/text-PDF statement import, reviewed missing entries and duplicate warnings
+- [x] Family/project/travel/annual budgets with carry-forward; category Insights drill-down; hide/reorder Home sections
+- [x] Searchable receipt vault, owner-scoped offline queue, in-app upcoming-payment reminders, theme settings
+- [x] Real email/Google/Lovable sign-in and verified passkey device lock; existing anonymous records can upgrade by email
+- [x] Verified receipt read/correction/save/search, XLSX import, PDF parsing, category rename/archive, offline save/sync and simulated device-passkey unlock
+- [x] All 48 automated tests and current preview build passed; signed-out redirects and mobile layout checked without errors
+- [ ] Successful real-account sign-in and email upgrade — needs the user's confirmed account or preview sign-in (no matching account available for automatic testing)
+- [ ] Installed-app offline cold-start — needs publication; app workers intentionally disabled in preview
+- [ ] Real iPhone Face ID — needs a compatible device on a stable HTTPS origin; simulated platform passkey verified
+- [ ] Background push payment notifications — needs a push service choice and user notification permission; in-app reminders delivered
+- [ ] Full native-only PRD features (Siri, iOS widgets, native share sheet) — unavailable in the web platform
+- [ ] Full card statement cycles/unbilled balances/EMI conversion, advanced investment feeds and account-linked document uploads — still require implementation
+- [ ] Scanned/arbitrary-layout PDF statements and legacy XLS — current importer supports XLSX and readable text-PDF transaction layouts only
+- [ ] Backups containing receipt binaries — current JSON backup retains receipt references, not image files
