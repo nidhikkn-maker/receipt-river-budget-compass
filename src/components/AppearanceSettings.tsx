@@ -56,7 +56,7 @@ export function AppearanceSettings() {
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
                 {styles.map((t) => (
                   <button key={t.name} type="button" onClick={() => pick(t.name)} aria-pressed={p.themeName === t.name}
-                    className="group rounded-3xl border bg-card p-3 text-left transition hover:shadow-float">
+                    className="group min-w-0 overflow-hidden rounded-3xl border bg-card p-3 text-left transition hover:shadow-float">
                     <Swatch colors={t.swatch} selected={p.themeName === t.name} />
                     <div className="mt-2 text-sm font-bold">{t.label}{t.darkFirst ? " · dark" : ""}</div>
                     <div className="text-xs text-muted-foreground">{t.hint}</div>
