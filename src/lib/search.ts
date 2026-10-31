@@ -89,7 +89,7 @@ export function parseQuery(q: string, today: string): ParsedQuery {
   const kindWords: [RegExp, string][] = [
     [/\b(reimbursement|reimbursements|claim|claims)\b/, "reimbursement"],
     [/\b(document|documents|receipt|receipts|invoice|invoices|policy|policies|statement|statements)\b/, "document"],
-    [/\b(recurring|subscription|subscriptions|emi|emis|bill|bills|commitment|commitments|payment|payments due)\b/, "commitment"],
+    [/\b(recurring|subscription|subscriptions|emi|emis|bill|bills|commitment|commitments|payments?\s+due)\b/, "commitment"],
     [/\b(loan|loans)\b/, "loan"],
     [/\b(account|accounts|card|cards)\b/, "account"],
     [/\b(goal|goals|savings target)\b/, "goal"],
@@ -100,7 +100,7 @@ export function parseQuery(q: string, today: string): ParsedQuery {
   if (/\bpending\b/.test(text)) { out.status = "pending"; text = text.replace(/\bpending\b/, " "); }
   if (/\boverdue\b/.test(text)) { out.status = "overdue"; text = text.replace(/\boverdue\b/, " "); }
 
-  out.text = text.replace(/\b(show|find|all|my|me|the|from|using|with|made|to|get|list|what|which|give)\b/g, " ").replace(/\s+/g, " ").trim();
+  out.text = text.replace(/\b(show|find|all|my|me|the|from|using|with|made|to|get|list|what|which|give|payment|payments|due)\b/g, " ").replace(/\s+/g, " ").trim();
   return out;
 }
 
