@@ -1,3 +1,4 @@
+import { InboxWork } from "@/components/InboxWork";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
@@ -55,6 +56,7 @@ function Inbox() {
         <TabsList className="mb-4 w-full justify-start overflow-x-auto"><TabsTrigger value="inbox">To review ({counts.pending})</TabsTrigger><TabsTrigger value="accounts">Accounts check</TabsTrigger><TabsTrigger value="reimb">Reimbursements</TabsTrigger></TabsList>
 
         <TabsContent value="inbox">
+          <InboxWork />
           <div className="mb-4 grid grid-cols-3 gap-2 text-center">
             {[["Pending", counts.pending], ["High priority", counts.high], ["Done", counts.dismissed]].map(([l, v]) => <div key={l} className="rounded-2xl border p-3"><div className="font-mono text-2xl font-bold">{v}</div><div className="text-xs font-medium text-muted-foreground">{l}</div></div>)}
           </div>
