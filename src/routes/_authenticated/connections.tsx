@@ -93,7 +93,13 @@ function Connections() {
         {present.map((k) => <Button key={k} size="sm" variant={kinds.includes(k) ? "default" : "ghost"} className={kinds.includes(k) ? "" : "text-muted-foreground line-through"} aria-pressed={kinds.includes(k)} onClick={() => toggle(k)}>{KIND_LABEL[k]}</Button>)}
         <Button size="sm" variant="ghost" onClick={() => setKinds(ALL_KINDS)}>Show all</Button>
       </div>}
-      {view.nodes.length > 0 && <ConnectionsMap nodes={view.nodes} edges={view.edges} selected={sel} onSelect={setSel} />}
+      {view.nodes.length > 0 && <>
+        <div className="mb-2 flex items-center justify-between gap-2 text-xs text-muted-foreground">
+          <span>Drag boxes to arrange your map (or select one and use arrow keys). Positions save automatically.</span>
+          {Object.keys(preferences.mapPositions).length > 0 && <button type="button" className="underline" onClick={() => run(() => savePreferences({ ...preferences, mapPositions: {} }), "Layout reset")}>Reset layout</button>}
+        </div>
+        <ConnectionsMap nodes={view.nodes} edges={view.edges} selected={sel} onSelect={setSel} saved={preferences.mapPositions} onMove={(id, pt) => { void savePreferences({ ...preferences, mapPositions: { ...preferences.mapPositions, [id]: pt } }); }} />
+      </>}
 
       {current && <Card title={current.label} action={<Button size="icon" variant="ghost" aria-label="Close" onClick={() => setSel(null)}><X className="h-4 w-4" /></Button>}>
         <p className="mb-3 text-xs text-muted-foreground">{KIND_LABEL[current.kind]}{current.details.length ? ` · ${current.details.join(" · ")}` : ""}</p>
