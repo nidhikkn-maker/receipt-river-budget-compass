@@ -12,14 +12,15 @@ import { AccountTools } from "@/components/AccountTools";
 import { money } from "@/lib/expenses";
 import { useStore } from "@/lib/store";
 import { CardDetails, GoalsPanel, LoansPanel } from "@/components/WealthPanels";
+import { FundPortfolio } from "@/components/FundPortfolio";
 
 export const Route = createFileRoute("/_authenticated/wealth")({
   head: () => ({
     meta: [
       { title: "Wealth & accounts — Ledgerline" },
-      { name: "description", content: "Bank accounts, cards, cash and net worth in one place." },
+      { name: "description", content: "Track accounts, net worth and dated mutual fund portfolio values and gains." },
       { property: "og:title", content: "Wealth & accounts — Ledgerline" },
-      { property: "og:description", content: "Bank accounts, cards, cash and net worth in one place." },
+      { property: "og:description", content: "Track accounts, net worth and dated mutual fund portfolio values and gains." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
     ],
@@ -60,6 +61,7 @@ function Wealth() {
         <Stat label="Net worth" value={money(nw.net)} />
       </div>
 
+      <FundPortfolio />
       <div className="grid gap-5 lg:grid-cols-[1.4fr_1fr]">
         <section className="space-y-2">
           <div className="flex items-center justify-between">
