@@ -32,6 +32,7 @@ import { Route as AuthenticatedPatternsRouteImport } from './routes/_authenticat
 import { Route as AuthenticatedPaymentMethodsRouteImport } from './routes/_authenticated/payment-methods'
 import { Route as AuthenticatedPlanRouteImport } from './routes/_authenticated/plan'
 import { Route as AuthenticatedReconcileRouteImport } from './routes/_authenticated/reconcile'
+import { Route as AuthenticatedReportCentreRouteImport } from './routes/_authenticated/report-centre'
 import { Route as AuthenticatedReportsRouteImport } from './routes/_authenticated/reports'
 import { Route as AuthenticatedReviewRouteImport } from './routes/_authenticated/review'
 import { Route as AuthenticatedRulesRouteImport } from './routes/_authenticated/rules'
@@ -161,6 +162,12 @@ const AuthenticatedReconcileRoute = AuthenticatedReconcileRouteImport.update({
   path: '/reconcile',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedReportCentreRoute =
+  AuthenticatedReportCentreRouteImport.update({
+    id: '/report-centre',
+    path: '/report-centre',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedReportsRoute = AuthenticatedReportsRouteImport.update({
   id: '/reports',
   path: '/reports',
@@ -241,6 +248,7 @@ export interface FileRoutesByFullPath {
   '/payment-methods': typeof AuthenticatedPaymentMethodsRoute
   '/plan': typeof AuthenticatedPlanRoute
   '/reconcile': typeof AuthenticatedReconcileRoute
+  '/report-centre': typeof AuthenticatedReportCentreRoute
   '/reports': typeof AuthenticatedReportsRoute
   '/review': typeof AuthenticatedReviewRoute
   '/rules': typeof AuthenticatedRulesRoute
@@ -276,6 +284,7 @@ export interface FileRoutesByTo {
   '/payment-methods': typeof AuthenticatedPaymentMethodsRoute
   '/plan': typeof AuthenticatedPlanRoute
   '/reconcile': typeof AuthenticatedReconcileRoute
+  '/report-centre': typeof AuthenticatedReportCentreRoute
   '/reports': typeof AuthenticatedReportsRoute
   '/review': typeof AuthenticatedReviewRoute
   '/rules': typeof AuthenticatedRulesRoute
@@ -313,6 +322,7 @@ export interface FileRoutesById {
   '/_authenticated/payment-methods': typeof AuthenticatedPaymentMethodsRoute
   '/_authenticated/plan': typeof AuthenticatedPlanRoute
   '/_authenticated/reconcile': typeof AuthenticatedReconcileRoute
+  '/_authenticated/report-centre': typeof AuthenticatedReportCentreRoute
   '/_authenticated/reports': typeof AuthenticatedReportsRoute
   '/_authenticated/review': typeof AuthenticatedReviewRoute
   '/_authenticated/rules': typeof AuthenticatedRulesRoute
@@ -350,6 +360,7 @@ export interface FileRouteTypes {
     | '/payment-methods'
     | '/plan'
     | '/reconcile'
+    | '/report-centre'
     | '/reports'
     | '/review'
     | '/rules'
@@ -385,6 +396,7 @@ export interface FileRouteTypes {
     | '/payment-methods'
     | '/plan'
     | '/reconcile'
+    | '/report-centre'
     | '/reports'
     | '/review'
     | '/rules'
@@ -421,6 +433,7 @@ export interface FileRouteTypes {
     | '/_authenticated/payment-methods'
     | '/_authenticated/plan'
     | '/_authenticated/reconcile'
+    | '/_authenticated/report-centre'
     | '/_authenticated/reports'
     | '/_authenticated/review'
     | '/_authenticated/rules'
@@ -608,6 +621,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedReconcileRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/report-centre': {
+      id: '/_authenticated/report-centre'
+      path: '/report-centre'
+      fullPath: '/report-centre'
+      preLoaderRoute: typeof AuthenticatedReportCentreRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/reports': {
       id: '/_authenticated/reports'
       path: '/reports'
@@ -706,6 +726,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedPaymentMethodsRoute: typeof AuthenticatedPaymentMethodsRoute
   AuthenticatedPlanRoute: typeof AuthenticatedPlanRoute
   AuthenticatedReconcileRoute: typeof AuthenticatedReconcileRoute
+  AuthenticatedReportCentreRoute: typeof AuthenticatedReportCentreRoute
   AuthenticatedReportsRoute: typeof AuthenticatedReportsRoute
   AuthenticatedReviewRoute: typeof AuthenticatedReviewRoute
   AuthenticatedRulesRoute: typeof AuthenticatedRulesRoute
@@ -735,6 +756,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedPaymentMethodsRoute: AuthenticatedPaymentMethodsRoute,
   AuthenticatedPlanRoute: AuthenticatedPlanRoute,
   AuthenticatedReconcileRoute: AuthenticatedReconcileRoute,
+  AuthenticatedReportCentreRoute: AuthenticatedReportCentreRoute,
   AuthenticatedReportsRoute: AuthenticatedReportsRoute,
   AuthenticatedReviewRoute: AuthenticatedReviewRoute,
   AuthenticatedRulesRoute: AuthenticatedRulesRoute,

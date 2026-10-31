@@ -126,7 +126,7 @@ function workspaceSection(list: Expense[]): Section {
 }
 function trendSection(d: ReportData, f: ReportFilters, ws: Scope[]): Section {
   const months: string[] = []; let m = f.to.slice(0, 7);
-  for (let i = 0; i < 6; i++) { months.unshift(m); const [y, mm] = m.split("-").map(Number); m = mm === 1 ? `${y - 1}-12` : `${y}-${String(mm - 1).padStart(2, "0")}`; }
+  for (let i = 0; i < 6; i++) { months.unshift(m); const y = Number(m.slice(0, 4)), mm = Number(m.slice(5, 7)); m = mm === 1 ? `${y - 1}-12` : `${y}-${String(mm - 1).padStart(2, "0")}`; }
   const base = matchFilters(d.transactions, f, d.trips);
   const rows = months.map((mo) => { const c = totalsFor(base.filter((e) => e.date.startsWith(mo)), ws); return [mo, num(c.income), num(c.spent), num(c.net)]; });
   return { title: "Six-month trend", headers: ["Month", "Income", "Spending", "Net"], align: ["l", "r", "r", "r"], rows };

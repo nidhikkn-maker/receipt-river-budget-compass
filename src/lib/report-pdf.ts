@@ -45,7 +45,7 @@ export async function renderReportPdf(r: ReportDoc, style: PdfStyle, generatedAt
     autoTable(doc, {
       startY: y + 1, margin: { left: M, right: M, top: 18, bottom: 16 }, head: [s.headers.map(ascii)],
       body: s.rows.length ? s.rows.map((row) => row.map(ascii)) : [[{ content: "No records for this selection.", colSpan: s.headers.length, styles: { fontStyle: "italic", textColor: [110, 110, 110] } }]],
-      foot: s.total ? [s.total.map(ascii)] : undefined, showHead: "everyPage", showFoot: "lastPage", rowPageBreak: "avoid",
+      ...(s.total ? { foot: [s.total.map(ascii)] } : {}), showHead: "everyPage", showFoot: "lastPage", rowPageBreak: "avoid",
       styles: { fontSize: s.wide ? 7 : 8, cellPadding: 1.4, overflow: "linebreak", lineColor: [220, 220, 220], lineWidth: 0.1 },
       headStyles: style === "mono" ? { fillColor: [235, 235, 235], textColor: [20, 20, 20] } : { fillColor: BRAND, textColor: [255, 255, 255] },
       footStyles: { fillColor: [245, 245, 245], textColor: [20, 20, 20], fontStyle: "bold" },
