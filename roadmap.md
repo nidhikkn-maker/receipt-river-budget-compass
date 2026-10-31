@@ -84,5 +84,5 @@
 - [x] V2 Phase 3: trips, merchant intelligence (merge/unmerge), weekly brief (in-app schedule)
 - [x] Insights export filters: date-range, department and status filters scoping all CSV/PDF exports; signed-in check exported exactly the 33 filtered rows
 - [x] Department summaries + CSV/PDF exports: usage %, remaining balance and over/within-budget status column; on-screen summary with progress bars
-- [ ] Bulk categorisation/recategorisation of existing entries
-- [ ] Bulk uploading of bills with categorisation
+- [x] Bulk categorisation/recategorisation: select mode on Expenses with all/none, category picker, split-clearing apply; fixed empty-split-list validation; signed-in apply verified and test data restored
+- [x] Bulk bill upload: pick several bills, each OCR-read and reviewed one by one with Bill n of N progress; two-bill signed-in run verified, test entries removed
