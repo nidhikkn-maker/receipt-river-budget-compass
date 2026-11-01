@@ -17,7 +17,19 @@ export interface ItineraryItem { id: string; date: string; time?: string; title:
 export interface Advance { id: string; date: string; amount: number; source: string; settledAt?: string | null; settlementNote?: string }
 /** One category's share of the trip plan. Category budgets plus a contingency allowance make up the plan. */
 export interface BudgetLine { category: string; amount: number }
-export interface TravelTrip extends Trip { type?: TripType; travellers?: string[]; bookings?: Booking[]; itinerary?: ItineraryItem[]; advances?: Advance[]; closedAt?: string | null; purpose?: string; budgetLines?: BudgetLine[]; contingency?: number; primaryWorkspace?: Scope; organisation?: string; workspaceBudgets?: { workspace: Scope; amount: number }[]; travellerBudgets?: { traveller: string; amount: number }[]; currencyBudgets?: { currency: string; amount: number; planningRate: number }[] }
+export interface TravelTrip extends Trip { type?: TripType; travellers?: string[]; bookings?: Booking[]; itinerary?: ItineraryItem[]; advances?: Advance[]; closedAt?: string | null; cancelledAt?: string | null; purpose?: string; budgetLines?: BudgetLine[]; contingency?: number; primaryWorkspace?: Scope; organisation?: string; workspaceBudgets?: { workspace: Scope; amount: number }[]; travellerBudgets?: { traveller: string; amount: number }[]; currencyBudgets?: { currency: string; amount: number; planningRate: number }[] }
+
+/** Lifecycle for cards and filters. Cancelled and closed win over dates; otherwise dates decide. */
+export type TripStatus = "upcoming" | "active" | "completed" | "cancelled" | "closed";
+export const TRIP_STATUSES = ["upcoming", "active", "completed", "cancelled", "closed"] as const;
+export const TRIP_STATUS_LABEL: Record<TripStatus, string> = { upcoming: "Upcoming", active: "Active", completed: "Completed", cancelled: "Cancelled", closed: "Closed" };
+export function tripStatus(t: Pick<TravelTrip, "start" | "end" | "closedAt" | "cancelledAt">, today: string): TripStatus {
+  if (t.cancelledAt) return "cancelled";
+  if (t.closedAt) return "closed";
+  if (t.start > today) return "upcoming";
+  if (t.end < today) return "completed";
+  return "active";
+}
 
 const r2 = (n: number) => Math.round(n * 100) / 100;
 type Row = Parameters<typeof tripSummary>[1][number] & { id: string; title?: string; scope?: Scope; reimbursementStatus?: ReimbursementStatus; reimbursement?: ReimbursementInfo; workspaceAllocations?: import("./workspaces").WorkspaceShare[]; originalAmount?: number | null; tripId?: string | null };
