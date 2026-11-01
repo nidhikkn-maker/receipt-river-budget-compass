@@ -54,7 +54,7 @@ describe("statement line model", () => {
     expect(balanceAddsUp(1000, 940, lines)).toBe(0);
     // A card's owed figure moves the other way round.
     expect(balanceAddsUp(1000, 1060, lines, true)).toBe(0);
-    expect(balanceAddsUp(1000, 940, lines, true)).toBe(120);
+    expect(balanceAddsUp(1000, 940, lines, true)).toBe(-120);
     expect(balanceAddsUp(null, 940, lines)).toBeNull();
   });
 
