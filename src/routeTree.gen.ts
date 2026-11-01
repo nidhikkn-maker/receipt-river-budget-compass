@@ -47,6 +47,7 @@ import { Route as AuthenticatedSearchRouteImport } from './routes/_authenticated
 import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings'
 import { Route as AuthenticatedStrategyRouteImport } from './routes/_authenticated/strategy'
 import { Route as AuthenticatedTransactionReviewRouteImport } from './routes/_authenticated/transaction-review'
+import { Route as AuthenticatedTransfersRouteImport } from './routes/_authenticated/transfers'
 import { Route as AuthenticatedTravelInboxRouteImport } from './routes/_authenticated/travel-inbox'
 import { Route as AuthenticatedTripsRouteImport } from './routes/_authenticated/trips'
 import { Route as AuthenticatedVaultRouteImport } from './routes/_authenticated/vault'
@@ -259,6 +260,11 @@ const AuthenticatedTransactionReviewRoute =
     path: '/transaction-review',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedTransfersRoute = AuthenticatedTransfersRouteImport.update({
+  id: '/transfers',
+  path: '/transfers',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedTravelInboxRoute =
   AuthenticatedTravelInboxRouteImport.update({
     id: '/travel-inbox',
@@ -352,6 +358,7 @@ export interface FileRoutesByFullPath {
   '/settings': typeof AuthenticatedSettingsRoute
   '/strategy': typeof AuthenticatedStrategyRoute
   '/transaction-review': typeof AuthenticatedTransactionReviewRoute
+  '/transfers': typeof AuthenticatedTransfersRoute
   '/travel-inbox': typeof AuthenticatedTravelInboxRoute
   '/trips': typeof AuthenticatedTripsRouteWithChildren
   '/vault': typeof AuthenticatedVaultRoute
@@ -401,6 +408,7 @@ export interface FileRoutesByTo {
   '/settings': typeof AuthenticatedSettingsRoute
   '/strategy': typeof AuthenticatedStrategyRoute
   '/transaction-review': typeof AuthenticatedTransactionReviewRoute
+  '/transfers': typeof AuthenticatedTransfersRoute
   '/travel-inbox': typeof AuthenticatedTravelInboxRoute
   '/vault': typeof AuthenticatedVaultRoute
   '/wealth': typeof AuthenticatedWealthRoute
@@ -451,6 +459,7 @@ export interface FileRoutesById {
   '/_authenticated/settings': typeof AuthenticatedSettingsRoute
   '/_authenticated/strategy': typeof AuthenticatedStrategyRoute
   '/_authenticated/transaction-review': typeof AuthenticatedTransactionReviewRoute
+  '/_authenticated/transfers': typeof AuthenticatedTransfersRoute
   '/_authenticated/travel-inbox': typeof AuthenticatedTravelInboxRoute
   '/_authenticated/trips': typeof AuthenticatedTripsRouteWithChildren
   '/_authenticated/vault': typeof AuthenticatedVaultRoute
@@ -502,6 +511,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/strategy'
     | '/transaction-review'
+    | '/transfers'
     | '/travel-inbox'
     | '/trips'
     | '/vault'
@@ -551,6 +561,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/strategy'
     | '/transaction-review'
+    | '/transfers'
     | '/travel-inbox'
     | '/vault'
     | '/wealth'
@@ -600,6 +611,7 @@ export interface FileRouteTypes {
     | '/_authenticated/settings'
     | '/_authenticated/strategy'
     | '/_authenticated/transaction-review'
+    | '/_authenticated/transfers'
     | '/_authenticated/travel-inbox'
     | '/_authenticated/trips'
     | '/_authenticated/vault'
@@ -892,6 +904,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedTransactionReviewRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/transfers': {
+      id: '/_authenticated/transfers'
+      path: '/transfers'
+      fullPath: '/transfers'
+      preLoaderRoute: typeof AuthenticatedTransfersRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/travel-inbox': {
       id: '/_authenticated/travel-inbox'
       path: '/travel-inbox'
@@ -1011,6 +1030,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRoute
   AuthenticatedStrategyRoute: typeof AuthenticatedStrategyRoute
   AuthenticatedTransactionReviewRoute: typeof AuthenticatedTransactionReviewRoute
+  AuthenticatedTransfersRoute: typeof AuthenticatedTransfersRoute
   AuthenticatedTravelInboxRoute: typeof AuthenticatedTravelInboxRoute
   AuthenticatedTripsRoute: typeof AuthenticatedTripsRouteWithChildren
   AuthenticatedVaultRoute: typeof AuthenticatedVaultRoute
@@ -1054,6 +1074,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedSettingsRoute: AuthenticatedSettingsRoute,
   AuthenticatedStrategyRoute: AuthenticatedStrategyRoute,
   AuthenticatedTransactionReviewRoute: AuthenticatedTransactionReviewRoute,
+  AuthenticatedTransfersRoute: AuthenticatedTransfersRoute,
   AuthenticatedTravelInboxRoute: AuthenticatedTravelInboxRoute,
   AuthenticatedTripsRoute: AuthenticatedTripsRouteWithChildren,
   AuthenticatedVaultRoute: AuthenticatedVaultRoute,
