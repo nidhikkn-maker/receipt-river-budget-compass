@@ -179,3 +179,30 @@ export function importReconciliationSummary(input: { opening: number | null; clo
   if (notImported.length) discrepancies.push(`${notImported.length} line${notImported.length === 1 ? '' : 's'} will remain unimported (net ${notImportedMovement})`);
   return { credits, debits, movement: statement.movement, expectedClosing: statement.importedBalance, difference: statement.difference, linesBalance: statement.verified, recordedCount: recordedRows.length, recordedMovement, balanceAfterImport, notImportedCount: notImported.length, notImportedMovement, discrepancies };
 }
+
+export type ReadinessState = 'reading' | 'failed' | 'not_started' | 'blocked' | 'waiting' | 'ready' | 'reconciled';
+export interface ReadinessCheck { label: string; ok: boolean }
+/** Explains, in priority order, why a statement's reconciliation is or isn't ready. rows=null when lines aren't loaded. Pure, never saves. */
+export function reconciliationReadiness(batch: ImportBatch, rows: ImportRow[] | null, posted: Set<string>, liability: boolean, currency = (n: number) => String(n)): { state: ReadinessState; title: string; reason: string; checks: ReadinessCheck[] } {
+  if (['queued', 'processing'].includes(batch.status)) return { state: 'reading', title: 'Still reading', reason: `The statement is still being processed${batch.total_pages ? ` (page ${batch.next_page ?? 0} of ${batch.total_pages})` : ''}.`, checks: [] };
+  if (['failed', 'paused', 'refused'].includes(batch.status)) return { state: 'failed', title: 'Failed', reason: batch.error ?? 'Processing stopped. Use Retry processing.', checks: [] };
+  const identity = !!batch.statement_review?.identity?.confirmed;
+  const s = importReconciliationSummary({ opening: batch.opening_balance, closing: batch.closing_balance, sourceOpening: batch.source_balances?.opening?.value ?? null, sourceClosing: batch.source_balances?.closing?.value ?? null, rows: rows ?? [], posted, importingIds: new Set(), liability });
+  const so = batch.source_balances?.opening?.value, sc = batch.source_balances?.closing?.value;
+  const od = so != null && batch.opening_balance != null ? Math.round((batch.opening_balance - so) * 100) / 100 : 0;
+  const cd = sc != null && batch.closing_balance != null ? Math.round((batch.closing_balance - sc) * 100) / 100 : 0;
+  const missing = [batch.opening_balance == null && 'opening', batch.closing_balance == null && 'closing'].filter(Boolean) as string[];
+  const checks: ReadinessCheck[] = [{ label: 'Account confirmed', ok: identity }, { label: 'Opening and closing balances entered', ok: !missing.length }, { label: 'Entered balances match printed balances', ok: od === 0 && cd === 0 }];
+  if (rows) checks.push({ label: 'Lines add up to closing balance', ok: !missing.length && s.linesBalance }, { label: 'All lines approved or imported', ok: s.notImportedCount === 0 });
+  const verified = !!batch.balance_verification?.checkedOriginal;
+  checks.push({ label: 'Balances checked against original', ok: verified });
+  const r = (state: ReadinessState, title: string, reason: string) => ({ state, title, reason, checks });
+  if (!identity) return r('not_started', 'Not started: account not confirmed', 'Confirm which account this statement belongs to.');
+  if (missing.length) return r('not_started', 'Not started: balances missing', `Enter the ${missing.join(' and ')} balance.`);
+  if (od !== 0 || cd !== 0) return r('blocked', 'Blocked: printed balance differs', `Entered balance differs from the one printed on the statement by ${currency(od !== 0 ? od : cd)}.`);
+  if (!rows) return r('waiting', 'Open to check lines', 'Open this statement to check its lines against the balances.');
+  if (!s.linesBalance) return r('blocked', "Blocked: lines don't add up", `Closing differs from opening plus lines by ${currency(s.difference ?? 0)}. Check for missing or extra lines.`);
+  if (s.notImportedCount) return r('waiting', 'Waiting: lines still in review', `${s.notImportedCount} line${s.notImportedCount === 1 ? ' is' : 's are'} not yet approved or imported.`);
+  if (verified) return r('reconciled', 'Reconciled', `Checked on ${batch.balance_verification!.reviewedAt.slice(0, 10)}.`);
+  return r('ready', 'Ready to reconcile', 'Account confirmed, balances entered and lines add up. Check balances against the original to finish.');
+}
