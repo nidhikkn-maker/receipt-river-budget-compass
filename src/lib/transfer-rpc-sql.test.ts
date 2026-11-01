@@ -1,5 +1,5 @@
 // @vitest-environment node
-// Staged RPC correction, disposable PostgreSQL only. Never writes to Cloud.
+// Installed RPC correction, disposable PostgreSQL only. Never writes to Cloud.
 import { PGlite } from '@electric-sql/pglite';
 import { readFileSync } from 'node:fs';
 import { beforeAll, beforeEach, afterAll, expect, it } from 'vitest';
@@ -16,7 +16,7 @@ beforeAll(async()=>{
  GRANT SELECT ON expenses,accounts TO authenticated;
  INSERT INTO accounts VALUES('${src}','${owner}','Source','savings',false),('${dst}','${owner}','Destination','savings',false);`);
  await db.exec(readFileSync('drizzle/migrations/0047_internal_transfer_links.sql','utf8'));
- await db.exec(readFileSync('.lovable/staged-sql/v5.12-transfer-safeguards.sql','utf8'));
+ await db.exec(readFileSync('drizzle/migrations/0049_harden_transfer_approval_and_undo.sql','utf8'));
 },20000);
 beforeEach(async()=>{await db.exec(`RESET ROLE;DELETE FROM transfer_links;DELETE FROM expenses;INSERT INTO expenses(id,employee_id,account_id,txn_type,amount,original_amount,currency,expense_date,description,reconciled_at) VALUES('${debit}','${owner}','${src}','expense',50000,50000,'INR','2026-04-01','Original debit','2026-04-02'),('${credit}','${owner}','${dst}','income',50000,50000,'INR','2026-04-01','Original credit','2026-04-02');`);await user();});
 afterAll(()=>db.close());
