@@ -28,6 +28,7 @@ import { Route as AuthenticatedExpenditureStatementRouteImport } from './routes/
 import { Route as AuthenticatedExpensesRouteImport } from './routes/_authenticated/expenses'
 import { Route as AuthenticatedFamilyRouteImport } from './routes/_authenticated/family'
 import { Route as AuthenticatedForecastRouteImport } from './routes/_authenticated/forecast'
+import { Route as AuthenticatedHistoricalImportRouteImport } from './routes/_authenticated/historical-import'
 import { Route as AuthenticatedInboxRouteImport } from './routes/_authenticated/inbox'
 import { Route as AuthenticatedNewRouteImport } from './routes/_authenticated/new'
 import { Route as AuthenticatedPatternsRouteImport } from './routes/_authenticated/patterns'
@@ -146,6 +147,12 @@ const AuthenticatedForecastRoute = AuthenticatedForecastRouteImport.update({
   path: '/forecast',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedHistoricalImportRoute =
+  AuthenticatedHistoricalImportRouteImport.update({
+    id: '/historical-import',
+    path: '/historical-import',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedInboxRoute = AuthenticatedInboxRouteImport.update({
   id: '/inbox',
   path: '/inbox',
@@ -264,6 +271,7 @@ export interface FileRoutesByFullPath {
   '/expenses': typeof AuthenticatedExpensesRoute
   '/family': typeof AuthenticatedFamilyRoute
   '/forecast': typeof AuthenticatedForecastRoute
+  '/historical-import': typeof AuthenticatedHistoricalImportRoute
   '/inbox': typeof AuthenticatedInboxRoute
   '/new': typeof AuthenticatedNewRoute
   '/patterns': typeof AuthenticatedPatternsRoute
@@ -303,6 +311,7 @@ export interface FileRoutesByTo {
   '/expenses': typeof AuthenticatedExpensesRoute
   '/family': typeof AuthenticatedFamilyRoute
   '/forecast': typeof AuthenticatedForecastRoute
+  '/historical-import': typeof AuthenticatedHistoricalImportRoute
   '/inbox': typeof AuthenticatedInboxRoute
   '/new': typeof AuthenticatedNewRoute
   '/patterns': typeof AuthenticatedPatternsRoute
@@ -344,6 +353,7 @@ export interface FileRoutesById {
   '/_authenticated/expenses': typeof AuthenticatedExpensesRoute
   '/_authenticated/family': typeof AuthenticatedFamilyRoute
   '/_authenticated/forecast': typeof AuthenticatedForecastRoute
+  '/_authenticated/historical-import': typeof AuthenticatedHistoricalImportRoute
   '/_authenticated/inbox': typeof AuthenticatedInboxRoute
   '/_authenticated/new': typeof AuthenticatedNewRoute
   '/_authenticated/patterns': typeof AuthenticatedPatternsRoute
@@ -385,6 +395,7 @@ export interface FileRouteTypes {
     | '/expenses'
     | '/family'
     | '/forecast'
+    | '/historical-import'
     | '/inbox'
     | '/new'
     | '/patterns'
@@ -424,6 +435,7 @@ export interface FileRouteTypes {
     | '/expenses'
     | '/family'
     | '/forecast'
+    | '/historical-import'
     | '/inbox'
     | '/new'
     | '/patterns'
@@ -464,6 +476,7 @@ export interface FileRouteTypes {
     | '/_authenticated/expenses'
     | '/_authenticated/family'
     | '/_authenticated/forecast'
+    | '/_authenticated/historical-import'
     | '/_authenticated/inbox'
     | '/_authenticated/new'
     | '/_authenticated/patterns'
@@ -632,6 +645,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedForecastRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/historical-import': {
+      id: '/_authenticated/historical-import'
+      path: '/historical-import'
+      fullPath: '/historical-import'
+      preLoaderRoute: typeof AuthenticatedHistoricalImportRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/inbox': {
       id: '/_authenticated/inbox'
       path: '/inbox'
@@ -782,6 +802,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedExpensesRoute: typeof AuthenticatedExpensesRoute
   AuthenticatedFamilyRoute: typeof AuthenticatedFamilyRoute
   AuthenticatedForecastRoute: typeof AuthenticatedForecastRoute
+  AuthenticatedHistoricalImportRoute: typeof AuthenticatedHistoricalImportRoute
   AuthenticatedInboxRoute: typeof AuthenticatedInboxRoute
   AuthenticatedNewRoute: typeof AuthenticatedNewRoute
   AuthenticatedPatternsRoute: typeof AuthenticatedPatternsRoute
@@ -815,6 +836,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedExpensesRoute: AuthenticatedExpensesRoute,
   AuthenticatedFamilyRoute: AuthenticatedFamilyRoute,
   AuthenticatedForecastRoute: AuthenticatedForecastRoute,
+  AuthenticatedHistoricalImportRoute: AuthenticatedHistoricalImportRoute,
   AuthenticatedInboxRoute: AuthenticatedInboxRoute,
   AuthenticatedNewRoute: AuthenticatedNewRoute,
   AuthenticatedPatternsRoute: AuthenticatedPatternsRoute,
