@@ -4,7 +4,7 @@ import type { ImportRow } from './historical-import';
 import type { Account } from './ledger';
 
 const accounts: Account[] = [{ id: 'bank', name: 'Bank', kind: 'savings', openingBalance: 0, archived: false }];
-const row: ImportRow = { id: 'a', fingerprint: 'a', line: { date: '2026-04-01', description: 'UPI SWIGGY 123456', ref: 'a', amount: 100.25, direction: 'debit' }, proposal: { title: 'Food', category: 'Food', scope: 'personal', memberId: null, amount: 999, currency: 'INR', date: '2026-04-01', paymentMethod: 'bank_transfer', accountId: 'bank', txnType: 'expense', tags: [] }, confidence: 'low', review_group: 'Unmatched or uncertain', decision: 'review', duplicate_kind: 'new', duplicate_id: null };
+const row: ImportRow = { id: 'a', fingerprint: 'a', line: { date: '2026-04-01', description: 'UPI SWIGGY 123456', ref: 'a', amount: 100.25, direction: 'debit' }, proposal: { title: 'Food', merchant: null, description: '', category: 'Food', scope: 'personal', memberId: null, amount: 999, currency: 'INR', date: '2026-04-01', paymentMethod: 'bank_transfer', accountId: 'bank', txnType: 'expense', tags: [] }, confidence: 'low', review_group: 'Unmatched or uncertain', decision: 'review', duplicate_kind: 'new', duplicate_id: null };
 const second: ImportRow = { ...row, id: 'b', fingerprint: 'b', line: { ...row.line, amount: 50.1, direction: 'credit' }, proposal: { ...row.proposal, category: 'Refunds', scope: 'business', txnType: 'refund', organisation: 'Example' } };
 
 describe('Statement grouping', () => {
@@ -23,7 +23,7 @@ describe('Statement grouping', () => {
     expect(groupImportRows([row, second], 'type', accounts).map(g => g.key).sort()).toEqual(['expense', 'refund']);
   });
   it('keeps account identity separate even when account names match', () => {
-    const other = { ...accounts[0], id: 'other' };
+    const other: Account = { id: 'other', name: 'Bank', kind: 'savings', openingBalance: 0, archived: false };
     expect(groupImportRows([row, { ...second, proposal: { ...second.proposal, accountId: 'other' } }], 'account', [...accounts, other])).toHaveLength(2);
   });
   it('groups missing organisations separately', () => {
