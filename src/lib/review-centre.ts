@@ -2,8 +2,9 @@ import type { Expense } from './expenses';
 import type { Account } from './ledger';
 import type { InboxItem } from './inbox';
 import { categoryReviewPreview, financialReview, type FinancialReview } from './financial-review';
+import { cashflow } from './ledger';
 
-export const REVIEW_FILTERS = { all: 'All transactions', category: 'Categorisation required', missing: 'Missing information', type: 'Financial type confirmation', conflict: 'Possible duplicates', ready: 'Suggested corrections' } as const;
+export const REVIEW_FILTERS = { all: 'All transactions', category: 'Categorisation required', missing: 'Missing information', type: 'Financial type confirmation', conflict: 'Possible duplicates', ready: 'Suggested corrections', confirmable:'Ready to Confirm' } as const;
 export type ReviewFilter = keyof typeof REVIEW_FILTERS;
 export const MISSING_FIELDS = { all: 'All missing fields', category: 'Category', account: 'Source account', organisation: 'Organisation', type: 'Financial type', payment: 'Payment method', receiving: 'Receiving account', other: 'Other required details' } as const;
 export type MissingField = keyof typeof MISSING_FIELDS;
@@ -37,6 +38,7 @@ export function matchesReview(row: FinancialReview, filter: ReviewFilter) {
   if (filter === 'missing') return row.group === 'missing' || row.issues.some(i => i.type === 'missing_details');
   if (filter === 'type') return !!row.suggestedType || row.group === 'type';
   if (filter === 'conflict') return row.group === 'conflict';
+  if (filter === 'confirmable') return confirmableImportRows([row]).length>0;
   return !!row.suggestedCategory || !!row.suggestedType;
 }
 
@@ -55,7 +57,9 @@ export function selectReviewIds(previous: Iterable<string>, rows: FinancialRevie
 
 export function selectedReviewSummary(rows: FinancialReview[]) {
   const entries = [...new Map(rows.map(r => [r.transaction.id, r.transaction])).values()];
+  const flow=cashflow(entries);
   return { count: entries.length, total: Math.round(entries.reduce((sum, e) => sum + e.amount, 0) * 100) / 100,
+    amounts:{expenses:flow.spent,income:flow.income,transfers:entries.filter(e=>e.txnType==='transfer').reduce((s,e)=>s+e.amount,0),settlements:entries.filter(e=>e.txnType==='card_payment').reduce((s,e)=>s+e.amount,0)},
     accounts: new Set(entries.map(e => e.accountId ?? 'Unknown')).size,
     organisations: [...new Set(entries.map(e => e.department || 'Unknown'))], types: [...new Set(entries.map(e => e.txnType ?? 'expense'))],
     missing: rows.filter(r => matchesReview(r, 'missing')).length, conflicts: rows.filter(r => matchesReview(r, 'conflict')).length };

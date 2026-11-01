@@ -2,11 +2,11 @@ import type { FinancialReview } from './financial-review';
 import { confirmableImportRows, centreCategoryPreview } from './review-centre';
 
 export function selectionScope(selected: Iterable<string>, rows: FinancialReview[], matching: FinancialReview[]) {
-  const ids = new Set(selected), matches = new Set(matching.map(r => r.transaction.id));
+  const ids = new Set(selected), matches = new Set(matching.map(r => r.transaction.id)),availableIds=new Set(rows.map(r=>r.transaction.id));
   const available = rows.filter(r => ids.has(r.transaction.id));
   return { total: available.length, matching: available.filter(r => matches.has(r.transaction.id)).length,
     hidden: available.filter(r => !matches.has(r.transaction.id)).length,
-    obsolete: [...ids].filter(id => !rows.some(r => r.transaction.id === id)).length };
+    obsolete: [...ids].filter(id => !availableIds.has(id)).length };
 }
 
 export function reviewActionEligibility(rows: FinancialReview[]) {
