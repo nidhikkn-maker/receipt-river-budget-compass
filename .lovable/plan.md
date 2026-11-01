@@ -26,3 +26,18 @@
   - A statement credit without a ledger payment is flagged.
   - The running balance matches `accountBalance`.
 - No database or schema changes and no publishing.
+
+---
+
+# Trip cancellation and deletion (added from your iPad screenshot)
+
+## What you will see
+- The trip page's "More" menu gets **Cancel trip**, **Restore trip** (shown once a trip is cancelled) and **Delete trip**. The same actions are added to each trip row on the All trips list.
+- **Cancel trip** asks you to confirm and shows what is affected: unpaid bookings, open advances and linked expenses. The trip is then marked Cancelled. No expenses or payments are removed. Unpaid bookings can be marked cancelled in the same step if you choose to.
+- **Delete trip** requires typing the trip name. If any expenses, advances or claims are linked, it lists them and only removes the links. The entries stay in your records. Deleting is blocked while a claim is submitted or an advance is unsettled.
+- Cancelled trips stay visible under the Cancelled filter and on the calendar, marked as cancelled.
+
+## Technical details
+- The trip page's "More" toggle is replaced with a menu holding these actions.
+- Cancel sets and Restore clears the existing `cancelledAt` trip field. Delete goes through the store's trip update path, and linked entries lose their trip link through the existing protected metadata update.
+- Tests check that cancelling never deletes expenses, that deleting is blocked while an advance is outstanding, and that restoring returns the trip to its date-based status.
