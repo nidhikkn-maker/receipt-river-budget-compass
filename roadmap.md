@@ -1,5 +1,7 @@
 # Roadmap (Functional Requirements v1.0)
 ## V5.9 Smart financial inbox
+- [ ] Current request: previewed account/type corrections with explicit confirmation, atomic stale-safe application and controlled tests; preserve live records.
+- [ ] V5.9.1 uploaded follow-up: diagnose and separate persisted import, reconciliation, balance verification and statement-period freshness; automatic Inbox refresh, independent counts and developer report. Preview only.
 - [x] First preview slice: historical issues never age out; five transaction-deduplicated groups, evidence-based card/reciprocal-account transfer suggestions, filters/selection, snapshot-bound category preview and existing audited correction/undo. Unresolved transaction issues stay visible despite legacy dismissals. No live records changed.
 - [ ] Priority 1 remaining: reviewed bulk source/destination account and financial-type correction, safe paired-movement linking, high-confidence bulk suggestion acceptance. Existing atomic category APIs cannot safely apply money-changing corrections; no guessed accounts or auto-posting.
 - [x] Continuation: reuse confirmed import rules for review-only ledger suggestions, priority conflicts, strict responsibility guards and same-category bulk confirmation; contextual editable rule seeds reuse the existing explicit-preview editor. Merchant cohorts retain ownership/type/claim partitions, cadence and exact active-profile hints; no automatic expenses or eligibility.
