@@ -277,3 +277,5 @@
 
 ## Travel email intake
 - [x] Email connection work set aside at the user's request; no mailbox access or automatic email intake implemented.
+
+- [ ] Latest request: finish current import-rule work, audit every remaining V5.3 document requirement, implement available gaps and name any external blockers.
