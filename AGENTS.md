@@ -44,4 +44,4 @@
 - Master-record rules (duplicates, organisation usage/rename) live in src/lib/master-data.ts and setup readiness in src/lib/setup-status.ts; every add-account path uses the shared AccountForm so contextual and central creation follow one rule set.
 - PDF table cells with non-Latin text are rendered by the browser onto canvas images (src/lib/pdf-unicode.ts withUnicode) because jsPDF core fonts are Latin-only and cannot shape Indic scripts; titles, footers and bill-page labels use textU()/drawTextU() which image-render non-Latin text.
 - Reports Centre job/history IDs match; callbacks recover imports without duplicates.
-- Import review uses owner-checked, preview-bound atomic changes and audit; tags merge, edits reset approval, and posting includes only selected approved rows.
+- Import review is owner-checked, atomic and audited; edits reset approval. Ledger review uses pure evidence groups and snapshot previews with existing category history/undo; type/account suggestions never auto-write.
