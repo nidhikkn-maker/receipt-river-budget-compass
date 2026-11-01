@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Checkbox } from "@/components/ui/checkbox";
 import { correctionPreview, type CorrectionPreview } from "@/lib/financial-corrections";
@@ -10,8 +10,8 @@ import { Card } from "@/components/Money";
 import { Button } from "@/components/ui/button";
 import { money } from "@/lib/expenses";
 import { useStore } from "@/lib/store";
-import { accountBalance } from "@/lib/ledger";
-import { balanceGate, lineId, missingLines, pairTransfers, crossCheck, parseBalanceStatement, rowsFromItems, statementTotals, type BalanceLine, type CrossRecord, type CrossResult } from "@/lib/statement-crosscheck";
+import { accountBalance, isLiability } from "@/lib/ledger";
+import { isAmex, parseAmexStatement, balanceGate, lineId, missingLines, pairTransfers, crossCheck, parseBalanceStatement, rowsFromItems, statementTotals, type BalanceLine, type CrossRecord, type CrossResult } from "@/lib/statement-crosscheck";
 
 export const Route = createFileRoute("/_authenticated/statement-crosscheck")({
   head: () => ({
@@ -42,7 +42,7 @@ async function readPdf(file: File): Promise<Parsed> {
       const c = await (await doc.getPage(n)).getTextContent();
       rows.push(...rowsFromItems(c.items.flatMap((i) => ("str" in i ? [{ str: i.str, x: i.transform[4] as number, y: i.transform[5] as number }] : []))));
     }
-    const p = parseBalanceStatement(rows, file.name);
+    const p = isAmex(rows) ? parseAmexStatement(rows, file.name) : parseBalanceStatement(rows, file.name);
     if (!p.lines.length) throw Error(`${file.name}: no entries found in this layout`);
     return { name: file.name, ...p };
   } finally { await task.destroy(); }
@@ -51,7 +51,7 @@ async function readPdf(file: File): Promise<Parsed> {
 const LABEL: Record<CrossResult["result"], string> = { found: "Found on other statement", found_wrong_kind: "Found — wrong kind", not_found: "Not found" };
 
 function CrossCheckPage() {
-  const { transactions, accounts, correctFinancialEntries, undoFinancialCorrection, save } = useStore();
+  const { transactions, accounts, correctFinancialEntries, undoFinancialCorrection, save, remove } = useStore();
   const money_accounts = accounts.filter((a) => !a.archived);
   const [accountId, setAccountId] = useState(() => money_accounts.find((a) => /movac/i.test(a.name))?.id ?? money_accounts[0]?.id ?? "");
   const [from, setFrom] = useState("2026-04-01");
@@ -112,26 +112,42 @@ function CrossCheckPage() {
     try { await undoFinancialCorrection(id); setApplied(null); toast.success("Original account and type restored"); } catch (e) { toast.error(e instanceof Error ? e.message : "Couldn’t undo — a later edit may block it."); }
   };
   const homeLines = home.flatMap((p) => p.lines);
-  const missing = useMemo(() => pairTransfers(missingLines(records, homeLines), other.flatMap((p) => p.lines)), [records, home, other]);
+  // Includes transfers already posted from another account into this one, so they are not reported missing or posted twice.
+  const accountRecords = useMemo(() => transactions.filter((e) => !e.transferCounterpartOf && (e.accountId === accountId || e.toAccountId === accountId) && e.date >= from && e.date <= to).map((e) => ({ date: e.date, amount: e.amount })), [transactions, accountId, from, to]);
+  const missing = useMemo(() => pairTransfers(missingLines(accountRecords, homeLines), other.flatMap((p) => p.lines)), [accountRecords, home, other]);
   const acct = accounts.find((a) => a.id === accountId);
   const closing = home.length ? home[home.length - 1]!.closing : null;
-  const gate = acct && home.length ? balanceGate(accountBalance(acct, transactions as never), missing, closing) : null;
+  const gate = acct && home.length ? balanceGate(accountBalance(acct, transactions as never), missing, closing, isLiability(acct.kind)) : null;
   const [posting, setPosting] = useState<string | null>(null);
+  const batchKey = `ledgerline:statement-batch:${accountId}`;
+  const [batch, setBatch] = useState<string[]>([]);
+  useEffect(() => { try { setBatch(JSON.parse(localStorage.getItem(batchKey) ?? "[]")); } catch { setBatch([]); } }, [batchKey]);
+  const keepBatch = (ids: string[]) => { setBatch(ids); if (ids.length) localStorage.setItem(batchKey, JSON.stringify(ids)); else localStorage.removeItem(batchKey); };
+  const undoBatch = async () => {
+    const left: string[] = [];
+    for (const id of batch) { const e = transactions.find((t) => t.id === id); if (!e) continue; try { await remove(e); } catch { left.push(id); } }
+    keepBatch(left);
+    if (left.length) toast.error(`${left.length} entries couldn’t be removed — try Undo again.`); else toast.success("Statement posting batch reversed");
+  };
   const postMissing = async () => {
     if (!acct || !gate?.ok) return;
     if (missing.some((m) => m.transferWith) && !targetId) { toast.error("Choose which account the other statements belong to, so transfers are posted between the right accounts."); return; }
     let done = 0;
+    const ids: string[] = [...batch];
     try {
       for (const m of missing) {
         setPosting(`Saving ${done + 1} of ${missing.length}…`);
         const transfer = !!m.transferWith;
+        const id = await lineId(accountId, m);
         await save({
           title: m.description.slice(0, 80) || "Statement entry", merchant: null, category: transfer ? "Transfer" : "Uncategorised", scope: "business", memberId: null,
           amount: m.amount, currency: "INR", paymentMethod: "bank_transfer", date: m.date, description: `Statement import · ${m.source}`, tags: ["statement-import"],
           txnType: transfer ? "transfer" : m.direction === "debit" ? "expense" : "income",
           accountId: transfer && m.direction === "credit" ? targetId : accountId,
           toAccountId: transfer ? (m.direction === "debit" ? targetId : accountId) : null,
-        }, { createId: await lineId(accountId, m), noRefresh: true });
+        }, { createId: id, noRefresh: true });
+        if (!ids.includes(id)) ids.push(id);
+        keepBatch([...ids]);
         done++;
       }
       toast.success(`${done} statement entries posted to ${acct.name}`);
@@ -224,6 +240,7 @@ function CrossCheckPage() {
                 {missing.map((m, i) => <li key={i} className="flex justify-between gap-2 p-2"><span className="min-w-0 truncate">{m.date} · {m.description}{m.transferWith ? ` · transfer ↔ ${m.transferWith.source}` : ""}</span><span className="shrink-0 tabular-nums">{m.direction === "debit" ? "−" : "+"}{money(m.amount)}</span></li>)}
               </ul>
               <Button onClick={postMissing} disabled={!gate?.ok || !missing.length || !!posting}>{posting ?? `Confirm and post ${missing.length} entries`}</Button>
+              {batch.length > 0 && <Button variant="outline" onClick={undoBatch}>Undo posting batch ({batch.length} entries)</Button>}
             </>)}
           </Card>
           <div className="flex justify-end"><Button variant="outline" onClick={exportCsv}><Download className="size-4" /> Export CSV</Button></div>

@@ -150,8 +150,9 @@ export function pairTransfers(missing: BalanceLine[], otherLines: BalanceLine[])
 }
 
 /** Balance gate: app balance plus the net effect of the proposed posts must equal the statement closing balance within ₹0.01. */
-export function balanceGate(appBalance: number, posts: BalanceLine[], closing: number | null) {
-  const net = Math.round(posts.reduce((s, l) => s + (l.direction === "credit" ? l.amount : -l.amount), 0) * 100) / 100;
+export function balanceGate(appBalance: number, posts: BalanceLine[], closing: number | null, liability = false) {
+  const sign = liability ? -1 : 1; // on a card, a credit lowers what is owed
+  const net = Math.round(posts.reduce((s, l) => s + sign * (l.direction === "credit" ? l.amount : -l.amount), 0) * 100) / 100;
   const after = Math.round((appBalance + net) * 100) / 100;
   const difference = closing === null ? null : Math.round((closing - after) * 100) / 100;
   return { net, after, difference, ok: difference !== null && Math.abs(difference) <= 0.01 };
