@@ -1,4 +1,11 @@
 # Roadmap (Functional Requirements v1.0)
+## V5.4 audit — evidence before release
+- [x] Save brief and rerun existing regression without cloud writes: 655 tests passed.
+- [x] Inspect architecture/recovery/financial rules; run quick security/dependency scans and request deeper scan.
+- [ ] Isolated workflow/restore/security audit — blocked: main and audit draft both share live data; no isolated cloud environment established.
+- [ ] Correct confirmed financial/recovery/report/dependency defects after approval, then rerun affected and critical regression checks.
+- [ ] Real iPhone/provider/live-worker acceptance — requires appropriate device/provider access and isolated testing.
+
 - [x] Fix Delete Data: in-app typed confirmation, visible errors, complete review/history cleanup and checked owner-file/offline cleanup; signed-in failure/cancel/mobile verified without wiping user data; 241 tests pass. Preview changes need publication.
 - [x] Face ID on sign-in page: signed-in virtual platform credential registered and verified, dashboard opens without second prompt, biometric failure offers password, signed-out state cannot bypass sign-in; 235 tests pass. Publication and real iPhone verification remain pending.
 - [x] Receipt details review before saving, persistent retry/manual entry; authenticated real OCR retry and corrected merchant/date/amount verified on mobile
