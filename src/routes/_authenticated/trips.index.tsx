@@ -14,7 +14,7 @@ import { PlanCalendar } from "@/components/PlanCalendar";
 import { CreateTripDialog } from "@/components/trip/CreateTripDialog";
 
 export const Route = createFileRoute("/_authenticated/trips/")({
-  validateSearch: (search: Record<string, unknown>): { trip?: string } => typeof search["trip"] === "string" ? { trip: search["trip"] } : {},
+  validateSearch: (search: Record<string, unknown>): { trip?: string; status?: "upcoming" } => ({ ...(typeof search["trip"] === "string" ? { trip: search["trip"] } : {}), ...(search["status"] === "upcoming" ? { status: "upcoming" as const } : {}) }),
   head: () => ({
     meta: [
       { title: "Travel Manager · Ledgerline" },
@@ -35,7 +35,7 @@ function Trips() {
   const today = todayISO();
   const search = Route.useSearch();
   const navigate = useNavigate();
-  const [filter, setFilter] = useState<"all" | TripStatus>("all");
+  const [filter, setFilter] = useState<"all" | TripStatus>(search.status ?? "all");
   const [workspace, setWorkspace] = useState<string>("all");
   const [query, setQuery] = useState("");
   const [createOpen, setCreateOpen] = useState(false);
