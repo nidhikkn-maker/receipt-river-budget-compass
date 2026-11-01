@@ -1,5 +1,5 @@
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import type { Expense } from "@/lib/expenses";
 import { defaultPreferences } from "@/lib/preferences";
 import { inboxItems } from "@/lib/inbox";
@@ -8,6 +8,7 @@ vi.mock("@/lib/store", () => ({ useStore: () => mocks.store }));
 vi.mock("@tanstack/react-router", () => ({ Link: ({ children }: { children: React.ReactNode }) => <span>{children}</span> }));
 import { FinancialReview } from "./FinancialReview";
 afterEach(cleanup);
+beforeAll(() => { Element.prototype.scrollIntoView = vi.fn(); });
 const transaction: Expense = { id: "controlled-copy", title: "Controlled expense", merchant: "Controlled merchant", category: "Miscellaneous", scope: "personal", memberId: null, splits: [], amount: 100, originalAmount: 100, currency: "INR", fxRate: 1, paymentMethod: "upi", reconciledAt: null, statementRef: "controlled statement", date: "2026-04-01", description: "Untouched source", receipts: [], txnType: "expense", accountId: "bank" };
 describe("controlled financial correction flow", () => {
   it("requires exact preview and explicit confirmation, preserves sources and exposes undo", async () => {
