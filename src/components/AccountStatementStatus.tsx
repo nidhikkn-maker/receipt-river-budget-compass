@@ -8,7 +8,7 @@ import { money } from "@/lib/expenses";
 import { Button } from "./ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "./ui/dialog";
 
-export function AccountStatementStatus() {
+export function AccountStatementStatus({ onAttention }: { onAttention?: (count: number | null) => void } = {}) {
   const { accounts, transactions, preferences, refresh } = useStore();
   const [evidence, setEvidence] = useState<StatementStatusEvidence[]>([]), [status, setStatus] = useState("Loading statement evidence…"), [selected, setSelected] = useState<string | null>(null);
   const generation = useRef(0);
@@ -37,6 +37,7 @@ export function AccountStatementStatus() {
   useEffect(()=>{void load();},[transactions,accounts]);
   const rows = accounts.filter(a => !a.archived).map(a => accountStatementStatus(a, evidence, transactions, preferences, new Date().toISOString().slice(0, 10)));
   const summary = accountStatementSummary(rows), focused = rows.find(r => r.accountId === selected);
+  useEffect(() => { onAttention?.(status ? null : summary.attention); }, [status, summary.attention, onAttention]);
   if (status) return <div className="flex flex-wrap items-center gap-2 py-4 text-sm" role="status"><p>{status}</p><Button size="sm" variant="outline" onClick={() => load(true)}>Retry account checks</Button></div>;
   return <section className="space-y-4" aria-label="Statement account status">
     <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">{[["Total accounts", summary.total], ["Current statements", summary.current], ["Reconciled accounts", summary.reconciled], ["Verified balances", summary.verified], ["Requiring attention", summary.attention]].map(([label, count]) => <div key={label} className="border-b py-2"><p className="text-xs text-muted-foreground">{label}</p><p className="text-xl font-semibold tabular-nums">{count}</p></div>)}</div>

@@ -28,13 +28,15 @@ export function InboxWork() {
   return (
     <div className="mb-4 grid gap-2">
       {importError&&<p role="status" className="text-sm text-warning">Could not refresh statement imports.</p>}
-      {groupImportInbox(imports).map(group=><section key={group.label} aria-label={`Imports · ${group.label}`} className="space-y-2"><h3 className="text-xs font-medium text-muted-foreground">{group.label} · {group.items.length}</h3>{group.items.map(b=><Link key={b.id} to="/historical-import" search={{batch:b.id}} className="flex gap-3 items-center border rounded-lg bg-card p-3"><FileText className="h-5 w-5 shrink-0 text-primary"/><div className="min-w-0"><p className="truncate text-sm font-semibold">{b.file_name}</p><p className="text-xs text-muted-foreground">Statement import · {b.status==='review'?'Ready for review':b.status}</p></div></Link>)}</section>)}
+      {!!imports.length && <h2 className="text-lg font-semibold">Statement imports</h2>}
+      {groupImportInbox(imports).map(group=><section key={group.label} aria-label={`Imports · ${group.label}`} className="space-y-2"><h3 className="text-xs font-medium text-muted-foreground">{group.label} · {group.items.length}{imports.length === 30 ? ' · latest 30 shown' : ''}</h3>{group.items.slice(0, 4).map(b=><Link key={b.id} to="/historical-import" search={{batch:b.id}} className="flex gap-3 items-center border rounded-lg bg-card p-3"><FileText className="h-5 w-5 shrink-0 text-primary"/><div className="min-w-0"><p className="truncate text-sm font-semibold">{b.file_name}</p><p className="text-xs text-muted-foreground">Statement import · {b.status==='review'?'Ready for review':b.status}</p></div></Link>)}{group.items.length > 4 && <Link to="/historical-import" className="text-sm text-primary underline">View all {group.label.toLowerCase()} imports</Link>}</section>)}
       {!!drafts && (
         <Link to="/drafts" className="flex items-center gap-3 rounded-2xl border bg-card p-3">
           <PencilLine className="h-5 w-5 text-gold-strong" />
           <div className="min-w-0 flex-1"><div className="text-sm font-semibold">{drafts} unfinished {drafts === 1 ? "draft" : "drafts"}</div><div className="text-xs text-muted-foreground">Resume where you left off</div></div>
         </Link>
       )}
+      {!!reports.length && <h2 className="mt-4 text-lg font-semibold">Reports & notifications</h2>}
       {reports.map((r) => (
         <Link key={r.id} to="/report-centre" className="flex items-center gap-3 rounded-2xl border bg-card p-3">
           <FileText className="h-5 w-5 text-primary" />
