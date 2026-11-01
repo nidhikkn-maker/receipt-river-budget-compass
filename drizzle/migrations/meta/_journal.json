@@ -302,6 +302,13 @@
       "when": 1793518734601,
       "tag": "0042_statement_identity_coverage_and_checkpoints",
       "breakpoints": true
+    },
+    {
+      "idx": 43,
+      "version": "7",
+      "when": 1793519040988,
+      "tag": "0043_guard_statement_identity_at_atomic_post",
+      "breakpoints": true
     }
   ]
 }
