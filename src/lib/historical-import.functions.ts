@@ -35,6 +35,8 @@ export const postHistoricalImport=createServerFn({method:'POST'}).middleware([re
     db.from('accounts').select('*').eq('owner_id',context.userId),
   ]);
   if(batch.error || rows.error || accounts.error || rows.data.length!==new Set(data.ids).size) throw Error('Could not read the selected import');
+  const identity = batch.data.statement_review as unknown as import('./statement-evidence').StatementReview;
+  if (!identity.identity?.confirmed || identity.identity.accountId !== batch.data.account_id) throw Error('Confirm the statement account against the original before importing entries.');
   const accs=accounts.data.map(a=>({id:a.id,name:a.name,kind:a.kind,openingBalance:Number(a.opening_balance),archived:a.archived})) as Account[];
   const converted: {id:string;rate:number;homeAmount:number;fxDate:string;proposal:Json;currency:string}[]=[];
   const rates=new Map<string,{rate:number;date:string}>();

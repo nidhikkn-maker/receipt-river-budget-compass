@@ -9,7 +9,7 @@ import { createLovableAiGatewayRunIdFetch } from './ai-import/run-id.server.ts';
 import { importFailurePolicy } from './scanned-import-policy';
 
 const balance=z.object({value:z.number().nullable(),quote:z.string(),page:z.number().nullable()});
-const schema=z.object({rows:z.array(z.object({date:z.string(),description:z.string(),amount:z.number(),direction:z.enum(['debit','credit']),reference:z.string(),page:z.number()})),opening:balance,closing:balance,periodFrom:z.string().nullable(),periodTo:z.string().nullable()});
+const schema=z.object({rows:z.array(z.object({date:z.string(),description:z.string(),amount:z.number(),direction:z.enum(['debit','credit']),reference:z.string(),page:z.number()})),opening:balance,closing:balance,periodFrom:z.string().nullable(),periodTo:z.string().nullable(),identities:z.array(z.object({bank:z.string().nullable(),identifier:z.string().nullable(),quote:z.string(),page:z.number().nullable()})).max(8)});
 export async function extractScannedChunk(db:SupabaseClient<Database>,batch:Database['public']['Tables']['import_batches']['Row'],blob:Blob) {
   const paused=await db.from('import_ai_state').select('*').eq('owner_id',batch.owner_id).maybeSingle();
   if(paused.error)throw Error('Could not check document processing state');
@@ -39,7 +39,7 @@ export async function extractScannedChunk(db:SupabaseClient<Database>,batch:Data
     for await(const part of result.fullStream){if(part.type==='error')throw part.error;}
     if(await result.finishReason==='content-filter'){type='refusal';message='The provider declined this document request';throw Error(message);}
     const output=await result.output;
-    const ins=await db.from('import_pdf_pages').insert({batch_id:batch.id,owner_id:batch.owner_id,page_start:start,page_end:end,rows:output.rows as unknown as Json,balances:{opening:output.opening,closing:output.closing,periodFrom:output.periodFrom,periodTo:output.periodTo} as unknown as Json,run_id:run.getRunId()??null});
+    const ins=await db.from('import_pdf_pages').insert({batch_id:batch.id,owner_id:batch.owner_id,page_start:start,page_end:end,rows:output.rows as unknown as Json,balances:{opening:output.opening,closing:output.closing,periodFrom:output.periodFrom,periodTo:output.periodTo,identities:output.identities} as unknown as Json,run_id:run.getRunId()??null});
     if(ins.error)throw Error('Could not save extracted page results');
     const update=await db.from('import_batches').update({next_page:end,total_pages:total,status:end<total?'queued':'processing',attempts:0,lease_until:new Date().toISOString(),error:null}).eq('id',batch.id).neq('status','cancelled');
     if(update.error)throw Error('Could not save PDF progress');
