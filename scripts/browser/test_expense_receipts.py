@@ -83,6 +83,7 @@ class ExpenseReceiptButtons(unittest.IsolatedAsyncioTestCase):
 
     async def test_submit_expense_and_read_back_through_list(self):
         await self.page.get_by_label("Amount", exact=True).fill("1250.50")
+        await self.page.get_by_label("Note", exact=True).fill("Controlled submitted expense")
         await self.choose_account()
         await self.page.get_by_role("button", name="Save expense", exact=True).click()
         await expect(self.page.get_by_role("heading", name="Controlled save complete")).to_be_visible()
