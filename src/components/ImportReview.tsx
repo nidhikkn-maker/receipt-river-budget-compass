@@ -8,7 +8,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { SCOPES, SCOPE_LABEL, money, type Scope } from '@/lib/expenses';
 import { TXN_LABEL, TXN_TYPES } from '@/lib/ledger';
 import { classificationStatus, mergeImportPatch, importSelectionSummary, REVIEW_GROUPS, merchantFamily, postingBlockers, orientStatementMove, type ImportRow, type ImportBatch, type ImportProposal } from '@/lib/historical-import';
-import { reviseRows } from '@/lib/import-repository';
+import { reviseRows, listImportRows } from '@/lib/import-repository';
+import { importResultCounts } from '@/lib/import-manifest';
 import { postHistoricalImport } from '@/lib/historical-import.functions';
 import { downloadBlob, toCsv } from '@/lib/reports';
 import { tripTag } from '@/lib/intelligence';
@@ -29,6 +30,7 @@ export function ImportReview({batch,rows,posted,onReload}:{batch:ImportBatch;row
   const [preview,setPreview]=useState<{rows:ImportRow[];patch:Partial<ImportProposal>;decision?:ImportRow['decision']}|null>(null),[final,setFinal]=useState(false);
   const [learning,setLearning]=useState<{row:ImportRow;proposal:ImportProposal}|null>(null),[learningScope,setLearningScope]=useState<LearningScope>('one');
   const [rule,setRule]=useState<{merchant:string;mappings:Partial<ImportProposal>}|null>(null);
+  const [result,setResult]=useState<ReturnType<typeof importResultCounts>|null>(null);
   const currentPosted=new Set(rows.filter(r=>posted.has(r.fingerprint)).map(r=>r.fingerprint));
   const active=rows.filter(r=>!posted.has(r.fingerprint));
   const filtered=active.filter(r=>(group==='All'||r.review_group===group)&&(merchant==='All'||merchantFamily(r.line.description)===merchant)&&(!from||r.line.date>=from)&&(!to||r.line.date<=to)&&`${r.proposal.title} ${r.line.description} ${r.proposal.category}`.toLowerCase().includes(search.toLowerCase()));
@@ -56,12 +58,17 @@ export function ImportReview({batch,rows,posted,onReload}:{batch:ImportBatch;row
   };
   const confirm=async()=>{
     if(!summary.eligible.length)return;
-    let count=0;
+    let count=0,failed=false;const selectedIds=new Set(picked.map(row=>row.id));
     try {
       for(let i=0;i<summary.eligible.length;i+=100)count+=(await post({data:{batch:batch.id,ids:summary.eligible.slice(i,i+100).map(r=>r.id)}})).count;
       toast.success(`${count} imported · ${summary.selected-summary.eligible.length} left for review`);setFinal(false);setSelected(new Set());
-    } catch(error) {toast.error(`${count} imported before interruption. Remaining records are saved for retry.`);throw error;}
-    finally {await onReload();await refresh();}
+    } catch(error) {failed=true;toast.error(`${count} imported before interruption. Remaining records are saved for retry.`);throw error;}
+    finally {
+      await onReload();await refresh();
+      const latestRows=await listImportRows(batch.id),fingerprints=new Set<string>();
+      for(let from=0;;from+=1000){const saved=await supabase.from('import_posts').select('fingerprint').eq('account_id',batch.account_id).range(from,from+999);if(saved.error)throw Error('Could not verify import results; reopen review before retrying');saved.data.forEach(row=>fingerprints.add(row.fingerprint));if(saved.data.length<1000)break;}
+      setResult(importResultCounts(latestRows,fingerprints,selectedIds,failed));
+    }
   };
   const selectRows=(items:ImportRow[])=>setSelected(s=>new Set([...s,...items.filter(r=>r.duplicate_kind!=='exact'&&r.decision!=='excluded').map(r=>r.id)]));
   const learn=()=>{
@@ -76,11 +83,13 @@ export function ImportReview({batch,rows,posted,onReload}:{batch:ImportBatch;row
     const existing=await supabase.from('import_rules').select('id').eq('merchant',rule.merchant).eq('account_id',batch.account_id).eq('enabled',true);
     if(existing.error)throw Error('Could not check existing rules');
     if(existing.data.length)throw Error('A rule already exists for this merchant and account. Review it in Import rules before adding another.');
-    const result=await supabase.from('import_rules').insert({merchant:rule.merchant,account_id:batch.account_id,mappings:rule.mappings as Json});
+    const directions=[...new Set(picked.filter(row=>merchantFamily(row.line.description)===rule.merchant).map(row=>row.line.direction??'debit'))];
+    const result=await supabase.from('import_rules').insert({merchant:rule.merchant,account_id:batch.account_id,mappings:rule.mappings as Json,conditions:{currency:batch.currency,...(directions.length===1?{direction:directions[0]}:{})}});
     if(result.error)throw Error('Could not remember rule');
     setRule(null);toast.success('Rule remembered for future imports');
   };
   return <div className="space-y-6">
+    {result&&<section aria-label="Import results" className="border-y py-4"><h3 className="mb-3 font-semibold">Import results</h3><dl className="grid grid-cols-2 gap-3 sm:grid-cols-4">{[['Successfully recorded',result.recorded],['Skipped',result.skipped],['Requires review',result.requiresReview],['Failed · retry available',result.failed]].map(([label,count])=><div key={label}><dt className="text-xs text-muted-foreground">{label}</dt><dd className="text-xl font-semibold">{count}</dd></div>)}</dl></section>}
     <div className="flex flex-wrap items-center gap-2"><Button variant="outline" onClick={async()=>{const result=await supabase.storage.from('receipts').createSignedUrl(batch.file_path,60);if(result.error)throw Error('Original unavailable');window.open(result.data.signedUrl,'_blank','noopener,noreferrer');}}>Original statement</Button><Button variant="ghost" onClick={()=>downloadBlob(new Blob([toCsv({title:'Import audit',headers:['Date','Description','Reference','Amount','Direction','Category','Workspace','Decision','Duplicate'],rows:rows.map(r=>[r.line.date,r.line.description,r.line.ref,r.line.amount,r.line.direction ?? 'debit',r.proposal.category,r.proposal.scope,posted.has(r.fingerprint)?'posted':r.decision,r.duplicate_kind])})],{type:'text/csv'}),`import-audit-${batch.id}.csv`)}>Export review audit</Button><Button asChild variant="ghost"><Link to="/settings" hash="import-rules">Import rules</Link></Button></div>
     <div className="flex gap-2 border-b pb-3">{(['overview','groups','transactions'] as const).map(v=><Button key={v} size="sm" variant={view===v?'default':'ghost'} onClick={()=>{setView(v);setGroupKey(null);setLimit(50);}}>{v==='overview'?'Overview':v==='groups'?'Groups':'Transactions'}</Button>)}</div>
     {view==='overview'&&<><div className="grid grid-cols-2 gap-4 sm:grid-cols-3">{[['Extracted',rows.length],['Verified',active.filter(r=>classificationStatus(r)==='Verified').length],['Suggested',active.filter(r=>classificationStatus(r)==='Suggested').length],['Needs review',active.filter(r=>classificationStatus(r)==='Needs review').length],['Duplicates',active.filter(r=>r.duplicate_kind!=='new').length],['Already recorded',currentPosted.size]].map(([label,count])=><div key={label}><p className="text-xs text-muted-foreground">{label}</p><p className="text-xl font-semibold">{count}</p></div>)}</div><p className="text-sm text-muted-foreground">{accounts.find(a=>a.id===batch.account_id)?.name} · {batch.period_from ?? 'Period not confirmed'} {batch.period_to?`– ${batch.period_to}`:''}</p><Button onClick={()=>setView('groups')}>Review transaction groups</Button></>}
