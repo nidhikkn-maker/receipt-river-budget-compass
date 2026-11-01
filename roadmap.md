@@ -4,7 +4,7 @@
 - [x] Root cause: correction form always displayed both internal account fields even though expense preview already ignores destination. Conditional fields, compatible card/loan targets, incoming account labels and mixed-type review guard added; existing protected confirmation retained.
 - [x] External recipient directory in owner preferences, optional identifiers/verified details/organisation/category preference, explicit preview-confirm create/edit/archive, search and new-entry picker; existing entries never automatically relabelled.
 - [x] Combined category/workspace/organisation/activity preview-confirm uses one existing atomic metadata operation; claims, incompatible types and split responsibility stay excluded.
-- [ ] Bulk durable payee association and external recoverable-loan/advance treatment blocked: user chose Keep shared storage unchanged; no new shared schema/protected-save support permitted.
+- [x] Payee links, bulk recipient mapping and lent/borrowed tracking (user approved shared saving)
 - [ ] Complete 18-case hosted financial/device acceptance; isolated hosted storage and physical device access still unavailable.
 ## Isolated reconciliation storage and physical-device acceptance
 - [x] Disposable local PostgreSQL test storage verifies saved evidence/checkpoint survives closing/reopening, owner isolation and unchanged balances; 44 focused checks passed, no Cloud access.
@@ -50,7 +50,7 @@
 - [x] Compact claim prefilling, explicit ambiguity review, organisation allocation/selection, eligible outstanding-only totals, frozen snapshots and regeneration versions; existing statements remain separate.
 - [x] 717 regression checks passed; authenticated pages and isolated in-memory save/reload → prefill → bill PDF → v2 flow verified; 402px page/form no overflow or errors; nothing published.
 - [ ] Cross-device cloud persistence/permission write acceptance — requires isolated cloud testing, because current preview and production share data; owner policy inspected, real cloud writes deliberately not tested.
-- [ ] Advance-to-claim funding allocation — needs a confirmed per-expense/per-organisation funding model; trips with unallocated advances block formal claim generation rather than guessing a deduction.
+- [x] Advance applied per claim — user enters amount each time
 - [ ] Real iPhone Safari verification — requires an actual device.
 ## V5.5 compact trip budget
 - [x] Compact Trip Budget card (Total/Actual/Remaining/Reimbursable), Edit Budget sheet with single save, tabbed Budget Breakdown (workspace/traveller/category/currency/organisation), "Budget not set" and "Budget requires confirmation" states, utilisation warnings configurable in Settings; 697 tests pass, build OK, phone-width browser verified, no live records changed, nothing published.
