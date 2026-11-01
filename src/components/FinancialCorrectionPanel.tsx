@@ -5,7 +5,7 @@ import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "./ui/dialog";
-import { useStore } from "@/lib/store";
+import { useStore, type FinancialCorrectionHistory } from "@/lib/store";
 import { money } from "@/lib/expenses";
 import { TXN_LABEL, type TxnType } from "@/lib/ledger";
 import type { FinancialReview } from "@/lib/financial-review";
@@ -16,7 +16,7 @@ export function FinancialCorrectionPanel({ rows, onSaved }: { rows: FinancialRev
   const [type, setType] = useState("keep"), [source, setSource] = useState("keep"), [destination, setDestination] = useState("keep");
   const [principal, setPrincipal] = useState(""), [interest, setInterest] = useState("");
   const [preview, setPreview] = useState<CorrectionPreview | null>(null);
-  const [history, setHistory] = useState<{ id: string; createdAt: string; count: number }[]>([]);
+  const [history, setHistory] = useState<FinancialCorrectionHistory[]>([]);
   const [historyError, setHistoryError] = useState("");
   const [restore, setRestore] = useState<string | null>(null);
   const operation = useRef<string | null>(null);
@@ -48,6 +48,6 @@ export function FinancialCorrectionPanel({ rows, onSaved }: { rows: FinancialRev
       <p className="text-sm text-muted-foreground">Original amounts, exchange rates, dates, narration and statements stay unchanged. Previous statement matching is reset for review. No entries are created or merged. Changes are audited; later edits block undo.</p>
       <div className="flex flex-wrap gap-2"><Button variant="outline" onClick={() => setPreview(null)}>Cancel</Button><Button onClick={apply}>Confirm financial changes</Button></div>
     </DialogContent></Dialog>
-    <Dialog open={!!restore} onOpenChange={v => { if (!v) setRestore(null); }}><DialogContent><DialogHeader><DialogTitle>Restore original account & type?</DialogTitle><DialogDescription>The exact original accounts, types, repayment split and previous statement matching will be restored for this batch. Any later edit blocks the entire restoration.</DialogDescription></DialogHeader><Button variant="outline" onClick={() => setRestore(null)}>Cancel</Button><Button onClick={async () => { if (!restore) return; await undoFinancialCorrection(restore); setRestore(null); await loadHistory(); toast.success("Original financial treatment restored."); }}>Confirm restoration</Button></DialogContent></Dialog>
+    <Dialog open={!!restore} onOpenChange={v => { if (!v) setRestore(null); }}><DialogContent className="max-h-[85dvh] overflow-y-auto"><DialogHeader><DialogTitle>Restore original account & type?</DialogTitle><DialogDescription>The exact original accounts, types, repayment split and previous statement matching will be restored for this batch. Any later edit blocks the entire restoration.</DialogDescription></DialogHeader><ul className="divide-y text-sm">{history.find(h => h.id === restore)?.entries.map(e => <li key={e.before.id} className="space-y-1 py-2"><p className="font-medium">{e.before.title} · {money(Number(e.before.amount))}</p><p>{TXN_LABEL[e.after.txn_type]} → {TXN_LABEL[e.before.txn_type]}</p><p>Source: {name(e.after.account_id)} → {name(e.before.account_id)}</p><p>Receiving: {name(e.after.to_account_id)} → {name(e.before.to_account_id)}</p>{e.before.txn_type === "loan_repayment" && <p>Original principal {e.before.principal} · interest {e.before.interest}</p>}</li>)}</ul><Button variant="outline" onClick={() => setRestore(null)}>Cancel</Button><Button onClick={async () => { if (!restore) return; await undoFinancialCorrection(restore); setRestore(null); await loadHistory(); toast.success("Original financial treatment restored."); }}>Confirm restoration</Button></DialogContent></Dialog>
   </div>;
 }

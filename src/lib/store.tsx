@@ -38,6 +38,7 @@ export interface AccountPatch {
   name?: string; creditLimit?: number | null; dueDay?: number | null; minBalance?: number; issuer?: string; lastFour?: string | null;
   statementDay?: number | null; interestRate?: number | null; includeInCash?: boolean; details?: AccountDetails;
 }
+export interface FinancialCorrectionHistory { id: string; createdAt: string; count: number; entries: { before: { id: string; title: string; txn_type: TxnType; account_id: string | null; to_account_id: string | null; amount: number; principal: number | null; interest: number | null }; after: { txn_type: TxnType; account_id: string | null; to_account_id: string | null; principal: number | null; interest: number | null; correction_revision: number } }[] }
 export interface NewAccount { name: string; kind: AccountKind; openingBalance: number; issuer?: string; lastFour?: string | null; creditLimit?: number | null; statementDay?: number | null; dueDay?: number | null; interestRate?: number | null; details?: AccountDetails }
 export interface DocumentMeta { title: string; docType: DocType; docDate: string | null; amount: number | null; currency: string; merchant: string | null; notes: string; text?: string; transactionId: string | null; accountId: string | null; loanId: string | null; expiresOn: string | null }
 
@@ -57,7 +58,7 @@ interface Ctx {
   undoCategoryBatch: (id: string) => Promise<void>;
   correctFinancialEntries: (preview: CorrectionPreview, id: string) => Promise<void>;
   undoFinancialCorrection: (id: string) => Promise<void>;
-  financialCorrectionHistory: () => Promise<{ id: string; createdAt: string; count: number }[]>;
+  financialCorrectionHistory: () => Promise<FinancialCorrectionHistory[]>;
   userId: string;
   name: string;
   updateName: (name: string) => Promise<void>;
@@ -361,7 +362,7 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
   };
   const financialCorrectionHistory: Ctx["financialCorrectionHistory"] = async () => {
     const result = await supabase.from("financial_corrections").select("id,created_at,entries").is("undone_at", null).order("created_at", { ascending: false }).limit(20);
-    check(result.error); return (result.data ?? []).map(r => ({ id: r.id, createdAt: r.created_at, count: Array.isArray(r.entries) ? r.entries.length : 0 }));
+    check(result.error); return (result.data ?? []).map(r => ({ id: r.id, createdAt: r.created_at, count: Array.isArray(r.entries) ? r.entries.length : 0, entries: r.entries as unknown as FinancialCorrectionHistory["entries"] }));
   };
 
   const remove: Ctx["remove"] = async (e) => {
