@@ -1,8 +1,8 @@
 # Roadmap (Functional Requirements v1.0)
 ## v5.14 historical completion audit (read-only)
-- [ ] Investigate why two statements are unconfirmed/unposted; verify actual identity, coverage and balance evidence rather than assuming the cause.
-- [ ] Inventory 357 records/16 accounts, missing periods, source-to-ledger matches, duplicates, unknown mappings and evidence-backed bulk/individual proposals; produce a full dry-run register.
-- [ ] Deliver Historical Completion Inventory, Statement Coverage Report, Dry-Run Correction Register, Financial Integrity Report and unresolved exceptions with exact completion counts.
+- [x] Original private PDFs independently verified: correct IDFC account headers/Apr–Nov coverage/balances; page extraction complete but identity evidence and all confirmations absent. Verified two SGST fingerprint collisions (256 raw/254 staged) and MOVAC printed debit-header ₹0.01 discrepancy; no assumptions about why a past click was not saved.
+- [x] Corrected scope: 357/16 was whole-app; requesting owner has 345 records/seven accounts. Complete 256-source/345-ledger CSVs: 117 unique-reference lines, four ambiguous-reference/four money-only/131 unmatched; 124 historical filename/account conflicts, nine potential duplicate groups, 54 category hints. Automatic completion/bulk fully eligible now zero; genuine individual-decision count blocked by missing originals/purpose evidence.
+- [x] Delivered five v5.14 reports and two detailed registers in the Historical Audit collection. Independently calculated seven balances and real owner report cashflow match production rules; 74 focused isolated tests pass. Whole-app counts/fingerprints unchanged from pre-audit (357/16), zero posts; no shared schema/record changes or publication.
 - [ ] Test hosted posting/correction/reconciliation/report save/retry/recovery only in isolated hosted storage; blocked if unavailable. No shared schema, posting, historical correction or publication without separate approval.
 ## Current mobile Inbox and transfer approval verification
 - [x] Eight financial-rule acceptance tests pass; two read-only Cloud inventories preserve all 357 records/16 accounts and identical fingerprints. Source totals/closing balances remain UNVERIFIED: both uploaded statements lack identity/closing confirmation and there are zero checkpoints.
