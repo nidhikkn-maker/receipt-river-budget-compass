@@ -56,20 +56,40 @@ describe("V5.4 F-001–F-008 exact financial outcomes — no cloud writes", () =
   });
 });
 
-// Expected failures record defects, NOT passing release gates. Remove .fails after approved fixes.
-describe("V5.4 known financial defects — release gates NOT passed", () => {
-  it.fails("D-FIN-001: Home and AI must quote ₹4,000 remaining, not the ₹10,000 original claim", () => {
+describe("V5.4 financial defect regressions — no cloud writes", () => {
+  it("D-FIN-001: Home and AI must quote ₹4,000 remaining, not the ₹10,000 original claim", () => {
     const tx = [claim(6000)];
     expect(position(input(tx)).reimbursements.pendingAmount).toBe(4000);
     expect(assistantFacts(input(tx)).actual.pendingReimbursements.pendingAmount).toBe(4000);
   });
-  it.fails("D-FIN-002: legacy Business report must include the ₹6,000 workspace share", () => {
+  it("D-FIN-002: legacy Business report must include the ₹6,000 workspace share", () => {
     const tx = [entry({ workspaceAllocations: [{ workspace: "personal", amount: 4000 }, { workspace: "business", amount: 6000 }] })];
     expect(buildReport("business", tx, () => "Sample person", {}).rows.reduce((sum, row) => sum + Number(row[10]), 0)).toBe(6000);
   });
-  it.fails("D-FIN-003: manual ₹1,100 repayment (₹980 principal/₹120 interest) reduces only principal", () => {
+  it("D-FIN-003: manual ₹1,100 repayment (₹980 principal/₹120 interest) reduces only principal", () => {
     const loan: Account = { ...bank, id: "audit-loan", kind: "loan", openingBalance: 10000 };
     const tx = [entry({ txnType: "loan_repayment", amount: 1100, originalAmount: 1100, toAccountId: loan.id, principal: 980, interest: 120 })];
     expect(accountBalance(loan, tx)).toBe(9020); expect(cashflow(tx).spent).toBe(120);
+    expect(accountBalance(bank, tx)).toBe(98900);
+  });
+  it("D-FIN-001: fully received, written-off and untracked records do not inflate pending claims", () => {
+    const tx = [claim(10000), entry({ reimbursementStatus: "pending", reimbursement: { stage: "written_off" } }), entry(), entry({ txnType: "reimbursement", reimbursementStatus: "pending" })];
+    expect(position(input(tx)).reimbursements).toEqual({ pendingCount: 0, pendingAmount: 0 });
+  });
+  it("D-FIN-002: foreign-currency Business share and category splits use stored INR exactly once", () => {
+    const tx = [entry({ currency: "USD", originalAmount: 100, fxRate: 100, workspaceAllocations: [{ workspace: "personal", amount: 40 }, { workspace: "business", amount: 60 }], allocations: [{ category: "Travel", amount: 4000 }, { category: "Food", amount: 6000 }] })];
+    const r = buildReport("business", tx, () => "Sample person", {});
+    expect(Number(r.rows[0]?.[8])).toBe(60); expect(Number(r.rows[0]?.[10])).toBe(6000);
+    const cats = buildReport("categories", tx, () => "Sample person", {});
+    expect(cats.rows.reduce((s, r) => s + Number(r[1]), 0)).toBe(6000);
+    expect(cats.rows.reduce((s, r) => s + Number(r[2]), 0)).toBe(4000);
+  });
+  it("D-FIN-003: foreign repayment uses stored INR, legacy principal and separate EMI charges stay compatible", () => {
+    const loan: Account = { ...bank, id: "audit-loan", kind: "loan", openingBalance: 10000 };
+    const foreign = entry({ txnType: "loan_repayment", amount: 1100, originalAmount: 11, toAccountId: loan.id, principal: 9.8, interest: 1.2 });
+    expect(accountBalance(loan, [foreign])).toBe(9020); expect(cashflow([foreign]).spent).toBe(120);
+    const legacy = entry({ txnType: "loan_repayment", amount: 980, originalAmount: 980, toAccountId: loan.id });
+    const fee = entry({ id: "fee", amount: 120, originalAmount: 120 });
+    expect(accountBalance(loan, [legacy, fee])).toBe(9020); expect(cashflow([legacy, fee]).spent).toBe(120);
   });
 });

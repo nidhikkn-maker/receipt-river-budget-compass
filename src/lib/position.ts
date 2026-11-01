@@ -3,10 +3,12 @@ import { accountBalance, accountValue, cashflow, isLiability, netWorth, type Acc
 import { addDays, amortize, closureDate, debtScenarios, detectSubscriptions, forecast, goalProgress, incomeTracking, monthEnd, occurrences, safeToSpend, subscriptionSummary, type Commitment } from "./planning";
 import { cardCycle, cardDues, type CardEmi, type LoanPayment } from "./cards";
 import { anomalies, budgetRecommendations, lastMonthCompare, monthToDateCompare, savingsIdeas, spendBy } from "./insights";
+import { isTracked, outstandingOf, type ReimbursementInfo } from "./reimbursements";
+import type { ReimbursementStatus } from "./expenses";
 
 export const CASH_KINDS = ["savings", "current", "cash", "wallet"];
 
-interface Rec extends Txn { merchant: string | null; category: string; paymentMethod: string; title: string; tags?: string[]; reimbursementStatus?: string }
+interface Rec extends Txn { merchant: string | null; category: string; paymentMethod: string; title: string; tags?: string[]; reimbursementStatus?: ReimbursementStatus; reimbursement?: ReimbursementInfo }
 export interface PositionLoan {
   id?: string; name: string; principal: number; rate: number; emi: number; nextDue: string;
   accountId?: string | null; loanType?: string; sourceTransactionId?: string | null; original?: number; startDate?: string | null; payments?: LoanPayment[]; status?: string;
@@ -73,7 +75,7 @@ export function position(i: PositionInput) {
     .sort((a, b) => a.date.localeCompare(b.date));
   const unlinkedLoanOwed = activeLoans.filter((l) => !l.accountId).reduce((s, l) => s + l.principal, 0);
   const nw = netWorth(live, i.transactions, i.valuations ?? []);
-  const pending = i.transactions.filter((t) => t.reimbursementStatus === "pending");
+  const pending = i.transactions.filter((t) => (t.txnType ?? "expense") === "expense" && isTracked(t) && outstandingOf(t) > 0);
   const subs = subscriptionSummary(i.commitments, i.transactions.filter((t) => (t.txnType ?? "expense") === "expense"), i.today);
   const income = incomeTracking(i.commitments, i.transactions, i.today);
   const loans = activeLoans.map((l) => { const a = amortize(l.principal, l.rate, l.emi); return { ...l, monthsLeft: a.months, interestLeft: a.totalInterest, payable: a.payable, closesOn: closureDate(l.nextDue, a.months) }; });
@@ -100,7 +102,7 @@ export function position(i: PositionInput) {
     cash: Math.round(cash * 100) / 100, minBalance, reserves, cards, flow, safe: sts, forecast: fc, upcoming, alerts,
     netWorth: { assets: nw.assets, liabilities: Math.round((nw.liabilities + unlinkedLoanOwed) * 100) / 100, net: Math.round((nw.net - unlinkedLoanOwed) * 100) / 100 },
     liabilitiesFromLoans: unlinkedLoanOwed,
-    reimbursements: { pendingCount: pending.length, pendingAmount: Math.round(pending.reduce((s, t) => s + t.amount, 0) * 100) / 100 },
+    reimbursements: { pendingCount: pending.length, pendingAmount: Math.round(pending.reduce((s, t) => s + outstandingOf(t), 0) * 100) / 100 },
     income,
     subscriptions: { active: subs.counts.active, monthly: subs.monthly, annual: subs.annual, summary: subs, detected: detectSubscriptions(i.transactions.filter((t) => (t.txnType ?? "expense") === "expense")) },
     loans,
