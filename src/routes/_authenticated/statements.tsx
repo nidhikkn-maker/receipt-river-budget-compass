@@ -350,14 +350,14 @@ function StatementDeskPage() {
                 </section>
               )}
 
+              {a.elsewhere.length > 0 && (
+              <section aria-label="Saved on another account">
+                <h3 className="font-semibold">Saved on another account · {a.elsewhere.length}</h3>
+                <ul className="space-y-1 text-sm">{a.elsewhere.map((m) => <li key={m.line.key} className="flex justify-between gap-2"><span className="min-w-0 truncate">{m.line.date} · {m.record.name} — on {m.accountName}</span><span className="shrink-0 tabular-nums">{money(m.line.amount, m.line.currency)}</span></li>)}</ul>
+                <Button size="sm" variant="outline" className="mt-1" onClick={() => prepareMove(a)}>Preview moving {a.elsewhere.length} here</Button>
+              </section>
+              )}
               {a.wrongKind.length > 0 && (
-                {a.elsewhere.length > 0 && (
-                <section aria-label="Saved on another account">
-                  <h3 className="font-semibold">Saved on another account · {a.elsewhere.length}</h3>
-                  <ul className="space-y-1 text-sm">{a.elsewhere.map((m) => <li key={m.line.key} className="flex justify-between gap-2"><span className="min-w-0 truncate">{m.line.date} · {m.record.name} — on {m.accountName}</span><span className="shrink-0 tabular-nums">{money(m.line.amount, m.line.currency)}</span></li>)}</ul>
-                  <Button size="sm" variant="outline" className="mt-1" onClick={() => prepareMove(a)}>Preview moving {a.elsewhere.length} here</Button>
-                </section>
-                )}
                 <section aria-label="Saved the wrong way">
                   <h3 className="font-semibold">Saved the wrong way · {a.wrongKind.length}</h3>
                   <p className="text-sm text-muted-foreground">These records sit on this account but the statement shows the money going the other way.</p>
