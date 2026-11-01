@@ -228,3 +228,10 @@
 - [x] Already in place: smart quick entry, remembered defaults, drafts + offline recovery, single-flight saves, setup assistant, search, privacy toggle, offline entry
 - [x] Reports Centre jobs recorded before generation; a per-minute server worker finishes abandoned ones (Tamil shows "?" in server-made PDFs; statements/claims with bills stay in-app)
 - [x] Saved filter views on Transactions (templates covered by Repeat favourites)
+
+## V5.1 Smart historical import (.lovable/requirements-v5.1.md)
+- [ ] Secure original statements, multi-upload, persistent extraction staging and safe retry.
+- [ ] Grouped review, bulk classifications, user-confirmed reusable import rules and duplicate-safe posting.
+- [ ] Historical opening-balance verification, statement reconciliation and account coverage gaps.
+- [ ] Persistent worker activation (requires publication approval); scanned PDF extraction recovery.
+- [ ] Integrate enrichment, provenance, Inbox and Settings; run import acceptance checks.
