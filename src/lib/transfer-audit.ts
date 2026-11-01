@@ -75,18 +75,21 @@ export function auditRecords(txns: Expense[], accounts: Account[], statements: A
     if (t.currency !== "INR" && (!t.fxRate || t.fxRate === 1)) out.push({ ...base(t), key: `fx-${t.id}`, issue: "currency", source: maskAccount(src), destination: maskAccount(dst), suggestedType: type(t), proposal: "Record the exchange rate used", confidence: "high", impact: "Rupee value may be wrong" });
   }
 
-  // E/G: compare uploaded statement lines with records on that account.
-  for (const s of statements) {
-    const lines = s.lines.filter((l) => l.date >= from);
-    const onAccount = rows.filter((t) => t.accountId === s.accountId || t.toAccountId === s.accountId);
+  // E/G: compare uploaded statement lines with records, pooling every statement for the same account.
+  for (const accountId of [...new Set(statements.map((s) => s.accountId))]) {
+    const group = statements.filter((s) => s.accountId === accountId);
+    const seenLine = new Set<string>();
+    const lines = group.flatMap((s) => s.lines.filter((l) => l.date >= from).map((l) => ({ l, s }))).filter(({ l }) => { const k = `${l.date}|${l.amount}|${l.direction}|${l.description}`; if (seenLine.has(k)) return false; seenLine.add(k); return true; });
+    const onAccount = rows.filter((t) => t.accountId === accountId || t.toAccountId === accountId);
     const matched = new Set<string>();
-    for (const l of lines) {
-      const hits = onAccount.filter((t) => !matched.has(t.id) && matchScore(l, t, s.currency, s.accountId) >= 0.5);
-      if (hits.length === 0) out.push({ key: `ml-${s.id}-${l.ref}-${l.date}-${l.amount}`, issue: "missing_in_ledger", date: l.date, amount: l.amount, currency: s.currency, reference: bankRef(l.description) ?? l.ref, source: maskAccount(acc(s.accountId)), destination: "—", currentType: "not recorded", suggestedType: l.direction === "credit" ? "income / transfer in" : "expense / transfer out", proposal: `Review “${l.description.slice(0, 60)}” in Statements`, confidence: "medium", impact: `${l.direction === "credit" ? "Money in" : "Money out"} ${r2(l.amount)} not reflected`, batchId: s.id });
-      else { const best = hits.sort((a, b) => matchScore(l, b, s.currency, s.accountId) - matchScore(l, a, s.currency, s.accountId))[0]!; matched.add(best.id); }
+    for (const { l, s } of lines) {
+      const hits = onAccount.filter((t) => !matched.has(t.id) && matchScore(l, t, s.currency, accountId) >= 0.5);
+      if (hits.length === 0) out.push({ key: `ml-${s.id}-${l.ref}-${l.date}-${l.amount}`, issue: "missing_in_ledger", date: l.date, amount: l.amount, currency: s.currency, reference: bankRef(l.description) ?? l.ref, source: maskAccount(acc(accountId)), destination: "—", currentType: "not recorded", suggestedType: l.direction === "credit" ? "income / transfer in" : "expense / transfer out", proposal: `Review “${l.description.slice(0, 60)}” in Statements`, confidence: "medium", impact: `${l.direction === "credit" ? "Money in" : "Money out"} ${r2(l.amount)} not reflected`, batchId: s.id });
+      else { const best = hits.sort((a, b) => matchScore(l, b, s.currency, accountId) - matchScore(l, a, s.currency, accountId))[0]!; matched.add(best.id); }
     }
-    if (s.from && s.to) for (const t of onAccount.filter((t) => t.date >= s.from! && t.date <= s.to! && !matched.has(t.id))) {
-      out.push({ ...base(t), key: `ms-${s.id}-${t.id}`, issue: type(t) === "transfer" && t.toAccountId === s.accountId ? "unmatched_transfer" : "missing_in_statement", source: maskAccount(acc(t.accountId)), destination: maskAccount(acc(t.toAccountId)), suggestedType: type(t), proposal: "Check whether this entry is a duplicate or belongs to another account", confidence: "low", impact: "Balance differs from the statement by this amount" });
+    const covered = (d: string) => group.some((s) => s.from && s.to && d >= s.from && d <= s.to);
+    for (const t of onAccount.filter((t) => covered(t.date) && !matched.has(t.id))) {
+      out.push({ ...base(t), key: `ms-${accountId}-${t.id}`, issue: type(t) === "transfer" && t.toAccountId === accountId ? "unmatched_transfer" : "missing_in_statement", source: maskAccount(acc(t.accountId)), destination: maskAccount(acc(t.toAccountId)), suggestedType: type(t), proposal: "Check whether this entry is a duplicate or belongs to another account", confidence: "low", impact: "Balance differs from the statement by this amount" });
     }
   }
   return out.sort((a, b) => b.date.localeCompare(a.date) || a.key.localeCompare(b.key));
