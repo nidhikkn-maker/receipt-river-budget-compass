@@ -41,14 +41,23 @@ Historical ledger entries may have older statement references without retained i
 - Controlled UI copy: choose type/account → preview → cancel (zero writes) → preview → explicit confirmation → read changed treatment → preview undo → confirm → original treatment read back. No Cloud writes.
 - Pure ledger impact tests verify exact spending and liability changes, FX preservation and principal/interest proportions.
 - Signed-in live preview: 40 selected records opened a financial preview with exact deltas and source references; Cancel used, never Confirm. Seven-account counts, details and 402px layout verified; no page errors or horizontal overflow.
-- Final full regression: 796 checks passed across 95 files; latest harness build OK. Added completeness guards prevent offsetting unaccounted ledger entries or reset correction matches from certifying reconciliation.
+- Initial correction full regression: 796 checks passed across 95 files. Continuation: 827 passing checks across 99 files, including fifteen controlled document scenarios; final test-only type fix verified separately. Completeness guards prevent offsetting unaccounted ledger entries or reset correction matches from certifying reconciliation.
 - Cloud correction history remains empty. No transactions, files or historical opening balances were changed or duplicated by testing.
 
-## Partial / blocked, not certified complete
-- V5.9.1 reliable extracted bank/account identification is not added; current account is explicitly selected in existing upload manifest. Filename is not used to infer identity.
-- Source coverage confirmation still uses the original-source balance-review confirmation; a dedicated balance-independent coverage confirmation remains to build.
-- Review timestamp is displayed as check recorded; a distinct immutable successful-reconciliation event/date is not added.
+## Continuation completed
+- New CSV and Excel processing extracts only explicitly labelled bank/account headers. Scanned PDF schema preserves bank/identifier/quote/page independently from balances and narration; existing staged rows/decisions are not overwritten or re-extracted.
+- A dedicated account + coverage review shows source clues, ambiguous or mismatched candidates, explicit missing-identifier confirmation, original references and actual statement coverage. Identity and coverage have an exact preview and separate explicit save; source balances are not required to confirm coverage.
+- Wrong-account imports are never reassigned. An explicitly confirmed source copy creates an unapproved import for a different owned active account or reuses an identical existing import. Original ledger/posting history stays intact.
+- A protected server function reads owner records, computes the same tested rules, hashes canonical batch/account/row/post/ledger-revision snapshots and writes an immutable checkpoint. The database locks and verifies the exact snapshots before storing the result; ordinary clients cannot write or fabricate checkpoint results.
+- Checkpoints include actual server timestamps. UI only certifies a saved checkpoint whose evidence still matches current records; later edits invalidate certification. Source review dates and upload times are not reconciliation dates.
+- Independent statement identity validation now guards both server posting and the atomic import-post trigger. This additive shared-backend guard can also block old published posting code until statement identity is confirmed in preview; no deployed frontend was changed.
+- Refresh listens for local completion events as well as visible polling, focus and reconnect. Reconciliation history reads the same saved-check evidence instead of trusting fingerprint-only arithmetic. Failed/incomplete repeated uploads reopen existing review and explain retry instead of silently duplicating batches.
+- Exact migration 0042 and 0043 tests: owner confirmation persists, stale/unrelated writes denied, source/ledger unchanged, checkpoint replay idempotent, owner-only reads, ordinary checkpoint forgery denied, and unconfirmed atomic posting rejected.
+- Controlled UI: preview/cancel causes no write, explicit identity/coverage save callback followed by independent saved-check callback and Requires Review read-back. Signed-in real preview opens/cancels evidence confirmation, accounts page reads back, desktop and 402px show no horizontal overflow or page errors; screenshots under /tmp/browser/v591.
+
+## Remaining external validation, not certified complete
 - Exact duplicates can match durable fingerprints or linked duplicate IDs; excluded rows remain unresolved. Paired movements are not merged automatically and need a separate reviewed model.
 - Existing shared Cloud financial apply/undo and true cross-device persistence are not tested with writes because isolation is unavailable. The exact SQL and UI flow pass controlled isolated tests; this is not hosted end-to-end write acceptance.
-- Physical-device, all 15 statement scenarios and representative real statement reconciliation still need source documents/test isolation. No full production-readiness claim.
-- Published frontend is unchanged; the explicitly approved additive save support changes the shared backend schema only.
+- All fifteen document scenarios have controlled regression coverage (including simulated second-device canonical hashes), not actual cross-device Cloud acceptance. Representative statements/copies of all seven actual accounts, actual iPhone tests and hosted end-to-end writes remain blocked by missing safe test storage/source evidence.
+- AI schema/prompt extraction for new scanned statements is implemented; actual provider output and missed rows were not exercised in this turn. No full production-readiness claim.
+- Published frontend is unchanged. Approved additive shared schema changes: 0042 adds source identity/review, owner-readable immutable checkpoints and protected functions; 0043 adds an atomic posting identity guard. No financial records or historical balances were updated.

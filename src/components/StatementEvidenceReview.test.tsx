@@ -15,8 +15,8 @@ it('controlled statement: confirmation is previewed, cancelled without saving, t
  fireEvent.change(screen.getByRole('textbox',{name:'Statement identity source reference'}),{target:{value:'Original page 1'}});
  fireEvent.click(screen.getByRole('checkbox',{name:'Confirm account despite missing identifier'}));fireEvent.click(screen.getByRole('checkbox',{name:'Confirm statement account identity'}));
  fireEvent.change(screen.getByRole('textbox',{name:'Statement coverage source reference'}),{target:{value:'Period header page 1'}});fireEvent.click(screen.getByRole('checkbox',{name:'Confirm actual statement coverage'}));
- fireEvent.click(screen.getByRole('button',{name:'Preview statement confirmation'}));expect(mocks.save).not.toHaveBeenCalled();fireEvent.click(screen.getByRole('button',{name:'Cancel',exact:true}));expect(mocks.save).not.toHaveBeenCalled();
- fireEvent.click(screen.getByRole('button',{name:'Preview statement confirmation'}));fireEvent.click(screen.getByRole('button',{name:'Confirm statement evidence',exact:true}));
+ fireEvent.click(screen.getByRole('button',{name:'Preview statement confirmation'}));expect(mocks.save).not.toHaveBeenCalled();fireEvent.click(screen.getByRole('button',{name:'Cancel'}));expect(mocks.save).not.toHaveBeenCalled();
+ fireEvent.click(screen.getByRole('button',{name:'Preview statement confirmation'}));fireEvent.click(screen.getByRole('button',{name:'Confirm statement evidence'}));
  await waitFor(()=>expect(mocks.save).toHaveBeenCalledWith({data:{batch:'copy',expected:{},review:expect.objectContaining({identity:expect.objectContaining({confirmed:true,missingIdentifierConfirmed:true,accountId:'bank'}),coverage:expect.objectContaining({from:'2026-10-01',to:'2026-10-31',confirmed:true})})}}));
  fireEvent.click(screen.getByRole('button',{name:'Run & save reconciliation check'}));await waitFor(()=>expect(mocks.check).toHaveBeenCalledWith({data:{batch:'copy',operation:expect.any(String)}}));
  expect(await screen.findByRole('status')).toHaveTextContent('Requires Review');expect(batch.opening_balance).toBe(null);expect(reload).toHaveBeenCalled();
