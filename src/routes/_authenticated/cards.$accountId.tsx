@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { money } from "@/lib/expenses";
 import { useStore } from "@/lib/store";
 import { cardLedger } from "@/lib/card-balance";
-import { cardBalanceSeries, cardRecency, statementCaption, updatedCaption } from "@/lib/card-trend";
+import { cardBalanceSeries, cardRecency, cardTrendKeys, statementCaption, updatedCaption } from "@/lib/card-trend";
 import { CardTrendChart } from "@/components/CardTrendChart";
 import { todayISO } from "@/lib/use-position";
 
@@ -57,7 +57,7 @@ function CardBalancePage() {
 
       <Card title="Balance trend" className="mt-4">
         <p className="text-[11px] text-muted-foreground">Amount owed at each month end · credit shows below zero · last 12 months</p>
-        <CardTrendChart points={trend} names={[card.name]} height={180} />
+        <CardTrendChart points={trend} names={cardTrendKeys([card])} height={180} />
       </Card>
 
       {r.unreconciled.count > 0 ? (
