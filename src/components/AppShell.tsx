@@ -129,6 +129,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const [hidden, setHidden] = useState(false);
   // Version 4.4: the universal entry opens as a focused screen without the global header or bottom bar.
   const focused = useRouterState({ select: (st) => st.location.pathname === "/new" });
+  const wideClaim = useRouterState({ select: (st) => st.location.pathname === '/claim-submission' });
   const [moreOpen, setMoreOpen] = useState(false);
   useEffect(() => { setHidden(localStorage.getItem("ll-privacy") === "1"); }, []);
   useEffect(() => { document.documentElement.classList.toggle("privacy", hidden); localStorage.setItem("ll-privacy", hidden ? "1" : "0"); }, [hidden]);
@@ -161,7 +162,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         </div>
       </header>
 
-      <main className={focused ? "mx-auto max-w-3xl px-4 pb-6 pt-2 sm:px-8" : "mx-auto max-w-6xl px-4 pb-28 pt-5 sm:px-8 lg:pb-12"}>
+      <main className={focused ? "mx-auto max-w-3xl px-4 pb-6 pt-2 sm:px-8" : wideClaim ? 'mx-auto max-w-[1800px] px-4 pb-28 pt-5 sm:px-8 lg:pb-12' : "mx-auto max-w-6xl px-4 pb-28 pt-5 sm:px-8 lg:pb-12"}>
         {!focused && !loading && <DraftsReminder />}
         {loading ? <p className="text-muted-foreground">Loading…</p> : <DeviceLock>{children}</DeviceLock>}
       </main>

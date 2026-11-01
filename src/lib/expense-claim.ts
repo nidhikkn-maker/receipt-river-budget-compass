@@ -3,7 +3,7 @@
 // it only reads records and never creates claims or changes claim status.
 import type { Statement, Annexure, RegisterRow } from "./expenditure-statement";
 
-export interface Claimant { name: string; employeeId: string; department: string; designation: string; approver: string; bankDetails: string; email: string; declaration?: string; reportingAuthority?: string; finance?: string; additionalApprover?: string; approvalDesignation?: string; organisationCode?: string; costCentre?: string; preferredCurrency?: string }
+export interface Claimant { name: string; employeeId: string; department: string; designation: string; approver: string; bankDetails: string; email: string; declaration?: string; reportingAuthority?: string; finance?: string; additionalApprover?: string; approvalDesignation?: string; organisationCode?: string; costCentre?: string; preferredCurrency?: string; legalEntity?:string;approvalReference?:string;signaturePreference?:string;reportHeader?:string }
 export interface ClaimItem extends RegisterRow { claimNo: number; claimed: number }
 export interface Claim {
   reference: string; organisation: string; purpose: string; subjectName: string; start: string; end: string; prepared: string; claimant: Claimant;

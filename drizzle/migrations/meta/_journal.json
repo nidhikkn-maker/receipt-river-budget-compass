@@ -281,6 +281,13 @@
       "when": 1793510962749,
       "tag": "0039_family_request_revocation_guards",
       "breakpoints": true
+    },
+    {
+      "idx": 40,
+      "version": "7",
+      "when": 1793515565757,
+      "tag": "0040_claim_preparations_and_activity_linking",
+      "breakpoints": true
     }
   ]
 }

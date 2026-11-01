@@ -168,6 +168,44 @@ export type Database = {
         }
         Relationships: []
       }
+      claim_preparations: {
+        Row: {
+          created_at: string
+          data: Json
+          id: string
+          mutation_id: string
+          owner_id: string
+          revision: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          data?: Json
+          id: string
+          mutation_id: string
+          owner_id: string
+          revision?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          data?: Json
+          id?: string
+          mutation_id?: string
+          owner_id?: string
+          revision?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "claim_preparation_owner"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "finance_preferences"
+            referencedColumns: ["owner_id"]
+          },
+        ]
+      }
       commitments: {
         Row: {
           account_id: string | null
@@ -1319,6 +1357,38 @@ export type Database = {
         }
         Relationships: []
       }
+      reimbursement_config_audit: {
+        Row: {
+          action: string
+          changed_sections: Json
+          created_at: string
+          id: string
+          owner_id: string
+        }
+        Insert: {
+          action: string
+          changed_sections?: Json
+          created_at?: string
+          id?: string
+          owner_id: string
+        }
+        Update: {
+          action?: string
+          changed_sections?: Json
+          created_at?: string
+          id?: string
+          owner_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reimbursement_config_audit_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "finance_preferences"
+            referencedColumns: ["owner_id"]
+          },
+        ]
+      }
       report_history: {
         Row: {
           created_at: string
@@ -1575,6 +1645,10 @@ export type Database = {
         }
         Returns: boolean
       }
+      link_activity_expenses: {
+        Args: { _items: Json; _tag: string }
+        Returns: number
+      }
       manage_trip_expenses: {
         Args: { _action: string; _items: Json; _trip: string; _value?: string }
         Returns: number
@@ -1628,6 +1702,24 @@ export type Database = {
       revise_import_rows: {
         Args: { _batch: string; _decision?: string; _items: Json; _patch: Json }
         Returns: number
+      }
+      save_claim_preparation: {
+        Args: { _data: Json; _expected: number; _id: string; _mutation: string }
+        Returns: {
+          created_at: string
+          data: Json
+          id: string
+          mutation_id: string
+          owner_id: string
+          revision: number
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "claim_preparations"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       save_import_balance_review: {
         Args: {

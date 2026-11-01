@@ -6,6 +6,7 @@ import type { Statement } from './expenditure-statement';
 export const DEFAULT_DECLARATION = 'I certify that these expenses were incurred for the stated official purpose, paid personally, and have not been claimed or reimbursed elsewhere. Supporting documents are attached where available.';
 export interface ApprovalRoute { id: string; label: string; reportingAuthority: string; approver: string; finance: string; additionalApprover: string; designation: string }
 export interface ReimbursementProfile {
+  profileName?: string; legalEntity?: string; approvalReference?: string; signaturePreference?: string; reportHeader?: string;
   id: string; organisation: string; workspace: Scope; organisationCode: string; costCentre: string;
   name: string; designation: string; employeeId: string; department: string; email: string; contact: string;
   accountId: string; accountHolder: string; currency: string; format: 'detailed' | 'summary'; declaration: string;
@@ -25,7 +26,7 @@ export const maskedText = (text: string) => text.replace(/(?:\d[ -]?){5,}/g, mat
 export const reimbursementAccountLabel = (account?: Account) => account ? `${maskedText(account.name)}${account.lastFour ? ` ••••${account.lastFour.replace(/\D/g, '').slice(-4)}` : ''}` : 'Account not selected';
 export function profileClaimant(p: ReimbursementProfile, accounts: Account[], routeId?: string): Claimant {
   const route = p.routes.find(r => r.id === (routeId || p.defaultRouteId));
-  return { name: p.name, designation: p.designation, department: p.department, employeeId: p.employeeId, email: p.email, approver: route?.approver ?? '', bankDetails: p.accountId ? `${reimbursementAccountLabel(accounts.find(a => a.id === p.accountId))}${p.accountHolder ? ` · ${maskedText(p.accountHolder)}` : ''}` : '', declaration: p.declaration, reportingAuthority: route?.reportingAuthority ?? '', finance: route?.finance ?? '', additionalApprover: route?.additionalApprover ?? '', approvalDesignation: route?.designation ?? '', costCentre: p.costCentre, organisationCode: p.organisationCode, preferredCurrency: p.currency };
+  return { name: p.name, designation: p.designation, department: p.department, employeeId: p.employeeId, email: p.email, approver: route?.approver ?? '', bankDetails: p.accountId ? `${reimbursementAccountLabel(accounts.find(a => a.id === p.accountId))}${p.accountHolder ? ` · ${maskedText(p.accountHolder)}` : ''}` : '', declaration: p.declaration, reportingAuthority: route?.reportingAuthority ?? '', finance: route?.finance ?? '', additionalApprover: route?.additionalApprover ?? '', approvalDesignation: route?.designation ?? '', costCentre: p.costCentre, organisationCode: p.organisationCode, preferredCurrency: p.currency,legalEntity:p.legalEntity??'',approvalReference:p.approvalReference??'',signaturePreference:p.signaturePreference??'',reportHeader:p.reportHeader??'' };
 }
 export function saveProfile(settings: ReimbursementSettings, profile: ReimbursementProfile, organisations: string[], accounts: Account[]): ReimbursementSettings {
   if (!organisations.includes(profile.organisation)) throw Error('Choose a saved organisation.');

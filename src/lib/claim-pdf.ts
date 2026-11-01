@@ -40,13 +40,16 @@ export async function renderClaimPdf(c: Claim, files: Record<string, AnnexFile |
   doc.setFont("helvetica", "normal"); doc.setFontSize(9); doc.setTextColor(80, 80, 80); textU(doc, `To: ${c.organisation} - Accounts Department`, M, 31);
   doc.setDrawColor(...INK); doc.setLineWidth(0.4); doc.line(M, 34, 196, 34);
   const k = c.claimant;
+  if(k.reportHeader) { doc.setFontSize(8); textU(doc,k.reportHeader,M,36,{maxW:182}); }
   table({ startY: 38, theme: "plain", styles: { fontSize: 9, cellPadding: 1.1 }, columnStyles: { 0: { fontStyle: "bold", cellWidth: 38 }, 2: { fontStyle: "bold", cellWidth: 34 } }, body: [
     ["Claimant", k.name, "Claim reference", c.reference], ["Employee ID", k.employeeId || "-", "Date of claim", c.prepared], ["Department", k.department || "-", "Activity", c.subjectName],
     ["Designation", k.designation || "-", "Period", `${c.start} to ${c.end}`], ["Email", k.email || "-", "Purpose", c.purpose],
     ['Organisation code', k.organisationCode || '-', 'Cost centre', k.costCentre || '-'],
+    ['Legal entity',k.legalEntity||'-','Approval reference',k.approvalReference||'-'],
     ['Reporting authority', k.reportingAuthority || '-', 'Proposed approver', k.approver || '-'],
     ['Finance / accounts', k.finance || '-', 'Additional approver', k.additionalApprover || '-'],
     ['Payment currency preference', k.preferredCurrency || 'INR', 'Approval status', 'Not approved — signature required'],
+    ['Signature preference',k.signaturePreference||'Signature required','', ''],
   ].map((r) => r.map(ascii)) });
   table({ startY: last() + 4, head: [["Claim summary", "INR"]], columnStyles: { 1: { halign: "right" } }, body: [['Total submitted expenditure (original full expenses)', n(c.items.reduce((s, i) => s + i.inr, 0))], ['Excluded expenditure (reference only)', n(c.excluded.reduce((s, x) => s + x.row.inr, 0))], ["Eligible personally-funded organisation share", n(c.totals.eligible)], ["Less: already reimbursed", n(c.totals.received)]], foot: [["Outstanding amount claimed", n(c.totals.claimed)]] });
   if (format === "summary") {
