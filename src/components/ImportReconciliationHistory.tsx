@@ -1,8 +1,7 @@
 import { useState } from 'react';
 import { useStore } from '@/lib/store';
 import { listImportRows } from '@/lib/import-repository';
-import { verifyHistoricalBalances,ledgerPeriodBalances } from '@/lib/balance-verification';
-import { isLiability } from '@/lib/ledger';
+import { statementReconciliationSummary } from '@/lib/import-manifest';
 import type { ImportBatch } from '@/lib/historical-import';
 import { supabase } from '@/integrations/supabase/client';
 import { downloadBlob,toCsv } from '@/lib/reports';
@@ -16,12 +15,9 @@ export function ImportReconciliationHistory({batches,onOpen}:{batches:ImportBatc
     const posted=new Set<string>();
     for(let from=0;;from+=1000){const r=await supabase.from('import_posts').select('account_id,fingerprint').range(from,from+999);if(r.error)throw Error('Could not read reconciliation history');r.data.forEach(row=>posted.add(`${row.account_id}:${row.fingerprint}`));if(r.data.length<1000)break;}
     const next=await Promise.all(batches.map(async batch=>{
-      const rows=await listImportRows(batch.id),account=accounts.find(a=>a.id===batch.account_id),review=batch.balance_verification;
-      const unresolved=rows.filter(row=>!posted.has(`${batch.account_id}:${row.fingerprint}`)).length;
-      const ledger=account&&batch.currency==='INR'&&batch.period_from&&batch.period_to?ledgerPeriodBalances(account,transactions,batch.period_from,batch.period_to):null;
-      const check=verifyHistoricalBalances({opening:batch.opening_balance,closing:batch.closing_balance,sourceOpening:review?.sourceOpening??null,sourceClosing:review?.sourceClosing??null,checkedOriginal:review?.checkedOriginal??false,reference:review?.sourceReference??'',lines:rows.map(r=>r.line),liability:account?isLiability(account.kind):false,ledgerOpening:ledger?.opening??null,ledgerClosing:ledger?.closing??null,unresolved});
-      const status=batch.status!=='review'?`Incomplete · ${batch.status}`:check.fullyReconciled?'Reconciled':batch.currency!=='INR'?'Currency comparison unavailable':check.difference!==null&&check.difference!==0?'Statement arithmetic discrepancy':check.sourceVerified?'Ledger requires reconciliation':'Source balances unverified';
-      return {batch,account:account?.name??'Account unavailable',status,difference:check.ledgerClosingDifference,unresolved,debits:rows.filter(r=>posted.has(`${batch.account_id}:${r.fingerprint}`)&&r.line.direction!=='credit').reduce((s,r)=>s+r.line.amount,0),credits:rows.filter(r=>posted.has(`${batch.account_id}:${r.fingerprint}`)&&r.line.direction==='credit').reduce((s,r)=>s+r.line.amount,0)};
+      const rows=await listImportRows(batch.id),account=accounts.find(a=>a.id===batch.account_id);
+      const known=new Set(rows.filter(row=>posted.has(`${batch.account_id}:${row.fingerprint}`)).map(row=>row.fingerprint));
+      return {batch,account:account?.name??'Account unavailable',...statementReconciliationSummary(batch,rows,known,account,transactions)};
     }));setLines(next);
   };
   return <section className="mb-6 border-y py-4"><div className="flex flex-wrap items-center gap-3"><h2 className="text-lg font-semibold">Reconciliation history</h2><Button size="sm" variant="outline" onClick={load}>{lines?'Refresh reconciliation':'Review reconciliation history'}</Button>{lines&&<Button size="sm" variant="ghost" onClick={()=>downloadBlob(new Blob([toCsv({title:'Statement reconciliation history',headers:['Statement','Account','Currency','From','To','Status','Opening','Closing','Confirmed debits','Confirmed credits','Ledger closing difference','Unresolved rows'],rows:lines.map(l=>[l.batch.file_name,l.account,l.batch.currency,l.batch.period_from,l.batch.period_to,l.status,l.batch.opening_balance,l.batch.closing_balance,l.debits,l.credits,l.difference,l.unresolved])})],{type:'text/csv'}),'statement-reconciliation.csv')}>Export reconciliation</Button>}</div>{lines&&<ul className="divide-y">{lines.map(l=><li key={l.batch.id} className="py-3 text-sm"><p className="break-words font-medium">{l.batch.file_name} · {l.account}</p><p className={l.status==='Reconciled'?'text-success':'text-warning'}>{l.status}</p><p>{l.unresolved} unresolved rows{l.difference!==null?` · Ledger difference ${money(l.difference,l.batch.currency)}`:''}</p><Button size="sm" variant="ghost" onClick={()=>onOpen(l.batch.id)}>Open balance review</Button></li>)}</ul>}</section>;
