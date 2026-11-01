@@ -124,3 +124,43 @@ export function rowsFromItems(items: { str: string; x: number; y: number }[]): s
   }
   return groups.sort((a, b) => b.y - a.y).map((g) => g.parts.sort((a, b) => a.x - b.x).map((p) => p.s.trim()).join("  "));
 }
+
+export type MissingLine = BalanceLine & { transferWith?: BalanceLine | undefined };
+
+/** Statement lines on the account's own statement with no saved record (same amount within the window, each record used once). */
+export function missingLines(records: { date: string; amount: number }[], homeLines: BalanceLine[], windowDays = 3): BalanceLine[] {
+  const used = new Set<number>();
+  for (const r of records) {
+    let best = -1, gap = Infinity;
+    homeLines.forEach((l, i) => { if (used.has(i) || Math.abs(l.amount - r.amount) > 0.005) return; const g = days(l.date, r.date); if (g <= windowDays && g < gap) { gap = g; best = i; } });
+    if (best >= 0) used.add(best);
+  }
+  return homeLines.filter((_, i) => !used.has(i));
+}
+
+/** A missing line is a transfer only when exactly one opposite-direction, same-amount line within 2 days exists on another uploaded statement. */
+export function pairTransfers(missing: BalanceLine[], otherLines: BalanceLine[]): MissingLine[] {
+  const taken = new Set<BalanceLine>();
+  return missing.map((m) => {
+    const c = otherLines.filter((o) => !taken.has(o) && o.direction !== m.direction && Math.abs(o.amount - m.amount) < 0.005 && days(o.date, m.date) <= 2);
+    if (c.length !== 1) return { ...m };
+    taken.add(c[0]!);
+    return { ...m, transferWith: c[0] };
+  });
+}
+
+/** Balance gate: app balance plus the net effect of the proposed posts must equal the statement closing balance within ₹0.01. */
+export function balanceGate(appBalance: number, posts: BalanceLine[], closing: number | null) {
+  const net = Math.round(posts.reduce((s, l) => s + (l.direction === "credit" ? l.amount : -l.amount), 0) * 100) / 100;
+  const after = Math.round((appBalance + net) * 100) / 100;
+  const difference = closing === null ? null : Math.round((closing - after) * 100) / 100;
+  return { net, after, difference, ok: difference !== null && Math.abs(difference) <= 0.01 };
+}
+
+/** Stable id per account + statement line so posting twice cannot create duplicates. */
+export async function lineId(accountId: string, l: BalanceLine): Promise<string> {
+  const h = new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(`${accountId}|${l.date}|${l.direction}|${l.amount.toFixed(2)}|${l.balance.toFixed(2)}`))).slice(0, 16);
+  h[6] = (h[6]! & 0x0f) | 0x50; h[8] = (h[8]! & 0x3f) | 0x80;
+  const x = [...h].map((b) => b.toString(16).padStart(2, "0")).join("");
+  return `${x.slice(0, 8)}-${x.slice(8, 12)}-${x.slice(12, 16)}-${x.slice(16, 20)}-${x.slice(20)}`;
+}
