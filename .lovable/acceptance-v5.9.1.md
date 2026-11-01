@@ -41,7 +41,7 @@ Historical ledger entries may have older statement references without retained i
 - Controlled UI copy: choose type/account → preview → cancel (zero writes) → preview → explicit confirmation → read changed treatment → preview undo → confirm → original treatment read back. No Cloud writes.
 - Pure ledger impact tests verify exact spending and liability changes, FX preservation and principal/interest proportions.
 - Signed-in live preview: 40 selected records opened a financial preview with exact deltas and source references; Cancel used, never Confirm. Seven-account counts, details and 402px layout verified; no page errors or horizontal overflow.
-- Full regression run before final safeguards: 791 passed. Final run recorded in chat/tools after additional completeness tests.
+- Final full regression: 796 checks passed across 95 files; latest harness build OK. Added completeness guards prevent offsetting unaccounted ledger entries or reset correction matches from certifying reconciliation.
 - Cloud correction history remains empty. No transactions, files or historical opening balances were changed or duplicated by testing.
 
 ## Partial / blocked, not certified complete
