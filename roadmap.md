@@ -371,5 +371,5 @@
 
 ## V5.10.3 combined plan (pending approval)
 - [ ] Card balance view with unreconciled-payment flags
-- [ ] Trip cancel / restore / delete
+- [x] Trip cancel / restore / delete (trip page; list-row shortcut pending)
 - [ ] V5.10.3 classification forms, recipients, safe transfers, audit (see .lovable/requirements-v5.10.3.md)
