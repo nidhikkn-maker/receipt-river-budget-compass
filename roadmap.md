@@ -1,10 +1,11 @@
 # Roadmap (Functional Requirements v1.0)
 ## V5.10 guided Financial Inbox
-- [ ] Separate overview, transaction review and account reconciliation; consistent independent issue counts.
-- [ ] Stable visible/page/all-matching/merchant selection, sticky summary and guided correction preview/confirmation.
-- [ ] Reuse merchant rules and guarded financial/mapping workflows; document unimplemented intelligent matching rather than guess.
-- [ ] Controlled selection/count/correction tests and signed-in iPhone/iPad/desktop preview checks without real record writes; acceptance report and no publication.
-- [ ] Full paired settlement/recurring/mapping and isolated Cloud write acceptance: preserve financial guards and identify remaining blockers.
+- [x] Separate overview, transaction review and account reconciliation; independent unique/issue/overlap counts; statement/report/reminder sections kept separate.
+- [x] Stable visible/page/all-matching/merchant selection; sticky summary, category exclusions and exact guarded correction confirmation; encrypted device review-context recovery.
+- [x] Reuse existing confirmed merchant rules/cohorts and guarded financial APIs; dedicated Settings classification-rules page. No new backend or financial writes.
+- [x] 835 tests passed; signed-in select 178 vs 40 visible, eligible/excluded category preview/cancel, device reload and five widths with no overflow/page errors; saved account evidence loaded. Acceptance report: .lovable/acceptance-v5.10.md. No publication.
+- [ ] General atomic organisation/workspace/activity/payment mapping, heterogeneous corrections, verified missing-detail recovery, recurring profile creation and pair linking need dedicated safe operations; cannot bypass existing guards. Documented as not implemented, not complete.
+- [ ] Actual Cloud write/read-back/rollback and physical iPhone/iPad/hardware acceptance require isolated Cloud and device access; real financial records remain untouched.
 ## V5.9 Smart financial inbox
 - [x] Current request: account/type corrections with exact before/after and ledger impact, explicit confirmation, dedicated owner-scoped atomic saving, all-edit revisions, idempotent audit batches and conflict-safe undo. Shared save support explicitly approved; no existing financial records changed; controlled PostgreSQL/UI tests and signed-in preview/cancel checked.
 - [x] V5.9.1 first correction: root cause identified (Inbox ignored import/source evidence and used verification click dates); separate statement account table/details, independent counts, automatic polling/focus refresh and conservative period/source/read-back calculations. Seven signed-in accounts inspected read-only, none has confirmed source coverage/balance; report in .lovable/acceptance-v5.9.1.md.
