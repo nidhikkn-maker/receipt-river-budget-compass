@@ -239,6 +239,13 @@
       "when": 1793497953456,
       "tag": "0033_scanned_import_jobs_and_balance_evidence",
       "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "7",
+      "when": 1793500640332,
+      "tag": "0034_atomic_trip_expense_actions",
+      "breakpoints": true
     }
   ]
 }
