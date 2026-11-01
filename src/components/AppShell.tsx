@@ -115,7 +115,7 @@ function SyncStatus() {
         (syncState === "error" ? "bg-destructive/10 text-destructive" : syncState === "offline" ? "bg-secondary text-secondary-foreground" : "bg-secondary text-muted-foreground hover:text-foreground")}
     >
       <Icon className={"h-3.5 w-3.5" + (syncState === "syncing" ? " animate-spin" : "")} />
-      <span className="max-w-28 truncate sm:max-w-none">{label}</span>
+      <span className={(syncState === "error" || syncState === "offline" || pendingCount > 0 ? "max-w-24" : "sr-only sm:not-sr-only") + " truncate sm:max-w-none"}>{label}</span>
     </button>
   );
 }
