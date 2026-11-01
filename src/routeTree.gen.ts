@@ -42,10 +42,10 @@ import { Route as AuthenticatedRulesRouteImport } from './routes/_authenticated/
 import { Route as AuthenticatedSearchRouteImport } from './routes/_authenticated/search'
 import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings'
 import { Route as AuthenticatedStrategyRouteImport } from './routes/_authenticated/strategy'
-import { Route as AuthenticatedTripsRouteImport } from './routes/_authenticated/trips'
 import { Route as AuthenticatedVaultRouteImport } from './routes/_authenticated/vault'
 import { Route as AuthenticatedWealthRouteImport } from './routes/_authenticated/wealth'
 import { Route as DotlovableOauthConsentRouteImport } from './routes/[.]lovable.oauth.consent'
+import { Route as AuthenticatedTripsIndexRouteImport } from './routes/_authenticated/trips.index'
 import { Route as AuthenticatedTripsTripIdRouteImport } from './routes/_authenticated/trips.$tripId'
 import { Route as ApiPublicJobsPaymentRemindersRouteImport } from './routes/api/public/jobs/payment-reminders'
 import { Route as ApiPublicJobsReportJobsRouteImport } from './routes/api/public/jobs/report-jobs'
@@ -221,11 +221,6 @@ const AuthenticatedStrategyRoute = AuthenticatedStrategyRouteImport.update({
   path: '/strategy',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
-const AuthenticatedTripsRoute = AuthenticatedTripsRouteImport.update({
-  id: '/trips',
-  path: '/trips',
-  getParentRoute: () => AuthenticatedRouteRoute,
-} as any)
 const AuthenticatedVaultRoute = AuthenticatedVaultRouteImport.update({
   id: '/vault',
   path: '/vault',
@@ -241,11 +236,16 @@ const DotlovableOauthConsentRoute = DotlovableOauthConsentRouteImport.update({
   path: '/.lovable/oauth/consent',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedTripsIndexRoute = AuthenticatedTripsIndexRouteImport.update({
+  id: '/trips/',
+  path: '/trips/',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedTripsTripIdRoute =
   AuthenticatedTripsTripIdRouteImport.update({
-    id: '/$tripId',
-    path: '/$tripId',
-    getParentRoute: () => AuthenticatedTripsRoute,
+    id: '/trips/$tripId',
+    path: '/trips/$tripId',
+    getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
 const ApiPublicJobsPaymentRemindersRoute =
   ApiPublicJobsPaymentRemindersRouteImport.update({
@@ -292,11 +292,11 @@ export interface FileRoutesByFullPath {
   '/search': typeof AuthenticatedSearchRoute
   '/settings': typeof AuthenticatedSettingsRoute
   '/strategy': typeof AuthenticatedStrategyRoute
-  '/trips': typeof AuthenticatedTripsRouteWithChildren
   '/vault': typeof AuthenticatedVaultRoute
   '/wealth': typeof AuthenticatedWealthRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/trips/$tripId': typeof AuthenticatedTripsTripIdRoute
+  '/trips/': typeof AuthenticatedTripsIndexRoute
   '/api/public/jobs/payment-reminders': typeof ApiPublicJobsPaymentRemindersRoute
   '/api/public/jobs/report-jobs': typeof ApiPublicJobsReportJobsRoute
 }
@@ -333,11 +333,11 @@ export interface FileRoutesByTo {
   '/search': typeof AuthenticatedSearchRoute
   '/settings': typeof AuthenticatedSettingsRoute
   '/strategy': typeof AuthenticatedStrategyRoute
-  '/trips': typeof AuthenticatedTripsRouteWithChildren
   '/vault': typeof AuthenticatedVaultRoute
   '/wealth': typeof AuthenticatedWealthRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/trips/$tripId': typeof AuthenticatedTripsTripIdRoute
+  '/trips': typeof AuthenticatedTripsIndexRoute
   '/api/public/jobs/payment-reminders': typeof ApiPublicJobsPaymentRemindersRoute
   '/api/public/jobs/report-jobs': typeof ApiPublicJobsReportJobsRoute
 }
@@ -376,11 +376,11 @@ export interface FileRoutesById {
   '/_authenticated/search': typeof AuthenticatedSearchRoute
   '/_authenticated/settings': typeof AuthenticatedSettingsRoute
   '/_authenticated/strategy': typeof AuthenticatedStrategyRoute
-  '/_authenticated/trips': typeof AuthenticatedTripsRouteWithChildren
   '/_authenticated/vault': typeof AuthenticatedVaultRoute
   '/_authenticated/wealth': typeof AuthenticatedWealthRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/_authenticated/trips/$tripId': typeof AuthenticatedTripsTripIdRoute
+  '/_authenticated/trips/': typeof AuthenticatedTripsIndexRoute
   '/api/public/jobs/payment-reminders': typeof ApiPublicJobsPaymentRemindersRoute
   '/api/public/jobs/report-jobs': typeof ApiPublicJobsReportJobsRoute
 }
@@ -419,11 +419,11 @@ export interface FileRouteTypes {
     | '/search'
     | '/settings'
     | '/strategy'
-    | '/trips'
     | '/vault'
     | '/wealth'
     | '/.lovable/oauth/consent'
     | '/trips/$tripId'
+    | '/trips/'
     | '/api/public/jobs/payment-reminders'
     | '/api/public/jobs/report-jobs'
   fileRoutesByTo: FileRoutesByTo
@@ -460,11 +460,11 @@ export interface FileRouteTypes {
     | '/search'
     | '/settings'
     | '/strategy'
-    | '/trips'
     | '/vault'
     | '/wealth'
     | '/.lovable/oauth/consent'
     | '/trips/$tripId'
+    | '/trips'
     | '/api/public/jobs/payment-reminders'
     | '/api/public/jobs/report-jobs'
   id:
@@ -502,11 +502,11 @@ export interface FileRouteTypes {
     | '/_authenticated/search'
     | '/_authenticated/settings'
     | '/_authenticated/strategy'
-    | '/_authenticated/trips'
     | '/_authenticated/vault'
     | '/_authenticated/wealth'
     | '/.lovable/oauth/consent'
     | '/_authenticated/trips/$tripId'
+    | '/_authenticated/trips/'
     | '/api/public/jobs/payment-reminders'
     | '/api/public/jobs/report-jobs'
   fileRoutesById: FileRoutesById
@@ -756,13 +756,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedStrategyRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
-    '/_authenticated/trips': {
-      id: '/_authenticated/trips'
-      path: '/trips'
-      fullPath: '/trips'
-      preLoaderRoute: typeof AuthenticatedTripsRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
     '/_authenticated/vault': {
       id: '/_authenticated/vault'
       path: '/vault'
@@ -784,12 +777,19 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DotlovableOauthConsentRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated/trips/': {
+      id: '/_authenticated/trips/'
+      path: '/trips'
+      fullPath: '/trips/'
+      preLoaderRoute: typeof AuthenticatedTripsIndexRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/trips/$tripId': {
       id: '/_authenticated/trips/$tripId'
-      path: '/$tripId'
+      path: '/trips/$tripId'
       fullPath: '/trips/$tripId'
       preLoaderRoute: typeof AuthenticatedTripsTripIdRouteImport
-      parentRoute: typeof AuthenticatedTripsRoute
+      parentRoute: typeof AuthenticatedRouteRoute
     }
     '/api/public/jobs/payment-reminders': {
       id: '/api/public/jobs/payment-reminders'
@@ -807,17 +807,6 @@ declare module '@tanstack/react-router' {
     }
   }
 }
-
-interface AuthenticatedTripsRouteChildren {
-  AuthenticatedTripsTripIdRoute: typeof AuthenticatedTripsTripIdRoute
-}
-
-const AuthenticatedTripsRouteChildren: AuthenticatedTripsRouteChildren = {
-  AuthenticatedTripsTripIdRoute: AuthenticatedTripsTripIdRoute,
-}
-
-const AuthenticatedTripsRouteWithChildren =
-  AuthenticatedTripsRoute._addFileChildren(AuthenticatedTripsRouteChildren)
 
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedAllocationRoute: typeof AuthenticatedAllocationRoute
@@ -847,9 +836,10 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedSearchRoute: typeof AuthenticatedSearchRoute
   AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRoute
   AuthenticatedStrategyRoute: typeof AuthenticatedStrategyRoute
-  AuthenticatedTripsRoute: typeof AuthenticatedTripsRouteWithChildren
   AuthenticatedVaultRoute: typeof AuthenticatedVaultRoute
   AuthenticatedWealthRoute: typeof AuthenticatedWealthRoute
+  AuthenticatedTripsTripIdRoute: typeof AuthenticatedTripsTripIdRoute
+  AuthenticatedTripsIndexRoute: typeof AuthenticatedTripsIndexRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
@@ -881,9 +871,10 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedSearchRoute: AuthenticatedSearchRoute,
   AuthenticatedSettingsRoute: AuthenticatedSettingsRoute,
   AuthenticatedStrategyRoute: AuthenticatedStrategyRoute,
-  AuthenticatedTripsRoute: AuthenticatedTripsRouteWithChildren,
   AuthenticatedVaultRoute: AuthenticatedVaultRoute,
   AuthenticatedWealthRoute: AuthenticatedWealthRoute,
+  AuthenticatedTripsTripIdRoute: AuthenticatedTripsTripIdRoute,
+  AuthenticatedTripsIndexRoute: AuthenticatedTripsIndexRoute,
 }
 
 const AuthenticatedRouteRouteWithChildren =
