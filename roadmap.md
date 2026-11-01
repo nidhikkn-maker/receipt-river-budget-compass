@@ -1,16 +1,17 @@
 # Roadmap (Functional Requirements v1.0)
 ## Current mobile Inbox and transfer approval verification
-- [ ] Report original count preservation, source bank totals, transfer/card/reimbursement non-duplication, organisation responsibility, verified closing balances and report/ledger agreement; distinguish controlled tests from source-statement verification.
-- [ ] Make mobile/tablet review and confirmation controls accessible and verify actual page-button flows in isolated browser data.
-- [ ] Implement and verify remaining owner-scoped transfer validation, retry and stale-safe Undo before approval; no historical record edits or publication.
-- [ ] Extend real-route browser tests through full review, confirmation, save/read-back and Undo, including transfer approval failures.
+- [x] Eight financial-rule acceptance tests pass; two read-only Cloud inventories preserve all 357 records/16 accounts and identical fingerprints. Source totals/closing balances remain UNVERIFIED: both uploaded statements lack identity/closing confirmation and there are zero checkpoints.
+- [x] Mobile/tablet controls have deliberate touch targets, narrow dialogs and reachable confirmation actions. Eight real-route Inbox browser tests pass, four-size overflow checks and phone confirmation screenshots inspected.
+- [x] Installed transfer approval/Undo safeguards (0049) with owner/account/direction/money/date/FX/workflow checks, exact retries, late-attachment snapshots and atomic stale-safe restoration; 21 tests run against installed SQL in disposable PGlite. Read-only Cloud checks confirm guards/anon denial. No real entries linked or changed; no publication.
+- [x] Browser buttons verified: select/filter/category preview/failure/retry/Undo, imported-row confirmation/cancel/failure, account correction/history Undo, organisation without trip/history Undo, transfer preview/cancel/failure/retry/Undo/refused restoration/read-back. 8 Inbox + 4 records-check + 2 expense/receipt pass; removed department approval remains explicitly skipped. Full suite 997 passes; build OK.
 ## Financial Inbox v5.12
 - [x] Diagnose current review, selection, financial rules and coverage against the complete brief; identified status/scope and transfer integrity gaps.
 - [x] Correct missing-info statuses, hidden selection, issue counts and truthful card-review labels; block unsafe client transfer pairs. Shared financial records unchanged.
 - [x] Five Inbox destinations, guided existing correction previews/confirmation, prominent group mappings, complete main filters/context and correction-batch history implemented.
 - [x] 977 tests / 123 files pass; 3 Inbox + 4 records-check + 2 expense/receipt browser tests pass (removed approvals explicitly skipped). Staged transfer correction passes 11 disposable-PGlite tests; 357/2,000-row timing and four controlled real-route screenshots inspected, no overflow/errors.
 - [x] Two read-only inventories identical (16 accounts, 357 records, 2 statements, 9 documents, zero links; account/record fingerprints unchanged). Verification report and controlled screenshots saved in Files; no publication/shared changes.
-- [ ] Apply staged transfer validation/undo only with separate shared-storage approval; cross-date/FX canonical movements and full four financial end-to-end scenarios still need implementation/verification (not release-ready).
+- [x] Transfer approval validation/Undo installed on explicit safeguard request and checked read-only; no financial records changed.
+- [ ] Cross-date/FX canonical movements and full hosted financial end-to-end scenarios remain blocked pending a source-preserving model and isolated hosted test storage (not release-ready).
 - [ ] Complete all-time status/transfer history, reject/search and unfinished-panel draft recovery; current history is existing correction batches only.
 - [ ] New production-like signed-in layout verification blocked by stale localhost bundle despite new-source fixture passing; do not count old-layout checks as v5.12 evidence. Physical-device/isolated hosted/security acceptance remains outstanding.
 ## Records-check browser button tests
