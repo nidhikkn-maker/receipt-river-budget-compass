@@ -6,6 +6,8 @@ import { Card, Row } from "@/components/Money";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { SCOPE_LABEL, money } from "@/lib/expenses";
+import { emptyTripFilters, matchesTripFilters } from "@/lib/trip-filters";
+import { TripDiscoveryFilters } from "@/components/trip/TripDiscoveryFilters";
 import { tripSummary } from "@/lib/intelligence";
 import { useStore } from "@/lib/store";
 import { advanceDashboard, tripStatus, TRIP_STATUS_LABEL, type TripStatus, type TravelTrip } from "@/lib/travel";
@@ -36,7 +38,7 @@ function Trips() {
   const search = Route.useSearch();
   const navigate = useNavigate();
   const [filter, setFilter] = useState<"all" | TripStatus>(search.status ?? "all");
-  const [workspace, setWorkspace] = useState<string>("all");
+  const [filters, setFilters] = useState(emptyTripFilters);
   const [query, setQuery] = useState("");
   const [createOpen, setCreateOpen] = useState(false);
 
@@ -50,7 +52,7 @@ function Trips() {
 
   const shown = trips.filter((t) => {
     if (filter !== "all" && tripStatus(t, today) !== filter) return false;
-    if (workspace !== "all" && (t.type ?? "personal") !== workspace) return false;
+    if (!matchesTripFilters(t, filters)) return false;
     if (query && !`${t.name} ${t.destination} ${t.organisation ?? ""}`.toLowerCase().includes(query.toLowerCase())) return false;
     return true;
   });
@@ -89,13 +91,7 @@ function Trips() {
           </Button>
         ))}
       </div>
-      <div className="mb-4 flex gap-2 overflow-x-auto pb-1" role="group" aria-label="Workspace filter">
-        {["all", "personal", "family", "business", "official", "mixed"].map((w) => (
-          <Button key={w} size="sm" variant={workspace === w ? "default" : "outline"} aria-pressed={workspace === w} onClick={() => setWorkspace(w)} className="shrink-0">
-            {w === "all" ? "All workspaces" : w === "mixed" ? "Mixed" : SCOPE_LABEL[w as keyof typeof SCOPE_LABEL]}
-          </Button>
-        ))}
-      </div>
+      <TripDiscoveryFilters trips={trips} value={filters} onChange={setFilters} />
 
       {shown.length === 0 && (
         <Card title="No trips here">
