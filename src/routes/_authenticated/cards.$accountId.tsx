@@ -6,6 +6,9 @@ import { Button } from "@/components/ui/button";
 import { money } from "@/lib/expenses";
 import { useStore } from "@/lib/store";
 import { cardLedger } from "@/lib/card-balance";
+import { cardBalanceSeries, cardRecency, cardTrendKeys, statementCaption, updatedCaption } from "@/lib/card-trend";
+import { CardTrendChart } from "@/components/CardTrendChart";
+import { todayISO } from "@/lib/use-position";
 
 export const Route = createFileRoute("/_authenticated/cards/$accountId")({
   head: () => ({
@@ -23,11 +26,14 @@ export const Route = createFileRoute("/_authenticated/cards/$accountId")({
 
 function CardBalancePage() {
   const { accountId } = Route.useParams();
-  const { accounts, transactions } = useStore();
+  const { accounts, transactions, preferences } = useStore();
   const [onlyFlagged, setOnlyFlagged] = useState(false);
   const [month, setMonth] = useState("");
   const card = accounts.find((a) => a.id === accountId && a.kind === "credit_card");
   const r = useMemo(() => (card ? cardLedger(card, transactions) : null), [card, transactions]);
+  const today = todayISO();
+  const rec = useMemo(() => (card ? cardRecency(card, transactions, preferences.statementBalances[card.id]?.date) : null), [card, transactions, preferences]);
+  const trend = useMemo(() => (card ? cardBalanceSeries([card], transactions, 12, today) : []), [card, transactions, today]);
   if (!card || !r) return <Card title="Card not found"><p className="text-sm text-muted-foreground">This credit card isn’t in your accounts.</p></Card>;
   const name = (id?: string | null) => accounts.find((a) => a.id === id)?.name ?? "Paying account missing";
   const lines = r.lines.filter((l) => (!onlyFlagged || l.issue) && (!month || l.txn.date.startsWith(month)));
@@ -41,11 +47,17 @@ function CardBalancePage() {
 
       <Card title="Outstanding" className="mt-4">
         <div className="my-1 break-words font-display text-2xl font-bold sm:text-3xl">{money(r.outstanding)}</div>
+        {rec && <p className="mb-1 text-xs text-muted-foreground">{statementCaption(rec)} · {updatedCaption(rec)}</p>}
         <Row label="Opening amount owed" value={money(r.opening)} />
         <Row label="Spends" value={money(r.spends)} />
         <Row label="Payments" value={`− ${money(r.payments)}`} />
         <Row label="Refunds" value={`− ${money(r.refunds)}`} />
         {r.limitUsed != null && <Row label="Credit limit used" value={`${r.limitUsed}%`} />}
+      </Card>
+
+      <Card title="Balance trend" className="mt-4">
+        <p className="text-[11px] text-muted-foreground">Amount owed at each month end · credit shows below zero · last 12 months</p>
+        <CardTrendChart points={trend} names={cardTrendKeys([card])} height={180} />
       </Card>
 
       {r.unreconciled.count > 0 ? (

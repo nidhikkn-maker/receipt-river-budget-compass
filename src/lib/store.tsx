@@ -233,7 +233,7 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
     setExpenses((e.data ?? []).map((x) => ({
       id: x.id, categoryRevision: x.category_revision, correctionRevision: x.correction_revision, department: x.department, title: x.title, merchant: x.merchant, category: x.category as Category, scope: x.scope as Scope, memberId: x.member_id, splits: (x.splits as unknown as Split[]) ?? [],
       amount: Number(x.amount), currency: x.currency, originalAmount: Number(x.original_amount ?? x.amount), fxRate: Number(x.fx_rate),
-      paymentMethod: x.payment_method as PaymentMethod, reconciledAt: x.reconciled_at, statementRef: x.statement_ref,
+      paymentMethod: x.payment_method as PaymentMethod, reconciledAt: x.reconciled_at, statementRef: x.statement_ref, updatedAt: x.updated_at,
       date: x.expense_date, description: x.description, receipts: (x.receipts as unknown as Receipt[]) ?? [],
       txnType: x.txn_type as TxnType, accountId: x.account_id, toAccountId: x.to_account_id, paymentInstrumentId: x.payment_instrument_id, payeeId: (x as { payee_id?: string | null }).payee_id ?? null, tags: x.tags ?? [], workspaceAllocations: (x.workspace_allocations as unknown as import("./workspaces").WorkspaceShare[]) ?? [],
       receiptDetails: x.receipt_details as unknown as ReceiptDetails, reimbursementStatus: x.reimbursement_status as ReimbursementStatus,
