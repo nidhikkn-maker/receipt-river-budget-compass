@@ -1,10 +1,13 @@
 # Roadmap (Functional Requirements v1.0)
 ## Financial Inbox v5.12
-- [ ] Diagnose current review, selection, financial rules and regression coverage against the complete brief.
-- [ ] Correct evidenced financial-logic gaps without editing live financial records; preserve existing external-payee save restriction until explicitly changed.
-- [ ] Implement five Inbox views and guided scoped selection/action/preview/confirmation with issue-specific counts and review history.
-- [ ] Verify controlled financial/browser workflows, realistic-volume performance and iPhone/iPad portrait/iPad landscape/desktop layouts.
-- [ ] Perform read-only historical integrity comparisons and deliver implementation, test, reconciliation, exception and readiness reports; no deployment.
+- [x] Diagnose current review, selection, financial rules and coverage against the complete brief; identified status/scope and transfer integrity gaps.
+- [x] Correct missing-info statuses, hidden selection, issue counts and truthful card-review labels; block unsafe client transfer pairs. Shared financial records unchanged.
+- [x] Five Inbox destinations, guided existing correction previews/confirmation, prominent group mappings, complete main filters/context and correction-batch history implemented.
+- [x] 977 tests / 123 files pass; 3 Inbox + 4 records-check + 2 expense/receipt browser tests pass (removed approvals explicitly skipped). Staged transfer correction passes 11 disposable-PGlite tests; 357/2,000-row timing and four controlled real-route screenshots inspected, no overflow/errors.
+- [x] Two read-only inventories identical (16 accounts, 357 records, 2 statements, 9 documents, zero links; account/record fingerprints unchanged). Verification report and controlled screenshots saved in Files; no publication/shared changes.
+- [ ] Apply staged transfer validation/undo only with separate shared-storage approval; cross-date/FX canonical movements and full four financial end-to-end scenarios still need implementation/verification (not release-ready).
+- [ ] Complete all-time status/transfer history, reject/search and unfinished-panel draft recovery; current history is existing correction batches only.
+- [ ] New production-like signed-in layout verification blocked by stale localhost bundle despite new-source fixture passing; do not count old-layout checks as v5.12 evidence. Physical-device/isolated hosted/security acceptance remains outstanding.
 ## Records-check browser button tests
 - [x] Four real-route browser tests pass: individual/multiple selection, checked-list movement, Undo, prior checked preservation, select-visible deduplication/clear and save-failure retry. Four existing rule tests also pass; screenshots inspected, no runtime errors or external requests, fixture accounts/transactions/statements unchanged. Controlled browser preferences only; no Cloud writes or publication.
 ## Expense, approval and receipt browser tests
