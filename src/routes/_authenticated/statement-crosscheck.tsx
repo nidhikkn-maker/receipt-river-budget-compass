@@ -10,7 +10,8 @@ import { Card } from "@/components/Money";
 import { Button } from "@/components/ui/button";
 import { money } from "@/lib/expenses";
 import { useStore } from "@/lib/store";
-import { crossCheck, parseBalanceStatement, rowsFromItems, statementTotals, type BalanceLine, type CrossRecord, type CrossResult } from "@/lib/statement-crosscheck";
+import { accountBalance } from "@/lib/ledger";
+import { balanceGate, lineId, missingLines, pairTransfers, crossCheck, parseBalanceStatement, rowsFromItems, statementTotals, type BalanceLine, type CrossRecord, type CrossResult } from "@/lib/statement-crosscheck";
 
 export const Route = createFileRoute("/_authenticated/statement-crosscheck")({
   head: () => ({
@@ -50,7 +51,7 @@ async function readPdf(file: File): Promise<Parsed> {
 const LABEL: Record<CrossResult["result"], string> = { found: "Found on other statement", found_wrong_kind: "Found — wrong kind", not_found: "Not found" };
 
 function CrossCheckPage() {
-  const { transactions, accounts, correctFinancialEntries, undoFinancialCorrection } = useStore();
+  const { transactions, accounts, correctFinancialEntries, undoFinancialCorrection, save } = useStore();
   const money_accounts = accounts.filter((a) => !a.archived);
   const [accountId, setAccountId] = useState(() => money_accounts.find((a) => /movac/i.test(a.name))?.id ?? money_accounts[0]?.id ?? "");
   const [from, setFrom] = useState("2026-04-01");
@@ -109,6 +110,33 @@ function CrossCheckPage() {
   };
   const undo = async (id: string) => {
     try { await undoFinancialCorrection(id); setApplied(null); toast.success("Original account and type restored"); } catch (e) { toast.error(e instanceof Error ? e.message : "Couldn’t undo — a later edit may block it."); }
+  };
+  const homeLines = home.flatMap((p) => p.lines);
+  const missing = useMemo(() => pairTransfers(missingLines(records, homeLines), other.flatMap((p) => p.lines)), [records, home, other]);
+  const acct = accounts.find((a) => a.id === accountId);
+  const closing = home.length ? home[home.length - 1]!.closing : null;
+  const gate = acct && home.length ? balanceGate(accountBalance(acct, transactions as never), missing, closing) : null;
+  const [posting, setPosting] = useState<string | null>(null);
+  const postMissing = async () => {
+    if (!acct || !gate?.ok) return;
+    if (missing.some((m) => m.transferWith) && !targetId) { toast.error("Choose which account the other statements belong to, so transfers are posted between the right accounts."); return; }
+    let done = 0;
+    try {
+      for (const m of missing) {
+        setPosting(`Saving ${done + 1} of ${missing.length}…`);
+        const transfer = !!m.transferWith;
+        await save({
+          title: m.description.slice(0, 80) || "Statement entry", merchant: null, category: transfer ? "Transfer" : "Uncategorised", scope: "business", memberId: null,
+          amount: m.amount, currency: acct.currency ?? "INR", paymentMethod: "bank_transfer", date: m.date, description: `Statement import · ${m.source}`, tags: ["statement-import"],
+          txnType: transfer ? "transfer" : m.direction === "debit" ? "expense" : "income",
+          accountId: transfer && m.direction === "credit" ? targetId : accountId,
+          toAccountId: transfer ? (m.direction === "debit" ? targetId : accountId) : null,
+        }, { createId: await lineId(accountId, m), noRefresh: true });
+        done++;
+      }
+      toast.success(`${done} statement entries posted to ${acct.name}`);
+    } catch (e) { toast.error(`${done} saved; stopped at entry ${done + 1}: ${e instanceof Error ? e.message : "try again"}. Retrying will not duplicate saved entries.`); }
+    finally { setPosting(null); }
   };
   const accName = (id: string) => accounts.find((a) => a.id === id)?.name ?? "—";
 
@@ -186,6 +214,17 @@ function CrossCheckPage() {
                 <div className="flex gap-2"><Button variant="outline" onClick={() => setPreview(null)}>Cancel</Button><Button onClick={apply}>Confirm and apply</Button></div>
               </div>
             )}
+          </Card>
+          <Card className="space-y-3 p-4">
+            <h2 className="font-semibold">Post missing statement entries</h2>
+            {!home.length ? <p className="text-sm text-muted-foreground">Add this account’s own statement (step 1) to find entries that have no record.</p> : (<>
+              <p className="text-sm">{missing.length} statement entries on {acct?.name} have no record · {missing.filter((m) => m.transferWith).length} are transfers with another uploaded statement (posted once as a transfer, not income and spending).</p>
+              {gate && <p className={`text-sm ${gate.ok ? "text-primary" : "text-destructive"}`} role="status">Balance in app now {money(gate.after - gate.net)} · after posting {money(gate.after)} · statement closing {closing !== null ? money(closing) : "—"}{gate.ok ? " · matches" : ` · off by ${money(gate.difference ?? 0)}. Posting is blocked: move wrong-account records first, and check the account’s starting balance equals the statement’s opening balance${home[0]?.opening != null ? ` (${money(home[0].opening)})` : ""}.`}</p>}
+              <ul className="max-h-72 divide-y divide-border overflow-auto rounded-md border border-border text-sm">
+                {missing.map((m, i) => <li key={i} className="flex justify-between gap-2 p-2"><span className="min-w-0 truncate">{m.date} · {m.description}{m.transferWith ? ` · transfer ↔ ${m.transferWith.source}` : ""}</span><span className="shrink-0 tabular-nums">{m.direction === "debit" ? "−" : "+"}{money(m.amount)}</span></li>)}
+              </ul>
+              <Button onClick={postMissing} disabled={!gate?.ok || !missing.length || !!posting}>{posting ?? `Confirm and post ${missing.length} entries`}</Button>
+            </>)}
           </Card>
           <div className="flex justify-end"><Button variant="outline" onClick={exportCsv}><Download className="size-4" /> Export CSV</Button></div>
           <ul className="divide-y divide-border rounded-lg border border-border bg-card">
