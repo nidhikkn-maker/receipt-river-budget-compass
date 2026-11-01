@@ -8,7 +8,6 @@ import { PageTitle } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { askAssistant } from "@/lib/assistant.functions";
-import { useAssistantFacts } from "@/lib/use-position";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_authenticated/assistant")({
@@ -32,7 +31,6 @@ const SUGGESTIONS = [
 type Msg = { role: "user" | "assistant"; content: string; error?: boolean };
 
 function Assistant() {
-  const facts = useAssistantFacts(30);
   const ask = useServerFn(askAssistant);
   const [msgs, setMsgs] = useState<Msg[]>([]);
   const [q, setQ] = useState("");
@@ -48,7 +46,7 @@ function Assistant() {
     setMsgs(next); setQ(""); setBusy(true);
     const req = latest.current.begin();
     try {
-      const r = await ask({ data: { messages: next.slice(-12).map(({ role, content }) => ({ role, content })), facts } });
+      const r = await ask({ data: { messages: next.slice(-12).map(({ role, content }) => ({ role, content })) } });
       if (!req.isCurrent()) return;
       setMsgs((m) => [...m, r.ok ? { role: "assistant", content: r.text } : { role: "assistant", content: r.error, error: true }]);
     } catch {
