@@ -455,3 +455,11 @@
 - [x] Back/forward buttons + edge-swipe back, centred pop-ups (shared dialog), weights capped at 600 on the chosen system font
 - [x] Publish completed layout changes
 - [x] Show E1–E7 corrections for review
+
+## V5.18 (Nov 1 2026)
+- [x] Fresh security check on live site + summarize issues before sharing widely (quick scan: guest note only; deep scan started; 1 moderate dev-only dependency advisory)
+- [x] Verify live site displays correctly on desktop and mobile (updated layouts + navigation) — no overflow or console errors on 17 pages at 1280px and 402px
+- [x] Fix live defects found: Reports category list unfolded (545 rows) → 50 at a time; Back after a refresh/shared link went home → now uses the browser's previous page
+- [ ] Publish the two V5.18 fixes — waiting on approval
+- [ ] Match five missing statements — blocked: statements not yet uploaded
+- [ ] Approve E1–E7 audit corrections — waiting on user

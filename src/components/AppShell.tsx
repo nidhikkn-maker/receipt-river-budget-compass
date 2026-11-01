@@ -2,7 +2,7 @@ import { FilePen } from "lucide-react";
 import { DraftsReminder } from "@/components/DraftsReminder";
 import { Link, useRouter, useRouterState } from "@tanstack/react-router";
 import { ArrowLeft, ArrowRight } from "lucide-react";
-import { showBackButton } from "@/lib/back-nav";
+import { backStep, showBackButton } from "@/lib/back-nav";
 import { useEffect, useState, type ReactNode } from "react";
 import { BarChart3, Bell, CalendarClock, Gem, Home, Landmark, ListFilter, PiggyBank, Plus, Settings, Sparkles, Users, Eye, EyeOff, FileText, UserRound, TrendingUp, Inbox, HeartPulse, Search, SlidersHorizontal, Split, Network, Plane, Wallet, Bot, Menu, X, MessageCircleQuestion, RefreshCw, CloudOff, Check, TriangleAlert } from "lucide-react";
 import { DeviceLock } from "./DeviceLock";
@@ -252,7 +252,12 @@ function BackButton() {
     else if (action.type === "PUSH") forwardSteps = 0;
     setCanForward(forwardSteps > 0);
   }), [router]);
-  const back = () => { if (router.history.canGoBack()) router.history.back(); else void router.navigate({ to: "/dashboard" }); };
+  const back = () => {
+    const step = backStep(router.history.canGoBack(), window.history.length);
+    if (step === "router") router.history.back();
+    else if (step === "browser") window.history.back();
+    else void router.navigate({ to: "/dashboard" });
+  };
   // Swipe right from the left edge goes back on phones and tablets.
   useEffect(() => {
     let x = -1, y = 0;

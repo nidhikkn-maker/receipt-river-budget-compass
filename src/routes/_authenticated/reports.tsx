@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Download, FileSpreadsheet, FileText } from "lucide-react";
 import { toast } from "sonner";
 import { PageTitle } from "@/components/AppShell";
@@ -52,8 +52,11 @@ function Reports() {
   const [to, setTo] = useState("");
   const [member, setMember] = useState("all");
   const [selectedCategory, setSelectedCategory] = useState("all");
+  const [catShown, setCatShown] = useState(50);
   const [scope,setScope]=useState<Scope|"all">("all");const [account,setAccount]=useState("all");const [payment,setPayment]=useState("all");const [query,setQuery]=useState("");
   const [department,setDepartment]=useState("all");const [status,setStatus]=useState("all");
+  const filterKey = [from, to, member, selectedCategory, scope, account, payment, query, department, status, JSON.stringify(tagGroup)].join("|");
+  useEffect(() => setCatShown(50), [filterKey]);
   const departmentOptions=[...new Set([...Object.keys(departmentBudgets),...transactions.map(e=>e.department?.trim()||"").filter(Boolean)])].sort();
   const filtered = applyFilters(transactions, { from, to, memberId: member, scope, accountId:account, paymentMethod:payment, query, tagAll:Object.values(tagGroup).filter(v=>v!=="all"), department })
     .filter(e=>status==="all"||(status==="none"?!isTracked(e):isTracked(e)&&stageOf(e)===status));
@@ -62,6 +65,7 @@ function Reports() {
   const drillRows=drill?list.filter(e=>(!drill.from||e.date>=drill.from)&&(!drill.to||e.date<=drill.to)&&(!drill.merchant||(e.merchant||e.title)===drill.merchant)&&(!drill.account||(accounts.find(a=>a.id===e.accountId)?.name??"Unassigned")===drill.account)):[];
   const monthEndOf=(m:string)=>{const [y,mo]=m.split("-").map(Number);return new Date(Date.UTC(y!,mo!,0)).toISOString().slice(0,10);};
   const categoryRows = Object.entries(categoryTotals(list)).map(([name,amount])=>({name,amount}));
+  const categoryList = list.filter(e=>selectedCategory==="all"||e.category===selectedCategory);
   const stamp = new Date().toISOString().slice(0, 10);
   const monthly=monthlySeries(filtered,stamp,12);const weekly=weeklySpend(filtered,stamp,8);const worth=netWorthSeries(accounts,transactions,valuations,stamp,12).map(x=>({...x,netWorth:x.net}));const cmp=monthToDateCompare(filtered,stamp);
   const subs=subscriptionSpendSeries(list,commitments,stamp,6);const util=cardUtilisationSeries(accounts,transactions,stamp,6);const cardNames=accounts.filter(a=>a.kind==="credit_card"&&(a.creditLimit??0)>0).map(a=>a.name);const loanRows=loanProgress(loans);const savings=savingsTrend(filtered,stamp,12);
@@ -117,7 +121,7 @@ function Reports() {
         <h2 className="font-display text-xl font-bold">Category spending</h2>
         <ResponsiveContainer width="100%" height={260}><BarChart data={categoryRows}><XAxis dataKey="name" tick={{fontSize:11}}/><Tooltip formatter={(v:number)=>money(v)}/><Bar dataKey="amount" fill="var(--chart-1)" onClick={data=>setSelectedCategory(String(data.name))}/></BarChart></ResponsiveContainer>
         <Select value={selectedCategory} onValueChange={setSelectedCategory}><SelectTrigger aria-label="Insight category"><SelectValue/></SelectTrigger><SelectContent><SelectItem value="all">All categories</SelectItem>{categoryRows.map(c=><SelectItem key={c.name} value={c.name}>{c.name}</SelectItem>)}</SelectContent></Select>
-        <div className="mt-4"><ExpenseTable items={list.filter(e=>selectedCategory==="all"||e.category===selectedCategory)} empty="No transactions in this range." /></div>
+        <div className="mt-4"><ExpenseTable items={categoryList.slice(0, catShown)} empty="No transactions in this range." />{categoryList.length > catShown && <div className="mt-4 flex flex-col items-center gap-1"><Button variant="outline" onClick={() => setCatShown((n) => n + 50)}>Show 50 more</Button><span className="text-xs text-muted-foreground">Showing {catShown} of {categoryList.length}</span></div>}</div>
       </section>
       <section className="mb-4 flex flex-wrap items-end gap-3"><div className="grid gap-1"><Label htmlFor="budget-month">Budget comparison month</Label><Input id="budget-month" type="month" value={budgetMonth} onChange={e => setBudgetMonth(e.target.value)} /></div>{departmentBudgetError && <p className="text-sm text-destructive">Department limits couldn't load. Try refreshing before exporting.</p>}</section>
       <section className="mb-8 rounded-3xl border bg-card p-5">
