@@ -2,14 +2,16 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { defaultPreferences } from '@/lib/preferences';
 import type { FinancialReview } from '@/lib/financial-review';
+import type { Expense } from '@/lib/expenses';
 const mocks = vi.hoisted(() => ({ save: vi.fn(), store: {} as Record<string, unknown> }));
 vi.mock('@/lib/store', () => ({ useStore: () => mocks.store }));
 import { ReviewMappingPanel } from './ReviewMappingPanel';
 afterEach(cleanup);
 describe('controlled bulk activity confirmation', () => {
   it('does not save on preview or cancel, and explicitly confirms reviewed records', async () => {
-    const transaction = { id: 'sample', title: 'Sample', amount: 50, date: '2026-04-01', txnType: 'expense', tags: [], description: 'Source' };
-    const rows = [{ transaction, group: 'category' }] as FinancialReview[];
+    Element.prototype.scrollIntoView = vi.fn();
+    const transaction: Expense = { id: 'sample', title: 'Sample', amount: 50, originalAmount: 50, currency: 'INR', fxRate: 1, date: '2026-04-01', txnType: 'expense', tags: [], description: 'Source', merchant: 'Test', category: 'Travel', scope: 'personal', memberId: null, splits: [], receipts: [], paymentMethod: 'upi', reconciledAt: null, statementRef: null };
+    const rows: FinancialReview[] = [{ transaction, group: 'category', issues: [], evidence: [], targetAccountIds: [], confidence: 'low', status: 'Unresolved' }];
     mocks.save.mockResolvedValue(undefined);
     mocks.store = { transactions: [transaction], preferences: { ...defaultPreferences(), tags: [{ group: 'Project', name: 'Audit' }] }, applyReviewMapping: mocks.save };
     const done = vi.fn(); render(<ReviewMappingPanel rows={rows} onSaved={done} />);
