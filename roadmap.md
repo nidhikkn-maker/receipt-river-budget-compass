@@ -230,6 +230,8 @@
 - [x] Saved filter views on Transactions (templates covered by Repeat favourites)
 
 ## V5.1 Smart historical import (.lovable/requirements-v5.1.md)
+- [ ] New requests: compare imported opening/closing balances to saved source evidence; scanned-PDF extraction continues after page closure.
+- [ ] Consolidated V5.0 specification (.lovable/requirements-v5.0-consolidated.md): audit existing features and finish in priority order without publication.
 - [x] Secure original statements (also in Vault), multi-upload CSV/XLS/XLSX/text PDF, persistent staging and retry; browser-verified two-row import.
 - [x] Grouped review, bulk classifications, editable/disableable user-confirmed merchant rules, conflicts and duplicate-safe atomic posting; reviewed edits survive reload, two ledger entries read back, repeated file recognised.
 - [x] Statement opening/closing arithmetic and ledger comparison, missing-month coverage, enrichment/provenance, Inbox/Settings, audit CSV; 560 total tests (full 559-test suite plus final transfer guard), no build errors or phone overflow.
