@@ -49,6 +49,7 @@ const MORE_GROUPS: { title: string; items: { to: string; label: string; icon: ty
     { to: "/records-check", label: "Records check (read-only)", icon: Search },
     { to: "/statements", label: "Statement Desk", icon: Inbox },
     { to: "/statement-crosscheck", label: "Statement match & fix", icon: Search },
+    { to: "/statement-accounts", label: "Statement coverage", icon: Search },
     { to: "/transfers", label: "Internal transfers", icon: Inbox },
     { to: "/review", label: "Monthly review", icon: HeartPulse },
     { to: "/search", label: "Search everything", icon: Search },
