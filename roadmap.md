@@ -428,4 +428,4 @@
 - [x] Recognise transfers already posted from another account (no false missing / double post)
 - [x] Undo an entire statement posting batch
 - [x] Publish latest statement matching/posting to live
-- [ ] Post matched statement results to live records (awaiting explicit approval of exact list)
+- [x] Post matched statement results to live records (MOVAC ₹21,419.15 gap remains)

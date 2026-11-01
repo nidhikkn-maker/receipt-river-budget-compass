@@ -160,7 +160,7 @@ export function balanceGate(appBalance: number, posts: BalanceLine[], closing: n
 
 /** Stable id per account + statement line so posting twice cannot create duplicates. */
 export async function lineId(accountId: string, l: BalanceLine): Promise<string> {
-  const h = new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(`${accountId}|${l.date}|${l.direction}|${l.amount.toFixed(2)}|${l.balance.toFixed(2)}`))).slice(0, 16);
+  const h = new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(`${accountId}|${l.date}|${l.direction}|${l.amount.toFixed(2)}|${l.balance.toFixed(2)}|${l.description}`))).slice(0, 16);
   h[6] = (h[6]! & 0x0f) | 0x50; h[8] = (h[8]! & 0x3f) | 0x80;
   const x = [...h].map((b) => b.toString(16).padStart(2, "0")).join("");
   return `${x.slice(0, 8)}-${x.slice(8, 12)}-${x.slice(12, 16)}-${x.slice(16, 20)}-${x.slice(20)}`;
