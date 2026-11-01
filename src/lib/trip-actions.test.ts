@@ -1,0 +1,15 @@
+import { expect, it } from "vitest";
+import { selectMatching, tripExpenses, tripActionSnapshot } from "./trip-actions";
+import { smartTripSuggestions } from "./trip-suggestions";
+import type { Expense } from "./expenses";
+import type { TravelTrip } from "./travel";
+const trip: TravelTrip = { id: "trip", name: "Kovai work", destination: "Coimbatore", start: "2026-11-03", end: "2026-11-05", budget: 0, currencies: ["INR"], type: "business" };
+const e: Expense = { id: "e", date: "2026-11-03", title: "Hotel Coimbatore", merchant: "Hotel", description: "", category: "Hotels", scope: "business", amount: 2500, originalAmount: 2500, currency: "INR", fxRate: 1, memberId: null, splits: [], receipts: [], paymentMethod: "cash", reconciledAt: null, statementRef: null };
+it("selects all matching expenses without duplicates", () => expect(selectMatching(["a"], ["a", "b"])).toEqual(["a", "b"]));
+it("includes id-linked and legacy tagged expenses but never advances", () => expect(tripExpenses(trip, [{ ...e, tripId: "trip" }, { ...e, id: "legacy", tags: ["Trip: Kovai work"] }, { ...e, id: "advance", tripId: "trip", txnType: "advance" }]).map((x) => x.id)).toEqual(["e", "legacy"]));
+it("captures reviewed metadata and original ledger values for conflict checking", () => expect(tripActionSnapshot(e)).toEqual({ id: "e", tags: [], tripId: null, department: null, amount: 2500, date: "2026-11-03", reimbursementStatus: "none" }));
+it("ranks destination and dates with explicit evidence without mutating the expense", () => { const before = structuredClone(e); const s = smartTripSuggestions(e, [trip]); expect(s[0]?.score).toBe(65); expect(s[0]?.reasons).toContain("Destination matches Coimbatore"); expect(e).toEqual(before); });
+it("matches booking references even before departure", () => expect(smartTripSuggestions({ ...e, date: "2026-10-01", title: "Booking ABC123" }, [{ ...trip, bookings: [{ id: "b", kind: "flight", provider: "Air", ref: "ABC123", date: trip.start, amount: 2500, status: "unpaid" }] }])[0]?.confidence).toBe("Strong match"));
+it("keeps overlapping date-only candidates ambiguous", () => expect(smartTripSuggestions({ ...e, title: "Lunch", merchant: "Cafe", category: "Dining" }, [trip, { ...trip, id: "other" }]).every((s) => s.ambiguous)).toBe(true));
+it("does not suggest closed, cancelled, already linked trips or non-expenses", () => { expect(smartTripSuggestions(e, [{ ...trip, closedAt: "2026-11-06" }, { ...trip, cancelledAt: "2026-11-01" }])).toEqual([]); expect(smartTripSuggestions({ ...e, tags: ["Trip: other"] }, [trip])).toEqual([]); expect(smartTripSuggestions({ ...e, txnType: "transfer" }, [trip])).toEqual([]); });
+it("does not infer a trip from workspace alone", () => expect(smartTripSuggestions({ ...e, date: "2026-01-01", title: "", merchant: null }, [trip])).toEqual([]));
