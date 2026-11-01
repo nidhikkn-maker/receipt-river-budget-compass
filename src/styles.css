@@ -780,6 +780,9 @@ html[data-theme="apple-glass"] :where(.bg-card, .bg-popover, .bg-ink) {
 
   input, textarea, select { font-size: 16px; }
 
+  /* The chosen type scale tops out at 600; the logo keeps its own brand font. */
+  .font-bold:not(.font-brand), .font-extrabold:not(.font-brand), .font-black:not(.font-brand) { font-weight: 600; }
+
   .font-display {
     font-weight: 600;
     letter-spacing: -0.015em;

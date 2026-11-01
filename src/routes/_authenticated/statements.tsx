@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { Download, Inbox, ShieldCheck, Upload, X } from "lucide-react";
 import { Card } from "@/components/Money";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import { money } from "@/lib/expenses";
 import { useStore } from "@/lib/store";
@@ -393,13 +394,16 @@ function StatementDeskPage() {
             </Card>
           ))}
 
-          {fix && (
-            <div role="region" aria-label="Change preview" className="space-y-2 rounded-2xl border border-primary p-3 text-sm">
-              <p className="font-medium">{fix.preview.records.length} records in {fix.name} {fix.preview.choice.accountId ? "will move to this statement's account" : `will be re-typed as ${String(fix.preview.choice.txnType)}`}</p>
-              <ul className="space-y-0.5">{fix.preview.balanceChanges.map((b) => <li key={b.id}>{b.name}: balance {b.change >= 0 ? "+" : ""}{money(b.change)}</li>)}</ul>
-              <div className="flex gap-2"><Button variant="outline" onClick={() => setFix(null)}>Cancel</Button><Button onClick={applyFix}>Confirm and apply</Button></div>
-            </div>
-          )}
+          <Dialog open={!!fix} onOpenChange={(o) => { if (!o) setFix(null); }}>
+            <DialogContent aria-label="Change preview" className="max-h-[85dvh] overflow-y-auto sm:max-w-md">
+              <DialogHeader>
+                <DialogTitle>Check before applying</DialogTitle>
+                <DialogDescription>{fix?.preview.records.length} records in {fix?.name} {fix?.preview.choice.accountId ? "will move to this statement's account" : `will be re-typed as ${String(fix?.preview.choice.txnType)}`}</DialogDescription>
+              </DialogHeader>
+              <ul className="divide-y rounded-xl border text-sm">{fix?.preview.balanceChanges.map((b) => <li key={b.id} className="flex justify-between gap-3 px-3 py-2"><span className="min-w-0 truncate">{b.name}</span><span className="shrink-0 font-mono">{b.change >= 0 ? "+" : ""}{money(b.change)}</span></li>)}</ul>
+              <DialogFooter className="gap-2"><Button variant="outline" onClick={() => setFix(null)}>Cancel</Button><Button onClick={applyFix}>Confirm and apply</Button></DialogFooter>
+            </DialogContent>
+          </Dialog>
 
           <div className="flex flex-wrap items-center gap-2">
             <Button onClick={apply} disabled={!!progress}>{progress ?? `Apply everything (${plan.totals.auto + accepted.length} to save)`}</Button>

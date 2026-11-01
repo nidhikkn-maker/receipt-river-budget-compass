@@ -16,6 +16,7 @@ import { OrganisationDirectory } from "@/components/OrganisationDirectory";
 import { PayeeDirectory } from '@/components/PayeeDirectory';
 import { ImportRules } from '@/components/ImportRules';
 import { SettingsDirectory } from "@/components/SettingsDirectory";
+import { Fold } from "@/components/Fold";
 import { useStore } from "@/lib/store";
 import { BACKUP_TABLES, createBackupZip, prepareRestore, readBackup, type Backup } from "@/lib/backup";
 import { downloadBlob } from "@/lib/reports";
@@ -128,14 +129,14 @@ function Settings() {
       <PageTitle eyebrow="Settings" title="Settings" sub={`${transactions.length} entries · ${accounts.length} accounts`} />
       <div className="mb-5 flex flex-wrap gap-2"><Button asChild variant="outline"><Link to="/auth">Sign in / account</Link></Button><Button asChild variant="outline"><Link to="/classification-rules">Transaction classification rules</Link></Button></div>
       <SettingsDirectory />
-      <div id="security" className="scroll-mt-20"><PasskeySettings /></div>
-      <div id="appearance" className="scroll-mt-20"><AppearanceSettings /></div>
-      <div id="finance" className="scroll-mt-20"><FinanceSettings /></div>
-      <OrganisationDirectory />
-      <PayeeDirectory />
-      <ImportRules />
-      <div id="notifications" className="scroll-mt-20"><PushSettings /></div>
-      <div id="data" className="grid scroll-mt-20 gap-4 sm:grid-cols-2">
+      <Fold id="security" title="Security & device unlock" hint="Face ID, passkeys and device lock"><PasskeySettings /></Fold>
+      <Fold id="appearance" title="Appearance" hint="Theme, light or dark, Home layout"><AppearanceSettings /></Fold>
+      <Fold id="finance" title="Finance preferences" hint="Currency, categories, tags, budgets and AI privacy"><FinanceSettings /></Fold>
+      <Fold id="organisations" title="Organisations" hint="Employers, clients and reimbursement contacts"><OrganisationDirectory /></Fold>
+      <Fold id="payees" title="Payees" hint="People and businesses you pay"><PayeeDirectory /></Fold>
+      <Fold id="rules" title="Import rules" hint="How statement lines are sorted automatically"><ImportRules /></Fold>
+      <Fold id="notifications" title="Notifications" hint="Reminders on this device"><PushSettings /></Fold>
+      <Fold id="data" title="Data, backups & reports" hint="Back up, restore, export or delete"><div className="grid gap-3 sm:grid-cols-2">
         <Card title="Back up everything" body="Accounts, entries, budgets, valuations, family and original receipt and document files.">
           <Button onClick={backup} disabled={busy}><Download className="h-4 w-4" />Download backup</Button>
         </Card>
@@ -155,7 +156,7 @@ function Settings() {
         <Card title="Delete all data" body="Removes financial records, receipts and documents in this account. Your sign-in account stays available. Download a backup first if you might need it.">
           <Button variant="destructive" onClick={() => { setDeleteConfirmation(""); setDeleteError(""); setDeleteOpen(true); }} disabled={busy}><Trash2 className="h-4 w-4" />Delete everything</Button>
         </Card>
-      </div>
+      </div></Fold>
       <Dialog open={deleteOpen} onOpenChange={(open) => { if (!busy) setDeleteOpen(open); }}>
         <DialogContent onEscapeKeyDown={(event) => { if (busy) event.preventDefault(); }} onPointerDownOutside={(event) => { if (busy) event.preventDefault(); }}>
           <DialogHeader>
@@ -182,8 +183,8 @@ function Settings() {
 
 function Card({ title, body, children }: { title: string; body: string; children: React.ReactNode }) {
   return (
-    <div className="grid content-start gap-3 rounded-3xl border bg-card p-5">
-      <h2 className="font-display text-lg font-bold">{title}</h2>
+    <div className="grid content-start gap-2 rounded-2xl border bg-background/40 p-4">
+      <h3 className="text-base font-semibold">{title}</h3>
       <p className="text-sm text-muted-foreground">{body}</p>
       <div>{children}</div>
     </div>

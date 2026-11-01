@@ -447,3 +447,9 @@
 - [x] Move entries to the correct account with preview/undo (/statement-accounts); Statement Desk also offers moves when another account holds the matching entry
 - [x] Coverage & freshness (/statement-accounts)
 - [x] Browser test for Statement Desk upload → review → apply → undo (scripts/browser/test_statement_desk.py)
+
+## V5.17 — Layout clean-up & navigation (Nov 2026)
+- [x] Verify cross-account match → move → undo with a sample statement (browser test)
+- [x] Tighter shared page title, Inbox tab strip + compact tiles, Settings folded sections, Activity in pages of 50
+- [ ] Fold long groups on review pages (Statement Desk, Records check, Coverage); move remaining in-page confirmations to centre pop-ups
+- [x] Back/forward buttons + edge-swipe back, centred pop-ups (shared dialog), weights capped at 600 on the chosen system font

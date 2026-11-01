@@ -1,6 +1,6 @@
 import { SavedViews } from "@/components/SavedViews";
 import { createFileRoute } from "@tanstack/react-router";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { History, Undo2 } from "lucide-react";
 import { PageTitle, Stat } from "@/components/AppShell";
 import { ExpenseTable } from "@/components/ExpenseTable";
@@ -31,6 +31,9 @@ function Expenses() {
   const { transactions: expenses, members, accounts, preferences, bulkSetCategory, categoryHistory, undoCategoryBatch } = useStore();
   const [f, setF] = useState<Filters>({ scope: "all", memberId: "all", category: "all" });
   const [selecting, setSelecting] = useState(false);
+  const [shown, setShown] = useState(50);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { setShown(50); }, [JSON.stringify(f)]);
   const [picked, setPicked] = useState<Set<string>>(new Set());
   const [bulkCategory, setBulkCategory] = useState("");
   const [applying, setApplying] = useState(false);
@@ -116,7 +119,8 @@ function Expenses() {
         <h2 className="mb-3 font-display font-bold">Bulk category history</h2>
         {historyLoading ? <p className="text-sm text-muted-foreground">Loading history…</p> : batches.length === 0 ? <p className="text-sm text-muted-foreground">No bulk category changes yet.</p> : <ul className="divide-y">{batches.map(b => <li key={b.id} className="py-3"><div className="flex flex-wrap items-center justify-between gap-2"><div><p className="text-sm font-bold">{b.entries.length} entries → {b.category}</p><p className="text-xs text-muted-foreground">{new Date(b.createdAt).toLocaleString()}{b.undoneAt ? ` · Undone ${new Date(b.undoneAt).toLocaleString()}` : ""}</p></div>{!b.undoneAt && <Button size="sm" variant="outline" disabled={applying} onClick={() => void undo(b.id)}><Undo2 className="mr-1 h-4 w-4" />Undo</Button>}</div><details className="mt-2 text-sm"><summary className="cursor-pointer text-primary">Changed entries</summary><ul className="mt-2 space-y-1">{b.entries.map(e => <li key={e.id} className="break-words">{e.title} · {e.from}{e.allocations.length ? " (category split)" : ""} → {b.category}</li>)}</ul></details></li>)}</ul>}
       </section>}
-      <ExpenseTable items={list} empty="No expenses match these filters." selected={selecting ? picked : undefined} onToggle={selecting ? togglePick : undefined} />
+      <ExpenseTable items={list.slice(0, shown)} empty="No expenses match these filters." selected={selecting ? picked : undefined} onToggle={selecting ? togglePick : undefined} />
+      {list.length > shown && <div className="mt-4 flex flex-col items-center gap-1"><Button variant="outline" onClick={() => setShown((n) => n + 50)}>Show 50 more</Button><span className="text-xs text-muted-foreground">Showing {shown} of {list.length}</span></div>}
     </>
   );
 }

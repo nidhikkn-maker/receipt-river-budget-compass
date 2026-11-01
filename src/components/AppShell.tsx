@@ -1,7 +1,7 @@
 import { FilePen } from "lucide-react";
 import { DraftsReminder } from "@/components/DraftsReminder";
 import { Link, useRouter, useRouterState } from "@tanstack/react-router";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, ArrowRight } from "lucide-react";
 import { showBackButton } from "@/lib/back-nav";
 import { useEffect, useState, type ReactNode } from "react";
 import { BarChart3, Bell, CalendarClock, Gem, Home, Landmark, ListFilter, PiggyBank, Plus, Settings, Sparkles, Users, Eye, EyeOff, FileText, UserRound, TrendingUp, Inbox, HeartPulse, Search, SlidersHorizontal, Split, Network, Plane, Wallet, Bot, Menu, X, MessageCircleQuestion, RefreshCw, CloudOff, Check, TriangleAlert } from "lucide-react";
@@ -220,11 +220,11 @@ export function AppShell({ children }: { children: ReactNode }) {
 
 export function PageTitle({ title, sub, eyebrow }: { title: string; sub?: string; eyebrow?: string }) {
   return (
-    <div className="mb-6">
-      {eyebrow && <div className="mb-1 font-mono text-[11px] font-semibold text-primary">{eyebrow}</div>}
-      <h1 className="font-display text-3xl font-bold tracking-tight sm:text-4xl">{title}</h1>
-      <span className="mt-2 block h-[3px] w-20 rounded-full bg-gold-hero" aria-hidden="true" />
-      {sub && <p className="mt-2 font-medium text-muted-foreground">{sub}</p>}
+    <div className="mb-4 sm:mb-6">
+      {eyebrow && <div className="mb-0.5 text-xs font-medium text-primary">{eyebrow}</div>}
+      <h1 className="font-display text-2xl font-semibold tracking-tight sm:text-3xl">{title}</h1>
+      <span className="mt-1.5 block h-0.5 w-12 rounded-full bg-gold-hero" aria-hidden="true" />
+      {sub && <p className="mt-1.5 text-sm text-muted-foreground">{sub}</p>}
     </div>
   );
 }
@@ -239,14 +239,36 @@ export function Stat({ label, value, hint, tone }: { label: string; value: strin
   );
 }
 
+// Forward steps available after going back; any fresh navigation clears them, like a browser.
+let forwardSteps = 0;
+
 function BackButton() {
   const router = useRouter();
   const path = useRouterState({ select: (st) => st.location.pathname });
+  const [canForward, setCanForward] = useState(forwardSteps > 0);
+  useEffect(() => router.history.subscribe(({ action }) => {
+    if (action.type === "BACK") forwardSteps++;
+    else if (action.type === "FORWARD") forwardSteps = Math.max(0, forwardSteps - 1);
+    else if (action.type === "PUSH") forwardSteps = 0;
+    setCanForward(forwardSteps > 0);
+  }), [router]);
+  const back = () => { if (router.history.canGoBack()) router.history.back(); else void router.navigate({ to: "/dashboard" }); };
+  // Swipe right from the left edge goes back on phones and tablets.
+  useEffect(() => {
+    let x = -1, y = 0;
+    const start = (e: TouchEvent) => { const t = e.touches[0]; x = t && t.clientX < 24 ? t.clientX : -1; y = t?.clientY ?? 0; };
+    const end = (e: TouchEvent) => { const t = e.changedTouches[0]; if (x >= 0 && t && t.clientX - x > 80 && Math.abs(t.clientY - y) < 60 && showBackButton(window.location.pathname)) back(); x = -1; };
+    window.addEventListener("touchstart", start, { passive: true });
+    window.addEventListener("touchend", end, { passive: true });
+    return () => { window.removeEventListener("touchstart", start); window.removeEventListener("touchend", end); };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   if (!showBackButton(path)) return null;
+  const btn = "inline-flex h-9 items-center gap-1 rounded-full px-2.5 text-sm font-medium text-muted-foreground transition hover:bg-accent hover:text-foreground active:scale-95";
   return (
-    <button type="button" aria-label="Back" onClick={() => { if (router.history.canGoBack()) router.history.back(); else void router.navigate({ to: "/dashboard" }); }}
-      className="mb-2 inline-flex h-10 items-center gap-1 rounded-xl pr-3 text-sm font-medium text-muted-foreground transition hover:text-foreground">
-      <ArrowLeft className="h-5 w-5" /> Back
-    </button>
+    <nav aria-label="Page history" className="-ml-2.5 mb-2 flex items-center gap-1">
+      <button type="button" aria-label="Back" onClick={back} className={btn}><ArrowLeft className="size-[18px]" /> Back</button>
+      {canForward && <button type="button" aria-label="Forward" onClick={() => router.history.forward()} className={btn}>Forward <ArrowRight className="size-[18px]" /></button>}
+    </nav>
   );
 }

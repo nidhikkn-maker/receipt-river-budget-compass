@@ -78,6 +78,26 @@ class StatementDeskFlow(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(await self.page.evaluate("deskFixture.transactions.length"), 0)
         self.assertEqual(len(await self.page.evaluate("deskFixture.removes")), 2)
 
+    async def test_cross_account_match_move_and_undo(self):
+        await self.page.evaluate("""() => { deskFixture.accounts.push({ id: 'card', name: 'Controlled card', kind: 'credit_card', openingBalance: 0, archived: false, issuer: '', lastFour: null });
+          deskFixture.transactions.push({ id: 'wrong-1', title: 'SWIGGY ORDER', merchant: 'Swiggy', date: '2026-10-02', amount: 250, originalAmount: 250, currency: 'INR', txnType: 'expense', accountId: 'card', toAccountId: null, splits: [], reconciledAt: null, statementRef: null, correctionRevision: 0, fxRate: 1 }); }""")
+        csv = "Date,Description,Debit,Credit\n2026-10-02,SWIGGY ORDER,250.00,\n"
+        await self.page.get_by_label("Statement files").set_input_files(files=[{"name": "sample.csv", "mimeType": "text/csv", "buffer": csv.encode()}])
+        await self.page.locator("select").first.select_option("desk-account")
+        section = self.page.get_by_label("Saved on another account")
+        await expect(section).to_contain_text("on Controlled card")
+        await expect(self.page.get_by_role("button", name="Accept all 1 asking items")).to_have_count(0)
+        await section.get_by_role("button", name="Preview moving 1 here").click()
+        await expect(self.page.get_by_role("dialog")).to_contain_text("will move to this statement's account")
+        await self.page.get_by_role("button", name="Confirm and apply").click()
+        await expect(self.page.get_by_text("1 records now match the statement")).to_be_visible()
+        self.assertEqual(await self.page.evaluate("deskFixture.transactions[0].accountId"), "desk-account")
+        await expect(section).to_have_count(0)
+        await self.page.get_by_role("button", name="Undo").first.click()
+        await expect(self.page.get_by_label("Saved on another account")).to_be_visible()
+        self.assertEqual(await self.page.evaluate("deskFixture.transactions[0].accountId"), "card")
+        self.assertEqual(await self.page.evaluate("deskFixture.saves.length"), 0)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -1,14 +1,27 @@
 import { Link } from '@tanstack/react-router';
-import { Button } from './ui/button';
-export function FinancialInboxNav({ active }: { active: 'overview' | 'review' | 'transfers' | 'accounts' | 'history' }) {
-  return <nav className="grid grid-cols-2 gap-2 [&_a]:min-h-11 [&_a]:min-w-0 [&_a]:whitespace-normal sm:flex sm:flex-wrap" aria-label="Financial Inbox views">
-    <Button asChild variant={active==='overview'?'default':'outline'}><Link to="/inbox">Overview</Link></Button>
-    <Button asChild variant={active==='review'?'default':'outline'}><Link to="/inbox" search={{section:'review'}}>Smart Review</Link></Button>
-    <Button asChild variant={active==='transfers'?'default':'outline'} className="h-auto min-h-10 whitespace-normal"><Link to="/transfers">Transfers & Card Payments</Link></Button>
-    <Button asChild variant={active==='accounts'?'default':'outline'} className="h-auto min-h-10 whitespace-normal"><Link to="/account-reconciliation">Account Reconciliation</Link></Button>
-    <Button asChild variant={active==='history'?'default':'outline'}><Link to="/inbox" search={{section:'history'}}>Review History</Link></Button>
-    <Button asChild variant="outline" className="h-auto min-h-10 whitespace-normal"><Link to="/statements">Statement Desk — upload many at once</Link></Button>
-    <Button asChild variant="outline" className="h-auto min-h-10 whitespace-normal"><Link to="/statement-crosscheck">Statement Match & Fix</Link></Button>
-    <Button asChild variant="outline" className="h-auto min-h-10 whitespace-normal"><Link to="/forex-reconcile">Forex Card</Link></Button>
-  </nav>;
+import { cn } from '@/lib/utils';
+
+type View = 'overview' | 'review' | 'transfers' | 'accounts' | 'history';
+const tab = (on: boolean) => cn(
+  'inline-flex h-10 shrink-0 snap-start items-center whitespace-nowrap rounded-full border px-4 text-sm font-medium transition active:scale-[0.98]',
+  on ? 'border-primary bg-primary text-primary-foreground' : 'bg-card text-foreground hover:bg-accent',
+);
+
+/** One scrolling row of short, equal-height tabs so the Inbox views never wrap or crowd the page. */
+export function FinancialInboxNav({ active }: { active: View }) {
+  return (
+    <nav aria-label="Financial Inbox views" className="-mx-4 mb-4 flex snap-x gap-2 overflow-x-auto px-4 pb-1 [scrollbar-width:none] sm:mx-0 sm:flex-wrap sm:px-0">
+      <Link to="/inbox" className={tab(active === 'overview')}>Overview</Link>
+      <Link to="/inbox" search={{ section: 'review' }} className={tab(active === 'review')}>Review</Link>
+      <Link to="/transfers" className={tab(active === 'transfers')}>Transfers</Link>
+      <Link to="/account-reconciliation" className={tab(active === 'accounts')}>Reconcile</Link>
+      <Link to="/inbox" search={{ section: 'history' }} aria-label="Review History" className={tab(active === 'history')}>History</Link>
+      <Link to="/inbox" search={{ section: 'statements' }} className={tab(false)}>Inbox uploads</Link>
+      <Link to="/statements" className={tab(false)}>Statement Desk</Link>
+      <Link to="/statement-accounts" className={tab(false)}>Coverage</Link>
+      <Link to="/statement-crosscheck" className={tab(false)}>Match & fix</Link>
+      <Link to="/forex-reconcile" className={tab(false)}>Forex</Link>
+      <Link to="/travel-inbox" className={tab(false)}>Travel</Link>
+    </nav>
+  );
 }
