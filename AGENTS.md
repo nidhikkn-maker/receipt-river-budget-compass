@@ -44,4 +44,4 @@
 - Corrections use owner-atomic RPCs, revisions and safe undo; preserve FX/source. Evidence drives statements; review-centre.ts separates Inbox, review and reconciliation.
 - Calendar destinations and review returns use browser-safe review-navigation.ts; return only after successful saving or explicit completion, never by silently clearing unresolved issues. use-review-view.ts preserves owner/history-entry UI context in tab memory (no plaintext storage); travel-calendar.ts derives review badges from saved closure/payment evidence, not navigation.
 - StatementInbox is the single statement-upload UI mounted in Inbox's Statements view; /reconcile redirects there for existing links, preserving upload and matching rules.
-- Records-check browser tests render the actual route with intercepted test-only data modules and block external traffic/writes, so button flows never alter Cloud records or preferences.
+- Browser tests render real routes with isolated data/AI/draft modules and block external traffic/writes; test-only persistence never certifies Cloud saves or alters live records.

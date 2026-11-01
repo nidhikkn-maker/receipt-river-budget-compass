@@ -2,9 +2,9 @@
 ## Records-check browser button tests
 - [x] Four real-route browser tests pass: individual/multiple selection, checked-list movement, Undo, prior checked preservation, select-visible deduplication/clear and save-failure retry. Four existing rule tests also pass; screenshots inspected, no runtime errors or external requests, fixture accounts/transactions/statements unchanged. Controlled browser preferences only; no Cloud writes or publication.
 ## Expense, approval and receipt browser tests
-- [ ] Test expense submission through real page buttons using isolated records.
-- [ ] Inspect existing department-manager/finance approval pages and test their buttons if implemented; do not invent an approval flow.
-- [ ] Test receipt upload, attachment viewing and correct expense linkage using isolated files and records.
+- [x] Expense form Save and expense-list read-back pass using isolated browser records (₹1,250.50, selected source account).
+- [ ] Department-manager/finance approval browser test explicitly skipped: migration 0002 removed the workflow, and current pages have no approval buttons. Requires a separately requested approval feature; no mock approval UI added.
+- [x] Receipt Upload → Files/PDF → Confirm details → Save → expense dialog → attachment popup → Edit/Save checks pass. Receipt stays on the same expense after edit/reload and absent from an unrelated expense. Real route controls, controlled OCR/data/files; Cloud persistence not certified. Two browser tests pass, prior four records-check tests pass, no runtime errors/external writes, no publication.
 ## Published to https://ledgerline.biz (2026-11-01, 13:22 UTC)
 - [x] Pre-publish quick security scan: one info-level item only (guest sign-in shares signed-in access rules; intentional for guest upgrade continuity). No critical findings.
 - [x] Publish requested and confirmed serving: site returns 200 and the newest pages ship — card balance (/cards/$accountId), records check, transfers and trip lifecycle pieces all load with expected content.

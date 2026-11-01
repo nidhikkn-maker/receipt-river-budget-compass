@@ -25,6 +25,10 @@ MOCKS = {
 }
 
 class ExpenseReceiptButtons(unittest.IsolatedAsyncioTestCase):
+    @unittest.skip("Manager/Finance expense approvals were removed in migration 0002; no current page buttons exist.")
+    async def test_department_manager_then_finance_approval(self):
+        """Explicit coverage gap: do not replace missing approvals with mock buttons."""
+
     async def asyncSetUp(self):
         OUTPUT.mkdir(parents=True, exist_ok=True)
         self.receipt = OUTPUT / "controlled-receipt.png"
