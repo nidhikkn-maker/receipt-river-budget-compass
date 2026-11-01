@@ -426,3 +426,4 @@
 
 - [ ] AMEX statement reading for Statement Match & Fix
 - [ ] Recognise transfers already posted from another account (no false missing / double post)
+- [ ] Undo an entire statement posting batch
