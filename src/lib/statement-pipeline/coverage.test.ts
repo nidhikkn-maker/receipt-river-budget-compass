@@ -32,3 +32,15 @@ describe("scanned statements", () => {
     expect(plan.accounts[0]!.auto).toHaveLength(0);
   });
 });
+
+describe("records saved on the wrong account", () => {
+  it("offers a move instead of posting a second copy", () => {
+    const other = { id: "b", name: "Card", kind: "credit_card", archived: false, openingBalance: 0 } as never;
+    const wrong = { ...(tx("w", "2026-10-02") as object), accountId: "b", toAccountId: null } as never;
+    const file = { name: "s.csv", accountId: "a", hint: null, currency: "INR", opening: null, closing: null,
+      lines: [{ key: "s#0", file: "s.csv", date: "2026-10-03", description: "X", amount: 10, direction: "debit", balance: null, currency: "INR", ref: "1" }] } as never;
+    const a = buildPlan([file], [acct, other], [wrong], [{ name: "Food", archived: false }] as never).accounts[0]!;
+    expect(a.elsewhere.map((e) => e.record.id)).toEqual(["w"]);
+    expect([...a.auto, ...a.ask]).toHaveLength(0);
+  });
+});
