@@ -43,4 +43,5 @@
 - Expense Claim Submission (src/lib/expense-claim.ts, claim-pdf.ts) derives claim lines from the same expenditure statement and shares ExpenditureReportBuilder; it only reads records and never changes claim status. The older Reimbursements CSV/PDF in /reports is left as is.
 - Master-record rules (duplicates, organisation usage/rename) live in src/lib/master-data.ts and setup readiness in src/lib/setup-status.ts; every add-account path uses the shared AccountForm so contextual and central creation follow one rule set.
 - PDF table cells with non-Latin text are rendered by the browser onto canvas images (src/lib/pdf-unicode.ts withUnicode) because jsPDF core fonts are Latin-only and cannot shape Indic scripts; titles, footers and bill-page labels use textU()/drawTextU() which image-render non-Latin text.
-- Reports Centre job and history IDs match so browser/worker completion never duplicates; the report callback also recovers staged statement imports.
+- Reports Centre job/history IDs match; completion never duplicates and callback recovers statement imports.
+- Import review uses owner-checked, preview-bound atomic changes and audit; tags merge, edits reset approval, and posting includes only selected approved rows.

@@ -35,7 +35,7 @@ export function ImportReview({batch,rows,posted,onReload}:{batch:ImportBatch;row
     const eligible=picked.filter(r=>decision!=='approved'||classificationStatus(r)!=='Needs review'||!!patch.category||r.proposal.reviewed);
     if(!eligible.length){toast.error('Review uncertain classifications individually or choose a final category');return;}
     const changed={...patch,...(patch.category?{categoryConfirmed:true}:{}),...(decision==='approved'?{reviewed:true}:{})};
-    setPreview({rows:eligible,patch:changed,decision});
+    setPreview({rows:eligible,patch:changed,...(decision?{decision}:{})});
   };
   const savePreview=async()=>{
     if(!preview)return;
