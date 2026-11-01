@@ -74,6 +74,16 @@ export function FinancialReview({ items, onOpen, initialFilter = "all" }: { item
   const cohorts = reviewCohorts(filtered, commitments ?? []);
   const [saveError, setSaveError] = useState("");
   const [completed, setCompleted] = useState(0);
+  const listRef = useRef<HTMLDivElement>(null);
+  const onListKeyDown = (event: React.KeyboardEvent) => {
+    if (event.key !== "ArrowDown" && event.key !== "ArrowUp") return;
+    const boxes = listRef.current?.querySelectorAll<HTMLElement>("[data-review-select]");
+    if (!boxes?.length) return;
+    const index = [...boxes].findIndex(b => b === document.activeElement);
+    if (index < 0) return;
+    event.preventDefault();
+    boxes[(index + (event.key === "ArrowDown" ? 1 : boxes.length - 1)) % boxes.length]?.focus();
+  };
   useEffect(() => { setGroup(initialFilter); }, [initialFilter]);
   const [contextReady, setContextReady] = useState(false);
   const [contextStatus, setContextStatus] = useState('');
