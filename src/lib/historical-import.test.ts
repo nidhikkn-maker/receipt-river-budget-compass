@@ -7,6 +7,14 @@ const account: Account = { id:'bank', name:'Bank', kind:'savings', openingBalanc
 const lines = [{ ref:'1', date:'2026-04-01', description:'SWIGGY ORDER', amount:100, direction:'debit' as const }, { ref:'2', date:'2026-04-01', description:'SWIGGY ORDER', amount:100, direction:'debit' as const }];
 const ctx = { accounts:[account], transactions:[] as Expense[], categories:[{name:'Food and beverages',archived:false}], accountId:'bank',currency:'INR' };
 describe('V5.1 historical import safeguards', () => {
+  it('blocks card-credit income even after a saved rule or manual change', () => {
+    const card = { ...account, id: 'card', kind: 'credit_card' as const };
+    const credit = { ref: 'pay', date: '2026-04-01', amount: 50000, direction: 'credit' as const, description: 'PAYMENT RECEIVED' };
+    const staged = stageImport([credit], { ...ctx, accounts: [account, card], accountId: card.id }, [{ id: 'bad', merchant: 'PAYMENT RECEIVED', account_id: card.id, enabled: true, mappings: { txnType: 'income' } }], new Set())[0];
+    if (!staged) throw Error('Missing fixture');
+    expect(staged.proposal.txnType).toBe('card_payment');
+    expect(postingBlockers({ ...staged, id: 'credit', proposal: { ...staged.proposal, accountId: card.id, txnType: 'income', reviewed: true } }, [account, card], '2026-11-01', { account_id: card.id, currency: 'INR' })).toContain('Credit-card credits are repayments or refunds, never income');
+  });
   it('starts on 1 April 2026', () => expect(HISTORICAL_START).toBe('2026-04-01'));
   it('groups merchant variants without losing original descriptions', () => { expect(merchantFamily('SWIGGY INSTAMART')).toBe(merchantFamily('SWIGGY UPI')); expect(stageImport(lines,ctx,[],new Set())[0]?.line.description).toBe('SWIGGY ORDER'); });
   it('preserves two legitimate identical payments', () => expect(new Set(fingerprintLines(lines,'bank')).size).toBe(2));

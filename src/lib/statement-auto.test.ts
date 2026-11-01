@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { CATEGORIES, type Expense, type StatementLine } from "./expenses";
-import type { Account } from "./ledger";
+import { accountBalance, cashflow, type Account } from "./ledger";
 import type { CategorySetting } from "./preferences";
 import { classifyStatementLine, cleanMerchant, draftToInput, planStatementRegistration, type StatementContext } from "./statement-auto";
 
@@ -11,7 +11,7 @@ const card: Account = { id: "acc2", name: "ICICI Card", kind: "credit_card", ope
 const expense = (o: Partial<Expense> & { id: string }): Expense => ({
   title: "", merchant: null, category: "Miscellaneous", scope: "personal", memberId: null, splits: [],
   amount: 0, currency: "INR", originalAmount: 0, fxRate: 1, paymentMethod: "other", reconciledAt: null,
-  statementRef: null, date: "2026-10-01", description: "", receipts: [], ...o,
+  statementRef: null, date: "2026-10-01", description: "", receipts: [], accountId: "acc1", ...o,
 });
 
 const ctx = (over: Partial<StatementContext> = {}): StatementContext => ({
@@ -23,6 +23,33 @@ const line = (o: Partial<StatementLine> & { description: string; amount: number 
 });
 
 describe("statement auto-registration", () => {
+  it("classifies credit-card repayments as payments, never income, and requires an unknown source", () => {
+    const credit = line({ description: "PAYMENT RECEIVED THANK YOU", amount: 50000, direction: "credit" });
+    const draft = classifyStatementLine(credit, ctx({ accountId: card.id }));
+    expect(draft.txnType).toBe("card_payment"); expect(draft.accountId).toBeNull(); expect(draft.toAccountId).toBe(card.id);
+    expect(planStatementRegistration([credit], [], ctx({ accountId: card.id })).register).toHaveLength(0);
+    expect(planStatementRegistration([credit], [], ctx({ accountId: card.id })).review).toHaveLength(1);
+  });
+  it("reuses a uniquely identified existing payment and reduces dues once without income", () => {
+    const payment = expense({ id: "payment", title: "Card payment received", txnType: "card_payment", accountId: savings.id, toAccountId: card.id, amount: 50000, originalAmount: 50000, date: "2026-10-05", reconciledAt: "2026-10-05" });
+    const credit = line({ description: "Card payment received", amount: 50000, direction: "credit" });
+    const context = ctx({ accountId: card.id, transactions: [payment] });
+    expect(classifyStatementLine(credit, context).existingPaymentId).toBe("payment");
+    const plan = planStatementRegistration([credit], [], context);
+    expect(plan.skipped).toHaveLength(1); expect(plan.register).toHaveLength(0);
+    expect(accountBalance({ ...card, openingBalance: 75000 }, [payment])).toBe(25000);
+    expect(accountBalance({ ...savings, openingBalance: 100000 }, [payment])).toBe(50000);
+    expect(cashflow([payment], "2026-10-01", "2026-10-31")).toMatchObject({ income: 0, spent: 0 });
+  });
+  it("does not infer the source from amount alone or ambiguous payments", () => {
+    const credit = line({ description: "PAYMENT RECEIVED", amount: 50000, direction: "credit" });
+    const payment = expense({ id: "one", title: "Unrelated", txnType: "card_payment", accountId: savings.id, toAccountId: card.id, amount: 50000, originalAmount: 50000, date: "2026-10-05" });
+    expect(classifyStatementLine(credit, ctx({ accountId: card.id, transactions: [payment] })).existingPaymentId).toBeUndefined();
+    expect(classifyStatementLine(credit, ctx({ accountId: card.id, transactions: [{ ...payment, title: "Payment received" }, { ...payment, id: "two", title: "Payment received" }] })).existingPaymentId).toBeUndefined();
+  });
+  it("keeps genuine card refunds separate from repayments", () => {
+    expect(classifyStatementLine(line({ description: "AMAZON REFUND", amount: 900, direction: "credit" }), ctx({ accountId: card.id })).txnType).toBe("refund");
+  });
   it("registers an UPI food purchase as an expense in Food and beverages", () => {
     const draft = classifyStatementLine(line({ description: "UPI-SWIGGY ORDER-4512", amount: 450 }), ctx());
     expect(draft.txnType).toBe("expense");

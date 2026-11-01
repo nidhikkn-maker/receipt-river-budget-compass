@@ -10,7 +10,7 @@ const savings: Account = { id: "acc1", name: "HDFC Savings", kind: "savings", op
 const expense = (o: Partial<Expense> & { id: string }): Expense => ({
   title: "", merchant: null, category: "Miscellaneous", scope: "personal", memberId: null, splits: [],
   amount: 0, currency: "INR", originalAmount: 0, fxRate: 1, paymentMethod: "other", reconciledAt: null,
-  statementRef: null, date: "2026-10-01", description: "", receipts: [], ...o,
+  statementRef: null, date: "2026-10-01", description: "", receipts: [], accountId: "acc1", ...o,
 });
 
 const ctx = (over: Partial<StatementContext> = {}): StatementContext => ({

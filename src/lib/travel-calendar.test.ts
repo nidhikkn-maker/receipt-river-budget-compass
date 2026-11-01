@@ -26,6 +26,24 @@ describe("booking reminders", () => {
 });
 
 describe("travel calendar", () => {
+  it("never completes a review just because trip dates have passed", () => {
+    const items = travelCalendarItems([trip], txns, "2026-11-01", "2026-11-30");
+    expect(items.filter(i => i.kind === "trip").every(i => i.reviewStatus === "pending")).toBe(true);
+  });
+  it("shows completed closed trips only when no settlement blockers remain", () => {
+    const closed = { ...trip, closedAt: "2026-11-04", bookings: [] };
+    expect(travelCalendarItems([closed], [], "2026-11-01", "2026-11-30").every(i => i.reviewStatus === "completed")).toBe(true);
+    expect(travelCalendarItems([{ ...closed, advances: [{ id: "advance", date: "2026-11-01", amount: 100, source: "Office" }] }], [], "2026-11-01", "2026-11-30").every(i => i.reviewStatus === "pending")).toBe(true);
+  });
+  it("keeps covered booking deadlines visible as completed without changing reminders", () => {
+    const covered = { ...trip, bookings: (trip.bookings ?? []).slice(0, 1).map(b => ({ ...b, dueDate: "2026-11-01", status: "paid" as const })) };
+    expect(travelCalendarItems([covered], txns, "2026-11-01", "2026-11-30").filter(i => i.kind === "booking")).toMatchObject([{ amount: 0, reviewStatus: "completed" }]);
+    expect(bookingReminders([covered], txns, "2026-11-01", 30)).toEqual([]);
+  });
+  it("keeps booking confirmation pending even when payment is covered", () => {
+    const covered = { ...trip, bookings: (trip.bookings ?? []).slice(0, 1).map(b => ({ ...b, dueDate: "2026-11-01", status: "paid" as const, confirmation: "pending" as const })) };
+    expect(travelCalendarItems([covered], txns, "2026-11-01", "2026-11-30").find(i => i.kind === "booking")?.reviewStatus).toBe("pending");
+  });
   it("includes each trip day in the visible month and unpaid booking deadlines", () => {
     const items = travelCalendarItems([trip], txns, "2026-11-01", "2026-11-30");
     expect(items.filter((i) => i.kind === "trip").map((i) => i.date)).toEqual(["2026-11-01", "2026-11-02"]);

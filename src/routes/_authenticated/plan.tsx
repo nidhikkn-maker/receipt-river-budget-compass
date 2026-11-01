@@ -14,6 +14,7 @@ import { useStore } from "@/lib/store";
 import { todayISO, usePosition } from "@/lib/use-position";
 import { cn } from "@/lib/utils";
 import { PlanCalendar } from "@/components/PlanCalendar";
+import { useReviewView } from "@/lib/use-review-view";
 
 export const Route = createFileRoute("/_authenticated/plan")({
   head: () => ({
@@ -37,8 +38,8 @@ const STATUS_STYLE: Record<string, string> = {
 const STATUS_LABEL: Record<string, string> = { overdue: "Overdue", due_soon: "Due soon", scheduled: "Scheduled", paused: "Paused", cancelled: "Cancelled" };
 
 function Plan() {
-  const [days, setDays] = useState(30);
-  const [withUnconfirmed, setWithUnconfirmed] = useState(false);
+  const [days, setDays] = useReviewView("forecast-days", 30);
+  const [withUnconfirmed, setWithUnconfirmed] = useReviewView("forecast-unconfirmed", false);
   const p = usePosition(days, withUnconfirmed);
   const { commitments, saveCommitment, removeCommitment, confirmCommitment, preferences } = useStore();
   const today = todayISO();

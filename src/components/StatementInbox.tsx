@@ -1,0 +1,360 @@
+import { confirmAction } from "@/lib/confirm";
+import { ProcessingPanel, stagesAt } from "@/components/ProcessingPanel";
+import { Spinner } from "@/components/ui/button";
+import { Link } from "@tanstack/react-router";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { filePattern, splitNewLines } from "@/lib/statement-fingerprint";
+import { toast } from "sonner";
+import { BadgeCheck, Sparkles, Upload } from "lucide-react";
+import { Stat } from "@/components/AppShell";
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { useReviewView } from "@/lib/use-review-view";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { BASE_CURRENCY, CURRENCIES, autoMatch, matchScore, money, type Match, type StatementLine } from "@/lib/expenses";
+import { StatementEntry } from "@/components/StatementEntry";
+import { readStatement } from "@/lib/statement-import";
+import { draftToInput, planStatementRegistration, existingCardPayment } from "@/lib/statement-auto";
+import { useStore } from "@/lib/store";
+import { useServerFn } from "@tanstack/react-start";
+import { extractStatement } from "@/lib/statement-extract.functions";
+
+export function StatementInbox() {
+  const { transactions: expenses, accounts, preferences, save, reconcile, refresh } = useStore();
+  const [statementAccount, setStatementAccount] = useReviewView("statement-account", "all");
+  const [lines, setLines] = useReviewView<StatementLine[]>("statement-lines", []);
+  const [fileName, setFileName] = useReviewView("statement-file", "");
+  const [currency, setCurrency] = useReviewView<string>("statement-currency", BASE_CURRENCY);
+  const [overrides, setOverrides] = useReviewView<Record<string, string>>("statement-overrides", {});
+  const [excluded, setExcluded] = useReviewView<Record<string, boolean>>("statement-exclusions", {});
+  const [busy, setBusy] = useState(false);
+  const [reading, setReading] = useState(false);
+  const [readStage, setReadStage] = useState<{ name: string; ai: boolean; at: number } | null>(null);
+  const scanStatement = useServerFn(extractStatement);
+
+  const accountFilter = statementAccount === "all" ? undefined : statementAccount;
+  const accountKey = statementAccount;
+  const [known, setKnown] = useState<Set<string>>(new Set());
+  const [upTo, setUpTo] = useState<string | null>(null);
+  const [lastBatch, setLastBatch] = useState<string | null>(null);
+  const [showImported, setShowImported] = useState(false);
+  const [itemList, setItemList] = useReviewView<"matched" | "unmatched" | null>("statement-items", null);
+  const [itemQuery, setItemQuery] = useReviewView("statement-search", "");
+  const [itemLimit, setItemLimit] = useReviewView("statement-limit", 40);
+  const openItems = (kind: "matched" | "unmatched") => { setItemQuery(""); setItemLimit(40); setItemList(kind); };
+
+  const loadKnown = useCallback(async (key: string) => {
+    const set = new Set<string>(); let top: string | null = null; let batch: string | null = null; let latest = "";
+    for (let from = 0; ; from += 1000) {
+      const { data, error } = await supabase.from("statement_line_imports").select("fingerprint,line_date,batch_id,created_at").eq("account_key", key).range(from, from + 999);
+      if (error) { toast.error("Couldn't check earlier uploads"); break; }
+      for (const r of data) { set.add(r.fingerprint); if (!top || r.line_date > top) top = r.line_date; if (r.created_at > latest) { latest = r.created_at; batch = r.batch_id; } }
+      if (data.length < 1000) break;
+    }
+    setKnown(set); setUpTo(top); setLastBatch(batch);
+  }, []);
+  useEffect(() => { void loadKnown(accountKey); }, [accountKey, loadKnown]);
+
+  const split = useMemo(() => splitNewLines(lines, accountKey, known, upTo), [lines, accountKey, known, upTo]);
+  const freshLines = split.fresh;
+
+  const markSeen = async () => {
+    if (!lines.length) return;
+    const batch = crypto.randomUUID(); const label = filePattern(fileName);
+    const rows = lines.map((l) => ({ account_key: accountKey, fingerprint: split.fingerprints.get(l.ref)!, line_date: l.date, batch_id: batch, file_label: label }));
+    for (let i = 0; i < rows.length; i += 500) {
+      const { error } = await supabase.from("statement_line_imports").upsert(rows.slice(i, i + 500), { onConflict: "owner_id,account_key,fingerprint", ignoreDuplicates: true });
+      if (error) { toast.error("Couldn't remember this statement — the same lines may show again next time"); return; }
+    }
+    await loadKnown(accountKey);
+  };
+
+  const forgetLast = async () => {
+    if (!lastBatch || !await confirmAction("Forget the last statement upload for this account? Its lines will show as new next time. Saved entries stay.")) return;
+    const { error } = await supabase.from("statement_line_imports").delete().eq("batch_id", lastBatch);
+    if (error) toast.error("Couldn't forget that upload"); else { toast.success("Last upload forgotten"); await loadKnown(accountKey); }
+  };
+
+  const matches: Match[] = useMemo(() => {
+    const card = accounts.some(a => a.id === accountFilter && a.kind === "credit_card");
+    const auto = autoMatch(freshLines, card ? expenses.filter(e => e.txnType !== "income") : expenses, currency, 0.4, accountFilter);
+    return auto.map((m) => {
+      const payment = existingCardPayment(m.line, { transactions: expenses, accounts, categories: preferences.categories, accountId: accountFilter ?? null, currency });
+      if (payment) return { ...m, expense: payment, score: 1 };
+      if (card && m.line.direction === "credit" && m.expense?.txnType === "card_payment") return { ...m, expense: null, score: 0 };
+      const o = overrides[m.line.ref];
+      if (o === undefined) return m;
+      return { ...m, expense: o === "none" ? null : expenses.find((e) => e.id === o) ?? null, score: 1 };
+    });
+  }, [freshLines, expenses, currency, overrides, accountFilter, accounts, preferences.categories]);
+
+  const plan = useMemo(() => planStatementRegistration(freshLines, matches, {
+    transactions: expenses,
+    accounts,
+    categories: preferences.categories,
+    accountId: accountFilter ?? null,
+    currency,
+  }), [freshLines, matches, expenses, accounts, preferences.categories, accountFilter, currency]);
+
+  const [includeDups, setIncludeDups] = useState<Record<string, boolean>>({});
+  const queue = [...plan.register, ...plan.possibleDuplicates.filter((d) => includeDups[d.draft.line.ref]).map((d) => d.draft)].filter((d) => !excluded[d.line.ref]);
+  const spendingTotal = queue.filter((d) => d.txnType === "expense").reduce((s, d) => s + d.line.amount, 0);
+
+  const onFile = async (f: File | undefined) => {
+    if (!f) return;
+    setReading(true); setReadStage({ name: f.name, ai: false, at: 0 });
+    try {
+      let parsed: StatementLine[];
+      try { parsed = await readStatement(f); }
+      catch (e) {
+        if (!/\.(pdf|png|jpe?g|webp)$/i.test(f.name) || f.size > 14 * 1024 * 1024) throw e;
+        if (!await confirmAction("Read this statement using AI? It may contain private banking details. Review all extracted rows before confirming.")) return;
+        const mimeType = /\.pdf$/i.test(f.name) ? "application/pdf" : /\.png$/i.test(f.name) ? "image/png" : /\.webp$/i.test(f.name) ? "image/webp" : "image/jpeg";
+        const dataUrl = await new Promise<string>((resolve, reject) => { const reader = new FileReader(); reader.onload = () => resolve(String(reader.result)); reader.onerror = reject; reader.readAsDataURL(f); });
+        setReadStage({ name: f.name, ai: true, at: 0 });
+        const result = await scanStatement({ data: { dataUrl, mimeType } });
+        if (!result.ok) throw Error(result.error);
+        parsed = result.lines;
+      }
+      setReadStage((x) => x && { ...x, at: 1 });
+      let key = accountKey;
+      if (statementAccount === "all") {
+        const { data } = await supabase.from("statement_line_imports").select("account_key").eq("file_label", filePattern(f.name)).neq("account_key", "all").order("created_at", { ascending: false }).limit(1);
+        const remembered = data?.[0]?.account_key;
+        if (remembered && accounts.some((a) => a.id === remembered)) { key = remembered; setStatementAccount(remembered); toast.info(`Using ${accounts.find((a) => a.id === remembered)?.name} like last time`); }
+      }
+      void key;
+      setLines(parsed); setFileName(f.name); setOverrides({}); setExcluded({}); setShowImported(false); setIncludeDups({});
+      toast.success(`${parsed.length} statement lines found`);
+    } catch (e) { toast.error((e as Error).message); } finally { setReading(false); setReadStage(null); }
+  };
+
+  const matched = matches.filter((m) => m.expense);
+
+  const registerAll = async () => {
+    if (!queue.length) return;
+    setBusy(true);
+    let done = 0;
+    const failed: string[] = [];
+    try {
+      for (const d of queue) {
+        const id = crypto.randomUUID();
+        try {
+          await save(draftToInput(d), { createId: id, noRefresh: true });
+          await reconcile(id, `${fileName} · ${d.line.date} · ${d.line.description}`.slice(0, 300), { noRefresh: true });
+          done++;
+        } catch { failed.push(d.title); }
+      }
+      await refresh();
+      await markSeen();
+      if (done) toast.success(`${done} ${done === 1 ? "expense" : "expenses"} registered from ${fileName}`);
+      if (failed.length) toast.error(`${failed.length} couldn't be registered — try again`);
+      setLines([]); setExcluded({}); setOverrides({}); setIncludeDups({});
+    } finally { setBusy(false); }
+  };
+
+  const confirmAll = async () => {
+    setBusy(true);
+    try {
+      const ids = matched.flatMap((m) => m.expense ? [m.expense.id] : []);
+      if (new Set(ids).size !== ids.length) throw Error("Each statement line must match a different transaction");
+      for (const m of matched) {
+        if (m.expense && !matchScore(m.line, m.expense, currency, accountFilter)) throw Error("A selected transaction doesn't match this account, direction, date or amount");
+      }
+      for (const m of matched) { if (!m.expense) continue; await reconcile(m.expense.id, `${fileName} · ${m.line.date} · ${m.line.description}`.slice(0, 300)); }
+      await markSeen();
+      toast.success(`${matched.length} expenses marked as matched`);
+      setLines([]);
+    } catch (e) { toast.error((e as Error).message); } finally { setBusy(false); }
+  };
+
+  const reconciled = expenses.filter((e) => e.reconciledAt);
+  const open = expenses.filter((e) => !e.reconciledAt);
+  const listItems = (itemList === "matched" ? reconciled : open).filter(e => `${e.title} ${e.merchant ?? ""} ${e.statementRef ?? ""} ${e.date} ${accounts.find(a => a.id === e.accountId)?.name ?? ""}`.toLowerCase().includes(itemQuery.toLowerCase()));
+
+  return (
+    <>
+      <h2 className="mb-3 text-xl font-semibold">Statements</h2>
+      <Button asChild className="mb-5"><Link to="/historical-import">Historical import & bulk review</Link></Button>
+      <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-3">
+        <Button variant="ghost" className="block h-auto min-w-0 whitespace-normal p-0 text-left" aria-label={`Matched: ${reconciled.length} transactions`} onClick={() => openItems("matched")}><Stat label="Matched" value={String(reconciled.length)} /></Button>
+        <Button variant="ghost" className="block h-auto min-w-0 whitespace-normal p-0 text-left" aria-label={`Not matched yet: ${open.length} transactions`} onClick={() => openItems("unmatched")}><Stat label="Not matched yet" value={String(open.length)} hint={money(open.reduce((s, e) => s + e.amount, 0))} /></Button>
+      </div>
+
+      {readStage && <ProcessingPanel className="mb-3" title={`Reading ${readStage.name}…`} stages={stagesAt([readStage.ai ? "Extracting transactions with AI" : "Reading transactions", "Matching remembered account"], readStage.at)} />}
+      <div className="mb-6 flex flex-wrap items-center gap-3 rounded-3xl border-2 border-dashed border-primary/40 bg-secondary/50 p-5">
+        <label className="inline-flex cursor-pointer items-center gap-2 rounded-2xl bg-gold px-4 py-2.5 text-sm font-semibold text-gold-foreground shadow-gold">
+          {reading ? <Spinner /> : <Upload className="h-4 w-4" />} {reading ? "Reading statement…" : "Upload statement"}
+          <input type="file" disabled={reading} accept=".csv,.xls,.xlsx,.pdf,.png,.jpg,.jpeg,.webp,text/csv,application/vnd.ms-excel,application/pdf" className="sr-only" onChange={(e) => onFile(e.target.files?.[0])} aria-label="Statement file" />
+        </label>
+        <div className="flex flex-wrap items-center gap-2 text-sm">
+          <Select value={statementAccount} onValueChange={(v) => { setStatementAccount(v); setOverrides({}); }}>
+            <SelectTrigger className="w-44" aria-label="Statement account"><SelectValue /></SelectTrigger>
+            <SelectContent><SelectItem value="all">All accounts</SelectItem>{accounts.map((a) => <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}</SelectContent>
+          </Select>
+          Statement currency
+          <Select value={currency} onValueChange={setCurrency}>
+            <SelectTrigger className="w-24" aria-label="Statement currency"><SelectValue /></SelectTrigger>
+            <SelectContent>{CURRENCIES.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
+          </Select>
+        </div>
+        {upTo && <p className="w-full text-sm"><span className="font-semibold">Statement imported up to {new Date(upTo).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}</span> for {statementAccount === "all" ? "unassigned uploads" : accounts.find((a) => a.id === statementAccount)?.name}. Just upload the latest statement — lines already brought in are skipped. {lastBatch && <button type="button" className="underline text-muted-foreground" onClick={forgetLast}>Forget last upload</button>}</p>}
+        <p className="w-full text-xs text-muted-foreground">Needs columns for date, description/narration, and debit (or amount). Dates like 01/10/2026 are read as day/month/year.</p>
+      </div>
+
+      {lines.length > 0 && (
+        <>
+          <div className="mb-4 rounded-3xl border bg-card p-4 text-sm">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <p><span className="font-semibold">{split.alreadyImported.length} lines already imported</span>{upTo ? ` up to ${upTo}` : ""} · <span className="font-semibold text-gold">{freshLines.length} new</span></p>
+              <div className="flex gap-2">
+                {split.alreadyImported.length > 0 && <Button variant="ghost" size="sm" onClick={() => setShowImported(!showImported)}>{showImported ? "Hide" : "Show"} already-imported lines</Button>}
+                <Button variant="outline" size="sm" disabled={busy} onClick={async () => { await markSeen(); setLines([]); toast.success("Statement remembered — only newer lines will show next time"); }}>Done with this statement</Button>
+              </div>
+            </div>
+            {split.olderUnseen.length > 0 && <p className="mt-2 rounded-xl bg-secondary px-3 py-2 text-xs">{split.olderUnseen.length} older line{split.olderUnseen.length === 1 ? "" : "s"} not seen before (dated before your last import) — included below for a quick look.</p>}
+            {showImported && <ul className="mt-2 max-h-60 space-y-1 overflow-auto text-xs text-muted-foreground">{split.alreadyImported.map((l) => <li key={l.ref} className="font-mono">{l.date} · {l.description} · {money(l.amount, currency)}</li>)}</ul>}
+          </div>
+          <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <Button asChild variant="ghost" className="block h-auto min-w-0 whitespace-normal p-0 text-left"><Link to="/inbox" search={{ section: "statements" }} hash="new-entries"><Stat label="New entries" value={String(plan.register.length)} hint={money(plan.register.filter((d) => d.txnType === "expense").reduce((s, d) => s + d.line.amount, 0))} /></Link></Button>
+            <Button asChild variant="ghost" className="block h-auto min-w-0 whitespace-normal p-0 text-left"><Link to="/inbox" search={{ section: "statements" }} hash="needs-review"><Stat label="Need a look" value={String(plan.review.length)} /></Link></Button>
+            <Button asChild variant="ghost" className="block h-auto min-w-0 whitespace-normal p-0 text-left"><Link to="/inbox" search={{ section: "statements" }} hash="possible-duplicates"><Stat label="Possible duplicates" value={String(plan.possibleDuplicates.length)} /></Link></Button>
+            <Button asChild variant="ghost" className="block h-auto min-w-0 whitespace-normal p-0 text-left"><Link to="/inbox" search={{ section: "statements" }} hash="already-recorded"><Stat label="Already recorded" value={String(plan.skipped.length)} /></Link></Button>
+          </div>
+
+          <div id="new-entries" className="mb-4 scroll-mt-28 rounded-3xl border bg-card p-4">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="min-w-0">
+                <h2 className="flex items-center gap-2 font-display text-lg font-bold"><Sparkles className="h-4 w-4 text-gold" /> Register {queue.length} transactions automatically</h2>
+                <p className="text-xs text-muted-foreground">Merchant, date, amount, category and payment method come from the statement. {queue.length ? `${money(spendingTotal)} of spending will be added.` : "Nothing left to register."}</p>
+              </div>
+              <Button onClick={registerAll} disabled={busy || queue.length === 0}>Register {queue.length}</Button>
+            </div>
+            {statementAccount === "all" && accounts.length > 1 && (
+              <p className="mt-2 rounded-xl bg-secondary px-3 py-2 text-xs text-muted-foreground">Pick the statement account above and each entry will also update that account's balance.</p>
+            )}
+            {plan.register.length > 0 && (
+              <ul className="mt-3 space-y-1.5">
+                {plan.register.map((d) => (
+                  <li key={d.line.ref} className="flex items-center gap-2 text-sm">
+                    <input
+                      type="checkbox"
+                      checked={!excluded[d.line.ref]}
+                      onChange={(e) => setExcluded({ ...excluded, [d.line.ref]: !e.target.checked })}
+                      aria-label={`Include ${d.title}`}
+                      className="h-4 w-4 shrink-0 accent-gold"
+                    />
+                    <span className="min-w-0 flex-1 truncate">{d.title}</span>
+                    <span className={"shrink-0 rounded-full px-2 py-0.5 text-xs " + (d.uncertain ? "bg-gold-soft font-semibold text-gold-strong" : "bg-secondary text-muted-foreground")}>{d.uncertain ? `${d.category} — check` : d.category}</span>
+                    <span className="shrink-0 font-mono text-xs">{money(d.line.amount, currency)}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+            {plan.recurringHints.length > 0 && (
+              <p className="mt-3 rounded-xl bg-secondary px-3 py-2 text-xs">
+                <span className="font-semibold">Looks recurring:</span> {plan.recurringHints.map((h) => `${h.merchant} (${h.count + 1} charges)`).join(", ")} — after registering, add them as planned payments so due dates are tracked. <Link to="/plan" className="font-semibold text-primary underline">Open Plan</Link>
+              </p>
+            )}
+          </div>
+
+          {plan.possibleDuplicates.length > 0 && (
+            <div id="possible-duplicates" className="mb-4 scroll-mt-28 rounded-3xl border-2 border-gold bg-card p-4">
+              <h2 className="font-display text-lg font-bold">Possible duplicates ({plan.possibleDuplicates.length})</h2>
+              <p className="mb-2 text-xs text-muted-foreground">These look like records you already have. They are not registered unless you say so.</p>
+              <ul className="space-y-2">
+                {plan.possibleDuplicates.map((d) => (
+                  <li key={d.draft.line.ref} className="rounded-2xl bg-secondary/60 p-3 text-sm">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="min-w-0">
+                        <div className="truncate font-medium">{d.draft.title}</div>
+                        <div className="font-mono text-xs text-muted-foreground">{d.draft.line.date} · {money(d.draft.line.amount, currency)}</div>
+                      </div>
+                      <div className="flex shrink-0 gap-2">
+                        <Button size="sm" variant="outline" onClick={() => setIncludeDups({ ...includeDups, [d.draft.line.ref]: true })} disabled={!!includeDups[d.draft.line.ref]}>It's new — register</Button>
+                      </div>
+                    </div>
+                    <p className="mt-1 text-xs text-muted-foreground">Already have: {d.existing.title} · {d.existing.date} · {money(d.existing.amount)}{includeDups[d.draft.line.ref] ? " — will be registered as a new entry" : " — left alone"}</p>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {matched.length > 0 && (
+            <div className="mb-4 rounded-3xl border bg-card p-4">
+              <div className="mb-2 flex items-center justify-between gap-3">
+                <h2 className="font-display text-lg font-bold">{matched.length} of {freshLines.length} already in your ledger</h2>
+                <Button variant="outline" size="sm" onClick={confirmAll} disabled={busy || matched.length === 0}>Confirm {matched.length} matches</Button>
+              </div>
+              <ul className="space-y-2">
+                {matched.map((m) => (
+                  <li key={m.line.ref} className="grid gap-2 rounded-2xl bg-secondary/60 p-3 sm:grid-cols-[1fr_1.2fr] sm:items-center">
+                    <div className="min-w-0">
+                      <div className="truncate text-sm font-medium">{m.line.description || "—"}</div>
+                      <div className="font-mono text-xs text-muted-foreground">{m.line.date} · {m.line.direction === "credit" ? "Credit · " : "Debit · "}{money(m.line.amount, currency)}</div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <BadgeCheck className="h-4 w-4 shrink-0 text-success" />
+                      <Select value={m.expense?.id ?? "none"} onValueChange={(v) => setOverrides({ ...overrides, [m.line.ref]: v })}>
+                        <SelectTrigger aria-label={`Match for ${m.line.description}`} className="min-w-0"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">No match</SelectItem>
+                          {(m.expense ? [m.expense, ...open.filter((e) => e.id !== m.expense?.id)] : open).filter((e) => matchScore(m.line, e, currency, accountFilter) > 0).slice(0, 50).map((e) => (
+                            <SelectItem key={e.id} value={e.id}>{e.date} · {e.title} · {money(e.originalAmount, e.currency)}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {plan.review.length > 0 && (
+            <div id="needs-review" className="mb-4 scroll-mt-28 rounded-3xl border bg-card p-4">
+              <h2 className="font-display text-lg font-bold">Needs a look ({plan.review.length})</h2>
+              <p className="mb-2 text-xs text-muted-foreground">Transfers, cash withdrawals and unclear credits — tell us where the money went.</p>
+              <ul className="space-y-2">
+                {plan.review.map((d) => (
+                  <li key={d.line.ref} className="rounded-2xl bg-secondary/60 p-3">
+                    <div className="mb-1 flex items-center justify-between gap-2">
+                      <div className="min-w-0">
+                        <div className="truncate text-sm font-medium">{d.title}</div>
+                        <div className="font-mono text-xs text-muted-foreground">{d.line.date} · {money(d.line.amount, currency)} · {d.reason}</div>
+                      </div>
+                    </div>
+                    <StatementEntry line={d.line} currency={currency} draft={d} statementAccount={accountFilter} />
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {plan.skipped.length > 0 && (
+            <section id="already-recorded" className="mb-4 scroll-mt-28"><h2 className="text-lg font-semibold">Already recorded ({plan.skipped.length})</h2><ul className="divide-y text-sm">{plan.skipped.map(s => <li key={s.line.ref} className="py-2"><p className="break-words">{s.line.date} · {s.line.description} · {money(s.line.amount, currency)}</p><p className="text-xs text-muted-foreground">{s.reason}</p></li>)}</ul></section>
+          )}
+        </>
+      )}
+
+      {lines.length === 0 && reconciled.length > 0 && (
+        <>
+          <h2 className="mb-3 mt-2 font-display text-xl font-bold">Recently matched</h2>
+          <ul className="space-y-2">
+            {reconciled.slice(0, 10).map((e) => (
+              <li key={e.id} className="flex items-center gap-3 rounded-2xl border bg-card p-3 text-sm">
+                <BadgeCheck className="h-4 w-4 text-success" />
+                <div className="min-w-0 flex-1"><div className="truncate font-medium">{e.title}</div><div className="truncate text-xs text-muted-foreground">{e.statementRef}</div></div>
+                <Button variant="ghost" size="sm" onClick={() => reconcile(e.id, null)}>Unmatch</Button>
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
+      <Dialog open={itemList !== null} onOpenChange={v => { if (!v) setItemList(null); }}><DialogContent className="max-h-[85dvh] overflow-y-auto sm:max-w-2xl"><DialogHeader><DialogTitle>{itemList === "matched" ? "Matched transactions" : "Not matched yet"}</DialogTitle><DialogDescription>{itemList === "matched" ? `${reconciled.length} transactions confirmed against statements.` : `${open.length} transactions without a confirmed statement match.`}</DialogDescription></DialogHeader><Input aria-label="Search statement transactions" placeholder="Search transaction, account or date" value={itemQuery} onChange={e => { setItemQuery(e.target.value); setItemLimit(40); }} /><p className="text-sm text-muted-foreground">{listItems.length} matching · {Math.min(itemLimit, listItems.length)} shown</p><ul className="divide-y">{listItems.slice(0, itemLimit).map(e => <li key={e.id} className="py-3"><Link to="/new" search={{ edit: e.id }} className="flex items-start justify-between gap-3 text-primary hover:underline"><span className="min-w-0"><span className="block break-words font-medium">{e.title}</span><span className="block text-xs text-muted-foreground">{e.date} · {accounts.find(a => a.id === e.accountId)?.name ?? "No account"}</span><span className="block break-words text-xs text-muted-foreground">{itemList === "matched" ? e.statementRef || "Confirmed statement match" : "No confirmed statement match — review this transaction and its statement."}</span></span><span className="shrink-0 text-sm tabular-nums">{money(e.amount)}</span></Link></li>)}</ul>{!listItems.length && <p className="py-4 text-center text-sm text-muted-foreground">No transactions found.</p>}{listItems.length > itemLimit && <Button variant="outline" onClick={() => setItemLimit(n => n + 40)}>Show more ({listItems.length - itemLimit})</Button>}<Button variant="outline" onClick={() => setItemList(null)}>Back to Statements</Button></DialogContent></Dialog>
+    </>
+  );
+}

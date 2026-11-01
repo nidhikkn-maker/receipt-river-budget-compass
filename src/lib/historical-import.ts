@@ -69,12 +69,13 @@ export function stageImport(lines: StatementLine[], ctx: StatementContext, rules
     const draft = classifyStatementLine(line, ctx);
     const { top, conflict } = matchingImportRules(rules, line, ctx.accountId, ctx.currency);
     const mapped = !conflict && top[0] ? safeImportRuleMappings(top[0].mappings) : undefined;
-    const proposal: ImportProposal = { title: draft.title, merchant: draft.merchant, category: draft.category, scope: draft.scope, memberId: null, amount: line.amount, currency: ctx.currency, date: line.date, paymentMethod: draft.paymentMethod, txnType: draft.txnType, accountId: ctx.accountId, toAccountId: null, description: line.description, tags: [], ...mapped };
+    const proposal: ImportProposal = { title: draft.title, merchant: draft.merchant, category: draft.category, scope: draft.scope, memberId: null, amount: line.amount, currency: ctx.currency, date: line.date, paymentMethod: draft.paymentMethod, txnType: draft.txnType, accountId: draft.accountId, toAccountId: draft.toAccountId ?? null, description: line.description, tags: [], ...mapped };
+    if (draft.txnType === 'card_payment') { proposal.txnType = 'card_payment'; proposal.accountId = draft.accountId; proposal.toAccountId = draft.toAccountId ?? null; }
     // Rule mappings can only enrich classifications, never change source money or date.
     proposal.amount = line.amount; proposal.date = line.date; proposal.currency = ctx.currency;
     const fingerprint = fingerprints[i] ?? '';
-    const duplicate = known.has(fingerprint) ? { kind: 'exact' as const, id: null } : duplicateOf(line, ctx.accountId ?? '', ctx.currency, ctx.transactions);
-    const group = duplicate.kind !== 'new' ? REVIEW_GROUPS[3] : draft.txnType === 'transfer' ? REVIEW_GROUPS[4] : conflict || /confirm it is income/.test(draft.reason) ? REVIEW_GROUPS[2] : draft.uncertain && !mapped ? REVIEW_GROUPS[5] : mapped ? REVIEW_GROUPS[0] : REVIEW_GROUPS[1];
+    const duplicate = draft.existingPaymentId ? { kind: 'exact' as const, id: draft.existingPaymentId } : known.has(fingerprint) ? { kind: 'exact' as const, id: null } : duplicateOf(line, ctx.accountId ?? '', ctx.currency, ctx.transactions);
+    const group = duplicate.kind !== 'new' ? REVIEW_GROUPS[3] : ['transfer', 'card_payment'].includes(draft.txnType) ? REVIEW_GROUPS[4] : conflict || /confirm it is income/.test(draft.reason) ? REVIEW_GROUPS[2] : draft.uncertain && !mapped ? REVIEW_GROUPS[5] : mapped ? REVIEW_GROUPS[0] : REVIEW_GROUPS[1];
     return { line, fingerprint, proposal, review_group: group, confidence: mapped && !conflict ? 'high' : draft.uncertain ? 'low' : 'medium', decision: 'review', duplicate_kind: duplicate.kind, duplicate_id: duplicate.id };
   });
 }
@@ -84,6 +85,7 @@ export function postingBlockers(row: ImportRow, accounts: Account[], today: stri
   if (statement) {
     if (p.amount !== row.line.amount || p.date !== row.line.date || p.currency !== statement.currency) out.push('Source amount, date and currency must remain unchanged');
     if (p.accountId !== statement.account_id && p.toAccountId !== statement.account_id) out.push('Entry must involve the statement account');
+    if (row.line.direction === 'credit' && p.txnType === 'income' && accounts.some(a => a.id === statement.account_id && a.kind === 'credit_card')) out.push('Credit-card credits are repayments or refunds, never income');
     if (['transfer','card_payment','loan_repayment','investment'].includes(p.txnType ?? '') && (row.line.direction === 'credit' ? p.toAccountId !== statement.account_id : p.accountId !== statement.account_id)) out.push('Transfer direction must match statement');
   }
   if (!accounts.some(a => a.id === p.accountId && !a.archived)) out.push('Confirm payment account');
@@ -95,6 +97,7 @@ export function postingBlockers(row: ImportRow, accounts: Account[], today: stri
   if (row.duplicate_kind === 'exact') out.push('Already imported');
   if (['likely','possible'].includes(row.duplicate_kind) && !p.duplicateOverride) out.push('Confirm this is a separate payment');
   if (['transfer','card_payment','loan_repayment','investment'].includes(p.txnType ?? '') && (!p.toAccountId || p.accountId === p.toAccountId || !accounts.some(a => a.id === p.toAccountId && !a.archived))) out.push('Confirm destination account');
+  if (p.txnType === 'card_payment' && !accounts.some(a => a.id === p.toAccountId && !a.archived && a.kind === 'credit_card')) out.push('Card payment destination must be a credit-card account');
   if (!p.reviewed) out.push('Review classification');
   return out;
 }
