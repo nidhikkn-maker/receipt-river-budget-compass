@@ -8,7 +8,7 @@ import { reviewCohorts, reviewRuleSeed } from '@/lib/financial-review-intelligen
 import type { FinancialReview } from '@/lib/financial-review';
 import type { ImportRule } from '@/lib/historical-import';
 import type { Commitment } from '@/lib/planning';
-import { money, type Expense } from '@/lib/expenses';
+import type { Expense } from '@/lib/expenses';
 
 export function FinancialReviewIntelligence({ rows, commitments, onSelect, ruleExpense, category }: {
   rows: FinancialReview[]; commitments: Commitment[]; onSelect: (ids: string[]) => void; ruleExpense: Expense | undefined; category: string;
