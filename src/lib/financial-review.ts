@@ -16,8 +16,8 @@ export interface FinancialReview {
   group: ReviewGroup;
   status: "Ready for Review" | "Suggested Correction" | "Needs Information" | "Possible Duplicate" | "Unresolved";
   confidence: "high" | "medium" | "low";
-  suggestedType?: TxnType;
-  suggestedCategory?: string;
+  suggestedType?: TxnType | undefined;
+  suggestedCategory?: string | undefined;
   targetAccountIds: string[];
   evidence: string[];
 }

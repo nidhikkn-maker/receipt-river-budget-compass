@@ -85,7 +85,7 @@ describe("V5.9 evidence and financial preservation", () => {
   });
   it("transfer and card settlements do not add income or spending", () => {
     const tx = [e({ txnType: "transfer", toAccountId: "other", amount: 1000 }), e({ id: "two", txnType: "card_payment", toAccountId: "card", amount: 250000 })];
-    expect(cashflow(tx).spend).toBe(0);
+    expect(cashflow(tx).spent).toBe(0);
     expect(cashflow(tx).income).toBe(0);
     expect(accountBalance(card, tx)).toBe(0);
   });
