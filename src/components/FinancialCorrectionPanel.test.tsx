@@ -14,8 +14,8 @@ it("controlled copy: cancel makes no change; confirm applies reviewed effects an
   const accounts = [{ id: "bank", name: "Bank", kind: "savings", openingBalance: 10000, archived: false }, { id: "card", name: "Card", kind: "credit_card", openingBalance: 1000, archived: false }];
   let history: unknown[] = [];
   mocks.history.mockImplementation(async () => history);
-  mocks.apply.mockImplementation(async (p: CorrectionPreview) => { mocks.store.transactions = p.after; history = [{ id: "batch", count: 1, createdAt: "2026-11-01", entries: [{ before: { id: e.id, title: e.title, amount: 1000, txn_type: "expense", account_id: "bank", to_account_id: null }, after: { txn_type: "card_payment", account_id: "bank", to_account_id: "card" } }] }]; });
-  mocks.undo.mockImplementation(async () => { mocks.store.transactions = [e]; history = []; });
+  mocks.apply.mockImplementation(async (p: CorrectionPreview) => { mocks.store['transactions'] = p.after; history = [{ id: "batch", count: 1, createdAt: "2026-11-01", entries: [{ before: { id: e.id, title: e.title, amount: 1000, txn_type: "expense", account_id: "bank", to_account_id: null }, after: { txn_type: "card_payment", account_id: "bank", to_account_id: "card" } }] }]; });
+  mocks.undo.mockImplementation(async () => { mocks.store['transactions'] = [e]; history = []; });
   mocks.store = { transactions: [e], accounts, correctFinancialEntries: mocks.apply, undoFinancialCorrection: mocks.undo, financialCorrectionHistory: mocks.history };
   render(<FinancialCorrectionPanel rows={[row]} onSaved={() => {}} />);
   fireEvent.click(screen.getByRole("combobox", { name: "Correction transaction type" })); fireEvent.click(await screen.findByRole("option", { name: "Card payment" }));
@@ -25,8 +25,8 @@ it("controlled copy: cancel makes no change; confirm applies reviewed effects an
   fireEvent.click(screen.getByRole("button", { name: "Preview account & type changes" })); fireEvent.click(screen.getByRole("button", { name: "Confirm financial changes" }));
   await waitFor(() => expect(mocks.apply).toHaveBeenCalledTimes(1));
   expect(mocks.apply.mock.calls[0]?.[0]).toMatchObject({ spendingChange: -1000, incomeChange: 0 });
-  expect((mocks.store.transactions as Expense[])[0]?.txnType).toBe("card_payment");
+  expect((mocks.store['transactions'] as Expense[])[0]?.txnType).toBe("card_payment");
   fireEvent.click(await screen.findByRole("button", { name: "Review undo" })); expect(mocks.undo).not.toHaveBeenCalled();
   fireEvent.click(screen.getByRole("button", { name: "Confirm restoration" })); await waitFor(() => expect(mocks.undo).toHaveBeenCalledWith("batch"));
-  expect((mocks.store.transactions as Expense[])[0]?.txnType).toBe("expense"); expect(e.description).toBe("Untouched");
+  expect((mocks.store['transactions'] as Expense[])[0]?.txnType).toBe("expense"); expect(e.description).toBe("Untouched");
 });
