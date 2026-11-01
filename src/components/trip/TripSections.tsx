@@ -13,6 +13,8 @@ import { downloadBlob, toPdf } from "@/lib/reports";
 import { todayISO } from "@/lib/use-position";
 import { tripSummary, tripTag } from "@/lib/intelligence";
 import { TripPlanFields } from "@/components/TripPlanFields";
+import { BookingDocumentImport } from "./BookingDocumentImport";
+import { reviewedBooking, type bookingDraft } from "@/lib/booking-import";
 
 const sel = "h-10 rounded-xl border bg-background px-2 text-sm";
 const slug = (name: string) => name.replace(/\W+/g, "-");
@@ -57,25 +59,28 @@ export function TripOverviewSection({ trip }: { trip: TravelTrip }) {
 
 /** Bookings: compact cards with type-relevant details; the entry form stays collapsed until needed. */
 export function TripBookingsSection({ trip }: { trip: TravelTrip }) {
-  const { transactions, setTags, documents } = useStore();
+  const { transactions, setTags, documents, preferences, savePreferences } = useStore();
   const put = useTripPut(trip);
   const closed = !!trip.closedAt;
   const matches = useMemo(() => bookingMatches(trip, transactions), [trip, transactions]);
   const f = useMemo(() => tripFinance(trip, transactions), [trip, transactions]);
   const [showForm, setShowForm] = useState(false);
-  const [bk, setBk] = useState({ kind: "flight" as BookingKind, provider: "", ref: "", date: trip.start, amount: "", due: "", cancel: "", traveller: "", location: "", currency: "INR", rate: "1", confirmation: "pending" as "pending" | "confirmed", document: "" });
+  const [bk, setBk] = useState<ReturnType<typeof bookingDraft>>({ kind: "flight", provider: "", ref: "", date: trip.start, amount: "", due: "", cancel: "", traveller: "", location: "", currency: "INR", rate: "1", confirmation: "pending", document: "", note: "" });
 
-  const addBooking = () => {
-    if (!(Number(bk.rate) > 0) || !Number.isFinite(Number(bk.rate))) { toast.error("Enter a positive planning exchange rate"); return; }
-    const b: Booking = { id: crypto.randomUUID(), kind: bk.kind, provider: bk.provider.trim(), ref: bk.ref.trim(), date: bk.date, amount: Math.round(Number(bk.amount) * Number(bk.rate) * 100) / 100, status: "unpaid", dueDate: bk.due || null, cancelTerms: bk.cancel.trim() || null, traveller: bk.traveller, location: bk.location, currency: bk.currency, originalAmount: Number(bk.amount), planningRate: Number(bk.rate), confirmation: bk.confirmation, documentIds: bk.document ? [bk.document] : [] };
-    try { validateBooking(b); } catch (e) { toast.error((e as Error).message); return; }
-    void put({ bookings: [...(trip.bookings ?? []), b] }, "Booking added — not counted as spent until paid");
-    setBk({ ...bk, provider: "", ref: "", amount: "", due: "", cancel: "" });
+  const addBooking = async () => {
+    let b: Booking;
+    try { b = reviewedBooking(crypto.randomUUID(), bk); } catch (e) { toast.error((e as Error).message); return; }
+    try {
+      await savePreferences({ ...preferences, trips: (preferences.trips as TravelTrip[]).map((t) => t.id === trip.id ? { ...t, bookings: [...(t.bookings ?? []), b] } : t) });
+      toast.success("Booking added — not counted as spent until paid");
+    } catch (e) { toast.error(e instanceof Error ? e.message : "Couldn't save booking"); return; }
+    setBk({ ...bk, provider: "", ref: "", amount: "", due: "", cancel: "", document: "", note: "" });
     setShowForm(false);
   };
 
   return (
     <Card title="Bookings" action={!closed && <Button size="sm" variant="gold" onClick={() => setShowForm((s) => !s)} aria-expanded={showForm}>{showForm ? "Close form" : "Add booking"}</Button>}>
+      {!closed && <BookingDocumentImport tripName={trip.name} onDraft={(draft) => { setBk(draft); setShowForm(true); }} />}
       {(trip.bookings ?? []).length === 0 && !showForm && <p className="text-sm text-muted-foreground">No bookings yet. Add flights, hotels, trains and other reservations here — they only affect balances once paid.</p>}
       {(trip.bookings ?? []).map((b) => (
         <div key={b.id} className="flex flex-wrap items-center gap-2 border-b py-2 text-sm last:border-0">
@@ -99,16 +104,17 @@ export function TripBookingsSection({ trip }: { trip: TravelTrip }) {
       {f.paidUnlinked.length > 0 && <p className="text-xs text-destructive">{f.paidUnlinked.length} paid booking(s) point to an entry not tagged to this trip.</p>}
       {!closed && showForm && <div className="mt-2 grid gap-2 border-t pt-3 sm:grid-cols-5">
         <select className={sel} value={bk.kind} onChange={(e) => setBk({ ...bk, kind: e.target.value as BookingKind })}>{BOOKING_KINDS.map((k) => <option key={k}>{k}</option>)}</select>
-        <Input className="h-10" placeholder="Provider" value={bk.provider} onChange={(e) => setBk({ ...bk, provider: e.target.value })} />
-        <Input className="h-10" placeholder="Booking ref" value={bk.ref} onChange={(e) => setBk({ ...bk, ref: e.target.value })} />
-        <Input className="h-10" type="date" value={bk.date} onChange={(e) => setBk({ ...bk, date: e.target.value })} />
-        <Input className="h-10" type="number" placeholder="Amount ₹" value={bk.amount} onChange={(e) => setBk({ ...bk, amount: e.target.value })} />
+        <Input className="h-10" aria-label="Booking provider" placeholder="Provider" value={bk.provider} onChange={(e) => setBk({ ...bk, provider: e.target.value })} />
+        <Input className="h-10" aria-label="Booking reference" placeholder="Booking ref" value={bk.ref} onChange={(e) => setBk({ ...bk, ref: e.target.value })} />
+        <Input className="h-10" aria-label="Booking date" type="date" value={bk.date} onChange={(e) => setBk({ ...bk, date: e.target.value })} />
+        <Input className="h-10" aria-label="Booking amount" type="number" placeholder="Original amount" value={bk.amount} onChange={(e) => setBk({ ...bk, amount: e.target.value })} />
         <Input className="h-10" type="date" aria-label="Payment due date" value={bk.due} onChange={(e) => setBk({ ...bk, due: e.target.value })} placeholder="Payment due" />
         <Input className="h-10 sm:col-span-4" placeholder="Cancellation terms (e.g. free until 24h before)" value={bk.cancel} onChange={(e) => setBk({ ...bk, cancel: e.target.value })} />
         <Input aria-label="Booking traveller" placeholder="Traveller" value={bk.traveller} onChange={e => setBk({ ...bk, traveller: e.target.value })} />
         <Input aria-label="Booking location" placeholder="Location" value={bk.location} onChange={e => setBk({ ...bk, location: e.target.value })} />
         <select aria-label="Booking currency" className={sel} value={bk.currency} onChange={e => setBk({ ...bk, currency: e.target.value, rate: e.target.value === "INR" ? "1" : bk.rate })}>{CURRENCIES.map(c => <option key={c}>{c}</option>)}</select>
         <Input aria-label="Booking planning exchange rate" type="number" value={bk.rate} onChange={e => setBk({ ...bk, rate: e.target.value })} />
+        <Input aria-label="Booking notes" placeholder="Notes / times" value={bk.note} onChange={e => setBk({ ...bk, note: e.target.value })} />
         <select aria-label="Booking attachment" className={`${sel} min-w-0`} value={bk.document} onChange={e => setBk({ ...bk, document: e.target.value })}><option value="">Attach vault document…</option>{documents.map(d => <option key={d.id} value={d.id}>{d.title}</option>)}</select>
         <Button type="button" variant="outline" className="sm:col-span-5" onClick={addBooking}>Add booking</Button>
       </div>}
