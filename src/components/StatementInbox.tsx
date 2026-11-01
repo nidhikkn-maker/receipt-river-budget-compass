@@ -177,7 +177,10 @@ export function StatementInbox() {
   return (
     <>
       <h2 className="mb-3 text-xl font-semibold">Statements</h2>
-      <Button asChild className="mb-5"><Link to="/historical-import">Historical import & bulk review</Link></Button>
+      <div className="mb-5 flex flex-wrap gap-2">
+        <Button asChild><Link to="/statements">Statement Desk — upload many at once</Link></Button>
+        <Button asChild variant="outline"><Link to="/historical-import">Historical import & bulk review</Link></Button>
+      </div>
       <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-3">
         <Button variant="ghost" className="block h-auto min-w-0 whitespace-normal p-0 text-left" aria-label={`Matched: ${reconciled.length} transactions`} onClick={() => openItems("matched")}><Stat label="Matched" value={String(reconciled.length)} /></Button>
         <Button variant="ghost" className="block h-auto min-w-0 whitespace-normal p-0 text-left" aria-label={`Not matched yet: ${open.length} transactions`} onClick={() => openItems("unmatched")}><Stat label="Not matched yet" value={String(open.length)} hint={money(open.reduce((s, e) => s + e.amount, 0))} /></Button>
