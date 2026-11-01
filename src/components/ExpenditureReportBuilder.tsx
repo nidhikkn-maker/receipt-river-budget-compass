@@ -24,7 +24,7 @@ import type { ClaimPreparationData } from '@/lib/claim-preparations';
 import type { Expense } from '@/lib/expenses';
 import { DEFAULT_DECLARATION, maskedText, organisationStatement, profileClaimant, reimbursementAccountLabel, resolveReimbursementProfile, responsibilityShares } from '@/lib/reimbursement-profiles';
 
-import { buildClaim, type Claimant } from "@/lib/expense-claim";
+import { buildClaim, applyAdvance, type Claimant } from "@/lib/expense-claim";
 
 const STAGES = ["Collecting transactions", "Fetching original bills", "Building statement", "Attaching annexures", "Saving to report history"];
 const sel = "h-9 w-full rounded-md border border-input bg-background px-2 text-sm";
