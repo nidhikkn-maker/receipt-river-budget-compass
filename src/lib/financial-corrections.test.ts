@@ -8,6 +8,20 @@ const card: Account = { ...bank, id: "card", name: "Card", kind: "credit_card" }
 const e: Expense = { id: "copy", correctionRevision: 0, title: "Card settlement", merchant: null, category: "Miscellaneous", scope: "personal", memberId: null, splits: [], amount: 1000, originalAmount: 10, currency: "USD", fxRate: 100, paymentMethod: "bank_transfer", reconciledAt: "2026-10-31", statementRef: "original", date: "2026-10-20", description: "Untouched", receipts: [], accountId: "bank", txnType: "expense" };
 const row = (t = e): FinancialReview => ({ transaction: t, issues: [], group: "type", status: "Suggested Correction", confidence: "medium", targetAccountIds: [], evidence: [] });
 describe("exact financial correction previews", () => {
+  it("ordinary expense account correction needs no destination and keeps the merchant and original statement", () => {
+    const expense = { ...e, merchant: "External supplier" };
+    const p = correctionPreview([row(expense)], { accountId: "card" }, [bank, card], [expense]);
+    expect(p.after[0]).toMatchObject({ txnType: "expense", accountId: "card", toAccountId: null, merchant: "External supplier", statementRef: "original" });
+    expect(p.spendingChange).toBe(0);
+    expect(expense.accountId).toBe("bank");
+  });
+  it("changing a movement to expense discards incompatible internal destination and repayment split only in the preview", () => {
+    const move = { ...e, txnType: "card_payment" as const, toAccountId: "card" };
+    const p = correctionPreview([row(move)], { txnType: "expense", toAccountId: "card", principal: 10, interest: 0 }, [bank, card], [move]);
+    expect(p.after[0]).toMatchObject({ txnType: "expense", toAccountId: null, principal: null, interest: null });
+    expect(p.spendingChange).toBe(1000);
+    expect(move.toAccountId).toBe("card");
+  });
   it("card settlement removes 1000 spending, reduces card owed by 1000 and preserves saved FX", () => {
     const p = correctionPreview([row()], { txnType: "card_payment", toAccountId: "card" }, [bank, card], [e]);
     expect(p.spendingChange).toBe(-1000); expect(p.incomeChange).toBe(0);

@@ -43,5 +43,5 @@
 - Claims reuse ledger rules; profiles/shares use owner preferences, preparations use revision-checked Cloud rows plus encrypted device copies, and discovery confirms audited existing-entry links. PDFs never submit/pay claims; older exports stay unchanged.
 - Master-record rules (duplicates, organisation usage/rename) live in src/lib/master-data.ts and setup readiness in src/lib/setup-status.ts; every add-account path uses the shared AccountForm so contextual and central creation follow one rule set.
 - PDF table cells with non-Latin text are rendered by the browser onto canvas images (src/lib/pdf-unicode.ts withUnicode) because jsPDF core fonts are Latin-only and cannot shape Indic scripts; titles, footers and bill-page labels use textU()/drawTextU() which image-render non-Latin text.
-- Reports Centre job/history IDs match; callbacks recover imports without duplicates.
-- Corrections use owner-atomic RPCs, revisions and safe undo; preserve FX/source. Statements use saved evidence. Inbox, transaction-review and account-reconciliation are separate; review-centre.ts owns counts/selection.
+- Report IDs match jobs; callbacks recover without duplicates. Reconciliation persistence tests use temporary PGlite, not Cloud or real devices.
+- Corrections use owner-atomic RPCs, revisions and safe undo; preserve FX/source. Evidence drives statements; review-centre.ts separates Inbox, review and reconciliation.

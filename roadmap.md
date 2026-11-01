@@ -1,4 +1,11 @@
 # Roadmap (Functional Requirements v1.0)
+## V5.10.1 transaction classification and external payees
+- [x] Root cause: correction form always displayed both internal account fields even though expense preview already ignores destination. Conditional fields, compatible card/loan targets, incoming account labels and mixed-type review guard added; existing protected confirmation retained.
+- [ ] Reusable external recipient directory, compatible bulk classification, safe persistence and 18-case financial/device completion report; preview only, no production changes.
+## Isolated reconciliation storage and physical-device acceptance
+- [x] Disposable local PostgreSQL test storage verifies saved evidence/checkpoint survives closing/reopening, owner isolation and unchanged balances; 44 focused checks passed, no Cloud access.
+- [ ] Separate hosted test storage: newly created reconciliation draft still shares live data; no hosted test writes permitted.
+- [ ] Physical iPad/iPhone save/reload and cross-device checks: blocked on separate hosted test storage and real-device access; emulation is not physical-device evidence.
 ## V5.9.2 Financial Inbox redesign (.lovable/requirements-v5.9.2.md)
 - [x] Audit against spec: three-view navigation, counts, selection scopes, bulk bar, guided preview/confirm, merchant groups, missing-field grouping, clutter-in-dialogs all already present from V5.10 work.
 - [x] This turn: prominent Review & Apply in the category dialog, bulk summary in the detail panel instead of "No transaction selected", arrow-key navigation between row checkboxes, selected-row highlighting in list and table.
