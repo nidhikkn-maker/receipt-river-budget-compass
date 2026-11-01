@@ -50,8 +50,13 @@ export function stageImport(lines: StatementLine[], ctx: StatementContext, rules
   });
 }
 
-export function postingBlockers(row: ImportRow, accounts: Account[], today: string): string[] {
+export function postingBlockers(row: ImportRow, accounts: Account[], today: string, statement?: Pick<ImportBatch, 'account_id' | 'currency'>): string[] {
   const p = row.proposal, out: string[] = [];
+  if (statement) {
+    if (p.amount !== row.line.amount || p.date !== row.line.date || p.currency !== statement.currency) out.push('Source amount, date and currency must remain unchanged');
+    if (p.accountId !== statement.account_id && p.toAccountId !== statement.account_id) out.push('Entry must involve the statement account');
+    if (['transfer','card_payment','loan_repayment','investment'].includes(p.txnType ?? '') && (row.line.direction === 'credit' ? p.toAccountId !== statement.account_id : p.accountId !== statement.account_id)) out.push('Transfer direction must match statement');
+  }
   if (!accounts.some(a => a.id === p.accountId && !a.archived)) out.push('Confirm payment account');
   if (!p.date || p.date < HISTORICAL_START || p.date > today) out.push('Date must be from 1 April 2026 through today');
   if (!Number.isFinite(p.amount) || p.amount <= 0) out.push('Confirm a positive amount');
@@ -60,7 +65,7 @@ export function postingBlockers(row: ImportRow, accounts: Account[], today: stri
   if (/^miscellaneous$/i.test(p.category?.trim() ?? '') && !p.categoryConfirmed) out.push('Explicitly confirm Miscellaneous as the final category');
   if (row.duplicate_kind === 'exact') out.push('Already imported');
   if (['likely','possible'].includes(row.duplicate_kind) && !p.duplicateOverride) out.push('Confirm this is a separate payment');
-  if (['transfer','card_payment','loan_repayment','investment'].includes(p.txnType ?? '') && (!p.toAccountId || p.accountId === p.toAccountId || !accounts.some(a => a.id === p.toAccountId))) out.push('Confirm destination account');
+  if (['transfer','card_payment','loan_repayment','investment'].includes(p.txnType ?? '') && (!p.toAccountId || p.accountId === p.toAccountId || !accounts.some(a => a.id === p.toAccountId && !a.archived))) out.push('Confirm destination account');
   if (!p.reviewed) out.push('Review classification');
   return out;
 }
@@ -78,8 +83,8 @@ export function mergeImportPatch(proposal: ImportProposal, patch: Partial<Import
   return { ...proposal, ...patch, tags: [...new Set([...(proposal.tags ?? []), ...(patch.tags ?? [])])] };
 }
 
-export function importSelectionSummary(rows: ImportRow[], accounts: Account[], today: string) {
-  const eligible = rows.filter(r => r.decision === 'approved' && postingBlockers(r, accounts, today).length === 0);
+export function importSelectionSummary(rows: ImportRow[], accounts: Account[], today: string, statement?: Pick<ImportBatch, 'account_id' | 'currency'>) {
+  const eligible = rows.filter(r => r.decision === 'approved' && postingBlockers(r, accounts, today, statement).length === 0);
   const types = new Map<string, { count: number; amount: number }>();
   for (const row of eligible) {
     const key = row.proposal.txnType ?? 'expense', old = types.get(key) ?? { count: 0, amount: 0 };
