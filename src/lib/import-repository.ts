@@ -5,6 +5,7 @@ import type { Account } from './ledger';
 import type { Expense } from './expenses';
 import type { StatementStatusEvidence } from './account-statement-status';
 import { checkpointHash, checkpointSnapshot, type StatementCheckpoint } from './statement-checkpoint';
+import { canonicalEvidence } from './statement-evidence';
 
 export async function statementEvidence(batch:ImportBatch,account:Account,transactions:Expense[]):Promise<StatementStatusEvidence> {
   const rows=await listImportRows(batch.id),posted:StatementStatusEvidence['posted']=[];
@@ -15,7 +16,7 @@ export async function statementEvidence(batch:ImportBatch,account:Account,transa
   const checkpoint=await supabase.from('statement_checkpoints').select('*').eq('batch_id',batch.id).order('created_at',{ascending:false}).order('id').limit(1).maybeSingle();
   if(checkpoint.error)throw Error('Saved reconciliation evidence unavailable');
   const evidence:StatementStatusEvidence={batch,rows,posted,...(checkpoint.data?{checkpoint:checkpoint.data as unknown as StatementCheckpoint}:{})};
-  evidence.currentHash=await checkpointHash(checkpointSnapshot(evidence,account,transactions));return evidence;
+  const snapshot=checkpointSnapshot(evidence,account,transactions);evidence.snapshotKey=canonicalEvidence(snapshot);evidence.currentHash=await checkpointHash(snapshot);return evidence;
 }
 
 export async function listImports(): Promise<ImportBatch[]> {

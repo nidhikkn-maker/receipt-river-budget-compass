@@ -3,8 +3,9 @@ import { accountBalance, isLiability, type Account } from "./ledger";
 import type { FinancePreferences } from "./preferences";
 import type { ImportBatch, ImportRow } from "./historical-import";
 import { verifyHistoricalBalances } from "./balance-verification";
-import { checkpointCurrent, type StatementCheckpoint } from "./statement-checkpoint";
-export interface StatementStatusEvidence { batch: ImportBatch; rows: ImportRow[]; posted: { fingerprint: string; transaction_id: string; posted_at: string }[]; checkpoint?: StatementCheckpoint; currentHash?: string }
+import { checkpointCurrent, checkpointSnapshot, type StatementCheckpoint } from "./statement-checkpoint";
+import { canonicalEvidence } from "./statement-evidence";
+export interface StatementStatusEvidence { batch: ImportBatch; rows: ImportRow[]; posted: { fingerprint: string; transaction_id: string; posted_at: string }[]; checkpoint?: StatementCheckpoint; currentHash?: string; snapshotKey?: string }
 const validDate = (s: string | null | undefined): s is string => !!s && /^\d{4}-\d{2}-\d{2}$/.test(s) && Number.isFinite(Date.parse(s));
 
 /** Account identity is the reviewed account selection, not filename inference. Import readiness is not reconciliation. */
@@ -46,7 +47,7 @@ export function accountStatementStatus(account: Account, evidence: StatementStat
   const conventionMatches = batch?.statement_review?.convention === (isLiability(account.kind) ? "liability" : "asset");
   const check = batch && latest && periodValid ? verifyHistoricalBalances({ opening: batch.opening_balance == null ? null : Number(batch.opening_balance), closing: batch.closing_balance == null ? null : Number(batch.closing_balance), sourceOpening: review?.sourceOpening ?? null, sourceClosing: review?.sourceClosing ?? null, checkedOriginal: review?.checkedOriginal ?? false, reference: review?.sourceReference ?? "", lines: rows.map(r => r.line), liability: batch.statement_review?.convention === "liability", ledgerOpening: batch.currency === "INR" ? accountBalance(account, transactions.filter(t => t.date < (batch.period_from ?? ""))) : null, ledgerClosing: batch.currency === "INR" ? ledgerClosing : null, unresolved: unresolved + unmatchedLedger }) : null;
   const calculatedReconciliation = !latest || !rows.length ? "Not Started" : batch?.status !== "review" || !identityConfirmed || !coverageConfirmed || !conventionMatches ? "Requires Review" : unresolved ? matched.length ? "In Progress" : "Requires Review" : check?.fullyReconciled ? "Reconciled" : difference !== null && difference !== 0 || check?.difference != null && check.difference !== 0 ? "Differences Found" : "Requires Review";
-  const currentCheckpoint = latest && checkpointCurrent(latest);
+  const currentCheckpoint = latest && checkpointCurrent(latest) && (!latest.snapshotKey || latest.snapshotKey === canonicalEvidence(checkpointSnapshot(latest,account,transactions)));
   const reconciliation = calculationOnly ? calculatedReconciliation : currentCheckpoint ? latest.checkpoint?.result.reconciliation ?? "Requires Review" : latest?.checkpoint ? "Requires Review" : matched.length ? "In Progress" : "Not Started";
   const balance = calculationOnly ? calculatedBalance : currentCheckpoint ? latest.checkpoint?.result.balance ?? "Not Verified" : "Not Verified";
   const missing = [!identityConfirmed ? "Statement account identity has not been confirmed." : "", !coverageConfirmed ? "Statement coverage has not been confirmed against the original." : "", !usableBalance ? "A reviewed closing balance is missing." : "", !conventionMatches && batch ? "Statement balance convention needs confirmation." : "", !currentCheckpoint && !calculationOnly && batch ? "Run and save a reconciliation check; previous checks may be outdated." : "", unresolved ? `${unresolved} statement rows are not matched to current ledger entries.` : "", unmatchedLedger ? `${unmatchedLedger} ledger entries in this period are not accounted for by statement matches.` : "", batch?.currency !== "INR" && batch ? "Original-currency comparison with the INR ledger is unavailable." : "", !batch ? "No historical import is linked to this account." : ""].filter(Boolean);
