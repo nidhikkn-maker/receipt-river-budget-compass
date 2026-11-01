@@ -136,7 +136,8 @@ function CrossCheckPage() {
     if (!acct || !gate?.ok) return;
     if (missing.some((m) => m.transferWith) && !targetId) { toast.error("Choose which account the other statements belong to, so transfers are posted between the right accounts."); return; }
     let done = 0;
-    const ids: string[] = [...batch];
+    const ids = [...new Set([...batch, ...(await Promise.all(missing.map((m) => lineId(accountId, m))))])];
+    try { await keepBatch(ids); } catch { toast.error("Couldn’t save the batch for Undo, so nothing was posted. Try again."); return; }
     try {
       for (const m of missing) {
         setPosting(`Saving ${done + 1} of ${missing.length}…`);
@@ -149,8 +150,6 @@ function CrossCheckPage() {
           accountId: transfer && m.direction === "credit" ? targetId : accountId,
           toAccountId: transfer ? (m.direction === "debit" ? targetId : accountId) : null,
         }, { createId: id, noRefresh: true });
-        if (!ids.includes(id)) ids.push(id);
-        await keepBatch([...ids]);
         done++;
       }
       toast.success(`${done} statement entries posted to ${acct.name}`);
