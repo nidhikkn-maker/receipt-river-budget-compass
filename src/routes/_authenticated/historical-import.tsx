@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { ImportUploadManifest, type StatementUpload } from '@/components/ImportUploadManifest';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ImportReview } from '@/components/ImportReview';
+import { ImportReconciliationHistory } from '@/components/ImportReconciliationHistory';
 import { ProcessingPanel, stagesAt } from '@/components/ProcessingPanel';
 import { supabase } from '@/integrations/supabase/client';
 import { useStore } from '@/lib/store';
@@ -67,6 +68,7 @@ function HistoricalImports() {
   const today=new Date().toISOString().slice(0,10);
   return <>
     <PageTitle eyebrow="Statements" title="Historical import" sub="Records from 1 April 2026"/>
+    <ol aria-label="Import stages" className="mb-5 flex flex-wrap gap-x-4 gap-y-2 text-xs text-muted-foreground"><li>1 · Upload</li><li>2 · Review groups</li><li>3 · Confirm import</li><li>4 · Reconcile</li></ol>
     <div className="mb-6 flex flex-wrap gap-2"><Button asChild variant="outline"><Link to="/wealth">Configure accounts & opening balances</Link></Button><Button asChild variant="ghost"><Link to="/reconcile">Statement matching</Link></Button></div>
     <section className="mb-6 border-y py-5 space-y-3">
       <h2 className="text-lg font-semibold">Upload statements</h2>
@@ -77,6 +79,7 @@ function HistoricalImports() {
     <section className="mb-6"><h2 className="text-lg font-semibold mb-3">Import coverage</h2><ul className="divide-y">{accounts.filter(a=>!a.archived).map(a=>{const coverage=coverageMonths(batches.filter(b=>b.account_id===a.id&&b.status==='review'),today);return <li key={a.id} className="py-3 text-sm"><span className="font-medium">{a.name}</span> · {coverage.covered.length} months represented<p className="text-xs text-warning">{coverage.missing.length?`Missing statement months: ${coverage.missing.join(', ')}`:'All months represented — verify full statement periods and reconciliation'}</p></li>;})}</ul></section>
     {overlappingStatements(batches).length>0&&<section className="mb-6 border-y py-4"><h2 className="mb-3 text-lg font-semibold">Overlapping statement periods</h2><ul className="space-y-2">{overlappingStatements(batches).map(({first,second})=><li key={`${first.id}-${second.id}`} className="text-sm break-words text-warning">{first.file_name} · {second.file_name}<Button size="sm" variant="ghost" onClick={async()=>{setCurrent(second.id);await reload(second.id);}}>Review overlap</Button></li>)}</ul></section>}
     <section className="mb-6"><h2 className="text-lg font-semibold mb-3">Saved statements</h2><ul className="divide-y">{batches.map(b=><li key={b.id} className="py-3 flex flex-wrap gap-2 items-center"><div className="min-w-0 flex-1"><p className="break-words text-sm font-medium">{b.file_name}</p><p className="text-xs text-muted-foreground">{accounts.find(a=>a.id===b.account_id)?.name} · {b.status} · {b.period_from ?? 'Period not confirmed'}{b.period_to?` to ${b.period_to}`:''}</p>{b.total_pages!=null&&<p className="text-xs text-muted-foreground">{b.next_page??0} of {b.total_pages} pages extracted</p>}{b.error&&<p className="text-xs text-destructive">{b.error}</p>}</div><Button size="sm" variant={current===b.id?'default':'outline'} onClick={async()=>{setCurrent(b.id);await reload(b.id);}}>Open review</Button>{['failed','paused'].includes(b.status)&&<Button size="sm" variant="outline" onClick={async()=>{await resume({data:{id:b.id}});if(!b.allow_ai)await process({data:{id:b.id}});await reload(b.id);}}>Retry processing</Button>}</li>)}</ul>{!batches.length&&<p className="text-sm text-muted-foreground">No statements uploaded yet.</p>}</section>
+    <ImportReconciliationHistory batches={batches} onOpen={async id=>{setCurrent(id);await reload(id);}}/>
     {batch&&<section className="border-t pt-6"><h2 className="mb-4 text-xl font-semibold break-words">{batch.file_name}</h2><ImportReview key={batch.id} batch={batch} rows={rows} posted={posted} onReload={()=>reload()}/></section>}
   </>;
 }
