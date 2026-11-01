@@ -1068,30 +1068,36 @@ export type Database = {
       import_rules: {
         Row: {
           account_id: string | null
+          conditions: Json
           created_at: string
           enabled: boolean
           id: string
           mappings: Json
           merchant: string
           owner_id: string
+          priority: number
         }
         Insert: {
           account_id?: string | null
+          conditions?: Json
           created_at?: string
           enabled?: boolean
           id?: string
           mappings?: Json
           merchant: string
           owner_id?: string
+          priority?: number
         }
         Update: {
           account_id?: string | null
+          conditions?: Json
           created_at?: string
           enabled?: boolean
           id?: string
           mappings?: Json
           merchant?: string
           owner_id?: string
+          priority?: number
         }
         Relationships: [
           {

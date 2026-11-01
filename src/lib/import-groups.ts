@@ -5,6 +5,7 @@ import { importPatterns } from './import-patterns';
 
 export const IMPORT_GROUP_DIMENSIONS = [
   { id: 'merchant', label: 'Merchant' },
+  { id: 'description', label: 'Description pattern' },
   { id: 'category', label: 'Category' },
   { id: 'workspace', label: 'Workspace' },
   { id: 'type', label: 'Transaction type' },
@@ -25,6 +26,7 @@ export function groupImportRows(rows: ImportRow[], dimension: ImportGroupDimensi
     let key: string, label: string;
     switch (dimension) {
       case 'pattern': key = patterns?.get(row.id)?.key ?? 'no-pattern'; label = patterns?.get(row.id)?.label ?? 'No reliable pattern'; break;
+      case 'description': key = label = row.line.description.normalize('NFKC').toUpperCase().replace(/\d{5,}/g,'#').replace(/\s+/g,' ').trim(); break;
       case 'category': key = label = p.category || 'Unclassified'; break;
       case 'workspace': key = p.scope; label = SCOPE_LABEL[p.scope]; break;
       case 'type': key = p.txnType ?? 'expense'; label = TXN_LABEL[p.txnType ?? 'expense']; break;

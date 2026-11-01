@@ -6,7 +6,8 @@ import { accountBalance, isLiability, type Account } from './ledger';
 export const HISTORICAL_START = '2026-04-01';
 export const REVIEW_GROUPS = ['Ready to approve', 'Suggested classification', 'Needs your decision', 'Possible duplicates', 'Transfers and settlements', 'Unmatched or uncertain'] as const;
 export interface ImportProposal extends ExpenseInput { reviewed?: boolean; categoryConfirmed?: boolean; duplicateOverride?: boolean; reimbursable?: boolean; organisation?: string; subcategory?: string; reimbursementOrganisation?: string }
-export interface ImportRule { id: string; merchant: string; account_id: string | null; mappings: Partial<ImportProposal>; enabled: boolean }
+export interface ImportRuleConditions { description?: string; direction?: 'debit' | 'credit'; currency?: string; minAmount?: number; maxAmount?: number }
+export interface ImportRule { id: string; merchant: string; account_id: string | null; mappings: Partial<ImportProposal>; enabled: boolean; conditions?: ImportRuleConditions; priority?: number }
 export interface ImportRow { id: string; fingerprint: string; line: StatementLine; proposal: ImportProposal; review_group: string; confidence: string; decision: 'review' | 'approved' | 'excluded'; duplicate_kind: 'new' | 'exact' | 'likely' | 'possible'; duplicate_id: string | null }
 export interface ImportBatch { id: string; account_id: string; file_name: string; file_path: string; currency: string; status: string; error: string | null; period_from: string | null; period_to: string | null; opening_balance: number | null; closing_balance: number | null; source_balances?: import('./balance-verification').BalanceEvidence; balance_verification?: import('./balance-verification').BalanceReview; allow_ai?:boolean; next_page?:number; total_pages?:number|null }
 
@@ -33,13 +34,41 @@ export function duplicateOf(line: StatementLine, accountId: string, currency: st
   return possible ? { kind: 'possible' as const, id: possible.id } : { kind: 'new' as const, id: null };
 }
 
+/** Conditions compare original statement values, never converted ledger amounts. */
+export function importRuleMatches(rule: ImportRule, line: StatementLine, accountId: string | null | undefined, currency: string): boolean {
+  const c = rule.conditions ?? {};
+  if (!rule.enabled || (rule.account_id && rule.account_id !== accountId) || merchantFamily(rule.merchant) !== merchantFamily(line.description)) return false;
+  if (c.description && !line.description.normalize('NFKC').toLocaleLowerCase().includes(c.description.normalize('NFKC').toLocaleLowerCase())) return false;
+  if (c.direction && c.direction !== (line.direction ?? 'debit')) return false;
+  if (c.currency && c.currency.toUpperCase() !== currency.toUpperCase()) return false;
+  if (c.minAmount !== undefined && (!Number.isFinite(c.minAmount) || c.minAmount < 0 || line.amount < c.minAmount)) return false;
+  if (c.maxAmount !== undefined && (!Number.isFinite(c.maxAmount) || c.maxAmount < 0 || line.amount > c.maxAmount)) return false;
+  return true;
+}
+
+/** Even malformed stored mappings cannot grant approval or change source identity/money. */
+export function safeImportRuleMappings(p: Partial<ImportProposal>): Partial<ImportProposal> {
+  const allowed = ['category', 'scope', 'organisation', 'subcategory', 'tags', 'txnType', 'reimbursable', 'reimbursementOrganisation'] as const;
+  const result = Object.fromEntries(allowed.filter(key => p[key] !== undefined).map(key => [key, p[key]])) as Partial<ImportProposal>;
+  if (result.txnType && !['expense','income','refund','transfer','card_payment','loan_repayment','investment','reimbursement','advance','advance_settlement'].includes(result.txnType)) delete result.txnType;
+  if (result.tags) result.tags = [...new Set(result.tags.filter(t => typeof t === 'string' && !/^Trip:/i.test(t)))];
+  return result;
+}
+
+export function matchingImportRules(rules: ImportRule[], line: StatementLine, accountId: string | null | undefined, currency: string) {
+  const matches = rules.filter(rule => importRuleMatches(rule, line, accountId, currency));
+  const priority = Math.max(0, ...matches.map(rule => rule.priority ?? 0));
+  const top = matches.filter(rule => (rule.priority ?? 0) === priority);
+  const key = (rule: ImportRule) => JSON.stringify(Object.entries(safeImportRuleMappings(rule.mappings)).sort(([a],[b]) => a.localeCompare(b)));
+  return { matches, top, conflict: new Set(top.map(key)).size > 1 };
+}
+
 export function stageImport(lines: StatementLine[], ctx: StatementContext, rules: ImportRule[], known: Set<string>): Omit<ImportRow, 'id'>[] {
   const fingerprints = fingerprintLines(lines, ctx.accountId ?? '');
   return lines.map((line, i) => {
     const draft = classifyStatementLine(line, ctx);
-    const mappings = rules.filter(r => r.enabled && (!r.account_id || r.account_id === ctx.accountId) && merchantFamily(r.merchant) === merchantFamily(line.description));
-    const conflict = mappings.length > 1 && new Set(mappings.map(r => JSON.stringify(r.mappings))).size > 1;
-    const mapped = !conflict ? mappings[0]?.mappings : undefined;
+    const { top, conflict } = matchingImportRules(rules, line, ctx.accountId, ctx.currency);
+    const mapped = !conflict && top[0] ? safeImportRuleMappings(top[0].mappings) : undefined;
     const proposal: ImportProposal = { title: draft.title, merchant: draft.merchant, category: draft.category, scope: draft.scope, memberId: null, amount: line.amount, currency: ctx.currency, date: line.date, paymentMethod: draft.paymentMethod, txnType: draft.txnType, accountId: ctx.accountId, toAccountId: null, description: line.description, tags: [], ...mapped };
     // Rule mappings can only enrich classifications, never change source money or date.
     proposal.amount = line.amount; proposal.date = line.date; proposal.currency = ctx.currency;
