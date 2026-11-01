@@ -78,11 +78,11 @@ describe("account identification", () => {
   });
 
   it("ties a printed account number to the account that carries it", () => {
-    expect(identifyFile(["IDFC FIRST BANK", "A/C No. 0012345678"], [], accounts).accountId).toBe("a1");
+    expect(identifyFile(["IDFC FIRST BANK", "A/C No. 000000001234"], [], accounts).accountId).toBe("a1");
   });
 
   it("reports an unknown account with a suggested name instead of guessing", () => {
-    const out = identifyFile(["HDFC BANK", "Statement of account"], [], [account({ id: "h1", name: "HDFC Savings" }), account({ id: "h2", name: "HDFC Current", kind: "current" })]);
+    const out = identifyFile(["HDFC BANK", "Statement of account"], [], [account({ id: "h1", name: "HDFC Savings" }), account({ id: "h2", name: "HDFC MOVAC" })]);
     expect(out.accountId).toBeNull();
     expect(out.hint).toMatchObject({ issuer: "HDFC Bank", kind: "savings", name: "HDFC Bank" });
   });
@@ -203,7 +203,7 @@ describe("change plan for a whole upload", () => {
   it("asks rather than saves itself when the file prints no closing figure", () => {
     const plan = buildPlan([file(null)], [acct], [], categories);
     const a = plan.accounts[0];
-    expect(a?.gate).toBeNull();
+    expect(a?.gate?.difference).toBeNull();
     expect(a?.auto.length).toBe(0);
     expect(a?.ask.length).toBe(1);
     expect(a?.ask[0]?.reason).toMatch(/no printed closing balance/);

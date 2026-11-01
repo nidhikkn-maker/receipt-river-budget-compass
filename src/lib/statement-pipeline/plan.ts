@@ -67,14 +67,15 @@ export function buildPlan(files: StmtFile[], accounts: Account[], transactions: 
     let auto = decisions.filter((d) => d.group === "auto");
     let ask = decisions.filter((d) => d.group === "ask");
     const later: { line: StmtLine; reason: string }[] = [];
+    // A file that prints no closing figure (CSV exports, wallet statements) has nothing to verify against.
+    const verifiable = gate !== null && gate.difference !== null;
 
-    if (gate && !gate.ok) {
-      const reason = `Balance check failed — after these postings the app would show ${money(gate.after)}, the statement says ${f.file.closing !== null ? money(f.file.closing) : "no closing figure"}${gate.difference !== null ? ` (off by ${money(Math.abs(gate.difference))})` : ""}. Fix the account's starting balance or move wrong-account records first.`;
+    if (verifiable && gate && !gate.ok) {
+      const reason = `Balance check failed — after these postings the app would show ${money(gate.after)}, the statement says ${money(gate.after + gate.difference!)} (off by ${money(Math.abs(gate.difference!))}). Fix the account's starting balance or move wrong-account records first.`;
       for (const d of [...auto, ...ask]) later.push({ line: d.line, reason });
       auto = [];
       ask = [];
-    } else if (!gate) {
-      // No printed closing figure (CSV exports, wallet statements): nothing can be verified, so nothing saves itself.
+    } else if (!verifiable) {
       ask = [...ask, ...auto.map((d) => ({ ...d, group: "ask" as const, reason: `${d.reason} · no printed closing balance to check against` }))];
       auto = [];
     }
