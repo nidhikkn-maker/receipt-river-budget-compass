@@ -37,3 +37,27 @@ describe('importReconciliationSummary', () => {
     expect(recSummary({ opening: 1000, closing: null, sourceOpening: 900, rows: [], posted: new Set(), importingIds: new Set(), liability: false }).discrepancies).toEqual(['Closing balance is missing', "Opening balance differs from the statement's printed opening by 100"]);
   });
 });
+
+import { reconciliationReadiness as ready, type ImportBatch } from './historical-import';
+describe('reconciliationReadiness', () => {
+  const row = (id: string, amount: number, direction: 'credit' | 'debit') => ({ id, fingerprint: 'f' + id, line: { date: '2026-04-02', description: id, amount, direction } }) as never;
+  const base = { id: 'b', account_id: 'a', file_name: 'x', file_path: 'p', currency: 'INR', status: 'review', error: null, period_from: null, period_to: null, opening_balance: 1000, closing_balance: 1300, statement_review: { identity: { confirmed: true } } } as never as ImportBatch;
+  const rows = [row('a', 500, 'credit'), row('b', 200, 'debit')];
+  it('reports reading and failed first', () => {
+    expect(ready({ ...base, status: 'processing', next_page: 2, total_pages: 5 }, rows, new Set(), false).reason).toContain('page 2 of 5');
+    expect(ready({ ...base, status: 'failed', error: 'Bad file' }, rows, new Set(), false)).toMatchObject({ state: 'failed', reason: 'Bad file' });
+  });
+  it('account identity outranks missing balances', () => {
+    expect(ready({ ...base, statement_review: undefined, opening_balance: null } as never, rows, new Set(), false).title).toBe('Not started: account not confirmed');
+    expect(ready({ ...base, closing_balance: null }, rows, new Set(), false).reason).toBe('Enter the closing balance.');
+  });
+  it('flags printed difference, then line mismatch, then pending lines', () => {
+    expect(ready({ ...base, source_balances: { closing: { value: 1200 } } } as never, rows, new Set(), false).state).toBe('blocked');
+    expect(ready({ ...base, closing_balance: 1250 }, rows, new Set(), false).reason).toContain('by -50');
+    expect(ready(base, rows, new Set(['fa']), false).reason).toBe('1 line is not yet approved or imported.');
+  });
+  it('ready, then reconciled once checked', () => {
+    expect(ready(base, rows, new Set(['fa', 'fb']), false).state).toBe('ready');
+    expect(ready({ ...base, balance_verification: { checkedOriginal: true, reviewedAt: '2026-05-01T00:00Z' } } as never, rows, new Set(['fa', 'fb']), false).reason).toBe('Checked on 2026-05-01.');
+  });
+});
