@@ -49,13 +49,13 @@ function CardBalancePage() {
       </Card>
 
       {r.unreconciled.count > 0 ? (
-        <button type="button" onClick={() => setOnlyFlagged((v) => !v)} className="mt-4 flex w-full items-center gap-2 rounded-2xl border border-destructive/40 bg-destructive/5 p-3 text-left text-sm">
+        <Button variant="outline" onClick={() => setOnlyFlagged((v) => !v)} className="mt-4 flex h-auto w-full flex-wrap items-center gap-2 border-destructive/40 bg-destructive/5 p-3 text-left text-sm whitespace-normal">
           <AlertTriangle className="h-4 w-4 shrink-0 text-destructive" />
           <span className="flex-1"><strong>{r.unreconciled.count} unreconciled payment{r.unreconciled.count > 1 ? "s" : ""}</strong> · {money(r.unreconciled.total)}</span>
           <span className="shrink-0 text-xs underline">{onlyFlagged ? "Show all" : "Show only these"}</span>
-        </button>
+        </Button>
       ) : (
-        <p className="mt-4 flex items-center gap-2 text-sm text-muted-foreground"><CheckCircle2 className="h-4 w-4" />All payments are matched to a card statement.</p>
+        <p className="mt-4 flex items-center gap-2 text-sm text-muted-foreground"><CheckCircle2 className="h-4 w-4" />{r.payments?'All recorded payments have a review confirmation; card-side matching is separate.':'No recorded card payments.'}</p>
       )}
 
       <div className="mt-4 flex flex-wrap items-center gap-2">

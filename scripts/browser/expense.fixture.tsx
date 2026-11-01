@@ -2,7 +2,7 @@ import { createRoot } from "react-dom/client";
 import { createRootRoute, createRoute, createRouter, Outlet, RouterProvider } from "@tanstack/react-router";
 import { Route as NewRoute } from "../../src/routes/_authenticated/new";
 import { Route as ExpensesRoute } from "../../src/routes/_authenticated/expenses";
-import { StoreFixture } from "./expense-mocks";
+import { StoreFixture } from "./expense-mocks.tsx";
 import { Toaster } from "../../src/components/ui/sonner";
 import "../../src/styles.css";
 

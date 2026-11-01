@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { suggestTransfers, transferImpact } from "./transfer-match";
+import { suggestTransfers, transferImpact, transferPairBlocker } from "./transfer-match";
 import { auditRecords } from "./transfer-audit";
 import { accountBalance, cashflow, type Account } from "./ledger";
 import type { Expense } from "./expenses";
@@ -11,6 +11,10 @@ const debit = e({ id: "d", description: "IMPS 612345678901 TO SBI 9876" });
 const credit = e({ id: "c", txnType: "income", accountId: "b", description: "IMPS 612345678901 FROM IDFC" });
 
 describe("internal transfers", () => {
+  it('blocks a different posting date rather than shifting the receiving balance date',()=>{expect(transferPairBlocker(debit,{...credit,date:'2026-10-02'})).toContain('posting dates');expect(suggestTransfers([debit,{...credit,date:'2026-10-02'}],[A,B],[])[0]?.strength).toBe('ambiguous');});
+  it('blocks equal original amounts with independently different INR values',()=>{expect(transferPairBlocker({...debit,currency:'USD',originalAmount:500},{...credit,currency:'USD',originalAmount:500,amount:50100})).toContain('currency values');});
+  it('does not suppress a receiving entry with a linked claim',()=>{expect(transferPairBlocker(debit,{...credit,reimbursementStatus:'pending'})).toContain('linked financial details');});
+  it('rejects an outgoing transfer as receiving evidence',()=>{expect(transferPairBlocker(debit,{...credit,txnType:'transfer',toAccountId:'a'})).toContain('not incoming');});
   it("pairs a ₹50,000 debit and credit with a shared reference as one strong match", () => {
     const s = suggestTransfers([debit, credit], [A, B], []);
     expect(s).toHaveLength(1); expect(s[0]?.strength).toBe("strong"); expect(s[0]?.credit?.id).toBe("c");

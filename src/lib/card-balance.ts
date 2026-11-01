@@ -23,7 +23,7 @@ export function cardLedger(card: Account, txns: CardTxn[]) {
     const kind: CardLineKind = k === "card_payment" && t.toAccountId === card.id ? "payment" : k === "refund" ? "refund" : change > 0 ? "spend" : "other";
     if (kind === "spend") spends += change; else if (kind === "payment") payments += -change; else if (kind === "refund") refunds += -change;
     const reconciled = !!t.reconciledAt;
-    const issue = kind !== "payment" ? null : !t.accountId ? "Paying account missing" : !reconciled ? "Not matched to a card statement yet" : null;
+    const issue = kind !== "payment" ? null : !t.accountId ? "Paying account missing" : !reconciled ? "Statement review has not been confirmed" : null;
     lines.push({ txn: t, kind, change, balanceAfter: bal, reconciled, issue });
   }
   const unreconciled = lines.filter((l) => l.issue);

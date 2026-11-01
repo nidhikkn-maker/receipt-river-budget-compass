@@ -372,6 +372,8 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
   };
   const confirmTransfer: Ctx["confirmTransfer"] = async ({ id, debit, destId, credit }) => {
     if (!navigator.onLine) throw Error("Reconnect before linking transfers.");
+    const { transferPairBlocker } = await import('./transfer-match');
+    const blocker = transferPairBlocker(debit,credit);if(blocker)throw Error(blocker);
     const r = await supabase.rpc("confirm_transfer", { _id: id, _debit: debit.id, _debit_rev: debit.correctionRevision ?? 0, _dest: destId, _credit: (credit?.id ?? null) as string, _credit_rev: (credit?.correctionRevision ?? null) as number });
     check(r.error); if (r.data !== id) throw Error("Saved transfer could not be confirmed. Retry the same preview."); await refresh();
   };

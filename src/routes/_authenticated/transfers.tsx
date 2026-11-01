@@ -9,7 +9,10 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { money, type Expense } from "@/lib/expenses";
 import { useStore } from "@/lib/store";
-import { suggestTransfers, transferImpact, transferStatus, TRANSFER_STATUS_LABEL, activeLinks, type TransferLinkRow, type TransferSuggestion } from "@/lib/transfer-match";
+import { suggestTransfers, transferImpact, transferStatus, transferPairBlocker, TRANSFER_STATUS_LABEL, activeLinks, type TransferLinkRow, type TransferSuggestion } from "@/lib/transfer-match";
+import { FinancialInboxNav } from '@/components/FinancialInboxNav';
+import { Link } from '@tanstack/react-router';
+import { cardLedger } from '@/lib/card-balance';
 
 export const Route = createFileRoute("/_authenticated/transfers")({
   head: () => ({
@@ -49,7 +52,7 @@ function TransfersPage() {
   const name = (id?: string | null) => accounts.find((a) => a.id === id)?.name ?? "—";
   const own = accounts.filter((a) => !a.archived);
 
-  const open = (list: TransferSuggestion[]) => setPending({ items: list.map((s) => ({ s, id: crypto.randomUUID() })) });
+  const open = (list: TransferSuggestion[]) => { const blocker=list.map(s=>transferPairBlocker(s.debit,s.credit)).find(Boolean);if(blocker){toast.error(blocker);return;}setPending({ items: list.map((s) => ({ s, id: crypto.randomUUID() })) }); };
   const run = async () => {
     if (!pending || busy.current) return;
     busy.current = true;
@@ -78,6 +81,8 @@ function TransfersPage() {
   return (
     <div className="mx-auto w-full max-w-5xl">
       <h1 className="font-display text-2xl sm:text-3xl font-bold tracking-tight">Internal transfers</h1>
+      <div className="my-4"><FinancialInboxNav active="transfers"/></div>
+      <section className="space-y-2 border-y py-4" aria-label="Credit card payments"><h2 className="text-lg font-semibold">Credit card payments</h2>{accounts.filter(a=>a.kind==='credit_card'&&!a.archived).map(card=>{const balance=cardLedger(card,transactions);return <Button asChild key={card.id} variant="outline" className="mr-2 h-auto min-h-10 whitespace-normal"><Link to="/cards/$accountId" params={{accountId:card.id}}>{card.name} · {balance.unreconciled.count} payments requiring evidence</Link></Button>;})}</section>
       <p className="mt-1 text-sm text-muted-foreground">Both statement lines stay. Linking records them as one movement so income and spending aren’t inflated. Nothing is linked without your confirmation.</p>
       {error && <p role="alert" className="mt-3 text-sm text-destructive">{error} <Button size="sm" variant="ghost" onClick={() => void load()}>Retry</Button></p>}
       {!links && !error && <p className="mt-4 text-sm text-muted-foreground">Searching for matching transfers…</p>}
@@ -100,9 +105,9 @@ function TransfersPage() {
                   <Pair d={s.debit} c={s.credit} dest={s.destId || destFor[s.debit.id] || ""} />
                   <p className="text-xs text-muted-foreground">{s.evidence.join(" · ")} · {s.candidates} possible entr{s.candidates === 1 ? "y" : "ies"}</p>
                   <div className="grid gap-2 sm:flex sm:flex-wrap">
-                    {s.credit && <Button size="sm" variant="outline" onClick={() => open([s])}>This is the same transfer</Button>}
+                    {s.credit && <Button size="sm" variant="outline" disabled={!!transferPairBlocker(s.debit,s.credit)} onClick={() => open([s])}>This is the same transfer</Button>}
                     <Select value={destFor[s.debit.id] ?? ""} onValueChange={(v) => setDestFor({ ...destFor, [s.debit.id]: v })}><SelectTrigger className="h-9 w-full sm:w-64" aria-label="Destination account"><SelectValue placeholder="Only one side uploaded — choose destination" /></SelectTrigger><SelectContent>{own.filter((a) => a.id !== s.debit.accountId).map((a) => <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}</SelectContent></Select>
-                    <Button size="sm" variant="ghost" disabled={!destFor[s.debit.id]} onClick={() => open([{ ...s, credit: null, destId: destFor[s.debit.id]! }])}>Save as awaiting destination</Button>
+                    <Button size="sm" variant="ghost" disabled={!destFor[s.debit.id]||!!s.credit} onClick={() => {const dest=destFor[s.debit.id];if(dest)open([{ ...s, credit: null, destId: dest }]);}}>Save as awaiting destination</Button>
                   </div>
                 </li>))}</ul>
             )}

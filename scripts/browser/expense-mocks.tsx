@@ -8,12 +8,12 @@ const initial: Expense = {
   paymentMethod: "upi", date: "2026-04-01", description: "", receipts: [], reconciledAt: null, statementRef: null,
   accountId: "controlled-account", txnType: "expense",
 };
-const fixture = {
+const fixture = ((window as unknown as { expenseBrowserFixture?: { transactions: Expense[]; saves: { id: string; names: string[] }[]; failNextSave: boolean } }).expenseBrowserFixture ??= {
   transactions: JSON.parse(sessionStorage.getItem("expense-browser-fixture") ?? JSON.stringify([initial])) as Expense[],
   saves: [] as { id: string; names: string[] }[], failNextSave: false,
-};
+});
 Object.assign(window, { expenseBrowserFixture: fixture });
-const Context = createContext<ReturnType<typeof makeStore> | null>(null);
+const Context = ((window as unknown as { isolatedExpenseContext?: ReturnType<typeof createContext<ReturnType<typeof makeStore> | null>> }).isolatedExpenseContext ??= createContext<ReturnType<typeof makeStore> | null>(null));
 const history = async () => [];
 const signedUrl = async (path: string) => `/controlled-receipt/${path.split("/").pop()}`;
 function makeStore(transactions: Expense[], update: (next: Expense[]) => void) {
