@@ -295,6 +295,13 @@
       "when": 1793518204917,
       "tag": "0041_financial_correction_confirmation_and_undo",
       "breakpoints": true
+    },
+    {
+      "idx": 42,
+      "version": "7",
+      "when": 1793518734601,
+      "tag": "0042_statement_identity_coverage_and_checkpoints",
+      "breakpoints": true
     }
   ]
 }
