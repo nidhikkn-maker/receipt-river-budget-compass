@@ -1,4 +1,6 @@
 # Roadmap (Functional Requirements v1.0)
+## Records-check browser button tests
+- [x] Four real-route browser tests pass: individual/multiple selection, checked-list movement, Undo, prior checked preservation, select-visible deduplication/clear and save-failure retry. Four existing rule tests also pass; screenshots inspected, no runtime errors or external requests, fixture accounts/transactions/statements unchanged. Controlled browser preferences only; no Cloud writes or publication.
 ## Published to https://ledgerline.biz (2026-11-01, 13:22 UTC)
 - [x] Pre-publish quick security scan: one info-level item only (guest sign-in shares signed-in access rules; intentional for guest upgrade continuity). No critical findings.
 - [x] Publish requested and confirmed serving: site returns 200 and the newest pages ship — card balance (/cards/$accountId), records check, transfers and trip lifecycle pieces all load with expected content.
