@@ -88,7 +88,7 @@ class StatementDeskFlow(unittest.IsolatedAsyncioTestCase):
         await expect(section).to_contain_text("on Controlled card")
         await expect(self.page.get_by_role("button", name="Accept all 1 asking items")).to_have_count(0)
         await section.get_by_role("button", name="Preview moving 1 here").click()
-        await expect(self.page.get_by_label("Change preview")).to_contain_text("will move to this statement's account")
+        await expect(self.page.get_by_role("dialog")).to_contain_text("will move to this statement's account")
         await self.page.get_by_role("button", name="Confirm and apply").click()
         await expect(self.page.get_by_text("1 records now match the statement")).to_be_visible()
         self.assertEqual(await self.page.evaluate("deskFixture.transactions[0].accountId"), "desk-account")
