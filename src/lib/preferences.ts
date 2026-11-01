@@ -54,6 +54,8 @@ export interface FinancePreferences {
   travelMessages: TravelMessage[];
   /** Named Transactions filter combinations (V5.0 saved views). */
   savedViews: SavedView[];
+  /** Records-check findings the owner marked as checked (finding keys). */
+  checkedAudit?: string[];
   /** Home arrangement; "custom" once the user hides or reorders sections themselves. */
   homeMode: HomeMode;
   categories: CategorySetting[];
@@ -160,6 +162,7 @@ export function normalizePreferences(raw: Partial<FinancePreferences> | null | u
   if (!Array.isArray(p.budgets)) p.budgets = [];
   if (!Array.isArray(p.homeHidden)) p.homeHidden = [];
   p.savedViews = sanitizeSavedViews(p.savedViews);
+  p.checkedAudit = Array.isArray(p.checkedAudit) ? [...new Set(p.checkedAudit.filter((k) => typeof k === "string" && k.length <= 200))].slice(-3000) : [];
   p.payees = cleanPayees(p.payees);
   p.reimbursementSettings = cleanReimbursementSettings(p.reimbursementSettings);
   p.homeShortcuts = cleanShortcuts(p.homeShortcuts);
