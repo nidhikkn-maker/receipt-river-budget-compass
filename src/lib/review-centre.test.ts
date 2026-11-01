@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { centreReview, matchesReview, reviewCounts, selectedReviewSummary, selectReviewIds } from './review-centre';
+import { centreCategoryPreview, centreReview, matchesReview, reviewCounts, selectedReviewSummary, selectReviewIds } from './review-centre';
 import { inboxItems } from './inbox';
 import { defaultPreferences } from './preferences';
 import type { Expense } from './expenses';
@@ -7,6 +7,14 @@ const expense = (id: string): Expense => ({ id, title: id, merchant: 'Grab', cat
 const accounts = [{ id: 'bank', name: 'Bank', kind: 'savings' as const, openingBalance: 1000, archived: false }];
 const rowsFor = (transactions: Expense[]) => { const prefs = defaultPreferences(); return centreReview(inboxItems({ transactions, accounts, commitments: [], prefs, today: '2026-11-01', pendingCount: 0 }), transactions, accounts, prefs.categories.map(c => c.name)); };
 describe('V5.10 review selection and counts', () => {
+  it('previews eligible category changes while explicitly excluding missing source accounts', () => {
+    const rows = rowsFor([expense('safe'), { ...expense('unknown'), accountId: null }]);
+    const preview = centreCategoryPreview(rows, 'Groceries');
+    expect(preview.records.map(e => e.id)).toEqual(['safe']);
+    expect(preview.excluded.map(e => e.id)).toEqual(['unknown']);
+    expect(preview.selectedCount).toBe(2);
+    expect(preview.remainingIssues).toBeGreaterThan(0);
+  });
   it('selects all 91 matching transactions beyond the 40 visible records', () => { const rows = rowsFor(Array.from({ length: 91 }, (_, n) => ({ ...expense(`${n}`), date: `2026-04-${String(n % 28 + 1).padStart(2, '0')}`, originalAmount: n + 1, amount: n + 1 }))); expect(selectReviewIds([], rows).size).toBe(91); expect(selectReviewIds([], rows.slice(0, 40)).size).toBe(40); });
   it('deduplicates stable IDs across pages and repeated selection', () => { const rows = rowsFor([expense('one')]); expect(selectReviewIds(['one'], [...rows, ...rows]).size).toBe(1); });
   it('category resolution retains the missing organisation issue', () => { const before = rowsFor([expense('one')]); const after = rowsFor([{ ...expense('one'), category: 'Groceries' }]); expect(reviewCounts(before)).toMatchObject({ transactions: 1, category: 1, missing: 1, issues: 2, multiple: 1 }); expect(reviewCounts(after)).toMatchObject({ transactions: 1, category: 0, missing: 1, issues: 1 }); });

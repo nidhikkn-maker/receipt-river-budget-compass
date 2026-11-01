@@ -16,7 +16,7 @@ describe("controlled financial correction flow", () => {
     const preferences = defaultPreferences();
     const accounts = [{ id: "bank", name: "Controlled bank", kind: "savings" as const, openingBalance: 1000, archived: false }];
     const transactions = [transaction];
-    mocks.save.mockResolvedValue("audited-batch"); mocks.undo.mockResolvedValue(undefined);
+    mocks.save.mockRejectedValueOnce(new Error('Controlled interrupted save')).mockResolvedValue("audited-batch"); mocks.undo.mockResolvedValue(undefined);
     mocks.store = { preferences, accounts, transactions, bulkSetCategory: mocks.save, undoCategoryBatch: mocks.undo };
     const items = inboxItems({ transactions, accounts, commitments: [], prefs: preferences, today: "2026-11-01", pendingCount: 0 });
     render(<FinancialReview items={items} onOpen={() => {}} />);
@@ -29,7 +29,12 @@ describe("controlled financial correction flow", () => {
     expect(mocks.save).not.toHaveBeenCalled();
     expect(screen.getByText("controlled-copy")).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Confirm & Apply Changes" }));
+    await screen.findByRole('button', { name: 'Unable to Save — Retry' });
+    const firstId = mocks.save.mock.calls[0]?.[2];
+    fireEvent.click(screen.getByRole('button', { name: 'Unable to Save — Retry' }));
     await waitFor(() => expect(mocks.save).toHaveBeenCalledWith(["controlled-copy"], "Groceries", expect.any(String)));
+    await waitFor(() => expect(mocks.save).toHaveBeenCalledTimes(2));
+    expect(mocks.save.mock.calls[1]?.[2]).toBe(firstId);
     expect(transaction.description).toBe("Untouched source");
     expect(transaction.category).toBe("Miscellaneous");
     fireEvent.click(await screen.findByRole("button", { name: "Undo correction" }));

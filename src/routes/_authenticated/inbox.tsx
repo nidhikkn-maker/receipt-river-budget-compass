@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from '@tanstack/react-router';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { ArrowUpRight } from 'lucide-react';
 import { PageTitle } from '@/components/AppShell';
 import { Button } from '@/components/ui/button';
@@ -10,6 +10,9 @@ import { inboxItems, INBOX_LABEL } from '@/lib/inbox';
 import { centreReview, reviewCounts, type ReviewFilter } from '@/lib/review-centre';
 import { todayISO } from '@/lib/use-position';
 import { money } from '@/lib/expenses';
+import { applyReviewRules } from '@/lib/financial-review-intelligence';
+import { listImportRules } from '@/lib/import-repository';
+import type { ImportRule } from '@/lib/historical-import';
 
 export const Route = createFileRoute('/_authenticated/inbox')({
   head: () => ({ meta: [ { title: 'Financial Inbox — Ledgerline' }, { name: 'description', content: 'Review transactions, statement imports and financial reminders with separate, evidence-based counts.' }, { property: 'og:title', content: 'Financial Inbox — Ledgerline' }, { property: 'og:description', content: 'A clear overview of transactions and accounts requiring attention.' }, { property: 'og:type', content: 'website' }, { name: 'twitter:card', content: 'summary' } ] }),
@@ -19,7 +22,10 @@ function Inbox() {
   const store = useStore();
   const today = todayISO();
   const items = useMemo(() => inboxItems({ transactions: store.transactions, accounts: store.accounts, commitments: store.commitments, prefs: store.preferences, today, pendingCount: store.pendingCount }), [store.transactions, store.accounts, store.commitments, store.preferences, today, store.pendingCount]);
-  const rows = centreReview(items, store.transactions, store.accounts, store.preferences.categories.filter(c => !c.archived).map(c => c.name));
+  const [rules, setRules] = useState<ImportRule[]>([]);
+  useEffect(() => { let active = true; void listImportRules().then(r => { if (active) setRules(r); }).catch(() => {}); return () => { active = false; }; }, []);
+  const categories = store.preferences.categories.filter(c => !c.archived).map(c => c.name);
+  const rows = applyReviewRules(centreReview(items, store.transactions, store.accounts, categories), rules, categories);
   const counts = reviewCounts(rows);
   const [attention, setAttention] = useState<number | null>(null);
   const reminders = items.filter(i => !i.transactionId && !i.accountId && !store.preferences.inboxDismissed.includes(i.key));

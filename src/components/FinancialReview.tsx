@@ -3,7 +3,7 @@ import { Link } from "@tanstack/react-router";
 import { toast } from "sonner";
 import { Undo2, SlidersHorizontal, CheckSquare, ChevronDown } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { centreReview, matchesReview, REVIEW_FILTERS, selectedReviewSummary, selectReviewIds, type ReviewFilter } from "@/lib/review-centre";
+import { centreCategoryPreview, centreReview, matchesReview, REVIEW_FILTERS, selectedReviewSummary, selectReviewIds, type ReviewFilter } from "@/lib/review-centre";
 import { reviewCohorts } from "@/lib/financial-review-intelligence";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -46,7 +46,7 @@ export function FinancialReview({ items, onOpen, initialFilter = "all" }: { item
   const [view, setView] = useState("transactions");
   const [category, setCategory] = useState("");
   const [detail, setDetail] = useState<string | null>(null);
-  const [preview, setPreview] = useState<ReturnType<typeof categoryReviewPreview> | null>(null);
+  const [preview, setPreview] = useState<ReturnType<typeof centreCategoryPreview> | null>(null);
   const [lastBatch, setLastBatch] = useState<string | null>(null);
   const operation = useRef<{ signature: string; id: string } | null>(null);
   const filtered = rows.filter(r => {
@@ -88,11 +88,11 @@ export function FinancialReview({ items, onOpen, initialFilter = "all" }: { item
     return () => clearTimeout(timer);
   }, [contextReady, userId, selected, query, group, category, account, workspace, organisation]);
   const selector = (label: string, value: string, set: (v: string) => void, options: [string, string][]) => <Select value={value} onValueChange={set}><SelectTrigger aria-label={label} className="min-w-0"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">{label}</SelectItem>{options.map(([id, name]) => <SelectItem key={id} value={id}>{name}</SelectItem>)}</SelectContent></Select>;
-  const showPreview = () => { try { setPreview(categoryReviewPreview(picked, category)); } catch (e) { toast.error((e as Error).message); } };
+  const showPreview = () => { try { setSaveError(''); setPreview(centreCategoryPreview(picked, category)); } catch (e) { toast.error((e as Error).message); } };
   const previewSuggested = () => {
     const category = picked[0]?.suggestedCategory;
     if (!category || picked.some(r => r.group !== "ready" || r.suggestedCategory !== category)) { toast.error("Select ready suggestions for one category. Other categories need separate confirmation."); return; }
-    try { setPreview(categoryReviewPreview(picked, category)); } catch (e) { toast.error((e as Error).message); }
+    try { setPreview(centreCategoryPreview(picked, category)); } catch (e) { toast.error((e as Error).message); }
   };
   const apply = async () => {
     if (!preview) return;
@@ -103,7 +103,8 @@ export function FinancialReview({ items, onOpen, initialFilter = "all" }: { item
     if (operation.current?.signature !== signature) operation.current = { signature, id: crypto.randomUUID() };
     let id: string;
     try { id = await bulkSetCategory(preview.records.map(e => e.id), preview.category, operation.current.id); setSaveError(""); setCompleted(preview.records.length); } catch (e) { setSaveError(e instanceof Error ? e.message : "Save failed"); return; }
-    setLastBatch(id); operation.current = null; setPreview(null); setSelected(new Set());
+    const excludedIds = new Set(preview.excluded.map(e => e.id));
+    setLastBatch(id); operation.current = null; setPreview(null); setSelected(excludedIds);
     toast.success("Categories saved. Account balances and reconciliation are unchanged.");
   };
   const evidence = focused ? <div className="space-y-3"><h3 className="break-words font-semibold">{focused.transaction.title}</h3><p className="text-sm">{focused.status} · {focused.confidence} confidence</p><div className="text-sm"><p>{focused.transaction.date} · {money(focused.transaction.amount)}</p><p>Account: {accounts.find(a => a.id === focused.transaction.accountId)?.name ?? "Unknown"}</p><p>Saved type: {TXN_LABEL[focused.transaction.txnType ?? "expense"]}</p><p>Organisation: {focused.transaction.department || "Unknown"}</p></div><ul className="list-disc space-y-2 pl-4 text-sm text-muted-foreground">{focused.evidence.map((s, i) => <li key={i}>{s}</li>)}</ul>{focused.suggestedType && <p className="text-sm font-medium">Proposed: {TXN_LABEL[focused.suggestedType]}{focused.targetAccountIds.length === 1 ? ` → ${accounts.find(a => a.id === focused.targetAccountIds[0])?.name}` : " · receiving account needs confirmation"}</p>}<div className="border-t pt-3"><p className="text-xs font-medium text-muted-foreground">Saved narration (not changed by this review)</p><p className="mt-1 whitespace-pre-wrap break-words text-sm">{focused.transaction.description || "Not available in this record"}</p><p className="mt-2 break-words text-xs text-muted-foreground">Statement reference: {focused.transaction.statementRef || "Unknown"}</p></div><Button variant="outline" onClick={() => onOpen(focused.transaction)}>Review transaction</Button></div> : <p className="text-sm text-muted-foreground">No transaction selected.</p>;

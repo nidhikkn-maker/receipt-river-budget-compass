@@ -1,7 +1,7 @@
 import type { Expense } from './expenses';
 import type { Account } from './ledger';
 import type { InboxItem } from './inbox';
-import { financialReview, type FinancialReview } from './financial-review';
+import { categoryReviewPreview, financialReview, type FinancialReview } from './financial-review';
 
 export const REVIEW_FILTERS = { all: 'All transactions', category: 'Categorisation required', missing: 'Missing information', type: 'Financial type confirmation', conflict: 'Possible duplicates', ready: 'Suggested corrections' } as const;
 export type ReviewFilter = keyof typeof REVIEW_FILTERS;
@@ -46,4 +46,14 @@ export function selectedReviewSummary(rows: FinancialReview[]) {
     accounts: new Set(entries.map(e => e.accountId ?? 'Unknown')).size,
     organisations: [...new Set(entries.map(e => e.department || 'Unknown'))], types: [...new Set(entries.map(e => e.txnType ?? 'expense'))],
     missing: rows.filter(r => matchesReview(r, 'missing')).length, conflicts: rows.filter(r => matchesReview(r, 'conflict')).length };
+}
+
+export function centreCategoryPreview(rows: FinancialReview[], category: string) {
+  const eligible: FinancialReview[] = [], excluded: { id: string; title: string; reason: string }[] = [];
+  for (const row of rows) {
+    try { categoryReviewPreview([row], category); eligible.push(row); }
+    catch (e) { excluded.push({ id: row.transaction.id, title: row.transaction.title, reason: e instanceof Error ? e.message : 'Individual review required' }); }
+  }
+  const preview = categoryReviewPreview(eligible, category);
+  return { ...preview, selectedCount: rows.length, excluded, remainingIssues: rows.reduce((sum, row) => sum + row.issues.filter(i => i.type !== 'uncategorised' || !eligible.includes(row)).length, 0) };
 }
