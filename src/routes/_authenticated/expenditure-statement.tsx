@@ -3,7 +3,7 @@ import { z } from "zod";
 import { ExpenditureReportBuilder } from "@/components/ExpenditureReportBuilder";
 
 export const Route = createFileRoute("/_authenticated/expenditure-statement")({
-  validateSearch: z.object({ trip: z.string().optional(), tag: z.string().optional(), entry: z.string().optional() }),
+  validateSearch: z.object({ trip: z.string().optional(), tag: z.string().optional(), entry: z.string().optional(), entries: z.string().max(18500).optional() }),
   head: () => ({ meta: [
     { title: "Detailed Expenditure Statement — Ledgerline" },
     { name: "description", content: "A complete A4 expenditure statement for a trip, event, project or purchase, with original bills attached." },

@@ -6,6 +6,7 @@ import type { MapLink } from "./graph";
 import type { PaymentInstrument } from "./payment-instruments";
 import type { AllocationPlan } from "./allocation";
 import type { FinanceRule } from "./rules-engine";
+import type { TravelMessage } from "./travel-inbox";
 import { cleanShortcuts, DEFAULT_SHORTCUTS, type ShortcutId } from "./home-shortcuts";
 import { CATEGORIES, memberShares, SCOPES, type Expense, type Scope } from "./expenses";
 import { cleanThemeName, type ThemeName } from "./themes";
@@ -46,6 +47,7 @@ export function sanitizeSavedViews(raw: unknown): SavedView[] {
 
 export interface FinancePreferences {
   homeShortcuts: ShortcutId[];
+  travelMessages: TravelMessage[];
   /** Named Transactions filter combinations (V5.0 saved views). */
   savedViews: SavedView[];
   /** Home arrangement; "custom" once the user hides or reorders sections themselves. */
@@ -131,7 +133,7 @@ export const DEFAULT_TAGS: GroupedTag[] = [
 
 export function defaultPreferences(): FinancePreferences {
   return {
-    categories: CATEGORIES.map((name) => ({ name, archived: false })), tags: DEFAULT_TAGS, budgets: [], homeHidden: [], homeOrder: [...HOME_SECTIONS], homeMode: "custom", savedViews: [], homeShortcuts: [...DEFAULT_SHORTCUTS],
+    categories: CATEGORIES.map((name) => ({ name, archived: false })), tags: DEFAULT_TAGS, budgets: [], homeHidden: [], homeOrder: [...HOME_SECTIONS], homeMode: "custom", savedViews: [], homeShortcuts: [...DEFAULT_SHORTCUTS], travelMessages: [],
     theme: "system", themeName: "signature", homeScope: "all", reminders: true, reminderDays: 3, defaultCurrency: "INR", language: "en", aiEnabled: true, aiReadsDocuments: true, cardAlertPct: 30, homePeriod: "month", homeCustomStart: "", homeCustomEnd: "",
     freshness: { reviewDays: 14, outdatedDays: 45, perAccount: {} }, inboxDismissed: [], statementBalances: {}, splitTemplates: [],
     emergency: defaultEmergency(), irregularRejected: [], irregularConfirmed: [], milestones: [], trips: [], merchantAliases: {}, brief: { enabled: true, day: 1, hour: 8 }, briefs: [], paymentInstruments: [],
@@ -151,6 +153,7 @@ export function normalizePreferences(raw: Partial<FinancePreferences> | null | u
   if (!Array.isArray(p.homeHidden)) p.homeHidden = [];
   p.savedViews = sanitizeSavedViews(p.savedViews);
   p.homeShortcuts = cleanShortcuts(p.homeShortcuts);
+  p.travelMessages = Array.isArray(p.travelMessages) ? p.travelMessages.filter((m) => m && typeof m.id === "string" && typeof m.title === "string" && typeof m.text === "string").slice(-300) : [];
   if (!["daily", "executive", "minimal", "custom"].includes(p.homeMode)) p.homeMode = "custom";
   p.reminderDays = Number.isFinite(p.reminderDays) ? Math.min(30, Math.max(0, Math.round(p.reminderDays))) : d.reminderDays;
   p.cardAlertPct = Number.isFinite(p.cardAlertPct) ? Math.min(100, Math.max(5, Math.round(p.cardAlertPct))) : d.cardAlertPct;

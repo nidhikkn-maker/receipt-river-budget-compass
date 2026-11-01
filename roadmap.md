@@ -248,6 +248,9 @@
 - [x] Mobile performance testing: scripts/mobile-perf.py measures phone-sized throttled load; verified 0.75s frame, 0.78s saved figures, 5.5s full sync on Fast 4G
 
 ## V5.2 Smart Home & Travel Redesign (.lovable/requirements-v5.2.md)
+- [x] Current batch: multi-select trip expense actions (visible/all matching, tags, organisation, reimbursable purpose, link/unlink, selected report), explicit preview and owner-checked atomic writes. Signed-in link/tag/reload, organisation/reimbursable/unlink, stale-snapshot rollback and signed-out denial verified; amounts and claims unchanged.
+- [x] Current batch: travel inbox for private uploaded confirmations and manually pasted trip messages; pending/reviewed messages persist, confirmations reopen in Bookings after navigation. No email or messaging-service connection; temporary records/files cleaned up.
+- [x] Current batch: ranked smart trip suggestions using dates, destinations, booking references, original-currency/provider matches and workspace/travel clues; ambiguity visible, closed/cancelled/linked/non-expenses excluded. Signed-in explicit confirmation verified, no automatic linking.
 - [x] Current request: booking confirmation uploads saved privately in Vault, consent-gated automatic extraction into editable drafts; original attachment retained, no automatic expense. Signed-in image confirmation extracted and reviewed booking persisted with ₹0 spent / ₹2,500 committed; temporary trip/file removed.
 - [x] Current request: home shortcut selection and ordering, including travel actions first; grouped checkbox selection, drag/drop and arrow alternatives, clear/defaults, six primary + View all, owner-saved ordering verified after reload. Full suite: 584 tests pass; phone flow has no horizontal overflow or runtime errors; no publication.
 - [x] P1: Compact Travel Manager overview (trip cards, status + workspace filters, search, alerts; no inline forms)
@@ -261,3 +264,6 @@
 - [ ] P4: Home shortcut selection/reorder (max 6 default + View All), workspace multi-select sheet, homepage personalisation persistence
 - [ ] P5: Smart trip linking suggestions, Travel Inbox integration, trip readiness indicator, reports consolidation, controlled trip closure validation
 - [ ] Acceptance: 23 demonstrations incl. unchanged records, no duplicate spend, iPhone layout
+
+## V5.3 Statement Import (.lovable/requirements-v5.3.md)
+- [ ] Uploaded specification saved; guided import stages, bulk exception review and historical reconciliation acceptance remain a separate implementation pass after current travel requests.

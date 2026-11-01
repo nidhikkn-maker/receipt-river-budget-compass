@@ -1569,6 +1569,10 @@ export type Database = {
         }
         Returns: boolean
       }
+      manage_trip_expenses: {
+        Args: { _action: string; _items: Json; _trip: string; _value?: string }
+        Returns: number
+      }
       move_expense_category: {
         Args: { source: string; target: string }
         Returns: undefined

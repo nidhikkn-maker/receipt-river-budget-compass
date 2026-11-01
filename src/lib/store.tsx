@@ -16,6 +16,7 @@ import { normalizePreferences, defaultPreferences, validateActiveCategory, type 
 import { addMonths, emiFor, emiSplit, nextAfter, type Commitment, type CommitmentKind, type CommitmentStatus, type Frequency, type LoanType } from "./planning";
 import { lastStatementDate, nextEmiInstalment, statementShift, type LoanPayment } from "./cards";
 import { validateDocument, type DocType, type VaultDoc } from "./documents";
+import { tripActionSnapshot, type TripAction } from "./trip-actions";
 
 export interface Loan {
   id: string; name: string;
@@ -104,6 +105,7 @@ interface Ctx {
   setScope: (id: string, scope: Scope) => Promise<void>;
   /** Changes labels only — amount, currency and stored exchange rate are untouched. */
   setTags: (id: string, tags: string[]) => Promise<void>;
+  manageTripExpenses: (tripId: string, rows: Expense[], action: TripAction, value?: string) => Promise<number>;
   reconcile: (id: string, ref: string | null, opts?: { noRefresh?: boolean }) => Promise<void>;
   addMember: (name: string, relation: string) => Promise<void>;
   removeMember: (id: string) => Promise<void>;
@@ -358,6 +360,10 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
     check((await supabase.from("expenses").update({ tags }).eq("id", id)).error);
     setExpenses((xs) => xs.map((x) => (x.id === id ? { ...x, tags } : x)));
   };
+  const manageTripExpenses: Ctx["manageTripExpenses"] = async (tripId, rows, action, value = "") => {
+    const { data, error } = await supabase.rpc("manage_trip_expenses", { _trip: tripId, _items: rows.map(tripActionSnapshot) as unknown as Json, _action: action, _value: value });
+    check(error); if (data == null) throw Error("No expenses were updated"); await refresh(); return data;
+  };
   const setReimbursement: Ctx["setReimbursement"] = async (id, status) => {
     check((await supabase.from("expenses").update({ reimbursement_status: status }).eq("id", id)).error);
     setExpenses((xs) => xs.map((x) => (x.id === id ? { ...x, reimbursementStatus: status } : x)));
@@ -596,7 +602,7 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
   return (
     <StoreCtx.Provider value={{
       departmentBudgets, departmentBudgetError,
-      pendingCount, setTags, preferences, savePreferences, ensureCategory, moveCategory, bulkSetCategory, categoryHistory, undoCategoryBatch, userId, name, updateName, members, memberName,
+      pendingCount, setTags, manageTripExpenses, preferences, savePreferences, ensureCategory, moveCategory, bulkSetCategory, categoryHistory, undoCategoryBatch, userId, name, updateName, members, memberName,
       expenses: expenses.filter((x) => (x.txnType ?? "expense") === "expense"), transactions: expenses, accounts, addAccount, setArchived, adjustBalance,
       commitments, loans, goals, valuations, documents, saveCommitment, confirmIrregular, removeCommitment, confirmCommitment, saveLoan, removeLoan, recordLoanPayment, convertToEmi,
       saveGoal, removeGoal, updateAccount, addValuation, removeValuation, addDocument, updateDocument, removeDocument, history, setReimbursement, recordReimbursement, deleteAll,

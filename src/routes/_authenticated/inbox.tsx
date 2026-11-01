@@ -52,6 +52,7 @@ function Inbox() {
   return (
     <div>
       <PageTitle eyebrow="Needs attention" title="Financial inbox" sub="Items clear themselves once the underlying record is fixed." />
+      <Button asChild variant="outline" className="mb-4"><Link to="/travel-inbox">Travel inbox</Link></Button>
       <Tabs defaultValue="inbox">
         <TabsList className="mb-4 w-full justify-start overflow-x-auto"><TabsTrigger value="inbox">To review ({counts.pending})</TabsTrigger><TabsTrigger value="accounts">Accounts check</TabsTrigger><TabsTrigger value="reimb">Reimbursements</TabsTrigger></TabsList>
 

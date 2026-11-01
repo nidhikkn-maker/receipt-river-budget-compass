@@ -40,6 +40,7 @@ import { ACCOUNT_LABEL, MOVE_TARGET, isMove, TXN_LABEL, TXN_TYPES, frequentMerch
 import { WorkspacePicker, splitShares } from "@/components/WorkspacePicker";
 import { suggestWorkspace, validateShares, type AllocationMethod } from "@/lib/workspaces";
 import { tripTag } from "@/lib/intelligence";
+import { smartTripSuggestions } from "@/lib/trip-suggestions";
 import { BOOKING_CATEGORY, bookingOutstanding, bookingPaid, bookingPaymentIds, travelCategory, tripsForDate, type TravelTrip } from "@/lib/travel";
 import { emiSplit } from "@/lib/planning";
 import { todayISO } from "@/lib/use-position";
@@ -814,8 +815,8 @@ function NewExpense() {
             </div>
           </div>
           {ctxTrip && <p className="text-xs text-primary">Adding to trip: {ctxTrip.name}{search.booking ? " — this payment will be linked to the booking" : ""}</p>}
-          {!ctxTrip && !editing && tripsForDate(preferences.trips as TravelTrip[], date).filter((t) => !tags.includes(tripTag(t))).map((t) => (
-            <button key={t.id} type="button" className="text-left text-xs text-primary underline" onClick={() => { setTags((x) => [...new Set([...x.split(",").map((y) => y.trim()).filter(Boolean), tripTag(t)])].join(", ")); if (t.type && t.type !== "mixed") setScope(t.type); const tc = travelCategory(`${merchant} ${title}`); if (tc && preferences.categories.some((c) => c.name === tc && !c.archived)) setCategory(tc); }}>This date is during "{t.name}" — add to that trip?</button>
+          {!ctxTrip && !editing && smartTripSuggestions({ date, title, merchant, description, currency, originalAmount: Number(amount) || 0, scope, category, tags: tags.split(",").map((t) => t.trim()), tripId: tripId === "none" ? null : tripId, txnType }, preferences.trips as TravelTrip[]).slice(0, 3).map((suggestion) => (
+            <div key={suggestion.trip.id} className="space-y-1 border-l-2 border-primary pl-3"><p className="text-xs text-muted-foreground">{suggestion.confidence}{suggestion.ambiguous ? " · Multiple possible trips" : ""} · {suggestion.reasons.join(" · ")}</p><Button type="button" size="sm" variant="outline" onClick={() => { setTags((x) => [...new Set([...x.split(",").map((y) => y.trim()).filter(Boolean), tripTag(suggestion.trip)])].join(", ")); setTripId(suggestion.trip.id); }}>Link to {suggestion.trip.name}</Button></div>
           ))}
           <div className="grid gap-1.5"><Label htmlFor="t">Note{af("title")}</Label><Input id="t" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Optional — e.g. Dinner with Ravi" className={fieldCls} /></div>
 
