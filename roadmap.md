@@ -1,4 +1,9 @@
 # Roadmap (Functional Requirements v1.0)
+## V5.7 reimbursement discovery and responsive claims
+- [ ] Find & Link existing expenses with explained suggestions, rejection, search/filter/bulk review and audited links without duplicate entries.
+- [ ] Owner-protected claim preparation drafts, save feedback/recovery, claimed-history warnings, and richer profile fields.
+- [ ] Phone/tablet/desktop claim layouts, searchable selectors, summary/detail/bill preview and verified report flow.
+- [ ] Automated and isolated browser acceptance; list remaining advance/cloud/device blockers, no publication.
 ## V5.6 organisation reimbursement profiles
 - [x] Multiple organisation/role profiles, organisation defaults, approval routes, existing receiving accounts, document/category preferences and activity mappings use existing owner-RLS cloud preferences; no migration or live test writes.
 - [x] Compact claim prefilling, explicit ambiguity review, organisation allocation/selection, eligible outstanding-only totals, frozen snapshots and regeneration versions; existing statements remain separate.
