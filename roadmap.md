@@ -246,3 +246,16 @@
 ## Sync visibility & mobile performance
 - [x] Visible sync status in the header (updating / up to date / offline / could not update, with waiting offline entries; tap to refresh)
 - [x] Mobile performance testing: scripts/mobile-perf.py measures phone-sized throttled load; verified 0.75s frame, 0.78s saved figures, 5.5s full sync on Fast 4G
+
+## V5.2 Smart Home & Travel Redesign (.lovable/requirements-v5.2.md)
+- [ ] P1: Compact Travel Manager overview (trip cards, filters, alerts; no inline forms)
+- [ ] P1: Dedicated individual trip view with section navigation (Overview/Itinerary/Bookings/Expenses/Budget & Settlements/Reports)
+- [ ] P1: Simplified Create Trip focused workflow (essentials first, optional later, save draft, no auto-keyboard)
+- [ ] P1: Responsive/overflow fixes on iPhone widths
+- [ ] P2: Dedicated Itinerary (day timeline, copy/move, multi-select participants, booking links, maps, conflicts)
+- [ ] P2: Dedicated Bookings (compact cards, type-relevant fields, document import to draft, booking↔itinerary↔expense linking)
+- [ ] P2: Universal Entry integration from trip (editable preselects), multi-select trip expense actions
+- [ ] P3: Budget & Settlements subsections (budget, allocations, advances, reimbursements, reconciliation); financial integrity checks
+- [ ] P4: Home shortcut selection/reorder (max 6 default + View All), workspace multi-select sheet, homepage personalisation persistence
+- [ ] P5: Smart trip linking suggestions, Travel Inbox integration, trip readiness indicator, reports consolidation, controlled trip closure validation
+- [ ] Acceptance: 23 demonstrations incl. unchanged records, no duplicate spend, iPhone layout
