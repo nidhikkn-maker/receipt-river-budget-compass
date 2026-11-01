@@ -171,7 +171,7 @@ export function ExpenditureReportBuilder({ mode, search }: { mode: "statement" |
   const openPreview = (b: Blob) => { const u = URL.createObjectURL(b); window.open(u, "_blank"); setTimeout(() => URL.revokeObjectURL(u), 60_000); };
 
   return (
-    <div className="space-y-5 pb-[calc(7rem+env(safe-area-inset-bottom))] [&_button]:min-h-11">
+    <div className="space-y-5 pb-[calc(7rem+env(safe-area-inset-bottom))] [&_button:not([role=checkbox])]:min-h-11">
       <PageTitle title={claimMode ? "Expense Claim Submission" : "Detailed Expenditure Statement"} sub={claimMode ? "A formal reimbursement request for your organisation's accounts team: claimed items, declaration, approval lines and the original bills." : "A complete record of what was spent, how it was paid and what is still to be reimbursed, with every original bill attached."} />
       {claimMode&&<div className="flex flex-wrap items-center justify-between gap-2 text-xs"><span role="status">{preparation.status}</span><div className="flex gap-2">{preparation.recover&&<Button size="sm" variant="outline" onClick={preparation.resume}>Resume saved preparation</Button>}<Button size="sm" variant="ghost" onClick={preparation.saveNow}>Save preparation</Button></div></div>}
       <div className={cn(claimMode&&'grid min-w-0 gap-6 min-[1000px]:grid-cols-[minmax(280px,.8fr)_minmax(0,1.4fr)] min-[1600px]:grid-cols-[minmax(280px,.75fr)_minmax(420px,1.2fr)_minmax(360px,1fr)]')}>

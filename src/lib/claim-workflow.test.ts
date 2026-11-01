@@ -1,7 +1,8 @@
 // @vitest-environment node
 import { PGlite } from '@electric-sql/pglite';
 import { beforeAll, afterAll, describe, it, expect } from 'vitest';
-import { claimWorkflowSql } from './claim-workflow-sql';
+import { readFileSync } from 'node:fs';
+const claimWorkflowSql=readFileSync('drizzle/migrations/0040_claim_preparations_and_activity_linking.sql','utf8');
 const db=new PGlite(); const owner='00000000-0000-0000-0000-000000000001',other='00000000-0000-0000-0000-000000000002',id='00000000-0000-0000-0000-000000000010',mutation='00000000-0000-0000-0000-000000000020';
 async function asUser(uid:string){await db.exec(`RESET ROLE; SELECT set_config('app.uid','${uid}',false); SET ROLE authenticated;`);}
 beforeAll(async()=>{await db.exec(`CREATE ROLE authenticated;CREATE ROLE anon;CREATE ROLE service_role;CREATE SCHEMA auth;CREATE FUNCTION auth.uid() RETURNS uuid LANGUAGE sql STABLE AS $$ SELECT nullif(current_setting('app.uid',true),'')::uuid $$;GRANT USAGE ON SCHEMA auth TO authenticated;CREATE TABLE public.finance_preferences(owner_id uuid PRIMARY KEY,data jsonb DEFAULT '{}'); CREATE TABLE public.expenses(id uuid PRIMARY KEY, employee_id uuid,txn_type text,tags text[],trip_id uuid,department text,amount numeric,expense_date date,reimbursement_status text,description text); INSERT INTO public.finance_preferences VALUES('${owner}','{"tags":[{"group":"Project","name":"Audit"}]}'),('${other}','{}');`);await db.exec(claimWorkflowSql);},20000);

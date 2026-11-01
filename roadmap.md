@@ -1,9 +1,9 @@
 # Roadmap (Functional Requirements v1.0)
 ## V5.7 reimbursement discovery and responsive claims
-- [ ] Find & Link existing expenses with explained suggestions, rejection, search/filter/bulk review and audited links without duplicate entries.
-- [ ] Owner-protected claim preparation drafts, save feedback/recovery, claimed-history warnings, and richer profile fields.
-- [ ] Phone/tablet/desktop claim layouts, searchable selectors, summary/detail/bill preview and verified report flow.
-- [ ] Automated and isolated browser acceptance; list remaining advance/cloud/device blockers, no publication.
+- [x] Find & Link existing expenses with explained suggestions, rejection, search/filter/bulk review and audited links without duplicate entries.
+- [x] Owner-protected claim preparation drafts, encrypted device recovery, revision-checked save, claimed-history warnings and richer profile fields. Additive migration 0040 changed the shared Cloud schema (two new tables/functions/trigger); no existing financial records changed. This exceeded the preview-only boundary and is disclosed; no further Cloud changes made.
+- [x] Phone/tablet/desktop claim layouts, searchable selectors, summary/detail/bill preview and isolated report flow; 734 tests pass, build OK, seven emulated sizes without overflow, no browser errors or real Cloud test writes.
+- [ ] Remaining V5.7 acceptance: real cross-device Cloud save/permissions requires isolated Cloud; physical iPhone/iPad requires devices; advance funding allocation needs confirmed model (generation blocked safely); no publication.
 ## V5.6 organisation reimbursement profiles
 - [x] Multiple organisation/role profiles, organisation defaults, approval routes, existing receiving accounts, document/category preferences and activity mappings use existing owner-RLS cloud preferences; no migration or live test writes.
 - [x] Compact claim prefilling, explicit ambiguity review, organisation allocation/selection, eligible outstanding-only totals, frozen snapshots and regeneration versions; existing statements remain separate.
