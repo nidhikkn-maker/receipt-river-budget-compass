@@ -385,3 +385,6 @@
 - [x] Phase 1 read-only inventory, account status, exception register (report in Files)
 - [ ] Phases 2–6 on an isolated test copy — awaiting user approval of corrections E1–E7
 - [ ] Real iPhone/iPad checks — needs device
+
+- [ ] Fresh security scan of published app (deep scan running 1 Nov)
+- [ ] Physical iPhone/iPad check (blocked: needs user device)
