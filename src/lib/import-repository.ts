@@ -21,10 +21,12 @@ export async function listImportRules():Promise<ImportRule[]> {
   if(r.error) throw Error('Could not load import rules'); return r.data as unknown as ImportRule[];
 }
 export async function reviseRows(batch:string,rows:ImportRow[],patch:Partial<ImportProposal>,decision?:ImportRow['decision']) {
+  const fields=new Set(['title','merchant','category','scope','memberId','paymentMethod','txnType','accountId','toAccountId','description','tags','reviewed','categoryConfirmed','duplicateOverride','reimbursable','organisation','subcategory','reimbursementOrganisation']);
+  const classification=Object.fromEntries(Object.entries(patch).filter(([key])=>fields.has(key)));
   const r=await supabase.rpc('revise_import_rows',{
     _batch:batch,
     _items:rows.map(row=>({id:row.id,proposal:row.proposal,decision:row.decision})) as unknown as Json,
-    _patch:patch as unknown as Json,
+    _patch:classification as unknown as Json,
     ... (decision ? {_decision:decision} : {}),
   });
   if(r.error) throw Error(r.error.message);
