@@ -10,7 +10,7 @@ import { useStore } from '@/lib/store';
 import type { Expense } from '@/lib/expenses';
 import { todayISO } from '@/lib/use-position';
 export const Route = createFileRoute('/_authenticated/account-reconciliation')({
-  validateSearch: (s: Record<string, unknown>) => ({ section: s.section === 'reimbursements' ? 'reimbursements' : 'accounts' }),
+  validateSearch: (s: Record<string, unknown>): { section?: string } => ({ section: s['section'] === 'reimbursements' ? 'reimbursements' : 'accounts' }),
   head: () => ({ meta: [{ title: 'Account Reconciliation — Ledgerline' }, { name: 'description', content: 'Review saved statement coverage, verified balances and account reconciliation evidence.' }, { property: 'og:title', content: 'Account Reconciliation — Ledgerline' }, { property: 'og:description', content: 'Independent statement, balance and reconciliation checks.' }, { property: 'og:type', content: 'website' }, { name: 'twitter:card', content: 'summary' }] }),
   component: Reconciliation,
 });

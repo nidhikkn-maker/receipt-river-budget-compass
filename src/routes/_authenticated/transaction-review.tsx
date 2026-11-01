@@ -10,7 +10,7 @@ import { REVIEW_FILTERS, type ReviewFilter } from '@/lib/review-centre';
 import type { Expense } from '@/lib/expenses';
 import { todayISO } from '@/lib/use-position';
 export const Route = createFileRoute('/_authenticated/transaction-review')({
-  validateSearch: (s: Record<string, unknown>): { filter: ReviewFilter } => ({ filter: typeof s.filter === 'string' && s.filter in REVIEW_FILTERS ? s.filter as ReviewFilter : 'all' }),
+  validateSearch: (s: Record<string, unknown>): { filter: ReviewFilter } => ({ filter: typeof s['filter'] === 'string' && s['filter'] in REVIEW_FILTERS ? s['filter'] as ReviewFilter : 'all' }),
   head: () => ({ meta: [{ title: 'Transaction Review Centre — Ledgerline' }, { name: 'description', content: 'Select and review transaction classifications with exact previews and explicit bulk confirmation.' }, { property: 'og:title', content: 'Transaction Review Centre — Ledgerline' }, { property: 'og:description', content: 'Guided transaction selection, evidence and audited corrections.' }, { property: 'og:type', content: 'website' }, { name: 'twitter:card', content: 'summary' }] }),
   component: ReviewCentre,
 });

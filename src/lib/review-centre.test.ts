@@ -3,7 +3,7 @@ import { centreReview, matchesReview, reviewCounts, selectedReviewSummary, selec
 import { inboxItems } from './inbox';
 import { defaultPreferences } from './preferences';
 import type { Expense } from './expenses';
-const expense = (id: string): Expense => ({ id, title: id, merchant: 'Grab', category: 'Miscellaneous', scope: 'business', memberId: null, splits: [], amount: 100, originalAmount: 100, currency: 'INR', fxRate: 1, paymentMethod: 'upi', date: '2026-04-01', description: 'Original', receipts: [], accountId: 'bank', txnType: 'expense' });
+const expense = (id: string): Expense => ({ id, title: id, merchant: 'Grab', category: 'Miscellaneous', scope: 'business', memberId: null, splits: [], amount: 100, originalAmount: 100, currency: 'INR', fxRate: 1, paymentMethod: 'upi', reconciledAt: null, statementRef: null, date: '2026-04-01', description: 'Original', receipts: [], accountId: 'bank', txnType: 'expense' });
 const accounts = [{ id: 'bank', name: 'Bank', kind: 'savings' as const, openingBalance: 1000, archived: false }];
 const rowsFor = (transactions: Expense[]) => { const prefs = defaultPreferences(); return centreReview(inboxItems({ transactions, accounts, commitments: [], prefs, today: '2026-11-01', pendingCount: 0 }), transactions, accounts, prefs.categories.map(c => c.name)); };
 describe('V5.10 review selection and counts', () => {

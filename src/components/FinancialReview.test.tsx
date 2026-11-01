@@ -20,9 +20,9 @@ describe("controlled financial correction flow", () => {
     mocks.store = { preferences, accounts, transactions, bulkSetCategory: mocks.save, undoCategoryBatch: mocks.undo };
     const items = inboxItems({ transactions, accounts, commitments: [], prefs: preferences, today: "2026-11-01", pendingCount: 0 });
     render(<FinancialReview items={items} onOpen={() => {}} />);
-    fireEvent.pointerDown(screen.getByRole("button", { name: "Select", exact: true }), { button: 0, ctrlKey: false });
+    fireEvent.keyDown(screen.getByRole("button", { name: /^Select$/ }), { key: "ArrowDown" });
     fireEvent.click(await screen.findByRole("menuitem", { name: "Select all visible (1)" }));
-    fireEvent.click(screen.getByRole("button", { name: "Categorise", exact: true }));
+    fireEvent.click(screen.getByRole("button", { name: /^Categorise$/ }));
     fireEvent.click(screen.getByRole("combobox", { name: "Bulk review category" }));
     fireEvent.click(await screen.findByRole("option", { name: "Groceries" }));
     fireEvent.click(screen.getByRole("button", { name: "Preview category changes" }));
