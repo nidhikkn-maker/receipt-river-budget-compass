@@ -1,4 +1,8 @@
 # Roadmap (Functional Requirements v1.0)
+## Calendar navigation and review return
+- [ ] Open calendar items directly, with a chooser when a date has multiple destinations.
+- [ ] Return after successful entry review or explicit completed trip/review; failures stay open.
+- [ ] Verify navigation without changing real financial records.
 ## Published-site verification and security (done 2026-11-01)
 - [x] Fresh security scan: deep scan clean (no code findings), supply chain clean; only known info-level guest sign-in item remains (intentional for guest upgrade continuity).
 - [x] Found live site serving a stale deployment; re-published twice. Fixed real bug: dashboard dropped the anomaly transaction id (Autopilot.tsx), so "See transaction" fell back to /expenses. Verified live: opens /new?edit=<id> with the exact transaction.

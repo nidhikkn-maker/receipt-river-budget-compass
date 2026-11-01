@@ -1,4 +1,5 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
+import { returnAfterReview } from "@/lib/review-navigation";
 import { useMemo, useState } from "react";
 import { ArrowLeft, CalendarPlus, Camera, FileText, MoreHorizontal, Plus, Receipt } from "lucide-react";
 import { Card, Row } from "@/components/Money";
@@ -42,6 +43,7 @@ function TripPage() {
   const { tripId } = Route.useParams();
   const search = Route.useSearch();
   const navigate = Route.useNavigate();
+  const router = useRouter();
   const { preferences: pr, savePreferences, transactions } = useStore();
   const today = todayISO();
   const trip = (pr.trips as TravelTrip[]).find((t) => t.id === tripId);
@@ -117,6 +119,7 @@ function TripPage() {
           }}>Delete trip (entries stay)</Button>
         </div>
       )}
+      <Button variant="outline" className="mt-4" onClick={() => returnAfterReview(router.history, () => { void navigate({ to: "/trips" }); })}><ArrowLeft className="h-4 w-4" />Done reviewing</Button>
     </div>
   );
 }

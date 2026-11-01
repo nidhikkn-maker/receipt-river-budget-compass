@@ -29,7 +29,7 @@ import { readReviewContext, writeReviewContext } from '@/lib/offline';
 
 const NEXT: Record<string, string> = { unverified_import: "imported but not yet confirmed — tap Confirm as reviewed", uncategorised: "needs a spending category — use Categorise", duplicate: "may be a duplicate — open it and keep or delete", inconsistency: "figures don't agree — open it to check", missing_details: "an account is missing — use Account & financial type", unreconciled_account: "account not matched to a statement" };
 const reasonOf = (r: ReviewRow) => { const t = [...new Set(r.issues.map(i => NEXT[i.type] ?? i.description))]; if (r.suggestedType) t.unshift("looks like a transfer or card payment, not spending"); else if (r.suggestedCategory) t.unshift(`similar entries use ${r.suggestedCategory}`); return t.join("; "); };
-export function FinancialReview({ items, onOpen, initialFilter = "all" }: { items: InboxItem[]; onOpen: (e: Expense) => void; initialFilter?: ReviewFilter }) {
+export function FinancialReview({ items, onOpen, initialFilter = "all", onCompleted }: { items: InboxItem[]; onOpen: (e: Expense) => void; initialFilter?: ReviewFilter; onCompleted?: () => void }) {
   const { transactions, accounts, preferences, commitments, bulkSetCategory, undoCategoryBatch, userId, reconcile, refresh } = useStore();
   const [confirmImports, setConfirmImports] = useState(false);
   const categories = preferences.categories.filter(c => !c.archived && c.name !== "Miscellaneous").map(c => c.name);
