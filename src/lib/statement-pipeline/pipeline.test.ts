@@ -176,8 +176,8 @@ describe("classifying lines with no record", () => {
 
 describe("change plan for a whole upload", () => {
   const acct = account({ id: "a1", name: "IDFC MOVAC", openingBalance: 1000 });
-  const file = (closing: number | null, description = "BIGBASKET ORDER") => ({
-    name: "idfc-oct.pdf", accountId: "a1", hint: null, currency: "INR", opening: 1000, closing,
+  const file = (closing: number | null, description = "BIGBASKET ORDER", opening = 1000) => ({
+    name: "idfc-oct.pdf", accountId: "a1", hint: null, currency: "INR", opening, closing,
     lines: fromStatementLines("idfc-oct.pdf", [{ ref: "0", date: "2026-10-01", description, amount: 600 }]),
   });
 
@@ -191,13 +191,30 @@ describe("change plan for a whole upload", () => {
   });
 
   it("holds every posting while the balance check fails", () => {
-    const plan = buildPlan([file(500)], [acct], [], categories);
+    // The file's own figures add up (900 − 600 = 300), but the app sits at 1,000, not 900.
+    const plan = buildPlan([file(300, "BIGBASKET ORDER", 900)], [acct], [], categories);
     const a = plan.accounts[0];
     expect(a?.gate?.ok).toBe(false);
     expect(a?.auto.length).toBe(0);
     expect(a?.ask.length).toBe(0);
     expect(a?.later.length).toBe(1);
     expect(a?.later[0]?.reason).toMatch(/Balance check failed/);
+  });
+
+  it("posts from a statement that ends before today when its own figures add up", () => {
+    const newer = txn({ id: "r9", date: "2026-10-05", amount: 250, merchant: "LATER SHOP", accountId: "a1" });
+    const plan = buildPlan([file(400)], [acct], [newer], categories);
+    const a = plan.accounts[0];
+    expect(a?.newerEntries).toBe(true);
+    expect(a?.auto.length).toBe(1);
+    expect(a?.later.length).toBe(0);
+  });
+
+  it("holds everything when the statement's own figures don't add up", () => {
+    const plan = buildPlan([file(700)], [acct], [], categories);
+    const a = plan.accounts[0];
+    expect(a?.later.length).toBe(1);
+    expect(a?.later[0]?.reason).toMatch(/own figures don't add up/);
   });
 
   it("asks rather than saves itself when the file prints no closing figure", () => {

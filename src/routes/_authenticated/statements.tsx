@@ -97,7 +97,7 @@ function StatementDeskPage() {
     if (!loaded.length) return null;
     return buildPlan(loaded.map((l) => drop(l.file)), accounts, transactions, preferences.categories);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [loaded, accounts, transactions, preferences.categories]);
+  }, [loaded, destinations, accounts, transactions, preferences.categories]);
 
   const api = () => {
     const s = storeRef.current;
@@ -274,9 +274,9 @@ function StatementDeskPage() {
               <p className="text-sm text-muted-foreground">
                 {a.isNew ? `New account: ${a.name}` : a.name}
                 {a.appBalance !== null ? ` · balance in the app ${money(a.appBalance)}` : ""}
-                {a.gate ? ` · after these postings ${money(a.gate.after)}${a.gate.difference !== null ? ` · statement says ${money(a.gate.after + a.gate.difference)}` : " · no printed closing figure"}` : ""}
+                {a.gate && a.newerEntries ? " · the app has newer entries than this statement, so its closing balance isn’t compared" : a.gate ? ` · after these postings ${money(a.gate.after)}${a.gate.difference !== null ? ` · statement says ${money(a.gate.after + a.gate.difference)}` : " · no printed closing figure"}` : ""}
               </p>
-              {a.gate && !a.gate.ok && a.gate.difference !== null && <p className="text-sm text-destructive" role="status">Balance check off by {money(Math.abs(a.gate.difference))} — postings for this account are held until it adds up.</p>}
+              {a.gateHeld && a.gate && <p className="text-sm text-destructive" role="status">Balance check off by {money(Math.abs(a.gate.difference ?? 0))} — postings for this account are held until it adds up.</p>}
 
               {a.auto.length > 0 && (
                 <section aria-label="Saved automatically">
