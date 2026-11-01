@@ -20,6 +20,7 @@ import { tripActionSnapshot, type TripAction } from "./trip-actions";
 import { correctionStillCurrent, type CorrectionPreview } from "./financial-corrections";
 import { mappingStillCurrent, type ReviewMappingPreview } from './review-mapping';
 import { recurringDuplicates } from './review-recurring';
+import { metadataStillCurrent, type MetadataPreview } from './review-metadata';
 
 export interface Loan {
   id: string; name: string;
@@ -62,6 +63,9 @@ interface Ctx {
   undoFinancialCorrection: (id: string) => Promise<void>;
   financialCorrectionHistory: () => Promise<FinancialCorrectionHistory[]>;
   applyReviewMapping: (preview: ReviewMappingPreview) => Promise<void>;
+  applyReviewMetadata: (preview: MetadataPreview, id: string) => Promise<void>;
+  undoReviewMetadata: (id: string) => Promise<void>;
+  reviewMetadataHistory: () => Promise<{id:string;createdAt:string;entries:{before:Record<string,unknown>;after:Record<string,unknown>}[]}[]>;
   saveRecurringReview: (draft: Omit<Commitment, 'id'>, id: string) => Promise<void>;
   userId: string;
   name: string;
@@ -368,6 +372,17 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
     const result = await supabase.from("financial_corrections").select("id,created_at,entries").is("undone_at", null).order("created_at", { ascending: false }).limit(20);
     check(result.error); return (result.data ?? []).map(r => ({ id: r.id, createdAt: r.created_at, count: Array.isArray(r.entries) ? r.entries.length : 0, entries: r.entries as unknown as FinancialCorrectionHistory["entries"] }));
   };
+  const applyReviewMetadata: Ctx['applyReviewMetadata'] = async (preview,id) => {
+    if (!navigator.onLine) throw Error('Reconnect before applying mappings.');
+    if (!metadataStillCurrent(preview,expenses,preferences,accounts)) throw Error('Records changed. Prepare a new preview.');
+    const result=await supabase.rpc('apply_review_metadata',{_id:id,_items:preview.items as unknown as Json,_config:preview.config as unknown as Json});
+    check(result.error);if(result.data!==id)throw Error('Saved result could not be confirmed. Retry the same preview.');await refresh();
+  };
+  const undoReviewMetadata: Ctx['undoReviewMetadata'] = async id => {check((await supabase.rpc('undo_review_metadata',{_id:id})).error);await refresh();};
+  const reviewMetadataHistory: Ctx['reviewMetadataHistory'] = async () => {
+    const result=await supabase.from('financial_corrections').select('id,created_at,entries').eq('request->>kind','review_metadata').is('undone_at',null).order('created_at',{ascending:false}).limit(20);
+    check(result.error);return (result.data??[]).map(r=>({id:r.id,createdAt:r.created_at,entries:r.entries as unknown as {before:Record<string,unknown>;after:Record<string,unknown>}[]}));
+  };
 
   const remove: Ctx["remove"] = async (e) => {
     check((await supabase.from("expenses").delete().eq("id", e.id)).error);
@@ -644,7 +659,7 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
   return (
     <StoreCtx.Provider value={{
       departmentBudgets, departmentBudgetError,
-      pendingCount, setTags, manageTripExpenses, applyReviewMapping, saveRecurringReview, preferences, savePreferences, ensureCategory, moveCategory, bulkSetCategory, categoryHistory, undoCategoryBatch, correctFinancialEntries, undoFinancialCorrection, financialCorrectionHistory, userId, name, updateName, members, memberName,
+      pendingCount, setTags, manageTripExpenses, applyReviewMapping, applyReviewMetadata, undoReviewMetadata, reviewMetadataHistory, saveRecurringReview, preferences, savePreferences, ensureCategory, moveCategory, bulkSetCategory, categoryHistory, undoCategoryBatch, correctFinancialEntries, undoFinancialCorrection, financialCorrectionHistory, userId, name, updateName, members, memberName,
       expenses: expenses.filter((x) => (x.txnType ?? "expense") === "expense"), transactions: expenses, accounts, addAccount, setArchived, adjustBalance,
       commitments, loans, goals, valuations, documents, saveCommitment, confirmIrregular, removeCommitment, confirmCommitment, saveLoan, removeLoan, recordLoanPayment, convertToEmi,
       saveGoal, removeGoal, updateAccount, addValuation, removeValuation, addDocument, updateDocument, removeDocument, history, setReimbursement, recordReimbursement, deleteAll,
