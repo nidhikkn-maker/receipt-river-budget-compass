@@ -6,6 +6,7 @@ import type { Statement } from './expenditure-statement';
 export const DEFAULT_DECLARATION = 'I certify that these expenses were incurred for the stated official purpose, paid personally, and have not been claimed or reimbursed elsewhere. Supporting documents are attached where available.';
 export interface ApprovalRoute { id: string; label: string; reportingAuthority: string; approver: string; finance: string; additionalApprover: string; designation: string }
 export interface ReimbursementProfile {
+  profileName?: string; legalEntity?: string; approvalReference?: string; signaturePreference?: string; reportHeader?: string;
   id: string; organisation: string; workspace: Scope; organisationCode: string; costCentre: string;
   name: string; designation: string; employeeId: string; department: string; email: string; contact: string;
   accountId: string; accountHolder: string; currency: string; format: 'detailed' | 'summary'; declaration: string;

@@ -10,7 +10,8 @@ export type DiscoveryGroup = 'linked' | 'suggested' | 'review' | 'settled';
 export interface DiscoveredExpense { entry: Expense; group: DiscoveryGroup; reasons: string[]; score: number; linked: boolean; imported: boolean; conflictingTrip: boolean }
 export function discoverClaimExpenses(input: { subject: Subject; entries: Expense[]; trips: TravelTrip[]; organisation: string; settings: ReimbursementSettings; from?: string; to?: string; rejected?: string[] }): DiscoveredExpense[] {
  const linked = new Set(subjectEntries(input.subject,input.entries,input.trips).map(e=>e.id));
- const trip = input.subject.kind === 'trip' ? input.trips.find(t=>t.id===input.subject.id) : undefined;
+ const tripId = input.subject.kind === 'trip' ? input.subject.id : undefined;
+ const trip = input.trips.find(t=>t.id===tripId);
  const from=input.from||trip?.start, to=input.to||trip?.end;
  return input.entries.filter(e=>(e.txnType??'expense')==='expense' && !(input.rejected??[]).includes(e.id)).flatMap(entry=>{
   const isLinked=linked.has(entry.id); const reasons:string[]=[]; let score=0;

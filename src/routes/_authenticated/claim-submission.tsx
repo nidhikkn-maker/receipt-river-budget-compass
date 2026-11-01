@@ -3,7 +3,7 @@ import { z } from "zod";
 import { ExpenditureReportBuilder } from "@/components/ExpenditureReportBuilder";
 
 export const Route = createFileRoute("/_authenticated/claim-submission")({
-  validateSearch: z.object({ trip: z.string().optional(), tag: z.string().optional(), entry: z.string().optional() }),
+  validateSearch: z.object({ trip: z.string().optional(), tag: z.string().optional(), entry: z.string().optional(),entries:z.string().optional() }),
   head: () => ({ meta: [
     { title: "Expense Claim Submission — Ledgerline" },
     { name: "description", content: "A formal reimbursement claim for your organisation with itemised expenses, declaration, approval fields and original bills." },

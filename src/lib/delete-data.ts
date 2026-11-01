@@ -1,5 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import { clearOfflineOwner } from "./offline";
+import { clearLocalPreparations } from './claim-preparations';
 
 /** Discover all owner files before deleting rows; a failed record deletion never removes files. */
 export async function deleteFinanceData(owner: string): Promise<void> {
@@ -29,7 +30,7 @@ export async function deleteFinanceData(owner: string): Promise<void> {
       if (result.error) filesFailed = true;
     } catch { filesFailed = true; }
   }
-  try { await clearOfflineOwner(owner); }
+  try { await clearLocalPreparations(owner); await clearOfflineOwner(owner); }
   catch { throw new Error("Online records were deleted, but this device's offline data couldn't be cleared. Keep this device online and retry."); }
   if (filesFailed) throw new Error("Records were deleted, but some receipt files couldn't be removed. Retry to finish deleting them.");
 }
