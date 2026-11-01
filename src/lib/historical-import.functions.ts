@@ -42,7 +42,7 @@ export const postHistoricalImport=createServerFn({method:'POST'}).middleware([re
     const row=raw as unknown as ImportRow;
     if(row.proposal.amount!==row.line.amount || row.proposal.date!==row.line.date || row.proposal.currency!==batch.data.currency) throw Error('Source amount, date and currency must remain unchanged');
     if(row.decision!=='approved') throw Error('Approve selected rows first');
-    const blockers=postingBlockers(row,accs,new Date().toISOString().slice(0,10));
+    const blockers=postingBlockers(row,accs,new Date().toISOString().slice(0,10),batch.data);
     if(blockers.length) throw Error(blockers[0]);
     let fx=rates.get(row.proposal.date);
     if(!fx) {

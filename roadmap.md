@@ -266,6 +266,7 @@
 - [ ] Acceptance: 23 demonstrations incl. unchanged records, no duplicate spend, iPhone layout
 
 ## V5.3 Statement Import (.lovable/requirements-v5.3.md)
+- [ ] Current continuation: representative bank/card acceptance, final-summary source/direction guards, posting readback and duplicate-free replay; synthetic records only, with cleanup and no publication.
 - [x] Current continuation: recurring-pattern grouping reuses cadence detection with account/currency/type/direction partitions, separate repeated payments and original totals. Signed-in five-row statement verified monthly hint, both same-day repeats, selection/drill-down, unchanged source and review status; phone/desktop no overflow or page errors; temporary files/records removed without posting; 622 tests pass, build OK.
 - [x] Current continuation: correction scope choices (one / selected similar / eligible matching), explicit previewed future-rule confirmation, conservative similarity guards and persisted-rule acceptance. Signed-in three-row correction/reload and rule save/cancel/readback verified; rows remain under review, originals preserved; phone/desktop no overflow or page errors; temporary records/rules removed, no ledger posting; 615 tests pass, build OK.
 - [ ] Uploaded specification saved; guided import stages, bulk exception review and historical reconciliation acceptance remain a separate implementation pass after current travel requests.
