@@ -1,0 +1,9 @@
+import { useId, useState } from 'react';
+import { Check, ChevronsUpDown } from 'lucide-react';
+import { Button } from './ui/button';
+import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
+import { Command, CommandInput, CommandList, CommandEmpty, CommandItem } from './ui/command';
+export function ClaimSearchSelect({ label, value, onChange, options, placeholder = 'Select' }: { label: string; value: string; onChange: (v:string)=>void; options:{value:string;label:string}[];placeholder?:string }) {
+ const [open,setOpen]=useState(false);const id=useId();
+ return <div className="min-w-0 space-y-1"><label id={id} className="text-xs">{label}</label><Popover open={open} onOpenChange={setOpen}><PopoverTrigger asChild><Button variant="outline" role="combobox" aria-labelledby={id} aria-expanded={open} className="h-11 w-full justify-between text-left font-normal"><span className="truncate">{options.find(o=>o.value===value)?.label??placeholder}</span><ChevronsUpDown className="h-4 w-4 shrink-0 text-muted-foreground" /></Button></PopoverTrigger><PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start"><Command><CommandInput placeholder={`Search ${label.toLowerCase()}`} /><CommandList><CommandEmpty>No matches</CommandEmpty>{options.map(o=><CommandItem key={o.value} value={`${o.label} ${o.value}`} onSelect={()=>{onChange(o.value);setOpen(false);}} className="min-h-11"><span className="min-w-0 flex-1 break-words">{o.label}</span>{value===o.value&&<Check className="h-4 w-4" />}</CommandItem>)}</CommandList></Command></PopoverContent></Popover></div>;
+}
