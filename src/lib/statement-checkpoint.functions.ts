@@ -17,7 +17,7 @@ export const saveStatementEvidence = createServerFn({ method: "POST" }).middlewa
   if (accounts.error) throw Error("Accounts unavailable");
   const mapped = accounts.data.map(a => ({ id: a.id, name: a.name, kind: a.kind as Account["kind"], openingBalance: Number(a.opening_balance), archived: a.archived, lastFour: a.last_four, issuer: a.issuer }));
   const account = mapped.find(a => a.id === batch.data.account_id);
-  const review: StatementReview = data.review;
+  const review: StatementReview = { identity: data.review.identity, convention: data.review.convention, ...(data.review.coverage ? { coverage: data.review.coverage } : {}) };
   const errors = statementReviewBlockers(review, account, [], new Date().toISOString().slice(0, 10));
   if (errors.length) throw Error(errors[0]);
   const candidates = identityCandidates({ bank: data.review.identity.bank, identifier: data.review.identity.identifier || null, quote: data.review.identity.reference, page: null }, mapped);
@@ -25,6 +25,24 @@ export const saveStatementEvidence = createServerFn({ method: "POST" }).middlewa
   const result = await context.supabase.rpc("review_statement_evidence", { _batch: data.batch, _expected: data.expected as Json, _review: data.review as Json });
   if (result.error) throw Error(result.error.message);
   return { ok: true };
+});
+
+export const copyStatementToAccount = createServerFn({ method: "POST" }).middleware([requireSupabaseAuth]).inputValidator((raw: unknown) => z.object({ batch: z.string().uuid(), account: z.string().uuid() }).parse(raw)).handler(async ({ data, context }) => {
+  const db = context.supabase;
+  const batch = await db.from("import_batches").select("*").eq("id", data.batch).eq("owner_id", context.userId).single();
+  const account = await db.from("accounts").select("id").eq("id", data.account).eq("owner_id", context.userId).eq("archived", false).single();
+  if (batch.error || account.error || batch.data.account_id === data.account) throw Error("Choose a different active account.");
+  const existing = await db.from("import_batches").select("id").eq("account_id", data.account).eq("file_hash", batch.data.file_hash).maybeSingle();
+  if (existing.error) throw Error("Could not check earlier imports.");
+  if (existing.data) return { id: existing.data.id, reused: true };
+  const source = await db.storage.from("receipts").download(batch.data.file_path);
+  if (source.error || !source.data) throw Error("Original statement unavailable; no copy created.");
+  const id = crypto.randomUUID(), path = `${context.userId}/statements/${id}-copy`;
+  const uploaded = await db.storage.from("receipts").upload(path, source.data, { contentType: source.data.type || "application/octet-stream" });
+  if (uploaded.error) throw Error("Could not preserve the new source copy.");
+  const created = await db.from("import_batches").insert({ id, account_id: data.account, file_name: batch.data.file_name, file_hash: batch.data.file_hash, file_path: path, currency: batch.data.currency, allow_ai: batch.data.allow_ai, raw_lines: batch.data.raw_lines, statement_identity: batch.data.statement_identity, source_balances: batch.data.source_balances, period_from: batch.data.period_from, period_to: batch.data.period_to });
+  if (created.error) { await db.storage.from("receipts").remove([path]); throw Error("Could not save the copy; existing statement is unchanged."); }
+  return { id, reused: false };
 });
 
 export const runStatementCheckpoint = createServerFn({ method: "POST" }).middleware([requireSupabaseAuth]).inputValidator((raw: unknown) => z.object({ batch: z.string().uuid(), operation: z.string().uuid() }).parse(raw)).handler(async ({ data, context }) => {

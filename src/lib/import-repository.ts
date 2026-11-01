@@ -1,6 +1,22 @@
 import { supabase } from '@/integrations/supabase/client';
 import type { Json } from '@/integrations/supabase/types';
 import type { ImportBatch, ImportRow, ImportRule, ImportProposal } from './historical-import';
+import type { Account } from './ledger';
+import type { Expense } from './expenses';
+import type { StatementStatusEvidence } from './account-statement-status';
+import { checkpointHash, checkpointSnapshot, type StatementCheckpoint } from './statement-checkpoint';
+
+export async function statementEvidence(batch:ImportBatch,account:Account,transactions:Expense[]):Promise<StatementStatusEvidence> {
+  const rows=await listImportRows(batch.id),posted:StatementStatusEvidence['posted']=[];
+  for(let from=0;;from+=1000) {
+    const r=await supabase.from('import_posts').select('fingerprint,transaction_id,posted_at').eq('account_id',batch.account_id).order('fingerprint').range(from,from+999);
+    if(r.error)throw Error('Posting evidence unavailable');posted.push(...r.data);if(r.data.length<1000)break;
+  }
+  const checkpoint=await supabase.from('statement_checkpoints').select('*').eq('batch_id',batch.id).order('created_at',{ascending:false}).order('id').limit(1).maybeSingle();
+  if(checkpoint.error)throw Error('Saved reconciliation evidence unavailable');
+  const evidence:StatementStatusEvidence={batch,rows,posted,...(checkpoint.data?{checkpoint:checkpoint.data as unknown as StatementCheckpoint}:{})};
+  evidence.currentHash=await checkpointHash(checkpointSnapshot(evidence,account,transactions));return evidence;
+}
 
 export async function listImports(): Promise<ImportBatch[]> {
   const batches: ImportBatch[] = [];

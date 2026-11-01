@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
-import { listImports, listImportRows } from "@/lib/import-repository";
+import { listImports, statementEvidence } from "@/lib/import-repository";
 import { accountStatementStatus, accountStatementSummary, type StatementStatusEvidence } from "@/lib/account-statement-status";
 import { useStore } from "@/lib/store";
 import { money } from "@/lib/expenses";
@@ -18,14 +18,8 @@ export function AccountStatementStatus() {
       const batches = await listImports();
       // Read durable posting fingerprints with pagination; one statement's failure never becomes a false success.
       const next = await Promise.all(batches.map(async batch => {
-        const rows = await listImportRows(batch.id);
-        const posted: StatementStatusEvidence["posted"] = [];
-        for (let from = 0;; from += 1000) {
-          const result = await supabase.from("import_posts").select("fingerprint,transaction_id,posted_at").eq("account_id", batch.account_id).order("fingerprint").range(from, from + 999);
-          if (result.error) throw Error("Posting evidence unavailable");
-          posted.push(...result.data); if (result.data.length < 1000) break;
-        }
-        return { batch, rows, posted };
+        const account=accounts.find(a=>a.id===batch.account_id);if(!account)throw Error('Account unavailable');
+        return statementEvidence(batch,account,transactions);
       }));
       if (run !== generation.current) return;
       if (updateLedger) await refresh();
@@ -36,8 +30,8 @@ export function AccountStatementStatus() {
   useEffect(() => {
     void load();
     const tick = () => { if (document.visibilityState === "visible") void load(true); };
-    const timer = window.setInterval(tick, 20000); window.addEventListener("focus", tick); window.addEventListener("online", tick);
-    return () => { generation.current++; clearInterval(timer); window.removeEventListener("focus", tick); window.removeEventListener("online", tick); };
+    const timer = window.setInterval(tick, 20000); window.addEventListener("focus", tick); window.addEventListener("online", tick);window.addEventListener("ledgerline:statement-updated",tick);
+    return () => { generation.current++; clearInterval(timer); window.removeEventListener("focus", tick); window.removeEventListener("online", tick);window.removeEventListener("ledgerline:statement-updated",tick); };
   }, []);
   const rows = accounts.filter(a => !a.archived).map(a => accountStatementStatus(a, evidence, transactions, preferences, new Date().toISOString().slice(0, 10)));
   const summary = accountStatementSummary(rows), focused = rows.find(r => r.accountId === selected);

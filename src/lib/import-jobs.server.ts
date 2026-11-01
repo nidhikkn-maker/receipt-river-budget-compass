@@ -7,6 +7,7 @@ import type { Account } from './ledger';
 import { extractScannedChunk } from './scanned-import.server';
 import { normalizeStatementRows } from './statement-rows';
 import type { BalanceEvidence } from './balance-verification';
+import { extractStatementIdentity, type StatementIdentity } from './statement-evidence';
 
 async function paged(db: SupabaseClient<Database>, owner: string) {
   const rows: Expense[] = [];
@@ -29,34 +30,43 @@ export async function processImport(db: SupabaseClient<Database>, id: string, ow
     if(!lines.length) {
       const file=await db.storage.from('receipts').download(b.file_path);
       if(file.error || !file.data) throw Error('Original statement could not be read');
-      if(/\.csv$/i.test(b.file_name)) lines=parseStatementCsv(await file.data.text(),true);
+      if(/\.csv$/i.test(b.file_name)) {
+        const text = await file.data.text(); lines=parseStatementCsv(text,true);
+        const identity = await db.from('import_batches').update({statement_identity:extractStatementIdentity(text) as unknown as Json}).eq('id',b.id).eq('owner_id',owner);
+        if(identity.error)throw Error('Could not preserve statement identity evidence');
+      }
       else if(/\.xlsx?$/i.test(b.file_name)) {
         const {read,utils}=await import('xlsx');
         const book=read(new Uint8Array(await file.data.arrayBuffer()),{type:'array',cellDates:true});
+        const identities:StatementIdentity[]=[];
         for(const name of book.SheetNames) {
           const sheet=book.Sheets[name]; if(!sheet) continue;
           const data=utils.sheet_to_json<unknown[]>(sheet,{header:1,defval:'',raw:true});
+          identities.push(...extractStatementIdentity(data.slice(0,30).map(r=>r.join(' ')).join('\n')));
           const header=data.findIndex(r=>r.some(c=>/date/i.test(String(c)))&&r.some(c=>/debit|withdrawal|amount|paid out/i.test(String(c))));
           if(header<0) continue;
           const csv=data.slice(header).map(r=>r.map(c=>`"${(c instanceof Date?c.toISOString().slice(0,10):String(c ?? '')).replaceAll('"','""')}"`).join(',')).join('\n');
           lines.push(...parseStatementCsv(csv,true).map(l=>({...l,ref:`${name}:${l.ref}`})));
         }
+        const identity = await db.from('import_batches').update({statement_identity:identities as unknown as Json}).eq('id',b.id).eq('owner_id',owner);
+        if(identity.error)throw Error('Could not preserve statement identity evidence');
       } else if(/\.pdf$/i.test(b.file_name)) {
         const complete=await extractScannedChunk(db,b,file.data);
         if(!complete)return;
         const pages=await db.from('import_pdf_pages').select('rows,balances').eq('batch_id',b.id).eq('owner_id',owner).order('page_start');
         if(pages.error)throw Error('Could not retrieve extracted PDF pages');
         const evidence:BalanceEvidence={opening:{value:null,quote:'',page:null},closing:{value:null,quote:'',page:null},periodFrom:null,periodTo:null};
-        lines=[];
+        lines=[]; const identities:StatementIdentity[]=[];
         for(const page of pages.data){
           const source=page.rows as unknown as {date:string;description:string;amount:number;direction:string;reference:string;page:number}[];
           for(let i=0;i<source.length;i++){const row=source[i];if(!row)continue;const normalized=normalizeStatementRows([row])[0];if(normalized)lines.push({...normalized,ref:`PDF${row.page}:${i}:${row.reference}`});}
-          const balances=page.balances as unknown as BalanceEvidence;
+          const balances=page.balances as unknown as BalanceEvidence & {identities?:StatementIdentity[]};
+          identities.push(...(balances.identities ?? []));
           if(balances.opening.value!=null)evidence.opening=balances.opening;
           if(balances.closing.value!=null)evidence.closing=balances.closing;
           evidence.periodFrom=balances.periodFrom??evidence.periodFrom;evidence.periodTo=balances.periodTo??evidence.periodTo;
         }
-        const saved=await db.from('import_batches').update({raw_lines:lines as unknown as Json,source_balances:evidence as unknown as Json,...(evidence.periodFrom?{period_from:evidence.periodFrom}:{}),...(evidence.periodTo?{period_to:evidence.periodTo}:{})}).eq('id',b.id).eq('owner_id',owner);
+        const saved=await db.from('import_batches').update({raw_lines:lines as unknown as Json,source_balances:evidence as unknown as Json,statement_identity:identities as unknown as Json,...(evidence.periodFrom?{period_from:evidence.periodFrom}:{}),...(evidence.periodTo?{period_to:evidence.periodTo}:{})}).eq('id',b.id).eq('owner_id',owner);
         if(saved.error)throw Error('Could not preserve extracted source data');
       } else throw Error('Choose a CSV, Excel or PDF statement');
     }
