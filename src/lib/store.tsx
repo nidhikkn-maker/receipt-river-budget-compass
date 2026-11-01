@@ -122,6 +122,7 @@ interface Ctx {
   reconcile: (id: string, ref: string | null, opts?: { noRefresh?: boolean }) => Promise<void>;
   addMember: (name: string, relation: string) => Promise<void>;
   removeMember: (id: string) => Promise<void>;
+  updateMember: (id: string, name: string, relation: string) => Promise<void>;
   setBudget: (c: Category, amount: number) => Promise<void>;
   signedUrl: (path: string) => Promise<string | null>;
   setAllocations: (e: Expense, lines: Allocation[]) => Promise<void>;
@@ -477,6 +478,11 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
     check((await supabase.from("family_members").insert({ owner_id: userId, name: n.trim(), relation: relation.trim() })).error);
     await refresh();
   };
+  const updateMember: Ctx["updateMember"] = async (id, n, relation) => {
+    if (!n.trim()) throw new Error("Enter a name");
+    check((await supabase.from("family_members").update({ name: n.trim(), relation: relation.trim() }).eq("id", id)).error);
+    await refresh();
+  };
   const removeMember: Ctx["removeMember"] = async (id) => {
     check((await supabase.from("family_members").delete().eq("id", id)).error);
     await refresh();
@@ -663,7 +669,7 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
       expenses: expenses.filter((x) => (x.txnType ?? "expense") === "expense"), transactions: expenses, accounts, addAccount, setArchived, adjustBalance,
       commitments, loans, goals, valuations, documents, saveCommitment, confirmIrregular, removeCommitment, confirmCommitment, saveLoan, removeLoan, recordLoanPayment, convertToEmi,
       saveGoal, removeGoal, updateAccount, addValuation, removeValuation, addDocument, updateDocument, removeDocument, history, setReimbursement, recordReimbursement, deleteAll,
-      budgets, loading, syncState, lastSyncedAt, refresh, save, remove, setScope, reconcile, addMember, removeMember, setBudget, signedUrl,
+      budgets, loading, syncState, lastSyncedAt, refresh, save, remove, setScope, reconcile, addMember, removeMember, updateMember, setBudget, signedUrl,
       setAllocations, updateReimbursement, addReimbursementReceipt, listReviews, saveReview,
     }}>
       {children}
