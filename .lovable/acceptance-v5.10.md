@@ -31,8 +31,17 @@
 - Preview and production share Cloud. Only read-only actual-record browser checks and isolated in-memory correction tests were performed.
 - Live production application was not deployed; its version remains unchanged.
 
+### Continuation — 1 November, 08:17 UTC
+- Added reviewed configured activity/project links, open-trip links and organisation changes restricted to already-linked trip expenses. Existing atomic owner/snapshot APIs are reused; claimed/split organisation responsibilities are excluded before confirmation.
+- Added direct recurring profile editor, preview, explicit save, active-profile duplicate blocking, same-ID retry and persisted insert read-back. It uses stored INR planning values and never creates expenses or resolves ledger issues. Mixed merchant/account/responsibility selections are refused.
+- Added missing-field filter and evidence-only recovery from saved active payment instruments and a unique configured organisation tag. No narration-only/ownership inference; recovery is a suggestion, not an automatic correction.
+- Overview rule failures are now visible with Retry, rather than silently implying complete suggested-type counts.
+- Controlled pure/component acceptance for exclusions, stale configuration, preview/cancel/save, recurring retries, merchant scope and recovery passed. Existing isolated activity SQL test confirms owner checks and rollback/source preservation.
+- Signed-in preview: activity/trip controls opened and cancelled; missing-field filtering visible; eligible saved expense recurring form opened and cancelled. Phone screenshots viewed, no horizontal overflow or page errors. No actual financial/rule/profile save performed.
+- Complete regression: 849 tests / 105 files passed. Preview build OK. No schema changes or publication.
+
 ### Outstanding (Not Implemented / Partial / Blocked)
-- General atomic bulk organisation/workspace/payment-method/activity mapping, heterogeneous category suggestions, automatic verified missing-detail recovery and direct recurring-profile creation remain unimplemented in this centre. Existing individual detail editor and recurring Plan remain available, not claimed as equivalent bulk workflows.
+- General non-trip organisation/workspace/payment-method bulk mapping, heterogeneous atomic categories and automatic bulk application of verified recovered details need additional protected save operations. Current organisation mapping is intentionally trip-scoped; generic workspace/payment mapping has no existing atomic endpoint and shared Cloud changes require approval.
 - Paired transfer/card-settlement linking remains blocked by existing financial guards. Potential opposite-side records cannot be merged through account/type correction; a dedicated owner-atomic, source-preserving pairing design and isolated write acceptance are needed.
 - Reimbursement/advance/other movements keep dedicated workflows; account/type correction currently supports expense, income, refund, transfer, card payment, loan repayment and investment only.
 - Full saved correction draft covers selection/filter/category context only; account/type form choices do not persist. Actual cross-device context is not supported.
