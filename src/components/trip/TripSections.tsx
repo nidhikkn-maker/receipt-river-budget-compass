@@ -170,51 +170,30 @@ export function TripExpensesSection({ trip }: { trip: TravelTrip }) {
   );
 }
 
-/** Budget & Settlements: budget vs actual, category lines, advances, reimbursements, reconciliation. */
+/** Budget & Settlements: compact Trip Budget card, optional breakdown, reimbursements, advances, reconciliation. */
 export function TripBudgetSection({ trip }: { trip: TravelTrip }) {
-  const { preferences: pr, transactions } = useStore();
+  const { transactions } = useStore();
   const put = useTripPut(trip);
   const closed = !!trip.closedAt;
   const f = useMemo(() => tripFinance(trip, transactions), [trip, transactions]);
-  const bd = useMemo(() => tripBudgetDetail(trip, transactions), [trip, transactions]);
   const recon = useMemo(() => advanceReconciliation(trip, transactions), [trip, transactions]);
   const [adv, setAdv] = useState({ amount: "", source: "", date: trip.start });
-  const [bl, setBl] = useState({ category: "", amount: "" });
+  const [editOpen, setEditOpen] = useState(false);
+  const [breakdownOpen, setBreakdownOpen] = useState(false);
   const ws = Object.entries(f.byWorkspace) as [Scope, number][];
   return (
     <>
-      <Card title="Budget and money" action={<Button size="sm" variant="outline" onClick={() => saveCsv(tripReportRows(trip, transactions), `trip-${slug(trip.name)}.csv`)}>CSV</Button>}>
+      <TripBudgetCard trip={trip} onEdit={() => setEditOpen(true)} onBreakdown={() => setBreakdownOpen((o) => !o)} />
+      <EditBudgetDialog trip={trip} open={editOpen} onOpenChange={setEditOpen} />
+      {breakdownOpen && <BudgetBreakdown trip={trip} />}
+      <ReimbursementBreakdownCard trip={trip} />
+
+      <Card title="Ledger detail" action={<Button size="sm" variant="outline" onClick={() => saveCsv(tripReportRows(trip, transactions), `trip-${slug(trip.name)}.csv`)}>CSV</Button>}>
         <Row label="Spent (in your records)" value={money(f.total)} />
         <Row label="Booked, not yet paid" value={money(f.committed)} />
         <Row label="Spent + booked" value={money(f.projected)} />
         {trip.budget > 0 && <Row label={f.remainingAfterCommitted >= 0 ? "Left after bookings" : "Over budget after bookings"} value={money(Math.abs(f.remainingAfterCommitted))} />}
         {ws.length > 0 && <div className="mt-2 text-xs text-muted-foreground">By workspace: {ws.map(([w, v]) => `${SCOPE_LABEL[w]} ${money(v)}`).join(" · ")}</div>}
-        {(bd.hasPlan || !closed) && (
-          <div className="mt-3 border-t pt-2">
-            <div className="text-xs font-medium">Category budgets</div>
-            {bd.lines.length === 0 && <p className="text-xs text-muted-foreground">No category budgets yet — add one to see where the trip plan stands line by line.</p>}
-            {bd.lines.map((l) => (
-              <div key={l.category} className="flex items-center gap-2 border-b py-1.5 text-sm last:border-0">
-                <span className="min-w-0 flex-1 truncate">{l.category}</span>
-                <span className="font-mono text-xs text-muted-foreground">{money(l.budget)} plan</span>
-                <span className={`font-mono text-xs ${l.over ? "text-destructive" : "text-muted-foreground"}`}>{l.over ? `${money(-l.left)} over` : `${money(l.left)} left`}</span>
-                {!closed && <Button size="sm" variant="ghost" aria-label={`Remove ${l.category} budget`} onClick={() => void put({ budgetLines: (trip.budgetLines ?? []).filter((x) => x.category !== l.category) })}>×</Button>}
-              </div>
-            ))}
-            {bd.contingency > 0 && <Row label="Contingency allowance" value={money(bd.contingency)} />}
-            {bd.unbudgeted > 0 && <Row label="Spent outside the budget lines" value={money(bd.unbudgeted)} />}
-            {bd.planned > 0 && <Row label={bd.remaining >= 0 ? "Left of the whole plan" : "Over the whole plan"} value={money(Math.abs(bd.remaining))} />}
-            {!closed && (
-              <div className="mt-2 grid gap-2 sm:grid-cols-3">
-                <select className={sel} value={bl.category} onChange={(e) => setBl({ ...bl, category: e.target.value })}><option value="">Category…</option>{pr.categories.filter((c) => !c.archived).map((c) => <option key={c.name} value={c.name}>{c.name}</option>)}</select>
-                <Input className="h-10" type="number" placeholder="Budget ₹" value={bl.amount} onChange={(e) => setBl({ ...bl, amount: e.target.value })} />
-                <Button type="button" variant="outline" onClick={() => { const n = Number(bl.amount); if (!bl.category || !(n > 0)) { toast.error("Pick a category and an amount above zero"); return; } if ((trip.budgetLines ?? []).some((x) => x.category === bl.category)) { toast.error("That category already has a budget"); return; } void put({ budgetLines: [...(trip.budgetLines ?? []), { category: bl.category, amount: n }] }, "Category budget added"); setBl({ category: "", amount: "" }); }}>Add line</Button>
-                <Input className="h-10" type="number" placeholder="Contingency ₹" defaultValue={trip.contingency || ""} onBlur={(e) => { const n = Number(e.target.value) || 0; if (n < 0) { toast.error("Contingency can't be negative"); return; } if (n !== (trip.contingency ?? 0)) void put({ contingency: n }, "Contingency updated"); }} />
-                <p className="text-xs text-muted-foreground sm:col-span-2">Contingency is extra room on top of the trip budget, held back for surprises.</p>
-              </div>
-            )}
-          </div>
-        )}
         <Row label="Reimbursement pending" value={money(f.reimbursablePending)} />
         <Row label="Reimbursement received" value={money(f.reimbursed)} />
         <p className="mt-1 text-xs text-muted-foreground">Reimbursements received settle the original spend; they're never counted as income.</p>
