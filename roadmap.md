@@ -258,6 +258,8 @@
 - [x] Mobile performance testing: scripts/mobile-perf.py measures phone-sized throttled load; verified 0.75s frame, 0.78s saved figures, 5.5s full sync on Fast 4G
 
 ## V5.2 Smart Home & Travel Redesign (.lovable/requirements-v5.2.md)
+- [x] Re-upload is byte-identical to saved V5.2 brief. Added read-only multi-select traveller/organisation/destination/workspace and inclusive date filters. Signed-in phone/desktop selection, search, dates and clearing passed; 679 tests passed, build OK, no live writes or publication. Review: .lovable/acceptance-v5.2-current.md.
+- [ ] Remaining V5.2 source-confirmed gaps: searchable itinerary participants, copy/move items, maps/possible same-time conflicts, trip draft recovery hardening and destination validation. Requires further implementation; live-record test prohibition remains.
 - [x] Current batch: multi-select trip expense actions (visible/all matching, tags, organisation, reimbursable purpose, link/unlink, selected report), explicit preview and owner-checked atomic writes. Signed-in link/tag/reload, organisation/reimbursable/unlink, stale-snapshot rollback and signed-out denial verified; amounts and claims unchanged.
 - [x] Current batch: travel inbox for private uploaded confirmations and manually pasted trip messages; pending/reviewed messages persist, confirmations reopen in Bookings after navigation. No email or messaging-service connection; temporary records/files cleaned up.
 - [x] Current batch: ranked smart trip suggestions using dates, destinations, booking references, original-currency/provider matches and workspace/travel clues; ambiguity visible, closed/cancelled/linked/non-expenses excluded. Signed-in explicit confirmation verified, no automatic linking.
