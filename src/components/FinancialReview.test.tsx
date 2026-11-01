@@ -20,13 +20,15 @@ describe("controlled financial correction flow", () => {
     mocks.store = { preferences, accounts, transactions, bulkSetCategory: mocks.save, undoCategoryBatch: mocks.undo };
     const items = inboxItems({ transactions, accounts, commitments: [], prefs: preferences, today: "2026-11-01", pendingCount: 0 });
     render(<FinancialReview items={items} onOpen={() => {}} />);
-    fireEvent.click(screen.getByRole("button", { name: "Select all visible" }));
+    fireEvent.pointerDown(screen.getByRole("button", { name: "Select", exact: true }), { button: 0, ctrlKey: false });
+    fireEvent.click(await screen.findByRole("menuitem", { name: "Select all visible (1)" }));
+    fireEvent.click(screen.getByRole("button", { name: "Categorise", exact: true }));
     fireEvent.click(screen.getByRole("combobox", { name: "Bulk review category" }));
     fireEvent.click(await screen.findByRole("option", { name: "Groceries" }));
     fireEvent.click(screen.getByRole("button", { name: "Preview category changes" }));
     expect(mocks.save).not.toHaveBeenCalled();
     expect(screen.getByText("controlled-copy")).toBeTruthy();
-    fireEvent.click(screen.getByRole("button", { name: "Confirm category changes" }));
+    fireEvent.click(screen.getByRole("button", { name: "Confirm & Apply Changes" }));
     await waitFor(() => expect(mocks.save).toHaveBeenCalledWith(["controlled-copy"], "Groceries", expect.any(String)));
     expect(transaction.description).toBe("Untouched source");
     expect(transaction.category).toBe("Miscellaneous");
