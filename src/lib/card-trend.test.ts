@@ -42,16 +42,16 @@ describe("balance series", () => {
   it("shows amount owed above zero and credit below zero at each month end", () => {
     const s = cardBalanceSeries([card], [buy("p1", "2026-08-10", 10000), pay("x1", "2026-09-05", 12000)], 4, "2026-11-15");
     expect(s.map((p) => p.label)).toEqual(["Aug", "Sep", "Oct", "Nov"]);
-    expect(s.map((p) => p.AMEX)).toEqual([10000, -2000, -2000, -2000]);
+    expect(s.map((p) => p["AMEX"])).toEqual([10000, -2000, -2000, -2000]);
     expect(s.at(-1)?.date).toBe("2026-11-15");
   });
   it("leaves months before a card's first entry empty instead of guessing a balance", () => {
     const s = cardBalanceSeries([card], [buy("p1", "2026-10-10", 500)], 3, "2026-11-15");
-    expect(s.map((p) => p.AMEX)).toEqual([null, 500, 500]);
+    expect(s.map((p) => p["AMEX"])).toEqual([null, 500, 500]);
   });
   it("ignores other accounts' entries when tracking this card", () => {
     const s = cardBalanceSeries([card], [{ id: "z", date: "2026-10-01", amount: 900, accountId: "b", txnType: "expense" }], 2, "2026-11-15");
-    expect(s.map((p) => p.AMEX)).toEqual([null, null]);
+    expect(s.map((p) => p["AMEX"])).toEqual([null, null]);
   });
   it("keeps two cards with the same name on separate lines", () => {
     expect(cardTrendKeys([card, card2])).toEqual(["AMEX", "AMEX (2)"]);

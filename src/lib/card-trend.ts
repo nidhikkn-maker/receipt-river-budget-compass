@@ -77,7 +77,7 @@ const monthLabel = (today: string, back: number) => {
 export function shortCardName(card: Account): string {
   const n = card.name.trim();
   const m = n.match(/^(.*?)(\d{5,})$/);
-  const base = m ? `${m[1].trim()} …${m[2].slice(-4)}` : n;
+  const base = m ? `${(m[1] ?? "").trim()} …${(m[2] ?? "").slice(-4)}` : n;
   return base.length > 22 ? `${base.slice(0, 21).trim()}…` : base;
 }
 
@@ -104,7 +104,11 @@ export function cardBalanceSeries(cards: Account[], txns: Txn[], months: number,
   for (let back = Math.max(1, months) - 1; back >= 0; back--) {
     const date = monthEndPoint(today, back);
     const point: TrendPoint = { label: monthLabel(today, back), date };
-    cards.forEach((c, i) => { point[keys[i]] = firstEntry[i] && date >= firstEntry[i] ? balanceAsOf(c, txns, date) : null; });
+    cards.forEach((c, i) => {
+      const k = keys[i];
+      if (!k) return;
+      point[k] = firstEntry[i] && date >= firstEntry[i] ? balanceAsOf(c, txns, date) : null;
+    });
     out.push(point);
   }
   return out;
