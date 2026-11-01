@@ -45,5 +45,3 @@
 - PDF table cells with non-Latin text are rendered by the browser onto canvas images (src/lib/pdf-unicode.ts withUnicode) because jsPDF core fonts are Latin-only and cannot shape Indic scripts; titles, footers and bill-page labels use textU()/drawTextU() which image-render non-Latin text.
 - Report IDs match jobs; callbacks recover without duplicates. Reconciliation persistence tests use temporary PGlite, not Cloud or real devices.
 - Corrections use owner-atomic RPCs, revisions and safe undo; preserve FX/source. Evidence drives statements; review-centre.ts separates Inbox, review and reconciliation.
-- Recipient links: expenses.payee_id references an owner-preferences payee (bulk via apply_review_metadata 'payeeId'); money lent/borrowed with outsiders is an other_asset/other_liability account with details.payeeId, moved by transfers so it never counts as spending or income.
-- Trip advances apply to claims only as a user-entered amount per claim (applyAdvance in expense-claim.ts), capped by advance not applied in earlier saved claims; never automatic.
