@@ -1,6 +1,6 @@
 # Roadmap (Functional Requirements v1.0)
 ## V5.10.1 transaction classification and external payees
-- [ ] Investigate and fix type-aware correction fields/validation; preserve original records, preview and confirm changes.
+- [x] Root cause: correction form always displayed both internal account fields even though expense preview already ignores destination. Conditional fields, compatible card/loan targets, incoming account labels and mixed-type review guard added; existing protected confirmation retained.
 - [ ] Reusable external recipient directory, compatible bulk classification, safe persistence and 18-case financial/device completion report; preview only, no production changes.
 ## Isolated reconciliation storage and physical-device acceptance
 - [x] Disposable local PostgreSQL test storage verifies saved evidence/checkpoint survives closing/reopening, owner isolation and unchanged balances; 44 focused checks passed, no Cloud access.
