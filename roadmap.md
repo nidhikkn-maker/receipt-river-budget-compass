@@ -1,4 +1,8 @@
 # Roadmap (Functional Requirements v1.0)
+## V5.6 organisation reimbursement profiles
+- [ ] Cloud-saved multiple organisation/role profiles, defaults, approval routes, saved account destinations and activity mapping.
+- [ ] Compact claim prefilling, explicit ambiguity review, organisation-scoped eligibility/selection, snapshot PDFs and unchanged existing statements.
+- [ ] Pure finance/profile regression tests and signed-in desktop/phone verification without live record writes; preview only.
 ## V5.5 compact trip budget
 - [x] Compact Trip Budget card (Total/Actual/Remaining/Reimbursable), Edit Budget sheet with single save, tabbed Budget Breakdown (workspace/traveller/category/currency/organisation), "Budget not set" and "Budget requires confirmation" states, utilisation warnings configurable in Settings; 697 tests pass, build OK, phone-width browser verified, no live records changed, nothing published.
 - [ ] Real iPhone Safari pass of the budget workflow — requires device access.
