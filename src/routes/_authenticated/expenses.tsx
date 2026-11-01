@@ -33,7 +33,7 @@ function Expenses() {
   const [selecting, setSelecting] = useState(false);
   const [shown, setShown] = useState(50);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => setShown(50), [JSON.stringify(f)]);
+  useEffect(() => { setShown(50); }, [JSON.stringify(f)]);
   const [picked, setPicked] = useState<Set<string>>(new Set());
   const [bulkCategory, setBulkCategory] = useState("");
   const [applying, setApplying] = useState(false);
