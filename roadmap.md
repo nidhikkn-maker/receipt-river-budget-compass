@@ -1,4 +1,10 @@
 # Roadmap (Functional Requirements v1.0)
+## Financial Inbox v5.12
+- [ ] Diagnose current review, selection, financial rules and regression coverage against the complete brief.
+- [ ] Correct evidenced financial-logic gaps without editing live financial records; preserve existing external-payee save restriction until explicitly changed.
+- [ ] Implement five Inbox views and guided scoped selection/action/preview/confirmation with issue-specific counts and review history.
+- [ ] Verify controlled financial/browser workflows, realistic-volume performance and iPhone/iPad portrait/iPad landscape/desktop layouts.
+- [ ] Perform read-only historical integrity comparisons and deliver implementation, test, reconciliation, exception and readiness reports; no deployment.
 ## Records-check browser button tests
 - [x] Four real-route browser tests pass: individual/multiple selection, checked-list movement, Undo, prior checked preservation, select-visible deduplication/clear and save-failure retry. Four existing rule tests also pass; screenshots inspected, no runtime errors or external requests, fixture accounts/transactions/statements unchanged. Controlled browser preferences only; no Cloud writes or publication.
 ## Expense, approval and receipt browser tests
