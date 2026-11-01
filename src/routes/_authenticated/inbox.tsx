@@ -16,7 +16,7 @@ import type { ImportRule } from '@/lib/historical-import';
 import { StatementInbox } from '@/components/StatementInbox';
 
 export const Route = createFileRoute('/_authenticated/inbox')({
-  validateSearch: (s: Record<string, unknown>): { section?: string } => typeof s.section === 'string' ? { section: s.section } : {},
+  validateSearch: (s: Record<string, unknown>): { section?: string } => typeof s['section'] === 'string' ? { section: s['section'] } : {},
   head: () => ({ meta: [ { title: 'Financial Inbox — Ledgerline' }, { name: 'description', content: 'Review transactions, statement imports and financial reminders with separate, evidence-based counts.' }, { property: 'og:title', content: 'Financial Inbox — Ledgerline' }, { property: 'og:description', content: 'A clear overview of transactions and accounts requiring attention.' }, { property: 'og:type', content: 'website' }, { name: 'twitter:card', content: 'summary' } ] }),
   component: Inbox,
 });

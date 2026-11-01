@@ -24,11 +24,11 @@ import { extractStatement } from "@/lib/statement-extract.functions";
 export function StatementInbox() {
   const { transactions: expenses, accounts, preferences, save, reconcile, refresh } = useStore();
   const [statementAccount, setStatementAccount] = useReviewView("statement-account", "all");
-  const [lines, setLines] = useState<StatementLine[]>([]);
-  const [fileName, setFileName] = useState("");
+  const [lines, setLines] = useReviewView<StatementLine[]>("statement-lines", []);
+  const [fileName, setFileName] = useReviewView("statement-file", "");
   const [currency, setCurrency] = useReviewView<string>("statement-currency", BASE_CURRENCY);
-  const [overrides, setOverrides] = useState<Record<string, string>>({});
-  const [excluded, setExcluded] = useState<Record<string, boolean>>({});
+  const [overrides, setOverrides] = useReviewView<Record<string, string>>("statement-overrides", {});
+  const [excluded, setExcluded] = useReviewView<Record<string, boolean>>("statement-exclusions", {});
   const [busy, setBusy] = useState(false);
   const [reading, setReading] = useState(false);
   const [readStage, setReadStage] = useState<{ name: string; ai: boolean; at: number } | null>(null);
@@ -233,7 +233,7 @@ export function StatementInbox() {
             )}
             {plan.register.length > 0 && (
               <ul className="mt-3 space-y-1.5">
-                {plan.register.slice(0, 8).map((d) => (
+                {plan.register.map((d) => (
                   <li key={d.line.ref} className="flex items-center gap-2 text-sm">
                     <input
                       type="checkbox"
@@ -247,7 +247,6 @@ export function StatementInbox() {
                     <span className="shrink-0 font-mono text-xs">{money(d.line.amount, currency)}</span>
                   </li>
                 ))}
-                {plan.register.length > 8 && <li className="text-xs text-muted-foreground">+ {plan.register.length - 8} more</li>}
               </ul>
             )}
             {plan.recurringHints.length > 0 && (
@@ -332,7 +331,7 @@ export function StatementInbox() {
           )}
 
           {plan.skipped.length > 0 && (
-            <p id="already-recorded" className="mb-4 scroll-mt-28 text-xs text-muted-foreground">{plan.skipped.length} line{plan.skipped.length === 1 ? "" : "s"} left alone: {plan.skipped.slice(0, 3).map((s) => s.reason).join(" · ")}{plan.skipped.length > 3 ? " · …" : ""}</p>
+            <section id="already-recorded" className="mb-4 scroll-mt-28"><h2 className="text-lg font-semibold">Already recorded ({plan.skipped.length})</h2><ul className="divide-y text-sm">{plan.skipped.map(s => <li key={s.line.ref} className="py-2"><p className="break-words">{s.line.date} · {s.line.description} · {money(s.line.amount, currency)}</p><p className="text-xs text-muted-foreground">{s.reason}</p></li>)}</ul></section>
           )}
         </>
       )}
