@@ -34,13 +34,13 @@ function CardBalancePage() {
   const months = [...new Set(r.lines.map((l) => l.txn.date.slice(0, 7)))];
 
   return (
-    <div>
+    <div className="mx-auto w-full max-w-4xl">
       <Button asChild variant="ghost" size="sm"><Link to="/wealth"><ArrowLeft className="mr-1 h-4 w-4" />Accounts</Link></Button>
-      <h1 className="mt-2 font-display text-3xl font-bold tracking-tight">{card.name}</h1>
+      <h1 className="mt-2 break-words font-display text-2xl font-bold tracking-tight sm:text-3xl">{card.name}</h1>
       <p className="text-sm text-muted-foreground">Card balance — what you owe and how payments reduce it</p>
 
       <Card title="Outstanding" className="mt-4">
-        <div className="my-1 font-display text-3xl font-bold">{money(r.outstanding)}</div>
+        <div className="my-1 break-words font-display text-2xl font-bold sm:text-3xl">{money(r.outstanding)}</div>
         <Row label="Opening amount owed" value={money(r.opening)} />
         <Row label="Spends" value={money(r.spends)} />
         <Row label="Payments" value={`− ${money(r.payments)}`} />
@@ -52,14 +52,14 @@ function CardBalancePage() {
         <button type="button" onClick={() => setOnlyFlagged((v) => !v)} className="mt-4 flex w-full items-center gap-2 rounded-2xl border border-destructive/40 bg-destructive/5 p-3 text-left text-sm">
           <AlertTriangle className="h-4 w-4 shrink-0 text-destructive" />
           <span className="flex-1"><strong>{r.unreconciled.count} unreconciled payment{r.unreconciled.count > 1 ? "s" : ""}</strong> · {money(r.unreconciled.total)}</span>
-          <span className="text-xs underline">{onlyFlagged ? "Show all" : "Show only these"}</span>
+          <span className="shrink-0 text-xs underline">{onlyFlagged ? "Show all" : "Show only these"}</span>
         </button>
       ) : (
         <p className="mt-4 flex items-center gap-2 text-sm text-muted-foreground"><CheckCircle2 className="h-4 w-4" />All payments are matched to a card statement.</p>
       )}
 
       <div className="mt-4 flex flex-wrap items-center gap-2">
-        <select aria-label="Month" className="h-9 rounded-lg border bg-background px-2 text-sm" value={month} onChange={(e) => setMonth(e.target.value)}>
+        <select aria-label="Month" className="h-10 w-full rounded-lg sm:w-auto border bg-background px-2 text-sm" value={month} onChange={(e) => setMonth(e.target.value)}>
           <option value="">All months</option>
           {months.map((m) => <option key={m} value={m}>{m}</option>)}
         </select>
@@ -68,7 +68,7 @@ function CardBalancePage() {
       <ul className="mt-3 divide-y rounded-2xl border bg-card">
         {lines.length === 0 && <li className="p-4 text-sm text-muted-foreground">No entries here.</li>}
         {lines.map((l) => (
-          <li key={l.txn.id} className="flex flex-wrap items-center gap-3 p-3">
+          <li key={l.txn.id} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-2 p-3 md:grid-cols-[minmax(0,1fr)_auto_auto]">
             <div className="min-w-0 flex-1">
               <div className="truncate font-medium">{l.txn.merchant || l.txn.title || (l.kind === "payment" ? "Card payment" : "Entry")}</div>
               <div className="text-xs text-muted-foreground">
@@ -78,10 +78,10 @@ function CardBalancePage() {
               {l.issue && <div className="text-xs text-destructive">{l.issue}</div>}
             </div>
             <div className="text-right">
-              <div className="font-mono text-sm font-semibold">{l.change > 0 ? "+" : "−"} {money(Math.abs(l.change))}</div>
-              <div className="text-[11px] text-muted-foreground">owed {money(l.balanceAfter)}</div>
+              <div className="whitespace-nowrap font-mono text-sm font-semibold">{l.change > 0 ? "+" : "−"} {money(Math.abs(l.change))}</div>
+              <div className="whitespace-nowrap text-[11px] text-muted-foreground">owed {money(l.balanceAfter)}</div>
             </div>
-            {l.issue && <Button asChild size="sm" variant="outline"><Link to="/new" search={{ edit: l.txn.id }}>Review</Link></Button>}
+            {l.issue && <Button asChild size="sm" variant="outline" className="col-span-2 w-full md:col-span-1 md:w-auto"><Link to="/new" search={{ edit: l.txn.id }}>Review</Link></Button>}
           </li>
         ))}
       </ul>

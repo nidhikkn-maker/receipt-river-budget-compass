@@ -54,41 +54,41 @@ function RecordsCheck() {
   };
 
   return (
-    <div>
-      <h1 className="font-display text-3xl font-bold tracking-tight">Records check</h1>
-      <p className="mt-1 flex items-center gap-2 text-sm text-muted-foreground"><ShieldCheck className="h-4 w-4" />Read-only · from {AUDIT_FROM} · compared with {statements?.length ?? "…"} uploaded statements. Nothing here changes your data.</p>
+    <div className="mx-auto w-full max-w-5xl">
+      <h1 className="font-display text-2xl sm:text-3xl font-bold tracking-tight">Records check</h1>
+      <p className="mt-1 flex items-start gap-2 text-sm text-muted-foreground"><ShieldCheck className="mt-0.5 h-4 w-4 shrink-0" />Read-only · from {AUDIT_FROM} · compared with {statements?.length ?? "…"} uploaded statements. Nothing here changes your data.</p>
 
       {error && <Card title="Couldn’t load statements" className="mt-4"><p role="alert" className="text-sm text-destructive">{error}</p></Card>}
       {!statements && !error && <p className="mt-6 text-sm text-muted-foreground">Checking your records against uploaded statements…</p>}
 
       {statements && (
         <>
-          <div className="mt-4 flex flex-wrap gap-2">
-            <Button size="sm" variant={issue === "all" ? "default" : "outline"} onClick={() => setIssue("all")}>All {findings.length}</Button>
+          <div className="-mx-4 mt-4 flex gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0">
+            <Button className="shrink-0" size="sm" variant={issue === "all" ? "default" : "outline"} onClick={() => setIssue("all")}>All {findings.length}</Button>
             {(Object.keys(AUDIT_LABEL) as AuditIssue[]).filter((k) => counts[k]).map((k) => (
-              <Button key={k} size="sm" variant={issue === k ? "default" : "outline"} onClick={() => setIssue(k)}>{AUDIT_LABEL[k]} {counts[k]}</Button>
+              <Button key={k} className="shrink-0" size="sm" variant={issue === k ? "default" : "outline"} onClick={() => setIssue(k)}>{AUDIT_LABEL[k]} {counts[k]}</Button>
             ))}
           </div>
           <div className="mt-3 flex flex-wrap items-center gap-2 text-sm">
             <Button size="sm" variant="ghost" onClick={() => setPicked(shown.map((f) => f.key))}>Select visible</Button>
             <Button size="sm" variant="ghost" onClick={() => setPicked([])}>Clear</Button>
             <Button size="sm" variant="outline" onClick={exportCsv}>Export {chosen.length ? `${chosen.length} selected` : "report"} (CSV)</Button>
-            {chosen.length > 0 && <span className="text-muted-foreground">Open each selected item to preview and confirm a correction.</span>}
+            {chosen.length > 0 && <span className="w-full text-muted-foreground sm:w-auto">Open each selected item to preview and confirm a correction.</span>}
           </div>
           {findings.length === 0 && <Card title="No issues found" className="mt-4"><p className="text-sm text-muted-foreground">Your records since April 2026 agree with the uploaded statements.</p></Card>}
           <ul className="mt-3 divide-y rounded-2xl border bg-card">
             {shown.slice(0, 300).map((f) => (
-              <li key={f.key} className="flex flex-wrap items-start gap-3 p-3">
-                <Checkbox aria-label={`Select ${f.reference}`} checked={picked.includes(f.key)} onCheckedChange={(v) => setPicked(v ? [...picked, f.key] : picked.filter((k) => k !== f.key))} />
+              <li key={f.key} className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-x-3 gap-y-2 p-3 md:grid-cols-[auto_minmax(0,1fr)_auto_auto]">
+                <Checkbox className="mt-1 h-5 w-5" aria-label={`Select ${f.reference}`} checked={picked.includes(f.key)} onCheckedChange={(v) => setPicked(v ? [...picked, f.key] : picked.filter((k) => k !== f.key))} />
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2"><span className="font-medium">{AUDIT_LABEL[f.issue]}</span><span className={"rounded-full px-2 py-0.5 text-[10px] font-semibold " + (f.confidence === "high" ? "bg-destructive/10 text-destructive" : "bg-secondary text-secondary-foreground")}>{f.confidence} confidence</span></div>
-                  <div className="text-xs text-muted-foreground">{f.date} · {f.source} → {f.destination} · ref {f.reference}</div>
+                  <div className="break-words text-xs text-muted-foreground">{f.date} · {f.source} → {f.destination} · ref {f.reference}</div>
                   <div className="text-xs">Now: {f.currentType} · Suggested: {f.suggestedType}</div>
                   <div className="text-xs text-muted-foreground">{f.proposal} · {f.impact}</div>
                 </div>
-                <div className="text-right font-mono text-sm font-semibold">{money(f.amount, f.currency)}</div>
-                {f.entryId ? <Button asChild size="sm" variant="outline"><Link to="/new" search={{ edit: f.entryId }}>Review</Link></Button>
-                  : <Button asChild size="sm" variant="outline"><Link to="/inbox" search={{ section: "statements" }}>Review</Link></Button>}
+                <div className="whitespace-nowrap text-right font-mono text-sm font-semibold">{money(f.amount, f.currency)}</div>
+                <div className="col-span-2 col-start-2 md:col-span-1 md:col-start-auto">{f.entryId ? <Button asChild size="sm" variant="outline" className="w-full md:w-auto"><Link to="/new" search={{ edit: f.entryId }}>Review</Link></Button>
+                  : <Button asChild size="sm" variant="outline" className="w-full md:w-auto"><Link to="/inbox" search={{ section: "statements" }}>Review</Link></Button>}</div>
               </li>
             ))}
           </ul>
