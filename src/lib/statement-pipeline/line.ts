@@ -75,7 +75,8 @@ export function totals(lines: StmtLine[]) {
 export function balanceAddsUp(opening: number | null, closing: number | null, lines: StmtLine[], liability = false) {
   if (opening === null || closing === null) return null;
   const t = totals(lines);
-  const expected = r2(opening + (liability ? 1 : -1) * (t.credits - t.debits));
+  // An account's balance rises with credits; what you owe on a card rises with debits.
+  const expected = r2(opening + (liability ? -1 : 1) * (t.credits - t.debits));
   return r2(closing - expected);
 }
 
