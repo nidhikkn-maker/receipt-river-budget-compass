@@ -130,7 +130,7 @@ export function reimbursementBreakdown(t: TravelTrip, txns: Txns): Reimbursement
   const f = tripFinance(t, txns);
   const out: ReimbursementBreakdown = { personalCash: 0, personalCard: 0, organisationPaid: 0, advances: r2(f.advanced), received: 0, pending: 0 };
   for (const e of f.entries as (typeof f.entries[number] & { paymentMethod?: string })[]) {
-    if (!isTracked(e)) continue;
+    if (!isTracked(e as Parameters<typeof isTracked>[0])) continue;
     const eligible = outstandingOf(e) + receivedOf(e);
     if (e.paymentMethod === "company_card") out.organisationPaid = r2(out.organisationPaid + eligible);
     else if (CARD_METHODS.has(e.paymentMethod ?? "")) out.personalCard = r2(out.personalCard + eligible);
