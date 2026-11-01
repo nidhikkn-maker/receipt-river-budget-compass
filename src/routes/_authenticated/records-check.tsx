@@ -63,10 +63,10 @@ function RecordsCheck() {
 
       {statements && (
         <>
-          <div className="mt-4 flex max-w-full gap-2 overflow-x-auto pb-1 sm:flex-wrap sm:overflow-visible">
-            <Button className="shrink-0" size="sm" variant={issue === "all" ? "default" : "outline"} onClick={() => setIssue("all")}>All {findings.length}</Button>
+          <div className="mt-4 flex flex-wrap gap-2">
+            <Button className="h-auto min-h-9 whitespace-normal text-left" size="sm" variant={issue === "all" ? "default" : "outline"} onClick={() => setIssue("all")}>All {findings.length}</Button>
             {(Object.keys(AUDIT_LABEL) as AuditIssue[]).filter((k) => counts[k]).map((k) => (
-              <Button key={k} className="shrink-0" size="sm" variant={issue === k ? "default" : "outline"} onClick={() => setIssue(k)}>{AUDIT_LABEL[k]} {counts[k]}</Button>
+              <Button key={k} className="h-auto min-h-9 whitespace-normal text-left" size="sm" variant={issue === k ? "default" : "outline"} onClick={() => setIssue(k)}>{AUDIT_LABEL[k]} {counts[k]}</Button>
             ))}
           </div>
           <div className="mt-3 flex flex-wrap items-center gap-2 text-sm">
