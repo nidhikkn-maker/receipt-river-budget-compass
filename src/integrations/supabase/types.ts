@@ -1652,6 +1652,10 @@ export type Database = {
     }
     Functions: {
       accept_family_invite: { Args: { _invite: string }; Returns: undefined }
+      apply_review_metadata: {
+        Args: { _config: Json; _id: string; _items: Json }
+        Returns: string
+      }
       bulk_category_change: {
         Args: { batch_id: string; items: Json; target: string }
         Returns: string
@@ -1844,6 +1848,7 @@ export type Database = {
       }
       undo_category_change: { Args: { batch_id: string }; Returns: undefined }
       undo_financial_correction: { Args: { _id: string }; Returns: undefined }
+      undo_review_metadata: { Args: { _id: string }; Returns: undefined }
     }
     Enums: {
       app_role: "employee" | "manager" | "finance"

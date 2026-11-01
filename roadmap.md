@@ -1,5 +1,6 @@
 # Roadmap (Functional Requirements v1.0)
 ## V5.10 guided Financial Inbox
+- [ ] Approved protected shared save support: general owner-atomic metadata mappings, per-record category patches, revisions/audit/idempotency and safe undo; controlled database tests only, no real financial edits or publication.
 - [x] Current continuation: scoped atomic trip/organisation/project-tag mapping, direct reviewed recurring profile creation with duplicate-safe retry/read-back, missing-field grouping, conservative saved-record recovery suggestions and visible rule failure/retry; 849 tests, signed-in phone form/cancel verified, no financial writes/schema changes/publication.
 - [x] Separate overview, transaction review and account reconciliation; independent unique/issue/overlap counts; statement/report/reminder sections kept separate.
 - [x] Stable visible/page/all-matching/merchant selection; sticky summary, category exclusions and exact guarded correction confirmation; encrypted device review-context recovery.

@@ -1,0 +1,38 @@
+// @vitest-environment node
+import { PGlite } from '@electric-sql/pglite';
+import { beforeAll, afterAll, beforeEach, it, expect } from 'vitest';
+import { readFileSync } from 'node:fs';
+import { REVIEW_METADATA_SQL } from './review-metadata-sql';
+const db = new PGlite();
+const owner='00000000-0000-0000-0000-000000000001', other='00000000-0000-0000-0000-000000000002', bank='00000000-0000-0000-0000-000000000010', entry='00000000-0000-0000-0000-000000000020';
+const config={tags:[{group:'Organisation',name:'AET'},{group:'Project',name:'Audit'}],categories:[{name:'Travel',archived:false},{name:'Food',archived:false}],paymentInstruments:[{id:'upi',type:'upi',accountId:bank}]};
+let seq=100;
+const operation=()=>`00000000-0000-0000-0000-${String(seq++).padStart(12,'0')}`;
+const asUser=async(uid=owner)=>db.exec(`RESET ROLE; SELECT set_config('app.uid','${uid}',false); SET ROLE authenticated;`);
+const apply=(id=operation(),items=[{id:entry,revision:0,patch:{organisation:'AET'}}],cfg=config)=>db.query('SELECT apply_review_metadata($1,$2::jsonb,$3::jsonb)',[id,JSON.stringify(items),JSON.stringify(cfg)]);
+beforeAll(async()=>{
+ await db.exec(`CREATE ROLE authenticated; CREATE ROLE anon; CREATE ROLE service_role; CREATE SCHEMA auth;
+ CREATE FUNCTION auth.uid() RETURNS uuid LANGUAGE sql STABLE AS $$SELECT nullif(current_setting('app.uid',true),'')::uuid$$; GRANT USAGE ON SCHEMA auth TO authenticated;
+ CREATE TABLE finance_preferences(owner_id uuid PRIMARY KEY,data jsonb);
+ CREATE TABLE accounts(id uuid PRIMARY KEY,owner_id uuid,name text,kind text,archived boolean DEFAULT false);
+ CREATE TABLE loans(owner_id uuid,source_transaction_id uuid);
+ CREATE TABLE expenses(id uuid PRIMARY KEY,employee_id uuid,title text,description text,amount numeric,original_amount numeric,fx_rate numeric,currency text,expense_date date,account_id uuid,to_account_id uuid,txn_type text DEFAULT 'expense',principal numeric,interest numeric,reconciled_at timestamptz,reconciled_by uuid,payment_instrument_id text,payment_method text DEFAULT 'other',department text,scope text DEFAULT 'personal',category text DEFAULT 'Travel',reimbursement_status text DEFAULT 'none',reimbursement jsonb DEFAULT '{}',allocations jsonb DEFAULT '[]',workspace_allocations jsonb DEFAULT '[]',splits jsonb DEFAULT '[]',trip_id uuid,tags text[] DEFAULT '{}');
+ GRANT SELECT ON expenses,accounts TO authenticated;`);
+ await db.exec(readFileSync('drizzle/migrations/0041_financial_correction_confirmation_and_undo.sql','utf8'));
+ await db.exec(REVIEW_METADATA_SQL);
+ await db.query('INSERT INTO finance_preferences VALUES($1,$3::jsonb),($2,$3::jsonb)',[owner,other,JSON.stringify(config)]);
+ await db.exec(`INSERT INTO accounts VALUES('${bank}','${owner}','Bank','savings',false);`);
+},20000);
+beforeEach(async()=>{await db.exec(`RESET ROLE; DELETE FROM financial_corrections; DELETE FROM expenses; INSERT INTO expenses(id,employee_id,title,description,amount,original_amount,fx_rate,currency,expense_date,account_id,reconciled_at) VALUES('${entry}','${owner}','Original','Statement narration',1000,10,100,'USD','2026-04-01','${bank}','2026-04-02');`);await asUser();});
+afterAll(()=>db.close());
+it('applies non-trip organisation atomically without touching original money or statement identity',async()=>{await apply();expect((await db.query('SELECT department,amount,original_amount,fx_rate,currency,description,account_id,reconciled_at IS NOT NULL AS matched FROM expenses')).rows).toEqual([{department:'AET',amount:'1000',original_amount:'10',fx_rate:'100',currency:'USD',description:'Statement narration',account_id:bank,matched:true}]);});
+it('supports per-record categories and workspace mappings',async()=>{await apply(operation(),[{id:entry,revision:0,patch:{category:'Food',scope:'official'}}]);expect((await db.query('SELECT category,scope FROM expenses')).rows).toEqual([{category:'Food',scope:'official'}]);});
+it('saved instrument mapping fills general method but never moves the source account',async()=>{await apply(operation(),[{id:entry,revision:0,patch:{paymentInstrumentId:'upi'}}]);expect((await db.query('SELECT account_id,payment_method,payment_instrument_id FROM expenses')).rows).toEqual([{account_id:bank,payment_method:'upi',payment_instrument_id:'upi'}]);});
+it('same request retries once and changed id reuse is refused',async()=>{const id=operation();await apply(id);await apply(id);expect((await db.query('SELECT count(*)::int AS n FROM financial_corrections')).rows).toEqual([{n:1}]);await expect(apply(id,[{id:entry,revision:1,patch:{scope:'official'}}])).rejects.toThrow('identifier');});
+it('one stale selected row rolls back all updates',async()=>{await expect(apply(operation(),[{id:entry,revision:0,patch:{organisation:'AET'}},{id:operation(),revision:0,patch:{scope:'official'}}])).rejects.toThrow('Transaction changed');expect((await db.query('SELECT department,correction_revision FROM expenses')).rows).toEqual([{department:null,correction_revision:0}]);});
+it('undo restores metadata and safe retry does not restore twice',async()=>{const id=operation();await apply(id);await db.query('SELECT undo_review_metadata($1)',[id]);await db.query('SELECT undo_review_metadata($1)',[id]);expect((await db.query('SELECT department,amount FROM expenses')).rows).toEqual([{department:null,amount:'1000'}]);});
+it('later edits block undo rather than being overwritten',async()=>{const id=operation();await apply(id);await db.exec("RESET ROLE; UPDATE expenses SET description='Later';");await asUser();await expect(db.query('SELECT undo_review_metadata($1)',[id])).rejects.toThrow('Later edit');});
+it('another owner cannot read change or undo the mapping',async()=>{const id=operation();await apply(id);await asUser(other);expect((await db.query('SELECT * FROM financial_corrections')).rows).toHaveLength(0);await expect(apply()).rejects.toThrow('Transaction changed');await expect(db.query('SELECT undo_review_metadata($1)',[id])).rejects.toThrow('unavailable');});
+it('anonymous cannot execute protected saving',async()=>{await db.exec("RESET ROLE; SELECT set_config('app.uid','',false); SET ROLE anon;");await expect(apply()).rejects.toThrow();});
+it('configuration changes and unsupported financial fields are refused',async()=>{await expect(apply(operation(),undefined,{...config,tags:[]})).rejects.toThrow('Configuration changed');await expect(apply(operation(),[{id:entry,revision:0,patch:{amount:'5'} as never}])).rejects.toThrow('Unsupported');});
+it('claims splits and non-expense types cannot bypass dedicated review',async()=>{await db.exec("RESET ROLE; UPDATE expenses SET reimbursement_status='pending';");await asUser();await expect(apply(operation(),[{id:entry,revision:1,patch:{organisation:'AET'}}])).rejects.toThrow('Claims');await db.exec("RESET ROLE; UPDATE expenses SET reimbursement_status='none',txn_type='income';");await asUser();await expect(apply(operation(),[{id:entry,revision:2,patch:{scope:'official'}}])).rejects.toThrow('financial type');});
