@@ -95,6 +95,9 @@ interface Ctx {
   deleteAll: () => Promise<void>;
   budgets: Budgets;
   loading: boolean;
+  /** "syncing" while saved figures refresh from the cloud; "synced" once up to date. */
+  syncState: "syncing" | "synced" | "offline" | "error";
+  lastSyncedAt: string | null;
   refresh: () => Promise<void>;
   save: (s: ExpenseInput, opts?: { id?: string; files?: File[]; createId?: string; noRefresh?: boolean }) => Promise<void>;
   remove: (e: Expense) => Promise<void>;

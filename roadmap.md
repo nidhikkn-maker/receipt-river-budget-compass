@@ -242,3 +242,7 @@
 - [ ] Complete verified contiguous historical coverage and representative bank/card month acceptance; represented months are not certified coverage.
 - [ ] Consolidated programme: shared selection controller and material-change preview, atomic proposal-change audit, add-tag merge and explicit partial-post results.
 - [ ] Consolidated programme: per-file account upload manifest, extended rule conditions/priority, grouped job Inbox, receipt/OCR background work, favourites and multi-select search/report filters.
+
+## Sync visibility & mobile performance
+- [ ] Visible sync status in the header (updating / up to date / offline / couldn't update, with waiting offline entries)
+- [ ] Mobile performance testing: repeatable phone-sized throttled load measurement script + verified numbers
