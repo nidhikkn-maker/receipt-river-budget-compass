@@ -19,7 +19,7 @@ describe("card balance", () => {
   it("a payment without a statement match is flagged", () => {
     const r = cardLedger(card, [spend, pay]);
     expect(r.unreconciled.count).toBe(1);
-    expect(r.lines[0]?.issue).toBe("Not matched to a card statement yet");
+    expect(r.lines[0]?.issue).toBe("Statement review has not been confirmed");
   });
   it("a reconciled payment is not flagged", () => {
     expect(cardLedger(card, [spend, { ...pay, reconciledAt: "y" }]).unreconciled.count).toBe(0);
