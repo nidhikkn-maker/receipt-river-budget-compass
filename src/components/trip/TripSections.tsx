@@ -59,7 +59,7 @@ export function TripOverviewSection({ trip }: { trip: TravelTrip }) {
 
 /** Bookings: compact cards with type-relevant details; the entry form stays collapsed until needed. */
 export function TripBookingsSection({ trip }: { trip: TravelTrip }) {
-  const { transactions, setTags, documents } = useStore();
+  const { transactions, setTags, documents, preferences, savePreferences } = useStore();
   const put = useTripPut(trip);
   const closed = !!trip.closedAt;
   const matches = useMemo(() => bookingMatches(trip, transactions), [trip, transactions]);
@@ -67,10 +67,13 @@ export function TripBookingsSection({ trip }: { trip: TravelTrip }) {
   const [showForm, setShowForm] = useState(false);
   const [bk, setBk] = useState<ReturnType<typeof bookingDraft>>({ kind: "flight", provider: "", ref: "", date: trip.start, amount: "", due: "", cancel: "", traveller: "", location: "", currency: "INR", rate: "1", confirmation: "pending", document: "", note: "" });
 
-  const addBooking = () => {
+  const addBooking = async () => {
     let b: Booking;
     try { b = reviewedBooking(crypto.randomUUID(), bk); } catch (e) { toast.error((e as Error).message); return; }
-    void put({ bookings: [...(trip.bookings ?? []), b] }, "Booking added — not counted as spent until paid");
+    try {
+      await savePreferences({ ...preferences, trips: (preferences.trips as TravelTrip[]).map((t) => t.id === trip.id ? { ...t, bookings: [...(t.bookings ?? []), b] } : t) });
+      toast.success("Booking added — not counted as spent until paid");
+    } catch (e) { toast.error(e instanceof Error ? e.message : "Couldn't save booking"); return; }
     setBk({ ...bk, provider: "", ref: "", amount: "", due: "", cancel: "", document: "", note: "" });
     setShowForm(false);
   };

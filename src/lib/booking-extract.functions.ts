@@ -57,7 +57,9 @@ export const extractBooking = createServerFn({ method: "POST" })
     } catch {
       if (status === 402 || status === 403) {
         const providerDenial = status === 403 && !["credit_limit_reached", "ai_disabled", "model_requires_retention_consent", "model_vendor_not_enabled", "provider_not_available_in_region"].includes(errorType);
-        const saved = await db.from("import_ai_state").upsert({ owner_id: context.userId, paused: true, reason: safeError, pause_kind: providerDenial ? "provider_denial" : "owner_action" });
+        // Pause state is intentionally server-write-only; caller and document ownership were verified above.
+        const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+        const saved = await supabaseAdmin.from("import_ai_state").upsert({ owner_id: context.userId, paused: true, reason: safeError, pause_kind: providerDenial ? "provider_denial" : "owner_action" });
         if (saved.error) return { ok: false, error: `${safeError} Processing could not be paused; do not retry until access is restored.` };
       }
       return { ok: false, error: safeError };

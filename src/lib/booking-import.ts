@@ -9,7 +9,7 @@ export const BookingExtraction = z.object({
 });
 export type ExtractedBooking = z.infer<typeof BookingExtraction>;
 export function bookingDraft(x: ExtractedBooking, documentId: string) {
-  const date = (v: string | null) => v && /^\d{4}-\d{2}-\d{2}$/.test(v) && new Date(`${v}T00:00:00Z`).toISOString().slice(0, 10) === v ? v : "";
+  const date = (v: string | null) => v && /^\d{4}-\d{2}-\d{2}$/.test(v) && Number.isFinite(Date.parse(`${v}T00:00:00Z`)) && new Date(`${v}T00:00:00Z`).toISOString().slice(0, 10) === v ? v : "";
   return { kind: x.kind ?? "other", provider: x.provider ?? "", ref: x.reference ?? "", date: date(x.date),
     amount: x.amount != null && Number.isFinite(x.amount) && x.amount >= 0 ? String(x.amount) : "",
     currency: x.currency && /^[A-Z]{3}$/.test(x.currency) ? x.currency : "INR", rate: x.currency === "INR" ? "1" : "",
