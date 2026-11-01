@@ -15,7 +15,7 @@ import { Label } from './ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from './ui/sheet';
 
-export function ImportRules() {
+export function ImportRules({ seed }: { seed?: ImportRule | undefined } = {}) {
   const {preferences,accounts}=useStore();
   const [rules,setRules]=useState<ImportRule[]>([]),[merchant,setMerchant]=useState(''),[category,setCategory]=useState(''),[workspace,setWorkspace]=useState<Scope>('personal'),[account,setAccount]=useState('all');
   const [editing,setEditing]=useState<string|null>(null),[description,setDescription]=useState(''),[direction,setDirection]=useState('all'),[currency,setCurrency]=useState(''),[min,setMin]=useState(''),[max,setMax]=useState(''),[priority,setPriority]=useState('0'),[organisation,setOrganisation]=useState(''),[tags,setTags]=useState(''),[type,setType]=useState('unchanged'),[reimbursable,setReimbursable]=useState(false);
@@ -44,6 +44,7 @@ export function ImportRules() {
     if(r.error)throw Error('Could not save import rule');reset();setPreview(null);await load();toast.success('Import rule saved');
   };
   const edit=(r:ImportRule)=>{const c:ImportRuleConditions=r.conditions??{};setEditing(r.id);setMerchant(r.merchant);setCategory(r.mappings.category??'');setWorkspace(r.mappings.scope??'personal');setAccount(r.account_id??'all');setDescription(c.description??'');setDirection(c.direction??'all');setCurrency(c.currency??'');setMin(c.minAmount===undefined?'':String(c.minAmount));setMax(c.maxAmount===undefined?'':String(c.maxAmount));setPriority(String(r.priority??0));setOrganisation(r.mappings.organisation??'');setTags((r.mappings.tags??[]).join(', '));setType(r.mappings.txnType??'unchanged');setReimbursable(!!r.mappings.reimbursable);};
+  useEffect(()=>{if(seed){edit(seed);setEditing(null);}},[seed]);
   return <section id="import-rules" className="mb-8 scroll-mt-20 border-t pt-6">
     <h2 className="mb-4 text-xl font-semibold">Financial automation · Import rules</h2>
     <div className="grid gap-3 sm:grid-cols-2">
