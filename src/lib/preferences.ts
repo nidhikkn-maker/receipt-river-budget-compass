@@ -121,6 +121,8 @@ export interface FinancePreferences {
   favouriteEntries: string[];
   /** Guided setup assistant: shown until finished or dismissed; reopenable from Settings. */
   setupAssistant: "pending" | "done";
+  /** Trip budget utilisation % at which the "Approaching Limit" warning starts (100% = fully utilised). */
+  tripBudgetWarnPct: number;
 }
 
 export const DEFAULT_TAGS: GroupedTag[] = [
@@ -137,7 +139,7 @@ export function defaultPreferences(): FinancePreferences {
     theme: "system", themeName: "signature", homeScope: "all", reminders: true, reminderDays: 3, defaultCurrency: "INR", language: "en", aiEnabled: true, aiReadsDocuments: true, cardAlertPct: 30, homePeriod: "month", homeCustomStart: "", homeCustomEnd: "",
     freshness: { reviewDays: 14, outdatedDays: 45, perAccount: {} }, inboxDismissed: [], statementBalances: {}, splitTemplates: [],
     emergency: defaultEmergency(), irregularRejected: [], irregularConfirmed: [], milestones: [], trips: [], merchantAliases: {}, brief: { enabled: true, day: 1, hour: 8 }, briefs: [], paymentInstruments: [],
-    allocationPlans: [], rules: [], ruleDismissed: [], autopilotActions: {}, coolingOff: [], contractObligations: [], decisions: [], mapLinks: [], mapPositions: {}, favouriteEntries: [], setupAssistant: "pending",
+    allocationPlans: [], rules: [], ruleDismissed: [], autopilotActions: {}, coolingOff: [], contractObligations: [], decisions: [], mapLinks: [], mapPositions: {}, favouriteEntries: [], setupAssistant: "pending", tripBudgetWarnPct: 80,
   };
 }
 
@@ -157,6 +159,7 @@ export function normalizePreferences(raw: Partial<FinancePreferences> | null | u
   if (!["daily", "executive", "minimal", "custom"].includes(p.homeMode)) p.homeMode = "custom";
   p.reminderDays = Number.isFinite(p.reminderDays) ? Math.min(30, Math.max(0, Math.round(p.reminderDays))) : d.reminderDays;
   p.cardAlertPct = Number.isFinite(p.cardAlertPct) ? Math.min(100, Math.max(5, Math.round(p.cardAlertPct))) : d.cardAlertPct;
+  p.tripBudgetWarnPct = Number.isFinite(p.tripBudgetWarnPct) ? Math.min(99, Math.max(10, Math.round(p.tripBudgetWarnPct))) : d.tripBudgetWarnPct;
   if (!/^[A-Z]{3}$/.test(p.defaultCurrency ?? "")) p.defaultCurrency = "INR";
   if (!(p.language in LANGUAGES)) p.language = "en";
   if (!["day", "week", "month", "custom"].includes(p.homePeriod)) p.homePeriod = "month";

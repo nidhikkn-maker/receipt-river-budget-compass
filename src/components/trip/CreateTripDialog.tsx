@@ -6,6 +6,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { CURRENCIES, SCOPE_LABEL } from "@/lib/expenses";
+import { tagsInGroup } from "@/lib/preferences";
 import { TRIP_TYPES, type TravelTrip, type TripType } from "@/lib/travel";
 import { useStore } from "@/lib/store";
 import { todayISO } from "@/lib/use-position";
@@ -89,12 +90,21 @@ export function CreateTripDialog({ open, onOpenChange }: { open: boolean; onOpen
           {more && (
             <div className="grid gap-3">
               <div><Label>Purpose</Label><Input className="h-11" value={form.purpose} onChange={(e) => setForm({ ...form, purpose: e.target.value })} /></div>
-              <div><Label>Organisation</Label><Input className="h-11" value={form.organisation} onChange={(e) => setForm({ ...form, organisation: e.target.value })} /></div>
+              <div><Label>Organisation</Label>
+                <select className={sel} value={form.organisation} onChange={(e) => setForm({ ...form, organisation: e.target.value })}>
+                  <option value="">None</option>
+                  {tagsInGroup(pr.tags, "Organisation").map((o) => <option key={o} value={o}>{o}</option>)}
+                </select>
+              </div>
               <div><Label>Travellers (comma separated)</Label><Input className="h-11" value={form.travellers} onChange={(e) => setForm({ ...form, travellers: e.target.value })} list="trip-members" />
                 <datalist id="trip-members">{members.map((m) => <option key={m.id} value={m.name} />)}</datalist></div>
               <div className="grid grid-cols-2 gap-3">
-                <div><Label>Budget (₹)</Label><Input type="number" className="h-11" value={form.budget} onChange={(e) => setForm({ ...form, budget: e.target.value })} /></div>
-                <div><Label>Currencies</Label><Input className="h-11" value={form.currencies} onChange={(e) => setForm({ ...form, currencies: e.target.value })} /></div>
+                <div><Label>Budget (optional)</Label><Input type="number" min="0" className="h-11" value={form.budget} onChange={(e) => setForm({ ...form, budget: e.target.value })} placeholder="No budget yet" /></div>
+                <div><Label>Primary currency</Label>
+                  <select className={sel} value={form.currencies} onChange={(e) => setForm({ ...form, currencies: e.target.value })}>
+                    {CURRENCIES.map((c) => <option key={c}>{c}</option>)}
+                  </select>
+                </div>
               </div>
             </div>
           )}

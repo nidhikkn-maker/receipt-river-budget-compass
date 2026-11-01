@@ -100,7 +100,7 @@ function TripPage() {
         ))}
       </div>
 
-      {section === "overview" && <TripOverviewSection trip={trip} />}
+      {section === "overview" && <TripOverviewSection trip={trip} onOpenBudget={() => go("budget")} />}
       {section === "itinerary" && <TripItinerarySection trip={trip} />}
       {section === "bookings" && <TripBookingsSection trip={trip} />}
       {section === "expenses" && <TripExpensesSection trip={trip} />}

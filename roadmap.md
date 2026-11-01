@@ -1,4 +1,7 @@
 # Roadmap (Functional Requirements v1.0)
+## V5.5 compact trip budget
+- [x] Compact Trip Budget card (Total/Actual/Remaining/Reimbursable), Edit Budget sheet with single save, tabbed Budget Breakdown (workspace/traveller/category/currency/organisation), "Budget not set" and "Budget requires confirmation" states, utilisation warnings configurable in Settings; 697 tests pass, build OK, phone-width browser verified, no live records changed, nothing published.
+- [ ] Real iPhone Safari pass of the budget workflow — requires device access.
 ## V5.4 audit — evidence before release
 - [x] Fix both security warnings: active-invite read/insert/withdraw guards tested in isolated PostgreSQL; assistant server-owned facts and untrusted context tested and signed-in answer verified; live financial records untouched.
 - [x] Fix D-FIN-001 remaining reimbursements, D-FIN-002 Business/category workspace shares, and D-FIN-003 repayment principal/interest including FX and legacy EMI compatibility; 675 tests passed, build OK.
