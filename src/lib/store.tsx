@@ -288,7 +288,7 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
     const res = await saveExpense({ data: {
       id: opts?.id ?? null, ...(opts?.createId ? { createId: opts.createId } : {}), title: s.title.trim(), merchant: s.merchant, category: s.category, scope: s.scope, memberId: s.memberId, splits: s.splits ?? [],
       currency: s.currency, originalAmount: s.amount, date: s.date, description: s.description, paymentMethod: s.paymentMethod,
-      txnType: s.txnType ?? "expense", accountId: s.accountId ?? null, toAccountId: s.toAccountId ?? null, paymentInstrumentId: s.paymentInstrumentId ?? null, tags: s.tags ?? [], workspaceAllocations: s.workspaceAllocations ?? [],
+      txnType: s.txnType ?? "expense", accountId: s.accountId ?? null, toAccountId: s.toAccountId ?? null, paymentInstrumentId: s.paymentInstrumentId ?? null, payeeId: s.payeeId ?? null, tags: s.tags ?? [], workspaceAllocations: s.workspaceAllocations ?? [],
       tripId: s.tripId ?? null, principal: s.principal ?? null, interest: s.interest ?? null,
       receiptDetails: s.receiptDetails, reimbursementStatus: s.reimbursementStatus ?? "none", adjustmentSign: s.adjustmentSign ?? 1,
       ...(receipts ? { receipts } : {}),
