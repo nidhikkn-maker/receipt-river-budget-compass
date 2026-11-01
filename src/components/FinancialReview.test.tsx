@@ -5,6 +5,7 @@ import { defaultPreferences } from "@/lib/preferences";
 import { inboxItems } from "@/lib/inbox";
 const mocks = vi.hoisted(() => ({ save: vi.fn(), undo: vi.fn(), store: {} as Record<string, unknown> }));
 vi.mock("@/lib/store", () => ({ useStore: () => mocks.store }));
+vi.mock("@/lib/import-repository", () => ({ listImportRules: async () => [] }));
 vi.mock("@tanstack/react-router", () => ({ Link: ({ children }: { children: React.ReactNode }) => <span>{children}</span> }));
 import { FinancialReview } from "./FinancialReview";
 afterEach(cleanup);

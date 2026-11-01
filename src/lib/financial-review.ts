@@ -90,7 +90,7 @@ export function financialReview(items: InboxItem[], transactions: Expense[], acc
 export function categoryReviewPreview(rows: FinancialReview[], category: string) {
   if (!category || category === "Miscellaneous") throw new Error("Choose a specific active category.");
   if (!rows.length) throw new Error("Select transactions first.");
-  if (rows.some(r => kind(r.transaction) !== "expense" || r.group !== "category" || r.transaction.allocations?.length)) {
+  if (rows.some(r => kind(r.transaction) !== "expense" || (r.group !== "category" && !(r.group === "ready" && r.suggestedCategory === category)) || r.transaction.allocations?.length)) {
     throw new Error("Resolve transaction type, missing information and conflicts before bulk categorisation.");
   }
   return {

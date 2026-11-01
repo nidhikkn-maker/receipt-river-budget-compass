@@ -2,7 +2,9 @@
 ## V5.9 Smart financial inbox
 - [x] First preview slice: historical issues never age out; five transaction-deduplicated groups, evidence-based card/reciprocal-account transfer suggestions, filters/selection, snapshot-bound category preview and existing audited correction/undo. Unresolved transaction issues stay visible despite legacy dismissals. No live records changed.
 - [ ] Priority 1 remaining: reviewed bulk source/destination account and financial-type correction, safe paired-movement linking, high-confidence bulk suggestion acceptance. Existing atomic category APIs cannot safely apply money-changing corrections; no guessed accounts or auto-posting.
-- [ ] Priority 2: merchant rules, organisation/activity mapping and recurring-profile integration.
+- [x] Continuation: reuse confirmed import rules for review-only ledger suggestions, priority conflicts, strict responsibility guards and same-category bulk confirmation; contextual editable rule seeds reuse the existing explicit-preview editor. Merchant cohorts retain ownership/type/claim partitions, cadence and exact active-profile hints; no automatic expenses or eligibility.
+- [x] Continuation verification: 766 checks passed, signed-in rule editor open/cancel, amount sort and phone/tablet no overflow/page errors; no Cloud/schema/rule/financial test writes, no publishing. Missing account corrections still require a validated atomic money-changing operation.
+- [ ] Priority 2 remaining: advanced organisation/activity mapping, recurring profile creation workflow and full scoped rule-learning acceptance.
 - [ ] Priority 3: expanded confidence/exception review and phone/tablet/desktop layouts.
 - [ ] Priority 4: complete statement evidence extraction, independent reconciliation audit, controlled regression/performance acceptance and readiness report.
 - [ ] Write/rollback acceptance on existing financial corrections requires isolated Cloud; never test on real records, never publish this brief without approval.

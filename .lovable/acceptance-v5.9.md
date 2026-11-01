@@ -17,8 +17,18 @@
 - Regression suite passed 755 checks before the extra component flow; that component subsequently passed separately. Preview build OK.
 
 ## Not complete / blockers
-- Ready-group bulk suggestion acceptance, generic bulk account/type/workspace/organisation/activity/recurring actions and pair merging remain unbuilt. Money-changing operations must not be simulated through category APIs.
-- Full V5.8 configuration/recurring integration, editable scoped merchant rule learning in the ledger Inbox, additional extraction identifiers and independent reconciliation audit remain open.
+- Generic bulk account/type/workspace/organisation/activity/recurring actions and pair merging remain unbuilt. Money-changing operations must not be simulated through category APIs.
+- Full V5.8 configuration/recurring integration, advanced scoped learning, additional extraction identifiers and independent reconciliation audit remain open.
 - Source narration shown is the saved ledger description, explicitly labelled; missing original identifiers are not fabricated. Original statement storage/staged review remain unchanged.
 - Real correction persistence, concurrent edits and undo acceptance need isolated Cloud because preview shares the live financial data. No testing writes performed.
 - No deployment or paid infrastructure activation. No full V5.9 completion or production-readiness claim.
+
+## Continuation: confirmed rules and merchant cohorts
+- Existing import rules are read for ledger proposals. Equal-priority conflicts stay unresolved. Amount conditions use original currency amounts. Workspace/organisation mismatch, reimbursement grants, split records, missing accounts and type changes cannot be promoted to ready category correction.
+- Ready rows with the same suggested category can be selected and passed through the existing exact-preview category confirmation/undo workflow; different suggestions require separate confirmations.
+- Merchant batches partition ownership, account, currency, type, workspace, organisation and claim treatment. Recurring cadence reuses the proven detector; same-day repetitions never establish cadence. Exact active subscription-name/account matches, overlaps and price increases are hints only. No expenses or profiles are automatically created.
+- Contextual Remember classification seeds the existing editable import-rule form with account, original currency and exact narration conditions. Rule creation/editing retains an explicit preview; changing the form after preview blocks saving. Settings editor remains available.
+- Newest date, highest amount and merchant sorting added.
+- 10 new pure rules and existing controlled confirmation/undo flow passed; full regression: 766 tests across 91 files, build OK.
+- Signed-in rule editor open/cancel and amount sorting verified; phone/tablet dialogs have no horizontal overflow or page errors. No rule saves, ledger mutations or Cloud migrations during verification.
+- Full Cloud rule persistence, generic bulk monetary corrections and physical-device acceptance remain unverified; the shared live database prevents controlled write acceptance.
