@@ -40,9 +40,9 @@ describe("controlled financial correction flow", () => {
     expect(transaction.description).toBe("Untouched source");
     expect(transaction.category).toBe("Miscellaneous");
     expect(onCompleted).not.toHaveBeenCalled();
-    fireEvent.click(await screen.findByRole("button", { name: "Undo correction" }));
-    await waitFor(() => expect(mocks.undo).toHaveBeenCalledWith("audited-batch"));
     rerender(<FinancialReview items={[]} onOpen={() => {}} onCompleted={onCompleted} />);
     await waitFor(() => expect(onCompleted).toHaveBeenCalledOnce());
+    fireEvent.click(await screen.findByRole("button", { name: "Undo correction" }));
+    await waitFor(() => expect(mocks.undo).toHaveBeenCalledWith("audited-batch"));
   });
 });
