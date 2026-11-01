@@ -10,6 +10,7 @@ import { useStore } from "@/lib/store";
 import { tripFinance, tripStatus, TRIP_STATUS_LABEL, type TravelTrip } from "@/lib/travel";
 import { todayISO } from "@/lib/use-position";
 import { TripOverviewSection, TripBookingsSection, TripItinerarySection, TripExpensesSection, TripBudgetSection, TripReportsSection, TripClosureCard } from "@/components/trip/TripSections";
+import { TripLifecycleActions } from "@/components/trip/TripLifecycleActions";
 
 const SECTIONS = [
   { id: "overview", label: "Overview" },
@@ -78,6 +79,7 @@ function TripPage() {
           <span className={"mt-1 shrink-0 rounded-full px-2.5 py-0.5 text-[11px] font-semibold " + (st === "active" ? "bg-gold/15 text-gold-strong" : st === "cancelled" ? "bg-destructive/10 text-destructive" : "bg-secondary text-secondary-foreground")}>{TRIP_STATUS_LABEL[st]}</span>
         </div>
         <p className="mt-1 text-sm text-muted-foreground">{trip.destination || "—"} · {trip.start} → {trip.end} · {trip.type === "mixed" ? "Mixed" : SCOPE_LABEL[trip.type ?? "personal"]}{trip.organisation ? ` · ${trip.organisation}` : ""}</p>
+        <div className="mt-3"><TripLifecycleActions trip={trip} onDeleted={() => void navigate({ to: "/trips" })} /></div>
       </div>
 
       <Card title="Financial summary" className="mb-4">
@@ -112,11 +114,6 @@ function TripPage() {
       {moreOpen && (
         <div className="mt-4 space-y-3">
           <TripClosureCard trip={trip} />
-          <Button variant="ghost" className="w-full text-destructive" onClick={async () => {
-            if (!confirm("Delete this trip? Entries stay, the trip label is kept on them.")) return;
-            await savePreferences({ ...pr, trips: pr.trips.filter((x) => x.id !== trip.id) });
-            void navigate({ to: "/trips" });
-          }}>Delete trip (entries stay)</Button>
         </div>
       )}
       <Button variant="outline" className="mt-4" onClick={() => returnAfterReview(router.history, () => { void navigate({ to: "/trips" }); })}><ArrowLeft className="h-4 w-4" />Done reviewing</Button>
