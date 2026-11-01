@@ -46,6 +46,7 @@ import { Route as AuthenticatedReviewRouteImport } from './routes/_authenticated
 import { Route as AuthenticatedRulesRouteImport } from './routes/_authenticated/rules'
 import { Route as AuthenticatedSearchRouteImport } from './routes/_authenticated/search'
 import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings'
+import { Route as AuthenticatedStatementAccountsRouteImport } from './routes/_authenticated/statement-accounts'
 import { Route as AuthenticatedStatementCrosscheckRouteImport } from './routes/_authenticated/statement-crosscheck'
 import { Route as AuthenticatedStatementsRouteImport } from './routes/_authenticated/statements'
 import { Route as AuthenticatedStrategyRouteImport } from './routes/_authenticated/strategy'
@@ -258,6 +259,12 @@ const AuthenticatedSettingsRoute = AuthenticatedSettingsRouteImport.update({
   path: '/settings',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedStatementAccountsRoute =
+  AuthenticatedStatementAccountsRouteImport.update({
+    id: '/statement-accounts',
+    path: '/statement-accounts',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedStatementCrosscheckRoute =
   AuthenticatedStatementCrosscheckRouteImport.update({
     id: '/statement-crosscheck',
@@ -377,6 +384,7 @@ export interface FileRoutesByFullPath {
   '/rules': typeof AuthenticatedRulesRoute
   '/search': typeof AuthenticatedSearchRoute
   '/settings': typeof AuthenticatedSettingsRoute
+  '/statement-accounts': typeof AuthenticatedStatementAccountsRoute
   '/statement-crosscheck': typeof AuthenticatedStatementCrosscheckRoute
   '/statements': typeof AuthenticatedStatementsRoute
   '/strategy': typeof AuthenticatedStrategyRoute
@@ -430,6 +438,7 @@ export interface FileRoutesByTo {
   '/rules': typeof AuthenticatedRulesRoute
   '/search': typeof AuthenticatedSearchRoute
   '/settings': typeof AuthenticatedSettingsRoute
+  '/statement-accounts': typeof AuthenticatedStatementAccountsRoute
   '/statement-crosscheck': typeof AuthenticatedStatementCrosscheckRoute
   '/statements': typeof AuthenticatedStatementsRoute
   '/strategy': typeof AuthenticatedStrategyRoute
@@ -484,6 +493,7 @@ export interface FileRoutesById {
   '/_authenticated/rules': typeof AuthenticatedRulesRoute
   '/_authenticated/search': typeof AuthenticatedSearchRoute
   '/_authenticated/settings': typeof AuthenticatedSettingsRoute
+  '/_authenticated/statement-accounts': typeof AuthenticatedStatementAccountsRoute
   '/_authenticated/statement-crosscheck': typeof AuthenticatedStatementCrosscheckRoute
   '/_authenticated/statements': typeof AuthenticatedStatementsRoute
   '/_authenticated/strategy': typeof AuthenticatedStrategyRoute
@@ -539,6 +549,7 @@ export interface FileRouteTypes {
     | '/rules'
     | '/search'
     | '/settings'
+    | '/statement-accounts'
     | '/statement-crosscheck'
     | '/statements'
     | '/strategy'
@@ -592,6 +603,7 @@ export interface FileRouteTypes {
     | '/rules'
     | '/search'
     | '/settings'
+    | '/statement-accounts'
     | '/statement-crosscheck'
     | '/statements'
     | '/strategy'
@@ -645,6 +657,7 @@ export interface FileRouteTypes {
     | '/_authenticated/rules'
     | '/_authenticated/search'
     | '/_authenticated/settings'
+    | '/_authenticated/statement-accounts'
     | '/_authenticated/statement-crosscheck'
     | '/_authenticated/statements'
     | '/_authenticated/strategy'
@@ -935,6 +948,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedSettingsRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/statement-accounts': {
+      id: '/_authenticated/statement-accounts'
+      path: '/statement-accounts'
+      fullPath: '/statement-accounts'
+      preLoaderRoute: typeof AuthenticatedStatementAccountsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/statement-crosscheck': {
       id: '/_authenticated/statement-crosscheck'
       path: '/statement-crosscheck'
@@ -1088,6 +1108,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedRulesRoute: typeof AuthenticatedRulesRoute
   AuthenticatedSearchRoute: typeof AuthenticatedSearchRoute
   AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRoute
+  AuthenticatedStatementAccountsRoute: typeof AuthenticatedStatementAccountsRoute
   AuthenticatedStatementCrosscheckRoute: typeof AuthenticatedStatementCrosscheckRoute
   AuthenticatedStatementsRoute: typeof AuthenticatedStatementsRoute
   AuthenticatedStrategyRoute: typeof AuthenticatedStrategyRoute
@@ -1135,6 +1156,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedRulesRoute: AuthenticatedRulesRoute,
   AuthenticatedSearchRoute: AuthenticatedSearchRoute,
   AuthenticatedSettingsRoute: AuthenticatedSettingsRoute,
+  AuthenticatedStatementAccountsRoute: AuthenticatedStatementAccountsRoute,
   AuthenticatedStatementCrosscheckRoute: AuthenticatedStatementCrosscheckRoute,
   AuthenticatedStatementsRoute: AuthenticatedStatementsRoute,
   AuthenticatedStrategyRoute: AuthenticatedStrategyRoute,

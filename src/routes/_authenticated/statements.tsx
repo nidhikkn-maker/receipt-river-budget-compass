@@ -13,6 +13,10 @@ import { correctionPreview, type CorrectionPreview } from "@/lib/financial-corre
 import type { FinancialReview } from "@/lib/financial-review";
 import { identifyFile } from "@/lib/statement-pipeline/identify";
 import { readStatementFile } from "@/lib/statement-pipeline/source";
+import { useServerFn } from "@tanstack/react-start";
+import { extractStatement } from "@/lib/statement-extract.functions";
+import type { StatementUpload } from "@/lib/preferences";
+import { Link } from "@tanstack/react-router";
 import { buildPlan, type AccountPlan, type StatementPlan } from "@/lib/statement-pipeline/plan";
 import { applyUpload, undoUpload, type ApplyResult } from "@/lib/statement-pipeline/apply";
 import { totals, type StmtFile } from "@/lib/statement-pipeline/line";
@@ -55,6 +59,18 @@ function StatementDeskPage() {
   const [fix, setFix] = useState<{ preview: CorrectionPreview; name: string } | null>(null);
   const fixOp = useRef("");
   const inputRef = useRef<HTMLInputElement>(null);
+  const extract = useServerFn(extractStatement);
+  const serverRead = async (f: File) => {
+    if (f.size > 14_000_000) throw Error(`${f.name}: too large for the scan reader (14 MB max)`);
+    const dataUrl = await new Promise<string>((ok, bad) => { const r = new FileReader(); r.onload = () => ok(String(r.result)); r.onerror = () => bad(r.error); r.readAsDataURL(f); });
+    const mimeType = (/\.pdf$/i.test(f.name) ? "application/pdf" : f.type || "image/jpeg") as "application/pdf" | "image/png" | "image/jpeg" | "image/webp";
+    setProgress(`Reading scan ${f.name}…`);
+    try {
+      const res = await extract({ data: { dataUrl, mimeType } });
+      if (!res.ok) throw Error(`${f.name}: ${res.error}`);
+      return res.lines;
+    } finally { setProgress(null); }
+  };
 
   const { accounts, transactions, preferences } = store;
   const live = accounts.filter((a) => !a.archived);
@@ -67,7 +83,7 @@ function StatementDeskPage() {
     const failed: string[] = [];
     for (const f of [...list]) {
       try {
-        const read = await readStatementFile(f);
+        const read = await readStatementFile(f, serverRead);
         const id = identifyFile(read.rows, read.files[0]?.lines ?? [], accounts);
         for (const file of read.files) {
           const t = totals(file.lines);
@@ -123,6 +139,9 @@ function StatementDeskPage() {
       const r = await applyUpload(requests, api(), setProgress);
       setResult(r);
       setAccepted([]);
+      const upload: StatementUpload = { id: crypto.randomUUID(), at: new Date().toISOString(), label: plan.accounts.map((a) => a.file.name).join(", ").slice(0, 200), posted: r.posted, reconciled: r.reconciled, createdAccounts: r.createdAccounts };
+      try { const s = storeRef.current; await s.savePreferences({ ...s.preferences, statementUploads: [upload, ...(s.preferences.statementUploads ?? [])].slice(0, 10) }); }
+      catch { toast.error("Saved, but undo history couldn’t sync to your other devices."); }
       toast.success(`${r.posted.length} entries posted · ${r.reconciled.length} records marked as matched${r.createdAccounts.length ? ` · ${r.createdAccounts.length} account${r.createdAccounts.length === 1 ? "" : "s"} created` : ""}`, {
         action: { label: "Undo", onClick: () => void undo(r) },
       });
@@ -133,11 +152,15 @@ function StatementDeskPage() {
     }
   };
 
-  const undo = async (r: ApplyResult) => {
+  const undo = async (r: ApplyResult, uploadId?: string) => {
     try {
       setProgress("Undoing…");
       const { left } = await undoUpload(r, api());
       setResult(null);
+      const s = storeRef.current;
+      const list = s.preferences.statementUploads ?? [];
+      const target = uploadId ?? list.find((u) => u.posted.join() === r.posted.join() && u.reconciled.join() === r.reconciled.join())?.id;
+      if (target && !left.length) await s.savePreferences({ ...s.preferences, statementUploads: list.filter((u) => u.id !== target) });
       if (left.length) toast.error(`${left.length} item${left.length === 1 ? "" : "s"} couldn’t be reversed — try Undo again.`);
       else toast.success("Upload reversed — your records are as they were");
     } catch (e) {
@@ -221,7 +244,7 @@ function StatementDeskPage() {
           <Upload className="mx-auto size-6 text-muted-foreground" />
           <p className="mt-1 text-sm">Drag statements here, or</p>
           <Button className="mt-2" variant="outline" onClick={() => inputRef.current?.click()}>Choose files</Button>
-          <input ref={inputRef} aria-label="Statement files" type="file" multiple accept=".pdf,.csv,.xls,.xlsx" className="hidden" onChange={(e) => { void add(e.target.files); e.target.value = ""; }} />
+          <input ref={inputRef} aria-label="Statement files" type="file" multiple accept=".pdf,.csv,.xls,.xlsx,.png,.jpg,.jpeg,.webp" className="hidden" onChange={(e) => { void add(e.target.files); e.target.value = ""; }} />
         </div>
         {busy && <p role="status" className="text-sm text-muted-foreground">Reading statements on this device…</p>}
         {progress && <p role="status" className="text-sm text-muted-foreground">{progress}</p>}
@@ -367,6 +390,21 @@ function StatementDeskPage() {
           </div>
         </>
       )}
+
+      {(preferences.statementUploads ?? []).length > 0 && (
+        <Card className="space-y-2 p-3" aria-label="Recent uploads">
+          <h2 className="font-medium">Recent uploads (any device)</h2>
+          <ul className="space-y-2">
+            {(preferences.statementUploads ?? []).map((u) => (
+              <li key={u.id} className="flex flex-wrap items-center justify-between gap-2 text-sm">
+                <span className="min-w-0 flex-1"><span className="block truncate">{u.label || "Upload"}</span><span className="text-xs text-muted-foreground">{new Date(u.at).toLocaleString()} · {u.posted.length} posted · {u.reconciled.length} matched</span></span>
+                <Button size="sm" variant="outline" disabled={!!progress} onClick={() => void undo(u, u.id)}>Undo</Button>
+              </li>
+            ))}
+          </ul>
+        </Card>
+      )}
+      <p className="text-xs text-muted-foreground">Scanned PDFs and photos are read on the server (needs AI document reading on in Settings); their lines always wait for your decision. <Link to="/statement-accounts" className="underline">See statement coverage and move entries</Link>.</p>
     </div>
   );
 }

@@ -58,6 +58,8 @@ export interface FinancePreferences {
   checkedAudit?: string[];
   /** Latest statement posting batch per account: entry ids only, so any signed-in device can undo it. */
   statementBatches?: Record<string, string[]>;
+  /** Statement Desk uploads (newest first) so any signed-in device can reverse one. */
+  statementUploads?: StatementUpload[];
   /** Home arrangement; "custom" once the user hides or reorders sections themselves. */
   homeMode: HomeMode;
   categories: CategorySetting[];
@@ -165,6 +167,7 @@ export function normalizePreferences(raw: Partial<FinancePreferences> | null | u
   if (!Array.isArray(p.homeHidden)) p.homeHidden = [];
   p.savedViews = sanitizeSavedViews(p.savedViews);
   { const b = p.statementBatches && typeof p.statementBatches === "object" ? p.statementBatches : {}; p.statementBatches = Object.fromEntries(Object.entries(b).filter(([k, v]) => k.length <= 64 && Array.isArray(v)).slice(0, 50).map(([k, v]) => [k, (v as unknown[]).filter((x): x is string => typeof x === "string" && x.length <= 64).slice(0, 2000)])); }
+  p.statementUploads = cleanStatementUploads(p.statementUploads);
   p.checkedAudit = Array.isArray(p.checkedAudit) ? [...new Set(p.checkedAudit.filter((k) => typeof k === "string" && k.length <= 200))].slice(-3000) : [];
   p.payees = cleanPayees(p.payees);
   p.reimbursementSettings = cleanReimbursementSettings(p.reimbursementSettings);
@@ -259,4 +262,17 @@ export function cleanMapPositions(raw: unknown): Record<string, { x: number; y: 
     out[k] = { x: Math.min(4000, Math.max(0, Math.round(o.x))), y: Math.min(4000, Math.max(30, Math.round(o.y))) };
   }
   return out;
+}
+
+export interface StatementUpload { id: string; at: string; label: string; posted: string[]; reconciled: string[]; createdAccounts: { id: string; name: string }[] }
+const ids = (v: unknown, max: number) => (Array.isArray(v) ? v.filter((x): x is string => typeof x === "string" && x.length <= 64).slice(0, max) : []);
+export function cleanStatementUploads(v: unknown): StatementUpload[] {
+  if (!Array.isArray(v)) return [];
+  return v.flatMap((u) => {
+    if (!u || typeof u !== "object") return [];
+    const o = u as { id?: unknown; at?: unknown; label?: unknown; posted?: unknown; reconciled?: unknown; createdAccounts?: unknown };
+    if (typeof o.id !== "string" || o.id.length > 64 || typeof o.at !== "string") return [];
+    const created = Array.isArray(o.createdAccounts) ? o.createdAccounts.flatMap((c) => (c && typeof c === "object" && typeof (c as { id?: unknown }).id === "string" ? [{ id: String((c as { id: string }).id).slice(0, 64), name: String((c as { name?: unknown }).name ?? "").slice(0, 80) }] : [])).slice(0, 50) : [];
+    return [{ id: o.id, at: o.at.slice(0, 40), label: String(o.label ?? "").slice(0, 200), posted: ids(o.posted, 3000), reconciled: ids(o.reconciled, 3000), createdAccounts: created }];
+  }).slice(0, 10);
 }

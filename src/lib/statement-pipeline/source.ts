@@ -2,6 +2,7 @@
 import { isAmex, parseAmexStatement, parseBalanceStatement, rowsFromItems } from "../statement-crosscheck";
 import { parseForexStatement } from "../forex-statement";
 import { readStatement } from "../statement-import";
+import type { StatementLine } from "../expenses";
 import { fromBalanceLines, fromForex, fromStatementLines, type StmtFile } from "./line";
 
 const MAX_PAGES = 120;
@@ -32,10 +33,24 @@ const fileOf = (name: string, lines: StmtFile["lines"], opening: number | null, 
  * entry per currency, because each wallet is its own balance. Rows are returned too, so the caller can
  * work out whose statement it is.
  */
-export async function readStatementFile(file: File): Promise<{ files: StmtFile[]; rows: string[] }> {
+/** Reads a scanned or photographed statement on the server. Lines come back without balances. */
+export type ServerReader = (file: File) => Promise<StatementLine[]>;
+
+export const isImageStatement = (name: string) => /\.(png|jpe?g|webp)$/i.test(name);
+
+/** Scanned files carry no printed opening/closing, so nothing from them can pass the balance gate on its own. */
+async function scanned(file: File, serverRead?: ServerReader) {
+  if (!serverRead) throw Error(`${file.name}: this is a scanned page — it needs the server reader`);
+  const lines = await serverRead(file);
+  if (!lines.length) throw Error(`${file.name}: no readable entries were found on this scan`);
+  return { files: [{ ...fileOf(`${file.name} (scanned)`, fromStatementLines(file.name, lines), null, null, "INR"), scanned: true }], rows: [file.name] };
+}
+
+export async function readStatementFile(file: File, serverRead?: ServerReader): Promise<{ files: StmtFile[]; rows: string[] }> {
+  if (isImageStatement(file.name)) return scanned(file, serverRead);
   if (/\.pdf$/i.test(file.name)) {
     const rows = await pdfRows(file);
-    if (!rows.length) throw Error(`${file.name}: this PDF has no readable text (a scanned page needs the server reader)`);
+    if (rows.join("").replace(/\s/g, "").length < 40) return scanned(file, serverRead);
     if (isAmex(rows)) {
       const parsed = parseAmexStatement(rows, file.name);
       if (!parsed.lines.length) throw Error(`${file.name}: no entries found in this American Express layout`);

@@ -40,6 +40,8 @@ export interface StmtFile {
   opening: number | null;
   closing: number | null;
   lines: StmtLine[];
+  /** Read from a scan on the server; every line is a suggestion until the person confirms it. */
+  scanned?: boolean;
 }
 
 const r2 = (n: number) => Math.round(n * 100) / 100;
