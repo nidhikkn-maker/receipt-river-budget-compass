@@ -218,6 +218,13 @@
       "when": 1793496794997,
       "tag": "0030_historical_import_staging",
       "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "7",
+      "when": 1793496898480,
+      "tag": "0031_secure_import_posting",
+      "breakpoints": true
     }
   ]
 }

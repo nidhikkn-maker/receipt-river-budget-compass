@@ -1502,6 +1502,10 @@ export type Database = {
         Args: { _batch: string; _rows: Json }
         Returns: number
       }
+      post_import_rows_secure: {
+        Args: { _batch: string; _owner: string; _rows: Json }
+        Returns: number
+      }
       receive_claim_receipt: {
         Args: {
           expense_id: string
