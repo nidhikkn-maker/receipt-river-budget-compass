@@ -60,7 +60,7 @@ export function Autopilot() {
               <ul className="mt-2 rounded-lg bg-muted/50 p-2 text-xs">{r.steps.map((s, k) => <li key={k} className="flex justify-between"><span>{s.label}</span><span className="font-mono">{money(s.amount)}</span></li>)}</ul>
             )}
             <div className="mt-2 flex flex-wrap gap-2">
-              <Button asChild size="sm" variant="outline"><Link to={r.to}>{r.actionLabel}</Link></Button>
+              <Button asChild size="sm" variant="outline">{r.editId ? <Link to="/new" search={{ edit: r.editId }}>{r.actionLabel}</Link> : <Link to={r.to}>{r.actionLabel}</Link>}</Button>
               {r.steps.length > 0 && <Button size="sm" variant="ghost" onClick={() => setOpen(open === r.key ? null : r.key)}>{open === r.key ? "Hide" : "How worked out"}</Button>}
               <Button size="sm" variant="ghost" onClick={() => act(r.key, "accepted")}>Done</Button>
               <Button size="sm" variant="ghost" onClick={() => act(r.key, "later")}>Later</Button>

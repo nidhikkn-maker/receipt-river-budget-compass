@@ -19,6 +19,8 @@ export interface AutopilotRecommendation {
   /** Where to go to act. */
   actionLabel: string;
   to: string;
+  /** Optional record to open directly. */
+  editId?: string;
 }
 
 export type AutopilotAction = { status: "accepted" | "dismissed" | "later"; at: string; until?: string };
@@ -32,7 +34,7 @@ export interface AutopilotInput {
   /** Overdue commitments: [{ name, amount, due }]. */
   overdue: { name: string; amount: number; due: string }[];
   /** Unusual recent transactions: [{ title, amount, reason }]. */
-  anomalies: { title: string; amount: number; reason: string }[];
+  anomalies: { id?: string; title: string; amount: number; reason: string }[];
   subscriptions: {
     monthly: number;
     duplicates: { names: string[] }[];
@@ -116,7 +118,7 @@ export function autopilot(i: AutopilotInput): AutopilotRecommendation[] {
     out.push({
       key: `anomaly:${a.title}:${a.amount}`, title: `Unusual: ${a.title}`,
       detail: `${money(a.amount)} — ${a.reason}. Worth a look if you don't recognise it.`,
-      priority: "low", impact: a.amount, steps: [{ label: "Amount", amount: a.amount }], actionLabel: "See transaction", to: "/expenses",
+      priority: "low", impact: a.amount, steps: [{ label: "Amount", amount: a.amount }], actionLabel: "See transaction", to: a.id ? "/new" : "/expenses", ...(a.id ? { editId: a.id } : {}),
     });
   }
   if (i.unreconciledOld > 0) {
