@@ -27,6 +27,7 @@ export function centreReview(items: InboxItem[], transactions: Expense[], accoun
     if (!accounts.some(a => a.id === e.accountId && !a.archived) && !items.some(i => i.transactionId === e.id && i.type === 'missing_details' && /account/i.test(i.description))) missing.push('Source account');
     if (['business', 'official'].includes(e.scope) && !e.department?.trim() && !e.workspaceAllocations?.length) missing.push('Organisation');
     if (!e.paymentMethod) missing.push('Payment method');
+    if (['transfer','card_payment','loan_repayment','investment'].includes(e.txnType??'expense') && (!e.toAccountId || e.toAccountId===e.accountId || !accounts.some(a=>a.id===e.toAccountId&&!a.archived)) && !items.some(i=>i.transactionId===e.id&&i.type==='missing_details'&&/receiving account/i.test(i.description))) missing.push('Receiving account');
     for (const field of missing) augmented.push({ key: `required:${field}:${e.id}`, type: 'missing_details', transactionId: e.id, title: e.title, description: `${field} requires confirmation`, amount: e.amount, date: e.date, accountName: null, priority: 'medium', action: `Confirm ${field.toLowerCase()}` });
   }
   return financialReview(augmented, transactions, accounts, categories);
@@ -72,7 +73,7 @@ export function centreCategoryPreview(rows: FinancialReview[], category: string)
     catch (e) { excluded.push({ id: row.transaction.id, title: row.transaction.title, reason: e instanceof Error ? e.message : 'Individual review required' }); }
   }
   const preview = categoryReviewPreview(eligible, category);
-  return { ...preview, selectedCount: rows.length, excluded, remainingIssues: rows.reduce((sum, row) => sum + row.issues.filter(i => i.type !== 'uncategorised' || !eligible.includes(row)).length, 0) };
+  return { ...preview, selectedCount: rows.length, excluded, remainingIssues: rows.reduce((sum,row)=>sum+reviewCounts([{...row,issues:row.issues.filter(i=>i.type!=='uncategorised'||!eligible.includes(row)),suggestedCategory:eligible.includes(row)?undefined:row.suggestedCategory}]).issues,0) };
 }
 /** Rows whose only open issue is an unconfirmed statement import, with no suggested change or conflict. */
 export function confirmableImportRows(rows: FinancialReview[]) {

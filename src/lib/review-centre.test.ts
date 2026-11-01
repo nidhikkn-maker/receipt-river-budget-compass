@@ -22,6 +22,7 @@ describe('V5.10 review selection and counts', () => {
   it('selected transaction total includes income, not expenditure only', () => { const rows = rowsFor([expense('one'), { ...expense('two'), txnType: 'income', amount: 250 }]); expect(selectedReviewSummary(rows).total).toBe(350); });
   it('selected amounts distinguish ₹100 expense, ₹250 income and ₹500 card settlement',()=>{const rows=rowsFor([expense('one'),{...expense('two'),txnType:'income',amount:250},{...expense('three'),txnType:'card_payment',amount:500,toAccountId:'unknown'}]);expect(selectedReviewSummary(rows).amounts).toEqual({expenses:100,income:250,transfers:0,settlements:500});});
   it('account ownership never fills organisation responsibility', () => { expect(rowsFor([expense('one')])[0]?.transaction.department).toBeUndefined(); expect(reviewCounts(rowsFor([expense('one')])).missing).toBe(1); });
+  it('an invalid receiving account contributes an unresolved issue independently',()=>{const rows=rowsFor([{...expense('one'),scope:'personal',txnType:'card_payment',category:'Groceries',toAccountId:'bank'}]);expect(reviewCounts(rows)).toMatchObject({transactions:1,missing:1,issues:1});});
 });
 describe("confirmableImportRows", () => {
   const row = (issues: string[], extra: Record<string, unknown> = {}) => ({ transaction: { id: "x" }, issues: issues.map(type => ({ type, description: "" })), group: "ready", evidence: [], targetAccountIds: [], confidence: "high", status: "Ready for Review", ...extra }) as never;
