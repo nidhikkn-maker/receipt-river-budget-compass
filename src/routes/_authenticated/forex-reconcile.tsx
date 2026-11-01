@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { Card } from "@/components/Money";
@@ -96,6 +96,7 @@ function ForexPage() {
       <h1 className="font-display text-2xl font-bold tracking-tight sm:text-3xl">Forex card reconciliation</h1>
       <div className="my-4"><FinancialInboxNav active="accounts" /></div>
       <p className="text-sm text-muted-foreground">Each currency wallet is checked on its own, in its own currency. Spends are saved in the wallet currency; the rupee value is worked out when saved.</p>
+      <p className="mt-1 text-sm"><Link to="/statements" className="font-medium text-primary underline">Statement Desk</Link> reads many statements at once — including wallet statements — and matches, categorises and posts them with your say-so.</p>
       <div className="mt-4 grid gap-3 sm:grid-cols-2">
         <Select value={accountId} onValueChange={setAccountId}><SelectTrigger aria-label="Forex card account"><SelectValue placeholder="Forex card account" /></SelectTrigger><SelectContent>{cards.map((a) => <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}</SelectContent></Select>
         <label className="flex min-h-11 cursor-pointer items-center justify-center rounded-md border px-3 text-sm font-medium">Add forex statements (PDF)<input type="file" accept="application/pdf" multiple className="sr-only" onChange={(e) => void load(e.target.files)} /></label>
