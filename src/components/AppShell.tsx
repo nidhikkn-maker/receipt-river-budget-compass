@@ -149,6 +149,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         <div className="mx-auto flex max-w-6xl items-center gap-1 px-4 py-2.5 sm:px-8">
           <Link to="/dashboard" className="font-brand text-xl font-bold tracking-tight text-primary">Ledgerline<span className="text-gold">.</span></Link>
           <div className="ml-auto flex items-center">
+            <SyncStatus />
             <Link to="/search" aria-label="Search" className="rounded-xl p-2 text-muted-foreground transition hover:text-foreground"><Search className="h-5 w-5" /></Link>
             <Link to="/inbox" aria-label="Notifications" className="rounded-xl p-2 text-muted-foreground transition hover:text-foreground"><Bell className="h-5 w-5" /></Link>
             <Button size="icon" variant="ghost" onClick={() => setHidden((h) => !h)} aria-label={hidden ? "Show amounts" : "Hide amounts"} className="rounded-xl text-muted-foreground">{hidden ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}</Button>
