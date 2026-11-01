@@ -1,7 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Database, Json } from '@/integrations/supabase/types';
 import { parseStatementCsv, type Expense, type StatementLine } from './expenses';
-import { normalizePreferences } from './preferences';
+import { normalizePreferences, type FinancePreferences } from './preferences';
 import { stageImport, type ImportRule } from './historical-import';
 import type { Account } from './ledger';
 
@@ -10,7 +10,7 @@ async function paged(db: SupabaseClient<Database>, owner: string) {
   for(let from=0;;from+=1000) {
     const result=await db.from('expenses').select('*').eq('employee_id',owner).order('id').range(from,from+999);
     if(result.error) throw Error('Could not check existing transactions');
-    rows.push(...result.data.map(t=>({id:t.id,title:t.title,merchant:t.merchant,date:t.expense_date,amount:Number(t.amount),originalAmount:Number(t.original_amount ?? t.amount),currency:t.currency,fxRate:Number(t.fx_rate),paymentMethod:t.payment_method as Expense['paymentMethod'],category:t.category,scope:t.scope as Expense['scope'],memberId:t.member_id,splits:[],description:t.description,receipts:[],reconciledAt:t.reconciled_at,statementRef:t.statement_ref,txnType:t.txn_type as Expense['txnType'],accountId:t.account_id,toAccountId:t.to_account_id})));
+    rows.push(...result.data.map(t=>({id:t.id,title:t.title,merchant:t.merchant,date:t.expense_date,amount:Number(t.amount),originalAmount:Number(t.original_amount ?? t.amount),currency:t.currency,fxRate:Number(t.fx_rate),paymentMethod:t.payment_method as Expense['paymentMethod'],category:t.category,scope:t.scope as Expense['scope'],memberId:t.member_id,splits:[],description:t.description,receipts:[],reconciledAt:t.reconciled_at,statementRef:t.statement_ref,txnType:t.txn_type as NonNullable<Expense['txnType']>,accountId:t.account_id,toAccountId:t.to_account_id})));
     if(result.data.length<1000) break;
   }
   return rows;
@@ -55,14 +55,14 @@ export async function processImport(db: SupabaseClient<Database>, id: string, ow
       posts.data.forEach(p=>known.add(p.fingerprint)); if(posts.data.length<1000) break;
     }
     const transactions=await paged(db,owner);
-    const ctx={transactions,accounts:accounts.data.map(a=>({id:a.id,name:a.name,kind:a.kind,openingBalance:Number(a.opening_balance),archived:a.archived})) as Account[], categories:normalizePreferences(prefs.data?.data).categories,accountId:b.account_id,currency:b.currency};
+    const ctx={transactions,accounts:accounts.data.map(a=>({id:a.id,name:a.name,kind:a.kind,openingBalance:Number(a.opening_balance),archived:a.archived})) as Account[], categories:normalizePreferences(prefs.data?.data as Partial<FinancePreferences> | undefined).categories,accountId:b.account_id,currency:b.currency};
     const staged=stageImport(lines,ctx,rules.data as unknown as ImportRule[],known);
     for(let i=0;i<staged.length;i+=250) {
       const ins=await db.from('import_rows').upsert(staged.slice(i,i+250).map(r=>({...r,owner_id:owner,batch_id:id,line:r.line as unknown as Json,proposal:r.proposal as unknown as Json})),{onConflict:'batch_id,fingerprint',ignoreDuplicates:true});
       if(ins.error) throw Error('Could not save extracted transactions');
     }
     const dates=lines.map(l=>l.date).sort();
-    const saved=await db.from('import_batches').update({status:'review',raw_lines:lines as unknown as Json,period_from:b.period_from ?? dates[0],period_to:b.period_to ?? dates.at(-1),error:null,updated_at:new Date().toISOString()}).eq('id',id).eq('owner_id',owner);
+    const saved=await db.from('import_batches').update({status:'review',raw_lines:lines as unknown as Json,period_from:b.period_from ?? dates[0] ?? null,period_to:b.period_to ?? dates.at(-1) ?? null,error:null,updated_at:new Date().toISOString()}).eq('id',id).eq('owner_id',owner);
     if(saved.error) throw Error('Could not finish import');
   } catch(e) {
     await db.from('import_batches').update({status:'failed',error:e instanceof Error?e.message:'Could not process statement',updated_at:new Date().toISOString()}).eq('id',id).eq('owner_id',owner);

@@ -40,7 +40,7 @@ export const postHistoricalImport=createServerFn({method:'POST'}).middleware([re
         const res=await fetch(`https://api.frankfurter.dev/v1/${row.proposal.date}?from=${encodeURIComponent(batch.data.currency)}&to=INR`);
         if(!res.ok) throw Error('Currency conversion unavailable; nothing was posted');
         const json=await res.json() as {date:string;rates:Record<string,number>};
-        const rate=json.rates.INR; if(!rate || rate<=0) throw Error('Currency conversion unavailable');
+        const rate=json.rates['INR']; if(!rate || rate<=0) throw Error('Currency conversion unavailable');
         fx={rate,date:json.date};
       }
       rates.set(row.proposal.date,fx);
