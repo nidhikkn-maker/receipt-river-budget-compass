@@ -22,6 +22,9 @@ FinancialCorrectionPanel always displayed both internal account selectors for ev
 - No Cloud schema changes, sample Cloud records, financial edits, or production publication in this work.
 
 ## Evidence
+- 1 November continuation: 889 tests across 111 files pass; latest build OK. Added mixed selection exclusions, compatible source-draft preservation, incompatible repayment clearing and issue-specific closure checks. Correction undo now calls the same completion callback as saving, so the parent clears stale selection.
+- Isolated PostgreSQL combined classification of two synthetic entries saves category/workspace/organisation/activity together; read-back preserves USD source amounts, descriptions and account identity. Same-request retry creates one audit, not duplicate entries; undo restores both. No Cloud calls.
+- Signed-in existing-record selection → correction form → cancel verified at 1280×1800, 820×1180, 1180×820 and 402×874. Fully opened panels inspected; no horizontal overflow or page errors. Screenshots under /tmp/browser/classification-final/. No hosted save or physical-device claim.
 - Latest full regression: 884 tests / 111 files passed; latest build log is build OK. Controlled recipient save/reopen and combined classification confirmation passed; production data was not used for writes.
 - Local reconciliation suite: 44 checks passed, including disposable disk-backed PostgreSQL close/reopen and owner-isolated saved checkpoints.
 - Full regression: 872 checks passed across 109 files. Two additional expense/destination regressions were then verified in the 10-check financial correction suite. Current app build log: build OK.
@@ -38,8 +41,8 @@ FinancialCorrectionPanel always displayed both internal account selectors for ev
 | Own-account transfer | Pass (controlled) | Financial correction/ledger tests require two different active accounts, zero expenditure |
 | AMEX dues | Pass (controlled) | Card-target filtering, impact/duplicate guards and correction SQL retry/undo |
 | Personal expense | Pass (controlled) | Expense has no destination; original source and spending preserved |
-| Business expense | Partial | Combined workspace/category guarded metadata; hosted acceptance not run |
-| Official paid personally | Partial | Combined workspace/organisation; claim eligibility not granted automatically |
+| Business expense | Partial | Combined category/workspace rules and isolated two-record metadata read-back pass; hosted acceptance not run |
+| Official paid personally | Partial | Isolated combined official/organisation/activity save, read-back and undo pass; claim eligibility not granted automatically |
 | Loan to another individual | Blocked | Outgoing receivable model and protected API not available under no-shared-change boundary |
 | Recoverable advance issued | Blocked | Existing advances are received travel advances, not issued counterparty receivables |
 | Incoming reimbursement | Partial | Existing dedicated workflow/ledger tests; not exposed as an unsupported correction |
@@ -47,7 +50,7 @@ FinancialCorrectionPanel always displayed both internal account selectors for ev
 | Bulk category assignment | Pass (controlled) | Existing atomic metadata/category SQL and component preview/confirmation |
 | Type change | Pass (controlled) | Type-aware fields and original-record-preserving correction tests |
 | Save/reopen corrected transaction | Partial | Isolated SQL persistence/retry covered; hosted read-back unavailable |
-| Inbox issue closure | Partial | Existing evidence-based review tests; no manual dismissal masquerades as resolution |
+| Inbox issue closure | Pass (controlled) | Confirmed category clears only the category issue; outstanding statement confirmation remains and balances do not change |
 | No duplicate expenses | Pass (controlled) | Existing correction idempotency SQL and unchanged ledger on directory save |
 | Account reconciliation | Partial | Local stored checkpoint reopen/owner isolation passes; real-device hosted run blocked |
 
