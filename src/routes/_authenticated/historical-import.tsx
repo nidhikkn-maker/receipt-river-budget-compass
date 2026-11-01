@@ -63,9 +63,9 @@ function HistoricalImports() {
       try {
         if(file.size>15*1024*1024)throw Error('Each statement must be under 15 MB');
         const bytes=await file.arrayBuffer();const hash=Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',bytes))).map(v=>v.toString(16).padStart(2,'0')).join('');
-        const exists=await supabase.from('import_batches').select('id').eq('account_id',account).eq('file_hash',hash).maybeSingle();
+        const exists=await supabase.from('import_batches').select('id,status').eq('account_id',account).eq('file_hash',hash).maybeSingle();
         if(exists.error)throw Error('Could not check for repeated statements');
-        if(exists.data){setCurrent(exists.data.id);await reload(exists.data.id);completed.add(item.id);toast.info('This statement is already saved');continue;}
+        if(exists.data){setCurrent(exists.data.id);await reload(exists.data.id);completed.add(item.id);toast.info(['failed','paused'].includes(exists.data.status)?'This statement is already saved but incomplete. Use Retry processing; no second import was created.':'This statement is already saved. Review posted, duplicate and unresolved counts instead of uploading again.');continue;}
         const up=await supabase.storage.from('receipts').upload(path,file,{contentType:file.type || 'application/octet-stream'});if(up.error)throw Error('Could not upload original statement');
         const ins=await supabase.from('import_batches').insert({id,account_id:account,file_name:file.name,file_path:path,file_hash:hash,currency,allow_ai:/\.pdf$/i.test(file.name),period_from:item.from||null,period_to:item.to||null});if(ins.error)throw Error('Could not queue statement');stored=true;completed.add(item.id);
         const original=await supabase.from('documents').insert({owner_id:userId,title:file.name,doc_type:'statement',file_path:path,file_name:file.name,mime_type:file.type,size_bytes:file.size,account_id:account,currency,notes:'Historical import source statement'});
