@@ -69,7 +69,7 @@ function CardBalancePage() {
         {lines.length === 0 && <li className="p-4 text-sm text-muted-foreground">No entries here.</li>}
         {lines.map((l) => (
           <li key={l.txn.id} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-2 p-3 md:grid-cols-[minmax(0,1fr)_auto_auto]">
-            <div className="min-w-0 flex-1">
+            <div className="min-w-0 flex-1 [overflow-wrap:anywhere]">
               <div className="truncate font-medium">{l.txn.merchant || l.txn.title || (l.kind === "payment" ? "Card payment" : "Entry")}</div>
               <div className="text-xs text-muted-foreground">
                 {l.txn.date} · {l.kind === "payment" ? `Payment from ${name(l.txn.accountId)}` : l.kind === "refund" ? "Refund" : l.kind === "spend" ? "Spend" : "Other"}

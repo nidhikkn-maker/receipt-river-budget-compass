@@ -87,7 +87,7 @@ function TransfersPage() {
           <Card title={`Strong matches found automatically (${strong.length})`} className="mt-4">
             {strong.length === 0 ? <p className="text-sm text-muted-foreground">No pairs with a shared reference or matching narration right now.</p> : (
               <>
-                <ul className="divide-y">{strong.map((s) => <li key={s.key} className="flex flex-col gap-3 py-3 md:flex-row md:items-center"><div className="min-w-0 flex-1"><Pair d={s.debit} c={s.credit} dest={s.destId} /><p className="mt-1 text-xs text-muted-foreground">{s.evidence.join(" · ")}</p></div><Button size="sm" variant="outline" className="w-full md:w-auto" onClick={() => open([s])}>Review</Button></li>)}</ul>
+                <ul className="divide-y">{strong.map((s) => <li key={s.key} className="flex flex-col gap-3 py-3 md:flex-row md:items-center"><div className="min-w-0 flex-1 [overflow-wrap:anywhere]"><Pair d={s.debit} c={s.credit} dest={s.destId} /><p className="mt-1 text-xs text-muted-foreground">{s.evidence.join(" · ")}</p></div><Button size="sm" variant="outline" className="w-full md:w-auto" onClick={() => open([s])}>Review</Button></li>)}</ul>
                 <Button className="mt-3 w-full sm:w-auto" onClick={() => open(strong)}><Link2 className="mr-1 h-4 w-4" />Review & link all {strong.length}</Button>
               </>
             )}
@@ -113,7 +113,7 @@ function TransfersPage() {
               const st = transferStatus(l, transactions, transferCounterparts);
               const d = transactions.find((t) => t.id === l.debit_id);
               return <li key={l.id} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-2 py-3 text-sm sm:flex">
-                <div className="min-w-0 flex-1"><div className="break-words font-medium">{name(l.source_account)} → {name(l.dest_account)}</div><div className="text-xs text-muted-foreground">{d?.date ?? "—"} · {money(Number(l.source_amount), l.source_currency)}</div></div>
+                <div className="min-w-0 flex-1 [overflow-wrap:anywhere]"><div className="break-words font-medium">{name(l.source_account)} → {name(l.dest_account)}</div><div className="text-xs text-muted-foreground">{d?.date ?? "—"} · {money(Number(l.source_amount), l.source_currency)}</div></div>
                 <span className={"rounded-full px-2 py-0.5 text-[11px] font-semibold " + (st === "conflict" ? "bg-destructive/10 text-destructive" : "bg-secondary text-secondary-foreground")}>{TRANSFER_STATUS_LABEL[st]}</span>
                 {st !== "cancelled" && <Button size="sm" variant="ghost" className="col-span-2 justify-self-start" onClick={async () => { try { await cancelTransfer(l.id); await load(); toast.success("Transfer unlinked; original entries restored"); } catch (e) { toast.error((e as Error).message); } }}><Undo2 className="mr-1 h-4 w-4" />Unlink</Button>}
               </li>;

@@ -80,7 +80,7 @@ function RecordsCheck() {
             {shown.slice(0, 300).map((f) => (
               <li key={f.key} className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-x-3 gap-y-2 p-3 md:grid-cols-[auto_minmax(0,1fr)_auto_auto]">
                 <Checkbox className="mt-1 h-5 w-5" aria-label={`Select ${f.reference}`} checked={picked.includes(f.key)} onCheckedChange={(v) => setPicked(v ? [...picked, f.key] : picked.filter((k) => k !== f.key))} />
-                <div className="min-w-0 flex-1">
+                <div className="min-w-0 flex-1 [overflow-wrap:anywhere]">
                   <div className="flex flex-wrap items-center gap-2"><span className="font-medium">{AUDIT_LABEL[f.issue]}</span><span className={"rounded-full px-2 py-0.5 text-[10px] font-semibold " + (f.confidence === "high" ? "bg-destructive/10 text-destructive" : "bg-secondary text-secondary-foreground")}>{f.confidence} confidence</span></div>
                   <div className="break-words text-xs text-muted-foreground">{f.date} · {f.source} → {f.destination} · ref {f.reference}</div>
                   <div className="text-xs">Now: {f.currentType} · Suggested: {f.suggestedType}</div>
