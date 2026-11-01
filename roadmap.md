@@ -248,10 +248,10 @@
 - [x] Mobile performance testing: scripts/mobile-perf.py measures phone-sized throttled load; verified 0.75s frame, 0.78s saved figures, 5.5s full sync on Fast 4G
 
 ## V5.2 Smart Home & Travel Redesign (.lovable/requirements-v5.2.md)
-- [ ] P1: Compact Travel Manager overview (trip cards, filters, alerts; no inline forms)
-- [ ] P1: Dedicated individual trip view with section navigation (Overview/Itinerary/Bookings/Expenses/Budget & Settlements/Reports)
-- [ ] P1: Simplified Create Trip focused workflow (essentials first, optional later, save draft, no auto-keyboard)
-- [ ] P1: Responsive/overflow fixes on iPhone widths
+- [x] P1: Compact Travel Manager overview (trip cards, status + workspace filters, search, alerts; no inline forms)
+- [x] P1: Dedicated individual trip view /trips/$tripId with section tabs (Overview/Itinerary/Bookings/Expenses/Budget & Settlements/Reports), quick actions, More→Close/Cancel/Delete
+- [x] P1: Simplified Create Trip dialog (essentials first, optional details, localStorage draft, no auto-keyboard)
+- [x] P1: Verified no horizontal overflow at 402px on overview + trip sections
 - [ ] P2: Dedicated Itinerary (day timeline, copy/move, multi-select participants, booking links, maps, conflicts)
 - [ ] P2: Dedicated Bookings (compact cards, type-relevant fields, document import to draft, booking↔itinerary↔expense linking)
 - [ ] P2: Universal Entry integration from trip (editable preselects), multi-select trip expense actions
