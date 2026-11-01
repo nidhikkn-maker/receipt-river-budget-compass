@@ -51,6 +51,7 @@ import { Route as AuthenticatedTripsRouteImport } from './routes/_authenticated/
 import { Route as AuthenticatedVaultRouteImport } from './routes/_authenticated/vault'
 import { Route as AuthenticatedWealthRouteImport } from './routes/_authenticated/wealth'
 import { Route as DotlovableOauthConsentRouteImport } from './routes/[.]lovable.oauth.consent'
+import { Route as AuthenticatedCardsAccountIdRouteImport } from './routes/_authenticated/cards.$accountId'
 import { Route as AuthenticatedTripsIndexRouteImport } from './routes/_authenticated/trips.index'
 import { Route as AuthenticatedTripsTripIdRouteImport } from './routes/_authenticated/trips.$tripId'
 import { Route as ApiPublicJobsPaymentRemindersRouteImport } from './routes/api/public/jobs/payment-reminders'
@@ -277,6 +278,12 @@ const DotlovableOauthConsentRoute = DotlovableOauthConsentRouteImport.update({
   path: '/.lovable/oauth/consent',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedCardsAccountIdRoute =
+  AuthenticatedCardsAccountIdRouteImport.update({
+    id: '/cards/$accountId',
+    path: '/cards/$accountId',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedTripsIndexRoute = AuthenticatedTripsIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -342,6 +349,7 @@ export interface FileRoutesByFullPath {
   '/vault': typeof AuthenticatedVaultRoute
   '/wealth': typeof AuthenticatedWealthRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
+  '/cards/$accountId': typeof AuthenticatedCardsAccountIdRoute
   '/trips/$tripId': typeof AuthenticatedTripsTripIdRoute
   '/trips/': typeof AuthenticatedTripsIndexRoute
   '/api/public/jobs/payment-reminders': typeof ApiPublicJobsPaymentRemindersRoute
@@ -388,6 +396,7 @@ export interface FileRoutesByTo {
   '/vault': typeof AuthenticatedVaultRoute
   '/wealth': typeof AuthenticatedWealthRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
+  '/cards/$accountId': typeof AuthenticatedCardsAccountIdRoute
   '/trips/$tripId': typeof AuthenticatedTripsTripIdRoute
   '/trips': typeof AuthenticatedTripsIndexRoute
   '/api/public/jobs/payment-reminders': typeof ApiPublicJobsPaymentRemindersRoute
@@ -437,6 +446,7 @@ export interface FileRoutesById {
   '/_authenticated/vault': typeof AuthenticatedVaultRoute
   '/_authenticated/wealth': typeof AuthenticatedWealthRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
+  '/_authenticated/cards/$accountId': typeof AuthenticatedCardsAccountIdRoute
   '/_authenticated/trips/$tripId': typeof AuthenticatedTripsTripIdRoute
   '/_authenticated/trips/': typeof AuthenticatedTripsIndexRoute
   '/api/public/jobs/payment-reminders': typeof ApiPublicJobsPaymentRemindersRoute
@@ -486,6 +496,7 @@ export interface FileRouteTypes {
     | '/vault'
     | '/wealth'
     | '/.lovable/oauth/consent'
+    | '/cards/$accountId'
     | '/trips/$tripId'
     | '/trips/'
     | '/api/public/jobs/payment-reminders'
@@ -532,6 +543,7 @@ export interface FileRouteTypes {
     | '/vault'
     | '/wealth'
     | '/.lovable/oauth/consent'
+    | '/cards/$accountId'
     | '/trips/$tripId'
     | '/trips'
     | '/api/public/jobs/payment-reminders'
@@ -580,6 +592,7 @@ export interface FileRouteTypes {
     | '/_authenticated/vault'
     | '/_authenticated/wealth'
     | '/.lovable/oauth/consent'
+    | '/_authenticated/cards/$accountId'
     | '/_authenticated/trips/$tripId'
     | '/_authenticated/trips/'
     | '/api/public/jobs/payment-reminders'
@@ -894,6 +907,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DotlovableOauthConsentRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated/cards/$accountId': {
+      id: '/_authenticated/cards/$accountId'
+      path: '/cards/$accountId'
+      fullPath: '/cards/$accountId'
+      preLoaderRoute: typeof AuthenticatedCardsAccountIdRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/trips/': {
       id: '/_authenticated/trips/'
       path: '/'
@@ -974,6 +994,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedTripsRoute: typeof AuthenticatedTripsRouteWithChildren
   AuthenticatedVaultRoute: typeof AuthenticatedVaultRoute
   AuthenticatedWealthRoute: typeof AuthenticatedWealthRoute
+  AuthenticatedCardsAccountIdRoute: typeof AuthenticatedCardsAccountIdRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
@@ -1015,6 +1036,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedTripsRoute: AuthenticatedTripsRouteWithChildren,
   AuthenticatedVaultRoute: AuthenticatedVaultRoute,
   AuthenticatedWealthRoute: AuthenticatedWealthRoute,
+  AuthenticatedCardsAccountIdRoute: AuthenticatedCardsAccountIdRoute,
 }
 
 const AuthenticatedRouteRouteWithChildren =
