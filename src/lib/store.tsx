@@ -138,7 +138,14 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
   const [preferences, setPreferences] = useState<FinancePreferences>(defaultPreferences);
 
   const firstLoad = useRef(true);
-  const refresh = useCallback(async () => {
+  const inFlight = useRef<Promise<void> | null>(null);
+  // Overlapping refresh calls share one set of requests.
+  const refresh = useCallback(() => {
+    if (!inFlight.current) inFlight.current = load().finally(() => { inFlight.current = null; });
+    return inFlight.current;
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userId]);
+  async function load() {
     // Show this device's saved copy straight away, then refresh from the cloud.
     if (!navigator.onLine || firstLoad.current) {
       firstLoad.current = false;
@@ -209,7 +216,7 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
     for (const x of b.data ?? []) bud[x.category as Category] = Number(x.monthly_amount);
     setBudgets(bud);
     setLoading(false);
-  }, [userId]);
+  }
 
   useEffect(() => { void refresh(); }, [refresh]);
   useEffect(() => {
