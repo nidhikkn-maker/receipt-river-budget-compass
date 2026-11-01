@@ -2,6 +2,14 @@ import { describe, expect, it } from "vitest";
 import { createBackupZip, prepareRestore, readBackup, type Backup } from "./backup";
 const backup: Backup = { app: "ledgerline", version: 2, owner: "a", exportedAt: "2026-10-31", data: { accounts: [{ id: "bank", owner_id: "a" }], family_members: [{ id: "child", owner_id: "a" }], expenses: [{ id: "bill", employee_id: "a", account_id: "bank", member_id: "child", splits: [{ memberId: "child", amount: 50 }], receipts: [{ path: "a/receipt.jpg" }] }], documents: [{ id: "doc", transaction_id: "bill", file_path: "a/document.pdf" }] } };
 describe("Complete backups", () => {
+  it('remaps reimbursement receiving accounts and report responsibility records across owners', () => {
+    const b = { ...backup, data: { ...backup.data, finance_preferences: [{ owner_id: 'a', data: { reimbursementSettings: { profiles: [{ id: 'role', accountId: 'bank' }], responsibilities: [{ entryId: 'bill', shares: [{ organisation: 'AET', amount: 100 }] }], mappings: [{ activity: 'entries:bill', organisation: 'AET', profileId: 'role' }] } } }] } };
+    let n = 0; const result = prepareRestore(b, 'b', () => `new-${++n}`);
+    const p = result.data.finance_preferences?.[0]?.['data'] as { reimbursementSettings: { profiles: { accountId: string }[]; responsibilities: { entryId: string }[]; mappings: { activity: string }[] } };
+    expect(p.reimbursementSettings.profiles[0]?.accountId).toBe(result.data.accounts?.[0]?.['id']);
+    expect(p.reimbursementSettings.responsibilities[0]?.entryId).toBe(result.data.expenses?.[0]?.['id']);
+    expect(p.reimbursementSettings.mappings[0]?.activity).toBe(`entries:${String(result.data.expenses?.[0]?.['id'])}`);
+  });
   it("round trips records and original receipt binaries", () => {
     const result = readBackup(createBackupZip(backup, { "a/receipt.jpg": new Uint8Array([1, 2, 3]) }), true);
     expect(result.backup).toEqual(backup); expect([...result.files["a/receipt.jpg"] ?? []]).toEqual([1, 2, 3]);

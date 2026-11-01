@@ -3,7 +3,7 @@
 // it only reads records and never creates claims or changes claim status.
 import type { Statement, Annexure, RegisterRow } from "./expenditure-statement";
 
-export interface Claimant { name: string; employeeId: string; department: string; designation: string; approver: string; bankDetails: string; email: string }
+export interface Claimant { name: string; employeeId: string; department: string; designation: string; approver: string; bankDetails: string; email: string; declaration?: string; reportingAuthority?: string; finance?: string; additionalApprover?: string; approvalDesignation?: string; organisationCode?: string; costCentre?: string; preferredCurrency?: string }
 export interface ClaimItem extends RegisterRow { claimNo: number; claimed: number }
 export interface Claim {
   reference: string; organisation: string; purpose: string; subjectName: string; start: string; end: string; prepared: string; claimant: Claimant;
@@ -15,7 +15,7 @@ const r2 = (n: number) => Math.round(n * 100) / 100;
 export function buildClaim(s: Statement, claimant: Claimant): Claim {
   const items: ClaimItem[] = []; const excluded: Claim["excluded"] = [];
   for (const r of s.rows) {
-    const reason = r.refund ? "Refund" : r.payerKind === "organisation" ? "Paid directly by the organisation" : r.payerKind === "other" ? `Paid by ${r.payer}` : r.rejected > 0 ? "Rejected / not eligible" : r.eligible <= 0 ? "Not marked for reimbursement" : r.outstanding <= 0 ? "Already fully reimbursed" : null;
+    const reason = r.refund ? "Refund" : r.payerKind === "organisation" ? "Paid directly by the organisation" : r.payerKind === "other" ? `Paid by ${r.payer}` : r.status === 'Organisation requires review' || r.status === 'Other organisation' ? r.status : r.rejected > 0 ? "Rejected / not eligible" : r.eligible <= 0 ? "Not marked for reimbursement" : r.outstanding <= 0 ? "Already fully reimbursed" : null;
     if (reason) { excluded.push({ row: r, reason }); continue; }
     items.push({ ...r, claimNo: items.length + 1, claimed: r.outstanding });
   }
@@ -25,7 +25,7 @@ export function buildClaim(s: Statement, claimant: Claimant): Claim {
   for (const it of items) it.billRef = billRef(it.claimNo);
   const sum = (f: (i: ClaimItem) => number) => r2(items.reduce((a, i) => a + f(i), 0));
   return {
-    reference: s.reference.replace("LL-DES-", "LL-CLM-"), organisation: s.organisation, purpose: s.purpose, subjectName: s.subjectName, start: s.start, end: s.end, prepared: s.prepared, claimant,
+    reference: s.reference.replace("LL-DES-", "LL-CLM-"), organisation: s.organisation, purpose: s.purpose, subjectName: s.subjectName, start: s.start, end: s.end, prepared: s.prepared, claimant: { ...claimant },
     items, annexures, excluded, totals: { eligible: sum((i) => i.eligible), received: sum((i) => i.reimbursed), claimed: sum((i) => i.claimed) },
   };
 }

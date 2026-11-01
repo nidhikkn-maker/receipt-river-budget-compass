@@ -8,6 +8,11 @@ const acc = (x: Partial<Account>): Account => ({ id: "a", name: "HDFC", kind: "s
 const get = (items: ReturnType<typeof setupStatus>, k: string) => items.find((i) => i.key === k)!.state;
 
 describe("financial setup status", () => {
+  it('reimbursement configuration stays optional and depends on saved profiles', () => {
+    const p = defaultPreferences();
+    expect(get(setupStatus({ accounts: [], expenses: [], preferences: p }), 'reimbursements')).toBe('not_configured');
+    expect(setupStatus({ accounts: [], expenses: [], preferences: p }).find(i => i.key === 'reimbursements')?.essential).toBe(false);
+  });
   it("no accounts means accounts not configured and essentials missing", () => {
     const s = setupStatus({ accounts: [], expenses: [], preferences: defaultPreferences() });
     expect(get(s, "accounts")).toBe("not_configured");

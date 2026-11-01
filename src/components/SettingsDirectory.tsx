@@ -17,6 +17,7 @@ const GROUPS: { title: string; items: Dest[] }[] = [
     { label: "Payment methods", desc: "UPI, debit/credit cards and wallets linked to accounts", to: "/payment-methods" },
     { label: "Workspaces", desc: "Personal, family, business and official focus", to: "/settings", hash: "finance" },
     { label: "Organisations", desc: "Organisation directory reused in claims and reports", to: "/settings", hash: "organisations" },
+    { label: "Reimbursement profiles", desc: "Organisation roles, approvals and receiving accounts", to: "/reimbursement-settings" },
   ] },
   { title: "Expense configuration", items: [
     { label: "Categories", desc: "Add, rename, move and archive categories", to: "/settings", hash: "finance" },

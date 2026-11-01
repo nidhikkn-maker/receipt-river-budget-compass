@@ -46,6 +46,8 @@ export function prepareRestore(backup: Backup, owner: string, uuid: () => string
     if (crossAccount && t === "finance_preferences" && row["data"] && typeof row["data"] === "object") {
       const p = { ...row["data"] as BackupRow };
       if (Array.isArray(p["budgets"])) p["budgets"] = p["budgets"].map((b: BackupRow) => b["kind"] === "person" && typeof b["value"] === "string" ? { ...b, value: ids.get(b["value"]) ?? b["value"] } : b);
+      const settings = p['reimbursementSettings'] as { profiles?: { accountId?: string }[]; responsibilities?: { entryId: string }[]; mappings?: { activity: string }[] } | undefined;
+      if (settings) p['reimbursementSettings'] = { ...settings, profiles: (settings.profiles ?? []).map(r => ({ ...r, accountId: r.accountId ? ids.get(r.accountId) ?? '' : '' })), responsibilities: (settings.responsibilities ?? []).map(r => ({ ...r, entryId: ids.get(r.entryId) ?? r.entryId })), mappings: (settings.mappings ?? []).map(m => m.activity.startsWith('entries:') ? { ...m, activity: `entries:${m.activity.slice(8).split(',').map(id => ids.get(id) ?? id).sort().join(',')}` } : m) };
       row["data"] = p;
     }
     return row;
