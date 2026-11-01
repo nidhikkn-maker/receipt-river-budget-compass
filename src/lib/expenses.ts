@@ -42,6 +42,8 @@ export interface ReceiptDetails {
 
 export interface Expense {
   id: string;
+  /** Receiving-side evidence of a linked internal transfer; never counted again. */
+  transferCounterpartOf?: string | null;
   categoryRevision?: number;
   correctionRevision?: number;
   department?: string | null;

@@ -37,6 +37,7 @@ import { Route as AuthenticatedPatternsRouteImport } from './routes/_authenticat
 import { Route as AuthenticatedPaymentMethodsRouteImport } from './routes/_authenticated/payment-methods'
 import { Route as AuthenticatedPlanRouteImport } from './routes/_authenticated/plan'
 import { Route as AuthenticatedReconcileRouteImport } from './routes/_authenticated/reconcile'
+import { Route as AuthenticatedRecordsCheckRouteImport } from './routes/_authenticated/records-check'
 import { Route as AuthenticatedReimbursementSettingsRouteImport } from './routes/_authenticated/reimbursement-settings'
 import { Route as AuthenticatedReportCentreRouteImport } from './routes/_authenticated/report-centre'
 import { Route as AuthenticatedReportsRouteImport } from './routes/_authenticated/reports'
@@ -46,6 +47,7 @@ import { Route as AuthenticatedSearchRouteImport } from './routes/_authenticated
 import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings'
 import { Route as AuthenticatedStrategyRouteImport } from './routes/_authenticated/strategy'
 import { Route as AuthenticatedTransactionReviewRouteImport } from './routes/_authenticated/transaction-review'
+import { Route as AuthenticatedTransfersRouteImport } from './routes/_authenticated/transfers'
 import { Route as AuthenticatedTravelInboxRouteImport } from './routes/_authenticated/travel-inbox'
 import { Route as AuthenticatedTripsRouteImport } from './routes/_authenticated/trips'
 import { Route as AuthenticatedVaultRouteImport } from './routes/_authenticated/vault'
@@ -204,6 +206,12 @@ const AuthenticatedReconcileRoute = AuthenticatedReconcileRouteImport.update({
   path: '/reconcile',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedRecordsCheckRoute =
+  AuthenticatedRecordsCheckRouteImport.update({
+    id: '/records-check',
+    path: '/records-check',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedReimbursementSettingsRoute =
   AuthenticatedReimbursementSettingsRouteImport.update({
     id: '/reimbursement-settings',
@@ -252,6 +260,11 @@ const AuthenticatedTransactionReviewRoute =
     path: '/transaction-review',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedTransfersRoute = AuthenticatedTransfersRouteImport.update({
+  id: '/transfers',
+  path: '/transfers',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedTravelInboxRoute =
   AuthenticatedTravelInboxRouteImport.update({
     id: '/travel-inbox',
@@ -335,6 +348,7 @@ export interface FileRoutesByFullPath {
   '/payment-methods': typeof AuthenticatedPaymentMethodsRoute
   '/plan': typeof AuthenticatedPlanRoute
   '/reconcile': typeof AuthenticatedReconcileRoute
+  '/records-check': typeof AuthenticatedRecordsCheckRoute
   '/reimbursement-settings': typeof AuthenticatedReimbursementSettingsRoute
   '/report-centre': typeof AuthenticatedReportCentreRoute
   '/reports': typeof AuthenticatedReportsRoute
@@ -344,6 +358,7 @@ export interface FileRoutesByFullPath {
   '/settings': typeof AuthenticatedSettingsRoute
   '/strategy': typeof AuthenticatedStrategyRoute
   '/transaction-review': typeof AuthenticatedTransactionReviewRoute
+  '/transfers': typeof AuthenticatedTransfersRoute
   '/travel-inbox': typeof AuthenticatedTravelInboxRoute
   '/trips': typeof AuthenticatedTripsRouteWithChildren
   '/vault': typeof AuthenticatedVaultRoute
@@ -383,6 +398,7 @@ export interface FileRoutesByTo {
   '/payment-methods': typeof AuthenticatedPaymentMethodsRoute
   '/plan': typeof AuthenticatedPlanRoute
   '/reconcile': typeof AuthenticatedReconcileRoute
+  '/records-check': typeof AuthenticatedRecordsCheckRoute
   '/reimbursement-settings': typeof AuthenticatedReimbursementSettingsRoute
   '/report-centre': typeof AuthenticatedReportCentreRoute
   '/reports': typeof AuthenticatedReportsRoute
@@ -392,6 +408,7 @@ export interface FileRoutesByTo {
   '/settings': typeof AuthenticatedSettingsRoute
   '/strategy': typeof AuthenticatedStrategyRoute
   '/transaction-review': typeof AuthenticatedTransactionReviewRoute
+  '/transfers': typeof AuthenticatedTransfersRoute
   '/travel-inbox': typeof AuthenticatedTravelInboxRoute
   '/vault': typeof AuthenticatedVaultRoute
   '/wealth': typeof AuthenticatedWealthRoute
@@ -432,6 +449,7 @@ export interface FileRoutesById {
   '/_authenticated/payment-methods': typeof AuthenticatedPaymentMethodsRoute
   '/_authenticated/plan': typeof AuthenticatedPlanRoute
   '/_authenticated/reconcile': typeof AuthenticatedReconcileRoute
+  '/_authenticated/records-check': typeof AuthenticatedRecordsCheckRoute
   '/_authenticated/reimbursement-settings': typeof AuthenticatedReimbursementSettingsRoute
   '/_authenticated/report-centre': typeof AuthenticatedReportCentreRoute
   '/_authenticated/reports': typeof AuthenticatedReportsRoute
@@ -441,6 +459,7 @@ export interface FileRoutesById {
   '/_authenticated/settings': typeof AuthenticatedSettingsRoute
   '/_authenticated/strategy': typeof AuthenticatedStrategyRoute
   '/_authenticated/transaction-review': typeof AuthenticatedTransactionReviewRoute
+  '/_authenticated/transfers': typeof AuthenticatedTransfersRoute
   '/_authenticated/travel-inbox': typeof AuthenticatedTravelInboxRoute
   '/_authenticated/trips': typeof AuthenticatedTripsRouteWithChildren
   '/_authenticated/vault': typeof AuthenticatedVaultRoute
@@ -482,6 +501,7 @@ export interface FileRouteTypes {
     | '/payment-methods'
     | '/plan'
     | '/reconcile'
+    | '/records-check'
     | '/reimbursement-settings'
     | '/report-centre'
     | '/reports'
@@ -491,6 +511,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/strategy'
     | '/transaction-review'
+    | '/transfers'
     | '/travel-inbox'
     | '/trips'
     | '/vault'
@@ -530,6 +551,7 @@ export interface FileRouteTypes {
     | '/payment-methods'
     | '/plan'
     | '/reconcile'
+    | '/records-check'
     | '/reimbursement-settings'
     | '/report-centre'
     | '/reports'
@@ -539,6 +561,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/strategy'
     | '/transaction-review'
+    | '/transfers'
     | '/travel-inbox'
     | '/vault'
     | '/wealth'
@@ -578,6 +601,7 @@ export interface FileRouteTypes {
     | '/_authenticated/payment-methods'
     | '/_authenticated/plan'
     | '/_authenticated/reconcile'
+    | '/_authenticated/records-check'
     | '/_authenticated/reimbursement-settings'
     | '/_authenticated/report-centre'
     | '/_authenticated/reports'
@@ -587,6 +611,7 @@ export interface FileRouteTypes {
     | '/_authenticated/settings'
     | '/_authenticated/strategy'
     | '/_authenticated/transaction-review'
+    | '/_authenticated/transfers'
     | '/_authenticated/travel-inbox'
     | '/_authenticated/trips'
     | '/_authenticated/vault'
@@ -809,6 +834,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedReconcileRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/records-check': {
+      id: '/_authenticated/records-check'
+      path: '/records-check'
+      fullPath: '/records-check'
+      preLoaderRoute: typeof AuthenticatedRecordsCheckRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/reimbursement-settings': {
       id: '/_authenticated/reimbursement-settings'
       path: '/reimbursement-settings'
@@ -870,6 +902,13 @@ declare module '@tanstack/react-router' {
       path: '/transaction-review'
       fullPath: '/transaction-review'
       preLoaderRoute: typeof AuthenticatedTransactionReviewRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/transfers': {
+      id: '/_authenticated/transfers'
+      path: '/transfers'
+      fullPath: '/transfers'
+      preLoaderRoute: typeof AuthenticatedTransfersRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/travel-inbox': {
@@ -981,6 +1020,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedPaymentMethodsRoute: typeof AuthenticatedPaymentMethodsRoute
   AuthenticatedPlanRoute: typeof AuthenticatedPlanRoute
   AuthenticatedReconcileRoute: typeof AuthenticatedReconcileRoute
+  AuthenticatedRecordsCheckRoute: typeof AuthenticatedRecordsCheckRoute
   AuthenticatedReimbursementSettingsRoute: typeof AuthenticatedReimbursementSettingsRoute
   AuthenticatedReportCentreRoute: typeof AuthenticatedReportCentreRoute
   AuthenticatedReportsRoute: typeof AuthenticatedReportsRoute
@@ -990,6 +1030,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRoute
   AuthenticatedStrategyRoute: typeof AuthenticatedStrategyRoute
   AuthenticatedTransactionReviewRoute: typeof AuthenticatedTransactionReviewRoute
+  AuthenticatedTransfersRoute: typeof AuthenticatedTransfersRoute
   AuthenticatedTravelInboxRoute: typeof AuthenticatedTravelInboxRoute
   AuthenticatedTripsRoute: typeof AuthenticatedTripsRouteWithChildren
   AuthenticatedVaultRoute: typeof AuthenticatedVaultRoute
@@ -1022,6 +1063,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedPaymentMethodsRoute: AuthenticatedPaymentMethodsRoute,
   AuthenticatedPlanRoute: AuthenticatedPlanRoute,
   AuthenticatedReconcileRoute: AuthenticatedReconcileRoute,
+  AuthenticatedRecordsCheckRoute: AuthenticatedRecordsCheckRoute,
   AuthenticatedReimbursementSettingsRoute:
     AuthenticatedReimbursementSettingsRoute,
   AuthenticatedReportCentreRoute: AuthenticatedReportCentreRoute,
@@ -1032,6 +1074,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedSettingsRoute: AuthenticatedSettingsRoute,
   AuthenticatedStrategyRoute: AuthenticatedStrategyRoute,
   AuthenticatedTransactionReviewRoute: AuthenticatedTransactionReviewRoute,
+  AuthenticatedTransfersRoute: AuthenticatedTransfersRoute,
   AuthenticatedTravelInboxRoute: AuthenticatedTravelInboxRoute,
   AuthenticatedTripsRoute: AuthenticatedTripsRouteWithChildren,
   AuthenticatedVaultRoute: AuthenticatedVaultRoute,

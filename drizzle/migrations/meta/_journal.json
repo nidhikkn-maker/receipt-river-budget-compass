@@ -330,6 +330,13 @@
       "when": 1793531783136,
       "tag": "0046_payee_links",
       "breakpoints": true
+    },
+    {
+      "idx": 47,
+      "version": "7",
+      "when": 1793537294336,
+      "tag": "0047_internal_transfer_links",
+      "breakpoints": true
     }
   ]
 }

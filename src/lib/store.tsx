@@ -60,6 +60,10 @@ interface Ctx {
   categoryHistory: () => Promise<CategoryBatch[]>;
   undoCategoryBatch: (id: string) => Promise<void>;
   correctFinancialEntries: (preview: CorrectionPreview, id: string) => Promise<void>;
+  confirmTransfer: (p: { id: string; debit: Expense; destId: string; credit: Expense | null }) => Promise<void>;
+  cancelTransfer: (id: string) => Promise<void>;
+  /** Receiving-side entries already linked to a transfer (kept as evidence, excluded from totals). */
+  transferCounterparts: Expense[];
   undoFinancialCorrection: (id: string) => Promise<void>;
   financialCorrectionHistory: () => Promise<FinancialCorrectionHistory[]>;
   applyReviewMapping: (preview: ReviewMappingPreview) => Promise<void>;
@@ -235,7 +239,7 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
       receiptDetails: x.receipt_details as unknown as ReceiptDetails, reimbursementStatus: x.reimbursement_status as ReimbursementStatus,
       adjustmentSign: x.adjustment_sign === -1 ? -1 : 1,
       allocations: (x.allocations as unknown as Allocation[]) ?? [], reimbursement: (x.reimbursement as unknown as ReimbursementInfo) ?? {},
-      tripId: x.trip_id, principal: x.principal == null ? null : Number(x.principal), interest: x.interest == null ? null : Number(x.interest),
+      transferCounterpartOf: x.transfer_counterpart_of ?? null, tripId: x.trip_id, principal: x.principal == null ? null : Number(x.principal), interest: x.interest == null ? null : Number(x.interest),
     })));
     const bud: Budgets = {};
     for (const x of b.data ?? []) bud[x.category as Category] = Number(x.monthly_amount);
@@ -366,6 +370,12 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
     check((await supabase.rpc("correct_financial_entries", { _id: id, _items: preview.snapshots as unknown as Json, _choice: preview.choice as Json, _accounts: preview.accounts as unknown as Json })).error);
     await refresh();
   };
+  const confirmTransfer: Ctx["confirmTransfer"] = async ({ id, debit, destId, credit }) => {
+    if (!navigator.onLine) throw Error("Reconnect before linking transfers.");
+    const r = await supabase.rpc("confirm_transfer", { _id: id, _debit: debit.id, _debit_rev: debit.correctionRevision ?? 0, _dest: destId, _credit: (credit?.id ?? null) as string, _credit_rev: (credit?.correctionRevision ?? null) as number });
+    check(r.error); if (r.data !== id) throw Error("Saved transfer could not be confirmed. Retry the same preview."); await refresh();
+  };
+  const cancelTransfer: Ctx["cancelTransfer"] = async id => { check((await supabase.rpc("cancel_transfer", { _id: id })).error); await refresh(); };
   const undoFinancialCorrection: Ctx["undoFinancialCorrection"] = async id => {
     check((await supabase.rpc("undo_financial_correction", { _id: id })).error); await refresh();
   };
@@ -666,7 +676,7 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
     <StoreCtx.Provider value={{
       departmentBudgets, departmentBudgetError,
       pendingCount, setTags, manageTripExpenses, applyReviewMapping, applyReviewMetadata, undoReviewMetadata, reviewMetadataHistory, saveRecurringReview, preferences, savePreferences, ensureCategory, moveCategory, bulkSetCategory, categoryHistory, undoCategoryBatch, correctFinancialEntries, undoFinancialCorrection, financialCorrectionHistory, userId, name, updateName, members, memberName,
-      expenses: expenses.filter((x) => (x.txnType ?? "expense") === "expense"), transactions: expenses, accounts, addAccount, setArchived, adjustBalance,
+      expenses: expenses.filter((x) => (x.txnType ?? "expense") === "expense"), transactions: expenses.filter((x) => !x.transferCounterpartOf), transferCounterparts: expenses.filter((x) => !!x.transferCounterpartOf), confirmTransfer, cancelTransfer, accounts, addAccount, setArchived, adjustBalance,
       commitments, loans, goals, valuations, documents, saveCommitment, confirmIrregular, removeCommitment, confirmCommitment, saveLoan, removeLoan, recordLoanPayment, convertToEmi,
       saveGoal, removeGoal, updateAccount, addValuation, removeValuation, addDocument, updateDocument, removeDocument, history, setReimbursement, recordReimbursement, deleteAll,
       budgets, loading, syncState, lastSyncedAt, refresh, save, remove, setScope, reconcile, addMember, removeMember, updateMember, setBudget, signedUrl,

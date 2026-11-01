@@ -48,6 +48,8 @@ export interface Txn {
   /** Adjustments only: +1 raises the balance, -1 lowers it. */
   adjustmentSign?: 1 | -1;
   reconciledAt?: string | null;
+  /** Receiving-side evidence of a linked transfer: never counted again. */
+  transferCounterpartOf?: string | null;
   /** Manual repayment breakdown is in original currency; legacy repayments without a split remain principal-only. */
   principal?: number | null;
   interest?: number | null;
@@ -80,6 +82,7 @@ export function accountBalance(a: Account, txns: Txn[]): number {
   const sign = isLiability(a.kind) ? -1 : 1;
   let bal = a.openingBalance;
   for (const t of txns) {
+    if (t.transferCounterpartOf) continue;
     const k = type(t);
     if (t.accountId === a.id) {
       if (k === "expense") bal -= sign * t.amount;
@@ -131,7 +134,7 @@ export function accountValue(a: Account, txns: Txn[], valuations: Valuation[] = 
 export function cashflow(txns: Txn[], from?: string, to?: string) {
   let income = 0, spent = 0;
   for (const t of txns) {
-    if ((from && t.date < from) || (to && t.date > to)) continue;
+    if (t.transferCounterpartOf || (from && t.date < from) || (to && t.date > to)) continue;
     const k = type(t);
     if (k === "income") income += t.amount;
     else if (k === "expense") spent += t.amount;

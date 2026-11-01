@@ -508,6 +508,7 @@ export type Database = {
           tags: string[]
           title: string
           to_account_id: string | null
+          transfer_counterpart_of: string | null
           trip_id: string | null
           txn_type: string
           updated_at: string
@@ -551,6 +552,7 @@ export type Database = {
           tags?: string[]
           title: string
           to_account_id?: string | null
+          transfer_counterpart_of?: string | null
           trip_id?: string | null
           txn_type?: string
           updated_at?: string
@@ -594,6 +596,7 @@ export type Database = {
           tags?: string[]
           title?: string
           to_account_id?: string | null
+          transfer_counterpart_of?: string | null
           trip_id?: string | null
           txn_type?: string
           updated_at?: string
@@ -1631,6 +1634,60 @@ export type Database = {
         }
         Relationships: []
       }
+      transfer_links: {
+        Row: {
+          before: Json
+          cancelled_at: string | null
+          created_at: string
+          credit_id: string | null
+          debit_id: string
+          dest_account: string
+          dest_amount: number | null
+          dest_currency: string | null
+          id: string
+          owner_id: string
+          source_account: string
+          source_amount: number
+          source_currency: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          before?: Json
+          cancelled_at?: string | null
+          created_at?: string
+          credit_id?: string | null
+          debit_id: string
+          dest_account: string
+          dest_amount?: number | null
+          dest_currency?: string | null
+          id: string
+          owner_id: string
+          source_account: string
+          source_amount: number
+          source_currency: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          before?: Json
+          cancelled_at?: string | null
+          created_at?: string
+          credit_id?: string | null
+          debit_id?: string
+          dest_account?: string
+          dest_amount?: number | null
+          dest_currency?: string | null
+          id?: string
+          owner_id?: string
+          source_account?: string
+          source_amount?: number
+          source_currency?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           id: string
@@ -1663,6 +1720,7 @@ export type Database = {
         Args: { batch_id: string; items: Json; target: string }
         Returns: string
       }
+      cancel_transfer: { Args: { _id: string }; Returns: undefined }
       claim_import_ai: { Args: { _owner: string }; Returns: boolean }
       claim_import_batches: {
         Args: never
@@ -1721,6 +1779,17 @@ export type Database = {
           isOneToOne: false
           isSetofReturn: true
         }
+      }
+      confirm_transfer: {
+        Args: {
+          _credit: string
+          _credit_rev: number
+          _debit: string
+          _debit_rev: number
+          _dest: string
+          _id: string
+        }
+        Returns: string
       }
       correct_financial_entries: {
         Args: { _accounts: Json; _choice: Json; _id: string; _items: Json }
