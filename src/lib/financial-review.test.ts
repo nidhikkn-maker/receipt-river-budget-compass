@@ -98,3 +98,13 @@ describe("V5.9 evidence and financial preservation", () => {
     expect(accountBalance(card, tx)).toBe(0);
   });
 });
+describe("suggested category settles", () => {
+  it("does not suggest the category a transaction already has", () => {
+    const peer = (id: string) => e({ id, merchant: "Opt Gst", category: "Financial charges", reconciledAt: "2026-11-01" });
+    const target = e({ id: "t", merchant: "Opt Gst", category: "Financial charges" });
+    const other = e({ id: "u", merchant: "Opt Gst", category: "Miscellaneous" });
+    const rows = review([peer("p1"), peer("p2"), target, other]);
+    expect(rows.find(r => r.transaction.id === "t")?.suggestedCategory).toBeUndefined();
+    expect(rows.find(r => r.transaction.id === "u")?.suggestedCategory).toBe("Financial charges");
+  });
+});
