@@ -14,6 +14,7 @@ import { advanceDashboard, tripStatus, TRIP_STATUS_LABEL, type TripStatus, type 
 import { todayISO } from "@/lib/use-position";
 import { PlanCalendar } from "@/components/PlanCalendar";
 import { CreateTripDialog } from "@/components/trip/CreateTripDialog";
+import { useReviewView } from "@/lib/use-review-view";
 
 export const Route = createFileRoute("/_authenticated/trips/")({
   validateSearch: (search: Record<string, unknown>): { trip?: string; status?: "upcoming" } => ({ ...(typeof search["trip"] === "string" ? { trip: search["trip"] } : {}), ...(search["status"] === "upcoming" ? { status: "upcoming" as const } : {}) }),
@@ -37,9 +38,9 @@ function Trips() {
   const today = todayISO();
   const search = Route.useSearch();
   const navigate = useNavigate();
-  const [filter, setFilter] = useState<"all" | TripStatus>(search.status ?? "all");
-  const [filters, setFilters] = useState(emptyTripFilters);
-  const [query, setQuery] = useState("");
+  const [filter, setFilter] = useReviewView<"all" | TripStatus>("trip-status", search.status ?? "all");
+  const [filters, setFilters] = useReviewView("trip-filters", emptyTripFilters);
+  const [query, setQuery] = useReviewView("trip-search", "");
   const [createOpen, setCreateOpen] = useState(false);
 
   // Legacy deep link: /trips?trip=<id> opens the dedicated trip view.

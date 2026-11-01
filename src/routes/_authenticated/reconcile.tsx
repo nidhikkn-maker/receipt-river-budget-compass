@@ -11,6 +11,7 @@ import { PageTitle, Stat } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { useReviewView } from "@/lib/use-review-view";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { BASE_CURRENCY, CURRENCIES, autoMatch, matchScore, money, type Match, type StatementLine } from "@/lib/expenses";
 import { StatementEntry } from "@/components/StatementEntry";
@@ -36,10 +37,10 @@ export const Route = createFileRoute("/_authenticated/reconcile")({
 
 function Reconcile() {
   const { transactions: expenses, accounts, preferences, save, reconcile, refresh } = useStore();
-  const [statementAccount, setStatementAccount] = useState("all");
+  const [statementAccount, setStatementAccount] = useReviewView("statement-account", "all");
   const [lines, setLines] = useState<StatementLine[]>([]);
   const [fileName, setFileName] = useState("");
-  const [currency, setCurrency] = useState<string>(BASE_CURRENCY);
+  const [currency, setCurrency] = useReviewView<string>("statement-currency", BASE_CURRENCY);
   const [overrides, setOverrides] = useState<Record<string, string>>({});
   const [excluded, setExcluded] = useState<Record<string, boolean>>({});
   const [busy, setBusy] = useState(false);
@@ -53,9 +54,9 @@ function Reconcile() {
   const [upTo, setUpTo] = useState<string | null>(null);
   const [lastBatch, setLastBatch] = useState<string | null>(null);
   const [showImported, setShowImported] = useState(false);
-  const [itemList, setItemList] = useState<"matched" | "unmatched" | null>(null);
-  const [itemQuery, setItemQuery] = useState("");
-  const [itemLimit, setItemLimit] = useState(40);
+  const [itemList, setItemList] = useReviewView<"matched" | "unmatched" | null>("statement-items", null);
+  const [itemQuery, setItemQuery] = useReviewView("statement-search", "");
+  const [itemLimit, setItemLimit] = useReviewView("statement-limit", 40);
   const openItems = (kind: "matched" | "unmatched") => { setItemQuery(""); setItemLimit(40); setItemList(kind); };
 
   const loadKnown = useCallback(async (key: string) => {
@@ -188,7 +189,7 @@ function Reconcile() {
       <PageTitle eyebrow="Bank" title="Statements" sub="Upload a CSV, Excel or PDF from your bank or card. New expenses are worked out and registered on their own — anything unclear is left for you." />
       <Button asChild className="mb-5"><Link to="/historical-import">Historical import & bulk review</Link></Button>
       <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-3">
-        <Button asChild variant="ghost" className="h-auto min-w-0 whitespace-normal p-0 text-left"><div role="button" tabIndex={0} aria-label={`Matched: ${reconciled.length} transactions`} onClick={() => openItems("matched")} onKeyDown={e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openItems("matched"); } }}><div className="w-full"><Stat label="Matched" value={String(reconciled.length)} /></div></div></Button>
+        <Button variant="ghost" className="block h-auto min-w-0 whitespace-normal p-0 text-left" aria-label={`Matched: ${reconciled.length} transactions`} onClick={() => openItems("matched")}><Stat label="Matched" value={String(reconciled.length)} /></Button>
         <Button variant="ghost" className="block h-auto min-w-0 whitespace-normal p-0 text-left" aria-label={`Not matched yet: ${open.length} transactions`} onClick={() => openItems("unmatched")}><Stat label="Not matched yet" value={String(open.length)} hint={money(open.reduce((s, e) => s + e.amount, 0))} /></Button>
       </div>
 
@@ -294,7 +295,7 @@ function Reconcile() {
           )}
 
           {matched.length > 0 && (
-            <div id="needs-review" className="mb-4 scroll-mt-28 rounded-3xl border bg-card p-4">
+            <div className="mb-4 rounded-3xl border bg-card p-4">
               <div className="mb-2 flex items-center justify-between gap-3">
                 <h2 className="font-display text-lg font-bold">{matched.length} of {freshLines.length} already in your ledger</h2>
                 <Button variant="outline" size="sm" onClick={confirmAll} disabled={busy || matched.length === 0}>Confirm {matched.length} matches</Button>
@@ -325,7 +326,7 @@ function Reconcile() {
           )}
 
           {plan.review.length > 0 && (
-            <div className="mb-4 rounded-3xl border bg-card p-4">
+            <div id="needs-review" className="mb-4 scroll-mt-28 rounded-3xl border bg-card p-4">
               <h2 className="font-display text-lg font-bold">Needs a look ({plan.review.length})</h2>
               <p className="mb-2 text-xs text-muted-foreground">Transfers, cash withdrawals and unclear credits — tell us where the money went.</p>
               <ul className="space-y-2">
