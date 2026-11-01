@@ -1,8 +1,11 @@
 # Roadmap (Functional Requirements v1.0)
 ## V5.6 organisation reimbursement profiles
-- [ ] Cloud-saved multiple organisation/role profiles, defaults, approval routes, saved account destinations and activity mapping.
-- [ ] Compact claim prefilling, explicit ambiguity review, organisation-scoped eligibility/selection, snapshot PDFs and unchanged existing statements.
-- [ ] Pure finance/profile regression tests and signed-in desktop/phone verification without live record writes; preview only.
+- [x] Multiple organisation/role profiles, organisation defaults, approval routes, existing receiving accounts, document/category preferences and activity mappings use existing owner-RLS cloud preferences; no migration or live test writes.
+- [x] Compact claim prefilling, explicit ambiguity review, organisation allocation/selection, eligible outstanding-only totals, frozen snapshots and regeneration versions; existing statements remain separate.
+- [x] 717 regression checks passed; authenticated pages and isolated in-memory save/reload → prefill → bill PDF → v2 flow verified; 402px page/form no overflow or errors; nothing published.
+- [ ] Cross-device cloud persistence/permission write acceptance — requires isolated cloud testing, because current preview and production share data; owner policy inspected, real cloud writes deliberately not tested.
+- [ ] Advance-to-claim funding allocation — needs a confirmed per-expense/per-organisation funding model; trips with unallocated advances block formal claim generation rather than guessing a deduction.
+- [ ] Real iPhone Safari verification — requires an actual device.
 ## V5.5 compact trip budget
 - [x] Compact Trip Budget card (Total/Actual/Remaining/Reimbursable), Edit Budget sheet with single save, tabbed Budget Breakdown (workspace/traveller/category/currency/organisation), "Budget not set" and "Budget requires confirmation" states, utilisation warnings configurable in Settings; 697 tests pass, build OK, phone-width browser verified, no live records changed, nothing published.
 - [ ] Real iPhone Safari pass of the budget workflow — requires device access.
