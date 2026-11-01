@@ -5,7 +5,7 @@ import { accountBalance, isLiability, type Account } from './ledger';
 
 export const HISTORICAL_START = '2026-04-01';
 export const REVIEW_GROUPS = ['Ready to approve', 'Suggested classification', 'Needs your decision', 'Possible duplicates', 'Transfers and settlements', 'Unmatched or uncertain'] as const;
-export interface ImportProposal extends ExpenseInput { reviewed?: boolean; duplicateOverride?: boolean; reimbursable?: boolean; organisation?: string; subcategory?: string; reimbursementOrganisation?: string }
+export interface ImportProposal extends ExpenseInput { reviewed?: boolean; categoryConfirmed?: boolean; duplicateOverride?: boolean; reimbursable?: boolean; organisation?: string; subcategory?: string; reimbursementOrganisation?: string }
 export interface ImportRule { id: string; merchant: string; account_id: string | null; mappings: Partial<ImportProposal>; enabled: boolean }
 export interface ImportRow { id: string; fingerprint: string; line: StatementLine; proposal: ImportProposal; review_group: string; confidence: string; decision: 'review' | 'approved' | 'excluded'; duplicate_kind: 'new' | 'exact' | 'likely' | 'possible'; duplicate_id: string | null }
 export interface ImportBatch { id: string; account_id: string; file_name: string; file_path: string; currency: string; status: string; error: string | null; period_from: string | null; period_to: string | null; opening_balance: number | null; closing_balance: number | null; source_balances?: import('./balance-verification').BalanceEvidence; balance_verification?: import('./balance-verification').BalanceReview; allow_ai?:boolean; next_page?:number; total_pages?:number|null }
@@ -56,11 +56,36 @@ export function postingBlockers(row: ImportRow, accounts: Account[], today: stri
   if (!p.date || p.date < HISTORICAL_START || p.date > today) out.push('Date must be from 1 April 2026 through today');
   if (!Number.isFinite(p.amount) || p.amount <= 0) out.push('Confirm a positive amount');
   if (!p.title?.trim() || !p.category?.trim()) out.push('Confirm title and category');
+  if (/miscellaneous\s*[—–-]\s*check/i.test(p.category ?? '')) out.push('Choose a final category');
+  if (/^miscellaneous$/i.test(p.category?.trim() ?? '') && !p.categoryConfirmed) out.push('Explicitly confirm Miscellaneous as the final category');
   if (row.duplicate_kind === 'exact') out.push('Already imported');
   if (['likely','possible'].includes(row.duplicate_kind) && !p.duplicateOverride) out.push('Confirm this is a separate payment');
   if (['transfer','card_payment','loan_repayment','investment'].includes(p.txnType ?? '') && (!p.toAccountId || p.accountId === p.toAccountId || !accounts.some(a => a.id === p.toAccountId))) out.push('Confirm destination account');
-  if (!p.reviewed && row.review_group !== REVIEW_GROUPS[0]) out.push('Review classification');
+  if (!p.reviewed) out.push('Review classification');
   return out;
+}
+
+export function classificationStatus(row: ImportRow): 'Verified' | 'Suggested' | 'Needs review' {
+  const p = row.proposal;
+  if (/miscellaneous\s*[—–-]\s*check/i.test(p.category ?? '') || (/^miscellaneous$/i.test(p.category?.trim() ?? '') && !p.categoryConfirmed)) return 'Needs review';
+  if (p.reviewed) return 'Verified';
+  if (row.confidence === 'low' || ['Needs your decision', 'Unmatched or uncertain'].includes(row.review_group)) return 'Needs review';
+  return 'Suggested';
+}
+
+/** Bulk patches enrich tags; they never erase existing tags or source money. */
+export function mergeImportPatch(proposal: ImportProposal, patch: Partial<ImportProposal>): ImportProposal {
+  return { ...proposal, ...patch, tags: [...new Set([...(proposal.tags ?? []), ...(patch.tags ?? [])])] };
+}
+
+export function importSelectionSummary(rows: ImportRow[], accounts: Account[], today: string) {
+  const eligible = rows.filter(r => r.decision === 'approved' && postingBlockers(r, accounts, today).length === 0);
+  const types = new Map<string, { count: number; amount: number }>();
+  for (const row of eligible) {
+    const key = row.proposal.txnType ?? 'expense', old = types.get(key) ?? { count: 0, amount: 0 };
+    types.set(key, { count: old.count + 1, amount: Math.round((old.amount + row.line.amount) * 100) / 100 });
+  }
+  return { selected: rows.length, eligible, requiresReview: rows.filter(r => r.duplicate_kind !== 'exact' && !eligible.includes(r)).length, duplicates: rows.filter(r => r.duplicate_kind === 'exact').length, types: [...types].map(([type, totals]) => ({ type, ...totals })) };
 }
 
 export function enrichedInput(p: ImportProposal): ExpenseInput {
