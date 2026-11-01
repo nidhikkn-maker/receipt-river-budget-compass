@@ -34,7 +34,7 @@ export interface AutopilotInput {
   /** Overdue commitments: [{ name, amount, due }]. */
   overdue: { name: string; amount: number; due: string }[];
   /** Unusual recent transactions: [{ title, amount, reason }]. */
-  anomalies: { title: string; amount: number; reason: string }[];
+  anomalies: { id?: string; title: string; amount: number; reason: string }[];
   subscriptions: {
     monthly: number;
     duplicates: { names: string[] }[];
