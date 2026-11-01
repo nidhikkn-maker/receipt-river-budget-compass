@@ -6,8 +6,8 @@ import { toast } from 'sonner';
 import { useStore } from '@/lib/store';
 import { supabase } from '@/integrations/supabase/client';
 import { SCOPES, SCOPE_LABEL, money, type Scope } from '@/lib/expenses';
-import { TXN_LABEL, TXN_TYPES, isLiability, balanceAsOf } from '@/lib/ledger';
-import { classificationStatus, mergeImportPatch, importSelectionSummary, REVIEW_GROUPS, merchantFamily, postingBlockers, orientStatementMove, reconcileStatement, type ImportRow, type ImportBatch, type ImportProposal } from '@/lib/historical-import';
+import { TXN_LABEL, TXN_TYPES } from '@/lib/ledger';
+import { classificationStatus, mergeImportPatch, importSelectionSummary, REVIEW_GROUPS, merchantFamily, postingBlockers, orientStatementMove, type ImportRow, type ImportBatch, type ImportProposal } from '@/lib/historical-import';
 import { reviseRows } from '@/lib/import-repository';
 import { postHistoricalImport } from '@/lib/historical-import.functions';
 import { downloadBlob, toCsv } from '@/lib/reports';
@@ -18,7 +18,7 @@ import { Input } from './ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 
 export function ImportReview({batch,rows,posted,onReload}:{batch:ImportBatch;rows:ImportRow[];posted:Set<string>;onReload:()=>Promise<void>}) {
-  const {accounts,preferences,members,transactions,refresh}=useStore();
+  const {accounts,refresh}=useStore();
   const post=useServerFn(postHistoricalImport);
   const [group,setGroup]=useState('All'),[merchant,setMerchant]=useState('All'),[selected,setSelected]=useState<Set<string>>(new Set()),[patch,setPatch]=useState<Partial<ImportProposal>>({}),[from,setFrom]=useState(''),[to,setTo]=useState(''),[expanded,setExpanded]=useState<string|null>(null);
   const [search,setSearch]=useState(''),[view,setView]=useState<'overview'|'groups'|'transactions'>('overview');

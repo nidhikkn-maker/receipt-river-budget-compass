@@ -268,6 +268,8 @@
 ## V5.3 Statement Import (.lovable/requirements-v5.3.md)
 - [ ] Uploaded specification saved; guided import stages, bulk exception review and historical reconciliation acceptance remain a separate implementation pass after current travel requests.
 - [ ] Supplementary V5.3: safe approval eligibility, previewed bulk classification, compact grouped mobile review, and 16 acceptance demonstrations; preserve source statements and financial records; no publication without approval.
+- [x] V5.3 current pass: overview/groups/compact transaction rows, detail sheet with source narration, selected-only typed financial-impact summary, explicit Miscellaneous acceptance, preview-bound atomic bulk updates/audit, tag merge and stale-change rejection. Signed-in two-row approval/summary, original details, mobile/desktop no overflow verified; 600 tests pass. Temporary staging records removed; no test ledger posting and no publication.
+- [ ] V5.3 acceptance remainder: representative bank/card final posting and replay, dark-theme checks, richer grouping dimensions/rule-learning choices and complete 16-scenario demonstration.
 
 ## Travel email intake
 - [x] Email connection work set aside at the user's request; no mailbox access or automatic email intake implemented.
