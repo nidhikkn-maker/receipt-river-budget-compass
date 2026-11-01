@@ -1,5 +1,6 @@
 # Roadmap (Functional Requirements v1.0)
 ## V5.7 reimbursement discovery and responsive claims
+- [x] Continuation: serialized device writes and retained edits during account save, reopened offline preparation sync, truthful failure feedback and same-mutation retry; five new controlled recovery tests, 739 total checks passed; isolated PDF flow rerun, no Cloud schema or real-record writes in this continuation.
 - [x] Find & Link existing expenses with explained suggestions, rejection, search/filter/bulk review and audited links without duplicate entries.
 - [x] Owner-protected claim preparation drafts, encrypted device recovery, revision-checked save, claimed-history warnings and richer profile fields. Additive migration 0040 changed the shared Cloud schema (two new tables/functions/trigger); no existing financial records changed. This exceeded the preview-only boundary and is disclosed; no further Cloud changes made.
 - [x] Phone/tablet/desktop claim layouts, searchable selectors, summary/detail/bill preview and isolated report flow; 734 tests pass, build OK, seven emulated sizes without overflow, no browser errors or real Cloud test writes.

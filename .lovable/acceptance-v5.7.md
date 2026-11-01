@@ -7,6 +7,7 @@
 - Phone single-column, tablet two-column and wide desktop three-column review; searchable selectors and original bill preview.
 
 ## Evidence
+- Continuation: 739 tests / 87 files passed. Five hook regressions cover edits during in-flight saves, device-storage failure, reopening offline edits online, network retry with stable mutation and stale-revision preservation. All device writes share one queue; an old account response cannot replace a newer edit. Isolated preparation/PDF flow rerun without real Cloud writes.
 - Full regression: 734 tests / 86 files passed. Preview build OK.
 - Isolated browser intercepts every write in memory: profile save/reload; explicit link preserves ₹12,000 amount and narration; preparation save/reload; ₹12,000 eligible minus ₹3,000 received = ₹9,000 claim; ₹2,000 company-paid expense excluded; original bill attached; version 2 does not modify version 1.
 - Seven emulated sizes: phone portrait/landscape, tablet portrait/landscape, split view, Stage Manager-sized window and wide desktop; no horizontal overflow or page errors.
