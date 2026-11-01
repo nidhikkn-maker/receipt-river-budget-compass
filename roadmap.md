@@ -1,5 +1,6 @@
 # Roadmap (Functional Requirements v1.0)
 ## V5.10 guided Financial Inbox
+- [ ] Current continuation: scoped atomic trip/organisation/project-tag mapping, direct reviewed recurring profile creation with duplicate-safe retry, missing-field grouping and rule-load/count recovery; preserve real records and no publication.
 - [x] Separate overview, transaction review and account reconciliation; independent unique/issue/overlap counts; statement/report/reminder sections kept separate.
 - [x] Stable visible/page/all-matching/merchant selection; sticky summary, category exclusions and exact guarded correction confirmation; encrypted device review-context recovery.
 - [x] Reuse existing confirmed merchant rules/cohorts and guarded financial APIs; dedicated Settings classification-rules page. No new backend or financial writes.
