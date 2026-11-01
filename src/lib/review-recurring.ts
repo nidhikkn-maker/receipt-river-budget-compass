@@ -11,3 +11,10 @@ export function recurringSeed(e: Expense, intervalDays: number | null) {
 export function recurringDuplicates(draft: Omit<Commitment, 'id'>, commitments: Commitment[]) {
   return commitments.filter(c => c.status === 'active' && c.direction === draft.direction && c.accountId === draft.accountId && normal(c.name) === normal(draft.name));
 }
+export function recurringSelection(entries: Expense[]) {
+  const first = entries[0];
+  if (!first) throw Error('Select a transaction first.');
+  recurringSeed(first, null);
+  if (entries.some(e => (e.txnType ?? 'expense') !== 'expense' || normal(e.merchant ?? '') !== normal(first.merchant ?? '') || e.accountId !== first.accountId || e.currency !== first.currency || e.scope !== first.scope || e.department !== first.department)) throw Error('Select one merchant, account, currency and responsibility group for a recurring profile.');
+  return first;
+}

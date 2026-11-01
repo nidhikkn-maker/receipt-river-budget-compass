@@ -23,7 +23,7 @@ export function centreReview(items: InboxItem[], transactions: Expense[], accoun
   const augmented = [...items];
   for (const e of transactions) {
     const missing: string[] = [];
-    if (!accounts.some(a => a.id === e.accountId && !a.archived)) missing.push('Source account');
+    if (!accounts.some(a => a.id === e.accountId && !a.archived) && !items.some(i => i.transactionId === e.id && i.type === 'missing_details' && /account/i.test(i.description))) missing.push('Source account');
     if (['business', 'official'].includes(e.scope) && !e.department?.trim() && !e.workspaceAllocations?.length) missing.push('Organisation');
     if (!e.paymentMethod) missing.push('Payment method');
     for (const field of missing) augmented.push({ key: `required:${field}:${e.id}`, type: 'missing_details', transactionId: e.id, title: e.title, description: `${field} requires confirmation`, amount: e.amount, date: e.date, accountName: null, priority: 'medium', action: `Confirm ${field.toLowerCase()}` });
