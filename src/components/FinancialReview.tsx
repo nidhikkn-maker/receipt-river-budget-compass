@@ -23,6 +23,7 @@ import { FinancialCorrectionPanel } from "./FinancialCorrectionPanel";
 import { ReviewMappingPanel } from "./ReviewMappingPanel";
 import { ReviewRecurringPanel } from "./ReviewRecurringPanel";
 import { recurringSeed } from "@/lib/review-recurring";
+import { verifiedRecovery } from '@/lib/review-recovery';
 import { readReviewContext, writeReviewContext } from '@/lib/offline';
 
 export function FinancialReview({ items, onOpen, initialFilter = "all" }: { items: InboxItem[]; onOpen: (e: Expense) => void; initialFilter?: ReviewFilter }) {
@@ -65,6 +66,7 @@ export function FinancialReview({ items, onOpen, initialFilter = "all" }: { item
   const visible = filtered.slice(0, limit);
   const picked = rows.filter(r => selected.has(r.transaction.id));
   const focused = rows.find(r => r.transaction.id === detail);
+  const recovery = focused ? verifiedRecovery(focused.transaction, accounts, preferences) : null;
   const toggle = (id: string) => setSelected(prev => { const next = new Set(prev); next.has(id) ? next.delete(id) : next.add(id); return next; });
   const pick = (ids: string[]) => setSelected(prev => selectReviewIds(prev, rows.filter(r => ids.includes(r.transaction.id))));
   const summary = selectedReviewSummary(picked);
