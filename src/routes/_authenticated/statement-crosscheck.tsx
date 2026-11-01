@@ -127,7 +127,7 @@ function CrossCheckPage() {
         const transfer = !!m.transferWith;
         await save({
           title: m.description.slice(0, 80) || "Statement entry", merchant: null, category: transfer ? "Transfer" : "Uncategorised", scope: "business", memberId: null,
-          amount: m.amount, currency: acct.currency ?? "INR", paymentMethod: "bank_transfer", date: m.date, description: `Statement import · ${m.source}`, tags: ["statement-import"],
+          amount: m.amount, currency: "INR", paymentMethod: "bank_transfer", date: m.date, description: `Statement import · ${m.source}`, tags: ["statement-import"],
           txnType: transfer ? "transfer" : m.direction === "debit" ? "expense" : "income",
           accountId: transfer && m.direction === "credit" ? targetId : accountId,
           toAccountId: transfer ? (m.direction === "debit" ? targetId : accountId) : null,
