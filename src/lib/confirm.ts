@@ -9,7 +9,7 @@ export function confirmAction(req: ConfirmRequest | string): Promise<boolean> {
   const r = typeof req === 'string' ? { message: req } : req;
   return new Promise(resolve => {
     queue.push({ ...r, resolve });
-    if (queue.length === 1) listener?.(queue[0]);
+    if (queue.length === 1) listener?.(queue[0] ?? null);
   });
 }
 
