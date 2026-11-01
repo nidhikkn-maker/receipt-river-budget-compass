@@ -248,6 +248,8 @@
 - [x] Mobile performance testing: scripts/mobile-perf.py measures phone-sized throttled load; verified 0.75s frame, 0.78s saved figures, 5.5s full sync on Fast 4G
 
 ## V5.2 Smart Home & Travel Redesign (.lovable/requirements-v5.2.md)
+- [ ] Current request: booking confirmation upload with automatic detail extraction into a reviewed booking draft; retain original attachment, no automatic expense.
+- [ ] Current request: home shortcut selection and ordering, including travel actions first.
 - [x] P1: Compact Travel Manager overview (trip cards, status + workspace filters, search, alerts; no inline forms)
 - [x] P1: Dedicated individual trip view /trips/$tripId with section tabs (Overview/Itinerary/Bookings/Expenses/Budget & Settlements/Reports), quick actions, More→Close/Cancel/Delete
 - [x] P1: Simplified Create Trip dialog (essentials first, optional details, localStorage draft, no auto-keyboard)
