@@ -1,4 +1,9 @@
 # Roadmap (Functional Requirements v1.0)
+## Published to https://ledgerline.biz (2026-11-01, 13:22 UTC)
+- [x] Pre-publish quick security scan: one info-level item only (guest sign-in shares signed-in access rules; intentional for guest upgrade continuity). No critical findings.
+- [x] Publish requested and confirmed serving: site returns 200 and the newest pages ship — card balance (/cards/$accountId), records check, transfers and trip lifecycle pieces all load with expected content.
+- [ ] Deep security scan is stale for this commit; run one on request before broad sharing.
+- [ ] Physical iPhone/iPad acceptance still needs the user's own devices; sandbox 402px checks are not device evidence.
 ## Statement tiles and calendar review continuity
 - [x] Card credits classify as card payments (refunds stay separate); unique existing source-account payments are recognised automatically without adding money twice. Unknown/ambiguous sources require confirmation. Protected historical posting rejects card-credit income and non-card destinations. Existing financial rows unchanged; no unattended posting added.
 - [x] Statements upload/matching moved to Inbox's Statements view; /reconcile redirects there, and the separate Bank navigation item is removed.
