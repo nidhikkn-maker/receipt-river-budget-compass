@@ -1,3 +1,4 @@
+// @vitest-environment node
 // Isolated in-memory PostgreSQL only: never contacts Lovable Cloud or writes live records.
 import { PGlite } from "@electric-sql/pglite";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
