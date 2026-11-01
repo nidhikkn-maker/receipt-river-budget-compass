@@ -283,4 +283,4 @@
 - [ ] V5.3 actual-statement and actual-iPhone acceptance — needs the user’s representative statement and compatible phone; synthetic month and emulated 402px checks passed.
 - [ ] Foreign-currency ledger reconciliation — source arithmetic supported, direct original-currency comparison to INR-only ledger unavailable; never certifies or auto-adjusts balances.
 
-- [ ] Current continuation: grouped live import Inbox, direct owner-visible batch links and automatic active-review refresh; test link/reload without posting.
+- [x] Current continuation: grouped auto-refreshing import Inbox and direct validated batch links; active review refreshes with stale-response protection. Signed-in processing→review update, exact-batch reload, Inbox link, phone overflow and no approval/posting verified; 655 tests pass. Temporary fixture removed; no publication.
