@@ -15,6 +15,7 @@ const GROUPS: { title: string; items: Dest[] }[] = [
   { title: "Financial setup", items: [
     { label: "Accounts", desc: "Bank, cash, cards, wallets, loans and investments", to: "/wealth" },
     { label: "Payment methods", desc: "UPI, debit/credit cards and wallets linked to accounts", to: "/payment-methods" },
+    { label: "Recipients & payees", desc: "External people, merchants and businesses", to: "/settings", hash: "payees" },
     { label: "Workspaces", desc: "Personal, family, business and official focus", to: "/settings", hash: "finance" },
     { label: "Organisations", desc: "Organisation directory reused in claims and reports", to: "/settings", hash: "organisations" },
     { label: "Reimbursement profiles", desc: "Organisation roles, approvals and receiving accounts", to: "/reimbursement-settings" },

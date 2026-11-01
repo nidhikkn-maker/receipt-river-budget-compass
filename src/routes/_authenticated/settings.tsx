@@ -13,6 +13,7 @@ import { FinanceSettings } from "@/components/FinanceSettings";
 import { AppearanceSettings } from "@/components/AppearanceSettings";
 import { PushSettings } from "@/components/PushSettings";
 import { OrganisationDirectory } from "@/components/OrganisationDirectory";
+import { PayeeDirectory } from '@/components/PayeeDirectory';
 import { ImportRules } from '@/components/ImportRules';
 import { SettingsDirectory } from "@/components/SettingsDirectory";
 import { useStore } from "@/lib/store";
@@ -131,6 +132,7 @@ function Settings() {
       <div id="appearance" className="scroll-mt-20"><AppearanceSettings /></div>
       <div id="finance" className="scroll-mt-20"><FinanceSettings /></div>
       <OrganisationDirectory />
+      <PayeeDirectory />
       <ImportRules />
       <div id="notifications" className="scroll-mt-20"><PushSettings /></div>
       <div id="data" className="grid scroll-mt-20 gap-4 sm:grid-cols-2">

@@ -1,6 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { AccountForm } from "@/components/AccountForm";
+import { PayeePicker } from '@/components/PayeePicker';
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { ScanLine, Sparkles, X, Camera, Image as ImageIcon, FolderOpen, Inbox, RotateCcw, PencilLine, ChevronDown, Check, Plus } from "lucide-react";
@@ -716,6 +717,7 @@ function NewExpense() {
 
         <fieldset disabled={!confirmed || reading || saving} className={cn("grid min-w-0 gap-3 rounded-3xl bg-card p-4", !confirmed && "opacity-50")}>
           {TYPE_HINT[txnType] && <p className="text-xs text-muted-foreground">{TYPE_HINT[txnType]}</p>}
+          {!isMove(txnType)&&<PayeePicker payees={preferences.payees??[]} merchant={merchant} onSelect={setMerchant}/>}
           {/* Category */}
           {!isMove(txnType) && (
             <div className="grid gap-1.5">

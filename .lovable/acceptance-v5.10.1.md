@@ -11,15 +11,43 @@ FinancialCorrectionPanel always displayed both internal account selectors for ev
 - Type switching clears incompatible local destination/split choices, never mutates confirmed records.
 - Mixed existing types require separate review or an explicitly selected target type before preview.
 - Existing exact financial impact, snapshot checks, confirmation, audit and undo remain authoritative.
+- Added searchable recipient directory in owner preferences, all five recipient types, optional identifiers and owner-verified account details, organisation/category preferences and reviewed create/edit/archive. New-entry selection explicitly fills merchant/payee name only; no owned account or automatic classification is created. This is not a stable ledger payee-ID association.
+- Combined category/workspace/organisation/activity review saves through one existing atomic metadata operation, preserving source money and excluding incompatible claims/splits/types.
 
 ## Not implemented / not verified
-- Reusable external recipient directory, payee associations, bulk external recipient save and third-party loan/advance treatment are still open requirements. They must not be simulated by internal destination accounts.
+- Stable ledger payee associations, bulk external recipient save and third-party recoverable loan/advance treatment remain blocked on coordinated protected schema/API changes; the current shared database cannot be changed under this brief. Existing travel advances mean advances received, not loans issued, and must not be relabelled to fake support.
 - The full 18-case acceptance demonstration and hosted save/reopen remain incomplete.
 - Physical iPad/iPhone and cross-device checks are blocked: the new draft shares live data, no physical devices or real-device service is connected.
 - No Cloud schema changes, sample Cloud records, financial edits, or production publication in this work.
 
 ## Evidence
+- Latest full regression: 884 tests / 111 files passed; latest build log is build OK. Controlled recipient save/reopen and combined classification confirmation passed; production data was not used for writes.
 - Local reconciliation suite: 44 checks passed, including disposable disk-backed PostgreSQL close/reopen and owner-isolated saved checkpoints.
 - Full regression: 872 checks passed across 109 files. Two additional expense/destination regressions were then verified in the 10-check financial correction suite. Current app build log: build OK.
 - Controlled component preview/cancel/confirm/undo passed; no actual Cloud correction was exercised.
 - These are controlled tests, not a hosted or physical-device end-to-end claim.
+- Signed-in browser: recipient form → preview → cancel verified at 1280×1800, 820×1180, 1180×820 and 402×874; no overflow or page errors. No hosted writes. Screenshots: /tmp/browser/payees/. Physical checks remain Blocked.
+
+## Requested 18-case register
+| Case | Status | Evidence / limitation |
+| --- | --- | --- |
+| UPI merchant payment | Partial | Existing one-account expense rules and explicit payee selection; no hosted payment written |
+| NEFT external individual | Partial | Directory accepts individual without bank details; stable ledger association unavailable |
+| Business supplier | Partial | Business directory entry and combined category/workspace preview |
+| Own-account transfer | Pass (controlled) | Financial correction/ledger tests require two different active accounts, zero expenditure |
+| AMEX dues | Pass (controlled) | Card-target filtering, impact/duplicate guards and correction SQL retry/undo |
+| Personal expense | Pass (controlled) | Expense has no destination; original source and spending preserved |
+| Business expense | Partial | Combined workspace/category guarded metadata; hosted acceptance not run |
+| Official paid personally | Partial | Combined workspace/organisation; claim eligibility not granted automatically |
+| Loan to another individual | Blocked | Outgoing receivable model and protected API not available under no-shared-change boundary |
+| Recoverable advance issued | Blocked | Existing advances are received travel advances, not issued counterparty receivables |
+| Incoming reimbursement | Partial | Existing dedicated workflow/ledger tests; not exposed as an unsupported correction |
+| Unknown counterparty | Pass (controlled) | Blank unknown details retained; invalid unnamed directory entries rejected |
+| Bulk category assignment | Pass (controlled) | Existing atomic metadata/category SQL and component preview/confirmation |
+| Type change | Pass (controlled) | Type-aware fields and original-record-preserving correction tests |
+| Save/reopen corrected transaction | Partial | Isolated SQL persistence/retry covered; hosted read-back unavailable |
+| Inbox issue closure | Partial | Existing evidence-based review tests; no manual dismissal masquerades as resolution |
+| No duplicate expenses | Pass (controlled) | Existing correction idempotency SQL and unchanged ledger on directory save |
+| Account reconciliation | Partial | Local stored checkpoint reopen/owner isolation passes; real-device hosted run blocked |
+
+No controlled Pass is a production or physical-device readiness claim.

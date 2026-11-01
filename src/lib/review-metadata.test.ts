@@ -8,3 +8,11 @@ const row=(transaction:Expense):FinancialReview=>({transaction,issues:[],group:'
 const prefs={...defaultPreferences(),tags:[{group:'Organisation',name:'AET'}]};
 it('non-trip organisation preserves original currency source and requires current records',()=>{const p=metadataPreview([row(e)],new Map([[e.id,{organisation:'AET'}]]),prefs,[]);expect(p.after[0]).toMatchObject({department:'AET',originalAmount:10,amount:1000,description:'Source',accountId:'bank'});expect(metadataStillCurrent(p,[e],prefs,[])).toBe(true);expect(metadataStillCurrent(p,[{...e,correctionRevision:1}],prefs,[])).toBe(false);});
 it('claimed entries remain excluded instead of silently changing responsibility',()=>{const p=metadataPreview([row(e),row({...e,id:'claim',reimbursementStatus:'pending'})],new Map([[e.id,{organisation:'AET'}],['claim',{organisation:'AET'}]]),prefs,[]);expect(p.items.map(i=>i.id)).toEqual(['test']);expect(p.excluded[0]?.id).toBe('claim');});
+it('combined category workspace organisation and activity changes preserve original money and source',()=>{
+ const configured={...prefs,categories:[{name:'Office & Supplies',archived:false}],tags:[...prefs.tags,{group:'Project',name:'Audit'}]};
+ const patch={category:'Office & Supplies',scope:'official' as const,organisation:'AET',tag:'Project: Audit'};
+ const p=metadataPreview([row(e)],new Map([[e.id,patch]]),configured,[]);
+ expect(p.items[0]?.patch).toEqual(patch);
+ expect(p.after[0]).toMatchObject({category:'Office & Supplies',scope:'official',department:'AET',tags:['Project: Audit'],amount:1000,originalAmount:10,fxRate:100,currency:'USD',accountId:'bank',description:'Source'});
+ expect(e.scope).toBe('personal');
+});
