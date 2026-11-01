@@ -22,3 +22,7 @@ it("repeated evidence creates no ledger entries and exact duplicate must read ba
   const duplicate = { ...statement, rows: statement.rows.map(r => ({ ...r, duplicate_kind: "exact" as const, duplicate_id: e.id })), posted: [] };
   expect(derive(duplicate).reconciliation).toBe("Reconciled"); expect(derive(duplicate, []).unresolved).toBe(1); expect([e]).toHaveLength(1);
 });
+it("financial correction resets the statement match even when money and date match", () => { expect(derive(statement, [{ ...e, correctionRevision: 1 }]).unresolved).toBe(1); });
+it("offsetting unaccounted ledger entries cannot certify reconciliation despite matching balance", () => {
+  expect(derive(statement, [e, { ...e, id: "unmatched expense", amount: 50 }, { ...e, id: "unmatched income", amount: 50, txnType: "income" }])).toMatchObject({ balance: "Verified", reconciliation: "Requires Review" });
+});
