@@ -18,6 +18,8 @@ import { lastStatementDate, nextEmiInstalment, statementShift, type LoanPayment 
 import { validateDocument, type DocType, type VaultDoc } from "./documents";
 import { tripActionSnapshot, type TripAction } from "./trip-actions";
 import { correctionStillCurrent, type CorrectionPreview } from "./financial-corrections";
+import { mappingStillCurrent, type ReviewMappingPreview } from './review-mapping';
+import { recurringDuplicates } from './review-recurring';
 
 export interface Loan {
   id: string; name: string;
@@ -59,6 +61,8 @@ interface Ctx {
   correctFinancialEntries: (preview: CorrectionPreview, id: string) => Promise<void>;
   undoFinancialCorrection: (id: string) => Promise<void>;
   financialCorrectionHistory: () => Promise<FinancialCorrectionHistory[]>;
+  applyReviewMapping: (preview: ReviewMappingPreview) => Promise<void>;
+  saveRecurringReview: (draft: Omit<Commitment, 'id'>, id: string) => Promise<void>;
   userId: string;
   name: string;
   updateName: (name: string) => Promise<void>;
@@ -382,6 +386,26 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
     const { data, error } = await supabase.rpc("manage_trip_expenses", { _trip: tripId, _items: rows.map(tripActionSnapshot) as unknown as Json, _action: action, _value: value });
     check(error); if (data == null) throw Error("No expenses were updated"); await refresh(); return data;
   };
+  const applyReviewMapping: Ctx['applyReviewMapping'] = async preview => {
+    if (!navigator.onLine) throw Error('Reconnect before applying mappings.');
+    if (!mappingStillCurrent(preview, expenses, preferences)) throw Error('Records changed. Review a new preview.');
+    if (preview.action === 'activity') {
+      const result = await supabase.rpc('link_activity_expenses', { _tag: preview.value, _items: preview.snapshots as unknown as Json });
+      check(result.error); if (result.data !== preview.records.length) throw Error('Mapping result could not be confirmed. Refresh before retry.');
+      await refresh();
+    } else await manageTripExpenses(preview.tripId, preview.records, preview.action === 'trip' ? 'link' : 'organisation', preview.value);
+  };
+  const saveRecurringReview: Ctx['saveRecurringReview'] = async (x, id) => {
+    if (!navigator.onLine) throw Error('Reconnect before saving a recurring profile.');
+    if (!x.name.trim() || !Number.isFinite(x.amount) || x.amount <= 0 || !/^\d{4}-\d{2}-\d{2}$/.test(x.nextDue)) throw Error('Enter a name, positive amount and next date.');
+    if (!accounts.some(a => a.id === x.accountId && !a.archived)) throw Error('Confirm an active account.');
+    if (recurringDuplicates(x, commitments).some(c => c.id !== id)) throw Error('A matching active profile already exists. Review your plan.');
+    const row = { id, owner_id: userId, name: x.name.trim(), kind: x.kind, direction: x.direction, amount: x.amount, frequency: x.frequency, interval_days: x.intervalDays, next_due: x.nextDue, account_id: x.accountId, category: x.category, confirmed: x.confirmed, essential: x.essential, status: x.status };
+    check((await supabase.from('commitments').upsert(row, { onConflict: 'id', ignoreDuplicates: true })).error);
+    const result = await supabase.from('commitments').select('*').eq('id', id).single(); check(result.error);
+    if (!result.data || Object.entries(row).some(([k, v]) => (result.data as unknown as Record<string, unknown>)[k] !== v)) throw Error('The saved profile changed. Review the existing plan rather than overwrite it.');
+    await refresh();
+  };
   const setReimbursement: Ctx["setReimbursement"] = async (id, status) => {
     check((await supabase.from("expenses").update({ reimbursement_status: status }).eq("id", id)).error);
     setExpenses((xs) => xs.map((x) => (x.id === id ? { ...x, reimbursementStatus: status } : x)));
@@ -620,7 +644,7 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
   return (
     <StoreCtx.Provider value={{
       departmentBudgets, departmentBudgetError,
-      pendingCount, setTags, manageTripExpenses, preferences, savePreferences, ensureCategory, moveCategory, bulkSetCategory, categoryHistory, undoCategoryBatch, correctFinancialEntries, undoFinancialCorrection, financialCorrectionHistory, userId, name, updateName, members, memberName,
+      pendingCount, setTags, manageTripExpenses, applyReviewMapping, saveRecurringReview, preferences, savePreferences, ensureCategory, moveCategory, bulkSetCategory, categoryHistory, undoCategoryBatch, correctFinancialEntries, undoFinancialCorrection, financialCorrectionHistory, userId, name, updateName, members, memberName,
       expenses: expenses.filter((x) => (x.txnType ?? "expense") === "expense"), transactions: expenses, accounts, addAccount, setArchived, adjustBalance,
       commitments, loans, goals, valuations, documents, saveCommitment, confirmIrregular, removeCommitment, confirmCommitment, saveLoan, removeLoan, recordLoanPayment, convertToEmi,
       saveGoal, removeGoal, updateAccount, addValuation, removeValuation, addDocument, updateDocument, removeDocument, history, setReimbursement, recordReimbursement, deleteAll,

@@ -5,13 +5,25 @@ import { categoryReviewPreview, financialReview, type FinancialReview } from './
 
 export const REVIEW_FILTERS = { all: 'All transactions', category: 'Categorisation required', missing: 'Missing information', type: 'Financial type confirmation', conflict: 'Possible duplicates', ready: 'Suggested corrections' } as const;
 export type ReviewFilter = keyof typeof REVIEW_FILTERS;
+export const MISSING_FIELDS = { all: 'All missing fields', category: 'Category', account: 'Source account', organisation: 'Organisation', type: 'Financial type', payment: 'Payment method', receiving: 'Receiving account', other: 'Other required details' } as const;
+export type MissingField = keyof typeof MISSING_FIELDS;
+export function missingFieldMatches(row: FinancialReview, field: MissingField) {
+  if (field === 'all') return true;
+  if (field === 'category') return matchesReview(row, 'category');
+  if (field === 'type') return matchesReview(row, 'type');
+  if (field === 'account') return row.issues.some(i => /source account|no account recorded/i.test(i.description));
+  if (field === 'organisation') return row.issues.some(i => /organisation requires/i.test(i.description));
+  if (field === 'payment') return row.issues.some(i => /payment method requires/i.test(i.description));
+  if (field === 'receiving') return row.evidence.some(i => /receiving account requires/i.test(i));
+  return row.issues.some(i => i.type === 'unverified_import' || i.type === 'inconsistency');
+}
 
 /** Only required saved fields create issues. Personal ownership never implies responsibility. */
 export function centreReview(items: InboxItem[], transactions: Expense[], accounts: Account[], categories: string[]) {
   const augmented = [...items];
   for (const e of transactions) {
     const missing: string[] = [];
-    if (!accounts.some(a => a.id === e.accountId && !a.archived)) missing.push('Source account');
+    if (!accounts.some(a => a.id === e.accountId && !a.archived) && !items.some(i => i.transactionId === e.id && i.type === 'missing_details' && /account/i.test(i.description))) missing.push('Source account');
     if (['business', 'official'].includes(e.scope) && !e.department?.trim() && !e.workspaceAllocations?.length) missing.push('Organisation');
     if (!e.paymentMethod) missing.push('Payment method');
     for (const field of missing) augmented.push({ key: `required:${field}:${e.id}`, type: 'missing_details', transactionId: e.id, title: e.title, description: `${field} requires confirmation`, amount: e.amount, date: e.date, accountName: null, priority: 'medium', action: `Confirm ${field.toLowerCase()}` });
