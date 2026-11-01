@@ -244,5 +244,5 @@
 - [ ] Consolidated programme: per-file account upload manifest, extended rule conditions/priority, grouped job Inbox, receipt/OCR background work, favourites and multi-select search/report filters.
 
 ## Sync visibility & mobile performance
-- [ ] Visible sync status in the header (updating / up to date / offline / couldn't update, with waiting offline entries)
-- [ ] Mobile performance testing: repeatable phone-sized throttled load measurement script + verified numbers
+- [x] Visible sync status in the header (updating / up to date / offline / could not update, with waiting offline entries; tap to refresh)
+- [x] Mobile performance testing: scripts/mobile-perf.py measures phone-sized throttled load; verified 0.75s frame, 0.78s saved figures, 5.5s full sync on Fast 4G
