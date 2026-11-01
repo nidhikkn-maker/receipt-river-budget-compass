@@ -15,6 +15,7 @@ FinancialCorrectionPanel always displayed both internal account selectors for ev
 - Combined category/workspace/organisation/activity review saves through one existing atomic metadata operation, preserving source money and excluding incompatible claims/splits/types.
 
 ## Not implemented / not verified
+- User decision: keep shared storage unchanged. No new protected payee-linked financial save support will be added under this request; recipient management and existing classification previews remain available.
 - Stable ledger payee associations, bulk external recipient save and third-party recoverable loan/advance treatment remain blocked on coordinated protected schema/API changes; the current shared database cannot be changed under this brief. Existing travel advances mean advances received, not loans issued, and must not be relabelled to fake support.
 - The full 18-case acceptance demonstration and hosted save/reopen remain incomplete.
 - Physical iPad/iPhone and cross-device checks are blocked: the new draft shares live data, no physical devices or real-device service is connected.
