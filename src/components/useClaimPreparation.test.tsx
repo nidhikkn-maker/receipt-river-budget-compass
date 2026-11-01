@@ -4,6 +4,7 @@ import type { ClaimPreparation, ClaimPreparationData } from '@/lib/claim-prepara
 const api=vi.hoisted(()=>({loadLocalPreparation:vi.fn(),loadCloudPreparation:vi.fn(),saveLocalPreparation:vi.fn(),saveCloudPreparation:vi.fn()}));
 vi.mock('@/lib/claim-preparations',()=>api);
 import { useClaimPreparation } from './useClaimPreparation';
+import { useState } from 'react';
 const data:ClaimPreparationData={choice:'trip:t',picked:[],excluded:[],organisation:'AET',profileId:'',routeId:'',accountId:'',claimant:{name:'Test',designation:'Role',employeeId:'',department:'',email:'',approver:'',bankDetails:''},purpose:'Original',from:'',to:'',format:'summary',rejected:[]};
 const initial:ClaimPreparation={id:'draft',data,revision:1,mutationId:'first',updatedAt:'2026-11-01T06:00:00Z'};
 beforeEach(()=>{vi.resetAllMocks();api.loadLocalPreparation.mockResolvedValue(initial);api.loadCloudPreparation.mockResolvedValue(initial);api.saveLocalPreparation.mockResolvedValue(undefined);api.saveCloudPreparation.mockImplementation(async(_owner,p)=>({...p,revision:p.revision+1}));Object.defineProperty(navigator,'onLine',{configurable:true,value:true});});
@@ -34,8 +35,8 @@ describe('Claim preparation save recovery',()=>{
  });
  it('restored offline edits sync on reopening online without another edit',async()=>{
   const local={...initial,data:{...data,purpose:'Offline edit'},mutationId:'offline',updatedAt:'2026-11-01T06:10:00Z'};api.loadLocalPreparation.mockResolvedValue(local);
-  let restored=data;const {result,rerender}=renderHook(({value})=>useClaimPreparation('owner',true,value,d=>{restored=d;},false),{initialProps:{value:data}});
-  await waitFor(()=>expect(result.current.ready).toBe(true));rerender({value:restored});
+  const {result}=renderHook(()=>{const [value,setValue]=useState(data);return useClaimPreparation('owner',true,value,setValue,false);});
+  await waitFor(()=>expect(result.current.ready).toBe(true));
   await waitFor(()=>expect(api.saveCloudPreparation).toHaveBeenCalled());expect(api.saveCloudPreparation.mock.calls[0][1].data.purpose).toBe('Offline edit');
  });
 });
