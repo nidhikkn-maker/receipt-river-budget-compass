@@ -1,5 +1,7 @@
 # Roadmap (Functional Requirements v1.0)
 ## V5.4 audit — evidence before release
+- [ ] Fix both security warnings (revoked family access and assistant instruction injection), plus dependency warnings, preserving live records.
+- [ ] Fix D-FIN-001 remaining reimbursements, D-FIN-002 Business workspace shares, and D-FIN-003 repayment principal/interest; prove with in-memory tests only.
 - [x] Save brief and rerun existing regression without cloud writes: 655 tests passed.
 - [x] Inspect architecture/recovery/financial rules; run quick security/dependency scans and request deeper scan.
 - [ ] Isolated workflow/restore/security audit — blocked: main and audit draft both share live data; no isolated cloud environment established.
