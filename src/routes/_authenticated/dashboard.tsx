@@ -22,6 +22,8 @@ import { scopedBudgetUsage } from "@/lib/preferences";
 import { addDays } from "@/lib/planning";
 import { freshnessSummary } from "@/lib/inbox";
 import { tripSummary } from "@/lib/intelligence";
+import { cardBalanceSeries, cardRecency, cardTrendKeys, statementCaption, updatedCaption } from "@/lib/card-trend";
+import { CardTrendChart } from "@/components/CardTrendChart";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
   head: () => ({
@@ -89,8 +91,11 @@ function Overview() {
   // §3 — metrics
   const month = today.slice(0, 7);
   const cash = live.filter((a) => a.includeInCash !== false && !isLiability(a.kind) && ["savings", "current", "cash", "wallet"].includes(a.kind)).reduce((s, a) => s + accountBalance(a, transactions), 0);
-  const cardRows = live.filter((a) => a.kind === "credit_card").map((a) => ({ id: a.id, name: a.name, bal: accountBalance(a, transactions) })).filter((r) => Math.abs(r.bal) >= 0.005).sort((x, y) => y.bal - x.bal);
+  const cardAccounts = live.filter((a) => a.kind === "credit_card");
+  const cardRows = cardAccounts.map((a) => ({ id: a.id, name: a.name, bal: accountBalance(a, transactions), rec: cardRecency(a, transactions, preferences.statementBalances[a.id]?.date) })).filter((r) => Math.abs(r.bal) >= 0.005).sort((x, y) => y.bal - x.bal);
   const cardDue = cardRows.reduce((s, r) => s + r.bal, 0);
+  const cardTrend = cardBalanceSeries(cardAccounts, transactions, 6, today);
+  const cardTrendNames = cardTrendKeys(cardAccounts);
   const flow = cashflow(transactions, `${month}-01`, `${month}-31`);
 
   // §4 — insights: top categories + budget use
@@ -190,17 +195,25 @@ function Overview() {
         <Link to="/wealth"><Stat label="Available cash" value={live.length ? money(cash) : "—"} {...(live.length ? {} : { hint: "Add accounts" })} /></Link>
         <Stat label="Income this month" value={money(flow.income)} />
         <Link to="/plan"><Stat label="Safe to spend" value={live.length ? money(pos.safe.amount) : "—"} {...(readiness.estimated ? { hint: "Estimated" } : {})} /></Link>
-        <details className="group col-span-2 lg:col-span-1 [&>summary::-webkit-details-marker]:hidden">
+        <details className="group col-span-2 lg:col-span-1 [&[open]]:lg:col-span-4 [&>summary::-webkit-details-marker]:hidden">
           <summary className="cursor-pointer list-none" aria-label="Show card-by-card dues"><Stat label="Card dues" value={money(cardDue)} hint={cardRows.length ? `${cardRows.length} card${cardRows.length === 1 ? "" : "s"} · tap for breakdown` : "No card balances"} /></summary>
           <ul className="mt-2 divide-y rounded-2xl border bg-card px-4 text-sm">
             {cardRows.map((r) => (
-              <li key={r.id} className="flex items-center justify-between gap-3 py-2">
-                <Link to="/cards/$accountId" params={{ accountId: r.id }} className="min-w-0 truncate font-medium text-primary">{r.name}</Link>
+              <li key={r.id} className="flex items-start justify-between gap-3 py-2">
+                <div className="min-w-0">
+                  <Link to="/cards/$accountId" params={{ accountId: r.id }} className="block min-w-0 truncate font-medium text-primary">{r.name}</Link>
+                  <div className="mt-0.5 text-[11px] leading-snug text-muted-foreground">{statementCaption(r.rec)} · {updatedCaption(r.rec)}</div>
+                </div>
                 <span className={"shrink-0 font-mono " + (r.bal < 0 ? "text-success" : "")}>{r.bal < 0 ? `${money(-r.bal)} credit` : money(r.bal)}</span>
               </li>
             ))}
             <li className="flex items-center justify-between gap-3 py-2 font-semibold"><span>Total owed</span><span className="font-mono">{money(cardDue)}</span></li>
           </ul>
+          <div className="mt-3 rounded-2xl border bg-card p-3">
+            <h3 className="font-display text-sm font-bold">Balance trend</h3>
+            <p className="mb-1 text-[11px] text-muted-foreground">Amount owed at each month end · credit shows below zero · last 6 months</p>
+            <CardTrendChart points={cardTrend} names={cardTrendNames} height={180} />
+          </div>
         </details>
       </section>
 
