@@ -38,7 +38,7 @@ class ExpenseReceiptButtons(unittest.IsolatedAsyncioTestCase):
         self.context = await self.browser.new_context(viewport={"width": 1280, "height": 1800})
         self.page = await self.context.new_page()
         self.errors, self.blocked = [], []
-        self.page.on("pageerror", lambda error: self.errors.append(str(error)))
+        self.page.on("pageerror", lambda error: self.errors.append(str(error))); self.page.on("console", lambda m: print("CONSOLE",m.type,m.text) if m.type in ("error","warning") else None)
         async def isolate(route):
             req = route.request
             parsed = urlparse(req.url)
