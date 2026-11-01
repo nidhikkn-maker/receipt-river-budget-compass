@@ -28,7 +28,7 @@ describe("V4 acceptance (Part G)", () => {
     expect(forms).toEqual(["src/routes/_authenticated/new.tsx"]);
     // Travel opens that same form with trip context instead of building its own;
     // the dashboard's entry point is the shell's floating + button (V4.3).
-    for (const f of ["src/routes/_authenticated/trips.tsx", "src/components/AppShell.tsx", "src/components/TravelPanel.tsx"]) expect(readFileSync(f, "utf8")).toContain('to="/new');
+    for (const f of ["src/routes/_authenticated/trips.tsx", "src/components/AppShell.tsx", "src/components/trip/TripSections.tsx"]) expect(readFileSync(f, "utf8")).toContain('to="/new');
     expect(readFileSync("src/routes/_authenticated/new.tsx", "utf8")).toContain("search.booking");
   });
 
