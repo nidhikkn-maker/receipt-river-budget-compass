@@ -27,7 +27,7 @@ export function Autopilot() {
       today, readiness,
       shortDates: p.forecast.shortDates, lowestProjected: p.forecast.lowest.balance,
       overdue: readiness.filter((r) => r.status === "overdue").map((r) => ({ name: r.name, amount: r.amount, due: r.date })),
-      anomalies: anomalies(transactions, today, 7).map((a) => ({ title: a.title, amount: a.amount, reason: a.reason })),
+      anomalies: anomalies(transactions, today, 7).map((a) => ({ id: a.id, title: a.title, amount: a.amount, reason: a.reason })),
       subscriptions: { monthly: subs.monthly, duplicates: subs.duplicates, increases: subs.increases },
       pendingReimbursements: { count: pending.length, amount: p.reimbursements.pendingAmount, oldestDays: oldest },
       overBudget: [], lateIncome: [], idleCash: 0, unreconciledOld: 0,
