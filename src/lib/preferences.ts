@@ -121,6 +121,8 @@ export interface FinancePreferences {
   favouriteEntries: string[];
   /** Guided setup assistant: shown until finished or dismissed; reopenable from Settings. */
   setupAssistant: "pending" | "done";
+  /** Trip budget utilisation % at which the "Approaching Limit" warning starts (100% = fully utilised). */
+  tripBudgetWarnPct: number;
 }
 
 export const DEFAULT_TAGS: GroupedTag[] = [
