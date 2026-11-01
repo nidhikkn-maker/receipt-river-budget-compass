@@ -37,6 +37,7 @@ import { Route as AuthenticatedPatternsRouteImport } from './routes/_authenticat
 import { Route as AuthenticatedPaymentMethodsRouteImport } from './routes/_authenticated/payment-methods'
 import { Route as AuthenticatedPlanRouteImport } from './routes/_authenticated/plan'
 import { Route as AuthenticatedReconcileRouteImport } from './routes/_authenticated/reconcile'
+import { Route as AuthenticatedRecordsCheckRouteImport } from './routes/_authenticated/records-check'
 import { Route as AuthenticatedReimbursementSettingsRouteImport } from './routes/_authenticated/reimbursement-settings'
 import { Route as AuthenticatedReportCentreRouteImport } from './routes/_authenticated/report-centre'
 import { Route as AuthenticatedReportsRouteImport } from './routes/_authenticated/reports'
@@ -204,6 +205,12 @@ const AuthenticatedReconcileRoute = AuthenticatedReconcileRouteImport.update({
   path: '/reconcile',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedRecordsCheckRoute =
+  AuthenticatedRecordsCheckRouteImport.update({
+    id: '/records-check',
+    path: '/records-check',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedReimbursementSettingsRoute =
   AuthenticatedReimbursementSettingsRouteImport.update({
     id: '/reimbursement-settings',
@@ -335,6 +342,7 @@ export interface FileRoutesByFullPath {
   '/payment-methods': typeof AuthenticatedPaymentMethodsRoute
   '/plan': typeof AuthenticatedPlanRoute
   '/reconcile': typeof AuthenticatedReconcileRoute
+  '/records-check': typeof AuthenticatedRecordsCheckRoute
   '/reimbursement-settings': typeof AuthenticatedReimbursementSettingsRoute
   '/report-centre': typeof AuthenticatedReportCentreRoute
   '/reports': typeof AuthenticatedReportsRoute
@@ -383,6 +391,7 @@ export interface FileRoutesByTo {
   '/payment-methods': typeof AuthenticatedPaymentMethodsRoute
   '/plan': typeof AuthenticatedPlanRoute
   '/reconcile': typeof AuthenticatedReconcileRoute
+  '/records-check': typeof AuthenticatedRecordsCheckRoute
   '/reimbursement-settings': typeof AuthenticatedReimbursementSettingsRoute
   '/report-centre': typeof AuthenticatedReportCentreRoute
   '/reports': typeof AuthenticatedReportsRoute
@@ -432,6 +441,7 @@ export interface FileRoutesById {
   '/_authenticated/payment-methods': typeof AuthenticatedPaymentMethodsRoute
   '/_authenticated/plan': typeof AuthenticatedPlanRoute
   '/_authenticated/reconcile': typeof AuthenticatedReconcileRoute
+  '/_authenticated/records-check': typeof AuthenticatedRecordsCheckRoute
   '/_authenticated/reimbursement-settings': typeof AuthenticatedReimbursementSettingsRoute
   '/_authenticated/report-centre': typeof AuthenticatedReportCentreRoute
   '/_authenticated/reports': typeof AuthenticatedReportsRoute
@@ -482,6 +492,7 @@ export interface FileRouteTypes {
     | '/payment-methods'
     | '/plan'
     | '/reconcile'
+    | '/records-check'
     | '/reimbursement-settings'
     | '/report-centre'
     | '/reports'
@@ -530,6 +541,7 @@ export interface FileRouteTypes {
     | '/payment-methods'
     | '/plan'
     | '/reconcile'
+    | '/records-check'
     | '/reimbursement-settings'
     | '/report-centre'
     | '/reports'
@@ -578,6 +590,7 @@ export interface FileRouteTypes {
     | '/_authenticated/payment-methods'
     | '/_authenticated/plan'
     | '/_authenticated/reconcile'
+    | '/_authenticated/records-check'
     | '/_authenticated/reimbursement-settings'
     | '/_authenticated/report-centre'
     | '/_authenticated/reports'
@@ -809,6 +822,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedReconcileRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/records-check': {
+      id: '/_authenticated/records-check'
+      path: '/records-check'
+      fullPath: '/records-check'
+      preLoaderRoute: typeof AuthenticatedRecordsCheckRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/reimbursement-settings': {
       id: '/_authenticated/reimbursement-settings'
       path: '/reimbursement-settings'
@@ -981,6 +1001,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedPaymentMethodsRoute: typeof AuthenticatedPaymentMethodsRoute
   AuthenticatedPlanRoute: typeof AuthenticatedPlanRoute
   AuthenticatedReconcileRoute: typeof AuthenticatedReconcileRoute
+  AuthenticatedRecordsCheckRoute: typeof AuthenticatedRecordsCheckRoute
   AuthenticatedReimbursementSettingsRoute: typeof AuthenticatedReimbursementSettingsRoute
   AuthenticatedReportCentreRoute: typeof AuthenticatedReportCentreRoute
   AuthenticatedReportsRoute: typeof AuthenticatedReportsRoute
@@ -1022,6 +1043,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedPaymentMethodsRoute: AuthenticatedPaymentMethodsRoute,
   AuthenticatedPlanRoute: AuthenticatedPlanRoute,
   AuthenticatedReconcileRoute: AuthenticatedReconcileRoute,
+  AuthenticatedRecordsCheckRoute: AuthenticatedRecordsCheckRoute,
   AuthenticatedReimbursementSettingsRoute:
     AuthenticatedReimbursementSettingsRoute,
   AuthenticatedReportCentreRoute: AuthenticatedReportCentreRoute,
