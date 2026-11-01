@@ -86,3 +86,15 @@ export function statementTotals(lines: BalanceLine[]) {
   const sum = (d: "debit" | "credit") => Math.round(lines.filter((l) => l.direction === d).reduce((s, l) => s + l.amount, 0) * 100) / 100;
   return { debits: sum("debit"), credits: sum("credit"), count: lines.length };
 }
+
+/** Groups PDF text items into visual rows (same baseline, left to right) per page. */
+export function rowsFromItems(items: { str: string; x: number; y: number }[]): string[] {
+  const groups: { y: number; parts: { x: number; s: string }[] }[] = [];
+  for (const it of items) {
+    if (!it.str.trim()) continue;
+    const g = groups.find((r) => Math.abs(r.y - it.y) <= 2);
+    if (g) g.parts.push({ x: it.x, s: it.str });
+    else groups.push({ y: it.y, parts: [{ x: it.x, s: it.str }] });
+  }
+  return groups.sort((a, b) => b.y - a.y).map((g) => g.parts.sort((a, b) => a.x - b.x).map((p) => p.s.trim()).join("  "));
+}
