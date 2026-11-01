@@ -20,5 +20,6 @@ FinancialCorrectionPanel always displayed both internal account selectors for ev
 
 ## Evidence
 - Local reconciliation suite: 44 checks passed, including disposable disk-backed PostgreSQL close/reopen and owner-isolated saved checkpoints.
-- Initial classification suite: 15 checks passed, including controlled component preview/cancel/confirm/undo; additional financial regressions run with the full suite.
+- Full regression: 872 checks passed across 109 files. Two additional expense/destination regressions were then verified in the 10-check financial correction suite. Current app build log: build OK.
+- Controlled component preview/cancel/confirm/undo passed; no actual Cloud correction was exercised.
 - These are controlled tests, not a hosted or physical-device end-to-end claim.
