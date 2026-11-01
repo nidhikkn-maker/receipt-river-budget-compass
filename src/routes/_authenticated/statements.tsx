@@ -198,6 +198,18 @@ function StatementDeskPage() {
     }
   };
 
+  const prepareMove = (a: AccountPlan) => {
+    if (!a.accountId) return;
+    const rows = a.elsewhere.map((m) => ({ transaction: transactions.find((t) => t.id === m.record.id)!, issues: [], group: "account", status: "Suggested Correction", confidence: 1, targetAccountIds: [a.accountId], evidence: ["Same amount and date on this statement"] })) as unknown as FinancialReview[];
+    if (rows.some((r) => !r.transaction)) { toast.error("A record changed since this was read. Reload and try again."); return; }
+    try {
+      fixOp.current = crypto.randomUUID();
+      setFix({ preview: correctionPreview(rows, { accountId: a.accountId }, accounts, transactions), name: a.file.name });
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Couldn’t prepare the move.");
+    }
+  };
+
   const applyFix = async () => {
     if (!fix) return;
     try {
@@ -339,6 +351,13 @@ function StatementDeskPage() {
               )}
 
               {a.wrongKind.length > 0 && (
+                {a.elsewhere.length > 0 && (
+                <section aria-label="Saved on another account">
+                  <h3 className="font-semibold">Saved on another account · {a.elsewhere.length}</h3>
+                  <ul className="space-y-1 text-sm">{a.elsewhere.map((m) => <li key={m.line.key} className="flex justify-between gap-2"><span className="min-w-0 truncate">{m.line.date} · {m.record.name} — on {m.accountName}</span><span className="shrink-0 tabular-nums">{money(m.line.amount, m.line.currency)}</span></li>)}</ul>
+                  <Button size="sm" variant="outline" className="mt-1" onClick={() => prepareMove(a)}>Preview moving {a.elsewhere.length} here</Button>
+                </section>
+                )}
                 <section aria-label="Saved the wrong way">
                   <h3 className="font-semibold">Saved the wrong way · {a.wrongKind.length}</h3>
                   <p className="text-sm text-muted-foreground">These records sit on this account but the statement shows the money going the other way.</p>
@@ -376,7 +395,7 @@ function StatementDeskPage() {
 
           {fix && (
             <div role="region" aria-label="Change preview" className="space-y-2 rounded-2xl border border-primary p-3 text-sm">
-              <p className="font-medium">{fix.preview.records.length} records in {fix.name} will be re-typed as {String(fix.preview.choice.txnType)}</p>
+              <p className="font-medium">{fix.preview.records.length} records in {fix.name} {fix.preview.choice.accountId ? "will move to this statement's account" : `will be re-typed as ${String(fix.preview.choice.txnType)}`}</p>
               <ul className="space-y-0.5">{fix.preview.balanceChanges.map((b) => <li key={b.id}>{b.name}: balance {b.change >= 0 ? "+" : ""}{money(b.change)}</li>)}</ul>
               <div className="flex gap-2"><Button variant="outline" onClick={() => setFix(null)}>Cancel</Button><Button onClick={applyFix}>Confirm and apply</Button></div>
             </div>
