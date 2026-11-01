@@ -148,6 +148,7 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId]);
   async function load() {
+    console.log("LLDBG load", new Error().stack?.split("\n").slice(1,6).join(" / "));
     // Show this device's saved copy straight away, then refresh from the cloud.
     if (!navigator.onLine || firstLoad.current) {
       firstLoad.current = false;
