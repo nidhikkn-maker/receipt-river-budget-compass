@@ -229,9 +229,9 @@ export function PageTitle({ title, sub, eyebrow }: { title: string; sub?: string
 
 export function Stat({ label, value, hint, tone }: { label: string; value: string; hint?: string; tone?: "business" | "personal" }) {
   return (
-    <div className={"@container min-w-0 rounded-2xl border border-l-4 bg-card p-4 " + (tone === "business" ? "border-l-primary" : tone === "personal" ? "border-l-primary-glow" : "border-l-gold")}>
+    <div className={"@container h-full min-w-0 overflow-hidden rounded-2xl border border-l-4 bg-card p-3 sm:p-4 " + (tone === "business" ? "border-l-primary" : tone === "personal" ? "border-l-primary-glow" : "border-l-gold")}>
       <div className="text-[11px] font-semibold text-muted-foreground">{label}</div>
-      <div className="mt-1 font-mono text-[min(1.5rem,15cqw)] font-semibold text-gold-strong">{value}</div>
+      <div className="mt-1 whitespace-nowrap font-mono text-[min(1.5rem,9.5cqw)] font-semibold tracking-tight text-gold-strong" title={value}>{value}</div>
       {hint && <div className="text-xs text-muted-foreground">{hint}</div>}
     </div>
   );

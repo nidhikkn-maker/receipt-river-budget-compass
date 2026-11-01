@@ -113,7 +113,7 @@ function Overview() {
   const hidden = (id: string) => preferences.homeHidden.includes(id);
 
   return (
-    <>
+    <div className="flex min-w-0 flex-col">
       <div className="mb-3 flex justify-end"><HomeModePicker compact /></div>
       <HomeShortcuts />
       {(scope === "business" || scope === "official") && (
@@ -293,6 +293,6 @@ function Overview() {
         </div>
         <ExpenseTable items={expenses.slice(0, 6)} empty="No expenses yet — tap + to add your first one." />
       </section>
-    </>
+    </div>
   );
 }
