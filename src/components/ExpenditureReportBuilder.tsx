@@ -49,7 +49,7 @@ export function ExpenditureReportBuilder({ mode, search }: { mode: "statement" |
   const navigate = useNavigate();
   const trips = (store.preferences.trips ?? []) as TravelTrip[];
   const instruments = store.preferences.paymentInstruments ?? [];
-  const groupTags = useMemo(() => [...new Set(store.transactions.flatMap((e) => e.tags ?? []).filter((t) => GROUP_TAG.test(t) && !t.startsWith("Trip: ")))].sort(), [store.transactions]);
+  const groupTags = useMemo(() => [...new Set([...store.preferences.tags.filter(t=>['Project','Event','Purpose','Client'].includes(t.group)).map(t=>`${t.group}: ${t.name}`),...store.transactions.flatMap((e) => e.tags ?? []).filter((t) => GROUP_TAG.test(t) && !t.startsWith("Trip: "))])].sort(), [store.transactions,store.preferences.tags]);
   const purchases = useMemo(() => store.expenses.filter((e) => e.scope === "business" || e.scope === "official" || (e.workspaceAllocations ?? []).some((w) => w.workspace === "business" || w.workspace === "official")).sort((a, b) => b.date.localeCompare(a.date)).slice(0, 200), [store.expenses]);
 
   const initial = search.trip ? `trip:${search.trip}` : search.tag ? `tag:${search.tag}` : search.entry || search.entries ? "entries" : trips[0] ? `trip:${trips[0].id}` : groupTags[0] ? `tag:${groupTags[0]}` : "entries";
@@ -65,7 +65,7 @@ export function ExpenditureReportBuilder({ mode, search }: { mode: "statement" |
   const cancelled = useRef(false);
   const initializedActivity = useRef('');
   const restoredProfile = useRef(false);
-  const [rejected,setRejected]=useState<string[]>([]),[detail,setDetail]=useState<Expense|null>(null),[reviewSearch,setReviewSearch]=useState(''),[reviewSort,setReviewSort]=useState('date'),[priorClaimIds,setPriorClaimIds]=useState<string[]>([]),[allowRepeat,setAllowRepeat]=useState(false);
+  const [rejected,setRejected]=useState<string[]>([]),[detail,setDetail]=useState<Expense|null>(null),[reviewSearch,setReviewSearch]=useState(''),[reviewSort,setReviewSort]=useState('date'),[priorClaimIds,setPriorClaimIds]=useState<string[]>([]),[allowRepeat,setAllowRepeat]=useState(false),[historyCheck,setHistoryCheck]=useState<'loading'|'ready'|'error'>('loading');
   useEffect(() => () => { if (result) URL.revokeObjectURL(result.url); }, [result]);
 
   const subject: Subject = choice.startsWith("trip:") ? { kind: "trip", id: choice.slice(5) } : choice.startsWith("tag:") ? { kind: "tag", tag: choice.slice(4) } : { kind: "entries", ids: picked };
@@ -99,7 +99,7 @@ export function ExpenditureReportBuilder({ mode, search }: { mode: "statement" |
   const preparationData:ClaimPreparationData={choice,picked,excluded,organisation:org,profileId,routeId,accountId:receivingAccountId,claimant,purpose,from,to,format:claimFormat,rejected};
   const restorePreparation=(d:ClaimPreparationData)=>{restoredProfile.current=true;initializedActivity.current=d.choice==='entries'?`entries:${[...d.picked].sort().join(',')}`:d.choice;setChoice(d.choice);setPicked(d.picked);setExcluded(d.excluded);setOrg(d.organisation);setProfileId(d.profileId);setRouteId(d.routeId);setReceivingAccountId(d.accountId);setClaimant(d.claimant);setPurpose(d.purpose);setFrom(d.from);setTo(d.to);setClaimFormat(d.format);setRejected(d.rejected??[]);setConfirmed(false);};
   const preparation=useClaimPreparation(store.userId,claimMode&&!store.loading,preparationData,restorePreparation,!!(search.trip||search.tag||search.entry||search.entries));
-  useEffect(()=>{if(!claimMode)return;let active=true;void (async()=>{const ids:string[]=[];for(let start=0;;start+=250){const {data,error}=await supabase.from('report_history').select('filters').eq('kind','claim-submission').order('created_at',{ascending:false}).range(start,start+249);if(error)break;for(const h of data??[]){const filters=h.filters as {organisation?:string;snapshot?:{items?:{id:string}[]}};if(filters.organisation===org)ids.push(...(filters.snapshot?.items??[]).map(i=>i.id));}if(!data||data.length<250)break;}if(active)setPriorClaimIds([...new Set(ids)]);})();return()=>{active=false;};},[claimMode,org]);
+  useEffect(()=>{if(!claimMode)return;let active=true;setHistoryCheck('loading');void (async()=>{const ids:string[]=[];for(let start=0;;start+=250){const {data,error}=await supabase.from('report_history').select('filters').eq('kind','claim-submission').order('created_at',{ascending:false}).range(start,start+249);if(error){if(active)setHistoryCheck('error');return;}for(const h of data??[]){const filters=h.filters as {organisation?:string;snapshot?:{items?:{id:string}[]}};if(filters.organisation===org)ids.push(...(filters.snapshot?.items??[]).map(i=>i.id));}if(!data||data.length<250)break;}if(active){setPriorClaimIds([...new Set(ids)]);setHistoryCheck('ready');}})();return()=>{active=false;};},[claimMode,org]);
   const pickFormat = async (f: 'detailed' | 'summary') => { setClaimFormat(f); try { await store.savePreferences({ ...store.preferences, reimbursementSettings: { ...settings, lastFormat: f } }); } catch { toast.error('Format changed for this claim but could not be saved.'); } };
   const draftStatement = buildStatement({ subject, subjectName, purpose, organisation: org, entries: candidates, trips, accounts: store.accounts, instruments, memberName: store.memberName, today: today(), reference: 'PREVIEW' });
   const scopedStatement = organisationStatement(draftStatement, candidates, settings, org, fallbackOrg);
@@ -119,6 +119,7 @@ export function ExpenditureReportBuilder({ mode, search }: { mode: "statement" |
     try {
       if (!included.length) throw new Error("Choose at least one transaction.");
       if (claimMode && (!org || !confirmed)) throw Error('Review and confirm the paying organisation and eligible expenses.');
+      if(claimMode&&historyCheck!=='ready')throw Error('Previous claims could not be checked. Reconnect and reload before generating.');
       if (claimMode && !profile && settings.profiles.filter(p => p.organisation === org).length > 1) throw Error('Select the applicable claimant role.');
       if (claimMode && advanceNet > 0) throw Error('This trip has advances. Allocate and reconcile advance funding before preparing a personal reimbursement claim.');
       const id = crypto.randomUUID(), reference = statementReference(today(), id);
@@ -153,6 +154,7 @@ export function ExpenditureReportBuilder({ mode, search }: { mode: "statement" |
       const path = `${store.userId}/reports/${id}.pdf`;
       let historySaved = false;
       const previous = claim ? await supabase.from('report_history').select('id,version,filters').eq('kind', 'claim-submission').contains('filters', { activity, organisation: org }).order('version', { ascending: false }).limit(1) : null;
+      if(previous?.error)throw Error('Could not check report versions. Your PDF is ready locally but was not saved.');
       const same = (previous?.data ?? []).filter(h => { const f = h.filters as { activity?: string; organisation?: string }; return f?.activity === activity && f?.organisation === org; });
       const version = 1 + Math.max(0, ...same.map(h => h.version));
       const up = await supabase.storage.from("receipts").upload(path, blob, { contentType: "application/pdf" });
@@ -169,7 +171,7 @@ export function ExpenditureReportBuilder({ mode, search }: { mode: "statement" |
   const openPreview = (b: Blob) => { const u = URL.createObjectURL(b); window.open(u, "_blank"); setTimeout(() => URL.revokeObjectURL(u), 60_000); };
 
   return (
-    <div className="space-y-5 pb-[calc(7rem+env(safe-area-inset-bottom))]">
+    <div className="space-y-5 pb-[calc(7rem+env(safe-area-inset-bottom))] [&_button]:min-h-11">
       <PageTitle title={claimMode ? "Expense Claim Submission" : "Detailed Expenditure Statement"} sub={claimMode ? "A formal reimbursement request for your organisation's accounts team: claimed items, declaration, approval lines and the original bills." : "A complete record of what was spent, how it was paid and what is still to be reimbursed, with every original bill attached."} />
       {claimMode&&<div className="flex flex-wrap items-center justify-between gap-2 text-xs"><span role="status">{preparation.status}</span><div className="flex gap-2">{preparation.recover&&<Button size="sm" variant="outline" onClick={preparation.resume}>Resume saved preparation</Button>}<Button size="sm" variant="ghost" onClick={preparation.saveNow}>Save preparation</Button></div></div>}
       <div className={cn(claimMode&&'grid min-w-0 gap-6 min-[1000px]:grid-cols-[minmax(280px,.8fr)_minmax(0,1.4fr)] min-[1600px]:grid-cols-[minmax(280px,.75fr)_minmax(420px,1.2fr)_minmax(360px,1fr)]')}>
@@ -205,6 +207,7 @@ export function ExpenditureReportBuilder({ mode, search }: { mode: "statement" |
       </div><div className="min-w-0 space-y-4">
       {claimMode&&<section className="space-y-3 border-y py-4"><h2 className="font-semibold">{subjectName} · {org||'Organisation unconfirmed'}</h2><dl className="grid grid-cols-2 gap-3">{[['Activity expenditure',draftStatement.summary.total],['Eligible organisation share',previewClaim.totals.eligible],['Already reimbursed',previewClaim.totals.received],['Outstanding selection',selectedClaimTotal],['Personal payments',draftStatement.summary.personal],['Organisation payments',draftStatement.summary.organisation],['Advances received',advanceNet],['Non-reimbursable / excluded',previewClaim.excluded.reduce((s,x)=>s+x.row.inr,0)]].map(([label,amount])=><div key={label}><dt className="text-xs text-muted-foreground">{label}</dt><dd className="whitespace-nowrap text-sm font-semibold tabular-nums">{money(Number(amount))}</dd></div>)}</dl></section>}
       {claimMode&&<ClaimExpenseDiscovery subject={subject} organisation={org} from={from} to={to} rejected={rejected} setRejected={setRejected} onPick={ids=>setPicked(p=>[...new Set([...p,...ids])])} />}
+      {claimMode&&multiOrg&&<div className="flex flex-wrap gap-2">{[...new Set(candidates.flatMap(e=>responsibilityShares(e,settings,fallbackOrg).map(p=>p.organisation)))].map(o=><Button key={o} size="sm" variant={org===o?'default':'outline'} onClick={()=>changeOrganisation(o)}>Prepare {o} claim</Button>)}</div>}
 
       <section className="space-y-2">
         <h2 className="font-semibold">Review transactions <span className="text-sm font-normal text-muted-foreground">({claimMode?eligibleIds.filter(id=>!excluded.includes(id)).length:included.length} of {candidates.length} included)</span></h2>
@@ -223,7 +226,7 @@ export function ExpenditureReportBuilder({ mode, search }: { mode: "statement" |
                 <div className="flex justify-between gap-2"><span className="truncate font-medium">{e.merchant || e.title}</span><span className="tabular-nums">{(e.txnType ?? "expense") === "refund" ? "−" : ""}{money(e.originalAmount, e.currency)}</span></div>
                 <div className="text-xs text-muted-foreground">{e.date} · {e.category} · {p.method} · <span className={cn(p.source === NOT_RECORDED && "text-destructive")}>{p.source}</span> · {p.payer}</div>
                 <div className="text-xs text-muted-foreground">{e.receipts.length ? <span className="inline-flex items-center gap-1"><Paperclip className="h-3 w-3" />{e.receipts.length} bill{e.receipts.length > 1 ? "s" : ""}</span> : <span className="text-destructive">Bill not attached</span>}{e.reimbursementStatus && e.reimbursementStatus !== "none" ? ` · reimbursement ${e.reimbursementStatus}` : ""}{accountName(e.accountId) ? "" : ""}</div>
-                {claimMode && <><p className="text-xs">{claimRow ? `Eligible ${money(claimRow.eligible)} · Received ${money(claimRow.reimbursed)} · Outstanding ${money(claimRow.claimed)}` : reason || 'Requires review'}{!allowed && claimRow ? ' · Excluded: payment details, category rule or required bill needs review' : ''}</p><ClaimOrganisationAllocation entry={e} fallback={fallbackOrg} /></>}
+                {claimMode && <><p className="text-xs">{claimRow ? `Eligible ${money(claimRow.eligible)} · Received ${money(claimRow.reimbursed)} · Outstanding ${money(claimRow.claimed)}` : reason || 'Requires review'}{!allowed && claimRow ? priorClaimIds.includes(e.id)?' · Previously included in a saved claim': ['submitted','under review'].includes(claimRow.status)?' · Already submitted / under review':' · Excluded: payment details, category rule or required bill needs review' : ''}</p><ClaimOrganisationAllocation entry={e} fallback={fallbackOrg} /></>}
                 <Button size="sm" variant="ghost" onClick={()=>setDetail(e)}><Eye className="h-3 w-3"/>Details / bills</Button>
               </div>
             </div>
@@ -233,7 +236,8 @@ export function ExpenditureReportBuilder({ mode, search }: { mode: "statement" |
       </section>
       {claimMode && <section className="space-y-3 border-y py-4"><h2 className="font-semibold">Review & generate</h2><p className="text-lg font-semibold tabular-nums">Outstanding claim · {money(selectedClaimTotal)}</p><p className="text-sm">{org || 'Paying organisation required'} · {maskedText(claimant.name)} · {purpose || 'Purpose not supplied'}</p><p className="text-xs text-muted-foreground">{previewClaim.items.filter(i => i.billRef === 'Bill Not Attached').length} expenses need bills · {previewClaim.excluded.length} excluded · {claimant.approver ? `Proposed approver: ${claimant.approver} (not approved)` : 'Approving authority not supplied'}</p><label className="flex items-start gap-2 text-sm"><Checkbox checked={confirmed} onCheckedChange={v => setConfirmed(v === true)} />I reviewed this organisation, profile and outstanding expenses. A repeated report is a new version, not another reimbursement.</label></section>}
 
-      <Button className="w-full" onClick={generate} disabled={busy || !included.length || (claimMode && (!confirmed || !org || selectedClaimTotal <= 0 || advanceNet > 0))}><FileText className="mr-1 h-4 w-4" />{claimMode ? "Generate claim PDF" : "Generate statement PDF"}</Button>
+      {claimMode&&historyCheck==='error'&&<p role="alert" className="text-sm text-destructive">Could not check previous claims. Reconnect and reload before generating.</p>}
+      <Button className="w-full" onClick={generate} disabled={busy || !included.length || (claimMode && (!confirmed || !org || selectedClaimTotal <= 0 || advanceNet > 0||historyCheck!=='ready'))}><FileText className="mr-1 h-4 w-4" />{claimMode ? "Generate claim PDF" : "Generate statement PDF"}</Button>
       <p className="text-xs text-muted-foreground">Prepared on this device — keep this page open until it's ready.</p>
       {stage >= 0 && <ProcessingPanel title={failed ? "Statement not finished" : "Preparing your statement… you can keep using the app; we'll tell you when it's ready"} stages={stagesAt(STAGES, stage, failed)} {...(busy ? { onCancel: () => { cancelled.current = true; setStage(-1); } } : {})} />}
       </div><div className={cn('min-w-0',claimMode&&'min-[1000px]:col-span-2 min-[1600px]:col-span-1')}>
