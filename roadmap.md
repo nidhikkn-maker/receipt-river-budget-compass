@@ -1,4 +1,9 @@
 # Roadmap (Functional Requirements v1.0)
+## Published-site verification and security (done 2026-11-01)
+- [x] Fresh security scan: deep scan clean (no code findings), supply chain clean; only known info-level guest sign-in item remains (intentional for guest upgrade continuity).
+- [x] Found live site serving a stale deployment; re-published twice. Fixed real bug: dashboard dropped the anomaly transaction id (Autopilot.tsx), so "See transaction" fell back to /expenses. Verified live: opens /new?edit=<id> with the exact transaction.
+- [x] Verified live: Financial Inbox shows "0 transactions needing attention" — corrected rows cleared.
+- [x] Organisation-without-trip mapping verified in preview earlier; not re-driven on live (inbox empty, no test writes on real records).
 ## V5.10.1 transaction classification and external payees
 - [x] Current continuation: compatible source-draft preservation/incompatible split clearing, mixed bulk exclusions, isolated two-record combined-save read-back/retry/undo and issue-specific closure verified; correction undo now notifies the parent to clear stale selection. 889 tests pass; signed-in open/cancel at four screen sizes without overflow/errors. Shared storage unchanged; hosted and physical-device acceptance remain blocked.
 - [x] Root cause: correction form always displayed both internal account fields even though expense preview already ignores destination. Conditional fields, compatible card/loan targets, incoming account labels and mixed-type review guard added; existing protected confirmation retained.
