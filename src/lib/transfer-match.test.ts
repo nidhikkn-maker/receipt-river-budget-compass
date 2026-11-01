@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { suggestTransfers, transferImpact, transferPairBlocker } from "./transfer-match";
+import { suggestTransfers, transferImpact, transferPairBlocker, transferApprovalBlocker } from "./transfer-match";
 import { auditRecords } from "./transfer-audit";
 import { accountBalance, cashflow, type Account } from "./ledger";
 import type { Expense } from "./expenses";
@@ -11,6 +11,8 @@ const debit = e({ id: "d", description: "IMPS 612345678901 TO SBI 9876" });
 const credit = e({ id: "c", txnType: "income", accountId: "b", description: "IMPS 612345678901 FROM IDFC" });
 
 describe("internal transfers", () => {
+  it('requires active owned money accounts, not a credit card destination',()=>{expect(transferApprovalBlocker(debit,credit,'b',[A,{...B,kind:'credit_card'}])).toContain('dedicated review');expect(transferApprovalBlocker(debit,credit,'b',[A])).toContain('active accounts');});
+  it('blocks trip-tagged records and invalid money',()=>{expect(transferPairBlocker(debit,{...credit,tags:['Trip: Work']})).toContain('linked financial');expect(transferPairBlocker({...debit,amount:NaN},credit)).toContain('positive');});
   it('blocks a different posting date rather than shifting the receiving balance date',()=>{expect(transferPairBlocker(debit,{...credit,date:'2026-10-02'})).toContain('posting dates');expect(suggestTransfers([debit,{...credit,date:'2026-10-02'}],[A,B],[])[0]?.strength).toBe('ambiguous');});
   it('blocks equal original amounts with independently different INR values',()=>{expect(transferPairBlocker({...debit,currency:'USD',originalAmount:500},{...credit,currency:'USD',originalAmount:500,amount:50100})).toContain('currency values');});
   it('does not suppress a receiving entry with a linked claim',()=>{expect(transferPairBlocker(debit,{...credit,reimbursementStatus:'pending'})).toContain('linked financial details');});
