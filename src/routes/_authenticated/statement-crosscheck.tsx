@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Checkbox } from "@/components/ui/checkbox";
 import { correctionPreview, type CorrectionPreview } from "@/lib/financial-corrections";
@@ -51,7 +51,7 @@ async function readPdf(file: File): Promise<Parsed> {
 const LABEL: Record<CrossResult["result"], string> = { found: "Found on other statement", found_wrong_kind: "Found — wrong kind", not_found: "Not found" };
 
 function CrossCheckPage() {
-  const { transactions, accounts, correctFinancialEntries, undoFinancialCorrection, save, remove } = useStore();
+  const { transactions, accounts, correctFinancialEntries, undoFinancialCorrection, save, remove, preferences, savePreferences } = useStore();
   const money_accounts = accounts.filter((a) => !a.archived);
   const [accountId, setAccountId] = useState(() => money_accounts.find((a) => /movac/i.test(a.name))?.id ?? money_accounts[0]?.id ?? "");
   const [from, setFrom] = useState("2026-04-01");
@@ -119,14 +119,17 @@ function CrossCheckPage() {
   const closing = home.length ? home[home.length - 1]!.closing : null;
   const gate = acct && home.length ? balanceGate(accountBalance(acct, transactions as never), missing, closing, isLiability(acct.kind)) : null;
   const [posting, setPosting] = useState<string | null>(null);
-  const batchKey = `ledgerline:statement-batch:${accountId}`;
-  const [batch, setBatch] = useState<string[]>([]);
-  useEffect(() => { try { setBatch(JSON.parse(localStorage.getItem(batchKey) ?? "[]")); } catch { setBatch([]); } }, [batchKey]);
-  const keepBatch = (ids: string[]) => { setBatch(ids); if (ids.length) localStorage.setItem(batchKey, JSON.stringify(ids)); else localStorage.removeItem(batchKey); };
+  // Saved in owner preferences so the batch can be undone from any signed-in device.
+  const batch = preferences.statementBatches?.[accountId] ?? [];
+  const keepBatch = async (ids: string[]) => {
+    const next = { ...(preferences.statementBatches ?? {}) };
+    if (ids.length) next[accountId] = ids; else delete next[accountId];
+    await savePreferences({ ...preferences, statementBatches: next });
+  };
   const undoBatch = async () => {
     const left: string[] = [];
     for (const id of batch) { const e = transactions.find((t) => t.id === id); if (!e) continue; try { await remove(e); } catch { left.push(id); } }
-    keepBatch(left);
+    await keepBatch(left);
     if (left.length) toast.error(`${left.length} entries couldn’t be removed — try Undo again.`); else toast.success("Statement posting batch reversed");
   };
   const postMissing = async () => {
@@ -147,7 +150,7 @@ function CrossCheckPage() {
           toAccountId: transfer ? (m.direction === "debit" ? targetId : accountId) : null,
         }, { createId: id, noRefresh: true });
         if (!ids.includes(id)) ids.push(id);
-        keepBatch([...ids]);
+        await keepBatch([...ids]);
         done++;
       }
       toast.success(`${done} statement entries posted to ${acct.name}`);

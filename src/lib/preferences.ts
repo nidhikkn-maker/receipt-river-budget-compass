@@ -56,6 +56,8 @@ export interface FinancePreferences {
   savedViews: SavedView[];
   /** Records-check findings the owner marked as checked (finding keys). */
   checkedAudit?: string[];
+  /** Latest statement posting batch per account: entry ids only, so any signed-in device can undo it. */
+  statementBatches?: Record<string, string[]>;
   /** Home arrangement; "custom" once the user hides or reorders sections themselves. */
   homeMode: HomeMode;
   categories: CategorySetting[];
@@ -162,6 +164,7 @@ export function normalizePreferences(raw: Partial<FinancePreferences> | null | u
   if (!Array.isArray(p.budgets)) p.budgets = [];
   if (!Array.isArray(p.homeHidden)) p.homeHidden = [];
   p.savedViews = sanitizeSavedViews(p.savedViews);
+  { const b = p.statementBatches && typeof p.statementBatches === "object" ? p.statementBatches : {}; p.statementBatches = Object.fromEntries(Object.entries(b).filter(([k, v]) => k.length <= 64 && Array.isArray(v)).slice(0, 50).map(([k, v]) => [k, (v as unknown[]).filter((x): x is string => typeof x === "string" && x.length <= 64).slice(0, 2000)])); }
   p.checkedAudit = Array.isArray(p.checkedAudit) ? [...new Set(p.checkedAudit.filter((k) => typeof k === "string" && k.length <= 200))].slice(-3000) : [];
   p.payees = cleanPayees(p.payees);
   p.reimbursementSettings = cleanReimbursementSettings(p.reimbursementSettings);
