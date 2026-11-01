@@ -424,6 +424,6 @@
 - [x] Statement cross-check: action workflow (move/kind corrections via preview, confirm, Undo)
 - [x] Link statement match & fix from Financial Inbox
 
-- [ ] AMEX statement reading for Statement Match & Fix
-- [ ] Recognise transfers already posted from another account (no false missing / double post)
-- [ ] Undo an entire statement posting batch
+- [x] AMEX statement reading for Statement Match & Fix
+- [x] Recognise transfers already posted from another account (no false missing / double post)
+- [x] Undo an entire statement posting batch
