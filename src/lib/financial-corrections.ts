@@ -30,7 +30,7 @@ export function correctionPreview(rows: FinancialReview[], choice: CorrectionCho
     const principal = type === "loan_repayment" ? (choice.principal ?? e.principal) : null;
     const interest = type === "loan_repayment" ? (choice.interest ?? e.interest) : null;
     if (type === "loan_repayment" && (principal == null || interest == null || !Number.isFinite(principal) || !Number.isFinite(interest) || principal < 0 || interest < 0 || Math.round((principal + interest) * 100) !== Math.round(e.originalAmount * 100))) throw Error("Confirm principal and interest in the original currency; together they must equal every selected payment.");
-    return { ...e, txnType: type, accountId: source.id, toAccountId: destination?.id ?? null, principal, interest, reconciledAt: null };
+    return { ...e, txnType: type, accountId: source.id, toAccountId: destination?.id ?? null, principal: principal ?? null, interest: interest ?? null, reconciledAt: null };
   });
   if (after.every((e, i) => e.txnType === (records[i]?.txnType ?? "expense") && e.accountId === records[i]?.accountId && (e.toAccountId ?? null) === (records[i]?.toAccountId ?? null) && (e.principal ?? null) === (records[i]?.principal ?? null) && (e.interest ?? null) === (records[i]?.interest ?? null))) throw Error("No account or transaction-type changes selected.");
   const involved = accounts.filter(a => [...records, ...after].some(e => e.accountId === a.id || e.toAccountId === a.id));
