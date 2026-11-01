@@ -3,9 +3,13 @@ import type { Json } from '@/integrations/supabase/types';
 import type { ImportBatch, ImportRow, ImportRule, ImportProposal } from './historical-import';
 
 export async function listImports(): Promise<ImportBatch[]> {
-  const r=await supabase.from('import_batches').select('*').order('created_at',{ascending:false});
-  if(r.error) throw Error('Could not load statement imports');
-  return r.data as unknown as ImportBatch[];
+  const batches: ImportBatch[] = [];
+  for(let from=0;;from+=1000) {
+    const r=await supabase.from('import_batches').select('*').order('created_at',{ascending:false}).order('id').range(from,from+999);
+    if(r.error) throw Error('Could not load statement imports');
+    batches.push(...r.data as unknown as ImportBatch[]); if(r.data.length<1000) break;
+  }
+  return batches;
 }
 export async function listImportRows(batch:string):Promise<ImportRow[]> {
   const rows:ImportRow[]=[];

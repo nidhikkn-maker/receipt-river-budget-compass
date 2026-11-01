@@ -43,6 +43,7 @@ export interface ReceiptDetails {
 export interface Expense {
   id: string;
   categoryRevision?: number;
+  correctionRevision?: number;
   department?: string | null;
   title: string;
   merchant: string | null;

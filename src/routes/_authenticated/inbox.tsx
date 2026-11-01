@@ -1,5 +1,6 @@
 import { InboxWork } from "@/components/InboxWork";
 import { FinancialReview } from "@/components/FinancialReview";
+import { AccountStatementStatus } from "@/components/AccountStatementStatus";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
@@ -75,7 +76,7 @@ function Inbox() {
             onConfirm={x.type === "unverified_import" && x.transactionId ? async () => { const t = transactions.find((y) => y.id === x.transactionId); try { await reconcile(x.transactionId!, t?.statementRef ?? `confirmed · ${today}`); toast.success("Confirmed"); } catch (e) { toast.error((e as Error).message); } } : undefined} />)}</ul>
         </TabsContent>
 
-        <TabsContent value="accounts"><AccountsCheck onOpen={setOpen} /></TabsContent>
+        <TabsContent value="accounts"><AccountStatementStatus /><details className="mt-6"><summary className="cursor-pointer text-sm font-medium">Manual balance comparison</summary><div className="mt-4"><AccountsCheck onOpen={setOpen} /></div></details></TabsContent>
         <TabsContent value="reimb"><Reimbursements list={expenses} onOpen={setOpen} today={today} /></TabsContent>
       </Tabs>
       <ExpenseDialog expense={open ? transactions.find((t) => t.id === open.id) ?? null : null} onClose={() => setOpen(null)} />
@@ -119,9 +120,8 @@ function AccountsCheck({ onOpen }: { onOpen: (e: Expense) => void }) {
   if (!fs.rows.length) return <p className="rounded-2xl border p-6 text-center text-sm">Add an account in Wealth to start checking balances.</p>;
   return (
     <div className="space-y-4">
-      <div className="rounded-2xl border p-3"><div className="font-display text-lg font-bold">{fs.label}</div>{fs.lowConfidence && <p className="text-sm text-destructive">Outdated: {fs.outdatedCritical.join(", ")}. Affordability figures may be unreliable until these are reconciled.</p>}</div>
-      <div className="overflow-x-auto"><table className="w-full text-sm"><thead className="text-left text-xs text-muted-foreground"><tr><th className="py-1">Account</th><th>Status</th><th>Last entry</th><th>Reconciled</th><th>Balance confirmed</th><th>Source</th></tr></thead>
-        <tbody>{fs.rows.map((r) => <tr key={r.accountId} className={cn("cursor-pointer border-t", r.accountId === sel && "bg-gold-soft/40")} onClick={() => setSel(r.accountId)}><td className="py-2 font-semibold">{r.name}</td><td><span className={cn("rounded-full px-2 py-0.5 text-xs font-bold", FRESH_TONE[r.status])}>{FRESHNESS_LABEL[r.status]}</span></td><td>{r.lastTransaction ?? "—"}</td><td>{r.lastReconciliation ?? "—"}</td><td>{r.lastBalanceConfirmation ?? "—"}</td><td className="capitalize">{r.source}</td></tr>)}</tbody></table></div>
+      <p className="text-sm text-muted-foreground">Manual comparisons do not certify statement coverage or reconciliation.</p>
+      <div className="flex flex-wrap gap-2">{accounts.filter(a => !a.archived).map(a => <Button key={a.id} size="sm" variant={sel === a.id ? "secondary" : "outline"} onClick={() => setSel(a.id)}>{a.name}</Button>)}</div>
       {acc && d && <section className="space-y-3 rounded-2xl border p-3">
         <h3 className="font-display text-lg font-bold">Check {acc.name}</h3>
         <div className="grid grid-cols-2 gap-2 text-sm sm:grid-cols-4">

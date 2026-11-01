@@ -477,6 +477,7 @@ export type Database = {
           amount: number
           category: string
           category_revision: number
+          correction_revision: number
           created_at: string
           currency: string
           department: string | null
@@ -518,6 +519,7 @@ export type Database = {
           amount: number
           category: string
           category_revision?: number
+          correction_revision?: number
           created_at?: string
           currency?: string
           department?: string | null
@@ -559,6 +561,7 @@ export type Database = {
           amount?: number
           category?: string
           category_revision?: number
+          correction_revision?: number
           created_at?: string
           currency?: string
           department?: string | null
@@ -782,6 +785,41 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      financial_corrections: {
+        Row: {
+          created_at: string
+          entries: Json
+          id: string
+          owner_id: string
+          request: Json
+          undone_at: string | null
+        }
+        Insert: {
+          created_at?: string
+          entries: Json
+          id: string
+          owner_id: string
+          request: Json
+          undone_at?: string | null
+        }
+        Update: {
+          created_at?: string
+          entries?: Json
+          id?: string
+          owner_id?: string
+          request?: Json
+          undone_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "financial_corrections_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "finance_preferences"
+            referencedColumns: ["owner_id"]
+          },
+        ]
       }
       goals: {
         Row: {
@@ -1627,6 +1665,10 @@ export type Database = {
           isSetofReturn: true
         }
       }
+      correct_financial_entries: {
+        Args: { _accounts: Json; _choice: Json; _id: string; _items: Json }
+        Returns: string
+      }
       decide_family_request: {
         Args: { _id: string; _note: string; _status: string }
         Returns: undefined
@@ -1733,6 +1775,7 @@ export type Database = {
         Returns: undefined
       }
       undo_category_change: { Args: { batch_id: string }; Returns: undefined }
+      undo_financial_correction: { Args: { _id: string }; Returns: undefined }
     }
     Enums: {
       app_role: "employee" | "manager" | "finance"
