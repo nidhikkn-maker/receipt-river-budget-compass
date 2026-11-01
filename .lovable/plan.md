@@ -28,7 +28,27 @@
 - One tile style: the same padding, corner size and number size, with large amounts shrinking to fit instead of wrapping.
 - Lists use consistent row heights, and amounts are right-aligned in a fixed column so they line up.
 
-### 5. Check every page
+### 5. Moving back and forth
+- Every inner page gets a Back arrow that returns to exactly where you came from, keeping your scroll position and filters.
+- The page header also gets a Forward arrow when there's a page to go forward to.
+- On iPhone and iPad, swiping from the left edge goes back.
+- Related pages (for example the Inbox tabs, or Statement Desk → Coverage → Match & Fix) show small previous/next links at the bottom, so you can move through a flow without the menu.
+
+### 6. Fonts you already chose
+- Everything uses your saved choice: the Apple system font at weights 400 (text), 500 (labels) and 600 (headings and amounts). The Ledgerline logo keeps its own brand font.
+- I'll remove any leftover fonts or bold weights that don't follow this, and keep labels in sentence case with amounts that line up and never wrap.
+
+### 7. Centre-screen pop-ups
+- Confirmations, previews (moves, corrections, posting, undo), pickers and short forms open in a centred pop-up with a dimmed background, instead of expanding inside long pages.
+- They are sized for phones (full width with margins, never covering the bottom bar awkwardly), close with a tap outside, an X or Esc, and return focus to where you were.
+- Simple success messages stay as small notes; any destructive action always uses the centred pop-up.
+
+### 8. Finishing details
+- Consistent icon sizes, aligned checkboxes and amounts, and the same pressed and focus states everywhere.
+- Smooth, short transitions (with reduced motion respected), empty states with a clear next step, and loading placeholders shaped like the content.
+- Tap targets at least 44px, nothing hidden behind the floating + button, and every theme checked for contrast.
+
+### 9. Check every page
 - Screenshot every main page at iPhone (402px), iPad (820px) and desktop sizes, before and after. I'll fix any overflow, wrapping or misalignment, and report page heights before and after.
 
 Nothing about your money or records changes. Only layout and spacing do.
