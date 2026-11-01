@@ -437,3 +437,5 @@
 - [x] Forex card statement import & reconciliation flow
 - [x] Bulk-categorise 58 uncategorised ICICI Krupa savings entries
 - [x] Home Card dues tile: card-by-card breakdown incl. card credits
+- [ ] Home card dues breakdown: statement date + last-updated time per card
+- [ ] Card dues/credit balance trend chart over time
