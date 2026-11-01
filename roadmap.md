@@ -441,4 +441,9 @@
 - [x] Card dues/credit balance trend chart over time
 
 ## V5.16 — One-upload statement pipeline (Nov 2026)
-- [ ] Plan: replicate the agent's match-and-ask method in-app (multi-statement upload, auto match/categorise/link, one review step)
+- [x] Phase 1: Statement Desk (/statements) — many files at once read on device, one canonical line model, account identification (asks when unsure), confidence-scored matching, category suggestions, own-account transfer pairing, self-check + balance gates, apply with one-tap undo
+- [ ] Durable cross-device batch undo (owner-RLS statement_operations; today's undo only covers the current session)
+- [ ] Backend fallback for scanned or photographed statements
+- [ ] Cross-account record moves suggested from another account's statement, then redirect /statement-crosscheck
+- [ ] Coverage & freshness: which statements are missing, how current each account is
+- [ ] Browser tests for the Statement Desk upload → review → apply → undo path
