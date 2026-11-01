@@ -15,8 +15,9 @@ export function FinancialInboxNav({ active }: { active: View }) {
       <Link to="/inbox" search={{ section: 'review' }} className={tab(active === 'review')}>Review</Link>
       <Link to="/transfers" className={tab(active === 'transfers')}>Transfers</Link>
       <Link to="/account-reconciliation" className={tab(active === 'accounts')}>Reconcile</Link>
-      <Link to="/inbox" search={{ section: 'history' }} className={tab(active === 'history')}>History</Link>
-      <Link to="/statements" className={tab(false)}>Statements</Link>
+      <Link to="/inbox" search={{ section: 'history' }} aria-label="Review History" className={tab(active === 'history')}>History</Link>
+      <Link to="/inbox" search={{ section: 'statements' }} className={tab(false)}>Inbox uploads</Link>
+      <Link to="/statements" className={tab(false)}>Statement Desk</Link>
       <Link to="/statement-accounts" className={tab(false)}>Coverage</Link>
       <Link to="/statement-crosscheck" className={tab(false)}>Match & fix</Link>
       <Link to="/forex-reconcile" className={tab(false)}>Forex</Link>
