@@ -375,3 +375,8 @@
 - [x] V5.10.3 transaction-type question, recipients (existing), confirmed internal transfer linking (strong matches auto-found), audit
 - [ ] V5.10.3 physical iPhone/iPad checks (needs your devices)
 - [x] Read-only past-records check from April 2026, auto-reviewed against uploaded statements
+
+## V5.11 Financial audit
+- [x] Phase 1 read-only inventory, account status, exception register (report in Files)
+- [ ] Phases 2–6 on an isolated test copy — awaiting user approval of corrections E1–E7
+- [ ] Real iPhone/iPad checks — needs device
