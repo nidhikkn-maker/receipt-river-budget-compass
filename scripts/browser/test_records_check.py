@@ -15,7 +15,8 @@ from playwright.async_api import async_playwright, expect
 
 BASE = "http://localhost:8080"
 EVIDENCE = Path("/tmp/browser/records-check-tests")
-HTML = """<!doctype html><html><head><meta charset="utf-8"></head>
+HTML = """<!doctype html><html><head><meta charset="utf-8">
+<script>window.__oj_refresh_installed__ = true; window.$RefreshReg$ = () => {}; window.$RefreshSig$ = () => type => type;</script></head>
 <body><div id="root"></div><script type="module" src="/scripts/browser/records-check.fixture.tsx"></script></body></html>"""
 
 
