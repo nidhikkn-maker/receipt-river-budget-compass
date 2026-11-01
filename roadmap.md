@@ -264,3 +264,6 @@
 - [ ] P4: Home shortcut selection/reorder (max 6 default + View All), workspace multi-select sheet, homepage personalisation persistence
 - [ ] P5: Smart trip linking suggestions, Travel Inbox integration, trip readiness indicator, reports consolidation, controlled trip closure validation
 - [ ] Acceptance: 23 demonstrations incl. unchanged records, no duplicate spend, iPhone layout
+
+## V5.3 Statement Import (.lovable/requirements-v5.3.md)
+- [ ] Uploaded specification saved; guided import stages, bulk exception review and historical reconciliation acceptance remain a separate implementation pass after current travel requests.
