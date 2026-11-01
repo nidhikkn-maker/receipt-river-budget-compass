@@ -21,3 +21,4 @@
 - Mutual fund NAVs are authenticated server-fetched daily quotes; reviewed units create dated valuation snapshots, never income or expense entries, so net worth reuses the ledger engine.
 - Universal entry presentation rules (recent-first ordering, which detail groups show, date shortcuts) are pure functions in src/lib/entry-form.ts; they never decide amounts or what is saved, so the one save path stays unchanged.
 - Historical statements use owner-scoped import_batches/import_rows staging and explicit import_rules; posting uses server-derived FX and atomic import_posts fingerprints, never changes existing ledger entries, and keeps original statement provenance.
+- Scanned imports extract four PDF pages per leased run with durable per-page results and owner AI pause guards; source balance quotes stay separate from user balance review, and matching arithmetic never certifies ledger completeness.

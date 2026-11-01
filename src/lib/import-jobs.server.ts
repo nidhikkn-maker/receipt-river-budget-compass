@@ -50,7 +50,7 @@ export async function processImport(db: SupabaseClient<Database>, id: string, ow
         lines=[];
         for(const page of pages.data){
           const source=page.rows as unknown as {date:string;description:string;amount:number;direction:string;reference:string;page:number}[];
-          for(let i=0;i<source.length;i++){const row=source[i];if(!row)continue;const normalized=normalizeStatementRows([row])[0];if(normalized)lines.push({...normalized,ref:`PDF${row.page}:${i}:${row.reference}`,description:row.reference?`${row.description} · ${row.reference}`:row.description});}
+          for(let i=0;i<source.length;i++){const row=source[i];if(!row)continue;const normalized=normalizeStatementRows([row])[0];if(normalized)lines.push({...normalized,ref:`PDF${row.page}:${i}:${row.reference}`});}
           const balances=page.balances as unknown as BalanceEvidence;
           if(balances.opening.value!=null)evidence.opening=balances.opening;
           if(balances.closing.value!=null)evidence.closing=balances.closing;
@@ -82,7 +82,9 @@ export async function processImport(db: SupabaseClient<Database>, id: string, ow
       if(ins.error) throw Error('Could not save extracted transactions');
     }
     const dates=lines.map(l=>l.date).sort();
-    const saved=await db.from('import_batches').update({status:'review',raw_lines:lines as unknown as Json,period_from:b.period_from ?? dates[0] ?? null,period_to:b.period_to ?? dates.at(-1) ?? null,error:null,updated_at:new Date().toISOString()}).eq('id',id).eq('owner_id',owner);
+    const latest=await db.from('import_batches').select('period_from,period_to,status').eq('id',id).eq('owner_id',owner).single();
+    if(latest.error)throw Error('Could not load extracted statement period');if(latest.data.status==='cancelled')return;
+    const saved=await db.from('import_batches').update({status:'review',raw_lines:lines as unknown as Json,period_from:latest.data.period_from ?? dates[0] ?? null,period_to:latest.data.period_to ?? dates.at(-1) ?? null,error:null,updated_at:new Date().toISOString()}).eq('id',id).eq('owner_id',owner).neq('status','cancelled');
     if(saved.error) throw Error('Could not finish import');
   } catch(e) {
     await db.from('import_batches').update({status:'failed',error:e instanceof Error?e.message:'Could not process statement',updated_at:new Date().toISOString()}).eq('id',id).eq('owner_id',owner);
@@ -91,6 +93,8 @@ export async function processImport(db: SupabaseClient<Database>, id: string, ow
 }
 
 export async function runImportJobs(db: SupabaseClient<Database>) {
+  const exhausted=await db.from('import_batches').update({status:'failed',error:'Processing attempts exhausted; retry explicitly'}).in('status',['queued','processing']).gte('attempts',3).lte('lease_until',new Date().toISOString());
+  if(exhausted.error)throw Error('Could not recover exhausted imports');
   const claimed=await db.rpc('claim_import_batches');
   if(claimed.error) throw Error('Could not claim imports');
   let done=0,failed=0;

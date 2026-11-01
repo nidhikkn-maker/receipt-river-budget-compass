@@ -45,7 +45,7 @@ export async function extractScannedChunk(db:SupabaseClient<Database>,batch:Data
     if(update.error)throw Error('Could not save PDF progress');
     return end>=total;
   }catch(e){
-    if(!type && status===403)type='provider_denial';
+    if(status===403 && !['credit_limit_reached','ai_disabled','model_requires_retention_consent','model_vendor_not_enabled','provider_not_available_in_region'].includes(type))type='provider_denial';
     const policy=importFailurePolicy(status,type);
     if(status==null||status===200)message=e instanceof Error?e.message:message;
     if(policy.pause){const state=await db.from('import_ai_state').upsert({owner_id:batch.owner_id,paused:true,reason:message,pause_kind:policy.resume?'owner_action':'provider_denial'});if(state.error)throw Error('Could not persist processing pause');}
