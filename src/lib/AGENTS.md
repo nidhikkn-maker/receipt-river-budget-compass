@@ -1,4 +1,5 @@
 # Finance rule modules
+- payees.ts stores external directory records in owner preferences; explicit selection fills the existing merchant draft only, never an owned account or automatic financial classification. Directory changes do not relabel old ledger records.
 - correction-fields.ts derives draft account fields from ledger movement/target rules; it never changes financial treatment or substitutes external payees for owned accounts.
 - financial-corrections.ts previews reuse ledger rules; atomic RPCs preserve source money and audit stale-safe undo. statement-evidence.ts extracts only labelled headers; identity/coverage require separate owner confirmations. statement-checkpoint.functions.ts derives saved immutable results from owner reads with atomic snapshot guards; account-statement-status.ts invalidates changed evidence and never uses upload dates for freshness.
 - review-centre.ts derives overlapping issue counts, stable-ID selection and explicit category exclusions without altering money; unfinished review context uses owner-encrypted device storage and never restores an approved preview or triggers a save.

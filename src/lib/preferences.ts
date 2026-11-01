@@ -7,6 +7,7 @@ import type { PaymentInstrument } from "./payment-instruments";
 import type { AllocationPlan } from "./allocation";
 import type { FinanceRule } from "./rules-engine";
 import type { TravelMessage } from "./travel-inbox";
+import { cleanPayees, type Payee } from './payees';
 import { cleanReimbursementSettings, emptyReimbursementSettings, type ReimbursementSettings } from './reimbursement-profiles';
 import { cleanShortcuts, DEFAULT_SHORTCUTS, type ShortcutId } from "./home-shortcuts";
 import { CATEGORIES, memberShares, SCOPES, type Expense, type Scope } from "./expenses";
@@ -47,6 +48,7 @@ export function sanitizeSavedViews(raw: unknown): SavedView[] {
 }
 
 export interface FinancePreferences {
+  payees: Payee[];
   reimbursementSettings: ReimbursementSettings;
   homeShortcuts: ShortcutId[];
   travelMessages: TravelMessage[];
@@ -137,6 +139,7 @@ export const DEFAULT_TAGS: GroupedTag[] = [
 
 export function defaultPreferences(): FinancePreferences {
   return {
+    payees: [],
     reimbursementSettings: emptyReimbursementSettings(),
     categories: CATEGORIES.map((name) => ({ name, archived: false })), tags: DEFAULT_TAGS, budgets: [], homeHidden: [], homeOrder: [...HOME_SECTIONS], homeMode: "custom", savedViews: [], homeShortcuts: [...DEFAULT_SHORTCUTS], travelMessages: [],
     theme: "system", themeName: "signature", homeScope: "all", reminders: true, reminderDays: 3, defaultCurrency: "INR", language: "en", aiEnabled: true, aiReadsDocuments: true, cardAlertPct: 30, homePeriod: "month", homeCustomStart: "", homeCustomEnd: "",
@@ -157,6 +160,7 @@ export function normalizePreferences(raw: Partial<FinancePreferences> | null | u
   if (!Array.isArray(p.budgets)) p.budgets = [];
   if (!Array.isArray(p.homeHidden)) p.homeHidden = [];
   p.savedViews = sanitizeSavedViews(p.savedViews);
+  p.payees = cleanPayees(p.payees);
   p.reimbursementSettings = cleanReimbursementSettings(p.reimbursementSettings);
   p.homeShortcuts = cleanShortcuts(p.homeShortcuts);
   p.travelMessages = Array.isArray(p.travelMessages) ? p.travelMessages.filter((m) => m && typeof m.id === "string" && typeof m.title === "string" && typeof m.text === "string").slice(-300) : [];
