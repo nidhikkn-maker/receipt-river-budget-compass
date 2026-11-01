@@ -1,0 +1,15 @@
+import { describe, expect, it } from 'vitest';
+import { mappingPreview, mappingStillCurrent } from './review-mapping';
+import { defaultPreferences } from './preferences';
+import type { FinancialReview } from './financial-review';
+import type { Expense } from './expenses';
+const entry: Expense = { id: 'controlled', title: 'Controlled', merchant: 'Train', amount: 200, originalAmount: 200, fxRate: 1, currency: 'INR', date: '2026-04-01', category: 'Travel', scope: 'official', memberId: null, splits: [], receipts: [], description: 'Original source', paymentMethod: 'upi', accountId: 'bank', reconciledAt: null, statementRef: null, txnType: 'expense', tags: [] };
+const row = (e: Expense): FinancialReview => ({ transaction: e, issues: [], group: 'category', status: 'Unresolved', confidence: 'low', evidence: [], targetAccountIds: [] });
+const prefs = () => ({ ...defaultPreferences(), tags: [{ group: 'Organisation', name: 'AET' }, { group: 'Project', name: 'Audit' }], trips: [{ id: 'trip', name: 'Review trip', start: '2026-04-01', end: '2026-04-04', budget: 0 }] });
+describe('review mapping guards', () => {
+  it('links configured activities without altering original money or source', () => { const p = mappingPreview([row(entry)], 'activity', 'Project: Audit', '', prefs()); expect(p.records[0]?.description).toBe('Original source'); expect(p.snapshots[0]?.amount).toBe(200); expect(entry.tags).toEqual([]); });
+  it('excludes income and already linked activities', () => { const p = mappingPreview([row(entry), row({ ...entry, id: 'income', txnType: 'income' }), row({ ...entry, id: 'linked', tags: ['Project: Audit'] })], 'activity', 'Project: Audit', '', prefs()); expect(p.records).toHaveLength(1); expect(p.excluded.map(e => e.id)).toEqual(['income', 'linked']); });
+  it('organisation batches require linked trip membership and never overwrite claim responsibility', () => { const p = mappingPreview([row({ ...entry, tripId: 'trip' }), row({ ...entry, id: 'claim', tripId: 'trip', reimbursementStatus: 'pending' }), row({ ...entry, id: 'unlinked' })], 'organisation', 'AET', 'trip', prefs()); expect(p.records.map(e => e.id)).toEqual(['controlled']); expect(p.excluded).toHaveLength(2); });
+  it('rejects unknown configuration and conflicting trips', () => { expect(() => mappingPreview([row(entry)], 'activity', 'Project: Unknown', '', prefs())).toThrow('configured activity'); expect(() => mappingPreview([row({ ...entry, tripId: 'other' })], 'trip', '', 'trip', prefs())).toThrow('No selected'); });
+  it('invalidates the whole preview after a record or configuration edit', () => { const p = mappingPreview([row(entry)], 'activity', 'Project: Audit', '', prefs()); expect(mappingStillCurrent(p, [entry], prefs())).toBe(true); expect(mappingStillCurrent(p, [{ ...entry, amount: 201 }], prefs())).toBe(false); expect(mappingStillCurrent(p, [entry], { ...prefs(), tags: [] })).toBe(false); });
+});
