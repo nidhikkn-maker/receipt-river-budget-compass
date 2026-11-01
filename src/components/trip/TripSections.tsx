@@ -30,7 +30,7 @@ export function useTripPut(trip: TravelTrip) {
 }
 
 /** Overview: trip details, travellers, insights, and the add-expense action. */
-export function TripOverviewSection({ trip }: { trip: TravelTrip }) {
+export function TripOverviewSection({ trip, onOpenBudget }: { trip: TravelTrip; onOpenBudget: () => void }) {
   const { preferences: pr, savePreferences, transactions, members } = useStore();
   const put = useTripPut(trip);
   const closed = !!trip.closedAt;
@@ -49,7 +49,7 @@ export function TripOverviewSection({ trip }: { trip: TravelTrip }) {
           <div className="mt-1 flex flex-wrap gap-2">{(trip.travellers ?? []).map((t) => <span key={t} className="rounded-full bg-secondary px-3 py-1 text-xs">{t}{!closed && <button type="button" aria-label={`Remove ${t}`} className="ml-1" onClick={() => void put({ travellers: (trip.travellers ?? []).filter((x) => x !== t) })}>×</button>}</span>)}</div>
           {!closed && <div className="mt-2 flex gap-2"><Input className="h-10" value={traveller} onChange={(e) => setTraveller(e.target.value)} placeholder="Name" list="members" /><datalist id="members">{members.map((m) => <option key={m.id} value={m.name} />)}</datalist><Button type="button" variant="outline" onClick={() => { const n = traveller.trim(); if (!n || (trip.travellers ?? []).includes(n)) return; void put({ travellers: [...(trip.travellers ?? []), n.slice(0, 60)] }); setTraveller(""); }}>Add</Button></div>}
         </div>
-        <TripPlanFields trip={trip} />
+        <TripBudgetMini trip={trip} onOpen={onOpenBudget} />
         {!closed && missingCats.length > 0 && <Button variant="outline" className="mt-3 w-full" onClick={() => void savePreferences({ ...pr, categories: [...pr.categories, ...missingCats.map((name) => ({ name, archived: false }))] }).then(() => toast.success("Travel categories added"))}>Add travel categories ({missingCats.join(", ")})</Button>}
         {!closed && <Button asChild variant="gold" className="mt-3 w-full"><Link to="/new" search={{ trip: trip.id }}>Add an expense to this trip</Link></Button>}
       </Card>
