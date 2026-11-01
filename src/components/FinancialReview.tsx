@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
 import { Link } from "@tanstack/react-router";
 import { toast } from "sonner";
 import { Undo2, SlidersHorizontal, CheckSquare, ChevronDown } from "lucide-react";
@@ -75,7 +75,7 @@ export function FinancialReview({ items, onOpen, initialFilter = "all" }: { item
   const [saveError, setSaveError] = useState("");
   const [completed, setCompleted] = useState(0);
   const listRef = useRef<HTMLDivElement>(null);
-  const onListKeyDown = (event: React.KeyboardEvent) => {
+  const onListKeyDown = (event: KeyboardEvent) => {
     if (event.key !== "ArrowDown" && event.key !== "ArrowUp") return;
     const boxes = listRef.current?.querySelectorAll<HTMLElement>("[data-review-select]");
     if (!boxes?.length) return;
