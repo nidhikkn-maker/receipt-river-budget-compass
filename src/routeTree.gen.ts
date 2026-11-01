@@ -47,6 +47,7 @@ import { Route as AuthenticatedRulesRouteImport } from './routes/_authenticated/
 import { Route as AuthenticatedSearchRouteImport } from './routes/_authenticated/search'
 import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings'
 import { Route as AuthenticatedStatementCrosscheckRouteImport } from './routes/_authenticated/statement-crosscheck'
+import { Route as AuthenticatedStatementsRouteImport } from './routes/_authenticated/statements'
 import { Route as AuthenticatedStrategyRouteImport } from './routes/_authenticated/strategy'
 import { Route as AuthenticatedTransactionReviewRouteImport } from './routes/_authenticated/transaction-review'
 import { Route as AuthenticatedTransfersRouteImport } from './routes/_authenticated/transfers'
@@ -263,6 +264,11 @@ const AuthenticatedStatementCrosscheckRoute =
     path: '/statement-crosscheck',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedStatementsRoute = AuthenticatedStatementsRouteImport.update({
+  id: '/statements',
+  path: '/statements',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedStrategyRoute = AuthenticatedStrategyRouteImport.update({
   id: '/strategy',
   path: '/strategy',
@@ -372,6 +378,7 @@ export interface FileRoutesByFullPath {
   '/search': typeof AuthenticatedSearchRoute
   '/settings': typeof AuthenticatedSettingsRoute
   '/statement-crosscheck': typeof AuthenticatedStatementCrosscheckRoute
+  '/statements': typeof AuthenticatedStatementsRoute
   '/strategy': typeof AuthenticatedStrategyRoute
   '/transaction-review': typeof AuthenticatedTransactionReviewRoute
   '/transfers': typeof AuthenticatedTransfersRoute
@@ -424,6 +431,7 @@ export interface FileRoutesByTo {
   '/search': typeof AuthenticatedSearchRoute
   '/settings': typeof AuthenticatedSettingsRoute
   '/statement-crosscheck': typeof AuthenticatedStatementCrosscheckRoute
+  '/statements': typeof AuthenticatedStatementsRoute
   '/strategy': typeof AuthenticatedStrategyRoute
   '/transaction-review': typeof AuthenticatedTransactionReviewRoute
   '/transfers': typeof AuthenticatedTransfersRoute
@@ -477,6 +485,7 @@ export interface FileRoutesById {
   '/_authenticated/search': typeof AuthenticatedSearchRoute
   '/_authenticated/settings': typeof AuthenticatedSettingsRoute
   '/_authenticated/statement-crosscheck': typeof AuthenticatedStatementCrosscheckRoute
+  '/_authenticated/statements': typeof AuthenticatedStatementsRoute
   '/_authenticated/strategy': typeof AuthenticatedStrategyRoute
   '/_authenticated/transaction-review': typeof AuthenticatedTransactionReviewRoute
   '/_authenticated/transfers': typeof AuthenticatedTransfersRoute
@@ -531,6 +540,7 @@ export interface FileRouteTypes {
     | '/search'
     | '/settings'
     | '/statement-crosscheck'
+    | '/statements'
     | '/strategy'
     | '/transaction-review'
     | '/transfers'
@@ -583,6 +593,7 @@ export interface FileRouteTypes {
     | '/search'
     | '/settings'
     | '/statement-crosscheck'
+    | '/statements'
     | '/strategy'
     | '/transaction-review'
     | '/transfers'
@@ -635,6 +646,7 @@ export interface FileRouteTypes {
     | '/_authenticated/search'
     | '/_authenticated/settings'
     | '/_authenticated/statement-crosscheck'
+    | '/_authenticated/statements'
     | '/_authenticated/strategy'
     | '/_authenticated/transaction-review'
     | '/_authenticated/transfers'
@@ -930,6 +942,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedStatementCrosscheckRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/statements': {
+      id: '/_authenticated/statements'
+      path: '/statements'
+      fullPath: '/statements'
+      preLoaderRoute: typeof AuthenticatedStatementsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/strategy': {
       id: '/_authenticated/strategy'
       path: '/strategy'
@@ -1070,6 +1089,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedSearchRoute: typeof AuthenticatedSearchRoute
   AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRoute
   AuthenticatedStatementCrosscheckRoute: typeof AuthenticatedStatementCrosscheckRoute
+  AuthenticatedStatementsRoute: typeof AuthenticatedStatementsRoute
   AuthenticatedStrategyRoute: typeof AuthenticatedStrategyRoute
   AuthenticatedTransactionReviewRoute: typeof AuthenticatedTransactionReviewRoute
   AuthenticatedTransfersRoute: typeof AuthenticatedTransfersRoute
@@ -1116,6 +1136,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedSearchRoute: AuthenticatedSearchRoute,
   AuthenticatedSettingsRoute: AuthenticatedSettingsRoute,
   AuthenticatedStatementCrosscheckRoute: AuthenticatedStatementCrosscheckRoute,
+  AuthenticatedStatementsRoute: AuthenticatedStatementsRoute,
   AuthenticatedStrategyRoute: AuthenticatedStrategyRoute,
   AuthenticatedTransactionReviewRoute: AuthenticatedTransactionReviewRoute,
   AuthenticatedTransfersRoute: AuthenticatedTransfersRoute,
