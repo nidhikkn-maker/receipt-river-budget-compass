@@ -14,6 +14,7 @@ import { useEffect, type ReactNode } from "react";
 import { registerOfflineApp } from "@/lib/pwa";
 import { supabase } from "@/integrations/supabase/client";
 import { Toaster } from "@/components/ui/sonner";
+import { ConfirmHost } from "@/components/ConfirmHost";
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 
@@ -157,6 +158,7 @@ function RootComponent() {
       <AuthListener />
       <ClientOnly fallback={<p className="p-6 text-muted-foreground">Loading Ledgerline…</p>}><Outlet /></ClientOnly>
       <Toaster />
+      <ConfirmHost />
     </QueryClientProvider>
   );
 }

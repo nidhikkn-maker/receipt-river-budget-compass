@@ -2,6 +2,7 @@ import * as React from "react";
 import { Slot } from "@radix-ui/react-slot";
 import { cva, type VariantProps } from "class-variance-authority";
 
+import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
 const buttonVariants = cva(
@@ -51,7 +52,11 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
       const r = (onClick as (e: React.MouseEvent<HTMLButtonElement>) => unknown)(e);
       if (r && typeof (r as Promise<unknown>).then === "function") {
         setAuto(true);
-        (r as Promise<unknown>).finally(() => setAuto(false)).catch(() => {});
+        // A failed action must never look like "no response": surface the reason unless the handler already did.
+        (r as Promise<unknown>).finally(() => setAuto(false)).catch((err: unknown) => {
+          if (err && typeof err === "object" && (err as { shown?: boolean }).shown) return;
+          toast.error(err instanceof Error && err.message ? err.message : "Something went wrong. Please try again.");
+        });
       }
     });
     if (asChild) {

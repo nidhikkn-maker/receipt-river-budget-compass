@@ -1,3 +1,4 @@
+import { confirmAction } from "@/lib/confirm";
 import { createFileRoute, Link } from '@tanstack/react-router';
 import { queryOptions, useSuspenseQuery } from '@tanstack/react-query';
 import { useServerFn } from '@tanstack/react-start';
@@ -52,8 +53,9 @@ function HistoricalImports() {
   },[current,batch?.status,batch?.next_page]);
   const upload=async(files:StatementUpload[])=>{
     const completed=new Set<string>();
-    const pdfConsent=!files.some(item=>/\.pdf$/i.test(item.file.name))||window.confirm('Read PDF statements with AI in the background? They may contain private financial information. AI usage uses workspace credits.');
-    if(!pdfConsent)return completed;
+    const hasPdf=files.some(item=>/\.pdf$/i.test(item.file.name));
+    const pdfConsent=!hasPdf||await confirmAction({title:'Read PDF statements with AI?',message:'PDF statements may contain private financial information. AI reading uses workspace credits. Every extracted row stays in review until you confirm it.',confirmLabel:'Allow and process',cancelLabel:'Cancel'});
+    if(!pdfConsent){toast.info('Nothing was uploaded. PDF statements need your permission to be read.');return completed;}
     for(const item of files) {
       const {file,accountId:account,currency}=item;
       let stored=false;const id=crypto.randomUUID(),path=`${userId}/statements/${id}-${file.name.replace(/[^\w.-]/g,'_')}`;
@@ -70,7 +72,11 @@ function HistoricalImports() {
         if(original.error)throw Error('Statement saved for import but could not be added to the Vault');
         setStage({name:file.name,at:1});
         if(/\.pdf$/i.test(file.name)) {
-          await refetch();toast.success('PDF queued for background extraction; you can close the app');continue;
+          setStage({name:file.name,at:2});setCurrent(id);
+          let status='queued';
+          for(let i=0;i<40&&status==='queued';i++){await process({data:{id}});const st=await supabase.from('import_batches').select('status,error').eq('id',id).single();if(st.error)throw Error('Could not check statement progress');status=st.data.status;if(['failed','paused','refused'].includes(status))throw Error(st.data.error??'Statement reading stopped');await refetch();}
+          if(status==='review'){await reload(id);toast.success(`${file.name} ready for review`);}else toast.info('Reading continues — the review opens here once all pages are read');
+          continue;
         }
         setStage({name:file.name,at:2});await process({data:{id}});setCurrent(id);await refetch();setRows(await listImportRows(id));const known=await supabase.from('import_posts').select('fingerprint').eq('account_id',account);if(known.error)throw Error('Could not check posted rows');setPosted(new Set(known.data.map(r=>r.fingerprint)));toast.success(`${file.name} ready for review`);
       }catch(e){const message=e instanceof Error?e.message:'Could not upload statement';if(stored)await supabase.from('import_batches').update({status:'failed',error:message}).eq('id',id);else await supabase.storage.from('receipts').remove([path]);toast.error(message);}
