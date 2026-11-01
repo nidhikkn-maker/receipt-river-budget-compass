@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { centreCategoryPreview, centreReview, matchesReview, reviewCounts, selectedReviewSummary, selectReviewIds } from './review-centre';
+import { centreCategoryPreview, centreReview, matchesReview, reviewCounts, selectedReviewSummary, selectReviewIds, confirmableImportRows } from './review-centre';
 import { inboxItems } from './inbox';
 import { defaultPreferences } from './preferences';
 import type { Expense } from './expenses';
