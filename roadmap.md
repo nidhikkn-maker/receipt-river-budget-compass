@@ -444,6 +444,6 @@
 - [x] Phase 1: Statement Desk (/statements) — many files at once read on device, one canonical line model, account identification (asks when unsure), confidence-scored matching, category suggestions, own-account transfer pairing, self-check + balance gates, apply with one-tap undo
 - [x] Cross-device upload undo (Recent uploads on Statement Desk, synced in owner preferences)
 - [x] Server reading for scanned PDFs and photos (lines always wait for confirmation)
-- [x] Move entries to the correct account with preview/undo (/statement-accounts); still open: suggestions from another account's statement
+- [x] Move entries to the correct account with preview/undo (/statement-accounts); Statement Desk also offers moves when another account holds the matching entry
 - [x] Coverage & freshness (/statement-accounts)
-- [ ] Browser tests for the Statement Desk upload → review → apply → undo path
+- [x] Browser test for Statement Desk upload → review → apply → undo (scripts/browser/test_statement_desk.py)
