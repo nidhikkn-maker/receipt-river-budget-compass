@@ -87,7 +87,9 @@ export function auditRecords(txns: Expense[], accounts: Account[], statements: A
       if (hits.length === 0) out.push({ key: `ml-${s.id}-${l.ref}-${l.date}-${l.amount}`, issue: "missing_in_ledger", date: l.date, amount: l.amount, currency: s.currency, reference: bankRef(l.description) ?? l.ref, source: maskAccount(acc(accountId)), destination: "—", currentType: "not recorded", suggestedType: l.direction === "credit" ? "income / transfer in" : "expense / transfer out", proposal: `Review “${l.description.slice(0, 60)}” in Statements`, confidence: "medium", impact: `${l.direction === "credit" ? "Money in" : "Money out"} ${r2(l.amount)} not reflected`, batchId: s.id });
       else { const best = hits.sort((a, b) => matchScore(l, b, s.currency, accountId) - matchScore(l, a, s.currency, accountId))[0]!; matched.add(best.id); }
     }
-    const covered = (d: string) => group.some((s) => s.from && s.to && d >= s.from && d <= s.to);
+    // Coverage = dates the statement lines actually span (claimed periods can be wider than the file).
+    const spans = group.map((s) => { const ds = s.lines.map((l) => l.date).sort(); return [ds[0], ds[ds.length - 1]] as const; }).filter(([a, b]) => a && b);
+    const covered = (d: string) => spans.some(([a, b]) => d >= a! && d <= b!);
     for (const t of onAccount.filter((t) => covered(t.date) && !matched.has(t.id))) {
       out.push({ ...base(t), key: `ms-${accountId}-${t.id}`, issue: type(t) === "transfer" && t.toAccountId === accountId ? "unmatched_transfer" : "missing_in_statement", source: maskAccount(acc(t.accountId)), destination: maskAccount(acc(t.toAccountId)), suggestedType: type(t), proposal: "Check whether this entry is a duplicate or belongs to another account", confidence: "low", impact: "Balance differs from the statement by this amount" });
     }
