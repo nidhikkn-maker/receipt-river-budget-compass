@@ -21,3 +21,19 @@ it('previews and cancels without writing and retains the same operation on retry
  await screen.findByRole('alert');fireEvent.click(screen.getByRole('button',{name:'Unable to Save — Retry'}));await waitFor(()=>expect(done).toHaveBeenCalledWith([]));
  expect(mock.save.mock.calls[0]?.[1]).toBe(mock.save.mock.calls[1]?.[1]);expect(e.department).toBeUndefined();
 });
+it('combined classification previews one guarded patch and saves only after confirmation',async()=>{
+ Element.prototype.scrollIntoView=vi.fn();
+ const e:Expense={id:'combined',title:'Supplier',merchant:'External supplier',amount:200,originalAmount:200,currency:'INR',fxRate:1,date:'2026-04-01',description:'Original statement',category:'Miscellaneous',scope:'personal',memberId:null,splits:[],receipts:[],paymentMethod:'bank_transfer',accountId:'bank',statementRef:null,reconciledAt:null};
+ const row:FinancialReview={transaction:e,group:'category',issues:[],evidence:[],targetAccountIds:[],confidence:'low',status:'Unresolved'};
+ mock.save.mockReset().mockResolvedValue(undefined);
+ mock.store={transactions:[e],accounts:[],preferences:{...defaultPreferences(),tags:[{group:'Organisation',name:'AET'}]},applyReviewMetadata:mock.save,reviewMetadataHistory:vi.fn().mockResolvedValue([])};
+ render(<ReviewMetadataPanel rows={[row]} onSaved={()=>{}}/>);
+ fireEvent.click(screen.getByRole('combobox',{name:'Bulk mapping field'}));fireEvent.click(await screen.findByRole('option',{name:'Category, workspace & responsibility'}));
+ fireEvent.click(screen.getByRole('combobox',{name:'Combined Workspace'}));fireEvent.click(await screen.findByRole('option',{name:'Official'}));
+ fireEvent.click(screen.getByRole('combobox',{name:'Combined Organisation'}));fireEvent.click(await screen.findByRole('option',{name:'AET'}));
+ fireEvent.click(screen.getByRole('button',{name:'Preview bulk mapping'}));expect(mock.save).not.toHaveBeenCalled();
+ fireEvent.click(screen.getByRole('button',{name:'Confirm & Save Mapping'}));
+ await waitFor(()=>expect(mock.save).toHaveBeenCalledTimes(1));
+ expect(mock.save.mock.calls[0]?.[0].items[0].patch).toEqual({scope:'official',organisation:'AET'});
+ expect(e.description).toBe('Original statement');expect(e.scope).toBe('personal');
+});

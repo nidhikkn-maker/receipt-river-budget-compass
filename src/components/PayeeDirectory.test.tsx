@@ -9,7 +9,7 @@ it('controlled recipient confirms then persists/reopens without bank details or 
   mock.save.mockReset();
   let preferences=defaultPreferences();
   const ledger=[{id:'untouched',amount:200}];
-  mock.save.mockImplementation(async(next)=>{preferences=next;mock.store.preferences=next;});
+  mock.save.mockImplementation(async(next)=>{preferences=next;mock.store['preferences']=next;});
   mock.store={preferences,savePreferences:mock.save,transactions:ledger};
   const first=render(<PayeeDirectory/>);
   fireEvent.click(screen.getByRole('button',{name:'Add recipient'}));
@@ -19,7 +19,7 @@ it('controlled recipient confirms then persists/reopens without bank details or 
   fireEvent.click(screen.getByRole('button',{name:'Confirm recipient'}));
   await waitFor(()=>expect(mock.save).toHaveBeenCalledTimes(1));
   expect(preferences.payees[0]).toMatchObject({name:'Controlled external person',type:'individual',accountDetails:'',accountVerified:false});
-  expect(mock.store.transactions).toEqual(ledger);
+  expect(mock.store['transactions']).toEqual(ledger);
   first.unmount();render(<PayeeDirectory/>);
   fireEvent.click(screen.getByRole('button',{name:'Edit Controlled external person'}));
   expect(screen.getByLabelText('Display name')).toHaveValue('Controlled external person');

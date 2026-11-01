@@ -11,9 +11,11 @@ FinancialCorrectionPanel always displayed both internal account selectors for ev
 - Type switching clears incompatible local destination/split choices, never mutates confirmed records.
 - Mixed existing types require separate review or an explicitly selected target type before preview.
 - Existing exact financial impact, snapshot checks, confirmation, audit and undo remain authoritative.
+- Added searchable recipient directory in owner preferences, all five recipient types, optional identifiers and owner-verified account details, organisation/category preferences and reviewed create/edit/archive. New-entry selection explicitly fills merchant/payee name only; no owned account or automatic classification is created. This is not a stable ledger payee-ID association.
+- Combined category/workspace/organisation/activity review saves through one existing atomic metadata operation, preserving source money and excluding incompatible claims/splits/types.
 
 ## Not implemented / not verified
-- Reusable external recipient directory, payee associations, bulk external recipient save and third-party loan/advance treatment are still open requirements. They must not be simulated by internal destination accounts.
+- Stable ledger payee associations, bulk external recipient save and third-party recoverable loan/advance treatment remain blocked on coordinated protected schema/API changes; the current shared database cannot be changed under this brief. Existing travel advances mean advances received, not loans issued, and must not be relabelled to fake support.
 - The full 18-case acceptance demonstration and hosted save/reopen remain incomplete.
 - Physical iPad/iPhone and cross-device checks are blocked: the new draft shares live data, no physical devices or real-device service is connected.
 - No Cloud schema changes, sample Cloud records, financial edits, or production publication in this work.
@@ -23,3 +25,4 @@ FinancialCorrectionPanel always displayed both internal account selectors for ev
 - Full regression: 872 checks passed across 109 files. Two additional expense/destination regressions were then verified in the 10-check financial correction suite. Current app build log: build OK.
 - Controlled component preview/cancel/confirm/undo passed; no actual Cloud correction was exercised.
 - These are controlled tests, not a hosted or physical-device end-to-end claim.
+- Signed-in browser: recipient form → preview → cancel verified at 1280×1800, 820×1180, 1180×820 and 402×874; no overflow or page errors. No hosted writes. Screenshots: /tmp/browser/payees/. Physical checks remain Blocked.

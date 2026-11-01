@@ -2,6 +2,7 @@
 ## V5.10.1 transaction classification and external payees
 - [x] Root cause: correction form always displayed both internal account fields even though expense preview already ignores destination. Conditional fields, compatible card/loan targets, incoming account labels and mixed-type review guard added; existing protected confirmation retained.
 - [x] External recipient directory in owner preferences, optional identifiers/verified details/organisation/category preference, explicit preview-confirm create/edit/archive, search and new-entry picker; existing entries never automatically relabelled.
+- [x] Combined category/workspace/organisation/activity preview-confirm uses one existing atomic metadata operation; claims, incompatible types and split responsibility stay excluded.
 - [ ] Bulk durable payee association and external recoverable-loan/advance treatment need coordinated protected storage/API changes; existing RPC whitelist has no payee field and shared Cloud changes are forbidden by V5.10.1 brief.
 - [ ] Complete 18-case hosted financial/device acceptance; isolated hosted storage and physical device access still unavailable.
 ## Isolated reconciliation storage and physical-device acceptance
