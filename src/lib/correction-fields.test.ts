@@ -33,3 +33,12 @@ it('loan repayments retain loan destination and principal/interest inputs even w
 it('mixed existing types do not presume the same account fields', () => {
   expect(correctionFields(undefined,[record('expense'),record('transfer')])).toMatchObject({mixed:true,type:undefined,destination:false});
 });
+import { intentAccounts, TXN_INTENTS } from './correction-fields';
+describe('What is this transaction?', () => {
+  const accts = [{ id: 'a', name: 'IDFC', kind: 'savings', openingBalance: 0, archived: false }, { id: 'r', name: 'Loan to Ravi', kind: 'other_asset', openingBalance: 0, archived: false }, { id: 'c', name: 'AMEX', kind: 'credit_card', openingBalance: 0, archived: false }] as const;
+  const get = (id: string) => TXN_INTENTS.find(i => i.id === id);
+  it('expense asks for no receiving account', () => { expect(intentAccounts(get('expense'), [...accts]).destinations).toEqual([]); });
+  it('loan given only offers receivable accounts', () => { expect(intentAccounts(get('loan_given'), [...accts]).destinations.map(a => a.id)).toEqual(['r']); });
+  it('card bill only offers credit cards', () => { expect(intentAccounts(get('card_bill'), [...accts]).destinations.map(a => a.id)).toEqual(['c']); });
+  it('offers all 13 transaction types', () => { expect(TXN_INTENTS).toHaveLength(13); });
+});
