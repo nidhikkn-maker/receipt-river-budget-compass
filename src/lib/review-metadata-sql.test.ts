@@ -27,6 +27,19 @@ beforeEach(async()=>{await db.exec(`RESET ROLE; DELETE FROM financial_correction
 afterAll(()=>db.close());
 it('applies non-trip organisation atomically without touching original money or statement identity',async()=>{await apply();expect((await db.query('SELECT department,amount,original_amount,fx_rate,currency,description,account_id,reconciled_at IS NOT NULL AS matched FROM expenses')).rows).toEqual([{department:'AET',amount:'1000',original_amount:'10',fx_rate:'100',currency:'USD',description:'Statement narration',account_id:bank,matched:true}]);});
 it('supports per-record categories and workspace mappings',async()=>{await apply(operation(),[{id:entry,revision:0,patch:{category:'Food',scope:'official'}}]);expect((await db.query('SELECT category,scope FROM expenses')).rows).toEqual([{category:'Food',scope:'official'}]);});
+it('bulk combined classification reads back two corrected records with one audit and unchanged source amounts',async()=>{
+ const second=operation();await db.exec(`RESET ROLE; INSERT INTO expenses(id,employee_id,title,description,amount,original_amount,fx_rate,currency,expense_date,account_id) VALUES('${second}','${owner}','Supplier','NEFT original',2000,20,100,'USD','2026-04-03','${bank}');`);await asUser();
+ const id=operation();const patch={category:'Food',scope:'official',organisation:'AET',tag:'Project: Audit'};
+ await apply(id,[{id:entry,revision:0,patch},{id:second,revision:0,patch}]);
+ await apply(id,[{id:entry,revision:0,patch},{id:second,revision:0,patch}]);
+ expect((await db.query('SELECT category,scope,department,tags,amount,original_amount,description,account_id FROM expenses ORDER BY amount')).rows).toEqual([
+  {category:'Food',scope:'official',department:'AET',tags:['Project: Audit'],amount:'1000',original_amount:'10',description:'Statement narration',account_id:bank},
+  {category:'Food',scope:'official',department:'AET',tags:['Project: Audit'],amount:'2000',original_amount:'20',description:'NEFT original',account_id:bank},
+ ]);
+ expect((await db.query('SELECT count(*)::int AS n FROM financial_corrections')).rows).toEqual([{n:1}]);
+ await db.query('SELECT undo_review_metadata($1)',[id]);
+ expect((await db.query('SELECT category,scope,department FROM expenses ORDER BY amount')).rows).toEqual([{category:'Travel',scope:'personal',department:null},{category:'Travel',scope:'personal',department:null}]);
+});
 it('saved instrument mapping fills general method but never moves the source account',async()=>{await apply(operation(),[{id:entry,revision:0,patch:{paymentInstrumentId:'upi'}}]);expect((await db.query('SELECT account_id,payment_method,payment_instrument_id FROM expenses')).rows).toEqual([{account_id:bank,payment_method:'upi',payment_instrument_id:'upi'}]);});
 it('same request retries once and changed id reuse is refused',async()=>{const id=operation();await apply(id);await apply(id);expect((await db.query('SELECT count(*)::int AS n FROM financial_corrections')).rows).toEqual([{n:1}]);await expect(apply(id,[{id:entry,revision:1,patch:{scope:'official'}}])).rejects.toThrow('identifier');});
 it('one stale selected row rolls back all updates',async()=>{await expect(apply(operation(),[{id:entry,revision:0,patch:{organisation:'AET'}},{id:operation(),revision:0,patch:{scope:'official'}}])).rejects.toThrow('Transaction changed');expect((await db.query('SELECT department,correction_revision FROM expenses')).rows).toEqual([{department:null,correction_revision:0}]);});

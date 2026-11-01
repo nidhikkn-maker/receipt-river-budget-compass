@@ -80,6 +80,14 @@ describe("V5.9 evidence and financial preservation", () => {
     for (const patch of [{ amount: 101 }, { department: "Other" }, { categoryRevision: 2 }]) expect(previewStillCurrent(p, [{ ...tx[0], ...patch } as Expense])).toBe(false);
     expect(previewStillCurrent(p, [])).toBe(false);
   });
+  it("category confirmation closes only the category issue, not outstanding statement review", () => {
+    const original=e();const p=categoryReviewPreview(review([original]),"Groceries");
+    const corrected={...original,category:p.category};
+    const remaining=items([corrected]).filter(i=>i.transactionId===original.id);
+    expect(remaining.map(i=>i.type)).toEqual(['unverified_import']);
+    expect(original.category).toBe('Miscellaneous');
+    expect(accountBalance(bank,[corrected])).toBe(accountBalance(bank,[original]));
+  });
   it("blocks duplicate, missing account, and split records from bulk categorisation", () => {
     for (const tx of [[e({ accountId: null })], [e(), e({ id: "two" })]]) expect(() => categoryReviewPreview(review(tx), "Groceries")).toThrow();
   });

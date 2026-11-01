@@ -1,5 +1,6 @@
 # Roadmap (Functional Requirements v1.0)
 ## V5.10.1 transaction classification and external payees
+- [x] Current continuation: compatible source-draft preservation/incompatible split clearing, mixed bulk exclusions, isolated two-record combined-save read-back/retry/undo and issue-specific closure verified; correction undo now notifies the parent to clear stale selection. 889 tests pass; signed-in open/cancel at four screen sizes without overflow/errors. Shared storage unchanged; hosted and physical-device acceptance remain blocked.
 - [x] Root cause: correction form always displayed both internal account fields even though expense preview already ignores destination. Conditional fields, compatible card/loan targets, incoming account labels and mixed-type review guard added; existing protected confirmation retained.
 - [x] External recipient directory in owner preferences, optional identifiers/verified details/organisation/category preference, explicit preview-confirm create/edit/archive, search and new-entry picker; existing entries never automatically relabelled.
 - [x] Combined category/workspace/organisation/activity preview-confirm uses one existing atomic metadata operation; claims, incompatible types and split responsibility stay excluded.
