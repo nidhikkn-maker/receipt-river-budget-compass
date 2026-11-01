@@ -2,8 +2,29 @@
 // Pure functions only; nothing here saves, posts or edits records.
 
 export type BalanceLine = { date: string; amount: number; direction: "debit" | "credit"; balance: number; description: string; source: string };
-export type CrossRecord = { id: string; date: string; amount: number; kind: string; name: string };
-export type CrossResult = CrossRecord & { result: "found" | "found_wrong_kind" | "not_found"; line?: BalanceLine };
+export type CrossRecord = { id: string; date: string; amount: number; kind: string; name: string; description?: string };
+export type CrossResult = CrossRecord & { result: "found" | "found_wrong_kind" | "not_found"; line?: BalanceLine; score: number; confidence: "high" | "medium" | "low"; reasons: string[]; dayGap?: number; nearest?: BalanceLine };
+
+const tokens = (s: string) => new Set(s.toLowerCase().split(/[^a-z0-9]+/).filter((t) => t.length >= 3 && !/^(upi|pos|visa|neft|imps|hdfc|idfb|utib|ift|the|ltd|pvt|and|mr)$/.test(t) && !/^\d+$/.test(t)));
+/** Explains a pairing; scores only inform review and never change a record. */
+export function scoreMatch(record: CrossRecord, line: BalanceLine): { score: number; reasons: string[]; dayGap: number } {
+  const reasons: string[] = [];
+  let score = 0;
+  const diff = Math.round(Math.abs(line.amount - record.amount) * 100) / 100;
+  if (diff < 0.005) { score += 50; reasons.push("Same amount"); } else reasons.push(`Amount differs by ${diff.toFixed(2)}`);
+  const gap = Math.round(days(line.date, record.date));
+  score += [30, 22, 15, 8][gap] ?? 0;
+  reasons.push(gap === 0 ? "Same date" : `Dates ${gap} day${gap === 1 ? "" : "s"} apart`);
+  const a = tokens(record.name), b = tokens(line.description);
+  const shared = [...a].filter((t) => b.has(t) || [...b].some((x) => x.startsWith(t) || t.startsWith(x)));
+  if (shared.length) { score += Math.min(20, 10 * shared.length); reasons.push(`Description shares “${shared.slice(0, 3).join(", ")}”`); }
+  else reasons.push("Descriptions share no words");
+  const isOut = outKinds.has(record.kind);
+  if ((line.direction === "debit") === isOut) reasons.push(`Direction agrees (money ${isOut ? "out" : "in"})`);
+  else { score -= 25; reasons.push(`Saved as ${record.kind}, but statement shows money ${line.direction === "debit" ? "out" : "in"}`); }
+  return { score: Math.max(0, Math.min(100, score)), reasons, dayGap: gap };
+}
+const band = (n: number) => (n >= 80 ? "high" : n >= 55 ? "medium" : "low") as CrossResult["confidence"];
 
 const MONTHS: Record<string, string> = { jan: "01", feb: "02", mar: "03", apr: "04", may: "05", jun: "06", jul: "07", aug: "08", sep: "09", oct: "10", nov: "11", dec: "12" };
 const NUM = /\d{1,3}(?:,\d{2,3})*\.\d{2}/g;
@@ -75,9 +96,14 @@ export function crossCheck(records: CrossRecord[], homeLines: BalanceLine[], oth
   const home = matchRecords(records, homeLines, windowDays);
   const leftover = home.filter((h) => !h.line).map((h) => h.record);
   const results = matchRecords(leftover, otherLines, windowDays).map(({ record, line }): CrossResult => {
-    if (!line) return { ...record, result: "not_found" };
+    if (!line) {
+      const nearest = otherLines.filter((l) => Math.abs(l.amount - record.amount) < 0.005).sort((x, y) => days(x.date, record.date) - days(y.date, record.date))[0];
+      const reasons = [nearest ? `Same amount only on ${nearest.date} (${Math.round(days(nearest.date, record.date))} days away, outside the ${windowDays}-day window)` : "No statement entry with this amount", `Not on the statements provided between ${windowDays} days either side`];
+      return { ...record, result: "not_found", score: 0, confidence: "low", reasons, nearest };
+    }
+    const s = scoreMatch(record, line);
     const wrong = (line.direction === "debit") !== outKinds.has(record.kind);
-    return { ...record, line, result: wrong ? "found_wrong_kind" : "found" };
+    return { ...record, line, result: wrong ? "found_wrong_kind" : "found", score: s.score, confidence: band(s.score), reasons: s.reasons, dayGap: s.dayGap };
   });
   return { onHome: records.length - leftover.length, results };
 }
