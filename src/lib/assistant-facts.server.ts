@@ -29,7 +29,7 @@ export async function readAssistantFacts(sb: SupabaseClient<Database>, owner: st
     sb.from("loans").select("*").eq("owner_id", owner).order("id"),
     sb.from("goals").select("*").eq("owner_id", owner).order("id"),
     sb.from("asset_valuations").select("*").eq("owner_id", owner).order("id"),
-    sb.from("category_budgets").select("*").eq("owner_id", owner).order("id"),
+    sb.from("category_budgets").select("*").eq("owner_id", owner).order("category"),
   ]);
   for (const result of [a, c, l, g, v, b]) {
     if (result.error || (result.data?.length ?? 0) >= 1000) throw new Error("Financial records could not be read completely");

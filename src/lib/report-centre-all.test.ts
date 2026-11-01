@@ -70,7 +70,7 @@ describe("report totals match the app's calculations", () => {
     expect(sum(d, "Total income")).toBe(expected.income);
     expect(sum(d, "Total expenses")).toBe(expected.spent);
     expect(sum(d, "Net cash flow")).toBe(expected.net);
-    expect(expected.spent).toBe(3000 + 2000 - 500 + 1000 + 1500 + 4000 + 8300);
+    expect(expected.spent).toBe(3000 + 2000 - 500 + 1000 + 1500 + 4000 + 8300 + 2000); // repayment interest, never principal
   });
   it("detailed transactions total equals every in-period entry", () => {
     const s = section(build("monthly"), "Detailed transactions");
@@ -83,7 +83,7 @@ describe("report totals match the app's calculations", () => {
     for (const [k, label] of [["personal", "Personal"], ["family", "Family"], ["business", "Business"], ["official", "Official"]] as const) expect(rowVal(d, "Workspace allocation", label)).toBe(w[k]);
     expect(N(section(d, "Workspace allocation").total![1])).toBe(w.total);
   });
-  it.each([["ws-personal", 3000 + 2000 - 500 + 400], ["ws-family", 1500], ["ws-business", 600 + 8300], ["ws-official", 4000]] as const)("%s totals only its share", (t, v) => {
+  it.each([["ws-personal", 3000 + 2000 - 500 + 400 + 2000], ["ws-family", 1500], ["ws-business", 600 + 8300], ["ws-official", 4000]] as const)("%s totals only its share", (t, v) => {
     expect(sum(build(t), "Total expenses")).toBe(v);
   });
   it("workspace reports add back up to the consolidated total", () => {
