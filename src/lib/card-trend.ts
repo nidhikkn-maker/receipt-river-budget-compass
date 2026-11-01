@@ -73,13 +73,21 @@ const monthLabel = (today: string, back: number) => {
   return new Date(Date.UTC(y, m - 1, 1)).toLocaleDateString("en", { month: "short", timeZone: "UTC" });
 };
 
-/** Distinct chart keys per card, so two cards sharing a name still get separate lines. */
+/** Account numbers are long; keep only enough of the name to tell cards apart in a chart. */
+export function shortCardName(card: Account): string {
+  const n = card.name.trim();
+  const m = n.match(/^(.*?)(\d{5,})$/);
+  const base = m ? `${m[1].trim()} …${m[2].slice(-4)}` : n;
+  return base.length > 22 ? `${base.slice(0, 21).trim()}…` : base;
+}
+
+/** Distinct chart labels per card, so two cards sharing a name still get separate lines. */
 export function cardTrendKeys(cards: Account[]): string[] {
   const seen = new Map<string, number>();
   return cards.map((c) => {
-    const n = (seen.get(c.name) ?? 0) + 1;
-    seen.set(c.name, n);
-    return n === 1 ? c.name : `${c.name} (${n})`;
+    const n = (seen.get(shortCardName(c)) ?? 0) + 1;
+    seen.set(shortCardName(c), n);
+    return n === 1 ? shortCardName(c) : `${shortCardName(c)} (${n})`;
   });
 }
 
