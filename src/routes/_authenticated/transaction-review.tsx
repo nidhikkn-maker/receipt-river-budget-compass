@@ -3,6 +3,7 @@ import { returnAfterReview } from '@/lib/review-navigation';
 import { useState } from 'react';
 import { PageTitle } from '@/components/AppShell';
 import { FinancialReview } from '@/components/FinancialReview';
+import { FinancialInboxNav } from '@/components/FinancialInboxNav';
 import { ExpenseDialog } from '@/components/ExpenseDialog';
 import { Button } from '@/components/ui/button';
 import { useStore } from '@/lib/store';
@@ -21,5 +22,5 @@ function ReviewCentre() {
   const store = useStore(), { filter } = Route.useSearch();
   const [open, setOpen] = useState<Expense | null>(null);
   const items = inboxItems({ transactions: store.transactions, accounts: store.accounts, commitments: store.commitments, prefs: store.preferences, today: todayISO(), pendingCount: store.pendingCount });
-  return <div className="space-y-4 pb-24"><Button asChild variant="ghost" size="sm"><Link to="/inbox">← Financial Inbox</Link></Button><PageTitle title="Transaction Review" /><FinancialReview items={items} onOpen={setOpen} initialFilter={filter} onCompleted={done} /><Button variant="outline" onClick={done}>← Done reviewing</Button><ExpenseDialog expense={store.transactions.find(t => t.id === open?.id) ?? null} onClose={() => setOpen(null)} /></div>;
+  return <div className="space-y-4 pb-24"><Button asChild variant="ghost" size="sm"><Link to="/inbox">← Financial Inbox</Link></Button><PageTitle title="Transaction Review" /><FinancialInboxNav active="review" /><FinancialReview items={items} onOpen={setOpen} initialFilter={filter} onCompleted={done} /><Button variant="outline" onClick={done}>← Done reviewing</Button><ExpenseDialog expense={store.transactions.find(t => t.id === open?.id) ?? null} onClose={() => setOpen(null)} /></div>;
 }
