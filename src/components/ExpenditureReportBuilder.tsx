@@ -57,6 +57,7 @@ export function ExpenditureReportBuilder({ mode, search }: { mode: "statement" |
   const [stage, setStage] = useState(-1); const [failed, setFailed] = useState(false);
   const [result, setResult] = useState<{ blob: Blob; url: string; name: string; missing: string[] } | null>(null);
   const cancelled = useRef(false);
+  const initializedActivity = useRef('');
   useEffect(() => () => { if (result) URL.revokeObjectURL(result.url); }, [result]);
 
   const subject: Subject = choice.startsWith("trip:") ? { kind: "trip", id: choice.slice(5) } : choice.startsWith("tag:") ? { kind: "tag", tag: choice.slice(4) } : { kind: "entries", ids: picked };
@@ -70,6 +71,8 @@ export function ExpenditureReportBuilder({ mode, search }: { mode: "statement" |
   const activity = choice === 'entries' ? `entries:${[...picked].sort().join(',')}` : choice;
   const profile = resolveReimbursementProfile(settings, { organisation: org, activity, ...(profileId ? { explicitId: profileId } : {}), ...(selectedTrip?.primaryWorkspace ? { workspace: selectedTrip.primaryWorkspace } : {}) }).profile;
   useEffect(() => {
+    if (store.loading || initializedActivity.current === activity || (choice.startsWith('trip:') && !selectedTrip)) return;
+    initializedActivity.current = activity;
     setProfileId(''); setConfirmed(false);
     setPurpose(selectedTrip?.purpose || (choice.startsWith('tag:') ? choice.slice(4).replace(/^\w+: /, '') : ''));
     const organisations = [...new Set(candidates.flatMap(e => responsibilityShares(e, settings, fallbackOrg).map(p => p.organisation)))];
@@ -77,7 +80,7 @@ export function ExpenditureReportBuilder({ mode, search }: { mode: "statement" |
     setFrom(selectedTrip?.start ?? ''); setTo(selectedTrip?.end ?? '');
   // Do not replace user edits when entries refresh.
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [choice]);
+  }, [choice, activity, store.loading, selectedTrip?.id]);
   useEffect(() => {
     if (!claimMode) return;
     setClaimant(profile ? profileClaimant(profile, store.accounts) : { name: store.name, employeeId: '', department: '', designation: '', approver: '', email: '', bankDetails: '', declaration: DEFAULT_DECLARATION });
@@ -96,6 +99,7 @@ export function ExpenditureReportBuilder({ mode, search }: { mode: "statement" |
   const advanceEntries = store.transactions.filter(e => selectedTrip && (e.tripId === selectedTrip.id || e.tags?.includes(`Trip: ${selectedTrip.name}`)) && (e.txnType === 'advance' || e.txnType === 'advance_settlement'));
   const advanceNet = Math.max(0, advanceEntries.reduce((s, e) => s + (e.txnType === 'advance' ? e.amount : -e.amount), 0));
   const changeOrganisation = (v: string) => { setOrg(v); setProfileId(''); setConfirmed(false); };
+  useEffect(() => { setConfirmed(false); }, [org, profile?.id, claimant, receivingAccountId, claimFormat, from, to, purpose, selectedClaimTotal, excluded, JSON.stringify(scopedStatement.rows.map(r => [r.id, r.eligible, r.reimbursed, r.outstanding]))]);
 
   async function generate() {
     cancelled.current = false; setFailed(false); setResult(null); setStage(0);
@@ -109,7 +113,7 @@ export function ExpenditureReportBuilder({ mode, search }: { mode: "statement" |
       const rawStatement = buildStatement({ subject, subjectName, purpose, organisation: org, entries: reportEntries, trips, accounts: store.accounts, instruments, memberName: store.memberName, today: today(), reference });
       const st = claimMode ? organisationStatement(rawStatement, reportEntries, settings, org, fallbackOrg) : rawStatement;
       const claim = claimMode ? buildClaim(st, { ...claimant, bankDetails: receivingAccountId ? reimbursementAccountLabel(store.accounts.find(a => a.id === receivingAccountId)) : '', approver: claimant.approver, declaration: claimant.declaration || DEFAULT_DECLARATION }) : null;
-      if (claim) claim.excluded = previewClaim.excluded;
+      if (claim) claim.excluded = [...previewClaim.excluded, ...previewClaim.items.filter(i => !reportEntries.some(e => e.id === i.id)).map(row => ({ row, reason: eligibleIds.includes(row.id) ? 'Not selected for this claim' : 'Profile document/category rule or missing payment details' }))];
       if (claim && !claimant.name.trim()) throw new Error("Enter the claimant's name.");
       if (claim && !claim.items.length) throw new Error("Nothing to claim: none of the chosen expenses are personally paid, marked for reimbursement and still outstanding.");
       setStage(1);
@@ -135,7 +139,7 @@ export function ExpenditureReportBuilder({ mode, search }: { mode: "statement" |
       setStage(4);
       const path = `${store.userId}/reports/${id}.pdf`;
       let historySaved = false;
-      const previous = claim ? await supabase.from('report_history').select('id,version,filters').eq('kind', 'claim-submission').order('created_at', { ascending: false }).limit(500) : null;
+      const previous = claim ? await supabase.from('report_history').select('id,version,filters').eq('kind', 'claim-submission').contains('filters', { activity, organisation: org }).order('version', { ascending: false }).limit(1) : null;
       const same = (previous?.data ?? []).filter(h => { const f = h.filters as { activity?: string; organisation?: string }; return f?.activity === activity && f?.organisation === org; });
       const version = 1 + Math.max(0, ...same.map(h => h.version));
       const up = await supabase.storage.from("receipts").upload(path, blob, { contentType: "application/pdf" });
@@ -154,7 +158,7 @@ export function ExpenditureReportBuilder({ mode, search }: { mode: "statement" |
   return (
     <div className="space-y-5 pb-24">
       <PageTitle title={claimMode ? "Expense Claim Submission" : "Detailed Expenditure Statement"} sub={claimMode ? "A formal reimbursement request for your organisation's accounts team: claimed items, declaration, approval lines and the original bills." : "A complete record of what was spent, how it was paid and what is still to be reimbursed, with every original bill attached."} />
-      <section className="space-y-3 rounded-xl border bg-card p-4">
+      <section className={cn('space-y-3', !claimMode && 'rounded-xl border bg-card p-4')}>
         <label className="block text-sm font-semibold">{claimMode ? 'Claim for' : 'What is this statement for?'}
           <select className={cn(sel, "mt-1")} value={choice} onChange={(e) => { setChoice(e.target.value); setExcluded([]); }}>
             {trips.length > 0 && <optgroup label="Trips">{trips.map((t) => <option key={t.id} value={`trip:${t.id}`}>{t.name}</option>)}</optgroup>}
@@ -176,7 +180,7 @@ export function ExpenditureReportBuilder({ mode, search }: { mode: "statement" |
             <label>To (optional)<input type="date" className={cn(sel, "mt-1")} value={to} onChange={(e) => setTo(e.target.value)} /></label>
           </div>
         )}
-        <div className="grid grid-cols-2 gap-2 text-xs">
+        <div className={cn('grid gap-2 text-xs', !claimMode && 'grid-cols-2')}>
           <label>Purpose<input className={cn(sel, "mt-1")} value={purpose} placeholder="e.g. Client visit" onChange={(e) => setPurpose(e.target.value)} /></label>
           {!claimMode && <label>Organisation<input className={cn(sel, "mt-1")} value={org} placeholder="From entries if blank" onChange={(e) => setOrg(e.target.value)} /></label>}
         </div>

@@ -67,8 +67,9 @@ export async function renderClaimPdf(c: Claim, files: Record<string, AnnexFile |
   doc.setFont("helvetica", "bold"); doc.setFontSize(10); doc.setTextColor(...INK); doc.text("Declaration", M, y);
   doc.setFont("helvetica", "normal"); doc.setFontSize(8.5); doc.setTextColor(40, 40, 40);
   const declaration = k.declaration || DEFAULT_DECLARATION;
-  const decl = doc.splitTextToSize(plain(declaration), 182);
-  textU(doc, declaration, M, y + 5, { maxW: 182 }); y += 5 + decl.length * 4 + 12;
+  const decl = doc.splitTextToSize(declaration, 182) as string[];
+  for (const line of decl) { if (y > 268) { doc.addPage(); y = 20; } textU(doc, line, M, y + 5, { maxW: 182 }); y += 4; }
+  y += 16; if (y > 260) { doc.addPage(); y = 25; }
   const sig = (x: number, label: string, name = "") => { doc.line(x, y, x + 55, y); doc.text(label, x, y + 4); if (name) textU(doc, name, x, y + 8, { maxW: 55 }); doc.text("Date: ____________", x, y + 13); };
   doc.setDrawColor(120, 120, 120); doc.setLineWidth(0.2);
   sig(M, "Claimant signature", k.name); sig(M + 63, "Approver signature required", k.approver); sig(M + 126, "Accounts / Finance");

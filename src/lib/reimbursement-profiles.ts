@@ -53,6 +53,11 @@ export function responsibilityShares(e: Expense, settings: ReimbursementSettings
     if (Math.abs(total - e.amount) > .009 || saved.shares.some(p => !p.organisation || !Number.isFinite(p.amount) || p.amount <= 0) || new Set(saved.shares.map(p => p.organisation)).size !== saved.shares.length) return [];
     return saved.shares;
   }
+  if (e.allocations?.length && e.allocations.every(a => (a.tags ?? []).filter(t => t.startsWith('Organisation: ')).length === 1) && Math.abs(e.allocations.reduce((s, a) => s + a.amount, 0) - e.amount) < .009) {
+    const totals = new Map<string, number>();
+    for (const a of e.allocations) { const org = a.tags?.find(t => t.startsWith('Organisation: '))?.slice(14).trim(); if (org) totals.set(org, (totals.get(org) ?? 0) + a.amount); }
+    return [...totals].map(([organisation, amount]) => ({ organisation, amount }));
+  }
   const tags = [...new Set((e.tags ?? []).filter(t => t.startsWith('Organisation: ')).map(t => t.slice(14).trim()).filter(Boolean))];
   const payer = e.reimbursement?.payer?.trim();
   // A saved payable-to organisation is authoritative; conflicting multiple tags remain unresolved.
@@ -60,7 +65,7 @@ export function responsibilityShares(e: Expense, settings: ReimbursementSettings
   return organisation ? [{ organisation, amount: e.amount }] : [];
 }
 export function validateResponsibility(shares: Responsibility['shares'], amount: number) {
-  if (!shares.length || shares.some(p => !p.organisation || !Number.isFinite(p.amount) || p.amount <= 0) || new Set(shares.map(p => p.organisation)).size !== shares.length || Math.abs(shares.reduce((s, p) => s + p.amount, 0) - amount) > .009) throw Error('Organisation shares must be positive and total the original stored INR amount.');
+  if (!shares.length || shares.some(p => !p.organisation || !Number.isFinite(p.amount) || p.amount <= 0 || Math.round(p.amount * 100) / 100 !== p.amount) || new Set(shares.map(p => p.organisation)).size !== shares.length || Math.abs(shares.reduce((s, p) => s + p.amount, 0) - amount) > .009) throw Error('Organisation shares must be positive and total the original stored INR amount.');
 }
 /** Report-only proportional attribution. Original records and exchange rates remain untouched. */
 export function organisationStatement(statement: Statement, entries: Expense[], settings: ReimbursementSettings, organisation: string, fallback = ''): Statement {
