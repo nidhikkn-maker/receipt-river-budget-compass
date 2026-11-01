@@ -1,5 +1,5 @@
 import { PaymentMethodsManager } from "@/components/PaymentMethodsManager";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Archive, ArchiveRestore } from "lucide-react";
