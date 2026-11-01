@@ -253,6 +253,20 @@
       "when": 1793500813644,
       "tag": "0035_trip_action_snapshot_validation",
       "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "7",
+      "when": 1793503487009,
+      "tag": "0036_atomic_import_review_changes",
+      "breakpoints": true
+    },
+    {
+      "idx": 37,
+      "version": "7",
+      "when": 1793503519593,
+      "tag": "0037_preserve_import_classification_enrichment",
+      "breakpoints": true
     }
   ]
 }

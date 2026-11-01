@@ -1,7 +1,7 @@
 import { createServerFn } from '@tanstack/react-start';
 import { z } from 'zod';
 import { requireSupabaseAuth } from '@/integrations/supabase/auth-middleware';
-import { enrichedInput, postingBlockers, type ImportRow } from './historical-import';
+import { postingBlockers, type ImportRow } from './historical-import';
 import type { Account } from './ledger';
 import type { Json } from '@/integrations/supabase/types';
 
@@ -56,10 +56,7 @@ export const postHistoricalImport=createServerFn({method:'POST'}).middleware([re
       }
       rates.set(row.proposal.date,fx);
     }
-    const proposal=enrichedInput(row.proposal);
-    const changed=await db.from('import_rows').update({proposal:{...row.proposal,...proposal} as unknown as Json}).eq('id',row.id).eq('owner_id',context.userId);
-    if(changed.error) throw Error('Could not save classifications');
-    converted.push({id:row.id,rate:fx.rate,homeAmount:Math.round(row.proposal.amount*fx.rate*100)/100,fxDate:fx.date,proposal:{...row.proposal,...proposal} as unknown as Json,currency:batch.data.currency});
+    converted.push({id:row.id,rate:fx.rate,homeAmount:Math.round(row.proposal.amount*fx.rate*100)/100,fxDate:fx.date,proposal:row.proposal as unknown as Json,currency:batch.data.currency});
   }
   const {supabaseAdmin}=await import('@/integrations/supabase/client.server');
   const posted=await supabaseAdmin.rpc('post_import_rows_secure',{_owner:context.userId,_batch:data.batch,_rows:converted as unknown as Json});

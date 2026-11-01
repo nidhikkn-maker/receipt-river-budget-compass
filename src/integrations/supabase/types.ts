@@ -1619,6 +1619,10 @@ export type Database = {
         Args: { _decision: string; _expense_id: string; _note?: string }
         Returns: string
       }
+      revise_import_rows: {
+        Args: { _batch: string; _decision?: string; _items: Json; _patch: Json }
+        Returns: number
+      }
       save_import_balance_review: {
         Args: {
           _batch: string

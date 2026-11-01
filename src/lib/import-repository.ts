@@ -20,10 +20,15 @@ export async function listImportRules():Promise<ImportRule[]> {
   const r=await supabase.from('import_rules').select('*').order('created_at');
   if(r.error) throw Error('Could not load import rules'); return r.data as unknown as ImportRule[];
 }
-export async function reviseRows(batch:string,ids:string[],patch:Partial<ImportProposal>,decision?:ImportRow['decision']) {
-  const current=(await listImportRows(batch)).filter(r=>ids.includes(r.id));
-  const r=await supabase.from('import_rows').upsert(current.map(row=>({id:row.id,batch_id:batch,fingerprint:row.fingerprint,line:row.line as unknown as Json,proposal:{...row.proposal,...patch} as unknown as Json,review_group:row.review_group,confidence:row.confidence,duplicate_kind:row.duplicate_kind,duplicate_id:row.duplicate_id,decision:decision ?? row.decision,updated_at:new Date().toISOString()})));
-  if(r.error) throw Error('Could not save review changes');
-  const audit=await supabase.from('import_audit').insert({batch_id:batch,action:decision ?? 'classification',details:{ids,patch} as unknown as Json});
-  if(audit.error) throw Error('Changes saved but audit could not be recorded');
+export async function reviseRows(batch:string,rows:ImportRow[],patch:Partial<ImportProposal>,decision?:ImportRow['decision']) {
+  const fields=new Set(['title','merchant','category','scope','memberId','paymentMethod','txnType','accountId','toAccountId','description','tags','reviewed','categoryConfirmed','duplicateOverride','reimbursable','organisation','subcategory','reimbursementOrganisation']);
+  const classification=Object.fromEntries(Object.entries(patch).filter(([key])=>fields.has(key)));
+  const r=await supabase.rpc('revise_import_rows',{
+    _batch:batch,
+    _items:rows.map(row=>({id:row.id,proposal:row.proposal,decision:row.decision})) as unknown as Json,
+    _patch:classification as unknown as Json,
+    ... (decision ? {_decision:decision} : {}),
+  });
+  if(r.error) throw Error(r.error.message);
+  return r.data;
 }
