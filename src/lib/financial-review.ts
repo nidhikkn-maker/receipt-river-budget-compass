@@ -65,7 +65,7 @@ export function financialReview(items: InboxItem[], transactions: Expense[], acc
         p.memberId === e.memberId && (p.reimbursementStatus ?? "none") === (e.reimbursementStatus ?? "none") &&
         !p.workspaceAllocations?.length && !e.workspaceAllocations?.length && !p.allocations?.length);
       const categories = new Set(peers.map(p => p.category));
-      if (peers.length >= 2 && categories.size === 1 && activeCategories.includes(peers[0]?.category ?? "") && peers[0]?.category !== "Miscellaneous") {
+      if (peers.length >= 2 && categories.size === 1 && activeCategories.includes(peers[0]?.category ?? "") && peers[0]?.category !== "Miscellaneous" && peers[0]?.category !== e.category) {
         suggestedCategory = peers[0]?.category;
         evidence.push(`${peers.length} verified entries for this exact merchant, account, workspace and responsibility use ${suggestedCategory}. This is a suggestion, not a saved rule.`);
       } else if (categories.size > 1) evidence.push("This merchant has different confirmed purposes; no category is inferred.");
