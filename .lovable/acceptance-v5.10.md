@@ -41,7 +41,15 @@
 - Complete regression: 849 tests / 105 files passed. Preview build OK. No schema changes or publication.
 
 ### Outstanding (Not Implemented / Partial / Blocked)
-- General non-trip organisation/workspace/payment-method bulk mapping, heterogeneous atomic categories and automatic bulk application of verified recovered details need additional protected save operations. Current organisation mapping is intentionally trip-scoped; generic workspace/payment mapping has no existing atomic endpoint and shared Cloud changes require approval.
+### Approved protected saving continuation — 1 November
+- Shared additive migrations 0044–0045 added owner-atomic general organisation/workspace/category/activity/payment metadata patches, immutable before/after audit, revision/configuration guards, same-request retry and all-or-nothing undo. Schema support was applied to shared Cloud with explicit permission; no financial records were edited and no publication occurred.
+- General organisation assignment no longer requires a trip. Payment mapping must preserve a compatible active source account; account changes remain in financial corrections. Claims, splits and linked monetary workflows remain individually reviewed.
+- Bulk Mappings & History provides exact before/after review, exclusions, confirmation and durable undo history. Per-row verified category suggestions and available organisation/payment recovery use the same guarded patches; uncertain/missing-account changes remain financial corrections, not auto recovery.
+- 864 controlled regression checks passed across 108 files, including deployed SQL in isolated PostgreSQL, owner/anonymous checks, rollback, stale undo, wrong undo-path refusal and same-ID retry. Shared function existence/grants verified read-only.
+- Signed-in saved expense workspace preview/cancel was observed on desktop and 402px phone, no horizontal overflow or runtime errors. Cloud save/read-back/undo was NOT exercised on real records; component confirmation and isolated PostgreSQL acceptance are not hosted end-to-end acceptance.
+- Preview compilation passed. Original balances, records and published application remained unchanged.
+
+### Outstanding (Not Implemented / Partial / Blocked)
 - Paired transfer/card-settlement linking remains blocked by existing financial guards. Potential opposite-side records cannot be merged through account/type correction; a dedicated owner-atomic, source-preserving pairing design and isolated write acceptance are needed.
 - Reimbursement/advance/other movements keep dedicated workflows; account/type correction currently supports expense, income, refund, transfer, card payment, loan repayment and investment only.
 - Full saved correction draft covers selection/filter/category context only; account/type form choices do not persist. Actual cross-device context is not supported.

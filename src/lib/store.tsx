@@ -369,8 +369,8 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
     check((await supabase.rpc("undo_financial_correction", { _id: id })).error); await refresh();
   };
   const financialCorrectionHistory: Ctx["financialCorrectionHistory"] = async () => {
-    const result = await supabase.from("financial_corrections").select("id,created_at,entries").is("undone_at", null).order("created_at", { ascending: false }).limit(20);
-    check(result.error); return (result.data ?? []).map(r => ({ id: r.id, createdAt: r.created_at, count: Array.isArray(r.entries) ? r.entries.length : 0, entries: r.entries as unknown as FinancialCorrectionHistory["entries"] }));
+    const result = await supabase.from("financial_corrections").select("id,created_at,entries,request").is("undone_at", null).order("created_at", { ascending: false }).limit(20);
+    check(result.error); return (result.data ?? []).filter(r => !(r.request && typeof r.request === 'object' && !Array.isArray(r.request) && r.request['kind'] === 'review_metadata')).map(r => ({ id: r.id, createdAt: r.created_at, count: Array.isArray(r.entries) ? r.entries.length : 0, entries: r.entries as unknown as FinancialCorrectionHistory["entries"] }));
   };
   const applyReviewMetadata: Ctx['applyReviewMetadata'] = async (preview,id) => {
     if (!navigator.onLine) throw Error('Reconnect before applying mappings.');
