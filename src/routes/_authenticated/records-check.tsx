@@ -57,9 +57,9 @@ function RecordsCheck() {
       toast.success(on ? `${keys.length} marked as checked` : `${keys.length} moved back to open`, on ? { action: { label: "Undo", onClick: () => void setCheckedKeys(keys, false) } } : undefined);
     } catch { toast.error("Couldn’t save. Nothing changed — try again."); }
   };
+  const chosen = findings.filter((f) => picked.includes(f.key));
   const nextEntry = chosen.find((f) => f.entryId);
   const nextLine = chosen.find((f) => f.issue === "missing_in_ledger");
-  const chosen = findings.filter((f) => picked.includes(f.key));
 
   const exportCsv = () => {
     const head = ["Reference", "Date", "Source", "Destination", "Amount", "Currency", "Current type", "Suggested type", "Issue", "Proposed correction", "Confidence", "Expected impact"];
@@ -99,7 +99,7 @@ function RecordsCheck() {
               {showChecked
                 ? <Button size="sm" variant="outline" onClick={() => setCheckedKeys(chosen.map((f) => f.key), false)}><RotateCcw className="mr-1 h-4 w-4" />Move back to open</Button>
                 : <Button size="sm" onClick={() => setCheckedKeys(chosen.map((f) => f.key), true)}><CheckCircle2 className="mr-1 h-4 w-4" />Mark as checked</Button>}
-              {nextEntry && <Button asChild size="sm" variant="outline"><Link to="/new" search={{ edit: nextEntry.entryId }}>Fix entries one by one</Link></Button>}
+              {nextEntry && <Button asChild size="sm" variant="outline"><Link to="/new" search={{ edit: nextEntry.entryId! }}>Fix entries one by one</Link></Button>}
               {nextLine && <Button asChild size="sm" variant="outline"><Link to="/new" search={draftFor(nextLine, batchAccount(nextLine.batchId))}><Plus className="mr-1 h-4 w-4" />Add lines one by one</Link></Button>}
               <p className="w-full text-xs text-muted-foreground">“Mark as checked” only hides items from this list. Fixes and new entries are always previewed and saved by you on the next page.</p>
             </div>
@@ -140,5 +140,8 @@ function RecordsCheck() {
 
 /** Prefilled draft only — the entry page never saves without the user pressing Save. */
 function draftFor(f: AuditFinding, account?: string) {
-  return { amount: f.amount, currency: f.currency, date: f.date, title: f.reference && f.reference !== "—" ? f.reference.slice(0, 160) : undefined, account };
+  const d: { amount: number; currency: string; date: string; title?: string; account?: string } = { amount: f.amount, currency: f.currency, date: f.date };
+  if (f.reference && f.reference !== "—") d.title = f.reference.slice(0, 160);
+  if (account) d.account = account;
+  return d;
 }
