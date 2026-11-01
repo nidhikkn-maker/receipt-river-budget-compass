@@ -10,6 +10,7 @@ import { money } from "@/lib/expenses";
 import { TXN_LABEL, type TxnType } from "@/lib/ledger";
 import type { FinancialReview } from "@/lib/financial-review";
 import { CORRECTION_TYPES, correctionPreview, correctionStillCurrent, type CorrectionPreview } from "@/lib/financial-corrections";
+import { correctionDestinationAccounts, correctionFields } from "@/lib/correction-fields";
 
 export function FinancialCorrectionPanel({ rows, onSaved }: { rows: FinancialReview[]; onSaved: () => void }) {
   const { accounts, transactions, correctFinancialEntries, undoFinancialCorrection, financialCorrectionHistory } = useStore();
@@ -22,9 +23,17 @@ export function FinancialCorrectionPanel({ rows, onSaved }: { rows: FinancialRev
   const operation = useRef<string | null>(null);
   const loadHistory = async () => { if (!financialCorrectionHistory) return; try { setHistory(await financialCorrectionHistory()); setHistoryError(""); } catch { setHistoryError("Correction history could not load."); } };
   useEffect(() => { void loadHistory(); }, []);
-  const selectAccount = (label: string, value: string, set: (v: string) => void) => <Select value={value} onValueChange={set}><SelectTrigger aria-label={label}><SelectValue /></SelectTrigger><SelectContent><SelectItem value="keep">{label} · keep existing</SelectItem>{accounts.filter(a => !a.archived).map(a => <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}</SelectContent></Select>;
+  const fields = correctionFields(type === "keep" ? undefined : type as TxnType, rows.map(row => row.transaction));
+  const destinationAccounts = correctionDestinationAccounts(fields.type, accounts);
+  const changeType = (value: string) => {
+    const next = correctionFields(value === "keep" ? undefined : value as TxnType, rows.map(row => row.transaction));
+    if (!next.destination || !correctionDestinationAccounts(next.type, accounts).some(a => a.id === destination)) setDestination("keep");
+    if (!next.repayment) { setPrincipal(""); setInterest(""); }
+    setType(value); setPreview(null); operation.current = null;
+  };
+  const selectAccount = (label: string, value: string, set: (v: string) => void, options = accounts.filter(a => !a.archived)) => <Select value={value} onValueChange={set}><SelectTrigger aria-label={label}><SelectValue /></SelectTrigger><SelectContent><SelectItem value="keep">{label} · keep existing</SelectItem>{options.map(a => <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}</SelectContent></Select>;
   const show = () => {
-    try { const next = correctionPreview(rows, { ...(type !== "keep" ? { txnType: type as TxnType } : {}), ...(source !== "keep" ? { accountId: source } : {}), ...(destination !== "keep" ? { toAccountId: destination } : {}), ...(principal !== "" ? { principal: Number(principal) } : {}), ...(interest !== "" ? { interest: Number(interest) } : {}) }, accounts, transactions); operation.current = crypto.randomUUID(); setPreview(next); } catch (e) { toast.error((e as Error).message); }
+    try { if (fields.mixed) throw Error("Review different transaction types separately or choose the intended type before previewing."); const next = correctionPreview(rows, { ...(type !== "keep" ? { txnType: type as TxnType } : {}), ...(source !== "keep" ? { accountId: source } : {}), ...(fields.destination && destination !== "keep" ? { toAccountId: destination } : {}), ...(fields.repayment && principal !== "" ? { principal: Number(principal) } : {}), ...(fields.repayment && interest !== "" ? { interest: Number(interest) } : {}) }, accounts, transactions); operation.current = crypto.randomUUID(); setPreview(next); } catch (e) { toast.error((e as Error).message); }
   };
   const apply = async () => {
     if (!preview || !operation.current) return;
@@ -36,8 +45,9 @@ export function FinancialCorrectionPanel({ rows, onSaved }: { rows: FinancialRev
   const name = (id?: string | null) => accounts.find(a => a.id === id)?.name ?? "Not recorded";
   return <div className="space-y-3 border-y py-3">
     <h3 className="text-sm font-semibold">Account & transaction-type corrections</h3>
-    <div className="grid gap-2 sm:grid-cols-3"><Select value={type} onValueChange={setType}><SelectTrigger aria-label="Correction transaction type"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="keep">Type · keep existing</SelectItem>{CORRECTION_TYPES.map(t => <SelectItem key={t} value={t}>{TXN_LABEL[t]}</SelectItem>)}</SelectContent></Select>{selectAccount("Source account", source, setSource)}{selectAccount("Receiving account", destination, setDestination)}</div>
-    {type === "loan_repayment" && <div className="grid gap-2 sm:grid-cols-2"><label className="text-xs">Principal · original currency<Input aria-label="Correction principal" type="number" min="0" value={principal} onChange={e => setPrincipal(e.target.value)} /></label><label className="text-xs">Interest · original currency<Input aria-label="Correction interest" type="number" min="0" value={interest} onChange={e => setInterest(e.target.value)} /></label></div>}
+    <div className="grid gap-2 sm:grid-cols-3"><Select value={type} onValueChange={changeType}><SelectTrigger aria-label="Correction transaction type"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="keep">Type · keep existing</SelectItem>{CORRECTION_TYPES.map(t => <SelectItem key={t} value={t}>{TXN_LABEL[t]}</SelectItem>)}</SelectContent></Select>{!fields.mixed && selectAccount(fields.accountLabel, source, setSource)}{fields.destination && selectAccount("Receiving account", destination, setDestination, destinationAccounts)}</div>
+    {fields.mixed && <p className="text-sm text-muted-foreground">Selected transactions have different financial types. Review compatible transactions separately before changing accounts.</p>}
+    {fields.repayment && <div className="grid gap-2 sm:grid-cols-2"><label className="text-xs">Principal · original currency<Input aria-label="Correction principal" type="number" min="0" value={principal} onChange={e => setPrincipal(e.target.value)} /></label><label className="text-xs">Interest · original currency<Input aria-label="Correction interest" type="number" min="0" value={interest} onChange={e => setInterest(e.target.value)} /></label></div>}
     <Button variant="outline" disabled={!rows.length} onClick={show}>Preview account & type changes</Button>
     {historyError && <div className="flex gap-2 text-sm"><p>{historyError}</p><Button variant="ghost" size="sm" onClick={loadHistory}>Retry history</Button></div>}
     {!!history.length && <details><summary className="cursor-pointer text-sm">Financial correction history ({history.length})</summary><ul className="mt-2 divide-y text-sm">{history.map(h => <li key={h.id} className="flex flex-wrap items-center justify-between gap-2 py-2"><span>{h.createdAt.slice(0, 10)} · {h.count} transactions</span><Button variant="outline" size="sm" onClick={() => setRestore(h.id)}><Undo2 className="mr-1 size-4" />Review undo</Button></li>)}</ul></details>}
