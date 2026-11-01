@@ -373,3 +373,4 @@
 - [x] Card balance view with unreconciled-payment flags (statement-only credits not yet listed)
 - [x] Trip cancel / restore / delete (trip page + All trips list, Restored label)
 - [ ] V5.10.3 classification forms, recipients, safe transfers, audit (see .lovable/requirements-v5.10.3.md)
+- [ ] Read-only past-records check from April 2026, auto-reviewed against uploaded statements
