@@ -1,4 +1,5 @@
-import { createFileRoute, Link } from '@tanstack/react-router';
+import { createFileRoute, Link, useRouter } from '@tanstack/react-router';
+import { returnAfterReview } from '@/lib/review-navigation';
 import { useState } from 'react';
 import { PageTitle } from '@/components/AppShell';
 import { FinancialReview } from '@/components/FinancialReview';
@@ -15,8 +16,10 @@ export const Route = createFileRoute('/_authenticated/transaction-review')({
   component: ReviewCentre,
 });
 function ReviewCentre() {
+  const router = useRouter();
+  const done = () => returnAfterReview(router.history, () => { void router.navigate({ to: '/inbox' }); });
   const store = useStore(), { filter } = Route.useSearch();
   const [open, setOpen] = useState<Expense | null>(null);
   const items = inboxItems({ transactions: store.transactions, accounts: store.accounts, commitments: store.commitments, prefs: store.preferences, today: todayISO(), pendingCount: store.pendingCount });
-  return <div className="space-y-4 pb-24"><Button asChild variant="ghost" size="sm"><Link to="/inbox">← Financial Inbox</Link></Button><PageTitle title="Transaction Review" /><FinancialReview items={items} onOpen={setOpen} initialFilter={filter} /><ExpenseDialog expense={store.transactions.find(t => t.id === open?.id) ?? null} onClose={() => setOpen(null)} /></div>;
+  return <div className="space-y-4 pb-24"><Button asChild variant="ghost" size="sm"><Link to="/inbox">← Financial Inbox</Link></Button><PageTitle title="Transaction Review" /><FinancialReview items={items} onOpen={setOpen} initialFilter={filter} onCompleted={done} /><Button variant="outline" onClick={done}>← Done reviewing</Button><ExpenseDialog expense={store.transactions.find(t => t.id === open?.id) ?? null} onClose={() => setOpen(null)} /></div>;
 }

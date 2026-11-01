@@ -1,4 +1,8 @@
 # Roadmap (Functional Requirements v1.0)
+## Calendar navigation and review return
+- [x] Open calendar items directly, with a chooser when a date has multiple destinations.
+- [x] Return after successful entry review, resolved financial review or explicit Done reviewing; failures and unresolved issues stay open.
+- [x] Signed-in preview: November 3 opens Kovai Trip, Done reviewing returns to Plan; review returns to Inbox, phone layout has no overflow or page errors. Eight focused tests pass. No real financial writes or publication; successful real-entry saving not exercised.
 ## Published-site verification and security (done 2026-11-01)
 - [x] Fresh security scan: deep scan clean (no code findings), supply chain clean; only known info-level guest sign-in item remains (intentional for guest upgrade continuity).
 - [x] Found live site serving a stale deployment; re-published twice. Fixed real bug: dashboard dropped the anomaly transaction id (Autopilot.tsx), so "See transaction" fell back to /expenses. Verified live: opens /new?edit=<id> with the exact transaction.

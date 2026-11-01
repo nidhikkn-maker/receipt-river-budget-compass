@@ -1,4 +1,5 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate, useRouter } from "@tanstack/react-router";
+import { returnAfterReview } from "@/lib/review-navigation";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { AccountForm } from "@/components/AccountForm";
 import { PayeePicker } from '@/components/PayeePicker';
@@ -111,6 +112,7 @@ function NewExpense() {
   };
   const liveAccounts = accounts.filter((a) => !a.archived);
   const nav = useNavigate();
+  const router = useRouter();
   const search = Route.useSearch();
   const { edit } = search;
   const editing = edit ? expenses.find((e) => e.id === edit) : undefined;
@@ -542,7 +544,8 @@ function NewExpense() {
         return;
       }
       setBatch(null);
-      nav({ to: editing ? "/expenses" : "/dashboard" });
+      if (editing || search.trip || search.booking) returnAfterReview(router.history, () => { void nav({ to: editing ? "/expenses" : "/dashboard" }); });
+      else void nav({ to: "/dashboard" });
     } catch (e) {
       const m = (e as Error).message || "";
       // A timeout doesn't prove the write failed; retrying re-uses the same id, so it can't duplicate.

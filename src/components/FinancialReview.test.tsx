@@ -19,7 +19,8 @@ describe("controlled financial correction flow", () => {
     mocks.save.mockRejectedValueOnce(new Error('Controlled interrupted save')).mockResolvedValue("audited-batch"); mocks.undo.mockResolvedValue(undefined);
     mocks.store = { preferences, accounts, transactions, bulkSetCategory: mocks.save, undoCategoryBatch: mocks.undo };
     const items = inboxItems({ transactions, accounts, commitments: [], prefs: preferences, today: "2026-11-01", pendingCount: 0 });
-    render(<FinancialReview items={items} onOpen={() => {}} />);
+    const onCompleted = vi.fn();
+    const { rerender } = render(<FinancialReview items={items} onOpen={() => {}} onCompleted={onCompleted} />);
     fireEvent.keyDown(screen.getByRole("button", { name: /^Select$/ }), { key: "ArrowDown" });
     fireEvent.click(await screen.findByRole("menuitem", { name: "Select all visible (1)" }));
     fireEvent.click(screen.getByRole("button", { name: /^Categorise$/ }));
@@ -30,6 +31,7 @@ describe("controlled financial correction flow", () => {
     expect(screen.getByText("controlled-copy")).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Confirm & Apply Changes" }));
     await screen.findByRole('button', { name: 'Unable to Save — Retry' });
+    expect(onCompleted).not.toHaveBeenCalled();
     const firstId = mocks.save.mock.calls[0]?.[2];
     fireEvent.click(screen.getByRole('button', { name: 'Unable to Save — Retry' }));
     await waitFor(() => expect(mocks.save).toHaveBeenCalledWith(["controlled-copy"], "Groceries", expect.any(String)));
@@ -37,6 +39,9 @@ describe("controlled financial correction flow", () => {
     expect(mocks.save.mock.calls[1]?.[2]).toBe(firstId);
     expect(transaction.description).toBe("Untouched source");
     expect(transaction.category).toBe("Miscellaneous");
+    expect(onCompleted).not.toHaveBeenCalled();
+    rerender(<FinancialReview items={[]} onOpen={() => {}} onCompleted={onCompleted} />);
+    await waitFor(() => expect(onCompleted).toHaveBeenCalledOnce());
     fireEvent.click(await screen.findByRole("button", { name: "Undo correction" }));
     await waitFor(() => expect(mocks.undo).toHaveBeenCalledWith("audited-batch"));
   });

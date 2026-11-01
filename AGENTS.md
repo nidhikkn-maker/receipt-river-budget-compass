@@ -42,3 +42,4 @@
 - Master-record rules (duplicates, organisation usage/rename) live in src/lib/master-data.ts and setup readiness in src/lib/setup-status.ts; every add-account path uses the shared AccountForm so contextual and central creation follow one rule set.
 - Report IDs match jobs; callbacks recover without duplicates. Reconciliation persistence tests use temporary PGlite, not Cloud or real devices.
 - Corrections use owner-atomic RPCs, revisions and safe undo; preserve FX/source. Evidence drives statements; review-centre.ts separates Inbox, review and reconciliation.
+- Calendar destinations and review returns use browser-safe review-navigation.ts; return only after successful saving or explicit completion, never by silently clearing unresolved issues.
