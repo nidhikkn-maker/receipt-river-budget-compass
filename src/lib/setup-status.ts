@@ -62,9 +62,9 @@ export function setupStatus(input: { accounts: Account[]; expenses: Expense[]; p
     ? { key: "entry", label: "Expense entry preferences", state: "ready", detail: `New entries default to ${p.defaultCurrency}.`, action: "Edit preferences", to: "/settings", hash: "finance", essential: true }
     : { key: "entry", label: "Expense entry preferences", state: "not_configured", detail: "Choose a default currency.", action: "Set currency", to: "/settings", hash: "finance", essential: true });
 
-  items.push(usesReimb
-    ? { key: "reimbursements", label: "Reimbursements", state: "ready", detail: "Reimbursable expenses are being tracked.", action: "Open claims", to: "/claim-submission", essential: false }
-    : { key: "reimbursements", label: "Reimbursements", state: "optional", detail: "Mark an expense as reimbursable to start tracking claims.", action: "Learn more", to: "/claim-submission", essential: false });
+  const profiles = p.reimbursementSettings?.profiles ?? [];
+  const complete = profiles.filter(r => r.name.trim() && r.designation.trim() && orgTags.some(t => t.name === r.organisation) && live.some(a => a.id === r.accountId && ['savings', 'current', 'wallet'].includes(a.kind)));
+  items.push({ key: 'reimbursements', label: 'Reimbursements', state: !profiles.length ? 'not_configured' : complete.length === profiles.length ? 'ready' : 'partial', detail: profiles.length ? `${profiles.length} organisation role profile${profiles.length > 1 ? 's' : ''}.` : usesReimb ? 'Tracking claims; no claimant profile saved.' : 'Optional · Add profiles only if you claim reimbursements.', action: 'Configure reimbursements', to: '/reimbursement-settings', essential: false });
 
   items.push({ key: "reports", label: "Report preferences", state: "optional", detail: "Report formats are remembered as you use them.", action: "Open Reports Centre", to: "/report-centre", essential: false });
   return items;
