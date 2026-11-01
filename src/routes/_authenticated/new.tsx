@@ -516,7 +516,7 @@ function NewExpense() {
       await save(
         { title: title.trim(), amount: Number(amount), currency, paymentMethod, category, date, description, merchant: merchant.trim() || null,
           receiptDetails: finalDetails, workspaceAllocations, scope: wsSplit.on ? (workspaceAllocations.slice().sort((a, b) => b.amount - a.amount)[0]?.workspace ?? scope) : scope, memberId: memberId === "me" ? null : memberId,
-          txnType, accountId: accountId === "none" ? null : accountId, paymentInstrumentId: instrumentId === "none" ? null : instrumentId, toAccountId: toAccountId === "none" ? null : toAccountId,
+          txnType, accountId: accountId === "none" ? null : accountId, paymentInstrumentId: instrumentId === "none" ? null : instrumentId, payeeId: !isMove(txnType) ? (preferences.payees ?? []).find(p => !p.archived && p.name === merchant.trim())?.id ?? null : null, toAccountId: toAccountId === "none" ? null : toAccountId,
           tripId: tripId === "none" ? null : tripId,
           principal: principal.trim() === "" ? null : Number(principal), interest: interest.trim() === "" ? null : Number(interest),
           tags: [...new Set(tags.split(",").map((t) => t.trim()).filter(Boolean))],
