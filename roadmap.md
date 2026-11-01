@@ -230,8 +230,9 @@
 - [x] Saved filter views on Transactions (templates covered by Repeat favourites)
 
 ## V5.1 Smart historical import (.lovable/requirements-v5.1.md)
-- [ ] Secure original statements, multi-upload, persistent extraction staging and safe retry.
-- [ ] Grouped review, bulk classifications, user-confirmed reusable import rules and duplicate-safe posting.
-- [ ] Historical opening-balance verification, statement reconciliation and account coverage gaps.
-- [ ] Persistent worker activation (requires publication approval); scanned PDF extraction recovery.
-- [ ] Integrate enrichment, provenance, Inbox and Settings; run import acceptance checks.
+- [x] Secure original statements (also in Vault), multi-upload CSV/XLS/XLSX/text PDF, persistent staging and retry; browser-verified two-row import.
+- [x] Grouped review, bulk classifications, editable/disableable user-confirmed merchant rules, conflicts and duplicate-safe atomic posting; reviewed edits survive reload, two ledger entries read back, repeated file recognised.
+- [x] Statement opening/closing arithmetic and ledger comparison, missing-month coverage, enrichment/provenance, Inbox/Settings, audit CSV; 560 total tests (full 559-test suite plus final transfer guard), no build errors or phone overflow.
+- [ ] Historical opening-balance verification assistant and conservative safe-to-spend integration; existing opening-balance configuration remains unchanged, reconciliation values are staging-only and do not add funds.
+- [ ] Persistent worker activation — requires publication approval; callback is prepared but live site unchanged.
+- [ ] Scanned PDF persistent extraction and complete historical coverage verification; current text-PDF extraction requires open browser, scanned PDFs use the existing statement matching workflow only.
