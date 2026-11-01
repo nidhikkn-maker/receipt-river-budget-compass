@@ -18,7 +18,7 @@ it('combined category workspace organisation and activity changes preserve origi
  expect(e.scope).toBe('personal');
 });
 it('mixed bulk mapping retains eligible expenses and excludes claims, splits and financial movements',()=>{
- const records=[e,{...e,id:'claim',reimbursementStatus:'pending' as const},{...e,id:'split',workspaceAllocations:[{scope:'personal' as const,amount:1000}]},{...e,id:'move',txnType:'transfer' as const,toAccountId:'other'}];
+ const records:Expense[]=[e,{...e,id:'claim',reimbursementStatus:'pending'},{...e,id:'split',workspaceAllocations:[{workspace:'personal',amount:1000}]},{...e,id:'move',txnType:'transfer',toAccountId:'other'}];
  const p=metadataPreview(records.map(row),new Map(records.map(t=>[t.id,{scope:'official' as const}])),prefs,[]);
  expect(p.selected).toBe(4);expect(p.items.map(t=>t.id)).toEqual(['test']);
  expect(p.excluded.map(t=>t.id)).toEqual(['claim','split','move']);
@@ -27,11 +27,12 @@ it('mixed bulk mapping retains eligible expenses and excludes claims, splits and
 });
 it('bulk payment mapping never moves accounts or accepts an archived instrument',()=>{
  const bank:Account={id:'bank',name:'Bank',kind:'savings',openingBalance:0,archived:false};
- const configured={...prefs,paymentInstruments:[{id:'upi',name:'UPI',type:'upi' as const,accountId:'bank',archived:false}]};
+ const instrument={id:'upi',nickname:'UPI',type:'upi' as const,accountId:'bank',archived:false};
+ const configured={...prefs,paymentInstruments:[instrument]};
  const other={...e,id:'other',accountId:'elsewhere'};
  const p=metadataPreview([row(e),row(other)],new Map([[e.id,{paymentInstrumentId:'upi'}],[other.id,{paymentInstrumentId:'upi'}]]),configured,[bank]);
  expect(p.items.map(t=>t.id)).toEqual(['test']);expect(p.excluded.map(t=>t.id)).toEqual(['other']);
  expect(p.after[0]).toMatchObject({accountId:'bank',paymentInstrumentId:'upi',paymentMethod:'upi'});
- expect(()=>metadataPreview([row(e)],new Map([[e.id,{paymentInstrumentId:'upi'}]]),{...configured,paymentInstruments:[{...configured.paymentInstruments[0],archived:true}]},[bank])).toThrow('No selected');
+ expect(()=>metadataPreview([row(e)],new Map([[e.id,{paymentInstrumentId:'upi'}]]),{...configured,paymentInstruments:[{...instrument,archived:true}]},[bank])).toThrow('No selected');
  expect(metadataStillCurrent(p,[e,other],{...configured,paymentInstruments:[]},[bank])).toBe(false);
 });
