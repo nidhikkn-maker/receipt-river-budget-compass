@@ -225,6 +225,13 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
     for (const x of b.data ?? []) bud[x.category as Category] = Number(x.monthly_amount);
     setBudgets(bud);
     setLoading(false);
+    setSyncState("synced");
+    setLastSyncedAt(new Date().toISOString());
+    } catch (err) {
+      setLoading(false);
+      setSyncState(navigator.onLine ? "error" : "offline");
+      throw err;
+    }
   }
 
   useEffect(() => { void (inFlight.current ?? refresh()); }, [refresh]);
@@ -593,7 +600,7 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
       expenses: expenses.filter((x) => (x.txnType ?? "expense") === "expense"), transactions: expenses, accounts, addAccount, setArchived, adjustBalance,
       commitments, loans, goals, valuations, documents, saveCommitment, confirmIrregular, removeCommitment, confirmCommitment, saveLoan, removeLoan, recordLoanPayment, convertToEmi,
       saveGoal, removeGoal, updateAccount, addValuation, removeValuation, addDocument, updateDocument, removeDocument, history, setReimbursement, recordReimbursement, deleteAll,
-      budgets, loading, refresh, save, remove, setScope, reconcile, addMember, removeMember, setBudget, signedUrl,
+      budgets, loading, syncState, lastSyncedAt, refresh, save, remove, setScope, reconcile, addMember, removeMember, setBudget, signedUrl,
       setAllocations, updateReimbursement, addReimbursementReceipt, listReviews, saveReview,
     }}>
       {children}
