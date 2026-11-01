@@ -439,3 +439,6 @@
 - [x] Home Card dues tile: card-by-card breakdown incl. card credits
 - [x] Home card dues breakdown: statement date + last-updated time per card
 - [x] Card dues/credit balance trend chart over time
+
+## V5.16 — One-upload statement pipeline (Nov 2026)
+- [ ] Plan: replicate the agent's match-and-ask method in-app (multi-statement upload, auto match/categorise/link, one review step)
