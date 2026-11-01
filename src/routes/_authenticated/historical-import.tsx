@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from '@tanstack/react-router';
 import { queryOptions, useSuspenseQuery } from '@tanstack/react-query';
 import { useServerFn } from '@tanstack/react-start';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { PageTitle } from '@/components/AppShell';
 import { Button } from '@/components/ui/button';
@@ -17,27 +17,39 @@ import { processHistoricalImport, resumeHistoricalImport } from '@/lib/historica
 import { overlappingStatements } from '@/lib/import-manifest';
 import { coverageMonths, type ImportRow } from '@/lib/historical-import';
 import { CURRENCIES } from '@/lib/expenses';
+import { importBatchSearch } from '@/lib/import-inbox';
 
 const importsQuery=queryOptions({queryKey:['historical-imports'],queryFn:listImports,refetchInterval:5000});
 export const Route=createFileRoute('/_authenticated/historical-import')({
+  validateSearch:importBatchSearch,
   head:()=>({meta:[{title:'Historical statement imports — Ledgerline'},{name:'description',content:'Review grouped historical statement transactions, apply classifications and reconcile records from April 2026.'},{property:'og:title',content:'Historical statement imports — Ledgerline'},{property:'og:description',content:'Secure historical statement review, classification and reconciliation.'},{property:'og:type',content:'website'},{name:'twitter:card',content:'summary'}]}),
   loader:({context})=>context.queryClient.ensureQueryData(importsQuery),component:HistoricalImports,
 });
 
 function HistoricalImports() {
+  const search=Route.useSearch();
   const {data:batches,refetch}=useSuspenseQuery(importsQuery);
   const {accounts,userId,refresh}=useStore();
   const process=useServerFn(processHistoricalImport);
   const resume=useServerFn(resumeHistoricalImport);
-  const [account,setAccount]=useState(''),[currency,setCurrency]=useState('INR'),[current,setCurrent]=useState<string|null>(null),[rows,setRows]=useState<ImportRow[]>([]),[posted,setPosted]=useState<Set<string>>(new Set()),[stage,setStage]=useState<{name:string;at:number}|null>(null);
+  const [account,setAccount]=useState(''),[currency,setCurrency]=useState('INR'),[current,setCurrent]=useState<string|null>(search.batch??null),[rows,setRows]=useState<ImportRow[]>([]),[posted,setPosted]=useState<Set<string>>(new Set()),[stage,setStage]=useState<{name:string;at:number}|null>(null);
+  const revision=useRef(0);
   const batch=batches.find(b=>b.id===current);
   const reload=async(id=current)=>{
     const latest=await refetch(); if(!id)return;
-    setRows(await listImportRows(id));
+    const version=++revision.current;const nextRows=await listImportRows(id);
     const b=latest.data?.find(x=>x.id===id);const known=new Set<string>();
     if(b)for(let from=0;;from+=1000){const r=await supabase.from('import_posts').select('fingerprint').eq('account_id',b.account_id).range(from,from+999);if(r.error)throw Error('Could not check posted transactions');r.data.forEach(p=>known.add(p.fingerprint));if(r.data.length<1000)break;}
-    setPosted(known);
+    if(version!==revision.current)return;setRows(nextRows);setPosted(known);
   };
+  useEffect(()=>{if(search.batch)setCurrent(search.batch);},[search.batch]);
+  useEffect(()=>{
+    if(!current)return;
+    setRows([]);setPosted(new Set());
+    void reload(current).catch(error=>toast.error(error.message));
+    const timer=['queued','processing'].includes(batch?.status??'')?window.setInterval(()=>{if(document.visibilityState==='visible')void reload(current).catch(error=>toast.error(error.message));},5000):null;
+    return ()=>{revision.current++;if(timer!==null)window.clearInterval(timer);};
+  },[current,batch?.status,batch?.next_page]);
   const upload=async(files:StatementUpload[])=>{
     const completed=new Set<string>();
     const pdfConsent=!files.some(item=>/\.pdf$/i.test(item.file.name))||window.confirm('Read PDF statements with AI in the background? They may contain private financial information. AI usage uses workspace credits.');
