@@ -436,3 +436,4 @@
 - [x] Linked-transaction review: ₹1.25 cr Allwin Laboratories → AK Meridian (transfer vs income/spending)
 - [x] Forex card statement import & reconciliation flow
 - [x] Bulk-categorise 58 uncategorised ICICI Krupa savings entries
+- [ ] Home Card dues tile: card-by-card breakdown incl. card credits
