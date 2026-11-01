@@ -420,3 +420,4 @@
 - [ ] Match five missing statements — blocked: statements not yet uploaded
 - [x] Decision worksheet for 74 possible transfers / 9 duplicate groups (18 records) in Files; in-app queue not built yet
 - [ ] Statement cross-check: match confidence score and reasons per result (read-only)
+- [ ] Statement cross-check: side-by-side record vs statement entry (date, amount, description differences)
