@@ -344,6 +344,13 @@
       "when": 1793539750444,
       "tag": "0048_hide_revoked_family_invites",
       "breakpoints": true
+    },
+    {
+      "idx": 49,
+      "version": "7",
+      "when": 1793544025677,
+      "tag": "0049_harden_transfer_approval_and_undo",
+      "breakpoints": true
     }
   ]
 }

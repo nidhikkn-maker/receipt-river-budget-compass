@@ -12,7 +12,7 @@ export const TRANSFER_STATUS_LABEL: Record<TransferStatus, string> = { proposed:
 
 const MONEY = ["savings", "current", "cash", "wallet"];
 const days = (a: string, b: string) => Math.abs(Date.parse(a) - Date.parse(b)) / 864e5;
-const free = (e: Expense) => !e.splits.length && !(e.allocations ?? []).length && !(e.workspaceAllocations ?? []).length && (e.reimbursementStatus ?? "none") === "none" && !e.tripId;
+const free = (e: Expense) => !e.splits.length && !(e.allocations ?? []).length && !(e.workspaceAllocations ?? []).length && (e.reimbursementStatus ?? "none") === "none" && !e.tripId && !(e.tags??[]).some(t=>t.startsWith('Trip:')) && !/^(Scheduled occurrence:|Reimbursed entries:)/.test(e.description??'');
 const text = (e: Expense) => `${e.title} ${e.merchant ?? ""} ${e.description ?? ""} ${e.statementRef ?? ""}`.toUpperCase();
 const ref = (e: Expense) => bankRef(`${e.statementRef ?? ""} ${e.description ?? ""}`);
 function names(a: Account) { return [a.lastFour, ...(a.name.match(/\d{4,}/g) ?? []).map((d) => d.slice(-4))].filter((x): x is string => !!x && x.length >= 4); }
@@ -30,11 +30,23 @@ export function activeLinks(links: TransferLinkRow[]) { return links.filter((l) 
 
 /** Current canonical ledger cannot preserve independently dated/converted credits. Block rather than change a balance. */
 export function transferPairBlocker(debit: Expense, credit: Expense | null) {
+  if (!['expense','transfer'].includes(debit.txnType??'expense') || debit.transferCounterpartOf) return 'Source is not an unlinked outgoing entry; review individually.';
+  if (![debit.amount,debit.originalAmount,...(credit?[credit.amount,credit.originalAmount]:[])].every(n=>Number.isFinite(n)&&n>0)) return 'Enter valid positive original and converted amounts before linking.';
   if (!free(debit) || Object.keys(debit.reimbursement ?? {}).length) return 'Source has linked claims, trips or splits; review individually.';
   if (!credit) return null;
   if (!free(credit) || Object.keys(credit.reimbursement ?? {}).length || !['income','refund'].includes(credit.txnType ?? 'expense')) return 'Receiving entry has linked financial details or is not incoming; review individually.';
   if (debit.currency !== credit.currency || Math.abs(debit.originalAmount-credit.originalAmount) >= 0.005 || Math.abs(debit.amount-credit.amount) >= 0.005) return 'Independent currency values differ; linking is blocked to preserve both balances.';
   if (debit.date !== credit.date) return 'Different posting dates require individual review to preserve dated balances.';
+  return null;
+}
+
+export function transferApprovalBlocker(debit: Expense, credit: Expense | null, destId: string, accounts: Account[]) {
+  const pair=transferPairBlocker(debit,credit);if(pair)return pair;
+  const source=accounts.find(a=>a.id===debit.accountId&&!a.archived),dest=accounts.find(a=>a.id===destId&&!a.archived);
+  if(!source||!dest||source.id===dest.id)return 'Choose two different active accounts you own.';
+  if(!MONEY.includes(source.kind)||!MONEY.includes(dest.kind))return 'Card payments, loans and investments require their dedicated review.';
+  if(credit&&(credit.accountId!==destId||credit.id===debit.id||credit.transferCounterpartOf))return 'Receiving entry must be unlinked and on the destination account.';
+  if(debit.txnType==='transfer'&&debit.toAccountId&&debit.toAccountId!==destId)return 'Receiving account differs from the existing transfer.';
   return null;
 }
 
@@ -54,7 +66,7 @@ export function suggestTransfers(txns: Expense[], accounts: Account[], links: Tr
     const cands = credits.filter((c) => c.accountId !== d.accountId && (!fixedDest || c.accountId === fixedDest) && c.currency === d.currency && Math.abs(c.originalAmount - d.originalAmount) < 0.005 && days(c.date, d.date) <= 3);
     const scored = cands.flatMap(c => { const dst=acc(c.accountId);return dst?[{c,ev:evidence(d,c,src,dst)}]:[]; });
     const strong = scored.filter((s) => s.ev.length);
-    if (strong.length === 1) { const s = strong[0]; if(!s?.c.accountId)continue;const blocker=transferPairBlocker(d,s.c);out.push({ key: `${d.id}:${s.c.id}`, debit: d, credit: s.c, destId: s.c.accountId, strength: blocker?'ambiguous':"strong", evidence: blocker?[...s.ev,blocker]:s.ev, candidates: cands.length }); claimed.set(s.c.id, (claimed.get(s.c.id) ?? 0) + 1); }
+    if (strong.length === 1) { const s = strong[0]; if(!s?.c.accountId)continue;const blocker=transferApprovalBlocker(d,s.c,s.c.accountId,accounts);out.push({ key: `${d.id}:${s.c.id}`, debit: d, credit: s.c, destId: s.c.accountId, strength: blocker?'ambiguous':"strong", evidence: blocker?[...s.ev,blocker]:s.ev, candidates: cands.length }); claimed.set(s.c.id, (claimed.get(s.c.id) ?? 0) + 1); }
     else if (strong.length > 1) out.push({ key: `${d.id}:?`, debit: d, credit: null, destId: "", strength: "ambiguous", evidence: [`${strong.length} entries look equally likely`], candidates: cands.length });
     else { const first=cands[0];if(first)out.push({ key: `${d.id}:${first.id}`, debit: d, credit: cands.length === 1 ? first : null, destId: cands.length === 1 ? first.accountId??'' : "", strength: "weak", evidence: ["Same amount and date only — confirm it yourself"], candidates: cands.length }); }
   }
