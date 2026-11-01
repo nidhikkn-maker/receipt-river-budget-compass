@@ -7,6 +7,7 @@ export const fixture = {
   saves: [] as string[],
   removes: [] as string[],
   uploads: [] as unknown[],
+  moves: [] as { id: string; before: Record<string, unknown>[] }[],
 };
 Object.assign(window, { deskFixture: fixture });
 
@@ -27,7 +28,16 @@ export function useStore() {
     addAccount: async () => { throw new Error("No new accounts in this test"); },
     setArchived: async () => {},
     refresh,
-    correctFinancialEntries: async () => {}, undoFinancialCorrection: async () => {},
+    correctFinancialEntries: async (p: { records: { id: string }[]; after: Record<string, unknown>[] }, id: string) => {
+      fixture.moves.push({ id, before: p.records.map((r) => ({ ...fixture.transactions.find((t) => t.id === r.id)! })) });
+      for (const a of p.after) Object.assign(fixture.transactions.find((t) => t.id === a.id)!, a);
+      await refresh();
+    },
+    undoFinancialCorrection: async (id: string) => {
+      const m = fixture.moves.find((x) => x.id === id);
+      for (const b of m?.before ?? []) Object.assign(fixture.transactions.find((t) => t.id === b.id)!, b);
+      await refresh();
+    },
   };
 }
 export const supabase = { from: () => { throw new Error("No Cloud access in this test"); } };
