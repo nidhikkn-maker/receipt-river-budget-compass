@@ -8,6 +8,7 @@ import type { Json } from '@/integrations/supabase/types';
 export const processHistoricalImport=createServerFn({method:'POST'}).middleware([requireSupabaseAuth]).inputValidator((d:unknown)=>z.object({id:z.string().uuid()}).parse(d)).handler(async({data,context})=>{
   const b=await context.supabase.from('import_batches').select('id,status').eq('id',data.id).eq('owner_id',context.userId).single();
   if(b.error) throw Error('Import not found');
+  if(['paused','refused','cancelled'].includes(b.data.status))throw Error('This import is stopped; review the processing message first');
   if(b.data.status==='processing') return {ok:true};
   const update=await context.supabase.from('import_batches').update({status:'processing',lease_until:new Date(Date.now()+300000).toISOString()}).eq('id',data.id).eq('owner_id',context.userId);
   if(update.error) throw Error('Could not start import');
@@ -15,6 +16,15 @@ export const processHistoricalImport=createServerFn({method:'POST'}).middleware(
   const {processImport}=await import('./import-jobs.server');
   await processImport(supabaseAdmin,data.id,context.userId);
   return {ok:true};
+});
+
+export const resumeHistoricalImport=createServerFn({method:'POST'}).middleware([requireSupabaseAuth]).inputValidator((d:unknown)=>z.object({id:z.string().uuid()}).parse(d)).handler(async({data,context})=>{
+  const batch=await context.supabase.from('import_batches').select('id').eq('id',data.id).eq('owner_id',context.userId).single();if(batch.error)throw Error('Import not found');
+  const state=await context.supabase.from('import_ai_state').select('*').eq('owner_id',context.userId).maybeSingle();if(state.error)throw Error('Could not read processing state');
+  if(state.data?.paused&&state.data.pause_kind!=='owner_action')throw Error(state.data.reason??'Provider access must be restored before starting a fresh import');
+  const {supabaseAdmin}=await import('@/integrations/supabase/client.server');
+  if(state.data?.paused){const cleared=await supabaseAdmin.from('import_ai_state').update({paused:false,reason:null,pause_kind:null}).eq('owner_id',context.userId);if(cleared.error)throw Error('Could not resume processing');}
+  const queued=await context.supabase.from('import_batches').update({status:'queued',attempts:0,error:null,lease_until:new Date().toISOString()}).eq('id',data.id);if(queued.error)throw Error('Could not queue retry');return {ok:true};
 });
 
 export const postHistoricalImport=createServerFn({method:'POST'}).middleware([requireSupabaseAuth]).inputValidator((d:unknown)=>z.object({batch:z.string().uuid(),ids:z.array(z.string().uuid()).min(1).max(100)}).parse(d)).handler(async({data,context})=>{
