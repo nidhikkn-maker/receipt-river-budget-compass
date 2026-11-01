@@ -427,5 +427,5 @@
 - [x] AMEX statement reading for Statement Match & Fix
 - [x] Recognise transfers already posted from another account (no false missing / double post)
 - [x] Undo an entire statement posting batch
-- [ ] Publish latest statement matching/posting to live
+- [x] Publish latest statement matching/posting to live
 - [ ] Post matched statement results to live records (awaiting explicit approval of exact list)
