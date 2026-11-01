@@ -20,9 +20,10 @@ import { listImportRules } from "@/lib/import-repository";
 import type { ImportRule } from "@/lib/historical-import";
 import { FinancialReviewIntelligence } from "./FinancialReviewIntelligence";
 import { FinancialCorrectionPanel } from "./FinancialCorrectionPanel";
+import { readReviewContext, writeReviewContext } from '@/lib/offline';
 
 export function FinancialReview({ items, onOpen, initialFilter = "all" }: { items: InboxItem[]; onOpen: (e: Expense) => void; initialFilter?: ReviewFilter }) {
-  const { transactions, accounts, preferences, commitments, bulkSetCategory, undoCategoryBatch } = useStore();
+  const { transactions, accounts, preferences, commitments, bulkSetCategory, undoCategoryBatch, userId } = useStore();
   const categories = preferences.categories.filter(c => !c.archived && c.name !== "Miscellaneous").map(c => c.name);
   const [rules, setRules] = useState<ImportRule[]>([]);
   const [ruleStatus, setRuleStatus] = useState("Loading classification rules…");
@@ -67,6 +68,25 @@ export function FinancialReview({ items, onOpen, initialFilter = "all" }: { item
   const [saveError, setSaveError] = useState("");
   const [completed, setCompleted] = useState(0);
   useEffect(() => { setGroup(initialFilter); }, [initialFilter]);
+  const [contextReady, setContextReady] = useState(false);
+  const [contextStatus, setContextStatus] = useState('');
+  useEffect(() => {
+    let active = true;
+    if (!userId) { setContextReady(true); return; }
+    void readReviewContext(userId).then(saved => {
+      if (!active || !saved) return;
+      setSelected(new Set(saved.selected)); setQuery(saved.query); setCategory(saved.category);
+      setAccount(saved.account); setWorkspace(saved.workspace); setOrganisation(saved.organisation);
+      if (initialFilter === 'all' && saved.group in REVIEW_FILTERS) setGroup(saved.group as ReviewFilter);
+      if (saved.selected.length) setContextStatus('Unconfirmed review restored on this device.');
+    }).catch(() => { if (active) setContextStatus('Review context could not restore.'); }).finally(() => { if (active) setContextReady(true); });
+    return () => { active = false; };
+  }, [userId]);
+  useEffect(() => {
+    if (!contextReady || !userId) return;
+    const timer = setTimeout(() => { void writeReviewContext(userId, { selected: [...selected], query, group, category, account, workspace, organisation }).catch(() => setContextStatus('Unfinished selection could not save on this device.')); }, 250);
+    return () => clearTimeout(timer);
+  }, [contextReady, userId, selected, query, group, category, account, workspace, organisation]);
   const selector = (label: string, value: string, set: (v: string) => void, options: [string, string][]) => <Select value={value} onValueChange={set}><SelectTrigger aria-label={label} className="min-w-0"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">{label}</SelectItem>{options.map(([id, name]) => <SelectItem key={id} value={id}>{name}</SelectItem>)}</SelectContent></Select>;
   const showPreview = () => { try { setPreview(categoryReviewPreview(picked, category)); } catch (e) { toast.error((e as Error).message); } };
   const previewSuggested = () => {
@@ -89,6 +109,7 @@ export function FinancialReview({ items, onOpen, initialFilter = "all" }: { item
   const evidence = focused ? <div className="space-y-3"><h3 className="break-words font-semibold">{focused.transaction.title}</h3><p className="text-sm">{focused.status} · {focused.confidence} confidence</p><div className="text-sm"><p>{focused.transaction.date} · {money(focused.transaction.amount)}</p><p>Account: {accounts.find(a => a.id === focused.transaction.accountId)?.name ?? "Unknown"}</p><p>Saved type: {TXN_LABEL[focused.transaction.txnType ?? "expense"]}</p><p>Organisation: {focused.transaction.department || "Unknown"}</p></div><ul className="list-disc space-y-2 pl-4 text-sm text-muted-foreground">{focused.evidence.map((s, i) => <li key={i}>{s}</li>)}</ul>{focused.suggestedType && <p className="text-sm font-medium">Proposed: {TXN_LABEL[focused.suggestedType]}{focused.targetAccountIds.length === 1 ? ` → ${accounts.find(a => a.id === focused.targetAccountIds[0])?.name}` : " · receiving account needs confirmation"}</p>}<div className="border-t pt-3"><p className="text-xs font-medium text-muted-foreground">Saved narration (not changed by this review)</p><p className="mt-1 whitespace-pre-wrap break-words text-sm">{focused.transaction.description || "Not available in this record"}</p><p className="mt-2 break-words text-xs text-muted-foreground">Statement reference: {focused.transaction.statementRef || "Unknown"}</p></div><Button variant="outline" onClick={() => onOpen(focused.transaction)}>Review transaction</Button></div> : <p className="text-sm text-muted-foreground">No transaction selected.</p>;
 
   return <section className="space-y-4" aria-label="Smart financial review">
+    {contextStatus && <p role="status" className="text-xs text-muted-foreground">{contextStatus}</p>}
     <div className="flex flex-wrap items-center justify-between gap-2"><div><h2 className="text-lg font-semibold">{rows.length} transactions needing attention</h2>{completed > 0 && <p role="status" className="text-sm text-success">Category correction applied to {completed} transactions. Remaining issues stay in review.</p>}</div><Button asChild variant="outline" size="sm"><Link to="/historical-import">Statement imports</Link></Button></div>
     {ruleStatus && <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground"><p>{ruleStatus}</p>{ruleStatus.includes("could not") && <Button variant="ghost" size="sm" onClick={loadRules}>Retry rules</Button>}</div>}
     <div className="flex flex-wrap gap-2"><Input className="min-w-0 flex-1 basis-48" aria-label="Search financial review" placeholder="Search merchant or narration" value={query} onChange={e => setQuery(e.target.value)} /><Select value={group} onValueChange={v => { setGroup(v as ReviewFilter); setLimit(40); }}><SelectTrigger className="w-full sm:w-56" aria-label="Review issue filter"><SelectValue /></SelectTrigger><SelectContent>{Object.entries(REVIEW_FILTERS).map(([key, label]) => <SelectItem key={key} value={key}>{label}</SelectItem>)}</SelectContent></Select><Button variant="outline" onClick={() => setFiltersOpen(!filtersOpen)} aria-expanded={filtersOpen}><SlidersHorizontal />Filters</Button><DropdownMenu><DropdownMenuTrigger asChild><Button variant="outline"><CheckSquare />Select<ChevronDown /></Button></DropdownMenuTrigger><DropdownMenuContent><DropdownMenuItem onSelect={() => pick(visible.map(r => r.transaction.id))}>Select all visible ({visible.length})</DropdownMenuItem><DropdownMenuItem onSelect={() => pick(filtered.map(r => r.transaction.id))}>Select all matching ({filtered.length})</DropdownMenuItem><DropdownMenuItem onSelect={() => pick(visible.map(r => r.transaction.id))}>Select current page ({visible.length})</DropdownMenuItem><DropdownMenuItem disabled={!focused?.transaction.merchant} onSelect={() => { const cohort = cohorts.find(c => c.rows.some(r => r.transaction.id === detail)); if (cohort) pick(cohort.rows.map(r => r.transaction.id)); else if (focused) pick([focused.transaction.id]); }}>Select current merchant group</DropdownMenuItem><DropdownMenuItem onSelect={() => setSelected(new Set())}>Clear selection</DropdownMenuItem></DropdownMenuContent></DropdownMenu></div>
