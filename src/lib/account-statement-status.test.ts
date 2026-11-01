@@ -27,3 +27,11 @@ it("financial correction resets the statement match even when money and date mat
 it("offsetting unaccounted ledger entries cannot certify reconciliation despite matching balance", () => {
   expect(derive(statement, [e, { ...e, id: "unmatched expense", amount: 50 }, { ...e, id: "unmatched income", amount: 50, txnType: "income" }])).toMatchObject({ balance: "Verified", reconciliation: "Requires Review" });
 });
+import { statementNextStep } from "./account-statement-status";
+describe("statementNextStep", () => {
+  const base = { batch: true, importing: false, failed: false, identityConfirmed: true, toPost: 0, coverageConfirmed: true, usableBalance: true, checked: true };
+  it("asks for upload when no statement", () => expect(statementNextStep({ ...base, batch: false })).toBe("Upload a statement for this account"));
+  it("identity comes before approving lines", () => expect(statementNextStep({ ...base, identityConfirmed: false, toPost: 224 })).toBe("Confirm the statement's account identity"));
+  it("counts lines still to import", () => expect(statementNextStep({ ...base, toPost: 224 })).toBe("Approve and import 224 statement lines"));
+  it("nothing left when complete", () => expect(statementNextStep(base)).toBeNull());
+});

@@ -69,3 +69,7 @@ export function centreCategoryPreview(rows: FinancialReview[], category: string)
   const preview = categoryReviewPreview(eligible, category);
   return { ...preview, selectedCount: rows.length, excluded, remainingIssues: rows.reduce((sum, row) => sum + row.issues.filter(i => i.type !== 'uncategorised' || !eligible.includes(row)).length, 0) };
 }
+/** Rows whose only open issue is an unconfirmed statement import, with no suggested change or conflict. */
+export function confirmableImportRows(rows: FinancialReview[]) {
+  return rows.filter(r => r.issues.length > 0 && r.issues.every(i => i.type === 'unverified_import') && !r.suggestedType && !r.suggestedCategory && r.group === 'ready');
+}

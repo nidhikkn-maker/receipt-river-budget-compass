@@ -51,8 +51,22 @@ export function accountStatementStatus(account: Account, evidence: StatementStat
   const reconciliation = calculationOnly ? calculatedReconciliation : currentCheckpoint ? latest.checkpoint?.result.reconciliation ?? "Requires Review" : latest?.checkpoint ? "Requires Review" : matched.length ? "In Progress" : "Not Started";
   const balance = calculationOnly ? calculatedBalance : currentCheckpoint ? latest.checkpoint?.result.balance ?? "Not Verified" : "Not Verified";
   const missing = [!identityConfirmed ? "Statement account identity has not been confirmed." : "", !coverageConfirmed ? "Statement coverage has not been confirmed against the original." : "", !usableBalance ? "A reviewed closing balance is missing." : "", !conventionMatches && batch ? "Statement balance convention needs confirmation." : "", !currentCheckpoint && !calculationOnly && batch ? "Run and save a reconciliation check; previous checks may be outdated." : "", unresolved ? `${unresolved} statement rows are not matched to current ledger entries.` : "", unmatchedLedger ? `${unmatchedLedger} ledger entries in this period are not accounted for by statement matches.` : "", batch?.currency !== "INR" && batch ? "Original-currency comparison with the INR ledger is unavailable." : "", !batch ? "No historical import is linked to this account." : ""].filter(Boolean);
-  return { accountId: account.id, name: account.name, batchId: batch?.id, imported, statementThrough: coverageConfirmed ? batch?.period_to ?? null : null, periodFrom: batch?.period_from ?? null, periodTo: batch?.period_to ?? null, freshness, reconciliation, balance, difference, confirmedBalance: balance === "Verified" ? closing ?? null : null, reconciliationDate: currentCheckpoint ? latest.checkpoint?.created_at ?? null : null, lastSuccessfulImport: successful?.batch.file_name ?? null, parsed: rows.length, posted: postedCount, duplicates, unresolved, matched: matched.length, missing, attention: imported !== "Imported" || freshness !== "Current" || reconciliation !== "Reconciled" || balance !== "Verified" };
+  const toPost = Math.max(0, rows.length - postedCount - duplicates);
+  const nextStep = statementNextStep({ batch: !!batch, importing: !!batch && ["queued","processing"].includes(batch.status), failed: !!batch && !["queued","processing","review"].includes(batch.status), identityConfirmed, toPost, coverageConfirmed, usableBalance, checked: calculationOnly || !!currentCheckpoint });
+  return { nextStep, accountId: account.id, name: account.name, batchId: batch?.id, imported, statementThrough: coverageConfirmed ? batch?.period_to ?? null : null, periodFrom: batch?.period_from ?? null, periodTo: batch?.period_to ?? null, freshness, reconciliation, balance, difference, confirmedBalance: balance === "Verified" ? closing ?? null : null, reconciliationDate: currentCheckpoint ? latest.checkpoint?.created_at ?? null : null, lastSuccessfulImport: successful?.batch.file_name ?? null, parsed: rows.length, posted: postedCount, duplicates, unresolved, matched: matched.length, missing, attention: imported !== "Imported" || freshness !== "Current" || reconciliation !== "Reconciled" || balance !== "Verified" };
 }
 export function accountStatementSummary(rows: ReturnType<typeof accountStatementStatus>[]) {
   return { total: rows.length, current: rows.filter(r => r.freshness === "Current").length, reconciled: rows.filter(r => r.reconciliation === "Reconciled").length, verified: rows.filter(r => r.balance === "Verified").length, attention: rows.filter(r => r.attention).length };
+}
+/** Plain next action for an account's statement; order follows the review workflow. */
+export function statementNextStep(s: { batch: boolean; importing: boolean; failed: boolean; identityConfirmed: boolean; toPost: number; coverageConfirmed: boolean; usableBalance: boolean; checked: boolean }): string | null {
+  if (!s.batch) return "Upload a statement for this account";
+  if (s.importing) return "Statement is still being read";
+  if (s.failed) return "Statement reading failed — open it to retry";
+  if (!s.identityConfirmed) return "Confirm the statement's account identity";
+  if (s.toPost) return `Approve and import ${s.toPost} statement ${s.toPost === 1 ? "line" : "lines"}`;
+  if (!s.coverageConfirmed) return "Confirm the statement period";
+  if (!s.usableBalance) return "Enter the closing balance shown on the statement";
+  if (!s.checked) return "Run and save the reconciliation check";
+  return null;
 }
