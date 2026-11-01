@@ -173,6 +173,7 @@ function CrossCheckPage() {
         <h1 className="flex items-center gap-2 text-xl font-semibold"><FileSearch className="size-5" /> Statement cross-check</h1>
         <p className="flex items-center gap-1.5 text-sm text-muted-foreground"><ShieldCheck className="size-4" /> Statements are read on this device and are never saved or attached. Matching is read-only; records change only when you review and confirm an action below.</p>
       </header>
+      <p className="text-sm"><Link to="/statements" className="font-medium text-primary underline">Statement Desk</Link> now reads many statements at once and does the matching, categorising and posting with your say-so.</p>
 
       <Card className="grid gap-3 p-4 sm:grid-cols-3">
         <label className="space-y-1 text-sm sm:col-span-1">Records saved on
