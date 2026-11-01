@@ -1,7 +1,7 @@
 import { FilePen } from "lucide-react";
 import { DraftsReminder } from "@/components/DraftsReminder";
 import { Link, useRouter, useRouterState } from "@tanstack/react-router";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, ArrowRight } from "lucide-react";
 import { showBackButton } from "@/lib/back-nav";
 import { useEffect, useState, type ReactNode } from "react";
 import { BarChart3, Bell, CalendarClock, Gem, Home, Landmark, ListFilter, PiggyBank, Plus, Settings, Sparkles, Users, Eye, EyeOff, FileText, UserRound, TrendingUp, Inbox, HeartPulse, Search, SlidersHorizontal, Split, Network, Plane, Wallet, Bot, Menu, X, MessageCircleQuestion, RefreshCw, CloudOff, Check, TriangleAlert } from "lucide-react";
