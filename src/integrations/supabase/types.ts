@@ -778,6 +778,30 @@ export type Database = {
         }
         Relationships: []
       }
+      import_ai_state: {
+        Row: {
+          lease_until: string
+          owner_id: string
+          pause_kind: string | null
+          paused: boolean
+          reason: string | null
+        }
+        Insert: {
+          lease_until?: string
+          owner_id: string
+          pause_kind?: string | null
+          paused?: boolean
+          reason?: string | null
+        }
+        Update: {
+          lease_until?: string
+          owner_id?: string
+          pause_kind?: string | null
+          paused?: boolean
+          reason?: string | null
+        }
+        Relationships: []
+      }
       import_audit: {
         Row: {
           action: string
@@ -816,7 +840,9 @@ export type Database = {
       import_batches: {
         Row: {
           account_id: string
+          allow_ai: boolean
           attempts: number
+          balance_verification: Json
           closing_balance: number | null
           created_at: string
           currency: string
@@ -826,17 +852,22 @@ export type Database = {
           file_path: string
           id: string
           lease_until: string
+          next_page: number
           opening_balance: number | null
           owner_id: string
           period_from: string | null
           period_to: string | null
           raw_lines: Json
+          source_balances: Json
           status: string
+          total_pages: number | null
           updated_at: string
         }
         Insert: {
           account_id: string
+          allow_ai?: boolean
           attempts?: number
+          balance_verification?: Json
           closing_balance?: number | null
           created_at?: string
           currency?: string
@@ -846,17 +877,22 @@ export type Database = {
           file_path: string
           id?: string
           lease_until?: string
+          next_page?: number
           opening_balance?: number | null
           owner_id?: string
           period_from?: string | null
           period_to?: string | null
           raw_lines?: Json
+          source_balances?: Json
           status?: string
+          total_pages?: number | null
           updated_at?: string
         }
         Update: {
           account_id?: string
+          allow_ai?: boolean
           attempts?: number
+          balance_verification?: Json
           closing_balance?: number | null
           created_at?: string
           currency?: string
@@ -866,12 +902,15 @@ export type Database = {
           file_path?: string
           id?: string
           lease_until?: string
+          next_page?: number
           opening_balance?: number | null
           owner_id?: string
           period_from?: string | null
           period_to?: string | null
           raw_lines?: Json
+          source_balances?: Json
           status?: string
+          total_pages?: number | null
           updated_at?: string
         }
         Relationships: [
@@ -880,6 +919,47 @@ export type Database = {
             columns: ["account_id"]
             isOneToOne: false
             referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      import_pdf_pages: {
+        Row: {
+          balances: Json
+          batch_id: string
+          created_at: string
+          owner_id: string
+          page_end: number
+          page_start: number
+          rows: Json
+          run_id: string | null
+        }
+        Insert: {
+          balances: Json
+          batch_id: string
+          created_at?: string
+          owner_id: string
+          page_end: number
+          page_start: number
+          rows: Json
+          run_id?: string | null
+        }
+        Update: {
+          balances?: Json
+          batch_id?: string
+          created_at?: string
+          owner_id?: string
+          page_end?: number
+          page_start?: number
+          rows?: Json
+          run_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "import_pdf_pages_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "import_batches"
             referencedColumns: ["id"]
           },
         ]
@@ -1414,11 +1494,14 @@ export type Database = {
         Args: { batch_id: string; items: Json; target: string }
         Returns: string
       }
+      claim_import_ai: { Args: { _owner: string }; Returns: boolean }
       claim_import_batches: {
         Args: never
         Returns: {
           account_id: string
+          allow_ai: boolean
           attempts: number
+          balance_verification: Json
           closing_balance: number | null
           created_at: string
           currency: string
@@ -1428,12 +1511,15 @@ export type Database = {
           file_path: string
           id: string
           lease_until: string
+          next_page: number
           opening_balance: number | null
           owner_id: string
           period_from: string | null
           period_to: string | null
           raw_lines: Json
+          source_balances: Json
           status: string
+          total_pages: number | null
           updated_at: string
         }[]
         SetofOptions: {
@@ -1528,6 +1614,17 @@ export type Database = {
       review_expense: {
         Args: { _decision: string; _expense_id: string; _note?: string }
         Returns: string
+      }
+      save_import_balance_review: {
+        Args: {
+          _batch: string
+          _closing: number
+          _from: string
+          _opening: number
+          _review: Json
+          _to: string
+        }
+        Returns: undefined
       }
       undo_category_change: { Args: { batch_id: string }; Returns: undefined }
     }
