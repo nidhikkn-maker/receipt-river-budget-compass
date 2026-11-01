@@ -13,7 +13,17 @@ export async function pendingEntries(owner:string){const rows=await operation<(S
 export const removePending=(id:string)=>operation("entries","readwrite",s=>s.delete(id));
 export const putSnapshot=async(owner:string,data:unknown)=>{const sealed=await encryptOffline(owner,data);return operation("snapshots","readwrite",s=>s.put(sealed,owner));};
 export async function getSnapshot<T>(owner:string):Promise<T|undefined>{const data=await operation<T|Sealed|undefined>("snapshots","readonly",s=>s.get(owner));if(data===undefined)return undefined;if(data&&typeof data==="object"&&"encrypted" in data)return decryptOffline<T>(owner,data as Sealed);await putSnapshot(owner,data);return data as T;}
-export async function clearOfflineOwner(owner:string){const entries=await operation<{id:string;owner:string}[]>("entries","readonly",s=>s.getAll());for(const e of entries.filter(x=>x.owner===owner))await removePending(e.id);await operation("snapshots","readwrite",s=>s.delete(owner));await operation("snapshots","readwrite",s=>s.delete(`drafts:${owner}`));await operation("keys","readwrite",s=>s.delete(owner));keyPromises.delete(owner);}
+export async function clearOfflineOwner(owner:string){const entries=await operation<{id:string;owner:string}[]>("entries","readonly",s=>s.getAll());for(const e of entries.filter(x=>x.owner===owner))await removePending(e.id);await operation("snapshots","readwrite",s=>s.delete(owner));await operation("snapshots","readwrite",s=>s.delete(`drafts:${owner}`));await operation("snapshots","readwrite",s=>s.delete(`review:${owner}`));await operation("keys","readwrite",s=>s.delete(owner));keyPromises.delete(owner);}
+
+export interface ReviewContext { selected: string[]; query: string; group: string; category: string; account: string; workspace: string; organisation: string }
+export async function readReviewContext(owner: string): Promise<ReviewContext | undefined> {
+  const value = await operation<Sealed | undefined>('snapshots', 'readonly', s => s.get(`review:${owner}`));
+  return value ? decryptOffline<ReviewContext>(owner, value) : undefined;
+}
+export async function writeReviewContext(owner: string, context: ReviewContext) {
+  const value = await encryptOffline(owner, context);
+  await operation('snapshots', 'readwrite', s => s.put(value, `review:${owner}`));
+}
 
 // ---- Offline expense drafts: one encrypted, owner-bound map per owner in the snapshots store ----
 export interface LocalDraftFile { name: string; type: string; fingerprint?: string; path?: string; bytes: number[] }

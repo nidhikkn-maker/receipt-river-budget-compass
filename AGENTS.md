@@ -44,4 +44,4 @@
 - Master-record rules (duplicates, organisation usage/rename) live in src/lib/master-data.ts and setup readiness in src/lib/setup-status.ts; every add-account path uses the shared AccountForm so contextual and central creation follow one rule set.
 - PDF table cells with non-Latin text are rendered by the browser onto canvas images (src/lib/pdf-unicode.ts withUnicode) because jsPDF core fonts are Latin-only and cannot shape Indic scripts; titles, footers and bill-page labels use textU()/drawTextU() which image-render non-Latin text.
 - Reports Centre job/history IDs match; callbacks recover imports without duplicates.
-- Ledger corrections use pure previews, owner-checked atomic RPCs, all-edit revisions and safe undo; FX/source stays unchanged and matching resets. Statement statuses use saved coverage/review evidence. Staged import edits reset approval.
+- Corrections use owner-atomic RPCs, revisions and safe undo; preserve FX/source. Statements use saved evidence. Inbox, transaction-review and account-reconciliation are separate; review-centre.ts owns counts/selection.

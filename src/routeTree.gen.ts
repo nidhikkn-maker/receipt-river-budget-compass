@@ -15,12 +15,14 @@ import { Route as AuthRouteImport } from './routes/auth'
 import { Route as McpRouteImport } from './routes/mcp'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as Char91DotwellKnownChar93OauthProtectedResourceRouteImport } from './routes/[.well-known]/oauth-protected-resource'
+import { Route as AuthenticatedAccountReconciliationRouteImport } from './routes/_authenticated/account-reconciliation'
 import { Route as AuthenticatedAllocationRouteImport } from './routes/_authenticated/allocation'
 import { Route as AuthenticatedAssistantRouteImport } from './routes/_authenticated/assistant'
 import { Route as AuthenticatedAssistantsRouteImport } from './routes/_authenticated/assistants'
 import { Route as AuthenticatedBriefRouteImport } from './routes/_authenticated/brief'
 import { Route as AuthenticatedBudgetsRouteImport } from './routes/_authenticated/budgets'
 import { Route as AuthenticatedClaimSubmissionRouteImport } from './routes/_authenticated/claim-submission'
+import { Route as AuthenticatedClassificationRulesRouteImport } from './routes/_authenticated/classification-rules'
 import { Route as AuthenticatedConnectionsRouteImport } from './routes/_authenticated/connections'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedDraftsRouteImport } from './routes/_authenticated/drafts'
@@ -43,6 +45,7 @@ import { Route as AuthenticatedRulesRouteImport } from './routes/_authenticated/
 import { Route as AuthenticatedSearchRouteImport } from './routes/_authenticated/search'
 import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings'
 import { Route as AuthenticatedStrategyRouteImport } from './routes/_authenticated/strategy'
+import { Route as AuthenticatedTransactionReviewRouteImport } from './routes/_authenticated/transaction-review'
 import { Route as AuthenticatedTravelInboxRouteImport } from './routes/_authenticated/travel-inbox'
 import { Route as AuthenticatedTripsRouteImport } from './routes/_authenticated/trips'
 import { Route as AuthenticatedVaultRouteImport } from './routes/_authenticated/vault'
@@ -83,6 +86,12 @@ const Char91DotwellKnownChar93OauthProtectedResourceRoute =
     path: '/.well-known/oauth-protected-resource',
     getParentRoute: () => rootRouteImport,
   } as any)
+const AuthenticatedAccountReconciliationRoute =
+  AuthenticatedAccountReconciliationRouteImport.update({
+    id: '/account-reconciliation',
+    path: '/account-reconciliation',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedAllocationRoute = AuthenticatedAllocationRouteImport.update({
   id: '/allocation',
   path: '/allocation',
@@ -112,6 +121,12 @@ const AuthenticatedClaimSubmissionRoute =
   AuthenticatedClaimSubmissionRouteImport.update({
     id: '/claim-submission',
     path: '/claim-submission',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedClassificationRulesRoute =
+  AuthenticatedClassificationRulesRouteImport.update({
+    id: '/classification-rules',
+    path: '/classification-rules',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
 const AuthenticatedConnectionsRoute =
@@ -230,6 +245,12 @@ const AuthenticatedStrategyRoute = AuthenticatedStrategyRouteImport.update({
   path: '/strategy',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedTransactionReviewRoute =
+  AuthenticatedTransactionReviewRouteImport.update({
+    id: '/transaction-review',
+    path: '/transaction-review',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedTravelInboxRoute =
   AuthenticatedTravelInboxRouteImport.update({
     id: '/travel-inbox',
@@ -285,12 +306,14 @@ export interface FileRoutesByFullPath {
   '/mcp': typeof McpRoute
   '/reset-password': typeof ResetPasswordRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
+  '/account-reconciliation': typeof AuthenticatedAccountReconciliationRoute
   '/allocation': typeof AuthenticatedAllocationRoute
   '/assistant': typeof AuthenticatedAssistantRoute
   '/assistants': typeof AuthenticatedAssistantsRoute
   '/brief': typeof AuthenticatedBriefRoute
   '/budgets': typeof AuthenticatedBudgetsRoute
   '/claim-submission': typeof AuthenticatedClaimSubmissionRoute
+  '/classification-rules': typeof AuthenticatedClassificationRulesRoute
   '/connections': typeof AuthenticatedConnectionsRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/drafts': typeof AuthenticatedDraftsRoute
@@ -313,6 +336,7 @@ export interface FileRoutesByFullPath {
   '/search': typeof AuthenticatedSearchRoute
   '/settings': typeof AuthenticatedSettingsRoute
   '/strategy': typeof AuthenticatedStrategyRoute
+  '/transaction-review': typeof AuthenticatedTransactionReviewRoute
   '/travel-inbox': typeof AuthenticatedTravelInboxRoute
   '/trips': typeof AuthenticatedTripsRouteWithChildren
   '/vault': typeof AuthenticatedVaultRoute
@@ -329,12 +353,14 @@ export interface FileRoutesByTo {
   '/mcp': typeof McpRoute
   '/reset-password': typeof ResetPasswordRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
+  '/account-reconciliation': typeof AuthenticatedAccountReconciliationRoute
   '/allocation': typeof AuthenticatedAllocationRoute
   '/assistant': typeof AuthenticatedAssistantRoute
   '/assistants': typeof AuthenticatedAssistantsRoute
   '/brief': typeof AuthenticatedBriefRoute
   '/budgets': typeof AuthenticatedBudgetsRoute
   '/claim-submission': typeof AuthenticatedClaimSubmissionRoute
+  '/classification-rules': typeof AuthenticatedClassificationRulesRoute
   '/connections': typeof AuthenticatedConnectionsRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/drafts': typeof AuthenticatedDraftsRoute
@@ -357,6 +383,7 @@ export interface FileRoutesByTo {
   '/search': typeof AuthenticatedSearchRoute
   '/settings': typeof AuthenticatedSettingsRoute
   '/strategy': typeof AuthenticatedStrategyRoute
+  '/transaction-review': typeof AuthenticatedTransactionReviewRoute
   '/travel-inbox': typeof AuthenticatedTravelInboxRoute
   '/vault': typeof AuthenticatedVaultRoute
   '/wealth': typeof AuthenticatedWealthRoute
@@ -374,12 +401,14 @@ export interface FileRoutesById {
   '/mcp': typeof McpRoute
   '/reset-password': typeof ResetPasswordRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
+  '/_authenticated/account-reconciliation': typeof AuthenticatedAccountReconciliationRoute
   '/_authenticated/allocation': typeof AuthenticatedAllocationRoute
   '/_authenticated/assistant': typeof AuthenticatedAssistantRoute
   '/_authenticated/assistants': typeof AuthenticatedAssistantsRoute
   '/_authenticated/brief': typeof AuthenticatedBriefRoute
   '/_authenticated/budgets': typeof AuthenticatedBudgetsRoute
   '/_authenticated/claim-submission': typeof AuthenticatedClaimSubmissionRoute
+  '/_authenticated/classification-rules': typeof AuthenticatedClassificationRulesRoute
   '/_authenticated/connections': typeof AuthenticatedConnectionsRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/drafts': typeof AuthenticatedDraftsRoute
@@ -402,6 +431,7 @@ export interface FileRoutesById {
   '/_authenticated/search': typeof AuthenticatedSearchRoute
   '/_authenticated/settings': typeof AuthenticatedSettingsRoute
   '/_authenticated/strategy': typeof AuthenticatedStrategyRoute
+  '/_authenticated/transaction-review': typeof AuthenticatedTransactionReviewRoute
   '/_authenticated/travel-inbox': typeof AuthenticatedTravelInboxRoute
   '/_authenticated/trips': typeof AuthenticatedTripsRouteWithChildren
   '/_authenticated/vault': typeof AuthenticatedVaultRoute
@@ -420,12 +450,14 @@ export interface FileRouteTypes {
     | '/mcp'
     | '/reset-password'
     | '/.well-known/oauth-protected-resource'
+    | '/account-reconciliation'
     | '/allocation'
     | '/assistant'
     | '/assistants'
     | '/brief'
     | '/budgets'
     | '/claim-submission'
+    | '/classification-rules'
     | '/connections'
     | '/dashboard'
     | '/drafts'
@@ -448,6 +480,7 @@ export interface FileRouteTypes {
     | '/search'
     | '/settings'
     | '/strategy'
+    | '/transaction-review'
     | '/travel-inbox'
     | '/trips'
     | '/vault'
@@ -464,12 +497,14 @@ export interface FileRouteTypes {
     | '/mcp'
     | '/reset-password'
     | '/.well-known/oauth-protected-resource'
+    | '/account-reconciliation'
     | '/allocation'
     | '/assistant'
     | '/assistants'
     | '/brief'
     | '/budgets'
     | '/claim-submission'
+    | '/classification-rules'
     | '/connections'
     | '/dashboard'
     | '/drafts'
@@ -492,6 +527,7 @@ export interface FileRouteTypes {
     | '/search'
     | '/settings'
     | '/strategy'
+    | '/transaction-review'
     | '/travel-inbox'
     | '/vault'
     | '/wealth'
@@ -508,12 +544,14 @@ export interface FileRouteTypes {
     | '/mcp'
     | '/reset-password'
     | '/.well-known/oauth-protected-resource'
+    | '/_authenticated/account-reconciliation'
     | '/_authenticated/allocation'
     | '/_authenticated/assistant'
     | '/_authenticated/assistants'
     | '/_authenticated/brief'
     | '/_authenticated/budgets'
     | '/_authenticated/claim-submission'
+    | '/_authenticated/classification-rules'
     | '/_authenticated/connections'
     | '/_authenticated/dashboard'
     | '/_authenticated/drafts'
@@ -536,6 +574,7 @@ export interface FileRouteTypes {
     | '/_authenticated/search'
     | '/_authenticated/settings'
     | '/_authenticated/strategy'
+    | '/_authenticated/transaction-review'
     | '/_authenticated/travel-inbox'
     | '/_authenticated/trips'
     | '/_authenticated/vault'
@@ -603,6 +642,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated/account-reconciliation': {
+      id: '/_authenticated/account-reconciliation'
+      path: '/account-reconciliation'
+      fullPath: '/account-reconciliation'
+      preLoaderRoute: typeof AuthenticatedAccountReconciliationRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/allocation': {
       id: '/_authenticated/allocation'
       path: '/allocation'
@@ -643,6 +689,13 @@ declare module '@tanstack/react-router' {
       path: '/claim-submission'
       fullPath: '/claim-submission'
       preLoaderRoute: typeof AuthenticatedClaimSubmissionRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/classification-rules': {
+      id: '/_authenticated/classification-rules'
+      path: '/classification-rules'
+      fullPath: '/classification-rules'
+      preLoaderRoute: typeof AuthenticatedClassificationRulesRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/connections': {
@@ -799,6 +852,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedStrategyRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/transaction-review': {
+      id: '/_authenticated/transaction-review'
+      path: '/transaction-review'
+      fullPath: '/transaction-review'
+      preLoaderRoute: typeof AuthenticatedTransactionReviewRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/travel-inbox': {
       id: '/_authenticated/travel-inbox'
       path: '/travel-inbox'
@@ -879,12 +939,14 @@ const AuthenticatedTripsRouteWithChildren =
   AuthenticatedTripsRoute._addFileChildren(AuthenticatedTripsRouteChildren)
 
 interface AuthenticatedRouteRouteChildren {
+  AuthenticatedAccountReconciliationRoute: typeof AuthenticatedAccountReconciliationRoute
   AuthenticatedAllocationRoute: typeof AuthenticatedAllocationRoute
   AuthenticatedAssistantRoute: typeof AuthenticatedAssistantRoute
   AuthenticatedAssistantsRoute: typeof AuthenticatedAssistantsRoute
   AuthenticatedBriefRoute: typeof AuthenticatedBriefRoute
   AuthenticatedBudgetsRoute: typeof AuthenticatedBudgetsRoute
   AuthenticatedClaimSubmissionRoute: typeof AuthenticatedClaimSubmissionRoute
+  AuthenticatedClassificationRulesRoute: typeof AuthenticatedClassificationRulesRoute
   AuthenticatedConnectionsRoute: typeof AuthenticatedConnectionsRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedDraftsRoute: typeof AuthenticatedDraftsRoute
@@ -907,6 +969,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedSearchRoute: typeof AuthenticatedSearchRoute
   AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRoute
   AuthenticatedStrategyRoute: typeof AuthenticatedStrategyRoute
+  AuthenticatedTransactionReviewRoute: typeof AuthenticatedTransactionReviewRoute
   AuthenticatedTravelInboxRoute: typeof AuthenticatedTravelInboxRoute
   AuthenticatedTripsRoute: typeof AuthenticatedTripsRouteWithChildren
   AuthenticatedVaultRoute: typeof AuthenticatedVaultRoute
@@ -914,12 +977,15 @@ interface AuthenticatedRouteRouteChildren {
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
+  AuthenticatedAccountReconciliationRoute:
+    AuthenticatedAccountReconciliationRoute,
   AuthenticatedAllocationRoute: AuthenticatedAllocationRoute,
   AuthenticatedAssistantRoute: AuthenticatedAssistantRoute,
   AuthenticatedAssistantsRoute: AuthenticatedAssistantsRoute,
   AuthenticatedBriefRoute: AuthenticatedBriefRoute,
   AuthenticatedBudgetsRoute: AuthenticatedBudgetsRoute,
   AuthenticatedClaimSubmissionRoute: AuthenticatedClaimSubmissionRoute,
+  AuthenticatedClassificationRulesRoute: AuthenticatedClassificationRulesRoute,
   AuthenticatedConnectionsRoute: AuthenticatedConnectionsRoute,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedDraftsRoute: AuthenticatedDraftsRoute,
@@ -944,6 +1010,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedSearchRoute: AuthenticatedSearchRoute,
   AuthenticatedSettingsRoute: AuthenticatedSettingsRoute,
   AuthenticatedStrategyRoute: AuthenticatedStrategyRoute,
+  AuthenticatedTransactionReviewRoute: AuthenticatedTransactionReviewRoute,
   AuthenticatedTravelInboxRoute: AuthenticatedTravelInboxRoute,
   AuthenticatedTripsRoute: AuthenticatedTripsRouteWithChildren,
   AuthenticatedVaultRoute: AuthenticatedVaultRoute,
