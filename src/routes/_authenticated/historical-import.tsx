@@ -66,7 +66,7 @@ function HistoricalImports() {
   const today=new Date().toISOString().slice(0,10);
   return <>
     <PageTitle eyebrow="Statements" title="Historical import" sub="Records from 1 April 2026"/>
-    <div className="mb-6 flex flex-wrap gap-2"><Button asChild variant="outline"><Link to="/accounts">Configure accounts & opening balances</Link></Button><Button asChild variant="ghost"><Link to="/reconcile">Statement matching</Link></Button></div>
+    <div className="mb-6 flex flex-wrap gap-2"><Button asChild variant="outline"><Link to="/wealth">Configure accounts & opening balances</Link></Button><Button asChild variant="ghost"><Link to="/reconcile">Statement matching</Link></Button></div>
     <section className="mb-6 border-y py-5 space-y-3">
       <h2 className="text-lg font-semibold">Upload statements</h2>
       <div className="flex flex-wrap gap-3"><Select value={account} onValueChange={setAccount}><SelectTrigger className="w-full sm:w-60" aria-label="Historical statement account"><SelectValue placeholder="Confirm account or card"/></SelectTrigger><SelectContent>{accounts.filter(a=>!a.archived).map(a=><SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}</SelectContent></Select><Select value={currency} onValueChange={setCurrency}><SelectTrigger className="w-28" aria-label="Historical statement currency"><SelectValue/></SelectTrigger><SelectContent>{CURRENCIES.map(c=><SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent></Select></div>
