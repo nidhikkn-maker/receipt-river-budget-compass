@@ -27,6 +27,7 @@ export const Route = createFileRoute("/_authenticated/records-check")({
 
 function RecordsCheck() {
   const { transactions, accounts, preferences, savePreferences } = useStore();
+  const [limit, setLimit] = useState(30);
   const [showChecked, setShowChecked] = useState(false);
   const checked = useMemo(() => new Set(preferences.checkedAudit ?? []), [preferences.checkedAudit]);
   const [statements, setStatements] = useState<AuditStatement[] | null>(null);
@@ -108,7 +109,7 @@ function RecordsCheck() {
           {findings.length > 0 && shown.length === 0 && <p className="mt-4 text-sm text-muted-foreground">{showChecked ? "Nothing marked as checked here yet." : "Everything here is checked."}</p>}
           {findings.length === 0 && <Card title="No issues found" className="mt-4"><p className="text-sm text-muted-foreground">Your records since April 2026 agree with the uploaded statements.</p></Card>}
           <ul className="mt-3 divide-y rounded-2xl border bg-card">
-            {shown.slice(0, 300).map((f) => (
+            {shown.slice(0, limit).map((f) => (
               <li key={f.key} className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-x-3 gap-y-2 p-3 md:grid-cols-[auto_minmax(0,1fr)_auto_auto]">
                 <Checkbox className="mt-1 h-5 w-5" aria-label={`Select ${f.reference}`} checked={picked.includes(f.key)} onCheckedChange={(v) => setPicked(v ? [...picked, f.key] : picked.filter((k) => k !== f.key))} />
                 <div className="min-w-0 flex-1 [overflow-wrap:anywhere]">
@@ -132,6 +133,7 @@ function RecordsCheck() {
               </li>
             ))}
           </ul>
+          {shown.length > limit && <Button variant="ghost" className="mt-2 h-11 w-full" onClick={() => setLimit((n) => n + 30)}>Show 30 more · {shown.length - limit} left</Button>}
           {shown.length > 300 && <p className="mt-2 text-xs text-muted-foreground">Showing 300 of {shown.length}. Use the filters or export the full report.</p>}
         </>
       )}
