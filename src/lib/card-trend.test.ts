@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { cardBalanceSeries, cardRecency, cardTrendKeys, monthEndPoint, statementCaption, updatedCaption, type CardRecord } from "./card-trend";
+import { cardBalanceSeries, cardRecency, cardTrendKeys, monthEndPoint, shortCardName, statementCaption, updatedCaption, type CardRecord } from "./card-trend";
 import type { Account } from "./ledger";
 
 const card: Account = { id: "c", name: "AMEX", kind: "credit_card", openingBalance: 0, archived: false };
@@ -62,5 +62,17 @@ describe("balance series", () => {
     expect(monthEndPoint("2026-11-15", 0)).toBe("2026-11-15");
     expect(monthEndPoint("2026-11-15", 1)).toBe("2026-10-31");
     expect(monthEndPoint("2026-03-05", 1)).toBe("2026-02-28");
+  });
+});
+
+describe("chart labels", () => {
+  it("shortens a trailing account number to its last four digits", () => {
+    expect(shortCardName({ ...card, name: "AMEX 379854902711004" })).toBe("AMEX …1004");
+    expect(shortCardName({ ...card, name: "ICICI EMERALD 5524181001631039" })).toBe("ICICI EMERALD …1039");
+    expect(shortCardName({ ...card, name: "ICICI Amazon Pay card" })).toBe("ICICI Amazon Pay card");
+  });
+  it("charts a numbered card under its short label", () => {
+    const s = cardBalanceSeries([{ ...card, name: "AMEX 379854902711004" }], [buy("p1", "2026-10-10", 500)], 1, "2026-11-15");
+    expect(s[0]).toMatchObject({ "AMEX …1004": 500 });
   });
 });
