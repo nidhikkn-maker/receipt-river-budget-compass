@@ -42,7 +42,7 @@ function TripPage() {
   const { tripId } = Route.useParams();
   const search = Route.useSearch();
   const navigate = Route.useNavigate();
-  const { preferences: pr, transactions } = useStore();
+  const { preferences: pr, savePreferences, transactions } = useStore();
   const today = todayISO();
   const trip = (pr.trips as TravelTrip[]).find((t) => t.id === tripId);
   const section: SectionId = search.section ?? "overview";
