@@ -8,6 +8,7 @@ import { tripTag } from "./intelligence";
 import { instrumentLabel, type PaymentInstrument } from "./payment-instruments";
 import { outstandingOf, receivedOf, reimbursableOf, isTracked, stageOf } from "./reimbursements";
 import type { TravelTrip } from "./travel";
+import { maskedText } from './reimbursement-profiles';
 
 export type Subject = { kind: "trip"; id: string } | { kind: "tag"; tag: string } | { kind: "entries"; ids: string[] };
 export type PayerKind = "personal" | "organisation" | "other";
@@ -27,9 +28,9 @@ export function subjectEntries(s: Subject, txns: Expense[], trips: TravelTrip[],
     const k = kindOf(e);
     if (k !== "expense" && k !== "refund") return false;
     if (isMove(e.txnType)) return false;
-    if (s.kind === "entries") return s.ids.includes(e.id);
     if (from && e.date < from) return false;
     if (to && e.date > to) return false;
+    if (s.kind === "entries") return s.ids.includes(e.id);
     return (trip && e.tripId === trip.id) || (!!tag && (e.tags ?? []).includes(tag));
   }).sort((a, b) => a.date.localeCompare(b.date) || a.id.localeCompare(b.id));
 }
@@ -40,7 +41,7 @@ export function paymentInfo(e: Expense, accounts: Account[], instruments: Paymen
   const inst = e.paymentInstrumentId ? instruments.find((p) => p.id === e.paymentInstrumentId) : undefined;
   const acct = accounts.find((a) => a.id === (inst?.accountId ?? e.accountId));
   const method = inst ? inst.type.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()) : e.paymentMethod ? PAYMENT_LABEL[e.paymentMethod] : NOT_RECORDED;
-  const source = inst ? `${instrumentLabel(inst).replace("··", "ending ")}${acct ? ` (${acct.name})` : ""}` : acct ? acct.name : NOT_RECORDED;
+  const source = maskedText(inst ? `${instrumentLabel(inst).replace("··", "ending ")}${acct ? ` (${acct.name})` : ""}` : acct ? `${acct.name}${acct.lastFour ? ` ending ${acct.lastFour.replace(/\D/g, '').slice(-4)}` : ''}` : NOT_RECORDED);
   const otherTag = (e.tags ?? []).find((t) => t.startsWith("Paid by: "));
   if (otherTag) return { method, source, payer: otherTag.slice(9), payerKind: "other" };
   if (inst?.type === "company_card" || e.paymentMethod === "company_card") return { method, source, payer: e.reimbursement?.payer || e.department || "Organisation", payerKind: "organisation" };
