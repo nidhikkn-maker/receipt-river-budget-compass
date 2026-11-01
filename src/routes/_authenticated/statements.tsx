@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { Download, Inbox, ShieldCheck, Upload, X } from "lucide-react";
 import { Card } from "@/components/Money";
 import { Button } from "@/components/ui/button";
+import { Clipped } from "@/components/Clipped";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import { money } from "@/lib/expenses";
@@ -317,14 +318,12 @@ function StatementDeskPage() {
               {a.auto.length > 0 && (
                 <section aria-label="Saved automatically">
                   <h3 className="font-semibold">Saved automatically · {a.auto.length}</h3>
-                  <ul className="mt-1 divide-y divide-border rounded-xl border border-border text-sm">
-                    {a.auto.map((d) => (
+                  <Clipped className="mt-1 divide-y divide-border rounded-xl border border-border text-sm" items={a.auto} render={(d) => (
                       <li key={d.line.key} className="flex items-start justify-between gap-3 p-2">
                         <span className="min-w-0"><span className="block truncate">{d.line.date} · {d.line.description}</span><span className="text-xs text-muted-foreground">{d.draft.category} · {d.reason}</span></span>
                         <span className="shrink-0 tabular-nums">{d.line.direction === "debit" ? "−" : "+"}{money(d.line.amount, d.line.currency)}</span>
                       </li>
-                    ))}
-                  </ul>
+                    )} />
                 </section>
               )}
 
@@ -339,15 +338,13 @@ function StatementDeskPage() {
                       </select>
                     </label>
                   )}
-                  <ul className="mt-1 divide-y divide-border rounded-xl border border-border text-sm">
-                    {a.ask.map((d) => (
+                  <Clipped className="mt-1 divide-y divide-border rounded-xl border border-border text-sm" items={a.ask} render={(d) => (
                       <li key={d.line.key} className="flex items-start gap-3 p-2">
                         <Checkbox aria-label={`Save ${d.line.description}`} checked={accepted.includes(d.line.key)} onCheckedChange={(v) => setAccepted((xs) => (v === true ? [...new Set([...xs, d.line.key])] : xs.filter((x) => x !== d.line.key)))} />
                         <span className="min-w-0 flex-1"><span className="block truncate">{d.line.date} · {d.line.description}</span><span className="block text-xs text-muted-foreground">{d.draft.category} · {d.reason}</span></span>
                         <span className="shrink-0 tabular-nums">{d.line.direction === "debit" ? "−" : "+"}{money(d.line.amount, d.line.currency)}</span>
                       </li>
-                    ))}
-                  </ul>
+                    )} />
                 </section>
               )}
 
@@ -362,14 +359,12 @@ function StatementDeskPage() {
                 <section aria-label="Saved the wrong way">
                   <h3 className="font-semibold">Saved the wrong way · {a.wrongKind.length}</h3>
                   <p className="text-sm text-muted-foreground">These records sit on this account but the statement shows the money going the other way.</p>
-                  <ul className="mt-1 divide-y divide-border rounded-xl border border-border text-sm">
-                    {a.wrongKind.map((m) => (
+                  <Clipped className="mt-1 divide-y divide-border rounded-xl border border-border text-sm" items={a.wrongKind} render={(m) => (
                       <li key={m.line.key} className="flex items-start justify-between gap-3 p-2">
                         <span className="min-w-0"><span className="block truncate">{m.line.date} · {m.record?.name}</span><span className="text-xs text-muted-foreground">{m.reasons.join(" · ")}</span></span>
                         <span className="shrink-0 tabular-nums">{money(m.line.amount, m.line.currency)}</span>
                       </li>
-                    ))}
-                  </ul>
+                    )} />
                   <Button className="mt-2" variant="outline" onClick={() => prepareFix(a)}>Correct these to match the statement</Button>
                 </section>
               )}
@@ -377,11 +372,9 @@ function StatementDeskPage() {
               {a.later.length > 0 && (
                 <section aria-label="Held back">
                   <h3 className="font-semibold">Held back · {a.later.length}</h3>
-                  <ul className="mt-1 divide-y divide-border rounded-xl border border-border text-sm">
-                    {a.later.map((l) => (
+                  <Clipped className="mt-1 divide-y divide-border rounded-xl border border-border text-sm" items={a.later} render={(l) => (
                       <li key={l.line.key} className="p-2"><span className="block truncate">{l.line.date} · {l.line.description} · {money(l.line.amount, l.line.currency)}</span><span className="text-xs text-muted-foreground">{l.reason}</span></li>
-                    ))}
-                  </ul>
+                    )} />
                 </section>
               )}
 

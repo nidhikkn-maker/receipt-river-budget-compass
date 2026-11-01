@@ -8,6 +8,7 @@ import type { TxnType } from "@/lib/ledger";
 import { Download, FileSearch, ShieldCheck } from "lucide-react";
 import { Card } from "@/components/Money";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { money } from "@/lib/expenses";
 import { useStore } from "@/lib/store";
 import { accountBalance, isLiability } from "@/lib/ledger";
@@ -224,15 +225,17 @@ function CrossCheckPage() {
               <Button onClick={prepare} disabled={!picked.length}>Review {picked.length} change{picked.length === 1 ? "" : "s"}</Button>
               {applied && <Button variant="outline" onClick={() => undo(applied)}>Undo last change</Button>}
             </div>
-            {preview && (
-              <div role="region" aria-label="Change preview" className="space-y-2 rounded-md border border-primary p-3 text-sm">
-                <p className="font-medium">{preview.records.length} records: {accName(accountId)} → {accName(targetId)}{preview.choice.txnType ? `, kind → ${preview.choice.txnType}` : ""}</p>
-                <ul className="space-y-0.5">{preview.balanceChanges.map((b) => <li key={b.id}>{b.name}: balance {b.change >= 0 ? "+" : ""}{money(b.change)}</li>)}</ul>
-                <p>Income {preview.incomeChange >= 0 ? "+" : ""}{money(preview.incomeChange)} · Spending {preview.spendingChange >= 0 ? "+" : ""}{money(preview.spendingChange)}</p>
-                <p className="text-xs text-muted-foreground">Statement matching on these records is cleared so they can be reconciled against the right account.</p>
-                <div className="flex gap-2"><Button variant="outline" onClick={() => setPreview(null)}>Cancel</Button><Button onClick={apply}>Confirm and apply</Button></div>
-              </div>
-            )}
+            <Dialog open={!!preview} onOpenChange={(o) => { if (!o) setPreview(null); }}>
+              <DialogContent aria-label="Change preview" className="sm:max-w-md">
+                <DialogHeader>
+                  <DialogTitle>Check before applying</DialogTitle>
+                  <DialogDescription>{preview?.records.length} records: {accName(accountId)} → {accName(targetId)}{preview?.choice.txnType ? `, kind → ${preview.choice.txnType}` : ""}. Statement matching on them is cleared so they can be reconciled against the right account.</DialogDescription>
+                </DialogHeader>
+                <ul className="divide-y rounded-xl border text-sm">{preview?.balanceChanges.map((b) => <li key={b.id} className="flex justify-between gap-3 px-3 py-2"><span className="min-w-0 truncate">{b.name}</span><span className="shrink-0 font-mono">{b.change >= 0 ? "+" : ""}{money(b.change)}</span></li>)}</ul>
+                {preview && <p className="text-sm text-muted-foreground">Income {preview.incomeChange >= 0 ? "+" : ""}{money(preview.incomeChange)} · Spending {preview.spendingChange >= 0 ? "+" : ""}{money(preview.spendingChange)}</p>}
+                <DialogFooter className="gap-2"><Button variant="outline" onClick={() => setPreview(null)}>Cancel</Button><Button onClick={apply}>Confirm and apply</Button></DialogFooter>
+              </DialogContent>
+            </Dialog>
           </Card>
           <Card className="space-y-3 p-4">
             <h2 className="font-semibold">Post missing statement entries</h2>
