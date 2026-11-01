@@ -270,4 +270,4 @@
 - [ ] Supplementary V5.3: safe approval eligibility, previewed bulk classification, compact grouped mobile review, and 16 acceptance demonstrations; preserve source statements and financial records; no publication without approval.
 
 ## Travel email intake
-- [ ] Connect each user's own mailbox and automatically stage travel messages/confirmations for review, with duplicate protection and disconnect controls. Blocked: Gmail setup was declined; neither Gmail nor Outlook has a configured App User Connector client. Await the user's preferred next step; no mailbox access or automatic intake implemented.
+- [x] Email connection work set aside at the user's request; no mailbox access or automatic email intake implemented.
