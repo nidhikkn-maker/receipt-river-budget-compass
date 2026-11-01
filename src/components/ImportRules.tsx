@@ -6,7 +6,8 @@ import type { Json } from '@/integrations/supabase/types';
 import { useStore } from '@/lib/store';
 import { listImportRules, listImports, listImportRows } from '@/lib/import-repository';
 import { merchantFamily, importRuleMatches, matchingImportRules, safeImportRuleMappings, type ImportRule, type ImportRow, type ImportRuleConditions } from '@/lib/historical-import';
-import { SCOPES, SCOPE_LABEL, TXN_TYPES, TXN_LABEL, type Scope, type TxnType } from '@/lib/expenses';
+import { SCOPES, SCOPE_LABEL, type Scope } from '@/lib/expenses';
+import { TXN_TYPES, TXN_LABEL, type TxnType } from '@/lib/ledger';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
@@ -37,7 +38,7 @@ export function ImportRules() {
   };
   const save=async()=>{
     validate();const rule=draft();
-    const payload={merchant:rule.merchant,account_id:rule.account_id,mappings:rule.mappings as Json,conditions:rule.conditions as Json,priority:rule.priority};
+    const payload={merchant:rule.merchant,account_id:rule.account_id,mappings:rule.mappings as Json,conditions:(rule.conditions??{}) as Json,priority:rule.priority??0};
     const r=editing?await supabase.from('import_rules').update(payload).eq('id',editing):await supabase.from('import_rules').insert(payload);
     if(r.error)throw Error('Could not save import rule');reset();setPreview(null);await load();toast.success('Import rule saved');
   };
