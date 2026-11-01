@@ -63,7 +63,7 @@ function RecordsCheck() {
 
       {statements && (
         <>
-          <div className="-mx-4 mt-4 flex gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0">
+          <div className="mt-4 flex max-w-full gap-2 overflow-x-auto pb-1 sm:flex-wrap sm:overflow-visible">
             <Button className="shrink-0" size="sm" variant={issue === "all" ? "default" : "outline"} onClick={() => setIssue("all")}>All {findings.length}</Button>
             {(Object.keys(AUDIT_LABEL) as AuditIssue[]).filter((k) => counts[k]).map((k) => (
               <Button key={k} className="shrink-0" size="sm" variant={issue === k ? "default" : "outline"} onClick={() => setIssue(k)}>{AUDIT_LABEL[k]} {counts[k]}</Button>
