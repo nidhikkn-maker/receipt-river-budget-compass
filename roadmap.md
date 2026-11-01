@@ -1,4 +1,6 @@
 # Roadmap (Functional Requirements v1.0)
+## Records-check browser button tests
+- [ ] Run isolated browser tests for individual/multiple selection, checked-list movement, Undo, prior checked preservation and save-failure retry; never write live preferences.
 ## Published to https://ledgerline.biz (2026-11-01, 13:22 UTC)
 - [x] Pre-publish quick security scan: one info-level item only (guest sign-in shares signed-in access rules; intentional for guest upgrade continuity). No critical findings.
 - [x] Publish requested and confirmed serving: site returns 200 and the newest pages ship — card balance (/cards/$accountId), records check, transfers and trip lifecycle pieces all load with expected content.
