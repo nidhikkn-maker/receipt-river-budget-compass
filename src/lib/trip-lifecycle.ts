@@ -20,11 +20,9 @@ export function cancelImpact(trip: TravelTrip, txns: Row[]) {
 }
 
 export function cancelTrip(trip: TravelTrip, now: string, cancelUnpaidBookings: boolean): TravelTrip {
-  return {
-    ...trip,
-    cancelledAt: now,
-    bookings: cancelUnpaidBookings ? (trip.bookings ?? []).map((b) => (b.status === "unpaid" ? { ...b, status: "cancelled" as const } : b)) : trip.bookings,
-  };
+  const next: TravelTrip = { ...trip, cancelledAt: now };
+  if (cancelUnpaidBookings && trip.bookings) next.bookings = trip.bookings.map((b) => (b.status === "unpaid" ? { ...b, status: "cancelled" as const } : b));
+  return next;
 }
 
 export function restoreTrip(trip: TravelTrip): TravelTrip {
