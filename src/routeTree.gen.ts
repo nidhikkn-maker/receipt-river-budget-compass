@@ -22,6 +22,7 @@ import { Route as AuthenticatedAssistantsRouteImport } from './routes/_authentic
 import { Route as AuthenticatedBriefRouteImport } from './routes/_authenticated/brief'
 import { Route as AuthenticatedBudgetsRouteImport } from './routes/_authenticated/budgets'
 import { Route as AuthenticatedClaimSubmissionRouteImport } from './routes/_authenticated/claim-submission'
+import { Route as AuthenticatedClassificationRulesRouteImport } from './routes/_authenticated/classification-rules'
 import { Route as AuthenticatedConnectionsRouteImport } from './routes/_authenticated/connections'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedDraftsRouteImport } from './routes/_authenticated/drafts'
@@ -120,6 +121,12 @@ const AuthenticatedClaimSubmissionRoute =
   AuthenticatedClaimSubmissionRouteImport.update({
     id: '/claim-submission',
     path: '/claim-submission',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedClassificationRulesRoute =
+  AuthenticatedClassificationRulesRouteImport.update({
+    id: '/classification-rules',
+    path: '/classification-rules',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
 const AuthenticatedConnectionsRoute =
@@ -306,6 +313,7 @@ export interface FileRoutesByFullPath {
   '/brief': typeof AuthenticatedBriefRoute
   '/budgets': typeof AuthenticatedBudgetsRoute
   '/claim-submission': typeof AuthenticatedClaimSubmissionRoute
+  '/classification-rules': typeof AuthenticatedClassificationRulesRoute
   '/connections': typeof AuthenticatedConnectionsRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/drafts': typeof AuthenticatedDraftsRoute
@@ -352,6 +360,7 @@ export interface FileRoutesByTo {
   '/brief': typeof AuthenticatedBriefRoute
   '/budgets': typeof AuthenticatedBudgetsRoute
   '/claim-submission': typeof AuthenticatedClaimSubmissionRoute
+  '/classification-rules': typeof AuthenticatedClassificationRulesRoute
   '/connections': typeof AuthenticatedConnectionsRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/drafts': typeof AuthenticatedDraftsRoute
@@ -399,6 +408,7 @@ export interface FileRoutesById {
   '/_authenticated/brief': typeof AuthenticatedBriefRoute
   '/_authenticated/budgets': typeof AuthenticatedBudgetsRoute
   '/_authenticated/claim-submission': typeof AuthenticatedClaimSubmissionRoute
+  '/_authenticated/classification-rules': typeof AuthenticatedClassificationRulesRoute
   '/_authenticated/connections': typeof AuthenticatedConnectionsRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/drafts': typeof AuthenticatedDraftsRoute
@@ -447,6 +457,7 @@ export interface FileRouteTypes {
     | '/brief'
     | '/budgets'
     | '/claim-submission'
+    | '/classification-rules'
     | '/connections'
     | '/dashboard'
     | '/drafts'
@@ -493,6 +504,7 @@ export interface FileRouteTypes {
     | '/brief'
     | '/budgets'
     | '/claim-submission'
+    | '/classification-rules'
     | '/connections'
     | '/dashboard'
     | '/drafts'
@@ -539,6 +551,7 @@ export interface FileRouteTypes {
     | '/_authenticated/brief'
     | '/_authenticated/budgets'
     | '/_authenticated/claim-submission'
+    | '/_authenticated/classification-rules'
     | '/_authenticated/connections'
     | '/_authenticated/dashboard'
     | '/_authenticated/drafts'
@@ -676,6 +689,13 @@ declare module '@tanstack/react-router' {
       path: '/claim-submission'
       fullPath: '/claim-submission'
       preLoaderRoute: typeof AuthenticatedClaimSubmissionRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/classification-rules': {
+      id: '/_authenticated/classification-rules'
+      path: '/classification-rules'
+      fullPath: '/classification-rules'
+      preLoaderRoute: typeof AuthenticatedClassificationRulesRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/connections': {
@@ -926,6 +946,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedBriefRoute: typeof AuthenticatedBriefRoute
   AuthenticatedBudgetsRoute: typeof AuthenticatedBudgetsRoute
   AuthenticatedClaimSubmissionRoute: typeof AuthenticatedClaimSubmissionRoute
+  AuthenticatedClassificationRulesRoute: typeof AuthenticatedClassificationRulesRoute
   AuthenticatedConnectionsRoute: typeof AuthenticatedConnectionsRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedDraftsRoute: typeof AuthenticatedDraftsRoute
@@ -964,6 +985,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedBriefRoute: AuthenticatedBriefRoute,
   AuthenticatedBudgetsRoute: AuthenticatedBudgetsRoute,
   AuthenticatedClaimSubmissionRoute: AuthenticatedClaimSubmissionRoute,
+  AuthenticatedClassificationRulesRoute: AuthenticatedClassificationRulesRoute,
   AuthenticatedConnectionsRoute: AuthenticatedConnectionsRoute,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedDraftsRoute: AuthenticatedDraftsRoute,
