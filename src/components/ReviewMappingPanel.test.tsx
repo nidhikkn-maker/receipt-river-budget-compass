@@ -5,6 +5,7 @@ import type { FinancialReview } from '@/lib/financial-review';
 import type { Expense } from '@/lib/expenses';
 const mocks = vi.hoisted(() => ({ save: vi.fn(), store: {} as Record<string, unknown> }));
 vi.mock('@/lib/store', () => ({ useStore: () => mocks.store }));
+vi.mock('@tanstack/react-router', () => ({ Link: ({ children }: { children: unknown }) => children }));
 import { ReviewMappingPanel } from './ReviewMappingPanel';
 afterEach(cleanup);
 describe('controlled bulk activity confirmation', () => {
