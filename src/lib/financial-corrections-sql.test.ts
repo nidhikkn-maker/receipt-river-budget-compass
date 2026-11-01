@@ -56,3 +56,17 @@ it("blocks possible receiving-side duplicates", async () => {
   await reset(); await db.exec(`RESET ROLE; INSERT INTO expenses(id,employee_id,account_id,txn_type,amount,original_amount,currency,expense_date) VALUES('${id()}','${uid}','${card}','refund',1000,10,'USD','2026-10-20');`); await asUser(uid);
   await expect(apply(id())).rejects.toThrow("receiving-side");
 });
+it("tracks every edit, rejecting a stale preview before any write", async () => {
+  await reset(); await db.exec("RESET ROLE; UPDATE expenses SET description='Changed on another device';"); await asUser(uid);
+  await expect(apply(id())).rejects.toThrow("Transaction changed");
+  expect((await db.query("SELECT txn_type FROM expenses")).rows).toEqual([{ txn_type: "expense" }]);
+});
+it("rejects tracked claims and incompatible movement targets on the server", async () => {
+  await reset(); await db.exec("RESET ROLE; UPDATE expenses SET reimbursement_status='pending';"); await asUser(uid);
+  await expect(apply(id(), 1)).rejects.toThrow("Linked claims");
+  await reset(); await expect(apply(id(), 0, undefined, { txnType: "card_payment", accountId: card, toAccountId: bank })).rejects.toThrow("does not match");
+});
+it("anonymous callers cannot execute corrections", async () => {
+  await reset(); await db.exec("RESET ROLE; SELECT set_config('app.uid','',false); SET ROLE anon;");
+  await expect(apply(id())).rejects.toThrow();
+});
