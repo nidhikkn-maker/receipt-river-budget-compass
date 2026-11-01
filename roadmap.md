@@ -1,5 +1,6 @@
 # Roadmap (Functional Requirements v1.0)
 ## Current mobile Inbox and transfer approval verification
+- [ ] Report original count preservation, source bank totals, transfer/card/reimbursement non-duplication, organisation responsibility, verified closing balances and report/ledger agreement; distinguish controlled tests from source-statement verification.
 - [ ] Make mobile/tablet review and confirmation controls accessible and verify actual page-button flows in isolated browser data.
 - [ ] Implement and verify remaining owner-scoped transfer validation, retry and stale-safe Undo before approval; no historical record edits or publication.
 - [ ] Extend real-route browser tests through full review, confirmation, save/read-back and Undo, including transfer approval failures.
