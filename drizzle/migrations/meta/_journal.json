@@ -316,6 +316,13 @@
       "when": 1793521335655,
       "tag": "0044_protected_review_metadata_mapping",
       "breakpoints": true
+    },
+    {
+      "idx": 45,
+      "version": "7",
+      "when": 1793522819935,
+      "tag": "0045_isolate_metadata_undo_from_financial_undo",
+      "breakpoints": true
     }
   ]
 }
