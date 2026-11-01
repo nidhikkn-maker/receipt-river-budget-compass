@@ -288,6 +288,13 @@
       "when": 1793515565757,
       "tag": "0040_claim_preparations_and_activity_linking",
       "breakpoints": true
+    },
+    {
+      "idx": 41,
+      "version": "7",
+      "when": 1793518204917,
+      "tag": "0041_financial_correction_confirmation_and_undo",
+      "breakpoints": true
     }
   ]
 }
