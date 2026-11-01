@@ -1,9 +1,9 @@
 import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
 
-export function Card({ title, children, className, action }: { title?: string; children: ReactNode; className?: string; action?: ReactNode }) {
+export function Card({ title, children, className, action, "aria-label": label }: { title?: string; children: ReactNode; className?: string; action?: ReactNode; "aria-label"?: string }) {
   return (
-    <section className={cn("mb-4 min-w-0 rounded-2xl border bg-card p-4", className)}>
+    <section aria-label={label} className={cn("mb-4 min-w-0 rounded-2xl border bg-card p-4", className)}>
       {(title || action) && <div className="mb-3 flex items-center justify-between gap-2"><h2 className="font-display text-base font-semibold">{title}</h2>{action}</div>}
       {children}
     </section>

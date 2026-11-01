@@ -4,7 +4,7 @@ import { money, type Expense } from "../expenses";
 import type { CategorySetting } from "../preferences";
 import type { StatementContext } from "../statement-auto";
 import { classifyMissing, type LineDecision } from "./classify";
-import { ledgerRec, matchLines, recordsNotMatched, type LedgerRec, type MatchOutcome } from "./match";
+import { isOut, ledgerRec, matchLines, recordsNotMatched, type LedgerRec, type MatchOutcome } from "./match";
 import { balanceAddsUp, projectBalance, totals, type AccountHint, type StmtFile, type StmtLine } from "./line";
 
 export interface Gate { net: number; after: number; difference: number | null; ok: boolean }
@@ -29,6 +29,8 @@ export interface AccountPlan {
   auto: LineDecision[];
   ask: LineDecision[];
   later: { line: StmtLine; reason: string }[];
+  /** Lines missing here that exactly one unconfirmed record on another account explains: offered as a move, never posted twice. */
+  elsewhere: { line: StmtLine; record: LedgerRec; accountName: string }[];
   /** Records on this account no uploaded statement explains. */
   unexplained: LedgerRec[];
 }
@@ -65,7 +67,21 @@ export function buildPlan(files: StmtFile[], accounts: Account[], transactions: 
   const accounts2: AccountPlan[] = first.map((f, index) => {
     const ctx: StatementContext = { transactions, accounts: live, categories, accountId: f.acct?.id ?? null, currency: f.file.currency };
     const otherMissing = first.filter((_, i) => i !== index).flatMap((o) => o.missing);
-    const decisions = classifyMissing(f.missing, otherMissing, ctx);
+    const claimed = new Set(first.flatMap((o) => o.outcomes.flatMap((x) => (x.record ? [x.record.id] : []))));
+    const elsewhere: AccountPlan["elsewhere"] = [];
+    const used = new Set<string>();
+    const stillMissing = f.acct ? f.missing.filter((line) => {
+      const out = line.direction === "debit";
+      const hits = transactions.filter((t) => !t.transferCounterpartOf && !t.reconciledAt && !t.statementRef && t.accountId && t.accountId !== f.acct!.id && !t.toAccountId && !claimed.has(t.id) && !used.has(t.id)
+        && t.currency === line.currency && Math.abs((t.originalAmount ?? t.amount) - line.amount) < 0.005 && Math.abs(Date.parse(t.date) - Date.parse(line.date)) <= 3 * 86400000
+        && isOut(t.txnType ?? "expense") === out);
+      if (hits.length !== 1) return true;
+      const t = hits[0]!;
+      used.add(t.id);
+      elsewhere.push({ line, record: ledgerRec(t), accountName: live.find((a) => a.id === t.accountId)?.name ?? "another account" });
+      return false;
+    }) : f.missing;
+    const decisions = classifyMissing(stillMissing, otherMissing, ctx);
 
     const gate = f.acct ? projectBalance(accountBalance(f.acct, transactions), decisions.map((d) => d.line), f.file.closing, isLiability(f.acct.kind)) : null;
     let auto = decisions.filter((d) => d.group === "auto");
@@ -114,6 +130,7 @@ export function buildPlan(files: StmtFile[], accounts: Account[], transactions: 
       auto,
       ask,
       later,
+      elsewhere,
       unexplained: f.acct ? recordsNotMatched(f.records, f.outcomes).filter((r) => !r.reconciledAt) : [],
     };
   });
