@@ -14,7 +14,7 @@ import { useStore } from "@/lib/store";
 import { money, SCOPE_LABEL, type Expense } from "@/lib/expenses";
 import { TXN_LABEL } from "@/lib/ledger";
 import type { InboxItem } from "@/lib/inbox";
-import { categoryReviewPreview, financialReview, previewStillCurrent, REVIEW_GROUPS, type ReviewGroup } from "@/lib/financial-review";
+import { categoryReviewPreview, financialReview, previewStillCurrent, REVIEW_GROUPS, type ReviewGroup, type FinancialReview as ReviewRow } from "@/lib/financial-review";
 import { applyReviewRules } from "@/lib/financial-review-intelligence";
 import { listImportRules } from "@/lib/import-repository";
 import type { ImportRule } from "@/lib/historical-import";
@@ -28,7 +28,7 @@ import { verifiedRecovery } from '@/lib/review-recovery';
 import { readReviewContext, writeReviewContext } from '@/lib/offline';
 
 const NEXT: Record<string, string> = { unverified_import: "imported but not yet confirmed — tap Confirm as reviewed", uncategorised: "needs a spending category — use Categorise", duplicate: "may be a duplicate — open it and keep or delete", inconsistency: "figures don't agree — open it to check", missing_details: "an account is missing — use Account & financial type", unreconciled_account: "account not matched to a statement" };
-const reasonOf = (r: FinancialReview) => { const t = [...new Set(r.issues.map(i => NEXT[i.type] ?? i.description))]; if (r.suggestedType) t.unshift("looks like a transfer or card payment, not spending"); else if (r.suggestedCategory) t.unshift(`similar entries use ${r.suggestedCategory}`); return t.join("; "); };
+const reasonOf = (r: ReviewRow) => { const t = [...new Set(r.issues.map(i => NEXT[i.type] ?? i.description))]; if (r.suggestedType) t.unshift("looks like a transfer or card payment, not spending"); else if (r.suggestedCategory) t.unshift(`similar entries use ${r.suggestedCategory}`); return t.join("; "); };
 export function FinancialReview({ items, onOpen, initialFilter = "all" }: { items: InboxItem[]; onOpen: (e: Expense) => void; initialFilter?: ReviewFilter }) {
   const { transactions, accounts, preferences, commitments, bulkSetCategory, undoCategoryBatch, userId, reconcile, refresh } = useStore();
   const [confirmImports, setConfirmImports] = useState(false);
