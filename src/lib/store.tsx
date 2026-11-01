@@ -139,10 +139,12 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
 
   const firstLoad = useRef(true);
   const inFlight = useRef<Promise<void> | null>(null);
-  // Overlapping refresh calls share one set of requests.
-  const refresh = useCallback(() => {
-    if (!inFlight.current) inFlight.current = load().finally(() => { inFlight.current = null; });
-    return inFlight.current;
+  const queued = useRef<Promise<void> | null>(null);
+  // Overlapping refresh calls share requests; a call made mid-load gets one follow-up load so saves are never missed.
+  const refresh = useCallback((): Promise<void> => {
+    if (!inFlight.current) { inFlight.current = load().finally(() => { inFlight.current = null; }); return inFlight.current; }
+    if (!queued.current) queued.current = inFlight.current.catch(() => {}).then(() => { queued.current = null; return refresh(); });
+    return queued.current;
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId]);
   async function load() {
