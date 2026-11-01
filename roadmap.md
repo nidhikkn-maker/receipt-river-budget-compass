@@ -1,4 +1,12 @@
 # Roadmap (Functional Requirements v1.0)
+## V5.9 Smart financial inbox
+- [x] First preview slice: historical issues never age out; five transaction-deduplicated groups, evidence-based card/reciprocal-account transfer suggestions, filters/selection, snapshot-bound category preview and existing audited correction/undo. Unresolved transaction issues stay visible despite legacy dismissals. No live records changed.
+- [ ] Priority 1 remaining: reviewed bulk source/destination account and financial-type correction, safe paired-movement linking, high-confidence bulk suggestion acceptance. Existing atomic category APIs cannot safely apply money-changing corrections; no guessed accounts or auto-posting.
+- [ ] Priority 2: merchant rules, organisation/activity mapping and recurring-profile integration.
+- [ ] Priority 3: expanded confidence/exception review and phone/tablet/desktop layouts.
+- [ ] Priority 4: complete statement evidence extraction, independent reconciliation audit, controlled regression/performance acceptance and readiness report.
+- [ ] Write/rollback acceptance on existing financial corrections requires isolated Cloud; never test on real records, never publish this brief without approval.
+- [x] First-slice verification: 755 regression checks plus controlled component confirmation/undo passed; signed-in 166-record review, select 40/clear, tablet and phone no overflow/page errors. Real data had no account-complete category candidates, so live category preview/save deliberately not forced; full Cloud correction/undo remains unverified.
 ## V5.7 reimbursement discovery and responsive claims
 - [x] Continuation: serialized device writes and retained edits during account save, reopened offline preparation sync, truthful failure feedback and same-mutation retry; five new controlled recovery tests, 739 total checks passed; isolated PDF flow rerun, no Cloud schema or real-record writes in this continuation.
 - [x] Find & Link existing expenses with explained suggestions, rejection, search/filter/bulk review and audited links without duplicate entries.

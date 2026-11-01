@@ -1,0 +1,35 @@
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
+import type { Expense } from "@/lib/expenses";
+import { defaultPreferences } from "@/lib/preferences";
+import { inboxItems } from "@/lib/inbox";
+const mocks = vi.hoisted(() => ({ save: vi.fn(), undo: vi.fn(), store: {} as Record<string, unknown> }));
+vi.mock("@/lib/store", () => ({ useStore: () => mocks.store }));
+vi.mock("@tanstack/react-router", () => ({ Link: ({ children }: { children: React.ReactNode }) => <span>{children}</span> }));
+import { FinancialReview } from "./FinancialReview";
+afterEach(cleanup);
+beforeAll(() => { Element.prototype.scrollIntoView = vi.fn(); });
+const transaction: Expense = { id: "controlled-copy", title: "Controlled expense", merchant: "Controlled merchant", category: "Miscellaneous", scope: "personal", memberId: null, splits: [], amount: 100, originalAmount: 100, currency: "INR", fxRate: 1, paymentMethod: "upi", reconciledAt: null, statementRef: "controlled statement", date: "2026-04-01", description: "Untouched source", receipts: [], txnType: "expense", accountId: "bank" };
+describe("controlled financial correction flow", () => {
+  it("requires exact preview and explicit confirmation, preserves sources and exposes undo", async () => {
+    const preferences = defaultPreferences();
+    const accounts = [{ id: "bank", name: "Controlled bank", kind: "savings" as const, openingBalance: 1000, archived: false }];
+    const transactions = [transaction];
+    mocks.save.mockResolvedValue("audited-batch"); mocks.undo.mockResolvedValue(undefined);
+    mocks.store = { preferences, accounts, transactions, bulkSetCategory: mocks.save, undoCategoryBatch: mocks.undo };
+    const items = inboxItems({ transactions, accounts, commitments: [], prefs: preferences, today: "2026-11-01", pendingCount: 0 });
+    render(<FinancialReview items={items} onOpen={() => {}} />);
+    fireEvent.click(screen.getByRole("button", { name: "Select all visible" }));
+    fireEvent.click(screen.getByRole("combobox", { name: "Bulk review category" }));
+    fireEvent.click(await screen.findByRole("option", { name: "Groceries" }));
+    fireEvent.click(screen.getByRole("button", { name: "Preview category changes" }));
+    expect(mocks.save).not.toHaveBeenCalled();
+    expect(screen.getByText("controlled-copy")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Confirm category changes" }));
+    await waitFor(() => expect(mocks.save).toHaveBeenCalledWith(["controlled-copy"], "Groceries", expect.any(String)));
+    expect(transaction.description).toBe("Untouched source");
+    expect(transaction.category).toBe("Miscellaneous");
+    fireEvent.click(await screen.findByRole("button", { name: "Undo correction" }));
+    await waitFor(() => expect(mocks.undo).toHaveBeenCalledWith("audited-batch"));
+  });
+});

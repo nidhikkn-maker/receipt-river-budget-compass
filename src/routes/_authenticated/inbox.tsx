@@ -1,4 +1,5 @@
 import { InboxWork } from "@/components/InboxWork";
+import { FinancialReview } from "@/components/FinancialReview";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
@@ -13,6 +14,7 @@ import { AGE_BUCKETS, REIMB_STAGE_LABEL, isTracked, outstandingOf, reimbursement
 import { useStore } from "@/lib/store";
 import { todayISO } from "@/lib/use-position";
 import { cn } from "@/lib/utils";
+import { confirmAction } from "@/lib/confirm";
 
 export const Route = createFileRoute("/_authenticated/inbox")({
   head: () => ({
@@ -41,10 +43,10 @@ function Inbox() {
   const all = useMemo(() => inboxItems({ transactions, accounts, commitments, prefs: preferences, today, pendingCount }), [transactions, accounts, commitments, preferences, today, pendingCount]);
   const counts = inboxCounts(all, preferences.inboxDismissed);
   const dismissed = new Set(preferences.inboxDismissed);
-  const shown = (showDone ? all.filter((x) => dismissed.has(x.key)) : counts.open).filter((x) => filter === "all" || x.type === filter);
-  const types = [...new Set(counts.open.map((x) => x.type))];
+  const shown = (showDone ? all.filter((x) => dismissed.has(x.key)) : counts.open).filter((x) => !x.transactionId && (filter === "all" || x.type === filter));
+  const types = [...new Set(counts.open.filter(x => !x.transactionId).map((x) => x.type))];
   const dismiss = async (k: string, undo = false) => {
-    try { await savePreferences({ ...preferences, inboxDismissed: undo ? preferences.inboxDismissed.filter((x) => x !== k) : [...preferences.inboxDismissed, k] }); toast.success(undo ? "Restored" : "Marked done"); }
+    try { await savePreferences({ ...preferences, inboxDismissed: undo ? preferences.inboxDismissed.filter((x) => x !== k) : [...preferences.inboxDismissed, k] }); toast.success(undo ? "Suggestion restored" : "Suggestion hidden; the underlying record is unchanged"); }
     catch (e) { toast.error((e as Error).message); }
   };
   const openTxn = (id?: string) => { const t = transactions.find((x) => x.id === id); if (t) setOpen(t); };
@@ -58,15 +60,17 @@ function Inbox() {
 
         <TabsContent value="inbox">
           <InboxWork />
+          <FinancialReview items={all} onOpen={setOpen} />
+          <h2 className="mb-3 mt-8 text-lg font-semibold">Other reminders</h2>
           <div className="mb-4 grid grid-cols-3 gap-2 text-center">
-            {[["Pending", counts.pending], ["High priority", counts.high], ["Done", counts.dismissed]].map(([l, v]) => <div key={l} className="rounded-2xl border p-3"><div className="font-mono text-2xl font-bold">{v}</div><div className="text-xs font-medium text-muted-foreground">{l}</div></div>)}
+            {[["Open issues", counts.pending], ["High priority", counts.high], ["Hidden reminders", counts.dismissed]].map(([l, v]) => <div key={l} className="rounded-2xl border p-3"><div className="font-mono text-2xl font-bold">{v}</div><div className="text-xs font-medium text-muted-foreground">{l}</div></div>)}
           </div>
           <div className="mb-3 flex flex-wrap gap-2">
             <Button size="sm" variant={filter === "all" && !showDone ? "gold" : "outline"} onClick={() => { setFilter("all"); setShowDone(false); }}>All</Button>
             {types.map((t) => <Button key={t} size="sm" variant={filter === t ? "gold" : "outline"} onClick={() => { setFilter(t); setShowDone(false); }}>{INBOX_LABEL[t]}</Button>)}
-            <Button size="sm" variant={showDone ? "gold" : "ghost"} onClick={() => { setShowDone(!showDone); setFilter("all"); }}>Done items</Button>
+            <Button size="sm" variant={showDone ? "gold" : "ghost"} onClick={() => { setShowDone(!showDone); setFilter("all"); }}>Hidden reminders</Button>
           </div>
-          {!shown.length && <p className="rounded-2xl border p-6 text-center text-sm text-muted-foreground">{showDone ? "Nothing marked done yet." : "All clear — nothing needs your attention."}</p>}
+          {!shown.length && <p className="border p-6 text-center text-sm text-muted-foreground">{showDone ? "No hidden reminders." : "No other reminders."}</p>}
           <ul className="space-y-2">{shown.map((x) => <Item key={x.key} x={x} done={dismissed.has(x.key)} onOpen={() => openTxn(x.transactionId)} onDismiss={() => dismiss(x.key, dismissed.has(x.key))}
             onConfirm={x.type === "unverified_import" && x.transactionId ? async () => { const t = transactions.find((y) => y.id === x.transactionId); try { await reconcile(x.transactionId!, t?.statementRef ?? `confirmed · ${today}`); toast.success("Confirmed"); } catch (e) { toast.error((e as Error).message); } } : undefined} />)}</ul>
         </TabsContent>
@@ -96,7 +100,7 @@ function Item({ x, done, onOpen, onDismiss, onConfirm }: { x: InboxItem; done: b
         {onConfirm && !done && <Button size="sm" variant="gold" onClick={onConfirm}>Confirm</Button>}
         {x.commitmentId && <Button asChild size="sm" variant="outline"><Link to="/plan">Open in Plan</Link></Button>}
         {x.type === "unreconciled_account" && <Button asChild size="sm" variant="outline"><Link to="/reconcile">Import statement</Link></Button>}
-        <Button size="sm" variant="ghost" onClick={onDismiss}>{done ? "Restore" : "Dismiss / resolved"}</Button>
+        <Button size="sm" variant="ghost" onClick={onDismiss}>{done ? "Restore suggestion" : "Dismiss suggestion"}</Button>
       </div>
     </li>
   );
@@ -131,7 +135,7 @@ function AccountsCheck({ onOpen }: { onOpen: (e: Expense) => void }) {
           <label className="text-xs">Statement balance ₹<Input className="w-36" type="number" inputMode="decimal" value={bal} onChange={(e) => setBal(e.target.value)} /></label>
           <label className="text-xs">As of<Input className="w-40" type="date" value={date} onChange={(e) => setDate(e.target.value)} /></label>
           <Button size="sm" variant="gold" disabled={!bal || busy} onClick={async () => { setBusy(true); try { await savePreferences({ ...preferences, statementBalances: { ...preferences.statementBalances, [acc.id]: { balance: Number(bal), date } } }); toast.success("Statement balance saved"); } catch (e) { toast.error((e as Error).message); } finally { setBusy(false); } }}>Compare</Button>
-          {d.difference != null && Math.abs(d.difference) >= 1 && <Button size="sm" variant="outline" disabled={busy} onClick={async () => { if (!confirm(`Record a balance adjustment of ${money(d.difference!)}? Only do this after checking for missing entries — it is not counted as spending or income.`)) return; setBusy(true); try { await adjustBalance(acc, d.statementBalance!, d.statementDate!); toast.success("Adjustment recorded"); } catch (e) { toast.error((e as Error).message); } finally { setBusy(false); } }}>Record adjustment</Button>}
+          {d.difference != null && Math.abs(d.difference) >= 1 && <Button size="sm" variant="outline" disabled={busy} onClick={async () => { if (d.difference == null || d.statementBalance == null || !d.statementDate) return; if (!await confirmAction({ title: "Confirm balance adjustment", message: `Record a balance adjustment of ${money(d.difference)}? Only do this after checking for missing entries — it is not counted as spending or income.`, confirmLabel: "Record adjustment" })) return; setBusy(true); try { await adjustBalance(acc, d.statementBalance, d.statementDate); toast.success("Adjustment recorded"); } catch (e) { toast.error((e as Error).message); } finally { setBusy(false); } }}>Record adjustment</Button>}
           <Button asChild size="sm" variant="outline"><Link to="/reconcile">Import statement</Link></Button>
         </div>
         {d.duplicates.length > 0 && <div><b className="text-sm">Possible duplicates</b><ul className="divide-y text-sm">{d.duplicates.map(([a, b]) => <li key={a.id + b.id} className="flex justify-between gap-2 py-1.5"><button className="truncate text-left underline" onClick={() => onOpen(b)}>{a.title} · {a.date}</button><span className="font-mono">{money(a.amount)}</span></li>)}</ul></div>}

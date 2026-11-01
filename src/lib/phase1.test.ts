@@ -72,12 +72,12 @@ describe("freshness and discrepancies", () => {
 });
 
 describe("inbox", () => {
-  it("flags duplicates once and drops dismissed items", () => {
+  it("flags duplicates once and keeps unresolved financial issues despite legacy dismissal", () => {
     const a = ex({ merchant: "Swiggy" }), b = ex({ merchant: "Swiggy" });
     const items = inboxItems({ transactions: [a, b], accounts: [bank], commitments: [], prefs, today: "2026-10-12", pendingCount: 0 });
     const dups = items.filter((x) => x.type === "duplicate");
     expect(dups).toHaveLength(1);
-    expect(inboxCounts(items, [dups[0]!.key]).open.some((x) => x.type === "duplicate")).toBe(false);
+    expect(inboxCounts(items, [dups[0]?.key ?? ""]).open.some((x) => x.type === "duplicate")).toBe(true);
   });
   it("resolves automatically when the category is fixed", () => {
     const run = (cat: string) => inboxItems({ transactions: [ex({ category: cat })], accounts: [], commitments: [], prefs, today: "2026-10-12", pendingCount: 0 }).filter((x) => x.type === "uncategorised").length;

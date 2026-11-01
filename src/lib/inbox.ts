@@ -101,7 +101,8 @@ export function inboxItems(i: InboxInput): InboxItem[] {
   const items: InboxItem[] = [];
   const acc = (id?: string | null) => i.accounts.find((a) => a.id === id)?.name ?? null;
   const active = new Set(i.prefs.categories.filter((c) => !c.archived).map((c) => c.name));
-  const recent = i.transactions.filter((t) => daysBetween(t.date, i.today) <= 120);
+  // Historical review is not aged out: April imports and older unresolved issues remain visible.
+  const recent = i.transactions.filter((t) => t.date <= i.today);
   for (const t of recent) {
     const base = { amount: t.amount, accountName: acc(t.accountId), date: t.date, transactionId: t.id };
     const kind = t.txnType ?? "expense";
@@ -111,6 +112,8 @@ export function inboxItems(i: InboxInput): InboxItem[] {
       items.push({ ...base, key: `unverified:${t.id}`, type: "unverified_import", title: t.title, description: `Imported from ${t.statementRef.split(" ·")[0]} but not confirmed`, priority: "medium", action: "Review and confirm" });
     if (kind === "expense" && !t.accountId)
       items.push({ ...base, key: `missing:${t.id}`, type: "missing_details", title: t.title, description: "No account recorded, so balances can't include it", priority: "low", action: "Edit to add the account" });
+    if (["transfer", "card_payment", "loan_repayment", "investment"].includes(kind) && (!t.accountId || !t.toAccountId || !i.accounts.some(a => a.id === t.accountId && !a.archived) || !i.accounts.some(a => a.id === t.toAccountId && !a.archived)))
+      items.push({ ...base, key: `moveaccount:${t.id}`, type: "missing_details", title: t.title, description: "A source or receiving account is missing or archived", priority: "high", action: "Confirm both accounts" });
     if (t.allocations?.length && Math.round(t.allocations.reduce((s, a) => s + a.amount, 0) * 100) !== Math.round(t.amount * 100))
       items.push({ ...base, key: `alloc:${t.id}`, type: "inconsistency", title: t.title, description: "Category split lines don't add up to the amount", priority: "high", action: "Fix the split" });
     if (kind === "transfer" && t.accountId && t.accountId === t.toAccountId)
@@ -139,6 +142,7 @@ export function inboxItems(i: InboxInput): InboxItem[] {
 
 export function inboxCounts(all: InboxItem[], dismissed: string[]) {
   const d = new Set(dismissed);
-  const open = all.filter((x) => !d.has(x.key));
+  // Dismissal is not evidence that a saved financial record has been corrected.
+  const open = all.filter((x) => !!x.transactionId || !d.has(x.key));
   return { open, pending: open.length, high: open.filter((x) => x.priority === "high").length, dismissed: all.length - open.length };
 }
