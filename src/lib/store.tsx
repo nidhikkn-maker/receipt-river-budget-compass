@@ -362,7 +362,7 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
   };
   const manageTripExpenses: Ctx["manageTripExpenses"] = async (tripId, rows, action, value = "") => {
     const { data, error } = await supabase.rpc("manage_trip_expenses", { _trip: tripId, _items: rows.map(tripActionSnapshot) as unknown as Json, _action: action, _value: value });
-    check(error); await refresh(); return data;
+    check(error); if (data == null) throw Error("No expenses were updated"); await refresh(); return data;
   };
   const setReimbursement: Ctx["setReimbursement"] = async (id, status) => {
     check((await supabase.from("expenses").update({ reimbursement_status: status }).eq("id", id)).error);

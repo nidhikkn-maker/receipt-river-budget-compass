@@ -6,7 +6,7 @@ import { categoryParts } from "./expenses";
 
 const r2 = (n: number) => Math.round(n * 100) / 100;
 const sum = (xs: number[]) => r2(xs.reduce((s, x) => s + x, 0));
-export interface Row extends Txn { id: string; category: string; merchant: string | null; title: string; tags?: string[]; currency?: string; originalAmount?: number; fxRate?: number; allocations?: { category: string; amount: number }[]; reimbursementStatus?: string; paymentMethod?: string }
+export interface Row extends Txn { id: string; category: string; merchant: string | null; title: string; tripId?: string | null; tags?: string[]; currency?: string; originalAmount?: number; fxRate?: number; allocations?: { category: string; amount: number }[]; reimbursementStatus?: string; paymentMethod?: string }
 const isSpend = (t: Txn) => (t.txnType ?? "expense") === "expense";
 const CASH = ["savings", "current", "cash", "wallet"];
 
@@ -209,7 +209,7 @@ export const tripTag = (t: Pick<Trip, "name">) => `Trip: ${t.name}`;
 /** Uses the INR amount and exchange rate stored on each entry — today's rate never rewrites history. */
 export function tripSummary(t: Trip, txns: Row[]) {
   const tag = tripTag(t);
-  const list = txns.filter((x) => isSpend(x) && ((x.tags ?? []).includes(tag)));
+  const list = txns.filter((x) => isSpend(x) && (x.tripId === t.id || (x.tags ?? []).includes(tag)));
   const total = sum(list.map((x) => x.amount));
   const days = Math.max(1, daysBetween(t.start, t.end) + 1);
   const daily: Record<string, number> = {}; for (const x of list) daily[x.date] = r2((daily[x.date] ?? 0) + x.amount);
