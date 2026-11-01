@@ -1,6 +1,7 @@
 import { SCOPE_LABEL } from './expenses';
 import { TXN_LABEL, type Account } from './ledger';
 import { classificationStatus, merchantFamily, type ImportRow } from './historical-import';
+import { importPatterns } from './import-patterns';
 
 export const IMPORT_GROUP_DIMENSIONS = [
   { id: 'merchant', label: 'Merchant' },
@@ -11,16 +12,19 @@ export const IMPORT_GROUP_DIMENSIONS = [
   { id: 'account', label: 'Account' },
   { id: 'organisation', label: 'Organisation' },
   { id: 'confidence', label: 'Review status' },
+  { id: 'pattern', label: 'Recurring patterns' },
 ] as const;
 export type ImportGroupDimension = typeof IMPORT_GROUP_DIMENSIONS[number]['id'];
 
 /** Grouping is presentation only: use original amounts, retain direction and never approve rows. */
 export function groupImportRows(rows: ImportRow[], dimension: ImportGroupDimension, accounts: Account[]) {
   const groups = new Map<string, { key: string; label: string; rows: ImportRow[]; debit: number; credit: number }>();
+  const patterns = dimension === 'pattern' ? new Map(importPatterns(rows).flatMap(pattern => pattern.rows.map(row => [row.id, pattern] as const))) : null;
   for (const row of rows) {
     const p = row.proposal;
     let key: string, label: string;
     switch (dimension) {
+      case 'pattern': key = patterns?.get(row.id)?.key ?? 'no-pattern'; label = patterns?.get(row.id)?.label ?? 'No reliable pattern'; break;
       case 'category': key = label = p.category || 'Unclassified'; break;
       case 'workspace': key = p.scope; label = SCOPE_LABEL[p.scope]; break;
       case 'type': key = p.txnType ?? 'expense'; label = TXN_LABEL[p.txnType ?? 'expense']; break;

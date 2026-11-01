@@ -266,6 +266,7 @@
 - [ ] Acceptance: 23 demonstrations incl. unchanged records, no duplicate spend, iPhone layout
 
 ## V5.3 Statement Import (.lovable/requirements-v5.3.md)
+- [ ] Current continuation: recurring-pattern grouping with separate repeated payments, source totals, conservative cadence hints and signed-in review verification.
 - [x] Current continuation: correction scope choices (one / selected similar / eligible matching), explicit previewed future-rule confirmation, conservative similarity guards and persisted-rule acceptance. Signed-in three-row correction/reload and rule save/cancel/readback verified; rows remain under review, originals preserved; phone/desktop no overflow or page errors; temporary records/rules removed, no ledger posting; 615 tests pass, build OK.
 - [ ] Uploaded specification saved; guided import stages, bulk exception review and historical reconciliation acceptance remain a separate implementation pass after current travel requests.
 - [ ] Supplementary V5.3: safe approval eligibility, previewed bulk classification, compact grouped mobile review, and 16 acceptance demonstrations; preserve source statements and financial records; no publication without approval.
