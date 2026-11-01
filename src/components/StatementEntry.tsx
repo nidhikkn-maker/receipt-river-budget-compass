@@ -8,7 +8,7 @@ import { matchScore, type StatementLine } from "@/lib/expenses";
 import { TXN_LABEL, TXN_TYPES, type TxnType } from "@/lib/ledger";
 import type { StatementDraft } from "@/lib/statement-auto";
 
-export function StatementEntry({ line, currency, draft, statementAccount }: { line: StatementLine; currency: string; draft?: StatementDraft; statementAccount?: string }) {
+export function StatementEntry({ line, currency, draft, statementAccount }: { line: StatementLine; currency: string; draft?: StatementDraft; statementAccount?: string | undefined }) {
   const { save, transactions, accounts, preferences } = useStore();
   const [open, setOpen] = useState(false);
   const [title, setTitle] = useState(draft?.title ?? line.description);

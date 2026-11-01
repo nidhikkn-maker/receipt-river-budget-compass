@@ -70,7 +70,7 @@ export function stageImport(lines: StatementLine[], ctx: StatementContext, rules
     const { top, conflict } = matchingImportRules(rules, line, ctx.accountId, ctx.currency);
     const mapped = !conflict && top[0] ? safeImportRuleMappings(top[0].mappings) : undefined;
     const proposal: ImportProposal = { title: draft.title, merchant: draft.merchant, category: draft.category, scope: draft.scope, memberId: null, amount: line.amount, currency: ctx.currency, date: line.date, paymentMethod: draft.paymentMethod, txnType: draft.txnType, accountId: draft.accountId, toAccountId: draft.toAccountId ?? null, description: line.description, tags: [], ...mapped };
-    if (draft.txnType === 'card_payment') { proposal.txnType = 'card_payment'; proposal.accountId = draft.accountId; proposal.toAccountId = draft.toAccountId; }
+    if (draft.txnType === 'card_payment') { proposal.txnType = 'card_payment'; proposal.accountId = draft.accountId; proposal.toAccountId = draft.toAccountId ?? null; }
     // Rule mappings can only enrich classifications, never change source money or date.
     proposal.amount = line.amount; proposal.date = line.date; proposal.currency = ctx.currency;
     const fingerprint = fingerprints[i] ?? '';

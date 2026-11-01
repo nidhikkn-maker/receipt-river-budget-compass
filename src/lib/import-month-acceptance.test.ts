@@ -22,7 +22,8 @@ function reviewed(rows: ImportRow[]): ImportRow[] {
     if (row.line.ref === 'cash') proposal.toAccountId = 'cash';
     if (row.line.ref === 'settlement') {
       proposal.txnType = 'card_payment';
-      proposal.toAccountId = row.proposal.accountId === 'card' ? 'bank' : 'card';
+      proposal.accountId = 'bank';
+      proposal.toAccountId = 'card';
     }
     return { ...row, decision: 'approved', proposal: orientStatementMove(proposal, row.line.direction, row.proposal.accountId ?? '') };
   });
@@ -59,9 +60,10 @@ describe('Representative April bank and card import acceptance', () => {
   it('detects the card-side settlement already recorded from the bank', () => {
     const transactions = asExpenses(reviewed(staged(bankLines, 'bank')));
     const rows = staged(cardLines, 'card', new Set(), transactions);
-    expect(rows.find(r => r.line.ref === 'settlement')?.duplicate_kind).toBe('possible');
+    expect(rows.find(r => r.line.ref === 'settlement')?.duplicate_kind).toBe('exact');
     const summary = importSelectionSummary(reviewed(rows), accounts, today, cardStatement);
-    expect(summary.requiresReview).toBe(1);
+    expect(summary.requiresReview).toBe(0);
+    expect(summary.duplicates).toBe(1);
     const combined = [...transactions, ...asExpenses(summary.eligible)];
     expect(accountBalance(bank, combined)).toBe(12250);
     expect(accountBalance(card, combined)).toBe(300);
