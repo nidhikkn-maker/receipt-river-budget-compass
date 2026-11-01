@@ -16,7 +16,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { BASE_CURRENCY, CURRENCIES, autoMatch, matchScore, money, type Match, type StatementLine } from "@/lib/expenses";
 import { StatementEntry } from "@/components/StatementEntry";
 import { readStatement } from "@/lib/statement-import";
-import { draftToInput, planStatementRegistration } from "@/lib/statement-auto";
+import { draftToInput, planStatementRegistration, existingCardPayment } from "@/lib/statement-auto";
 import { useStore } from "@/lib/store";
 import { useServerFn } from "@tanstack/react-start";
 import { extractStatement } from "@/lib/statement-extract.functions";
@@ -78,13 +78,17 @@ export function StatementInbox() {
   };
 
   const matches: Match[] = useMemo(() => {
-    const auto = autoMatch(freshLines, expenses, currency, 0.4, accountFilter);
+    const card = accounts.some(a => a.id === accountFilter && a.kind === "credit_card");
+    const auto = autoMatch(freshLines, card ? expenses.filter(e => e.txnType !== "income") : expenses, currency, 0.4, accountFilter);
     return auto.map((m) => {
+      const payment = existingCardPayment(m.line, { transactions: expenses, accounts, categories: preferences.categories, accountId: accountFilter ?? null, currency });
+      if (payment) return { ...m, expense: payment, score: 1 };
+      if (card && m.line.direction === "credit" && m.expense?.txnType === "card_payment") return { ...m, expense: null, score: 0 };
       const o = overrides[m.line.ref];
       if (o === undefined) return m;
       return { ...m, expense: o === "none" ? null : expenses.find((e) => e.id === o) ?? null, score: 1 };
     });
-  }, [freshLines, expenses, currency, overrides, accountFilter]);
+  }, [freshLines, expenses, currency, overrides, accountFilter, accounts, preferences.categories]);
 
   const plan = useMemo(() => planStatementRegistration(freshLines, matches, {
     transactions: expenses,
@@ -323,7 +327,7 @@ export function StatementInbox() {
                         <div className="font-mono text-xs text-muted-foreground">{d.line.date} · {money(d.line.amount, currency)} · {d.reason}</div>
                       </div>
                     </div>
-                    <StatementEntry line={d.line} currency={currency} />
+                    <StatementEntry line={d.line} currency={currency} draft={d} statementAccount={accountFilter} />
                   </li>
                 ))}
               </ul>
