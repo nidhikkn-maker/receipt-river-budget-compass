@@ -38,7 +38,7 @@ describe('importReconciliationSummary', () => {
   });
 });
 
-import { reconciliationReadiness as ready } from './historical-import';
+import { reconciliationReadiness as ready, type ImportBatch } from './historical-import';
 describe('reconciliationReadiness', () => {
   const row = (id: string, amount: number, direction: 'credit' | 'debit') => ({ id, fingerprint: 'f' + id, line: { date: '2026-04-02', description: id, amount, direction } }) as never;
   const base = { id: 'b', account_id: 'a', file_name: 'x', file_path: 'p', currency: 'INR', status: 'review', error: null, period_from: null, period_to: null, opening_balance: 1000, closing_balance: 1300, statement_review: { identity: { confirmed: true } } } as never as ImportBatch;
