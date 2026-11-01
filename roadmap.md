@@ -369,8 +369,9 @@
 
 - [x] Current continuation: grouped auto-refreshing import Inbox and direct validated batch links; active review refreshes with stale-response protection. Signed-in processing→review update, exact-batch reload, Inbox link, phone overflow and no approval/posting verified; 655 tests pass. Temporary fixture removed; no publication.
 
-## V5.10.3 combined plan (pending approval)
+## V5.10.3 combined plan (approved)
 - [x] Card balance view with unreconciled-payment flags (statement-only credits not yet listed)
 - [x] Trip cancel / restore / delete (trip page + All trips list, Restored label)
-- [ ] V5.10.3 classification forms, recipients, safe transfers, audit (see .lovable/requirements-v5.10.3.md)
-- [ ] Read-only past-records check from April 2026, auto-reviewed against uploaded statements
+- [x] V5.10.3 transaction-type question, recipients (existing), confirmed internal transfer linking (strong matches auto-found), audit
+- [ ] V5.10.3 physical iPhone/iPad checks (needs your devices)
+- [x] Read-only past-records check from April 2026, auto-reviewed against uploaded statements
