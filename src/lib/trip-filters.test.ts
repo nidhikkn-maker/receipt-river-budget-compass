@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { emptyTripFilters, matchesTripFilters } from "./trip-filters";
 import type { TravelTrip } from "./travel";
 
-const trip: TravelTrip = { id: "one", name: "Conference", destination: "Chennai", start: "2026-11-10", end: "2026-11-15", budget: 10000, type: "mixed", primaryWorkspace: "business", workspaceBudgets: [{ workspace: "personal", amount: 2000 }], travellers: ["Asha", "Ravi"], organisation: "Acme" };
+const trip: TravelTrip = { id: "one", name: "Conference", destination: "Chennai", start: "2026-11-10", end: "2026-11-15", budget: 10000, currencies: ["INR"], type: "mixed", primaryWorkspace: "business", workspaceBudgets: [{ workspace: "personal", amount: 2000 }], travellers: ["Asha", "Ravi"], organisation: "Acme" };
 describe("trip discovery filters", () => {
   it("allows any selected traveller but requires the selected organisation too", () => {
     expect(matchesTripFilters(trip, { ...emptyTripFilters(), travellers: ["Other", "Ravi"], organisations: ["Acme"] })).toBe(true);
