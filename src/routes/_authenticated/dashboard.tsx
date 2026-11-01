@@ -89,7 +89,8 @@ function Overview() {
   // §3 — metrics
   const month = today.slice(0, 7);
   const cash = live.filter((a) => a.includeInCash !== false && !isLiability(a.kind) && ["savings", "current", "cash", "wallet"].includes(a.kind)).reduce((s, a) => s + accountBalance(a, transactions), 0);
-  const cardDue = live.filter((a) => a.kind === "credit_card").reduce((s, a) => s + accountBalance(a, transactions), 0);
+  const cardRows = live.filter((a) => a.kind === "credit_card").map((a) => ({ id: a.id, name: a.name, bal: accountBalance(a, transactions) })).filter((r) => Math.abs(r.bal) >= 0.005).sort((x, y) => y.bal - x.bal);
+  const cardDue = cardRows.reduce((s, r) => s + r.bal, 0);
   const flow = cashflow(transactions, `${month}-01`, `${month}-31`);
 
   // §4 — insights: top categories + budget use
@@ -189,7 +190,18 @@ function Overview() {
         <Link to="/wealth"><Stat label="Available cash" value={live.length ? money(cash) : "—"} {...(live.length ? {} : { hint: "Add accounts" })} /></Link>
         <Stat label="Income this month" value={money(flow.income)} />
         <Link to="/plan"><Stat label="Safe to spend" value={live.length ? money(pos.safe.amount) : "—"} {...(readiness.estimated ? { hint: "Estimated" } : {})} /></Link>
-        <Link to="/wealth"><Stat label="Card dues" value={money(cardDue)} /></Link>
+        <details className="group col-span-2 lg:col-span-1 [&>summary::-webkit-details-marker]:hidden">
+          <summary className="cursor-pointer list-none" aria-label="Show card-by-card dues"><Stat label="Card dues" value={money(cardDue)} hint={cardRows.length ? `${cardRows.length} card${cardRows.length === 1 ? "" : "s"} · tap for breakdown` : "No card balances"} /></summary>
+          <ul className="mt-2 divide-y rounded-2xl border bg-card px-4 text-sm">
+            {cardRows.map((r) => (
+              <li key={r.id} className="flex items-center justify-between gap-3 py-2">
+                <Link to="/cards/$accountId" params={{ accountId: r.id }} className="min-w-0 truncate font-medium text-primary">{r.name}</Link>
+                <span className={"shrink-0 font-mono " + (r.bal < 0 ? "text-success" : "")}>{r.bal < 0 ? `${money(-r.bal)} credit` : money(r.bal)}</span>
+              </li>
+            ))}
+            <li className="flex items-center justify-between gap-3 py-2 font-semibold"><span>Total owed</span><span className="font-mono">{money(cardDue)}</span></li>
+          </ul>
+        </details>
       </section>
 
       {/* §4 — Spending insights */}
