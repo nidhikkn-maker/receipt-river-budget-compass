@@ -1,4 +1,8 @@
 # Roadmap (Functional Requirements v1.0)
+## Isolated reconciliation storage and physical-device acceptance
+- [ ] Add disposable local PostgreSQL test storage and verify saved reconciliation survives closing/reopening it, without Cloud access.
+- [ ] Separate hosted test storage: newly created reconciliation draft still shares live data; no hosted test writes permitted.
+- [ ] Physical iPad/iPhone save/reload and cross-device checks: blocked on separate hosted test storage and real-device access; emulation is not physical-device evidence.
 ## V5.9.2 Financial Inbox redesign (.lovable/requirements-v5.9.2.md)
 - [x] Audit against spec: three-view navigation, counts, selection scopes, bulk bar, guided preview/confirm, merchant groups, missing-field grouping, clutter-in-dialogs all already present from V5.10 work.
 - [x] This turn: prominent Review & Apply in the category dialog, bulk summary in the detail panel instead of "No transaction selected", arrow-key navigation between row checkboxes, selected-row highlighting in list and table.
