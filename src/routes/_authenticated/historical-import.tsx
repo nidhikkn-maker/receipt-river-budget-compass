@@ -1,3 +1,4 @@
+import { confirmAction } from "@/lib/confirm";
 import { createFileRoute, Link } from '@tanstack/react-router';
 import { queryOptions, useSuspenseQuery } from '@tanstack/react-query';
 import { useServerFn } from '@tanstack/react-start';
@@ -52,7 +53,7 @@ function HistoricalImports() {
   },[current,batch?.status,batch?.next_page]);
   const upload=async(files:StatementUpload[])=>{
     const completed=new Set<string>();
-    const pdfConsent=!files.some(item=>/\.pdf$/i.test(item.file.name))||window.confirm('Read PDF statements with AI in the background? They may contain private financial information. AI usage uses workspace credits.');
+    const pdfConsent=!files.some(item=>/\.pdf$/i.test(item.file.name))||await confirmAction('Read PDF statements with AI in the background? They may contain private financial information. AI usage uses workspace credits.');
     if(!pdfConsent)return completed;
     for(const item of files) {
       const {file,accountId:account,currency}=item;

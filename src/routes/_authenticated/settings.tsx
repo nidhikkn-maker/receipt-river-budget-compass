@@ -1,3 +1,4 @@
+import { confirmAction } from "@/lib/confirm";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useRef, useState } from "react";
 import { toast } from "sonner";
@@ -83,7 +84,7 @@ function Settings() {
       if (f.size > 150 * 1024 * 1024) throw Error("Backup must be under 150 MB");
       const { backup: j, files } = readBackup(new Uint8Array(await f.arrayBuffer()), /\.zip$/i.test(f.name));
       const { data: restored, paths } = prepareRestore(j, userId, undefined, true);
-      if (!window.confirm("Restore this backup into your account? Existing matching records will be updated.")) return;
+      if (!await confirmAction("Restore this backup into your account? Existing matching records will be updated.")) return;
       for (const [oldPath, newPath] of paths) {
         let bytes = files[oldPath];
         if (!bytes) {

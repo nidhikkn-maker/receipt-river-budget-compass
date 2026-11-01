@@ -1,3 +1,4 @@
+import { confirmAction } from "@/lib/confirm";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
@@ -64,7 +65,7 @@ function Assistants() {
   async function revoke(g: Grant) {
     const id = clientId(g);
     const name = g.client.name ?? g.client.client_name ?? "this assistant";
-    if (!id || !window.confirm(`Remove access for ${name}? It will need your approval to connect again.`)) return;
+    if (!id || !await confirmAction(`Remove access for ${name}? It will need your approval to connect again.`)) return;
     setBusy(id);
     try {
       await authFetch(`/user/oauth/grants?client_id=${encodeURIComponent(id)}`, "DELETE");

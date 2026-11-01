@@ -1,3 +1,4 @@
+import { confirmAction } from "@/lib/confirm";
 import { ProcessingPanel, stagesAt } from "@/components/ProcessingPanel";
 import { Spinner } from "@/components/ui/button";
 import { createFileRoute, Link } from "@tanstack/react-router";
@@ -78,7 +79,7 @@ function Reconcile() {
   };
 
   const forgetLast = async () => {
-    if (!lastBatch || !window.confirm("Forget the last statement upload for this account? Its lines will show as new next time. Saved entries stay.")) return;
+    if (!lastBatch || !await confirmAction("Forget the last statement upload for this account? Its lines will show as new next time. Saved entries stay.")) return;
     const { error } = await supabase.from("statement_line_imports").delete().eq("batch_id", lastBatch);
     if (error) toast.error("Couldn't forget that upload"); else { toast.success("Last upload forgotten"); await loadKnown(accountKey); }
   };
@@ -112,7 +113,7 @@ function Reconcile() {
       try { parsed = await readStatement(f); }
       catch (e) {
         if (!/\.(pdf|png|jpe?g|webp)$/i.test(f.name) || f.size > 14 * 1024 * 1024) throw e;
-        if (!window.confirm("Read this statement using AI? It may contain private banking details. Review all extracted rows before confirming.")) return;
+        if (!await confirmAction("Read this statement using AI? It may contain private banking details. Review all extracted rows before confirming.")) return;
         const mimeType = /\.pdf$/i.test(f.name) ? "application/pdf" : /\.png$/i.test(f.name) ? "image/png" : /\.webp$/i.test(f.name) ? "image/webp" : "image/jpeg";
         const dataUrl = await new Promise<string>((resolve, reject) => { const reader = new FileReader(); reader.onload = () => resolve(String(reader.result)); reader.onerror = reject; reader.readAsDataURL(f); });
         setReadStage({ name: f.name, ai: true, at: 0 });

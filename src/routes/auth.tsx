@@ -1,3 +1,4 @@
+import { confirmAction } from "@/lib/confirm";
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -107,7 +108,7 @@ function Auth() {
     } catch (e) { toast.error((e as Error).message); } finally { setBusy(false); }
   };
   const social = async (provider: "google" | "lovable") => {
-    if (anonymous && !window.confirm("Social sign-in opens a different account. Download a backup first to keep your existing browser records. Continue?")) return;
+    if (anonymous && !await confirmAction("Social sign-in opens a different account. Download a backup first to keep your existing browser records. Continue?")) return;
     const r = await lovable.auth.signInWithOAuth(provider, { redirect_uri: back() });
     if (r.error) toast.error(r.error.message); else if (!r.redirected) await go();
   };
