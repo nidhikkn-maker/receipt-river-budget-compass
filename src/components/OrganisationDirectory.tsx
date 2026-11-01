@@ -15,13 +15,13 @@ export function OrganisationDirectory() {
     const n = window.prompt(`Rename “${old}” to`, old)?.trim().slice(0, 24);
     if (!n || n === old) return;
     if (list.some((o) => o.name.toLowerCase() === n.toLowerCase() && o.name !== old)) { toast.error(`“${n}” already exists`); return; }
-    await savePreferences({ ...p, tags: p.tags.map((t) => (t.group === "Organisation" && t.name === old ? { ...t, name: n } : t)) });
+    await savePreferences({ ...p, tags: p.tags.map((t) => (t.group === "Organisation" && t.name === old ? { ...t, name: n } : t)), reimbursementSettings: { ...p.reimbursementSettings, profiles: p.reimbursementSettings.profiles.map(r => r.organisation === old ? { ...r, organisation: n } : r), mappings: p.reimbursementSettings.mappings.map(m => m.organisation === old ? { ...m, organisation: n } : m), responsibilities: p.reimbursementSettings.responsibilities.map(r => ({ ...r, shares: r.shares.map(s => s.organisation === old ? { ...s, organisation: n } : s) })) } });
     const from = `Organisation: ${old}`, to = `Organisation: ${n}`;
     for (const e of transactions) if ((e.tags ?? []).includes(from)) await setTags(e.id, renameTagIn(e.tags ?? [], from, to));
     toast.success("Organisation renamed everywhere");
   };
   const [name, setName] = useState("");
-  const list = useMemo(() => organisationUsage(p.tags, transactions), [p.tags, transactions]);
+  const list = useMemo(() => organisationUsage(p.tags, transactions).map(o => ({ ...o, uses: o.uses + p.reimbursementSettings.profiles.filter(r => r.organisation === o.name).length + p.reimbursementSettings.responsibilities.filter(r => r.shares.some(s => s.organisation === o.name)).length })), [p.tags, transactions, p.reimbursementSettings]);
   const add = async () => {
     const n = name.trim();
     if (list.some((o) => o.name.toLowerCase() === n.toLowerCase())) { toast.error(`“${n}” is already in your organisations`); return; }

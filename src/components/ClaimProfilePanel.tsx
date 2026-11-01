@@ -5,7 +5,7 @@ import { reimbursementInput } from './ReimbursementSettings';
 import { reimbursementAccountLabel, type ReimbursementProfile } from '@/lib/reimbursement-profiles';
 import type { Claimant } from '@/lib/expense-claim';
 export function ClaimProfilePanel({ organisation, setOrganisation, profile, profileId, setProfileId, claimant, setClaimant, routeId, setRouteId, accountId, setAccountId, format, setFormat, activity }: {
-  organisation: string; setOrganisation: (v: string) => void; profile?: ReimbursementProfile; profileId: string; setProfileId: (v: string) => void; claimant: Claimant; setClaimant: (v: Claimant) => void; routeId: string; setRouteId: (v: string) => void; accountId: string; setAccountId: (v: string) => void; format: 'detailed' | 'summary'; setFormat: (v: 'detailed' | 'summary') => void; activity: string;
+  organisation: string; setOrganisation: (v: string) => void; profile: ReimbursementProfile | undefined; profileId: string; setProfileId: (v: string) => void; claimant: Claimant; setClaimant: (v: Claimant) => void; routeId: string; setRouteId: (v: string) => void; accountId: string; setAccountId: (v: string) => void; format: 'detailed' | 'summary'; setFormat: (v: 'detailed' | 'summary') => void; activity: string;
 }) {
   const store = useStore(); const settings = store.preferences.reimbursementSettings;
   const profiles = settings.profiles.filter(p => p.organisation === organisation);
