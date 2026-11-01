@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { centreCategoryPreview, centreReview, matchesReview, reviewCounts, selectedReviewSummary, selectReviewIds } from './review-centre';
+import { centreCategoryPreview, centreReview, matchesReview, reviewCounts, selectedReviewSummary, selectReviewIds, confirmableImportRows } from './review-centre';
 import { inboxItems } from './inbox';
 import { defaultPreferences } from './preferences';
 import type { Expense } from './expenses';
@@ -21,4 +21,9 @@ describe('V5.10 review selection and counts', () => {
   it('selection does not change classifications or resolve issues', () => { const rows = rowsFor([expense('one')]); selectReviewIds([], rows); expect(rows[0]?.transaction.category).toBe('Miscellaneous'); const first = rows[0]; expect(first && matchesReview(first, 'missing')).toBe(true); });
   it('selected transaction total includes income, not expenditure only', () => { const rows = rowsFor([expense('one'), { ...expense('two'), txnType: 'income', amount: 250 }]); expect(selectedReviewSummary(rows).total).toBe(350); });
   it('account ownership never fills organisation responsibility', () => { expect(rowsFor([expense('one')])[0]?.transaction.department).toBeUndefined(); expect(reviewCounts(rowsFor([expense('one')])).missing).toBe(1); });
+});
+describe("confirmableImportRows", () => {
+  const row = (issues: string[], extra: Record<string, unknown> = {}) => ({ transaction: { id: "x" }, issues: issues.map(type => ({ type, description: "" })), group: "ready", evidence: [], targetAccountIds: [], confidence: "high", status: "Ready for Review", ...extra }) as never;
+  it("card payment only awaiting import confirmation can be confirmed", () => expect(confirmableImportRows([row(["unverified_import"])])).toHaveLength(1));
+  it("rows with other issues or suggestions are excluded", () => expect(confirmableImportRows([row(["unverified_import", "uncategorised"]), row(["unverified_import"], { suggestedType: "card_payment" })])).toHaveLength(0));
 });

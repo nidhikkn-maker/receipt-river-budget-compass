@@ -1,5 +1,5 @@
-import { expect, it } from "vitest";
-import { accountStatementStatus, accountStatementSummary, type StatementStatusEvidence } from "./account-statement-status";
+import { describe, expect, it } from "vitest";
+import { accountStatementStatus, accountStatementSummary, statementNextStep, type StatementStatusEvidence } from "./account-statement-status";
 import { defaultPreferences } from "./preferences";
 import type { Expense } from "./expenses";
 import type { Account } from "./ledger";
@@ -26,4 +26,12 @@ it("repeated evidence creates no ledger entries and exact duplicate must read ba
 it("financial correction resets the statement match even when money and date match", () => { expect(derive(statement, [{ ...e, correctionRevision: 1 }]).unresolved).toBe(1); });
 it("offsetting unaccounted ledger entries cannot certify reconciliation despite matching balance", () => {
   expect(derive(statement, [e, { ...e, id: "unmatched expense", amount: 50 }, { ...e, id: "unmatched income", amount: 50, txnType: "income" }])).toMatchObject({ balance: "Verified", reconciliation: "Requires Review" });
+});
+
+describe("statementNextStep", () => {
+  const base = { batch: true, importing: false, failed: false, identityConfirmed: true, toPost: 0, coverageConfirmed: true, usableBalance: true, checked: true };
+  it("asks for upload when no statement", () => expect(statementNextStep({ ...base, batch: false })).toBe("Upload a statement for this account"));
+  it("identity comes before approving lines", () => expect(statementNextStep({ ...base, identityConfirmed: false, toPost: 224 })).toBe("Confirm the statement's account identity"));
+  it("counts lines still to import", () => expect(statementNextStep({ ...base, toPost: 224 })).toBe("Approve and import 224 statement lines"));
+  it("nothing left when complete", () => expect(statementNextStep(base)).toBeNull());
 });
