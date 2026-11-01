@@ -16,7 +16,7 @@ export function useStore() {
   const [preferences, setPreferences] = useState<Record<string, unknown>>({ categories: [{ name: "Food", archived: false }, { name: "Other", archived: false }], tags: [], statementUploads: [] });
   const refresh = async () => bump((n) => n + 1);
   return {
-    accounts: fixture.accounts, transactions: fixture.transactions, preferences,
+    accounts: [...fixture.accounts], transactions: fixture.transactions.map((t) => ({ ...t })), preferences,
     savePreferences: async (next: Record<string, unknown>) => { fixture.uploads = (next.statementUploads as unknown[]) ?? []; setPreferences(next); },
     save: async (input: Record<string, unknown>, opts?: { createId?: string }) => {
       const id = opts?.createId ?? crypto.randomUUID();
