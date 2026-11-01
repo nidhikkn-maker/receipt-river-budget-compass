@@ -8,6 +8,8 @@
 - These checks are not hosted end-to-end, cross-device, or physical Safari acceptance.
 
 ## Physical-device prerequisites — Blocked
+Local verification: 44 tests passed across five files on 1 November 2026, including disk close/reopen, owner isolation, protected checkpoint retry, unchanged account opening balance, confirmation/cancel and pure reconciliation rules. No browser or physical-device end-to-end write is claimed.
+
 1. A separately confirmed hosted test environment, with its own database, private files, authentication and test-only HTTPS URL. An owner account inside the live database is not equivalent to an isolated environment.
 2. Physical iPad and iPhone access, or an authorised real-device testing service. None is connected to this workspace.
 3. Synthetic test account and original sample statement only; no real financial records copied.

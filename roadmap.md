@@ -1,6 +1,9 @@
 # Roadmap (Functional Requirements v1.0)
+## V5.10.1 transaction classification and external payees
+- [ ] Investigate and fix type-aware correction fields/validation; preserve original records, preview and confirm changes.
+- [ ] Reusable external recipient directory, compatible bulk classification, safe persistence and 18-case financial/device completion report; preview only, no production changes.
 ## Isolated reconciliation storage and physical-device acceptance
-- [ ] Add disposable local PostgreSQL test storage and verify saved reconciliation survives closing/reopening it, without Cloud access.
+- [x] Disposable local PostgreSQL test storage verifies saved evidence/checkpoint survives closing/reopening, owner isolation and unchanged balances; 44 focused checks passed, no Cloud access.
 - [ ] Separate hosted test storage: newly created reconciliation draft still shares live data; no hosted test writes permitted.
 - [ ] Physical iPad/iPhone save/reload and cross-device checks: blocked on separate hosted test storage and real-device access; emulation is not physical-device evidence.
 ## V5.9.2 Financial Inbox redesign (.lovable/requirements-v5.9.2.md)
