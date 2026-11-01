@@ -55,7 +55,7 @@ export function reconcileWallet(w: ForexWallet, records: ForexRecord[], windowDa
     if (best) { used.add(best.id); matched.push({ line: l, record: best }); } else missing.push(l);
   }
   const first = w.lines[0]?.date, last = w.lines[w.lines.length - 1]?.date;
-  const extra = pool.filter((r) => !used.has(r.id) && first && last && r.date >= first && days(r.date, last) <= 7 + (r.date > last ? 0 : 9999));
+  const extra = pool.filter((r) => !used.has(r.id) && first && last && r.date >= first && (r.date <= last || days(r.date, last) <= 7));
   const r2 = (n: number) => Math.round(n * 100) / 100;
   const loaded = r2(w.lines.reduce((s, l) => s + l.credit, 0));
   const recordedSpend = r2(matched.reduce((s, m) => s + m.record.originalAmount, 0) + extra.reduce((s, r) => s + r.originalAmount, 0));
