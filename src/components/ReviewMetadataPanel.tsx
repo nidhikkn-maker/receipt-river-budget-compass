@@ -10,6 +10,7 @@ import { Undo2 } from 'lucide-react';
 export function ReviewMetadataPanel({rows,onSaved}:{rows:FinancialReview[];onSaved:(excluded:string[])=>void}) {
  const store=useStore();
  const [mode,setMode]=useState('organisation'),[value,setValue]=useState(''),[error,setError]=useState('');
+ const [combined,setCombined]=useState<MetadataPatch>({});
  const [preview,setPreview]=useState<MetadataPreview|null>(null),[restore,setRestore]=useState<string|null>(null);
  const [history,setHistory]=useState<{id:string;createdAt:string;entries:{before:Record<string,unknown>;after:Record<string,unknown>}[]}[]>([]);
  const id=useRef<string|null>(null);
@@ -20,7 +21,8 @@ export function ReviewMetadataPanel({rows,onSaved}:{rows:FinancialReview[];onSav
   const patches=new Map<string,MetadataPatch>();
   for(const r of rows) {
    const e=r.transaction;
-   if(mode==='suggested') {if(r.suggestedCategory&&(r.group==='ready'||r.group==='category')) patches.set(e.id,{category:r.suggestedCategory});}
+   if(mode==='combined') {if(!Object.keys(combined).length)throw Error('Choose at least one classification change.');patches.set(e.id,{...combined});}
+   else if(mode==='suggested') {if(r.suggestedCategory&&(r.group==='ready'||r.group==='category')) patches.set(e.id,{category:r.suggestedCategory});}
    else if(mode==='recovery') {const recovery=verifiedRecovery(e,store.accounts,store.preferences);const patch:MetadataPatch={};if(!e.department&&recovery.organisation)patch.organisation=recovery.organisation;if(e.paymentInstrumentId&&recovery.paymentMethod&&e.paymentMethod!==recovery.paymentMethod)patch.paymentInstrumentId=e.paymentInstrumentId;patches.set(e.id,patch);}
    else {if(!value)throw Error('Choose a mapping value.');patches.set(e.id,{[mode]:value} as MetadataPatch);}
   }
@@ -32,8 +34,14 @@ export function ReviewMetadataPanel({rows,onSaved}:{rows:FinancialReview[];onSav
  }catch(e){setError(e instanceof Error?e.message:'Unable to save mapping');}};
  const fields=['department','scope','category','payment_instrument_id','payment_method','tags'];
  return <div className="space-y-3">
- {!preview ? <><Select value={mode} onValueChange={v=>{setMode(v);setValue('');}}><SelectTrigger aria-label="Bulk mapping field"><SelectValue/></SelectTrigger><SelectContent><SelectItem value="organisation">Organisation</SelectItem><SelectItem value="scope">Workspace</SelectItem><SelectItem value="paymentInstrumentId">Saved payment method</SelectItem><SelectItem value="category">Category</SelectItem><SelectItem value="tag">Project or activity</SelectItem><SelectItem value="suggested">Each verified category suggestion</SelectItem><SelectItem value="recovery">Available verified missing details</SelectItem></SelectContent></Select>
- {!['suggested','recovery'].includes(mode)&&<Select value={value} onValueChange={setValue}><SelectTrigger aria-label="Bulk mapping value"><SelectValue placeholder="Choose value"/></SelectTrigger><SelectContent>{options.map(([key,label])=><SelectItem key={key} value={key}>{label}</SelectItem>)}</SelectContent></Select>}
+ {!preview ? <><Select value={mode} onValueChange={v=>{setMode(v);setValue('');}}><SelectTrigger aria-label="Bulk mapping field"><SelectValue/></SelectTrigger><SelectContent><SelectItem value="combined">Category, workspace & responsibility</SelectItem><SelectItem value="organisation">Organisation</SelectItem><SelectItem value="scope">Workspace</SelectItem><SelectItem value="paymentInstrumentId">Saved payment method</SelectItem><SelectItem value="category">Category</SelectItem><SelectItem value="tag">Project or activity</SelectItem><SelectItem value="suggested">Each verified category suggestion</SelectItem><SelectItem value="recovery">Available verified missing details</SelectItem></SelectContent></Select>
+ {mode==='combined'&&<div className="grid gap-2 sm:grid-cols-2">{([
+  ['category','Category',store.preferences.categories.filter(c=>!c.archived).map(c=>[c.name,c.name])],
+  ['scope','Workspace',Object.entries(SCOPE_LABEL)],
+  ['organisation','Organisation',store.preferences.tags.filter(t=>t.group==='Organisation').map(t=>[t.name,t.name])],
+  ['tag','Activity',store.preferences.tags.filter(t=>['Project','Event','Purpose','Client'].includes(t.group)).map(t=>[`${t.group}: ${t.name}`,t.name])],
+ ] as [keyof MetadataPatch,string,string[][]][]).map(([key,label,choices])=><Select key={key} value={combined[key]??'keep'} onValueChange={v=>setCombined(current=>{const next={...current};if(v==='keep')delete next[key];else Object.assign(next,{[key]:v});return next;})}><SelectTrigger aria-label={`Combined ${label}`}><SelectValue/></SelectTrigger><SelectContent><SelectItem value="keep">{label} · keep existing</SelectItem>{choices.map(([id,name])=>id&&name?<SelectItem key={id} value={id}>{name}</SelectItem>:null)}</SelectContent></Select>)}</div>}
+ {!['suggested','recovery','combined'].includes(mode)&&<Select value={value} onValueChange={setValue}><SelectTrigger aria-label="Bulk mapping value"><SelectValue placeholder="Choose value"/></SelectTrigger><SelectContent>{options.map(([key,label])=><SelectItem key={key} value={key}>{label}</SelectItem>)}</SelectContent></Select>}
  <Button onClick={prepare}>Preview bulk mapping</Button></> : <><h3 className="font-semibold">Confirm bulk mapping</h3><p className="text-sm">{preview.selected} selected · {preview.records.length} included · {preview.excluded.length} excluded</p><p className="text-sm text-muted-foreground">Account balances, total income and spending, original amounts, narration, exchange rates and statement matching stay unchanged. Category, workspace and organisation reports may change. Claims are not granted.</p>
  <ul className="max-h-64 divide-y overflow-y-auto text-sm">{preview.records.map((e,index)=>{const next=preview.after[index];return <li key={e.id} className="space-y-1 py-2"><p className="break-words font-medium">{e.title} · {money(e.amount)}</p>{next&&(['department','scope','category','paymentInstrumentId','paymentMethod','tags'] as const).filter(k=>JSON.stringify(e[k])!==JSON.stringify(next[k])).map(k=><p key={k} className="break-words text-xs">{k==='department'?'Organisation':k==='paymentInstrumentId'?'Saved payment method':k==='paymentMethod'?'Payment type':k==='scope'?'Workspace':k==='tags'?'Activity':'Category'}: {String(e[k]??'Unknown')} → {String(next[k])}</p>)}</li>;})}</ul>
  {!!preview.excluded.length&&<details><summary>Excluded transactions</summary><ul className="text-xs">{preview.excluded.map(e=><li key={e.id}>{e.title}: {e.reason}</li>)}</ul></details>}
