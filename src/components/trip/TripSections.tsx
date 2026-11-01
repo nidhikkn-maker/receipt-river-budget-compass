@@ -158,12 +158,8 @@ export function TripItinerarySection({ trip }: { trip: TravelTrip }) {
 
 /** Expenses: trip-tagged entries, daily chart, category/currency totals, and candidate entries to attach. */
 export function TripExpensesSection({ trip }: { trip: TravelTrip }) {
-  const { transactions, setTags } = useStore();
+  const { transactions } = useStore();
   const s = useMemo(() => tripSummary(trip, transactions), [trip, transactions]);
-  const tag = tripTag(trip);
-  const candidates = transactions.filter((t) => (t.txnType ?? "expense") === "expense" && t.date >= trip.start && t.date <= trip.end && !(t.tags ?? []).includes(tag));
-  const toggle = async (id: string, on: boolean) => { const t = transactions.find((x) => x.id === id); if (!t) return; try { await setTags(id, on ? [...new Set([...(t.tags ?? []), tag])] : (t.tags ?? []).filter((x) => x !== tag)); } catch (e) { toast.error((e as Error).message); } };
-  const markReimb = async (id: string) => { const t = transactions.find((x) => x.id === id); if (!t) return; const r = "Purpose: Reimbursable"; try { await setTags(id, (t.tags ?? []).includes(r) ? (t.tags ?? []).filter((x) => x !== r) : [...(t.tags ?? []), r]); } catch (e) { toast.error((e as Error).message); } };
   return (
     <>
       <TripExpenseActions trip={trip} />
