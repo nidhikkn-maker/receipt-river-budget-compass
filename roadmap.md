@@ -455,3 +455,7 @@
 - [x] Back/forward buttons + edge-swipe back, centred pop-ups (shared dialog), weights capped at 600 on the chosen system font
 - [x] Publish completed layout changes
 - [x] Show E1–E7 corrections for review
+
+## V5.18 (Nov 1 2026)
+- [ ] Fresh security check on live site + summarize issues before sharing widely
+- [ ] Verify live site displays correctly on desktop and mobile (updated layouts + navigation)
