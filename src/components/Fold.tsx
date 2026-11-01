@@ -18,7 +18,7 @@ export function Fold({ id, title, hint, children, defaultOpen = false }: { id?: 
         </span>
         <ChevronDown className="size-5 shrink-0 text-muted-foreground transition-transform group-open:rotate-180 motion-reduce:transition-none" aria-hidden="true" />
       </summary>
-      <div className="border-t px-3 pb-3 pt-3 sm:px-4">{children}</div>
+      <div className="border-t px-3 pb-3 pt-3 sm:px-4 [&>section]:m-0 [&>section]:border-0 [&>section]:py-0 [&>div>section]:m-0 [&>div>section]:border-0 [&>div>section]:py-0">{children}</div>
     </details>
   );
 }

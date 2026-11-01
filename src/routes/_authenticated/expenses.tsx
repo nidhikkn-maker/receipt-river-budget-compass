@@ -31,6 +31,9 @@ function Expenses() {
   const { transactions: expenses, members, accounts, preferences, bulkSetCategory, categoryHistory, undoCategoryBatch } = useStore();
   const [f, setF] = useState<Filters>({ scope: "all", memberId: "all", category: "all" });
   const [selecting, setSelecting] = useState(false);
+  const [shown, setShown] = useState(50);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => setShown(50), [JSON.stringify(f)]);
   const [picked, setPicked] = useState<Set<string>>(new Set());
   const [bulkCategory, setBulkCategory] = useState("");
   const [applying, setApplying] = useState(false);
