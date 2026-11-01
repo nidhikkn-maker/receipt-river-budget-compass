@@ -31,3 +31,12 @@ describe("statement cross-check", () => {
     expect(results.map((r) => r.result)).toEqual(["found", "found_wrong_kind", "not_found"]);
   });
 });
+
+describe("match confidence", () => {
+  it("scores exact same-day matches with shared words high and wrong direction low", async () => {
+    const { scoreMatch } = await import("./statement-crosscheck");
+    const line = { date: "2026-04-02", amount: 300, direction: "debit" as const, balance: 0, description: "UPI/DR/1/Arthan Shop", source: "k.pdf" };
+    expect(scoreMatch({ id: "a", date: "2026-04-02", amount: 300, kind: "expense", name: "Arthan" }, line).score).toBe(100);
+    expect(scoreMatch({ id: "b", date: "2026-04-05", amount: 300, kind: "income", name: "Other" }, line).score).toBe(33);
+  });
+});

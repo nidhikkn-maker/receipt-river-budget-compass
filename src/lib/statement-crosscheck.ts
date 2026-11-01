@@ -2,7 +2,7 @@
 // Pure functions only; nothing here saves, posts or edits records.
 
 export type BalanceLine = { date: string; amount: number; direction: "debit" | "credit"; balance: number; description: string; source: string };
-export type CrossRecord = { id: string; date: string; amount: number; kind: string; name: string };
+export type CrossRecord = { id: string; date: string; amount: number; kind: string; name: string; description?: string };
 export type CrossResult = CrossRecord & { result: "found" | "found_wrong_kind" | "not_found"; line?: BalanceLine; score: number; confidence: "high" | "medium" | "low"; reasons: string[]; dayGap?: number; nearest?: BalanceLine };
 
 const tokens = (s: string) => new Set(s.toLowerCase().split(/[^a-z0-9]+/).filter((t) => t.length >= 3 && !/^(upi|pos|visa|neft|imps|hdfc|idfb|utib|ift|the|ltd|pvt|and|mr)$/.test(t) && !/^\d+$/.test(t)));

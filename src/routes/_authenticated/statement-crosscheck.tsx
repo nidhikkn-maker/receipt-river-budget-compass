@@ -64,7 +64,7 @@ function CrossCheckPage() {
 
   const records: CrossRecord[] = useMemo(() => transactions
     .filter((e) => e.accountId === accountId && e.date >= from && e.date <= to)
-    .map((e) => ({ id: e.id, date: e.date, amount: e.amount, kind: e.txnType ?? "expense", name: e.merchant || e.title })), [transactions, accountId, from, to]);
+    .map((e) => ({ id: e.id, date: e.date, amount: e.amount, kind: e.txnType ?? "expense", name: e.merchant || e.title, description: e.description })), [transactions, accountId, from, to]);
 
   const out = useMemo(() => (other.length ? crossCheck(records, home.flatMap((p) => p.lines), other.flatMap((p) => p.lines)) : null), [records, home, other]);
   const count = (r: CrossResult["result"]) => out?.results.filter((x) => x.result === r) ?? [];
@@ -73,8 +73,8 @@ function CrossCheckPage() {
 
   const exportCsv = () => {
     const q = (s: string | number) => `"${String(s).replaceAll('"', '""')}"`;
-    const csv = ["record_date,kind,amount,name,result,statement_date,statement_direction,statement_file,statement_description",
-      ...(out?.results ?? []).map((r) => [r.date, r.kind, r.amount, r.name, LABEL[r.result], r.line?.date ?? "", r.line?.direction ?? "", r.line?.source ?? "", r.line?.description ?? ""].map(q).join(","))].join("\n");
+    const csv = ["record_date,kind,amount,name,result,confidence,score,reasons,statement_date,statement_direction,statement_file,statement_description",
+      ...(out?.results ?? []).map((r) => [r.date, r.kind, r.amount, r.name, LABEL[r.result], r.confidence, r.score, r.reasons.join("; "), r.line?.date ?? "", r.line?.direction ?? "", r.line?.source ?? "", r.line?.description ?? ""].map(q).join(","))].join("\n");
     const a = document.createElement("a");
     a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
     a.download = "statement-crosscheck.csv"; a.click(); URL.revokeObjectURL(a.href);
@@ -122,16 +122,51 @@ function CrossCheckPage() {
           </div>
           <div className="flex justify-end"><Button variant="outline" onClick={exportCsv}><Download className="size-4" /> Export CSV</Button></div>
           <ul className="divide-y divide-border rounded-lg border border-border bg-card">
-            {shown.map((r) => (
-              <li key={r.id} className="flex flex-col gap-1 p-3 text-sm sm:flex-row sm:items-center sm:justify-between">
-                <div className="min-w-0"><div className="truncate font-medium">{r.name}</div><div className="text-xs text-muted-foreground">{r.date} · saved as {r.kind}{r.line ? ` · statement ${r.line.date}, money ${r.line.direction === "debit" ? "out" : "in"} · ${r.line.source}` : ""}</div></div>
-                <div className="flex shrink-0 items-center gap-3"><span className="tabular-nums">{money(r.amount)}</span><span className={`rounded-full px-2 py-0.5 text-xs ${r.result === "found" ? "bg-primary/10 text-primary" : r.result === "found_wrong_kind" ? "bg-destructive/10 text-destructive" : "bg-muted text-muted-foreground"}`}>{LABEL[r.result]}</span></div>
-              </li>
-            ))}
+            {shown.map((r) => <ResultRow key={r.id} r={r} />)}
             {!shown.length && <li className="p-3 text-sm text-muted-foreground">Nothing in this group.</li>}
           </ul>
         </>
       )}
     </div>
+  );
+}
+
+function Side({ title, date, amount, kind, text, diff }: { title: string; date?: string; amount?: number; kind?: string; text?: string; diff: { date: boolean; amount: boolean; kind: boolean } }) {
+  const mark = (on: boolean) => (on ? "font-semibold text-destructive" : "");
+  return (
+    <div className="min-w-0 rounded-md border border-border p-3">
+      <div className="mb-1 text-xs font-medium text-muted-foreground">{title}</div>
+      {date === undefined ? <p className="text-sm text-muted-foreground">No matching statement entry</p> : (
+        <dl className="grid grid-cols-[5.5rem_1fr] gap-x-2 gap-y-1 text-sm">
+          <dt className="text-muted-foreground">Date</dt><dd className={mark(diff.date)}>{date}</dd>
+          <dt className="text-muted-foreground">Amount</dt><dd className={`tabular-nums ${mark(diff.amount)}`}>{amount !== undefined ? money(amount) : "—"}</dd>
+          <dt className="text-muted-foreground">Kind</dt><dd className={mark(diff.kind)}>{kind}</dd>
+          <dt className="text-muted-foreground">Description</dt><dd className="break-words">{text || "—"}</dd>
+        </dl>
+      )}
+    </div>
+  );
+}
+
+function ResultRow({ r }: { r: CrossResult }) {
+  const [open, setOpen] = useState(false);
+  const l = r.line ?? r.nearest;
+  const isOut = !["income", "refund"].includes(r.kind);
+  const diff = { date: !!l && l.date !== r.date, amount: !!l && Math.abs(l.amount - r.amount) > 0.005, kind: !!l && (l.direction === "debit") !== isOut };
+  const tone = r.result === "found" ? "bg-primary/10 text-primary" : r.result === "found_wrong_kind" ? "bg-destructive/10 text-destructive" : "bg-muted text-muted-foreground";
+  return (
+    <li className="p-3 text-sm">
+      <button type="button" aria-expanded={open} onClick={() => setOpen((o) => !o)} className="flex min-h-11 w-full flex-col gap-1 text-left sm:flex-row sm:items-center sm:justify-between">
+        <div className="min-w-0"><div className="truncate font-medium">{r.name}</div><div className="text-xs text-muted-foreground">{r.date} · saved as {r.kind}{r.line ? ` · ${r.line.source}` : ""}</div></div>
+        <div className="flex shrink-0 flex-wrap items-center gap-2"><span className="tabular-nums">{money(r.amount)}</span><span className={`rounded-full px-2 py-0.5 text-xs ${tone}`}>{LABEL[r.result]}</span><span className="rounded-full border border-border px-2 py-0.5 text-xs">{r.result === "not_found" ? "No match" : `${r.confidence} · ${r.score}`}</span></div>
+      </button>
+      <ul className="mt-1 flex flex-wrap gap-1">{r.reasons.map((x) => <li key={x} className="rounded bg-muted px-1.5 py-0.5 text-xs text-muted-foreground">{x}</li>)}</ul>
+      {open && (
+        <div className="mt-2 grid gap-2 sm:grid-cols-2">
+          <Side title="Saved record" date={r.date} amount={r.amount} kind={r.kind} text={[r.name, r.description].filter(Boolean).join(" — ")} diff={{ date: false, amount: false, kind: false }} />
+          <Side title={r.line ? "Statement entry" : r.nearest ? "Nearest same-amount entry (not matched)" : "Statement entry"} date={l?.date} amount={l?.amount} kind={l ? `money ${l.direction === "debit" ? "out" : "in"}` : undefined} text={l ? `${l.description} (${l.source})` : undefined} diff={diff} />
+        </div>
+      )}
+    </li>
   );
 }
