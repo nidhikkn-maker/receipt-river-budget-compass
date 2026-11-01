@@ -19,3 +19,8 @@ describe("trip lifecycle", () => {
     expect(deleteBlockers(trip, [])).toEqual([]);
   });
 });
+describe("restored label", () => {
+  it("restoring records when it happened so the list can show Restored", () => {
+    expect(restoreTrip(cancelTrip(trip, "x", false), "2026-11-02T00:00:00Z").restoredAt).toBe("2026-11-02T00:00:00Z");
+  });
+});
