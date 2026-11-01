@@ -429,3 +429,9 @@
 - [x] Undo an entire statement posting batch
 - [x] Publish latest statement matching/posting to live
 - [x] Post matched statement results to live records (MOVAC ₹21,419.15 gap remains)
+
+## V5.15 (Nov 2026)
+- [ ] Post + reconcile HDFC Forex card statements (EUR 616.49 / USD 2,592.53)
+- [ ] Bulk categorisation for 41 uncategorised HDFC Krupa entries
+- [ ] Linked-transaction review: ₹1.25 cr Allwin Laboratories → AK Meridian (transfer vs income/spending)
+- [ ] Forex card statement import & reconciliation flow
