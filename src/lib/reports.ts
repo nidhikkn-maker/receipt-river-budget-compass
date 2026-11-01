@@ -1,4 +1,5 @@
 import { whoLabel, PAYMENT_LABEL, SCOPE_LABEL, budgetUsage, totalsBy, categoryTotals, type Budgets, type Expense } from "./expenses";
+import { workspaceParts } from "./workspaces";
 
 export type ReportKind = "expenses" | "business" | "categories" | "reimbursements" | "reimbursement-payments" | "departments";
 export interface Report { title: string; headers: string[]; rows: (string | number)[][] }
@@ -30,10 +31,17 @@ export function buildReport(kind: ReportKind, transactions: Expense[], memberNam
      e.currency, fmt(e.originalAmount), fmt(e.fxRate), fmt(e.amount), e.reconciledAt ? "Yes" : "No", e.reimbursementStatus ?? "none"];
   const headers = ["Date", "Title", "Merchant", "Category", "Type", "For", "Paid with", "Currency", "Bill amount", "Rate", "Amount (INR)", "Bank matched", "Reimbursement"];
   if (kind === "expenses") return { title: "All expenses", headers, rows: expenses.map(row) };
-  if (kind === "business") return { title: "Business expenses", headers, rows: expenses.filter((e) => e.scope === "business").map(row) };
+  const inWorkspace = (scope: Expense["scope"]) => expenses.flatMap((e) => {
+    const share = workspaceParts(e).find((p) => p.workspace === scope);
+    if (!share || share.amount <= 0) return [];
+    const ratio = e.amount > 0 ? share.amount / e.amount : 0;
+    return [{ ...e, scope, amount: share.amount, originalAmount: e.originalAmount * ratio,
+      allocations: (e.allocations ?? []).map((a) => ({ ...a, amount: a.amount * ratio })) }];
+  });
+  if (kind === "business") return { title: "Business expenses", headers, rows: inWorkspace("business").map(row) };
   if (kind === "reimbursements") return { title: "Reimbursements", headers, rows: expenses.filter(e=>e.reimbursementStatus && e.reimbursementStatus!=="none").map(row) };
-  const biz = categoryTotals(expenses.filter((e) => e.scope === "business"));
-  const per = categoryTotals(expenses.filter((e) => e.scope === "personal"));
+  const biz = categoryTotals(inWorkspace("business"));
+  const per = categoryTotals(inWorkspace("personal"));
   const month = options.budgetMonth ?? new Date().toISOString().slice(0, 7);
   const usage = Object.fromEntries(budgetUsage(expenses, budgets, month).map((u) => [u.category, u]));
   return {

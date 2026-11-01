@@ -48,6 +48,10 @@ export interface Txn {
   /** Adjustments only: +1 raises the balance, -1 lowers it. */
   adjustmentSign?: 1 | -1;
   reconciledAt?: string | null;
+  /** Manual repayment breakdown is in original currency; legacy repayments without a split remain principal-only. */
+  principal?: number | null;
+  interest?: number | null;
+  originalAmount?: number;
 }
 
 export interface Valuation { id?: string; accountId: string; value: number; valuedOn: string; source: string; note?: string }
@@ -59,6 +63,14 @@ export const MOVE_TYPES: TxnType[] = ["transfer", "card_payment", "loan_repaymen
 export const isMove = (k: TxnType | undefined) => MOVE_TYPES.includes(k ?? "expense");
 /** Destination account kinds allowed for each move type. */
 export const MOVE_TARGET: Partial<Record<TxnType, AccountKind[]>> = { card_payment: ["credit_card"], loan_repayment: ["loan", "other_liability"], investment: ["investment", "fixed_deposit", "other_asset"] };
+
+/** Stored INR payment apportioned using the saved original-currency split. */
+export function repaymentParts(t: Txn) {
+  if (type(t) !== "loan_repayment" || t.principal == null || t.interest == null) return { principal: t.amount, interest: 0 };
+  const total = t.originalAmount ?? t.principal + t.interest;
+  const interest = total > 0 ? r2(t.amount * t.interest / total) : 0;
+  return { principal: r2(t.amount - interest), interest };
+}
 
 /**
  * Balance of one account. For asset accounts it's money held; for liabilities it's amount owed.
@@ -78,7 +90,7 @@ export function accountBalance(a: Account, txns: Txn[]): number {
       else if (k === "advance") bal += sign * t.amount;
       else if (k === "advance_settlement") bal -= sign * t.amount;
     }
-    if (isMove(k) && t.toAccountId === a.id) bal += sign * t.amount;
+    if (isMove(k) && t.toAccountId === a.id) bal += sign * (k === "loan_repayment" ? repaymentParts(t).principal : t.amount);
   }
   return r2(bal);
 }
@@ -123,6 +135,7 @@ export function cashflow(txns: Txn[], from?: string, to?: string) {
     const k = type(t);
     if (k === "income") income += t.amount;
     else if (k === "expense") spent += t.amount;
+    else if (k === "loan_repayment") spent += repaymentParts(t).interest;
     else if (k === "refund" || k === "reimbursement") spent -= t.amount;
   }
   return { income: r2(income), spent: r2(spent), net: r2(income - spent) };

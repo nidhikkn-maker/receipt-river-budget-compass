@@ -1,5 +1,7 @@
 # Finance rule modules
-- V5.4 financial audit fixtures run only in memory; explicit expected-failure tests document unresolved release blockers and must never be counted as successful acceptance.
+- V5.4 financial audit fixtures run only in memory; defect regressions assert real passing outcomes, and unresolved expected failures must never be counted as successful acceptance.
+- Position reimbursement totals use outstandingOf on tracked expense claims; legacy workspace reports use workspaceParts, and manual loan splits use stored-INR repaymentParts while preserving principal-only legacy/EMI entries.
+- Family permission SQL has an isolated PGlite regression covering active, unrelated and revoked requesters plus owner decisions; cloud tests must never create sample records in production.
 
 - Personal/family tracker, no approvals: expense rules live as pure tested functions in src/lib/expenses.ts.
 - Accounts/ledger rules (balances, cashflow, net worth) are pure tested functions in src/lib/ledger.ts; balances are derived from entries, never stored, and transfers/card payments never count as income or spending. store.expenses = expense-type only; store.transactions = all entries.

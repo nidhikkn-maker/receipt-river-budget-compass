@@ -1,9 +1,12 @@
 # Roadmap (Functional Requirements v1.0)
 ## V5.4 audit — evidence before release
+- [x] Fix both security warnings: active-invite read/insert/withdraw guards tested in isolated PostgreSQL; assistant server-owned facts and untrusted context tested and signed-in answer verified; live financial records untouched.
+- [x] Fix D-FIN-001 remaining reimbursements, D-FIN-002 Business/category workspace shares, and D-FIN-003 repayment principal/interest including FX and legacy EMI compatibility; 675 tests passed, build OK.
+- [ ] Remaining dependency advisories: deepmerge has no patched compatible release; minimatch legacy consumers need an upstream API-compatible fix or separately verified replacement. Compatible Vite/Vitest/transitive upgrades applied; esbuild/glob overridden to patched versions.
 - [x] Save brief and rerun existing regression without cloud writes: 655 tests passed.
 - [x] Inspect architecture/recovery/financial rules; run quick security/dependency scans and request deeper scan.
 - [ ] Isolated workflow/restore/security audit — blocked: main and audit draft both share live data; no isolated cloud environment established.
-- [ ] Correct confirmed financial/recovery/report/dependency defects after approval, then rerun affected and critical regression checks.
+- [ ] Remaining recovery/report release gates require an isolated cloud environment; three confirmed financial defects corrected, residual dependency blockers listed above.
 - [ ] Real iPhone/provider/live-worker acceptance — requires appropriate device/provider access and isolated testing.
 
 - [x] Fix Delete Data: in-app typed confirmation, visible errors, complete review/history cleanup and checked owner-file/offline cleanup; signed-in failure/cancel/mobile verified without wiping user data; 241 tests pass. Preview changes need publication.
