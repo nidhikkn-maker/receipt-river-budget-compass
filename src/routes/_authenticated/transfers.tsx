@@ -68,16 +68,16 @@ function TransfersPage() {
   };
 
   const Pair = ({ d, c, dest }: { d: Expense; c: Expense | null; dest: string }) => (
-    <div className="grid gap-1 text-sm sm:grid-cols-[1fr_auto_1fr] sm:items-center">
-      <div><div className="font-medium">{name(d.accountId)}</div><div className="text-xs text-muted-foreground">{d.date} · {d.title} · {money(d.originalAmount, d.currency)} out</div></div>
-      <ArrowRight className="hidden h-4 w-4 sm:block" />
-      <div><div className="font-medium">{name(dest)}</div><div className="text-xs text-muted-foreground">{c ? `${c.date} · ${c.title} · ${money(c.originalAmount, c.currency)} in` : "Waiting for the destination statement"}</div></div>
+    <div className="grid min-w-0 gap-1 text-sm md:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] md:items-center md:gap-3">
+      <div className="min-w-0"><div className="truncate font-medium">{name(d.accountId)}</div><div className="break-words text-xs text-muted-foreground">{d.date} · {d.title} · {money(d.originalAmount, d.currency)} out</div></div>
+      <ArrowRight className="h-4 w-4 rotate-90 text-muted-foreground md:rotate-0" />
+      <div className="min-w-0"><div className="truncate font-medium">{name(dest)}</div><div className="break-words text-xs text-muted-foreground">{c ? `${c.date} · ${c.title} · ${money(c.originalAmount, c.currency)} in` : "Waiting for the destination statement"}</div></div>
     </div>
   );
 
   return (
-    <div>
-      <h1 className="font-display text-3xl font-bold tracking-tight">Internal transfers</h1>
+    <div className="mx-auto w-full max-w-5xl">
+      <h1 className="font-display text-2xl sm:text-3xl font-bold tracking-tight">Internal transfers</h1>
       <p className="mt-1 text-sm text-muted-foreground">Both statement lines stay. Linking records them as one movement so income and spending aren’t inflated. Nothing is linked without your confirmation.</p>
       {error && <p role="alert" className="mt-3 text-sm text-destructive">{error} <Button size="sm" variant="ghost" onClick={() => void load()}>Retry</Button></p>}
       {!links && !error && <p className="mt-4 text-sm text-muted-foreground">Searching for matching transfers…</p>}
@@ -87,8 +87,8 @@ function TransfersPage() {
           <Card title={`Strong matches found automatically (${strong.length})`} className="mt-4">
             {strong.length === 0 ? <p className="text-sm text-muted-foreground">No pairs with a shared reference or matching narration right now.</p> : (
               <>
-                <ul className="divide-y">{strong.map((s) => <li key={s.key} className="flex flex-wrap items-center gap-3 py-3"><div className="min-w-0 flex-1"><Pair d={s.debit} c={s.credit} dest={s.destId} /><p className="mt-1 text-xs text-muted-foreground">{s.evidence.join(" · ")}</p></div><Button size="sm" variant="outline" onClick={() => open([s])}>Review</Button></li>)}</ul>
-                <Button className="mt-3" onClick={() => open(strong)}><Link2 className="mr-1 h-4 w-4" />Review & link all {strong.length}</Button>
+                <ul className="divide-y">{strong.map((s) => <li key={s.key} className="flex flex-col gap-3 py-3 md:flex-row md:items-center"><div className="min-w-0 flex-1 [overflow-wrap:anywhere]"><Pair d={s.debit} c={s.credit} dest={s.destId} /><p className="mt-1 text-xs text-muted-foreground">{s.evidence.join(" · ")}</p></div><Button size="sm" variant="outline" className="w-full md:w-auto" onClick={() => open([s])}>Review</Button></li>)}</ul>
+                <Button className="mt-3 w-full sm:w-auto" onClick={() => open(strong)}><Link2 className="mr-1 h-4 w-4" />Review & link all {strong.length}</Button>
               </>
             )}
           </Card>
@@ -99,9 +99,9 @@ function TransfersPage() {
                 <li key={s.key} className="space-y-2 py-3">
                   <Pair d={s.debit} c={s.credit} dest={s.destId || destFor[s.debit.id] || ""} />
                   <p className="text-xs text-muted-foreground">{s.evidence.join(" · ")} · {s.candidates} possible entr{s.candidates === 1 ? "y" : "ies"}</p>
-                  <div className="flex flex-wrap gap-2">
+                  <div className="grid gap-2 sm:flex sm:flex-wrap">
                     {s.credit && <Button size="sm" variant="outline" onClick={() => open([s])}>This is the same transfer</Button>}
-                    <Select value={destFor[s.debit.id] ?? ""} onValueChange={(v) => setDestFor({ ...destFor, [s.debit.id]: v })}><SelectTrigger className="h-9 w-56" aria-label="Destination account"><SelectValue placeholder="Only one side uploaded — choose destination" /></SelectTrigger><SelectContent>{own.filter((a) => a.id !== s.debit.accountId).map((a) => <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}</SelectContent></Select>
+                    <Select value={destFor[s.debit.id] ?? ""} onValueChange={(v) => setDestFor({ ...destFor, [s.debit.id]: v })}><SelectTrigger className="h-9 w-full sm:w-64" aria-label="Destination account"><SelectValue placeholder="Only one side uploaded — choose destination" /></SelectTrigger><SelectContent>{own.filter((a) => a.id !== s.debit.accountId).map((a) => <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}</SelectContent></Select>
                     <Button size="sm" variant="ghost" disabled={!destFor[s.debit.id]} onClick={() => open([{ ...s, credit: null, destId: destFor[s.debit.id]! }])}>Save as awaiting destination</Button>
                   </div>
                 </li>))}</ul>
@@ -112,10 +112,10 @@ function TransfersPage() {
             <ul className="divide-y">{links.slice(0, 200).map((l) => {
               const st = transferStatus(l, transactions, transferCounterparts);
               const d = transactions.find((t) => t.id === l.debit_id);
-              return <li key={l.id} className="flex flex-wrap items-center gap-3 py-3 text-sm">
-                <div className="min-w-0 flex-1"><div className="font-medium">{name(l.source_account)} → {name(l.dest_account)}</div><div className="text-xs text-muted-foreground">{d?.date ?? "—"} · {money(Number(l.source_amount), l.source_currency)}</div></div>
+              return <li key={l.id} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-2 py-3 text-sm sm:flex">
+                <div className="min-w-0 flex-1 [overflow-wrap:anywhere]"><div className="break-words font-medium">{name(l.source_account)} → {name(l.dest_account)}</div><div className="text-xs text-muted-foreground">{d?.date ?? "—"} · {money(Number(l.source_amount), l.source_currency)}</div></div>
                 <span className={"rounded-full px-2 py-0.5 text-[11px] font-semibold " + (st === "conflict" ? "bg-destructive/10 text-destructive" : "bg-secondary text-secondary-foreground")}>{TRANSFER_STATUS_LABEL[st]}</span>
-                {st !== "cancelled" && <Button size="sm" variant="ghost" onClick={async () => { try { await cancelTransfer(l.id); await load(); toast.success("Transfer unlinked; original entries restored"); } catch (e) { toast.error((e as Error).message); } }}><Undo2 className="mr-1 h-4 w-4" />Unlink</Button>}
+                {st !== "cancelled" && <Button size="sm" variant="ghost" className="col-span-2 justify-self-start" onClick={async () => { try { await cancelTransfer(l.id); await load(); toast.success("Transfer unlinked; original entries restored"); } catch (e) { toast.error((e as Error).message); } }}><Undo2 className="mr-1 h-4 w-4" />Unlink</Button>}
               </li>;
             })}</ul>
           </Card>
@@ -123,11 +123,11 @@ function TransfersPage() {
       )}
 
       <Dialog open={!!pending} onOpenChange={(v) => { if (!v && !busy.current) setPending(null); }}>
-        <DialogContent className="max-h-[85dvh] overflow-y-auto sm:max-w-2xl">
+        <DialogContent className="max-h-[85dvh] w-[calc(100vw-1.5rem)] overflow-y-auto sm:max-w-2xl">
           <DialogHeader><DialogTitle>Confirm {pending?.items.length} transfer{pending && pending.items.length > 1 ? "s" : ""}</DialogTitle><DialogDescription>Existing entries are linked. No new debit or credit is created.</DialogDescription></DialogHeader>
           <ul className="divide-y">{pending?.items.map(({ s }) => { const imp = transferImpact(s.debit, s.credit); return <li key={s.key} className="space-y-1 py-3"><Pair d={s.debit} c={s.credit} dest={s.destId} /><p className="text-xs">Income {money(imp.incomeChange)} · Spending {money(imp.spendingChange)} · New postings: none</p><p className="text-xs text-muted-foreground">{s.credit ? "Both balances stay as they are." : `${name(s.destId)} rises by ${money(s.debit.amount)} until its statement arrives.`}</p></li>; })}</ul>
           {stage && <p className="text-sm" role="status">{stage}</p>}
-          <div className="flex flex-wrap gap-2"><Button variant="outline" disabled={!!stage} onClick={() => setPending(null)}>Cancel</Button><Button onClick={run}>Confirm transfer{pending && pending.items.length > 1 ? "s" : ""}</Button></div>
+          <div className="sticky bottom-0 -mx-6 -mb-6 grid grid-cols-2 gap-2 border-t bg-background p-4 sm:static sm:m-0 sm:flex sm:justify-end sm:border-0 sm:p-0"><Button variant="outline" disabled={!!stage} onClick={() => setPending(null)}>Cancel</Button><Button onClick={run}>Confirm transfer{pending && pending.items.length > 1 ? "s" : ""}</Button></div>
         </DialogContent>
       </Dialog>
     </div>
