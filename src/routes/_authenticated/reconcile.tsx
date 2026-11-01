@@ -9,6 +9,8 @@ import { toast } from "sonner";
 import { BadgeCheck, Sparkles, Upload } from "lucide-react";
 import { PageTitle, Stat } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { BASE_CURRENCY, CURRENCIES, autoMatch, matchScore, money, type Match, type StatementLine } from "@/lib/expenses";
 import { StatementEntry } from "@/components/StatementEntry";
@@ -51,6 +53,10 @@ function Reconcile() {
   const [upTo, setUpTo] = useState<string | null>(null);
   const [lastBatch, setLastBatch] = useState<string | null>(null);
   const [showImported, setShowImported] = useState(false);
+  const [itemList, setItemList] = useState<"matched" | "unmatched" | null>(null);
+  const [itemQuery, setItemQuery] = useState("");
+  const [itemLimit, setItemLimit] = useState(40);
+  const openItems = (kind: "matched" | "unmatched") => { setItemQuery(""); setItemLimit(40); setItemList(kind); };
 
   const loadKnown = useCallback(async (key: string) => {
     const set = new Set<string>(); let top: string | null = null; let batch: string | null = null; let latest = "";
@@ -175,14 +181,15 @@ function Reconcile() {
 
   const reconciled = expenses.filter((e) => e.reconciledAt);
   const open = expenses.filter((e) => !e.reconciledAt);
+  const listItems = (itemList === "matched" ? reconciled : open).filter(e => `${e.title} ${e.merchant ?? ""} ${e.statementRef ?? ""} ${e.date} ${accounts.find(a => a.id === e.accountId)?.name ?? ""}`.toLowerCase().includes(itemQuery.toLowerCase()));
 
   return (
     <>
       <PageTitle eyebrow="Bank" title="Statements" sub="Upload a CSV, Excel or PDF from your bank or card. New expenses are worked out and registered on their own — anything unclear is left for you." />
       <Button asChild className="mb-5"><Link to="/historical-import">Historical import & bulk review</Link></Button>
       <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-3">
-        <Stat label="Matched" value={String(reconciled.length)} />
-        <Stat label="Not matched yet" value={String(open.length)} hint={money(open.reduce((s, e) => s + e.amount, 0))} />
+        <Button asChild variant="ghost" className="h-auto min-w-0 whitespace-normal p-0 text-left"><div role="button" tabIndex={0} aria-label={`Matched: ${reconciled.length} transactions`} onClick={() => openItems("matched")} onKeyDown={e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openItems("matched"); } }}><div className="w-full"><Stat label="Matched" value={String(reconciled.length)} /></div></div></Button>
+        <Button variant="ghost" className="block h-auto min-w-0 whitespace-normal p-0 text-left" aria-label={`Not matched yet: ${open.length} transactions`} onClick={() => openItems("unmatched")}><Stat label="Not matched yet" value={String(open.length)} hint={money(open.reduce((s, e) => s + e.amount, 0))} /></Button>
       </div>
 
       {readStage && <ProcessingPanel className="mb-3" title={`Reading ${readStage.name}…`} stages={stagesAt([readStage.ai ? "Extracting transactions with AI" : "Reading transactions", "Matching remembered account"], readStage.at)} />}
@@ -220,13 +227,13 @@ function Reconcile() {
             {showImported && <ul className="mt-2 max-h-60 space-y-1 overflow-auto text-xs text-muted-foreground">{split.alreadyImported.map((l) => <li key={l.ref} className="font-mono">{l.date} · {l.description} · {money(l.amount, currency)}</li>)}</ul>}
           </div>
           <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
-            <Stat label="New entries" value={String(plan.register.length)} hint={money(plan.register.filter((d) => d.txnType === "expense").reduce((s, d) => s + d.line.amount, 0))} />
-            <Stat label="Need a look" value={String(plan.review.length)} />
-            <Stat label="Possible duplicates" value={String(plan.possibleDuplicates.length)} />
-            <Stat label="Already recorded" value={String(plan.skipped.length)} />
+            <Button asChild variant="ghost" className="block h-auto min-w-0 whitespace-normal p-0 text-left"><Link to="/reconcile" hash="new-entries"><Stat label="New entries" value={String(plan.register.length)} hint={money(plan.register.filter((d) => d.txnType === "expense").reduce((s, d) => s + d.line.amount, 0))} /></Link></Button>
+            <Button asChild variant="ghost" className="block h-auto min-w-0 whitespace-normal p-0 text-left"><Link to="/reconcile" hash="needs-review"><Stat label="Need a look" value={String(plan.review.length)} /></Link></Button>
+            <Button asChild variant="ghost" className="block h-auto min-w-0 whitespace-normal p-0 text-left"><Link to="/reconcile" hash="possible-duplicates"><Stat label="Possible duplicates" value={String(plan.possibleDuplicates.length)} /></Link></Button>
+            <Button asChild variant="ghost" className="block h-auto min-w-0 whitespace-normal p-0 text-left"><Link to="/reconcile" hash="already-recorded"><Stat label="Already recorded" value={String(plan.skipped.length)} /></Link></Button>
           </div>
 
-          <div className="mb-4 rounded-3xl border bg-card p-4">
+          <div id="new-entries" className="mb-4 scroll-mt-28 rounded-3xl border bg-card p-4">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div className="min-w-0">
                 <h2 className="flex items-center gap-2 font-display text-lg font-bold"><Sparkles className="h-4 w-4 text-gold" /> Register {queue.length} transactions automatically</h2>
@@ -264,7 +271,7 @@ function Reconcile() {
           </div>
 
           {plan.possibleDuplicates.length > 0 && (
-            <div className="mb-4 rounded-3xl border-2 border-gold bg-card p-4">
+            <div id="possible-duplicates" className="mb-4 scroll-mt-28 rounded-3xl border-2 border-gold bg-card p-4">
               <h2 className="font-display text-lg font-bold">Possible duplicates ({plan.possibleDuplicates.length})</h2>
               <p className="mb-2 text-xs text-muted-foreground">These look like records you already have. They are not registered unless you say so.</p>
               <ul className="space-y-2">
@@ -287,7 +294,7 @@ function Reconcile() {
           )}
 
           {matched.length > 0 && (
-            <div className="mb-4 rounded-3xl border bg-card p-4">
+            <div id="needs-review" className="mb-4 scroll-mt-28 rounded-3xl border bg-card p-4">
               <div className="mb-2 flex items-center justify-between gap-3">
                 <h2 className="font-display text-lg font-bold">{matched.length} of {freshLines.length} already in your ledger</h2>
                 <Button variant="outline" size="sm" onClick={confirmAll} disabled={busy || matched.length === 0}>Confirm {matched.length} matches</Button>
@@ -338,7 +345,7 @@ function Reconcile() {
           )}
 
           {plan.skipped.length > 0 && (
-            <p className="mb-4 text-xs text-muted-foreground">{plan.skipped.length} line{plan.skipped.length === 1 ? "" : "s"} left alone: {plan.skipped.slice(0, 3).map((s) => s.reason).join(" · ")}{plan.skipped.length > 3 ? " · …" : ""}</p>
+            <p id="already-recorded" className="mb-4 scroll-mt-28 text-xs text-muted-foreground">{plan.skipped.length} line{plan.skipped.length === 1 ? "" : "s"} left alone: {plan.skipped.slice(0, 3).map((s) => s.reason).join(" · ")}{plan.skipped.length > 3 ? " · …" : ""}</p>
           )}
         </>
       )}
@@ -357,6 +364,7 @@ function Reconcile() {
           </ul>
         </>
       )}
+      <Dialog open={itemList !== null} onOpenChange={v => { if (!v) setItemList(null); }}><DialogContent className="max-h-[85dvh] overflow-y-auto sm:max-w-2xl"><DialogHeader><DialogTitle>{itemList === "matched" ? "Matched transactions" : "Not matched yet"}</DialogTitle><DialogDescription>{itemList === "matched" ? `${reconciled.length} transactions confirmed against statements.` : `${open.length} transactions without a confirmed statement match.`}</DialogDescription></DialogHeader><Input aria-label="Search statement transactions" placeholder="Search transaction, account or date" value={itemQuery} onChange={e => { setItemQuery(e.target.value); setItemLimit(40); }} /><p className="text-sm text-muted-foreground">{listItems.length} matching · {Math.min(itemLimit, listItems.length)} shown</p><ul className="divide-y">{listItems.slice(0, itemLimit).map(e => <li key={e.id} className="py-3"><Link to="/new" search={{ edit: e.id }} className="flex items-start justify-between gap-3 text-primary hover:underline"><span className="min-w-0"><span className="block break-words font-medium">{e.title}</span><span className="block text-xs text-muted-foreground">{e.date} · {accounts.find(a => a.id === e.accountId)?.name ?? "No account"}</span><span className="block break-words text-xs text-muted-foreground">{itemList === "matched" ? e.statementRef || "Confirmed statement match" : "No confirmed statement match — review this transaction and its statement."}</span></span><span className="shrink-0 text-sm tabular-nums">{money(e.amount)}</span></Link></li>)}</ul>{!listItems.length && <p className="py-4 text-center text-sm text-muted-foreground">No transactions found.</p>}{listItems.length > itemLimit && <Button variant="outline" onClick={() => setItemLimit(n => n + 40)}>Show more ({listItems.length - itemLimit})</Button>}<Button variant="outline" onClick={() => setItemList(null)}>Back to Statements</Button></DialogContent></Dialog>
     </>
   );
 }
