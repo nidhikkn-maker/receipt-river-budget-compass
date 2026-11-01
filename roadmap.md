@@ -454,3 +454,4 @@
 - [x] Fold long groups on review pages (Statement Desk, Records check, Coverage); move remaining in-page confirmations to centre pop-ups
 - [x] Back/forward buttons + edge-swipe back, centred pop-ups (shared dialog), weights capped at 600 on the chosen system font
 - [ ] Publish completed layout changes
+- [ ] Show E1–E7 corrections for review
