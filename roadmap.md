@@ -1,11 +1,11 @@
 # Roadmap (Functional Requirements v1.0)
 ## Statement tiles and calendar review continuity
-- [ ] Credit-card statement repayments never count as income; automatically recognise existing source-account payments and reduce dues without duplicates or invented source accounts.
-- [ ] Move statement upload experience into Financial Inbox; retain old statement links without a separate page.
-- [ ] Statement tiles open corresponding searchable items and individual transactions.
-- [ ] Preserve selected calendar date/month, page position and filters on return.
-- [ ] Show evidence-based pending/completed calendar indicators without resolving financial issues by navigation.
-- [ ] Verify flows in preview without financial writes.
+- [x] Card credits classify as card payments (refunds stay separate); unique existing source-account payments are recognised automatically without adding money twice. Unknown/ambiguous sources require confirmation. Protected historical posting rejects card-credit income and non-card destinations. Existing financial rows unchanged; no unattended posting added.
+- [x] Statements upload/matching moved to Inbox's Statements view; /reconcile redirects there, and the separate Bank navigation item is removed.
+- [x] Matched/unmatched tiles open searchable paginated lists and exact transactions; upload-summary tiles jump to corresponding full item lists.
+- [x] Calendar month/date, trip/forecast/statement filters and expanded travel calendar survive same-tab review return using owner/history-keyed memory; router restores scroll position. No reload/cross-device persistence promised.
+- [x] Pending/completed calendar counts derive from saved trip closure/blockers and booking payment/confirmation. Passing dates or Done reviewing do not complete reviews.
+- [x] Signed-in preview verified tiles, exact item open/cancel, restored filters/date/month/scroll and phone overflow; controlled card CSV shows Card payment, fixed card destination, source confirmation and no income option. 931 tests pass; preview error-free. No financial test writes or publication. Automatic matching/outstanding arithmetic verified in isolated tests, not a live financial save.
 ## Calendar navigation and review return
 - [x] Open calendar items directly, with a chooser when a date has multiple destinations.
 - [x] Return after successful entry review, resolved financial review or explicit Done reviewing; failures and unresolved issues stay open.
