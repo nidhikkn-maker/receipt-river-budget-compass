@@ -55,6 +55,16 @@ export async function loadFamily() {
 export async function inviteMember(ownerId: string, memberId: string, email: string) {
   check((await supabase.from("family_invites").insert({ owner_id: ownerId, member_id: memberId, email: normalizeEmail(email) })).error);
 }
+/** Rule: a corrected email must be valid and not used by another member's invite. */
+export function checkInviteEmail(email: string, inviteId: string, invites: { id: string; email: string }[]): string {
+  const v = normalizeEmail(email);
+  if (invites.some((i) => i.id !== inviteId && i.email.toLowerCase() === v)) throw new Error("That email is already used for another family member");
+  return v;
+}
+/** Changing the email of a connected invite clears the old connection so only the new address can accept. */
+export async function updateInviteEmail(id: string, email: string) {
+  check((await supabase.from("family_invites").update({ email, accepted_by: null, accepted_at: null }).eq("id", id)).error);
+}
 export async function setInviteRevoked(id: string, revoked: boolean) { check((await supabase.from("family_invites").update({ revoked }).eq("id", id)).error); }
 export async function inviteOwner(id: string): Promise<string | null> { const r = await supabase.rpc("family_invite_owner", { _invite: id }); check(r.error); return (r.data as string | null) ?? null; }
 export async function acceptInvite(id: string) { check((await supabase.rpc("accept_family_invite", { _invite: id })).error); }

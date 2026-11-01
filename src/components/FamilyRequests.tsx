@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { money } from "@/lib/expenses";
 import { useStore } from "@/lib/store";
-import { inviteOwner, acceptInvite, decideRequest, evidenceUrl, inviteMember, loadFamily, sendRequest, setInviteRevoked, type FamilyRequest } from "@/lib/family-requests";
+import { inviteOwner, acceptInvite, decideRequest, evidenceUrl, inviteMember, loadFamily, sendRequest, setInviteRevoked, updateInviteEmail, checkInviteEmail, type FamilyRequest } from "@/lib/family-requests";
 
 type Data = Awaited<ReturnType<typeof loadFamily>>;
 const STATUS: Record<FamilyRequest["status"], string> = { pending: "Waiting", approved: "Approved", declined: "Declined", withdrawn: "Withdrawn" };
@@ -16,6 +16,7 @@ export function FamilyRequests() {
   const [d, setD] = useState<Data | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [editing, setEditing] = useState<{ id: string; email: string } | null>(null);
   const [emails, setEmails] = useState<Record<string, string>>({});
   const [notes, setNotes] = useState<Record<string, string>>({});
   const [f, setF] = useState({ invite: "", title: "", amount: 0, neededBy: "", note: "" });
@@ -90,9 +91,15 @@ export function FamilyRequests() {
           const inv = d.invites.find((i) => i.memberId === m.id);
           return <div key={m.id} className="flex flex-wrap items-center gap-2 border-b py-2 text-sm last:border-0">
             <span className="w-28 font-semibold">{m.name}</span>
-            {inv ? <>
+            {inv && editing?.id === inv.id ? <>
+              <Input className="h-9 max-w-xs" type="email" aria-label={`New email for ${m.name}`} value={editing.email} onChange={(e) => setEditing({ id: inv.id, email: e.target.value })} />
+              <Button size="sm" disabled={busy} onClick={() => void run(async () => { const v = checkInviteEmail(editing.email, inv.id, d.invites); await updateInviteEmail(inv.id, v); setEditing(null); }, "Email updated")}>Save</Button>
+              <Button size="sm" variant="ghost" onClick={() => setEditing(null)}>Cancel</Button>
+              {inv.acceptedBy && <p className="w-full text-xs text-destructive">They're already connected. Saving disconnects them — they'll need to sign in again with the new email.</p>}
+            </> : inv ? <>
               <span className="text-muted-foreground">{inv.email} · {inv.revoked ? "Access removed" : inv.acceptedBy ? "Connected" : "Invited — ask them to sign in at ledgerline.biz with this email"}</span>
               <Button size="sm" variant="ghost" disabled={busy} onClick={() => void run(() => setInviteRevoked(inv.id, !inv.revoked), inv.revoked ? "Access restored" : "Access removed")}>{inv.revoked ? "Restore" : "Remove access"}</Button>
+              <Button size="sm" variant="ghost" disabled={busy} onClick={() => setEditing({ id: inv.id, email: inv.email })}>Edit email</Button>
             </> : <>
               <Input className="h-9 max-w-xs" type="email" placeholder="Their email" value={emails[m.id] ?? ""} onChange={(e) => setEmails({ ...emails, [m.id]: e.target.value })} />
               <Button size="sm" disabled={busy} onClick={() => void run(() => inviteMember(d.uid, m.id, emails[m.id] ?? ""), "Invitation saved")}>Invite</Button>

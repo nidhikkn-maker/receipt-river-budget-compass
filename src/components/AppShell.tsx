@@ -1,6 +1,8 @@
 import { FilePen } from "lucide-react";
 import { DraftsReminder } from "@/components/DraftsReminder";
-import { Link, useRouterState } from "@tanstack/react-router";
+import { Link, useRouter, useRouterState } from "@tanstack/react-router";
+import { ArrowLeft } from "lucide-react";
+import { showBackButton } from "@/lib/back-nav";
 import { useEffect, useState, type ReactNode } from "react";
 import { BarChart3, Bell, CalendarClock, Gem, Home, Landmark, ListFilter, PiggyBank, Plus, Settings, Sparkles, Users, Eye, EyeOff, FileText, UserRound, TrendingUp, Inbox, HeartPulse, Search, SlidersHorizontal, Split, Network, Plane, Wallet, Bot, Menu, X, MessageCircleQuestion, RefreshCw, CloudOff, Check, TriangleAlert } from "lucide-react";
 import { DeviceLock } from "./DeviceLock";
@@ -163,6 +165,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       </header>
 
       <main className={focused ? "mx-auto max-w-3xl px-4 pb-6 pt-2 sm:px-8" : wideClaim ? 'mx-auto max-w-[1800px] px-4 pb-28 pt-5 sm:px-8 lg:pb-12' : "mx-auto max-w-6xl px-4 pb-28 pt-5 sm:px-8 lg:pb-12"}>
+        {!focused && <BackButton />}
         {!focused && !loading && <DraftsReminder />}
         {loading ? <p className="text-muted-foreground">Loading…</p> : <DeviceLock>{children}</DeviceLock>}
       </main>
@@ -230,5 +233,17 @@ export function Stat({ label, value, hint, tone }: { label: string; value: strin
       <div className="mt-1 font-mono text-[min(1.5rem,15cqw)] font-semibold text-gold-strong">{value}</div>
       {hint && <div className="text-xs text-muted-foreground">{hint}</div>}
     </div>
+  );
+}
+
+function BackButton() {
+  const router = useRouter();
+  const path = useRouterState({ select: (st) => st.location.pathname });
+  if (!showBackButton(path)) return null;
+  return (
+    <button type="button" aria-label="Back" onClick={() => { if (router.history.canGoBack()) router.history.back(); else void router.navigate({ to: "/dashboard" }); }}
+      className="mb-2 inline-flex h-10 items-center gap-1 rounded-xl pr-3 text-sm font-medium text-muted-foreground transition hover:text-foreground">
+      <ArrowLeft className="h-5 w-5" /> Back
+    </button>
   );
 }
