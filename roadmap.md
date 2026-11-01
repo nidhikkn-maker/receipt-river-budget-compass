@@ -368,3 +368,8 @@
 - [ ] Foreign-currency ledger reconciliation — source arithmetic supported, direct original-currency comparison to INR-only ledger unavailable; never certifies or auto-adjusts balances.
 
 - [x] Current continuation: grouped auto-refreshing import Inbox and direct validated batch links; active review refreshes with stale-response protection. Signed-in processing→review update, exact-batch reload, Inbox link, phone overflow and no approval/posting verified; 655 tests pass. Temporary fixture removed; no publication.
+
+## V5.10.3 combined plan (pending approval)
+- [ ] Card balance view with unreconciled-payment flags
+- [ ] Trip cancel / restore / delete
+- [ ] V5.10.3 classification forms, recipients, safe transfers, audit (see .lovable/requirements-v5.10.3.md)
