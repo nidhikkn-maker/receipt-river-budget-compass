@@ -47,6 +47,9 @@ describe("statement auto-registration", () => {
     expect(classifyStatementLine(credit, ctx({ accountId: card.id, transactions: [payment] })).existingPaymentId).toBeUndefined();
     expect(classifyStatementLine(credit, ctx({ accountId: card.id, transactions: [{ ...payment, title: "Payment received" }, { ...payment, id: "two", title: "Payment received" }] })).existingPaymentId).toBeUndefined();
   });
+  it("keeps genuine card refunds separate from repayments", () => {
+    expect(classifyStatementLine(line({ description: "AMAZON REFUND", amount: 900, direction: "credit" }), ctx({ accountId: card.id })).txnType).toBe("refund");
+  });
   it("registers an UPI food purchase as an expense in Food and beverages", () => {
     const draft = classifyStatementLine(line({ description: "UPI-SWIGGY ORDER-4512", amount: 450 }), ctx());
     expect(draft.txnType).toBe("expense");

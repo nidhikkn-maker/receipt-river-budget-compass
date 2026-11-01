@@ -42,6 +42,7 @@ function Trips() {
   const [filters, setFilters] = useReviewView("trip-filters", emptyTripFilters);
   const [query, setQuery] = useReviewView("trip-search", "");
   const [createOpen, setCreateOpen] = useState(false);
+  const [calendarOpen, setCalendarOpen] = useReviewView("travel-calendar-open", false);
 
   // Legacy deep link: /trips?trip=<id> opens the dedicated trip view.
   useEffect(() => { if (search.trip) void navigate({ to: "/trips/$tripId", params: { tripId: search.trip }, replace: true }); }, [search.trip, navigate]);
@@ -129,7 +130,7 @@ function Trips() {
         })}
       </div>
 
-      <details className="mt-6 border-t pt-3"><summary className="cursor-pointer font-display text-lg font-bold">Travel & payment calendar</summary><div className="mt-4"><PlanCalendar /></div></details>
+      <details open={calendarOpen} onToggle={e => setCalendarOpen(e.currentTarget.open)} className="mt-6 border-t pt-3"><summary className="cursor-pointer font-display text-lg font-bold">Travel & payment calendar</summary><div className="mt-4"><PlanCalendar /></div></details>
 
       <CreateTripDialog open={createOpen} onOpenChange={setCreateOpen} />
     </div>

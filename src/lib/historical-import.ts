@@ -97,6 +97,7 @@ export function postingBlockers(row: ImportRow, accounts: Account[], today: stri
   if (row.duplicate_kind === 'exact') out.push('Already imported');
   if (['likely','possible'].includes(row.duplicate_kind) && !p.duplicateOverride) out.push('Confirm this is a separate payment');
   if (['transfer','card_payment','loan_repayment','investment'].includes(p.txnType ?? '') && (!p.toAccountId || p.accountId === p.toAccountId || !accounts.some(a => a.id === p.toAccountId && !a.archived))) out.push('Confirm destination account');
+  if (p.txnType === 'card_payment' && !accounts.some(a => a.id === p.toAccountId && !a.archived && a.kind === 'credit_card')) out.push('Card payment destination must be a credit-card account');
   if (!p.reviewed) out.push('Review classification');
   return out;
 }
