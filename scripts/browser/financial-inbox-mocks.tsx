@@ -14,3 +14,4 @@ export const statementEvidence=async()=>{throw Error('No statement fixture');};
 export const readReviewContext=async()=>fixture.context;
 export const writeReviewContext=async(_owner:string,value:unknown)=>{fixture.context=value;};
 export const supabase={from:()=>{const q={select:()=>q,in:()=>q,order:()=>q,limit:()=>q,gte:()=>q,then:(resolve:(v:unknown)=>void)=>resolve({data:[],error:null})};return q;}};
+export const localDrafts=async()=>[];
