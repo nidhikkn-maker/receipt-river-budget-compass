@@ -12,7 +12,7 @@ import { findPassThroughPairs, type PassPair } from "@/lib/pass-through";
 /** Money received and sent straight on from one account. Choosing "transfer" routes both sides through a holding account you pick, so income and spending are not inflated. */
 export function PassThroughReview() {
   const { transactions, accounts, correctFinancialEntries, undoFinancialCorrection } = useStore();
-  const pairs = useMemo(() => findPassThroughPairs(transactions.map((t) => ({ id: t.id, date: t.date, amount: t.amount, currency: t.currency, accountId: t.accountId, txnType: t.txnType ?? "expense", title: t.title }))), [transactions]);
+  const pairs = useMemo(() => findPassThroughPairs(transactions.map((t) => ({ id: t.id, date: t.date, amount: t.amount, currency: t.currency, accountId: t.accountId ?? null, txnType: t.txnType ?? "expense", title: t.title }))), [transactions]);
   const [via, setVia] = useState<Record<string, string>>({});
   const [kept, setKept] = useState<Set<string>>(new Set());
   const [done, setDone] = useState<Record<string, string[]>>({});
@@ -27,8 +27,8 @@ export function PassThroughReview() {
     setBusy(true);
     const ops: string[] = [];
     try {
-      const a = correctionPreview([row(p.incoming.id)], { txnType: "transfer", accountId: h, toAccountId: p.incoming.accountId ?? undefined }, accounts, transactions);
-      const b = correctionPreview([row(p.outgoing.id)], { txnType: "transfer", accountId: p.outgoing.accountId ?? undefined, toAccountId: h }, accounts, transactions);
+      const a = correctionPreview([row(p.incoming.id)], { txnType: "transfer", accountId: h, toAccountId: p.incoming.accountId ?? "" }, accounts, transactions);
+      const b = correctionPreview([row(p.outgoing.id)], { txnType: "transfer", accountId: p.outgoing.accountId ?? "", toAccountId: h }, accounts, transactions);
       const i1 = crypto.randomUUID(); await correctFinancialEntries(a, i1); ops.push(i1);
       const i2 = crypto.randomUUID(); await correctFinancialEntries(b, i2); ops.push(i2);
       setDone((d) => ({ ...d, [p.incoming.id]: ops }));
