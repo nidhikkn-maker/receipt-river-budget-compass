@@ -1,0 +1,23 @@
+import { cleanup,fireEvent,render,screen,waitFor } from '@testing-library/react';
+import { afterEach,beforeAll,it,expect,vi } from 'vitest';
+import type { ImportBatch } from '@/lib/historical-import';
+const mocks=vi.hoisted(()=>({save:vi.fn(),check:vi.fn(),copy:vi.fn(),store:{} as Record<string,unknown>}));
+vi.mock('@/lib/store',()=>({useStore:()=>mocks.store}));
+vi.mock('@tanstack/react-start',()=>({useServerFn:(fn:unknown)=>fn}));
+vi.mock('@/lib/statement-checkpoint.functions',()=>({saveStatementEvidence:mocks.save,runStatementCheckpoint:mocks.check,copyStatementToAccount:mocks.copy}));
+import { StatementEvidenceReview } from './StatementEvidenceReview';
+afterEach(cleanup);beforeAll(()=>{Element.prototype.scrollIntoView=vi.fn();});
+it('controlled statement: confirmation is previewed, cancelled without saving, then explicitly saved and checked',async()=>{
+ const batch:ImportBatch={id:'copy',account_id:'bank',file_name:'sample.csv',file_path:'owner/sample',status:'review',error:null,currency:'INR',period_from:'2026-10-01',period_to:'2026-10-31',opening_balance:null,closing_balance:null,statement_identity:[]};
+ mocks.store={accounts:[{id:'bank',name:'Controlled bank',kind:'savings',openingBalance:1000,archived:false}]};
+ mocks.save.mockResolvedValue({ok:true});mocks.check.mockResolvedValue({reconciliation:'Requires Review',balance:'Not Verified',difference:null,unresolved:1});
+ const reload=vi.fn().mockResolvedValue(undefined);render(<StatementEvidenceReview batch={batch} onReload={reload}/>);
+ fireEvent.change(screen.getByRole('textbox',{name:'Statement identity source reference'}),{target:{value:'Original page 1'}});
+ fireEvent.click(screen.getByRole('checkbox',{name:'Confirm account despite missing identifier'}));fireEvent.click(screen.getByRole('checkbox',{name:'Confirm statement account identity'}));
+ fireEvent.change(screen.getByRole('textbox',{name:'Statement coverage source reference'}),{target:{value:'Period header page 1'}});fireEvent.click(screen.getByRole('checkbox',{name:'Confirm actual statement coverage'}));
+ fireEvent.click(screen.getByRole('button',{name:'Preview statement confirmation'}));expect(mocks.save).not.toHaveBeenCalled();fireEvent.click(screen.getByRole('button',{name:'Cancel',exact:true}));expect(mocks.save).not.toHaveBeenCalled();
+ fireEvent.click(screen.getByRole('button',{name:'Preview statement confirmation'}));fireEvent.click(screen.getByRole('button',{name:'Confirm statement evidence',exact:true}));
+ await waitFor(()=>expect(mocks.save).toHaveBeenCalledWith({data:{batch:'copy',expected:{},review:expect.objectContaining({identity:expect.objectContaining({confirmed:true,missingIdentifierConfirmed:true,accountId:'bank'}),coverage:expect.objectContaining({from:'2026-10-01',to:'2026-10-31',confirmed:true})})}}));
+ fireEvent.click(screen.getByRole('button',{name:'Run & save reconciliation check'}));await waitFor(()=>expect(mocks.check).toHaveBeenCalledWith({data:{batch:'copy',operation:expect.any(String)}}));
+ expect(await screen.findByRole('status')).toHaveTextContent('Requires Review');expect(batch.opening_balance).toBe(null);expect(reload).toHaveBeenCalled();
+});
