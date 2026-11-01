@@ -48,7 +48,7 @@ describe('reconciliationReadiness', () => {
     expect(ready({ ...base, status: 'failed', error: 'Bad file' }, rows, new Set(), false)).toMatchObject({ state: 'failed', reason: 'Bad file' });
   });
   it('account identity outranks missing balances', () => {
-    expect(ready({ ...base, statement_review: undefined, opening_balance: null }, rows, new Set(), false).title).toBe('Not started: account not confirmed');
+    expect(ready({ ...base, statement_review: undefined, opening_balance: null } as never, rows, new Set(), false).title).toBe('Not started: account not confirmed');
     expect(ready({ ...base, closing_balance: null }, rows, new Set(), false).reason).toBe('Enter the closing balance.');
   });
   it('flags printed difference, then line mismatch, then pending lines', () => {
