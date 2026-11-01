@@ -22,3 +22,18 @@ describe('V5.1 historical import safeguards', () => {
   it('transfers and card settlements never inflate income or expenditure', () => expect(cashflow([{id:'t',amount:100,date:'2026-04-01',txnType:'transfer'},{id:'c',amount:100,date:'2026-04-01',txnType:'card_payment'}],'2026-04-01','2026-04-30')).toMatchObject({income:0,spent:0}));
   it('a credited transfer arrives at the statement account instead of leaving it',()=>{const row=stageImport(lines,ctx,[],new Set())[0];if(!row)throw Error('Missing fixture');expect(orientStatementMove({...row.proposal,txnType:'transfer',accountId:'bank',toAccountId:'cash'},'credit','bank')).toMatchObject({accountId:'cash',toAccountId:'bank'});});
 });
+import { importReconciliationSummary as recSummary } from './historical-import';
+describe('importReconciliationSummary', () => {
+  const row = (id: string, amount: number, direction: 'credit' | 'debit') => ({ id, fingerprint: 'f' + id, line: { date: '2026-04-02', description: id, amount, direction }, proposal: {}, review_group: '', confidence: '', decision: 'approved', duplicate_kind: 'new', duplicate_id: null }) as never;
+  it('balances when all lines import and closing matches', () => {
+    const s = recSummary({ opening: 1000, closing: 1300, rows: [row('a', 500, 'credit'), row('b', 200, 'debit')], posted: new Set(), importingIds: new Set(['a', 'b']), liability: false });
+    expect(s.credits).toBe(500); expect(s.debits).toBe(200); expect(s.expectedClosing).toBe(1300); expect(s.balanceAfterImport).toBe(1300); expect(s.discrepancies).toEqual([]);
+  });
+  it('flags closing mismatch and lines left unimported', () => {
+    const s = recSummary({ opening: 1000, closing: 1250, rows: [row('a', 500, 'credit'), row('b', 200, 'debit')], posted: new Set(), importingIds: new Set(['a']), liability: false });
+    expect(s.difference).toBe(-50); expect(s.balanceAfterImport).toBe(1500); expect(s.notImportedCount).toBe(1); expect(s.discrepancies).toHaveLength(2);
+  });
+  it('flags printed balance differences and missing balances', () => {
+    expect(recSummary({ opening: 1000, closing: null, sourceOpening: 900, rows: [], posted: new Set(), importingIds: new Set(), liability: false }).discrepancies).toEqual(['Closing balance is missing', "Opening balance differs from the statement's printed opening by 100"]);
+  });
+});
