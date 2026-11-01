@@ -20,3 +20,15 @@ describe("statement posting", () => {
     expect(await lineId("acc", L("2026-05-01", 1, "debit", 5))).toBe(await lineId("acc", L("2026-05-01", 1, "debit", 5)));
   });
 });
+import { parseAmexStatement } from "./statement-crosscheck";
+describe("amex", () => {
+  it("reads charges and CR credits and reconciles to the closing balance", () => {
+    const rows = ["Previous Balance", "238,096.06 -   1,000.00 +   500.00 =   237,596.06", "received by August 20, 2026", "July 28  PAYMENT RECEIVED. THANK YOU  1,000.00", "Card Number XXXX CR", "August 2  LOUIS PHILIPPE  500.00", "Total of new transactions  500.00"];
+    const p = parseAmexStatement(rows, "a");
+    expect(p.lines.map((l) => l.direction)).toEqual(["credit", "debit"]);
+    expect(p.lines.at(-1)!.balance).toBe(237596.06);
+  });
+  it("card credits lower the amount owed in the balance check", () => {
+    expect(balanceGate(1000, [{ date: "2026-07-28", amount: 400, direction: "credit", balance: 0, description: "", source: "" }], 600, true).ok).toBe(true);
+  });
+});

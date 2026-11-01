@@ -150,8 +150,9 @@ export function pairTransfers(missing: BalanceLine[], otherLines: BalanceLine[])
 }
 
 /** Balance gate: app balance plus the net effect of the proposed posts must equal the statement closing balance within ₹0.01. */
-export function balanceGate(appBalance: number, posts: BalanceLine[], closing: number | null) {
-  const net = Math.round(posts.reduce((s, l) => s + (l.direction === "credit" ? l.amount : -l.amount), 0) * 100) / 100;
+export function balanceGate(appBalance: number, posts: BalanceLine[], closing: number | null, liability = false) {
+  const sign = liability ? -1 : 1; // on a card, a credit lowers what is owed
+  const net = Math.round(posts.reduce((s, l) => s + sign * (l.direction === "credit" ? l.amount : -l.amount), 0) * 100) / 100;
   const after = Math.round((appBalance + net) * 100) / 100;
   const difference = closing === null ? null : Math.round((closing - after) * 100) / 100;
   return { net, after, difference, ok: difference !== null && Math.abs(difference) <= 0.01 };
@@ -164,3 +165,30 @@ export async function lineId(accountId: string, l: BalanceLine): Promise<string>
   const x = [...h].map((b) => b.toString(16).padStart(2, "0")).join("");
   return `${x.slice(0, 8)}-${x.slice(8, 12)}-${x.slice(12, 16)}-${x.slice(16, 20)}-${x.slice(20)}`;
 }
+
+const FULL_MONTHS = ["january", "february", "march", "april", "may", "june", "july", "august", "september", "october", "november", "december"];
+/** AMEX card statement: "Month D  description  amount" rows, credits marked CR (same or next row). Balance is the amount owed. */
+export function parseAmexStatement(rows: string[], source: string): { lines: BalanceLine[]; opening: number | null; closing: number | null; printed: { credits: number; debits: number } | null } {
+  const text = rows.join("\n");
+  const end = text.match(/received by\s+([A-Za-z]+)\s+\d{1,2},\s+(\d{4})/i);
+  const endMonth = end ? FULL_MONTHS.indexOf(end[1]!.toLowerCase()) + 1 : 12;
+  const endYear = end ? Number(end[2]) : new Date().getFullYear();
+  const sum = text.match(/([\d,]+\.\d{2})\s*-\s+([\d,]+\.\d{2})\s*\+\s+([\d,]+\.\d{2})\s*=\s+([\d,]+\.\d{2})/);
+  const opening = sum ? toNum(sum[1]!) : null;
+  const lines: BalanceLine[] = [];
+  let owed = opening ?? 0;
+  const re = new RegExp(`^\\s*(${FULL_MONTHS.join("|")})\\s+(\\d{1,2})\\s+(.+?)\\s+([\\d,]+\\.\\d{2})\\s*(CR)?\\s*$`, "i");
+  rows.forEach((row, i) => {
+    const m = row.match(re);
+    if (!m || /^total/i.test(m[3]!)) return;
+    const mo = FULL_MONTHS.indexOf(m[1]!.toLowerCase()) + 1;
+    const year = mo > endMonth ? endYear - 1 : endYear;
+    const credit = !!m[5] || /^\s*(card number.*)?\bCR\s*$/i.test(rows[i + 1] ?? "");
+    const amount = toNum(m[4]!);
+    owed = Math.round((owed + (credit ? -amount : amount)) * 100) / 100;
+    lines.push({ date: `${year}-${String(mo).padStart(2, "0")}-${m[2]!.padStart(2, "0")}`, amount, direction: credit ? "credit" : "debit", balance: owed, description: m[3]!.replace(/\s+/g, " ").trim().slice(0, 160), source });
+  });
+  return { lines, opening, closing: sum ? toNum(sum[4]!) : null, printed: sum ? { credits: toNum(sum[2]!), debits: toNum(sum[3]!) } : null };
+}
+
+export const isAmex = (rows: string[]) => rows.some((r) => /american express/i.test(r)) && rows.some((r) => /Membership Number/i.test(r));
