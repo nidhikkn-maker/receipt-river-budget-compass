@@ -107,7 +107,16 @@ function TripPage() {
       {section === "budget" && <TripBudgetSection trip={trip} />}
       {section === "reports" && <TripReportsSection trip={trip} />}
 
-      {moreOpen && <div className="mt-4"><TripClosureCard trip={trip} /></div>}
+      {moreOpen && (
+        <div className="mt-4 space-y-3">
+          <TripClosureCard trip={trip} />
+          <Button variant="ghost" className="w-full text-destructive" onClick={async () => {
+            if (!confirm("Delete this trip? Entries stay, the trip label is kept on them.")) return;
+            await savePreferences({ ...pr, trips: pr.trips.filter((x) => x.id !== trip.id) });
+            void navigate({ to: "/trips" });
+          }}>Delete trip (entries stay)</Button>
+        </div>
+      )}
     </div>
   );
 }
