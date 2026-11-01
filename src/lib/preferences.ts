@@ -270,7 +270,7 @@ export function cleanStatementUploads(v: unknown): StatementUpload[] {
   if (!Array.isArray(v)) return [];
   return v.flatMap((u) => {
     if (!u || typeof u !== "object") return [];
-    const o = u as Record<string, unknown>;
+    const o = u as { id?: unknown; at?: unknown; label?: unknown; posted?: unknown; reconciled?: unknown; createdAccounts?: unknown };
     if (typeof o.id !== "string" || o.id.length > 64 || typeof o.at !== "string") return [];
     const created = Array.isArray(o.createdAccounts) ? o.createdAccounts.flatMap((c) => (c && typeof c === "object" && typeof (c as { id?: unknown }).id === "string" ? [{ id: String((c as { id: string }).id).slice(0, 64), name: String((c as { name?: unknown }).name ?? "").slice(0, 80) }] : [])).slice(0, 50) : [];
     return [{ id: o.id, at: o.at.slice(0, 40), label: String(o.label ?? "").slice(0, 200), posted: ids(o.posted, 3000), reconciled: ids(o.reconciled, 3000), createdAccounts: created }];
