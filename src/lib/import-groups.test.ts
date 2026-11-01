@@ -8,6 +8,11 @@ const row: ImportRow = { id: 'a', fingerprint: 'a', line: { date: '2026-04-01', 
 const second: ImportRow = { ...row, id: 'b', fingerprint: 'b', line: { ...row.line, amount: 50.1, direction: 'credit' }, proposal: { ...row.proposal, category: 'Refunds', scope: 'business', txnType: 'refund', organisation: 'Example' } };
 
 describe('Statement grouping', () => {
+  it('groups repeated narration formats without merging source rows',()=>{
+    const repeated={...row,id:'repeat',line:{...row.line,description:'UPI SWIGGY 654321'}};
+    const grouped=groupImportRows([row,repeated], 'description', accounts);
+    expect(grouped).toHaveLength(1);expect(grouped[0]?.rows).toHaveLength(2);expect(grouped[0]?.debit).toBe(200.5);expect(repeated.line.description).toBe('UPI SWIGGY 654321');
+  });
   it('uses original amounts and separates credits from debits within one merchant', () => {
     const groups = groupImportRows([row, second], 'merchant', accounts);
     expect(groups).toHaveLength(1);
