@@ -12,7 +12,7 @@ class InboxTests(unittest.IsolatedAsyncioTestCase):
    if u.netloc!='localhost:8080' or r.method not in ('GET','HEAD'):self.blocked.append(u.hostname);await route.abort()
    elif u.path=='/inbox':await route.fulfill(content_type='text/html',body=HTML)
    elif u.path in ['/src/lib/store.tsx','/src/lib/import-repository.ts','/src/lib/offline.ts','/src/integrations/supabase/client.ts']:
-    exports={'/src/lib/store.tsx':'useStore','/src/lib/import-repository.ts':'listImportRules,listImports,statementEvidence','/src/lib/offline.ts':'readReviewContext,writeReviewContext,localDrafts,localToFile,putLocalDraft,removeLocalDraft,fileToLocal','/src/integrations/supabase/client.ts':'supabase'}[u.path];await route.fulfill(content_type='application/javascript',body=f'export {{ {exports} }} from "/scripts/browser/financial-inbox-mocks.tsx";')
+    exports={'/src/lib/store.tsx':'useStore','/src/lib/import-repository.ts':'listImportRules,listImports,statementEvidence,listImportRows,reviseRows','/src/lib/offline.ts':'readReviewContext,writeReviewContext,localDrafts,localToFile,putLocalDraft,removeLocalDraft,fileToLocal','/src/integrations/supabase/client.ts':'supabase'}[u.path];await route.fulfill(content_type='application/javascript',body=f'export {{ {exports} }} from "/scripts/browser/financial-inbox-mocks.tsx";')
    else:await route.continue_()
   await self.context.route('**/*',isolate);await self.page.goto('http://localhost:8080/inbox?section=review');print('DIAGNOSTIC',await self.page.locator('body').inner_text(),self.errors);await expect(self.page.get_by_role('heading',name='91 transactions needing attention')).to_be_visible()
  async def asyncTearDown(self):

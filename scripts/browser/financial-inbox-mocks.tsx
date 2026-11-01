@@ -20,3 +20,6 @@ export const localToFile=()=>null;
 export const putLocalDraft=async()=>{};
 export const removeLocalDraft=async()=>{};
 export const fileToLocal=async()=>({});
+
+export const listImportRows=async()=>[];
+export const reviseRows=async()=>{throw Error("Test cannot revise real imports");};
