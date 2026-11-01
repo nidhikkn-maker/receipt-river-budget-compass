@@ -1,6 +1,6 @@
 import { SavedViews } from "@/components/SavedViews";
 import { createFileRoute } from "@tanstack/react-router";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { History, Undo2 } from "lucide-react";
 import { PageTitle, Stat } from "@/components/AppShell";
 import { ExpenseTable } from "@/components/ExpenseTable";
