@@ -5,7 +5,7 @@ import { inboxItems } from './inbox';
 import { defaultPreferences } from './preferences';
 import type { Expense } from './expenses';
 const accounts = [{ id: 'bank', name: 'Bank', kind: 'savings' as const, openingBalance: 1000, archived: false }];
-const entry = (id: string): Expense => ({ id, title: id, category: 'Miscellaneous', scope: 'personal', memberId: null, splits: [], amount: 100, originalAmount: 100, currency: 'INR', fxRate: 1, paymentMethod: 'upi', reconciledAt: null, statementRef: null, date: '2026-04-01', description: 'Original', receipts: [], accountId: 'bank', txnType: 'expense' });
+const entry = (id: string): Expense => ({ id, title: id, merchant: null, category: 'Miscellaneous', scope: 'personal', memberId: null, splits: [], amount: 100, originalAmount: 100, currency: 'INR', fxRate: 1, paymentMethod: 'upi', reconciledAt: null, statementRef: null, date: '2026-04-01', description: 'Original', receipts: [], accountId: 'bank', txnType: 'expense' });
 const rowsFor = (entries: Expense[]) => { const prefs = defaultPreferences(); return centreReview(inboxItems({ transactions: entries, accounts, commitments: [], prefs, today: '2026-11-01', pendingCount: 0 }), entries, accounts, prefs.categories.map(c => c.name)); };
 describe('guided review safeguards', () => {
   it('reports selected records excluded by changed filters without adding others', () => { const rows = rowsFor([entry('one'), entry('two')]); expect(selectionScope(['one','two','gone'], rows, rows.slice(0,1))).toEqual({total:2,matching:1,hidden:1,obsolete:1}); });
