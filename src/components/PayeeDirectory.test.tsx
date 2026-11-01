@@ -1,0 +1,28 @@
+import { cleanup,fireEvent,render,screen,waitFor } from '@testing-library/react';
+import { afterEach,expect,it,vi } from 'vitest';
+import { defaultPreferences } from '@/lib/preferences';
+const mock=vi.hoisted(()=>({save:vi.fn(),store:{} as Record<string,unknown>}));
+vi.mock('@/lib/store',()=>({useStore:()=>mock.store}));
+import { PayeeDirectory } from './PayeeDirectory';
+afterEach(cleanup);
+it('controlled recipient confirms then persists/reopens without bank details or ledger changes',async()=>{
+  mock.save.mockReset();
+  let preferences=defaultPreferences();
+  const ledger=[{id:'untouched',amount:200}];
+  mock.save.mockImplementation(async(next)=>{preferences=next;mock.store.preferences=next;});
+  mock.store={preferences,savePreferences:mock.save,transactions:ledger};
+  const first=render(<PayeeDirectory/>);
+  fireEvent.click(screen.getByRole('button',{name:'Add recipient'}));
+  fireEvent.change(screen.getByLabelText('Display name'),{target:{value:'Controlled external person'}});
+  fireEvent.click(screen.getByRole('button',{name:'Review recipient'}));
+  expect(mock.save).not.toHaveBeenCalled();
+  fireEvent.click(screen.getByRole('button',{name:'Confirm recipient'}));
+  await waitFor(()=>expect(mock.save).toHaveBeenCalledTimes(1));
+  expect(preferences.payees[0]).toMatchObject({name:'Controlled external person',type:'individual',accountDetails:'',accountVerified:false});
+  expect(mock.store.transactions).toEqual(ledger);
+  first.unmount();render(<PayeeDirectory/>);
+  fireEvent.click(screen.getByRole('button',{name:'Edit Controlled external person'}));
+  expect(screen.getByLabelText('Display name')).toHaveValue('Controlled external person');
+  fireEvent.click(screen.getByRole('button',{name:'Cancel'}));
+  expect(mock.save).toHaveBeenCalledTimes(1);
+});
