@@ -7,7 +7,7 @@ export interface Claimant { name: string; employeeId: string; department: string
 export interface ClaimItem extends RegisterRow { claimNo: number; claimed: number }
 export interface Claim {
   reference: string; organisation: string; purpose: string; subjectName: string; start: string; end: string; prepared: string; claimant: Claimant;
-  items: ClaimItem[]; annexures: Annexure[]; totals: { eligible: number; received: number; claimed: number }; excluded: { row: RegisterRow; reason: string }[];
+  items: ClaimItem[]; annexures: Annexure[]; totals: { eligible: number; received: number; claimed: number; advanceApplied?: number; payable?: number }; excluded: { row: RegisterRow; reason: string }[];
 }
 const r2 = (n: number) => Math.round(n * 100) / 100;
 
@@ -28,4 +28,13 @@ export function buildClaim(s: Statement, claimant: Claimant): Claim {
     reference: s.reference.replace("LL-DES-", "LL-CLM-"), organisation: s.organisation, purpose: s.purpose, subjectName: s.subjectName, start: s.start, end: s.end, prepared: s.prepared, claimant: { ...claimant },
     items, annexures, excluded, totals: { eligible: sum((i) => i.eligible), received: sum((i) => i.reimbursed), claimed: sum((i) => i.claimed) },
   };
+}
+
+/** Applies a user-chosen part of an advance to this claim. Never automatic: the amount is entered by the user each time. */
+export function applyAdvance(c: Claim, amount: number, available: number): Claim {
+  const a = r2(amount);
+  if (!Number.isFinite(a) || a < 0) throw Error("Enter the advance amount to apply, or 0.");
+  if (a > r2(available) + 0.004) throw Error("You cannot apply more than the advance still unapplied.");
+  if (a > c.totals.claimed + 0.004) throw Error("The advance applied cannot exceed the amount claimed.");
+  return { ...c, totals: { ...c.totals, advanceApplied: a, payable: r2(c.totals.claimed - a) } };
 }

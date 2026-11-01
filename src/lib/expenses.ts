@@ -67,6 +67,8 @@ export interface Expense {
   accountId?: string | null;
   toAccountId?: string | null;
   paymentInstrumentId?: string | null;
+  /** Saved external recipient (directory id); never an owned account. */
+  payeeId?: string | null;
   tags?: string[];
   receiptDetails?: ReceiptDetails;
   reimbursementStatus?: ReimbursementStatus;
@@ -140,6 +142,7 @@ export interface ExpenseInput {
   accountId?: string | null;
   toAccountId?: string | null;
   paymentInstrumentId?: string | null;
+  payeeId?: string | null;
   tags?: string[];
   receiptDetails?: ReceiptDetails;
   reimbursementStatus?: ReimbursementStatus;

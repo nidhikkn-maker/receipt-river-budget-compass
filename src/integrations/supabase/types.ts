@@ -491,6 +491,7 @@ export type Database = {
           member_id: string | null
           merchant: string | null
           original_amount: number | null
+          payee_id: string | null
           payment_instrument_id: string | null
           payment_method: string
           principal: number | null
@@ -533,6 +534,7 @@ export type Database = {
           member_id?: string | null
           merchant?: string | null
           original_amount?: number | null
+          payee_id?: string | null
           payment_instrument_id?: string | null
           payment_method?: string
           principal?: number | null
@@ -575,6 +577,7 @@ export type Database = {
           member_id?: string | null
           merchant?: string | null
           original_amount?: number | null
+          payee_id?: string | null
           payment_instrument_id?: string | null
           payment_method?: string
           principal?: number | null

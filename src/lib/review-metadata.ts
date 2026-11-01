@@ -4,7 +4,7 @@ import type { FinancialReview } from './financial-review';
 import type { FinancePreferences } from './preferences';
 import type { Account } from './ledger';
 import { INSTRUMENT_ACCOUNT_KINDS, INSTRUMENT_PAYMENT } from './payment-instruments';
-export type MetadataPatch = { organisation?: string; scope?: Scope; category?: string; paymentInstrumentId?: string; tag?: string };
+export type MetadataPatch = { organisation?: string; scope?: Scope; category?: string; paymentInstrumentId?: string; tag?: string; payeeId?: string };
 export const metadataConfig = (p: FinancePreferences) => ({ tags: p.tags, categories: p.categories, paymentInstruments: p.paymentInstruments });
 export function metadataPreview(rows: FinancialReview[], patches: Map<string, MetadataPatch>, prefs: FinancePreferences, accounts: Account[]) {
  if (!rows.length || rows.length > 500) throw Error('Select between 1 and 500 transactions.');
@@ -21,7 +21,8 @@ export function metadataPreview(rows: FinancialReview[], patches: Map<string, Me
   if (patch.category && !prefs.categories.some(c=>c.name===patch.category&&!c.archived)) throw Error('Choose active category.');
   if (patch.scope && !SCOPES.includes(patch.scope)) throw Error('Choose valid workspace.');
   if (patch.tag && !prefs.tags.some(t=>['Project','Event','Purpose','Client'].includes(t.group)&&`${t.group}: ${t.name}`===patch.tag)) throw Error('Choose configured activity.');
-  const next={...e,...(patch.organisation?{department:patch.organisation}:{}),...(patch.scope?{scope:patch.scope}:{}),...(patch.category?{category:patch.category}:{}),...(patch.tag?{tags:[...new Set([...(e.tags??[]),patch.tag])]}:{})};
+  if (patch.payeeId && !(prefs.payees??[]).some(p=>p.id===patch.payeeId&&!p.archived)) throw Error('Choose an active recipient.');
+  const next={...e,...(patch.payeeId?{payeeId:patch.payeeId}:{}),...(patch.organisation?{department:patch.organisation}:{}),...(patch.scope?{scope:patch.scope}:{}),...(patch.category?{category:patch.category}:{}),...(patch.tag?{tags:[...new Set([...(e.tags??[]),patch.tag])]}:{})};
   if (patch.paymentInstrumentId) {
    const instrument=prefs.paymentInstruments.find(p=>p.id===patch.paymentInstrumentId&&!p.archived);
    const account=accounts.find(a=>a.id===e.accountId&&!a.archived);
