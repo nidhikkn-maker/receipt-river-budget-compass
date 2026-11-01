@@ -71,7 +71,7 @@ function RecordsCheck() {
   return (
     <div className="mx-auto w-full max-w-5xl">
       <h1 className="font-display text-2xl sm:text-3xl font-bold tracking-tight">Records check</h1>
-      <p className="mt-1 flex items-start gap-2 text-sm text-muted-foreground"><ShieldCheck className="mt-0.5 h-4 w-4 shrink-0" />Read-only · from {AUDIT_FROM} · compared with {statements?.length ?? "…"} uploaded statements. Nothing here changes your data.</p>
+      <p className="mt-1 flex items-start gap-2 text-sm text-muted-foreground"><ShieldCheck className="mt-0.5 h-4 w-4 shrink-0" />Read-only · from {AUDIT_FROM} · compared with {statements?.length ?? "…"} uploaded statements. Marking items checked only tidies this list; it never changes your records.</p>
 
       {error && <Card title="Couldn’t load statements" className="mt-4"><p role="alert" className="text-sm text-destructive">{error}</p></Card>}
       {!statements && !error && <p className="mt-6 text-sm text-muted-foreground">Checking your records against uploaded statements…</p>}
