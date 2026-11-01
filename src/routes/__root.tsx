@@ -132,8 +132,14 @@ function AuthListener() {
   const router = useRouter();
   const { queryClient } = Route.useRouteContext();
   useEffect(() => {
-    const { data } = supabase.auth.onAuthStateChange((event) => {
+    let current: string | null | undefined;
+    const { data } = supabase.auth.onAuthStateChange((event, session) => {
+      const id = session?.user?.id ?? null;
+      if (event === "INITIAL_SESSION") { current = id; return; }
+      // Supabase repeats SIGNED_IN for the already-restored user on start-up/tab focus; skip that reload.
+      if (event === "SIGNED_IN" && id === current) return;
       if (event !== "SIGNED_IN" && event !== "SIGNED_OUT" && event !== "USER_UPDATED") return;
+      current = id;
       router.invalidate();
       if (event !== "SIGNED_OUT") queryClient.invalidateQueries();
     });

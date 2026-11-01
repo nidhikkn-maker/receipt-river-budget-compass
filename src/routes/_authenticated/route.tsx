@@ -8,13 +8,12 @@ import { AppShell } from "@/components/AppShell";
 export const Route = createFileRoute("/_authenticated")({
   ssr: false,
   beforeLoad: async () => {
-    if (!navigator.onLine) {
-      const { data } = await supabase.auth.getSession();
-      if (data.session?.user) return { userId: data.session.user.id };
-      throw redirect({ to: "/auth" });
+    // Local session check keeps page opens instant; every data request is still verified by the server.
+    const { data } = await supabase.auth.getSession();
+    if (data.session?.user) {
+      if (navigator.onLine) void supabase.auth.getUser().then(({ data: u, error }) => { if (!u.user && error?.status === 401) void supabase.auth.signOut({ scope: "local" }); });
+      return { userId: data.session.user.id };
     }
-    const { data } = await supabase.auth.getUser();
-    if (data.user) return { userId: data.user.id };
     throw redirect({ to: "/auth" });
   },
   component: AuthedLayout,

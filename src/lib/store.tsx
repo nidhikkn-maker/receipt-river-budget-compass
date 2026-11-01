@@ -137,15 +137,28 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
   const deleting = useRef(false);
   const [preferences, setPreferences] = useState<FinancePreferences>(defaultPreferences);
 
-  const refresh = useCallback(async () => {
-    if (!navigator.onLine) {
+  const firstLoad = useRef(true);
+  const inFlight = useRef<Promise<void> | null>(null);
+  const queued = useRef<Promise<void> | null>(null);
+  // Overlapping refresh calls share requests; a call made mid-load gets one follow-up load so saves are never missed.
+  const refresh = useCallback((): Promise<void> => {
+    if (!inFlight.current) { inFlight.current = load().finally(() => { inFlight.current = null; }); return inFlight.current; }
+    if (!queued.current) queued.current = inFlight.current.catch(() => {}).then(() => { queued.current = null; return refresh(); });
+    return queued.current;
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userId]);
+  async function load() {
+    // Show this device's saved copy straight away, then refresh from the cloud.
+    if (!navigator.onLine || firstLoad.current) {
+      firstLoad.current = false;
       const cached = await getSnapshot<Snapshot>(userId).catch(() => undefined);
       if (cached) {
         setName(cached.name); setMembers(cached.members); setExpenses(cached.expenses); setAccounts(cached.accounts); setCommitments(cached.commitments);
         setLoans(cached.rawLoans ?? []); setGoals(cached.goals); setBudgets(cached.budgets); setPreferences(normalizePreferences(cached.preferences));
         setValuations(cached.valuations ?? []); setDocuments(cached.documents ?? []);
+        setLoading(false);
       }
-      setLoading(false); return;
+      if (!navigator.onLine) { setLoading(false); return; }
     }
     const [p, m, e, b, a, c, l, g, pref, v, d, db] = await Promise.all([
       supabase.from("profiles").select("full_name").eq("id", userId).maybeSingle(),
@@ -205,9 +218,9 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
     for (const x of b.data ?? []) bud[x.category as Category] = Number(x.monthly_amount);
     setBudgets(bud);
     setLoading(false);
-  }, [userId]);
+  }
 
-  useEffect(() => { void refresh(); }, [refresh]);
+  useEffect(() => { void (inFlight.current ?? refresh()); }, [refresh]);
   useEffect(() => {
     if (!loading && navigator.onLine) void putSnapshot(userId, { name, members, expenses, accounts, commitments, rawLoans, goals, budgets, preferences, valuations, documents } satisfies Snapshot).catch(() => {});
   }, [loading, userId, name, members, expenses, accounts, commitments, rawLoans, goals, budgets, preferences, valuations, documents]);
