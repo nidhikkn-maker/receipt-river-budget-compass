@@ -246,6 +246,13 @@
       "when": 1793500640332,
       "tag": "0034_atomic_trip_expense_actions",
       "breakpoints": true
+    },
+    {
+      "idx": 35,
+      "version": "7",
+      "when": 1793500813644,
+      "tag": "0035_trip_action_snapshot_validation",
+      "breakpoints": true
     }
   ]
 }
