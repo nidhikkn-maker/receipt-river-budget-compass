@@ -125,7 +125,7 @@ function Settings() {
   return (
     <>
       <PageTitle eyebrow="Settings" title="Settings" sub={`${transactions.length} entries · ${accounts.length} accounts`} />
-      <div className="mb-5"><Button asChild variant="outline"><Link to="/auth">Sign in / account</Link></Button></div>
+      <div className="mb-5 flex flex-wrap gap-2"><Button asChild variant="outline"><Link to="/auth">Sign in / account</Link></Button><Button asChild variant="outline"><Link to="/classification-rules">Transaction classification rules</Link></Button></div>
       <SettingsDirectory />
       <div id="security" className="scroll-mt-20"><PasskeySettings /></div>
       <div id="appearance" className="scroll-mt-20"><AppearanceSettings /></div>
