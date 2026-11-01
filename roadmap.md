@@ -1,4 +1,7 @@
 # Roadmap (Functional Requirements v1.0)
+## Published-site verification and security (current)
+- [ ] Fresh security scan of the latest published version (quick + deep scan).
+- [ ] Verify on ledgerline.biz: saving an organisation mapping without a trip; "See transaction" opening the exact transaction; corrected rows clearing from review.
 ## V5.10.1 transaction classification and external payees
 - [x] Current continuation: compatible source-draft preservation/incompatible split clearing, mixed bulk exclusions, isolated two-record combined-save read-back/retry/undo and issue-specific closure verified; correction undo now notifies the parent to clear stale selection. 889 tests pass; signed-in open/cancel at four screen sizes without overflow/errors. Shared storage unchanged; hosted and physical-device acceptance remain blocked.
 - [x] Root cause: correction form always displayed both internal account fields even though expense preview already ignores destination. Conditional fields, compatible card/loan targets, incoming account labels and mixed-type review guard added; existing protected confirmation retained.
