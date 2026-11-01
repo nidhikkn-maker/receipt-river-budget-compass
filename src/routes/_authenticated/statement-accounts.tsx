@@ -34,6 +34,7 @@ function StatementAccountsPage() {
   const coverage = useMemo(() => statementCoverage(accounts, transactions, today), [accounts, transactions, today]);
   const live = accounts.filter((a) => !a.archived);
 
+  const [allAccounts, setAllAccounts] = useState(false);
   const [from, setFrom] = useState("");
   const [query, setQuery] = useState("");
   const [picked, setPicked] = useState<string[]>([]);
@@ -82,7 +83,7 @@ function StatementAccountsPage() {
 
       <section aria-label="Accounts" className="space-y-3">
         {!coverage.length && <Card className="p-4 text-sm">No account entries since April 2026 yet.</Card>}
-        {coverage.map((c) => (
+        {(allAccounts ? coverage : coverage.slice(0, 5)).map((c) => (
           <Card key={c.accountId} className="space-y-2 p-3">
             <div className="flex flex-wrap items-baseline justify-between gap-2">
               <h2 className="min-w-0 truncate font-medium">{c.name}</h2>
@@ -101,6 +102,7 @@ function StatementAccountsPage() {
             {c.missingMonths.length > 0 && <p className="text-xs text-destructive">{c.missingMonths.length} month{c.missingMonths.length === 1 ? "" : "s"} with entries but no statement</p>}
           </Card>
         ))}
+        {coverage.length > 5 && <Button variant="ghost" className="h-11 w-full" onClick={() => setAllAccounts((v) => !v)}>{allAccounts ? "Show fewer accounts" : `Show all ${coverage.length} accounts`}</Button>}
       </section>
 
       <Card className="space-y-3 p-3" aria-label="Move entries">
