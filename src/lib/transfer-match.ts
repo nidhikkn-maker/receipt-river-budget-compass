@@ -28,6 +28,16 @@ function evidence(d: Expense, c: Expense, src: Account, dst: Account): string[] 
 
 export function activeLinks(links: TransferLinkRow[]) { return links.filter((l) => !l.cancelled_at); }
 
+/** Current canonical ledger cannot preserve independently dated/converted credits. Block rather than change a balance. */
+export function transferPairBlocker(debit: Expense, credit: Expense | null) {
+  if (!free(debit) || Object.keys(debit.reimbursement ?? {}).length) return 'Source has linked claims, trips or splits; review individually.';
+  if (!credit) return null;
+  if (!free(credit) || Object.keys(credit.reimbursement ?? {}).length || !['income','refund'].includes(credit.txnType ?? 'expense')) return 'Receiving entry has linked financial details or is not incoming; review individually.';
+  if (debit.currency !== credit.currency || Math.abs(debit.originalAmount-credit.originalAmount) >= 0.005 || Math.abs(debit.amount-credit.amount) >= 0.005) return 'Independent currency values differ; linking is blocked to preserve both balances.';
+  if (debit.date !== credit.date) return 'Different posting dates require individual review to preserve dated balances.';
+  return null;
+}
+
 /** Unlinked outgoing entries paired with incoming entries on another owned account. */
 export function suggestTransfers(txns: Expense[], accounts: Account[], links: TransferLinkRow[]): TransferSuggestion[] {
   const used = new Set(activeLinks(links).flatMap((l) => [l.debit_id, l.credit_id ?? ""]));
@@ -38,14 +48,15 @@ export function suggestTransfers(txns: Expense[], accounts: Account[], links: Tr
   const out: TransferSuggestion[] = [];
   const claimed = new Map<string, number>();
   for (const d of debits) {
-    const src = acc(d.accountId)!;
+    const src = acc(d.accountId);
+    if (!src) continue;
     const fixedDest = awaiting.get(d.id)?.dest_account ?? (d.txnType === "transfer" ? d.toAccountId : null);
     const cands = credits.filter((c) => c.accountId !== d.accountId && (!fixedDest || c.accountId === fixedDest) && c.currency === d.currency && Math.abs(c.originalAmount - d.originalAmount) < 0.005 && days(c.date, d.date) <= 3);
-    const scored = cands.map((c) => ({ c, ev: evidence(d, c, src, acc(c.accountId)!) }));
+    const scored = cands.flatMap(c => { const dst=acc(c.accountId);return dst?[{c,ev:evidence(d,c,src,dst)}]:[]; });
     const strong = scored.filter((s) => s.ev.length);
-    if (strong.length === 1) { const s = strong[0]!; out.push({ key: `${d.id}:${s.c.id}`, debit: d, credit: s.c, destId: s.c.accountId!, strength: "strong", evidence: s.ev, candidates: cands.length }); claimed.set(s.c.id, (claimed.get(s.c.id) ?? 0) + 1); }
+    if (strong.length === 1) { const s = strong[0]; if(!s?.c.accountId)continue;const blocker=transferPairBlocker(d,s.c);out.push({ key: `${d.id}:${s.c.id}`, debit: d, credit: s.c, destId: s.c.accountId, strength: blocker?'ambiguous':"strong", evidence: blocker?[...s.ev,blocker]:s.ev, candidates: cands.length }); claimed.set(s.c.id, (claimed.get(s.c.id) ?? 0) + 1); }
     else if (strong.length > 1) out.push({ key: `${d.id}:?`, debit: d, credit: null, destId: "", strength: "ambiguous", evidence: [`${strong.length} entries look equally likely`], candidates: cands.length });
-    else if (cands.length) out.push({ key: `${d.id}:${cands[0]!.id}`, debit: d, credit: cands.length === 1 ? cands[0]! : null, destId: cands.length === 1 ? cands[0]!.accountId! : "", strength: "weak", evidence: ["Same amount and date only — confirm it yourself"], candidates: cands.length });
+    else { const first=cands[0];if(first)out.push({ key: `${d.id}:${first.id}`, debit: d, credit: cands.length === 1 ? first : null, destId: cands.length === 1 ? first.accountId??'' : "", strength: "weak", evidence: ["Same amount and date only — confirm it yourself"], candidates: cands.length }); }
   }
   // A credit claimed by two strong suggestions is a conflict, never auto-linked.
   return out.map((s) => (s.strength === "strong" && s.credit && (claimed.get(s.credit.id) ?? 0) > 1 ? { ...s, strength: "ambiguous" as const, evidence: ["Receiving entry matches more than one debit"] } : s));

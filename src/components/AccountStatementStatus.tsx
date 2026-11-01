@@ -9,7 +9,8 @@ import { Button } from "./ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "./ui/dialog";
 
 export function AccountStatementStatus({ onAttention }: { onAttention?: (count: number | null) => void } = {}) {
-  const { accounts, transactions, preferences, refresh } = useStore();
+  const { accounts, transactions: ledgerTransactions, transferCounterparts, preferences, refresh } = useStore();
+  const transactions = useMemo(() => [...ledgerTransactions,...(transferCounterparts??[])], [ledgerTransactions,transferCounterparts]);
   const [evidence, setEvidence] = useState<StatementStatusEvidence[]>([]), [status, setStatus] = useState("Loading statement evidence…"), [selected, setSelected] = useState<string | null>(null);
   const generation = useRef(0);
   const latestStore=useRef({accounts,transactions});latestStore.current={accounts,transactions};
