@@ -16,9 +16,9 @@ export async function readAssistantFacts(sb: SupabaseClient<Database>, owner: st
       id: x.id, title: x.title, merchant: x.merchant, category: x.category, scope: x.scope as Expense["scope"], memberId: x.member_id,
       splits: x.splits as unknown as Expense["splits"], amount: Number(x.amount), originalAmount: Number(x.original_amount ?? x.amount), currency: x.currency, fxRate: Number(x.fx_rate),
       paymentMethod: x.payment_method as Expense["paymentMethod"], date: x.expense_date, description: x.description, receipts: [],
-      txnType: x.txn_type as Expense["txnType"], accountId: x.account_id, toAccountId: x.to_account_id, reconciledAt: x.reconciled_at, statementRef: x.statement_ref,
-      adjustmentSign: x.adjustment_sign === -1 ? -1 : 1, tags: x.tags ?? [], reimbursementStatus: x.reimbursement_status as Expense["reimbursementStatus"],
-      reimbursement: x.reimbursement as Expense["reimbursement"], allocations: x.allocations as unknown as Expense["allocations"],
+      txnType: x.txn_type as NonNullable<Expense["txnType"]>, accountId: x.account_id, toAccountId: x.to_account_id, reconciledAt: x.reconciled_at, statementRef: x.statement_ref,
+      adjustmentSign: x.adjustment_sign === -1 ? -1 : 1, tags: x.tags ?? [], reimbursementStatus: x.reimbursement_status as NonNullable<Expense["reimbursementStatus"]>,
+      reimbursement: (x.reimbursement ?? {}) as NonNullable<Expense["reimbursement"]>, allocations: (x.allocations ?? []) as unknown as NonNullable<Expense["allocations"]>,
       principal: x.principal == null ? null : Number(x.principal), interest: x.interest == null ? null : Number(x.interest),
     });
     if (r.data.length < 500) break;

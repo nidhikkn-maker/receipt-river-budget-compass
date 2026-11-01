@@ -36,7 +36,7 @@ export function buildReport(kind: ReportKind, transactions: Expense[], memberNam
     if (!share || share.amount <= 0) return [];
     const ratio = e.amount > 0 ? share.amount / e.amount : 0;
     return [{ ...e, scope, amount: share.amount, originalAmount: e.originalAmount * ratio,
-      allocations: e.allocations?.map((a) => ({ ...a, amount: a.amount * ratio })) }];
+      allocations: (e.allocations ?? []).map((a) => ({ ...a, amount: a.amount * ratio })) }];
   });
   if (kind === "business") return { title: "Business expenses", headers, rows: inWorkspace("business").map(row) };
   if (kind === "reimbursements") return { title: "Reimbursements", headers, rows: expenses.filter(e=>e.reimbursementStatus && e.reimbursementStatus!=="none").map(row) };
