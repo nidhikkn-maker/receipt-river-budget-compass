@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { money, type StatementLine } from "@/lib/expenses";
 import { useStore } from "@/lib/store";
+import { selectVisible, setChecked } from "@/lib/audit-checked";
 import { AUDIT_FROM, AUDIT_LABEL, auditRecords, type AuditFinding, type AuditIssue, type AuditStatement } from "@/lib/transfer-audit";
 
 export const Route = createFileRoute("/_authenticated/records-check")({
@@ -50,7 +51,7 @@ function RecordsCheck() {
   const shown = (showChecked ? findings.filter((f) => checked.has(f.key)) : open).filter((f) => issue === "all" || f.issue === issue);
   const batchAccount = (id?: string) => statements?.find((b) => b.id === id)?.accountId;
   const setCheckedKeys = async (keys: string[], on: boolean) => {
-    const next = on ? [...checked, ...keys] : [...checked].filter((k) => !keys.includes(k));
+    const next = setChecked([...checked], keys, on);
     try {
       await savePreferences({ ...preferences, checkedAudit: next });
       setPicked((p) => p.filter((k) => !keys.includes(k)));
@@ -89,7 +90,7 @@ function RecordsCheck() {
             ))}
           </div>
           <div className="mt-3 flex flex-wrap items-center gap-2 text-sm">
-            <Button size="sm" variant="ghost" onClick={() => setPicked(shown.map((f) => f.key))}>Select visible</Button>
+            <Button size="sm" variant="ghost" onClick={() => setPicked(selectVisible(picked, shown.map((f) => f.key)))}>Select visible</Button>
             <Button size="sm" variant="ghost" onClick={() => setPicked([])}>Clear</Button>
             <Button size="sm" variant="outline" onClick={exportCsv}>Export {chosen.length ? `${chosen.length} selected` : "report"} (CSV)</Button>
           </div>
