@@ -1,5 +1,5 @@
-import { expect, it } from "vitest";
-import { accountStatementStatus, accountStatementSummary, type StatementStatusEvidence } from "./account-statement-status";
+import { describe, expect, it } from "vitest";
+import { accountStatementStatus, accountStatementSummary, statementNextStep, type StatementStatusEvidence } from "./account-statement-status";
 import { defaultPreferences } from "./preferences";
 import type { Expense } from "./expenses";
 import type { Account } from "./ledger";
@@ -27,7 +27,7 @@ it("financial correction resets the statement match even when money and date mat
 it("offsetting unaccounted ledger entries cannot certify reconciliation despite matching balance", () => {
   expect(derive(statement, [e, { ...e, id: "unmatched expense", amount: 50 }, { ...e, id: "unmatched income", amount: 50, txnType: "income" }])).toMatchObject({ balance: "Verified", reconciliation: "Requires Review" });
 });
-import { statementNextStep } from "./account-statement-status";
+
 describe("statementNextStep", () => {
   const base = { batch: true, importing: false, failed: false, identityConfirmed: true, toPost: 0, coverageConfirmed: true, usableBalance: true, checked: true };
   it("asks for upload when no statement", () => expect(statementNextStep({ ...base, batch: false })).toBe("Upload a statement for this account"));
