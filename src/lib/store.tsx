@@ -148,7 +148,6 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId]);
   async function load() {
-    console.log("LLDBG load", new Error().stack?.split("\n").slice(1,6).join(" / "));
     // Show this device's saved copy straight away, then refresh from the cloud.
     if (!navigator.onLine || firstLoad.current) {
       firstLoad.current = false;
@@ -221,7 +220,7 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
     setLoading(false);
   }
 
-  useEffect(() => { void refresh(); }, [refresh]);
+  useEffect(() => { void (inFlight.current ?? refresh()); }, [refresh]);
   useEffect(() => {
     if (!loading && navigator.onLine) void putSnapshot(userId, { name, members, expenses, accounts, commitments, rawLoans, goals, budgets, preferences, valuations, documents } satisfies Snapshot).catch(() => {});
   }, [loading, userId, name, members, expenses, accounts, commitments, rawLoans, goals, budgets, preferences, valuations, documents]);
