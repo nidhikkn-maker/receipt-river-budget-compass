@@ -1,4 +1,9 @@
 # Roadmap (Functional Requirements v1.0)
+## v5.14 historical completion audit (read-only)
+- [ ] Investigate why two statements are unconfirmed/unposted; verify actual identity, coverage and balance evidence rather than assuming the cause.
+- [ ] Inventory 357 records/16 accounts, missing periods, source-to-ledger matches, duplicates, unknown mappings and evidence-backed bulk/individual proposals; produce a full dry-run register.
+- [ ] Deliver Historical Completion Inventory, Statement Coverage Report, Dry-Run Correction Register, Financial Integrity Report and unresolved exceptions with exact completion counts.
+- [ ] Test hosted posting/correction/reconciliation/report save/retry/recovery only in isolated hosted storage; blocked if unavailable. No shared schema, posting, historical correction or publication without separate approval.
 ## Current mobile Inbox and transfer approval verification
 - [x] Eight financial-rule acceptance tests pass; two read-only Cloud inventories preserve all 357 records/16 accounts and identical fingerprints. Source totals/closing balances remain UNVERIFIED: both uploaded statements lack identity/closing confirmation and there are zero checkpoints.
 - [x] Mobile/tablet controls have deliberate touch targets, narrow dialogs and reachable confirmation actions. Eight real-route Inbox browser tests pass, four-size overflow checks and phone confirmation screenshots inspected.
