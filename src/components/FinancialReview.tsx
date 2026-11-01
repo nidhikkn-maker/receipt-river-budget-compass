@@ -70,6 +70,8 @@ export function FinancialReview({ items, onOpen, initialFilter = "all" }: { item
   useEffect(() => { setGroup(initialFilter); }, [initialFilter]);
   const [contextReady, setContextReady] = useState(false);
   const [contextStatus, setContextStatus] = useState('');
+  const [narrow, setNarrow] = useState(false);
+  useEffect(() => { const media = window.matchMedia('(max-width: 767px)'); const update = () => setNarrow(media.matches); update(); media.addEventListener('change', update); return () => media.removeEventListener('change', update); }, []);
   useEffect(() => {
     let active = true;
     if (!userId) { setContextReady(true); return; }
