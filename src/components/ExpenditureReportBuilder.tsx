@@ -32,7 +32,7 @@ async function toJpeg(blob: Blob): Promise<Uint8Array> {
   } finally { URL.revokeObjectURL(url); }
 }
 
-export function ExpenditureReportBuilder({ mode, search }: { mode: "statement" | "claim"; search: { trip?: string | undefined; tag?: string | undefined; entry?: string | undefined } }) {
+export function ExpenditureReportBuilder({ mode, search }: { mode: "statement" | "claim"; search: { trip?: string | undefined; tag?: string | undefined; entry?: string | undefined; entries?: string | undefined } }) {
   const claimMode = mode === "claim";
   const [claimant, setClaimant] = useState<Claimant>({ name: "", employeeId: "", department: "", designation: "", approver: "", bankDetails: "", email: "" });
   useEffect(() => { try { const v = localStorage.getItem("ledgerline:claimant"); if (v) setClaimant((c) => ({ ...c, ...JSON.parse(v) })); } catch { /* ignore */ } }, []);
@@ -47,9 +47,9 @@ export function ExpenditureReportBuilder({ mode, search }: { mode: "statement" |
   const groupTags = useMemo(() => [...new Set(store.transactions.flatMap((e) => e.tags ?? []).filter((t) => GROUP_TAG.test(t) && !t.startsWith("Trip: ")))].sort(), [store.transactions]);
   const purchases = useMemo(() => store.expenses.filter((e) => e.scope === "business" || e.scope === "official" || (e.workspaceAllocations ?? []).some((w) => w.workspace === "business" || w.workspace === "official")).sort((a, b) => b.date.localeCompare(a.date)).slice(0, 200), [store.expenses]);
 
-  const initial = search.trip ? `trip:${search.trip}` : search.tag ? `tag:${search.tag}` : search.entry ? "entries" : trips[0] ? `trip:${trips[0].id}` : groupTags[0] ? `tag:${groupTags[0]}` : "entries";
+  const initial = search.trip ? `trip:${search.trip}` : search.tag ? `tag:${search.tag}` : search.entry || search.entries ? "entries" : trips[0] ? `trip:${trips[0].id}` : groupTags[0] ? `tag:${groupTags[0]}` : "entries";
   const [choice, setChoice] = useState(initial);
-  const [picked, setPicked] = useState<string[]>(search.entry ? [search.entry] : []);
+  const [picked, setPicked] = useState<string[]>(search.entries ? search.entries.split(",").filter((id) => store.transactions.some((e) => e.id === id)).slice(0, 500) : search.entry ? [search.entry] : []);
   const [from, setFrom] = useState(""); const [to, setTo] = useState("");
   const [purpose, setPurpose] = useState(""); const [org, setOrg] = useState("");
   const [excluded, setExcluded] = useState<string[]>([]);

@@ -14,6 +14,7 @@ import { todayISO } from "@/lib/use-position";
 import { tripSummary, tripTag } from "@/lib/intelligence";
 import { TripPlanFields } from "@/components/TripPlanFields";
 import { BookingDocumentImport } from "./BookingDocumentImport";
+import { TripExpenseActions } from "./TripExpenseActions";
 import { reviewedBooking, type bookingDraft } from "@/lib/booking-import";
 
 const sel = "h-10 rounded-xl border bg-background px-2 text-sm";
@@ -165,14 +166,10 @@ export function TripExpensesSection({ trip }: { trip: TravelTrip }) {
   const markReimb = async (id: string) => { const t = transactions.find((x) => x.id === id); if (!t) return; const r = "Purpose: Reimbursable"; try { await setTags(id, (t.tags ?? []).includes(r) ? (t.tags ?? []).filter((x) => x !== r) : [...(t.tags ?? []), r]); } catch (e) { toast.error((e as Error).message); } };
   return (
     <>
-      <Card title={`Trip entries (${s.entries.length})`} action={<Button size="sm" variant="gold" asChild><Link to="/new" search={{ trip: trip.id }}>Add entry</Link></Button>}>
-        {s.entries.length === 0 && <p className="text-sm text-muted-foreground">No entries tagged “{tag}” yet. Add one, or pick from the entries during these dates below.</p>}
-        {s.entries.map((e) => <div key={e.id} className="flex items-center justify-between gap-2 border-b py-1.5 text-sm last:border-0"><span className="min-w-0 truncate">{e.date} · {e.merchant ?? e.title}{e.currency !== "INR" && <span className="text-xs text-muted-foreground"> · {e.currency} {e.originalAmount} @ {e.fxRate}</span>}</span><span className="flex shrink-0 items-center gap-1"><span className="font-mono font-semibold">{money(e.amount)}</span><Button size="sm" variant="ghost" onClick={() => markReimb(e.id)}>{(e.tags ?? []).includes("Purpose: Reimbursable") ? "Reimb ✓" : "Reimb"}</Button><Button size="sm" variant="ghost" onClick={() => toggle(e.id, false)}>Remove</Button></span></div>)}
-      </Card>
+      <TripExpenseActions trip={trip} />
       {s.daily.length > 0 && <Card title="Daily spending"><div className="h-40"><ResponsiveContainer><BarChart data={s.daily}><XAxis dataKey="date" tickFormatter={(d: string) => d.slice(8)} fontSize={11} /><Tooltip formatter={(v: number) => money(v)} /><RBar dataKey="amount" fill="var(--gold)" radius={4} /></BarChart></ResponsiveContainer></div></Card>}
       {s.categories.length > 0 && <Card title="By category">{s.categories.map((c) => <Row key={c.category} label={c.category} value={money(c.amount)} />)}</Card>}
       {s.currencies.length > 0 && <Card title="By currency (rate used)">{s.currencies.map((c) => <Row key={c.currency} label={`${c.currency} ${c.original.toLocaleString()} @ ${c.rates.join(", ") || "1"}`} value={money(c.inr)} />)}</Card>}
-      {candidates.length > 0 && <Card title="Entries during these dates">{candidates.slice(0, 40).map((e) => <div key={e.id} className="flex items-center justify-between gap-2 py-1 text-sm"><span className="min-w-0 truncate">{e.date} · {e.merchant ?? e.title} · {money(e.amount)}</span><Button size="sm" variant="outline" onClick={() => toggle(e.id, true)}>Add</Button></div>)}</Card>}
     </>
   );
 }

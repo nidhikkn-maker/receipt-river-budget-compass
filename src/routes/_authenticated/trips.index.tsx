@@ -58,6 +58,7 @@ function Trips() {
   return (
     <div>
       <PageTitle eyebrow="Travel" title="Travel Manager" sub="Every trip at a glance. Open one for bookings, itinerary, expenses, budget and reports." />
+      <Button asChild variant="outline" className="mb-4"><Link to="/travel-inbox">Travel inbox</Link></Button>
 
       {(dash.toReturn > 0 || dash.owedToYou > 0 || dueSoon.length > 0) && (
         <Card title="Travel alerts" className="mb-4">
