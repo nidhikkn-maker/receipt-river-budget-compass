@@ -26,10 +26,11 @@ export const postHistoricalImport=createServerFn({method:'POST'}).middleware([re
   ]);
   if(batch.error || rows.error || accounts.error || rows.data.length!==new Set(data.ids).size) throw Error('Could not read the selected import');
   const accs=accounts.data.map(a=>({id:a.id,name:a.name,kind:a.kind,openingBalance:Number(a.opening_balance),archived:a.archived})) as Account[];
-  const converted: {id:string;rate:number;homeAmount:number;fxDate:string}[]=[];
+  const converted: {id:string;rate:number;homeAmount:number;fxDate:string;proposal:Json;currency:string}[]=[];
   const rates=new Map<string,{rate:number;date:string}>();
   for(const raw of rows.data) {
     const row=raw as unknown as ImportRow;
+    if(row.proposal.amount!==row.line.amount || row.proposal.date!==row.line.date || row.proposal.currency!==batch.data.currency) throw Error('Source amount, date and currency must remain unchanged');
     if(row.decision!=='approved') throw Error('Approve selected rows first');
     const blockers=postingBlockers(row,accs,new Date().toISOString().slice(0,10));
     if(blockers.length) throw Error(blockers[0]);
@@ -48,7 +49,7 @@ export const postHistoricalImport=createServerFn({method:'POST'}).middleware([re
     const proposal=enrichedInput(row.proposal);
     const changed=await db.from('import_rows').update({proposal:{...row.proposal,...proposal} as unknown as Json}).eq('id',row.id).eq('owner_id',context.userId);
     if(changed.error) throw Error('Could not save classifications');
-    converted.push({id:row.id,rate:fx.rate,homeAmount:Math.round(row.proposal.amount*fx.rate*100)/100,fxDate:fx.date});
+    converted.push({id:row.id,rate:fx.rate,homeAmount:Math.round(row.proposal.amount*fx.rate*100)/100,fxDate:fx.date,proposal:{...row.proposal,...proposal} as unknown as Json,currency:batch.data.currency});
   }
   const {supabaseAdmin}=await import('@/integrations/supabase/client.server');
   const posted=await supabaseAdmin.rpc('post_import_rows_secure',{_owner:context.userId,_batch:data.batch,_rows:converted as unknown as Json});

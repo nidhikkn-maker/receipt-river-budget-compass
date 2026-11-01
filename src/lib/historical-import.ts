@@ -68,6 +68,13 @@ export function enrichedInput(p: ImportProposal): ExpenseInput {
   return { ...p, tags, reimbursementStatus: p.reimbursable ? 'pending' : 'none' };
 }
 
+export function orientStatementMove(proposal: ImportProposal, direction: StatementLine['direction'], statementAccount: string): ImportProposal {
+  if (direction === 'credit' && ['transfer','card_payment','loan_repayment','investment'].includes(proposal.txnType ?? '') && proposal.accountId === statementAccount && proposal.toAccountId) {
+    return { ...proposal, accountId: proposal.toAccountId, toAccountId: statementAccount };
+  }
+  return proposal;
+}
+
 /** Opening is the balance BEFORE this period. No adjustment or missing entry is created. */
 export function reconcileStatement(opening: number | null, closing: number | null, lines: StatementLine[], liability: boolean) {
   const movement = Math.round(lines.reduce((sum, l) => sum + (l.direction === 'credit' ? 1 : -1) * (liability ? -1 : 1) * l.amount, 0) * 100) / 100;

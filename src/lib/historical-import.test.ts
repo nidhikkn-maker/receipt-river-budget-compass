@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { merchantFamily, stageImport, reconcileStatement, coverageMonths, historicalOpeningFor, postingBlockers, HISTORICAL_START } from './historical-import';
+import { merchantFamily, stageImport, reconcileStatement, coverageMonths, historicalOpeningFor, postingBlockers, HISTORICAL_START, orientStatementMove } from './historical-import';
 import { fingerprintLines } from './statement-fingerprint';
 import { cashflow, accountBalance, type Account } from './ledger';
 import type { Expense } from './expenses';
@@ -20,4 +20,5 @@ describe('V5.1 historical import safeguards', () => {
   it('optional merchant and tags do not block reviewed rows', () => { const staged=stageImport(lines,ctx,[],new Set())[0]; if(!staged) throw Error('Missing fixture'); expect(postingBlockers({...staged,id:'r',proposal:{...staged.proposal,merchant:null,tags:[],reviewed:true}},[account],'2026-11-01')).toEqual([]); });
   it('uncertain accounting cannot post unreviewed', () => { const staged=stageImport([{date:'2026-04-01',amount:100,direction:'debit',ref:'t',description:'SELF TRANSFER'}],ctx,[],new Set())[0]; if(!staged) throw Error('Missing fixture'); expect(postingBlockers({...staged,id:'r'},[account],'2026-11-01')).toContain('Confirm destination account'); });
   it('transfers and card settlements never inflate income or expenditure', () => expect(cashflow([{id:'t',amount:100,date:'2026-04-01',txnType:'transfer'},{id:'c',amount:100,date:'2026-04-01',txnType:'card_payment'}],'2026-04-01','2026-04-30')).toMatchObject({income:0,spent:0}));
+  it('a credited transfer arrives at the statement account instead of leaving it',()=>{const row=stageImport(lines,ctx,[],new Set())[0];if(!row)throw Error('Missing fixture');expect(orientStatementMove({...row.proposal,txnType:'transfer',accountId:'bank',toAccountId:'cash'},'credit','bank')).toMatchObject({accountId:'cash',toAccountId:'bank'});});
 });
