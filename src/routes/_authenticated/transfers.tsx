@@ -13,6 +13,7 @@ import { suggestTransfers, transferImpact, transferStatus, transferApprovalBlock
 import { FinancialInboxNav } from '@/components/FinancialInboxNav';
 import { Link } from '@tanstack/react-router';
 import { cardLedger } from '@/lib/card-balance';
+import { PassThroughReview } from '@/components/PassThroughReview';
 
 export const Route = createFileRoute("/_authenticated/transfers")({
   head: () => ({
@@ -91,6 +92,7 @@ function TransfersPage() {
 
       {links && (
         <>
+          <PassThroughReview />
           <Card title={`Strong matches found automatically (${strong.length})`} className="mt-4">
             {strong.length === 0 ? <p className="text-sm text-muted-foreground">No pairs with a shared reference or matching narration right now.</p> : (
               <>

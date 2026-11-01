@@ -54,3 +54,4 @@
 - trip-lifecycle.ts: cancel/restore only set cancelledAt/restoredAt; delete unlinks entries and is blocked while advances or claims are open. card-balance.ts derives running card owed from accountBalance; payments are reconciled only when reconciledAt is set.
 - correction-fields.ts TXN_INTENTS maps the 13 "What is this transaction?" choices onto existing ledger types; loans/advances use receivable or borrowing accounts, reimbursement stays in the claim flow.
 - statement-crosscheck.ts parses balance-column PDF statements on-device (direction from running balance) and only reports matches; the cross-check page never uploads, stores or posts statements.
+- Forex card statements (forex-statement.ts) reconcile per currency wallet in the wallet's own currency; pass-through pairs (pass-through.ts) become transfers only via an explicit, undoable correction through a chosen holding account.

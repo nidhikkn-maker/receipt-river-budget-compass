@@ -100,6 +100,7 @@ function Expenses() {
         <Stat tone="personal" label="Personal" value={money(t.personal)} />
         <Stat label={`${list.length} total`} value={money(t.total)} />
       </div>
+      {(() => { const groups = accounts.map(a => ({ a, n: expenses.filter(e => e.accountId === a.id && /^uncategori[sz]ed$/i.test(e.category)).length })).filter(g => g.n > 0); return groups.length ? <div className="mb-4 flex flex-wrap items-center gap-2" aria-label="Uncategorised entries by account"><span className="text-sm text-muted-foreground">Sort uncategorised:</span>{groups.map(({ a, n }) => <Button key={a.id} size="sm" variant="outline" className="min-h-10 whitespace-normal" onClick={() => { const cat = expenses.find(e => e.accountId === a.id && /^uncategori[sz]ed$/i.test(e.category))!.category; setF({ ...f, scope: "all", accountId: a.id, category: cat as NonNullable<Filters["category"]> }); setSelecting(true); setPicked(new Set()); }}>{a.name} · {n}</Button>)}</div> : null; })()}
       <div className="mb-4 flex flex-wrap items-center gap-2">
         <Button variant="outline" size="sm" onClick={() => { setShowHistory(!showHistory); if (!showHistory) void loadHistory(); }}><History className="mr-1 h-4 w-4" />Category history</Button>
         {lastBatch && <Button variant="outline" size="sm" disabled={applying} onClick={() => void undo(lastBatch)}><Undo2 className="mr-1 h-4 w-4" />Undo last change</Button>}
