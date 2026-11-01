@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { ArrowRightLeft, CalendarClock } from "lucide-react";
 import { Card } from "@/components/Money";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { money } from "@/lib/expenses";
 import { useStore } from "@/lib/store";
 import { correctionPreview, type CorrectionPreview } from "@/lib/financial-corrections";
@@ -73,9 +74,9 @@ function StatementAccountsPage() {
   };
 
   return (
-    <div className="mx-auto max-w-4xl space-y-4 p-3 sm:p-6">
+    <div className="mx-auto max-w-4xl space-y-4">
       <header className="space-y-1">
-        <h1 className="text-2xl font-semibold">Statement coverage</h1>
+        <h1 className="font-display text-2xl font-semibold tracking-tight sm:text-3xl">Statement coverage</h1>
         <p className="text-sm text-muted-foreground">A month is confirmed when a statement matched at least one of its entries. Upload missing ones on the <Link to="/statements" className="underline">Statement Desk</Link>.</p>
       </header>
 
@@ -135,13 +136,16 @@ function StatementAccountsPage() {
           </ul>
         )}
         <Button disabled={!picked.length || !to} onClick={prepare}>Preview move ({picked.length})</Button>
-        {preview && (
-          <div role="region" aria-label="Move preview" className="space-y-2 rounded-xl border border-primary p-3 text-sm">
-            <p className="font-medium">{preview.records.length} entr{preview.records.length === 1 ? "y" : "ies"} will move. Statement matches on them are cleared so they can be re-checked.</p>
-            <ul>{preview.balanceChanges.map((b) => <li key={b.id}>{b.name}: balance {b.change >= 0 ? "+" : ""}{money(b.change)}</li>)}</ul>
-            <div className="flex gap-2"><Button variant="outline" onClick={() => setPreview(null)}>Cancel</Button><Button onClick={confirm}>Confirm move</Button></div>
-          </div>
-        )}
+        <Dialog open={!!preview} onOpenChange={(o) => { if (!o) setPreview(null); }}>
+          <DialogContent aria-label="Move preview" className="max-h-[85dvh] overflow-y-auto sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>Move {preview?.records.length} entr{preview?.records.length === 1 ? "y" : "ies"}?</DialogTitle>
+              <DialogDescription>Statement matches on them are cleared so they can be re-checked. You can undo this.</DialogDescription>
+            </DialogHeader>
+            <ul className="divide-y rounded-xl border text-sm">{preview?.balanceChanges.map((b) => <li key={b.id} className="flex justify-between gap-3 px-3 py-2"><span className="min-w-0 truncate">{b.name}</span><span className="shrink-0 font-mono">{b.change >= 0 ? "+" : ""}{money(b.change)}</span></li>)}</ul>
+            <DialogFooter className="gap-2"><Button variant="outline" onClick={() => setPreview(null)}>Cancel</Button><Button onClick={confirm}>Confirm move</Button></DialogFooter>
+          </DialogContent>
+        </Dialog>
       </Card>
     </div>
   );
