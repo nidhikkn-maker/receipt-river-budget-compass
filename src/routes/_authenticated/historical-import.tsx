@@ -51,6 +51,8 @@ function HistoricalImports() {
         if(exists.data){setCurrent(exists.data.id);await reload(exists.data.id);toast.info('This statement is already saved');continue;}
         const up=await supabase.storage.from('receipts').upload(path,file,{contentType:file.type || 'application/octet-stream'});if(up.error)throw Error('Could not upload original statement');
         const ins=await supabase.from('import_batches').insert({id,account_id:account,file_name:file.name,file_path:path,file_hash:hash,currency});if(ins.error)throw Error('Could not queue statement');stored=true;
+        const original=await supabase.from('documents').insert({owner_id:userId,title:file.name,doc_type:'statement',file_path:path,file_name:file.name,mime_type:file.type,size_bytes:file.size,account_id:account,currency,notes:'Historical import source statement'});
+        if(original.error)throw Error('Statement saved for import but could not be added to the Vault');
         setStage({name:file.name,at:1});
         if(/\.pdf$/i.test(file.name)) {
           // Text PDF extraction depends on browser PDF worker; save results before classification.
@@ -58,7 +60,7 @@ function HistoricalImports() {
           const saved=await supabase.from('import_batches').update({raw_lines:parsed as unknown as Json}).eq('id',id);
           if(saved.error)throw Error('Could not save PDF extraction');
         }
-        setStage({name:file.name,at:2});await process({data:{id}});setCurrent(id);await refetch();setRows(await listImportRows(id));setPosted(new Set());toast.success(`${file.name} ready for review`);
+        setStage({name:file.name,at:2});await process({data:{id}});setCurrent(id);await refetch();setRows(await listImportRows(id));const known=await supabase.from('import_posts').select('fingerprint').eq('account_id',account);if(known.error)throw Error('Could not check posted rows');setPosted(new Set(known.data.map(r=>r.fingerprint)));toast.success(`${file.name} ready for review`);
       }catch(e){const message=e instanceof Error?e.message:'Could not upload statement';if(stored)await supabase.from('import_batches').update({status:'failed',error:message}).eq('id',id);else await supabase.storage.from('receipts').remove([path]);toast.error(message);}finally{setStage(null);}
     }
     await refetch(); await refresh();

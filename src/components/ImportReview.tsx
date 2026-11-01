@@ -21,6 +21,7 @@ export function ImportReview({batch,rows,posted,onReload}:{batch:ImportBatch;row
   const [group,setGroup]=useState('All'),[merchant,setMerchant]=useState('All'),[selected,setSelected]=useState<Set<string>>(new Set()),[patch,setPatch]=useState<Partial<ImportProposal>>({}),[from,setFrom]=useState(''),[to,setTo]=useState(''),[expanded,setExpanded]=useState<string|null>(null);
   const [opening,setOpening]=useState(batch.opening_balance==null?'':String(batch.opening_balance)),[closing,setClosing]=useState(batch.closing_balance==null?'':String(batch.closing_balance));
   const [periodFrom,setPeriodFrom]=useState(batch.period_from ?? ''),[periodTo,setPeriodTo]=useState(batch.period_to ?? '');
+  const currentPosted=new Set(rows.filter(r=>posted.has(r.fingerprint)).map(r=>r.fingerprint));
   const active=rows.filter(r=>!posted.has(r.fingerprint));
   const visible=active.filter(r=>(group==='All'||r.review_group===group)&&(merchant==='All'||merchantFamily(r.line.description)===merchant)&&(!from||r.line.date>=from)&&(!to||r.line.date<=to));
   const merchants=useMemo(()=>[...new Set(active.map(r=>merchantFamily(r.line.description)))].sort(),[rows,posted]);
