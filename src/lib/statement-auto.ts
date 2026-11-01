@@ -5,8 +5,11 @@
 import { matchScore, PAYMENT_METHODS, type Expense, type ExpenseInput, type PaymentMethod, type Scope, type StatementLine, type Match } from "./expenses";
 import { suggestForMerchant, type Account, type AccountKind, type TxnType } from "./ledger";
 import { resolveCategory, type CategorySetting } from "./preferences";
+import { bankRef } from "./statement-fingerprint";
 
 export interface StatementDraft {
+  toAccountId?: string | null;
+  existingPaymentId?: string;
   line: StatementLine;
   title: string;
   merchant: string;
@@ -144,6 +147,10 @@ export function classifyStatementLine(line: StatementLine, ctx: StatementContext
 
   if (line.direction === "credit") {
     if (REFUND_CREDIT.test(text)) return { ...base, category, txnType: "refund", reason: "Refund or reversal credited back" };
+    if (account?.kind === "credit_card") {
+      const payment = existingCardPayment(line, ctx);
+      return { ...base, accountId: payment?.accountId ?? null, toAccountId: account.id, category: resolveCategory(ctx.categories, "Financial charges") ?? category, txnType: "card_payment", paymentMethod: "bank_transfer", ...(payment ? { existingPaymentId: payment.id } : {}), reason: payment ? "Existing source-account card payment — reduces outstanding once, not income" : "Card credit or repayment — confirm the paying account; never income", uncertain: !payment };
+    }
     if (INCOME_CREDIT.test(text)) return { ...base, category, txnType: "income", reason: "Money coming in (salary, interest or dividend)", uncertain };
     if (TRANSFER_CREDIT.test(text)) return { ...base, category, txnType: "transfer", reason: "Money moved in from another account — pick where it came from" };
     return { ...base, category, txnType: "income", reason: "Credit line — confirm it is income before saving", uncertain: true };
@@ -162,6 +169,8 @@ export function planStatementRegistration(lines: StatementLine[], matches: Match
   const plan: StatementPlan = { register: [], review: [], skipped: [], possibleDuplicates: [], recurringHints: [] };
   const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, "");
   for (const line of lines) {
+    const draft = classifyStatementLine(line, ctx);
+    if (draft.existingPaymentId) { plan.skipped.push({ line, reason: `Existing card payment from ${ctx.accounts.find(a => a.id === draft.accountId)?.name ?? "source account"}; already reduces outstanding, not income` }); continue; }
     const match = matches.find((m) => m.line.ref === line.ref);
     if (match?.expense) {
       plan.skipped.push({ line, reason: `Already matched to "${match.expense.title}"` });
@@ -170,20 +179,19 @@ export function planStatementRegistration(lines: StatementLine[], matches: Match
     let best = 0;
     let bestTxn: Expense | null = null;
     for (const t of ctx.transactions) {
-      const s = matchScore(line, t, ctx.currency);
+      const s = matchScore(line, t, ctx.currency, ctx.accountId ?? undefined);
       if (s > best) { best = s; bestTxn = t; }
     }
     if (best >= 0.7) {
       plan.skipped.push({ line, reason: "Already in your ledger" });
       continue;
     }
-    const draft = classifyStatementLine(line, ctx);
     if (best >= 0.4 && bestTxn) {
       // Close to an existing record but not clearly the same — the user decides.
       plan.possibleDuplicates.push({ draft, existing: { id: bestTxn.id, title: bestTxn.title, date: bestTxn.date, amount: bestTxn.amount } });
       continue;
     }
-    if (draft.txnType === "transfer" || /confirm it is income/.test(draft.reason)) plan.review.push(draft);
+    if (draft.txnType === "transfer" || draft.txnType === "card_payment" || /confirm it is income/.test(draft.reason)) plan.review.push(draft);
     else plan.register.push(draft);
   }
   // Recurring hints: a merchant being registered now that already appears 3+ times in history.
@@ -217,7 +225,15 @@ export function draftToInput(draft: StatementDraft): ExpenseInput {
     description: "Statement import",
     txnType: draft.txnType,
     accountId: draft.accountId,
-    toAccountId: null,
+    toAccountId: draft.toAccountId ?? null,
     tags: [],
   };
+}
+
+/** Reuse only an existing, fully identified movement: no amount-only pairing or new money. */
+export function existingCardPayment(line: StatementLine, ctx: StatementContext): Expense | null {
+  if (line.direction !== "credit" || ctx.accounts.find(a => a.id === ctx.accountId)?.kind !== "credit_card") return null;
+  const ref = bankRef(line.description);
+  const candidates = ctx.transactions.filter(t => t.txnType === "card_payment" && t.toAccountId === ctx.accountId && t.accountId && ctx.accounts.some(a => a.id === t.accountId && !a.archived && ["savings", "current", "cash", "wallet"].includes(a.kind)) && t.currency === ctx.currency && Math.abs(t.originalAmount - line.amount) < 0.01 && t.date === line.date && ((ref && bankRef(t.statementRef ?? t.description) === ref) || matchScore(line, t, ctx.currency, ctx.accountId ?? undefined) >= 0.95));
+  return candidates.length === 1 ? candidates[0] ?? null : null;
 }
