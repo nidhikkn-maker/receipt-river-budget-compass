@@ -129,8 +129,8 @@ describe("Test 7 — existing trip migration", () => {
     });
     const dims = allocationReconciliation(t);
     expect(dims.every((d) => d.total > 0 || d.key === "organisation")).toBe(true);
-    expect(t.workspaceBudgets?.[0].amount).toBe(8000);
-    expect(t.budgetLines?.[0].category).toBe("Hotels");
+    expect(t.workspaceBudgets?.[0]?.amount).toBe(8000);
+    expect(t.budgetLines?.[0]?.category).toBe("Hotels");
   });
   it("marks a budget-less trip with allocations as requiring confirmation, never auto-summed", () => {
     const t = trip({ budget: 0, workspaceBudgets: [{ workspace: "business", amount: 8000 }] });
