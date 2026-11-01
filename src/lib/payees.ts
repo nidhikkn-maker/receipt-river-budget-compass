@@ -1,3 +1,4 @@
+import { accountBalance, type Account, type Txn } from './ledger';
 export const PAYEE_TYPES = ['individual', 'merchant', 'business', 'organisation', 'other'] as const;
 export type PayeeType = typeof PAYEE_TYPES[number];
 export interface Payee {
@@ -37,4 +38,15 @@ export function cleanPayees(raw: unknown): Payee[] {
 export function payeeDraft(payee: Payee) {
   if (payee.archived) throw Error('Choose an active recipient.');
   return { merchant: payee.name };
+}
+/** Money lent to / borrowed from an outside recipient is tracked as an owned "Other asset" or
+ * "Borrowing" account linked to the recipient, so transfers move money and nothing counts as spending or income. */
+export function recipientAccount(payee: Payee, direction: 'lent' | 'borrowed') {
+  if (payee.archived) throw Error('Choose an active recipient.');
+  return { name: `${direction === 'lent' ? 'Lent to' : 'Borrowed from'} ${payee.name}`.slice(0, 120), kind: direction === 'lent' ? 'other_asset' as const : 'other_liability' as const, openingBalance: 0, details: { payeeId: payee.id } };
+}
+export function recipientBalances(payeeId: string, accounts: Account[], txns: Txn[]) {
+  const linked = accounts.filter(a => a.details?.payeeId === payeeId && !a.archived);
+  const sum = (kind: string) => linked.filter(a => a.kind === kind).reduce((s, a) => s + accountBalance(a, txns), 0);
+  return { owedToYou: Math.round(sum('other_asset') * 100) / 100, youOwe: Math.round(sum('other_liability') * 100) / 100, accounts: linked };
 }

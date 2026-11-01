@@ -36,7 +36,7 @@ export interface Account {
   includeInCash?: boolean;
   details?: AccountDetails;
 }
-export interface AccountDetails { schemeCode?: string; schemeName?: string; units?: number }
+export interface AccountDetails { schemeCode?: string; schemeName?: string; units?: number; /** Outside recipient this receivable/borrowing tracks. */ payeeId?: string }
 
 export interface Txn {
   id: string;
