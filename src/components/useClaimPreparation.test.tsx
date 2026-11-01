@@ -18,12 +18,12 @@ describe('Claim preparation save recovery',()=>{
   const first={...data,purpose:'First edit'};rerender({value:first});
   let saving:Promise<void>=Promise.resolve();act(()=>{saving=result.current.saveNow();});
   await waitFor(()=>expect(api.saveCloudPreparation).toHaveBeenCalledTimes(1));
-  const sent=api.saveCloudPreparation.mock.calls[0][1] as ClaimPreparation;
+  const sent=api.saveCloudPreparation.mock.calls[0]?.[1] as ClaimPreparation;
   const newest={...data,purpose:'Latest edit'};rerender({value:newest});
   await waitFor(()=>expect(api.saveLocalPreparation.mock.calls.at(-1)?.[1].data.purpose).toBe('Latest edit'));
   await act(async()=>{complete({...sent,revision:2});await saving;});
   await waitFor(()=>expect(api.saveCloudPreparation).toHaveBeenCalledTimes(2));
-  const next=api.saveCloudPreparation.mock.calls[1][1] as ClaimPreparation;
+  const next=api.saveCloudPreparation.mock.calls[1]?.[1] as ClaimPreparation;
   expect(next.data.purpose).toBe('Latest edit');expect(next.revision).toBe(2);
   await waitFor(()=>expect(api.saveLocalPreparation.mock.calls.at(-1)?.[1].data.purpose).toBe('Latest edit'));
  });
@@ -37,16 +37,16 @@ describe('Claim preparation save recovery',()=>{
   const local={...initial,data:{...data,purpose:'Offline edit'},mutationId:'offline',updatedAt:'2026-11-01T06:10:00Z'};api.loadLocalPreparation.mockResolvedValue(local);
   const {result}=renderHook(()=>{const [value,setValue]=useState(data);return useClaimPreparation('owner',true,value,setValue,false);});
   await waitFor(()=>expect(result.current.ready).toBe(true));
-  await waitFor(()=>expect(api.saveCloudPreparation).toHaveBeenCalled());expect(api.saveCloudPreparation.mock.calls[0][1].data.purpose).toBe('Offline edit');
+  await waitFor(()=>expect(api.saveCloudPreparation).toHaveBeenCalled());expect(api.saveCloudPreparation.mock.calls[0]?.[1].data.purpose).toBe('Offline edit');
  });
  it('a failed account save can be retried with the same mutation',async()=>{
   api.saveCloudPreparation.mockRejectedValueOnce(Error('Network interrupted'));
   const {result,rerender}=renderHook(({value})=>useClaimPreparation('owner',true,value,()=>{},false),{initialProps:{value:data}});
   await waitFor(()=>expect(result.current.ready).toBe(true));rerender({value:{...data,purpose:'Retry edit'}});
   await act(async()=>{await result.current.saveNow();});expect(result.current.status).toContain('cloud save failed');
-  const sent=api.saveCloudPreparation.mock.calls[0][1] as ClaimPreparation;
+  const sent=api.saveCloudPreparation.mock.calls[0]?.[1] as ClaimPreparation;
   await act(async()=>{await result.current.saveNow();});
-  expect(api.saveCloudPreparation.mock.calls[1][1].mutationId).toBe(sent.mutationId);expect(result.current.status).toBe('Saved to account');
+  expect(api.saveCloudPreparation.mock.calls[1]?.[1].mutationId).toBe(sent.mutationId);expect(result.current.status).toBe('Saved to account');
  });
  it('a stale revision keeps device edits and does not overwrite the other device',async()=>{
   api.saveCloudPreparation.mockRejectedValue(Error('Preparation changed on another device. Reload before saving'));
