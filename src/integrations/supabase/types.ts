@@ -935,6 +935,8 @@ export type Database = {
           period_to: string | null
           raw_lines: Json
           source_balances: Json
+          statement_identity: Json
+          statement_review: Json
           status: string
           total_pages: number | null
           updated_at: string
@@ -960,6 +962,8 @@ export type Database = {
           period_to?: string | null
           raw_lines?: Json
           source_balances?: Json
+          statement_identity?: Json
+          statement_review?: Json
           status?: string
           total_pages?: number | null
           updated_at?: string
@@ -985,6 +989,8 @@ export type Database = {
           period_to?: string | null
           raw_lines?: Json
           source_balances?: Json
+          statement_identity?: Json
+          statement_review?: Json
           status?: string
           total_pages?: number | null
           updated_at?: string
@@ -1517,6 +1523,48 @@ export type Database = {
         }
         Relationships: []
       }
+      statement_checkpoints: {
+        Row: {
+          batch_id: string
+          created_at: string
+          evidence_hash: string
+          id: string
+          owner_id: string
+          result: Json
+        }
+        Insert: {
+          batch_id: string
+          created_at?: string
+          evidence_hash: string
+          id: string
+          owner_id: string
+          result: Json
+        }
+        Update: {
+          batch_id?: string
+          created_at?: string
+          evidence_hash?: string
+          id?: string
+          owner_id?: string
+          result?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "statement_checkpoints_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "import_batches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "statement_checkpoints_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "finance_preferences"
+            referencedColumns: ["owner_id"]
+          },
+        ]
+      }
       statement_line_imports: {
         Row: {
           account_key: string
@@ -1632,6 +1680,8 @@ export type Database = {
           period_to: string | null
           raw_lines: Json
           source_balances: Json
+          statement_identity: Json
+          statement_review: Json
           status: string
           total_pages: number | null
           updated_at: string
@@ -1732,6 +1782,20 @@ export type Database = {
         Args: { _expense_id: string; _statement_ref: string }
         Returns: undefined
       }
+      record_statement_checkpoint: {
+        Args: {
+          _batch: string
+          _expected: Json
+          _hash: string
+          _id: string
+          _ledger: Json
+          _owner: string
+          _posts: Json
+          _result: Json
+          _rows: Json
+        }
+        Returns: undefined
+      }
       restore_finance_backup: {
         Args: { display_name?: string; payload: Json }
         Returns: Json
@@ -1740,6 +1804,10 @@ export type Database = {
       review_expense: {
         Args: { _decision: string; _expense_id: string; _note?: string }
         Returns: string
+      }
+      review_statement_evidence: {
+        Args: { _batch: string; _expected: Json; _review: Json }
+        Returns: undefined
       }
       revise_import_rows: {
         Args: { _batch: string; _decision?: string; _items: Json; _patch: Json }

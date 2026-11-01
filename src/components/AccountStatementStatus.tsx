@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
-import { listImports, listImportRows } from "@/lib/import-repository";
+import { listImports, statementEvidence } from "@/lib/import-repository";
 import { accountStatementStatus, accountStatementSummary, type StatementStatusEvidence } from "@/lib/account-statement-status";
 import { useStore } from "@/lib/store";
 import { money } from "@/lib/expenses";
@@ -12,23 +12,18 @@ export function AccountStatementStatus() {
   const { accounts, transactions, preferences, refresh } = useStore();
   const [evidence, setEvidence] = useState<StatementStatusEvidence[]>([]), [status, setStatus] = useState("Loading statement evidence…"), [selected, setSelected] = useState<string | null>(null);
   const generation = useRef(0);
+  const latestStore=useRef({accounts,transactions});latestStore.current={accounts,transactions};
   const load = async (updateLedger = false) => {
     const run = ++generation.current;
     try {
+      if(updateLedger)await refresh();
       const batches = await listImports();
       // Read durable posting fingerprints with pagination; one statement's failure never becomes a false success.
       const next = await Promise.all(batches.map(async batch => {
-        const rows = await listImportRows(batch.id);
-        const posted: StatementStatusEvidence["posted"] = [];
-        for (let from = 0;; from += 1000) {
-          const result = await supabase.from("import_posts").select("fingerprint,transaction_id,posted_at").eq("account_id", batch.account_id).order("fingerprint").range(from, from + 999);
-          if (result.error) throw Error("Posting evidence unavailable");
-          posted.push(...result.data); if (result.data.length < 1000) break;
-        }
-        return { batch, rows, posted };
+        const account=latestStore.current.accounts.find(a=>a.id===batch.account_id);if(!account)throw Error('Account unavailable');
+        return statementEvidence(batch,account,latestStore.current.transactions);
       }));
       if (run !== generation.current) return;
-      if (updateLedger) await refresh();
       if (run !== generation.current) return;
       setEvidence(next); setStatus("");
     } catch { if (run === generation.current) setStatus("Statement evidence could not refresh. Account checks are unavailable until retry succeeds."); }
@@ -36,9 +31,10 @@ export function AccountStatementStatus() {
   useEffect(() => {
     void load();
     const tick = () => { if (document.visibilityState === "visible") void load(true); };
-    const timer = window.setInterval(tick, 20000); window.addEventListener("focus", tick); window.addEventListener("online", tick);
-    return () => { generation.current++; clearInterval(timer); window.removeEventListener("focus", tick); window.removeEventListener("online", tick); };
+    const timer = window.setInterval(tick, 20000); window.addEventListener("focus", tick); window.addEventListener("online", tick);window.addEventListener("ledgerline:statement-updated",tick);
+    return () => { generation.current++; clearInterval(timer); window.removeEventListener("focus", tick); window.removeEventListener("online", tick);window.removeEventListener("ledgerline:statement-updated",tick); };
   }, []);
+  useEffect(()=>{void load();},[transactions,accounts]);
   const rows = accounts.filter(a => !a.archived).map(a => accountStatementStatus(a, evidence, transactions, preferences, new Date().toISOString().slice(0, 10)));
   const summary = accountStatementSummary(rows), focused = rows.find(r => r.accountId === selected);
   if (status) return <div className="flex flex-wrap items-center gap-2 py-4 text-sm" role="status"><p>{status}</p><Button size="sm" variant="outline" onClick={() => load(true)}>Retry account checks</Button></div>;
