@@ -414,3 +414,8 @@
 
 - [ ] Fresh security scan of published app (deep scan running 1 Nov)
 - [ ] Physical iPhone/iPad check (blocked: needs user device)
+
+## V5.14 follow-ups (1 Nov)
+- [x] Reconcile MOVAC SGST ₹90 ×2, ₹0.01 debit total, balance gap (read-only report in Files)
+- [ ] Match five missing statements — blocked: statements not yet uploaded
+- [x] Decision worksheet for 74 possible transfers / 9 duplicate groups (18 records) in Files; in-app queue not built yet
