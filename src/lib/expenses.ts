@@ -62,6 +62,8 @@ export interface Expense {
   paymentMethod: PaymentMethod;
   reconciledAt: string | null;
   statementRef: string | null;
+  /** When the server last wrote this record (ISO timestamp). */
+  updatedAt?: string | null;
   date: string;
   description: string;
   receipts: Receipt[];
