@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from './ui/dialog';
 
 export function PayeeDirectory() {
-  const { preferences, savePreferences, accounts, transactions, addAccount } = useStore();
+  const { preferences, savePreferences, accounts = [], transactions = [], addAccount } = useStore();
   const [track,setTrack] = useState<{payee:Payee;direction:'lent'|'borrowed'}|null>(null);
   const [tracking,setTracking] = useState(false);
   const startTracking = async () => {

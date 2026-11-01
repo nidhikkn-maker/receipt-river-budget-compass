@@ -142,6 +142,7 @@ export interface ExpenseInput {
   accountId?: string | null;
   toAccountId?: string | null;
   paymentInstrumentId?: string | null;
+  payeeId?: string | null;
   tags?: string[];
   receiptDetails?: ReceiptDetails;
   reimbursementStatus?: ReimbursementStatus;
