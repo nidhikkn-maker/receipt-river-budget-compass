@@ -1,7 +1,8 @@
 import { beforeEach, expect, it, vi } from "vitest";
-const mocks = vi.hoisted(() => ({ getUser: vi.fn(), list: vi.fn(), remove: vi.fn(), rpc: vi.fn(), clear: vi.fn() }));
+const mocks = vi.hoisted(() => ({ getUser: vi.fn(), list: vi.fn(), remove: vi.fn(), rpc: vi.fn(), clear: vi.fn(),clearClaims:vi.fn() }));
 vi.mock("@/integrations/supabase/client", () => ({ supabase: { auth: { getUser: mocks.getUser }, storage: { from: () => ({ list: mocks.list, remove: mocks.remove }) }, rpc: mocks.rpc } }));
 vi.mock("./offline", () => ({ clearOfflineOwner: mocks.clear }));
+vi.mock('./claim-preparations',()=>({clearLocalPreparations:mocks.clearClaims}));
 import { deleteFinanceData } from "./delete-data";
 beforeEach(() => {
   vi.resetAllMocks();
@@ -11,6 +12,7 @@ beforeEach(() => {
   mocks.rpc.mockResolvedValue({ error: null });
   mocks.remove.mockResolvedValue({ error: null });
   mocks.clear.mockResolvedValue(undefined);
+  mocks.clearClaims.mockResolvedValue(undefined);
 });
 it("refuses deletion offline", async () => {
   vi.stubGlobal("navigator", { onLine: false });
@@ -36,6 +38,7 @@ it("includes unlinked and nested owner files and clears only that owner's offlin
   expect(mocks.list.mock.calls.map((call) => call[0])).toEqual(["owner", "owner/docs"]);
   expect(mocks.remove).toHaveBeenCalledWith(["owner/bill.jpg", "owner/docs/statement.pdf"]);
   expect(mocks.clear).toHaveBeenCalledWith("owner");
+  expect(mocks.clearClaims).toHaveBeenCalledWith('owner');
   expect(mocks.rpc).toHaveBeenCalledWith("delete_my_finance_data");
   expect(mocks.rpc.mock.invocationCallOrder[0]).toBeLessThan(mocks.remove.mock.invocationCallOrder[0] ?? 0);
 });

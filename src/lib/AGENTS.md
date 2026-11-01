@@ -1,4 +1,5 @@
 # Finance rule modules
+- Claim discovery is pure in claim-discovery.ts; preparation saves use owner-scoped revision and mutation IDs, with encrypted owner device recovery in claim-preparations.ts. Linking reuses audited metadata transactions and never grants reimbursement eligibility.
 - V5.4 financial audit fixtures run only in memory; defect regressions assert real passing outcomes, and unresolved expected failures must never be counted as successful acceptance.
 - Position reimbursement totals use outstandingOf on tracked expense claims; legacy workspace reports use workspaceParts, and manual loan splits use stored-INR repaymentParts while preserving principal-only legacy/EMI entries.
 - Family permission SQL has an isolated PGlite regression covering active, unrelated and revoked requesters plus owner decisions; cloud tests must never create sample records in production.
