@@ -11,7 +11,7 @@ import { Link } from '@tanstack/react-router';
 
 export function ReviewRecurringPanel({ expense, cadence, onSaved }: { expense: Expense; cadence: number | null; onSaved: () => void }) {
   const store = useStore();
-  const [draft, setDraft] = useState(() => recurringSeed(expense, cadence));
+  const [draft, setDraft] = useState<Omit<import('@/lib/planning').Commitment, 'id'>>(() => recurringSeed(expense, cadence));
   const [kind, setKind] = useState<CommitmentKind>('subscription'), [frequency, setFrequency] = useState<Frequency>(draft.frequency);
   const [preview, setPreview] = useState(false), [error, setError] = useState('');
   const id = useRef(crypto.randomUUID());
