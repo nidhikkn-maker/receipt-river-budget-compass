@@ -137,15 +137,19 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
   const deleting = useRef(false);
   const [preferences, setPreferences] = useState<FinancePreferences>(defaultPreferences);
 
+  const firstLoad = useRef(true);
   const refresh = useCallback(async () => {
-    if (!navigator.onLine) {
+    // Show this device's saved copy straight away, then refresh from the cloud.
+    if (!navigator.onLine || firstLoad.current) {
+      firstLoad.current = false;
       const cached = await getSnapshot<Snapshot>(userId).catch(() => undefined);
       if (cached) {
         setName(cached.name); setMembers(cached.members); setExpenses(cached.expenses); setAccounts(cached.accounts); setCommitments(cached.commitments);
         setLoans(cached.rawLoans ?? []); setGoals(cached.goals); setBudgets(cached.budgets); setPreferences(normalizePreferences(cached.preferences));
         setValuations(cached.valuations ?? []); setDocuments(cached.documents ?? []);
+        setLoading(false);
       }
-      setLoading(false); return;
+      if (!navigator.onLine) { setLoading(false); return; }
     }
     const [p, m, e, b, a, c, l, g, pref, v, d, db] = await Promise.all([
       supabase.from("profiles").select("full_name").eq("id", userId).maybeSingle(),
