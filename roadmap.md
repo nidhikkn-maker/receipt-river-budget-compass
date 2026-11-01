@@ -282,3 +282,5 @@
 - [ ] V5.3 live background acceptance — blocked on publication approval; persisted chunk/lease recovery was previously tested locally after closing the page, but live schedule is not certified.
 - [ ] V5.3 actual-statement and actual-iPhone acceptance — needs the user’s representative statement and compatible phone; synthetic month and emulated 402px checks passed.
 - [ ] Foreign-currency ledger reconciliation — source arithmetic supported, direct original-currency comparison to INR-only ledger unavailable; never certifies or auto-adjusts balances.
+
+- [ ] Current continuation: grouped live import Inbox, direct owner-visible batch links and automatic active-review refresh; test link/reload without posting.
