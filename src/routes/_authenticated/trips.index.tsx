@@ -1,4 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { TripLifecycleActions } from "@/components/trip/TripLifecycleActions";
 import { useEffect, useMemo, useState } from "react";
 import { CalendarClock, Plane, Plus, Search } from "lucide-react";
 import { PageTitle } from "@/components/AppShell";
@@ -105,13 +106,14 @@ function Trips() {
           const st = tripStatus(t, today);
           const total = spent.get(t.id) ?? 0;
           return (
-            <Link key={t.id} to="/trips/$tripId" params={{ tripId: t.id }} className="block rounded-2xl border bg-card p-4 transition hover:bg-accent">
+            <div key={t.id} className="rounded-2xl border bg-card p-4"><Link to="/trips/$tripId" params={{ tripId: t.id }} className="-m-2 block rounded-xl p-2 transition hover:bg-accent">
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0">
                   <div className="truncate font-display text-lg font-bold">{t.name}</div>
                   <div className="truncate text-xs text-muted-foreground">{t.destination || "—"} · {t.start} → {t.end}</div>
                 </div>
                 <span className={"shrink-0 rounded-full px-2.5 py-0.5 text-[11px] font-semibold " + (st === "active" ? "bg-gold/15 text-gold-strong" : st === "cancelled" ? "bg-destructive/10 text-destructive" : "bg-secondary text-secondary-foreground")}>{TRIP_STATUS_LABEL[st]}</span>
+                {st !== "cancelled" && t.restoredAt && <span className="shrink-0 rounded-full bg-primary/10 px-2.5 py-0.5 text-[11px] font-semibold text-primary">Restored</span>}
               </div>
               <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
                 <span>{t.type === "mixed" ? "Mixed" : SCOPE_LABEL[t.type ?? "personal"]}</span>
@@ -125,7 +127,7 @@ function Trips() {
                 </div>
                 <Plane className="h-4 w-4 text-muted-foreground" />
               </div>
-            </Link>
+            </Link><div className="mt-3 border-t pt-3"><TripLifecycleActions trip={t} onDeleted={() => {}} /></div></div>
           );
         })}
       </div>

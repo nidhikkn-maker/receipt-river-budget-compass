@@ -1,5 +1,5 @@
 import { PaymentMethodsManager } from "@/components/PaymentMethodsManager";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Archive, ArchiveRestore } from "lucide-react";
@@ -74,6 +74,7 @@ function Wealth() {
                 </Button>
               </div>
               {a.kind === "credit_card" && !a.archived && <CardDetails a={a} />}
+              {a.kind === "credit_card" && <Link to="/cards/$accountId" params={{ accountId: a.id }} className="mt-2 inline-block text-sm font-medium text-primary underline">View card balance & payments</Link>}
               {!a.archived && <AccountTools a={a} />}
               {!a.archived && ["savings","current","cash","wallet","credit_card"].includes(a.kind) && (
                 <details className="mt-2 border-t pt-2"><summary className="cursor-pointer text-xs font-semibold text-muted-foreground">Linked UPI IDs & cards ({preferences.paymentInstruments.filter(p=>p.accountId===a.id&&!p.archived).length})</summary><div className="mt-2"><PaymentMethodsManager accountId={a.id} /></div></details>

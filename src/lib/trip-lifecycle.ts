@@ -25,8 +25,8 @@ export function cancelTrip(trip: TravelTrip, now: string, cancelUnpaidBookings: 
   return next;
 }
 
-export function restoreTrip(trip: TravelTrip): TravelTrip {
-  return { ...trip, cancelledAt: null };
+export function restoreTrip(trip: TravelTrip, now = new Date().toISOString()): TravelTrip {
+  return { ...trip, cancelledAt: null, restoredAt: now };
 }
 
 /** Deleting a trip only unlinks entries; blocked while money is still open. */
