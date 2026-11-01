@@ -1,4 +1,10 @@
 # Roadmap (Functional Requirements v1.0)
+## V5.9 Smart financial inbox
+- [ ] Priority 1: preserve historical review items, five evidence-based groups, account/type/transfer/card suggestions and exact-preview bulk category correction using existing audited operations.
+- [ ] Priority 2: merchant rules, organisation/activity mapping and recurring-profile integration.
+- [ ] Priority 3: expanded confidence/exception review and phone/tablet/desktop layouts.
+- [ ] Priority 4: complete statement evidence extraction, independent reconciliation audit, controlled regression/performance acceptance and readiness report.
+- [ ] Write/rollback acceptance on existing financial corrections requires isolated Cloud; never test on real records, never publish this brief without approval.
 ## V5.7 reimbursement discovery and responsive claims
 - [x] Continuation: serialized device writes and retained edits during account save, reopened offline preparation sync, truthful failure feedback and same-mutation retry; five new controlled recovery tests, 739 total checks passed; isolated PDF flow rerun, no Cloud schema or real-record writes in this continuation.
 - [x] Find & Link existing expenses with explained suggestions, rejection, search/filter/bulk review and audited links without duplicate entries.
