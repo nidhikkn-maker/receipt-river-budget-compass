@@ -252,7 +252,13 @@ function BackButton() {
     else if (action.type === "PUSH") forwardSteps = 0;
     setCanForward(forwardSteps > 0);
   }), [router]);
-  const back = () => { if (router.history.canGoBack()) router.history.back(); else void router.navigate({ to: "/dashboard" }); };
+  // Router history only knows pages opened in this session, so on a fresh load or refresh
+  // fall back to the browser's own back step before giving up and going home.
+  const back = () => {
+    if (router.history.canGoBack()) router.history.back();
+    else if (window.history.length > 1) window.history.back();
+    else void router.navigate({ to: "/dashboard" });
+  };
   // Swipe right from the left edge goes back on phones and tablets.
   useEffect(() => {
     let x = -1, y = 0;
