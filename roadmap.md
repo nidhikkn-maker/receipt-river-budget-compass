@@ -1,4 +1,10 @@
 # Roadmap (Functional Requirements v1.0)
+## V5.10 guided Financial Inbox
+- [ ] Separate overview, transaction review and account reconciliation; consistent independent issue counts.
+- [ ] Stable visible/page/all-matching/merchant selection, sticky summary and guided correction preview/confirmation.
+- [ ] Reuse merchant rules and guarded financial/mapping workflows; document unimplemented intelligent matching rather than guess.
+- [ ] Controlled selection/count/correction tests and signed-in iPhone/iPad/desktop preview checks without real record writes; acceptance report and no publication.
+- [ ] Full paired settlement/recurring/mapping and isolated Cloud write acceptance: preserve financial guards and identify remaining blockers.
 ## V5.9 Smart financial inbox
 - [x] Current request: account/type corrections with exact before/after and ledger impact, explicit confirmation, dedicated owner-scoped atomic saving, all-edit revisions, idempotent audit batches and conflict-safe undo. Shared save support explicitly approved; no existing financial records changed; controlled PostgreSQL/UI tests and signed-in preview/cancel checked.
 - [x] V5.9.1 first correction: root cause identified (Inbox ignored import/source evidence and used verification click dates); separate statement account table/details, independent counts, automatic polling/focus refresh and conservative period/source/read-back calculations. Seven signed-in accounts inspected read-only, none has confirmed source coverage/balance; report in .lovable/acceptance-v5.9.1.md.
