@@ -778,6 +778,251 @@ export type Database = {
         }
         Relationships: []
       }
+      import_audit: {
+        Row: {
+          action: string
+          batch_id: string
+          created_at: string
+          details: Json
+          id: string
+          owner_id: string
+        }
+        Insert: {
+          action: string
+          batch_id: string
+          created_at?: string
+          details?: Json
+          id?: string
+          owner_id?: string
+        }
+        Update: {
+          action?: string
+          batch_id?: string
+          created_at?: string
+          details?: Json
+          id?: string
+          owner_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "import_audit_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "import_batches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      import_batches: {
+        Row: {
+          account_id: string
+          attempts: number
+          closing_balance: number | null
+          created_at: string
+          currency: string
+          error: string | null
+          file_hash: string
+          file_name: string
+          file_path: string
+          id: string
+          lease_until: string
+          opening_balance: number | null
+          owner_id: string
+          period_from: string | null
+          period_to: string | null
+          raw_lines: Json
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          account_id: string
+          attempts?: number
+          closing_balance?: number | null
+          created_at?: string
+          currency?: string
+          error?: string | null
+          file_hash: string
+          file_name: string
+          file_path: string
+          id?: string
+          lease_until?: string
+          opening_balance?: number | null
+          owner_id?: string
+          period_from?: string | null
+          period_to?: string | null
+          raw_lines?: Json
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string
+          attempts?: number
+          closing_balance?: number | null
+          created_at?: string
+          currency?: string
+          error?: string | null
+          file_hash?: string
+          file_name?: string
+          file_path?: string
+          id?: string
+          lease_until?: string
+          opening_balance?: number | null
+          owner_id?: string
+          period_from?: string | null
+          period_to?: string | null
+          raw_lines?: Json
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "import_batches_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      import_posts: {
+        Row: {
+          account_id: string
+          batch_id: string | null
+          fingerprint: string
+          original_line: Json
+          owner_id: string
+          posted_at: string
+          transaction_id: string
+        }
+        Insert: {
+          account_id: string
+          batch_id?: string | null
+          fingerprint: string
+          original_line: Json
+          owner_id: string
+          posted_at?: string
+          transaction_id: string
+        }
+        Update: {
+          account_id?: string
+          batch_id?: string | null
+          fingerprint?: string
+          original_line?: Json
+          owner_id?: string
+          posted_at?: string
+          transaction_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "import_posts_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "import_posts_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "import_batches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      import_rows: {
+        Row: {
+          batch_id: string
+          confidence: string
+          created_at: string
+          decision: string
+          duplicate_id: string | null
+          duplicate_kind: string
+          fingerprint: string
+          id: string
+          line: Json
+          owner_id: string
+          proposal: Json
+          review_group: string
+          updated_at: string
+        }
+        Insert: {
+          batch_id: string
+          confidence?: string
+          created_at?: string
+          decision?: string
+          duplicate_id?: string | null
+          duplicate_kind?: string
+          fingerprint: string
+          id?: string
+          line: Json
+          owner_id?: string
+          proposal: Json
+          review_group: string
+          updated_at?: string
+        }
+        Update: {
+          batch_id?: string
+          confidence?: string
+          created_at?: string
+          decision?: string
+          duplicate_id?: string | null
+          duplicate_kind?: string
+          fingerprint?: string
+          id?: string
+          line?: Json
+          owner_id?: string
+          proposal?: Json
+          review_group?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "import_rows_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "import_batches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      import_rules: {
+        Row: {
+          account_id: string | null
+          created_at: string
+          enabled: boolean
+          id: string
+          mappings: Json
+          merchant: string
+          owner_id: string
+        }
+        Insert: {
+          account_id?: string | null
+          created_at?: string
+          enabled?: boolean
+          id?: string
+          mappings?: Json
+          merchant: string
+          owner_id?: string
+        }
+        Update: {
+          account_id?: string | null
+          created_at?: string
+          enabled?: boolean
+          id?: string
+          mappings?: Json
+          merchant?: string
+          owner_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "import_rules_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       loans: {
         Row: {
           account_id: string | null
@@ -1169,6 +1414,35 @@ export type Database = {
         Args: { batch_id: string; items: Json; target: string }
         Returns: string
       }
+      claim_import_batches: {
+        Args: never
+        Returns: {
+          account_id: string
+          attempts: number
+          closing_balance: number | null
+          created_at: string
+          currency: string
+          error: string | null
+          file_hash: string
+          file_name: string
+          file_path: string
+          id: string
+          lease_until: string
+          opening_balance: number | null
+          owner_id: string
+          period_from: string | null
+          period_to: string | null
+          raw_lines: Json
+          status: string
+          updated_at: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "import_batches"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       claim_report_jobs: {
         Args: { _limit: number }
         Returns: {
@@ -1223,6 +1497,10 @@ export type Database = {
           member_name: string
           revoked: boolean
         }[]
+      }
+      post_import_rows: {
+        Args: { _batch: string; _rows: Json }
+        Returns: number
       }
       receive_claim_receipt: {
         Args: {
