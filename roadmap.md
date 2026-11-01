@@ -421,3 +421,5 @@
 - [x] Decision worksheet for 74 possible transfers / 9 duplicate groups (18 records) in Files; in-app queue not built yet
 - [x] Statement cross-check: match confidence score and reasons per result (read-only)
 - [x] Statement cross-check: side-by-side record vs statement entry (date, amount, description differences)
+- [x] Statement cross-check: action workflow (move/kind corrections via preview, confirm, Undo)
+- [x] Link statement match & fix from Financial Inbox

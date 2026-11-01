@@ -1,5 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
+import { toast } from "sonner";
+import { Checkbox } from "@/components/ui/checkbox";
+import { correctionPreview, type CorrectionPreview } from "@/lib/financial-corrections";
+import type { FinancialReview } from "@/lib/financial-review";
+import type { TxnType } from "@/lib/ledger";
 import { Download, FileSearch, ShieldCheck } from "lucide-react";
 import { Card } from "@/components/Money";
 import { Button } from "@/components/ui/button";
@@ -45,7 +50,7 @@ async function readPdf(file: File): Promise<Parsed> {
 const LABEL: Record<CrossResult["result"], string> = { found: "Found on other statement", found_wrong_kind: "Found — wrong kind", not_found: "Not found" };
 
 function CrossCheckPage() {
-  const { transactions, accounts } = useStore();
+  const { transactions, accounts, correctFinancialEntries, undoFinancialCorrection } = useStore();
   const money_accounts = accounts.filter((a) => !a.archived);
   const [accountId, setAccountId] = useState(() => money_accounts.find((a) => /movac/i.test(a.name))?.id ?? money_accounts[0]?.id ?? "");
   const [from, setFrom] = useState("2026-04-01");
@@ -55,6 +60,11 @@ function CrossCheckPage() {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [filter, setFilter] = useState<CrossResult["result"] | "all">("all");
+  const [targetId, setTargetId] = useState(() => money_accounts.find((a) => /idfc krupa/i.test(a.name))?.id ?? "");
+  const [picked, setPicked] = useState<string[]>([]);
+  const [preview, setPreview] = useState<CorrectionPreview | null>(null);
+  const [applied, setApplied] = useState<string | null>(null);
+  const op = useRef("");
 
   const load = async (files: FileList | null, set: (p: Parsed[]) => void) => {
     if (!files?.length) return;
@@ -71,6 +81,37 @@ function CrossCheckPage() {
   const total = (xs: CrossResult[]) => xs.reduce((s, x) => s + x.amount, 0);
   const shown = (out?.results ?? []).filter((r) => filter === "all" || r.result === filter);
 
+  const actionable = (out?.results ?? []).filter((r) => r.result !== "not_found");
+  const toggle = (id: string, on: boolean) => setPicked((p) => (on ? [...new Set([...p, id])] : p.filter((x) => x !== id)));
+  const prepare = () => {
+    try {
+      if (!targetId || targetId === accountId) throw Error("Choose which account the other statements belong to (different from the records account).");
+      const sel = actionable.filter((r) => picked.includes(r.id));
+      if (!sel.length) throw Error("Select at least one found record.");
+      const dirs = new Set(sel.map((r) => r.line!.direction));
+      if (dirs.size > 1) throw Error("Selected records mix money in and money out. Act on each group separately.");
+      const wrongKind = sel.some((r) => r.result === "found_wrong_kind");
+      const kindFix: TxnType | undefined = wrongKind ? ([...dirs][0] === "debit" ? "expense" : "income") : undefined;
+      if (wrongKind && sel.some((r) => r.result !== "found_wrong_kind")) throw Error("Act on “Found” and “Wrong kind” records separately.");
+      const rows = sel.map((r) => ({ transaction: transactions.find((t) => t.id === r.id)!, issues: [], group: "account", status: "Suggested Correction", confidence: r.confidence, targetAccountIds: [targetId], evidence: r.reasons }) as unknown as FinancialReview);
+      if (rows.some((r) => !r.transaction)) throw Error("A selected record changed. Reload and try again.");
+      op.current = crypto.randomUUID();
+      setPreview(correctionPreview(rows, { accountId: targetId, ...(kindFix ? { txnType: kindFix } : {}) }, accounts, transactions));
+    } catch (e) { toast.error(e instanceof Error ? e.message : "Couldn’t prepare the change"); }
+  };
+  const apply = async () => {
+    if (!preview) return;
+    try {
+      await correctFinancialEntries(preview, op.current);
+      setApplied(op.current); setPreview(null); setPicked([]);
+      toast.success(`${preview.records.length} records corrected`, { action: { label: "Undo", onClick: () => void undo(op.current) } });
+    } catch (e) { toast.error(e instanceof Error ? e.message : "Nothing changed — try again."); }
+  };
+  const undo = async (id: string) => {
+    try { await undoFinancialCorrection(id); setApplied(null); toast.success("Original account and type restored"); } catch (e) { toast.error(e instanceof Error ? e.message : "Couldn’t undo — a later edit may block it."); }
+  };
+  const accName = (id: string) => accounts.find((a) => a.id === id)?.name ?? "—";
+
   const exportCsv = () => {
     const q = (s: string | number) => `"${String(s).replaceAll('"', '""')}"`;
     const csv = ["record_date,kind,amount,name,result,confidence,score,reasons,statement_date,statement_direction,statement_file,statement_description",
@@ -84,7 +125,7 @@ function CrossCheckPage() {
     <div className="mx-auto max-w-5xl space-y-4 p-4">
       <header className="space-y-1">
         <h1 className="flex items-center gap-2 text-xl font-semibold"><FileSearch className="size-5" /> Statement cross-check</h1>
-        <p className="flex items-center gap-1.5 text-sm text-muted-foreground"><ShieldCheck className="size-4" /> Read-only. Statements are read on this device and are not saved, posted or attached. No records change.</p>
+        <p className="flex items-center gap-1.5 text-sm text-muted-foreground"><ShieldCheck className="size-4" /> Statements are read on this device and are never saved or attached. Matching is read-only; records change only when you review and confirm an action below.</p>
       </header>
 
       <Card className="grid gap-3 p-4 sm:grid-cols-3">
@@ -120,9 +161,35 @@ function CrossCheckPage() {
               </button>
             ); })}
           </div>
+          <Card className="space-y-3 p-4">
+            <h2 className="font-semibold">Act on matches</h2>
+            <p className="text-sm text-muted-foreground">Selected records move to the account the statement belongs to; “wrong kind” records also take the statement’s direction. You see every change first, and can Undo. Statements are still not saved, and no new entries are posted.</p>
+            <label className="block space-y-1 text-sm">Other statements belong to
+              <select className="h-11 w-full rounded-md border border-input bg-background px-2" value={targetId} onChange={(e) => setTargetId(e.target.value)}>
+                <option value="">Choose account…</option>
+                {money_accounts.filter((a) => a.id !== accountId).map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
+              </select>
+            </label>
+            <div className="flex flex-wrap gap-2">
+              <Button variant="outline" onClick={() => setPicked(actionable.filter((r) => r.result === "found" && r.confidence === "high").map((r) => r.id))}>Select high-confidence found</Button>
+              <Button variant="outline" onClick={() => setPicked(actionable.filter((r) => r.result === "found_wrong_kind").map((r) => r.id))}>Select wrong kind</Button>
+              <Button variant="ghost" onClick={() => setPicked([])}>Clear</Button>
+              <Button onClick={prepare} disabled={!picked.length}>Review {picked.length} change{picked.length === 1 ? "" : "s"}</Button>
+              {applied && <Button variant="outline" onClick={() => undo(applied)}>Undo last change</Button>}
+            </div>
+            {preview && (
+              <div role="region" aria-label="Change preview" className="space-y-2 rounded-md border border-primary p-3 text-sm">
+                <p className="font-medium">{preview.records.length} records: {accName(accountId)} → {accName(targetId)}{preview.choice.txnType ? `, kind → ${preview.choice.txnType}` : ""}</p>
+                <ul className="space-y-0.5">{preview.balanceChanges.map((b) => <li key={b.id}>{b.name}: balance {b.change >= 0 ? "+" : ""}{money(b.change)}</li>)}</ul>
+                <p>Income {preview.incomeChange >= 0 ? "+" : ""}{money(preview.incomeChange)} · Spending {preview.spendingChange >= 0 ? "+" : ""}{money(preview.spendingChange)}</p>
+                <p className="text-xs text-muted-foreground">Statement matching on these records is cleared so they can be reconciled against the right account.</p>
+                <div className="flex gap-2"><Button variant="outline" onClick={() => setPreview(null)}>Cancel</Button><Button onClick={apply}>Confirm and apply</Button></div>
+              </div>
+            )}
+          </Card>
           <div className="flex justify-end"><Button variant="outline" onClick={exportCsv}><Download className="size-4" /> Export CSV</Button></div>
           <ul className="divide-y divide-border rounded-lg border border-border bg-card">
-            {shown.map((r) => <ResultRow key={r.id} r={r} />)}
+            {shown.map((r) => <ResultRow key={r.id} r={r} picked={picked.includes(r.id)} onPick={r.result === "not_found" ? undefined : (on) => toggle(r.id, on)} />)}
             {!shown.length && <li className="p-3 text-sm text-muted-foreground">Nothing in this group.</li>}
           </ul>
         </>
@@ -131,7 +198,7 @@ function CrossCheckPage() {
   );
 }
 
-function Side({ title, date, amount, kind, text, diff }: { title: string; date?: string; amount?: number; kind?: string; text?: string; diff: { date: boolean; amount: boolean; kind: boolean } }) {
+function Side({ title, date, amount, kind, text, diff }: { title: string; date?: string | undefined; amount?: number | undefined; kind?: string | undefined; text?: string | undefined; diff: { date: boolean; amount: boolean; kind: boolean } }) {
   const mark = (on: boolean) => (on ? "font-semibold text-destructive" : "");
   return (
     <div className="min-w-0 rounded-md border border-border p-3">
@@ -148,14 +215,16 @@ function Side({ title, date, amount, kind, text, diff }: { title: string; date?:
   );
 }
 
-function ResultRow({ r }: { r: CrossResult }) {
+function ResultRow({ r, picked, onPick }: { r: CrossResult; picked: boolean; onPick?: ((on: boolean) => void) | undefined }) {
   const [open, setOpen] = useState(false);
   const l = r.line ?? r.nearest;
   const isOut = !["income", "refund"].includes(r.kind);
   const diff = { date: !!l && l.date !== r.date, amount: !!l && Math.abs(l.amount - r.amount) > 0.005, kind: !!l && (l.direction === "debit") !== isOut };
   const tone = r.result === "found" ? "bg-primary/10 text-primary" : r.result === "found_wrong_kind" ? "bg-destructive/10 text-destructive" : "bg-muted text-muted-foreground";
   return (
-    <li className="p-3 text-sm">
+    <li className="flex gap-2 p-3 text-sm">
+      {onPick ? <Checkbox className="mt-3" aria-label={`Select ${r.name}`} checked={picked} onCheckedChange={(v) => onPick(v === true)} /> : <span className="w-4" />}
+      <div className="min-w-0 flex-1">
       <button type="button" aria-expanded={open} onClick={() => setOpen((o) => !o)} className="flex min-h-11 w-full flex-col gap-1 text-left sm:flex-row sm:items-center sm:justify-between">
         <div className="min-w-0"><div className="truncate font-medium">{r.name}</div><div className="text-xs text-muted-foreground">{r.date} · saved as {r.kind}{r.line ? ` · ${r.line.source}` : ""}</div></div>
         <div className="flex shrink-0 flex-wrap items-center gap-2"><span className="tabular-nums">{money(r.amount)}</span><span className={`rounded-full px-2 py-0.5 text-xs ${tone}`}>{LABEL[r.result]}</span><span className="rounded-full border border-border px-2 py-0.5 text-xs">{r.result === "not_found" ? "No match" : `${r.confidence} · ${r.score}`}</span></div>
@@ -167,6 +236,7 @@ function ResultRow({ r }: { r: CrossResult }) {
           <Side title={r.line ? "Statement entry" : r.nearest ? "Nearest same-amount entry (not matched)" : "Statement entry"} date={l?.date} amount={l?.amount} kind={l ? `money ${l.direction === "debit" ? "out" : "in"}` : undefined} text={l ? `${l.description} (${l.source})` : undefined} diff={diff} />
         </div>
       )}
+      </div>
     </li>
   );
 }

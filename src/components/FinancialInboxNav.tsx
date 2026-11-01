@@ -7,5 +7,6 @@ export function FinancialInboxNav({ active }: { active: 'overview' | 'review' | 
     <Button asChild variant={active==='transfers'?'default':'outline'} className="h-auto min-h-10 whitespace-normal"><Link to="/transfers">Transfers & Card Payments</Link></Button>
     <Button asChild variant={active==='accounts'?'default':'outline'} className="h-auto min-h-10 whitespace-normal"><Link to="/account-reconciliation">Account Reconciliation</Link></Button>
     <Button asChild variant={active==='history'?'default':'outline'}><Link to="/inbox" search={{section:'history'}}>Review History</Link></Button>
+    <Button asChild variant="outline" className="h-auto min-h-10 whitespace-normal"><Link to="/statement-crosscheck">Statement Match & Fix</Link></Button>
   </nav>;
 }
