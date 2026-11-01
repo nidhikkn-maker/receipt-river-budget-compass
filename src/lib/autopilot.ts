@@ -118,7 +118,7 @@ export function autopilot(i: AutopilotInput): AutopilotRecommendation[] {
     out.push({
       key: `anomaly:${a.title}:${a.amount}`, title: `Unusual: ${a.title}`,
       detail: `${money(a.amount)} — ${a.reason}. Worth a look if you don't recognise it.`,
-      priority: "low", impact: a.amount, steps: [{ label: "Amount", amount: a.amount }], actionLabel: "See transaction", to: "/new", editId: a.id,
+      priority: "low", impact: a.amount, steps: [{ label: "Amount", amount: a.amount }], actionLabel: "See transaction", to: a.id ? "/new" : "/expenses", ...(a.id ? { editId: a.id } : {}),
     });
   }
   if (i.unreconciledOld > 0) {
