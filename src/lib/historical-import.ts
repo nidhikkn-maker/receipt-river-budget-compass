@@ -158,3 +158,24 @@ export function historicalOpeningFor(account: Account, transactions: Expense[], 
 }
 export { isLiability };
 export type { Scope };
+/** Pre-confirmation reconciliation summary. Pure: never creates adjustments or entries. */
+export function importReconciliationSummary(input: { opening: number | null; closing: number | null; sourceOpening?: number | null; sourceClosing?: number | null; rows: ImportRow[]; posted: Set<string>; importingIds: Set<string>; liability: boolean }) {
+  const r2 = (n: number) => Math.round(n * 100) / 100;
+  const sign = (l: StatementLine) => (l.direction === 'credit' ? 1 : -1) * (input.liability ? -1 : 1);
+  const credits = r2(input.rows.filter(r => r.line.direction === 'credit').reduce((s, r) => s + r.line.amount, 0));
+  const debits = r2(input.rows.filter(r => r.line.direction !== 'credit').reduce((s, r) => s + r.line.amount, 0));
+  const statement = reconcileStatement(input.opening, input.closing, input.rows.map(r => r.line), input.liability);
+  const recordedRows = input.rows.filter(r => input.posted.has(r.fingerprint) || input.importingIds.has(r.id));
+  const recordedMovement = r2(recordedRows.reduce((s, r) => s + sign(r.line) * r.line.amount, 0));
+  const notImported = input.rows.filter(r => !input.posted.has(r.fingerprint) && !input.importingIds.has(r.id));
+  const notImportedMovement = r2(statement.movement - recordedMovement);
+  const balanceAfterImport = input.opening == null ? null : r2(input.opening + recordedMovement);
+  const discrepancies: string[] = [];
+  if (input.opening == null) discrepancies.push('Opening balance is missing');
+  if (input.closing == null) discrepancies.push('Closing balance is missing');
+  if (statement.difference != null && !statement.verified) discrepancies.push(`Statement lines do not add up: closing differs from opening plus lines by ${statement.difference}`);
+  if (input.sourceOpening != null && input.opening != null && Math.abs(input.sourceOpening - input.opening) >= 0.01) discrepancies.push(`Opening balance differs from the statement's printed opening by ${r2(input.opening - input.sourceOpening)}`);
+  if (input.sourceClosing != null && input.closing != null && Math.abs(input.sourceClosing - input.closing) >= 0.01) discrepancies.push(`Closing balance differs from the statement's printed closing by ${r2(input.closing - input.sourceClosing)}`);
+  if (notImported.length) discrepancies.push(`${notImported.length} line${notImported.length === 1 ? '' : 's'} will remain unimported (net ${notImportedMovement})`);
+  return { credits, debits, movement: statement.movement, expectedClosing: statement.importedBalance, difference: statement.difference, linesBalance: statement.verified, recordedCount: recordedRows.length, recordedMovement, balanceAfterImport, notImportedCount: notImported.length, notImportedMovement, discrepancies };
+}
