@@ -5,7 +5,7 @@ import type { CategorySetting } from "../preferences";
 import type { StatementContext } from "../statement-auto";
 import { classifyMissing, type LineDecision } from "./classify";
 import { ledgerRec, matchLines, recordsNotMatched, type LedgerRec, type MatchOutcome } from "./match";
-import { projectBalance, totals, type AccountHint, type StmtFile, type StmtLine } from "./line";
+import { balanceAddsUp, projectBalance, totals, type AccountHint, type StmtFile, type StmtLine } from "./line";
 
 export interface Gate { net: number; after: number; difference: number | null; ok: boolean }
 
@@ -20,6 +20,10 @@ export interface AccountPlan {
   appBalance: number | null;
   /** Null when the file prints no closing figure, so nothing can be verified against it. */
   gate: Gate | null;
+  /** The account already has entries newer than this statement, so its closing balance can't be compared with the app. */
+  newerEntries: boolean;
+  /** Postings are held because the app's balance doesn't reach the statement's printed closing figure. */
+  gateHeld: boolean;
   matched: MatchOutcome[];
   wrongKind: MatchOutcome[];
   auto: LineDecision[];
@@ -67,15 +71,29 @@ export function buildPlan(files: StmtFile[], accounts: Account[], transactions: 
     let auto = decisions.filter((d) => d.group === "auto");
     let ask = decisions.filter((d) => d.group === "ask");
     const later: { line: StmtLine; reason: string }[] = [];
-    // A file that prints no closing figure (CSV exports, wallet statements) has nothing to verify against.
-    const verifiable = gate !== null && gate.difference !== null;
+    const liability = f.acct ? isLiability(f.acct.kind) : f.file.hint?.kind === "credit_card";
+    // Does the file's own arithmetic hold? A file whose printed figures contradict each other was probably misread.
+    const selfCheck = balanceAddsUp(f.file.opening, f.file.closing, f.file.lines, liability);
+    const selfOk = selfCheck === 0;
+    // A statement that ends before the account's newest entry can't be compared with today's balance.
+    const lastDate = f.file.lines.reduce((m, l) => (l.date > m ? l.date : m), "");
+    const newerEntries = !!f.acct && lastDate !== "" && transactions.some((t) => !t.transferCounterpartOf && (t.accountId === f.acct!.id || t.toAccountId === f.acct!.id) && t.date > lastDate);
+    const verifiable = gate !== null && gate.difference !== null && !newerEntries;
+    let gateHeld = false;
 
-    if (verifiable && gate && !gate.ok) {
+    if (selfCheck !== null && !selfOk) {
+      const reason = `The statement's own figures don't add up — its opening balance, ${totals(f.file.lines).count} entries and printed closing balance are off by ${money(Math.abs(selfCheck))}. The file may not have been read correctly, so nothing from it is posted.`;
+      for (const d of [...auto, ...ask]) later.push({ line: d.line, reason });
+      auto = [];
+      ask = [];
+    } else if (verifiable && gate && !gate.ok) {
+      gateHeld = true;
       const reason = `Balance check failed — after these postings the app would show ${money(gate.after)}, the statement says ${money(gate.after + gate.difference!)} (off by ${money(Math.abs(gate.difference!))}). Fix the account's starting balance or move wrong-account records first.`;
       for (const d of [...auto, ...ask]) later.push({ line: d.line, reason });
       auto = [];
       ask = [];
-    } else if (!verifiable) {
+    } else if (!selfOk && !verifiable) {
+      // Nothing printed adds up and the app can't be compared with it: ask rather than save itself.
       ask = [...ask, ...auto.map((d) => ({ ...d, group: "ask" as const, reason: `${d.reason} · no printed closing balance to check against` }))];
       auto = [];
     }
@@ -89,6 +107,8 @@ export function buildPlan(files: StmtFile[], accounts: Account[], transactions: 
       liability: f.acct ? isLiability(f.acct.kind) : f.file.hint?.kind === "credit_card",
       appBalance: f.acct ? accountBalance(f.acct, transactions) : null,
       gate,
+      newerEntries,
+      gateHeld,
       matched: f.outcomes.filter((o) => o.result === "matched"),
       wrongKind: f.outcomes.filter((o) => o.result === "wrong_kind"),
       auto,
