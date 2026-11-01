@@ -1,4 +1,9 @@
 # Roadmap (Functional Requirements v1.0)
+## Statement tiles and calendar review continuity
+- [ ] Statement tiles open corresponding searchable items and individual transactions.
+- [ ] Preserve selected calendar date/month, page position and filters on return.
+- [ ] Show evidence-based pending/completed calendar indicators without resolving financial issues by navigation.
+- [ ] Verify flows in preview without financial writes.
 ## Calendar navigation and review return
 - [x] Open calendar items directly, with a chooser when a date has multiple destinations.
 - [x] Return after successful entry review, resolved financial review or explicit Done reviewing; failures and unresolved issues stay open.
