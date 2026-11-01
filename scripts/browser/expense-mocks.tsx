@@ -13,7 +13,7 @@ const fixture = {
   saves: [] as { id: string; names: string[] }[], failNextSave: false,
 };
 Object.assign(window, { expenseBrowserFixture: fixture });
-const Context = createContext<ReturnType<typeof makeStore> | null>(null);
+const Context = ((window as unknown as { isolatedExpenseContext?: ReturnType<typeof createContext<ReturnType<typeof makeStore> | null>> }).isolatedExpenseContext ??= createContext<ReturnType<typeof makeStore> | null>(null));
 const history = async () => [];
 const signedUrl = async (path: string) => `/controlled-receipt/${path.split("/").pop()}`;
 function makeStore(transactions: Expense[], update: (next: Expense[]) => void) {
