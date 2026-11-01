@@ -43,3 +43,4 @@
 - Report IDs match jobs; callbacks recover without duplicates. Reconciliation persistence tests use temporary PGlite, not Cloud or real devices.
 - Corrections use owner-atomic RPCs, revisions and safe undo; preserve FX/source. Evidence drives statements; review-centre.ts separates Inbox, review and reconciliation.
 - Calendar destinations and review returns use browser-safe review-navigation.ts; return only after successful saving or explicit completion, never by silently clearing unresolved issues. use-review-view.ts preserves owner/history-entry UI context in tab memory (no plaintext storage); travel-calendar.ts derives review badges from saved closure/payment evidence, not navigation.
+- StatementInbox is the single statement-upload UI mounted in Inbox's Statements view; /reconcile redirects there for existing links, preserving upload and matching rules.
