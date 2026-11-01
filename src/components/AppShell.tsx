@@ -2,7 +2,7 @@ import { FilePen } from "lucide-react";
 import { DraftsReminder } from "@/components/DraftsReminder";
 import { Link, useRouterState } from "@tanstack/react-router";
 import { useEffect, useState, type ReactNode } from "react";
-import { BarChart3, Bell, CalendarClock, Gem, Home, Landmark, ListFilter, PiggyBank, Plus, Settings, Sparkles, Users, Eye, EyeOff, FileText, UserRound, TrendingUp, Inbox, HeartPulse, Search, SlidersHorizontal, Split, Network, Plane, Wallet, Bot, Menu, X, MessageCircleQuestion } from "lucide-react";
+import { BarChart3, Bell, CalendarClock, Gem, Home, Landmark, ListFilter, PiggyBank, Plus, Settings, Sparkles, Users, Eye, EyeOff, FileText, UserRound, TrendingUp, Inbox, HeartPulse, Search, SlidersHorizontal, Split, Network, Plane, Wallet, Bot, Menu, X, MessageCircleQuestion, RefreshCw, CloudOff, Check, TriangleAlert } from "lucide-react";
 import { DeviceLock } from "./DeviceLock";
 import { Button } from "./ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "./ui/dialog";
@@ -89,6 +89,34 @@ function WorkspaceSelector() {
   );
 }
 
+/** Small header pill showing whether saved figures are refreshing, current, offline or failed. Tap to refresh. */
+function SyncStatus() {
+  const { syncState, lastSyncedAt, pendingCount, refresh } = useStore();
+  const [, tick] = useState(0);
+  useEffect(() => { const t = setInterval(() => tick((n) => n + 1), 30000); return () => clearInterval(t); }, []);
+  const mins = lastSyncedAt ? Math.max(0, Math.round((Date.now() - new Date(lastSyncedAt).getTime()) / 60000)) : null;
+  const label =
+    syncState === "syncing" ? "Updating…" :
+    syncState === "offline" ? (pendingCount > 0 ? `Offline · ${pendingCount} waiting` : "Offline · saved copy") :
+    syncState === "error" ? "Couldn't update — tap to retry" :
+    pendingCount > 0 ? `${pendingCount} waiting to sync` :
+    mins == null || mins < 1 ? "Up to date" : `Updated ${mins} min ago`;
+  const Icon = syncState === "syncing" ? RefreshCw : syncState === "offline" ? CloudOff : syncState === "error" ? TriangleAlert : Check;
+  return (
+    <button
+      type="button"
+      onClick={() => void refresh()}
+      aria-live="polite"
+      title={label}
+      className={"flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold transition " +
+        (syncState === "error" ? "bg-destructive/10 text-destructive" : syncState === "offline" ? "bg-secondary text-secondary-foreground" : "bg-secondary text-muted-foreground hover:text-foreground")}
+    >
+      <Icon className={"h-3.5 w-3.5" + (syncState === "syncing" ? " animate-spin" : "")} />
+      <span className="max-w-28 truncate sm:max-w-none">{label}</span>
+    </button>
+  );
+}
+
 export function AppShell({ children }: { children: ReactNode }) {
   const { loading, preferences, name } = useStore();
   useEffect(() => {
@@ -121,6 +149,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         <div className="mx-auto flex max-w-6xl items-center gap-1 px-4 py-2.5 sm:px-8">
           <Link to="/dashboard" className="font-brand text-xl font-bold tracking-tight text-primary">Ledgerline<span className="text-gold">.</span></Link>
           <div className="ml-auto flex items-center">
+            <SyncStatus />
             <Link to="/search" aria-label="Search" className="rounded-xl p-2 text-muted-foreground transition hover:text-foreground"><Search className="h-5 w-5" /></Link>
             <Link to="/inbox" aria-label="Notifications" className="rounded-xl p-2 text-muted-foreground transition hover:text-foreground"><Bell className="h-5 w-5" /></Link>
             <Button size="icon" variant="ghost" onClick={() => setHidden((h) => !h)} aria-label={hidden ? "Show amounts" : "Hide amounts"} className="rounded-xl text-muted-foreground">{hidden ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}</Button>

@@ -95,6 +95,9 @@ interface Ctx {
   deleteAll: () => Promise<void>;
   budgets: Budgets;
   loading: boolean;
+  /** "syncing" while saved figures refresh from the cloud; "synced" once up to date. */
+  syncState: "syncing" | "synced" | "offline" | "error";
+  lastSyncedAt: string | null;
   refresh: () => Promise<void>;
   save: (s: ExpenseInput, opts?: { id?: string; files?: File[]; createId?: string; noRefresh?: boolean }) => Promise<void>;
   remove: (e: Expense) => Promise<void>;
@@ -132,6 +135,8 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
   const [departmentBudgets, setDepartmentBudgets] = useState<Record<string, number>>({});
   const [departmentBudgetError, setDepartmentBudgetError] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [syncState, setSyncState] = useState<"syncing" | "synced" | "offline" | "error">("syncing");
+  const [lastSyncedAt, setLastSyncedAt] = useState<string | null>(null);
   const [pendingCount, setPendingCount] = useState(0);
   const syncing = useRef(false);
   const deleting = useRef(false);
@@ -158,8 +163,10 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
         setValuations(cached.valuations ?? []); setDocuments(cached.documents ?? []);
         setLoading(false);
       }
-      if (!navigator.onLine) { setLoading(false); return; }
+      if (!navigator.onLine) { setLoading(false); setSyncState("offline"); return; }
     }
+    setSyncState("syncing");
+    try {
     const [p, m, e, b, a, c, l, g, pref, v, d, db] = await Promise.all([
       supabase.from("profiles").select("full_name").eq("id", userId).maybeSingle(),
       supabase.from("family_members").select("id, name, relation").order("created_at"),
@@ -218,6 +225,13 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
     for (const x of b.data ?? []) bud[x.category as Category] = Number(x.monthly_amount);
     setBudgets(bud);
     setLoading(false);
+    setSyncState("synced");
+    setLastSyncedAt(new Date().toISOString());
+    } catch (err) {
+      setLoading(false);
+      setSyncState(navigator.onLine ? "error" : "offline");
+      throw err;
+    }
   }
 
   useEffect(() => { void (inFlight.current ?? refresh()); }, [refresh]);
@@ -586,7 +600,7 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
       expenses: expenses.filter((x) => (x.txnType ?? "expense") === "expense"), transactions: expenses, accounts, addAccount, setArchived, adjustBalance,
       commitments, loans, goals, valuations, documents, saveCommitment, confirmIrregular, removeCommitment, confirmCommitment, saveLoan, removeLoan, recordLoanPayment, convertToEmi,
       saveGoal, removeGoal, updateAccount, addValuation, removeValuation, addDocument, updateDocument, removeDocument, history, setReimbursement, recordReimbursement, deleteAll,
-      budgets, loading, refresh, save, remove, setScope, reconcile, addMember, removeMember, setBudget, signedUrl,
+      budgets, loading, syncState, lastSyncedAt, refresh, save, remove, setScope, reconcile, addMember, removeMember, setBudget, signedUrl,
       setAllocations, updateReimbursement, addReimbursementReceipt, listReviews, saveReview,
     }}>
       {children}
