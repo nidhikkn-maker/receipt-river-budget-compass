@@ -45,3 +45,4 @@
 - Calendar destinations and review returns use browser-safe review-navigation.ts; return only after successful saving or explicit completion, never by silently clearing unresolved issues. use-review-view.ts preserves owner/history-entry UI context in tab memory (no plaintext storage); travel-calendar.ts derives review badges from saved closure/payment evidence, not navigation.
 - StatementInbox is the single statement-upload UI mounted in Inbox's Statements view; /reconcile redirects there for existing links, preserving upload and matching rules.
 - Browser tests use real routes with isolated data and blocked external writes, including Inbox approval/retry/Undo; fixtures never certify Cloud saves.
+- Long settings-style pages use the shared Fold (details) component, which opens itself for a matching URL hash; pop-ups use the shared centred Dialog so phone sizing stays consistent.
