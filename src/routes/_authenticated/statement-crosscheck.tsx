@@ -198,7 +198,7 @@ function CrossCheckPage() {
   );
 }
 
-function Side({ title, date, amount, kind, text, diff }: { title: string; date?: string; amount?: number; kind?: string; text?: string; diff: { date: boolean; amount: boolean; kind: boolean } }) {
+function Side({ title, date, amount, kind, text, diff }: { title: string; date?: string | undefined; amount?: number | undefined; kind?: string | undefined; text?: string | undefined; diff: { date: boolean; amount: boolean; kind: boolean } }) {
   const mark = (on: boolean) => (on ? "font-semibold text-destructive" : "");
   return (
     <div className="min-w-0 rounded-md border border-border p-3">
@@ -215,7 +215,7 @@ function Side({ title, date, amount, kind, text, diff }: { title: string; date?:
   );
 }
 
-function ResultRow({ r, picked, onPick }: { r: CrossResult; picked: boolean; onPick?: (on: boolean) => void }) {
+function ResultRow({ r, picked, onPick }: { r: CrossResult; picked: boolean; onPick?: ((on: boolean) => void) | undefined }) {
   const [open, setOpen] = useState(false);
   const l = r.line ?? r.nearest;
   const isOut = !["income", "refund"].includes(r.kind);
