@@ -453,3 +453,4 @@
 - [x] Tighter shared page title, Inbox tab strip + compact tiles, Settings folded sections, Activity in pages of 50
 - [x] Fold long groups on review pages (Statement Desk, Records check, Coverage); move remaining in-page confirmations to centre pop-ups
 - [x] Back/forward buttons + edge-swipe back, centred pop-ups (shared dialog), weights capped at 600 on the chosen system font
+- [ ] Publish completed layout changes
