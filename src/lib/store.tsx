@@ -135,6 +135,8 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
   const [departmentBudgets, setDepartmentBudgets] = useState<Record<string, number>>({});
   const [departmentBudgetError, setDepartmentBudgetError] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [syncState, setSyncState] = useState<"syncing" | "synced" | "offline" | "error">("syncing");
+  const [lastSyncedAt, setLastSyncedAt] = useState<string | null>(null);
   const [pendingCount, setPendingCount] = useState(0);
   const syncing = useRef(false);
   const deleting = useRef(false);
@@ -161,8 +163,10 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
         setValuations(cached.valuations ?? []); setDocuments(cached.documents ?? []);
         setLoading(false);
       }
-      if (!navigator.onLine) { setLoading(false); return; }
+      if (!navigator.onLine) { setLoading(false); setSyncState("offline"); return; }
     }
+    setSyncState("syncing");
+    try {
     const [p, m, e, b, a, c, l, g, pref, v, d, db] = await Promise.all([
       supabase.from("profiles").select("full_name").eq("id", userId).maybeSingle(),
       supabase.from("family_members").select("id, name, relation").order("created_at"),
