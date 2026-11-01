@@ -1,4 +1,8 @@
 # Roadmap (Functional Requirements v1.0)
+## Current mobile Inbox and transfer approval verification
+- [ ] Make mobile/tablet review and confirmation controls accessible and verify actual page-button flows in isolated browser data.
+- [ ] Implement and verify remaining owner-scoped transfer validation, retry and stale-safe Undo before approval; no historical record edits or publication.
+- [ ] Extend real-route browser tests through full review, confirmation, save/read-back and Undo, including transfer approval failures.
 ## Financial Inbox v5.12
 - [x] Diagnose current review, selection, financial rules and coverage against the complete brief; identified status/scope and transfer integrity gaps.
 - [x] Correct missing-info statuses, hidden selection, issue counts and truthful card-review labels; block unsafe client transfer pairs. Shared financial records unchanged.
