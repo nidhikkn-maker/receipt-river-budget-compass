@@ -42,10 +42,11 @@ export function matchesReview(row: FinancialReview, filter: ReviewFilter) {
 
 export function reviewCounts(rows: FinancialReview[]) {
   const unique = [...new Map(rows.map(r => [r.transaction.id, r])).values()];
-  const issues = unique.map(r => new Set([...r.issues.map(i => i.key), ...(r.suggestedType ? [`type:${r.transaction.id}`] : [])]).size);
+  const issues = unique.map(r => new Set([...r.issues.map(i => i.key), ...(r.suggestedType ? [`type:${r.transaction.id}`] : []), ...(r.suggestedCategory && !r.issues.some(i => i.type === 'uncategorised') ? [`category:${r.transaction.id}`] : []), ...(r.group === 'conflict' && !r.issues.some(i => ['duplicate','inconsistency'].includes(i.type)) ? [`conflict:${r.transaction.id}`] : [])]).size);
   return { transactions: unique.length, issues: issues.reduce((a, b) => a + b, 0), multiple: issues.filter(n => n > 1).length,
     category: unique.filter(r => matchesReview(r, 'category')).length, missing: unique.filter(r => matchesReview(r, 'missing')).length,
-    type: unique.filter(r => matchesReview(r, 'type')).length, conflict: unique.filter(r => matchesReview(r, 'conflict')).length };
+    type: unique.filter(r => matchesReview(r, 'type')).length, conflict: unique.filter(r => matchesReview(r, 'conflict')).length,
+    ready: confirmableImportRows(unique).length };
 }
 
 export function selectReviewIds(previous: Iterable<string>, rows: FinancialReview[]) {

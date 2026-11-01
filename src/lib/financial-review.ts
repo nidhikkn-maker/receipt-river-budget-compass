@@ -75,7 +75,8 @@ export function financialReview(items: InboxItem[], transactions: Expense[], acc
     const incompleteMove = ["transfer", "card_payment", "loan_repayment", "investment"].includes(kind(e)) &&
       (!e.toAccountId || e.toAccountId === e.accountId || !accounts.some(a => a.id === e.toAccountId && !a.archived));
     const uncategorised = issues.some(i => i.type === "uncategorised");
-    const group: ReviewGroup = conflict ? "conflict" : suggestedType ? "type" : invalidAccount || incompleteMove ? "missing" : uncategorised ? "category" : "ready";
+    const missingDetails = issues.some(i => i.type === 'missing_details');
+    const group: ReviewGroup = conflict ? "conflict" : suggestedType ? "type" : invalidAccount || incompleteMove ? "missing" : uncategorised ? "category" : missingDetails ? 'missing' : "ready";
     if (invalidAccount) evidence.push("Source account is missing, archived or no longer configured.");
     if (incompleteMove) evidence.push("Receiving account requires confirmation.");
     if (targets.length !== 1 && suggestedType) evidence.push(targets.length ? "Several receiving accounts match; choose one." : "Receiving card is not identified; choose it manually.");
