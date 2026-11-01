@@ -8,7 +8,7 @@ export const REVIEW_GROUPS = ['Ready to approve', 'Suggested classification', 'N
 export interface ImportProposal extends ExpenseInput { reviewed?: boolean; duplicateOverride?: boolean; reimbursable?: boolean; organisation?: string; subcategory?: string; reimbursementOrganisation?: string }
 export interface ImportRule { id: string; merchant: string; account_id: string | null; mappings: Partial<ImportProposal>; enabled: boolean }
 export interface ImportRow { id: string; fingerprint: string; line: StatementLine; proposal: ImportProposal; review_group: string; confidence: string; decision: 'review' | 'approved' | 'excluded'; duplicate_kind: 'new' | 'exact' | 'likely' | 'possible'; duplicate_id: string | null }
-export interface ImportBatch { id: string; account_id: string; file_name: string; file_path: string; currency: string; status: string; error: string | null; period_from: string | null; period_to: string | null; opening_balance: number | null; closing_balance: number | null }
+export interface ImportBatch { id: string; account_id: string; file_name: string; file_path: string; currency: string; status: string; error: string | null; period_from: string | null; period_to: string | null; opening_balance: number | null; closing_balance: number | null; source_balances?: import('./balance-verification').BalanceEvidence; balance_verification?: import('./balance-verification').BalanceReview; allow_ai?:boolean; next_page?:number; total_pages?:number|null }
 
 /** Merchant families are grouping hints, never a permanent category decision. */
 export function merchantFamily(description: string): string {

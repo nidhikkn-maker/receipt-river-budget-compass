@@ -4,6 +4,9 @@ import { parseStatementCsv, type Expense, type StatementLine } from './expenses'
 import { normalizePreferences, type FinancePreferences } from './preferences';
 import { stageImport, type ImportRule } from './historical-import';
 import type { Account } from './ledger';
+import { extractScannedChunk } from './scanned-import.server';
+import { normalizeStatementRows } from './statement-rows';
+import type { BalanceEvidence } from './balance-verification';
 
 async function paged(db: SupabaseClient<Database>, owner: string) {
   const rows: Expense[] = [];
@@ -20,7 +23,7 @@ export async function processImport(db: SupabaseClient<Database>, id: string, ow
   const result=await db.from('import_batches').select('*').eq('id',id).eq('owner_id',owner).single();
   if(result.error) throw Error('Import not found');
   const b=result.data;
-  if(b.status==='review') return;
+  if(['review','paused','refused','cancelled'].includes(b.status)) return;
   try {
     let lines=b.raw_lines as unknown as StatementLine[];
     if(!lines.length) {
@@ -38,7 +41,24 @@ export async function processImport(db: SupabaseClient<Database>, id: string, ow
           const csv=data.slice(header).map(r=>r.map(c=>`"${(c instanceof Date?c.toISOString().slice(0,10):String(c ?? '')).replaceAll('"','""')}"`).join(',')).join('\n');
           lines.push(...parseStatementCsv(csv,true).map(l=>({...l,ref:`${name}:${l.ref}`})));
         }
-      } else throw Error('This PDF needs extraction while the app is open. Retry from Statements.');
+      } else if(/\.pdf$/i.test(b.file_name)) {
+        const complete=await extractScannedChunk(db,b,file.data);
+        if(!complete)return;
+        const pages=await db.from('import_pdf_pages').select('rows,balances').eq('batch_id',b.id).eq('owner_id',owner).order('page_start');
+        if(pages.error)throw Error('Could not retrieve extracted PDF pages');
+        const evidence:BalanceEvidence={opening:{value:null,quote:'',page:null},closing:{value:null,quote:'',page:null},periodFrom:null,periodTo:null};
+        lines=[];
+        for(const page of pages.data){
+          const source=page.rows as unknown as {date:string;description:string;amount:number;direction:string;reference:string;page:number}[];
+          for(let i=0;i<source.length;i++){const row=source[i];if(!row)continue;const normalized=normalizeStatementRows([row])[0];if(normalized)lines.push({...normalized,ref:`PDF${row.page}:${i}:${row.reference}`});}
+          const balances=page.balances as unknown as BalanceEvidence;
+          if(balances.opening.value!=null)evidence.opening=balances.opening;
+          if(balances.closing.value!=null)evidence.closing=balances.closing;
+          evidence.periodFrom=balances.periodFrom??evidence.periodFrom;evidence.periodTo=balances.periodTo??evidence.periodTo;
+        }
+        const saved=await db.from('import_batches').update({raw_lines:lines as unknown as Json,source_balances:evidence as unknown as Json,...(evidence.periodFrom?{period_from:evidence.periodFrom}:{}),...(evidence.periodTo?{period_to:evidence.periodTo}:{})}).eq('id',b.id).eq('owner_id',owner);
+        if(saved.error)throw Error('Could not preserve extracted source data');
+      } else throw Error('Choose a CSV, Excel or PDF statement');
     }
     if(!lines.length) throw Error('No transactions found. Check the statement columns.');
     if(lines.length>10000) throw Error('Split statements larger than 10,000 transactions into smaller files.');
@@ -62,7 +82,9 @@ export async function processImport(db: SupabaseClient<Database>, id: string, ow
       if(ins.error) throw Error('Could not save extracted transactions');
     }
     const dates=lines.map(l=>l.date).sort();
-    const saved=await db.from('import_batches').update({status:'review',raw_lines:lines as unknown as Json,period_from:b.period_from ?? dates[0] ?? null,period_to:b.period_to ?? dates.at(-1) ?? null,error:null,updated_at:new Date().toISOString()}).eq('id',id).eq('owner_id',owner);
+    const latest=await db.from('import_batches').select('period_from,period_to,status').eq('id',id).eq('owner_id',owner).single();
+    if(latest.error)throw Error('Could not load extracted statement period');if(latest.data.status==='cancelled')return;
+    const saved=await db.from('import_batches').update({status:'review',raw_lines:lines as unknown as Json,period_from:latest.data.period_from ?? dates[0] ?? null,period_to:latest.data.period_to ?? dates.at(-1) ?? null,error:null,updated_at:new Date().toISOString()}).eq('id',id).eq('owner_id',owner).neq('status','cancelled');
     if(saved.error) throw Error('Could not finish import');
   } catch(e) {
     await db.from('import_batches').update({status:'failed',error:e instanceof Error?e.message:'Could not process statement',updated_at:new Date().toISOString()}).eq('id',id).eq('owner_id',owner);
@@ -71,6 +93,8 @@ export async function processImport(db: SupabaseClient<Database>, id: string, ow
 }
 
 export async function runImportJobs(db: SupabaseClient<Database>) {
+  const exhausted=await db.from('import_batches').update({status:'failed',error:'Processing attempts exhausted; retry explicitly'}).in('status',['queued','processing']).gte('attempts',3).lte('lease_until',new Date().toISOString());
+  if(exhausted.error)throw Error('Could not recover exhausted imports');
   const claimed=await db.rpc('claim_import_batches');
   if(claimed.error) throw Error('Could not claim imports');
   let done=0,failed=0;

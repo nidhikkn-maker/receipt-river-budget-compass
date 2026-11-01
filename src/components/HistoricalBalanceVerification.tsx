@@ -1,0 +1,35 @@
+import { useState } from 'react';
+import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
+import { useStore } from '@/lib/store';
+import { money } from '@/lib/expenses';
+import { isLiability } from '@/lib/ledger';
+import { verifyHistoricalBalances,ledgerPeriodBalances } from '@/lib/balance-verification';
+import type { ImportBatch,ImportRow } from '@/lib/historical-import';
+import type { Json } from '@/integrations/supabase/types';
+import { Button } from './ui/button';
+import { Input } from './ui/input';
+
+export function HistoricalBalanceVerification({batch,rows,posted,onReload}:{batch:ImportBatch;rows:ImportRow[];posted:Set<string>;onReload:()=>Promise<void>}) {
+  const {accounts,transactions}=useStore();const a=accounts.find(x=>x.id===batch.account_id);
+  const review=batch.balance_verification,evidence=batch.source_balances;
+  const [opening,setOpening]=useState(batch.opening_balance==null?'':String(batch.opening_balance)),[closing,setClosing]=useState(batch.closing_balance==null?'':String(batch.closing_balance));
+  const [sourceOpening,setSourceOpening]=useState(review?.sourceOpening==null?evidence?.opening?.value==null?'':String(evidence.opening.value):String(review.sourceOpening)),[sourceClosing,setSourceClosing]=useState(review?.sourceClosing==null?evidence?.closing?.value==null?'':String(evidence.closing.value):String(review.sourceClosing));
+  const [reference,setReference]=useState(review?.sourceReference??''),[checked,setChecked]=useState(review?.checkedOriginal??false),[from,setFrom]=useState(batch.period_from??''),[to,setTo]=useState(batch.period_to??'');
+  const parse=(s:string)=>s===''?null:Number(s);
+  const ledger=a&&from&&to&&batch.currency==='INR'?ledgerPeriodBalances(a,transactions,from,to):null;
+  const comparison=verifyHistoricalBalances({opening:parse(opening),closing:parse(closing),sourceOpening:parse(sourceOpening),sourceClosing:parse(sourceClosing),checkedOriginal:checked,reference,lines:rows.map(r=>r.line),liability:a?isLiability(a.kind):false,ledgerOpening:ledger?.opening??null,ledgerClosing:ledger?.closing??null,unresolved:rows.filter(r=>!posted.has(r.fingerprint)).length});
+  const show=(n:number|null)=>n==null?'Not available':money(n,batch.currency);
+  return <section className="border-t pt-5 space-y-4"><h3 className="text-lg font-semibold">Historical balance verification</h3>
+    <div className="grid gap-3 sm:grid-cols-2"><label className="text-xs">Statement starts<Input type="date" aria-label="Statement period start" value={from} onChange={e=>{setFrom(e.target.value);setChecked(false);}}/></label><label className="text-xs">Statement ends<Input type="date" aria-label="Statement period end" value={to} onChange={e=>{setTo(e.target.value);setChecked(false);}}/></label></div>
+    <div className="grid gap-3 sm:grid-cols-2"><label className="text-xs">Imported opening balance<Input type="number" aria-label="Imported opening balance" value={opening} onChange={e=>{setOpening(e.target.value);setChecked(false);}}/></label><label className="text-xs">Imported closing balance<Input type="number" aria-label="Imported closing balance" value={closing} onChange={e=>{setClosing(e.target.value);setChecked(false);}}/></label><label className="text-xs">Source opening balance<Input type="number" aria-label="Source opening balance" value={sourceOpening} onChange={e=>{setSourceOpening(e.target.value);setChecked(false);}}/></label><label className="text-xs">Source closing balance<Input type="number" aria-label="Source closing balance" value={sourceClosing} onChange={e=>{setSourceClosing(e.target.value);setChecked(false);}}/></label></div>
+    {evidence?.opening?.quote&&<p className="text-xs text-muted-foreground">Extracted opening evidence · Page {evidence.opening.page??'unknown'}: {evidence.opening.quote}</p>}
+    {evidence?.closing?.quote&&<p className="text-xs text-muted-foreground">Extracted closing evidence · Page {evidence.closing.page??'unknown'}: {evidence.closing.quote}</p>}
+    <Input aria-label="Balance source reference" placeholder="Source page or record reference" value={reference} onChange={e=>{setReference(e.target.value);setChecked(false);}}/>
+    <Button variant="outline" onClick={async()=>{const r=await supabase.storage.from('receipts').createSignedUrl(batch.file_path,60);if(r.error)throw Error('Source statement unavailable');window.open(r.data.signedUrl,'_blank','noopener,noreferrer');}}>Open original for comparison</Button>
+    <label className="flex items-center gap-2 text-sm"><input type="checkbox" aria-label="Checked against original source" checked={checked} onChange={e=>setChecked(e.target.checked)}/>I checked these balances against the original source</label>
+    <dl className="grid gap-2 text-sm sm:grid-cols-2"><div><dt className="text-muted-foreground">Opening difference</dt><dd>{show(comparison.openingDifference)}</dd></div><div><dt className="text-muted-foreground">Closing difference</dt><dd>{show(comparison.closingDifference)}</dd></div><div><dt className="text-muted-foreground">Imported movement</dt><dd>{show(comparison.movement)}</dd></div><div><dt className="text-muted-foreground">Arithmetic difference</dt><dd>{show(comparison.difference)}</dd></div><div><dt className="text-muted-foreground">Ledger opening</dt><dd>{show(ledger?.opening??null)}</dd></div><div><dt className="text-muted-foreground">Ledger closing</dt><dd>{show(ledger?.closing??null)}</dd></div><div><dt className="text-muted-foreground">Ledger opening difference</dt><dd>{show(comparison.ledgerOpeningDifference)}</dd></div><div><dt className="text-muted-foreground">Ledger closing difference</dt><dd>{show(comparison.ledgerClosingDifference)}</dd></div></dl>
+    <p className={comparison.sourceVerified?'text-sm text-success':'text-sm text-warning'}>{comparison.sourceVerified?'Source balances verified':'Source balances unverified'}</p><p className={comparison.fullyReconciled?'text-sm text-success':'text-sm text-warning'}>{comparison.fullyReconciled?'Source, imported movements and ledger reconcile':'Historical ledger still requires reconciliation'}</p>
+    <Button variant="outline" onClick={async()=>{if(opening===''||closing==='')throw Error('Enter imported opening and closing balances');if(!from||!to||from>to||from<'2026-04-01'||to>new Date().toISOString().slice(0,10))throw Error('Confirm a valid statement period');for(const s of [opening,closing,sourceOpening,sourceClosing])if(s!==''&&!Number.isFinite(Number(s)))throw Error('Enter finite balances');const result=await supabase.rpc('save_import_balance_review',{_batch:batch.id,_opening:Number(opening),_closing:Number(closing),_from:from,_to:to,_review:{sourceOpening:parse(sourceOpening),sourceClosing:parse(sourceClosing),sourceReference:reference,checkedOriginal:checked,reviewedAt:new Date().toISOString()} as Json});if(result.error)throw Error(result.error.message);await onReload();toast.success('Balance verification saved; no financial entries changed');}}>Save balance verification</Button>
+  </section>;
+}

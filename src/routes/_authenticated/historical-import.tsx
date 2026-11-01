@@ -13,13 +13,13 @@ import { ProcessingPanel, stagesAt } from '@/components/ProcessingPanel';
 import { supabase } from '@/integrations/supabase/client';
 import { useStore } from '@/lib/store';
 import { listImports, listImportRows } from '@/lib/import-repository';
-import { processHistoricalImport } from '@/lib/historical-import.functions';
+import { processHistoricalImport, resumeHistoricalImport } from '@/lib/historical-import.functions';
 import { readStatement } from '@/lib/statement-import';
 import { coverageMonths, type ImportRow } from '@/lib/historical-import';
 import { CURRENCIES } from '@/lib/expenses';
 import type { Json } from '@/integrations/supabase/types';
 
-const importsQuery=queryOptions({queryKey:['historical-imports'],queryFn:listImports});
+const importsQuery=queryOptions({queryKey:['historical-imports'],queryFn:listImports,refetchInterval:5000});
 export const Route=createFileRoute('/_authenticated/historical-import')({
   head:()=>({meta:[{title:'Historical statement imports — Ledgerline'},{name:'description',content:'Review grouped historical statement transactions, apply classifications and reconcile records from April 2026.'},{property:'og:title',content:'Historical statement imports — Ledgerline'},{property:'og:description',content:'Secure historical statement review, classification and reconciliation.'},{property:'og:type',content:'website'},{name:'twitter:card',content:'summary'}]}),
   loader:({context})=>context.queryClient.ensureQueryData(importsQuery),component:HistoricalImports,
@@ -29,6 +29,7 @@ function HistoricalImports() {
   const {data:batches,refetch}=useSuspenseQuery(importsQuery);
   const {accounts,userId,refresh}=useStore();
   const process=useServerFn(processHistoricalImport);
+  const resume=useServerFn(resumeHistoricalImport);
   const [account,setAccount]=useState(''),[currency,setCurrency]=useState('INR'),[current,setCurrent]=useState<string|null>(null),[rows,setRows]=useState<ImportRow[]>([]),[posted,setPosted]=useState<Set<string>>(new Set()),[stage,setStage]=useState<{name:string;at:number}|null>(null);
   const batch=batches.find(b=>b.id===current);
   const reload=async(id=current)=>{
@@ -40,6 +41,8 @@ function HistoricalImports() {
   };
   const upload=async(files:FileList|null)=>{
     if(!files?.length)return; if(!account)throw Error('Confirm the statement account first');
+    const pdfConsent=!Array.from(files).some(f=>/\.pdf$/i.test(f.name))||window.confirm('Read PDF statements with AI in the background? They may contain private financial information. AI usage uses workspace credits.');
+    if(!pdfConsent)return;
     for(const file of Array.from(files)) {
       let stored=false;const id=crypto.randomUUID(),path=`${userId}/statements/${id}-${file.name.replace(/[^\w.-]/g,'_')}`;
       setStage({name:file.name,at:0});
@@ -50,15 +53,12 @@ function HistoricalImports() {
         if(exists.error)throw Error('Could not check for repeated statements');
         if(exists.data){setCurrent(exists.data.id);await reload(exists.data.id);toast.info('This statement is already saved');continue;}
         const up=await supabase.storage.from('receipts').upload(path,file,{contentType:file.type || 'application/octet-stream'});if(up.error)throw Error('Could not upload original statement');
-        const ins=await supabase.from('import_batches').insert({id,account_id:account,file_name:file.name,file_path:path,file_hash:hash,currency});if(ins.error)throw Error('Could not queue statement');stored=true;
+        const ins=await supabase.from('import_batches').insert({id,account_id:account,file_name:file.name,file_path:path,file_hash:hash,currency,allow_ai:/\.pdf$/i.test(file.name)});if(ins.error)throw Error('Could not queue statement');stored=true;
         const original=await supabase.from('documents').insert({owner_id:userId,title:file.name,doc_type:'statement',file_path:path,file_name:file.name,mime_type:file.type,size_bytes:file.size,account_id:account,currency,notes:'Historical import source statement'});
         if(original.error)throw Error('Statement saved for import but could not be added to the Vault');
         setStage({name:file.name,at:1});
         if(/\.pdf$/i.test(file.name)) {
-          // Text PDF extraction depends on browser PDF worker; save results before classification.
-          const parsed=await readStatement(file);
-          const saved=await supabase.from('import_batches').update({raw_lines:parsed as unknown as Json}).eq('id',id);
-          if(saved.error)throw Error('Could not save PDF extraction');
+          await refetch();toast.success('PDF queued for background extraction; you can close the app');continue;
         }
         setStage({name:file.name,at:2});await process({data:{id}});setCurrent(id);await refetch();setRows(await listImportRows(id));const known=await supabase.from('import_posts').select('fingerprint').eq('account_id',account);if(known.error)throw Error('Could not check posted rows');setPosted(new Set(known.data.map(r=>r.fingerprint)));toast.success(`${file.name} ready for review`);
       }catch(e){const message=e instanceof Error?e.message:'Could not upload statement';if(stored)await supabase.from('import_batches').update({status:'failed',error:message}).eq('id',id);else await supabase.storage.from('receipts').remove([path]);toast.error(message);}finally{setStage(null);}
@@ -76,7 +76,7 @@ function HistoricalImports() {
       {stage&&<ProcessingPanel title={stage.name} stages={stagesAt(['Uploading original statement','Extracting transactions','Finding duplicates and suggesting classifications','Ready for review'],stage.at)}/>}
     </section>
     <section className="mb-6"><h2 className="text-lg font-semibold mb-3">Import coverage</h2><ul className="divide-y">{accounts.filter(a=>!a.archived).map(a=>{const coverage=coverageMonths(batches.filter(b=>b.account_id===a.id&&b.status==='review'),today);return <li key={a.id} className="py-3 text-sm"><span className="font-medium">{a.name}</span> · {coverage.covered.length} months represented<p className="text-xs text-warning">{coverage.missing.length?`Missing statement months: ${coverage.missing.join(', ')}`:'All months represented — verify full statement periods and reconciliation'}</p></li>;})}</ul></section>
-    <section className="mb-6"><h2 className="text-lg font-semibold mb-3">Saved statements</h2><ul className="divide-y">{batches.map(b=><li key={b.id} className="py-3 flex flex-wrap gap-2 items-center"><div className="min-w-0 flex-1"><p className="break-words text-sm font-medium">{b.file_name}</p><p className="text-xs text-muted-foreground">{accounts.find(a=>a.id===b.account_id)?.name} · {b.status} · {b.period_from ?? 'Period not confirmed'}{b.period_to?` to ${b.period_to}`:''}</p>{b.error&&<p className="text-xs text-destructive">{b.error}</p>}</div><Button size="sm" variant={current===b.id?'default':'outline'} onClick={async()=>{setCurrent(b.id);await reload(b.id);}}>Open review</Button>{b.status!=='review'&&<Button size="sm" variant="outline" onClick={async()=>{await supabase.from('import_batches').update({status:'queued',attempts:0,error:null}).eq('id',b.id);await process({data:{id:b.id}});await reload(b.id);}}>Retry processing</Button>}</li>)}</ul>{!batches.length&&<p className="text-sm text-muted-foreground">No statements uploaded yet.</p>}</section>
+    <section className="mb-6"><h2 className="text-lg font-semibold mb-3">Saved statements</h2><ul className="divide-y">{batches.map(b=><li key={b.id} className="py-3 flex flex-wrap gap-2 items-center"><div className="min-w-0 flex-1"><p className="break-words text-sm font-medium">{b.file_name}</p><p className="text-xs text-muted-foreground">{accounts.find(a=>a.id===b.account_id)?.name} · {b.status} · {b.period_from ?? 'Period not confirmed'}{b.period_to?` to ${b.period_to}`:''}</p>{b.total_pages!=null&&<p className="text-xs text-muted-foreground">{b.next_page??0} of {b.total_pages} pages extracted</p>}{b.error&&<p className="text-xs text-destructive">{b.error}</p>}</div><Button size="sm" variant={current===b.id?'default':'outline'} onClick={async()=>{setCurrent(b.id);await reload(b.id);}}>Open review</Button>{['failed','paused'].includes(b.status)&&<Button size="sm" variant="outline" onClick={async()=>{await resume({data:{id:b.id}});if(!b.allow_ai)await process({data:{id:b.id}});await reload(b.id);}}>Retry processing</Button>}</li>)}</ul>{!batches.length&&<p className="text-sm text-muted-foreground">No statements uploaded yet.</p>}</section>
     {batch&&<section className="border-t pt-6"><h2 className="mb-4 text-xl font-semibold break-words">{batch.file_name}</h2><ImportReview key={batch.id} batch={batch} rows={rows} posted={posted} onReload={()=>reload()}/></section>}
   </>;
 }

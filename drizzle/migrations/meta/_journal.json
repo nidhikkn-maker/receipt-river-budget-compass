@@ -232,6 +232,13 @@
       "when": 1793497482787,
       "tag": "0032_import_post_snapshot_and_direction_guards",
       "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "7",
+      "when": 1793497953456,
+      "tag": "0033_scanned_import_jobs_and_balance_evidence",
+      "breakpoints": true
     }
   ]
 }
