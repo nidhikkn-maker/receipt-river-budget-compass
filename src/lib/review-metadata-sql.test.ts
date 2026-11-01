@@ -9,7 +9,7 @@ const config={tags:[{group:'Organisation',name:'AET'},{group:'Project',name:'Aud
 let seq=100;
 const operation=()=>`00000000-0000-0000-0000-${String(seq++).padStart(12,'0')}`;
 const asUser=async(uid=owner)=>db.exec(`RESET ROLE; SELECT set_config('app.uid','${uid}',false); SET ROLE authenticated;`);
-const apply=(id=operation(),items=[{id:entry,revision:0,patch:{organisation:'AET'}}],cfg=config)=>db.query('SELECT apply_review_metadata($1,$2::jsonb,$3::jsonb)',[id,JSON.stringify(items),JSON.stringify(cfg)]);
+const apply=(id=operation(),items:{id:string;revision:number;patch:Record<string,string>}[]=[{id:entry,revision:0,patch:{organisation:'AET'}}],cfg=config)=>db.query('SELECT apply_review_metadata($1,$2::jsonb,$3::jsonb)',[id,JSON.stringify(items),JSON.stringify(cfg)]);
 beforeAll(async()=>{
  await db.exec(`CREATE ROLE authenticated; CREATE ROLE anon; CREATE ROLE service_role; CREATE SCHEMA auth;
  CREATE FUNCTION auth.uid() RETURNS uuid LANGUAGE sql STABLE AS $$SELECT nullif(current_setting('app.uid',true),'')::uuid$$; GRANT USAGE ON SCHEMA auth TO authenticated;
