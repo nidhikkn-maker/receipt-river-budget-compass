@@ -17,6 +17,7 @@ import { addMonths, emiFor, emiSplit, nextAfter, type Commitment, type Commitmen
 import { lastStatementDate, nextEmiInstalment, statementShift, type LoanPayment } from "./cards";
 import { validateDocument, type DocType, type VaultDoc } from "./documents";
 import { tripActionSnapshot, type TripAction } from "./trip-actions";
+import { correctionStillCurrent, type CorrectionPreview } from "./financial-corrections";
 
 export interface Loan {
   id: string; name: string;
@@ -54,6 +55,9 @@ interface Ctx {
   bulkSetCategory: (ids: string[], category: string, batchId: string) => Promise<string>;
   categoryHistory: () => Promise<CategoryBatch[]>;
   undoCategoryBatch: (id: string) => Promise<void>;
+  correctFinancialEntries: (preview: CorrectionPreview, id: string) => Promise<void>;
+  undoFinancialCorrection: (id: string) => Promise<void>;
+  financialCorrectionHistory: () => Promise<{ id: string; createdAt: string; count: number }[]>;
   userId: string;
   name: string;
   updateName: (name: string) => Promise<void>;
@@ -213,7 +217,7 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
     setName(p.data?.full_name ?? "");
     setMembers(m.data ?? []);
     setExpenses((e.data ?? []).map((x) => ({
-      id: x.id, categoryRevision: x.category_revision, department: x.department, title: x.title, merchant: x.merchant, category: x.category as Category, scope: x.scope as Scope, memberId: x.member_id, splits: (x.splits as unknown as Split[]) ?? [],
+      id: x.id, categoryRevision: x.category_revision, correctionRevision: x.correction_revision, department: x.department, title: x.title, merchant: x.merchant, category: x.category as Category, scope: x.scope as Scope, memberId: x.member_id, splits: (x.splits as unknown as Split[]) ?? [],
       amount: Number(x.amount), currency: x.currency, originalAmount: Number(x.original_amount ?? x.amount), fxRate: Number(x.fx_rate),
       paymentMethod: x.payment_method as PaymentMethod, reconciledAt: x.reconciled_at, statementRef: x.statement_ref,
       date: x.expense_date, description: x.description, receipts: (x.receipts as unknown as Receipt[]) ?? [],
@@ -345,6 +349,19 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
     if (v.length > 80) throw new Error("Keep your name under 80 characters");
     check((await supabase.from("profiles").update({ full_name: v }).eq("id", userId)).error);
     setName(v);
+  };
+  const correctFinancialEntries: Ctx["correctFinancialEntries"] = async (preview, id) => {
+    if (!navigator.onLine) throw Error("Reconnect before applying financial corrections.");
+    if (!correctionStillCurrent(preview, expenses, accounts)) throw Error("The preview changed. Review it again before saving.");
+    check((await supabase.rpc("correct_financial_entries", { _id: id, _items: preview.snapshots as unknown as Json, _choice: preview.choice as Json, _accounts: preview.accounts as unknown as Json })).error);
+    await refresh();
+  };
+  const undoFinancialCorrection: Ctx["undoFinancialCorrection"] = async id => {
+    check((await supabase.rpc("undo_financial_correction", { _id: id })).error); await refresh();
+  };
+  const financialCorrectionHistory: Ctx["financialCorrectionHistory"] = async () => {
+    const result = await supabase.from("financial_corrections").select("id,created_at,entries").is("undone_at", null).order("created_at", { ascending: false }).limit(20);
+    check(result.error); return (result.data ?? []).map(r => ({ id: r.id, createdAt: r.created_at, count: Array.isArray(r.entries) ? r.entries.length : 0 }));
   };
 
   const remove: Ctx["remove"] = async (e) => {
@@ -602,7 +619,7 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
   return (
     <StoreCtx.Provider value={{
       departmentBudgets, departmentBudgetError,
-      pendingCount, setTags, manageTripExpenses, preferences, savePreferences, ensureCategory, moveCategory, bulkSetCategory, categoryHistory, undoCategoryBatch, userId, name, updateName, members, memberName,
+      pendingCount, setTags, manageTripExpenses, preferences, savePreferences, ensureCategory, moveCategory, bulkSetCategory, categoryHistory, undoCategoryBatch, correctFinancialEntries, undoFinancialCorrection, financialCorrectionHistory, userId, name, updateName, members, memberName,
       expenses: expenses.filter((x) => (x.txnType ?? "expense") === "expense"), transactions: expenses, accounts, addAccount, setArchived, adjustBalance,
       commitments, loans, goals, valuations, documents, saveCommitment, confirmIrregular, removeCommitment, confirmCommitment, saveLoan, removeLoan, recordLoanPayment, convertToEmi,
       saveGoal, removeGoal, updateAccount, addValuation, removeValuation, addDocument, updateDocument, removeDocument, history, setReimbursement, recordReimbursement, deleteAll,
