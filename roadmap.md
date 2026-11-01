@@ -1,4 +1,9 @@
 # Roadmap (Functional Requirements v1.0)
+## V5.9.2 Financial Inbox redesign (.lovable/requirements-v5.9.2.md)
+- [x] Audit against spec: three-view navigation, counts, selection scopes, bulk bar, guided preview/confirm, merchant groups, missing-field grouping, clutter-in-dialogs all already present from V5.10 work.
+- [x] This turn: prominent Review & Apply in the category dialog, bulk summary in the detail panel instead of "No transaction selected", arrow-key navigation between row checkboxes, selected-row highlighting in list and table.
+- [x] Verified: 864 tests / 108 files pass, build OK, signed-in desktop/iPad-landscape/iPad-portrait/iPhone screenshots with no overflow or page errors; report in .lovable/acceptance-v5.9.2.md. No financial writes, no publication.
+- [ ] Physical iPad/iPhone, Split View, Stage Manager, hardware keyboard/trackpad acceptance — needs real devices.
 ## V5.10 guided Financial Inbox
 - [x] Approved protected shared save support: general owner-atomic organisation/workspace/activity/category/payment metadata patches, revisions/config audit/idempotency and safe undo; shared additive 0044–0045, read-only grant verification, isolated SQL tests, 864 regressions and signed-in desktop/phone preview/cancel. No real financial edits or publication; hosted write acceptance remains unverified.
 - [x] Current continuation: scoped atomic trip/organisation/project-tag mapping, direct reviewed recurring profile creation with duplicate-safe retry/read-back, missing-field grouping, conservative saved-record recovery suggestions and visible rule failure/retry; 849 tests, signed-in phone form/cancel verified, no financial writes/schema changes/publication.

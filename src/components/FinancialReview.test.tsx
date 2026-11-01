@@ -25,7 +25,7 @@ describe("controlled financial correction flow", () => {
     fireEvent.click(screen.getByRole("button", { name: /^Categorise$/ }));
     fireEvent.click(screen.getByRole("combobox", { name: "Bulk review category" }));
     fireEvent.click(await screen.findByRole("option", { name: "Groceries" }));
-    fireEvent.click(screen.getByRole("button", { name: "Preview category changes" }));
+    fireEvent.click(screen.getByRole("button", { name: "Review & Apply" }));
     expect(mocks.save).not.toHaveBeenCalled();
     expect(screen.getByText("controlled-copy")).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Confirm & Apply Changes" }));
