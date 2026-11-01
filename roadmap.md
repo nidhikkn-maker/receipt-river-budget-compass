@@ -266,12 +266,12 @@
 - [ ] Acceptance: 23 demonstrations incl. unchanged records, no duplicate spend, iPhone layout
 
 ## V5.3 Statement Import (.lovable/requirements-v5.3.md)
-- [ ] Current continuation: recurring-pattern grouping with separate repeated payments, source totals, conservative cadence hints and signed-in review verification.
+- [x] Current continuation: recurring-pattern grouping reuses cadence detection with account/currency/type/direction partitions, separate repeated payments and original totals. Signed-in five-row statement verified monthly hint, both same-day repeats, selection/drill-down, unchanged source and review status; phone/desktop no overflow or page errors; temporary files/records removed without posting; 622 tests pass, build OK.
 - [x] Current continuation: correction scope choices (one / selected similar / eligible matching), explicit previewed future-rule confirmation, conservative similarity guards and persisted-rule acceptance. Signed-in three-row correction/reload and rule save/cancel/readback verified; rows remain under review, originals preserved; phone/desktop no overflow or page errors; temporary records/rules removed, no ledger posting; 615 tests pass, build OK.
 - [ ] Uploaded specification saved; guided import stages, bulk exception review and historical reconciliation acceptance remain a separate implementation pass after current travel requests.
 - [ ] Supplementary V5.3: safe approval eligibility, previewed bulk classification, compact grouped mobile review, and 16 acceptance demonstrations; preserve source statements and financial records; no publication without approval.
 - [x] V5.3 current pass: overview/groups/compact transaction rows, detail sheet with source narration, selected-only typed financial-impact summary, explicit Miscellaneous acceptance, preview-bound atomic bulk updates/audit, tag merge and stale-change rejection. Signed-in two-row approval/summary, original details, mobile/desktop no overflow verified; 600 tests pass. Temporary staging records removed; no test ledger posting and no publication.
-- [ ] V5.3 acceptance remainder: representative bank/card final posting and replay, full theme checks, recurring-pattern grouping, richer rule conditions and complete 16-scenario demonstration.
+- [ ] V5.3 acceptance remainder: representative bank/card final posting and replay, full theme checks, richer rule conditions and complete 16-scenario demonstration.
 - [x] V5.3 continuation: category/workspace/type/account/organisation/direction/review-status groups with original-currency in/out totals and group drill-down. Signed-in 52-row statement verified all eight choices, Show more, select visible and clear; phone/desktop no overflow or page errors. Light/dark rendering inspected; 608 tests pass, build OK. Temporary account, statement and files removed; no ledger posting or publication.
 
 ## Travel email intake
