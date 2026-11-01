@@ -1,5 +1,5 @@
 import { describe,expect,it } from 'vitest';
-import { statementDateRange,manifestBlockers,overlappingStatements,importResultCounts } from './import-manifest';
+import { statementDateRange,manifestBlockers,overlappingStatements,importResultCounts,statementReconciliationSummary } from './import-manifest';
 import type { ImportBatch,ImportRow } from './historical-import';
 
 describe('Statement manifest and outcomes',()=>{
@@ -16,5 +16,14 @@ describe('Statement manifest and outcomes',()=>{
     const rows=[{id:'a',fingerprint:'a',decision:'approved',duplicate_kind:'new'},{id:'b',fingerprint:'b',decision:'approved',duplicate_kind:'new'},{id:'c',fingerprint:'c',decision:'review',duplicate_kind:'new'},{id:'d',fingerprint:'d',decision:'excluded',duplicate_kind:'new'}] as ImportRow[];
     expect(importResultCounts(rows,new Set(['a']),new Set(['a','b','c','d']),true)).toEqual({recorded:1,skipped:1,requiresReview:1,failed:1});
     expect(importResultCounts(rows,new Set(['a','b']),new Set(['a','b','c','d']),false)).toEqual({recorded:2,skipped:1,requiresReview:1,failed:0});
+  });
+  it('never certifies foreign-currency statements against INR ledger balances',()=>{
+    const batch={currency:'USD',status:'review',opening_balance:0,closing_balance:0,period_from:'2026-04-01',period_to:'2026-04-30',balance_verification:{sourceOpening:0,sourceClosing:0,sourceReference:'page 1',checkedOriginal:true}} as ImportBatch;
+    expect(statementReconciliationSummary(batch,[],new Set(),undefined,[]).status).toBe('Currency comparison unavailable');
+  });
+  it('keeps source arithmetic distinct from confirmed posted debits',()=>{
+    const batch={currency:'INR',status:'review',opening_balance:1000,closing_balance:500} as ImportBatch;
+    const rows=[{fingerprint:'a',line:{amount:250,direction:'debit'}},{fingerprint:'b',line:{amount:100,direction:'debit'}}] as ImportRow[];
+    expect(statementReconciliationSummary(batch,rows,new Set(['a']),undefined,[])).toMatchObject({status:'Statement arithmetic discrepancy',debits:250,credits:0,unresolved:1});
   });
 });
