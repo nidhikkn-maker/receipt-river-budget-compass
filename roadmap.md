@@ -1,5 +1,6 @@
 # Roadmap (Functional Requirements v1.0)
 ## Statement tiles and calendar review continuity
+- [ ] Move statement upload experience into Financial Inbox; retain old statement links without a separate page.
 - [ ] Statement tiles open corresponding searchable items and individual transactions.
 - [ ] Preserve selected calendar date/month, page position and filters on return.
 - [ ] Show evidence-based pending/completed calendar indicators without resolving financial issues by navigation.
