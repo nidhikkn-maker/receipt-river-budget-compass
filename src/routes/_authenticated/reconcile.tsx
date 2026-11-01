@@ -178,6 +178,7 @@ function Reconcile() {
   return (
     <>
       <PageTitle eyebrow="Bank" title="Statements" sub="Upload a CSV, Excel or PDF from your bank or card. New expenses are worked out and registered on their own — anything unclear is left for you." />
+      <Button asChild className="mb-5"><Link to="/historical-import">Historical import & bulk review</Link></Button>
       <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-3">
         <Stat label="Matched" value={String(reconciled.length)} />
         <Stat label="Not matched yet" value={String(open.length)} hint={money(open.reduce((s, e) => s + e.amount, 0))} />

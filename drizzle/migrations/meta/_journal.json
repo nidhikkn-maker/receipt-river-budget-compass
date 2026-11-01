@@ -211,6 +211,27 @@
       "when": 1793478845663,
       "tag": "0029_report_jobs",
       "breakpoints": true
+    },
+    {
+      "idx": 30,
+      "version": "7",
+      "when": 1793496794997,
+      "tag": "0030_historical_import_staging",
+      "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "7",
+      "when": 1793496898480,
+      "tag": "0031_secure_import_posting",
+      "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "7",
+      "when": 1793497482787,
+      "tag": "0032_import_post_snapshot_and_direction_guards",
+      "breakpoints": true
     }
   ]
 }

@@ -228,3 +228,11 @@
 - [x] Already in place: smart quick entry, remembered defaults, drafts + offline recovery, single-flight saves, setup assistant, search, privacy toggle, offline entry
 - [x] Reports Centre jobs recorded before generation; a per-minute server worker finishes abandoned ones (Tamil shows "?" in server-made PDFs; statements/claims with bills stay in-app)
 - [x] Saved filter views on Transactions (templates covered by Repeat favourites)
+
+## V5.1 Smart historical import (.lovable/requirements-v5.1.md)
+- [x] Secure original statements (also in Vault), multi-upload CSV/XLS/XLSX/text PDF, persistent staging and retry; browser-verified two-row import.
+- [x] Grouped review, bulk classifications, editable/disableable user-confirmed merchant rules, conflicts and duplicate-safe atomic posting; reviewed edits survive reload, two ledger entries read back, repeated file recognised.
+- [x] Statement opening/closing arithmetic and ledger comparison, missing-month coverage, enrichment/provenance, Inbox/Settings, audit CSV; 560 total tests (full 559-test suite plus final transfer guard), no build errors or phone overflow.
+- [ ] Historical opening-balance verification assistant and conservative safe-to-spend integration; existing opening-balance configuration remains unchanged, reconciliation values are staging-only and do not add funds.
+- [ ] Persistent worker activation — requires publication approval; callback is prepared but live site unchanged.
+- [ ] Scanned PDF persistent extraction and complete historical coverage verification; current text-PDF extraction requires open browser, scanned PDFs use the existing statement matching workflow only.

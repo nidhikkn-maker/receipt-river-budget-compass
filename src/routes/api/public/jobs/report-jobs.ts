@@ -7,7 +7,8 @@ export const Route = createFileRoute("/api/public/jobs/report-jobs")({
     if (failure) return failure;
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { runReportJobs } = await import("@/lib/report-jobs.server");
-    try { return Response.json(await runReportJobs(supabaseAdmin)); }
+    const { runImportJobs } = await import('@/lib/import-jobs.server');
+    try { return Response.json({ ...(await runReportJobs(supabaseAdmin)), imports: await runImportJobs(supabaseAdmin) }); }
     catch { return Response.json({ error: "Report jobs unavailable" }, { status: 503 }); }
   } } },
 });

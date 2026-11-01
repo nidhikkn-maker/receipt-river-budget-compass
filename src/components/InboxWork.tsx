@@ -8,17 +8,20 @@ import { listDrafts } from "@/lib/drafts";
 export function InboxWork() {
   const [drafts, setDrafts] = useState<number | null>(null);
   const [reports, setReports] = useState<{ id: string; title: string; created_at: string }[]>([]);
+  const [imports,setImports]=useState<{id:string;file_name:string;status:string}[]>([]);
   useEffect(() => {
     let live = true;
+    supabase.from('import_batches').select('id,file_name,status').order('created_at',{ascending:false}).limit(5).then(({data})=>live&&setImports(data ?? []));
     listDrafts().then((d) => live && setDrafts(d.filter((x) => x.status !== "saved").length)).catch(() => live && setDrafts(0));
     const since = new Date(Date.now() - 7 * 864e5).toISOString();
     supabase.from("report_history").select("id,title,created_at").gte("created_at", since).order("created_at", { ascending: false }).limit(3)
       .then(({ data }) => live && setReports(data ?? []));
     return () => { live = false; };
   }, []);
-  if (!drafts && !reports.length) return null;
+  if (!drafts && !reports.length && !imports.length) return null;
   return (
     <div className="mb-4 grid gap-2">
+      {imports.map(b=><Link key={b.id} to="/historical-import" className="flex gap-3 items-center border rounded-lg bg-card p-3"><FileText className="h-5 w-5 text-primary"/><div className="min-w-0"><p className="truncate text-sm font-semibold">{b.file_name}</p><p className="text-xs text-muted-foreground">Statement import · {b.status==='review'?'Ready for review':b.status}</p></div></Link>)}
       {!!drafts && (
         <Link to="/drafts" className="flex items-center gap-3 rounded-2xl border bg-card p-3">
           <PencilLine className="h-5 w-5 text-gold-strong" />
