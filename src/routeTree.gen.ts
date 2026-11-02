@@ -61,6 +61,7 @@ import { Route as DotlovableOauthConsentRouteImport } from './routes/[.]lovable.
 import { Route as AuthenticatedCardsAccountIdRouteImport } from './routes/_authenticated/cards.$accountId'
 import { Route as AuthenticatedTripsIndexRouteImport } from './routes/_authenticated/trips.index'
 import { Route as AuthenticatedTripsTripIdRouteImport } from './routes/_authenticated/trips.$tripId'
+import { Route as ApiPublicJobsCleanupDemosRouteImport } from './routes/api/public/jobs/cleanup-demos'
 import { Route as ApiPublicJobsPaymentRemindersRouteImport } from './routes/api/public/jobs/payment-reminders'
 import { Route as ApiPublicJobsReportJobsRouteImport } from './routes/api/public/jobs/report-jobs'
 
@@ -341,6 +342,12 @@ const AuthenticatedTripsTripIdRoute =
     path: '/$tripId',
     getParentRoute: () => AuthenticatedTripsRoute,
   } as any)
+const ApiPublicJobsCleanupDemosRoute =
+  ApiPublicJobsCleanupDemosRouteImport.update({
+    id: '/api/public/jobs/cleanup-demos',
+    path: '/api/public/jobs/cleanup-demos',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicJobsPaymentRemindersRoute =
   ApiPublicJobsPaymentRemindersRouteImport.update({
     id: '/api/public/jobs/payment-reminders',
@@ -405,6 +412,7 @@ export interface FileRoutesByFullPath {
   '/cards/$accountId': typeof AuthenticatedCardsAccountIdRoute
   '/trips/$tripId': typeof AuthenticatedTripsTripIdRoute
   '/trips/': typeof AuthenticatedTripsIndexRoute
+  '/api/public/jobs/cleanup-demos': typeof ApiPublicJobsCleanupDemosRoute
   '/api/public/jobs/payment-reminders': typeof ApiPublicJobsPaymentRemindersRoute
   '/api/public/jobs/report-jobs': typeof ApiPublicJobsReportJobsRoute
 }
@@ -459,6 +467,7 @@ export interface FileRoutesByTo {
   '/cards/$accountId': typeof AuthenticatedCardsAccountIdRoute
   '/trips/$tripId': typeof AuthenticatedTripsTripIdRoute
   '/trips': typeof AuthenticatedTripsIndexRoute
+  '/api/public/jobs/cleanup-demos': typeof ApiPublicJobsCleanupDemosRoute
   '/api/public/jobs/payment-reminders': typeof ApiPublicJobsPaymentRemindersRoute
   '/api/public/jobs/report-jobs': typeof ApiPublicJobsReportJobsRoute
 }
@@ -516,6 +525,7 @@ export interface FileRoutesById {
   '/_authenticated/cards/$accountId': typeof AuthenticatedCardsAccountIdRoute
   '/_authenticated/trips/$tripId': typeof AuthenticatedTripsTripIdRoute
   '/_authenticated/trips/': typeof AuthenticatedTripsIndexRoute
+  '/api/public/jobs/cleanup-demos': typeof ApiPublicJobsCleanupDemosRoute
   '/api/public/jobs/payment-reminders': typeof ApiPublicJobsPaymentRemindersRoute
   '/api/public/jobs/report-jobs': typeof ApiPublicJobsReportJobsRoute
 }
@@ -573,6 +583,7 @@ export interface FileRouteTypes {
     | '/cards/$accountId'
     | '/trips/$tripId'
     | '/trips/'
+    | '/api/public/jobs/cleanup-demos'
     | '/api/public/jobs/payment-reminders'
     | '/api/public/jobs/report-jobs'
   fileRoutesByTo: FileRoutesByTo
@@ -627,6 +638,7 @@ export interface FileRouteTypes {
     | '/cards/$accountId'
     | '/trips/$tripId'
     | '/trips'
+    | '/api/public/jobs/cleanup-demos'
     | '/api/public/jobs/payment-reminders'
     | '/api/public/jobs/report-jobs'
   id:
@@ -683,6 +695,7 @@ export interface FileRouteTypes {
     | '/_authenticated/cards/$accountId'
     | '/_authenticated/trips/$tripId'
     | '/_authenticated/trips/'
+    | '/api/public/jobs/cleanup-demos'
     | '/api/public/jobs/payment-reminders'
     | '/api/public/jobs/report-jobs'
   fileRoutesById: FileRoutesById
@@ -695,6 +708,7 @@ export interface RootRouteChildren {
   ResetPasswordRoute: typeof ResetPasswordRoute
   Char91DotwellKnownChar93OauthProtectedResourceRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   DotlovableOauthConsentRoute: typeof DotlovableOauthConsentRoute
+  ApiPublicJobsCleanupDemosRoute: typeof ApiPublicJobsCleanupDemosRoute
   ApiPublicJobsPaymentRemindersRoute: typeof ApiPublicJobsPaymentRemindersRoute
   ApiPublicJobsReportJobsRoute: typeof ApiPublicJobsReportJobsRoute
 }
@@ -1065,6 +1079,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedTripsTripIdRouteImport
       parentRoute: typeof AuthenticatedTripsRoute
     }
+    '/api/public/jobs/cleanup-demos': {
+      id: '/api/public/jobs/cleanup-demos'
+      path: '/api/public/jobs/cleanup-demos'
+      fullPath: '/api/public/jobs/cleanup-demos'
+      preLoaderRoute: typeof ApiPublicJobsCleanupDemosRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/jobs/payment-reminders': {
       id: '/api/public/jobs/payment-reminders'
       path: '/api/public/jobs/payment-reminders'
@@ -1202,6 +1223,7 @@ const rootRouteChildren: RootRouteChildren = {
   Char91DotwellKnownChar93OauthProtectedResourceRoute:
     Char91DotwellKnownChar93OauthProtectedResourceRoute,
   DotlovableOauthConsentRoute: DotlovableOauthConsentRoute,
+  ApiPublicJobsCleanupDemosRoute: ApiPublicJobsCleanupDemosRoute,
   ApiPublicJobsPaymentRemindersRoute: ApiPublicJobsPaymentRemindersRoute,
   ApiPublicJobsReportJobsRoute: ApiPublicJobsReportJobsRoute,
 }
