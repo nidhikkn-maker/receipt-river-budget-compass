@@ -21,3 +21,19 @@ describe("waiting to sync list", () => {
     expect(mergePending(list, [])).toEqual([expect.objectContaining({ id: "a", status: "saved" })]);
   });
 });
+
+describe("removing an entry from this device", () => {
+  const item = (status: PendingStatus) => ({ id: "a", date: "2026-11-01", payee: "Cafe", title: "Lunch", amount: 250, currency: "INR", createdAt: "x", status });
+  it("treats an entry that never reached the account as permanent loss", () => {
+    for (const status of ["waiting", "saving", "failed"] as PendingStatus[]) expect(removalIsPermanent(item(status))).toBe(true);
+  });
+  it("treats an entry already saved to the account as recoverable", () => {
+    expect(removalIsPermanent(item("saved"))).toBe(false);
+  });
+  it("blocks removal until the warning is acknowledged", () => {
+    expect(canRemove(item("failed"), false)).toBe(false);
+    expect(canRemove(item("failed"), true)).toBe(true);
+    expect(canRemove(item("saved"), false)).toBe(true);
+    expect(canRemove(undefined, true)).toBe(false);
+  });
+});
