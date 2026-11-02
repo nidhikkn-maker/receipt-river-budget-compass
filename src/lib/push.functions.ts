@@ -1,16 +1,17 @@
+import { requireRealAccount } from "@/lib/real-account-middleware";
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { privateReminderPayload, pushSubscriptionSchema, validPushEndpoint } from "./push-rules";
 
-export const getPushConfig = createServerFn({ method: "GET" }).middleware([requireSupabaseAuth]).handler(async () => {
+export const getPushConfig = createServerFn({ method: "GET" }).middleware([requireRealAccount]).handler(async () => {
   const seed = process.env["WEB_PUSH_SIGNING_SEED"];
   if (!seed) return { available: false, publicKey: "" };
   const { signingKeys } = await import("./push-crypto.server");
   return { available: true, publicKey: (await signingKeys(seed)).publicKey };
 });
 
-export const savePushDevice = createServerFn({ method: "POST" }).middleware([requireSupabaseAuth])
+export const savePushDevice = createServerFn({ method: "POST" }).middleware([requireRealAccount])
   .inputValidator((input: unknown) => pushSubscriptionSchema.parse(input)).handler(async ({ data, context }) => {
     const { count, error: countError } = await context.supabase.from("push_subscriptions").select("id", { count: "exact", head: true });
     if (countError) throw Error("Couldn't check notification devices");
@@ -22,14 +23,14 @@ export const savePushDevice = createServerFn({ method: "POST" }).middleware([req
   });
 
 const endpointInput = z.object({ endpoint: z.string().max(2048).refine(validPushEndpoint) });
-export const removePushDevice = createServerFn({ method: "POST" }).middleware([requireSupabaseAuth])
+export const removePushDevice = createServerFn({ method: "POST" }).middleware([requireRealAccount])
   .inputValidator((input: unknown) => endpointInput.parse(input)).handler(async ({ data, context }) => {
     const { error } = await context.supabase.from("push_subscriptions").delete().eq("endpoint",data.endpoint);
     if (error) throw Error("Couldn't turn off this notification device");
     return { ok: true };
   });
 
-export const testDevicePush = createServerFn({ method: "POST" }).middleware([requireSupabaseAuth])
+export const testDevicePush = createServerFn({ method: "POST" }).middleware([requireRealAccount])
   .inputValidator((input: unknown) => endpointInput.parse(input)).handler(async ({ data, context }) => {
     const seed = process.env["WEB_PUSH_SIGNING_SEED"];
     if (!seed) throw Error("Notifications are not configured yet");

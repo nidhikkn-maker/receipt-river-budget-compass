@@ -1,3 +1,4 @@
+import { requireRealAccount } from "@/lib/real-account-middleware";
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
@@ -33,7 +34,7 @@ You receive FACTS computed by the app's financial engine. Rules:
 - Be short, plain and friendly. Use ₹ with Indian digit grouping. Short bullet lists are fine.`;
 
 export const askAssistant = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireRealAccount])
   .inputValidator((d: unknown) => AssistantInput.parse(d))
   .handler(async ({ data, context }): Promise<{ ok: true; text: string } | { ok: false; error: string }> => {
     const prefs = await context.supabase.from("finance_preferences").select("data").eq("owner_id",context.userId).maybeSingle();
@@ -75,7 +76,7 @@ const Spoken = z.object({
 export type SpokenEntry = z.infer<typeof Spoken>;
 
 export const parseSpokenEntry = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireRealAccount])
   .inputValidator((d: unknown) => z.object({ text: z.string().trim().min(2).max(500), today: z.string().regex(/^\d{4}-\d{2}-\d{2}$/), accounts: z.array(z.string().max(80)).max(50) }).parse(d))
   .handler(async ({ data, context }): Promise<{ ok: true; result: SpokenEntry } | { ok: false; error: string }> => {
     const prefs=await context.supabase.from("finance_preferences").select("data").eq("owner_id",context.userId).maybeSingle();

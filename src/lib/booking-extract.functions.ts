@@ -1,3 +1,4 @@
+import { requireRealAccount } from "@/lib/real-account-middleware";
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
@@ -5,7 +6,7 @@ import { BookingExtraction, type ExtractedBooking } from "./booking-import";
 import { normalizePreferences, type FinancePreferences } from "./preferences";
 
 export const extractBooking = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireRealAccount])
   .inputValidator((raw: unknown) => z.object({ documentId: z.string().uuid(), consent: z.literal(true) }).parse(raw))
   .handler(async ({ data, context }): Promise<{ ok: true; result: ExtractedBooking } | { ok: false; error: string }> => {
     const db = context.supabase;
