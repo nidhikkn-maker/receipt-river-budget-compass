@@ -98,6 +98,8 @@ export type UploadRequest = {
   /** Every reminder for this request, newest first; manual resends are marked. */
   reminders: { at: string; to: string | null; manual: boolean }[];
   canResend: boolean;
+  /** Set while the resend cooldown is running: when the next resend becomes available. */
+  resendAvailableAt: string | null;
   reminder: "sent" | "due" | "not-needed" | "waiting" | "closed";
   confirmAt: string | null;
   confirmTo: string | null;
@@ -145,6 +147,7 @@ export function requestReport(links: RequestLink[], events: LinkEvent[], uploads
         reminderAt: reminded?.at ?? null,
         reminders: ev.filter((e) => e.kind === "reminded").sort((a, b) => b.at.localeCompare(a.at)).map((e) => reminderEntry(e)),
         canResend: canResendReminder(l, now),
+        resendAvailableAt: nextResendAt(reminded?.at ?? null, now),
         reminder,
         confirmAt: notified?.at ?? null,
         confirmTo: notified?.detail ?? null,
@@ -163,4 +166,12 @@ export function reminderEntry(e: { at: string; detail: string | null }) {
 /** A reminder can be resent by hand only while the link still accepts files (open, not expired, not full). */
 export function canResendReminder(l: LinkRow, now = new Date()): boolean {
   return linkState(l, now) === "active";
+}
+/** Minimum gap between any reminder (automatic or manual) and the next manual resend. */
+export const RESEND_COOLDOWN_HOURS = 24;
+/** When the next manual resend is allowed, or null if allowed now. */
+export function nextResendAt(lastReminderAt: string | null, now = new Date()): string | null {
+  if (!lastReminderAt) return null;
+  const t = new Date(lastReminderAt).getTime() + RESEND_COOLDOWN_HOURS * 3600_000;
+  return t > now.getTime() ? new Date(t).toISOString() : null;
 }

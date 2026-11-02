@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireRealAccount } from "@/lib/real-account-middleware";
-import { canResendReminder, MANUAL_REMINDER_PREFIX, linkHistory, requestReport, type LinkEvent, type RequestLink, type UploadRequest, linkState, LINK_DAYS, MAX_FILES, PUBLIC_ORIGIN } from "@/lib/upload-link";
+import { canResendReminder, nextResendAt, MANUAL_REMINDER_PREFIX, linkHistory, requestReport, type LinkEvent, type RequestLink, type UploadRequest, linkState, LINK_DAYS, MAX_FILES, PUBLIC_ORIGIN } from "@/lib/upload-link";
 
 export interface AccountantInfo {
   name: string; email: string; sendDay: number; autoSend: boolean;
@@ -97,6 +97,9 @@ export const resendReminder = createServerFn({ method: "POST" })
     ]);
     if (!l) return { ok: false as const, error: "That request wasn't found" };
     if (!canResendReminder(l)) return { ok: false as const, error: "This link no longer accepts files — send a new link instead" };
+    const { data: last } = await supabase.from("upload_link_events").select("at").eq("owner_id", userId).eq("link_id", l.id).eq("kind", "reminded").order("at", { ascending: false }).limit(1).maybeSingle();
+    const wait = nextResendAt(last?.at ?? null);
+    if (wait) return { ok: false as const, error: `A reminder was sent recently — you can resend after ${new Date(wait).toLocaleString("en-IN", { timeZone: "Asia/Kolkata", dateStyle: "medium", timeStyle: "short" })}` };
     if (!c?.email) return { ok: false as const, error: "Add your accountant's email first" };
     const { send, tokenFor } = await import("@/lib/upload-link.server");
     const url = `${PUBLIC_ORIGIN}/u/${await tokenFor(l.id)}`;
