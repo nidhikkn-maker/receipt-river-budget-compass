@@ -1,3 +1,4 @@
+import { csvCell } from "@/lib/csv-safe";
 import { createFileRoute } from "@tanstack/react-router";
 import { SectionTabs } from "@/components/SectionTabs";
 import { AccountantSettings } from "@/components/AccountantSettings";
@@ -230,7 +231,7 @@ function StatementDeskPage() {
 
   const exportCsv = () => {
     if (!plan) return;
-    const q = (s: string | number) => `"${String(s).replaceAll('"', '""')}"`;
+    const q = csvCell;
     const rows = ["file,account,date,description,amount,direction,outcome,reason"];
     for (const a of plan.accounts) {
       for (const m of a.matched) rows.push([a.file.name, a.name, m.line.date, m.line.description, m.line.amount, m.line.direction, "already recorded", m.reasons.join("; ")].map(q).join(","));

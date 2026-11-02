@@ -1,3 +1,4 @@
+import { csvCell } from "@/lib/csv-safe";
 import { SectionTabs } from "@/components/SectionTabs";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
@@ -67,7 +68,7 @@ function RecordsCheck() {
   const exportCsv = () => {
     const head = ["Reference", "Date", "Source", "Destination", "Amount", "Currency", "Current type", "Suggested type", "Issue", "Proposed correction", "Confidence", "Expected impact"];
     const rows = (chosen.length ? chosen : shown).map((f) => [f.reference, f.date, f.source, f.destination, f.amount, f.currency, f.currentType, f.suggestedType, AUDIT_LABEL[f.issue], f.proposal, f.confidence, f.impact]);
-    const csv = [head, ...rows].map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(",")).join("\n");
+    const csv = [head, ...rows].map((r) => r.map((c) => csvCell(c)).join(",")).join("\n");
     const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv" })); a.download = "records-check.csv"; a.click();
   };
 

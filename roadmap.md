@@ -576,3 +576,6 @@
 - [x] Test duplicate-transfer warning
 - [x] Publish all
 - [ ] Find and fix biggest app/receipt slowness
+- [ ] Profile Home startup (found ~1.2s server wait per page; fix not yet done)
+- [x] Receipt reading progress + retry
+- [ ] Fix 3 security warnings (spreadsheet done; 2 email warnings need user decision on daily limit)
