@@ -114,7 +114,8 @@ function Auth() {
     if (r.error) toast.error(r.error.message); else if (!r.redirected) await go();
   };
   return <div className="relative min-h-dvh overflow-hidden">
-  <div aria-hidden="true" className="pointer-events-none fixed bottom-4 right-4 size-[72px] bg-accent opacity-40 sm:size-[110px] dark:opacity-30" style={{ maskImage: `url(${kkLogo.url})`, WebkitMaskImage: `url(${kkLogo.url})`, maskSize: "contain", WebkitMaskSize: "contain", maskRepeat: "no-repeat", WebkitMaskRepeat: "no-repeat" }}>
+  <div aria-hidden="true" className="pointer-events-none fixed bottom-4 right-4 opacity-50 dark:opacity-40">
+    <img src={kkLogo.url} alt="" className="size-[72px] object-contain sm:size-[110px]" />
   </div>
   <main className="relative mx-auto max-w-md px-6 py-12">
     <Link to="/dashboard" className="font-display text-2xl font-bold text-primary">Ledgerline</Link>
