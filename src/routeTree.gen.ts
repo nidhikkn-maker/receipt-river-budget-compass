@@ -67,6 +67,7 @@ import { Route as ApiPublicJobsCleanupDemosRouteImport } from './routes/api/publ
 import { Route as ApiPublicJobsPaymentRemindersRouteImport } from './routes/api/public/jobs/payment-reminders'
 import { Route as ApiPublicJobsReportJobsRouteImport } from './routes/api/public/jobs/report-jobs'
 import { Route as ApiPublicUploadTokenRouteImport } from './routes/api/public/upload/$token'
+import { Route as LovableEmailTransactionalPreviewRouteImport } from './routes/lovable/email/transactional/preview'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -378,6 +379,12 @@ const ApiPublicUploadTokenRoute = ApiPublicUploadTokenRouteImport.update({
   path: '/api/public/upload/$token',
   getParentRoute: () => rootRouteImport,
 } as any)
+const LovableEmailTransactionalPreviewRoute =
+  LovableEmailTransactionalPreviewRouteImport.update({
+    id: '/lovable/email/transactional/preview',
+    path: '/lovable/email/transactional/preview',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -437,6 +444,7 @@ export interface FileRoutesByFullPath {
   '/api/public/jobs/payment-reminders': typeof ApiPublicJobsPaymentRemindersRoute
   '/api/public/jobs/report-jobs': typeof ApiPublicJobsReportJobsRoute
   '/api/public/upload/$token': typeof ApiPublicUploadTokenRoute
+  '/lovable/email/transactional/preview': typeof LovableEmailTransactionalPreviewRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -495,6 +503,7 @@ export interface FileRoutesByTo {
   '/api/public/jobs/payment-reminders': typeof ApiPublicJobsPaymentRemindersRoute
   '/api/public/jobs/report-jobs': typeof ApiPublicJobsReportJobsRoute
   '/api/public/upload/$token': typeof ApiPublicUploadTokenRoute
+  '/lovable/email/transactional/preview': typeof LovableEmailTransactionalPreviewRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -556,6 +565,7 @@ export interface FileRoutesById {
   '/api/public/jobs/payment-reminders': typeof ApiPublicJobsPaymentRemindersRoute
   '/api/public/jobs/report-jobs': typeof ApiPublicJobsReportJobsRoute
   '/api/public/upload/$token': typeof ApiPublicUploadTokenRoute
+  '/lovable/email/transactional/preview': typeof LovableEmailTransactionalPreviewRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -617,6 +627,7 @@ export interface FileRouteTypes {
     | '/api/public/jobs/payment-reminders'
     | '/api/public/jobs/report-jobs'
     | '/api/public/upload/$token'
+    | '/lovable/email/transactional/preview'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -675,6 +686,7 @@ export interface FileRouteTypes {
     | '/api/public/jobs/payment-reminders'
     | '/api/public/jobs/report-jobs'
     | '/api/public/upload/$token'
+    | '/lovable/email/transactional/preview'
   id:
     | '__root__'
     | '/'
@@ -735,6 +747,7 @@ export interface FileRouteTypes {
     | '/api/public/jobs/payment-reminders'
     | '/api/public/jobs/report-jobs'
     | '/api/public/upload/$token'
+    | '/lovable/email/transactional/preview'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -751,6 +764,7 @@ export interface RootRouteChildren {
   ApiPublicJobsPaymentRemindersRoute: typeof ApiPublicJobsPaymentRemindersRoute
   ApiPublicJobsReportJobsRoute: typeof ApiPublicJobsReportJobsRoute
   ApiPublicUploadTokenRoute: typeof ApiPublicUploadTokenRoute
+  LovableEmailTransactionalPreviewRoute: typeof LovableEmailTransactionalPreviewRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -1161,6 +1175,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicUploadTokenRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/lovable/email/transactional/preview': {
+      id: '/lovable/email/transactional/preview'
+      path: '/lovable/email/transactional/preview'
+      fullPath: '/lovable/email/transactional/preview'
+      preLoaderRoute: typeof LovableEmailTransactionalPreviewRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -1290,6 +1311,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicJobsPaymentRemindersRoute: ApiPublicJobsPaymentRemindersRoute,
   ApiPublicJobsReportJobsRoute: ApiPublicJobsReportJobsRoute,
   ApiPublicUploadTokenRoute: ApiPublicUploadTokenRoute,
+  LovableEmailTransactionalPreviewRoute: LovableEmailTransactionalPreviewRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

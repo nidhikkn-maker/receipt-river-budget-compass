@@ -28,7 +28,7 @@ export function AccountantSettings() {
     if (!r.ok) { toast.error(r.error); return; }
     await reload();
     if (email && r.emailed) toast.success(`Link emailed to ${info?.name}`);
-    else { await copy(r.url); if (email) toast.message("Email sending isn't set up yet — the new link was copied so you can share it."); }
+    else { await copy(r.url); if (email) toast.message(r.reason === "domain_not_verified" ? "Email is still being verified — the new link was copied so you can share it." : r.reason === "recipient_suppressed" ? "That address has opted out of emails — the new link was copied instead." : "The email couldn't be sent — the new link was copied so you can share it."); }
   };
 
   if (err) return <p className="text-sm text-destructive">{err}</p>;
