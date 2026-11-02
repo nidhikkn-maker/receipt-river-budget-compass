@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ExtractedReceiptSchema, ReceiptDetailsSchema, receiptConfidence, receiptBreakdownError, receiptItemConfidence } from "./receipt-reading";
+import { ExtractedReceiptSchema, ReceiptDetailsSchema, receiptConfidence, receiptBreakdownError, receiptItemConfidence, receiptItemReviewReasons, receiptItemsToReview, receiptItemTotalError, receiptReviewCheck, receiptReviewSignature } from "./receipt-reading";
 import { validateExpense, type ExpenseInput } from "./expenses";
 
 const read = { title: "Cafe", merchant: "Cafe", date: "2026-11-02", amount: 432.10, subtotal: 360, tax: 32.10, tip: 40, confidence: { merchant: "high", date: "low", total: "medium" }, items: [], text: "Cafe", currency: "INR", payment_method: null, description: null, category: "Food and beverages", scope: "personal" };
@@ -71,5 +71,47 @@ describe("receipt reading", () => {
     const details = { subtotal: 360, items: [{ name: "Dinner", quantity: 2, amount: 360 }] };
     expect(ReceiptDetailsSchema.parse(details)).toEqual(details);
     expect(ReceiptDetailsSchema.safeParse({ items: [{ name: "Dinner", quantity: 1, amount: -1 }] }).success).toBe(false);
+  });
+  it("flags only items whose name or amount was read with low confidence", () => {
+    const items = [
+      { name: "Dinner", quantity: 2, amount: 360, confidence: { name: "high", amount: "low" } },
+      { name: "Coffee", quantity: 1, amount: 0, confidence: { name: "low", amount: "high" } },
+      { name: "Water", quantity: 1, amount: 12, confidence: { name: "high", amount: "high" } },
+      { name: "Sweets", quantity: 1, amount: 40 },
+    ];
+    expect(receiptItemsToReview(items)).toEqual([0, 1]);
+    expect(receiptItemReviewReasons(items[0]!)).toEqual(["amount"]);
+    expect(receiptItemReviewReasons({ name: "Cake", amount: 40, confidence: { name: "low", amount: "low" } })).toEqual(["name", "amount"]);
+    expect(receiptItemReviewReasons(items[3]!)).toEqual([]);
+  });
+  it("compares extracted item amounts against the read subtotal", () => {
+    const items = [{ name: "Dinner", quantity: 2, amount: 360 }];
+    expect(receiptItemTotalError(432.10, { subtotal: 360, tax: 32.10, tip: 40, items })).toBeNull();
+    expect(receiptItemTotalError(432.10, { subtotal: 350, tax: 32.10, tip: 40, items })).toMatch(/add up to 360\.00, but the subtotal is 350\.00/);
+    expect(receiptItemTotalError(432.10, { subtotal: 360, tax: 32.10, tip: 40, items: [{ name: "Dinner", quantity: 2, amount: 360 }, { name: "Water", quantity: 1, amount: 12 }] })).toMatch(/add up to 372\.00/);
+  });
+  it("falls back to total minus tax and tip when no subtotal was read", () => {
+    expect(receiptItemTotalError(432.10, { tax: 32.10, tip: 40, items: [{ name: "Dinner", quantity: 2, amount: 360 }] })).toBeNull();
+    expect(receiptItemTotalError(432.10, { tax: 32.10, tip: 40, items: [{ name: "Dinner", quantity: 2, amount: 350 }] })).toMatch(/total minus tax and tip/);
+  });
+  it("leaves receipts with no extracted items unjudged", () => {
+    expect(receiptItemTotalError(432.10, { subtotal: 360, tax: 32.10, tip: 40, items: [] })).toBeNull();
+    expect(receiptItemTotalError(432.10, { subtotal: 360, tax: 32.10, tip: 40 })).toBeNull();
+    expect(receiptItemsToReview([])).toEqual([]);
+  });
+  it("requires a fresh review acknowledgement whenever an item or amount is edited", () => {
+    const items = [{ name: "Dinner", quantity: 2, amount: 360, confidence: { name: "high", amount: "low" } }];
+    const details = { subtotal: 360, tax: 32.10, tip: 40, items };
+    expect(receiptReviewCheck(432.10, details)).toEqual({ items: [0], itemTotalError: null, needed: true });
+    const before = receiptReviewSignature(432.10, details);
+    expect(receiptReviewSignature(432.10, details)).toBe(before);
+    expect(receiptReviewSignature(432.10, { ...details, items: [{ ...items[0]!, amount: 300 }] })).not.toBe(before);
+    expect(receiptReviewSignature(432.10, { ...details, tip: 50 })).not.toBe(before);
+    expect(receiptReviewSignature(432.11, details)).not.toBe(before);
+    expect(receiptReviewCheck(432.10, { subtotal: 360, tax: 32.10, tip: 40, items: [{ name: "Dinner", quantity: 2, amount: 300 }] }).needed).toBe(true);
+  });
+  it("asks for a human check on item totals without making the expense unsavable", () => {
+    const input: ExpenseInput = { title: "Cafe", amount: 432.10, currency: "INR", date: "2026-11-02", category: "Food and beverages", scope: "personal", merchant: "Cafe", paymentMethod: "cash", description: "", memberId: null, splits: [], receiptDetails: { subtotal: 360, tax: 32.10, tip: 40, items: [{ name: "Dinner", quantity: 1, amount: 300 }] } };
+    expect(() => validateExpense(input)).not.toThrow();
   });
 });
