@@ -1,4 +1,9 @@
 # Roadmap (Functional Requirements v1.0)
+## Receipt scanning completion (2 Nov 2026)
+- [ ] Extract and review receipt tax and tip in New expense entry without adding them twice to the total.
+- [ ] Suggest an owner-catalog category from the scanned merchant and require confirmation before saving.
+- [ ] Show merchant, date and total reading confidence so uncertain values can be checked.
+- [ ] Run focused rule tests and an isolated receipt review/save browser flow; do not change real records.
 ## Monthly upload request view and accountant email regressions (2 Nov 2026)
 - [x] Reminder and upload-confirmation email regressions render the registered templates and assert subject, personalisation, private button URL/limits and safe missing-data fallback; nine email tests pass.
 - [x] New /upload-requests view lists every monthly accountant request — link status, email, opens, files waiting, reminder state and confirmation to you — newest first, folded beyond six, linked from Settings; six report-derivation tests and four isolated real-route browser tests pass.
