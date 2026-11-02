@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useRouter, useRouterState } from "@tanstack/react-router";
 
-const WARM = ["/expenses", "/inbox", "/statements", "/reports", "/more", "/new"] as const;
+const WARM = ["/expenses", "/inbox", "/statements", "/reports", "/new", "/settings"] as const;
 
 /** Top progress bar for page changes, idle warm-up of main pages, and duplicate-tap guard. */
 export function NavProgress() {

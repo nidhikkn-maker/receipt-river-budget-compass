@@ -823,3 +823,11 @@ html[data-theme="apple-glass"] :where(.bg-card, .bg-popover, .bg-ink) {
 /* Official Ledgerline logo colours (logo only; app theme unchanged) */
 :root { --brand-ink: #17242B; --brand-teal: #168F80; }
 .dark, html.dark { --brand-ink: #FFFFFF; --brand-teal: #2BB3A1; }
+
+/* Page-change progress bar and instant press feedback on every tappable item. */
+@keyframes nav-progress { 0% { width: 0; } 60% { width: 75%; } 100% { width: 92%; } }
+.nav-progress { animation: nav-progress 2.5s ease-out forwards; }
+@layer base {
+  a, button, [role="button"], [role="tab"], [role="menuitem"] { -webkit-tap-highlight-color: transparent; touch-action: manipulation; transition: transform 90ms ease, opacity 90ms ease; }
+  a:active, button:not(:disabled):active, [role="button"]:active, [role="tab"]:active, [role="menuitem"]:active { transform: scale(0.97); opacity: 0.85; }
+}
