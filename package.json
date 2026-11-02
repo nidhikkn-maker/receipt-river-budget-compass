@@ -88,7 +88,11 @@
     "vite-plugin-pwa": "^2.0.0",
     "vite-tsconfig-paths": "^6.1.1",
     "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz",
-    "zod": "^4.6.7"
+    "zod": "^4.6.7",
+    "@lovable.dev/email-js": "0.4.0",
+    "@lovable.dev/webhooks-js": "0.0.3",
+    "@react-email/components": "^1.0.12",
+    "@react-email/render": "^2.0.10"
   },
   "devDependencies": {
     "@electric-sql/pglite": "^0.5.13",
@@ -120,5 +124,10 @@
   },
   "patchedDependencies": {
     "tsyringe@4.10.0": "patches/tsyringe@4.10.0.patch"
+  },
+  "pnpm": {
+    "overrides": {
+      "entities": "4.5.0"
+    }
   }
 }
