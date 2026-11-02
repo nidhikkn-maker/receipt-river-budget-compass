@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import { MoreHorizontal } from "lucide-react";
@@ -65,6 +66,7 @@ export function AccountantSettings() {
       )}
       <LinkHistory items={info.history} name={info.name} />
       <p className="text-xs text-muted-foreground">Uploaded files appear in Statement Desk for matching. The link never gives access to your app or records.</p>
+      <p className="text-sm"><Link to="/upload-requests" className="text-primary">See every monthly request</Link></p>
 
       <Dialog open={!!edit} onOpenChange={(o) => !o && setEdit(null)}>
         <DialogContent>

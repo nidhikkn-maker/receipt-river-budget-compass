@@ -1,4 +1,7 @@
 # Roadmap (Functional Requirements v1.0)
+## Monthly upload request view and accountant email regressions (2 Nov 2026)
+- [x] Reminder and upload-confirmation email regressions render the registered templates and assert subject, personalisation, private button URL/limits and safe missing-data fallback; nine email tests pass.
+- [x] New /upload-requests view lists every monthly accountant request — link status, email, opens, files waiting, reminder state and confirmation to you — newest first, folded beyond six, linked from Settings; six report-derivation tests and four isolated real-route browser tests pass.
 ## Email rendering and dependency advisory CI regressions
 - [x] Real registered accountant email renderer regression checks personalised content/subject, private upload button URL/limits and safe missing-data fallback; all 1,082 tests pass and preview build is OK.
 - [x] Separate non-blocking CI job runs bun audit, saves its report and warns on advisories/check failures; checksum confirms the lockfile is unchanged. Local audit reports deepmerge (low) and minimatch (moderate); no fixes applied. GitHub execution awaits the next push/PR.

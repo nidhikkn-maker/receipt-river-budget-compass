@@ -55,6 +55,7 @@ import { Route as AuthenticatedTransactionReviewRouteImport } from './routes/_au
 import { Route as AuthenticatedTransfersRouteImport } from './routes/_authenticated/transfers'
 import { Route as AuthenticatedTravelInboxRouteImport } from './routes/_authenticated/travel-inbox'
 import { Route as AuthenticatedTripsRouteImport } from './routes/_authenticated/trips'
+import { Route as AuthenticatedUploadRequestsRouteImport } from './routes/_authenticated/upload-requests'
 import { Route as AuthenticatedVaultRouteImport } from './routes/_authenticated/vault'
 import { Route as AuthenticatedWealthRouteImport } from './routes/_authenticated/wealth'
 import { Route as UTokenRouteImport } from './routes/u.$token'
@@ -314,6 +315,12 @@ const AuthenticatedTripsRoute = AuthenticatedTripsRouteImport.update({
   path: '/trips',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedUploadRequestsRoute =
+  AuthenticatedUploadRequestsRouteImport.update({
+    id: '/upload-requests',
+    path: '/upload-requests',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedVaultRoute = AuthenticatedVaultRouteImport.update({
   id: '/vault',
   path: '/vault',
@@ -432,6 +439,7 @@ export interface FileRoutesByFullPath {
   '/transfers': typeof AuthenticatedTransfersRoute
   '/travel-inbox': typeof AuthenticatedTravelInboxRoute
   '/trips': typeof AuthenticatedTripsRouteWithChildren
+  '/upload-requests': typeof AuthenticatedUploadRequestsRoute
   '/vault': typeof AuthenticatedVaultRoute
   '/wealth': typeof AuthenticatedWealthRoute
   '/u/$token': typeof UTokenRoute
@@ -491,6 +499,7 @@ export interface FileRoutesByTo {
   '/transaction-review': typeof AuthenticatedTransactionReviewRoute
   '/transfers': typeof AuthenticatedTransfersRoute
   '/travel-inbox': typeof AuthenticatedTravelInboxRoute
+  '/upload-requests': typeof AuthenticatedUploadRequestsRoute
   '/vault': typeof AuthenticatedVaultRoute
   '/wealth': typeof AuthenticatedWealthRoute
   '/u/$token': typeof UTokenRoute
@@ -553,6 +562,7 @@ export interface FileRoutesById {
   '/_authenticated/transfers': typeof AuthenticatedTransfersRoute
   '/_authenticated/travel-inbox': typeof AuthenticatedTravelInboxRoute
   '/_authenticated/trips': typeof AuthenticatedTripsRouteWithChildren
+  '/_authenticated/upload-requests': typeof AuthenticatedUploadRequestsRoute
   '/_authenticated/vault': typeof AuthenticatedVaultRoute
   '/_authenticated/wealth': typeof AuthenticatedWealthRoute
   '/u/$token': typeof UTokenRoute
@@ -615,6 +625,7 @@ export interface FileRouteTypes {
     | '/transfers'
     | '/travel-inbox'
     | '/trips'
+    | '/upload-requests'
     | '/vault'
     | '/wealth'
     | '/u/$token'
@@ -674,6 +685,7 @@ export interface FileRouteTypes {
     | '/transaction-review'
     | '/transfers'
     | '/travel-inbox'
+    | '/upload-requests'
     | '/vault'
     | '/wealth'
     | '/u/$token'
@@ -735,6 +747,7 @@ export interface FileRouteTypes {
     | '/_authenticated/transfers'
     | '/_authenticated/travel-inbox'
     | '/_authenticated/trips'
+    | '/_authenticated/upload-requests'
     | '/_authenticated/vault'
     | '/_authenticated/wealth'
     | '/u/$token'
@@ -1091,6 +1104,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedTripsRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/upload-requests': {
+      id: '/_authenticated/upload-requests'
+      path: '/upload-requests'
+      fullPath: '/upload-requests'
+      preLoaderRoute: typeof AuthenticatedUploadRequestsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/vault': {
       id: '/_authenticated/vault'
       path: '/vault'
@@ -1239,6 +1259,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedTransfersRoute: typeof AuthenticatedTransfersRoute
   AuthenticatedTravelInboxRoute: typeof AuthenticatedTravelInboxRoute
   AuthenticatedTripsRoute: typeof AuthenticatedTripsRouteWithChildren
+  AuthenticatedUploadRequestsRoute: typeof AuthenticatedUploadRequestsRoute
   AuthenticatedVaultRoute: typeof AuthenticatedVaultRoute
   AuthenticatedWealthRoute: typeof AuthenticatedWealthRoute
   AuthenticatedCardsAccountIdRoute: typeof AuthenticatedCardsAccountIdRoute
@@ -1288,6 +1309,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedTransfersRoute: AuthenticatedTransfersRoute,
   AuthenticatedTravelInboxRoute: AuthenticatedTravelInboxRoute,
   AuthenticatedTripsRoute: AuthenticatedTripsRouteWithChildren,
+  AuthenticatedUploadRequestsRoute: AuthenticatedUploadRequestsRoute,
   AuthenticatedVaultRoute: AuthenticatedVaultRoute,
   AuthenticatedWealthRoute: AuthenticatedWealthRoute,
   AuthenticatedCardsAccountIdRoute: AuthenticatedCardsAccountIdRoute,
