@@ -471,3 +471,4 @@
 - [x] Face ID sign-in with MPIN/password fallback (verify existing)
 - [ ] Test Face ID fallback on a real iPhone (needs user device)
 - [x] Waiting to sync screen (/sync-queue) with per-entry status and retry
+- [x] Action menu for offline entries (retry / discard)
