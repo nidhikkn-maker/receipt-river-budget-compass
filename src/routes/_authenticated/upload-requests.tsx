@@ -1,10 +1,11 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useState } from "react";
+import { toast } from "sonner";
 import { PageTitle } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { getUploadRequests } from "@/lib/accountant.functions";
+import { getUploadRequests, resendReminder } from "@/lib/accountant.functions";
 import type { UploadRequest } from "@/lib/upload-link";
 
 export const Route = createFileRoute("/_authenticated/upload-requests")({
@@ -41,6 +42,13 @@ function UploadRequests() {
   const [rows, setRows] = useState<UploadRequest[] | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [all, setAll] = useState(false);
+  const resend = useServerFn(resendReminder);
+  const doResend = async (id: string) => {
+    const r = await resend({ data: { linkId: id } });
+    if (!r.ok) { toast.error(r.error); return; }
+    toast.success("Reminder emailed");
+    setRows(await load());
+  };
 
   useEffect(() => { void load().then(setRows).catch((e) => setErr(e instanceof Error ? e.message : "Couldn't load")); }, [load]);
 
@@ -75,6 +83,14 @@ function UploadRequests() {
                   <Row label="Reminder" value={r.reminderAt ? `Sent ${when(r.reminderAt)}` : REMINDER[r.reminder]} />
                   <Row label="Confirmation to you" value={r.confirmAt ? `${when(r.confirmAt)}${r.confirmTo ? ` · ${r.confirmTo}` : ""}` : r.files ? "Not sent" : "Nothing to confirm yet"} />
                 </dl>
+                {r.reminders.length > 0 && (
+                  <ul className="mt-2 grid gap-0.5 border-l-2 border-border pl-3 text-xs text-muted-foreground" aria-label="Reminder history">
+                    {r.reminders.map((m) => <li key={m.at}>{when(m.at)} · {m.manual ? "Resent by you" : "Automatic"}{m.to ? ` · ${m.to}` : ""}</li>)}
+                  </ul>
+                )}
+                {r.canResend && (
+                  <Button size="sm" variant="outline" className="mt-2" onClick={() => doResend(r.id)}>Resend reminder</Button>
+                )}
                 <p className="mt-2 text-xs text-muted-foreground">
                   Created {day(r.createdOn)} · {r.state === "active" ? `open until ${day(r.expiresAt)}` : r.state === "expired" ? `lapsed ${day(r.expiresAt)}` : "no longer usable"}
                 </p>
