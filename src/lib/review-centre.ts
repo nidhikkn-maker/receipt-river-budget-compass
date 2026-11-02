@@ -25,7 +25,7 @@ export function centreReview(items: InboxItem[], transactions: Expense[], accoun
   for (const e of transactions) {
     const missing: string[] = [];
     if (!accounts.some(a => a.id === e.accountId && !a.archived) && !items.some(i => i.transactionId === e.id && i.type === 'missing_details' && /account/i.test(i.description))) missing.push('Source account');
-    if (['business', 'official'].includes(e.scope) && !e.department?.trim() && !e.workspaceAllocations?.length) missing.push('Organisation');
+    // Payee and organisation are optional details: bank statement lines often carry neither, so they never raise a review issue.
     if (!e.paymentMethod) missing.push('Payment method');
     if (['transfer','card_payment','loan_repayment','investment'].includes(e.txnType??'expense') && (!e.toAccountId || e.toAccountId===e.accountId || !accounts.some(a=>a.id===e.toAccountId&&!a.archived)) && !items.some(i=>i.transactionId===e.id&&i.type==='missing_details'&&/receiving account/i.test(i.description))) missing.push('Receiving account');
     for (const field of missing) augmented.push({ key: `required:${field}:${e.id}`, type: 'missing_details', transactionId: e.id, title: e.title, description: `${field} requires confirmation`, amount: e.amount, date: e.date, accountName: null, priority: 'medium', action: `Confirm ${field.toLowerCase()}` });
