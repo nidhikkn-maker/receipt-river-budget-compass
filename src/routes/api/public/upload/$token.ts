@@ -19,6 +19,10 @@ export const Route = createFileRoute("/api/public/upload/$token")({
       GET: async ({ params }) => {
         const found = await lookup(params.token);
         if (!found || linkState(found.link) !== "active") return inactive();
+        // One "opened" entry per link per hour keeps the history readable.
+        const hourAgo = new Date(Date.now() - 3600_000).toISOString();
+        const { count } = await found.admin.from("upload_link_events").select("id", { count: "exact", head: true }).eq("link_id", found.link.id).eq("kind", "opened").gte("at", hourAgo);
+        if (!count) await found.admin.from("upload_link_events").insert({ owner_id: found.link.owner_id, link_id: found.link.id, kind: "opened" });
         const { data: p } = await found.admin.from("profiles").select("full_name").eq("id", found.link.owner_id).maybeSingle();
         const first = (p?.full_name ?? "").split(" ")[0] || "your client";
         return Response.json({ active: true, ownerName: first, remaining: found.link.max_files - found.link.file_count, expiresAt: found.link.expires_at });
@@ -39,6 +43,7 @@ export const Route = createFileRoute("/api/public/upload/$token")({
         if (up.error) return Response.json({ error: "Upload failed, please try again" }, { status: 500 });
         const ins = await found.admin.from("accountant_uploads").insert({ owner_id: owner as string, link_id: found.link.id, file_path: path, file_name: name, size_bytes: file.size, mime_type: file.type || "application/octet-stream" });
         if (ins.error) { await found.admin.storage.from("statement-uploads").remove([path]); return Response.json({ error: "Upload failed, please try again" }, { status: 500 }); }
+        await found.admin.from("upload_link_events").insert({ owner_id: owner as string, link_id: found.link.id, kind: "uploaded", detail: name });
         return Response.json({ ok: true });
       },
     },

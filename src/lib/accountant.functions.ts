@@ -1,10 +1,11 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireRealAccount } from "@/lib/real-account-middleware";
-import { linkState, LINK_DAYS, MAX_FILES, PUBLIC_ORIGIN } from "@/lib/upload-link";
+import { linkHistory, type LinkEvent, linkState, LINK_DAYS, MAX_FILES, PUBLIC_ORIGIN } from "@/lib/upload-link";
 
 export interface AccountantInfo {
   name: string; email: string; sendDay: number; autoSend: boolean;
+  history: LinkEvent[];
   link: null | { url: string; state: string; expiresAt: string; files: number; maxFiles: number; lastEmailedAt: string | null };
 }
 
@@ -12,12 +13,15 @@ export const getAccountant = createServerFn({ method: "POST" })
   .middleware([requireRealAccount])
   .handler(async ({ context }): Promise<AccountantInfo> => {
     const { supabase, userId } = context;
-    const [{ data: c }, { data: l }] = await Promise.all([
+    const [{ data: c }, { data: l }, { data: ev }, { data: links }] = await Promise.all([
       supabase.from("accountant_contacts").select("*").eq("owner_id", userId).maybeSingle(),
       supabase.from("upload_links").select("*").eq("owner_id", userId).order("created_at", { ascending: false }).limit(1).maybeSingle(),
+      supabase.from("upload_link_events").select("link_id, kind, detail, at").eq("owner_id", userId).order("at", { ascending: false }).limit(200),
+      supabase.from("upload_links").select("id, expires_at, revoked_at").eq("owner_id", userId).order("created_at", { ascending: false }).limit(50),
     ]);
     const { tokenFor } = await import("@/lib/upload-link.server");
     return {
+      history: linkHistory((ev ?? []).map((e) => ({ linkId: e.link_id, kind: e.kind as LinkEvent["kind"], detail: e.detail, at: e.at })), links ?? []).slice(0, 200),
       name: c?.name ?? "Mr. Durai", email: c?.email ?? "", sendDay: c?.send_day ?? 1, autoSend: c?.auto_send ?? true,
       link: l ? { url: `${PUBLIC_ORIGIN}/u/${await tokenFor(l.id)}`, state: linkState(l), expiresAt: l.expires_at, files: l.file_count, maxFiles: l.max_files, lastEmailedAt: l.last_emailed_at } : null,
     };
@@ -54,8 +58,9 @@ export const sendLinkNow = createServerFn({ method: "POST" })
 export const turnOffLink = createServerFn({ method: "POST" })
   .middleware([requireRealAccount])
   .handler(async ({ context }) => {
-    const { error } = await context.supabase.from("upload_links").update({ revoked_at: new Date().toISOString() }).eq("owner_id", context.userId).is("revoked_at", null);
+    const { data: open, error } = await context.supabase.from("upload_links").update({ revoked_at: new Date().toISOString() }).eq("owner_id", context.userId).is("revoked_at", null).select("id");
     if (error) throw new Error("Couldn't turn off the link");
+    if (open?.length) await context.supabase.from("upload_link_events").insert(open.map((l) => ({ owner_id: context.userId, link_id: l.id, kind: "turned_off" })));
     return { ok: true };
   });
 

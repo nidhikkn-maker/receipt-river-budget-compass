@@ -63,6 +63,7 @@ export function AccountantSettings() {
           {l.lastEmailedAt ? ` · emailed ${fmt(l.lastEmailedAt)}` : ""}
         </p>
       )}
+      <LinkHistory items={info.history} name={info.name} />
       <p className="text-xs text-muted-foreground">Uploaded files appear in Statement Desk for matching. The link never gives access to your app or records.</p>
 
       <Dialog open={!!edit} onOpenChange={(o) => !o && setEdit(null)}>
@@ -87,5 +88,33 @@ export function AccountantSettings() {
         </DialogContent>
       </Dialog>
     </div>
+  );
+}
+
+const LABEL: Record<string, string> = { created: "New link created", emailed: "Link emailed", opened: "Link opened", uploaded: "File uploaded", turned_off: "Link turned off", expired: "Link expired" };
+
+function LinkHistory({ items, name }: { items: AccountantInfo["history"]; name: string }) {
+  const [all, setAll] = useState(false);
+  if (!items.length) return <p className="text-sm text-muted-foreground">No link activity yet.</p>;
+  const shown = all ? items : items.slice(0, 8);
+  const when = (d: string) => new Date(d).toLocaleString("en-IN", { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" });
+  return (
+    <section aria-label="Link activity" className="rounded-lg border">
+      <p className="border-b px-3 py-2 text-sm font-medium">Link activity</p>
+      <ul className="divide-y">
+        {shown.map((e, i) => (
+          <li key={i} className="flex items-baseline gap-3 px-3 py-2 text-sm">
+            <span className="min-w-0 flex-1">
+              {LABEL[e.kind] ?? e.kind}
+              {e.kind === "emailed" && e.detail ? <span className="text-muted-foreground"> to {e.detail}</span> : null}
+              {e.kind === "opened" ? <span className="text-muted-foreground"> by {name}</span> : null}
+              {e.kind === "uploaded" && e.detail ? <span className="block truncate text-xs text-muted-foreground">{e.detail}</span> : null}
+            </span>
+            <span className="shrink-0 text-xs text-muted-foreground">{when(e.at)}</span>
+          </li>
+        ))}
+      </ul>
+      {items.length > 8 && <button type="button" className="w-full border-t px-3 py-2 text-sm text-primary" onClick={() => setAll(!all)}>{all ? "Show less" : `Show all ${items.length}`}</button>}
+    </section>
   );
 }
