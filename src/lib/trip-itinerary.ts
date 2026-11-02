@@ -69,7 +69,7 @@ const icsDate = (d: string) => d.replace(/-/g, "");
 const icsStamp = (iso: string) => new Date(iso).toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "");
 const nextIsoDay = (d: string) => new Date(Date.parse(d + "T00:00:00Z") + 864e5).toISOString().slice(0, 10);
 
-export interface CalendarEvent { uid: string; title: string; note: string; start: string; end: string; location?: string }
+export interface CalendarEvent { uid: string; title: string; note: string; start: string; end: string; location?: string | undefined }
 
 /** The events a trip calendar export would contain, in export order. Recomputed from live trip data, so re-exporting always reflects the latest edits. */
 export function calendarEvents(t: TravelTrip): CalendarEvent[] {
