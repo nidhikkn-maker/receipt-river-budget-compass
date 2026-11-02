@@ -108,7 +108,7 @@ export function requestReport(links: RequestLink[], events: LinkEvent[], uploads
   for (const e of events) { const a = evOf.get(e.linkId) ?? []; a.push(e); evOf.set(e.linkId, a); }
   const upOf = new Map<string, RequestUpload[]>();
   for (const u of uploads) { const a = upOf.get(u.linkId) ?? []; a.push(u); upOf.set(u.linkId, a); }
-  const latest = (list: { at: string }[], kind: LinkEvent["kind"]) =>
+  const latest = (list: LinkEvent[], kind: LinkEvent["kind"]) =>
     list.filter((e) => e.kind === kind).sort((a, b) => b.at.localeCompare(a.at))[0] ?? null;
 
   return [...links]

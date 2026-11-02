@@ -65,14 +65,18 @@ describe("monthly upload request report", () => {
   });
   const ev = (kind: LinkEvent["kind"], at: string, detail: string | null = null): LinkEvent => ({ linkId: "L1", kind, detail, at });
   const up = (fileName: string, uploadedAt: string, consumedAt: string | null = null): RequestUpload => ({ linkId: "L1", fileName, uploadedAt, consumedAt });
+  const one = (l: RequestLink, events: LinkEvent[] = [], ups: RequestUpload[] = []) => {
+    const r = requestReport([l], events, ups, now).find((x) => x.id === l.id);
+    if (!r) throw new Error("report dropped this request");
+    return r;
+  };
 
   it("names the month and reports the email, opens, files and what still waits", () => {
-    const [r] = requestReport(
-      [link({ file_count: 2 })],
+    const r = one(
+      link({ file_count: 2 }),
       [ev("created", "2026-11-01T04:00:00Z"), ev("emailed", "2026-11-01T04:00:05Z", "durai@example.com"),
         ev("opened", "2026-11-03T09:00:00Z"), ev("opened", "2026-11-04T09:00:00Z"), ev("uploaded", "2026-11-04T09:05:00Z", "HDFC.pdf")],
       [up("HDFC.pdf", "2026-11-04T09:05:00Z"), up("AMEX.pdf", "2026-11-05T09:05:00Z", "2026-11-06T09:00:00Z")],
-      now,
     );
     expect(r.month).toBe("November 2026");
     expect(r.state).toBe("active");
@@ -86,32 +90,29 @@ describe("monthly upload request report", () => {
 
   it("says a reminder is owed a few days after the email, then sent once it went", () => {
     const events = [ev("emailed", "2026-11-01T04:00:00Z", "durai@example.com")];
-    expect(requestReport([link()], events, [], now)[0].reminder).toBe("due");
-    const [sent] = requestReport([link()], [...events, ev("reminded", "2026-11-06T04:00:00Z", "durai@example.com")], [], now);
+    expect(one(link(), events).reminder).toBe("due");
+    const sent = one(link(), [...events, ev("reminded", "2026-11-06T04:00:00Z", "durai@example.com")]);
     expect(sent.reminder).toBe("sent");
     expect(sent.reminderAt).toBe("2026-11-06T04:00:00Z");
   });
 
   it("waits before the reminder day and never reminds a link that was not emailed", () => {
-    const recent = link({ last_emailed_at: "2026-11-08T04:00:00Z" });
-    expect(requestReport([recent], [ev("emailed", "2026-11-08T04:00:00Z")], [], now)[0].reminder).toBe("waiting");
-    expect(requestReport([link({ last_emailed_at: null })], [], [], now)[0].reminder).toBe("closed");
+    expect(one(link({ last_emailed_at: "2026-11-08T04:00:00Z" }), [ev("emailed", "2026-11-08T04:00:00Z")]).reminder).toBe("waiting");
+    expect(one(link({ last_emailed_at: null })).reminder).toBe("closed");
   });
 
   it("closes the reminder once a link has lapsed or been turned off with nothing uploaded", () => {
-    const off = link({ revoked_at: "2026-11-08T04:00:00Z" });
-    expect(requestReport([off], [ev("emailed", "2026-11-01T04:00:00Z")], [], now)[0].reminder).toBe("closed");
-    const lapsed = link({ expires_at: "2026-11-09T04:00:00Z" });
-    const [r] = requestReport([lapsed], [ev("emailed", "2026-11-01T04:00:00Z")], [], now);
+    expect(one(link({ revoked_at: "2026-11-08T04:00:00Z" }), [ev("emailed", "2026-11-01T04:00:00Z")]).reminder).toBe("closed");
+    const r = one(link({ expires_at: "2026-11-09T04:00:00Z" }), [ev("emailed", "2026-11-01T04:00:00Z")]);
     expect(r.state).toBe("expired");
     expect(r.reminder).toBe("closed");
   });
 
   it("reports the confirmation email to you, and flags files that never produced one", () => {
-    const withNote = requestReport([link({ file_count: 1 })], [ev("uploaded", "2026-11-04T09:05:00Z", "HDFC.pdf"), ev("owner_notified", "2026-11-04T09:06:00Z", "krupa@ledgerline.biz")], [up("HDFC.pdf", "2026-11-04T09:05:00Z")], now)[0];
+    const withNote = one(link({ file_count: 1 }), [ev("uploaded", "2026-11-04T09:05:00Z", "HDFC.pdf"), ev("owner_notified", "2026-11-04T09:06:00Z", "krupa@ledgerline.biz")], [up("HDFC.pdf", "2026-11-04T09:05:00Z")]);
     expect(withNote.confirmAt).toBe("2026-11-04T09:06:00Z");
     expect(withNote.confirmTo).toBe("krupa@ledgerline.biz");
-    const missing = requestReport([link({ file_count: 1 })], [ev("uploaded", "2026-11-04T09:05:00Z", "HDFC.pdf")], [up("HDFC.pdf", "2026-11-04T09:05:00Z")], now)[0];
+    const missing = one(link({ file_count: 1 }), [ev("uploaded", "2026-11-04T09:05:00Z", "HDFC.pdf")], [up("HDFC.pdf", "2026-11-04T09:05:00Z")]);
     expect(missing.confirmAt).toBeNull();
     expect(missing.files).toBe(1);
   });
@@ -120,7 +121,7 @@ describe("monthly upload request report", () => {
     const older = link({ id: "L0", created_at: "2026-10-01T04:00:00Z" });
     const rows = requestReport([link({ file_count: MAX_FILES }), older], [], [], now);
     expect(rows.map((r) => r.month)).toEqual(["November 2026", "October 2026"]);
-    expect(rows[0].state).toBe("full");
+    expect(rows.at(0)?.state).toBe("full");
   });
 });
 
