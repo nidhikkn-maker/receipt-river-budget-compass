@@ -2,7 +2,7 @@
 ## New expense airy receipt follow-up (2 Nov 2026)
 - [x] Workspace and Date print as the same side-by-side rows as Category, Paid with and Note; workspace choice opens as a picker on the right, date keeps its calendar field with Today/Yesterday under it.
 - [x] 1,177 tests pass; five-row iPhone check on real data confirms every label left with its value right, workspace switching, date pills and the split panel all work inside the row; build OK.
-- [ ] Publish the airy-receipt New expense (rows, aliases, smart-default settings, shop-name account fix) to ledgerline.biz; blocked only on a fresh security scan, the last one predates these changes.
+- [x] Published the airy-receipt New expense (rows, aliases, smart-default settings, shop-name account fix) to ledgerline.biz after a fresh scan; publish scheduled, deployment timing an estimate.
 ## iPhone receipt viewer verification (2 Nov 2026)
 
 - [ ] Verify double-tap zoom, gentle pinch and drag-pan for photo and PDF receipts on the owner's real iPhone; blocked — no physical device access from this sandbox, only touch-emulated browser checks are possible here.
