@@ -31,8 +31,37 @@ describe("repeat expense", () => {
     expect(r.favourites.map((e) => e.id)).toEqual(["a"]);
     expect(r.recent.map((e) => e.id)).toEqual(["b"]);
   });
-  it("suggests the last used live account and workspace", () => {
+  it("never suggests a closed account", () => {
     const s = smartDefaults([{ date: "2026-10-01", accountId: "old", scope: "business" }, { date: "2026-10-02", accountId: "gone", scope: "family" }], ["old"]);
-    expect(s).toEqual({ accountId: "old", scope: "family" });
+    expect(s.accountId).toBe("old");
+  });
+  it("picks the usual category, account, workspace and payment method, favouring recent entries", () => {
+    const h = [
+      { date: "2026-10-05", category: "Food", accountId: "hdfc", scope: "personal" as const, paymentMethod: "upi" },
+      { date: "2026-10-04", category: "Food", accountId: "hdfc", scope: "personal" as const, paymentMethod: "upi" },
+      { date: "2026-10-03", category: "Fuel", accountId: "amex", scope: "business" as const, paymentMethod: "card" },
+      { date: "2026-10-02", category: "Fuel", accountId: "amex", scope: "business" as const, paymentMethod: "card" },
+      { date: "2026-10-01", category: "Fuel", accountId: "amex", scope: "business" as const, paymentMethod: "card" },
+    ];
+    // Three older Fuel entries (0.81 + 0.73 + 0.66 ≈ 2.2) outweigh two newer Food ones (1 + 0.9 = 1.9).
+    expect(smartDefaults(h, ["hdfc", "amex"])).toMatchObject({ category: "Fuel", accountId: "amex", scope: "business", paymentMethod: "card", basis: "habit" });
+    expect(smartDefaults(h.slice(0, 4), ["hdfc", "amex"])).toMatchObject({ category: "Food", accountId: "hdfc", scope: "personal" });
+  });
+  it("uses that merchant's own history when the merchant is known", () => {
+    const h = [
+      { date: "2026-10-05", category: "Food", accountId: "hdfc", scope: "personal" as const, merchant: "Swiggy" },
+      { date: "2026-10-01", category: "Fuel", accountId: "amex", scope: "business" as const, merchant: "Indian Oil" },
+    ];
+    expect(smartDefaults(h, ["hdfc", "amex"], { merchant: " indian oil " })).toMatchObject({ category: "Fuel", accountId: "amex", scope: "business", basis: "merchant", merchant: "Indian Oil" });
+    expect(smartDefaults(h, ["hdfc", "amex"], { merchant: "New shop" })).toMatchObject({ category: "Food", basis: "habit" });
+  });
+  it("skips archived categories and retired workspaces, and only counts expenses", () => {
+    const h = [
+      { date: "2026-10-05", category: "Old", scope: "official" as const },
+      { date: "2026-10-04", category: "Salary", scope: "personal" as const, txnType: "income" as const },
+      { date: "2026-10-03", category: "Food", scope: "family" as const },
+    ];
+    expect(smartDefaults(h, [], { categories: ["Food", "Salary"], scopes: ["personal", "family", "business"] })).toMatchObject({ category: "Food", scope: "family" });
+    expect(smartDefaults([], []).basis).toBeNull();
   });
 });

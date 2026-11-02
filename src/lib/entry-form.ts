@@ -75,8 +75,34 @@ export function repeatDraft(e: RepeatSource, trips: TripWindow[], today: string)
 }
 
 /** Last confirmed account and workspace for plain expenses, used only when nothing else has chosen them. */
-export function smartDefaults(history: { date: string; accountId?: string | null; scope: Scope; txnType?: TxnType }[], liveAccountIds: string[]) {
-  const sorted = history.filter((e) => (e.txnType ?? "expense") === "expense").sort((a, b) => b.date.localeCompare(a.date));
-  const acct = sorted.find((e) => e.accountId && liveAccountIds.includes(e.accountId))?.accountId ?? null;
-  return { accountId: acct, scope: sorted[0]?.scope ?? null };
+export interface SmartDefaultsPast { date: string; createdAt?: string | null; accountId?: string | null; scope: Scope; txnType?: TxnType; category?: string | null; merchant?: string | null; paymentMethod?: string | null }
+export interface SmartDefaults { accountId: string | null; scope: Scope | null; category: string | null; paymentMethod: string | null; basis: "merchant" | "habit" | null; merchant?: string }
+
+/**
+ * Starting choices for a routine expense. Recent entries count more than old ones (each step back weighs 0.9×,
+ * looking at the last 40 expenses), so a habit that changed last week wins over one from last year.
+ * When a merchant is given and has history, only that merchant's entries are used. Archived categories and
+ * closed accounts are never suggested. These are only starting values — the person can change any of them.
+ */
+export function smartDefaults(history: SmartDefaultsPast[], liveAccountIds: string[], opts: { categories?: readonly string[]; merchant?: string | null; scopes?: readonly Scope[] } = {}): SmartDefaults {
+  const sorted = history.filter((e) => (e.txnType ?? "expense") === "expense").sort((a, b) => (b.date + (b.createdAt ?? "")).localeCompare(a.date + (a.createdAt ?? "")));
+  const key = (opts.merchant ?? "").trim().toLowerCase();
+  const forMerchant = key ? sorted.filter((e) => (e.merchant ?? "").trim().toLowerCase() === key) : [];
+  const pool = (forMerchant.length ? forMerchant : sorted).slice(0, 40);
+  const top = <T extends string>(pick: (e: SmartDefaultsPast) => string | null | undefined, ok: (v: string) => boolean): T | null => {
+    const score = new Map<string, number>();
+    pool.forEach((e, i) => { const v = pick(e); if (v && ok(v)) score.set(v, (score.get(v) ?? 0) + 0.9 ** i); });
+    let best: string | null = null; let bestScore = 0;
+    for (const [v, n] of score) if (n > bestScore + 1e-9) { best = v; bestScore = n; }
+    return best as T | null;
+  };
+  const merchantName = forMerchant[0]?.merchant?.trim();
+  return {
+    accountId: top((e) => e.accountId, (v) => liveAccountIds.includes(v)),
+    scope: top<Scope>((e) => e.scope, (v) => !opts.scopes || (opts.scopes as readonly string[]).includes(v)),
+    category: top((e) => e.category, (v) => !opts.categories || opts.categories.includes(v)),
+    paymentMethod: top((e) => e.paymentMethod, () => true),
+    basis: pool.length ? (forMerchant.length ? "merchant" : "habit") : null,
+    ...(forMerchant.length && merchantName ? { merchant: merchantName } : {}),
+  };
 }

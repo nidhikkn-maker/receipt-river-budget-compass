@@ -18,7 +18,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
-  BASE_CURRENCY, CATEGORIES, CURRENCIES, PAYMENT_LABEL, PAYMENT_METHODS, convert, money, splitEvenly,
+  ACTIVE_SCOPES, BASE_CURRENCY, CATEGORIES, CURRENCIES, PAYMENT_LABEL, PAYMENT_METHODS, convert, money, splitEvenly,
   type Category, type PaymentMethod, type Scope, type ReceiptDetails,
 } from "@/lib/expenses";
 import { tagValue } from "@/lib/preferences";
@@ -307,14 +307,32 @@ function NewExpense() {
     if (window.history.length > 1) window.history.back(); else nav({ to: "/dashboard" });
   };
 
-  const defaultsApplied = useRef(false);
+  // Smart defaults: start a routine expense with your usual category, account, payment method and workspace,
+  // then re-check once the merchant is known. A field is only changed while it still holds the value we put
+  // there, so anything you (or a scan, link, draft or repeat) chose is never overwritten.
+  const defaultsBase = useRef<{ category: string; accountId: string; scope: string; paymentMethod: string } | null>(null);
+  const [defaultsNote, setDefaultsNote] = useState<{ basis: "merchant" | "habit"; merchant?: string } | null>(null);
+  const liveAccountKey = liveAccounts.map((a) => a.id).join(",");
   useEffect(() => {
-    if (edit || defaultsApplied.current || !expenses.length) return;
-    defaultsApplied.current = true;
-    const d = smartDefaults(expenses, liveAccounts.map((a) => a.id));
-    if (d.accountId && !search.account) setAccountId((cur) => (cur === "none" ? d.accountId! : cur));
-    if (d.scope && !search.scope && !search.trip) setScope(d.scope);
-  }, [edit, expenses.length]);
+    if (edit || search.draft || txnType !== "expense" || !expenses.length) return;
+    const base = defaultsBase.current ?? { category, accountId, scope, paymentMethod };
+    const d = smartDefaults(expenses, liveAccounts.map((a) => a.id), { merchant, scopes: ACTIVE_SCOPES, categories: preferences.categories.filter((c) => !c.archived).map((c) => c.name) });
+    if (!d.basis) return;
+    const filled = new Set<string>();
+    if (d.category && category === base.category && d.category !== category) { setCategory(d.category as Category); filled.add("category"); }
+    if (d.accountId && !search.account && accountId === base.accountId && d.accountId !== accountId) { setAccountId(d.accountId); filled.add("payment"); }
+    if (d.paymentMethod && !search.payment && instrumentId === "none" && paymentMethod === base.paymentMethod && d.paymentMethod !== paymentMethod && (PAYMENT_METHODS as readonly string[]).includes(d.paymentMethod)) setPaymentMethod(d.paymentMethod as PaymentMethod);
+    if (d.scope && !search.scope && !search.trip && !wsSplit.on && scope === base.scope && d.scope !== scope) { setScope(d.scope); filled.add("workspace"); }
+    defaultsBase.current = {
+      category: base.category === category && d.category ? d.category : "\u0000",
+      accountId: !search.account && base.accountId === accountId && d.accountId ? d.accountId : "\u0000",
+      scope: !search.scope && !search.trip && base.scope === scope && d.scope ? d.scope : "\u0000",
+      paymentMethod: base.paymentMethod === paymentMethod && d.paymentMethod ? d.paymentMethod : "\u0000",
+    };
+    if (filled.size) setAutoFilled((x) => new Set([...x, ...filled]));
+    setDefaultsNote({ basis: d.basis, ...(d.merchant ? { merchant: d.merchant } : {}) });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [edit, search.draft, txnType, expenses.length, liveAccountKey, merchant.trim().toLowerCase()]);
   const [repeatOpen, setRepeatOpen] = useState(false);
   const [repeatedFrom, setRepeatedFrom] = useState<string | null>(null);
   const favs = preferences.favouriteEntries ?? [];
@@ -817,6 +835,7 @@ function NewExpense() {
 
         <fieldset disabled={!confirmed || reading || saving} className={cn("receipt-paper grid min-w-0 gap-3 px-5", !confirmed && "opacity-50")}>
           {TYPE_HINT[txnType] && <p className="text-xs text-muted-foreground">{TYPE_HINT[txnType]}</p>}
+          {defaultsNote && !editing && txnType === "expense" && <p role="status" className="flex items-center gap-1.5 text-xs text-muted-foreground"><Sparkles aria-hidden className="h-3 w-3 text-primary" />{defaultsNote.basis === "merchant" ? `Filled with what you usually choose for ${defaultsNote.merchant}` : "Filled with your usual choices"} — change anything before saving.</p>}
           {!isMove(txnType)&&<PayeePicker payees={preferences.payees??[]} merchant={merchant} onSelect={setMerchant}/>}
           {/* Category */}
           {!isMove(txnType) && (
