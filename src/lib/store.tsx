@@ -143,6 +143,8 @@ interface Ctx {
   saveReview: (r: Omit<SavedReview, "id" | "generatedAt">) => Promise<void>;
 }
 export interface SavedReview { id: string; month: string; figures: unknown; dataHash: string; narrative: string; dataCutoff: string; generatedAt: string }
+// Columns Home needs for balances, dues and monthly totals; omits receipts, notes and receipt details.
+const LITE_COLUMNS = "id,category_revision,correction_revision,department,title,merchant,category,scope,member_id,splits,amount,currency,original_amount,fx_rate,payment_method,reconciled_at,statement_ref,updated_at,expense_date,txn_type,account_id,to_account_id,payment_instrument_id,payee_id,tags,workspace_allocations,reimbursement_status,adjustment_sign,allocations,reimbursement,transfer_counterpart_of,trip_id,principal,interest,created_at";
 const StoreCtx = createContext<Ctx | null>(null);
 const r2 = (n: number) => Math.round(n * 100) / 100;
 const today = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; };
@@ -172,6 +174,8 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
   const [preferences, setPreferences] = useState<FinancePreferences>(defaultPreferences);
 
   const firstLoad = useRef(true);
+  // Only the very first cloud load uses the light expense query; later loads always fetch full records.
+  const hadSnapshot = useRef(false);
   const inFlight = useRef<Promise<void> | null>(null);
   const queued = useRef<Promise<void> | null>(null);
   // Overlapping refresh calls share requests; a call made mid-load gets one follow-up load so saves are never missed.
@@ -187,6 +191,7 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
       firstLoad.current = false;
       const cached = await getSnapshot<Snapshot>(userId).catch(() => undefined);
       if (cached) {
+        hadSnapshot.current = true;
         setName(cached.name); setMembers(cached.members); setExpenses(cached.expenses); setAccounts(cached.accounts); setCommitments(cached.commitments);
         setLoans(cached.rawLoans ?? []); setGoals(cached.goals); setBudgets(cached.budgets); setPreferences(normalizePreferences(cached.preferences));
         setValuations(cached.valuations ?? []); setDocuments(cached.documents ?? []);
@@ -205,9 +210,15 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
       supabase.from("department_budgets").select("department,amount"),
     ]);
     restP.catch(() => {});
+    // Cold open (no device copy): fetch only the columns Home's totals need, then the full records in the background.
+    const lite = !hadSnapshot.current;
+    const fullP = lite ? supabase.from("expenses").select("*").order("expense_date", { ascending: false }).order("created_at", { ascending: false }) : null;
+    fullP?.then(() => {}, () => {});
     const [p, e, b, a, c, l, pref] = await Promise.all([
       supabase.from("profiles").select("full_name").eq("id", userId).maybeSingle(),
-      supabase.from("expenses").select("*").order("expense_date", { ascending: false }).order("created_at", { ascending: false }),
+      lite
+        ? supabase.from("expenses").select(LITE_COLUMNS).order("expense_date", { ascending: false }).order("created_at", { ascending: false }) as unknown as typeof fullP & object
+        : supabase.from("expenses").select("*").order("expense_date", { ascending: false }).order("created_at", { ascending: false }),
       supabase.from("category_budgets").select("category, monthly_amount"),
       supabase.from("accounts").select("*").order("created_at"),
       supabase.from("commitments").select("*").order("next_due"),
@@ -233,7 +244,7 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
       includeInCash: x.include_in_cash, details: (x.details as unknown as AccountDetails) ?? {},
     })));
     setName(p.data?.full_name ?? "");
-    setExpenses((e.data ?? []).map((x) => ({
+    const toExpense = (x: NonNullable<typeof e.data>[number]): Expense => ({
       id: x.id, categoryRevision: x.category_revision, correctionRevision: x.correction_revision, department: x.department, title: x.title, merchant: x.merchant, category: x.category as Category, scope: x.scope as Scope, memberId: x.member_id, splits: (x.splits as unknown as Split[]) ?? [],
       amount: Number(x.amount), currency: x.currency, originalAmount: Number(x.original_amount ?? x.amount), fxRate: Number(x.fx_rate),
       paymentMethod: x.payment_method as PaymentMethod, reconciledAt: x.reconciled_at, statementRef: x.statement_ref, updatedAt: x.updated_at,
@@ -243,11 +254,17 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
       adjustmentSign: x.adjustment_sign === -1 ? -1 : 1,
       allocations: (x.allocations as unknown as Allocation[]) ?? [], reimbursement: (x.reimbursement as unknown as ReimbursementInfo) ?? {},
       transferCounterpartOf: x.transfer_counterpart_of ?? null, tripId: x.trip_id, principal: x.principal == null ? null : Number(x.principal), interest: x.interest == null ? null : Number(x.interest),
-    })));
+    });
+    setExpenses((e.data ?? []).map(toExpense));
     const bud: Budgets = {};
     for (const x of b.data ?? []) bud[x.category as Category] = Number(x.monthly_amount);
     setBudgets(bud);
     setLoading(false);
+    if (fullP) {
+      const full = await fullP;
+      if (full.error) toast.error("Some records couldn't load — pull to refresh or try again");
+      else setExpenses((full.data ?? []).map(toExpense));
+    }
     const [m, g, v, d, db] = await restP;
     if ([g, v, d].some((x) => x.error)) toast.error("Some records couldn't load — pull to refresh or try again");
     setDepartmentBudgetError(!!db.error);
@@ -260,6 +277,7 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
       transactionId: x.transaction_id, accountId: x.account_id, loanId: x.loan_id, expiresOn: x.expires_on, createdAt: x.created_at,
     })));
     setMembers(m.data ?? []);
+    hadSnapshot.current = true;
     setSyncState("synced");
     setLastSyncedAt(new Date().toISOString());
     } catch (err) {
