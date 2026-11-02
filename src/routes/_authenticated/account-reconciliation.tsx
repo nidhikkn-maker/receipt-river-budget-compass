@@ -2,7 +2,6 @@ import { SectionTabs } from "@/components/SectionTabs";
 import { createFileRoute, Link } from '@tanstack/react-router';
 import { useState } from 'react';
 import { PageTitle } from '@/components/AppShell';
-import { FinancialInboxNav } from '@/components/FinancialInboxNav';
 import { AccountStatementStatus } from '@/components/AccountStatementStatus';
 import { AccountsCheck, Reimbursements } from '@/components/InboxLegacyTools';
 import { ExpenseDialog } from '@/components/ExpenseDialog';

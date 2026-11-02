@@ -1,4 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { SectionTabs } from "@/components/SectionTabs";
+import { AccountantSettings } from "@/components/AccountantSettings";
 import { useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Download, Inbox, ShieldCheck, Upload, X } from "lucide-react";
@@ -25,6 +27,7 @@ import { totals, type StmtFile } from "@/lib/statement-pipeline/line";
 import { AccountantInbox } from "@/components/AccountantInbox";
 
 export const Route = createFileRoute("/_authenticated/statements")({
+  validateSearch: (s: Record<string, unknown>): { tab?: "accountant" } => (s["tab"] === "accountant" ? { tab: "accountant" } : {}),
   head: () => ({
     meta: [
       { title: "Statement Desk · Ledgerline" },
@@ -48,6 +51,7 @@ interface Loaded {
 }
 
 function StatementDeskPage() {
+  const { tab } = Route.useSearch();
   const store = useStore();
   const storeRef = useRef(store);
   storeRef.current = store;
@@ -243,8 +247,16 @@ function StatementDeskPage() {
 
   const askKeys = plan?.accounts.flatMap((a) => a.ask.map((d) => d.line.key)) ?? [];
 
+  if (tab === "accountant") return (
+    <div className="mx-auto max-w-5xl space-y-4 p-4">
+      <h1 className="flex items-center gap-2 text-xl font-semibold"><Inbox className="size-5" /> Statement Desk</h1>
+      <SectionTabs group="statements" active="accountant" />
+      <AccountantSettings />
+    </div>
+  );
   return (
     <div className="mx-auto max-w-5xl space-y-4 p-4">
+      <SectionTabs group="statements" active="upload" />
       <header className="space-y-1">
         <h1 className="flex items-center gap-2 text-xl font-semibold"><Inbox className="size-5" /> Statement Desk</h1>
         <p className="flex items-start gap-1.5 text-sm text-muted-foreground"><ShieldCheck className="mt-0.5 size-4 shrink-0" /> Drop in as many statements as you like — PDF, CSV or Excel. They are read on this device, matched against your records, and nothing is saved until you say so.</p>
