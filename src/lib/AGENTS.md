@@ -57,3 +57,4 @@
 - statement-crosscheck.ts parses balance-column PDF statements on-device (direction from running balance) and only reports matches; the cross-check page never uploads, stores or posts statements.
 - Forex card statements (forex-statement.ts) reconcile per currency wallet in the wallet's own currency; pass-through pairs (pass-through.ts) become transfers only via an explicit, undoable correction through a chosen holding account.
 - Statement Desk upload history lives in owner preferences (statementUploads, max 10) so undo works from any device; scanned/photo statements are read by the existing server extractor and never auto-post (no printed balances). Coverage is derived from reconciled/statement-ref entries in statement-pipeline/coverage.ts.
+- New entry suggestions (single-entry.ts) reuse these rules as tap-to-apply hints only; strong matches block Save until confirmed separate, so typed and statement entries share one rule set.
