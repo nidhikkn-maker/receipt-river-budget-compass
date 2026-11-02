@@ -491,3 +491,7 @@
 - [x] Measured first Home load vs sign-in at three mobile speeds on the live site
 - [x] Home card-dues chart mounts only when the breakdown is opened (first-load bytes unchanged: the chart library still arrives through background page warm-up)
 - [ ] On a genuinely slow line (~400 kbit/s) the first Home screen is still about twice the sign-in screen: it needs your accounts, expenses and commitments data, roughly double what sign-in downloads.
+
+- [ ] Accountant link: safe end-to-end upload test
+- [ ] Accountant link activity history (sent, opened, expired, uploads)
+- [ ] Accountant link: domain email sending (needs email domain setup)
