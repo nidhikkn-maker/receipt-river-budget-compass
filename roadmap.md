@@ -474,3 +474,4 @@
 - [x] Action menu for offline entries (retry / discard)
 - [ ] Timed opening check: measure how long the app takes from tap to first usable screen (preview + live), and what blocks it
 - [ ] Face ID appears by itself right after the first email sign-in, with no tap needed; MPIN and password stay as fallbacks
+- [ ] Make login time as low as possible (measure, then remove every avoidable wait before the home screen)
