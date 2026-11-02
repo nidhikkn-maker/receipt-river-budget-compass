@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
-import { PasskeySettings } from "@/components/DeviceLock";
+import { MpinSettings, PasskeySettings } from "@/components/DeviceLock";
 import { FinanceSettings } from "@/components/FinanceSettings";
 import { AppearanceSettings } from "@/components/AppearanceSettings";
 import { PushSettings } from "@/components/PushSettings";
@@ -129,7 +129,7 @@ function Settings() {
       <PageTitle eyebrow="Settings" title="Settings" sub={`${transactions.length} entries · ${accounts.length} accounts`} />
       <div className="mb-5 flex flex-wrap gap-2"><Button asChild variant="outline"><Link to="/auth">Sign in / account</Link></Button><Button asChild variant="outline"><Link to="/classification-rules">Transaction classification rules</Link></Button></div>
       <SettingsDirectory />
-      <Fold id="security" title="Security & device unlock" hint="Face ID, passkeys and device lock"><PasskeySettings /></Fold>
+      <Fold id="security" title="Security & device unlock" hint="MPIN, Face ID and device lock"><MpinSettings /><PasskeySettings /></Fold>
       <Fold id="appearance" title="Appearance" hint="Theme, light or dark, Home layout"><AppearanceSettings /></Fold>
       <Fold id="finance" title="Finance preferences" hint="Currency, categories, tags, budgets and AI privacy"><FinanceSettings /></Fold>
       <Fold id="organisations" title="Organisations" hint="Employers, clients and reimbursement contacts"><OrganisationDirectory /></Fold>

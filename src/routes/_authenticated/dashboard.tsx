@@ -191,11 +191,11 @@ function Overview() {
       </section>
 
       {/* §3 — Essential metrics */}
-      <section hidden={hidden("metrics")} style={{ order: order("metrics") }} className="mb-5 grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <section hidden={hidden("metrics")} style={{ order: order("metrics") }} className="mb-5 mt-2 grid grid-cols-2 gap-3 lg:grid-cols-4">
         <Link to="/wealth"><Stat label="Available cash" value={live.length ? money(cash) : "—"} {...(live.length ? {} : { hint: "Add accounts" })} /></Link>
         <Stat label="Income this month" value={money(flow.income)} />
         <Link to="/plan"><Stat label="Safe to spend" value={live.length ? money(pos.safe.amount) : "—"} {...(readiness.estimated ? { hint: "Estimated" } : {})} /></Link>
-        <details className="group col-span-2 lg:col-span-1 [&[open]]:lg:col-span-4 [&>summary::-webkit-details-marker]:hidden">
+        <details className="group col-span-1 [&[open]]:col-span-2 [&[open]]:lg:col-span-4 [&>summary::-webkit-details-marker]:hidden">
           <summary className="cursor-pointer list-none" aria-label="Show card-by-card dues"><Stat label="Card dues" value={money(cardDue)} hint={cardRows.length ? `${cardRows.length} card${cardRows.length === 1 ? "" : "s"} · tap for breakdown` : "No card balances"} /></summary>
           <ul className="mt-2 divide-y rounded-2xl border bg-card px-4 text-sm">
             {cardRows.map((r) => (
