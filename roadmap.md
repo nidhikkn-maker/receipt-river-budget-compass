@@ -466,7 +466,7 @@
 - [ ] Approve E1–E7 audit corrections — waiting on user
 
 ## V5.19
-- [ ] Faster startup from Home Screen
-- [ ] Sign-in page + bottom menu alignment at tablet/desktop
-- [ ] Face ID sign-in with MPIN/password fallback (verify existing)
-- [ ] Test Face ID → MPIN → password fallback after failed attempts
+- [x] Faster startup from Home Screen
+- [x] Sign-in page + bottom menu alignment at tablet/desktop
+- [x] Face ID sign-in with MPIN/password fallback (verify existing)
+- [ ] Test Face ID fallback on a real iPhone (needs user device)
