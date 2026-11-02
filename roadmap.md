@@ -494,4 +494,4 @@
 
 - [x] Accountant link: safe end-to-end upload test
 - [x] Accountant link activity history (sent, opened, expired, uploads)
-- [ ] Accountant link: domain email sending — blocked: user must complete email domain setup
+- [x] Accountant link: domain email sending (sends once notify.ledgerline.biz finishes verifying)
