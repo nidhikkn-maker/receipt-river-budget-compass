@@ -495,3 +495,5 @@
 - [x] Accountant link: safe end-to-end upload test
 - [x] Accountant link activity history (sent, opened, expired, uploads)
 - [x] Accountant link: domain email sending (sends once notify.ledgerline.biz finishes verifying)
+- [x] Accountant link: one reminder email 4 days after the monthly link if nothing uploaded
+- [x] Accountant link: email the owner when files are uploaded (one per 30-min batch)
