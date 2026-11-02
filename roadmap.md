@@ -547,6 +547,6 @@
 - [x] Receipt total check recalculates on every item, subtotal, tax or tip edit
 
 ## Receipt viewer & field confirmation
-- [ ] Side-by-side receipt image viewer with zoom during review
-- [ ] Require confirming low-confidence merchant/date/total before saving
-- [ ] Publish after receipt changes
+- [x] Side-by-side receipt image viewer with zoom during review
+- [x] Require confirming low-confidence merchant/date/total before saving
+- [x] Publish after receipt changes
