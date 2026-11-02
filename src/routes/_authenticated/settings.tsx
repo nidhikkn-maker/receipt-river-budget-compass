@@ -15,6 +15,7 @@ import { PushSettings } from "@/components/PushSettings";
 import { OrganisationDirectory } from "@/components/OrganisationDirectory";
 import { PayeeDirectory } from '@/components/PayeeDirectory';
 import { ImportRules } from '@/components/ImportRules';
+import { AccountantSettings } from "@/components/AccountantSettings";
 import { SettingsDirectory } from "@/components/SettingsDirectory";
 import { Fold } from "@/components/Fold";
 import { useStore } from "@/lib/store";
@@ -134,6 +135,7 @@ function Settings() {
       <Fold id="finance" title="Finance preferences" hint="Currency, categories, tags, budgets and AI privacy"><FinanceSettings /></Fold>
       <Fold id="organisations" title="Organisations" hint="Employers, clients and reimbursement contacts"><OrganisationDirectory /></Fold>
       <Fold id="payees" title="Payees" hint="People and businesses you pay"><PayeeDirectory /></Fold>
+      <Fold id="accountant" title="Accountant upload link" hint="Monthly link for your accountant to upload statements"><AccountantSettings /></Fold>
       <Fold id="rules" title="Import rules" hint="How statement lines are sorted automatically"><ImportRules /></Fold>
       <Fold id="notifications" title="Notifications" hint="Reminders on this device"><PushSettings /></Fold>
       <Fold id="data" title="Data, backups & reports" hint="Back up, restore, export or delete"><div className="grid gap-3 sm:grid-cols-2">

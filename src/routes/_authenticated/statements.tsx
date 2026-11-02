@@ -22,6 +22,7 @@ import { Link } from "@tanstack/react-router";
 import { buildPlan, type AccountPlan, type StatementPlan } from "@/lib/statement-pipeline/plan";
 import { applyUpload, undoUpload, type ApplyResult } from "@/lib/statement-pipeline/apply";
 import { totals, type StmtFile } from "@/lib/statement-pipeline/line";
+import { AccountantInbox } from "@/components/AccountantInbox";
 
 export const Route = createFileRoute("/_authenticated/statements")({
   head: () => ({
@@ -77,7 +78,7 @@ function StatementDeskPage() {
   const { accounts, transactions, preferences } = store;
   const live = accounts.filter((a) => !a.archived);
 
-  const add = async (list: FileList | null) => {
+  const add = async (list: FileList | File[] | null) => {
     if (!list?.length) return;
     setBusy(true);
     setErrors([]);
@@ -248,6 +249,8 @@ function StatementDeskPage() {
         <h1 className="flex items-center gap-2 text-xl font-semibold"><Inbox className="size-5" /> Statement Desk</h1>
         <p className="flex items-start gap-1.5 text-sm text-muted-foreground"><ShieldCheck className="mt-0.5 size-4 shrink-0" /> Drop in as many statements as you like — PDF, CSV or Excel. They are read on this device, matched against your records, and nothing is saved until you say so.</p>
       </header>
+
+      <AccountantInbox onFiles={add} />
 
       <Card className="space-y-3 p-4">
         <div

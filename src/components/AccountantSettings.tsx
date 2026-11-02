@@ -51,7 +51,7 @@ export function AccountantSettings() {
             {l && l.state === "active" && <DropdownMenuItem onSelect={() => void copy(l.url)}>Copy link</DropdownMenuItem>}
             {!l || l.state !== "active" ? <DropdownMenuItem onSelect={() => void fresh(false)}>Create & copy new link</DropdownMenuItem> : null}
             {l && l.state === "active" && <DropdownMenuItem className="text-destructive" onSelect={async () => {
-              if (!(await confirmAction({ title: "Turn off upload link?", description: `${info.name} won't be able to upload with the current link. You can send a new one any time.`, confirmLabel: "Turn off" }))) return;
+              if (!(await confirmAction({ title: "Turn off upload link?", message: `${info.name} won't be able to upload with the current link. You can send a new one any time.`, confirmLabel: "Turn off" }))) return;
               await offFn(); await reload(); toast.success("Link turned off");
             }}>Turn off link</DropdownMenuItem>}
           </DropdownMenuContent>
