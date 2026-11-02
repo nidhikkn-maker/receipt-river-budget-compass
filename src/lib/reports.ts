@@ -11,7 +11,7 @@ export function buildReport(kind: ReportKind, transactions: Expense[], memberNam
   if (kind === "reimbursement-payments") {
     const claims = options.claims ?? transactions;
     return { title: "Reimbursement payments", headers: ["Date received", "Payment", "Payer", "Claim / expense", "Department", "Received into", "Currency", "Original amount", "Amount (INR)", "Payment ID"], rows: transactions.filter((e) => e.txnType === "reimbursement").map((e) => {
-      const linked = claims.filter((c) => c.reimbursement?.receipts?.some((r) => r.txnId === e.id || r.id === e.id) || e.description.includes(c.id));
+      const linked = claims.filter((c) => c.reimbursement?.receipts?.some((r) => r.txnId === e.id || r.id === e.id) || (e.description ?? '').includes(c.id));
       return [e.date, e.title, e.merchant ?? linked.map((c) => c.reimbursement?.payer ?? "").filter(Boolean).join("; "), linked.map((c) => c.title).join("; "), e.department ?? linked.map((c) => c.department).filter(Boolean).join("; "), options.accountName?.(e.accountId ?? null) ?? e.accountId ?? "Unassigned", e.currency, fmt(e.originalAmount), fmt(e.amount), e.id];
     }) };
   }
