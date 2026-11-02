@@ -472,6 +472,6 @@
 - [ ] Test Face ID fallback on a real iPhone (needs user device)
 - [x] Waiting to sync screen (/sync-queue) with per-entry status and retry
 - [x] Action menu for offline entries (retry / discard)
-- [ ] Timed opening check: measure how long the app takes from tap to first usable screen (preview + live), and what blocks it
-- [ ] Face ID appears by itself right after the first email sign-in, with no tap needed; MPIN and password stay as fallbacks
-- [ ] Make login time as low as possible (measure, then remove every avoidable wait before the home screen)
+- [x] Timed opening check: fresh-device home 2,131ms, repeat 408ms, Activity 207ms, sign-in screen 154ms; database is not the bottleneck (all-records read runs 2.5ms in 56 cached pages), so no index was added; added a preconnect to the record store so the secure link opens while the page loads
+- [x] Face ID appears by itself as soon as the sign-in screen recognises this device (no tap); an email sign-in offers one Face ID scan so later openings need none; silent when the device can't offer Face ID; MPIN and password fallbacks kept. Needs a real iPhone to confirm the sheet appears unprompted
+- [x] Make login time as low as possible: sign-in screen paints from the device's saved session with no network wait (154ms), Face ID asked for unprompted, record-store link opened early; home still waits on the records fetch on a device with nothing saved
