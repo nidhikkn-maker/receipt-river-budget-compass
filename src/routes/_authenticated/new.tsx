@@ -265,10 +265,13 @@ function NewExpense() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [search.draft]);
   const draftData = (): DraftData => ({ txnType, amount, currency, date, category, merchant, title, accountId, toAccountId, instrumentId, paymentMethod, scope, tripId, tags, description, memberId, principal, interest, wsSplit, splitOn, shares, receiptDetails, extracted: !!scanRead || !!receiptDetails.text, ...(readingError ? { error: readingError } : {}) });
-  const persistDraft = async (): Promise<boolean> => {
+  const persistDraft = async (auto = false): Promise<boolean> => {
     if (editing || !draftLoaded.current) return false;
     const d = draftData();
     if (!hasDraftContent(d, receipts.length) && !draftExists.current) return false;
+    // Background autosave only starts a new draft once there is an amount or a receipt;
+    // a shop name alone (often auto-filled) shouldn't leave "No amount yet" drafts behind.
+    if (auto && !draftExists.current && !(Number(d.amount) > 0) && receipts.length === 0) return false;
     setDraftState("saving");
     // Always keep an encrypted copy on this device first, so edits survive a lost connection or a closed app.
     try {

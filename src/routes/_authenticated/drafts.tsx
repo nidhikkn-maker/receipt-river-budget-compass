@@ -76,18 +76,18 @@ function DraftsPage() {
             <span className="text-muted-foreground">{picked.length ? `${picked.length} selected` : `${drafts.length} waiting`}</span>
             {picked.length > 0 && <Button size="sm" variant="outline" className="ml-auto" onClick={() => setConfirm(drafts.filter((d) => picked.includes(d.id)))}><Trash2 className="h-4 w-4" />Delete selected</Button>}
           </div>
-          <ul className="grid gap-2">
+          <ul className="grid grid-cols-[minmax(0,1fr)] gap-2">
             {drafts.map((d) => {
               const x = d.data; const amt = Number(x.amount);
               return (
-                <li key={d.id} className="flex items-center gap-3 rounded-2xl border bg-card p-3">
+                <li key={d.id} className="flex min-w-0 items-center gap-3 overflow-hidden rounded-2xl border bg-card p-3">
                   <Checkbox aria-label="Select draft" checked={picked.includes(d.id)} onCheckedChange={(v) => setPicked((p) => (v ? [...p, d.id] : p.filter((i) => i !== d.id)))} />
                   <Thumb d={d} />
                   <div className="min-w-0 flex-1">
                     <p className="truncate font-semibold">{x.merchant || x.title || (d.receipts.length ? "Captured receipt" : "Unfinished entry")}</p>
                     <p className="truncate text-xs text-muted-foreground">{amt > 0 ? money(amt, x.currency || "INR") : "No amount yet"} · {new Date(d.createdAt).toLocaleDateString()}{x.scope ? ` · ${SCOPE_LABEL[x.scope as keyof typeof SCOPE_LABEL] ?? x.scope}` : ""}</p>
                     <span className={cn("mt-1 inline-block rounded-full px-2 py-0.5 text-[10px] font-bold", d.status === "failed" ? "bg-destructive/15 text-destructive" : d.status === "ready" ? "bg-primary/15 text-primary" : "bg-secondary")}>{DRAFT_STATUS_LABEL[d.status]}</span>
-                    <span className="ml-1 text-[10px] text-muted-foreground">{d.localOnly ? "Only on this device · waiting to sync" : "Synced to your account"}</span>
+                    <span className="mt-1 block text-[10px] text-muted-foreground">{d.localOnly ? "Only on this device · waiting to sync" : "Synced to your account"}</span>
                   </div>
                   <div className="flex shrink-0 flex-col gap-1">
                     <Button asChild size="sm"><Link to="/new" search={{ draft: d.id }}>Resume</Link></Button>

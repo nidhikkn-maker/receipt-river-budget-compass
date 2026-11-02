@@ -376,7 +376,7 @@ function StatementDeskPage() {
                   <p className="text-sm text-muted-foreground">These records sit on this account but the statement shows the money going the other way.</p>
                   <Clipped className="mt-1 divide-y divide-border rounded-xl border border-border text-sm" items={a.wrongKind} render={(m) => (
                       <li key={m.line.key} className="flex items-start justify-between gap-3 p-2">
-                        <span className="min-w-0"><span className="block truncate">{m.line.date} · {m.record?.name}</span><span className="text-xs text-muted-foreground">{m.reasons.join(" · ")}</span></span>
+                        <span className="min-w-0"><span className="block break-words [overflow-wrap:anywhere]">{m.line.date} · {m.record?.name}</span><span className="text-xs text-muted-foreground">{m.reasons.join(" · ")}</span></span>
                         <span className="shrink-0 tabular-nums">{money(m.line.amount, m.line.currency)}</span>
                       </li>
                     )} />
