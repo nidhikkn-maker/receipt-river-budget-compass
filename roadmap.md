@@ -583,3 +583,5 @@
 - [x] Publish email sending limits
 - [ ] Verify daily email limits (test account)
 - [x] Investigate 5s+ app open time (smaller saved copy)
+- [x] Reduce first-load work further
+- [x] Measure first/repeat open (emulation; real iPhone needs user)

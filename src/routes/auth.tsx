@@ -13,7 +13,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable/index";
 import "@lovable.dev/cloud-auth-js/styles.css";
 import { oauthReturnPath } from "@/lib/oauth-return-path";
-import { useDevicePasskey } from "@/components/DeviceLock";
+import { useDevicePasskey } from "@/lib/device-passkey";
 import { verifyDevicePassword } from "@/lib/device-reauth";
 import { rememberDeviceUnlock } from "@/lib/device-unlock";
 import { PinPad } from "@/components/PinPad";

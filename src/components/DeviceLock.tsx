@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { LedgerlineSymbol } from "./LedgerlineLogo";
 import { useServerFn } from "@tanstack/react-start";
-import { startAuthentication, startRegistration } from "@simplewebauthn/browser";
-import type { PublicKeyCredentialCreationOptionsJSON, PublicKeyCredentialRequestOptionsJSON } from "@simplewebauthn/browser";
+
+
 import { toast } from "sonner";
 import { Fingerprint } from "lucide-react";
 import { Button } from "./ui/button";
@@ -13,7 +13,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { verifyDevicePassword } from "@/lib/device-reauth";
 import { consumeDeviceUnlock } from "@/lib/device-unlock";
-import { passkeyOptions, verifyPasskey } from "@/lib/passkeys.functions";
+
 import { useStore } from "@/lib/store";
 import { PinPad } from "./PinPad";
 import { clearMpin, hasMpin, setMpin, verifyMpin } from "@/lib/mpin";
@@ -45,7 +45,8 @@ export function MpinSettings() {
     </Dialog>
   </div>;
 }
-export function useDevicePasskey(){const options=useServerFn(passkeyOptions);const verify=useServerFn(verifyPasskey);return async(kind:"register"|"unlock")=>{const res=await options({data:{kind}});const response=kind==="register"?await startRegistration({optionsJSON:JSON.parse(res.options) as PublicKeyCredentialCreationOptionsJSON}):await startAuthentication({optionsJSON:JSON.parse(res.options) as PublicKeyCredentialRequestOptionsJSON});await verify({data:{kind,response:response as unknown as Record<string,unknown>}});};}
+export { useDevicePasskey } from "@/lib/device-passkey";
+import { useDevicePasskey } from "@/lib/device-passkey";
 export function PasskeySettings(){const {userId}=useStore();const passkey=useDevicePasskey();return <div className="mb-6 flex flex-wrap gap-3"><Button variant="outline" onClick={async()=>{try{await passkey("register");localStorage.setItem(`ll-lock-${userId}`,"1");toast.success("Face ID / device passkey enabled");}catch(e){toast.error((e as Error).message);}}}><Fingerprint className="h-4 w-4"/>Enable Face ID / device lock</Button><Button variant="ghost" onClick={async()=>{try{await passkey("unlock");localStorage.removeItem(`ll-lock-${userId}`);toast.success("Device lock disabled");}catch(e){toast.error((e as Error).message);}}}>Disable device lock</Button></div>}
 export function DeviceLock({ children }: { children: ReactNode }) {
   const { userId } = useStore();
