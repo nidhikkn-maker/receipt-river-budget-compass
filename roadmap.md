@@ -543,3 +543,5 @@
 - [x] New entry uses Statement Desk rules: category, account, transfer/card-payment suggestions, matching saved entries, already-saved other side
 - [x] Save calendar titles/notes on plans and check-ins for future .ics exports
 - [x] Per-event configurable reminders inside the exported .ics file
+- [x] Receipt items with low name/amount confidence highlighted and checked before saving
+- [x] Receipt total check recalculates on every item, subtotal, tax or tip edit
