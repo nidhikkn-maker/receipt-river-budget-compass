@@ -4,7 +4,7 @@ import { MPIN_LENGTH } from "@/lib/mpin";
 
 /** Four dots plus a phone-style keypad. Calls onComplete once all digits are entered. */
 export function PinPad({ onComplete, busy = false, onFaceId, error, label = "Enter your MPIN" }: {
-  onComplete: (pin: string) => void | Promise<void>; busy?: boolean; onFaceId?: () => void; error?: string; label?: string;
+  onComplete: (pin: string) => void | Promise<void>; busy?: boolean; onFaceId?: (() => void) | undefined; error?: string | undefined; label?: string | undefined;
 }) {
   const [pin, setPin] = useState("");
   useEffect(() => { if (error) setPin(""); }, [error]);

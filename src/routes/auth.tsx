@@ -142,7 +142,7 @@ function Auth() {
     {checking ? <p role="status" className="text-sm text-muted-foreground">Checking your account…</p> : signedEmail ? <>
       <div className="mb-5 flex items-center justify-center gap-3"><span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-primary text-sm font-semibold text-primary-foreground">{signedEmail[0]?.toUpperCase()}</span><span className="min-w-0 truncate text-sm">{signedEmail}</span></div>
       {mpinOn && !passwordMode ? <div className="grid gap-2">
-        <PinPad busy={busy} error={faceError} onFaceId={faceEnabled ? () => void unlock() : undefined} onComplete={pinUnlock} />
+        <PinPad busy={busy} error={faceError} {...(faceEnabled ? { onFaceId: () => void unlock() } : {})} onComplete={pinUnlock} />
         <Button variant="link" disabled={busy} onClick={() => setPasswordMode(true)}>Use account password</Button>
         <Button variant="link" disabled={busy} onClick={() => void signOut()}>Sign out</Button>
       </div> : <div className="grid gap-3">
