@@ -468,3 +468,4 @@
 ## V5.19
 - [ ] Faster startup from Home Screen
 - [ ] Sign-in page + bottom menu alignment at tablet/desktop
+- [ ] Face ID sign-in with MPIN/password fallback (verify existing)
