@@ -45,3 +45,4 @@
 - Review returns (review-navigation.ts) happen only after a save or explicit completion; use-review-view.ts keeps UI context in tab memory; calendar badges come from saved evidence, not navigation.
 - Statement Desk (/statements, statement-pipeline/) is the main upload path; Inbox's StatementInbox view stays for single-batch review and /reconcile redirects to it.
 - Browser tests use real routes with isolated data and blocked external writes, including Inbox approval/retry/Undo; fixtures never certify Cloud saves.
+- Device MPIN (src/lib/mpin.ts) is a device-only quick unlock: salted PBKDF2 hash per owner in local storage, erased after five wrong tries; it only opens an existing session, never signs in.
