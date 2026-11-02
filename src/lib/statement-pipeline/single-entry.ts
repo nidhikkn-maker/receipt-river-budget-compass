@@ -2,7 +2,7 @@
 import { classifyStatementLine } from "../statement-auto";
 import type { Account, TxnType } from "../ledger";
 import type { Expense } from "../expenses";
-import type { CategorySetting } from "../categories";
+import type { CategorySetting } from "../preferences";
 import { ledgerRec, pairOpposites, scoreRecord, type LedgerRec } from "./match";
 import { detectIssuer } from "./identify";
 import { toStatementLine, type StmtLine } from "./line";
