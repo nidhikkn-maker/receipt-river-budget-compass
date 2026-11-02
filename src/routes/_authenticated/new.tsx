@@ -945,19 +945,18 @@ function NewExpense() {
               <p className="text-xs text-muted-foreground">Optional. If you fill one, fill both — they must add up to the payment.</p>
             </div>
           )}
-          {/* Workspace + date */}
-          <div className="grid gap-3">
-            <WorkspacePicker compact scope={scope} setScope={setScope} total={Number(amount) || 0} currency={currency} split={wsSplit} setSplit={setWsSplit}
-              suggestion={suggestWorkspace({ merchant, tags: tagList, tripType: ctxTrip?.type ?? null, category }, expenses)} />
-            <div className="grid grid-cols-[auto_1fr] items-center gap-2">
-              <Label htmlFor="d" className="col-span-2">Date{af("date")}</Label>
-              <div className="flex gap-1">
-                <Button type="button" size="sm" variant={date === today ? "default" : "outline"} className="h-8 flex-1 rounded-full px-2 text-xs" onClick={() => setDate(today)}>Today</Button>
-                <Button type="button" size="sm" variant={date === yesterday ? "default" : "outline"} className="h-8 flex-1 rounded-full px-2 text-xs" onClick={() => setDate(yesterday)}>Yesterday</Button>
-              </div>
-              <Input id="d" type="date" value={date} onChange={(e) => setDate(e.target.value)} className="h-9 rounded-xl text-sm" />
+          {/* Workspace + date: same printed rows as the fields above */}
+          <WorkspacePicker row scope={scope} setScope={setScope} total={Number(amount) || 0} currency={currency} split={wsSplit} setSplit={setWsSplit}
+            suggestion={suggestWorkspace({ merchant, tags: tagList, tripType: ctxTrip?.type ?? null, category }, expenses)} />
+          <div className="receipt-row">
+            <Label htmlFor="d">Date{af("date")}</Label>
+            <Input id="d" type="date" value={date} onChange={(e) => setDate(e.target.value)} className="h-11 text-sm" />
+            <div className="flex justify-end gap-1">
+              <Button type="button" size="sm" variant={date === today ? "default" : "outline"} className="h-8 rounded-full px-3 text-xs" onClick={() => setDate(today)}>Today</Button>
+              <Button type="button" size="sm" variant={date === yesterday ? "default" : "outline"} className="h-8 rounded-full px-3 text-xs" onClick={() => setDate(yesterday)}>Yesterday</Button>
             </div>
           </div>
+
           {ctxTrip && <p className="text-xs text-primary">Adding to trip: {ctxTrip.name}{search.booking ? " — this payment will be linked to the booking" : ""}</p>}
           {!ctxTrip && !editing && smartTripSuggestions({ date, title, merchant, description, currency, originalAmount: Number(amount) || 0, scope, category, tags: tags.split(",").map((t) => t.trim()), tripId: tripId === "none" ? null : tripId, txnType }, preferences.trips as TravelTrip[]).slice(0, 3).map((suggestion) => (
             <div key={suggestion.trip.id} className="space-y-1 border-l-2 border-primary pl-3"><p className="text-xs text-muted-foreground">{suggestion.confidence}{suggestion.ambiguous ? " · Multiple possible trips" : ""} · {suggestion.reasons.join(" · ")}</p><Button type="button" size="sm" variant="outline" onClick={() => { setTags((x) => [...new Set([...x.split(",").map((y) => y.trim()).filter(Boolean), tripTag(suggestion.trip)])].join(", ")); setTripId(suggestion.trip.id); }}>Link to {suggestion.trip.name}</Button></div>

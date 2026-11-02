@@ -903,7 +903,10 @@ html[data-theme="apple-glass"] :where(.bg-card, .bg-popover, .bg-ink) {
 .receipt-row { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; column-gap: 1rem; row-gap: 0.25rem; padding-block: 0.25rem; border-bottom: 1.5px dashed var(--receipt-rule); }
 .receipt-row > label { font-size: 0.875rem; font-weight: 400; }
 .receipt-row > :nth-child(n + 3) { grid-column: 1 / -1; }
-.receipt-paper .receipt-row :is(input:not([type="checkbox"]):not([type="radio"]), button[role="combobox"], button[aria-label="Category"]) { border-bottom: 0; justify-content: flex-end; text-align: right; font-weight: 500; padding-inline: 0; gap: 0.5rem; min-width: 0; }
+.receipt-paper .receipt-row :is(input:not([type="checkbox"]):not([type="radio"]):not([type="date"]), button[role="combobox"], button[aria-label="Category"]) { border-bottom: 0; justify-content: flex-end; text-align: right; font-weight: 500; padding-inline: 0; gap: 0.5rem; min-width: 0; }
+/* A date field keeps room for the browser's own calendar button at the right end. */
+.receipt-paper .receipt-row input[type="date"] { border-bottom: 0; justify-content: flex-end; text-align: right; font-weight: 500; padding-inline: 0 1.35rem; min-width: 0; }
+
 .receipt-paper .receipt-row button[role="combobox"] > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .receipt-paper :is(input:not([type="checkbox"]):not([type="radio"]), textarea, select, button[role="combobox"], button[aria-label="Category"]) {
   background: transparent;
