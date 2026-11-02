@@ -48,3 +48,26 @@ export async function dispatchPaymentReminders(db: SupabaseClient<Database>, see
   }));
   return {sent,failed,skipped};
 }
+/** Sends one lock-screen nudge per device when a saved booking check-in time arrives; each check-in is claimed once per owner. */
+export async function dispatchCheckInReminders(db: SupabaseClient<Database>, seed: string, now: Date, windowMin = 15) {
+  const { dueCheckIns, checkInPayload } = await import("./push-rules");
+  const { data: devices, error } = await db.from("push_subscriptions").select("*").limit(200);
+  if (error) throw Error("Couldn't load notification devices");
+  const owners = [...new Set((devices ?? []).map((d) => d.owner_id))];
+  let sent = 0;
+  for (const owner of owners) {
+    const pref = await db.from("finance_preferences").select("data").eq("owner_id", owner).maybeSingle();
+    const p = normalizePreferences(pref.data?.data as Partial<FinancePreferences> | null);
+    const due = dueCheckIns((p.trips ?? []) as never, now.getTime(), windowMin);
+    const claimed: string[] = [];
+    for (const d of due) {
+      const { error: e } = await db.from("push_reminder_log").insert({ owner_id: owner, sent_on: d.at.slice(0, 10), item_key: d.key });
+      if (!e) claimed.push(d.key);
+    }
+    if (!claimed.length) continue;
+    for (const device of (devices ?? []).filter((x) => x.owner_id === owner)) {
+      try { const r = await sendDevicePush(seed, device, checkInPayload(claimed.length)); if (r.expired) await db.from("push_subscriptions").delete().eq("id", device.id); else if (r.ok) sent++; } catch { /* other devices still try */ }
+    }
+  }
+  return { checkInsSent: sent };
+}

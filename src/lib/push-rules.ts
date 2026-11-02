@@ -58,3 +58,20 @@ export function tripReminderItems(trips: TripReminderSource[], today: string): R
 export function privateReminderPayload(count: number, test = false) {
   return { title: "Ledgerline", body: test ? "Notifications are working on this device." : `${count} payment, renewal or trip reminder${count === 1 ? "" : "s"} to review.`, url: "/plan", tag: test ? "ledgerline-test" : "ledgerline-reminders" };
 }
+export interface CheckInSource { id: string; closedAt?: string | null; cancelledAt?: string | null; bookings?: { id: string; status: string; checkInAt?: string | null }[] }
+/** Bookings whose saved check-in moment fell within the last `windowMin` minutes (inclusive of now). */
+export function dueCheckIns(trips: CheckInSource[], nowMs: number, windowMin: number): { key: string; at: string }[] {
+  const out: { key: string; at: string }[] = [];
+  for (const t of trips) {
+    if (t.closedAt || t.cancelledAt) continue;
+    for (const b of t.bookings ?? []) {
+      if (b.status === "cancelled" || !b.checkInAt) continue;
+      const at = Date.parse(b.checkInAt);
+      if (Number.isFinite(at) && at <= nowMs && at > nowMs - windowMin * 60_000) out.push({ key: `checkin:${b.id}:${b.checkInAt}`, at: b.checkInAt });
+    }
+  }
+  return out;
+}
+export function checkInPayload(count: number) {
+  return { title: "Ledgerline", body: count === 1 ? "A trip check-in is due now." : `${count} trip check-ins are due now.`, url: "/trips", tag: "ledgerline-checkin" };
+}
