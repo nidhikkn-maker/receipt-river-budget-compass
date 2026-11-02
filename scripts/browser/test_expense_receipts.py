@@ -3,6 +3,7 @@
 Run python3 scripts/browser/test_expense_receipts.py with Vite at localhost:8080.
 No Cloud access; controlled browser-only persistence is not Cloud acceptance.
 """
+import re
 import unittest
 from pathlib import Path
 from urllib.parse import urlparse
@@ -35,7 +36,7 @@ class ExpenseReceiptButtons(unittest.IsolatedAsyncioTestCase):
         Image.new("RGB", (240, 320), "white").save(self.receipt)
         self.playwright = await async_playwright().start()
         self.browser = await self.playwright.chromium.launch(headless=True)
-        self.context = await self.browser.new_context(viewport={"width": 1280, "height": 1800})
+        self.context = await self.browser.new_context(viewport={"width": 1280, "height": 1800}, has_touch=True)
         self.page = await self.context.new_page()
         self.errors, self.blocked = [], []
         self.page.on("pageerror", lambda error: self.errors.append(str(error)))
@@ -111,6 +112,28 @@ class ExpenseReceiptButtons(unittest.IsolatedAsyncioTestCase):
         await expect(viewer.locator("img")).to_be_visible(timeout=15000)
         await review.get_by_role("button", name="Zoom in", exact=True).click()
         await expect(review.get_by_role("img", name="Receipt controlled-receipt.pdf, zoom 150%")).to_be_visible()
+        await review.get_by_role("button", name="Reset zoom", exact=True).click()
+        frame = review.get_by_role("img", name=re.compile("Receipt controlled-receipt.pdf"))
+        await expect(frame).to_have_attribute("aria-label", re.compile("zoom 100%"))
+        b = await frame.bounding_box(); cx, cy = b["x"] + b["width"] / 2, b["y"] + b["height"] / 2
+        cdp = await self.context.new_cdp_session(self.page)
+        async def touch(kind, pts): await cdp.send("Input.dispatchTouchEvent", {"type": kind, "touchPoints": [{"x": x, "y": y, "id": i} for i, (x, y) in enumerate(pts)]})
+        # Gentle pinch: doubling the finger gap zooms about 1.5x, not straight to the maximum.
+        await touch("touchStart", [(cx - 30, cy), (cx + 30, cy)])
+        for k in range(1, 7): await touch("touchMove", [(cx - 30 - 5 * k, cy), (cx + 30 + 5 * k, cy)])
+        await touch("touchEnd", [])
+        zoom = int(re.search(r"zoom (\d+)%", await frame.get_attribute("aria-label")).group(1))
+        self.assertTrue(130 <= zoom <= 170, zoom)
+        await review.get_by_role("button", name="Reset zoom", exact=True).click()
+        await self.page.wait_for_timeout(300)
+        async def double_tap():
+            for _ in range(2):
+                await touch("touchStart", [(cx, cy)]); await touch("touchEnd", []); await self.page.wait_for_timeout(80)
+        await double_tap()
+        await expect(frame).to_have_attribute("aria-label", re.compile("zoom 250%"))
+        await self.page.wait_for_timeout(400)
+        await double_tap()
+        await expect(frame).to_have_attribute("aria-label", re.compile("zoom 100%"))
 
     async def test_receipt_upload_view_and_link_survives_edit(self):
         await self.page.get_by_label("Extract receipt items", exact=True).check()
