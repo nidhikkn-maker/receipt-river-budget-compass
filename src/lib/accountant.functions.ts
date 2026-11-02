@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireRealAccount } from "@/lib/real-account-middleware";
-import { linkHistory, type LinkEvent, linkState, LINK_DAYS, MAX_FILES, PUBLIC_ORIGIN } from "@/lib/upload-link";
+import { linkHistory, requestReport, type LinkEvent, type RequestLink, type UploadRequest, linkState, LINK_DAYS, MAX_FILES, PUBLIC_ORIGIN } from "@/lib/upload-link";
 
 export interface AccountantInfo {
   name: string; email: string; sendDay: number; autoSend: boolean;
