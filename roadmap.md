@@ -554,3 +554,6 @@
 - [x] Publish after receipt changes
 - [x] Fresh security check on live site (deep scan clean)
 - [x] Audit: all requests complete, no duplicate features
+
+## iPhone receipt problem reporting (added 2026-11-02)
+- [x] Simple in-app way to report receipt zoom/pan trouble from iPhone, with device + browser details captured automatically

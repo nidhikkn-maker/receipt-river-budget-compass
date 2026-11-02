@@ -17,6 +17,7 @@ import { PayeeDirectory } from '@/components/PayeeDirectory';
 import { ImportRules } from '@/components/ImportRules';
 import { SettingsDirectory } from "@/components/SettingsDirectory";
 import { Fold } from "@/components/Fold";
+import { ReceiptProblemReports } from "@/components/ReceiptProblemReports";
 import { useStore } from "@/lib/store";
 import { BACKUP_TABLES, createBackupZip, prepareRestore, readBackup, type Backup } from "@/lib/backup";
 import { downloadBlob } from "@/lib/reports";
@@ -137,6 +138,7 @@ function Settings() {
       <Fold id="accountant" title="Accountant upload link" hint="Now lives in Statement Desk"><p className="text-sm text-muted-foreground">Your accountant's link, contact and monthly requests are managed in Statement Desk.</p><Button asChild variant="secondary" className="mt-2"><Link to="/statements" search={{ tab: "accountant" }}>Open in Statement Desk</Link></Button></Fold>
       <Fold id="rules" title="Import rules" hint="How statement lines are sorted automatically"><ImportRules /></Fold>
       <Fold id="notifications" title="Notifications" hint="Reminders on this device"><PushSettings /></Fold>
+      <Fold id="problems" title="Problem reports" hint="Things you flagged in the receipt viewer"><ReceiptProblemReports /></Fold>
       <Fold id="data" title="Data, backups & reports" hint="Back up, restore, export or delete"><div className="grid gap-3 sm:grid-cols-2">
         <Card title="Back up everything" body="Accounts, entries, budgets, valuations, family and original receipt and document files.">
           <Button onClick={backup} disabled={busy}><Download className="h-4 w-4" />Download backup</Button>

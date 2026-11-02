@@ -20,6 +20,7 @@ MOCKS = {
     "/src/lib/receipt-extract.functions.ts": ["extractReceipt"],
     "/src/lib/fx.functions.ts": ["getFxRate"],
     "/src/lib/assistant.functions.ts": ["parseSpokenEntry"],
+    "/src/lib/receipt-problems.functions.ts": ["reportReceiptProblem"],
     "/src/lib/drafts.ts": ["hasDraftContent", "draftStatus", "getDraft", "completeDraft", "upsertDraft", "uploadDraftReceipt", "draftReceiptFile"],
     "/src/lib/offline.ts": ["fileToLocal", "localDrafts", "localToFile", "putLocalDraft", "removeLocalDraft"],
     "/src/components/AppShell.tsx": ["PageTitle", "Stat"],
@@ -134,6 +135,40 @@ class ExpenseReceiptButtons(unittest.IsolatedAsyncioTestCase):
         await self.page.wait_for_timeout(400)
         await double_tap()
         await expect(frame).to_have_attribute("aria-label", re.compile("zoom 100%"))
+
+    async def test_report_a_problem_from_the_viewer_sends_device_and_browser(self):
+        """Reporting receipt trouble carries the chosen problem, the note and this device's details."""
+        await self.page.get_by_role("button", name="Upload a receipt", exact=True).click()
+        async with self.page.expect_file_chooser() as chooser:
+            await self.page.get_by_role("button", name="Files / PDF", exact=True).click()
+        await (await chooser.value).set_files(self.receipt)
+        review = self.page.get_by_role("group", name="Review scanned details")
+        await expect(review).to_be_visible()
+        await review.get_by_role("button", name="Zoom in", exact=True).click()
+        await expect(review.get_by_role("img", name="Receipt controlled-receipt.png, zoom 150%")).to_be_visible()
+        await review.get_by_role("button", name="Report a problem", exact=True).click()
+        dialog = self.page.get_by_role("dialog")
+        await expect(dialog.get_by_role("heading", name="Report a receipt viewing problem", exact=True)).to_be_visible()
+        await expect(dialog.get_by_role("button", name="Send report", exact=True)).to_be_disabled()
+        await dialog.get_by_text("Device details we'll send", exact=True).click()
+        await expect(dialog.get_by_text("Screen:")).to_be_visible()
+        await expect(dialog.get_by_text("Touch:")).to_be_visible()
+        await dialog.get_by_role("radio", name="Zoom didn't work", exact=True).check()
+        await dialog.get_by_label("Anything else? (optional)", exact=True).fill("Pinch jumped straight to full zoom")
+        await dialog.get_by_role("button", name="Send report", exact=True).click()
+        await expect(self.page.get_by_role("dialog")).not_to_be_visible()
+        sent = await self.page.evaluate("expenseBrowserFixture.reports[0]")
+        self.assertEqual(sent["kind"], "zoom")
+        self.assertEqual(sent["note"], "Pinch jumped straight to full zoom")
+        self.assertEqual(sent["receiptName"], "controlled-receipt.png")
+        self.assertEqual(sent["receiptType"], "image/png")
+        self.assertEqual(sent["zoom"], 1.5)
+        facts = sent["facts"]
+        self.assertIn("zoom in tapped", facts["log"])
+        self.assertTrue(facts["pointerEvents"])
+        self.assertGreater(facts["screenWidth"], 0)
+        self.assertIn("Mozilla", facts["ua"])
+        self.assertEqual(await self.page.evaluate("expenseBrowserFixture.saves.length"), 0)
 
     async def test_receipt_upload_view_and_link_survives_edit(self):
         await self.page.get_by_label("Extract receipt items", exact=True).check()

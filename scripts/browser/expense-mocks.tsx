@@ -8,9 +8,10 @@ const initial: Expense = {
   paymentMethod: "upi", date: "2026-04-01", description: "", receipts: [], reconciledAt: null, statementRef: null,
   accountId: "controlled-account", txnType: "expense",
 };
-const fixture = ((window as unknown as { expenseBrowserFixture?: { transactions: Expense[]; saves: { id: string; names: string[] }[]; failNextSave: boolean } }).expenseBrowserFixture ??= {
+type ReportRow = { kind: string; note: string; receiptName: string; receiptType: string; zoom: number; facts: Record<string, unknown> };
+const fixture = ((window as unknown as { expenseBrowserFixture?: { transactions: Expense[]; saves: { id: string; names: string[] }[]; failNextSave: boolean; reports: ReportRow[] } }).expenseBrowserFixture ??= {
   transactions: JSON.parse(sessionStorage.getItem("expense-browser-fixture") ?? JSON.stringify([initial])) as Expense[],
-  saves: [] as { id: string; names: string[] }[], failNextSave: false,
+  saves: [] as { id: string; names: string[] }[], failNextSave: false, reports: [] as ReportRow[],
 });
 Object.assign(window, { expenseBrowserFixture: fixture });
 const Context = ((window as unknown as { isolatedExpenseContext?: ReturnType<typeof createContext<ReturnType<typeof makeStore> | null>> }).isolatedExpenseContext ??= createContext<ReturnType<typeof makeStore> | null>(null));
@@ -64,3 +65,4 @@ export const fileToLocal = async () => ({});
 export const localToFile = () => { throw new Error("No stored draft files"); };
 export const PageTitle = ({ title }: { title: string }) => <h1>{title}</h1>;
 export const Stat = () => null;
+export const reportReceiptProblem = async ({ data }: { data: ReportRow }) => { fixture.reports.push(data); return { ok: true, id: "controlled-report", emailed: false }; };

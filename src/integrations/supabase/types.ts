@@ -1496,6 +1496,42 @@ export type Database = {
         }
         Relationships: []
       }
+      receipt_problem_reports: {
+        Row: {
+          created_at: string
+          emailed: boolean
+          facts: Json
+          id: string
+          kind: string
+          note: string
+          owner_id: string
+          receipt_name: string
+          receipt_type: string
+        }
+        Insert: {
+          created_at?: string
+          emailed?: boolean
+          facts?: Json
+          id?: string
+          kind: string
+          note?: string
+          owner_id: string
+          receipt_name?: string
+          receipt_type?: string
+        }
+        Update: {
+          created_at?: string
+          emailed?: boolean
+          facts?: Json
+          id?: string
+          kind?: string
+          note?: string
+          owner_id?: string
+          receipt_name?: string
+          receipt_type?: string
+        }
+        Relationships: []
+      }
       reimbursement_config_audit: {
         Row: {
           action: string

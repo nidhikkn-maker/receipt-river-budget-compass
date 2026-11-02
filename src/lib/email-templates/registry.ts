@@ -2,6 +2,7 @@ import type { ComponentType } from 'react'
 import { template as accountantUploadLink } from './accountant-upload-link'
 import { template as accountantUploadReminder } from './accountant-upload-reminder'
 import { template as accountantUploadReceived } from './accountant-upload-received'
+import { template as receiptProblemReport } from './receipt-problem-report'
 
 export interface TemplateEntry {
   component: ComponentType<any>
@@ -24,6 +25,7 @@ export const TEMPLATES: Record<string, TemplateEntry> = {
   'accountant-upload-link': accountantUploadLink,
   'accountant-upload-reminder': accountantUploadReminder,
   'accountant-upload-received': accountantUploadReceived,
+  'receipt-problem-report': receiptProblemReport,
   // Add templates here as they are created, e.g.:
   // 'welcome': welcomeTemplate,
 }
