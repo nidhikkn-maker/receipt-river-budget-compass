@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { ScanFace } from "lucide-react";
-import { KkMonogram } from "@/components/KkMonogram";
+import kkLogo from "@/assets/kk-logo.png.asset.json";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -114,8 +114,7 @@ function Auth() {
     if (r.error) toast.error(r.error.message); else if (!r.redirected) await go();
   };
   return <div className="relative min-h-dvh overflow-hidden">
-  <div aria-hidden="true" className="pointer-events-none fixed inset-0 flex items-center justify-center">
-    <KkMonogram className="w-[min(80vw,520px)] text-accent opacity-[0.22] dark:opacity-[0.14]" />
+  <div aria-hidden="true" className="pointer-events-none fixed bottom-4 right-4 size-[72px] bg-accent opacity-40 sm:size-[110px] dark:opacity-30" style={{ maskImage: `url(${kkLogo.url})`, WebkitMaskImage: `url(${kkLogo.url})`, maskSize: "contain", WebkitMaskSize: "contain", maskRepeat: "no-repeat", WebkitMaskRepeat: "no-repeat" }}>
   </div>
   <main className="relative mx-auto max-w-md px-6 py-12">
     <Link to="/dashboard" className="font-display text-2xl font-bold text-primary">Ledgerline</Link>
