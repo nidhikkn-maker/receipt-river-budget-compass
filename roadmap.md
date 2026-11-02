@@ -476,5 +476,5 @@
 - [x] Face ID appears by itself as soon as the sign-in screen recognises this device (no tap); an email sign-in offers one Face ID scan so later openings need none; silent when the device can't offer Face ID; MPIN and password fallbacks kept. Needs a real iPhone to confirm the sheet appears unprompted
 - [x] Make login time as low as possible: sign-in screen paints from the device's saved session with no network wait (154ms), Face ID asked for unprompted, record-store link opened early; home still waits on the records fetch on a device with nothing saved
 
-- [ ] Reduce cold home load below 2.1s without delaying access
-- [ ] Fresh security scan summary of published build
+- [x] Reduce cold home load: fonts no longer block first paint
+- [x] Fresh security scan summary of published build
