@@ -81,8 +81,10 @@ function Auth() {
       if (current.error || current.data.user?.id !== ownerId) throw Error("session");
       rememberDeviceUnlock(ownerId);
       await go();
-    } catch {
-      setFaceError(auto ? "Face ID didn't complete. Use your MPIN or your account password." : "Face ID wasn't completed or isn't available. Try again, or use your account password.");
+    } catch (err) {
+      // Stay quiet when this device simply can't offer Face ID; only speak up when a real scan didn't finish.
+      const silent = auto && err instanceof Error && err.message === "unavailable";
+      if (!silent) setFaceError(auto ? "Face ID didn't complete. Use your MPIN or your account password." : "Face ID wasn't completed or isn't available. Try again, or use your account password.");
       if (!auto) setPasswordMode(true);
     }
     finally { setBusy(false); }
