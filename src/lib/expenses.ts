@@ -1,4 +1,5 @@
 import { workspaceParts } from "./workspaces";
+import { receiptBreakdownError } from "./receipt-reading";
 // Personal + family expense tracker domain logic (pure, tested).
 
 /** Default categories for new accounts (the 18 from the requirements plus two business ones). Users can rename, merge, archive and add. */
@@ -32,6 +33,8 @@ export interface Member { id: string; name: string; relation: string }
 export interface Receipt { name: string; type: string; path: string }
 export interface ReceiptDetails {
   tax?: number | null;
+  tip?: number | null;
+  confidence?: import("./receipt-reading").ReceiptConfidence;
   items?: { name: string; quantity: number; amount: number }[];
   text?: string;
   /** SHA-256 fingerprint of the receipt file, for duplicate-receipt detection. */
@@ -160,6 +163,8 @@ export interface ExpenseInput {
 export function validateExpense(s: ExpenseInput) {
   if (!s.title.trim()) throw new ValidationError("Add a title");
   if (!(s.amount > 0)) throw new ValidationError("Amount must be greater than zero");
+  const receiptError = receiptBreakdownError(s.amount, s.receiptDetails);
+  if (receiptError) throw new ValidationError(receiptError);
   if (!/^\d{4}-\d{2}-\d{2}$/.test(s.date)) throw new ValidationError("Add the expense date");
   if (!SCOPES.includes(s.scope)) throw new ValidationError("Choose a workspace");
   if (s.txnType && ["transfer", "card_payment", "loan_repayment", "investment"].includes(s.txnType)) {

@@ -1,0 +1,47 @@
+import { describe, expect, it } from "vitest";
+import { ExtractedReceiptSchema, ReceiptDetailsSchema, receiptConfidence, receiptBreakdownError } from "./receipt-reading";
+import { validateExpense, type ExpenseInput } from "./expenses";
+
+const read = { title: "Cafe", merchant: "Cafe", date: "2026-11-02", amount: 432.10, tax: 32.10, tip: 40, confidence: { merchant: "high", date: "low", total: "medium" }, items: [], text: "Cafe", currency: "INR", payment_method: null, description: null, category: "Food and beverages", scope: "personal" };
+describe("receipt reading", () => {
+  it("preserves tax, tip and field certainty through the real server metadata validator", () => {
+    const details = { tax: 32.10, tip: 40, confidence: { merchant: "high", date: "low", total: "medium" } };
+    expect(ReceiptDetailsSchema.parse(details)).toEqual(details);
+  });
+  it("accepts old receipts that have no tip or certainty metadata", () => {
+    expect(ReceiptDetailsSchema.parse({ tax: null, items: [] })).toEqual({ tax: null, items: [] });
+  });
+  it("extracts explicit tax and tip without changing the total", () => {
+    const parsed = ExtractedReceiptSchema.parse(read);
+    expect(parsed.tax).toBe(32.10);
+    expect(parsed.tip).toBe(40);
+    expect(parsed.amount).toBe(432.10);
+  });
+  it("keeps absent tax and tip unknown rather than inventing zero", () => {
+    const parsed = ExtractedReceiptSchema.parse({ ...read, tax: null, tip: null });
+    expect(parsed.tax).toBeNull(); expect(parsed.tip).toBeNull();
+  });
+  it("shows independent certainty for merchant, date and total", () => {
+    expect(receiptConfidence(ExtractedReceiptSchema.parse(read))).toEqual({ merchant: "high", date: "low", total: "medium" });
+  });
+  it("never labels missing extracted values as high confidence", () => {
+    expect(receiptConfidence({ merchant: null, date: null, amount: null, confidence: { merchant: "high", date: "high", total: "high" } })).toEqual({ merchant: "unknown", date: "unknown", total: "unknown" });
+  });
+  it("does not manufacture certainty for older reader results", () => {
+    expect(receiptConfidence({ merchant: "Cafe", date: "2026-11-02", amount: 432.10 })).toEqual({ merchant: "unknown", date: "unknown", total: "unknown" });
+  });
+  it("rejects a tax and tip breakdown exceeding the paid total", () => {
+    expect(receiptBreakdownError(100, { tax: 70, tip: 40 })).not.toBeNull();
+    expect(receiptBreakdownError(432.10, { tax: 32.10, tip: 40 })).toBeNull();
+  });
+  it("rejects negative and non-finite breakdowns", () => {
+    expect(receiptBreakdownError(100, { tip: -1 })).not.toBeNull();
+    expect(receiptBreakdownError(100, { tax: NaN })).not.toBeNull();
+  });
+  it("save validation preserves total and checks breakdown without summing it again", () => {
+    const input: ExpenseInput = { title: "Cafe", amount: 432.10, currency: "INR", date: "2026-11-02", category: "Food and beverages", scope: "personal", merchant: "Cafe", paymentMethod: "cash", description: "", memberId: null, splits: [], receiptDetails: { tax: 32.10, tip: 40 } };
+    expect(() => validateExpense(input)).not.toThrow();
+    expect(input.amount).toBe(432.10);
+    expect(() => validateExpense({ ...input, receiptDetails: { tax: 400, tip: 40 } })).toThrow();
+  });
+});

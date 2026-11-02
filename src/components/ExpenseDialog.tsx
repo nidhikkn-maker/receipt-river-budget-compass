@@ -57,6 +57,7 @@ export function ExpenseDialog({ expense, onClose }: { expense: Expense | null; o
           )}
         </div>
         {e.receiptDetails?.tax != null && <p className="text-sm">Tax included: <span className="font-mono">{money(e.receiptDetails.tax,e.currency)}</span></p>}
+        {e.receiptDetails?.tip != null && <p className="text-sm">Tip included: <span className="font-mono">{money(e.receiptDetails.tip,e.currency)}</span></p>}
         {!!e.receiptDetails?.items?.length && <ul className="divide-y">{e.receiptDetails.items.map((item,i)=><li key={i} className="flex justify-between gap-3 py-2 text-sm"><span>{item.name} × {item.quantity}</span><span className="font-mono">{money(item.amount,e.currency)}</span></li>)}</ul>}
         <ScopeToggle value={scope} onChange={changeScope} />
         {e.description && <p className="text-sm">{e.description}</p>}

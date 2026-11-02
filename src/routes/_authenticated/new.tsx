@@ -25,6 +25,7 @@ import { tagValue } from "@/lib/preferences";
 import { duplicateBills } from "@/lib/bill-duplicates";
 import { suggestForEntry } from "@/lib/statement-pipeline/single-entry";
 import { buildReceiptAudit, receiptFingerprint, receiptFingerprintMatches, type ReceiptReadValues } from "@/lib/receipt-audit";
+import { receiptConfidence, receiptBreakdownError, type ReadingConfidence } from "@/lib/receipt-reading";
 import { quickEntrySearch } from "@/lib/quick-entry";
 import { useStore } from "@/lib/store";
 import { activeInstruments, applyInstrument, instrumentLabel, lastInstrumentForMerchant } from "@/lib/payment-instruments";
@@ -94,6 +95,11 @@ const isDate = (s: string | null | undefined): s is string => !!s && /^\d{4}-\d{
 interface SpeechRec { lang: string; interimResults: boolean; start: () => void; onresult: (e: { results: ArrayLike<ArrayLike<{ transcript: string }>> }) => void; onend: () => void; onerror: () => void }
 
 interface Scan { merchant: string; date: string; amount: string; currency: string }
+
+function ReadingIndicator({ value }: { value: ReadingConfidence }) {
+  const label = { high: "High reading confidence", medium: "Double-check · medium confidence", low: "Double-check · low confidence", unknown: "Double-check · confidence unavailable" }[value];
+  return <span className={cn("text-xs", value === "high" ? "text-success" : "text-muted-foreground")}>{label}</span>;
+}
 
 function NewExpense() {
   const { userId, save, transactions: expenses, members, accounts, loans, preferences, savePreferences, documents, addDocument, removeDocument, signedUrl } = useStore();
@@ -179,6 +185,7 @@ function NewExpense() {
   const [readTarget, setReadTarget] = useState<LocalReceipt | null>(null);
   const [scan, setScan] = useState<Scan | null>(null);
   const [scanRead, setScanRead] = useState<ReceiptReadValues | null>(null);
+  const [scanCategory, setScanCategory] = useState<string>("");
   const [confirmed, setConfirmed] = useState(true);
   const [receiptApproval, setReceiptApproval] = useState("");
   const [autoFilled, setAutoFilled] = useState<Set<string>>(new Set());
@@ -392,6 +399,7 @@ function NewExpense() {
     setReadTarget(first);
     setReadingError("");
     setScan(null);
+    setScanCategory("");
     setConfirmed(false);
     setReading(true); setStage({ kind: "receipt", at: 0 });
     const req = latest.current.begin();
@@ -405,10 +413,12 @@ function NewExpense() {
       if (!res.ok) throw new Error(res.error);
       setStage({ kind: "receipt", at: 2 });
       const x = res.result;
-      setReceiptDetails({ tax: x.tax, items: x.items, text: x.text, fingerprint: first.fingerprint });
+      setReceiptDetails({ tax: x.tax, tip: x.tip, confidence: receiptConfidence(x), items: x.items, text: x.text, fingerprint: first.fingerprint });
       const filled = new Set<string>();
       if (x.title && (fresh || !title)) { setTitle(x.title); filled.add("title"); }
-      if (x.category) { setCategory(x.category); filled.add("category"); }
+      const merchantHint = suggestForEntry({ date: isDate(x.date) ? x.date : date, amount: x.amount ?? 0, currency: x.currency ?? currency, txnType: "expense", text: [x.merchant, x.description].filter(Boolean).join(" "), accountId: accountId === "none" ? null : accountId }, { transactions: expenses, accounts, categories: preferences.categories }).category;
+      const categoryHint = merchantHint ?? x.category;
+      setScanCategory(categoryHint && preferences.categories.some(c => !c.archived && c.name === categoryHint) ? categoryHint : "");
       if (x.payment_method) { setPaymentMethod(x.payment_method); filled.add("payment"); }
       if (x.description && (fresh || !description)) { setDescription(x.description); filled.add("description"); }
       if (x.scope) { setScope(x.scope); filled.add("scope"); }
@@ -458,6 +468,10 @@ function NewExpense() {
     if (!scan.merchant.trim()) { toast.error("Enter the merchant"); return; }
     if (!(Number(scan.amount) > 0)) { toast.error("Enter an amount greater than zero"); return; }
     if (!isDate(scan.date)) { toast.error("Enter the date"); return; }
+    const breakdownError = receiptBreakdownError(Number(scan.amount), receiptDetails);
+    if (breakdownError) { toast.error(breakdownError); return; }
+    if (!preferences.categories.some(c => !c.archived && c.name === scanCategory)) { toast.error("Choose a category to confirm"); return; }
+    setCategory(scanCategory);
     setMerchant(scan.merchant.trim()); rememberMerchant(scan.merchant.trim());
     if (!title.trim()) setTitle(scan.merchant.trim());
     setAmount(scan.amount);
@@ -467,7 +481,7 @@ function NewExpense() {
       const audit = buildReceiptAudit(scanRead, { merchant: scan.merchant, date: scan.date, amount: Number(scan.amount), currency: scan.currency }, new Date().toISOString());
       setReceiptDetails((d) => ({ ...d, audit }));
     }
-    setAutoFilled((s) => new Set([...s, "merchant", "amount", "date", "currency"]));
+    setAutoFilled((s) => new Set([...s, "merchant", "amount", "date", "currency", "category"]));
     setConfirmed(true);
   };
 
@@ -728,9 +742,9 @@ function NewExpense() {
         {scan && !reading && !confirmed && (
           <section ref={reviewRef} className="space-y-3 rounded-3xl border-2 border-primary bg-card p-4 shadow-float" role="group" aria-label="Review scanned details">
             <div><div className="font-display font-bold">Check what we read</div><p className="text-xs text-muted-foreground">Fix anything that's off, then confirm.</p></div>
-            <div className="grid gap-1"><Label htmlFor="sm">Merchant</Label><Input id="sm" value={scan.merchant} onChange={(e) => setScan({ ...scan, merchant: e.target.value })} /></div>
+            <div className="grid gap-1"><Label htmlFor="sm">Merchant</Label><Input id="sm" value={scan.merchant} onChange={(e) => setScan({ ...scan, merchant: e.target.value })} /><ReadingIndicator value={receiptDetails.confidence?.merchant ?? "unknown"} /></div>
             <div className="grid grid-cols-2 gap-3">
-              <div className="grid gap-1"><Label htmlFor="sd">Date</Label><Input id="sd" type="date" value={scan.date} onChange={(e) => setScan({ ...scan, date: e.target.value })} /></div>
+              <div className="grid gap-1"><Label htmlFor="sd">Date</Label><Input id="sd" type="date" value={scan.date} onChange={(e) => setScan({ ...scan, date: e.target.value })} /><ReadingIndicator value={receiptDetails.confidence?.date ?? "unknown"} /></div>
               <div className="grid gap-1"><Label>Currency</Label>
                 <Select value={scan.currency} onValueChange={(v) => setScan({ ...scan, currency: v })}>
                   <SelectTrigger aria-label="Scanned currency"><SelectValue /></SelectTrigger>
@@ -738,8 +752,12 @@ function NewExpense() {
                 </Select>
               </div>
             </div>
-            <div className="grid gap-1"><Label htmlFor="sa">Total on bill</Label><Input id="sa" type="number" step="0.01" min="0" className="font-mono" value={scan.amount} onChange={(e) => setScan({ ...scan, amount: e.target.value })} /></div>
-            <div className="grid gap-1"><Label htmlFor="receipt-tax">Tax included</Label><Input id="receipt-tax" type="number" min="0" step="0.01" value={receiptDetails.tax ?? ""} onChange={e=>setReceiptDetails({...receiptDetails,tax:e.target.value===""?null:Number(e.target.value)})}/></div>
+            <div className="grid gap-1"><Label htmlFor="sa">Total on bill</Label><Input id="sa" type="number" step="0.01" min="0" className="font-mono" value={scan.amount} onChange={(e) => setScan({ ...scan, amount: e.target.value })} /><ReadingIndicator value={receiptDetails.confidence?.total ?? "unknown"} /></div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="grid gap-1"><Label htmlFor="receipt-tax">Tax included</Label><Input id="receipt-tax" type="number" min="0" step="0.01" value={receiptDetails.tax ?? ""} onChange={e=>setReceiptDetails({...receiptDetails,tax:e.target.value===""?null:Number(e.target.value)})}/></div>
+              <div className="grid gap-1"><Label htmlFor="receipt-tip">Tip included</Label><Input id="receipt-tip" type="number" min="0" step="0.01" value={receiptDetails.tip ?? ""} onChange={e=>setReceiptDetails({...receiptDetails,tip:e.target.value===""?null:Number(e.target.value)})}/></div>
+            </div>
+            <div className="grid gap-1"><Label>Suggested category</Label><Select value={scanCategory} onValueChange={setScanCategory}><SelectTrigger aria-label="Receipt category"><SelectValue placeholder="Choose category" /></SelectTrigger><SelectContent>{categoryNames.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent></Select></div>
             {(receiptDetails.items??[]).map((item,i)=><div key={i} className="grid grid-cols-[1fr_64px_80px] gap-2"><Input aria-label={`Item ${i+1} name`} value={item.name} onChange={e=>setReceiptDetails({...receiptDetails,items:(receiptDetails.items ?? []).map((x,j)=>j===i?{...x,name:e.target.value}:x)})}/><Input aria-label={`Item ${i+1} quantity`} type="number" value={item.quantity} onChange={e=>setReceiptDetails({...receiptDetails,items:(receiptDetails.items ?? []).map((x,j)=>j===i?{...x,quantity:Number(e.target.value)}:x)})}/><Input aria-label={`Item ${i+1} amount`} type="number" step="0.01" value={item.amount} onChange={e=>setReceiptDetails({...receiptDetails,items:(receiptDetails.items ?? []).map((x,j)=>j===i?{...x,amount:Number(e.target.value)}:x)})}/></div>)}
             <div className="flex justify-end gap-2">
               <Button type="button" variant="ghost" size="sm" onClick={() => { setScan(null); setConfirmed(true); }}>Enter manually</Button>
