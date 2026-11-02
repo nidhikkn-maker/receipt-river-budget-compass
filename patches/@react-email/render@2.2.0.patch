@@ -1,0 +1,6 @@
+diff --git a/dist/node/index.mjs b/dist/node/index.mjs
+--- a/dist/node/index.mjs
++++ b/dist/node/index.mjs
+@@ -1,5 +1,5 @@
+-import { decodeHTML, decodeHTMLAttribute } from "entities/lib/decode.js";
++import { decodeHTML, decodeHTMLAttribute } from "entities/decode";
