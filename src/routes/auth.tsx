@@ -115,7 +115,7 @@ function Auth() {
   };
   return <div className="relative min-h-dvh overflow-hidden">
   <div aria-hidden="true" className="pointer-events-none fixed inset-0 flex items-center justify-center">
-    <KkMonogram className="w-[min(80vw,520px)] text-accent opacity-[0.13] dark:opacity-[0.09]" />
+    <KkMonogram className="w-[min(80vw,520px)] text-accent opacity-[0.22] dark:opacity-[0.14]" />
   </div>
   <main className="relative mx-auto max-w-md px-6 py-12">
     <Link to="/dashboard" className="font-display text-2xl font-bold text-primary">Ledgerline</Link>
