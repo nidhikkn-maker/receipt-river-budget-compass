@@ -34,12 +34,30 @@ export function NavProgress() {
     return () => { clearTimeout(timer); document.removeEventListener("click", onTap); };
   }, [router]);
 
-  // Warm the most-used pages once the first screen is idle.
+  // Warm the most-used pages one at a time, only after the first screen has settled,
+  // so background page code never competes with the data the first screen is waiting on.
   useEffect(() => {
-    const run = () => { for (const to of WARM) void router.preloadRoute({ to } as never).catch(() => {}); };
+    let cancelled = false;
+    const timers: number[] = [];
+    let idleId = 0;
     const w = window as Window & { requestIdleCallback?: (cb: () => void, o?: { timeout: number }) => number };
-    const id = w.requestIdleCallback ? w.requestIdleCallback(run, { timeout: 2500 }) : window.setTimeout(run, 1200);
-    return () => { if (!w.requestIdleCallback) clearTimeout(id); };
+    const start = () => WARM.forEach((to, i) => {
+      timers.push(window.setTimeout(() => {
+        if (!cancelled) void router.preloadRoute({ to } as never).catch(() => {});
+      }, i * 700));
+    });
+    const kick = window.setTimeout(() => {
+      if (w.requestIdleCallback) {
+        idleId = w.requestIdleCallback(() => { if (!cancelled) start(); }, { timeout: 5000 }) ?? 0;
+      } else start();
+    }, 2200);
+    return () => {
+      cancelled = true;
+      timers.forEach(clearTimeout);
+      clearTimeout(kick);
+      const cw = w as Window & { cancelIdleCallback?: (id: number) => void };
+      if (idleId && cw.cancelIdleCallback) cw.cancelIdleCallback(idleId);
+    };
   }, [router]);
 
   // Ignore repeat taps on a link to the page that is already opening.
