@@ -33,6 +33,8 @@ class AccountantUpload(unittest.IsolatedAsyncioTestCase):
         async def isolate(route):
             req = route.request
             u = urlparse(req.url)
+            if u.netloc in ("fonts.googleapis.com", "fonts.gstatic.com") and req.method == "GET":
+                return await route.abort()
             if u.netloc != "localhost:8080":
                 self.blocked.append(u.hostname); return await route.abort()
             if u.path == f"/api/public/upload/{TOKEN}":
