@@ -10,7 +10,7 @@ const directionOf = (e: Expense) => ['income', 'refund', 'reimbursement', 'advan
 export function applyReviewRules(rows: FinancialReview[], rules: ImportRule[], activeCategories: string[]): FinancialReview[] {
   return rows.map(row => {
     const e = row.transaction;
-    if (row.group === 'conflict' || !e.description.trim()) return row;
+    if (row.group === 'conflict' || !(e.description ?? '').trim()) return row;
     const match = matchingImportRules(rules, { ref: e.id, date: e.date, description: e.description, amount: e.originalAmount, direction: directionOf(e) }, e.accountId, e.currency);
     if (match.conflict) return { ...row, group: 'conflict', status: 'Unresolved', confidence: 'low', evidence: [...row.evidence, 'Saved classification rules disagree at the same priority; choose a treatment manually.'] };
     const rule = match.top[0];
