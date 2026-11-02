@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { ScanFace } from "lucide-react";
+import { KkMonogram } from "@/components/KkMonogram";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -112,7 +113,11 @@ function Auth() {
     const r = await lovable.auth.signInWithOAuth(provider, { redirect_uri: back() });
     if (r.error) toast.error(r.error.message); else if (!r.redirected) await go();
   };
-  return <main className="mx-auto max-w-md px-6 py-12">
+  return <div className="relative min-h-dvh overflow-hidden">
+  <div aria-hidden="true" className="pointer-events-none fixed inset-0 flex items-center justify-center">
+    <KkMonogram className="w-[min(80vw,520px)] text-accent opacity-[0.22] dark:opacity-[0.14]" />
+  </div>
+  <main className="relative mx-auto max-w-md px-6 py-12">
     <Link to="/dashboard" className="font-display text-2xl font-bold text-primary">Ledgerline</Link>
     <h1 className="mb-5 mt-8 font-display text-3xl font-bold">{signedEmail ? "Welcome back" : signup ? "Create your account" : "Sign in"}</h1>
     {checking ? <p role="status" className="text-sm text-muted-foreground">Checking your account…</p> : signedEmail ? <>
@@ -144,5 +149,6 @@ function Auth() {
       {anonymous && <p className="mt-4 text-xs text-muted-foreground">Create an email account to keep this browser’s records. Social sign-in may open a separate account; back up first.</p>}
       <Button asChild variant="link" className="mt-4"><Link to="/dashboard">Back to Ledgerline</Link></Button>
     </>}
-  </main>;
+  </main>
+  </div>;
 }
