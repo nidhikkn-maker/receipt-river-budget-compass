@@ -187,23 +187,25 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
     }
     setSyncState("syncing");
     try {
-    const [p, m, e, b, a, c, l, g, pref, v, d, db] = await Promise.all([
-      supabase.from("profiles").select("full_name").eq("id", userId).maybeSingle(),
+    // Essential records first; the rest load in the background so the first screen is not held up.
+    const restP = Promise.all([
       supabase.from("family_members").select("id, name, relation").order("created_at"),
+      supabase.from("goals").select("*").order("created_at"),
+      supabase.from("asset_valuations").select("*").order("valued_on", { ascending: false }),
+      supabase.from("documents").select("*").order("created_at", { ascending: false }),
+      supabase.from("department_budgets").select("department,amount"),
+    ]);
+    restP.catch(() => {});
+    const [p, e, b, a, c, l, pref] = await Promise.all([
+      supabase.from("profiles").select("full_name").eq("id", userId).maybeSingle(),
       supabase.from("expenses").select("*").order("expense_date", { ascending: false }).order("created_at", { ascending: false }),
       supabase.from("category_budgets").select("category, monthly_amount"),
       supabase.from("accounts").select("*").order("created_at"),
       supabase.from("commitments").select("*").order("next_due"),
       supabase.from("loans").select("*").order("created_at"),
-      supabase.from("goals").select("*").order("created_at"),
       supabase.from("finance_preferences").select("data").eq("owner_id", userId).maybeSingle(),
-      supabase.from("asset_valuations").select("*").order("valued_on", { ascending: false }),
-      supabase.from("documents").select("*").order("created_at", { ascending: false }),
-      supabase.from("department_budgets").select("department,amount"),
     ]);
-    const firstError = [e, a, c, l, g, v, d].find((x) => x.error)?.error;
-    setDepartmentBudgetError(!!db.error);
-    setDepartmentBudgets(Object.fromEntries((db.data ?? []).map((x) => [x.department, Number(x.amount)])));
+    const firstError = [e, a, c, l].find((x) => x.error)?.error;
     if (firstError) toast.error("Some records couldn't load — pull to refresh or try again");
     setPreferences(normalizePreferences(pref.data?.data as unknown as Partial<FinancePreferences>));
     setCommitments((c.data ?? []).map((x) => ({ id: x.id, name: x.name, kind: x.kind as CommitmentKind, direction: x.direction as "in" | "out", amount: Number(x.amount),
@@ -215,21 +217,13 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
       prepaymentTerms: x.prepayment_terms, foreclosurePct: Number(x.foreclosure_pct), accountId: x.account_id, sourceTransactionId: x.source_transaction_id,
       payments: (x.payments as unknown as LoanPayment[]) ?? [], status: x.status === "closed" ? "closed" : "active",
     })));
-    setGoals((g.data ?? []).map((x) => ({ id: x.id, name: x.name, target: Number(x.target), saved: Number(x.saved), monthly: Number(x.monthly), reserve: x.reserve })));
     setAccounts((a.data ?? []).map((x) => ({
       id: x.id, name: x.name, kind: x.kind as AccountKind, openingBalance: Number(x.opening_balance), archived: x.archived,
       creditLimit: x.credit_limit == null ? null : Number(x.credit_limit), dueDay: x.due_day, minBalance: Number(x.min_balance),
       issuer: x.issuer, lastFour: x.last_four, statementDay: x.statement_day, interestRate: x.interest_rate == null ? null : Number(x.interest_rate),
       includeInCash: x.include_in_cash, details: (x.details as unknown as AccountDetails) ?? {},
     })));
-    setValuations((v.data ?? []).map((x) => ({ id: x.id, accountId: x.account_id, value: Number(x.value), valuedOn: x.valued_on, source: x.source, note: x.note })));
-    setDocuments((d.data ?? []).map((x) => ({
-      id: x.id, title: x.title, docType: x.doc_type as DocType, filePath: x.file_path, fileName: x.file_name, mimeType: x.mime_type, size: x.size_bytes,
-      docDate: x.doc_date, amount: x.amount == null ? null : Number(x.amount), currency: x.currency, merchant: x.merchant, notes: x.notes, text: x.extracted_text,
-      transactionId: x.transaction_id, accountId: x.account_id, loanId: x.loan_id, expiresOn: x.expires_on, createdAt: x.created_at,
-    })));
     setName(p.data?.full_name ?? "");
-    setMembers(m.data ?? []);
     setExpenses((e.data ?? []).map((x) => ({
       id: x.id, categoryRevision: x.category_revision, correctionRevision: x.correction_revision, department: x.department, title: x.title, merchant: x.merchant, category: x.category as Category, scope: x.scope as Scope, memberId: x.member_id, splits: (x.splits as unknown as Split[]) ?? [],
       amount: Number(x.amount), currency: x.currency, originalAmount: Number(x.original_amount ?? x.amount), fxRate: Number(x.fx_rate),
@@ -245,6 +239,18 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
     for (const x of b.data ?? []) bud[x.category as Category] = Number(x.monthly_amount);
     setBudgets(bud);
     setLoading(false);
+    const [m, g, v, d, db] = await restP;
+    if ([g, v, d].some((x) => x.error)) toast.error("Some records couldn't load — pull to refresh or try again");
+    setDepartmentBudgetError(!!db.error);
+    setDepartmentBudgets(Object.fromEntries((db.data ?? []).map((x) => [x.department, Number(x.amount)])));
+    setGoals((g.data ?? []).map((x) => ({ id: x.id, name: x.name, target: Number(x.target), saved: Number(x.saved), monthly: Number(x.monthly), reserve: x.reserve })));
+    setValuations((v.data ?? []).map((x) => ({ id: x.id, accountId: x.account_id, value: Number(x.value), valuedOn: x.valued_on, source: x.source, note: x.note })));
+    setDocuments((d.data ?? []).map((x) => ({
+      id: x.id, title: x.title, docType: x.doc_type as DocType, filePath: x.file_path, fileName: x.file_name, mimeType: x.mime_type, size: x.size_bytes,
+      docDate: x.doc_date, amount: x.amount == null ? null : Number(x.amount), currency: x.currency, merchant: x.merchant, notes: x.notes, text: x.extracted_text,
+      transactionId: x.transaction_id, accountId: x.account_id, loanId: x.loan_id, expiresOn: x.expires_on, createdAt: x.created_at,
+    })));
+    setMembers(m.data ?? []);
     setSyncState("synced");
     setLastSyncedAt(new Date().toISOString());
     } catch (err) {
