@@ -176,6 +176,7 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
   const firstLoad = useRef(true);
   // Only the very first cloud load uses the light expense query; later loads always fetch full records.
   const hadSnapshot = useRef(false);
+  const liteActive = useRef(false);
   const inFlight = useRef<Promise<void> | null>(null);
   const queued = useRef<Promise<void> | null>(null);
   // Overlapping refresh calls share requests; a call made mid-load gets one follow-up load so saves are never missed.
@@ -212,13 +213,15 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
     restP.catch(() => {});
     // Cold open (no device copy): fetch only the columns Home's totals need, then the full records in the background.
     const lite = !hadSnapshot.current;
-    const fullP = lite ? supabase.from("expenses").select("*").order("expense_date", { ascending: false }).order("created_at", { ascending: false }) : null;
+    const fullQuery = () => supabase.from("expenses").select("*").order("expense_date", { ascending: false }).order("created_at", { ascending: false });
+    const fullP = lite ? fullQuery() : null;
+    if (lite) liteActive.current = true;
     fullP?.then(() => {}, () => {});
     const [p, e, b, a, c, l, pref] = await Promise.all([
       supabase.from("profiles").select("full_name").eq("id", userId).maybeSingle(),
       lite
-        ? supabase.from("expenses").select(LITE_COLUMNS).order("expense_date", { ascending: false }).order("created_at", { ascending: false }) as unknown as typeof fullP & object
-        : supabase.from("expenses").select("*").order("expense_date", { ascending: false }).order("created_at", { ascending: false }),
+        ? (supabase.from("expenses").select(LITE_COLUMNS).order("expense_date", { ascending: false }).order("created_at", { ascending: false }) as unknown as ReturnType<typeof fullQuery>)
+        : fullQuery(),
       supabase.from("category_budgets").select("category, monthly_amount"),
       supabase.from("accounts").select("*").order("created_at"),
       supabase.from("commitments").select("*").order("next_due"),
@@ -264,6 +267,7 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
       const full = await fullP;
       if (full.error) toast.error("Some records couldn't load — pull to refresh or try again");
       else setExpenses((full.data ?? []).map(toExpense));
+      liteActive.current = false;
     }
     const [m, g, v, d, db] = await restP;
     if ([g, v, d].some((x) => x.error)) toast.error("Some records couldn't load — pull to refresh or try again");
@@ -305,6 +309,8 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
   const save: Ctx["save"] = async (s, opts) => {
     if (deleting.current) throw new Error("Please wait until data deletion finishes.");
     validateExpense(s);
+    // Edits need full records (receipts, notes); wait for the background load if it is still arriving.
+    if (liteActive.current && opts?.id && inFlight.current) await inFlight.current.catch(() => {});
     validateActiveCategory(preferences.categories, s.category, !!opts?.id);
     if (!navigator.onLine) {
       if (opts?.id) throw Error("Reconnect to edit an existing transaction");
