@@ -791,6 +791,11 @@ function NewExpense() {
           <ul className="space-y-2 text-sm">{duplicates.map(e => <li key={e.id} className="flex flex-wrap items-center justify-between gap-2"><span>{e.merchant} · {e.date} · {e.currency} {e.originalAmount.toFixed(2)}</span><Link to="/new" search={{ edit: e.id }} target="_blank" rel="noopener noreferrer" className="text-primary underline">Review existing entry</Link></li>)}</ul>
           <div className="flex flex-wrap gap-2"><Button type="button" size="sm" variant="outline" disabled={saving} onClick={() => void advanceQueue()}>Skip this bill</Button><Button type="button" size="sm" variant="secondary" disabled={!duplicateBlocked} onClick={() => setDuplicateApproval(duplicateSignature)}>{duplicateBlocked ? "Keep as a separate bill" : "Separate bill confirmed"}</Button></div>
         </section>}
+        {!reading && confirmed && desk.transferDuplicate && <section role="alert" aria-label="Possible transfer duplicate" className="space-y-1 rounded-2xl border border-warning/50 bg-card p-3 text-sm">
+          <h2 className="font-semibold">This may repeat a transfer you already saved</h2>
+          <p className="text-muted-foreground">{acctNameOf(accounts, desk.transferDuplicate.accountId!)} → {acctNameOf(accounts, desk.transferDuplicate.toAccountId!)} · {desk.transferDuplicate.date} · {desk.transferDuplicate.currency} {desk.transferDuplicate.amount.toFixed(2)}. Money moved between your own accounts isn't spending or income — saving this too would count it twice.</p>
+          <Link to="/new" search={{ edit: desk.transferDuplicate.id }} className="font-semibold text-primary underline">Open the transfer</Link>
+        </section>}
         {!reading && confirmed && (deskCategory || deskAccount || deskType || desk.opposite) && <section aria-label="Statement Desk suggestions" className="space-y-2 rounded-2xl border bg-card p-3 text-sm">
           <h2 className="font-semibold"><Sparkles className="mr-1 inline h-4 w-4 text-primary" />Suggestions (same rules as Statement Desk)</h2>
           <ul className="space-y-1.5">

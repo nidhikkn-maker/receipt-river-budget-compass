@@ -37,4 +37,10 @@ describe("New entry uses Statement Desk rules", () => {
     const s = suggestForEntry({ ...base, txnType: "transfer", text: "move" }, { transactions: [tx({ id: "in", originalAmount: 500, amount: 500, txnType: "income", accountId: "c" })], accounts, categories });
     expect(s.opposite?.id).toBe("in");
   });
+  it("warns when an expense may repeat a saved transfer on the same account", () => {
+    const t = tx({ id: "t1", originalAmount: 500, amount: 500, txnType: "transfer", accountId: "s", toAccountId: "c", date: "2026-10-02" });
+    expect(suggestForEntry({ ...base, text: "x" }, { transactions: [t], accounts, categories }).transferDuplicate?.id).toBe("t1");
+    expect(suggestForEntry({ ...base, amount: 501, text: "x" }, { transactions: [t], accounts, categories }).transferDuplicate).toBeUndefined();
+    expect(suggestForEntry({ ...base, txnType: "transfer", text: "x" }, { transactions: [t], accounts, categories }).transferDuplicate).toBeUndefined();
+  });
 });

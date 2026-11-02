@@ -30,6 +30,8 @@ export interface EntrySuggestion {
   matches: EntryMatch[];
   /** The other side of an own-account movement that is already saved. */
   opposite?: LedgerRec;
+  /** A saved own-account transfer with the same amount and nearby date on this account — this spending/income may repeat it. */
+  transferDuplicate?: LedgerRec;
 }
 
 const IN: TxnType[] = ["income", "refund"];
@@ -92,6 +94,10 @@ export function suggestForEntry(d: EntryDraft, ctx: { transactions: Expense[]; a
       const id = pair.get("new");
       const o = id && cands.length === 1 ? cands.find((r) => r.id === id) : undefined;
       if (o) out.opposite = o;
+    }
+    if (!MOVE.includes(kind) && d.accountId) {
+      const t = near.find((r) => MOVE.includes(r.kind as TxnType) && r.accountId && r.toAccountId && (r.accountId === d.accountId || r.toAccountId === d.accountId));
+      if (t) out.transferDuplicate = t;
     }
   }
   return out;
