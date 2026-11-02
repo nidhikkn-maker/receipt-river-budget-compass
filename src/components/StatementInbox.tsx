@@ -178,8 +178,7 @@ export function StatementInbox() {
     <>
       <h2 className="mb-3 text-xl font-semibold">Statements</h2>
       <div className="mb-5 flex flex-wrap gap-2">
-        <Button asChild><Link to="/statements">Statement Desk — upload many at once</Link></Button>
-        <Button asChild variant="outline"><Link to="/historical-import">Historical import & bulk review</Link></Button>
+        <Button asChild><Link to="/statements">Upload statements in Statement Desk</Link></Button>
       </div>
       <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-3">
         <Button variant="ghost" className="block h-auto min-w-0 whitespace-normal p-0 text-left" aria-label={`Matched: ${reconciled.length} transactions`} onClick={() => openItems("matched")}><Stat label="Matched" value={String(reconciled.length)} /></Button>
@@ -188,10 +187,7 @@ export function StatementInbox() {
 
       {readStage && <ProcessingPanel className="mb-3" title={`Reading ${readStage.name}…`} stages={stagesAt([readStage.ai ? "Extracting transactions with AI" : "Reading transactions", "Matching remembered account"], readStage.at)} />}
       <div className="mb-6 flex flex-wrap items-center gap-3 rounded-3xl border-2 border-dashed border-primary/40 bg-secondary/50 p-5">
-        <label className="inline-flex cursor-pointer items-center gap-2 rounded-2xl bg-gold px-4 py-2.5 text-sm font-semibold text-gold-foreground shadow-gold">
-          {reading ? <Spinner /> : <Upload className="h-4 w-4" />} {reading ? "Reading statement…" : "Upload statement"}
-          <input type="file" disabled={reading} accept=".csv,.xls,.xlsx,.pdf,.png,.jpg,.jpeg,.webp,text/csv,application/vnd.ms-excel,application/pdf" className="sr-only" onChange={(e) => onFile(e.target.files?.[0])} aria-label="Statement file" />
-        </label>
+        <p className="text-sm text-muted-foreground">Statement Desk is the one place to upload bank statements. Matches made there show up here.</p>
         <div className="flex flex-wrap items-center gap-2 text-sm">
           <Select value={statementAccount} onValueChange={(v) => { setStatementAccount(v); setOverrides({}); }}>
             <SelectTrigger className="w-44" aria-label="Statement account"><SelectValue /></SelectTrigger>
