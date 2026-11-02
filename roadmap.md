@@ -512,3 +512,6 @@
 - [ ] Help find the accountant upload link (Settings)
 
 - [x] Closed two unused IDFC imports; payee/organisation optional; categorised 199 entries; Statement Desk is the only statement upload place
+
+- [x] Bulk recategorise groups (Personal payments, AMEX, MOVAC) from Activity
+- [x] Inbox "still needs review" summary
