@@ -1,9 +1,20 @@
 import { describe, expect, it } from "vitest";
-import { ExtractedReceiptSchema, ReceiptDetailsSchema, receiptConfidence, receiptBreakdownError } from "./receipt-reading";
+import { ExtractedReceiptSchema, ReceiptDetailsSchema, receiptConfidence, receiptBreakdownError, receiptItemConfidence } from "./receipt-reading";
 import { validateExpense, type ExpenseInput } from "./expenses";
 
 const read = { title: "Cafe", merchant: "Cafe", date: "2026-11-02", amount: 432.10, subtotal: 360, tax: 32.10, tip: 40, confidence: { merchant: "high", date: "low", total: "medium" }, items: [], text: "Cafe", currency: "INR", payment_method: null, description: null, category: "Food and beverages", scope: "personal" };
 describe("receipt reading", () => {
+  it("preserves separate item name and amount confidence in extracted and saved metadata", () => {
+    const item = { name: "Dinner", quantity: 2, amount: 360, confidence: { name: "high", amount: "low" } };
+    expect(ExtractedReceiptSchema.parse({ ...read, items: [item] }).items[0]?.confidence).toEqual({ name: "high", amount: "low" });
+    expect(ReceiptDetailsSchema.parse({ items: [item] }).items?.[0]?.confidence).toEqual({ name: "high", amount: "low" });
+  });
+  it("keeps older item certainty unknown instead of manufacturing high confidence", () => {
+    expect(receiptItemConfidence({ name: "Dinner", amount: 360 })).toEqual({ name: "unknown", amount: "unknown" });
+  });
+  it("never labels blank item names or invalid amounts as high confidence", () => {
+    expect(receiptItemConfidence({ name: " ", amount: NaN, confidence: { name: "high", amount: "high" } })).toEqual({ name: "unknown", amount: "unknown" });
+  });
   it("preserves tax, tip and field certainty through the real server metadata validator", () => {
     const details = { tax: 32.10, tip: 40, confidence: { merchant: "high", date: "low", total: "medium" } };
     expect(ReceiptDetailsSchema.parse(details)).toEqual(details);

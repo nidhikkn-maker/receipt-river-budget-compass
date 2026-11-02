@@ -2,7 +2,7 @@ import { requireRealAccount } from "@/lib/real-account-middleware";
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { normalizePreferences, resolveCategory, type FinancePreferences } from "./preferences";
-import { ExtractedReceiptSchema, receiptConfidence, type ExtractedReceipt } from "./receipt-reading";
+import { ExtractedReceiptSchema, receiptConfidence, receiptItemConfidence, type ExtractedReceipt } from "./receipt-reading";
 export type { ExtractedReceipt } from "./receipt-reading";
 
 const Input = z.object({ dataUrl: z.string().startsWith("data:").max(4_000_000), mimeType: z.string(), includeItems: z.boolean().default(false) });
@@ -41,6 +41,7 @@ export const extractReceipt = createServerFn({ method: "POST" })
       }
       const output = ExtractedReceiptSchema.parse(JSON.parse(text));
       if (!data.includeItems) output.items = [];
+      output.items = output.items.map(item => ({ ...item, confidence: receiptItemConfidence(item) }));
       return { ok: true, result: { ...output, confidence: receiptConfidence(output), category: resolveCategory(settings.categories, output.category) } };
     } catch (e) {
       if (e instanceof z.ZodError || e instanceof SyntaxError) return { ok: false, error: "Couldn't read this receipt." };

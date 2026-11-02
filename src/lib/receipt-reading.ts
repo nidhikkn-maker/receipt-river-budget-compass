@@ -4,12 +4,14 @@ export const ReadingConfidence = z.enum(["high", "medium", "low", "unknown"]);
 export type ReadingConfidence = z.infer<typeof ReadingConfidence>;
 export const ReceiptConfidence = z.object({ merchant: ReadingConfidence, date: ReadingConfidence, total: ReadingConfidence });
 export type ReceiptConfidence = z.infer<typeof ReceiptConfidence>;
+export const ReceiptItemConfidence = z.object({ name: ReadingConfidence, amount: ReadingConfidence });
+export type ReceiptItemConfidence = z.infer<typeof ReceiptItemConfidence>;
 export const ReceiptDetailsSchema = z.object({
   subtotal: z.number().nonnegative().nullable().optional(),
   tax: z.number().nonnegative().nullable().optional(),
   tip: z.number().nonnegative().nullable().optional(),
   confidence: ReceiptConfidence.optional(),
-  items: z.array(z.object({ name: z.string().max(200), quantity: z.number().nonnegative(), amount: z.number().nonnegative() })).max(100).optional(),
+  items: z.array(z.object({ name: z.string().max(200), quantity: z.number().nonnegative(), amount: z.number().nonnegative(), confidence: ReceiptItemConfidence.optional() })).max(100).optional(),
   text: z.string().max(20000).optional(), fingerprint: z.string().max(128).optional(),
   audit: z.object({
     read: z.object({ merchant: z.string().max(200), date: z.string().max(20), amount: z.number().nonnegative(), currency: z.string().max(8) }),
@@ -26,13 +28,20 @@ export const ExtractedReceiptSchema = z.object({
   tax: z.number().nonnegative().nullable().describe("Explicit total tax, null if not shown; sum separate tax components once"),
   tip: z.number().nonnegative().nullable().describe("Explicit gratuity/tip included in final paid total, null if unknown; do not infer from service charge"),
   confidence: ReceiptConfidence.describe("Reading certainty, not a calibrated probability: high = clearly labelled and readable; medium = some ambiguity; low = unclear; unknown = missing"),
-  items: z.array(z.object({ name: z.string(), quantity: z.number().nonnegative(), amount: z.number().nonnegative() })),
+  items: z.array(z.object({ name: z.string(), quantity: z.number().nonnegative(), amount: z.number().nonnegative(), confidence: ReceiptItemConfidence.describe("Separate reading certainty for this item's name and extended line amount; never a probability") })),
   text: z.string(), currency: z.string().nullable(),
   payment_method: z.enum(["cash", "upi", "credit_card", "debit_card", "forex_card", "company_card", "bank_transfer", "other"]).nullable(),
   description: z.string().nullable(), category: z.string().max(60).nullable(),
   scope: z.enum(["personal", "business"]).nullable(),
 });
 export type ExtractedReceipt = z.infer<typeof ExtractedReceiptSchema>;
+
+export function receiptItemConfidence(item: { name: string; amount: number; confidence?: ReceiptItemConfidence | undefined }): ReceiptItemConfidence {
+  return {
+    name: item.name.trim() ? item.confidence?.name ?? "unknown" : "unknown",
+    amount: Number.isFinite(item.amount) && item.amount >= 0 ? item.confidence?.amount ?? "unknown" : "unknown",
+  };
+}
 
 export function receiptConfidence(values: { merchant: string | null; date: string | null; amount: number | null; confidence?: ReceiptConfidence }): ReceiptConfidence {
   return {

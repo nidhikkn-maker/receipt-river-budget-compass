@@ -36,7 +36,7 @@ export interface ReceiptDetails {
   tax?: number | null;
   tip?: number | null;
   confidence?: import("./receipt-reading").ReceiptConfidence;
-  items?: { name: string; quantity: number; amount: number }[];
+  items?: { name: string; quantity: number; amount: number; confidence?: import("./receipt-reading").ReceiptItemConfidence | undefined }[];
   text?: string;
   /** SHA-256 fingerprint of the receipt file, for duplicate-receipt detection. */
   fingerprint?: string;
