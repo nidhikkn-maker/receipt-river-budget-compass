@@ -42,7 +42,7 @@ export function receiptConfidence(values: { merchant: string | null; date: strin
   };
 }
 
-export function receiptBreakdownError(total: number, details?: { subtotal?: number | null; tax?: number | null | undefined; tip?: number | null | undefined }): string | null {
+export function receiptBreakdownError(total: number, details?: { subtotal?: number | null | undefined; tax?: number | null | undefined; tip?: number | null | undefined }): string | null {
   const amounts = [details?.subtotal, details?.tax, details?.tip];
   if (amounts.some(value => value != null && (!Number.isFinite(value) || value < 0))) return "Subtotal, tax and tip must be zero or more.";
   const included = (details?.tax ?? 0) + (details?.tip ?? 0);
