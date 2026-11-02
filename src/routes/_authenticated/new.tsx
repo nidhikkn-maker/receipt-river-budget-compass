@@ -545,7 +545,6 @@ function NewExpense() {
     if (!confirmed) { toast.error("Confirm the scanned bill details first"); return; }
     if (duplicateBlocked) { toast.error("Review the possible duplicate or skip this bill"); return; }
     if (receiptBlocked) { toast.error("This receipt is already used — review it or choose a different file"); return; }
-    if (review.needed && reviewApproval !== reviewSig) { toast.error("Check the highlighted receipt items before saving"); return; }
     const breakdownError = receiptBreakdownError(Number(amount), receiptDetails);
     if (breakdownError) { toast.error(breakdownError); return; }
     if (saving) return;
