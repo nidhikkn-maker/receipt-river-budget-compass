@@ -13,7 +13,7 @@ import { useStore } from "@/lib/store";
 import { accountBalance, cashflow, isLiability } from "@/lib/ledger";
 import { usePosition } from "@/lib/use-position";
 import { todayISO, useAssistantFacts } from "@/lib/use-position";
-import { useState } from "react";
+import { lazy, Suspense, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { askAssistant } from "@/lib/assistant.functions";
 import { Button } from "@/components/ui/button";
@@ -23,7 +23,7 @@ import { addDays } from "@/lib/planning";
 import { freshnessSummary } from "@/lib/inbox";
 import { tripSummary } from "@/lib/intelligence";
 import { cardBalanceSeries, cardRecency, cardTrendKeys, statementCaption, updatedCaption } from "@/lib/card-trend";
-import { CardTrendChart } from "@/components/CardTrendChart";
+const CardTrendChart = lazy(() => import("@/components/CardTrendChart").then((m) => ({ default: m.CardTrendChart })));
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
   head: () => ({
@@ -212,7 +212,7 @@ function Overview() {
           <div className="mt-3 rounded-2xl border bg-card p-3">
             <h3 className="font-display text-sm font-bold">Balance trend</h3>
             <p className="mb-1 text-[11px] text-muted-foreground">Amount owed at each month end · credit shows below zero · last 6 months</p>
-            <CardTrendChart points={cardTrend} names={cardTrendNames} height={180} />
+            <Suspense fallback={<div className="animate-pulse rounded-xl bg-muted" style={{ height: 180 }} />}><CardTrendChart points={cardTrend} names={cardTrendNames} height={180} /></Suspense>
           </div>
         </details>
       </section>

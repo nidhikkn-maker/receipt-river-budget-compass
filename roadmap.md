@@ -484,3 +484,5 @@
 - [x] Demo dates stay in current month
 - [x] Spinner on tapped item + page skeleton while loading
 - [x] Measure live pages at iPhone speed (real device unavailable)
+- [x] Fresh security scan of published site + summary
+- [x] Optimize cold Home load on slow mobile (chart deferred)
