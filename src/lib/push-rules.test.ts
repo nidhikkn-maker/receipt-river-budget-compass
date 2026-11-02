@@ -41,3 +41,13 @@ describe("Outbound push safety",()=>{
   });
   it("rejects malformed browser encryption keys",()=>expect(pushSubscriptionSchema.safeParse({endpoint:"https://fcm.googleapis.com/a",keys:{p256dh:"bad",auth:"bad"}}).success).toBe(false));
 });
+import { tripReminderItems } from "./push-rules";
+describe("trip reminders", () => {
+  const trip = { id: "t", itinerary: [{ id: "a", date: "2026-05-01" }, { id: "b", date: "2026-05-05" }], bookings: [{ id: "h", date: "2026-05-02", status: "unpaid", kind: "hotel" }, { id: "x", date: "2026-05-01", status: "cancelled", kind: "flight" }] };
+  it("includes plans and check-ins for today and tomorrow only", () => {
+    expect(tripReminderItems([trip], "2026-05-01").map((i) => i.key)).toEqual(["trip-plan:t:a:2026-05-01", "trip-checkin:t:h:2026-05-02"]);
+  });
+  it("skips closed or cancelled trips", () => {
+    expect(tripReminderItems([{ ...trip, closedAt: "x" }, { ...trip, cancelledAt: "y" }], "2026-05-01")).toEqual([]);
+  });
+});
