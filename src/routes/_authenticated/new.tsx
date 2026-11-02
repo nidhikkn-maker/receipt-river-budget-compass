@@ -11,7 +11,7 @@ import { ScanLine, Sparkles, X, Camera, Image as ImageIcon, FolderOpen, Inbox, R
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { dayShortcut, recentFirst, relevantSections, repeatCandidates, repeatDraft, smartDefaults } from "@/lib/entry-form";
-import { Repeat, Star } from "lucide-react";
+import { ArrowRight, Repeat, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -630,27 +630,29 @@ function NewExpense() {
   const fieldCls = "h-11 rounded-xl";
 
   return (
-    <>
-      <header className="sticky top-0 z-20 -mx-4 mb-3 flex items-center gap-2 border-b bg-background/90 px-3 py-2 backdrop-blur sm:-mx-8 sm:px-6">
-        <Button type="button" size="icon" variant="ghost" aria-label="Close" onClick={() => close()}><X className="h-5 w-5" /></Button>
+    <div className="receipt-desk -mx-4 min-h-dvh px-4 pb-2 sm:-mx-8 sm:px-8">
+      <header className="receipt-desk sticky top-0 z-20 -mx-4 mb-3 flex items-center gap-2 px-3 py-2 sm:-mx-8 sm:px-6">
+        <Button type="button" size="icon" variant="ghost" className="text-receipt-desk-foreground hover:bg-receipt-chip hover:text-receipt-desk-foreground" aria-label="Close" onClick={() => close()}><X className="h-5 w-5" /></Button>
         <h1 className="font-display text-lg font-bold">{editing ? "Edit entry" : `New ${TXN_LABEL[txnType].toLowerCase()}`}</h1>
-        {!editing && <span aria-live="polite" className="hidden text-[11px] text-muted-foreground min-[380px]:inline">{draftState === "saving" ? "Saving draft…" : draftState === "uploading" ? "Uploading receipt…" : draftState === "saved" ? "Draft saved" : draftState === "device" ? "Saved on this device · syncs when online" : draftState === "error" ? <span className="text-destructive">Draft not saved</span> : ""}</span>}
+        {!editing && <span aria-live="polite" className="hidden text-[11px] opacity-70 min-[380px]:inline">{draftState === "saving" ? "Saving draft…" : draftState === "uploading" ? "Uploading receipt…" : draftState === "saved" ? "Draft saved" : draftState === "device" ? "Saved on this device · syncs when online" : draftState === "error" ? <span className="text-destructive">Draft not saved</span> : ""}</span>}
         <div className="ml-auto w-36">
           <Select value={txnType} onValueChange={(v) => setTxnType(v as TxnType)}>
-            <SelectTrigger aria-label="Transaction type" className="h-9 rounded-full"><SelectValue /></SelectTrigger>
+            <SelectTrigger aria-label="Transaction type" className="h-9 rounded-full border-0 bg-receipt-chip text-receipt-desk-foreground"><SelectValue /></SelectTrigger>
             <SelectContent>{TXN_TYPES.map((t) => <SelectItem key={t} value={t}>{TXN_LABEL[t]}</SelectItem>)}</SelectContent>
           </Select>
         </div>
       </header>
       <form onSubmit={submit} className="mx-auto grid max-w-xl gap-3">
         {/* Amount */}
-        <div className="rounded-3xl bg-card p-4 text-center shadow-sm">
-          <Label htmlFor="a" className="text-xs text-muted-foreground">Amount{af("amount")}</Label>
+        <div className="receipt-paper px-5 text-center">
+          <p aria-hidden className="text-xs font-semibold tracking-[0.35em]">{editing ? "EDIT ENTRY" : `NEW ${TXN_LABEL[txnType].toUpperCase()}`}</p>
+          <div aria-hidden className="receipt-rule my-3" />
+          <Label htmlFor="a" className="text-xs">Amount{af("amount")}</Label>
           <div className="mt-1 flex items-center justify-center gap-2">
             <select aria-label="Currency" value={currency} onChange={(e) => setCurrency(e.target.value)} disabled={!confirmed || reading || saving}
-              className="rounded-lg bg-secondary px-2 py-1 text-sm font-semibold">{[...new Set([currency, ...CURRENCIES])].map((c) => <option key={c} value={c}>{c}</option>)}</select>
+              className="rounded-full border border-current/20 bg-transparent px-2 py-1 text-sm font-semibold">{[...new Set([currency, ...CURRENCIES])].map((c) => <option key={c} value={c}>{c}</option>)}</select>
             <input id="a" inputMode="decimal" enterKeyHint="done" onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); e.currentTarget.blur(); } }} type="number" step="0.01" min="0" placeholder="0" value={amount} disabled={!confirmed || reading || saving}
-              onChange={(e) => setAmount(e.target.value)} className="w-full min-w-0 max-w-[14rem] appearance-none bg-transparent [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none text-center font-mono text-4xl font-bold outline-none placeholder:text-muted-foreground/50" />
+              onChange={(e) => setAmount(e.target.value)} className="w-full min-w-0 max-w-[14rem] appearance-none bg-transparent [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none text-center text-5xl font-bold tracking-tight outline-none placeholder:opacity-40" style={{ borderBottom: 0 }} />
           </div>
           {Number(amount) > 0 && <p className="mt-1 text-xs text-muted-foreground">{money(Number(amount), currency)}</p>}
           {currency !== BASE_CURRENCY && (
@@ -660,20 +662,21 @@ function NewExpense() {
                 : <span title={`1 ${currency} = ${fx.rate.toFixed(4)} INR · rate of ${fx.date}`}>≈ <span className="font-mono font-semibold">{converted != null ? money(converted) : "—"}</span> <span className="text-muted-foreground">· rate in More details</span></span>}
             </p>
           )}
+          <div aria-hidden className="receipt-rule mt-3" />
         </div>
 
         {/* Quick capture */}
-        <div className="grid grid-cols-4 gap-2">
-          <Button type="button" disabled={reading || saving} variant="secondary" aria-label="Scan and fill" className="h-auto flex-col gap-0.5 rounded-2xl py-2" onClick={() => cameraRef.current?.click()}><Camera className="h-5 w-5" /><span className="text-[11px]">Scan</span></Button>
+        <div className="order-first grid grid-cols-4 gap-2 pb-2">
+          <Button type="button" disabled={reading || saving} variant="ghost" aria-label="Scan and fill" className="receipt-chip rounded-full mx-auto aspect-square h-auto w-16 flex-col gap-0.5" onClick={() => cameraRef.current?.click()}><Camera className="h-5 w-5" /><span className="text-[11px]">Scan</span></Button>
           <Popover>
-            <PopoverTrigger asChild><Button type="button" disabled={reading || saving} variant="secondary" aria-label="Upload a receipt" className="h-auto flex-col gap-0.5 rounded-2xl py-2"><FolderOpen className="h-5 w-5" /><span className="text-[11px]">Upload</span></Button></PopoverTrigger>
+            <PopoverTrigger asChild><Button type="button" disabled={reading || saving} variant="ghost" aria-label="Upload a receipt" className="receipt-chip rounded-full mx-auto aspect-square h-auto w-16 flex-col gap-0.5"><FolderOpen className="h-5 w-5" /><span className="text-[11px]">Upload</span></Button></PopoverTrigger>
             <PopoverContent className="grid w-44 gap-1 p-1.5">
               <Button type="button" variant="ghost" className="justify-start" onClick={() => galleryRef.current?.click()}><ImageIcon className="h-4 w-4" />Photos</Button>
               <Button type="button" variant="ghost" className="justify-start" onClick={() => fileRef.current?.click()}><FolderOpen className="h-4 w-4" />Files / PDF</Button>
             </PopoverContent>
           </Popover>
-          <Button type="button" disabled={reading || saving} variant={listening ? "default" : "secondary"} aria-label="Speak an entry" className="h-auto flex-col gap-0.5 rounded-2xl py-2" onClick={() => { setVoiceOpen(true); startVoice(); }}><Mic className="h-5 w-5" /><span className="text-[11px]">{listening ? "Listening" : "Voice"}</span></Button>
-          <Button type="button" disabled={reading || saving || !!editing} variant={repeatOpen ? "default" : "secondary"} aria-label="Repeat an expense" aria-expanded={repeatOpen} className="h-auto flex-col gap-0.5 rounded-2xl py-2" onClick={() => setRepeatOpen((o) => !o)}><Repeat className="h-5 w-5" /><span className="text-[11px]">Repeat</span></Button>
+          <Button type="button" disabled={reading || saving} variant={listening ? "gold" : "ghost"} aria-label="Speak an entry" className={cn("mx-auto aspect-square h-auto w-16 flex-col gap-0.5 rounded-full", !listening && "receipt-chip")} onClick={() => { setVoiceOpen(true); startVoice(); }}><Mic className="h-5 w-5" /><span className="text-[11px]">{listening ? "Listening" : "Voice"}</span></Button>
+          <Button type="button" disabled={reading || saving || !!editing} variant={repeatOpen ? "gold" : "ghost"} aria-label="Repeat an expense" aria-expanded={repeatOpen} className={cn("mx-auto aspect-square h-auto w-16 flex-col gap-0.5 rounded-full", !repeatOpen && "receipt-chip")} onClick={() => setRepeatOpen((o) => !o)}><Repeat className="h-5 w-5" /><span className="text-[11px]">Repeat</span></Button>
         </div>
         {repeatOpen && (
           <section aria-label="Repeat an expense" className="rounded-2xl border bg-card p-2 text-sm">
@@ -695,7 +698,7 @@ function NewExpense() {
           </section>
         )}
         {repeatedFrom && !repeatOpen && <p role="status" className="rounded-2xl bg-gold-soft px-3 py-2 text-xs">Copied from your last <b>{repeatedFrom}</b> entry with today's date. Adjust the amount and tap Save — nothing is saved until you do.</p>}
-        <Label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={includeItems} disabled={reading || saving} onChange={e => setIncludeItems(e.target.checked)} />Extract receipt items</Label>
+        <Label className="flex items-center gap-2 text-sm text-receipt-desk-foreground/85"><input type="checkbox" checked={includeItems} disabled={reading || saving} onChange={e => setIncludeItems(e.target.checked)} />Extract receipt items</Label>
         <input ref={cameraRef} type="file" accept="image/*" capture="environment" className="sr-only" aria-label="Take a photo of a receipt" onChange={(e) => { void onFiles(e.target.files); e.target.value = ""; }} />
         <input ref={galleryRef} type="file" multiple accept="image/*" className="sr-only" aria-label="Choose receipt photos" onChange={(e) => { void onFiles(e.target.files); e.target.value = ""; }} />
         <input ref={fileRef} id="r" type="file" multiple accept="image/*,application/pdf" className="sr-only" aria-label="Choose receipt files" onChange={(e) => { void onFiles(e.target.files); e.target.value = ""; }} />
@@ -812,7 +815,7 @@ function NewExpense() {
           </DialogContent>
         </Dialog>
 
-        <fieldset disabled={!confirmed || reading || saving} className={cn("grid min-w-0 gap-3 rounded-3xl bg-card p-4", !confirmed && "opacity-50")}>
+        <fieldset disabled={!confirmed || reading || saving} className={cn("receipt-paper grid min-w-0 gap-3 px-5", !confirmed && "opacity-50")}>
           {TYPE_HINT[txnType] && <p className="text-xs text-muted-foreground">{TYPE_HINT[txnType]}</p>}
           {!isMove(txnType)&&<PayeePicker payees={preferences.payees??[]} merchant={merchant} onSelect={setMerchant}/>}
           {/* Category */}
@@ -920,7 +923,7 @@ function NewExpense() {
           <div className="grid gap-1.5"><Label htmlFor="t">Note{af("title")}</Label><Input id="t" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Optional — e.g. Dinner with Ravi" className={fieldCls} /></div>
 
           {/* More details */}
-          <button type="button" aria-expanded={more} onClick={() => setMore((m) => !m)} className="flex items-center justify-between rounded-xl border border-dashed px-3 py-2.5 text-sm font-semibold">
+          <button type="button" aria-expanded={more} onClick={() => setMore((m) => !m)} className="receipt-rule flex items-center justify-between px-1 pt-3 text-sm font-semibold">
             <span>More details{(sections.business || sections.travel || sections.fx) && !more ? <span className="ml-2 text-xs font-normal text-muted-foreground">{[sections.business && "business", sections.travel && "travel", sections.fx && "exchange rate"].filter(Boolean).join(" · ")}</span> : null}</span>
             <ChevronDown className={cn("h-4 w-4 transition-transform", more && "rotate-180")} />
           </button>
@@ -1013,13 +1016,13 @@ function NewExpense() {
           )}
         </fieldset>
 
-        <div className="sticky bottom-0 z-10 -mx-4 bg-background/95 px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-2 backdrop-blur sm:mx-0 sm:px-0">
+        <div className="receipt-desk sticky bottom-0 z-10 -mx-4 px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-2 backdrop-blur sm:mx-0 sm:px-0">
           {saveError && !saving && <div role="alert" className="mb-2 flex items-center justify-between gap-2 rounded-xl border border-destructive/40 bg-card px-3 py-2 text-xs"><span className="text-destructive">{saveError}</span><Button type="submit" size="sm" variant="outline">Retry</Button></div>}
-          <Button type="submit" size="lg" variant="gold" loading={saving} loadingText={editing ? "Saving changes…" : `Saving your ${TXN_LABEL[txnType].toLowerCase()}…`} className="h-12 w-full rounded-2xl text-base" disabled={reading || saving || !confirmed || duplicateBlocked || matchBlocked || receiptBlocked || !(Number(amount) > 0)}>
-            {editing ? "Save changes" : `Save ${TXN_LABEL[txnType].toLowerCase()}`}
+          <Button type="submit" size="lg" variant="gold" loading={saving} loadingText={editing ? "Saving changes…" : `Saving your ${TXN_LABEL[txnType].toLowerCase()}…`} className="h-12 w-full rounded-full text-base font-semibold uppercase tracking-[0.2em]" disabled={reading || saving || !confirmed || duplicateBlocked || matchBlocked || receiptBlocked || !(Number(amount) > 0)}>
+            {editing ? "Save changes" : `Save ${TXN_LABEL[txnType].toLowerCase()}`}<ArrowRight aria-hidden className="h-4 w-4" />
           </Button>
         </div>
       </form>
-    </>
+    </div>
   );
 }

@@ -557,4 +557,4 @@
 
 ## iPhone receipt problem reporting (added 2026-11-02)
 - [x] Simple in-app way to report receipt zoom/pan trouble from iPhone, with device + browser details captured automatically
-- [ ] Redesign the page in IMG_2179 screenshot; show 3 templates to choose from
+- [x] New expense page redesigned in the chosen "Paper receipt" look
