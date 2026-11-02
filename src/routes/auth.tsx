@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { ScanFace } from "lucide-react";
+import { LedgerlineLogo } from "@/components/LedgerlineLogo";
 import kkLogo from "@/assets/kk-monogram-gold.png.asset.json";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -114,11 +115,12 @@ function Auth() {
     if (r.error) toast.error(r.error.message); else if (!r.redirected) await go();
   };
   return <div className="relative min-h-dvh overflow-hidden">
-  <div aria-hidden="true" className="pointer-events-none fixed bottom-4 right-4 opacity-50 dark:opacity-40">
-    <img src={kkLogo.url} alt="" className="size-[72px] object-contain sm:size-[110px]" />
+  <div className="pointer-events-none fixed z-0 flex flex-col items-center gap-1 text-muted-foreground opacity-70" style={{ right: "max(1rem, env(safe-area-inset-right))", bottom: "max(1rem, env(safe-area-inset-bottom))" }}>
+    <img src={kkLogo.url} alt="KK monogram" className="size-12 object-contain sm:size-16" />
+    <span className="text-[10px] tracking-wide sm:text-xs">A creation by KK</span>
   </div>
-  <main className="relative mx-auto max-w-md px-6 py-12">
-    <Link to="/dashboard" className="font-display text-2xl font-bold text-primary">Ledgerline</Link>
+  <main className="relative z-10 mx-auto max-w-md px-6 pb-28 pt-12">
+    <Link to="/dashboard" aria-label="Ledgerline home" className="inline-block"><LedgerlineLogo className="h-9 w-auto sm:h-11" /></Link>
     <h1 className="mb-5 mt-8 font-display text-3xl font-bold">{signedEmail ? "Welcome back" : signup ? "Create your account" : "Sign in"}</h1>
     {checking ? <p role="status" className="text-sm text-muted-foreground">Checking your account…</p> : signedEmail ? <>
       <p className="mb-5 break-words text-sm">{signedEmail}</p>

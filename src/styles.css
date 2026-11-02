@@ -819,3 +819,7 @@ html[data-theme="apple-glass"] :where(.bg-card, .bg-popover, .bg-ink) {
 
 /* Privacy mode: blur amounts */
 .privacy .font-mono { filter: blur(7px); transition: filter .2s; }
+
+/* Official Ledgerline logo colours (logo only; app theme unchanged) */
+:root { --brand-ink: #17242B; --brand-teal: #168F80; }
+.dark, html.dark { --brand-ink: #FFFFFF; --brand-teal: #2BB3A1; }
