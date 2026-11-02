@@ -382,12 +382,12 @@
 - [x] P1: Dedicated individual trip view /trips/$tripId with section tabs (Overview/Itinerary/Bookings/Expenses/Budget & Settlements/Reports), quick actions, More→Close/Cancel/Delete
 - [x] P1: Simplified Create Trip dialog (essentials first, optional details, localStorage draft, no auto-keyboard)
 - [x] P1: Verified no horizontal overflow at 402px on overview + trip sections
-- [ ] P2: Dedicated Itinerary (day timeline, copy/move, multi-select participants, booking links, maps, conflicts)
-- [ ] P2: Dedicated Bookings (compact cards, type-relevant fields, document import to draft, booking↔itinerary↔expense linking)
-- [ ] P2: Universal Entry integration from trip (editable preselects), multi-select trip expense actions
-- [ ] P3: Budget & Settlements subsections (budget, allocations, advances, reimbursements, reconciliation); financial integrity checks
-- [ ] P4: Home shortcut selection/reorder (max 6 default + View All), workspace multi-select sheet, homepage personalisation persistence
-- [ ] P5: Smart trip linking suggestions, Travel Inbox integration, trip readiness indicator, reports consolidation, controlled trip closure validation
+- [x] P2: Dedicated Itinerary (day timeline, copy/move, multi-select participants, booking links, maps, conflicts)
+- [x] P2: Dedicated Bookings (compact cards, type-relevant fields, document import to draft, booking↔itinerary↔expense linking)
+- [x] P2: Universal Entry integration from trip (editable preselects), multi-select trip expense actions
+- [x] P3: Budget & Settlements subsections (budget, allocations, advances, reimbursements, reconciliation); financial integrity checks
+- [x] P4: Home shortcut selection/reorder (max 6 default + View All), workspace multi-select sheet, homepage personalisation persistence
+- [x] P5: Smart trip linking suggestions, Travel Inbox integration, trip readiness indicator, reports consolidation, controlled trip closure validation
 - [ ] Acceptance: 23 demonstrations incl. unchanged records, no duplicate spend, iPhone layout
 
 ## V5.3 Statement Import (.lovable/requirements-v5.3.md)

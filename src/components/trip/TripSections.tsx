@@ -16,6 +16,7 @@ import { TripBudgetCard, EditBudgetDialog, BudgetBreakdown, ReimbursementBreakdo
 import { BookingDocumentImport } from "./BookingDocumentImport";
 import { TripExpenseActions } from "./TripExpenseActions";
 import { reviewedBooking, type bookingDraft } from "@/lib/booking-import";
+import { copyItem, itineraryConflicts, itineraryDays, mapLink, outsideTrip, tripReadiness } from "@/lib/trip-itinerary";
 
 const sel = "h-10 rounded-xl border bg-background px-2 text-sm";
 const slug = (name: string) => name.replace(/\W+/g, "-");
@@ -50,6 +51,7 @@ export function TripOverviewSection({ trip, onOpenBudget }: { trip: TravelTrip; 
           {!closed && <div className="mt-2 flex gap-2"><Input className="h-10" value={traveller} onChange={(e) => setTraveller(e.target.value)} placeholder="Name" list="members" /><datalist id="members">{members.map((m) => <option key={m.id} value={m.name} />)}</datalist><Button type="button" variant="outline" onClick={() => { const n = traveller.trim(); if (!n || (trip.travellers ?? []).includes(n)) return; void put({ travellers: [...(trip.travellers ?? []), n.slice(0, 60)] }); setTraveller(""); }}>Add</Button></div>}
         </div>
         <TripBudgetMini trip={trip} onOpen={onOpenBudget} />
+        {(() => { const r = tripReadiness(trip); return <div className="mt-3 rounded-xl bg-secondary p-3 text-sm"><b>Trip readiness {r.done}/{r.total}</b>{r.missing.length ? <span className="block text-xs text-muted-foreground">Still to do: {r.missing.join(" · ")}</span> : <span className="block text-xs text-muted-foreground">All set.</span>}</div>; })()}
         {!closed && missingCats.length > 0 && <Button variant="outline" className="mt-3 w-full" onClick={() => void savePreferences({ ...pr, categories: [...pr.categories, ...missingCats.map((name) => ({ name, archived: false }))] }).then(() => toast.success("Travel categories added"))}>Add travel categories ({missingCats.join(", ")})</Button>}
         {!closed && <Button asChild variant="gold" className="mt-3 w-full"><Link to="/new" search={{ trip: trip.id }}>Add an expense to this trip</Link></Button>}
       </Card>
@@ -130,15 +132,31 @@ export function TripItinerarySection({ trip }: { trip: TravelTrip }) {
   const closed = !!trip.closedAt;
   const [showForm, setShowForm] = useState(false);
   const [it, setIt] = useState({ date: trip.start, time: "", title: "", place: "", who: "", note: "", booking: "", document: "" });
-  const items = [...(trip.itinerary ?? [])].sort((a, b) => `${a.date}${a.time ?? ""}`.localeCompare(`${b.date}${b.time ?? ""}`));
+  const all = trip.itinerary ?? [];
+  const days = itineraryDays(all);
+  const clashes = itineraryConflicts(all);
+  const outside = outsideTrip(trip, all);
+  const nextDay = (d: string) => new Date(Date.parse(d + "T00:00:00Z") + 864e5).toISOString().slice(0, 10);
   return (
     <Card title="Itinerary" action={!closed && <Button size="sm" variant="gold" onClick={() => setShowForm((s) => !s)} aria-expanded={showForm}>{showForm ? "Close form" : "Add item"}</Button>}>
-      {items.length === 0 && !showForm && <p className="text-sm text-muted-foreground">No plans yet. Add day-by-day activities, linked bookings and notes.</p>}
-      {items.map((i) => (
-        <div key={i.id} className="border-b py-2 text-sm last:border-0">
-          <div className="flex items-start gap-2"><span className="w-28 shrink-0 text-xs text-muted-foreground">{i.date} {i.time}</span><div className="min-w-0 flex-1"><span className="block truncate">{i.title}{i.place && <span className="text-muted-foreground"> · {i.place}</span>}{i.travellers?.length ? <span className="text-muted-foreground"> · {i.travellers.join(", ")}</span> : null}</span>{i.note && <span className="block truncate text-xs text-muted-foreground">{i.note}</span>}</div>{!closed && <Button size="sm" variant="ghost" onClick={() => void put({ itinerary: (trip.itinerary ?? []).filter((x) => x.id !== i.id) })}>Remove</Button>}</div>
-          {i.bookingId && <div className="text-xs text-muted-foreground">Booking: {(trip.bookings ?? []).find(b => b.id === i.bookingId)?.ref || (trip.bookings ?? []).find(b => b.id === i.bookingId)?.provider}</div>}
-          {i.documentIds?.map(id => <Link key={id} to="/vault" className="block text-xs text-primary">{documents.find(d => d.id === id)?.title ?? "Linked document"}</Link>)}
+      {all.length === 0 && !showForm && <p className="text-sm text-muted-foreground">No plans yet. Add day-by-day activities, linked bookings and notes.</p>}
+      {clashes.size > 0 && <p className="mb-2 text-xs text-destructive">{clashes.size} plans clash at the same time for the same people.</p>}
+      {days.map((day, n) => (
+        <div key={day.date} className="mb-3">
+          <div className="mb-1 text-xs font-semibold text-muted-foreground">Day {n + 1} · {day.date}</div>
+          {day.items.map((i) => (
+            <div key={i.id} className="border-b py-2 text-sm last:border-0">
+              <div className="flex flex-wrap items-start gap-2"><span className="w-14 shrink-0 text-xs text-muted-foreground">{i.time || "Any time"}</span><div className="min-w-0 flex-1"><span className="block truncate">{i.title}{i.place && <a className="text-primary" href={mapLink(i.place)} target="_blank" rel="noreferrer"> · {i.place}</a>}{i.travellers?.length ? <span className="text-muted-foreground"> · {i.travellers.join(", ")}</span> : null}</span>{i.note && <span className="block truncate text-xs text-muted-foreground">{i.note}</span>}{clashes.has(i.id) && <span className="block text-xs text-destructive">Time clash</span>}{outside.has(i.id) && <span className="block text-xs text-destructive">Outside trip dates</span>}</div>
+                {!closed && <div className="flex gap-1">
+                  <Input aria-label={`Move ${i.title} to date`} type="date" className="h-8 w-36" value={i.date} onChange={(e) => e.target.value && void put({ itinerary: all.map((x) => x.id === i.id ? { ...x, date: e.target.value } : x) }, "Moved")} />
+                  <Button size="sm" variant="ghost" onClick={() => void put({ itinerary: [...all, copyItem(i, nextDay(i.date), crypto.randomUUID())] }, "Copied to next day")}>Copy</Button>
+                  <Button size="sm" variant="ghost" onClick={() => void put({ itinerary: all.filter((x) => x.id !== i.id) })}>Remove</Button>
+                </div>}
+              </div>
+              {i.bookingId && <div className="text-xs text-muted-foreground">Booking: {(trip.bookings ?? []).find(b => b.id === i.bookingId)?.ref || (trip.bookings ?? []).find(b => b.id === i.bookingId)?.provider}</div>}
+              {i.documentIds?.map(id => <Link key={id} to="/vault" className="block text-xs text-primary">{documents.find(d => d.id === id)?.title ?? "Linked document"}</Link>)}
+            </div>
+          ))}
         </div>
       ))}
       {!closed && showForm && <div className="mt-2 grid gap-2 border-t pt-3 sm:grid-cols-4">
