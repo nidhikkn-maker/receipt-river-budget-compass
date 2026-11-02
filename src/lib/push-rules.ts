@@ -21,10 +21,11 @@ export const pushSubscriptionSchema = z.object({
   userAgent: z.string().max(300).default(""),
 });
 
-export interface ReminderItem { key: string; date: string; kind: "payment" | "document" }
+export interface ReminderItem { key: string; date: string; kind: "payment" | "document" | "trip" }
 export function paymentReminderItems(input: {
   today: string; leadDays: number; enabled: boolean; commitments: Commitment[]; loans: PositionLoan[];
   accounts: Account[]; transactions: Txn[]; documents: { id: string; expiresOn: string | null }[];
+  trips?: TripReminderSource[];
 }): ReminderItem[] {
   if (!input.enabled) return [];
   const end = addDays(input.today, Math.min(30, Math.max(0, Math.round(input.leadDays))));
@@ -37,10 +38,23 @@ export function paymentReminderItems(input: {
     if (cycle.remainingDue > 0 && cycle.dueDate && cycle.dueDate <= end) items.push({ key: `card:${a.id}:${cycle.dueDate}`, date: cycle.dueDate, kind: "payment" });
   }
   for (const d of input.documents) if (d.expiresOn && d.expiresOn <= end) items.push({ key: `document:${d.id}:${d.expiresOn}`, date: d.expiresOn, kind: "document" });
+  items.push(...tripReminderItems(input.trips ?? [], input.today));
   return items.sort((a,b) => a.date.localeCompare(b.date));
+}
+
+export interface TripReminderSource { id: string; closedAt?: string | null; cancelledAt?: string | null; itinerary?: { id: string; date: string }[]; bookings?: { id: string; date: string; status: string; kind: string }[] }
+/** Itinerary plans and booking check-ins today or tomorrow, for open trips only. Independent of payment reminder settings. */
+export function tripReminderItems(trips: TripReminderSource[], today: string): ReminderItem[] {
+  const end = addDays(today, 1); const out: ReminderItem[] = [];
+  for (const t of trips) {
+    if (t.closedAt || t.cancelledAt) continue;
+    for (const i of t.itinerary ?? []) if (i.date >= today && i.date <= end) out.push({ key: `trip-plan:${t.id}:${i.id}:${i.date}`, date: i.date, kind: "trip" });
+    for (const b of t.bookings ?? []) if (b.status !== "cancelled" && b.date >= today && b.date <= end) out.push({ key: `trip-checkin:${t.id}:${b.id}:${b.date}`, date: b.date, kind: "trip" });
+  }
+  return out;
 }
 
 /** Lock-screen notifications deliberately omit names, amounts and account details. */
 export function privateReminderPayload(count: number, test = false) {
-  return { title: "Ledgerline", body: test ? "Notifications are working on this device." : `${count} payment or renewal reminder${count === 1 ? "" : "s"} to review.`, url: "/plan", tag: test ? "ledgerline-test" : "ledgerline-reminders" };
+  return { title: "Ledgerline", body: test ? "Notifications are working on this device." : `${count} payment, renewal or trip reminder${count === 1 ? "" : "s"} to review.`, url: "/plan", tag: test ? "ledgerline-test" : "ledgerline-reminders" };
 }

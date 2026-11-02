@@ -16,7 +16,7 @@ import { TripBudgetCard, EditBudgetDialog, BudgetBreakdown, ReimbursementBreakdo
 import { BookingDocumentImport } from "./BookingDocumentImport";
 import { TripExpenseActions } from "./TripExpenseActions";
 import { reviewedBooking, type bookingDraft } from "@/lib/booking-import";
-import { copyItem, itineraryConflicts, itineraryDays, mapLink, outsideTrip, tripReadiness } from "@/lib/trip-itinerary";
+import { copyItem, itineraryConflicts, itineraryDays, itineraryPdfRows, mapLink, outsideTrip, tripReadiness } from "@/lib/trip-itinerary";
 
 const sel = "h-10 rounded-xl border bg-background px-2 text-sm";
 const slug = (name: string) => name.replace(/\W+/g, "-");
@@ -136,19 +136,26 @@ export function TripItinerarySection({ trip }: { trip: TravelTrip }) {
   const days = itineraryDays(all);
   const clashes = itineraryConflicts(all);
   const outside = outsideTrip(trip, all);
+  const [compact, setCompact] = useState(false);
+  const [pdfBlob, setPdfBlob] = useState<Blob | null>(null);
+  const preparePdf = async () => { setPdfBlob(await toPdf({ title: `Itinerary: ${trip.name}`, headers: ["Day", "Time", "Plan / booking"], rows: itineraryPdfRows(trip) }, `${trip.destination || ""} · ${trip.start} to ${trip.end}`)); };
   const nextDay = (d: string) => new Date(Date.parse(d + "T00:00:00Z") + 864e5).toISOString().slice(0, 10);
   return (
     <Card title="Itinerary" action={!closed && <Button size="sm" variant="gold" onClick={() => setShowForm((s) => !s)} aria-expanded={showForm}>{showForm ? "Close form" : "Add item"}</Button>}>
       {all.length === 0 && !showForm && <p className="text-sm text-muted-foreground">No plans yet. Add day-by-day activities, linked bookings and notes.</p>}
+      {(all.length > 0 || (trip.bookings ?? []).length > 0) && <div className="mb-3 flex flex-wrap gap-2">
+        <Button size="sm" variant={compact ? "default" : "outline"} onClick={() => setCompact((c) => !c)} aria-pressed={compact}>{compact ? "Full view" : "Compact days"}</Button>
+        {pdfBlob ? <Button size="sm" variant="gold" onClick={() => { downloadBlob(pdfBlob, `itinerary-${slug(trip.name)}.pdf`); setPdfBlob(null); }}>Download itinerary PDF</Button> : <Button size="sm" variant="outline" onClick={preparePdf}>Prepare shareable PDF</Button>}
+      </div>}
       {clashes.size > 0 && <p className="mb-2 text-xs text-destructive">{clashes.size} plans clash at the same time for the same people.</p>}
       {days.map((day, n) => (
         <div key={day.date} className="mb-3">
           <div className="mb-1 text-xs font-semibold text-muted-foreground">Day {n + 1} · {day.date}</div>
-          {day.items.map((i) => (
+          {compact ? <ul className="space-y-1 rounded-xl bg-secondary p-2 text-sm">{day.items.map((i) => <li key={i.id} className="grid grid-cols-[3.5rem_minmax(0,1fr)] gap-2"><span className="text-xs text-muted-foreground">{i.time || "—"}</span><span className={"truncate " + (clashes.has(i.id) ? "text-destructive" : "")}>{i.title}</span></li>)}</ul> : day.items.map((i) => (
             <div key={i.id} className="border-b py-2 text-sm last:border-0">
-              <div className="flex flex-wrap items-start gap-2"><span className="w-14 shrink-0 text-xs text-muted-foreground">{i.time || "Any time"}</span><div className="min-w-0 flex-1"><span className="block truncate">{i.title}{i.place && <a className="text-primary" href={mapLink(i.place)} target="_blank" rel="noreferrer"> · {i.place}</a>}{i.travellers?.length ? <span className="text-muted-foreground"> · {i.travellers.join(", ")}</span> : null}</span>{i.note && <span className="block truncate text-xs text-muted-foreground">{i.note}</span>}{clashes.has(i.id) && <span className="block text-xs text-destructive">Time clash</span>}{outside.has(i.id) && <span className="block text-xs text-destructive">Outside trip dates</span>}</div>
-                {!closed && <div className="flex gap-1">
-                  <Input aria-label={`Move ${i.title} to date`} type="date" className="h-8 w-36" value={i.date} onChange={(e) => e.target.value && void put({ itinerary: all.map((x) => x.id === i.id ? { ...x, date: e.target.value } : x) }, "Moved")} />
+              <div className="flex flex-wrap items-start gap-2"><span className="w-14 shrink-0 text-xs text-muted-foreground">{i.time || "Any time"}</span><div className="min-w-0 flex-1 basis-[calc(100%-4rem)] sm:basis-auto"><span className="block truncate">{i.title}{i.place && <a className="text-primary" href={mapLink(i.place)} target="_blank" rel="noreferrer"> · {i.place}</a>}{i.travellers?.length ? <span className="text-muted-foreground"> · {i.travellers.join(", ")}</span> : null}</span>{i.note && <span className="block truncate text-xs text-muted-foreground">{i.note}</span>}{clashes.has(i.id) && <span className="block text-xs text-destructive">Time clash</span>}{outside.has(i.id) && <span className="block text-xs text-destructive">Outside trip dates</span>}</div>
+                {!closed && <div className="flex w-full gap-1 sm:w-auto">
+                  <Input aria-label={`Move ${i.title} to date`} type="date" className="h-8 min-w-0 flex-1 sm:w-36 sm:flex-none" value={i.date} onChange={(e) => e.target.value && void put({ itinerary: all.map((x) => x.id === i.id ? { ...x, date: e.target.value } : x) }, "Moved")} />
                   <Button size="sm" variant="ghost" onClick={() => void put({ itinerary: [...all, copyItem(i, nextDay(i.date), crypto.randomUUID())] }, "Copied to next day")}>Copy</Button>
                   <Button size="sm" variant="ghost" onClick={() => void put({ itinerary: all.filter((x) => x.id !== i.id) })}>Remove</Button>
                 </div>}

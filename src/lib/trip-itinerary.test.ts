@@ -28,3 +28,12 @@ describe("trip itinerary", () => {
     expect(r.missing).toContain("Set a budget");
   });
 });
+
+import { itineraryPdfRows } from "./trip-itinerary";
+describe("itinerary PDF", () => {
+  it("lists plans by day then bookings, without amounts", () => {
+    const rows = itineraryPdfRows({ id: "t", name: "T", start: "2026-05-01", end: "2026-05-02", budget: 0, itinerary: [{ id: "a", date: "2026-05-01", time: "09:00", title: "Museum" }], bookings: [{ id: "h", kind: "hotel", provider: "Taj", ref: "R1", date: "2026-05-01", amount: 9000, status: "unpaid" }] } as unknown as TravelTrip);
+    expect(rows).toEqual([["Day 1 · 2026-05-01", "09:00", "Museum"], ["Booking", "2026-05-01", "hotel · Taj · #R1 · Unconfirmed"]]);
+    expect(rows.flat().join(" ")).not.toContain("9000");
+  });
+});
