@@ -8,7 +8,7 @@ describe("trip itinerary", () => {
   it("groups by day in time order", () => {
     const d = itineraryDays([i("b", "2026-05-02", "09:00"), i("a", "2026-05-01"), i("c", "2026-05-02", "08:00")]);
     expect(d.map((x) => x.date)).toEqual(["2026-05-01", "2026-05-02"]);
-    expect(d[1].items.map((x) => x.id)).toEqual(["c", "b"]);
+    expect(d[1]!.items.map((x) => x.id)).toEqual(["c", "b"]);
   });
   it("flags same-time clashes only for shared travellers", () => {
     expect([...itineraryConflicts([i("a", "2026-05-01", "09:00", ["KK"]), i("b", "2026-05-01", "09:00", ["KK"])])].sort()).toEqual(["a", "b"]);

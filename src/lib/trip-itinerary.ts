@@ -17,7 +17,7 @@ export function itineraryDays(items: ItineraryItem[]): { date: string; items: It
 export function itineraryConflicts(items: ItineraryItem[]): Set<string> {
   const ids = new Set<string>();
   for (let a = 0; a < items.length; a++) for (let b = a + 1; b < items.length; b++) {
-    const x = items[a], y = items[b];
+    const x = items[a]!, y = items[b]!;
     if (!x.time || x.date !== y.date || x.time !== y.time) continue;
     const tx = x.travellers ?? [], ty = y.travellers ?? [];
     if (!tx.length || !ty.length || tx.some((t) => ty.includes(t))) { ids.add(x.id); ids.add(y.id); }
