@@ -1,3 +1,4 @@
+import { SectionTabs } from "@/components/SectionTabs";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
@@ -77,6 +78,7 @@ function StatementAccountsPage() {
   return (
     <div className="mx-auto max-w-4xl space-y-4">
       <header className="space-y-1">
+        <SectionTabs group="health" active="coverage" />
         <h1 className="font-display text-2xl font-semibold tracking-tight sm:text-3xl">Statement coverage</h1>
         <p className="text-sm text-muted-foreground">A month is confirmed when a statement matched at least one of its entries. Upload missing ones on the <Link to="/statements" className="underline">Statement Desk</Link>.</p>
       </header>

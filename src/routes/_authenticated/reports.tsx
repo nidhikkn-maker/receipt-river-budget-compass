@@ -1,3 +1,4 @@
+import { SectionTabs } from "@/components/SectionTabs";
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { Download, FileSpreadsheet, FileText } from "lucide-react";
@@ -94,7 +95,7 @@ function Reports() {
 
   return (
     <>
-      <PageTitle eyebrow="Insights" title="Spending & reports" />
+      <SectionTabs group="reports" active="charts" /><PageTitle eyebrow="Insights" title="Spending & reports" />
       <div className="mb-6 grid gap-3 rounded-3xl border bg-card p-5 sm:grid-cols-4 sm:items-end">
         <div className="grid gap-1"><Label htmlFor="from">From</Label><Input id="from" type="date" value={from} onChange={(e) => setFrom(e.target.value)} /></div>
         <div className="grid gap-1"><Label htmlFor="to">To</Label><Input id="to" type="date" value={to} onChange={(e) => setTo(e.target.value)} /></div>
