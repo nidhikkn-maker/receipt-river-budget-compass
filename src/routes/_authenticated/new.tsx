@@ -25,7 +25,7 @@ import { tagValue } from "@/lib/preferences";
 import { duplicateBills } from "@/lib/bill-duplicates";
 import { suggestForEntry } from "@/lib/statement-pipeline/single-entry";
 import { buildReceiptAudit, receiptFingerprint, receiptFingerprintMatches, type ReceiptReadValues } from "@/lib/receipt-audit";
-import { receiptConfidence, receiptBreakdownError, receiptItemConfidence, type ReadingConfidence } from "@/lib/receipt-reading";
+import { receiptConfidence, receiptBreakdownError, receiptItemConfidence, receiptItemReviewReasons, receiptReviewCheck, receiptReviewSignature, type ReadingConfidence } from "@/lib/receipt-reading";
 import { quickEntrySearch } from "@/lib/quick-entry";
 import { useStore } from "@/lib/store";
 import { activeInstruments, applyInstrument, instrumentLabel, lastInstrumentForMerchant } from "@/lib/payment-instruments";
@@ -181,6 +181,8 @@ function NewExpense() {
   const [batch, setBatch] = useState<{ done: number; total: number } | null>(null);
   const [duplicateApproval, setDuplicateApproval] = useState("");
   const [matchApproval, setMatchApproval] = useState("");
+  const [reviewApproval, setReviewApproval] = useState("");
+  const [reviewDialog, setReviewDialog] = useState(false);
   const [reading, setReading] = useState(false);
   const [readingError, setReadingError] = useState("");
   const [readTarget, setReadTarget] = useState<LocalReceipt | null>(null);
