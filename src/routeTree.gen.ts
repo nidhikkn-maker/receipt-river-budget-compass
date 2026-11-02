@@ -57,6 +57,7 @@ import { Route as AuthenticatedTravelInboxRouteImport } from './routes/_authenti
 import { Route as AuthenticatedTripsRouteImport } from './routes/_authenticated/trips'
 import { Route as AuthenticatedVaultRouteImport } from './routes/_authenticated/vault'
 import { Route as AuthenticatedWealthRouteImport } from './routes/_authenticated/wealth'
+import { Route as UTokenRouteImport } from './routes/u.$token'
 import { Route as DotlovableOauthConsentRouteImport } from './routes/[.]lovable.oauth.consent'
 import { Route as AuthenticatedCardsAccountIdRouteImport } from './routes/_authenticated/cards.$accountId'
 import { Route as AuthenticatedTripsIndexRouteImport } from './routes/_authenticated/trips.index'
@@ -322,6 +323,11 @@ const AuthenticatedWealthRoute = AuthenticatedWealthRouteImport.update({
   path: '/wealth',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const UTokenRoute = UTokenRouteImport.update({
+  id: '/u/$token',
+  path: '/u/$token',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const DotlovableOauthConsentRoute = DotlovableOauthConsentRouteImport.update({
   id: '/.lovable/oauth/consent',
   path: '/.lovable/oauth/consent',
@@ -421,6 +427,7 @@ export interface FileRoutesByFullPath {
   '/trips': typeof AuthenticatedTripsRouteWithChildren
   '/vault': typeof AuthenticatedVaultRoute
   '/wealth': typeof AuthenticatedWealthRoute
+  '/u/$token': typeof UTokenRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/cards/$accountId': typeof AuthenticatedCardsAccountIdRoute
   '/trips/$tripId': typeof AuthenticatedTripsTripIdRoute
@@ -478,6 +485,7 @@ export interface FileRoutesByTo {
   '/travel-inbox': typeof AuthenticatedTravelInboxRoute
   '/vault': typeof AuthenticatedVaultRoute
   '/wealth': typeof AuthenticatedWealthRoute
+  '/u/$token': typeof UTokenRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/cards/$accountId': typeof AuthenticatedCardsAccountIdRoute
   '/trips/$tripId': typeof AuthenticatedTripsTripIdRoute
@@ -538,6 +546,7 @@ export interface FileRoutesById {
   '/_authenticated/trips': typeof AuthenticatedTripsRouteWithChildren
   '/_authenticated/vault': typeof AuthenticatedVaultRoute
   '/_authenticated/wealth': typeof AuthenticatedWealthRoute
+  '/u/$token': typeof UTokenRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/_authenticated/cards/$accountId': typeof AuthenticatedCardsAccountIdRoute
   '/_authenticated/trips/$tripId': typeof AuthenticatedTripsTripIdRoute
@@ -598,6 +607,7 @@ export interface FileRouteTypes {
     | '/trips'
     | '/vault'
     | '/wealth'
+    | '/u/$token'
     | '/.lovable/oauth/consent'
     | '/cards/$accountId'
     | '/trips/$tripId'
@@ -655,6 +665,7 @@ export interface FileRouteTypes {
     | '/travel-inbox'
     | '/vault'
     | '/wealth'
+    | '/u/$token'
     | '/.lovable/oauth/consent'
     | '/cards/$accountId'
     | '/trips/$tripId'
@@ -714,6 +725,7 @@ export interface FileRouteTypes {
     | '/_authenticated/trips'
     | '/_authenticated/vault'
     | '/_authenticated/wealth'
+    | '/u/$token'
     | '/.lovable/oauth/consent'
     | '/_authenticated/cards/$accountId'
     | '/_authenticated/trips/$tripId'
@@ -732,6 +744,7 @@ export interface RootRouteChildren {
   McpRoute: typeof McpRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
   Char91DotwellKnownChar93OauthProtectedResourceRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
+  UTokenRoute: typeof UTokenRoute
   DotlovableOauthConsentRoute: typeof DotlovableOauthConsentRoute
   ApiPublicJobsAccountantLinksRoute: typeof ApiPublicJobsAccountantLinksRoute
   ApiPublicJobsCleanupDemosRoute: typeof ApiPublicJobsCleanupDemosRoute
@@ -1078,6 +1091,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedWealthRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/u/$token': {
+      id: '/u/$token'
+      path: '/u/$token'
+      fullPath: '/u/$token'
+      preLoaderRoute: typeof UTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/.lovable/oauth/consent': {
       id: '/.lovable/oauth/consent'
       path: '/.lovable/oauth/consent'
@@ -1263,6 +1283,7 @@ const rootRouteChildren: RootRouteChildren = {
   ResetPasswordRoute: ResetPasswordRoute,
   Char91DotwellKnownChar93OauthProtectedResourceRoute:
     Char91DotwellKnownChar93OauthProtectedResourceRoute,
+  UTokenRoute: UTokenRoute,
   DotlovableOauthConsentRoute: DotlovableOauthConsentRoute,
   ApiPublicJobsAccountantLinksRoute: ApiPublicJobsAccountantLinksRoute,
   ApiPublicJobsCleanupDemosRoute: ApiPublicJobsCleanupDemosRoute,
