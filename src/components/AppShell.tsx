@@ -1,6 +1,6 @@
 import { FilePen } from "lucide-react";
 import { DraftsReminder } from "@/components/DraftsReminder";
-import { Link, useRouter, useRouterState } from "@tanstack/react-router";
+import { Link, useRouter, useRouterState , useNavigate } from "@tanstack/react-router";
 import { ArrowLeft, ArrowRight } from "lucide-react";
 import { backStep, showBackButton } from "@/lib/back-nav";
 import { useEffect, useState, type ReactNode } from "react";
@@ -98,6 +98,7 @@ function WorkspaceSelector() {
 /** Small header pill showing whether saved figures are refreshing, current, offline or failed. Tap to refresh. */
 function SyncStatus() {
   const { syncState, lastSyncedAt, pendingCount, refresh } = useStore();
+  const navigate = useNavigate();
   const [, tick] = useState(0);
   useEffect(() => { const t = setInterval(() => tick((n) => n + 1), 30000); return () => clearInterval(t); }, []);
   const mins = lastSyncedAt ? Math.max(0, Math.round((Date.now() - new Date(lastSyncedAt).getTime()) / 60000)) : null;
@@ -111,7 +112,7 @@ function SyncStatus() {
   return (
     <button
       type="button"
-      onClick={() => void refresh()}
+      onClick={() => (pendingCount > 0 ? void navigate({ to: "/sync-queue" }) : void refresh())}
       aria-live="polite"
       title={label}
       className={"flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold transition " +

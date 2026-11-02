@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import type { Database, Json } from "@/integrations/supabase/types";
 import { queueEntry, pendingEntries, removePending, putSnapshot, getSnapshot } from "./offline";
+import { mergePending, setItem, type PendingItem } from "./pending-sync";
 import { deleteFinanceData } from "./delete-data";
 import { saveExpense } from "./fx.functions";
 import {
@@ -51,6 +52,10 @@ interface Ctx {
   departmentBudgets: Record<string, number>;
   departmentBudgetError: boolean;
   pendingCount: number;
+  /** Entries saved on this device that are waiting for (or recently finished) syncing. */
+  pendingItems: PendingItem[];
+  /** Try syncing waiting entries again; pass an id to retry just one. */
+  retrySync: (id?: string) => Promise<void>;
   preferences: FinancePreferences;
   savePreferences: (p: FinancePreferences) => Promise<void>;
   ensureCategory: (name: string) => Promise<void>;
@@ -158,6 +163,8 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
   const [syncState, setSyncState] = useState<"syncing" | "synced" | "offline" | "error">("syncing");
   const [lastSyncedAt, setLastSyncedAt] = useState<string | null>(null);
   const [pendingCount, setPendingCount] = useState(0);
+  const [pendingItems, setPendingItems] = useState<PendingItem[]>([]);
+  const syncRef = useRef<(only?: string) => Promise<void>>(async () => {});
   const syncing = useRef(false);
   const deleting = useRef(false);
   const [preferences, setPreferences] = useState<FinancePreferences>(defaultPreferences);
@@ -282,7 +289,7 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
     if (!navigator.onLine) {
       if (opts?.id) throw Error("Reconnect to edit an existing transaction");
       await queueEntry({ id: opts?.createId ?? crypto.randomUUID(), owner: userId, input: s, files: opts?.files ?? [], createdAt: new Date().toISOString() });
-      setPendingCount((await pendingEntries(userId)).length);
+      void syncRef.current();
       toast.message("Saved offline — waiting to sync"); return;
     }
     let receipts: Receipt[] | undefined;
@@ -310,24 +317,38 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
 
   useEffect(() => {
     let active = true;
-    const sync = async () => {
-      const entries = await pendingEntries(userId).catch(() => []);
-      if (active) setPendingCount(entries.length);
+    const sync = async (only?: string) => {
+      const entries = await pendingEntries(userId).catch(() => [] as Awaited<ReturnType<typeof pendingEntries>>);
+      if (!active) return;
+      setPendingCount(entries.length);
+      setPendingItems((prev) => mergePending(prev, entries));
       if (!navigator.onLine || syncing.current || deleting.current || !entries.length) return;
       syncing.current = true;
+      let failed = 0, saved = 0;
       try {
         for (const entry of entries) {
+          if (only && entry.id !== only) continue;
           if (!navigator.onLine || deleting.current) break;
-          await save(entry.input, { createId: entry.id, files: entry.files });
-          if (!navigator.onLine) break;
-          await removePending(entry.id);
+          setPendingItems((prev) => setItem(prev, entry.id, { status: "saving", error: undefined }));
+          try {
+            await save(entry.input, { createId: entry.id, files: entry.files, noRefresh: true });
+            await removePending(entry.id);
+            saved++;
+            setPendingItems((prev) => setItem(prev, entry.id, { status: "saved", error: undefined }));
+          } catch (err) {
+            failed++;
+            setPendingItems((prev) => setItem(prev, entry.id, { status: "failed", error: err instanceof Error ? err.message : "Couldn't save" }));
+          }
         }
         if (active) setPendingCount((await pendingEntries(userId)).length);
-        toast.success("Offline entries synced");
-      } catch { toast.error("Offline entry is still waiting — reconnect to retry"); } finally { syncing.current = false; }
+        if (saved) { toast.success(`${saved} offline ${saved === 1 ? "entry" : "entries"} synced`); void refresh(); }
+        if (failed) toast.error(`${failed} offline ${failed === 1 ? "entry" : "entries"} couldn't sync — open Waiting to sync to retry`);
+      } finally { syncing.current = false; }
     };
-    void sync(); window.addEventListener("online", sync);
-    return () => { active = false; window.removeEventListener("online", sync); };
+    syncRef.current = sync;
+    const onOnline = () => void sync();
+    void sync(); window.addEventListener("online", onOnline);
+    return () => { active = false; window.removeEventListener("online", onOnline); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId]);
 
@@ -683,7 +704,7 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
   return (
     <StoreCtx.Provider value={{
       departmentBudgets, departmentBudgetError,
-      pendingCount, setTags, manageTripExpenses, applyReviewMapping, applyReviewMetadata, undoReviewMetadata, reviewMetadataHistory, saveRecurringReview, preferences, savePreferences, ensureCategory, moveCategory, bulkSetCategory, categoryHistory, undoCategoryBatch, correctFinancialEntries, undoFinancialCorrection, financialCorrectionHistory, userId, name, updateName, members, memberName,
+      pendingCount, pendingItems, retrySync: (id?: string) => syncRef.current(id), setTags, manageTripExpenses, applyReviewMapping, applyReviewMetadata, undoReviewMetadata, reviewMetadataHistory, saveRecurringReview, preferences, savePreferences, ensureCategory, moveCategory, bulkSetCategory, categoryHistory, undoCategoryBatch, correctFinancialEntries, undoFinancialCorrection, financialCorrectionHistory, userId, name, updateName, members, memberName,
       expenses: expenses.filter((x) => (x.txnType ?? "expense") === "expense"), transactions: expenses.filter((x) => !x.transferCounterpartOf), transferCounterparts: expenses.filter((x) => !!x.transferCounterpartOf), confirmTransfer, cancelTransfer, accounts, addAccount, setArchived, adjustBalance,
       commitments, loans, goals, valuations, documents, saveCommitment, confirmIrregular, removeCommitment, confirmCommitment, saveLoan, removeLoan, recordLoanPayment, convertToEmi,
       saveGoal, removeGoal, updateAccount, addValuation, removeValuation, addDocument, updateDocument, removeDocument, history, setReimbursement, recordReimbursement, deleteAll,

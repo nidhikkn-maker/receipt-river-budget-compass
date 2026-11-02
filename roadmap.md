@@ -470,3 +470,4 @@
 - [x] Sign-in page + bottom menu alignment at tablet/desktop
 - [x] Face ID sign-in with MPIN/password fallback (verify existing)
 - [ ] Test Face ID fallback on a real iPhone (needs user device)
+- [x] Waiting to sync screen (/sync-queue) with per-entry status and retry
