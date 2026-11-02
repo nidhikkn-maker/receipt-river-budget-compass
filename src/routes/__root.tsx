@@ -97,7 +97,6 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
       // Logo/Tamil fonts load without blocking first paint (print-media swap trick); system font shows meanwhile.
-      { rel: "stylesheet", href: "https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@700&family=Noto+Sans+Tamil:wght@400;600&display=swap", media: "print", onLoad: "this.media='all'" } as never,
       // Open the secure link to the record store while the page is still loading, so the first fetch doesn't wait on it.
       { rel: "preconnect", href: (import.meta.env['VITE_SUPABASE_URL'] ?? "").replace(/\/$/, "") },
       { rel: "dns-prefetch", href: (import.meta.env['VITE_SUPABASE_URL'] ?? "").replace(/\/$/, "") },
@@ -106,6 +105,9 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { rel: "apple-touch-icon", href: "/apple-touch-icon.png" },
     ],
     scripts: [
+      {
+        children: `(function(){var l=document.createElement("link");l.rel="stylesheet";l.href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@700&family=Noto+Sans+Tamil:wght@400;600&display=swap";document.head.appendChild(l);})();`,
+      },
       {
         /* Apply the saved theme before first paint to avoid a flash. */
         children: `try{var t=JSON.parse(localStorage.getItem("ll-theme")||"{}");var e=document.documentElement;e.dataset.theme=t.themeName||"signature";e.classList.toggle("dark",t.appearance==="dark"||(t.appearance!=="light"&&matchMedia("(prefers-color-scheme: dark)").matches));}catch(_){}`,
