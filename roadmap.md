@@ -545,3 +545,8 @@
 - [x] Per-event configurable reminders inside the exported .ics file
 - [x] Receipt items with low name/amount confidence highlighted and checked before saving
 - [x] Receipt total check recalculates on every item, subtotal, tax or tip edit
+
+## Receipt viewer & field confirmation
+- [x] Side-by-side receipt image viewer with zoom during review
+- [x] Require confirming low-confidence merchant/date/total before saving
+- [x] Publish after receipt changes

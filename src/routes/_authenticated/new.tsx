@@ -25,7 +25,8 @@ import { tagValue } from "@/lib/preferences";
 import { duplicateBills } from "@/lib/bill-duplicates";
 import { suggestForEntry } from "@/lib/statement-pipeline/single-entry";
 import { buildReceiptAudit, receiptFingerprint, receiptFingerprintMatches, type ReceiptReadValues } from "@/lib/receipt-audit";
-import { receiptConfidence, receiptBreakdownError, receiptItemConfidence, receiptItemReviewReasons, receiptReviewCheck, receiptReviewSignature, type ReadingConfidence } from "@/lib/receipt-reading";
+import { receiptConfidence, receiptBreakdownError, receiptItemConfidence, receiptItemReviewReasons, receiptReviewCheck, receiptReviewSignature, unconfirmedFields, type ReceiptField, type ReadingConfidence } from "@/lib/receipt-reading";
+import { ReceiptZoomViewer } from "@/components/ReceiptZoomViewer";
 import { quickEntrySearch } from "@/lib/quick-entry";
 import { useStore } from "@/lib/store";
 import { activeInstruments, applyInstrument, instrumentLabel, lastInstrumentForMerchant } from "@/lib/payment-instruments";
@@ -183,6 +184,7 @@ function NewExpense() {
   const [matchApproval, setMatchApproval] = useState("");
   const [reviewApproval, setReviewApproval] = useState("");
   const [reviewDialog, setReviewDialog] = useState(false);
+  const [fieldChecks, setFieldChecks] = useState<Partial<Record<ReceiptField, string>>>({});
   const [reading, setReading] = useState(false);
   const [readingError, setReadingError] = useState("");
   const [readTarget, setReadTarget] = useState<LocalReceipt | null>(null);
@@ -404,7 +406,7 @@ function NewExpense() {
     setScan(null);
     setScanCategory("");
     setConfirmed(false);
-    setReviewApproval(""); setReviewDialog(false);
+    setReviewApproval(""); setReviewDialog(false); setFieldChecks({});
     setReading(true); setStage({ kind: "receipt", at: 0 });
     const req = latest.current.begin();
     try {
@@ -473,6 +475,15 @@ function NewExpense() {
   const reviewSig = useMemo(() => receiptReviewSignature(reviewTotal, receiptDetails), [reviewTotal, receiptDetails]);
   const reviewMessages = [receiptBreakdownError(reviewTotal, receiptDetails), review.itemTotalError].filter((m): m is string => !!m);
 
+  const fieldValues: Record<ReceiptField, string> = { merchant: scan?.merchant.trim() ?? "", date: scan?.date ?? "", total: scan?.amount ?? "" };
+  const fieldsToConfirm = unconfirmedFields(receiptDetails.confidence, fieldValues, fieldChecks);
+  const FIELD_LABEL: Record<ReceiptField, string> = { merchant: "merchant", date: "date", total: "total" };
+  const FieldCheck = ({ f }: { f: ReceiptField }) => receiptDetails.confidence?.[f] !== "low" ? null : (
+    <label className={cn("flex items-center gap-2 rounded-xl border-2 p-2 text-xs font-semibold", fieldChecks[f] === fieldValues[f] ? "border-border" : "border-warning bg-warning/10")}>
+      <input type="checkbox" className="h-4 w-4" checked={fieldChecks[f] === fieldValues[f]} onChange={(e) => setFieldChecks((c) => ({ ...c, [f]: e.target.checked ? fieldValues[f] : undefined }))} />
+      I've checked this {FIELD_LABEL[f]} against the receipt
+    </label>);
+
   const confirmScan = (reviewApproved = false) => {
     if (!scan) return;
     if (!scan.merchant.trim()) { toast.error("Enter the merchant"); return; }
@@ -480,6 +491,7 @@ function NewExpense() {
     if (!isDate(scan.date)) { toast.error("Enter the date"); return; }
     const breakdownError = receiptBreakdownError(Number(scan.amount), receiptDetails);
     if (breakdownError) { toast.error(breakdownError); return; }
+    if (fieldsToConfirm.length) { toast.error(`Confirm the ${fieldsToConfirm.map((f) => FIELD_LABEL[f]).join(", ")} — it was hard to read`); return; }
     if (!reviewApproved && review.needed && reviewApproval !== reviewSig) { setReviewDialog(true); return; }
     if (!preferences.categories.some(c => !c.archived && c.name === scanCategory)) { toast.error("Choose a category to confirm"); return; }
     setCategory(scanCategory);
@@ -518,7 +530,7 @@ function NewExpense() {
   const advanceQueue = async () => {
     const [next, ...rest] = queue;
     setQueue(rest); setBatch(b => next && b ? { done: b.done + 1, total: b.total } : null);
-    setFromInbox([]); setDuplicateApproval(""); setReceiptApproval(""); setReviewApproval(""); setReviewDialog(false); setReceipts(next ? [next] : []);
+    setFromInbox([]); setDuplicateApproval(""); setReceiptApproval(""); setReviewApproval(""); setReviewDialog(false); setFieldChecks({}); setReceipts(next ? [next] : []);
     setTitle(""); setMerchant(""); setAmount(""); setDescription(""); setTags("");
     setReceiptDetails({}); setScan(null); setScanRead(null); setConfirmed(true); setReadingError(""); setReadTarget(null); setAutoFilled(new Set()); setSplitOn(false); setShares({});
     if (next) await runExtraction(next, true);
@@ -751,14 +763,16 @@ function NewExpense() {
         {receiptReuse.length > 0 && !reading && <section aria-label="Receipt already used" className="space-y-3 rounded-2xl border border-gold bg-gold-soft p-4">
           <h2 className="font-display font-bold">This receipt is already attached to another entry</h2>
           <ul className="space-y-2 text-sm">{receiptReuse.map(e => <li key={e.id} className="flex flex-wrap items-center justify-between gap-2"><span>{e.merchant ?? e.title} · {e.date} · {e.currency} {e.originalAmount.toFixed(2)}</span><Link to="/new" search={{ edit: e.id }} target="_blank" rel="noopener noreferrer" className="text-primary underline">Review existing entry</Link></li>)}</ul>
-          <div className="flex flex-wrap gap-2"><Button type="button" size="sm" variant="outline" disabled={saving} onClick={() => { setReceipts([]); setReceiptDetails({}); setScan(null); setScanRead(null); setConfirmed(true); setReceiptApproval(""); setReviewApproval(""); setReviewDialog(false); }}>Remove this receipt</Button><Button type="button" size="sm" variant="secondary" disabled={!receiptBlocked} onClick={() => setReceiptApproval(receiptSignature)}>{receiptBlocked ? "Use this receipt anyway" : "Reused receipt confirmed"}</Button></div>
+          <div className="flex flex-wrap gap-2"><Button type="button" size="sm" variant="outline" disabled={saving} onClick={() => { setReceipts([]); setReceiptDetails({}); setScan(null); setScanRead(null); setConfirmed(true); setReceiptApproval(""); setReviewApproval(""); setReviewDialog(false); setFieldChecks({}); }}>Remove this receipt</Button><Button type="button" size="sm" variant="secondary" disabled={!receiptBlocked} onClick={() => setReceiptApproval(receiptSignature)}>{receiptBlocked ? "Use this receipt anyway" : "Reused receipt confirmed"}</Button></div>
         </section>}
         {scan && !reading && !confirmed && (
-          <section ref={reviewRef} className="space-y-3 rounded-3xl border-2 border-primary bg-card p-4 shadow-float" role="group" aria-label="Review scanned details">
+          <section ref={reviewRef} className={cn("rounded-3xl border-2 border-primary bg-card p-4 shadow-float", receipts[0] && "lg:grid lg:w-[min(64rem,calc(100vw-4rem))] lg:grid-cols-2 lg:gap-5 lg:justify-self-center")} role="group" aria-label="Review scanned details">
+            {receipts[0] && <div className="mb-4 lg:mb-0"><div className="lg:sticky lg:top-4"><div className="mb-2 font-display font-bold">Original receipt</div><ReceiptZoomViewer src={receipts[0].dataUrl} type={receipts[0].type} name={receipts[0].name} /></div></div>}
+            <div className="min-w-0 space-y-3">
             <div><div className="font-display font-bold">Check what we read</div><p className="text-xs text-muted-foreground">Fix anything that's off, then confirm.</p></div>
-            <div className="grid gap-1"><Label htmlFor="sm">Merchant</Label><Input id="sm" value={scan.merchant} onChange={(e) => setScan({ ...scan, merchant: e.target.value })} /><ReadingIndicator value={receiptDetails.confidence?.merchant ?? "unknown"} /></div>
+            <div className="grid gap-1"><Label htmlFor="sm">Merchant</Label><Input id="sm" value={scan.merchant} onChange={(e) => setScan({ ...scan, merchant: e.target.value })} /><ReadingIndicator value={receiptDetails.confidence?.merchant ?? "unknown"} /><FieldCheck f="merchant" /></div>
             <div className="grid grid-cols-2 gap-3">
-              <div className="grid gap-1"><Label htmlFor="sd">Date</Label><Input id="sd" type="date" value={scan.date} onChange={(e) => setScan({ ...scan, date: e.target.value })} /><ReadingIndicator value={receiptDetails.confidence?.date ?? "unknown"} /></div>
+              <div className="grid gap-1"><Label htmlFor="sd">Date</Label><Input id="sd" type="date" value={scan.date} onChange={(e) => setScan({ ...scan, date: e.target.value })} /><ReadingIndicator value={receiptDetails.confidence?.date ?? "unknown"} /><FieldCheck f="date" /></div>
               <div className="grid gap-1"><Label>Currency</Label>
                 <Select value={scan.currency} onValueChange={(v) => setScan({ ...scan, currency: v })}>
                   <SelectTrigger aria-label="Scanned currency"><SelectValue /></SelectTrigger>
@@ -766,7 +780,7 @@ function NewExpense() {
                 </Select>
               </div>
             </div>
-            <div className="grid gap-1"><Label htmlFor="sa">Total on bill</Label><Input id="sa" type="number" step="0.01" min="0" className="font-mono" value={scan.amount} onChange={(e) => setScan({ ...scan, amount: e.target.value })} /><ReadingIndicator value={receiptDetails.confidence?.total ?? "unknown"} /></div>
+            <div className="grid gap-1"><Label htmlFor="sa">Total on bill</Label><Input id="sa" type="number" step="0.01" min="0" className="font-mono" value={scan.amount} onChange={(e) => setScan({ ...scan, amount: e.target.value })} /><ReadingIndicator value={receiptDetails.confidence?.total ?? "unknown"} /><FieldCheck f="total" /></div>
             <div className="grid gap-1"><Label htmlFor="receipt-subtotal">Subtotal before tax and tip</Label><Input id="receipt-subtotal" type="number" min="0" step="0.01" value={receiptDetails.subtotal ?? ""} onChange={e=>setReceiptDetails({...receiptDetails,subtotal:e.target.value===""?null:Number(e.target.value)})}/></div>
             <div className="grid grid-cols-2 gap-3">
               <div className="grid gap-1"><Label htmlFor="receipt-tax">Tax included</Label><Input id="receipt-tax" type="number" min="0" step="0.01" value={receiptDetails.tax ?? ""} onChange={e=>setReceiptDetails({...receiptDetails,tax:e.target.value===""?null:Number(e.target.value)})}/></div>
@@ -779,6 +793,7 @@ function NewExpense() {
             <div className="flex justify-end gap-2">
               <Button type="button" variant="ghost" size="sm" onClick={() => { setScan(null); setConfirmed(true); }}>Enter manually</Button>
               <Button type="button" size="sm" onClick={() => confirmScan()}>Confirm details</Button>
+            </div>
             </div>
           </section>
         )}
