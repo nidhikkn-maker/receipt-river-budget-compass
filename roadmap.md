@@ -482,3 +482,5 @@
 - [x] Publish fonts + demo
 - [x] Pages open at login-like speed with tap feedback
 - [x] Demo dates stay in current month
+- [x] Spinner on tapped item + page skeleton while loading
+- [x] Measure live pages at iPhone speed (real device unavailable)

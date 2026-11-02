@@ -1,3 +1,4 @@
+import { PageSkeleton } from "@/components/PageSkeleton";
 import { NavProgress } from "@/components/NavProgress";
 import { DemoBanner } from "@/components/DemoBanner";
 import { FilePen } from "lucide-react";
@@ -176,7 +177,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       <main className={focused ? "mx-auto max-w-3xl px-4 pb-6 pt-2 sm:px-8" : wideClaim ? 'mx-auto max-w-[1800px] px-4 pb-[calc(8.5rem+env(safe-area-inset-bottom))] pt-5 sm:px-8 lg:pb-12' : "mx-auto max-w-6xl px-4 pb-[calc(8.5rem+env(safe-area-inset-bottom))] pt-5 sm:px-8 lg:pb-12"}>
         {!focused && <BackButton />}
         {!focused && !loading && <DraftsReminder />}
-        {loading ? <p className="text-muted-foreground">Loading…</p> : <DeviceLock>{children}</DeviceLock>}
+        {loading ? <PageSkeleton /> : <DeviceLock>{children}</DeviceLock>}
       </main>
 
       <nav hidden={focused} aria-label="Primary" className="fixed inset-x-3 bottom-[calc(0.75rem+env(safe-area-inset-bottom))] z-30 sm:inset-x-auto sm:left-1/2 sm:w-[min(560px,calc(100%-3rem))] sm:-translate-x-1/2 flex items-center justify-around rounded-3xl bg-ink px-2 py-2 text-ink-muted shadow-float backdrop-blur-xl lg:hidden">

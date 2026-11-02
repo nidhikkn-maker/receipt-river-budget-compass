@@ -831,3 +831,8 @@ html[data-theme="apple-glass"] :where(.bg-card, .bg-popover, .bg-ink) {
   a, button, [role="button"], [role="tab"], [role="menuitem"] { -webkit-tap-highlight-color: transparent; touch-action: manipulation; transition: transform 90ms ease, opacity 90ms ease; }
   a:active, button:not(:disabled):active, [role="button"]:active, [role="tab"]:active, [role="menuitem"]:active { transform: scale(0.97); opacity: 0.85; }
 }
+
+/* Spinner on the tapped item while its page opens. */
+@keyframes nav-spin { to { transform: rotate(360deg); } }
+[data-nav-pending] { position: relative; }
+[data-nav-pending]::after { content: ""; position: absolute; top: 6px; right: 6px; width: 14px; height: 14px; border-radius: 9999px; border: 2px solid var(--color-gold); border-right-color: transparent; animation: nav-spin 0.7s linear infinite; pointer-events: none; }
