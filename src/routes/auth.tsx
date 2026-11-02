@@ -1,6 +1,6 @@
 import { confirmAction } from "@/lib/confirm";
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { ScanFace } from "lucide-react";
@@ -54,20 +54,21 @@ function Auth() {
   const [mpinOn, setMpinOn] = useState(false);
   useEffect(() => {
     let active = true;
-    void supabase.auth.getUser().then(({ data }) => {
+    // Paint from the session saved on this device (no network wait), then let the server check correct it.
+    const apply = (user: { id: string; email?: string; is_anonymous?: boolean } | null) => {
       if (!active) return;
-      const user = data.user;
       setAnonymous(user?.is_anonymous ?? false);
       const e = user?.is_anonymous ? "" : user?.email ?? "";
       setSignedEmail(e); setOwnerId(e ? user?.id ?? "" : "");
       const enabled = Boolean(e && user && localStorage.getItem(`ll-lock-${user.id}`) === "1");
       setFaceEnabled(enabled); setMpinOn(Boolean(e && user && hasMpin(user.id)));
       if (e && !enabled && next && next !== "/") window.location.assign(next);
-    }).catch(() => { if (active) setFaceError("Couldn't check your account. Sign in below to continue."); })
-      .finally(() => { if (active) setChecking(false); });
+    };
+    void supabase.auth.getSession().then(({ data }) => { apply(data.session?.user ?? null); if (active) setChecking(false); }).catch(() => { if (active) setChecking(false); });
+    void supabase.auth.getUser().then(({ data }) => apply(data.user)).catch(() => { if (active) setFaceError("Couldn't check your account. Sign in below to continue."); });
     return () => { active = false; };
   }, [next]);
-  const unlock = async () => {
+  const unlock = async (auto = false) => {
     setFaceError("");
     if (!ownerId || !signedEmail) { setFaceError("Sign in with your password or Google first. Face ID unlocks your remembered account; it cannot sign in after you have signed out."); return; }
     setBusy(true);
@@ -80,9 +81,20 @@ function Auth() {
       if (current.error || current.data.user?.id !== ownerId) throw Error("session");
       rememberDeviceUnlock(ownerId);
       await go();
-    } catch { setFaceError("Face ID wasn't completed or isn't available. Try again, or use your account password."); setPasswordMode(true); }
+    } catch {
+      setFaceError(auto ? "Face ID didn't complete. Use your MPIN or your account password." : "Face ID wasn't completed or isn't available. Try again, or use your account password.");
+      if (!auto) setPasswordMode(true);
+    }
     finally { setBusy(false); }
   };
+  // Face ID is asked for by itself as soon as this device is recognised — no tap needed.
+  const autoTried = useRef(false);
+  useEffect(() => {
+    if (checking || autoTried.current || anonymous || !faceEnabled || !ownerId) return;
+    autoTried.current = true;
+    void unlock(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [checking, anonymous, faceEnabled, ownerId]);
   const signOut = async () => {
     setBusy(true);
     try {
@@ -92,6 +104,15 @@ function Auth() {
       await nav({ to: "/auth", replace: true });
     } catch { toast.error("Couldn't sign out. Please try again."); }
     finally { setBusy(false); }
+  };
+  // One Face ID scan at the end of an email sign-in means later openings need no taps at all.
+  const offerDeviceUnlock = async () => {
+    if (faceEnabled || anonymous || signup) return;
+    const id = (await supabase.auth.getUser()).data.user?.id;
+    if (!id || localStorage.getItem(`ll-face-offer-${id}`)) return;
+    if (!await confirmAction("Set up Face ID on this device? Next time Ledgerline opens with one scan — no password needed.")) { localStorage.setItem(`ll-face-offer-${id}`, "later"); return; }
+    try { await passkey("register"); localStorage.setItem(`ll-lock-${id}`, "1"); }
+    catch { localStorage.setItem(`ll-face-offer-${id}`, "later"); }
   };
   const submit = async (e: React.FormEvent) => {
     e.preventDefault(); setBusy(true);
@@ -108,6 +129,7 @@ function Auth() {
       } else {
         await query.cancelQueries(); query.clear();
         const { error } = await supabase.auth.signInWithPassword({ email, password }); if (error) throw error;
+        await offerDeviceUnlock();
         await go();
       }
     } catch (e) { toast.error((e as Error).message); } finally { setBusy(false); }
