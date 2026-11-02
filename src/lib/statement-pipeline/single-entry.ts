@@ -33,7 +33,7 @@ export interface EntrySuggestion {
 }
 
 const IN: TxnType[] = ["income", "refund"];
-const dirOf = (k: TxnType) => (IN.includes(k) ? "credit" : "debit") as const;
+const dirOf = (k: TxnType): "credit" | "debit" => (IN.includes(k) ? "credit" : "debit");
 const MOVE: TxnType[] = ["transfer", "card_payment"];
 
 /** Account named in the text: full account name, last four digits in the name, or the bank/card issuer when only one account fits. */
@@ -90,7 +90,8 @@ export function suggestForEntry(d: EntryDraft, ctx: { transactions: Expense[]; a
       const cands = near.filter((r) => r.accountId && r.accountId !== d.accountId && r.toAccountId !== d.accountId && (r.kind === "income" || r.kind === "transfer"));
       const pair = pairOpposites([{ key: "new", date: d.date, amount: d.amount, direction: "debit" }], cands.map((r) => ({ key: r.id, date: r.date, amount: r.amount, direction: "credit" as const })));
       const id = pair.get("new");
-      if (id && cands.length === 1) out.opposite = cands.find((r) => r.id === id);
+      const o = id && cands.length === 1 ? cands.find((r) => r.id === id) : undefined;
+      if (o) out.opposite = o;
     }
   }
   return out;
