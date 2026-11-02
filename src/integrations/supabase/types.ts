@@ -14,6 +14,77 @@ export type Database = {
   }
   public: {
     Tables: {
+      accountant_contacts: {
+        Row: {
+          auto_send: boolean
+          email: string
+          name: string
+          owner_id: string
+          send_day: number
+          updated_at: string
+        }
+        Insert: {
+          auto_send?: boolean
+          email?: string
+          name?: string
+          owner_id: string
+          send_day?: number
+          updated_at?: string
+        }
+        Update: {
+          auto_send?: boolean
+          email?: string
+          name?: string
+          owner_id?: string
+          send_day?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      accountant_uploads: {
+        Row: {
+          consumed_at: string | null
+          file_name: string
+          file_path: string
+          id: string
+          link_id: string
+          mime_type: string
+          owner_id: string
+          size_bytes: number
+          uploaded_at: string
+        }
+        Insert: {
+          consumed_at?: string | null
+          file_name: string
+          file_path: string
+          id?: string
+          link_id: string
+          mime_type: string
+          owner_id: string
+          size_bytes: number
+          uploaded_at?: string
+        }
+        Update: {
+          consumed_at?: string | null
+          file_name?: string
+          file_path?: string
+          id?: string
+          link_id?: string
+          mime_type?: string
+          owner_id?: string
+          size_bytes?: number
+          uploaded_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "accountant_uploads_link_id_fkey"
+            columns: ["link_id"]
+            isOneToOne: false
+            referencedRelation: "upload_links"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       accounts: {
         Row: {
           archived: boolean
@@ -1706,6 +1777,39 @@ export type Database = {
         }
         Relationships: []
       }
+      upload_links: {
+        Row: {
+          created_at: string
+          expires_at: string
+          file_count: number
+          id: string
+          last_emailed_at: string | null
+          max_files: number
+          owner_id: string
+          revoked_at: string | null
+        }
+        Insert: {
+          created_at?: string
+          expires_at?: string
+          file_count?: number
+          id?: string
+          last_emailed_at?: string | null
+          max_files?: number
+          owner_id: string
+          revoked_at?: string | null
+        }
+        Update: {
+          created_at?: string
+          expires_at?: string
+          file_count?: number
+          id?: string
+          last_emailed_at?: string | null
+          max_files?: number
+          owner_id?: string
+          revoked_at?: string | null
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           id: string
@@ -1798,6 +1902,7 @@ export type Database = {
           isSetofReturn: true
         }
       }
+      claim_upload_slot: { Args: { _link: string }; Returns: string }
       confirm_transfer: {
         Args: {
           _credit: string

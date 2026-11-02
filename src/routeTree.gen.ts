@@ -57,13 +57,16 @@ import { Route as AuthenticatedTravelInboxRouteImport } from './routes/_authenti
 import { Route as AuthenticatedTripsRouteImport } from './routes/_authenticated/trips'
 import { Route as AuthenticatedVaultRouteImport } from './routes/_authenticated/vault'
 import { Route as AuthenticatedWealthRouteImport } from './routes/_authenticated/wealth'
+import { Route as UTokenRouteImport } from './routes/u.$token'
 import { Route as DotlovableOauthConsentRouteImport } from './routes/[.]lovable.oauth.consent'
 import { Route as AuthenticatedCardsAccountIdRouteImport } from './routes/_authenticated/cards.$accountId'
 import { Route as AuthenticatedTripsIndexRouteImport } from './routes/_authenticated/trips.index'
 import { Route as AuthenticatedTripsTripIdRouteImport } from './routes/_authenticated/trips.$tripId'
+import { Route as ApiPublicJobsAccountantLinksRouteImport } from './routes/api/public/jobs/accountant-links'
 import { Route as ApiPublicJobsCleanupDemosRouteImport } from './routes/api/public/jobs/cleanup-demos'
 import { Route as ApiPublicJobsPaymentRemindersRouteImport } from './routes/api/public/jobs/payment-reminders'
 import { Route as ApiPublicJobsReportJobsRouteImport } from './routes/api/public/jobs/report-jobs'
+import { Route as ApiPublicUploadTokenRouteImport } from './routes/api/public/upload/$token'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -320,6 +323,11 @@ const AuthenticatedWealthRoute = AuthenticatedWealthRouteImport.update({
   path: '/wealth',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const UTokenRoute = UTokenRouteImport.update({
+  id: '/u/$token',
+  path: '/u/$token',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const DotlovableOauthConsentRoute = DotlovableOauthConsentRouteImport.update({
   id: '/.lovable/oauth/consent',
   path: '/.lovable/oauth/consent',
@@ -342,6 +350,12 @@ const AuthenticatedTripsTripIdRoute =
     path: '/$tripId',
     getParentRoute: () => AuthenticatedTripsRoute,
   } as any)
+const ApiPublicJobsAccountantLinksRoute =
+  ApiPublicJobsAccountantLinksRouteImport.update({
+    id: '/api/public/jobs/accountant-links',
+    path: '/api/public/jobs/accountant-links',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicJobsCleanupDemosRoute =
   ApiPublicJobsCleanupDemosRouteImport.update({
     id: '/api/public/jobs/cleanup-demos',
@@ -357,6 +371,11 @@ const ApiPublicJobsPaymentRemindersRoute =
 const ApiPublicJobsReportJobsRoute = ApiPublicJobsReportJobsRouteImport.update({
   id: '/api/public/jobs/report-jobs',
   path: '/api/public/jobs/report-jobs',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicUploadTokenRoute = ApiPublicUploadTokenRouteImport.update({
+  id: '/api/public/upload/$token',
+  path: '/api/public/upload/$token',
   getParentRoute: () => rootRouteImport,
 } as any)
 
@@ -408,13 +427,16 @@ export interface FileRoutesByFullPath {
   '/trips': typeof AuthenticatedTripsRouteWithChildren
   '/vault': typeof AuthenticatedVaultRoute
   '/wealth': typeof AuthenticatedWealthRoute
+  '/u/$token': typeof UTokenRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/cards/$accountId': typeof AuthenticatedCardsAccountIdRoute
   '/trips/$tripId': typeof AuthenticatedTripsTripIdRoute
   '/trips/': typeof AuthenticatedTripsIndexRoute
+  '/api/public/jobs/accountant-links': typeof ApiPublicJobsAccountantLinksRoute
   '/api/public/jobs/cleanup-demos': typeof ApiPublicJobsCleanupDemosRoute
   '/api/public/jobs/payment-reminders': typeof ApiPublicJobsPaymentRemindersRoute
   '/api/public/jobs/report-jobs': typeof ApiPublicJobsReportJobsRoute
+  '/api/public/upload/$token': typeof ApiPublicUploadTokenRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -463,13 +485,16 @@ export interface FileRoutesByTo {
   '/travel-inbox': typeof AuthenticatedTravelInboxRoute
   '/vault': typeof AuthenticatedVaultRoute
   '/wealth': typeof AuthenticatedWealthRoute
+  '/u/$token': typeof UTokenRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/cards/$accountId': typeof AuthenticatedCardsAccountIdRoute
   '/trips/$tripId': typeof AuthenticatedTripsTripIdRoute
   '/trips': typeof AuthenticatedTripsIndexRoute
+  '/api/public/jobs/accountant-links': typeof ApiPublicJobsAccountantLinksRoute
   '/api/public/jobs/cleanup-demos': typeof ApiPublicJobsCleanupDemosRoute
   '/api/public/jobs/payment-reminders': typeof ApiPublicJobsPaymentRemindersRoute
   '/api/public/jobs/report-jobs': typeof ApiPublicJobsReportJobsRoute
+  '/api/public/upload/$token': typeof ApiPublicUploadTokenRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -521,13 +546,16 @@ export interface FileRoutesById {
   '/_authenticated/trips': typeof AuthenticatedTripsRouteWithChildren
   '/_authenticated/vault': typeof AuthenticatedVaultRoute
   '/_authenticated/wealth': typeof AuthenticatedWealthRoute
+  '/u/$token': typeof UTokenRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/_authenticated/cards/$accountId': typeof AuthenticatedCardsAccountIdRoute
   '/_authenticated/trips/$tripId': typeof AuthenticatedTripsTripIdRoute
   '/_authenticated/trips/': typeof AuthenticatedTripsIndexRoute
+  '/api/public/jobs/accountant-links': typeof ApiPublicJobsAccountantLinksRoute
   '/api/public/jobs/cleanup-demos': typeof ApiPublicJobsCleanupDemosRoute
   '/api/public/jobs/payment-reminders': typeof ApiPublicJobsPaymentRemindersRoute
   '/api/public/jobs/report-jobs': typeof ApiPublicJobsReportJobsRoute
+  '/api/public/upload/$token': typeof ApiPublicUploadTokenRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -579,13 +607,16 @@ export interface FileRouteTypes {
     | '/trips'
     | '/vault'
     | '/wealth'
+    | '/u/$token'
     | '/.lovable/oauth/consent'
     | '/cards/$accountId'
     | '/trips/$tripId'
     | '/trips/'
+    | '/api/public/jobs/accountant-links'
     | '/api/public/jobs/cleanup-demos'
     | '/api/public/jobs/payment-reminders'
     | '/api/public/jobs/report-jobs'
+    | '/api/public/upload/$token'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -634,13 +665,16 @@ export interface FileRouteTypes {
     | '/travel-inbox'
     | '/vault'
     | '/wealth'
+    | '/u/$token'
     | '/.lovable/oauth/consent'
     | '/cards/$accountId'
     | '/trips/$tripId'
     | '/trips'
+    | '/api/public/jobs/accountant-links'
     | '/api/public/jobs/cleanup-demos'
     | '/api/public/jobs/payment-reminders'
     | '/api/public/jobs/report-jobs'
+    | '/api/public/upload/$token'
   id:
     | '__root__'
     | '/'
@@ -691,13 +725,16 @@ export interface FileRouteTypes {
     | '/_authenticated/trips'
     | '/_authenticated/vault'
     | '/_authenticated/wealth'
+    | '/u/$token'
     | '/.lovable/oauth/consent'
     | '/_authenticated/cards/$accountId'
     | '/_authenticated/trips/$tripId'
     | '/_authenticated/trips/'
+    | '/api/public/jobs/accountant-links'
     | '/api/public/jobs/cleanup-demos'
     | '/api/public/jobs/payment-reminders'
     | '/api/public/jobs/report-jobs'
+    | '/api/public/upload/$token'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -707,10 +744,13 @@ export interface RootRouteChildren {
   McpRoute: typeof McpRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
   Char91DotwellKnownChar93OauthProtectedResourceRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
+  UTokenRoute: typeof UTokenRoute
   DotlovableOauthConsentRoute: typeof DotlovableOauthConsentRoute
+  ApiPublicJobsAccountantLinksRoute: typeof ApiPublicJobsAccountantLinksRoute
   ApiPublicJobsCleanupDemosRoute: typeof ApiPublicJobsCleanupDemosRoute
   ApiPublicJobsPaymentRemindersRoute: typeof ApiPublicJobsPaymentRemindersRoute
   ApiPublicJobsReportJobsRoute: typeof ApiPublicJobsReportJobsRoute
+  ApiPublicUploadTokenRoute: typeof ApiPublicUploadTokenRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -1051,6 +1091,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedWealthRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/u/$token': {
+      id: '/u/$token'
+      path: '/u/$token'
+      fullPath: '/u/$token'
+      preLoaderRoute: typeof UTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/.lovable/oauth/consent': {
       id: '/.lovable/oauth/consent'
       path: '/.lovable/oauth/consent'
@@ -1079,6 +1126,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedTripsTripIdRouteImport
       parentRoute: typeof AuthenticatedTripsRoute
     }
+    '/api/public/jobs/accountant-links': {
+      id: '/api/public/jobs/accountant-links'
+      path: '/api/public/jobs/accountant-links'
+      fullPath: '/api/public/jobs/accountant-links'
+      preLoaderRoute: typeof ApiPublicJobsAccountantLinksRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/jobs/cleanup-demos': {
       id: '/api/public/jobs/cleanup-demos'
       path: '/api/public/jobs/cleanup-demos'
@@ -1098,6 +1152,13 @@ declare module '@tanstack/react-router' {
       path: '/api/public/jobs/report-jobs'
       fullPath: '/api/public/jobs/report-jobs'
       preLoaderRoute: typeof ApiPublicJobsReportJobsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/upload/$token': {
+      id: '/api/public/upload/$token'
+      path: '/api/public/upload/$token'
+      fullPath: '/api/public/upload/$token'
+      preLoaderRoute: typeof ApiPublicUploadTokenRouteImport
       parentRoute: typeof rootRouteImport
     }
   }
@@ -1222,10 +1283,13 @@ const rootRouteChildren: RootRouteChildren = {
   ResetPasswordRoute: ResetPasswordRoute,
   Char91DotwellKnownChar93OauthProtectedResourceRoute:
     Char91DotwellKnownChar93OauthProtectedResourceRoute,
+  UTokenRoute: UTokenRoute,
   DotlovableOauthConsentRoute: DotlovableOauthConsentRoute,
+  ApiPublicJobsAccountantLinksRoute: ApiPublicJobsAccountantLinksRoute,
   ApiPublicJobsCleanupDemosRoute: ApiPublicJobsCleanupDemosRoute,
   ApiPublicJobsPaymentRemindersRoute: ApiPublicJobsPaymentRemindersRoute,
   ApiPublicJobsReportJobsRoute: ApiPublicJobsReportJobsRoute,
+  ApiPublicUploadTokenRoute: ApiPublicUploadTokenRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
