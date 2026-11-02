@@ -52,6 +52,8 @@ function Auth() {
   const [notice, setNotice] = useState("");
   const [faceError, setFaceError] = useState("");
   const [mpinOn, setMpinOn] = useState(false);
+  const [demoOpen, setDemoOpen] = useState(false);
+  const [demoEmail, setDemoEmail] = useState("");
   useEffect(() => {
     let active = true;
     // Paint from the session saved on this device (no network wait), then let the server check correct it.
@@ -136,6 +138,18 @@ function Auth() {
       }
     } catch (e) { toast.error((e as Error).message); } finally { setBusy(false); }
   };
+  const startDemo = async (e: React.FormEvent) => {
+    e.preventDefault(); setBusy(true);
+    try {
+      const current = (await supabase.auth.getSession()).data.session?.user;
+      if (!current?.is_anonymous) {
+        await query.cancelQueries(); query.clear();
+        const { error } = await supabase.auth.signInAnonymously(); if (error) throw error;
+      }
+      const { error } = await supabase.rpc("start_demo_workspace", { _label: demoEmail.trim() }); if (error) throw error;
+      await nav({ to: "/dashboard" });
+    } catch (e) { toast.error((e as Error).message || "Couldn't open the demo"); } finally { setBusy(false); }
+  };
   const social = async (provider: "google" | "lovable") => {
     if (anonymous && !await confirmAction("Social sign-in opens a different account. Download a backup first to keep your existing browser records. Continue?")) return;
     const r = await lovable.auth.signInWithOAuth(provider, { redirect_uri: back() });
@@ -194,6 +208,14 @@ function Auth() {
       <div className="mt-4 grid gap-2"><Button variant="outline" disabled={busy} onClick={() => social("google")}>Continue with Google</Button><Button className="lovable-auth-button" disabled={busy} onClick={() => social("lovable")}>Continue with Lovable</Button></div>
       <div className="my-1" />
       <div className="mt-4 flex flex-wrap justify-between gap-2"><Button variant="link" onClick={() => { setSignup(!signup); setNotice(""); setFaceError(""); }}>{signup ? "Already have an account?" : "Create an account"}</Button><Button variant="link" onClick={async () => { if (!email) { toast.error("Enter your email first"); return; } const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: window.location.origin + "/reset-password" }); if (error) toast.error(error.message); else setNotice("Check your email for the password reset link."); }}>Forgot password?</Button></div>
+      <div className="mt-5 rounded-2xl border border-dashed bg-muted/40 p-4">
+        {demoOpen ? <form className="grid gap-2" onSubmit={startDemo}>
+          <Label htmlFor="demo-email">Your email (any address, not verified)</Label>
+          <Input id="demo-email" type="email" autoComplete="email" required maxLength={254} value={demoEmail} onChange={e => setDemoEmail(e.target.value)} />
+          <Button variant="gold" disabled={busy} className="min-h-11">{busy ? "Opening demo…" : "Open the live demo"}</Button>
+        </form> : <Button variant="outline" disabled={busy} className="min-h-11 w-full" onClick={() => setDemoOpen(true)}>Try the live demo</Button>}
+        <p className="mt-2 text-center text-xs text-muted-foreground">Sample data only, nothing is saved to a real account.</p>
+      </div>
       {anonymous && <p className="mt-4 text-xs text-muted-foreground">Create an email account to keep this browser’s records. Social sign-in may open a separate account; back up first.</p>}
     </>}
     </div>

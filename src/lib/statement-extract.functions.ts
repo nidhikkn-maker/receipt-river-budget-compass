@@ -1,12 +1,12 @@
+import { requireRealAccount } from "@/lib/real-account-middleware";
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { normalizePreferences, type FinancePreferences } from "./preferences";
 import { normalizeStatementRows } from "./statement-rows";
 
 const rows = z.object({ rows: z.array(z.object({ date: z.string(), description: z.string(), amount: z.number().positive(), direction: z.enum(["debit", "credit"]) })).max(300) });
 export const extractStatement = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireRealAccount])
   .inputValidator((raw: unknown) => z.object({ dataUrl: z.string().startsWith("data:").max(20_000_000), mimeType: z.enum(["application/pdf", "image/png", "image/jpeg", "image/webp"]) }).parse(raw))
   .handler(async ({ data, context }) => {
     const prefs = await context.supabase.from("finance_preferences").select("data").eq("owner_id", context.userId).maybeSingle();

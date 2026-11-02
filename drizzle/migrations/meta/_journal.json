@@ -351,6 +351,13 @@
       "when": 1793544025677,
       "tag": "0049_harden_transfer_approval_and_undo",
       "breakpoints": true
+    },
+    {
+      "idx": 50,
+      "version": "7",
+      "when": 1793588097836,
+      "tag": "0050_migration",
+      "breakpoints": true
     }
   ]
 }

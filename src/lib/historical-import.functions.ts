@@ -1,11 +1,11 @@
+import { requireRealAccount } from "@/lib/real-account-middleware";
 import { createServerFn } from '@tanstack/react-start';
 import { z } from 'zod';
-import { requireSupabaseAuth } from '@/integrations/supabase/auth-middleware';
 import { postingBlockers, type ImportRow } from './historical-import';
 import type { Account } from './ledger';
 import type { Json } from '@/integrations/supabase/types';
 
-export const processHistoricalImport=createServerFn({method:'POST'}).middleware([requireSupabaseAuth]).inputValidator((d:unknown)=>z.object({id:z.string().uuid()}).parse(d)).handler(async({data,context})=>{
+export const processHistoricalImport=createServerFn({method:'POST'}).middleware([requireRealAccount]).inputValidator((d:unknown)=>z.object({id:z.string().uuid()}).parse(d)).handler(async({data,context})=>{
   const b=await context.supabase.from('import_batches').select('id,status').eq('id',data.id).eq('owner_id',context.userId).single();
   if(b.error) throw Error('Import not found');
   if(['paused','refused','cancelled'].includes(b.data.status))throw Error('This import is stopped; review the processing message first');
@@ -18,7 +18,7 @@ export const processHistoricalImport=createServerFn({method:'POST'}).middleware(
   return {ok:true};
 });
 
-export const resumeHistoricalImport=createServerFn({method:'POST'}).middleware([requireSupabaseAuth]).inputValidator((d:unknown)=>z.object({id:z.string().uuid()}).parse(d)).handler(async({data,context})=>{
+export const resumeHistoricalImport=createServerFn({method:'POST'}).middleware([requireRealAccount]).inputValidator((d:unknown)=>z.object({id:z.string().uuid()}).parse(d)).handler(async({data,context})=>{
   const batch=await context.supabase.from('import_batches').select('id').eq('id',data.id).eq('owner_id',context.userId).single();if(batch.error)throw Error('Import not found');
   const state=await context.supabase.from('import_ai_state').select('*').eq('owner_id',context.userId).maybeSingle();if(state.error)throw Error('Could not read processing state');
   if(state.data?.paused&&state.data.pause_kind!=='owner_action')throw Error(state.data.reason??'Provider access must be restored before starting a fresh import');
@@ -27,7 +27,7 @@ export const resumeHistoricalImport=createServerFn({method:'POST'}).middleware([
   const queued=await context.supabase.from('import_batches').update({status:'queued',attempts:0,error:null,lease_until:new Date().toISOString()}).eq('id',data.id);if(queued.error)throw Error('Could not queue retry');return {ok:true};
 });
 
-export const postHistoricalImport=createServerFn({method:'POST'}).middleware([requireSupabaseAuth]).inputValidator((d:unknown)=>z.object({batch:z.string().uuid(),ids:z.array(z.string().uuid()).min(1).max(100)}).parse(d)).handler(async({data,context})=>{
+export const postHistoricalImport=createServerFn({method:'POST'}).middleware([requireRealAccount]).inputValidator((d:unknown)=>z.object({batch:z.string().uuid(),ids:z.array(z.string().uuid()).min(1).max(100)}).parse(d)).handler(async({data,context})=>{
   const db=context.supabase;
   const [batch,rows,accounts]=await Promise.all([
     db.from('import_batches').select('*').eq('id',data.batch).eq('owner_id',context.userId).single(),

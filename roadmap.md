@@ -478,3 +478,5 @@
 
 - [x] Reduce cold home load: fonts no longer block first paint
 - [x] Fresh security scan summary of published build
+- [x] Visitor demo link on sign-in
+- [x] Publish fonts + demo

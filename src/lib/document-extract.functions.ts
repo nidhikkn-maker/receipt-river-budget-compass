@@ -1,6 +1,6 @@
+import { requireRealAccount } from "@/lib/real-account-middleware";
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { normalizePreferences, type FinancePreferences } from "./preferences";
 import { DOC_TYPES } from "./documents";
 
@@ -28,7 +28,7 @@ const Extracted = z.object({
 export type ExtractedDocument = z.infer<typeof Extracted>;
 
 export const extractDocument = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireRealAccount])
   .inputValidator((d: unknown) => Input.parse(d))
   .handler(async ({ data, context }): Promise<{ ok: true; result: ExtractedDocument } | { ok: false; error: string }> => {
     const prefs=await context.supabase.from("finance_preferences").select("data").eq("owner_id",context.userId).maybeSingle();
