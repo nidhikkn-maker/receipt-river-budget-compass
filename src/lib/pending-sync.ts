@@ -25,3 +25,14 @@ export function mergePending(prev: PendingItem[], queued: PendingEntry[]): Pendi
 export function setItem(list: PendingItem[], id: string, patch: Partial<PendingItem>): PendingItem[] {
   return list.map((p) => (p.id === id ? { ...p, ...patch } : p));
 }
+
+/** True when the entry lives only on this device: it has never reached the account, so removing it here loses it for good. */
+export function removalIsPermanent(item: Pick<PendingItem, "status">): boolean {
+  return item.status !== "saved";
+}
+
+/** Removing a device-only entry needs the owner's acknowledgement first; one already saved to the account does not. */
+export function canRemove(item: Pick<PendingItem, "status"> | undefined, acknowledged: boolean): boolean {
+  if (!item) return false;
+  return removalIsPermanent(item) ? acknowledged : true;
+}
