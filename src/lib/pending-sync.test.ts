@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { mergePending, setItem } from "./pending-sync";
+import { canRemove, mergePending, removalIsPermanent, setItem } from "./pending-sync";
+import type { PendingStatus } from "./pending-sync";
 import type { PendingEntry } from "./offline";
 
 const entry = (id: string, createdAt: string): PendingEntry => ({
