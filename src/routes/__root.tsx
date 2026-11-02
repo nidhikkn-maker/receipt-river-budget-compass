@@ -96,7 +96,8 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       },
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
-      { rel: "stylesheet", href: "https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@700&family=Noto+Sans+Tamil:wght@400;600&display=swap" },
+      // Logo/Tamil fonts load without blocking first paint (print-media swap trick); system font shows meanwhile.
+      { rel: "stylesheet", href: "https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@700&family=Noto+Sans+Tamil:wght@400;600&display=swap", media: "print", onLoad: "this.media='all'" } as never,
       // Open the secure link to the record store while the page is still loading, so the first fetch doesn't wait on it.
       { rel: "preconnect", href: (import.meta.env['VITE_SUPABASE_URL'] ?? "").replace(/\/$/, "") },
       { rel: "dns-prefetch", href: (import.meta.env['VITE_SUPABASE_URL'] ?? "").replace(/\/$/, "") },
