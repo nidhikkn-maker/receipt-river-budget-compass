@@ -175,3 +175,19 @@ export function nextResendAt(lastReminderAt: string | null, now = new Date()): s
   const t = new Date(lastReminderAt).getTime() + RESEND_COOLDOWN_HOURS * 3600_000;
   return t > now.getTime() ? new Date(t).toISOString() : null;
 }
+
+/** Most accountant emails (links + reminders) one owner may trigger by hand in 24 hours. */
+export const DAILY_EMAIL_LIMIT = 10;
+/** Most different accountant addresses one owner may email in 24 hours. */
+export const DAILY_RECIPIENT_LIMIT = 3;
+
+/** Decides whether another accountant email to `to` is allowed, from the owner's emails in the last 24h. */
+export function emailAllowance(recent: { detail: string | null; at: string }[], to: string, now = new Date()): { ok: true } | { ok: false; error: string } {
+  const since = now.getTime() - 24 * 3600_000;
+  const day = recent.filter((e) => new Date(e.at).getTime() > since);
+  if (day.length >= DAILY_EMAIL_LIMIT) return { ok: false, error: `You've sent ${DAILY_EMAIL_LIMIT} accountant emails today — try again tomorrow` };
+  const addr = (d: string | null) => (d ?? "").replace(MANUAL_REMINDER_PREFIX, "").trim().toLowerCase();
+  const seen = new Set(day.map((e) => addr(e.detail)).filter(Boolean));
+  if (!seen.has(to.trim().toLowerCase()) && seen.size >= DAILY_RECIPIENT_LIMIT) return { ok: false, error: `You've emailed ${DAILY_RECIPIENT_LIMIT} different addresses today — try again tomorrow` };
+  return { ok: true };
+}

@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireRealAccount } from "@/lib/real-account-middleware";
-import { canResendReminder, nextResendAt, MANUAL_REMINDER_PREFIX, linkHistory, requestReport, type LinkEvent, type RequestLink, type UploadRequest, linkState, LINK_DAYS, MAX_FILES, PUBLIC_ORIGIN } from "@/lib/upload-link";
+import { canResendReminder, nextResendAt, MANUAL_REMINDER_PREFIX, linkHistory, requestReport, type LinkEvent, type RequestLink, type UploadRequest, linkState, LINK_DAYS, MAX_FILES, PUBLIC_ORIGIN, emailAllowance } from "@/lib/upload-link";
 
 export interface AccountantInfo {
   name: string; email: string; sendDay: number; autoSend: boolean;
@@ -43,6 +43,13 @@ export const saveAccountant = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+/** Owner's accountant emails (links + reminders) in the last 24 hours, for the daily limits. */
+async function recentEmails(supabase: any, userId: string) {
+  const since = new Date(Date.now() - 24 * 3600_000).toISOString();
+  const { data } = await supabase.from("upload_link_events").select("detail, at").eq("owner_id", userId).in("kind", ["emailed", "reminded"]).gte("at", since).limit(100);
+  return (data ?? []) as { detail: string | null; at: string }[];
+}
+
 /** Creates a fresh 30-day link (turning off the old one) and tries to email it. */
 export const sendLinkNow = createServerFn({ method: "POST" })
   .middleware([requireRealAccount])
@@ -52,6 +59,10 @@ export const sendLinkNow = createServerFn({ method: "POST" })
     const { createFreshLink } = await import("@/lib/accountant.server");
     const { data: c } = await supabase.from("accountant_contacts").select("*").eq("owner_id", userId).maybeSingle();
     if (data.email && !c?.email) return { ok: false as const, error: "Add your accountant's email first" };
+    if (data.email && c?.email) {
+      const allow = emailAllowance(await recentEmails(supabase, userId), c.email);
+      if (!allow.ok) return { ok: false as const, error: allow.error };
+    }
     return { ok: true as const, ...(await createFreshLink(userId, data.email ? c : null)) };
   });
 
@@ -101,6 +112,8 @@ export const resendReminder = createServerFn({ method: "POST" })
     const wait = nextResendAt(last?.at ?? null);
     if (wait) return { ok: false as const, error: `A reminder was sent recently — you can resend after ${new Date(wait).toLocaleString("en-IN", { timeZone: "Asia/Kolkata", dateStyle: "medium", timeStyle: "short" })}` };
     if (!c?.email) return { ok: false as const, error: "Add your accountant's email first" };
+    const allow = emailAllowance(await recentEmails(supabase, userId), c.email);
+    if (!allow.ok) return { ok: false as const, error: allow.error };
     const { send, tokenFor } = await import("@/lib/upload-link.server");
     const url = `${PUBLIC_ORIGIN}/u/${await tokenFor(l.id)}`;
     const at = new Date().toISOString();
