@@ -563,3 +563,5 @@
 - [x] Smart defaults on/off settings
 - [ ] Publish after smart-defaults work
 - [x] Per-shop rules to correct or turn off learned category/account/payment/workspace
+- [x] Airy receipt redesign of New expense
+- [x] Shop aliases for per-shop rules

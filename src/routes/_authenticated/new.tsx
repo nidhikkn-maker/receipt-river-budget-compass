@@ -10,7 +10,7 @@ import { toast } from "sonner";
 import { ScanLine, Sparkles, X, Camera, Image as ImageIcon, FolderOpen, Inbox, RotateCcw, PencilLine, ChevronDown, Check, Plus } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
-import { dayShortcut, recentFirst, relevantSections, repeatCandidates, repeatDraft, smartDefaults, applyShopRule, shopKey, type SmartDefaultReason } from "@/lib/entry-form";
+import { dayShortcut, recentFirst, relevantSections, repeatCandidates, repeatDraft, smartDefaults, applyShopRule, shopRuleFor, type SmartDefaultReason } from "@/lib/entry-form";
 import { ArrowRight, Repeat, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -323,7 +323,7 @@ function NewExpense() {
     const d = smartDefaults(expenses, liveAccounts.map((a) => a.id), { merchant, scopes: ACTIVE_SCOPES, categories: preferences.categories.filter((c) => !c.archived).map((c) => c.name) });
     if (!d.basis) return;
     const filled = new Set<string>();
-    const shopRule = applyShopRule(d, preferences.shopRules?.[shopKey(merchant)]);
+    const shopRule = applyShopRule(d, shopRuleFor(merchant, preferences.shopRules, preferences.shopAliases));
     Object.assign(d, shopRule.value);
     const byRule = (f: "category" | "accountId" | "paymentMethod" | "scope") => shopRule.ruled.includes(f);
     if (!sdOn.category) d.category = null;
@@ -350,7 +350,7 @@ function NewExpense() {
     if (d.scope && (byRule("scope") || d.reasons.scope)) reasons.push({ label: "Workspace", value: SCOPE_LABEL[d.scope as Scope] ?? d.scope, reason: rs("scope") });
     setDefaultsNote({ basis: d.basis, ...(d.merchant ? { merchant: d.merchant } : {}), reasons });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [edit, search.draft, txnType, expenses.length, liveAccountKey, merchant.trim().toLowerCase(), JSON.stringify(preferences.shopRules?.[shopKey(merchant)] ?? null), sdOn.category, sdOn.payment, sdOn.workspace]);
+  }, [edit, search.draft, txnType, expenses.length, liveAccountKey, merchant.trim().toLowerCase(), JSON.stringify(shopRuleFor(merchant, preferences.shopRules, preferences.shopAliases) ?? null), sdOn.category, sdOn.payment, sdOn.workspace]);
   const [repeatOpen, setRepeatOpen] = useState(false);
   const [repeatedFrom, setRepeatedFrom] = useState<string | null>(null);
   const favs = preferences.favouriteEntries ?? [];
@@ -576,7 +576,7 @@ function NewExpense() {
     if (editing) return;
     const found = suggestForMerchant(m, expenses);
     if (!found) return;
-    const rule = preferences.shopRules?.[shopKey(m)];
+    const rule = shopRuleFor(m, preferences.shopRules, preferences.shopAliases);
     const ruled = applyShopRule({ category: found.category, accountId: found.accountId ?? null, paymentMethod: found.paymentMethod, scope: found.scope }, rule).value;
     const hit = { ...found, category: ruled.category ?? "", accountId: ruled.accountId ?? null, paymentMethod: ruled.paymentMethod ?? "", scope: (ruled.scope ?? "") as typeof found.scope };
     const filled = new Set(autoFilled);
@@ -667,6 +667,8 @@ function NewExpense() {
   const today = dayShortcut(0); const yesterday = dayShortcut(1);
   const methodNote = instrumentId !== "none" ? savedMethods.find((p) => p.id === instrumentId) : undefined;
   const fieldCls = "h-11 rounded-xl";
+  /** "IDFC Krupa 10178745345" + Savings → "IDFC Krupa · Savings ••5345" so the row stays readable. */
+  const shortAccount = (name: string, kind: string) => { const digits = name.match(/\d{4,}/g)?.pop(); const base = name.replace(/\b\d{4,}\b/g, "").replace(/\s+/g, " ").trim(); return `${base || name} · ${kind}${digits ? ` ••${digits.slice(-4)}` : ""}`; };
 
   return (
     <div className="receipt-desk -mx-4 min-h-dvh px-4 pb-2 sm:-mx-8 sm:px-8">
@@ -684,14 +686,14 @@ function NewExpense() {
       <form onSubmit={submit} className="mx-auto grid max-w-xl gap-3">
         {/* Amount */}
         <div className="receipt-paper px-5 text-center">
-          <p aria-hidden className="text-xs font-semibold tracking-[0.35em]">{editing ? "EDIT ENTRY" : `NEW ${TXN_LABEL[txnType].toUpperCase()}`}</p>
+          <p aria-hidden className="text-xs font-semibold tracking-[0.2em] text-[color:var(--receipt-muted)]">{editing ? "EDIT ENTRY" : `NEW ${TXN_LABEL[txnType].toUpperCase()}`}</p>
           <div aria-hidden className="receipt-rule my-3" />
-          <Label htmlFor="a" className="text-xs">Amount{af("amount")}</Label>
+          <Label htmlFor="a" className="sr-only">Amount{af("amount")}</Label>
           <div className="mt-1 flex items-center justify-center gap-2">
             <select aria-label="Currency" value={currency} onChange={(e) => setCurrency(e.target.value)} disabled={!confirmed || reading || saving}
-              className="rounded-full border border-current/20 bg-transparent px-2 py-1 text-sm font-semibold">{[...new Set([currency, ...CURRENCIES])].map((c) => <option key={c} value={c}>{c}</option>)}</select>
+              className="rounded-full border-0 bg-[color:var(--receipt-rule)]/20 px-2.5 py-1 text-sm font-semibold">{[...new Set([currency, ...CURRENCIES])].map((c) => <option key={c} value={c}>{c}</option>)}</select>
             <input id="a" inputMode="decimal" enterKeyHint="done" onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); e.currentTarget.blur(); } }} type="number" step="0.01" min="0" placeholder="0" value={amount} disabled={!confirmed || reading || saving}
-              onChange={(e) => setAmount(e.target.value)} className="w-full min-w-0 max-w-[14rem] appearance-none bg-transparent [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none text-center text-5xl font-bold tracking-tight outline-none placeholder:opacity-40" style={{ borderBottom: 0 }} />
+              onChange={(e) => setAmount(e.target.value)} className="w-full min-w-0 max-w-[14rem] appearance-none bg-transparent [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none receipt-amount text-center text-6xl font-bold tracking-tight outline-none placeholder:opacity-40" style={{ borderBottom: 0 }} />
           </div>
           {Number(amount) > 0 && <p className="mt-1 text-xs text-muted-foreground">{money(Number(amount), currency)}</p>}
           {currency !== BASE_CURRENCY && (
@@ -856,11 +858,11 @@ function NewExpense() {
 
         <fieldset disabled={!confirmed || reading || saving} className={cn("receipt-paper grid min-w-0 gap-3 px-5", !confirmed && "opacity-50")}>
           {TYPE_HINT[txnType] && <p className="text-xs text-muted-foreground">{TYPE_HINT[txnType]}</p>}
-          {defaultsNote && !editing && txnType === "expense" && <div role="status"><p className="flex items-center gap-1.5 text-xs text-muted-foreground"><Sparkles aria-hidden className="h-3 w-3 text-primary" />{defaultsNote.basis === "merchant" ? `Filled with what you usually choose for ${defaultsNote.merchant}` : "Filled with your usual choices"} — change anything before saving.</p>{defaultsNote.reasons.length > 0 && <details className="mt-1 text-xs text-muted-foreground"><summary className="cursor-pointer underline-offset-2 hover:underline">Why these choices?</summary><ul className="mt-1 grid gap-1">{defaultsNote.reasons.map((r) => <li key={r.label}><b className="text-foreground">{r.label}: {r.value}</b> — {r.reason ? <>chosen in {r.reason.matches} of your last {r.reason.lookedAt} {defaultsNote.basis === "merchant" ? `${defaultsNote.merchant} ` : ""}expenses{r.reason.examples.length ? `, most recently ${r.reason.examples.map((x) => `${x.merchant ?? "an expense"} on ${x.date}`).join(", ")}` : ""}.</> : "set by your rule for this shop."}</li>)}</ul><Link to="/settings" hash="smart-defaults" className="mt-1 inline-block underline">Change smart defaults or this shop's rules</Link></details>}</div>}
+          {defaultsNote && !editing && txnType === "expense" && <div role="status"><p className="flex items-center gap-1.5 text-xs text-muted-foreground"><Sparkles aria-hidden className="h-3 w-3 text-primary" />{defaultsNote.basis === "merchant" ? `Filled with what you usually choose for ${defaultsNote.merchant}` : "Filled with your usual choices"}</p>{defaultsNote.reasons.length > 0 && <details className="mt-1 text-xs text-muted-foreground"><summary className="cursor-pointer underline-offset-2 hover:underline">Why these choices?</summary><ul className="mt-1 grid gap-1">{defaultsNote.reasons.map((r) => <li key={r.label}><b className="text-foreground">{r.label}: {r.value}</b> — {r.reason ? <>chosen in {r.reason.matches} of your last {r.reason.lookedAt} {defaultsNote.basis === "merchant" ? `${defaultsNote.merchant} ` : ""}expenses{r.reason.examples.length ? `, most recently ${r.reason.examples.map((x) => `${x.merchant ?? "an expense"} on ${x.date}`).join(", ")}` : ""}.</> : "set by your rule for this shop."}</li>)}</ul><Link to="/settings" hash="smart-defaults" className="mt-1 inline-block underline">Change smart defaults or this shop's rules</Link></details>}</div>}
           {!isMove(txnType)&&<PayeePicker payees={preferences.payees??[]} merchant={merchant} onSelect={setMerchant}/>}
           {/* Category */}
           {!isMove(txnType) && (
-            <div className="grid gap-1.5">
+            <div className="receipt-row">
               <Label>Category{af("category")}</Label>
               <Popover open={catOpen} onOpenChange={setCatOpen}>
                 <PopoverTrigger asChild>
@@ -881,10 +883,10 @@ function NewExpense() {
           )}
           {/* Paid with = the real account affected */}
           <div className={cn("grid gap-3", isMove(txnType) && "grid-cols-2")}>
-            <div className="grid gap-1.5">
+            <div className={cn(isMove(txnType) ? "grid gap-1.5" : "receipt-row")}>
               <Label>{isMove(txnType) ? "From account" : txnType === "advance" ? "Received into" : txnType === "advance_settlement" ? "Returned from" : txnType === "income" ? "Into account" : "Paid with"}{af("payment")}</Label>
               <Select value={accountId} onValueChange={(v) => { accountByUser.current = true; setAccountId(v); setAutoFilled((x) => { const n = new Set(x); n.delete("payment"); return n; }); }}>
-                <SelectTrigger aria-label="Account" className={fieldCls}><SelectValue /></SelectTrigger>
+                <SelectTrigger aria-label="Account" className={fieldCls}><SelectValue>{accountId !== "none" && acctById.get(accountId) ? shortAccount(acctById.get(accountId)!.name, ACCOUNT_LABEL[acctById.get(accountId)!.kind]) : "Choose account"}</SelectValue></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="none">Choose account</SelectItem>
                   {[...acctOrder.recent, ...acctOrder.rest].map((id) => { const a = acctById.get(id)!; return <SelectItem key={id} value={id}>{a.name} · {ACCOUNT_LABEL[a.kind]}</SelectItem>; })}
@@ -960,7 +962,7 @@ function NewExpense() {
           {!ctxTrip && !editing && smartTripSuggestions({ date, title, merchant, description, currency, originalAmount: Number(amount) || 0, scope, category, tags: tags.split(",").map((t) => t.trim()), tripId: tripId === "none" ? null : tripId, txnType }, preferences.trips as TravelTrip[]).slice(0, 3).map((suggestion) => (
             <div key={suggestion.trip.id} className="space-y-1 border-l-2 border-primary pl-3"><p className="text-xs text-muted-foreground">{suggestion.confidence}{suggestion.ambiguous ? " · Multiple possible trips" : ""} · {suggestion.reasons.join(" · ")}</p><Button type="button" size="sm" variant="outline" onClick={() => { setTags((x) => [...new Set([...x.split(",").map((y) => y.trim()).filter(Boolean), tripTag(suggestion.trip)])].join(", ")); setTripId(suggestion.trip.id); }}>Link to {suggestion.trip.name}</Button></div>
           ))}
-          <div className="grid gap-1.5"><Label htmlFor="t">Note{af("title")}</Label><Input id="t" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Optional — e.g. Dinner with Ravi" className={fieldCls} /></div>
+          <div className="receipt-row"><Label htmlFor="t">Note{af("title")}</Label><Input id="t" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Optional — e.g. Dinner with Ravi" className={fieldCls} /></div>
 
           {/* More details */}
           <button type="button" aria-expanded={more} onClick={() => setMore((m) => !m)} className="receipt-rule flex items-center justify-between px-1 pt-3 text-sm font-semibold">
@@ -1058,7 +1060,7 @@ function NewExpense() {
 
         <div className="receipt-desk sticky bottom-0 z-10 -mx-4 px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-2 backdrop-blur sm:mx-0 sm:px-0">
           {saveError && !saving && <div role="alert" className="mb-2 flex items-center justify-between gap-2 rounded-xl border border-destructive/40 bg-card px-3 py-2 text-xs"><span className="text-destructive">{saveError}</span><Button type="submit" size="sm" variant="outline">Retry</Button></div>}
-          <Button type="submit" size="lg" variant="gold" loading={saving} loadingText={editing ? "Saving changes…" : `Saving your ${TXN_LABEL[txnType].toLowerCase()}…`} className="h-12 w-full rounded-full text-base font-semibold uppercase tracking-[0.2em]" disabled={reading || saving || !confirmed || duplicateBlocked || matchBlocked || receiptBlocked || !(Number(amount) > 0)}>
+          <Button type="submit" size="lg" variant="gold" loading={saving} loadingText={editing ? "Saving changes…" : `Saving your ${TXN_LABEL[txnType].toLowerCase()}…`} className="h-12 w-full rounded-full text-base font-semibold" disabled={reading || saving || !confirmed || duplicateBlocked || matchBlocked || receiptBlocked || !(Number(amount) > 0)}>
             {editing ? "Save changes" : `Save ${TXN_LABEL[txnType].toLowerCase()}`}<ArrowRight aria-hidden className="h-4 w-4" />
           </Button>
         </div>

@@ -4,7 +4,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Button } from "@/components/ui/button";
 import { useStore } from "@/lib/store";
 import { toast } from "sonner";
-import { shopKey, smartDefaults, type ShopRuleField } from "@/lib/entry-form";
+import { resolveShop, shopKey, smartDefaults, type ShopRuleField } from "@/lib/entry-form";
 import { ACTIVE_SCOPES, PAYMENT_LABEL, PAYMENT_METHODS, SCOPE_LABEL } from "@/lib/expenses";
 import type { ShopRule } from "@/lib/preferences";
 
@@ -15,6 +15,16 @@ export function ShopRulesSettings() {
   const { preferences: p, savePreferences, transactions, accounts } = useStore();
   const [q, setQ] = useState("");
   const rules = p.shopRules ?? {};
+  const aliases = p.shopAliases ?? {};
+  const [aliasDraft, setAliasDraft] = useState<Record<string, string>>({});
+  const saveAliases = async (next: Record<string, string>) => { try { await savePreferences({ ...p, shopAliases: next }); } catch { toast.error("Couldn't save — try again"); } };
+  const addAlias = (key: string) => {
+    const a = shopKey(aliasDraft[key]); if (!a || a === key) return;
+    if (resolveShop(key, { ...aliases, [a]: key }) !== key) { toast.error("That name already points here another way"); return; }
+    const next = { ...aliases, [a]: key };
+    for (const [k, v] of Object.entries(next)) if (v === a) next[k] = key; // names that pointed at the alias now point at this shop
+    void saveAliases(next); setAliasDraft((d) => ({ ...d, [key]: "" }));
+  };
   const live = accounts.filter((a) => !a.archived);
   const cats = p.categories.filter((c) => !c.archived).map((c) => c.name);
   const shops = useMemo(() => {
@@ -22,7 +32,8 @@ export function ShopRulesSettings() {
     for (const e of transactions) { if ((e.txnType ?? "expense") !== "expense" || !e.merchant?.trim()) continue; const k = shopKey(e.merchant); const x = m.get(k); m.set(k, { name: x?.name ?? e.merchant.trim(), n: (x?.n ?? 0) + 1 }); }
     return [...m.entries()].sort((a, b) => Number(Boolean(rules[b[0]])) - Number(Boolean(rules[a[0]])) || b[1].n - a[1].n);
   }, [transactions, rules]);
-  const shown = shops.filter(([k]) => !q.trim() || k.includes(shopKey(q))).slice(0, q.trim() ? 30 : 8);
+  const namesFor = (key: string) => Object.entries(aliases).filter(([, v]) => v === key).map(([k]) => k);
+  const shown = shops.filter(([k]) => !aliases[k]).filter(([k]) => !q.trim() || k.includes(shopKey(q)) || namesFor(k).some((n) => n.includes(shopKey(q)))).slice(0, q.trim() ? 30 : 8);
   const setRule = async (key: string, f: ShopRuleField, v: string) => {
     const next: ShopRule = { ...(rules[key] ?? {}) };
     if (v === LEARN) delete next[f]; else next[f] = v;
@@ -41,7 +52,7 @@ export function ShopRulesSettings() {
   );
   return (
     <div className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-3 border-t pt-3">
-      <div><h3 className="text-sm font-medium">Per-shop rules</h3><p className="text-xs text-muted-foreground">Correct or switch off what's learned for a specific shop. Your saved entries are not changed.</p></div>
+      <div><h3 className="text-sm font-medium">Per-shop rules</h3><p className="text-xs text-muted-foreground">Correct or switch off what's learned for a specific shop. Add other spellings under "Also called" so the same rule applies. Your saved entries are not changed.</p></div>
       <Input placeholder="Search your shops" value={q} onChange={(e) => setQ(e.target.value)} aria-label="Search shops" />
       {shown.length === 0 && <p className="text-xs text-muted-foreground">No shops found yet — they appear after you save expenses with a shop name.</p>}
       {shown.map(([key, s]) => {
@@ -54,6 +65,15 @@ export function ShopRulesSettings() {
               {field(key, "accountId", "Account", live.find((a) => a.id === d.accountId)?.name ?? null, live.map((a) => ({ value: a.id, label: a.name })))}
               {field(key, "paymentMethod", "Payment", d.paymentMethod ? PAYMENT_LABEL[d.paymentMethod as keyof typeof PAYMENT_LABEL] ?? d.paymentMethod : null, PAYMENT_METHODS.map((m) => ({ value: m, label: PAYMENT_LABEL[m] })))}
               {field(key, "scope", "Workspace", d.scope ? SCOPE_LABEL[d.scope] : null, ACTIVE_SCOPES.map((x) => ({ value: x, label: SCOPE_LABEL[x] })))}
+            </div>
+            <div className="grid gap-1.5">
+              <span className="text-xs text-muted-foreground">Also called</span>
+              {namesFor(key).length > 0 && <div className="flex flex-wrap gap-1.5">{namesFor(key).map((n) => <span key={n} className="inline-flex items-center gap-1 rounded-full bg-secondary px-2 py-0.5 text-xs">{shops.find(([k]) => k === n)?.[1].name ?? n}<button type="button" aria-label={`Remove ${n}`} className="text-muted-foreground" onClick={() => { const next = { ...aliases }; delete next[n]; void saveAliases(next); }}>×</button></span>)}</div>}
+              <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-2">
+                <Input list={`aliases-${key}`} placeholder="Another name for this shop" aria-label={`Another name for ${s.name}`} className="h-8 text-xs" value={aliasDraft[key] ?? ""} onChange={(e) => setAliasDraft((d) => ({ ...d, [key]: e.target.value }))} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addAlias(key); } }} />
+                <Button size="sm" variant="outline" className="h-8" onClick={() => addAlias(key)} disabled={!shopKey(aliasDraft[key])}>Add</Button>
+              </div>
+              <datalist id={`aliases-${key}`}>{shops.filter(([k]) => k !== key && !aliases[k]).slice(0, 50).map(([k, v]) => <option key={k} value={v.name} />)}</datalist>
             </div>
           </div>
         );

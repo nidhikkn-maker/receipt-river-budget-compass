@@ -135,3 +135,13 @@ export function applyShopRule<T extends Partial<Record<ShopRuleField, string | n
   }
   return { value, ruled };
 }
+
+/** The shop whose rule applies: follows aliases (at most a few hops, so a loop can't hang). */
+export function resolveShop(merchant: string | null | undefined, aliases: Record<string, string> | undefined): string {
+  let k = shopKey(merchant);
+  for (let i = 0; i < 5 && aliases?.[k]; i++) k = aliases[k]!;
+  return k;
+}
+export function shopRuleFor<R>(merchant: string | null | undefined, rules: Record<string, R> | undefined, aliases: Record<string, string> | undefined): R | undefined {
+  return rules?.[resolveShop(merchant, aliases)];
+}

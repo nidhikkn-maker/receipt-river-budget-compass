@@ -877,7 +877,7 @@ html[data-theme="apple-glass"] :where(.bg-card, .bg-popover, .bg-ink) {
   --zz: 9px;
   background: var(--receipt-paper);
   color: var(--receipt-ink);
-  font-family: var(--receipt-font);
+  margin-inline: 0.25rem;
   filter: drop-shadow(var(--receipt-shadow));
   border-radius: 0;
   padding-top: calc(var(--zz) + 1.25rem);
@@ -897,8 +897,14 @@ html[data-theme="apple-glass"] :where(.bg-card, .bg-popover, .bg-ink) {
   border-top: 2px dotted var(--receipt-rule);
 }
 /* Form fields printed on the receipt: transparent with a dotted underline instead of boxes. */
-.receipt-paper, .receipt-paper * { font-family: var(--receipt-font); }
-.receipt-paper label { color: var(--receipt-muted); letter-spacing: 0.04em; }
+.receipt-amount { font-family: var(--receipt-font); }
+.receipt-paper label { color: var(--receipt-muted); }
+/* Airy rows: small label on the left, chosen value on the right; anything else spans the row below. */
+.receipt-row { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; column-gap: 1rem; row-gap: 0.25rem; padding-block: 0.25rem; border-bottom: 1.5px dashed var(--receipt-rule); }
+.receipt-row > label { font-size: 0.875rem; font-weight: 400; }
+.receipt-row > :nth-child(n + 3) { grid-column: 1 / -1; }
+.receipt-paper .receipt-row :is(input:not([type="checkbox"]):not([type="radio"]), button[role="combobox"], button[aria-label="Category"]) { border-bottom: 0; justify-content: flex-end; text-align: right; font-weight: 500; padding-inline: 0; gap: 0.5rem; min-width: 0; }
+.receipt-paper .receipt-row button[role="combobox"] > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .receipt-paper :is(input:not([type="checkbox"]):not([type="radio"]), textarea, select, button[role="combobox"], button[aria-label="Category"]) {
   background: transparent;
   color: var(--receipt-ink);
@@ -906,6 +912,5 @@ html[data-theme="apple-glass"] :where(.bg-card, .bg-popover, .bg-ink) {
   border-bottom: 2px dotted var(--receipt-rule);
   border-radius: 0;
   box-shadow: none;
-  font-family: var(--receipt-font);
 }
 .receipt-paper :is(input, textarea, button[role="combobox"]):focus-visible { outline: none; border-bottom-color: var(--gold); }

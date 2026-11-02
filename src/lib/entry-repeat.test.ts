@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { repeatCandidates, repeatDraft, smartDefaults, applyShopRule } from "./entry-form";
+import { repeatCandidates, repeatDraft, smartDefaults, applyShopRule, shopRuleFor, resolveShop } from "./entry-form";
 
 const base = { title: "Dinner", merchant: "Toit", category: "Food", scope: "personal" as const, originalAmount: 3500, currency: "INR", accountId: "amex", paymentMethod: "card", tags: ["Purpose: Family"], description: "dinner", txnType: "expense" as const };
 
@@ -84,5 +84,18 @@ describe("per-shop rules", () => {
     const r = applyShopRule({ category: "Groceries", accountId: "a1", paymentMethod: "upi", scope: "personal" }, { category: "off", scope: "business" });
     expect(r.value).toEqual({ category: null, accountId: "a1", paymentMethod: "upi", scope: "business" });
     expect(r.ruled).toEqual(["category", "scope"]);
+  });
+});
+
+describe("shop aliases", () => {
+  it("applies a shop's rule to its other spellings", () => {
+    const rules = { "freshmart": { category: "Groceries" } };
+    const aliases = { "fresh mart chennai": "freshmart", "pos freshmart": "fresh mart chennai" };
+    expect(shopRuleFor(" Fresh Mart Chennai ", rules, aliases)).toEqual({ category: "Groceries" });
+    expect(shopRuleFor("POS FreshMart", rules, aliases)).toEqual({ category: "Groceries" });
+    expect(shopRuleFor("Uber", rules, aliases)).toBeUndefined();
+  });
+  it("stops on a loop instead of hanging", () => {
+    expect(typeof resolveShop("a", { a: "b", b: "a" })).toBe("string");
   });
 });

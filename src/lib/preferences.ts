@@ -55,6 +55,8 @@ export interface FinancePreferences {
   smartDefaults?: SmartDefaultSettings;
   /** Keyed by lower-cased, trimmed shop name. */
   shopRules?: Record<string, ShopRule>;
+  /** Other spellings of a shop → the shop key whose rule applies (both trimmed lower-case). */
+  shopAliases?: Record<string, string>;
   payees: Payee[];
   reimbursementSettings: ReimbursementSettings;
   homeShortcuts: ShortcutId[];
@@ -190,6 +192,7 @@ export function normalizePreferences(raw: Partial<FinancePreferences> | null | u
   p.themeName = cleanThemeName(p.themeName);
   { const r = p.shopRules && typeof p.shopRules === "object" ? p.shopRules : {}; const str = (v: unknown) => (typeof v === "string" && v.length > 0 && v.length <= 80 ? v : undefined);
     p.shopRules = Object.fromEntries(Object.entries(r).filter(([k, v]) => k.length > 0 && k.length <= 120 && v && typeof v === "object").slice(0, 500).map(([k, v]) => { const o: ShopRule = {}; for (const f of ["category", "accountId", "paymentMethod", "scope"] as const) { const x = str((v as ShopRule)[f]); if (x) o[f] = x; } return [k, o]; }).filter(([, o]) => Object.keys(o as object).length)); }
+  { const a = p.shopAliases && typeof p.shopAliases === "object" ? p.shopAliases : {}; p.shopAliases = Object.fromEntries(Object.entries(a).filter(([k, v]) => typeof v === "string" && k.length > 0 && k.length <= 120 && v.length > 0 && v.length <= 120 && k !== v).slice(0, 1000)); }
   { const sd = (p.smartDefaults ?? {}) as Partial<SmartDefaultSettings>; p.smartDefaults = { category: sd.category !== false, payment: sd.payment !== false, workspace: sd.workspace !== false }; }
   if (p.homeScope !== "all" && !(ACTIVE_SCOPES as readonly string[]).includes(p.homeScope)) p.homeScope = "all";
   const iso = (v: unknown) => (typeof v === "string" && /^\d{4}-\d{2}-\d{2}$/.test(v) ? v : "");
