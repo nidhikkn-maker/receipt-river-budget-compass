@@ -174,7 +174,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         {loading ? <p className="text-muted-foreground">Loading…</p> : <DeviceLock>{children}</DeviceLock>}
       </main>
 
-      <nav hidden={focused} aria-label="Primary" className="fixed inset-x-3 bottom-3 z-30 flex items-center justify-around rounded-3xl bg-ink px-2 py-2 text-ink-muted shadow-float backdrop-blur-xl lg:hidden">
+      <nav hidden={focused} aria-label="Primary" className="fixed inset-x-3 bottom-[calc(0.75rem+env(safe-area-inset-bottom))] z-30 sm:inset-x-auto sm:left-1/2 sm:w-[min(560px,calc(100%-3rem))] sm:-translate-x-1/2 flex items-center justify-around rounded-3xl bg-ink px-2 py-2 text-ink-muted shadow-float backdrop-blur-xl lg:hidden">
         <Link to="/dashboard" className="flex flex-1 flex-col items-center gap-0.5 rounded-2xl py-1.5 text-[10px] font-semibold" activeProps={{ className: "!text-gold" }}>
           <Home className="h-5 w-5" />Home
         </Link>
