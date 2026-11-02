@@ -10,6 +10,11 @@ export const getRouter = () => {
     context: { queryClient },
     scrollRestoration: true,
     defaultPreloadStaleTime: 0,
+    // Start fetching a page's code on touch/hover so it's ready when the tap lands.
+    defaultPreload: "intent",
+    defaultPreloadDelay: 0,
+    defaultPendingMs: 150,
+    defaultPendingMinMs: 200,
   });
 
   return router;
