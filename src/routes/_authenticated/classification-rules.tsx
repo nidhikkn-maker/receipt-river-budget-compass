@@ -1,8 +1,7 @@
-import { createFileRoute, Link } from '@tanstack/react-router';
-import { PageTitle } from '@/components/AppShell';
-import { ImportRules } from '@/components/ImportRules';
-import { Button } from '@/components/ui/button';
+import { createFileRoute, redirect } from '@tanstack/react-router';
+
+/** Classification rules now sit on the single Rules page. */
 export const Route = createFileRoute('/_authenticated/classification-rules')({
-  head: () => ({ meta: [{ title: 'Transaction Classification Rules — Ledgerline' }, { name: 'description', content: 'Review and edit confirmed merchant classification rules and specific account conditions.' }, { property: 'og:title', content: 'Transaction Classification Rules — Ledgerline' }, { property: 'og:description', content: 'Manage confirmed merchant rules without changing original records.' }, { property: 'og:type', content: 'website' }, { name: 'twitter:card', content: 'summary' }] }),
-  component: () => <div><Button asChild variant="ghost" size="sm"><Link to="/settings">← Settings</Link></Button><PageTitle title="Transaction Classification Rules" /><ImportRules /></div>,
+  beforeLoad: () => { throw redirect({ to: '/rules', hash: 'classification', replace: true }); },
+  head: () => ({ meta: [{ title: 'Rules — Ledgerline' }, { name: 'description', content: 'Classification rules now live on the Rules page.' }, { property: 'og:title', content: 'Rules — Ledgerline' }, { property: 'og:description', content: 'Classification rules now live on the Rules page.' }, { property: 'og:type', content: 'website' }, { name: 'twitter:card', content: 'summary' }] }),
 });
