@@ -521,3 +521,6 @@
 - [x] Inline fixes in review lists + live counts
 - [x] Overlaps 1-3, 9 (statements, review, accountant)
 - [x] Overlaps 4-8 (shared tab rows, menu tidy-up)
+- [ ] Trip reminders for upcoming itinerary plans and booking check-ins
+- [ ] Trip itinerary + bookings shareable PDF
+- [ ] Compact iPhone day-by-day itinerary view
