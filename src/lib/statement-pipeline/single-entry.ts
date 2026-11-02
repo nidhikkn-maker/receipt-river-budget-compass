@@ -3,7 +3,7 @@ import { classifyStatementLine } from "../statement-auto";
 import type { Account, TxnType } from "../ledger";
 import type { Expense } from "../expenses";
 import type { CategorySetting } from "../categories";
-import { ledgerRec, matchLines, pairOpposites, scoreRecord, type LedgerRec } from "./match";
+import { ledgerRec, pairOpposites, scoreRecord, type LedgerRec } from "./match";
 import { detectIssuer } from "./identify";
 import { toStatementLine, type StmtLine } from "./line";
 
@@ -84,11 +84,10 @@ export function suggestForEntry(d: EntryDraft, ctx: { transactions: Expense[]; a
       .filter((m) => m.score >= 55)
       .sort((a, b) => b.score - a.score)
       .slice(0, 3);
-    void matchLines;
     // Opposite side of an own-account move: only when the type is already a move (never inferred from amount alone).
     const kind = out.txnType ?? d.txnType;
     if (MOVE.includes(kind) && d.accountId) {
-      const cands = near.filter((r) => r.accountId !== d.accountId && IN.includes(r.kind) === false && r.kind !== "expense" ? false : r.accountId !== d.accountId);
+      const cands = near.filter((r) => r.accountId && r.accountId !== d.accountId && r.toAccountId !== d.accountId && (r.kind === "income" || r.kind === "transfer"));
       const pair = pairOpposites([{ key: "new", date: d.date, amount: d.amount, direction: "debit" }], cands.map((r) => ({ key: r.id, date: r.date, amount: r.amount, direction: "credit" as const })));
       const id = pair.get("new");
       if (id && cands.length === 1) out.opposite = cands.find((r) => r.id === id);
