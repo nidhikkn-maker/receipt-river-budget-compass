@@ -1,7 +1,6 @@
 import { requireRealAccount } from "@/lib/real-account-middleware";
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { privateReminderPayload, pushSubscriptionSchema, validPushEndpoint } from "./push-rules";
 
 export const getPushConfig = createServerFn({ method: "GET" }).middleware([requireRealAccount]).handler(async () => {

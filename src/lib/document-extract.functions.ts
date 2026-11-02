@@ -1,7 +1,6 @@
 import { requireRealAccount } from "@/lib/real-account-middleware";
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { normalizePreferences, type FinancePreferences } from "./preferences";
 import { DOC_TYPES } from "./documents";
 
