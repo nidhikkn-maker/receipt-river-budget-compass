@@ -30,7 +30,7 @@ export async function dispatchPaymentReminders(db: SupabaseClient<Database>, see
     const accounts: Account[] = (a.data ?? []).map(x=>({id:x.id,name:x.name,kind:x.kind as AccountKind,openingBalance:Number(x.opening_balance),archived:x.archived,statementDay:x.statement_day,dueDay:x.due_day,creditLimit:x.credit_limit}));
     const transactions: Txn[] = (t.data ?? []).map(x=>({id:x.id,txnType:x.txn_type as TxnType,amount:Number(x.amount),accountId:x.account_id,toAccountId:x.to_account_id,date:x.expense_date,adjustmentSign:x.adjustment_sign === -1 ? -1 : 1}));
     for(const loan of loans){const account=accounts.find(a=>a.id===loan.accountId);if(account&&loan.loanType!=="credit_card_emi")loan.principal=accountBalance(account,transactions);}
-    const items=paymentReminderItems({today,leadDays:p.reminderDays,enabled:p.reminders,commitments,loans,accounts,transactions,documents:(d.data ?? []).map(x=>({id:x.id,expiresOn:x.expires_on}))});
+    const items=paymentReminderItems({today,leadDays:p.reminderDays,enabled:p.reminders,commitments,loans,accounts,transactions,documents:(d.data ?? []).map(x=>({id:x.id,expiresOn:x.expires_on})),trips:(p.trips ?? []) as never});
     if (!items.length) { await db.from("push_subscriptions").update({last_sent_at:new Date().toISOString()}).eq("id",device.id); skipped++; return; }
     const key=`device:${device.id}`;
     const { error: claimError } = await db.from("push_reminder_log").insert({owner_id:owner,sent_on:today,item_key:key});
