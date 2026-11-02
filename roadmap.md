@@ -1,4 +1,9 @@
 # Roadmap (Functional Requirements v1.0)
+## Faster first open on a slow phone connection (2 Nov 2026)
+- [x] Sign-in page no longer pulls in the accounts, expenses and claims code; Face ID code downloads only when Face ID is tapped; offline saved copy trimmed so it is ready sooner.
+- [x] Published to ledgerline.biz after a scan showing no serious findings; site answered HTTP 200, deployment timing an estimate.
+- [ ] Repeat-open timing on the owner's real iPhone still unmeasured — needs the owner to open, wait, close fully, reopen and report both times; blocked on device access.
+- [ ] Fresh security scan on the latest commit recommended before broad sharing (the checked scan predates this change and still lists the two email warnings that the daily-limit fix already covers).
 ## New expense airy receipt follow-up (2 Nov 2026)
 - [x] Workspace and Date print as the same side-by-side rows as Category, Paid with and Note; workspace choice opens as a picker on the right, date keeps its calendar field with Today/Yesterday under it.
 - [x] 1,177 tests pass; five-row iPhone check on real data confirms every label left with its value right, workspace switching, date pills and the split panel all work inside the row; build OK.
