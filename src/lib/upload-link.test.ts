@@ -36,3 +36,22 @@ describe("accountant upload link", () => {
     expect(await verifyToken("s", t.slice(0, -2) + "zz")).toBeNull();
   });
 });
+
+import { reminderDue, ownerNotifyDue } from "./upload-link";
+describe("accountant reminder and owner notice", () => {
+  const now = new Date("2026-11-10T04:00:00Z");
+  const base = { emailedAt: "2026-11-05T04:00:00Z", fileCount: 0, reminded: false, expiresAt: "2026-12-05T04:00:00Z", revokedAt: null };
+  it("reminds 4+ days after the email when nothing uploaded", () => expect(reminderDue(base, now)).toBe(true));
+  it("waits until 4 days have passed", () => expect(reminderDue({ ...base, emailedAt: "2026-11-07T04:00:00Z" }, now)).toBe(false));
+  it("skips once files are uploaded", () => expect(reminderDue({ ...base, fileCount: 1 }, now)).toBe(false));
+  it("reminds only once", () => expect(reminderDue({ ...base, reminded: true }, now)).toBe(false));
+  it("skips links never emailed or turned off", () => {
+    expect(reminderDue({ ...base, emailedAt: null }, now)).toBe(false);
+    expect(reminderDue({ ...base, revokedAt: "2026-11-08T00:00:00Z" }, now)).toBe(false);
+  });
+  it("owner gets at most one notice per 30 minutes", () => {
+    expect(ownerNotifyDue(null, now)).toBe(true);
+    expect(ownerNotifyDue("2026-11-10T03:45:00Z", now)).toBe(false);
+    expect(ownerNotifyDue("2026-11-10T03:29:00Z", now)).toBe(true);
+  });
+});

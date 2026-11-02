@@ -7,7 +7,7 @@ export const ALLOWED = /\.(pdf|csv|xls|xlsx|png|jpe?g|webp)$/i;
 export const PUBLIC_ORIGIN = "https://ledgerline.biz";
 
 export type LinkRow = { id: string; expires_at: string; revoked_at: string | null; file_count: number; max_files: number };
-export type LinkEvent = { linkId: string; kind: "created" | "emailed" | "opened" | "uploaded" | "turned_off" | "expired"; detail: string | null; at: string };
+export type LinkEvent = { linkId: string; kind: "created" | "emailed" | "opened" | "uploaded" | "turned_off" | "expired" | "reminded" | "owner_notified"; detail: string | null; at: string };
 
 /** Newest-first history; expiry is derived from each link's end date (never stored), so it can't be missed. */
 export function linkHistory(events: LinkEvent[], links: Pick<LinkRow, "id" | "expires_at" | "revoked_at">[], now = new Date()): LinkEvent[] {
@@ -29,6 +29,20 @@ export function fileProblem(name: string, size: number): string | null {
   if (size <= 0) return "Empty file";
   if (size > MAX_BYTES) return "Larger than 20 MB";
   return null;
+}
+
+export const REMINDER_AFTER_DAYS = 4;
+/** One reminder per link: emailed at least 4 days ago, still open, and nothing uploaded yet. */
+export function reminderDue(l: { emailedAt: string | null; fileCount: number; reminded: boolean; expiresAt: string; revokedAt: string | null }, now = new Date()): boolean {
+  if (!l.emailedAt || l.reminded || l.fileCount > 0 || l.revokedAt) return false;
+  if (new Date(l.expiresAt).getTime() <= now.getTime()) return false;
+  return now.getTime() - new Date(l.emailedAt).getTime() >= REMINDER_AFTER_DAYS * 86400_000;
+}
+
+export const NOTIFY_GAP_MIN = 30;
+/** Owner gets one "files uploaded" email per link per 30 minutes, so a 25-file batch sends one email. */
+export function ownerNotifyDue(lastNotified: string | null, now = new Date()): boolean {
+  return !lastNotified || now.getTime() - new Date(lastNotified).getTime() >= NOTIFY_GAP_MIN * 60_000;
 }
 
 /** True when the monthly email is due today (day of month in India) and none went out this month. */
