@@ -885,8 +885,8 @@ function NewExpense() {
             </div>
           )}
           {/* Paid with = the real account affected */}
-          <div className={cn("grid gap-3", isMove(txnType) && "grid-cols-2")}>
-            <div className={cn(isMove(txnType) ? "grid gap-1.5" : "receipt-row")}>
+          <div className="grid gap-3">
+            <div className="receipt-row">
               <Label>{isMove(txnType) ? "From account" : txnType === "advance" ? "Received into" : txnType === "advance_settlement" ? "Returned from" : txnType === "income" ? "Into account" : "Paid with"}{af("payment")}</Label>
               <Select value={accountId} onValueChange={(v) => { accountByUser.current = true; setAccountId(v); setAutoFilled((x) => { const n = new Set(x); n.delete("payment"); return n; }); }}>
                 <SelectTrigger aria-label="Account" className={fieldCls}><SelectValue>{accountId !== "none" && acctById.get(accountId) ? shortAccount(acctById.get(accountId)!.name, ACCOUNT_LABEL[acctById.get(accountId)!.kind]) : "Choose account"}</SelectValue></SelectTrigger>
@@ -904,15 +904,16 @@ function NewExpense() {
               {methodNote && <p className="text-xs text-muted-foreground">via {instrumentLabel(methodNote)}</p>}
             </div>
             {isMove(txnType) && (
-              <div className="grid gap-1.5">
+              <div className="receipt-row">
                 <Label>{txnType === "card_payment" ? "Card being paid" : txnType === "loan_repayment" ? "Loan being repaid" : txnType === "investment" ? "Invested into" : "To account"}</Label>
                 <Select value={toAccountId} onValueChange={setToAccountId}>
-                  <SelectTrigger aria-label="To account" className={fieldCls}><SelectValue /></SelectTrigger>
+                  <SelectTrigger aria-label="To account" className={fieldCls}><SelectValue>{toAccountId !== "none" && acctById.get(toAccountId) ? shortAccount(acctById.get(toAccountId)!.name, ACCOUNT_LABEL[acctById.get(toAccountId)!.kind]) : "Not set"}</SelectValue></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="none">Not set</SelectItem>
                     {liveAccounts.filter((a) => !MOVE_TARGET[txnType] || MOVE_TARGET[txnType]!.includes(a.kind)).map((a) => <SelectItem key={a.id} value={a.id}>{a.name} · {ACCOUNT_LABEL[a.kind]}</SelectItem>)}
                   </SelectContent>
                 </Select>
+                {edit && toAccountId === "none" && <p className="text-xs text-muted-foreground">This looks like one side of a transfer whose other side is saved separately. Link both sides on <Link to="/transfers" className="font-semibold text-primary underline">Transfers</Link> so neither account is counted twice — don't fill this in here.</p>}
               </div>
             )}
           </div>

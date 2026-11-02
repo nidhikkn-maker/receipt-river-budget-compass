@@ -917,3 +917,6 @@ html[data-theme="apple-glass"] :where(.bg-card, .bg-popover, .bg-ink) {
   box-shadow: none;
 }
 .receipt-paper :is(input, textarea, button[role="combobox"]):focus-visible { outline: none; border-bottom-color: var(--gold); }
+
+/* Cards placed on the dark receipt desk keep their own readable text colour. */
+.receipt-desk .bg-card { color: var(--card-foreground); }
