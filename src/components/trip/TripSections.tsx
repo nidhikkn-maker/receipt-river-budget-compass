@@ -16,6 +16,7 @@ import { TripBudgetCard, EditBudgetDialog, BudgetBreakdown, ReimbursementBreakdo
 import { BookingDocumentImport } from "./BookingDocumentImport";
 import { TripExpenseActions } from "./TripExpenseActions";
 import { reviewedBooking, type bookingDraft } from "@/lib/booking-import";
+import { copyItem, itineraryConflicts, itineraryDays, mapLink, outsideTrip, tripReadiness } from "@/lib/trip-itinerary";
 
 const sel = "h-10 rounded-xl border bg-background px-2 text-sm";
 const slug = (name: string) => name.replace(/\W+/g, "-");
@@ -50,6 +51,7 @@ export function TripOverviewSection({ trip, onOpenBudget }: { trip: TravelTrip; 
           {!closed && <div className="mt-2 flex gap-2"><Input className="h-10" value={traveller} onChange={(e) => setTraveller(e.target.value)} placeholder="Name" list="members" /><datalist id="members">{members.map((m) => <option key={m.id} value={m.name} />)}</datalist><Button type="button" variant="outline" onClick={() => { const n = traveller.trim(); if (!n || (trip.travellers ?? []).includes(n)) return; void put({ travellers: [...(trip.travellers ?? []), n.slice(0, 60)] }); setTraveller(""); }}>Add</Button></div>}
         </div>
         <TripBudgetMini trip={trip} onOpen={onOpenBudget} />
+        {(() => { const r = tripReadiness(trip); return <div className="mt-3 rounded-xl bg-secondary p-3 text-sm"><b>Trip readiness {r.done}/{r.total}</b>{r.missing.length ? <span className="block text-xs text-muted-foreground">Still to do: {r.missing.join(" · ")}</span> : <span className="block text-xs text-muted-foreground">All set.</span>}</div>; })()}
         {!closed && missingCats.length > 0 && <Button variant="outline" className="mt-3 w-full" onClick={() => void savePreferences({ ...pr, categories: [...pr.categories, ...missingCats.map((name) => ({ name, archived: false }))] }).then(() => toast.success("Travel categories added"))}>Add travel categories ({missingCats.join(", ")})</Button>}
         {!closed && <Button asChild variant="gold" className="mt-3 w-full"><Link to="/new" search={{ trip: trip.id }}>Add an expense to this trip</Link></Button>}
       </Card>
