@@ -156,6 +156,23 @@ export function TripItinerarySection({ trip }: { trip: TravelTrip }) {
         <Button size="sm" variant="outline" onClick={openCalendar}>Add to calendar (.ics)</Button>
         {pdfBlob ? <Button size="sm" variant="gold" onClick={() => { downloadBlob(pdfBlob, `itinerary-${slug(trip.name)}.pdf`); setPdfBlob(null); }}>Download itinerary PDF</Button> : <Button size="sm" variant="outline" onClick={preparePdf}>Prepare shareable PDF</Button>}
       </div>}
+      <Dialog open={calOpen} onOpenChange={setCalOpen}>
+        <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-lg" aria-label="Edit calendar events">
+          <DialogHeader><DialogTitle>Calendar events</DialogTitle></DialogHeader>
+          <p className="text-xs text-muted-foreground">Rename events or add notes before saving the file. These changes only affect the downloaded file; edit the plan or booking itself to change the trip. Export again after any change to get an updated file.</p>
+          <div className="space-y-3">
+            {events.map((e) => (
+              <div key={e.uid} className="rounded-xl border p-3">
+                <Label className="text-xs">Title</Label>
+                <Input className="h-9" aria-label={`Calendar title for ${e.title}`} value={calEdits[e.uid]?.title ?? ""} onChange={(ev) => setCalEdits((s) => ({ ...s, [e.uid]: { ...s[e.uid]!, title: ev.target.value } }))} />
+                <Label className="mt-2 text-xs">Note</Label>
+                <Input className="h-9" aria-label={`Calendar note for ${e.title}`} placeholder="Optional note" value={calEdits[e.uid]?.note ?? ""} onChange={(ev) => setCalEdits((s) => ({ ...s, [e.uid]: { ...s[e.uid]!, note: ev.target.value } }))} />
+              </div>
+            ))}
+          </div>
+          <Button variant="gold" onClick={downloadCalendar}>Download calendar file</Button>
+        </DialogContent>
+      </Dialog>
       {clashes.size > 0 && <p className="mb-2 text-xs text-destructive">{clashes.size} plans clash at the same time for the same people.</p>}
       {days.map((day, n) => (
         <div key={day.date} className="mb-3">
