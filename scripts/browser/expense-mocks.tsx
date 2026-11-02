@@ -47,7 +47,7 @@ export function useStore() {
   if (!store) throw new Error("Missing isolated store");
   return store;
 }
-export const extractReceipt = async ({ data }: { data: { includeItems?: boolean } }) => ({ ok: true, result: { title: "Controlled receipt expense", merchant: "Controlled cafe", amount: 432.10, currency: "INR", date: "2026-04-02", category: "Food and beverages", subtotal: 360, tax: 32.10, tip: 40, confidence: { merchant: "high", date: "low", total: "medium" }, items: data.includeItems ? [{ name: "Dinner", quantity: 2, amount: 360 }] : [], text: "Controlled receipt", scope: "business" } });
+export const extractReceipt = async ({ data }: { data: { includeItems?: boolean } }) => ({ ok: true, result: { title: "Controlled receipt expense", merchant: "Controlled cafe", amount: 432.10, currency: "INR", date: "2026-04-02", category: "Food and beverages", subtotal: 360, tax: 32.10, tip: 40, confidence: { merchant: "high", date: "low", total: "medium" }, items: data.includeItems ? [{ name: "Dinner", quantity: 2, amount: 360, confidence: { name: "high", amount: "low" } }] : [], text: "Controlled receipt", scope: "business" } });
 export const getFxRate = async () => ({ ok: true, rate: 1, date: "2026-04-02" });
 export const parseSpokenEntry = async () => { throw new Error("Voice not part of this test"); };
 export const hasDraftContent = () => false;
