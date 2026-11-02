@@ -16,7 +16,7 @@ import { TripBudgetCard, EditBudgetDialog, BudgetBreakdown, ReimbursementBreakdo
 import { BookingDocumentImport } from "./BookingDocumentImport";
 import { TripExpenseActions } from "./TripExpenseActions";
 import { reviewedBooking, type bookingDraft } from "@/lib/booking-import";
-import { calendarEvents, copyItem, itineraryConflicts, itineraryDays, itineraryPdfRows, mapLink, tripCalendar, outsideTrip, tripReadiness } from "@/lib/trip-itinerary";
+import { applyCalendarEdits, calendarEvents, CALENDAR_ALARMS, copyItem, itineraryConflicts, itineraryDays, itineraryPdfRows, mapLink, tripCalendar, outsideTrip, tripReadiness } from "@/lib/trip-itinerary";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 const sel = "h-10 rounded-xl border bg-background px-2 text-sm";
