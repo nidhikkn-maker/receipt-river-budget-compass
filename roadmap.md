@@ -486,3 +486,6 @@
 - [x] Measure live pages at iPhone speed (real device unavailable)
 - [x] Fresh security scan of published site + summary
 - [x] Optimize cold Home load on slow mobile (chart deferred)
+
+## Home load timing on a slow mobile connection
+- [ ] Measure first Home load at slow-mobile speeds on the live site and compare with the sign-in screen; optimise whatever is slower.
