@@ -25,7 +25,7 @@ import { tagValue } from "@/lib/preferences";
 import { duplicateBills } from "@/lib/bill-duplicates";
 import { suggestForEntry } from "@/lib/statement-pipeline/single-entry";
 import { buildReceiptAudit, receiptFingerprint, receiptFingerprintMatches, type ReceiptReadValues } from "@/lib/receipt-audit";
-import { receiptConfidence, receiptBreakdownError, receiptItemConfidence, type ReadingConfidence } from "@/lib/receipt-reading";
+import { receiptConfidence, receiptBreakdownError, receiptItemConfidence, receiptItemReviewReasons, receiptReviewCheck, receiptReviewSignature, type ReadingConfidence } from "@/lib/receipt-reading";
 import { quickEntrySearch } from "@/lib/quick-entry";
 import { useStore } from "@/lib/store";
 import { activeInstruments, applyInstrument, instrumentLabel, lastInstrumentForMerchant } from "@/lib/payment-instruments";
@@ -181,6 +181,8 @@ function NewExpense() {
   const [batch, setBatch] = useState<{ done: number; total: number } | null>(null);
   const [duplicateApproval, setDuplicateApproval] = useState("");
   const [matchApproval, setMatchApproval] = useState("");
+  const [reviewApproval, setReviewApproval] = useState("");
+  const [reviewDialog, setReviewDialog] = useState(false);
   const [reading, setReading] = useState(false);
   const [readingError, setReadingError] = useState("");
   const [readTarget, setReadTarget] = useState<LocalReceipt | null>(null);
@@ -402,6 +404,7 @@ function NewExpense() {
     setScan(null);
     setScanCategory("");
     setConfirmed(false);
+    setReviewApproval(""); setReviewDialog(false);
     setReading(true); setStage({ kind: "receipt", at: 0 });
     const req = latest.current.begin();
     try {
@@ -464,13 +467,20 @@ function NewExpense() {
     await runExtraction(first, false);
   };
 
-  const confirmScan = () => {
+  // Live receipt check: recomputed whenever an item, subtotal, tax, tip or the bill total is edited.
+  const reviewTotal = Number(!confirmed && scan ? scan.amount : amount);
+  const review = useMemo(() => receiptReviewCheck(reviewTotal, receiptDetails), [reviewTotal, receiptDetails]);
+  const reviewSig = useMemo(() => receiptReviewSignature(reviewTotal, receiptDetails), [reviewTotal, receiptDetails]);
+  const reviewMessages = [receiptBreakdownError(reviewTotal, receiptDetails), review.itemTotalError].filter((m): m is string => !!m);
+
+  const confirmScan = (reviewApproved = false) => {
     if (!scan) return;
     if (!scan.merchant.trim()) { toast.error("Enter the merchant"); return; }
     if (!(Number(scan.amount) > 0)) { toast.error("Enter an amount greater than zero"); return; }
     if (!isDate(scan.date)) { toast.error("Enter the date"); return; }
     const breakdownError = receiptBreakdownError(Number(scan.amount), receiptDetails);
     if (breakdownError) { toast.error(breakdownError); return; }
+    if (!reviewApproved && review.needed && reviewApproval !== reviewSig) { setReviewDialog(true); return; }
     if (!preferences.categories.some(c => !c.archived && c.name === scanCategory)) { toast.error("Choose a category to confirm"); return; }
     setCategory(scanCategory);
     setMerchant(scan.merchant.trim()); rememberMerchant(scan.merchant.trim());
@@ -508,7 +518,7 @@ function NewExpense() {
   const advanceQueue = async () => {
     const [next, ...rest] = queue;
     setQueue(rest); setBatch(b => next && b ? { done: b.done + 1, total: b.total } : null);
-    setFromInbox([]); setDuplicateApproval(""); setReceiptApproval(""); setReceipts(next ? [next] : []);
+    setFromInbox([]); setDuplicateApproval(""); setReceiptApproval(""); setReviewApproval(""); setReviewDialog(false); setReceipts(next ? [next] : []);
     setTitle(""); setMerchant(""); setAmount(""); setDescription(""); setTags("");
     setReceiptDetails({}); setScan(null); setScanRead(null); setConfirmed(true); setReadingError(""); setReadTarget(null); setAutoFilled(new Set()); setSplitOn(false); setShares({});
     if (next) await runExtraction(next, true);
@@ -741,7 +751,7 @@ function NewExpense() {
         {receiptReuse.length > 0 && !reading && <section aria-label="Receipt already used" className="space-y-3 rounded-2xl border border-gold bg-gold-soft p-4">
           <h2 className="font-display font-bold">This receipt is already attached to another entry</h2>
           <ul className="space-y-2 text-sm">{receiptReuse.map(e => <li key={e.id} className="flex flex-wrap items-center justify-between gap-2"><span>{e.merchant ?? e.title} · {e.date} · {e.currency} {e.originalAmount.toFixed(2)}</span><Link to="/new" search={{ edit: e.id }} target="_blank" rel="noopener noreferrer" className="text-primary underline">Review existing entry</Link></li>)}</ul>
-          <div className="flex flex-wrap gap-2"><Button type="button" size="sm" variant="outline" disabled={saving} onClick={() => { setReceipts([]); setReceiptDetails({}); setScan(null); setScanRead(null); setConfirmed(true); setReceiptApproval(""); }}>Remove this receipt</Button><Button type="button" size="sm" variant="secondary" disabled={!receiptBlocked} onClick={() => setReceiptApproval(receiptSignature)}>{receiptBlocked ? "Use this receipt anyway" : "Reused receipt confirmed"}</Button></div>
+          <div className="flex flex-wrap gap-2"><Button type="button" size="sm" variant="outline" disabled={saving} onClick={() => { setReceipts([]); setReceiptDetails({}); setScan(null); setScanRead(null); setConfirmed(true); setReceiptApproval(""); setReviewApproval(""); setReviewDialog(false); }}>Remove this receipt</Button><Button type="button" size="sm" variant="secondary" disabled={!receiptBlocked} onClick={() => setReceiptApproval(receiptSignature)}>{receiptBlocked ? "Use this receipt anyway" : "Reused receipt confirmed"}</Button></div>
         </section>}
         {scan && !reading && !confirmed && (
           <section ref={reviewRef} className="space-y-3 rounded-3xl border-2 border-primary bg-card p-4 shadow-float" role="group" aria-label="Review scanned details">
@@ -762,16 +772,30 @@ function NewExpense() {
               <div className="grid gap-1"><Label htmlFor="receipt-tax">Tax included</Label><Input id="receipt-tax" type="number" min="0" step="0.01" value={receiptDetails.tax ?? ""} onChange={e=>setReceiptDetails({...receiptDetails,tax:e.target.value===""?null:Number(e.target.value)})}/></div>
               <div className="grid gap-1"><Label htmlFor="receipt-tip">Tip included</Label><Input id="receipt-tip" type="number" min="0" step="0.01" value={receiptDetails.tip ?? ""} onChange={e=>setReceiptDetails({...receiptDetails,tip:e.target.value===""?null:Number(e.target.value)})}/></div>
             </div>
-            {receiptBreakdownError(Number(scan.amount), receiptDetails) ? <p role="alert" className="text-sm text-destructive">{receiptBreakdownError(Number(scan.amount), receiptDetails)}</p> : <p role="status" className="text-xs text-muted-foreground">{receiptDetails.subtotal == null ? "Subtotal not read — total comparison unavailable." : "Subtotal + tax + tip matches the total."}</p>}
+            {reviewMessages.length > 0 ? <p role="alert" className="text-sm text-destructive">{reviewMessages.join(" ")}</p> : <p role="status" className="text-xs text-muted-foreground">{receiptDetails.subtotal == null ? "Subtotal not read — total comparison unavailable." : "Subtotal + tax + tip matches the total."}</p>}
             <div className="grid gap-1"><Label>Suggested category</Label><Select value={scanCategory} onValueChange={setScanCategory}><SelectTrigger aria-label="Receipt category"><SelectValue placeholder="Choose category" /></SelectTrigger><SelectContent>{categoryNames.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent></Select></div>
-            {(receiptDetails.items?.length ?? 0) > 0 && <details open className="min-w-0 text-sm"><summary className="cursor-pointer font-semibold">Receipt items ({receiptDetails.items?.length})</summary><div className="mt-2 max-h-72 space-y-3 overflow-y-auto">{(receiptDetails.items ?? []).map((item,i)=><div key={i} className="grid min-w-0 grid-cols-2 gap-2 border-b pb-3"><div className="col-span-2"><Label htmlFor={`item-name-${i}`}>Item {i+1} name</Label><Input id={`item-name-${i}`} value={item.name} onChange={e=>setReceiptDetails({...receiptDetails,items:(receiptDetails.items ?? []).map((x,j)=>j===i?{...x,name:e.target.value}:x)})}/><ReadingIndicator field={`Item ${i+1} name confidence`} value={receiptItemConfidence(item).name}/></div><div><Label htmlFor={`item-quantity-${i}`}>Item {i+1} quantity</Label><Input id={`item-quantity-${i}`} type="number" min="0" value={item.quantity} onChange={e=>setReceiptDetails({...receiptDetails,items:(receiptDetails.items ?? []).map((x,j)=>j===i?{...x,quantity:Number(e.target.value)}:x)})}/></div><div><Label htmlFor={`item-amount-${i}`}>Item {i+1} amount</Label><Input id={`item-amount-${i}`} type="number" min="0" step="0.01" value={item.amount} onChange={e=>setReceiptDetails({...receiptDetails,items:(receiptDetails.items ?? []).map((x,j)=>j===i?{...x,amount:Number(e.target.value)}:x)})}/><ReadingIndicator field={`Item ${i+1} amount confidence`} value={receiptItemConfidence(item).amount}/></div><Button type="button" variant="ghost" size="sm" className="col-span-2 justify-self-end" aria-label={`Remove item ${i+1}`} onClick={()=>setReceiptDetails({...receiptDetails,items:(receiptDetails.items ?? []).filter((_,j)=>j!==i)})}><X className="h-4 w-4"/>Remove</Button></div>)}</div></details>}
+            {(receiptDetails.items?.length ?? 0) > 0 && <details open className="min-w-0 text-sm"><summary className="cursor-pointer font-semibold">Receipt items ({receiptDetails.items?.length}){review.items.length > 0 ? ` · ${review.items.length} need your check` : ""}</summary><p className="mt-1 text-xs text-muted-foreground">{review.items.length > 0 ? "Highlighted items were hard to read — check them before saving." : "Every item read clearly."}</p><div className="mt-2 max-h-72 space-y-3 overflow-y-auto">{(receiptDetails.items ?? []).map((item,i)=>{const flagged=review.items.includes(i);const reasons=receiptItemReviewReasons(item);return <div key={i} className={cn("grid min-w-0 grid-cols-2 gap-2",flagged?"rounded-2xl border-2 border-warning bg-warning/10 p-2":"border-b pb-3")}><div className="col-span-2"><Label htmlFor={`item-name-${i}`}>Item {i+1} name</Label><Input id={`item-name-${i}`} value={item.name} onChange={e=>setReceiptDetails({...receiptDetails,items:(receiptDetails.items ?? []).map((x,j)=>j===i?{...x,name:e.target.value}:x)})}/><ReadingIndicator field={`Item ${i+1} name confidence`} value={receiptItemConfidence(item).name}/></div><div><Label htmlFor={`item-quantity-${i}`}>Item {i+1} quantity</Label><Input id={`item-quantity-${i}`} type="number" min="0" value={item.quantity} onChange={e=>setReceiptDetails({...receiptDetails,items:(receiptDetails.items ?? []).map((x,j)=>j===i?{...x,quantity:Number(e.target.value)}:x)})}/></div><div><Label htmlFor={`item-amount-${i}`}>Item {i+1} amount</Label><Input id={`item-amount-${i}`} type="number" min="0" step="0.01" value={item.amount} onChange={e=>setReceiptDetails({...receiptDetails,items:(receiptDetails.items ?? []).map((x,j)=>j===i?{...x,amount:Number(e.target.value)}:x)})}/><ReadingIndicator field={`Item ${i+1} amount confidence`} value={receiptItemConfidence(item).amount}/></div>{flagged && <p role="status" className="col-span-2 text-xs font-semibold text-warning">Check the {reasons.join(" and ")} of this item</p>}<Button type="button" variant="ghost" size="sm" className="col-span-2 justify-self-end" aria-label={`Remove item ${i+1}`} onClick={()=>setReceiptDetails({...receiptDetails,items:(receiptDetails.items ?? []).filter((_,j)=>j!==i)})}><X className="h-4 w-4"/>Remove</Button></div>;})}</div></details>}
             {includeItems && !receiptDetails.items?.length && <p className="text-xs text-muted-foreground">No readable receipt items found.</p>}
             <div className="flex justify-end gap-2">
               <Button type="button" variant="ghost" size="sm" onClick={() => { setScan(null); setConfirmed(true); }}>Enter manually</Button>
-              <Button type="button" size="sm" onClick={confirmScan}>Confirm details</Button>
+              <Button type="button" size="sm" onClick={() => confirmScan()}>Confirm details</Button>
             </div>
           </section>
         )}
+        <Dialog open={reviewDialog} onOpenChange={setReviewDialog}>
+          <DialogContent className="max-w-lg">
+            <DialogHeader><DialogTitle>Check these receipt items before saving</DialogTitle></DialogHeader>
+            <div className="space-y-2 text-sm">
+              {review.items.map((i) => { const item = receiptDetails.items?.[i]; if (!item) return null; return <p key={i}><b>Item {i + 1}</b> · {item.name || "unnamed"} · {item.amount.toFixed(2)} <span className="text-muted-foreground">— the {receiptItemReviewReasons(item).join(" and ")} was hard to read</span></p>; })}
+              {review.itemTotalError && <p>{review.itemTotalError}</p>}
+              <p className="text-xs text-muted-foreground">Nothing is saved until you confirm these details.</p>
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button type="button" variant="ghost" onClick={() => setReviewDialog(false)}>Go back and check</Button>
+              <Button type="button" onClick={() => { setReviewApproval(reviewSig); setReviewDialog(false); confirmScan(true); }}>I{"'"}ve checked these items</Button>
+            </div>
+          </DialogContent>
+        </Dialog>
 
         <fieldset disabled={!confirmed || reading || saving} className={cn("grid min-w-0 gap-3 rounded-3xl bg-card p-4", !confirmed && "opacity-50")}>
           {TYPE_HINT[txnType] && <p className="text-xs text-muted-foreground">{TYPE_HINT[txnType]}</p>}
