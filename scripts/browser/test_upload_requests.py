@@ -67,7 +67,7 @@ class UploadRequestsPage(unittest.IsolatedAsyncioTestCase):
             await self.playwright.stop()
 
     async def test_used_request_shows_email_opens_files_and_confirmation(self):
-        card = self.page.get_by_text("November 2026", exact=True).locator("xpath=ancestor::li[1]")
+        card = self.page.get_by_role("listitem").filter(has_text="AMEX-Nov.pdf")
         await expect(card).to_contain_text("Open")
         await expect(card).to_contain_text("Link emailed 1 Nov 2026 to durai@example.com")
         await expect(card).to_contain_text("Files 2 of 50 — AMEX-Nov.pdf, HDFC-Nov.pdf · 1 waiting")
