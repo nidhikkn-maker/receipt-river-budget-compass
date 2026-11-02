@@ -570,3 +570,4 @@
 - [x] Per-shop rules to correct or turn off learned category/account/payment/workspace
 - [x] Airy receipt redesign of New expense
 - [x] Shop aliases for per-shop rules
+- [x] Fix false 'Saved the wrong way' for transfers into the statement account; publish

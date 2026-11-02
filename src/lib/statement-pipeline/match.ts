@@ -19,6 +19,9 @@ export interface LedgerRec {
 /** Kinds that take money out of the account the statement belongs to. */
 export const OUT_KINDS: TxnType[] = ["expense", "transfer", "card_payment", "loan_repayment", "investment", "advance"];
 export const isOut = (k: TxnType) => OUT_KINDS.includes(k);
+/** Money direction for the statement's own account: a movement whose destination is this account is money in. */
+export const outFor = (rec: Pick<LedgerRec, "kind" | "accountId" | "toAccountId">, accountId?: string | null) =>
+  accountId && rec.toAccountId === accountId && rec.accountId !== accountId ? false : isOut(rec.kind);
 
 const days = (a: string, b: string) => Math.abs(Date.parse(a) - Date.parse(b)) / 86400000;
 const STOP = /^(upi|pos|visa|neft|imps|hdfc|idfc|icici|utib|the|ltd|pvt|and|mr|for|at|by)$/;
@@ -27,7 +30,8 @@ const tokens = (s: string) => new Set(s.toLowerCase().split(/[^a-z0-9]+/).filter
 export interface MatchScore { score: number; reasons: string[]; dayGap: number }
 
 /** Why two things look like the same movement. Scores only inform review; they never change a record. */
-export function scoreRecord(rec: LedgerRec, line: StmtLine): MatchScore {
+export function scoreRecord(rec: LedgerRec, line: StmtLine, accountId?: string | null): MatchScore {
+  const out = outFor(rec, accountId);
   const reasons: string[] = [];
   let score = 0;
   const diff = Math.round(Math.abs(line.amount - rec.amount) * 100) / 100;
@@ -40,7 +44,7 @@ export function scoreRecord(rec: LedgerRec, line: StmtLine): MatchScore {
   const shared = [...a].filter((t) => b.has(t) || [...b].some((x) => x.startsWith(t) || t.startsWith(x)));
   if (shared.length) { score += Math.min(20, 10 * shared.length); reasons.push(`Description shares “${shared.slice(0, 3).join(", ")}”`); }
   else reasons.push("Descriptions share no words");
-  if ((line.direction === "debit") === isOut(rec.kind)) reasons.push(`Direction agrees (money ${isOut(rec.kind) ? "out" : "in"})`);
+  if ((line.direction === "debit") === out) reasons.push(`Direction agrees (money ${out ? "out" : "in"})`);
   else { score -= 25; reasons.push(`Saved as ${rec.kind}, but the statement shows money ${line.direction === "debit" ? "out" : "in"}`); }
   return { score: Math.max(0, Math.min(100, score)), reasons, dayGap: gap };
 }
@@ -58,13 +62,13 @@ export interface MatchOutcome {
 const band = (n: number) => (n >= 80 ? "high" : n >= 55 ? "medium" : "low") as MatchOutcome["confidence"];
 
 /** One-to-one pairing: the best-scoring pairs are taken first, so no record or line is used twice. */
-export function matchLines(lines: StmtLine[], records: LedgerRec[], windowDays = 3): MatchOutcome[] {
+export function matchLines(lines: StmtLine[], records: LedgerRec[], windowDays = 3, accountId?: string | null): MatchOutcome[] {
   const pairs: { line: StmtLine; rec: LedgerRec; score: number }[] = [];
   for (const line of lines) {
     for (const rec of records) {
       if (rec.currency !== line.currency || Math.abs(rec.amount - line.amount) > 0.005) continue;
       if (days(line.date, rec.date) > windowDays) continue;
-      pairs.push({ line, rec, score: scoreRecord(rec, line).score });
+      pairs.push({ line, rec, score: scoreRecord(rec, line, accountId).score });
     }
   }
   pairs.sort((x, y) => y.score - x.score || x.line.key.localeCompare(y.line.key) || x.rec.id.localeCompare(y.rec.id));
@@ -80,8 +84,8 @@ export function matchLines(lines: StmtLine[], records: LedgerRec[], windowDays =
   return lines.map((line): MatchOutcome => {
     const rec = chosen.get(line.key);
     if (!rec) return { line, result: "missing", score: 0, confidence: "low", reasons: ["No record with this amount inside the date window"] };
-    const s = scoreRecord(rec, line);
-    const wrong = (line.direction === "debit") !== isOut(rec.kind);
+    const s = scoreRecord(rec, line, accountId);
+    const wrong = (line.direction === "debit") !== outFor(rec, accountId);
     return { line, record: rec, result: wrong ? "wrong_kind" : "matched", score: s.score, confidence: band(s.score), reasons: s.reasons };
   });
 }

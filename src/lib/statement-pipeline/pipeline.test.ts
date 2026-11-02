@@ -235,3 +235,13 @@ describe("change plan for a whole upload", () => {
     expect(a?.unexplained.length).toBe(0);
   });
 });
+
+describe("transfer into the statement account", () => {
+  it("is money in, not saved the wrong way", async () => {
+    const { matchLines } = await import("./match");
+    const rec = { id: "t", date: "2026-04-16", amount: 100, kind: "transfer" as const, name: "req IMPS", description: "", currency: "INR", accountId: "hdfc", toAccountId: "idfc" };
+    const ln = { key: "k", date: "2026-04-16", amount: 100, direction: "credit", description: "req IMPS", currency: "INR" } as never;
+    expect(matchLines([ln], [rec], 3, "idfc")[0]?.result).toBe("matched");
+    expect(matchLines([{ ...(ln as object), direction: "debit" } as never], [rec], 3, "hdfc")[0]?.result).toBe("matched");
+  });
+});

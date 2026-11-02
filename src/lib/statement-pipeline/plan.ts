@@ -59,7 +59,7 @@ export function buildPlan(files: StmtFile[], accounts: Account[], transactions: 
         .filter((e) => !e.transferCounterpartOf && (e.accountId === acct.id || e.toAccountId === acct.id) && (!from || e.date >= from) && (!to || e.date <= to))
         .map(ledgerRec)
       : [];
-    const outcomes = matchLines(file.lines, records);
+    const outcomes = matchLines(file.lines, records, 3, acct?.id ?? null);
     const missing = outcomes.filter((o) => o.result === "missing").map((o) => o.line);
     return { file, acct, records, outcomes, missing };
   });
