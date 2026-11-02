@@ -20,7 +20,7 @@ async function notifyOwner(admin: Admin, owner: string, linkId: string, fileName
   if (!ownerNotifyDue(last?.at ?? null)) return;
   const { data: u } = await admin.auth.admin.getUserById(owner);
   const to = u?.user?.email;
-  if (!to || u.user.is_anonymous) return;
+  if (!to || u?.user?.is_anonymous) return;
   // Claim the slot first so parallel uploads in one batch send a single email.
   await admin.from("upload_link_events").insert({ owner_id: owner, link_id: linkId, kind: "owner_notified", detail: to });
   const [{ data: p }, { data: c }] = await Promise.all([
@@ -28,7 +28,7 @@ async function notifyOwner(admin: Admin, owner: string, linkId: string, fileName
     admin.from("accountant_contacts").select("name").eq("owner_id", owner).maybeSingle(),
   ]);
   const { emailOwnerUploaded } = await import("@/lib/upload-link.server");
-  await emailOwnerUploaded(to, (p?.full_name ?? "").split(" ")[0], c?.name || "Your accountant", fileName, `${PUBLIC_ORIGIN}/statements`, `accountant-upload-received-${linkId}-${Date.now()}`);
+  await emailOwnerUploaded(to, (p?.full_name ?? "").split(" ")[0] ?? "", c?.name || "Your accountant", fileName, `${PUBLIC_ORIGIN}/statements`, `accountant-upload-received-${linkId}-${Date.now()}`);
 }
 
 export const Route = createFileRoute("/api/public/upload/$token")({
