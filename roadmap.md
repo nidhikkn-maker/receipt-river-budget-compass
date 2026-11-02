@@ -575,7 +575,8 @@
 - [x] Security scan summary (3 warnings await user decision)
 - [x] Test duplicate-transfer warning
 - [x] Publish all
-- [ ] Find and fix biggest app/receipt slowness
-- [ ] Profile Home startup (found ~1.2s server wait per page; fix not yet done)
+- [x] Find and fix biggest app/receipt slowness (offline app worker never installed: wrong file paths; fixed so pages open from the saved copy)
+- [ ] Fresh security scan summary (deep scan running)
+- [x] Profile Home startup and cut the ~1.2-2.5s server wait (installed app now opens from the saved copy and refreshes in the background)
 - [x] Receipt reading progress + retry
 - [ ] Fix 3 security warnings (spreadsheet done; 2 email warnings need user decision on daily limit)

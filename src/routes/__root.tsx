@@ -11,7 +11,7 @@ import {
 } from "@tanstack/react-router";
 import { useEffect, type ReactNode } from "react";
 
-import { registerOfflineApp } from "@/lib/pwa";
+import { registerOfflineApp, recoverStaleAppFiles } from "@/lib/pwa";
 import { supabase } from "@/integrations/supabase/client";
 import { Toaster } from "@/components/ui/sonner";
 import { ConfirmHost } from "@/components/ConfirmHost";
@@ -135,7 +135,7 @@ function RootShell({ children }: { children: ReactNode }) {
 }
 
 function AuthListener() {
-  useEffect(()=>{void registerOfflineApp().catch(()=>{});},[]);
+  useEffect(()=>{recoverStaleAppFiles();void registerOfflineApp().catch(()=>{});},[]);
   const router = useRouter();
   const { queryClient } = Route.useRouteContext();
   useEffect(() => {
