@@ -12,8 +12,8 @@ export const BOOKING_KINDS = ["flight", "hotel", "train", "bus", "car", "visa", 
 export type BookingKind = (typeof BOOKING_KINDS)[number];
 
 /** A booking is a plan, not a payment. Money reaches it through linked ledger entries; the remainder stays a commitment. */
-export interface Booking { id: string; kind: BookingKind; provider: string; ref: string; date: string; amount: number; status: "unpaid" | "paid" | "cancelled"; expenseId?: string | null; checkInAt?: string | null; reminderOff?: boolean; expenseIds?: string[]; dueDate?: string | null; cancelTerms?: string | null; note?: string; traveller?: string; location?: string; currency?: string; originalAmount?: number; planningRate?: number; confirmation?: "pending" | "confirmed"; documentIds?: string[] }
-export interface ItineraryItem { id: string; date: string; time?: string; title: string; place?: string; bookingId?: string | null; travellers?: string[]; note?: string; documentIds?: string[] }
+export interface Booking { id: string; kind: BookingKind; provider: string; ref: string; date: string; amount: number; status: "unpaid" | "paid" | "cancelled"; expenseId?: string | null; checkInAt?: string | null; reminderOff?: boolean; calendarTitle?: string; calendarNote?: string; calendarAlarm?: number; expenseIds?: string[]; dueDate?: string | null; cancelTerms?: string | null; note?: string; traveller?: string; location?: string; currency?: string; originalAmount?: number; planningRate?: number; confirmation?: "pending" | "confirmed"; documentIds?: string[] }
+export interface ItineraryItem { id: string; date: string; time?: string; title: string; place?: string; bookingId?: string | null; travellers?: string[]; note?: string; documentIds?: string[]; calendarTitle?: string; calendarNote?: string; calendarAlarm?: number }
 export interface Advance { id: string; date: string; amount: number; source: string; settledAt?: string | null; settlementNote?: string }
 /** One category's share of the trip plan. Category budgets plus a contingency allowance make up the plan. */
 export interface BudgetLine { category: string; amount: number }

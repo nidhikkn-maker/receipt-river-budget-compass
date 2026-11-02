@@ -69,29 +69,60 @@ const icsDate = (d: string) => d.replace(/-/g, "");
 const icsStamp = (iso: string) => new Date(iso).toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "");
 const nextIsoDay = (d: string) => new Date(Date.parse(d + "T00:00:00Z") + 864e5).toISOString().slice(0, 10);
 
-export interface CalendarEvent { uid: string; title: string; note: string; start: string; end: string; location?: string | undefined }
+export interface CalendarEvent { uid: string; title: string; note: string; start: string; end: string; location?: string | undefined; defaultTitle: string; defaultNote: string; alarm: number | null }
+export interface CalendarEdit { title?: string; note?: string; alarm?: number | null }
+/** Reminder choices offered for calendar events, in minutes before the start. */
+export const CALENDAR_ALARMS: { minutes: number | null; label: string }[] = [
+  { minutes: null, label: "No reminder" }, { minutes: 15, label: "15 minutes before" }, { minutes: 60, label: "1 hour before" },
+  { minutes: 180, label: "3 hours before" }, { minutes: 1440, label: "1 day before" },
+];
 
-/** The events a trip calendar export would contain, in export order. Recomputed from live trip data, so re-exporting always reflects the latest edits. */
+const saved = (x: { calendarTitle?: string; calendarNote?: string; calendarAlarm?: number }, title: string, note: string) =>
+  ({ title: x.calendarTitle || title, note: x.calendarNote ?? note, defaultTitle: title, defaultNote: note, alarm: typeof x.calendarAlarm === "number" ? x.calendarAlarm : null });
+
+/** The events a trip calendar export would contain, in export order. Recomputed from live trip data with any saved calendar wording and reminders. */
 export function calendarEvents(t: TravelTrip): CalendarEvent[] {
   const out: CalendarEvent[] = [];
   for (const i of t.itinerary ?? []) {
-    if (i.time) { const s = `${icsDate(i.date)}T${i.time.replace(":", "")}00`; out.push({ uid: `plan-${i.id}`, title: i.title, note: i.note ?? "", start: `DTSTART:${s}`, end: `DTEND:${s}`, location: i.place }); }
-    else out.push({ uid: `plan-${i.id}`, title: i.title, note: i.note ?? "", start: `DTSTART;VALUE=DATE:${icsDate(i.date)}`, end: `DTEND;VALUE=DATE:${icsDate(nextIsoDay(i.date))}`, location: i.place });
+    const w = saved(i, i.title, i.note ?? "");
+    if (i.time) { const s = `${icsDate(i.date)}T${i.time.replace(":", "")}00`; out.push({ uid: `plan-${i.id}`, ...w, start: `DTSTART:${s}`, end: `DTEND:${s}`, location: i.place }); }
+    else out.push({ uid: `plan-${i.id}`, ...w, start: `DTSTART;VALUE=DATE:${icsDate(i.date)}`, end: `DTEND;VALUE=DATE:${icsDate(nextIsoDay(i.date))}`, location: i.place });
   }
   for (const b of t.bookings ?? []) {
     if (b.status === "cancelled") continue;
     const title = `${b.kind} · ${b.provider}${b.ref ? ` #${b.ref}` : ""}`;
-    if (b.checkInAt) out.push({ uid: `booking-${b.id}`, title: `Check-in: ${title}`, note: b.note ?? "", start: `DTSTART:${icsStamp(b.checkInAt)}`, end: `DTEND:${icsStamp(b.checkInAt)}`, location: b.location });
-    else out.push({ uid: `booking-${b.id}`, title, note: b.note ?? "", start: `DTSTART;VALUE=DATE:${icsDate(b.date)}`, end: `DTEND;VALUE=DATE:${icsDate(nextIsoDay(b.date))}`, location: b.location });
+    if (b.checkInAt) out.push({ uid: `booking-${b.id}`, ...saved(b, `Check-in: ${title}`, b.note ?? ""), start: `DTSTART:${icsStamp(b.checkInAt)}`, end: `DTEND:${icsStamp(b.checkInAt)}`, location: b.location });
+    else out.push({ uid: `booking-${b.id}`, ...saved(b, title, b.note ?? ""), start: `DTSTART;VALUE=DATE:${icsDate(b.date)}`, end: `DTEND;VALUE=DATE:${icsDate(nextIsoDay(b.date))}`, location: b.location });
   }
   return out;
 }
 
-/** iCalendar file of itinerary plans and active bookings; timed items keep their local time, check-ins use the saved moment. No amounts. `edits` overrides an event's title/note by uid. */
-export function tripCalendar(t: TravelTrip, stamp: string, edits: Record<string, { title?: string; note?: string }> = {}): string {
+const alarmBlock = (min: number | null, title: string) => (min === null ? [] : ["BEGIN:VALARM", "ACTION:DISPLAY", `DESCRIPTION:${icsText(title)}`, `TRIGGER:-PT${min}M`, "END:VALARM"]);
+
+/** iCalendar file of itinerary plans and active bookings; no amounts. `edits` overrides an event's title/note/reminder by uid for this file. */
+export function tripCalendar(t: TravelTrip, stamp: string, edits: Record<string, CalendarEdit> = {}): string {
   const ev = calendarEvents(t).map((e) => {
     const o = edits[e.uid] ?? {};
-    return ["BEGIN:VEVENT", `UID:${e.uid}@ledgerline`, `DTSTAMP:${icsStamp(stamp)}`, e.start, e.end, `SUMMARY:${icsText(o.title ?? e.title)}`, ...((o.note ?? e.note) ? [`DESCRIPTION:${icsText(o.note ?? e.note)}`] : []), ...(e.location ? [`LOCATION:${icsText(e.location)}`] : []), "END:VEVENT"].join("\r\n");
+    const title = o.title ?? e.title, note = o.note ?? e.note, alarm = o.alarm !== undefined ? o.alarm : e.alarm;
+    return ["BEGIN:VEVENT", `UID:${e.uid}@ledgerline`, `DTSTAMP:${icsStamp(stamp)}`, e.start, e.end, `SUMMARY:${icsText(title)}`, ...(note ? [`DESCRIPTION:${icsText(note)}`] : []), ...(e.location ? [`LOCATION:${icsText(e.location)}`] : []), ...alarmBlock(alarm, title), "END:VEVENT"].join("\r\n");
   });
   return ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Ledgerline//Trip//EN", `X-WR-CALNAME:${icsText(t.name)}`, ...ev, "END:VCALENDAR", ""].join("\r\n");
+}
+
+/** Trip with calendar wording and reminders saved for future exports. Values equal to the default are cleared, so plan/booking changes still flow through. */
+export function applyCalendarEdits(t: TravelTrip, edits: Record<string, CalendarEdit>): Pick<TravelTrip, "itinerary" | "bookings"> {
+  const defaults = new Map(calendarEvents({ ...t, itinerary: (t.itinerary ?? []).map(strip), bookings: (t.bookings ?? []).map(strip) }).map((e) => [e.uid, e]));
+  const fold = <X extends { id: string; calendarTitle?: string; calendarNote?: string; calendarAlarm?: number }>(x: X, uid: string): X => {
+    const o = edits[uid], d = defaults.get(uid);
+    if (!o || !d) return x;
+    const next = strip(x);
+    const title = (o.title ?? x.calendarTitle ?? "").trim(); if (title && title !== d.defaultTitle) next.calendarTitle = title.slice(0, 200);
+    const note = o.note ?? x.calendarNote; if (note !== undefined && note !== d.defaultNote) next.calendarNote = note.slice(0, 1000);
+    const alarm = o.alarm !== undefined ? o.alarm : x.calendarAlarm; if (typeof alarm === "number") next.calendarAlarm = alarm;
+    return next;
+  };
+  return { itinerary: (t.itinerary ?? []).map((i) => fold(i, `plan-${i.id}`)), bookings: (t.bookings ?? []).map((b) => fold(b, `booking-${b.id}`)) };
+}
+function strip<X extends { calendarTitle?: string; calendarNote?: string; calendarAlarm?: number }>(x: X): X {
+  const { calendarTitle: _a, calendarNote: _b, calendarAlarm: _c, ...rest } = x; return rest as X;
 }
