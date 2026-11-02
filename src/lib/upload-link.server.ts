@@ -19,3 +19,16 @@ export async function emailLink(to: string, name: string, ownerName: string, url
     return { sent: false, reason: code ?? "send_failed" };
   }
 }
+
+async function send(template: string, to: string, data: Record<string, unknown>, key: string): Promise<boolean> {
+  const { sendTemplateEmail } = await import("@/lib/email-templates/send-email");
+  try { return (await sendTemplateEmail(template, to, { templateData: data, idempotencyKey: key })).sent; } catch { return false; }
+}
+
+/** Sends the one reminder for this link to the accountant. */
+export const emailReminder = (to: string, name: string, ownerName: string, url: string, linkId: string) =>
+  send("accountant-upload-reminder", to, { name, ownerName, url }, `accountant-upload-reminder-${linkId}`);
+
+/** Tells the owner (their own sign-in email) that files arrived on their link. */
+export const emailOwnerUploaded = (to: string, ownerName: string, accountantName: string, fileName: string, url: string, key: string) =>
+  send("accountant-upload-received", to, { ownerName, accountantName, fileName, url }, key);

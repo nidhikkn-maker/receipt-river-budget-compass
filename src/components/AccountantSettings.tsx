@@ -91,7 +91,7 @@ export function AccountantSettings() {
   );
 }
 
-const LABEL: Record<string, string> = { created: "New link created", emailed: "Link emailed", opened: "Link opened", uploaded: "File uploaded", turned_off: "Link turned off", expired: "Link expired" };
+const LABEL: Record<string, string> = { created: "New link created", emailed: "Link emailed", opened: "Link opened", uploaded: "File uploaded", turned_off: "Link turned off", expired: "Link expired", reminded: "Reminder emailed", owner_notified: "You were emailed about uploads" };
 
 function LinkHistory({ items, name }: { items: AccountantInfo["history"]; name: string }) {
   const [all, setAll] = useState(false);
