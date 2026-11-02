@@ -67,7 +67,8 @@ class SyncQueueDiscardWarning(unittest.IsolatedAsyncioTestCase):
     async def test_warning_explains_device_only_removal_and_blocks_until_acknowledged(self):
         await self.open_remove_dialog("Controlled cafe")
         await expect(self.dialog.get_by_text("This entry has never reached your account", exact=False)).to_be_visible()
-        await expect(self.dialog.get_by_text("cannot be recovered", exact=False)).to_be_visible()
+        await expect(self.dialog.get_by_text("Removing it deletes it from this device permanently", exact=False)).to_be_visible()
+        await expect(self.dialog.get_by_role("checkbox")).not_to_be_checked()
         await expect(self.dialog.get_by_text("Controlled cafe · 2026-11-01", exact=False)).to_be_visible()
         remove = self.dialog.get_by_role("button", name="Remove from this device")
         await expect(remove).to_be_disabled()
