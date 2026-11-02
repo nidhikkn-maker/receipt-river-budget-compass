@@ -1,4 +1,8 @@
 # Roadmap (Functional Requirements v1.0)
+## CI check and entities patch documentation
+- [x] Added .github/workflows/ci.yml: bun install --frozen-lockfile, then typecheck (new `bun run typecheck` script), production build, and full test suite on push/PR.
+- [x] Fixed the underlying entities conflict instead of patching it: removed the global entities@7 override, the two patches, and the vite.config.ts entities alias; each consumer now resolves its own entities version. Build OK, 1,079 tests pass, typecheck clean.
+- [x] Documented the tsyringe patch and the removed entities workarounds (why they existed, safe update/removal steps) in patches/README.md; updated the AGENTS.md rule.
 ## v5.14 historical completion audit (read-only)
 - [x] Original private PDFs independently verified: correct IDFC account headers/Apr–Nov coverage/balances; page extraction complete but identity evidence and all confirmations absent. Verified two SGST fingerprint collisions (256 raw/254 staged) and MOVAC printed debit-header ₹0.01 discrepancy; no assumptions about why a past click was not saved.
 - [x] Corrected scope: 357/16 was whole-app; requesting owner has 345 records/seven accounts. Complete 256-source/345-ledger CSVs: 117 unique-reference lines, four ambiguous-reference/four money-only/131 unmatched; 124 historical filename/account conflicts, nine potential duplicate groups, 54 category hints. Automatic completion/bulk fully eligible now zero; genuine individual-decision count blocked by missing originals/purpose evidence.
