@@ -268,6 +268,24 @@ export type Database = {
           },
         ]
       }
+      demo_sessions: {
+        Row: {
+          created_at: string
+          label: string
+          owner_id: string
+        }
+        Insert: {
+          created_at?: string
+          label: string
+          owner_id: string
+        }
+        Update: {
+          created_at?: string
+          label?: string
+          owner_id?: string
+        }
+        Relationships: []
+      }
       department_budgets: {
         Row: {
           amount: number
@@ -1800,6 +1818,7 @@ export type Database = {
         Returns: undefined
       }
       delete_my_finance_data: { Args: never; Returns: undefined }
+      expired_demo_owners: { Args: never; Returns: string[] }
       family_invite_owner: { Args: { _invite: string }; Returns: string }
       finance_operation: {
         Args: { action: string; payload: Json }
@@ -1918,6 +1937,7 @@ export type Database = {
         }
         Returns: undefined
       }
+      start_demo_workspace: { Args: { _label: string }; Returns: undefined }
       undo_category_change: { Args: { batch_id: string }; Returns: undefined }
       undo_financial_correction: { Args: { _id: string }; Returns: undefined }
       undo_review_metadata: { Args: { _id: string }; Returns: undefined }
