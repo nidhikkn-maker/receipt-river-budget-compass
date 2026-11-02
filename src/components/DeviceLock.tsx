@@ -1,4 +1,5 @@
 import { useEffect, useState, type ReactNode } from "react";
+import { LedgerlineSymbol } from "./LedgerlineLogo";
 import { useServerFn } from "@tanstack/react-start";
 import { startAuthentication, startRegistration } from "@simplewebauthn/browser";
 import type { PublicKeyCredentialCreationOptionsJSON, PublicKeyCredentialRequestOptionsJSON } from "@simplewebauthn/browser";
@@ -52,7 +53,8 @@ export function DeviceLock({ children }: { children: ReactNode }) {
     finally { setBusy(false); }
   };
   return <div className="flex min-h-[70vh] flex-col items-center justify-center gap-4 px-4">
-    <Fingerprint className="h-12 w-12 text-primary" />
+    <LedgerlineSymbol className="h-10 w-auto" />
+    <Fingerprint className="h-10 w-10 text-primary" />
     <h1 className="text-center font-display text-2xl font-bold">Ledgerline is locked</h1>
     <Button disabled={busy} className="max-w-full whitespace-normal" onClick={async () => {
       setBusy(true); setError("");

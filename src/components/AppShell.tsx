@@ -6,6 +6,7 @@ import { backStep, showBackButton } from "@/lib/back-nav";
 import { useEffect, useState, type ReactNode } from "react";
 import { BarChart3, Bell, CalendarClock, Gem, Home, Landmark, ListFilter, PiggyBank, Plus, Settings, Sparkles, Users, Eye, EyeOff, FileText, UserRound, TrendingUp, Inbox, HeartPulse, Search, SlidersHorizontal, Split, Network, Plane, Wallet, Bot, Menu, X, MessageCircleQuestion, RefreshCw, CloudOff, Check, TriangleAlert } from "lucide-react";
 import { DeviceLock } from "./DeviceLock";
+import { LedgerlineBrand } from "./LedgerlineLogo";
 import { Button } from "./ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "./ui/dialog";
 import { useStore } from "@/lib/store";
@@ -141,7 +142,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   return (
     <div className="min-h-screen bg-background lg:pl-24">
       <aside className="fixed inset-y-0 left-0 z-30 hidden w-24 flex-col items-center gap-1 overflow-y-auto bg-ink py-6 text-ink-foreground lg:flex">
-        <Link to="/dashboard" className="mb-6 flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-hero font-display text-xl font-extrabold text-ink-foreground shadow-float">L</Link>
+        <Link to="/dashboard" aria-label="Ledgerline home" className="mb-6 shrink-0"><img src="/app-icon.png" alt="Ledgerline" width={48} height={48} className="h-12 w-12 rounded-2xl shadow-float" /></Link>
         {LINKS.map((l) => (
           <Link key={l.to} to={l.to} className="flex w-20 flex-col items-center gap-1 rounded-2xl py-2.5 text-[11px] font-semibold text-ink-muted transition hover:text-ink-foreground"
             activeProps={{ className: "!text-gold bg-sidebar-accent ring-1 ring-gold" }}>
@@ -153,7 +154,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
       <header hidden={focused} className="sticky top-0 z-20 border-b bg-background/85 backdrop-blur">
         <div className="mx-auto flex max-w-6xl items-center gap-1 px-4 py-2.5 sm:px-8">
-          <Link to="/dashboard" className="font-brand text-xl font-bold tracking-tight text-primary">Ledgerline<span className="text-gold">.</span></Link>
+          <Link to="/dashboard" aria-label="Ledgerline home" className="flex items-center"><LedgerlineBrand /></Link>
           <div className="ml-auto flex items-center">
             <SyncStatus />
             <Link to="/search" aria-label="Search" className="rounded-xl p-2 text-muted-foreground transition hover:text-foreground"><Search className="h-5 w-5" /></Link>

@@ -1,4 +1,5 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
+import { LedgerlineLogo } from "@/components/LedgerlineLogo";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -66,7 +67,7 @@ function Consent() {
 
   return (
     <main className="mx-auto max-w-md px-6 py-12">
-      <div className="font-display text-2xl font-bold text-primary">Ledgerline<span className="text-gold">.</span></div>
+      <LedgerlineLogo className="h-8 w-auto" />
       <div className="mt-8 rounded-2xl border bg-card p-6">
         <h1 className="font-display text-2xl font-bold">Connect {name} to Ledgerline</h1>
         <p className="mt-2 text-sm">This lets {name} use Ledgerline as you{email ? <> (<b>{email}</b>)</> : null}.</p>
