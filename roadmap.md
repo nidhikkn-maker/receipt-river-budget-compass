@@ -472,3 +472,5 @@
 - [ ] Test Face ID fallback on a real iPhone (needs user device)
 - [x] Waiting to sync screen (/sync-queue) with per-entry status and retry
 - [x] Action menu for offline entries (retry / discard)
+- [ ] Timed opening check: measure how long the app takes from tap to first usable screen (preview + live), and what blocks it
+- [ ] Face ID appears by itself right after the first email sign-in, with no tap needed; MPIN and password stay as fallbacks
