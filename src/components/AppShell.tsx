@@ -1,6 +1,6 @@
 import { FilePen } from "lucide-react";
 import { DraftsReminder } from "@/components/DraftsReminder";
-import { Link, useRouter, useRouterState } from "@tanstack/react-router";
+import { Link, useRouter, useRouterState , useNavigate } from "@tanstack/react-router";
 import { ArrowLeft, ArrowRight } from "lucide-react";
 import { backStep, showBackButton } from "@/lib/back-nav";
 import { useEffect, useState, type ReactNode } from "react";

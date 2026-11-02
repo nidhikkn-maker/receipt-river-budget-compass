@@ -3,7 +3,7 @@ import type { PendingEntry } from "./offline";
 export type PendingStatus = "waiting" | "saving" | "saved" | "failed";
 export interface PendingItem {
   id: string; date: string; payee: string; title: string; amount: number; currency: string;
-  createdAt: string; status: PendingStatus; error?: string;
+  createdAt: string; status: PendingStatus; error?: string | undefined;
 }
 
 /** Combine the device queue with known statuses. Saved items stay listed (they're no longer queued); everything queued shows at least "waiting". */

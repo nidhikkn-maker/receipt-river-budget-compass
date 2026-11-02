@@ -27,7 +27,7 @@ function SyncQueue() {
   const fmt = (n: number, c: string) => { try { return new Intl.NumberFormat("en-IN", { style: "currency", currency: c }).format(n); } catch { return `${c} ${n}`; } };
   return (
     <div className="mx-auto max-w-2xl">
-      <PageTitle title="Waiting to sync" subtitle="Entries saved on this device while offline. Each is saved to your account once, even if you retry." />
+      <PageTitle title="Waiting to sync" sub="Entries saved on this device while offline. Each is saved to your account once, even if you retry." />
       {failed > 0 && <div className="mb-4 flex justify-end"><Button onClick={() => retrySync()}>Retry all</Button></div>}
       {pendingItems.length === 0 ? (
         <p className="rounded-2xl bg-card p-6 text-center text-sm text-muted-foreground">Nothing waiting — every entry on this device is saved to your account.</p>
