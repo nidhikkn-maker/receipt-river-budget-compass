@@ -65,3 +65,21 @@ export const turnOffLink = createServerFn({ method: "POST" })
   });
 
 export { LINK_DAYS, MAX_FILES };
+
+/** One row per monthly upload request: link status, email, opens, files, reminder and owner confirmation. */
+export const getUploadRequests = createServerFn({ method: "POST" })
+  .middleware([requireRealAccount])
+  .handler(async ({ context }): Promise<UploadRequest[]> => {
+    const { supabase, userId } = context;
+    const [{ data: links }, { data: ev }, { data: ups }] = await Promise.all([
+      supabase.from("upload_links").select("id, created_at, expires_at, revoked_at, file_count, max_files, last_emailed_at").eq("owner_id", userId).order("created_at", { ascending: false }).limit(24),
+      supabase.from("upload_link_events").select("link_id, kind, detail, at").eq("owner_id", userId).order("at", { ascending: false }).limit(1000),
+      supabase.from("accountant_uploads").select("link_id, file_name, uploaded_at, consumed_at").eq("owner_id", userId).order("uploaded_at", { ascending: false }).limit(1000),
+    ]);
+    return requestReport(
+      (links ?? []) as RequestLink[],
+      (ev ?? []).map((e) => ({ linkId: e.link_id, kind: e.kind as LinkEvent["kind"], detail: e.detail, at: e.at })),
+      (ups ?? []).map((u) => ({ linkId: u.link_id, fileName: u.file_name, uploadedAt: u.uploaded_at, consumedAt: u.consumed_at })),
+    );
+  });
+

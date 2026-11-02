@@ -74,3 +74,76 @@ export async function verifyToken(secret: string, token: string): Promise<string
   for (let i = 0; i < want.length; i++) diff |= want.charCodeAt(i) ^ sig.charCodeAt(i);
   return diff === 0 ? id : null;
 }
+
+/** One file the accountant sent through a link, and whether Statement Desk has read it yet. */
+export type RequestUpload = { linkId: string; fileName: string; uploadedAt: string; consumedAt: string | null };
+export type RequestLink = LinkRow & { created_at: string; last_emailed_at: string | null };
+
+/** What happened about one month's upload request: email, opens, files, reminder, owner confirmation. */
+export type UploadRequest = {
+  id: string;
+  month: string;
+  createdOn: string;
+  state: LinkState;
+  expiresAt: string;
+  emailedAt: string | null;
+  emailedTo: string | null;
+  openedAt: string | null;
+  opens: number;
+  files: number;
+  maxFiles: number;
+  names: string[];
+  waiting: number;
+  reminderAt: string | null;
+  reminder: "sent" | "due" | "not-needed" | "waiting" | "closed";
+  confirmAt: string | null;
+  confirmTo: string | null;
+};
+
+const MONTH = new Intl.DateTimeFormat("en-IN", { month: "long", year: "numeric", timeZone: "Asia/Kolkata" });
+
+/** Builds the monthly request list, newest first, from raw owner-scoped rows. Pure: nothing here reaches the database. */
+export function requestReport(links: RequestLink[], events: LinkEvent[], uploads: RequestUpload[], now = new Date()): UploadRequest[] {
+  const evOf = new Map<string, LinkEvent[]>();
+  for (const e of events) { const a = evOf.get(e.linkId) ?? []; a.push(e); evOf.set(e.linkId, a); }
+  const upOf = new Map<string, RequestUpload[]>();
+  for (const u of uploads) { const a = upOf.get(u.linkId) ?? []; a.push(u); upOf.set(u.linkId, a); }
+  const latest = (list: { at: string }[], kind: LinkEvent["kind"]) =>
+    list.filter((e) => e.kind === kind).sort((a, b) => b.at.localeCompare(a.at))[0] ?? null;
+
+  return [...links]
+    .sort((a, b) => b.created_at.localeCompare(a.created_at))
+    .map((l) => {
+      const ev = evOf.get(l.id) ?? [];
+      const ups = (upOf.get(l.id) ?? []).sort((a, b) => b.uploadedAt.localeCompare(a.uploadedAt));
+      const emailed = latest(ev, "emailed"), opened = latest(ev, "opened"),
+        reminded = latest(ev, "reminded"), notified = latest(ev, "owner_notified");
+      let reminder: UploadRequest["reminder"];
+      if (reminded) reminder = "sent";
+      else if (l.file_count > 0) reminder = "not-needed";
+      else if (!l.last_emailed_at) reminder = "closed";
+      else if (reminderDue({ emailedAt: l.last_emailed_at, fileCount: l.file_count, reminded: false, expiresAt: l.expires_at, revokedAt: l.revoked_at }, now)) reminder = "due";
+      else if (linkState(l, now) === "active") reminder = "waiting";
+      else reminder = "closed";
+      return {
+        id: l.id,
+        month: MONTH.format(new Date(l.created_at)),
+        createdOn: l.created_at,
+        state: linkState(l, now),
+        expiresAt: l.expires_at,
+        emailedAt: l.last_emailed_at,
+        emailedTo: emailed?.detail ?? null,
+        openedAt: opened?.at ?? null,
+        opens: ev.filter((e) => e.kind === "opened").length,
+        files: l.file_count,
+        maxFiles: l.max_files,
+        names: ups.map((u) => u.fileName),
+        waiting: ups.filter((u) => !u.consumedAt).length,
+        reminderAt: reminded?.at ?? null,
+        reminder,
+        confirmAt: notified?.at ?? null,
+        confirmTo: notified?.detail ?? null,
+      };
+    });
+}
+
