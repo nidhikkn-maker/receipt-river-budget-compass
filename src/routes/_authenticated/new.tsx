@@ -3,7 +3,9 @@ import { returnAfterReview } from "@/lib/review-navigation";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { AccountForm } from "@/components/AccountForm";
 import { PayeePicker } from '@/components/PayeePicker';
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+
+const acctNameOf = (list: { id: string; name: string }[], id: string) => list.find((a) => a.id === id)?.name ?? "account";
 import { toast } from "sonner";
 import { ScanLine, Sparkles, X, Camera, Image as ImageIcon, FolderOpen, Inbox, RotateCcw, PencilLine, ChevronDown, Check, Plus } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -171,6 +173,7 @@ function NewExpense() {
   const [queue, setQueue] = useState<LocalReceipt[]>([]);
   const [batch, setBatch] = useState<{ done: number; total: number } | null>(null);
   const [duplicateApproval, setDuplicateApproval] = useState("");
+  const [matchApproval, setMatchApproval] = useState("");
   const [reading, setReading] = useState(false);
   const [readingError, setReadingError] = useState("");
   const [readTarget, setReadTarget] = useState<LocalReceipt | null>(null);
@@ -482,7 +485,6 @@ function NewExpense() {
   const deskType = desk.txnType && desk.txnType !== txnType ? desk.txnType : null;
   const deskMatches = desk.matches.filter((m) => !duplicates.some((d) => d.id === m.record.id));
   const matchSignature = JSON.stringify([date, amount, currency, accountId, deskMatches.map((m) => m.record.id)]);
-  const [matchApproval, setMatchApproval] = useState("");
   const matchBlocked = deskMatches.some((m) => m.exact) && matchApproval !== matchSignature;
   // Same receipt file already attached to another entry (by content fingerprint).
   const receiptReuse = txnType === "expense" && !editing ? receiptFingerprintMatches(receipts[0]?.fingerprint, expenses) : [];
