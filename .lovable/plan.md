@@ -1,0 +1,22 @@
+# Visitor demo on the sign-in page
+
+## What visitors will see
+- A clear "Try the live demo" button on the sign-in page, under the normal sign-in options, with one line saying "Sample data only, nothing is saved to a real account."
+- Tapping it opens the full app straight away (Home, Activity, Statements, Reports and the rest) filled with realistic sample accounts, cards, expenses, receipts and a trip.
+- A slim "Demo mode — Create your own account" banner stays at the top, so visitors can sign up whenever they like.
+- Each visitor gets their own private sample copy. Nobody sees another visitor's changes, and your real records are never visible or touched.
+- Demo copies are removed automatically after 24 hours.
+
+## Limits in demo mode
+- AI receipt scanning, statement reading, push reminders, family invites, Face ID/PIN setup and data export are turned off, each with a short note saying they're available with a real account (this keeps costs and abuse down).
+- A simple rate limit on starting demos stops misuse.
+
+## Also included
+- Publish the faster-loading fonts change (and this demo) to ledgerline.biz once you approve.
+
+## Technical details
+- Uses the existing guest (anonymous) sign-in, so no shared password. A server function seeds sample rows for the new guest owner id (owner-scoped, RLS unchanged), idempotently.
+- `is_anonymous` flags demo mode; AI/push/invite/export server functions refuse anonymous callers.
+- A scheduled cleanup route (cron-authenticated) deletes guest owners older than 24h and their storage.
+- Existing guest-to-email upgrade keeps working, so a visitor can convert their demo into a real account.
+- Browser test: click demo, see sample Home, confirm the banner, confirm AI scan is disabled.
