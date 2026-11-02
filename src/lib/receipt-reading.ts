@@ -40,7 +40,7 @@ export function receiptConfidence(values: { merchant: string | null; date: strin
   };
 }
 
-export function receiptBreakdownError(total: number, details?: { tax?: number | null; tip?: number | null }): string | null {
+export function receiptBreakdownError(total: number, details?: { tax?: number | null | undefined; tip?: number | null | undefined }): string | null {
   const amounts = [details?.tax, details?.tip];
   if (amounts.some(value => value != null && (!Number.isFinite(value) || value < 0))) return "Tax and tip must be zero or more.";
   const included = (details?.tax ?? 0) + (details?.tip ?? 0);

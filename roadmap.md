@@ -1,9 +1,9 @@
 # Roadmap (Functional Requirements v1.0)
 ## Receipt scanning completion (2 Nov 2026)
-- [ ] Extract and review receipt tax and tip in New expense entry without adding them twice to the total.
-- [ ] Suggest an owner-catalog category from the scanned merchant and require confirmation before saving.
-- [ ] Show merchant, date and total reading confidence so uncertain values can be checked.
-- [ ] Run focused rule tests and an isolated receipt review/save browser flow; do not change real records.
+- [x] Extract and review receipt tax and tip in New expense entry without adding them twice to the total; server validator retains both.
+- [x] Suggest an owner-catalog category from the scanned merchant and require confirmation before saving.
+- [x] Show merchant, date and total qualitative reading confidence so uncertain values can be checked.
+- [x] 1,137 rule/regression tests and two isolated real-route expense/receipt browser tests pass; phone/desktop review checked. Real receipt AI accuracy and Cloud persistence remain unverified; real records unchanged, preview only.
 ## Monthly upload request view and accountant email regressions (2 Nov 2026)
 - [x] Reminder and upload-confirmation email regressions render the registered templates and assert subject, personalisation, private button URL/limits and safe missing-data fallback; nine email tests pass.
 - [x] New /upload-requests view lists every monthly accountant request — link status, email, opens, files waiting, reminder state and confirmation to you — newest first, folded beyond six, linked from Settings; six report-derivation tests and four isolated real-route browser tests pass.
@@ -531,8 +531,6 @@
 - [x] Compact iPhone day-by-day itinerary view
 - [x] Booking check-in times with timed reminders
 - [x] Export itinerary + booking dates as calendar file
-- [ ] Calendar export: editable event titles/notes before .ics download; re-export reflects edits
-- [ ] Per-booking check-in reminder controls (change time or disable)
 - [x] Calendar export: editable titles/notes in a pop-up before download; re-export reflects edits
 - [x] Per-booking "Remind me" toggle (change time via check-in box, turn off via checkbox)
 - [x] New entry uses Statement Desk rules: category, account, transfer/card-payment suggestions, matching saved entries, already-saved other side
