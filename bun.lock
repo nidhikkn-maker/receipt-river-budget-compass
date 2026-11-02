@@ -112,6 +112,7 @@
   },
   "patchedDependencies": {
     "tsyringe@4.10.0": "patches/tsyringe@4.10.0.patch",
+    "@react-email/render@2.2.0": "patches/@react-email/render@2.2.0.patch",
   },
   "overrides": {
     "entities": "7.0.1",
