@@ -44,7 +44,7 @@ class SyncQueueDiscardWarning(unittest.IsolatedAsyncioTestCase):
         await self.context.route("**/*", isolate)
         await self.page.goto(BASE + "/sync-queue", wait_until="domcontentloaded")
         try:
-            await expect(self.page.get_by_text("Controlled cafe")).to_be_visible(timeout=15000)
+            await expect(self.page.get_by_text("Controlled cafe", exact=True)).to_be_visible(timeout=15000)
         except Exception:
             print("Setup errors:", self.errors, "blocked:", self.blocked)
             await self.browser.close()
@@ -73,14 +73,14 @@ class SyncQueueDiscardWarning(unittest.IsolatedAsyncioTestCase):
         remove = self.dialog.get_by_role("button", name="Remove from this device")
         await expect(remove).to_be_disabled()
         await remove.click(force=True)
-        await expect(self.page.get_by_text("Controlled cafe")).to_be_visible()
+        await expect(self.page.get_by_text("Controlled cafe", exact=True)).to_be_visible()
         self.assertEqual(await self.page.evaluate("syncQueueBrowserFixture.removed"), [])
         await self.page.screenshot(path=str(OUTPUT / "warning-before-ack.png"))
         await self.dialog.get_by_role("checkbox").click()
         await expect(remove).to_be_enabled()
         await remove.click()
         await expect(self.dialog).not_to_be_visible()
-        await expect(self.page.get_by_text("Controlled cafe")).not_to_be_visible()
+        await expect(self.page.get_by_text("Controlled cafe", exact=True)).not_to_be_visible()
         self.assertEqual(await self.page.evaluate("syncQueueBrowserFixture.removed"), ["queued-failed"])
         self.assertEqual(await self.page.evaluate("syncQueueBrowserFixture.items.map(i=>i.id)"), ["queued-waiting"])
 
@@ -89,7 +89,7 @@ class SyncQueueDiscardWarning(unittest.IsolatedAsyncioTestCase):
         await expect(self.dialog.get_by_text("If you still need this expense", exact=False)).to_be_visible()
         await self.dialog.get_by_role("button", name="Keep it").click()
         await expect(self.dialog).not_to_be_visible()
-        await expect(self.page.get_by_text("Controlled print shop")).to_be_visible()
+        await expect(self.page.get_by_text("Controlled print shop", exact=True)).to_be_visible()
         self.assertEqual(await self.page.evaluate("syncQueueBrowserFixture.removed"), [])
 
     async def test_acknowledgement_does_not_carry_over_to_another_entry(self):
