@@ -74,3 +74,29 @@ describe("trip calendar and check-ins", () => {
     expect(tripReminderItems([off as never], "2026-05-01").filter((i) => i.key.includes("booking"))).toEqual([]);
   });
 });
+
+import { applyCalendarEdits } from "./trip-itinerary";
+describe("saved calendar wording and reminders", () => {
+  const t = { id: "t", name: "Goa", start: "2026-05-01", end: "2026-05-02", budget: 0, itinerary: [{ id: "a", date: "2026-05-01", time: "09:30", title: "Beach" }], bookings: [{ id: "h", kind: "hotel", provider: "Taj", ref: "R1", date: "2026-05-01", amount: 1, status: "unpaid", checkInAt: "2026-05-01T08:30:00.000Z" }] } as unknown as TravelTrip;
+  it("saved title, note and reminder carry into later exports", () => {
+    const saved = { ...t, ...applyCalendarEdits(t, { "plan-a": { title: "Sunrise walk", note: "Lobby", alarm: 60 }, "booking-h": { alarm: 1440 } }) };
+    expect(saved.itinerary![0]!.title).toBe("Beach");
+    const ics = tripCalendar(saved, "2026-04-01T00:00:00Z");
+    expect(ics).toContain("SUMMARY:Sunrise walk");
+    expect(ics).toContain("TRIGGER:-PT60M");
+    expect(ics).toContain("TRIGGER:-PT1440M");
+  });
+  it("saved wording survives a time change", () => {
+    const saved = { ...t, ...applyCalendarEdits(t, { "plan-a": { title: "Sunrise walk" } }) };
+    saved.itinerary = [{ ...saved.itinerary![0]!, time: "07:00" }];
+    const ics = tripCalendar(saved, "2026-04-01T00:00:00Z");
+    expect(ics).toContain("DTSTART:20260501T070000");
+    expect(ics).toContain("SUMMARY:Sunrise walk");
+  });
+  it("resetting to the default clears saved wording and reminder", () => {
+    const saved = { ...t, ...applyCalendarEdits(t, { "plan-a": { title: "X", alarm: 15 } }) };
+    const reset = applyCalendarEdits(saved, { "plan-a": { title: "Beach", note: "", alarm: null } });
+    expect(reset.itinerary![0]).toEqual(t.itinerary![0]);
+    expect(tripCalendar(t, "2026-04-01T00:00:00Z")).not.toContain("VALARM");
+  });
+});
