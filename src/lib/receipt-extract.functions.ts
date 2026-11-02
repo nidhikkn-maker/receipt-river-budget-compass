@@ -5,7 +5,7 @@ import { normalizePreferences, resolveCategory, type FinancePreferences } from "
 import { ExtractedReceiptSchema, receiptConfidence, type ExtractedReceipt } from "./receipt-reading";
 export type { ExtractedReceipt } from "./receipt-reading";
 
-const Input = z.object({ dataUrl: z.string().startsWith("data:").max(4_000_000), mimeType: z.string() });
+const Input = z.object({ dataUrl: z.string().startsWith("data:").max(4_000_000), mimeType: z.string(), includeItems: z.boolean().default(false) });
 
 export const extractReceipt = createServerFn({ method: "POST" })
   .middleware([requireRealAccount])
@@ -40,6 +40,7 @@ export const extractReceipt = createServerFn({ method: "POST" })
         if (event.type === "response.output_text.delta") text += event.delta;
       }
       const output = ExtractedReceiptSchema.parse(JSON.parse(text));
+      if (!data.includeItems) output.items = [];
       return { ok: true, result: { ...output, confidence: receiptConfidence(output), category: resolveCategory(settings.categories, output.category) } };
     } catch (e) {
       if (e instanceof z.ZodError || e instanceof SyntaxError) return { ok: false, error: "Couldn't read this receipt." };
