@@ -29,3 +29,9 @@ describe("confirmableImportRows", () => {
   it("card payment only awaiting import confirmation can be confirmed", () => expect(confirmableImportRows([row(["unverified_import"])])).toHaveLength(1));
   it("rows with other issues or suggestions are excluded", () => expect(confirmableImportRows([row(["unverified_import", "uncategorised"]), row(["unverified_import"], { suggestedType: "card_payment" })])).toHaveLength(0));
 });
+describe('optional payee and organisation', () => {
+  it('a business statement line with no payee or organisation is not missing information', () => {
+    const rows = rowsFor([{ ...expense('bare'), merchant: null, department: null, category: 'Groceries' }]);
+    expect(rows.filter(r => matchesReview(r, 'missing'))).toHaveLength(0);
+  });
+});
