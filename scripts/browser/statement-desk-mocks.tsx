@@ -40,4 +40,22 @@ export function useStore() {
     },
   };
 }
-export const supabase = { from: () => { throw new Error("No Cloud access in this test"); } };
+// Only the accountant-upload reads are served, from the test's local fixture endpoints; anything else fails loudly.
+type Q = { then: (ok: (r: { data: unknown; error: null }) => unknown) => Promise<unknown> } & Record<string, unknown>;
+const chain = (run: () => Promise<unknown>): Q => {
+  const q: Q = { then: (ok) => run().then((data) => ok({ data, error: null })) };
+  for (const k of ["select", "is", "order", "eq", "in"]) q[k] = () => q;
+  return q;
+};
+export const accountantConsumed: string[] = [];
+Object.assign(window, { accountantConsumed });
+export const supabase = {
+  from: (table: string) => {
+    if (table !== "accountant_uploads") throw new Error("No Cloud access in this test");
+    return {
+      select: () => chain(() => fetch("/__fixture/accountant-uploads").then((r) => (r.ok ? r.json() : []))),
+      update: () => ({ in: (_c: string, ids: string[]) => { accountantConsumed.push(...ids); return Promise.resolve({ data: null, error: null }); } }),
+    };
+  },
+  storage: { from: () => ({ download: (path: string) => fetch(`/__fixture/file?path=${encodeURIComponent(path)}`).then(async (r) => ({ data: r.ok ? await r.blob() : null, error: r.ok ? null : new Error("missing") })) }) },
+};
