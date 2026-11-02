@@ -122,7 +122,8 @@ export function inboxItems(i: InboxInput): InboxItem[] {
     if (kind === "expense" && t.reimbursementStatus === "pending" && out > 0)
       items.push({ ...base, amount: out, key: `reimb:${t.id}`, type: "pending_reimbursement", title: t.title, description: `${t.reimbursement?.payer || "Payer not set"} · ${daysBetween(t.reimbursement?.submittedOn || t.date, i.today)} days`, priority: daysBetween(t.date, i.today) > 60 ? "high" : "low", action: "Track or record receipt" });
   }
-  for (const [a, b] of duplicatePairs(recent))
+  const separate = new Set(i.prefs.inboxDismissed ?? []);
+  for (const [a, b] of duplicatePairs(recent)) if (!separate.has(`dup:${[a.id, b.id].sort().join(":")}`))
     items.push({ key: `dup:${[a.id, b.id].sort().join(":")}`, type: "duplicate", title: a.title, description: `Same amount, date and account as "${b.title}"`, amount: a.amount, accountName: acc(a.accountId), date: a.date, priority: "high", action: "Delete one or dismiss", transactionId: b.id });
   for (const f of freshnessSummary(i.accounts, i.transactions, i.prefs, i.today).rows) if (f.status !== "current") {
     const d = discrepancy(i.accounts.find((a) => a.id === f.accountId)!, i.transactions, i.prefs);

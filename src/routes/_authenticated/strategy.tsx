@@ -1,3 +1,4 @@
+import { SectionTabs } from "@/components/SectionTabs";
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
@@ -33,7 +34,7 @@ function Strategy() {
   const tab = typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("tab") ?? "simulate" : "simulate";
   return (
     <div>
-      <PageTitle eyebrow="Plan ahead" title="Strategy" sub="What-ifs never change your real records. Nothing moves money for you." />
+      <SectionTabs group="plan" active="strategy" /><PageTitle eyebrow="Plan ahead" title="Strategy" sub="What-ifs never change your real records. Nothing moves money for you." />
       <Tabs defaultValue={tab}>
         <TabsList className="mb-4 w-full justify-start overflow-x-auto">
           <TabsTrigger value="simulate">Simulator</TabsTrigger>

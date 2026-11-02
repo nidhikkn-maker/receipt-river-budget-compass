@@ -41,28 +41,24 @@ const LINKS = [
 /** "More" sheet groups: every module stays reachable, organised by purpose. */
 const MORE_GROUPS: { title: string; items: { to: string; label: string; icon: typeof Home }[] }[] = [
   { title: "Money", items: [
-    { to: "/plan", label: "Plan & calendar", icon: CalendarClock },
+    { to: "/plan", label: "Plan, forecast & what-if", icon: CalendarClock },
     { to: "/budgets", label: "Budgets", icon: PiggyBank },
-    { to: "/forecast", label: "Forecast", icon: TrendingUp },
     { to: "/allocation", label: "Money allocation", icon: Split },
     { to: "/rules", label: "Financial rules", icon: SlidersHorizontal },
   ] },
   { title: "Activity", items: [
     { to: "/drafts", label: "Drafts", icon: FilePen },
     { to: "/inbox", label: "Financial inbox", icon: Inbox },
-    { to: "/records-check", label: "Records check (read-only)", icon: Search },
+    { to: "/records-check", label: "Account health", icon: Search },
     { to: "/statements", label: "Statement Desk", icon: Inbox },
-    { to: "/statement-accounts", label: "Statement coverage", icon: Search },
     { to: "/transfers", label: "Internal transfers", icon: Inbox },
     { to: "/review", label: "Monthly review", icon: HeartPulse },
     { to: "/search", label: "Search everything", icon: Search },
     { to: "/vault", label: "Document vault", icon: FileText },
   ] },
   { title: "Insights", items: [
-    { to: "/report-centre", label: "Reports Centre (PDF)", icon: FileText },
-    { to: "/reports", label: "Reports", icon: BarChart3 },
+    { to: "/reports", label: "Reports & PDFs", icon: BarChart3 },
     { to: "/brief", label: "Weekly brief", icon: Sparkles },
-    { to: "/strategy", label: "What if…", icon: MessageCircleQuestion },
     { to: "/connections", label: "Money map", icon: Network },
   ] },
   { title: "Workspaces & travel", items: [
@@ -73,7 +69,6 @@ const MORE_GROUPS: { title: string; items: { to: string; label: string; icon: ty
   { title: "Account", items: [
     { to: "/settings", label: "Settings & backup", icon: Settings },
     { to: "/payment-methods", label: "Payment methods", icon: Wallet },
-    { to: "/assistants", label: "Connected assistants", icon: Bot },
   ] },
 ];
 

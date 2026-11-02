@@ -66,7 +66,7 @@ export function AccountantSettings() {
       )}
       <LinkHistory items={info.history} name={info.name} />
       <p className="text-xs text-muted-foreground">Uploaded files appear in Statement Desk for matching. The link never gives access to your app or records.</p>
-      <p className="text-sm"><Link to="/upload-requests" className="text-primary">See every monthly request</Link></p>
+      <p className="text-sm"><Link to="/upload-requests" className="text-primary">See every monthly request (Monthly requests tab)</Link></p>
 
       <Dialog open={!!edit} onOpenChange={(o) => !o && setEdit(null)}>
         <DialogContent>

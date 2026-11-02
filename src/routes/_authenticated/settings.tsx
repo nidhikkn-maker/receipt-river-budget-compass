@@ -15,7 +15,6 @@ import { PushSettings } from "@/components/PushSettings";
 import { OrganisationDirectory } from "@/components/OrganisationDirectory";
 import { PayeeDirectory } from '@/components/PayeeDirectory';
 import { ImportRules } from '@/components/ImportRules';
-import { AccountantSettings } from "@/components/AccountantSettings";
 import { SettingsDirectory } from "@/components/SettingsDirectory";
 import { Fold } from "@/components/Fold";
 import { useStore } from "@/lib/store";
@@ -128,14 +127,14 @@ function Settings() {
   return (
     <>
       <PageTitle eyebrow="Settings" title="Settings" sub={`${transactions.length} entries · ${accounts.length} accounts`} />
-      <div className="mb-5 flex flex-wrap gap-2"><Button asChild variant="outline"><Link to="/auth">Sign in / account</Link></Button><Button asChild variant="outline"><Link to="/classification-rules">Transaction classification rules</Link></Button></div>
+      <div className="mb-5 flex flex-wrap gap-2"><Button asChild variant="outline"><Link to="/auth">Sign in / account</Link></Button><Button asChild variant="outline"><Link to="/rules" hash="classification">Transaction classification rules</Link></Button></div>
       <SettingsDirectory />
       <Fold id="security" title="Security & device unlock" hint="MPIN, Face ID and device lock"><MpinSettings /><PasskeySettings /></Fold>
       <Fold id="appearance" title="Appearance" hint="Theme, light or dark, Home layout"><AppearanceSettings /></Fold>
       <Fold id="finance" title="Finance preferences" hint="Currency, categories, tags, budgets and AI privacy"><FinanceSettings /></Fold>
       <Fold id="organisations" title="Organisations" hint="Employers, clients and reimbursement contacts"><OrganisationDirectory /></Fold>
       <Fold id="payees" title="Payees" hint="People and businesses you pay"><PayeeDirectory /></Fold>
-      <Fold id="accountant" title="Accountant upload link" hint="Monthly link for your accountant to upload statements"><AccountantSettings /></Fold>
+      <Fold id="accountant" title="Accountant upload link" hint="Now lives in Statement Desk"><p className="text-sm text-muted-foreground">Your accountant's link, contact and monthly requests are managed in Statement Desk.</p><Button asChild variant="secondary" className="mt-2"><Link to="/statements" search={{ tab: "accountant" }}>Open in Statement Desk</Link></Button></Fold>
       <Fold id="rules" title="Import rules" hint="How statement lines are sorted automatically"><ImportRules /></Fold>
       <Fold id="notifications" title="Notifications" hint="Reminders on this device"><PushSettings /></Fold>
       <Fold id="data" title="Data, backups & reports" hint="Back up, restore, export or delete"><div className="grid gap-3 sm:grid-cols-2">

@@ -1,3 +1,4 @@
+import { SectionTabs } from "@/components/SectionTabs";
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { Area, AreaChart, Bar, BarChart, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
@@ -44,7 +45,7 @@ function Forecast() {
   const num = (k: keyof typeof a) => (e: React.ChangeEvent<HTMLInputElement>) => setA({ ...a, [k]: k === "income" || k === "savings" ? e.target.value : Math.max(k === "years" ? 1 : 0, Math.min(k === "years" ? 30 : 30, Number(e.target.value) || 0)) });
 
   return <>
-    <PageTitle eyebrow="Prediction" title={`Your next ${a.years} years`} />
+    <SectionTabs group="plan" active="forecast" /><PageTitle eyebrow="Prediction" title={`Your next ${a.years} years`} />
     <p className="mb-4 text-sm text-muted-foreground">Based on your average spending per category over the last 6 months, compounded at typical Indian inflation rates. Change any assumption below. This is an estimate, not financial advice.</p>
     <div className="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
       {([["years", "Years"], ["generalInflation", "Inflation %/yr"], ["incomeGrowth", "Income growth %"], ["savingsReturn", "Savings return %"]] as const).map(([k, l]) => <div key={k} className="grid gap-1"><Label htmlFor={`f-${k}`}>{l}</Label><Input id={`f-${k}`} type="number" step="0.5" value={a[k]} onChange={num(k)} /></div>)}

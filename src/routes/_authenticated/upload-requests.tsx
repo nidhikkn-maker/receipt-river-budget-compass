@@ -1,3 +1,4 @@
+import { SectionTabs } from "@/components/SectionTabs";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useState } from "react";
@@ -60,7 +61,7 @@ function UploadRequests() {
 
   return (
     <div className="mx-auto max-w-2xl">
-      <PageTitle title="Statement upload requests" sub="One request each month: the link your accountant uses to send statements, and what has happened about it." />
+      <SectionTabs group="statements" active="requests" /><PageTitle title="Statement upload requests" sub="One request each month: the link your accountant uses to send statements, and what has happened about it." />
       {rows.length === 0 ? (
         <p className="rounded-2xl bg-card p-6 text-center text-sm text-muted-foreground">No upload requests yet. Set your accountant up under Settings → Accountant upload link.</p>
       ) : (

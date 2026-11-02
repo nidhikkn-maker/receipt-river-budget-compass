@@ -515,3 +515,9 @@
 
 - [x] Bulk recategorise groups (Personal payments, AMEX, MOVAC) from Activity
 - [x] Inbox "still needs review" summary
+
+## Clean-up plan (approved 2026-11-02)
+- [x] Side-by-side duplicate comparison
+- [x] Inline fixes in review lists + live counts
+- [x] Overlaps 1-3, 9 (statements, review, accountant)
+- [x] Overlaps 4-8 (shared tab rows, menu tidy-up)

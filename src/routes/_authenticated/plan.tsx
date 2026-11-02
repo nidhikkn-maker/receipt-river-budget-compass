@@ -1,3 +1,4 @@
+import { SectionTabs } from "@/components/SectionTabs";
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -47,7 +48,7 @@ function Plan() {
 
   return (
     <>
-      <PageTitle eyebrow="Plan" title="What can I spend?" sub="Works through every payment in date order — money arriving later can't pay an earlier bill." />
+      <SectionTabs group="plan" active="plan" /><PageTitle eyebrow="Plan" title="What can I spend?" sub="Works through every payment in date order — money arriving later can't pay an earlier bill." />
       <div className="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
         <Button asChild variant="outline"><a href="/strategy?tab=simulate">Decision simulator</a></Button>
         <Button asChild variant="outline"><a href="/strategy?tab=emergency">Emergency fund</a></Button>
