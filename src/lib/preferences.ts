@@ -10,7 +10,7 @@ import type { TravelMessage } from "./travel-inbox";
 import { cleanPayees, type Payee } from './payees';
 import { cleanReimbursementSettings, emptyReimbursementSettings, type ReimbursementSettings } from './reimbursement-profiles';
 import { cleanShortcuts, DEFAULT_SHORTCUTS, type ShortcutId } from "./home-shortcuts";
-import { CATEGORIES, memberShares, SCOPES, type Expense, type Scope } from "./expenses";
+import { ACTIVE_SCOPES, CATEGORIES, memberShares, SCOPES, type Expense, type Scope } from "./expenses";
 import { cleanThemeName, type ThemeName } from "./themes";
 import { defaultEmergency, type BriefSettings, type EmergencySettings, type MerchantAliases, type Milestone, type Trip, type WeeklyBrief } from "./intelligence";
 
@@ -181,7 +181,7 @@ export function normalizePreferences(raw: Partial<FinancePreferences> | null | u
   if (!(p.language in LANGUAGES)) p.language = "en";
   if (!["day", "week", "month", "custom"].includes(p.homePeriod)) p.homePeriod = "month";
   p.themeName = cleanThemeName(p.themeName);
-  if (p.homeScope !== "all" && !(SCOPES as readonly string[]).includes(p.homeScope)) p.homeScope = "all";
+  if (p.homeScope !== "all" && !(ACTIVE_SCOPES as readonly string[]).includes(p.homeScope)) p.homeScope = "all";
   const iso = (v: unknown) => (typeof v === "string" && /^\d{4}-\d{2}-\d{2}$/.test(v) ? v : "");
   p.homeCustomStart = iso(p.homeCustomStart);
   p.homeCustomEnd = iso(p.homeCustomEnd);

@@ -4,7 +4,7 @@ import { ScopeToggle } from "@/components/ScopeBadge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { SCOPES, SCOPE_LABEL, type Scope } from "@/lib/expenses";
+import { ACTIVE_SCOPES, SCOPE_LABEL, type Scope } from "@/lib/expenses";
 import { buildShares, validateShares, type AllocationMethod, type Suggestion, type WorkspaceShare } from "@/lib/workspaces";
 
 /** Workspace choice with an editable suggestion and an optional split of one entry across workspaces (charged once). */
@@ -23,7 +23,7 @@ export function WorkspacePicker({ scope, setScope, suggestion, total, currency, 
         <label className="flex items-center gap-2 text-xs font-medium"><input type="checkbox" checked={split.on} onChange={(e) => setSplit({ ...split, on: e.target.checked, values: e.target.checked && !Object.keys(split.values).length ? { [scope]: "" } : split.values })} />Split across workspaces</label>
       </div>
       {!split.on && (compact
-        ? <select aria-label="Workspace" value={scope} onChange={(e) => setScope(e.target.value as Scope)} className="h-11 w-full rounded-xl border border-input bg-background px-3 text-sm">{SCOPES.map((w) => <option key={w} value={w}>{SCOPE_LABEL[w]}</option>)}</select>
+        ? <select aria-label="Workspace" value={scope} onChange={(e) => setScope(e.target.value as Scope)} className="h-11 w-full rounded-xl border border-input bg-background px-3 text-sm">{ACTIVE_SCOPES.map((w) => <option key={w} value={w}>{SCOPE_LABEL[w]}</option>)}</select>
         : <ScopeToggle value={scope} onChange={setScope} />)}
       {suggestion.workspace && suggestion.workspace !== scope && !split.on && (
         <button type="button" onClick={() => setScope(suggestion.workspace!)} className={`flex items-center gap-1 text-left text-xs ${tone}`}>
@@ -34,7 +34,7 @@ export function WorkspacePicker({ scope, setScope, suggestion, total, currency, 
       {split.on && (
         <div className="grid gap-2 rounded-2xl border p-3">
           <div className="flex flex-wrap gap-1">{(["fixed", "percent", "equal"] as const).map((m) => <Button key={m} type="button" size="sm" variant={split.method === m ? "default" : "outline"} onClick={() => setSplit({ ...split, method: m })}>{m === "fixed" ? `Amount (${currency})` : m === "percent" ? "Percent" : "Equal"}</Button>)}</div>
-          {SCOPES.map((w) => {
+          {ACTIVE_SCOPES.map((w) => {
             const on = w in split.values;
             return (
               <div key={w} className="flex items-center gap-2">

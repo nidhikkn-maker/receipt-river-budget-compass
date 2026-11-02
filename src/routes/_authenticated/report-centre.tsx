@@ -11,7 +11,7 @@ import { ProcessingPanel, stagesAt } from "@/components/ProcessingPanel";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { useStore } from "@/lib/store";
 import { supabase } from "@/integrations/supabase/client";
-import { SCOPES, SCOPE_LABEL, type Scope } from "@/lib/expenses";
+import { ACTIVE_SCOPES, SCOPE_LABEL, type Scope } from "@/lib/expenses";
 import { PERIOD_LABEL, REPORT_TYPES, buildReportDoc, emptyFilters, needsTrip, orgOf, periodRange, reportLabel, type DraftLite, type Period, type ReportDoc, type ReportFilters, type ReportType, type StatusFilter } from "@/lib/report-centre";
 import { downloadBlob, deliverFile } from "@/lib/reports";
 import { listDrafts } from "@/lib/drafts";
@@ -144,7 +144,7 @@ function ReportCentre() {
         <label className="block text-sm font-semibold">Report
           <select className={cn(sel, "mt-1 w-full")} value={type} onChange={(e) => setType(e.target.value as ReportType)}>
             {(["Financial", "Workspace", "Travel", "Operational"] as const).map((g) => (
-              <optgroup key={g} label={`${g} reports`}>{REPORT_TYPES.filter((r) => r[2] === g).map((r) => <option key={r[0]} value={r[0]}>{r[1]}</option>)}</optgroup>
+              <optgroup key={g} label={`${g} reports`}>{REPORT_TYPES.filter((r) => r[2] === g && r[0] !== "ws-official").map((r) => <option key={r[0]} value={r[0]}>{r[1]}</option>)}</optgroup>
             ))}
           </select>
         </label>
@@ -161,7 +161,7 @@ function ReportCentre() {
         {!type.startsWith("ws-") && type !== "consolidated" && (
           <div>
             <div className="mb-1 text-sm font-semibold">Workspaces <span className="font-normal text-muted-foreground">(none selected = all)</span></div>
-            <div className="flex flex-wrap gap-1.5">{SCOPES.map((s) => (
+            <div className="flex flex-wrap gap-1.5">{ACTIVE_SCOPES.map((s) => (
               <button key={s} type="button" aria-pressed={f.workspaces.includes(s)} onClick={() => toggleWs(s)} className={cn("rounded-full border px-3 py-1 text-xs font-medium", f.workspaces.includes(s) ? "border-primary bg-primary text-primary-foreground" : "bg-background")}>{SCOPE_LABEL[s]}</button>
             ))}</div>
           </div>

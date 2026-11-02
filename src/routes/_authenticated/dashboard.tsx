@@ -7,7 +7,7 @@ import { PaymentReminders } from "@/components/PaymentReminders";
 import { Autopilot } from "@/components/Autopilot";
 import { Stat } from "@/components/AppShell";
 import { ExpenseTable } from "@/components/ExpenseTable";
-import { money, totalsByScope, type Expense, type Scope, SCOPE_LABEL, SCOPES } from "@/lib/expenses";
+import { money, totalsByScope, type Expense, type Scope, SCOPE_LABEL, ACTIVE_SCOPES } from "@/lib/expenses";
 import { workspaceParts } from "@/lib/workspaces";
 import { useStore } from "@/lib/store";
 import { accountBalance, cashflow, isLiability } from "@/lib/ledger";
@@ -160,7 +160,7 @@ function Overview() {
             </div>
             {scope === "all" && byWorkspace.total > 0 && (
               <div className="flex flex-wrap gap-1.5">
-                {SCOPES.filter((s) => byWorkspace[s] > 0).map((s) => (
+                {ACTIVE_SCOPES.filter((s) => byWorkspace[s] > 0).map((s) => (
                   <span key={s} className="rounded-full bg-secondary px-3 py-1 text-xs font-semibold text-secondary-foreground">
                     {SCOPE_LABEL[s]} <b className="font-mono">{money(byWorkspace[s])}</b>
                   </span>

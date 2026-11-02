@@ -45,7 +45,7 @@ export function TripOverviewSection({ trip, onOpenBudget }: { trip: TravelTrip; 
     <>
       <Card title="Trip details">
         <div className="grid gap-3 sm:grid-cols-2">
-          <div><Label>Trip type</Label><select className={`${sel} w-full`} disabled={closed} value={trip.type ?? "personal"} onChange={(e) => void put({ type: e.target.value as TripType })}>{TRIP_TYPES.map((t) => <option key={t} value={t}>{t === "mixed" ? "Mixed purpose" : SCOPE_LABEL[t]}</option>)}</select></div>
+          <div><Label>Trip type</Label><select className={`${sel} w-full`} disabled={closed} value={trip.type ?? "personal"} onChange={(e) => void put({ type: e.target.value as TripType })}>{TRIP_TYPES.filter((t) => t !== "official").map((t) => <option key={t} value={t}>{t === "mixed" ? "Mixed purpose" : SCOPE_LABEL[t]}</option>)}</select></div>
           <div><Label>Purpose</Label><Input className="h-10" disabled={closed} defaultValue={trip.purpose ?? ""} onBlur={(e) => e.target.value !== (trip.purpose ?? "") && void put({ purpose: e.target.value.slice(0, 200) })} /></div>
           <div><Label>Organisation</Label><Input className="h-10" disabled={closed} defaultValue={trip.organisation ?? ""} onBlur={(e) => e.target.value !== (trip.organisation ?? "") && void put({ organisation: e.target.value.slice(0, 120) })} /></div>
         </div>

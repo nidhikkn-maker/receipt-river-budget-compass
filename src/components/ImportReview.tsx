@@ -7,7 +7,7 @@ import { useServerFn } from '@tanstack/react-start';
 import { toast } from 'sonner';
 import { useStore } from '@/lib/store';
 import { supabase } from '@/integrations/supabase/client';
-import { SCOPES, SCOPE_LABEL, money, type Scope } from '@/lib/expenses';
+import { ACTIVE_SCOPES, SCOPE_LABEL, money, type Scope } from '@/lib/expenses';
 import { TXN_LABEL, TXN_TYPES } from '@/lib/ledger';
 import { classificationStatus, mergeImportPatch, importSelectionSummary, REVIEW_GROUPS, merchantFamily, postingBlockers, orientStatementMove, type ImportRow, type ImportBatch, type ImportProposal } from '@/lib/historical-import';
 import { reviseRows, listImportRows } from '@/lib/import-repository';
@@ -130,7 +130,7 @@ function ClassificationFields({patch,setPatch}:{patch:Partial<ImportProposal>;se
   const {preferences,accounts,members}=useStore();
   return <div className="grid gap-2 sm:grid-cols-2">
     <Select value={patch.category ?? ''} onValueChange={v=>setPatch({...patch,category:v})}><SelectTrigger aria-label="Bulk category"><SelectValue placeholder="Set category"/></SelectTrigger><SelectContent>{preferences.categories.filter(c=>!c.archived).map(c=><SelectItem key={c.name} value={c.name}>{c.name}</SelectItem>)}</SelectContent></Select>
-    <Select value={patch.scope ?? ''} onValueChange={v=>setPatch({...patch,scope:v as Scope})}><SelectTrigger aria-label="Bulk workspace"><SelectValue placeholder="Assign workspace"/></SelectTrigger><SelectContent>{SCOPES.map(s=><SelectItem key={s} value={s}>{SCOPE_LABEL[s]}</SelectItem>)}</SelectContent></Select>
+    <Select value={patch.scope ?? ''} onValueChange={v=>setPatch({...patch,scope:v as Scope})}><SelectTrigger aria-label="Bulk workspace"><SelectValue placeholder="Assign workspace"/></SelectTrigger><SelectContent>{ACTIVE_SCOPES.map(s=><SelectItem key={s} value={s}>{SCOPE_LABEL[s]}</SelectItem>)}</SelectContent></Select>
     <Select value={patch.accountId ?? ''} onValueChange={v=>setPatch({...patch,accountId:v})}><SelectTrigger aria-label="Bulk payment account"><SelectValue placeholder="Confirm payment account"/></SelectTrigger><SelectContent>{accounts.filter(a=>!a.archived).map(a=><SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}</SelectContent></Select>
     <Select value={patch.memberId ?? ''} onValueChange={v=>setPatch({...patch,memberId:v==='me'?null:v})}><SelectTrigger aria-label="Bulk person"><SelectValue placeholder="Assign person"/></SelectTrigger><SelectContent><SelectItem value="me">Me</SelectItem>{members.map(m=><SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>)}</SelectContent></Select>
     <Input placeholder="Subcategory" aria-label="Bulk subcategory" value={patch.subcategory ?? ''} onChange={e=>setPatch({...patch,subcategory:e.target.value})}/><Input placeholder="Organisation" aria-label="Bulk organisation" value={patch.organisation ?? ''} onChange={e=>setPatch({...patch,organisation:e.target.value})}/>

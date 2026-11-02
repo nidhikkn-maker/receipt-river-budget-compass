@@ -14,7 +14,7 @@ import { Button } from "./ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "./ui/dialog";
 import { useStore } from "@/lib/store";
 import { applyTheme } from "@/lib/themes";
-import { SCOPES, SCOPE_LABEL, type Scope } from "@/lib/expenses";
+import { ACTIVE_SCOPES, SCOPE_LABEL, type Scope } from "@/lib/expenses";
 
 const LINKS = [
   { to: "/dashboard", label: "Home", icon: Home },
@@ -74,7 +74,7 @@ const MORE_GROUPS: { title: string; items: { to: string; label: string; icon: ty
 
 function WorkspaceSelector() {
   const { preferences, savePreferences } = useStore();
-  const options: ("all" | Scope)[] = ["all", ...SCOPES];
+  const options: ("all" | Scope)[] = ["all", ...ACTIVE_SCOPES];
   return (
     <div className="flex min-w-0 max-w-full gap-1 overflow-x-auto pb-0.5" role="group" aria-label="Workspace">
       {options.map((s) => (

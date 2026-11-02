@@ -7,7 +7,7 @@ import type { Json } from '@/integrations/supabase/types';
 import { useStore } from '@/lib/store';
 import { listImportRules, listImports, listImportRows } from '@/lib/import-repository';
 import { merchantFamily, importRuleMatches, matchingImportRules, safeImportRuleMappings, type ImportRule, type ImportRow, type ImportRuleConditions } from '@/lib/historical-import';
-import { SCOPES, SCOPE_LABEL, type Scope } from '@/lib/expenses';
+import { ACTIVE_SCOPES, SCOPE_LABEL, type Scope } from '@/lib/expenses';
 import { TXN_TYPES, TXN_LABEL, type TxnType } from '@/lib/ledger';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -58,7 +58,7 @@ export function ImportRules({ seed }: { seed?: ImportRule | undefined } = {}) {
       <Label className="grid gap-2">Minimum original amount<Input aria-label="Rule minimum amount" type="number" min={0} step="0.01" value={min} onChange={e=>setMin(e.target.value)}/></Label>
       <Label className="grid gap-2">Maximum original amount<Input aria-label="Rule maximum amount" type="number" min={0} step="0.01" value={max} onChange={e=>setMax(e.target.value)}/></Label>
       <Select value={category} onValueChange={setCategory}><SelectTrigger aria-label="Rule category"><SelectValue placeholder="Category"/></SelectTrigger><SelectContent>{preferences.categories.filter(c=>!c.archived&&!/miscellaneous\s*[—–-]\s*check/i.test(c.name)).map(c=><SelectItem key={c.name} value={c.name}>{c.name}</SelectItem>)}</SelectContent></Select>
-      <Select value={workspace} onValueChange={v=>setWorkspace(v as Scope)}><SelectTrigger aria-label="Rule workspace"><SelectValue/></SelectTrigger><SelectContent>{SCOPES.map(s=><SelectItem key={s} value={s}>{SCOPE_LABEL[s]}</SelectItem>)}</SelectContent></Select>
+      <Select value={workspace} onValueChange={v=>setWorkspace(v as Scope)}><SelectTrigger aria-label="Rule workspace"><SelectValue/></SelectTrigger><SelectContent>{ACTIVE_SCOPES.map(s=><SelectItem key={s} value={s}>{SCOPE_LABEL[s]}</SelectItem>)}</SelectContent></Select>
       <Input aria-label="Rule organisation" placeholder="Organisation" value={organisation} onChange={e=>setOrganisation(e.target.value)}/>
       <Input aria-label="Rule tags" placeholder="Tags, separated by commas" value={tags} onChange={e=>setTags(e.target.value)}/>
       <Select value={type} onValueChange={setType}><SelectTrigger aria-label="Rule transaction type"><SelectValue/></SelectTrigger><SelectContent><SelectItem value="unchanged">Keep suggested transaction type</SelectItem>{TXN_TYPES.filter(t=>t!=='adjustment').map(t=><SelectItem key={t} value={t}>{TXN_LABEL[t]}</SelectItem>)}</SelectContent></Select>

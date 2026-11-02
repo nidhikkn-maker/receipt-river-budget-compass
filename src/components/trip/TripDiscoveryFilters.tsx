@@ -14,7 +14,7 @@ export function TripDiscoveryFilters({ trips, value, onChange }: { trips: Travel
   const [search, setSearch] = useState("");
   const unique = (values: (string | undefined)[]) => [...new Set(values.filter((v): v is string => !!v))].sort((a, b) => a.localeCompare(b));
   const groups = [
-    { key: "workspaces" as const, title: "Workspaces", values: ["personal", "family", "business", "official", "mixed"] },
+    { key: "workspaces" as const, title: "Workspaces", values: ["personal", "family", "business", "mixed"] },
     { key: "travellers" as const, title: "Travellers", values: unique(trips.flatMap((t) => t.travellers ?? [])) },
     { key: "organisations" as const, title: "Organisations", values: unique(trips.map((t) => t.organisation)) },
     { key: "destinations" as const, title: "Destinations", values: unique(trips.map((t) => t.destination)) },

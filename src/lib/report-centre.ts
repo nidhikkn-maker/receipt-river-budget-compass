@@ -122,7 +122,7 @@ function workspaceSection(list: Expense[]): Section {
   const t: Record<string, number> = {};
   for (const e of list) for (const p of workspaceParts(e)) t[p.workspace] = r2((t[p.workspace] ?? 0) + p.amount);
   const total = r2(list.reduce((s, e) => s + e.amount, 0));
-  return { title: "Workspace allocation", headers: ["Workspace", "Spending (INR)"], align: ["l", "r"], rows: SCOPES.map((s) => [SCOPE_LABEL[s], num(t[s] ?? 0)]), total: ["Total (each entry counted once)", num(total)], chart: SCOPES.map((s) => ({ label: SCOPE_LABEL[s], value: t[s] ?? 0 })) };
+  return { title: "Workspace allocation", headers: ["Workspace", "Spending (INR)"], align: ["l", "r"], rows: SCOPES.filter((s) => s !== "official" || (t[s] ?? 0) !== 0).map((s) => [SCOPE_LABEL[s], num(t[s] ?? 0)]), total: ["Total (each entry counted once)", num(total)], chart: SCOPES.filter((s) => s !== "official" || (t[s] ?? 0) !== 0).map((s) => ({ label: SCOPE_LABEL[s], value: t[s] ?? 0 })) };
 }
 function trendSection(d: ReportData, f: ReportFilters, ws: Scope[]): Section {
   const months: string[] = []; let m = f.to.slice(0, 7);

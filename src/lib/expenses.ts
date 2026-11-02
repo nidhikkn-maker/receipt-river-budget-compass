@@ -14,6 +14,8 @@ export const CHARGES_CATEGORY = "Financial charges";
 export type Category = string;
 
 export const SCOPES = ["personal", "family", "business", "official"] as const;
+/** Workspaces people can pick. "official" was retired; it stays readable only so any older record still opens. */
+export const ACTIVE_SCOPES = ["personal", "family", "business"] as const satisfies readonly Scope[];
 export type Scope = (typeof SCOPES)[number];
 export const SCOPE_LABEL: Record<Scope, string> = { personal: "Personal", family: "Family", business: "Business", official: "Official" };
 

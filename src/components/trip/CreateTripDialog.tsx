@@ -81,7 +81,7 @@ export function CreateTripDialog({ open, onOpenChange }: { open: boolean; onOpen
           </div>
           <div><Label>Primary workspace</Label>
             <select className={sel} value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value as TripType })}>
-              {TRIP_TYPES.map((t) => <option key={t} value={t}>{t === "mixed" ? "Mixed purpose" : SCOPE_LABEL[t]}</option>)}
+              {TRIP_TYPES.filter((t) => t !== "official").map((t) => <option key={t} value={t}>{t === "mixed" ? "Mixed purpose" : SCOPE_LABEL[t]}</option>)}
             </select>
           </div>
           <button type="button" className="text-left text-sm font-semibold text-primary" aria-expanded={more} onClick={() => setMore((m) => !m)}>
