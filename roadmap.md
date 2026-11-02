@@ -480,3 +480,5 @@
 - [x] Fresh security scan summary of published build
 - [x] Visitor demo link on sign-in
 - [x] Publish fonts + demo
+- [x] Pages open at login-like speed with tap feedback
+- [x] Demo dates stay in current month

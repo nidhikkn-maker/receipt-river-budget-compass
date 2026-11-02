@@ -47,3 +47,4 @@
 - Browser tests use real routes with isolated data and blocked external writes, including Inbox approval/retry/Undo; fixtures never certify Cloud saves.
 - Device MPIN (src/lib/mpin.ts) is a device-only quick unlock: salted PBKDF2 hash per owner in local storage, erased after five wrong tries; it only opens an existing session, never signs in.
 - Visitor demo: /auth starts a guest session and the start_demo_workspace function seeds owner-scoped sample rows (email is only a display label in demo_sessions); requireRealAccount blocks guests from AI/push/import server functions, and an hourly cron route deletes demos older than 24h — keeps costs bounded and real identities unclaimed.
+- Navigation feel: router preloads on intent with a short pending threshold; NavProgress (in AppShell) shows the page-change bar, warms main pages when idle and drops repeat taps on a link already opening — so taps always give feedback without double navigation.
