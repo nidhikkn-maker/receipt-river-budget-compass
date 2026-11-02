@@ -46,3 +46,4 @@
 - Statement Desk (/statements, statement-pipeline/) is the main upload path; Inbox's StatementInbox view stays for single-batch review and /reconcile redirects to it.
 - Browser tests use real routes with isolated data and blocked external writes, including Inbox approval/retry/Undo; fixtures never certify Cloud saves.
 - Device MPIN (src/lib/mpin.ts) is a device-only quick unlock: salted PBKDF2 hash per owner in local storage, erased after five wrong tries; it only opens an existing session, never signs in.
+- Visitor demo: /auth starts a guest session and the start_demo_workspace function seeds owner-scoped sample rows (email is only a display label in demo_sessions); requireRealAccount blocks guests from AI/push/import server functions, and an hourly cron route deletes demos older than 24h — keeps costs bounded and real identities unclaimed.
