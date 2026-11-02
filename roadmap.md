@@ -526,3 +526,7 @@
 - [x] Compact iPhone day-by-day itinerary view
 - [x] Booking check-in times with timed reminders
 - [x] Export itinerary + booking dates as calendar file
+- [ ] Calendar export: editable event titles/notes before .ics download; re-export reflects edits
+- [ ] Per-booking check-in reminder controls (change time or disable)
+- [x] Calendar export: editable titles/notes in a pop-up before download; re-export reflects edits
+- [x] Per-booking "Remind me" toggle (change time via check-in box, turn off via checkbox)

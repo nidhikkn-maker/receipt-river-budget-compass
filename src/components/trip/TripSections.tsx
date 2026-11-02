@@ -16,7 +16,8 @@ import { TripBudgetCard, EditBudgetDialog, BudgetBreakdown, ReimbursementBreakdo
 import { BookingDocumentImport } from "./BookingDocumentImport";
 import { TripExpenseActions } from "./TripExpenseActions";
 import { reviewedBooking, type bookingDraft } from "@/lib/booking-import";
-import { copyItem, itineraryConflicts, itineraryDays, itineraryPdfRows, mapLink, tripCalendar, outsideTrip, tripReadiness } from "@/lib/trip-itinerary";
+import { calendarEvents, copyItem, itineraryConflicts, itineraryDays, itineraryPdfRows, mapLink, tripCalendar, outsideTrip, tripReadiness } from "@/lib/trip-itinerary";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 const sel = "h-10 rounded-xl border bg-background px-2 text-sm";
 /** ISO moment → value for a datetime-local input in this device's time zone. */
@@ -89,7 +90,7 @@ export function TripBookingsSection({ trip }: { trip: TravelTrip }) {
       {(trip.bookings ?? []).length === 0 && !showForm && <p className="text-sm text-muted-foreground">No bookings yet. Add flights, hotels, trains and other reservations here — they only affect balances once paid.</p>}
       {(trip.bookings ?? []).map((b) => (
         <div key={b.id} className="flex flex-wrap items-center gap-2 border-b py-2 text-sm last:border-0">
-          <div className="min-w-0 flex-1"><b className="capitalize">{b.kind}</b> · {b.provider} {b.ref && <span className="text-muted-foreground">#{b.ref}</span>}<div className="text-xs text-muted-foreground">{b.date} · {money(b.amount)} · {b.status === "cancelled" ? "Cancelled" : b.status === "paid" ? "Paid — linked to entry" : bookingPaid(b, transactions) > 0 ? `Part paid ${money(bookingPaid(b, transactions))} · ${money(bookingOutstanding(b, transactions))} still due` : "Not paid (no effect on balances)"}</div><div className="text-xs text-muted-foreground">{b.traveller} {b.location && `· ${b.location}`} · {b.confirmation ?? "pending"}{b.currency && b.currency !== "INR" && ` · ${b.currency} ${b.originalAmount} × ${b.planningRate}`}</div>{b.dueDate && <div className="text-xs text-muted-foreground">Payment due {b.dueDate}</div>}{b.status !== "cancelled" && <label className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">Check-in<input type="datetime-local" aria-label={`Check-in time for ${b.provider || b.ref}`} disabled={closed} className="h-8 rounded-lg border bg-background px-2 text-xs" value={b.checkInAt ? localInput(b.checkInAt) : ""} onChange={(e) => void put({ bookings: (trip.bookings ?? []).map((x) => x.id === b.id ? { ...x, checkInAt: e.target.value ? new Date(e.target.value).toISOString() : null } : x) }, e.target.value ? "Check-in reminder set" : "Check-in time cleared")} /></label>}{b.cancelTerms && <div className="text-xs text-muted-foreground">Cancellation: {b.cancelTerms}</div>}{b.documentIds?.map(id => <Link key={id} to="/vault" className="block text-xs text-primary">{documents.find(d => d.id === id)?.title ?? "Attached document"}</Link>)}</div>
+          <div className="min-w-0 flex-1"><b className="capitalize">{b.kind}</b> · {b.provider} {b.ref && <span className="text-muted-foreground">#{b.ref}</span>}<div className="text-xs text-muted-foreground">{b.date} · {money(b.amount)} · {b.status === "cancelled" ? "Cancelled" : b.status === "paid" ? "Paid — linked to entry" : bookingPaid(b, transactions) > 0 ? `Part paid ${money(bookingPaid(b, transactions))} · ${money(bookingOutstanding(b, transactions))} still due` : "Not paid (no effect on balances)"}</div><div className="text-xs text-muted-foreground">{b.traveller} {b.location && `· ${b.location}`} · {b.confirmation ?? "pending"}{b.currency && b.currency !== "INR" && ` · ${b.currency} ${b.originalAmount} × ${b.planningRate}`}</div>{b.dueDate && <div className="text-xs text-muted-foreground">Payment due {b.dueDate}</div>}{b.status !== "cancelled" && <div className="mt-1 flex flex-wrap items-center gap-3 text-xs text-muted-foreground"><label className="flex items-center gap-2">Check-in<input type="datetime-local" aria-label={`Check-in time for ${b.provider || b.ref}`} disabled={closed} className="h-8 rounded-lg border bg-background px-2 text-xs" value={b.checkInAt ? localInput(b.checkInAt) : ""} onChange={(e) => void put({ bookings: (trip.bookings ?? []).map((x) => x.id === b.id ? { ...x, checkInAt: e.target.value ? new Date(e.target.value).toISOString() : null } : x) }, e.target.value ? "Check-in reminder set" : "Check-in time cleared")} /></label><label className="flex items-center gap-1.5"><input type="checkbox" aria-label={`Reminder for ${b.provider || b.ref}`} disabled={closed} checked={!b.reminderOff} onChange={(e) => void put({ bookings: (trip.bookings ?? []).map((x) => x.id === b.id ? { ...x, reminderOff: !e.target.checked } : x) }, e.target.checked ? "Reminder on for this booking" : "Reminder off for this booking")} />Remind me</label></div>}{b.cancelTerms && <div className="text-xs text-muted-foreground">Cancellation: {b.cancelTerms}</div>}{b.documentIds?.map(id => <Link key={id} to="/vault" className="block text-xs text-primary">{documents.find(d => d.id === id)?.title ?? "Attached document"}</Link>)}</div>
           {!closed && b.status === "unpaid" && <><Button asChild size="sm" variant="gold"><Link to="/new" search={{ trip: trip.id, booking: b.id }}>Record payment</Link></Button><Button size="sm" variant="ghost" onClick={() => void put({ bookings: (trip.bookings ?? []).map((x) => (x.id === b.id ? { ...x, status: "cancelled" as const } : x)) })}>Cancel</Button></>}
           {b.status === "paid" && b.expenseId && <Button asChild size="sm" variant="outline"><Link to="/new" search={{ edit: b.expenseId }}>View entry</Link></Button>}
           {!closed && b.status !== "cancelled" && <select aria-label={`Confirmation for ${b.provider || b.ref}`} className={sel} value={b.confirmation ?? "pending"} onChange={e => void put({ bookings: (trip.bookings ?? []).map(x => x.id === b.id ? { ...x, confirmation: e.target.value as "pending" | "confirmed" } : x) })}><option value="pending">Unconfirmed</option><option value="confirmed">Confirmed</option></select>}
@@ -140,6 +141,11 @@ export function TripItinerarySection({ trip }: { trip: TravelTrip }) {
   const outside = outsideTrip(trip, all);
   const [compact, setCompact] = useState(false);
   const [pdfBlob, setPdfBlob] = useState<Blob | null>(null);
+  const [calOpen, setCalOpen] = useState(false);
+  const [calEdits, setCalEdits] = useState<Record<string, { title: string; note: string }>>({});
+  const events = calendarEvents(trip);
+  const openCalendar = () => { setCalEdits(Object.fromEntries(events.map((e) => [e.uid, { title: e.title, note: e.note }]))); setCalOpen(true); };
+  const downloadCalendar = () => { downloadBlob(new Blob([tripCalendar(trip, new Date().toISOString(), calEdits)], { type: "text/calendar;charset=utf-8" }), `trip-${slug(trip.name)}.ics`); setCalOpen(false); };
   const preparePdf = async () => { setPdfBlob(await toPdf({ title: `Itinerary: ${trip.name}`, headers: ["Day", "Time", "Plan / booking"], rows: itineraryPdfRows(trip) }, `${trip.destination || ""} · ${trip.start} to ${trip.end}`)); };
   const nextDay = (d: string) => new Date(Date.parse(d + "T00:00:00Z") + 864e5).toISOString().slice(0, 10);
   return (
@@ -147,9 +153,26 @@ export function TripItinerarySection({ trip }: { trip: TravelTrip }) {
       {all.length === 0 && !showForm && <p className="text-sm text-muted-foreground">No plans yet. Add day-by-day activities, linked bookings and notes.</p>}
       {(all.length > 0 || (trip.bookings ?? []).length > 0) && <div className="mb-3 flex flex-wrap gap-2">
         <Button size="sm" variant={compact ? "default" : "outline"} onClick={() => setCompact((c) => !c)} aria-pressed={compact}>{compact ? "Full view" : "Compact days"}</Button>
-        <Button size="sm" variant="outline" onClick={() => downloadBlob(new Blob([tripCalendar(trip, new Date().toISOString())], { type: "text/calendar;charset=utf-8" }), `trip-${slug(trip.name)}.ics`)}>Add to calendar (.ics)</Button>
+        <Button size="sm" variant="outline" onClick={openCalendar}>Add to calendar (.ics)</Button>
         {pdfBlob ? <Button size="sm" variant="gold" onClick={() => { downloadBlob(pdfBlob, `itinerary-${slug(trip.name)}.pdf`); setPdfBlob(null); }}>Download itinerary PDF</Button> : <Button size="sm" variant="outline" onClick={preparePdf}>Prepare shareable PDF</Button>}
       </div>}
+      <Dialog open={calOpen} onOpenChange={setCalOpen}>
+        <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-lg" aria-label="Edit calendar events">
+          <DialogHeader><DialogTitle>Calendar events</DialogTitle></DialogHeader>
+          <p className="text-xs text-muted-foreground">Rename events or add notes before saving the file. These changes only affect the downloaded file; edit the plan or booking itself to change the trip. Export again after any change to get an updated file.</p>
+          <div className="space-y-3">
+            {events.map((e) => (
+              <div key={e.uid} className="rounded-xl border p-3">
+                <Label className="text-xs">Title</Label>
+                <Input className="h-9" aria-label={`Calendar title for ${e.title}`} value={calEdits[e.uid]?.title ?? ""} onChange={(ev) => setCalEdits((s) => ({ ...s, [e.uid]: { ...s[e.uid]!, title: ev.target.value } }))} />
+                <Label className="mt-2 text-xs">Note</Label>
+                <Input className="h-9" aria-label={`Calendar note for ${e.title}`} placeholder="Optional note" value={calEdits[e.uid]?.note ?? ""} onChange={(ev) => setCalEdits((s) => ({ ...s, [e.uid]: { ...s[e.uid]!, note: ev.target.value } }))} />
+              </div>
+            ))}
+          </div>
+          <Button variant="gold" onClick={downloadCalendar}>Download calendar file</Button>
+        </DialogContent>
+      </Dialog>
       {clashes.size > 0 && <p className="mb-2 text-xs text-destructive">{clashes.size} plans clash at the same time for the same people.</p>}
       {days.map((day, n) => (
         <div key={day.date} className="mb-3">

@@ -38,8 +38,8 @@ describe("itinerary PDF", () => {
   });
 });
 
-import { tripCalendar } from "./trip-itinerary";
-import { dueCheckIns } from "./push-rules";
+import { calendarEvents, tripCalendar } from "./trip-itinerary";
+import { dueCheckIns, tripReminderItems } from "./push-rules";
 describe("trip calendar and check-ins", () => {
   const t = { id: "t", name: "Goa", start: "2026-05-01", end: "2026-05-02", budget: 0, itinerary: [{ id: "a", date: "2026-05-01", time: "09:30", title: "Beach, sunrise" }, { id: "b", date: "2026-05-02", title: "Free day" }], bookings: [{ id: "h", kind: "hotel", provider: "Taj", ref: "R1", date: "2026-05-01", amount: 9000, status: "unpaid", checkInAt: "2026-05-01T08:30:00.000Z" }, { id: "x", kind: "flight", provider: "AI", ref: "", date: "2026-05-01", amount: 1, status: "cancelled" }] } as unknown as TravelTrip;
   it("exports plans and active bookings without amounts", () => {
@@ -56,5 +56,21 @@ describe("trip calendar and check-ins", () => {
     expect(dueCheckIns([t as never], at - 60_000, 15)).toEqual([]);
     expect(dueCheckIns([t as never], at + 5 * 60_000, 15).map((x) => x.key)).toEqual(["checkin:h:2026-05-01T08:30:00.000Z"]);
     expect(dueCheckIns([t as never], at + 20 * 60_000, 15)).toEqual([]);
+  });
+  it("applies per-event title and note edits only to the exported file", () => {
+    const ics = tripCalendar(t, "2026-04-01T00:00:00Z", { "plan-a": { title: "Sunrise walk", note: "Meet at lobby" } });
+    expect(ics).toContain("SUMMARY:Sunrise walk");
+    expect(ics).toContain("DESCRIPTION:Meet at lobby");
+    expect(ics).not.toContain("Beach\\, sunrise");
+    expect(ics).toContain("SUMMARY:Check-in: hotel · Taj #R1");
+  });
+  it("lists exportable events with their default titles and saved notes", () => {
+    expect(calendarEvents(t).map((e) => e.uid)).toEqual(["plan-a", "plan-b", "booking-h"]);
+  });
+  it("skips bookings whose reminder is turned off", () => {
+    const off = { ...t, bookings: [{ ...t.bookings![0]!, reminderOff: true }] };
+    const at = Date.parse("2026-05-01T08:30:00Z");
+    expect(dueCheckIns([off as never], at + 5 * 60_000, 15)).toEqual([]);
+    expect(tripReminderItems([off as never], "2026-05-01").filter((i) => i.key.includes("booking"))).toEqual([]);
   });
 });

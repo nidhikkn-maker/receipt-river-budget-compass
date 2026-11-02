@@ -69,20 +69,29 @@ const icsDate = (d: string) => d.replace(/-/g, "");
 const icsStamp = (iso: string) => new Date(iso).toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "");
 const nextIsoDay = (d: string) => new Date(Date.parse(d + "T00:00:00Z") + 864e5).toISOString().slice(0, 10);
 
-/** iCalendar file of itinerary plans and active bookings; timed items keep their local time, check-ins use the saved moment. No amounts. */
-export function tripCalendar(t: TravelTrip, stamp: string): string {
-  const ev: string[] = [];
-  const add = (uid: string, summary: string, start: string, end: string, location?: string) =>
-    ev.push(["BEGIN:VEVENT", `UID:${uid}@ledgerline`, `DTSTAMP:${icsStamp(stamp)}`, start, end, `SUMMARY:${icsText(summary)}`, ...(location ? [`LOCATION:${icsText(location)}`] : []), "END:VEVENT"].join("\r\n"));
+export interface CalendarEvent { uid: string; title: string; note: string; start: string; end: string; location?: string | undefined }
+
+/** The events a trip calendar export would contain, in export order. Recomputed from live trip data, so re-exporting always reflects the latest edits. */
+export function calendarEvents(t: TravelTrip): CalendarEvent[] {
+  const out: CalendarEvent[] = [];
   for (const i of t.itinerary ?? []) {
-    if (i.time) { const s = `${icsDate(i.date)}T${i.time.replace(":", "")}00`; add(`plan-${i.id}`, i.title, `DTSTART:${s}`, `DTEND:${s}`, i.place); }
-    else add(`plan-${i.id}`, i.title, `DTSTART;VALUE=DATE:${icsDate(i.date)}`, `DTEND;VALUE=DATE:${icsDate(nextIsoDay(i.date))}`, i.place);
+    if (i.time) { const s = `${icsDate(i.date)}T${i.time.replace(":", "")}00`; out.push({ uid: `plan-${i.id}`, title: i.title, note: i.note ?? "", start: `DTSTART:${s}`, end: `DTEND:${s}`, location: i.place }); }
+    else out.push({ uid: `plan-${i.id}`, title: i.title, note: i.note ?? "", start: `DTSTART;VALUE=DATE:${icsDate(i.date)}`, end: `DTEND;VALUE=DATE:${icsDate(nextIsoDay(i.date))}`, location: i.place });
   }
   for (const b of t.bookings ?? []) {
     if (b.status === "cancelled") continue;
     const title = `${b.kind} · ${b.provider}${b.ref ? ` #${b.ref}` : ""}`;
-    if (b.checkInAt) add(`booking-${b.id}`, `Check-in: ${title}`, `DTSTART:${icsStamp(b.checkInAt)}`, `DTEND:${icsStamp(b.checkInAt)}`, b.location);
-    else add(`booking-${b.id}`, title, `DTSTART;VALUE=DATE:${icsDate(b.date)}`, `DTEND;VALUE=DATE:${icsDate(nextIsoDay(b.date))}`, b.location);
+    if (b.checkInAt) out.push({ uid: `booking-${b.id}`, title: `Check-in: ${title}`, note: b.note ?? "", start: `DTSTART:${icsStamp(b.checkInAt)}`, end: `DTEND:${icsStamp(b.checkInAt)}`, location: b.location });
+    else out.push({ uid: `booking-${b.id}`, title, note: b.note ?? "", start: `DTSTART;VALUE=DATE:${icsDate(b.date)}`, end: `DTEND;VALUE=DATE:${icsDate(nextIsoDay(b.date))}`, location: b.location });
   }
+  return out;
+}
+
+/** iCalendar file of itinerary plans and active bookings; timed items keep their local time, check-ins use the saved moment. No amounts. `edits` overrides an event's title/note by uid. */
+export function tripCalendar(t: TravelTrip, stamp: string, edits: Record<string, { title?: string; note?: string }> = {}): string {
+  const ev = calendarEvents(t).map((e) => {
+    const o = edits[e.uid] ?? {};
+    return ["BEGIN:VEVENT", `UID:${e.uid}@ledgerline`, `DTSTAMP:${icsStamp(stamp)}`, e.start, e.end, `SUMMARY:${icsText(o.title ?? e.title)}`, ...((o.note ?? e.note) ? [`DESCRIPTION:${icsText(o.note ?? e.note)}`] : []), ...(e.location ? [`LOCATION:${icsText(e.location)}`] : []), "END:VEVENT"].join("\r\n");
+  });
   return ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Ledgerline//Trip//EN", `X-WR-CALNAME:${icsText(t.name)}`, ...ev, "END:VCALENDAR", ""].join("\r\n");
 }

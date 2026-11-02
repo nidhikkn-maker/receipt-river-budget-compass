@@ -42,14 +42,14 @@ export function paymentReminderItems(input: {
   return items.sort((a,b) => a.date.localeCompare(b.date));
 }
 
-export interface TripReminderSource { id: string; closedAt?: string | null; cancelledAt?: string | null; itinerary?: { id: string; date: string }[]; bookings?: { id: string; date: string; status: string; kind: string }[] }
+export interface TripReminderSource { id: string; closedAt?: string | null; cancelledAt?: string | null; itinerary?: { id: string; date: string }[]; bookings?: { id: string; date: string; status: string; kind: string; reminderOff?: boolean }[] }
 /** Itinerary plans and booking check-ins today or tomorrow, for open trips only. Independent of payment reminder settings. */
 export function tripReminderItems(trips: TripReminderSource[], today: string): ReminderItem[] {
   const end = addDays(today, 1); const out: ReminderItem[] = [];
   for (const t of trips) {
     if (t.closedAt || t.cancelledAt) continue;
     for (const i of t.itinerary ?? []) if (i.date >= today && i.date <= end) out.push({ key: `trip-plan:${t.id}:${i.id}:${i.date}`, date: i.date, kind: "trip" });
-    for (const b of t.bookings ?? []) if (b.status !== "cancelled" && b.date >= today && b.date <= end) out.push({ key: `trip-checkin:${t.id}:${b.id}:${b.date}`, date: b.date, kind: "trip" });
+    for (const b of t.bookings ?? []) if (b.status !== "cancelled" && !b.reminderOff && b.date >= today && b.date <= end) out.push({ key: `trip-checkin:${t.id}:${b.id}:${b.date}`, date: b.date, kind: "trip" });
   }
   return out;
 }
@@ -58,14 +58,14 @@ export function tripReminderItems(trips: TripReminderSource[], today: string): R
 export function privateReminderPayload(count: number, test = false) {
   return { title: "Ledgerline", body: test ? "Notifications are working on this device." : `${count} payment, renewal or trip reminder${count === 1 ? "" : "s"} to review.`, url: "/plan", tag: test ? "ledgerline-test" : "ledgerline-reminders" };
 }
-export interface CheckInSource { id: string; closedAt?: string | null; cancelledAt?: string | null; bookings?: { id: string; status: string; checkInAt?: string | null }[] }
+export interface CheckInSource { id: string; closedAt?: string | null; cancelledAt?: string | null; bookings?: { id: string; status: string; checkInAt?: string | null; reminderOff?: boolean }[] }
 /** Bookings whose saved check-in moment fell within the last `windowMin` minutes (inclusive of now). */
 export function dueCheckIns(trips: CheckInSource[], nowMs: number, windowMin: number): { key: string; at: string }[] {
   const out: { key: string; at: string }[] = [];
   for (const t of trips) {
     if (t.closedAt || t.cancelledAt) continue;
     for (const b of t.bookings ?? []) {
-      if (b.status === "cancelled" || !b.checkInAt) continue;
+      if (b.status === "cancelled" || b.reminderOff || !b.checkInAt) continue;
       const at = Date.parse(b.checkInAt);
       if (Number.isFinite(at) && at <= nowMs && at > nowMs - windowMin * 60_000) out.push({ key: `checkin:${b.id}:${b.checkInAt}`, at: b.checkInAt });
     }
