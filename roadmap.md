@@ -464,3 +464,7 @@
 - [ ] Deep-scan of the published V5.18 build — running since 01:03 UTC, report on completion
 - [ ] Match five missing statements — blocked: statements not yet uploaded
 - [ ] Approve E1–E7 audit corrections — waiting on user
+
+## V5.19
+- [ ] Faster startup from Home Screen
+- [ ] Sign-in page + bottom menu alignment at tablet/desktop
