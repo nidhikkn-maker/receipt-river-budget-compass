@@ -175,6 +175,7 @@ function NewExpense() {
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
   const [description, setDescription] = useState("");
   const [receiptDetails, setReceiptDetails] = useState<ReceiptDetails>({});
+  const [includeItems, setIncludeItems] = useState(false);
   const [receipts, setReceipts] = useState<LocalReceipt[]>([]);
   const [queue, setQueue] = useState<LocalReceipt[]>([]);
   const [batch, setBatch] = useState<{ done: number; total: number } | null>(null);
@@ -408,12 +409,12 @@ function NewExpense() {
       if (!req.isCurrent()) return;
       setStage({ kind: "receipt", at: 1 });
       if (prepared.dataUrl.length > 4_000_000) throw new Error("This file is too large to read. Try a smaller photo or PDF, or enter the details yourself.");
-      const res = await extract({ data: prepared });
+      const res = await extract({ data: { ...prepared, includeItems } });
       if (!req.isCurrent()) return;
       if (!res.ok) throw new Error(res.error);
       setStage({ kind: "receipt", at: 2 });
       const x = res.result;
-      setReceiptDetails({ tax: x.tax, tip: x.tip, confidence: receiptConfidence(x), items: x.items, text: x.text, fingerprint: first.fingerprint });
+      setReceiptDetails({ subtotal: x.subtotal, tax: x.tax, tip: x.tip, confidence: receiptConfidence(x), items: x.items, text: x.text, fingerprint: first.fingerprint });
       const filled = new Set<string>();
       if (x.title && (fresh || !title)) { setTitle(x.title); filled.add("title"); }
       const merchantHint = suggestForEntry({ date: isDate(x.date) ? x.date : date, amount: x.amount ?? 0, currency: x.currency ?? currency, txnType: "expense", text: [x.merchant, x.description].filter(Boolean).join(" "), accountId: accountId === "none" ? null : accountId }, { transactions: expenses, accounts, categories: preferences.categories }).category;
@@ -534,6 +535,8 @@ function NewExpense() {
     if (!confirmed) { toast.error("Confirm the scanned bill details first"); return; }
     if (duplicateBlocked) { toast.error("Review the possible duplicate or skip this bill"); return; }
     if (receiptBlocked) { toast.error("This receipt is already used — review it or choose a different file"); return; }
+    const breakdownError = receiptBreakdownError(Number(amount), receiptDetails);
+    if (breakdownError) { toast.error(breakdownError); return; }
     if (saving) return;
     setSaving(true); setSaveError("");
     try {
@@ -670,6 +673,7 @@ function NewExpense() {
           </section>
         )}
         {repeatedFrom && !repeatOpen && <p role="status" className="rounded-2xl bg-gold-soft px-3 py-2 text-xs">Copied from your last <b>{repeatedFrom}</b> entry with today's date. Adjust the amount and tap Save — nothing is saved until you do.</p>}
+        <Label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={includeItems} disabled={reading || saving} onChange={e => setIncludeItems(e.target.checked)} />Extract receipt items</Label>
         <input ref={cameraRef} type="file" accept="image/*" capture="environment" className="sr-only" aria-label="Take a photo of a receipt" onChange={(e) => { void onFiles(e.target.files); e.target.value = ""; }} />
         <input ref={galleryRef} type="file" multiple accept="image/*" className="sr-only" aria-label="Choose receipt photos" onChange={(e) => { void onFiles(e.target.files); e.target.value = ""; }} />
         <input ref={fileRef} id="r" type="file" multiple accept="image/*,application/pdf" className="sr-only" aria-label="Choose receipt files" onChange={(e) => { void onFiles(e.target.files); e.target.value = ""; }} />
@@ -753,12 +757,15 @@ function NewExpense() {
               </div>
             </div>
             <div className="grid gap-1"><Label htmlFor="sa">Total on bill</Label><Input id="sa" type="number" step="0.01" min="0" className="font-mono" value={scan.amount} onChange={(e) => setScan({ ...scan, amount: e.target.value })} /><ReadingIndicator value={receiptDetails.confidence?.total ?? "unknown"} /></div>
+            <div className="grid gap-1"><Label htmlFor="receipt-subtotal">Subtotal before tax and tip</Label><Input id="receipt-subtotal" type="number" min="0" step="0.01" value={receiptDetails.subtotal ?? ""} onChange={e=>setReceiptDetails({...receiptDetails,subtotal:e.target.value===""?null:Number(e.target.value)})}/></div>
             <div className="grid grid-cols-2 gap-3">
               <div className="grid gap-1"><Label htmlFor="receipt-tax">Tax included</Label><Input id="receipt-tax" type="number" min="0" step="0.01" value={receiptDetails.tax ?? ""} onChange={e=>setReceiptDetails({...receiptDetails,tax:e.target.value===""?null:Number(e.target.value)})}/></div>
               <div className="grid gap-1"><Label htmlFor="receipt-tip">Tip included</Label><Input id="receipt-tip" type="number" min="0" step="0.01" value={receiptDetails.tip ?? ""} onChange={e=>setReceiptDetails({...receiptDetails,tip:e.target.value===""?null:Number(e.target.value)})}/></div>
             </div>
+            {receiptBreakdownError(Number(scan.amount), receiptDetails) ? <p role="alert" className="text-sm text-destructive">{receiptBreakdownError(Number(scan.amount), receiptDetails)}</p> : <p role="status" className="text-xs text-muted-foreground">{receiptDetails.subtotal == null ? "Subtotal not read — total comparison unavailable." : "Subtotal + tax + tip matches the total."}</p>}
             <div className="grid gap-1"><Label>Suggested category</Label><Select value={scanCategory} onValueChange={setScanCategory}><SelectTrigger aria-label="Receipt category"><SelectValue placeholder="Choose category" /></SelectTrigger><SelectContent>{categoryNames.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent></Select></div>
-            {(receiptDetails.items??[]).map((item,i)=><div key={i} className="grid grid-cols-[1fr_64px_80px] gap-2"><Input aria-label={`Item ${i+1} name`} value={item.name} onChange={e=>setReceiptDetails({...receiptDetails,items:(receiptDetails.items ?? []).map((x,j)=>j===i?{...x,name:e.target.value}:x)})}/><Input aria-label={`Item ${i+1} quantity`} type="number" value={item.quantity} onChange={e=>setReceiptDetails({...receiptDetails,items:(receiptDetails.items ?? []).map((x,j)=>j===i?{...x,quantity:Number(e.target.value)}:x)})}/><Input aria-label={`Item ${i+1} amount`} type="number" step="0.01" value={item.amount} onChange={e=>setReceiptDetails({...receiptDetails,items:(receiptDetails.items ?? []).map((x,j)=>j===i?{...x,amount:Number(e.target.value)}:x)})}/></div>)}
+            {(receiptDetails.items?.length ?? 0) > 0 && <details open className="min-w-0 text-sm"><summary className="cursor-pointer font-semibold">Receipt items ({receiptDetails.items?.length})</summary><div className="mt-2 max-h-72 space-y-3 overflow-y-auto">{(receiptDetails.items ?? []).map((item,i)=><div key={i} className="grid min-w-0 grid-cols-2 gap-2 border-b pb-3"><div className="col-span-2"><Label htmlFor={`item-name-${i}`}>Item {i+1} name</Label><Input id={`item-name-${i}`} value={item.name} onChange={e=>setReceiptDetails({...receiptDetails,items:(receiptDetails.items ?? []).map((x,j)=>j===i?{...x,name:e.target.value}:x)})}/></div><div><Label htmlFor={`item-quantity-${i}`}>Item {i+1} quantity</Label><Input id={`item-quantity-${i}`} type="number" min="0" value={item.quantity} onChange={e=>setReceiptDetails({...receiptDetails,items:(receiptDetails.items ?? []).map((x,j)=>j===i?{...x,quantity:Number(e.target.value)}:x)})}/></div><div><Label htmlFor={`item-amount-${i}`}>Item {i+1} amount</Label><Input id={`item-amount-${i}`} type="number" min="0" step="0.01" value={item.amount} onChange={e=>setReceiptDetails({...receiptDetails,items:(receiptDetails.items ?? []).map((x,j)=>j===i?{...x,amount:Number(e.target.value)}:x)})}/></div><Button type="button" variant="ghost" size="sm" className="col-span-2 justify-self-end" aria-label={`Remove item ${i+1}`} onClick={()=>setReceiptDetails({...receiptDetails,items:(receiptDetails.items ?? []).filter((_,j)=>j!==i)})}><X className="h-4 w-4"/>Remove</Button></div>)}</div></details>}
+            {includeItems && !receiptDetails.items?.length && <p className="text-xs text-muted-foreground">No readable receipt items found.</p>}
             <div className="flex justify-end gap-2">
               <Button type="button" variant="ghost" size="sm" onClick={() => { setScan(null); setConfirmed(true); }}>Enter manually</Button>
               <Button type="button" size="sm" onClick={confirmScan}>Confirm details</Button>

@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { ExtractedReceiptSchema, ReceiptDetailsSchema, receiptConfidence, receiptBreakdownError } from "./receipt-reading";
 import { validateExpense, type ExpenseInput } from "./expenses";
 
-const read = { title: "Cafe", merchant: "Cafe", date: "2026-11-02", amount: 432.10, tax: 32.10, tip: 40, confidence: { merchant: "high", date: "low", total: "medium" }, items: [], text: "Cafe", currency: "INR", payment_method: null, description: null, category: "Food and beverages", scope: "personal" };
+const read = { title: "Cafe", merchant: "Cafe", date: "2026-11-02", amount: 432.10, subtotal: 360, tax: 32.10, tip: 40, confidence: { merchant: "high", date: "low", total: "medium" }, items: [], text: "Cafe", currency: "INR", payment_method: null, description: null, category: "Food and beverages", scope: "personal" };
 describe("receipt reading", () => {
   it("preserves tax, tip and field certainty through the real server metadata validator", () => {
     const details = { tax: 32.10, tip: 40, confidence: { merchant: "high", date: "low", total: "medium" } };
@@ -43,5 +43,22 @@ describe("receipt reading", () => {
     expect(() => validateExpense(input)).not.toThrow();
     expect(input.amount).toBe(432.10);
     expect(() => validateExpense({ ...input, receiptDetails: { tax: 400, tip: 40 } })).toThrow();
+  });
+  it("compares subtotal plus tax and tip exactly at currency-cent precision", () => {
+    expect(receiptBreakdownError(432.10, { subtotal: 360, tax: 32.10, tip: 40 })).toBeNull();
+    expect(receiptBreakdownError(432.11, { subtotal: 360, tax: 32.10, tip: 40 })).not.toBeNull();
+    expect(receiptBreakdownError(0.3, { subtotal: 0.1, tax: 0.2 })).toBeNull();
+  });
+  it("does not invent a subtotal for older or unreadable receipts", () => {
+    expect(receiptBreakdownError(432.10, { subtotal: null, tax: 32.10, tip: 40 })).toBeNull();
+  });
+  it("rejects a mismatch through expense save validation", () => {
+    const input: ExpenseInput = { title: "Cafe", amount: 432.10, currency: "INR", date: "2026-11-02", category: "Food and beverages", scope: "personal", merchant: "Cafe", paymentMethod: "cash", description: "", memberId: null, splits: [], receiptDetails: { subtotal: 350, tax: 32.10, tip: 40 } };
+    expect(() => validateExpense(input)).toThrow(/mismatch/);
+  });
+  it("retains reviewed item extended amounts without multiplying quantity or changing spending", () => {
+    const details = { subtotal: 360, items: [{ name: "Dinner", quantity: 2, amount: 360 }] };
+    expect(ReceiptDetailsSchema.parse(details)).toEqual(details);
+    expect(ReceiptDetailsSchema.safeParse({ items: [{ name: "Dinner", quantity: 1, amount: -1 }] }).success).toBe(false);
   });
 });
