@@ -1,4 +1,6 @@
 # Roadmap (Functional Requirements v1.0)
+## iPhone receipt viewer verification (2 Nov 2026)
+- [ ] Verify double-tap zoom, gentle pinch and drag-pan for photo and PDF receipts on the owner's real iPhone; blocked — no physical device access from this sandbox, only touch-emulated browser checks are possible here.
 ## Receipt item confidence (2 Nov 2026)
 - [x] Show and retain separate name/amount confidence for receipt items, with unknown fallback for older receipts; editing does not manufacture confidence.
 - [x] 39 focused tests and two isolated expense browser checks pass, including saved item certainty; preview build OK. Real AI accuracy remains unverified; not published.
