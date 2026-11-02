@@ -489,4 +489,4 @@
 
 ## Home load timing on a slow mobile connection
 - [ ] Measure first Home load at slow-mobile speeds on the live site and compare with the sign-in screen; optimise whatever is slower.
-- [x] Stop the card-dues chart loading until the breakdown is opened (saves ~91 KB on first Home load)
+- [x] Home card-dues chart mounts only when the breakdown is opened (first-load bytes unchanged: the chart library still arrives through background page warm-up)
