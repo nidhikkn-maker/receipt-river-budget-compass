@@ -1,7 +1,7 @@
 # Roadmap (Functional Requirements v1.0)
 ## Email rendering and dependency advisory CI regressions
-- [ ] Render the accountant upload-link email with the real email renderer and verify its key content and upload button in CI.
-- [ ] Add a read-only dependency vulnerability check to CI that reports advisories without changing the lockfile.
+- [x] Real registered accountant email renderer regression checks personalised content/subject, private upload button URL/limits and safe missing-data fallback; all 1,082 tests pass and preview build is OK.
+- [x] Separate non-blocking CI job runs bun audit, saves its report and warns on advisories/check failures; checksum confirms the lockfile is unchanged. Local audit reports deepmerge (low) and minimatch (moderate); no fixes applied. GitHub execution awaits the next push/PR.
 ## CI check and entities patch documentation
 - [x] Added .github/workflows/ci.yml: bun install --frozen-lockfile, then typecheck (new `bun run typecheck` script), production build, and full test suite on push/PR.
 - [x] Fixed the underlying entities conflict instead of patching it: removed the global entities@7 override, the two patches, and the vite.config.ts entities alias; each consumer now resolves its own entities version. Build OK, 1,079 tests pass, typecheck clean.
