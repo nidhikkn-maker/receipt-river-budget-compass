@@ -68,7 +68,7 @@ describe("trip calendar and check-ins", () => {
     expect(calendarEvents(t).map((e) => e.uid)).toEqual(["plan-a", "plan-b", "booking-h"]);
   });
   it("skips bookings whose reminder is turned off", () => {
-    const off = { ...t, bookings: [{ ...t.bookings[0], reminderOff: true }] };
+    const off = { ...t, bookings: [{ ...t.bookings![0]!, reminderOff: true }] };
     const at = Date.parse("2026-05-01T08:30:00Z");
     expect(dueCheckIns([off as never], at + 5 * 60_000, 15)).toEqual([]);
     expect(tripReminderItems([off as never], "2026-05-01").filter((i) => i.key.includes("booking"))).toEqual([]);
