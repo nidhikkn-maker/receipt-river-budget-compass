@@ -92,8 +92,7 @@ function HistoricalImports() {
     <ol aria-label="Import stages" className="mb-5 flex flex-wrap gap-x-4 gap-y-2 text-xs text-muted-foreground"><li>1 · Upload</li><li>2 · Review groups</li><li>3 · Confirm import</li><li>4 · Reconcile</li></ol>
     <div className="mb-6 flex flex-wrap gap-2"><Button asChild variant="outline"><Link to="/wealth">Configure accounts & opening balances</Link></Button><Button asChild variant="ghost"><Link to="/inbox" search={{ section: "statements" }}>Statement matching</Link></Button></div>
     <section className="mb-6 border-y py-5 space-y-3">
-      <h2 className="text-lg font-semibold">Upload statements</h2>
-      <div className="flex flex-wrap gap-3"><Select value={account} onValueChange={setAccount}><SelectTrigger className="w-full sm:w-60" aria-label="Historical statement account"><SelectValue placeholder="Confirm account or card"/></SelectTrigger><SelectContent>{accounts.filter(a=>!a.archived).map(a=><SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}</SelectContent></Select><Select value={currency} onValueChange={setCurrency}><SelectTrigger className="w-28" aria-label="Historical statement currency"><SelectValue/></SelectTrigger><SelectContent>{CURRENCIES.map(c=><SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent></Select></div>
+      <h2 className="text-lg font-semibold">Past imports</h2>
       <div className="rounded-xl border bg-card p-4 text-sm"><p className="text-muted-foreground">New statements are uploaded only in Statement Desk, so every bank statement has one home.</p><Link to="/statements" className="mt-2 inline-block font-medium text-primary underline">Go to Statement Desk</Link></div>
       {stage&&<ProcessingPanel title={stage.name} stages={stagesAt(['Uploading original statement','Extracting transactions','Finding duplicates and suggesting classifications','Ready for review'],stage.at)}/>}
     </section>
