@@ -21,8 +21,7 @@ export const extractReceipt = createServerFn({ method: "POST" })
       const result = await streamResponse({
         model: "openai/gpt-6-astra",
         text: { format: { type: "json_schema", name: "receipt", strict: true, schema: z.toJSONSchema(ExtractedReceiptSchema) } },
-        reasoning: { effort: "low", summary: "auto" },
-        include: ["reasoning.encrypted_content"],
+        reasoning: { effort: "low" },
         input: [
           {
             role: "user",

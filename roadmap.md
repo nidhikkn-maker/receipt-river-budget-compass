@@ -572,6 +572,7 @@
 - [x] Shop aliases for per-shop rules
 - [x] Fix false 'Saved the wrong way' for transfers into the statement account; publish
 - [x] Discard option on receipt suggestions review
-- [ ] Security scan summary
-- [ ] Test duplicate-transfer warning
+- [ ] Security scan summary (deep scan running)
+- [x] Test duplicate-transfer warning
 - [x] Publish all
+- [ ] Find and fix biggest app/receipt slowness
