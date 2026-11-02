@@ -1,7 +1,7 @@
 # Roadmap (Functional Requirements v1.0)
 ## Receipt item confidence (2 Nov 2026)
-- [ ] Show and retain separate name/amount confidence for receipt items, with unknown fallback for older receipts.
-- [ ] Verify item confidence review and save read-back with isolated tests.
+- [x] Show and retain separate name/amount confidence for receipt items, with unknown fallback for older receipts; editing does not manufacture confidence.
+- [x] 39 focused tests and two isolated expense browser checks pass, including saved item certainty; preview build OK. Real AI accuracy remains unverified; not published.
 ## Receipt arithmetic and optional items (2 Nov 2026)
 - [x] Compare subtotal plus tax and tip with total, flag mismatches before confirmation and saving; unavailable subtotal stays unknown.
 - [x] Offer optional receipt item extraction with editable names and line amounts before saving.
