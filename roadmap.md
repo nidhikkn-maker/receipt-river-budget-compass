@@ -549,3 +549,4 @@
 ## Receipt viewer & field confirmation
 - [ ] Side-by-side receipt image viewer with zoom during review
 - [ ] Require confirming low-confidence merchant/date/total before saving
+- [ ] Publish after receipt changes
