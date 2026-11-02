@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { ScanFace } from "lucide-react";
-import { KkMonogram } from "@/components/KkMonogram";
+import kkLogo from "@/assets/kk-monogram-gold.png.asset.json";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -114,8 +114,8 @@ function Auth() {
     if (r.error) toast.error(r.error.message); else if (!r.redirected) await go();
   };
   return <div className="relative min-h-dvh overflow-hidden">
-  <div aria-hidden="true" className="pointer-events-none fixed inset-0 flex items-center justify-center">
-    <KkMonogram className="w-[min(80vw,520px)] text-accent opacity-[0.22] dark:opacity-[0.14]" />
+  <div aria-hidden="true" className="pointer-events-none fixed bottom-4 right-4 opacity-50 dark:opacity-40">
+    <img src={kkLogo.url} alt="" className="size-[72px] object-contain sm:size-[110px]" />
   </div>
   <main className="relative mx-auto max-w-md px-6 py-12">
     <Link to="/dashboard" className="font-display text-2xl font-bold text-primary">Ledgerline</Link>
