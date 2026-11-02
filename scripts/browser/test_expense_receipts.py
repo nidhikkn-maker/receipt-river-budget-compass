@@ -103,7 +103,7 @@ class ExpenseReceiptButtons(unittest.IsolatedAsyncioTestCase):
         Image.new("RGB", (240, 320), "white").save(pdf, "PDF")
         await self.page.get_by_role("button", name="Upload a receipt", exact=True).click()
         async with self.page.expect_file_chooser() as chooser:
-            await self.page.get_by_role("menuitem").filter(has_text="file").first.click() if False else None
+            await self.page.get_by_role("button", name="Files / PDF", exact=True).click()
         await (await chooser.value).set_files(pdf)
         review = self.page.get_by_role("group", name="Review scanned details")
         viewer = review.get_by_role("img", name="Receipt controlled-receipt.pdf, zoom 100%")
