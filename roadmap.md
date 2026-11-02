@@ -524,3 +524,5 @@
 - [x] Trip reminders for upcoming itinerary plans and booking check-ins
 - [x] Trip itinerary + bookings shareable PDF
 - [x] Compact iPhone day-by-day itinerary view
+- [ ] Booking check-in times with timed reminders
+- [ ] Export itinerary + booking dates as calendar file
