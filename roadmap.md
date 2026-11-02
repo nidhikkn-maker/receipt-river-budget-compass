@@ -580,3 +580,6 @@
 - [x] Profile Home startup and cut the ~1.2-2.5s server wait (installed app now opens from the saved copy and refreshes in the background)
 - [x] Receipt reading progress + retry
 - [ ] Fix 3 security warnings (spreadsheet done; 2 email warnings need user decision on daily limit)
+- [x] Publish email sending limits
+- [ ] Verify daily email limits (test account)
+- [x] Investigate 5s+ app open time (smaller saved copy)
