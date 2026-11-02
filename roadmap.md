@@ -551,3 +551,4 @@
 - [x] Require confirming low-confidence merchant/date/total before saving
 - [x] Publish after receipt changes
 - [ ] Fresh security check on live site (deep scan running)
+- [ ] Audit: all requests complete, no duplicate features
