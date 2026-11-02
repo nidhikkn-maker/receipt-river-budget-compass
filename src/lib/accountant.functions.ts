@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireRealAccount } from "@/lib/real-account-middleware";
-import { linkHistory, requestReport, type LinkEvent, type RequestLink, type UploadRequest, linkState, LINK_DAYS, MAX_FILES, PUBLIC_ORIGIN } from "@/lib/upload-link";
+import { canResendReminder, MANUAL_REMINDER_PREFIX, linkHistory, requestReport, type LinkEvent, type RequestLink, type UploadRequest, linkState, LINK_DAYS, MAX_FILES, PUBLIC_ORIGIN } from "@/lib/upload-link";
 
 export interface AccountantInfo {
   name: string; email: string; sendDay: number; autoSend: boolean;
@@ -83,3 +83,26 @@ export const getUploadRequests = createServerFn({ method: "POST" })
     );
   });
 
+
+/** Owner-triggered reminder for one monthly request; recorded in that request's reminder history. */
+export const resendReminder = createServerFn({ method: "POST" })
+  .middleware([requireRealAccount])
+  .inputValidator((d: unknown) => z.object({ linkId: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+    const [{ data: l }, { data: c }, { data: p }] = await Promise.all([
+      supabase.from("upload_links").select("id, expires_at, revoked_at, file_count, max_files").eq("owner_id", userId).eq("id", data.linkId).maybeSingle(),
+      supabase.from("accountant_contacts").select("name, email").eq("owner_id", userId).maybeSingle(),
+      supabase.from("profiles").select("full_name").eq("id", userId).maybeSingle(),
+    ]);
+    if (!l) return { ok: false as const, error: "That request wasn't found" };
+    if (!canResendReminder(l)) return { ok: false as const, error: "This link no longer accepts files — send a new link instead" };
+    if (!c?.email) return { ok: false as const, error: "Add your accountant's email first" };
+    const { send, tokenFor } = await import("@/lib/upload-link.server");
+    const url = `${PUBLIC_ORIGIN}/u/${await tokenFor(l.id)}`;
+    const at = new Date().toISOString();
+    const sent = await send("accountant-upload-reminder", c.email, { name: c.name, ownerName: p?.full_name || "your client", url }, `accountant-upload-reminder-${l.id}-manual-${at}`);
+    if (!sent) return { ok: false as const, error: "The reminder couldn't be emailed yet — your sending domain may still be verifying" };
+    await supabase.from("upload_link_events").insert({ owner_id: userId, link_id: l.id, kind: "reminded", detail: MANUAL_REMINDER_PREFIX + c.email, at });
+    return { ok: true as const };
+  });

@@ -95,6 +95,9 @@ export type UploadRequest = {
   names: string[];
   waiting: number;
   reminderAt: string | null;
+  /** Every reminder for this request, newest first; manual resends are marked. */
+  reminders: { at: string; to: string | null; manual: boolean }[];
+  canResend: boolean;
   reminder: "sent" | "due" | "not-needed" | "waiting" | "closed";
   confirmAt: string | null;
   confirmTo: string | null;
@@ -140,6 +143,8 @@ export function requestReport(links: RequestLink[], events: LinkEvent[], uploads
         names: ups.map((u) => u.fileName),
         waiting: ups.filter((u) => !u.consumedAt).length,
         reminderAt: reminded?.at ?? null,
+        reminders: ev.filter((e) => e.kind === "reminded").sort((a, b) => b.at.localeCompare(a.at)).map((e) => reminderEntry(e)),
+        canResend: canResendReminder(l, now),
         reminder,
         confirmAt: notified?.at ?? null,
         confirmTo: notified?.detail ?? null,
@@ -147,3 +152,15 @@ export function requestReport(links: RequestLink[], events: LinkEvent[], uploads
     });
 }
 
+
+export const MANUAL_REMINDER_PREFIX = "resent:";
+/** Reminder event detail: automatic reminders store the email; manual resends store "resent:<email>". */
+export function reminderEntry(e: { at: string; detail: string | null }) {
+  const d = e.detail ?? "";
+  const manual = d.startsWith(MANUAL_REMINDER_PREFIX);
+  return { at: e.at, to: (manual ? d.slice(MANUAL_REMINDER_PREFIX.length) : d) || null, manual };
+}
+/** A reminder can be resent by hand only while the link still accepts files (open, not expired, not full). */
+export function canResendReminder(l: LinkRow, now = new Date()): boolean {
+  return linkState(l, now) === "active";
+}

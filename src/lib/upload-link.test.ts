@@ -125,3 +125,16 @@ describe("monthly upload request report", () => {
   });
 });
 
+
+import { canResendReminder, reminderEntry } from "./upload-link";
+describe("manual reminder resend", () => {
+  const now = new Date("2026-11-10T00:00:00Z");
+  const l = { id: "a", expires_at: "2026-12-01T00:00:00Z", revoked_at: null as string | null, file_count: 0, max_files: 50 };
+  it("allowed while link is open", () => expect(canResendReminder(l, now)).toBe(true));
+  it("blocked once expired", () => expect(canResendReminder({ ...l, expires_at: "2026-11-01T00:00:00Z" }, now)).toBe(false));
+  it("blocked once turned off", () => expect(canResendReminder({ ...l, revoked_at: "2026-11-05T00:00:00Z" }, now)).toBe(false));
+  it("marks resends as manual in history", () => {
+    expect(reminderEntry({ at: "x", detail: "resent:d@x.com" })).toEqual({ at: "x", to: "d@x.com", manual: true });
+    expect(reminderEntry({ at: "x", detail: "d@x.com" })).toEqual({ at: "x", to: "d@x.com", manual: false });
+  });
+});

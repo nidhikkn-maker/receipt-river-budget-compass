@@ -20,7 +20,7 @@ export async function emailLink(to: string, name: string, ownerName: string, url
   }
 }
 
-async function send(template: string, to: string, data: Record<string, unknown>, key: string): Promise<boolean> {
+export async function send(template: string, to: string, data: Record<string, unknown>, key: string): Promise<boolean> {
   const { sendTemplateEmail } = await import("@/lib/email-templates/send-email");
   try { return (await sendTemplateEmail(template, to, { templateData: data, idempotencyKey: key })).sent; } catch { return false; }
 }
