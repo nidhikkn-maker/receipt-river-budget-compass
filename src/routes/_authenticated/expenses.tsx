@@ -104,6 +104,12 @@ function Expenses() {
         <Stat label={`${list.length} total`} value={money(t.total)} />
       </div>
       {(() => { const groups = accounts.map(a => ({ a, n: expenses.filter(e => e.accountId === a.id && /^uncategori[sz]ed$/i.test(e.category)).length })).filter(g => g.n > 0); return groups.length ? <div className="mb-4 flex flex-wrap items-center gap-2" aria-label="Uncategorised entries by account"><span className="text-sm text-muted-foreground">Sort uncategorised:</span>{groups.map(({ a, n }) => <Button key={a.id} size="sm" variant="outline" className="min-h-10 whitespace-normal" onClick={() => { const cat = expenses.find(e => e.accountId === a.id && /^uncategori[sz]ed$/i.test(e.category))!.category; setF({ ...f, scope: "all", accountId: a.id, category: cat as NonNullable<Filters["category"]> }); setSelecting(true); setPicked(new Set()); }}>{a.name} · {n}</Button>)}</div> : null; })()}
+      {(() => {
+        const groups: { key: string; label: string; n: number; apply: Partial<Filters> }[] = [];
+        for (const c of ["Personal payments", "Cash withdrawal", "Financial charges"]) { const n = expenses.filter(e => e.category === c).length; if (n) groups.push({ key: `c:${c}`, label: c, n, apply: { category: c as NonNullable<Filters["category"]>, accountId: "all" } }); }
+        for (const a of accounts.filter(a => /amex|american express|movac/i.test(`${a.name} ${a.issuer ?? ""}`))) { const n = expenses.filter(e => e.accountId === a.id).length; if (n) groups.push({ key: `a:${a.id}`, label: a.name, n, apply: { accountId: a.id, category: "all" } }); }
+        return groups.length ? <div className="mb-4 flex flex-wrap items-center gap-2" aria-label="Recategorise a group"><span className="text-sm text-muted-foreground">Review & recategorise:</span>{groups.map(g => <Button key={g.key} size="sm" variant="outline" className="min-h-10 whitespace-normal" onClick={() => { setF({ ...f, scope: "all", query: "", ...g.apply }); setSelecting(true); setPicked(new Set()); }}>{g.label} · {g.n}</Button>)}</div> : null;
+      })()}
       <div className="mb-4 flex flex-wrap items-center gap-2">
         <Button variant="outline" size="sm" onClick={() => { setShowHistory(!showHistory); if (!showHistory) void loadHistory(); }}><History className="mr-1 h-4 w-4" />Category history</Button>
         {lastBatch && <Button variant="outline" size="sm" disabled={applying} onClick={() => void undo(lastBatch)}><Undo2 className="mr-1 h-4 w-4" />Undo last change</Button>}
