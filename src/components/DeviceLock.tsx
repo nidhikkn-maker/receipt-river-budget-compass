@@ -15,6 +15,36 @@ import { verifyDevicePassword } from "@/lib/device-reauth";
 import { consumeDeviceUnlock } from "@/lib/device-unlock";
 import { passkeyOptions, verifyPasskey } from "@/lib/passkeys.functions";
 import { useStore } from "@/lib/store";
+import { PinPad } from "./PinPad";
+import { clearMpin, hasMpin, setMpin, verifyMpin } from "@/lib/mpin";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "./ui/dialog";
+
+export function MpinSettings() {
+  const { userId } = useStore();
+  const [on, setOn] = useState(false);
+  const [open, setOpen] = useState(false);
+  const [first, setFirst] = useState("");
+  const [error, setError] = useState("");
+  useEffect(() => setOn(hasMpin(userId)), [userId]);
+  const close = () => { setOpen(false); setFirst(""); setError(""); };
+  return <div className="mb-6 flex flex-wrap items-center gap-3">
+    <Button variant="outline" onClick={() => setOpen(true)}>{on ? "Change 4-digit MPIN" : "Set up 4-digit MPIN"}</Button>
+    {on && <Button variant="ghost" onClick={() => { clearMpin(userId); setOn(false); toast.success("MPIN removed from this device"); }}>Remove MPIN</Button>}
+    <p className="w-full text-xs text-muted-foreground">The MPIN works only on this device and only after you have signed in. Five wrong tries erase it.</p>
+    <Dialog open={open} onOpenChange={(v) => { if (!v) close(); }}>
+      <DialogContent>
+        <DialogHeader><DialogTitle>{first ? "Enter it again" : "Choose a 4-digit MPIN"}</DialogTitle><DialogDescription>Avoid repeated digits or simple sequences like 1234.</DialogDescription></DialogHeader>
+        <PinPad key={first ? "confirm" : "choose"} label={first ? "Confirm your MPIN" : "New MPIN"} error={error} onComplete={async (pin) => {
+          setError("");
+          if (!first) { setFirst(pin); return; }
+          if (pin !== first) { setFirst(""); setError("The two PINs didn't match. Start again."); return; }
+          try { await setMpin(userId, pin); localStorage.setItem(`ll-lock-${userId}`, "1"); setOn(true); toast.success("MPIN set for this device"); close(); }
+          catch (e) { setFirst(""); setError((e as Error).message); }
+        }} />
+      </DialogContent>
+    </Dialog>
+  </div>;
+}
 export function useDevicePasskey(){const options=useServerFn(passkeyOptions);const verify=useServerFn(verifyPasskey);return async(kind:"register"|"unlock")=>{const res=await options({data:{kind}});const response=kind==="register"?await startRegistration({optionsJSON:JSON.parse(res.options) as PublicKeyCredentialCreationOptionsJSON}):await startAuthentication({optionsJSON:JSON.parse(res.options) as PublicKeyCredentialRequestOptionsJSON});await verify({data:{kind,response:response as unknown as Record<string,unknown>}});};}
 export function PasskeySettings(){const {userId}=useStore();const passkey=useDevicePasskey();return <div className="mb-6 flex flex-wrap gap-3"><Button variant="outline" onClick={async()=>{try{await passkey("register");localStorage.setItem(`ll-lock-${userId}`,"1");toast.success("Face ID / device passkey enabled");}catch(e){toast.error((e as Error).message);}}}><Fingerprint className="h-4 w-4"/>Enable Face ID / device lock</Button><Button variant="ghost" onClick={async()=>{try{await passkey("unlock");localStorage.removeItem(`ll-lock-${userId}`);toast.success("Device lock disabled");}catch(e){toast.error((e as Error).message);}}}>Disable device lock</Button></div>}
 export function DeviceLock({ children }: { children: ReactNode }) {
@@ -52,6 +82,22 @@ export function DeviceLock({ children }: { children: ReactNode }) {
     } catch { setError("Couldn't sign out. Check your connection and try again."); }
     finally { setBusy(false); }
   };
+  const face = async () => {
+    setBusy(true); setError("");
+    try { await passkey("unlock"); setLocked(false); }
+    catch { setError("Face ID wasn't completed or isn't available. Use your MPIN or password."); }
+    finally { setBusy(false); }
+  };
+  if (hasMpin(userId) && !passwordMode) return <div className="flex min-h-[80vh] flex-col items-center justify-center gap-2 px-4">
+    <LedgerlineSymbol className="mb-2 h-10 w-auto" />
+    <h1 className="mb-2 text-center font-display text-xl font-semibold">Welcome back</h1>
+    <PinPad busy={busy} error={error} onFaceId={() => void face()} onComplete={async (pin) => {
+      setBusy(true); setError("");
+      try { const r = await verifyMpin(userId, pin); if (r.ok) setLocked(false); else if (r.reset) { setError("Too many wrong tries. Use your account password."); setPasswordMode(true); } else setError(`Wrong MPIN. ${r.left} ${r.left === 1 ? "try" : "tries"} left.`); }
+      finally { setBusy(false); }
+    }} />
+    <Button variant="link" disabled={busy} onClick={() => setPasswordMode(true)}>Use account password</Button>
+  </div>;
   return <div className="flex min-h-[70vh] flex-col items-center justify-center gap-4 px-4">
     <LedgerlineSymbol className="h-10 w-auto" />
     <Fingerprint className="h-10 w-10 text-primary" />

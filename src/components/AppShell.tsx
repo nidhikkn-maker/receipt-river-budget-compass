@@ -168,7 +168,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         </div>
       </header>
 
-      <main className={focused ? "mx-auto max-w-3xl px-4 pb-6 pt-2 sm:px-8" : wideClaim ? 'mx-auto max-w-[1800px] px-4 pb-28 pt-5 sm:px-8 lg:pb-12' : "mx-auto max-w-6xl px-4 pb-28 pt-5 sm:px-8 lg:pb-12"}>
+      <main className={focused ? "mx-auto max-w-3xl px-4 pb-6 pt-2 sm:px-8" : wideClaim ? 'mx-auto max-w-[1800px] px-4 pb-[calc(8.5rem+env(safe-area-inset-bottom))] pt-5 sm:px-8 lg:pb-12' : "mx-auto max-w-6xl px-4 pb-[calc(8.5rem+env(safe-area-inset-bottom))] pt-5 sm:px-8 lg:pb-12"}>
         {!focused && <BackButton />}
         {!focused && !loading && <DraftsReminder />}
         {loading ? <p className="text-muted-foreground">Loading…</p> : <DeviceLock>{children}</DeviceLock>}

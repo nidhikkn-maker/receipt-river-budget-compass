@@ -105,13 +105,13 @@ describe("advance dashboard", () => {
     { id: "e2", txnType: "expense", amount: 7000, date: "2026-10-02", tags: ["Trip: Delhi"], scope: "official" },
   ] as never;
   it("lists only trips with advance activity, biggest outstanding first", () => {
-    const d = advanceDashboard(trips, txns);
+    const d = advanceDashboard(trips, txns, "2026-10-10");
     expect(d.rows.map((r) => r.tripId)).toEqual(["t1", "t2"]);
     expect(d.rows[0]).toMatchObject({ advances: 10000, expenses: 6000, outstanding: 4000 });
     expect(d.rows[1]!.outstanding).toBe(-2000);
   });
   it("totals keep the sign per trip", () => {
-    const d = advanceDashboard(trips, txns);
+    const d = advanceDashboard(trips, txns, "2026-10-10");
     expect(d.toReturn).toBe(4000);
     expect(d.owedToYou).toBe(2000);
   });

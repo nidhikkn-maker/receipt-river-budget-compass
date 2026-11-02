@@ -16,6 +16,8 @@ import { oauthReturnPath } from "@/lib/oauth-return-path";
 import { useDevicePasskey } from "@/components/DeviceLock";
 import { verifyDevicePassword } from "@/lib/device-reauth";
 import { rememberDeviceUnlock } from "@/lib/device-unlock";
+import { PinPad } from "@/components/PinPad";
+import { hasMpin, verifyMpin } from "@/lib/mpin";
 
 export const Route = createFileRoute("/auth")({
   validateSearch: (s: Record<string, unknown>): { next?: string } => typeof s["next"] === "string" ? { next: s["next"] } : {},
@@ -49,6 +51,7 @@ function Auth() {
   const [passwordMode, setPasswordMode] = useState(false);
   const [notice, setNotice] = useState("");
   const [faceError, setFaceError] = useState("");
+  const [mpinOn, setMpinOn] = useState(false);
   useEffect(() => {
     let active = true;
     void supabase.auth.getUser().then(({ data }) => {
@@ -58,7 +61,7 @@ function Auth() {
       const e = user?.is_anonymous ? "" : user?.email ?? "";
       setSignedEmail(e); setOwnerId(e ? user?.id ?? "" : "");
       const enabled = Boolean(e && user && localStorage.getItem(`ll-lock-${user.id}`) === "1");
-      setFaceEnabled(enabled);
+      setFaceEnabled(enabled); setMpinOn(Boolean(e && user && hasMpin(user.id)));
       if (e && !enabled && next && next !== "/") window.location.assign(next);
     }).catch(() => { if (active) setFaceError("Couldn't check your account. Sign in below to continue."); })
       .finally(() => { if (active) setChecking(false); });
@@ -114,20 +117,38 @@ function Auth() {
     const r = await lovable.auth.signInWithOAuth(provider, { redirect_uri: back() });
     if (r.error) toast.error(r.error.message); else if (!r.redirected) await go();
   };
-  return <div className="relative min-h-dvh overflow-hidden">
+  const pinUnlock = async (pin: string) => {
+    setBusy(true); setFaceError("");
+    try {
+      const { data, error } = await supabase.auth.getUser();
+      if (error || data.user?.id !== ownerId) throw Error("session");
+      const r = await verifyMpin(ownerId, pin);
+      if (r.ok) { rememberDeviceUnlock(ownerId); await go(); return; }
+      if (r.reset) { setMpinOn(false); setPasswordMode(true); setFaceError("Too many wrong tries, so the MPIN was removed. Use your account password."); }
+      else setFaceError(`Wrong MPIN. ${r.left} ${r.left === 1 ? "try" : "tries"} left.`);
+    } catch { setFaceError("Couldn't check your account. Use your account password."); setPasswordMode(true); }
+    finally { setBusy(false); }
+  };
+  return <div className="relative min-h-dvh overflow-hidden bg-gradient-to-b from-secondary/60 via-background to-background">
   <div className="pointer-events-none fixed z-0 flex flex-col items-center gap-1 text-muted-foreground opacity-70" style={{ right: "max(1rem, env(safe-area-inset-right))", bottom: "max(1rem, env(safe-area-inset-bottom))" }}>
     <img src={kkLogo.url} alt="KK monogram" className="size-12 object-contain sm:size-16" />
     <span className="text-[10px] tracking-wide sm:text-xs">A creation by KK</span>
   </div>
-  <main className="relative z-10 mx-auto max-w-md px-6 pb-28 pt-12">
-    <Link to="/dashboard" aria-label="Ledgerline home" className="inline-block"><LedgerlineLogo className="h-9 w-auto sm:h-11" /></Link>
-    <h1 className="mb-5 mt-8 font-display text-3xl font-bold">{signedEmail ? "Welcome back" : signup ? "Create your account" : "Sign in"}</h1>
+  <main className="relative z-10 mx-auto flex min-h-dvh max-w-md flex-col justify-center px-5 pb-32 pt-10 sm:pb-24">
+    <Link to="/dashboard" aria-label="Ledgerline home" className="mx-auto mb-8 inline-block"><LedgerlineLogo className="h-9 w-auto sm:h-11" /></Link>
+    <div className="rounded-3xl border bg-card/95 p-6 shadow-float backdrop-blur sm:p-8">
+    <h1 className="mb-1 text-center font-display text-2xl font-semibold">{signedEmail ? "Welcome back" : signup ? "Create your account" : "Sign in"}</h1>
+    <p className="mb-6 text-center text-sm text-muted-foreground">{signedEmail ? "Unlock to open your accounts" : signup ? "Start tracking with Ledgerline" : "Your finances, in one place"}</p>
     {checking ? <p role="status" className="text-sm text-muted-foreground">Checking your account…</p> : signedEmail ? <>
-      <p className="mb-5 break-words text-sm">{signedEmail}</p>
-      <div className="grid gap-3">
+      <div className="mb-5 flex items-center justify-center gap-3"><span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-primary text-sm font-semibold text-primary-foreground">{signedEmail[0]?.toUpperCase()}</span><span className="min-w-0 truncate text-sm">{signedEmail}</span></div>
+      {mpinOn && !passwordMode ? <div className="grid gap-2">
+        <PinPad busy={busy} error={faceError} {...(faceEnabled ? { onFaceId: () => void unlock() } : {})} onComplete={pinUnlock} />
+        <Button variant="link" disabled={busy} onClick={() => setPasswordMode(true)}>Use account password</Button>
+        <Button variant="link" disabled={busy} onClick={() => void signOut()}>Sign out</Button>
+      </div> : <div className="grid gap-3">
         <Button variant="gold" disabled={busy} className="min-h-12 whitespace-normal" onClick={() => void unlock()}><ScanFace className="h-5 w-5 shrink-0" />{busy ? "Verifying…" : "Unlock with Face ID"}</Button>
         {faceError && <p role="alert" className="text-sm text-destructive">{faceError}</p>}
-        {!faceEnabled && <p className="text-sm text-muted-foreground">Enable Face ID in Settings after opening your account.</p>}
+        {!faceEnabled && !mpinOn && <p className="text-sm text-muted-foreground">Set up a 4-digit MPIN or Face ID in Settings → Security for quick sign-in.</p>}
         {passwordMode ? <form className="grid gap-3" onSubmit={async e => {
           e.preventDefault(); setBusy(true); setFaceError("");
           try { await verifyDevicePassword(ownerId, password); rememberDeviceUnlock(ownerId); await go(); }
@@ -135,22 +156,23 @@ function Auth() {
           finally { setPassword(""); setBusy(false); }
         }}><Label htmlFor="unlock-password">Account password</Label><Input id="unlock-password" type="password" autoComplete="current-password" required disabled={busy} value={password} onChange={e => setPassword(e.target.value)} /><Button disabled={busy || !password}>Verify password and open</Button></form> : <Button variant="outline" disabled={busy} onClick={() => faceEnabled ? setPasswordMode(true) : void go()}>{faceEnabled ? "Use account password" : "Open Ledgerline"}</Button>}
         <Button variant="link" disabled={busy} onClick={() => void signOut()}>Sign out and use another sign-in method</Button>
-      </div>
+      </div>}
     </> : <>
-      {!signup && <div className="mb-5 grid gap-3"><Button variant="gold" disabled={busy} className="min-h-12 whitespace-normal" onClick={() => void unlock()}><ScanFace className="h-5 w-5 shrink-0" />Face ID</Button><p className="text-sm text-muted-foreground">Face ID is available when this device remembers your signed-in account.</p></div>}
+      {!signup && <div className="mb-5 grid gap-3"><Button variant="gold" disabled={busy} className="min-h-12 whitespace-normal" onClick={() => void unlock()}><ScanFace className="h-5 w-5 shrink-0" />Face ID</Button><div className="flex items-center gap-3 text-xs text-muted-foreground"><span className="h-px flex-1 bg-border" />or use email<span className="h-px flex-1 bg-border" /></div></div>}
       {faceError && <p role="alert" className="mb-4 text-sm text-destructive">{faceError}</p>}
       <form onSubmit={submit} className="grid gap-4">
         {signup && <div className="grid gap-1"><Label htmlFor="display-name">Display name</Label><Input id="display-name" value={name} onChange={e => setName(e.target.value)} required /></div>}
         <div className="grid gap-1"><Label htmlFor="email">Email</Label><Input id="email" type="email" autoComplete="email" required value={email} onChange={e => setEmail(e.target.value)} /></div>
         <div className="grid gap-1"><Label htmlFor="password">Password</Label><Input id="password" type="password" autoComplete={signup ? "new-password" : "current-password"} minLength={8} required value={password} onChange={e => setPassword(e.target.value)} /></div>
-        <Button disabled={busy}>{busy ? "Please wait…" : signup ? "Create account" : "Sign in"}</Button>
+        <Button disabled={busy} className="min-h-11">{busy ? "Please wait…" : signup ? "Create account" : "Sign in"}</Button>
         {notice && <p role="status" className="text-sm text-success">{notice}</p>}
       </form>
       <div className="mt-4 grid gap-2"><Button variant="outline" disabled={busy} onClick={() => social("google")}>Continue with Google</Button><Button className="lovable-auth-button" disabled={busy} onClick={() => social("lovable")}>Continue with Lovable</Button></div>
+      <div className="my-1" />
       <div className="mt-4 flex flex-wrap justify-between gap-2"><Button variant="link" onClick={() => { setSignup(!signup); setNotice(""); setFaceError(""); }}>{signup ? "Already have an account?" : "Create an account"}</Button><Button variant="link" onClick={async () => { if (!email) { toast.error("Enter your email first"); return; } const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: window.location.origin + "/reset-password" }); if (error) toast.error(error.message); else setNotice("Check your email for the password reset link."); }}>Forgot password?</Button></div>
       {anonymous && <p className="mt-4 text-xs text-muted-foreground">Create an email account to keep this browser’s records. Social sign-in may open a separate account; back up first.</p>}
-      <Button asChild variant="link" className="mt-4"><Link to="/dashboard">Back to Ledgerline</Link></Button>
     </>}
+    </div>
   </main>
   </div>;
 }
