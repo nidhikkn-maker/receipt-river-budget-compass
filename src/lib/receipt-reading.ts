@@ -4,6 +4,18 @@ export const ReadingConfidence = z.enum(["high", "medium", "low", "unknown"]);
 export type ReadingConfidence = z.infer<typeof ReadingConfidence>;
 export const ReceiptConfidence = z.object({ merchant: ReadingConfidence, date: ReadingConfidence, total: ReadingConfidence });
 export type ReceiptConfidence = z.infer<typeof ReceiptConfidence>;
+export const ReceiptDetailsSchema = z.object({
+  tax: z.number().nonnegative().nullable().optional(),
+  tip: z.number().nonnegative().nullable().optional(),
+  confidence: ReceiptConfidence.optional(),
+  items: z.array(z.object({ name: z.string().max(200), quantity: z.number().nonnegative(), amount: z.number().nonnegative() })).max(100).optional(),
+  text: z.string().max(20000).optional(), fingerprint: z.string().max(128).optional(),
+  audit: z.object({
+    read: z.object({ merchant: z.string().max(200), date: z.string().max(20), amount: z.number().nonnegative(), currency: z.string().max(8) }),
+    corrected: z.object({ merchant: z.string().max(200).optional(), date: z.string().max(20).optional(), amount: z.number().nonnegative().optional(), currency: z.string().max(8).optional() }),
+    confirmedAt: z.string().max(40),
+  }).optional(),
+});
 
 export const ExtractedReceiptSchema = z.object({
   title: z.string().nullable(), merchant: z.string().nullable(),

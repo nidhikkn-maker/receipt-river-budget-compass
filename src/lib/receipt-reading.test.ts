@@ -1,9 +1,16 @@
 import { describe, expect, it } from "vitest";
-import { ExtractedReceiptSchema, receiptConfidence, receiptBreakdownError } from "./receipt-reading";
+import { ExtractedReceiptSchema, ReceiptDetailsSchema, receiptConfidence, receiptBreakdownError } from "./receipt-reading";
 import { validateExpense, type ExpenseInput } from "./expenses";
 
 const read = { title: "Cafe", merchant: "Cafe", date: "2026-11-02", amount: 432.10, tax: 32.10, tip: 40, confidence: { merchant: "high", date: "low", total: "medium" }, items: [], text: "Cafe", currency: "INR", payment_method: null, description: null, category: "Food and beverages", scope: "personal" };
 describe("receipt reading", () => {
+  it("preserves tax, tip and field certainty through the real server metadata validator", () => {
+    const details = { tax: 32.10, tip: 40, confidence: { merchant: "high", date: "low", total: "medium" } };
+    expect(ReceiptDetailsSchema.parse(details)).toEqual(details);
+  });
+  it("accepts old receipts that have no tip or certainty metadata", () => {
+    expect(ReceiptDetailsSchema.parse({ tax: null, items: [] })).toEqual({ tax: null, items: [] });
+  });
   it("extracts explicit tax and tip without changing the total", () => {
     const parsed = ExtractedReceiptSchema.parse(read);
     expect(parsed.tax).toBe(32.10);

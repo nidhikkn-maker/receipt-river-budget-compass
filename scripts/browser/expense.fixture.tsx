@@ -7,7 +7,7 @@ import { Toaster } from "../../src/components/ui/sonner";
 import "../../src/styles.css";
 
 const rootRoute = createRootRoute({ component: () => <StoreFixture><Outlet /><Toaster duration={60000} /></StoreFixture> });
-const authenticated = createRoute({ getParentRoute: () => rootRoute, id: "_authenticated", component: Outlet });
+const authenticated = createRoute({ getParentRoute: () => rootRoute, id: "_authenticated", component: () => <main className="px-4 sm:px-8"><Outlet /></main> });
 const entry = NewRoute.update({ id: "/new", path: "/new", getParentRoute: () => authenticated });
 const expenses = ExpensesRoute.update({ id: "/expenses", path: "/expenses", getParentRoute: () => authenticated });
 const dashboard = createRoute({ getParentRoute: () => authenticated, path: "/dashboard", component: () => <h1>Controlled save complete</h1> });
