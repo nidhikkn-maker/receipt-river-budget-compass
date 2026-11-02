@@ -88,9 +88,14 @@ function UploadRequests() {
                     {r.reminders.map((m) => <li key={m.at}>{when(m.at)} · {m.manual ? "Resent by you" : "Automatic"}{m.to ? ` · ${m.to}` : ""}</li>)}
                   </ul>
                 )}
-                {r.canResend && (
+                {r.canResend && (r.resendAvailableAt ? (
+                  <div className="mt-2 flex flex-wrap items-center gap-2">
+                    <Button size="sm" variant="outline" disabled>Resend reminder</Button>
+                    <span className="text-xs text-muted-foreground">Next resend available {when(r.resendAvailableAt)}</span>
+                  </div>
+                ) : (
                   <Button size="sm" variant="outline" className="mt-2" onClick={() => doResend(r.id)}>Resend reminder</Button>
-                )}
+                ))}
                 <p className="mt-2 text-xs text-muted-foreground">
                   Created {day(r.createdOn)} · {r.state === "active" ? `open until ${day(r.expiresAt)}` : r.state === "expired" ? `lapsed ${day(r.expiresAt)}` : "no longer usable"}
                 </p>

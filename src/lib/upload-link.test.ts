@@ -138,3 +138,11 @@ describe("manual reminder resend", () => {
     expect(reminderEntry({ at: "x", detail: "d@x.com" })).toEqual({ at: "x", to: "d@x.com", manual: false });
   });
 });
+
+import { nextResendAt } from "./upload-link";
+describe("reminder resend cooldown", () => {
+  const now = new Date("2026-11-10T12:00:00Z");
+  it("allowed when no reminder yet", () => expect(nextResendAt(null, now)).toBeNull());
+  it("blocked within 24 hours, shows when", () => expect(nextResendAt("2026-11-10T02:00:00Z", now)).toBe("2026-11-11T02:00:00.000Z"));
+  it("allowed after 24 hours", () => expect(nextResendAt("2026-11-09T11:00:00Z", now)).toBeNull());
+});
