@@ -29,7 +29,7 @@ describe("Private payment notifications",()=>{
     expect(paymentReminderItems({...input,transactions:[purchase,{id:"pay",txnType:"transfer",amount:5000,accountId:"bank",toAccountId:"card",date:"2026-10-26"}]})).toEqual([]);
   });
   it("notifications contain only a generic count, no names or balances",()=>{
-    expect(privateReminderPayload(2)).toEqual({title:"Ledgerline",body:"2 payment or renewal reminders to review.",url:"/plan",tag:"ledgerline-reminders"});
+    expect(privateReminderPayload(2)).toEqual({title:"Ledgerline",body:"2 payment, renewal or trip reminders to review.",url:"/plan",tag:"ledgerline-reminders"});
   });
 });
 describe("Outbound push safety",()=>{
