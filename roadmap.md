@@ -461,6 +461,6 @@
 - [x] Verify live site displays correctly on desktop and mobile (updated layouts + navigation) — no overflow or console errors on 17 pages at 1280px and 402px
 - [x] Fix live defects found: Reports category list unfolded (545 rows) → 50 at a time; Back after a refresh/shared link went home → now uses the browser's previous page
 - [x] Publish the two V5.18 fixes (fresh scan at 01:02 UTC: guest note only, no critical findings)
-- [ ] Deep-scan the published V5.18 build — waiting on user go-ahead
+- [ ] Deep-scan of the published V5.18 build — running since 01:03 UTC, report on completion
 - [ ] Match five missing statements — blocked: statements not yet uploaded
 - [ ] Approve E1–E7 audit corrections — waiting on user
