@@ -69,6 +69,16 @@ export function DeviceLock({ children }: { children: ReactNode }) {
     document.addEventListener("visibilitychange", change);
     return () => { if (timer) clearTimeout(timer); document.removeEventListener("visibilitychange", change); };
   }, [userId]);
+  // Ask for Face ID straight away when the app opens locked; MPIN/password stay available if it's cancelled or fails.
+  const autoTried = useRef(false);
+  useEffect(() => {
+    if (!locked) { autoTried.current = false; return; }
+    if (autoTried.current) return;
+    autoTried.current = true;
+    setBusy(true);
+    passkey("unlock").then(() => setLocked(false), () => setError(hasMpin(userId) ? "Use Face ID, your MPIN or your account password." : "Tap to try Face ID again, or use your account password.")).finally(() => setBusy(false));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [locked, userId]);
   if (!ready) return null;
   if (!locked) return children;
   const signInAgain = async () => {
