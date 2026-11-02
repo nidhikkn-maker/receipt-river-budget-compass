@@ -20,7 +20,7 @@ export const Route = createFileRoute("/u/$token")({
 });
 
 type Info = { active: boolean; ownerName?: string; remaining?: number; expiresAt?: string };
-type Item = { name: string; status: "waiting" | "sending" | "done" | "failed"; error?: string };
+type Item = { name: string; status: "waiting" | "sending" | "done" | "failed"; error?: string | undefined };
 
 function UploadPage() {
   const { token } = Route.useParams();
