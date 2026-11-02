@@ -571,3 +571,7 @@
 - [x] Airy receipt redesign of New expense
 - [x] Shop aliases for per-shop rules
 - [x] Fix false 'Saved the wrong way' for transfers into the statement account; publish
+- [x] Discard option on receipt suggestions review
+- [ ] Security scan summary
+- [ ] Test duplicate-transfer warning
+- [x] Publish all

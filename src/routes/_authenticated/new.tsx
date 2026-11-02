@@ -821,13 +821,14 @@ function NewExpense() {
           <section ref={reviewRef} className={cn("rounded-3xl border-2 border-primary bg-card p-4 shadow-float", receipts[0] && "lg:grid lg:w-[min(64rem,calc(100vw-4rem))] lg:grid-cols-2 lg:gap-5 lg:justify-self-center")} role="group" aria-label="Review scanned details">
             {receipts[0] && <div className="mb-4 lg:mb-0"><div className="lg:sticky lg:top-4"><div className="mb-2 font-display font-bold">Original receipt</div><ReceiptZoomViewer src={receipts[0].dataUrl} type={receipts[0].type} name={receipts[0].name} /></div></div>}
             <div className="min-w-0 space-y-3">
-            <div><div className="font-display font-bold">Check what we read</div><p className="text-xs text-muted-foreground">Fix anything that's off, then confirm.</p></div>
+            <div className="flex items-start justify-between gap-3"><div className="min-w-0"><div className="font-display font-bold">Check what we read</div><p className="text-xs text-muted-foreground">Fix anything that's off, then confirm.</p></div>
+              <Button type="button" size="sm" variant="ghost" className="shrink-0" onClick={() => { setScan(null); setScanRead(null); setScanCategory(""); setReceiptDetails({}); setReviewApproval(""); setReviewDialog(false); setFieldChecks({}); setConfirmed(true); }}>Discard</Button></div>
             <div className="grid gap-1"><Label htmlFor="sm">Merchant</Label><Input id="sm" value={scan.merchant} onChange={(e) => setScan({ ...scan, merchant: e.target.value })} /><ReadingIndicator value={receiptDetails.confidence?.merchant ?? "unknown"} /><FieldCheck f="merchant" /></div>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="grid gap-1"><Label htmlFor="sd">Date</Label><Input id="sd" type="date" value={scan.date} onChange={(e) => setScan({ ...scan, date: e.target.value })} /><ReadingIndicator value={receiptDetails.confidence?.date ?? "unknown"} /><FieldCheck f="date" /></div>
-              <div className="grid gap-1"><Label>Currency</Label>
+            <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] items-start gap-3">
+              <div className="grid min-w-0 gap-1"><Label htmlFor="sd">Date</Label><Input id="sd" type="date" className="h-10 w-full min-w-0 appearance-none" value={scan.date} onChange={(e) => setScan({ ...scan, date: e.target.value })} /><ReadingIndicator value={receiptDetails.confidence?.date ?? "unknown"} /><FieldCheck f="date" /></div>
+              <div className="grid min-w-0 gap-1"><Label>Currency</Label>
                 <Select value={scan.currency} onValueChange={(v) => setScan({ ...scan, currency: v })}>
-                  <SelectTrigger aria-label="Scanned currency"><SelectValue /></SelectTrigger>
+                  <SelectTrigger aria-label="Scanned currency" className="h-10 w-full min-w-0"><SelectValue /></SelectTrigger>
                   <SelectContent>{[...new Set([scan.currency, ...CURRENCIES])].map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
                 </Select>
               </div>
