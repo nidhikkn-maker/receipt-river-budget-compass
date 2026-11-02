@@ -83,6 +83,9 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
+      { name: "apple-mobile-web-app-capable", content: "yes" },
+      { name: "mobile-web-app-capable", content: "yes" },
+      { name: "apple-mobile-web-app-title", content: "Ledgerline" },
       { title: "Ledgerline — Personal finance" },
       { name: "description", content: "Private accounts, family spending, budgets and financial planning." },
       { property: "og:type", content: "website" },
@@ -103,6 +106,12 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { rel: "icon", href: "/favicon.png", type: "image/png" },
       { rel: "manifest", href: "/manifest.webmanifest" },
       { rel: "apple-touch-icon", href: "/apple-touch-icon.png" },
+      // iPhone launch screens: shown the instant the home-screen icon is tapped, before any page work starts.
+      ...([[375,812,3],[390,844,3],[393,852,3],[402,874,3],[414,896,2],[414,896,3],[428,926,3],[430,932,3],[440,956,3],[375,667,2],[320,568,2]] as const).map(([w,h,d]) => ({
+        rel: "apple-touch-startup-image",
+        href: `/splash/iphone-${w}x${h}@${d}x.png`,
+        media: `(device-width: ${w}px) and (device-height: ${h}px) and (-webkit-device-pixel-ratio: ${d}) and (orientation: portrait)`,
+      })),
     ],
     scripts: [
       {
@@ -155,6 +164,15 @@ function AuthListener() {
   return null;
 }
 
+/* Same look as the iPhone launch screen, so tapping the icon flows straight into the app without a blank or text-only frame. */
+function LaunchScreen() {
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-background" aria-label="Opening Ledgerline" role="status">
+      <img src="/app-icon-large.png" alt="" width={96} height={96} className="-mt-10 h-24 w-24 rounded-[22px]" />
+    </div>
+  );
+}
+
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
 
@@ -162,7 +180,7 @@ function RootComponent() {
     <QueryClientProvider client={queryClient}>
       {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
       <AuthListener />
-      <ClientOnly fallback={<p className="p-6 text-muted-foreground">Loading Ledgerline…</p>}><Outlet /></ClientOnly>
+      <ClientOnly fallback={<LaunchScreen />}><Outlet /></ClientOnly>
       <Toaster />
       <ConfirmHost />
     </QueryClientProvider>
