@@ -2,6 +2,10 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useStore } from "@/lib/store";
 import { PageTitle } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { MoreHorizontal } from "lucide-react";
+import { useState } from "react";
 import type { PendingStatus } from "@/lib/pending-sync";
 
 export const Route = createFileRoute("/_authenticated/sync-queue")({
@@ -22,7 +26,9 @@ const TONE: Record<PendingStatus, string> = {
 };
 
 function SyncQueue() {
-  const { pendingItems, retrySync } = useStore();
+  const { pendingItems, retrySync, discardPending } = useStore();
+  const [discard, setDiscard] = useState<string | null>(null);
+  const target = pendingItems.find((p) => p.id === discard);
   const failed = pendingItems.filter((p) => p.status === "failed" || p.status === "waiting").length;
   const fmt = (n: number, c: string) => { try { return new Intl.NumberFormat("en-IN", { style: "currency", currency: c }).format(n); } catch { return `${c} ${n}`; } };
   return (
@@ -41,11 +47,31 @@ function SyncQueue() {
                 <span className={"mt-1.5 inline-block rounded-full px-2 py-0.5 text-[11px] font-medium " + TONE[p.status]}>{LABEL[p.status]}</span>
                 {p.error && <p className="mt-1 text-xs text-destructive">{p.error}</p>}
               </div>
-              {(p.status === "failed" || p.status === "waiting") && <Button variant="outline" size="sm" onClick={() => retrySync(p.id)}>Retry</Button>}
+              {(p.status === "failed" || p.status === "waiting") && (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" aria-label={`Actions for ${p.payee}`} className="h-11 w-11"><MoreHorizontal className="h-5 w-5" /></Button></DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onSelect={() => void retrySync(p.id)}>Retry now</DropdownMenuItem>
+                    <DropdownMenuItem className="text-destructive" onSelect={() => setDiscard(p.id)}>Discard from this device</DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
             </li>
           ))}
         </ul>
       )}
+      <AlertDialog open={!!target} onOpenChange={(o) => !o && setDiscard(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Discard this entry?</AlertDialogTitle>
+            <AlertDialogDescription>{target ? `${target.payee} on ${target.date} hasn't reached your account. Discarding removes it from this device and it won't be saved.` : ""}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Keep</AlertDialogCancel>
+            <AlertDialogAction className="bg-destructive text-destructive-foreground hover:bg-destructive/90" onClick={() => { if (target) void discardPending(target.id); setDiscard(null); }}>Discard</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

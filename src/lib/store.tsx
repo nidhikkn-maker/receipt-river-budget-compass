@@ -56,6 +56,8 @@ interface Ctx {
   pendingItems: PendingItem[];
   /** Try syncing waiting entries again; pass an id to retry just one. */
   retrySync: (id?: string) => Promise<void>;
+  /** Remove a waiting entry from this device without saving it. */
+  discardPending: (id: string) => Promise<void>;
   preferences: FinancePreferences;
   savePreferences: (p: FinancePreferences) => Promise<void>;
   ensureCategory: (name: string) => Promise<void>;
@@ -704,7 +706,7 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
   return (
     <StoreCtx.Provider value={{
       departmentBudgets, departmentBudgetError,
-      pendingCount, pendingItems, retrySync: (id?: string) => syncRef.current(id), setTags, manageTripExpenses, applyReviewMapping, applyReviewMetadata, undoReviewMetadata, reviewMetadataHistory, saveRecurringReview, preferences, savePreferences, ensureCategory, moveCategory, bulkSetCategory, categoryHistory, undoCategoryBatch, correctFinancialEntries, undoFinancialCorrection, financialCorrectionHistory, userId, name, updateName, members, memberName,
+      pendingCount, pendingItems, retrySync: (id?: string) => syncRef.current(id), discardPending: async (id: string) => { await removePending(id); setPendingItems((prev) => prev.filter((p) => p.id !== id)); setPendingCount((await pendingEntries(userId)).length); }, setTags, manageTripExpenses, applyReviewMapping, applyReviewMetadata, undoReviewMetadata, reviewMetadataHistory, saveRecurringReview, preferences, savePreferences, ensureCategory, moveCategory, bulkSetCategory, categoryHistory, undoCategoryBatch, correctFinancialEntries, undoFinancialCorrection, financialCorrectionHistory, userId, name, updateName, members, memberName,
       expenses: expenses.filter((x) => (x.txnType ?? "expense") === "expense"), transactions: expenses.filter((x) => !x.transferCounterpartOf), transferCounterparts: expenses.filter((x) => !!x.transferCounterpartOf), confirmTransfer, cancelTransfer, accounts, addAccount, setArchived, adjustBalance,
       commitments, loans, goals, valuations, documents, saveCommitment, confirmIrregular, removeCommitment, confirmCommitment, saveLoan, removeLoan, recordLoanPayment, convertToEmi,
       saveGoal, removeGoal, updateAccount, addValuation, removeValuation, addDocument, updateDocument, removeDocument, history, setReimbursement, recordReimbursement, deleteAll,
