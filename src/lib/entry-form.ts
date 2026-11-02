@@ -76,7 +76,9 @@ export function repeatDraft(e: RepeatSource, trips: TripWindow[], today: string)
 
 /** Last confirmed account and workspace for plain expenses, used only when nothing else has chosen them. */
 export interface SmartDefaultsPast { date: string; createdAt?: string | null; accountId?: string | null; scope: Scope; txnType?: TxnType; category?: string | null; merchant?: string | null; paymentMethod?: string | null }
-export interface SmartDefaults { accountId: string | null; scope: Scope | null; category: string | null; paymentMethod: string | null; basis: "merchant" | "habit" | null; merchant?: string }
+/** Why a field was suggested: how many of the looked-at expenses chose it, and the most recent of them. */
+export interface SmartDefaultReason { matches: number; lookedAt: number; examples: { date: string; merchant: string | null }[] }
+export interface SmartDefaults { accountId: string | null; scope: Scope | null; category: string | null; paymentMethod: string | null; basis: "merchant" | "habit" | null; merchant?: string; reasons: { category?: SmartDefaultReason; accountId?: SmartDefaultReason; scope?: SmartDefaultReason; paymentMethod?: SmartDefaultReason } }
 
 /**
  * Starting choices for a routine expense. Recent entries count more than old ones (each step back weighs 0.9×,
@@ -97,11 +99,22 @@ export function smartDefaults(history: SmartDefaultsPast[], liveAccountIds: stri
     return best as T | null;
   };
   const merchantName = forMerchant[0]?.merchant?.trim();
+  const why = (pick: (e: SmartDefaultsPast) => string | null | undefined, v: string | null): SmartDefaultReason | undefined => {
+    if (!v) return undefined;
+    const hits = pool.filter((e) => pick(e) === v);
+    return { matches: hits.length, lookedAt: pool.length, examples: hits.slice(0, 3).map((e) => ({ date: e.date, merchant: e.merchant?.trim() || null })) };
+  };
+  const accountId = top((e) => e.accountId, (v) => liveAccountIds.includes(v));
+  const scope = top<Scope>((e) => e.scope, (v) => !opts.scopes || (opts.scopes as readonly string[]).includes(v));
+  const category = top((e) => e.category, (v) => !opts.categories || opts.categories.includes(v));
+  const paymentMethod = top((e) => e.paymentMethod, () => true);
+  const reasons: SmartDefaults["reasons"] = {};
+  { const r = why((e) => e.category, category); if (r) reasons.category = r; }
+  { const r = why((e) => e.accountId, accountId); if (r) reasons.accountId = r; }
+  { const r = why((e) => e.scope, scope); if (r) reasons.scope = r; }
+  { const r = why((e) => e.paymentMethod, paymentMethod); if (r) reasons.paymentMethod = r; }
   return {
-    accountId: top((e) => e.accountId, (v) => liveAccountIds.includes(v)),
-    scope: top<Scope>((e) => e.scope, (v) => !opts.scopes || (opts.scopes as readonly string[]).includes(v)),
-    category: top((e) => e.category, (v) => !opts.categories || opts.categories.includes(v)),
-    paymentMethod: top((e) => e.paymentMethod, () => true),
+    accountId, scope, category, paymentMethod, reasons,
     basis: pool.length ? (forMerchant.length ? "merchant" : "habit") : null,
     ...(forMerchant.length && merchantName ? { merchant: merchantName } : {}),
   };

@@ -10,7 +10,7 @@ import { toast } from "sonner";
 import { ScanLine, Sparkles, X, Camera, Image as ImageIcon, FolderOpen, Inbox, RotateCcw, PencilLine, ChevronDown, Check, Plus } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
-import { dayShortcut, recentFirst, relevantSections, repeatCandidates, repeatDraft, smartDefaults } from "@/lib/entry-form";
+import { dayShortcut, recentFirst, relevantSections, repeatCandidates, repeatDraft, smartDefaults, type SmartDefaultReason } from "@/lib/entry-form";
 import { ArrowRight, Repeat, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,6 +20,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import {
   ACTIVE_SCOPES, BASE_CURRENCY, CATEGORIES, CURRENCIES, PAYMENT_LABEL, PAYMENT_METHODS, convert, money, splitEvenly,
   type Category, type PaymentMethod, type Scope, type ReceiptDetails,
+  SCOPE_LABEL,
 } from "@/lib/expenses";
 import { tagValue } from "@/lib/preferences";
 import { duplicateBills } from "@/lib/bill-duplicates";
@@ -311,7 +312,10 @@ function NewExpense() {
   // then re-check once the merchant is known. A field is only changed while it still holds the value we put
   // there, so anything you (or a scan, link, draft or repeat) chose is never overwritten.
   const defaultsBase = useRef<{ category: string; accountId: string; scope: string; paymentMethod: string } | null>(null);
-  const [defaultsNote, setDefaultsNote] = useState<{ basis: "merchant" | "habit"; merchant?: string } | null>(null);
+  const [defaultsNote, setDefaultsNote] = useState<{ basis: "merchant" | "habit"; merchant?: string; reasons: { label: string; value: string; reason: SmartDefaultReason }[] } | null>(null);
+  // Set once you pick an account yourself; shop-name matching and smart defaults then never change it.
+  const accountByUser = useRef(false);
+  const sdOn = preferences.smartDefaults ?? { category: true, payment: true, workspace: true };
   const liveAccountKey = liveAccounts.map((a) => a.id).join(",");
   useEffect(() => {
     if (edit || search.draft || txnType !== "expense" || !expenses.length) return;
@@ -319,6 +323,11 @@ function NewExpense() {
     const d = smartDefaults(expenses, liveAccounts.map((a) => a.id), { merchant, scopes: ACTIVE_SCOPES, categories: preferences.categories.filter((c) => !c.archived).map((c) => c.name) });
     if (!d.basis) return;
     const filled = new Set<string>();
+    if (!sdOn.category) d.category = null;
+    if (!sdOn.payment) { d.accountId = null; d.paymentMethod = null; }
+    if (!sdOn.workspace) d.scope = null;
+    if (accountByUser.current) d.accountId = null;
+    if (!d.category && !d.accountId && !d.paymentMethod && !d.scope) { setDefaultsNote(null); return; }
     if (d.category && category === base.category && d.category !== category) { setCategory(d.category as Category); filled.add("category"); }
     if (d.accountId && !search.account && accountId === base.accountId && d.accountId !== accountId) { setAccountId(d.accountId); filled.add("payment"); }
     if (d.paymentMethod && !search.payment && instrumentId === "none" && paymentMethod === base.paymentMethod && d.paymentMethod !== paymentMethod && (PAYMENT_METHODS as readonly string[]).includes(d.paymentMethod)) setPaymentMethod(d.paymentMethod as PaymentMethod);
@@ -330,9 +339,14 @@ function NewExpense() {
       paymentMethod: base.paymentMethod === paymentMethod && d.paymentMethod ? d.paymentMethod : "\u0000",
     };
     if (filled.size) setAutoFilled((x) => new Set([...x, ...filled]));
-    setDefaultsNote({ basis: d.basis, ...(d.merchant ? { merchant: d.merchant } : {}) });
+    const reasons: { label: string; value: string; reason: SmartDefaultReason }[] = [];
+    if (d.category && d.reasons.category) reasons.push({ label: "Category", value: d.category, reason: d.reasons.category });
+    if (d.accountId && d.reasons.accountId) reasons.push({ label: "Paid with", value: liveAccounts.find((a) => a.id === d.accountId)?.name ?? "Account", reason: d.reasons.accountId });
+    if (d.paymentMethod && d.reasons.paymentMethod) reasons.push({ label: "Payment method", value: d.paymentMethod, reason: d.reasons.paymentMethod });
+    if (d.scope && d.reasons.scope) reasons.push({ label: "Workspace", value: SCOPE_LABEL[d.scope] ?? d.scope, reason: d.reasons.scope });
+    setDefaultsNote({ basis: d.basis, ...(d.merchant ? { merchant: d.merchant } : {}), reasons });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [edit, search.draft, txnType, expenses.length, liveAccountKey, merchant.trim().toLowerCase()]);
+  }, [edit, search.draft, txnType, expenses.length, liveAccountKey, merchant.trim().toLowerCase(), sdOn.category, sdOn.payment, sdOn.workspace]);
   const [repeatOpen, setRepeatOpen] = useState(false);
   const [repeatedFrom, setRepeatedFrom] = useState<string | null>(null);
   const favs = preferences.favouriteEntries ?? [];
@@ -562,8 +576,8 @@ function NewExpense() {
     if (preferences.categories.some(c=>c.name===hit.category && !c.archived)) { setCategory(hit.category as Category); filled.add("category"); }
     if ((PAYMENT_METHODS as readonly string[]).includes(hit.paymentMethod)) { setPaymentMethod(hit.paymentMethod as PaymentMethod); filled.add("paymentMethod"); }
     if (hit.scope === "business" || hit.scope === "personal") { setScope(hit.scope); filled.add("scope"); }
-    if (hit.accountId && liveAccounts.some((a) => a.id === hit.accountId)) setAccountId(hit.accountId);
-    const usual = lastInstrumentForMerchant(m, expenses, savedMethods);
+    if (!accountByUser.current && hit.accountId && liveAccounts.some((a) => a.id === hit.accountId)) setAccountId(hit.accountId);
+    const usual = accountByUser.current ? null : lastInstrumentForMerchant(m, expenses, savedMethods);
     if (usual) { pickInstrument(usual.id); filled.add("paymentMethod"); }
     if (hit.tags.length && !tags.trim()) setTags(hit.tags.join(", "));
     setAutoFilled(filled);
@@ -835,7 +849,7 @@ function NewExpense() {
 
         <fieldset disabled={!confirmed || reading || saving} className={cn("receipt-paper grid min-w-0 gap-3 px-5", !confirmed && "opacity-50")}>
           {TYPE_HINT[txnType] && <p className="text-xs text-muted-foreground">{TYPE_HINT[txnType]}</p>}
-          {defaultsNote && !editing && txnType === "expense" && <p role="status" className="flex items-center gap-1.5 text-xs text-muted-foreground"><Sparkles aria-hidden className="h-3 w-3 text-primary" />{defaultsNote.basis === "merchant" ? `Filled with what you usually choose for ${defaultsNote.merchant}` : "Filled with your usual choices"} — change anything before saving.</p>}
+          {defaultsNote && !editing && txnType === "expense" && <div role="status"><p className="flex items-center gap-1.5 text-xs text-muted-foreground"><Sparkles aria-hidden className="h-3 w-3 text-primary" />{defaultsNote.basis === "merchant" ? `Filled with what you usually choose for ${defaultsNote.merchant}` : "Filled with your usual choices"} — change anything before saving.</p>{defaultsNote.reasons.length > 0 && <details className="mt-1 text-xs text-muted-foreground"><summary className="cursor-pointer underline-offset-2 hover:underline">Why these choices?</summary><ul className="mt-1 grid gap-1">{defaultsNote.reasons.map((r) => <li key={r.label}><b className="text-foreground">{r.label}: {r.value}</b> — chosen in {r.reason.matches} of your last {r.reason.lookedAt} {defaultsNote.basis === "merchant" ? `${defaultsNote.merchant} ` : ""}expenses{r.reason.examples.length ? `, most recently ${r.reason.examples.map((x) => `${x.merchant ?? "an expense"} on ${x.date}`).join(", ")}` : ""}.</li>)}</ul><Link to="/settings" hash="smart-defaults" className="mt-1 inline-block underline">Change or turn off smart defaults</Link></details>}</div>}
           {!isMove(txnType)&&<PayeePicker payees={preferences.payees??[]} merchant={merchant} onSelect={setMerchant}/>}
           {/* Category */}
           {!isMove(txnType) && (
@@ -862,7 +876,7 @@ function NewExpense() {
           <div className={cn("grid gap-3", isMove(txnType) && "grid-cols-2")}>
             <div className="grid gap-1.5">
               <Label>{isMove(txnType) ? "From account" : txnType === "advance" ? "Received into" : txnType === "advance_settlement" ? "Returned from" : txnType === "income" ? "Into account" : "Paid with"}{af("payment")}</Label>
-              <Select value={accountId} onValueChange={setAccountId}>
+              <Select value={accountId} onValueChange={(v) => { accountByUser.current = true; setAccountId(v); setAutoFilled((x) => { const n = new Set(x); n.delete("payment"); return n; }); }}>
                 <SelectTrigger aria-label="Account" className={fieldCls}><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="none">Choose account</SelectItem>

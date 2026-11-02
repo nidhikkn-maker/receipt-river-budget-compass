@@ -47,7 +47,10 @@ export function sanitizeSavedViews(raw: unknown): SavedView[] {
     .slice(0, 20).map((v) => ({ id: v.id, name: String(v.name).trim().slice(0, 40), filters: Object.fromEntries(Object.entries(v.filters).filter(([, x]) => typeof x === "string" && x !== "")) as Record<string, string> }));
 }
 
+/** Which New expense fields may be filled from past habits. */
+export interface SmartDefaultSettings { category: boolean; payment: boolean; workspace: boolean }
 export interface FinancePreferences {
+  smartDefaults?: SmartDefaultSettings;
   payees: Payee[];
   reimbursementSettings: ReimbursementSettings;
   homeShortcuts: ShortcutId[];
@@ -181,6 +184,7 @@ export function normalizePreferences(raw: Partial<FinancePreferences> | null | u
   if (!(p.language in LANGUAGES)) p.language = "en";
   if (!["day", "week", "month", "custom"].includes(p.homePeriod)) p.homePeriod = "month";
   p.themeName = cleanThemeName(p.themeName);
+  { const sd = (p.smartDefaults ?? {}) as Partial<SmartDefaultSettings>; p.smartDefaults = { category: sd.category !== false, payment: sd.payment !== false, workspace: sd.workspace !== false }; }
   if (p.homeScope !== "all" && !(ACTIVE_SCOPES as readonly string[]).includes(p.homeScope)) p.homeScope = "all";
   const iso = (v: unknown) => (typeof v === "string" && /^\d{4}-\d{2}-\d{2}$/.test(v) ? v : "");
   p.homeCustomStart = iso(p.homeCustomStart);

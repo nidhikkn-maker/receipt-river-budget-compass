@@ -559,3 +559,6 @@
 - [x] Simple in-app way to report receipt zoom/pan trouble from iPhone, with device + browser details captured automatically
 - [x] New expense page redesigned in the chosen "Paper receipt" look
 - [x] Smart defaults for category, account, payment method and workspace on New expense
+- [x] Explain which past expenses led to each smart default
+- [x] Smart defaults on/off settings
+- [ ] Publish after smart-defaults work

@@ -65,3 +65,16 @@ describe("repeat expense", () => {
     expect(smartDefaults([], []).basis).toBeNull();
   });
 });
+
+describe("smart default reasons", () => {
+  it("counts the past expenses behind each suggestion and lists the latest", () => {
+    const h = [
+      { date: "2026-10-30", scope: "personal" as const, category: "Groceries", merchant: "FreshMart", accountId: "a1", paymentMethod: "upi" },
+      { date: "2026-10-20", scope: "personal" as const, category: "Groceries", merchant: "FreshMart", accountId: "a1", paymentMethod: "upi" },
+      { date: "2026-10-10", scope: "business" as const, category: "Travel", merchant: "Uber", accountId: "a2", paymentMethod: "card" },
+    ];
+    const d = smartDefaults(h, ["a1", "a2"]);
+    expect(d.reasons.category).toEqual({ matches: 2, lookedAt: 3, examples: [{ date: "2026-10-30", merchant: "FreshMart" }, { date: "2026-10-20", merchant: "FreshMart" }] });
+    expect(d.reasons.scope?.matches).toBe(2);
+  });
+});

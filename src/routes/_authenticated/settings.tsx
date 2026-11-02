@@ -17,6 +17,7 @@ import { PayeeDirectory } from '@/components/PayeeDirectory';
 import { ImportRules } from '@/components/ImportRules';
 import { SettingsDirectory } from "@/components/SettingsDirectory";
 import { Fold } from "@/components/Fold";
+import { SmartDefaultsSettings } from "@/components/SmartDefaultsSettings";
 import { ReceiptProblemReports } from "@/components/ReceiptProblemReports";
 import { useStore } from "@/lib/store";
 import { BACKUP_TABLES, createBackupZip, prepareRestore, readBackup, type Backup } from "@/lib/backup";
@@ -133,6 +134,7 @@ function Settings() {
       <Fold id="security" title="Security & device unlock" hint="MPIN, Face ID and device lock"><MpinSettings /><PasskeySettings /></Fold>
       <Fold id="appearance" title="Appearance" hint="Theme, light or dark, Home layout"><AppearanceSettings /></Fold>
       <Fold id="finance" title="Finance preferences" hint="Currency, categories, tags, budgets and AI privacy"><FinanceSettings /></Fold>
+      <Fold id="smart-defaults" title="Smart defaults" hint="Usual category, payment and workspace on New expense"><SmartDefaultsSettings /></Fold>
       <Fold id="organisations" title="Organisations" hint="Employers, clients and reimbursement contacts"><OrganisationDirectory /></Fold>
       <Fold id="payees" title="Payees" hint="People and businesses you pay"><PayeeDirectory /></Fold>
       <Fold id="accountant" title="Accountant upload link" hint="Now lives in Statement Desk"><p className="text-sm text-muted-foreground">Your accountant's link, contact and monthly requests are managed in Statement Desk.</p><Button asChild variant="secondary" className="mt-2"><Link to="/statements" search={{ tab: "accountant" }}>Open in Statement Desk</Link></Button></Fold>
