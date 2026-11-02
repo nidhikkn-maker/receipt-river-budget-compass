@@ -54,3 +54,12 @@ export function tripReadiness(t: TravelTrip): Readiness {
   ];
   return { done: checks.filter((c) => c[0]).length, total: checks.length, missing: checks.filter((c) => !c[0]).map((c) => c[1]) };
 }
+
+/** Shareable itinerary rows: plans by day, then bookings. No amounts or payment details. */
+export function itineraryPdfRows(t: TravelTrip): string[][] {
+  const rows: string[][] = [];
+  itineraryDays(t.itinerary ?? []).forEach((d, n) => d.items.forEach((i) => rows.push([`Day ${n + 1} · ${d.date}`, i.time || "Any time", [i.title, i.place, i.travellers?.join(", ")].filter(Boolean).join(" · ")])));
+  for (const b of [...(t.bookings ?? [])].filter((b) => b.status !== "cancelled").sort((a, b) => a.date.localeCompare(b.date)))
+    rows.push(["Booking", b.date, [b.kind, b.provider, b.ref && `#${b.ref}`, b.location, b.confirmation === "confirmed" ? "Confirmed" : "Unconfirmed"].filter(Boolean).join(" · ")]);
+  return rows;
+}
