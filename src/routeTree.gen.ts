@@ -50,6 +50,7 @@ import { Route as AuthenticatedStatementAccountsRouteImport } from './routes/_au
 import { Route as AuthenticatedStatementCrosscheckRouteImport } from './routes/_authenticated/statement-crosscheck'
 import { Route as AuthenticatedStatementsRouteImport } from './routes/_authenticated/statements'
 import { Route as AuthenticatedStrategyRouteImport } from './routes/_authenticated/strategy'
+import { Route as AuthenticatedSyncQueueRouteImport } from './routes/_authenticated/sync-queue'
 import { Route as AuthenticatedTransactionReviewRouteImport } from './routes/_authenticated/transaction-review'
 import { Route as AuthenticatedTransfersRouteImport } from './routes/_authenticated/transfers'
 import { Route as AuthenticatedTravelInboxRouteImport } from './routes/_authenticated/travel-inbox'
@@ -281,6 +282,11 @@ const AuthenticatedStrategyRoute = AuthenticatedStrategyRouteImport.update({
   path: '/strategy',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedSyncQueueRoute = AuthenticatedSyncQueueRouteImport.update({
+  id: '/sync-queue',
+  path: '/sync-queue',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedTransactionReviewRoute =
   AuthenticatedTransactionReviewRouteImport.update({
     id: '/transaction-review',
@@ -388,6 +394,7 @@ export interface FileRoutesByFullPath {
   '/statement-crosscheck': typeof AuthenticatedStatementCrosscheckRoute
   '/statements': typeof AuthenticatedStatementsRoute
   '/strategy': typeof AuthenticatedStrategyRoute
+  '/sync-queue': typeof AuthenticatedSyncQueueRoute
   '/transaction-review': typeof AuthenticatedTransactionReviewRoute
   '/transfers': typeof AuthenticatedTransfersRoute
   '/travel-inbox': typeof AuthenticatedTravelInboxRoute
@@ -442,6 +449,7 @@ export interface FileRoutesByTo {
   '/statement-crosscheck': typeof AuthenticatedStatementCrosscheckRoute
   '/statements': typeof AuthenticatedStatementsRoute
   '/strategy': typeof AuthenticatedStrategyRoute
+  '/sync-queue': typeof AuthenticatedSyncQueueRoute
   '/transaction-review': typeof AuthenticatedTransactionReviewRoute
   '/transfers': typeof AuthenticatedTransfersRoute
   '/travel-inbox': typeof AuthenticatedTravelInboxRoute
@@ -497,6 +505,7 @@ export interface FileRoutesById {
   '/_authenticated/statement-crosscheck': typeof AuthenticatedStatementCrosscheckRoute
   '/_authenticated/statements': typeof AuthenticatedStatementsRoute
   '/_authenticated/strategy': typeof AuthenticatedStrategyRoute
+  '/_authenticated/sync-queue': typeof AuthenticatedSyncQueueRoute
   '/_authenticated/transaction-review': typeof AuthenticatedTransactionReviewRoute
   '/_authenticated/transfers': typeof AuthenticatedTransfersRoute
   '/_authenticated/travel-inbox': typeof AuthenticatedTravelInboxRoute
@@ -553,6 +562,7 @@ export interface FileRouteTypes {
     | '/statement-crosscheck'
     | '/statements'
     | '/strategy'
+    | '/sync-queue'
     | '/transaction-review'
     | '/transfers'
     | '/travel-inbox'
@@ -607,6 +617,7 @@ export interface FileRouteTypes {
     | '/statement-crosscheck'
     | '/statements'
     | '/strategy'
+    | '/sync-queue'
     | '/transaction-review'
     | '/transfers'
     | '/travel-inbox'
@@ -661,6 +672,7 @@ export interface FileRouteTypes {
     | '/_authenticated/statement-crosscheck'
     | '/_authenticated/statements'
     | '/_authenticated/strategy'
+    | '/_authenticated/sync-queue'
     | '/_authenticated/transaction-review'
     | '/_authenticated/transfers'
     | '/_authenticated/travel-inbox'
@@ -976,6 +988,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedStrategyRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/sync-queue': {
+      id: '/_authenticated/sync-queue'
+      path: '/sync-queue'
+      fullPath: '/sync-queue'
+      preLoaderRoute: typeof AuthenticatedSyncQueueRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/transaction-review': {
       id: '/_authenticated/transaction-review'
       path: '/transaction-review'
@@ -1112,6 +1131,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedStatementCrosscheckRoute: typeof AuthenticatedStatementCrosscheckRoute
   AuthenticatedStatementsRoute: typeof AuthenticatedStatementsRoute
   AuthenticatedStrategyRoute: typeof AuthenticatedStrategyRoute
+  AuthenticatedSyncQueueRoute: typeof AuthenticatedSyncQueueRoute
   AuthenticatedTransactionReviewRoute: typeof AuthenticatedTransactionReviewRoute
   AuthenticatedTransfersRoute: typeof AuthenticatedTransfersRoute
   AuthenticatedTravelInboxRoute: typeof AuthenticatedTravelInboxRoute
@@ -1160,6 +1180,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedStatementCrosscheckRoute: AuthenticatedStatementCrosscheckRoute,
   AuthenticatedStatementsRoute: AuthenticatedStatementsRoute,
   AuthenticatedStrategyRoute: AuthenticatedStrategyRoute,
+  AuthenticatedSyncQueueRoute: AuthenticatedSyncQueueRoute,
   AuthenticatedTransactionReviewRoute: AuthenticatedTransactionReviewRoute,
   AuthenticatedTransfersRoute: AuthenticatedTransfersRoute,
   AuthenticatedTravelInboxRoute: AuthenticatedTravelInboxRoute,
