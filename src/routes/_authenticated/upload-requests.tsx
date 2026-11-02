@@ -85,7 +85,7 @@ function UploadRequests() {
             <Button variant="outline" className="mt-3 w-full" onClick={() => setAll(!all)}>{all ? "Show fewer" : `Show all ${rows.length}`}</Button>
           )}
           <p className="mt-4 text-sm">
-            <Link to="/settings" search={{ fold: "accountant" }} className="text-primary">Manage your accountant and link</Link>
+            <Link to="/settings" hash="accountant" className="text-primary">Manage your accountant and link</Link>
           </p>
         </>
       )}
