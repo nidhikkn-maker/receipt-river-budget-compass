@@ -113,6 +113,7 @@ function Overview() {
   const [brief, setBrief] = useState("");
   const [busy, setBusy] = useState(false);
   const [briefOpen, setBriefOpen] = useState(false);
+  const [duesOpen, setDuesOpen] = useState(false);
 
   const setPeriod = (homePeriod: typeof preferences.homePeriod) => void savePreferences({ ...preferences, homePeriod });
   const order = (id: string) => preferences.homeOrder.indexOf(id);
@@ -195,7 +196,7 @@ function Overview() {
         <Link to="/wealth"><Stat label="Available cash" value={live.length ? money(cash) : "—"} {...(live.length ? {} : { hint: "Add accounts" })} /></Link>
         <Stat label="Income this month" value={money(flow.income)} />
         <Link to="/plan"><Stat label="Safe to spend" value={live.length ? money(pos.safe.amount) : "—"} {...(readiness.estimated ? { hint: "Estimated" } : {})} /></Link>
-        <details className="group col-span-1 [&[open]]:col-span-2 [&[open]]:lg:col-span-4 [&>summary::-webkit-details-marker]:hidden">
+        <details className="group col-span-1 [&[open]]:col-span-2 [&[open]]:lg:col-span-4 [&>summary::-webkit-details-marker]:hidden" onToggle={(e) => setDuesOpen(e.currentTarget.open)}>
           <summary className="cursor-pointer list-none" aria-label="Show card-by-card dues"><Stat label="Card dues" value={money(cardDue)} hint={cardRows.length ? `${cardRows.length} card${cardRows.length === 1 ? "" : "s"} · tap for breakdown` : "No card balances"} /></summary>
           <ul className="mt-2 divide-y rounded-2xl border bg-card px-4 text-sm">
             {cardRows.map((r) => (
@@ -212,7 +213,7 @@ function Overview() {
           <div className="mt-3 rounded-2xl border bg-card p-3">
             <h3 className="font-display text-sm font-bold">Balance trend</h3>
             <p className="mb-1 text-[11px] text-muted-foreground">Amount owed at each month end · credit shows below zero · last 6 months</p>
-            <Suspense fallback={<div className="animate-pulse rounded-xl bg-muted" style={{ height: 180 }} />}><CardTrendChart points={cardTrend} names={cardTrendNames} height={180} /></Suspense>
+            {duesOpen && <Suspense fallback={<div className="animate-pulse rounded-xl bg-muted" style={{ height: 180 }} />}><CardTrendChart points={cardTrend} names={cardTrendNames} height={180} /></Suspense>}
           </div>
         </details>
       </section>
