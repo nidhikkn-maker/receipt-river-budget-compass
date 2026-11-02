@@ -98,6 +98,20 @@ class ExpenseReceiptButtons(unittest.IsolatedAsyncioTestCase):
         dialog = await self.open_expense(entries[0]["title"])
         await expect(dialog.get_by_text("₹1,250.50", exact=True)).to_be_visible()
 
+    async def test_pdf_receipt_zooms_in_side_by_side_viewer(self):
+        pdf = OUTPUT / "controlled-receipt.pdf"
+        Image.new("RGB", (240, 320), "white").save(pdf, "PDF")
+        await self.page.get_by_role("button", name="Upload a receipt", exact=True).click()
+        async with self.page.expect_file_chooser() as chooser:
+            await self.page.get_by_role("button", name="Files / PDF", exact=True).click()
+        await (await chooser.value).set_files(pdf)
+        review = self.page.get_by_role("group", name="Review scanned details")
+        viewer = review.get_by_role("img", name="Receipt controlled-receipt.pdf, zoom 100%")
+        await expect(viewer).to_be_visible()
+        await expect(viewer.locator("img")).to_be_visible(timeout=15000)
+        await review.get_by_role("button", name="Zoom in", exact=True).click()
+        await expect(review.get_by_role("img", name="Receipt controlled-receipt.pdf, zoom 150%")).to_be_visible()
+
     async def test_receipt_upload_view_and_link_survives_edit(self):
         await self.page.get_by_label("Extract receipt items", exact=True).check()
         await self.page.get_by_role("button", name="Upload a receipt", exact=True).click()
