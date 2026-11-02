@@ -1,4 +1,8 @@
 # Roadmap (Functional Requirements v1.0)
+## Receipt arithmetic and optional items (2 Nov 2026)
+- [x] Compare subtotal plus tax and tip with total, flag mismatches before confirmation and saving; unavailable subtotal stays unknown.
+- [x] Offer optional receipt item extraction with editable names and line amounts before saving.
+- [x] 36 focused tests and two isolated receipt/expense browser checks pass; preview build OK. Real AI accuracy and Cloud saves unverified; no real records changed, not published.
 ## Receipt scanning completion (2 Nov 2026)
 - [x] Extract and review receipt tax and tip in New expense entry without adding them twice to the total; server validator retains both.
 - [x] Suggest an owner-catalog category from the scanned merchant and require confirmation before saving.

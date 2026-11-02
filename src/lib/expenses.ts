@@ -32,6 +32,7 @@ export interface Member { id: string; name: string; relation: string }
 
 export interface Receipt { name: string; type: string; path: string }
 export interface ReceiptDetails {
+  subtotal?: number | null;
   tax?: number | null;
   tip?: number | null;
   confidence?: import("./receipt-reading").ReceiptConfidence;
