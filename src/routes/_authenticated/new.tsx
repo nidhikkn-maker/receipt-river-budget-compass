@@ -10,7 +10,7 @@ import { toast } from "sonner";
 import { ScanLine, Sparkles, X, Camera, Image as ImageIcon, FolderOpen, Inbox, RotateCcw, PencilLine, ChevronDown, Check, Plus } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
-import { dayShortcut, recentFirst, relevantSections, repeatCandidates, repeatDraft, smartDefaults, type SmartDefaultReason } from "@/lib/entry-form";
+import { dayShortcut, recentFirst, relevantSections, repeatCandidates, repeatDraft, smartDefaults, applyShopRule, shopKey, type SmartDefaultReason } from "@/lib/entry-form";
 import { ArrowRight, Repeat, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -312,7 +312,7 @@ function NewExpense() {
   // then re-check once the merchant is known. A field is only changed while it still holds the value we put
   // there, so anything you (or a scan, link, draft or repeat) chose is never overwritten.
   const defaultsBase = useRef<{ category: string; accountId: string; scope: string; paymentMethod: string } | null>(null);
-  const [defaultsNote, setDefaultsNote] = useState<{ basis: "merchant" | "habit"; merchant?: string; reasons: { label: string; value: string; reason: SmartDefaultReason }[] } | null>(null);
+  const [defaultsNote, setDefaultsNote] = useState<{ basis: "merchant" | "habit"; merchant?: string; reasons: { label: string; value: string; reason: SmartDefaultReason | null }[] } | null>(null);
   // Set once you pick an account yourself; shop-name matching and smart defaults then never change it.
   const accountByUser = useRef(false);
   const sdOn = preferences.smartDefaults ?? { category: true, payment: true, workspace: true };
@@ -323,6 +323,9 @@ function NewExpense() {
     const d = smartDefaults(expenses, liveAccounts.map((a) => a.id), { merchant, scopes: ACTIVE_SCOPES, categories: preferences.categories.filter((c) => !c.archived).map((c) => c.name) });
     if (!d.basis) return;
     const filled = new Set<string>();
+    const shopRule = applyShopRule(d, preferences.shopRules?.[shopKey(merchant)]);
+    Object.assign(d, shopRule.value);
+    const byRule = (f: "category" | "accountId" | "paymentMethod" | "scope") => shopRule.ruled.includes(f);
     if (!sdOn.category) d.category = null;
     if (!sdOn.payment) { d.accountId = null; d.paymentMethod = null; }
     if (!sdOn.workspace) d.scope = null;
@@ -339,14 +342,15 @@ function NewExpense() {
       paymentMethod: base.paymentMethod === paymentMethod && d.paymentMethod ? d.paymentMethod : "\u0000",
     };
     if (filled.size) setAutoFilled((x) => new Set([...x, ...filled]));
-    const reasons: { label: string; value: string; reason: SmartDefaultReason }[] = [];
-    if (d.category && d.reasons.category) reasons.push({ label: "Category", value: d.category, reason: d.reasons.category });
-    if (d.accountId && d.reasons.accountId) reasons.push({ label: "Paid with", value: liveAccounts.find((a) => a.id === d.accountId)?.name ?? "Account", reason: d.reasons.accountId });
-    if (d.paymentMethod && d.reasons.paymentMethod) reasons.push({ label: "Payment method", value: d.paymentMethod, reason: d.reasons.paymentMethod });
-    if (d.scope && d.reasons.scope) reasons.push({ label: "Workspace", value: SCOPE_LABEL[d.scope] ?? d.scope, reason: d.reasons.scope });
+    const reasons: { label: string; value: string; reason: SmartDefaultReason | null }[] = [];
+    const rs = (f: "category" | "accountId" | "paymentMethod" | "scope") => (byRule(f) ? null : d.reasons[f] ?? null);
+    if (d.category && (byRule("category") || d.reasons.category)) reasons.push({ label: "Category", value: d.category, reason: rs("category") });
+    if (d.accountId && (byRule("accountId") || d.reasons.accountId)) reasons.push({ label: "Paid with", value: liveAccounts.find((a) => a.id === d.accountId)?.name ?? "Account", reason: rs("accountId") });
+    if (d.paymentMethod && (byRule("paymentMethod") || d.reasons.paymentMethod)) reasons.push({ label: "Payment method", value: d.paymentMethod, reason: rs("paymentMethod") });
+    if (d.scope && (byRule("scope") || d.reasons.scope)) reasons.push({ label: "Workspace", value: SCOPE_LABEL[d.scope as Scope] ?? d.scope, reason: rs("scope") });
     setDefaultsNote({ basis: d.basis, ...(d.merchant ? { merchant: d.merchant } : {}), reasons });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [edit, search.draft, txnType, expenses.length, liveAccountKey, merchant.trim().toLowerCase(), sdOn.category, sdOn.payment, sdOn.workspace]);
+  }, [edit, search.draft, txnType, expenses.length, liveAccountKey, merchant.trim().toLowerCase(), JSON.stringify(preferences.shopRules?.[shopKey(merchant)] ?? null), sdOn.category, sdOn.payment, sdOn.workspace]);
   const [repeatOpen, setRepeatOpen] = useState(false);
   const [repeatedFrom, setRepeatedFrom] = useState<string | null>(null);
   const favs = preferences.favouriteEntries ?? [];
@@ -570,14 +574,17 @@ function NewExpense() {
 
   const rememberMerchant = (m: string) => {
     if (editing) return;
-    const hit = suggestForMerchant(m, expenses);
-    if (!hit) return;
+    const found = suggestForMerchant(m, expenses);
+    if (!found) return;
+    const rule = preferences.shopRules?.[shopKey(m)];
+    const ruled = applyShopRule({ category: found.category, accountId: found.accountId ?? null, paymentMethod: found.paymentMethod, scope: found.scope }, rule).value;
+    const hit = { ...found, category: ruled.category ?? "", accountId: ruled.accountId ?? null, paymentMethod: ruled.paymentMethod ?? "", scope: (ruled.scope ?? "") as typeof found.scope };
     const filled = new Set(autoFilled);
     if (preferences.categories.some(c=>c.name===hit.category && !c.archived)) { setCategory(hit.category as Category); filled.add("category"); }
     if ((PAYMENT_METHODS as readonly string[]).includes(hit.paymentMethod)) { setPaymentMethod(hit.paymentMethod as PaymentMethod); filled.add("paymentMethod"); }
     if (hit.scope === "business" || hit.scope === "personal") { setScope(hit.scope); filled.add("scope"); }
     if (!accountByUser.current && hit.accountId && liveAccounts.some((a) => a.id === hit.accountId)) setAccountId(hit.accountId);
-    const usual = accountByUser.current ? null : lastInstrumentForMerchant(m, expenses, savedMethods);
+    const usual = accountByUser.current || rule?.accountId || rule?.paymentMethod ? null : lastInstrumentForMerchant(m, expenses, savedMethods);
     if (usual) { pickInstrument(usual.id); filled.add("paymentMethod"); }
     if (hit.tags.length && !tags.trim()) setTags(hit.tags.join(", "));
     setAutoFilled(filled);
@@ -849,7 +856,7 @@ function NewExpense() {
 
         <fieldset disabled={!confirmed || reading || saving} className={cn("receipt-paper grid min-w-0 gap-3 px-5", !confirmed && "opacity-50")}>
           {TYPE_HINT[txnType] && <p className="text-xs text-muted-foreground">{TYPE_HINT[txnType]}</p>}
-          {defaultsNote && !editing && txnType === "expense" && <div role="status"><p className="flex items-center gap-1.5 text-xs text-muted-foreground"><Sparkles aria-hidden className="h-3 w-3 text-primary" />{defaultsNote.basis === "merchant" ? `Filled with what you usually choose for ${defaultsNote.merchant}` : "Filled with your usual choices"} — change anything before saving.</p>{defaultsNote.reasons.length > 0 && <details className="mt-1 text-xs text-muted-foreground"><summary className="cursor-pointer underline-offset-2 hover:underline">Why these choices?</summary><ul className="mt-1 grid gap-1">{defaultsNote.reasons.map((r) => <li key={r.label}><b className="text-foreground">{r.label}: {r.value}</b> — chosen in {r.reason.matches} of your last {r.reason.lookedAt} {defaultsNote.basis === "merchant" ? `${defaultsNote.merchant} ` : ""}expenses{r.reason.examples.length ? `, most recently ${r.reason.examples.map((x) => `${x.merchant ?? "an expense"} on ${x.date}`).join(", ")}` : ""}.</li>)}</ul><Link to="/settings" hash="smart-defaults" className="mt-1 inline-block underline">Change or turn off smart defaults</Link></details>}</div>}
+          {defaultsNote && !editing && txnType === "expense" && <div role="status"><p className="flex items-center gap-1.5 text-xs text-muted-foreground"><Sparkles aria-hidden className="h-3 w-3 text-primary" />{defaultsNote.basis === "merchant" ? `Filled with what you usually choose for ${defaultsNote.merchant}` : "Filled with your usual choices"} — change anything before saving.</p>{defaultsNote.reasons.length > 0 && <details className="mt-1 text-xs text-muted-foreground"><summary className="cursor-pointer underline-offset-2 hover:underline">Why these choices?</summary><ul className="mt-1 grid gap-1">{defaultsNote.reasons.map((r) => <li key={r.label}><b className="text-foreground">{r.label}: {r.value}</b> — {r.reason ? <>chosen in {r.reason.matches} of your last {r.reason.lookedAt} {defaultsNote.basis === "merchant" ? `${defaultsNote.merchant} ` : ""}expenses{r.reason.examples.length ? `, most recently ${r.reason.examples.map((x) => `${x.merchant ?? "an expense"} on ${x.date}`).join(", ")}` : ""}.</> : "set by your rule for this shop."}</li>)}</ul><Link to="/settings" hash="smart-defaults" className="mt-1 inline-block underline">Change smart defaults or this shop's rules</Link></details>}</div>}
           {!isMove(txnType)&&<PayeePicker payees={preferences.payees??[]} merchant={merchant} onSelect={setMerchant}/>}
           {/* Category */}
           {!isMove(txnType) && (

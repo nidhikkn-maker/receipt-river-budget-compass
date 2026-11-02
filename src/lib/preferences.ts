@@ -49,8 +49,12 @@ export function sanitizeSavedViews(raw: unknown): SavedView[] {
 
 /** Which New expense fields may be filled from past habits. */
 export interface SmartDefaultSettings { category: boolean; payment: boolean; workspace: boolean }
+/** Per-shop override of learned suggestions: missing = learn from history, "off" = never suggest, other = always use this. */
+export interface ShopRule { category?: string; accountId?: string; paymentMethod?: string; scope?: string }
 export interface FinancePreferences {
   smartDefaults?: SmartDefaultSettings;
+  /** Keyed by lower-cased, trimmed shop name. */
+  shopRules?: Record<string, ShopRule>;
   payees: Payee[];
   reimbursementSettings: ReimbursementSettings;
   homeShortcuts: ShortcutId[];
@@ -184,6 +188,8 @@ export function normalizePreferences(raw: Partial<FinancePreferences> | null | u
   if (!(p.language in LANGUAGES)) p.language = "en";
   if (!["day", "week", "month", "custom"].includes(p.homePeriod)) p.homePeriod = "month";
   p.themeName = cleanThemeName(p.themeName);
+  { const r = p.shopRules && typeof p.shopRules === "object" ? p.shopRules : {}; const str = (v: unknown) => (typeof v === "string" && v.length > 0 && v.length <= 80 ? v : undefined);
+    p.shopRules = Object.fromEntries(Object.entries(r).filter(([k, v]) => k.length > 0 && k.length <= 120 && v && typeof v === "object").slice(0, 500).map(([k, v]) => { const o: ShopRule = {}; for (const f of ["category", "accountId", "paymentMethod", "scope"] as const) { const x = str((v as ShopRule)[f]); if (x) o[f] = x; } return [k, o]; }).filter(([, o]) => Object.keys(o as object).length)); }
   { const sd = (p.smartDefaults ?? {}) as Partial<SmartDefaultSettings>; p.smartDefaults = { category: sd.category !== false, payment: sd.payment !== false, workspace: sd.workspace !== false }; }
   if (p.homeScope !== "all" && !(ACTIVE_SCOPES as readonly string[]).includes(p.homeScope)) p.homeScope = "all";
   const iso = (v: unknown) => (typeof v === "string" && /^\d{4}-\d{2}-\d{2}$/.test(v) ? v : "");

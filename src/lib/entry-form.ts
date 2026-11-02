@@ -119,3 +119,19 @@ export function smartDefaults(history: SmartDefaultsPast[], liveAccountIds: stri
     ...(forMerchant.length && merchantName ? { merchant: merchantName } : {}),
   };
 }
+
+export const shopKey = (m: string | null | undefined) => (m ?? "").trim().toLowerCase();
+export type ShopRuleField = "category" | "accountId" | "paymentMethod" | "scope";
+/**
+ * Apply your per-shop rule to learned suggestions: "off" removes a suggestion, any other value replaces it.
+ * Returns which fields your rule decided so the form can say so.
+ */
+export function applyShopRule<T extends Partial<Record<ShopRuleField, string | null>>>(d: T, rule: Partial<Record<ShopRuleField, string>> | undefined): { value: T; ruled: ShopRuleField[] } {
+  const value = { ...d }; const ruled: ShopRuleField[] = [];
+  if (!rule) return { value, ruled };
+  for (const f of ["category", "accountId", "paymentMethod", "scope"] as const) {
+    const r = rule[f]; if (!r) continue;
+    (value as Record<string, string | null>)[f] = r === "off" ? null : r; ruled.push(f);
+  }
+  return { value, ruled };
+}

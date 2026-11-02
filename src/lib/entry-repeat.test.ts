@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { repeatCandidates, repeatDraft, smartDefaults } from "./entry-form";
+import { repeatCandidates, repeatDraft, smartDefaults, applyShopRule } from "./entry-form";
 
 const base = { title: "Dinner", merchant: "Toit", category: "Food", scope: "personal" as const, originalAmount: 3500, currency: "INR", accountId: "amex", paymentMethod: "card", tags: ["Purpose: Family"], description: "dinner", txnType: "expense" as const };
 
@@ -76,5 +76,13 @@ describe("smart default reasons", () => {
     const d = smartDefaults(h, ["a1", "a2"]);
     expect(d.reasons.category).toEqual({ matches: 2, lookedAt: 3, examples: [{ date: "2026-10-30", merchant: "FreshMart" }, { date: "2026-10-20", merchant: "FreshMart" }] });
     expect(d.reasons.scope?.matches).toBe(2);
+  });
+});
+
+describe("per-shop rules", () => {
+  it("turns off or replaces learned suggestions only for the fields you set", () => {
+    const r = applyShopRule({ category: "Groceries", accountId: "a1", paymentMethod: "upi", scope: "personal" }, { category: "off", scope: "business" });
+    expect(r.value).toEqual({ category: null, accountId: "a1", paymentMethod: "upi", scope: "business" });
+    expect(r.ruled).toEqual(["category", "scope"]);
   });
 });

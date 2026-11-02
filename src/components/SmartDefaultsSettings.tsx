@@ -2,6 +2,7 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { useStore } from "@/lib/store";
 import { toast } from "sonner";
+import { ShopRulesSettings } from "@/components/ShopRulesSettings";
 import type { SmartDefaultSettings } from "@/lib/preferences";
 
 const ROWS: { key: keyof SmartDefaultSettings; label: string; hint: string }[] = [
@@ -18,14 +19,15 @@ export function SmartDefaultsSettings() {
     try { await savePreferences({ ...p, smartDefaults: { ...sd, [key]: on } }); } catch { toast.error("Couldn't save — try again"); }
   };
   return (
-    <div className="grid gap-3">
+    <div className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-3">
       <p className="text-sm text-muted-foreground">New expense fills these from your last 40 expenses, giving recent ones more weight. Tap “Why these choices?” on the form to see which entries were used. Anything you pick yourself is never changed.</p>
       {ROWS.map((r) => (
         <div key={r.key} className="flex items-start justify-between gap-3">
-          <div><Label htmlFor={`sd-${r.key}`}>{r.label}</Label><p className="text-xs text-muted-foreground">{r.hint}</p></div>
-          <Switch id={`sd-${r.key}`} checked={sd[r.key]} onCheckedChange={(v) => void set(r.key, v)} />
+          <div className="min-w-0"><Label htmlFor={`sd-${r.key}`}>{r.label}</Label><p className="text-xs text-muted-foreground">{r.hint}</p></div>
+          <Switch className="shrink-0" id={`sd-${r.key}`} checked={sd[r.key]} onCheckedChange={(v) => void set(r.key, v)} />
         </div>
       ))}
+      <ShopRulesSettings />
     </div>
   );
 }

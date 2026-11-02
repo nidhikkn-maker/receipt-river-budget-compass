@@ -562,3 +562,4 @@
 - [x] Explain which past expenses led to each smart default
 - [x] Smart defaults on/off settings
 - [ ] Publish after smart-defaults work
+- [x] Per-shop rules to correct or turn off learned category/account/payment/workspace

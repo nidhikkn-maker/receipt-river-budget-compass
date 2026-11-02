@@ -61,4 +61,4 @@
 
 - Expense drafts live in owner-RLS expense_drafts (src/lib/drafts.ts) with receipts under the owner receipts prefix; drafts never enter the ledger, share their id with the eventual transaction so a repeated Save is idempotent, and are marked saved (files removed) after the real save. Every draft edit is first written to an encrypted owner-bound device copy (offline.ts snapshots store) and synced on start-up/online with newer-copy-wins, so offline edits survive closing the app.
 - Device MPIN (src/lib/mpin.ts) is a device-only quick unlock: salted PBKDF2 hash per owner in local storage, erased after five wrong tries; it only opens an existing session, never signs in.
-- Smart defaults per field are owner preferences (finance_preferences.smartDefaults); an account the user picks on New expense is never replaced by shop-name matching or defaults.
+- Smart defaults per field and per-shop rules (shopRules keyed by trimmed lower-case shop name) are owner preferences applied before suggestions reach New expense; a self-picked account is never replaced.
