@@ -72,7 +72,7 @@ function UploadRequests() {
                   <Row label="Link emailed" value={r.emailedAt ? `${day(r.emailedAt)}${r.emailedTo ? ` to ${r.emailedTo}` : ""}` : "Not emailed"} />
                   <Row label="Opened" value={r.openedAt ? `${when(r.openedAt)}${r.opens > 1 ? ` · ${r.opens} times` : ""}` : "Not opened yet"} />
                   <Row label="Files" value={`${r.files} of ${r.maxFiles}${r.names.length ? ` — ${r.names.slice(0, 3).join(", ")}${r.names.length > 3 ? ` +${r.names.length - 3} more` : ""}` : ""}${r.waiting ? ` · ${r.waiting} waiting` : ""}`} />
-                  <Row label="Reminder" value={r.reminderAt ? `${when(r.reminderAt)}` : REMINDER[r.reminder]} />
+                  <Row label="Reminder" value={r.reminderAt ? `Sent ${when(r.reminderAt)}` : REMINDER[r.reminder]} />
                   <Row label="Confirmation to you" value={r.confirmAt ? `${when(r.confirmAt)}${r.confirmTo ? ` · ${r.confirmTo}` : ""}` : r.files ? "Not sent" : "Nothing to confirm yet"} />
                 </dl>
                 <p className="mt-2 text-xs text-muted-foreground">

@@ -69,15 +69,16 @@ class UploadRequestsPage(unittest.IsolatedAsyncioTestCase):
     async def test_used_request_shows_email_opens_files_and_confirmation(self):
         card = self.page.get_by_role("listitem").filter(has_text="AMEX-Nov.pdf")
         await expect(card).to_contain_text("Open")
-        await expect(card).to_contain_text("Link emailed 1 Nov 2026 to durai@example.com")
-        await expect(card).to_contain_text("Files 2 of 50 — AMEX-Nov.pdf, HDFC-Nov.pdf · 1 waiting")
+        await expect(card).to_contain_text("Link emailed")
+        await expect(card).to_contain_text("1 Nov 2026 to durai@example.com")
+        await expect(card).to_contain_text("2 of 50 — AMEX-Nov.pdf, HDFC-Nov.pdf · 1 waiting")
         await expect(card).to_contain_text("No reminder needed — files arrived")
         await expect(card).to_contain_text("nidhi.kkn@gmail.com")
 
     async def test_reminder_owed_and_reminder_sent_are_kept_apart(self):
         cards = self.page.get_by_role("listitem")
         await expect(cards.filter(has_text="November 2026").filter(has_text="Reminder owed")).to_have_count(1)
-        await expect(cards.filter(has_text="October 2026")).to_contain_text("Reminder sent")
+        await expect(cards.filter(has_text="October 2026")).to_contain_text("Sent 6 Oct")
         await expect(cards.filter(has_text="October 2026")).to_contain_text("Expired")
         await expect(cards.filter(has_text="October 2026")).to_contain_text("Nothing to confirm yet")
 
