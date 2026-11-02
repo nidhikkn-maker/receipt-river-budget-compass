@@ -1777,6 +1777,41 @@ export type Database = {
         }
         Relationships: []
       }
+      upload_link_events: {
+        Row: {
+          at: string
+          detail: string | null
+          id: string
+          kind: string
+          link_id: string
+          owner_id: string
+        }
+        Insert: {
+          at?: string
+          detail?: string | null
+          id?: string
+          kind: string
+          link_id: string
+          owner_id: string
+        }
+        Update: {
+          at?: string
+          detail?: string | null
+          id?: string
+          kind?: string
+          link_id?: string
+          owner_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "upload_link_events_link_id_fkey"
+            columns: ["link_id"]
+            isOneToOne: false
+            referencedRelation: "upload_links"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       upload_links: {
         Row: {
           created_at: string

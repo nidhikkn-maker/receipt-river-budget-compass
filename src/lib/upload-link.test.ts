@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { fileProblem, linkState, MAX_FILES, sendDue, signToken, verifyToken } from "./upload-link";
+import { linkHistory, fileProblem, linkState, MAX_FILES, sendDue, signToken, verifyToken } from "./upload-link";
 
 const row = { id: "x", expires_at: "2026-12-02T00:00:00Z", revoked_at: null, file_count: 0, max_files: MAX_FILES };
 const now = new Date("2026-11-02T04:00:00Z");
@@ -19,6 +19,14 @@ describe("accountant upload link", () => {
     expect(sendDue(1, null, now)).toBe(false);
     expect(sendDue(2, "2026-11-02T01:00:00Z", now)).toBe(false);
     expect(sendDue(2, "2026-10-02T01:00:00Z", now)).toBe(true);
+  });
+  it("history adds expiry for lapsed links, newest first, not for turned-off ones", () => {
+    const h = linkHistory(
+      [{ linkId: "a", kind: "uploaded", detail: "x.pdf", at: "2026-10-05T00:00:00Z" }],
+      [{ id: "a", expires_at: "2026-10-31T00:00:00Z", revoked_at: null }, { id: "b", expires_at: "2026-10-20T00:00:00Z", revoked_at: "2026-10-10T00:00:00Z" }],
+      now,
+    );
+    expect(h.map((e) => e.kind)).toEqual(["expired", "uploaded"]);
   });
   it("tokens verify only with the right signature", async () => {
     const id = "123e4567-e89b-12d3-a456-426614174000";

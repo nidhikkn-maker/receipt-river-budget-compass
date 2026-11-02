@@ -7,6 +7,14 @@ export const ALLOWED = /\.(pdf|csv|xls|xlsx|png|jpe?g|webp)$/i;
 export const PUBLIC_ORIGIN = "https://ledgerline.biz";
 
 export type LinkRow = { id: string; expires_at: string; revoked_at: string | null; file_count: number; max_files: number };
+export type LinkEvent = { linkId: string; kind: "created" | "emailed" | "opened" | "uploaded" | "turned_off" | "expired"; detail: string | null; at: string };
+
+/** Newest-first history; expiry is derived from each link's end date (never stored), so it can't be missed. */
+export function linkHistory(events: LinkEvent[], links: Pick<LinkRow, "id" | "expires_at" | "revoked_at">[], now = new Date()): LinkEvent[] {
+  const expired = links.filter((l) => !l.revoked_at && new Date(l.expires_at) <= now).map((l) => ({ linkId: l.id, kind: "expired" as const, detail: null, at: l.expires_at }));
+  return [...events, ...expired].sort((a, b) => b.at.localeCompare(a.at));
+}
+
 export type LinkState = "active" | "expired" | "revoked" | "full";
 
 export function linkState(l: LinkRow, now = new Date()): LinkState {
