@@ -21,6 +21,7 @@ import {
 } from "@/lib/expenses";
 import { tagValue } from "@/lib/preferences";
 import { duplicateBills } from "@/lib/bill-duplicates";
+import { suggestForEntry } from "@/lib/statement-pipeline/single-entry";
 import { buildReceiptAudit, receiptFingerprint, receiptFingerprintMatches, type ReceiptReadValues } from "@/lib/receipt-audit";
 import { quickEntrySearch } from "@/lib/quick-entry";
 import { useStore } from "@/lib/store";
@@ -471,6 +472,18 @@ function NewExpense() {
   const duplicates = txnType === "expense" ? duplicateBills(billIdentity, expenses, edit) : [];
   const duplicateSignature = JSON.stringify([billIdentity, receipts.map(r => r.name), duplicates.map(e => e.id)]);
   const duplicateBlocked = duplicates.length > 0 && duplicateApproval !== duplicateSignature;
+  // Statement Desk rules on this one entry: suggestions only, applied by tap, never saved on their own.
+  const deskText = [merchant, title, description].filter(Boolean).join(" ");
+  const desk = useMemo(() => suggestForEntry({ id: edit, date, amount: Number(amount) || 0, currency, txnType, text: deskText, accountId: accountId === "none" ? null : accountId }, { transactions: expenses, accounts, categories: preferences.categories }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [deskText, date, amount, currency, txnType, accountId, expenses, accounts, preferences.categories, edit]);
+  const deskCategory = desk.category && desk.category !== category && preferences.categories.some((c) => c.name === desk.category && !c.archived) ? desk.category : null;
+  const deskAccount = desk.accountId && accountId === "none" ? acctNameOf(accounts, desk.accountId) : null;
+  const deskType = desk.txnType && desk.txnType !== txnType ? desk.txnType : null;
+  const deskMatches = desk.matches.filter((m) => !duplicates.some((d) => d.id === m.record.id));
+  const matchSignature = JSON.stringify([date, amount, currency, accountId, deskMatches.map((m) => m.record.id)]);
+  const [matchApproval, setMatchApproval] = useState("");
+  const matchBlocked = deskMatches.some((m) => m.exact) && matchApproval !== matchSignature;
   // Same receipt file already attached to another entry (by content fingerprint).
   const receiptReuse = txnType === "expense" && !editing ? receiptFingerprintMatches(receipts[0]?.fingerprint, expenses) : [];
   const receiptSignature = JSON.stringify([receipts[0]?.fingerprint, receiptReuse.map(e => e.id)]);
@@ -688,6 +701,21 @@ function NewExpense() {
           <h2 className="font-display font-bold">This bill may already exist</h2>
           <ul className="space-y-2 text-sm">{duplicates.map(e => <li key={e.id} className="flex flex-wrap items-center justify-between gap-2"><span>{e.merchant} · {e.date} · {e.currency} {e.originalAmount.toFixed(2)}</span><Link to="/new" search={{ edit: e.id }} target="_blank" rel="noopener noreferrer" className="text-primary underline">Review existing entry</Link></li>)}</ul>
           <div className="flex flex-wrap gap-2"><Button type="button" size="sm" variant="outline" disabled={saving} onClick={() => void advanceQueue()}>Skip this bill</Button><Button type="button" size="sm" variant="secondary" disabled={!duplicateBlocked} onClick={() => setDuplicateApproval(duplicateSignature)}>{duplicateBlocked ? "Keep as a separate bill" : "Separate bill confirmed"}</Button></div>
+        </section>}
+        {!reading && confirmed && (deskCategory || deskAccount || deskType || desk.opposite) && <section aria-label="Statement Desk suggestions" className="space-y-2 rounded-2xl border bg-card p-3 text-sm">
+          <h2 className="font-semibold"><Sparkles className="mr-1 inline h-4 w-4 text-primary" />Suggestions (same rules as Statement Desk)</h2>
+          <ul className="space-y-1.5">
+            {deskCategory && <li className="flex flex-wrap items-center justify-between gap-2"><span>Category: <b>{deskCategory}</b> <span className="text-muted-foreground">· {desk.categoryReason}</span></span><Button type="button" size="sm" variant="outline" onClick={() => { setCategory(deskCategory as Category); setAutoFilled((x) => new Set([...x, "category"])); }}>Use</Button></li>}
+            {deskAccount && <li className="flex flex-wrap items-center justify-between gap-2"><span>Account: <b>{deskAccount}</b> <span className="text-muted-foreground">· {desk.accountReason}</span></span><Button type="button" size="sm" variant="outline" onClick={() => { setAccountId(desk.accountId!); setAutoFilled((x) => new Set([...x, "payment"])); }}>Use</Button></li>}
+            {deskType && <li className="flex flex-wrap items-center justify-between gap-2"><span>Looks like a <b>{TXN_LABEL[deskType].toLowerCase()}</b>{desk.toAccountId ? <> to <b>{acctNameOf(accounts, desk.toAccountId)}</b></> : null} <span className="text-muted-foreground">· {desk.typeReason}</span></span><Button type="button" size="sm" variant="outline" onClick={() => { setTxnType(deskType); if (desk.toAccountId) setToAccountId(desk.toAccountId); }}>Use</Button></li>}
+            {desk.opposite && <li className="flex flex-wrap items-center justify-between gap-2"><span>The other side is already saved: <b>{desk.opposite.name}</b> · {desk.opposite.date} · {desk.opposite.currency} {desk.opposite.amount.toFixed(2)}. Open it and set both accounts instead of saving a second copy.</span><Link to="/new" search={{ edit: desk.opposite.id }} className="text-primary underline">Open it</Link></li>}
+          </ul>
+          <p className="text-xs text-muted-foreground">Nothing changes until you tap Use and then Save.</p>
+        </section>}
+        {!reading && deskMatches.length > 0 && <section aria-label="Possible matching entries" className="space-y-3 rounded-2xl border border-gold bg-gold-soft p-4">
+          <h2 className="font-display font-bold">This may already be saved</h2>
+          <ul className="space-y-2 text-sm">{deskMatches.map((m) => <li key={m.record.id} className="flex flex-wrap items-center justify-between gap-2"><span><b>{m.record.name}</b> · {m.record.date} · {m.record.currency} {m.record.amount.toFixed(2)} <span className="text-muted-foreground">· {m.exact ? "Strong match" : "Possible match"}: {m.reasons.slice(0, 3).join(", ")}</span></span><Link to="/new" search={{ edit: m.record.id }} className="text-primary underline">Open existing</Link></li>)}</ul>
+          <Button type="button" size="sm" variant="secondary" disabled={!matchBlocked} onClick={() => setMatchApproval(matchSignature)}>{matchBlocked ? "It's separate — save anyway" : deskMatches.some((m) => m.exact) ? "Separate entry confirmed" : "Save allowed — check it is separate"}</Button>
         </section>}
         {batch && duplicates.length === 0 && <Button type="button" variant="ghost" size="sm" disabled={reading || saving} onClick={() => void advanceQueue()}>Skip this bill</Button>}
         {receiptReuse.length > 0 && !reading && <section aria-label="Receipt already used" className="space-y-3 rounded-2xl border border-gold bg-gold-soft p-4">
@@ -921,7 +949,7 @@ function NewExpense() {
 
         <div className="sticky bottom-0 z-10 -mx-4 bg-background/95 px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-2 backdrop-blur sm:mx-0 sm:px-0">
           {saveError && !saving && <div role="alert" className="mb-2 flex items-center justify-between gap-2 rounded-xl border border-destructive/40 bg-card px-3 py-2 text-xs"><span className="text-destructive">{saveError}</span><Button type="submit" size="sm" variant="outline">Retry</Button></div>}
-          <Button type="submit" size="lg" variant="gold" loading={saving} loadingText={editing ? "Saving changes…" : `Saving your ${TXN_LABEL[txnType].toLowerCase()}…`} className="h-12 w-full rounded-2xl text-base" disabled={reading || saving || !confirmed || duplicateBlocked || receiptBlocked || !(Number(amount) > 0)}>
+          <Button type="submit" size="lg" variant="gold" loading={saving} loadingText={editing ? "Saving changes…" : `Saving your ${TXN_LABEL[txnType].toLowerCase()}…`} className="h-12 w-full rounded-2xl text-base" disabled={reading || saving || !confirmed || duplicateBlocked || matchBlocked || receiptBlocked || !(Number(amount) > 0)}>
             {editing ? "Save changes" : `Save ${TXN_LABEL[txnType].toLowerCase()}`}
           </Button>
         </div>
