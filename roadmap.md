@@ -509,3 +509,4 @@
 - [x] Accountant link: email the owner when files are uploaded (one per 30-min batch)
 ## entities/decode build fix (done 2026-11-02)
 - [x] Rolldown build failed loading entities/decode from htmlparser2@10. Fixed: entities overridden to 7.0.1, entities@7 patched to re-export legacy ./lib/decode.js and ./lib/encode.js, @react-email/render patched to import entities/decode. Build OK, 1078 tests pass, typecheck clean.
+- [ ] Help find the accountant upload link (Settings)
