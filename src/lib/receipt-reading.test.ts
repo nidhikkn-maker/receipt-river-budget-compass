@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ExtractedReceiptSchema, ReceiptDetailsSchema, receiptConfidence, receiptBreakdownError, receiptItemConfidence, receiptItemReviewReasons, receiptItemsToReview, receiptItemTotalError, receiptReviewCheck, receiptReviewSignature } from "./receipt-reading";
+import { ExtractedReceiptSchema, ReceiptDetailsSchema, receiptConfidence, receiptBreakdownError, receiptItemConfidence, receiptItemReviewReasons, receiptItemsToReview, receiptItemTotalError, receiptReviewCheck, receiptReviewSignature, type ReceiptAmounts } from "./receipt-reading";
 import { validateExpense, type ExpenseInput } from "./expenses";
 
 const read = { title: "Cafe", merchant: "Cafe", date: "2026-11-02", amount: 432.10, subtotal: 360, tax: 32.10, tip: 40, confidence: { merchant: "high", date: "low", total: "medium" }, items: [], text: "Cafe", currency: "INR", payment_method: null, description: null, category: "Food and beverages", scope: "personal" };
@@ -73,7 +73,7 @@ describe("receipt reading", () => {
     expect(ReceiptDetailsSchema.safeParse({ items: [{ name: "Dinner", quantity: 1, amount: -1 }] }).success).toBe(false);
   });
   it("flags only items whose name or amount was read with low confidence", () => {
-    const items = [
+    const items: NonNullable<ReceiptAmounts["items"]> = [
       { name: "Dinner", quantity: 2, amount: 360, confidence: { name: "high", amount: "low" } },
       { name: "Coffee", quantity: 1, amount: 0, confidence: { name: "low", amount: "high" } },
       { name: "Water", quantity: 1, amount: 12, confidence: { name: "high", amount: "high" } },
@@ -100,7 +100,7 @@ describe("receipt reading", () => {
     expect(receiptItemsToReview([])).toEqual([]);
   });
   it("requires a fresh review acknowledgement whenever an item or amount is edited", () => {
-    const items = [{ name: "Dinner", quantity: 2, amount: 360, confidence: { name: "high", amount: "low" } }];
+    const items: NonNullable<ReceiptAmounts["items"]> = [{ name: "Dinner", quantity: 2, amount: 360, confidence: { name: "high", amount: "low" } }];
     const details = { subtotal: 360, tax: 32.10, tip: 40, items };
     expect(receiptReviewCheck(432.10, details)).toEqual({ items: [0], itemTotalError: null, needed: true });
     const before = receiptReviewSignature(432.10, details);
