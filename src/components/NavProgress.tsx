@@ -36,20 +36,33 @@ export function NavProgress() {
 
   // Warm the most-used pages one at a time, only after the first screen has settled,
   // so background page code never competes with the data the first screen is waiting on.
+  // On a line slow enough to hold up that first screen, only the most-used page is
+  // warmed, and much later; the rest loads when it is actually tapped.
   useEffect(() => {
     let cancelled = false;
     const timers: number[] = [];
     let idleId = 0;
     const w = window as Window & { requestIdleCallback?: (cb: () => void, o?: { timeout: number }) => number };
-    const start = () => WARM.forEach((to, i) => {
+    const warm = (list: readonly string[], gap: number) => list.forEach((to, i) => {
       timers.push(window.setTimeout(() => {
         if (!cancelled) void router.preloadRoute({ to } as never).catch(() => {});
-      }, i * 700));
+      }, i * gap));
     });
+    const start = () => {
+      const nav = performance.getEntriesByType("navigation")[0] as PerformanceNavigationTiming | undefined;
+      const conn = (navigator as Navigator & { connection?: { saveData?: boolean } }).connection;
+      if (conn?.saveData === true || (nav?.loadEventEnd ?? 0) > 4000) warm(["/expenses"], 0);
+      else warm(WARM, 700);
+    };
     const kick = window.setTimeout(() => {
-      if (w.requestIdleCallback) {
-        idleId = w.requestIdleCallback(() => { if (!cancelled) start(); }, { timeout: 5000 }) ?? 0;
-      } else start();
+      const run = () => { if (!cancelled) start(); };
+      // Still loading the first screen? Wait for it, then judge how busy the line is.
+      if (document.readyState !== "complete") {
+        window.addEventListener("load", () => window.setTimeout(run, 1500), { once: true });
+        return;
+      }
+      if (w.requestIdleCallback) idleId = w.requestIdleCallback(run, { timeout: 5000 }) ?? 0;
+      else run();
     }, 2200);
     return () => {
       cancelled = true;
