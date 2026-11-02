@@ -141,6 +141,11 @@ export function TripItinerarySection({ trip }: { trip: TravelTrip }) {
   const outside = outsideTrip(trip, all);
   const [compact, setCompact] = useState(false);
   const [pdfBlob, setPdfBlob] = useState<Blob | null>(null);
+  const [calOpen, setCalOpen] = useState(false);
+  const [calEdits, setCalEdits] = useState<Record<string, { title: string; note: string }>>({});
+  const events = calendarEvents(trip);
+  const openCalendar = () => { setCalEdits(Object.fromEntries(events.map((e) => [e.uid, { title: e.title, note: e.note }]))); setCalOpen(true); };
+  const downloadCalendar = () => { downloadBlob(new Blob([tripCalendar(trip, new Date().toISOString(), calEdits)], { type: "text/calendar;charset=utf-8" }), `trip-${slug(trip.name)}.ics`); setCalOpen(false); };
   const preparePdf = async () => { setPdfBlob(await toPdf({ title: `Itinerary: ${trip.name}`, headers: ["Day", "Time", "Plan / booking"], rows: itineraryPdfRows(trip) }, `${trip.destination || ""} · ${trip.start} to ${trip.end}`)); };
   const nextDay = (d: string) => new Date(Date.parse(d + "T00:00:00Z") + 864e5).toISOString().slice(0, 10);
   return (
@@ -148,7 +153,7 @@ export function TripItinerarySection({ trip }: { trip: TravelTrip }) {
       {all.length === 0 && !showForm && <p className="text-sm text-muted-foreground">No plans yet. Add day-by-day activities, linked bookings and notes.</p>}
       {(all.length > 0 || (trip.bookings ?? []).length > 0) && <div className="mb-3 flex flex-wrap gap-2">
         <Button size="sm" variant={compact ? "default" : "outline"} onClick={() => setCompact((c) => !c)} aria-pressed={compact}>{compact ? "Full view" : "Compact days"}</Button>
-        <Button size="sm" variant="outline" onClick={() => downloadBlob(new Blob([tripCalendar(trip, new Date().toISOString())], { type: "text/calendar;charset=utf-8" }), `trip-${slug(trip.name)}.ics`)}>Add to calendar (.ics)</Button>
+        <Button size="sm" variant="outline" onClick={openCalendar}>Add to calendar (.ics)</Button>
         {pdfBlob ? <Button size="sm" variant="gold" onClick={() => { downloadBlob(pdfBlob, `itinerary-${slug(trip.name)}.pdf`); setPdfBlob(null); }}>Download itinerary PDF</Button> : <Button size="sm" variant="outline" onClick={preparePdf}>Prepare shareable PDF</Button>}
       </div>}
       {clashes.size > 0 && <p className="mb-2 text-xs text-destructive">{clashes.size} plans clash at the same time for the same people.</p>}
