@@ -16,7 +16,8 @@
   "overrides": {
     "rolldown": "1.2.1",
     "esbuild": "0.28.2",
-    "glob": "14.0.3"
+    "glob": "14.0.3",
+    "entities": "7.0.1"
   },
   "dependencies": {
     "@ai-sdk/openai": "^4.0.106",
@@ -123,11 +124,13 @@
     "vitest": "^4.1.12"
   },
   "patchedDependencies": {
-    "tsyringe@4.10.0": "patches/tsyringe@4.10.0.patch"
+    "tsyringe@4.10.0": "patches/tsyringe@4.10.0.patch",
+    "@react-email/render@2.2.0": "patches/@react-email/render@2.2.0.patch",
+    "entities@7.0.1": "patches/entities@7.0.1.patch"
   },
   "pnpm": {
     "overrides": {
-      "entities": "4.5.0"
+      "entities": "7.0.1"
     }
   }
 }

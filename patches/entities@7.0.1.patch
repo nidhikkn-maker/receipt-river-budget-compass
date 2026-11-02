@@ -1,0 +1,30 @@
+diff --git a/package.json b/package.json
+--- a/package.json
++++ b/package.json
+@@ -41,6 +41,26 @@
+                 "default": "./dist/commonjs/decode.js"
+             }
+         },
++        "./lib/decode.js": {
++            "import": {
++                "types": "./dist/esm/decode.d.ts",
++                "default": "./dist/esm/decode.js"
++            },
++            "require": {
++                "types": "./dist/commonjs/decode.d.ts",
++                "default": "./dist/commonjs/decode.js"
++            }
++        },
++        "./lib/encode.js": {
++            "import": {
++                "types": "./dist/esm/encode.d.ts",
++                "default": "./dist/esm/encode.js"
++            },
++            "require": {
++                "types": "./dist/commonjs/encode.d.ts",
++                "default": "./dist/commonjs/encode.js"
++            }
++        },
+         "./escape": {
+             "import": {
+                 "types": "./dist/esm/escape.d.ts",
