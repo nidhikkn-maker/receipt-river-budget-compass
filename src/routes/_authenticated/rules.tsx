@@ -1,3 +1,4 @@
+import { ImportRules } from "@/components/ImportRules";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
@@ -150,6 +151,10 @@ function RulesPage() {
             </li>
           ))}
         </ul>
+      </section>
+      <section id="classification" className="mt-6 rounded-3xl border bg-card p-5" aria-label="Transaction classification rules">
+        <h2 className="mb-2 font-display text-lg font-semibold">Transaction classification rules</h2>
+        <ImportRules />
       </section>
     </div>
   );

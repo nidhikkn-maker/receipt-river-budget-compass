@@ -18,7 +18,6 @@ export function FinancialInboxNav({ active }: { active: View }) {
       <Link to="/inbox" search={{ section: 'history' }} aria-label="Review History" className={tab(active === 'history')}>History</Link>
       <Link to="/inbox" search={{ section: 'statements' }} className={tab(false)}>Matched statements</Link>
       <Link to="/statements" className={tab(false)}>Statement Desk</Link>
-      <Link to="/statement-accounts" className={tab(false)}>Coverage</Link>
       <Link to="/travel-inbox" className={tab(false)}>Travel</Link>
     </nav>
   );

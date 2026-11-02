@@ -127,7 +127,7 @@ function Settings() {
   return (
     <>
       <PageTitle eyebrow="Settings" title="Settings" sub={`${transactions.length} entries · ${accounts.length} accounts`} />
-      <div className="mb-5 flex flex-wrap gap-2"><Button asChild variant="outline"><Link to="/auth">Sign in / account</Link></Button><Button asChild variant="outline"><Link to="/classification-rules">Transaction classification rules</Link></Button></div>
+      <div className="mb-5 flex flex-wrap gap-2"><Button asChild variant="outline"><Link to="/auth">Sign in / account</Link></Button><Button asChild variant="outline"><Link to="/rules" hash="classification">Transaction classification rules</Link></Button></div>
       <SettingsDirectory />
       <Fold id="security" title="Security & device unlock" hint="MPIN, Face ID and device lock"><MpinSettings /><PasskeySettings /></Fold>
       <Fold id="appearance" title="Appearance" hint="Theme, light or dark, Home layout"><AppearanceSettings /></Fold>
