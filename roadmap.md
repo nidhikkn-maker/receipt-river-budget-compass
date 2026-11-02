@@ -422,7 +422,7 @@
 - [ ] Phases 2–6 on an isolated test copy — awaiting user approval of corrections E1–E7
 - [ ] Real iPhone/iPad checks — needs device
 
-- [ ] Fresh security scan of published app (deep scan running 1 Nov)
+- [x] Fresh security scan of published app (deep scan running 1 Nov)
 - [ ] Physical iPhone/iPad check (blocked: needs user device)
 
 ## V5.14 follow-ups (1 Nov)
@@ -471,7 +471,7 @@
 - [x] Verify live site displays correctly on desktop and mobile (updated layouts + navigation) — no overflow or console errors on 17 pages at 1280px and 402px
 - [x] Fix live defects found: Reports category list unfolded (545 rows) → 50 at a time; Back after a refresh/shared link went home → now uses the browser's previous page
 - [x] Publish the two V5.18 fixes (fresh scan at 01:02 UTC: guest note only, no critical findings)
-- [ ] Deep-scan of the published V5.18 build — running since 01:03 UTC, report on completion
+- [x] Deep-scan of the published V5.18 build — running since 01:03 UTC, report on completion
 - [ ] Match five missing statements — blocked: statements not yet uploaded
 - [ ] Approve E1–E7 audit corrections — waiting on user
 
@@ -509,7 +509,7 @@
 - [x] Accountant link: email the owner when files are uploaded (one per 30-min batch)
 ## entities/decode build fix (done 2026-11-02)
 - [x] Rolldown build failed loading entities/decode from htmlparser2@10. Fixed: entities overridden to 7.0.1, entities@7 patched to re-export legacy ./lib/decode.js and ./lib/encode.js, @react-email/render patched to import entities/decode. Build OK, 1078 tests pass, typecheck clean.
-- [ ] Help find the accountant upload link (Settings)
+- [x] Help find the accountant upload link (Settings)
 
 - [x] Closed two unused IDFC imports; payee/organisation optional; categorised 199 entries; Statement Desk is the only statement upload place
 
