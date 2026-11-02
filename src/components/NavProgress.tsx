@@ -10,9 +10,29 @@ export function NavProgress() {
   const [show, setShow] = useState(false);
 
   useEffect(() => {
-    if (!pending) { setShow(false); return; }
+    if (!pending) {
+      setShow(false);
+      document.querySelectorAll("[data-nav-pending]").forEach((el) => el.removeAttribute("data-nav-pending"));
+      return;
+    }
     setShow(true);
   }, [pending]);
+
+  // Mark the tapped link so it shows its own spinner until the page is ready.
+  useEffect(() => {
+    let timer = 0;
+    const onTap = (e: MouseEvent) => {
+      const a = (e.target as Element | null)?.closest?.("a[href]") as HTMLAnchorElement | null;
+      if (!a || a.target === "_blank" || e.defaultPrevented) return;
+      const url = new URL(a.href, location.href);
+      if (url.origin !== location.origin || url.pathname === location.pathname) return;
+      clearTimeout(timer);
+      // Only show it if opening takes longer than a blink.
+      timer = window.setTimeout(() => { if (router.state.status === "pending" || router.state.isLoading) a.setAttribute("data-nav-pending", ""); }, 120);
+    };
+    document.addEventListener("click", onTap);
+    return () => { clearTimeout(timer); document.removeEventListener("click", onTap); };
+  }, [router]);
 
   // Warm the most-used pages once the first screen is idle.
   useEffect(() => {

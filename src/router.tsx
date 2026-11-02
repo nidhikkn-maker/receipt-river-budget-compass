@@ -1,6 +1,7 @@
 import { QueryClient } from "@tanstack/react-query";
 import { createRouter } from "@tanstack/react-router";
 import { routeTree } from "./routeTree.gen";
+import { PageSkeleton } from "./components/PageSkeleton";
 
 export const getRouter = () => {
   const queryClient = new QueryClient();
@@ -15,6 +16,7 @@ export const getRouter = () => {
     defaultPreloadDelay: 0,
     defaultPendingMs: 150,
     defaultPendingMinMs: 200,
+    defaultPendingComponent: PageSkeleton,
   });
 
   return router;
