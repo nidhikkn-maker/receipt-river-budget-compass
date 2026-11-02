@@ -530,3 +530,6 @@
 - [ ] Per-booking check-in reminder controls (change time or disable)
 - [x] Calendar export: editable titles/notes in a pop-up before download; re-export reflects edits
 - [x] Per-booking "Remind me" toggle (change time via check-in box, turn off via checkbox)
+- [x] New entry uses Statement Desk rules: category, account, transfer/card-payment suggestions, matching saved entries, already-saved other side
+- [x] Save calendar titles/notes on plans and check-ins for future .ics exports
+- [x] Per-event configurable reminders inside the exported .ics file

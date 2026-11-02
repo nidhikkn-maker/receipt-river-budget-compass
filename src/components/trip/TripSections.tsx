@@ -16,7 +16,7 @@ import { TripBudgetCard, EditBudgetDialog, BudgetBreakdown, ReimbursementBreakdo
 import { BookingDocumentImport } from "./BookingDocumentImport";
 import { TripExpenseActions } from "./TripExpenseActions";
 import { reviewedBooking, type bookingDraft } from "@/lib/booking-import";
-import { calendarEvents, copyItem, itineraryConflicts, itineraryDays, itineraryPdfRows, mapLink, tripCalendar, outsideTrip, tripReadiness } from "@/lib/trip-itinerary";
+import { applyCalendarEdits, calendarEvents, CALENDAR_ALARMS, copyItem, itineraryConflicts, itineraryDays, itineraryPdfRows, mapLink, tripCalendar, outsideTrip, tripReadiness } from "@/lib/trip-itinerary";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 const sel = "h-10 rounded-xl border bg-background px-2 text-sm";
@@ -142,10 +142,11 @@ export function TripItinerarySection({ trip }: { trip: TravelTrip }) {
   const [compact, setCompact] = useState(false);
   const [pdfBlob, setPdfBlob] = useState<Blob | null>(null);
   const [calOpen, setCalOpen] = useState(false);
-  const [calEdits, setCalEdits] = useState<Record<string, { title: string; note: string }>>({});
+  const [calEdits, setCalEdits] = useState<Record<string, { title: string; note: string; alarm: number | null }>>({});
+  const [calSave, setCalSave] = useState(true);
   const events = calendarEvents(trip);
-  const openCalendar = () => { setCalEdits(Object.fromEntries(events.map((e) => [e.uid, { title: e.title, note: e.note }]))); setCalOpen(true); };
-  const downloadCalendar = () => { downloadBlob(new Blob([tripCalendar(trip, new Date().toISOString(), calEdits)], { type: "text/calendar;charset=utf-8" }), `trip-${slug(trip.name)}.ics`); setCalOpen(false); };
+  const openCalendar = () => { setCalEdits(Object.fromEntries(events.map((e) => [e.uid, { title: e.title, note: e.note, alarm: e.alarm }]))); setCalOpen(true); };
+  const downloadCalendar = async () => { if (calSave && !closed) await put(applyCalendarEdits(trip, calEdits), "Calendar wording and reminders saved for future exports"); downloadBlob(new Blob([tripCalendar(trip, new Date().toISOString(), calEdits)], { type: "text/calendar;charset=utf-8" }), `trip-${slug(trip.name)}.ics`); setCalOpen(false); };
   const preparePdf = async () => { setPdfBlob(await toPdf({ title: `Itinerary: ${trip.name}`, headers: ["Day", "Time", "Plan / booking"], rows: itineraryPdfRows(trip) }, `${trip.destination || ""} · ${trip.start} to ${trip.end}`)); };
   const nextDay = (d: string) => new Date(Date.parse(d + "T00:00:00Z") + 864e5).toISOString().slice(0, 10);
   return (
@@ -159,7 +160,7 @@ export function TripItinerarySection({ trip }: { trip: TravelTrip }) {
       <Dialog open={calOpen} onOpenChange={setCalOpen}>
         <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-lg" aria-label="Edit calendar events">
           <DialogHeader><DialogTitle>Calendar events</DialogTitle></DialogHeader>
-          <p className="text-xs text-muted-foreground">Rename events or add notes before saving the file. These changes only affect the downloaded file; edit the plan or booking itself to change the trip. Export again after any change to get an updated file.</p>
+          <p className="text-xs text-muted-foreground">Rename events or add notes before saving the file. Rename events, add notes and choose a reminder. Saved wording stays with the plan or check-in for every future export without renaming it in the trip; new times always come from the trip.</p>
           <div className="space-y-3">
             {events.map((e) => (
               <div key={e.uid} className="rounded-xl border p-3">
@@ -167,9 +168,15 @@ export function TripItinerarySection({ trip }: { trip: TravelTrip }) {
                 <Input className="h-9" aria-label={`Calendar title for ${e.title}`} value={calEdits[e.uid]?.title ?? ""} onChange={(ev) => setCalEdits((s) => ({ ...s, [e.uid]: { ...s[e.uid]!, title: ev.target.value } }))} />
                 <Label className="mt-2 text-xs">Note</Label>
                 <Input className="h-9" aria-label={`Calendar note for ${e.title}`} placeholder="Optional note" value={calEdits[e.uid]?.note ?? ""} onChange={(ev) => setCalEdits((s) => ({ ...s, [e.uid]: { ...s[e.uid]!, note: ev.target.value } }))} />
+                <Label className="mt-2 text-xs">Reminder</Label>
+                <select className="h-9 w-full rounded-md border bg-background px-2 text-sm" aria-label={`Calendar reminder for ${e.title}`} value={calEdits[e.uid]?.alarm ?? ""} onChange={(ev) => setCalEdits((s) => ({ ...s, [e.uid]: { ...s[e.uid]!, alarm: ev.target.value === "" ? null : Number(ev.target.value) } }))}>
+                  {CALENDAR_ALARMS.map((a) => <option key={a.label} value={a.minutes ?? ""}>{a.label}</option>)}
+                </select>
+                {(calEdits[e.uid]?.title !== e.defaultTitle || calEdits[e.uid]?.note !== e.defaultNote || calEdits[e.uid]?.alarm !== null) && <button type="button" className="mt-2 text-xs font-semibold text-primary underline" onClick={() => setCalEdits((s) => ({ ...s, [e.uid]: { title: e.defaultTitle, note: e.defaultNote, alarm: null } }))}>Reset to default</button>}
               </div>
             ))}
           </div>
+          {!closed && <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={calSave} onChange={(ev) => setCalSave(ev.target.checked)} />Save for future exports</label>}
           <Button variant="gold" onClick={downloadCalendar}>Download calendar file</Button>
         </DialogContent>
       </Dialog>
