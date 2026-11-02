@@ -550,3 +550,4 @@
 - [x] Side-by-side receipt image viewer with zoom during review
 - [x] Require confirming low-confidence merchant/date/total before saving
 - [x] Publish after receipt changes
+- [ ] Fresh security check on live site (deep scan running)
