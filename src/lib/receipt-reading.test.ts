@@ -115,3 +115,16 @@ describe("receipt reading", () => {
     expect(() => validateExpense(input)).not.toThrow();
   });
 });
+import { lowConfidenceFields, unconfirmedFields } from "./receipt-reading";
+describe("low-confidence main fields", () => {
+  it("flags only low merchant/date/total", () => {
+    expect(lowConfidenceFields({ merchant: "low", date: "medium", total: "low" })).toEqual(["merchant", "total"]);
+    expect(lowConfidenceFields({ merchant: "unknown", date: "high", total: "medium" })).toEqual([]);
+  });
+  it("requires confirmation at the current value", () => {
+    const values = { merchant: "Cafe", date: "2026-11-01", total: "432.10" };
+    expect(unconfirmedFields({ total: "low" }, values, {})).toEqual(["total"]);
+    expect(unconfirmedFields({ total: "low" }, values, { total: "432.10" })).toEqual([]);
+    expect(unconfirmedFields({ total: "low" }, { ...values, total: "430" }, { total: "432.10" })).toEqual(["total"]);
+  });
+});

@@ -125,3 +125,12 @@ export function receiptReviewSignature(total: number, details?: ReceiptAmounts):
     items: (details?.items ?? []).map((item) => [item.name, item.quantity, item.amount, receiptItemConfidence(item).name, receiptItemConfidence(item).amount]),
   });
 }
+export type ReceiptField = "merchant" | "date" | "total";
+/** Main fields read with low confidence; each must be confirmed by the user at its current value. */
+export function lowConfidenceFields(confidence?: Partial<ReceiptConfidence>): ReceiptField[] {
+  return (["merchant", "date", "total"] as const).filter((f) => confidence?.[f] === "low");
+}
+/** Low-confidence fields not yet confirmed at the value now shown (editing a value needs a fresh confirmation). */
+export function unconfirmedFields(confidence: Partial<ReceiptConfidence> | undefined, values: Record<ReceiptField, string>, checked: Partial<Record<ReceiptField, string>>): ReceiptField[] {
+  return lowConfidenceFields(confidence).filter((f) => checked[f] !== values[f]);
+}
