@@ -36,6 +36,8 @@ export function ReceiptZoomViewer({ src, type, name }: { src: string; type: stri
   const viewRef = useRef(view); viewRef.current = view;
   const pointers = useRef(new Map<number, { x: number; y: number }>());
   const pinch = useRef<{ d: number; z: number } | null>(null);
+  const tap = useRef<{ x: number; y: number; t: number; moved: number; multi: boolean } | null>(null);
+  const lastTap = useRef<{ x: number; y: number; t: number } | null>(null);
 
   const [smooth, setSmooth] = useState(false);
   /** Keep the zoomed picture covering the frame, like Photos on iPhone. */
@@ -66,23 +68,33 @@ export function ReceiptZoomViewer({ src, type, name }: { src: string; type: stri
   if (isPdf && pdfFailed) return <div className="space-y-2"><object data={src} type={type} aria-label={`Receipt ${name}`} className="h-[28rem] w-full rounded-2xl border bg-muted" /><p className="text-xs text-muted-foreground">This PDF couldn't be prepared for zooming, so it's shown as is.</p></div>;
   if (!isPdf && !type.startsWith("image/")) return <p className="text-sm text-muted-foreground">Preview not available for this file.</p>;
 
-  const onDown = (e: React.PointerEvent) => { setSmooth(false); e.currentTarget.setPointerCapture(e.pointerId); pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY }); if (pointers.current.size === 2) { const [a, b] = [...pointers.current.values()]; pinch.current = { d: Math.hypot(a!.x - b!.x, a!.y - b!.y), z: viewRef.current.z }; } };
+  const onDown = (e: React.PointerEvent) => { setSmooth(false); if (pointers.current.size === 0) tap.current = { x: e.clientX, y: e.clientY, t: Date.now(), moved: 0, multi: false }; else if (tap.current) tap.current.multi = true; e.currentTarget.setPointerCapture(e.pointerId); pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY }); if (pointers.current.size === 2) { const [a, b] = [...pointers.current.values()]; pinch.current = { d: Math.hypot(a!.x - b!.x, a!.y - b!.y), z: viewRef.current.z }; } };
   const onMove = (e: React.PointerEvent) => {
     const prev = pointers.current.get(e.pointerId); if (!prev) return;
     pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (tap.current) tap.current.moved = Math.max(tap.current.moved, Math.hypot(e.clientX - tap.current.x, e.clientY - tap.current.y));
     const r = box.current!.getBoundingClientRect();
     if (pointers.current.size === 2 && pinch.current) {
       const [a, b] = [...pointers.current.values()];
-      zoomAt(pinch.current.z * Math.hypot(a!.x - b!.x, a!.y - b!.y) / pinch.current.d, (a!.x + b!.x) / 2 - r.left, (a!.y + b!.y) / 2 - r.top);
+      zoomAt(pinch.current.z * (Math.hypot(a!.x - b!.x, a!.y - b!.y) / pinch.current.d) ** 0.6, (a!.x + b!.x) / 2 - r.left, (a!.y + b!.y) / 2 - r.top);
     } else if (viewRef.current.z > 1) setView((v) => bound({ ...v, x: v.x + e.clientX - prev.x, y: v.y + e.clientY - prev.y }));
   };
-  const onUp = (e: React.PointerEvent) => { pointers.current.delete(e.pointerId); if (pointers.current.size < 2) pinch.current = null; };
+  const onUp = (e: React.PointerEvent) => {
+    pointers.current.delete(e.pointerId); if (pointers.current.size < 2) pinch.current = null;
+    if (e.type !== "pointerup" || pointers.current.size > 0) return;
+    const t = tap.current; tap.current = null;
+    if (!t || t.multi || t.moved > 10 || Date.now() - t.t > 300) { lastTap.current = null; return; }
+    const prev = lastTap.current; const now = Date.now();
+    if (prev && now - prev.t < 300 && Math.hypot(e.clientX - prev.x, e.clientY - prev.y) < 30) {
+      lastTap.current = null; const r = box.current!.getBoundingClientRect();
+      zoomAt(viewRef.current.z > 1 ? 1 : 2.5, e.clientX - r.left, e.clientY - r.top, true);
+    } else lastTap.current = { x: e.clientX, y: e.clientY, t: now };
+  };
 
   return (
     <div className="space-y-2">
       <div ref={box} role="img" aria-label={`Receipt ${name}, zoom ${Math.round(view.z * 100)}%`} className="relative h-[24rem] overflow-hidden rounded-2xl border bg-muted lg:h-[34rem]" style={{ touchAction: "none", cursor: view.z > 1 ? "grab" : "zoom-in" }}
-        onPointerDown={onDown} onPointerMove={onMove} onPointerUp={onUp} onPointerCancel={onUp}
-        onDoubleClick={(e) => { const r = e.currentTarget.getBoundingClientRect(); zoomAt(view.z > 1 ? 1 : 2.5, e.clientX - r.left, e.clientY - r.top, true); }}>
+        onPointerDown={onDown} onPointerMove={onMove} onPointerUp={onUp} onPointerCancel={onUp}>
         {!shown && <div role="status" className="absolute inset-0 flex items-center justify-center text-sm text-muted-foreground">Preparing PDF…</div>}
         {shown && <img src={shown} alt="" draggable={false} className="h-full w-full select-none object-contain" style={{ transformOrigin: "0 0", transform: `translate(${view.x}px, ${view.y}px) scale(${view.z})`, transition: smooth ? "transform 220ms cubic-bezier(.2,.8,.2,1)" : "none" }} />}
       </div>
