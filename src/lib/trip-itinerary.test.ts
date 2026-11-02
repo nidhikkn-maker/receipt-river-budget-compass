@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { copyItem, itineraryConflicts, itineraryDays, outsideTrip, tripReadiness } from "./trip-itinerary";
-import type { TravelTrip } from "./travel";
+import type { ItineraryItem, TravelTrip } from "./travel";
 
-const i = (id: string, date: string, time?: string, travellers?: string[]) => ({ id, date, title: id, time, travellers });
+const i = (id: string, date: string, time?: string, travellers?: string[]): ItineraryItem => ({ id, date, title: id, ...(time ? { time } : {}), ...(travellers ? { travellers } : {}) });
 
 describe("trip itinerary", () => {
   it("groups by day in time order", () => {
