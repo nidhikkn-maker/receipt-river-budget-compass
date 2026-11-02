@@ -20,7 +20,7 @@ export function LedgerlineSymbol({ className = "h-7 w-auto", title = "Ledgerline
 export function LedgerlineLogo({ className = "h-8 w-auto", title = "Ledgerline" }: { className?: string; title?: string }) {
   return <svg viewBox="0 0 620 116" className={className} role="img" aria-label={title}>
     <SymbolShapes />
-    <text x="156" y="94" fontFamily="-apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif" fontSize="92" fontWeight="500" letterSpacing="2" fill={ink}>LEDGERLINE</text>
+    <text x="156" y="94" fontFamily="-apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif" fontSize="92" fontWeight="500" textLength="460" lengthAdjust="spacingAndGlyphs" fill={ink}>LEDGERLINE</text>
   </svg>;
 }
 
