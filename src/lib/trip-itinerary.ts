@@ -63,3 +63,26 @@ export function itineraryPdfRows(t: TravelTrip): string[][] {
     rows.push(["Booking", b.date, [b.kind, b.provider, b.ref && `#${b.ref}`, b.location, b.confirmation === "confirmed" ? "Confirmed" : "Unconfirmed"].filter(Boolean).join(" · ")]);
   return rows;
 }
+
+const icsText = (s: string) => s.replace(/[\\;,]/g, (c) => "\\" + c).replace(/\n/g, "\\n");
+const icsDate = (d: string) => d.replace(/-/g, "");
+const icsStamp = (iso: string) => new Date(iso).toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "");
+const nextIsoDay = (d: string) => new Date(Date.parse(d + "T00:00:00Z") + 864e5).toISOString().slice(0, 10);
+
+/** iCalendar file of itinerary plans and active bookings; timed items keep their local time, check-ins use the saved moment. No amounts. */
+export function tripCalendar(t: TravelTrip, stamp: string): string {
+  const ev: string[] = [];
+  const add = (uid: string, summary: string, start: string, end: string, location?: string) =>
+    ev.push(["BEGIN:VEVENT", `UID:${uid}@ledgerline`, `DTSTAMP:${icsStamp(stamp)}`, start, end, `SUMMARY:${icsText(summary)}`, ...(location ? [`LOCATION:${icsText(location)}`] : []), "END:VEVENT"].join("\r\n"));
+  for (const i of t.itinerary ?? []) {
+    if (i.time) { const s = `${icsDate(i.date)}T${i.time.replace(":", "")}00`; add(`plan-${i.id}`, i.title, `DTSTART:${s}`, `DTEND:${s}`, i.place); }
+    else add(`plan-${i.id}`, i.title, `DTSTART;VALUE=DATE:${icsDate(i.date)}`, `DTEND;VALUE=DATE:${icsDate(nextIsoDay(i.date))}`, i.place);
+  }
+  for (const b of t.bookings ?? []) {
+    if (b.status === "cancelled") continue;
+    const title = `${b.kind} · ${b.provider}${b.ref ? ` #${b.ref}` : ""}`;
+    if (b.checkInAt) add(`booking-${b.id}`, `Check-in: ${title}`, `DTSTART:${icsStamp(b.checkInAt)}`, `DTEND:${icsStamp(b.checkInAt)}`, b.location);
+    else add(`booking-${b.id}`, title, `DTSTART;VALUE=DATE:${icsDate(b.date)}`, `DTEND;VALUE=DATE:${icsDate(nextIsoDay(b.date))}`, b.location);
+  }
+  return ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Ledgerline//Trip//EN", `X-WR-CALNAME:${icsText(t.name)}`, ...ev, "END:VCALENDAR", ""].join("\r\n");
+}

@@ -37,3 +37,24 @@ describe("itinerary PDF", () => {
     expect(rows.flat().join(" ")).not.toContain("9000");
   });
 });
+
+import { tripCalendar } from "./trip-itinerary";
+import { dueCheckIns } from "./push-rules";
+describe("trip calendar and check-ins", () => {
+  const t = { id: "t", name: "Goa", start: "2026-05-01", end: "2026-05-02", budget: 0, itinerary: [{ id: "a", date: "2026-05-01", time: "09:30", title: "Beach, sunrise" }, { id: "b", date: "2026-05-02", title: "Free day" }], bookings: [{ id: "h", kind: "hotel", provider: "Taj", ref: "R1", date: "2026-05-01", amount: 9000, status: "unpaid", checkInAt: "2026-05-01T08:30:00.000Z" }, { id: "x", kind: "flight", provider: "AI", ref: "", date: "2026-05-01", amount: 1, status: "cancelled" }] } as unknown as TravelTrip;
+  it("exports plans and active bookings without amounts", () => {
+    const ics = tripCalendar(t, "2026-04-01T00:00:00Z");
+    expect(ics).toContain("DTSTART:20260501T093000");
+    expect(ics).toContain("SUMMARY:Beach\\, sunrise");
+    expect(ics).toContain("DTSTART;VALUE=DATE:20260502");
+    expect(ics).toContain("DTSTART:20260501T083000Z");
+    expect(ics).not.toContain("flight");
+    expect(ics).not.toContain("9000");
+  });
+  it("check-in reminder fires once its time arrives, not before or long after", () => {
+    const at = Date.parse("2026-05-01T08:30:00Z");
+    expect(dueCheckIns([t as never], at - 60_000, 15)).toEqual([]);
+    expect(dueCheckIns([t as never], at + 5 * 60_000, 15).map((x) => x.key)).toEqual(["checkin:h:2026-05-01T08:30:00.000Z"]);
+    expect(dueCheckIns([t as never], at + 20 * 60_000, 15)).toEqual([]);
+  });
+});
