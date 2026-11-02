@@ -8,3 +8,14 @@ diff --git a/dist/node/index.mjs b/dist/node/index.mjs
  import { SyntaxKind, parse } from "html5parser";
  import React, { Suspense } from "react";
  import { Fragment, jsx } from "react/jsx-runtime";
+diff --git a/dist/edge/index.mjs b/dist/edge/index.mjs
+--- a/dist/edge/index.mjs
++++ b/dist/edge/index.mjs
+@@ -1,6 +1,6 @@
+ import { convert } from "html-to-text";
+ import React, { Suspense } from "react";
+-import { decodeHTML, decodeHTMLAttribute } from "entities/lib/decode.js";
++import { decodeHTML, decodeHTMLAttribute } from "entities/decode";
+ import { SyntaxKind, parse } from "html5parser";
+ import { Fragment, jsx } from "react/jsx-runtime";
+ //#region src/shared/utils/pretty.ts
