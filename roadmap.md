@@ -593,3 +593,4 @@
 
 - [ ] GLS EMI auto-matching for IDFC Krupa debits (amount gaps, linked-account payments)
 - [ ] GLS loan reconciliation view: scheduled EMI vs bank debit with amount/date differences
+- [ ] GLS loan term: 5 years (set start/end)
