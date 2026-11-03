@@ -130,12 +130,12 @@ export function emiReconciliation(
 export function emiTargets(
   loans: { id: string; name: string; emi: number; nextDue: string; accountId: string | null; status: string; loanType: string }[],
   commitments: { kind: string; status: string; amount: number; accountId: string | null; name: string }[],
-  accounts: { id: string; details?: Record<string, unknown> | null; lastFour?: string | null }[],
+  accounts: { id: string; details?: object | null | undefined }[],
 ): EmiTarget[] {
   return loans.filter((l) => l.status !== "closed" && l.loanType !== "credit_card_emi" && l.emi > 0).map((l) => {
     const c = commitments.find((x) => x.kind === "emi" && x.status === "active" && Math.abs(x.amount - l.emi) <= emiTolerance(l.emi));
     const acc = accounts.find((a) => a.id === l.accountId);
-    const raw = acc?.details?.["matchRefs"];
+    const raw = (acc?.details as Record<string, unknown> | null | undefined)?.["matchRefs"];
     const refs = Array.isArray(raw) ? raw.filter((r): r is string => typeof r === "string") : [];
     return { loanId: l.id, name: l.name, loanAccountId: l.accountId, payFromAccountId: c?.accountId ?? null, emi: l.emi, dueDay: Number(l.nextDue.slice(8, 10)), refs };
   });
