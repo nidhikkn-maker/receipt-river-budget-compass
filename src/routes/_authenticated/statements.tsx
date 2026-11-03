@@ -26,6 +26,7 @@ import { buildPlan, type AccountPlan, type StatementPlan } from "@/lib/statement
 import { applyUpload, undoUpload, type ApplyResult } from "@/lib/statement-pipeline/apply";
 import { totals, type StmtFile } from "@/lib/statement-pipeline/line";
 import { AccountantInbox } from "@/components/AccountantInbox";
+import { emiTargets } from "@/lib/emi-match";
 
 export const Route = createFileRoute("/_authenticated/statements")({
   validateSearch: (s: Record<string, unknown>): { tab?: "accountant" } => (s["tab"] === "accountant" ? { tab: "accountant" } : {}),
@@ -119,9 +120,9 @@ function StatementDeskPage() {
 
   const plan: StatementPlan | null = useMemo(() => {
     if (!loaded.length) return null;
-    return buildPlan(loaded.map((l) => drop(l.file)), accounts, transactions, preferences.categories);
+    return buildPlan(loaded.map((l) => drop(l.file)), accounts, transactions, preferences.categories, emiTargets(store.loans, store.commitments, accounts));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [loaded, destinations, accounts, transactions, preferences.categories]);
+  }, [loaded, destinations, accounts, transactions, preferences.categories, store.loans, store.commitments]);
 
   const api = () => {
     const s = storeRef.current;
