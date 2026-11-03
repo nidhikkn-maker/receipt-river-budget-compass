@@ -77,7 +77,7 @@ export function matchEmiDebit(
   return hits.length === 1 ? hits[0]! : null;
 }
 
-export type EmiRowStatus = "matched" | "amount" | "date" | "missing" | "upcoming";
+export type EmiRowStatus = "matched" | "amount" | "date" | "missing" | "lender_only" | "upcoming";
 export interface EmiRow {
   due: string;
   emi: number;
@@ -118,7 +118,7 @@ export function emiReconciliation(
     if (pick) used.add(pick.d.id);
     const amountDiff = pick ? Math.round((pick.d.amount - loan.emi) * 100) / 100 : null;
     const status: EmiRowStatus = !pick
-      ? due > today ? "upcoming" : "missing"
+      ? due > today ? "upcoming" : lender ? "lender_only" : "missing"
       : Math.abs(amountDiff!) > emiTolerance(loan.emi) ? "amount"
       : Math.abs(pick.days) > 3 ? "date" : "matched";
     rows.push({ due, emi: loan.emi, lenderPaid: lender || null, debit: pick?.d ?? null, amountDiff, dayDiff: pick?.days ?? null, status });
