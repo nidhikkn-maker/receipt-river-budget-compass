@@ -15,6 +15,7 @@ import { loanHistory, loanBalanceChart, loanHistoryRows, payoffProjection } from
 import { downloadBlob } from "@/lib/reports";
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip } from "recharts";
 import { todayISO } from "@/lib/use-position";
+import { emiReconciliation, emiTargets, matchEmiDebit, type EmiRowStatus } from "@/lib/emi-match";
 
 const months = (n: number) => (Number.isFinite(n) ? `${Math.floor(n / 12)}y ${n % 12}m` : "never");
 
@@ -146,6 +147,7 @@ function LoanCard({ l, onRemove }: { l: Loan; onRemove: () => void }) {
         </div>
       )}
       {l.status!=="closed"&&<div className="mt-4 grid gap-2 border-t pt-3"><Input aria-label={`Payment date for ${l.name}`} type="date" max={todayISO()} value={payDate} onChange={e=>setPayDate(e.target.value)}/>{l.loanType!=="credit_card_emi"&&<Select value={from} onValueChange={setFrom}><SelectTrigger aria-label={`Pay ${l.name} from`}><SelectValue/></SelectTrigger><SelectContent><SelectItem value="none">Payment account</SelectItem>{accounts.filter(x=>!x.archived&&["savings","current","cash","wallet"].includes(x.kind)).map(x=><SelectItem key={x.id} value={x.id}>{x.name}</SelectItem>)}</SelectContent></Select>}<Button size="sm" disabled={busy||(l.loanType!=="credit_card_emi"&&from==="none")} onClick={async()=>{setBusy(true);try{await recordLoanPayment(l,{fromAccountId:from==="none"?null:from,date:payDate});toast.success("EMI recorded");}catch(e){toast.error((e as Error).message);}finally{setBusy(false);}}}>{l.loanType==="credit_card_emi"?"Record billed instalment":"Record EMI payment"}</Button></div>}
+      {l.loanType !== "credit_card_emi" && <EmiReconciliation l={l} />}
       <details className="mt-3"><summary className="cursor-pointer text-sm">Payment history & full schedule</summary><ul className="mt-2 divide-y text-xs">{l.payments.map((p,i)=><li key={i} className="py-2">{p.date} · principal {money(p.principal)} + interest {money(p.interest)} = {money(p.total)}</li>)}</ul><div className="mt-2 max-h-64 overflow-auto"><table className="w-full text-left text-xs"><thead><tr><th>Date</th><th>Principal</th><th>Interest</th><th>Balance</th></tr></thead><tbody>{a.schedule.map(row=><tr key={row.month} className="border-t"><td className="py-2">{addMonths(l.nextDue,row.month-1)}</td><td>{money(row.principal)}</td><td>{money(row.interest)}</td><td>{money(row.balance)}</td></tr>)}</tbody></table></div></details>
     </div>
   );
@@ -187,5 +189,47 @@ export function GoalsPanel() {
         <Button type="submit" className="col-span-2">Add goal</Button>
       </form>
     </section>
+  );
+}
+
+const EMI_STATUS: Record<EmiRowStatus, { label: string; tone: string }> = {
+  matched: { label: "Matched", tone: "text-muted-foreground" },
+  amount: { label: "Amount differs", tone: "text-destructive" },
+  date: { label: "Date differs", tone: "text-warning" },
+  missing: { label: "No bank debit", tone: "text-destructive" },
+  lender_only: { label: "Lender only", tone: "text-muted-foreground" },
+  upcoming: { label: "Upcoming", tone: "text-muted-foreground" },
+};
+
+/** Each scheduled EMI beside the bank debit that paid it; read-only, never changes records. */
+function EmiReconciliation({ l }: { l: Loan }) {
+  const { accounts, commitments, transactions } = useStore();
+  const target = emiTargets([l], commitments, accounts)[0];
+  if (!target) return null;
+  const debits = transactions.filter((e) =>
+    (e.txnType === "loan_repayment" && !!l.accountId && e.toAccountId === l.accountId)
+    || (matchEmiDebit({ date: e.date, amount: e.amount, direction: "debit", accountId: e.accountId, description: `${e.title} ${e.merchant ?? ""} ${e.statementRef ?? ""}` }, [target]) !== null && !["income", "refund"].includes(e.txnType ?? "expense")),
+  ).map((e) => ({ id: e.id, date: e.date, amount: e.amount, title: e.title }));
+  const from = [...l.payments.map((p) => p.date), ...debits.map((d) => d.date)].sort()[0] ?? l.nextDue;
+  const rows = emiReconciliation({ emi: l.emi, dueDay: target.dueDay, from, nextDue: l.nextDue, payments: l.payments }, debits, todayISO()).reverse();
+  const flagged = rows.filter((r) => r.status === "amount" || r.status === "date" || r.status === "missing").length;
+  const payFrom = accounts.find((a) => a.id === target.payFromAccountId)?.name;
+  return (
+    <details className="mt-3 rounded-xl border p-2">
+      <summary className="cursor-pointer text-sm font-medium">EMI reconciliation · {rows.length} EMIs · {flagged ? `${flagged} to check` : "all clear"}</summary>
+      <p className="mt-1 text-[11px] text-muted-foreground">Scheduled EMI on day {target.dueDay}{payFrom ? ` from ${payFrom}` : ""} beside the bank debit found within 7 days before or 5 days after. Gaps up to ₹{Math.max(100, Math.round(l.emi * 0.005)).toLocaleString("en-IN")} count as matched; "Lender only" means the loan statement shows it paid but your bank records don't go back that far.</p>
+      <div className="mt-2 grid grid-cols-[1fr_1fr_1fr_auto] gap-1 text-[11px] text-muted-foreground"><span>Due</span><span>Bank debit</span><span>Difference</span><span>Status</span></div>
+      {rows.map((r) => {
+        const st = EMI_STATUS[r.status];
+        return (
+          <div key={r.due} className="grid grid-cols-[1fr_1fr_1fr_auto] items-start gap-1 border-t py-1 text-xs">
+            <span className="font-mono">{r.due}<span className="block text-[10px] text-muted-foreground">{money(r.emi)}{r.lenderPaid ? ` · lender ${money(r.lenderPaid)}` : ""}</span></span>
+            <span className="min-w-0 font-mono">{r.debit ? <>{r.debit.date}<span className="block truncate text-[10px] text-muted-foreground" title={r.debit.title}>{money(r.debit.amount)}</span></> : "—"}</span>
+            <span className="font-mono">{r.debit ? <>{r.amountDiff === 0 ? "₹0" : `${r.amountDiff! > 0 ? "+" : "−"}${money(Math.abs(r.amountDiff!))}`}<span className="block text-[10px] text-muted-foreground">{r.dayDiff === 0 ? "on time" : `${Math.abs(r.dayDiff!)}d ${r.dayDiff! < 0 ? "early" : "late"}`}</span></> : "—"}</span>
+            <span className={`text-right font-medium ${st.tone}`}>{st.label}</span>
+          </div>
+        );
+      })}
+    </details>
   );
 }
