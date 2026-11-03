@@ -591,6 +591,6 @@
 - [x] Reduce first-load work further
 - [x] Measure first/repeat open (emulation; real iPhone needs user)
 
-- [ ] GLS EMI auto-matching for IDFC Krupa debits (amount gaps, linked-account payments)
-- [ ] GLS loan reconciliation view: scheduled EMI vs bank debit with amount/date differences
-- [ ] GLS loan term: 5 years (set start/end)
+- [x] GLS EMI auto-matching for IDFC Krupa debits (amount gaps, linked-account payments)
+- [x] GLS loan reconciliation view: scheduled EMI vs bank debit with amount/date differences
+- [x] GLS loan term: 5 years (set start/end)
