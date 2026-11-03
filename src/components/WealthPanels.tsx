@@ -208,7 +208,7 @@ function EmiReconciliation({ l }: { l: Loan }) {
   if (!target) return null;
   const debits = transactions.filter((e) =>
     (e.txnType === "loan_repayment" && !!l.accountId && e.toAccountId === l.accountId)
-    || (matchEmiDebit({ date: e.date, amount: e.amount, direction: "debit", accountId: e.accountId, description: `${e.title} ${e.merchant ?? ""} ${e.statementRef ?? ""}` }, [target]) !== null && !["income", "refund"].includes(e.txnType ?? "expense")),
+    || (matchEmiDebit({ date: e.date, amount: e.amount, direction: "debit", accountId: e.accountId ?? null, description: `${e.title} ${e.merchant ?? ""} ${e.statementRef ?? ""}` }, [target]) !== null && !["income", "refund"].includes(e.txnType ?? "expense")),
   ).map((e) => ({ id: e.id, date: e.date, amount: e.amount, title: e.title }));
   const from = [...l.payments.map((p) => p.date), ...debits.map((d) => d.date)].sort()[0] ?? l.nextDue;
   const rows = emiReconciliation({ emi: l.emi, dueDay: target.dueDay, from, nextDue: l.nextDue, payments: l.payments }, debits, todayISO()).reverse();

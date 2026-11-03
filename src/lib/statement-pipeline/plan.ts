@@ -1,3 +1,4 @@
+import type { EmiTarget } from "../emi-match";
 // One change plan for a whole upload: what saves itself, what must be asked, what waits (pure, tested).
 import { accountBalance, isLiability, type Account } from "../ledger";
 import { money, type Expense } from "../expenses";

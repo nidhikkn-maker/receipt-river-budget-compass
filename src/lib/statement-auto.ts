@@ -1,3 +1,4 @@
+import { matchEmiDebit, type EmiTarget } from "./emi-match";
 // Automatic registration of bank-statement lines as ledger entries (pure, tested).
 // A line is only auto-registered when the rules are confident; anything that needs a
 // person's decision (transfers, cash withdrawals, unclear credits) is returned for review.
