@@ -590,3 +590,6 @@
 - [x] Investigate 5s+ app open time (smaller saved copy)
 - [x] Reduce first-load work further
 - [x] Measure first/repeat open (emulation; real iPhone needs user)
+
+- [ ] GLS EMI auto-matching for IDFC Krupa debits (amount gaps, linked-account payments)
+- [ ] GLS loan reconciliation view: scheduled EMI vs bank debit with amount/date differences
