@@ -1,3 +1,4 @@
+import type { EmiTarget } from "../emi-match";
 // One change plan for a whole upload: what saves itself, what must be asked, what waits (pure, tested).
 import { accountBalance, isLiability, type Account } from "../ledger";
 import { money, type Expense } from "../expenses";
@@ -49,7 +50,7 @@ const periodOf = (lines: StmtLine[]) => {
  * Reads every uploaded file against the ledger and says what would happen.
  * Nothing is posted here: an account whose balance check fails has every posting held.
  */
-export function buildPlan(files: StmtFile[], accounts: Account[], transactions: Expense[], categories: CategorySetting[]): StatementPlan {
+export function buildPlan(files: StmtFile[], accounts: Account[], transactions: Expense[], categories: CategorySetting[], emiTargets: EmiTarget[] = []): StatementPlan {
   const live = accounts.filter((a) => !a.archived);
   const first = files.map((file) => {
     const acct = live.find((a) => a.id === file.accountId) ?? null;
@@ -65,7 +66,7 @@ export function buildPlan(files: StmtFile[], accounts: Account[], transactions: 
   });
 
   const accounts2: AccountPlan[] = first.map((f, index) => {
-    const ctx: StatementContext = { transactions, accounts: live, categories, accountId: f.acct?.id ?? null, currency: f.file.currency };
+    const ctx: StatementContext = { transactions, accounts: live, categories, accountId: f.acct?.id ?? null, currency: f.file.currency, emiTargets };
     const otherMissing = first.filter((_, i) => i !== index).flatMap((o) => o.missing);
     const claimed = new Set(first.flatMap((o) => o.outcomes.flatMap((x) => (x.record ? [x.record.id] : []))));
     const elsewhere: AccountPlan["elsewhere"] = [];
