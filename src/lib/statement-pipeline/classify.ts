@@ -31,7 +31,7 @@ export function classifyMissing(missing: StmtLine[], otherFiles: StmtLine[], ctx
     if (transferWith) {
       return { line, group: "ask" as const, reason: `Same amount and date on ${transferWith.file} the other way — one movement between two of your accounts. Confirm where it went.`, draft, transferWith, needsDestination: true };
     }
-    if (MOVE.has(draft.txnType)) return { line, group: "ask" as const, reason: draft.reason, draft, needsDestination: true };
+    if (MOVE.has(draft.txnType)) return { line, group: "ask" as const, reason: draft.reason, draft, needsDestination: !draft.toAccountId };
     if (draft.txnType === "income" && /confirm/.test(draft.reason)) return { line, group: "ask" as const, reason: "Money coming in — tell us it is income before it is saved", draft };
     if (draft.uncertain) return { line, group: "ask" as const, reason: `Category is only a guess (${draft.category}) — check it before saving`, draft };
     return { line, group: "auto" as const, reason: draft.reason, draft };

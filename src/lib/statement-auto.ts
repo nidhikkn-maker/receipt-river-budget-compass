@@ -45,6 +45,8 @@ export interface StatementContext {
   /** Account the statement came from, when the user picked one. */
   accountId: string | null;
   currency: string;
+  /** Loan EMIs a debit from this account may pay (see emi-match.ts). */
+  emiTargets?: EmiTarget[];
 }
 
 /** Keyword -> category. Checked in order, first hit wins. Names must exist in the catalog. */
@@ -156,6 +158,12 @@ export function classifyStatementLine(line: StatementLine, ctx: StatementContext
     return { ...base, category, txnType: "income", reason: "Credit line — confirm it is income before saving", uncertain: true };
   }
 
+  const emi = ctx.emiTargets?.length ? matchEmiDebit({ date: line.date, amount: line.amount, direction: "debit", accountId: ctx.accountId, description: line.description || "" }, ctx.emiTargets) : null;
+  if (emi) {
+    const gap = emi.amountDiff === 0 ? "exact EMI" : `₹${Math.abs(emi.amountDiff).toLocaleString("en-IN")} ${emi.amountDiff < 0 ? "less" : "more"} than the EMI${emi.linked ? " (linked account may cover the rest)" : ""}`;
+    const when = emi.dayDiff === 0 ? "on the due date" : `${Math.abs(emi.dayDiff)} day${Math.abs(emi.dayDiff) === 1 ? "" : "s"} ${emi.dayDiff < 0 ? "before" : "after"} the ${emi.due} due date`;
+    return { ...base, title: `${emi.target.name} EMI`, category: resolveCategory(ctx.categories, "Financial charges") ?? category, txnType: "loan_repayment", toAccountId: emi.target.loanAccountId, paymentMethod: "bank_transfer", reason: `Looks like the ${emi.target.name} EMI — ${gap}, ${when}. Confirm before saving.` };
+  }
   if (CARD_OR_LOAN_PAYMENT.test(text)) return { ...base, category, txnType: "transfer", reason: "Card, loan or investment payment — pick the account it went to" };
   if (TRANSFER_DEBIT.test(text)) return { ...base, category, txnType: "transfer", reason: "Transfer or cash withdrawal — pick where the money went" };
   if (/\b(CHARGES?|PENALTY|SURCHARGE|MINIMUM BALANCE|AMCC|MARKUP|FOREX FEE|LATE FEE)\b/.test(text)) {
