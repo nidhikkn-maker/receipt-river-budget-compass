@@ -63,7 +63,9 @@ export function position(i: PositionInput) {
   const cardOut = cards.flatMap((c) => cardDues(c.account, c.cycle, i.today));
   const activeLoans = i.loans.filter((l) => l.status !== "closed");
   // EMIs from the loans list are scheduled like monthly commitments; card EMIs are billed on the card instead.
-  const loanCommitments: Commitment[] = activeLoans.filter((l) => !isCardEmi(l)).map((l, k) => ({ id: `loan-${l.id ?? k}`, name: `${l.name} EMI`, kind: "emi", direction: "out", amount: l.emi, frequency: "monthly", intervalDays: null, nextDue: l.nextDue, accountId: null, category: "Financial charges", confirmed: true, essential: true, status: "active" }));
+  // A saved recurring EMI with the same amount already schedules this loan, so don't add it twice.
+  const savedEmi = (l: { emi: number }) => i.commitments.some((c) => c.kind === "emi" && c.status === "active" && Math.abs(c.amount - l.emi) < 0.01);
+  const loanCommitments: Commitment[] = activeLoans.filter((l) => !isCardEmi(l) && !savedEmi(l)).map((l, k) => ({ id: `loan-${l.id ?? k}`, name: `${l.name} EMI`, kind: "emi", direction: "out", amount: l.emi, frequency: "monthly", intervalDays: null, nextDue: l.nextDue, accountId: null, category: "Financial charges", confirmed: true, essential: true, status: "active" }));
   const all = [...i.commitments, ...loanCommitments];
   const input = { startBalance: cash, commitments: all, today: i.today, days: i.days, includeUnconfirmed: !!i.includeUnconfirmed, extraOut: cardOut };
   const sts = safeToSpend({ ...input, reserves, minBalance });
