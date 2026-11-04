@@ -442,6 +442,7 @@ export type Database = {
           doc_type: string
           expires_on: string | null
           extracted_text: string
+          fields: Json
           file_name: string
           file_path: string
           id: string
@@ -450,6 +451,7 @@ export type Database = {
           mime_type: string
           notes: string
           owner_id: string
+          replaces_id: string | null
           size_bytes: number
           title: string
           transaction_id: string | null
@@ -463,6 +465,7 @@ export type Database = {
           doc_type?: string
           expires_on?: string | null
           extracted_text?: string
+          fields?: Json
           file_name: string
           file_path: string
           id?: string
@@ -471,6 +474,7 @@ export type Database = {
           mime_type?: string
           notes?: string
           owner_id: string
+          replaces_id?: string | null
           size_bytes?: number
           title: string
           transaction_id?: string | null
@@ -484,6 +488,7 @@ export type Database = {
           doc_type?: string
           expires_on?: string | null
           extracted_text?: string
+          fields?: Json
           file_name?: string
           file_path?: string
           id?: string
@@ -492,6 +497,7 @@ export type Database = {
           mime_type?: string
           notes?: string
           owner_id?: string
+          replaces_id?: string | null
           size_bytes?: number
           title?: string
           transaction_id?: string | null
@@ -509,6 +515,13 @@ export type Database = {
             columns: ["loan_id"]
             isOneToOne: false
             referencedRelation: "loans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "documents_replaces_id_fkey"
+            columns: ["replaces_id"]
+            isOneToOne: false
+            referencedRelation: "documents"
             referencedColumns: ["id"]
           },
           {
