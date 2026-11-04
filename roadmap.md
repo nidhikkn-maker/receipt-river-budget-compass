@@ -681,3 +681,8 @@
 - Opening balances are compared, not posted to the ledger (ledger has no non-cash opening entry type) — needs owner decision.
 - ITR JSON in official schema — schemas are thousands of fields; working papers only until scoped with accountant.
 - Live NSE/BSE prices — needs licensed provider choice. GLS original amount — needs sanction letter. iPhone push/camera — needs device test. Publishing — needs approval.
+
+## Approved plan 2026-11-04 (v6.0+v6.1 remaining gaps) — see .lovable/plan/ledgerline-v6-0-v6-1-complete-remaining-gap-plan-2026-11-04.md
+- [ ] A1 Opening-balance workflow posting dated opening entries
+- [ ] A2 Accountant-ready income tax handoff
+- [ ] B–H batches per plan
