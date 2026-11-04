@@ -27,7 +27,7 @@ import { tagValue } from "@/lib/preferences";
 import { duplicateBills } from "@/lib/bill-duplicates";
 import { suggestForEntry } from "@/lib/statement-pipeline/single-entry";
 import { buildReceiptAudit, receiptFingerprint, receiptFingerprintMatches, type ReceiptReadValues } from "@/lib/receipt-audit";
-import { receiptConfidence, receiptBreakdownError, receiptRoundOff, receiptItemConfidence, receiptItemReviewReasons, receiptReviewCheck, receiptReviewSignature, unconfirmedFields, type ReceiptField, type ReadingConfidence } from "@/lib/receipt-reading";
+import { receiptConfidence, receiptBreakdownError, receiptRoundOff, receiptItemConfidence, receiptItemReviewReasons, receiptReviewCheck, receiptReviewSignature, unconfirmedFields, correctedFields, learnedShopName, type ReceiptField, type ReadingConfidence } from "@/lib/receipt-reading";
 import { ReceiptZoomViewer } from "@/components/ReceiptZoomViewer";
 import { quickEntrySearch } from "@/lib/quick-entry";
 import { useStore } from "@/lib/store";
@@ -475,7 +475,8 @@ function NewExpense() {
       const cur = x.currency && /^[A-Z]{3}$/.test(x.currency.toUpperCase()) ? x.currency.toUpperCase() : currency;
       const readValues: ReceiptReadValues = { merchant: x.merchant ?? "", date: isDate(x.date) ? x.date : date, amount: x.amount ?? 0, currency: cur };
       setScanRead(readValues);
-      setScan({ merchant: readValues.merchant, date: readValues.date, amount: x.amount != null ? String(x.amount) : "", currency: cur });
+      const learned = learnedShopName(readValues.merchant, preferences.shopAliases, expenses.map((e) => e.merchant ?? "").filter(Boolean));
+      setScan({ merchant: learned ?? readValues.merchant, date: readValues.date, amount: x.amount != null ? String(x.amount) : "", currency: cur });
       setAutoFilled(filled);
       setConfirmed(false);
       toast.success("Bill read — check the key details");
@@ -524,9 +525,14 @@ function NewExpense() {
   const roundAmt = roundInfo.printed || roundInfo.implied;
   const roundNote = roundAmt ? `Round-off ${roundAmt > 0 ? "+" : "−"}${Math.abs(roundAmt).toFixed(2)}${roundInfo.implied ? " (bill rounded to nearest whole amount)" : " (printed on bill)"}.` : "";
   const fieldValues: Record<ReceiptField, string> = { merchant: scan?.merchant.trim() ?? "", date: scan?.date ?? "", total: scan?.amount ?? "" };
-  const fieldsToConfirm = unconfirmedFields(receiptDetails.confidence, fieldValues, fieldChecks);
+  const corrected = scan ? correctedFields(scanRead, scan) : [];
+  const fieldsToConfirm = unconfirmedFields(receiptDetails.confidence, fieldValues, fieldChecks).filter((f) => !corrected.includes(f));
+  const readShown: Record<ReceiptField, string> = { merchant: scanRead?.merchant || "nothing", date: scanRead?.date || "nothing", total: scanRead ? String(scanRead.amount) : "" };
+  const Corrected = ({ f }: { f: ReceiptField }) => !scan || !scanRead || !corrected.includes(f) ? null : (
+    <p role="status" className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground"><span className="font-semibold text-foreground">Corrected</span> (bill read {readShown[f]})
+      <button type="button" className="text-primary underline" onClick={() => setScan({ ...scan, ...(f === "merchant" ? { merchant: scanRead.merchant } : f === "date" ? { date: scanRead.date } : { amount: String(scanRead.amount) }) })}>Undo</button></p>);
   const FIELD_LABEL: Record<ReceiptField, string> = { merchant: "merchant", date: "date", total: "total" };
-  const FieldCheck = ({ f }: { f: ReceiptField }) => receiptDetails.confidence?.[f] !== "low" ? null : (
+  const FieldCheck = ({ f }: { f: ReceiptField }) => receiptDetails.confidence?.[f] !== "low" || corrected.includes(f) ? null : (
     <label className={cn("flex items-center gap-2 rounded-xl border-2 p-2 text-xs font-semibold", fieldChecks[f] === fieldValues[f] ? "border-border" : "border-warning bg-warning/10")}>
       <input type="checkbox" className="h-4 w-4" checked={fieldChecks[f] === fieldValues[f]} onChange={(e) => setFieldChecks((c) => ({ ...c, [f]: e.target.checked ? fieldValues[f] : undefined }))} />
       I've checked this {FIELD_LABEL[f]} against the receipt
@@ -544,6 +550,10 @@ function NewExpense() {
     if (!preferences.categories.some(c => !c.archived && c.name === scanCategory)) { toast.error("Choose a category to confirm"); return; }
     setCategory(scanCategory);
     setMerchant(scan.merchant.trim()); rememberMerchant(scan.merchant.trim());
+    if (scanRead?.merchant.trim() && corrected.includes("merchant")) {
+      const from = scanRead.merchant.trim().toLowerCase().replace(/\s+/g, " "), to = scan.merchant.trim().toLowerCase().replace(/\s+/g, " ");
+      if (from !== to && preferences.shopAliases?.[from] !== to) void savePreferences({ ...preferences, shopAliases: { ...preferences.shopAliases, [from]: to } }).catch(() => {});
+    }
     if (!title.trim()) setTitle(scan.merchant.trim());
     setAmount(scan.amount);
     setDate(scan.date);
@@ -833,11 +843,11 @@ function NewExpense() {
           <section ref={reviewRef} className={cn("rounded-3xl border-2 border-primary bg-card p-4 shadow-float", receipts[0] && "lg:grid lg:w-[min(64rem,calc(100vw-4rem))] lg:grid-cols-2 lg:gap-5 lg:justify-self-center")} role="group" aria-label="Review scanned details">
             {receipts[0] && <div className="mb-4 lg:mb-0"><div className="lg:sticky lg:top-4"><div className="mb-2 font-display font-bold">Original receipt</div><ReceiptZoomViewer src={receipts[0].dataUrl} type={receipts[0].type} name={receipts[0].name} /></div></div>}
             <div className="min-w-0 space-y-3">
-            <div className="flex items-start justify-between gap-3"><div className="min-w-0"><div className="font-display font-bold">Check what we read</div><p className="text-xs text-muted-foreground">Fix anything that's off, then confirm.</p></div>
+            <div className="flex items-start justify-between gap-3"><div className="min-w-0"><div className="font-display font-bold">Check what we read</div><p className="text-xs text-muted-foreground">Tap the shop, date or total to correct it, then confirm.</p></div>
               <Button type="button" size="sm" variant="ghost" className="shrink-0" onClick={() => { setScan(null); setScanRead(null); setScanCategory(""); setReceiptDetails({}); setReviewApproval(""); setReviewDialog(false); setFieldChecks({}); setConfirmed(true); }}>Discard</Button></div>
-            <div className="grid gap-1"><Label htmlFor="sm">Merchant</Label><Input id="sm" value={scan.merchant} onChange={(e) => setScan({ ...scan, merchant: e.target.value })} /><ReadingIndicator value={receiptDetails.confidence?.merchant ?? "unknown"} /><FieldCheck f="merchant" /></div>
+            <div className="grid gap-1"><Label htmlFor="sm">Merchant</Label><Input id="sm" value={scan.merchant} onChange={(e) => setScan({ ...scan, merchant: e.target.value })} /><ReadingIndicator value={receiptDetails.confidence?.merchant ?? "unknown"} /><FieldCheck f="merchant" /><Corrected f="merchant" /></div>
             <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] items-start gap-3">
-              <div className="grid min-w-0 gap-1"><Label htmlFor="sd">Date</Label><Input id="sd" type="date" className="h-10 w-full min-w-0 appearance-none" value={scan.date} onChange={(e) => setScan({ ...scan, date: e.target.value })} /><ReadingIndicator value={receiptDetails.confidence?.date ?? "unknown"} /><FieldCheck f="date" /></div>
+              <div className="grid min-w-0 gap-1"><Label htmlFor="sd">Date</Label><Input id="sd" type="date" className="h-10 w-full min-w-0 appearance-none" value={scan.date} onChange={(e) => setScan({ ...scan, date: e.target.value })} /><ReadingIndicator value={receiptDetails.confidence?.date ?? "unknown"} /><FieldCheck f="date" /><Corrected f="date" /></div>
               <div className="grid min-w-0 gap-1"><Label>Currency</Label>
                 <Select value={scan.currency} onValueChange={(v) => setScan({ ...scan, currency: v })}>
                   <SelectTrigger aria-label="Scanned currency" className="h-10 w-full min-w-0"><SelectValue /></SelectTrigger>
@@ -845,7 +855,7 @@ function NewExpense() {
                 </Select>
               </div>
             </div>
-            <div className="grid gap-1"><Label htmlFor="sa">Total on bill</Label><Input id="sa" type="number" step="0.01" min="0" className="font-mono" value={scan.amount} onChange={(e) => setScan({ ...scan, amount: e.target.value })} /><ReadingIndicator value={receiptDetails.confidence?.total ?? "unknown"} /><FieldCheck f="total" /></div>
+            <div className="grid gap-1"><Label htmlFor="sa">Total on bill</Label><Input id="sa" type="number" step="0.01" min="0" className="font-mono" value={scan.amount} onChange={(e) => setScan({ ...scan, amount: e.target.value })} /><ReadingIndicator value={receiptDetails.confidence?.total ?? "unknown"} /><FieldCheck f="total" /><Corrected f="total" /></div>
             <div className="grid gap-1"><Label htmlFor="receipt-subtotal">Subtotal before tax and tip</Label><Input id="receipt-subtotal" type="number" min="0" step="0.01" value={receiptDetails.subtotal ?? ""} onChange={e=>setReceiptDetails({...receiptDetails,subtotal:e.target.value===""?null:Number(e.target.value)})}/></div>
             <div className="grid grid-cols-2 gap-3">
               <div className="grid gap-1"><Label htmlFor="receipt-tax">Tax included</Label><Input id="receipt-tax" type="number" min="0" step="0.01" value={receiptDetails.tax ?? ""} onChange={e=>setReceiptDetails({...receiptDetails,tax:e.target.value===""?null:Number(e.target.value)})}/></div>

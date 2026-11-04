@@ -28,6 +28,10 @@ export interface AccountHint {
   kind: AccountKind;
   issuer: string;
   lastFour: string | null;
+  /** Full printed account number, IFSC and holder — only from labelled header lines. */
+  number?: string;
+  ifsc?: string;
+  holder?: string;
 }
 
 /** One parsed statement file (a forex file can yield one file per currency wallet). */

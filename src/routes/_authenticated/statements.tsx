@@ -27,6 +27,11 @@ import { applyUpload, undoUpload, type ApplyResult } from "@/lib/statement-pipel
 import { totals, type StmtFile } from "@/lib/statement-pipeline/line";
 import { AccountantInbox } from "@/components/AccountantInbox";
 import { emiTargets } from "@/lib/emi-match";
+import { NewStatementAccount } from "@/components/NewStatementAccount";
+import { newAccountFromHint } from "@/lib/statement-pipeline/apply";
+import type { AccountHint } from "@/lib/statement-pipeline/line";
+import { supabase } from "@/integrations/supabase/client";
+import { suggestTransfers, transferApprovalBlocker, activeLinks, type TransferLinkRow } from "@/lib/transfer-match";
 
 export const Route = createFileRoute("/_authenticated/statements")({
   validateSearch: (s: Record<string, unknown>): { tab?: "accountant" } => (s["tab"] === "accountant" ? { tab: "accountant" } : {}),
@@ -65,6 +70,9 @@ function StatementDeskPage() {
   const [accepted, setAccepted] = useState<string[]>([]);
   const [destinations, setDestinations] = useState<Record<string, string>>({});
   const [result, setResult] = useState<ApplyResult | null>(null);
+  const [hintEdits, setHintEdits] = useState<Record<string, Partial<AccountHint>>>({});
+  const [links, setLinks] = useState<TransferLinkRow[] | null>(null);
+  const [linking, setLinking] = useState<string | null>(null);
   const [fix, setFix] = useState<{ preview: CorrectionPreview; name: string } | null>(null);
   const fixOp = useRef("");
   const inputRef = useRef<HTMLInputElement>(null);
@@ -111,7 +119,9 @@ function StatementDeskPage() {
     if (next.length) toast.success(`${next.length} statement${next.length === 1 ? "" : "s"} read on this device`);
   };
 
-  const drop = (file: StmtFile): StmtFile => {
+  const drop = (raw: StmtFile): StmtFile => {
+    const edits = hintEdits[raw.name];
+    const file = edits && raw.hint ? { ...raw, hint: { ...raw.hint, ...edits } } : raw;
     const over = destinations[`${file.name}\u0000account`];
     if (!over) return file;
     if (over === "__new__") return { ...file, accountId: null, hint: file.hint ?? { name: file.name.replace(/\.[a-z]+$/i, "").slice(0, 40) || "New account", kind: "savings", issuer: "", lastFour: null } };
@@ -148,6 +158,7 @@ function StatementDeskPage() {
       const r = await applyUpload(requests, api(), setProgress);
       setResult(r);
       setAccepted([]);
+      void loadLinks();
       const upload: StatementUpload = { id: crypto.randomUUID(), at: new Date().toISOString(), label: plan.accounts.map((a) => a.file.name).join(", ").slice(0, 200), posted: r.posted, reconciled: r.reconciled, createdAccounts: r.createdAccounts };
       try { const s = storeRef.current; await s.savePreferences({ ...s.preferences, statementUploads: [upload, ...(s.preferences.statementUploads ?? [])].slice(0, 10) }); }
       catch { toast.error("Saved, but undo history couldn’t sync to your other devices."); }
@@ -159,6 +170,37 @@ function StatementDeskPage() {
     } finally {
       setProgress(null);
     }
+  };
+
+  const loadLinks = async () => {
+    const q = await supabase.from("transfer_links").select("*");
+    setLinks(q.error ? [] : ((q.data ?? []) as unknown as TransferLinkRow[]));
+  };
+  const createFor = async (l: Loaded) => {
+    const f = drop(l.file);
+    if (!f.hint) return;
+    try {
+      const id = await storeRef.current.addAccount(newAccountFromHint(f.hint, f.opening));
+      setDestinations((d) => ({ ...d, [`${l.file.name}\u0000account`]: id }));
+      setLoaded((xs) => xs.map((x) => (x.file.name === l.file.name ? { ...x, accountName: f.hint!.name } : x)));
+      toast.success(`${f.hint.name} added — this statement is now matched against it`);
+    } catch (e) { toast.error(e instanceof Error ? e.message : "Couldn't add the account"); }
+  };
+  // Transfers touching what this upload just posted; clear ones are ticked, amount-only ones wait for a decision.
+  const postedSet = new Set(result?.posted ?? []);
+  const transferHints = links && result ? suggestTransfers(transactions, accounts, links).filter((s) => postedSet.has(s.debit.id) || (s.credit && postedSet.has(s.credit.id))) : [];
+  const linkClear = async () => {
+    const clear = transferHints.filter((s) => s.strength === "strong" && !transferApprovalBlocker(s.debit, s.credit, s.destId, accounts));
+    let ok = 0; const failed: string[] = [];
+    for (const [i, s] of clear.entries()) {
+      setLinking(`Linking ${i + 1} of ${clear.length}…`);
+      const id = activeLinks(links ?? []).find((x) => x.debit_id === s.debit.id && !x.credit_id)?.id ?? crypto.randomUUID();
+      try { await storeRef.current.confirmTransfer({ id, debit: s.debit, destId: s.destId, credit: s.credit }); ok++; }
+      catch (e) { failed.push((e as Error).message); }
+    }
+    setLinking(null); await loadLinks();
+    if (ok) toast.success(`${ok} transfer${ok > 1 ? "s" : ""} linked between your accounts`);
+    if (failed.length) toast.error(`${failed.length} not linked — ${failed[0]}`);
   };
 
   const undo = async (r: ApplyResult, uploadId?: string) => {
@@ -299,6 +341,11 @@ function StatementDeskPage() {
                       {live.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
                     </select>
                   </label>
+                  {(destinations[`${l.file.name}\u0000account`] ?? l.file.accountId ?? "__new__") === "__new__" && (
+                    <NewStatementAccount hint={drop(l.file).hint} file={l.file} accounts={accounts}
+                      onEdit={(patch) => setHintEdits((h) => ({ ...h, [l.file.name]: { ...h[l.file.name], ...patch } }))}
+                      onCreate={() => createFor(l)} />
+                  )}
                 </div>
                 <Button variant="ghost" size="sm" aria-label={`Remove ${l.file.name}`} onClick={() => setLoaded((xs) => xs.filter((x) => x.file.name !== l.file.name))}><X className="size-4" /></Button>
               </li>
@@ -421,6 +468,21 @@ function StatementDeskPage() {
             {result && <Button variant="outline" onClick={() => void undo(result)}>Undo this upload ({result.posted.length} posted)</Button>}
             <Button variant="ghost" onClick={exportCsv}><Download className="size-4" /> Export the plan</Button>
           </div>
+          {transferHints.length > 0 && (
+            <Card className="space-y-2 p-3" aria-label="Transfers between your accounts">
+              <h3 className="font-semibold">Transfers between your accounts · {transferHints.length}</h3>
+              <p className="text-xs text-muted-foreground">Clear matches share a reference or name the other account. Ones that only match on amount stay for you to decide on the Transfers page.</p>
+              <ul className="divide-y divide-border rounded-xl border border-border text-sm">{transferHints.map((s) => (
+                <li key={s.key} className="flex items-start justify-between gap-3 p-2">
+                  <span className="min-w-0"><span className="block truncate">{s.debit.date} · {s.debit.title}</span><span className="text-xs text-muted-foreground">{accounts.find((a) => a.id === s.debit.accountId)?.name ?? "—"} → {accounts.find((a) => a.id === s.destId)?.name ?? "—"} · {s.strength === "strong" ? "clear match" : "check this"}</span></span>
+                  <span className="shrink-0 tabular-nums">{money(s.debit.amount)}</span>
+                </li>))}</ul>
+              <div className="flex flex-wrap gap-2">
+                {transferHints.some((s) => s.strength === "strong") && <Button size="sm" disabled={!!linking} onClick={() => void linkClear()}>{linking ?? `Link ${transferHints.filter((s) => s.strength === "strong").length} clear matches`}</Button>}
+                <Button size="sm" variant="outline" asChild><Link to="/transfers">Review on Transfers page</Link></Button>
+              </div>
+            </Card>
+          )}
         </>
       )}
 
