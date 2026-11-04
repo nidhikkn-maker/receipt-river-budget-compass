@@ -41,16 +41,14 @@ export function continuousAudit(p: { today: string; entities: EntityProfile[]; a
   };
   for (const [k, b] of bucket(p.entries.filter((e) => e.statementRef && !e.reconciledAt), true)) out.push({ key: `unrec:${k}`, type: "Unreconciled bank", entity: b.entity, account: acc(b.accountId), fy: b.fy, risk: b.n > 20 ? "high" : "medium", text: `${b.n} statement lines not yet confirmed`, evidence: "Statement Desk imports", to: "/inbox" });
   for (const [k, b] of bucket(p.entries.filter((e) => (e.txnType ?? "expense") === "expense" && e.category === "Miscellaneous"), false)) out.push({ key: `class:misc:${k}`, type: "Classification", entity: b.entity, account: null, fy: b.fy, risk: b.n > 25 ? "high" : "low", text: `${b.n} entries still filed under Miscellaneous`, evidence: "Ledger categories", to: "/inbox" });
-  const dupFirst = duplicatePairs(p.entries).map((d) => p.entries.find((e) => e.id === (d as unknown as { a?: { id: string } }).a?.id) ?? (Array.isArray(d) ? d[0] : undefined)).filter((e): e is Expense => !!e);
-  const dupN = duplicatePairs(p.entries).length;
-  if (dupN) for (const [k, b] of dupFirst.length ? bucket(dupFirst, false) : [["all", { entity: "All", fy, accountId: null, n: dupN }] as const]) out.push({ key: `dup:${k}`, type: "Duplicate", entity: b.entity, account: null, fy: b.fy, risk: "high", text: `${b.n} possible duplicate pair${b.n > 1 ? "s" : ""}`, evidence: "Same amount, date and account", to: "/inbox" });
+  for (const [k, b] of bucket(duplicatePairs(p.entries).map((d) => d[0]), false)) out.push({ key: `dup:${k}`, type: "Duplicate", entity: b.entity, account: null, fy: b.fy, risk: "high", text: `${b.n} possible duplicate pair${b.n > 1 ? "s" : ""}`, evidence: "Same amount, date and account", to: "/inbox" });
   const diffs = bookVsTax(p.assets, fy).filter((d) => Math.abs(d.difference) > 1);
   if (diffs.length) out.push({ key: `dep:${fy}`, type: "Depreciation", entity: "All", account: null, fy, risk: "low", text: `${diffs.length} asset${diffs.length > 1 ? "s" : ""} with book ≠ tax depreciation (deferred tax to review)`, evidence: "Depreciation engine", to: "/assets" });
   const unposted = p.books.journals.filter((j) => j.status === "prepared").length;
   if (unposted) out.push({ key: "dep:unposted", type: "Depreciation", entity: "All", account: null, fy, risk: "medium", text: `${unposted} depreciation journal${unposted > 1 ? "s" : ""} prepared but not posted`, evidence: "Prepared journals", to: "/assets" });
   const months = [0, 1, 2].map((i) => { const d = new Date(p.today + "T00:00:00Z"); d.setUTCMonth(d.getUTCMonth() - i); return d.toISOString().slice(0, 7); }).reverse();
   // Same receipts and one-receipt-one-lease allocation as Property [§39, §52].
-  const income = p.entries.filter((e) => e.txnType === "income" || (e.txnType === "transfer" && !!e.toAccountId)).map((e) => ({ id: e.id, date: e.date, amount: e.amount, accountId: e.txnType === "transfer" ? e.toAccountId : e.accountId, currency: e.currency, text: `${e.title} ${e.merchant ?? ""} ${e.description}` }));
+  const income = p.entries.filter((e) => e.txnType === "income" || (e.txnType === "transfer" && !!e.toAccountId)).map((e) => ({ id: e.id, date: e.date, amount: e.amount, accountId: e.txnType === "transfer" ? e.toAccountId : e.accountId, currency: e.originalCurrency ?? undefined, text: `${e.title} ${e.merchant ?? ""} ${e.description}` }));
   const allLeases = { leases: p.books.leases, properties: p.books.properties };
   for (const l of p.books.leases) {
     const prop = p.books.properties.find((x) => x.id === l.propertyId);
