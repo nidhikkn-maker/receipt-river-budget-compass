@@ -36,6 +36,12 @@ export interface FyRecord {
   /** Opening balances the owner confirmed for the next year; never forced to agree. */
   confirmedOpening?: Partial<Record<OpeningHead, number>> | undefined;
   confirmedOn?: Iso | undefined;
+  /** Detailed schedules as printed (P&L, cash flow, notes, registers…); missing ones stay absent. */
+  details?: FyDetail[] | undefined;
+  /** Earlier versions kept when figures are corrected [§20]. */
+  versions?: FyVersion[] | undefined;
+  /** Account-by-account mapping of audited heads to this entity's ledger accounts [§19]. */
+  accountMap?: Record<string, OpeningHead> | undefined;
 }
 
 /** Property directory: Owner → Property → Building → Floor → Unit [§37]. */
@@ -49,12 +55,23 @@ export interface Property {
   buildings: Building[];
   valuation?: { value: number; date: Iso; source: string } | undefined;
   docIds: string[];
+  links?: PropertyLinks | undefined;
 }
 export interface Lease {
   id: string; propertyId: string; unitId?: string | undefined; tenant: string; start: Iso; end: Iso;
-  rent: number; dueDay: number; escalationPct: number; escalationEveryMonths: number;
-  deposit: number; noticeDays: number; paymentTerms: string; gst: boolean; docId?: string | undefined;
+  rent: number;
+  /** Terms not printed on the lease stay undefined and are listed as "needs answer" — never defaulted [§38, §59]. */
+  dueDay?: number | undefined; escalationPct?: number | undefined; escalationEveryMonths?: number | undefined;
+  deposit?: number | undefined; noticeDays?: number | undefined; paymentTerms: string; gst?: boolean | undefined; docId?: string | undefined;
+  /** Bank account rent is expected into, and currency; used for exclusive receipt matching [§23, §39]. */
+  accountId?: string | undefined; currency?: string | undefined;
 }
+export const LEASE_TERMS = ["dueDay", "escalationPct", "escalationEveryMonths", "deposit", "noticeDays", "gst"] as const;
+export const LEASE_TERM_LABEL: Record<(typeof LEASE_TERMS)[number], string> = { dueDay: "rent due day", escalationPct: "rent increase %", escalationEveryMonths: "increase every (months)", deposit: "security deposit", noticeDays: "notice period (days)", gst: "GST on rent" };
+export function leaseUnknowns(l: Lease): string[] { return LEASE_TERMS.filter((k) => l[k] === undefined).map((k) => LEASE_TERM_LABEL[k]); }
+
+/** Property links to the rest of the books [§37, §41]. */
+export interface PropertyLinks { loanId?: string | undefined; insuranceDocIds?: string[] | undefined; taxDocIds?: string[] | undefined; depositAccountId?: string | undefined; gstin?: string | undefined }
 export type PropertyCostKind = "maintenance" | "utility" | "propertyTax" | "insurance" | "improvement" | "vendor" | "other";
 export interface PropertyCost { id: string; propertyId: string; date: Iso; kind: PropertyCostKind; vendor: string; amount: number; transactionId?: string | undefined; docId?: string | undefined }
 
@@ -63,7 +80,21 @@ export type AssetEventKind = "received" | "capitalised" | "location" | "custodia
 export interface AssetEvent { id: string; assetId: string; date: Iso; kind: AssetEventKind; note: string; value?: number | undefined; docId?: string | undefined }
 
 /** Depreciation journal prepared for approval [§34]. */
-export interface Journal { id: string; assetId: string; period: string; amount: number; kind: "book"; status: "prepared" | "posted"; postedOn?: Iso | undefined }
+export interface Journal { id: string; assetId: string; period: string; amount: number; kind: "book"; status: "prepared" | "posted"; postedOn?: Iso | undefined; transactionId?: string | undefined }
+
+/** Approval policy [§56–57]: which actions need an explicit owner approval before they take effect. */
+export const POLICY_ACTIONS = ["capitalise", "postDepreciation", "taxTreatment", "historicalCorrection", "finaliseAccounts", "closePeriod", "activateRule", "createEntity"] as const;
+export type PolicyAction = (typeof POLICY_ACTIONS)[number];
+export interface ApprovalPolicy { require: Record<PolicyAction, boolean>; capitalisationMin?: number | undefined }
+export const DEFAULT_POLICY: ApprovalPolicy = { require: { capitalise: true, postDepreciation: true, taxTreatment: true, historicalCorrection: true, finaliseAccounts: true, closePeriod: true, activateRule: true, createEntity: true } };
+
+/** Durable state of an audit finding [§53]: it stays open until resolved. */
+export interface FindingState { key: string; status: "open" | "resolved" | "accepted"; note: string; at: string }
+
+/** Detailed prior-year schedule lines with source evidence [§18, §20]. */
+export interface ScheduleLine { label: string; amount: number; page?: number | null | undefined; quote?: string | undefined }
+export interface FyDetail { schedule: Schedule; lines: ScheduleLine[]; docId?: string | undefined }
+export interface FyVersion { at: string; reason: string; audited: Partial<Record<OpeningHead, number>> }
 
 /** Investments beyond demat equities [§42, v6.1 §8]. */
 export type HoldingKind = "mutual_fund" | "etf" | "gold_etf" | "sgb" | "physical_gold" | "bond" | "other";
@@ -107,6 +138,14 @@ export interface BooksData {
   holdings: Holding[]; quotes: Quote[]; snapshots: Snapshot[]; alerts: AlertSettings; goldRate?: GoldRate | undefined;
   taxProfiles: TaxProfile[]; gstInvoices: GstInvoice[]; gstFilings: GstFiling[];
   rules: RuleVersion[];
+  policy?: ApprovalPolicy | undefined;
+  findings?: FindingState[] | undefined;
+  /** Decisions on centrally detected rule changes (regulatory_changes rows). */
+  ruleDecisions?: { changeId: string; status: "approved" | "dismissed"; at: string }[] | undefined;
+  /** Entity → ledger account ids, so tax and reconciliations stay per entity [§45]. */
+  entityAccounts?: Record<string, string[]> | undefined;
+  /** Approved label → canonical field mappings [§15, §59]. */
+  fieldMappings?: Record<string, string> | undefined;
 }
 
 export const DEFAULT_ALERTS: AlertSettings = { portfolioMovePct: 5, staleNavDays: 3, missingPrices: true, corporateActions: true, quantityMismatch: true, unusualValuationPct: 20 };
@@ -144,5 +183,20 @@ export function cleanBooks(raw: unknown): BooksData {
     gstInvoices: arr<GstInvoice>(r["gstInvoices"], (x) => typeof x.id === "string" && isDate(x.date) && fin(x.taxable), 10000),
     gstFilings: arr<GstFiling>(r["gstFilings"], (x) => typeof x.id === "string", 2000),
     rules: arr<RuleVersion>(r["rules"], (x) => typeof x.id === "string" && isDate(x.effectiveFrom), 1000),
+    policy: cleanPolicy(r["policy"]),
+    findings: arr<FindingState>(r["findings"], (x) => typeof x.key === "string" && ["open", "resolved", "accepted"].includes(x.status), 3000),
+    ruleDecisions: arr<{ changeId: string; status: "approved" | "dismissed"; at: string }>(r["ruleDecisions"], (x) => typeof x.changeId === "string", 1000),
+    entityAccounts: r["entityAccounts"] && typeof r["entityAccounts"] === "object" ? Object.fromEntries(Object.entries(r["entityAccounts"] as Record<string, unknown>).filter(([, v]) => Array.isArray(v)).map(([k, v]) => [k, (v as unknown[]).filter((s): s is string => typeof s === "string")])) : {},
+    fieldMappings: r["fieldMappings"] && typeof r["fieldMappings"] === "object" ? Object.fromEntries(Object.entries(r["fieldMappings"] as Record<string, unknown>).filter(([, v]) => typeof v === "string")) as Record<string, string> : {},
   };
+}
+
+export function cleanPolicy(v: unknown): ApprovalPolicy {
+  const p = (v && typeof v === "object" ? v : {}) as Partial<ApprovalPolicy>;
+  const req = { ...DEFAULT_POLICY.require };
+  for (const k of POLICY_ACTIONS) if (typeof p.require?.[k] === "boolean") req[k] = p.require[k];
+  return { require: req, ...(fin(p.capitalisationMin) && p.capitalisationMin! >= 0 ? { capitalisationMin: p.capitalisationMin } : {}) };
+}
+export function requiresApproval(policy: ApprovalPolicy | undefined, action: PolicyAction): boolean {
+  return (policy ?? DEFAULT_POLICY).require[action] !== false;
 }
