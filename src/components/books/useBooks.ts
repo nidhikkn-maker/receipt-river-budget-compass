@@ -95,6 +95,8 @@ export function useNetWorth() {
     });
     const portfolio = nw.assets.find((a) => a.label === "Investments")!.value;
     const last = books.snapshots.at(-1);
-    return { ...nw, valued, portfolio, liquid: raw.assets, movement: last ? Math.round(portfolio - last.portfolio) : null, lastSnapshot: last?.date ?? null, demat, dematRows, duplicates, closeJob: closes.job };
+    // Market movement excludes money you put in or took out since the last snapshot [v6.1 §12].
+    const flows = last ? transactions.filter((t) => t.txnType === "investment" && t.date > last.date).reduce((s, t) => s + t.amount, 0) : 0;
+    return { ...nw, valued, portfolio, liquid: raw.assets, movement: last ? Math.round(portfolio - last.portfolio - flows) : null, flowsSinceSnapshot: Math.round(flows), lastSnapshot: last?.date ?? null, demat, dematRows, duplicates, closeJob: closes.job };
   }, [accounts, transactions, valuations, loans, books, demat, preferences.assets, closes]); // eslint-disable-line react-hooks/exhaustive-deps
 }
