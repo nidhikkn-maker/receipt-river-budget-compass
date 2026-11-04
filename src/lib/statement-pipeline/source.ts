@@ -10,7 +10,7 @@ const MAX_PAGES = 120;
 /** Text rows of a PDF, CSV or text file, read on this device, for document-type detection. Other formats return []. */
 export async function readDocRows(file: File): Promise<string[]> {
   if (/\.pdf$/i.test(file.name)) return pdfRows(file);
-  if (/\.(csv|txt)$/i.test(file.name)) return (await file.text()).split(/\r?\n/).map((r) => r.replace(/[",]+/g, " ").replace(/\s+/g, " ").trim()).filter(Boolean);
+  if (/\.(csv|txt)$/i.test(file.name)) return (await file.text()).split(/\r?\n/).map((r) => (r.match(/("([^"]|"")*"|[^,]*)(,|$)/g) ?? [r]).map((c) => c.replace(/,$/, "").replace(/^"|"$/g, "").trim()).filter(Boolean).join(" ")).filter(Boolean);
   return [];
 }
 
