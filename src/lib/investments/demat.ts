@@ -5,7 +5,12 @@ export type InvestDocKind = "demat" | "transactions" | "gains";
 export interface HoldingLine { isin: string; name: string; quantity: number; value: number | null }
 export interface TradeLine { date: string; isin: string; name: string; side: "buy" | "sell"; quantity: number; price: number | null; amount: number | null }
 export interface GainLine { sellDate: string; buyDate: string | null; isin: string; name: string; quantity: number; cost: number | null; proceeds: number | null; gain: number | null }
-export interface InvestDoc { kind: InvestDocKind; broker: string; dpId: string; clientId: string; holder: string; asOf: string | null; holdings: HoldingLine[]; trades: TradeLine[]; gains: GainLine[] }
+/** Non-trade investment events on transaction statements [v6 §43]; reported for reconciliation, never posted. */
+export type InvestEventKind = "dividend" | "redemption" | "bonus" | "split" | "rights" | "merger" | "brokerage";
+export interface InvestEvent { date: string; isin: string; name: string; kind: InvestEventKind; quantity: number | null; amount: number | null }
+export interface InvestDoc { kind: InvestDocKind; broker: string; dpId: string; clientId: string; holder: string; asOf: string | null; holdings: HoldingLine[]; trades: TradeLine[]; gains: GainLine[]; events?: InvestEvent[] }
+const EVENT_RE: [RegExp, InvestEventKind][] = [[/\bdividend\b/i, "dividend"], [/\bredemption|redeem/i, "redemption"], [/\bbonus\b/i, "bonus"], [/\b(split|sub-?division)\b/i, "split"], [/\brights?\b/i, "rights"], [/\b(merger|amalgamation|demerger)\b/i, "merger"], [/\bbrokerage\b/i, "brokerage"]];
+export function eventKindOf(row: string): InvestEventKind | null { return EVENT_RE.find(([re]) => re.test(row))?.[1] ?? null; }
 
 export interface Lot { date: string; side: "buy" | "sell"; quantity: number; price: number | null; amount: number | null; source: string }
 export interface StoredHolding { isin: string; name: string; quantity: number; asOf: string | null; statementValue: number | null; lots: Lot[]; gains: (GainLine & { source: string })[]; sources: string[] }
@@ -56,7 +61,7 @@ export function parseInvestmentDoc(rows: string[]): InvestDoc | null {
     clientId: labelled(rows, /\b(?:client|BO|beneficiary)\s*ID\s*[:-]?\s*([A-Z0-9]{6,16})/i),
     holder: labelled(rows, /\b(?:account holder|holder name|name of (?:the )?holder|client name)\s*[:-]\s*([A-Za-z .]+)/i),
     asOf: (() => { const r = rows.find((x) => /\b(as on|as of|statement date|holding as)\b/i.test(x)); return r ? datesIn(r)[0] ?? null : null; })(),
-    holdings: [], trades: [], gains: [],
+    holdings: [], trades: [], gains: [], events: [],
   };
   for (const row of rows) {
     const isin = row.match(ISIN)?.[1];
@@ -67,6 +72,9 @@ export function parseInvestmentDoc(rows: string[]): InvestDoc | null {
     if (kind === "demat") {
       if (!nums.length) continue;
       doc.holdings.push({ isin, name, quantity: nums[0]!, value: nums.length > 1 ? nums[nums.length - 1]! : null });
+    } else if (kind === "transactions" && eventKindOf(row) && dates[0]) {
+      const ev = eventKindOf(row)!;
+      doc.events!.push({ date: dates[0], isin, name, kind: ev, quantity: ["bonus", "split", "rights", "merger", "redemption"].includes(ev) && nums.length ? Math.abs(nums[0]!) : null, amount: nums.length ? Math.abs(nums[nums.length - 1]!) : null });
     } else if (kind === "transactions") {
       const side = /\b(sell|s)\b/i.test(row) ? "sell" : /\b(buy|b)\b/i.test(row) ? "buy" : null;
       if (!side || !dates[0] || !nums.length) continue;

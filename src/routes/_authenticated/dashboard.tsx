@@ -1,3 +1,4 @@
+import { NetWorthCard } from "@/components/books/NetWorthCard";
 import { HomeModePicker } from "@/components/HomeModePicker";
 import { HomeShortcuts } from "@/components/HomeShortcuts";
 import { MilestoneBanner } from "@/components/MilestoneBanner";
@@ -123,6 +124,7 @@ function Overview() {
     <div className="flex min-w-0 flex-col">
       <div className="mb-3 flex justify-end"><HomeModePicker compact /></div>
       <HomeShortcuts />
+      <NetWorthCard />
       {(scope === "business" || scope === "official") && (
         <div className="mb-4 flex flex-wrap gap-2 text-sm">
           <Link to="/expenditure-statement" className="rounded-xl border bg-card px-3 py-2 font-semibold text-primary">Generate {scope} statement</Link>

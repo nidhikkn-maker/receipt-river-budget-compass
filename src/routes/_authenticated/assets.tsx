@@ -6,6 +6,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useStore } from "@/lib/store";
 import { fyOf } from "@/lib/entities";
+import { PropertyPanel } from "@/components/books/PropertyPanel";
+import { AssetLifecycle, DepreciationBooks } from "@/components/books/AssetBooks";
+import { Link } from "@tanstack/react-router";
+import { DEFAULT_LIFE } from "@/lib/books/intake";
 import { assetFollowUps, ASSET_KINDS, TAX_RATES, bookSchedule, rentCheck, shareValue, taxSchedule, type Asset, type AssetKind } from "@/lib/assets";
 
 export const Route = createFileRoute("/_authenticated/assets")({
@@ -46,7 +50,8 @@ function Assets() {
   return (
     <div className="mx-auto max-w-2xl space-y-4 p-4">
       <PageTitle title="Property & assets" sub={`Your share of book value now: ${inr(total)} · FY ${fy}`} />
-      {!edit && <Button onClick={() => setEdit(blank())}>Add property or asset</Button>}
+      <PropertyPanel />
+      {!edit && <div className="flex flex-wrap gap-2"><Link to="/statements" search={{ context: "assets" }} className="inline-flex items-center rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground">Add asset from invoice</Link><Button variant="outline" onClick={() => setEdit(blank())}>Add manually</Button></div>}
 
       {edit && (
         <div className="space-y-3 rounded-2xl border bg-card p-4 text-sm">
@@ -70,6 +75,10 @@ function Assets() {
                 </select>
               </label>
               <label>Book rate %<Input type="number" value={edit.bookRatePct} onChange={(e) => setEdit({ ...edit, bookRatePct: Math.min(100, num(e.target.value)) })} /></label>
+              <label>Useful life (years)<Input type="number" placeholder={String(DEFAULT_LIFE[edit.kind])} value={edit.usefulLifeYears ?? ""} onChange={(e) => setEdit({ ...edit, usefulLifeYears: num(e.target.value) || undefined })} /></label>
+              <label>Residual value %<Input type="number" value={edit.residualPct ?? ""} onChange={(e) => setEdit({ ...edit, residualPct: Math.min(100, num(e.target.value)) || undefined })} /></label>
+              <label>Department<Input value={edit.department ?? ""} onChange={(e) => setEdit({ ...edit, department: e.target.value || undefined })} /></label>
+              <label>Warranty until<Input type="date" value={edit.warrantyUntil ?? ""} onChange={(e) => setEdit({ ...edit, warrantyUntil: e.target.value || undefined })} /></label>
             </>}
             <label>Rent per month ₹<Input type="number" value={edit.monthlyRent ?? ""} onChange={(e) => setEdit({ ...edit, monthlyRent: num(e.target.value) || undefined })} /></label>
             <label>Asset tag / ID<Input value={edit.tag ?? ""} onChange={(e) => setEdit({ ...edit, tag: e.target.value || undefined })} /></label>
@@ -86,6 +95,7 @@ function Assets() {
               <label>Deposit held ₹<Input type="number" value={edit.deposit ?? ""} onChange={(e) => setEdit({ ...edit, deposit: num(e.target.value) || undefined })} /></label>
             </> : null}
             <label>Sold on<Input type="date" value={edit.soldOn ?? ""} onChange={(e) => setEdit({ ...edit, soldOn: e.target.value || undefined })} /></label>
+            {edit.soldOn && <label>Sale value ₹<Input type="number" value={edit.saleValue ?? ""} onChange={(e) => setEdit({ ...edit, saleValue: num(e.target.value) || undefined })} /></label>}
           </div>
           <label className="block">Deed / invoice in DocuRepo
             <select className="w-full rounded-md border bg-background px-3 py-2" value={edit.docId ?? ""} onChange={(e) => setEdit({ ...edit, docId: e.target.value || undefined })}>
@@ -116,9 +126,10 @@ function Assets() {
                 <Button size="sm" variant="outline" onClick={() => setEdit(a)}>Edit</Button>
               </div>
             </div>
-            {(a.tag || a.location || a.custodian || a.tenant) && <p className="text-xs text-muted-foreground">{[a.tag && `Tag ${a.tag}`, a.location, a.custodian && `with ${a.custodian}`, a.tenant && `Tenant ${a.tenant}${a.leaseEnd ? ` till ${a.leaseEnd}` : ""}${a.deposit ? ` · deposit ${inr(a.deposit)}` : ""}`].filter(Boolean).join(" · ")}</p>}
+            {(a.tag || a.location || a.custodian || a.tenant) && <p className="text-xs text-muted-foreground">{[a.tag && `Tag ${a.tag}`, a.location, a.custodian && `with ${a.custodian}`, a.department && `dept ${a.department}`, a.tenant && `Tenant ${a.tenant}${a.leaseEnd ? ` till ${a.leaseEnd}` : ""}${a.deposit ? ` · deposit ${inr(a.deposit)}` : ""}`].filter(Boolean).join(" · ")}</p>}
             {assetFollowUps(a, today()).length > 0 && <p className="text-xs text-destructive">{assetFollowUps(a, today()).join(" · ")}</p>}
             {rent.length > 0 && <div className="flex flex-wrap gap-1">{rent.map((m) => <span key={m.month} title={m.deposits ? `Deposit ${inr(m.deposits)} kept separate` : undefined} className={`rounded-full px-2 py-0.5 text-xs ${m.status === "paid" || m.status === "advance" ? "bg-primary/10 text-primary" : "bg-destructive/10 text-destructive"}`}>{m.month}: {inr(m.received)} / {inr(m.expected)}{m.status === "advance" ? ` · ${inr(-m.balance)} ahead` : m.balance > 0 ? ` · ${inr(m.balance)} due` : ""}{m.deposits ? ` · deposit ${inr(m.deposits)}` : ""}</span>)}</div>}
+            {a.kind !== "property" && <AssetLifecycle a={a} />}
             {(book.length > 0 || tax.length > 0) && <Button size="sm" variant="ghost" onClick={() => setOpen(open === a.id ? null : a.id)}>{open === a.id ? "Hide" : "Show"} depreciation</Button>}
             {open === a.id && (
               <table className="w-full text-xs">
@@ -129,6 +140,7 @@ function Assets() {
           </div>
         );
       })}
+      <DepreciationBooks />
       <p className="text-xs text-muted-foreground">Tax figures use standard block rates as a guide; confirm with your accountant before filing.</p>
     </div>
   );

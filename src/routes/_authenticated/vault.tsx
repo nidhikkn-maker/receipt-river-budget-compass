@@ -17,6 +17,7 @@ import { useStore } from "@/lib/store";
 import { money, type Expense } from "@/lib/expenses";
 import { DOC_TYPES, DOC_LABEL, duplicateDocuments, earlierVersions, expiringDocuments, searchVault, vaultItems, type DocField, type DocType, type VaultItem } from "@/lib/documents";
 import { todayISO } from "@/lib/use-position";
+import { VaultBooks } from "@/components/books/VaultBooks";
 export const Route=createFileRoute("/_authenticated/vault")({head:()=>({meta:[{title:"DocuRepo — Ledgerline"},{name:"description",content:"Search receipts and upload linked financial documents."},{property:"og:title",content:"DocuRepo — Ledgerline"},{property:"og:description",content:"Receipts, statements, insurance and warranties with renewal dates."},{property:"og:type",content:"website"},{name:"twitter:card",content:"summary"}]}),component:Vault});
 function Vault() {
   const { transactions, documents, accounts, loans, addDocument, updateDocument, removeDocument, signedUrl, preferences, savePreferences } = useStore();
@@ -69,6 +70,7 @@ function Vault() {
   return <>
     <PageTitle eyebrow="Documents" title="DocuRepo" />
     <NoticeDeadlines />
+    <VaultBooks />
     {expires.length > 0 && <div className="mb-4 border-l-4 border-destructive bg-secondary p-3 text-sm">{expires.map(d => <p key={d.id}>{d.title} · expires {d.expiresOn}</p>)}</div>}
     <div className="mb-5 grid gap-3 sm:grid-cols-4">
       <Input aria-label="Search documents" placeholder="Merchant, amount, filename or text" value={q} onChange={e => setQ(e.target.value)} />

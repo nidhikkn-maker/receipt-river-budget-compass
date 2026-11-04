@@ -6,6 +6,7 @@ import { fyOf, yearsSince } from "@/lib/entities";
 import { taxDraft } from "@/lib/tax-summary";
 import { gstMonths } from "@/lib/receivables";
 import { estimateTax, rulesFor } from "@/lib/tax-rules";
+import { FyOnboarding, GstReturns, RulesRegister, TaxComputationCard, TaxProfiles } from "@/components/books/TaxCentre";
 
 export const Route = createFileRoute("/_authenticated/tax")({
   head: () => ({ meta: [
@@ -33,7 +34,7 @@ function Tax() {
 
   return (
     <div className="mx-auto max-w-2xl space-y-4 p-4">
-      <PageTitle title="Income tax & GST" sub="A working draft from your records — not a return. Your accountant files." />
+      <PageTitle title="Tax & audit" sub="Working drafts from your records — never filed by Ledgerline. Your accountant files with your approval." />
       <div className="flex flex-wrap gap-2">
         {years.map((y) => <button key={y} type="button" onClick={() => setFy(y)} className={`rounded-full border px-3 py-1 text-sm ${y === fy ? "bg-primary text-primary-foreground" : "bg-card"}`}>FY {y}</button>)}
       </div>
@@ -52,6 +53,12 @@ function Tax() {
         <p className="px-4 pb-3 text-xs text-muted-foreground">Invoice GST comes from Customers owing; bill GST is what's printed on business bills. Not a filed return.</p>
       </div>
       {d.billsMissing > 0 && <p className="text-sm">{d.billsMissing} business spends this year have no bill. <Link to="/gst-check" className="font-semibold text-primary underline">See them</Link></p>}
+      <TaxComputationCard fy={fy} />
+      <TaxProfiles fy={fy} />
+      <GstReturns fy={fy} />
+      <FyOnboarding />
+      <RulesRegister />
+      <Link to="/statements" search={{ context: "tax" }} className="block text-sm font-semibold text-primary underline">Upload salary, rent, investment or tax documents</Link>
       <p className="text-xs text-muted-foreground">GST input only counts tax printed on bills you attached; claimable credit depends on supplier filings (GSTR-2B), which aren't connected.</p>
     </div>
   );
