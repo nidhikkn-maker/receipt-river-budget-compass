@@ -20,6 +20,7 @@ import { commitIntake, type Confirmed } from "@/lib/books/commit";
 import { emptyBooks, LEASE_TERMS, LEASE_TERM_LABEL, leaseUnknowns, requiresApproval, type Lease } from "@/lib/books/types";
 import { HEAD_LABEL } from "@/lib/books/fy";
 import { ASSET_KINDS, type AssetKind } from "@/lib/assets";
+import { toObligations } from "@/lib/contracts";
 import { closeRun, documentIdForRun, startRun, updateRun, type RunData } from "@/lib/books/runs";
 
 const CONTEXT_TYPE: Partial<Record<IntakeContext, DocType>> = { entity: "incorporation", fy: "audited_financials", property: "property_deed", assets: "asset_invoice", gst: "gst_return" };
@@ -31,7 +32,9 @@ export interface ResumeState { runId: string; read?: ExtractedDocument | undefin
 
 export function DocumentIntake({ file, context, onClose, resume, replacesId }: { file: File; context?: IntakeContext | undefined; onClose: () => void; resume?: ResumeState | undefined; replacesId?: string | undefined }) {
   const store = useStore();
-  const { preferences, savePreferences, addDocument, updateDocument, documents } = store;
+  const { preferences, savePreferences, addDocument, updateDocument, documents, accounts, loans } = store;
+  const [linkAcc, setLinkAcc] = useState("");
+  const [linkLoan, setLinkLoan] = useState("");
   const read = useServerFn(extractDocument);
   const runId = useRef(resume?.runId ?? crypto.randomUUID()).current;
   const runData = useRef<RunData>(resume?.data ?? {});
@@ -160,13 +163,15 @@ export function DocumentIntake({ file, context, onClose, resume, replacesId }: {
       await step("Save");
       const fieldsOut = fields.map((f) => ({ ...f, originalValue: f.originalValue ?? f.value }));
       if (!dup) {
-        await addDocument(file, { id: docId, title, docType, docDate: isIso(x?.date) ? x!.date : null, amount: x?.amount ?? null, currency: x?.currency || "INR", merchant: x?.merchant ?? null, notes: x?.notes ?? "", text: x?.text ?? "", transactionId: null, accountId: null, loanId: null, expiresOn: isIso(x?.expiresOn) ? x!.expiresOn : null, fields: fieldsOut, replacesId: replacesId ?? runData.current.replacesId ?? null });
+        await addDocument(file, { id: docId, title, docType, docDate: isIso(x?.date) ? x!.date : null, amount: x?.amount ?? null, currency: x?.currency || "INR", merchant: x?.merchant ?? null, notes: x?.notes ?? "", text: x?.text ?? "", transactionId: null, accountId: linkAcc || null, loanId: linkLoan || null, expiresOn: isIso(x?.expiresOn) ? x!.expiresOn : null, fields: fieldsOut, replacesId: replacesId ?? runData.current.replacesId ?? null });
       }
       await updateRun(runId, { documentId: docId }).catch(() => undefined);
       const withDoc: Confirmed = c.route === "asset" ? { ...c, asset: { ...c.asset, docId: c.asset.docId ?? docId } } : c.route === "lease" ? { ...c, lease: { ...c.lease, docId } } : c.route === "fy" ? { ...c, record: { ...c.record, docIds: [...new Set([...c.record.docIds, docId])] } } : c;
       at = "Reconcile"; await step("Reconcile");
       const next = commitIntake({ entities, assets: preferences.assets ?? [], books }, withDoc, { id: docId, title, docType, fieldLabels: fields.map((f) => f.label) }, today(), () => crypto.randomUUID());
-      await savePreferences({ ...preferences, entities: next.entities, assets: next.assets, books: next.books });
+      const known = new Set(preferences.contractObligations.map((o) => o.docId));
+      const obs = !known.has(docId) ? toObligations(docId, x?.obligations ?? [], () => crypto.randomUUID()) : [];
+      await savePreferences({ ...preferences, entities: next.entities, assets: next.assets, books: next.books, ...(obs.length ? { contractObligations: [...preferences.contractObligations, ...obs] } : {}) });
       // A document that now backs a record is kept as evidence and can't be deleted by accident [§11].
       if (c.route !== "document") await updateDocument(docId, { evidenceLocked: true }).catch(() => undefined);
       at = "Audit"; await step("Audit");
@@ -254,6 +259,11 @@ export function DocumentIntake({ file, context, onClose, resume, replacesId }: {
           {proposal.record?.details?.length ? <p className="text-xs text-muted-foreground">Detailed schedules read: {proposal.record.details.map((d) => `${d.schedule} (${d.lines.length} lines)`).join(", ")}</p> : null}
           {proposal.missingSchedules.length > 0 && <p className="text-xs text-destructive">Not in this upload: {proposal.missingSchedules.join(", ")} — left empty, not filled in.</p>}
         </div>}
+        {(route === "document" || route === "loan") && <div className="grid grid-cols-2 gap-2 text-xs">
+          <label>Link to account<select className="mt-1 w-full rounded-md border bg-background px-2 py-1" value={linkAcc} onChange={(e) => setLinkAcc(e.target.value)}><option value="">Not linked</option>{accounts.filter((a) => !a.archived).map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}</select></label>
+          <label>Link to loan<select className="mt-1 w-full rounded-md border bg-background px-2 py-1" value={linkLoan} onChange={(e) => setLinkLoan(e.target.value)}><option value="">Not linked</option>{loans.map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}</select></label>
+        </div>}
+        {!!x.obligations?.length && <p className="text-xs text-muted-foreground">{x.obligations.length} payment obligation{x.obligations.length > 1 ? "s" : ""} found — they'll be listed on the document for review.</p>}
         {missing.length > 0 && <p className="text-xs text-destructive">Still needed: {missing.join(", ")}.{missing.includes("which company") && <> <Link to="/entities" className="underline">Add the company first</Link></>}</p>}
         <div className="flex flex-wrap gap-2">
           <Button onClick={save} loading={saving} disabled={!!failed && !["Save", "Reconcile", "Audit"].includes(failed.step)}>{failed ? "Retry" : proposal ? "Confirm and save" : "Save to DocuRepo"}</Button>
