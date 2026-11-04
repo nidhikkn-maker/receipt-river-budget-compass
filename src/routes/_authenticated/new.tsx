@@ -260,12 +260,16 @@ function NewExpense() {
       if (!live) return;
       setReceipts(files);
       draftLoaded.current = true; setDraftState(useLocal ? "device" : "saved");
-      if (files.length && navigator.onLine && (search.retry || (!x.extracted && !x.amount))) await runExtraction(files[0]!, false);
+      if (x.scan && !search.retry) {
+        // Restore the unconfirmed reading so its amount, shop and date are shown for review again.
+        const sc = x.scan; setScan({ merchant: sc.merchant, date: sc.date, amount: sc.amount, currency: sc.currency }); setScanCategory(sc.category ?? "");
+        setScanRead(sc.read ?? { merchant: sc.merchant, date: sc.date, amount: Number(sc.amount) || 0, currency: sc.currency }); setConfirmed(false);
+      } else if (files.length && navigator.onLine && (search.retry || !(Number(x.amount) > 0))) await runExtraction(files[0]!, false);
     })().catch(() => { draftLoaded.current = true; toast.error("Couldn't open that draft"); });
     return () => { live = false; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [search.draft]);
-  const draftData = (): DraftData => ({ txnType, amount, currency, date, category, merchant, title, accountId, toAccountId, instrumentId, paymentMethod, scope, tripId, tags, description, memberId, principal, interest, wsSplit, splitOn, shares, receiptDetails, extracted: !!scanRead || !!receiptDetails.text, ...(readingError ? { error: readingError } : {}) });
+  const draftData = (): DraftData => ({ txnType, amount, currency, date, category, merchant, title, accountId, toAccountId, instrumentId, paymentMethod, scope, tripId, tags, description, memberId, principal, interest, wsSplit, splitOn, shares, receiptDetails, extracted: !!scanRead || !!receiptDetails.text, ...(readingError ? { error: readingError } : {}), ...(scan && !confirmed ? { scan: { ...scan, category: scanCategory, ...(scanRead ? { read: scanRead } : {}) } } : {}) });
   const persistDraft = async (auto = false): Promise<boolean> => {
     if (editing || !draftLoaded.current) return false;
     const d = draftData();

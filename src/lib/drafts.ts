@@ -11,6 +11,8 @@ export interface DraftData {
   accountId?: string; toAccountId?: string; instrumentId?: string; paymentMethod?: string; scope?: string; tripId?: string;
   tags?: string; description?: string; memberId?: string; principal?: string; interest?: string;
   wsSplit?: unknown; splitOn?: boolean; shares?: Record<string, string>; receiptDetails?: unknown; extracted?: boolean; error?: string;
+  /** Receipt values read but not yet confirmed, so reopening the draft shows them for review. */
+  scan?: { merchant: string; date: string; amount: string; currency: string; category?: string; read?: { merchant: string; date: string; amount: number; currency: string } };
 }
 export interface Draft { localOnly?: boolean; id: string; data: DraftData; receipts: DraftReceipt[]; status: DraftStatus; transactionId: string | null; createdAt: string; updatedAt: string }
 
