@@ -40,7 +40,6 @@
 - The V4.3 theme system keeps one component tree: src/lib/themes.ts is the catalog (5 families / 7 styles) and src/styles.css holds per-theme token blocks under html[data-theme="..."] with dedicated .dark variants; Signature is the default :root. New UI must use semantic tokens only so every theme stays correct, and theme changes never touch financial data.
 - Async feedback is shared: Button `loading`/auto single-flight for promise-returning onClick, ProcessingPanel for real stages only, createLatest() to drop stale responses; new-entry saves reuse one draft id so retries stay idempotent.
 - Claims reuse ledger rules; profiles/shares use owner preferences, preparations use revision-checked Cloud rows plus encrypted device copies, and discovery confirms audited existing-entry links. PDFs never submit/pay claims; older exports stay unchanged.
-- Master-record rules (duplicates, organisation usage/rename) live in src/lib/master-data.ts and setup readiness in src/lib/setup-status.ts; every add-account path uses the shared AccountForm so contextual and central creation follow one rule set.
 - Report IDs match jobs; callbacks recover without duplicates. Reconciliation persistence tests use temporary PGlite, not Cloud or real devices.
 - Corrections use owner-atomic RPCs, revisions and safe undo; preserve FX/source. Evidence drives statements; review-centre.ts separates Inbox, review and reconciliation.
 - Review returns (review-navigation.ts) happen only after a save or explicit completion; use-review-view.ts keeps UI context in tab memory; calendar badges come from saved evidence, not navigation.
@@ -51,4 +50,3 @@
 
 - Accountant upload links are HMAC-signed link ids (src/lib/upload-link.ts), verified in /api/public/upload/$token with atomic slot claims; uploads land in the private statement-uploads bucket and only enter the ledger through the normal Statement Desk flow. The monthly request view (/upload-requests) adds no state of its own: requestReport derives every row from stored link rows, events and uploads, so the view is read-only.
 - Pages sharing one job are grouped by src/components/SectionTabs.tsx (Statement Desk, Account health, Plan, Reports); retired pages redirect via beforeLoad so old links work. Review lives only at /inbox?section=review.
-- Receipt-viewer problem reports keep device and browser reading in pure rules (src/lib/device-report.ts) so a saved report can be re-read years later without the phone that made it; the viewer's last twelve moves travel with the report, and reports are never financial records.
