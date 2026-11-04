@@ -17,7 +17,9 @@ import type { TxnType } from "@/lib/ledger";
 import { correctionPreview, type CorrectionPreview } from "@/lib/financial-corrections";
 import type { FinancialReview } from "@/lib/financial-review";
 import { identifyFile } from "@/lib/statement-pipeline/identify";
-import { readStatementFile } from "@/lib/statement-pipeline/source";
+import { readStatementFile, readDocRows } from "@/lib/statement-pipeline/source";
+import { parseInvestmentDoc, type InvestDoc } from "@/lib/investments/demat";
+import { InvestmentReview } from "@/components/InvestmentReview";
 import { useServerFn } from "@tanstack/react-start";
 import { extractStatement } from "@/lib/statement-extract.functions";
 import type { StatementUpload } from "@/lib/preferences";
@@ -68,6 +70,8 @@ function StatementDeskPage() {
   storeRef.current = store;
 
   const [loaded, setLoaded] = useState<Loaded[]>([]);
+  /** Investment documents (demat, trades, capital gains) go to their own review, never into the bank ledger. */
+  const [invest, setInvest] = useState<{ key: string; file: File; doc: InvestDoc }[]>([]);
   const [errors, setErrors] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
   const [progress, setProgress] = useState<string | null>(null);
@@ -108,6 +112,8 @@ function StatementDeskPage() {
     const failed: string[] = [];
     for (const f of [...list]) {
       try {
+        const inv = parseInvestmentDoc(await readDocRows(f).catch(() => []));
+        if (inv) { setInvest((p) => [...p.filter((x) => x.file.name !== f.name), { key: `${f.name}-${f.size}-${f.lastModified}`, file: f, doc: inv }]); continue; }
         const read = await readStatementFile(f, serverRead);
         const id = identifyFile(read.rows, read.files[0]?.lines ?? [], accounts);
         for (const file of read.files) {
@@ -327,7 +333,7 @@ function StatementDeskPage() {
       <SectionTabs group="statements" active="upload" />
       <header className="space-y-1">
         <h1 className="flex items-center gap-2 text-xl font-semibold"><Inbox className="size-5" /> Statement Desk</h1>
-        <p className="flex items-start gap-1.5 text-sm text-muted-foreground"><ShieldCheck className="mt-0.5 size-4 shrink-0" /> Drop in as many statements as you like — PDF, CSV or Excel. They are read on this device, matched against your records, and nothing is saved until you say so.</p>
+        <p className="flex items-start gap-1.5 text-sm text-muted-foreground"><ShieldCheck className="mt-0.5 size-4 shrink-0" /> Drop in as many statements as you like — bank, card, loan, demat, trades or capital gains; PDF, CSV or Excel. They are read on this device, matched against your records, and nothing is saved until you say so.</p>
       </header>
 
       <AccountantInbox onFiles={add} />
@@ -346,6 +352,8 @@ function StatementDeskPage() {
         {busy && <p role="status" className="text-sm text-muted-foreground">Reading statements on this device…</p>}
         {progress && <p role="status" className="text-sm text-muted-foreground">{progress}</p>}
         {errors.length > 0 && <ul className="space-y-1 text-sm text-destructive" role="alert">{errors.map((e) => <li key={e}>{e}</li>)}</ul>}
+
+        {invest.map((x) => <InvestmentReview key={x.key} file={x.file} doc={x.doc} onClose={() => setInvest((p) => p.filter((y) => y.key !== x.key))} onUploadMore={() => inputRef.current?.click()} />)}
 
         {loaded.length > 0 && (
           <ul className="divide-y divide-border rounded-xl border border-border">
