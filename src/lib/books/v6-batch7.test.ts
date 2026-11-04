@@ -100,3 +100,17 @@ describe("account and loan link suggestions", () => {
     expect(suggestLinks("Mercedes GLS loan EMI", [], [{ id: "l", name: "Mercedes GLS" }]).loanId).toBe("l");
   });
 });
+
+import { calcValue, validateRule } from "./regulatory";
+import type { RuleVersion } from "./types";
+describe("approved rules feed calculations", () => {
+  const rule = (value: string, status: RuleVersion["status"] = "active") => ({ id: "r", key: "cg.equity_months", area: "income_tax", value, effectiveFrom: "2024-07-23", publishedOn: "2024-07-23", sourceUrl: "https://incometaxindia.gov.in/x", status, tests: [] }) as unknown as RuleVersion;
+  it("uses the approved value from its effective date, default before", () => {
+    expect(calcValue([rule("24")], "cg.equity_months", "2026-03-31", 12)).toBe(24);
+    expect(calcValue([rule("24")], "cg.equity_months", "2024-03-31", 12)).toBe(12);
+  });
+  it("a calculation rule with a non-numeric value fails validation", () => {
+    expect(validateRule(rule("one year", "proposed")).some((t) => !t.passed)).toBe(true);
+    expect(validateRule(rule("12", "proposed")).find((t) => t.name.startsWith("Calculation check"))?.passed).toBe(true);
+  });
+});
