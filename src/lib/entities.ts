@@ -27,6 +27,12 @@ export interface EntityProfile {
   people?: { name: string; role: string }[] | undefined;
   shareholding?: { name: string; pct: number }[] | undefined;
   activities?: string[] | undefined;
+  /** Financial year end as MM-DD (India default 03-31) [§14]. */
+  fyEnd?: string | undefined;
+  /** Related entities printed on documents; linked only when the owner confirms [§14]. */
+  related?: { name: string; relation: string; pan: string | null; cin: string | null }[] | undefined;
+  /** Ids of identifiers checked against a certificate (PAN/CIN/GSTIN) [§16]. */
+  verified?: string[] | undefined;
 }
 
 const PAN_RE = /^[A-Z]{5}[0-9]{4}[A-Z]$/;

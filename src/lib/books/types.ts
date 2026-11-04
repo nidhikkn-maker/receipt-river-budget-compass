@@ -56,6 +56,7 @@ export interface Property {
   valuation?: { value: number; date: Iso; source: string } | undefined;
   docIds: string[];
   links?: PropertyLinks | undefined;
+  notes?: string | undefined;
 }
 export interface Lease {
   id: string; propertyId: string; unitId?: string | undefined; tenant: string; start: Iso; end: Iso;
