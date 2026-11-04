@@ -64,9 +64,9 @@ describe("§71 assets & depreciation", () => {
     const book = annualBook(car, "2025-26").depreciation;
     const tax = bookVsTax([car], "2025-26")[0]!.tax;
     expect(book).toBeCloseTo((12000000 * 0.95) / 8, -1);
-    expect(tax).toBe(1530000); // 15% on WDV after FY24-25 half-year 7.5%
+    expect(tax).toBe(1665000); // FY24-25 half rate 7.5% (used <180 days), then 15% on 1,11,00,000 WDV
     expect(book).not.toBe(tax);
-    expect(blockSchedule([car], "2025-26")[0]).toMatchObject({ kind: "vehicle", rate: 15, depreciation: 1530000 });
+    expect(blockSchedule([car], "2025-26")[0]).toMatchObject({ kind: "vehicle", rate: 15, depreciation: 1665000 });
   });
   it("monthly book depreciation never goes below residual", () => {
     const m = monthlyBook({ ...car, usefulLifeYears: 1 }, "2027-12");

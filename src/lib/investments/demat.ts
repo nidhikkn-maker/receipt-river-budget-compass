@@ -9,7 +9,7 @@ export interface GainLine { sellDate: string; buyDate: string | null; isin: stri
 export type InvestEventKind = "dividend" | "redemption" | "bonus" | "split" | "rights" | "merger" | "brokerage";
 export interface InvestEvent { date: string; isin: string; name: string; kind: InvestEventKind; quantity: number | null; amount: number | null }
 export interface InvestDoc { kind: InvestDocKind; broker: string; dpId: string; clientId: string; holder: string; asOf: string | null; holdings: HoldingLine[]; trades: TradeLine[]; gains: GainLine[]; events?: InvestEvent[] }
-const EVENT_RE: [RegExp, InvestEventKind][] = [[/dividend/i, "dividend"], [/redemption|redeem/i, "redemption"], [/bonus/i, "bonus"], [/(split|sub-?division)/i, "split"], [/rights?/i, "rights"], [/(merger|amalgamation|demerger)/i, "merger"], [/brokerage/i, "brokerage"]];
+const EVENT_RE: [RegExp, InvestEventKind][] = [[/\bdividend\b/i, "dividend"], [/\bredemption|redeem/i, "redemption"], [/\bbonus\b/i, "bonus"], [/\b(split|sub-?division)\b/i, "split"], [/\brights?\b/i, "rights"], [/\b(merger|amalgamation|demerger)\b/i, "merger"], [/\bbrokerage\b/i, "brokerage"]];
 export function eventKindOf(row: string): InvestEventKind | null { return EVENT_RE.find(([re]) => re.test(row))?.[1] ?? null; }
 
 export interface Lot { date: string; side: "buy" | "sell"; quantity: number; price: number | null; amount: number | null; source: string }
