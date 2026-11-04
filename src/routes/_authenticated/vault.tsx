@@ -32,7 +32,7 @@ function Vault() {
   const upload = async (e: React.FormEvent) => {
     e.preventDefault(); if (!file || busy) return;
     const dups = duplicateDocuments(documents, { fileName: file.name, size: file.size, docType: form.docType, docDate: form.date || null, amount: form.amount ? Number(form.amount) : null, merchant: form.merchant || null }, replaces);
-    if (dups.length && !(await confirmAction(`This looks like ${dups[0].title}, already in DocuRepo. Save it anyway?`))) return;
+    if (dups.length && !(await confirmAction(`This looks like ${dups[0]!.title}, already in DocuRepo. Save it anyway?`))) return;
     setBusy(true);
     try {
       const docId = await addDocument(file, { title: form.title, docType: form.docType, docDate: form.date || null, amount: form.amount ? Number(form.amount) : null, currency: "INR", merchant: form.merchant || null, notes: form.notes, text,

@@ -1,4 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import type { Json } from "@/integrations/supabase/types";
 import { duplicateAccount } from "@/lib/master-data";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -683,7 +684,7 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
       id: docId, owner_id: userId, title: meta.title.trim(), doc_type: meta.docType, file_path: path, file_name: file.name.slice(0, 200), mime_type: file.type, size_bytes: file.size,
       doc_date: meta.docDate || null, amount: meta.amount, currency: meta.currency, merchant: meta.merchant?.trim() || null, notes: meta.notes.slice(0, 2000), extracted_text: (meta.text ?? "").slice(0, 20000),
       transaction_id: meta.transactionId, account_id: meta.accountId, loan_id: meta.loanId, expires_on: meta.expiresOn || null,
-      fields: (meta.fields ?? []).slice(0, 40) as unknown as Database["public"]["Tables"]["documents"]["Insert"]["fields"], replaces_id: meta.replacesId ?? null,
+      fields: (meta.fields ?? []).slice(0, 40) as unknown as Json, replaces_id: meta.replacesId ?? null,
     });
     if (error) { await supabase.storage.from("receipts").remove([path]); throw new Error(error.message); }
     await refresh();
@@ -702,7 +703,7 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
     if (m.accountId !== undefined) row["account_id"] = m.accountId;
     if (m.loanId !== undefined) row["loan_id"] = m.loanId;
     if (m.expiresOn !== undefined) row["expires_on"] = m.expiresOn || null;
-    if (m.fields !== undefined) row["fields"] = m.fields as unknown as Database["public"]["Tables"]["documents"]["Update"]["fields"];
+    if (m.fields !== undefined) row["fields"] = m.fields as unknown as Json;
     check((await supabase.from("documents").update(row).eq("id", id)).error);
     await refresh();
   };
