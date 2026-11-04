@@ -10,6 +10,7 @@ import { ENTITY_KINDS, fyRange } from "@/lib/entities";
 import { accountBalance } from "@/lib/ledger";
 import { booksHeads, HEAD_LABEL, nextFy, openingProposal } from "@/lib/books/fy";
 import { OpeningBalances } from "./OpeningBalances";
+import { ItrHandoff } from "./ItrHandoff";
 import { REQUIRED_SCHEDULES } from "@/lib/books/intake";
 import { annualSummary, duplicateInvoices, gstr1, gstr1Json, gstr3b, gstr3bJson, gstr9, invoiceProblems, validateGstJson, matchGstPayments, unfiledPeriods } from "@/lib/books/gst";
 import { activateRule, OFFICIAL_SOURCES, proposeRule, ruleOn, validateRule, formFor } from "@/lib/books/regulatory";
@@ -286,6 +287,7 @@ export function TaxComputationCard({ fy }: { fy: string }) {
           <p className="mt-1 text-[11px] text-muted-foreground">Only credits you can see on Form 26AS, Form 16/16A, AIS or a paid challan. Upload them on <Link to="/statements" search={{ context: "tax" }} className="underline">Statement Desk</Link> to keep the original.</p>
         </div>
         {c.notes.map((n) => <p key={n} className="text-[11px] text-muted-foreground">{n}</p>)}
+        <ItrHandoff fy={fy} ent={ent} c={c} personal={personal} regime={regime} profileConfirmed={!unconfirmed} credits={cr.lines} unrecordedTaxDebits={challans.length} gains={ent ? [] : (demat ?? []).flatMap((d) => d.holdings.flatMap((h) => h.gains))} scope={accountIds} slabTax={slabTax} />
       </div>
     </Fold>
   );
