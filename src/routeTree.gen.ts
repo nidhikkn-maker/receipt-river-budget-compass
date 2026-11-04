@@ -32,6 +32,7 @@ import { Route as AuthenticatedExpensesRouteImport } from './routes/_authenticat
 import { Route as AuthenticatedFamilyRouteImport } from './routes/_authenticated/family'
 import { Route as AuthenticatedForecastRouteImport } from './routes/_authenticated/forecast'
 import { Route as AuthenticatedForexReconcileRouteImport } from './routes/_authenticated/forex-reconcile'
+import { Route as AuthenticatedGstCheckRouteImport } from './routes/_authenticated/gst-check'
 import { Route as AuthenticatedHistoricalImportRouteImport } from './routes/_authenticated/historical-import'
 import { Route as AuthenticatedInboxRouteImport } from './routes/_authenticated/inbox'
 import { Route as AuthenticatedNewRouteImport } from './routes/_authenticated/new'
@@ -193,6 +194,11 @@ const AuthenticatedForexReconcileRoute =
     path: '/forex-reconcile',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedGstCheckRoute = AuthenticatedGstCheckRouteImport.update({
+  id: '/gst-check',
+  path: '/gst-check',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedHistoricalImportRoute =
   AuthenticatedHistoricalImportRouteImport.update({
     id: '/historical-import',
@@ -429,6 +435,7 @@ export interface FileRoutesByFullPath {
   '/family': typeof AuthenticatedFamilyRoute
   '/forecast': typeof AuthenticatedForecastRoute
   '/forex-reconcile': typeof AuthenticatedForexReconcileRoute
+  '/gst-check': typeof AuthenticatedGstCheckRoute
   '/historical-import': typeof AuthenticatedHistoricalImportRoute
   '/inbox': typeof AuthenticatedInboxRoute
   '/new': typeof AuthenticatedNewRoute
@@ -492,6 +499,7 @@ export interface FileRoutesByTo {
   '/family': typeof AuthenticatedFamilyRoute
   '/forecast': typeof AuthenticatedForecastRoute
   '/forex-reconcile': typeof AuthenticatedForexReconcileRoute
+  '/gst-check': typeof AuthenticatedGstCheckRoute
   '/historical-import': typeof AuthenticatedHistoricalImportRoute
   '/inbox': typeof AuthenticatedInboxRoute
   '/new': typeof AuthenticatedNewRoute
@@ -556,6 +564,7 @@ export interface FileRoutesById {
   '/_authenticated/family': typeof AuthenticatedFamilyRoute
   '/_authenticated/forecast': typeof AuthenticatedForecastRoute
   '/_authenticated/forex-reconcile': typeof AuthenticatedForexReconcileRoute
+  '/_authenticated/gst-check': typeof AuthenticatedGstCheckRoute
   '/_authenticated/historical-import': typeof AuthenticatedHistoricalImportRoute
   '/_authenticated/inbox': typeof AuthenticatedInboxRoute
   '/_authenticated/new': typeof AuthenticatedNewRoute
@@ -621,6 +630,7 @@ export interface FileRouteTypes {
     | '/family'
     | '/forecast'
     | '/forex-reconcile'
+    | '/gst-check'
     | '/historical-import'
     | '/inbox'
     | '/new'
@@ -684,6 +694,7 @@ export interface FileRouteTypes {
     | '/family'
     | '/forecast'
     | '/forex-reconcile'
+    | '/gst-check'
     | '/historical-import'
     | '/inbox'
     | '/new'
@@ -747,6 +758,7 @@ export interface FileRouteTypes {
     | '/_authenticated/family'
     | '/_authenticated/forecast'
     | '/_authenticated/forex-reconcile'
+    | '/_authenticated/gst-check'
     | '/_authenticated/historical-import'
     | '/_authenticated/inbox'
     | '/_authenticated/new'
@@ -966,6 +978,13 @@ declare module '@tanstack/react-router' {
       path: '/forex-reconcile'
       fullPath: '/forex-reconcile'
       preLoaderRoute: typeof AuthenticatedForexReconcileRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/gst-check': {
+      id: '/_authenticated/gst-check'
+      path: '/gst-check'
+      fullPath: '/gst-check'
+      preLoaderRoute: typeof AuthenticatedGstCheckRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/historical-import': {
@@ -1275,6 +1294,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedFamilyRoute: typeof AuthenticatedFamilyRoute
   AuthenticatedForecastRoute: typeof AuthenticatedForecastRoute
   AuthenticatedForexReconcileRoute: typeof AuthenticatedForexReconcileRoute
+  AuthenticatedGstCheckRoute: typeof AuthenticatedGstCheckRoute
   AuthenticatedHistoricalImportRoute: typeof AuthenticatedHistoricalImportRoute
   AuthenticatedInboxRoute: typeof AuthenticatedInboxRoute
   AuthenticatedNewRoute: typeof AuthenticatedNewRoute
@@ -1326,6 +1346,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedFamilyRoute: AuthenticatedFamilyRoute,
   AuthenticatedForecastRoute: AuthenticatedForecastRoute,
   AuthenticatedForexReconcileRoute: AuthenticatedForexReconcileRoute,
+  AuthenticatedGstCheckRoute: AuthenticatedGstCheckRoute,
   AuthenticatedHistoricalImportRoute: AuthenticatedHistoricalImportRoute,
   AuthenticatedInboxRoute: AuthenticatedInboxRoute,
   AuthenticatedNewRoute: AuthenticatedNewRoute,

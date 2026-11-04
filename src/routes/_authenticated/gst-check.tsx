@@ -37,7 +37,7 @@ function GstCheck() {
         </div>
         {missing.length === 0 && <p className="text-sm text-muted-foreground">Every business spend in this range has a bill or document.</p>}
         {missing.slice(0, 50).map((e) => (
-          <Link key={e.id} to="/expenses" search={{ q: e.merchant || e.title } as never} className="flex justify-between rounded-xl bg-secondary/50 px-3 py-2 text-sm">
+          <Link key={e.id} to="/expenses" className="flex justify-between rounded-xl bg-secondary/50 px-3 py-2 text-sm">
             <span>{e.merchant || e.title} · {e.date}</span><b>{inr(e.amount)}</b>
           </Link>
         ))}
