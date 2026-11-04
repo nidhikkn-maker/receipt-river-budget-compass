@@ -1,0 +1,117 @@
+import { createFileRoute } from "@tanstack/react-router";
+import { useMemo, useState } from "react";
+import { toast } from "sonner";
+import { PageTitle } from "@/components/AppShell";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { useStore } from "@/lib/store";
+import { fyOf } from "@/lib/entities";
+import { ASSET_KINDS, TAX_RATES, bookSchedule, rentCheck, shareValue, taxSchedule, type Asset, type AssetKind } from "@/lib/assets";
+
+export const Route = createFileRoute("/_authenticated/assets")({
+  head: () => ({ meta: [
+    { title: "Property, assets & depreciation — Ledgerline" },
+    { name: "description", content: "Property ownership shares, fixed assets, rent received and book and income-tax depreciation by year." },
+    { property: "og:title", content: "Property, assets & depreciation — Ledgerline" },
+    { property: "og:description", content: "Property ownership shares, fixed assets, rent received and book and income-tax depreciation by year." },
+    { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" },
+  ] }),
+  component: Assets,
+});
+
+const inr = (n: number) => "₹" + n.toLocaleString("en-IN", { maximumFractionDigits: 0 });
+const today = () => new Date().toISOString().slice(0, 10);
+const blank = (): Asset => ({ id: crypto.randomUUID(), name: "", kind: "property", cost: 0, inUse: today(), sharePct: 100, bookMethod: "slm", bookRatePct: 0 });
+
+function Assets() {
+  const { preferences, savePreferences, transactions, documents } = useStore();
+  const list = preferences.assets ?? [];
+  const entities = preferences.entities ?? [];
+  const [edit, setEdit] = useState<Asset | null>(null);
+  const [open, setOpen] = useState<string | null>(null);
+  const fy = fyOf(today());
+  const months = useMemo(() => { const d = new Date(); return [0, 1, 2].map((i) => new Date(d.getFullYear(), d.getMonth() - i, 15).toISOString().slice(0, 7)); }, []);
+  const income = useMemo(() => transactions.filter((t) => t.txnType === "income").map((t) => ({ date: t.date, amount: t.amount, text: `${t.title} ${t.merchant ?? ""} ${t.description}` })), [transactions]);
+  const total = list.filter((a) => !a.soldOn).reduce((s, a) => s + shareValue(a, fy), 0);
+
+  const valid = edit && edit.name.trim() && edit.cost > 0 && /^\d{4}-\d{2}-\d{2}$/.test(edit.inUse);
+  const save = async () => {
+    if (!edit || !valid) return;
+    const next = list.some((x) => x.id === edit.id) ? list.map((x) => (x.id === edit.id ? edit : x)) : [...list, edit];
+    await savePreferences({ ...preferences, assets: next }); toast.success("Asset saved"); setEdit(null);
+  };
+  const remove = async (id: string) => { await savePreferences({ ...preferences, assets: list.filter((x) => x.id !== id) }); setEdit(null); };
+  const num = (v: string) => Math.max(0, Number(v) || 0);
+
+  return (
+    <div className="mx-auto max-w-2xl space-y-4 p-4">
+      <PageTitle title="Property & assets" sub={`Your share of book value now: ${inr(total)} · FY ${fy}`} />
+      {!edit && <Button onClick={() => setEdit(blank())}>Add property or asset</Button>}
+
+      {edit && (
+        <div className="space-y-3 rounded-2xl border bg-card p-4 text-sm">
+          <Input placeholder="Name (e.g. Anna Nagar flat)" value={edit.name} onChange={(e) => setEdit({ ...edit, name: e.target.value })} />
+          <select className="w-full rounded-md border bg-background px-3 py-2" value={edit.kind} onChange={(e) => { const kind = e.target.value as AssetKind; setEdit({ ...edit, kind, bookRatePct: kind === "property" ? 0 : edit.bookRatePct || TAX_RATES[kind] }); }}>
+            {Object.entries(ASSET_KINDS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+          </select>
+          <div className="grid grid-cols-2 gap-2">
+            <label>Cost ₹<Input type="number" value={edit.cost || ""} onChange={(e) => setEdit({ ...edit, cost: num(e.target.value) })} /></label>
+            <label>Put to use<Input type="date" value={edit.inUse} onChange={(e) => setEdit({ ...edit, inUse: e.target.value })} /></label>
+            <label>Your share %<Input type="number" value={edit.sharePct} onChange={(e) => setEdit({ ...edit, sharePct: Math.min(100, num(e.target.value)) })} /></label>
+            <label>Owned by
+              <select className="mt-0 w-full rounded-md border bg-background px-3 py-2" value={edit.ownerEntityId ?? ""} onChange={(e) => setEdit({ ...edit, ownerEntityId: e.target.value || undefined })}>
+                <option value="">—</option>{entities.map((x) => <option key={x.id} value={x.id}>{x.name}</option>)}
+              </select>
+            </label>
+            {edit.kind !== "property" && <>
+              <label>Book method
+                <select className="w-full rounded-md border bg-background px-3 py-2" value={edit.bookMethod} onChange={(e) => setEdit({ ...edit, bookMethod: e.target.value as "slm" | "wdv" })}>
+                  <option value="slm">Straight line</option><option value="wdv">Written down</option>
+                </select>
+              </label>
+              <label>Book rate %<Input type="number" value={edit.bookRatePct} onChange={(e) => setEdit({ ...edit, bookRatePct: Math.min(100, num(e.target.value)) })} /></label>
+            </>}
+            <label>Rent per month ₹<Input type="number" value={edit.monthlyRent ?? ""} onChange={(e) => setEdit({ ...edit, monthlyRent: num(e.target.value) || undefined })} /></label>
+            <label>Sold on<Input type="date" value={edit.soldOn ?? ""} onChange={(e) => setEdit({ ...edit, soldOn: e.target.value || undefined })} /></label>
+          </div>
+          <label className="block">Deed / invoice in DocuRepo
+            <select className="w-full rounded-md border bg-background px-3 py-2" value={edit.docId ?? ""} onChange={(e) => setEdit({ ...edit, docId: e.target.value || undefined })}>
+              <option value="">None</option>{documents.map((d) => <option key={d.id} value={d.id}>{d.title}</option>)}
+            </select>
+          </label>
+          <div className="flex flex-wrap gap-2">
+            <Button onClick={save} disabled={!valid}>Save</Button>
+            <Button variant="ghost" onClick={() => setEdit(null)}>Cancel</Button>
+            {list.some((x) => x.id === edit.id) && <Button variant="ghost" className="text-destructive" onClick={() => remove(edit.id)}>Delete</Button>}
+          </div>
+        </div>
+      )}
+
+      {list.length === 0 && !edit && <p className="text-sm text-muted-foreground">Add property deeds, vehicles, computers and other assets to see ownership and depreciation.</p>}
+      {list.map((a) => {
+        const book = bookSchedule(a, fy), tax = taxSchedule(a, fy), rent = rentCheck(a, income, months);
+        const doc = documents.find((d) => d.id === a.docId);
+        return (
+          <div key={a.id} className="space-y-2 rounded-2xl border bg-card p-4 text-sm">
+            <div className="flex items-start justify-between gap-2">
+              <div>
+                <p className="font-semibold">{a.name}{a.soldOn ? " (sold)" : ""}</p>
+                <p className="text-xs text-muted-foreground">{ASSET_KINDS[a.kind]} · cost {inr(a.cost)} · {a.sharePct}% yours · now {inr(shareValue(a, fy))}{doc ? ` · ${doc.title}` : " · no deed/invoice linked"}</p>
+              </div>
+              <Button size="sm" variant="outline" onClick={() => setEdit(a)}>Edit</Button>
+            </div>
+            {rent.length > 0 && <div className="flex flex-wrap gap-1">{rent.map((m) => <span key={m.month} className={`rounded-full px-2 py-0.5 text-xs ${m.received >= m.expected ? "bg-primary/10 text-primary" : "bg-destructive/10 text-destructive"}`}>{m.month}: {inr(m.received)} / {inr(m.expected)}</span>)}</div>}
+            {(book.length > 0 || tax.length > 0) && <Button size="sm" variant="ghost" onClick={() => setOpen(open === a.id ? null : a.id)}>{open === a.id ? "Hide" : "Show"} depreciation</Button>}
+            {open === a.id && (
+              <table className="w-full text-xs">
+                <thead><tr className="text-muted-foreground"><th className="text-left">FY</th><th className="text-right">Book</th><th className="text-right">Book value</th><th className="text-right">Tax ({TAX_RATES[a.kind]}%)</th><th className="text-right">Tax WDV</th></tr></thead>
+                <tbody>{book.map((b, i) => <tr key={b.fy}><td>{b.fy}</td><td className="text-right">{inr(b.depreciation)}</td><td className="text-right">{inr(b.closing)}</td><td className="text-right">{tax[i] ? inr(tax[i]!.depreciation) : "—"}</td><td className="text-right">{tax[i] ? inr(tax[i]!.closing) : "—"}</td></tr>)}</tbody>
+              </table>
+            )}
+          </div>
+        );
+      })}
+      <p className="text-xs text-muted-foreground">Tax figures use standard block rates as a guide; confirm with your accountant before filing.</p>
+    </div>
+  );
+}

@@ -17,6 +17,7 @@ import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as Char91DotwellKnownChar93OauthProtectedResourceRouteImport } from './routes/[.well-known]/oauth-protected-resource'
 import { Route as AuthenticatedAccountReconciliationRouteImport } from './routes/_authenticated/account-reconciliation'
 import { Route as AuthenticatedAllocationRouteImport } from './routes/_authenticated/allocation'
+import { Route as AuthenticatedAssetsRouteImport } from './routes/_authenticated/assets'
 import { Route as AuthenticatedAssistantRouteImport } from './routes/_authenticated/assistant'
 import { Route as AuthenticatedAssistantsRouteImport } from './routes/_authenticated/assistants'
 import { Route as AuthenticatedBriefRouteImport } from './routes/_authenticated/brief'
@@ -54,6 +55,7 @@ import { Route as AuthenticatedStatementCrosscheckRouteImport } from './routes/_
 import { Route as AuthenticatedStatementsRouteImport } from './routes/_authenticated/statements'
 import { Route as AuthenticatedStrategyRouteImport } from './routes/_authenticated/strategy'
 import { Route as AuthenticatedSyncQueueRouteImport } from './routes/_authenticated/sync-queue'
+import { Route as AuthenticatedTaxRouteImport } from './routes/_authenticated/tax'
 import { Route as AuthenticatedTransactionReviewRouteImport } from './routes/_authenticated/transaction-review'
 import { Route as AuthenticatedTransfersRouteImport } from './routes/_authenticated/transfers'
 import { Route as AuthenticatedTravelInboxRouteImport } from './routes/_authenticated/travel-inbox'
@@ -112,6 +114,11 @@ const AuthenticatedAccountReconciliationRoute =
 const AuthenticatedAllocationRoute = AuthenticatedAllocationRouteImport.update({
   id: '/allocation',
   path: '/allocation',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedAssetsRoute = AuthenticatedAssetsRouteImport.update({
+  id: '/assets',
+  path: '/assets',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedAssistantRoute = AuthenticatedAssistantRouteImport.update({
@@ -312,6 +319,11 @@ const AuthenticatedSyncQueueRoute = AuthenticatedSyncQueueRouteImport.update({
   path: '/sync-queue',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedTaxRoute = AuthenticatedTaxRouteImport.update({
+  id: '/tax',
+  path: '/tax',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedTransactionReviewRoute =
   AuthenticatedTransactionReviewRouteImport.update({
     id: '/transaction-review',
@@ -420,6 +432,7 @@ export interface FileRoutesByFullPath {
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/account-reconciliation': typeof AuthenticatedAccountReconciliationRoute
   '/allocation': typeof AuthenticatedAllocationRoute
+  '/assets': typeof AuthenticatedAssetsRoute
   '/assistant': typeof AuthenticatedAssistantRoute
   '/assistants': typeof AuthenticatedAssistantsRoute
   '/brief': typeof AuthenticatedBriefRoute
@@ -457,6 +470,7 @@ export interface FileRoutesByFullPath {
   '/statements': typeof AuthenticatedStatementsRoute
   '/strategy': typeof AuthenticatedStrategyRoute
   '/sync-queue': typeof AuthenticatedSyncQueueRoute
+  '/tax': typeof AuthenticatedTaxRoute
   '/transaction-review': typeof AuthenticatedTransactionReviewRoute
   '/transfers': typeof AuthenticatedTransfersRoute
   '/travel-inbox': typeof AuthenticatedTravelInboxRoute
@@ -484,6 +498,7 @@ export interface FileRoutesByTo {
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/account-reconciliation': typeof AuthenticatedAccountReconciliationRoute
   '/allocation': typeof AuthenticatedAllocationRoute
+  '/assets': typeof AuthenticatedAssetsRoute
   '/assistant': typeof AuthenticatedAssistantRoute
   '/assistants': typeof AuthenticatedAssistantsRoute
   '/brief': typeof AuthenticatedBriefRoute
@@ -521,6 +536,7 @@ export interface FileRoutesByTo {
   '/statements': typeof AuthenticatedStatementsRoute
   '/strategy': typeof AuthenticatedStrategyRoute
   '/sync-queue': typeof AuthenticatedSyncQueueRoute
+  '/tax': typeof AuthenticatedTaxRoute
   '/transaction-review': typeof AuthenticatedTransactionReviewRoute
   '/transfers': typeof AuthenticatedTransfersRoute
   '/travel-inbox': typeof AuthenticatedTravelInboxRoute
@@ -549,6 +565,7 @@ export interface FileRoutesById {
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/_authenticated/account-reconciliation': typeof AuthenticatedAccountReconciliationRoute
   '/_authenticated/allocation': typeof AuthenticatedAllocationRoute
+  '/_authenticated/assets': typeof AuthenticatedAssetsRoute
   '/_authenticated/assistant': typeof AuthenticatedAssistantRoute
   '/_authenticated/assistants': typeof AuthenticatedAssistantsRoute
   '/_authenticated/brief': typeof AuthenticatedBriefRoute
@@ -586,6 +603,7 @@ export interface FileRoutesById {
   '/_authenticated/statements': typeof AuthenticatedStatementsRoute
   '/_authenticated/strategy': typeof AuthenticatedStrategyRoute
   '/_authenticated/sync-queue': typeof AuthenticatedSyncQueueRoute
+  '/_authenticated/tax': typeof AuthenticatedTaxRoute
   '/_authenticated/transaction-review': typeof AuthenticatedTransactionReviewRoute
   '/_authenticated/transfers': typeof AuthenticatedTransfersRoute
   '/_authenticated/travel-inbox': typeof AuthenticatedTravelInboxRoute
@@ -615,6 +633,7 @@ export interface FileRouteTypes {
     | '/.well-known/oauth-protected-resource'
     | '/account-reconciliation'
     | '/allocation'
+    | '/assets'
     | '/assistant'
     | '/assistants'
     | '/brief'
@@ -652,6 +671,7 @@ export interface FileRouteTypes {
     | '/statements'
     | '/strategy'
     | '/sync-queue'
+    | '/tax'
     | '/transaction-review'
     | '/transfers'
     | '/travel-inbox'
@@ -679,6 +699,7 @@ export interface FileRouteTypes {
     | '/.well-known/oauth-protected-resource'
     | '/account-reconciliation'
     | '/allocation'
+    | '/assets'
     | '/assistant'
     | '/assistants'
     | '/brief'
@@ -716,6 +737,7 @@ export interface FileRouteTypes {
     | '/statements'
     | '/strategy'
     | '/sync-queue'
+    | '/tax'
     | '/transaction-review'
     | '/transfers'
     | '/travel-inbox'
@@ -743,6 +765,7 @@ export interface FileRouteTypes {
     | '/.well-known/oauth-protected-resource'
     | '/_authenticated/account-reconciliation'
     | '/_authenticated/allocation'
+    | '/_authenticated/assets'
     | '/_authenticated/assistant'
     | '/_authenticated/assistants'
     | '/_authenticated/brief'
@@ -780,6 +803,7 @@ export interface FileRouteTypes {
     | '/_authenticated/statements'
     | '/_authenticated/strategy'
     | '/_authenticated/sync-queue'
+    | '/_authenticated/tax'
     | '/_authenticated/transaction-review'
     | '/_authenticated/transfers'
     | '/_authenticated/travel-inbox'
@@ -873,6 +897,13 @@ declare module '@tanstack/react-router' {
       path: '/allocation'
       fullPath: '/allocation'
       preLoaderRoute: typeof AuthenticatedAllocationRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/assets': {
+      id: '/_authenticated/assets'
+      path: '/assets'
+      fullPath: '/assets'
+      preLoaderRoute: typeof AuthenticatedAssetsRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/assistant': {
@@ -1134,6 +1165,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedSyncQueueRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/tax': {
+      id: '/_authenticated/tax'
+      path: '/tax'
+      fullPath: '/tax'
+      preLoaderRoute: typeof AuthenticatedTaxRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/transaction-review': {
       id: '/_authenticated/transaction-review'
       path: '/transaction-review'
@@ -1279,6 +1317,7 @@ const AuthenticatedTripsRouteWithChildren =
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedAccountReconciliationRoute: typeof AuthenticatedAccountReconciliationRoute
   AuthenticatedAllocationRoute: typeof AuthenticatedAllocationRoute
+  AuthenticatedAssetsRoute: typeof AuthenticatedAssetsRoute
   AuthenticatedAssistantRoute: typeof AuthenticatedAssistantRoute
   AuthenticatedAssistantsRoute: typeof AuthenticatedAssistantsRoute
   AuthenticatedBriefRoute: typeof AuthenticatedBriefRoute
@@ -1316,6 +1355,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedStatementsRoute: typeof AuthenticatedStatementsRoute
   AuthenticatedStrategyRoute: typeof AuthenticatedStrategyRoute
   AuthenticatedSyncQueueRoute: typeof AuthenticatedSyncQueueRoute
+  AuthenticatedTaxRoute: typeof AuthenticatedTaxRoute
   AuthenticatedTransactionReviewRoute: typeof AuthenticatedTransactionReviewRoute
   AuthenticatedTransfersRoute: typeof AuthenticatedTransfersRoute
   AuthenticatedTravelInboxRoute: typeof AuthenticatedTravelInboxRoute
@@ -1330,6 +1370,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAccountReconciliationRoute:
     AuthenticatedAccountReconciliationRoute,
   AuthenticatedAllocationRoute: AuthenticatedAllocationRoute,
+  AuthenticatedAssetsRoute: AuthenticatedAssetsRoute,
   AuthenticatedAssistantRoute: AuthenticatedAssistantRoute,
   AuthenticatedAssistantsRoute: AuthenticatedAssistantsRoute,
   AuthenticatedBriefRoute: AuthenticatedBriefRoute,
@@ -1369,6 +1410,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedStatementsRoute: AuthenticatedStatementsRoute,
   AuthenticatedStrategyRoute: AuthenticatedStrategyRoute,
   AuthenticatedSyncQueueRoute: AuthenticatedSyncQueueRoute,
+  AuthenticatedTaxRoute: AuthenticatedTaxRoute,
   AuthenticatedTransactionReviewRoute: AuthenticatedTransactionReviewRoute,
   AuthenticatedTransfersRoute: AuthenticatedTransfersRoute,
   AuthenticatedTravelInboxRoute: AuthenticatedTravelInboxRoute,

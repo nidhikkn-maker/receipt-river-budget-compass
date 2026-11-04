@@ -1,7 +1,8 @@
 ## Companies & financial years (4 Nov 2026)
 - [x] Profiles with PAN/GSTIN/CIN checks and per-year on-record status at /entities; 4 rule tests pass. Not browser-checked or published.
 - [x] Suppliers & missing invoices page (/gst-check), 2 rule tests pass; not browser-checked.
-- [ ] Next: customer/GST return matching, assets/property, depreciation, income tax/GST drafts, audit dashboard; live prices need a price provider.
+- [x] Property & assets with book/tax depreciation and rent check (/assets); income tax & GST working draft (/tax); rule tests pass.
+- [ ] Next: customer/GST return (GSTR-2B) matching, regulatory rules, audit dashboard; assets/property, depreciation, income tax/GST drafts, audit dashboard; live prices need a price provider.
 # Roadmap (Functional Requirements v1.0)
 ## Remove offline receipt photos you no longer need (4 Nov 2026)
 - [x] Each photo on /offline-receipts has a Remove control and there's Remove all failed; both ask first, delete only from this phone, and never touch a photo that has already been read into a draft.
