@@ -675,15 +675,20 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
   const removeValuation: Ctx["removeValuation"] = async (id) => { check((await supabase.from("asset_valuations").delete().eq("id", id)).error); await refresh(); };
   const addDocument: Ctx["addDocument"] = async (file, meta) => {
     validateDocument({ title: meta.title, size: file.size, docType: meta.docType, amount: meta.amount });
+    // A retried Statement Desk run reuses its id, so a second attempt never stores the file twice.
+    if (meta.id) {
+      const prior = await supabase.from("documents").select("id").eq("id", meta.id).eq("owner_id", userId).maybeSingle();
+      if (prior.data) { await refresh(); return prior.data.id; }
+    }
     const path = `${userId}/docs/${crypto.randomUUID()}-${safeName(file.name)}`;
     const up = await supabase.storage.from("receipts").upload(path, file, { contentType: file.type || "application/octet-stream" });
     if (up.error) throw new Error(`Couldn't upload ${file.name}`);
-    const docId = crypto.randomUUID();
+    const docId = meta.id ?? crypto.randomUUID();
     const { error } = await supabase.from("documents").insert({
       id: docId, owner_id: userId, title: meta.title.trim(), doc_type: meta.docType, file_path: path, file_name: file.name.slice(0, 200), mime_type: file.type, size_bytes: file.size,
       doc_date: meta.docDate || null, amount: meta.amount, currency: meta.currency, merchant: meta.merchant?.trim() || null, notes: meta.notes.slice(0, 2000), extracted_text: (meta.text ?? "").slice(0, 20000),
       transaction_id: meta.transactionId, account_id: meta.accountId, loan_id: meta.loanId, expires_on: meta.expiresOn || null,
-      fields: (meta.fields ?? []).slice(0, 40) as unknown as Json, replaces_id: meta.replacesId ?? null,
+      fields: (meta.fields ?? []).slice(0, 40) as unknown as Json, replaces_id: meta.replacesId ?? null, evidence_locked: !!meta.evidenceLocked,
     });
     if (error) { await supabase.storage.from("receipts").remove([path]); throw new Error(error.message); }
     await refresh();
