@@ -119,7 +119,7 @@ export interface AlertSettings { portfolioMovePct: number; staleNavDays: number;
 export interface GoldRate { perGram24k: number; date: Iso; source: string }
 
 /** Tax & GST [§45–48]. */
-export interface TaxProfile { entityId: string; regime: "new" | "old"; obligations: string[]; gstScheme: "regular" | "composition" | "qrmp" | "none"; auditRequired: boolean }
+export interface TaxProfile { entityId: string; regime: "new" | "old"; obligations: string[]; gstScheme: "regular" | "composition" | "qrmp" | "none"; auditRequired: boolean; hasBusiness?: boolean | undefined; confirmedAt?: string | undefined }
 export interface GstInvoice {
   id: string; gstin: string; kind: "sales" | "purchase"; number: string; date: Iso; party: string; partyGstin: string;
   taxable: number; igst: number; cgst: number; sgst: number; cess: number; docId?: string | undefined; transactionId?: string | undefined;

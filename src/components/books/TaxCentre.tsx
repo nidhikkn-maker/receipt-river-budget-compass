@@ -71,13 +71,18 @@ export function TaxProfiles({ fy }: { fy: string }) {
       <div className="space-y-2 text-sm">
         {entities.length === 0 && <p className="text-muted-foreground">Add a company or person first on <Link to="/entities" className="underline">Companies & years</Link>.</p>}
         {entities.map((e) => {
-          const p = books.taxProfiles.find((x) => x.entityId === e.id) ?? { entityId: e.id, regime: "new", obligations: [], gstScheme: e.gstins.length ? "regular" : "none", auditRequired: e.kind === "company" || e.kind === "llp" } as TaxProfile;
-          const f = formFor(e.kind, e.kind !== "individual", fy);
+          const saved = books.taxProfiles.find((x) => x.entityId === e.id);
+          // Nothing is assumed: an unsaved profile shows blank choices until confirmed [§45].
+          const p = saved ?? ({ entityId: e.id, regime: "", obligations: [], gstScheme: "", auditRequired: false } as unknown as TaxProfile);
+          const ready = !!saved && !!saved.regime && !!saved.gstScheme;
+          const f = formFor(e.kind, p.hasBusiness ?? e.kind !== "individual", fy);
           return <div key={e.id} className="rounded-xl border p-3">
             <p className="font-semibold">{e.name} <span className="text-xs font-normal text-muted-foreground">{ENTITY_KINDS[e.kind].label}</span></p>
             <div className="mt-1 grid grid-cols-2 gap-2 text-xs">
-              <label>Regime<select className="w-full rounded-md border bg-background px-1 py-1" value={p.regime} onChange={(x) => upd({ ...p, regime: x.target.value as "new" })}><option value="new">New</option><option value="old">Old</option></select></label>
-              <label>GST scheme<select className="w-full rounded-md border bg-background px-1 py-1" value={p.gstScheme} onChange={(x) => upd({ ...p, gstScheme: x.target.value as "regular" })}><option value="none">Not registered</option><option value="regular">Regular (monthly)</option><option value="qrmp">QRMP (quarterly)</option><option value="composition">Composition</option></select></label>
+              <label>Regime<select className="w-full rounded-md border bg-background px-1 py-1" value={p.regime} onChange={(x) => upd({ ...p, regime: x.target.value as "new", confirmedAt: new Date().toISOString() })}><option value="" disabled>Choose…</option><option value="new">New</option><option value="old">Old</option></select></label>
+              <label>GST scheme<select className="w-full rounded-md border bg-background px-1 py-1" value={p.gstScheme} onChange={(x) => upd({ ...p, gstScheme: x.target.value as "regular", confirmedAt: new Date().toISOString() })}><option value="" disabled>Choose…</option><option value="none">Not registered</option><option value="regular">Regular (monthly)</option><option value="qrmp">QRMP (quarterly)</option><option value="composition">Composition</option></select></label>
+              <label className="col-span-2 flex items-center gap-2"><input type="checkbox" checked={p.hasBusiness ?? e.kind !== "individual"} onChange={(x) => upd({ ...p, hasBusiness: x.target.checked })} />Has business or professional income</label>
+              {!ready && <p className="col-span-2 text-destructive">Not confirmed — choose the regime and GST scheme. Tax and GST working stay hidden until then.</p>}
               <label className="col-span-2 flex items-center gap-2"><input type="checkbox" checked={p.auditRequired} onChange={(x) => upd({ ...p, auditRequired: x.target.checked })} />Accounts audited</label>
             </div>
             <details className="mt-1 text-xs"><summary className="cursor-pointer text-muted-foreground">Accounts belonging to {e.name} · {(books.entityAccounts?.[e.id] ?? []).length} linked</summary>
@@ -245,8 +250,10 @@ export function TaxComputationCard({ fy }: { fy: string }) {
   const profile = ent ? books.taxProfiles.find((p) => p.entityId === ent.id) : undefined;
   const { rules } = rulesFor(fy);
   const personal = !ent || ent.kind === "individual" || ent.kind === "huf";
-  const regime = profile?.regime ?? "new";
-  const slabTax = personal && regime === "new" ? estimateTax(c.total - c.capitalGains.long - c.capitalGains.short, rules) : null;
+  // A company/person needs a confirmed profile; "You (personal)" has no entity record and uses the new regime unless an individual profile exists.
+  const regime = ent ? profile?.regime : "new";
+  const unconfirmed = !!ent && !(profile?.regime && profile.gstScheme);
+  const slabTax = !unconfirmed && personal && regime === "new" ? estimateTax(c.total - c.capitalGains.long - c.capitalGains.short, rules) : null;
   const creditKey = ent?.id ?? "personal";
   const cr = creditsFor(books.taxCredits ?? [], creditKey, fy);
   const recordedTx = new Set((books.taxCredits ?? []).map((x) => x.transactionId).filter(Boolean));
