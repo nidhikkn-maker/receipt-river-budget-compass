@@ -24,7 +24,7 @@ export function PropertyPanel() {
   const assets = preferences.assets ?? [];
   const [newName, setNewName] = useState("");
   const [lease, setLease] = useState<Lease | null>(null);
-  const [cost, setCost] = useState<Record<string, { kind: PropertyCostKind; vendor: string; amount: string; date: string }>>({});
+  const [cost, setCost] = useState<Record<string, { kind: PropertyCostKind; vendor: string; amount: string; date: string; txId?: string; docId?: string }>>({});
   const months = useMemo(() => [5, 4, 3, 2, 1, 0].map((i) => { const d = new Date(); d.setDate(15); d.setMonth(d.getMonth() - i); return d.toISOString().slice(0, 7); }), []);
   // Every credit is a candidate (not only entries already tagged income), so a deposit misfiled as income is still kept apart [§39].
   const income = useMemo(() => transactions.filter((t) => ["income", "transfer", "reimbursement"].includes(t.txnType ?? "expense")).map((t) => ({ id: t.id, date: t.date, amount: t.amount, text: `${t.title} ${t.merchant ?? ""} ${t.description}`, accountId: t.txnType === "transfer" ? t.toAccountId : t.accountId, ...(t.currency ? { currency: t.currency } : {}) })), [transactions]);
