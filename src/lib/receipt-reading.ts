@@ -28,7 +28,7 @@ export const ExtractedReceiptSchema = z.object({
   subtotal: z.number().nonnegative().nullable().describe("Explicit subtotal before tax and tip, null if not shown; never calculate it from total"),
   tax: z.number().nonnegative().nullable().describe("Explicit total tax, null if not shown; sum separate tax components once"),
   tip: z.number().nonnegative().nullable().describe("Explicit gratuity/tip included in final paid total, null if unknown; do not infer from service charge"),
-  round_off: z.number().nullable().describe("Explicit printed round-off/rounding/R/O adjustment, signed (negative when the bill rounds down), null if not printed; never calculate it"),
+  round_off: z.number().nullable().optional().describe("Explicit printed round-off/rounding/R/O adjustment, signed (negative when the bill rounds down), null if not printed; never calculate it"),
   confidence: ReceiptConfidence.describe("Reading certainty, not a calibrated probability: high = clearly labelled and readable; medium = some ambiguity; low = unclear; unknown = missing"),
   items: z.array(z.object({ name: z.string(), quantity: z.number().nonnegative(), amount: z.number().nonnegative(), confidence: ReceiptItemConfidence.describe("Separate reading certainty for this item's name and extended line amount; never a probability") })),
   text: z.string(), currency: z.string().nullable(),
