@@ -1,5 +1,4 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import type { Json } from "@/integrations/supabase/types";
 import { duplicateAccount } from "@/lib/master-data";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
