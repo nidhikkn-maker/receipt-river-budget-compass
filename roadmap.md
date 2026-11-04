@@ -3,7 +3,8 @@
 - [x] Suppliers & missing invoices page (/gst-check), 2 rule tests pass; not browser-checked.
 - [x] Property & assets with book/tax depreciation and rent check (/assets); income tax & GST working draft (/tax); rule tests pass.
 - [x] GSTR-2B check on /gst-check and Audit dashboard (/audit); rule tests pass.
-- [ ] Next: customer receivables, yearly tax-rule versions; assets/property, depreciation, income tax/GST drafts, audit dashboard; live prices need a price provider.
+- [x] Customers owing (/receivables) and yearly tax rules with estimate on /tax; tests pass.
+- [ ] Live NSE/BSE prices need an approved price provider.
 # Roadmap (Functional Requirements v1.0)
 ## Remove offline receipt photos you no longer need (4 Nov 2026)
 - [x] Each photo on /offline-receipts has a Remove control and there's Remove all failed; both ask first, delete only from this phone, and never touch a photo that has already been read into a draft.
