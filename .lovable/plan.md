@@ -1,135 +1,178 @@
-# Ledgerline v6 roadmap: one app combining v6.0 and v6.1
+# Ledgerline v6: one simple app for everything in v6.0 and v6.1
 
-v6.0 and v6.1 build on the app you already have. They don't replace it. Everything comes in through **Statement Desk**, every original file is kept in **DocuRepo**, and each area reads from the same records. That way nothing is entered twice and nothing is counted twice.
+This plan covers every section of both documents (v6.0 sections 1–72 and the final instructions, plus v6.1 sections 1–15). Section numbers are shown in brackets so you can check that nothing is missing. Parts that already exist are reused and only changed where a new requirement needs it.
+
+## 1. A simpler, more modern app
+
+The app has grown to around 45 pages. v6 reorganises them into **five places**, each with a clean, quiet look in the existing deep blue and gold.
 
 ```text
-             Statement Desk  (the only upload place, for every module)
-   Upload -> Identify -> Read -> Check -> Match -> Sort -> Confirm -> Save -> Undo
-                                   |
-                     DocuRepo  (one copy of each original, linked to many records)
-                                   |
- Money | Investments | Assets | Property | Loans | Income tax | GST | Rules | Audit
-                                   |
-            Net worth and reports on Home and Wealth (live where a trusted source exists)
+Bottom bar:   Home  |  Money  |  ( + Upload )  |  Inbox  |  More
+More:         Wealth  ·  Tax & Audit  ·  DocuRepo  ·  Settings
 ```
 
-Each phase is a separate release. You approve each one before I build it, and it ships only after its checks pass.
+| Place | What lives there (existing pages folded in) |
+|---|---|
+| **Home** | Net worth card (v6.1 §11), what needs you today, upcoming payments |
+| **Money** | Ledger, expenses, accounts, cards, loans, transfers, budgets, plan, trips, claims, reports |
+| **+ Upload** | Statement Desk: the one way to add anything, from a receipt photo to a sale deed [§2–4, §58] |
+| **Inbox** | Every exception, review and approval in one queue [§24, §53] |
+| **Wealth** | Investments and Demat, Assets, Property, Net worth history |
+| **Tax & Audit** | Entities, Financial Year Onboarding, Income Tax, GST, Rules, Audit readiness |
+| **DocuRepo** | Every original document (the existing vault, renamed) |
 
-## Every document in your list, and where it goes
+- Inside each place there is one short list and a detail view. On iPad there are list and detail side by side; on iPhone, compact cards with the confirm buttons always reachable and never hidden behind the bottom bar [§60].
+- Old page links keep working and redirect to their new place.
+- No visual rebuild of working screens: the same parts move into the simpler layout.
 
-| Document | Phase | Goes to |
-|---|---|---|
-| Bank statements | Exists, extended in 2 | Ledger, reconciliation |
-| Credit card statements | Exists, extended in 2 | Ledger, card bills |
-| Loan statements | Exists, extended in 2 | Loans, EMI matching |
-| Receipts | Exists | Expenses |
-| Invoices | 4 | Expenses and income, missing-invoice check |
-| Utility bills | 4 | Expenses, linked to the property |
-| Contracts | 4 | Obligations and payment terms |
-| Insurance documents | 2 | Renewals, linked to an asset, property or vehicle |
-| ICICI Direct statements | 3 | Investments |
-| Demat holdings | 3 | Investments |
-| Mutual fund statements | 3 | Investments (existing fund prices) |
-| Company incorporation documents | 5 | Entity profile |
-| PAN and GST registration | 5 | Entity profile, tax and GST settings |
-| Audited financial statements | 5 | Opening balances, previous years |
-| Trial balances | 5 | Opening balances, previous years |
-| Asset purchase invoices | 6 | Asset register |
-| Depreciation schedules | 6 | Book and tax depreciation |
-| Maintenance documents | 6 and 7 | Asset or property history |
-| Property deeds and ownership documents | 7 | Property directory and ownership share |
-| Lease agreements | 7 | Tenants and rent |
-| Tax returns | 8 | Income tax, previous-year figures |
-| GST returns | 9 | GST reconciliation |
-| Other financial and legal records | 2 | DocuRepo, linked by hand when the type isn't clear |
+## 2. What already exists and is reused [§61 Phase 1]
 
-## Phase 1: Check what already exists (no changes)
-- A written review of what the app already does against each v6.0 section, ending in a gap list. Later phases then reuse existing parts instead of rebuilding them.
+Phase 1 is a written check of the existing app. It already covers: Statement Desk (bank, card, loan, forex), the shared ledger and new-entry screen, the Inbox, the Document Vault, receipts, loans and EMI matching, transfers, mutual fund prices, Wealth, reimbursements, the eight financial checks, offline use and backups. Each of these is extended, never duplicated: one ledger and one Inbox [§21, §53].
 
-## Phase 2: DocuRepo and Statement Desk for every document type
-- Rename the Document Vault to **DocuRepo** (More → DocuRepo). Old links keep working.
-- Statement Desk recognises the document type itself and asks only when it isn't sure.
-- It also works out who and what the document belongs to: entity, person, organisation, financial year, period, account, asset, property, investment, loan, tax registration, and expiry or renewal date.
-- One stored file can link to many records, with no duplicate copies.
-- Each file gets an automatic name (Entity / Year / Type / ID) and searchable details. The original file and its name are kept untouched.
-- Each value read from a document keeps its page, the value as printed, how sure the reading is, and whether you've checked it.
-- Document lifecycle: version, replaced-by, expiry and renewal reminders, and retention.
-- Search by type, entity, year, amount, linked record or text.
-- An "Upload" button in every module opens Statement Desk set up for that module.
+## 3. Statement Desk: the single intake [§2, §3, §4]
 
-## Phase 3: Investments and the Demat completeness check
-- An ICICI Direct demat statement opens a **Demat Statement Review** card. It shows: account identified, holdings read, valuation (needs price data), purchase history (complete or missing), capital gains (waiting to be checked), and the original stored in DocuRepo.
-- If purchase history is missing, it offers **"Upload ICICI Direct Transaction Statement or Capital Gains Statement"**. That file goes through the same desk, attaches to existing holdings by ISIN, and never creates a second copy of a security.
-- Quantity check: bought − sold must equal the holding. Capital gains are marked verified only when both documents agree.
-- Mutual fund statements (CAS) link to the existing funds.
-- **Live prices and net worth (v6.1):**
-  - Share and ETF prices come from an approved provider. Each price shows its date and time and is labelled "delayed" unless it really is live.
-  - Value = checked quantity × price. Broker cash is counted once.
-  - A Net worth card on Home shows how up to date each part is, with dated snapshots for history.
-  - Alerts cover missing or stale prices, quantity differences and corporate actions.
-  - **Needs your decision:** which price provider to use, because some charge.
+- Accepts every document in your list: bank and card statements, incorporation documents, PAN and GST registration, audited financial statements, trial balances, tax returns, GST returns, invoices, receipts, contracts, investment and ICICI Direct statements, demat holdings, mutual fund statements, loan statements, property deeds, lease agreements, insurance, asset purchase invoices, depreciation schedules, utility bills, maintenance documents, and other financial and legal records.
+- It recognises the type itself and asks only when it isn't sure.
+- Every document follows the same steps: Upload → Identify → Read → Check → Match → Sort → Prepare records → Confirm where needed → Save → Undo. Each step is recorded, and a failed step never leaves half-made records.
+- An Upload button in Wealth, Property, Assets or Tax opens Statement Desk set up for that place. There is no second upload screen.
 
-## Phase 4: Automated accounting
-- One shared ledger for each entity, with bank, card, invoice, receipt, contract and utility bill lines recognised and matched.
-- Internal transfers and card payments are never counted twice.
-- A missing-invoice check flags business debits that have no invoice in DocuRepo.
+## 4. DocuRepo [§5–11]
 
-## Phase 5: Company and past-year setup
-- Create an entity profile from incorporation, PAN and GST registration documents: name, CIN, PAN, GSTIN, directors or partners, address and financial year. Uploading the same documents again creates no duplicates.
-- New fields go onto existing ones where they match. A brand-new field needs your approval before it's added.
-- Suggest opening balances from last year's audited statements or trial balance. Anything missing in the schedules is flagged and never made up. You approve the balances before they are used.
+- **Storage [§5]:** More → DocuRepo stores every processed document, with access controls. It replaces separate document stores.
+- **Classification [§6]:** documents are sorted automatically by type, legal entity, person, organisation, financial year, period, account, asset, property, investment, loan, transaction, tax registration, expiry or renewal, and amounts. The app asks only when it isn't sure.
+- **Extracted values [§7]:** names, addresses, registration IDs, dates, amounts, tax, account references, asset details, contract terms, payment terms, interest, depreciation, holdings and financial statement values. Each keeps its source, page, value as printed, cleaned value, how sure the reading is, and whether you've checked it.
+- **Links [§8]:** one document links to many records, for example invoice → asset, supplier, payment, loan, insurance, depreciation, organisation and tax. The file is never stored twice.
+- **Naming [§9]:** files get automatic names (Entity / Year / Type / ID). The original file and filename are kept, and you can view them in folders without a fixed structure.
+- **Search [§10]:** plain-language search by company, property, asset, account, transaction, date, amount, year, type, registration number, merchant, tenant or supplier. Results respect each entity's permissions.
+- **Lifecycle [§11]:** version history, replacements (the original is never erased), expiry and renewal reminders, duplicate detection, audit evidence, retention rules and controlled export.
 
-## Phase 6: Assets and depreciation
-- An asset register built from purchase invoices, covering the asset's life, documents, insurance, maintenance and checks.
-- Book depreciation (Companies Act) and tax depreciation (Income Tax blocks) are worked out separately and posted only after you confirm.
-- Uploaded depreciation schedules are compared against the app's own calculation.
+## 5. Entities from documents [§12–16]
 
-## Phase 7: Property ownership and rent
-- Property records come from deeds and ownership documents: owner or owners and their shares, purchase date and cost, registration and survey details, encumbrances and the related loan.
-- Ownership is used in net worth and in tax, so a jointly owned property counts only your share.
-- Tenants come from lease agreements: rent, deposit, yearly increases, start and end dates.
-- Rent received is matched from bank statements. Security deposits are kept apart from income.
-- Property tax, maintenance and utility bills attach to each property, with property accounts and returns.
+- **Setup [§12, §13]:** Tax & Audit → Add Entity → Upload Documents. There is no blank form. Accepted documents: Certificate of Incorporation, PAN, GST certificate, MoA, AoA, LLP agreement, partnership deed, trust deed, registration certificates, bank documents and prior-year audited statements.
+- **Proposed profile [§14]:** legal name, type, registration numbers, PAN, GSTINs, incorporation date, address, directors, partners or trustees, shareholding, financial year, tax registrations, related entities, activities and authorised persons. You review it instead of typing it.
+- **New fields [§15]:** a field the app doesn't hold yet goes onto an existing field where one fits. Otherwise it is proposed as a new field, tested, and added only with your approval. Fields are never created automatically from random text.
+- **Matching later documents [§16]:** later documents match an existing entity by verified IDs, so a spelling difference never creates a duplicate company.
 
-## Phase 8: Income tax
-- A Tax & Audit Centre for each entity and each person.
-- Draft income figures by head: salary, house property (using your ownership share), business, capital gains (from Phase 3) and other sources.
-- Deductions, TDS and advance tax are shown against Form 26AS / AIS where you upload them.
-- Past tax returns are read in for previous-year comparison.
-- Drafts only; nothing is ever filed automatically.
+## 6. Previous years [§17–20]
 
-## Phase 9: GST
-- Output tax from sales invoices, input credit from purchase invoices, with a GSTR-1 / 3B draft summary.
-- Uploaded GST returns are compared with the books, and GSTR-2B gaps are listed.
-- Due-date reminders. Drafts only, never filed automatically.
+- **Import [§17, §18]:** Tax & Audit → Financial Year Onboarding, for several years. It reads balance sheets, P&L, trial balances, cash flow statements, notes, auditor reports, fixed asset registers, depreciation schedules, loan schedules, receivables, payables, investment schedules, tax computations and GST reconciliations.
+- **Opening balances [§19]:** proposed opening balances for bank, cash, investments, fixed assets, accumulated depreciation, capital and reserves, loans, receivables, payables, tax and other balances. They are compared with the audited closing values, and no balancing figure is ever forced.
+- **History [§20]:** statements, audit qualifications, opening and closing balances, filed returns, tax losses and carry-forwards, depreciation, investments, property and loan balances. The source data stays readable even after later corrections.
 
-## Phase 10: Regulatory intelligence
-- A list of trusted official sources (for example the Income Tax, GST and MCA portals) checked for rule changes such as rates, limits and due dates.
-- Each rule carries the date it applies from, so past years keep the rules they were worked out under.
-- A new rule is shown to you for approval before it's used.
-- Period-correct form drafts are generated from the approved rules.
+## 7. Automated accounting [§21–25]
 
-## Phase 11: Continuous audit and automation levels
-- An "audit-ready" dashboard. Every important figure can be traced back to its document, using the eight financial checks already in the app. Gaps go to the Inbox.
-- Three automation levels:
-  - **Automatic:** reading, matching and reminders.
-  - **Confirm first:** postings, new records and opening balances.
-  - **Never automatic:** filing, payments, trades, and deleting evidence.
-- Missing information: the app searches records and documents first, then asks you only for the smallest missing piece.
+- **One ledger [§21]:** the existing ledger and new-entry screen are reused. There is no second ledger for tax, assets, property or investments.
+- **Recognition [§22]:** the app recognises income, expenses, transfers, card payments, loans, investment trades, asset purchases, rent, security deposits, tax payments and reimbursements. A debit is never assumed to be an expense, and a credit never assumed to be income.
+- **Matching [§23]:** matches use account, date, amount, direction, reference, merchant, counterparty, currency, document and saved rules, never amount alone. The existing rules are extended.
+- **Reconciliations [§24]:** bank, card and loan reconciliations exist already. Supplier, customer, investment, intercompany and GST reconciliations are new. Every difference goes to the Inbox.
+- **Missing invoices [§25]:** a bank line without an invoice still counts toward the bank balance. Whether a document exists is tracked separately from how the line is classified, and a missing invoice raises a tax, approval or audit flag.
 
-## Rules kept in every phase
-- Statement Desk is the only upload place. Nothing is invented. Anything unsure waits for you to confirm.
-- Every save can be undone, and a failed step never leaves half-saved records.
-- Your records belong only to you, with separate access for each entity.
-- Existing records and the way shared data is stored are not changed without your approval.
-- Nothing is published to the live site without your go-ahead.
+## 8. Investments and Demat, including the completeness check [§42–44, your request]
+
+- **Holdings [§42]:** ICICI Direct statements, stocks, mutual funds, ETFs, gold, bonds and other investments, all imported through Statement Desk with the originals in DocuRepo.
+- **Demat Statement Review card:**
+
+| Check | Status |
+|---|---|
+| Demat account | Identified |
+| Stock holdings | Extracted |
+| Portfolio valuation | Price data required |
+| Purchase history | Check completeness |
+| Capital gains | Pending verification |
+| Original document | Stored in DocuRepo |
+
+- **Missing purchase history:** the card offers **"Upload ICICI Direct Transaction Statement or Capital Gains Statement"**. That file goes through the same Statement Desk, links to existing holdings by ISIN, and fills in the missing dates, quantities and costs without creating a duplicate security. Bought − sold must equal the holding. Gains are marked verified only when both documents agree.
+- **Recognised automatically [§43]:** holdings, buys, sells, dividends, redemptions, corporate actions, brokerage, cost basis where there is evidence, and values where a trusted source exists. Costs and prices are never made up.
+- **Net worth details [§44]:** each holding shows owner, valuation date, source and checked status. Broker cash and duplicate holdings are never counted twice.
+
+## 9. Live market data and dynamic net worth (v6.1 §1–15)
+
+- **Prices [§2]:** NSE and BSE shares, ETFs, listed bonds, mutual fund NAVs and currencies from an authorised provider, following its licence and caching rules. There is no scraping.
+- **Security matching [§3]:** securities are matched by ISIN, exchange, symbol, instrument type and fund codes, never by name alone.
+- **Valuation [§4]:**
+  - Holding value = checked quantity × price.
+  - Portfolio = holdings + investment-account cash.
+  - Each type of instrument uses its own valuation rule, and nothing is counted twice across statements.
+- **Status [§5]:** each security shows exchange, trading status, last price, price date and time, last refresh and a staleness marker. Delayed prices or the previous close are never labelled live.
+- **Refresh [§6]:** prices update during market hours as often as the provider allows, and keep the closing price after hours. If a fetch fails, the last good price is kept and marked stale, never shown as zero.
+- **Mutual fund NAV [§7]:** the existing daily NAV source is reused, refreshed when a new NAV is published, and shown with its NAV date.
+- **Gold [§8]:** Gold ETFs, Sovereign Gold Bonds and physical gold are valued separately. Physical gold uses your chosen method, purity and weight, never the ETF price.
+- **Net worth [§9, §10]:**
+  - Net worth = recognised assets − recognised liabilities, by legal ownership.
+  - Market-valued assets, bank-verified cash and manually valued assets are labelled differently.
+  - A freshness summary shows the date behind each part, and net worth is never called fully live unless every part is.
+- **Home card [§11]:** net worth, portfolio value and its movement, liquid balances, liabilities, last update and freshness. Tapping it opens Wealth.
+- **History [§12]:** dated snapshots of the portfolio, net worth, performance and allocation. Snapshots never create ledger entries.
+- **Alerts [§13]:** big portfolio moves, missing prices, stale NAVs, corporate actions, quantity differences and unusual values. Each can be switched on or off in the existing notification settings.
+- **Tests [§14] and limits [§15]:** all 13 v6.1 tests are covered. The app never invents prices, never changes purchase costs, and never places trades.
+- **Needs your decision:** which price provider to use for NSE and BSE. Some charge a fee.
+
+## 10. Asset Management and depreciation [§26–34]
+
+- **Module [§26]:** Wealth → Assets, linked to the ledger.
+- **Registration [§27]:** an invoice is enough to set up an asset. The app reads the asset, legal owner, cost, dates, supplier, linked payment, warranty and insurance, suggests a category, and prepares the asset record and accounting links. Capitalisation follows your approved policy.
+- **Lifecycle [§28]:** acquisition, receipt, capitalisation, location, custodian, maintenance, transfer, verification, impairment or revaluation, and disposal.
+- **Documents [§29]:** invoices, warranties, insurance, maintenance records, photos, disposal documents and valuation reports, all stored in DocuRepo.
+- **Physical checks [§30]:** a unique ID and QR code for each asset, with location, department, custodian, physical verification and missing or damaged reports.
+- **Two kinds of depreciation [§31]:** book depreciation follows your accounting policy, and tax depreciation follows income-tax blocks. They are never assumed to be equal.
+- **Inputs [§32]:** cost, capitalisation and put-to-use dates, category, method, useful life, residual value, tax rates, additions, disposals and prior written-down values.
+- **Schedules [§33]:** monthly and yearly book depreciation, accumulated depreciation, net book value, tax depreciation, tax written-down value, block schedules, additions and disposals, and a book-versus-tax reconciliation.
+- **Posting [§34]:** depreciation is calculated automatically. Journals are posted to open periods only, under your approval rules, and closed periods are never changed.
+
+## 11. Property Management, including ownership documents [§35–41]
+
+- **Module [§35]:** Wealth → Property, linked to Assets and the ledger.
+- **Setup [§36]:** Add Property → Upload Document. Accepted documents: sale deed, registration document, lease, property tax, loan, insurance, valuation report and utility bill.
+- **Directory [§37]:** organised as Owner → Property → Building → Floor → Unit. Each property holds its details, legal ownership and share, location, purchase details, valuation, related assets, loans, insurance, tax records and documents.
+- **Tenants [§38]:** read from the lease: tenant, unit, lease period, rent, escalation, deposit, due dates, notice period, payment terms and tax details. Nothing is retyped.
+- **Rent matching [§39]:** bank receipts are matched to expected rent, recognising rent received, partial payments, arrears, advance rent, deposits and other receipts. A deposit is never counted as rent.
+- **Operations [§40]:** leases, renewals, escalations, tenant ledger, collection, maintenance, utilities, expenses, vendors, insurance, property tax, improvements and occupancy.
+- **Accounting [§41]:** each property links to income and expenditure, receivables, deposits, loans, assets, depreciation, GST and income tax. Its value is held in one place only.
+
+## 12. Income tax and GST [§45–48]
+
+- **Tax profiles [§45]:** one Tax & Audit Centre covers individuals, proprietorships, companies, LLPs, partnerships, trusts and other entities. Each has its own tax profile and filing obligations.
+- **Income tax preparation [§46]:** uses financial statements, bank lines, salary documents, rent, investments, loans, depreciation, tax statements and earlier returns. Deductions and credits are never invented.
+- **GST [§47]:** for each GSTIN, an invoice register, GSTR-1, GSTR-3B, GSTR-2B reconciliation, ITC review, payment matching, annual returns and filing evidence, following the filing scheme that actually applies.
+- **Filing [§48]:** validated drafts and supporting reports only. Actual filing needs your explicit approval and an authorised method.
+
+## 13. Regulatory intelligence [§49–51]
+
+- **What is monitored [§49]:** a version-controlled set of rules, watching official sources for changes to income tax, GST, corporate reporting, depreciation, return formats, filing schemas, validation rules, due dates and property compliance.
+- **Each change [§50]:** keeps its source, publication and effective dates, which entities and periods it affects, a comparison of old and new rules, tests, and an ambiguity flag. It becomes active only after your approval. Filed returns and closed years are never changed.
+- **Forms [§51]:** drafts follow the official schema for each period, and old form versions are kept. A draft is never a filed return.
+
+## 14. Always audit-ready [§52–54]
+
+- **Checks [§52]:** run all the time for unreconciled entries, wrong classifications, missing invoices, duplicates, asset gaps, depreciation differences, rent gaps, tax and GST mismatches, cost-basis gaps, intercompany differences and missing documents.
+- **Inbox [§53]:** everything goes to the existing Inbox, grouped by entity, account, year, issue, risk and evidence. There is no second queue.
+- **Readiness dashboard [§54]:** in Tax & Audit, it shows reconciled accounts, open issues, missing evidence, closed periods, draft reports, pending tax work, unchecked balances and approvals needed. It counts only verified data.
+
+## 15. Automation levels and missing information [§55–59]
+
+- **Automatic [§55]:** sorting, reading, merchant and entity matching, linking, duplicate checks, draft reports, reminders, rule watching and previews.
+- **Confirm first [§56]:** opening balances, capitalisation, reclassification, property and tenant links, depreciation posting, tax treatment, historical corrections and reimbursement settlements.
+- **Explicit approval only [§57]:** closed-period changes, shared database changes, finalising statements, filing, certification and going live.
+- **Upload first [§58]:** your usual action is to upload. You then see what was read, what was found, what is proposed, any conflicts and what needs approval.
+- **Missing values [§59]:** the app searches records, then related documents, then saved rules, and checks whether the value can be worked out. Only then does it ask for the smallest missing piece, and you can correct it in place.
+
+## 16. Build order, tests and evidence [§61–72]
+
+- **Build order [§61–70]:** Phases run 1 audit → 2 documents → 3 entities and past years → 4 accounting automation (with Demat and v6.1 in this phase) → 5 assets and property → 6 depreciation → 7 tax, GST and rules → 8 continuous audit → 9 end-to-end checks → 10 your acceptance. Each phase is built in isolation and waits for your approval.
+- **Tests [§71]:** all 22 tests become automated checks.
+- **Reports [§72]:** every phase delivers its matching report from the list of 20, including screenshots for iPhone, iPad and desktop.
+- **Final instructions:** nothing is invented, duplicated or silently reinterpreted. No closed periods or shared data are changed without approval, and nothing is filed or published without your go-ahead.
 
 ## Technical notes
-- Each phase adds pure rule modules under src/lib, plus tests from the v6.0 Part P list (items 1–22).
-- Database changes are added alongside the existing tables, with owner and entity access rules and atomic, repeat-safe save functions.
-- Phase 2 extends the existing documents table with document-to-record links and extracted-field rows.
-- Phase 3 adds demat accounts, holdings (unique per ISIN), lots, capital-gain lines, a server-side cached price fetcher and valuation snapshots kept apart from the ledger.
-- Phases 7–10 add properties and owners, leases, tax computations, GST periods and dated rule versions.
-
-## Suggested order
-2 → 3 → 4 → 5 → 6 → 7 → 8 → 9 → 10 → 11, one at a time.
+- Navigation: AppShell becomes five places, and the existing routes become sections inside them, with beforeLoad redirects for old paths, reusing SectionTabs.
+- Statement Desk gets a document-type classifier, plus a parser and matcher per type under statement-pipeline/. DocuRepo extends the existing documents table with record links, extracted-field rows (page, raw, normalised, confidence, status) and versions.
+- New owner- and entity-scoped tables, added alongside existing ones:
+  - entities and tax profiles
+  - financial years and opening balances
+  - demat accounts, holdings (unique per ISIN), lots and capital-gain lines
+  - prices and valuation snapshots
+  - assets and depreciation runs
+  - properties, units, owners, tenants and leases
+  - GST periods
+  - rule versions with effective dates
+- All writes go through atomic, repeat-safe database functions with undo. Rules are pure modules with tests.
