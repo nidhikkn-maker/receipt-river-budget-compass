@@ -36,8 +36,10 @@ export async function createDemat(doc: InvestDoc): Promise<string> {
 /** Writes merged holdings with one row per ISIN (unique in the database), so a security can never appear twice. */
 export async function saveHoldings(dematId: string, holdings: StoredHolding[]) {
   if (!holdings.length) return;
+  const owner = (await supabase.auth.getSession()).data.session?.user.id;
+  if (!owner) throw new Error("Sign in again to save holdings");
   const { error } = await supabase.from("security_holdings").upsert(holdings.map((h) => ({
-    demat_id: dematId, isin: h.isin, name: h.name, quantity: h.quantity, as_of: h.asOf, statement_value: h.statementValue,
+    owner_id: owner, demat_id: dematId, isin: h.isin, name: h.name, quantity: h.quantity, as_of: h.asOf, statement_value: h.statementValue,
     lots: h.lots as never, gains: h.gains as never, sources: h.sources as never, updated_at: new Date().toISOString(),
   })), { onConflict: "owner_id,demat_id,isin" });
   if (error) throw new Error(error.message);
