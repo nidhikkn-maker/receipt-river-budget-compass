@@ -1,7 +1,7 @@
 /** Money customers owe: invoices kept in owner preferences, paid status derived from income entries. */
 import type { Expense } from "./expenses";
 
-export interface Receivable { id: string; customer: string; invoiceNo?: string; date: string; dueDate?: string; amount: number }
+export interface Receivable { id: string; customer: string; invoiceNo?: string; date: string; dueDate?: string; amount: number; /** GST charged on the invoice (included in amount). */ gst?: number }
 export type ReceivableStatus = { r: Receivable; paidBy: Expense | undefined; overdueDays: number };
 
 const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, "");
@@ -22,5 +22,19 @@ export function receivableStatus(list: Receivable[], entries: Expense[], today: 
     const due = r.dueDate ?? r.date;
     const overdueDays = paidBy ? 0 : Math.max(0, Math.round((Date.parse(today) - Date.parse(due)) / 86400000));
     return { r, paidBy, overdueDays };
+  });
+}
+
+export interface GstMonth { month: string; outputGst: number; inputGst: number; net: number; invoices: number }
+
+/** GSTR-3B style working per month: GST on your invoices less GST on business bills. Draft only. */
+export function gstMonths(list: Receivable[], entries: Expense[], months: string[]): GstMonth[] {
+  const r2 = (n: number) => Math.round(n * 100) / 100;
+  return months.map((m) => {
+    const inv = list.filter((r) => r.date.startsWith(m));
+    const outputGst = inv.reduce((s, r) => s + (r.gst ?? 0), 0);
+    const inputGst = entries.filter((e) => e.date.startsWith(m) && e.scope === "business" && (!e.txnType || e.txnType === "expense") && !e.transferCounterpartOf)
+      .reduce((s, e) => s + (e.receiptDetails?.tax ?? 0) * (e.fxRate || 1), 0);
+    return { month: m, outputGst: r2(outputGst), inputGst: r2(inputGst), net: r2(outputGst - inputGst), invoices: inv.length };
   });
 }
