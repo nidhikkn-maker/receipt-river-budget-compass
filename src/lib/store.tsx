@@ -16,7 +16,7 @@ import { statusColumn, validateReceipt, type ReimbursementInfo } from "./reimbur
 import { normalizePreferences, defaultPreferences, validateActiveCategory, type FinancePreferences } from "./preferences";
 import { addMonths, emiFor, emiSplit, nextAfter, type Commitment, type CommitmentKind, type CommitmentStatus, type Frequency, type LoanType } from "./planning";
 import { lastStatementDate, nextEmiInstalment, statementShift, type LoanPayment } from "./cards";
-import { validateDocument, type DocType, type VaultDoc } from "./documents";
+import { validateDocument, type DocField, type DocType, type VaultDoc } from "./documents";
 import { tripActionSnapshot, type TripAction } from "./trip-actions";
 import { correctionStillCurrent, type CorrectionPreview } from "./financial-corrections";
 import { mappingStillCurrent, type ReviewMappingPreview } from './review-mapping';
@@ -45,7 +45,7 @@ export interface AccountPatch {
 }
 export interface FinancialCorrectionHistory { id: string; createdAt: string; count: number; entries: { before: { id: string; title: string; txn_type: TxnType; account_id: string | null; to_account_id: string | null; amount: number; principal: number | null; interest: number | null }; after: { txn_type: TxnType; account_id: string | null; to_account_id: string | null; principal: number | null; interest: number | null; correction_revision: number } }[] }
 export interface NewAccount { name: string; kind: AccountKind; openingBalance: number; issuer?: string; lastFour?: string | null; creditLimit?: number | null; statementDay?: number | null; dueDay?: number | null; interestRate?: number | null; details?: AccountDetails }
-export interface DocumentMeta { title: string; docType: DocType; docDate: string | null; amount: number | null; currency: string; merchant: string | null; notes: string; text?: string; transactionId: string | null; accountId: string | null; loanId: string | null; expiresOn: string | null }
+export interface DocumentMeta { title: string; docType: DocType; docDate: string | null; amount: number | null; currency: string; merchant: string | null; notes: string; text?: string; transactionId: string | null; accountId: string | null; loanId: string | null; expiresOn: string | null; fields?: DocField[]; replacesId?: string | null }
 
 interface Snapshot { name: string; members: Member[]; expenses: Expense[]; accounts: Account[]; commitments: Commitment[]; rawLoans: Loan[]; goals: Goal[]; budgets: Budgets; preferences: FinancePreferences; valuations: Valuation[]; documents: VaultDoc[] }
 
@@ -280,6 +280,7 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
       id: x.id, title: x.title, docType: x.doc_type as DocType, filePath: x.file_path, fileName: x.file_name, mimeType: x.mime_type, size: x.size_bytes,
       docDate: x.doc_date, amount: x.amount == null ? null : Number(x.amount), currency: x.currency, merchant: x.merchant, notes: x.notes, text: x.extracted_text,
       transactionId: x.transaction_id, accountId: x.account_id, loanId: x.loan_id, expiresOn: x.expires_on, createdAt: x.created_at,
+      fields: Array.isArray(x.fields) ? (x.fields as unknown as DocField[]) : [], replacesId: x.replaces_id,
     })));
     setMembers(m.data ?? []);
     hadSnapshot.current = true;
@@ -682,6 +683,7 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
       id: docId, owner_id: userId, title: meta.title.trim(), doc_type: meta.docType, file_path: path, file_name: file.name.slice(0, 200), mime_type: file.type, size_bytes: file.size,
       doc_date: meta.docDate || null, amount: meta.amount, currency: meta.currency, merchant: meta.merchant?.trim() || null, notes: meta.notes.slice(0, 2000), extracted_text: (meta.text ?? "").slice(0, 20000),
       transaction_id: meta.transactionId, account_id: meta.accountId, loan_id: meta.loanId, expires_on: meta.expiresOn || null,
+      fields: (meta.fields ?? []).slice(0, 40) as unknown as Json, replaces_id: meta.replacesId ?? null,
     });
     if (error) { await supabase.storage.from("receipts").remove([path]); throw new Error(error.message); }
     await refresh();
@@ -700,6 +702,7 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
     if (m.accountId !== undefined) row["account_id"] = m.accountId;
     if (m.loanId !== undefined) row["loan_id"] = m.loanId;
     if (m.expiresOn !== undefined) row["expires_on"] = m.expiresOn || null;
+    if (m.fields !== undefined) row["fields"] = m.fields as unknown as Json;
     check((await supabase.from("documents").update(row).eq("id", id)).error);
     await refresh();
   };

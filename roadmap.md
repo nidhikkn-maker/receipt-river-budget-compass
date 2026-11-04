@@ -623,7 +623,7 @@
 - [x] Simpler bottom bar: Home · Money · + · Inbox · More (AI moved to More)
 - [x] Demat holdings on Wealth with completeness status
 - [ ] Live NSE/BSE prices + net worth freshness on Home (blocked: choose an approved price provider)
-- [ ] Phase 2 DocuRepo: auto document type for all listed documents, multi-record links, extracted-field evidence, versions, search
+- [x] Phase 2 DocuRepo: all listed document types auto-detected, key details with page/quote evidence, versions (original kept), duplicate warnings, search by key details
 - [ ] Phase 3 Entities from documents + Financial Year Onboarding + opening balances
 - [ ] Phase 4 Supplier/customer/intercompany/GST reconciliations, missing-invoice flags
 - [ ] Phase 5 Asset Management + Property Management (deeds, ownership share, leases, rent matching)
