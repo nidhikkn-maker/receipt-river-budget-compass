@@ -49,7 +49,9 @@ export interface AssetRead { name: string | null; kind: AssetKind | null; owner:
 export interface PropertyRead { name: string | null; owner: string | null; address: string | null; cost: number | null; acquiredOn: string | null; surveyNo: string | null; valuation: number | null; valuationDate: string | null; insurer?: string | null | undefined; utilityConsumerNo?: string | null | undefined; propertyTaxId?: string | null | undefined }
 export interface LeaseRead { tenant: string | null; property: string | null; unit: string | null; start: string | null; end: string | null; rent: number | null; dueDay: number | null; escalationPct: number | null; escalationEveryMonths: number | null; deposit: number | null; noticeDays: number | null; paymentTerms: string | null; gst: boolean | null }
 export interface AuditedRead { entity: string | null; pan: string | null; fy: string | null; lines: { head: OpeningHead; amount: number }[]; totalAssets: number | null; totalLiabilities: number | null; schedules: Schedule[]; details?: { schedule: Schedule; lines: { label: string; amount: number; page: number | null; quote: string }[] }[] | undefined; qualifications: string[]; filedForm: string | null; ackNo: string | null; filedOn: string | null }
-export interface ReadProfiles { entity: EntityRead | null; asset: AssetRead | null; property: PropertyRead | null; lease: LeaseRead | null; audited: AuditedRead | null }
+export interface GstInvoiceRead { number: string | null; date: string | null; seller: string | null; sellerGstin: string | null; buyer: string | null; buyerGstin: string | null; taxable: number | null; igst: number | null; cgst: number | null; sgst: number | null; cess: number | null }
+export interface TaxStatementRead { form: "form16" | "26as" | "ais" | "payslip" | null; fy: string | null; pan: string | null; taxableSalary: number | null; credits: { kind: "tds" | "tcs" | "advance" | "self_assessment"; amount: number; deductor: string | null }[] }
+export interface ReadProfiles { entity: EntityRead | null; asset: AssetRead | null; property: PropertyRead | null; lease: LeaseRead | null; audited: AuditedRead | null; gstInvoice?: GstInvoiceRead | null | undefined; taxStatement?: TaxStatementRead | null | undefined }
 
 const iso = (v: string | null | undefined) => (v && /^\d{4}-\d{2}-\d{2}$/.test(v) ? v : null);
 const norm = (s: string) => s.toUpperCase().replace(/[^A-Z0-9]/g, "");
@@ -240,4 +242,28 @@ export function fillLeaseFromTrusted(
     if (Number.isFinite(n) && n > 0) { out[k] = n; sources[k] = d.title; }
   }
   return { lease: out, sources };
+}
+
+const GSTIN = /^\d{2}[A-Z]{5}\d{4}[A-Z][1-9A-Z]Z[0-9A-Z]$/;
+/**
+ * GST invoice draft from an uploaded tax invoice [§58]: sales when the seller GSTIN is one of the owner's,
+ * purchase when the buyer GSTIN is. Unknown direction or missing tax facts stay as "missing" for review.
+ */
+export function proposeGstInvoice(read: GstInvoiceRead, ownGstins: string[], newId: string, docId: string | null): { invoice: import("./types").GstInvoice | null; missing: string[] } {
+  const own = new Set(ownGstins.map((g) => norm(g)));
+  const seller = read.sellerGstin ? norm(read.sellerGstin) : "", buyer = read.buyerGstin ? norm(read.buyerGstin) : "";
+  const kind = own.has(seller) ? "sales" : own.has(buyer) ? "purchase" : null;
+  const missing = [!read.number && "invoice number", !iso(read.date) && "invoice date", read.taxable == null && "taxable value", !kind && "which of your GSTINs this invoice belongs to"].filter((x): x is string => !!x);
+  if (missing.length || !kind) return { invoice: null, missing };
+  const party = kind === "sales" ? { n: read.buyer, g: buyer } : { n: read.seller, g: seller };
+  if (party.g && !GSTIN.test(party.g)) missing.push("party GSTIN looks invalid");
+  return { missing, invoice: { id: newId, gstin: kind === "sales" ? seller : buyer, kind, number: read.number!.trim(), date: read.date!, party: party.n?.trim() ?? "", partyGstin: party.g, taxable: read.taxable!, igst: read.igst ?? 0, cgst: read.cgst ?? 0, sgst: read.sgst ?? 0, cess: read.cess ?? 0, docId: docId ?? undefined } };
+}
+
+/** Tax credits and taxable salary from Form 16 / 26AS / AIS / payslip, for confirmation [§46]. Entity is matched by PAN only. */
+export function proposeTaxStatement(read: TaxStatementRead, entities: EntityProfile[]): { fy: string | null; entityId: string | null; salary: number | null; credits: TaxStatementRead["credits"]; missing: string[] } {
+  const ent = read.pan ? entities.find((e) => e.pan && norm(e.pan) === norm(read.pan!)) : undefined;
+  const fy = read.fy && /^\d{4}-\d{2}$/.test(read.fy) ? read.fy : null;
+  const missing = [!fy && "financial year", !read.pan && "PAN"].filter((x): x is string => !!x);
+  return { fy, entityId: ent?.id ?? (read.pan ? null : null), salary: read.taxableSalary, credits: read.credits.filter((c) => c.amount > 0), missing };
 }
