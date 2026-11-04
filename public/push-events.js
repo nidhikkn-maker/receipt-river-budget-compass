@@ -9,6 +9,11 @@ self.addEventListener("push", event => {
     body: test ? "Notifications are working on this device." : count,
     icon: "/app-icon.png", badge: "/app-icon.png", tag: test ? "ledgerline-test" : "ledgerline-reminders",
     data: { url: "/plan" },
+  }).then(async () => {
+    // Tell open app windows the test reached this device, so Settings can show "Delivered".
+    if (!test) return;
+    const windows = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
+    windows.forEach(client => client.postMessage({ type: "ledgerline-test-shown", at: Date.now() }));
   }));
 });
 self.addEventListener("notificationclick", event => {
