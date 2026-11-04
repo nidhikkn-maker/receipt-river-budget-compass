@@ -165,7 +165,10 @@ export function emiTargets(
   accounts: { id: string; details?: object | null | undefined }[],
 ): EmiTarget[] {
   return loans.filter((l) => l.status !== "closed" && l.loanType !== "credit_card_emi" && l.emi > 0).map((l) => {
-    const c = commitments.find((x) => x.kind === "emi" && x.status === "active" && Math.abs(x.amount - l.emi) <= emiTolerance(l.emi));
+    const candidates = commitments.filter((x) => x.kind === "emi" && x.status === "active" && Math.abs(x.amount - l.emi) <= emiTolerance(l.emi));
+    const linked = candidates.filter(x => (accounts.find(a => a.id === x.accountId)?.details as Record<string, unknown> | undefined)?.["fundsLoan"] === l.id);
+    const named = candidates.filter(x => norm(x.name).includes(norm(l.name)));
+    const c = linked.length === 1 ? linked[0] : named.length === 1 ? named[0] : candidates.length === 1 ? candidates[0] : undefined;
     const acc = accounts.find((a) => a.id === l.accountId);
     const raw = (acc?.details as Record<string, unknown> | null | undefined)?.["matchRefs"];
     const refs = Array.isArray(raw) ? raw.filter((r): r is string => typeof r === "string") : [];

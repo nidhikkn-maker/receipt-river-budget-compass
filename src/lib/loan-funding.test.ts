@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { bankBalanceKnown, currentBankBalance, loanFundingReminders, validateBankBalance } from "./loan-funding";
 import { paymentReadiness } from "./readiness";
 import { adjustmentToMatch, type Account, type Txn } from "./ledger";
-import type { EmiTarget } from "./emi-match";
+import { emiTargets, type EmiTarget } from "./emi-match";
 import type { Commitment } from "./planning";
 import { paymentReminderItems } from "./push-rules";
 
@@ -36,6 +36,12 @@ describe("City Union Bank balance coverage", () => {
   });
 });
 describe("Funding transfer reminders", () => {
+  it("chooses CUB EMI rather than similarly priced IDFC funding commitment", () => {
+    const accounts = [{ ...bank, details: { fundsLoan: "gls", fundedFrom: "idfc", fundingDay: 3 } as Account["details"] }];
+    const targets = emiTargets([loan], [{ ...emi, name: "Auto transfer to CUB savings (GLS EMI)", accountId: "idfc", amount: 313900 }, emi], accounts);
+    expect(targets[0]?.payFromAccountId).toBe("cub");
+    expect(targets[0]?.fundingFromAccountId).toBe("idfc");
+  });
   it("alerts after the 3rd for a missing transfer before the 5th", () => {
     expect(reminders([])[0]).toMatchObject({ status: "missing", due: "2026-11-05", fundingDate: "2026-11-03", shortfall: 313913 });
     expect(reminders([], "2026-11-02")).toEqual([]);
