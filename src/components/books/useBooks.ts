@@ -97,7 +97,7 @@ export function useNetWorth() {
       + assets.filter((a) => !a.soldOn && !linked.has(a.id)).reduce((s, a) => s + shareValue(a, fy), 0);
     const nw = dynamicNetWorth({
       bank: Math.round(raw.assets * 100) / 100, bankBasis: "bank, cash and wallet balances from recorded entries",
-      investments: valued, demat: Math.round((dematValue + raw.investments) * 100) / 100, dematBasis: dematRows.length ? [closeCount && `${closeCount}/${dematRows.length} demat at official closing price${closeDate ? ` (${closeDate})` : ""}`, closeCount < dematRows.length && `others at statement value${dematDate ? ` (${dematDate})` : ""}`].filter(Boolean).join(" · ") : "",
+      investments: valued, demat: Math.round((dematValue + raw.investments) * 100) / 100, dematBasis: dematRows.length ? [closeCount && `${closeCount}/${dematRows.length} demat at official closing price${closeDate ? ` (${closeDate})` : ""}`, closeCount < dematRows.length && `others at statement value${dematDate ? ` (${dematDate})` : ""}`, raw.investments > 0 && "investment & deposit accounts at their latest recorded value"].filter(Boolean).join(" · ") : raw.investments > 0 ? "investment & deposit accounts at their latest recorded value" : "",
       otherAssets: Math.round(raw.other * 100) / 100, property: Math.round(propVal), propertyBasis: books.properties.some((p) => p.valuation) ? "latest dated valuation or book value" : "book value from asset register",
       liabilities: raw.liabilities + loanOwed, liabilitiesBasis: "latest loan and card balances on record",
     });
