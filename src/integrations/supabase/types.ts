@@ -2245,6 +2245,10 @@ export type Database = {
         }
       }
       claim_upload_slot: { Args: { _link: string }; Returns: string }
+      commit_document_intake: {
+        Args: { p_data: Json; p_document_id: string; p_lock: boolean }
+        Returns: undefined
+      }
       confirm_transfer: {
         Args: {
           _credit: string
