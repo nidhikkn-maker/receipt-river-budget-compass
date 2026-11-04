@@ -103,6 +103,7 @@ export async function undoUpload(result: ApplyResult, api: ApplyApi): Promise<{ 
     try { await api.remove(e); } catch { left.push(id); }
   }
   for (const id of result.reconciled) { try { await api.reconcile(id, null, { noRefresh: true }); } catch { left.push(id); } }
+  for (const l of result.linkedDrafts ?? []) { if (!left.includes(l.transactionId)) await api.unlinkDraft?.(l.draftId).catch(() => {}); }
   for (const c of result.createdAccounts) { try { await api.setArchived(c.id, true); } catch { /* the account stays for the person to remove */ } }
   await api.refresh();
   return { left };
