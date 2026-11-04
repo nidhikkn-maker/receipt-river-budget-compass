@@ -21,6 +21,8 @@ export interface VaultDoc {
   docDate: string | null; amount: number | null; currency: string; merchant: string | null; notes: string; text: string;
   transactionId: string | null; accountId: string | null; loanId: string | null; expiresOn: string | null; createdAt: string;
   fields?: DocField[]; replacesId?: string | null;
+  /** Original kept as audit evidence: cannot be deleted until unlocked [§11]. */
+  evidenceLocked?: boolean;
 }
 export interface VaultItem {
   key: string; source: "document" | "receipt"; docId: string | null; title: string; docType: DocType; path: string; fileName: string; mimeType: string;

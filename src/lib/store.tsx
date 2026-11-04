@@ -280,7 +280,7 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
       id: x.id, title: x.title, docType: x.doc_type as DocType, filePath: x.file_path, fileName: x.file_name, mimeType: x.mime_type, size: x.size_bytes,
       docDate: x.doc_date, amount: x.amount == null ? null : Number(x.amount), currency: x.currency, merchant: x.merchant, notes: x.notes, text: x.extracted_text,
       transactionId: x.transaction_id, accountId: x.account_id, loanId: x.loan_id, expiresOn: x.expires_on, createdAt: x.created_at,
-      fields: Array.isArray(x.fields) ? (x.fields as unknown as DocField[]) : [], replacesId: x.replaces_id,
+      fields: Array.isArray(x.fields) ? (x.fields as unknown as DocField[]) : [], replacesId: x.replaces_id, evidenceLocked: !!x.evidence_locked,
     })));
     setMembers(m.data ?? []);
     hadSnapshot.current = true;
@@ -708,12 +708,15 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
     if (m.loanId !== undefined) row["loan_id"] = m.loanId;
     if (m.expiresOn !== undefined) row["expires_on"] = m.expiresOn || null;
     if (m.fields !== undefined) row["fields"] = m.fields as unknown as Json;
+    if (m.evidenceLocked !== undefined) row["evidence_locked"] = m.evidenceLocked;
     check((await supabase.from("documents").update(row).eq("id", id)).error);
     await refresh();
   };
   const removeDocument: Ctx["removeDocument"] = async (d) => {
-    check((await supabase.from("documents").delete().eq("id", d.id)).error);
-    await supabase.storage.from("receipts").remove([d.filePath]);
+    const del = await supabase.from("documents").delete().eq("id", d.id);
+    if (del.error) throw new Error(/audit evidence/i.test(del.error.message) ? "This original is kept as audit evidence. Unlock it first." : del.error.message);
+    const rm = await supabase.storage.from("receipts").remove([d.filePath]);
+    if (rm.error) throw new Error(`Record removed but the file could not be deleted: ${rm.error.message}`);
     await refresh();
   };
   const history: Ctx["history"] = useCallback(async (id) => {
