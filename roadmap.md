@@ -662,3 +662,12 @@
 - [ ] Scheduled jobs (closing prices, rule watch) start working only after the next publish — needs owner approval to publish
 - [ ] GLS loan original amount/start date — needs sanction letter
 - [ ] Physical iPhone checks — needs owner's device
+
+## v6 gap plan (approved 5 Nov 2026) — remaining
+- [x] B2/B3/B7 rules: deposit wording only, tenant balances from lease start, block depreciation after sales, confirmed asset life/residual/put-to-use, capital-gain holding periods, loss expiry/latest record, house-property cap/loss, personal tax excludes company records, GST payment GSTIN/period/account, GSTR-9 working, saved drafts tile, audit entity/FY attribution, shared rent matching.
+- [ ] B1 atomic intake, page required, invoice→GST draft, trusted lookups, account/loan links
+- [ ] B3 confirmed tax profile; per-company opening balances
+- [ ] B4 rule monitoring sources, substantive rule tests, official JSON drafts, field-extension proposals, plain-language search
+- [ ] B5 market/net worth (v6.1)
+- [ ] B7 receipt intake via Statement Desk path, loss extraction, Form16/26AS ingestion, loan/supplier/investment/intercompany reconciliations, property cost links
+- [ ] B6 tests, screenshots, evidence pack v2
