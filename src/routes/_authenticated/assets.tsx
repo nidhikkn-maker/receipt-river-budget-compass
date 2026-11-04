@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { assetFollowUps, createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { PageTitle } from "@/components/AppShell";
@@ -72,6 +72,19 @@ function Assets() {
               <label>Book rate %<Input type="number" value={edit.bookRatePct} onChange={(e) => setEdit({ ...edit, bookRatePct: Math.min(100, num(e.target.value)) })} /></label>
             </>}
             <label>Rent per month ₹<Input type="number" value={edit.monthlyRent ?? ""} onChange={(e) => setEdit({ ...edit, monthlyRent: num(e.target.value) || undefined })} /></label>
+            <label>Asset tag / ID<Input value={edit.tag ?? ""} onChange={(e) => setEdit({ ...edit, tag: e.target.value || undefined })} /></label>
+            <label>Location<Input value={edit.location ?? ""} onChange={(e) => setEdit({ ...edit, location: e.target.value || undefined })} /></label>
+            <label>Custodian<Input value={edit.custodian ?? ""} onChange={(e) => setEdit({ ...edit, custodian: e.target.value || undefined })} /></label>
+            <label>Condition
+              <select className="w-full rounded-md border bg-background px-3 py-2" value={edit.condition ?? "ok"} onChange={(e) => setEdit({ ...edit, condition: e.target.value as Asset["condition"] })}>
+                <option value="ok">OK</option><option value="damaged">Damaged</option><option value="missing">Missing</option>
+              </select>
+            </label>
+            {edit.monthlyRent ? <>
+              <label>Tenant<Input value={edit.tenant ?? ""} onChange={(e) => setEdit({ ...edit, tenant: e.target.value || undefined })} /></label>
+              <label>Lease ends<Input type="date" value={edit.leaseEnd ?? ""} onChange={(e) => setEdit({ ...edit, leaseEnd: e.target.value || undefined })} /></label>
+              <label>Deposit held ₹<Input type="number" value={edit.deposit ?? ""} onChange={(e) => setEdit({ ...edit, deposit: num(e.target.value) || undefined })} /></label>
+            </> : null}
             <label>Sold on<Input type="date" value={edit.soldOn ?? ""} onChange={(e) => setEdit({ ...edit, soldOn: e.target.value || undefined })} /></label>
           </div>
           <label className="block">Deed / invoice in DocuRepo
@@ -98,8 +111,13 @@ function Assets() {
                 <p className="font-semibold">{a.name}{a.soldOn ? " (sold)" : ""}</p>
                 <p className="text-xs text-muted-foreground">{ASSET_KINDS[a.kind]} · cost {inr(a.cost)} · {a.sharePct}% yours · now {inr(shareValue(a, fy))}{doc ? ` · ${doc.title}` : " · no deed/invoice linked"}</p>
               </div>
-              <Button size="sm" variant="outline" onClick={() => setEdit(a)}>Edit</Button>
+              <div className="flex gap-1">
+                {a.kind !== "property" && !a.soldOn && <Button size="sm" variant="ghost" onClick={async () => { await savePreferences({ ...preferences, assets: list.map((x) => (x.id === a.id ? { ...x, lastVerified: today(), condition: "ok" as const } : x)) }); toast.success("Marked as checked today"); }}>Checked today</Button>}
+                <Button size="sm" variant="outline" onClick={() => setEdit(a)}>Edit</Button>
+              </div>
             </div>
+            {(a.tag || a.location || a.custodian || a.tenant) && <p className="text-xs text-muted-foreground">{[a.tag && `Tag ${a.tag}`, a.location, a.custodian && `with ${a.custodian}`, a.tenant && `Tenant ${a.tenant}${a.leaseEnd ? ` till ${a.leaseEnd}` : ""}${a.deposit ? ` · deposit ${inr(a.deposit)}` : ""}`].filter(Boolean).join(" · ")}</p>}
+            {assetFollowUps(a, today()).length > 0 && <p className="text-xs text-destructive">{assetFollowUps(a, today()).join(" · ")}</p>}
             {rent.length > 0 && <div className="flex flex-wrap gap-1">{rent.map((m) => <span key={m.month} className={`rounded-full px-2 py-0.5 text-xs ${m.received >= m.expected ? "bg-primary/10 text-primary" : "bg-destructive/10 text-destructive"}`}>{m.month}: {inr(m.received)} / {inr(m.expected)}</span>)}</div>}
             {(book.length > 0 || tax.length > 0) && <Button size="sm" variant="ghost" onClick={() => setOpen(open === a.id ? null : a.id)}>{open === a.id ? "Hide" : "Show"} depreciation</Button>}
             {open === a.id && (

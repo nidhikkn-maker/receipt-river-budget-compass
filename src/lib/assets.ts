@@ -24,6 +24,28 @@ export interface Asset {
   soldOn?: string | undefined;
   /** Rent expected per month for leased-out property. */
   monthlyRent?: number | undefined;
+  /** Physical check details [§30]. */
+  tag?: string | undefined;
+  location?: string | undefined;
+  custodian?: string | undefined;
+  lastVerified?: string | undefined;
+  condition?: "ok" | "damaged" | "missing" | undefined;
+  /** Tenant lease [§38]. */
+  tenant?: string | undefined;
+  leaseEnd?: string | undefined;
+  deposit?: number | undefined;
+}
+
+/** Physical-check and lease follow-ups; pure, never changes the asset. */
+export function assetFollowUps(a: Asset, today: string): string[] {
+  if (a.soldOn) return [];
+  const out: string[] = [];
+  const days = (d: string) => Math.round((Date.parse(today) - Date.parse(d)) / 86400000);
+  if (a.condition === "missing") out.push("reported missing");
+  else if (a.condition === "damaged") out.push("reported damaged");
+  if (a.kind !== "property" && (!a.lastVerified || days(a.lastVerified) > 365)) out.push(a.lastVerified ? "not physically checked in over a year" : "never physically checked");
+  if (a.leaseEnd) { const left = -days(a.leaseEnd); if (left < 0) out.push(`lease ended ${a.leaseEnd}`); else if (left <= 60) out.push(`lease ends in ${left} days`); }
+  return out;
 }
 
 const r2 = (n: number) => Math.round(n * 100) / 100;
