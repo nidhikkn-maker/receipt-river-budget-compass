@@ -8,7 +8,7 @@ import { fyOf, fyRange, type EntityProfile } from "../entities";
 import { closedPeriodFor } from "./periods";
 import { ruleOn } from "./regulatory";
 import { invoiceProblems, taxOf } from "./gst";
-import type { ClosedPeriod, FyRecord, GstFiling, GstInvoice, RuleVersion, TaxProfile } from "./types";
+import type { ClosedPeriod, CreditKind, FyRecord, GstFiling, GstInvoice, RuleVersion, TaxCredit, TaxProfile } from "./types";
 
 const r2 = (n: number) => Math.round(n * 100) / 100;
 const pad = (n: number) => String(n).padStart(2, "0");
@@ -80,8 +80,7 @@ export function itcReview(list: GstInvoice[], gstin: string, period: string, in2
   return { lines, eligible: r2(lines.filter((l) => l.eligible).reduce((s, l) => s + l.tax, 0)), held: r2(lines.filter((l) => !l.eligible).reduce((s, l) => s + l.tax, 0)) };
 }
 
-export type CreditKind = "tds" | "tcs" | "advance" | "self_assessment";
-export interface TaxCredit { id: string; entityId: string; fy: string; kind: CreditKind; amount: number; source: string; docId?: string | undefined; transactionId?: string | undefined }
+export type { CreditKind, TaxCredit };
 export const CREDIT_LABEL: Record<CreditKind, string> = { tds: "Tax deducted (TDS)", tcs: "Tax collected (TCS)", advance: "Advance tax", self_assessment: "Self-assessment tax" };
 
 /** Income-tax challan payments found in the ledger: narration must name the challan or tax type, never a guess. */

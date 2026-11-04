@@ -6,6 +6,10 @@ import type { DocType } from "../documents";
 
 export type Iso = string; // YYYY-MM-DD
 
+/** Income-tax credits per entity and FY [§46]. */
+export type CreditKind = "tds" | "tcs" | "advance" | "self_assessment";
+export interface TaxCredit { id: string; entityId: string; fy: string; kind: CreditKind; amount: number; source: string; docId?: string | undefined; transactionId?: string | undefined }
+
 /** A locked accounting period [§34, §57]; entries dated inside cannot be saved, changed or deleted. */
 export interface ClosedPeriod { id: string; from: Iso; to: Iso; entityId?: string | undefined; closedOn: Iso; note: string }
 export interface PeriodEvent { at: string; action: "closed" | "reopened"; periodId: string; reason: string }
