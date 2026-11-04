@@ -1,5 +1,5 @@
 /** DocuRepo helpers [§6–11]: links, logical folders, filters, retention and controlled export. Pure. */
-import { DOC_LABEL, type DocType, type VaultDoc } from "../documents";
+import { DOC_LABEL, DOC_TYPES, type DocType, type VaultDoc } from "../documents";
 import { fyOf, type EntityProfile } from "../entities";
 import type { DocLink, LinkKind } from "./types";
 
