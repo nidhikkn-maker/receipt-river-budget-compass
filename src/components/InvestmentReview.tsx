@@ -87,6 +87,7 @@ export function InvestmentReview({ file, doc, onClose, onUploadMore }: { file: F
       )}
 
       {merge.unmatched.length > 0 && <p className="mt-3 text-sm text-muted-foreground">Not in your holdings, so not added: {merge.unmatched.map((u) => u.name || u.isin).join(", ")}.</p>}
+      {!!doc.events?.length && <div className="mt-3 text-sm"><p className="font-semibold">Other events on this statement ({doc.events.length})</p>{doc.events.slice(0, 12).map((e, i) => <p key={i} className="text-xs text-muted-foreground">{e.date} · {e.name || e.isin} · {e.kind}{e.quantity != null ? ` · ${e.quantity} units` : ""}{e.amount != null ? ` · ₹${e.amount.toLocaleString("en-IN")}` : ""}</p>)}<p className="text-xs text-muted-foreground">Dividends and redemptions arrive in your bank as income; bonus, split, rights and merger events change quantities — check holdings after saving. Brokerage is shown for cost, not posted.</p></div>}
       {merge.duplicatesSkipped > 0 && <p className="mt-1 text-sm text-muted-foreground">{merge.duplicatesSkipped} line{merge.duplicatesSkipped === 1 ? "" : "s"} already on file, skipped.</p>}
 
       {check.needsHistoryUpload && (
