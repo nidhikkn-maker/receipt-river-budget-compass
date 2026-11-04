@@ -16,6 +16,10 @@ import { todayISO, usePosition } from "@/lib/use-position";
 import { cn } from "@/lib/utils";
 import { PlanCalendar } from "@/components/PlanCalendar";
 import { useReviewView } from "@/lib/use-review-view";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { confirmAction } from "@/lib/confirm";
+import { bulkTotals, markableKey, markableUpcoming } from "@/lib/mark-done";
 
 export const Route = createFileRoute("/_authenticated/plan")({
   head: () => ({
@@ -45,6 +49,26 @@ function Plan() {
   const { commitments, saveCommitment, removeCommitment, confirmCommitment, preferences } = useStore();
   const today = todayISO();
   const short = p.forecast.shortDates;
+  const markable = markableUpcoming(p.upcoming.slice(0, 40), commitments);
+  const markKeys = new Set(markable.map(markableKey));
+  const [picked, setPicked] = useState<string[]>([]);
+  const [bulkBusy, setBulkBusy] = useState<string | null>(null);
+  const chosen = markable.filter((u) => picked.includes(markableKey(u)));
+  const markChosen = async () => {
+    const t = bulkTotals(chosen);
+    const ok = await confirmAction({ title: `Mark ${t.count} payment${t.count > 1 ? "s" : ""} done?`, message: `Each is recorded at its scheduled amount from its usual account${t.out ? ` · ${money(t.out)} out` : ""}${t.in ? ` · ${money(t.in)} in` : ""}, and moves to its next date. Use a single Paid button to change an amount.`, confirmLabel: "Mark done" });
+    if (!ok) return;
+    let done = 0; const failed: string[] = [];
+    for (const [i, u] of chosen.entries()) {
+      setBulkBusy(`Marking ${i + 1} of ${chosen.length}…`);
+      const c = commitments.find((x) => x.id === u.commitmentId);
+      if (!c) continue;
+      try { await confirmCommitment(c, c.amount); done++; } catch (e) { failed.push(`${c.name}: ${(e as Error).message}`); }
+    }
+    setBulkBusy(null); setPicked([]);
+    if (done) toast.success(`${done} payment${done > 1 ? "s" : ""} marked done`);
+    if (failed.length) toast.error(`${failed.length} not marked — ${failed[0]}`);
+  };
 
   return (
     <>
@@ -113,13 +137,19 @@ function Plan() {
       <PlanCalendar />
       <section className="mb-6 grid gap-5 sm:grid-cols-2"><div><h2 className="font-display text-lg font-bold">Income this month</h2><p className="mt-2 text-sm">Received {money(p.income.received)} · expected remaining {money(p.income.expectedRemaining)} · confirmed {money(p.income.expectedConfirmed)}</p><ul className="mt-2 divide-y text-sm">{Object.entries(p.income.bySource).map(([name,amount])=><li key={name} className="flex justify-between py-2"><span>{name}</span><span>{money(amount)}</span></li>)}</ul>{p.income.late.map((x,i)=><p key={i} className="text-sm text-destructive">Late income: {x.name} · {money(x.amount)}</p>)}</div><div><h2 className="font-display text-lg font-bold">Subscriptions</h2><p className="mt-2 text-sm">{p.subscriptions.active} active · {money(p.subscriptions.monthly)}/month · {money(p.subscriptions.annual)}/year</p>{p.subscriptions.summary.increases.map((x,i)=><p key={i} className="mt-2 text-sm">Price increase: {x.name}</p>)}{p.subscriptions.summary.duplicates.map((x,i)=><p key={i} className="mt-2 text-sm text-warning">Review duplicates: {x.names.join(" / ")}</p>)}</div></section>
       <section id="payments" className="mb-8 scroll-mt-28">
-        <h2 className="mb-2 font-display text-lg font-bold">Calendar</h2>
+        <div className="mb-2 flex flex-wrap items-center justify-between gap-2"><h2 className="font-display text-lg font-bold">Calendar</h2>
+          {markable.length > 0 && <div className="flex flex-wrap gap-2">
+            <Button size="sm" variant="ghost" onClick={() => setPicked(chosen.length === markable.length ? [] : markable.map(markableKey))}>{chosen.length === markable.length ? "Clear selection" : `Select all due (${markable.length})`}</Button>
+            {chosen.length > 0 && <Button size="sm" disabled={!!bulkBusy} onClick={() => void markChosen()}><Check className="h-4 w-4" />{bulkBusy ?? `Mark ${chosen.length} done`}</Button>}
+          </div>}
+        </div>
         {!p.upcoming.length && <p className="rounded-2xl border border-dashed p-6 text-center text-sm text-muted-foreground">Nothing scheduled. Add salary, rent, EMIs, insurance or subscriptions below.</p>}
         <ul className="space-y-2">
           {p.upcoming.slice(0, 40).map((u, k) => {
             const c = commitments.find((x) => x.id === u.commitmentId);
             return (
               <li key={k} className="flex items-center gap-3 rounded-2xl border bg-card p-3">
+                {markable.length > 0 && <div className="w-5">{markKeys.has(markableKey(u)) && <Checkbox aria-label={`Select ${u.name}`} checked={picked.includes(markableKey(u))} onCheckedChange={(v) => setPicked((xs) => v === true ? [...xs, markableKey(u)] : xs.filter((x) => x !== markableKey(u)))} />}</div>}
                 <div className="w-14 text-center font-mono text-xs"><div className="text-lg font-bold">{u.date.slice(8)}</div>{new Date(u.date + "T00:00:00").toLocaleString("en", { month: "short" })}</div>
                 <div className="min-w-0 flex-1">
                   <div className="truncate font-medium">{u.name}</div>
@@ -129,7 +159,7 @@ function Plan() {
                   </div>
                 </div>
                 <div className={cn("font-mono", u.direction === "in" && "text-primary")}>{u.direction === "in" ? "+" : "−"}{money(u.amount)}</div>
-                {c && (u.overdue || u.date===c.nextDue) && <PayButton c={c} onPay={confirmCommitment} />}
+                {c && markKeys.has(markableKey(u)) && <PayButton c={c} onPay={confirmCommitment} />}
               </li>
             );
           })}
@@ -196,17 +226,30 @@ function nextFrom(last: string, every: number, today: string) {
 }
 
 function PayButton({ c, onPay }: { c: Commitment; onPay: (c: Commitment, amount: number) => Promise<void> }) {
+  const [open, setOpen] = useState(false);
+  const [v, setV] = useState(String(c.amount));
   const [busy, setBusy] = useState(false);
+  const verb = c.direction === "in" ? "received" : "paid";
   return (
-    <Button size="sm" variant="secondary" disabled={busy} aria-label={`Mark ${c.name} ${c.direction === "in" ? "received" : "paid"}`}
-      onClick={async () => {
-        const v = window.prompt(`Actual amount ${c.direction === "in" ? "received" : "paid"} (₹)`, String(c.amount));
-        if (v === null) return;
-        setBusy(true);
-        try { await onPay(c, Number(v)); toast.success("Recorded and moved to the next date"); } catch (e) { toast.error((e as Error).message); } finally { setBusy(false); }
-      }}>
-      <Check className="h-4 w-4" />{c.direction === "in" ? "Got it" : "Paid"}
-    </Button>
+    <>
+      <Button size="sm" variant="secondary" aria-label={`Mark ${c.name} ${verb}`} onClick={() => { setV(String(c.amount)); setOpen(true); }}>
+        <Check className="h-4 w-4" />{c.direction === "in" ? "Got it" : "Paid"}
+      </Button>
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader><DialogTitle>Mark {c.name} {verb}</DialogTitle></DialogHeader>
+          <Label htmlFor={`pay-${c.id}`}>Actual amount {verb} (₹)</Label>
+          <Input id={`pay-${c.id}`} type="number" inputMode="decimal" min="0" step="0.01" value={v} onChange={(e) => setV(e.target.value)} />
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
+            <Button loading={busy} disabled={!(Number(v) > 0)} onClick={async () => {
+              setBusy(true);
+              try { await onPay(c, Number(v)); toast.success("Recorded and moved to the next date"); setOpen(false); } catch (e) { toast.error((e as Error).message); } finally { setBusy(false); }
+            }}>Mark {verb}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
 
