@@ -602,3 +602,4 @@
 - [ ] Verify GLS original amount/start date (blocked: sanction letter needed)
 - [ ] Connect missing/short loan funding warnings to existing phone push, with independent delivery and private messages
 - [ ] Verify funding reminder rules, scheduled delivery, and signed-in notification settings
+- [ ] Add notification configuration for loan funding, payments, document renewals, trips and check-ins in existing Settings
