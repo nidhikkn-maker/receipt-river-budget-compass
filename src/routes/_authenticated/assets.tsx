@@ -1,4 +1,4 @@
-import { assetFollowUps, createFileRoute } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { PageTitle } from "@/components/AppShell";
@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useStore } from "@/lib/store";
 import { fyOf } from "@/lib/entities";
-import { ASSET_KINDS, TAX_RATES, bookSchedule, rentCheck, shareValue, taxSchedule, type Asset, type AssetKind } from "@/lib/assets";
+import { assetFollowUps, ASSET_KINDS, TAX_RATES, bookSchedule, rentCheck, shareValue, taxSchedule, type Asset, type AssetKind } from "@/lib/assets";
 
 export const Route = createFileRoute("/_authenticated/assets")({
   head: () => ({ meta: [
