@@ -34,6 +34,15 @@ export interface Asset {
   tenant?: string | undefined;
   leaseEnd?: string | undefined;
   deposit?: number | undefined;
+  /** Book policy inputs [§32]: useful life (years) and residual value (% of cost). */
+  usefulLifeYears?: number | undefined;
+  residualPct?: number | undefined;
+  /** Sale proceeds for the tax block on disposal. */
+  saleValue?: number | undefined;
+  department?: string | undefined;
+  supplier?: string | undefined;
+  warrantyUntil?: string | undefined;
+  insurance?: string | undefined;
 }
 
 /** Physical-check and lease follow-ups; pure, never changes the asset. */
