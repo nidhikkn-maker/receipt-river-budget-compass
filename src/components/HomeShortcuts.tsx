@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { setPendingScan } from "@/lib/pending-scan";
+import { queueOfflineScan } from "@/lib/offline-scan";
+import { cameraBlocked } from "@/lib/camera-check";
 import { Plane, ScanLine, Inbox, Search, CalendarClock, FileText, Plus, Wallet, CreditCard, HandCoins, ChartPie, Sparkles, TrendingUp, FolderOpen, ArrowUp, ArrowDown, Settings2, GripVertical } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -12,7 +14,7 @@ import { CreateTripDialog } from "@/components/trip/CreateTripDialog";
 
 const ICONS = { scan: ScanLine, expense: Plus, inbox: Inbox, travel: Plane, "upcoming-trips": CalendarClock, "create-trip": Plus, search: Search, payments: CalendarClock, accounts: Wallet, cards: CreditCard, reimbursements: HandCoins, budgets: ChartPie, reports: FileText, insights: TrendingUp, assistant: Sparkles, wealth: Wallet, documents: FolderOpen };
 export function HomeShortcuts() {
-  const { preferences, savePreferences } = useStore();
+  const { userId, preferences, savePreferences } = useStore();
   const [open, setOpen] = useState(false), [all, setAll] = useState(false), [create, setCreate] = useState(false);
   const [selected, setSelected] = useState<ShortcutId[]>([]);
   const [drag, setDrag] = useState<ShortcutId | null>(null);
@@ -27,7 +29,7 @@ export function HomeShortcuts() {
     <div className="grid grid-cols-3 gap-2 sm:grid-cols-6">{shown.map((id) => {
       const s = SHORTCUTS.find((x) => x.id === id); if (!s) return null; const Icon = ICONS[id];
       if (id === "create-trip") return <Button key={id} variant="outline" className={actionClass} onClick={() => setCreate(true)}><Icon className="h-5 w-5 text-primary" />{s.label}</Button>;
-      if (id === "scan") return <Button key={id} asChild variant="outline" className={actionClass}><label className="cursor-pointer"><input type="file" accept="image/*" capture="environment" className="sr-only" aria-label="Take a photo of a receipt" onChange={(e) => { const files = Array.from(e.target.files ?? []); e.target.value = ""; if (!files.length) return; setPendingScan(files); void navigate({ to: "/new", search: { scan: true } as never }); }} /><Icon className="h-5 w-5 text-primary" /><span>{s.label}</span></label></Button>;
+      if (id === "scan") return <Button key={id} asChild variant="outline" className={actionClass}><label className="cursor-pointer" onClick={async (e) => { if (e.target !== e.currentTarget && (e.target as HTMLElement).tagName === "INPUT") return; const why = await cameraBlocked(); if (why) { e.preventDefault(); toast.message(why, { description: "Opening the expense form instead — you can attach a photo there." }); void navigate({ to: "/new" }); } }}><input type="file" accept="image/*" capture="environment" className="sr-only" aria-label="Take a photo of a receipt" onChange={async (e) => { const files = Array.from(e.target.files ?? []); e.target.value = ""; if (!files.length) return; if (!navigator.onLine) { try { await queueOfflineScan(userId, files); toast.success("Receipt saved on this phone", { description: "It will upload and be read automatically when you're back online." }); } catch { toast.error("Couldn't save the photo on this phone"); } return; } setPendingScan(files); void navigate({ to: "/new", search: { scan: true } as never }); }} /><Icon className="h-5 w-5 text-primary" /><span>{s.label}</span></label></Button>;
       return <Button key={id} asChild variant="outline" className={actionClass}><Link to={s.to} {...(id === "upcoming-trips" ? { search: { status: "upcoming" } } : {})}><Icon className="h-5 w-5 text-primary" /><span>{s.label}</span></Link></Button>;
     })}</div>
     <Sheet open={open} onOpenChange={setOpen}><SheetContent side="bottom" className="max-h-[85dvh] overflow-y-auto" aria-describedby={undefined} onOpenAutoFocus={(e) => e.preventDefault()}><SheetHeader><SheetTitle>Home shortcuts</SheetTitle></SheetHeader>

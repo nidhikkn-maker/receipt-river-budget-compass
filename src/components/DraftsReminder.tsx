@@ -5,6 +5,9 @@ import { listDrafts, pendingDrafts, syncLocalDrafts } from "@/lib/drafts";
 import { localDrafts } from "@/lib/offline";
 import { useStore } from "@/lib/store";
 import { toast } from "sonner";
+import { useServerFn } from "@tanstack/react-start";
+import { extractReceipt } from "@/lib/receipt-extract.functions";
+import { processOfflineScans } from "@/lib/offline-scan";
 
 /** Subtle "expenses waiting" note; never forces the user into a draft. "Later" hides it for this session. */
 export function DraftsReminder() {
@@ -14,9 +17,10 @@ export function DraftsReminder() {
   useEffect(() => { setLater(sessionStorage.getItem("ll-drafts-later") === "1"); }, []);
   const { userId } = useStore();
   const [tick, setTick] = useState(0);
+  const extract = useServerFn(extractReceipt);
   // Sync device-only drafts at start-up and whenever the connection comes back.
   useEffect(() => {
-    const run = () => void syncLocalDrafts(userId).then((n) => { if (n) { toast.success(`${n} offline draft${n === 1 ? "" : "s"} synced`); setTick((t) => t + 1); } });
+    const run = () => void processOfflineScans(userId, extract as never).catch(() => 0).then((r) => { if (r) toast.success(`${r} offline receipt${r === 1 ? "" : "s"} read — review in Drafts`); return syncLocalDrafts(userId); }).then((n) => { if (n) { toast.success(`${n} offline draft${n === 1 ? "" : "s"} synced`); setTick((t) => t + 1); } });
     run(); window.addEventListener("online", run);
     return () => window.removeEventListener("online", run);
   }, [userId]);
