@@ -15,7 +15,7 @@ import { useStore } from "@/lib/store";
 import { extractDocument, type ExtractedDocument } from "@/lib/document-extract.functions";
 import { DOC_LABEL, DOC_TYPES, duplicateDocuments, type DocField, type DocType } from "@/lib/documents";
 import { ENTITY_KINDS } from "@/lib/entities";
-import { autoName, fillLeaseFromTrusted, proposeAsset, proposeEntity, proposeFy, proposeLease, proposeProperty, ROUTE_OF, trail, type IntakeContext, type Step } from "@/lib/books/intake";
+import { autoName, fillLeaseFromTrusted, proposeAsset, proposeEntity, proposeFy, proposeLease, proposeProperty, proposeGstInvoice, proposeTaxStatement, ROUTE_OF, trail, type IntakeContext, type Step } from "@/lib/books/intake";
 import { commitIntake, type Confirmed } from "@/lib/books/commit";
 import { emptyBooks, LEASE_TERMS, LEASE_TERM_LABEL, leaseUnknowns, requiresApproval, type Lease } from "@/lib/books/types";
 import { HEAD_LABEL } from "@/lib/books/fy";
@@ -108,6 +108,8 @@ export function DocumentIntake({ file, context, onClose, resume, replacesId }: {
       const filled = fillLeaseFromTrusted(p.lease, books.leases, related, books.fieldMappings ?? {});
       return { kind: "lease" as const, ...p, lease: filled.lease, unknown: leaseUnknowns(filled.lease), sources: filled.sources };
     }
+    if (route === "gst" && x.gstInvoice) return { kind: "gst" as const, ...proposeGstInvoice(x.gstInvoice, entities.flatMap((e) => e.gstins), id, null) };
+    if (route === "tax" && x.taxStatement) return { kind: "tax" as const, ...proposeTaxStatement(x.taxStatement, entities) };
     if (route === "fy" && x.audited) return { kind: "fy" as const, ...proposeFy(x.audited as Parameters<typeof proposeFy>[0], entities, books.fyRecords, id, null) };
     return null;
   }, [x, route, entities, books.properties, books.fyRecords, books.leases, books.docLinks, books.fieldMappings, documents, runId]);
@@ -150,6 +152,12 @@ export function DocumentIntake({ file, context, onClose, resume, replacesId }: {
       const lease: Lease = { ...l, propertyId: leaseProperty || l.propertyId, rent: Number(v("rent", l.rent)) };
       for (const k of LEASE_TERMS) { if (k === "gst") { const g = edit["gst"]; if (g !== undefined) lease.gst = g === "" ? undefined : g === "yes"; } else lease[k] = optNum(k, l[k]); }
       return { route: "lease", lease };
+    }
+    if (proposal.kind === "gst") return proposal.invoice ? { route: "gst", invoice: { ...proposal.invoice, number: v("invno", proposal.invoice.number), taxable: Number(v("taxable", proposal.invoice.taxable)) || proposal.invoice.taxable } } : null;
+    if (proposal.kind === "tax") {
+      if (!proposal.fy) return null;
+      const whoId = v("taxwho", proposal.entityId ?? "self");
+      return { route: "tax", entityId: whoId, fy: proposal.fy, salary: proposal.salary, credits: proposal.credits.map((c) => ({ kind: c.kind, amount: c.amount, source: `${DOC_LABEL[docType]}${c.deductor ? ` · ${c.deductor}` : ""}` })) };
     }
     if (proposal.kind === "fy") return proposal.record && (!ownerSuggested || ownerOk) ? { route: "fy", record: proposal.record } : null;
     return { route: "document" };
@@ -241,6 +249,20 @@ export function DocumentIntake({ file, context, onClose, resume, replacesId }: {
           <p className="col-span-2 text-xs text-muted-foreground">{[x.asset?.supplier && `Supplier ${x.asset.supplier}`, x.asset?.purchaseDate && `invoice ${x.asset.purchaseDate}`, x.asset?.warrantyUntil && `warranty to ${x.asset.warrantyUntil}`, x.asset?.insurance && `insurance ${x.asset.insurance}`].filter(Boolean).join(" · ")}</p>
           {needCap && !belowCap && <label className="col-span-2 flex items-center gap-2 text-xs"><input type="checkbox" checked={capOk} onChange={(e) => setCapOk(e.target.checked)} />Capitalise this as a fixed asset (your approval policy asks for this){capMin == null ? " — no capitalisation limit set yet in Audit → Approvals" : ""}</label>}
         </div> : null)}
+        {proposal?.kind === "gst" && (proposal.invoice ? <div className="grid grid-cols-2 gap-2 rounded-xl border p-3">
+          <p className="col-span-2 font-semibold">GST {proposal.invoice.kind === "sales" ? "sales" : "purchase"} invoice draft · {proposal.invoice.gstin}</p>
+          <label className="text-xs">Invoice number<Input aria-label="Invoice number" value={v("invno", proposal.invoice.number)} onChange={(e) => setEdit({ ...edit, invno: e.target.value })} /></label>
+          <label className="text-xs">Taxable value<Input aria-label="Taxable value" inputMode="decimal" value={v("taxable", proposal.invoice.taxable)} onChange={(e) => setEdit({ ...edit, taxable: e.target.value })} /></label>
+          <p className="col-span-2 text-xs text-muted-foreground">{proposal.invoice.date} · {proposal.invoice.party || "party not printed"} {proposal.invoice.partyGstin} · IGST {proposal.invoice.igst} · CGST {proposal.invoice.cgst} · SGST {proposal.invoice.sgst}{proposal.invoice.cess ? ` · cess ${proposal.invoice.cess}` : ""}. Saved to the GST register for review; nothing is filed.</p>
+        </div> : <p className="rounded-xl border border-dashed p-3 text-xs">GST invoice can't be prepared yet — missing: {proposal.missing.join(", ")}. It is kept in DocuRepo.</p>)}
+        {proposal?.kind === "tax" && <div className="grid gap-2 rounded-xl border p-3 text-xs">
+          <p className="font-semibold">Tax statement · FY {proposal.fy ?? "not printed"}</p>
+          <label>Whose tax<select aria-label="Whose tax statement" className="w-full rounded-md border bg-background px-1 py-1" value={v("taxwho", proposal.entityId ?? "self")} onChange={(e) => setEdit({ ...edit, taxwho: e.target.value })}><option value="self">You (personal)</option>{entities.map((e) => <option key={e.id} value={e.id}>{e.name}</option>)}</select></label>
+          {proposal.salary != null && <p>Taxable salary as printed: ₹{proposal.salary.toLocaleString("en-IN")}</p>}
+          {proposal.credits.map((c, i) => <p key={i}>{c.kind.toUpperCase()} ₹{c.amount.toLocaleString("en-IN")}{c.deductor ? ` · ${c.deductor}` : ""}</p>)}
+          {proposal.missing.length > 0 && <p className="text-destructive">Missing: {proposal.missing.join(", ")}</p>}
+          <p className="text-muted-foreground">These become taxes already paid and salary for that year. Each is recorded once per document.</p>
+        </div>}
         {proposal?.kind === "property" && <div className="grid grid-cols-2 gap-2 rounded-xl border p-3">
           <p className="col-span-2 font-semibold">Proposed property</p>
           <Input aria-label="Property name" className="col-span-2" value={v("name", proposal.property.name)} onChange={(e) => setEdit({ ...edit, name: e.target.value })} />
