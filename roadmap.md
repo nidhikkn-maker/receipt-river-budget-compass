@@ -615,3 +615,19 @@
 - [x] Match confirmed receipt drafts to imported bank lines (auto when certain, review when unsure)
 - [x] Statement Desk pre-save reconciliation summary (unmatched lines, balance gaps)
 - [x] Mark upcoming payments done, individually and in bulk
+
+## Ledgerline v6 (v6.0 + v6.1, approved plan)
+- [x] Demat Statement Review on Statement Desk (six checks, ISIN merge, no duplicate securities, undo)
+- [x] Transaction / Capital Gains statements complete purchase history through the same desk
+- [x] Originals stored in DocuRepo (vault renamed); new investment document types
+- [x] Simpler bottom bar: Home · Money · + · Inbox · More (AI moved to More)
+- [x] Demat holdings on Wealth with completeness status
+- [ ] Live NSE/BSE prices + net worth freshness on Home (blocked: choose an approved price provider)
+- [ ] Phase 2 DocuRepo: auto document type for all listed documents, multi-record links, extracted-field evidence, versions, search
+- [ ] Phase 3 Entities from documents + Financial Year Onboarding + opening balances
+- [ ] Phase 4 Supplier/customer/intercompany/GST reconciliations, missing-invoice flags
+- [ ] Phase 5 Asset Management + Property Management (deeds, ownership share, leases, rent matching)
+- [ ] Phase 6 Book and tax depreciation
+- [ ] Phase 7 Income tax, GST drafts, regulatory rule versions
+- [ ] Phase 8 Continuous audit dashboard and automation levels
+- [ ] Phase 9–10 End-to-end checks, 22 tests, reports, acceptance
