@@ -604,3 +604,6 @@
 - [x] Verify funding rules and dispatch with isolated tests; active 10-minute schedule confirmed; signed-in settings save/reload checked
 - [x] Add notification configuration for loan funding, payments, document renewals, trips and check-ins in existing Settings
 - [ ] Confirm actual phone delivery (requires enabling notifications in the installed published app)
+- [ ] Clear offline indicator and sync status in the app header
+- [ ] Capture receipt photos offline; upload and read them automatically after reconnecting
+- [ ] Camera permission check with fallback to the normal expense form when the camera can't open
