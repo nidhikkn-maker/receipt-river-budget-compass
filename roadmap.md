@@ -607,3 +607,5 @@
 - [x] Clear offline indicator and sync status in the app header
 - [x] Capture receipt photos offline; upload and read them automatically after reconnecting
 - [x] Camera permission check with fallback to the normal expense form when the camera can't open
+- [x] Offline receipt retries never create duplicate drafts
+- [x] Screen listing failed receipt photos with error and retry status

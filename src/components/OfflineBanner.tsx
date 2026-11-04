@@ -3,6 +3,7 @@ import { CloudOff, RefreshCw, Check } from "lucide-react";
 import { useStore } from "@/lib/store";
 import { offlineScanStatus, requestScanRetry } from "@/lib/offline-scan";
 import { Button } from "@/components/ui/button";
+import { Link } from "@tanstack/react-router";
 
 /** Clear strip: offline (what's on this phone and waiting), then syncing and "all synced" after reconnecting. */
 export function OfflineBanner() {
@@ -33,6 +34,7 @@ export function OfflineBanner() {
       <CloudOff className="h-4 w-4 shrink-0 text-destructive" />
       <span className="min-w-0 flex-1"><b>{failed} receipt photo{failed === 1 ? "" : "s"} couldn't upload.</b> They're still saved on this phone — no need to take them again.</span>
       <Button size="sm" variant="outline" onClick={() => { requestScanRetry(); setTimeout(() => void offlineScanStatus(userId).then((x) => { setScans(x.waiting); setFailed(x.failed); }), 1500); }}>Retry</Button>
+      <Link to="/offline-receipts" className="text-xs font-semibold text-primary underline">Details</Link>
     </div>
   );
   const wait = [pendingCount ? `${pendingCount} ${pendingCount === 1 ? "entry" : "entries"}` : "", scans ? `${scans} receipt photo${scans === 1 ? "" : "s"}` : ""].filter(Boolean).join(" and ");
