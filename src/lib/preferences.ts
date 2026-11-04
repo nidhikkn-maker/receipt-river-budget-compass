@@ -1,4 +1,5 @@
 import { cleanAssets, type Asset } from "./assets";
+import { cleanReceivables, type Receivable } from "./receivables";
 import { cleanEntities, type EntityProfile } from "./entities";
 import type { AutopilotAction } from "./autopilot";
 import { normalizeNotificationSettings, type NotificationSettings } from "./notification-settings";
@@ -76,6 +77,8 @@ export interface FinancePreferences {
   entities?: EntityProfile[];
   /** Fixed assets and property ownership. */
   assets?: Asset[];
+  /** Invoices customers still owe. */
+  receivables?: Receivable[];
   /** Home arrangement; "custom" once the user hides or reorders sections themselves. */
   homeMode: HomeMode;
   categories: CategorySetting[];
@@ -187,6 +190,7 @@ export function normalizePreferences(raw: Partial<FinancePreferences> | null | u
   p.statementUploads = cleanStatementUploads(p.statementUploads);
   p.entities = cleanEntities(p.entities);
   p.assets = cleanAssets(p.assets);
+  p.receivables = cleanReceivables(p.receivables);
   p.checkedAudit = Array.isArray(p.checkedAudit) ? [...new Set(p.checkedAudit.filter((k) => typeof k === "string" && k.length <= 200))].slice(-3000) : [];
   p.payees = cleanPayees(p.payees);
   p.reimbursementSettings = cleanReimbursementSettings(p.reimbursementSettings);

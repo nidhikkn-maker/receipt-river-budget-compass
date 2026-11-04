@@ -74,6 +74,7 @@ const MORE_GROUPS: { title: string; items: { to: string; label: string; icon: ty
     { to: "/tax", label: "Income tax & GST", icon: BarChart3 },
     { to: "/audit", label: "Audit dashboard", icon: Search },
     { to: "/gst-check", label: "Suppliers & invoices", icon: FileText },
+    { to: "/receivables", label: "Customers owing", icon: Wallet },
     { to: "/settings", label: "Settings & backup", icon: Settings },
     { to: "/payment-methods", label: "Payment methods", icon: Wallet },
   ] },
