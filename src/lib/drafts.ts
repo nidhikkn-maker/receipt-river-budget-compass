@@ -54,11 +54,13 @@ export async function upsertDraft(id: string, owner: string, data: DraftData, re
   if (error) throw new Error("Draft not saved");
 }
 /** Upload a receipt into the owner's private draft folder; returns its stored path. */
-/** Fixed storage path for a device-saved photo, so a retried upload replaces the earlier copy instead of adding another. */
+/** Fixed storage path for a device-saved photo, so a retried upload reuses the earlier copy instead of adding another. */
 export const stableReceiptPath = (owner: string, draftId: string, index: number, name: string) => `${owner}/drafts/${draftId}/offline-${index}-${name.replace(/[^\w.-]+/g, "_").slice(-80)}`;
 export async function uploadDraftReceipt(owner: string, draftId: string, f: File, index?: number): Promise<string> {
   const path = index != null ? stableReceiptPath(owner, draftId, index, f.name) : `${owner}/drafts/${draftId}/${crypto.randomUUID()}-${f.name.replace(/[^\w.-]+/g, "_").slice(-80)}`;
-  const { error } = await supabase.storage.from("receipts").upload(path, f, { contentType: f.type || "application/octet-stream", upsert: index != null });
+  const { error } = await supabase.storage.from("receipts").upload(path, f, { contentType: f.type || "application/octet-stream" });
+  // An earlier attempt already stored this exact photo at its fixed path: reuse it rather than adding a copy.
+  if (error && index != null && /exists|duplicate|409/i.test(`${error.message} ${(error as { statusCode?: string }).statusCode ?? ""}`)) return path;
   if (error) throw new Error(`Couldn't upload ${f.name}`);
   return path;
 }
