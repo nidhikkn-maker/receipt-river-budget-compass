@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ExtractedReceiptSchema, ReceiptDetailsSchema, receiptConfidence, receiptRoundOff, receiptBreakdownError, receiptItemConfidence, receiptItemReviewReasons, receiptItemsToReview, receiptItemTotalError, receiptReviewCheck, receiptReviewSignature, type ReceiptAmounts } from "./receipt-reading";
+import { ExtractedReceiptSchema, ReceiptDetailsSchema, receiptConfidence, receiptRoundOff, receiptRoundOffFor, receiptBreakdownError, receiptItemConfidence, receiptItemReviewReasons, receiptItemsToReview, receiptItemTotalError, receiptReviewCheck, receiptReviewSignature, type ReceiptAmounts } from "./receipt-reading";
 import { validateExpense, type ExpenseInput } from "./expenses";
 
 const read = { title: "Cafe", merchant: "Cafe", date: "2026-11-02", amount: 432.10, subtotal: 360, tax: 32.10, tip: 40, confidence: { merchant: "high", date: "low", total: "medium" }, items: [], text: "Cafe", currency: "INR", payment_method: null, description: null, category: "Food and beverages", scope: "personal" };
@@ -145,5 +145,18 @@ describe("receipt round-off", () => {
   });
   it("ignores paise-level item differences on rounded INR bills", () => {
     expect(receiptItemTotalError(2265, { subtotal: 2157.4, tax: 107.86, items: [{ name: "A", quantity: 1, amount: 2157 }] }, "INR")).toBeNull();
+  });
+});
+
+describe("receiptRoundOffFor", () => {
+  it("uses the saved round-off first", () => {
+    expect(receiptRoundOffFor({ originalAmount: 2264, currency: "INR", receiptDetails: { subtotal: 2157, tax: 107.4, roundOff: -0.4 } })).toEqual({ amount: -0.4, source: "saved" });
+  });
+  it("works out round-off for older INR records", () => {
+    const r = receiptRoundOffFor({ originalAmount: 2265, currency: "INR", receiptDetails: { subtotal: 2157, tax: 107.86 } });
+    expect(r.source).toBe("implied"); expect(r.amount).toBeCloseTo(0.14);
+  });
+  it("gives none for decimal currencies", () => {
+    expect(receiptRoundOffFor({ originalAmount: 11, currency: "USD", receiptDetails: { subtotal: 10, tax: 0.86 } }).amount).toBe(0);
   });
 });
