@@ -41,7 +41,7 @@ export function detectIssuer(rows: string[]) {
   const known = BANKS.find((b) => b.re.test(h));
   if (known) return known;
   // Any other bank whose name is printed in the header, e.g. "Saraswat Co-operative Bank".
-  const m = h.match(/\b([A-Z][A-Za-z&.]+(?:[ -][A-Z][A-Za-z&.]+){0,4} Bank)\b/);
+  const m = h.match(/\b([A-Z][A-Za-z&.-]+(?: [A-Z][A-Za-z&.-]+){0,4} Bank)\b/);
   if (!m?.[1] || /^(the )?bank$/i.test(m[1])) return null;
   const issuer = m[1].trim();
   return { issuer, kind: "savings" as AccountKind, re: new RegExp(issuer.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i") };
