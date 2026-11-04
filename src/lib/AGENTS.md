@@ -1,4 +1,5 @@
 # Finance rule modules
+- Phone notification choices live in owner preferences and notification-settings.ts; funding pushes use independent daily device claims so earlier payment reminders cannot suppress them.
 - Subdirectories hold the rest of these notes: src/lib/statement-pipeline/AGENTS.md (statement, import and transfer rules) and src/components/AGENTS.md (review, claim, trip and report rules).
 - payees.ts stores external directory records in owner preferences; explicit selection fills the existing merchant draft only, never an owned account or automatic financial classification. Directory changes do not relabel old ledger records.
 - correction-fields.ts derives draft account fields from ledger movement/target rules; it never changes financial treatment or substitutes external payees for owned accounts.

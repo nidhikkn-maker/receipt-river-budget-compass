@@ -60,5 +60,8 @@ describe("Funding transfer reminders", () => {
     const input = { today: "2026-11-04", leadDays: 3, enabled: true, commitments: [emi], accounts: [{ ...bank, details: { fundedFrom: "idfc", fundingDay: 3 } as NonNullable<Account["details"]> }], loans: [loan], transactions: [transfer], documents: [] };
     expect(paymentReminderItems(input).some(i => i.key === "loan-funding:gls:2026-11-05")).toBe(true);
     expect(paymentReminderItems({ ...input, enabled: false })).toEqual([]);
+    expect(paymentReminderItems({ ...input, notifications: { loanFunding: false } }).some(i=>i.key.startsWith("loan-funding:"))).toBe(false);
+    expect(paymentReminderItems({ ...input, notifications: { payments: false } }).map(i=>i.key)).toEqual(["loan-funding:gls:2026-11-05"]);
+    expect(paymentReminderItems({ ...input, transactions: [{...transfer,amount:313913}], notifications: { payments: false } })).toEqual([]);
   });
 });
