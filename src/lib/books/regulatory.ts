@@ -55,12 +55,12 @@ export function activateRule(rules: RuleVersion[], id: string, today: string): R
 /** Form version for a period: e.g. ITR forms are notified per assessment year [§51, test 15]. */
 export interface FormVersion { form: string; assessmentYear: string; schemaVersion: string; source: string }
 export const FORM_VERSIONS: FormVersion[] = [
-  { form: "ITR-1", assessmentYear: "2025-26", schemaVersion: "AY2025-26 v1.0", source: "CBDT Notification 40/2025" },
-  { form: "ITR-3", assessmentYear: "2025-26", schemaVersion: "AY2025-26 v1.0", source: "CBDT Notification 42/2025" },
-  { form: "ITR-6", assessmentYear: "2025-26", schemaVersion: "AY2025-26 v1.0", source: "CBDT Notification 43/2025" },
-  { form: "ITR-1", assessmentYear: "2024-25", schemaVersion: "AY2024-25 v1.1", source: "CBDT Notification 105/2023" },
-  { form: "ITR-3", assessmentYear: "2024-25", schemaVersion: "AY2024-25 v1.1", source: "CBDT Notification 19/2024" },
-  { form: "ITR-6", assessmentYear: "2024-25", schemaVersion: "AY2024-25 v1.1", source: "CBDT Notification 19/2024" },
+  { form: "ITR-1", assessmentYear: "2025-26", schemaVersion: "AY2025-26 v1.0", source: "CBDT-notified form — confirm version on the e-Filing portal" },
+  { form: "ITR-3", assessmentYear: "2025-26", schemaVersion: "AY2025-26 v1.0", source: "CBDT-notified form — confirm version on the e-Filing portal" },
+  { form: "ITR-6", assessmentYear: "2025-26", schemaVersion: "AY2025-26 v1.0", source: "CBDT-notified form — confirm version on the e-Filing portal" },
+  { form: "ITR-1", assessmentYear: "2024-25", schemaVersion: "AY2024-25 v1.1", source: "CBDT-notified form — confirm version on the e-Filing portal" },
+  { form: "ITR-3", assessmentYear: "2024-25", schemaVersion: "AY2024-25 v1.1", source: "CBDT-notified form — confirm version on the e-Filing portal" },
+  { form: "ITR-6", assessmentYear: "2024-25", schemaVersion: "AY2024-25 v1.1", source: "CBDT-notified form — confirm version on the e-Filing portal" },
 ];
 /** Assessment year for a financial year. */
 export const ayOf = (fy: string) => { const s = Number(fy.slice(0, 4)) + 1; return `${s}-${String((s + 1) % 100).padStart(2, "0")}`; };
