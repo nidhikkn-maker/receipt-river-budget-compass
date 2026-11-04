@@ -158,6 +158,8 @@ export function DocumentIntake({ file, context, onClose, resume, replacesId }: {
   const save = async () => {
     const c = confirmed();
     if (!c) { toast.error(ownerSuggested && !ownerOk ? "Confirm which company this belongs to first" : "Fill the missing details first"); return; }
+    const unlocated = fields.filter((f) => !f.page && !f.section?.trim()).length;
+    if (unlocated) { toast.error(`${unlocated} detail${unlocated > 1 ? "s" : ""} need a page or section — open “Details read”`); return; }
     if (needCap && !capOk && c.route === "asset") { toast.error("Confirm capitalisation first"); return; }
     setSaving(true); setFailed(null);
     let at: Step = "Save";
@@ -212,7 +214,8 @@ export function DocumentIntake({ file, context, onClose, resume, replacesId }: {
         {fields.length > 0 && <details><summary className="cursor-pointer text-muted-foreground">Details read ({fields.length}) — tap a value to correct it</summary>
           <div className="mt-2 grid gap-2">{fields.map((f, i) => <label key={i} className="grid gap-0.5"><span className="text-xs">{f.label}{f.confidence !== "high" && <span className={`ml-1 ${f.confidence === "low" ? "text-destructive" : "text-muted-foreground"}`}>{f.confidence} confidence</span>}{f.status === "corrected" && <span className="ml-1 text-primary">corrected</span>}</span>
             <Input value={f.value} onChange={(e) => setFields(fields.map((y, j) => (j === i ? { ...y, value: e.target.value, status: "corrected" } : y)))} />
-            <span className="text-[11px] text-muted-foreground">{f.page ? `Page ${f.page} · ` : ""}printed “{f.originalValue ?? f.quote}”{f.quote && f.originalValue && f.quote !== f.originalValue ? ` · “${f.quote}”` : ""}</span></label>)}</div></details>}
+            {!f.page && <Input aria-label={`Page or section for ${f.label}`} className="h-7 text-xs" placeholder="Page or section where this appears (required)" value={f.section ?? ""} onChange={(e) => setFields(fields.map((y, j) => (j === i ? { ...y, section: e.target.value } : y)))} />}
+            <span className="text-[11px] text-muted-foreground">{f.page ? `Page ${f.page} · ` : f.section ? `${f.section} · ` : ""}printed “{f.originalValue ?? f.quote}”{f.quote && f.originalValue && f.quote !== f.originalValue ? ` · “${f.quote}”` : ""}</span></label>)}</div></details>}
 
         {ownerSuggested && <label className="flex items-start gap-2 rounded-xl border border-dashed p-3 text-xs"><input type="checkbox" className="mt-0.5" checked={ownerOk} onChange={(e) => setOwnerOk(e.target.checked)} /><span>The name on this document matches <b>{entities.find((e) => e.id === (proposal?.kind === "fy" ? proposal.entityId : proposal?.kind === "asset" ? proposal.asset?.ownerEntityId : proposal?.kind === "property" ? proposal.property.ownerEntityId : null))?.name}</b>, but no PAN, CIN or GSTIN confirms it. Tick to confirm it belongs to this company.</span></label>}
 

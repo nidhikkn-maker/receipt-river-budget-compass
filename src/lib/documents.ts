@@ -13,7 +13,7 @@ export const DOC_LABEL: Record<DocType, string> = {
   utility_bill: "Utility bill", maintenance: "Maintenance document", other: "Other financial or legal record",
 };
 /** One key detail read from a document, with where it came from so it can be checked. */
-export interface DocField { label: string; value: string; /** As printed, before normalising [§7]. */ originalValue?: string | undefined; page: number | null; quote: string; confidence: "high" | "medium" | "low"; status: "read" | "confirmed" | "corrected" }
+export interface DocField { label: string; value: string; /** As printed, before normalising [§7]. */ originalValue?: string | undefined; page: number | null; /** Section locator when no page number was read [§7]. */ section?: string | undefined; quote: string; confidence: "high" | "medium" | "low"; status: "read" | "confirmed" | "corrected" }
 export const MAX_DOC_BYTES = 10 * 1024 * 1024;
 
 export interface VaultDoc {
