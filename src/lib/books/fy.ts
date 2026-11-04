@@ -1,4 +1,7 @@
 /** Proposed opening balances vs audited closing values [§19]. Differences are shown, never forced. */
+import { accountBalance, type Account, type Txn } from "../ledger";
+import type { Asset } from "../assets";
+import { annualBook } from "./depreciation";
 import { OPENING_HEADS, type FyRecord, type OpeningHead } from "./types";
 
 export const HEAD_LABEL: Record<OpeningHead, string> = {
@@ -35,4 +38,22 @@ export function nextFy(fy: string): string { const s = Number(fy.slice(0, 4)) + 
 /** Confirming copies audited figures as the next year's opening; earlier source figures stay untouched [§20]. */
 export function confirmOpening(rec: FyRecord, today: string, chosen?: Partial<Record<OpeningHead, number>>): FyRecord {
   return { ...rec, confirmedOpening: { ...(chosen ?? rec.audited) }, confirmedOn: today };
+}
+
+/**
+ * What Ledgerline holds at a year end for one entity, head by head, using only that entity's linked
+ * accounts and owned assets [§19, §63]. Heads with no linked source stay undefined (not zero).
+ */
+export function booksHeads(p: { accounts: Account[]; txns: Txn[]; assets: Asset[]; accountIds: Set<string>; entityId: string; fyEnd: string; fy: string }): Partial<Record<OpeningHead, number>> {
+  const mine = p.accounts.filter((a) => p.accountIds.has(a.id));
+  const upTo = p.txns.filter((t) => t.date <= p.fyEnd);
+  const sum = (kinds: string[], sign = 1) => { const xs = mine.filter((a) => kinds.includes(a.kind)); return xs.length ? r2(sign * xs.reduce((s, a) => s + accountBalance(a, upTo), 0)) : undefined; };
+  const own = p.assets.filter((a) => a.ownerEntityId === p.entityId && a.inUse <= p.fyEnd && !(a.soldOn && a.soldOn <= p.fyEnd));
+  const out: Partial<Record<OpeningHead, number>> = {
+    bank: sum(["savings", "current"]), cash: sum(["cash"]), investments: sum(["investment", "fixed_deposit"]),
+    receivables: sum(["other_asset"]), loans: sum(["loan"], -1), payables: sum(["other_liability", "credit_card"], -1),
+    fixedAssets: own.length ? r2(own.reduce((s, a) => s + a.cost * (a.sharePct / 100), 0)) : undefined,
+    accumulatedDepreciation: own.length ? r2(own.reduce((s, a) => s + annualBook(a, p.fy).accumulated * (a.sharePct / 100), 0)) : undefined,
+  };
+  return Object.fromEntries(Object.entries(out).filter(([, v]) => v !== undefined)) as Partial<Record<OpeningHead, number>>;
 }

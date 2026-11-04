@@ -8,7 +8,7 @@ import { Fold } from "@/components/Fold";
 import { useStore } from "@/lib/store";
 import { ENTITY_KINDS, fyRange } from "@/lib/entities";
 import { accountBalance } from "@/lib/ledger";
-import { HEAD_LABEL, confirmOpening, nextFy, openingProposal } from "@/lib/books/fy";
+import { booksHeads, HEAD_LABEL, confirmOpening, nextFy, openingProposal } from "@/lib/books/fy";
 import { REQUIRED_SCHEDULES } from "@/lib/books/intake";
 import { annualSummary, duplicateInvoices, gstr1, gstr3b, gstr9, invoiceProblems, matchGstPayments, unfiledPeriods } from "@/lib/books/gst";
 import { activateRule, OFFICIAL_SOURCES, proposeRule, ruleOn, validateRule, formFor } from "@/lib/books/regulatory";
@@ -34,9 +34,8 @@ export function FyOnboarding() {
         <p className="text-xs text-muted-foreground">Balance sheet, P&L, trial balance, cash flow, notes, auditor's report, fixed-asset and depreciation schedules, loan/receivable/payable/investment schedules, tax computation and GST reconciliation. Each one fills in what it contains; nothing missing is filled in for you.</p>
         {books.fyRecords.map((r) => {
           const ent = entities.find((e) => e.id === r.entityId);
-          const bookNow: Partial<Record<OpeningHead, number>> = r.confirmedOpening ? {} : {
-            bank: Math.round(accounts.filter((a) => ["savings", "current"].includes(a.kind) && !a.archived).reduce((s, a) => s + accountBalance(a, transactions.filter((t) => t.date <= fyRange(r.fy).end)), 0)),
-          };
+          // Per entity, head by head, using only accounts linked to this entity [§19].
+          const bookNow: Partial<Record<OpeningHead, number>> = r.confirmedOpening || !r.entityId ? {} : booksHeads({ accounts, txns: transactions, assets: preferences.assets ?? [], accountIds: new Set(books.entityAccounts?.[r.entityId] ?? []), entityId: r.entityId, fyEnd: fyRange(r.fy).end, fy: r.fy });
           const op = openingProposal(r, bookNow);
           const missing = REQUIRED_SCHEDULES.filter((s) => !r.schedules.includes(s));
           return <div key={r.id} className="space-y-2 rounded-xl border p-3">
