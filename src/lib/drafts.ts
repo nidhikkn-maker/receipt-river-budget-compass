@@ -125,3 +125,13 @@ export function syncLocalDrafts(owner: string): Promise<number> {
   })().finally(() => { syncing = null; });
   return syncing;
 }
+
+/** A receipt draft matched to a bank line: marked saved against that entry but its files kept, so Undo can bring it back. */
+export async function linkDraftToTransaction(id: string, transactionId: string) {
+  const { error } = await supabase.from("expense_drafts").update({ status: "saved", transaction_id: transactionId, updated_at: new Date().toISOString() }).eq("id", id);
+  if (error) throw error;
+}
+export async function unlinkDraft(id: string) {
+  const { error } = await supabase.from("expense_drafts").update({ status: "ready", transaction_id: null, updated_at: new Date().toISOString() }).eq("id", id);
+  if (error) throw error;
+}

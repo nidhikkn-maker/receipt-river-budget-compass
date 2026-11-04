@@ -612,3 +612,6 @@
 - [x] Camera permission check with fallback to the normal expense form when the camera can't open
 - [x] Offline receipt retries never create duplicate drafts
 - [x] Screen listing failed receipt photos with error and retry status
+- [x] Match confirmed receipt drafts to imported bank lines (auto when certain, review when unsure)
+- [x] Statement Desk pre-save reconciliation summary (unmatched lines, balance gaps)
+- [x] Mark upcoming payments done, individually and in bulk

@@ -18,7 +18,10 @@ export async function stableId(accountId: string, l: StmtLine): Promise<string> 
 }
 
 export interface ApplyApi {
-  save: (input: ExpenseInput, opts?: { createId?: string; noRefresh?: boolean }) => Promise<void>;
+  save: (input: ExpenseInput, opts?: { createId?: string; noRefresh?: boolean; files?: File[] }) => Promise<void>;
+  /** Marks a matched receipt draft as used by the posted entry (and reverses that on undo). */
+  linkDraft?: (draftId: string, transactionId: string) => Promise<void>;
+  unlinkDraft?: (draftId: string) => Promise<void>;
   remove: (e: Expense) => Promise<void>;
   reconcile: (id: string, ref: string | null, opts?: { noRefresh?: boolean }) => Promise<void>;
   addAccount: (a: NewAccount) => Promise<string>;
@@ -33,12 +36,17 @@ export interface ApplyRequest {
   decisions: LineDecision[];
   destination?: string | null;
   reconcileIds: { id: string; ref: string }[];
+  /** Receipt drafts paired with lines (by line key); the bank amount and date always stay. */
+  draftLinks?: Record<string, DraftLink>;
 }
+
+export interface DraftLink { draftId: string; overrides: { [K in "title" | "merchant" | "category" | "description" | "receiptDetails"]?: ExpenseInput[K] | undefined }; files: () => Promise<File[]> }
 
 export interface ApplyResult {
   posted: string[];
   reconciled: string[];
   createdAccounts: { id: string; name: string }[];
+  linkedDrafts?: { draftId: string; transactionId: string }[];
 }
 
 /**
@@ -65,6 +73,14 @@ export async function applyUpload(requests: ApplyRequest[], api: ApplyApi, onPro
       const input = decisionInput(d, { statementAccountId: accountId, destination: r.destination ?? null });
       if (!input.accountId && !d.needsDestination) input.accountId = accountId;
       const id = await stableId(accountId, d.line);
+      const link = r.draftLinks?.[d.line.key];
+      if (link) {
+        Object.assign(input, Object.fromEntries(Object.entries(link.overrides).filter(([, v]) => v !== undefined && v !== "")));
+        await api.save(input, { createId: id, noRefresh: true, files: await link.files() });
+        result.posted.push(id);
+        if (api.linkDraft) { await api.linkDraft(link.draftId, id); (result.linkedDrafts ??= []).push({ draftId: link.draftId, transactionId: id }); }
+        continue;
+      }
       await api.save(input, { createId: id, noRefresh: true });
       result.posted.push(id);
     }
@@ -87,6 +103,7 @@ export async function undoUpload(result: ApplyResult, api: ApplyApi): Promise<{ 
     try { await api.remove(e); } catch { left.push(id); }
   }
   for (const id of result.reconciled) { try { await api.reconcile(id, null, { noRefresh: true }); } catch { left.push(id); } }
+  for (const l of result.linkedDrafts ?? []) { if (!left.includes(l.transactionId)) await api.unlinkDraft?.(l.draftId).catch(() => {}); }
   for (const c of result.createdAccounts) { try { await api.setArchived(c.id, true); } catch { /* the account stays for the person to remove */ } }
   await api.refresh();
   return { left };
