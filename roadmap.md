@@ -1,3 +1,14 @@
+## Ledgerline v6.0 + v6.1 gap closure (4 Nov 2026)
+- [x] Statement Desk takes every document type, with context from other pages and a visible step trail; failed saves keep nothing.
+- [x] DocuRepo: fact sources and confidence, one file linked to many records, automatic names, folders, company/year/registration filters, retention list, ZIP export with manifest.
+- [x] Companies from documents (matched by PAN/CIN/GSTIN), past-year audited accounts with opening balances, flagged missing schedules, losses carried forward.
+- [x] Property directory, leases with escalation/notice/deposit, tenant ledger, costs, occupancy; asset lifecycle, QR labels, monthly book depreciation, tax blocks, book-vs-tax, journals posted only in open periods; closed periods enforced in the database.
+- [x] Holdings beyond shares, prices with freshness labels, gold, alerts, valuation history, net worth on Home; dividends/corporate actions shown on trade statements; tax payments recognised.
+- [x] Tax by head, tax profiles, GSTR-1/3B drafts, payments, filing evidence, rule register with approval, form versions; audit findings grouped and fed into the Inbox; 30 new tests pass (1,302 total).
+- [ ] Live NSE/BSE share prices — needs an approved licensed provider.
+- [ ] Automatic detection of new government rules — official sources are linked and changes are recorded for approval, but nothing fetches and compares them on a schedule yet.
+- [ ] Physical iPhone/iPad checks — needs the owner's devices.
+
 ## Companies & financial years (4 Nov 2026)
 - [x] Profiles with PAN/GSTIN/CIN checks and per-year on-record status at /entities; 4 rule tests pass. Not browser-checked or published.
 - [x] Suppliers & missing invoices page (/gst-check), 2 rule tests pass; not browser-checked.
