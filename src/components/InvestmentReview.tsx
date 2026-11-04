@@ -58,7 +58,7 @@ export function InvestmentReview({ file, doc, onClose, onUploadMore }: { file: F
     catch (e) { toast.error((e as Error).message); } finally { setBusy(false); }
   };
 
-  const valuationText = merge.holdings.some((h) => h.statementValue != null) ? "Price data required (statement value shown below)" : "Price data required";
+  const valuationText = merge.holdings.some((h) => h.statementValue != null) ? "Price data required" : "Price data required";
   return (
     <Card className="p-5">
       <div className="flex items-start justify-between gap-3">
@@ -92,7 +92,7 @@ export function InvestmentReview({ file, doc, onClose, onUploadMore }: { file: F
       {check.needsHistoryUpload && (
         <div className="mt-4 rounded-2xl border border-gold/40 bg-gold/10 p-3">
           <p className="text-sm">Buy dates or costs are missing for {check.missingHistory.slice(0, 3).map((m) => m.name || m.isin).join(", ")}{check.missingHistory.length > 3 ? ` and ${check.missingHistory.length - 3} more` : ""}.</p>
-          <Button variant="outline" size="sm" className="mt-2" onClick={onUploadMore}><Upload className="h-4 w-4" />Upload ICICI Direct Transaction Statement or Capital Gains Statement</Button>
+          <Button variant="outline" size="sm" className="mt-2 h-auto whitespace-normal py-2 text-left" onClick={onUploadMore}><Upload className="h-4 w-4" />Upload ICICI Direct Transaction Statement or Capital Gains Statement</Button>
         </div>
       )}
 
