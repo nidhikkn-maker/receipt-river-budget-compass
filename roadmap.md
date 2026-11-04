@@ -1,8 +1,8 @@
 # Roadmap (Functional Requirements v1.0)
 ## City Union Bank EMI readiness (4 Nov 2026)
-- [ ] Add an explicit dated bank balance update and show coverage for upcoming loan EMIs without inventing a balance.
-- [ ] Remind when the scheduled primary-account transfer to City Union Bank is missing or short before the EMI due date; reuse existing reminders.
-- [ ] Test balance coverage and transfer reminder rules and verify the signed-in loan screen.
+- [x] Add an explicit dated bank balance update and show coverage for upcoming loan EMIs without inventing a balance.
+- [x] Remind when the scheduled primary-account transfer to City Union Bank is missing or short before the EMI due date; reuse existing reminders and private push.
+- [x] 52 focused checks pass; signed-in CUB coverage, missing 3 November transfer and balance preview/cancel verified. No real balance changed; live save and physical notification delivery remain unverified. Preview only.
 ## Faster first open on a slow phone connection (2 Nov 2026)
 - [x] Sign-in page no longer pulls in the accounts, expenses and claims code; Face ID code downloads only when Face ID is tapped; offline saved copy trimmed so it is ready sooner.
 - [x] Published to ledgerline.biz after a scan showing no serious findings; site answered HTTP 200, deployment timing an estimate.

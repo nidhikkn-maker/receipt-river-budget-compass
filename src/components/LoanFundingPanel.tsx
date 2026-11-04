@@ -29,7 +29,7 @@ export function LoanFundingPanel({ loan }: { loan: Loan }) {
         <span className={r.status === "shortfall" || r.status === "overdue" ? "text-destructive" : "text-muted-foreground"}>{!known || r.status === "unknown" ? "Update balance to check" : r.status === "overdue" ? "Overdue" : r.shortfall > 0 ? `${money(r.shortfall)} short` : "Covered by recorded balance"}</span>
       </div>)}
     </div>
-    {reminders.map(r => <p key={r.key} role="status" className="mt-2 border-l-2 border-warning pl-3 text-xs text-warning-foreground">{r.status === "missing" ? `No recorded transfer to ${account.name} for ${r.fundingDate}.` : `Recorded transfer ${money(r.received)} is ${money(r.shortfall)} below the EMI.`} Loan payment due {r.due}.{known && balance >= r.expected ? " Your recorded balance covers this EMI." : " Check the bank balance before payment."}</p>)}
+    {reminders.map(r => <p key={r.key} role="status" className="mt-2 border-l-2 border-warning pl-3 text-xs text-foreground">{r.status === "missing" ? `No recorded transfer to ${account.name} for ${r.fundingDate}.` : `Recorded transfer ${money(r.received)} is ${money(r.shortfall)} below the EMI.`} Loan payment due {r.due}.{known && balance >= r.expected ? " Your recorded balance covers this EMI." : " Check the bank balance before payment."}</p>)}
     <BankBalanceEditor account={account} />
   </section>;
 }
