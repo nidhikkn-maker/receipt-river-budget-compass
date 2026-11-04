@@ -19,7 +19,7 @@ export type LinkKind = "entity" | "asset" | "property" | "lease" | "loan" | "tra
 export interface DocLink { docId: string; kind: LinkKind; targetId: string; label: string }
 
 /** A field seen on a document that Ledgerline has no canonical place for [§15]; kept as data, proposed for approval. */
-export interface ProposedField { label: string; docType: DocType; seen: number; status: "proposed" | "approved" | "rejected" }
+export interface ProposedField { label: string; docType: DocType; seen: number; status: "proposed" | "approved" | "rejected"; plan?: string | undefined; compatible?: boolean | undefined; decidedOn?: string | undefined }
 
 /** Audited prior-year figures for one entity and financial year [§17–20]. */
 export const OPENING_HEADS = ["bank", "cash", "investments", "fixedAssets", "accumulatedDepreciation", "capitalReserves", "loans", "receivables", "payables", "taxBalances", "other"] as const;

@@ -292,3 +292,19 @@ export function assetPayment(read: { supplier: string | null; cost: number | nul
   const hits = txns.filter((t) => (t.txnType ?? "expense") === "expense" && near(t.date) && words(`${t.merchant ?? ""} ${t.title}`).includes(sup) && (read.cost == null || Math.abs(t.amount - read.cost) <= 1));
   return hits.length === 1 ? { id: hits[0]!.id, amount: hits[0]!.amount, date: hits[0]!.date } : null;
 }
+
+/**
+ * Controlled extension proposal for a newly seen field [§15]: what approving does (migration plan) and a
+ * compatibility check against existing approved fields and mappings, so nothing collides or is silently renamed.
+ */
+export function fieldExtensionPlan(f: { label: string; docType: string }, approved: { label: string; docType: string }[], mappings: Record<string, string>): { plan: string; compatible: boolean; problems: string[] } {
+  const key = f.label.trim().toLowerCase();
+  const problems: string[] = [];
+  if (approved.some((a) => a.label.trim().toLowerCase() === key && a.docType === f.docType)) problems.push("already an approved field for this document type");
+  if (mappings[key]) problems.push(`already mapped to “${mappings[key]}”`);
+  if (!/^[\p{L}\p{N} ./()&%-]{2,60}$/u.test(f.label.trim())) problems.push("label has unsupported characters or length");
+  return {
+    plan: `Store “${f.label.trim()}” as a named detail on ${f.docType.replace(/_/g, " ")} documents; existing documents are unchanged and older readers ignore the extra detail (no table change).`,
+    compatible: problems.length === 0, problems,
+  };
+}

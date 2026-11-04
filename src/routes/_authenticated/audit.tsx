@@ -9,6 +9,7 @@ import { useStore } from "@/lib/store";
 import { loanRecon, supplierRecon, investmentRecon, intercompanyRecon } from "@/lib/books/recon";
 import { accountBalance } from "@/lib/ledger";
 import { useDemat } from "@/components/books/useBooks";
+import { fieldExtensionPlan } from "@/lib/books/intake";
 import { approvalHistory, entityObligations, groupBy, readinessTiles, reconHub, setFindingState } from "@/lib/books/audit";
 import { closePeriod, POLICY, reopenPeriod } from "@/lib/books/periods";
 import { missingInvoices } from "@/lib/gst-recon";
@@ -133,8 +134,10 @@ function Audit() {
       </Fold>
 
       {pending.length > 0 && <Fold title="New fields found on documents" hint={`${pending.length} waiting — kept as document details until you approve`}>
-        <div className="space-y-1 text-sm">{pending.map((f) => <div key={`${f.docType}:${f.label}`} className="flex items-center justify-between gap-2"><span>{f.label} <span className="text-xs text-muted-foreground">({f.docType.replace(/_/g, " ")}, seen {f.seen}×)</span></span>
-          <span className="flex gap-1">{(["approved", "rejected"] as const).map((s) => <Button key={s} size="sm" variant="ghost" onClick={() => save({ proposedFields: books.proposedFields.map((x) => (x === f ? { ...x, status: s } : x)) })}>{s === "approved" ? "Keep as field" : "Ignore"}</Button>)}</span></div>)}
+        <div className="space-y-2 text-sm">{pending.map((f) => { const ext = fieldExtensionPlan(f, books.proposedFields.filter((x) => x.status === "approved"), books.fieldMappings ?? {}); return <div key={`${f.docType}:${f.label}`} className="space-y-1 rounded-xl border p-2"><div className="flex items-center justify-between gap-2"><span className="min-w-0 break-words">{f.label} <span className="text-xs text-muted-foreground">({f.docType.replace(/_/g, " ")}, seen {f.seen}×)</span></span>
+          <span className="flex shrink-0 gap-1">{(["approved", "rejected"] as const).map((s) => <Button key={s} size="sm" variant="ghost" disabled={s === "approved" && !ext.compatible} onClick={() => save({ proposedFields: books.proposedFields.map((x) => (x === f ? { ...x, status: s, plan: ext.plan, compatible: ext.compatible, decidedOn: today } : x)) })}>{s === "approved" ? "Keep as field" : "Ignore"}</Button>)}</span></div>
+          <p className="text-[11px] text-muted-foreground">Plan: {ext.plan}</p>
+          <p className={`text-[11px] ${ext.compatible ? "text-primary" : "text-destructive"}`}>Compatibility check: {ext.compatible ? "passed" : ext.problems.join("; ")}</p></div>; })}
           <p className="text-[11px] text-muted-foreground">Approved fields stay searchable document details; no database columns are created automatically.</p></div>
       </Fold>}
     </div>
