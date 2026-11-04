@@ -608,6 +608,9 @@ function NewExpense() {
     setSaving(true); setSaveError("");
     try {
       const finalDetails: ReceiptDetails = { ...receiptDetails };
+      // Keep the unprinted rounding with the receipt so its parts always add up to the saved total later.
+      const implied = receiptRoundOff(Number(amount), receiptDetails, currency).implied;
+      if (implied) finalDetails.roundOff = implied;
       const fp = receipts[0]?.fingerprint ?? receiptDetails.fingerprint;
       if (fp) finalDetails.fingerprint = fp;
       const workspaceAllocations = splitShares(wsSplit, Number(amount));

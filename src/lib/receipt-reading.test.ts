@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ExtractedReceiptSchema, ReceiptDetailsSchema, receiptConfidence, receiptBreakdownError, receiptItemConfidence, receiptItemReviewReasons, receiptItemsToReview, receiptItemTotalError, receiptReviewCheck, receiptReviewSignature, type ReceiptAmounts } from "./receipt-reading";
+import { ExtractedReceiptSchema, ReceiptDetailsSchema, receiptConfidence, receiptRoundOff, receiptBreakdownError, receiptItemConfidence, receiptItemReviewReasons, receiptItemsToReview, receiptItemTotalError, receiptReviewCheck, receiptReviewSignature, type ReceiptAmounts } from "./receipt-reading";
 import { validateExpense, type ExpenseInput } from "./expenses";
 
 const read = { title: "Cafe", merchant: "Cafe", date: "2026-11-02", amount: 432.10, subtotal: 360, tax: 32.10, tip: 40, confidence: { merchant: "high", date: "low", total: "medium" }, items: [], text: "Cafe", currency: "INR", payment_method: null, description: null, category: "Food and beverages", scope: "personal" };
@@ -126,5 +126,24 @@ describe("low-confidence main fields", () => {
     expect(unconfirmedFields({ total: "low" }, values, {})).toEqual(["total"]);
     expect(unconfirmedFields({ total: "low" }, values, { total: "432.10" })).toEqual([]);
     expect(unconfirmedFields({ total: "low" }, { ...values, total: "430" }, { total: "432.10" })).toEqual(["total"]);
+  });
+});
+
+describe("receipt round-off", () => {
+  it("accepts an unprinted round-off to the nearest rupee", () => {
+    expect(receiptBreakdownError(2265, { subtotal: 2157, tax: 107.86 }, "INR")).toBeNull();
+    expect(receiptRoundOff(2265, { subtotal: 2157, tax: 107.86 }, "INR").implied).toBeCloseTo(0.14);
+  });
+  it("still flags a gap of a rupee or more", () => {
+    expect(receiptBreakdownError(2266, { subtotal: 2157, tax: 107.86 }, "INR")).not.toBeNull();
+  });
+  it("counts a printed negative round-off", () => {
+    expect(receiptBreakdownError(2264, { subtotal: 2157, tax: 107.4, roundOff: -0.4 }, "INR")).toBeNull();
+  });
+  it("keeps decimal currencies strict", () => {
+    expect(receiptBreakdownError(11, { subtotal: 10, tax: 0.86 }, "USD")).not.toBeNull();
+  });
+  it("ignores paise-level item differences on rounded INR bills", () => {
+    expect(receiptItemTotalError(2265, { subtotal: 2157.4, tax: 107.86, items: [{ name: "A", quantity: 1, amount: 2157 }] }, "INR")).toBeNull();
   });
 });
