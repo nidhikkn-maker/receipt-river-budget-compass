@@ -258,13 +258,14 @@ export function TaxComputationCard({ fy }: { fy: string }) {
   const cr = creditsFor(books.taxCredits ?? [], creditKey, fy);
   const recordedTx = new Set((books.taxCredits ?? []).map((x) => x.transactionId).filter(Boolean));
   const challans = ledgerTaxPayments(accountIds ? transactions.filter((t) => t.accountId && accountIds.has(t.accountId)) : transactions, fy).filter((t) => !recordedTx.has(t.id));
-  const rows: [string, number][] = [["Salary", c.salary], ["House property (rent − 30% − home-loan interest)", c.houseProperty.net], ["Business / profession", c.business.net], ["Short-term capital gains", c.capitalGains.short], ["Long-term capital gains", c.capitalGains.long], ["Other sources (interest, dividends)", c.otherSources], ["Gross total income", c.gross], ["Losses brought forward set off", -c.lossesSetOff], ["Total income", c.total]];
+  const rows: [string, number][] = [["Salary", c.salary], ["House property (rent − 30% − interest, loss capped ₹2L)", c.houseProperty.net], ["Business / profession", c.business.net], ["Short-term capital gains", c.capitalGains.short], ["Long-term capital gains", c.capitalGains.long], ["Other sources (interest, dividends)", c.otherSources], ["Gross total income", c.gross], ["Losses brought forward set off", -c.lossesSetOff], ["Total income", c.total]];
   const addCredit = (x: { kind: CreditKind; amount: number; source: string; transactionId?: string }) => save({ taxCredits: [...(books.taxCredits ?? []), { id: crypto.randomUUID(), entityId: creditKey, fy, ...x }] });
   return (
     <Fold title="Tax computation by head" hint={`FY ${fy} · ${ent?.name ?? "You (personal)"} · total income ${inr(c.total)}`}>
       <div className="space-y-2 text-sm">
         {entities.length > 0 && <select aria-label="Whose tax" className="w-full rounded-md border bg-background px-2 py-1 text-sm" value={who} onChange={(e) => setWho(e.target.value)}><option value="">You (personal)</option>{entities.map((e) => <option key={e.id} value={e.id}>{e.name}</option>)}</select>}
         {ent && accountIds && accountIds.size === 0 && <p className="text-xs text-destructive">No accounts are linked to {ent.name} yet — link them in its tax profile below. Until then nothing is counted for it.</p>}
+        {unconfirmed && <p className="text-xs text-destructive">Confirm {ent!.name}'s tax profile (regime and GST scheme) below before this working is used.</p>}
         <div className="divide-y rounded-xl border">{rows.map(([k, v]) => <div key={k} className="flex justify-between gap-2 px-3 py-2 text-xs"><span>{k}</span><b className="shrink-0">{inr(v)}</b></div>)}</div>
         {slabTax != null ? <p className="text-xs">Indicative slab tax (new regime): <b>{inr(slabTax)}</b> plus capital-gains tax at special rates.</p>
           : <p className="text-xs text-muted-foreground">{personal ? "Old-regime slabs and deductions are not added — no tax figure is shown rather than a guess." : `${ent ? ENTITY_KINDS[ent.kind].label : ""} tax rates depend on the option chosen (e.g. section 115BAA/115BAB) — the accountant confirms the rate; no tax figure is shown.`}</p>}
