@@ -44,11 +44,11 @@ export const ROUTE_OF: Record<DocType, Route> = {
 };
 
 /** What the reader proposes for each kind (all optional; null when not printed). */
-export interface EntityRead { legalName: string | null; kind: EntityKind | null; pan: string | null; gstins: string[]; cin: string | null; incorporatedOn: string | null; address: string | null; people: { name: string; role: string }[]; shareholding: { name: string; pct: number }[]; activities: string[]; fyEnd: string | null }
+export interface EntityRead { legalName: string | null; kind: EntityKind | null; pan: string | null; gstins: string[]; cin: string | null; incorporatedOn: string | null; address: string | null; people: { name: string; role: string }[]; shareholding: { name: string; pct: number }[]; activities: string[]; fyEnd: string | null; related?: { name: string; relation: string; pan: string | null; cin: string | null }[] | undefined }
 export interface AssetRead { name: string | null; kind: AssetKind | null; owner: string | null; cost: number | null; purchaseDate: string | null; supplier: string | null; warrantyUntil: string | null; insurance: string | null; serial: string | null }
-export interface PropertyRead { name: string | null; owner: string | null; address: string | null; cost: number | null; acquiredOn: string | null; surveyNo: string | null; valuation: number | null; valuationDate: string | null }
+export interface PropertyRead { name: string | null; owner: string | null; address: string | null; cost: number | null; acquiredOn: string | null; surveyNo: string | null; valuation: number | null; valuationDate: string | null; insurer?: string | null | undefined; utilityConsumerNo?: string | null | undefined; propertyTaxId?: string | null | undefined }
 export interface LeaseRead { tenant: string | null; property: string | null; unit: string | null; start: string | null; end: string | null; rent: number | null; dueDay: number | null; escalationPct: number | null; escalationEveryMonths: number | null; deposit: number | null; noticeDays: number | null; paymentTerms: string | null; gst: boolean | null }
-export interface AuditedRead { entity: string | null; pan: string | null; fy: string | null; lines: { head: OpeningHead; amount: number }[]; totalAssets: number | null; totalLiabilities: number | null; schedules: Schedule[]; qualifications: string[]; filedForm: string | null; ackNo: string | null; filedOn: string | null }
+export interface AuditedRead { entity: string | null; pan: string | null; fy: string | null; lines: { head: OpeningHead; amount: number }[]; totalAssets: number | null; totalLiabilities: number | null; schedules: Schedule[]; details?: { schedule: Schedule; lines: { label: string; amount: number; page: number | null; quote: string }[] }[] | undefined; qualifications: string[]; filedForm: string | null; ackNo: string | null; filedOn: string | null }
 export interface ReadProfiles { entity: EntityRead | null; asset: AssetRead | null; property: PropertyRead | null; lease: LeaseRead | null; audited: AuditedRead | null }
 
 const iso = (v: string | null | undefined) => (v && /^\d{4}-\d{2}-\d{2}$/.test(v) ? v : null);
@@ -101,6 +101,8 @@ function extraOf(base: EntityProfile, r: EntityRead): Partial<EntityProfile> {
     people: (b["people"] as EntityRead["people"])?.length ? b["people"] : r.people,
     shareholding: (b["shareholding"] as EntityRead["shareholding"])?.length ? b["shareholding"] : r.shareholding,
     activities: (b["activities"] as string[])?.length ? b["activities"] : r.activities,
+    fyEnd: (b["fyEnd"] as string) || (r.fyEnd && /^\d{2}-\d{2}$/.test(r.fyEnd) ? r.fyEnd : undefined),
+    related: (b["related"] as EntityRead["related"])?.length ? b["related"] : r.related?.filter((x) => x.name.trim()),
   } as Partial<EntityProfile>;
 }
 
@@ -118,7 +120,8 @@ export const DEFAULT_LIFE: Record<AssetKind, number> = { property: 0, building: 
 export function proposeProperty(read: PropertyRead, entities: EntityProfile[], newId: string, docId: string | null): { property: Property; missing: string[]; ownerSuggested: boolean } {
   const owner = read.owner ? nameSuggestion(entities, read.owner)?.id : undefined;
   const missing = [!read.name && !read.address && "property name or address", read.cost == null && "acquisition cost", !owner && "legal owner"].filter((x): x is string => !!x);
-  return { missing, ownerSuggested: !!owner, property: { id: newId, name: read.name?.trim() || read.address?.split(",")[0]?.trim() || "New property", ownerEntityId: owner, address: read.address ?? "", buildings: [], docIds: docId ? [docId] : [], ...(read.valuation != null && iso(read.valuationDate) ? { valuation: { value: read.valuation, date: read.valuationDate!, source: "Valuation report" } } : {}) } };
+  const ids = [read.utilityConsumerNo && `Consumer ${read.utilityConsumerNo}`, read.propertyTaxId && `Tax ID ${read.propertyTaxId}`, read.insurer && `Insured with ${read.insurer}`].filter(Boolean).join(" · ");
+  return { missing, ownerSuggested: !!owner, property: { id: newId, ...(ids ? { notes: ids } : {}), name: read.name?.trim() || read.address?.split(",")[0]?.trim() || "New property", ownerEntityId: owner, address: read.address ?? "", buildings: [], docIds: docId ? [docId] : [], ...(read.valuation != null && iso(read.valuationDate) ? { valuation: { value: read.valuation, date: read.valuationDate!, source: "Valuation report" } } : {}) } };
 }
 
 /** Lease proposal linked to a property/unit by name; missing pieces are asked, never guessed [§38, test 8]. */
@@ -145,7 +148,8 @@ export function proposeFy(read: AuditedRead, entities: EntityProfile[], existing
   const ownerSuggested = !byId && !!ent;
   const fy = read.fy && /^\d{4}-\d{2}$/.test(read.fy) ? read.fy : null;
   const missing = [!ent && "which company", !fy && "financial year"].filter((x): x is string => !!x);
-  const missingSchedules = REQUIRED_SCHEDULES.filter((s) => !read.schedules.includes(s));
+  const present = new Set([...read.schedules, ...(read.details ?? []).filter((d) => d.lines.length).map((d) => d.schedule)]);
+  const missingSchedules = REQUIRED_SCHEDULES.filter((s) => !present.has(s));
   if (!ent || !fy) return { record: null, entityId: ent?.id ?? null, missingSchedules, missing, ownerSuggested };
   const prev = existing.find((r) => r.entityId === ent.id && r.fy === fy);
   const audited = { ...(prev?.audited ?? {}) };
@@ -155,17 +159,22 @@ export function proposeFy(read: AuditedRead, entities: EntityProfile[], existing
     record: {
       id: prev?.id ?? newId, entityId: ent.id, fy, audited,
       totalAssets: read.totalAssets ?? prev?.totalAssets ?? null, totalLiabilities: read.totalLiabilities ?? prev?.totalLiabilities ?? null,
-      schedules: [...new Set([...(prev?.schedules ?? []), ...read.schedules])],
+      schedules: [...new Set([...(prev?.schedules ?? []), ...present])],
       qualifications: [...new Set([...(prev?.qualifications ?? []), ...read.qualifications])],
       filedReturns: [...(prev?.filedReturns ?? []), ...(read.filedForm && read.ackNo && iso(read.filedOn) && !(prev?.filedReturns ?? []).some((f) => f.ack === read.ackNo) ? [{ form: read.filedForm, ack: read.ackNo, filedOn: read.filedOn! }] : [])],
       lossesCarriedForward: prev?.lossesCarriedForward ?? [],
       docIds: [...new Set([...(prev?.docIds ?? []), ...(docId ? [docId] : [])])],
       ...(prev?.confirmedOpening ? { confirmedOpening: prev.confirmedOpening, confirmedOn: prev.confirmedOn } : {}),
       ...(prev && JSON.stringify(prev.audited) !== JSON.stringify(audited) ? { versions: [...(prev.versions ?? []), { at: new Date().toISOString(), reason: "replaced by a later upload", audited: prev.audited }] } : prev?.versions ? { versions: prev.versions } : {}),
-      ...(prev?.details ? { details: prev.details } : {}),
+      ...(read.details?.length || prev?.details ? { details: mergeDetails(prev?.details ?? [], (read.details ?? []).filter((d) => d.lines.length).map((d) => ({ schedule: d.schedule, lines: d.lines, ...(docId ? { docId } : {}) }))) } : {}),
       ...(prev?.accountMap ? { accountMap: prev.accountMap } : {}),
     },
   };
+}
+function mergeDetails(a: NonNullable<FyRecord["details"]>, b: NonNullable<FyRecord["details"]>) {
+  const out = [...a];
+  for (const d of b) { const i = out.findIndex((x) => x.schedule === d.schedule); if (i >= 0) out[i] = d; else out.push(d); }
+  return out;
 }
 export const REQUIRED_SCHEDULES: Schedule[] = ["balanceSheet", "profitLoss", "notes", "auditorReport", "fixedAssetRegister"];
 
