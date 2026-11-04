@@ -6,6 +6,9 @@ import { Fold } from "@/components/Fold";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useStore } from "@/lib/store";
+import { loanRecon, supplierRecon, investmentRecon, intercompanyRecon } from "@/lib/books/recon";
+import { accountBalance } from "@/lib/ledger";
+import { useDemat } from "@/components/books/useBooks";
 import { approvalHistory, entityObligations, groupBy, readinessTiles, reconHub, setFindingState } from "@/lib/books/audit";
 import { closePeriod, POLICY, reopenPeriod } from "@/lib/books/periods";
 import { missingInvoices } from "@/lib/gst-recon";
@@ -29,7 +32,8 @@ const LEVEL = { automatic: "Done automatically", confirm: "Needs your confirmati
 type By = "risk" | "type" | "entity" | "fy" | "account" | "evidence";
 
 function Audit() {
-  const { transactions, documents, accounts, preferences } = useStore();
+  const { transactions, documents, accounts, preferences, loans } = useStore();
+  const demat = useDemat();
   const { books, save } = useBooks();
   const { open: items, reviewed } = useAuditAll();
   const entities = preferences.entities ?? [];
@@ -51,6 +55,18 @@ function Audit() {
     suppliersMissing: missingInvoices(transactions, documents, 0).length,
     customersOpen: receivableStatus(preferences.receivables ?? [], transactions, today).filter((r) => !r.paidBy).length,
   }), [items, transactions, accounts, documents, preferences.receivables, today]);
+  // Figure-level reconciliations [§24]; differences are for review only.
+  const fyNow = fyOf(today);
+  const recon = useMemo(() => {
+    const ledgerAt = (id: string, date: string) => { const a = accounts.find((x) => x.id === id); return a ? accountBalance(a, transactions.filter((t) => t.date <= date)) : 0; };
+    return {
+      loan: loanRecon(loans, documents.filter((d) => d.docType === "loan_statement").map((d) => ({ loanId: d.loanId ?? null, date: d.docDate, outstanding: d.amount })), ledgerAt).filter((r) => Math.abs(r.difference) > 1),
+      supplier: supplierRecon(books.gstInvoices, transactions.filter((t) => (t.txnType ?? "expense") === "expense").map((t) => ({ id: t.id, amount: t.amount, date: t.date, text: `${t.title} ${t.merchant ?? ""} ${t.description}` })), fyRange(fyNow).start, fyRange(fyNow).end),
+      investment: investmentRecon((demat ?? []).flatMap((d) => d.holdings)),
+      inter: intercompanyRecon(transactions, books.entityAccounts ?? {}),
+    };
+  }, [loans, documents, accounts, transactions, books, demat, fyNow]);
+  const entName = (id: string) => entities.find((e) => e.id === id)?.name ?? id;
   const groups = groupBy(items, by);
   const pending = books.proposedFields.filter((f) => f.status === "proposed");
 
@@ -61,6 +77,12 @@ function Audit() {
 
       <Fold title="Reconciliations" hint="Bank, card, loan, supplier, customer, investment, intercompany, GST" defaultOpen>
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">{hub.map((h) => <Link key={h.kind} to={h.to} className="rounded-xl border px-3 py-2 text-sm"><span className="block text-xs text-muted-foreground">{h.kind}</span><b className={h.open ? "text-destructive" : "text-primary"}>{h.open ? `${h.open} open` : "Clear"}</b></Link>)}</div>
+        <div className="mt-3 space-y-2 text-xs">
+          <details><summary className="cursor-pointer">Loan vs lender statement · {recon.loan.length ? `${recon.loan.length} differ` : "agree or no statement"}</summary>{recon.loan.map((r) => <p key={r.loanId} className="break-words">{r.name} on {r.statementDate}: lender {inr(r.lender)} · ledger {inr(r.ledger)} · <b className="text-destructive">difference {inr(r.difference)}</b></p>)}{!recon.loan.length && <p className="text-muted-foreground">Upload the lender's statement on Statement Desk and link it to the loan to compare.</p>}</details>
+          <details><summary className="cursor-pointer">Supplier invoices vs payments · FY {fyNow} · {recon.supplier.length} differ</summary>{recon.supplier.map((r) => <p key={r.gstin + r.party} className="break-words">{r.party} {r.gstin}: invoiced {inr(r.invoiced)} ({r.invoices}) · paid {inr(r.paid)} ({r.payments}) · <b className={r.difference > 0 ? "text-destructive" : ""}>{r.difference > 0 ? `${inr(r.difference)} unpaid` : `${inr(-r.difference)} paid without invoice`}</b></p>)}</details>
+          <details><summary className="cursor-pointer">Holdings vs transaction history · {recon.investment.length} differ</summary>{recon.investment.map((r) => <p key={r.isin} className="break-words">{r.name} ({r.isin}): statement {r.statement} · from transactions {r.fromTransactions} · difference {r.difference}</p>)}</details>
+          <details><summary className="cursor-pointer">Between companies · {recon.inter.length} pair{recon.inter.length === 1 ? "" : "s"}</summary>{recon.inter.map((r) => <p key={r.a + r.b} className="break-words">{entName(r.a)} → {entName(r.b)} {inr(r.aToB)} · {entName(r.b)} → {entName(r.a)} {inr(r.bToA)} · net {r.net >= 0 ? `${entName(r.b)} owes ${entName(r.a)}` : `${entName(r.a)} owes ${entName(r.b)}`} {inr(Math.abs(r.net))}{r.unconfirmed ? ` · ${r.unconfirmed} not confirmed` : ""}</p>)}{!recon.inter.length && <p className="text-muted-foreground">Link accounts to each company in its tax profile to see transfers between them.</p>}</details>
+        </div>
       </Fold>
 
       <div className="flex flex-wrap gap-1 text-xs">{(["risk", "type", "entity", "fy", "account", "evidence"] as By[]).map((b) => <button key={b} type="button" onClick={() => setBy(b)} className={`rounded-full border px-3 py-1 ${by === b ? "bg-primary text-primary-foreground" : "bg-card"}`}>By {b === "fy" ? "year" : b}</button>)}</div>
