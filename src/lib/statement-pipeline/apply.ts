@@ -55,7 +55,7 @@ export async function applyUpload(requests: ApplyRequest[], api: ApplyApi, onPro
     if (!accountId) {
       const hint = r.account.hint;
       if (!hint) throw Error(`We couldn't tell which account ${r.account.file.name} belongs to — choose one before posting.`);
-      accountId = await api.addAccount({ name: hint.name, kind: hint.kind, openingBalance: 0, issuer: hint.issuer, lastFour: hint.lastFour });
+      accountId = await api.addAccount(newAccountFromHint(hint, r.account.file.opening));
       result.createdAccounts.push({ id: accountId, name: hint.name });
     }
     for (const d of r.decisions) {
@@ -89,4 +89,14 @@ export async function undoUpload(result: ApplyResult, api: ApplyApi): Promise<{ 
   for (const c of result.createdAccounts) { try { await api.setArchived(c.id, true); } catch { /* the account stays for the person to remove */ } }
   await api.refresh();
   return { left };
+}
+
+/** The account a statement describes: printed opening balance (never invented) and its own reference numbers for later matching. */
+export function newAccountFromHint(hint: AccountHint, printedOpening: number | null) {
+  const refs = [hint.number, hint.lastFour].filter((x): x is string => !!x);
+  return {
+    name: hint.name, kind: hint.kind, openingBalance: printedOpening != null && Number.isFinite(printedOpening) ? printedOpening : 0,
+    issuer: hint.issuer, lastFour: hint.lastFour,
+    details: { ...(refs.length ? { matchRefs: [...new Set(refs)] } : {}), ...(hint.ifsc ? { ifsc: hint.ifsc } : {}), ...(hint.holder ? { holder: hint.holder } : {}) } as AccountDetails,
+  };
 }
