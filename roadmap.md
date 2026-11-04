@@ -614,3 +614,4 @@
 - [x] Screen listing failed receipt photos with error and retry status
 - [ ] Match confirmed receipt drafts to imported bank lines (auto when certain, review when unsure)
 - [ ] Statement Desk pre-save reconciliation summary (unmatched lines, balance gaps)
+- [ ] Mark upcoming payments done, individually and in bulk
