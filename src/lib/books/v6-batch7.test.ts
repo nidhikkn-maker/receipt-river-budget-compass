@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import type { GstInvoice } from "./types";
 import { receiptKind, tenantLedger } from "./property";
 import { broughtForward, gainTerm } from "./taxcomp";
 import { blockSchedule } from "./depreciation";
@@ -112,5 +113,21 @@ describe("approved rules feed calculations", () => {
   it("a calculation rule with a non-numeric value fails validation", () => {
     expect(validateRule(rule("one year", "proposed")).some((t) => !t.passed)).toBe(true);
     expect(validateRule(rule("12", "proposed")).find((t) => t.name.startsWith("Calculation check"))?.passed).toBe(true);
+  });
+});
+
+import { gstr1Json, gstr3bJson, validateGstJson } from "./gst";
+describe("GST return files", () => {
+  const inv = [{ id: "s", gstin: "33ABCDE1234F1Z5", kind: "sales", number: "S/1", date: "2026-05-04", party: "B", partyGstin: "29ABCDE1234F1Z5", taxable: 1000, igst: 180, cgst: 0, sgst: 0, cess: 0 }] as GstInvoice[];
+  it("GSTR-1 file has the offline-tool layout and passes format checks", () => {
+    const j = gstr1Json(inv, "33ABCDE1234F1Z5", "2026-05");
+    expect(j.fp).toBe("052026");
+    expect(j.b2b[0]!.inv[0]).toMatchObject({ inum: "S/1", idt: "04-05-2026", val: 1180, pos: "29" });
+    expect(validateGstJson("GSTR-1", j as never)).toEqual([]);
+  });
+  it("GSTR-3B file carries outward tax", () => {
+    const j = gstr3bJson(inv, "33ABCDE1234F1Z5", "2026-05");
+    expect(j.sup_details.osup_det.iamt).toBe(180);
+    expect(validateGstJson("GSTR-3B", { ...j, gstin: "bad" } as never)).toContain("gstin is not a valid GSTIN");
   });
 });
