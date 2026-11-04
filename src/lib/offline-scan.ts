@@ -66,3 +66,27 @@ export async function offlineScanRows(owner: string): Promise<OfflineScanRow[]> 
     return { id: d.id, name: f?.name ?? "Receipt photo", takenAt: d.updatedAt, error: typeof err === "string" && err ? err : null, kind: (d.data["errorKind"] as OfflineScanRow["kind"]) ?? null, attempts: Number(d.data["attempts"] ?? 0), lastTriedAt: (d.data["lastTriedAt"] as string) ?? null, thumb: f && f.type.startsWith("image/") ? URL.createObjectURL(localToFile(f)) : null };
   });
 }
+
+/** Writes a photo's record back only while it is still waiting to be read, so a photo the owner removed
+    during an attempt can't be resurrected by that attempt finishing late. */
+async function putIfPending(owner: string, d: LocalDraft): Promise<void> {
+  const live = (await localDrafts(owner).catch(() => [])).find((x) => x.id === d.id);
+  if (!live?.data["pendingScan"]) return;
+  await putLocalDraft(owner, d);
+}
+
+/* A photo the owner no longer wants is dropped from this phone only: it never entered the ledger, and a
+   photo that has already been read is a normal draft, so it stays in Drafts instead of being deleted here. */
+export async function removeOfflineScan(owner: string, id: string): Promise<boolean> {
+  const d = (await localDrafts(owner).catch(() => [])).find((x) => x.id === id);
+  if (!d?.data["pendingScan"]) return false;
+  await removeLocalDraft(owner, id);
+  return true;
+}
+
+/** Clears every photo whose last attempt failed; photos still uploading or being read are left alone. */
+export async function removeFailedOfflineScans(owner: string): Promise<number> {
+  const list = (await localDrafts(owner).catch(() => [])).filter((d) => d.data["pendingScan"] && d.data["error"]);
+  for (const d of list) await removeLocalDraft(owner, d.id);
+  return list.length;
+}
