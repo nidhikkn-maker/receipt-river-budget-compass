@@ -4,6 +4,7 @@
 - [x] Property & assets with book/tax depreciation and rent check (/assets); income tax & GST working draft (/tax); rule tests pass.
 - [x] GSTR-2B check on /gst-check and Audit dashboard (/audit); rule tests pass.
 - [x] Customers owing (/receivables) and yearly tax rules with estimate on /tax; tests pass.
+- [x] Asset tag/location/custodian/condition, "Checked today", tenant lease and deposit; overdue checks and expiring leases flag on /audit; tests pass.
 - [ ] Live NSE/BSE prices need an approved price provider.
 # Roadmap (Functional Requirements v1.0)
 ## Remove offline receipt photos you no longer need (4 Nov 2026)
