@@ -671,3 +671,13 @@
 - [ ] B5 market/net worth (v6.1)
 - [ ] B7 receipt intake via Statement Desk path, loss extraction, Form16/26AS ingestion, loan/supplier/investment/intercompany reconciliations, property cost links
 - [ ] B6 tests, screenshots, evidence pack v2
+
+## v6 Batch 7 (this round) — done
+- Property costs link to their real payment and bill; Add Expense receipts share the DocuRepo duplicate check.
+- Approved rule changes feed tax calculations (house-property cap, holding periods, loss carry years) with calculation checks.
+- Rule watch tags forms/schema/validation/due-date changes; GSTR-1/3B JSON in GSTN offline-tool layout with format checks.
+- Controlled new-field approval (plan + compatibility check); plain-words DocuRepo search; flow-adjusted portfolio alerts.
+## Still open (blocked)
+- Opening balances are compared, not posted to the ledger (ledger has no non-cash opening entry type) — needs owner decision.
+- ITR JSON in official schema — schemas are thousands of fields; working papers only until scoped with accountant.
+- Live NSE/BSE prices — needs licensed provider choice. GLS original amount — needs sanction letter. iPhone push/camera — needs device test. Publishing — needs approval.
