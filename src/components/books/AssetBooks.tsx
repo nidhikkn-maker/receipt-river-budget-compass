@@ -1,17 +1,24 @@
-/** Asset lifecycle, QR labels and the full depreciation engine (v6 §28–34). */
-import { useEffect, useState } from "react";
+/** Asset lifecycle, QR labels and the full depreciation engine (v6 §21, §26–34). */
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useServerFn } from "@tanstack/react-start";
+import { Link } from "@tanstack/react-router";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Fold } from "@/components/Fold";
 import { ASSET_KINDS, type Asset } from "@/lib/assets";
 import { fyOf } from "@/lib/entities";
-import { annualBook, blockSchedule, bookVsTax, monthlyBook, postJournals, prepareJournals } from "@/lib/books/depreciation";
-import type { AssetEventKind } from "@/lib/books/types";
+import { useStore } from "@/lib/store";
+import { saveExpense } from "@/lib/fx.functions";
+import { annualBook, blockSchedule, bookVsTax, monthlyBook, prepareJournals } from "@/lib/books/depreciation";
+import { applyEvent, depreciationEntry, depreciationEntryKey, depreciationExceptions, disposalResult, dueMonths, stableUuid, suggestPayment } from "@/lib/books/assets-ledger";
+import { requiresApproval, type AssetEventKind } from "@/lib/books/types";
 import { useBooks } from "./useBooks";
 
 const inr = (n: number) => "₹" + n.toLocaleString("en-IN", { maximumFractionDigits: 0 });
 const today = () => new Date().toISOString().slice(0, 10);
-const EVENT: Record<AssetEventKind, string> = { received: "Received", capitalised: "Capitalised", location: "Moved location", custodian: "New custodian", maintenance: "Maintenance", transfer: "Transferred", verified: "Physically verified", impairment: "Impairment", revaluation: "Revaluation", disposal: "Disposed" };
+const EVENT: Record<AssetEventKind, string> = { received: "Received", capitalised: "Capitalised", location: "Moved location", custodian: "New custodian", maintenance: "Maintenance", transfer: "Transferred to department", verified: "Physically verified", impairment: "Impairment (write-down)", revaluation: "Revaluation", disposal: "Disposed / sold", missing: "Reported missing", damaged: "Reported damaged" };
+const NEEDS_TO: AssetEventKind[] = ["location", "custodian", "transfer"];
+const NEEDS_VALUE: AssetEventKind[] = ["impairment", "revaluation", "disposal"];
 
 /** QR label encoding the asset tag and id, for printing and stick-on verification. */
 export function AssetQr({ a }: { a: Asset }) {
@@ -22,24 +29,56 @@ export function AssetQr({ a }: { a: Asset }) {
 }
 
 export function AssetLifecycle({ a }: { a: Asset }) {
-  const { books, save } = useBooks();
+  const { books, preferences, savePreferences } = useBooks();
+  const { accounts, documents, transactions } = useStore();
   const [kind, setKind] = useState<AssetEventKind>("maintenance");
   const [note, setNote] = useState("");
+  const [to, setTo] = useState("");
+  const [value, setValue] = useState("");
+  const [docId, setDocId] = useState("");
   const events = books.assetEvents.filter((e) => e.assetId === a.id).sort((x, y) => y.date.localeCompare(x.date));
   const months = monthlyBook(a, today().slice(0, 7)).slice(-12);
+  const disposal = disposalResult(a);
+  const pay = useMemo(() => (a.paymentId ? null : suggestPayment(a, transactions.map((t) => ({ id: t.id, date: t.date, amount: t.amount, text: `${t.title} ${t.merchant ?? ""} ${t.description}`, txnType: t.txnType })))), [a, transactions]);
+  const payTxn = transactions.find((t) => t.id === (a.paymentId ?? pay));
+  const assetDocs = documents.filter((d) => d.id === a.docId || (a.docIds ?? []).includes(d.id));
+  const putAsset = (next: Asset, extra: Partial<typeof books> = {}) => savePreferences({ ...preferences, assets: (preferences.assets ?? []).map((x) => (x.id === a.id ? next : x)), books: { ...books, ...extra } });
+
+  const record = async () => {
+    const v = Number(value);
+    if (NEEDS_TO.includes(kind) && !to.trim()) { toast.error("Say where / to whom"); return; }
+    if (NEEDS_VALUE.includes(kind) && kind !== "disposal" && !(v > 0) && kind === "impairment") { toast.error("Enter the write-down amount"); return; }
+    const e = { id: crypto.randomUUID(), assetId: a.id, date: today(), kind, note, ...(to.trim() ? { to: to.trim() } : {}), ...(value.trim() && Number.isFinite(v) ? { value: v } : {}), ...(docId ? { docId } : {}), applied: true };
+    const next = applyEvent(a, e);
+    await putAsset(docId && !(next.docIds ?? []).includes(docId) ? { ...next, docIds: [...(next.docIds ?? []), docId] } : next, { assetEvents: [...books.assetEvents, e] });
+    setNote(""); setTo(""); setValue(""); setDocId("");
+    toast.success(kind === "disposal" ? "Disposal recorded — depreciation stops from this date" : "Recorded");
+  };
+
   return (
-    <details className="text-xs"><summary className="cursor-pointer text-muted-foreground">Lifecycle, label & monthly depreciation ({events.length} events)</summary>
+    <details className="text-xs"><summary className="cursor-pointer text-muted-foreground">Lifecycle, documents, label & monthly depreciation ({events.length} events)</summary>
       <div className="mt-2 flex flex-wrap items-start gap-3">
         <AssetQr a={a} />
         <div className="min-w-0 flex-1 space-y-1">
-          {events.map((e) => <p key={e.id}>{e.date} · {EVENT[e.kind]}{e.value ? ` · ${inr(e.value)}` : ""}{e.note ? ` · ${e.note}` : ""}</p>)}
+          <p className="text-muted-foreground">{[a.purchaseDate && `bought ${a.purchaseDate}`, a.capitalisedOn && `capitalised ${a.capitalisedOn}`, `in use ${a.inUse}`, a.condition && a.condition !== "ok" && `condition: ${a.condition}`].filter(Boolean).join(" · ")}</p>
+          {disposal && <p>Disposed {a.soldOn}: proceeds {inr(disposal.proceeds)} vs book value {inr(disposal.nbv)} → {disposal.gain >= 0 ? "gain" : "loss"} {inr(Math.abs(disposal.gain))}</p>}
+          {events.map((e) => <p key={e.id}>{e.date} · {EVENT[e.kind]}{e.to ? ` → ${e.to}` : ""}{e.value ? ` · ${inr(e.value)}` : ""}{e.note ? ` · ${e.note}` : ""}{e.docId ? " · 📎" : ""}</p>)}
           <div className="flex flex-wrap gap-1"><select aria-label="Event" className="rounded-md border bg-background px-1" value={kind} onChange={(e) => setKind(e.target.value as AssetEventKind)}>{Object.entries(EVENT).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select>
+            {NEEDS_TO.includes(kind) && <input aria-label="New location, custodian or department" className="min-w-0 flex-1 rounded-md border bg-background px-2" placeholder={kind === "transfer" ? "Department" : kind === "custodian" ? "Custodian" : "Location"} value={to} onChange={(e) => setTo(e.target.value)} />}
+            {NEEDS_VALUE.includes(kind) && <input aria-label="Amount" type="number" className="w-28 rounded-md border bg-background px-2" placeholder={kind === "disposal" ? "Sale proceeds" : kind === "impairment" ? "Write-down ₹" : "Change ₹ (±)"} value={value} onChange={(e) => setValue(e.target.value)} />}
             <input aria-label="Event note" className="min-w-0 flex-1 rounded-md border bg-background px-2" placeholder="Note" value={note} onChange={(e) => setNote(e.target.value)} />
-            <Button size="sm" variant="outline" className="h-7" onClick={async () => { await save({ assetEvents: [...books.assetEvents, { id: crypto.randomUUID(), assetId: a.id, date: today(), kind, note }] }); setNote(""); toast.success("Recorded"); }}>Add</Button></div>
-          <p className="text-muted-foreground">Disposal, revaluation and impairment are recorded here; set "Sold on" and sale value on the asset to stop depreciation.</p>
+            <select aria-label="Supporting document" className="max-w-40 rounded-md border bg-background px-1" value={docId} onChange={(e) => setDocId(e.target.value)}><option value="">No document</option>{documents.map((d) => <option key={d.id} value={d.id}>{d.title}</option>)}</select>
+            <Button size="sm" variant="outline" className="h-7" onClick={record}>Add</Button></div>
+          <div className="flex flex-wrap items-center gap-2">
+            <label>Ledger asset account<select className="ml-1 rounded-md border bg-background px-1" value={a.accountId ?? ""} onChange={(e) => void putAsset({ ...a, accountId: e.target.value || undefined })}><option value="">Not linked</option>{accounts.filter((x) => !x.archived && ["other_asset", "investment"].includes(x.kind)).map((x) => <option key={x.id} value={x.id}>{x.name}</option>)}</select></label>
+            <Link to="/statements" search={{ context: "assets" }} className="text-primary underline">Upload maintenance, photo, valuation or disposal paper</Link>
+          </div>
+          {assetDocs.length > 0 && <p>Documents: {assetDocs.map((d) => d.title).join(" · ")}</p>}
+          {payTxn && <p>{a.paymentId ? "Paid by" : "Likely payment"}: {payTxn.date} · {payTxn.title} · {inr(payTxn.amount)} {!a.paymentId && <Button size="sm" variant="ghost" className="h-6" onClick={() => void putAsset({ ...a, paymentId: payTxn.id })}>Link</Button>}</p>}
         </div>
       </div>
-      {months.length > 0 && <table className="mt-2 w-full"><thead><tr className="text-muted-foreground"><th className="text-left">Month</th><th className="text-right">Depreciation</th><th className="text-right">Accumulated</th><th className="text-right">Net book value</th></tr></thead>
+      {months.length > 0 && <div className="mt-2 space-y-1 sm:hidden">{months.map((m) => <p key={m.month} className="flex justify-between"><span>{m.month}</span><span>{inr(m.depreciation)} · NBV {inr(m.nbv)}</span></p>)}</div>}
+      {months.length > 0 && <table className="mt-2 hidden w-full sm:table"><thead><tr className="text-muted-foreground"><th className="text-left">Month</th><th className="text-right">Depreciation</th><th className="text-right">Accumulated</th><th className="text-right">Net book value</th></tr></thead>
         <tbody>{months.map((m) => <tr key={m.month}><td>{m.month}</td><td className="text-right">{inr(m.depreciation)}</td><td className="text-right">{inr(m.accumulated)}</td><td className="text-right">{inr(m.nbv)}</td></tr>)}</tbody></table>}
     </details>
   );
@@ -47,29 +86,61 @@ export function AssetLifecycle({ a }: { a: Asset }) {
 
 export function DepreciationBooks() {
   const { books, save, preferences } = useBooks();
+  const { ensureCategory } = useStore();
+  const post = useServerFn(saveExpense);
   const assets = (preferences.assets ?? []).filter((a) => a.kind !== "property");
   const fy = fyOf(today());
-  const [month, setMonth] = useState(() => { const d = new Date(); d.setDate(1); d.setMonth(d.getMonth() - 1); return d.toISOString().slice(0, 7); });
+  const [busy, setBusy] = useState(false);
   const blocks = blockSchedule(assets, fy);
   const vs = bookVsTax(assets, fy);
   const prepared = books.journals.filter((j) => j.status === "prepared");
+  const exceptions = assets.filter((a) => !a.soldOn).map((a) => ({ a, x: depreciationExceptions(a) })).filter((r) => r.x.length);
+  const autoRan = useRef(false);
+
+  // Monthly run: on opening, prepare every completed month not yet prepared (open periods only) [§34].
+  useEffect(() => {
+    if (autoRan.current || !assets.length) return;
+    autoRan.current = true;
+    const t = today();
+    let all = books.journals; const notes: string[] = [];
+    const months = [...new Set(assets.flatMap((a) => dueMonths(a, all, t)))].sort();
+    for (const m of months) { const r = prepareJournals(assets, m, all, books.closedPeriods, () => crypto.randomUUID()); all = [...all, ...r.journals]; notes.push(...r.exceptions); }
+    if (all.length > books.journals.length) void save({ journals: all }).then(() => toast.message(`Depreciation prepared for ${all.length - books.journals.length} asset-month(s) — review and approve below`));
+    else if (notes.length) toast.message(notes.slice(0, 2).join(" · "));
+  }, [assets.length]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const approve = async () => {
+    setBusy(true);
+    const posted: Record<string, { tx: string; on: string }> = {}; const problems: string[] = [];
+    try {
+      await ensureCategory("Depreciation").catch(() => undefined);
+      for (const j of prepared) {
+        const r = depreciationEntry(j, assets.find((a) => a.id === j.assetId), books.closedPeriods);
+        if (!r.ok) { problems.push(r.reason); continue; }
+        const id = await stableUuid(...depreciationEntryKey(j.assetId, j.period));
+        const res = await post({ data: { id: null, createId: id, title: r.entry.title, merchant: null, category: r.entry.category, scope: "business", workspaceAllocations: [], memberId: null, splits: [], currency: "INR", originalAmount: r.entry.amount, date: r.entry.date, description: r.entry.description, paymentMethod: "other", txnType: "adjustment", reimbursementStatus: "none", adjustmentSign: -1, accountId: r.entry.accountId, toAccountId: null, paymentInstrumentId: null, payeeId: null, tripId: null, principal: null, interest: null, tags: ["depreciation"] } });
+        if (!res.ok) { problems.push(`${j.period}: ${res.error}`); continue; }
+        posted[j.id] = { tx: id, on: today() };
+      }
+      if (Object.keys(posted).length) await save({ journals: books.journals.map((j) => (posted[j.id] ? { ...j, status: "posted" as const, postedOn: posted[j.id]!.on, transactionId: posted[j.id]!.tx } : j)) });
+      if (Object.keys(posted).length) toast.success(`${Object.keys(posted).length} depreciation entr${Object.keys(posted).length === 1 ? "y" : "ies"} posted to your records`);
+      if (problems.length) toast.error([...new Set(problems)].slice(0, 3).join(" · "));
+    } finally { setBusy(false); }
+  };
+
   return (
     <Fold id="depreciation" title="Depreciation books" hint={`FY ${fy} · ${prepared.length} journal${prepared.length === 1 ? "" : "s"} waiting to post`}>
       <div className="space-y-3 text-xs">
+        {exceptions.length > 0 && <div className="rounded-lg bg-destructive/10 p-2 text-destructive"><p className="font-semibold">Exceptions</p>{exceptions.map((r) => <p key={r.a.id}>{r.a.name}: {r.x.join(", ")}</p>)}</div>}
         <p className="font-semibold">Income-tax blocks (WDV)</p>
-        <table className="w-full"><thead><tr className="text-muted-foreground"><th className="text-left">Block</th><th className="text-right">Opening</th><th className="text-right">Additions</th><th className="text-right">Disposals</th><th className="text-right">Depreciation</th><th className="text-right">Closing</th></tr></thead>
-          <tbody>{blocks.map((b) => <tr key={b.kind}><td>{ASSET_KINDS[b.kind]} {b.rate}%</td><td className="text-right">{inr(b.opening)}</td><td className="text-right">{inr(b.additionsFull + b.additionsHalf)}{b.additionsHalf ? "*" : ""}</td><td className="text-right">{inr(b.disposals)}</td><td className="text-right">{inr(b.depreciation)}</td><td className="text-right">{inr(b.closing)}</td></tr>)}</tbody></table>
+        <div className="overflow-x-auto"><table className="w-full min-w-[480px]"><thead><tr className="text-muted-foreground"><th className="text-left">Block</th><th className="text-right">Opening</th><th className="text-right">Additions</th><th className="text-right">Disposals</th><th className="text-right">Depreciation</th><th className="text-right">Closing</th></tr></thead>
+          <tbody>{blocks.map((b) => <tr key={b.kind}><td>{ASSET_KINDS[b.kind]} {b.rate}%</td><td className="text-right">{inr(b.opening)}</td><td className="text-right">{inr(b.additionsFull + b.additionsHalf)}{b.additionsHalf ? "*" : ""}</td><td className="text-right">{inr(b.disposals)}</td><td className="text-right">{inr(b.depreciation)}</td><td className="text-right">{inr(b.closing)}</td></tr>)}</tbody></table></div>
         <p className="text-muted-foreground">* used under 180 days in the year — half rate.</p>
         <p className="font-semibold">Book vs tax · FY {fy}</p>
-        <table className="w-full"><thead><tr className="text-muted-foreground"><th className="text-left">Asset</th><th className="text-right">Book</th><th className="text-right">Tax</th><th className="text-right">Difference</th><th className="text-right">Net book value</th></tr></thead>
-          <tbody>{vs.map((v) => { const a = assets.find((x) => x.id === v.assetId)!; return <tr key={v.assetId}><td>{v.name}</td><td className="text-right">{inr(v.book)}</td><td className="text-right">{inr(v.tax)}</td><td className="text-right">{inr(v.difference)}</td><td className="text-right">{inr(annualBook(a, fy).nbv)}</td></tr>; })}</tbody></table>
-        <div className="flex flex-wrap items-end gap-2">
-          <label>Month<input type="month" className="block rounded-md border bg-background px-2 py-1" value={month} onChange={(e) => setMonth(e.target.value)} /></label>
-          <Button size="sm" variant="outline" onClick={async () => { const r = prepareJournals(assets, month, books.journals, books.closedPeriods, () => crypto.randomUUID()); if (r.exceptions.length) toast.message(r.exceptions.join(" · ")); if (r.journals.length) { await save({ journals: [...books.journals, ...r.journals] }); toast.success(`${r.journals.length} journal${r.journals.length > 1 ? "s" : ""} prepared`); } else if (!r.exceptions.length) toast.message("Nothing new to prepare for this month"); }}>Prepare depreciation</Button>
-          {prepared.length > 0 && <Button size="sm" onClick={async () => { try { await save({ journals: postJournals(books.journals, prepared.map((j) => j.id), books.closedPeriods, today()) }); toast.success("Depreciation posted to the asset books"); } catch (e) { toast.error((e as Error).message); } }}>Approve & post {prepared.length}</Button>}
-        </div>
-        {prepared.map((j) => <p key={j.id}>{j.period} · {assets.find((a) => a.id === j.assetId)?.name} · {inr(j.amount)} — Dr Depreciation / Cr Accumulated depreciation</p>)}
-        <p className="text-muted-foreground">Posted journals update the asset books only; they are non-cash and never create bank entries. Closed periods are refused.</p>
+        <div className="space-y-1">{vs.map((v) => { const a = assets.find((x) => x.id === v.assetId)!; return <div key={v.assetId} className="flex flex-wrap justify-between gap-2 border-b py-1"><span>{v.name}</span><span>book {inr(v.book)} · tax {inr(v.tax)} · diff {inr(v.difference)} · NBV {inr(annualBook(a, fy).nbv)}</span></div>; })}</div>
+        {prepared.length > 0 && <Button size="sm" loading={busy} onClick={approve}>{requiresApproval(books.policy, "postDepreciation") ? "Approve & post" : "Post"} {prepared.length}</Button>}
+        {prepared.map((j) => <p key={j.id}>{j.period} · {assets.find((a) => a.id === j.assetId)?.name} · {inr(j.amount)} — Dr Depreciation / Cr asset account</p>)}
+        <p className="text-muted-foreground">Approved depreciation is saved once per asset per month as a non-cash entry that lowers the asset's own account — never a bank account. Closed months are refused; a retry never posts twice.</p>
       </div>
     </Fold>
   );
