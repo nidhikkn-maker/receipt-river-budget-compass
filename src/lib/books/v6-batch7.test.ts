@@ -131,3 +131,12 @@ describe("GST return files", () => {
     expect(validateGstJson("GSTR-3B", { ...j, gstin: "bad" } as never)).toContain("gstin is not a valid GSTIN");
   });
 });
+
+import { parseDocQuery } from "./docrepo";
+describe("plain-language document search", () => {
+  it("reads type, company, amount and year", () => {
+    const f = parseDocQuery("Krupa invoices above 1 lakh last year", [{ id: "k", name: "Krupa Traders" } as never], "2026-06-10");
+    expect(f.types).toContain("invoice"); expect(f.entityId).toBe("k"); expect(f.min).toBe(100000);
+    expect(f.from).toBe("2025-04-01"); expect(f.to).toBe("2026-03-31"); expect(f.words).toEqual([]);
+  });
+});
