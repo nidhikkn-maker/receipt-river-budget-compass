@@ -99,6 +99,7 @@ export function syncLocalDrafts(owner: string): Promise<number> {
     if (typeof navigator !== "undefined" && !navigator.onLine) return 0;
     let done = 0;
     for (const l of await localDrafts(owner)) {
+      if (l.data["pendingScan"]) continue; // offline receipt photos upload only after they've been read (offline-scan.ts)
       try {
         const server = await getDraft(l.id);
         if (server?.status === "saved") { await removeLocalDraft(owner, l.id); continue; }

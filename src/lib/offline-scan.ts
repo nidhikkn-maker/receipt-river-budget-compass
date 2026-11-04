@@ -26,8 +26,9 @@ export async function processOfflineScans(owner: string, extract: Extract): Prom
       const raw = await new Promise<string>((ok, bad) => { const r = new FileReader(); r.onload = () => ok(String(r.result)); r.onerror = () => bad(r.error); r.readAsDataURL(f); });
       const prepared = await prepareForReading(raw, f.type);
       const res = await extract({ data: { ...prepared, includeItems: false } });
-      const data: Record<string, unknown> = { ...d.data, pendingScan: false };
-      if (res.ok) {
+      if (!res.ok) { await putLocalDraft(owner, { ...d, data: { ...d.data, error: res.error }, updatedAt: new Date().toISOString() }); continue; }
+      const data: Record<string, unknown> = { ...d.data, pendingScan: false, error: undefined };
+      {
         const x = res.result;
         Object.assign(data, {
           extracted: true, txnType: "expense",
@@ -36,10 +37,18 @@ export async function processOfflineScans(owner: string, extract: Extract): Prom
           ...(x.currency && /^[A-Za-z]{3}$/.test(x.currency) ? { currency: x.currency.toUpperCase() } : {}),
           receiptDetails: { subtotal: x.subtotal ?? null, tax: x.tax ?? null, tip: x.tip ?? null, roundOff: x.round_off != null && Math.abs(x.round_off) <= 1 ? x.round_off : null, text: x.text ?? "" },
         });
-      } else data["error"] = res.error;
+      }
       await putLocalDraft(owner, { ...d, data, updatedAt: new Date().toISOString() });
       done++;
-    } catch { /* still offline or reading failed to connect: stays queued for the next reconnect */ }
+    } catch (e) { await putLocalDraft(owner, { ...d, data: { ...d.data, error: e instanceof Error ? e.message : "Couldn't connect" }, updatedAt: d.updatedAt }).catch(() => {}); }
   }
   return done;
 }
+
+/** Photos still on this phone, and how many of those failed their last attempt (kept so they can be retried). */
+export async function offlineScanStatus(owner: string): Promise<{ waiting: number; failed: number }> {
+  const list = (await localDrafts(owner).catch(() => [])).filter((d) => d.data["pendingScan"]);
+  return { waiting: list.length, failed: list.filter((d) => d.data["error"]).length };
+}
+export const RETRY_SCANS_EVENT = "ll-retry-offline-scans";
+export const requestScanRetry = () => window.dispatchEvent(new Event(RETRY_SCANS_EVENT));
