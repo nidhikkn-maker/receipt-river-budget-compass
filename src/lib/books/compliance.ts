@@ -20,7 +20,7 @@ export interface Obligation { entityId: string; form: string; period: string; du
 /** Months of a financial year, April to March. */
 export const fyMonths = (fy: string) => { const s = Number(fy.slice(0, 4)); return Array.from({ length: 12 }, (_, i) => ym(s, 4 + i)); };
 /** Quarter label for a month inside a FY: the quarter's last month, e.g. 2026-06 for Apr–Jun. */
-export const quarterEnd = (month: string) => { const [y, m] = month.split("-").map(Number) as [number, number]; const qm = Math.ceil(((m + 8) % 12 + 1) / 3) * 3; return ym(y, m + (qm - ((m + 8) % 12 + 1))); };
+export const quarterEnd = (month: string) => { const [y, m] = month.split("-").map(Number) as [number, number]; return ym(y, Math.ceil(m / 3) * 3); };
 
 /** A due date: the approved register rule when one applies on that date, else the standard default. */
 function dueFor(rules: RuleVersion[], form: string, standard: string): { due: string; basis: string } {
@@ -102,11 +102,10 @@ export function creditsFor(credits: TaxCredit[], entityId: string, fy: string) {
 }
 
 /** Which entities a rule touches, by area [§50]. */
-export function affectedEntities(r: Pick<RuleVersion, "area" | "appliesTo">, entities: EntityProfile[]): EntityProfile[] {
+export function affectedEntities(r: Pick<RuleVersion, "area" | "appliesTo" | "key">, entities: EntityProfile[]): EntityProfile[] {
   if (r.appliesTo.length) return entities.filter((e) => r.appliesTo.includes(e.id));
-  if (r.area === "gst" || (r.area === "due_date" && /gst|cmp/i.test(""))) return entities.filter((e) => e.gstins.length > 0);
+  if (r.area === "gst" || (r.area === "due_date" && /gst|cmp/i.test(r.key))) return entities.filter((e) => e.gstins.length > 0);
   if (r.area === "corporate") return entities.filter((e) => e.kind === "company" || e.kind === "llp");
-  if (r.area === "property") return entities;
   return entities;
 }
 
