@@ -1,3 +1,4 @@
+import { receiptRoundOffFor } from "./receipt-reading";
 import { whoLabel, PAYMENT_LABEL, SCOPE_LABEL, budgetUsage, totalsBy, categoryTotals, type Budgets, type Expense } from "./expenses";
 import { workspaceParts } from "./workspaces";
 
@@ -27,9 +28,11 @@ export function buildReport(kind: ReportKind, transactions: Expense[], memberNam
       return [name, entries.length, fmt(sum(entries)), month, limit === undefined ? "" : fmt(limit), fmt(spent), limit === undefined ? "" : fmt(limit - spent), limit && limit > 0 ? fmt(spent / limit * 100) : "", limit === undefined ? "No limit" : spent > limit ? "Over budget" : "Within budget"];
     }) };
   }
+  const opt = (v: number | null | undefined) => (v == null ? "" : fmt(v));
   const row = (e: Expense) => [e.date, e.title, e.merchant ?? "", e.category, SCOPE_LABEL[e.scope], whoLabel(e, memberName), PAYMENT_LABEL[e.paymentMethod],
-     e.currency, fmt(e.originalAmount), fmt(e.fxRate), fmt(e.amount), e.reconciledAt ? "Yes" : "No", e.reimbursementStatus ?? "none"];
-  const headers = ["Date", "Title", "Merchant", "Category", "Type", "For", "Paid with", "Currency", "Bill amount", "Rate", "Amount (INR)", "Bank matched", "Reimbursement"];
+     e.currency, fmt(e.originalAmount), fmt(e.fxRate), fmt(e.amount), e.reconciledAt ? "Yes" : "No", e.reimbursementStatus ?? "none",
+     opt(e.receiptDetails?.subtotal), opt(e.receiptDetails?.tax), opt(e.receiptDetails?.tip), (() => { const r = receiptRoundOffFor(e).amount; return r ? fmt(r) : ""; })()];
+  const headers = ["Date", "Title", "Merchant", "Category", "Type", "For", "Paid with", "Currency", "Bill amount", "Rate", "Amount (INR)", "Bank matched", "Reimbursement", "Subtotal", "Tax", "Tip", "Round-off"];
   if (kind === "expenses") return { title: "All expenses", headers, rows: expenses.map(row) };
   const inWorkspace = (scope: Expense["scope"]) => expenses.flatMap((e) => {
     const share = workspaceParts(e).find((p) => p.workspace === scope);
