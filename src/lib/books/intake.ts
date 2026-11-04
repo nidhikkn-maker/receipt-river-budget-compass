@@ -105,20 +105,20 @@ function extraOf(base: EntityProfile, r: EntityRead): Partial<EntityProfile> {
 }
 
 /** Asset master record proposal from a purchase invoice [§27, test 5]. Capitalisation still needs confirmation. */
-export function proposeAsset(read: AssetRead, entities: EntityProfile[], newId: string, docId: string | null): { asset: Asset | null; missing: string[] } {
+export function proposeAsset(read: AssetRead, entities: EntityProfile[], newId: string, docId: string | null): { asset: Asset | null; missing: string[]; ownerSuggested: boolean } {
   const missing = [!read.name && "asset name", read.cost == null && "purchase cost", !iso(read.purchaseDate) && "purchase date"].filter((x): x is string => !!x);
-  if (!read.name || read.cost == null || !iso(read.purchaseDate)) return { asset: null, missing };
+  if (!read.name || read.cost == null || !iso(read.purchaseDate)) return { asset: null, missing, ownerSuggested: false };
   const kind: AssetKind = read.kind ?? "other";
-  const owner = read.owner ? matchEntity(entities, { name: read.owner })?.entity.id : undefined;
-  return { missing, asset: { id: newId, name: read.name.trim(), kind, cost: read.cost, inUse: read.purchaseDate!, sharePct: 100, bookMethod: "slm", bookRatePct: 0, ownerEntityId: owner, docId: docId ?? undefined, tag: read.serial ?? undefined, usefulLifeYears: DEFAULT_LIFE[kind], residualPct: kind === "property" ? 0 : 5 } as Asset };
+  const owner = read.owner ? nameSuggestion(entities, read.owner)?.id : undefined;
+  return { missing, ownerSuggested: !!owner, asset: { id: newId, name: read.name.trim(), kind, cost: read.cost, inUse: read.purchaseDate!, sharePct: 100, bookMethod: "slm", bookRatePct: 0, ownerEntityId: owner, docId: docId ?? undefined, tag: read.serial ?? undefined, usefulLifeYears: DEFAULT_LIFE[kind], residualPct: kind === "property" ? 0 : 5 } as Asset };
 }
 /** Indicative useful lives (Companies Act Schedule II); editable per asset. */
 export const DEFAULT_LIFE: Record<AssetKind, number> = { property: 0, building: 30, vehicle: 8, machinery: 15, computer: 3, furniture: 10, other: 5 };
 
-export function proposeProperty(read: PropertyRead, entities: EntityProfile[], newId: string, docId: string | null): { property: Property; missing: string[] } {
-  const owner = read.owner ? matchEntity(entities, { name: read.owner })?.entity.id : undefined;
+export function proposeProperty(read: PropertyRead, entities: EntityProfile[], newId: string, docId: string | null): { property: Property; missing: string[]; ownerSuggested: boolean } {
+  const owner = read.owner ? nameSuggestion(entities, read.owner)?.id : undefined;
   const missing = [!read.name && !read.address && "property name or address", read.cost == null && "acquisition cost", !owner && "legal owner"].filter((x): x is string => !!x);
-  return { missing, property: { id: newId, name: read.name?.trim() || read.address?.split(",")[0]?.trim() || "New property", ownerEntityId: owner, address: read.address ?? "", buildings: [], docIds: docId ? [docId] : [], ...(read.valuation != null && iso(read.valuationDate) ? { valuation: { value: read.valuation, date: read.valuationDate!, source: "Valuation report" } } : {}) } };
+  return { missing, ownerSuggested: !!owner, property: { id: newId, name: read.name?.trim() || read.address?.split(",")[0]?.trim() || "New property", ownerEntityId: owner, address: read.address ?? "", buildings: [], docIds: docId ? [docId] : [], ...(read.valuation != null && iso(read.valuationDate) ? { valuation: { value: read.valuation, date: read.valuationDate!, source: "Valuation report" } } : {}) } };
 }
 
 /** Lease proposal linked to a property/unit by name; missing pieces are asked, never guessed [§38, test 8]. */
@@ -139,17 +139,19 @@ export function proposeLease(read: LeaseRead, properties: Property[], newId: str
 }
 
 /** Prior-year record from audited statements; flags missing schedules instead of filling them [§18, §20, test 3–4]. */
-export function proposeFy(read: AuditedRead, entities: EntityProfile[], existing: FyRecord[], newId: string, docId: string | null): { record: FyRecord | null; entityId: string | null; missingSchedules: Schedule[]; missing: string[] } {
-  const ent = matchEntity(entities, { pan: read.pan, name: read.entity })?.entity;
+export function proposeFy(read: AuditedRead, entities: EntityProfile[], existing: FyRecord[], newId: string, docId: string | null): { record: FyRecord | null; entityId: string | null; missingSchedules: Schedule[]; missing: string[]; ownerSuggested: boolean } {
+  const byId = matchEntity(entities, { pan: read.pan });
+  const ent = byId?.entity ?? nameSuggestion(entities, read.entity) ?? undefined;
+  const ownerSuggested = !byId && !!ent;
   const fy = read.fy && /^\d{4}-\d{2}$/.test(read.fy) ? read.fy : null;
   const missing = [!ent && "which company", !fy && "financial year"].filter((x): x is string => !!x);
   const missingSchedules = REQUIRED_SCHEDULES.filter((s) => !read.schedules.includes(s));
-  if (!ent || !fy) return { record: null, entityId: ent?.id ?? null, missingSchedules, missing };
+  if (!ent || !fy) return { record: null, entityId: ent?.id ?? null, missingSchedules, missing, ownerSuggested };
   const prev = existing.find((r) => r.entityId === ent.id && r.fy === fy);
   const audited = { ...(prev?.audited ?? {}) };
   for (const l of read.lines) audited[l.head] = l.amount;
   return {
-    entityId: ent.id, missingSchedules, missing,
+    entityId: ent.id, missingSchedules, missing, ownerSuggested,
     record: {
       id: prev?.id ?? newId, entityId: ent.id, fy, audited,
       totalAssets: read.totalAssets ?? prev?.totalAssets ?? null, totalLiabilities: read.totalLiabilities ?? prev?.totalLiabilities ?? null,
@@ -159,6 +161,9 @@ export function proposeFy(read: AuditedRead, entities: EntityProfile[], existing
       lossesCarriedForward: prev?.lossesCarriedForward ?? [],
       docIds: [...new Set([...(prev?.docIds ?? []), ...(docId ? [docId] : [])])],
       ...(prev?.confirmedOpening ? { confirmedOpening: prev.confirmedOpening, confirmedOn: prev.confirmedOn } : {}),
+      ...(prev && JSON.stringify(prev.audited) !== JSON.stringify(audited) ? { versions: [...(prev.versions ?? []), { at: new Date().toISOString(), reason: "replaced by a later upload", audited: prev.audited }] } : prev?.versions ? { versions: prev.versions } : {}),
+      ...(prev?.details ? { details: prev.details } : {}),
+      ...(prev?.accountMap ? { accountMap: prev.accountMap } : {}),
     },
   };
 }
