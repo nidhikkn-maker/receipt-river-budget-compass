@@ -59,6 +59,7 @@ const MORE_GROUPS: { title: string; items: { to: string; label: string; icon: ty
   ] },
   { title: "Insights", items: [
     { to: "/reports", label: "Reports & PDFs", icon: BarChart3 },
+    { to: "/assistant", label: "AI assistant", icon: Sparkles },
     { to: "/brief", label: "Weekly brief", icon: Sparkles },
     { to: "/connections", label: "Money map", icon: Network },
   ] },

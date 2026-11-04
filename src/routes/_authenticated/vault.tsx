@@ -63,7 +63,7 @@ function Vault() {
     const a = document.createElement("a"); a.href = url; a.target = "_blank"; a.rel = "noopener noreferrer"; a.click();
   };
   return <>
-    <PageTitle eyebrow="Documents" title="Document vault" />
+    <PageTitle eyebrow="Documents" title="DocuRepo" />
     <NoticeDeadlines />
     {expires.length > 0 && <div className="mb-4 border-l-4 border-destructive bg-secondary p-3 text-sm">{expires.map(d => <p key={d.id}>{d.title} · expires {d.expiresOn}</p>)}</div>}
     <div className="mb-5 grid gap-3 sm:grid-cols-4">
