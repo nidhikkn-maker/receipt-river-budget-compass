@@ -10,7 +10,7 @@ import { ENTITY_KINDS, fyRange } from "@/lib/entities";
 import { accountBalance } from "@/lib/ledger";
 import { booksHeads, HEAD_LABEL, confirmOpening, nextFy, openingProposal } from "@/lib/books/fy";
 import { REQUIRED_SCHEDULES } from "@/lib/books/intake";
-import { annualSummary, duplicateInvoices, gstr1, gstr3b, gstr9, invoiceProblems, matchGstPayments, unfiledPeriods } from "@/lib/books/gst";
+import { annualSummary, duplicateInvoices, gstr1, gstr1Json, gstr3b, gstr3bJson, gstr9, invoiceProblems, validateGstJson, matchGstPayments, unfiledPeriods } from "@/lib/books/gst";
 import { activateRule, OFFICIAL_SOURCES, proposeRule, ruleOn, validateRule, formFor } from "@/lib/books/regulatory";
 import type { GstInvoice, OpeningHead, RuleArea, TaxProfile } from "@/lib/books/types";
 import { supabase } from "@/integrations/supabase/client";
@@ -133,6 +133,12 @@ export function GstReturns({ fy }: { fy: string }) {
           <div className="rounded-xl border p-3 text-xs"><p className="font-semibold">GSTR-1 draft · {period}</p><p>B2B: {r1.b2b.count} invoices · taxable {inr(r1.b2b.taxable)} · tax {inr(r1.b2b.igst + r1.b2b.cgst + r1.b2b.sgst + r1.b2b.cess)}</p><p>B2C: {r1.b2c.count} invoices · taxable {inr(r1.b2c.taxable)}</p></div>
           <div className="rounded-xl border p-3 text-xs"><p className="font-semibold">GSTR-3B draft · {period}</p><p>Output tax {inr(r3.outputTax)} · ITC {inr(r3.itcClaimed)}</p><p className="font-semibold">Net payable {inr(r3.netPayable)}{r3.carryForward ? ` · credit carried ${inr(r3.carryForward)}` : ""}</p></div>
         </div>
+        <div className="flex flex-wrap gap-2 text-xs">{([["GSTR-1", gstr1Json(books.gstInvoices, gstin, period)], ["GSTR-3B", gstr3bJson(books.gstInvoices, gstin, period, eligibleKeys)]] as const).map(([form, j]) => {
+          const errs = validateGstJson(form, j as unknown as Record<string, unknown>);
+          return <div key={form} className="min-w-0">{errs.length ? <p className="break-words text-destructive">{form} file not ready: {errs.slice(0, 3).join("; ")}</p>
+            : <Button size="sm" variant="outline" onClick={() => { const b = new Blob([JSON.stringify(j, null, 1)], { type: "application/json" }); const a = document.createElement("a"); a.href = URL.createObjectURL(b); a.download = `${form}_${gstin}_${period}.json`; a.click(); URL.revokeObjectURL(a.href); }}>Download {form} JSON (offline-tool layout)</Button>}</div>;
+        })}</div>
+        <p className="text-[11px] text-muted-foreground">Files follow the GSTN offline-tool JSON layout and pass the format checks above. Check them in the official offline tool before your accountant files; nothing is uploaded.</p>
         {!profile && <p className="text-xs text-destructive">No filing scheme recorded for this GSTIN — set it in the tax profile above so monthly or quarterly returns are worked out correctly.</p>}
         {itc.lines.length > 0 && <details><summary className="cursor-pointer text-xs text-muted-foreground">Input tax credit review · {inr(itc.eligible)} claimable · {inr(itc.held)} held</summary>
           {itc.lines.map((l) => <p key={l.invoice.id} className="break-words text-xs">{l.invoice.number} · {l.invoice.party} · {inr(l.tax)} — {l.eligible ? <span className="text-primary">claimable</span> : <span className="text-destructive">held: {l.reasons.join(", ")}</span>}</p>)}</details>}
