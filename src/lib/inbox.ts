@@ -82,10 +82,10 @@ export function discrepancy(a: Account, txns: Expense[], prefs: Pick<FinancePref
   return { accountId: a.id, name: a.name, lastReconciled, recordedBalance: recorded, statementBalance: stmt?.balance ?? null, statementDate: asOf, difference, unmatched, duplicates, action };
 }
 
-export type InboxType = "uncategorised" | "unverified_import" | "duplicate" | "unreconciled_account" | "missing_details" | "pending_reimbursement" | "pending_sync" | "commitment" | "inconsistency";
+export type InboxType = "uncategorised" | "unverified_import" | "duplicate" | "unreconciled_account" | "missing_details" | "pending_reimbursement" | "pending_sync" | "commitment" | "inconsistency" | "audit";
 export const INBOX_LABEL: Record<InboxType, string> = {
   uncategorised: "Uncategorised", unverified_import: "Unverified import", duplicate: "Possible duplicate", unreconciled_account: "Unreconciled account",
-  missing_details: "Missing details", pending_reimbursement: "Pending reimbursement", pending_sync: "Waiting to sync", commitment: "Confirm payment", inconsistency: "Data inconsistency",
+  missing_details: "Missing details", pending_reimbursement: "Pending reimbursement", pending_sync: "Waiting to sync", commitment: "Confirm payment", inconsistency: "Data inconsistency", audit: "Audit check",
 };
 export type Priority = "high" | "medium" | "low";
 export interface InboxItem {

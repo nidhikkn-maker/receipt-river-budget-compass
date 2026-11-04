@@ -1,6 +1,7 @@
 import { cleanAssets, type Asset } from "./assets";
 import { cleanReceivables, type Receivable } from "./receivables";
 import { cleanEntities, type EntityProfile } from "./entities";
+import { cleanBooks, type BooksData } from "./books/types";
 import type { AutopilotAction } from "./autopilot";
 import { normalizeNotificationSettings, type NotificationSettings } from "./notification-settings";
 import type { CoolingOffItem } from "./cooling-off";
@@ -79,6 +80,8 @@ export interface FinancePreferences {
   assets?: Asset[];
   /** Invoices customers still owe. */
   receivables?: Receivable[];
+  /** v6 books: closed periods, DocuRepo links, past years, property, depreciation journals, investments, GST and rules. */
+  books?: BooksData;
   /** Home arrangement; "custom" once the user hides or reorders sections themselves. */
   homeMode: HomeMode;
   categories: CategorySetting[];
@@ -191,6 +194,7 @@ export function normalizePreferences(raw: Partial<FinancePreferences> | null | u
   p.entities = cleanEntities(p.entities);
   p.assets = cleanAssets(p.assets);
   p.receivables = cleanReceivables(p.receivables);
+  p.books = cleanBooks(p.books);
   p.checkedAudit = Array.isArray(p.checkedAudit) ? [...new Set(p.checkedAudit.filter((k) => typeof k === "string" && k.length <= 200))].slice(-3000) : [];
   p.payees = cleanPayees(p.payees);
   p.reimbursementSettings = cleanReimbursementSettings(p.reimbursementSettings);
