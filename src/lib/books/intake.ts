@@ -279,3 +279,16 @@ export function suggestLinks(text: string, accounts: { id: string; lastFour?: st
   const loanHits = loans.filter((l) => (l.name.trim().length >= 4 && t.includes(l.name.trim().toUpperCase())) || (l.refs ?? []).some((r) => r.trim().length >= 4 && t.includes(r.trim().toUpperCase())));
   return { accountId: accHits.length === 1 ? accHits[0]!.id : null, loanId: loanHits.length === 1 ? loanHits[0]!.id : null };
 }
+
+/**
+ * Trusted-record lookup for an asset invoice [§27, §59]: the bank/card payment to the same supplier,
+ * within 30 days of the invoice and (when cost is known) within ₹1 of it. Used to propose the linked
+ * payment and, when the invoice total was not read, the cost — always shown with its source for review.
+ */
+export function assetPayment(read: { supplier: string | null; cost: number | null; purchaseDate: string | null }, txns: { id: string; date: string; amount: number; merchant?: string | null | undefined; title: string; txnType?: string | null | undefined }[]): { id: string; amount: number; date: string } | null {
+  const sup = read.supplier ? words(read.supplier) : "";
+  if (sup.length < 3) return null;
+  const near = (d: string) => !read.purchaseDate || Math.abs(Date.parse(d) - Date.parse(read.purchaseDate)) <= 30 * 864e5;
+  const hits = txns.filter((t) => (t.txnType ?? "expense") === "expense" && near(t.date) && words(`${t.merchant ?? ""} ${t.title}`).includes(sup) && (read.cost == null || Math.abs(t.amount - read.cost) <= 1));
+  return hits.length === 1 ? { id: hits[0]!.id, amount: hits[0]!.amount, date: hits[0]!.date } : null;
+}

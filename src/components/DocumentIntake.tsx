@@ -15,7 +15,7 @@ import { useStore } from "@/lib/store";
 import { extractDocument, type ExtractedDocument } from "@/lib/document-extract.functions";
 import { DOC_LABEL, DOC_TYPES, duplicateDocuments, type DocField, type DocType } from "@/lib/documents";
 import { ENTITY_KINDS } from "@/lib/entities";
-import { autoName, fillLeaseFromTrusted, proposeAsset, proposeEntity, proposeFy, proposeLease, proposeProperty, proposeGstInvoice, proposeTaxStatement, suggestLinks, ROUTE_OF, trail, type IntakeContext, type Step } from "@/lib/books/intake";
+import { autoName, fillLeaseFromTrusted, proposeAsset, proposeEntity, proposeFy, proposeLease, proposeProperty, proposeGstInvoice, proposeTaxStatement, suggestLinks, assetPayment, ROUTE_OF, trail, type IntakeContext, type Step } from "@/lib/books/intake";
 import { commitIntake, type Confirmed } from "@/lib/books/commit";
 import { emptyBooks, LEASE_TERMS, LEASE_TERM_LABEL, leaseUnknowns, requiresApproval, type Lease } from "@/lib/books/types";
 import { HEAD_LABEL } from "@/lib/books/fy";
@@ -108,7 +108,13 @@ export function DocumentIntake({ file, context, onClose, resume, replacesId }: {
     // Proposed record ids derive from the run so a retry updates the same record.
     const id = runId;
     if (route === "entity" && x.entity) return { kind: "entity" as const, ...proposeEntity(x.entity, entities, id, today()) };
-    if (route === "asset" && x.asset) return { kind: "asset" as const, ...proposeAsset(x.asset, entities, id, null) };
+    if (route === "asset" && x.asset) {
+      // Look in trusted records (the matching payment) before asking for missing details [§59].
+      const pay = assetPayment(x.asset, store.transactions);
+      const read = x.asset.cost == null && pay ? { ...x.asset, cost: pay.amount, purchaseDate: x.asset.purchaseDate ?? pay.date } : x.asset;
+      const p = proposeAsset(read, entities, id, null);
+      return { kind: "asset" as const, ...p, payment: pay, costFromPayment: x.asset.cost == null && !!pay, asset: p.asset ? { ...p.asset, ...(pay ? { transactionId: pay.id } : {}) } : null };
+    }
     if (route === "property" && x.property) return { kind: "property" as const, ...proposeProperty(x.property, entities, id, null) };
     if (route === "lease" && x.lease) {
       const p = proposeLease(x.lease, books.properties, id, null);
