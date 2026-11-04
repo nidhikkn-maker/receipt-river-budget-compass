@@ -37,6 +37,7 @@ export interface ReceiptDetails {
   subtotal?: number | null;
   tax?: number | null;
   tip?: number | null;
+  roundOff?: number | null;
   confidence?: import("./receipt-reading").ReceiptConfidence;
   items?: { name: string; quantity: number; amount: number; confidence?: import("./receipt-reading").ReceiptItemConfidence | undefined }[];
   text?: string;
@@ -166,7 +167,7 @@ export interface ExpenseInput {
 export function validateExpense(s: ExpenseInput) {
   if (!s.title.trim()) throw new ValidationError("Add a title");
   if (!(s.amount > 0)) throw new ValidationError("Amount must be greater than zero");
-  const receiptError = receiptBreakdownError(s.amount, s.receiptDetails);
+  const receiptError = receiptBreakdownError(s.amount, s.receiptDetails, s.currency);
   if (receiptError) throw new ValidationError(receiptError);
   if (!/^\d{4}-\d{2}-\d{2}$/.test(s.date)) throw new ValidationError("Add the expense date");
   if (!SCOPES.includes(s.scope)) throw new ValidationError("Choose a workspace");
