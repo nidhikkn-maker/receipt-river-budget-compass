@@ -31,7 +31,7 @@ function Receivables() {
   const add = async () => {
     const amount = Number(f.amount);
     if (!f.customer.trim() || !(amount > 0)) { toast.error("Add a customer and amount"); return; }
-    const r: Receivable = { id: crypto.randomUUID(), customer: f.customer.trim(), invoiceNo: f.invoiceNo.trim() || undefined, date: f.date, dueDate: f.dueDate || undefined, amount };
+    const r: Receivable = { id: crypto.randomUUID(), customer: f.customer.trim(), date: f.date, amount, ...(f.invoiceNo.trim() ? { invoiceNo: f.invoiceNo.trim() } : {}), ...(f.dueDate ? { dueDate: f.dueDate } : {}) };
     await savePreferences({ ...preferences, receivables: [...list, r] });
     setF({ customer: "", invoiceNo: "", date: today(), dueDate: "", amount: "" }); toast.success("Invoice added");
   };

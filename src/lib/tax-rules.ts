@@ -13,7 +13,7 @@ export function rulesFor(fy: string): { rules: TaxRuleSet; carriedForward: boole
   const exact = sorted.find((r) => r.fy === fy);
   if (exact) return { rules: exact, carriedForward: false };
   const before = sorted.filter((r) => r.fy < fy).pop();
-  return { rules: before ?? sorted[0], carriedForward: true };
+  return { rules: (before ?? sorted[0])!, carriedForward: true };
 }
 
 /** Slab tax + rebate + cess; surcharge not included. */
