@@ -72,8 +72,10 @@ import { Route as AuthenticatedTripsIndexRouteImport } from './routes/_authentic
 import { Route as AuthenticatedTripsTripIdRouteImport } from './routes/_authenticated/trips.$tripId'
 import { Route as ApiPublicJobsAccountantLinksRouteImport } from './routes/api/public/jobs/accountant-links'
 import { Route as ApiPublicJobsCleanupDemosRouteImport } from './routes/api/public/jobs/cleanup-demos'
+import { Route as ApiPublicJobsClosingPricesRouteImport } from './routes/api/public/jobs/closing-prices'
 import { Route as ApiPublicJobsPaymentRemindersRouteImport } from './routes/api/public/jobs/payment-reminders'
 import { Route as ApiPublicJobsReportJobsRouteImport } from './routes/api/public/jobs/report-jobs'
+import { Route as ApiPublicJobsRuleWatchRouteImport } from './routes/api/public/jobs/rule-watch'
 import { Route as ApiPublicUploadTokenRouteImport } from './routes/api/public/upload/$token'
 import { Route as LovableEmailTransactionalPreviewRouteImport } from './routes/lovable/email/transactional/preview'
 
@@ -414,6 +416,12 @@ const ApiPublicJobsCleanupDemosRoute =
     path: '/api/public/jobs/cleanup-demos',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicJobsClosingPricesRoute =
+  ApiPublicJobsClosingPricesRouteImport.update({
+    id: '/api/public/jobs/closing-prices',
+    path: '/api/public/jobs/closing-prices',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicJobsPaymentRemindersRoute =
   ApiPublicJobsPaymentRemindersRouteImport.update({
     id: '/api/public/jobs/payment-reminders',
@@ -423,6 +431,11 @@ const ApiPublicJobsPaymentRemindersRoute =
 const ApiPublicJobsReportJobsRoute = ApiPublicJobsReportJobsRouteImport.update({
   id: '/api/public/jobs/report-jobs',
   path: '/api/public/jobs/report-jobs',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicJobsRuleWatchRoute = ApiPublicJobsRuleWatchRouteImport.update({
+  id: '/api/public/jobs/rule-watch',
+  path: '/api/public/jobs/rule-watch',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiPublicUploadTokenRoute = ApiPublicUploadTokenRouteImport.update({
@@ -500,8 +513,10 @@ export interface FileRoutesByFullPath {
   '/trips/': typeof AuthenticatedTripsIndexRoute
   '/api/public/jobs/accountant-links': typeof ApiPublicJobsAccountantLinksRoute
   '/api/public/jobs/cleanup-demos': typeof ApiPublicJobsCleanupDemosRoute
+  '/api/public/jobs/closing-prices': typeof ApiPublicJobsClosingPricesRoute
   '/api/public/jobs/payment-reminders': typeof ApiPublicJobsPaymentRemindersRoute
   '/api/public/jobs/report-jobs': typeof ApiPublicJobsReportJobsRoute
+  '/api/public/jobs/rule-watch': typeof ApiPublicJobsRuleWatchRoute
   '/api/public/upload/$token': typeof ApiPublicUploadTokenRoute
   '/lovable/email/transactional/preview': typeof LovableEmailTransactionalPreviewRoute
 }
@@ -567,8 +582,10 @@ export interface FileRoutesByTo {
   '/trips': typeof AuthenticatedTripsIndexRoute
   '/api/public/jobs/accountant-links': typeof ApiPublicJobsAccountantLinksRoute
   '/api/public/jobs/cleanup-demos': typeof ApiPublicJobsCleanupDemosRoute
+  '/api/public/jobs/closing-prices': typeof ApiPublicJobsClosingPricesRoute
   '/api/public/jobs/payment-reminders': typeof ApiPublicJobsPaymentRemindersRoute
   '/api/public/jobs/report-jobs': typeof ApiPublicJobsReportJobsRoute
+  '/api/public/jobs/rule-watch': typeof ApiPublicJobsRuleWatchRoute
   '/api/public/upload/$token': typeof ApiPublicUploadTokenRoute
   '/lovable/email/transactional/preview': typeof LovableEmailTransactionalPreviewRoute
 }
@@ -637,8 +654,10 @@ export interface FileRoutesById {
   '/_authenticated/trips/': typeof AuthenticatedTripsIndexRoute
   '/api/public/jobs/accountant-links': typeof ApiPublicJobsAccountantLinksRoute
   '/api/public/jobs/cleanup-demos': typeof ApiPublicJobsCleanupDemosRoute
+  '/api/public/jobs/closing-prices': typeof ApiPublicJobsClosingPricesRoute
   '/api/public/jobs/payment-reminders': typeof ApiPublicJobsPaymentRemindersRoute
   '/api/public/jobs/report-jobs': typeof ApiPublicJobsReportJobsRoute
+  '/api/public/jobs/rule-watch': typeof ApiPublicJobsRuleWatchRoute
   '/api/public/upload/$token': typeof ApiPublicUploadTokenRoute
   '/lovable/email/transactional/preview': typeof LovableEmailTransactionalPreviewRoute
 }
@@ -707,8 +726,10 @@ export interface FileRouteTypes {
     | '/trips/'
     | '/api/public/jobs/accountant-links'
     | '/api/public/jobs/cleanup-demos'
+    | '/api/public/jobs/closing-prices'
     | '/api/public/jobs/payment-reminders'
     | '/api/public/jobs/report-jobs'
+    | '/api/public/jobs/rule-watch'
     | '/api/public/upload/$token'
     | '/lovable/email/transactional/preview'
   fileRoutesByTo: FileRoutesByTo
@@ -774,8 +795,10 @@ export interface FileRouteTypes {
     | '/trips'
     | '/api/public/jobs/accountant-links'
     | '/api/public/jobs/cleanup-demos'
+    | '/api/public/jobs/closing-prices'
     | '/api/public/jobs/payment-reminders'
     | '/api/public/jobs/report-jobs'
+    | '/api/public/jobs/rule-watch'
     | '/api/public/upload/$token'
     | '/lovable/email/transactional/preview'
   id:
@@ -843,8 +866,10 @@ export interface FileRouteTypes {
     | '/_authenticated/trips/'
     | '/api/public/jobs/accountant-links'
     | '/api/public/jobs/cleanup-demos'
+    | '/api/public/jobs/closing-prices'
     | '/api/public/jobs/payment-reminders'
     | '/api/public/jobs/report-jobs'
+    | '/api/public/jobs/rule-watch'
     | '/api/public/upload/$token'
     | '/lovable/email/transactional/preview'
   fileRoutesById: FileRoutesById
@@ -860,8 +885,10 @@ export interface RootRouteChildren {
   DotlovableOauthConsentRoute: typeof DotlovableOauthConsentRoute
   ApiPublicJobsAccountantLinksRoute: typeof ApiPublicJobsAccountantLinksRoute
   ApiPublicJobsCleanupDemosRoute: typeof ApiPublicJobsCleanupDemosRoute
+  ApiPublicJobsClosingPricesRoute: typeof ApiPublicJobsClosingPricesRoute
   ApiPublicJobsPaymentRemindersRoute: typeof ApiPublicJobsPaymentRemindersRoute
   ApiPublicJobsReportJobsRoute: typeof ApiPublicJobsReportJobsRoute
+  ApiPublicJobsRuleWatchRoute: typeof ApiPublicJobsRuleWatchRoute
   ApiPublicUploadTokenRoute: typeof ApiPublicUploadTokenRoute
   LovableEmailTransactionalPreviewRoute: typeof LovableEmailTransactionalPreviewRoute
 }
@@ -1309,6 +1336,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicJobsCleanupDemosRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/jobs/closing-prices': {
+      id: '/api/public/jobs/closing-prices'
+      path: '/api/public/jobs/closing-prices'
+      fullPath: '/api/public/jobs/closing-prices'
+      preLoaderRoute: typeof ApiPublicJobsClosingPricesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/jobs/payment-reminders': {
       id: '/api/public/jobs/payment-reminders'
       path: '/api/public/jobs/payment-reminders'
@@ -1321,6 +1355,13 @@ declare module '@tanstack/react-router' {
       path: '/api/public/jobs/report-jobs'
       fullPath: '/api/public/jobs/report-jobs'
       preLoaderRoute: typeof ApiPublicJobsReportJobsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/jobs/rule-watch': {
+      id: '/api/public/jobs/rule-watch'
+      path: '/api/public/jobs/rule-watch'
+      fullPath: '/api/public/jobs/rule-watch'
+      preLoaderRoute: typeof ApiPublicJobsRuleWatchRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/public/upload/$token': {
@@ -1479,8 +1520,10 @@ const rootRouteChildren: RootRouteChildren = {
   DotlovableOauthConsentRoute: DotlovableOauthConsentRoute,
   ApiPublicJobsAccountantLinksRoute: ApiPublicJobsAccountantLinksRoute,
   ApiPublicJobsCleanupDemosRoute: ApiPublicJobsCleanupDemosRoute,
+  ApiPublicJobsClosingPricesRoute: ApiPublicJobsClosingPricesRoute,
   ApiPublicJobsPaymentRemindersRoute: ApiPublicJobsPaymentRemindersRoute,
   ApiPublicJobsReportJobsRoute: ApiPublicJobsReportJobsRoute,
+  ApiPublicJobsRuleWatchRoute: ApiPublicJobsRuleWatchRoute,
   ApiPublicUploadTokenRoute: ApiPublicUploadTokenRoute,
   LovableEmailTransactionalPreviewRoute: LovableEmailTransactionalPreviewRoute,
 }

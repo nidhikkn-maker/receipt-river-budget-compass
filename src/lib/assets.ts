@@ -43,6 +43,19 @@ export interface Asset {
   supplier?: string | undefined;
   warrantyUntil?: string | undefined;
   insurance?: string | undefined;
+  /** Kept separate from put-to-use [§32]: invoice date and the date it entered the books. */
+  purchaseDate?: string | undefined;
+  capitalisedOn?: string | undefined;
+  /** Written-down value carried in from an imported prior year [§32]: book value at the start of `openingFy`. */
+  openingWdv?: { fy: string; book: number; tax?: number | undefined } | undefined;
+  /** Impairment / revaluation adjustments to book value from a date onward [§28]. */
+  adjustments?: { date: string; amount: number; kind: "impairment" | "revaluation"; note: string }[] | undefined;
+  /** Supporting documents beyond the invoice: maintenance, photos, disposal papers, valuation reports [§29]. */
+  docIds?: string[] | undefined;
+  /** Ledger asset account whose book value depreciation reduces (an "other asset" account) [§21, §26]. */
+  accountId?: string | undefined;
+  /** Bank entry that paid for the asset, when matched [§27]. */
+  paymentId?: string | undefined;
 }
 
 /** Physical-check and lease follow-ups; pure, never changes the asset. */

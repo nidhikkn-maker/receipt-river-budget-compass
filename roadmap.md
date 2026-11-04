@@ -5,8 +5,8 @@
 - [x] Property directory, leases with escalation/notice/deposit, tenant ledger, costs, occupancy; asset lifecycle, QR labels, monthly book depreciation, tax blocks, book-vs-tax, journals posted only in open periods; closed periods enforced in the database.
 - [x] Holdings beyond shares, prices with freshness labels, gold, alerts, valuation history, net worth on Home; dividends/corporate actions shown on trade statements; tax payments recognised.
 - [x] Tax by head, tax profiles, GSTR-1/3B drafts, payments, filing evidence, rule register with approval, form versions; audit findings grouped and fed into the Inbox; 30 new tests pass (1,302 total).
-- [ ] Live NSE/BSE share prices — needs an approved licensed provider.
-- [ ] Automatic detection of new government rules — official sources are linked and changes are recorded for approval, but nothing fetches and compares them on a schedule yet.
+- [x] NSE/BSE share prices — official end-of-day closing prices saved each weekday evening (live intraday still needs a licensed provider).
+- [x] Weekly automatic check of official tax/GST/MCA pages; new notices wait for owner approval.
 - [ ] Physical iPhone/iPad checks — needs the owner's devices.
 
 ## Companies & financial years (4 Nov 2026)
@@ -16,7 +16,7 @@
 - [x] GSTR-2B check on /gst-check and Audit dashboard (/audit); rule tests pass.
 - [x] Customers owing (/receivables) and yearly tax rules with estimate on /tax; tests pass.
 - [x] Asset tag/location/custodian/condition, "Checked today", tenant lease and deposit; overdue checks and expiring leases flag on /audit; tests pass.
-- [ ] Live NSE/BSE prices need an approved price provider.
+- [x] End-of-day NSE/BSE prices in place; live intraday needs a licensed provider.
 # Roadmap (Functional Requirements v1.0)
 ## Remove offline receipt photos you no longer need (4 Nov 2026)
 - [x] Each photo on /offline-receipts has a Remove control and there's Remove all failed; both ask first, delete only from this phone, and never touch a photo that has already been read into a draft.
@@ -650,3 +650,11 @@
 - [ ] Phase 7 Income tax, GST drafts, regulatory rule versions
 - [ ] Phase 8 Continuous audit dashboard and automation levels
 - [ ] Phase 9–10 End-to-end checks, 22 tests, reports, acceptance
+
+## v6 gap batch (Nov 2026)
+- [x] Resumable Statement Desk runs, evidence lock, DocuRepo uploads via Statement Desk
+- [x] Depreciation posted once per month to the asset's own ledger account; lifecycle events update the register
+- [x] Closing prices + canonical demat net worth; weekly rule watch
+- [ ] Scheduled jobs (closing prices, rule watch) start working only after the next publish — needs owner approval to publish
+- [ ] GLS loan original amount/start date — needs sanction letter
+- [ ] Physical iPhone checks — needs owner's device

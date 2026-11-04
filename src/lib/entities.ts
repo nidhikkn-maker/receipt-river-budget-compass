@@ -27,6 +27,12 @@ export interface EntityProfile {
   people?: { name: string; role: string }[] | undefined;
   shareholding?: { name: string; pct: number }[] | undefined;
   activities?: string[] | undefined;
+  /** Financial year end as MM-DD (India default 03-31) [§14]. */
+  fyEnd?: string | undefined;
+  /** Related entities printed on documents; linked only when the owner confirms [§14]. */
+  related?: { name: string; relation: string; pan: string | null; cin: string | null }[] | undefined;
+  /** Ids of identifiers checked against a certificate (PAN/CIN/GSTIN) [§16]. */
+  verified?: string[] | undefined;
 }
 
 const PAN_RE = /^[A-Z]{5}[0-9]{4}[A-Z]$/;
@@ -101,6 +107,9 @@ export function cleanEntities(raw: unknown): EntityProfile[] {
       ...(typeof x.incorporatedOn === "string" && /^\d{4}-\d{2}-\d{2}$/.test(x.incorporatedOn) ? { incorporatedOn: x.incorporatedOn } : {}),
       ...(Array.isArray(x.people) ? { people: x.people.filter((q) => q && typeof q.name === "string").slice(0, 50).map((q) => ({ name: String(q.name).slice(0, 120), role: String(q.role ?? "").slice(0, 60) })) } : {}),
       ...(Array.isArray(x.shareholding) ? { shareholding: x.shareholding.filter((q) => q && typeof q.name === "string" && Number.isFinite(q.pct)).slice(0, 50) } : {}),
-      ...(Array.isArray(x.activities) ? { activities: x.activities.filter((q) => typeof q === "string").slice(0, 20) } : {}) }))
+      ...(Array.isArray(x.activities) ? { activities: x.activities.filter((q) => typeof q === "string").slice(0, 20) } : {}),
+      ...(typeof x.fyEnd === "string" && /^\d{2}-\d{2}$/.test(x.fyEnd) ? { fyEnd: x.fyEnd } : {}),
+      ...(Array.isArray(x.related) ? { related: x.related.filter((q) => q && typeof q.name === "string").slice(0, 30).map((q) => ({ name: String(q.name).slice(0, 160), relation: String(q.relation ?? "").slice(0, 60), pan: typeof q.pan === "string" ? q.pan : null, cin: typeof q.cin === "string" ? q.cin : null })) } : {}),
+      ...(Array.isArray(x.verified) ? { verified: x.verified.filter((q) => typeof q === "string").slice(0, 40) } : {}) }))
     .slice(0, 50);
 }

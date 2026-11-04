@@ -45,7 +45,7 @@ export interface AccountPatch {
 }
 export interface FinancialCorrectionHistory { id: string; createdAt: string; count: number; entries: { before: { id: string; title: string; txn_type: TxnType; account_id: string | null; to_account_id: string | null; amount: number; principal: number | null; interest: number | null }; after: { txn_type: TxnType; account_id: string | null; to_account_id: string | null; principal: number | null; interest: number | null; correction_revision: number } }[] }
 export interface NewAccount { name: string; kind: AccountKind; openingBalance: number; issuer?: string; lastFour?: string | null; creditLimit?: number | null; statementDay?: number | null; dueDay?: number | null; interestRate?: number | null; details?: AccountDetails }
-export interface DocumentMeta { title: string; docType: DocType; docDate: string | null; amount: number | null; currency: string; merchant: string | null; notes: string; text?: string; transactionId: string | null; accountId: string | null; loanId: string | null; expiresOn: string | null; fields?: DocField[]; replacesId?: string | null }
+export interface DocumentMeta { title: string; docType: DocType; docDate: string | null; amount: number | null; currency: string; merchant: string | null; notes: string; text?: string; transactionId: string | null; accountId: string | null; loanId: string | null; expiresOn: string | null; fields?: DocField[]; replacesId?: string | null; id?: string; evidenceLocked?: boolean }
 
 interface Snapshot { name: string; members: Member[]; expenses: Expense[]; accounts: Account[]; commitments: Commitment[]; rawLoans: Loan[]; goals: Goal[]; budgets: Budgets; preferences: FinancePreferences; valuations: Valuation[]; documents: VaultDoc[] }
 
@@ -280,7 +280,7 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
       id: x.id, title: x.title, docType: x.doc_type as DocType, filePath: x.file_path, fileName: x.file_name, mimeType: x.mime_type, size: x.size_bytes,
       docDate: x.doc_date, amount: x.amount == null ? null : Number(x.amount), currency: x.currency, merchant: x.merchant, notes: x.notes, text: x.extracted_text,
       transactionId: x.transaction_id, accountId: x.account_id, loanId: x.loan_id, expiresOn: x.expires_on, createdAt: x.created_at,
-      fields: Array.isArray(x.fields) ? (x.fields as unknown as DocField[]) : [], replacesId: x.replaces_id,
+      fields: Array.isArray(x.fields) ? (x.fields as unknown as DocField[]) : [], replacesId: x.replaces_id, evidenceLocked: !!x.evidence_locked,
     })));
     setMembers(m.data ?? []);
     hadSnapshot.current = true;
@@ -675,15 +675,20 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
   const removeValuation: Ctx["removeValuation"] = async (id) => { check((await supabase.from("asset_valuations").delete().eq("id", id)).error); await refresh(); };
   const addDocument: Ctx["addDocument"] = async (file, meta) => {
     validateDocument({ title: meta.title, size: file.size, docType: meta.docType, amount: meta.amount });
+    // A retried Statement Desk run reuses its id, so a second attempt never stores the file twice.
+    if (meta.id) {
+      const prior = await supabase.from("documents").select("id").eq("id", meta.id).eq("owner_id", userId).maybeSingle();
+      if (prior.data) { await refresh(); return prior.data.id; }
+    }
     const path = `${userId}/docs/${crypto.randomUUID()}-${safeName(file.name)}`;
     const up = await supabase.storage.from("receipts").upload(path, file, { contentType: file.type || "application/octet-stream" });
     if (up.error) throw new Error(`Couldn't upload ${file.name}`);
-    const docId = crypto.randomUUID();
+    const docId = meta.id ?? crypto.randomUUID();
     const { error } = await supabase.from("documents").insert({
       id: docId, owner_id: userId, title: meta.title.trim(), doc_type: meta.docType, file_path: path, file_name: file.name.slice(0, 200), mime_type: file.type, size_bytes: file.size,
       doc_date: meta.docDate || null, amount: meta.amount, currency: meta.currency, merchant: meta.merchant?.trim() || null, notes: meta.notes.slice(0, 2000), extracted_text: (meta.text ?? "").slice(0, 20000),
       transaction_id: meta.transactionId, account_id: meta.accountId, loan_id: meta.loanId, expires_on: meta.expiresOn || null,
-      fields: (meta.fields ?? []).slice(0, 40) as unknown as Json, replaces_id: meta.replacesId ?? null,
+      fields: (meta.fields ?? []).slice(0, 40) as unknown as Json, replaces_id: meta.replacesId ?? null, evidence_locked: !!meta.evidenceLocked,
     });
     if (error) { await supabase.storage.from("receipts").remove([path]); throw new Error(error.message); }
     await refresh();
@@ -703,12 +708,15 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
     if (m.loanId !== undefined) row["loan_id"] = m.loanId;
     if (m.expiresOn !== undefined) row["expires_on"] = m.expiresOn || null;
     if (m.fields !== undefined) row["fields"] = m.fields as unknown as Json;
+    if (m.evidenceLocked !== undefined) row["evidence_locked"] = m.evidenceLocked;
     check((await supabase.from("documents").update(row).eq("id", id)).error);
     await refresh();
   };
   const removeDocument: Ctx["removeDocument"] = async (d) => {
-    check((await supabase.from("documents").delete().eq("id", d.id)).error);
-    await supabase.storage.from("receipts").remove([d.filePath]);
+    const del = await supabase.from("documents").delete().eq("id", d.id);
+    if (del.error) throw new Error(/audit evidence/i.test(del.error.message) ? "This original is kept as audit evidence. Unlock it first." : del.error.message);
+    const rm = await supabase.storage.from("receipts").remove([d.filePath]);
+    if (rm.error) throw new Error(`Record removed but the file could not be deleted: ${rm.error.message}`);
     await refresh();
   };
   const history: Ctx["history"] = useCallback(async (id) => {

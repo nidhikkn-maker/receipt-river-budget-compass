@@ -18,7 +18,8 @@ const Extracted = z.object({
   text: z.string().describe("Readable text for search"),
   fields: z.array(z.object({
     label: z.string().describe("Field name, e.g. 'GSTIN', 'PAN', 'CIN', 'Survey number', 'Owner share', 'Lease rent', 'Assessment year', 'Policy number (last 4)', 'Asset', 'Depreciation rate'"),
-    value: z.string(),
+    value: z.string().describe("Normalised value (dates YYYY-MM-DD, numbers without separators, identifiers upper-case)"),
+    originalValue: z.string().describe("The value exactly as printed, before normalising"),
     page: z.number().nullable().describe("Page number where it appears"),
     quote: z.string().describe("Short exact quote from the document supporting the value"),
     confidence: z.enum(["high", "medium", "low"]),
@@ -36,8 +37,9 @@ const Extracted = z.object({
     legalName: z.string().nullable(), kind: z.enum(["individual", "huf", "proprietorship", "partnership", "llp", "company", "trust"]).nullable(),
     pan: z.string().nullable(), gstins: z.array(z.string()), cin: z.string().nullable().describe("CIN or LLPIN"), incorporatedOn: z.string().nullable().describe("YYYY-MM-DD"),
     address: z.string().nullable().describe("Registered address"), people: z.array(z.object({ name: z.string(), role: z.string().describe("Director, Partner, Trustee, Authorised signatory") })),
-    shareholding: z.array(z.object({ name: z.string(), pct: z.number() })), activities: z.array(z.string()), fyEnd: z.string().nullable(),
-  }).nullable().describe("Only for incorporation certificates, PAN/GST certificates, MoA/AoA, LLP/partnership/trust deeds"),
+    shareholding: z.array(z.object({ name: z.string(), pct: z.number() })), activities: z.array(z.string()), fyEnd: z.string().nullable().describe("Financial year end as MM-DD, e.g. 03-31"),
+    related: z.array(z.object({ name: z.string(), relation: z.string().describe("Holding company, subsidiary, associate, group company, partner firm"), pan: z.string().nullable(), cin: z.string().nullable() })).describe("Related entities printed on the document"),
+  }).nullable().describe("For incorporation certificates, PAN/GST certificates, MoA/AoA, LLP/partnership/trust deeds, and also bank account opening/KYC letters or audited accounts that print the entity's identifiers"),
   asset: z.object({
     name: z.string().nullable(), kind: z.enum(["property", "building", "vehicle", "machinery", "computer", "furniture", "other"]).nullable(), owner: z.string().nullable().describe("Buyer / billed-to name"),
     cost: z.number().nullable().describe("Total capitalisable cost incl. non-creditable taxes"), purchaseDate: z.string().nullable(), supplier: z.string().nullable(),
@@ -46,7 +48,8 @@ const Extracted = z.object({
   property: z.object({
     name: z.string().nullable(), owner: z.string().nullable(), address: z.string().nullable(), cost: z.number().nullable().describe("Consideration / acquisition cost"),
     acquiredOn: z.string().nullable(), surveyNo: z.string().nullable(), valuation: z.number().nullable(), valuationDate: z.string().nullable(),
-  }).nullable().describe("Only for sale deeds, registration, property tax and valuation documents"),
+    insurer: z.string().nullable().describe("Property insurer, if a property insurance policy"), utilityConsumerNo: z.string().nullable().describe("Electricity/water consumer number, if a utility bill"), propertyTaxId: z.string().nullable().describe("Property tax assessment number"),
+  }).nullable().describe("For sale deeds, registration, property tax, valuation reports, property insurance and utility bills for a property"),
   lease: z.object({
     tenant: z.string().nullable(), property: z.string().nullable(), unit: z.string().nullable(), start: z.string().nullable(), end: z.string().nullable(),
     rent: z.number().nullable().describe("Monthly rent"), dueDay: z.number().nullable(), escalationPct: z.number().nullable(), escalationEveryMonths: z.number().nullable(),
@@ -57,6 +60,10 @@ const Extracted = z.object({
     lines: z.array(z.object({ head: z.enum(["bank", "cash", "investments", "fixedAssets", "accumulatedDepreciation", "capitalReserves", "loans", "receivables", "payables", "taxBalances", "other"]), amount: z.number() })).describe("Closing balances as printed; omit heads not printed"),
     totalAssets: z.number().nullable(), totalLiabilities: z.number().nullable(),
     schedules: z.array(z.enum(["balanceSheet", "profitLoss", "trialBalance", "cashFlow", "notes", "auditorReport", "fixedAssetRegister", "depreciation", "loanSchedule", "receivables", "payables", "investments", "taxComputation", "gstReconciliation"])).describe("Which schedules this document actually contains"),
+    details: z.array(z.object({
+      schedule: z.enum(["balanceSheet", "profitLoss", "trialBalance", "cashFlow", "notes", "auditorReport", "fixedAssetRegister", "depreciation", "loanSchedule", "receivables", "payables", "investments", "taxComputation", "gstReconciliation"]),
+      lines: z.array(z.object({ label: z.string(), amount: z.number(), page: z.number().nullable(), quote: z.string() })).describe("Up to 40 printed line items of this schedule, as printed"),
+    })).describe("Detailed contents of each schedule actually present: P&L lines, cash flow lines, notes amounts, fixed asset register rows, depreciation, loans, receivables, payables, investments, tax computation, GST reconciliation. Omit schedules not printed."),
     qualifications: z.array(z.string()).describe("Audit qualifications or emphasis-of-matter, quoted"), filedForm: z.string().nullable().describe("e.g. ITR-6"), ackNo: z.string().nullable(), filedOn: z.string().nullable(),
   }).nullable().describe("Only for audited financial statements, trial balances, tax returns and depreciation schedules"),
 });
