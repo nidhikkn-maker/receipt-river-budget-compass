@@ -17,10 +17,12 @@ export interface TaxComputation {
   gross: number; lossesSetOff: number; total: number; notes: string[];
 }
 
-export function taxComputation(fy: string, entries: Expense[], assets: Asset[], leases: Lease[], gains: { sellDate: string; buyDate: string | null; gain: number | null }[], records: FyRecord[], entityId?: string, scope?: { accountIds: Set<string> }): TaxComputation {
+export function taxComputation(fy: string, entries: Expense[], assets: Asset[], leases: Lease[], gains: { sellDate: string; buyDate: string | null; gain: number | null; kind?: GainKind }[], records: FyRecord[], entityId?: string, scope?: { accountIds: Set<string> }, exclude?: { accountIds: Set<string> }): TaxComputation {
   // Per entity [§45]: only entries on that entity's mapped accounts and assets it owns.
-  const inYear = entries.filter((e) => fyOf(e.date) === fy && !e.transferCounterpartOf && (!scope || (!!e.accountId && scope.accountIds.has(e.accountId))));
+  const inYear = entries.filter((e) => fyOf(e.date) === fy && !e.transferCounterpartOf && (!scope || (!!e.accountId && scope.accountIds.has(e.accountId))) && !(exclude && e.accountId && exclude.accountIds.has(e.accountId)));
   if (scope && entityId) assets = assets.filter((a) => a.ownerEntityId === entityId);
+  // Personal working never includes company-owned records [§45].
+  else if (!entityId) assets = assets.filter((a) => !a.ownerEntityId);
   const income = inYear.filter((e) => e.txnType === "income");
   const text = (e: Expense) => `${e.title} ${e.merchant ?? ""} ${e.description} ${e.category}`;
   const tenants = leases.map((l) => l.tenant.toLowerCase()).filter((t) => t.length >= 3);
@@ -28,7 +30,8 @@ export function taxComputation(fy: string, entries: Expense[], assets: Asset[], 
   const salary = r2(income.filter((e) => /salary|payroll|stipend/i.test(text(e))).reduce((s, e) => s + e.amount, 0));
   const rent = r2(income.filter((e) => isRent(e) && receiptKind(text(e)) === "rent").reduce((s, e) => s + e.amount, 0));
   const homeLoanInterest = r2(inYear.filter((e) => e.txnType === "loan_repayment" && /home|housing/i.test(text(e))).reduce((s, e) => s + (e.interest ?? 0), 0));
-  const hpNet = r2(rent - rent * 0.3 - homeLoanInterest);
+  // s.24(b): interest deduction and house-property loss set-off are both capped at ₹2,00,000.
+  const hpNet = r2(Math.max(-HP_LOSS_CAP, rent - rent * 0.3 - Math.min(homeLoanInterest, rent > 0 ? homeLoanInterest : HP_LOSS_CAP)));
   const other = r2(income.filter((e) => /interest|dividend/i.test(text(e))).reduce((s, e) => s + e.amount, 0));
   const used = new Set(income.filter((e) => /salary|payroll|stipend|interest|dividend/i.test(text(e)) || isRent(e)).map((e) => e.id));
   const receipts = r2(income.filter((e) => !used.has(e.id) && e.scope === "business").reduce((s, e) => s + e.amount, 0));
@@ -36,15 +39,38 @@ export function taxComputation(fy: string, entries: Expense[], assets: Asset[], 
   const depreciation = r2(assets.reduce((s, a) => s + (taxSchedule(a, fy).find((y) => y.fy === fy)?.depreciation ?? 0) * (a.sharePct / 100), 0));
   const bizNet = r2(receipts - expenses - depreciation);
   let short = 0, long = 0;
-  for (const g of gains) if (g.gain != null && fyOf(g.sellDate) === fy) { const held = g.buyDate ? (Date.parse(g.sellDate) - Date.parse(g.buyDate)) / 864e5 : null; if (held != null && held > 365) long += g.gain; else short += g.gain; }
+  let unknown = 0;
+  for (const g of gains) if (g.gain != null && fyOf(g.sellDate) === fy) {
+    if (!g.buyDate) { unknown += g.gain; continue; }
+    if (gainTerm(g.kind ?? "listed_equity", g.buyDate, g.sellDate) === "long") long += g.gain; else short += g.gain;
+  }
   const notes: string[] = [];
-  if (gains.some((g) => g.gain != null && !g.buyDate)) notes.push("Some gains have no purchase date; treated as short-term until the transaction statement is uploaded");
-  if (homeLoanInterest > 200000) notes.push("Self-occupied home-loan interest is capped at ₹2,00,000; let-out property loss set-off is capped at ₹2,00,000 — confirm with your accountant");
-  const gross = r2(salary + Math.max(0, hpNet) + Math.max(0, bizNet) + Math.max(0, short) + Math.max(0, long) + other);
-  const cf = records.filter((r) => (!entityId || r.entityId === entityId) && r.fy < fy).flatMap((r) => r.lossesCarriedForward);
+  if (unknown) notes.push(`Gains of ₹${r2(unknown).toLocaleString("en-IN")} have no purchase date and are left out until the transaction statement is uploaded`);
+  if (homeLoanInterest > HP_LOSS_CAP) notes.push("Home-loan interest above ₹2,00,000 is not deducted (s.24(b) cap)");
+  if (hpNet < 0) notes.push("House-property loss is set off against other income up to ₹2,00,000; any excess is carried forward");
+  const gross = r2(salary + hpNet + Math.max(0, bizNet) + Math.max(0, short) + Math.max(0, long) + other);
+  const cf = broughtForward(records.filter((r) => !entityId || r.entityId === entityId), fy);
   const businessLoss = cf.filter((l) => l.kind === "business" || l.kind === "depreciation").reduce((s, l) => s + l.amount, 0);
   const lossesSetOff = r2(Math.min(businessLoss, Math.max(0, bizNet)));
   if (cf.length) notes.push(`Losses brought forward from filed returns: ₹${cf.reduce((s, l) => s + l.amount, 0).toLocaleString("en-IN")}`);
   notes.push("No deductions under Chapter VI-A are assumed — add only those you have evidence for");
   return { salary, houseProperty: { rent, standardDeduction: r2(rent * 0.3), homeLoanInterest, net: hpNet }, business: { receipts, expenses, depreciation, net: bizNet }, capitalGains: { short: r2(short), long: r2(long) }, otherSources: other, gross, lossesSetOff, total: r2(gross - lossesSetOff), notes };
+}
+
+const HP_LOSS_CAP = 200000;
+export type GainKind = "listed_equity" | "equity_fund" | "property" | "other";
+
+/** Holding period for long-term treatment: 12 months for listed shares/equity funds, 24 months otherwise. */
+export function gainTerm(kind: GainKind, buy: string, sell: string): "long" | "short" {
+  const months = kind === "listed_equity" || kind === "equity_fund" ? 12 : 24;
+  const b = new Date(buy + "T00:00:00Z"); b.setUTCMonth(b.getUTCMonth() + months);
+  return Date.parse(sell + "T00:00:00Z") > b.getTime() ? "long" : "short";
+}
+
+const fyStart = (fy: string) => Number(fy.slice(0, 4));
+/** Losses available this year: only the latest earlier filed record (each record restates what is still carried), dropping expired ones (8 years; unabsorbed depreciation never expires). */
+export function broughtForward(records: FyRecord[], fy: string): FyRecord["lossesCarriedForward"] {
+  const prior = records.filter((r) => r.fy < fy).sort((a, b) => (a.fy < b.fy ? 1 : -1))[0];
+  if (!prior) return [];
+  return prior.lossesCarriedForward.filter((l) => l.amount > 0 && (l.kind === "depreciation" || fyStart(fy) - fyStart(l.fromFy) <= 8));
 }

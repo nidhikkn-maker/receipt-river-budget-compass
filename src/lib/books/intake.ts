@@ -107,12 +107,12 @@ function extraOf(base: EntityProfile, r: EntityRead): Partial<EntityProfile> {
 }
 
 /** Asset master record proposal from a purchase invoice [§27, test 5]. Capitalisation still needs confirmation. */
-export function proposeAsset(read: AssetRead, entities: EntityProfile[], newId: string, docId: string | null): { asset: Asset | null; missing: string[]; ownerSuggested: boolean } {
-  const missing = [!read.name && "asset name", read.cost == null && "purchase cost", !iso(read.purchaseDate) && "purchase date"].filter((x): x is string => !!x);
+export function proposeAsset(read: AssetRead, entities: EntityProfile[], newId: string, docId: string | null): { asset: Asset | null; missing: string[]; ownerSuggested: boolean; suggestedLife?: number } {
+  const missing = [!read.name && "asset name", read.cost == null && "purchase cost", !iso(read.purchaseDate) && "purchase date", "date put to use (confirm)", "useful life", "residual value"].filter((x): x is string => !!x);
   if (!read.name || read.cost == null || !iso(read.purchaseDate)) return { asset: null, missing, ownerSuggested: false };
   const kind: AssetKind = read.kind ?? "other";
   const owner = read.owner ? nameSuggestion(entities, read.owner)?.id : undefined;
-  return { missing, ownerSuggested: !!owner, asset: { id: newId, name: read.name.trim(), kind, cost: read.cost, inUse: read.purchaseDate!, sharePct: 100, bookMethod: "slm", bookRatePct: 0, ownerEntityId: owner, docId: docId ?? undefined, tag: read.serial ?? undefined, usefulLifeYears: DEFAULT_LIFE[kind], residualPct: kind === "property" ? 0 : 5 } as Asset };
+  return { missing, ownerSuggested: !!owner, asset: { id: newId, name: read.name.trim(), kind, cost: read.cost, inUse: read.purchaseDate!, sharePct: 100, bookMethod: "slm", bookRatePct: 0, ownerEntityId: owner, docId: docId ?? undefined, tag: read.serial ?? undefined, ...(read.supplier ? { supplier: read.supplier } : {}), ...(read.warrantyUntil ? { warrantyUntil: read.warrantyUntil } : {}), ...(read.insurance ? { insurance: read.insurance } : {}) } as Asset, suggestedLife: DEFAULT_LIFE[kind] };
 }
 /** Indicative useful lives (Companies Act Schedule II); editable per asset. */
 export const DEFAULT_LIFE: Record<AssetKind, number> = { property: 0, building: 30, vehicle: 8, machinery: 15, computer: 3, furniture: 10, other: 5 };
