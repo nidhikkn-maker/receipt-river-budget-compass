@@ -90,3 +90,13 @@ describe("invoice and tax statement intake", () => {
     expect(proposeTaxStatement({ form: "26as", fy: "2025-26", pan: null, taxableSalary: null, credits: [] }, []).missing).toContain("PAN");
   });
 });
+
+import { suggestLinks } from "./intake";
+describe("account and loan link suggestions", () => {
+  it("links only on a unique masked account number", () => {
+    const accs = [{ id: "a", lastFour: "4321" }, { id: "b", lastFour: "9999" }];
+    expect(suggestLinks("Statement for A/c XXXX4321", accs, []).accountId).toBe("a");
+    expect(suggestLinks("Total 4321 paid", accs, []).accountId).toBeNull();
+    expect(suggestLinks("Mercedes GLS loan EMI", [], [{ id: "l", name: "Mercedes GLS" }]).loanId).toBe("l");
+  });
+});

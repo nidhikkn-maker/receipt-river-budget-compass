@@ -299,6 +299,7 @@ export function DocumentIntake({ file, context, onClose, resume, replacesId }: {
           {proposal.missingSchedules.length > 0 && <p className="text-xs text-destructive">Not in this upload: {proposal.missingSchedules.join(", ")} — left empty, not filled in.</p>}
         </div>}
         {(route === "document" || route === "loan") && <div className="grid grid-cols-2 gap-2 text-xs">
+          {(suggested?.accountId || suggested?.loanId) && <p className="col-span-2 text-xs text-muted-foreground">Link suggested from the account or loan number printed on the document — check it.</p>}
           <label>Link to account<select className="mt-1 w-full rounded-md border bg-background px-2 py-1" value={linkAcc} onChange={(e) => setLinkAcc(e.target.value)}><option value="">Not linked</option>{accounts.filter((a) => !a.archived).map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}</select></label>
           <label>Link to loan<select className="mt-1 w-full rounded-md border bg-background px-2 py-1" value={linkLoan} onChange={(e) => setLinkLoan(e.target.value)}><option value="">Not linked</option>{loans.map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}</select></label>
         </div>}
