@@ -7,6 +7,7 @@ import { InboxWork } from '@/components/InboxWork';
 import { AccountStatementStatus } from '@/components/AccountStatementStatus';
 import { useStore } from '@/lib/store';
 import { inboxItems, INBOX_LABEL } from '@/lib/inbox';
+import { useAudit, auditInboxItems } from '@/components/books/useAudit';
 import { centreReview, reviewCounts, REVIEW_FILTERS, type ReviewFilter } from '@/lib/review-centre';
 import { todayISO } from '@/lib/use-position';
 import { money } from '@/lib/expenses';
@@ -29,7 +30,8 @@ function Inbox() {
   const { section,filter } = Route.useSearch();
   const store = useStore();
   const today = todayISO();
-  const items = useMemo(() => inboxItems({ transactions: store.transactions, accounts: store.accounts, commitments: store.commitments, prefs: store.preferences, today, pendingCount: store.pendingCount }), [store.transactions, store.accounts, store.commitments, store.preferences, today, store.pendingCount]);
+  const audit = useAudit();
+  const items = useMemo(() => [...inboxItems({ transactions: store.transactions, accounts: store.accounts, commitments: store.commitments, prefs: store.preferences, today, pendingCount: store.pendingCount }), ...auditInboxItems(audit)], [store.transactions, store.accounts, store.commitments, store.preferences, today, store.pendingCount, audit]);
   const [rules, setRules] = useState<ImportRule[]>([]);
   const [rulesError, setRulesError] = useState(false);
   useEffect(() => { let active = true; const load = () => { void listImportRules().then(r => { if (active) { setRules(r); setRulesError(false); } }).catch(() => { if (active) setRulesError(true); }); }; load(); window.addEventListener('focus', load); return () => { active = false; window.removeEventListener('focus', load); }; }, []);
