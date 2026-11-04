@@ -213,3 +213,31 @@ export function unmappedFields(labels: string[], docType: DocType, known: Propos
   }
   return out.slice(-300);
 }
+
+/**
+ * Before asking the owner, fill unknown lease terms from trusted sources, in order [§59]:
+ * 1) an existing lease for the same tenant and property, 2) fields printed on related documents
+ * (same property), mapped through canonical field names. Each filled value records where it came from.
+ */
+export function fillLeaseFromTrusted(
+  lease: Lease,
+  existing: Lease[],
+  related: { title: string; fields: { label: string; value: string }[] }[],
+  approved: Record<string, string> = {},
+): { lease: Lease; sources: Record<string, string> } {
+  const out: Lease = { ...lease };
+  const sources: Record<string, string> = {};
+  const prior = existing.find((l) => l.id !== lease.id && l.propertyId === lease.propertyId && l.tenant.trim().toLowerCase() === lease.tenant.trim().toLowerCase());
+  const numKeys = ["dueDay", "escalationPct", "escalationEveryMonths", "deposit", "noticeDays"] as const;
+  for (const k of numKeys) if (out[k] === undefined && prior?.[k] !== undefined) { out[k] = prior[k]; sources[k] = "earlier lease for this tenant"; }
+  if (out.gst === undefined && prior?.gst !== undefined) { out.gst = prior.gst; sources["gst"] = "earlier lease for this tenant"; }
+  const want: Record<string, (typeof numKeys)[number]> = { "security deposit": "deposit", deposit: "deposit", "notice period": "noticeDays", escalation: "escalationPct" };
+  for (const d of related) for (const f of d.fields) {
+    const c = canonicalField(f.label, approved);
+    const k = c ? want[c] : undefined;
+    if (!k || out[k] !== undefined) continue;
+    const n = Number(f.value.replace(/[^\d.]/g, ""));
+    if (Number.isFinite(n) && n > 0) { out[k] = n; sources[k] = d.title; }
+  }
+  return { lease: out, sources };
+}
