@@ -8,9 +8,9 @@ import { Fold } from "@/components/Fold";
 import { useStore } from "@/lib/store";
 import { ENTITY_KINDS, fyRange } from "@/lib/entities";
 import { accountBalance } from "@/lib/ledger";
-import { HEAD_LABEL, confirmOpening, nextFy, openingProposal } from "@/lib/books/fy";
+import { booksHeads, HEAD_LABEL, confirmOpening, nextFy, openingProposal } from "@/lib/books/fy";
 import { REQUIRED_SCHEDULES } from "@/lib/books/intake";
-import { annualSummary, duplicateInvoices, gstr1, gstr3b, invoiceProblems, matchGstPayments, unfiledPeriods } from "@/lib/books/gst";
+import { annualSummary, duplicateInvoices, gstr1, gstr1Json, gstr3b, gstr3bJson, gstr9, invoiceProblems, validateGstJson, matchGstPayments, unfiledPeriods } from "@/lib/books/gst";
 import { activateRule, OFFICIAL_SOURCES, proposeRule, ruleOn, validateRule, formFor } from "@/lib/books/regulatory";
 import type { GstInvoice, OpeningHead, RuleArea, TaxProfile } from "@/lib/books/types";
 import { supabase } from "@/integrations/supabase/client";
@@ -34,9 +34,8 @@ export function FyOnboarding() {
         <p className="text-xs text-muted-foreground">Balance sheet, P&L, trial balance, cash flow, notes, auditor's report, fixed-asset and depreciation schedules, loan/receivable/payable/investment schedules, tax computation and GST reconciliation. Each one fills in what it contains; nothing missing is filled in for you.</p>
         {books.fyRecords.map((r) => {
           const ent = entities.find((e) => e.id === r.entityId);
-          const bookNow: Partial<Record<OpeningHead, number>> = r.confirmedOpening ? {} : {
-            bank: Math.round(accounts.filter((a) => ["savings", "current"].includes(a.kind) && !a.archived).reduce((s, a) => s + accountBalance(a, transactions.filter((t) => t.date <= fyRange(r.fy).end)), 0)),
-          };
+          // Per entity, head by head, using only accounts linked to this entity [§19].
+          const bookNow: Partial<Record<OpeningHead, number>> = r.confirmedOpening || !r.entityId ? {} : booksHeads({ accounts, txns: transactions, assets: preferences.assets ?? [], accountIds: new Set(books.entityAccounts?.[r.entityId] ?? []), entityId: r.entityId, fyEnd: fyRange(r.fy).end, fy: r.fy });
           const op = openingProposal(r, bookNow);
           const missing = REQUIRED_SCHEDULES.filter((s) => !r.schedules.includes(s));
           return <div key={r.id} className="space-y-2 rounded-xl border p-3">
@@ -71,13 +70,18 @@ export function TaxProfiles({ fy }: { fy: string }) {
       <div className="space-y-2 text-sm">
         {entities.length === 0 && <p className="text-muted-foreground">Add a company or person first on <Link to="/entities" className="underline">Companies & years</Link>.</p>}
         {entities.map((e) => {
-          const p = books.taxProfiles.find((x) => x.entityId === e.id) ?? { entityId: e.id, regime: "new", obligations: [], gstScheme: e.gstins.length ? "regular" : "none", auditRequired: e.kind === "company" || e.kind === "llp" } as TaxProfile;
-          const f = formFor(e.kind, e.kind !== "individual", fy);
+          const saved = books.taxProfiles.find((x) => x.entityId === e.id);
+          // Nothing is assumed: an unsaved profile shows blank choices until confirmed [§45].
+          const p = saved ?? ({ entityId: e.id, regime: "", obligations: [], gstScheme: "", auditRequired: false } as unknown as TaxProfile);
+          const ready = !!saved && !!saved.regime && !!saved.gstScheme;
+          const f = formFor(e.kind, p.hasBusiness ?? e.kind !== "individual", fy);
           return <div key={e.id} className="rounded-xl border p-3">
             <p className="font-semibold">{e.name} <span className="text-xs font-normal text-muted-foreground">{ENTITY_KINDS[e.kind].label}</span></p>
             <div className="mt-1 grid grid-cols-2 gap-2 text-xs">
-              <label>Regime<select className="w-full rounded-md border bg-background px-1 py-1" value={p.regime} onChange={(x) => upd({ ...p, regime: x.target.value as "new" })}><option value="new">New</option><option value="old">Old</option></select></label>
-              <label>GST scheme<select className="w-full rounded-md border bg-background px-1 py-1" value={p.gstScheme} onChange={(x) => upd({ ...p, gstScheme: x.target.value as "regular" })}><option value="none">Not registered</option><option value="regular">Regular (monthly)</option><option value="qrmp">QRMP (quarterly)</option><option value="composition">Composition</option></select></label>
+              <label>Regime<select className="w-full rounded-md border bg-background px-1 py-1" value={p.regime} onChange={(x) => upd({ ...p, regime: x.target.value as "new", confirmedAt: new Date().toISOString() })}><option value="" disabled>Choose…</option><option value="new">New</option><option value="old">Old</option></select></label>
+              <label>GST scheme<select className="w-full rounded-md border bg-background px-1 py-1" value={p.gstScheme} onChange={(x) => upd({ ...p, gstScheme: x.target.value as "regular", confirmedAt: new Date().toISOString() })}><option value="" disabled>Choose…</option><option value="none">Not registered</option><option value="regular">Regular (monthly)</option><option value="qrmp">QRMP (quarterly)</option><option value="composition">Composition</option></select></label>
+              <label className="col-span-2 flex items-center gap-2"><input type="checkbox" checked={p.hasBusiness ?? e.kind !== "individual"} onChange={(x) => upd({ ...p, hasBusiness: x.target.checked })} />Has business or professional income</label>
+              {!ready && <p className="col-span-2 text-destructive">Not confirmed — choose the regime and GST scheme. Tax and GST working stay hidden until then.</p>}
               <label className="col-span-2 flex items-center gap-2"><input type="checkbox" checked={p.auditRequired} onChange={(x) => upd({ ...p, auditRequired: x.target.checked })} />Accounts audited</label>
             </div>
             <details className="mt-1 text-xs"><summary className="cursor-pointer text-muted-foreground">Accounts belonging to {e.name} · {(books.entityAccounts?.[e.id] ?? []).length} linked</summary>
@@ -110,7 +114,8 @@ export function GstReturns({ fy }: { fy: string }) {
   const eligibleKeys = new Set(itc.lines.filter((l) => l.eligible).map((l) => `${l.invoice.partyGstin}|${l.invoice.number.trim().toUpperCase()}`));
   const r1 = gstr1(books.gstInvoices, gstin, period), r3 = gstr3b(books.gstInvoices, gstin, period, eligibleKeys);
   const due = owner ? obligations({ entity: owner, profile, fy, today: today(), gstFilings: books.gstFilings, fyRecords: books.fyRecords, rules: books.rules }).filter((o) => o.gstin === gstin) : [];
-  const pay = matchGstPayments(months.map((m) => ({ period: m, amount: gstr3b(books.gstInvoices, gstin, m).netPayable })).filter((x) => x.amount > 0), transactions.filter((t) => (t.txnType ?? "expense") === "expense").map((t) => ({ id: t.id, date: t.date, amount: t.amount, text: `${t.title} ${t.merchant ?? ""} ${t.description}` })));
+  const pay = matchGstPayments(months.map((m) => ({ period: m, amount: gstr3b(books.gstInvoices, gstin, m, new Set(itcReview(books.gstInvoices, gstin, m).lines.filter((l) => l.eligible).map((l) => `${l.invoice.partyGstin}|${l.invoice.number.trim().toUpperCase()}`))).netPayable })).filter((x) => x.amount > 0), transactions.filter((t) => (t.txnType ?? "expense") === "expense").map((t) => ({ id: t.id, date: t.date, amount: t.amount, accountId: t.accountId, text: `${t.title} ${t.merchant ?? ""} ${t.description}` })), { gstin, accountIds: owner ? new Set(books.entityAccounts?.[owner.id] ?? []) : undefined });
+  const g9 = gstr9(books.gstInvoices, gstin, Number(fy.slice(0, 4)), eligibleKeys);
   const yr = annualSummary(books.gstInvoices, gstin, Number(fy.slice(0, 4)));
   const unfiled: { form: string; period: string; due?: string; status?: string }[] = profile ? due.filter((o) => o.status === "overdue" || o.status === "due") : unfiledPeriods(books.gstFilings, gstin, "GSTR-3B", months).map((m) => ({ form: "GSTR-3B", period: m }));
   const list = books.gstInvoices.filter((i) => i.gstin === gstin && i.date.startsWith(period));
@@ -128,11 +133,19 @@ export function GstReturns({ fy }: { fy: string }) {
           <div className="rounded-xl border p-3 text-xs"><p className="font-semibold">GSTR-1 draft · {period}</p><p>B2B: {r1.b2b.count} invoices · taxable {inr(r1.b2b.taxable)} · tax {inr(r1.b2b.igst + r1.b2b.cgst + r1.b2b.sgst + r1.b2b.cess)}</p><p>B2C: {r1.b2c.count} invoices · taxable {inr(r1.b2c.taxable)}</p></div>
           <div className="rounded-xl border p-3 text-xs"><p className="font-semibold">GSTR-3B draft · {period}</p><p>Output tax {inr(r3.outputTax)} · ITC {inr(r3.itcClaimed)}</p><p className="font-semibold">Net payable {inr(r3.netPayable)}{r3.carryForward ? ` · credit carried ${inr(r3.carryForward)}` : ""}</p></div>
         </div>
+        <div className="flex flex-wrap gap-2 text-xs">{([["GSTR-1", gstr1Json(books.gstInvoices, gstin, period)], ["GSTR-3B", gstr3bJson(books.gstInvoices, gstin, period, eligibleKeys)]] as const).map(([form, j]) => {
+          const errs = validateGstJson(form, j as unknown as Record<string, unknown>);
+          return <div key={form} className="min-w-0">{errs.length ? <p className="break-words text-destructive">{form} file not ready: {errs.slice(0, 3).join("; ")}</p>
+            : <Button size="sm" variant="outline" onClick={() => { const b = new Blob([JSON.stringify(j, null, 1)], { type: "application/json" }); const a = document.createElement("a"); a.href = URL.createObjectURL(b); a.download = `${form}_${gstin}_${period}.json`; a.click(); URL.revokeObjectURL(a.href); }}>Download {form} JSON (offline-tool layout)</Button>}</div>;
+        })}</div>
+        <p className="text-[11px] text-muted-foreground">Files follow the GSTN offline-tool JSON layout and pass the format checks above. Check them in the official offline tool before your accountant files; nothing is uploaded.</p>
         {!profile && <p className="text-xs text-destructive">No filing scheme recorded for this GSTIN — set it in the tax profile above so monthly or quarterly returns are worked out correctly.</p>}
         {itc.lines.length > 0 && <details><summary className="cursor-pointer text-xs text-muted-foreground">Input tax credit review · {inr(itc.eligible)} claimable · {inr(itc.held)} held</summary>
           {itc.lines.map((l) => <p key={l.invoice.id} className="break-words text-xs">{l.invoice.number} · {l.invoice.party} · {inr(l.tax)} — {l.eligible ? <span className="text-primary">claimable</span> : <span className="text-destructive">held: {l.reasons.join(", ")}</span>}</p>)}</details>}
         {unfiled.length > 0 && <div className="text-xs"><b>Returns due</b>{unfiled.slice(0, 12).map((o) => <p key={`${o.form}${o.period}`}>{o.form} {o.period}{o.due ? ` · due ${o.due}${o.status === "overdue" ? " (overdue)" : ""}` : ""}</p>)}</div>}
         <p className="text-[11px] text-muted-foreground">ITC in the 3B draft counts only purchases with a valid supplier GSTIN and a clean tax split; confirm against the supplier-filed GSTR-2B on <Link to="/gst-check" className="underline">Suppliers & invoices</Link> before filing. Annual FY {fy}: sales {inr(yr.sales)}, output tax {inr(yr.outputTax)}, purchases {inr(yr.purchases)}, input tax {inr(yr.inputTax)}.</p>
+        <div className="rounded-xl border p-3 text-xs"><p className="font-semibold">GSTR-9 working · FY {fy}</p><p>Table 4 outward: taxable {inr(g9.table4.taxable)} · tax {inr(g9.table4.tax)}</p><p>Table 6 ITC availed: {inr(g9.table6.itc)}</p><p>Table 9 tax payable {inr(g9.table9.payable)} · per monthly 3B {inr(g9.table9.paidThrough3B)}</p>{g9.checks.map((c) => <p key={c} className="text-destructive">{c}</p>)}
+          <Button size="sm" variant="outline" className="mt-2" onClick={() => save({ savedDrafts: [...(books.savedDrafts ?? []).filter((d) => !(d.form === "GSTR-9" && d.period === fy && d.ref === gstin)), { id: crypto.randomUUID(), form: "GSTR-9", period: fy, ref: gstin, createdAt: new Date().toISOString(), data: g9 }, ...[{ form: "GSTR-1", data: r1 }, { form: "GSTR-3B", data: r3 }].map((x) => ({ id: crypto.randomUUID(), form: x.form, period, ref: gstin, createdAt: new Date().toISOString(), data: x.data }))].filter((d, i, all) => all.findIndex((o) => o.form === d.form && o.period === d.period && o.ref === d.ref) === i) })}>Save drafts for review</Button></div>
         {pay.length > 0 && <div className="text-xs"><b>GST payments</b>{pay.map((p) => <p key={p.period}>{p.period}: {inr(p.amount)} — {p.paymentId ? `paid ${p.paidOn}` : <span className="text-destructive">no matching payment found</span>}</p>)}</div>}
         <details><summary className="cursor-pointer text-muted-foreground">Invoice register · {list.length} in {period}{dups.length ? ` · ${dups.length} duplicate number${dups.length > 1 ? "s" : ""}` : ""}</summary>
           {list.map((i) => <div key={i.id} className="flex justify-between gap-2 border-b py-1 text-xs"><span>{i.kind === "sales" ? "Sale" : "Purchase"} {i.number} · {i.party} {i.partyGstin}<span className="block text-destructive">{invoiceProblems(i).join(" · ")}</span></span><span>{inr(i.taxable)} + {inr(i.igst + i.cgst + i.sgst + i.cess)}<Button size="sm" variant="ghost" className="h-6" onClick={() => save({ gstInvoices: books.gstInvoices.filter((x) => x.id !== i.id) })}>Remove</Button></span></div>)}
@@ -237,23 +250,27 @@ export function TaxComputationCard({ fy }: { fy: string }) {
   const ent = entities.find((e) => e.id === who);
   const accountIds = ent ? new Set(books.entityAccounts?.[ent.id] ?? []) : null;
   const gains = ent ? [] : (demat ?? []).flatMap((d) => d.holdings.flatMap((h) => h.gains));
-  const c = taxComputation(fy, transactions, preferences.assets ?? [], books.leases, gains, books.fyRecords, ent?.id, accountIds ? { accountIds } : undefined);
+  const companyAccounts = new Set(Object.values(books.entityAccounts ?? {}).flat());
+  const c = taxComputation(fy, transactions, preferences.assets ?? [], books.leases, gains, books.fyRecords, ent?.id, accountIds ? { accountIds } : undefined, ent ? undefined : { accountIds: companyAccounts }, (() => { const xs = (books.salaryEvidence ?? []).filter((x) => x.entityId === (ent?.id ?? "personal") && x.fy === fy); return xs.length ? xs.reduce((s, x) => s + x.amount, 0) : null; })(), books.rules);
   const profile = ent ? books.taxProfiles.find((p) => p.entityId === ent.id) : undefined;
   const { rules } = rulesFor(fy);
   const personal = !ent || ent.kind === "individual" || ent.kind === "huf";
-  const regime = profile?.regime ?? "new";
-  const slabTax = personal && regime === "new" ? estimateTax(c.total - c.capitalGains.long - c.capitalGains.short, rules) : null;
+  // A company/person needs a confirmed profile; "You (personal)" has no entity record and uses the new regime unless an individual profile exists.
+  const regime = ent ? profile?.regime : "new";
+  const unconfirmed = !!ent && !(profile?.regime && profile.gstScheme);
+  const slabTax = !unconfirmed && personal && regime === "new" ? estimateTax(c.total - c.capitalGains.long - c.capitalGains.short, rules) : null;
   const creditKey = ent?.id ?? "personal";
   const cr = creditsFor(books.taxCredits ?? [], creditKey, fy);
   const recordedTx = new Set((books.taxCredits ?? []).map((x) => x.transactionId).filter(Boolean));
   const challans = ledgerTaxPayments(accountIds ? transactions.filter((t) => t.accountId && accountIds.has(t.accountId)) : transactions, fy).filter((t) => !recordedTx.has(t.id));
-  const rows: [string, number][] = [["Salary", c.salary], ["House property (rent − 30% − home-loan interest)", c.houseProperty.net], ["Business / profession", c.business.net], ["Short-term capital gains", c.capitalGains.short], ["Long-term capital gains", c.capitalGains.long], ["Other sources (interest, dividends)", c.otherSources], ["Gross total income", c.gross], ["Losses brought forward set off", -c.lossesSetOff], ["Total income", c.total]];
+  const rows: [string, number][] = [["Salary", c.salary], ["House property (rent − 30% − interest, loss capped ₹2L)", c.houseProperty.net], ["Business / profession", c.business.net], ["Short-term capital gains", c.capitalGains.short], ["Long-term capital gains", c.capitalGains.long], ["Other sources (interest, dividends)", c.otherSources], ["Gross total income", c.gross], ["Losses brought forward set off", -c.lossesSetOff], ["Total income", c.total]];
   const addCredit = (x: { kind: CreditKind; amount: number; source: string; transactionId?: string }) => save({ taxCredits: [...(books.taxCredits ?? []), { id: crypto.randomUUID(), entityId: creditKey, fy, ...x }] });
   return (
     <Fold title="Tax computation by head" hint={`FY ${fy} · ${ent?.name ?? "You (personal)"} · total income ${inr(c.total)}`}>
       <div className="space-y-2 text-sm">
         {entities.length > 0 && <select aria-label="Whose tax" className="w-full rounded-md border bg-background px-2 py-1 text-sm" value={who} onChange={(e) => setWho(e.target.value)}><option value="">You (personal)</option>{entities.map((e) => <option key={e.id} value={e.id}>{e.name}</option>)}</select>}
         {ent && accountIds && accountIds.size === 0 && <p className="text-xs text-destructive">No accounts are linked to {ent.name} yet — link them in its tax profile below. Until then nothing is counted for it.</p>}
+        {unconfirmed && <p className="text-xs text-destructive">Confirm {ent!.name}'s tax profile (regime and GST scheme) below before this working is used.</p>}
         <div className="divide-y rounded-xl border">{rows.map(([k, v]) => <div key={k} className="flex justify-between gap-2 px-3 py-2 text-xs"><span>{k}</span><b className="shrink-0">{inr(v)}</b></div>)}</div>
         {slabTax != null ? <p className="text-xs">Indicative slab tax (new regime): <b>{inr(slabTax)}</b> plus capital-gains tax at special rates.</p>
           : <p className="text-xs text-muted-foreground">{personal ? "Old-regime slabs and deductions are not added — no tax figure is shown rather than a guess." : `${ent ? ENTITY_KINDS[ent.kind].label : ""} tax rates depend on the option chosen (e.g. section 115BAA/115BAB) — the accountant confirms the rate; no tax figure is shown.`}</p>}

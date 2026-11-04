@@ -1,7 +1,7 @@
 // Document vault: receipts attached to entries plus stand-alone documents, searchable together (pure, tested).
 export const DOC_TYPES = ["bill", "receipt", "invoice", "bank_statement", "card_statement", "insurance", "loan_agreement", "payment_confirmation", "warranty", "demat_statement", "transaction_statement", "capital_gains_statement",
   "mutual_fund_statement", "loan_statement", "incorporation", "pan_gst_registration", "audited_financials", "trial_balance", "tax_return", "gst_return",
-  "contract", "property_deed", "lease_agreement", "asset_invoice", "depreciation_schedule", "utility_bill", "maintenance", "other"] as const;
+  "contract", "property_deed", "lease_agreement", "asset_invoice", "depreciation_schedule", "utility_bill", "maintenance", "tax_statement", "other"] as const;
 export type DocType = (typeof DOC_TYPES)[number];
 export const DOC_LABEL: Record<DocType, string> = {
   bill: "Bill", receipt: "Receipt", invoice: "Invoice", bank_statement: "Bank statement", card_statement: "Credit card statement", insurance: "Insurance document",
@@ -9,11 +9,11 @@ export const DOC_LABEL: Record<DocType, string> = {
   demat_statement: "Demat statement", transaction_statement: "Transaction statement", capital_gains_statement: "Capital gains statement",
   mutual_fund_statement: "Mutual fund statement", loan_statement: "Loan statement", incorporation: "Company incorporation document", pan_gst_registration: "PAN / GST registration",
   audited_financials: "Audited financial statements", trial_balance: "Trial balance", tax_return: "Tax return", gst_return: "GST return", contract: "Contract",
-  property_deed: "Property deed", lease_agreement: "Lease agreement", asset_invoice: "Asset purchase invoice", depreciation_schedule: "Depreciation schedule",
+  property_deed: "Property deed", lease_agreement: "Lease agreement", asset_invoice: "Asset purchase invoice", depreciation_schedule: "Depreciation schedule", tax_statement: "Form 16 / 26AS / AIS / payslip",
   utility_bill: "Utility bill", maintenance: "Maintenance document", other: "Other financial or legal record",
 };
 /** One key detail read from a document, with where it came from so it can be checked. */
-export interface DocField { label: string; value: string; /** As printed, before normalising [§7]. */ originalValue?: string | undefined; page: number | null; quote: string; confidence: "high" | "medium" | "low"; status: "read" | "confirmed" | "corrected" }
+export interface DocField { label: string; value: string; /** As printed, before normalising [§7]. */ originalValue?: string | undefined; page: number | null; /** Section locator when no page number was read [§7]. */ section?: string | undefined; quote: string; confidence: "high" | "medium" | "low"; status: "read" | "confirmed" | "corrected" }
 export const MAX_DOC_BYTES = 10 * 1024 * 1024;
 
 export interface VaultDoc {

@@ -61,6 +61,8 @@ interface Ctx {
   discardPending: (id: string) => Promise<void>;
   preferences: FinancePreferences;
   savePreferences: (p: FinancePreferences) => Promise<void>;
+  /** Saves records from a document and locks it as evidence in one database transaction [v6 §3]. */
+  commitDocumentRecords: (documentId: string, p: FinancePreferences, lock: boolean) => Promise<void>;
   ensureCategory: (name: string) => Promise<void>;
   moveCategory: (source: string, target: string) => Promise<void>;
   /** Recategorises many entries at once; clears any category split so it can't contradict the new category. */
@@ -385,6 +387,13 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
     setPreferences(p);
     try { check((await supabase.from("finance_preferences").upsert({ owner_id: userId, data: p as unknown as Json, updated_at: new Date().toISOString() })).error); }
     catch(e){setPreferences(previous);throw e;}
+  };
+  const commitDocumentRecords: Ctx["commitDocumentRecords"] = async (documentId, p, lock) => {
+    const previous = preferences;
+    setPreferences(p);
+    try { check((await supabase.rpc("commit_document_intake", { p_document_id: documentId, p_data: p as unknown as Json, p_lock: lock })).error); }
+    catch (e) { setPreferences(previous); throw e; }
+    if (lock) await refresh().catch(() => undefined);
   };
   const ensureCategory: Ctx["ensureCategory"] = async (cat) => {
     if (preferences.categories.some((c) => c.name === cat)) return;
@@ -743,7 +752,7 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
   return (
     <StoreCtx.Provider value={{
       departmentBudgets, departmentBudgetError,
-      pendingCount, pendingItems, retrySync: (id?: string) => syncRef.current(id), discardPending: async (id: string) => { await removePending(id); setPendingItems((prev) => prev.filter((p) => p.id !== id)); setPendingCount((await pendingEntries(userId)).length); }, setTags, manageTripExpenses, applyReviewMapping, applyReviewMetadata, undoReviewMetadata, reviewMetadataHistory, saveRecurringReview, preferences, savePreferences, ensureCategory, moveCategory, bulkSetCategory, categoryHistory, undoCategoryBatch, correctFinancialEntries, undoFinancialCorrection, financialCorrectionHistory, userId, name, updateName, members, memberName,
+      pendingCount, pendingItems, retrySync: (id?: string) => syncRef.current(id), discardPending: async (id: string) => { await removePending(id); setPendingItems((prev) => prev.filter((p) => p.id !== id)); setPendingCount((await pendingEntries(userId)).length); }, setTags, manageTripExpenses, applyReviewMapping, applyReviewMetadata, undoReviewMetadata, reviewMetadataHistory, saveRecurringReview, preferences, savePreferences, commitDocumentRecords, ensureCategory, moveCategory, bulkSetCategory, categoryHistory, undoCategoryBatch, correctFinancialEntries, undoFinancialCorrection, financialCorrectionHistory, userId, name, updateName, members, memberName,
       expenses: expenses.filter((x) => (x.txnType ?? "expense") === "expense"), transactions: expenses.filter((x) => !x.transferCounterpartOf), transferCounterparts: expenses.filter((x) => !!x.transferCounterpartOf), confirmTransfer, cancelTransfer, accounts, addAccount, setArchived, adjustBalance,
       commitments, loans, goals, valuations, documents, saveCommitment, confirmIrregular, removeCommitment, confirmCommitment, saveLoan, removeLoan, recordLoanPayment, convertToEmi,
       saveGoal, removeGoal, updateAccount, addValuation, removeValuation, addDocument, updateDocument, removeDocument, history, setReimbursement, recordReimbursement, deleteAll,

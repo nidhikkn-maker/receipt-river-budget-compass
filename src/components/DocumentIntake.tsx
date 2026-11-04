@@ -15,7 +15,7 @@ import { useStore } from "@/lib/store";
 import { extractDocument, type ExtractedDocument } from "@/lib/document-extract.functions";
 import { DOC_LABEL, DOC_TYPES, duplicateDocuments, type DocField, type DocType } from "@/lib/documents";
 import { ENTITY_KINDS } from "@/lib/entities";
-import { autoName, fillLeaseFromTrusted, proposeAsset, proposeEntity, proposeFy, proposeLease, proposeProperty, ROUTE_OF, trail, type IntakeContext, type Step } from "@/lib/books/intake";
+import { autoName, fillLeaseFromTrusted, proposeAsset, proposeEntity, proposeFy, proposeLease, proposeProperty, proposeGstInvoice, proposeTaxStatement, suggestLinks, assetPayment, ROUTE_OF, trail, type IntakeContext, type Step } from "@/lib/books/intake";
 import { commitIntake, type Confirmed } from "@/lib/books/commit";
 import { emptyBooks, LEASE_TERMS, LEASE_TERM_LABEL, leaseUnknowns, requiresApproval, type Lease } from "@/lib/books/types";
 import { HEAD_LABEL } from "@/lib/books/fy";
@@ -94,12 +94,27 @@ export function DocumentIntake({ file, context, onClose, resume, replacesId }: {
   }, [file]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const route = ROUTE_OF[docType];
+  // Preselect the account/loan the document names; the owner can change it before saving [§6].
+  const suggested = useMemo(() => (x ? suggestLinks(`${x.text ?? ""} ${fields.map((f) => `${f.label} ${f.value}`).join(" ")}`, accounts, loans.map((l) => ({ id: l.id, name: l.name }))) : null), [x, fields, accounts, loans]);
+  const autoLinked = useRef(false);
+  useEffect(() => {
+    if (!suggested || autoLinked.current) return;
+    autoLinked.current = true;
+    if (suggested.accountId && !linkAcc) setLinkAcc(suggested.accountId);
+    if (suggested.loanId && !linkLoan) setLinkLoan(suggested.loanId);
+  }, [suggested]); // eslint-disable-line react-hooks/exhaustive-deps
   const proposal = useMemo(() => {
     if (!x) return null;
     // Proposed record ids derive from the run so a retry updates the same record.
     const id = runId;
     if (route === "entity" && x.entity) return { kind: "entity" as const, ...proposeEntity(x.entity, entities, id, today()) };
-    if (route === "asset" && x.asset) return { kind: "asset" as const, ...proposeAsset(x.asset, entities, id, null) };
+    if (route === "asset" && x.asset) {
+      // Look in trusted records (the matching payment) before asking for missing details [§59].
+      const pay = assetPayment(x.asset, store.transactions);
+      const read = x.asset.cost == null && pay ? { ...x.asset, cost: pay.amount, purchaseDate: x.asset.purchaseDate ?? pay.date } : x.asset;
+      const p = proposeAsset(read, entities, id, null);
+      return { kind: "asset" as const, ...p, payment: pay, costFromPayment: x.asset.cost == null && !!pay, asset: p.asset ? { ...p.asset, ...(pay ? { transactionId: pay.id } : {}) } : null };
+    }
     if (route === "property" && x.property) return { kind: "property" as const, ...proposeProperty(x.property, entities, id, null) };
     if (route === "lease" && x.lease) {
       const p = proposeLease(x.lease, books.properties, id, null);
@@ -108,6 +123,8 @@ export function DocumentIntake({ file, context, onClose, resume, replacesId }: {
       const filled = fillLeaseFromTrusted(p.lease, books.leases, related, books.fieldMappings ?? {});
       return { kind: "lease" as const, ...p, lease: filled.lease, unknown: leaseUnknowns(filled.lease), sources: filled.sources };
     }
+    if (route === "gst" && x.gstInvoice) return { kind: "gst" as const, ...proposeGstInvoice(x.gstInvoice, entities.flatMap((e) => e.gstins), id, null) };
+    if (route === "tax" && x.taxStatement) return { kind: "tax" as const, ...proposeTaxStatement(x.taxStatement, entities) };
     if (route === "fy" && x.audited) return { kind: "fy" as const, ...proposeFy(x.audited as Parameters<typeof proposeFy>[0], entities, books.fyRecords, id, null) };
     return null;
   }, [x, route, entities, books.properties, books.fyRecords, books.leases, books.docLinks, books.fieldMappings, documents, runId]);
@@ -118,7 +135,8 @@ export function DocumentIntake({ file, context, onClose, resume, replacesId }: {
   const v = (k: string, d: string | number | null | undefined) => edit[k] ?? (d == null ? "" : String(d));
   const optNum = (k: string, d: number | undefined) => { const s = edit[k]; if (s === undefined) return d; return s.trim() === "" || !Number.isFinite(Number(s)) ? undefined : Number(s); };
   const ownerSuggested = !!proposal && "ownerSuggested" in proposal && proposal.ownerSuggested;
-  const capMin = books.policy?.capitalisationMin;
+  const capOwner = proposal?.kind === "asset" ? proposal.asset?.ownerEntityId : undefined;
+  const capMin = (capOwner ? books.policy?.capitalisationMinByEntity?.[capOwner] : undefined) ?? books.policy?.capitalisationMin;
   const needCap = proposal?.kind === "asset" && !!proposal.asset && requiresApproval(books.policy, "capitalise");
   const belowCap = proposal?.kind === "asset" && !!proposal.asset && capMin != null && proposal.asset.cost < capMin;
 
@@ -132,7 +150,10 @@ export function DocumentIntake({ file, context, onClose, resume, replacesId }: {
       if (!proposal.asset || belowCap) return proposal.asset && belowCap ? { route: "document" } : null;
       const a = proposal.asset;
       const purchase = x?.asset?.purchaseDate ?? a.inUse;
-      return { route: "asset", asset: { ...a, name: v("name", a.name), cost: Number(v("cost", a.cost)) || a.cost, inUse: v("inUse", a.inUse), purchaseDate: purchase, capitalisedOn: v("capOn", purchase), kind: v("akind", a.kind) as AssetKind, supplier: x?.asset?.supplier ?? undefined, warrantyUntil: x?.asset?.warrantyUntil ?? undefined, insurance: x?.asset?.insurance ?? undefined, ...(ownerSuggested && !ownerOk ? { ownerEntityId: undefined } : {}) } as typeof a };
+      // Put-to-use date, useful life and residual value are never assumed [§32].
+      const life = optNum("life", undefined), resid = optNum("resid", undefined);
+      if (edit["inUse"] === undefined || life == null || resid == null) return null;
+      return { route: "asset", asset: { ...a, usefulLifeYears: life, residualPct: resid, name: v("name", a.name), cost: Number(v("cost", a.cost)) || a.cost, inUse: v("inUse", a.inUse), purchaseDate: purchase, capitalisedOn: v("capOn", purchase), kind: v("akind", a.kind) as AssetKind, supplier: x?.asset?.supplier ?? undefined, warrantyUntil: x?.asset?.warrantyUntil ?? undefined, insurance: x?.asset?.insurance ?? undefined, ...(ownerSuggested && !ownerOk ? { ownerEntityId: undefined } : {}) } as typeof a };
     }
     if (proposal.kind === "property") {
       const cost = Number(v("cost", x?.property?.cost ?? "")) || 0;
@@ -148,6 +169,12 @@ export function DocumentIntake({ file, context, onClose, resume, replacesId }: {
       for (const k of LEASE_TERMS) { if (k === "gst") { const g = edit["gst"]; if (g !== undefined) lease.gst = g === "" ? undefined : g === "yes"; } else lease[k] = optNum(k, l[k]); }
       return { route: "lease", lease };
     }
+    if (proposal.kind === "gst") return proposal.invoice ? { route: "gst", invoice: { ...proposal.invoice, number: v("invno", proposal.invoice.number), taxable: Number(v("taxable", proposal.invoice.taxable)) || proposal.invoice.taxable } } : null;
+    if (proposal.kind === "tax") {
+      if (!proposal.fy) return null;
+      const whoId = v("taxwho", proposal.entityId ?? "personal");
+      return { route: "tax", entityId: whoId, fy: proposal.fy, salary: proposal.salary, credits: proposal.credits.map((c) => ({ kind: c.kind, amount: c.amount, source: `${DOC_LABEL[docType]}${c.deductor ? ` · ${c.deductor}` : ""}` })) };
+    }
     if (proposal.kind === "fy") return proposal.record && (!ownerSuggested || ownerOk) ? { route: "fy", record: proposal.record } : null;
     return { route: "document" };
   };
@@ -155,6 +182,8 @@ export function DocumentIntake({ file, context, onClose, resume, replacesId }: {
   const save = async () => {
     const c = confirmed();
     if (!c) { toast.error(ownerSuggested && !ownerOk ? "Confirm which company this belongs to first" : "Fill the missing details first"); return; }
+    const unlocated = fields.filter((f) => !f.page && !f.section?.trim()).length;
+    if (unlocated) { toast.error(`${unlocated} detail${unlocated > 1 ? "s" : ""} need a page or section — open “Details read”`); return; }
     if (needCap && !capOk && c.route === "asset") { toast.error("Confirm capitalisation first"); return; }
     setSaving(true); setFailed(null);
     let at: Step = "Save";
@@ -171,9 +200,8 @@ export function DocumentIntake({ file, context, onClose, resume, replacesId }: {
       const next = commitIntake({ entities, assets: preferences.assets ?? [], books }, withDoc, { id: docId, title, docType, fieldLabels: fields.map((f) => f.label) }, today(), () => crypto.randomUUID());
       const known = new Set(preferences.contractObligations.map((o) => o.docId));
       const obs = !known.has(docId) ? toObligations(docId, x?.obligations ?? [], () => crypto.randomUUID()) : [];
-      await savePreferences({ ...preferences, entities: next.entities, assets: next.assets, books: next.books, ...(obs.length ? { contractObligations: [...preferences.contractObligations, ...obs] } : {}) });
-      // A document that now backs a record is kept as evidence and can't be deleted by accident [§11].
-      if (c.route !== "document") await updateDocument(docId, { evidenceLocked: true }).catch(() => undefined);
+      // Records and the evidence lock commit together: either both are saved or neither is [§3, §11].
+      await store.commitDocumentRecords(docId, { ...preferences, entities: next.entities, assets: next.assets, books: next.books, ...(obs.length ? { contractObligations: [...preferences.contractObligations, ...obs] } : {}) }, c.route !== "document");
       at = "Audit"; await step("Audit");
       await closeRun({ id: runId, data: runData.current }, "done").catch(() => undefined);
       setDone(c.route);
@@ -210,7 +238,8 @@ export function DocumentIntake({ file, context, onClose, resume, replacesId }: {
         {fields.length > 0 && <details><summary className="cursor-pointer text-muted-foreground">Details read ({fields.length}) — tap a value to correct it</summary>
           <div className="mt-2 grid gap-2">{fields.map((f, i) => <label key={i} className="grid gap-0.5"><span className="text-xs">{f.label}{f.confidence !== "high" && <span className={`ml-1 ${f.confidence === "low" ? "text-destructive" : "text-muted-foreground"}`}>{f.confidence} confidence</span>}{f.status === "corrected" && <span className="ml-1 text-primary">corrected</span>}</span>
             <Input value={f.value} onChange={(e) => setFields(fields.map((y, j) => (j === i ? { ...y, value: e.target.value, status: "corrected" } : y)))} />
-            <span className="text-[11px] text-muted-foreground">{f.page ? `Page ${f.page} · ` : ""}printed “{f.originalValue ?? f.quote}”{f.quote && f.originalValue && f.quote !== f.originalValue ? ` · “${f.quote}”` : ""}</span></label>)}</div></details>}
+            {!f.page && <Input aria-label={`Page or section for ${f.label}`} className="h-7 text-xs" placeholder="Page or section where this appears (required)" value={f.section ?? ""} onChange={(e) => setFields(fields.map((y, j) => (j === i ? { ...y, section: e.target.value } : y)))} />}
+            <span className="text-[11px] text-muted-foreground">{f.page ? `Page ${f.page} · ` : f.section ? `${f.section} · ` : ""}printed “{f.originalValue ?? f.quote}”{f.quote && f.originalValue && f.quote !== f.originalValue ? ` · “${f.quote}”` : ""}</span></label>)}</div></details>}
 
         {ownerSuggested && <label className="flex items-start gap-2 rounded-xl border border-dashed p-3 text-xs"><input type="checkbox" className="mt-0.5" checked={ownerOk} onChange={(e) => setOwnerOk(e.target.checked)} /><span>The name on this document matches <b>{entities.find((e) => e.id === (proposal?.kind === "fy" ? proposal.entityId : proposal?.kind === "asset" ? proposal.asset?.ownerEntityId : proposal?.kind === "property" ? proposal.property.ownerEntityId : null))?.name}</b>, but no PAN, CIN or GSTIN confirms it. Tick to confirm it belongs to this company.</span></label>}
 
@@ -228,11 +257,29 @@ export function DocumentIntake({ file, context, onClose, resume, replacesId }: {
           <Input aria-label="Asset name" className="col-span-2" value={v("name", proposal.asset.name)} onChange={(e) => setEdit({ ...edit, name: e.target.value })} />
           <label className="text-xs">Cost<Input aria-label="Cost" type="number" value={v("cost", proposal.asset.cost)} onChange={(e) => setEdit({ ...edit, cost: e.target.value })} /></label>
           <label className="text-xs">Put to use<Input aria-label="Put to use" type="date" value={v("inUse", proposal.asset.inUse)} onChange={(e) => setEdit({ ...edit, inUse: e.target.value })} /></label>
+          {proposal.payment && <p className="col-span-2 text-xs text-muted-foreground">Linked payment: ₹{proposal.payment.amount.toLocaleString("en-IN")} on {proposal.payment.date}{proposal.costFromPayment ? " — cost taken from this payment because the invoice total wasn't read" : ""}.</p>}
+          <label className="text-xs">Useful life (years)<Input aria-label="Useful life" inputMode="decimal" placeholder={proposal.suggestedLife ? `Suggested ${proposal.suggestedLife}` : ""} value={v("life", null)} onChange={(e) => setEdit({ ...edit, life: e.target.value })} /></label>
+          <label className="text-xs">Residual value (%)<Input aria-label="Residual value" inputMode="decimal" placeholder="e.g. 5" value={v("resid", null)} onChange={(e) => setEdit({ ...edit, resid: e.target.value })} /></label>
+          {(edit["inUse"] === undefined || !v("life", null) || !v("resid", null)) && <p className="col-span-2 text-xs text-muted-foreground">Confirm the put-to-use date, useful life and residual value before saving.</p>}
           <label className="col-span-2 text-xs">Capitalised on<Input aria-label="Capitalised on" type="date" value={v("capOn", x.asset?.purchaseDate ?? proposal.asset.inUse)} onChange={(e) => setEdit({ ...edit, capOn: e.target.value })} /></label>
           <select aria-label="Asset category" className="col-span-2 rounded-md border bg-background px-2 py-2" value={v("akind", proposal.asset.kind)} onChange={(e) => setEdit({ ...edit, akind: e.target.value })}>{Object.entries(ASSET_KINDS).map(([k, l]) => <option key={k} value={k}>{l}</option>)}</select>
           <p className="col-span-2 text-xs text-muted-foreground">{[x.asset?.supplier && `Supplier ${x.asset.supplier}`, x.asset?.purchaseDate && `invoice ${x.asset.purchaseDate}`, x.asset?.warrantyUntil && `warranty to ${x.asset.warrantyUntil}`, x.asset?.insurance && `insurance ${x.asset.insurance}`].filter(Boolean).join(" · ")}</p>
           {needCap && !belowCap && <label className="col-span-2 flex items-center gap-2 text-xs"><input type="checkbox" checked={capOk} onChange={(e) => setCapOk(e.target.checked)} />Capitalise this as a fixed asset (your approval policy asks for this){capMin == null ? " — no capitalisation limit set yet in Audit → Approvals" : ""}</label>}
         </div> : null)}
+        {proposal?.kind === "gst" && (proposal.invoice ? <div className="grid grid-cols-2 gap-2 rounded-xl border p-3">
+          <p className="col-span-2 font-semibold">GST {proposal.invoice.kind === "sales" ? "sales" : "purchase"} invoice draft · {proposal.invoice.gstin}</p>
+          <label className="text-xs">Invoice number<Input aria-label="Invoice number" value={v("invno", proposal.invoice.number)} onChange={(e) => setEdit({ ...edit, invno: e.target.value })} /></label>
+          <label className="text-xs">Taxable value<Input aria-label="Taxable value" inputMode="decimal" value={v("taxable", proposal.invoice.taxable)} onChange={(e) => setEdit({ ...edit, taxable: e.target.value })} /></label>
+          <p className="col-span-2 text-xs text-muted-foreground">{proposal.invoice.date} · {proposal.invoice.party || "party not printed"} {proposal.invoice.partyGstin} · IGST {proposal.invoice.igst} · CGST {proposal.invoice.cgst} · SGST {proposal.invoice.sgst}{proposal.invoice.cess ? ` · cess ${proposal.invoice.cess}` : ""}. Saved to the GST register for review; nothing is filed.</p>
+        </div> : <p className="rounded-xl border border-dashed p-3 text-xs">GST invoice can't be prepared yet — missing: {proposal.missing.join(", ")}. It is kept in DocuRepo.</p>)}
+        {proposal?.kind === "tax" && <div className="grid gap-2 rounded-xl border p-3 text-xs">
+          <p className="font-semibold">Tax statement · FY {proposal.fy ?? "not printed"}</p>
+          <label>Whose tax<select aria-label="Whose tax statement" className="w-full rounded-md border bg-background px-1 py-1" value={v("taxwho", proposal.entityId ?? "personal")} onChange={(e) => setEdit({ ...edit, taxwho: e.target.value })}><option value="personal">You (personal)</option>{entities.map((e) => <option key={e.id} value={e.id}>{e.name}</option>)}</select></label>
+          {proposal.salary != null && <p>Taxable salary as printed: ₹{proposal.salary.toLocaleString("en-IN")}</p>}
+          {proposal.credits.map((c, i) => <p key={i}>{c.kind.toUpperCase()} ₹{c.amount.toLocaleString("en-IN")}{c.deductor ? ` · ${c.deductor}` : ""}</p>)}
+          {proposal.missing.length > 0 && <p className="text-destructive">Missing: {proposal.missing.join(", ")}</p>}
+          <p className="text-muted-foreground">These become taxes already paid and salary for that year. Each is recorded once per document.</p>
+        </div>}
         {proposal?.kind === "property" && <div className="grid grid-cols-2 gap-2 rounded-xl border p-3">
           <p className="col-span-2 font-semibold">Proposed property</p>
           <Input aria-label="Property name" className="col-span-2" value={v("name", proposal.property.name)} onChange={(e) => setEdit({ ...edit, name: e.target.value })} />
@@ -260,6 +307,7 @@ export function DocumentIntake({ file, context, onClose, resume, replacesId }: {
           {proposal.missingSchedules.length > 0 && <p className="text-xs text-destructive">Not in this upload: {proposal.missingSchedules.join(", ")} — left empty, not filled in.</p>}
         </div>}
         {(route === "document" || route === "loan") && <div className="grid grid-cols-2 gap-2 text-xs">
+          {(suggested?.accountId || suggested?.loanId) && <p className="col-span-2 text-xs text-muted-foreground">Link suggested from the account or loan number printed on the document — check it.</p>}
           <label>Link to account<select className="mt-1 w-full rounded-md border bg-background px-2 py-1" value={linkAcc} onChange={(e) => setLinkAcc(e.target.value)}><option value="">Not linked</option>{accounts.filter((a) => !a.archived).map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}</select></label>
           <label>Link to loan<select className="mt-1 w-full rounded-md border bg-background px-2 py-1" value={linkLoan} onChange={(e) => setLinkLoan(e.target.value)}><option value="">Not linked</option>{loans.map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}</select></label>
         </div>}

@@ -64,8 +64,18 @@ const Extracted = z.object({
       schedule: z.enum(["balanceSheet", "profitLoss", "trialBalance", "cashFlow", "notes", "auditorReport", "fixedAssetRegister", "depreciation", "loanSchedule", "receivables", "payables", "investments", "taxComputation", "gstReconciliation"]),
       lines: z.array(z.object({ label: z.string(), amount: z.number(), page: z.number().nullable(), quote: z.string() })).describe("Up to 40 printed line items of this schedule, as printed"),
     })).describe("Detailed contents of each schedule actually present: P&L lines, cash flow lines, notes amounts, fixed asset register rows, depreciation, loans, receivables, payables, investments, tax computation, GST reconciliation. Omit schedules not printed."),
+    losses: z.array(z.object({ fromFy: z.string().describe("Year the loss arose, like 2021-22"), kind: z.enum(["business", "capital", "depreciation", "house"]), amount: z.number() })).describe("Losses carried forward exactly as printed in the return or tax computation; empty if none printed"),
     qualifications: z.array(z.string()).describe("Audit qualifications or emphasis-of-matter, quoted"), filedForm: z.string().nullable().describe("e.g. ITR-6"), ackNo: z.string().nullable(), filedOn: z.string().nullable(),
   }).nullable().describe("Only for audited financial statements, trial balances, tax returns and depreciation schedules"),
+  gstInvoice: z.object({
+    number: z.string().nullable(), date: z.string().nullable().describe("YYYY-MM-DD"), seller: z.string().nullable(), sellerGstin: z.string().nullable(), buyer: z.string().nullable(), buyerGstin: z.string().nullable(),
+    taxable: z.number().nullable(), igst: z.number().nullable(), cgst: z.number().nullable(), sgst: z.number().nullable(), cess: z.number().nullable(),
+  }).nullable().describe("Only for tax invoices that print GSTIN and a tax split"),
+  taxStatement: z.object({
+    form: z.enum(["form16", "26as", "ais", "payslip"]).nullable(), fy: z.string().nullable().describe("Financial year like 2025-26"), pan: z.string().nullable(),
+    taxableSalary: z.number().nullable().describe("Taxable salary as printed (Form 16 Part B / payslip YTD)"),
+    credits: z.array(z.object({ kind: z.enum(["tds", "tcs", "advance", "self_assessment"]), amount: z.number(), deductor: z.string().nullable() })).describe("Tax deducted/collected/paid entries as printed"),
+  }).nullable().describe("Only for Form 16, Form 26AS, AIS or salary slips"),
 });
 export type ExtractedDocument = z.infer<typeof Extracted>;
 

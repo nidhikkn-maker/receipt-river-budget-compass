@@ -662,3 +662,22 @@
 - [ ] Scheduled jobs (closing prices, rule watch) start working only after the next publish — needs owner approval to publish
 - [ ] GLS loan original amount/start date — needs sanction letter
 - [ ] Physical iPhone checks — needs owner's device
+
+## v6 gap plan (approved 5 Nov 2026) — remaining
+- [x] B2/B3/B7 rules: deposit wording only, tenant balances from lease start, block depreciation after sales, confirmed asset life/residual/put-to-use, capital-gain holding periods, loss expiry/latest record, house-property cap/loss, personal tax excludes company records, GST payment GSTIN/period/account, GSTR-9 working, saved drafts tile, audit entity/FY attribution, shared rent matching.
+- [ ] B1 atomic intake, page required, invoice→GST draft, trusted lookups, account/loan links
+- [ ] B3 confirmed tax profile; per-company opening balances
+- [ ] B4 rule monitoring sources, substantive rule tests, official JSON drafts, field-extension proposals, plain-language search
+- [ ] B5 market/net worth (v6.1)
+- [ ] B7 receipt intake via Statement Desk path, loss extraction, Form16/26AS ingestion, loan/supplier/investment/intercompany reconciliations, property cost links
+- [ ] B6 tests, screenshots, evidence pack v2
+
+## v6 Batch 7 (this round) — done
+- Property costs link to their real payment and bill; Add Expense receipts share the DocuRepo duplicate check.
+- Approved rule changes feed tax calculations (house-property cap, holding periods, loss carry years) with calculation checks.
+- Rule watch tags forms/schema/validation/due-date changes; GSTR-1/3B JSON in GSTN offline-tool layout with format checks.
+- Controlled new-field approval (plan + compatibility check); plain-words DocuRepo search; flow-adjusted portfolio alerts.
+## Still open (blocked)
+- Opening balances are compared, not posted to the ledger (ledger has no non-cash opening entry type) — needs owner decision.
+- ITR JSON in official schema — schemas are thousands of fields; working papers only until scoped with accountant.
+- Live NSE/BSE prices — needs licensed provider choice. GLS original amount — needs sanction letter. iPhone push/camera — needs device test. Publishing — needs approval.

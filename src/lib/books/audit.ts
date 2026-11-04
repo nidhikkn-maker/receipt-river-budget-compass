@@ -31,23 +31,29 @@ export function continuousAudit(p: { today: string; entities: EntityProfile[]; a
   const fy = fyOf(p.today);
   for (const f of auditFindings(p.today, p.entities, p.assets, p.entries, p.docs))
     out.push({ key: `a:${f.key}`, type: MAP[f.area] ?? "Missing document", entity: f.text.split(":")[0] ?? "", account: null, fy: /FY (\d{4}-\d{2})/.exec(f.text)?.[1] ?? null, risk: f.severity, text: f.text, evidence: "Saved records", to: f.to });
-  const unrec = p.entries.filter((e) => e.statementRef && !e.reconciledAt);
-  const byAcc = new Map<string, number>(); for (const e of unrec) byAcc.set(e.accountId ?? "", (byAcc.get(e.accountId ?? "") ?? 0) + 1);
-  for (const [id, n] of byAcc) out.push({ key: `unrec:${id}`, type: "Unreconciled bank", entity: "Personal", account: acc(id), fy, risk: n > 20 ? "high" : "medium", text: `${n} statement lines not yet confirmed`, evidence: "Statement Desk imports", to: "/inbox" });
-  const misc = p.entries.filter((e) => (e.txnType ?? "expense") === "expense" && e.category === "Miscellaneous").length;
-  if (misc) out.push({ key: "class:misc", type: "Classification", entity: "Personal", account: null, fy, risk: misc > 25 ? "high" : "low", text: `${misc} entries still filed under Miscellaneous`, evidence: "Ledger categories", to: "/inbox" });
-  const dups = duplicatePairs(p.entries).length;
-  if (dups) out.push({ key: "dup", type: "Duplicate", entity: "Personal", account: null, fy, risk: "high", text: `${dups} possible duplicate pair${dups > 1 ? "s" : ""}`, evidence: "Same amount, date and account", to: "/inbox" });
+  // Findings keep their real entity (via account mapping) and financial year [§53].
+  const ownerOfAcc = new Map<string, string>(); for (const [eid, ids] of Object.entries(p.books.entityAccounts ?? {})) for (const id of ids) ownerOfAcc.set(id, eid);
+  const entOfEntry = (e: { accountId?: string | null | undefined }) => ent(e.accountId ? ownerOfAcc.get(e.accountId) : undefined);
+  const bucket = <T extends { accountId?: string | null | undefined; date: string }>(xs: T[], withAcc: boolean) => {
+    const m = new Map<string, { entity: string; fy: string; accountId: string | null; n: number }>();
+    for (const e of xs) { const k = `${withAcc ? e.accountId ?? "" : entOfEntry(e)}|${fyOf(e.date)}`; const cur = m.get(k) ?? { entity: entOfEntry(e), fy: fyOf(e.date), accountId: withAcc ? e.accountId ?? null : null, n: 0 }; cur.n++; m.set(k, cur); }
+    return [...m.entries()];
+  };
+  for (const [k, b] of bucket(p.entries.filter((e) => e.statementRef && !e.reconciledAt), true)) out.push({ key: `unrec:${k}`, type: "Unreconciled bank", entity: b.entity, account: acc(b.accountId), fy: b.fy, risk: b.n > 20 ? "high" : "medium", text: `${b.n} statement lines not yet confirmed`, evidence: "Statement Desk imports", to: "/inbox" });
+  for (const [k, b] of bucket(p.entries.filter((e) => (e.txnType ?? "expense") === "expense" && e.category === "Miscellaneous"), false)) out.push({ key: `class:misc:${k}`, type: "Classification", entity: b.entity, account: null, fy: b.fy, risk: b.n > 25 ? "high" : "low", text: `${b.n} entries still filed under Miscellaneous`, evidence: "Ledger categories", to: "/inbox" });
+  for (const [k, b] of bucket(duplicatePairs(p.entries).map((d) => d[0]), false)) out.push({ key: `dup:${k}`, type: "Duplicate", entity: b.entity, account: null, fy: b.fy, risk: "high", text: `${b.n} possible duplicate pair${b.n > 1 ? "s" : ""}`, evidence: "Same amount, date and account", to: "/inbox" });
   const diffs = bookVsTax(p.assets, fy).filter((d) => Math.abs(d.difference) > 1);
   if (diffs.length) out.push({ key: `dep:${fy}`, type: "Depreciation", entity: "All", account: null, fy, risk: "low", text: `${diffs.length} asset${diffs.length > 1 ? "s" : ""} with book ≠ tax depreciation (deferred tax to review)`, evidence: "Depreciation engine", to: "/assets" });
   const unposted = p.books.journals.filter((j) => j.status === "prepared").length;
   if (unposted) out.push({ key: "dep:unposted", type: "Depreciation", entity: "All", account: null, fy, risk: "medium", text: `${unposted} depreciation journal${unposted > 1 ? "s" : ""} prepared but not posted`, evidence: "Prepared journals", to: "/assets" });
   const months = [0, 1, 2].map((i) => { const d = new Date(p.today + "T00:00:00Z"); d.setUTCMonth(d.getUTCMonth() - i); return d.toISOString().slice(0, 7); }).reverse();
-  const income = p.entries.filter((e) => e.txnType === "income").map((e) => ({ id: e.id, date: e.date, amount: e.amount, text: `${e.title} ${e.merchant ?? ""} ${e.description}` }));
+  // Same receipts and one-receipt-one-lease allocation as Property [§39, §52].
+  const income = p.entries.filter((e) => e.txnType === "income" || (e.txnType === "transfer" && !!e.toAccountId)).map((e) => ({ id: e.id, date: e.date, amount: e.amount, accountId: e.txnType === "transfer" ? e.toAccountId : e.accountId, currency: e.currency, text: `${e.title} ${e.merchant ?? ""} ${e.description}` }));
+  const allLeases = { leases: p.books.leases, properties: p.books.properties };
   for (const l of p.books.leases) {
     const prop = p.books.properties.find((x) => x.id === l.propertyId);
     for (const a of leaseAlerts(l, p.today)) out.push({ key: `lease:${l.id}:${a}`, type: "Property/rent", entity: ent(prop?.ownerEntityId), account: null, fy, risk: /ended/.test(a) ? "high" : "medium", text: `${l.tenant}: ${a}`, evidence: "Lease terms", to: "/assets" });
-    const last = tenantLedger(l, prop, income, months).pop();
+    const last = tenantLedger(l, prop, income, months, allLeases).pop();
     if (last && last.balance > 0) out.push({ key: `rent:${l.id}:${last.month}`, type: "Property/rent", entity: ent(prop?.ownerEntityId), account: null, fy, risk: "high", text: `${l.tenant}: ₹${last.balance.toLocaleString("en-IN")} rent outstanding`, evidence: "Bank receipts vs lease", to: "/assets" });
   }
   for (const i of p.books.gstInvoices) for (const prob of invoiceProblems(i)) out.push({ key: `gst:${i.id}:${prob}`, type: "GST", entity: i.gstin, account: null, fy: fyOf(i.date), risk: "medium", text: `${i.number}: ${prob}`, evidence: "Invoice register", to: "/tax" });
@@ -137,7 +143,7 @@ export function readinessTiles(p: { accounts: Account[]; entries: Expense[]; ite
     { label: "Missing evidence", value: String(p.docsMissing) },
     { label: "Closed periods", value: String(p.books.closedPeriods.length) },
     // Drafts prepared from saved records for periods that have ended and have no filing evidence yet.
-    { label: "Draft reports", value: String(ended.length) },
+    { label: "Draft reports", value: `${(p.books.savedDrafts ?? []).length} saved · ${ended.length} needed` },
     { label: "Pending tax preparation", value: String(p.entitiesWithoutProfile + p.obligations.filter((o) => o.status === "overdue").length) },
     { label: "Unverified balances", value: String(p.books.fyRecords.filter((r) => !r.confirmedOpening).length + p.entries.filter((e) => e.statementRef && !e.reconciledAt).length) },
     { label: "Required approvals", value: String(p.books.journals.filter((j) => j.status === "prepared").length + p.books.rules.filter((r) => r.status === "proposed").length + p.books.proposedFields.filter((f) => f.status === "proposed").length) },

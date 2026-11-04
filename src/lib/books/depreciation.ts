@@ -70,12 +70,15 @@ export function blockSchedule(assets: Asset[], fy: string): BlockRow[] {
     if (added) { const half = (Date.parse(end) - Date.parse(a.inUse)) / 864e5 + 1 < 180; if (half) row.additionsHalf += a.cost; else row.additionsFull += a.cost; }
     else if (y) row.opening += y.opening;
     if (a.soldOn && a.soldOn >= start && a.soldOn <= end) row.disposals += a.saleValue ?? 0;
-    if (y && !(a.soldOn && a.soldOn >= start && a.soldOn <= end)) row.depreciation += y.depreciation;
     by.set(a.kind, row);
   }
+  // s.32 works on the block: sale proceeds reduce the full-rate part first, then the half-rate additions.
   return [...by.values()].map((r) => {
-    const base = r.opening + r.additionsFull + r.additionsHalf - r.disposals;
-    return { ...r, opening: r2(r.opening), depreciation: r2(base <= 0 ? 0 : r.depreciation), closing: r2(Math.max(0, base - (base <= 0 ? 0 : r.depreciation))) };
+    const fullBase = r.opening + r.additionsFull - r.disposals;
+    const halfBase = Math.max(0, r.additionsHalf + Math.min(0, fullBase));
+    const full = Math.max(0, fullBase);
+    const dep = r2((full * r.rate) / 100 + (halfBase * r.rate) / 200);
+    return { ...r, opening: r2(r.opening), depreciation: dep, closing: r2(full + halfBase - dep) };
   });
 }
 

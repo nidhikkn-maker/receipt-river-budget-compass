@@ -1,3 +1,4 @@
+import { duplicateDocuments } from "@/lib/documents";
 import { takePendingScan } from "@/lib/pending-scan";
 import { createFileRoute, Link, useNavigate, useRouter } from "@tanstack/react-router";
 import { returnAfterReview } from "@/lib/review-navigation";
@@ -111,7 +112,8 @@ function NewExpense() {
   const [fromInbox, setFromInbox] = useState<string[]>([]);
   const cameraRef = useRef<HTMLInputElement>(null); const galleryRef = useRef<HTMLInputElement>(null);
   const saveForLater = async () => {
-    try { for (const r of receipts) await addDocument(r.file, { title: `Receipt to add · ${r.name}`.slice(0, 120), docType: "receipt", docDate: null, amount: null, currency: "INR", merchant: null, notes: PENDING, transactionId: null, accountId: null, loanId: null, expiresOn: null });
+    // Same evidence store and duplicate check as Statement Desk: a photo already in DocuRepo is not stored twice.
+    try { for (const r of receipts) if (!duplicateDocuments(documents, { fileName: r.file.name, size: r.file.size, docType: "receipt", docDate: null, amount: null, merchant: null }).some((d) => d.fileName === r.file.name && d.size === r.file.size)) await addDocument(r.file, { title: `Receipt to add · ${r.name}`.slice(0, 120), docType: "receipt", docDate: null, amount: null, currency: "INR", merchant: null, notes: PENDING, transactionId: null, accountId: null, loanId: null, expiresOn: null });
       toast.success(`${receipts.length} receipt${receipts.length === 1 ? "" : "s"} saved to add later`); setReceipts([]); setScan(null); setConfirmed(true);
     } catch (e) { toast.error((e as Error).message); }
   };

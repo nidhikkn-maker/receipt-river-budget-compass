@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Fold } from "@/components/Fold";
 import { useStore } from "@/lib/store";
 import { DOC_LABEL, currentVersions, type DocType } from "@/lib/documents";
-import { DEFAULT_RETENTION, exportManifest, filterRepo, folders, linksOf, pastRetention, renewalReminders, type FolderBy } from "@/lib/books/docrepo";
+import { applyDocQuery, parseDocQuery, DEFAULT_RETENTION, exportManifest, filterRepo, folders, linksOf, pastRetention, renewalReminders, type FolderBy } from "@/lib/books/docrepo";
 import { fyOf } from "@/lib/entities";
 import { useBooks } from "./useBooks";
 
@@ -21,7 +21,10 @@ export function VaultBooks() {
   const [picked, setPicked] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
   const today = new Date().toISOString().slice(0, 10);
-  const filtered = filterRepo(docs, { ...(entityId ? { entityId } : {}), ...(fy ? { fy } : {}), ...(reg ? { reg } : {}) }, books.docLinks, entities);
+  const [ask, setAsk] = useState("");
+  const nl = ask.trim() ? parseDocQuery(ask, entities, today) : null;
+  const filtered0 = filterRepo(docs, { ...(entityId ? { entityId } : {}), ...(fy ? { fy } : {}), ...(reg ? { reg } : {}) }, books.docLinks, entities);
+  const filtered = nl ? applyDocQuery(filtered0, nl, books.docLinks, entities) : filtered0;
   const groups = folders(filtered, by, books.docLinks, entities);
   const years = [...new Set(docs.map((d) => fyOf(d.docDate ?? d.createdAt.slice(0, 10))))].sort().reverse();
   const old = pastRetention(docs, today, books.retentionYears);
@@ -50,6 +53,8 @@ export function VaultBooks() {
     <Fold id="organise" title="Folders, filters & export" hint={`${docs.length} documents · ${renew.length} renewals in 60 days${old.length ? ` · ${old.length} past retention` : ""}`}>
       <div className="space-y-3 text-sm">
         <Link to="/statements" className="inline-block text-xs font-semibold text-primary underline">Upload through Statement Desk — it identifies, reads and files any document</Link>
+        <Input aria-label="Ask in plain words" placeholder="e.g. Krupa invoices above 1 lakh last year" value={ask} onChange={(e) => setAsk(e.target.value)} />
+        {nl && <p className="break-words text-xs text-muted-foreground">Understood as: {[nl.types.length ? nl.types.map((t) => t.replace(/_/g, " ")).join(", ") : "any type", nl.entityId ? entities.find((e) => e.id === nl.entityId)?.name : null, nl.min != null ? `above ₹${nl.min.toLocaleString("en-IN")}` : null, nl.max != null ? `below ₹${nl.max.toLocaleString("en-IN")}` : null, nl.from ? `${nl.from} to ${nl.to}` : null, nl.words.length ? `containing “${nl.words.join(" ")}”` : null].filter(Boolean).join(" · ")} — {filtered.length} found</p>}
         <div className="grid gap-2 sm:grid-cols-3">
           <select aria-label="Company filter" className="rounded-md border bg-background px-2 py-2" value={entityId} onChange={(e) => setEntityId(e.target.value)}><option value="">All companies & people</option>{entities.map((e) => <option key={e.id} value={e.id}>{e.name}</option>)}</select>
           <select aria-label="Financial year filter" className="rounded-md border bg-background px-2 py-2" value={fy} onChange={(e) => setFy(e.target.value)}><option value="">All years</option>{years.map((y) => <option key={y} value={y}>FY {y}</option>)}</select>

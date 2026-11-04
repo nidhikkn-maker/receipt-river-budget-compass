@@ -129,7 +129,7 @@ describe("audit decisions", () => {
     const overdue = obs.filter((o) => o.status === "overdue").length;
     expect(tiles.find((t) => t.label === "Pending tax preparation")!.value).toBe(String(1 + overdue));
     const none = readinessTiles({ accounts: [], entries: [], items: [], books: emptyBooks(), docsMissing: 0, today: base.today, obligations: [], entitiesWithoutProfile: 0 });
-    expect(none.find((t) => t.label === "Draft reports")!.value).toBe("0");
+    expect(none.find((t) => t.label === "Draft reports")!.value).toBe("0 saved · 0 needed");
     expect(none.find((t) => t.label === "Pending tax preparation")!.value).toBe("0");
   });
   it("approval history lists period closures and rule approvals, newest first", () => {

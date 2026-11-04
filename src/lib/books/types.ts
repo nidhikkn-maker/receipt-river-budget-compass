@@ -15,11 +15,11 @@ export interface ClosedPeriod { id: string; from: Iso; to: Iso; entityId?: strin
 export interface PeriodEvent { at: string; action: "closed" | "reopened"; periodId: string; reason: string }
 
 /** One document linked to many records without copying the file [§8]. */
-export type LinkKind = "entity" | "asset" | "property" | "lease" | "loan" | "transaction" | "supplier" | "investment" | "insurance" | "fy";
+export type LinkKind = "entity" | "asset" | "property" | "lease" | "loan" | "transaction" | "supplier" | "investment" | "insurance" | "fy" | "gst";
 export interface DocLink { docId: string; kind: LinkKind; targetId: string; label: string }
 
 /** A field seen on a document that Ledgerline has no canonical place for [§15]; kept as data, proposed for approval. */
-export interface ProposedField { label: string; docType: DocType; seen: number; status: "proposed" | "approved" | "rejected" }
+export interface ProposedField { label: string; docType: DocType; seen: number; status: "proposed" | "approved" | "rejected"; plan?: string | undefined; compatible?: boolean | undefined; decidedOn?: string | undefined }
 
 /** Audited prior-year figures for one entity and financial year [§17–20]. */
 export const OPENING_HEADS = ["bank", "cash", "investments", "fixedAssets", "accumulatedDepreciation", "capitalReserves", "loans", "receivables", "payables", "taxBalances", "other"] as const;
@@ -91,7 +91,7 @@ export interface Journal { id: string; assetId: string; period: string; amount: 
 /** Approval policy [§56–57]: which actions need an explicit owner approval before they take effect. */
 export const POLICY_ACTIONS = ["capitalise", "postDepreciation", "taxTreatment", "historicalCorrection", "finaliseAccounts", "closePeriod", "activateRule", "createEntity"] as const;
 export type PolicyAction = (typeof POLICY_ACTIONS)[number];
-export interface ApprovalPolicy { require: Record<PolicyAction, boolean>; capitalisationMin?: number | undefined }
+export interface ApprovalPolicy { require: Record<PolicyAction, boolean>; capitalisationMin?: number | undefined; /** Per company/person limit [§27]; falls back to capitalisationMin. */ capitalisationMinByEntity?: Record<string, number> | undefined }
 export const DEFAULT_POLICY: ApprovalPolicy = { require: { capitalise: true, postDepreciation: true, taxTreatment: true, historicalCorrection: true, finaliseAccounts: true, closePeriod: true, activateRule: true, createEntity: true } };
 
 /** Durable state of an audit finding [§53]: it stays open until resolved. */
@@ -114,12 +114,12 @@ export interface Holding {
 /** v6.1 §5 — a price as delivered, never relabelled. */
 export type Freshness = "live" | "delayed" | "eod" | "nav" | "manual" | "statement";
 export interface Quote { key: string; price: number; at: string; provider: string; freshness: Freshness; refreshedAt: string; failedAt?: string | undefined }
-export interface Snapshot { date: Iso; netWorth: number; portfolio: number; liquid: number; liabilities: number; allocation: Record<string, number> }
+export interface Snapshot { date: Iso; netWorth: number; portfolio: number; liquid: number; liabilities: number; allocation: Record<string, number>; invested?: number | undefined }
 export interface AlertSettings { portfolioMovePct: number; staleNavDays: number; missingPrices: boolean; corporateActions: boolean; quantityMismatch: boolean; unusualValuationPct: number }
 export interface GoldRate { perGram24k: number; date: Iso; source: string }
 
 /** Tax & GST [§45–48]. */
-export interface TaxProfile { entityId: string; regime: "new" | "old"; obligations: string[]; gstScheme: "regular" | "composition" | "qrmp" | "none"; auditRequired: boolean }
+export interface TaxProfile { entityId: string; regime: "new" | "old"; obligations: string[]; gstScheme: "regular" | "composition" | "qrmp" | "none"; auditRequired: boolean; hasBusiness?: boolean | undefined; confirmedAt?: string | undefined }
 export interface GstInvoice {
   id: string; gstin: string; kind: "sales" | "purchase"; number: string; date: Iso; party: string; partyGstin: string;
   taxable: number; igst: number; cgst: number; sgst: number; cess: number; docId?: string | undefined; transactionId?: string | undefined;
@@ -154,7 +154,12 @@ export interface BooksData {
   fieldMappings?: Record<string, string> | undefined;
   /** TDS/TCS from Form 26AS/16/AIS and confirmed tax challans, per entity and FY [§46]. */
   taxCredits?: TaxCredit[] | undefined;
+  /** Return drafts actually prepared and saved (frozen working, not filings). */
+  savedDrafts?: SavedDraft[] | undefined;
+  /** Taxable salary as printed on Form 16 / payslips, per entity (or "self") and FY [§46]. */
+  salaryEvidence?: { entityId: string; fy: string; amount: number; docId: string }[] | undefined;
 }
+export interface SavedDraft { id: string; form: string; period: string; ref: string; createdAt: string; data: unknown }
 
 export const DEFAULT_ALERTS: AlertSettings = { portfolioMovePct: 5, staleNavDays: 3, missingPrices: true, corporateActions: true, quantityMismatch: true, unusualValuationPct: 20 };
 
@@ -196,6 +201,8 @@ export function cleanBooks(raw: unknown): BooksData {
     ruleDecisions: arr<{ changeId: string; status: "approved" | "dismissed"; at: string }>(r["ruleDecisions"], (x) => typeof x.changeId === "string", 1000),
     entityAccounts: r["entityAccounts"] && typeof r["entityAccounts"] === "object" ? Object.fromEntries(Object.entries(r["entityAccounts"] as Record<string, unknown>).filter(([, v]) => Array.isArray(v)).map(([k, v]) => [k, (v as unknown[]).filter((s): s is string => typeof s === "string")])) : {},
     fieldMappings: r["fieldMappings"] && typeof r["fieldMappings"] === "object" ? Object.fromEntries(Object.entries(r["fieldMappings"] as Record<string, unknown>).filter(([, v]) => typeof v === "string")) as Record<string, string> : {},
+    salaryEvidence: arr<{ entityId: string; fy: string; amount: number; docId: string }>(r["salaryEvidence"], (x) => typeof x.entityId === "string" && typeof x.fy === "string" && fin(x.amount), 500),
+    savedDrafts: arr<SavedDraft>(r["savedDrafts"], (x) => typeof x.id === "string" && typeof x.form === "string" && typeof x.period === "string", 500),
     taxCredits: arr<TaxCredit>(r["taxCredits"], (x) => typeof x.id === "string" && typeof x.entityId === "string" && typeof x.fy === "string" && fin(x.amount) && x.amount > 0 && ["tds", "tcs", "advance", "self_assessment"].includes(x.kind), 2000),
   };
 }
@@ -204,7 +211,8 @@ export function cleanPolicy(v: unknown): ApprovalPolicy {
   const p = (v && typeof v === "object" ? v : {}) as Partial<ApprovalPolicy>;
   const req = { ...DEFAULT_POLICY.require };
   for (const k of POLICY_ACTIONS) if (typeof p.require?.[k] === "boolean") req[k] = p.require[k];
-  return { require: req, ...(fin(p.capitalisationMin) && p.capitalisationMin! >= 0 ? { capitalisationMin: p.capitalisationMin } : {}) };
+  const by = p.capitalisationMinByEntity && typeof p.capitalisationMinByEntity === "object" ? Object.fromEntries(Object.entries(p.capitalisationMinByEntity).filter(([, v]) => fin(v) && v >= 0)) : {};
+  return { require: req, ...(fin(p.capitalisationMin) && p.capitalisationMin! >= 0 ? { capitalisationMin: p.capitalisationMin } : {}), ...(Object.keys(by).length ? { capitalisationMinByEntity: by } : {}) };
 }
 export function requiresApproval(policy: ApprovalPolicy | undefined, action: PolicyAction): boolean {
   return (policy ?? DEFAULT_POLICY).require[action] !== false;

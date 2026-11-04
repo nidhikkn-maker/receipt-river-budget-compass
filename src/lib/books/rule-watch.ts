@@ -30,3 +30,15 @@ export function newHeadlines(previous: string[] | null, current: string[]): stri
   const before = new Set(previous.map((x) => x.toLowerCase()));
   return current.filter((x) => !before.has(x.toLowerCase()));
 }
+
+/** What a new headline touches: named forms and whether it concerns schemas, validations or due dates [§49]. */
+export function classifyHeadline(t: string): { forms: string[]; schema: boolean; validation: boolean; dueDate: boolean; rate: boolean } {
+  const forms = [...new Set((t.toUpperCase().match(/\b(ITR-?\d|GSTR-?\d[A-Z]?|CMP-?08|FORM\s?(?:16A?|26AS|26QB|3CD|10[A-Z]*|AOC-4|MGT-7A?)|AOC-4|MGT-7A?)\b/g) ?? []).map((f) => f.replace(/\s+/, " ")))];
+  return { forms, schema: /schema|json|utility|offline tool|excel utility/i.test(t), validation: /validation|rule[s]? change|error code/i.test(t), dueDate: /due date|extend|extension|last date/i.test(t), rate: /rate|slab|percent|%|surcharge|cess/i.test(t) };
+}
+/** One-line summary for the change record, e.g. "ITR-3 · schema". */
+export function describeHeadline(t: string): string {
+  const c = classifyHeadline(t);
+  const tags = [...c.forms, c.schema && "schema", c.validation && "validation", c.dueDate && "due date", c.rate && "rate"].filter(Boolean);
+  return tags.length ? `${tags.join(" · ")} — ${t}` : t;
+}

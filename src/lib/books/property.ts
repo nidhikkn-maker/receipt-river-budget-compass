@@ -31,7 +31,8 @@ export interface TenantRow { month: string; due: number; rent: number; deposit: 
 
 /** Classify a bank receipt for a lease: deposits are never rent [§39, test 10]. */
 export function receiptKind(text: string, amount?: number, lease?: Lease): LedgerRowKind {
-  if (lease?.deposit && amount != null && Math.abs(amount - lease.deposit) <= 1 && !(Math.abs(amount - lease.rent) <= 1)) return "deposit";
+  // An amount equal to the deposit is not evidence on its own; only wording or a document says "deposit".
+  void amount; void lease;
   if (/\b(security\s*)?deposit\b|advance\s*security|refundable/i.test(text)) return "deposit";
   if (/maintenance|electricity|water|reimburse|penalty|late fee/i.test(text)) return "other";
   return "rent";
@@ -79,6 +80,18 @@ export function leaseReceipts(l: Lease, p: Property | undefined, income: Receipt
 export function tenantLedger(l: Lease, p: Property | undefined, income: Receipt[], months: string[], all?: { leases: Lease[]; properties: Property[] }): TenantRow[] {
   const mine = leaseReceipts(l, p, income, all);
   let owed = 0;
+  // Carry arrears/advance from the lease start so earlier months are never lost.
+  const first = months[0];
+  if (first) {
+    let m = l.start.slice(0, 7);
+    while (m < first) {
+      const due = rentFor(l, m);
+      const paid = mine.filter((r) => r.date.startsWith(m) && receiptKind(r.text, r.amount, l) === "rent").reduce((s, r) => s + r.amount, 0);
+      owed = r2(owed + due - paid);
+      const [y, mo] = m.split("-").map(Number) as [number, number];
+      m = mo === 12 ? `${y + 1}-01` : `${y}-${String(mo + 1).padStart(2, "0")}`;
+    }
+  }
   return months.map((month) => {
     const inM = mine.filter((r) => r.date.startsWith(month));
     const sum = (k: LedgerRowKind) => r2(inM.filter((r) => receiptKind(r.text, r.amount, l) === k).reduce((s, r) => s + r.amount, 0));

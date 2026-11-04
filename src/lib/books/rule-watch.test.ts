@@ -17,3 +17,10 @@ describe("official rule page watch", () => {
     expect(await fingerprint(["A notification 2026"])).not.toBe(await fingerprint(["Another notification 2026"]));
   });
 });
+
+import { classifyHeadline } from "./rule-watch";
+import { it as it2, expect as ex2 } from "vitest";
+it2("tags which forms and validations a change concerns", () => {
+  const c = classifyHeadline("Revised JSON schema for ITR-3 and validation rules for AY 2026-27");
+  ex2(c.forms).toEqual(["ITR-3"]); ex2(c.schema).toBe(true); ex2(c.validation).toBe(true);
+});

@@ -24,7 +24,7 @@ export function PropertyPanel() {
   const assets = preferences.assets ?? [];
   const [newName, setNewName] = useState("");
   const [lease, setLease] = useState<Lease | null>(null);
-  const [cost, setCost] = useState<Record<string, { kind: PropertyCostKind; vendor: string; amount: string; date: string }>>({});
+  const [cost, setCost] = useState<Record<string, { kind: PropertyCostKind; vendor: string; amount: string; date: string; txId?: string; docId?: string }>>({});
   const months = useMemo(() => [5, 4, 3, 2, 1, 0].map((i) => { const d = new Date(); d.setDate(15); d.setMonth(d.getMonth() - i); return d.toISOString().slice(0, 7); }), []);
   // Every credit is a candidate (not only entries already tagged income), so a deposit misfiled as income is still kept apart [§39].
   const income = useMemo(() => transactions.filter((t) => ["income", "transfer", "reimbursement"].includes(t.txnType ?? "expense")).map((t) => ({ id: t.id, date: t.date, amount: t.amount, text: `${t.title} ${t.merchant ?? ""} ${t.description}`, accountId: t.txnType === "transfer" ? t.toAccountId : t.accountId, ...(t.currency ? { currency: t.currency } : {}) })), [transactions]);
@@ -85,13 +85,20 @@ export function PropertyPanel() {
             <Button size="sm" variant="outline" onClick={() => setLease({ id: crypto.randomUUID(), propertyId: p.id, tenant: "", start: today(), end: today(), rent: 0, paymentTerms: "" })}>Add tenant manually</Button>
             <details className="text-xs"><summary className="cursor-pointer text-muted-foreground">Costs FY {fy}: running {inr(cs.running)} · improvements {inr(cs.capital)}</summary>
               {Object.entries(cs.byKind).map(([k, v]) => <p key={k}>{COST[k as PropertyCostKind]}: {inr(v)}</p>)}
-              {(() => { const c = cost[p.id] ?? { kind: "maintenance" as PropertyCostKind, vendor: "", amount: "", date: today() }; return <div className="mt-1 grid grid-cols-2 gap-1">
+              {(() => { const c = cost[p.id] ?? { kind: "maintenance" as PropertyCostKind, vendor: "", amount: "", date: today(), txId: "", docId: "" };
+                // Link the actual payment and bill so property costs reconcile to the ledger and feed GST [§41].
+                const amt = Number(c.amount);
+                const linkedTx = new Set(books.propertyCosts.map((x) => x.transactionId).filter(Boolean));
+                const pays = amt > 0 ? transactions.filter((t) => (t.txnType ?? "expense") === "expense" && !linkedTx.has(t.id) && Math.abs(t.amount - amt) <= 1 && Math.abs(Date.parse(t.date) - Date.parse(c.date)) <= 15 * 864e5) : [];
+                return <div className="mt-1 grid grid-cols-2 gap-1">
                 <select aria-label="Cost type" className="rounded-md border bg-background px-1" value={c.kind} onChange={(e) => setCost({ ...cost, [p.id]: { ...c, kind: e.target.value as PropertyCostKind } })}>{Object.entries(COST).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select>
                 <Input aria-label="Vendor" className="h-8" placeholder="Vendor" value={c.vendor} onChange={(e) => setCost({ ...cost, [p.id]: { ...c, vendor: e.target.value } })} />
                 <Input aria-label="Cost amount" className="h-8" type="number" placeholder="Amount" value={c.amount} onChange={(e) => setCost({ ...cost, [p.id]: { ...c, amount: e.target.value } })} />
                 <Input aria-label="Cost date" className="h-8" type="date" value={c.date} onChange={(e) => setCost({ ...cost, [p.id]: { ...c, date: e.target.value } })} />
-                <Button size="sm" variant="outline" className="col-span-2" disabled={!(Number(c.amount) > 0)} onClick={async () => { await save({ propertyCosts: [...books.propertyCosts, { id: crypto.randomUUID(), propertyId: p.id, date: c.date, kind: c.kind, vendor: c.vendor, amount: Number(c.amount) }] }); setCost({ ...cost, [p.id]: { ...c, amount: "", vendor: "" } }); }}>Record cost</Button></div>; })()}
-              <p className="mt-1 text-muted-foreground">These are a property register; the payment itself stays the ledger entry so nothing is counted twice.</p>
+                <select aria-label="Payment for this cost" className="col-span-2 rounded-md border bg-background px-1 py-1" value={c.txId ?? ""} onChange={(e) => setCost({ ...cost, [p.id]: { ...c, txId: e.target.value } })}><option value="">{pays.length ? "Choose the payment…" : "No matching payment yet"}</option>{pays.map((t) => <option key={t.id} value={t.id}>{t.date} · {t.merchant || t.title} · {inr(t.amount)}</option>)}</select>
+                <select aria-label="Bill for this cost" className="col-span-2 rounded-md border bg-background px-1 py-1" value={c.docId ?? ""} onChange={(e) => setCost({ ...cost, [p.id]: { ...c, docId: e.target.value } })}><option value="">No bill attached</option>{documents.filter((d) => ["bill", "invoice", "utility_bill", "maintenance", "receipt"].includes(d.docType)).slice(0, 200).map((d) => <option key={d.id} value={d.id}>{d.title}</option>)}</select>
+                <Button size="sm" variant="outline" className="col-span-2" disabled={!(amt > 0)} onClick={async () => { await save({ propertyCosts: [...books.propertyCosts, { id: crypto.randomUUID(), propertyId: p.id, date: c.date, kind: c.kind, vendor: c.vendor, amount: amt, ...(c.txId ? { transactionId: c.txId } : {}), ...(c.docId ? { docId: c.docId } : {}) }] }); setCost({ ...cost, [p.id]: { ...c, amount: "", vendor: "", txId: "", docId: "" } }); }}>Record cost</Button></div>; })()}
+              <p className="mt-1 text-muted-foreground">Costs linked to a payment reconcile to the ledger; the payment stays the only money movement, so nothing is counted twice. Bills attached here are kept as evidence for property GST.</p>
             </details>
           </div>;
         })}

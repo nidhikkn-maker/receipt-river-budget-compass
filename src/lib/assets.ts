@@ -34,6 +34,8 @@ export interface Asset {
   tenant?: string | undefined;
   leaseEnd?: string | undefined;
   deposit?: number | undefined;
+  /** Payment that bought this asset [§27]. */
+  transactionId?: string | undefined;
   /** Book policy inputs [§32]: useful life (years) and residual value (% of cost). */
   usefulLifeYears?: number | undefined;
   residualPct?: number | undefined;

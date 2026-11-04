@@ -32,14 +32,14 @@ export function parseContext(v: unknown): IntakeContext | undefined {
 }
 
 /** Where each document type is reviewed; every one is still stored in DocuRepo [§5]. */
-export type Route = "statement" | "investment" | "entity" | "fy" | "asset" | "property" | "lease" | "gst" | "loan" | "document";
+export type Route = "statement" | "investment" | "entity" | "fy" | "asset" | "property" | "lease" | "gst" | "loan" | "tax" | "document";
 export const ROUTE_OF: Record<DocType, Route> = {
   bank_statement: "statement", card_statement: "statement", loan_statement: "loan",
   demat_statement: "investment", transaction_statement: "investment", capital_gains_statement: "investment", mutual_fund_statement: "investment",
   incorporation: "entity", pan_gst_registration: "entity",
   audited_financials: "fy", trial_balance: "fy", tax_return: "fy", depreciation_schedule: "fy",
   asset_invoice: "asset", warranty: "asset", property_deed: "property", lease_agreement: "lease",
-  gst_return: "gst", invoice: "gst",
+  gst_return: "gst", invoice: "gst", tax_statement: "tax",
   bill: "document", receipt: "document", insurance: "document", loan_agreement: "loan", payment_confirmation: "document", contract: "document", utility_bill: "property", maintenance: "asset", other: "document",
 };
 
@@ -48,8 +48,10 @@ export interface EntityRead { legalName: string | null; kind: EntityKind | null;
 export interface AssetRead { name: string | null; kind: AssetKind | null; owner: string | null; cost: number | null; purchaseDate: string | null; supplier: string | null; warrantyUntil: string | null; insurance: string | null; serial: string | null }
 export interface PropertyRead { name: string | null; owner: string | null; address: string | null; cost: number | null; acquiredOn: string | null; surveyNo: string | null; valuation: number | null; valuationDate: string | null; insurer?: string | null | undefined; utilityConsumerNo?: string | null | undefined; propertyTaxId?: string | null | undefined }
 export interface LeaseRead { tenant: string | null; property: string | null; unit: string | null; start: string | null; end: string | null; rent: number | null; dueDay: number | null; escalationPct: number | null; escalationEveryMonths: number | null; deposit: number | null; noticeDays: number | null; paymentTerms: string | null; gst: boolean | null }
-export interface AuditedRead { entity: string | null; pan: string | null; fy: string | null; lines: { head: OpeningHead; amount: number }[]; totalAssets: number | null; totalLiabilities: number | null; schedules: Schedule[]; details?: { schedule: Schedule; lines: { label: string; amount: number; page: number | null; quote: string }[] }[] | undefined; qualifications: string[]; filedForm: string | null; ackNo: string | null; filedOn: string | null }
-export interface ReadProfiles { entity: EntityRead | null; asset: AssetRead | null; property: PropertyRead | null; lease: LeaseRead | null; audited: AuditedRead | null }
+export interface AuditedRead { entity: string | null; pan: string | null; fy: string | null; lines: { head: OpeningHead; amount: number }[]; totalAssets: number | null; totalLiabilities: number | null; schedules: Schedule[]; details?: { schedule: Schedule; lines: { label: string; amount: number; page: number | null; quote: string }[] }[] | undefined; losses?: { fromFy: string; kind: "business" | "capital" | "depreciation" | "house"; amount: number }[] | undefined; qualifications: string[]; filedForm: string | null; ackNo: string | null; filedOn: string | null }
+export interface GstInvoiceRead { number: string | null; date: string | null; seller: string | null; sellerGstin: string | null; buyer: string | null; buyerGstin: string | null; taxable: number | null; igst: number | null; cgst: number | null; sgst: number | null; cess: number | null }
+export interface TaxStatementRead { form: "form16" | "26as" | "ais" | "payslip" | null; fy: string | null; pan: string | null; taxableSalary: number | null; credits: { kind: "tds" | "tcs" | "advance" | "self_assessment"; amount: number; deductor: string | null }[] }
+export interface ReadProfiles { entity: EntityRead | null; asset: AssetRead | null; property: PropertyRead | null; lease: LeaseRead | null; audited: AuditedRead | null; gstInvoice?: GstInvoiceRead | null | undefined; taxStatement?: TaxStatementRead | null | undefined }
 
 const iso = (v: string | null | undefined) => (v && /^\d{4}-\d{2}-\d{2}$/.test(v) ? v : null);
 const norm = (s: string) => s.toUpperCase().replace(/[^A-Z0-9]/g, "");
@@ -107,12 +109,12 @@ function extraOf(base: EntityProfile, r: EntityRead): Partial<EntityProfile> {
 }
 
 /** Asset master record proposal from a purchase invoice [§27, test 5]. Capitalisation still needs confirmation. */
-export function proposeAsset(read: AssetRead, entities: EntityProfile[], newId: string, docId: string | null): { asset: Asset | null; missing: string[]; ownerSuggested: boolean } {
-  const missing = [!read.name && "asset name", read.cost == null && "purchase cost", !iso(read.purchaseDate) && "purchase date"].filter((x): x is string => !!x);
+export function proposeAsset(read: AssetRead, entities: EntityProfile[], newId: string, docId: string | null): { asset: Asset | null; missing: string[]; ownerSuggested: boolean; suggestedLife?: number } {
+  const missing = [!read.name && "asset name", read.cost == null && "purchase cost", !iso(read.purchaseDate) && "purchase date", "date put to use (confirm)", "useful life", "residual value"].filter((x): x is string => !!x);
   if (!read.name || read.cost == null || !iso(read.purchaseDate)) return { asset: null, missing, ownerSuggested: false };
   const kind: AssetKind = read.kind ?? "other";
   const owner = read.owner ? nameSuggestion(entities, read.owner)?.id : undefined;
-  return { missing, ownerSuggested: !!owner, asset: { id: newId, name: read.name.trim(), kind, cost: read.cost, inUse: read.purchaseDate!, sharePct: 100, bookMethod: "slm", bookRatePct: 0, ownerEntityId: owner, docId: docId ?? undefined, tag: read.serial ?? undefined, usefulLifeYears: DEFAULT_LIFE[kind], residualPct: kind === "property" ? 0 : 5 } as Asset };
+  return { missing, ownerSuggested: !!owner, asset: { id: newId, name: read.name.trim(), kind, cost: read.cost, inUse: read.purchaseDate!, sharePct: 100, bookMethod: "slm", bookRatePct: 0, ownerEntityId: owner, docId: docId ?? undefined, tag: read.serial ?? undefined, ...(read.supplier ? { supplier: read.supplier } : {}), ...(read.warrantyUntil ? { warrantyUntil: read.warrantyUntil } : {}), ...(read.insurance ? { insurance: read.insurance } : {}) } as Asset, suggestedLife: DEFAULT_LIFE[kind] };
 }
 /** Indicative useful lives (Companies Act Schedule II); editable per asset. */
 export const DEFAULT_LIFE: Record<AssetKind, number> = { property: 0, building: 30, vehicle: 8, machinery: 15, computer: 3, furniture: 10, other: 5 };
@@ -162,7 +164,7 @@ export function proposeFy(read: AuditedRead, entities: EntityProfile[], existing
       schedules: [...new Set([...(prev?.schedules ?? []), ...present])],
       qualifications: [...new Set([...(prev?.qualifications ?? []), ...read.qualifications])],
       filedReturns: [...(prev?.filedReturns ?? []), ...(read.filedForm && read.ackNo && iso(read.filedOn) && !(prev?.filedReturns ?? []).some((f) => f.ack === read.ackNo) ? [{ form: read.filedForm, ack: read.ackNo, filedOn: read.filedOn! }] : [])],
-      lossesCarriedForward: prev?.lossesCarriedForward ?? [],
+      lossesCarriedForward: read.losses?.length ? read.losses.filter((l) => l.amount > 0 && /^\d{4}-\d{2}$/.test(l.fromFy)) : prev?.lossesCarriedForward ?? [],
       docIds: [...new Set([...(prev?.docIds ?? []), ...(docId ? [docId] : [])])],
       ...(prev?.confirmedOpening ? { confirmedOpening: prev.confirmedOpening, confirmedOn: prev.confirmedOn } : {}),
       ...(prev && JSON.stringify(prev.audited) !== JSON.stringify(audited) ? { versions: [...(prev.versions ?? []), { at: new Date().toISOString(), reason: "replaced by a later upload", audited: prev.audited }] } : prev?.versions ? { versions: prev.versions } : {}),
@@ -240,4 +242,69 @@ export function fillLeaseFromTrusted(
     if (Number.isFinite(n) && n > 0) { out[k] = n; sources[k] = d.title; }
   }
   return { lease: out, sources };
+}
+
+const GSTIN = /^\d{2}[A-Z]{5}\d{4}[A-Z][1-9A-Z]Z[0-9A-Z]$/;
+/**
+ * GST invoice draft from an uploaded tax invoice [§58]: sales when the seller GSTIN is one of the owner's,
+ * purchase when the buyer GSTIN is. Unknown direction or missing tax facts stay as "missing" for review.
+ */
+export function proposeGstInvoice(read: GstInvoiceRead, ownGstins: string[], newId: string, docId: string | null): { invoice: import("./types").GstInvoice | null; missing: string[] } {
+  const own = new Set(ownGstins.map((g) => norm(g)));
+  const seller = read.sellerGstin ? norm(read.sellerGstin) : "", buyer = read.buyerGstin ? norm(read.buyerGstin) : "";
+  const kind = own.has(seller) ? "sales" : own.has(buyer) ? "purchase" : null;
+  const missing = [!read.number && "invoice number", !iso(read.date) && "invoice date", read.taxable == null && "taxable value", !kind && "which of your GSTINs this invoice belongs to"].filter((x): x is string => !!x);
+  if (missing.length || !kind) return { invoice: null, missing };
+  const party = kind === "sales" ? { n: read.buyer, g: buyer } : { n: read.seller, g: seller };
+  if (party.g && !GSTIN.test(party.g)) missing.push("party GSTIN looks invalid");
+  return { missing, invoice: { id: newId, gstin: kind === "sales" ? seller : buyer, kind, number: read.number!.trim(), date: read.date!, party: party.n?.trim() ?? "", partyGstin: party.g, taxable: read.taxable!, igst: read.igst ?? 0, cgst: read.cgst ?? 0, sgst: read.sgst ?? 0, cess: read.cess ?? 0, docId: docId ?? undefined } };
+}
+
+/** Tax credits and taxable salary from Form 16 / 26AS / AIS / payslip, for confirmation [§46]. Entity is matched by PAN only. */
+export function proposeTaxStatement(read: TaxStatementRead, entities: EntityProfile[]): { fy: string | null; entityId: string | null; salary: number | null; credits: TaxStatementRead["credits"]; missing: string[] } {
+  const ent = read.pan ? entities.find((e) => e.pan && norm(e.pan) === norm(read.pan!)) : undefined;
+  const fy = read.fy && /^\d{4}-\d{2}$/.test(read.fy) ? read.fy : null;
+  const missing = [!fy && "financial year", !read.pan && "PAN"].filter((x): x is string => !!x);
+  return { fy, entityId: ent?.id ?? (read.pan ? null : null), salary: read.taxableSalary, credits: read.credits.filter((c) => c.amount > 0), missing };
+}
+
+/**
+ * Suggest which owned account / loan a document belongs to [§6]: an account only when its last four digits
+ * appear after a masked or account-number marker and exactly one account matches; a loan only when its
+ * name or a saved reference is printed. Suggestions are shown preselected and can be changed in review.
+ */
+export function suggestLinks(text: string, accounts: { id: string; lastFour?: string | null | undefined; archived?: boolean }[], loans: { id: string; name: string; refs?: string[] | undefined }[]): { accountId: string | null; loanId: string | null } {
+  const t = text.toUpperCase();
+  const accHits = accounts.filter((a) => !a.archived && a.lastFour && /^\d{4}$/.test(a.lastFour) && new RegExp(`(?:X{2,}|\\*{2,}|A/C(?:\\s*NO\\.?)?\\s*[:\\-]?\\s*\\d*|ACCOUNT\\s*(?:NO\\.?|NUMBER)?\\s*[:\\-]?\\s*\\d*|CARD\\s*(?:NO\\.?)?\\s*[:\\-]?\\s*[X*\\d\\s]*)${a.lastFour}\\b`).test(t));
+  const loanHits = loans.filter((l) => (l.name.trim().length >= 4 && t.includes(l.name.trim().toUpperCase())) || (l.refs ?? []).some((r) => r.trim().length >= 4 && t.includes(r.trim().toUpperCase())));
+  return { accountId: accHits.length === 1 ? accHits[0]!.id : null, loanId: loanHits.length === 1 ? loanHits[0]!.id : null };
+}
+
+/**
+ * Trusted-record lookup for an asset invoice [§27, §59]: the bank/card payment to the same supplier,
+ * within 30 days of the invoice and (when cost is known) within ₹1 of it. Used to propose the linked
+ * payment and, when the invoice total was not read, the cost — always shown with its source for review.
+ */
+export function assetPayment(read: { supplier: string | null; cost: number | null; purchaseDate: string | null }, txns: { id: string; date: string; amount: number; merchant?: string | null | undefined; title: string; txnType?: string | null | undefined }[]): { id: string; amount: number; date: string } | null {
+  const sup = read.supplier ? words(read.supplier) : "";
+  if (sup.length < 3) return null;
+  const near = (d: string) => !read.purchaseDate || Math.abs(Date.parse(d) - Date.parse(read.purchaseDate)) <= 30 * 864e5;
+  const hits = txns.filter((t) => (t.txnType ?? "expense") === "expense" && near(t.date) && words(`${t.merchant ?? ""} ${t.title}`).includes(sup) && (read.cost == null || Math.abs(t.amount - read.cost) <= 1));
+  return hits.length === 1 ? { id: hits[0]!.id, amount: hits[0]!.amount, date: hits[0]!.date } : null;
+}
+
+/**
+ * Controlled extension proposal for a newly seen field [§15]: what approving does (migration plan) and a
+ * compatibility check against existing approved fields and mappings, so nothing collides or is silently renamed.
+ */
+export function fieldExtensionPlan(f: { label: string; docType: string }, approved: { label: string; docType: string }[], mappings: Record<string, string>): { plan: string; compatible: boolean; problems: string[] } {
+  const key = f.label.trim().toLowerCase();
+  const problems: string[] = [];
+  if (approved.some((a) => a.label.trim().toLowerCase() === key && a.docType === f.docType)) problems.push("already an approved field for this document type");
+  if (mappings[key]) problems.push(`already mapped to “${mappings[key]}”`);
+  if (!/^[\p{L}\p{N} ./()&%-]{2,60}$/u.test(f.label.trim())) problems.push("label has unsupported characters or length");
+  return {
+    plan: `Store “${f.label.trim()}” as a named detail on ${f.docType.replace(/_/g, " ")} documents; existing documents are unchanged and older readers ignore the extra detail (no table change).`,
+    compatible: problems.length === 0, problems,
+  };
 }
