@@ -33,3 +33,22 @@ describe("document rules", () => {
     expect(() => validateDocument({ title: " ", size: 10, docType: "bill" })).toThrow("title");
   });
 });
+
+import { currentVersions, earlierVersions, duplicateDocuments } from "./documents";
+describe("DocuRepo versions and duplicates", () => {
+  const base = { title: "Deed", docType: "property_deed" as const, filePath: "p", fileName: "deed.pdf", mimeType: "application/pdf", size: 100, docDate: "2024-01-01", amount: 5000000, currency: "INR", merchant: "Sub-registrar", notes: "", text: "", transactionId: null, accountId: null, loanId: null, expiresOn: null, createdAt: "2024-01-01" };
+  const v1 = { ...base, id: "a" }, v2 = { ...base, id: "b", replacesId: "a", fileName: "deed-v2.pdf" };
+  it("hides replaced originals but keeps them as earlier versions", () => {
+    expect(currentVersions([v1, v2]).map(d => d.id)).toEqual(["b"]);
+    expect(earlierVersions([v1, v2], "b").map(d => d.id)).toEqual(["a"]);
+  });
+  it("flags same file or same type/date/amount/issuer as a possible duplicate", () => {
+    expect(duplicateDocuments([v1], { fileName: "deed.pdf", size: 100, docType: "other", docDate: null, amount: null, merchant: null })).toHaveLength(1);
+    expect(duplicateDocuments([v1], { fileName: "x.pdf", size: 1, docType: "property_deed", docDate: "2024-01-01", amount: 5000000, merchant: "sub-registrar " })).toHaveLength(1);
+    expect(duplicateDocuments([v1], { fileName: "x.pdf", size: 1, docType: "property_deed", docDate: "2024-01-02", amount: 5000000, merchant: "Sub-registrar" })).toHaveLength(0);
+  });
+  it("finds documents by a key detail such as GSTIN", () => {
+    const g = { ...base, id: "g", fields: [{ label: "GSTIN", value: "33ABCDE1234F1Z5", page: 1, quote: "GSTIN 33ABCDE1234F1Z5", confidence: "high" as const, status: "read" as const }] };
+    expect(searchVault(vaultItems([g], []), { q: "33abcde" })).toHaveLength(1);
+  });
+});

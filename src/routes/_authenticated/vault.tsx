@@ -15,7 +15,7 @@ import { ExpenseDialog } from "@/components/ExpenseDialog";
 import { Button } from "@/components/ui/button";
 import { useStore } from "@/lib/store";
 import { money, type Expense } from "@/lib/expenses";
-import { DOC_TYPES, DOC_LABEL, expiringDocuments, searchVault, vaultItems, type DocType, type VaultItem } from "@/lib/documents";
+import { DOC_TYPES, DOC_LABEL, duplicateDocuments, earlierVersions, expiringDocuments, searchVault, vaultItems, type DocField, type DocType, type VaultItem } from "@/lib/documents";
 import { todayISO } from "@/lib/use-position";
 export const Route=createFileRoute("/_authenticated/vault")({head:()=>({meta:[{title:"DocuRepo — Ledgerline"},{name:"description",content:"Search receipts and upload linked financial documents."},{property:"og:title",content:"DocuRepo — Ledgerline"},{property:"og:description",content:"Receipts, statements, insurance and warranties with renewal dates."},{property:"og:type",content:"website"},{name:"twitter:card",content:"summary"}]}),component:Vault});
 function Vault() {
@@ -25,22 +25,26 @@ function Vault() {
   const [type, setType] = useState<DocType | "all">("all"); const [selected, setSelected] = useState<Expense | null>(null);
   const [busy, setBusy] = useState(false); const [file, setFile] = useState<File | null>(null); const input = useRef<HTMLInputElement>(null); const cam = useRef<HTMLInputElement>(null); const gal = useRef<HTMLInputElement>(null);
   const scanFn = useServerFn(extractDocument); const [scanning, setScanning] = useState(false); const [text, setText] = useState("");
+  const [fields, setFields] = useState<DocField[]>([]); const [replaces, setReplaces] = useState<string | null>(null);
   const [form, setForm] = useState({ title: "", docType: "other" as DocType, date: todayISO(), amount: "", merchant: "", notes: "", transactionId: "none", accountId: "none", loanId: "none", expiry: "" });
   const items = searchVault(vaultItems(documents, transactions), { q, type, from, to });
   const expires = expiringDocuments(documents, todayISO());
   const upload = async (e: React.FormEvent) => {
-    e.preventDefault(); if (!file || busy) return; setBusy(true);
+    e.preventDefault(); if (!file || busy) return;
+    const dups = duplicateDocuments(documents, { fileName: file.name, size: file.size, docType: form.docType, docDate: form.date || null, amount: form.amount ? Number(form.amount) : null, merchant: form.merchant || null }, replaces);
+    if (dups.length && !(await confirmAction(`This looks like ${dups[0].title}, already in DocuRepo. Save it anyway?`))) return;
+    setBusy(true);
     try {
       const docId = await addDocument(file, { title: form.title, docType: form.docType, docDate: form.date || null, amount: form.amount ? Number(form.amount) : null, currency: "INR", merchant: form.merchant || null, notes: form.notes, text,
-        transactionId: form.transactionId === "none" ? null : form.transactionId, accountId: form.accountId === "none" ? null : form.accountId, loanId: form.loanId === "none" ? null : form.loanId, expiresOn: form.expiry || null });
+        transactionId: form.transactionId === "none" ? null : form.transactionId, accountId: form.accountId === "none" ? null : form.accountId, loanId: form.loanId === "none" ? null : form.loanId, expiresOn: form.expiry || null, fields, replacesId: replaces });
       const obs = toObligations(docId, found, () => crypto.randomUUID());
       if (obs.length) { await savePreferences({ ...preferences, contractObligations: [...preferences.contractObligations, ...obs] }); toast.message(`${obs.length} payment obligation${obs.length > 1 ? "s" : ""} found — review them on the document`); }
-      setFound([]); setFile(null); setText(""); setForm({ ...form, title: "", notes: "", amount: "" }); if (input.current) input.current.value = ""; toast.success("Document saved");
+      setFound([]); setFields([]); setReplaces(null); setFile(null); setText(""); setForm({ ...form, title: "", notes: "", amount: "" }); if (input.current) input.current.value = ""; toast.success("Document saved");
     } catch (err) { toast.error((err as Error).message); } finally { setBusy(false); }
   };
   const isDate = (v: string | null) => !!v && /^\d{4}-\d{2}-\d{2}$/.test(v);
   const pick = async (f: File | null) => {
-    setFile(f); setText(""); setFound([]); if (!f) return;
+    setFile(f); setText(""); setFound([]); setFields([]); if (!f) return;
     const base = { ...form, title: f.name.replace(/\.[^.]+$/, "") }; setForm(base);
     if (!(f.type.startsWith("image/") || f.type === "application/pdf")) return;
     if (f.type === "application/pdf" && f.size > 3_000_000) { toast.message("File is large — fill the details manually"); return; }
@@ -51,7 +55,7 @@ function Vault() {
       if (prepared.dataUrl.length > 4_000_000) { toast.message("File is large — fill the details manually"); return; }
       const out = await scanFn({ data: prepared });
       if (!out.ok) { toast.error(out.error); return; }
-      const x = out.result; setText(x.text); setFound(x.obligations ?? []);
+      const x = out.result; setText(x.text); setFound(x.obligations ?? []); setFields((x.fields ?? []).map(f => ({ ...f, status: "read" as const })));
       setForm({ ...base, title: x.title || base.title, docType: x.docType, merchant: x.merchant ?? "", date: isDate(x.date) ? x.date! : base.date, expiry: isDate(x.expiresOn) ? x.expiresOn! : "", amount: x.amount != null ? String(x.amount) : "", notes: x.notes ?? "" });
       toast.success("Details filled in — please check them");
     } catch { toast.error("Couldn't scan this document"); } finally { setScanning(false); }
@@ -76,10 +80,16 @@ function Vault() {
     <div className="mb-8 grid gap-3 sm:grid-cols-2">{items.map(item => <article key={item.key} className="min-w-0 rounded-lg border bg-card p-4">
       <Button variant="ghost" className="h-auto w-full justify-start gap-3 whitespace-normal p-0 text-left" onClick={() => void open(item)}><FileText className="h-6 w-6 shrink-0 text-primary" /><span className="min-w-0"><span className="block break-words font-semibold">{item.title}</span><span className="block text-xs text-muted-foreground">{DOC_LABEL[item.docType]} · {item.date ?? "No date"}{item.amount != null && ` · ${money(item.amount, item.currency)}`}</span><span className="block break-words text-xs text-muted-foreground">{item.fileName}</span></span><ExternalLink className="ml-auto h-4 w-4 shrink-0" /></Button>
       {item.source === "document" && <div className="mt-3 flex justify-end gap-2"><Button size="sm" variant="outline" onClick={() => { const title = window.prompt("Document title", item.title); if (title && item.docId) void updateDocument(item.docId, { title }).then(() => toast.success("Document updated")).catch(e => toast.error(e.message)); }}>Rename</Button><Button size="icon" variant="ghost" aria-label={`Delete document ${item.title}`} onClick={() => { const doc = documents.find(d => d.id === item.docId); if (doc) void confirmAction(`Delete ${doc.title} and its file?`).then(ok => ok ? removeDocument(doc).then(() => toast.success("Document deleted")) : undefined).catch(e => toast.error(e.message)); }}><Trash2 className="h-4 w-4" /></Button></div>}
-      {item.docId && <ContractObligations docId={item.docId} />}
+      {item.docId && (() => { const d = documents.find(x => x.id === item.docId); const old = earlierVersions(documents, item.docId); return <>
+        {!!d?.fields?.length && <details className="mt-3 text-sm"><summary className="cursor-pointer text-muted-foreground">Key details ({d.fields.length})</summary><dl className="mt-2 grid gap-1">{d.fields.map((f, i) => <div key={i} className="grid grid-cols-[minmax(0,2fr)_minmax(0,3fr)] gap-2"><dt className="text-muted-foreground">{f.label}</dt><dd className="break-words">{f.value}{f.confidence === "low" && <span className="ml-1 text-xs text-destructive">check</span>}<span className="block text-xs text-muted-foreground">{f.page ? `p.${f.page} · ` : ""}“{f.quote}”</span></dd></div>)}</dl></details>}
+        {old.length > 0 && <details className="mt-2 text-sm"><summary className="cursor-pointer text-muted-foreground">{old.length} earlier version{old.length > 1 ? "s" : ""}</summary>{old.map(v => <Button key={v.id} variant="link" className="h-auto p-0 text-xs" onClick={() => void open({ ...item, key: v.id, docId: v.id, path: v.filePath, source: "document" })}>{v.fileName} · {v.createdAt.slice(0, 10)}</Button>)}</details>}
+        <Button size="sm" variant="ghost" className="mt-2 px-0 text-xs" onClick={() => { if (!d) return; setReplaces(d.id); setForm({ ...form, title: d.title, docType: d.docType, merchant: d.merchant ?? "" }); document.getElementById("doc-title")?.scrollIntoView({ behavior: "smooth" }); toast.message("Choose the new file — the original stays as an earlier version"); }}>Upload new version</Button>
+        <ContractObligations docId={item.docId} /></>; })()}
     </article>)}</div>
     <form onSubmit={upload} className="grid gap-3 border-t pt-6 sm:grid-cols-2">
-      <h2 className="font-display text-xl font-bold sm:col-span-2">Add document</h2>
+      <h2 className="font-display text-xl font-bold sm:col-span-2">{replaces ? "New version" : "Add document"}</h2>
+      {replaces && <p className="text-sm text-muted-foreground sm:col-span-2">Replacing {documents.find(d => d.id === replaces)?.title}; the original is kept. <Button type="button" variant="link" className="h-auto p-0" onClick={() => setReplaces(null)}>Cancel</Button></p>}
+      {fields.length > 0 && <div className="rounded-lg border p-3 text-sm sm:col-span-2"><p className="mb-2 font-semibold">Key details read — edit any value before saving</p>{fields.map((f, i) => <div key={i} className="mb-2 grid gap-1"><Label htmlFor={`fld-${i}`}>{f.label}{f.confidence === "low" && <span className="ml-1 text-xs text-destructive">hard to read</span>}</Label><Input id={`fld-${i}`} value={f.value} onChange={e => setFields(fields.map((x, j) => j === i ? { ...x, value: e.target.value, status: "corrected" } : x))} /><span className="text-xs text-muted-foreground">{f.page ? `Page ${f.page} · ` : ""}“{f.quote}”</span></div>)}</div>}
       <div className="rounded-3xl border-2 border-dashed border-primary/40 bg-secondary/50 p-4 text-center sm:col-span-2">
         <ScanLine className="mx-auto h-7 w-7 text-primary" />
         <p className="mt-1 font-semibold">{scanning ? "Reading your document…" : file ? file.name : "Scan or choose a document"}</p>
