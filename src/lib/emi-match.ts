@@ -13,6 +13,10 @@ export interface EmiTarget {
   dueDay: number;
   /** Loan / linked-account numbers or branch codes that name this loan in a narration. */
   refs: string[];
+  /** Account that tops up payFromAccountId before the EMI (e.g. an auto transfer on the 3rd). */
+  fundingFromAccountId?: string | null;
+  /** Day of month the funding transfer usually happens. */
+  fundingDay?: number | null;
 }
 
 /** Small gaps (rounding, a linked account topping up the rest) are allowed: ₹100 or 0.5% of the EMI. */
@@ -65,6 +69,7 @@ export function matchEmiDebit(
   if (line.direction !== "debit" || !(line.amount > 0)) return null;
   const hits = targets.flatMap((target) => {
     const linked = namesLoan(line.description, target.refs);
+    if (line.accountId && line.accountId === target.fundingFromAccountId) return [];
     const fromUsual = !!line.accountId && line.accountId === target.payFromAccountId;
     if (!fromUsual && !linked) return [];
     const off = dayOffset(line.date, target.dueDay);
@@ -77,7 +82,24 @@ export function matchEmiDebit(
   return hits.length === 1 ? hits[0]! : null;
 }
 
-export type EmiRowStatus = "matched" | "amount" | "date" | "missing" | "lender_only" | "upcoming";
+/** A debit from the funding account that tops up the EMI account (suggested as a transfer, never an EMI). */
+export function matchEmiFunding(
+  line: { date: string; amount: number; direction: "debit" | "credit"; accountId: string | null },
+  targets: EmiTarget[],
+): { target: EmiTarget; dayDiff: number; amountDiff: number } | null {
+  if (line.direction !== "debit" || !(line.amount > 0) || !line.accountId) return null;
+  const hits = targets.flatMap((target) => {
+    if (!target.fundingFromAccountId || !target.payFromAccountId || line.accountId !== target.fundingFromAccountId) return [];
+    const off = dayOffset(line.date, target.fundingDay ?? target.dueDay);
+    if (!off) return [];
+    const amountDiff = Math.round((line.amount - target.emi) * 100) / 100;
+    if (Math.abs(amountDiff) > emiTolerance(target.emi)) return [];
+    return [{ target, dayDiff: off.days, amountDiff }];
+  });
+  return hits.length === 1 ? hits[0]! : null;
+}
+
+export type EmiRowStatus = "funded_only" | "matched" | "amount" | "date" | "missing" | "lender_only" | "upcoming";
 export interface EmiRow {
   due: string;
   emi: number;
@@ -86,6 +108,8 @@ export interface EmiRow {
   debit: { id: string; date: string; amount: number; title: string } | null;
   amountDiff: number | null;
   dayDiff: number | null;
+  /** Transfer into the EMI account that funded this EMI, when found. */
+  funding: { id: string; date: string; amount: number } | null;
   status: EmiRowStatus;
 }
 
@@ -98,9 +122,11 @@ export function emiReconciliation(
   loan: { emi: number; dueDay: number; from: string; nextDue: string; payments: { date: string; total: number }[] },
   debits: { id: string; date: string; amount: number; title: string }[],
   today: string,
+  fundings: { id: string; date: string; amount: number }[] = [],
 ): EmiRow[] {
   const rows: EmiRow[] = [];
   const used = new Set<string>();
+  const usedF = new Set<string>();
   const start = new Date(t(loan.from));
   const end = loan.nextDue > today ? loan.nextDue : today;
   for (let k = 0; k < 600; k++) {
@@ -116,12 +142,18 @@ export function emiReconciliation(
       .sort((a, b) => Math.abs(a.days) - Math.abs(b.days));
     const pick = candidates[0];
     if (pick) used.add(pick.d.id);
+    const fund = fundings
+      .filter((f) => !usedF.has(f.id))
+      .map((f) => ({ f, days: Math.round((t(f.date) - t(due)) / DAY) }))
+      .filter((x) => x.days >= -EMI_WINDOW.before && x.days <= 0)
+      .sort((a, b) => Math.abs(a.days) - Math.abs(b.days))[0];
+    if (fund) usedF.add(fund.f.id);
     const amountDiff = pick ? Math.round((pick.d.amount - loan.emi) * 100) / 100 : null;
     const status: EmiRowStatus = !pick
-      ? due > today ? "upcoming" : lender ? "lender_only" : "missing"
+      ? fund ? "funded_only" : due > today ? "upcoming" : lender ? "lender_only" : "missing"
       : Math.abs(amountDiff!) > emiTolerance(loan.emi) ? "amount"
       : Math.abs(pick.days) > 3 ? "date" : "matched";
-    rows.push({ due, emi: loan.emi, lenderPaid: lender || null, debit: pick?.d ?? null, amountDiff, dayDiff: pick?.days ?? null, status });
+    rows.push({ due, emi: loan.emi, lenderPaid: lender || null, debit: pick?.d ?? null, amountDiff, dayDiff: pick?.days ?? null, funding: fund?.f ?? null, status });
   }
   return rows;
 }
@@ -137,6 +169,10 @@ export function emiTargets(
     const acc = accounts.find((a) => a.id === l.accountId);
     const raw = (acc?.details as Record<string, unknown> | null | undefined)?.["matchRefs"];
     const refs = Array.isArray(raw) ? raw.filter((r): r is string => typeof r === "string") : [];
-    return { loanId: l.id, name: l.name, loanAccountId: l.accountId, payFromAccountId: c?.accountId ?? null, emi: l.emi, dueDay: Number(l.nextDue.slice(8, 10)), refs };
+    const payFrom = c?.accountId ?? null;
+    const pd = (accounts.find((a) => a.id === payFrom)?.details as Record<string, unknown> | null | undefined) ?? {};
+    const fundingFromAccountId = typeof pd["fundedFrom"] === "string" ? pd["fundedFrom"] as string : null;
+    const fundingDay = typeof pd["fundingDay"] === "number" ? pd["fundingDay"] as number : null;
+    return { loanId: l.id, name: l.name, loanAccountId: l.accountId, payFromAccountId: payFrom, emi: l.emi, dueDay: Number(l.nextDue.slice(8, 10)), refs, fundingFromAccountId, fundingDay };
   });
 }

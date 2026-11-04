@@ -197,6 +197,7 @@ const EMI_STATUS: Record<EmiRowStatus, { label: string; tone: string }> = {
   amount: { label: "Amount differs", tone: "text-destructive" },
   date: { label: "Date differs", tone: "text-warning" },
   missing: { label: "No bank debit", tone: "text-destructive" },
+  funded_only: { label: "Funded, EMI debit not yet seen", tone: "text-muted-foreground" },
   lender_only: { label: "Lender only", tone: "text-muted-foreground" },
   upcoming: { label: "Upcoming", tone: "text-muted-foreground" },
 };
@@ -210,8 +211,10 @@ function EmiReconciliation({ l }: { l: Loan }) {
     (e.txnType === "loan_repayment" && !!l.accountId && e.toAccountId === l.accountId)
     || (matchEmiDebit({ date: e.date, amount: e.amount, direction: "debit", accountId: e.accountId ?? null, description: `${e.title} ${e.merchant ?? ""} ${e.statementRef ?? ""}` }, [target]) !== null && !["income", "refund"].includes(e.txnType ?? "expense")),
   ).map((e) => ({ id: e.id, date: e.date, amount: e.amount, title: e.title }));
+  const fundings = target.fundingFromAccountId && target.payFromAccountId ? transactions.filter((e) => e.txnType === "transfer" && e.accountId === target.fundingFromAccountId && e.toAccountId === target.payFromAccountId)
+    .map((e) => ({ id: e.id, date: e.date, amount: e.amount })) : [];
   const from = [...l.payments.map((p) => p.date), ...debits.map((d) => d.date)].sort()[0] ?? l.nextDue;
-  const rows = emiReconciliation({ emi: l.emi, dueDay: target.dueDay, from, nextDue: l.nextDue, payments: l.payments }, debits, todayISO()).reverse();
+  const rows = emiReconciliation({ emi: l.emi, dueDay: target.dueDay, from, nextDue: l.nextDue, payments: l.payments }, debits, todayISO(), fundings).reverse();
   const flagged = rows.filter((r) => r.status === "amount" || r.status === "date" || r.status === "missing").length;
   const payFrom = accounts.find((a) => a.id === target.payFromAccountId)?.name;
   return (
@@ -223,7 +226,7 @@ function EmiReconciliation({ l }: { l: Loan }) {
         const st = EMI_STATUS[r.status];
         return (
           <div key={r.due} className="grid grid-cols-[1fr_1fr_1fr_auto] items-start gap-1 border-t py-1 text-xs">
-            <span className="font-mono">{r.due}<span className="block text-[10px] text-muted-foreground">{money(r.emi)}{r.lenderPaid ? ` · lender ${money(r.lenderPaid)}` : ""}</span></span>
+            <span className="font-mono">{r.due}<span className="block text-[10px] text-muted-foreground">{money(r.emi)}{r.lenderPaid ? ` · lender ${money(r.lenderPaid)}` : ""}{r.funding ? ` · funded ${r.funding.date.slice(5)}` : ""}</span></span>
             <span className="min-w-0 font-mono">{r.debit ? <>{r.debit.date}<span className="block truncate text-[10px] text-muted-foreground" title={r.debit.title}>{money(r.debit.amount)}</span></> : "—"}</span>
             <span className="font-mono">{r.debit ? <>{r.amountDiff === 0 ? "₹0" : `${r.amountDiff! > 0 ? "+" : "−"}${money(Math.abs(r.amountDiff!))}`}<span className="block text-[10px] text-muted-foreground">{r.dayDiff === 0 ? "on time" : `${Math.abs(r.dayDiff!)}d ${r.dayDiff! < 0 ? "early" : "late"}`}</span></> : "—"}</span>
             <span className={`text-right font-medium ${st.tone}`}>{st.label}</span>

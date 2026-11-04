@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { emiReconciliation, matchEmiDebit, type EmiTarget } from "./emi-match";
+import { emiReconciliation, matchEmiDebit, type EmiTarget , matchEmiFunding } from "./emi-match";
 
 const gls: EmiTarget = { loanId: "L", name: "Mercedes GLS loan", loanAccountId: "LA", payFromAccountId: "IDFC", emi: 313913, dueDay: 5, refs: ["501212020006289", "143001001024894", "CIUB0000143"] };
 const debit = (o: Partial<{ date: string; amount: number; accountId: string | null; description: string }>) =>
@@ -40,5 +40,21 @@ describe("GLS EMI reconciliation", () => {
   it("a month paid per the lender with no bank record is 'lender only', not missing", () => {
     const rows = emiReconciliation({ ...loan, nextDue: "2026-08-05" }, [], "2026-08-20");
     expect(rows[0]!.status).toBe("lender_only");
+  });
+});
+
+describe("EMI funded by an auto transfer", () => {
+  const T: EmiTarget = { loanId: "l", name: "GLS", loanAccountId: "loan", payFromAccountId: "cub", emi: 313913, dueDay: 5, refs: ["143001001024894"], fundingFromAccountId: "idfc", fundingDay: 3 };
+  it("IDFC debit on the 3rd is a top-up of CUB, not the EMI", () => {
+    const line = { date: "2026-11-03", amount: 313900, direction: "debit" as const, accountId: "idfc", description: "NEFT 143001001024894" };
+    expect(matchEmiDebit(line, [T])).toBeNull();
+    expect(matchEmiFunding(line, [T])?.target.payFromAccountId).toBe("cub");
+  });
+  it("CUB debit on the 5th is the EMI", () => {
+    expect(matchEmiDebit({ date: "2026-11-05", amount: 313913, direction: "debit", accountId: "cub", description: "EMI" }, [T])?.amountDiff).toBe(0);
+  });
+  it("funded month without CUB debit is funded_only, not missing", () => {
+    const rows = emiReconciliation({ emi: 313913, dueDay: 5, from: "2026-10-01", nextDue: "2026-10-05", payments: [] }, [], "2026-10-20", [{ id: "f", date: "2026-10-03", amount: 313900 }]);
+    expect(rows[0]!.status).toBe("funded_only");
   });
 });
