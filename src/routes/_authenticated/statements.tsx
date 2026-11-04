@@ -20,6 +20,8 @@ import { identifyFile } from "@/lib/statement-pipeline/identify";
 import { readStatementFile, readDocRows } from "@/lib/statement-pipeline/source";
 import { parseInvestmentDoc, type InvestDoc } from "@/lib/investments/demat";
 import { InvestmentReview } from "@/components/InvestmentReview";
+import { DocumentIntake } from "@/components/DocumentIntake";
+import { CONTEXTS, parseContext, type IntakeContext } from "@/lib/books/intake";
 import { useServerFn } from "@tanstack/react-start";
 import { extractStatement } from "@/lib/statement-extract.functions";
 import type { StatementUpload } from "@/lib/preferences";
@@ -40,7 +42,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { suggestTransfers, transferApprovalBlocker, activeLinks, type TransferLinkRow } from "@/lib/transfer-match";
 
 export const Route = createFileRoute("/_authenticated/statements")({
-  validateSearch: (s: Record<string, unknown>): { tab?: "accountant" } => (s["tab"] === "accountant" ? { tab: "accountant" } : {}),
+  validateSearch: (s: Record<string, unknown>): { tab?: "accountant"; context?: IntakeContext } => {
+    const context = parseContext(s["context"]);
+    return { ...(s["tab"] === "accountant" ? { tab: "accountant" as const } : {}), ...(context ? { context } : {}) };
+  },
   head: () => ({
     meta: [
       { title: "Statement Desk · Ledgerline" },
@@ -64,7 +69,9 @@ interface Loaded {
 }
 
 function StatementDeskPage() {
-  const { tab } = Route.useSearch();
+  const { tab, context } = Route.useSearch();
+  /** Non-bank documents (company papers, deeds, leases, audited accounts, invoices) — reviewed here, stored in DocuRepo. */
+  const [docs, setDocs] = useState<{ key: string; file: File }[]>([]);
   const store = useStore();
   const storeRef = useRef(store);
   storeRef.current = store;
@@ -114,7 +121,13 @@ function StatementDeskPage() {
       try {
         const inv = parseInvestmentDoc(await readDocRows(f).catch(() => []));
         if (inv) { setInvest((p) => [...p.filter((x) => x.file.name !== f.name), { key: `${f.name}-${f.size}-${f.lastModified}`, file: f, doc: inv }]); continue; }
-        const read = await readStatementFile(f, serverRead);
+        const asDoc = () => setDocs((p) => [...p.filter((x) => x.file.name !== f.name), { key: `${f.name}-${f.size}-${f.lastModified}`, file: f }]);
+        const docLike = /\.(pdf|png|jpe?g|webp)$/i.test(f.name);
+        if (context && context !== "investments" && docLike) { asDoc(); continue; }
+        let read: Awaited<ReturnType<typeof readStatementFile>>;
+        try { read = await readStatementFile(f, serverRead); }
+        catch (e) { if (docLike) { asDoc(); continue; } throw e; }
+        if (!read.files.some((x) => x.lines.length) && docLike) { asDoc(); continue; }
         const id = identifyFile(read.rows, read.files[0]?.lines ?? [], accounts);
         for (const file of read.files) {
           const t = totals(file.lines);
@@ -333,9 +346,10 @@ function StatementDeskPage() {
       <SectionTabs group="statements" active="upload" />
       <header className="space-y-1">
         <h1 className="flex items-center gap-2 text-xl font-semibold"><Inbox className="size-5" /> Statement Desk</h1>
-        <p className="flex items-start gap-1.5 text-sm text-muted-foreground"><ShieldCheck className="mt-0.5 size-4 shrink-0" /> Drop in as many statements as you like — bank, card, loan, demat, trades or capital gains; PDF, CSV or Excel. They are read on this device, matched against your records, and nothing is saved until you say so.</p>
+        <p className="flex items-start gap-1.5 text-sm text-muted-foreground"><ShieldCheck className="mt-0.5 size-4 shrink-0" /> Drop in any financial or legal document — bank, card, loan, demat, trades, capital gains, company papers, audited accounts, deeds, leases, invoices; PDF, photo, CSV or Excel. They are read on this device, matched against your records, and nothing is saved until you say so.</p>
       </header>
 
+      {context && <p className="rounded-xl bg-secondary px-3 py-2 text-sm">Adding for <b>{CONTEXTS[context]}</b> — any document you drop is identified, read and filed in DocuRepo, then you confirm what it creates.</p>}
       <AccountantInbox onFiles={add} />
 
       <Card className="space-y-3 p-4">
@@ -353,6 +367,7 @@ function StatementDeskPage() {
         {progress && <p role="status" className="text-sm text-muted-foreground">{progress}</p>}
         {errors.length > 0 && <ul className="space-y-1 text-sm text-destructive" role="alert">{errors.map((e) => <li key={e}>{e}</li>)}</ul>}
 
+        {docs.map((x) => <DocumentIntake key={x.key} file={x.file} context={context} onClose={() => setDocs((p) => p.filter((y) => y.key !== x.key))} />)}
         {invest.map((x) => <InvestmentReview key={x.key} file={x.file} doc={x.doc} onClose={() => setInvest((p) => p.filter((y) => y.key !== x.key))} onUploadMore={() => inputRef.current?.click()} />)}
 
         {loaded.length > 0 && (
