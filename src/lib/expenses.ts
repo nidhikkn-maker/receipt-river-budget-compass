@@ -7,7 +7,7 @@ export const CATEGORIES = [
   "Food and beverages", "Groceries", "Shopping", "Family and children", "Education", "Medical and healthcare",
   "Fuel and vehicle expenses", "Travel and accommodation", "Household expenses", "Utility bills", "Digital subscriptions",
   "Insurance", "Financial charges", "Gifts and occasions", "Domestic staff", "Entertainment", "Personal care", "Miscellaneous",
-  "Office & Supplies", "Client & Business Meals",
+  "Office & Supplies", "Client & Business Meals", "Taxes and duties",
 ] as const;
 /** Category used for interest, late fees and other bank/card charges. */
 export const CHARGES_CATEGORY = "Financial charges";
