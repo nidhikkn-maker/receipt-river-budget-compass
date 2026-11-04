@@ -35,3 +35,4 @@
 - Company/person profiles (src/lib/entities.ts) live in owner preferences.entities; PAN type letter and GSTIN embedded PAN/mod-36 check are validated before save, and financial-year status is counted from saved records only, never marked complete automatically.
 - Supplier/missing-invoice checks (src/lib/gst-recon.ts) are read-only over business-scope spending; a bill counts if the entry has a receipt or a DocuRepo document linked to it, and GSTIN is read only from linked documents.
 - Property/fixed assets (src/lib/assets.ts) live in owner preferences.assets; book SLM/WDV is day-prorated, tax WDV uses block rates with the under-180-day half-rate rule, land never depreciates, and rent checks only read income entries naming the property.
+- Income tax/GST working (src/lib/tax-summary.ts) is a read-only per-FY draft from ledger entries and assets; GST input counts only tax printed on business bills, never claimable credit.
