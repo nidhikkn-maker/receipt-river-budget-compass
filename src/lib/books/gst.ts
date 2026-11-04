@@ -43,13 +43,13 @@ export function gstr3b(list: GstInvoice[], gstin: string, period: string, in2b?:
 }
 
 /** Match GST payments in the ledger (narration with GST/CBIC/challan) to 3B liabilities by amount within ±₹1. */
-export function matchGstPayments(liabilities: { period: string; amount: number }[], payments: { id: string; date: string; amount: number; text: string; accountId?: string | null }[], opts?: { gstin?: string; accountIds?: Set<string> }) {
+export function matchGstPayments(liabilities: { period: string; amount: number }[], payments: { id: string; date: string; amount: number; text: string; accountId?: string | null | undefined }[], opts?: { gstin?: string | undefined; accountIds?: Set<string> | undefined }) {
   const GSTIN_RE = /\b\d{2}[A-Z]{5}\d{4}[A-Z][1-9A-Z]Z[0-9A-Z]\b/g;
   const pool = payments.filter((p) => {
     if (!/\bgst\b|cbic|gst\s*challan|cpin/i.test(p.text)) return false;
     // Must belong to this entity's accounts and must not name a different GSTIN.
     if (opts?.accountIds?.size && !(p.accountId && opts.accountIds.has(p.accountId))) return false;
-    const named = p.text.toUpperCase().match(GSTIN_RE) ?? [];
+    const named: string[] = p.text.toUpperCase().match(GSTIN_RE) ?? [];
     return !(opts?.gstin && named.length && !named.includes(opts.gstin.toUpperCase()));
   });
   const used = new Set<string>();
