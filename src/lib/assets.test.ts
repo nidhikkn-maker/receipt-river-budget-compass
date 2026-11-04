@@ -25,3 +25,16 @@ describe("assets", () => {
     expect(r.map((m) => m.received)).toEqual([30000, 0]);
   });
 });
+
+import { assetFollowUps as fu } from "./assets";
+describe("asset follow-ups", () => {
+  const base = { id: "x", name: "Laptop", kind: "computer", cost: 1, inUse: "2025-01-01", sharePct: 100, bookMethod: "slm", bookRatePct: 0 } as never;
+  it("flags never checked and lease ending within 60 days", () => {
+    expect(fu(base, "2026-11-04")).toEqual(["never physically checked"]);
+    expect(fu({ ...(base as object), kind: "property", leaseEnd: "2026-12-04" } as never, "2026-11-04")).toEqual(["lease ends in 30 days"]);
+  });
+  it("checked within a year is clear; sold assets never flag", () => {
+    expect(fu({ ...(base as object), lastVerified: "2026-06-01" } as never, "2026-11-04")).toEqual([]);
+    expect(fu({ ...(base as object), soldOn: "2026-01-01", condition: "missing" } as never, "2026-11-04")).toEqual([]);
+  });
+});

@@ -3,7 +3,7 @@ import type { Expense } from "./expenses";
 import type { VaultDoc } from "./documents";
 import { gstinProblem, panProblem, yearStatuses, type EntityProfile } from "./entities";
 import { missingInvoices } from "./gst-recon";
-import type { Asset } from "./assets";
+import { assetFollowUps, type Asset } from "./assets";
 
 export interface Finding { key: string; area: "Profiles" | "Invoices" | "Assets" | "Years"; text: string; to: string; severity: "high" | "medium" }
 
@@ -19,6 +19,7 @@ export function auditFindings(today: string, entities: EntityProfile[], assets: 
   }
   const missing = missingInvoices(entries, docs, 0);
   if (missing.length) out.push({ key: "inv", area: "Invoices", text: `${missing.length} business spends have no bill`, to: "/gst-check", severity: missing.some((m) => m.amount >= 10000) ? "high" : "medium" });
+  for (const a of assets) for (const f of assetFollowUps(a, today)) out.push({ key: `assetchk:${a.id}:${f}`, area: "Assets", text: `${a.name}: ${f}`, to: "/assets", severity: /missing|ended/.test(f) ? "high" : "medium" });
   for (const a of assets) if (!a.docId && !a.soldOn) out.push({ key: `asset:${a.id}`, area: "Assets", text: `${a.name}: no ${a.kind === "property" ? "deed" : "purchase invoice"} linked`, to: "/assets", severity: a.kind === "property" ? "high" : "medium" });
   return out.sort((x, y) => (x.severity === y.severity ? 0 : x.severity === "high" ? -1 : 1));
 }
