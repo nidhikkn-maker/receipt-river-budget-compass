@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useId, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
@@ -11,6 +11,7 @@ import { validateBankBalance } from "@/lib/loan-funding";
 import { confirmAction } from "@/lib/confirm";
 
 export function BankBalanceEditor({ account }: { account: Account }) {
+  const fieldId = useId();
   const { adjustBalance, updateAccount, transactions } = useStore();
   const [amount, setAmount] = useState("");
   const [date, setDate] = useState(todayISO());
@@ -33,8 +34,8 @@ export function BankBalanceEditor({ account }: { account: Account }) {
       finally { setBusy(false); }
     }}>
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        <div><Label htmlFor={`bank-balance-${account.id}`}>Bank balance (₹)</Label><Input id={`bank-balance-${account.id}`} type="number" inputMode="decimal" min="0" step="0.01" value={amount} onChange={e => setAmount(e.target.value)} /></div>
-        <div><Label htmlFor={`bank-date-${account.id}`}>Balance date</Label><Input id={`bank-date-${account.id}`} type="date" max={todayISO()} value={date} onChange={e => setDate(e.target.value)} /></div>
+        <div><Label htmlFor={`${fieldId}-balance`}>Bank balance (₹)</Label><Input id={`${fieldId}-balance`} type="number" inputMode="decimal" min="0" step="0.01" value={amount} onChange={e => setAmount(e.target.value)} /></div>
+        <div><Label htmlFor={`${fieldId}-date`}>Balance date</Label><Input id={`${fieldId}-date`} type="date" max={todayISO()} value={date} onChange={e => setDate(e.target.value)} /></div>
       </div>
       {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
       <Button type="submit" loading={busy}>Review balance update</Button>
