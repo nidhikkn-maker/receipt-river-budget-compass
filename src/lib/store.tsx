@@ -22,6 +22,7 @@ import { correctionStillCurrent, type CorrectionPreview } from "./financial-corr
 import { mappingStillCurrent, type ReviewMappingPreview } from './review-mapping';
 import { recurringDuplicates } from './review-recurring';
 import { metadataStillCurrent, type MetadataPreview } from './review-metadata';
+import { validateBankBalance } from './loan-funding';
 
 export interface Loan {
   id: string; name: string;
@@ -600,6 +601,7 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
   };
   const adjustBalance: Ctx["adjustBalance"] = async (a, actual, date) => {
     if (!Number.isFinite(actual)) throw new Error("Enter the balance you see at the bank");
+    if (["savings", "current", "cash", "wallet"].includes(a.kind)) validateBankBalance(actual, date, new Date().toISOString().slice(0, 10));
     const adj = adjustmentToMatch(a, expenses.filter((t) => t.date <= date), actual);
     if (!adj) return false;
     await save({ title: `Balance adjustment — ${a.name}`, merchant: null, category: "Adjustment", scope: "personal", memberId: null, amount: adj.amount, currency: "INR",

@@ -5,6 +5,7 @@
 
 import { accountBalance, type Account, type Txn } from "./ledger";
 import { occurrences, type Commitment, type Occurrence } from "./planning";
+import { bankBalanceKnown, currentBankBalance } from "./loan-funding";
 
 export type ReadinessStatus = "ready" | "shortfall" | "unknown" | "overdue" | "paid";
 
@@ -73,7 +74,11 @@ export function paymentReadiness(i: ReadinessInput): PaymentReadiness[] {
       continue;
     }
 
-    const balance = accountBalance(account, i.transactions);
+    if (!bankBalanceKnown(account)) {
+      results.push({ ...base, status: "unknown", projected: null, shortfall: 0, steps: [{ label: `Update the actual balance in ${account.name}`, amount: 0 }] });
+      continue;
+    }
+    const balance = currentBankBalance(account, i.transactions, i.today);
     const incomeBefore = ins.filter((x) => x.date <= o.date && (x.commitmentId ? (i.commitments.find((y) => y.id === x.commitmentId)?.accountId ?? (account.id === defaultAccount?.id ? account.id : null)) === account.id : account.id === defaultAccount?.id));
     const income = r2(incomeBefore.reduce((s, x) => s + x.amount, 0));
     const earlier = outs.slice(0, index).filter((x) => accountFor(x)?.id === account.id);
