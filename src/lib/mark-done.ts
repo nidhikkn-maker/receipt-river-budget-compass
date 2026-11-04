@@ -9,7 +9,7 @@ export function markableUpcoming<U extends UpcomingLike>(upcoming: U[], commitme
   const seen = new Set<string>();
   return upcoming.filter((u) => {
     const c = commitments.find((x) => x.id === u.commitmentId);
-    if (!c || c.status !== "active" || u.date !== c.nextDue || seen.has(c.id)) return false;
+    if (!c || c.status !== "active" || (!u.overdue && u.date !== c.nextDue) || seen.has(c.id)) return false;
     seen.add(c.id);
     return true;
   });
