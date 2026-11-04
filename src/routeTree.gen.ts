@@ -17,6 +17,7 @@ import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as Char91DotwellKnownChar93OauthProtectedResourceRouteImport } from './routes/[.well-known]/oauth-protected-resource'
 import { Route as AuthenticatedAccountReconciliationRouteImport } from './routes/_authenticated/account-reconciliation'
 import { Route as AuthenticatedAllocationRouteImport } from './routes/_authenticated/allocation'
+import { Route as AuthenticatedAssetsRouteImport } from './routes/_authenticated/assets'
 import { Route as AuthenticatedAssistantRouteImport } from './routes/_authenticated/assistant'
 import { Route as AuthenticatedAssistantsRouteImport } from './routes/_authenticated/assistants'
 import { Route as AuthenticatedBriefRouteImport } from './routes/_authenticated/brief'
@@ -112,6 +113,11 @@ const AuthenticatedAccountReconciliationRoute =
 const AuthenticatedAllocationRoute = AuthenticatedAllocationRouteImport.update({
   id: '/allocation',
   path: '/allocation',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedAssetsRoute = AuthenticatedAssetsRouteImport.update({
+  id: '/assets',
+  path: '/assets',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedAssistantRoute = AuthenticatedAssistantRouteImport.update({
@@ -420,6 +426,7 @@ export interface FileRoutesByFullPath {
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/account-reconciliation': typeof AuthenticatedAccountReconciliationRoute
   '/allocation': typeof AuthenticatedAllocationRoute
+  '/assets': typeof AuthenticatedAssetsRoute
   '/assistant': typeof AuthenticatedAssistantRoute
   '/assistants': typeof AuthenticatedAssistantsRoute
   '/brief': typeof AuthenticatedBriefRoute
@@ -484,6 +491,7 @@ export interface FileRoutesByTo {
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/account-reconciliation': typeof AuthenticatedAccountReconciliationRoute
   '/allocation': typeof AuthenticatedAllocationRoute
+  '/assets': typeof AuthenticatedAssetsRoute
   '/assistant': typeof AuthenticatedAssistantRoute
   '/assistants': typeof AuthenticatedAssistantsRoute
   '/brief': typeof AuthenticatedBriefRoute
@@ -549,6 +557,7 @@ export interface FileRoutesById {
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/_authenticated/account-reconciliation': typeof AuthenticatedAccountReconciliationRoute
   '/_authenticated/allocation': typeof AuthenticatedAllocationRoute
+  '/_authenticated/assets': typeof AuthenticatedAssetsRoute
   '/_authenticated/assistant': typeof AuthenticatedAssistantRoute
   '/_authenticated/assistants': typeof AuthenticatedAssistantsRoute
   '/_authenticated/brief': typeof AuthenticatedBriefRoute
@@ -615,6 +624,7 @@ export interface FileRouteTypes {
     | '/.well-known/oauth-protected-resource'
     | '/account-reconciliation'
     | '/allocation'
+    | '/assets'
     | '/assistant'
     | '/assistants'
     | '/brief'
@@ -679,6 +689,7 @@ export interface FileRouteTypes {
     | '/.well-known/oauth-protected-resource'
     | '/account-reconciliation'
     | '/allocation'
+    | '/assets'
     | '/assistant'
     | '/assistants'
     | '/brief'
@@ -743,6 +754,7 @@ export interface FileRouteTypes {
     | '/.well-known/oauth-protected-resource'
     | '/_authenticated/account-reconciliation'
     | '/_authenticated/allocation'
+    | '/_authenticated/assets'
     | '/_authenticated/assistant'
     | '/_authenticated/assistants'
     | '/_authenticated/brief'
@@ -873,6 +885,13 @@ declare module '@tanstack/react-router' {
       path: '/allocation'
       fullPath: '/allocation'
       preLoaderRoute: typeof AuthenticatedAllocationRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/assets': {
+      id: '/_authenticated/assets'
+      path: '/assets'
+      fullPath: '/assets'
+      preLoaderRoute: typeof AuthenticatedAssetsRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/assistant': {
@@ -1279,6 +1298,7 @@ const AuthenticatedTripsRouteWithChildren =
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedAccountReconciliationRoute: typeof AuthenticatedAccountReconciliationRoute
   AuthenticatedAllocationRoute: typeof AuthenticatedAllocationRoute
+  AuthenticatedAssetsRoute: typeof AuthenticatedAssetsRoute
   AuthenticatedAssistantRoute: typeof AuthenticatedAssistantRoute
   AuthenticatedAssistantsRoute: typeof AuthenticatedAssistantsRoute
   AuthenticatedBriefRoute: typeof AuthenticatedBriefRoute
@@ -1330,6 +1350,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAccountReconciliationRoute:
     AuthenticatedAccountReconciliationRoute,
   AuthenticatedAllocationRoute: AuthenticatedAllocationRoute,
+  AuthenticatedAssetsRoute: AuthenticatedAssetsRoute,
   AuthenticatedAssistantRoute: AuthenticatedAssistantRoute,
   AuthenticatedAssistantsRoute: AuthenticatedAssistantsRoute,
   AuthenticatedBriefRoute: AuthenticatedBriefRoute,
