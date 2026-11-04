@@ -12,6 +12,10 @@ import { Label } from "./ui/label";
 import { NOTIFICATION_TYPES, normalizeNotificationSettings } from "@/lib/notification-settings";
 
 function keyBytes(key: string) { return Uint8Array.from(atob(key.replace(/-/g,"+").replace(/_/g,"/")),c=>c.charCodeAt(0)); }
+type TestState = "sending" | "accepted" | "shown" | "unconfirmed" | "failed";
+function Step({done,failed,label}:{done:boolean;failed:boolean;label:string}) {
+  return <li className={`flex items-center gap-2 ${failed?"text-destructive":done?"text-foreground":"text-muted-foreground"}`}><span aria-hidden className="w-4 text-center">{failed?"✕":done?"✓":"…"}</span>{label}</li>;
+}
 export function PushSettings() {
   const { preferences, userId, savePreferences, loading }=useStore();
   const choices = normalizeNotificationSettings(preferences.notifications);
@@ -61,11 +65,29 @@ export function PushSettings() {
     } catch(e){toast.error((e as Error).message);}finally{setBusy(false);}
   };
   const disable=async()=>{if(!sub)return;setBusy(true);try{await remove({data:{endpoint:sub.endpoint}});await sub.unsubscribe();setSub(null);setStatus("Notifications are off on this device.");}catch(e){toast.error((e as Error).message);}finally{setBusy(false);}};
-  const sendTest=async()=>{if(!sub)return;setBusy(true);try{const result=await test({data:{endpoint:sub.endpoint}});if(result.expired){await sub.unsubscribe();setSub(null);throw Error("This registration expired. Enable notifications again.");}if(!result.ok)throw Error("The notification service couldn't accept the test. Try again later.");toast.success("Test accepted by the notification service");}catch(e){toast.error((e as Error).message);}finally{setBusy(false);}};
+  const [delivery,setDelivery]=useState<{state:TestState;at:number;detail?:string}|null>(null);
+  useEffect(()=>{
+    if(!("serviceWorker" in navigator))return;
+    const onMsg=(e:MessageEvent)=>{if(e.data?.type==="ledgerline-test-shown")setDelivery(d=>d&&d.state!=="failed"?{state:"shown",at:Date.now()}:d);};
+    navigator.serviceWorker.addEventListener("message",onMsg);
+    return()=>navigator.serviceWorker.removeEventListener("message",onMsg);
+  },[]);
+  // If the phone never reports showing it, say so instead of leaving "waiting" forever.
+  useEffect(()=>{if(delivery?.state!=="accepted")return;const t=setTimeout(()=>setDelivery(d=>d?.state==="accepted"?{...d,state:"unconfirmed"}:d),30000);return()=>clearTimeout(t);},[delivery]);
+  const sendTest=async()=>{if(!sub)return;setBusy(true);setDelivery({state:"sending",at:Date.now()});try{const result=await test({data:{endpoint:sub.endpoint}});if(result.expired){await sub.unsubscribe();setSub(null);throw Error("This registration expired. Enable notifications again.");}if(!result.ok)throw Error("The notification service couldn't accept the test. Try again later.");setDelivery(d=>d?.state==="shown"?d:{state:"accepted",at:Date.now()});}catch(e){const msg=(e as Error).message;setDelivery({state:"failed",at:Date.now(),detail:msg});toast.error(msg);}finally{setBusy(false);}};
   return <section className="mb-8 py-3" aria-labelledby="push-settings-title">
     <h2 id="push-settings-title" className="mb-2 flex items-center gap-2 font-display text-xl font-bold"><Bell className="h-5 w-5"/>Device notifications</h2>
     <p role="status" className="mb-3 text-sm text-muted-foreground">{status}</p>
-    <div className="flex flex-wrap gap-2"><Button variant="outline" disabled={busy||!supported} onClick={sub?disable:enable}>{sub?<BellOff className="h-4 w-4"/>:<Bell className="h-4 w-4"/>}{sub?"Turn off this device":"Enable this device"}</Button><Button variant="outline" disabled={busy||!sub||!supported} onClick={sendTest}><Send className="h-4 w-4"/>Send test</Button></div>
+    <div className="flex flex-wrap gap-2"><Button variant="outline" disabled={busy||!supported} onClick={sub?disable:enable}>{sub?<BellOff className="h-4 w-4"/>:<Bell className="h-4 w-4"/>}{sub?"Turn off this device":"Enable this device"}</Button><Button variant="outline" disabled={busy||!sub||!supported} onClick={sendTest}><Send className="h-4 w-4"/>Send test notification</Button></div>
+    {delivery&&<div role="status" aria-live="polite" className="mt-3 rounded-lg border bg-card p-3 text-sm text-card-foreground">
+      <p className="font-medium">Test delivery · {new Date(delivery.at).toLocaleTimeString()}</p>
+      <ol className="mt-2 space-y-1">
+        <Step done={delivery.state!=="sending"&&delivery.state!=="failed"} failed={delivery.state==="failed"} label="Sent to the notification service"/>
+        <Step done={delivery.state==="shown"} failed={delivery.state==="unconfirmed"} label={delivery.state==="unconfirmed"?"Not confirmed on this device within 30 seconds":"Shown on this device"}/>
+      </ol>
+      {delivery.state==="failed"&&<p className="mt-2 text-destructive">{delivery.detail}</p>}
+      {delivery.state==="unconfirmed"&&<p className="mt-2 text-muted-foreground">If you saw the notification, it's working. If not, check Settings → Notifications → Ledgerline on your phone, and that Focus mode is off.</p>}
+    </div>}
     <fieldset disabled={loading || saving} className="mt-6 min-w-0 divide-y">
       <div className="flex items-center justify-between gap-4 py-4"><Label htmlFor="all-reminders">All reminders</Label><Switch id="all-reminders" checked={preferences.reminders} disabled={saving} onCheckedChange={value=>void update({reminders:value})}/></div>
       {NOTIFICATION_TYPES.map(({key,label})=><div key={key} className="flex items-center justify-between gap-4 py-4"><Label className="min-w-0 break-words leading-5" htmlFor={`notify-${key}`}>{label}</Label><Switch id={`notify-${key}`} className="shrink-0" checked={choices[key]} disabled={saving||!preferences.reminders} onCheckedChange={value=>void update({notifications:{...choices,[key]:value}})}/></div>)}
