@@ -20,6 +20,7 @@ import { Route as AuthenticatedAllocationRouteImport } from './routes/_authentic
 import { Route as AuthenticatedAssetsRouteImport } from './routes/_authenticated/assets'
 import { Route as AuthenticatedAssistantRouteImport } from './routes/_authenticated/assistant'
 import { Route as AuthenticatedAssistantsRouteImport } from './routes/_authenticated/assistants'
+import { Route as AuthenticatedAuditRouteImport } from './routes/_authenticated/audit'
 import { Route as AuthenticatedBriefRouteImport } from './routes/_authenticated/brief'
 import { Route as AuthenticatedBudgetsRouteImport } from './routes/_authenticated/budgets'
 import { Route as AuthenticatedClaimSubmissionRouteImport } from './routes/_authenticated/claim-submission'
@@ -129,6 +130,11 @@ const AuthenticatedAssistantRoute = AuthenticatedAssistantRouteImport.update({
 const AuthenticatedAssistantsRoute = AuthenticatedAssistantsRouteImport.update({
   id: '/assistants',
   path: '/assistants',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedAuditRoute = AuthenticatedAuditRouteImport.update({
+  id: '/audit',
+  path: '/audit',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedBriefRoute = AuthenticatedBriefRouteImport.update({
@@ -435,6 +441,7 @@ export interface FileRoutesByFullPath {
   '/assets': typeof AuthenticatedAssetsRoute
   '/assistant': typeof AuthenticatedAssistantRoute
   '/assistants': typeof AuthenticatedAssistantsRoute
+  '/audit': typeof AuthenticatedAuditRoute
   '/brief': typeof AuthenticatedBriefRoute
   '/budgets': typeof AuthenticatedBudgetsRoute
   '/claim-submission': typeof AuthenticatedClaimSubmissionRoute
@@ -501,6 +508,7 @@ export interface FileRoutesByTo {
   '/assets': typeof AuthenticatedAssetsRoute
   '/assistant': typeof AuthenticatedAssistantRoute
   '/assistants': typeof AuthenticatedAssistantsRoute
+  '/audit': typeof AuthenticatedAuditRoute
   '/brief': typeof AuthenticatedBriefRoute
   '/budgets': typeof AuthenticatedBudgetsRoute
   '/claim-submission': typeof AuthenticatedClaimSubmissionRoute
@@ -568,6 +576,7 @@ export interface FileRoutesById {
   '/_authenticated/assets': typeof AuthenticatedAssetsRoute
   '/_authenticated/assistant': typeof AuthenticatedAssistantRoute
   '/_authenticated/assistants': typeof AuthenticatedAssistantsRoute
+  '/_authenticated/audit': typeof AuthenticatedAuditRoute
   '/_authenticated/brief': typeof AuthenticatedBriefRoute
   '/_authenticated/budgets': typeof AuthenticatedBudgetsRoute
   '/_authenticated/claim-submission': typeof AuthenticatedClaimSubmissionRoute
@@ -636,6 +645,7 @@ export interface FileRouteTypes {
     | '/assets'
     | '/assistant'
     | '/assistants'
+    | '/audit'
     | '/brief'
     | '/budgets'
     | '/claim-submission'
@@ -702,6 +712,7 @@ export interface FileRouteTypes {
     | '/assets'
     | '/assistant'
     | '/assistants'
+    | '/audit'
     | '/brief'
     | '/budgets'
     | '/claim-submission'
@@ -768,6 +779,7 @@ export interface FileRouteTypes {
     | '/_authenticated/assets'
     | '/_authenticated/assistant'
     | '/_authenticated/assistants'
+    | '/_authenticated/audit'
     | '/_authenticated/brief'
     | '/_authenticated/budgets'
     | '/_authenticated/claim-submission'
@@ -918,6 +930,13 @@ declare module '@tanstack/react-router' {
       path: '/assistants'
       fullPath: '/assistants'
       preLoaderRoute: typeof AuthenticatedAssistantsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/audit': {
+      id: '/_authenticated/audit'
+      path: '/audit'
+      fullPath: '/audit'
+      preLoaderRoute: typeof AuthenticatedAuditRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/brief': {
@@ -1320,6 +1339,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedAssetsRoute: typeof AuthenticatedAssetsRoute
   AuthenticatedAssistantRoute: typeof AuthenticatedAssistantRoute
   AuthenticatedAssistantsRoute: typeof AuthenticatedAssistantsRoute
+  AuthenticatedAuditRoute: typeof AuthenticatedAuditRoute
   AuthenticatedBriefRoute: typeof AuthenticatedBriefRoute
   AuthenticatedBudgetsRoute: typeof AuthenticatedBudgetsRoute
   AuthenticatedClaimSubmissionRoute: typeof AuthenticatedClaimSubmissionRoute
@@ -1373,6 +1393,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAssetsRoute: AuthenticatedAssetsRoute,
   AuthenticatedAssistantRoute: AuthenticatedAssistantRoute,
   AuthenticatedAssistantsRoute: AuthenticatedAssistantsRoute,
+  AuthenticatedAuditRoute: AuthenticatedAuditRoute,
   AuthenticatedBriefRoute: AuthenticatedBriefRoute,
   AuthenticatedBudgetsRoute: AuthenticatedBudgetsRoute,
   AuthenticatedClaimSubmissionRoute: AuthenticatedClaimSubmissionRoute,
