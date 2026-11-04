@@ -267,3 +267,15 @@ export function proposeTaxStatement(read: TaxStatementRead, entities: EntityProf
   const missing = [!fy && "financial year", !read.pan && "PAN"].filter((x): x is string => !!x);
   return { fy, entityId: ent?.id ?? (read.pan ? null : null), salary: read.taxableSalary, credits: read.credits.filter((c) => c.amount > 0), missing };
 }
+
+/**
+ * Suggest which owned account / loan a document belongs to [§6]: an account only when its last four digits
+ * appear after a masked or account-number marker and exactly one account matches; a loan only when its
+ * name or a saved reference is printed. Suggestions are shown preselected and can be changed in review.
+ */
+export function suggestLinks(text: string, accounts: { id: string; lastFour?: string | null | undefined; archived?: boolean }[], loans: { id: string; name: string; refs?: string[] | undefined }[]): { accountId: string | null; loanId: string | null } {
+  const t = text.toUpperCase();
+  const accHits = accounts.filter((a) => !a.archived && a.lastFour && /^\d{4}$/.test(a.lastFour) && new RegExp(`(?:X{2,}|\\*{2,}|A/C(?:\\s*NO\\.?)?\\s*[:\\-]?\\s*\\d*|ACCOUNT\\s*(?:NO\\.?|NUMBER)?\\s*[:\\-]?\\s*\\d*|CARD\\s*(?:NO\\.?)?\\s*[:\\-]?\\s*[X*\\d\\s]*)${a.lastFour}\\b`).test(t));
+  const loanHits = loans.filter((l) => (l.name.trim().length >= 4 && t.includes(l.name.trim().toUpperCase())) || (l.refs ?? []).some((r) => r.trim().length >= 4 && t.includes(r.trim().toUpperCase())));
+  return { accountId: accHits.length === 1 ? accHits[0]!.id : null, loanId: loanHits.length === 1 ? loanHits[0]!.id : null };
+}

@@ -15,7 +15,7 @@ import { useStore } from "@/lib/store";
 import { extractDocument, type ExtractedDocument } from "@/lib/document-extract.functions";
 import { DOC_LABEL, DOC_TYPES, duplicateDocuments, type DocField, type DocType } from "@/lib/documents";
 import { ENTITY_KINDS } from "@/lib/entities";
-import { autoName, fillLeaseFromTrusted, proposeAsset, proposeEntity, proposeFy, proposeLease, proposeProperty, proposeGstInvoice, proposeTaxStatement, ROUTE_OF, trail, type IntakeContext, type Step } from "@/lib/books/intake";
+import { autoName, fillLeaseFromTrusted, proposeAsset, proposeEntity, proposeFy, proposeLease, proposeProperty, proposeGstInvoice, proposeTaxStatement, suggestLinks, ROUTE_OF, trail, type IntakeContext, type Step } from "@/lib/books/intake";
 import { commitIntake, type Confirmed } from "@/lib/books/commit";
 import { emptyBooks, LEASE_TERMS, LEASE_TERM_LABEL, leaseUnknowns, requiresApproval, type Lease } from "@/lib/books/types";
 import { HEAD_LABEL } from "@/lib/books/fy";
@@ -94,6 +94,15 @@ export function DocumentIntake({ file, context, onClose, resume, replacesId }: {
   }, [file]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const route = ROUTE_OF[docType];
+  // Preselect the account/loan the document names; the owner can change it before saving [§6].
+  const suggested = useMemo(() => (x ? suggestLinks(`${x.text ?? ""} ${fields.map((f) => `${f.label} ${f.value}`).join(" ")}`, accounts, loans.map((l) => ({ id: l.id, name: l.name }))) : null), [x, fields, accounts, loans]);
+  const autoLinked = useRef(false);
+  useEffect(() => {
+    if (!suggested || autoLinked.current) return;
+    autoLinked.current = true;
+    if (suggested.accountId && !linkAcc) setLinkAcc(suggested.accountId);
+    if (suggested.loanId && !linkLoan) setLinkLoan(suggested.loanId);
+  }, [suggested]); // eslint-disable-line react-hooks/exhaustive-deps
   const proposal = useMemo(() => {
     if (!x) return null;
     // Proposed record ids derive from the run so a retry updates the same record.
