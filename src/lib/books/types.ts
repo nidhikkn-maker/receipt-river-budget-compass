@@ -15,7 +15,7 @@ export interface ClosedPeriod { id: string; from: Iso; to: Iso; entityId?: strin
 export interface PeriodEvent { at: string; action: "closed" | "reopened"; periodId: string; reason: string }
 
 /** One document linked to many records without copying the file [§8]. */
-export type LinkKind = "entity" | "asset" | "property" | "lease" | "loan" | "transaction" | "supplier" | "investment" | "insurance" | "fy";
+export type LinkKind = "entity" | "asset" | "property" | "lease" | "loan" | "transaction" | "supplier" | "investment" | "insurance" | "fy" | "gst";
 export interface DocLink { docId: string; kind: LinkKind; targetId: string; label: string }
 
 /** A field seen on a document that Ledgerline has no canonical place for [§15]; kept as data, proposed for approval. */
