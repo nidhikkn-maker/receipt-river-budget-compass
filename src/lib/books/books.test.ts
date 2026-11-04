@@ -25,7 +25,7 @@ describe("§71 entity onboarding", () => {
     const { profile, matchedBy, missing } = proposeEntity(entityRead, [], "e1", "2026-11-04");
     expect(matchedBy).toBeNull();
     expect(profile).toMatchObject({ name: "KR Enterprises Private Limited", kind: "company", pan: "AAACK1234C", regNo: "U12345TN2020PTC123456", booksFrom: "2020-21", incorporatedOn: "2020-06-15" });
-    expect(missing).toEqual([]);
+    expect(missing).toEqual(["date put to use (confirm)", "useful life", "residual value"]);
   });
   it("2. re-uploading the same documents creates no duplicate", () => {
     const first = proposeEntity(entityRead, [], "e1", "2026-11-04").profile;
