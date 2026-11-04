@@ -167,3 +167,21 @@ export function receiptRoundOffFor(e: { originalAmount: number; currency: string
   const r = receiptRoundOff(e.originalAmount, d, e.currency);
   return r.implied ? { amount: r.implied, source: "implied" } : { amount: 0, source: null };
 }
+
+/** Fields the owner changed from what the bill reading said. A changed field counts as checked by the owner. */
+export function correctedFields(read: { merchant: string; date: string; amount: number } | null | undefined, now: { merchant: string; date: string; amount: string }): ReceiptField[] {
+  if (!read) return [];
+  const out: ReceiptField[] = [];
+  if (read.merchant.trim().toLowerCase() !== now.merchant.trim().toLowerCase()) out.push("merchant");
+  if (read.date !== now.date) out.push("date");
+  if (Math.abs((Number(read.amount) || 0) - (Number(now.amount) || 0)) > 0.0001) out.push("total");
+  return out;
+}
+
+const key = (s: string) => s.trim().toLowerCase().replace(/\s+/g, " ");
+/** Shop name the owner corrected this reading to before (aliases: misread key → corrected key). Amounts and dates are never learned. */
+export function learnedShopName(read: string, aliases: Record<string, string> | undefined, knownNames: string[]): string | null {
+  const target = aliases?.[key(read)];
+  if (!target) return null;
+  return knownNames.find((n) => key(n) === target) ?? target.replace(/\b\w/g, (c) => c.toUpperCase());
+}
