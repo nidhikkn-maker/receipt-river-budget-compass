@@ -1,9 +1,10 @@
 // Document vault: receipts attached to entries plus stand-alone documents, searchable together (pure, tested).
-export const DOC_TYPES = ["bill", "receipt", "invoice", "bank_statement", "card_statement", "insurance", "loan_agreement", "payment_confirmation", "warranty", "other"] as const;
+export const DOC_TYPES = ["bill", "receipt", "invoice", "bank_statement", "card_statement", "insurance", "loan_agreement", "payment_confirmation", "warranty", "demat_statement", "transaction_statement", "capital_gains_statement", "other"] as const;
 export type DocType = (typeof DOC_TYPES)[number];
 export const DOC_LABEL: Record<DocType, string> = {
   bill: "Bill", receipt: "Receipt", invoice: "Invoice", bank_statement: "Bank statement", card_statement: "Credit card statement", insurance: "Insurance document",
-  loan_agreement: "Loan agreement", payment_confirmation: "Payment confirmation", warranty: "Warranty", other: "Other",
+  loan_agreement: "Loan agreement", payment_confirmation: "Payment confirmation", warranty: "Warranty",
+  demat_statement: "Demat statement", transaction_statement: "Transaction statement", capital_gains_statement: "Capital gains statement", other: "Other",
 };
 export const MAX_DOC_BYTES = 10 * 1024 * 1024;
 
