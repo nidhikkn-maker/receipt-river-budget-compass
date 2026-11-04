@@ -52,7 +52,7 @@ export async function renderStatementPdf(s: Statement, files: Record<string, Ann
     body: s.rows.map((r) => [String(r.sno), ascii(r.workspaces), n(r.businessShare), n(r.personalShare), r.status]) });
   const itemised = s.rows.filter((r) => r.items.length);
   if (itemised.length) table({ startY: last() + 6, head: [["S.No", "Line item", "Qty", "Amount (original currency)", "Reconciles with bill"]], columnStyles: { 3: { halign: "right" } },
-    body: itemised.flatMap((r) => r.items.map((it, i) => [i ? "" : String(r.sno), ascii(it.name), String(it.quantity), n(it.amount), i ? "" : r.itemsReconcile ? "Yes" : "No - shown as read from the bill"])) });
+    body: itemised.flatMap((r) => [...r.items.map((it, i) => [i ? "" : String(r.sno), ascii(it.name), String(it.quantity), n(it.amount), i ? "" : r.itemsReconcile ? "Yes" : "No - shown as read from the bill"]), ...(r.roundOff ? [["", "Round-off", "", n(r.roundOff), ""]] : [])]) });
   table({ startY: last() + 6, theme: "plain", head: [["Notes and disclosures"]], body: s.disclosures.map((d) => ["- " + ascii(d)]), styles: { fontSize: 8 } });
 
   return appendAnnexures(new Uint8Array(doc.output("arraybuffer")), s, files);

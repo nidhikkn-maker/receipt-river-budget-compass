@@ -159,3 +159,11 @@ export function lowConfidenceFields(confidence?: Partial<ReceiptConfidence>): Re
 export function unconfirmedFields(confidence: Partial<ReceiptConfidence> | undefined, values: Record<ReceiptField, string>, checked: Partial<Record<ReceiptField, string>>): ReceiptField[] {
   return lowConfidenceFields(confidence).filter((f) => checked[f] !== values[f]);
 }
+
+/** Round-off for a saved expense: the saved value wins, otherwise worked out (display only) for older records. */
+export function receiptRoundOffFor(e: { originalAmount: number; currency: string; receiptDetails?: Breakdown | null | undefined }): { amount: number; source: "saved" | "printed" | "implied" | null } {
+  const d = e.receiptDetails ?? undefined;
+  if (d?.roundOff != null && Number.isFinite(d.roundOff) && d.roundOff !== 0) return { amount: Math.round(d.roundOff * 100) / 100, source: "saved" };
+  const r = receiptRoundOff(e.originalAmount, d, e.currency);
+  return r.implied ? { amount: r.implied, source: "implied" } : { amount: 0, source: null };
+}
