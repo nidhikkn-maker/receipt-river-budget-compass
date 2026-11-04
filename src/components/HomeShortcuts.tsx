@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { setPendingScan } from "@/lib/pending-scan";
 import { queueOfflineScan } from "@/lib/offline-scan";
@@ -19,6 +19,8 @@ export function HomeShortcuts() {
   const [selected, setSelected] = useState<ShortcutId[]>([]);
   const [drag, setDrag] = useState<ShortcutId | null>(null);
   const navigate = useNavigate();
+  const [camIssue, setCamIssue] = useState<string | null>(null);
+  useEffect(() => { void cameraBlocked().then(setCamIssue); }, []);
   const shown = all ? preferences.homeShortcuts : primaryShortcuts(preferences.homeShortcuts);
   const actionClass = "h-20 w-full min-w-0 flex-col gap-2 whitespace-normal rounded-lg border text-center text-xs";
   return <section aria-label="Home shortcuts" className="mb-5">
@@ -29,7 +31,7 @@ export function HomeShortcuts() {
     <div className="grid grid-cols-3 gap-2 sm:grid-cols-6">{shown.map((id) => {
       const s = SHORTCUTS.find((x) => x.id === id); if (!s) return null; const Icon = ICONS[id];
       if (id === "create-trip") return <Button key={id} variant="outline" className={actionClass} onClick={() => setCreate(true)}><Icon className="h-5 w-5 text-primary" />{s.label}</Button>;
-      if (id === "scan") return <Button key={id} asChild variant="outline" className={actionClass}><label className="cursor-pointer" onClick={async (e) => { if (e.target !== e.currentTarget && (e.target as HTMLElement).tagName === "INPUT") return; const why = await cameraBlocked(); if (why) { e.preventDefault(); toast.message(why, { description: "Opening the expense form instead — you can attach a photo there." }); void navigate({ to: "/new" }); } }}><input type="file" accept="image/*" capture="environment" className="sr-only" aria-label="Take a photo of a receipt" onChange={async (e) => { const files = Array.from(e.target.files ?? []); e.target.value = ""; if (!files.length) return; if (!navigator.onLine) { try { await queueOfflineScan(userId, files); toast.success("Receipt saved on this phone", { description: "It will upload and be read automatically when you're back online." }); } catch { toast.error("Couldn't save the photo on this phone"); } return; } setPendingScan(files); void navigate({ to: "/new", search: { scan: true } as never }); }} /><Icon className="h-5 w-5 text-primary" /><span>{s.label}</span></label></Button>;
+      if (id === "scan") return <Button key={id} asChild variant="outline" className={actionClass}><label className="cursor-pointer" onClick={(e) => { if ((e.target as HTMLElement).tagName === "INPUT") return; const why = camIssue; if (why) { e.preventDefault(); toast.message(why, { description: "Opening the expense form instead — you can attach a photo there." }); void navigate({ to: "/new" }); } }}><input type="file" accept="image/*" capture="environment" className="sr-only" aria-label="Take a photo of a receipt" onChange={async (e) => { const files = Array.from(e.target.files ?? []); e.target.value = ""; if (!files.length) return; if (!navigator.onLine) { try { await queueOfflineScan(userId, files); toast.success("Receipt saved on this phone", { description: "It will upload and be read automatically when you're back online." }); } catch { toast.error("Couldn't save the photo on this phone"); } return; } setPendingScan(files); void navigate({ to: "/new", search: { scan: true } as never }); }} /><Icon className="h-5 w-5 text-primary" /><span>{s.label}</span></label></Button>;
       return <Button key={id} asChild variant="outline" className={actionClass}><Link to={s.to} {...(id === "upcoming-trips" ? { search: { status: "upcoming" } } : {})}><Icon className="h-5 w-5 text-primary" /><span>{s.label}</span></Link></Button>;
     })}</div>
     <Sheet open={open} onOpenChange={setOpen}><SheetContent side="bottom" className="max-h-[85dvh] overflow-y-auto" aria-describedby={undefined} onOpenAutoFocus={(e) => e.preventDefault()}><SheetHeader><SheetTitle>Home shortcuts</SheetTitle></SheetHeader>
