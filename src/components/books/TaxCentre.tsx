@@ -112,7 +112,7 @@ export function GstReturns({ fy }: { fy: string }) {
   const due = owner ? obligations({ entity: owner, profile, fy, today: today(), gstFilings: books.gstFilings, fyRecords: books.fyRecords, rules: books.rules }).filter((o) => o.gstin === gstin) : [];
   const pay = matchGstPayments(months.map((m) => ({ period: m, amount: gstr3b(books.gstInvoices, gstin, m).netPayable })).filter((x) => x.amount > 0), transactions.filter((t) => (t.txnType ?? "expense") === "expense").map((t) => ({ id: t.id, date: t.date, amount: t.amount, text: `${t.title} ${t.merchant ?? ""} ${t.description}` })));
   const yr = annualSummary(books.gstInvoices, gstin, Number(fy.slice(0, 4)));
-  const unfiled = profile ? due.filter((o) => o.status === "overdue" || o.status === "due") : unfiledPeriods(books.gstFilings, gstin, "GSTR-3B", months).map((m) => ({ form: "GSTR-3B", period: m }));
+  const unfiled: { form: string; period: string; due?: string; status?: string }[] = profile ? due.filter((o) => o.status === "overdue" || o.status === "due") : unfiledPeriods(books.gstFilings, gstin, "GSTR-3B", months).map((m) => ({ form: "GSTR-3B", period: m }));
   const list = books.gstInvoices.filter((i) => i.gstin === gstin && i.date.startsWith(period));
   const dups = duplicateInvoices(books.gstInvoices.filter((i) => i.gstin === gstin));
   const n = (v: string) => Math.max(0, Number(v) || 0);
@@ -131,7 +131,7 @@ export function GstReturns({ fy }: { fy: string }) {
         {!profile && <p className="text-xs text-destructive">No filing scheme recorded for this GSTIN — set it in the tax profile above so monthly or quarterly returns are worked out correctly.</p>}
         {itc.lines.length > 0 && <details><summary className="cursor-pointer text-xs text-muted-foreground">Input tax credit review · {inr(itc.eligible)} claimable · {inr(itc.held)} held</summary>
           {itc.lines.map((l) => <p key={l.invoice.id} className="break-words text-xs">{l.invoice.number} · {l.invoice.party} · {inr(l.tax)} — {l.eligible ? <span className="text-primary">claimable</span> : <span className="text-destructive">held: {l.reasons.join(", ")}</span>}</p>)}</details>}
-        {unfiled.length > 0 && <div className="text-xs"><b>Returns due</b>{unfiled.slice(0, 12).map((o) => <p key={`${o.form}${o.period}`}>{o.form} {o.period}{"due" in o ? ` · due ${String(o.due)}${o.status === "overdue" ? " (overdue)" : ""}` : ""}</p>)}</div>}
+        {unfiled.length > 0 && <div className="text-xs"><b>Returns due</b>{unfiled.slice(0, 12).map((o) => <p key={`${o.form}${o.period}`}>{o.form} {o.period}{o.due ? ` · due ${o.due}${o.status === "overdue" ? " (overdue)" : ""}` : ""}</p>)}</div>}
         <p className="text-[11px] text-muted-foreground">ITC in the 3B draft counts only purchases with a valid supplier GSTIN and a clean tax split; confirm against the supplier-filed GSTR-2B on <Link to="/gst-check" className="underline">Suppliers & invoices</Link> before filing. Annual FY {fy}: sales {inr(yr.sales)}, output tax {inr(yr.outputTax)}, purchases {inr(yr.purchases)}, input tax {inr(yr.inputTax)}.</p>
         {pay.length > 0 && <div className="text-xs"><b>GST payments</b>{pay.map((p) => <p key={p.period}>{p.period}: {inr(p.amount)} — {p.paymentId ? `paid ${p.paidOn}` : <span className="text-destructive">no matching payment found</span>}</p>)}</div>}
         <details><summary className="cursor-pointer text-muted-foreground">Invoice register · {list.length} in {period}{dups.length ? ` · ${dups.length} duplicate number${dups.length > 1 ? "s" : ""}` : ""}</summary>
