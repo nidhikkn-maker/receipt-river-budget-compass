@@ -148,3 +148,26 @@ it("portfolio move alert ignores newly invested money", () => {
   expect(valuationAlerts([], [s("2026-05-01", 100000, 90000), s("2026-05-02", 150000, 140000)], a, {})).toEqual([]);
   expect(valuationAlerts([], [s("2026-05-01", 100000, 90000), s("2026-05-02", 90000, 90000)], a, {})[0]).toMatch(/fell 10\.0%/);
 });
+
+import { openingPlan, stableId } from "./fy";
+describe("opening-balance posting", () => {
+  const rec = { id: "r", entityId: "e1", fy: "2025-26", audited: { bank: 500000, loans: 200000, capitalReserves: 300000 }, schedules: [], qualifications: [], filedReturns: [], lossesCarriedForward: [] } as never;
+  const accounts = [{ id: "b1", name: "Bank", kind: "current", openingBalance: 450000 }, { id: "l1", name: "Loan", kind: "loan", openingBalance: 200000 }] as never;
+  const base = { rec, accounts, txns: [], missingSchedules: [], fyEnd: "2026-03-31", exceptions: {} };
+  it("posts exactly the difference on 1 April and skips accounts that agree", () => {
+    const p = openingPlan({ ...base, links: { bank: [{ accountId: "b1", target: 500000 }], loans: [{ accountId: "l1", target: 200000 }] } });
+    expect(p.blockers).toEqual([]); expect(p.openingDate).toBe("2026-04-01");
+    expect(p.postings).toHaveLength(1);
+    expect(p.postings[0]).toMatchObject({ accountId: "b1", amount: 50000, sign: 1 });
+    expect(p.rows.find((r) => r.head === "loans")?.status).toBe("agrees");
+  });
+  it("blocks an unlinked balance unless a reason is written", () => {
+    const p = openingPlan({ ...base, links: { bank: [{ accountId: "b1", target: 500000 }] } });
+    expect(p.blockers.some((b) => b.startsWith("Loans"))).toBe(true);
+    expect(openingPlan({ ...base, links: { bank: [{ accountId: "b1", target: 500000 }] }, exceptions: { loans: "Loan held by director personally" } }).blockers).toEqual([]);
+  });
+  it("blocks account amounts that don't add up to the audited figure", () => {
+    expect(openingPlan({ ...base, links: { bank: [{ accountId: "b1", target: 400000 }], loans: [{ accountId: "l1", target: 200000 }] } }).blockers[0]).toMatch(/add up/);
+  });
+  it("retries reuse the same entry id", () => { expect(stableId("opening|e1|2025-26|b1")).toBe(stableId("opening|e1|2025-26|b1")); expect(stableId("a")).not.toBe(stableId("b")); });
+});
