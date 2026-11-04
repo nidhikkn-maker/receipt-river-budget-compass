@@ -68,6 +68,6 @@ export function computationRows(c: TaxComputation): [string, number][] {
     ["House property — rent received", c.houseProperty.rent], ["House property — standard deduction (30%)", -c.houseProperty.standardDeduction], ["House property — home-loan interest", -c.houseProperty.homeLoanInterest], ["House property — net", c.houseProperty.net],
     ["Business — receipts", c.business.receipts], ["Business — expenses", -c.business.expenses], ["Business — tax depreciation", -c.business.depreciation], ["Business — net", c.business.net],
     ["Short-term capital gains", c.capitalGains.short], ["Long-term capital gains", c.capitalGains.long], ["Other sources", c.otherSources],
-    ["Gross total income", c.gross], ["Losses brought forward set off", -c.lossesSetOff], ["Total income", c.total],
+    ["Gross total income", c.gross], ["Losses brought forward set off", c.lossesSetOff ? -c.lossesSetOff : 0], ["Total income", c.total],
   ];
 }
