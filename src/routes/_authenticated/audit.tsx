@@ -6,11 +6,11 @@ import { Fold } from "@/components/Fold";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useStore } from "@/lib/store";
-import { groupBy, readinessTiles, reconHub } from "@/lib/books/audit";
+import { approvalHistory, entityObligations, groupBy, readinessTiles, reconHub, setFindingState } from "@/lib/books/audit";
 import { closePeriod, POLICY, reopenPeriod } from "@/lib/books/periods";
 import { missingInvoices } from "@/lib/gst-recon";
 import { receivableStatus } from "@/lib/receivables";
-import { useAudit } from "@/components/books/useAudit";
+import { useAuditAll } from "@/components/books/useAudit";
 import { useBooks } from "@/components/books/useBooks";
 import { fyRange, fyOf } from "@/lib/entities";
 
@@ -26,17 +26,25 @@ export const Route = createFileRoute("/_authenticated/audit")({
 });
 
 const LEVEL = { automatic: "Done automatically", confirm: "Needs your confirmation", restricted: "Needs explicit approval" } as const;
-type By = "risk" | "type" | "entity" | "fy" | "account";
+type By = "risk" | "type" | "entity" | "fy" | "account" | "evidence";
 
 function Audit() {
   const { transactions, documents, accounts, preferences } = useStore();
   const { books, save } = useBooks();
-  const items = useAudit();
+  const { open: items, reviewed } = useAuditAll();
+  const entities = preferences.entities ?? [];
   const [by, setBy] = useState<By>("risk");
   const today = new Date().toISOString().slice(0, 10);
   const lastFy = fyOf(new Date(Date.parse(today) - 365 * 864e5).toISOString().slice(0, 10));
   const [from, setFrom] = useState(fyRange(lastFy).start); const [to, setTo] = useState(fyRange(lastFy).end); const [note, setNote] = useState("");
-  const tiles = useMemo(() => readinessTiles({ accounts, entries: transactions, items, books, docsMissing: missingInvoices(transactions, documents, 0).length, today }), [accounts, transactions, items, books, documents, today]);
+  const obligations = useMemo(() => entities.flatMap((e) => entityObligations({ today, entities, books }, e.id)), [entities, books, today]);
+  const tiles = useMemo(() => readinessTiles({ accounts, entries: transactions, items, books, docsMissing: missingInvoices(transactions, documents, 0).length, today, obligations, entitiesWithoutProfile: entities.filter((e) => !books.taxProfiles.some((p) => p.entityId === e.id)).length }), [accounts, transactions, items, books, documents, today, obligations, entities]);
+  const history = useMemo(() => approvalHistory(books), [books]);
+  const decide = async (key: string, status: "resolved" | "accepted" | "open") => {
+    const note = status === "open" ? "" : window.prompt(status === "resolved" ? "What fixed it? (kept with the finding)" : "Why is this acceptable? (kept with the finding)") ?? "";
+    if (status !== "open" && !note) return;
+    try { await save({ findings: setFindingState(books.findings, key, status, note, new Date().toISOString()) }); toast.success(status === "open" ? "Finding reopened" : "Saved with your note"); } catch (e) { toast.error((e as Error).message); }
+  };
   const hub = useMemo(() => reconHub(items, {
     cardUnrec: transactions.filter((t) => t.statementRef && !t.reconciledAt && accounts.find((a) => a.id === t.accountId)?.kind === "credit_card").length,
     loanUnrec: transactions.filter((t) => t.txnType === "loan_repayment" && !t.reconciledAt).length,
@@ -55,12 +63,19 @@ function Audit() {
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">{hub.map((h) => <Link key={h.kind} to={h.to} className="rounded-xl border px-3 py-2 text-sm"><span className="block text-xs text-muted-foreground">{h.kind}</span><b className={h.open ? "text-destructive" : "text-primary"}>{h.open ? `${h.open} open` : "Clear"}</b></Link>)}</div>
       </Fold>
 
-      <div className="flex flex-wrap gap-1 text-xs">{(["risk", "type", "entity", "fy", "account"] as By[]).map((b) => <button key={b} type="button" onClick={() => setBy(b)} className={`rounded-full border px-3 py-1 ${by === b ? "bg-primary text-primary-foreground" : "bg-card"}`}>By {b === "fy" ? "year" : b}</button>)}</div>
+      <div className="flex flex-wrap gap-1 text-xs">{(["risk", "type", "entity", "fy", "account", "evidence"] as By[]).map((b) => <button key={b} type="button" onClick={() => setBy(b)} className={`rounded-full border px-3 py-1 ${by === b ? "bg-primary text-primary-foreground" : "bg-card"}`}>By {b === "fy" ? "year" : b}</button>)}</div>
       {groups.map((g) => <section key={g.name} className="space-y-1"><h2 className="text-xs font-semibold uppercase text-muted-foreground">{g.name} · {g.items.length}</h2>
-        {g.items.map((f) => <Link key={f.key} to={f.to} className="flex items-center justify-between gap-2 rounded-2xl border bg-card px-4 py-3 text-sm">
-          <span className="min-w-0"><span className="mr-2 text-xs text-muted-foreground">{f.type}</span>{f.text}<span className="block text-[11px] text-muted-foreground">Evidence: {f.evidence}{f.fy ? ` · FY ${f.fy}` : ""}</span></span>
-          <span className={`shrink-0 rounded-full px-2 py-0.5 text-xs ${f.risk === "high" ? "bg-destructive/10 text-destructive" : "bg-secondary text-muted-foreground"}`}>{f.risk === "high" ? "Important" : f.risk === "medium" ? "Check" : "Low"}</span>
-        </Link>)}</section>)}
+        {g.items.map((f) => <div key={f.key} className="rounded-2xl border bg-card px-4 py-3 text-sm">
+          <Link to={f.to} className="flex items-start justify-between gap-2">
+            <span className="min-w-0 break-words"><span className="mr-2 text-xs text-muted-foreground">{f.type}</span>{f.text}<span className="block text-[11px] text-muted-foreground">Evidence: {f.evidence}{f.fy ? ` · FY ${f.fy}` : ""}</span></span>
+            <span className={`shrink-0 rounded-full px-2 py-0.5 text-xs ${f.risk === "high" ? "bg-destructive/10 text-destructive" : "bg-secondary text-muted-foreground"}`}>{f.risk === "high" ? "Important" : f.risk === "medium" ? "Check" : "Low"}</span>
+          </Link>
+          <div className="mt-1 flex gap-1"><Button size="sm" variant="ghost" className="h-7 px-2 text-xs" onClick={() => decide(f.key, "resolved")}>Mark fixed</Button><Button size="sm" variant="ghost" className="h-7 px-2 text-xs" onClick={() => decide(f.key, "accepted")}>Accept with note</Button></div>
+        </div>)}</section>)}
+
+      {reviewed.length > 0 && <Fold title="Reviewed findings" hint={`${reviewed.length} marked fixed or accepted — still checked every time`}>
+        <div className="space-y-1 text-sm">{reviewed.map((f) => <div key={f.key} className="flex items-start justify-between gap-2 rounded-xl border px-3 py-2"><span className="min-w-0 break-words">{f.text}<span className="block text-[11px] text-muted-foreground">{f.state.status === "resolved" ? "Fixed" : "Accepted"} {f.state.at.slice(0, 10)} · {f.state.note}</span></span><Button size="sm" variant="ghost" className="h-7 shrink-0 text-xs" onClick={() => decide(f.key, "open")}>Reopen</Button></div>)}</div>
+      </Fold>}
 
       <Fold id="periods" title="Closed periods" hint={`${books.closedPeriods.length} closed · entries inside can't be changed`}>
         <div className="space-y-2 text-sm">
@@ -75,6 +90,11 @@ function Audit() {
 
       <Fold title="Approval policy" hint="What runs automatically, what asks first, what needs explicit approval">
         <div className="grid gap-3 text-sm sm:grid-cols-3">{POLICY.map((p) => <div key={p.level}><p className="font-semibold">{LEVEL[p.level]}</p><ul className="mt-1 list-disc pl-4 text-xs text-muted-foreground">{p.items.map((i) => <li key={i}>{i}</li>)}</ul></div>)}</div>
+      </Fold>
+
+      <Fold title="Approval history" hint={`${history.length} recorded decision${history.length === 1 ? "" : "s"}`}>
+        {history.length === 0 ? <p className="text-sm text-muted-foreground">No approvals recorded yet.</p>
+          : <div className="space-y-1 text-xs">{history.slice(0, 200).map((h, i) => <p key={i} className="break-words"><span className="font-mono text-muted-foreground">{h.at}</span> · <b>{h.what}</b> · {h.detail}</p>)}</div>}
       </Fold>
 
       {pending.length > 0 && <Fold title="New fields found on documents" hint={`${pending.length} waiting — kept as document details until you approve`}>
