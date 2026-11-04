@@ -59,3 +59,34 @@ describe("per-company opening balances", () => {
     expect(h.loans).toBeUndefined();
   });
 });
+
+import { proposeGstInvoice, proposeTaxStatement } from "./intake";
+import { commitIntake } from "./commit";
+import { emptyBooks } from "./types";
+describe("invoice and tax statement intake", () => {
+  const read = { number: "INV-7", date: "2026-05-02", seller: "Acme", sellerGstin: "29ABCDE1234F1Z5", buyer: "KR", buyerGstin: "33ABCDE1234F1Z5", taxable: 1000, igst: 180, cgst: 0, sgst: 0, cess: 0 };
+  it("an uploaded invoice becomes a purchase draft for the owner's GSTIN", () => {
+    const p = proposeGstInvoice(read, ["33ABCDE1234F1Z5"], "g1", null);
+    expect(p.invoice).toMatchObject({ kind: "purchase", gstin: "33ABCDE1234F1Z5", partyGstin: "29ABCDE1234F1Z5", taxable: 1000, igst: 180 });
+  });
+  it("an invoice for nobody's GSTIN is not guessed", () => {
+    expect(proposeGstInvoice(read, ["27ZZZZZ1234F1Z5"], "g1", null).invoice).toBeNull();
+  });
+  it("re-uploading the same invoice updates, never duplicates", () => {
+    const inv = proposeGstInvoice(read, ["33ABCDE1234F1Z5"], "g1", null).invoice!;
+    const doc = { id: "d1", title: "x", docType: "invoice" as const, fieldLabels: [] };
+    const once = commitIntake({ entities: [], assets: [], books: emptyBooks() }, { route: "gst", invoice: inv }, doc, "2026-05-03", () => "n");
+    const twice = commitIntake(once, { route: "gst", invoice: { ...inv, id: "g2" } }, doc, "2026-05-03", () => "n");
+    expect(twice.books.gstInvoices).toHaveLength(1);
+  });
+  it("tax statement credits are recorded once per document", () => {
+    const doc = { id: "d2", title: "26AS", docType: "tax_statement" as const, fieldLabels: [] };
+    const c = { route: "tax" as const, entityId: "personal", fy: "2025-26", salary: 900000, credits: [{ kind: "tds" as const, amount: 50000, source: "26AS" }] };
+    let n = 0;
+    const once = commitIntake({ entities: [], assets: [], books: emptyBooks() }, c, doc, "2026-05-03", () => `t${n++}`);
+    const twice = commitIntake(once, c, doc, "2026-05-03", () => `t${n++}`);
+    expect(twice.books.taxCredits).toHaveLength(1);
+    expect(twice.books.salaryEvidence).toEqual([{ entityId: "personal", fy: "2025-26", amount: 900000, docId: "d2" }]);
+    expect(proposeTaxStatement({ form: "26as", fy: "2025-26", pan: null, taxableSalary: null, credits: [] }, []).missing).toContain("PAN");
+  });
+});
