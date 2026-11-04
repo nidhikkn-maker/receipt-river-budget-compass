@@ -22,8 +22,7 @@ export function useBooks() {
 /** Demat holdings, cached per signed-in owner so a different account never sees another's copy. */
 let dematCache: { owner: string; data: DematWithHoldings[] } | null = null;
 export function useDemat() {
-  const { userId } = useStore() as unknown as { userId?: string | null };
-  const owner = userId ?? "";
+  const { userId: owner } = useStore();
   const [d, setD] = useState<DematWithHoldings[] | null>(dematCache && dematCache.owner === owner ? dematCache.data : null);
   useEffect(() => {
     let live = true;
