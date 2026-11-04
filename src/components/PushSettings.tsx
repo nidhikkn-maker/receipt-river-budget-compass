@@ -13,7 +13,7 @@ import { NOTIFICATION_TYPES, normalizeNotificationSettings } from "@/lib/notific
 
 function keyBytes(key: string) { return Uint8Array.from(atob(key.replace(/-/g,"+").replace(/_/g,"/")),c=>c.charCodeAt(0)); }
 export function PushSettings() {
-  const { preferences, userId, savePreferences }=useStore();
+  const { preferences, userId, savePreferences, loading }=useStore();
   const choices = normalizeNotificationSettings(preferences.notifications);
   const [saving, setSaving] = useState(false);
   const [days, setDays] = useState(String(preferences.reminderDays));
@@ -66,11 +66,11 @@ export function PushSettings() {
     <h2 id="push-settings-title" className="mb-2 flex items-center gap-2 font-display text-xl font-bold"><Bell className="h-5 w-5"/>Device notifications</h2>
     <p role="status" className="mb-3 text-sm text-muted-foreground">{status}</p>
     <div className="flex flex-wrap gap-2"><Button variant="outline" disabled={busy||!supported} onClick={sub?disable:enable}>{sub?<BellOff className="h-4 w-4"/>:<Bell className="h-4 w-4"/>}{sub?"Turn off this device":"Enable this device"}</Button><Button variant="outline" disabled={busy||!sub||!supported} onClick={sendTest}><Send className="h-4 w-4"/>Send test</Button></div>
-    <div className="mt-6 divide-y">
+    <fieldset disabled={loading || saving} className="mt-6 min-w-0 divide-y">
       <div className="flex items-center justify-between gap-4 py-4"><Label htmlFor="all-reminders">All reminders</Label><Switch id="all-reminders" checked={preferences.reminders} disabled={saving} onCheckedChange={value=>void update({reminders:value})}/></div>
       {NOTIFICATION_TYPES.map(({key,label})=><div key={key} className="flex items-center justify-between gap-4 py-4"><Label className="min-w-0 break-words leading-5" htmlFor={`notify-${key}`}>{label}</Label><Switch id={`notify-${key}`} className="shrink-0" checked={choices[key]} disabled={saving||!preferences.reminders} onCheckedChange={value=>void update({notifications:{...choices,[key]:value}})}/></div>)}
-    </div>
-    <div className="mt-4 flex flex-wrap items-end gap-3"><div className="grid gap-2"><Label htmlFor="notification-lead-days">Days before due date</Label><Input id="notification-lead-days" className="w-24" type="number" min={0} max={30} value={days} onChange={e=>setDays(e.target.value)}/></div><Button variant="outline" disabled={saving||!Number.isFinite(Number(days))||days.trim()===""} onClick={()=>update({reminderDays:Math.min(30,Math.max(0,Math.round(Number(days))))})}>Save timing</Button></div>
+    </fieldset>
+    <div className="mt-4 flex flex-wrap items-end gap-3"><div className="grid gap-2"><Label htmlFor="notification-lead-days">Days before due date</Label><Input id="notification-lead-days" className="w-24" disabled={loading||saving} type="number" min={0} max={30} value={days} onChange={e=>setDays(e.target.value)}/></div><Button variant="outline" disabled={loading||saving||!Number.isFinite(Number(days))||days.trim()===""} onClick={()=>update({reminderDays:Math.min(30,Math.max(0,Math.round(Number(days))))})}>Save timing</Button></div>
     <p className="mt-4 text-xs text-muted-foreground">Loan funding is checked from its scheduled transfer date until the EMI is paid or due. Lock-screen messages never include account names, balances or amounts.</p>
   </section>;
 }
