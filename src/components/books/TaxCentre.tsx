@@ -8,7 +8,8 @@ import { Fold } from "@/components/Fold";
 import { useStore } from "@/lib/store";
 import { ENTITY_KINDS, fyRange } from "@/lib/entities";
 import { accountBalance } from "@/lib/ledger";
-import { booksHeads, HEAD_LABEL, confirmOpening, nextFy, openingProposal } from "@/lib/books/fy";
+import { booksHeads, HEAD_LABEL, nextFy, openingProposal } from "@/lib/books/fy";
+import { OpeningBalances } from "./OpeningBalances";
 import { REQUIRED_SCHEDULES } from "@/lib/books/intake";
 import { annualSummary, duplicateInvoices, gstr1, gstr1Json, gstr3b, gstr3bJson, gstr9, invoiceProblems, validateGstJson, matchGstPayments, unfiledPeriods } from "@/lib/books/gst";
 import { activateRule, OFFICIAL_SOURCES, proposeRule, ruleOn, validateRule, formFor } from "@/lib/books/regulatory";
@@ -35,13 +36,13 @@ export function FyOnboarding() {
         {books.fyRecords.map((r) => {
           const ent = entities.find((e) => e.id === r.entityId);
           // Per entity, head by head, using only accounts linked to this entity [§19].
-          const bookNow: Partial<Record<OpeningHead, number>> = r.confirmedOpening || !r.entityId ? {} : booksHeads({ accounts, txns: transactions, assets: preferences.assets ?? [], accountIds: new Set(books.entityAccounts?.[r.entityId] ?? []), entityId: r.entityId, fyEnd: fyRange(r.fy).end, fy: r.fy });
+          const bookNow: Partial<Record<OpeningHead, number>> = !r.entityId ? {} : booksHeads({ accounts, txns: transactions, assets: preferences.assets ?? [], accountIds: new Set(books.entityAccounts?.[r.entityId] ?? []), entityId: r.entityId, fyEnd: fyRange(r.fy).end, fy: r.fy });
           const op = openingProposal(r, bookNow);
           const missing = REQUIRED_SCHEDULES.filter((s) => !r.schedules.includes(s));
           return <div key={r.id} className="space-y-2 rounded-xl border p-3">
             <p className="font-semibold">{ent?.name ?? "Unknown entity"} · FY {r.fy} → opening FY {nextFy(r.fy)}</p>
-            <table className="w-full text-xs"><thead><tr className="text-muted-foreground"><th className="text-left">Balance</th><th className="text-right">Audited closing</th><th className="text-right">In Ledgerline</th><th className="text-right">Difference</th></tr></thead>
-              <tbody>{op.lines.filter((l) => l.audited != null || l.books != null).map((l) => <tr key={l.head}><td>{HEAD_LABEL[l.head]}</td><td className="text-right">{l.audited == null ? "not in upload" : inr(l.audited)}</td><td className="text-right">{l.books == null ? "—" : inr(l.books)}</td><td className={`text-right ${l.difference ? "text-destructive" : ""}`}>{l.difference == null ? "—" : inr(l.difference)}</td></tr>)}</tbody></table>
+            <div className="overflow-x-auto"><table className="w-full min-w-[22rem] text-xs"><thead><tr className="text-muted-foreground"><th className="text-left">Balance</th><th className="text-right">Audited closing</th><th className="text-right">In Ledgerline</th><th className="text-right">Difference</th></tr></thead>
+              <tbody>{op.lines.filter((l) => l.audited != null || l.books != null).map((l) => <tr key={l.head}><td>{HEAD_LABEL[l.head]}</td><td className="text-right">{l.audited == null ? "not in upload" : inr(l.audited)}</td><td className="text-right">{l.books == null ? "—" : inr(l.books)}</td><td className={`text-right ${l.difference ? "text-destructive" : ""}`}>{l.difference == null ? "—" : inr(l.difference)}</td></tr>)}</tbody></table></div>
             {op.balanced === false && <p className="text-xs text-destructive">Audited figures don't balance by {inr(op.gap ?? 0)} — upload the missing schedule rather than adjusting.</p>}
             {op.totalsCheck && <p className="text-xs text-destructive">{op.totalsCheck}</p>}
             {missing.length > 0 && <p className="text-xs text-muted-foreground">Not yet uploaded: {missing.join(", ")}</p>}
@@ -51,8 +52,7 @@ export function FyOnboarding() {
               <div className="mt-1 flex gap-1"><select aria-label="Loss type" className="rounded-md border bg-background px-1" value={loss[r.id]?.kind ?? "business"} onChange={(e) => setLoss({ ...loss, [r.id]: { amount: loss[r.id]?.amount ?? "", kind: e.target.value as "business" } })}><option value="business">Business</option><option value="capital">Capital</option><option value="depreciation">Unabsorbed depreciation</option><option value="house">House property</option></select>
                 <Input aria-label="Loss amount" className="h-8 w-28" type="number" placeholder="As per return" value={loss[r.id]?.amount ?? ""} onChange={(e) => setLoss({ ...loss, [r.id]: { kind: loss[r.id]?.kind ?? "business", amount: e.target.value } })} />
                 <Button size="sm" variant="ghost" onClick={async () => { const l = loss[r.id]; if (!l || !(Number(l.amount) > 0)) return; await save({ fyRecords: books.fyRecords.map((x) => (x.id === r.id ? { ...x, lossesCarriedForward: [...x.lossesCarriedForward, { fromFy: r.fy, kind: l.kind, amount: Number(l.amount) }] } : x)) }); setLoss({ ...loss, [r.id]: { kind: l.kind, amount: "" } }); }}>Add</Button></div></div>
-            {r.confirmedOpening ? <p className="text-xs text-primary">Opening balances confirmed {r.confirmedOn}. The audited source figures above stay unchanged.</p>
-              : <Button size="sm" onClick={async () => { await save({ fyRecords: books.fyRecords.map((x) => (x.id === r.id ? confirmOpening(x, today()) : x)) }); toast.success("Opening balances confirmed"); }}>Confirm as opening balances</Button>}
+            {r.entityId ? <OpeningBalances rec={r} missingSchedules={missing} /> : <p className="text-xs text-muted-foreground">Choose which company or person this year belongs to before posting opening balances.</p>}
           </div>;
         })}
       </div>
