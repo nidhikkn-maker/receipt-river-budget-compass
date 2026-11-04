@@ -55,6 +55,7 @@ import { Route as AuthenticatedStatementCrosscheckRouteImport } from './routes/_
 import { Route as AuthenticatedStatementsRouteImport } from './routes/_authenticated/statements'
 import { Route as AuthenticatedStrategyRouteImport } from './routes/_authenticated/strategy'
 import { Route as AuthenticatedSyncQueueRouteImport } from './routes/_authenticated/sync-queue'
+import { Route as AuthenticatedTaxRouteImport } from './routes/_authenticated/tax'
 import { Route as AuthenticatedTransactionReviewRouteImport } from './routes/_authenticated/transaction-review'
 import { Route as AuthenticatedTransfersRouteImport } from './routes/_authenticated/transfers'
 import { Route as AuthenticatedTravelInboxRouteImport } from './routes/_authenticated/travel-inbox'
@@ -318,6 +319,11 @@ const AuthenticatedSyncQueueRoute = AuthenticatedSyncQueueRouteImport.update({
   path: '/sync-queue',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedTaxRoute = AuthenticatedTaxRouteImport.update({
+  id: '/tax',
+  path: '/tax',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedTransactionReviewRoute =
   AuthenticatedTransactionReviewRouteImport.update({
     id: '/transaction-review',
@@ -464,6 +470,7 @@ export interface FileRoutesByFullPath {
   '/statements': typeof AuthenticatedStatementsRoute
   '/strategy': typeof AuthenticatedStrategyRoute
   '/sync-queue': typeof AuthenticatedSyncQueueRoute
+  '/tax': typeof AuthenticatedTaxRoute
   '/transaction-review': typeof AuthenticatedTransactionReviewRoute
   '/transfers': typeof AuthenticatedTransfersRoute
   '/travel-inbox': typeof AuthenticatedTravelInboxRoute
@@ -529,6 +536,7 @@ export interface FileRoutesByTo {
   '/statements': typeof AuthenticatedStatementsRoute
   '/strategy': typeof AuthenticatedStrategyRoute
   '/sync-queue': typeof AuthenticatedSyncQueueRoute
+  '/tax': typeof AuthenticatedTaxRoute
   '/transaction-review': typeof AuthenticatedTransactionReviewRoute
   '/transfers': typeof AuthenticatedTransfersRoute
   '/travel-inbox': typeof AuthenticatedTravelInboxRoute
@@ -595,6 +603,7 @@ export interface FileRoutesById {
   '/_authenticated/statements': typeof AuthenticatedStatementsRoute
   '/_authenticated/strategy': typeof AuthenticatedStrategyRoute
   '/_authenticated/sync-queue': typeof AuthenticatedSyncQueueRoute
+  '/_authenticated/tax': typeof AuthenticatedTaxRoute
   '/_authenticated/transaction-review': typeof AuthenticatedTransactionReviewRoute
   '/_authenticated/transfers': typeof AuthenticatedTransfersRoute
   '/_authenticated/travel-inbox': typeof AuthenticatedTravelInboxRoute
@@ -662,6 +671,7 @@ export interface FileRouteTypes {
     | '/statements'
     | '/strategy'
     | '/sync-queue'
+    | '/tax'
     | '/transaction-review'
     | '/transfers'
     | '/travel-inbox'
@@ -727,6 +737,7 @@ export interface FileRouteTypes {
     | '/statements'
     | '/strategy'
     | '/sync-queue'
+    | '/tax'
     | '/transaction-review'
     | '/transfers'
     | '/travel-inbox'
@@ -792,6 +803,7 @@ export interface FileRouteTypes {
     | '/_authenticated/statements'
     | '/_authenticated/strategy'
     | '/_authenticated/sync-queue'
+    | '/_authenticated/tax'
     | '/_authenticated/transaction-review'
     | '/_authenticated/transfers'
     | '/_authenticated/travel-inbox'
@@ -1153,6 +1165,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedSyncQueueRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/tax': {
+      id: '/_authenticated/tax'
+      path: '/tax'
+      fullPath: '/tax'
+      preLoaderRoute: typeof AuthenticatedTaxRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/transaction-review': {
       id: '/_authenticated/transaction-review'
       path: '/transaction-review'
@@ -1336,6 +1355,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedStatementsRoute: typeof AuthenticatedStatementsRoute
   AuthenticatedStrategyRoute: typeof AuthenticatedStrategyRoute
   AuthenticatedSyncQueueRoute: typeof AuthenticatedSyncQueueRoute
+  AuthenticatedTaxRoute: typeof AuthenticatedTaxRoute
   AuthenticatedTransactionReviewRoute: typeof AuthenticatedTransactionReviewRoute
   AuthenticatedTransfersRoute: typeof AuthenticatedTransfersRoute
   AuthenticatedTravelInboxRoute: typeof AuthenticatedTravelInboxRoute
@@ -1390,6 +1410,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedStatementsRoute: AuthenticatedStatementsRoute,
   AuthenticatedStrategyRoute: AuthenticatedStrategyRoute,
   AuthenticatedSyncQueueRoute: AuthenticatedSyncQueueRoute,
+  AuthenticatedTaxRoute: AuthenticatedTaxRoute,
   AuthenticatedTransactionReviewRoute: AuthenticatedTransactionReviewRoute,
   AuthenticatedTransfersRoute: AuthenticatedTransfersRoute,
   AuthenticatedTravelInboxRoute: AuthenticatedTravelInboxRoute,
