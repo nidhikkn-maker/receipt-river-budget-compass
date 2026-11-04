@@ -48,7 +48,7 @@ export function continuousAudit(p: { today: string; entities: EntityProfile[]; a
   if (unposted) out.push({ key: "dep:unposted", type: "Depreciation", entity: "All", account: null, fy, risk: "medium", text: `${unposted} depreciation journal${unposted > 1 ? "s" : ""} prepared but not posted`, evidence: "Prepared journals", to: "/assets" });
   const months = [0, 1, 2].map((i) => { const d = new Date(p.today + "T00:00:00Z"); d.setUTCMonth(d.getUTCMonth() - i); return d.toISOString().slice(0, 7); }).reverse();
   // Same receipts and one-receipt-one-lease allocation as Property [§39, §52].
-  const income = p.entries.filter((e) => e.txnType === "income" || (e.txnType === "transfer" && !!e.toAccountId)).map((e) => ({ id: e.id, date: e.date, amount: e.amount, accountId: e.txnType === "transfer" ? e.toAccountId : e.accountId, currency: e.originalCurrency ?? undefined, text: `${e.title} ${e.merchant ?? ""} ${e.description}` }));
+  const income = p.entries.filter((e) => e.txnType === "income" || (e.txnType === "transfer" && !!e.toAccountId)).map((e) => ({ id: e.id, date: e.date, amount: e.amount, accountId: e.txnType === "transfer" ? e.toAccountId : e.accountId, currency: e.currency, text: `${e.title} ${e.merchant ?? ""} ${e.description}` }));
   const allLeases = { leases: p.books.leases, properties: p.books.properties };
   for (const l of p.books.leases) {
     const prop = p.books.properties.find((x) => x.id === l.propertyId);
