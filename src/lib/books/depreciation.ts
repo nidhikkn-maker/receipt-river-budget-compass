@@ -105,22 +105,6 @@ export function prepareJournals(assets: Asset[], month: string, existing: Journa
   return { journals, exceptions };
 }
 
-/** Prepare every open month from the earliest put-to-use date to `today`'s previous month that is not yet prepared [§34]. */
-export function prepareDueJournals(assets: Asset[], today: string, existing: Journal[], closed: ClosedPeriod[], newId: () => string) {
-  const last = (() => { const d = new Date(today.slice(0, 7) + "-01T00:00:00Z"); d.setUTCMonth(d.getUTCMonth() - 1); return d.toISOString().slice(0, 7); })();
-  const startAt = assets.map((a) => a.inUse.slice(0, 7)).sort()[0];
-  const journals: Journal[] = []; const exceptions: string[] = [];
-  if (!startAt) return { journals, exceptions };
-  const d = new Date(startAt + "-01T00:00:00Z");
-  for (let i = 0; i < 600; i++) {
-    const m = d.toISOString().slice(0, 7); if (m > last) break;
-    const r = prepareJournals(assets, m, [...existing, ...journals], closed, newId);
-    journals.push(...r.journals); exceptions.push(...r.exceptions.filter((x) => !x.includes("is closed")));
-    d.setUTCMonth(d.getUTCMonth() + 1);
-  }
-  return { journals, exceptions: [...new Set(exceptions)] };
-}
-
 /** Posting moves prepared journals to posted, refusing any in a closed period. */
 export function postJournals(all: Journal[], ids: string[], closed: ClosedPeriod[], today: string): Journal[] {
   return all.map((j) => {
