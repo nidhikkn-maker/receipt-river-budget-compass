@@ -58,7 +58,8 @@ describe("§71 assets & depreciation", () => {
   it("5. asset invoice generates a proposed asset", () => {
     const { asset, missing } = proposeAsset({ name: "Dell laptop", kind: "computer", owner: "KR Enterprises", cost: 150000, purchaseDate: "2026-05-10", supplier: "Dell", warrantyUntil: "2029-05-10", insurance: null, serial: "SN1" }, [ent], "a9", "d1");
     expect(missing).toEqual(["date put to use (confirm)", "useful life", "residual value"]);
-    expect(asset).toMatchObject({ name: "Dell laptop", kind: "computer", cost: 150000, inUse: "2026-05-10", ownerEntityId: "e1", docId: "d1", usefulLifeYears: 3 });
+    expect(asset).toMatchObject({ name: "Dell laptop", kind: "computer", cost: 150000, inUse: "2026-05-10", ownerEntityId: "e1", docId: "d1", supplier: "Dell", warrantyUntil: "2029-05-10" });
+    expect(asset?.usefulLifeYears).toBeUndefined();
   });
   it("6. book and tax depreciation are calculated separately", () => {
     const book = annualBook(car, "2025-26").depreciation;
