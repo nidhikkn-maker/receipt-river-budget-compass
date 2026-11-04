@@ -65,3 +65,48 @@ export function renewalReminders(docs: VaultDoc[], today: string, days = 30) {
   const until = new Date(Date.parse(today) + days * 864e5).toISOString().slice(0, 10);
   return docs.filter((d) => d.expiresOn && d.expiresOn >= today && d.expiresOn <= until).map((d) => ({ key: `doc-renew:${d.id}:${d.expiresOn}`, title: `${d.title} renews ${d.expiresOn}`, date: d.expiresOn! }));
 }
+
+/**
+ * Plain-language document search [§10], rule-based so results are explainable: "Krupa company invoices above
+ * 1 lakh last year" → type, entity, amount and date filters, shown to the owner as editable chips.
+ */
+export interface NlFilters { types: DocType[]; entityId?: string; min?: number; max?: number; from?: string; to?: string; words: string[] }
+export function parseDocQuery(q: string, entities: EntityProfile[], today: string): NlFilters {
+  let t = ` ${q.toLowerCase()} `;
+  const out: NlFilters = { types: [], words: [] };
+  const amt = (n: string, unit?: string) => Number(n.replace(/,/g, "")) * (unit?.startsWith("cr") ? 1e7 : unit?.startsWith("l") ? 1e5 : unit === "k" ? 1e3 : 1);
+  t = t.replace(/\b(above|over|more than|greater than|>)\s*₹?\s*([\d,.]+)\s*(lakhs?|lacs?|crores?|cr|k)?\b/g, (_, __, n, u) => { out.min = amt(n, u); return " "; });
+  t = t.replace(/\b(below|under|less than|<)\s*₹?\s*([\d,.]+)\s*(lakhs?|lacs?|crores?|cr|k)?\b/g, (_, __, n, u) => { out.max = amt(n, u); return " "; });
+  const fyR = (fy: string) => ({ from: `${fy.slice(0, 4)}-04-01`, to: `${Number(fy.slice(0, 4)) + 1}-03-31` });
+  const cur = fyOf(today);
+  const prev = `${Number(cur.slice(0, 4)) - 1}-${String(Number(cur.slice(0, 4)) % 100).padStart(2, "0")}`;
+  t = t.replace(/\bfy\s*(\d{4})\s*-\s*(\d{2})\b/g, (_, a, b) => { Object.assign(out, fyR(`${a}-${b}`)); return " "; });
+  t = t.replace(/\b(last|previous) (financial )?year\b/g, () => { Object.assign(out, fyR(prev)); return " "; });
+  t = t.replace(/\bthis (financial )?year\b/g, () => { Object.assign(out, fyR(cur)); return " "; });
+  t = t.replace(/\blast month\b/g, () => { const d = new Date(today.slice(0, 7) + "-01T00:00:00Z"); d.setUTCMonth(d.getUTCMonth() - 1); const m = d.toISOString().slice(0, 7); out.from = `${m}-01`; out.to = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 0)).toISOString().slice(0, 10); return " "; });
+  for (const ty of DOC_TYPES) {
+    const label = DOC_LABEL[ty].toLowerCase().split(/[ /]+/)[0]!;
+    const word = ty.replace(/_/g, " ");
+    for (const w of [word, `${word}s`, label.length >= 4 ? `${label}s` : "", label.length >= 4 ? label : ""].filter(Boolean)) {
+      const re = new RegExp(`\\b${w.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`, "g");
+      if (re.test(t)) { if (!out.types.includes(ty)) out.types.push(ty); t = t.replace(re, " "); }
+    }
+  }
+  const e = entities.filter((x) => { const n = x.name.toLowerCase().split(/\s+/)[0]!; return n.length >= 3 && t.includes(` ${n}`); });
+  if (e.length === 1) { out.entityId = e[0]!.id; t = t.replace(e[0]!.name.toLowerCase().split(/\s+/)[0]!, " "); }
+  out.words = t.replace(/\b(company|companies|for|of|the|and|from|in|with|all|show|me|my|documents?)\b/g, " ").split(/\s+/).filter((w) => w.length >= 3);
+  return out;
+}
+export function applyDocQuery(docs: VaultDoc[], f: NlFilters, links: DocLink[], entities: EntityProfile[]): VaultDoc[] {
+  return docs.filter((d) => {
+    const date = d.docDate ?? d.createdAt.slice(0, 10);
+    if (f.types.length && !f.types.includes(d.docType)) return false;
+    if (f.entityId && entityOfDoc(d, links, entities)?.id !== f.entityId) return false;
+    if (f.min != null && !(d.amount != null && d.amount > f.min)) return false;
+    if (f.max != null && !(d.amount != null && d.amount < f.max)) return false;
+    if (f.from && date < f.from) return false;
+    if (f.to && date > f.to) return false;
+    const hay = `${d.title} ${d.merchant ?? ""} ${d.text} ${(d.fields ?? []).map((x) => x.value).join(" ")}`.toLowerCase();
+    return f.words.every((w) => hay.includes(w));
+  });
+}
