@@ -27,7 +27,7 @@ const today = () => new Date().toISOString().slice(0, 10);
 const inr = (n: number) => "₹" + n.toLocaleString("en-IN", { maximumFractionDigits: 0 });
 const isIso = (v: string | null | undefined) => !!v && /^\d{4}-\d{2}-\d{2}$/.test(v);
 
-export interface ResumeState { runId: string; read: ExtractedDocument; docType: DocType; fields: DocField[]; data: RunData }
+export interface ResumeState { runId: string; read?: ExtractedDocument | undefined; docType?: DocType | undefined; fields?: DocField[] | undefined; data: RunData }
 
 export function DocumentIntake({ file, context, onClose, resume, replacesId }: { file: File; context?: IntakeContext | undefined; onClose: () => void; resume?: ResumeState | undefined; replacesId?: string | undefined }) {
   const store = useStore();
@@ -39,7 +39,7 @@ export function DocumentIntake({ file, context, onClose, resume, replacesId }: {
   const [fields, setFields] = useState<DocField[]>(resume?.fields ?? []);
   const [docType, setDocType] = useState<DocType>(resume?.docType ?? (context ? CONTEXT_TYPE[context] ?? "other" : "other"));
   const [failed, setFailed] = useState<{ step: Step; note: string } | null>(null);
-  const [stage, setStage] = useState<Step>(resume ? "Confirm" : "Upload");
+  const [stage, setStage] = useState<Step>(resume?.read ? "Confirm" : "Upload");
   const [saving, setSaving] = useState(false);
   const [done, setDone] = useState<string | null>(null);
   const [edit, setEdit] = useState<Record<string, string>>({});
@@ -55,7 +55,7 @@ export function DocumentIntake({ file, context, onClose, resume, replacesId }: {
   };
 
   useEffect(() => {
-    if (resume) return;
+    if (resume?.read) return;
     let live = true;
     (async () => {
       let at: Step = "Upload";

@@ -25,7 +25,7 @@ export function trail(reached: Step, failed?: { step: Step; note: string } | nul
 }
 
 /** Contexts other pages open Statement Desk with [§4]. */
-export const CONTEXTS = { investments: "Investments", property: "Property", assets: "Assets", tax: "Tax & audit", entity: "New company", fy: "Past-year accounts", gst: "GST" } as const;
+export const CONTEXTS = { documents: "DocuRepo", investments: "Investments", property: "Property", assets: "Assets", tax: "Tax & audit", entity: "New company", fy: "Past-year accounts", gst: "GST" } as const;
 export type IntakeContext = keyof typeof CONTEXTS;
 export function parseContext(v: unknown): IntakeContext | undefined {
   return typeof v === "string" && v in CONTEXTS ? (v as IntakeContext) : undefined;

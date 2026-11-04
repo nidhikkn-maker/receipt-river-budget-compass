@@ -20,7 +20,8 @@ import { identifyFile } from "@/lib/statement-pipeline/identify";
 import { readStatementFile, readDocRows } from "@/lib/statement-pipeline/source";
 import { parseInvestmentDoc, type InvestDoc } from "@/lib/investments/demat";
 import { InvestmentReview } from "@/components/InvestmentReview";
-import { DocumentIntake } from "@/components/DocumentIntake";
+import { DocumentIntake, type ResumeState } from "@/components/DocumentIntake";
+import { UnfinishedRuns } from "@/components/books/UnfinishedRuns";
 import { CONTEXTS, parseContext, type IntakeContext } from "@/lib/books/intake";
 import { useServerFn } from "@tanstack/react-start";
 import { extractStatement } from "@/lib/statement-extract.functions";
@@ -42,9 +43,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { suggestTransfers, transferApprovalBlocker, activeLinks, type TransferLinkRow } from "@/lib/transfer-match";
 
 export const Route = createFileRoute("/_authenticated/statements")({
-  validateSearch: (s: Record<string, unknown>): { tab?: "accountant"; context?: IntakeContext } => {
+  validateSearch: (s: Record<string, unknown>): { tab?: "accountant"; context?: IntakeContext; replaces?: string } => {
     const context = parseContext(s["context"]);
-    return { ...(s["tab"] === "accountant" ? { tab: "accountant" as const } : {}), ...(context ? { context } : {}) };
+    const replaces = typeof s["replaces"] === "string" && /^[0-9a-f-]{36}$/i.test(s["replaces"]) ? s["replaces"] : undefined;
+    return { ...(s["tab"] === "accountant" ? { tab: "accountant" as const } : {}), ...(context ? { context } : {}), ...(replaces ? { replaces } : {}) };
   },
   head: () => ({
     meta: [
@@ -69,9 +71,9 @@ interface Loaded {
 }
 
 function StatementDeskPage() {
-  const { tab, context } = Route.useSearch();
+  const { tab, context, replaces } = Route.useSearch();
   /** Non-bank documents (company papers, deeds, leases, audited accounts, invoices) — reviewed here, stored in DocuRepo. */
-  const [docs, setDocs] = useState<{ key: string; file: File }[]>([]);
+  const [docs, setDocs] = useState<{ key: string; file: File; resume?: ResumeState; context?: IntakeContext | undefined }[]>([]);
   const store = useStore();
   const storeRef = useRef(store);
   storeRef.current = store;
@@ -367,7 +369,8 @@ function StatementDeskPage() {
         {progress && <p role="status" className="text-sm text-muted-foreground">{progress}</p>}
         {errors.length > 0 && <ul className="space-y-1 text-sm text-destructive" role="alert">{errors.map((e) => <li key={e}>{e}</li>)}</ul>}
 
-        {docs.map((x) => <DocumentIntake key={x.key} file={x.file} context={context} onClose={() => setDocs((p) => p.filter((y) => y.key !== x.key))} />)}
+        <UnfinishedRuns active={docs.map((d) => d.resume?.runId ?? d.key)} onResume={(file, resume, ctx) => setDocs((p) => [...p.filter((y) => y.resume?.runId !== resume.runId), { key: resume.runId, file, resume, context: parseContext(ctx) }])} />
+        {docs.map((x) => <DocumentIntake key={x.key} file={x.file} context={x.context ?? context} resume={x.resume} replacesId={replaces} onClose={() => setDocs((p) => p.filter((y) => y.key !== x.key))} />)}
         {invest.map((x) => <InvestmentReview key={x.key} file={x.file} doc={x.doc} onClose={() => setInvest((p) => p.filter((y) => y.key !== x.key))} onUploadMore={() => inputRef.current?.click()} />)}
 
         {loaded.length > 0 && (
