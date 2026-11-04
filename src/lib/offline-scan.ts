@@ -1,4 +1,4 @@
-import { fileToLocal, localDrafts, localToFile, putLocalDraft } from "./offline";
+import { fileToLocal, localDrafts, localToFile, putLocalDraft, removeLocalDraft, type LocalDraft } from "./offline";
 
 /* Receipt photos taken offline are kept as encrypted device drafts marked pendingScan. When the connection
    returns they are read once (prefilling merchant, amount, date and currency only) before the normal draft
@@ -32,7 +32,7 @@ async function runScans(owner: string, extract: Extract): Promise<number> {
       const raw = await new Promise<string>((ok, bad) => { const r = new FileReader(); r.onload = () => ok(String(r.result)); r.onerror = () => bad(r.error); r.readAsDataURL(f); });
       const prepared = await prepareForReading(raw, f.type);
       const res = await extract({ data: { ...prepared, includeItems: false } });
-      if (!res.ok) { await putLocalDraft(owner, { ...d, data: { ...d.data, error: res.error, errorKind: "reading", attempts: Number(d.data["attempts"] ?? 0) + 1, lastTriedAt: new Date().toISOString() }, updatedAt: new Date().toISOString() }); continue; }
+      if (!res.ok) { await putIfPending(owner, { ...d, data: { ...d.data, error: res.error, errorKind: "reading", attempts: Number(d.data["attempts"] ?? 0) + 1, lastTriedAt: new Date().toISOString() }, updatedAt: new Date().toISOString() }); continue; }
       const data: Record<string, unknown> = { ...d.data, pendingScan: false, error: undefined };
       {
         const x = res.result;
@@ -44,9 +44,9 @@ async function runScans(owner: string, extract: Extract): Promise<number> {
           receiptDetails: { subtotal: x.subtotal ?? null, tax: x.tax ?? null, tip: x.tip ?? null, roundOff: x.round_off != null && Math.abs(x.round_off) <= 1 ? x.round_off : null, text: x.text ?? "" },
         });
       }
-      await putLocalDraft(owner, { ...d, data, updatedAt: new Date().toISOString() }); // same id: the synced draft row is upserted, never duplicated
+      await putIfPending(owner, { ...d, data, updatedAt: new Date().toISOString() }); // same id: the synced draft row is upserted, never duplicated
       done++;
-    } catch (e) { await putLocalDraft(owner, { ...d, data: { ...d.data, error: e instanceof Error ? e.message : "Couldn't connect", errorKind: "upload", attempts: Number(d.data["attempts"] ?? 0) + 1, lastTriedAt: new Date().toISOString() }, updatedAt: d.updatedAt }).catch(() => {}); }
+    } catch (e) { await putIfPending(owner, { ...d, data: { ...d.data, error: e instanceof Error ? e.message : "Couldn't connect", errorKind: "upload", attempts: Number(d.data["attempts"] ?? 0) + 1, lastTriedAt: new Date().toISOString() }, updatedAt: d.updatedAt }).catch(() => {}); }
   }
   return done;
 }
@@ -65,4 +65,28 @@ export async function offlineScanRows(owner: string): Promise<OfflineScanRow[]> 
     const f = d.files[0]; const err = d.data["error"];
     return { id: d.id, name: f?.name ?? "Receipt photo", takenAt: d.updatedAt, error: typeof err === "string" && err ? err : null, kind: (d.data["errorKind"] as OfflineScanRow["kind"]) ?? null, attempts: Number(d.data["attempts"] ?? 0), lastTriedAt: (d.data["lastTriedAt"] as string) ?? null, thumb: f && f.type.startsWith("image/") ? URL.createObjectURL(localToFile(f)) : null };
   });
+}
+
+/** Writes a photo's record back only while it is still waiting to be read, so a photo the owner removed
+    during an attempt can't be resurrected by that attempt finishing late. */
+async function putIfPending(owner: string, d: LocalDraft): Promise<void> {
+  const live = (await localDrafts(owner).catch(() => [])).find((x) => x.id === d.id);
+  if (!live?.data["pendingScan"]) return;
+  await putLocalDraft(owner, d);
+}
+
+/* A photo the owner no longer wants is dropped from this phone only: it never entered the ledger, and a
+   photo that has already been read is a normal draft, so it stays in Drafts instead of being deleted here. */
+export async function removeOfflineScan(owner: string, id: string): Promise<boolean> {
+  const d = (await localDrafts(owner).catch(() => [])).find((x) => x.id === id);
+  if (!d?.data["pendingScan"]) return false;
+  await removeLocalDraft(owner, id);
+  return true;
+}
+
+/** Clears every photo whose last attempt failed; photos still uploading or being read are left alone. */
+export async function removeFailedOfflineScans(owner: string): Promise<number> {
+  const list = (await localDrafts(owner).catch(() => [])).filter((d) => d.data["pendingScan"] && d.data["error"]);
+  for (const d of list) await removeLocalDraft(owner, d.id);
+  return list.length;
 }
