@@ -54,9 +54,11 @@ export async function upsertDraft(id: string, owner: string, data: DraftData, re
   if (error) throw new Error("Draft not saved");
 }
 /** Upload a receipt into the owner's private draft folder; returns its stored path. */
-export async function uploadDraftReceipt(owner: string, draftId: string, f: File): Promise<string> {
-  const path = `${owner}/drafts/${draftId}/${crypto.randomUUID()}-${f.name.replace(/[^\w.-]+/g, "_").slice(-80)}`;
-  const { error } = await supabase.storage.from("receipts").upload(path, f, { contentType: f.type || "application/octet-stream" });
+/** Fixed storage path for a device-saved photo, so a retried upload replaces the earlier copy instead of adding another. */
+export const stableReceiptPath = (owner: string, draftId: string, index: number, name: string) => `${owner}/drafts/${draftId}/offline-${index}-${name.replace(/[^\w.-]+/g, "_").slice(-80)}`;
+export async function uploadDraftReceipt(owner: string, draftId: string, f: File, index?: number): Promise<string> {
+  const path = index != null ? stableReceiptPath(owner, draftId, index, f.name) : `${owner}/drafts/${draftId}/${crypto.randomUUID()}-${f.name.replace(/[^\w.-]+/g, "_").slice(-80)}`;
+  const { error } = await supabase.storage.from("receipts").upload(path, f, { contentType: f.type || "application/octet-stream", upsert: index != null });
   if (error) throw new Error(`Couldn't upload ${f.name}`);
   return path;
 }
@@ -105,8 +107,8 @@ export function syncLocalDrafts(owner: string): Promise<number> {
         if (server?.status === "saved") { await removeLocalDraft(owner, l.id); continue; }
         if (!shouldUploadLocal(l, server)) { await removeLocalDraft(owner, l.id); continue; }
         const receipts: DraftReceipt[] = [];
-        for (const f of l.files) {
-          if (!f.path) { f.path = await uploadDraftReceipt(owner, l.id, localToFile(f)); await putLocalDraft(owner, l); }
+        for (const [i, f] of l.files.entries()) {
+          if (!f.path) { f.path = await uploadDraftReceipt(owner, l.id, localToFile(f), i); await putLocalDraft(owner, l); }
           receipts.push({ name: f.name, type: f.type, path: f.path, ...(f.fingerprint ? { fingerprint: f.fingerprint } : {}) });
         }
         const data = l.data as DraftData;
