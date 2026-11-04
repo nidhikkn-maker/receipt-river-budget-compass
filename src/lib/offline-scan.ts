@@ -1,4 +1,4 @@
-import { fileToLocal, localDrafts, localToFile, putLocalDraft } from "./offline";
+import { fileToLocal, localDrafts, localToFile, putLocalDraft, removeLocalDraft, type LocalDraft } from "./offline";
 
 /* Receipt photos taken offline are kept as encrypted device drafts marked pendingScan. When the connection
    returns they are read once (prefilling merchant, amount, date and currency only) before the normal draft
@@ -32,7 +32,7 @@ async function runScans(owner: string, extract: Extract): Promise<number> {
       const raw = await new Promise<string>((ok, bad) => { const r = new FileReader(); r.onload = () => ok(String(r.result)); r.onerror = () => bad(r.error); r.readAsDataURL(f); });
       const prepared = await prepareForReading(raw, f.type);
       const res = await extract({ data: { ...prepared, includeItems: false } });
-      if (!res.ok) { await putLocalDraft(owner, { ...d, data: { ...d.data, error: res.error, errorKind: "reading", attempts: Number(d.data["attempts"] ?? 0) + 1, lastTriedAt: new Date().toISOString() }, updatedAt: new Date().toISOString() }); continue; }
+      if (!res.ok) { await putIfPending(owner, { ...d, data: { ...d.data, error: res.error, errorKind: "reading", attempts: Number(d.data["attempts"] ?? 0) + 1, lastTriedAt: new Date().toISOString() }, updatedAt: new Date().toISOString() }); continue; }
       const data: Record<string, unknown> = { ...d.data, pendingScan: false, error: undefined };
       {
         const x = res.result;
@@ -44,9 +44,9 @@ async function runScans(owner: string, extract: Extract): Promise<number> {
           receiptDetails: { subtotal: x.subtotal ?? null, tax: x.tax ?? null, tip: x.tip ?? null, roundOff: x.round_off != null && Math.abs(x.round_off) <= 1 ? x.round_off : null, text: x.text ?? "" },
         });
       }
-      await putLocalDraft(owner, { ...d, data, updatedAt: new Date().toISOString() }); // same id: the synced draft row is upserted, never duplicated
+      await putIfPending(owner, { ...d, data, updatedAt: new Date().toISOString() }); // same id: the synced draft row is upserted, never duplicated
       done++;
-    } catch (e) { await putLocalDraft(owner, { ...d, data: { ...d.data, error: e instanceof Error ? e.message : "Couldn't connect", errorKind: "upload", attempts: Number(d.data["attempts"] ?? 0) + 1, lastTriedAt: new Date().toISOString() }, updatedAt: d.updatedAt }).catch(() => {}); }
+    } catch (e) { await putIfPending(owner, { ...d, data: { ...d.data, error: e instanceof Error ? e.message : "Couldn't connect", errorKind: "upload", attempts: Number(d.data["attempts"] ?? 0) + 1, lastTriedAt: new Date().toISOString() }, updatedAt: d.updatedAt }).catch(() => {}); }
   }
   return done;
 }
