@@ -414,6 +414,13 @@
       "when": 1793810444900,
       "tag": "0058_migration",
       "breakpoints": true
+    },
+    {
+      "idx": 59,
+      "version": "7",
+      "when": 1793827093321,
+      "tag": "0059_books_v6_gaps",
+      "breakpoints": true
     }
   ]
 }

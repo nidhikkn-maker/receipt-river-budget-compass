@@ -5,7 +5,7 @@
 import type { DocType } from "../documents";
 import { fyOf, type EntityKind, type EntityProfile } from "../entities";
 import type { Asset, AssetKind } from "../assets";
-import type { FyRecord, Lease, OpeningHead, Property, ProposedField, Schedule } from "./types";
+import { leaseUnknowns, type FyRecord, type Lease, type OpeningHead, type Property, type ProposedField, type Schedule } from "./types";
 
 export const STEPS = ["Upload", "Identify", "Extract", "Validate", "Match", "Classify", "Prepare records", "Confirm", "Save", "Reconcile", "Audit"] as const;
 export type Step = (typeof STEPS)[number];
@@ -55,17 +55,24 @@ const iso = (v: string | null | undefined) => (v && /^\d{4}-\d{2}-\d{2}$/.test(v
 const norm = (s: string) => s.toUpperCase().replace(/[^A-Z0-9]/g, "");
 const words = (s: string) => s.toLowerCase().replace(/\b(private|pvt|limited|ltd|llp|the|and|&|co|company)\b/g, " ").replace(/[^a-z0-9 ]/g, " ").split(/\s+/).filter(Boolean).join(" ");
 
-/** Match by verified identifiers first (PAN, CIN, GSTIN), then exact normalised name — never fuzzy [§16]. */
-export function matchEntity(list: EntityProfile[], read: { pan?: string | null; cin?: string | null; gstins?: string[]; name?: string | null }): { entity: EntityProfile; by: "PAN" | "CIN" | "GSTIN" | "name" } | null {
+/** Automatic match only on verified identifiers (PAN, CIN, GSTIN). Several identifier hits are ambiguous and return null [§16]. */
+export function matchEntity(list: EntityProfile[], read: { pan?: string | null; cin?: string | null; gstins?: string[]; name?: string | null }): { entity: EntityProfile; by: "PAN" | "CIN" | "GSTIN" } | null {
   const pan = read.pan ? norm(read.pan) : "";
   const cin = read.cin ? norm(read.cin) : "";
-  const gst = (read.gstins ?? []).map(norm);
-  for (const e of list) if (pan && norm(e.pan) === pan) return { entity: e, by: "PAN" };
-  for (const e of list) if (cin && e.regNo && norm(e.regNo) === cin) return { entity: e, by: "CIN" };
-  for (const e of list) if (gst.some((g) => e.gstins.map(norm).includes(g) || g.slice(2, 12) === norm(e.pan))) return { entity: e, by: "GSTIN" };
-  const n = read.name ? words(read.name) : "";
-  for (const e of list) if (n && words(e.name) === n) return { entity: e, by: "name" };
-  return null;
+  const gst = (read.gstins ?? []).map(norm).filter(Boolean);
+  const hits = new Map<string, { entity: EntityProfile; by: "PAN" | "CIN" | "GSTIN" }>();
+  for (const e of list) {
+    if (pan && e.pan && norm(e.pan) === pan) hits.set(e.id, { entity: e, by: "PAN" });
+    else if (cin && e.regNo && norm(e.regNo) === cin) hits.set(e.id, { entity: e, by: "CIN" });
+    else if (gst.some((g) => e.gstins.map(norm).includes(g))) hits.set(e.id, { entity: e, by: "GSTIN" });
+  }
+  return hits.size === 1 ? [...hits.values()][0]! : null;
+}
+/** A same-name company is only a suggestion the owner must confirm — never an automatic match [§6, §16]. */
+export function nameSuggestion(list: EntityProfile[], name: string | null | undefined): EntityProfile | null {
+  const n = name ? words(name) : "";
+  const found = n ? list.filter((e) => words(e.name) === n) : [];
+  return found.length === 1 ? found[0]! : null;
 }
 
 /** Draft profile to review, merged into a matched profile so re-uploads never duplicate [§14, §16, test 2]. */
@@ -98,44 +105,53 @@ function extraOf(base: EntityProfile, r: EntityRead): Partial<EntityProfile> {
 }
 
 /** Asset master record proposal from a purchase invoice [§27, test 5]. Capitalisation still needs confirmation. */
-export function proposeAsset(read: AssetRead, entities: EntityProfile[], newId: string, docId: string | null): { asset: Asset | null; missing: string[] } {
+export function proposeAsset(read: AssetRead, entities: EntityProfile[], newId: string, docId: string | null): { asset: Asset | null; missing: string[]; ownerSuggested: boolean } {
   const missing = [!read.name && "asset name", read.cost == null && "purchase cost", !iso(read.purchaseDate) && "purchase date"].filter((x): x is string => !!x);
-  if (!read.name || read.cost == null || !iso(read.purchaseDate)) return { asset: null, missing };
+  if (!read.name || read.cost == null || !iso(read.purchaseDate)) return { asset: null, missing, ownerSuggested: false };
   const kind: AssetKind = read.kind ?? "other";
-  const owner = read.owner ? matchEntity(entities, { name: read.owner })?.entity.id : undefined;
-  return { missing, asset: { id: newId, name: read.name.trim(), kind, cost: read.cost, inUse: read.purchaseDate!, sharePct: 100, bookMethod: "slm", bookRatePct: 0, ownerEntityId: owner, docId: docId ?? undefined, tag: read.serial ?? undefined, usefulLifeYears: DEFAULT_LIFE[kind], residualPct: kind === "property" ? 0 : 5 } as Asset };
+  const owner = read.owner ? nameSuggestion(entities, read.owner)?.id : undefined;
+  return { missing, ownerSuggested: !!owner, asset: { id: newId, name: read.name.trim(), kind, cost: read.cost, inUse: read.purchaseDate!, sharePct: 100, bookMethod: "slm", bookRatePct: 0, ownerEntityId: owner, docId: docId ?? undefined, tag: read.serial ?? undefined, usefulLifeYears: DEFAULT_LIFE[kind], residualPct: kind === "property" ? 0 : 5 } as Asset };
 }
 /** Indicative useful lives (Companies Act Schedule II); editable per asset. */
 export const DEFAULT_LIFE: Record<AssetKind, number> = { property: 0, building: 30, vehicle: 8, machinery: 15, computer: 3, furniture: 10, other: 5 };
 
-export function proposeProperty(read: PropertyRead, entities: EntityProfile[], newId: string, docId: string | null): { property: Property; missing: string[] } {
-  const owner = read.owner ? matchEntity(entities, { name: read.owner })?.entity.id : undefined;
+export function proposeProperty(read: PropertyRead, entities: EntityProfile[], newId: string, docId: string | null): { property: Property; missing: string[]; ownerSuggested: boolean } {
+  const owner = read.owner ? nameSuggestion(entities, read.owner)?.id : undefined;
   const missing = [!read.name && !read.address && "property name or address", read.cost == null && "acquisition cost", !owner && "legal owner"].filter((x): x is string => !!x);
-  return { missing, property: { id: newId, name: read.name?.trim() || read.address?.split(",")[0]?.trim() || "New property", ownerEntityId: owner, address: read.address ?? "", buildings: [], docIds: docId ? [docId] : [], ...(read.valuation != null && iso(read.valuationDate) ? { valuation: { value: read.valuation, date: read.valuationDate!, source: "Valuation report" } } : {}) } };
+  return { missing, ownerSuggested: !!owner, property: { id: newId, name: read.name?.trim() || read.address?.split(",")[0]?.trim() || "New property", ownerEntityId: owner, address: read.address ?? "", buildings: [], docIds: docId ? [docId] : [], ...(read.valuation != null && iso(read.valuationDate) ? { valuation: { value: read.valuation, date: read.valuationDate!, source: "Valuation report" } } : {}) } };
 }
 
 /** Lease proposal linked to a property/unit by name; missing pieces are asked, never guessed [§38, test 8]. */
-export function proposeLease(read: LeaseRead, properties: Property[], newId: string, docId: string | null): { lease: Lease | null; propertyId: string | null; missing: string[] } {
+export function proposeLease(read: LeaseRead, properties: Property[], newId: string, docId: string | null): { lease: Lease | null; propertyId: string | null; missing: string[]; unknown: string[] } {
   const want = (read.property ?? "").toLowerCase();
   const prop = properties.find((p) => want && (want.includes(p.name.toLowerCase()) || p.name.toLowerCase().includes(want) || (p.address && want.includes(p.address.toLowerCase().split(",")[0]!))));
   const unit = prop?.buildings.flatMap((b) => b.floors.flatMap((f) => f.units)).find((u) => read.unit && u.name.toLowerCase() === read.unit.toLowerCase());
   const missing = [!read.tenant && "tenant", read.rent == null && "monthly rent", !iso(read.start) && "lease start", !iso(read.end) && "lease end", !prop && "which property"].filter((x): x is string => !!x);
-  if (!read.tenant || read.rent == null || !iso(read.start) || !iso(read.end)) return { lease: null, propertyId: prop?.id ?? null, missing };
-  return { propertyId: prop?.id ?? null, missing, lease: { id: newId, propertyId: prop?.id ?? "", unitId: unit?.id, tenant: read.tenant.trim(), start: read.start!, end: read.end!, rent: read.rent, dueDay: Math.min(28, Math.max(1, read.dueDay ?? 1)), escalationPct: read.escalationPct ?? 0, escalationEveryMonths: read.escalationEveryMonths ?? 12, deposit: read.deposit ?? 0, noticeDays: read.noticeDays ?? 0, paymentTerms: read.paymentTerms ?? "", gst: !!read.gst, docId: docId ?? undefined } };
+  if (!read.tenant || read.rent == null || !iso(read.start) || !iso(read.end)) return { lease: null, propertyId: prop?.id ?? null, missing, unknown: [] };
+  const lease: Lease = {
+    id: newId, propertyId: prop?.id ?? "", unitId: unit?.id, tenant: read.tenant.trim(), start: read.start!, end: read.end!, rent: read.rent,
+    dueDay: read.dueDay != null && read.dueDay >= 1 && read.dueDay <= 31 ? Math.round(read.dueDay) : undefined,
+    escalationPct: read.escalationPct ?? undefined, escalationEveryMonths: read.escalationEveryMonths ?? undefined,
+    deposit: read.deposit ?? undefined, noticeDays: read.noticeDays ?? undefined, paymentTerms: read.paymentTerms ?? "",
+    gst: read.gst ?? undefined, docId: docId ?? undefined,
+  };
+  return { propertyId: prop?.id ?? null, missing, lease, unknown: leaseUnknowns(lease) };
 }
 
 /** Prior-year record from audited statements; flags missing schedules instead of filling them [§18, §20, test 3–4]. */
-export function proposeFy(read: AuditedRead, entities: EntityProfile[], existing: FyRecord[], newId: string, docId: string | null): { record: FyRecord | null; entityId: string | null; missingSchedules: Schedule[]; missing: string[] } {
-  const ent = matchEntity(entities, { pan: read.pan, name: read.entity })?.entity;
+export function proposeFy(read: AuditedRead, entities: EntityProfile[], existing: FyRecord[], newId: string, docId: string | null): { record: FyRecord | null; entityId: string | null; missingSchedules: Schedule[]; missing: string[]; ownerSuggested: boolean } {
+  const byId = matchEntity(entities, { pan: read.pan });
+  const ent = byId?.entity ?? nameSuggestion(entities, read.entity) ?? undefined;
+  const ownerSuggested = !byId && !!ent;
   const fy = read.fy && /^\d{4}-\d{2}$/.test(read.fy) ? read.fy : null;
   const missing = [!ent && "which company", !fy && "financial year"].filter((x): x is string => !!x);
   const missingSchedules = REQUIRED_SCHEDULES.filter((s) => !read.schedules.includes(s));
-  if (!ent || !fy) return { record: null, entityId: ent?.id ?? null, missingSchedules, missing };
+  if (!ent || !fy) return { record: null, entityId: ent?.id ?? null, missingSchedules, missing, ownerSuggested };
   const prev = existing.find((r) => r.entityId === ent.id && r.fy === fy);
   const audited = { ...(prev?.audited ?? {}) };
   for (const l of read.lines) audited[l.head] = l.amount;
   return {
-    entityId: ent.id, missingSchedules, missing,
+    entityId: ent.id, missingSchedules, missing, ownerSuggested,
     record: {
       id: prev?.id ?? newId, entityId: ent.id, fy, audited,
       totalAssets: read.totalAssets ?? prev?.totalAssets ?? null, totalLiabilities: read.totalLiabilities ?? prev?.totalLiabilities ?? null,
@@ -145,6 +161,9 @@ export function proposeFy(read: AuditedRead, entities: EntityProfile[], existing
       lossesCarriedForward: prev?.lossesCarriedForward ?? [],
       docIds: [...new Set([...(prev?.docIds ?? []), ...(docId ? [docId] : [])])],
       ...(prev?.confirmedOpening ? { confirmedOpening: prev.confirmedOpening, confirmedOn: prev.confirmedOn } : {}),
+      ...(prev && JSON.stringify(prev.audited) !== JSON.stringify(audited) ? { versions: [...(prev.versions ?? []), { at: new Date().toISOString(), reason: "replaced by a later upload", audited: prev.audited }] } : prev?.versions ? { versions: prev.versions } : {}),
+      ...(prev?.details ? { details: prev.details } : {}),
+      ...(prev?.accountMap ? { accountMap: prev.accountMap } : {}),
     },
   };
 }
@@ -157,11 +176,28 @@ export function autoName(p: { entity?: string | null | undefined; date?: string 
 
 /** Labels Ledgerline already stores somewhere; anything else becomes a proposed field, never a new column [§15]. */
 const CANONICAL = /^(pan|gstin|cin|llpin|tan|name|legal name|date|amount|total|tax|cgst|sgst|igst|cess|address|registered address|director|partner|trustee|tenant|rent|monthly rent|deposit|security deposit|lease start|lease end|notice period|escalation|cost|purchase cost|supplier|vendor|warranty|policy number|account number|ifsc|isin|quantity|survey number|owner|owner share|interest rate|emi|due date|period|financial year|assessment year|invoice number|place of supply|hsn|sac|depreciation rate|useful life)\b/i;
-export function unmappedFields(labels: string[], docType: DocType, known: ProposedField[]): ProposedField[] {
+/** Common printed spellings mapped to an existing canonical field before anything is proposed [§15]. */
+export const SYNONYMS: Record<string, string> = {
+  "permanent account number": "pan", "pan no": "pan", "gst number": "gstin", "gstn": "gstin", "gst registration number": "gstin",
+  "corporate identity number": "cin", "company identification number": "cin", "llp identification number": "llpin",
+  "date of incorporation": "date", "invoice no": "invoice number", "bill no": "invoice number", "bill number": "invoice number", "invoice date": "date",
+  "taxable value": "amount", "grand total": "total", "net amount": "total", "amount payable": "total", "lessee": "tenant", "licensee": "tenant",
+  "lessor": "owner", "licensor": "owner", "monthly license fee": "monthly rent", "licence fee": "rent", "refundable deposit": "security deposit",
+  "lock-in period": "notice period", "commencement date": "lease start", "expiry date": "lease end", "vendor name": "supplier", "seller": "supplier",
+  "serial no": "invoice number", "registered office": "registered address", "a/c no": "account number", "ifsc code": "ifsc",
+};
+export function canonicalField(label: string, approved: Record<string, string> = {}): string | null {
+  const k = label.trim().toLowerCase().replace(/[.:]+$/, "").replace(/\s+/g, " ");
+  if (approved[k]) return approved[k]!;
+  if (SYNONYMS[k]) return SYNONYMS[k]!;
+  const m = CANONICAL.exec(k);
+  return m ? m[1]!.toLowerCase() : null;
+}
+export function unmappedFields(labels: string[], docType: DocType, known: ProposedField[], approved: Record<string, string> = {}): ProposedField[] {
   const out = [...known];
   for (const l of labels) {
     const label = l.trim().slice(0, 60);
-    if (!label || CANONICAL.test(label)) continue;
+    if (!label || canonicalField(label, approved)) continue;
     const at = out.findIndex((f) => f.label.toLowerCase() === label.toLowerCase() && f.docType === docType);
     if (at >= 0) out[at] = { ...out[at]!, seen: out[at]!.seen + 1 };
     else out.push({ label, docType, seen: 1, status: "proposed" });

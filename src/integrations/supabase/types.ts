@@ -432,6 +432,51 @@ export type Database = {
         }
         Relationships: []
       }
+      document_runs: {
+        Row: {
+          attempts: number
+          context: string
+          created_at: string
+          data: Json
+          document_id: string | null
+          error: string | null
+          file_name: string
+          id: string
+          owner_id: string
+          stage: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          attempts?: number
+          context?: string
+          created_at?: string
+          data?: Json
+          document_id?: string | null
+          error?: string | null
+          file_name: string
+          id: string
+          owner_id: string
+          stage?: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          attempts?: number
+          context?: string
+          created_at?: string
+          data?: Json
+          document_id?: string | null
+          error?: string | null
+          file_name?: string
+          id?: string
+          owner_id?: string
+          stage?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       documents: {
         Row: {
           account_id: string | null
@@ -440,6 +485,7 @@ export type Database = {
           currency: string
           doc_date: string | null
           doc_type: string
+          evidence_locked: boolean
           expires_on: string | null
           extracted_text: string
           fields: Json
@@ -463,6 +509,7 @@ export type Database = {
           currency?: string
           doc_date?: string | null
           doc_type?: string
+          evidence_locked?: boolean
           expires_on?: string | null
           extracted_text?: string
           fields?: Json
@@ -486,6 +533,7 @@ export type Database = {
           currency?: string
           doc_date?: string | null
           doc_type?: string
+          evidence_locked?: boolean
           expires_on?: string | null
           extracted_text?: string
           fields?: Json
@@ -1329,6 +1377,36 @@ export type Database = {
           },
         ]
       }
+      job_state: {
+        Row: {
+          detail: Json
+          last_run: string | null
+          last_success: string | null
+          lease_until: string
+          name: string
+          reason: string | null
+          status: string
+        }
+        Insert: {
+          detail?: Json
+          last_run?: string | null
+          last_success?: string | null
+          lease_until?: string
+          name: string
+          reason?: string | null
+          status?: string
+        }
+        Update: {
+          detail?: Json
+          last_run?: string | null
+          last_success?: string | null
+          lease_until?: string
+          name?: string
+          reason?: string | null
+          status?: string
+        }
+        Relationships: []
+      }
       loans: {
         Row: {
           account_id: string | null
@@ -1406,6 +1484,45 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      market_quotes: {
+        Row: {
+          close: number
+          exchange: string
+          fetched_at: string
+          isin: string | null
+          name: string
+          prev_close: number | null
+          price_date: string
+          series: string
+          source: string
+          symbol: string
+        }
+        Insert: {
+          close: number
+          exchange: string
+          fetched_at?: string
+          isin?: string | null
+          name?: string
+          prev_close?: number | null
+          price_date: string
+          series?: string
+          source: string
+          symbol: string
+        }
+        Update: {
+          close?: number
+          exchange?: string
+          fetched_at?: string
+          isin?: string | null
+          name?: string
+          prev_close?: number | null
+          price_date?: string
+          series?: string
+          source?: string
+          symbol?: string
+        }
+        Relationships: []
       }
       monthly_reviews: {
         Row: {
@@ -1572,6 +1689,63 @@ export type Database = {
           owner_id?: string
           receipt_name?: string
           receipt_type?: string
+        }
+        Relationships: []
+      }
+      regulatory_changes: {
+        Row: {
+          detected_at: string
+          fingerprint: string
+          id: string
+          previous_fingerprint: string | null
+          proposals: Json
+          source_id: string
+          summary: string
+          url: string
+        }
+        Insert: {
+          detected_at?: string
+          fingerprint: string
+          id?: string
+          previous_fingerprint?: string | null
+          proposals?: Json
+          source_id: string
+          summary?: string
+          url: string
+        }
+        Update: {
+          detected_at?: string
+          fingerprint?: string
+          id?: string
+          previous_fingerprint?: string | null
+          proposals?: Json
+          source_id?: string
+          summary?: string
+          url?: string
+        }
+        Relationships: []
+      }
+      regulatory_snapshots: {
+        Row: {
+          excerpt: string
+          fetched_at: string
+          fingerprint: string
+          source_id: string
+          url: string
+        }
+        Insert: {
+          excerpt?: string
+          fetched_at?: string
+          fingerprint: string
+          source_id: string
+          url: string
+        }
+        Update: {
+          excerpt?: string
+          fetched_at?: string
+          fingerprint?: string
+          source_id?: string
+          url?: string
         }
         Relationships: []
       }
@@ -2047,6 +2221,7 @@ export type Database = {
           isSetofReturn: true
         }
       }
+      claim_job: { Args: { _minutes: number; _name: string }; Returns: boolean }
       claim_report_jobs: {
         Args: { _limit: number }
         Returns: {
