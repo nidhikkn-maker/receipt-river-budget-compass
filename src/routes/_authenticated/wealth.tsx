@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ACCOUNT_KINDS, ACCOUNT_LABEL, accountValue, isLiability, netWorth, type AccountKind } from "@/lib/ledger";
+import { ACCOUNT_KINDS, ACCOUNT_LABEL, accountValue, isLiability, type AccountKind } from "@/lib/ledger";
 import { AccountForm } from "@/components/AccountForm";
 import { AccountTools } from "@/components/AccountTools";
 import { money } from "@/lib/expenses";
@@ -17,6 +17,7 @@ import { CardDetails, GoalsPanel, LoansPanel } from "@/components/WealthPanels";
 import { FundPortfolio } from "@/components/FundPortfolio";
 import { DematHoldings } from "@/components/DematHoldings";
 import { MarketPanel } from "@/components/books/MarketPanel";
+import { useNetWorth } from "@/components/books/useBooks";
 
 export const Route = createFileRoute("/_authenticated/wealth")({
   head: () => ({
@@ -35,17 +36,15 @@ export const Route = createFileRoute("/_authenticated/wealth")({
 function Wealth() {
   const { accounts, transactions, valuations, setArchived, updateAccount, loans, preferences } = useStore();
   const [showArchived, setShowArchived] = useState(false);
-  const live = accounts.filter((a) => !a.archived);
-  const nwRaw = netWorth(live, transactions, valuations);
-  // Loans with a linked account are already in the account balances; only count the rest here.
-  const loanOwed = loans.filter((l) => !l.accountId && l.status !== "closed").reduce((s, l) => s + l.principal, 0);
-  const nw = { assets: nwRaw.assets, liabilities: nwRaw.liabilities + loanOwed, net: nwRaw.net - loanOwed };
+  // Same net worth as Home: each account, holding, property and loan counted once [v6.1 §9].
+  const canonical = useNetWorth();
+  const nw = { assets: canonical.assets.reduce((s, a) => s + a.value, 0), liabilities: canonical.liabilities, net: canonical.net };
   const list = accounts.filter((a) => showArchived || !a.archived);
 
 
   return (
     <>
-      <PageTitle eyebrow="Wealth" title="Accounts & net worth" sub="Balances come straight from your recorded entries." />
+      <PageTitle eyebrow="Wealth" title="Accounts & net worth" sub="Balances come from your recorded entries; investments and property use their dated prices or valuations." />
       <div className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-3">
         <Stat label="Assets" value={money(nw.assets)} />
         <Stat label="Owed" value={money(nw.liabilities)} />
