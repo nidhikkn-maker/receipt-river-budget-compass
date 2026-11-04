@@ -69,6 +69,7 @@ export function matchEmiDebit(
   if (line.direction !== "debit" || !(line.amount > 0)) return null;
   const hits = targets.flatMap((target) => {
     const linked = namesLoan(line.description, target.refs);
+    if (line.accountId && line.accountId === target.fundingFromAccountId) return [];
     const fromUsual = !!line.accountId && line.accountId === target.payFromAccountId;
     if (!fromUsual && !linked) return [];
     const off = dayOffset(line.date, target.dueDay);
