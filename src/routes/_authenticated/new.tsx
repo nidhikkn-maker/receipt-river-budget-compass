@@ -1,3 +1,4 @@
+import { takePendingScan } from "@/lib/pending-scan";
 import { createFileRoute, Link, useNavigate, useRouter } from "@tanstack/react-router";
 import { returnAfterReview } from "@/lib/review-navigation";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -483,6 +484,7 @@ function NewExpense() {
     }
   };
 
+  useEffect(() => { const f = takePendingScan(); if (!f) return; const dt = new DataTransfer(); f.forEach((x) => dt.items.add(x)); void onFiles(dt.files); }, []); // eslint-disable-line react-hooks/exhaustive-deps
   const onFiles = async (files: FileList | null) => {
     if (!files?.length || reading || saving) return;
     const big = Array.from(files).find((f) => f.size > 5 * 1024 * 1024);

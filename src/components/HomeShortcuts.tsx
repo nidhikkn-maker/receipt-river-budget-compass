@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { Link } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
+import { setPendingScan } from "@/lib/pending-scan";
 import { Plane, ScanLine, Inbox, Search, CalendarClock, FileText, Plus, Wallet, CreditCard, HandCoins, ChartPie, Sparkles, TrendingUp, FolderOpen, ArrowUp, ArrowDown, Settings2, GripVertical } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -15,6 +16,7 @@ export function HomeShortcuts() {
   const [open, setOpen] = useState(false), [all, setAll] = useState(false), [create, setCreate] = useState(false);
   const [selected, setSelected] = useState<ShortcutId[]>([]);
   const [drag, setDrag] = useState<ShortcutId | null>(null);
+  const navigate = useNavigate();
   const shown = all ? preferences.homeShortcuts : primaryShortcuts(preferences.homeShortcuts);
   const actionClass = "h-20 w-full min-w-0 flex-col gap-2 whitespace-normal rounded-lg border text-center text-xs";
   return <section aria-label="Home shortcuts" className="mb-5">
@@ -25,6 +27,7 @@ export function HomeShortcuts() {
     <div className="grid grid-cols-3 gap-2 sm:grid-cols-6">{shown.map((id) => {
       const s = SHORTCUTS.find((x) => x.id === id); if (!s) return null; const Icon = ICONS[id];
       if (id === "create-trip") return <Button key={id} variant="outline" className={actionClass} onClick={() => setCreate(true)}><Icon className="h-5 w-5 text-primary" />{s.label}</Button>;
+      if (id === "scan") return <Button key={id} asChild variant="outline" className={actionClass}><label className="cursor-pointer"><input type="file" accept="image/*" capture="environment" className="sr-only" aria-label="Take a photo of a receipt" onChange={(e) => { const files = Array.from(e.target.files ?? []); e.target.value = ""; if (!files.length) return; setPendingScan(files); void navigate({ to: "/new", search: { scan: true } as never }); }} /><Icon className="h-5 w-5 text-primary" /><span>{s.label}</span></label></Button>;
       return <Button key={id} asChild variant="outline" className={actionClass}><Link to={s.to} {...(id === "scan" ? { search: { scan: true } } : id === "upcoming-trips" ? { search: { status: "upcoming" } } : {})}><Icon className="h-5 w-5 text-primary" /><span>{s.label}</span></Link></Button>;
     })}</div>
     <Sheet open={open} onOpenChange={setOpen}><SheetContent side="bottom" className="max-h-[85dvh] overflow-y-auto" aria-describedby={undefined} onOpenAutoFocus={(e) => e.preventDefault()}><SheetHeader><SheetTitle>Home shortcuts</SheetTitle></SheetHeader>
