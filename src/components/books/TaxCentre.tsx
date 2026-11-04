@@ -228,19 +228,67 @@ export function RulesRegister() {
 }
 
 export function TaxComputationCard({ fy }: { fy: string }) {
-  const { books, preferences } = useBooks();
+  const { books, save, preferences } = useBooks();
   const { transactions } = useStore();
   const demat = useDemat();
-  const gains = (demat ?? []).flatMap((d) => d.holdings.flatMap((h) => h.gains));
-  const c = taxComputation(fy, transactions, preferences.assets ?? [], books.leases, gains, books.fyRecords);
+  const entities = preferences.entities ?? [];
+  const [who, setWho] = useState<string>("");
+  const [credit, setCredit] = useState({ kind: "tds" as CreditKind, amount: "", source: "" });
+  const ent = entities.find((e) => e.id === who);
+  const accountIds = ent ? new Set(books.entityAccounts?.[ent.id] ?? []) : null;
+  const gains = ent ? [] : (demat ?? []).flatMap((d) => d.holdings.flatMap((h) => h.gains));
+  const c = taxComputation(fy, transactions, preferences.assets ?? [], books.leases, gains, books.fyRecords, ent?.id, accountIds ? { accountIds } : undefined);
+  const profile = ent ? books.taxProfiles.find((p) => p.entityId === ent.id) : undefined;
   const { rules } = rulesFor(fy);
+  const personal = !ent || ent.kind === "individual" || ent.kind === "huf";
+  const regime = profile?.regime ?? "new";
+  const slabTax = personal && regime === "new" ? estimateTax(c.total - c.capitalGains.long - c.capitalGains.short, rules) : null;
+  const creditKey = ent?.id ?? "personal";
+  const cr = creditsFor(books.taxCredits ?? [], creditKey, fy);
+  const recordedTx = new Set((books.taxCredits ?? []).map((x) => x.transactionId).filter(Boolean));
+  const challans = ledgerTaxPayments(accountIds ? transactions.filter((t) => t.accountId && accountIds.has(t.accountId)) : transactions, fy).filter((t) => !recordedTx.has(t.id));
   const rows: [string, number][] = [["Salary", c.salary], ["House property (rent − 30% − home-loan interest)", c.houseProperty.net], ["Business / profession", c.business.net], ["Short-term capital gains", c.capitalGains.short], ["Long-term capital gains", c.capitalGains.long], ["Other sources (interest, dividends)", c.otherSources], ["Gross total income", c.gross], ["Losses brought forward set off", -c.lossesSetOff], ["Total income", c.total]];
+  const addCredit = (x: { kind: CreditKind; amount: number; source: string; transactionId?: string }) => save({ taxCredits: [...(books.taxCredits ?? []), { id: crypto.randomUUID(), entityId: creditKey, fy, ...x }] });
   return (
-    <Fold title="Tax computation by head" hint={`FY ${fy} · total income ${inr(c.total)}`}>
+    <Fold title="Tax computation by head" hint={`FY ${fy} · ${ent?.name ?? "You (personal)"} · total income ${inr(c.total)}`}>
       <div className="space-y-2 text-sm">
-        <div className="divide-y rounded-xl border">{rows.map(([k, v]) => <div key={k} className="flex justify-between px-3 py-2 text-xs"><span>{k}</span><b>{inr(v)}</b></div>)}</div>
-        <p className="text-xs">Indicative slab tax (individual, new regime): <b>{inr(estimateTax(c.total - c.capitalGains.long - c.capitalGains.short, rules))}</b> plus capital-gains tax at special rates.</p>
+        {entities.length > 0 && <select aria-label="Whose tax" className="w-full rounded-md border bg-background px-2 py-1 text-sm" value={who} onChange={(e) => setWho(e.target.value)}><option value="">You (personal)</option>{entities.map((e) => <option key={e.id} value={e.id}>{e.name}</option>)}</select>}
+        {ent && accountIds && accountIds.size === 0 && <p className="text-xs text-destructive">No accounts are linked to {ent.name} yet — link them in its tax profile below. Until then nothing is counted for it.</p>}
+        <div className="divide-y rounded-xl border">{rows.map(([k, v]) => <div key={k} className="flex justify-between gap-2 px-3 py-2 text-xs"><span>{k}</span><b className="shrink-0">{inr(v)}</b></div>)}</div>
+        {slabTax != null ? <p className="text-xs">Indicative slab tax (new regime): <b>{inr(slabTax)}</b> plus capital-gains tax at special rates.</p>
+          : <p className="text-xs text-muted-foreground">{personal ? "Old-regime slabs and deductions are not added — no tax figure is shown rather than a guess." : `${ent ? ENTITY_KINDS[ent.kind].label : ""} tax rates depend on the option chosen (e.g. section 115BAA/115BAB) — the accountant confirms the rate; no tax figure is shown.`}</p>}
+        <div className="rounded-xl border p-3 text-xs">
+          <p className="font-semibold">Taxes already paid · {inr(cr.total)}</p>
+          {cr.lines.map((l) => <p key={l.id} className="flex justify-between gap-2"><span className="break-words">{CREDIT_LABEL[l.kind]} · {l.source}</span><span className="shrink-0">{inr(l.amount)}<Button size="sm" variant="ghost" className="h-6" onClick={() => save({ taxCredits: (books.taxCredits ?? []).filter((x) => x.id !== l.id) })}>Remove</Button></span></p>)}
+          {slabTax != null && cr.total > 0 && <p className="mt-1 font-semibold">{slabTax - cr.total >= 0 ? `Balance still to pay about ${inr(slabTax - cr.total)}` : `Refund due about ${inr(cr.total - slabTax)}`} (before capital-gains tax)</p>}
+          {challans.map((t) => <p key={t.id} className="mt-1 flex items-center justify-between gap-2"><span className="break-words">Bank debit {t.date}: {t.text.slice(0, 60)} · {inr(t.amount)}</span><Button size="sm" variant="outline" className="h-7 shrink-0" onClick={() => addCredit({ kind: t.kind, amount: t.amount, source: `Bank debit ${t.date}`, transactionId: t.id })}>Count as {t.kind === "self_assessment" ? "self-assessment" : "advance"} tax</Button></p>)}
+          <div className="mt-2 flex flex-wrap gap-1"><select aria-label="Credit type" className="rounded-md border bg-background px-1" value={credit.kind} onChange={(e) => setCredit({ ...credit, kind: e.target.value as CreditKind })}>{(Object.keys(CREDIT_LABEL) as CreditKind[]).map((k) => <option key={k} value={k}>{CREDIT_LABEL[k]}</option>)}</select>
+            <Input aria-label="Credit amount" className="h-8 w-28" type="number" placeholder="Amount" value={credit.amount} onChange={(e) => setCredit({ ...credit, amount: e.target.value })} />
+            <Input aria-label="Credit source" className="h-8 min-w-0 flex-1" placeholder="Source, e.g. Form 26AS / Form 16 from employer" value={credit.source} onChange={(e) => setCredit({ ...credit, source: e.target.value })} />
+            <Button size="sm" variant="outline" disabled={!(Number(credit.amount) > 0) || credit.source.trim().length < 3} onClick={async () => { await addCredit({ kind: credit.kind, amount: Number(credit.amount), source: credit.source.trim() }); setCredit({ ...credit, amount: "", source: "" }); }}>Add</Button></div>
+          <p className="mt-1 text-[11px] text-muted-foreground">Only credits you can see on Form 26AS, Form 16/16A, AIS or a paid challan. Upload them on <Link to="/statements" search={{ context: "tax" }} className="underline">Statement Desk</Link> to keep the original.</p>
+        </div>
         {c.notes.map((n) => <p key={n} className="text-[11px] text-muted-foreground">{n}</p>)}
+      </div>
+    </Fold>
+  );
+}
+
+/** Every filing obligation with its due date and evidence, per entity [§45, §48]. */
+export function FilingCalendar({ fy }: { fy: string }) {
+  const { books, preferences } = useBooks();
+  const entities = preferences.entities ?? [];
+  const list = entities.flatMap((e) => obligations({ entity: e, profile: books.taxProfiles.find((p) => p.entityId === e.id), fy, today: today(), gstFilings: books.gstFilings, fyRecords: books.fyRecords, rules: books.rules }).map((o) => ({ ...o, name: e.name })));
+  const missing = entities.filter((e) => !books.taxProfiles.some((p) => p.entityId === e.id));
+  const overdue = list.filter((o) => o.status === "overdue").length;
+  const tone = { filed: "text-primary", overdue: "text-destructive", due: "font-semibold", upcoming: "text-muted-foreground" } as const;
+  return (
+    <Fold id="calendar" title="Filing calendar" hint={`FY ${fy} · ${list.filter((o) => o.status === "filed").length}/${list.length} with filing evidence${overdue ? ` · ${overdue} overdue` : ""}`}>
+      <div className="space-y-1 text-xs">
+        {missing.length > 0 && <p className="text-destructive">Set a tax profile for {missing.map((e) => e.name).join(", ")} to see its returns.</p>}
+        {list.length === 0 && missing.length === 0 && <p className="text-muted-foreground">Add a company or person on Companies & years to see its returns.</p>}
+        {list.map((o) => <div key={`${o.entityId}${o.gstin}${o.form}${o.period}`} className="flex items-start justify-between gap-2 border-b py-1"><span className="min-w-0 break-words"><b>{o.form}</b> {o.period} · {o.name}{o.gstin ? ` · ${o.gstin}` : ""}<span className="block text-[11px] text-muted-foreground">{o.basis}</span></span><span className={`shrink-0 text-right ${tone[o.status]}`}>{o.status === "filed" ? o.evidence : `due ${o.due}`}<span className="block">{o.status}</span></span></div>)}
+        <p className="text-[11px] text-muted-foreground">Drafts are prepared here; Ledgerline never files. After you or your accountant file, record the acknowledgement or ARN so the return shows as filed.</p>
       </div>
     </Fold>
   );
