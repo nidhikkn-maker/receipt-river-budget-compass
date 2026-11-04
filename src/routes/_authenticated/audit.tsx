@@ -16,6 +16,7 @@ import { receivableStatus } from "@/lib/receivables";
 import { useAuditAll } from "@/components/books/useAudit";
 import { useBooks } from "@/components/books/useBooks";
 import { fyRange, fyOf } from "@/lib/entities";
+const inr = (n: number) => `₹${Math.round(n).toLocaleString("en-IN")}`;
 
 export const Route = createFileRoute("/_authenticated/audit")({
   head: () => ({ meta: [
