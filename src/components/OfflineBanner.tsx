@@ -9,7 +9,7 @@ export function OfflineBanner() {
   const [online, setOnline] = useState(true);
   const [scans, setScans] = useState(0);
   const [justBack, setJustBack] = useState(false);
-  const timer = useRef<ReturnType<typeof setTimeout>>();
+  const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   useEffect(() => {
     setOnline(navigator.onLine);
     const check = () => void pendingOfflineScans(userId).then(setScans);

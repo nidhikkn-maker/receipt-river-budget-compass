@@ -10,7 +10,7 @@ export async function queueOfflineScan(owner: string, files: File[]): Promise<st
 }
 
 export async function pendingOfflineScans(owner: string): Promise<number> {
-  return (await localDrafts(owner).catch(() => [])).filter((d) => d.data.pendingScan).length;
+  return (await localDrafts(owner).catch(() => [])).filter((d) => d.data["pendingScan"]).length;
 }
 
 type Extract = (a: { data: { dataUrl: string; mimeType: string; includeItems: boolean } }) => Promise<{ ok: true; result: { merchant?: string | null; amount?: number | null; date?: string | null; currency?: string | null; title?: string | null; subtotal?: number | null; tax?: number | null; tip?: number | null; round_off?: number | null; text?: string | null } } | { ok: false; error: string }>;
@@ -20,7 +20,7 @@ export async function processOfflineScans(owner: string, extract: Extract): Prom
   let done = 0;
   const { prepareForReading } = await import("./image-prep");
   for (const d of await localDrafts(owner)) {
-    if (!d.data.pendingScan || !d.files[0]) continue;
+    if (!d.data["pendingScan"] || !d.files[0]) continue;
     const f = localToFile(d.files[0]);
     try {
       const raw = await new Promise<string>((ok, bad) => { const r = new FileReader(); r.onload = () => ok(String(r.result)); r.onerror = () => bad(r.error); r.readAsDataURL(f); });
@@ -36,7 +36,7 @@ export async function processOfflineScans(owner: string, extract: Extract): Prom
           ...(x.currency && /^[A-Za-z]{3}$/.test(x.currency) ? { currency: x.currency.toUpperCase() } : {}),
           receiptDetails: { subtotal: x.subtotal ?? null, tax: x.tax ?? null, tip: x.tip ?? null, roundOff: x.round_off != null && Math.abs(x.round_off) <= 1 ? x.round_off : null, text: x.text ?? "" },
         });
-      } else data.error = res.error;
+      } else data["error"] = res.error;
       await putLocalDraft(owner, { ...d, data, updatedAt: new Date().toISOString() });
       done++;
     } catch { /* still offline or reading failed to connect: stays queued for the next reconnect */ }
