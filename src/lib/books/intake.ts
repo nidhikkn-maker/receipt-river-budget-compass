@@ -32,14 +32,14 @@ export function parseContext(v: unknown): IntakeContext | undefined {
 }
 
 /** Where each document type is reviewed; every one is still stored in DocuRepo [§5]. */
-export type Route = "statement" | "investment" | "entity" | "fy" | "asset" | "property" | "lease" | "gst" | "loan" | "document";
+export type Route = "statement" | "investment" | "entity" | "fy" | "asset" | "property" | "lease" | "gst" | "loan" | "tax" | "document";
 export const ROUTE_OF: Record<DocType, Route> = {
   bank_statement: "statement", card_statement: "statement", loan_statement: "loan",
   demat_statement: "investment", transaction_statement: "investment", capital_gains_statement: "investment", mutual_fund_statement: "investment",
   incorporation: "entity", pan_gst_registration: "entity",
   audited_financials: "fy", trial_balance: "fy", tax_return: "fy", depreciation_schedule: "fy",
   asset_invoice: "asset", warranty: "asset", property_deed: "property", lease_agreement: "lease",
-  gst_return: "gst", invoice: "gst",
+  gst_return: "gst", invoice: "gst", tax_statement: "tax",
   bill: "document", receipt: "document", insurance: "document", loan_agreement: "loan", payment_confirmation: "document", contract: "document", utility_bill: "property", maintenance: "asset", other: "document",
 };
 
