@@ -151,7 +151,7 @@ export function proposeFy(read: AuditedRead, entities: EntityProfile[], existing
 export const REQUIRED_SCHEDULES: Schedule[] = ["balanceSheet", "profitLoss", "notes", "auditorReport", "fixedAssetRegister"];
 
 /** Descriptive name "Entity / FY / Type / Identifier"; the original filename is always kept separately [§9]. */
-export function autoName(p: { entity?: string | null; date?: string | null; typeLabel: string; identifier?: string | null }): string {
+export function autoName(p: { entity?: string | null | undefined; date?: string | null | undefined; typeLabel: string; identifier?: string | null | undefined }): string {
   return [p.entity?.trim() || "Personal", p.date ? `FY ${fyOf(p.date)}` : null, p.typeLabel, p.identifier?.trim() || null].filter(Boolean).join(" / ");
 }
 
