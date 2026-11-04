@@ -33,3 +33,4 @@
 - Receipt corrections: correctedFields compares the edited bill check against the saved reading (both kept in the draft), and a corrected field counts as owner-checked; only shop-name corrections are learned (shopAliases misread→corrected key via learnedShopName), never amounts or dates.
 - Upcoming payments are marked done via mark-done.ts (only an active commitment's current or overdue due date, once each); bulk uses scheduled amounts through confirmCommitment after an in-app confirm.
 - Company/person profiles (src/lib/entities.ts) live in owner preferences.entities; PAN type letter and GSTIN embedded PAN/mod-36 check are validated before save, and financial-year status is counted from saved records only, never marked complete automatically.
+- Supplier/missing-invoice checks (src/lib/gst-recon.ts) are read-only over business-scope spending; a bill counts if the entry has a receipt or a DocuRepo document linked to it, and GSTIN is read only from linked documents.
