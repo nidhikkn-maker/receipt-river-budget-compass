@@ -57,3 +57,19 @@ Two new independent audits re-read every line of both documents against the curr
 - Atomic intake: one security-definer database function per document run, owner-checked, idempotent on the run id. Storage upload is staged first and removed on failure.
 - Changes stay in the existing pages (Statement Desk, DocuRepo, Assets, Tax, Audit, Wealth, Settings). No new tabs.
 - Pure rules stay in the existing books modules with tests next to them. Nothing is published without your approval.
+
+## Full gap register (every partial or missing point found)
+
+v6.0
+- §3 partial saves -> B1. §6 automatic account/loan/entity links -> B1. §7 page/section required -> B1. §10 plain-language search -> B4. §15 controlled field extension with migration test -> B4.
+- §19, §63 per-company opening balance comparison and posting -> B3. §27 supplier/warranty/insurance/payment carried over; per-company capitalisation policy -> B2. §32 verified put-to-use date, useful life and residual value -> B2. §33 block depreciation after sales -> B2. §34 automatic monthly preparation -> B2. §66 tested schedules -> B2/B6.
+- §39 deposit identification -> B3. §45 confirmed tax profile, no assumed defaults -> B3. §46 capital-gains holding periods; carry-forward expiry and use -> B3. §47 GST payment matching by GSTIN/period/challan; GSTR-9 tables -> B3. §48 validated drafts -> B4.
+- §49 schema, validation and property-compliance monitoring -> B4. §50 substantive rule tests; approved rules feed calculations -> B4. §51, §67 official JSON-format drafts -> B4.
+- §58, §62 invoices create GST drafts; required evidence lock -> B1. §59 trusted-record lookup for all required fields -> B1.
+- §60, §69, §71.19, §72 devices, isolated end-to-end and cross-company access tests, accuracy/security/screenshot reports -> B6 (physical devices and accuracy sample need you).
+
+v6.1
+- §1, §4 brokerage cash vs securities, verified quantities, bond valuation rules -> B5. §2 bonds and currencies; source terms recorded -> B5/B6. §3 exchange and instrument type matching -> B5.
+- §5 per-row status, real download time -> B5. §6 failure marks stale, never zero, reload after download -> B5. §7 automatic NAV refresh; source named accurately -> B5.
+- §9 ownership-aware demat, owner filter, reconciled bank values -> B5. §10, §11 valuation time and full quality summary on Wealth and Home -> B5. §12 allocation and flow-adjusted performance -> B5. §13 corporate actions, demat alerts, configurable threshold, flow-adjusted alerts -> B5.
+- §14, §15 combined tests and v2 evidence bundle -> B6. Live intraday prices and production schedules -> Needs you.
