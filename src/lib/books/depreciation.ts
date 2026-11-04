@@ -22,10 +22,16 @@ export function monthlyBook(a: Asset, uptoMonth: string): BookMonth[] {
   const wdvRate = a.bookMethod === "wdv" ? (life > 0 && a.cost > 0 && residual > 0 ? 1 - (residual / a.cost) ** (1 / life) : a.bookRatePct / 100) : 0;
   const out: BookMonth[] = [];
   let nbv = a.cost, acc = 0;
-  const start = a.inUse.slice(0, 7);
+  let start = a.inUse.slice(0, 7);
+  // Imported prior-year written-down value: continue from the start of that year instead of recomputing history [§32].
+  const ob = a.openingWdv && a.openingWdv.book >= 0 ? a.openingWdv : null;
+  if (ob) { const s0 = fyRange(ob.fy).start.slice(0, 7); if (s0 > start) { start = s0; nbv = ob.book; acc = r2(a.cost - ob.book); } }
+  const adj = [...(a.adjustments ?? [])].sort((x, y) => x.date.localeCompare(y.date));
   for (let m = start; m <= uptoMonth && out.length < 600; m = nextMonth(m)) {
     if (a.soldOn && m > a.soldOn.slice(0, 7)) break;
-    const from = m === start ? Number(a.inUse.slice(8, 10)) : 1;
+    // Impairment (negative) / revaluation (positive) change the carrying amount from their month onward [§28].
+    for (const x of adj) if (x.date.slice(0, 7) === m) nbv = r2(Math.max(residual, nbv + x.amount));
+    const from = m === a.inUse.slice(0, 7) ? Number(a.inUse.slice(8, 10)) : 1;
     const to = a.soldOn && m === a.soldOn.slice(0, 7) ? Number(a.soldOn.slice(8, 10)) : daysIn(m);
     const frac = Math.max(0, to - from + 1) / daysIn(m);
     const raw = a.bookMethod === "wdv" ? nbv * wdvRate / 12 * frac : annualSlm / 12 * frac;

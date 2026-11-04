@@ -77,8 +77,9 @@ export type PropertyCostKind = "maintenance" | "utility" | "propertyTax" | "insu
 export interface PropertyCost { id: string; propertyId: string; date: Iso; kind: PropertyCostKind; vendor: string; amount: number; transactionId?: string | undefined; docId?: string | undefined }
 
 /** Asset lifecycle event [§28]. */
-export type AssetEventKind = "received" | "capitalised" | "location" | "custodian" | "maintenance" | "transfer" | "verified" | "impairment" | "revaluation" | "disposal";
-export interface AssetEvent { id: string; assetId: string; date: Iso; kind: AssetEventKind; note: string; value?: number | undefined; docId?: string | undefined }
+export type AssetEventKind = "received" | "capitalised" | "location" | "custodian" | "maintenance" | "transfer" | "verified" | "impairment" | "revaluation" | "disposal" | "missing" | "damaged";
+/** `to` carries the new location / custodian / department for moves and transfers. */
+export interface AssetEvent { id: string; assetId: string; date: Iso; kind: AssetEventKind; note: string; value?: number | undefined; docId?: string | undefined; to?: string | undefined; applied?: boolean | undefined }
 
 /** Depreciation journal prepared for approval [§34]. */
 export interface Journal { id: string; assetId: string; period: string; amount: number; kind: "book"; status: "prepared" | "posted"; postedOn?: Iso | undefined; transactionId?: string | undefined }
