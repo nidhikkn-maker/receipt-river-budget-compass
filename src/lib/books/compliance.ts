@@ -22,10 +22,16 @@ export const fyMonths = (fy: string) => { const s = Number(fy.slice(0, 4)); retu
 /** Quarter label for a month inside a FY: the quarter's last month, e.g. 2026-06 for Apr–Jun. */
 export const quarterEnd = (month: string) => { const [y, m] = month.split("-").map(Number) as [number, number]; return ym(y, Math.ceil(m / 3) * 3); };
 
-/** A due date: the approved register rule when one applies on that date, else the standard default. */
-function dueFor(rules: RuleVersion[], form: string, standard: string): { due: string; basis: string } {
-  const r = ruleOn(rules, `due.${form}`, standard);
-  if (r && /^\d{4}-\d{2}-\d{2}$/.test(r.value.trim())) return { due: r.value.trim(), basis: `Approved rule: ${r.title}` };
+/**
+ * A due date: an approved period-specific extension `due.<FORM>.<period>` (value YYYY-MM-DD) wins; then an
+ * approved general change `due.<FORM>` (value = day of month, applied to the standard month); else the default.
+ */
+export function dueFor(rules: RuleVersion[], form: string, periodKey: string, standard: string): { due: string; basis: string } {
+  const ext = ruleOn(rules, `due.${form}.${periodKey}`, standard);
+  if (ext && /^\d{4}-\d{2}-\d{2}$/.test(ext.value.trim())) return { due: ext.value.trim(), basis: `Extended: ${ext.title}` };
+  const gen = ruleOn(rules, `due.${form}`, standard);
+  const dd = gen ? Number(gen.value.trim()) : NaN;
+  if (gen && Number.isInteger(dd) && dd >= 1 && dd <= 31) return { due: `${standard.slice(0, 8)}${pad(dd)}`, basis: `Approved rule: ${gen.title}` };
   return { due: standard, basis: "Standard due date — record any extension in the rules register" };
 }
 
@@ -42,14 +48,14 @@ export function obligations(p: { entity: EntityProfile; profile: TaxProfile | un
   // Income-tax return for the AY following this FY: 31 Jul for non-audit, 31 Oct for audited cases and companies.
   if (fyEnd < today || fy === fyOf(today)) {
     const itrStd = profile.auditRequired || entity.kind === "company" ? `${nextYear}-10-31` : `${nextYear}-07-31`;
-    const d = dueFor(p.rules, "ITR", itrStd);
+    const d = dueFor(p.rules, "ITR", fy, itrStd);
     const rec = p.fyRecords.find((r) => r.entityId === entity.id && r.fy === fy)?.filedReturns.find((f) => /^ITR/i.test(f.form));
     out.push({ entityId: entity.id, form: "ITR", period: `FY ${fy}`, ...d, status: status(d.due, rec?.filedOn ?? null), evidence: rec ? `${rec.form} ack ${rec.ack}` : null });
   }
   const months = fyMonths(fy).filter((m) => m < today.slice(0, 7));
   for (const gstin of entity.gstins) {
     const filed = (form: string, period: string) => p.gstFilings.find((f) => f.gstin === gstin && f.form === form && f.period === period) ?? null;
-    const add = (form: string, period: string, std: string) => { const d = dueFor(p.rules, form, std); const f = filed(form, period); out.push({ entityId: entity.id, gstin, form, period, ...d, status: status(d.due, f?.filedOn ?? null), evidence: f ? `ARN ${f.arn}` : null }); };
+    const add = (form: string, period: string, std: string) => { const d = dueFor(p.rules, form, period.replace(/^FY /, ""), std); const f = filed(form, period); out.push({ entityId: entity.id, gstin, form, period, ...d, status: status(d.due, f?.filedOn ?? null), evidence: f ? `ARN ${f.arn}` : null }); };
     if (profile.gstScheme === "regular") for (const m of months) { add("GSTR-1", m, day(m, 1, 11)); add("GSTR-3B", m, day(m, 1, 20)); }
     if (profile.gstScheme === "qrmp") for (const q of [...new Set(months.map(quarterEnd))].filter((q) => q < today.slice(0, 7))) { add("GSTR-1", q, day(q, 1, 13)); add("GSTR-3B", q, day(q, 1, 22)); }
     if (profile.gstScheme === "composition") { for (const q of [...new Set(months.map(quarterEnd))].filter((q) => q < today.slice(0, 7))) add("CMP-08", q, day(q, 1, 18)); if (fyEnd < today) add("GSTR-4", `FY ${fy}`, `${nextYear}-04-30`); }
