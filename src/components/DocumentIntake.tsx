@@ -132,7 +132,10 @@ export function DocumentIntake({ file, context, onClose, resume, replacesId }: {
       if (!proposal.asset || belowCap) return proposal.asset && belowCap ? { route: "document" } : null;
       const a = proposal.asset;
       const purchase = x?.asset?.purchaseDate ?? a.inUse;
-      return { route: "asset", asset: { ...a, name: v("name", a.name), cost: Number(v("cost", a.cost)) || a.cost, inUse: v("inUse", a.inUse), purchaseDate: purchase, capitalisedOn: v("capOn", purchase), kind: v("akind", a.kind) as AssetKind, supplier: x?.asset?.supplier ?? undefined, warrantyUntil: x?.asset?.warrantyUntil ?? undefined, insurance: x?.asset?.insurance ?? undefined, ...(ownerSuggested && !ownerOk ? { ownerEntityId: undefined } : {}) } as typeof a };
+      // Put-to-use date, useful life and residual value are never assumed [§32].
+      const life = optNum("life", undefined), resid = optNum("resid", undefined);
+      if (edit["inUse"] === undefined || life == null || resid == null) return null;
+      return { route: "asset", asset: { ...a, usefulLifeYears: life, residualPct: resid, name: v("name", a.name), cost: Number(v("cost", a.cost)) || a.cost, inUse: v("inUse", a.inUse), purchaseDate: purchase, capitalisedOn: v("capOn", purchase), kind: v("akind", a.kind) as AssetKind, supplier: x?.asset?.supplier ?? undefined, warrantyUntil: x?.asset?.warrantyUntil ?? undefined, insurance: x?.asset?.insurance ?? undefined, ...(ownerSuggested && !ownerOk ? { ownerEntityId: undefined } : {}) } as typeof a };
     }
     if (proposal.kind === "property") {
       const cost = Number(v("cost", x?.property?.cost ?? "")) || 0;
@@ -228,6 +231,9 @@ export function DocumentIntake({ file, context, onClose, resume, replacesId }: {
           <Input aria-label="Asset name" className="col-span-2" value={v("name", proposal.asset.name)} onChange={(e) => setEdit({ ...edit, name: e.target.value })} />
           <label className="text-xs">Cost<Input aria-label="Cost" type="number" value={v("cost", proposal.asset.cost)} onChange={(e) => setEdit({ ...edit, cost: e.target.value })} /></label>
           <label className="text-xs">Put to use<Input aria-label="Put to use" type="date" value={v("inUse", proposal.asset.inUse)} onChange={(e) => setEdit({ ...edit, inUse: e.target.value })} /></label>
+          <label className="text-xs">Useful life (years)<Input aria-label="Useful life" inputMode="decimal" placeholder={proposal.suggestedLife ? `Suggested ${proposal.suggestedLife}` : ""} value={v("life", null)} onChange={(e) => setEdit({ ...edit, life: e.target.value })} /></label>
+          <label className="text-xs">Residual value (%)<Input aria-label="Residual value" inputMode="decimal" placeholder="e.g. 5" value={v("resid", null)} onChange={(e) => setEdit({ ...edit, resid: e.target.value })} /></label>
+          {(edit["inUse"] === undefined || !v("life", null) || !v("resid", null)) && <p className="col-span-2 text-xs text-muted-foreground">Confirm the put-to-use date, useful life and residual value before saving.</p>}
           <label className="col-span-2 text-xs">Capitalised on<Input aria-label="Capitalised on" type="date" value={v("capOn", x.asset?.purchaseDate ?? proposal.asset.inUse)} onChange={(e) => setEdit({ ...edit, capOn: e.target.value })} /></label>
           <select aria-label="Asset category" className="col-span-2 rounded-md border bg-background px-2 py-2" value={v("akind", proposal.asset.kind)} onChange={(e) => setEdit({ ...edit, akind: e.target.value })}>{Object.entries(ASSET_KINDS).map(([k, l]) => <option key={k} value={k}>{l}</option>)}</select>
           <p className="col-span-2 text-xs text-muted-foreground">{[x.asset?.supplier && `Supplier ${x.asset.supplier}`, x.asset?.purchaseDate && `invoice ${x.asset.purchaseDate}`, x.asset?.warrantyUntil && `warranty to ${x.asset.warrantyUntil}`, x.asset?.insurance && `insurance ${x.asset.insurance}`].filter(Boolean).join(" · ")}</p>
