@@ -69,6 +69,7 @@ const MORE_GROUPS: { title: string; items: { to: string; label: string; icon: ty
     { to: "/wealth", label: "Wealth & accounts", icon: Gem },
   ] },
   { title: "Account", items: [
+    { to: "/entities", label: "Companies & years", icon: Users },
     { to: "/settings", label: "Settings & backup", icon: Settings },
     { to: "/payment-methods", label: "Payment methods", icon: Wallet },
   ] },
