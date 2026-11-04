@@ -106,10 +106,10 @@ function LoanCard({ l, onRemove }: { l: Loan; onRemove: () => void }) {
         <Button size="icon" variant="ghost" aria-label={`Delete ${l.name}`} onClick={onRemove}><Trash2 className="h-4 w-4" /></Button>
       </div>
       {a.payable ? (
-        <div className="mt-2 grid grid-cols-3 gap-2 text-sm">
-          <div><div className="text-[11px] text-muted-foreground">Time left</div><div className="font-mono">{months(a.months)}</div></div>
-          <div><div className="text-[11px] text-muted-foreground">Interest left</div><div className="font-mono">{money(a.totalInterest)}</div></div>
-          <div><div className="text-[11px] text-muted-foreground">Next EMI split</div><div className="font-mono text-xs">{first ? `${money(first.principal)} + ${money(first.interest)} int.` : "—"}</div></div>
+        <div className="mt-2 grid grid-cols-2 gap-2 text-sm sm:grid-cols-3">
+          <div className="min-w-0"><div className="text-[11px] text-muted-foreground">Time left</div><div className="font-mono">{months(a.months)}</div></div>
+          <div className="min-w-0"><div className="text-[11px] text-muted-foreground">Interest left</div><div className="break-words font-mono">{money(a.totalInterest)}</div></div>
+          <div className="col-span-2 min-w-0 sm:col-span-1"><div className="text-[11px] text-muted-foreground">Next EMI split</div><div className="break-words font-mono text-xs">{first ? `${money(first.principal)} + ${money(first.interest)} int.` : "—"}</div></div>
         </div>
       ) : <p className="mt-2 text-sm text-destructive">This EMI doesn't cover the monthly interest — the loan would never close.</p>}
       {l.principal > 0 && <div className="mt-3 rounded-xl border p-2 text-sm">

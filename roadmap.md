@@ -7,7 +7,11 @@
 - [x] Tax by head, tax profiles, GSTR-1/3B drafts, payments, filing evidence, rule register with approval, form versions; audit findings grouped and fed into the Inbox; 30 new tests pass (1,302 total).
 - [x] NSE/BSE share prices — official end-of-day closing prices saved each weekday evening (live intraday still needs a licensed provider).
 - [x] Weekly automatic check of official tax/GST/MCA pages; new notices wait for owner approval.
+- [x] Tax per company/person (linked accounts only), taxes already paid (TDS/TCS/advance/self-assessment), filing calendar with scheme-aware GST due dates and approved extensions, ITC review, rule impact (affected entities/years, closed or filed years unchanged).
+- [x] Audit: tax/GST overdue and unconfirmed tax-payment checks, fixed/accepted decisions with notes, approval history, group by evidence, readiness tiles from real data; price alert threshold, demat quantity totals, 4-business-day staleness, per-owner demat cache, one net worth on Home and Wealth with each account counted once; phone-width fixes. 1,342 tests pass.
+- [x] Evidence pack (§72) delivered as Ledgerline_v6_Evidence_Pack.md.
 - [ ] Physical iPhone/iPad checks — needs the owner's devices.
+- [ ] Publish (starts price and rule jobs) — needs the owner's explicit approval.
 
 ## Companies & financial years (4 Nov 2026)
 - [x] Profiles with PAN/GSTIN/CIN checks and per-year on-record status at /entities; 4 rule tests pass. Not browser-checked or published.

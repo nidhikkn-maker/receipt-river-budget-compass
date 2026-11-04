@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Fold } from "@/components/Fold";
 import { money } from "@/lib/expenses";
 import { getFundNav } from "@/lib/mutual-funds.functions";
-import { addSnapshot, FRESHNESS_LABEL, quoteKey, recordFailure, upsertQuote, valuationAlerts } from "@/lib/books/market";
+import { addSnapshot, FRESHNESS_LABEL, quantityByIsin, quoteKey, recordFailure, upsertQuote, valuationAlerts } from "@/lib/books/market";
 import type { Holding, HoldingKind } from "@/lib/books/types";
 import { useBooks, useNetWorth } from "./useBooks";
 
@@ -22,8 +22,9 @@ export function MarketPanel() {
   const [edit, setEdit] = useState<Holding | null>(null);
   const [price, setPrice] = useState<Record<string, string>>({});
   const [gold, setGold] = useState(books.goldRate ? String(books.goldRate.perGram24k) : "");
-  const statementQty = Object.fromEntries((nw.demat ?? []).flatMap((d) => d.holdings.map((h) => [h.isin, h.quantity])));
-  const alerts = valuationAlerts(nw.valued, books.snapshots, books.alerts, statementQty);
+  // Your own entries for a security are compared with the demat total across every account [v6.1 §4, §13].
+  const statementQty = quantityByIsin(nw.demat ?? []);
+  const alerts = valuationAlerts(nw.valued, books.snapshots, books.alerts, statementQty, books.holdings);
 
   const refreshNavs = async () => {
     let quotes = books.quotes; let ok = 0, bad = 0;

@@ -44,3 +44,4 @@
 - Approved asset depreciation posts once per asset-month (stable UUID from asset+month) as a non-cash adjustment on the asset's own other_asset/investment account, never a bank account; closed periods and unlinked assets are refused (books/assets-ledger.ts).
 - NSE/BSE end-of-day closes come from official bhavcopy files saved by a cron route into shared market_quotes; demat holdings are the canonical copy of a security, so a manual holding with the same ISIN is never added to net worth twice.
 - Official rule pages are watched weekly (books/rule-watch.ts): headline fingerprints record detected changes only; rules change solely through owner-approved proposals.
+- Filing obligations, ITC review, tax credits and rule impact are pure rules in books/compliance.ts; due dates come from approved `due.<FORM>[.<period>]` register rules over standard defaults, so extensions live in one versioned place and nothing is filed automatically.

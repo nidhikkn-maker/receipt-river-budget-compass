@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useStore } from "@/lib/store";
 import { emptyBooks, type BooksData } from "@/lib/books/types";
-import { netWorth } from "@/lib/ledger";
+import { accountValue, isLiability } from "@/lib/ledger";
 import { shareValue } from "@/lib/assets";
 import { fyOf } from "@/lib/entities";
 import { dynamicNetWorth, valueHolding } from "@/lib/books/market";
@@ -19,10 +19,17 @@ export function useBooks() {
   return { books, save, preferences, savePreferences };
 }
 
-let dematCache: DematWithHoldings[] | null = null;
+/** Demat holdings, cached per signed-in owner so a different account never sees another's copy. */
+let dematCache: { owner: string; data: DematWithHoldings[] } | null = null;
 export function useDemat() {
-  const [d, setD] = useState<DematWithHoldings[] | null>(dematCache);
-  useEffect(() => { let live = true; loadDemat().then((x) => { dematCache = x; if (live) setD(x); }).catch(() => { if (live) setD([]); }); return () => { live = false; }; }, []);
+  const { userId: owner } = useStore();
+  const [d, setD] = useState<DematWithHoldings[] | null>(dematCache && dematCache.owner === owner ? dematCache.data : null);
+  useEffect(() => {
+    let live = true;
+    if (!(dematCache && dematCache.owner === owner)) setD(null);
+    loadDemat().then((x) => { dematCache = { owner, data: x }; if (live) setD(x); }).catch(() => { if (live) setD([]); });
+    return () => { live = false; };
+  }, [owner]);
   return d;
 }
 
@@ -59,7 +66,15 @@ export function useNetWorth() {
   const closes = useClosingPrices([...books.holdings.map((h) => h.isin ?? ""), ...dematHoldings.map((h) => h.isin)]);
   return useMemo(() => {
     const live = accounts.filter((a) => !a.archived);
-    const raw = netWorth(live, transactions, valuations);
+    // Each ledger account is counted in exactly one component [v6.1 §9]: accounts that carry a registered
+    // asset are valued through the asset/property register, investment accounts under investments.
+    const assetLinked = new Set((preferences.assets ?? []).map((a) => a.accountId).filter(Boolean));
+    const raw = { assets: 0, investments: 0, other: 0, liabilities: 0 };
+    for (const a of live) {
+      if (assetLinked.has(a.id)) continue;
+      const v = accountValue(a, transactions, valuations).value;
+      if (isLiability(a.kind)) raw.liabilities += v; else if (a.kind === "investment" || a.kind === "fixed_deposit") raw.investments += v; else if (a.kind === "other_asset") raw.other += v; else raw.assets += v;
+    }
     const loanOwed = loans.filter((l) => !l.accountId && l.status !== "closed").reduce((s, l) => s + l.principal, 0);
     const now = new Date();
     // Canonical holdings: a security in a demat statement is counted once from the demat; a manual
@@ -81,13 +96,15 @@ export function useNetWorth() {
     const propVal = books.properties.reduce((s, p) => { const a = assets.find((x) => x.id === p.assetId); return s + (propertyValue(p, a ? shareValue(a, fy) : null).value ?? 0); }, 0)
       + assets.filter((a) => !a.soldOn && !linked.has(a.id)).reduce((s, a) => s + shareValue(a, fy), 0);
     const nw = dynamicNetWorth({
-      bank: raw.assets, bankBasis: "account balances from recorded and reconciled entries",
-      investments: valued, demat: dematValue, dematBasis: dematRows.length ? [closeCount && `${closeCount}/${dematRows.length} demat at official closing price${closeDate ? ` (${closeDate})` : ""}`, closeCount < dematRows.length && `others at statement value${dematDate ? ` (${dematDate})` : ""}`].filter(Boolean).join(" · ") : "",
-      otherAssets: 0, property: Math.round(propVal), propertyBasis: books.properties.some((p) => p.valuation) ? "latest dated valuation or book value" : "book value from asset register",
+      bank: Math.round(raw.assets * 100) / 100, bankBasis: "bank, cash and wallet balances from recorded entries",
+      investments: valued, demat: Math.round((dematValue + raw.investments) * 100) / 100, dematBasis: dematRows.length ? [closeCount && `${closeCount}/${dematRows.length} demat at official closing price${closeDate ? ` (${closeDate})` : ""}`, closeCount < dematRows.length && `others at statement value${dematDate ? ` (${dematDate})` : ""}`, raw.investments > 0 && "investment & deposit accounts at their latest recorded value"].filter(Boolean).join(" · ") : raw.investments > 0 ? "investment & deposit accounts at their latest recorded value" : "",
+      otherAssets: Math.round(raw.other * 100) / 100, property: Math.round(propVal), propertyBasis: books.properties.some((p) => p.valuation) ? "latest dated valuation or book value" : "book value from asset register",
       liabilities: raw.liabilities + loanOwed, liabilitiesBasis: "latest loan and card balances on record",
     });
     const portfolio = nw.assets.find((a) => a.label === "Investments")!.value;
     const last = books.snapshots.at(-1);
-    return { ...nw, valued, portfolio, liquid: raw.assets, movement: last ? Math.round(portfolio - last.portfolio) : null, lastSnapshot: last?.date ?? null, demat, dematRows, duplicates, closeJob: closes.job };
+    // Market movement excludes money you put in or took out since the last snapshot [v6.1 §12].
+    const flows = last ? transactions.filter((t) => t.txnType === "investment" && t.date > last.date).reduce((s, t) => s + t.amount, 0) : 0;
+    return { ...nw, valued, portfolio, liquid: raw.assets, movement: last ? Math.round(portfolio - last.portfolio - flows) : null, flowsSinceSnapshot: Math.round(flows), lastSnapshot: last?.date ?? null, demat, dematRows, duplicates, closeJob: closes.job };
   }, [accounts, transactions, valuations, loans, books, demat, preferences.assets, closes]); // eslint-disable-line react-hooks/exhaustive-deps
 }
