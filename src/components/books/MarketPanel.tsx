@@ -58,6 +58,10 @@ export function MarketPanel() {
           <div className="flex justify-between px-3 py-2"><span>Liabilities<span className="block text-[11px] text-muted-foreground">{nw.liabilitiesBasis}</span></span><b className="font-mono">−{money(nw.liabilities)}</b></div>
           <div className="flex justify-between px-3 py-2 font-semibold"><span>Net worth · {nw.label}</span><span className="font-mono">{money(nw.net)}</span></div>
         </div>
+        {nw.duplicates.length > 0 && <p className="rounded-xl bg-secondary p-2 text-xs">Counted once from your demat statement: {nw.duplicates.join(", ")}</p>}
+        <p className="text-[11px] text-muted-foreground">Closing prices: {nw.closeJob?.lastSuccess ? `last saved ${nw.closeJob.lastSuccess.slice(0, 16).replace("T", " ")} UTC` : "not fetched yet"}{nw.closeJob?.status === "failed" ? ` · last attempt failed (${nw.closeJob.reason ?? "unknown"}) — earlier prices kept` : ""}</p>
+        {nw.dematRows.length > 0 && <details className="text-xs"><summary className="cursor-pointer text-muted-foreground">Demat holdings ({nw.dematRows.length})</summary>
+          <div className="mt-1 divide-y">{nw.dematRows.map((h) => <div key={h.id} className="flex justify-between gap-2 py-1"><span className="min-w-0 truncate">{h.name}<span className="block text-muted-foreground">{h.quantity} · {h.basis}</span></span><b className="font-mono">{money(h.value)}</b></div>)}</div></details>}
         {alerts.length > 0 && <ul className="space-y-1 rounded-xl bg-secondary p-3 text-xs">{alerts.map((a) => <li key={a}>{a}</li>)}</ul>}
         <div className="flex flex-wrap gap-2">
           <Button size="sm" variant="outline" onClick={() => setEdit(blank())}>Add holding</Button>
@@ -111,7 +115,7 @@ export function MarketPanel() {
         {books.snapshots.length > 0 && <details className="text-xs"><summary className="cursor-pointer text-muted-foreground">Valuation history ({books.snapshots.length})</summary>
           <table className="mt-2 w-full"><thead><tr className="text-muted-foreground"><th className="text-left">Date</th><th className="text-right">Portfolio</th><th className="text-right">Net worth</th></tr></thead>
             <tbody>{books.snapshots.slice(-24).reverse().map((s) => <tr key={s.date}><td>{s.date}</td><td className="text-right">{money(s.portfolio)}</td><td className="text-right">{money(s.netWorth)}</td></tr>)}</tbody></table></details>}
-        <p className="text-[11px] text-muted-foreground">Mutual fund NAVs come from AMFI (published daily). NSE/BSE share prices need an approved licensed provider — until then shares show the statement value or a price you enter, labelled as such. No prices are invented and trades are never placed.</p>
+        <p className="text-[11px] text-muted-foreground">Mutual fund NAVs come from AMFI (published daily). NSE/BSE shares use the official end-of-day closing price saved each weekday evening (never live); without one they show the statement value or a price you enter, labelled as such. No prices are invented and trades are never placed.</p>
       </div>
     </Fold>
   );
