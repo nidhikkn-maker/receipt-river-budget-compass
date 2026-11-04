@@ -3,7 +3,8 @@ import type { Expense, ExpenseInput } from "../expenses";
 import type { NewAccount } from "../store";
 import { decisionInput, type LineDecision } from "./classify";
 import type { AccountPlan } from "./plan";
-import type { StmtLine } from "./line";
+import type { AccountHint, StmtLine } from "./line";
+import type { AccountDetails } from "../ledger";
 
 /** Same recipe the statement cross-check already uses, so re-uploading a file never posts it twice. */
 export async function stableId(accountId: string, l: StmtLine): Promise<string> {
