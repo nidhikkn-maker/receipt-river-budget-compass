@@ -33,3 +33,19 @@ describe("v6 accuracy fixes", () => {
     expect(row!.depreciation).toBeCloseTo(((row!.opening - 10000) * row!.rate) / 100, 0);
   });
 });
+
+import { matchGstPayments, gstr9 } from "./gst";
+describe("GST payment matching", () => {
+  const liab = [{ period: "2026-04", amount: 5000 }];
+  it("rejects payments naming another GSTIN or outside the period window", () => {
+    const pays = [
+      { id: "a", date: "2026-05-15", amount: 5000, text: "GST CPIN 29ABCDE1234F1Z5" },
+      { id: "b", date: "2026-09-01", amount: 5000, text: "GST challan" },
+    ];
+    expect(matchGstPayments(liab, pays, { gstin: "33ABCDE1234F1Z5" })[0]!.paymentId).toBeNull();
+    expect(matchGstPayments(liab, [{ id: "c", date: "2026-05-18", amount: 5000, text: "GST CPIN 33ABCDE1234F1Z5" }], { gstin: "33ABCDE1234F1Z5" })[0]!.paymentId).toBe("c");
+  });
+  it("GSTR-9 working has no differences when no invoices", () => {
+    expect(gstr9([], "33ABCDE1234F1Z5", 2026).checks).toEqual([]);
+  });
+});
