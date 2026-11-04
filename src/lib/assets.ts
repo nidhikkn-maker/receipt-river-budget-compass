@@ -14,16 +14,16 @@ export interface Asset {
   cost: number;
   /** Date first put to use (YYYY-MM-DD). */
   inUse: string;
-  ownerEntityId?: string;
+  ownerEntityId?: string | undefined;
   /** Ownership share in percent (joint property). */
   sharePct: number;
   bookMethod: "slm" | "wdv";
   bookRatePct: number;
   /** Optional linked DocuRepo deed/invoice. */
-  docId?: string;
-  soldOn?: string;
+  docId?: string | undefined;
+  soldOn?: string | undefined;
   /** Rent expected per month for leased-out property. */
-  monthlyRent?: number;
+  monthlyRent?: number | undefined;
 }
 
 const r2 = (n: number) => Math.round(n * 100) / 100;
