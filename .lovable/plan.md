@@ -73,3 +73,21 @@ v6.1
 - §5 per-row status, real download time -> B5. §6 failure marks stale, never zero, reload after download -> B5. §7 automatic NAV refresh; source named accurately -> B5.
 - §9 ownership-aware demat, owner filter, reconciled bank values -> B5. §10, §11 valuation time and full quality summary on Wealth and Home -> B5. §12 allocation and flow-adjusted performance -> B5. §13 corporate actions, demat alerts, configurable threshold, flow-adjusted alerts -> B5.
 - §14, §15 combined tests and v2 evidence bundle -> B6. Live intraday prices and production schedules -> Needs you.
+
+## Batch 7 — Found in the extra passes (v6.0 §2, §4, §20, §24, §39, §41, §45, §46, §52–54)
+- Receipt photos on the Add expense page go through the same intake as Statement Desk (same reading, duplicate check and evidence store), so there is one way in.
+- Audited statements and past returns are read for carried-forward losses (year, type, amount), which go to review instead of being typed.
+- Real reconciliations: loan (lender statement balance, principal, interest and charges vs. ledger), supplier (statement vs. invoices, credit notes and payments), investment (statement quantities and transactions vs. records), and inter-company (matching entries between two companies, including within the business workspace).
+- Tenant balances carry forward from the lease start, so older arrears and advances are never lost.
+- Property costs link to the actual payment and bill, and feed property income/expense and GST.
+- Personal tax working excludes records belonging to companies. Each company's working includes its own investment gains.
+- Salary comes from Form 16 or payslips. TDS/TCS is read from uploaded Form 16, 26AS or AIS and proposed for confirmation.
+- House property: interest limited to the legal cap, and a loss is carried into total income or forward instead of being dropped.
+- Audit uses the same rent matching as Property (one receipt to one lease, full history, deposits and transfers included).
+- Audit findings keep their real company and financial year instead of defaulting to "Personal" and the current year.
+- The "Draft reports" tile counts drafts actually prepared and saved.
+
+## Pass record
+- Pass 1–2: section-level audits of v6.0 §§1–72 and v6.1 §§1–15.
+- Pass 3: requirement-by-requirement cross-check of v6.0 lines 1–560, 560–1128 and all of v6.1 against the code and this plan. v6.1 found nothing new. v6.0 found the items in Batch 7.
+- After building, a further full pass runs before the evidence pack, and any new finding is fixed in the same round.
