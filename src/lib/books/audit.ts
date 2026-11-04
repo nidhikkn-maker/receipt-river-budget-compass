@@ -16,6 +16,8 @@ import { leaseAlerts, tenantLedger } from "./property";
 import { pastRetention } from "./docrepo";
 import { openingProposal } from "./fy";
 import { REQUIRED_SCHEDULES } from "./intake";
+import { ledgerTaxPayments, obligations, type Obligation } from "./compliance";
+import type { FindingState } from "./types";
 
 export type IssueType = "Unreconciled bank" | "Classification" | "Missing invoice" | "Duplicate" | "Asset register" | "Depreciation" | "Property/rent" | "Tax" | "GST" | "Investment cost basis" | "Intercompany" | "Missing document" | "Profile" | "Opening balance";
 export interface AuditItem { key: string; type: IssueType; entity: string; account: string | null; fy: string | null; risk: "high" | "medium" | "low"; text: string; evidence: string; to: string }
@@ -60,10 +62,55 @@ export function continuousAudit(p: { today: string; entities: EntityProfile[]; a
     if (op.balanced === false) out.push({ key: `fybal:${r.id}`, type: "Opening balance", entity: ent(r.entityId), account: null, fy: r.fy, risk: "high", text: `FY ${r.fy}: audited balances differ by ${op.gap}`, evidence: "Audited statements", to: "/tax" });
     if (!r.confirmedOpening) out.push({ key: `fyopen:${r.id}`, type: "Opening balance", entity: ent(r.entityId), account: null, fy: r.fy, risk: "medium", text: `FY ${r.fy}: opening balances waiting for your confirmation`, evidence: "Audited statements", to: "/tax" });
   }
+  // Tax and GST [§52]: missing profiles, overdue filings and ledger tax payments not yet confirmed as credits.
+  for (const e of p.entities) {
+    const prof = p.books.taxProfiles.find((x) => x.entityId === e.id);
+    if (!prof) { out.push({ key: `taxprof:${e.id}`, type: "Tax", entity: e.name, account: null, fy, risk: "medium", text: `${e.name}: no tax profile, so filing obligations can't be worked out`, evidence: "Tax profiles", to: "/tax" }); continue; }
+    for (const o of entityObligations(p, e.id)) if (o.status === "overdue") out.push({ key: `oblig:${e.id}:${o.gstin ?? ""}:${o.form}:${o.period}`, type: o.form === "ITR" ? "Tax" : "GST", entity: e.name, account: null, fy: o.period.startsWith("FY ") ? o.period.slice(3) : fyOf(`${o.period}-01`), risk: "high", text: `${o.form} ${o.period}${o.gstin ? ` (${o.gstin})` : ""}: due ${o.due}, no filing evidence recorded`, evidence: o.basis, to: "/tax" });
+  }
+  const credited = new Set((p.books.taxCredits ?? []).map((c) => c.transactionId).filter(Boolean));
+  const unconfirmed = ledgerTaxPayments(p.entries, fy).filter((t) => !credited.has(t.id));
+  if (unconfirmed.length) out.push({ key: `taxpay:${fy}`, type: "Tax", entity: "All", account: null, fy, risk: "medium", text: `${unconfirmed.length} income-tax payment${unconfirmed.length > 1 ? "s" : ""} in the ledger not yet confirmed as tax credits`, evidence: "Bank debits naming a tax challan", to: "/tax" });
   const old = pastRetention(p.docs, p.today, p.books.retentionYears).length;
   if (old) out.push({ key: "retention", type: "Missing document", entity: "All", account: null, fy: null, risk: "low", text: `${old} document${old > 1 ? "s are" : " is"} past the retention period (review; nothing is deleted)`, evidence: "Retention policy", to: "/vault" });
   const order = { high: 0, medium: 1, low: 2 };
   return [...new Map(out.map((x) => [x.key, x])).values()].sort((a, b) => order[a.risk] - order[b.risk]);
+}
+
+type ObligationInput = { today: string; entities: EntityProfile[]; books: BooksData };
+/** Obligations for this and the previous financial year for one entity. */
+export function entityObligations(p: ObligationInput, entityId: string): Obligation[] {
+  const e = p.entities.find((x) => x.id === entityId); if (!e) return [];
+  const prof = p.books.taxProfiles.find((x) => x.entityId === entityId);
+  const cur = fyOf(p.today); const prev = `${Number(cur.slice(0, 4)) - 1}-${cur.slice(2, 4)}`;
+  return [prev, cur].flatMap((fy) => obligations({ entity: e, profile: prof, fy, today: p.today, gstFilings: p.books.gstFilings, fyRecords: p.books.fyRecords, rules: p.books.rules }));
+}
+
+/** Split derived findings by the owner's saved decision [§53]: open, or reviewed with its note. */
+export function withStates(items: AuditItem[], states: FindingState[] | undefined) {
+  const by = new Map((states ?? []).map((s) => [s.key, s]));
+  const open: AuditItem[] = [], reviewed: (AuditItem & { state: FindingState })[] = [];
+  for (const i of items) { const s = by.get(i.key); if (s && s.status !== "open") reviewed.push({ ...i, state: s }); else open.push(i); }
+  return { open, reviewed };
+}
+/** Record a decision; reopening keeps the history line. */
+export function setFindingState(states: FindingState[] | undefined, key: string, status: FindingState["status"], note: string, at: string): FindingState[] {
+  if (status !== "open" && note.trim().length < 3) throw new Error("Add a short note saying why");
+  return [...(states ?? []).filter((s) => s.key !== key), { key, status, note: note.trim(), at }];
+}
+
+export interface ApprovalEvent { at: string; what: string; detail: string }
+/** Every recorded approval and restricted action, newest first [§55–57]. Read from saved records only. */
+export function approvalHistory(b: BooksData): ApprovalEvent[] {
+  const out: ApprovalEvent[] = [];
+  for (const l of b.periodLog) out.push({ at: l.at, what: l.action === "closed" ? "Period closed" : "Period reopened", detail: l.reason });
+  for (const r of b.rules) if (r.approvedOn) out.push({ at: r.approvedOn, what: "Rule approved", detail: `${r.title} (${r.key} = ${r.value}, from ${r.effectiveFrom})` });
+  for (const j of b.journals) if (j.status === "posted" && j.postedOn) out.push({ at: j.postedOn, what: "Depreciation posted", detail: `${j.period} · ₹${j.amount.toLocaleString("en-IN")}` });
+  for (const f of b.fyRecords) if (f.confirmedOpening && f.confirmedOn) out.push({ at: f.confirmedOn, what: "Opening balances confirmed", detail: `FY ${f.fy}` });
+  for (const s of b.findings ?? []) out.push({ at: s.at.slice(0, 10), what: s.status === "open" ? "Finding reopened" : s.status === "resolved" ? "Finding resolved" : "Finding accepted", detail: `${s.key}${s.note ? ` — ${s.note}` : ""}` });
+  for (const d of b.ruleDecisions ?? []) out.push({ at: d.at.slice(0, 10), what: d.status === "approved" ? "Official notice taken up" : "Official notice dismissed", detail: d.changeId });
+  for (const c of b.taxCredits ?? []) out.push({ at: c.fy, what: "Tax credit recorded", detail: `${c.kind} ₹${c.amount.toLocaleString("en-IN")} · ${c.source}` });
+  return out.sort((a, b2) => b2.at.localeCompare(a.at));
 }
 
 /** Transfers across workspaces (personal ↔ business) without a matching counter-entry [§24]. */
@@ -80,7 +127,8 @@ export function groupBy(items: AuditItem[], by: "entity" | "account" | "fy" | "t
 }
 
 /** Readiness tiles from real data only [§54]. */
-export function readinessTiles(p: { accounts: Account[]; entries: Expense[]; items: AuditItem[]; books: BooksData; docsMissing: number; today: string }) {
+export function readinessTiles(p: { accounts: Account[]; entries: Expense[]; items: AuditItem[]; books: BooksData; docsMissing: number; today: string; obligations: Obligation[]; entitiesWithoutProfile: number }) {
+  const ended = p.obligations.filter((o) => o.status !== "filed" && o.status !== "upcoming");
   const live = p.accounts.filter((a) => !a.archived && ["savings", "current", "credit_card", "cash"].includes(a.kind));
   const reconciled = live.filter((a) => { const es = p.entries.filter((e) => e.accountId === a.id && e.statementRef); return es.length > 0 && es.every((e) => e.reconciledAt); }).length;
   return [
@@ -88,8 +136,9 @@ export function readinessTiles(p: { accounts: Account[]; entries: Expense[]; ite
     { label: "Open exceptions", value: String(p.items.length) },
     { label: "Missing evidence", value: String(p.docsMissing) },
     { label: "Closed periods", value: String(p.books.closedPeriods.length) },
-    { label: "Draft reports", value: String(p.books.gstInvoices.length ? 2 : 0) },
-    { label: "Pending tax preparation", value: String(p.books.taxProfiles.length ? p.items.filter((i) => i.type === "Tax" || i.type === "GST").length : 1) },
+    // Drafts prepared from saved records for periods that have ended and have no filing evidence yet.
+    { label: "Draft reports", value: String(ended.length) },
+    { label: "Pending tax preparation", value: String(p.entitiesWithoutProfile + p.obligations.filter((o) => o.status === "overdue").length) },
     { label: "Unverified balances", value: String(p.books.fyRecords.filter((r) => !r.confirmedOpening).length + p.entries.filter((e) => e.statementRef && !e.reconciledAt).length) },
     { label: "Required approvals", value: String(p.books.journals.filter((j) => j.status === "prepared").length + p.books.rules.filter((r) => r.status === "proposed").length + p.books.proposedFields.filter((f) => f.status === "proposed").length) },
   ];
