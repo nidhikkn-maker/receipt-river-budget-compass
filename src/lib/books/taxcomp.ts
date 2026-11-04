@@ -17,8 +17,10 @@ export interface TaxComputation {
   gross: number; lossesSetOff: number; total: number; notes: string[];
 }
 
-export function taxComputation(fy: string, entries: Expense[], assets: Asset[], leases: Lease[], gains: { sellDate: string; buyDate: string | null; gain: number | null }[], records: FyRecord[], entityId?: string): TaxComputation {
-  const inYear = entries.filter((e) => fyOf(e.date) === fy && !e.transferCounterpartOf);
+export function taxComputation(fy: string, entries: Expense[], assets: Asset[], leases: Lease[], gains: { sellDate: string; buyDate: string | null; gain: number | null }[], records: FyRecord[], entityId?: string, scope?: { accountIds: Set<string> }): TaxComputation {
+  // Per entity [§45]: only entries on that entity's mapped accounts and assets it owns.
+  const inYear = entries.filter((e) => fyOf(e.date) === fy && !e.transferCounterpartOf && (!scope || (!!e.accountId && scope.accountIds.has(e.accountId))));
+  if (scope && entityId) assets = assets.filter((a) => a.ownerEntityId === entityId);
   const income = inYear.filter((e) => e.txnType === "income");
   const text = (e: Expense) => `${e.title} ${e.merchant ?? ""} ${e.description} ${e.category}`;
   const tenants = leases.map((l) => l.tenant.toLowerCase()).filter((t) => t.length >= 3);
