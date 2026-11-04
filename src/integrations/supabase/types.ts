@@ -339,6 +339,36 @@ export type Database = {
           },
         ]
       }
+      demat_accounts: {
+        Row: {
+          broker: string
+          client_id: string
+          created_at: string
+          dp_id: string
+          holder: string
+          id: string
+          owner_id: string
+        }
+        Insert: {
+          broker?: string
+          client_id?: string
+          created_at?: string
+          dp_id?: string
+          holder?: string
+          id?: string
+          owner_id?: string
+        }
+        Update: {
+          broker?: string
+          client_id?: string
+          created_at?: string
+          dp_id?: string
+          holder?: string
+          id?: string
+          owner_id?: string
+        }
+        Relationships: []
+      }
       demo_sessions: {
         Row: {
           created_at: string
@@ -1653,6 +1683,59 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      security_holdings: {
+        Row: {
+          as_of: string | null
+          demat_id: string
+          gains: Json
+          id: string
+          isin: string
+          lots: Json
+          name: string
+          owner_id: string
+          quantity: number
+          sources: Json
+          statement_value: number | null
+          updated_at: string
+        }
+        Insert: {
+          as_of?: string | null
+          demat_id: string
+          gains?: Json
+          id?: string
+          isin: string
+          lots?: Json
+          name?: string
+          owner_id?: string
+          quantity?: number
+          sources?: Json
+          statement_value?: number | null
+          updated_at?: string
+        }
+        Update: {
+          as_of?: string | null
+          demat_id?: string
+          gains?: Json
+          id?: string
+          isin?: string
+          lots?: Json
+          name?: string
+          owner_id?: string
+          quantity?: number
+          sources?: Json
+          statement_value?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "security_holdings_demat_id_fkey"
+            columns: ["demat_id"]
+            isOneToOne: false
+            referencedRelation: "demat_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       statement_checkpoints: {
         Row: {
