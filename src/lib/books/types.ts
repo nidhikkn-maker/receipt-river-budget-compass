@@ -91,7 +91,7 @@ export interface Journal { id: string; assetId: string; period: string; amount: 
 /** Approval policy [§56–57]: which actions need an explicit owner approval before they take effect. */
 export const POLICY_ACTIONS = ["capitalise", "postDepreciation", "taxTreatment", "historicalCorrection", "finaliseAccounts", "closePeriod", "activateRule", "createEntity"] as const;
 export type PolicyAction = (typeof POLICY_ACTIONS)[number];
-export interface ApprovalPolicy { require: Record<PolicyAction, boolean>; capitalisationMin?: number | undefined }
+export interface ApprovalPolicy { require: Record<PolicyAction, boolean>; capitalisationMin?: number | undefined; /** Per company/person limit [§27]; falls back to capitalisationMin. */ capitalisationMinByEntity?: Record<string, number> | undefined }
 export const DEFAULT_POLICY: ApprovalPolicy = { require: { capitalise: true, postDepreciation: true, taxTreatment: true, historicalCorrection: true, finaliseAccounts: true, closePeriod: true, activateRule: true, createEntity: true } };
 
 /** Durable state of an audit finding [§53]: it stays open until resolved. */
@@ -211,7 +211,8 @@ export function cleanPolicy(v: unknown): ApprovalPolicy {
   const p = (v && typeof v === "object" ? v : {}) as Partial<ApprovalPolicy>;
   const req = { ...DEFAULT_POLICY.require };
   for (const k of POLICY_ACTIONS) if (typeof p.require?.[k] === "boolean") req[k] = p.require[k];
-  return { require: req, ...(fin(p.capitalisationMin) && p.capitalisationMin! >= 0 ? { capitalisationMin: p.capitalisationMin } : {}) };
+  const by = p.capitalisationMinByEntity && typeof p.capitalisationMinByEntity === "object" ? Object.fromEntries(Object.entries(p.capitalisationMinByEntity).filter(([, v]) => fin(v) && v >= 0)) : {};
+  return { require: req, ...(fin(p.capitalisationMin) && p.capitalisationMin! >= 0 ? { capitalisationMin: p.capitalisationMin } : {}), ...(Object.keys(by).length ? { capitalisationMinByEntity: by } : {}) };
 }
 export function requiresApproval(policy: ApprovalPolicy | undefined, action: PolicyAction): boolean {
   return (policy ?? DEFAULT_POLICY).require[action] !== false;

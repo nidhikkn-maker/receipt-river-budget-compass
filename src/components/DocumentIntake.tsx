@@ -135,7 +135,8 @@ export function DocumentIntake({ file, context, onClose, resume, replacesId }: {
   const v = (k: string, d: string | number | null | undefined) => edit[k] ?? (d == null ? "" : String(d));
   const optNum = (k: string, d: number | undefined) => { const s = edit[k]; if (s === undefined) return d; return s.trim() === "" || !Number.isFinite(Number(s)) ? undefined : Number(s); };
   const ownerSuggested = !!proposal && "ownerSuggested" in proposal && proposal.ownerSuggested;
-  const capMin = books.policy?.capitalisationMin;
+  const capOwner = proposal?.kind === "asset" ? proposal.asset?.ownerEntityId : undefined;
+  const capMin = (capOwner ? books.policy?.capitalisationMinByEntity?.[capOwner] : undefined) ?? books.policy?.capitalisationMin;
   const needCap = proposal?.kind === "asset" && !!proposal.asset && requiresApproval(books.policy, "capitalise");
   const belowCap = proposal?.kind === "asset" && !!proposal.asset && capMin != null && proposal.asset.cost < capMin;
 

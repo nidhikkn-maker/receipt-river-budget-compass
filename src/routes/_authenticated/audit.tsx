@@ -90,6 +90,18 @@ function Audit() {
 
       <Fold title="Approval policy" hint="What runs automatically, what asks first, what needs explicit approval">
         <div className="grid gap-3 text-sm sm:grid-cols-3">{POLICY.map((p) => <div key={p.level}><p className="font-semibold">{LEVEL[p.level]}</p><ul className="mt-1 list-disc pl-4 text-xs text-muted-foreground">{p.items.map((i) => <li key={i}>{i}</li>)}</ul></div>)}</div>
+        <div className="mt-3 space-y-1 text-xs"><p className="font-semibold">Capitalisation limit (purchases below this stay as expenses)</p>
+          {[{ id: "", name: "Default for everyone" }, ...(preferences.entities ?? [])].map((e) => {
+            const cur = e.id ? books.policy?.capitalisationMinByEntity?.[e.id] : books.policy?.capitalisationMin;
+            return <label key={e.id || "all"} className="flex items-center justify-between gap-2"><span className="min-w-0 truncate">{e.name}</span>
+              <Input aria-label={`Capitalisation limit ${e.name}`} className="h-8 w-32" inputMode="decimal" placeholder={e.id ? "Use default" : "Not set"} defaultValue={cur ?? ""} onBlur={async (x) => {
+                const raw = x.target.value.trim(); const n = raw === "" ? undefined : Number(raw);
+                if (n !== undefined && !(Number.isFinite(n) && n >= 0)) { toast.error("Enter a number"); return; }
+                const pol = books.policy ?? { require: {} as never };
+                const by = { ...(pol.capitalisationMinByEntity ?? {}) }; if (e.id) { if (n === undefined) delete by[e.id]; else by[e.id] = n; }
+                await save({ policy: { ...pol, ...(e.id ? { capitalisationMinByEntity: by } : { capitalisationMin: n }) } });
+              }} /></label>;
+          })}</div>
       </Fold>
 
       <Fold title="Approval history" hint={`${history.length} recorded decision${history.length === 1 ? "" : "s"}`}>
