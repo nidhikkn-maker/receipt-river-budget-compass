@@ -6,7 +6,7 @@ import { fyOf, yearsSince } from "@/lib/entities";
 import { taxDraft } from "@/lib/tax-summary";
 import { gstMonths } from "@/lib/receivables";
 import { estimateTax, rulesFor } from "@/lib/tax-rules";
-import { FyOnboarding, GstReturns, RulesRegister, TaxProfiles } from "@/components/books/TaxCentre";
+import { FyOnboarding, GstReturns, RulesRegister, TaxComputationCard, TaxProfiles } from "@/components/books/TaxCentre";
 
 export const Route = createFileRoute("/_authenticated/tax")({
   head: () => ({ meta: [
@@ -53,6 +53,7 @@ function Tax() {
         <p className="px-4 pb-3 text-xs text-muted-foreground">Invoice GST comes from Customers owing; bill GST is what's printed on business bills. Not a filed return.</p>
       </div>
       {d.billsMissing > 0 && <p className="text-sm">{d.billsMissing} business spends this year have no bill. <Link to="/gst-check" className="font-semibold text-primary underline">See them</Link></p>}
+      <TaxComputationCard fy={fy} />
       <TaxProfiles fy={fy} />
       <GstReturns fy={fy} />
       <FyOnboarding />

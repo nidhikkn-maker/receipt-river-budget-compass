@@ -13,7 +13,9 @@ import { REQUIRED_SCHEDULES } from "@/lib/books/intake";
 import { annualSummary, duplicateInvoices, gstr1, gstr3b, invoiceProblems, matchGstPayments, unfiledPeriods } from "@/lib/books/gst";
 import { activateRule, OFFICIAL_SOURCES, proposeRule, ruleOn, validateRule, formFor } from "@/lib/books/regulatory";
 import type { GstInvoice, OpeningHead, RuleArea, TaxProfile } from "@/lib/books/types";
-import { useBooks } from "./useBooks";
+import { useBooks, useDemat } from "./useBooks";
+import { taxComputation } from "@/lib/books/taxcomp";
+import { estimateTax, rulesFor } from "@/lib/tax-rules";
 
 const inr = (n: number) => "₹" + n.toLocaleString("en-IN", { maximumFractionDigits: 0 });
 const today = () => new Date().toISOString().slice(0, 10);
@@ -172,6 +174,25 @@ export function RulesRegister() {
             <Input aria-label="Open question" className="col-span-2" placeholder="Anything unclear? (blocks approval until cleared)" value={d.ambiguity} onChange={(e) => setD({ ...d, ambiguity: e.target.value })} />
             <Button size="sm" className="col-span-2" disabled={!d.key || !d.title || !d.value} onClick={async () => { const r = proposeRule(books.rules, { id: crypto.randomUUID(), area: d.area, key: d.key, title: d.title, value: d.value, sourceUrl: d.sourceUrl, publishedOn: d.publishedOn, effectiveFrom: d.effectiveFrom, appliesTo: [], ...(d.ambiguity ? { ambiguity: d.ambiguity } : {}) }); if (r.duplicate) { toast.message("This rule version is already recorded"); return; } await save({ rules: r.rules }); toast.success("Recorded as a proposal"); }}>Add as proposal</Button>
           </div></details>
+      </div>
+    </Fold>
+  );
+}
+
+export function TaxComputationCard({ fy }: { fy: string }) {
+  const { books, preferences } = useBooks();
+  const { transactions } = useStore();
+  const demat = useDemat();
+  const gains = (demat ?? []).flatMap((d) => d.holdings.flatMap((h) => h.gains));
+  const c = taxComputation(fy, transactions, preferences.assets ?? [], books.leases, gains, books.fyRecords);
+  const { rules } = rulesFor(fy);
+  const rows: [string, number][] = [["Salary", c.salary], ["House property (rent − 30% − home-loan interest)", c.houseProperty.net], ["Business / profession", c.business.net], ["Short-term capital gains", c.capitalGains.short], ["Long-term capital gains", c.capitalGains.long], ["Other sources (interest, dividends)", c.otherSources], ["Gross total income", c.gross], ["Losses brought forward set off", -c.lossesSetOff], ["Total income", c.total]];
+  return (
+    <Fold title="Tax computation by head" hint={`FY ${fy} · total income ${inr(c.total)}`}>
+      <div className="space-y-2 text-sm">
+        <div className="divide-y rounded-xl border">{rows.map(([k, v]) => <div key={k} className="flex justify-between px-3 py-2 text-xs"><span>{k}</span><b>{inr(v)}</b></div>)}</div>
+        <p className="text-xs">Indicative slab tax (individual, new regime): <b>{inr(estimateTax(c.total - c.capitalGains.long - c.capitalGains.short, rules))}</b> plus capital-gains tax at special rates.</p>
+        {c.notes.map((n) => <p key={n} className="text-[11px] text-muted-foreground">{n}</p>)}
       </div>
     </Fold>
   );
