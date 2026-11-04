@@ -13,6 +13,7 @@ import { REQUIRED_SCHEDULES } from "@/lib/books/intake";
 import { annualSummary, duplicateInvoices, gstr1, gstr3b, invoiceProblems, matchGstPayments, unfiledPeriods } from "@/lib/books/gst";
 import { activateRule, OFFICIAL_SOURCES, proposeRule, ruleOn, validateRule, formFor } from "@/lib/books/regulatory";
 import type { GstInvoice, OpeningHead, RuleArea, TaxProfile } from "@/lib/books/types";
+import { supabase } from "@/integrations/supabase/client";
 import { useBooks, useDemat } from "./useBooks";
 import { taxComputation } from "@/lib/books/taxcomp";
 import { estimateTax, rulesFor } from "@/lib/tax-rules";
@@ -145,14 +146,41 @@ export function GstReturns({ fy }: { fy: string }) {
   );
 }
 
+interface DetectedChange { id: string; url: string; summary: string; detected_at: string; proposals: unknown }
+/** Changes the weekly watch found on official pages, waiting for the owner to record or dismiss [§49–51]. */
+function useDetectedChanges() {
+  const [v, setV] = useState<{ changes: DetectedChange[]; job: { status: string; last_success: string | null; reason: string | null } | null }>({ changes: [], job: null });
+  useEffect(() => {
+    let live = true;
+    void Promise.all([
+      supabase.from("regulatory_changes").select("id,url,summary,detected_at,proposals").order("detected_at", { ascending: false }).limit(30),
+      supabase.from("job_state").select("status,last_success,reason").eq("name", "rule-watch").maybeSingle(),
+    ]).then(([c, j]) => { if (live) setV({ changes: (c.data ?? []) as DetectedChange[], job: j.data ?? null }); }).catch(() => undefined);
+    return () => { live = false; };
+  }, []);
+  return v;
+}
+
 export function RulesRegister() {
   const { books, save } = useBooks();
+  const detected = useDetectedChanges();
+  const decided = new Set((books.ruleDecisions ?? []).map((x) => x.changeId));
+  const open = detected.changes.filter((c) => !decided.has(c.id));
+  const decide = (id: string, status: "approved" | "dismissed") => save({ ruleDecisions: [...(books.ruleDecisions ?? []), { changeId: id, status, at: new Date().toISOString() }] });
   const [d, setD] = useState({ area: "income_tax" as RuleArea, key: "", title: "", value: "", sourceUrl: "", publishedOn: today(), effectiveFrom: today(), ambiguity: "" });
   const proposed = books.rules.filter((r) => r.status === "proposed");
   return (
     <Fold id="rules" title="Regulatory intelligence" hint={`${books.rules.filter((r) => r.status === "active").length} active · ${proposed.length} waiting for approval`}>
       <div className="space-y-3 text-sm">
         <div className="text-xs"><b>Official sources watched (read-only)</b>{OFFICIAL_SOURCES.map((s) => <a key={s.url} href={s.url} target="_blank" rel="noopener noreferrer" className="block text-primary underline">{s.name}</a>)}</div>
+        <p className="text-[11px] text-muted-foreground">Checked weekly: {detected.job?.last_success ? `last ${detected.job.last_success.slice(0, 10)}` : "not run yet"}{detected.job?.reason ? ` · ${detected.job.reason}` : ""}</p>
+        {open.map((c) => <div key={c.id} className="rounded-xl border border-primary/40 p-3 text-xs">
+          <p className="font-semibold">{c.summary} <span className="font-normal text-muted-foreground">· found {c.detected_at.slice(0, 10)}</span></p>
+          <ul className="ml-4 list-disc">{(Array.isArray(c.proposals) ? (c.proposals as string[]) : []).slice(0, 8).map((x) => <li key={x}>{x}</li>)}</ul>
+          <div className="mt-1 flex flex-wrap gap-1"><a href={c.url} target="_blank" rel="noopener noreferrer" className="text-primary underline">Open official page</a>
+            <Button size="sm" variant="outline" className="h-7" onClick={() => { setD({ ...d, sourceUrl: c.url, title: (Array.isArray(c.proposals) ? String((c.proposals as string[])[0] ?? "") : "").slice(0, 120) }); void decide(c.id, "approved"); toast.message("Fill in the rule key, value and effective date below, then add it as a proposal"); }}>Record as rule change</Button>
+            <Button size="sm" variant="ghost" className="h-7" onClick={() => void decide(c.id, "dismissed")}>Not relevant</Button></div>
+        </div>)}
         <p className="text-[11px] text-muted-foreground">A change is recorded as a proposal with its source and effective date, checked, and only applies after you approve it. Earlier years keep the rule that applied then; filed returns and closed years are never changed.</p>
         {books.rules.slice().reverse().map((r) => { const prev = ruleOn(books.rules.filter((x) => x.id !== r.id), r.key, r.effectiveFrom); const tests = validateRule(r); return <div key={r.id} className="rounded-xl border p-3 text-xs">
           <p className="font-semibold">{r.title} <span className={`ml-1 rounded-full px-2 ${r.status === "active" ? "bg-primary/10 text-primary" : "bg-secondary"}`}>{r.status}</span></p>
@@ -162,7 +190,7 @@ export function RulesRegister() {
             <div className="mt-1 flex gap-1"><Button size="sm" disabled={tests.some((t) => !t.passed)} onClick={async () => { try { await save({ rules: activateRule(books.rules, r.id, today()) }); toast.success("Rule approved and active from its effective date"); } catch (e) { toast.error((e as Error).message); } }}>Approve</Button>
               <Button size="sm" variant="ghost" onClick={() => save({ rules: books.rules.map((x) => (x.id === r.id ? { ...x, status: "rejected" } : x)) })}>Reject</Button></div></>}
         </div>; })}
-        <details><summary className="cursor-pointer text-muted-foreground">Record a rule change</summary>
+        <details open={Boolean(d.sourceUrl) || undefined}><summary className="cursor-pointer text-muted-foreground">Record a rule change</summary>
           <div className="mt-2 grid grid-cols-2 gap-2 text-xs">
             <select aria-label="Area" className="rounded-md border bg-background px-1" value={d.area} onChange={(e) => setD({ ...d, area: e.target.value as RuleArea })}>{["income_tax", "gst", "corporate", "depreciation", "return_format", "due_date", "property"].map((a) => <option key={a} value={a}>{a.replace("_", " ")}</option>)}</select>
             <Input aria-label="Rule key" placeholder="Key, e.g. gstr3b.due" value={d.key} onChange={(e) => setD({ ...d, key: e.target.value.trim() })} />
