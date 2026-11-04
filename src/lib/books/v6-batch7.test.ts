@@ -140,3 +140,11 @@ describe("plain-language document search", () => {
     expect(f.from).toBe("2025-04-01"); expect(f.to).toBe("2026-03-31"); expect(f.words).toEqual([]);
   });
 });
+
+import { valuationAlerts } from "./market";
+it("portfolio move alert ignores newly invested money", () => {
+  const a = { portfolioMovePct: 5, staleNavDays: 5, missingPrices: false, corporateActions: false, quantityMismatch: false, unusualValuationPct: 0 };
+  const s = (date: string, portfolio: number, invested: number) => ({ date, netWorth: 0, portfolio, liquid: 0, liabilities: 0, allocation: {}, invested });
+  expect(valuationAlerts([], [s("2026-05-01", 100000, 90000), s("2026-05-02", 150000, 140000)], a, {})).toEqual([]);
+  expect(valuationAlerts([], [s("2026-05-01", 100000, 90000), s("2026-05-02", 90000, 90000)], a, {})[0]).toMatch(/fell 10\.0%/);
+});

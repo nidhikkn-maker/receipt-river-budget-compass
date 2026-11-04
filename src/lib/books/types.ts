@@ -114,7 +114,7 @@ export interface Holding {
 /** v6.1 §5 — a price as delivered, never relabelled. */
 export type Freshness = "live" | "delayed" | "eod" | "nav" | "manual" | "statement";
 export interface Quote { key: string; price: number; at: string; provider: string; freshness: Freshness; refreshedAt: string; failedAt?: string | undefined }
-export interface Snapshot { date: Iso; netWorth: number; portfolio: number; liquid: number; liabilities: number; allocation: Record<string, number> }
+export interface Snapshot { date: Iso; netWorth: number; portfolio: number; liquid: number; liabilities: number; allocation: Record<string, number>; invested?: number | undefined }
 export interface AlertSettings { portfolioMovePct: number; staleNavDays: number; missingPrices: boolean; corporateActions: boolean; quantityMismatch: boolean; unusualValuationPct: number }
 export interface GoldRate { perGram24k: number; date: Iso; source: string }
 

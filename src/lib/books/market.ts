@@ -106,7 +106,9 @@ export function valuationAlerts(valued: Valued[], snapshots: Snapshot[], a: Aler
   for (const v of valued) if (v.stale && v.holding.kind === "mutual_fund") out.push(`${v.holding.name}: NAV older than ${a.staleNavDays} days`);
   if (snapshots.length >= 2) {
     const [p, c] = snapshots.slice(-2) as [Snapshot, Snapshot];
-    if (p.portfolio > 0) { const pct = ((c.portfolio - p.portfolio) / p.portfolio) * 100; if (Math.abs(pct) >= a.portfolioMovePct) out.push(`Portfolio moved ${pct.toFixed(1)}% since ${p.date}`); }
+    // Market move excludes money added or withdrawn between snapshots, so a new purchase is not an "increase" [v6.1 §13].
+    const flows = c.invested != null && p.invested != null ? c.invested - p.invested : 0;
+    if (p.portfolio > 0) { const pct = ((c.portfolio - p.portfolio - flows) / p.portfolio) * 100; if (Math.abs(pct) >= a.portfolioMovePct) out.push(`Portfolio ${pct >= 0 ? "rose" : "fell"} ${Math.abs(pct).toFixed(1)}% from market movement since ${p.date}${flows ? ` (₹${Math.round(flows).toLocaleString("en-IN")} of new money excluded)` : ""}`); }
   }
   if (a.quantityMismatch) {
     const held = new Map<string, { name: string; qty: number }>();
