@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { indexedDB } from "fake-indexeddb";
 import { localDrafts, putLocalDraft, type LocalDraft } from "./offline";
-import { removeFailedOfflineScans, removeOfflineScan } from "./offline-scan";
+import { removeFailedOfflineScans, removeOfflineScan, processOfflineScans } from "./offline-scan";
 
 globalThis.indexedDB = indexedDB;
 
@@ -56,5 +56,26 @@ describe("Removing offline receipt photos", () => {
 
     expect(await localDrafts("drop-owner")).toEqual([]);
     expect((await localDrafts("hold-owner")).map((d) => d.id)).toEqual(["shared-id"]);
+  });
+
+  it("doesn't bring a photo back when it is removed while its reading is still running", async () => {
+    const owner = "race-owner";
+    await putLocalDraft(owner, photo("raced", { error: "Couldn't connect", errorKind: "upload", attempts: 1 }));
+
+    let started = false;
+    let release!: () => void;
+    const gate = new Promise<void>((res) => { release = res; });
+    const run = processOfflineScans(owner, async () => {
+      started = true;
+      await gate;
+      return { ok: true, result: { merchant: "Cream Centre", amount: 2265, currency: "INR" } } as const;
+    });
+
+    while (!started) await new Promise((res) => setTimeout(res, 5));
+    expect(await removeOfflineScan(owner, "raced")).toBe(true);
+    release();
+    expect(await run).toBe(1); // the attempt still counts as read, but its photo is gone
+
+    expect(await localDrafts(owner)).toEqual([]);
   });
 });
