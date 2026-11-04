@@ -25,7 +25,7 @@ describe("§71 entity onboarding", () => {
     const { profile, matchedBy, missing } = proposeEntity(entityRead, [], "e1", "2026-11-04");
     expect(matchedBy).toBeNull();
     expect(profile).toMatchObject({ name: "KR Enterprises Private Limited", kind: "company", pan: "AAACK1234C", regNo: "U12345TN2020PTC123456", booksFrom: "2020-21", incorporatedOn: "2020-06-15" });
-    expect(missing).toEqual(["date put to use (confirm)", "useful life", "residual value"]);
+    expect(missing).toEqual([]);
   });
   it("2. re-uploading the same documents creates no duplicate", () => {
     const first = proposeEntity(entityRead, [], "e1", "2026-11-04").profile;
@@ -57,7 +57,7 @@ const car: Asset = { id: "a1", name: "Mercedes GLS", kind: "vehicle", cost: 1200
 describe("§71 assets & depreciation", () => {
   it("5. asset invoice generates a proposed asset", () => {
     const { asset, missing } = proposeAsset({ name: "Dell laptop", kind: "computer", owner: "KR Enterprises", cost: 150000, purchaseDate: "2026-05-10", supplier: "Dell", warrantyUntil: "2029-05-10", insurance: null, serial: "SN1" }, [ent], "a9", "d1");
-    expect(missing).toEqual([]);
+    expect(missing).toEqual(["date put to use (confirm)", "useful life", "residual value"]);
     expect(asset).toMatchObject({ name: "Dell laptop", kind: "computer", cost: 150000, inUse: "2026-05-10", ownerEntityId: "e1", docId: "d1", usefulLifeYears: 3 });
   });
   it("6. book and tax depreciation are calculated separately", () => {
