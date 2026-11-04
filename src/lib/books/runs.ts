@@ -5,7 +5,7 @@
  * retried save finds the copy it already stored instead of creating a second one.
  */
 import { supabase } from "@/integrations/supabase/client";
-import type { Json } from "@/integrations/supabase/types";
+import type { Database, Json } from "@/integrations/supabase/types";
 import type { Step } from "./intake";
 
 export type RunStatus = "running" | "waiting" | "failed" | "done" | "cancelled";
@@ -56,10 +56,10 @@ export async function startRun(id: string, file: File, context: string, extra: R
 }
 
 export async function updateRun(id: string, patch: { stage?: Step; status?: RunStatus; error?: string | null; documentId?: string | null; data?: RunData }): Promise<void> {
-  const row: Record<string, unknown> = { updated_at: new Date().toISOString() };
+  const row: Database["public"]["Tables"]["document_runs"]["Update"] = { updated_at: new Date().toISOString() };
   if (patch.stage) row["stage"] = patch.stage;
   if (patch.status) row["status"] = patch.status;
-  if (patch.error !== undefined) row["error"] = patch.error?.slice(0, 500) ?? null;
+  if (patch.error !== undefined) row["error"] = patch.error === null ? null : patch.error.slice(0, 500);
   if (patch.documentId !== undefined) row["document_id"] = patch.documentId;
   if (patch.data) row["data"] = patch.data as unknown as Json;
   const { error } = await supabase.from("document_runs").update(row).eq("id", id);
