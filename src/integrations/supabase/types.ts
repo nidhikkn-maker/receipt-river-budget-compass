@@ -1557,6 +1557,54 @@ export type Database = {
         }
         Relationships: []
       }
+      opening_postings: {
+        Row: {
+          entity_id: string
+          exceptions: Json
+          fy: string
+          id: string
+          lines: Json
+          opening_date: string
+          owner_id: string
+          posted_at: string
+          posted_by: string
+          source_doc_id: string | null
+          txn_ids: string[]
+          undone_at: string | null
+          undone_by: string | null
+        }
+        Insert: {
+          entity_id: string
+          exceptions?: Json
+          fy: string
+          id: string
+          lines?: Json
+          opening_date: string
+          owner_id?: string
+          posted_at?: string
+          posted_by?: string
+          source_doc_id?: string | null
+          txn_ids?: string[]
+          undone_at?: string | null
+          undone_by?: string | null
+        }
+        Update: {
+          entity_id?: string
+          exceptions?: Json
+          fy?: string
+          id?: string
+          lines?: Json
+          opening_date?: string
+          owner_id?: string
+          posted_at?: string
+          posted_by?: string
+          source_doc_id?: string | null
+          txn_ids?: string[]
+          undone_at?: string | null
+          undone_by?: string | null
+        }
+        Relationships: []
+      }
       passkey_challenges: {
         Row: {
           challenge: string
@@ -2314,6 +2362,18 @@ export type Database = {
         Args: { _batch: string; _owner: string; _rows: Json }
         Returns: number
       }
+      post_opening_balances: {
+        Args: {
+          _date: string
+          _doc: string
+          _entity: string
+          _exceptions: Json
+          _fy: string
+          _id: string
+          _lines: Json
+        }
+        Returns: string[]
+      }
       receive_claim_receipt: {
         Args: {
           expense_id: string
@@ -2391,6 +2451,7 @@ export type Database = {
       start_demo_workspace: { Args: { _label: string }; Returns: undefined }
       undo_category_change: { Args: { batch_id: string }; Returns: undefined }
       undo_financial_correction: { Args: { _id: string }; Returns: undefined }
+      undo_opening_balances: { Args: { _id: string }; Returns: undefined }
       undo_review_metadata: { Args: { _id: string }; Returns: undefined }
     }
     Enums: {
