@@ -148,6 +148,8 @@ export interface BooksData {
   entityAccounts?: Record<string, string[]> | undefined;
   /** Approved label → canonical field mappings [§15, §59]. */
   fieldMappings?: Record<string, string> | undefined;
+  /** TDS/TCS from Form 26AS/16/AIS and confirmed tax challans, per entity and FY [§46]. */
+  taxCredits?: TaxCredit[] | undefined;
 }
 
 export const DEFAULT_ALERTS: AlertSettings = { portfolioMovePct: 5, staleNavDays: 3, missingPrices: true, corporateActions: true, quantityMismatch: true, unusualValuationPct: 20 };
@@ -190,6 +192,7 @@ export function cleanBooks(raw: unknown): BooksData {
     ruleDecisions: arr<{ changeId: string; status: "approved" | "dismissed"; at: string }>(r["ruleDecisions"], (x) => typeof x.changeId === "string", 1000),
     entityAccounts: r["entityAccounts"] && typeof r["entityAccounts"] === "object" ? Object.fromEntries(Object.entries(r["entityAccounts"] as Record<string, unknown>).filter(([, v]) => Array.isArray(v)).map(([k, v]) => [k, (v as unknown[]).filter((s): s is string => typeof s === "string")])) : {},
     fieldMappings: r["fieldMappings"] && typeof r["fieldMappings"] === "object" ? Object.fromEntries(Object.entries(r["fieldMappings"] as Record<string, unknown>).filter(([, v]) => typeof v === "string")) as Record<string, string> : {},
+    taxCredits: arr<TaxCredit>(r["taxCredits"], (x) => typeof x.id === "string" && typeof x.entityId === "string" && typeof x.fy === "string" && fin(x.amount) && x.amount > 0 && ["tds", "tcs", "advance", "self_assessment"].includes(x.kind), 2000),
   };
 }
 

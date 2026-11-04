@@ -18,13 +18,28 @@ export function marketOpen(at: Date): boolean {
   return d >= 1 && d <= 5 && mins >= 555 && mins <= 930;
 }
 
-/** Stale when a refresh failed, or older than allowed for its kind. */
+/** Weekdays strictly after `from` up to and including `to` (exchange holidays not modelled). */
+export function businessDaysBetween(from: Date, to: Date): number {
+  let n = 0; const d = new Date(Date.UTC(from.getUTCFullYear(), from.getUTCMonth(), from.getUTCDate()));
+  const end = Date.UTC(to.getUTCFullYear(), to.getUTCMonth(), to.getUTCDate());
+  while (d.getTime() < end) { d.setUTCDate(d.getUTCDate() + 1); const w = d.getUTCDay(); if (w !== 0 && w !== 6) n++; }
+  return n;
+}
+
+/** Stale when a refresh failed, or older than allowed for its kind (prices: more than four business days). */
 export function isStale(q: Quote, now: Date, kind: Holding["kind"], staleNavDays: number): boolean {
   if (q.failedAt && q.failedAt > q.refreshedAt) return true;
   const ageH = (now.getTime() - Date.parse(q.at)) / 36e5;
   if (kind === "mutual_fund") return ageH > staleNavDays * 24;
-  if (q.freshness === "live" || q.freshness === "delayed") return marketOpen(now) ? ageH > 0.5 : ageH > 96;
-  return ageH > 96;
+  if ((q.freshness === "live" || q.freshness === "delayed") && marketOpen(now)) return ageH > 0.5;
+  return businessDaysBetween(new Date(q.at), now) > 4;
+}
+
+/** Statement quantity per ISIN summed across every demat account, so two accounts never overwrite each other. */
+export function quantityByIsin(accounts: { holdings: { isin: string; quantity: number }[] }[]): Record<string, number> {
+  const out: Record<string, number> = {};
+  for (const a of accounts) for (const h of a.holdings) if (h.isin) out[h.isin] = (out[h.isin] ?? 0) + h.quantity;
+  return out;
 }
 
 /** A failed refresh keeps the last valid price and marks it stale — never zero [v6.1 §6]. */
@@ -93,7 +108,11 @@ export function valuationAlerts(valued: Valued[], snapshots: Snapshot[], a: Aler
     const [p, c] = snapshots.slice(-2) as [Snapshot, Snapshot];
     if (p.portfolio > 0) { const pct = ((c.portfolio - p.portfolio) / p.portfolio) * 100; if (Math.abs(pct) >= a.portfolioMovePct) out.push(`Portfolio moved ${pct.toFixed(1)}% since ${p.date}`); }
   }
-  if (a.quantityMismatch) for (const v of valued) { const k = v.holding.isin; if (k && statementQty[k] != null && Math.abs(statementQty[k]! - v.holding.quantity) > 1e-6) out.push(`${v.holding.name}: ${v.holding.quantity} held vs ${statementQty[k]} on the latest statement`); }
-  if (a.unusualValuationPct > 0) for (const v of valued) if (v.value != null && v.holding.costBasis && Math.abs(v.value / v.holding.costBasis - 1) * 100 > a.unusualValuationPct * 5) out.push(`${v.holding.name}: value is far from cost — check the price`);
+  if (a.quantityMismatch) {
+    const held = new Map<string, { name: string; qty: number }>();
+    for (const v of valued) { const k = v.holding.isin; if (k) held.set(k, { name: held.get(k)?.name ?? v.holding.name, qty: (held.get(k)?.qty ?? 0) + v.holding.quantity }); }
+    for (const [k, h] of held) if (statementQty[k] != null && Math.abs(statementQty[k]! - h.qty) > 1e-6) out.push(`${h.name}: ${h.qty} held vs ${statementQty[k]} on the latest statement`);
+  }
+  if (a.unusualValuationPct > 0) for (const v of valued) if (v.value != null && v.holding.costBasis && Math.abs(v.value / v.holding.costBasis - 1) * 100 > a.unusualValuationPct) out.push(`${v.holding.name}: value is ${Math.round((v.value / v.holding.costBasis - 1) * 100)}% from cost — check the price`);
   return out;
 }
