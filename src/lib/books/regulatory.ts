@@ -12,7 +12,27 @@ export const OFFICIAL_SOURCES: { area: RuleArea; name: string; url: string }[] =
   { area: "due_date", name: "GST portal — news & updates", url: "https://www.gst.gov.in/newsandupdates" },
   { area: "corporate", name: "MCA — notifications & circulars", url: "https://www.mca.gov.in/content/mca/global/en/acts-rules/ebooks/notifications.html" },
   { area: "depreciation", name: "Income-tax Rules — Appendix I depreciation rates", url: "https://incometaxindia.gov.in/Pages/rules/income-tax-rules-1962.aspx" },
+  { area: "return_format", name: "GST portal — offline tools & return JSON formats", url: "https://www.gst.gov.in/download/returns" },
+  { area: "property", name: "TN Registration Dept — guideline values & stamp duty", url: "https://tnreginet.gov.in/portal/" },
+  { area: "property", name: "Income Tax — TDS on property (Form 26QB)", url: "https://incometaxindia.gov.in/Pages/i-am/nri/tds-on-sale-of-property.aspx" },
 ];
+
+/**
+ * Rule keys the calculations actually read [§50]. A proposal for one of these is tested by running the
+ * calculation with the old and new value on a sample, so approval sees the real effect.
+ */
+export const CALC_RULES: Record<string, { label: string; min: number; max: number; sample: (v: number) => string }> = {
+  "tax.hp_interest_cap": { label: "House-property interest / loss cap (₹)", min: 0, max: 10_000_000, sample: (v) => `Rent 3,00,000, interest 4,00,000 → house property ${Math.max(-v, 300000 * 0.7 - 400000).toLocaleString("en-IN")}` },
+  "cg.equity_months": { label: "Long-term holding for listed shares/equity funds (months)", min: 1, max: 120, sample: (v) => `Held 13 months → ${13 > v ? "long-term" : "short-term"}` },
+  "cg.other_months": { label: "Long-term holding for property/other assets (months)", min: 1, max: 120, sample: (v) => `Held 20 months → ${20 > v ? "long-term" : "short-term"}` },
+  "loss.carry_years": { label: "Years a business loss can be carried forward", min: 1, max: 20, sample: (v) => `Loss from 8 years ago → ${8 <= v ? "still available" : "expired"}` },
+};
+/** Approved value of a calculation rule on a date, else the built-in default. */
+export function calcValue(rules: RuleVersion[] | undefined, key: keyof typeof CALC_RULES | string, date: string, fallback: number): number {
+  const r = rules ? ruleOn(rules, key, date) : null;
+  const n = r ? Number(r.value.replace(/[,₹\s]/g, "")) : NaN;
+  return Number.isFinite(n) ? n : fallback;
+}
 
 /** Rule in force for a key on a date: the active version whose window contains it [§50, test 14]. */
 export function ruleOn(rules: RuleVersion[], key: string, date: string): RuleVersion | null {
@@ -35,7 +55,15 @@ export function validateRule(r: RuleVersion): { name: string; passed: boolean }[
     { name: "Effective date on or after publication", passed: r.effectiveFrom >= r.publishedOn || r.publishedOn === "" },
     { name: "Value stated", passed: r.value.trim().length > 0 },
     { name: "No open ambiguity", passed: !r.ambiguity?.trim() },
+    ...substantive(r),
   ];
+}
+function substantive(r: RuleVersion): { name: string; passed: boolean }[] {
+  const c = CALC_RULES[r.key];
+  if (!c) return [];
+  const n = Number(r.value.replace(/[,₹\s]/g, ""));
+  const ok = Number.isFinite(n) && n >= c.min && n <= c.max;
+  return [{ name: ok ? `Calculation check: ${c.sample(n)}` : `Value must be a number between ${c.min} and ${c.max} for ${c.label}`, passed: ok }];
 }
 
 /** Activating closes the previous version the day before; earlier years keep their old rule [§50]. */
