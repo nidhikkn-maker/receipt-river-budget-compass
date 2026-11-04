@@ -17,8 +17,8 @@ describe("receivables", () => {
       { id: "a", customer: "Acme", date: "2026-05-01", amount: 5000 },
       { id: "b", customer: "Acme", date: "2026-05-02", dueDate: "2026-05-20", amount: 5000 },
     ], [inc], "2026-05-30");
-    expect(s[0].paidBy?.id).toBe("i1");
-    expect(s[1].paidBy).toBeUndefined();
-    expect(s[1].overdueDays).toBe(10);
+    expect(s[0]!.paidBy?.id).toBe("i1");
+    expect(s[1]!.paidBy).toBeUndefined();
+    expect(s[1]!.overdueDays).toBe(10);
   });
 });

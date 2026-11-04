@@ -2,7 +2,7 @@
 import type { Expense } from "./expenses";
 
 export interface Receivable { id: string; customer: string; invoiceNo?: string; date: string; dueDate?: string; amount: number }
-export type ReceivableStatus = { r: Receivable; paidBy?: Expense; overdueDays: number };
+export type ReceivableStatus = { r: Receivable; paidBy: Expense | undefined; overdueDays: number };
 
 const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, "");
 
@@ -17,7 +17,7 @@ export function receivableStatus(list: Receivable[], entries: Expense[], today: 
   const income = entries.filter((e) => e.txnType === "income").sort((a, b) => a.date.localeCompare(b.date));
   return [...list].sort((a, b) => a.date.localeCompare(b.date)).map((r) => {
     const key = norm(r.customer);
-    const paidBy = income.find((e) => !used.has(e.id) && e.date >= r.date && Math.abs(e.amount - r.amount) <= 1 && key.length > 0 && norm(`${e.merchant ?? ""} ${e.note ?? ""}`).includes(key));
+    const paidBy = income.find((e) => !used.has(e.id) && e.date >= r.date && Math.abs(e.amount - r.amount) <= 1 && key.length > 0 && norm(`${e.merchant ?? ""} ${e.description ?? ""}`).includes(key));
     if (paidBy) used.add(paidBy.id);
     const due = r.dueDate ?? r.date;
     const overdueDays = paidBy ? 0 : Math.max(0, Math.round((Date.parse(today) - Date.parse(due)) / 86400000));
