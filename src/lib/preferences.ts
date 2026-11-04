@@ -185,6 +185,7 @@ export function normalizePreferences(raw: Partial<FinancePreferences> | null | u
   const order = (raw?.homeOrder ?? []).filter((x) => (HOME_SECTIONS as readonly string[]).includes(x));
   p.homeOrder = [...order, ...HOME_SECTIONS.filter((x) => !order.includes(x))];
   if (!Array.isArray(p.categories) || !p.categories.length) p.categories = d.categories;
+  if (!p.categories.some((c) => c.name === "Taxes and duties")) p.categories = [...p.categories, { name: "Taxes and duties", archived: false }];
   if (!Array.isArray(p.tags)) p.tags = d.tags;
   if (!Array.isArray(p.budgets)) p.budgets = [];
   if (!Array.isArray(p.homeHidden)) p.homeHidden = [];
