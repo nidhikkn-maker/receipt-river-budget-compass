@@ -34,10 +34,6 @@ export interface Asset {
   tenant?: string | undefined;
   leaseEnd?: string | undefined;
   deposit?: number | undefined;
-  /** From the purchase invoice [§27]. */
-  supplier?: string | undefined;
-  warrantyUntil?: string | undefined;
-  insurance?: string | undefined;
   /** Book policy inputs [§32]: useful life (years) and residual value (% of cost). */
   usefulLifeYears?: number | undefined;
   residualPct?: number | undefined;
