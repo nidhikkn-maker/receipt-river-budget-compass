@@ -49,7 +49,7 @@ export function booksHeads(p: { accounts: Account[]; txns: Txn[]; assets: Asset[
   const upTo = p.txns.filter((t) => t.date <= p.fyEnd);
   const sum = (kinds: string[], sign = 1) => { const xs = mine.filter((a) => kinds.includes(a.kind)); return xs.length ? r2(sign * xs.reduce((s, a) => s + accountBalance(a, upTo), 0)) : undefined; };
   const own = p.assets.filter((a) => a.ownerEntityId === p.entityId && a.inUse <= p.fyEnd && !(a.soldOn && a.soldOn <= p.fyEnd));
-  const out: Partial<Record<OpeningHead, number>> = {
+  const out: Partial<Record<OpeningHead, number | undefined>> = {
     bank: sum(["savings", "current"]), cash: sum(["cash"]), investments: sum(["investment", "fixed_deposit"]),
     receivables: sum(["other_asset"]), loans: sum(["loan"], -1), payables: sum(["other_liability", "credit_card"], -1),
     fixedAssets: own.length ? r2(own.reduce((s, a) => s + a.cost * (a.sharePct / 100), 0)) : undefined,

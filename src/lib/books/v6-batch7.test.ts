@@ -49,3 +49,13 @@ describe("GST payment matching", () => {
     expect(gstr9([], "33ABCDE1234F1Z5", 2026).checks).toEqual([]);
   });
 });
+
+import { booksHeads } from "./fy";
+describe("per-company opening balances", () => {
+  it("counts only the company's linked accounts and leaves unlinked heads empty", () => {
+    const accounts = [{ id: "b1", name: "Co bank", kind: "current", openingBalance: 1000 }, { id: "b2", name: "My bank", kind: "savings", openingBalance: 5000 }] as never[];
+    const h = booksHeads({ accounts, txns: [], assets: [], accountIds: new Set(["b1"]), entityId: "e1", fyEnd: "2026-03-31", fy: "2025-26" });
+    expect(h.bank).toBe(1000);
+    expect(h.loans).toBeUndefined();
+  });
+});
