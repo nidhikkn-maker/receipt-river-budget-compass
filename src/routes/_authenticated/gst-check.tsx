@@ -46,8 +46,8 @@ function GstCheck() {
         </div>
         {missing.length === 0 && <p className="text-sm text-muted-foreground">Every business spend in this range has a bill or document.</p>}
         {missing.slice(0, 50).map((e) => (
-          <Link key={e.id} to="/expenses" className="flex justify-between rounded-xl bg-secondary/50 px-3 py-2 text-sm">
-            <span>{e.merchant || e.title} · {e.date}</span><b>{inr(e.amount)}</b>
+          <Link key={e.id} to="/expenses" className="flex justify-between gap-2 rounded-xl bg-secondary/50 px-3 py-2 text-sm">
+            <span className="min-w-0 break-all">{e.merchant || e.title} · {e.date}</span><b className="shrink-0">{inr(e.amount)}</b>
           </Link>
         ))}
       </section>
@@ -60,13 +60,13 @@ function GstCheck() {
         {g2bResult && (<>
           <p className="text-sm">{g2bResult.rows.filter((r) => r.state === "matched").length} matched · {g2bResult.rows.filter((r) => r.state === "amount-differs").length} amount differs · {g2bResult.rows.filter((r) => r.state === "not-in-books").length} not in your books · {g2bResult.booksOnly.length} taxed bills the supplier hasn't filed</p>
           {g2bResult.rows.filter((r) => r.state !== "matched").slice(0, 50).map((r) => (
-            <div key={r.invoice.gstin + r.invoice.number} className="flex justify-between rounded-xl bg-secondary/50 px-3 py-2 text-sm">
-              <span>{r.invoice.supplier} · #{r.invoice.number} · {r.invoice.date}</span>
-              <span className={r.state === "not-in-books" ? "text-destructive" : ""}>{inr(r.invoice.value)} · {r.state === "not-in-books" ? "not in books" : "amount differs"}</span>
+            <div key={r.invoice.gstin + r.invoice.number} className="flex justify-between gap-2 rounded-xl bg-secondary/50 px-3 py-2 text-sm">
+              <span className="min-w-0 break-all">{r.invoice.supplier} · #{r.invoice.number} · {r.invoice.date}</span>
+              <span className={`shrink-0 text-right ${r.state === "not-in-books" ? "text-destructive" : ""}`}>{inr(r.invoice.value)} · {r.state === "not-in-books" ? "not in books" : "amount differs"}</span>
             </div>
           ))}
           {g2bResult.booksOnly.slice(0, 30).map((e) => (
-            <div key={e.id} className="flex justify-between rounded-xl bg-secondary/50 px-3 py-2 text-sm"><span>{e.merchant || e.title} · {e.date}</span><span>{inr(e.amount)} · supplier hasn't filed</span></div>
+            <div key={e.id} className="flex justify-between gap-2 rounded-xl bg-secondary/50 px-3 py-2 text-sm"><span className="min-w-0 break-all">{e.merchant || e.title} · {e.date}</span><span className="shrink-0 text-right">{inr(e.amount)} · supplier hasn't filed</span></div>
           ))}
         </>)}
       </section>
@@ -76,7 +76,7 @@ function GstCheck() {
         {suppliers.length === 0 && <p className="text-sm text-muted-foreground">No business spending yet.</p>}
         {suppliers.map((s) => (
           <div key={s.key} className="rounded-xl bg-secondary/50 px-3 py-2 text-sm">
-            <div className="flex justify-between"><span className="font-semibold">{s.name}</span><b>{inr(s.total)}</b></div>
+            <div className="flex justify-between gap-2"><span className="min-w-0 break-all font-semibold">{s.name}</span><b className="shrink-0">{inr(s.total)}</b></div>
             <p className="text-xs text-muted-foreground">{s.count} bills · {s.withBill} with invoice · GST on bills {inr(s.tax)} · {s.gstin ? `GSTIN ${s.gstin}` : "GSTIN not on file"}</p>
           </div>
         ))}
