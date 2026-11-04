@@ -1,4 +1,5 @@
 import type { AutopilotAction } from "./autopilot";
+import { normalizeNotificationSettings, type NotificationSettings } from "./notification-settings";
 import type { CoolingOffItem } from "./cooling-off";
 import type { ContractObligation } from "./contracts";
 import type { DecisionMemory } from "./memory";
@@ -82,6 +83,7 @@ export interface FinancePreferences {
   /** Workspace the Home overview focuses on; "all" shows everything. */
   homeScope: "all" | Scope;
   reminders: boolean;
+  notifications?: NotificationSettings;
   /** Days before a due date to start reminding. */
   reminderDays: number;
   /** Currency pre-selected for new entries. */
@@ -184,6 +186,7 @@ export function normalizePreferences(raw: Partial<FinancePreferences> | null | u
   p.travelMessages = Array.isArray(p.travelMessages) ? p.travelMessages.filter((m) => m && typeof m.id === "string" && typeof m.title === "string" && typeof m.text === "string").slice(-300) : [];
   if (!["daily", "executive", "minimal", "custom"].includes(p.homeMode)) p.homeMode = "custom";
   p.reminderDays = Number.isFinite(p.reminderDays) ? Math.min(30, Math.max(0, Math.round(p.reminderDays))) : d.reminderDays;
+  p.notifications = normalizeNotificationSettings(p.notifications);
   p.cardAlertPct = Number.isFinite(p.cardAlertPct) ? Math.min(100, Math.max(5, Math.round(p.cardAlertPct))) : d.cardAlertPct;
   p.tripBudgetWarnPct = Number.isFinite(p.tripBudgetWarnPct) ? Math.min(99, Math.max(10, Math.round(p.tripBudgetWarnPct))) : d.tripBudgetWarnPct;
   if (!/^[A-Z]{3}$/.test(p.defaultCurrency ?? "")) p.defaultCurrency = "INR";

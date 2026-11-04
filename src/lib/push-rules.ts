@@ -5,6 +5,7 @@ import { cardEmisOf, type PositionLoan } from "./position";
 import type { Account, Txn } from "./ledger";
 import { emiTargets } from "./emi-match";
 import { loanFundingReminders } from "./loan-funding";
+import { normalizeNotificationSettings, type NotificationSettings } from "./notification-settings";
 
 /** Restrict outbound sends even when a subscription was inserted directly through the Data API. */
 export function validPushEndpoint(endpoint: string): boolean {
@@ -23,17 +24,20 @@ export const pushSubscriptionSchema = z.object({
   userAgent: z.string().max(300).default(""),
 });
 
-export interface ReminderItem { key: string; date: string; kind: "payment" | "document" | "trip" }
+export interface ReminderItem { key: string; date: string; kind: "payment" | "document" | "trip" | "loanFunding" }
 export function paymentReminderItems(input: {
   today: string; leadDays: number; enabled: boolean; commitments: Commitment[]; loans: PositionLoan[];
   accounts: Account[]; transactions: Txn[]; documents: { id: string; expiresOn: string | null }[];
   trips?: TripReminderSource[];
+  notifications?: Partial<NotificationSettings>;
 }): ReminderItem[] {
   if (!input.enabled) return [];
+  const settings = normalizeNotificationSettings(input.notifications);
   const end = addDays(input.today, Math.min(30, Math.max(0, Math.round(input.leadDays))));
   const items: ReminderItem[] = [];
   const targets = emiTargets(input.loans.map(l => ({ id: l.id ?? l.name, name: l.name, emi: l.emi, nextDue: l.nextDue, accountId: l.accountId ?? null, status: l.status ?? "active", loanType: l.loanType ?? "personal" })), input.commitments, input.accounts);
-  items.push(...loanFundingReminders(targets, input.loans, input.transactions, input.today, input.leadDays).map(r => ({ key: r.key, date: r.due, kind: "payment" as const })));
+  if (settings.loanFunding) items.push(...loanFundingReminders(targets, input.loans, input.transactions, input.today, input.leadDays).map(r => ({ key: r.key, date: r.due, kind: "loanFunding" as const })));
+  if (settings.payments) {
   for (const c of input.commitments) if (c.status === "active" && c.direction === "out" && c.amount > 0 && c.nextDue <= end) items.push({ key: `commitment:${c.id}:${c.nextDue}`, date: c.nextDue, kind: "payment" });
   for (const l of input.loans) if (l.status !== "closed" && l.loanType !== "credit_card_emi" && l.emi > 0 && l.principal > 0 && l.nextDue <= end) items.push({ key: `loan:${l.id}:${l.nextDue}`, date: l.nextDue, kind: "payment" });
   const emis = cardEmisOf(input.loans);
@@ -41,8 +45,9 @@ export function paymentReminderItems(input: {
     const cycle = cardCycle(a, input.transactions, emis, input.today);
     if (cycle.remainingDue > 0 && cycle.dueDate && cycle.dueDate <= end) items.push({ key: `card:${a.id}:${cycle.dueDate}`, date: cycle.dueDate, kind: "payment" });
   }
-  for (const d of input.documents) if (d.expiresOn && d.expiresOn <= end) items.push({ key: `document:${d.id}:${d.expiresOn}`, date: d.expiresOn, kind: "document" });
-  items.push(...tripReminderItems(input.trips ?? [], input.today));
+  }
+  if (settings.documents) for (const d of input.documents) if (d.expiresOn && d.expiresOn <= end) items.push({ key: `document:${d.id}:${d.expiresOn}`, date: d.expiresOn, kind: "document" });
+  if (settings.trips) items.push(...tripReminderItems(input.trips ?? [], input.today));
   return items.sort((a,b) => a.date.localeCompare(b.date));
 }
 
@@ -61,6 +66,15 @@ export function tripReminderItems(trips: TripReminderSource[], today: string): R
 /** Lock-screen notifications deliberately omit names, amounts and account details. */
 export function privateReminderPayload(count: number, test = false) {
   return { title: "Ledgerline", body: test ? "Notifications are working on this device." : `${count} payment, renewal or trip reminder${count === 1 ? "" : "s"} to review.`, url: "/plan", tag: test ? "ledgerline-test" : "ledgerline-reminders" };
+}
+/** Funding warnings have their own daily claim: an earlier ordinary reminder must not suppress them. */
+export function reminderBatches(items: ReminderItem[], deviceId: string) {
+  const funding = items.filter(i => i.kind === "loanFunding");
+  const ordinary = items.filter(i => i.kind !== "loanFunding");
+  return [
+    ...(ordinary.length ? [{ key: `device:${deviceId}`, payload: privateReminderPayload(ordinary.length) }] : []),
+    ...(funding.length ? [{ key: `device:${deviceId}:loan-funding`, payload: { title: "Ledgerline", body: "A loan funding transfer needs review before the next payment.", url: "/plan", tag: "ledgerline-loan-funding" } }] : []),
+  ];
 }
 export interface CheckInSource { id: string; closedAt?: string | null; cancelledAt?: string | null; bookings?: { id: string; status: string; checkInAt?: string | null; reminderOff?: boolean }[] }
 /** Bookings whose saved check-in moment fell within the last `windowMin` minutes (inclusive of now). */
