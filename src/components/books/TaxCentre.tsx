@@ -16,6 +16,7 @@ import type { GstInvoice, OpeningHead, RuleArea, TaxProfile } from "@/lib/books/
 import { supabase } from "@/integrations/supabase/client";
 import { useBooks, useDemat } from "./useBooks";
 import { taxComputation } from "@/lib/books/taxcomp";
+import { CREDIT_LABEL, creditsFor, itcReview, ledgerTaxPayments, obligations, ruleImpact, type CreditKind } from "@/lib/books/compliance";
 import { estimateTax, rulesFor } from "@/lib/tax-rules";
 
 const inr = (n: number) => "₹" + n.toLocaleString("en-IN", { maximumFractionDigits: 0 });
@@ -62,6 +63,7 @@ export function FyOnboarding() {
 
 export function TaxProfiles({ fy }: { fy: string }) {
   const { books, save, preferences } = useBooks();
+  const { accounts } = useStore();
   const entities = preferences.entities ?? [];
   const upd = (p: TaxProfile) => save({ taxProfiles: [...books.taxProfiles.filter((x) => x.entityId !== p.entityId), p] });
   return (
@@ -78,6 +80,9 @@ export function TaxProfiles({ fy }: { fy: string }) {
               <label>GST scheme<select className="w-full rounded-md border bg-background px-1 py-1" value={p.gstScheme} onChange={(x) => upd({ ...p, gstScheme: x.target.value as "regular" })}><option value="none">Not registered</option><option value="regular">Regular (monthly)</option><option value="qrmp">QRMP (quarterly)</option><option value="composition">Composition</option></select></label>
               <label className="col-span-2 flex items-center gap-2"><input type="checkbox" checked={p.auditRequired} onChange={(x) => upd({ ...p, auditRequired: x.target.checked })} />Accounts audited</label>
             </div>
+            <details className="mt-1 text-xs"><summary className="cursor-pointer text-muted-foreground">Accounts belonging to {e.name} · {(books.entityAccounts?.[e.id] ?? []).length} linked</summary>
+              <div className="mt-1 grid gap-1 sm:grid-cols-2">{accounts.filter((a) => !a.archived).map((a) => { const mine = books.entityAccounts?.[e.id] ?? []; const other = Object.entries(books.entityAccounts ?? {}).find(([k, v]) => k !== e.id && v.includes(a.id)); return <label key={a.id} className={`flex items-center gap-2 ${other ? "opacity-50" : ""}`}><input type="checkbox" disabled={!!other} checked={mine.includes(a.id)} onChange={(x) => save({ entityAccounts: { ...(books.entityAccounts ?? {}), [e.id]: x.target.checked ? [...mine, a.id] : mine.filter((id) => id !== a.id) } })} />{a.name}{other ? " (another entity)" : ""}</label>; })}</div>
+              <p className="mt-1 text-[11px] text-muted-foreground">The tax working for {e.name} uses only entries on these accounts, so one entity's money never counts in another's return.</p></details>
             <p className="mt-1 text-xs text-muted-foreground">Obligations: {[f.form, p.auditRequired && (e.kind === "company" ? "Statutory audit + AOC-4/MGT-7" : "Tax audit (3CA/3CB-3CD) if applicable"), p.gstScheme === "regular" && "GSTR-1 + GSTR-3B monthly", p.gstScheme === "qrmp" && "GSTR-1/IFF + GSTR-3B quarterly", p.gstScheme === "composition" && "CMP-08 quarterly + GSTR-4", p.gstScheme !== "none" && "GSTR-9 annual"].filter(Boolean).join(" · ")}</p>
             <p className="text-[11px] text-muted-foreground">{f.note}</p>
           </div>;
@@ -99,15 +104,20 @@ export function GstReturns({ fy }: { fy: string }) {
   const [inv, setInv] = useState<GstInvoice | null>(null);
   const [filing, setFiling] = useState({ form: "GSTR-3B", arn: "", filedOn: today() });
   if (!gstins.length) return <Fold title="GST returns" hint="Add a GSTIN to a company first"><p className="text-sm text-muted-foreground">Add GSTINs on <Link to="/entities" className="underline">Companies & years</Link>.</p></Fold>;
-  const r1 = gstr1(books.gstInvoices, gstin, period), r3 = gstr3b(books.gstInvoices, gstin, period);
+  const owner = (preferences.entities ?? []).find((e) => e.gstins.includes(gstin));
+  const profile = books.taxProfiles.find((p) => p.entityId === owner?.id);
+  const itc = itcReview(books.gstInvoices, gstin, period);
+  const eligibleKeys = new Set(itc.lines.filter((l) => l.eligible).map((l) => `${l.invoice.partyGstin}|${l.invoice.number.trim().toUpperCase()}`));
+  const r1 = gstr1(books.gstInvoices, gstin, period), r3 = gstr3b(books.gstInvoices, gstin, period, eligibleKeys);
+  const due = owner ? obligations({ entity: owner, profile, fy, today: today(), gstFilings: books.gstFilings, fyRecords: books.fyRecords, rules: books.rules }).filter((o) => o.gstin === gstin) : [];
   const pay = matchGstPayments(months.map((m) => ({ period: m, amount: gstr3b(books.gstInvoices, gstin, m).netPayable })).filter((x) => x.amount > 0), transactions.filter((t) => (t.txnType ?? "expense") === "expense").map((t) => ({ id: t.id, date: t.date, amount: t.amount, text: `${t.title} ${t.merchant ?? ""} ${t.description}` })));
   const yr = annualSummary(books.gstInvoices, gstin, Number(fy.slice(0, 4)));
-  const unfiled = unfiledPeriods(books.gstFilings, gstin, "GSTR-3B", months);
+  const unfiled = profile ? due.filter((o) => o.status === "overdue" || o.status === "due") : unfiledPeriods(books.gstFilings, gstin, "GSTR-3B", months).map((m) => ({ form: "GSTR-3B", period: m }));
   const list = books.gstInvoices.filter((i) => i.gstin === gstin && i.date.startsWith(period));
   const dups = duplicateInvoices(books.gstInvoices.filter((i) => i.gstin === gstin));
   const n = (v: string) => Math.max(0, Number(v) || 0);
   return (
-    <Fold id="gst" title="GST returns (drafts)" hint={`${unfiled.length} month${unfiled.length === 1 ? "" : "s"} without filing evidence`}>
+    <Fold id="gst" title="GST returns (drafts)" hint={profile ? `${unfiled.length} return${unfiled.length === 1 ? "" : "s"} due or overdue · ${profile.gstScheme === "qrmp" ? "quarterly (QRMP)" : profile.gstScheme === "composition" ? "composition" : profile.gstScheme === "regular" ? "monthly" : "not registered"}` : "Set the filing scheme in the tax profile"}>
       <div className="space-y-3 text-sm">
         <div className="flex flex-wrap gap-2">
           <select aria-label="GSTIN" className="rounded-md border bg-background px-2 py-1" value={gstin} onChange={(e) => setGstin(e.target.value)}>{gstins.map((x) => <option key={x.g} value={x.g}>{x.name} · {x.g}</option>)}</select>
@@ -118,7 +128,11 @@ export function GstReturns({ fy }: { fy: string }) {
           <div className="rounded-xl border p-3 text-xs"><p className="font-semibold">GSTR-1 draft · {period}</p><p>B2B: {r1.b2b.count} invoices · taxable {inr(r1.b2b.taxable)} · tax {inr(r1.b2b.igst + r1.b2b.cgst + r1.b2b.sgst + r1.b2b.cess)}</p><p>B2C: {r1.b2c.count} invoices · taxable {inr(r1.b2c.taxable)}</p></div>
           <div className="rounded-xl border p-3 text-xs"><p className="font-semibold">GSTR-3B draft · {period}</p><p>Output tax {inr(r3.outputTax)} · ITC {inr(r3.itcClaimed)}</p><p className="font-semibold">Net payable {inr(r3.netPayable)}{r3.carryForward ? ` · credit carried ${inr(r3.carryForward)}` : ""}</p></div>
         </div>
-        <p className="text-[11px] text-muted-foreground">ITC here uses every purchase invoice entered; check it against GSTR-2B on <Link to="/gst-check" className="underline">Suppliers & invoices</Link> before filing. Annual FY {fy}: sales {inr(yr.sales)}, output tax {inr(yr.outputTax)}, purchases {inr(yr.purchases)}, input tax {inr(yr.inputTax)}.</p>
+        {!profile && <p className="text-xs text-destructive">No filing scheme recorded for this GSTIN — set it in the tax profile above so monthly or quarterly returns are worked out correctly.</p>}
+        {itc.lines.length > 0 && <details><summary className="cursor-pointer text-xs text-muted-foreground">Input tax credit review · {inr(itc.eligible)} claimable · {inr(itc.held)} held</summary>
+          {itc.lines.map((l) => <p key={l.invoice.id} className="break-words text-xs">{l.invoice.number} · {l.invoice.party} · {inr(l.tax)} — {l.eligible ? <span className="text-primary">claimable</span> : <span className="text-destructive">held: {l.reasons.join(", ")}</span>}</p>)}</details>}
+        {unfiled.length > 0 && <div className="text-xs"><b>Returns due</b>{unfiled.slice(0, 12).map((o) => <p key={`${o.form}${o.period}`}>{o.form} {o.period}{"due" in o ? ` · due ${String(o.due)}${o.status === "overdue" ? " (overdue)" : ""}` : ""}</p>)}</div>}
+        <p className="text-[11px] text-muted-foreground">ITC in the 3B draft counts only purchases with a valid supplier GSTIN and a clean tax split; confirm against the supplier-filed GSTR-2B on <Link to="/gst-check" className="underline">Suppliers & invoices</Link> before filing. Annual FY {fy}: sales {inr(yr.sales)}, output tax {inr(yr.outputTax)}, purchases {inr(yr.purchases)}, input tax {inr(yr.inputTax)}.</p>
         {pay.length > 0 && <div className="text-xs"><b>GST payments</b>{pay.map((p) => <p key={p.period}>{p.period}: {inr(p.amount)} — {p.paymentId ? `paid ${p.paidOn}` : <span className="text-destructive">no matching payment found</span>}</p>)}</div>}
         <details><summary className="cursor-pointer text-muted-foreground">Invoice register · {list.length} in {period}{dups.length ? ` · ${dups.length} duplicate number${dups.length > 1 ? "s" : ""}` : ""}</summary>
           {list.map((i) => <div key={i.id} className="flex justify-between gap-2 border-b py-1 text-xs"><span>{i.kind === "sales" ? "Sale" : "Purchase"} {i.number} · {i.party} {i.partyGstin}<span className="block text-destructive">{invoiceProblems(i).join(" · ")}</span></span><span>{inr(i.taxable)} + {inr(i.igst + i.cgst + i.sgst + i.cess)}<Button size="sm" variant="ghost" className="h-6" onClick={() => save({ gstInvoices: books.gstInvoices.filter((x) => x.id !== i.id) })}>Remove</Button></span></div>)}
@@ -162,12 +176,12 @@ function useDetectedChanges() {
 }
 
 export function RulesRegister() {
-  const { books, save } = useBooks();
+  const { books, save, preferences } = useBooks();
   const detected = useDetectedChanges();
   const decided = new Set((books.ruleDecisions ?? []).map((x) => x.changeId));
   const open = detected.changes.filter((c) => !decided.has(c.id));
   const decide = (id: string, status: "approved" | "dismissed") => save({ ruleDecisions: [...(books.ruleDecisions ?? []), { changeId: id, status, at: new Date().toISOString() }] });
-  const [d, setD] = useState({ area: "income_tax" as RuleArea, key: "", title: "", value: "", sourceUrl: "", publishedOn: today(), effectiveFrom: today(), ambiguity: "" });
+  const [d, setD] = useState({ area: "income_tax" as RuleArea, key: "", title: "", value: "", sourceUrl: "", publishedOn: today(), effectiveFrom: today(), ambiguity: "", appliesTo: [] as string[] });
   const proposed = books.rules.filter((r) => r.status === "proposed");
   return (
     <Fold id="rules" title="Regulatory intelligence" hint={`${books.rules.filter((r) => r.status === "active").length} active · ${proposed.length} waiting for approval`}>
@@ -186,8 +200,12 @@ export function RulesRegister() {
           <p className="font-semibold">{r.title} <span className={`ml-1 rounded-full px-2 ${r.status === "active" ? "bg-primary/10 text-primary" : "bg-secondary"}`}>{r.status}</span></p>
           <p>{r.key}: <b>{r.value}</b> from {r.effectiveFrom}{r.effectiveTo ? ` to ${r.effectiveTo}` : ""}{prev ? ` (was ${prev.value})` : ""}</p>
           <a href={r.sourceUrl} target="_blank" rel="noopener noreferrer" className="text-primary underline">Source</a> · published {r.publishedOn}
+          {r.status === "proposed" && (() => { const imp = ruleImpact(r, { entities: preferences.entities ?? [], closedPeriods: books.closedPeriods, fyRecords: books.fyRecords, gstFilings: books.gstFilings, today: today() }); return <div className="mt-1 rounded-lg bg-secondary/50 p-2">
+            <p>Affects: {imp.entities.length ? imp.entities.map((e) => e.name).join(", ") : "no saved company or person yet"} · FY {imp.years.join(", ")}</p>
+            {imp.protectedYears.map((y) => <p key={y.fy} className="text-destructive">FY {y.fy} keeps its earlier treatment ({y.why.join(", ")}) — nothing there is changed.</p>)}
+          </div>; })()}
           {r.status === "proposed" && <><ul className="mt-1">{tests.map((t) => <li key={t.name} className={t.passed ? "" : "text-destructive"}>{t.passed ? "✓" : "✗"} {t.name}</li>)}</ul>
-            <div className="mt-1 flex gap-1"><Button size="sm" disabled={tests.some((t) => !t.passed)} onClick={async () => { try { await save({ rules: activateRule(books.rules, r.id, today()) }); toast.success("Rule approved and active from its effective date"); } catch (e) { toast.error((e as Error).message); } }}>Approve</Button>
+            <div className="mt-1 flex gap-1"><Button size="sm" disabled={tests.some((t) => !t.passed)} onClick={async () => { const imp = ruleImpact(r, { entities: preferences.entities ?? [], closedPeriods: books.closedPeriods, fyRecords: books.fyRecords, gstFilings: books.gstFilings, today: today() }); if (imp.protectedYears.length && !window.confirm(`This rule reaches back into ${imp.protectedYears.map((y) => `FY ${y.fy}`).join(", ")}, which ${imp.protectedYears.length > 1 ? "are" : "is"} closed or filed. Those years will keep their earlier treatment. Approve for the open periods only?`)) return; try { await save({ rules: activateRule(books.rules, r.id, today()) }); toast.success("Rule approved and active from its effective date"); } catch (e) { toast.error((e as Error).message); } }}>Approve</Button>
               <Button size="sm" variant="ghost" onClick={() => save({ rules: books.rules.map((x) => (x.id === r.id ? { ...x, status: "rejected" } : x)) })}>Reject</Button></div></>}
         </div>; })}
         <details open={Boolean(d.sourceUrl) || undefined}><summary className="cursor-pointer text-muted-foreground">Record a rule change</summary>
@@ -199,8 +217,10 @@ export function RulesRegister() {
             <Input aria-label="Official source URL" className="col-span-2" placeholder="https://…gov.in/…" value={d.sourceUrl} onChange={(e) => setD({ ...d, sourceUrl: e.target.value.trim() })} />
             <label>Published<Input type="date" value={d.publishedOn} onChange={(e) => setD({ ...d, publishedOn: e.target.value })} /></label>
             <label>Effective from<Input type="date" value={d.effectiveFrom} onChange={(e) => setD({ ...d, effectiveFrom: e.target.value })} /></label>
+            {(preferences.entities ?? []).length > 0 && <div className="col-span-2"><p className="text-muted-foreground">Applies to (leave all unticked to decide by rule area)</p><div className="flex flex-wrap gap-2">{(preferences.entities ?? []).map((e) => <label key={e.id} className="flex items-center gap-1"><input type="checkbox" checked={d.appliesTo.includes(e.id)} onChange={(x) => setD({ ...d, appliesTo: x.target.checked ? [...d.appliesTo, e.id] : d.appliesTo.filter((i) => i !== e.id) })} />{e.name}</label>)}</div></div>}
+            <p className="col-span-2 text-[11px] text-muted-foreground">For a due-date change use the key <code>due.FORM</code> (e.g. due.GSTR-3B or due.ITR) with the new date as the value; the filing calendar then uses it from its effective date.</p>
             <Input aria-label="Open question" className="col-span-2" placeholder="Anything unclear? (blocks approval until cleared)" value={d.ambiguity} onChange={(e) => setD({ ...d, ambiguity: e.target.value })} />
-            <Button size="sm" className="col-span-2" disabled={!d.key || !d.title || !d.value} onClick={async () => { const r = proposeRule(books.rules, { id: crypto.randomUUID(), area: d.area, key: d.key, title: d.title, value: d.value, sourceUrl: d.sourceUrl, publishedOn: d.publishedOn, effectiveFrom: d.effectiveFrom, appliesTo: [], ...(d.ambiguity ? { ambiguity: d.ambiguity } : {}) }); if (r.duplicate) { toast.message("This rule version is already recorded"); return; } await save({ rules: r.rules }); toast.success("Recorded as a proposal"); }}>Add as proposal</Button>
+            <Button size="sm" className="col-span-2" disabled={!d.key || !d.title || !d.value} onClick={async () => { const r = proposeRule(books.rules, { id: crypto.randomUUID(), area: d.area, key: d.key, title: d.title, value: d.value, sourceUrl: d.sourceUrl, publishedOn: d.publishedOn, effectiveFrom: d.effectiveFrom, appliesTo: d.appliesTo, ...(d.ambiguity ? { ambiguity: d.ambiguity } : {}) }); if (r.duplicate) { toast.message("This rule version is already recorded"); return; } await save({ rules: r.rules }); toast.success("Recorded as a proposal"); }}>Add as proposal</Button>
           </div></details>
       </div>
     </Fold>
