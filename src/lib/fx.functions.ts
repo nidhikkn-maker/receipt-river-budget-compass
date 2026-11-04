@@ -65,7 +65,7 @@ export const saveExpense = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => SaveInput.parse(d))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
-    const receiptError = receiptBreakdownError(data.originalAmount, data.receiptDetails);
+    const receiptError = receiptBreakdownError(data.originalAmount, data.receiptDetails, data.currency);
     if (receiptError) return { ok: false as const, error: receiptError };
     if (data.receipts?.some((r) => !r.path.startsWith(`${userId}/`))) return { ok: false as const, error: "Invalid receipt" };
     if (data.splits.length) {

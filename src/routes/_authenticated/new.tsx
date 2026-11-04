@@ -26,7 +26,7 @@ import { tagValue } from "@/lib/preferences";
 import { duplicateBills } from "@/lib/bill-duplicates";
 import { suggestForEntry } from "@/lib/statement-pipeline/single-entry";
 import { buildReceiptAudit, receiptFingerprint, receiptFingerprintMatches, type ReceiptReadValues } from "@/lib/receipt-audit";
-import { receiptConfidence, receiptBreakdownError, receiptItemConfidence, receiptItemReviewReasons, receiptReviewCheck, receiptReviewSignature, unconfirmedFields, type ReceiptField, type ReadingConfidence } from "@/lib/receipt-reading";
+import { receiptConfidence, receiptBreakdownError, receiptRoundOff, receiptItemConfidence, receiptItemReviewReasons, receiptReviewCheck, receiptReviewSignature, unconfirmedFields, type ReceiptField, type ReadingConfidence } from "@/lib/receipt-reading";
 import { ReceiptZoomViewer } from "@/components/ReceiptZoomViewer";
 import { quickEntrySearch } from "@/lib/quick-entry";
 import { useStore } from "@/lib/store";
@@ -458,7 +458,7 @@ function NewExpense() {
       if (!res.ok) throw new Error(res.error);
       setStage({ kind: "receipt", at: 2 });
       const x = res.result;
-      setReceiptDetails({ subtotal: x.subtotal, tax: x.tax, tip: x.tip, confidence: receiptConfidence(x), items: x.items, text: x.text, fingerprint: first.fingerprint });
+      setReceiptDetails({ subtotal: x.subtotal, tax: x.tax, tip: x.tip, roundOff: x.round_off != null && Math.abs(x.round_off) <= 1 ? x.round_off : null, confidence: receiptConfidence(x), items: x.items, text: x.text, fingerprint: first.fingerprint });
       const filled = new Set<string>();
       if (x.title && (fresh || !title)) { setTitle(x.title); filled.add("title"); }
       const merchantHint = suggestForEntry({ date: isDate(x.date) ? x.date : date, amount: x.amount ?? 0, currency: x.currency ?? currency, txnType: "expense", text: [x.merchant, x.description].filter(Boolean).join(" "), accountId: accountId === "none" ? null : accountId }, { transactions: expenses, accounts, categories: preferences.categories }).category;
@@ -510,10 +510,13 @@ function NewExpense() {
 
   // Live receipt check: recomputed whenever an item, subtotal, tax, tip or the bill total is edited.
   const reviewTotal = Number(!confirmed && scan ? scan.amount : amount);
-  const review = useMemo(() => receiptReviewCheck(reviewTotal, receiptDetails), [reviewTotal, receiptDetails]);
+  const review = useMemo(() => receiptReviewCheck(reviewTotal, receiptDetails, currency), [reviewTotal, receiptDetails, currency]);
   const reviewSig = useMemo(() => receiptReviewSignature(reviewTotal, receiptDetails), [reviewTotal, receiptDetails]);
-  const reviewMessages = [receiptBreakdownError(reviewTotal, receiptDetails), review.itemTotalError].filter((m): m is string => !!m);
+  const reviewMessages = [receiptBreakdownError(reviewTotal, receiptDetails, currency), review.itemTotalError].filter((m): m is string => !!m);
 
+  const roundInfo = receiptRoundOff(reviewTotal, receiptDetails, currency);
+  const roundAmt = roundInfo.printed || roundInfo.implied;
+  const roundNote = roundAmt ? `Round-off ${roundAmt > 0 ? "+" : "−"}${Math.abs(roundAmt).toFixed(2)}${roundInfo.implied ? " (bill rounded to nearest whole amount)" : " (printed on bill)"}.` : "";
   const fieldValues: Record<ReceiptField, string> = { merchant: scan?.merchant.trim() ?? "", date: scan?.date ?? "", total: scan?.amount ?? "" };
   const fieldsToConfirm = unconfirmedFields(receiptDetails.confidence, fieldValues, fieldChecks);
   const FIELD_LABEL: Record<ReceiptField, string> = { merchant: "merchant", date: "date", total: "total" };
@@ -528,7 +531,7 @@ function NewExpense() {
     if (!scan.merchant.trim()) { toast.error("Enter the merchant"); return; }
     if (!(Number(scan.amount) > 0)) { toast.error("Enter an amount greater than zero"); return; }
     if (!isDate(scan.date)) { toast.error("Enter the date"); return; }
-    const breakdownError = receiptBreakdownError(Number(scan.amount), receiptDetails);
+    const breakdownError = receiptBreakdownError(Number(scan.amount), receiptDetails, currency);
     if (breakdownError) { toast.error(breakdownError); return; }
     if (fieldsToConfirm.length) { toast.error(`Confirm the ${fieldsToConfirm.map((f) => FIELD_LABEL[f]).join(", ")} — it was hard to read`); return; }
     if (!reviewApproved && review.needed && reviewApproval !== reviewSig) { setReviewDialog(true); return; }
@@ -599,7 +602,7 @@ function NewExpense() {
     if (!confirmed) { toast.error("Confirm the scanned bill details first"); return; }
     if (duplicateBlocked) { toast.error("Review the possible duplicate or skip this bill"); return; }
     if (receiptBlocked) { toast.error("This receipt is already used — review it or choose a different file"); return; }
-    const breakdownError = receiptBreakdownError(Number(amount), receiptDetails);
+    const breakdownError = receiptBreakdownError(Number(amount), receiptDetails, currency);
     if (breakdownError) { toast.error(breakdownError); return; }
     if (saving) return;
     setSaving(true); setSaveError("");
@@ -839,7 +842,7 @@ function NewExpense() {
               <div className="grid gap-1"><Label htmlFor="receipt-tax">Tax included</Label><Input id="receipt-tax" type="number" min="0" step="0.01" value={receiptDetails.tax ?? ""} onChange={e=>setReceiptDetails({...receiptDetails,tax:e.target.value===""?null:Number(e.target.value)})}/></div>
               <div className="grid gap-1"><Label htmlFor="receipt-tip">Tip included</Label><Input id="receipt-tip" type="number" min="0" step="0.01" value={receiptDetails.tip ?? ""} onChange={e=>setReceiptDetails({...receiptDetails,tip:e.target.value===""?null:Number(e.target.value)})}/></div>
             </div>
-            {reviewMessages.length > 0 ? <p role="alert" className="text-sm text-destructive">{reviewMessages.join(" ")}</p> : <p role="status" className="text-xs text-muted-foreground">{receiptDetails.subtotal == null ? "Subtotal not read — total comparison unavailable." : "Subtotal + tax + tip matches the total."}</p>}
+            {reviewMessages.length > 0 ? <p role="alert" className="text-sm text-destructive">{reviewMessages.join(" ")}</p> : <p role="status" className="text-xs text-muted-foreground">{receiptDetails.subtotal == null ? "Subtotal not read — total comparison unavailable." : "Subtotal + tax + tip matches the total."}{roundNote ? ` ${roundNote}` : ""}</p>}
             <div className="grid gap-1"><Label>Suggested category</Label><Select value={scanCategory} onValueChange={setScanCategory}><SelectTrigger aria-label="Receipt category"><SelectValue placeholder="Choose category" /></SelectTrigger><SelectContent>{categoryNames.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent></Select></div>
             {(receiptDetails.items?.length ?? 0) > 0 && <details open className="min-w-0 text-sm"><summary className="cursor-pointer font-semibold">Receipt items ({receiptDetails.items?.length}){review.items.length > 0 ? ` · ${review.items.length} need your check` : ""}</summary><p className="mt-1 text-xs text-muted-foreground">{review.items.length > 0 ? "Highlighted items were hard to read — check them before saving." : "Every item read clearly."}</p><div className="mt-2 max-h-72 space-y-3 overflow-y-auto">{(receiptDetails.items ?? []).map((item,i)=>{const flagged=review.items.includes(i);const reasons=receiptItemReviewReasons(item);return <div key={i} className={cn("grid min-w-0 grid-cols-2 gap-2",flagged?"rounded-2xl border-2 border-warning bg-warning/10 p-2":"border-b pb-3")}><div className="col-span-2"><Label htmlFor={`item-name-${i}`}>Item {i+1} name</Label><Input id={`item-name-${i}`} value={item.name} onChange={e=>setReceiptDetails({...receiptDetails,items:(receiptDetails.items ?? []).map((x,j)=>j===i?{...x,name:e.target.value}:x)})}/><ReadingIndicator field={`Item ${i+1} name confidence`} value={receiptItemConfidence(item).name}/></div><div><Label htmlFor={`item-quantity-${i}`}>Item {i+1} quantity</Label><Input id={`item-quantity-${i}`} type="number" min="0" value={item.quantity} onChange={e=>setReceiptDetails({...receiptDetails,items:(receiptDetails.items ?? []).map((x,j)=>j===i?{...x,quantity:Number(e.target.value)}:x)})}/></div><div><Label htmlFor={`item-amount-${i}`}>Item {i+1} amount</Label><Input id={`item-amount-${i}`} type="number" min="0" step="0.01" value={item.amount} onChange={e=>setReceiptDetails({...receiptDetails,items:(receiptDetails.items ?? []).map((x,j)=>j===i?{...x,amount:Number(e.target.value)}:x)})}/><ReadingIndicator field={`Item ${i+1} amount confidence`} value={receiptItemConfidence(item).amount}/></div>{flagged && <p role="status" className="col-span-2 text-xs font-semibold text-warning">Check the {reasons.join(" and ")} of this item</p>}<Button type="button" variant="ghost" size="sm" className="col-span-2 justify-self-end" aria-label={`Remove item ${i+1}`} onClick={()=>setReceiptDetails({...receiptDetails,items:(receiptDetails.items ?? []).filter((_,j)=>j!==i)})}><X className="h-4 w-4"/>Remove</Button></div>;})}</div></details>}
             {includeItems && !receiptDetails.items?.length && <p className="text-xs text-muted-foreground">No readable receipt items found.</p>}
