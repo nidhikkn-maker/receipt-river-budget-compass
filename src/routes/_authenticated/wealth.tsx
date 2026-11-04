@@ -15,6 +15,7 @@ import { money } from "@/lib/expenses";
 import { useStore } from "@/lib/store";
 import { CardDetails, GoalsPanel, LoansPanel } from "@/components/WealthPanels";
 import { FundPortfolio } from "@/components/FundPortfolio";
+import { DematHoldings } from "@/components/DematHoldings";
 
 export const Route = createFileRoute("/_authenticated/wealth")({
   head: () => ({
@@ -51,6 +52,7 @@ function Wealth() {
       </div>
 
       <FundPortfolio />
+      <DematHoldings />
       <div className="grid gap-5 lg:grid-cols-[1.4fr_1fr]">
         <section className="min-w-0 space-y-2">
           <div className="flex items-center justify-between">

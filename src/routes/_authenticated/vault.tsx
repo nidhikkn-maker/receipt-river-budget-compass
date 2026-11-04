@@ -17,7 +17,7 @@ import { useStore } from "@/lib/store";
 import { money, type Expense } from "@/lib/expenses";
 import { DOC_TYPES, DOC_LABEL, expiringDocuments, searchVault, vaultItems, type DocType, type VaultItem } from "@/lib/documents";
 import { todayISO } from "@/lib/use-position";
-export const Route=createFileRoute("/_authenticated/vault")({head:()=>({meta:[{title:"Document vault — Ledgerline"},{name:"description",content:"Search receipts and upload linked financial documents."},{property:"og:title",content:"Document vault — Ledgerline"},{property:"og:description",content:"Receipts, statements, insurance and warranties with renewal dates."},{property:"og:type",content:"website"},{name:"twitter:card",content:"summary"}]}),component:Vault});
+export const Route=createFileRoute("/_authenticated/vault")({head:()=>({meta:[{title:"DocuRepo — Ledgerline"},{name:"description",content:"Search receipts and upload linked financial documents."},{property:"og:title",content:"DocuRepo — Ledgerline"},{property:"og:description",content:"Receipts, statements, insurance and warranties with renewal dates."},{property:"og:type",content:"website"},{name:"twitter:card",content:"summary"}]}),component:Vault});
 function Vault() {
   const { transactions, documents, accounts, loans, addDocument, updateDocument, removeDocument, signedUrl, preferences, savePreferences } = useStore();
   const [found, setFound] = useState<ExtractedDocument["obligations"]>([]);
@@ -63,7 +63,7 @@ function Vault() {
     const a = document.createElement("a"); a.href = url; a.target = "_blank"; a.rel = "noopener noreferrer"; a.click();
   };
   return <>
-    <PageTitle eyebrow="Documents" title="Document vault" />
+    <PageTitle eyebrow="Documents" title="DocuRepo" />
     <NoticeDeadlines />
     {expires.length > 0 && <div className="mb-4 border-l-4 border-destructive bg-secondary p-3 text-sm">{expires.map(d => <p key={d.id}>{d.title} · expires {d.expiresOn}</p>)}</div>}
     <div className="mb-5 grid gap-3 sm:grid-cols-4">

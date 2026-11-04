@@ -35,7 +35,7 @@ const LINKS = [
   { to: "/connections", label: "Links", icon: Network },
   { to: "/family", label: "Family", icon: Users },
   { to: "/trips", label: "Trips", icon: Plane },
-  { to: "/vault", label: "Vault", icon: FileText },
+  { to: "/vault", label: "DocuRepo", icon: FileText },
   { to: "/settings", label: "Settings", icon: Settings },
 ] as const;
 
@@ -55,10 +55,11 @@ const MORE_GROUPS: { title: string; items: { to: string; label: string; icon: ty
     { to: "/transfers", label: "Internal transfers", icon: Inbox },
     { to: "/review", label: "Monthly review", icon: HeartPulse },
     { to: "/search", label: "Search everything", icon: Search },
-    { to: "/vault", label: "Document vault", icon: FileText },
+    { to: "/vault", label: "DocuRepo", icon: FileText },
   ] },
   { title: "Insights", items: [
     { to: "/reports", label: "Reports & PDFs", icon: BarChart3 },
+    { to: "/assistant", label: "AI assistant", icon: Sparkles },
     { to: "/brief", label: "Weekly brief", icon: Sparkles },
     { to: "/connections", label: "Money map", icon: Network },
   ] },
@@ -181,13 +182,13 @@ export function AppShell({ children }: { children: ReactNode }) {
           <Home className="h-5 w-5" />Home
         </Link>
         <Link to="/expenses" className="flex flex-1 flex-col items-center gap-0.5 rounded-2xl py-1.5 text-[10px] font-semibold" activeProps={{ className: "!text-gold" }}>
-          <ListFilter className="h-5 w-5" />Activity
+          <ListFilter className="h-5 w-5" />Money
         </Link>
         <Link to="/new" aria-label="Add entry" className="flex flex-1 flex-col items-center">
           <span className="-mt-8 flex h-14 w-14 items-center justify-center rounded-full bg-gold-hero text-gold-foreground shadow-gold transition active:scale-95"><Plus className="h-7 w-7" /></span>
         </Link>
-        <Link to="/assistant" className="flex flex-1 flex-col items-center gap-0.5 rounded-2xl py-1.5 text-[10px] font-semibold" activeProps={{ className: "!text-gold" }}>
-          <Sparkles className="h-5 w-5" />AI
+        <Link to="/inbox" className="flex flex-1 flex-col items-center gap-0.5 rounded-2xl py-1.5 text-[10px] font-semibold" activeProps={{ className: "!text-gold" }}>
+          <Inbox className="h-5 w-5" />Inbox
         </Link>
         <button type="button" onClick={() => setMoreOpen(true)} aria-label="More modules" aria-expanded={moreOpen} className="flex flex-1 flex-col items-center gap-0.5 rounded-2xl py-1.5 text-[10px] font-semibold">
           <Menu className="h-5 w-5" />More
