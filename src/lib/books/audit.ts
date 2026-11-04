@@ -137,7 +137,7 @@ export function readinessTiles(p: { accounts: Account[]; entries: Expense[]; ite
     { label: "Missing evidence", value: String(p.docsMissing) },
     { label: "Closed periods", value: String(p.books.closedPeriods.length) },
     // Drafts prepared from saved records for periods that have ended and have no filing evidence yet.
-    { label: "Draft reports", value: String(ended.length) },
+    { label: "Draft reports", value: `${(p.books.savedDrafts ?? []).length} saved · ${ended.length} needed` },
     { label: "Pending tax preparation", value: String(p.entitiesWithoutProfile + p.obligations.filter((o) => o.status === "overdue").length) },
     { label: "Unverified balances", value: String(p.books.fyRecords.filter((r) => !r.confirmedOpening).length + p.entries.filter((e) => e.statementRef && !e.reconciledAt).length) },
     { label: "Required approvals", value: String(p.books.journals.filter((j) => j.status === "prepared").length + p.books.rules.filter((r) => r.status === "proposed").length + p.books.proposedFields.filter((f) => f.status === "proposed").length) },

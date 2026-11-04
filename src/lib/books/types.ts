@@ -154,7 +154,10 @@ export interface BooksData {
   fieldMappings?: Record<string, string> | undefined;
   /** TDS/TCS from Form 26AS/16/AIS and confirmed tax challans, per entity and FY [§46]. */
   taxCredits?: TaxCredit[] | undefined;
+  /** Return drafts actually prepared and saved (frozen working, not filings). */
+  savedDrafts?: SavedDraft[] | undefined;
 }
+export interface SavedDraft { id: string; form: string; period: string; ref: string; createdAt: string; data: unknown }
 
 export const DEFAULT_ALERTS: AlertSettings = { portfolioMovePct: 5, staleNavDays: 3, missingPrices: true, corporateActions: true, quantityMismatch: true, unusualValuationPct: 20 };
 
@@ -196,6 +199,7 @@ export function cleanBooks(raw: unknown): BooksData {
     ruleDecisions: arr<{ changeId: string; status: "approved" | "dismissed"; at: string }>(r["ruleDecisions"], (x) => typeof x.changeId === "string", 1000),
     entityAccounts: r["entityAccounts"] && typeof r["entityAccounts"] === "object" ? Object.fromEntries(Object.entries(r["entityAccounts"] as Record<string, unknown>).filter(([, v]) => Array.isArray(v)).map(([k, v]) => [k, (v as unknown[]).filter((s): s is string => typeof s === "string")])) : {},
     fieldMappings: r["fieldMappings"] && typeof r["fieldMappings"] === "object" ? Object.fromEntries(Object.entries(r["fieldMappings"] as Record<string, unknown>).filter(([, v]) => typeof v === "string")) as Record<string, string> : {},
+    savedDrafts: arr<SavedDraft>(r["savedDrafts"], (x) => typeof x.id === "string" && typeof x.form === "string" && typeof x.period === "string", 500),
     taxCredits: arr<TaxCredit>(r["taxCredits"], (x) => typeof x.id === "string" && typeof x.entityId === "string" && typeof x.fy === "string" && fin(x.amount) && x.amount > 0 && ["tds", "tcs", "advance", "self_assessment"].includes(x.kind), 2000),
   };
 }
