@@ -27,7 +27,7 @@ export function BankBalanceEditor({ account }: { account: Account }) {
         const recorded = balanceAsOf(account, transactions, date);
         if (!await confirmAction({ title: "Confirm bank balance", message: `${account.name} on ${date}: ${money(recorded)} → ${money(actual)}. This records a balance adjustment, not income or an EMI payment.`, confirmLabel: "Confirm balance" })) return;
         await adjustBalance(account, actual, date);
-        await updateAccount(account.id, { details: { ...account.details, needsBalance: false, balanceConfirmedOn: date } as Account["details"] });
+        await updateAccount(account.id, { details: { ...account.details, needsBalance: false, balanceConfirmedOn: date } as NonNullable<Account["details"]> });
         toast.success("Bank balance updated"); setAmount("");
       } catch (err) { setError(err instanceof Error ? err.message : "Balance update failed. Please retry."); }
       finally { setBusy(false); }

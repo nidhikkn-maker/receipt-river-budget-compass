@@ -26,7 +26,7 @@ describe("City Union Bank balance coverage", () => {
     expect(paymentReadiness({ accounts: [bank], transactions: [transfer], commitments: [emi], today: "2026-11-04" })[0]?.shortfall).toBe(13);
   });
   it("unknown starting balance never certifies coverage", () => {
-    const unknown = { ...bank, details: { needsBalance: true } as Account["details"] };
+    const unknown = { ...bank, details: { needsBalance: true } as NonNullable<Account["details"]> };
     expect(bankBalanceKnown(unknown)).toBe(false);
     expect(paymentReadiness({ accounts: [unknown], transactions: [transfer], commitments: [emi], today: "2026-11-04" })[0]?.status).toBe("unknown");
   });
@@ -37,7 +37,7 @@ describe("City Union Bank balance coverage", () => {
 });
 describe("Funding transfer reminders", () => {
   it("chooses CUB EMI rather than similarly priced IDFC funding commitment", () => {
-    const accounts = [{ ...bank, details: { fundsLoan: "gls", fundedFrom: "idfc", fundingDay: 3 } as Account["details"] }];
+    const accounts = [{ ...bank, details: { fundsLoan: "gls", fundedFrom: "idfc", fundingDay: 3 } as NonNullable<Account["details"]> }];
     const targets = emiTargets([loan], [{ ...emi, name: "Auto transfer to CUB savings (GLS EMI)", accountId: "idfc", amount: 313900 }, emi], accounts);
     expect(targets[0]?.payFromAccountId).toBe("cub");
     expect(targets[0]?.fundingFromAccountId).toBe("idfc");
@@ -57,7 +57,7 @@ describe("Funding transfer reminders", () => {
   });
   it("stops after recorded EMI payment", () => expect(reminders([{ id: "paid", txnType: "loan_repayment", amount: 313913, date: "2026-11-05", accountId: "cub", toAccountId: "loan" }], "2026-11-05")).toEqual([]));
   it("shares the funding warning with private push and respects reminder switch", () => {
-    const input = { today: "2026-11-04", leadDays: 3, enabled: true, commitments: [emi], accounts: [{ ...bank, details: { fundedFrom: "idfc", fundingDay: 3 } as Account["details"] }], loans: [loan], transactions: [transfer], documents: [] };
+    const input = { today: "2026-11-04", leadDays: 3, enabled: true, commitments: [emi], accounts: [{ ...bank, details: { fundedFrom: "idfc", fundingDay: 3 } as NonNullable<Account["details"]> }], loans: [loan], transactions: [transfer], documents: [] };
     expect(paymentReminderItems(input).some(i => i.key === "loan-funding:gls:2026-11-05")).toBe(true);
     expect(paymentReminderItems({ ...input, enabled: false })).toEqual([]);
   });
