@@ -1,3 +1,4 @@
+import { describeHeadline } from "@/lib/books/rule-watch";
 import { createFileRoute } from "@tanstack/react-router";
 import { authenticateCronRequest } from "@/integrations/supabase/cron-auth";
 import { OFFICIAL_SOURCES } from "@/lib/books/regulatory";
@@ -26,7 +27,7 @@ export const Route = createFileRoute("/api/public/jobs/rule-watch")({
             if (prev.data?.fingerprint === fp) { report[id] = "unchanged"; continue; }
             const added = newHeadlines(prev.data ? prev.data.excerpt.split("\n") : null, lines);
             await supabaseAdmin.from("regulatory_snapshots").upsert({ source_id: id, url: s.url, fingerprint: fp, excerpt: lines.join("\n").slice(0, 20000) }, { onConflict: "source_id,fingerprint" });
-            if (added.length) await supabaseAdmin.from("regulatory_changes").upsert({ source_id: id, url: s.url, previous_fingerprint: prev.data?.fingerprint ?? null, fingerprint: fp, summary: `${s.name}: ${added.length} new item${added.length > 1 ? "s" : ""}`, proposals: added.slice(0, 20) }, { onConflict: "source_id,fingerprint", ignoreDuplicates: true });
+            if (added.length) await supabaseAdmin.from("regulatory_changes").upsert({ source_id: id, url: s.url, previous_fingerprint: prev.data?.fingerprint ?? null, fingerprint: fp, summary: `${s.name}: ${added.length} new item${added.length > 1 ? "s" : ""}`, proposals: added.slice(0, 20).map(describeHeadline) }, { onConflict: "source_id,fingerprint", ignoreDuplicates: true });
             report[id] = prev.data ? `${added.length} new` : "baseline saved";
           } catch (e) { report[id] = (e as Error).message.slice(0, 80); }
         }
