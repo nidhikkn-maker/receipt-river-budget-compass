@@ -1,59 +1,75 @@
-# Investment statements in Statement Desk + Completeness Check
+# Ledgerline v6 roadmap: one app combining v6.0 and v6.1
 
-## How v6.0 and v6.1 fit into one app
-
-They aren't separate apps. Both plug into what Ledgerline already has:
+v6.0 and v6.1 build on the app you already have. They don't replace it. Everything comes in through **Statement Desk**, every original file is kept in **DocuRepo**, and each area reads from the same records. That way nothing is entered twice and nothing is counted twice.
 
 ```text
-Statement Desk (the only upload place)
-   -> identifies the document: bank / card / loan / demat / transactions / capital gains
-   -> keeps the original file in the Document Vault, renamed to DocuRepo
-   -> Investments: holdings, cost, capital gains          (v6.0 Part on investments)
-   -> Prices and net worth on Home and Wealth             (v6.1)
+             Statement Desk  (the only upload place, for every module)
+   Upload -> Identify -> Read -> Check -> Match -> Sort -> Confirm -> Save -> Undo
+                                   |
+                     DocuRepo  (one copy of each original, linked to many records)
+                                   |
+  Money & ledger | Investments | Assets | Property | Loans | Tax & GST | Audit
+                                   |
+            Net worth and reports on Home and Wealth (live where a trusted source exists)
 ```
 
-This plan does the first slice: demat statements, the completeness check, and filling the gaps from a second document. Live share prices (v6.1) come next, as a separate step, because they need an approved price provider.
+Each phase is a separate release. You approve each one before I build it, and it ships only after its checks pass.
 
-## What you'll see
+## Phase 1: Check what already exists (no changes)
+- A written review of what the app already does against each v6.0 section: bank, card, loan and receipt reading, Inbox, the vault, Wealth and mutual fund prices.
+- The result is a gap list, so later phases reuse what exists and don't rebuild it.
 
-After you upload an ICICI Direct demat (holdings) statement on Statement Desk, a **Demat Statement Review** card shows:
+## Phase 2: DocuRepo and Statement Desk for every kind of document
+- Rename the Document Vault to **DocuRepo** (More → DocuRepo). Old links keep working.
+- Statement Desk recognises the document type itself (bank, card, loan, demat, invoice, deed, lease, tax return, and so on) and asks only when it isn't sure.
+- One stored file can link to many records, such as an asset, a loan and a payment. Each file gets an automatic name and searchable details, and the original file is kept untouched.
+- Each value read from a document keeps its page, the value as printed, how sure the reading is, and whether you've checked it.
+- An "Upload" button in any module opens Statement Desk set up for that module.
 
-| Check | What it shows |
-|---|---|
-| Demat account | Identified (DP ID / client ID, holder), or "Confirm account" |
-| Stock holdings | Extracted: N securities, matched by ISIN |
-| Portfolio valuation | "Price data required" until a trusted price exists; the statement's own printed value is shown and labelled with its date |
-| Purchase history | Complete / Missing for N holdings |
-| Capital gains | Pending verification / Verified |
-| Original document | Stored in DocuRepo (link) |
+## Phase 3: Investments and the Demat completeness check
+- An ICICI Direct demat statement on Statement Desk opens a **Demat Statement Review** card. It shows: account identified, holdings read, valuation (needs price data), purchase history (complete or missing), capital gains (waiting to be checked), and the original stored in DocuRepo.
+- If purchase history is missing, it offers **"Upload ICICI Direct Transaction Statement or Capital Gains Statement"**. That file goes through the same desk, attaches to existing holdings by ISIN, and never creates a second copy of a security.
+- Quantity check: bought − sold must equal the holding. Capital gains are marked verified only when both documents agree.
 
-If buy dates or costs are missing for any holding, the card offers:
-**"Upload ICICI Direct Transaction Statement or Capital Gains Statement"**. This opens Statement Desk set up for that demat account.
+## Phase 4: Live prices and net worth (v6.1)
+- Share and ETF prices from an approved provider, plus the existing mutual fund prices. Each price shows its date and time and is labelled "delayed" unless it really is live.
+- Holding value = checked quantity × price. Cash held by the broker is counted once.
+- A Net worth card on Home shows assets, investments, cash and liabilities, how up to date each part is, and dated snapshots for history. Price updates never change purchase costs or ledger entries.
+- Alerts for missing or stale prices, quantity differences and corporate actions, each of which you can switch on or off.
+- **Needs your decision:** which price provider to use. Some charge a fee and have their own rules for use.
 
-When that second file is uploaded:
-- each trade or gain line is matched to an existing holding by ISIN (the name alone is never enough)
-- it adds buy date, quantity and cost to that holding; it never creates a second copy of the security
-- quantities are checked: bought − sold must equal the holding quantity; any gap shows as "Quantity differs by X"
-- capital gains become "Verified" only when the gains statement agrees with the matched buys and sells
-- unknown securities or unsure matches wait for your tap; nothing is saved without you confirming
-- both originals stay in DocuRepo, linked to the demat account and its holdings
+## Phase 5: Company and past-year setup
+- Create a company profile from incorporation, PAN and GST documents. Uploading the same documents again creates no duplicates.
+- Suggest opening balances from last year's audited statements. Anything missing in the schedules is flagged and never made up. You approve the balances before they are used.
 
-The Document Vault is renamed **DocuRepo** (More → DocuRepo). It gets new document types: Demat statement, Transaction statement, Capital gains statement.
+## Phase 6: Assets and depreciation
+- An asset register built from purchase invoices, with each asset's life, documents and checks.
+- Book depreciation and tax depreciation are worked out separately as schedules. They are posted only after you confirm.
 
-## Rules kept
-- Statement Desk stays the only upload place. An "Upload" button on Investments opens it.
-- No made-up prices, costs or dates. Missing values stay "missing".
-- Holdings and trades are investment records, not bank entries, so nothing is counted twice in cash or ledger totals.
-- Undo on the upload removes what it added and puts back the earlier holding details.
+## Phase 7: Property and rent
+- Property and tenant records from deeds and leases: rent, deposit and yearly increases.
+- Rent received is matched from bank statements. Security deposits are kept apart from rental income.
 
-## Technical section
-- Database (migration): `demat_accounts` (owner, dp_id, client_id, broker, holder, account_id link), `securities_holdings` (owner, demat_id, isin unique per demat, symbol, name, quantity, as_of, statement_value, source_doc), `security_lots` (holding_id, trade_date, qty, price, cost, side, source_doc, fingerprint unique), `capital_gain_lines` (holding_id, sell_date, qty, cost, proceeds, gain, term, source_doc, fingerprint unique). All rows belong to their owner (RLS), with grants. Writes go through an owner-checked atomic RPC (`apply_investment_statement`) with idempotent fingerprints and an undo snapshot.
-- `src/lib/statement-pipeline/identify.ts`: detect demat holdings, transaction and capital-gains documents (ICICI Direct header patterns plus generic NSDL/CDSL "ISIN" tables).
-- New pure modules: `investment-parse.ts` (rows to holdings/trades/gains), `investment-match.ts` (ISIN-first matching to existing holdings), `investment-completeness.ts` (the six statuses and the missing-history list, plus quantity reconciliation). These have unit tests with the exact rules: ISIN match, no duplicate security, quantity gap, gains verified only when they agree.
-- Scanned PDFs reuse the existing server extractor with a holdings/trades schema; document privacy settings still apply.
-- UI: `InvestmentReview.tsx` card in `statements.tsx`; holdings list on Wealth gains a "Cost / Purchase history" column; `/vault` relabelled DocuRepo (route kept so old links work); `documents.ts` gets the new types.
-- AGENTS.md rule added for the investment pipeline.
+## Phase 8: Tax, GST and rule updates
+- A Tax & Audit Centre for each entity, with draft returns and GST summaries prepared from records. Nothing is ever filed automatically.
+- Rule changes carry the date they apply from, so past years keep the rules they were worked out under.
 
-## Not in this step (next)
-- Live NSE/BSE prices and net worth on Home (v6.1). We need to choose an approved price source first. Mutual fund prices already come from the published daily fund prices.
-- The rest of v6.0 (GST, tax, property, assets) gets its own plan.
+## Phase 9: Continuous audit
+- An "audit-ready" dashboard. Every important figure can be traced back to the document it came from, using the eight financial checks already in the app.
+- Gaps show up in the Inbox, such as a bank debit with no invoice.
+
+## Rules kept in every phase
+- Statement Desk is the only upload place. Nothing is invented. Anything unsure waits for you to confirm.
+- Every save can be undone, and a failed step never leaves half-saved records.
+- Your records belong only to you. Existing records and the way shared data is stored are not changed without your approval.
+- Nothing is published to the live site without your go-ahead.
+
+## Technical notes
+- Each phase adds pure rule modules under src/lib, plus tests based on the v6.0 Part P list.
+- Database changes are added alongside the existing tables, with owner-only access and atomic, repeat-safe save functions.
+- Phase 2 extends the existing documents table into a document-to-record link table, rather than creating a new file store.
+- Phase 3 adds demat accounts, holdings (unique per ISIN per account), purchase lots and capital-gain lines.
+- Phase 4 adds a server-side price fetcher with caching, and valuation snapshots kept apart from the ledger.
+
+## Suggested order
+Phases 2 → 3 → 4 first, because together they deliver what you asked for. Phases 5–9 follow in that order, one at a time.
