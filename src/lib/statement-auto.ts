@@ -1,4 +1,4 @@
-import { matchEmiDebit, type EmiTarget } from "./emi-match";
+import { matchEmiDebit, matchEmiFunding, type EmiTarget } from "./emi-match";
 // Automatic registration of bank-statement lines as ledger entries (pure, tested).
 // A line is only auto-registered when the rules are confident; anything that needs a
 // person's decision (transfers, cash withdrawals, unclear credits) is returned for review.
@@ -164,6 +164,11 @@ export function classifyStatementLine(line: StatementLine, ctx: StatementContext
     const gap = emi.amountDiff === 0 ? "exact EMI" : `₹${Math.abs(emi.amountDiff).toLocaleString("en-IN")} ${emi.amountDiff < 0 ? "less" : "more"} than the EMI${emi.linked ? " (linked account may cover the rest)" : ""}`;
     const when = emi.dayDiff === 0 ? "on the due date" : `${Math.abs(emi.dayDiff)} day${Math.abs(emi.dayDiff) === 1 ? "" : "s"} ${emi.dayDiff < 0 ? "before" : "after"} the ${emi.due} due date`;
     return { ...base, title: `${emi.target.name} EMI`, category: resolveCategory(ctx.categories, "Financial charges") ?? category, txnType: "loan_repayment", toAccountId: emi.target.loanAccountId, paymentMethod: "bank_transfer", reason: `Looks like the ${emi.target.name} EMI — ${gap}, ${when}. Confirm before saving.` };
+  }
+  const fund = ctx.emiTargets?.length ? matchEmiFunding({ date: line.date, amount: line.amount, direction: "debit", accountId: ctx.accountId }, ctx.emiTargets) : null;
+  if (fund) {
+    const dest = ctx.accounts.find((a) => a.id === fund.target.payFromAccountId)?.name ?? "the EMI account";
+    return { ...base, title: `Transfer to ${dest} (${fund.target.name} EMI)`, category: resolveCategory(ctx.categories, "Transfers") ?? category, txnType: "transfer", toAccountId: fund.target.payFromAccountId, paymentMethod: "bank_transfer", reason: `Looks like the monthly top-up of ${dest} before the ${fund.target.name} EMI. Confirm before saving.` };
   }
   if (CARD_OR_LOAN_PAYMENT.test(text)) return { ...base, category, txnType: "transfer", reason: "Card, loan or investment payment — pick the account it went to" };
   if (TRANSFER_DEBIT.test(text)) return { ...base, category, txnType: "transfer", reason: "Transfer or cash withdrawal — pick where the money went" };
