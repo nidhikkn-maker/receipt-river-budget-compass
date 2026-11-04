@@ -245,7 +245,7 @@ export function TaxComputationCard({ fy }: { fy: string }) {
   const accountIds = ent ? new Set(books.entityAccounts?.[ent.id] ?? []) : null;
   const gains = ent ? [] : (demat ?? []).flatMap((d) => d.holdings.flatMap((h) => h.gains));
   const companyAccounts = new Set(Object.values(books.entityAccounts ?? {}).flat());
-  const c = taxComputation(fy, transactions, preferences.assets ?? [], books.leases, gains, books.fyRecords, ent?.id, accountIds ? { accountIds } : undefined, ent ? undefined : { accountIds: companyAccounts });
+  const c = taxComputation(fy, transactions, preferences.assets ?? [], books.leases, gains, books.fyRecords, ent?.id, accountIds ? { accountIds } : undefined, ent ? undefined : { accountIds: companyAccounts }, (() => { const xs = (books.salaryEvidence ?? []).filter((x) => x.entityId === (ent?.id ?? "personal") && x.fy === fy); return xs.length ? xs.reduce((s, x) => s + x.amount, 0) : null; })());
   const profile = ent ? books.taxProfiles.find((p) => p.entityId === ent.id) : undefined;
   const { rules } = rulesFor(fy);
   const personal = !ent || ent.kind === "individual" || ent.kind === "huf";

@@ -156,7 +156,7 @@ export function DocumentIntake({ file, context, onClose, resume, replacesId }: {
     if (proposal.kind === "gst") return proposal.invoice ? { route: "gst", invoice: { ...proposal.invoice, number: v("invno", proposal.invoice.number), taxable: Number(v("taxable", proposal.invoice.taxable)) || proposal.invoice.taxable } } : null;
     if (proposal.kind === "tax") {
       if (!proposal.fy) return null;
-      const whoId = v("taxwho", proposal.entityId ?? "self");
+      const whoId = v("taxwho", proposal.entityId ?? "personal");
       return { route: "tax", entityId: whoId, fy: proposal.fy, salary: proposal.salary, credits: proposal.credits.map((c) => ({ kind: c.kind, amount: c.amount, source: `${DOC_LABEL[docType]}${c.deductor ? ` · ${c.deductor}` : ""}` })) };
     }
     if (proposal.kind === "fy") return proposal.record && (!ownerSuggested || ownerOk) ? { route: "fy", record: proposal.record } : null;
@@ -257,7 +257,7 @@ export function DocumentIntake({ file, context, onClose, resume, replacesId }: {
         </div> : <p className="rounded-xl border border-dashed p-3 text-xs">GST invoice can't be prepared yet — missing: {proposal.missing.join(", ")}. It is kept in DocuRepo.</p>)}
         {proposal?.kind === "tax" && <div className="grid gap-2 rounded-xl border p-3 text-xs">
           <p className="font-semibold">Tax statement · FY {proposal.fy ?? "not printed"}</p>
-          <label>Whose tax<select aria-label="Whose tax statement" className="w-full rounded-md border bg-background px-1 py-1" value={v("taxwho", proposal.entityId ?? "self")} onChange={(e) => setEdit({ ...edit, taxwho: e.target.value })}><option value="self">You (personal)</option>{entities.map((e) => <option key={e.id} value={e.id}>{e.name}</option>)}</select></label>
+          <label>Whose tax<select aria-label="Whose tax statement" className="w-full rounded-md border bg-background px-1 py-1" value={v("taxwho", proposal.entityId ?? "personal")} onChange={(e) => setEdit({ ...edit, taxwho: e.target.value })}><option value="personal">You (personal)</option>{entities.map((e) => <option key={e.id} value={e.id}>{e.name}</option>)}</select></label>
           {proposal.salary != null && <p>Taxable salary as printed: ₹{proposal.salary.toLocaleString("en-IN")}</p>}
           {proposal.credits.map((c, i) => <p key={i}>{c.kind.toUpperCase()} ₹{c.amount.toLocaleString("en-IN")}{c.deductor ? ` · ${c.deductor}` : ""}</p>)}
           {proposal.missing.length > 0 && <p className="text-destructive">Missing: {proposal.missing.join(", ")}</p>}

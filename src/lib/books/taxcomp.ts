@@ -17,7 +17,7 @@ export interface TaxComputation {
   gross: number; lossesSetOff: number; total: number; notes: string[];
 }
 
-export function taxComputation(fy: string, entries: Expense[], assets: Asset[], leases: Lease[], gains: { sellDate: string; buyDate: string | null; gain: number | null; kind?: GainKind }[], records: FyRecord[], entityId?: string, scope?: { accountIds: Set<string> }, exclude?: { accountIds: Set<string> }): TaxComputation {
+export function taxComputation(fy: string, entries: Expense[], assets: Asset[], leases: Lease[], gains: { sellDate: string; buyDate: string | null; gain: number | null; kind?: GainKind }[], records: FyRecord[], entityId?: string, scope?: { accountIds: Set<string> }, exclude?: { accountIds: Set<string> }, salaryEvidence?: number | null): TaxComputation {
   // Per entity [§45]: only entries on that entity's mapped accounts and assets it owns.
   const inYear = entries.filter((e) => fyOf(e.date) === fy && !e.transferCounterpartOf && (!scope || (!!e.accountId && scope.accountIds.has(e.accountId))) && !(exclude && e.accountId && exclude.accountIds.has(e.accountId)));
   if (scope && entityId) assets = assets.filter((a) => a.ownerEntityId === entityId);
@@ -27,7 +27,9 @@ export function taxComputation(fy: string, entries: Expense[], assets: Asset[], 
   const text = (e: Expense) => `${e.title} ${e.merchant ?? ""} ${e.description} ${e.category}`;
   const tenants = leases.map((l) => l.tenant.toLowerCase()).filter((t) => t.length >= 3);
   const isRent = (e: Expense) => tenants.some((t) => text(e).toLowerCase().includes(t)) || /\brent\b/i.test(text(e));
-  const salary = r2(income.filter((e) => /salary|payroll|stipend/i.test(text(e))).reduce((s, e) => s + e.amount, 0));
+  // Taxable salary comes from Form 16 / payslips when uploaded; bank credits are only a fallback estimate [§46].
+  const bankSalary = r2(income.filter((e) => /salary|payroll|stipend/i.test(text(e))).reduce((s, e) => s + e.amount, 0));
+  const salary = salaryEvidence != null ? r2(salaryEvidence) : bankSalary;
   const rent = r2(income.filter((e) => isRent(e) && receiptKind(text(e)) === "rent").reduce((s, e) => s + e.amount, 0));
   const homeLoanInterest = r2(inYear.filter((e) => e.txnType === "loan_repayment" && /home|housing/i.test(text(e))).reduce((s, e) => s + (e.interest ?? 0), 0));
   // s.24(b): interest deduction and house-property loss set-off are both capped at ₹2,00,000.
@@ -45,6 +47,7 @@ export function taxComputation(fy: string, entries: Expense[], assets: Asset[], 
     if (gainTerm(g.kind ?? "listed_equity", g.buyDate, g.sellDate) === "long") long += g.gain; else short += g.gain;
   }
   const notes: string[] = [];
+  if (salaryEvidence == null && bankSalary > 0) notes.push("Salary is estimated from bank credits (net pay). Upload Form 16 or payslips for the taxable figure");
   if (unknown) notes.push(`Gains of ₹${r2(unknown).toLocaleString("en-IN")} have no purchase date and are left out until the transaction statement is uploaded`);
   if (homeLoanInterest > HP_LOSS_CAP) notes.push("Home-loan interest above ₹2,00,000 is not deducted (s.24(b) cap)");
   if (hpNet < 0) notes.push("House-property loss is set off against other income up to ₹2,00,000; any excess is carried forward");
