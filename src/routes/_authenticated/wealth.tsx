@@ -52,7 +52,7 @@ function Wealth() {
 
       <FundPortfolio />
       <div className="grid gap-5 lg:grid-cols-[1.4fr_1fr]">
-        <section className="space-y-2">
+        <section className="min-w-0 space-y-2">
           <div className="flex items-center justify-between">
             <h2 className="font-display text-lg font-bold">Your accounts</h2>
             <Button variant="ghost" size="sm" onClick={() => setShowArchived((v) => !v)}>{showArchived ? "Hide archived" : "Show archived"}</Button>
