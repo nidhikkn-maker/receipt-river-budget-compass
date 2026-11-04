@@ -174,9 +174,8 @@ export function DocumentIntake({ file, context, onClose, resume, replacesId }: {
       const next = commitIntake({ entities, assets: preferences.assets ?? [], books }, withDoc, { id: docId, title, docType, fieldLabels: fields.map((f) => f.label) }, today(), () => crypto.randomUUID());
       const known = new Set(preferences.contractObligations.map((o) => o.docId));
       const obs = !known.has(docId) ? toObligations(docId, x?.obligations ?? [], () => crypto.randomUUID()) : [];
-      await savePreferences({ ...preferences, entities: next.entities, assets: next.assets, books: next.books, ...(obs.length ? { contractObligations: [...preferences.contractObligations, ...obs] } : {}) });
-      // A document that now backs a record is kept as evidence and can't be deleted by accident [§11].
-      if (c.route !== "document") await updateDocument(docId, { evidenceLocked: true }).catch(() => undefined);
+      // Records and the evidence lock commit together: either both are saved or neither is [§3, §11].
+      await store.commitDocumentRecords(docId, { ...preferences, entities: next.entities, assets: next.assets, books: next.books, ...(obs.length ? { contractObligations: [...preferences.contractObligations, ...obs] } : {}) }, c.route !== "document");
       at = "Audit"; await step("Audit");
       await closeRun({ id: runId, data: runData.current }, "done").catch(() => undefined);
       setDone(c.route);
