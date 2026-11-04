@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { PageTitle } from "@/components/AppShell";
@@ -46,7 +46,8 @@ function Entities() {
   return (
     <div className="mx-auto max-w-2xl space-y-4 p-4">
       <PageTitle title="Companies & years" sub="Each company or person you keep books for, and which past years are on record." />
-      {!edit && <Button onClick={() => { setEdit(blank()); setGst(""); }}>Add company or person</Button>}
+      {!edit && <div className="flex flex-wrap gap-2"><Link to="/statements" search={{ context: "entity" }} className="inline-flex items-center rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground">Add from documents</Link><Button variant="outline" onClick={() => { setEdit(blank()); setGst(""); }}>Add manually</Button></div>}
+      {!edit && <p className="text-xs text-muted-foreground">Upload the incorporation certificate, PAN, GST certificate, MoA/AoA or partnership/LLP/trust deed — the profile is read for you to review. Re-uploading matches by PAN, CIN or GSTIN, so no duplicates.</p>}
 
       {edit && (
         <div className="space-y-3 rounded-2xl border bg-card p-4">
@@ -90,7 +91,10 @@ function Entities() {
           <div className="flex items-start justify-between gap-2">
             <div>
               <p className="font-semibold">{p.name}</p>
-              <p className="text-xs text-muted-foreground">{ENTITY_KINDS[p.kind].label} · PAN {p.pan}{p.regNo ? ` · ${p.regNo}` : ""}{p.gstins.length ? ` · ${p.gstins.length} GSTIN` : ""}</p>
+              <p className="text-xs text-muted-foreground">{ENTITY_KINDS[p.kind].label} · PAN {p.pan}{p.regNo ? ` · ${p.regNo}` : ""}{p.gstins.length ? ` · ${p.gstins.length} GSTIN` : ""}{p.incorporatedOn ? ` · since ${p.incorporatedOn}` : ""}</p>
+              {p.address && <p className="text-xs text-muted-foreground">{p.address}</p>}
+              {!!p.people?.length && <p className="text-xs text-muted-foreground">{p.people.map((x) => `${x.name} (${x.role})`).join(", ")}</p>}
+              {!!p.shareholding?.length && <p className="text-xs text-muted-foreground">Shareholding: {p.shareholding.map((x) => `${x.name} ${x.pct}%`).join(", ")}</p>}
             </div>
             <Button size="sm" variant="outline" onClick={() => setEdit(p)}>Edit</Button>
           </div>
