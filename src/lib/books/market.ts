@@ -100,7 +100,7 @@ export function addSnapshot(list: Snapshot[], s: Snapshot): Snapshot[] {
 }
 
 /** Configurable valuation alerts [v6.1 §13]. */
-export function valuationAlerts(valued: Valued[], snapshots: Snapshot[], a: AlertSettings, statementQty: Record<string, number>): string[] {
+export function valuationAlerts(valued: Valued[], snapshots: Snapshot[], a: AlertSettings, statementQty: Record<string, number>, qtyHoldings: Holding[] = valued.map((v) => v.holding)): string[] {
   const out: string[] = [];
   if (a.missingPrices) { const m = valued.filter((v) => v.value == null); if (m.length) out.push(`${m.length} holding${m.length > 1 ? "s have" : " has"} no price`); }
   for (const v of valued) if (v.stale && v.holding.kind === "mutual_fund") out.push(`${v.holding.name}: NAV older than ${a.staleNavDays} days`);
@@ -110,7 +110,7 @@ export function valuationAlerts(valued: Valued[], snapshots: Snapshot[], a: Aler
   }
   if (a.quantityMismatch) {
     const held = new Map<string, { name: string; qty: number }>();
-    for (const v of valued) { const k = v.holding.isin; if (k) held.set(k, { name: held.get(k)?.name ?? v.holding.name, qty: (held.get(k)?.qty ?? 0) + v.holding.quantity }); }
+    for (const h of qtyHoldings) { const k = h.isin; if (k) held.set(k, { name: held.get(k)?.name ?? h.name, qty: (held.get(k)?.qty ?? 0) + h.quantity }); }
     for (const [k, h] of held) if (statementQty[k] != null && Math.abs(statementQty[k]! - h.qty) > 1e-6) out.push(`${h.name}: ${h.qty} held vs ${statementQty[k]} on the latest statement`);
   }
   if (a.unusualValuationPct > 0) for (const v of valued) if (v.value != null && v.holding.costBasis && Math.abs(v.value / v.holding.costBasis - 1) * 100 > a.unusualValuationPct) out.push(`${v.holding.name}: value is ${Math.round((v.value / v.holding.costBasis - 1) * 100)}% from cost — check the price`);

@@ -19,10 +19,18 @@ export function useBooks() {
   return { books, save, preferences, savePreferences };
 }
 
-let dematCache: DematWithHoldings[] | null = null;
+/** Demat holdings, cached per signed-in owner so a different account never sees another's copy. */
+let dematCache: { owner: string; data: DematWithHoldings[] } | null = null;
 export function useDemat() {
-  const [d, setD] = useState<DematWithHoldings[] | null>(dematCache);
-  useEffect(() => { let live = true; loadDemat().then((x) => { dematCache = x; if (live) setD(x); }).catch(() => { if (live) setD([]); }); return () => { live = false; }; }, []);
+  const { userId } = useStore() as unknown as { userId?: string | null };
+  const owner = userId ?? "";
+  const [d, setD] = useState<DematWithHoldings[] | null>(dematCache && dematCache.owner === owner ? dematCache.data : null);
+  useEffect(() => {
+    let live = true;
+    if (!(dematCache && dematCache.owner === owner)) setD(null);
+    loadDemat().then((x) => { dematCache = { owner, data: x }; if (live) setD(x); }).catch(() => { if (live) setD([]); });
+    return () => { live = false; };
+  }, [owner]);
   return d;
 }
 
