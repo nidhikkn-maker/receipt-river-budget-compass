@@ -3,6 +3,8 @@ import { addDays, type Commitment } from "./planning";
 import { cardCycle } from "./cards";
 import { cardEmisOf, type PositionLoan } from "./position";
 import type { Account, Txn } from "./ledger";
+import { emiTargets } from "./emi-match";
+import { loanFundingReminders } from "./loan-funding";
 
 /** Restrict outbound sends even when a subscription was inserted directly through the Data API. */
 export function validPushEndpoint(endpoint: string): boolean {
@@ -30,6 +32,8 @@ export function paymentReminderItems(input: {
   if (!input.enabled) return [];
   const end = addDays(input.today, Math.min(30, Math.max(0, Math.round(input.leadDays))));
   const items: ReminderItem[] = [];
+  const targets = emiTargets(input.loans.map(l => ({ id: l.id ?? l.name, name: l.name, emi: l.emi, nextDue: l.nextDue, accountId: l.accountId ?? null, status: l.status ?? "active", loanType: l.loanType ?? "personal" })), input.commitments, input.accounts);
+  items.push(...loanFundingReminders(targets, input.loans, input.transactions, input.today, input.leadDays).map(r => ({ key: r.key, date: r.due, kind: "payment" as const })));
   for (const c of input.commitments) if (c.status === "active" && c.direction === "out" && c.amount > 0 && c.nextDue <= end) items.push({ key: `commitment:${c.id}:${c.nextDue}`, date: c.nextDue, kind: "payment" });
   for (const l of input.loans) if (l.status !== "closed" && l.loanType !== "credit_card_emi" && l.emi > 0 && l.principal > 0 && l.nextDue <= end) items.push({ key: `loan:${l.id}:${l.nextDue}`, date: l.nextDue, kind: "payment" });
   const emis = cardEmisOf(input.loans);
