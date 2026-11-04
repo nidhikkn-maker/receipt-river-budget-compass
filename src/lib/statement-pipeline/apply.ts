@@ -40,7 +40,7 @@ export interface ApplyRequest {
   draftLinks?: Record<string, DraftLink>;
 }
 
-export interface DraftLink { draftId: string; overrides: Partial<Pick<ExpenseInput, "title" | "merchant" | "category" | "description" | "receiptDetails">>; files: () => Promise<File[]> }
+export interface DraftLink { draftId: string; overrides: { [K in "title" | "merchant" | "category" | "description" | "receiptDetails"]?: ExpenseInput[K] | undefined }; files: () => Promise<File[]> }
 
 export interface ApplyResult {
   posted: string[];
