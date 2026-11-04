@@ -45,7 +45,7 @@ function Entities() {
 
   return (
     <div className="mx-auto max-w-2xl space-y-4 p-4">
-      <PageTitle title="Companies & years" subtitle="Each company or person you keep books for, and which past years are on record." />
+      <PageTitle title="Companies & years" sub="Each company or person you keep books for, and which past years are on record." />
       {!edit && <Button onClick={() => { setEdit(blank()); setGst(""); }}>Add company or person</Button>}
 
       {edit && (

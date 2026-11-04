@@ -39,10 +39,10 @@ export function panProblem(pan: string, kind: EntityKind): string | null {
 export function gstinCheckChar(first14: string): string {
   let sum = 0;
   for (let i = 0; i < 14; i++) {
-    const v = CHARS.indexOf(first14[i]) * (i % 2 === 0 ? 1 : 2);
+    const v = CHARS.indexOf(first14[i] ?? "0") * (i % 2 === 0 ? 1 : 2);
     sum += Math.floor(v / 36) + (v % 36);
   }
-  return CHARS[(36 - (sum % 36)) % 36];
+  return CHARS[(36 - (sum % 36)) % 36] ?? "0";
 }
 
 export function gstinProblem(gstin: string, pan: string): string | null {
@@ -57,7 +57,7 @@ export function gstinProblem(gstin: string, pan: string): string | null {
 
 /** Indian financial year label for a date (Apr–Mar). */
 export function fyOf(date: string): string {
-  const [y, m] = date.split("-").map(Number);
+  const [y = 0, m = 1] = date.split("-").map(Number);
   const start = m >= 4 ? y : y - 1;
   return `${start}-${String((start + 1) % 100).padStart(2, "0")}`;
 }
@@ -90,6 +90,6 @@ export function yearStatuses(booksFrom: string, today: string, entryDates: strin
 export function cleanEntities(raw: unknown): EntityProfile[] {
   if (!Array.isArray(raw)) return [];
   return raw.filter((x): x is EntityProfile => !!x && typeof x.id === "string" && typeof x.name === "string" && x.kind in ENTITY_KINDS)
-    .map((x) => ({ id: x.id.slice(0, 64), name: x.name.slice(0, 120), kind: x.kind, pan: String(x.pan ?? "").toUpperCase().slice(0, 10), gstins: Array.isArray(x.gstins) ? x.gstins.filter((g) => typeof g === "string").map((g) => g.toUpperCase().slice(0, 15)).slice(0, 40) : [], regNo: typeof x.regNo === "string" ? x.regNo.slice(0, 30) : undefined, booksFrom: /^\d{4}-\d{2}$/.test(x.booksFrom) ? x.booksFrom : "2026-27" }))
+    .map((x) => ({ id: x.id.slice(0, 64), name: x.name.slice(0, 120), kind: x.kind, pan: String(x.pan ?? "").toUpperCase().slice(0, 10), gstins: Array.isArray(x.gstins) ? x.gstins.filter((g) => typeof g === "string").map((g) => g.toUpperCase().slice(0, 15)).slice(0, 40) : [], ...(typeof x.regNo === "string" ? { regNo: x.regNo.slice(0, 30) } : {}), booksFrom: /^\d{4}-\d{2}$/.test(x.booksFrom) ? x.booksFrom : "2026-27" }))
     .slice(0, 50);
 }
