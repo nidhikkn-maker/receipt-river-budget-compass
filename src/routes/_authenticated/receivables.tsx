@@ -24,16 +24,16 @@ const today = () => new Date().toISOString().slice(0, 10);
 function Receivables() {
   const { preferences, savePreferences, transactions } = useStore();
   const list = preferences.receivables ?? [];
-  const [f, setF] = useState({ customer: "", invoiceNo: "", date: today(), dueDate: "", amount: "" });
+  const [f, setF] = useState({ customer: "", invoiceNo: "", date: today(), dueDate: "", amount: "", gst: "" });
   const rows = useMemo(() => receivableStatus(list, transactions, today()), [list, transactions]);
   const open = rows.filter((x) => !x.paidBy);
 
   const add = async () => {
     const amount = Number(f.amount);
     if (!f.customer.trim() || !(amount > 0)) { toast.error("Add a customer and amount"); return; }
-    const r: Receivable = { id: crypto.randomUUID(), customer: f.customer.trim(), date: f.date, amount, ...(f.invoiceNo.trim() ? { invoiceNo: f.invoiceNo.trim() } : {}), ...(f.dueDate ? { dueDate: f.dueDate } : {}) };
+    const r: Receivable = { id: crypto.randomUUID(), customer: f.customer.trim(), date: f.date, amount, ...(f.invoiceNo.trim() ? { invoiceNo: f.invoiceNo.trim() } : {}), ...(f.dueDate ? { dueDate: f.dueDate } : {}), ...(Number(f.gst) > 0 && Number(f.gst) < amount ? { gst: Number(f.gst) } : {}) };
     await savePreferences({ ...preferences, receivables: [...list, r] });
-    setF({ customer: "", invoiceNo: "", date: today(), dueDate: "", amount: "" }); toast.success("Invoice added");
+    setF({ customer: "", invoiceNo: "", date: today(), dueDate: "", amount: "", gst: "" }); toast.success("Invoice added");
   };
   const remove = async (id: string) => savePreferences({ ...preferences, receivables: list.filter((x) => x.id !== id) });
 
@@ -44,6 +44,7 @@ function Receivables() {
         <Input placeholder="Customer" value={f.customer} onChange={(e) => setF({ ...f, customer: e.target.value })} />
         <Input placeholder="Invoice no." value={f.invoiceNo} onChange={(e) => setF({ ...f, invoiceNo: e.target.value })} />
         <Input type="number" inputMode="decimal" placeholder="Amount ₹" value={f.amount} onChange={(e) => setF({ ...f, amount: e.target.value })} />
+        <Input type="number" inputMode="decimal" placeholder="GST in it ₹" value={f.gst} onChange={(e) => setF({ ...f, gst: e.target.value })} />
         <Input type="date" aria-label="Invoice date" value={f.date} onChange={(e) => setF({ ...f, date: e.target.value })} />
         <Input type="date" aria-label="Due date" value={f.dueDate} onChange={(e) => setF({ ...f, dueDate: e.target.value })} />
         <Button onClick={add}>Add invoice</Button>

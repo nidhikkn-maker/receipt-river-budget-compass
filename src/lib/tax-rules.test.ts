@@ -22,3 +22,12 @@ describe("receivables", () => {
     expect(s[1]!.overdueDays).toBe(10);
   });
 });
+
+import { gstMonths } from "./receivables";
+describe("GST by month", () => {
+  it("output GST less bill GST for the month", () => {
+    const bill = { id: "b", date: "2026-05-03", amount: 1180, scope: "business", receiptDetails: { tax: 180 }, fxRate: 1 } as unknown as Expense;
+    const [m] = gstMonths([{ id: "a", customer: "Acme", date: "2026-05-01", amount: 11800, gst: 1800 }], [bill], ["2026-05"]);
+    expect(m).toMatchObject({ outputGst: 1800, inputGst: 180, net: 1620, invoices: 1 });
+  });
+});
