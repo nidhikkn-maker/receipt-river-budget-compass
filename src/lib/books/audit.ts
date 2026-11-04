@@ -120,9 +120,9 @@ export function intercompanyGaps(entries: Expense[], accounts: Account[]) {
     .map((e) => ({ id: e.id, date: e.date, accountId: e.accountId, scope: scopeOf(e.accountId) ?? "", text: `${e.title}: transfer between workspaces not confirmed on both sides` }));
 }
 
-export function groupBy(items: AuditItem[], by: "entity" | "account" | "fy" | "type" | "risk"): { name: string; items: AuditItem[] }[] {
+export function groupBy(items: AuditItem[], by: "entity" | "account" | "fy" | "type" | "risk" | "evidence"): { name: string; items: AuditItem[] }[] {
   const m = new Map<string, AuditItem[]>();
-  for (const i of items) { const k = (by === "fy" ? i.fy && `FY ${i.fy}` : by === "account" ? i.account : by === "type" ? i.type : by === "risk" ? i.risk : i.entity) || "—"; m.set(k, [...(m.get(k) ?? []), i]); }
+  for (const i of items) { const k = (by === "fy" ? i.fy && `FY ${i.fy}` : by === "account" ? i.account : by === "type" ? i.type : by === "risk" ? i.risk : by === "evidence" ? i.evidence : i.entity) || "—"; m.set(k, [...(m.get(k) ?? []), i]); }
   return [...m.entries()].map(([name, items]) => ({ name, items }));
 }
 
