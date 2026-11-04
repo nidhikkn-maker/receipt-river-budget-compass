@@ -118,7 +118,7 @@ function Assets() {
             </div>
             {(a.tag || a.location || a.custodian || a.tenant) && <p className="text-xs text-muted-foreground">{[a.tag && `Tag ${a.tag}`, a.location, a.custodian && `with ${a.custodian}`, a.tenant && `Tenant ${a.tenant}${a.leaseEnd ? ` till ${a.leaseEnd}` : ""}${a.deposit ? ` · deposit ${inr(a.deposit)}` : ""}`].filter(Boolean).join(" · ")}</p>}
             {assetFollowUps(a, today()).length > 0 && <p className="text-xs text-destructive">{assetFollowUps(a, today()).join(" · ")}</p>}
-            {rent.length > 0 && <div className="flex flex-wrap gap-1">{rent.map((m) => <span key={m.month} className={`rounded-full px-2 py-0.5 text-xs ${m.received >= m.expected ? "bg-primary/10 text-primary" : "bg-destructive/10 text-destructive"}`}>{m.month}: {inr(m.received)} / {inr(m.expected)}</span>)}</div>}
+            {rent.length > 0 && <div className="flex flex-wrap gap-1">{rent.map((m) => <span key={m.month} title={m.deposits ? `Deposit ${inr(m.deposits)} kept separate` : undefined} className={`rounded-full px-2 py-0.5 text-xs ${m.status === "paid" || m.status === "advance" ? "bg-primary/10 text-primary" : "bg-destructive/10 text-destructive"}`}>{m.month}: {inr(m.received)} / {inr(m.expected)}{m.status === "advance" ? ` · ${inr(-m.balance)} ahead` : m.balance > 0 ? ` · ${inr(m.balance)} due` : ""}{m.deposits ? ` · deposit ${inr(m.deposits)}` : ""}</span>)}</div>}
             {(book.length > 0 || tax.length > 0) && <Button size="sm" variant="ghost" onClick={() => setOpen(open === a.id ? null : a.id)}>{open === a.id ? "Hide" : "Show"} depreciation</Button>}
             {open === a.id && (
               <table className="w-full text-xs">

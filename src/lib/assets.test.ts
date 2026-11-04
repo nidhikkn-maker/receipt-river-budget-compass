@@ -24,6 +24,17 @@ describe("assets", () => {
     const r = rentCheck(flat, [{ date: "2026-05-03", amount: 30000, text: "Rent Anna Nagar flat" }], ["2026-05", "2026-06"]);
     expect(r.map((m) => m.received)).toEqual([30000, 0]);
   });
+  it("rent check never counts a deposit as rent and carries arrears and advance", () => {
+    const flat: Asset = { ...car, name: "Anna Nagar flat", kind: "property", monthlyRent: 30000, tenant: "Ravi" };
+    const r = rentCheck(flat, [
+      { date: "2026-05-02", amount: 100000, text: "Ravi security deposit" },
+      { date: "2026-05-05", amount: 20000, text: "Rent from Ravi" },
+      { date: "2026-06-05", amount: 50000, text: "Ravi rent" },
+    ], ["2026-05", "2026-06", "2026-07"]);
+    expect(r[0]).toMatchObject({ received: 20000, deposits: 100000, balance: 10000, status: "partial" });
+    expect(r[1]).toMatchObject({ balance: -10000, status: "advance" });
+    expect(r[2]).toMatchObject({ received: 0, balance: 20000, status: "unpaid" });
+  });
 });
 
 import { assetFollowUps as fu } from "./assets";

@@ -100,12 +100,32 @@ export function shareValue(a: Asset, fy: string): number {
   return r2(value * (a.sharePct / 100));
 }
 
-export interface RentMonth { month: string; expected: number; received: number }
-/** Compare expected rent with income entries whose text names the property. */
+export type RentStatus = "paid" | "partial" | "unpaid" | "advance";
+export interface RentMonth {
+  month: string; expected: number; received: number;
+  /** Rent still owed after this month (arrears), or prepaid when negative. */
+  balance: number; status: RentStatus;
+  /** Deposit receipts this month — never counted as rent [§39]. */
+  deposits: number;
+}
+/**
+ * Compare expected rent with income naming the property or tenant [§39].
+ * Receipts saying "deposit" are kept apart; over/under payments carry forward
+ * so arrears and advance rent are visible. Read-only — never posts entries.
+ */
 export function rentCheck(a: Asset, income: { date: string; amount: number; text: string }[], months: string[]): RentMonth[] {
   if (!a.monthlyRent) return [];
-  const key = a.name.trim().toLowerCase();
-  return months.map((m) => ({ month: m, expected: a.monthlyRent!, received: r2(income.filter((i) => i.date.startsWith(m) && i.text.toLowerCase().includes(key)).reduce((s, i) => s + i.amount, 0)) }));
+  const keys = [a.name, a.tenant].map((k) => k?.trim().toLowerCase()).filter((k): k is string => !!k);
+  const mine = income.filter((i) => keys.some((k) => i.text.toLowerCase().includes(k)));
+  let owed = 0;
+  return months.map((m) => {
+    const inMonth = mine.filter((i) => i.date.startsWith(m));
+    const deposits = r2(inMonth.filter((i) => /deposit|advance\s*security/i.test(i.text)).reduce((s, i) => s + i.amount, 0));
+    const received = r2(inMonth.filter((i) => !/deposit|advance\s*security/i.test(i.text)).reduce((s, i) => s + i.amount, 0));
+    owed = r2(owed + a.monthlyRent! - received);
+    const status: RentStatus = owed < 0 ? "advance" : owed === 0 ? "paid" : received > 0 ? "partial" : "unpaid";
+    return { month: m, expected: a.monthlyRent!, received, balance: owed, status, deposits };
+  });
 }
 
 export function cleanAssets(raw: unknown): Asset[] {
