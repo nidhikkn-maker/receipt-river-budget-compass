@@ -1,5 +1,5 @@
 /** Tax & audit centre sections: past-year onboarding, tax profiles, GST returns and rule register (v6 §17–20, §45–51). */
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
