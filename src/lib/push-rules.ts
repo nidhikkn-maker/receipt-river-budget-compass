@@ -29,7 +29,7 @@ export function paymentReminderItems(input: {
   today: string; leadDays: number; enabled: boolean; commitments: Commitment[]; loans: PositionLoan[];
   accounts: Account[]; transactions: Txn[]; documents: { id: string; expiresOn: string | null }[];
   trips?: TripReminderSource[];
-  notifications?: Partial<NotificationSettings>;
+  notifications?: Partial<NotificationSettings> | undefined;
 }): ReminderItem[] {
   if (!input.enabled) return [];
   const settings = normalizeNotificationSettings(input.notifications);
