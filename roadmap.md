@@ -1,4 +1,7 @@
 # Roadmap (Functional Requirements v1.0)
+## Remove offline receipt photos you no longer need (4 Nov 2026)
+- [x] Each photo on /offline-receipts has a Remove control and there's Remove all failed; both ask first, delete only from this phone, and never touch a photo that has already been read into a draft.
+- [x] 5 focused checks pass (failed photo deleted, already-read photo and unknown photo refused, remove-all leaves waiting photos, other owners untouched, a photo removed mid-attempt isn't written back) plus the existing offline and draft tests; signed-in browser check removed 2 failed photos, kept the waiting one, then removed it and reached the empty state with no console errors. Preview only.
 ## City Union Bank EMI readiness (4 Nov 2026)
 - [x] Add an explicit dated bank balance update and show coverage for upcoming loan EMIs without inventing a balance.
 - [x] Remind when the scheduled primary-account transfer to City Union Bank is missing or short before the EMI due date; reuse existing reminders and private push.
