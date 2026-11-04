@@ -51,7 +51,7 @@ export function MarketPanel() {
   };
 
   return (
-    <Fold id="#investments" title="Investments & net worth" hint={`${books.holdings.length} holdings · ${nw.quality.length ? nw.quality[0] : "values as of latest records"}`}>
+    <Fold id="investments" title="Investments & net worth" hint={`${books.holdings.length} holdings · ${nw.quality.length ? nw.quality[0] : "values as of latest records"}`}>
       <div className="space-y-3 text-sm">
         <div className="divide-y rounded-xl border">
           {nw.assets.map((a) => <div key={a.label} className="flex justify-between gap-2 px-3 py-2"><span>{a.label}<span className="block text-[11px] text-muted-foreground">{a.basis || "—"}</span></span><b className="font-mono">{money(a.value)}</b></div>)}
