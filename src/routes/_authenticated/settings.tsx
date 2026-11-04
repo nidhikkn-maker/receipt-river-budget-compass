@@ -139,7 +139,7 @@ function Settings() {
       <Fold id="payees" title="Payees" hint="People and businesses you pay"><PayeeDirectory /></Fold>
       <Fold id="accountant" title="Accountant upload link" hint="Now lives in Statement Desk"><p className="text-sm text-muted-foreground">Your accountant's link, contact and monthly requests are managed in Statement Desk.</p><Button asChild variant="secondary" className="mt-2"><Link to="/statements" search={{ tab: "accountant" }}>Open in Statement Desk</Link></Button></Fold>
       <Fold id="rules" title="Import rules" hint="How statement lines are sorted automatically"><ImportRules /></Fold>
-      <Fold id="notifications" title="Notifications" hint="Reminders on this device"><PushSettings /></Fold>
+      <Fold id="notifications" title="Notifications" hint="Phone alerts, reminder types and advance timing"><PushSettings /></Fold>
       <Fold id="problems" title="Problem reports" hint="Things you flagged in the receipt viewer"><ReceiptProblemReports /></Fold>
       <Fold id="data" title="Data, backups & reports" hint="Back up, restore, export or delete"><div className="grid gap-3 sm:grid-cols-2">
         <Card title="Back up everything" body="Accounts, entries, budgets, valuations, family and original receipt and document files.">

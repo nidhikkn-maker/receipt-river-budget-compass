@@ -1,7 +1,8 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
 import { normalizePreferences, type FinancePreferences } from "./preferences";
-import { paymentReminderItems, privateReminderPayload } from "./push-rules";
+import { paymentReminderItems, reminderBatches } from "./push-rules";
+import { normalizeNotificationSettings } from "./notification-settings";
 import { sendDevicePush } from "./push-crypto.server";
 import { accountBalance, type Account, type AccountKind, type Txn, type TxnType } from "./ledger";
 import type { Commitment } from "./planning";
@@ -9,8 +10,8 @@ import type { PositionLoan } from "./position";
 import type { LoanPayment } from "./cards";
 
 export async function dispatchPaymentReminders(db: SupabaseClient<Database>, seed: string, today: string) {
-  // Rotate through devices; the scheduler can safely retry without duplicate daily deliveries.
-  const { data: devices, error } = await db.from("push_subscriptions").select("*").or(`last_sent_at.is.null,last_sent_at.lt.${today}T00:00:00Z`).order("last_sent_at",{nullsFirst:true}).limit(10);
+  // Recheck already-notified devices: a funding shortfall can appear later the same day.
+  const { data: devices, error } = await db.from("push_subscriptions").select("*");
   if (error) throw Error("Couldn't load notification devices");
   let sent=0, failed=0, skipped=0;
   await Promise.all((devices ?? []).map(async device => {
@@ -30,13 +31,13 @@ export async function dispatchPaymentReminders(db: SupabaseClient<Database>, see
     const accounts: Account[] = (a.data ?? []).map(x=>({id:x.id,name:x.name,kind:x.kind as AccountKind,openingBalance:Number(x.opening_balance),archived:x.archived,statementDay:x.statement_day,dueDay:x.due_day,creditLimit:x.credit_limit,details:x.details as NonNullable<Account["details"]>}));
     const transactions: Txn[] = (t.data ?? []).map(x=>({id:x.id,txnType:x.txn_type as TxnType,amount:Number(x.amount),accountId:x.account_id,toAccountId:x.to_account_id,date:x.expense_date,adjustmentSign:x.adjustment_sign === -1 ? -1 : 1,transferCounterpartOf:x.transfer_counterpart_of,principal:x.principal,interest:x.interest,...(x.original_amount == null ? {} : { originalAmount:x.original_amount })}));
     for(const loan of loans){const account=accounts.find(a=>a.id===loan.accountId);if(account&&loan.loanType!=="credit_card_emi")loan.principal=accountBalance(account,transactions);}
-    const items=paymentReminderItems({today,leadDays:p.reminderDays,enabled:p.reminders,commitments,loans,accounts,transactions,documents:(d.data ?? []).map(x=>({id:x.id,expiresOn:x.expires_on})),trips:(p.trips ?? []) as never});
-    if (!items.length) { await db.from("push_subscriptions").update({last_sent_at:new Date().toISOString()}).eq("id",device.id); skipped++; return; }
-    const key=`device:${device.id}`;
+    const items=paymentReminderItems({today,leadDays:p.reminderDays,enabled:p.reminders,notifications:p.notifications,commitments,loans,accounts,transactions,documents:(d.data ?? []).map(x=>({id:x.id,expiresOn:x.expires_on})),trips:(p.trips ?? []) as never});
+    if (!items.length) { skipped++; return; }
+    for (const { key, payload } of reminderBatches(items, device.id)) {
     const { error: claimError } = await db.from("push_reminder_log").insert({owner_id:owner,sent_on:today,item_key:key});
-    if (claimError) { if(claimError.code==="23505")await db.from("push_subscriptions").update({last_sent_at:new Date().toISOString()}).eq("id",device.id);skipped++; return; }
+    if (claimError) { if(claimError.code === "23505") skipped++; else failed++; continue; }
     try {
-      const result=await sendDevicePush(seed,device,privateReminderPayload(items.length));
+      const result=await sendDevicePush(seed,device,payload);
       if (result.expired) { await db.from("push_subscriptions").delete().eq("id",device.id); skipped++; return; }
       if (!result.ok) throw Error("Delivery refused");
       await db.from("push_subscriptions").update({last_sent_at:new Date().toISOString()}).eq("id",device.id);
@@ -44,6 +45,7 @@ export async function dispatchPaymentReminders(db: SupabaseClient<Database>, see
     } catch {
       await db.from("push_reminder_log").delete().eq("owner_id",owner).eq("sent_on",today).eq("item_key",key);
       failed++;
+    }
     }
   }));
   return {sent,failed,skipped};
@@ -57,7 +59,9 @@ export async function dispatchCheckInReminders(db: SupabaseClient<Database>, see
   let sent = 0;
   for (const owner of owners) {
     const pref = await db.from("finance_preferences").select("data").eq("owner_id", owner).maybeSingle();
+    if (pref.error) continue;
     const p = normalizePreferences(pref.data?.data as Partial<FinancePreferences> | null);
+    if (!p.reminders || !normalizeNotificationSettings(p.notifications).checkIns) continue;
     const due = dueCheckIns((p.trips ?? []) as never, now.getTime(), windowMin);
     const claimed: string[] = [];
     for (const d of due) {

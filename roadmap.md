@@ -600,3 +600,7 @@
 - [x] GLS loan term: 5 years (set start/end)
 - [x] Reclassify seven IDFC Krupa Apr–Oct 2026 debits as GLS EMI
 - [ ] Verify GLS original amount/start date (blocked: sanction letter needed)
+- [x] Connect missing/short loan funding warnings to existing phone push, with independent delivery and private messages
+- [x] Verify funding rules and dispatch with isolated tests; active 10-minute schedule confirmed; signed-in settings save/reload checked
+- [x] Add notification configuration for loan funding, payments, document renewals, trips and check-ins in existing Settings
+- [ ] Confirm actual phone delivery (requires enabling notifications in the installed published app)
