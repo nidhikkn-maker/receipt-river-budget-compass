@@ -2,7 +2,7 @@ import { csvCell } from "@/lib/csv-safe";
 import { createFileRoute } from "@tanstack/react-router";
 import { SectionTabs } from "@/components/SectionTabs";
 import { AccountantSettings } from "@/components/AccountantSettings";
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Download, Inbox, ShieldCheck, Upload, X } from "lucide-react";
 import { Card } from "@/components/Money";
@@ -27,6 +27,10 @@ import { applyUpload, undoUpload, type ApplyResult } from "@/lib/statement-pipel
 import { totals, type StmtFile } from "@/lib/statement-pipeline/line";
 import { AccountantInbox } from "@/components/AccountantInbox";
 import { emiTargets } from "@/lib/emi-match";
+import { matchDraftsToLines, type DraftMatch } from "@/lib/statement-pipeline/draft-match";
+import { reconSummary } from "@/lib/statement-pipeline/summary";
+import { listDrafts, draftReceiptFile, linkDraftToTransaction, unlinkDraft, type Draft } from "@/lib/drafts";
+import type { ReceiptDetails } from "@/lib/expenses";
 import { NewStatementAccount } from "@/components/NewStatementAccount";
 import { newAccountFromHint } from "@/lib/statement-pipeline/apply";
 import type { AccountHint } from "@/lib/statement-pipeline/line";
@@ -73,6 +77,10 @@ function StatementDeskPage() {
   const [hintEdits, setHintEdits] = useState<Record<string, Partial<AccountHint>>>({});
   const [links, setLinks] = useState<TransferLinkRow[] | null>(null);
   const [linking, setLinking] = useState<string | null>(null);
+  const [drafts, setDrafts] = useState<Draft[]>([]);
+  /** Line keys whose receipt pairing the owner changed from the default (sure = on, check = off). */
+  const [draftFlip, setDraftFlip] = useState<string[]>([]);
+  useEffect(() => { listDrafts().then(setDrafts).catch(() => setDrafts([])); }, []);
   const [fix, setFix] = useState<{ preview: CorrectionPreview; name: string } | null>(null);
   const fixOp = useRef("");
   const inputRef = useRef<HTMLInputElement>(null);
@@ -134,9 +142,23 @@ function StatementDeskPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loaded, destinations, accounts, transactions, preferences.categories, store.loans, store.commitments]);
 
+  const draftMatches: DraftMatch[] = useMemo(() => {
+    if (!plan) return [];
+    return matchDraftsToLines(plan.accounts.flatMap((a) => [...a.auto, ...a.ask].map((d) => d.line)), drafts);
+  }, [plan, drafts]);
+  const draftOn = (m: DraftMatch) => (m.certainty === "sure") !== draftFlip.includes(m.lineKey);
+  const draftLinksFor = (a: AccountPlan) => {
+    const keys = new Set([...a.auto, ...a.ask].map((d) => d.line.key));
+    return Object.fromEntries(draftMatches.filter((m) => keys.has(m.lineKey) && draftOn(m)).flatMap((m) => {
+      const d = drafts.find((x) => x.id === m.draftId); if (!d) return [];
+      const x = d.data; const exact = Math.abs(m.amountGap) < 0.005;
+      return [[m.lineKey, { draftId: d.id, overrides: { title: x.title || x.merchant, merchant: x.merchant, category: x.category, description: x.description, ...(exact && x.receiptDetails ? { receiptDetails: x.receiptDetails as ReceiptDetails } : {}) }, files: async () => (await Promise.all(d.receipts.map(draftReceiptFile))).filter((f): f is File => !!f) }]];
+    }));
+  };
+
   const api = () => {
     const s = storeRef.current;
-    return { save: s.save, remove: s.remove, reconcile: s.reconcile, addAccount: s.addAccount, setArchived: s.setArchived, refresh: s.refresh, transactions: s.transactions };
+    return { save: s.save, remove: s.remove, reconcile: s.reconcile, addAccount: s.addAccount, setArchived: s.setArchived, refresh: s.refresh, transactions: s.transactions, linkDraft: linkDraftToTransaction, unlinkDraft };
   };
 
   const apply = async () => {
@@ -146,6 +168,7 @@ function StatementDeskPage() {
         account: a,
         decisions: [...a.auto, ...a.ask.filter((d) => accepted.includes(d.line.key))],
         destination: destinations[a.file.name] ?? null,
+        draftLinks: draftLinksFor(a),
         reconcileIds: a.matched.filter((m) => m.record && !m.record.reconciledAt).map((m) => ({ id: m.record!.id, ref: `${m.line.file} · ${m.line.date} · ${m.line.amount.toFixed(2)}` })),
       }))
       .filter((r) => r.decisions.length || r.reconcileIds.length);
@@ -159,6 +182,7 @@ function StatementDeskPage() {
       setResult(r);
       setAccepted([]);
       void loadLinks();
+      listDrafts().then(setDrafts).catch(() => {}); setDraftFlip([]);
       const upload: StatementUpload = { id: crypto.randomUUID(), at: new Date().toISOString(), label: plan.accounts.map((a) => a.file.name).join(", ").slice(0, 200), posted: r.posted, reconciled: r.reconciled, createdAccounts: r.createdAccounts };
       try { const s = storeRef.current; await s.savePreferences({ ...s.preferences, statementUploads: [upload, ...(s.preferences.statementUploads ?? [])].slice(0, 10) }); }
       catch { toast.error("Saved, but undo history couldn’t sync to your other devices."); }
@@ -378,6 +402,32 @@ function StatementDeskPage() {
                 {a.gate && a.newerEntries ? " · the app has newer entries than this statement, so its closing balance isn’t compared" : a.gate ? ` · after these postings ${money(a.gate.after)}${a.gate.difference !== null ? ` · statement says ${money(a.gate.after + a.gate.difference)}` : " · no printed closing figure"}` : ""}
               </p>
               {a.gateHeld && a.gate && <p className="text-sm text-destructive" role="status">Balance check off by {money(Math.abs(a.gate.difference ?? 0))} — postings for this account are held until it adds up.</p>}
+              {(() => { const r = reconSummary(a); const cur = a.file.currency; return (
+                <section aria-label="Reconciliation summary" className={`space-y-2 rounded-xl border-2 p-3 text-sm ${r.ok ? "border-border" : "border-warning bg-warning/10"}`}>
+                  <h3 className="font-semibold">{r.ok ? "Before you save · everything agrees" : "Before you save · check these"}</h3>
+                  <dl className="grid grid-cols-2 gap-x-4 gap-y-1 sm:grid-cols-4">
+                    {([["Already in the app", r.matched], ["Will save", r.toSave], ["Unmatched lines", r.unmatchedLines], ["In app, not on statement", r.notOnStatement]] as const).map(([k, v]) => <div key={k}><dt className="text-xs text-muted-foreground">{k}</dt><dd className="font-semibold tabular-nums">{v}</dd></div>)}
+                  </dl>
+                  <ul className="space-y-0.5 text-xs">
+                    <li>{r.statementGap === null ? "Statement balances: opening or closing not printed, so the file can't check itself." : r.statementGap === 0 ? "Statement balances: opening + entries = printed closing." : `Statement balances don't add up — off by ${money(Math.abs(r.statementGap), cur)}.`}</li>
+                    <li>{r.appGap === null ? (a.newerEntries ? "App balance: the app has newer entries, so it isn't compared." : "App balance: can't be compared without a printed closing figure.") : Math.abs(r.appGap) < 0.01 ? "App balance after saving matches the statement's closing figure." : `App balance after saving differs from the statement by ${money(Math.abs(r.appGap), cur)}.`}</li>
+                    {r.needDecision > 0 && <li>{r.needDecision} line{r.needDecision > 1 ? "s" : ""} need your decision below.</li>}
+                    {r.held > 0 && <li>{r.held} line{r.held > 1 ? "s are" : " is"} held back until the balance adds up.</li>}
+                    {r.elsewhere > 0 && <li>{r.elsewhere} line{r.elsewhere > 1 ? "s look" : " looks"} saved on another account.</li>}
+                    {r.wrongKind > 0 && <li>{r.wrongKind} record{r.wrongKind > 1 ? "s were" : " was"} saved the wrong way (money in vs out).</li>}
+                  </ul>
+                </section>); })()}
+              {(() => { const keys = new Set([...a.auto, ...a.ask].map((d) => d.line.key)); const ms = draftMatches.filter((m) => keys.has(m.lineKey)); if (!ms.length) return null; const lineOf = (k: string) => [...a.auto, ...a.ask].find((d) => d.line.key === k)!.line; return (
+                <section aria-label="Receipt drafts matched" className="space-y-2">
+                  <h3 className="font-semibold">Receipts matched to bank lines · {ms.length}</h3>
+                  <p className="text-xs text-muted-foreground">Ticked receipts attach their photo, shop and category to the bank entry; the bank amount and date are kept. Unsure ones start unticked.</p>
+                  <ul className="divide-y divide-border rounded-xl border border-border text-sm">{ms.map((m) => { const d = drafts.find((x) => x.id === m.draftId); const l = lineOf(m.lineKey); return (
+                    <li key={m.lineKey} className="flex items-start gap-3 p-2">
+                      <Checkbox aria-label={`Use receipt ${d?.data.merchant ?? ""} for ${l.description}`} checked={draftOn(m)} onCheckedChange={() => setDraftFlip((xs) => xs.includes(m.lineKey) ? xs.filter((x) => x !== m.lineKey) : [...xs, m.lineKey])} />
+                      <span className="min-w-0 flex-1"><span className="block truncate">{d?.data.merchant || d?.data.title || "Receipt"} · {d?.data.date} → {l.date} · {l.description}</span><span className={`block text-xs ${m.certainty === "sure" ? "text-muted-foreground" : "text-warning"}`}>{m.certainty === "sure" ? "Sure match" : "Check this"} · {m.reasons.join(" · ")}</span></span>
+                      <span className="shrink-0 tabular-nums">{money(l.amount, l.currency)}</span>
+                    </li>); })}</ul>
+                </section>); })()}
 
               {a.auto.length > 0 && (
                 <section aria-label="Saved automatically">
