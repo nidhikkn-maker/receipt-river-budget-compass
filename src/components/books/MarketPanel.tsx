@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Fold } from "@/components/Fold";
 import { money } from "@/lib/expenses";
 import { getFundNav } from "@/lib/mutual-funds.functions";
+import { statementActionAlerts } from "@/lib/books/investment-alerts";
 import { addSnapshot, FRESHNESS_LABEL, quantityByIsin, quoteKey, recordFailure, upsertQuote, valuationAlerts } from "@/lib/books/market";
 import type { Holding, HoldingKind } from "@/lib/books/types";
 import { useBooks, useNetWorth } from "./useBooks";
@@ -24,7 +25,8 @@ export function MarketPanel() {
   const [gold, setGold] = useState(books.goldRate ? String(books.goldRate.perGram24k) : "");
   // Your own entries for a security are compared with the demat total across every account [v6.1 §4, §13].
   const statementQty = quantityByIsin(nw.demat ?? []);
-  const alerts = valuationAlerts(nw.valued, books.snapshots, books.alerts, statementQty, books.holdings, [], nw.dematMissing);
+  const actions = statementActionAlerts(nw.demat ?? []);
+  const alerts = valuationAlerts(nw.valued, books.snapshots, books.alerts, statementQty, books.holdings, actions, nw.dematMissing);
 
   const refreshNavs = async () => {
     let quotes = books.quotes; let ok = 0, bad = 0;
@@ -64,6 +66,7 @@ export function MarketPanel() {
         {nw.dematRows.length > 0 && <details className="text-xs"><summary className="cursor-pointer text-muted-foreground">Demat holdings ({nw.dematRows.length})</summary>
           <div className="mt-1 divide-y">{nw.dematRows.map((h) => <div key={h.id} className="flex justify-between gap-2 py-1"><span className="min-w-0 truncate">{h.name}<span className="block text-muted-foreground">{h.quantity} · {h.basis}</span></span><b className="font-mono">{h.value == null ? "no price" : money(h.value)}</b></div>)}</div></details>}
         {alerts.length > 0 && <ul className="space-y-1 rounded-xl bg-secondary p-3 text-xs">{alerts.map((a) => <li key={a}>{a}</li>)}</ul>}
+        {books.alerts.corporateActions && actions.length > 0 && <Link to="/vault" className="text-xs text-primary underline">Corporate-action source documents</Link>}
         <div className="flex flex-wrap gap-2">
           <Button size="sm" variant="outline" onClick={() => setEdit(blank())}>Add holding</Button>
           <Button size="sm" variant="outline" onClick={refreshNavs} disabled={!books.holdings.some((h) => h.schemeCode)}>Refresh NAVs</Button>
