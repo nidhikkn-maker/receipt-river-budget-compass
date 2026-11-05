@@ -100,7 +100,7 @@ export function addSnapshot(list: Snapshot[], s: Snapshot): Snapshot[] {
 }
 
 /** Configurable valuation alerts [v6.1 §13]. */
-export function valuationAlerts(valued: Valued[], snapshots: Snapshot[], a: AlertSettings, statementQty: Record<string, number>, qtyHoldings: Holding[] = valued.map((v) => v.holding)): string[] {
+export function valuationAlerts(valued: Valued[], snapshots: Snapshot[], a: AlertSettings, statementQty: Record<string, number>, qtyHoldings: Holding[] = valued.map((v) => v.holding), corporateActions: { name: string; note: string }[] = [], dematMissing: string[] = []): string[] {
   const out: string[] = [];
   if (a.missingPrices) { const m = valued.filter((v) => v.value == null); if (m.length) out.push(`${m.length} holding${m.length > 1 ? "s have" : " has"} no price`); }
   for (const v of valued) if (v.stale && v.holding.kind === "mutual_fund") out.push(`${v.holding.name}: NAV older than ${a.staleNavDays} days`);
@@ -115,6 +115,9 @@ export function valuationAlerts(valued: Valued[], snapshots: Snapshot[], a: Aler
     for (const h of qtyHoldings) { const k = h.isin; if (k) held.set(k, { name: held.get(k)?.name ?? h.name, qty: (held.get(k)?.qty ?? 0) + h.quantity }); }
     for (const [k, h] of held) if (statementQty[k] != null && Math.abs(statementQty[k]! - h.qty) > 1e-6) out.push(`${h.name}: ${h.qty} held vs ${statementQty[k]} on the latest statement`);
   }
-  if (a.unusualValuationPct > 0) for (const v of valued) if (v.value != null && v.holding.costBasis && Math.abs(v.value / v.holding.costBasis - 1) * 100 > a.unusualValuationPct) out.push(`${v.holding.name}: value is ${Math.round((v.value / v.holding.costBasis - 1) * 100)}% from cost — check the price`);
+  // Value already carries the ownership share, so compare it with the same share of cost [v6.1 §13].
+  if (a.unusualValuationPct > 0) for (const v of valued) { const cost = v.holding.costBasis ? v.holding.costBasis * ((v.holding.sharePct ?? 100) / 100) : 0; if (v.value != null && cost > 0 && Math.abs(v.value / cost - 1) * 100 > a.unusualValuationPct) out.push(`${v.holding.name}: value is ${Math.round((v.value / cost - 1) * 100)}% from cost — check the price`); }
+  if (a.corporateActions) for (const c of corporateActions) out.push(`${c.name}: ${c.note} — reconcile quantity and cost before relying on its value`);
+  if (a.missingPrices && dematMissing.length) out.push(`${dematMissing.length} demat holding${dematMissing.length > 1 ? "s have" : " has"} no price or statement value`);
   return out;
 }

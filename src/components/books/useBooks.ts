@@ -54,7 +54,7 @@ export function useClosingPrices(isins: string[]): ClosingPrices {
   return v;
 }
 /** Closing price as a quote for the valuation rules; end-of-day, never live. */
-export const closeQuote = (isin: string, c: { exchange: string; close: number; date: string }): Quote => ({ key: `isin:${isin}`, price: c.close, at: `${c.date}T10:00:00.000Z`, provider: `${c.exchange} official closing price`, freshness: "eod", refreshedAt: `${c.date}T13:30:00.000Z` });
+export const closeQuote = (isin: string, c: { exchange: string; close: number; date: string }): Quote => ({ key: `isin:${isin}`, price: c.close, at: `${c.date}T10:00:00.000Z` /* 15:30 IST market close */, provider: `${c.exchange} official closing price`, freshness: "eod", refreshedAt: `${c.date}T13:30:00.000Z` });
 
 /** Ownership-aware dynamic net worth with freshness per component [v6.1 §9–11]. */
 export function useNetWorth() {
@@ -85,8 +85,10 @@ export function useNetWorth() {
     const valued = books.holdings.filter((h) => !(h.isin && dematIsins.has(h.isin))).map((h) => valueHolding(h, quotes, books.goldRate, now, books.alerts));
     const duplicates = books.holdings.filter((h) => h.isin && dematIsins.has(h.isin)).map((h) => h.name);
     let closeCount = 0;
-    const dematRows = dematHoldings.map((h) => { const c = closes.byIsin.get(h.isin); if (c && h.quantity > 0) { closeCount++; return { ...h, value: Math.round(h.quantity * c.close * 100) / 100, basis: `${c.exchange} close ${c.date}` }; } return { ...h, value: h.statementValue ?? 0, basis: h.statementValue != null ? `statement ${h.asOf ?? ""}`.trim() : "no price" }; });
-    const dematValue = dematRows.reduce((s, h) => s + h.value, 0);
+    const dematRows = dematHoldings.map((h) => { const c = closes.byIsin.get(h.isin); if (c && h.quantity > 0) { closeCount++; return { ...h, value: Math.round(h.quantity * c.close * 100) / 100, basis: `${c.exchange} close ${c.date}` }; } return { ...h, value: h.statementValue ?? null, basis: h.statementValue != null ? `statement ${h.asOf ?? ""}`.trim() : "no price" }; });
+    // A missing price stays missing — never counted as zero [v6.1 §6, §15].
+    const dematValue = dematRows.reduce((s, h) => s + (h.value ?? 0), 0);
+    const dematMissing = dematRows.filter((h) => h.value == null).map((h) => h.name ?? h.isin);
     const dematDate = dematHoldings.map((h) => h.asOf ?? "").sort().pop();
     const closeDate = [...closes.byIsin.values()].map((c) => c.date).sort().pop();
     const fy = fyOf(now.toISOString().slice(0, 10));
@@ -105,6 +107,6 @@ export function useNetWorth() {
     const last = books.snapshots.at(-1);
     // Market movement excludes money you put in or took out since the last snapshot [v6.1 §12].
     const flows = last ? transactions.filter((t) => t.txnType === "investment" && t.date > last.date).reduce((s, t) => s + t.amount, 0) : 0;
-    return { ...nw, valued, portfolio, liquid: raw.assets, movement: last ? Math.round(portfolio - last.portfolio - flows) : null, flowsSinceSnapshot: Math.round(flows), lastSnapshot: last?.date ?? null, demat, dematRows, duplicates, closeJob: closes.job };
+    return { ...nw, valued, portfolio, liquid: raw.assets, movement: last ? Math.round(portfolio - last.portfolio - flows) : null, flowsSinceSnapshot: Math.round(flows), lastSnapshot: last?.date ?? null, demat, dematRows, dematMissing, duplicates, closeJob: closes.job };
   }, [accounts, transactions, valuations, loans, books, demat, preferences.assets, closes]); // eslint-disable-line react-hooks/exhaustive-deps
 }
