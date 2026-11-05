@@ -165,6 +165,8 @@ export interface BooksData {
   itrHandoffs?: import("./itr-handoff").HandoffRecord[] | undefined;
   /** Old-regime deductions the owner has evidence for, per entity and FY [§46]. */
   taxDeductions?: TaxDeduction[] | undefined;
+  /** Owner-entered company facts per FY (ownership %, partner capital, accumulated profits). */
+  entityTaxProfiles?: import("./entity-tax-profile").EntityTaxYear[] | undefined;
 }
 export interface TaxDeduction { id: string; entityId: string; fy: string; section: "80C" | "80CCD1B" | "80D" | "80E" | "80G" | "80TTA" | "other"; amount: number; evidence: string }
 export interface SavedDraft { id: string; form: string; period: string; ref: string; createdAt: string; data: unknown }
