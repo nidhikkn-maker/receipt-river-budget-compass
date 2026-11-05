@@ -152,7 +152,10 @@ interface Ctx {
 export interface SavedReview { id: string; month: string; figures: unknown; dataHash: string; narrative: string; dataCutoff: string; generatedAt: string }
 // Columns Home needs for balances, dues and monthly totals; omits receipts, notes and receipt details.
 const LITE_COLUMNS = "id,category_revision,correction_revision,department,title,merchant,category,scope,member_id,splits,amount,currency,original_amount,fx_rate,payment_method,reconciled_at,statement_ref,updated_at,expense_date,txn_type,account_id,to_account_id,payment_instrument_id,payee_id,tags,workspace_allocations,reimbursement_status,adjustment_sign,allocations,reimbursement,transfer_counterpart_of,trip_id,principal,interest,created_at";
-const StoreCtx = createContext<Ctx | null>(null);
+// Keep one context identity across hot reloads; otherwise a re-executed module
+// creates a new context and mounted consumers throw "useStore outside provider".
+const g = globalThis as unknown as { __ledgerlineStoreCtx?: React.Context<Ctx | null> };
+const StoreCtx = g.__ledgerlineStoreCtx ?? (g.__ledgerlineStoreCtx = createContext<Ctx | null>(null));
 const r2 = (n: number) => Math.round(n * 100) / 100;
 const today = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; };
 const safeName = (n: string) => n.replace(/[^\w.-]/g, "_").slice(-120);
