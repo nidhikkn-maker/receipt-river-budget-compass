@@ -24,6 +24,7 @@ const Extracted = z.object({
     quote: z.string().describe("Short exact quote from the document supporting the value"),
     confidence: z.enum(["high", "medium", "low"]),
   })).describe("Up to 20 key facts specific to this document type: registration numbers, parties, owners and shares, property/asset identifiers, periods, tax figures. Only values printed on the document."),
+  possiblyIncomplete: z.boolean().nullable().describe("True when the document has more facts, schedule lines or pages than you could list (lists were cut short or pages were unreadable). Never guess the missing items."),
   obligations: z.array(z.object({
     label: z.string().describe("What must be paid or done, e.g. 'Annual premium', 'Monthly EMI', 'Maintenance fee'"),
     amount: z.number().nullable(),
