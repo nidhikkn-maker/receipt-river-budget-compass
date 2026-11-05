@@ -36,6 +36,8 @@ export function receiptKind(text: string, amount?: number, lease?: Lease): Ledge
   if (/maintenance|electricity|water|reimburse|penalty|late fee/i.test(text)) return "other";
   // Unlabelled receipt matching the deposit (and not the rent) waits for you — never assumed rent or deposit [§39].
   if (amount != null && lease?.deposit && Math.abs(amount - lease.deposit) <= 1 && Math.abs(amount - lease.rent) > 1) return "unconfirmed";
+  // Unlabelled receipt larger than the monthly rent may be arrears, advance or something else — ask, never assume [§39].
+  if (amount != null && lease && !/\brent\b/i.test(text) && amount > Math.max(lease.rent * 1.01, lease.rent + 1) && amount > (lease.rent || 0)) return "unconfirmed";
   return "rent";
 }
 
