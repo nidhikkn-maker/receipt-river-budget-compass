@@ -151,7 +151,7 @@ interface Ctx {
 }
 export interface SavedReview { id: string; month: string; figures: unknown; dataHash: string; narrative: string; dataCutoff: string; generatedAt: string }
 // Columns Home needs for balances, dues and monthly totals; omits receipts, notes and receipt details.
-const LITE_COLUMNS = "id,category_revision,correction_revision,department,title,merchant,category,scope,member_id,splits,amount,currency,original_amount,fx_rate,payment_method,reconciled_at,statement_ref,updated_at,expense_date,txn_type,account_id,to_account_id,payment_instrument_id,payee_id,tags,workspace_allocations,reimbursement_status,adjustment_sign,allocations,reimbursement,transfer_counterpart_of,trip_id,principal,interest,created_at";
+const LITE_COLUMNS = "id,category_revision,correction_revision,department,title,merchant,category,scope,member_id,splits,amount,currency,original_amount,fx_rate,payment_method,reconciled_at,statement_ref,updated_at,expense_date,txn_type,account_id,to_account_id,payment_instrument_id,payee_id,entity_id,entity_source,tags,workspace_allocations,reimbursement_status,adjustment_sign,allocations,reimbursement,transfer_counterpart_of,trip_id,principal,interest,created_at";
 // Keep one context identity across hot reloads; otherwise a re-executed module
 // creates a new context and mounted consumers throw "useStore outside provider".
 const g = globalThis as unknown as { __ledgerlineStoreCtx?: import("react").Context<Ctx | null> };
@@ -262,7 +262,7 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
       amount: Number(x.amount), currency: x.currency, originalAmount: Number(x.original_amount ?? x.amount), fxRate: Number(x.fx_rate),
       paymentMethod: x.payment_method as PaymentMethod, reconciledAt: x.reconciled_at, statementRef: x.statement_ref, updatedAt: x.updated_at,
       date: x.expense_date, description: x.description, receipts: (x.receipts as unknown as Receipt[]) ?? [],
-      txnType: x.txn_type as TxnType, accountId: x.account_id, toAccountId: x.to_account_id, paymentInstrumentId: x.payment_instrument_id, payeeId: (x as { payee_id?: string | null }).payee_id ?? null, tags: x.tags ?? [], workspaceAllocations: (x.workspace_allocations as unknown as import("./workspaces").WorkspaceShare[]) ?? [],
+      txnType: x.txn_type as TxnType, accountId: x.account_id, toAccountId: x.to_account_id, paymentInstrumentId: x.payment_instrument_id, payeeId: (x as { payee_id?: string | null }).payee_id ?? null, entityId: (x as { entity_id?: string | null }).entity_id ?? null, entitySource: ((x as { entity_source?: string }).entity_source === "manual" ? "manual" : "account"), tags: x.tags ?? [], workspaceAllocations: (x.workspace_allocations as unknown as import("./workspaces").WorkspaceShare[]) ?? [],
       receiptDetails: x.receipt_details as unknown as ReceiptDetails, reimbursementStatus: x.reimbursement_status as ReimbursementStatus,
       adjustmentSign: x.adjustment_sign === -1 ? -1 : 1,
       allocations: (x.allocations as unknown as Allocation[]) ?? [], reimbursement: (x.reimbursement as unknown as ReimbursementInfo) ?? {},
@@ -343,7 +343,7 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
     const res = await saveExpense({ data: {
       id: opts?.id ?? null, ...(opts?.createId ? { createId: opts.createId } : {}), title: s.title.trim(), merchant: s.merchant, category: s.category, scope: s.scope, memberId: s.memberId, splits: s.splits ?? [],
       currency: s.currency, originalAmount: s.amount, date: s.date, description: s.description, paymentMethod: s.paymentMethod,
-      txnType: s.txnType ?? "expense", accountId: s.accountId ?? null, toAccountId: s.toAccountId ?? null, paymentInstrumentId: s.paymentInstrumentId ?? null, payeeId: s.payeeId ?? null, tags: s.tags ?? [], workspaceAllocations: s.workspaceAllocations ?? [],
+      txnType: s.txnType ?? "expense", accountId: s.accountId ?? null, toAccountId: s.toAccountId ?? null, paymentInstrumentId: s.paymentInstrumentId ?? null, payeeId: s.payeeId ?? null, ...(s.entitySource ? { entitySource: s.entitySource, entityId: s.entityId ?? null } : {}), tags: s.tags ?? [], workspaceAllocations: s.workspaceAllocations ?? [],
       tripId: s.tripId ?? null, principal: s.principal ?? null, interest: s.interest ?? null,
       receiptDetails: s.receiptDetails, reimbursementStatus: s.reimbursementStatus ?? "none", adjustmentSign: s.adjustmentSign ?? 1,
       ...(receipts ? { receipts } : {}),
