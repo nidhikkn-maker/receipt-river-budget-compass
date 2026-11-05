@@ -51,3 +51,4 @@
 
 - Accountant upload links are HMAC-signed link ids (src/lib/upload-link.ts), verified in /api/public/upload/$token with atomic slot claims; uploads land in the private statement-uploads bucket and only enter the ledger through the normal Statement Desk flow. The monthly request view (/upload-requests) adds no state of its own: requestReport derives every row from stored link rows, events and uploads, so the view is read-only.
 - Pages sharing one job are grouped by src/components/SectionTabs.tsx (Statement Desk, Account health, Plan, Reports); retired pages redirect via beforeLoad so old links work. Review lives only at /inbox?section=review.
+- Asset physical checks resolve exact owner-visible QR/barcode tags through asset-verification.ts; lazy device-only decoding requires confirmation and saves the check/event together in preferences without financial changes.
