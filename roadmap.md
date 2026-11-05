@@ -704,11 +704,12 @@
 - [x] Phase 1 acceptance tests (pure rules + isolated database)
 
 ## Final plan (5 Nov 2026) — .lovable/plan/finish-both-documents-...-2026-11-05.md
+- [x] C14: QR/barcode physical asset checks with camera/photo/manual fallback, exact owner-register matching and explicit condition confirmation. 1,448 tests pass; signed-in controlled QR-photo decode, unknown refusal, confirmation and reload read-back verified at phone width with no page errors. Real records unchanged; phone camera/Cloud save remain unverified; not published.
 - [x] E29: retained statement bonuses/splits/rights/mergers/dividends with document ids, duplicate-safe retries and undo snapshots; alerts now read saved events. 1,442 tests pass, including isolated PostgreSQL read-back; signed-in controlled Wealth alert visible with no errors. Real financial records unchanged; not published.
 - [x] Dashboard provider recovery checked signed-in: dashboard loads, no provider exception or page errors.
 - [x] E30 exchange-holiday-aware market open/staleness; D19 unlabelled receipts above rent wait for confirmation
 - [x] iPhone/iPad (portrait+landscape) layout check of main pages — no overflow, no errors
 - [x] Security rescan; shared price/rule tables limited to signed-in readers; published
 - [x] E22 NSE/BSE prices kept separate per holding exchange; E27 each net-worth part shows its own as-of date; E25 price + fetch time per holding; E28 snapshots include demat value, count, money moved and price date
-- [ ] Remaining plan items A1–A7, B8–B12, C13–C16, D17–D18/D20–D21, E23–E24, E26, E29, F31–F34, acceptance pack
+- [ ] Remaining plan items A1–A7, B8–B12, C13/C15–C16, D17–D18/D20–D21, E23–E24, E26, F31–F34, acceptance pack
 - [ ] Real-device checks (Face ID, camera, offline, push) — needs owner's iPhone/iPad
