@@ -30,7 +30,7 @@ const isIso = (v: string | null | undefined) => !!v && /^\d{4}-\d{2}-\d{2}$/.tes
 
 export interface ResumeState { runId: string; read?: ExtractedDocument | undefined; docType?: DocType | undefined; fields?: DocField[] | undefined; data: RunData }
 
-export function DocumentIntake({ file, context, onClose, resume, replacesId }: { file: File; context?: IntakeContext | undefined; onClose: () => void; resume?: ResumeState | undefined; replacesId?: string | undefined }) {
+export function DocumentIntake({ file, context, onClose, resume, replacesId, onStatement }: { file: File; context?: IntakeContext | undefined; onClose: () => void; onStatement?: (() => void) | undefined; resume?: ResumeState | undefined; replacesId?: string | undefined }) {
   const store = useStore();
   const { preferences, savePreferences, addDocument, updateDocument, documents, accounts, loans } = store;
   const [linkAcc, setLinkAcc] = useState("");
