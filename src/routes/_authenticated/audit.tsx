@@ -6,7 +6,7 @@ import { Fold } from "@/components/Fold";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useStore } from "@/lib/store";
-import { loanRecon, supplierRecon, investmentRecon, intercompanyRecon } from "@/lib/books/recon";
+import { loanRecon, supplierRecon, customerRecon, investmentRecon, intercompanyRecon } from "@/lib/books/recon";
 import { accountBalance } from "@/lib/ledger";
 import { useDemat } from "@/components/books/useBooks";
 import { fieldExtensionPlan } from "@/lib/books/intake";
@@ -64,6 +64,7 @@ function Audit() {
     return {
       loan: loanRecon(loans, documents.filter((d) => d.docType === "loan_statement").map((d) => ({ loanId: d.loanId ?? null, date: d.docDate, outstanding: d.amount })), ledgerAt).filter((r) => Math.abs(r.difference) > 1),
       supplier: supplierRecon(books.gstInvoices, transactions.filter((t) => (t.txnType ?? "expense") === "expense").map((t) => ({ id: t.id, amount: t.amount, date: t.date, text: `${t.title} ${t.merchant ?? ""} ${t.description}` })), fyRange(fyNow).start, fyRange(fyNow).end),
+      customer: customerRecon(books.gstInvoices, transactions.filter((t) => t.txnType === "income").map((t) => ({ id: t.id, amount: t.amount, date: t.date, text: `${t.title} ${t.merchant ?? ""} ${t.description}` })), fyRange(fyNow).start, fyRange(fyNow).end),
       investment: investmentRecon((demat ?? []).flatMap((d) => d.holdings)),
       inter: intercompanyRecon(transactions, books.entityAccounts ?? {}),
     };
@@ -82,6 +83,7 @@ function Audit() {
         <div className="mt-3 space-y-2 text-xs">
           <details><summary className="cursor-pointer">Loan vs lender statement · {recon.loan.length ? `${recon.loan.length} differ` : "agree or no statement"}</summary>{recon.loan.map((r) => <p key={r.loanId} className="break-words">{r.name} on {r.statementDate}: lender {inr(r.lender)} · ledger {inr(r.ledger)} · <b className="text-destructive">difference {inr(r.difference)}</b></p>)}{!recon.loan.length && <p className="text-muted-foreground">Upload the lender's statement on Statement Desk and link it to the loan to compare.</p>}</details>
           <details><summary className="cursor-pointer">Supplier invoices vs payments · FY {fyNow} · {recon.supplier.length} differ</summary>{recon.supplier.map((r) => <p key={r.gstin + r.party} className="break-words">{r.party} {r.gstin}: invoiced {inr(r.invoiced)} ({r.invoices}) · paid {inr(r.paid)} ({r.payments}) · <b className={r.difference > 0 ? "text-destructive" : ""}>{r.difference > 0 ? `${inr(r.difference)} unpaid` : `${inr(-r.difference)} paid without invoice`}</b></p>)}</details>
+          <details><summary className="cursor-pointer">Customer invoices vs receipts · FY {fyNow} · {recon.customer.length} differ</summary>{recon.customer.map((r) => <p key={r.gstin + r.party} className="break-words">{r.party} {r.gstin}: invoiced {inr(r.invoiced)} ({r.invoices}) · received {inr(r.received)} ({r.receipts}) · <b className={r.outstanding > 0 ? "text-destructive" : ""}>{r.outstanding > 0 ? `${inr(r.outstanding)} still owed` : `${inr(-r.outstanding)} received without invoice`}</b></p>)}</details>
           <details><summary className="cursor-pointer">Holdings vs transaction history · {recon.investment.length} differ</summary>{recon.investment.map((r) => <p key={r.isin} className="break-words">{r.name} ({r.isin}): statement {r.statement} · from transactions {r.fromTransactions} · difference {r.difference}</p>)}</details>
           <details><summary className="cursor-pointer">Between companies · {recon.inter.length} pair{recon.inter.length === 1 ? "" : "s"}</summary>{recon.inter.map((r) => <p key={r.a + r.b} className="break-words">{entName(r.a)} → {entName(r.b)} {inr(r.aToB)} · {entName(r.b)} → {entName(r.a)} {inr(r.bToA)} · net {r.net >= 0 ? `${entName(r.b)} owes ${entName(r.a)}` : `${entName(r.a)} owes ${entName(r.b)}`} {inr(Math.abs(r.net))}{r.unconfirmed ? ` · ${r.unconfirmed} not confirmed` : ""}</p>)}{!recon.inter.length && <p className="text-muted-foreground">Link accounts to each company in its tax profile to see transfers between them.</p>}</details>
         </div>
