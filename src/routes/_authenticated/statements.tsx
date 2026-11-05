@@ -33,7 +33,7 @@ import { totals, type StmtFile } from "@/lib/statement-pipeline/line";
 import { AccountantInbox } from "@/components/AccountantInbox";
 import { emiTargets } from "@/lib/emi-match";
 import { matchDraftsToLines, type DraftMatch } from "@/lib/statement-pipeline/draft-match";
-import { reconSummary } from "@/lib/statement-pipeline/summary";
+import { reconSummary, savedBalanceCheck } from "@/lib/statement-pipeline/summary";
 import { listDrafts, draftReceiptFile, linkDraftToTransaction, unlinkDraft, type Draft } from "@/lib/drafts";
 import type { ReceiptDetails } from "@/lib/expenses";
 import { NewStatementAccount, defaultEntityChoice } from "@/components/NewStatementAccount";
@@ -208,8 +208,8 @@ function StatementDeskPage() {
       // One event per saved statement: did the app's balance after saving match the printed closing figure?
       for (const q of requests) {
         const sm = reconSummary(q.account);
-        const balance = sm.appGap === null ? "not_compared" : Math.abs(sm.appGap) < 0.01 ? "matched" : "differs";
-        window.__lovableEvents?.track?.("project.statement_saved", { balance, statement_adds_up: sm.statementGap === null ? "not_printed" : sm.statementGap === 0 ? "yes" : "no", entries_posted: q.decisions.length, fully_reconciled: sm.ok });
+        const { result: balance } = savedBalanceCheck(q.account, q.decisions.map((d) => d.line));
+        window.__lovableEvents?.track?.("project.statement_saved", { balance, statement_adds_up: sm.statementGap === null ? "not_printed" : sm.statementGap === 0 ? "yes" : "no", entries_posted: q.decisions.length, fully_reconciled: balance === "matched" && sm.unmatchedLines === 0 && sm.wrongKind === 0 && sm.notOnStatement === 0 });
       }
       setAccepted([]);
       void loadLinks();
