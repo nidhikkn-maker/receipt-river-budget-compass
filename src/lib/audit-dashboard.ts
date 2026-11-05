@@ -11,7 +11,7 @@ export function auditFindings(today: string, entities: EntityProfile[], assets: 
   const out: Finding[] = [];
   for (const p of entities) {
     const pe = panProblem(p.pan, p.kind);
-    if (pe) out.push({ key: `pan:${p.id}`, area: "Profiles", text: `${p.name}: ${pe}`, to: "/entities", severity: "high" });
+    if (pe) out.push({ key: `pan:${p.id}`, area: "Profiles", text: `${p.name}: ${pe}`, to: "/entities", severity: p.pan.trim() ? "high" : "low" });
     for (const g of p.gstins) { const ge = gstinProblem(g, p.pan); if (ge) out.push({ key: `gst:${p.id}:${g}`, area: "Profiles", text: `${p.name} ${g}: ${ge}`, to: "/entities", severity: "high" }); }
     const dates = entries.map((e) => e.date);
     for (const y of yearStatuses(p.booksFrom, today, dates, entries.filter((e) => e.statementRef || e.reconciledAt).map((e) => e.date), docs.map((d) => d.docDate ?? d.createdAt.slice(0, 10))))
