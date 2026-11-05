@@ -1,6 +1,8 @@
 /** Applies a confirmed intake proposal to owner preferences in one write. Pure so it can be tested. */
 import type { EntityProfile } from "../entities";
 import type { Asset } from "../assets";
+import type { Holding, Quote } from "./types";
+import { upsertQuote } from "./market";
 import type { BooksData, FyRecord, GstInvoice, Lease, Property, TaxCredit } from "./types";
 import { addLink } from "./docrepo";
 import { unmappedFields } from "./intake";
@@ -14,6 +16,7 @@ export type Confirmed =
   | { route: "fy"; record: FyRecord }
   | { route: "gst"; invoice: GstInvoice }
   | { route: "tax"; entityId: string; fy: string; salary: number | null; credits: { kind: TaxCredit["kind"]; amount: number; source: string }[] }
+  | { route: "fund"; holdings: Holding[]; quotes: Quote[] }
   | { route: "document" };
 
 export interface PrefsSlice { entities: EntityProfile[]; assets: Asset[]; books: BooksData }
@@ -60,6 +63,13 @@ export function commitIntake(p: PrefsSlice, c: Confirmed, doc: { id: string; tit
       const add = c.credits.filter((x) => !have.has(`${x.kind}|${x.amount}`)).map((x) => ({ id: newId(), entityId: c.entityId, fy: c.fy, kind: x.kind, amount: x.amount, source: x.source, docId: doc.id }));
       books = { ...books, taxCredits: [...(books.taxCredits ?? []), ...add], ...(c.salary != null ? { salaryEvidence: [...(books.salaryEvidence ?? []).filter((s) => !(s.entityId === c.entityId && s.fy === c.fy && s.docId === doc.id)), { entityId: c.entityId, fy: c.fy, amount: c.salary, docId: doc.id }] } : {}) };
       link("entity", c.entityId, "tax statement");
+      break;
+    }
+    case "fund": {
+      let holdings = books.holdings, quotes = books.quotes;
+      for (const h of c.holdings) { holdings = upsert(holdings, h); link("investment", h.id, h.name); }
+      for (const q of c.quotes) quotes = upsertQuote(quotes, q);
+      books = { ...books, holdings, quotes };
       break;
     }
     case "document": break;
