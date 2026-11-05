@@ -22,8 +22,19 @@ The app already keeps a hidden company-to-account list that taxes, opening balan
 - Linking never changes balances, entries or past reports; it only changes which company's tax, opening balance and audit views include that account.
 - A company with blank PAN is allowed to exist but its PAN/GSTIN checks still run once you fill them in.
 
+## Nothing is required
+- No field is mandatory to save an account link or create a company: name can be left blank (saved as "Unnamed company" and editable later), type defaults to Company, PAN/GSTIN/CIN/books-from are all optional.
+- PAN/GSTIN checks only show as gentle warnings when something is typed; they never block saving, including on the existing Companies & years form.
+
+## Trips: "Mark completed" option
+- When creating a trip, a new "Completed" switch lets you record a past trip as finished straight away.
+- On any trip, a "Mark trip completed" button is always available (not only after the end date).
+- Open items (unpaid bookings, unsettled advances, pending claims) are listed as reminders, but no longer stop you from completing — today they block the Close button.
+- "Reopen" stays available; completing never adds or changes entries.
+
 ## Technical details
-- `src/lib/entities.ts`: allow a "stub" profile (PAN optional when `stub: true`); add `stubEntity(name, kind)`, `looksLikeBusiness(holder)`, `matchEntityByName()`.
+- Trips: `closeBlockers` becomes advisory (`closeReminders`); TripSections close button no longer disabled; trip create form sets `closedAt` when "Completed" is on. Update trip tests for the new rule.
+- `src/lib/entities.ts`: make PAN and all other fields optional for every profile (validation returns warnings, not save blockers); add `stubEntity(name, kind)`, `looksLikeBusiness(holder)`, `matchEntityByName()`.
 - New pure `src/lib/books/entity-accounts.ts`: `linkAccount(map, entityId, accountId)` (exclusive), `unlink`, `ownerOf`. Unit tests for exclusivity, unlink, name matching, business-name detection.
 - Save company + link together in one preferences write (`entities` + `books.entityAccounts`).
 - UI: account edit dialog picker, entities page section + badge, statement new-account card suggestion in the Statement Desk.
