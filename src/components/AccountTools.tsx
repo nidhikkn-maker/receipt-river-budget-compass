@@ -11,13 +11,14 @@ import { money } from "@/lib/expenses";
 import { todayISO } from "@/lib/use-position";
 import { MutualFundTools } from "./MutualFundTools";
 import { BankBalanceEditor } from "./BankBalanceEditor";
+import { BelongsTo } from "./BelongsTo";
 export function AccountTools({ a }: { a: Account }) {
  const { transactions, valuations, addValuation, removeValuation, adjustBalance, updateAccount } = useStore();
  const [value,setValue]=useState(""); const [date,setDate]=useState(todayISO()); const [source,setSource]=useState("manual"); const [busy,setBusy]=useState(false);
  const run=async(fn:()=>Promise<unknown>)=>{setBusy(true);try{await fn();toast.success("Saved");}catch(e){toast.error((e as Error).message);}finally{setBusy(false);}};
  const valued=VALUED_KINDS.includes(a.kind); const v=accountValue(a,transactions,valuations,todayISO());
  return <details className="mt-3 border-t pt-2"><summary className="cursor-pointer text-sm font-medium">{valued?"Valuations & history":"Balance & account settings"}</summary>
- <div className="mt-3 grid gap-3"><div className="text-xs text-muted-foreground">Statement-matched balance: {money(reconciledBalance(a,transactions))}{v.valuedOn&&` · latest value ${v.valuedOn} (${v.source})`}</div>
+ <div className="mt-3 grid gap-3"><BelongsTo accountId={a.id}/><div className="text-xs text-muted-foreground">Statement-matched balance: {money(reconciledBalance(a,transactions))}{v.valuedOn&&` · latest value ${v.valuedOn} (${v.source})`}</div>
  <div className="flex flex-wrap gap-2"><Button size="sm" variant="outline" disabled={busy} onClick={()=>{const name=window.prompt("Account name",a.name);if(name)void run(()=>updateAccount(a.id,{name}));}}>Rename account</Button>{!["savings","current","cash","wallet"].includes(a.kind)&&<Button size="sm" variant="outline" disabled={busy} onClick={()=>{const value=window.prompt("Actual balance shown on your statement (₹)");if(value!==null&&value.trim())void run(()=>adjustBalance(a,Number(value),todayISO()));}}>Adjust to statement balance</Button>}</div>
  {["savings","current","cash","wallet"].includes(a.kind)&&<BankBalanceEditor account={a}/>}
  {["savings","current","cash","wallet"].includes(a.kind)&&<label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={a.includeInCash!==false} onChange={e=>void run(()=>updateAccount(a.id,{includeInCash:e.target.checked}))}/>Include in available cash</label>}
