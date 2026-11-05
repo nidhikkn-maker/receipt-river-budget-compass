@@ -723,3 +723,7 @@
 - [x] Company field on expenses (auto from account, manual override)
 - [x] Company spending comparison view + filters
 - [x] Per-company tax + personal tax "From your companies" (proprietorship/partnership/company rules)
+- [x] Usage events: company created, account linked, expense company assigned
+- [x] Editable per-year company tax profile
+- [x] Accountant tax workpaper (calculation, sources, assumptions)
+- [x] Add expense page white in dark mode too
