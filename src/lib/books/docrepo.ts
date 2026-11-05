@@ -106,7 +106,7 @@ export function applyDocQuery(docs: VaultDoc[], f: NlFilters, links: DocLink[], 
     if (f.max != null && !(d.amount != null && d.amount < f.max)) return false;
     if (f.from && date < f.from) return false;
     if (f.to && date > f.to) return false;
-    const hay = `${d.title} ${d.merchant ?? ""} ${d.text} ${(d.fields ?? []).map((x) => x.value).join(" ")}`.toLowerCase();
+    const hay = `${d.title} ${d.merchant ?? ""} ${d.text} ${(d.fields ?? []).map((x) => x.value).join(" ")} ${linksOf(links, d.id).map((l) => l.label).join(" ")}`.toLowerCase();
     return f.words.every((w) => hay.includes(w));
   });
 }
