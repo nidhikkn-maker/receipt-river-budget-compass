@@ -4,7 +4,7 @@ import type { EntityProfile } from "../entities";
 import type { Expense } from "../expenses";
 import { creditsFor, dueFor, itcReview, ledgerTaxPayments, obligations, quarterEnd, ruleImpact } from "./compliance";
 import { approvalHistory, readinessTiles, setFindingState, withStates, type AuditItem } from "./audit";
-import { businessDaysBetween, isStale, quantityByIsin, valuationAlerts } from "./market";
+import { businessDaysBetween, isStale, quantityByIsin, valuationAlerts, valueHolding } from "./market";
 import { DEFAULT_ALERTS, emptyBooks, type GstInvoice, type Holding, type RuleVersion, type TaxProfile } from "./types";
 
 const co: EntityProfile = { id: "e1", name: "KR Enterprises", kind: "company", pan: "AAACK1234C", gstins: ["33AAACK1234C1Z5"], booksFrom: "2020-21" };
