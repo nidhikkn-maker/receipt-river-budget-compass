@@ -69,6 +69,9 @@ export function valueHolding(h: Holding, quotes: Quote[], gold: GoldRate | undef
   const q = key ? quotes.find((x) => x.key === key) ?? null : null;
   if (!key) return { holding: h, key, quote: null, value: null, stale: false, note: "Needs ISIN, exchange symbol or fund code" };
   if (!q) return { holding: h, key, quote: null, value: null, stale: false, note: "Price data required" };
+  // Instrument type must fit the price type: funds use NAVs, exchange-traded securities use exchange prices [v6.1 §3].
+  const exchangeQuote = q.freshness === "live" || q.freshness === "delayed" || q.freshness === "eod";
+  if ((h.kind === "mutual_fund" && exchangeQuote) || ((h.kind === "equity" || h.kind === "etf") && q.freshness === "nav")) return { holding: h, key, quote: null, value: null, stale: false, note: h.kind === "mutual_fund" ? "Exchange price found but a fund needs its NAV" : "NAV found but this security needs an exchange price" };
   return { holding: h, key, quote: q, value: Math.round(h.quantity * q.price * share * 100) / 100, stale: isStale(q, now, h.kind, alerts.staleNavDays), note: `${FRESHNESS_LABEL[q.freshness]} · ${q.provider}` };
 }
 
