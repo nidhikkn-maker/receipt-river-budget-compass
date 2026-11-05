@@ -52,7 +52,9 @@ async def main():
   await card.screenshot(path=str(ROOT/'1_profile.png'))
   await page.reload(); await page.wait_for_timeout(10000); await page.screenshot(path=str(ROOT/'2_reload.png')); await page.locator('div.rounded-2xl',has_text=ENT['name']).first.get_by_text('share 75%').wait_for(timeout=60000)
   # 2. Download the workpaper.
-  await page.goto('http://localhost:8080/tax?fy=2025-26')
+  await page.goto('http://localhost:8080/tax')
+  await page.get_by_role('button',name='FY 2025-26').click(timeout=60000)
+  await page.get_by_text('Tax computation by head').click()
   btn=page.get_by_role('button',name='Download workpaper (PDF + spreadsheets)')
   await btn.scroll_into_view_if_needed(timeout=60000)
   async with page.expect_download(timeout=60000) as dl: await btn.click()
