@@ -55,7 +55,7 @@ export const supabase = {
   from: (table: string) => {
     // Read-only lists the page refreshes after saving come back empty; any write still fails loudly.
     if (table === "transfer_links" || table === "expense_drafts") return { select: () => chain(async () => []) };
-    if (table !== "accountant_uploads") throw new Error("No Cloud access in this test");
+    if (table !== "accountant_uploads") throw new Error(`No Cloud access in this test (${table})`);
     return {
       select: () => chain(() => fetch("/__fixture/accountant-uploads").then((r) => (r.ok ? r.json() : []))),
       update: () => ({ in: (_c: string, ids: string[]) => { accountantConsumed.push(...ids); return Promise.resolve({ data: null, error: null }); } }),
