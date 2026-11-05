@@ -23,7 +23,7 @@ async def main():
       rows=await (await route.fetch()).json(); base=rows[0] if isinstance(rows,list) else rows
       d=base.get('data') or {}; d['entities']=[ENT]; d['books']={**(d.get('books') or {}),'entityAccounts':{},'entityTaxProfiles':[]}
       st['data']={**base,'data':d}
-     await route.fulfill(status=200,content_type='application/json',body=json.dumps([st['data']] if 'single' not in (r.headers.get('accept') or '') else st['data'])); return
+     await route.fulfill(status=200,content_type='application/json',body=json.dumps([st['data']] if 'vnd.pgrst.object' not in (r.headers.get('accept') or '') else st['data'])); return
     if r.method in ('POST','PATCH'):
      body=r.post_data_json; body=body[0] if isinstance(body,list) else body
      st['data']={**st['data'],**body}; st['writes']+=1; await route.fulfill(status=201,content_type='application/json',body=''); return
