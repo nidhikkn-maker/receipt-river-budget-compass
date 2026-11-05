@@ -82,21 +82,21 @@ export function valueHolding(h: Holding, quotes: Quote[], gold: GoldRate | undef
   return { holding: h, key, quote: q, value: Math.round(h.quantity * q.price * share * 100) / 100, stale: isStale(q, now, h.kind, alerts.staleNavDays), note: `${FRESHNESS_LABEL[q.freshness]} · ${q.provider}` };
 }
 
-export interface NetWorthPart { label: string; value: number; basis: string; live: boolean }
+export interface NetWorthPart { label: string; value: number; basis: string; live: boolean; asOf?: string | null }
 /** Net worth = recognised assets − recognised liabilities, each with its basis [v6.1 §9–10]. */
-export function dynamicNetWorth(parts: { bank: number; bankBasis: string; investments: Valued[]; demat: number; dematBasis: string; otherAssets: number; property: number; propertyBasis: string; liabilities: number; liabilitiesBasis: string }) {
+export function dynamicNetWorth(parts: { bank: number; bankBasis: string; investments: Valued[]; demat: number; dematBasis: string; otherAssets: number; property: number; propertyBasis: string; liabilities: number; liabilitiesBasis: string; asOf?: { bank?: string | null; investments?: string | null; property?: string | null; liabilities?: string | null } }) {
   const inv = parts.investments.reduce((s, v) => s + (v.value ?? 0), 0);
   const assets: NetWorthPart[] = [
-    { label: "Bank & cash", value: parts.bank, basis: parts.bankBasis, live: false },
-    { label: "Investments", value: Math.round((inv + parts.demat) * 100) / 100, basis: [parts.investments.length ? `${parts.investments.filter((v) => v.value != null).length}/${parts.investments.length} priced` : "", parts.dematBasis].filter(Boolean).join(" · "), live: parts.investments.some((v) => v.quote?.freshness === "live" && !v.stale) },
-    { label: "Property", value: parts.property, basis: parts.propertyBasis, live: false },
+    { label: "Bank & cash", value: parts.bank, basis: parts.bankBasis, live: false, asOf: parts.asOf?.bank ?? null },
+    { label: "Investments", value: Math.round((inv + parts.demat) * 100) / 100, basis: [parts.investments.length ? `${parts.investments.filter((v) => v.value != null).length}/${parts.investments.length} priced` : "", parts.dematBasis].filter(Boolean).join(" · "), live: parts.investments.some((v) => v.quote?.freshness === "live" && !v.stale), asOf: [parts.asOf?.investments, ...parts.investments.map((v) => v.quote?.at?.slice(0, 10))].filter(Boolean).sort()[0] ?? null },
+    { label: "Property", value: parts.property, basis: parts.propertyBasis, live: false, asOf: parts.asOf?.property ?? null },
     { label: "Other assets", value: parts.otherAssets, basis: "latest recorded value", live: false },
   ];
   const total = assets.reduce((s, a) => s + a.value, 0);
   const missing = parts.investments.filter((v) => v.value == null).length;
   const stale = parts.investments.filter((v) => v.stale).length;
   return {
-    assets, liabilities: parts.liabilities, liabilitiesBasis: parts.liabilitiesBasis,
+    assets, liabilities: parts.liabilities, liabilitiesBasis: parts.liabilitiesBasis, liabilitiesAsOf: parts.asOf?.liabilities ?? null,
     net: Math.round((total - parts.liabilities) * 100) / 100,
     /** Overall is never "live" while bank, property or loans are statement-based [v6.1 §10]. */
     label: "As of latest records" as const,
