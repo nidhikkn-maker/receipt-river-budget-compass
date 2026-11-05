@@ -321,10 +321,10 @@ export function TripClosureCard({ trip }: { trip: TravelTrip }) {
   const f = useMemo(() => tripFinance(trip, transactions), [trip, transactions]);
   if (cancelled) return <Card title="Trip cancelled"><p className="text-sm">Cancelled on {trip.cancelledAt?.slice(0, 10)}. Records are unchanged.</p><Button variant="outline" className="mt-2" onClick={() => void put({ cancelledAt: null }, "Cancellation removed")}>Undo cancellation</Button></Card>;
   return (
-    <Card title={closed ? "Trip closed" : "Close trip"}>
-      {closed ? <><p className="text-sm">Closed on {trip.closedAt?.slice(0, 10)}. Final spend {money(f.total)}. Closing didn't add any entries.</p><Button variant="outline" className="mt-2" onClick={() => void put({ closedAt: null }, "Trip reopened")}>Reopen</Button></>
-        : <>{blockers.length ? <ul className="list-disc pl-5 text-sm text-muted-foreground">{blockers.map((b) => <li key={b}>{b}</li>)}</ul> : <p className="text-sm text-muted-foreground">Everything is settled.</p>}
-          <div className="mt-2 flex gap-2"><Button className="flex-1" disabled={blockers.length > 0} onClick={() => void put({ closedAt: new Date().toISOString() }, "Trip closed")}>Close trip</Button><Button variant="ghost" onClick={() => { if (confirm("Cancel this trip? Records stay; the trip is marked cancelled.")) void put({ cancelledAt: new Date().toISOString() }, "Trip cancelled"); }}>Cancel trip</Button></div></>}
+    <Card title={closed ? "Trip completed" : "Complete trip"}>
+      {closed ? <><p className="text-sm">Completed on {trip.closedAt?.slice(0, 10)}. Final spend {money(f.total)}. Completing didn't add any entries.</p><Button variant="outline" className="mt-2" onClick={() => void put({ closedAt: null }, "Trip reopened")}>Reopen</Button></>
+        : <>{blockers.length ? <><p className="text-xs text-muted-foreground">Reminders — you can still complete the trip:</p><ul className="list-disc pl-5 text-sm text-muted-foreground">{blockers.map((b) => <li key={b}>{b}</li>)}</ul></> : <p className="text-sm text-muted-foreground">Everything is settled.</p>}
+          <div className="mt-2 flex gap-2"><Button className="flex-1" onClick={() => void put({ closedAt: new Date().toISOString() }, "Trip marked completed")}>Mark trip completed</Button><Button variant="ghost" onClick={() => { if (confirm("Cancel this trip? Records stay; the trip is marked cancelled.")) void put({ cancelledAt: new Date().toISOString() }, "Trip cancelled"); }}>Cancel trip</Button></div></>}
     </Card>
   );
 }
