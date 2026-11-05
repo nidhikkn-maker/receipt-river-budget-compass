@@ -51,6 +51,8 @@ class StatementDeskFlow(unittest.IsolatedAsyncioTestCase):
         await self.context.route("**/*", isolate)
         await self.page.goto(BASE + "/statements", wait_until="domcontentloaded")
         await expect(self.page.get_by_role("heading", name="Statement Desk")).to_be_visible()
+        # Capture usage events locally (the real events runtime is not loaded on localhost).
+        await self.page.evaluate("() => { window.deskEvents = []; window.__lovableEvents = { track: (name, props) => { window.deskEvents.push({ name, props }); return null; } }; }")
 
     async def asyncTearDown(self):
         try:
@@ -73,10 +75,21 @@ class StatementDeskFlow(unittest.IsolatedAsyncioTestCase):
         await expect(self.page.get_by_role("button", name="Undo this upload (2 posted)")).to_be_visible()
         self.assertEqual(len(await self.page.evaluate("deskFixture.saves")), 2)
         self.assertEqual(len(await self.page.evaluate("deskFixture.uploads")), 1)
+        events = await self.page.evaluate("deskEvents")
+        self.assertEqual(events, [{"name": "project.statement_saved", "props": {"balance": "not_compared", "statement_adds_up": "not_printed", "entries_posted": 2, "fully_reconciled": False}}])
         await self.page.get_by_label("Recent uploads").get_by_role("button", name="Undo").click()
         await expect(self.page.get_by_label("Recent uploads")).to_have_count(0)
         self.assertEqual(await self.page.evaluate("deskFixture.transactions.length"), 0)
         self.assertEqual(len(await self.page.evaluate("deskFixture.removes")), 2)
+
+    async def test_saved_statement_reports_balance_match(self):
+        csv = "Date,Description,Debit,Credit,Balance\n2026-10-02,SWIGGY ORDER,250.00,,750.00\n2026-10-03,AMAZON PURCHASE,480.00,,270.00\n"
+        await self.page.get_by_label("Statement files").set_input_files(files=[{"name": "balanced.csv", "mimeType": "text/csv", "buffer": csv.encode()}])
+        await self.page.locator("select").first.select_option("desk-account")
+        await self.page.get_by_role("button", name="Apply everything (2 to save)").click()
+        await expect(self.page.get_by_role("button", name="Undo this upload (2 posted)")).to_be_visible()
+        events = await self.page.evaluate("deskEvents")
+        self.assertEqual(events, [{"name": "project.statement_saved", "props": {"balance": "matched", "statement_adds_up": "yes", "entries_posted": 2, "fully_reconciled": True}}])
 
     async def test_cross_account_match_move_and_undo(self):
         await self.page.evaluate("""() => { deskFixture.accounts.push({ id: 'card', name: 'Controlled card', kind: 'credit_card', openingBalance: 0, archived: false, issuer: '', lastFour: null });
