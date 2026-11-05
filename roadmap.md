@@ -727,3 +727,5 @@
 - [x] Editable per-year company tax profile
 - [x] Accountant tax workpaper (calculation, sources, assumptions)
 - [x] Add expense page white in dark mode too
+- [ ] Statement saved event with closing-balance match
+- [ ] Browser checks: edit company tax profile, download tax workpaper PDF
