@@ -12,7 +12,7 @@ import { addSnapshot, FRESHNESS_LABEL, quantityByIsin, quoteKey, recordFailure, 
 import type { Holding, HoldingKind } from "@/lib/books/types";
 import { useBooks, useNetWorth } from "./useBooks";
 
-const KIND: Record<HoldingKind, string> = { mutual_fund: "Mutual fund", etf: "ETF", gold_etf: "Gold ETF", sgb: "Sovereign Gold Bond", physical_gold: "Physical gold", bond: "Bond", other: "Other" };
+const KIND: Record<HoldingKind, string> = { mutual_fund: "Mutual fund", etf: "ETF", gold_etf: "Gold ETF", sgb: "Sovereign Gold Bond", physical_gold: "Physical gold", bond: "Bond", broker_cash: "Cash with broker", other: "Other" };
 const blank = (): Holding => ({ id: crypto.randomUUID(), kind: "mutual_fund", name: "", quantity: 0, sharePct: 100, source: "entered by you" });
 
 export function MarketPanel() {
