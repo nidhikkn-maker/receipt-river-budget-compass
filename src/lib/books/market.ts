@@ -11,18 +11,25 @@ export function quoteKey(h: Pick<Holding, "isin" | "exchange" | "symbol" | "sche
   return null;
 }
 
-/** NSE/BSE regular session, Mon–Fri 09:15–15:30 IST (holidays not modelled; flagged as an assumption). */
+/** NSE/BSE trading holidays (exchange circulars). Dates not listed are treated as trading days. */
+export const EXCHANGE_HOLIDAYS = new Set<string>([
+  "2025-02-26","2025-03-14","2025-03-31","2025-04-10","2025-04-14","2025-04-18","2025-05-01","2025-08-15","2025-08-27","2025-10-02","2025-10-21","2025-10-22","2025-11-05","2025-12-25",
+  "2026-01-26","2026-03-03","2026-03-26","2026-03-31","2026-04-03","2026-04-14","2026-05-01","2026-05-28","2026-06-26","2026-09-14","2026-10-02","2026-10-20","2026-11-10","2026-11-24","2026-12-25",
+]);
+const isHoliday = (d: Date) => EXCHANGE_HOLIDAYS.has(d.toISOString().slice(0, 10));
+
+/** NSE/BSE regular session, Mon–Fri 09:15–15:30 IST, closed on listed exchange holidays. */
 export function marketOpen(at: Date): boolean {
   const ist = new Date(at.getTime() + 5.5 * 3600e3);
   const d = ist.getUTCDay(), mins = ist.getUTCHours() * 60 + ist.getUTCMinutes();
-  return d >= 1 && d <= 5 && mins >= 555 && mins <= 930;
+  return d >= 1 && d <= 5 && !isHoliday(ist) && mins >= 555 && mins <= 930;
 }
 
-/** Weekdays strictly after `from` up to and including `to` (exchange holidays not modelled). */
+/** Trading days strictly after `from` up to and including `to` (weekends and listed exchange holidays skipped). */
 export function businessDaysBetween(from: Date, to: Date): number {
   let n = 0; const d = new Date(Date.UTC(from.getUTCFullYear(), from.getUTCMonth(), from.getUTCDate()));
   const end = Date.UTC(to.getUTCFullYear(), to.getUTCMonth(), to.getUTCDate());
-  while (d.getTime() < end) { d.setUTCDate(d.getUTCDate() + 1); const w = d.getUTCDay(); if (w !== 0 && w !== 6) n++; }
+  while (d.getTime() < end) { d.setUTCDate(d.getUTCDate() + 1); const w = d.getUTCDay(); if (w !== 0 && w !== 6 && !isHoliday(d)) n++; }
   return n;
 }
 
