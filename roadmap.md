@@ -729,3 +729,5 @@
 - [x] Add expense page white in dark mode too
 - [x] Statement saved event with closing-balance match
 - [x] Browser checks: edit company tax profile, download tax workpaper PDF
+- [x] Statement-saved event uses balance after saving (declined lines count); Statement Desk browser check covers matched + not compared
+- [x] Tax profiles survive reload; merged companies keep their tax years; workpaper shows the real total tax
