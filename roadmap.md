@@ -704,6 +704,7 @@
 - [x] Phase 1 acceptance tests (pure rules + isolated database)
 
 ## Final plan (5 Nov 2026) — .lovable/plan/finish-both-documents-...-2026-11-05.md
+- [ ] Current continuation: retain statement corporate actions with source documents and connect saved events to investment alerts; verify dashboard provider recovery.
 - [x] E30 exchange-holiday-aware market open/staleness; D19 unlabelled receipts above rent wait for confirmation
 - [x] iPhone/iPad (portrait+landscape) layout check of main pages — no overflow, no errors
 - [x] Security rescan; shared price/rule tables limited to signed-in readers; published
