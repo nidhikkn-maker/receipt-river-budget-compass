@@ -32,8 +32,9 @@ export function buildReport(kind: ReportKind, transactions: Expense[], memberNam
   const row = (e: Expense) => [e.date, e.title, e.merchant ?? "", e.category, SCOPE_LABEL[e.scope], whoLabel(e, memberName), PAYMENT_LABEL[e.paymentMethod],
      e.currency, fmt(e.originalAmount), fmt(e.fxRate), fmt(e.amount), e.reconciledAt ? "Yes" : "No", e.reimbursementStatus ?? "none",
      opt(e.receiptDetails?.subtotal), opt(e.receiptDetails?.tax), opt(e.receiptDetails?.tip), (() => { const r = receiptRoundOffFor(e).amount; return r ? fmt(r) : ""; })(), (e.receiptDetails?.charges ?? []).map((c) => `${c.label} ${fmt(c.amount)}`).join("; "), (e.receiptDetails?.taxParts ?? []).map((t) => `${t.label}${t.rate != null ? ` ${t.rate}%` : ""} ${fmt(t.amount)}`).join("; ")];
-  const headers = ["Date", "Title", "Merchant", "Category", "Type", "For", "Paid with", "Currency", "Bill amount", "Rate", "Amount (INR)", "Bank matched", "Reimbursement", "Subtotal", "Tax", "Tip", "Round-off", "Charges", "Tax parts"];
-  if (kind === "expenses") return { title: "All expenses", headers, rows: expenses.map(row) };
+  const headers = ["Date", "Title", "Merchant", "Category", "Type", "For", "Paid with", "Currency", "Bill amount", "Rate", "Amount (INR)", "Bank matched", "Reimbursement", "Subtotal", "Tax", "Tip", "Round-off", "Charges", "Tax parts", ...(options.companyOf ? ["Company"] : [])];
+  const baseRow = row; const rowC = (e: Expense) => options.companyOf ? [...baseRow(e), options.companyOf(e)] : baseRow(e);
+  if (kind === "expenses") return { title: "All expenses", headers, rows: expenses.map(rowC) };
   const inWorkspace = (scope: Expense["scope"]) => expenses.flatMap((e) => {
     const share = workspaceParts(e).find((p) => p.workspace === scope);
     if (!share || share.amount <= 0) return [];
@@ -41,8 +42,8 @@ export function buildReport(kind: ReportKind, transactions: Expense[], memberNam
     return [{ ...e, scope, amount: share.amount, originalAmount: e.originalAmount * ratio,
       allocations: (e.allocations ?? []).map((a) => ({ ...a, amount: a.amount * ratio })) }];
   });
-  if (kind === "business") return { title: "Business expenses", headers, rows: inWorkspace("business").map(row) };
-  if (kind === "reimbursements") return { title: "Reimbursements", headers, rows: expenses.filter(e=>e.reimbursementStatus && e.reimbursementStatus!=="none").map(row) };
+  if (kind === "business") return { title: "Business expenses", headers, rows: inWorkspace("business").map(rowC) };
+  if (kind === "reimbursements") return { title: "Reimbursements", headers, rows: expenses.filter(e=>e.reimbursementStatus && e.reimbursementStatus!=="none").map(rowC) };
   const biz = categoryTotals(inWorkspace("business"));
   const per = categoryTotals(inWorkspace("personal"));
   const month = options.budgetMonth ?? new Date().toISOString().slice(0, 7);
