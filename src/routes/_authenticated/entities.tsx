@@ -8,6 +8,8 @@ import { useStore } from "@/lib/store";
 import { dropEntity, linkAccounts, mergeEntity, needsDetails, unlinkAccount } from "@/lib/books/entity-accounts";
 import { emptyBooks } from "@/lib/books/types";
 import { confirmAction } from "@/lib/confirm";
+import { CompanyTaxProfile } from "@/components/books/CompanyTaxProfile";
+import { dropEntityYears } from "@/lib/books/entity-tax-profile";
 import { ENTITY_KINDS, fyOf, gstinProblem, panProblem, yearStatuses, type EntityKind, type EntityProfile } from "@/lib/entities";
 
 export const Route = createFileRoute("/_authenticated/entities")({
@@ -55,7 +57,7 @@ function Entities() {
   };
   const remove = async (id: string) => {
     if (!(await confirmAction({ title: "Delete this profile?", message: "Linked accounts are unlinked, not deleted. Entries stay as they are.", confirmLabel: "Delete" }))) return;
-    await saveLinks(dropEntity(links, id), list.filter((x) => x.id !== id), "Profile deleted"); setEdit(null);
+    await savePreferences({ ...preferences, entities: list.filter((x) => x.id !== id), books: { ...books, entityAccounts: dropEntity(links, id), entityTaxProfiles: dropEntityYears(books.entityTaxProfiles, id) } }); toast.success("Profile deleted"); setEdit(null);
   };
   const merge = async (from: string, into: string) => {
     if (!into || !(await confirmAction({ title: "Merge companies?", message: "Accounts move to the chosen company and this profile is removed. Entries are not changed.", confirmLabel: "Merge" }))) return;
@@ -118,6 +120,7 @@ function Entities() {
             </div>
             <div className="flex shrink-0 gap-1"><Button size="sm" variant="outline" onClick={() => setEdit(p)}>Edit</Button><Button size="sm" variant="ghost" className="text-destructive" onClick={() => void remove(p.id)}>Delete</Button></div>
           </div>
+          {p.kind !== "individual" && p.kind !== "huf" && <CompanyTaxProfile entity={p} />}
           <div className="space-y-1">
             <p className="text-xs font-semibold text-muted-foreground">Bank accounts & cards ({(links[p.id] ?? []).length})</p>
             {(links[p.id] ?? []).map((id) => (
