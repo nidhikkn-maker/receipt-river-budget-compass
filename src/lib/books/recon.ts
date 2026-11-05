@@ -45,11 +45,48 @@ export function supplierRecon(invoices: GstInvoice[], payments: { id: string; am
   }).filter((r) => Math.abs(r.difference) > 1);
 }
 
+export interface CustomerReconRow { party: string; gstin: string; invoiced: number; received: number; outstanding: number; invoices: number; receipts: number }
+/** Customer: sales invoices (incl. tax) per customer vs receipts naming that customer; each receipt is used once. */
+export function customerRecon(invoices: GstInvoice[], receipts: { id: string; amount: number; text: string; date: string }[], from: string, to: string): CustomerReconRow[] {
+  const by = new Map<string, { party: string; gstin: string; invoiced: number; invoices: number }>();
+  for (const i of invoices) {
+    if (i.kind !== "sale" || i.date < from || i.date > to) continue;
+    const k = i.partyGstin || words(i.party);
+    const cur = by.get(k) ?? { party: i.party, gstin: i.partyGstin, invoiced: 0, invoices: 0 };
+    cur.invoiced = r2(cur.invoiced + i.taxable + i.igst + i.cgst + i.sgst + i.cess); cur.invoices++;
+    by.set(k, cur);
+  }
+  const used = new Set<string>();
+  return [...by.values()].sort((a, b) => words(b.party).length - words(a.party).length).map((s) => {
+    const name = words(s.party);
+    const mine = name.length >= 3 ? receipts.filter((p) => !used.has(p.id) && p.date >= from && p.date <= to && words(p.text).includes(name)) : [];
+    for (const p of mine) used.add(p.id);
+    const received = r2(mine.reduce((t, p) => t + p.amount, 0));
+    return { party: s.party, gstin: s.gstin, invoiced: s.invoiced, received, outstanding: r2(s.invoiced - received), invoices: s.invoices, receipts: mine.length };
+  }).filter((r) => Math.abs(r.outstanding) > 1);
+}
+
 export interface InvestmentReconRow { isin: string; name: string; statement: number; fromTransactions: number; difference: number }
 /** Investment: holding quantity on the demat statement vs buys − sells from transaction statements (only when history exists). */
-export function investmentRecon(holdings: { isin: string; name: string; quantity: number; lots: { side: "buy" | "sell"; quantity: number }[] }[]): InvestmentReconRow[] {
+export interface QtyAction { date: string; isin: string; kind: string; quantity: number | null }
+/**
+ * Applies corporate actions to a running quantity [§43]: bonus/rights/split rows carry the shares credited,
+ * merger/redemption rows the shares removed (sign as printed is ignored). Rows without a quantity are reported
+ * as unresolved so the quantity is never guessed.
+ */
+export function applyCorporateActions(qty: number, actions: QtyAction[]): { quantity: number; unresolved: QtyAction[] } {
+  let q = qty; const unresolved: QtyAction[] = [];
+  for (const a of [...actions].sort((x, y) => x.date.localeCompare(y.date))) {
+    if (a.kind === "dividend" || a.kind === "brokerage") continue;
+    if (a.quantity == null) { unresolved.push(a); continue; }
+    q += ["merger", "redemption"].includes(a.kind) ? -Math.abs(a.quantity) : Math.abs(a.quantity);
+  }
+  return { quantity: r2(q), unresolved };
+}
+export function investmentRecon(holdings: { isin: string; name: string; quantity: number; openingQty?: number; lots: { side: "buy" | "sell"; quantity: number }[] }[], actions: QtyAction[] = []): InvestmentReconRow[] {
   return holdings.filter((h) => h.lots.length > 0).map((h) => {
-    const q = r2(h.lots.reduce((s, l) => s + (l.side === "buy" ? l.quantity : -l.quantity), 0));
+    const traded = (h.openingQty ?? 0) + h.lots.reduce((s, l) => s + (l.side === "buy" ? l.quantity : -l.quantity), 0);
+    const q = applyCorporateActions(traded, actions.filter((a) => a.isin === h.isin)).quantity;
     return { isin: h.isin, name: h.name, statement: h.quantity, fromTransactions: q, difference: r2(h.quantity - q) };
   }).filter((r) => Math.abs(r.difference) > 0.0001);
 }
