@@ -19,7 +19,7 @@ import { useBooks } from "./useBooks";
 const inr = (n: number) => (n < 0 ? "−" : "") + "₹" + Math.abs(Math.round(n)).toLocaleString("en-IN");
 
 export function TaxWorkpaper({ fy, personalLines }: { fy: string; personalLines: FromEntityLine[] }) {
-  const { books, save, preferences } = useBooks();
+  const { books, preferences } = useBooks();
   const { transactions, accounts, addDocument } = useStore();
   const [busy, setBusy] = useState(false);
   const [open, setOpen] = useState<string | null>(null);
@@ -83,7 +83,6 @@ export function TaxWorkpaper({ fy, personalLines }: { fy: string; personalLines:
       const blob = new Blob([zipSync(files)], { type: "application/zip" });
       await addDocument(new File([blob], fileName, { type: "application/zip" }), { title: `Tax workpaper · FY ${fy}`, docType: "other", docDate: new Date().toISOString().slice(0, 10), amount: null, currency: "INR", merchant: null, notes: `${sections.length} taxpayer(s)`, transactionId: null, accountId: null, loanId: null, expiresOn: null, evidenceLocked: true });
       const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = fileName; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 30_000);
-      void save;
       toast.success("Workpaper prepared and kept in DocuRepo");
     } catch (e) { toast.error((e as Error).message); } finally { setBusy(false); }
   };
