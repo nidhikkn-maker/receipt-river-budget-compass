@@ -206,10 +206,12 @@ function StatementDeskPage() {
       const r = await applyUpload(requests, api(), setProgress);
       setResult(r);
       // One event per saved statement: did the app's balance after saving match the printed closing figure?
+      // Lines still open after saving: asked lines not accepted, held lines and lines saved on another account.
+      const leftOpen = (q: (typeof requests)[number]) => q.account.ask.length - (q.decisions.length - q.account.auto.length) + q.account.later.length + q.account.elsewhere.length;
       for (const q of requests) {
         const sm = reconSummary(q.account);
         const { result: balance } = savedBalanceCheck(q.account, q.decisions.map((d) => d.line));
-        window.__lovableEvents?.track?.("project.statement_saved", { balance, statement_adds_up: sm.statementGap === null ? "not_printed" : sm.statementGap === 0 ? "yes" : "no", entries_posted: q.decisions.length, fully_reconciled: balance === "matched" && sm.unmatchedLines === 0 && sm.wrongKind === 0 && sm.notOnStatement === 0 });
+        window.__lovableEvents?.track?.("project.statement_saved", { balance, statement_adds_up: sm.statementGap === null ? "not_printed" : sm.statementGap === 0 ? "yes" : "no", entries_posted: q.decisions.length, fully_reconciled: balance === "matched" && leftOpen(q) === 0 && sm.wrongKind === 0 && sm.notOnStatement === 0 });
       }
       setAccepted([]);
       void loadLinks();
