@@ -17,6 +17,7 @@ export function NetWorthCard() {
         <div><span className="block text-muted-foreground">Liquid</span><b>{money(nw.liquid)}</b></div>
         <div><span className="block text-muted-foreground">Owed</span><b>{money(nw.liabilities)}</b></div>
       </div>
+      <p className="mt-2 text-[11px] text-muted-foreground">Updated from records to {nw.recordsAsOf ?? "—"}{nw.pricesAsOf ? ` · share prices: closing ${nw.pricesAsOf}` : ""}{nw.dematMissing.length ? ` · ${nw.dematMissing.length} holding${nw.dematMissing.length > 1 ? "s" : ""} without a price` : ""}</p>
       {nw.quality.length > 0 && <p className="mt-2 text-[11px] text-muted-foreground">{nw.quality.join(" · ")}</p>}
     </Link>
   );
