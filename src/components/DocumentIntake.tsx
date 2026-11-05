@@ -151,8 +151,9 @@ export function DocumentIntake({ file, context, onClose, resume, replacesId }: {
       const a = proposal.asset;
       const purchase = x?.asset?.purchaseDate ?? a.inUse;
       // Put-to-use date, useful life and residual value are never assumed [§32].
-      const life = optNum("life", undefined), resid = optNum("resid", undefined);
-      if (edit["inUse"] === undefined || life == null || resid == null) return null;
+      const life = optNum("life", undefined) ?? x?.asset?.usefulLifeYears ?? undefined, resid = optNum("resid", undefined) ?? x?.asset?.residualPct ?? undefined;
+      const printedUse = !!x?.asset?.putToUseOn;
+      if ((edit["inUse"] === undefined && !printedUse) || life == null || resid == null) return null;
       return { route: "asset", asset: { ...a, usefulLifeYears: life, residualPct: resid, name: v("name", a.name), cost: Number(v("cost", a.cost)) || a.cost, inUse: v("inUse", a.inUse), purchaseDate: purchase, capitalisedOn: v("capOn", purchase), kind: v("akind", a.kind) as AssetKind, supplier: x?.asset?.supplier ?? undefined, warrantyUntil: x?.asset?.warrantyUntil ?? undefined, insurance: x?.asset?.insurance ?? undefined, ...(ownerSuggested && !ownerOk ? { ownerEntityId: undefined } : {}) } as typeof a };
     }
     if (proposal.kind === "property") {
