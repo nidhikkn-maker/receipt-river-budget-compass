@@ -5,7 +5,7 @@ import { validateExpense, type ExpenseInput } from "./expenses";
 const read = { title: "Cafe", merchant: "Cafe", date: "2026-11-02", amount: 432.10, subtotal: 360, tax: 32.10, tip: 40, round_off: null, charges: [], tax_parts: [], confidence: { merchant: "high", date: "low", total: "medium" }, items: [], text: "Cafe", currency: "INR", payment_method: null, description: null, category: "Food and beverages", scope: "personal" };
 describe("receipt reading", () => {
   it("preserves separate item name and amount confidence in extracted and saved metadata", () => {
-    const item = { name: "Dinner", quantity: 2, amount: 360, confidence: { name: "high", amount: "low" } };
+    const item = { name: "Dinner", quantity: 2, amount: 360, section: null, confidence: { name: "high", amount: "low" } };
     expect(ExtractedReceiptSchema.parse({ ...read, items: [item] }).items[0]?.confidence).toEqual({ name: "high", amount: "low" });
     expect(ReceiptDetailsSchema.parse({ items: [item] }).items?.[0]?.confidence).toEqual({ name: "high", amount: "low" });
   });
