@@ -180,7 +180,7 @@ function NewExpense() {
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
   const [description, setDescription] = useState("");
   const [receiptDetails, setReceiptDetails] = useState<ReceiptDetails>({});
-  const [includeItems, setIncludeItems] = useState(false);
+  const [includeItems, setIncludeItems] = useState(true);
   const [receipts, setReceipts] = useState<LocalReceipt[]>([]);
   const [queue, setQueue] = useState<LocalReceipt[]>([]);
   const [batch, setBatch] = useState<{ done: number; total: number } | null>(null);
@@ -465,7 +465,7 @@ function NewExpense() {
       if (!res.ok) throw new Error(res.error);
       setStage({ kind: "receipt", at: 2 });
       const x = res.result;
-      setReceiptDetails({ subtotal: x.subtotal, tax: x.tax, tip: x.tip, roundOff: x.round_off != null && Math.abs(x.round_off) <= 1 ? x.round_off : null, confidence: receiptConfidence(x), items: x.items, text: x.text, fingerprint: first.fingerprint });
+      setReceiptDetails({ subtotal: x.subtotal, tax: x.tax, tip: x.tip, charges: x.charges, taxParts: x.tax_parts, roundOff: x.round_off != null && Math.abs(x.round_off) <= 1 ? x.round_off : null, confidence: receiptConfidence(x), items: x.items, text: x.text, fingerprint: first.fingerprint });
       const filled = new Set<string>();
       if (x.title && (fresh || !title)) { setTitle(x.title); filled.add("title"); }
       const merchantHint = suggestForEntry({ date: isDate(x.date) ? x.date : date, amount: x.amount ?? 0, currency: x.currency ?? currency, txnType: "expense", text: [x.merchant, x.description].filter(Boolean).join(" "), accountId: accountId === "none" ? null : accountId }, { transactions: expenses, accounts, categories: preferences.categories }).category;
