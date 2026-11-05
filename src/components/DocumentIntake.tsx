@@ -311,6 +311,7 @@ export function DocumentIntake({ file, context, onClose, resume, replacesId }: {
           <label>Link to account<select className="mt-1 w-full rounded-md border bg-background px-2 py-1" value={linkAcc} onChange={(e) => setLinkAcc(e.target.value)}><option value="">Not linked</option>{accounts.filter((a) => !a.archived).map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}</select></label>
           <label>Link to loan<select className="mt-1 w-full rounded-md border bg-background px-2 py-1" value={linkLoan} onChange={(e) => setLinkLoan(e.target.value)}><option value="">Not linked</option>{loans.map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}</select></label>
         </div>}
+        {x.possiblyIncomplete && <p className="text-xs font-medium text-destructive">This document is long — some lines may not have been read. Check the original before relying on totals.</p>}
         {!!x.obligations?.length && <p className="text-xs text-muted-foreground">{x.obligations.length} payment obligation{x.obligations.length > 1 ? "s" : ""} found — they'll be listed on the document for review.</p>}
         {missing.length > 0 && <p className="text-xs text-destructive">Still needed: {missing.join(", ")}.{missing.includes("which company") && <> <Link to="/entities" className="underline">Add the company first</Link></>}</p>}
         <div className="flex flex-wrap gap-2">

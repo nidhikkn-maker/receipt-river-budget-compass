@@ -23,7 +23,8 @@ const Extracted = z.object({
     page: z.number().nullable().describe("Page number where it appears"),
     quote: z.string().describe("Short exact quote from the document supporting the value"),
     confidence: z.enum(["high", "medium", "low"]),
-  })).describe("Up to 20 key facts specific to this document type: registration numbers, parties, owners and shares, property/asset identifiers, periods, tax figures. Only values printed on the document."),
+  })).describe("Up to 40 key facts specific to this document type: registration numbers, parties, owners and shares, property/asset identifiers, periods, tax figures. Only values printed on the document."),
+  possiblyIncomplete: z.boolean().nullable().describe("True when the document has more facts, schedule lines or pages than you could list (lists were cut short or pages were unreadable). Never guess the missing items."),
   obligations: z.array(z.object({
     label: z.string().describe("What must be paid or done, e.g. 'Annual premium', 'Monthly EMI', 'Maintenance fee'"),
     amount: z.number().nullable(),
@@ -62,7 +63,7 @@ const Extracted = z.object({
     schedules: z.array(z.enum(["balanceSheet", "profitLoss", "trialBalance", "cashFlow", "notes", "auditorReport", "fixedAssetRegister", "depreciation", "loanSchedule", "receivables", "payables", "investments", "taxComputation", "gstReconciliation"])).describe("Which schedules this document actually contains"),
     details: z.array(z.object({
       schedule: z.enum(["balanceSheet", "profitLoss", "trialBalance", "cashFlow", "notes", "auditorReport", "fixedAssetRegister", "depreciation", "loanSchedule", "receivables", "payables", "investments", "taxComputation", "gstReconciliation"]),
-      lines: z.array(z.object({ label: z.string(), amount: z.number(), page: z.number().nullable(), quote: z.string() })).describe("Up to 40 printed line items of this schedule, as printed"),
+      lines: z.array(z.object({ label: z.string(), amount: z.number(), page: z.number().nullable(), quote: z.string() })).describe("Up to 80 printed line items of this schedule, as printed"),
     })).describe("Detailed contents of each schedule actually present: P&L lines, cash flow lines, notes amounts, fixed asset register rows, depreciation, loans, receivables, payables, investments, tax computation, GST reconciliation. Omit schedules not printed."),
     losses: z.array(z.object({ fromFy: z.string().describe("Year the loss arose, like 2021-22"), kind: z.enum(["business", "capital", "depreciation", "house"]), amount: z.number() })).describe("Losses carried forward exactly as printed in the return or tax computation; empty if none printed"),
     qualifications: z.array(z.string()).describe("Audit qualifications or emphasis-of-matter, quoted"), filedForm: z.string().nullable().describe("e.g. ITR-6"), ackNo: z.string().nullable(), filedOn: z.string().nullable(),
