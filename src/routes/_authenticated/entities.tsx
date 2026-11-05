@@ -132,9 +132,9 @@ function Entities() {
             ))}
             {picking === p.id ? (
               <div className="space-y-1 rounded-xl border p-2">
-                {accounts.filter((a) => !a.archived && !(links[p.id] ?? []).includes(a.id)).map((a) => (
-                  <label key={a.id} className="flex items-center gap-2 text-sm"><input type="checkbox" checked={pick.includes(a.id)} onChange={(e) => setPick(e.target.checked ? [...pick, a.id] : pick.filter((x) => x !== a.id))} />{a.name}</label>
-                ))}
+                {accounts.filter((a) => !a.archived && !(links[p.id] ?? []).includes(a.id)).map((a) => { const cur = Object.entries(links).find(([, ids]) => ids.includes(a.id))?.[0]; const curName = cur ? list.find((x) => x.id === cur)?.name ?? "another company" : "Personal"; return (
+                  <label key={a.id} className="flex items-center gap-2 text-sm"><input type="checkbox" checked={pick.includes(a.id)} onChange={(e) => setPick(e.target.checked ? [...pick, a.id] : pick.filter((x) => x !== a.id))} />{a.name}<span className="text-xs text-muted-foreground">· now {curName}</span></label>
+                ); })}
                 <div className="flex gap-2"><Button size="sm" disabled={!pick.length} onClick={() => void saveLinks(linkAccounts(links, p.id, pick), list, "Linked").then(() => { setPicking(null); setPick([]); })}>Link {pick.length || ""}</Button><Button size="sm" variant="ghost" onClick={() => { setPicking(null); setPick([]); }}>Cancel</Button></div>
               </div>
             ) : <div className="flex flex-wrap gap-2"><Button size="sm" variant="outline" onClick={() => { setPicking(p.id); setPick([]); }}>Link accounts</Button>
