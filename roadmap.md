@@ -699,3 +699,10 @@
 - [x] Opening balance sheet from audited figures
 - [x] Freeze whole years; database refuses GST invoice changes and silent un-closing in frozen years
 - [x] Phase 1 acceptance tests (pure rules + isolated database)
+
+## Final plan (5 Nov 2026) — .lovable/plan/finish-both-documents-...-2026-11-05.md
+- [x] E30 exchange-holiday-aware market open/staleness; D19 unlabelled receipts above rent wait for confirmation
+- [x] iPhone/iPad (portrait+landscape) layout check of main pages — no overflow, no errors
+- [x] Security rescan; shared price/rule tables limited to signed-in readers; published
+- [ ] Remaining plan items A1–A7, B8–B12, C13–C16, D17–D18/D20–D21, E22–E29, F31–F34, acceptance pack
+- [ ] Real-device checks (Face ID, camera, offline, push) — needs owner's iPhone/iPad
