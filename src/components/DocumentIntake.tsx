@@ -16,6 +16,7 @@ import { extractDocument, type ExtractedDocument } from "@/lib/document-extract.
 import { DOC_LABEL, DOC_TYPES, duplicateDocuments, type DocField, type DocType } from "@/lib/documents";
 import { ENTITY_KINDS } from "@/lib/entities";
 import { autoName, fillLeaseFromTrusted, proposeAsset, proposeEntity, proposeFy, proposeLease, proposeProperty, proposeGstInvoice, proposeTaxStatement, suggestLinks, assetPayment, ROUTE_OF, trail, type IntakeContext, type Step } from "@/lib/books/intake";
+import { proposeFundHoldings } from "@/lib/books/fund-statement";
 import { commitIntake, type Confirmed } from "@/lib/books/commit";
 import { emptyBooks, LEASE_TERMS, LEASE_TERM_LABEL, leaseUnknowns, requiresApproval, type Lease } from "@/lib/books/types";
 import { HEAD_LABEL } from "@/lib/books/fy";
@@ -128,9 +129,10 @@ export function DocumentIntake({ file, context, onClose, resume, replacesId, onS
     }
     if (route === "gst" && x.gstInvoice) return { kind: "gst" as const, ...proposeGstInvoice(x.gstInvoice, entities.flatMap((e) => e.gstins), id, null) };
     if (route === "tax" && x.taxStatement) return { kind: "tax" as const, ...proposeTaxStatement(x.taxStatement, entities) };
+    if (x.fund && x.fund.holdings.length) return { kind: "fund" as const, lines: proposeFundHoldings(x.fund, books.holdings, (i) => `${id.slice(0, 30)}-mf${i}`, DOC_LABEL[docType]) };
     if (route === "fy" && x.audited) return { kind: "fy" as const, ...proposeFy(x.audited as Parameters<typeof proposeFy>[0], entities, books.fyRecords, id, null) };
     return null;
-  }, [x, route, edit, entities, books.properties, books.fyRecords, books.leases, books.docLinks, books.fieldMappings, documents, runId]);
+  }, [x, route, edit, entities, books.properties, books.fyRecords, books.leases, books.docLinks, books.fieldMappings, books.holdings, documents, runId, docType]);
 
   const entityName = proposal?.kind === "entity" ? proposal.profile.name : entities.find((e) => e.pan && fields.some((f) => f.value.toUpperCase().includes(e.pan)))?.name;
   const title = autoName({ entity: entityName, date: x?.date ?? null, typeLabel: DOC_LABEL[docType], identifier: fields.find((f) => /^(cin|gstin|pan|invoice number|survey number)/i.test(f.label))?.value ?? null });
@@ -178,6 +180,10 @@ export function DocumentIntake({ file, context, onClose, resume, replacesId, onS
       if (!proposal.fy) return null;
       const whoId = v("taxwho", proposal.entityId ?? "personal");
       return { route: "tax", entityId: whoId, fy: proposal.fy, salary: proposal.salary, credits: proposal.credits.map((c) => ({ kind: c.kind, amount: c.amount, source: `${DOC_LABEL[docType]}${c.deductor ? ` · ${c.deductor}` : ""}` })) };
+    }
+    if (proposal.kind === "fund") {
+      const ok = proposal.lines.filter((l) => l.holding);
+      return ok.length ? { route: "fund", holdings: ok.map((l) => l.holding!), quotes: ok.flatMap((l) => (l.quote ? [l.quote] : [])) } : null;
     }
     if (proposal.kind === "fy") return proposal.record && (!ownerSuggested || ownerOk) ? { route: "fy", record: proposal.record } : null;
     return { route: "document" };
@@ -277,6 +283,17 @@ export function DocumentIntake({ file, context, onClose, resume, replacesId, onS
           <label className="text-xs">Taxable value<Input aria-label="Taxable value" inputMode="decimal" value={v("taxable", proposal.invoice.taxable)} onChange={(e) => setEdit({ ...edit, taxable: e.target.value })} /></label>
           <p className="col-span-2 text-xs text-muted-foreground">{proposal.invoice.date} · {proposal.invoice.party || "party not printed"} {proposal.invoice.partyGstin} · IGST {proposal.invoice.igst} · CGST {proposal.invoice.cgst} · SGST {proposal.invoice.sgst}{proposal.invoice.cess ? ` · cess ${proposal.invoice.cess}` : ""}. Saved to the GST register for review; nothing is filed.</p>
         </div> : <p className="rounded-xl border border-dashed p-3 text-xs">GST invoice can't be prepared yet — missing: {proposal.missing.join(", ")}. It is kept in DocuRepo.</p>)}
+        {proposal?.kind === "fund" && <div className="grid gap-2 rounded-xl border p-3 text-xs">
+          <p className="font-semibold">Fund holdings on this statement</p>
+          {proposal.lines.map((l, i) => <div key={i} className="grid gap-0.5 border-t pt-2 first:border-t-0 first:pt-0">
+            <p className="font-medium">{l.holding?.name ?? x.fund?.holdings[i]?.scheme}</p>
+            {l.holding && <p>{l.holding.quantity.toLocaleString("en-IN", { maximumFractionDigits: 3 })} units{l.quote ? ` · NAV ₹${l.quote.price} on ${l.quote.at.slice(0, 10)} · ₹${Math.round(l.holding.quantity * l.quote.price).toLocaleString("en-IN")}` : " · NAV not printed"}{l.holding.costBasis != null ? ` · cost ₹${l.holding.costBasis.toLocaleString("en-IN")}` : ""}</p>}
+            <p className="text-muted-foreground">{l.existingId ? `Updates your existing holding (was ${l.previousUnits?.toLocaleString("en-IN")} units)` : "New holding"}{l.holding?.isin ? ` · ${l.holding.isin}` : ""}</p>
+            {l.valueCheck && <p className="text-destructive">{l.valueCheck}</p>}
+            {l.missing.length > 0 && <p className="text-destructive">Missing: {l.missing.join(", ")}{!l.holding ? " — not added" : ""}</p>}
+          </div>)}
+          <p className="text-muted-foreground">Units and NAV are taken exactly as printed and labelled "From statement". Nothing is posted to your bank accounts.</p>
+        </div>}
         {proposal?.kind === "tax" && <div className="grid gap-2 rounded-xl border p-3 text-xs">
           <p className="font-semibold">Tax statement · FY {proposal.fy ?? "not printed"}</p>
           <label>Whose tax<select aria-label="Whose tax statement" className="w-full rounded-md border bg-background px-1 py-1" value={v("taxwho", proposal.entityId ?? "personal")} onChange={(e) => setEdit({ ...edit, taxwho: e.target.value })}><option value="personal">You (personal)</option>{entities.map((e) => <option key={e.id} value={e.id}>{e.name}</option>)}</select></label>
