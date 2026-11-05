@@ -1,7 +1,7 @@
 """End-to-end: edit a company's yearly tax profile and download the accountant tax workpaper.
 Controlled: finance_preferences is served from an in-memory fixture, document/storage writes are faked,
 every other write is blocked, so real Cloud records never change."""
-import asyncio,json,os,zipfile,io
+import asyncio,json,os,re,zipfile,io
 from pathlib import Path
 from playwright.async_api import async_playwright
 ROOT=Path('/tmp/browser/tax-wp'); ROOT.mkdir(parents=True,exist_ok=True)
@@ -58,7 +58,7 @@ async def main():
   btn=page.get_by_role('button',name='Download workpaper (PDF + spreadsheets)')
   await btn.scroll_into_view_if_needed(timeout=60000)
   async with page.expect_download(timeout=60000) as dl: await btn.click()
-  await page.get_by_text('Fixture Traders Pvt Ltd').last.click(); await page.locator('div.rounded-xl',has_text='Tax workpaper for your accountant').last.screenshot(path=str(ROOT/'3_workpaper.png'))
+  await page.locator('div.rounded-xl',has_text='Tax workpaper for your accountant').last.get_by_role('button',name=re.compile('Fixture Traders')).click(); await page.locator('div.rounded-xl',has_text='Tax workpaper for your accountant').last.screenshot(path=str(ROOT/'3_workpaper.png'))
   path=ROOT/'wp.zip'; await (await dl.value).save_as(path)
   z=zipfile.ZipFile(path); names=set(z.namelist())
   assert {'0_workpaper.pdf','1_computation.csv','2_source_transactions.csv','3_assumptions.csv'}<=names, names
