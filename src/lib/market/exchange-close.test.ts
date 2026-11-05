@@ -23,3 +23,7 @@ describe("NSE and BSE kept separate", () => {
     expect(nw.liabilitiesAsOf).toBe("2026-10-31");
   });
 });
+import { fmtIst } from "@/lib/books/market";
+describe("price times", () => {
+  it("shows exchange close time in IST", () => { expect(fmtIst("2026-11-04T10:00:00.000Z")).toBe("4 Nov 2026, 15:30 IST"); expect(fmtIst("x")).toBe("unknown"); });
+});
