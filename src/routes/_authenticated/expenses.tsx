@@ -1,6 +1,7 @@
 import { SavedViews } from "@/components/SavedViews";
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
+import { effectiveEntity } from "@/lib/books/entity-accounts";
 import { History, Undo2 } from "lucide-react";
 import { PageTitle, Stat } from "@/components/AppShell";
 import { ExpenseTable } from "@/components/ExpenseTable";
@@ -30,6 +31,7 @@ export const Route = createFileRoute("/_authenticated/expenses")({
 function Expenses() {
   const { transactions: expenses, members, accounts, preferences, bulkSetCategory, categoryHistory, undoCategoryBatch } = useStore();
   const [f, setF] = useState<Filters>({ scope: "all", memberId: "all", category: "all" });
+  const [company, setCompany] = useState("all");
   const [selecting, setSelecting] = useState(false);
   const [shown, setShown] = useState(50);
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -53,7 +55,7 @@ function Expenses() {
     catch(e) { toast.error((e as Error).message); }
     finally { setApplying(false); }
   };
-  const list = applyFilters(expenses, f);
+  const list = applyFilters(expenses, f).filter(e => company === "all" || (effectiveEntity(e, preferences.books?.entityAccounts ?? {}) ?? "personal") === company);
   const t = totalsByScope(list.filter(e=>(e.txnType??"expense")==="expense"));
   const activeCategories = preferences.categories.filter(c=>!c.archived).map(c=>c.name);
   const togglePick = (id: string) => setPicked(s => { const n = new Set(s); if (n.has(id)) n.delete(id); else n.add(id); return n; });
@@ -79,7 +81,7 @@ function Expenses() {
         ))}
       </div>
       <SavedViews filters={f} onApply={(v) => setF(v as Filters)} />
-      <div className="mb-3 grid gap-3 sm:grid-cols-5"><Input aria-label="Search transactions" placeholder="Merchant, description or tags" value={f.query ?? ""} onChange={e=>setF({...f,query:e.target.value})}/><Select value={f.accountId ?? "all"} onValueChange={v=>setF({...f,accountId:v})}><SelectTrigger aria-label="Filter account"><SelectValue/></SelectTrigger><SelectContent><SelectItem value="all">All accounts</SelectItem>{accounts.map(a=><SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}</SelectContent></Select><Select value={f.paymentMethod ?? "all"} onValueChange={v=>setF({...f,paymentMethod:v})}><SelectTrigger aria-label="Filter payment"><SelectValue/></SelectTrigger><SelectContent><SelectItem value="all">All payment methods</SelectItem>{PAYMENT_METHODS.map(v=><SelectItem key={v} value={v}>{PAYMENT_LABEL[v]}</SelectItem>)}</SelectContent></Select><Select value={f.paymentInstrumentId ?? "all"} onValueChange={v=>setF({...f,paymentInstrumentId:v})}><SelectTrigger aria-label="Filter UPI ID or card"><SelectValue/></SelectTrigger><SelectContent><SelectItem value="all">All UPI IDs & cards</SelectItem>{preferences.paymentInstruments.map(p=><SelectItem key={p.id} value={p.id}>{instrumentLabel(p)}</SelectItem>)}</SelectContent></Select><Select value={f.tag ?? "all"} onValueChange={v=>setF({...f,tag:v})}><SelectTrigger aria-label="Filter tag"><SelectValue/></SelectTrigger><SelectContent><SelectItem value="all">All tags</SelectItem>{[...new Set(expenses.flatMap(e=>e.tags??[]))].map(t=><SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent></Select></div><div className="mb-5 grid gap-3 sm:grid-cols-4">
+      <div className="mb-3 grid gap-3 sm:grid-cols-5">{(preferences.entities ?? []).length > 0 && <Select value={company} onValueChange={setCompany}><SelectTrigger aria-label="Filter company"><SelectValue/></SelectTrigger><SelectContent><SelectItem value="all">All companies & personal</SelectItem><SelectItem value="personal">Personal</SelectItem>{(preferences.entities ?? []).map(x=><SelectItem key={x.id} value={x.id}>{x.name}</SelectItem>)}</SelectContent></Select>}<Input aria-label="Search transactions" placeholder="Merchant, description or tags" value={f.query ?? ""} onChange={e=>setF({...f,query:e.target.value})}/><Select value={f.accountId ?? "all"} onValueChange={v=>setF({...f,accountId:v})}><SelectTrigger aria-label="Filter account"><SelectValue/></SelectTrigger><SelectContent><SelectItem value="all">All accounts</SelectItem>{accounts.map(a=><SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}</SelectContent></Select><Select value={f.paymentMethod ?? "all"} onValueChange={v=>setF({...f,paymentMethod:v})}><SelectTrigger aria-label="Filter payment"><SelectValue/></SelectTrigger><SelectContent><SelectItem value="all">All payment methods</SelectItem>{PAYMENT_METHODS.map(v=><SelectItem key={v} value={v}>{PAYMENT_LABEL[v]}</SelectItem>)}</SelectContent></Select><Select value={f.paymentInstrumentId ?? "all"} onValueChange={v=>setF({...f,paymentInstrumentId:v})}><SelectTrigger aria-label="Filter UPI ID or card"><SelectValue/></SelectTrigger><SelectContent><SelectItem value="all">All UPI IDs & cards</SelectItem>{preferences.paymentInstruments.map(p=><SelectItem key={p.id} value={p.id}>{instrumentLabel(p)}</SelectItem>)}</SelectContent></Select><Select value={f.tag ?? "all"} onValueChange={v=>setF({...f,tag:v})}><SelectTrigger aria-label="Filter tag"><SelectValue/></SelectTrigger><SelectContent><SelectItem value="all">All tags</SelectItem>{[...new Set(expenses.flatMap(e=>e.tags??[]))].map(t=><SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent></Select></div><div className="mb-5 grid gap-3 sm:grid-cols-4">
         <Select value={f.memberId ?? "all"} onValueChange={(v) => setF({ ...f, memberId: v })}>
           <SelectTrigger aria-label="Family member"><SelectValue /></SelectTrigger>
           <SelectContent>
