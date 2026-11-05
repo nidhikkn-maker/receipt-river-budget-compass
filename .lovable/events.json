@@ -1,0 +1,91 @@
+{
+  "schema_version": 1,
+  "events": {
+    "project.account_company_linked": {
+      "event_schema_version": 1,
+      "description": "A bank account was linked to, moved between, or unlinked from a company.",
+      "privacy": {
+        "contains_pii": false,
+        "purpose": "product_analytics"
+      },
+      "properties_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "action",
+          "source"
+        ],
+        "properties": {
+          "action": {
+            "type": "string",
+            "enum": [
+              "link",
+              "move",
+              "unlink"
+            ]
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "companies_page",
+              "account_settings",
+              "statement_upload"
+            ]
+          }
+        }
+      }
+    },
+    "project.company_created": {
+      "event_schema_version": 1,
+      "description": "A company profile was created (Companies page, account settings, or statement upload).",
+      "privacy": {
+        "contains_pii": false,
+        "purpose": "product_analytics"
+      },
+      "properties_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "source"
+        ],
+        "properties": {
+          "source": {
+            "type": "string",
+            "enum": [
+              "companies_page",
+              "account_settings",
+              "statement_upload"
+            ]
+          },
+          "kind": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "project.expense_company_assigned": {
+      "event_schema_version": 1,
+      "description": "The owner picked a company by hand on an expense (new or edit); automatic fill from the account is not counted.",
+      "privacy": {
+        "contains_pii": false,
+        "purpose": "product_analytics"
+      },
+      "properties_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "mode"
+        ],
+        "properties": {
+          "mode": {
+            "type": "string",
+            "enum": [
+              "new",
+              "edit"
+            ]
+          }
+        }
+      }
+    }
+  }
+}
