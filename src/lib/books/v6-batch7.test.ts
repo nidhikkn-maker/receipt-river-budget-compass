@@ -10,7 +10,7 @@ const lease = { id: "l1", propertyId: "p1", tenant: "Ravi Kumar", start: "2026-0
 
 describe("v6 accuracy fixes", () => {
   it("an amount equal to the deposit alone is not a deposit", () => {
-    expect(receiptKind("NEFT Ravi Kumar", 30000, lease)).toBe("rent");
+    expect(receiptKind("NEFT Ravi Kumar", 30000, lease)).toBe("unconfirmed");
     expect(receiptKind("Ravi Kumar security deposit", 30000, lease)).toBe("deposit");
   });
   it("tenant arrears carry forward from the lease start", () => {
