@@ -1923,6 +1923,7 @@ export type Database = {
         Row: {
           as_of: string | null
           demat_id: string
+          events: Json
           gains: Json
           id: string
           isin: string
@@ -1937,6 +1938,7 @@ export type Database = {
         Insert: {
           as_of?: string | null
           demat_id: string
+          events?: Json
           gains?: Json
           id?: string
           isin: string
@@ -1951,6 +1953,7 @@ export type Database = {
         Update: {
           as_of?: string | null
           demat_id?: string
+          events?: Json
           gains?: Json
           id?: string
           isin?: string

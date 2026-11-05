@@ -13,7 +13,7 @@ const EVENT_RE: [RegExp, InvestEventKind][] = [[/\bdividend\b/i, "dividend"], [/
 export function eventKindOf(row: string): InvestEventKind | null { return EVENT_RE.find(([re]) => re.test(row))?.[1] ?? null; }
 
 export interface Lot { date: string; side: "buy" | "sell"; quantity: number; price: number | null; amount: number | null; source: string }
-export interface StoredHolding { isin: string; name: string; quantity: number; asOf: string | null; statementValue: number | null; lots: Lot[]; gains: (GainLine & { source: string })[]; sources: string[] }
+export interface StoredHolding { isin: string; name: string; quantity: number; asOf: string | null; statementValue: number | null; lots: Lot[]; gains: (GainLine & { source: string })[]; sources: string[]; events?: (InvestEvent & { source: string })[] }
 
 const ISIN = /\b(IN[A-Z0-9]{9}\d)\b/;
 const MONTHS: Record<string, string> = { jan: "01", feb: "02", mar: "03", apr: "04", may: "05", jun: "06", jul: "07", aug: "08", sep: "09", oct: "10", nov: "11", dec: "12" };
@@ -132,7 +132,7 @@ export interface MergeResult { holdings: StoredHolding[]; added: { holdings: num
  * trades and gains only attach to holdings that already exist — unknown ISINs are reported, never created.
  */
 export function mergeInvestmentDoc(existing: StoredHolding[], doc: InvestDoc, source: string): MergeResult {
-  const map = new Map(existing.map((h) => [h.isin, { ...h, lots: [...h.lots], gains: [...h.gains], sources: [...h.sources] }]));
+  const map = new Map<string, StoredHolding>(existing.map((h) => [h.isin, { ...h, lots: [...h.lots], gains: [...h.gains], sources: [...h.sources], events: [...(h.events ?? [])] }]));
   const added = { holdings: 0, lots: 0, gains: 0 };
   const unmatched = new Map<string, string>();
   let duplicatesSkipped = 0;
@@ -163,6 +163,14 @@ export function mergeInvestmentDoc(existing: StoredHolding[], doc: InvestDoc, so
       const buy: Lot = { date: g.buyDate, side: "buy", quantity: g.quantity, price: g.cost != null && g.quantity ? round(g.cost / g.quantity) : null, amount: g.cost, source };
       if (!cur.lots.some((l) => l.side === "buy" && l.date === buy.date && l.quantity === buy.quantity)) { cur.lots.push(buy); added.lots++; }
     }
+  }
+  for (const event of doc.events ?? []) {
+    const cur = map.get(event.isin);
+    if (!cur) { unmatched.set(event.isin, event.name); continue; }
+    const events = cur.events ?? [];
+    if (events.some((e) => e.date === event.date && e.kind === event.kind && e.quantity === event.quantity && e.amount === event.amount)) { duplicatesSkipped++; continue; }
+    cur.events = [...events, { ...event, source }];
+    touch(cur);
   }
   return { holdings: [...map.values()], added, unmatched: [...unmatched].map(([isin, name]) => ({ isin, name })), duplicatesSkipped };
 }

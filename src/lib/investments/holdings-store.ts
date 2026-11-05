@@ -1,6 +1,6 @@
 // Owner-scoped demat accounts and holdings in Lovable Cloud. RLS limits every read and write to the signed-in owner.
 import { supabase } from "@/integrations/supabase/client";
-import type { InvestDoc, Lot, StoredHolding, GainLine } from "./demat";
+import type { InvestDoc, InvestEvent, Lot, StoredHolding, GainLine } from "./demat";
 
 export interface DematAccount { id: string; broker: string; dpId: string; clientId: string; holder: string }
 export interface DematWithHoldings extends DematAccount { holdings: (StoredHolding & { id: string })[] }
@@ -17,6 +17,7 @@ export async function loadDemat(): Promise<DematWithHoldings[]> {
     holdings: (h.data ?? []).filter((x) => x.demat_id === d.id).map((x) => ({
       id: x.id, isin: x.isin, name: x.name, quantity: Number(x.quantity), asOf: x.as_of, statementValue: x.statement_value == null ? null : Number(x.statement_value),
       lots: (x.lots ?? []) as unknown as Lot[], gains: (x.gains ?? []) as unknown as (GainLine & { source: string })[], sources: (x.sources ?? []) as unknown as string[],
+      events: (x.events ?? []) as unknown as (InvestEvent & { source: string })[],
     })),
   }));
 }
@@ -40,7 +41,7 @@ export async function saveHoldings(dematId: string, holdings: StoredHolding[]) {
   if (!owner) throw new Error("Sign in again to save holdings");
   const { error } = await supabase.from("security_holdings").upsert(holdings.map((h) => ({
     owner_id: owner, demat_id: dematId, isin: h.isin, name: h.name, quantity: h.quantity, as_of: h.asOf, statement_value: h.statementValue,
-    lots: h.lots as never, gains: h.gains as never, sources: h.sources as never, updated_at: new Date().toISOString(),
+    lots: h.lots as never, gains: h.gains as never, sources: h.sources as never, events: (h.events ?? []) as never, updated_at: new Date().toISOString(),
   })), { onConflict: "owner_id,demat_id,isin" });
   if (error) throw new Error(error.message);
 }

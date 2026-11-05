@@ -449,6 +449,13 @@
       "when": 1793855704082,
       "tag": "0063_shared_reference_reads_real_accounts",
       "breakpoints": true
+    },
+    {
+      "idx": 64,
+      "version": "7",
+      "when": 1793902104474,
+      "tag": "0064_retain_investment_statement_events",
+      "breakpoints": true
     }
   ]
 }
