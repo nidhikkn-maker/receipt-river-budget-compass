@@ -704,7 +704,8 @@
 - [x] Phase 1 acceptance tests (pure rules + isolated database)
 
 ## Final plan (5 Nov 2026) — .lovable/plan/finish-both-documents-...-2026-11-05.md
-- [ ] Current continuation: retain statement corporate actions with source documents and connect saved events to investment alerts; verify dashboard provider recovery.
+- [x] E29: retained statement bonuses/splits/rights/mergers/dividends with document ids, duplicate-safe retries and undo snapshots; alerts now read saved events. 1,442 tests pass, including isolated PostgreSQL read-back; signed-in controlled Wealth alert visible with no errors. Real financial records unchanged; not published.
+- [x] Dashboard provider recovery checked signed-in: dashboard loads, no provider exception or page errors.
 - [x] E30 exchange-holiday-aware market open/staleness; D19 unlabelled receipts above rent wait for confirmation
 - [x] iPhone/iPad (portrait+landscape) layout check of main pages — no overflow, no errors
 - [x] Security rescan; shared price/rule tables limited to signed-in readers; published
