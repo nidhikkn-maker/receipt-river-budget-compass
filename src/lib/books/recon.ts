@@ -50,7 +50,7 @@ export interface CustomerReconRow { party: string; gstin: string; invoiced: numb
 export function customerRecon(invoices: GstInvoice[], receipts: { id: string; amount: number; text: string; date: string }[], from: string, to: string): CustomerReconRow[] {
   const by = new Map<string, { party: string; gstin: string; invoiced: number; invoices: number }>();
   for (const i of invoices) {
-    if (i.kind !== "sale" || i.date < from || i.date > to) continue;
+    if (i.kind !== "sales" || i.date < from || i.date > to) continue;
     const k = i.partyGstin || words(i.party);
     const cur = by.get(k) ?? { party: i.party, gstin: i.partyGstin, invoiced: 0, invoices: 0 };
     cur.invoiced = r2(cur.invoiced + i.taxable + i.igst + i.cgst + i.sgst + i.cess); cur.invoices++;
