@@ -79,6 +79,8 @@ export function valueHolding(h: Holding, quotes: Quote[], gold: GoldRate | undef
     const ageD = (now.getTime() - Date.parse(gold.date)) / 864e5;
     return { holding: h, key: null, quote: { key: "gold", price: gold.perGram24k, at: gold.date, provider: gold.source, freshness: "manual", refreshedAt: gold.date }, value, stale: ageD > 7, note: `${h.grams} g × ${h.karat}k at ${gold.perGram24k}/g (24k) · ${gold.source}` };
   }
+  // Cash held with a broker is money, not a security: rupee amount × share, never priced [v6.1 §3].
+  if (h.kind === "broker_cash") return { holding: h, key: null, quote: null, value: Math.round(h.quantity * share * 100) / 100, stale: false, note: `Broker cash · ${h.source}` };
   const key = quoteKey(h);
   const q = key ? quotes.find((x) => x.key === key) ?? null : null;
   if (!key) return { holding: h, key, quote: null, value: null, stale: false, note: "Needs ISIN, exchange symbol or fund code" };

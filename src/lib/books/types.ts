@@ -103,7 +103,7 @@ export interface FyDetail { schedule: Schedule; lines: ScheduleLine[]; docId?: s
 export interface FyVersion { at: string; reason: string; audited: Partial<Record<OpeningHead, number>> }
 
 /** Investments beyond demat equities [§42, v6.1 §8]. */
-export type HoldingKind = "mutual_fund" | "etf" | "gold_etf" | "sgb" | "physical_gold" | "bond" | "other";
+export type HoldingKind = "mutual_fund" | "etf" | "gold_etf" | "sgb" | "physical_gold" | "bond" | "broker_cash" | "other";
 export interface Holding {
   id: string; kind: HoldingKind; name: string; isin?: string | undefined; symbol?: string | undefined; exchange?: "NSE" | "BSE" | undefined; schemeCode?: string | undefined;
   quantity: number; ownerEntityId?: string | undefined; sharePct: number;
