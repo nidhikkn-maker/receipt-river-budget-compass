@@ -435,6 +435,13 @@
       "when": 1793833392129,
       "tag": "0061_opening_balance_postings",
       "breakpoints": true
+    },
+    {
+      "idx": 62,
+      "version": "7",
+      "when": 1793849749978,
+      "tag": "0062_freeze_closed_years_books",
+      "breakpoints": true
     }
   ]
 }

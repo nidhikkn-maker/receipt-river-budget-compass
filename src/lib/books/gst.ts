@@ -147,3 +147,27 @@ export function validateGstJson(kind: "GSTR-1" | "GSTR-3B", j: Record<string, un
   } else if (!(j["sup_details"] && j["itc_elg"])) errs.push("sup_details and itc_elg are required");
   return errs;
 }
+
+export interface GstHeads { igst: number; cgst: number; sgst: number; cess: number }
+/**
+ * ITC set-off in the order the GST law sets (s.49 / rule 88A): IGST credit against IGST, then CGST, then SGST;
+ * CGST credit against CGST then IGST; SGST credit against SGST then IGST; cess only against cess. CGST and
+ * SGST credit are never used against each other. Returns the cash still payable and credit left per head.
+ */
+export function gstSetOff(output: GstHeads, itc: GstHeads): { used: { from: keyof GstHeads; to: keyof GstHeads; amount: number }[]; cash: GstHeads; carry: GstHeads; cashTotal: number } {
+  const due = { ...output }, cr = { ...itc }; const used: { from: keyof GstHeads; to: keyof GstHeads; amount: number }[] = [];
+  const use = (from: keyof GstHeads, to: keyof GstHeads) => { const a = r2(Math.min(cr[from], due[to])); if (a > 0) { cr[from] = r2(cr[from] - a); due[to] = r2(due[to] - a); used.push({ from, to, amount: a }); } };
+  use("igst", "igst"); use("igst", "cgst"); use("igst", "sgst");
+  use("cgst", "cgst"); use("cgst", "igst"); use("sgst", "sgst"); use("sgst", "igst"); use("cess", "cess");
+  return { used, cash: due, carry: cr, cashTotal: r2(due.igst + due.cgst + due.sgst + due.cess) };
+}
+
+/** Head-wise output tax and eligible ITC for a GSTIN and month, then set off. */
+export function gstPayable(list: GstInvoice[], gstin: string, period: string, eligible?: Set<string>, carryIn?: GstHeads) {
+  const mine = list.filter((i) => i.gstin === gstin && periodOf(i.date) === period);
+  const h = (xs: GstInvoice[]): GstHeads => ({ igst: r2(xs.reduce((s, i) => s + i.igst, 0)), cgst: r2(xs.reduce((s, i) => s + i.cgst, 0)), sgst: r2(xs.reduce((s, i) => s + i.sgst, 0)), cess: r2(xs.reduce((s, i) => s + i.cess, 0)) });
+  const out = h(mine.filter((i) => i.kind === "sales"));
+  const inn = h(mine.filter((i) => i.kind === "purchase" && (!eligible || eligible.has(`${i.partyGstin}|${i.number.trim().toUpperCase()}`))));
+  const itc = carryIn ? { igst: r2(inn.igst + carryIn.igst), cgst: r2(inn.cgst + carryIn.cgst), sgst: r2(inn.sgst + carryIn.sgst), cess: r2(inn.cess + carryIn.cess) } : inn;
+  return { output: out, itc, ...gstSetOff(out, itc) };
+}

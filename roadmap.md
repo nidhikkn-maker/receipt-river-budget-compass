@@ -692,3 +692,10 @@
 ## One-run finish (5 Nov 2026) — checklist in Files: Ledgerline_v6_Requirements_Checklist.md
 - [x] Statements from any page → Statement Desk; originals kept in DocuRepo; incomplete asset/lease suggestions editable; demat no-zero prices; fund/exchange price-type check; ownership-aware cost alert; Home as-of dates; deposit-sized receipts wait for confirmation.
 - [ ] Remaining large items (see checklist top-15 + v6.1 list): company-level access control, figure-level evidence on every register value, server-enforced approvals, typed intake writes, full tax/GST computations and official schemas, full opening trial balance, customer/supplier reconciliation, closed-period evidence, asset lifecycle journals, corporate actions, acceptance suite.
+
+## Phase 1 (5 Nov 2026) — done
+- [x] Full income tax (both regimes, deductions with proof, rebate/marginal relief, special-rate gains, surcharge, cess, company/firm options) + ITR computation JSON
+- [x] GST cash payable by head with legal set-off order
+- [x] Opening balance sheet from audited figures
+- [x] Freeze whole years; database refuses GST invoice changes and silent un-closing in frozen years
+- [x] Phase 1 acceptance tests (pure rules + isolated database)

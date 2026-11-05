@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { useStore } from "@/lib/store";
 import { fyRange } from "@/lib/entities";
 import { ACCOUNT_LABEL, accountBalance, type AccountKind } from "@/lib/ledger";
-import { HEAD_LABEL, nextFy, openingPlan, POSTABLE_HEADS, stableId, type OpeningLink } from "@/lib/books/fy";
+import { HEAD_LABEL, nextFy, openingBalanceSheet, openingPlan, POSTABLE_HEADS, stableId, type OpeningLink } from "@/lib/books/fy";
 import { periodBlocker } from "@/lib/books/periods";
 import type { FyRecord, OpeningHead } from "@/lib/books/types";
 import { useBooks } from "./useBooks";
@@ -75,6 +75,10 @@ export function OpeningBalances({ rec, missingSchedules }: { rec: FyRecord; miss
 
   return (
     <div className="space-y-2 rounded-lg border p-2 text-xs">
+      {(() => { const bs = openingBalanceSheet(rec); return <div className="rounded-md border p-2"><p className="font-semibold">Opening balance sheet · 1 April {plan.openingDate.slice(0, 4)}</p>
+        <div className="mt-1 grid gap-2 sm:grid-cols-2"><div><p className="text-muted-foreground">Assets</p>{bs.assets.map((x) => <p key={x.head} className="flex justify-between gap-2"><span>{HEAD_LABEL[x.head]}</span><span>{inr(x.amount)}</span></p>)}{rec.audited.accumulatedDepreciation != null && <p className="flex justify-between gap-2"><span>Less accumulated depreciation</span><span>−{inr(rec.audited.accumulatedDepreciation)}</span></p>}<p className="flex justify-between gap-2 border-t font-semibold"><span>Total assets</span><span>{inr(bs.totalAssets)}</span></p></div>
+          <div><p className="text-muted-foreground">Capital & liabilities</p>{bs.liabilities.map((x) => <p key={x.head} className="flex justify-between gap-2"><span>{HEAD_LABEL[x.head]}</span><span>{inr(x.amount)}</span></p>)}<p className="flex justify-between gap-2 border-t font-semibold"><span>Total</span><span>{inr(bs.totalLiabilities)}</span></p></div></div>
+        <p className={bs.balanced ? "mt-1 text-primary" : "mt-1 text-destructive"}>{bs.balanced ? "Balances — both sides agree" : `Does not balance by ${inr(bs.difference)}`}{bs.missing.length ? ` · not in the upload: ${bs.missing.map((h) => HEAD_LABEL[h]).join(", ")}` : ""}</p></div>; })()}
       <p className="font-semibold">Post opening balances for FY {nextFy(rec.fy)} (dated {plan.openingDate})</p>
       {plan.rows.map((r) => <div key={r.head} className="space-y-1 border-b pb-2 last:border-0">
         <div className="flex flex-wrap justify-between gap-1"><span className="font-medium">{HEAD_LABEL[r.head]}</span><span>{r.audited == null ? "not in upload" : `audited ${inr(r.audited)}`} · <span className={r.status === "unlinked" || r.status === "split mismatch" ? "text-destructive" : "text-muted-foreground"}>{r.status}</span></span></div>

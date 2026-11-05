@@ -21,6 +21,24 @@ export function closePeriod(periods: ClosedPeriod[], log: PeriodEvent[], from: s
   return { periods: [...periods, { id, from, to, closedOn: today, note: note.trim() }].sort((a, b) => a.from.localeCompare(b.from)), log: [...log, { at: today, action: "closed", periodId: id, reason: note.trim() }] };
 }
 
+/** Whole financial year (1 April – 31 March) as a closed period range. */
+export function fyRange(fy: string): { from: string; to: string } { const y = Number(fy.slice(0, 4)); return { from: `${y}-04-01`, to: `${y + 1}-03-31` }; }
+
+/** Years that can be frozen: ended before today and not already fully closed. */
+export function closableYears(periods: ClosedPeriod[], today: string, back = 6): string[] {
+  const y = Number(today.slice(0, 4)) - (today.slice(5) < "04-01" ? 1 : 0);
+  const out: string[] = [];
+  for (let s = y - 1; s >= y - back; s--) { const fy = `${s}-${String((s + 1) % 100).padStart(2, "0")}`; const r = fyRange(fy); if (!periods.some((p) => r.from <= p.to && r.to >= p.from)) out.push(fy); }
+  return out;
+}
+
+/** Freezing a year: closes the full FY with a note; overlapping closures are refused. */
+export function closeYear(periods: ClosedPeriod[], log: PeriodEvent[], fy: string, note: string, today: string, id: string) {
+  const r = fyRange(fy);
+  if (r.to >= today) throw new Error(`FY ${fy} has not ended yet`);
+  return closePeriod(periods, log, r.from, r.to, note.trim() || `FY ${fy} frozen`, today, id);
+}
+
 /** Reopening is restricted: it needs a written reason and is logged permanently [§57]. */
 export function reopenPeriod(periods: ClosedPeriod[], log: PeriodEvent[], id: string, reason: string, today: string): { periods: ClosedPeriod[]; log: PeriodEvent[] } {
   if (reason.trim().length < 5) throw new Error("Write why this period is being reopened");

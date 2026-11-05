@@ -121,3 +121,20 @@ export function openingPlan(p: { rec: FyRecord; links: Partial<Record<OpeningHea
   for (const x of postings) { if (dup.has(x.accountId)) blockers.push("An account is linked to more than one balance line"); dup.add(x.accountId); }
   return { rows, postings, blockers: [...new Set(blockers)], openingDate };
 }
+
+/**
+ * Full opening balance sheet for the year after rec.fy from the audited figures [§19]: assets side,
+ * capital & liabilities side, net fixed assets, and the difference. Missing heads stay missing.
+ */
+export function openingBalanceSheet(rec: FyRecord): { assets: { head: OpeningHead; amount: number }[]; liabilities: { head: OpeningHead; amount: number }[]; netFixedAssets: number | null; totalAssets: number; totalLiabilities: number; difference: number; balanced: boolean; missing: OpeningHead[] } {
+  const a = rec.audited;
+  const assets = ASSET_SIDE.filter((h) => a[h] != null).map((h) => ({ head: h, amount: a[h]! }));
+  const liabilities = (["capitalReserves", "loans", "payables"] as OpeningHead[]).filter((h) => a[h] != null).map((h) => ({ head: h, amount: a[h]! }));
+  const netFixedAssets = a.fixedAssets != null ? r2(a.fixedAssets - (a.accumulatedDepreciation ?? 0)) : null;
+  // Accumulated depreciation reduces fixed assets on the assets side rather than sitting with liabilities.
+  const totalAssets = r2(assets.reduce((s, x) => s + x.amount, 0) - (a.accumulatedDepreciation ?? 0));
+  const totalLiabilities = r2(liabilities.reduce((s, x) => s + x.amount, 0));
+  const difference = r2(totalAssets - totalLiabilities);
+  const missing = (["bank", "fixedAssets", "capitalReserves"] as OpeningHead[]).filter((h) => a[h] == null);
+  return { assets, liabilities, netFixedAssets, totalAssets, totalLiabilities, difference, balanced: Math.abs(difference) <= 1 && !missing.includes("capitalReserves"), missing };
+}

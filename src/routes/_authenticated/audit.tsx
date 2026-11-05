@@ -11,7 +11,7 @@ import { accountBalance } from "@/lib/ledger";
 import { useDemat } from "@/components/books/useBooks";
 import { fieldExtensionPlan } from "@/lib/books/intake";
 import { approvalHistory, entityObligations, groupBy, readinessTiles, reconHub, setFindingState } from "@/lib/books/audit";
-import { closePeriod, POLICY, reopenPeriod } from "@/lib/books/periods";
+import { closePeriod, closableYears, closeYear, POLICY, reopenPeriod } from "@/lib/books/periods";
 import { missingInvoices } from "@/lib/gst-recon";
 import { receivableStatus } from "@/lib/receivables";
 import { useAuditAll } from "@/components/books/useAudit";
@@ -110,6 +110,7 @@ function Audit() {
           <div className="grid grid-cols-2 gap-2"><label className="text-xs">From<Input type="date" value={from} onChange={(e) => setFrom(e.target.value)} /></label><label className="text-xs">To<Input type="date" value={to} onChange={(e) => setTo(e.target.value)} /></label>
             <Input className="col-span-2" placeholder="Note (e.g. FY audited and filed)" value={note} onChange={(e) => setNote(e.target.value)} /></div>
           <Button size="sm" onClick={async () => { try { const r = closePeriod(books.closedPeriods, books.periodLog, from, to, note, today, crypto.randomUUID()); await save({ closedPeriods: r.periods, periodLog: r.log }); setNote(""); toast.success("Period closed"); } catch (e) { toast.error((e as Error).message); } }}>Close period</Button>
+          {closableYears(books.closedPeriods, today).length > 0 && <div className="flex flex-wrap items-center gap-1 text-xs"><span className="text-muted-foreground">Freeze a whole year:</span>{closableYears(books.closedPeriods, today).map((fy) => <Button key={fy} size="sm" variant="outline" className="h-7" onClick={async () => { if (!window.confirm(`Freeze FY ${fy}? Entries, opening balances and GST invoices dated 1 April ${fy.slice(0, 4)} – 31 March ${Number(fy.slice(0, 4)) + 1} can't be changed until it is reopened with a reason.`)) return; try { const r = closeYear(books.closedPeriods, books.periodLog, fy, note, today, crypto.randomUUID()); await save({ closedPeriods: r.periods, periodLog: r.log }); setNote(""); toast.success(`FY ${fy} frozen`); } catch (e) { toast.error((e as Error).message); } }}>Freeze FY {fy}</Button>)}</div>}
           {books.periodLog.length > 0 && <details className="text-xs"><summary className="cursor-pointer text-muted-foreground">History ({books.periodLog.length})</summary>{books.periodLog.slice().reverse().map((l, i) => <p key={i}>{l.at} · {l.action} · {l.reason}</p>)}</details>}
         </div>
       </Fold>
