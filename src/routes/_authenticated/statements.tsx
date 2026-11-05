@@ -247,6 +247,8 @@ function StatementDeskPage() {
         const e = choice === "__new" ? stubEntity(f.hint.holder ?? f.hint.name) : null;
         const books = st.preferences.books ?? emptyBooks();
         await st.savePreferences({ ...st.preferences, entities: e ? [...ents, e] : ents, books: { ...books, entityAccounts: linkAccounts(books.entityAccounts ?? {}, e ? e.id : choice, [id]) } });
+        if (e) window.__lovableEvents?.track?.("project.company_created", { source: "statement_upload", kind: e.kind });
+        window.__lovableEvents?.track?.("project.account_company_linked", { action: "link", source: "statement_upload" });
       }
       setLoaded((xs) => xs.map((x) => (x.file.name === l.file.name ? { ...x, accountName: f.hint!.name } : x)));
       toast.success(`${f.hint.name} added — this statement is now matched against it`);

@@ -47,8 +47,10 @@ function Entities() {
   const save = async () => {
     if (!edit) return;
     const fixed = { ...edit, name: edit.name.trim() || "Unnamed company" };
-    const next = list.some((x) => x.id === edit.id) ? list.map((x) => (x.id === edit.id ? fixed : x)) : [...list, fixed];
+    const isNew = !list.some((x) => x.id === edit.id);
+    const next = isNew ? [...list, fixed] : list.map((x) => (x.id === edit.id ? fixed : x));
     await savePreferences({ ...preferences, entities: next });
+    if (isNew) window.__lovableEvents?.track?.("project.company_created", { source: "companies_page", kind: fixed.kind });
     toast.success("Profile saved"); setEdit(null);
   };
   const remove = async (id: string) => {
@@ -122,11 +124,11 @@ function Entities() {
               <div key={id} className="flex items-center justify-between gap-2 rounded-xl bg-secondary/50 px-3 py-1.5 text-sm">
                 <span className="truncate">{accName(id)}</span>
                 <div className="flex shrink-0 items-center gap-1">
-                  <select aria-label="Move to" className="rounded-md border bg-background px-2 py-1 text-xs" value="" onChange={(e) => void saveLinks(linkAccounts(links, e.target.value || null, [id]), list, "Moved")}>
+                  <select aria-label="Move to" className="rounded-md border bg-background px-2 py-1 text-xs" value="" onChange={(e) => { const to = e.target.value || null; void saveLinks(linkAccounts(links, to, [id]), list, "Moved").then(() => window.__lovableEvents?.track?.("project.account_company_linked", { action: to ? "move" : "unlink", source: "companies_page" })); }}>
                     <option value="">Move to…</option>
                     {list.filter((x) => x.id !== p.id).map((x) => <option key={x.id} value={x.id}>{x.name}</option>)}
                   </select>
-                  <Button size="sm" variant="ghost" onClick={() => void saveLinks(unlinkAccount(links, id), list, "Unlinked")}>Unlink</Button>
+                  <Button size="sm" variant="ghost" onClick={() => void saveLinks(unlinkAccount(links, id), list, "Unlinked").then(() => window.__lovableEvents?.track?.("project.account_company_linked", { action: "unlink", source: "companies_page" }))}>Unlink</Button>
                 </div>
               </div>
             ))}
@@ -135,7 +137,7 @@ function Entities() {
                 {accounts.filter((a) => !a.archived && !(links[p.id] ?? []).includes(a.id)).map((a) => { const cur = Object.entries(links).find(([, ids]) => ids.includes(a.id))?.[0]; const curName = cur ? list.find((x) => x.id === cur)?.name ?? "another company" : "Personal"; return (
                   <label key={a.id} className="flex items-center gap-2 text-sm"><input type="checkbox" checked={pick.includes(a.id)} onChange={(e) => setPick(e.target.checked ? [...pick, a.id] : pick.filter((x) => x !== a.id))} />{a.name}<span className="text-xs text-muted-foreground">· now {curName}</span></label>
                 ); })}
-                <div className="flex gap-2"><Button size="sm" disabled={!pick.length} onClick={() => void saveLinks(linkAccounts(links, p.id, pick), list, "Linked").then(() => { setPicking(null); setPick([]); })}>Link {pick.length || ""}</Button><Button size="sm" variant="ghost" onClick={() => { setPicking(null); setPick([]); }}>Cancel</Button></div>
+                <div className="flex gap-2"><Button size="sm" disabled={!pick.length} onClick={() => void saveLinks(linkAccounts(links, p.id, pick), list, "Linked").then(() => { window.__lovableEvents?.track?.("project.account_company_linked", { action: "link", source: "companies_page" }); setPicking(null); setPick([]); })}>Link {pick.length || ""}</Button><Button size="sm" variant="ghost" onClick={() => { setPicking(null); setPick([]); }}>Cancel</Button></div>
               </div>
             ) : <div className="flex flex-wrap gap-2"><Button size="sm" variant="outline" onClick={() => { setPicking(p.id); setPick([]); }}>Link accounts</Button>
               {list.length > 1 && <select aria-label="Merge into" className="rounded-md border bg-background px-2 py-1 text-xs" value="" onChange={(e) => void merge(p.id, e.target.value)}><option value="">Merge into…</option>{list.filter((x) => x.id !== p.id).map((x) => <option key={x.id} value={x.id}>{x.name}</option>)}</select>}</div>}

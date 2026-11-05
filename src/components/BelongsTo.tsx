@@ -31,6 +31,8 @@ export function BelongsTo({ accountId }: { accountId: string }) {
     setBusy(true);
     try {
       await savePreferences({ ...preferences, entities: newEntity ? [...list, newEntity] : list, books: { ...books, entityAccounts: linkAccounts(links, target, [accountId]) } });
+      if (newEntity) window.__lovableEvents?.track?.("project.company_created", { source: "account_settings", kind: newEntity.kind });
+      window.__lovableEvents?.track?.("project.account_company_linked", { action: !target ? "unlink" : owner ? "move" : "link", source: "account_settings" });
       toast.success(target ? `Linked to ${toName}` : "Marked personal");
       setCreating(false);
     } catch (e) { toast.error((e as Error).message); } finally { setBusy(false); }
