@@ -5,6 +5,7 @@ import { returnAfterReview } from "@/lib/review-navigation";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { AccountForm } from "@/components/AccountForm";
 import { PayeePicker } from '@/components/PayeePicker';
+import { ownerOf } from '@/lib/books/entity-accounts';
 import { useEffect, useMemo, useRef, useState } from "react";
 
 const acctNameOf = (list: { id: string; name: string }[], id: string) => list.find((a) => a.id === id)?.name ?? "account";
@@ -135,6 +136,8 @@ function NewExpense() {
   const ctxTrip = (preferences.trips as TravelTrip[]).find((t) => t.id === search.trip);
   const [txnType, setTxnType] = useState<TxnType>("expense");
   const [accountId, setAccountId] = useState<string>("none");
+  /** "" = follow the paying account's company; "personal" or an entity id = chosen by hand. */
+  const [companyPick, setCompanyPick] = useState<string>("");
   const [addAcct, setAddAcct] = useState(false);
   const [toAccountId, setToAccountId] = useState<string>("none");
   const [tripId, setTripId] = useState<string>("none");
@@ -428,7 +431,7 @@ function NewExpense() {
     setScope(editing.scope); setMemberId(editing.memberId ?? "me");
     const wa = editing.workspaceAllocations ?? [];
     setWsSplit(wa.length > 1 ? { on: true, method: "fixed", values: Object.fromEntries(wa.map((x) => [x.workspace, String(x.amount)])) } : { on: false, method: "fixed", values: {} });
-    setTxnType(editing.txnType ?? "expense"); setAccountId(editing.accountId ?? "none"); setInstrumentId(editing.paymentInstrumentId ?? "none"); setToAccountId(editing.toAccountId ?? "none"); setTags((editing.tags ?? []).join(", "));
+    setTxnType(editing.txnType ?? "expense"); setAccountId(editing.accountId ?? "none"); setCompanyPick(editing.entitySource === "manual" ? editing.entityId ?? "personal" : ""); setInstrumentId(editing.paymentInstrumentId ?? "none"); setToAccountId(editing.toAccountId ?? "none"); setTags((editing.tags ?? []).join(", "));
     setTripId(editing.tripId ?? "none"); setPrincipal(editing.principal == null ? "" : String(editing.principal)); setInterest(editing.interest == null ? "" : String(editing.interest));
     setSplitOn(editing.splits.length > 0);
     setShares(Object.fromEntries(editing.splits.map((x) => [x.memberId ?? "me", String(x.amount)])));
@@ -638,7 +641,7 @@ function NewExpense() {
       await save(
         { title: title.trim(), amount: Number(amount), currency, paymentMethod, category, date, description, merchant: merchant.trim() || null,
           receiptDetails: finalDetails, workspaceAllocations, scope: wsSplit.on ? (workspaceAllocations.slice().sort((a, b) => b.amount - a.amount)[0]?.workspace ?? scope) : scope, memberId: memberId === "me" ? null : memberId,
-          txnType, accountId: accountId === "none" ? null : accountId, paymentInstrumentId: instrumentId === "none" ? null : instrumentId, payeeId: !isMove(txnType) ? (preferences.payees ?? []).find(p => !p.archived && p.name === merchant.trim())?.id ?? null : null, toAccountId: toAccountId === "none" ? null : toAccountId,
+          txnType, accountId: accountId === "none" ? null : accountId, paymentInstrumentId: instrumentId === "none" ? null : instrumentId, entitySource: companyPick ? "manual" : "account", entityId: companyPick && companyPick !== "personal" ? companyPick : null, payeeId: !isMove(txnType) ? (preferences.payees ?? []).find(p => !p.archived && p.name === merchant.trim())?.id ?? null : null, toAccountId: toAccountId === "none" ? null : toAccountId,
           tripId: tripId === "none" ? null : tripId,
           principal: principal.trim() === "" ? null : Number(principal), interest: interest.trim() === "" ? null : Number(interest),
           tags: [...new Set(tags.split(",").map((t) => t.trim()).filter(Boolean))],
@@ -939,6 +942,15 @@ function NewExpense() {
               </Dialog>
               {methodNote && <p className="text-xs text-muted-foreground">via {instrumentLabel(methodNote)}</p>}
             </div>
+            {(preferences.entities ?? []).length > 0 && (() => { const auto = accountId !== "none" ? ownerOf(preferences.books?.entityAccounts ?? {}, accountId) : null; const autoName = auto ? (preferences.entities ?? []).find((x) => x.id === auto)?.name ?? "Company" : "Personal"; return (
+              <div className="receipt-row">
+                <Label>Company{!companyPick && <Sparkles className="ml-1 inline h-3 w-3 text-primary" aria-label="Auto-filled" />}</Label>
+                <select aria-label="Company" className={`${fieldCls} w-full bg-transparent`} value={companyPick} onChange={(e) => setCompanyPick(e.target.value)}>
+                  <option value="">{autoName} (from account)</option>
+                  <option value="personal">Personal</option>
+                  {(preferences.entities ?? []).map((x) => <option key={x.id} value={x.id}>{x.name}</option>)}
+                </select>
+              </div>); })()}
             {isMove(txnType) && (
               <div className="receipt-row">
                 <Label>{txnType === "card_payment" ? "Card being paid" : txnType === "loan_repayment" ? "Loan being repaid" : txnType === "investment" ? "Invested into" : "To account"}</Label>
