@@ -83,6 +83,9 @@ export interface Expense {
   paymentInstrumentId?: string | null;
   /** Saved external recipient (directory id); never an owned account. */
   payeeId?: string | null;
+  /** Company chosen by hand (entitySource "manual"); otherwise the paying account's company applies. */
+  entityId?: string | null;
+  entitySource?: "account" | "manual";
   tags?: string[];
   receiptDetails?: ReceiptDetails;
   reimbursementStatus?: ReimbursementStatus;
@@ -157,6 +160,9 @@ export interface ExpenseInput {
   toAccountId?: string | null;
   paymentInstrumentId?: string | null;
   payeeId?: string | null;
+  /** Company chosen by hand (entitySource "manual"); otherwise the paying account's company applies. */
+  entityId?: string | null;
+  entitySource?: "account" | "manual";
   tags?: string[];
   receiptDetails?: ReceiptDetails;
   reimbursementStatus?: ReimbursementStatus;

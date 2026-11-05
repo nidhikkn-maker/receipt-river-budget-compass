@@ -57,3 +57,14 @@ export function matchEntityByName(list: EntityProfile[], name: string | null | u
 export function needsDetails(e: EntityProfile): boolean {
   return !e.pan.trim();
 }
+
+/** Company an entry counts for: a hand-picked company wins; otherwise the paying account's company; null = personal. */
+export function effectiveEntity(e: { entityId?: string | null; entitySource?: "account" | "manual"; accountId?: string | null }, map: EntityAccounts): string | null {
+  if (e.entitySource === "manual") return e.entityId ?? null;
+  return e.accountId ? ownerOf(map, e.accountId) : null;
+}
+
+/** Entries that would change company if this account moved (manual choices are kept). */
+export function affectedByMove(entries: { accountId?: string | null; entitySource?: "account" | "manual" }[], accountId: string): number {
+  return entries.filter((e) => e.accountId === accountId && e.entitySource !== "manual").length;
+}

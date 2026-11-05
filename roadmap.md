@@ -719,3 +719,7 @@
 - [x] Edit / move / delete / merge on companies and account links (trips already had edit/delete)
 - [x] Trips: "Mark completed" anytime and on create; open items are reminders only
 - [x] Add expense page: blue → white (preview shared)
+- [x] Create company inline from account settings; move personal accounts to a company
+- [x] Company field on expenses (auto from account, manual override)
+- [x] Company spending comparison view + filters
+- [x] Per-company tax + personal tax "From your companies" (proprietorship/partnership/company rules)

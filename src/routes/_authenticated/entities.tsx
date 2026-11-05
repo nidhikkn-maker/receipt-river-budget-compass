@@ -63,7 +63,7 @@ function Entities() {
   return (
     <div className="mx-auto max-w-2xl space-y-4 p-4">
       <PageTitle title="Companies & years" sub="Each company or person you keep books for, and which past years are on record." />
-      {!edit && <div className="flex flex-wrap gap-2"><Link to="/statements" search={{ context: "entity" }} className="inline-flex items-center rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground">Add from documents</Link><Button variant="outline" onClick={() => { setEdit(blank()); setGst(""); }}>Add manually</Button></div>}
+      {!edit && <div className="flex flex-wrap gap-2"><Link to="/statements" search={{ context: "entity" }} className="inline-flex items-center rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground">Add from documents</Link><Button variant="outline" onClick={() => { setEdit(blank()); setGst(""); }}>Add manually</Button><Link to="/company-spending" className="inline-flex items-center rounded-md border px-4 py-2 text-sm font-semibold">Compare spending</Link></div>}
       {!edit && <p className="text-xs text-muted-foreground">Upload the incorporation certificate, PAN, GST certificate, MoA/AoA or partnership/LLP/trust deed — the profile is read for you to review. Re-uploading matches by PAN, CIN or GSTIN, so no duplicates.</p>}
 
       {edit && (
@@ -132,9 +132,9 @@ function Entities() {
             ))}
             {picking === p.id ? (
               <div className="space-y-1 rounded-xl border p-2">
-                {accounts.filter((a) => !a.archived && !(links[p.id] ?? []).includes(a.id)).map((a) => (
-                  <label key={a.id} className="flex items-center gap-2 text-sm"><input type="checkbox" checked={pick.includes(a.id)} onChange={(e) => setPick(e.target.checked ? [...pick, a.id] : pick.filter((x) => x !== a.id))} />{a.name}</label>
-                ))}
+                {accounts.filter((a) => !a.archived && !(links[p.id] ?? []).includes(a.id)).map((a) => { const cur = Object.entries(links).find(([, ids]) => ids.includes(a.id))?.[0]; const curName = cur ? list.find((x) => x.id === cur)?.name ?? "another company" : "Personal"; return (
+                  <label key={a.id} className="flex items-center gap-2 text-sm"><input type="checkbox" checked={pick.includes(a.id)} onChange={(e) => setPick(e.target.checked ? [...pick, a.id] : pick.filter((x) => x !== a.id))} />{a.name}<span className="text-xs text-muted-foreground">· now {curName}</span></label>
+                ); })}
                 <div className="flex gap-2"><Button size="sm" disabled={!pick.length} onClick={() => void saveLinks(linkAccounts(links, p.id, pick), list, "Linked").then(() => { setPicking(null); setPick([]); })}>Link {pick.length || ""}</Button><Button size="sm" variant="ghost" onClick={() => { setPicking(null); setPick([]); }}>Cancel</Button></div>
               </div>
             ) : <div className="flex flex-wrap gap-2"><Button size="sm" variant="outline" onClick={() => { setPicking(p.id); setPick([]); }}>Link accounts</Button>
