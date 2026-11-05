@@ -16,7 +16,9 @@ export function useStore() {
   const [preferences, setPreferences] = useState<Record<string, unknown>>({ categories: [{ name: "Food", archived: false }, { name: "Other", archived: false }], tags: [], statementUploads: [] });
   const refresh = async () => bump((n) => n + 1);
   return {
-    accounts: [...fixture.accounts], transactions: fixture.transactions.map((t) => ({ ...t })), preferences,
+    accounts: [...fixture.accounts], transactions: fixture.transactions.map((t) => ({ ...t })), preferences, loans: [], commitments: [], documents: [],
+    addDocument: async () => crypto.randomUUID(),
+    confirmTransfer: async () => {},
     savePreferences: async (next: Record<string, unknown>) => { fixture.uploads = (next.statementUploads as unknown[]) ?? []; setPreferences(next); },
     save: async (input: Record<string, unknown>, opts?: { createId?: string }) => {
       const id = opts?.createId ?? crypto.randomUUID();
@@ -51,7 +53,9 @@ export const accountantConsumed: string[] = [];
 Object.assign(window, { accountantConsumed });
 export const supabase = {
   from: (table: string) => {
-    if (table !== "accountant_uploads") throw new Error("No Cloud access in this test");
+    // Read-only lists the page refreshes after saving come back empty; any write still fails loudly.
+    if (table === "transfer_links" || table === "expense_drafts") return { select: () => chain(async () => []) };
+    if (table !== "accountant_uploads") throw new Error(`No Cloud access in this test (${table})`);
     return {
       select: () => chain(() => fetch("/__fixture/accountant-uploads").then((r) => (r.ok ? r.json() : []))),
       update: () => ({ in: (_c: string, ids: string[]) => { accountantConsumed.push(...ids); return Promise.resolve({ data: null, error: null }); } }),

@@ -14,6 +14,8 @@ export interface WpSection {
   key: string; name: string; kind: string;
   heads: [string, number][];
   tax: [string, number][] | null;
+  /** Total tax for the year (before credits); null when no tax figure is shown. */
+  taxTotal: number | null;
   fromCompanies: FromEntityLine[];
   sources: WpSource[];
   assumptions: string[];
@@ -57,7 +59,7 @@ export function assumptions(x: { fy: string; regime: string | null; ruleCount: n
       out.push(p.ownershipPct != null ? `Your ownership share: ${p.ownershipPct}% (entered).` : "Your ownership share: not entered.");
       if (x.kind === "partnership" || x.kind === "llp") out.push(p.capital != null ? `Partner capital ₹${Math.round(p.capital).toLocaleString("en-IN")} used for the 12% interest cap (s.40(b)(iv)).` : "Partner capital not entered — 12% interest cap not checked.");
       if (x.kind === "company") out.push(p.accumulatedProfits != null ? `Accumulated profits ₹${Math.round(p.accumulatedProfits).toLocaleString("en-IN")} used as the deemed-dividend limit (s.2(22)(e)).` : "Accumulated profits not entered — deemed dividend not quantified.");
-      if (p.bookProfit != null) out.push(`Book profit ₹${Math.round(p.bookProfit).toLocaleString("en-IN")} taken from the entered profile instead of the ledger.`);
+      if (p.bookProfit != null) out.push(`Book profit ₹${Math.round(p.bookProfit).toLocaleString("en-IN")} (entered) is used for your personal working; this taxpayer's own working above uses its ledger entries.`);
       if (p.notes) out.push(`Owner note: ${p.notes}`);
     }
   }

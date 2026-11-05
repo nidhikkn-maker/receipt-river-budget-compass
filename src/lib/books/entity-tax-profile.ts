@@ -49,7 +49,14 @@ export function profileFor(list: EntityTaxYear[] | undefined, entityId: string, 
   return (list ?? []).find((x) => x.entityId === entityId && x.fy === fy);
 }
 
-/** Drop entries for deleted companies; move entries when companies merge (target's own year wins). */
+/** Drop entries for a deleted company. */
 export function dropEntityYears(list: EntityTaxYear[] | undefined, entityId: string): EntityTaxYear[] {
   return (list ?? []).filter((x) => x.entityId !== entityId);
+}
+
+/** Merge: the merged-away company's years move to the target, except years the target already has. */
+export function mergeEntityYears(list: EntityTaxYear[] | undefined, from: string, into: string): EntityTaxYear[] {
+  const all = list ?? [];
+  const has = new Set(all.filter((x) => x.entityId === into).map((x) => x.fy));
+  return all.filter((x) => x.entityId !== from || !has.has(x.fy)).map((x) => (x.entityId === from ? { ...x, entityId: into } : x));
 }

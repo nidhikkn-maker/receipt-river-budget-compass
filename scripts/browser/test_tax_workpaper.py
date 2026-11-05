@@ -1,7 +1,7 @@
 """End-to-end: edit a company's yearly tax profile and download the accountant tax workpaper.
 Controlled: finance_preferences is served from an in-memory fixture, document/storage writes are faked,
 every other write is blocked, so real Cloud records never change."""
-import asyncio,json,os,zipfile,io
+import asyncio,json,os,re,zipfile,io
 from pathlib import Path
 from playwright.async_api import async_playwright
 ROOT=Path('/tmp/browser/tax-wp'); ROOT.mkdir(parents=True,exist_ok=True)
@@ -50,7 +50,7 @@ async def main():
   ys=st['data']['data']['books']['entityTaxProfiles']
   assert len(ys)==1 and ys[0]['ownershipPct']==75 and ys[0]['accumulatedProfits']==500000, ys
   await card.screenshot(path=str(ROOT/'1_profile.png'))
-  await page.reload(); await page.wait_for_timeout(10000); await page.screenshot(path=str(ROOT/'2_reload.png')); await page.locator('div.rounded-2xl',has_text=ENT['name']).first.get_by_text('share 75%').wait_for(timeout=60000)
+  await page.reload(); await page.locator('div.rounded-2xl',has_text=ENT['name']).first.get_by_text('share 75%').wait_for(timeout=60000)
   # 2. Download the workpaper.
   await page.goto('http://localhost:8080/tax')
   await page.get_by_role('button',name='FY 2025-26').click(timeout=60000)
@@ -58,6 +58,7 @@ async def main():
   btn=page.get_by_role('button',name='Download workpaper (PDF + spreadsheets)')
   await btn.scroll_into_view_if_needed(timeout=60000)
   async with page.expect_download(timeout=60000) as dl: await btn.click()
+  await page.locator('div.rounded-xl',has_text='Tax workpaper for your accountant').last.get_by_role('button',name=re.compile('Fixture Traders')).click(); await page.locator('div.rounded-xl',has_text='Tax workpaper for your accountant').last.screenshot(path=str(ROOT/'3_workpaper.png'))
   path=ROOT/'wp.zip'; await (await dl.value).save_as(path)
   z=zipfile.ZipFile(path); names=set(z.namelist())
   assert {'0_workpaper.pdf','1_computation.csv','2_source_transactions.csv','3_assumptions.csv'}<=names, names

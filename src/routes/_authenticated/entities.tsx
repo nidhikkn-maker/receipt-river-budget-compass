@@ -9,7 +9,7 @@ import { dropEntity, linkAccounts, mergeEntity, needsDetails, unlinkAccount } fr
 import { emptyBooks } from "@/lib/books/types";
 import { confirmAction } from "@/lib/confirm";
 import { CompanyTaxProfile } from "@/components/books/CompanyTaxProfile";
-import { dropEntityYears } from "@/lib/books/entity-tax-profile";
+import { dropEntityYears, mergeEntityYears } from "@/lib/books/entity-tax-profile";
 import { ENTITY_KINDS, fyOf, gstinProblem, panProblem, yearStatuses, type EntityKind, type EntityProfile } from "@/lib/entities";
 
 export const Route = createFileRoute("/_authenticated/entities")({
@@ -61,7 +61,7 @@ function Entities() {
   };
   const merge = async (from: string, into: string) => {
     if (!into || !(await confirmAction({ title: "Merge companies?", message: "Accounts move to the chosen company and this profile is removed. Entries are not changed.", confirmLabel: "Merge" }))) return;
-    await saveLinks(mergeEntity(links, from, into), list.filter((x) => x.id !== from), "Merged");
+    await savePreferences({ ...preferences, entities: list.filter((x) => x.id !== from), books: { ...books, entityAccounts: mergeEntity(links, from, into), entityTaxProfiles: mergeEntityYears(books.entityTaxProfiles, from, into) } }); toast.success("Merged");
   };
 
   return (

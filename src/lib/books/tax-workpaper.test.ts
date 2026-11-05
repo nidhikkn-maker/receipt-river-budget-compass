@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { assumptions, computationHeads, sourceGroups, workpaperCsv } from "./tax-workpaper";
-import { copyTaxYear, profileFor, removeTaxYear, upsertTaxYear } from "./entity-tax-profile";
+import { copyTaxYear, dropEntityYears, mergeEntityYears, profileFor, removeTaxYear, upsertTaxYear } from "./entity-tax-profile";
 import type { TaxComputation } from "./taxcomp";
 
 const c: TaxComputation = { salary: 100, houseProperty: { rent: 0, standardDeduction: 0, homeLoanInterest: 0, net: 0 }, business: { receipts: 1000, expenses: 300, depreciation: 50, net: 650 }, capitalGains: { short: 0, long: 0 }, otherSources: 20, gross: 770, lossesSetOff: 0, total: 770, notes: [] };
@@ -31,7 +31,7 @@ describe("tax workpaper", () => {
     expect(a.some((x) => x.includes("50%"))).toBe(true);
   });
   it("csv carries one row per source entry", () => {
-    const csv = workpaperCsv([{ key: "p", name: "You", kind: "personal", heads: [["Total income", 1]], tax: [["Tax", 0]], fromCompanies: [], sources: [{ group: "Expenses", total: 5, entries: [{ id: "x", date: "2025-04-01", title: "t", account: "A", amount: 5 }] }], assumptions: ["a"] }]);
+    const csv = workpaperCsv([{ key: "p", name: "You", kind: "personal", heads: [["Total income", 1]], tax: [["Tax", 0]], taxTotal: 0, fromCompanies: [], sources: [{ group: "Expenses", total: 5, entries: [{ id: "x", date: "2025-04-01", title: "t", account: "A", amount: 5 }] }], assumptions: ["a"] }]);
     expect(csv.sources.length).toBe(2);
     expect(csv.computation.length).toBe(3);
   });
@@ -57,5 +57,11 @@ describe("company tax profile per year", () => {
     l = copyTaxYear(l, "1", "2026-27", "2");
     expect(profileFor(l, "e", "2026-27")!.capital).toBe(10);
     expect(removeTaxYear(l, "1").length).toBe(1);
+  });
+  it("merge moves years to the target without overwriting its own; delete drops them", () => {
+    const l = [{ id: "a", entityId: "x", fy: "2024-25", capital: 1 }, { id: "b", entityId: "x", fy: "2025-26", capital: 2 }, { id: "c", entityId: "y", fy: "2025-26", capital: 3 }];
+    const m = mergeEntityYears(l, "x", "y");
+    expect(m.filter((v) => v.entityId === "y").map((v) => [v.fy, v.capital]).sort()).toEqual([["2024-25", 1], ["2025-26", 3]]);
+    expect(dropEntityYears(l, "x").map((v) => v.id)).toEqual(["c"]);
   });
 });
