@@ -663,6 +663,8 @@ export type Database = {
           department: string | null
           description: string
           employee_id: string
+          entity_id: string | null
+          entity_source: string
           expense_date: string
           fx_date: string | null
           fx_rate: number
@@ -707,6 +709,8 @@ export type Database = {
           department?: string | null
           description?: string
           employee_id: string
+          entity_id?: string | null
+          entity_source?: string
           expense_date: string
           fx_date?: string | null
           fx_rate?: number
@@ -751,6 +755,8 @@ export type Database = {
           department?: string | null
           description?: string
           employee_id?: string
+          entity_id?: string | null
+          entity_source?: string
           expense_date?: string
           fx_date?: string | null
           fx_rate?: number
