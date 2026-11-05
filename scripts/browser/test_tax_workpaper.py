@@ -58,6 +58,7 @@ async def main():
   btn=page.get_by_role('button',name='Download workpaper (PDF + spreadsheets)')
   await btn.scroll_into_view_if_needed(timeout=60000)
   async with page.expect_download(timeout=60000) as dl: await btn.click()
+  await page.get_by_text('Fixture Traders Pvt Ltd').last.click(); await page.locator('div.rounded-xl',has_text='Tax workpaper for your accountant').last.screenshot(path=str(ROOT/'3_workpaper.png'))
   path=ROOT/'wp.zip'; await (await dl.value).save_as(path)
   z=zipfile.ZipFile(path); names=set(z.namelist())
   assert {'0_workpaper.pdf','1_computation.csv','2_source_transactions.csv','3_assumptions.csv'}<=names, names
