@@ -14,6 +14,8 @@ export interface WpSection {
   key: string; name: string; kind: string;
   heads: [string, number][];
   tax: [string, number][] | null;
+  /** Total tax for the year (before credits); null when no tax figure is shown. */
+  taxTotal: number | null;
   fromCompanies: FromEntityLine[];
   sources: WpSource[];
   assumptions: string[];

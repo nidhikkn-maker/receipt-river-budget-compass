@@ -37,7 +37,7 @@ export function TaxWorkpaper({ fy, personalLines }: { fy: string; personalLines:
     const c = withEntityIncome(base, personalLines);
     const dl = (books.taxDeductions ?? []).filter((d) => d.entityId === "personal" && d.fy === fy);
     const pl = individualLiability(c, fy, "new", dl, creditsFor(books.taxCredits ?? [], "personal", fy).total);
-    out.push({ key: "personal", name: "You (personal)", kind: "personal", heads: computationHeads(c), tax: pl.lines, fromCompanies: personalLines,
+    out.push({ key: "personal", name: "You (personal)", kind: "personal", heads: computationHeads(c), tax: pl.lines, taxTotal: pl.total, fromCompanies: personalLines,
       sources: sourceGroups(inYear.filter((t) => !(t.accountId && companyAccounts.has(t.accountId))), acct),
       assumptions: assumptions({ fy, regime: "new regime (default for personal working)", ruleCount: approved, kind: "personal", notes: c.notes, liability: pl, flags: personalLines.filter((l) => l.head === "flag").map((l) => `${l.name}: ${l.basis}`) }) });
     // Each company / profile
@@ -51,7 +51,7 @@ export function TaxWorkpaper({ fy, personalLines }: { fy: string; personalLines:
       const confirmed = !!(tp?.regime && tp.gstScheme);
       const l = !confirmed ? null : personalKind ? individualLiability(ec, fy, (tp!.regime ?? "new") as "new" | "old", (books.taxDeductions ?? []).filter((d) => d.entityId === e.id && d.fy === fy), credits) : entityLiability(ec, e.kind === "company" ? "company" : "firm", tp?.companyOption, credits);
       const flags = [ids.size ? `${ids.size} linked account(s) define what is counted.` : "No accounts linked — nothing is counted for this taxpayer.", ...(!confirmed ? ["Tax profile (regime and GST scheme) not confirmed — no tax figure shown."] : [])];
-      out.push({ key: e.id, name: e.name, kind: e.kind, heads: computationHeads(ec), tax: l?.lines ?? null, fromCompanies: [],
+      out.push({ key: e.id, name: e.name, kind: e.kind, heads: computationHeads(ec), tax: l?.lines ?? null, taxTotal: l?.total ?? null, fromCompanies: [],
         sources: sourceGroups(inYear.filter((t) => t.accountId && ids.has(t.accountId)), acct),
         assumptions: assumptions({ fy, regime: confirmed ? (personalKind ? `${tp!.regime} regime` : e.kind === "company" ? `company option ${tp?.companyOption ?? "not chosen"}` : "firm rate") : null, ruleCount: approved, kind: e.kind, profile: yp, notes: ec.notes, liability: l, flags }) });
     }
@@ -92,7 +92,7 @@ export function TaxWorkpaper({ fy, personalLines }: { fy: string; personalLines:
       <p className="font-semibold">Tax workpaper for your accountant · FY {fy}</p>
       {sections.map((s) => <div key={s.key} className="rounded-md bg-secondary p-2">
         <button type="button" className="flex w-full justify-between gap-2 text-left font-medium" onClick={() => setOpen(open === s.key ? null : s.key)}>
-          <span className="min-w-0 break-words">{s.name}</span><span className="shrink-0">{inr(s.heads.find((h) => h[0] === "Total income")?.[1] ?? 0)} · {s.tax ? `tax ${inr(s.tax.find((t) => /payable|total/i.test(t[0]))?.[1] ?? 0)}` : "tax not shown"}</span>
+          <span className="min-w-0 break-words">{s.name}</span><span className="shrink-0">{inr(s.heads.find((h) => h[0] === "Total income")?.[1] ?? 0)} · {s.taxTotal != null ? `tax ${inr(s.taxTotal)}` : "tax not shown"}</span>
         </button>
         {open === s.key && <div className="mt-2 space-y-2">
           <div>{s.heads.filter(([, v]) => v).map(([k, v]) => <p key={k} className="flex justify-between gap-2"><span>{k}</span><b>{inr(v)}</b></p>)}</div>
