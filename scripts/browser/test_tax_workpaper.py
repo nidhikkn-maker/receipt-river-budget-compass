@@ -50,7 +50,7 @@ async def main():
   ys=st['data']['data']['books']['entityTaxProfiles']
   assert len(ys)==1 and ys[0]['ownershipPct']==75 and ys[0]['accumulatedProfits']==500000, ys
   await card.screenshot(path=str(ROOT/'1_profile.png'))
-  await page.reload(); await page.locator('div.rounded-2xl',has_text=ENT['name']).first.get_by_text('share 75%').wait_for(timeout=60000)
+  await page.reload(); await page.wait_for_timeout(8000); await page.screenshot(path=str(ROOT/'2_reload.png')); print('reload keys', list(st['data']['data']['books'].keys())[:40], st['data']['data'].get('entities')); await page.locator('div.rounded-2xl',has_text=ENT['name']).first.get_by_text('share 75%').wait_for(timeout=60000)
   # 2. Download the workpaper.
   await page.goto('http://localhost:8080/tax?fy=2025-26')
   btn=page.get_by_role('button',name='Download workpaper (PDF + spreadsheets)')
