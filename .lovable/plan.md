@@ -18,7 +18,8 @@ The app already keeps a hidden company-to-account list that taxes, opening balan
 - If the holder matches an existing company name, that company is preselected.
 
 ## Rules
-- One account belongs to at most one company; moving it removes it from the old one.
+- One company can have any number of bank accounts and cards linked; link several at once from the company page.
+- Each account belongs to at most one company; moving it removes it from the old one.
 - Linking never changes balances, entries or past reports; it only changes which company's tax, opening balance and audit views include that account.
 - A company with blank PAN is allowed to exist but its PAN/GSTIN checks still run once you fill them in.
 
