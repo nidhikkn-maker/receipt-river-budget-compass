@@ -23,6 +23,12 @@ The app already keeps a hidden company-to-account list that taxes, opening balan
 - Linking never changes balances, entries or past reports; it only changes which company's tax, opening balance and audit views include that account.
 - A company with blank PAN is allowed to exist but its PAN/GSTIN checks still run once you fill them in.
 
+## Edit, move and delete everywhere
+- Companies: Edit, Delete (accounts are unlinked, never deleted; entries untouched), and Merge into another company.
+- Linked accounts: Edit account, Move to another company, Unlink — from both the company page and the account.
+- Trips: Edit, Move entries to another trip, Delete (existing safe checks shown as warnings).
+- Saved as a standing rule for future work: every list item gets Edit / Move / Delete where it makes sense.
+
 ## Nothing is required
 - No field is mandatory to save an account link or create a company: name can be left blank (saved as "Unnamed company" and editable later), type defaults to Company, PAN/GSTIN/CIN/books-from are all optional.
 - PAN/GSTIN checks only show as gentle warnings when something is typed; they never block saving, including on the existing Companies & years form.
