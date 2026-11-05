@@ -60,6 +60,13 @@ export function upsertQuote(quotes: Quote[], q: Quote): Quote[] {
   return [...quotes.filter((x) => x.key !== q.key), q];
 }
 
+/** "5 Nov, 15:30 IST" — the real time a price is for / was fetched [v6.1 §5]. */
+export function fmtIst(iso: string): string {
+  const t = Date.parse(iso); if (!Number.isFinite(t)) return "unknown";
+  const d = new Date(t + 5.5 * 3600e3);
+  return `${d.getUTCDate()} ${["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][d.getUTCMonth()]} ${d.getUTCFullYear()}, ${String(d.getUTCHours()).padStart(2,"0")}:${String(d.getUTCMinutes()).padStart(2,"0")} IST`;
+}
+
 export interface Valued { holding: Holding; key: string | null; quote: Quote | null; value: number | null; stale: boolean; note: string }
 
 /** Holding value = verified quantity × applicable price × ownership share [v6.1 §4, §8]. */
@@ -79,7 +86,7 @@ export function valueHolding(h: Holding, quotes: Quote[], gold: GoldRate | undef
   // Instrument type must fit the price type: funds use NAVs, exchange-traded securities use exchange prices [v6.1 §3].
   const exchangeQuote = q.freshness === "live" || q.freshness === "delayed" || q.freshness === "eod";
   if ((h.kind === "mutual_fund" && exchangeQuote) || ((h.kind === "etf" || h.kind === "gold_etf" || h.kind === "sgb" || h.kind === "bond") && q.freshness === "nav")) return { holding: h, key, quote: null, value: null, stale: false, note: h.kind === "mutual_fund" ? "Exchange price found but a fund needs its NAV" : "NAV found but this security needs an exchange price" };
-  return { holding: h, key, quote: q, value: Math.round(h.quantity * q.price * share * 100) / 100, stale: isStale(q, now, h.kind, alerts.staleNavDays), note: `${FRESHNESS_LABEL[q.freshness]} · ${q.provider}` };
+  return { holding: h, key, quote: q, value: Math.round(h.quantity * q.price * share * 100) / 100, stale: isStale(q, now, h.kind, alerts.staleNavDays), note: `${FRESHNESS_LABEL[q.freshness]} · ${q.provider} · price ${fmtIst(q.at)} · fetched ${fmtIst(q.refreshedAt)}` };
 }
 
 export interface NetWorthPart { label: string; value: number; basis: string; live: boolean; asOf?: string | null }

@@ -47,7 +47,7 @@ export function MarketPanel() {
   const snapshot = async () => {
     const allocation: Record<string, number> = {};
     for (const v of nw.valued) if (v.value) allocation[KIND[v.holding.kind]] = (allocation[KIND[v.holding.kind]] ?? 0) + v.value;
-    await save({ snapshots: addSnapshot(books.snapshots, { date: new Date().toISOString().slice(0, 10), netWorth: nw.net, portfolio: nw.portfolio, liquid: nw.liquid, liabilities: nw.liabilities, allocation, invested: Math.round(books.holdings.reduce((s, h) => s + (h.costBasis ?? 0) * (h.sharePct / 100), 0)) }) });
+    await save({ snapshots: addSnapshot(books.snapshots, { date: new Date().toISOString().slice(0, 10), netWorth: nw.net, portfolio: nw.portfolio, liquid: nw.liquid, liabilities: nw.liabilities, allocation, invested: Math.round(books.holdings.reduce((s, h) => s + (h.costBasis ?? 0) * (h.sharePct / 100), 0)), demat: Math.round(nw.dematRows.reduce((s, h) => s + (h.value ?? 0), 0)), dematCount: nw.dematRows.length, flows: nw.flowsSinceSnapshot, pricesAsOf: nw.pricesAsOf }) });
     toast.success("Today's valuation saved — no entries were created");
   };
 
