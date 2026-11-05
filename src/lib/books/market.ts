@@ -124,3 +124,10 @@ export function valuationAlerts(valued: Valued[], snapshots: Snapshot[], a: Aler
   if (a.missingPrices && dematMissing.length) out.push(`${dematMissing.length} demat holding${dematMissing.length > 1 ? "s have" : " has"} no price or statement value`);
   return out;
 }
+
+/** Apply a bonus (ratio new:held) or split (old face → new face) to a lot; total cost never changes. */
+export function applyCorporateAction(lot: { quantity: number; cost: number }, a: { kind: "bonus" | "split"; ratioNew: number; ratioOld: number }): { quantity: number; cost: number; unitCost: number } {
+  if (!(a.ratioNew > 0) || !(a.ratioOld > 0)) throw new Error("Ratio must be positive");
+  const quantity = a.kind === "bonus" ? lot.quantity + Math.floor((lot.quantity * a.ratioNew) / a.ratioOld) : Math.round((lot.quantity * a.ratioOld) / a.ratioNew * 1e6) / 1e6;
+  return { quantity, cost: lot.cost, unitCost: quantity ? lot.cost / quantity : 0 };
+}
