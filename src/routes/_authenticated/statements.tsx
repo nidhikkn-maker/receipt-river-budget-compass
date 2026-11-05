@@ -205,6 +205,12 @@ function StatementDeskPage() {
       setProgress("Saving…");
       const r = await applyUpload(requests, api(), setProgress);
       setResult(r);
+      // One event per saved statement: did the app's balance after saving match the printed closing figure?
+      for (const q of requests) {
+        const sm = reconSummary(q.account);
+        const balance = sm.appGap === null ? "not_compared" : Math.abs(sm.appGap) < 0.01 ? "matched" : "differs";
+        window.__lovableEvents?.track?.("project.statement_saved", { balance, statement_adds_up: sm.statementGap === null ? "not_printed" : sm.statementGap === 0 ? "yes" : "no", entries_posted: q.decisions.length, fully_reconciled: sm.ok });
+      }
       setAccepted([]);
       void loadLinks();
       listDrafts().then(setDrafts).catch(() => {}); setDraftFlip([]);
