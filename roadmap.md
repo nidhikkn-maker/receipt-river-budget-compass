@@ -715,7 +715,7 @@
 - [ ] Real-device checks (Face ID, camera, offline, push) — needs owner's iPhone/iPad
 
 ## Companies ↔ accounts, trips, colours (6 Nov 2026)
-- [ ] Link bank accounts to companies both ways, auto-create company, nothing mandatory, many accounts per company
-- [ ] Edit / move / delete actions on companies, links and trips
-- [ ] Trips: "Mark completed" anytime and on create; open items are reminders only
-- [ ] Add expense page: blue → white, show preview
+- [x] Link bank accounts to companies both ways, auto-create company, nothing mandatory, many accounts per company
+- [x] Edit / move / delete / merge on companies and account links (trips already had edit/delete)
+- [x] Trips: "Mark completed" anytime and on create; open items are reminders only
+- [x] Add expense page: blue → white (preview shared)
