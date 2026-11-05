@@ -98,6 +98,13 @@ describe("market alerts and freshness", () => {
     const v = [{ holding: h({ costBasis: 1000 }), key: "k", quote: null, value: 1250, stale: false, note: "" }];
     expect(valuationAlerts(v, [], DEFAULT_ALERTS, {}).some((a) => a.includes("25% from cost"))).toBe(true);
   });
+  it("a 50%-owned holding at cost raises no false value-vs-cost alert", () => {
+    const v = [{ holding: h({ costBasis: 1000, sharePct: 50 }), key: "k", quote: null, value: 500, stale: false, note: "" }];
+    expect(valuationAlerts(v, [], DEFAULT_ALERTS, {}).some((a) => a.includes("from cost"))).toBe(false);
+  });
+  it("demat holdings without any price are flagged, not valued at zero", () => {
+    expect(valuationAlerts([], [], DEFAULT_ALERTS, {}, [], [], ["TCS"]).some((a) => a.includes("1 demat holding has no price"))).toBe(true);
+  });
   it("statement quantity adds up across demat accounts", () => {
     expect(quantityByIsin([{ holdings: [{ isin: "INE1", quantity: 10 }] }, { holdings: [{ isin: "INE1", quantity: 5 }] }])).toEqual({ INE1: 15 });
   });
