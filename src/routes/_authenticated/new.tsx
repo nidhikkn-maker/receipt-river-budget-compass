@@ -648,6 +648,7 @@ function NewExpense() {
           splits: splitOn ? Object.entries(shares).map(([k, v]) => ({ memberId: k === "me" ? null : k, amount: Number(v) })) : [] },
         { ...(editing ? { id: editing.id } : {}), ...(createId ? { createId } : {}), files: receipts.map((r) => r.file) },
       );
+      if (companyPick && (editing?.entitySource !== "manual" || (editing.entityId ?? "personal") !== companyPick)) window.__lovableEvents?.track?.("project.expense_company_assigned", { mode: editing ? "edit" : "new" });
       if (createId && ctxTrip && search.booking) {
         // A payment can cover part of a booking: keep every linked entry and only call it paid once they add up.
         await savePreferences({ ...preferences, trips: (preferences.trips as TravelTrip[]).map((t) => t.id !== ctxTrip.id ? t : { ...t, bookings: (t.bookings ?? []).map((b) => {

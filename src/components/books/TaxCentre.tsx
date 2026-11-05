@@ -22,6 +22,8 @@ import { CREDIT_LABEL, creditsFor, itcReview, ledgerTaxPayments, obligations, ru
 import { entityLiability, individualLiability, itrComputationJson, suggestItrForm, DEDUCTION_CAP } from "@/lib/books/tax-full";
 import type { TaxDeduction } from "@/lib/books/types";
 import { classifyPayment, fromEntities, withEntityIncome, type EntityFacts } from "@/lib/books/from-entities";
+import { profileFor } from "@/lib/books/entity-tax-profile";
+import { TaxWorkpaper } from "./TaxWorkpaper";
 import { fyOf } from "@/lib/entities";
 
 const inr = (n: number) => "₹" + n.toLocaleString("en-IN", { maximumFractionDigits: 0 });
@@ -264,7 +266,8 @@ export function TaxComputationCard({ fy }: { fy: string }) {
     const ownerOfAcc = new Map<string, string>(); for (const [eid, ids] of Object.entries(books.entityAccounts ?? {})) for (const id of ids) ownerOfAcc.set(id, eid);
     const facts: EntityFacts[] = entities.filter((e) => e.kind === "proprietorship" || e.kind === "partnership" || e.kind === "llp" || e.kind === "company").map((e) => {
       const ids = new Set(books.entityAccounts?.[e.id] ?? []);
-      const profit = ids.size ? taxComputation(fy, transactions, preferences.assets ?? [], books.leases, [], books.fyRecords, e.id, { accountIds: ids }).business.net : 0;
+      const yp = profileFor(books.entityTaxProfiles, e.id, fy);
+      const profit = yp?.bookProfit != null ? yp.bookProfit : ids.size ? taxComputation(fy, transactions, preferences.assets ?? [], books.leases, [], books.fyRecords, e.id, { accountIds: ids }).business.net : 0;
       const paid = { salary: 0, remuneration: 0, capitalInterest: 0, dividend: 0, loans: 0, rent: 0, interest: 0 };
       const nm = e.name.trim().toLowerCase();
       for (const t of transactions) {
@@ -276,8 +279,8 @@ export function TaxComputationCard({ fy }: { fy: string }) {
         if (!fromCo && !incomeNamed) continue;
         const k = classifyPayment(text, type); if (k) paid[k] += t.amount;
       }
-      const me = (e.shareholding ?? []).length === 1 ? e.shareholding![0]!.pct : null;
-      return { entity: e, profit, paid, holdingPct: me };
+      const me = yp?.ownershipPct ?? ((e.shareholding ?? []).length === 1 ? e.shareholding![0]!.pct : null);
+      return { entity: e, profit, paid, holdingPct: me, capital: yp?.capital ?? null, accumulatedProfits: yp?.accumulatedProfits ?? null };
     });
     return fromEntities(facts);
   }, [ent, entities, books, transactions, fy, preferences.assets]);
@@ -334,6 +337,7 @@ export function TaxComputationCard({ fy }: { fy: string }) {
         </div>
         {c.notes.map((n) => <p key={n} className="text-[11px] text-muted-foreground">{n}</p>)}
         <ItrHandoff fy={fy} ent={ent} c={c} personal={personal} regime={regime} profileConfirmed={!unconfirmed} credits={cr.lines} unrecordedTaxDebits={challans.length} gains={ent ? [] : (demat ?? []).flatMap((d) => d.holdings.flatMap((h) => h.gains))} scope={accountIds} slabTax={slabTax} />
+        <TaxWorkpaper fy={fy} personalLines={entityLines} />
       </div>
     </Fold>
   );
