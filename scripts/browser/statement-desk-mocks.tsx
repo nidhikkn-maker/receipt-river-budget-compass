@@ -53,6 +53,8 @@ export const accountantConsumed: string[] = [];
 Object.assign(window, { accountantConsumed });
 export const supabase = {
   from: (table: string) => {
+    // Read-only lists the page refreshes after saving come back empty; any write still fails loudly.
+    if (table === "transfer_links" || table === "expense_drafts") return { select: () => chain(async () => []) };
     if (table !== "accountant_uploads") throw new Error("No Cloud access in this test");
     return {
       select: () => chain(() => fetch("/__fixture/accountant-uploads").then((r) => (r.ok ? r.json() : []))),
