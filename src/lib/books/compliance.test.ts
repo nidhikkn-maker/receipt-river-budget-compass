@@ -144,3 +144,12 @@ describe("audit decisions", () => {
     expect(approvalHistory(b).map((e) => e.what)).toEqual(["Rule approved", "Period closed"]);
   });
 });
+
+describe("instrument type matches price type [v6.1 §3]", () => {
+  const now = new Date("2026-11-04T12:00:00Z");
+  it("a mutual fund is never valued from an exchange closing price", () => {
+    const q = { key: "isin:INF000000001", price: 50, at: "2026-11-04T10:00:00Z", provider: "NSE", freshness: "eod" as const, refreshedAt: "2026-11-04T13:30:00Z" };
+    expect(valueHolding(h({ kind: "mutual_fund" }), [q], undefined, now, DEFAULT_ALERTS).value).toBeNull();
+    expect(valueHolding(h({ kind: "etf" }), [q], undefined, now, DEFAULT_ALERTS).value).toBe(500);
+  });
+});
