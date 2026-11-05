@@ -2,10 +2,10 @@ import { describe, expect, it } from "vitest";
 import { ExtractedReceiptSchema, ReceiptDetailsSchema, receiptConfidence, receiptRoundOff, receiptRoundOffFor, receiptBreakdownError, receiptItemConfidence, receiptItemReviewReasons, receiptItemsToReview, receiptItemTotalError, receiptReviewCheck, receiptReviewSignature, type ReceiptAmounts } from "./receipt-reading";
 import { validateExpense, type ExpenseInput } from "./expenses";
 
-const read = { title: "Cafe", merchant: "Cafe", date: "2026-11-02", amount: 432.10, subtotal: 360, tax: 32.10, tip: 40, round_off: null, confidence: { merchant: "high", date: "low", total: "medium" }, items: [], text: "Cafe", currency: "INR", payment_method: null, description: null, category: "Food and beverages", scope: "personal" };
+const read = { title: "Cafe", merchant: "Cafe", date: "2026-11-02", amount: 432.10, subtotal: 360, tax: 32.10, tip: 40, round_off: null, charges: [], tax_parts: [], confidence: { merchant: "high", date: "low", total: "medium" }, items: [], text: "Cafe", currency: "INR", payment_method: null, description: null, category: "Food and beverages", scope: "personal" };
 describe("receipt reading", () => {
   it("preserves separate item name and amount confidence in extracted and saved metadata", () => {
-    const item = { name: "Dinner", quantity: 2, amount: 360, confidence: { name: "high", amount: "low" } };
+    const item = { name: "Dinner", quantity: 2, amount: 360, section: null, confidence: { name: "high", amount: "low" } };
     expect(ExtractedReceiptSchema.parse({ ...read, items: [item] }).items[0]?.confidence).toEqual({ name: "high", amount: "low" });
     expect(ReceiptDetailsSchema.parse({ items: [item] }).items?.[0]?.confidence).toEqual({ name: "high", amount: "low" });
   });
@@ -167,4 +167,21 @@ describe("receipt request format", () => {
     const s = zz.toJSONSchema(ExtractedReceiptSchema) as { properties: Record<string, unknown>; required: string[] };
     expect(Object.keys(s.properties).filter((k) => !s.required.includes(k))).toEqual([]);
   });
+});
+
+import { receiptBreakdownError as rbe, receiptItemTotalError as rite } from "./receipt-reading";
+describe("service charges and discounts", () => {
+  it("service charge makes the total reconcile", () => {
+    expect(rbe(2265, { subtotal: 2000, charges: [{ amount: 100 }], tax: 165 }, "INR")).toBeNull();
+    expect(rbe(2265, { subtotal: 2000, tax: 165 }, "INR")).not.toBeNull();
+  });
+  it("discount reduces the total", () => { expect(rbe(1890, { subtotal: 2000, charges: [{ amount: -200 }], tax: 90 }, "INR")).toBeNull(); });
+  it("tax parts must add up to tax", () => {
+    expect(rbe(1100, { subtotal: 1000, tax: 100, taxParts: [{ amount: 50 }, { amount: 50 }] }, "INR")).toBeNull();
+    expect(rbe(1100, { subtotal: 1000, tax: 100, taxParts: [{ amount: 50 }, { amount: 40 }] }, "INR")).not.toBeNull();
+  });
+  it("items reconcile against total minus charges when no subtotal is printed", () => {
+    expect(rite(1150, { tax: 50, charges: [{ amount: 100 }], items: [{ name: "Dosa", quantity: 1, amount: 1000 }] }, "INR")).toBeNull();
+  });
+  it("a gap that does not add up is still an error", () => { expect(rbe(2500, { subtotal: 2000, charges: [{ amount: 100 }], tax: 165 }, "INR")).not.toBeNull(); });
 });

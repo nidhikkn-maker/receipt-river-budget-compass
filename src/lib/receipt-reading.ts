@@ -11,8 +11,11 @@ export const ReceiptDetailsSchema = z.object({
   tax: z.number().nonnegative().nullable().optional(),
   tip: z.number().nonnegative().nullable().optional(),
   roundOff: z.number().min(-1).max(1).nullable().optional(),
+  /** Printed charge lines between subtotal and total (service charge, packing, delivery, fees); discounts are negative. */
+  charges: z.array(z.object({ label: z.string().max(120), kind: z.enum(["service", "packing", "delivery", "fee", "discount", "other"]), amount: z.number().min(-1e9).max(1e9) })).max(30).optional(),
+  taxParts: z.array(z.object({ label: z.string().max(60), rate: z.number().min(0).max(100).nullable(), amount: z.number().nonnegative() })).max(20).optional(),
   confidence: ReceiptConfidence.optional(),
-  items: z.array(z.object({ name: z.string().max(200), quantity: z.number().nonnegative(), amount: z.number().nonnegative(), confidence: ReceiptItemConfidence.optional() })).max(100).optional(),
+  items: z.array(z.object({ name: z.string().max(200), quantity: z.number().nonnegative(), amount: z.number().nonnegative(), confidence: ReceiptItemConfidence.optional(), section: z.string().max(120).nullable().optional() })).max(100).optional(),
   text: z.string().max(20000).optional(), fingerprint: z.string().max(128).optional(),
   audit: z.object({
     read: z.object({ merchant: z.string().max(200), date: z.string().max(20), amount: z.number().nonnegative(), currency: z.string().max(8) }),
@@ -29,8 +32,10 @@ export const ExtractedReceiptSchema = z.object({
   tax: z.number().nonnegative().nullable().describe("Explicit total tax, null if not shown; sum separate tax components once"),
   tip: z.number().nonnegative().nullable().describe("Explicit gratuity/tip included in final paid total, null if unknown; do not infer from service charge"),
   round_off: z.number().nullable().describe("Explicit printed round-off/rounding/R/O adjustment, signed (negative when the bill rounds down), null if not printed; never calculate it"),
+  charges: z.array(z.object({ label: z.string().describe("Label exactly as printed, e.g. Service Charge 5%"), kind: z.enum(["service", "packing", "delivery", "fee", "discount", "other"]), amount: z.number().describe("Signed: discounts negative, charges positive") })).describe("Every printed non-tax line between subtotal and grand total (service charge, packing, delivery, cover/convenience fee, discount). Never fold into tax or tip; empty if none printed"),
+  tax_parts: z.array(z.object({ label: z.string().describe("e.g. CGST, SGST, IGST, VAT, Cess"), rate: z.number().nullable().describe("Printed percentage, null if not printed"), amount: z.number().nonnegative() })).describe("Each printed tax line; their sum is the tax field. Empty if not printed"),
   confidence: ReceiptConfidence.describe("Reading certainty, not a calibrated probability: high = clearly labelled and readable; medium = some ambiguity; low = unclear; unknown = missing"),
-  items: z.array(z.object({ name: z.string(), quantity: z.number().nonnegative(), amount: z.number().nonnegative(), confidence: ReceiptItemConfidence.describe("Separate reading certainty for this item's name and extended line amount; never a probability") })),
+  items: z.array(z.object({ name: z.string(), quantity: z.number().nonnegative(), amount: z.number().nonnegative(), section: z.string().nullable().describe("Printed section heading this item sits under, e.g. Beverages; null if none. Headings are never items"), confidence: ReceiptItemConfidence.describe("Separate reading certainty for this item's name and extended line amount; never a probability") })),
   text: z.string(), currency: z.string().nullable(),
   payment_method: z.enum(["cash", "upi", "credit_card", "debit_card", "forex_card", "company_card", "bank_transfer", "other"]).nullable(),
   description: z.string().nullable(), category: z.string().max(60).nullable(),
@@ -56,7 +61,12 @@ export function receiptConfidence(values: { merchant: string | null; date: strin
 /** Currencies whose bills round the final total to a whole unit, often without printing a round-off line. */
 const WHOLE_UNIT_ROUNDING = new Set(["INR", "JPY", "KRW", "IDR"]);
 
-type Breakdown = { subtotal?: number | null | undefined; tax?: number | null | undefined; tip?: number | null | undefined; roundOff?: number | null | undefined };
+type Breakdown = { subtotal?: number | null | undefined; tax?: number | null | undefined; tip?: number | null | undefined; roundOff?: number | null | undefined; charges?: readonly { amount: number }[] | undefined; taxParts?: readonly { amount: number }[] | undefined };
+
+/** Sum of printed charges (service, packing, delivery, fees) less discounts. */
+export function receiptChargesTotal(details?: Breakdown): number {
+  return Math.round((details?.charges ?? []).reduce((s, c) => s + (Number.isFinite(c.amount) ? c.amount : 0), 0) * 100) / 100;
+}
 
 /**
  * Round-off between the parts and the bill total, in currency units. `printed` comes from the bill; `implied`
@@ -65,7 +75,7 @@ type Breakdown = { subtotal?: number | null | undefined; tax?: number | null | u
 export function receiptRoundOff(total: number, details?: Breakdown, currency?: string): { printed: number; implied: number } {
   const printed = details?.roundOff != null && Number.isFinite(details.roundOff) ? Math.round(details.roundOff * 100) : 0;
   if (details?.subtotal == null || !Number.isFinite(total) || total <= 0) return { printed: printed / 100, implied: 0 };
-  const gap = Math.round(total * 100) - Math.round((details.subtotal + (details.tax ?? 0) + (details.tip ?? 0)) * 100) - printed;
+  const gap = Math.round(total * 100) - Math.round((details.subtotal + receiptChargesTotal(details) + (details.tax ?? 0) + (details.tip ?? 0)) * 100) - printed;
   const eligible = !printed && WHOLE_UNIT_ROUNDING.has((currency ?? "INR").toUpperCase()) && Math.round(total * 100) % 100 === 0 && Math.abs(gap) < 100;
   return { printed: printed / 100, implied: eligible ? gap / 100 : 0 };
 }
@@ -76,11 +86,16 @@ export function receiptBreakdownError(total: number, details?: Breakdown, curren
   if (details?.roundOff != null && (!Number.isFinite(details.roundOff) || Math.abs(details.roundOff) > 1)) return "Round-off must be between -1 and 1.";
   const included = (details?.tax ?? 0) + (details?.tip ?? 0);
   if (Math.round(included * 100) > Math.round(total * 100)) return "Tax and tip cannot exceed the total paid. Check the receipt amounts.";
+  if ((details?.charges ?? []).some((c) => !Number.isFinite(c.amount))) return "Each charge needs an amount.";
+  const parts = details?.taxParts ?? [];
+  const partSum = parts.reduce((t, p) => t + p.amount, 0);
+  if (parts.length && details?.tax != null && Math.round(partSum * 100) !== Math.round(details.tax * 100)) return `Tax parts add up to ${partSum.toFixed(2)}, but tax is ${details.tax.toFixed(2)}. Check each tax line.`;
   if (details?.subtotal != null && Number.isFinite(total) && total > 0) {
     const round = receiptRoundOff(total, details, currency);
-    const expected = Math.round((details.subtotal + included + round.printed + round.implied) * 100);
+    const charges = receiptChargesTotal(details);
+    const expected = Math.round((details.subtotal + charges + included + round.printed + round.implied) * 100);
     const actual = Math.round(total * 100);
-    if (expected !== actual) return `Receipt total mismatch: subtotal + tax + tip${round.printed ? " + round-off" : ""} = ${(expected / 100).toFixed(2)}, but total is ${(actual / 100).toFixed(2)}. Check discounts, other charges or reading errors before saving.`;
+    if (expected !== actual) return `Receipt total mismatch: subtotal ${details.subtotal.toFixed(2)}${charges ? ` + charges ${charges.toFixed(2)}` : ""} + tax ${(details.tax ?? 0).toFixed(2)} + tip ${(details.tip ?? 0).toFixed(2)}${round.printed ? ` + round-off ${round.printed.toFixed(2)}` : ""} = ${(expected / 100).toFixed(2)}, but total is ${(actual / 100).toFixed(2)}. Check for a missing charge, discount or reading error before saving.`;
   }
   return null;
 }
@@ -93,6 +108,7 @@ export interface ReceiptAmounts {
   tax?: number | null | undefined;
   tip?: number | null | undefined;
   roundOff?: number | null | undefined;
+  charges?: readonly { amount: number }[] | undefined;
   items?: readonly { name: string; quantity: number; amount: number; confidence?: ReceiptItemConfidence | undefined }[] | undefined;
 }
 
@@ -119,7 +135,7 @@ export function receiptItemTotalError(total: number, details?: ReceiptAmounts, c
   const itemSum = cents(items.reduce((sum, item) => sum + item.amount, 0));
   const subtotal = details?.subtotal;
   const hasSubtotal = subtotal != null && Number.isFinite(subtotal);
-  const base = hasSubtotal ? cents(subtotal as number) : cents(total - (details?.tax ?? 0) - (details?.tip ?? 0));
+  const base = hasSubtotal ? cents(subtotal as number) : cents(total - (details?.tax ?? 0) - (details?.tip ?? 0) - receiptChargesTotal(details));
   if (!Number.isFinite(base) || base < 0 || itemSum === base) return null;
   // On whole-unit-rounded bills, paise-level differences are rounding, not a missing line.
   if (WHOLE_UNIT_ROUNDING.has((currency ?? "INR").toUpperCase()) && cents(total) % 100 === 0 && Math.abs(itemSum - base) < 100) return null;

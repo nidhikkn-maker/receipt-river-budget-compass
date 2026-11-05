@@ -31,8 +31,8 @@ export function buildReport(kind: ReportKind, transactions: Expense[], memberNam
   const opt = (v: number | null | undefined) => (v == null ? "" : fmt(v));
   const row = (e: Expense) => [e.date, e.title, e.merchant ?? "", e.category, SCOPE_LABEL[e.scope], whoLabel(e, memberName), PAYMENT_LABEL[e.paymentMethod],
      e.currency, fmt(e.originalAmount), fmt(e.fxRate), fmt(e.amount), e.reconciledAt ? "Yes" : "No", e.reimbursementStatus ?? "none",
-     opt(e.receiptDetails?.subtotal), opt(e.receiptDetails?.tax), opt(e.receiptDetails?.tip), (() => { const r = receiptRoundOffFor(e).amount; return r ? fmt(r) : ""; })()];
-  const headers = ["Date", "Title", "Merchant", "Category", "Type", "For", "Paid with", "Currency", "Bill amount", "Rate", "Amount (INR)", "Bank matched", "Reimbursement", "Subtotal", "Tax", "Tip", "Round-off"];
+     opt(e.receiptDetails?.subtotal), opt(e.receiptDetails?.tax), opt(e.receiptDetails?.tip), (() => { const r = receiptRoundOffFor(e).amount; return r ? fmt(r) : ""; })(), (e.receiptDetails?.charges ?? []).map((c) => `${c.label} ${fmt(c.amount)}`).join("; "), (e.receiptDetails?.taxParts ?? []).map((t) => `${t.label}${t.rate != null ? ` ${t.rate}%` : ""} ${fmt(t.amount)}`).join("; ")];
+  const headers = ["Date", "Title", "Merchant", "Category", "Type", "For", "Paid with", "Currency", "Bill amount", "Rate", "Amount (INR)", "Bank matched", "Reimbursement", "Subtotal", "Tax", "Tip", "Round-off", "Charges", "Tax parts"];
   if (kind === "expenses") return { title: "All expenses", headers, rows: expenses.map(row) };
   const inWorkspace = (scope: Expense["scope"]) => expenses.flatMap((e) => {
     const share = workspaceParts(e).find((p) => p.workspace === scope);

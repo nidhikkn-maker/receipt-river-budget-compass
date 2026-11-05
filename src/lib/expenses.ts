@@ -38,8 +38,11 @@ export interface ReceiptDetails {
   tax?: number | null;
   tip?: number | null;
   roundOff?: number | null;
+  /** Printed service charge, packing, delivery, fee lines; discounts negative. */
+  charges?: { label: string; kind: "service" | "packing" | "delivery" | "fee" | "discount" | "other"; amount: number }[];
+  taxParts?: { label: string; rate: number | null; amount: number }[];
   confidence?: import("./receipt-reading").ReceiptConfidence;
-  items?: { name: string; quantity: number; amount: number; confidence?: import("./receipt-reading").ReceiptItemConfidence | undefined }[];
+  items?: { name: string; quantity: number; amount: number; section?: string | null | undefined; confidence?: import("./receipt-reading").ReceiptItemConfidence | undefined }[];
   text?: string;
   /** SHA-256 fingerprint of the receipt file, for duplicate-receipt detection. */
   fingerprint?: string;
