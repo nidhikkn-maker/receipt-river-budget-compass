@@ -32,6 +32,8 @@ export interface AccountHint {
   number?: string;
   ifsc?: string;
   holder?: string;
+  /** Owner's choice for which company owns the account: "" personal, an entity id, or "__new" (create from holder name). */
+  entityChoice?: string;
 }
 
 /** One parsed statement file (a forex file can yield one file per currency wallet). */

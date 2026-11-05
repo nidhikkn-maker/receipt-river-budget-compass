@@ -3,13 +3,22 @@ import { Input } from "@/components/ui/input";
 import { ACCOUNT_LABEL, type Account, type AccountKind } from "@/lib/ledger";
 import { duplicateAccount } from "@/lib/master-data";
 import { money } from "@/lib/expenses";
+import type { EntityProfile } from "@/lib/entities";
+import { looksLikeBusiness, matchEntityByName } from "@/lib/books/entity-accounts";
 import type { AccountHint, StmtFile } from "@/lib/statement-pipeline/line";
 
 const KINDS: AccountKind[] = ["savings", "current", "credit_card", "wallet", "loan", "other_asset", "other_liability"];
 
 /** Prefilled "new account found" card: every detail comes from the statement and stays editable until the owner taps Create. */
-export function NewStatementAccount({ hint, file, accounts, onEdit, onCreate }: {
-  hint: AccountHint | null; file: StmtFile; accounts: Account[];
+/** Default company choice: matching company by holder, a new one when the holder reads like a business, else personal. */
+export function defaultEntityChoice(hint: AccountHint, entities: EntityProfile[]): string {
+  if (hint.entityChoice !== undefined) return hint.entityChoice;
+  const m = matchEntityByName(entities, hint.holder); if (m) return m.id;
+  return looksLikeBusiness(hint.holder) ? "__new" : "";
+}
+
+export function NewStatementAccount({ hint, file, accounts, entities = [], onEdit, onCreate }: {
+  hint: AccountHint | null; file: StmtFile; accounts: Account[]; entities?: EntityProfile[];
   onEdit: (patch: Partial<AccountHint>) => void; onCreate: () => Promise<void>;
 }) {
   if (!hint) return null;
@@ -26,6 +35,13 @@ export function NewStatementAccount({ hint, file, accounts, onEdit, onCreate }: 
         </label>
         <label className="grid gap-1 text-xs">Bank<Input value={hint.issuer} onChange={(e) => onEdit({ issuer: e.target.value })} /></label>
         <label className="grid gap-1 text-xs">Last 4 digits<Input inputMode="numeric" maxLength={4} value={hint.lastFour ?? ""} onChange={(e) => onEdit({ lastFour: e.target.value.replace(/\D/g, "").slice(0, 4) || null })} /></label>
+        <label className="grid gap-1 text-xs sm:col-span-2">Belongs to
+          <select className="h-10 rounded-md border border-input bg-background px-2 text-sm" value={defaultEntityChoice(hint, entities)} onChange={(e) => onEdit({ entityChoice: e.target.value })}>
+            <option value="">Me (personal)</option>
+            {entities.map((x) => <option key={x.id} value={x.id}>{x.name}</option>)}
+            <option value="__new">New company{hint.holder ? `: ${hint.holder}` : ""} (fill details later)</option>
+          </select>
+        </label>
       </div>
       <p className="text-xs text-muted-foreground">
         {[hint.holder && `Holder ${hint.holder}`, hint.ifsc && `IFSC ${hint.ifsc}`, file.currency !== "INR" && file.currency].filter(Boolean).join(" · ")}

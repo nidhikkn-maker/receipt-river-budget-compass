@@ -713,3 +713,9 @@
 - [x] E22 NSE/BSE prices kept separate per holding exchange; E27 each net-worth part shows its own as-of date; E25 price + fetch time per holding; E28 snapshots include demat value, count, money moved and price date
 - [ ] Remaining plan items A1–A7, B8–B12, C13/C15–C16, D17–D18/D20–D21, E23–E24, E26, F31–F34, acceptance pack
 - [ ] Real-device checks (Face ID, camera, offline, push) — needs owner's iPhone/iPad
+
+## Companies ↔ accounts, trips, colours (6 Nov 2026)
+- [x] Link bank accounts to companies both ways, auto-create company, nothing mandatory, many accounts per company
+- [x] Edit / move / delete / merge on companies and account links (trips already had edit/delete)
+- [x] Trips: "Mark completed" anytime and on create; open items are reminders only
+- [x] Add expense page: blue → white (preview shared)

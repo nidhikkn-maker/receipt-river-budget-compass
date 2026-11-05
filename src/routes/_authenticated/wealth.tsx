@@ -68,7 +68,7 @@ function Wealth() {
               <div className="flex items-center gap-3">
                 <div className="min-w-0 flex-1">
                   <div className="truncate font-medium">{a.name}</div>
-                  <div className="text-xs text-muted-foreground">{ACCOUNT_LABEL[a.kind]}{isLiability(a.kind) ? " · owed" : ""}</div>
+                  <div className="text-xs text-muted-foreground">{ACCOUNT_LABEL[a.kind]}{isLiability(a.kind) ? " · owed" : ""}{(() => { const eid = Object.entries(preferences.books?.entityAccounts ?? {}).find(([, ids]) => ids.includes(a.id))?.[0]; const n = eid && (preferences.entities ?? []).find((x) => x.id === eid)?.name; return n ? ` · ${n}` : ""; })()}</div>
                 </div>
                 <div className="font-mono">{money(bal)}</div>
                 <Button variant="ghost" size="icon" aria-label={a.archived ? `Restore ${a.name}` : `Archive ${a.name}`}

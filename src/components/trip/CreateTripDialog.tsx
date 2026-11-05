@@ -24,6 +24,7 @@ export function CreateTripDialog({ open, onOpenChange }: { open: boolean; onOpen
   const [form, setForm] = useState<TripDraft>(() => emptyDraft(todayISO()));
   const [more, setMore] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [done, setDone] = useState(false);
 
   // Restore a saved draft when the dialog opens.
   useEffect(() => {
@@ -56,12 +57,13 @@ export function CreateTripDialog({ open, onOpenChange }: { open: boolean; onOpen
       type: form.type, travellers: form.travellers.split(",").map((x) => x.trim()).filter(Boolean).slice(0, 8), bookings: [], itinerary: [], advances: [],
       ...(form.purpose.trim() ? { purpose: form.purpose.trim().slice(0, 200) } : {}),
       ...(form.organisation.trim() ? { organisation: form.organisation.trim().slice(0, 120) } : {}),
+      ...(done ? { closedAt: new Date().toISOString() } : {}),
     };
     setSaving(true);
     try {
       await savePreferences({ ...pr, trips: [t, ...pr.trips] });
       localStorage.removeItem(DRAFT_KEY);
-      toast.success("Trip created");
+      toast.success(done ? "Trip saved as completed" : "Trip created"); setDone(false);
       onOpenChange(false);
       setForm(emptyDraft(todayISO()));
       void navigate({ to: "/trips/$tripId", params: { tripId: t.id } });
@@ -108,6 +110,7 @@ export function CreateTripDialog({ open, onOpenChange }: { open: boolean; onOpen
               </div>
             </div>
           )}
+          <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={done} onChange={(e) => setDone(e.target.checked)} />This trip is already completed</label>
           <div className="flex gap-2 pt-1">
             <Button variant="outline" className="flex-1" onClick={saveDraft}>Save draft</Button>
             <Button variant="gold" className="flex-1" loading={saving} onClick={create}>Create trip</Button>

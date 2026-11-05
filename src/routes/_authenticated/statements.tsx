@@ -36,7 +36,9 @@ import { matchDraftsToLines, type DraftMatch } from "@/lib/statement-pipeline/dr
 import { reconSummary } from "@/lib/statement-pipeline/summary";
 import { listDrafts, draftReceiptFile, linkDraftToTransaction, unlinkDraft, type Draft } from "@/lib/drafts";
 import type { ReceiptDetails } from "@/lib/expenses";
-import { NewStatementAccount } from "@/components/NewStatementAccount";
+import { NewStatementAccount, defaultEntityChoice } from "@/components/NewStatementAccount";
+import { linkAccounts, stubEntity } from "@/lib/books/entity-accounts";
+import { emptyBooks } from "@/lib/books/types";
 import { newAccountFromHint } from "@/lib/statement-pipeline/apply";
 import type { AccountHint } from "@/lib/statement-pipeline/line";
 import { supabase } from "@/integrations/supabase/client";
@@ -239,6 +241,13 @@ function StatementDeskPage() {
     try {
       const id = await storeRef.current.addAccount(newAccountFromHint(f.hint, f.opening));
       setDestinations((d) => ({ ...d, [`${l.file.name}\u0000account`]: id }));
+      const st = storeRef.current; const ents = st.preferences.entities ?? [];
+      const choice = defaultEntityChoice(f.hint, ents);
+      if (choice) {
+        const e = choice === "__new" ? stubEntity(f.hint.holder ?? f.hint.name) : null;
+        const books = st.preferences.books ?? emptyBooks();
+        await st.savePreferences({ ...st.preferences, entities: e ? [...ents, e] : ents, books: { ...books, entityAccounts: linkAccounts(books.entityAccounts ?? {}, e ? e.id : choice, [id]) } });
+      }
       setLoaded((xs) => xs.map((x) => (x.file.name === l.file.name ? { ...x, accountName: f.hint!.name } : x)));
       toast.success(`${f.hint.name} added — this statement is now matched against it`);
     } catch (e) { toast.error(e instanceof Error ? e.message : "Couldn't add the account"); }
@@ -404,7 +413,7 @@ function StatementDeskPage() {
                     </select>
                   </label>
                   {(destinations[`${l.file.name}\u0000account`] ?? l.file.accountId ?? "__new__") === "__new__" && (
-                    <NewStatementAccount hint={drop(l.file).hint} file={l.file} accounts={accounts}
+                    <NewStatementAccount hint={drop(l.file).hint} file={l.file} accounts={accounts} entities={preferences.entities ?? []}
                       onEdit={(patch) => setHintEdits((h) => ({ ...h, [l.file.name]: { ...h[l.file.name], ...patch } }))}
                       onCreate={() => createFor(l)} />
                   )}
