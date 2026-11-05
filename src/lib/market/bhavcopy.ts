@@ -59,3 +59,18 @@ export function latestByIsin(rows: { exchange: string; isin: string | null; clos
   }
   return m;
 }
+
+/** Latest close per ISIN on one exchange: NSE and BSE prices for the same ISIN stay separate [v6.1 §3]. */
+export function latestByIsinExchange(rows: { exchange: string; isin: string | null; close: number; price_date: string; symbol: string }[]): Map<string, { exchange: string; close: number; date: string; symbol: string }> {
+  const m = new Map<string, { exchange: string; close: number; date: string; symbol: string }>();
+  for (const r of rows) {
+    if (!r.isin) continue;
+    const k = `${r.isin}|${r.exchange}`, p = m.get(k);
+    if (!p || r.price_date > p.date) m.set(k, { exchange: r.exchange, close: Number(r.close), date: r.price_date, symbol: r.symbol });
+  }
+  return m;
+}
+/** The holding's own exchange when it names one; otherwise the default (NSE-preferred) latest close. */
+export function pickClose<T>(byIsin: Map<string, T>, byIsinEx: Map<string, T>, isin: string, exchange?: string | null): T | undefined {
+  return exchange ? byIsinEx.get(`${isin}|${exchange}`) : byIsin.get(isin);
+}

@@ -704,5 +704,6 @@
 - [x] E30 exchange-holiday-aware market open/staleness; D19 unlabelled receipts above rent wait for confirmation
 - [x] iPhone/iPad (portrait+landscape) layout check of main pages — no overflow, no errors
 - [x] Security rescan; shared price/rule tables limited to signed-in readers; published
-- [ ] Remaining plan items A1–A7, B8–B12, C13–C16, D17–D18/D20–D21, E22–E29, F31–F34, acceptance pack
+- [x] E22 NSE/BSE prices kept separate per holding exchange; E27 each net-worth part shows its own as-of date
+- [ ] Remaining plan items A1–A7, B8–B12, C13–C16, D17–D18/D20–D21, E23–E26, E28–E29, F31–F34, acceptance pack
 - [ ] Real-device checks (Face ID, camera, offline, push) — needs owner's iPhone/iPad

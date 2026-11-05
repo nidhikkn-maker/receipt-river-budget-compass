@@ -55,8 +55,8 @@ export function MarketPanel() {
     <Fold id="investments" title="Investments & net worth" hint={`${books.holdings.length} holdings · ${nw.quality.length ? nw.quality[0] : "values as of latest records"}`}>
       <div className="space-y-3 text-sm">
         <div className="divide-y rounded-xl border">
-          {nw.assets.map((a) => <div key={a.label} className="flex justify-between gap-2 px-3 py-2"><span>{a.label}<span className="block text-[11px] text-muted-foreground">{a.basis || "—"}</span></span><b className="font-mono">{money(a.value)}</b></div>)}
-          <div className="flex justify-between px-3 py-2"><span>Liabilities<span className="block text-[11px] text-muted-foreground">{nw.liabilitiesBasis}</span></span><b className="font-mono">−{money(nw.liabilities)}</b></div>
+          {nw.assets.map((a) => <div key={a.label} className="flex justify-between gap-2 px-3 py-2"><span>{a.label}<span className="block text-[11px] text-muted-foreground">{a.basis || "—"}{a.asOf ? ` · as of ${a.asOf}` : ""}</span></span><b className="font-mono">{money(a.value)}</b></div>)}
+          <div className="flex justify-between px-3 py-2"><span>Liabilities<span className="block text-[11px] text-muted-foreground">{nw.liabilitiesBasis}{nw.liabilitiesAsOf ? ` · as of ${nw.liabilitiesAsOf}` : ""}</span></span><b className="font-mono">−{money(nw.liabilities)}</b></div>
           <div className="flex justify-between px-3 py-2 font-semibold"><span>Net worth · {nw.label}</span><span className="font-mono">{money(nw.net)}</span></div>
         </div>
         {nw.duplicates.length > 0 && <p className="rounded-xl bg-secondary p-2 text-xs">Counted once from your demat statement: {nw.duplicates.join(", ")}</p>}

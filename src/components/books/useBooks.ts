@@ -8,7 +8,7 @@ import { dynamicNetWorth, valueHolding } from "@/lib/books/market";
 import { propertyValue } from "@/lib/books/property";
 import { loadDemat, type DematWithHoldings } from "@/lib/investments/holdings-store";
 import { supabase } from "@/integrations/supabase/client";
-import { latestByIsin } from "@/lib/market/bhavcopy";
+import { latestByIsin, latestByIsinExchange, pickClose } from "@/lib/market/bhavcopy";
 import type { Quote } from "@/lib/books/types";
 
 /** Books data with a single-write updater (owner preferences). */
@@ -33,11 +33,11 @@ export function useDemat() {
   return d;
 }
 
-export interface ClosingPrices { byIsin: Map<string, { exchange: string; close: number; date: string; symbol: string }>; job: { status: string; lastSuccess: string | null; reason: string | null } | null }
+export interface ClosingPrices { byIsin: Map<string, { exchange: string; close: number; date: string; symbol: string }>; byIsinEx: Map<string, { exchange: string; close: number; date: string; symbol: string }>; job: { status: string; lastSuccess: string | null; reason: string | null } | null }
 /** Official NSE/BSE end-of-day closes saved by the evening job, for the ISINs the owner holds [v6.1 §2–5]. */
 export function useClosingPrices(isins: string[]): ClosingPrices {
   const key = [...new Set(isins.filter((i) => /^IN[A-Z0-9]{10}$/.test(i)))].sort().join(",");
-  const [v, setV] = useState<ClosingPrices>({ byIsin: new Map(), job: null });
+  const [v, setV] = useState<ClosingPrices>({ byIsin: new Map(), byIsinEx: new Map(), job: null });
   useEffect(() => {
     let live = true;
     void (async () => {
@@ -47,7 +47,8 @@ export function useClosingPrices(isins: string[]): ClosingPrices {
         supabase.from("job_state").select("status,last_success,reason").eq("name", "closing-prices").maybeSingle(),
       ]);
       if (!live) return;
-      setV({ byIsin: latestByIsin((q.data ?? []) as { exchange: string; isin: string | null; close: number; price_date: string; symbol: string }[]), job: j.data ? { status: j.data.status, lastSuccess: j.data.last_success, reason: j.data.reason } : null });
+      const rows = (q.data ?? []) as { exchange: string; isin: string | null; close: number; price_date: string; symbol: string }[];
+      setV({ byIsin: latestByIsin(rows), byIsinEx: latestByIsinExchange(rows), job: j.data ? { status: j.data.status, lastSuccess: j.data.last_success, reason: j.data.reason } : null });
     })().catch(() => undefined);
     return () => { live = false; };
   }, [key]);
@@ -82,7 +83,12 @@ export function useNetWorth() {
     const dematIsins = new Set(dematHoldings.map((h) => h.isin));
     let quotes = books.quotes;
     for (const [isin, c] of closes.byIsin) { const q = closeQuote(isin, c); const prev = quotes.find((x) => x.key === q.key); if (!prev || prev.at < q.at) quotes = [...quotes.filter((x) => x.key !== q.key), q]; }
-    const valued = books.holdings.filter((h) => !(h.isin && dematIsins.has(h.isin))).map((h) => valueHolding(h, quotes, books.goldRate, now, books.alerts));
+    // A holding that names its exchange is valued at that exchange's close, never the other one's [v6.1 §3].
+    const valued = books.holdings.filter((h) => !(h.isin && dematIsins.has(h.isin))).map((h) => {
+      const c = h.isin && h.exchange ? pickClose(closes.byIsin, closes.byIsinEx, h.isin, h.exchange) : undefined;
+      const qs = c && h.isin ? [...quotes.filter((x) => x.key !== `isin:${h.isin}`), closeQuote(h.isin, c)] : h.isin && h.exchange && closes.byIsin.has(h.isin) ? quotes.filter((x) => !(x.key === `isin:${h.isin}` && x.provider.endsWith("official closing price"))) : quotes;
+      return valueHolding(h, qs, books.goldRate, now, books.alerts);
+    });
     const duplicates = books.holdings.filter((h) => h.isin && dematIsins.has(h.isin)).map((h) => h.name);
     let closeCount = 0;
     const dematRows = dematHoldings.map((h) => { const c = closes.byIsin.get(h.isin); if (c && h.quantity > 0) { closeCount++; return { ...h, value: Math.round(h.quantity * c.close * 100) / 100, basis: `${c.exchange} close ${c.date}` }; } return { ...h, value: h.statementValue ?? null, basis: h.statementValue != null ? `statement ${h.asOf ?? ""}`.trim() : "no price" }; });
@@ -102,6 +108,7 @@ export function useNetWorth() {
       investments: valued, demat: Math.round((dematValue + raw.investments) * 100) / 100, dematBasis: dematRows.length ? [closeCount && `${closeCount}/${dematRows.length} demat at official closing price${closeDate ? ` (${closeDate})` : ""}`, closeCount < dematRows.length && `others at statement value${dematDate ? ` (${dematDate})` : ""}`, raw.investments > 0 && "investment & deposit accounts at their latest recorded value"].filter(Boolean).join(" · ") : raw.investments > 0 ? "investment & deposit accounts at their latest recorded value" : "",
       otherAssets: Math.round(raw.other * 100) / 100, property: Math.round(propVal), propertyBasis: books.properties.some((p) => p.valuation) ? "latest dated valuation or book value" : "book value from asset register",
       liabilities: raw.liabilities + loanOwed, liabilitiesBasis: "latest loan and card balances on record",
+      asOf: { bank: transactions.reduce((m, t) => (t.date > m ? t.date : m), "") || null, investments: closeDate ?? dematDate ?? null, property: books.properties.map((p) => p.valuation?.date ?? "").sort().pop() || null, liabilities: loans.filter((l) => l.status !== "closed").map((l) => (l as { asOf?: string }).asOf ?? "").sort().pop() || null },
     });
     const portfolio = nw.assets.find((a) => a.label === "Investments")!.value;
     const last = books.snapshots.at(-1);
