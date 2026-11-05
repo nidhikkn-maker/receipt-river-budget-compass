@@ -12,7 +12,7 @@ import { booksHeads, HEAD_LABEL, nextFy, openingProposal } from "@/lib/books/fy"
 import { OpeningBalances } from "./OpeningBalances";
 import { ItrHandoff } from "./ItrHandoff";
 import { REQUIRED_SCHEDULES } from "@/lib/books/intake";
-import { annualSummary, duplicateInvoices, gstr1, gstr1Json, gstr3b, gstr3bJson, gstr9, invoiceProblems, validateGstJson, matchGstPayments, unfiledPeriods } from "@/lib/books/gst";
+import { gstPayable, annualSummary, duplicateInvoices, gstr1, gstr1Json, gstr3b, gstr3bJson, gstr9, invoiceProblems, validateGstJson, matchGstPayments, unfiledPeriods } from "@/lib/books/gst";
 import { activateRule, OFFICIAL_SOURCES, proposeRule, ruleOn, validateRule, formFor } from "@/lib/books/regulatory";
 import type { GstInvoice, OpeningHead, RuleArea, TaxProfile } from "@/lib/books/types";
 import { supabase } from "@/integrations/supabase/client";
@@ -20,6 +20,8 @@ import { useBooks, useDemat } from "./useBooks";
 import { taxComputation } from "@/lib/books/taxcomp";
 import { CREDIT_LABEL, creditsFor, itcReview, ledgerTaxPayments, obligations, ruleImpact, type CreditKind } from "@/lib/books/compliance";
 import { estimateTax, rulesFor } from "@/lib/tax-rules";
+import { entityLiability, individualLiability, itrComputationJson, suggestItrForm, DEDUCTION_CAP } from "@/lib/books/tax-full";
+import type { TaxDeduction } from "@/lib/books/types";
 
 const inr = (n: number) => "₹" + n.toLocaleString("en-IN", { maximumFractionDigits: 0 });
 const today = () => new Date().toISOString().slice(0, 10);
@@ -81,6 +83,7 @@ export function TaxProfiles({ fy }: { fy: string }) {
             <div className="mt-1 grid grid-cols-2 gap-2 text-xs">
               <label>Regime<select className="w-full rounded-md border bg-background px-1 py-1" value={p.regime} onChange={(x) => upd({ ...p, regime: x.target.value as "new", confirmedAt: new Date().toISOString() })}><option value="" disabled>Choose…</option><option value="new">New</option><option value="old">Old</option></select></label>
               <label>GST scheme<select className="w-full rounded-md border bg-background px-1 py-1" value={p.gstScheme} onChange={(x) => upd({ ...p, gstScheme: x.target.value as "regular", confirmedAt: new Date().toISOString() })}><option value="" disabled>Choose…</option><option value="none">Not registered</option><option value="regular">Regular (monthly)</option><option value="qrmp">QRMP (quarterly)</option><option value="composition">Composition</option></select></label>
+              {(e.kind === "company") && <label className="col-span-2">Company tax option<select aria-label={`Tax option ${e.name}`} className="w-full rounded-md border bg-background px-1 py-1" value={p.companyOption ?? ""} onChange={(x) => upd({ ...p, companyOption: (x.target.value || undefined) as TaxProfile["companyOption"] })}><option value="">Not chosen — no tax figure shown</option><option value="115BAA">Section 115BAA (22%)</option><option value="115BAB">Section 115BAB (15%, new manufacturing)</option><option value="normal25">Normal 25% (turnover up to ₹400 crore)</option><option value="normal30">Normal 30%</option></select></label>}
               <label className="col-span-2 flex items-center gap-2"><input type="checkbox" checked={p.hasBusiness ?? e.kind !== "individual"} onChange={(x) => upd({ ...p, hasBusiness: x.target.checked })} />Has business or professional income</label>
               {!ready && <p className="col-span-2 text-destructive">Not confirmed — choose the regime and GST scheme. Tax and GST working stay hidden until then.</p>}
               <label className="col-span-2 flex items-center gap-2"><input type="checkbox" checked={p.auditRequired} onChange={(x) => upd({ ...p, auditRequired: x.target.checked })} />Accounts audited</label>
@@ -132,7 +135,8 @@ export function GstReturns({ fy }: { fy: string }) {
         </div>
         <div className="grid gap-2 sm:grid-cols-2">
           <div className="rounded-xl border p-3 text-xs"><p className="font-semibold">GSTR-1 draft · {period}</p><p>B2B: {r1.b2b.count} invoices · taxable {inr(r1.b2b.taxable)} · tax {inr(r1.b2b.igst + r1.b2b.cgst + r1.b2b.sgst + r1.b2b.cess)}</p><p>B2C: {r1.b2c.count} invoices · taxable {inr(r1.b2c.taxable)}</p></div>
-          <div className="rounded-xl border p-3 text-xs"><p className="font-semibold">GSTR-3B draft · {period}</p><p>Output tax {inr(r3.outputTax)} · ITC {inr(r3.itcClaimed)}</p><p className="font-semibold">Net payable {inr(r3.netPayable)}{r3.carryForward ? ` · credit carried ${inr(r3.carryForward)}` : ""}</p></div>
+          <div className="rounded-xl border p-3 text-xs"><p className="font-semibold">GSTR-3B draft · {period}</p><p>Output tax {inr(r3.outputTax)} · ITC {inr(r3.itcClaimed)}</p><p className="font-semibold">Net payable {inr(r3.netPayable)}{r3.carryForward ? ` · credit carried ${inr(r3.carryForward)}` : ""}</p>
+            {(() => { const so = gstPayable(books.gstInvoices, gstin, period, eligibleKeys); return <div className="mt-1 border-t pt-1"><p>Cash to pay by head (after set-off in legal order): IGST {inr(so.cash.igst)} · CGST {inr(so.cash.cgst)} · SGST {inr(so.cash.sgst)} · cess {inr(so.cash.cess)} = <b>{inr(so.cashTotal)}</b></p>{so.used.length > 0 && <p className="text-muted-foreground">Credit used: {so.used.map((u) => `${u.from.toUpperCase()}→${u.to.toUpperCase()} ${inr(u.amount)}`).join(" · ")}</p>}{(so.carry.igst + so.carry.cgst + so.carry.sgst + so.carry.cess) > 0 && <p className="text-muted-foreground">Credit left: IGST {inr(so.carry.igst)} · CGST {inr(so.carry.cgst)} · SGST {inr(so.carry.sgst)}</p>}</div>; })()}</div>
         </div>
         <div className="flex flex-wrap gap-2 text-xs">{([["GSTR-1", gstr1Json(books.gstInvoices, gstin, period)], ["GSTR-3B", gstr3bJson(books.gstInvoices, gstin, period, eligibleKeys)]] as const).map(([form, j]) => {
           const errs = validateGstJson(form, j as unknown as Record<string, unknown>);
@@ -262,6 +266,11 @@ export function TaxComputationCard({ fy }: { fy: string }) {
   const slabTax = !unconfirmed && personal && regime === "new" ? estimateTax(c.total - c.capitalGains.long - c.capitalGains.short, rules) : null;
   const creditKey = ent?.id ?? "personal";
   const cr = creditsFor(books.taxCredits ?? [], creditKey, fy);
+  const dedLines = (books.taxDeductions ?? []).filter((d) => d.entityId === creditKey && d.fy === fy);
+  const [ded, setDed] = useState({ section: "80C" as TaxDeduction["section"], amount: "", evidence: "" });
+  const liab = unconfirmed ? null : personal ? individualLiability(c, fy, (regime ?? "new") as "new" | "old", dedLines, cr.total) : entityLiability(c, ent!.kind === "company" ? "company" : "firm", profile?.companyOption, cr.total);
+  const other = !unconfirmed && personal ? individualLiability(c, fy, regime === "old" ? "new" : "old", dedLines, cr.total) : null;
+  const itrForm = suggestItrForm(ent?.kind ?? "individual", c);
   const recordedTx = new Set((books.taxCredits ?? []).map((x) => x.transactionId).filter(Boolean));
   const challans = ledgerTaxPayments(accountIds ? transactions.filter((t) => t.accountId && accountIds.has(t.accountId)) : transactions, fy).filter((t) => !recordedTx.has(t.id));
   const rows: [string, number][] = [["Salary", c.salary], ["House property (rent − 30% − interest, loss capped ₹2L)", c.houseProperty.net], ["Business / profession", c.business.net], ["Short-term capital gains", c.capitalGains.short], ["Long-term capital gains", c.capitalGains.long], ["Other sources (interest, dividends)", c.otherSources], ["Gross total income", c.gross], ["Losses brought forward set off", c.lossesSetOff ? -c.lossesSetOff : 0], ["Total income", c.total]];
@@ -273,7 +282,19 @@ export function TaxComputationCard({ fy }: { fy: string }) {
         {ent && accountIds && accountIds.size === 0 && <p className="text-xs text-destructive">No accounts are linked to {ent.name} yet — link them in its tax profile below. Until then nothing is counted for it.</p>}
         {unconfirmed && <p className="text-xs text-destructive">Confirm {ent!.name}'s tax profile (regime and GST scheme) below before this working is used.</p>}
         <div className="divide-y rounded-xl border">{rows.map(([k, v]) => <div key={k} className="flex justify-between gap-2 px-3 py-2 text-xs"><span>{k}</span><b className="shrink-0">{inr(v)}</b></div>)}</div>
-        {slabTax != null ? <p className="text-xs">Indicative slab tax (new regime): <b>{inr(slabTax)}</b> plus capital-gains tax at special rates.</p>
+        {liab ? <div className="rounded-xl border p-3 text-xs"><p className="font-semibold">Tax worked out · {liab.regime === "new" ? "new regime" : liab.regime === "old" ? "old regime" : ent ? ENTITY_KINDS[ent.kind].label : ""} · suggested form {itrForm}</p>
+          {liab.lines.map(([k, v]) => <p key={k} className="flex justify-between gap-2"><span>{k}</span><b className="shrink-0">{v < 0 ? "−" : ""}{inr(Math.abs(v))}</b></p>)}
+          {other && <p className="mt-1 text-muted-foreground">Under the {other.regime} regime the tax would be {inr(other.total)} ({other.total < liab.total ? `${inr(liab.total - other.total)} less` : other.total > liab.total ? `${inr(other.total - liab.total)} more` : "the same"}).</p>}
+          {liab.notes.map((n) => <p key={n} className="text-[11px] text-muted-foreground">{n}</p>)}
+          <Button size="sm" variant="outline" className="mt-2" onClick={() => { const j = itrComputationJson({ fy, pan: ent?.pan ?? null, name: ent?.name ?? "You", form: itrForm, c, l: liab }); const b = new Blob([JSON.stringify(j, null, 1)], { type: "application/json" }); const a = document.createElement("a"); a.href = URL.createObjectURL(b); a.download = `${itrForm}_computation_${fy}.json`; a.click(); URL.revokeObjectURL(a.href); }}>Download {itrForm} computation (JSON)</Button>
+        </div> : <p className="text-xs text-muted-foreground">{unconfirmed ? "Tax is shown once the profile is confirmed." : "Choose the company tax option in its tax profile — no tax figure is shown rather than a guess."}</p>}
+        {personal && !unconfirmed && <div className="rounded-xl border p-3 text-xs"><p className="font-semibold">Deductions with proof (old regime) · {dedLines.length}</p>
+          {dedLines.map((d) => <p key={d.id} className="flex justify-between gap-2"><span className="break-words">{d.section} · {d.evidence}</span><span className="shrink-0">{inr(d.amount)}<Button size="sm" variant="ghost" className="h-6" onClick={() => save({ taxDeductions: (books.taxDeductions ?? []).filter((x) => x.id !== d.id) })}>Remove</Button></span></p>)}
+          <div className="mt-1 flex flex-wrap gap-1"><select aria-label="Deduction section" className="rounded-md border bg-background px-1" value={ded.section} onChange={(e) => setDed({ ...ded, section: e.target.value as TaxDeduction["section"] })}>{(Object.keys(DEDUCTION_CAP) as TaxDeduction["section"][]).map((k) => <option key={k} value={k}>{k}{Number.isFinite(DEDUCTION_CAP[k]) ? ` (max ${inr(DEDUCTION_CAP[k])})` : ""}</option>)}</select>
+            <Input aria-label="Deduction amount" className="h-8 w-28" type="number" placeholder="Amount" value={ded.amount} onChange={(e) => setDed({ ...ded, amount: e.target.value })} />
+            <Input aria-label="Deduction proof" className="h-8 min-w-0 flex-1" placeholder="Proof, e.g. LIC premium receipt" value={ded.evidence} onChange={(e) => setDed({ ...ded, evidence: e.target.value })} />
+            <Button size="sm" variant="outline" disabled={!(Number(ded.amount) > 0) || ded.evidence.trim().length < 3} onClick={async () => { await save({ taxDeductions: [...(books.taxDeductions ?? []), { id: crypto.randomUUID(), entityId: creditKey, fy, section: ded.section, amount: Number(ded.amount), evidence: ded.evidence.trim() }] }); setDed({ ...ded, amount: "", evidence: "" }); }}>Add</Button></div>
+          <p className="mt-1 text-[11px] text-muted-foreground">Only used in the old regime; each section is capped by law.</p></div>}
           : <p className="text-xs text-muted-foreground">{personal ? "Old-regime slabs and deductions are not added — no tax figure is shown rather than a guess." : `${ent ? ENTITY_KINDS[ent.kind].label : ""} tax rates depend on the option chosen (e.g. section 115BAA/115BAB) — the accountant confirms the rate; no tax figure is shown.`}</p>}
         <div className="rounded-xl border p-3 text-xs">
           <p className="font-semibold">Taxes already paid · {inr(cr.total)}</p>
