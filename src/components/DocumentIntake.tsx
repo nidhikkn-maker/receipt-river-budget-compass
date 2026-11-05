@@ -111,13 +111,16 @@ export function DocumentIntake({ file, context, onClose, resume, replacesId, onS
     if (route === "asset" && x.asset) {
       // Look in trusted records (the matching payment) before asking for missing details [§59].
       const pay = assetPayment(x.asset, store.transactions);
-      const read = x.asset.cost == null && pay ? { ...x.asset, cost: pay.amount, purchaseDate: x.asset.purchaseDate ?? pay.date } : x.asset;
+      const base = x.asset.cost == null && pay ? { ...x.asset, cost: pay.amount, purchaseDate: x.asset.purchaseDate ?? pay.date } : x.asset;
+      // Owner-typed answers fill only what the document didn't print, so an incomplete suggestion stays editable [§7].
+      const read = { ...base, name: base.name || edit["fillName"] || null, cost: base.cost ?? (Number(edit["fillCost"]) > 0 ? Number(edit["fillCost"]) : null), purchaseDate: base.purchaseDate ?? (isIso(edit["fillDate"]) ? edit["fillDate"]! : null) };
       const p = proposeAsset(read, entities, id, null);
       return { kind: "asset" as const, ...p, payment: pay, costFromPayment: x.asset.cost == null && !!pay, asset: p.asset ? { ...p.asset, ...(pay ? { transactionId: pay.id } : {}) } : null };
     }
     if (route === "property" && x.property) return { kind: "property" as const, ...proposeProperty(x.property, entities, id, null) };
     if (route === "lease" && x.lease) {
-      const p = proposeLease(x.lease, books.properties, id, null);
+      const lr = x.lease;
+      const p = proposeLease({ ...lr, tenant: lr.tenant || edit["fillTenant"] || null, rent: lr.rent ?? (Number(edit["fillRent"]) > 0 ? Number(edit["fillRent"]) : null), start: lr.start ?? (isIso(edit["fillStart"]) ? edit["fillStart"]! : null), end: lr.end ?? (isIso(edit["fillEnd"]) ? edit["fillEnd"]! : null) }, books.properties, id, null);
       if (!p.lease) return { kind: "lease" as const, ...p, sources: {} as Record<string, string> };
       const related = documents.filter((d) => books.docLinks.some((l) => l.docId === d.id && l.targetId === p.lease!.propertyId)).map((d) => ({ title: d.title, fields: d.fields ?? [] }));
       const filled = fillLeaseFromTrusted(p.lease, books.leases, related, books.fieldMappings ?? {});
@@ -127,7 +130,7 @@ export function DocumentIntake({ file, context, onClose, resume, replacesId, onS
     if (route === "tax" && x.taxStatement) return { kind: "tax" as const, ...proposeTaxStatement(x.taxStatement, entities) };
     if (route === "fy" && x.audited) return { kind: "fy" as const, ...proposeFy(x.audited as Parameters<typeof proposeFy>[0], entities, books.fyRecords, id, null) };
     return null;
-  }, [x, route, entities, books.properties, books.fyRecords, books.leases, books.docLinks, books.fieldMappings, documents, runId]);
+  }, [x, route, edit, entities, books.properties, books.fyRecords, books.leases, books.docLinks, books.fieldMappings, documents, runId]);
 
   const entityName = proposal?.kind === "entity" ? proposal.profile.name : entities.find((e) => e.pan && fields.some((f) => f.value.toUpperCase().includes(e.pan)))?.name;
   const title = autoName({ entity: entityName, date: x?.date ?? null, typeLabel: DOC_LABEL[docType], identifier: fields.find((f) => /^(cin|gstin|pan|invoice number|survey number)/i.test(f.label))?.value ?? null });
@@ -267,7 +270,7 @@ export function DocumentIntake({ file, context, onClose, resume, replacesId, onS
           <select aria-label="Asset category" className="col-span-2 rounded-md border bg-background px-2 py-2" value={v("akind", proposal.asset.kind)} onChange={(e) => setEdit({ ...edit, akind: e.target.value })}>{Object.entries(ASSET_KINDS).map(([k, l]) => <option key={k} value={k}>{l}</option>)}</select>
           <p className="col-span-2 text-xs text-muted-foreground">{[x.asset?.supplier && `Supplier ${x.asset.supplier}`, x.asset?.purchaseDate && `invoice ${x.asset.purchaseDate}`, x.asset?.warrantyUntil && `warranty to ${x.asset.warrantyUntil}`, x.asset?.insurance && `insurance ${x.asset.insurance}`].filter(Boolean).join(" · ")}</p>
           {needCap && !belowCap && <label className="col-span-2 flex items-center gap-2 text-xs"><input type="checkbox" checked={capOk} onChange={(e) => setCapOk(e.target.checked)} />Capitalise this as a fixed asset (your approval policy asks for this){capMin == null ? " — no capitalisation limit set yet in Audit → Approvals" : ""}</label>}
-        </div> : null)}
+        </div> : <div className="grid grid-cols-2 gap-2 rounded-xl border border-dashed p-3 text-xs"><p className="col-span-2 font-semibold">Not printed — fill in to continue: {proposal.missing.join(", ")}</p>{!x.asset?.name && <label>Asset name<Input aria-label="Asset name" type="text" value={edit["fillName"] ?? ""} onChange={(e) => setEdit({ ...edit, fillName: e.target.value })} /></label>}{x.asset?.cost == null && <label>Purchase cost<Input aria-label="Purchase cost" type="number" value={edit["fillCost"] ?? ""} onChange={(e) => setEdit({ ...edit, fillCost: e.target.value })} /></label>}{!x.asset?.purchaseDate && <label>Purchase date<Input aria-label="Purchase date" type="date" value={edit["fillDate"] ?? ""} onChange={(e) => setEdit({ ...edit, fillDate: e.target.value })} /></label>}</div>)}
         {proposal?.kind === "gst" && (proposal.invoice ? <div className="grid grid-cols-2 gap-2 rounded-xl border p-3">
           <p className="col-span-2 font-semibold">GST {proposal.invoice.kind === "sales" ? "sales" : "purchase"} invoice draft · {proposal.invoice.gstin}</p>
           <label className="text-xs">Invoice number<Input aria-label="Invoice number" value={v("invno", proposal.invoice.number)} onChange={(e) => setEdit({ ...edit, invno: e.target.value })} /></label>
@@ -301,7 +304,7 @@ export function DocumentIntake({ file, context, onClose, resume, replacesId, onS
           </div>}
           <p className="col-span-2 text-xs text-muted-foreground">The deposit is never counted as rent.</p>
           <select aria-label="Property for this lease" className="col-span-2 rounded-md border bg-background px-2 py-2" value={leaseProperty || proposal.lease.propertyId} onChange={(e) => setLeaseProperty(e.target.value)}><option value="">Choose property…</option>{books.properties.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}</select>
-        </div> : null)}
+        </div> : <div className="grid grid-cols-2 gap-2 rounded-xl border border-dashed p-3 text-xs"><p className="col-span-2 font-semibold">Not printed — fill in to continue: {proposal.missing.join(", ")}</p>{!x.lease?.tenant && <label>Tenant<Input aria-label="Tenant" type="text" value={edit["fillTenant"] ?? ""} onChange={(e) => setEdit({ ...edit, fillTenant: e.target.value })} /></label>}{x.lease?.rent == null && <label>Monthly rent<Input aria-label="Monthly rent" type="number" value={edit["fillRent"] ?? ""} onChange={(e) => setEdit({ ...edit, fillRent: e.target.value })} /></label>}{!x.lease?.start && <label>Lease start<Input aria-label="Lease start" type="date" value={edit["fillStart"] ?? ""} onChange={(e) => setEdit({ ...edit, fillStart: e.target.value })} /></label>}{!x.lease?.end && <label>Lease end<Input aria-label="Lease end" type="date" value={edit["fillEnd"] ?? ""} onChange={(e) => setEdit({ ...edit, fillEnd: e.target.value })} /></label>}</div>)}
         {proposal?.kind === "fy" && <div className="space-y-1 rounded-xl border p-3">
           <p className="font-semibold">{proposal.record ? `Past-year accounts FY ${proposal.record.fy}` : "Past-year accounts"}</p>
           {proposal.record && Object.entries(proposal.record.audited).map(([k, a]) => <div key={k} className="flex justify-between text-xs"><span>{HEAD_LABEL[k as keyof typeof HEAD_LABEL]}</span><b>{inr(a ?? 0)}</b></div>)}

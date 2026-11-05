@@ -24,7 +24,7 @@ export function MarketPanel() {
   const [gold, setGold] = useState(books.goldRate ? String(books.goldRate.perGram24k) : "");
   // Your own entries for a security are compared with the demat total across every account [v6.1 §4, §13].
   const statementQty = quantityByIsin(nw.demat ?? []);
-  const alerts = valuationAlerts(nw.valued, books.snapshots, books.alerts, statementQty, books.holdings);
+  const alerts = valuationAlerts(nw.valued, books.snapshots, books.alerts, statementQty, books.holdings, [], nw.dematMissing);
 
   const refreshNavs = async () => {
     let quotes = books.quotes; let ok = 0, bad = 0;
@@ -62,7 +62,7 @@ export function MarketPanel() {
         {nw.duplicates.length > 0 && <p className="rounded-xl bg-secondary p-2 text-xs">Counted once from your demat statement: {nw.duplicates.join(", ")}</p>}
         <p className="text-[11px] text-muted-foreground">Closing prices: {nw.closeJob?.lastSuccess ? `last saved ${nw.closeJob.lastSuccess.slice(0, 16).replace("T", " ")} UTC` : "not fetched yet"}{nw.closeJob?.status === "failed" ? ` · last attempt failed (${nw.closeJob.reason ?? "unknown"}) — earlier prices kept` : ""}</p>
         {nw.dematRows.length > 0 && <details className="text-xs"><summary className="cursor-pointer text-muted-foreground">Demat holdings ({nw.dematRows.length})</summary>
-          <div className="mt-1 divide-y">{nw.dematRows.map((h) => <div key={h.id} className="flex justify-between gap-2 py-1"><span className="min-w-0 truncate">{h.name}<span className="block text-muted-foreground">{h.quantity} · {h.basis}</span></span><b className="font-mono">{money(h.value)}</b></div>)}</div></details>}
+          <div className="mt-1 divide-y">{nw.dematRows.map((h) => <div key={h.id} className="flex justify-between gap-2 py-1"><span className="min-w-0 truncate">{h.name}<span className="block text-muted-foreground">{h.quantity} · {h.basis}</span></span><b className="font-mono">{h.value == null ? "no price" : money(h.value)}</b></div>)}</div></details>}
         {alerts.length > 0 && <ul className="space-y-1 rounded-xl bg-secondary p-3 text-xs">{alerts.map((a) => <li key={a}>{a}</li>)}</ul>}
         <div className="flex flex-wrap gap-2">
           <Button size="sm" variant="outline" onClick={() => setEdit(blank())}>Add holding</Button>
@@ -111,6 +111,7 @@ export function MarketPanel() {
           <div className="mt-2 grid grid-cols-2 gap-2">
             <label>Portfolio move %<Input type="number" value={books.alerts.portfolioMovePct} onChange={(e) => save({ alerts: { ...books.alerts, portfolioMovePct: Number(e.target.value) || 0 } })} /></label>
             <label>NAV stale after days<Input type="number" value={books.alerts.staleNavDays} onChange={(e) => save({ alerts: { ...books.alerts, staleNavDays: Number(e.target.value) || 1 } })} /></label>
+            <label>Value vs cost alert %<Input type="number" value={books.alerts.unusualValuationPct} onChange={(e) => save({ alerts: { ...books.alerts, unusualValuationPct: Number(e.target.value) || 0 } })} /></label>
             {(["missingPrices", "quantityMismatch", "corporateActions"] as const).map((k) => <label key={k} className="flex items-center gap-2"><input type="checkbox" checked={books.alerts[k]} onChange={(e) => save({ alerts: { ...books.alerts, [k]: e.target.checked } })} />{k === "missingPrices" ? "Missing prices" : k === "quantityMismatch" ? "Quantity differences" : "Corporate actions"}</label>)}
           </div></details>
         {books.snapshots.length > 0 && <details className="text-xs"><summary className="cursor-pointer text-muted-foreground">Valuation history ({books.snapshots.length})</summary>

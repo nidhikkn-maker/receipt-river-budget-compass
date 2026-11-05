@@ -4,7 +4,7 @@ import type { EntityProfile } from "../entities";
 import type { Expense } from "../expenses";
 import { creditsFor, dueFor, itcReview, ledgerTaxPayments, obligations, quarterEnd, ruleImpact } from "./compliance";
 import { approvalHistory, readinessTiles, setFindingState, withStates, type AuditItem } from "./audit";
-import { businessDaysBetween, isStale, quantityByIsin, valuationAlerts } from "./market";
+import { businessDaysBetween, isStale, quantityByIsin, valuationAlerts, valueHolding } from "./market";
 import { DEFAULT_ALERTS, emptyBooks, type GstInvoice, type Holding, type RuleVersion, type TaxProfile } from "./types";
 
 const co: EntityProfile = { id: "e1", name: "KR Enterprises", kind: "company", pan: "AAACK1234C", gstins: ["33AAACK1234C1Z5"], booksFrom: "2020-21" };
@@ -98,6 +98,13 @@ describe("market alerts and freshness", () => {
     const v = [{ holding: h({ costBasis: 1000 }), key: "k", quote: null, value: 1250, stale: false, note: "" }];
     expect(valuationAlerts(v, [], DEFAULT_ALERTS, {}).some((a) => a.includes("25% from cost"))).toBe(true);
   });
+  it("a 50%-owned holding at cost raises no false value-vs-cost alert", () => {
+    const v = [{ holding: h({ costBasis: 1000, sharePct: 50 }), key: "k", quote: null, value: 500, stale: false, note: "" }];
+    expect(valuationAlerts(v, [], DEFAULT_ALERTS, {}).some((a) => a.includes("from cost"))).toBe(false);
+  });
+  it("demat holdings without any price are flagged, not valued at zero", () => {
+    expect(valuationAlerts([], [], DEFAULT_ALERTS, {}, [], [], ["TCS"]).some((a) => a.includes("1 demat holding has no price"))).toBe(true);
+  });
   it("statement quantity adds up across demat accounts", () => {
     expect(quantityByIsin([{ holdings: [{ isin: "INE1", quantity: 10 }] }, { holdings: [{ isin: "INE1", quantity: 5 }] }])).toEqual({ INE1: 15 });
   });
@@ -135,5 +142,14 @@ describe("audit decisions", () => {
   it("approval history lists period closures and rule approvals, newest first", () => {
     const b = { ...emptyBooks(), periodLog: [{ at: "2026-06-01", action: "closed" as const, periodId: "c", reason: "FY filed" }], rules: [rule("due.ITR", "15", { approvedOn: "2026-10-02" })] };
     expect(approvalHistory(b).map((e) => e.what)).toEqual(["Rule approved", "Period closed"]);
+  });
+});
+
+describe("instrument type matches price type [v6.1 §3]", () => {
+  const now = new Date("2026-11-04T12:00:00Z");
+  it("a mutual fund is never valued from an exchange closing price", () => {
+    const q = { key: "isin:INF000000001", price: 50, at: "2026-11-04T10:00:00Z", provider: "NSE", freshness: "eod" as const, refreshedAt: "2026-11-04T13:30:00Z" };
+    expect(valueHolding(h({ kind: "mutual_fund" }), [q], undefined, now, DEFAULT_ALERTS).value).toBeNull();
+    expect(valueHolding(h({ kind: "etf" }), [q], undefined, now, DEFAULT_ALERTS).value).toBe(500);
   });
 });

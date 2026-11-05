@@ -10,7 +10,7 @@ const lease = { id: "l1", propertyId: "p1", tenant: "Ravi Kumar", start: "2026-0
 
 describe("v6 accuracy fixes", () => {
   it("an amount equal to the deposit alone is not a deposit", () => {
-    expect(receiptKind("NEFT Ravi Kumar", 30000, lease)).toBe("rent");
+    expect(receiptKind("NEFT Ravi Kumar", 30000, lease)).toBe("unconfirmed");
     expect(receiptKind("Ravi Kumar security deposit", 30000, lease)).toBe("deposit");
   });
   it("tenant arrears carry forward from the lease start", () => {
@@ -170,4 +170,12 @@ describe("opening-balance posting", () => {
     expect(openingPlan({ ...base, links: { bank: [{ accountId: "b1", target: 400000 }], loans: [{ accountId: "l1", target: 200000 }] } }).blockers[0]).toMatch(/add up/);
   });
   it("retries reuse the same entry id", () => { expect(stableId("opening|e1|2025-26|b1")).toBe(stableId("opening|e1|2025-26|b1")); expect(stableId("a")).not.toBe(stableId("b")); });
+});
+
+describe("unlabelled deposit-sized receipts [§39]", () => {
+  it("waits for confirmation instead of counting as rent", () => {
+    const l = { id: "l", propertyId: "p", tenant: "Ravi", start: "2026-04-01", end: "2027-03-31", rent: 30000, deposit: 90000 } as Parameters<typeof receiptKind>[2];
+    expect(receiptKind("NEFT Ravi Kumar", 90000, l)).toBe("unconfirmed");
+    expect(receiptKind("NEFT Ravi Kumar", 30000, l)).toBe("rent");
+  });
 });

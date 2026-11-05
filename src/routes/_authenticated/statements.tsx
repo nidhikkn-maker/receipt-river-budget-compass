@@ -113,6 +113,7 @@ function StatementDeskPage() {
   const { accounts, transactions, preferences } = store;
   const live = accounts.filter((a) => !a.archived);
 
+  const originals = useRef(new Map<string, File>());
   const add = async (list: FileList | File[] | null, asStatement = false) => {
     if (!list?.length) return;
     setBusy(true);
@@ -136,6 +137,7 @@ function StatementDeskPage() {
           const hint = id.hint ? { ...id.hint, name: file.currency === "INR" ? id.hint.name : `${id.hint.name} ${file.currency}` } : null;
           const accountId = file.accountId ?? id.accountId;
           const named = accounts.find((a) => a.id === accountId);
+          originals.current.set(file.name, f);
           next.push({ file: { ...file, accountId, hint }, accountName: named?.name ?? hint?.name ?? "unknown account", entries: t.count, debits: t.debits, credits: t.credits });
         }
       } catch (e) {
@@ -205,6 +207,16 @@ function StatementDeskPage() {
       void loadLinks();
       listDrafts().then(setDrafts).catch(() => {}); setDraftFlip([]);
       const upload: StatementUpload = { id: crypto.randomUUID(), at: new Date().toISOString(), label: plan.accounts.map((a) => a.file.name).join(", ").slice(0, 200), posted: r.posted, reconciled: r.reconciled, createdAccounts: r.createdAccounts };
+      // Keep each statement original once in DocuRepo, evidence-locked, so posted lines trace back to their file [§3].
+      const kept = new Set<File>();
+      for (const a of plan.accounts) {
+        const f = originals.current.get(a.file.name);
+        if (!f || kept.has(f) || !requests.some((q) => q.account === a)) continue;
+        kept.add(f);
+        const ds = a.file.lines.map((l) => l.date).sort();
+        try { await storeRef.current.addDocument(f, { title: `Statement · ${a.file.name}`, docType: a.file.hint?.kind === "credit_card" || /card/i.test(a.file.name) ? "card_statement" : "bank_statement", docDate: ds[ds.length - 1] ?? null, amount: null, currency: a.file.currency, merchant: null, notes: `Statement Desk upload ${upload.id}: ${a.file.lines.length} lines (${ds[0] ?? "?"} to ${ds[ds.length - 1] ?? "?"}).`, transactionId: null, accountId: a.file.accountId, loanId: null, expiresOn: null, evidenceLocked: true }); }
+        catch { toast.error(`Posted, but the original of ${f.name} couldn’t be stored in DocuRepo.`); }
+      }
       try { const s = storeRef.current; await s.savePreferences({ ...s.preferences, statementUploads: [upload, ...(s.preferences.statementUploads ?? [])].slice(0, 10) }); }
       catch { toast.error("Saved, but undo history couldn’t sync to your other devices."); }
       toast.success(`${r.posted.length} entries posted · ${r.reconciled.length} records marked as matched${r.createdAccounts.length ? ` · ${r.createdAccounts.length} account${r.createdAccounts.length === 1 ? "" : "s"} created` : ""}`, {

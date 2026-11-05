@@ -26,15 +26,16 @@ export function nextEscalation(l: Lease, today: string): { date: string; rent: n
 }
 
 export interface Receipt { id: string; date: string; amount: number; text: string; accountId?: string | null | undefined; currency?: string | undefined }
-export type LedgerRowKind = "rent" | "deposit" | "other";
+export type LedgerRowKind = "rent" | "deposit" | "other" | "unconfirmed";
 export interface TenantRow { month: string; due: number; rent: number; deposit: number; other: number; balance: number; status: "paid" | "partial" | "unpaid" | "advance" | "none" }
 
 /** Classify a bank receipt for a lease: deposits are never rent [§39, test 10]. */
 export function receiptKind(text: string, amount?: number, lease?: Lease): LedgerRowKind {
   // An amount equal to the deposit is not evidence on its own; only wording or a document says "deposit".
-  void amount; void lease;
   if (/\b(security\s*)?deposit\b|advance\s*security|refundable/i.test(text)) return "deposit";
   if (/maintenance|electricity|water|reimburse|penalty|late fee/i.test(text)) return "other";
+  // Unlabelled receipt matching the deposit (and not the rent) waits for you — never assumed rent or deposit [§39].
+  if (amount != null && lease?.deposit && Math.abs(amount - lease.deposit) <= 1 && Math.abs(amount - lease.rent) > 1) return "unconfirmed";
   return "rent";
 }
 
