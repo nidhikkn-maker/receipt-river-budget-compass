@@ -52,11 +52,11 @@ function Entities() {
     toast.success("Profile saved"); setEdit(null);
   };
   const remove = async (id: string) => {
-    if (!(await confirmAction({ title: "Delete this profile?", description: "Linked accounts are unlinked, not deleted. Entries stay as they are.", confirmLabel: "Delete" }))) return;
+    if (!(await confirmAction({ title: "Delete this profile?", message: "Linked accounts are unlinked, not deleted. Entries stay as they are.", confirmLabel: "Delete" }))) return;
     await saveLinks(dropEntity(links, id), list.filter((x) => x.id !== id), "Profile deleted"); setEdit(null);
   };
   const merge = async (from: string, into: string) => {
-    if (!into || !(await confirmAction({ title: "Merge companies?", description: "Accounts move to the chosen company and this profile is removed. Entries are not changed.", confirmLabel: "Merge" }))) return;
+    if (!into || !(await confirmAction({ title: "Merge companies?", message: "Accounts move to the chosen company and this profile is removed. Entries are not changed.", confirmLabel: "Merge" }))) return;
     await saveLinks(mergeEntity(links, from, into), list.filter((x) => x.id !== from), "Merged");
   };
 
