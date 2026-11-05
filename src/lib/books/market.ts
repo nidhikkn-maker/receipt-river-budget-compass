@@ -86,7 +86,11 @@ export function valueHolding(h: Holding, quotes: Quote[], gold: GoldRate | undef
   // Instrument type must fit the price type: funds use NAVs, exchange-traded securities use exchange prices [v6.1 §3].
   const exchangeQuote = q.freshness === "live" || q.freshness === "delayed" || q.freshness === "eod";
   if ((h.kind === "mutual_fund" && exchangeQuote) || ((h.kind === "etf" || h.kind === "gold_etf" || h.kind === "sgb" || h.kind === "bond") && q.freshness === "nav")) return { holding: h, key, quote: null, value: null, stale: false, note: h.kind === "mutual_fund" ? "Exchange price found but a fund needs its NAV" : "NAV found but this security needs an exchange price" };
-  return { holding: h, key, quote: q, value: Math.round(h.quantity * q.price * share * 100) / 100, stale: isStale(q, now, h.kind, alerts.staleNavDays), note: `${FRESHNESS_LABEL[q.freshness]} · ${q.provider} · price ${fmtIst(q.at)} · fetched ${fmtIst(q.refreshedAt)}` };
+  const status = q.tradingStatus ?? h.tradingStatus ?? "active";
+  // Delisted or suspended securities are never valued at an old last price as if tradable [v6.1 §4].
+  if (status === "delisted") return { holding: h, key, quote: q, value: null, stale: true, note: `Delisted — last price ${q.price} on ${fmtIst(q.at)} is not used; enter a confirmed value` };
+  const flag = status === "suspended" ? "Trading suspended · last traded price · " : status === "illiquid" ? "Thinly traded · " : "";
+  return { holding: h, key, quote: q, value: Math.round(h.quantity * q.price * share * 100) / 100, stale: status === "suspended" || isStale(q, now, h.kind, alerts.staleNavDays), note: `${flag}${FRESHNESS_LABEL[q.freshness]} · ${q.provider} · price ${fmtIst(q.at)} · fetched ${fmtIst(q.refreshedAt)}` };
 }
 
 export interface NetWorthPart { label: string; value: number; basis: string; live: boolean; asOf?: string | null }

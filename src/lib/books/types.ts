@@ -110,10 +110,13 @@ export interface Holding {
   /** Physical gold: grams and purity in karat. */
   grams?: number | undefined; karat?: number | undefined;
   costBasis?: number | undefined; source: string;
+  /** v6.1 §4 — exchange trading status as published by the exchange or statement. */
+  tradingStatus?: TradingStatus | undefined;
 }
+export type TradingStatus = "active" | "suspended" | "delisted" | "illiquid";
 /** v6.1 §5 — a price as delivered, never relabelled. */
 export type Freshness = "live" | "delayed" | "eod" | "nav" | "manual" | "statement";
-export interface Quote { key: string; price: number; at: string; provider: string; freshness: Freshness; refreshedAt: string; failedAt?: string | undefined }
+export interface Quote { key: string; price: number; at: string; provider: string; freshness: Freshness; refreshedAt: string; failedAt?: string | undefined; tradingStatus?: TradingStatus | undefined }
 export interface Snapshot { date: Iso; netWorth: number; portfolio: number; liquid: number; liabilities: number; allocation: Record<string, number>; invested?: number | undefined; demat?: number | undefined; dematCount?: number | undefined; flows?: number | undefined; pricesAsOf?: string | null | undefined }
 export interface AlertSettings { portfolioMovePct: number; staleNavDays: number; missingPrices: boolean; corporateActions: boolean; quantityMismatch: boolean; unusualValuationPct: number }
 export interface GoldRate { perGram24k: number; date: Iso; source: string }
