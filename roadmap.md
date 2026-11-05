@@ -1,6 +1,7 @@
 ## Ledgerline v6.0 + v6.1 gap closure (4 Nov 2026)
 - [x] Customer invoices vs receipts on Audit; bonus/split/merger quantities and opening quantities in holding checks (never guessed); printed opening book/tax WDV kept from asset documents. 115 books tests pass.
 - [ ] Remaining checklist ranks 1–8, 12, 15 (company-level access, figure-level evidence, server approvals, typed intake writes, full tax/GST computations, official schemas, full opening trial balance, period-close evidence, acceptance suite) — continuing.
+- [ ] Fix receipt reading problem on draft 282d2ee7 (reported 5 Nov).
 - [x] Statement Desk takes every document type, with context from other pages and a visible step trail; failed saves keep nothing.
 - [x] DocuRepo: fact sources and confidence, one file linked to many records, automatic names, folders, company/year/registration filters, retention list, ZIP export with manifest.
 - [x] Companies from documents (matched by PAN/CIN/GSTIN), past-year audited accounts with opening balances, flagged missing schedules, losses carried forward.
