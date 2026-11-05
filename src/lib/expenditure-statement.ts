@@ -54,7 +54,7 @@ export interface RegisterRow {
   sno: number; id: string; date: string; particulars: string; category: string; merchant: string; method: string; source: string; payer: string; payerKind: PayerKind;
   currency: string; original: number; inr: number; allocated: number; businessShare: number; personalShare: number; workspaces: string;
   eligible: number; reimbursed: number; outstanding: number; rejected: number; status: string; billRef: string; refund: boolean;
-  items: { name: string; quantity: number; amount: number }[]; itemsReconcile: boolean; roundOff: number;
+  items: { name: string; quantity: number; amount: number }[]; charges: { label: string; amount: number }[]; itemsReconcile: boolean; roundOff: number;
 }
 export interface Statement {
   reference: string; title: string; subjectName: string; workspace: string; organisation: string; purpose: string; start: string; end: string; prepared: string; currency: "INR";
@@ -88,14 +88,15 @@ export function buildStatement(input: {
     e.receipts.forEach((r, j) => { const no = `A-${String(annexures.length + 1).padStart(2, "0")}`; refs.push(no); annexures.push({ no, row: i + 1, receiptIndex: j, path: r.path, name: r.name, type: r.type, merchant: e.merchant || e.title, date: e.date, amount: e.originalAmount, docType: docType(r.type, r.name) }); });
     const items = e.receiptDetails?.items ?? [];
     const roundOff = receiptRoundOffFor(e).amount;
-    const itemsTotal = r2(items.reduce((s, x) => s + x.amount, 0) + (e.receiptDetails?.tax ?? 0) + (e.receiptDetails?.tip ?? 0) + roundOff);
+    const charges = e.receiptDetails?.charges ?? [];
+    const itemsTotal = r2(items.reduce((s, x) => s + x.amount, 0) + charges.reduce((s, c) => s + c.amount, 0) + (e.receiptDetails?.tax ?? 0) + (e.receiptDetails?.tip ?? 0) + roundOff);
     return {
       sno: i + 1, id: e.id, date: e.date, particulars: e.title || e.description || NOT_RECORDED, category: e.category || NOT_RECORDED, merchant: e.merchant || NOT_RECORDED,
       method: p.method, source: p.source, payer: p.payer, payerKind: p.payerKind, currency: e.currency, original: r2(sign * e.originalAmount), inr,
       allocated: inr, businessShare: r2(sign * biz), personalShare: r2(inr - sign * biz), workspaces: parts.map((x) => `${SCOPE_LABEL[x.workspace as Scope]} ${x.amount.toFixed(2)}`).join(" + "),
       eligible, reimbursed, outstanding, rejected, status: stage ? stage.replace(/_/g, " ") : sign < 0 ? "Refund" : "Not claimed",
       billRef: refs.length ? refs.join(", ") : "Bill Not Attached", refund: sign < 0,
-      items, roundOff, itemsReconcile: items.length > 0 && (Math.abs(itemsTotal - e.originalAmount) < 0.5 || Math.abs(r2(itemsTotal - (e.receiptDetails?.tax ?? 0)) - e.originalAmount) < 0.5),
+      items, charges, roundOff, itemsReconcile: items.length > 0 && (Math.abs(itemsTotal - e.originalAmount) < 0.5 || Math.abs(r2(itemsTotal - (e.receiptDetails?.tax ?? 0)) - e.originalAmount) < 0.5),
     };
   });
   const sumBy = (f: (r: RegisterRow) => number) => r2(rows.reduce((s, r) => s + f(r), 0));

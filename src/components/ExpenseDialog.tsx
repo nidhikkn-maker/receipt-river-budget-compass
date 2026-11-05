@@ -58,10 +58,12 @@ export function ExpenseDialog({ expense, onClose }: { expense: Expense | null; o
           )}
         </div>
         {e.receiptDetails?.tax != null && <p className="text-sm">Tax included: <span className="font-mono">{money(e.receiptDetails.tax,e.currency)}</span></p>}
+        {(e.receiptDetails?.charges ?? []).map((c, i) => <p key={`c${i}`} className="text-sm">{c.label}: <span className="font-mono">{c.amount < 0 ? "−" : ""}{money(Math.abs(c.amount), e.currency)}</span></p>)}
+        {(e.receiptDetails?.taxParts?.length ?? 0) > 0 && <p className="text-xs text-muted-foreground">{e.receiptDetails!.taxParts!.map((t) => `${t.label}${t.rate != null ? ` ${t.rate}%` : ""} ${t.amount.toFixed(2)}`).join(" · ")}</p>}
         {e.receiptDetails?.tip != null && <p className="text-sm">Tip included: <span className="font-mono">{money(e.receiptDetails.tip,e.currency)}</span></p>}
         {(() => { const r = receiptRoundOffFor(e); if (!r.amount) return null; const d = e.receiptDetails;
           return <><p className="text-sm">Round-off: <span className="font-mono">{r.amount > 0 ? "+" : "−"}{money(Math.abs(r.amount),e.currency)}</span> <span className="text-muted-foreground">({r.source === "implied" ? "bill rounded to nearest rupee" : "round-off on bill"})</span></p>
-          {d?.subtotal != null && <p className="text-xs text-muted-foreground font-mono">Subtotal {d.subtotal.toFixed(2)}{d.tax ? ` + Tax ${d.tax.toFixed(2)}` : ""}{d.tip ? ` + Tip ${d.tip.toFixed(2)}` : ""} {r.amount > 0 ? "+" : "−"} Round-off {Math.abs(r.amount).toFixed(2)} = {e.originalAmount.toFixed(2)}</p>}</>; })()}
+          {d?.subtotal != null && <p className="text-xs text-muted-foreground font-mono">Subtotal {d.subtotal.toFixed(2)}{(d.charges ?? []).map((c) => ` ${c.amount < 0 ? "−" : "+"} ${c.label} ${Math.abs(c.amount).toFixed(2)}`).join("")}{d.tax ? ` + Tax ${d.tax.toFixed(2)}` : ""}{d.tip ? ` + Tip ${d.tip.toFixed(2)}` : ""} {r.amount > 0 ? "+" : "−"} Round-off {Math.abs(r.amount).toFixed(2)} = {e.originalAmount.toFixed(2)}</p>}</>; })()}
         {!!e.receiptDetails?.items?.length && <ul className="divide-y">{e.receiptDetails.items.map((item,i)=><li key={i} className="flex justify-between gap-3 py-2 text-sm"><span>{item.name} × {item.quantity}</span><span className="font-mono">{money(item.amount,e.currency)}</span></li>)}</ul>}
         <ScopeToggle value={scope} onChange={changeScope} />
         {e.description && <p className="text-sm">{e.description}</p>}
