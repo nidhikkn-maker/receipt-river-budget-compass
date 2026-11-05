@@ -686,3 +686,7 @@
 - [x] A1 Opening-balance workflow posting dated opening entries
 - [x] A2 Accountant-ready income tax handoff
 - [ ] B–H batches per plan
+
+## One-run finish (5 Nov 2026) — checklist in Files: Ledgerline_v6_Requirements_Checklist.md
+- [x] Statements from any page → Statement Desk; originals kept in DocuRepo; incomplete asset/lease suggestions editable; demat no-zero prices; fund/exchange price-type check; ownership-aware cost alert; Home as-of dates; deposit-sized receipts wait for confirmation.
+- [ ] Remaining large items (see checklist top-15 + v6.1 list): company-level access control, figure-level evidence on every register value, server-enforced approvals, typed intake writes, full tax/GST computations and official schemas, full opening trial balance, customer/supplier reconciliation, closed-period evidence, asset lifecycle journals, corporate actions, acceptance suite.
