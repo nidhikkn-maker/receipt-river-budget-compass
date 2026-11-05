@@ -128,7 +128,7 @@ export function itrComputationJson(p: { fy: string; pan: string | null; name: st
 /** Suggested ITR form from income heads and entity kind [§46]. */
 export function suggestItrForm(kind: string, c: TaxComputation): string {
   if (kind === "company") return "ITR-6";
-  if (kind === "firm" || kind === "llp") return "ITR-5";
+  if (kind === "partnership" || kind === "llp") return "ITR-5";
   if (kind === "trust") return "ITR-7";
   if (c.business.receipts > 0 || c.business.net !== 0) return "ITR-3";
   if (c.capitalGains.short || c.capitalGains.long || c.total > 5000000 || c.houseProperty.net < 0) return "ITR-2";
