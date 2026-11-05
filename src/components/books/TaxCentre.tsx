@@ -21,6 +21,8 @@ import { taxComputation } from "@/lib/books/taxcomp";
 import { CREDIT_LABEL, creditsFor, itcReview, ledgerTaxPayments, obligations, ruleImpact, type CreditKind } from "@/lib/books/compliance";
 import { entityLiability, individualLiability, itrComputationJson, suggestItrForm, DEDUCTION_CAP } from "@/lib/books/tax-full";
 import type { TaxDeduction } from "@/lib/books/types";
+import { classifyPayment, fromEntities, withEntityIncome, type EntityFacts } from "@/lib/books/from-entities";
+import { fyOf } from "@/lib/entities";
 
 const inr = (n: number) => "₹" + n.toLocaleString("en-IN", { maximumFractionDigits: 0 });
 const today = () => new Date().toISOString().slice(0, 10);
@@ -255,7 +257,31 @@ export function TaxComputationCard({ fy }: { fy: string }) {
   const accountIds = ent ? new Set(books.entityAccounts?.[ent.id] ?? []) : null;
   const gains = ent ? [] : (demat ?? []).flatMap((d) => d.holdings.flatMap((h) => h.gains));
   const companyAccounts = new Set(Object.values(books.entityAccounts ?? {}).flat());
-  const c = taxComputation(fy, transactions, preferences.assets ?? [], books.leases, gains, books.fyRecords, ent?.id, accountIds ? { accountIds } : undefined, ent ? undefined : { accountIds: companyAccounts }, (() => { const xs = (books.salaryEvidence ?? []).filter((x) => x.entityId === (ent?.id ?? "personal") && x.fy === fy); return xs.length ? xs.reduce((s, x) => s + x.amount, 0) : null; })(), books.rules);
+  const cBase = taxComputation(fy, transactions, preferences.assets ?? [], books.leases, gains, books.fyRecords, ent?.id, accountIds ? { accountIds } : undefined, ent ? undefined : { accountIds: companyAccounts }, (() => { const xs = (books.salaryEvidence ?? []).filter((x) => x.entityId === (ent?.id ?? "personal") && x.fy === fy); return xs.length ? xs.reduce((s, x) => s + x.amount, 0) : null; })(), books.rules);
+  // Personal: add what each business legally contributes (proprietor profit, partner remuneration/interest, company salary/dividend/deemed dividend).
+  const entityLines = useMemo(() => {
+    if (ent) return [];
+    const ownerOfAcc = new Map<string, string>(); for (const [eid, ids] of Object.entries(books.entityAccounts ?? {})) for (const id of ids) ownerOfAcc.set(id, eid);
+    const facts: EntityFacts[] = entities.filter((e) => e.kind === "proprietorship" || e.kind === "partnership" || e.kind === "llp" || e.kind === "company").map((e) => {
+      const ids = new Set(books.entityAccounts?.[e.id] ?? []);
+      const profit = ids.size ? taxComputation(fy, transactions, preferences.assets ?? [], books.leases, [], books.fyRecords, e.id, { accountIds: ids }).business.net : 0;
+      const paid = { salary: 0, remuneration: 0, capitalInterest: 0, dividend: 0, loans: 0, rent: 0, interest: 0 };
+      const nm = e.name.trim().toLowerCase();
+      for (const t of transactions) {
+        if (fyOf(t.date) !== fy) continue;
+        const type = t.txnType ?? "expense";
+        const text = `${t.title} ${t.merchant ?? ""} ${t.description} ${t.category}`;
+        const fromCo = type === "transfer" && t.accountId && ownerOfAcc.get(t.accountId) === e.id && t.toAccountId && !ownerOfAcc.has(t.toAccountId);
+        const incomeNamed = type === "income" && !(t.accountId && ownerOfAcc.has(t.accountId)) && nm.length > 2 && text.toLowerCase().includes(nm);
+        if (!fromCo && !incomeNamed) continue;
+        const k = classifyPayment(text, type); if (k) paid[k] += t.amount;
+      }
+      const me = (e.shareholding ?? []).length === 1 ? e.shareholding![0]!.pct : null;
+      return { entity: e, profit, paid, holdingPct: me };
+    });
+    return fromEntities(facts);
+  }, [ent, entities, books, transactions, fy, preferences.assets]);
+  const c = withEntityIncome(cBase, entityLines);
   const profile = ent ? books.taxProfiles.find((p) => p.entityId === ent.id) : undefined;
   const personal = !ent || ent.kind === "individual" || ent.kind === "huf";
   // A company/person needs a confirmed profile; "You (personal)" has no entity record and uses the new regime unless an individual profile exists.
@@ -278,6 +304,9 @@ export function TaxComputationCard({ fy }: { fy: string }) {
       <div className="space-y-2 text-sm">
         {entities.length > 0 && <select aria-label="Whose tax" className="w-full rounded-md border bg-background px-2 py-1 text-sm" value={who} onChange={(e) => setWho(e.target.value)}><option value="">You (personal)</option>{entities.map((e) => <option key={e.id} value={e.id}>{e.name}</option>)}</select>}
         {ent && accountIds && accountIds.size === 0 && <p className="text-xs text-destructive">No accounts are linked to {ent.name} yet — link them in its tax profile below. Until then nothing is counted for it.</p>}
+        {!ent && entityLines.length > 0 && <div className="rounded-xl border p-3 text-xs"><p className="font-semibold">From your companies</p>
+          {entityLines.map((l, k) => <p key={k} className="flex justify-between gap-2"><span className="break-words">{l.name} · {l.basis}</span>{l.head !== "flag" && <b className="shrink-0">{l.head === "exempt" ? "exempt " : ""}{inr(l.amount)}</b>}</p>)}
+          <p className="mt-1 text-[11px] text-muted-foreground">A company's own profit is taxed in the company, not in your hands. Draft for your accountant — nothing is filed.</p></div>}
         {unconfirmed && <p className="text-xs text-destructive">Confirm {ent!.name}'s tax profile (regime and GST scheme) below before this working is used.</p>}
         <div className="divide-y rounded-xl border">{rows.map(([k, v]) => <div key={k} className="flex justify-between gap-2 px-3 py-2 text-xs"><span>{k}</span><b className="shrink-0">{inr(v)}</b></div>)}</div>
         {liab ? <div className="rounded-xl border p-3 text-xs"><p className="font-semibold">Tax worked out · {liab.regime === "new" ? "new regime" : liab.regime === "old" ? "old regime" : ent ? ENTITY_KINDS[ent.kind].label : ""} · suggested form {itrForm}</p>
