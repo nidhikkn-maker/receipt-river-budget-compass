@@ -10,3 +10,9 @@ describe("trading status", () => {
   it("suspended keeps last price but marks stale", () => { const v = run("suspended"); expect(v.value).toBe(1000); expect(v.stale).toBe(true); expect(v.note).toMatch(/suspended/); });
   it("delisted is not valued", () => { expect(run("delisted").value).toBeNull(); });
 });
+describe("broker cash", () => {
+  it("counts the rupee amount without a price", () => {
+    const v = valueHolding({ id: "c", kind: "broker_cash", name: "ICICI Direct ledger", quantity: 25000, sharePct: 100, source: "statement" } as never, [], undefined, now, a);
+    expect(v.value).toBe(25000);
+  });
+});
