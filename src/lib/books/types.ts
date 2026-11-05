@@ -119,7 +119,7 @@ export interface AlertSettings { portfolioMovePct: number; staleNavDays: number;
 export interface GoldRate { perGram24k: number; date: Iso; source: string }
 
 /** Tax & GST [§45–48]. */
-export interface TaxProfile { entityId: string; regime: "new" | "old"; obligations: string[]; gstScheme: "regular" | "composition" | "qrmp" | "none"; auditRequired: boolean; hasBusiness?: boolean | undefined; confirmedAt?: string | undefined }
+export interface TaxProfile { entityId: string; regime: "new" | "old"; obligations: string[]; gstScheme: "regular" | "composition" | "qrmp" | "none"; auditRequired: boolean; hasBusiness?: boolean | undefined; confirmedAt?: string | undefined; companyOption?: "115BAA" | "115BAB" | "normal25" | "normal30" | undefined }
 export interface GstInvoice {
   id: string; gstin: string; kind: "sales" | "purchase"; number: string; date: Iso; party: string; partyGstin: string;
   taxable: number; igst: number; cgst: number; sgst: number; cess: number; docId?: string | undefined; transactionId?: string | undefined;
@@ -160,7 +160,10 @@ export interface BooksData {
   salaryEvidence?: { entityId: string; fy: string; amount: number; docId: string }[] | undefined;
   /** Frozen accountant handoffs (ZIP kept in DocuRepo) with their status [§46]. */
   itrHandoffs?: import("./itr-handoff").HandoffRecord[] | undefined;
+  /** Old-regime deductions the owner has evidence for, per entity and FY [§46]. */
+  taxDeductions?: TaxDeduction[] | undefined;
 }
+export interface TaxDeduction { id: string; entityId: string; fy: string; section: "80C" | "80CCD1B" | "80D" | "80E" | "80G" | "80TTA" | "other"; amount: number; evidence: string }
 export interface SavedDraft { id: string; form: string; period: string; ref: string; createdAt: string; data: unknown }
 
 export const DEFAULT_ALERTS: AlertSettings = { portfolioMovePct: 5, staleNavDays: 3, missingPrices: true, corporateActions: true, quantityMismatch: true, unusualValuationPct: 20 };
@@ -206,6 +209,7 @@ export function cleanBooks(raw: unknown): BooksData {
     salaryEvidence: arr<{ entityId: string; fy: string; amount: number; docId: string }>(r["salaryEvidence"], (x) => typeof x.entityId === "string" && typeof x.fy === "string" && fin(x.amount), 500),
     itrHandoffs: arr<import("./itr-handoff").HandoffRecord>(r["itrHandoffs"], (x) => typeof x.id === "string" && typeof x.docId === "string" && typeof x.fy === "string" && ["prepared", "sent", "questions", "filed"].includes(x.status), 500),
     savedDrafts: arr<SavedDraft>(r["savedDrafts"], (x) => typeof x.id === "string" && typeof x.form === "string" && typeof x.period === "string", 500),
+    taxDeductions: arr<TaxDeduction>(r["taxDeductions"], (x) => typeof x.id === "string" && typeof x.entityId === "string" && typeof x.fy === "string" && fin(x.amount) && x.amount > 0 && typeof x.evidence === "string" && x.evidence.trim().length >= 3, 1000),
     taxCredits: arr<TaxCredit>(r["taxCredits"], (x) => typeof x.id === "string" && typeof x.entityId === "string" && typeof x.fy === "string" && fin(x.amount) && x.amount > 0 && ["tds", "tcs", "advance", "self_assessment"].includes(x.kind), 2000),
   };
 }
