@@ -839,18 +839,20 @@ html[data-theme="apple-glass"] :where(.bg-card, .bg-popover, .bg-ink) {
 
 /* ---- New expense: "paper receipt" look. Tokens follow the active theme's primary/gold. ---- */
 :root {
-  --receipt-desk: color-mix(in oklab, var(--primary) 82%, black);
-  --receipt-desk-foreground: oklch(0.96 0.01 90);
+  --receipt-desk: oklch(1 0 0);
+  --receipt-desk-foreground: oklch(0.24 0.03 255);
   --receipt-paper: oklch(0.955 0.012 85);
   --receipt-ink: oklch(0.24 0.03 255);
   --receipt-muted: oklch(0.5 0.02 255);
   --receipt-rule: oklch(0.72 0.02 255);
   --receipt-chip: color-mix(in oklab, var(--receipt-desk-foreground) 12%, transparent);
-  --receipt-shadow: 0 18px 40px -18px oklch(0 0 0 / 0.55);
+  --receipt-shadow: 0 10px 28px -14px oklch(0 0 0 / 0.28), 0 0 0 1px oklch(0 0 0 / 0.06);
   --receipt-font: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, "DejaVu Sans Mono", "Liberation Mono", monospace, "Noto Sans Tamil";
 }
 .dark {
   --receipt-desk: oklch(0.16 0.025 255);
+  --receipt-desk-foreground: oklch(0.96 0.01 90);
+  --receipt-shadow: 0 18px 40px -18px oklch(0 0 0 / 0.55);
   --receipt-paper: oklch(0.27 0.012 85);
   --receipt-ink: oklch(0.93 0.01 85);
   --receipt-muted: oklch(0.72 0.015 85);
