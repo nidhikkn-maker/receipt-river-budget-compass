@@ -7,6 +7,7 @@ No sign-in, real records, Cloud requests, or production preference writes.
 Evidence is written to /tmp/browser/statement-desk-tests/.
 """
 import json
+import subprocess
 import unittest
 from pathlib import Path
 from urllib.parse import urlparse
@@ -83,9 +84,14 @@ class StatementDeskFlow(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(len(await self.page.evaluate("deskFixture.removes")), 2)
 
     async def test_saved_statement_reports_balance_match(self):
-        csv = "Date,Description,Debit,Credit,Balance\n2026-10-02,SWIGGY ORDER,250.00,,750.00\n2026-10-03,AMAZON PURCHASE,480.00,,270.00\n"
-        await self.page.get_by_label("Statement files").set_input_files(files=[{"name": "balanced.csv", "mimeType": "text/csv", "buffer": csv.encode()}])
+        pdf = EVIDENCE / "balanced.pdf"
+        subprocess.run(["bun", str(Path(__file__).parent / "make_balanced_statement.ts"), str(pdf)], check=True)
+        await self.page.get_by_label("Statement files").set_input_files(files=[{"name": "balanced.pdf", "mimeType": "application/pdf", "buffer": pdf.read_bytes()}])
         await self.page.locator("select").first.select_option("desk-account")
+        await expect(self.page.get_by_text("Statement balances: opening + entries = printed closing.")).to_be_visible()
+        accept = self.page.get_by_role("button", name="Accept all 2 asking items")
+        if await accept.count():
+            await accept.click()
         await self.page.get_by_role("button", name="Apply everything (2 to save)").click()
         await expect(self.page.get_by_role("button", name="Undo this upload (2 posted)")).to_be_visible()
         events = await self.page.evaluate("deskEvents")
