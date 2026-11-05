@@ -113,7 +113,7 @@ function StatementDeskPage() {
   const { accounts, transactions, preferences } = store;
   const live = accounts.filter((a) => !a.archived);
 
-  const add = async (list: FileList | File[] | null) => {
+  const add = async (list: FileList | File[] | null, asStatement = false) => {
     if (!list?.length) return;
     setBusy(true);
     setErrors([]);
@@ -125,7 +125,7 @@ function StatementDeskPage() {
         if (inv) { setInvest((p) => [...p.filter((x) => x.file.name !== f.name), { key: `${f.name}-${f.size}-${f.lastModified}`, file: f, doc: inv }]); continue; }
         const asDoc = () => setDocs((p) => [...p.filter((x) => x.file.name !== f.name), { key: `${f.name}-${f.size}-${f.lastModified}`, file: f }]);
         const docLike = /\.(pdf|png|jpe?g|webp)$/i.test(f.name);
-        if (context && context !== "investments" && docLike) { asDoc(); continue; }
+        if (!asStatement && context && context !== "investments" && docLike) { asDoc(); continue; }
         let read: Awaited<ReturnType<typeof readStatementFile>>;
         try { read = await readStatementFile(f, serverRead); }
         catch (e) { if (docLike) { asDoc(); continue; } throw e; }
@@ -370,7 +370,7 @@ function StatementDeskPage() {
         {errors.length > 0 && <ul className="space-y-1 text-sm text-destructive" role="alert">{errors.map((e) => <li key={e}>{e}</li>)}</ul>}
 
         <UnfinishedRuns active={docs.map((d) => d.resume?.runId ?? d.key)} onResume={(file, resume, ctx) => setDocs((p) => [...p.filter((y) => y.resume?.runId !== resume.runId), { key: resume.runId, file, resume, context: parseContext(ctx) }])} />
-        {docs.map((x) => <DocumentIntake key={x.key} file={x.file} context={x.context ?? context} resume={x.resume} replacesId={replaces} onClose={() => setDocs((p) => p.filter((y) => y.key !== x.key))} />)}
+        {docs.map((x) => <DocumentIntake key={x.key} file={x.file} context={x.context ?? context} resume={x.resume} replacesId={replaces} onClose={() => setDocs((p) => p.filter((y) => y.key !== x.key))} onStatement={() => { setDocs((p) => p.filter((y) => y.key !== x.key)); void add([x.file], true); }} />)}
         {invest.map((x) => <InvestmentReview key={x.key} file={x.file} doc={x.doc} onClose={() => setInvest((p) => p.filter((y) => y.key !== x.key))} onUploadMore={() => inputRef.current?.click()} />)}
 
         {loaded.length > 0 && (
