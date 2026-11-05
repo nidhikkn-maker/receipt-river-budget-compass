@@ -1,5 +1,10 @@
 # Company tracking, tax profiles and accountant tax workpaper
 
+## 0. Add expense page: always white (first)
+The white background is already in place, but only when your phone is in light mode. In dark mode the page is still navy blue, and the published site hasn't received the change yet.
+- Make the Add expense page white in dark mode too, with dark text and the cream receipt card, so it looks the same everywhere.
+- Publish once you approve, so the published site and your phone show it.
+
 ## 1. Usage tracking (company workflows)
 Record three moments so you can see how often each workflow is used:
 - **Company created**: from the Companies page, from "Belongs to" in account settings, or suggested during a statement upload. Records where it was created and the company type.
