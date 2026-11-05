@@ -1,3 +1,4 @@
+import { effectiveEntity } from "@/lib/books/entity-accounts";
 import { SectionTabs } from "@/components/SectionTabs";
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
@@ -83,7 +84,7 @@ function Reports() {
       return { name, spent, limit, remaining: limit === undefined ? 0 : Math.round((limit - spent) * 100) / 100, pct: limit && limit > 0 ? Math.round(spent / limit * 1000) / 10 : 0 };
     });
   })();
-  const report = (k: ReportKind) => buildReport(k, filtered, memberName, budgets, { departmentBudgets, budgetMonth, claims: transactions, accountName: id => accounts.find(a => a.id === id)?.name ?? "Unassigned" });
+  const report = (k: ReportKind) => buildReport(k, filtered, memberName, budgets, { departmentBudgets, budgetMonth, claims: transactions, accountName: id => accounts.find(a => a.id === id)?.name ?? "Unassigned", ...((preferences.entities ?? []).length ? { companyOf: (e: import("@/lib/expenses").Expense) => { const k = effectiveEntity(e, preferences.books?.entityAccounts ?? {}); return k ? (preferences.entities ?? []).find(x => x.id === k)?.name ?? "" : "Personal"; } } : {}) });
   const csv = (k: ReportKind) => void deliverFile(new Blob(["\uFEFF", toCsv(report(k))], { type: "text/csv;charset=utf-8" }), `ledgerline-${k}-${stamp}.csv`).catch(() => toast.error("Couldn't download the CSV"));
   const pdf = async (k: ReportKind) => {
     const r = report(k), key = JSON.stringify([r, subtitle]);

@@ -7,7 +7,7 @@ export interface Report { title: string; headers: string[]; rows: (string | numb
 
 const fmt = (n: number) => n.toFixed(2);
 
-export function buildReport(kind: ReportKind, transactions: Expense[], memberName: (id: string | null) => string, budgets: Budgets, options: { departmentBudgets?: Record<string, number>; budgetMonth?: string; claims?: Expense[]; accountName?: (id: string | null) => string } = {}): Report {
+export function buildReport(kind: ReportKind, transactions: Expense[], memberName: (id: string | null) => string, budgets: Budgets, options: { departmentBudgets?: Record<string, number>; budgetMonth?: string; claims?: Expense[]; accountName?: (id: string | null) => string; companyOf?: (e: Expense) => string } = {}): Report {
   const expenses = transactions.filter((e) => (e.txnType ?? "expense") === "expense");
   if (kind === "reimbursement-payments") {
     const claims = options.claims ?? transactions;
