@@ -38,6 +38,11 @@ describe("tax workpaper", () => {
 });
 
 describe("company tax profile per year", () => {
+  it("survives the saved-preferences clean-up on reload", async () => {
+    const { cleanBooks } = await import("./types");
+    const b = cleanBooks({ entityTaxProfiles: [{ id: "1", entityId: "e", fy: "2025-26", ownershipPct: 75 }, { id: "bad", entityId: "e", fy: "x" }] });
+    expect(b.entityTaxProfiles?.map((x) => x.id)).toEqual(["1"]);
+  });
   it("one entry per company and year; upsert replaces", () => {
     let l = upsertTaxYear([], { id: "1", entityId: "e", fy: "2025-26", ownershipPct: 60 });
     l = upsertTaxYear(l, { id: "2", entityId: "e", fy: "2025-26", ownershipPct: 70 });
