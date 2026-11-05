@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { ExtractedReceiptSchema, ReceiptDetailsSchema, receiptConfidence, receiptRoundOff, receiptRoundOffFor, receiptBreakdownError, receiptItemConfidence, receiptItemReviewReasons, receiptItemsToReview, receiptItemTotalError, receiptReviewCheck, receiptReviewSignature, type ReceiptAmounts } from "./receipt-reading";
 import { validateExpense, type ExpenseInput } from "./expenses";
 
-const read = { title: "Cafe", merchant: "Cafe", date: "2026-11-02", amount: 432.10, subtotal: 360, tax: 32.10, tip: 40, confidence: { merchant: "high", date: "low", total: "medium" }, items: [], text: "Cafe", currency: "INR", payment_method: null, description: null, category: "Food and beverages", scope: "personal" };
+const read = { title: "Cafe", merchant: "Cafe", date: "2026-11-02", amount: 432.10, subtotal: 360, tax: 32.10, tip: 40, round_off: null, confidence: { merchant: "high", date: "low", total: "medium" }, items: [], text: "Cafe", currency: "INR", payment_method: null, description: null, category: "Food and beverages", scope: "personal" };
 describe("receipt reading", () => {
   it("preserves separate item name and amount confidence in extracted and saved metadata", () => {
     const item = { name: "Dinner", quantity: 2, amount: 360, confidence: { name: "high", amount: "low" } };
@@ -158,5 +158,13 @@ describe("receiptRoundOffFor", () => {
   });
   it("gives none for decimal currencies", () => {
     expect(receiptRoundOffFor({ originalAmount: 11, currency: "USD", receiptDetails: { subtotal: 10, tax: 0.86 } }).amount).toBe(0);
+  });
+});
+
+import { z as zz } from "zod";
+describe("receipt request format", () => {
+  it("lists every field as required so strict AI reading is accepted", () => {
+    const s = zz.toJSONSchema(ExtractedReceiptSchema) as { properties: Record<string, unknown>; required: string[] };
+    expect(Object.keys(s.properties).filter((k) => !s.required.includes(k))).toEqual([]);
   });
 });
