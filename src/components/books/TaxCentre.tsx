@@ -19,7 +19,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { useBooks, useDemat } from "./useBooks";
 import { taxComputation } from "@/lib/books/taxcomp";
 import { CREDIT_LABEL, creditsFor, itcReview, ledgerTaxPayments, obligations, ruleImpact, type CreditKind } from "@/lib/books/compliance";
-import { estimateTax, rulesFor } from "@/lib/tax-rules";
 import { entityLiability, individualLiability, itrComputationJson, suggestItrForm, DEDUCTION_CAP } from "@/lib/books/tax-full";
 import type { TaxDeduction } from "@/lib/books/types";
 
@@ -258,12 +257,10 @@ export function TaxComputationCard({ fy }: { fy: string }) {
   const companyAccounts = new Set(Object.values(books.entityAccounts ?? {}).flat());
   const c = taxComputation(fy, transactions, preferences.assets ?? [], books.leases, gains, books.fyRecords, ent?.id, accountIds ? { accountIds } : undefined, ent ? undefined : { accountIds: companyAccounts }, (() => { const xs = (books.salaryEvidence ?? []).filter((x) => x.entityId === (ent?.id ?? "personal") && x.fy === fy); return xs.length ? xs.reduce((s, x) => s + x.amount, 0) : null; })(), books.rules);
   const profile = ent ? books.taxProfiles.find((p) => p.entityId === ent.id) : undefined;
-  const { rules } = rulesFor(fy);
   const personal = !ent || ent.kind === "individual" || ent.kind === "huf";
   // A company/person needs a confirmed profile; "You (personal)" has no entity record and uses the new regime unless an individual profile exists.
   const regime = ent ? profile?.regime : "new";
   const unconfirmed = !!ent && !(profile?.regime && profile.gstScheme);
-  const slabTax = !unconfirmed && personal && regime === "new" ? estimateTax(c.total - c.capitalGains.long - c.capitalGains.short, rules) : null;
   const creditKey = ent?.id ?? "personal";
   const cr = creditsFor(books.taxCredits ?? [], creditKey, fy);
   const dedLines = (books.taxDeductions ?? []).filter((d) => d.entityId === creditKey && d.fy === fy);
@@ -271,6 +268,7 @@ export function TaxComputationCard({ fy }: { fy: string }) {
   const liab = unconfirmed ? null : personal ? individualLiability(c, fy, (regime ?? "new") as "new" | "old", dedLines, cr.total) : entityLiability(c, ent!.kind === "company" ? "company" : "firm", profile?.companyOption, cr.total);
   const other = !unconfirmed && personal ? individualLiability(c, fy, regime === "old" ? "new" : "old", dedLines, cr.total) : null;
   const itrForm = suggestItrForm(ent?.kind ?? "individual", c);
+  const slabTax = liab?.total ?? null;
   const recordedTx = new Set((books.taxCredits ?? []).map((x) => x.transactionId).filter(Boolean));
   const challans = ledgerTaxPayments(accountIds ? transactions.filter((t) => t.accountId && accountIds.has(t.accountId)) : transactions, fy).filter((t) => !recordedTx.has(t.id));
   const rows: [string, number][] = [["Salary", c.salary], ["House property (rent − 30% − interest, loss capped ₹2L)", c.houseProperty.net], ["Business / profession", c.business.net], ["Short-term capital gains", c.capitalGains.short], ["Long-term capital gains", c.capitalGains.long], ["Other sources (interest, dividends)", c.otherSources], ["Gross total income", c.gross], ["Losses brought forward set off", c.lossesSetOff ? -c.lossesSetOff : 0], ["Total income", c.total]];
@@ -299,7 +297,6 @@ export function TaxComputationCard({ fy }: { fy: string }) {
         <div className="rounded-xl border p-3 text-xs">
           <p className="font-semibold">Taxes already paid · {inr(cr.total)}</p>
           {cr.lines.map((l) => <p key={l.id} className="flex justify-between gap-2"><span className="break-words">{CREDIT_LABEL[l.kind]} · {l.source}</span><span className="shrink-0">{inr(l.amount)}<Button size="sm" variant="ghost" className="h-6" onClick={() => save({ taxCredits: (books.taxCredits ?? []).filter((x) => x.id !== l.id) })}>Remove</Button></span></p>)}
-          {slabTax != null && cr.total > 0 && <p className="mt-1 font-semibold">{slabTax - cr.total >= 0 ? `Balance still to pay about ${inr(slabTax - cr.total)}` : `Refund due about ${inr(cr.total - slabTax)}`} (before capital-gains tax)</p>}
           {challans.map((t) => <p key={t.id} className="mt-1 flex items-center justify-between gap-2"><span className="break-words">Bank debit {t.date}: {t.text.slice(0, 60)} · {inr(t.amount)}</span><Button size="sm" variant="outline" className="h-7 shrink-0" onClick={() => addCredit({ kind: t.kind, amount: t.amount, source: `Bank debit ${t.date}`, transactionId: t.id })}>Count as {t.kind === "self_assessment" ? "self-assessment" : "advance"} tax</Button></p>)}
           <div className="mt-2 flex flex-wrap gap-1"><select aria-label="Credit type" className="rounded-md border bg-background px-1" value={credit.kind} onChange={(e) => setCredit({ ...credit, kind: e.target.value as CreditKind })}>{(Object.keys(CREDIT_LABEL) as CreditKind[]).map((k) => <option key={k} value={k}>{CREDIT_LABEL[k]}</option>)}</select>
             <Input aria-label="Credit amount" className="h-8 w-28" type="number" placeholder="Amount" value={credit.amount} onChange={(e) => setCredit({ ...credit, amount: e.target.value })} />
