@@ -12,7 +12,7 @@ import { booksHeads, HEAD_LABEL, nextFy, openingProposal } from "@/lib/books/fy"
 import { OpeningBalances } from "./OpeningBalances";
 import { ItrHandoff } from "./ItrHandoff";
 import { REQUIRED_SCHEDULES } from "@/lib/books/intake";
-import { invoiceRegister, gstPayable, annualSummary, duplicateInvoices, gstr1, gstr1Json, gstr3b, gstr3bJson, gstr9, invoiceProblems, noteProblems, validateGstJson, matchGstPayments, unfiledPeriods } from "@/lib/books/gst";
+import { invoiceRegister, gstPayable, annualSummary, duplicateInvoices, gstr1, gstr1Json, gstr3b, gstr3bJson, gstr9, gstr9Heads, invoiceProblems, noteProblems, validateGstJson, matchGstPayments, unfiledPeriods } from "@/lib/books/gst";
 import { activateRule, OFFICIAL_SOURCES, proposeRule, ruleOn, validateRule, formFor, validateReturnDraft, ayOf } from "@/lib/books/regulatory";
 import type { GstInvoice, OpeningHead, RuleArea, TaxProfile } from "@/lib/books/types";
 import { supabase } from "@/integrations/supabase/client";
@@ -129,6 +129,7 @@ export function GstReturns({ fy }: { fy: string }) {
   const pay = matchGstPayments(months.map((m) => ({ period: m, amount: gstr3b(books.gstInvoices, gstin, m, new Set(itcReview(books.gstInvoices, gstin, m).lines.filter((l) => l.eligible).map((l) => `${l.invoice.partyGstin}|${l.invoice.number.trim().toUpperCase()}`)),books.gstAdvances).netPayable })).filter((x) => x.amount > 0), transactions.filter((t) => (t.txnType ?? "expense") === "expense").map((t) => ({ id: t.id, date: t.date, amount: t.amount, accountId: t.accountId, text: `${t.title} ${t.merchant ?? ""} ${t.description}` })), { gstin, accountIds: owner ? new Set(books.entityAccounts?.[owner.id] ?? []) : undefined });
   const annualEligible=new Set(months.flatMap(m=>itcReview(books.gstInvoices,gstin,m).lines.filter(l=>l.eligible).map(l=>`${l.invoice.partyGstin}|${l.invoice.number.trim().toUpperCase()}`)));
   const g9 = gstr9(books.gstInvoices, gstin, Number(fy.slice(0, 4)), annualEligible,books.gstAdvances);
+  const g9h = gstr9Heads(books.gstInvoices, gstin, Number(fy.slice(0, 4)), annualEligible, books.gstAdvances);
   const yr = annualSummary(books.gstInvoices, gstin, Number(fy.slice(0, 4)));
   const unfiled: { form: string; period: string; due?: string; status?: string }[] = profile ? due.filter((o) => o.status === "overdue" || o.status === "due") : unfiledPeriods(books.gstFilings, gstin, "GSTR-3B", months).map((m) => ({ form: "GSTR-3B", period: m }));
   const list = invoiceRegister(books.gstInvoices,gstin,period);
@@ -162,6 +163,10 @@ export function GstReturns({ fy }: { fy: string }) {
         {unfiled.length > 0 && <div className="text-xs"><b>Returns due</b>{unfiled.slice(0, 12).map((o) => <p key={`${o.form}${o.period}`}>{o.form} {o.period}{o.due ? ` · due ${o.due}${o.status === "overdue" ? " (overdue)" : ""}` : ""}</p>)}</div>}
         <p className="text-[11px] text-muted-foreground">ITC in the 3B draft counts only purchases with a valid supplier GSTIN and a clean tax split; confirm against the supplier-filed GSTR-2B on <Link to="/gst-check" className="underline">Suppliers & invoices</Link> before filing. Annual FY {fy}: sales {inr(yr.sales)}, output tax {inr(yr.outputTax)}, purchases {inr(yr.purchases)}, input tax {inr(yr.inputTax)}.</p>
         <div className="rounded-xl border p-3 text-xs"><p className="font-semibold">GSTR-9 working · FY {fy}</p><p>Table 4 outward: taxable {inr(g9.table4.taxable)} · tax {inr(g9.table4.tax)}</p><p>Table 6 ITC availed: {inr(g9.table6.itc)}</p><p>Table 9 tax payable {inr(g9.table9.payable)} · per monthly 3B {inr(g9.table9.paidThrough3B)}</p>{g9.checks.map((c) => <p key={c} className="text-destructive">{c}</p>)}
+          <details className="mt-1"><summary className="cursor-pointer text-muted-foreground">Per-head annual working (IGST / CGST / SGST / cess)</summary>
+            {([["Output tax", g9h.output], ["Credit claimed", g9h.itc], ["Reverse-charge cash", g9h.reverse], ["Advance tax", g9h.advance], ["Credit carried forward", g9h.carry]] as const).map(([label, h]) => <p key={label}>{label}: IGST {inr(h.igst)} · CGST {inr(h.cgst)} · SGST {inr(h.sgst)} · cess {inr(h.cess)}</p>)}
+            {g9h.checks.map((c) => <p key={c} className="text-destructive">{c}</p>)}
+          </details>
           <Button size="sm" variant="outline" className="mt-2" onClick={() => save({ savedDrafts: [...(books.savedDrafts ?? []).filter((d) => !(d.form === "GSTR-9" && d.period === fy && d.ref === gstin)), { id: crypto.randomUUID(), form: "GSTR-9", period: fy, ref: gstin, createdAt: new Date().toISOString(), data: g9 }, ...[{ form: "GSTR-1", data: r1 }, { form: "GSTR-3B", data: r3 }].map((x) => ({ id: crypto.randomUUID(), form: x.form, period, ref: gstin, createdAt: new Date().toISOString(), data: x.data }))].filter((d, i, all) => all.findIndex((o) => o.form === d.form && o.period === d.period && o.ref === d.ref) === i) })}>Save drafts for review</Button></div>
         {pay.length > 0 && <div className="text-xs"><b>GST payments</b>{pay.map((p) => <p key={p.period}>{p.period}: {inr(p.amount)} — {p.paymentId ? `paid ${p.paidOn}` : <span className="text-destructive">no matching payment found</span>}</p>)}</div>}
         <details><summary className="cursor-pointer text-muted-foreground">Invoice register · {list.length} in {period}{dups.length ? ` · ${dups.length} duplicate number${dups.length > 1 ? "s" : ""}` : ""}</summary>
