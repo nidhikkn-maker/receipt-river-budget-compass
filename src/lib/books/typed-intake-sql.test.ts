@@ -5,7 +5,8 @@ import { beforeAll, beforeEach, afterAll, it, expect } from 'vitest';
 const db = new PGlite();
 const owner='00000000-0000-0000-0000-000000000001', doc='00000000-0000-0000-0000-000000000002', op='00000000-0000-0000-0000-000000000003';
 let revision=0;
-const commit=async(data:object) =>{await db.query(`DELETE FROM document_runs WHERE data->'intakeAttempt'->>'id'=$1`,[op]);await db.query(`INSERT INTO document_runs(owner_id,data) VALUES ($1,jsonb_build_object('intakeAttempt',jsonb_build_object('id',$2::text,'documentId',$3::text,'data',$4::jsonb,'lock',true,'expected',$5::bigint)))`,[owner,op,doc,JSON.stringify(data),revision]);return db.query<{r:number}>('SELECT commit_document_intake_reviewed($1,$2,$3::jsonb,true,$4)::int r',[op,doc,JSON.stringify(data),revision]);};
+const commit=async(data:object,operation:string=op) =>{await db.query(`DELETE FROM document_runs WHERE data->'intakeAttempt'->>'id'=$1`,[operation]);await db.query(`INSERT INTO document_runs(owner_id,data) VALUES ($1,jsonb_build_object('intakeAttempt',jsonb_build_object('id',$2::text,'documentId',$3::text,'data',$4::jsonb,'lock',true,'expected',$5::bigint)))`,[owner,operation,doc,JSON.stringify(data),revision]);return db.query<{r:number}>('SELECT commit_document_intake_reviewed($1,$2,$3::jsonb,true,$4)::int r',[operation,doc,JSON.stringify(data),revision]);};
+const fresh=()=>crypto.randomUUID();
 const holding={id:'h1',name:'Printed fund',kind:'mutual_fund',quantity:50,sharePct:100,source:'Statement'};
 beforeAll(async()=>{
  await db.exec(`CREATE ROLE authenticated; CREATE ROLE anon; CREATE ROLE service_role; CREATE SCHEMA auth; CREATE FUNCTION auth.uid() RETURNS uuid LANGUAGE sql AS $$ SELECT '${owner}'::uuid $$;
@@ -60,13 +61,13 @@ it('validates nested financial-year schedules line by line',async()=>{
  const fy={id:'f1',entityId:'e1',fy:'2025-26',audited:{bank:1000,fixedAssets:5000},schedules:[],qualifications:[],filedReturns:[{form:'ITR-3',ack:'ACK1',filedOn:'2026-07-31'}],lossesCarriedForward:[{fromFy:'2024-25',kind:'business',amount:2000}],docIds:[],details:[{schedule:'profitLoss',lines:[{label:'Revenue',amount:10000,page:3,quote:'Revenue from operations'}]}]};
  await commit({books:{fyRecords:[fy]}});
  expect((await db.query<{n:number}>("SELECT jsonb_array_length(data->'books'->'fyRecords')::int n FROM finance_preferences")).rows[0]?.n).toBe(1);
- await expect(commit({books:{fyRecords:[{...fy,id:'f2',details:[{schedule:'profitLoss',lines:[{label:'',amount:1}]}]}]}})).rejects.toThrow(/schedule line/);
- await expect(commit({books:{fyRecords:[{...fy,id:'f3',details:[{schedule:'unknown',lines:[]}]}]}})).rejects.toThrow(/schedule/);
- await expect(commit({books:{fyRecords:[{...fy,id:'f4',audited:{bank:-5}}]}})).rejects.toThrow(/audited head/);
- await expect(commit({books:{fyRecords:[{...fy,id:'f5',audited:{madeUp:1}}]}})).rejects.toThrow(/audited head/);
- await expect(commit({books:{fyRecords:[{...fy,id:'f6',lossesCarriedForward:[{fromFy:'24-25',kind:'business',amount:1}]}]}})).rejects.toThrow(/carried-forward loss/);
- await expect(commit({books:{fyRecords:[{...fy,id:'f7',filedReturns:[{form:'',ack:'A',filedOn:'2026-07-31'}]}]}})).rejects.toThrow(/filed return/);
- await expect(commit({books:{fyRecords:[{...fy,id:'f8',versions:[{at:'',reason:'',audited:{}}]}]}})).rejects.toThrow(/earlier version/);
+ await expect(commit({books:{fyRecords:[{...fy,id:'f2',details:[{schedule:'profitLoss',lines:[{label:'',amount:1}]}]}]}},fresh())).rejects.toThrow(/schedule line/);
+ await expect(commit({books:{fyRecords:[{...fy,id:'f3',details:[{schedule:'unknown',lines:[]}]}]}},fresh())).rejects.toThrow(/schedule/);
+ await expect(commit({books:{fyRecords:[{...fy,id:'f4',audited:{bank:-5}}]}},fresh())).rejects.toThrow(/audited head/);
+ await expect(commit({books:{fyRecords:[{...fy,id:'f5',audited:{madeUp:1}}]}},fresh())).rejects.toThrow(/audited head/);
+ await expect(commit({books:{fyRecords:[{...fy,id:'f6',lossesCarriedForward:[{fromFy:'24-25',kind:'business',amount:1}]}]}},fresh())).rejects.toThrow(/carried-forward loss/);
+ await expect(commit({books:{fyRecords:[{...fy,id:'f7',filedReturns:[{form:'',ack:'A',filedOn:'2026-07-31'}]}]}},fresh())).rejects.toThrow(/filed return/);
+ await expect(commit({books:{fyRecords:[{...fy,id:'f8',versions:[{at:'',reason:'',audited:{}}]}]}},fresh())).rejects.toThrow(/earlier version/);
 });
 it('preserves unchanged legacy rows while validating new typed rows',async()=>{
  await db.exec(`UPDATE finance_preferences SET data='{"assets":[{"legacy":true}]}'`);
