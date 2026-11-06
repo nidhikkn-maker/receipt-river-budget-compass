@@ -50,7 +50,7 @@ function Wealth() {
         <Stat label="Owed" value={money(nw.liabilities)} />
         <Stat label="Net worth" value={money(nw.net)} />
       </div>
-
+      {canonical.quality.length > 0 && <p className="mb-5 text-xs text-destructive">{canonical.quality.join(' · ')}</p>}
       <FundPortfolio />
       <DematHoldings />
       <MarketPanel />
