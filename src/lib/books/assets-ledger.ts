@@ -5,7 +5,7 @@
  */
 import type { Asset } from "../assets";
 import type { AssetEvent, ClosedPeriod, Journal } from "./types";
-import { monthlyBook, nextMonth } from "./depreciation";
+import { monthlyBook, nextMonth, prepareJournals } from "./depreciation";
 import { closedPeriodFor } from "./periods";
 
 /** Stable UUID (v5-style, SHA-1) so a retried post finds the entry it already created. */
@@ -101,19 +101,14 @@ export { nextMonth };
  * duplicates; closed months are skipped; posting still needs the owner's approval.
  */
 export async function scheduledRun(assets: Asset[], journals: Journal[], closed: ClosedPeriod[], today: string): Promise<{ journals: Journal[]; added: Journal[]; exceptions: { assetId: string; name: string; reasons: string[] }[] }> {
-  const { prepareJournals } = await import("./depreciation");
   const live = assets.filter((a) => a.kind !== "property" && !a.soldOn);
   const exceptions = live.map((a) => ({ assetId: a.id, name: a.name, reasons: depreciationExceptions(a) })).filter((x) => x.reasons.length);
   const runnable = live.filter((a) => !exceptions.some((x) => x.assetId === a.id && x.reasons.some((r) => r !== "no ledger asset account to post to")));
   let all = journals; const added: Journal[] = [];
   const months = [...new Set(runnable.flatMap((a) => dueMonths(a, all, today)))].sort();
   for (const m of months) {
-    const ids = new Map<string, string>();
-    for (const a of runnable) ids.set(a.id, await stableUuid("journal", a.id, m));
-    const queue = runnable.map((a) => ids.get(a.id)!);
-    let i = 0;
-    const r = prepareJournals(runnable, m, all, closed, () => queue[i++] ?? crypto.randomUUID());
-    // prepareJournals skips assets, so re-key each journal by its own asset to keep ids stable.
+    const r = prepareJournals(runnable, m, all, closed, () => crypto.randomUUID());
+    // Stable id per asset-month so reruns and retries never create a second journal.
     const fixed = await Promise.all(r.journals.map(async (j) => ({ ...j, id: await stableUuid("journal", j.assetId, m) })));
     all = [...all, ...fixed]; added.push(...fixed);
   }
