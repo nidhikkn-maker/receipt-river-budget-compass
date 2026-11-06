@@ -777,4 +777,4 @@
 ## Manual prices & report dashboard (6 Nov 2026)
 - [x] Manual market-price overrides with source, price date, note and append-only change history; active override wins over feed/closing price until cleared (3 tests).
 - [x] In-app Required reports dashboard (/report-status, linked from Audit) with status, in-app evidence links and tests; test verifies every referenced file exists.
-- [ ] Priorities 2–15: 13 impairment/disposal postings and 14 investment items added this session (browser check of 13 pending); resume at rank 2 per docs/IMPLEMENTATION_PROGRESS.md "Current task".
+- [ ] Priorities 2–15: this session added ranks 2, 7, 8, 9, 12 (partial), 13, 14 work; resume at rank 3 per docs/IMPLEMENTATION_PROGRESS.md "Current task".
