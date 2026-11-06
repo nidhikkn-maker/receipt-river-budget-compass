@@ -6,7 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useStore } from "@/lib/store";
 import { companyDocuments, type EntityAccounts } from "@/lib/books/entity-accounts";
 import { confirmAction } from "@/lib/confirm";
-import { rowsFor, sharedCompanyCsv, type SharedCompany, type SharedDoc, type SharedTxn } from "@/lib/books/shared-company";
+import { filterShared, rowsFor, sharedCompanyCsv, sharedCompanyPdf, type SharedCompany, type SharedDoc, type SharedTxn } from "@/lib/books/shared-company";
 
 type Grant = { id: string; member_email: string; created_at: string; can_write: boolean };
 
@@ -64,6 +64,7 @@ export function SharedWithMe() {
   const [companies, setCompanies] = useState<SharedCompany[] | null>(null);
   const [txns, setTxns] = useState<SharedTxn[]>([]);
   const [docs, setDocs] = useState<SharedDoc[]>([]);
+  const [queries, setQueries] = useState<Record<string, string>>({});
   const load = useCallback(async () => {
     const { data: cs } = await supabase.rpc("my_shared_companies");
     const list = (cs ?? []) as SharedCompany[];
@@ -82,20 +83,48 @@ export function SharedWithMe() {
     const { data, error } = await supabase.from("expenses").update({ title }).eq("id", id).select("id");
     if (error || !data?.length) toast.error("You can only view this company"); else { toast.success("Saved"); void load(); }
   };
+  const upload = async (c: SharedCompany, file: File) => {
+    const path = `${c.owner_id}/docs/${crypto.randomUUID()}-${file.name.replace(/[^\w.-]+/g, "_").slice(0, 80)}`;
+    const up = await supabase.storage.from("receipts").upload(path, file, { contentType: file.type || "application/octet-stream" });
+    if (up.error) { toast.error("Couldn't upload — you may only have view access"); return; }
+    const { error } = await supabase.from("documents").insert({
+      owner_id: c.owner_id, entity_id: c.entity_id, title: file.name.replace(/\.[^.]+$/, ""), doc_type: "other",
+      file_path: path, file_name: file.name.slice(0, 200), mime_type: file.type || "application/octet-stream", size_bytes: file.size,
+      currency: "INR", notes: "", extracted_text: "", fields: [],
+    });
+    if (error) { await supabase.storage.from("receipts").remove([path]); toast.error("Couldn't save the document"); return; }
+    toast.success("Document added to the shared company"); void load();
+  };
   return (
     <div className="space-y-3 rounded-2xl border bg-card p-4">
       <p className="font-semibold">Shared with you</p>
       <p className="text-xs text-muted-foreground">Companies other people gave you access to. Never added to your own records or totals.</p>
       {companies.map((c) => {
-        const t = rowsFor(txns, c, (r) => r.employee_id), d = rowsFor(docs, c, (r) => r.owner_id);
+        const all = rowsFor(txns, c, (r) => r.employee_id), allDocs = rowsFor(docs, c, (r) => r.owner_id);
+        const q = (queries[c.grant_id] ?? "").trim();
+        const t = filterShared(all, q, (r) => [r.title, r.merchant, r.category, r.expense_date]);
+        const d = filterShared(allDocs, q, (r) => [r.title, r.doc_type, r.doc_date]);
         return (
           <details key={c.grant_id} className="rounded-xl border p-3 text-sm">
-            <summary className="cursor-pointer"><span className="font-medium">{c.company_name}</span> <span className="text-xs text-muted-foreground">· {c.owner_email} · {c.can_write ? "Can edit" : "View only"} · {t.length} entries · {d.length} documents</span></summary>
+            <summary className="cursor-pointer"><span className="font-medium">{c.company_name}</span> <span className="text-xs text-muted-foreground">· {c.owner_email} · {c.can_write ? "Can edit" : "View only"} · {all.length} entries · {allDocs.length} documents</span></summary>
             <div className="mt-3 space-y-2">
-              <Button size="sm" variant="outline" onClick={() => {
-                const blob = new Blob([sharedCompanyCsv(c, txns, docs)], { type: "text/csv" });
-                const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = `${c.company_name.replace(/[^\w-]+/g, "_")}.csv`; a.click(); URL.revokeObjectURL(a.href);
-              }}>Download CSV</Button>
+              <div className="flex flex-wrap items-center gap-2">
+                <Input aria-label={`Search ${c.company_name}`} placeholder="Search entries and documents" className="h-8 max-w-56" value={queries[c.grant_id] ?? ""} onChange={(e) => setQueries((s) => ({ ...s, [c.grant_id]: e.target.value }))} />
+                <Button size="sm" variant="outline" onClick={() => {
+                  const blob = new Blob([sharedCompanyCsv(c, txns, docs)], { type: "text/csv" });
+                  const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = `${c.company_name.replace(/[^\w-]+/g, "_")}.csv`; a.click(); URL.revokeObjectURL(a.href);
+                }}>Download CSV</Button>
+                <Button size="sm" variant="outline" onClick={async () => {
+                  const blob = await sharedCompanyPdf(c, txns, docs);
+                  const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = `${c.company_name.replace(/[^\w-]+/g, "_")}.pdf`; a.click(); URL.revokeObjectURL(a.href);
+                }}>Download PDF</Button>
+                {c.can_write && (
+                  <Button size="sm" variant="outline" onClick={() => document.getElementById(`shared-upload-${c.grant_id}`)?.click()}>Add document</Button>
+                )}
+                {c.can_write && (
+                  <input id={`shared-upload-${c.grant_id}`} type="file" className="hidden" aria-label={`Add a document to ${c.company_name}`} onChange={(e) => { const f = e.target.files?.[0]; if (f) void upload(c, f); e.target.value = ""; }} />
+                )}
+              </div>
               {t.slice(0, 100).map((r) => (
                 <div key={r.id} className="flex items-center justify-between gap-2">
                   <span className="truncate">{r.title}<span className="block text-xs text-muted-foreground">{r.expense_date} · {r.category}</span></span>

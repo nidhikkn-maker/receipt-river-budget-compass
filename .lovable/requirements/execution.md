@@ -30,3 +30,30 @@
 - The original GUC-based period authority prototype was superseded: Cloud refused setting its custom permission parameter. The applied implementation uses a private owner/transaction authority table, removed in the same close transaction; no permission marker leaks into later writes.
 - Isolated signed-in browser check passed: company tax profile edited from 60% to 75% and survived reload; accountant ZIP downloaded with PDF and three CSVs using the edited assumptions. Screenshots inspected. Production writes were intercepted, so this does not certify Cloud persistence.
 - Controlled browser evidence never certifies hosted saves or real-device behaviour.
+## 6 Nov 2026 — Priority 1 continued (company access)
+- Register relabelled: 890 unexamined clauses now NOT AUDITED (they never asserted missing code), 9 PARTIAL kept; status legend recorded in register.json.
+- Member uploads (migration 0078): edit-grant members can add documents owned by the granting owner and tagged only to a company they can edit; files upload into the owner's private prefix only while an active edit grant exists. View-only members, other companies, untagged rows and strangers are refused; revocation closes both paths immediately. Six disposable PostgreSQL tests pass.
+- Shared view: per-company search over entries and documents, PDF export (same company-only rows as CSV, access level and spending total printed), and an Add document control for edit members. Five new pure tests pass.
+- Company-access suite: 23 tests pass (documents, files, transactions, uploads, CSV/PDF/search). Remaining Priority 1 gap: a two-real-account hosted check, which needs a second sign-in (external).
+
+## 6 Nov 2026 — Document intake server approval (Priority: typed saves & centralized approvals)
+- Migration 0079: commit_document_intake_reviewed now requires the exact approved attempt (id, document, payload, lock, revision) retained in the owner's durable document run before saving; unreviewed or altered payloads are refused. Committed retries still replay even after the run attempt is removed.
+- Existing intake fixtures updated to seed approved runs; three new approval tests (no run, altered payload/lock, replay after run removal). All 310 books tests pass; typecheck clean.
+
+## 6 Nov 2026 — Broker cash overlap check (audit item 6)
+- recon.ts brokerCashOverlap(): flags a broker_cash holding and a cash-like account (savings/current/cash/wallet/investment/other_asset) whose names share a significant word (e.g. the broker's name) — the same money would otherwise be counted twice in net worth. Read-only; clears when records are fixed. Generic words (cash/balance/fund) never match on their own; liabilities and archived accounts are ignored.
+- Surfaced in the continuous audit as a high-risk "Investment overlap" finding pointing to Wealth. Four new tests; full suite 1,629 passed.
+- Item 7 (demat legal ownership) verified already complete: sharePct stored and validated 0–100, applied in valuation, editable and shown as "% yours" in the Market panel.
+
+## 6 Nov 2026 — Field-level provenance (audit item 4)
+- docrepo.ts recordProvenance(): for any saved record, the linked source documents with every read field — saved value, printed original when corrected, page/section locator, status and confidence. Pure and read-only.
+- Tax workpaper ZIP gains a fourth sheet, 4_field_provenance.csv: per taxpayer, every field read from that company's linked documents, so the accountant can trace each figure to its printed source. Personal section stays entry-based (sheet 2).
+- Three new tests; workpaper suite 13 passed; typecheck clean.
+- Item 5 verified already complete: GST drafts (GSTR-1/3B/9 + JSON + validation + Rule 88A set-off), opening balance sheet (fy.ts openingBalanceSheet) and asset posting acceptance (scheduled-depreciation, phase1-acceptance) all exist with tests.
+
+## 6 Nov 2026 — §71 acceptance matrix completed (audit item 11, partial)
+- books.test.ts now covers all 22 mandatory cases: added 11 (ICICI Direct demat import), 12 (re-import without duplicates + investment recon), 17 (internal transfer pairing, no income/spend), 18 (card settlement lowers owed, no new spending), 19 (one account ↔ one company mapping), 20 (source-to-report traceability via recordProvenance), 22 (ledger integrity invariants). 37 matrix tests pass.
+
+## 6 Nov 2026 — §72 deliverables map
+- docs/DELIVERABLES.md maps all 20 required reports to their executable evidence; 17 done, 3 partial (real-document extraction accuracy, physical device screenshots, deployment readiness) — all three wait on owner inputs listed in OPEN_BLOCKERS.
+- Full suite after all additions: 1,639 tests passed; typecheck clean.

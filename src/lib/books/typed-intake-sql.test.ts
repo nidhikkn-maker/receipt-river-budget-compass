@@ -5,19 +5,21 @@ import { beforeAll, beforeEach, afterAll, it, expect } from 'vitest';
 const db = new PGlite();
 const owner='00000000-0000-0000-0000-000000000001', doc='00000000-0000-0000-0000-000000000002', op='00000000-0000-0000-0000-000000000003';
 let revision=0;
-const commit=(data:object) => db.query<{r:number}>('SELECT commit_document_intake_reviewed($1,$2,$3::jsonb,true,$4)::int r',[op,doc,JSON.stringify(data),revision]);
+const commit=async(data:object) =>{await db.query(`DELETE FROM document_runs WHERE data->'intakeAttempt'->>'id'=$1`,[op]);await db.query(`INSERT INTO document_runs(owner_id,data) VALUES ($1,jsonb_build_object('intakeAttempt',jsonb_build_object('id',$2::text,'documentId',$3::text,'data',$4::jsonb,'lock',true,'expected',$5::bigint)))`,[owner,op,doc,JSON.stringify(data),revision]);return db.query<{r:number}>('SELECT commit_document_intake_reviewed($1,$2,$3::jsonb,true,$4)::int r',[op,doc,JSON.stringify(data),revision]);};
 const holding={id:'h1',name:'Printed fund',kind:'mutual_fund',quantity:50,sharePct:100,source:'Statement'};
 beforeAll(async()=>{
  await db.exec(`CREATE ROLE authenticated; CREATE ROLE anon; CREATE ROLE service_role; CREATE SCHEMA auth; CREATE FUNCTION auth.uid() RETURNS uuid LANGUAGE sql AS $$ SELECT '${owner}'::uuid $$;
  CREATE TABLE finance_preferences(owner_id uuid primary key,data jsonb,updated_at timestamptz);
  CREATE TABLE documents(id uuid primary key,owner_id uuid,evidence_locked boolean,doc_type text);
+ CREATE TABLE document_runs(owner_id uuid,data jsonb);
  CREATE FUNCTION commit_document_intake(uuid,jsonb,boolean) RETURNS void LANGUAGE sql AS $$ SELECT $$;
  INSERT INTO finance_preferences VALUES('${owner}','{}',now()); INSERT INTO documents VALUES('${doc}','${owner}',false,'mutual_fund_statement');`);
  await db.exec(readFileSync('drizzle/migrations/0071_revision_checked_document_intake.sql','utf8'));
  await db.exec(readFileSync('drizzle/migrations/0074_typed_document_intake_validation.sql','utf8'));
+ await db.exec(readFileSync('drizzle/migrations/0079_intake_server_approval.sql','utf8'));
 },20000);
 beforeEach(async()=>{
- await db.exec(`DELETE FROM document_intake_commits; UPDATE finance_preferences SET data='{}'; UPDATE documents SET evidence_locked=false,doc_type='mutual_fund_statement'`);
+ await db.exec(`DELETE FROM document_intake_commits; DELETE FROM document_runs; UPDATE finance_preferences SET data='{}'; UPDATE documents SET evidence_locked=false,doc_type='mutual_fund_statement'`);
  revision=(await db.query<{r:number}>('SELECT revision::int r FROM finance_preferences')).rows[0]?.r??0;
 });
 afterAll(()=>db.close());

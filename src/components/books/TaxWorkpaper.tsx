@@ -12,7 +12,7 @@ import { entityLiability, individualLiability } from "@/lib/books/tax-full";
 import { creditsFor } from "@/lib/books/compliance";
 import { withEntityIncome, type FromEntityLine } from "@/lib/books/from-entities";
 import { profileFor } from "@/lib/books/entity-tax-profile";
-import { assumptions, computationHeads, sourceGroups, workpaperCsv, type WpSection } from "@/lib/books/tax-workpaper";
+import { assumptions, computationHeads, provenanceCsv, sourceGroups, workpaperCsv, type WpSection } from "@/lib/books/tax-workpaper";
 import { toCsv } from "@/lib/books/itr-handoff";
 import { useBooks } from "./useBooks";
 
@@ -20,7 +20,7 @@ const inr = (n: number) => (n < 0 ? "−" : "") + "₹" + Math.abs(Math.round(n)
 
 export function TaxWorkpaper({ fy, personalLines }: { fy: string; personalLines: FromEntityLine[] }) {
   const { books, preferences } = useBooks();
-  const { transactions, accounts, addDocument } = useStore();
+  const { transactions, accounts, addDocument, documents } = useStore();
   const [busy, setBusy] = useState(false);
   const [open, setOpen] = useState<string | null>(null);
   const entities = preferences.entities ?? [];
@@ -63,7 +63,7 @@ export function TaxWorkpaper({ fy, personalLines }: { fy: string; personalLines:
     try {
       const csv = workpaperCsv(sections);
       const { strToU8, zipSync } = await import("fflate");
-      const files: Record<string, Uint8Array> = { "1_computation.csv": strToU8(toCsv(csv.computation)), "2_source_transactions.csv": strToU8(toCsv(csv.sources)), "3_assumptions.csv": strToU8(toCsv(csv.assumptions)) };
+      const files: Record<string, Uint8Array> = { "1_computation.csv": strToU8(toCsv(csv.computation)), "2_source_transactions.csv": strToU8(toCsv(csv.sources)), "3_assumptions.csv": strToU8(toCsv(csv.assumptions)), "4_field_provenance.csv": strToU8(toCsv(provenanceCsv(sections, books.docLinks ?? [], documents))) };
       const { jsPDF } = await import("jspdf");
       const { loadPdfFonts, textU } = await import("@/lib/pdf-unicode");
       await loadPdfFonts().catch(() => undefined);

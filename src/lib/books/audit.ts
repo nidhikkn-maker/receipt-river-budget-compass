@@ -15,11 +15,12 @@ import { invoiceProblems, duplicateInvoices } from "./gst";
 import { leaseAlerts, tenantLedger } from "./property";
 import { pastRetention } from "./docrepo";
 import { openingProposal } from "./fy";
+import { brokerCashOverlap } from "./recon";
 import { REQUIRED_SCHEDULES } from "./intake";
 import { ledgerTaxPayments, obligations, type Obligation } from "./compliance";
 import type { FindingState } from "./types";
 
-export type IssueType = "Unreconciled bank" | "Classification" | "Missing invoice" | "Duplicate" | "Asset register" | "Depreciation" | "Property/rent" | "Tax" | "GST" | "Investment cost basis" | "Intercompany" | "Missing document" | "Profile" | "Opening balance";
+export type IssueType = "Unreconciled bank" | "Classification" | "Missing invoice" | "Duplicate" | "Asset register" | "Depreciation" | "Property/rent" | "Tax" | "GST" | "Investment cost basis" | "Investment overlap" | "Intercompany" | "Missing document" | "Profile" | "Opening balance";
 export interface AuditItem { key: string; type: IssueType; entity: string; account: string | null; fy: string | null; risk: "high" | "medium" | "low"; text: string; evidence: string; to: string }
 
 const MAP: Record<string, IssueType> = { Profiles: "Profile", Invoices: "Missing invoice", Assets: "Asset register", Years: "Missing document" };
@@ -59,6 +60,8 @@ export function continuousAudit(p: { today: string; entities: EntityProfile[]; a
   for (const i of p.books.gstInvoices) for (const prob of invoiceProblems(i)) out.push({ key: `gst:${i.id}:${prob}`, type: "GST", entity: i.gstin, account: null, fy: fyOf(i.date), risk: "medium", text: `${i.number}: ${prob}`, evidence: "Invoice register", to: "/tax" });
   for (const n of duplicateInvoices(p.books.gstInvoices)) out.push({ key: `gstdup:${n}`, type: "GST", entity: "", account: null, fy, risk: "high", text: `Invoice ${n} entered more than once`, evidence: "Invoice register", to: "/tax" });
   for (const h of p.holdingsWithoutCost) out.push({ key: `cost:${h.isin}`, type: "Investment cost basis", entity: "Personal", account: null, fy, risk: "medium", text: `${h.name}: purchase history missing`, evidence: "Demat holdings", to: "/wealth" });
+  // Broker cash held both as a holding and as an account would be counted twice in net worth [§24].
+  for (const o of brokerCashOverlap(p.books.holdings ?? [], p.accounts)) out.push({ key: `bcash:${o.holdingId}:${o.accountId}`, type: "Investment overlap", entity: "Personal", account: o.accountName, fy: null, risk: "high", text: `${o.holdingName}: broker cash may also be counted in account “${o.accountName}” — keep only one`, evidence: "Holdings vs accounts", to: "/wealth" });
   const inter = intercompanyGaps(p.entries, p.accounts);
   for (const g of inter) out.push({ key: `ic:${g.id}`, type: "Intercompany", entity: g.scope, account: acc(g.accountId), fy: fyOf(g.date), risk: "medium", text: g.text, evidence: "Transfers between workspaces", to: "/transfers" });
   for (const r of p.books.fyRecords) {

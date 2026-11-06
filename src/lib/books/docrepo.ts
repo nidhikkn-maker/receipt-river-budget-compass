@@ -110,3 +110,29 @@ export function applyDocQuery(docs: VaultDoc[], f: NlFilters, links: DocLink[], 
     return f.words.every((w) => hay.includes(w));
   });
 }
+
+export interface ProvenanceField { label: string; value: string; printed: string | null; where: string; status: string; confidence: string }
+export interface ProvenanceDoc { docId: string; title: string; docType: string; fields: ProvenanceField[] }
+/**
+ * Field-level provenance [§7, §15]: for one saved record, the documents linked to it and every read field
+ * with where it was printed (page/section), its saved value and — when the owner corrected it — the value
+ * as printed. Read-only; reports use it to show exactly where each figure came from.
+ */
+export function recordProvenance(targetId: string, links: DocLink[], docs: VaultDoc[]): ProvenanceDoc[] {
+  const ids = [...new Set(links.filter((l) => l.targetId === targetId).map((l) => l.docId))];
+  const out: ProvenanceDoc[] = [];
+  for (const id of ids) {
+    const d = docs.find((x) => x.id === id);
+    if (!d) continue;
+    out.push({
+      docId: d.id, title: d.title, docType: d.docType,
+      fields: (d.fields ?? []).map((f) => ({
+        label: f.label, value: f.value,
+        printed: f.status === "corrected" ? f.originalValue ?? null : null,
+        where: f.page != null ? `page ${f.page}` : f.section ?? "",
+        status: f.status, confidence: f.confidence,
+      })),
+    });
+  }
+  return out;
+}
