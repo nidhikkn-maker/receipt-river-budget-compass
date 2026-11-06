@@ -3244,14 +3244,22 @@
    },
    "original": "Search results must respect entity-level permissions.",
    "interpretation": "Account for this source clause in the context of 10. Search; verify each enumerated feature and applicable safeguard, not merely screen presence.",
-   "modules": [],
+   "modules": [
+    "drizzle/migrations/0075_entity_level_access.sql",
+    "src/components/books/CompanyAccess.tsx",
+    "src/lib/books/entity-accounts.ts (companyDocuments)"
+   ],
    "dependencies": [],
-   "status": "NOT IMPLEMENTED",
-   "requiredWork": "Map source clause to existing implementation and verification evidence; this initial status means not yet assessed, not an assertion that existing code is absent.",
+   "status": "PARTIAL",
+   "requiredWork": "Read-only company grants enforced on documents and files. Open: write grants for registers, entity scoping for exports and register reads, hosted two-account check.",
    "verificationMethod": "Source-to-code audit followed by applicable unit/database/integration/real-route checks; hosted/device evidence separately required.",
    "finalTestResult": {
-    "result": "NOT RUN",
-    "evidence": []
+    "result": "PASS (disposable DB)",
+    "evidence": [
+     "src/lib/books/entity-access-sql.test.ts 6/6: no-grant, foreign-company, personal-file, write, stranger and revoke refusals",
+     "entity-accounts.test.ts companyDocuments 2/2",
+     "Signed-in /entities panel render, no page errors (6 Nov)"
+    ]
    }
   },
   {
@@ -14625,14 +14633,22 @@
    },
    "original": "19. Verify cross-entity access controls.",
    "interpretation": "Account for this source clause in the context of 71. Mandatory tests; verify each enumerated feature and applicable safeguard, not merely screen presence.",
-   "modules": [],
+   "modules": [
+    "drizzle/migrations/0075_entity_level_access.sql",
+    "src/components/books/CompanyAccess.tsx",
+    "src/lib/books/entity-accounts.ts (companyDocuments)"
+   ],
    "dependencies": [],
-   "status": "NOT IMPLEMENTED",
-   "requiredWork": "Map source clause to existing implementation and verification evidence; this initial status means not yet assessed, not an assertion that existing code is absent.",
+   "status": "PARTIAL",
+   "requiredWork": "Read-only company grants enforced on documents and files. Open: write grants for registers, entity scoping for exports and register reads, hosted two-account check.",
    "verificationMethod": "Source-to-code audit followed by applicable unit/database/integration/real-route checks; hosted/device evidence separately required.",
    "finalTestResult": {
-    "result": "NOT RUN",
-    "evidence": []
+    "result": "PASS (disposable DB)",
+    "evidence": [
+     "src/lib/books/entity-access-sql.test.ts 6/6: no-grant, foreign-company, personal-file, write, stranger and revoke refusals",
+     "entity-accounts.test.ts companyDocuments 2/2",
+     "Signed-in /entities panel render, no page errors (6 Nov)"
+    ]
    }
   },
   {

@@ -31,3 +31,20 @@ describe("company account links", () => {
     expect(matchEntityByName([stubEntity("Krupa Traders Private Limited")], "M/S KRUPA TRADERS PVT LTD")?.name).toBe("Krupa Traders Private Limited");
   });
 });
+
+import { companyDocuments } from "./entity-accounts";
+describe("companyDocuments", () => {
+  const map = { c1: ["a1"], c2: ["a2"] };
+  const docs = [
+    { id: "d1", accountId: "a1", entityId: null }, { id: "d2", accountId: "a2", entityId: null },
+    { id: "d3", accountId: null, entityId: "c1" }, { id: "d4", accountId: "a1", entityId: "c2" }, { id: "d5", accountId: null, entityId: null },
+  ];
+  it("lists tagged documents and suggests only untagged ones from the company's own accounts", () => {
+    const r = companyDocuments(docs, map, "c1");
+    expect(r.tagged.map((d) => d.id)).toEqual(["d3"]);
+    expect(r.suggested.map((d) => d.id)).toEqual(["d1"]);
+  });
+  it("never suggests a document already tagged to another company or a personal one", () => {
+    expect(companyDocuments(docs, map, "c2").suggested.map((d) => d.id)).toEqual(["d2"]);
+  });
+});

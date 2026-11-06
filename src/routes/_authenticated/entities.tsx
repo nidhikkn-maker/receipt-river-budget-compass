@@ -9,6 +9,7 @@ import { dropEntity, linkAccounts, mergeEntity, needsDetails, unlinkAccount } fr
 import { emptyBooks } from "@/lib/books/types";
 import { confirmAction } from "@/lib/confirm";
 import { CompanyTaxProfile } from "@/components/books/CompanyTaxProfile";
+import { CompanyAccess, SharedWithMe } from "@/components/books/CompanyAccess";
 import { dropEntityYears, mergeEntityYears } from "@/lib/books/entity-tax-profile";
 import { ENTITY_KINDS, fyOf, gstinProblem, panProblem, yearStatuses, type EntityKind, type EntityProfile } from "@/lib/entities";
 
@@ -107,6 +108,7 @@ function Entities() {
         </div>
       )}
 
+      {!edit && <SharedWithMe />}
       {list.length === 0 && !edit && <p className="text-sm text-muted-foreground">No profiles yet. Add yourself and each company to track PAN, GST and past years.</p>}
       {list.map((p) => (
         <div key={p.id} className="space-y-3 rounded-2xl border bg-card p-4">
@@ -121,6 +123,7 @@ function Entities() {
             <div className="flex shrink-0 gap-1"><Button size="sm" variant="outline" onClick={() => setEdit(p)}>Edit</Button><Button size="sm" variant="ghost" className="text-destructive" onClick={() => void remove(p.id)}>Delete</Button></div>
           </div>
           {p.kind !== "individual" && p.kind !== "huf" && <CompanyTaxProfile entity={p} />}
+          {p.kind !== "individual" && <CompanyAccess entityId={p.id} entityName={p.name} links={links} />}
           <div className="space-y-1">
             <p className="text-xs font-semibold text-muted-foreground">Bank accounts & cards ({(links[p.id] ?? []).length})</p>
             {(links[p.id] ?? []).map((id) => (

@@ -68,3 +68,10 @@ export function effectiveEntity(e: { entityId?: string | null; entitySource?: "a
 export function affectedByMove(entries: { accountId?: string | null; entitySource?: "account" | "manual" }[], accountId: string): number {
   return entries.filter((e) => e.accountId === accountId && e.entitySource !== "manual").length;
 }
+
+/** Documents that could belong to a company: already tagged to it, or linked to one of its accounts. Suggestion only — tagging is an explicit owner action, and UI filters are never authorisation. */
+export function companyDocuments<D extends { id: string; accountId: string | null; entityId?: string | null }>(docs: D[], map: EntityAccounts, entityId: string): { tagged: D[]; suggested: D[] } {
+  const tagged = docs.filter((d) => d.entityId === entityId);
+  const suggested = docs.filter((d) => !d.entityId && !!d.accountId && ownerOf(map, d.accountId) === entityId);
+  return { tagged, suggested };
+}
