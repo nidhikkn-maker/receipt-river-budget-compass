@@ -31,3 +31,5 @@ Not verified: hosted two-account access, real-device behaviour, real-document ex
 - GST: current-only register regression; 3 special-treatment tests assert LUT exports excluded from domestic supply, RCM payable in cash despite other ITC, payment-gated credit, service-advance adjustment and non-taxable goods advance.
 - `scripts/browser/test_priority_gst.py`: signed-in real Tax page with isolated preference/RPC responses; no write before approval, one invoice save, amendment displays one current row, advance saved, read-back after reload, no page errors. All external writes blocked. Screenshots inspected. This is NOT hosted write acceptance or real-document evidence.
 - Outstanding: P3 direct-write rollout/journal transitions; P7 annual/payment/late-credit consistency; P2 derived dependencies; P12 other derived facts; individual audit of remaining NOT AUDITED clauses.
+
+- Follow-up: 219 files / 1,681 tests pass; late RCM credit is counted only in the payment month, annual liability includes RCM, and monthly payment projections include service advances. Controlled GST browser rerun passed after these changes; build OK.

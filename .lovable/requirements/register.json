@@ -10854,7 +10854,7 @@
       ],
       "dependencies": [],
       "status": "PARTIAL",
-      "requiredWork": "RCM cash/credit and advances tested; late-payment credit and annual/payment projections still incomplete.",
+      "requiredWork": "RCM cash/paid-month credit, advances and annual/payment projections tested; nested server validation, advance-rate differences and source verification remain incomplete.",
       "verificationMethod": "Individual source-to-code audit, disposable PostgreSQL rules and controlled real-route verification; hosted sources separately pending",
       "finalTestResult": {
         "result": "PARTIAL",
@@ -18174,7 +18174,7 @@
   ],
   "latestVerification": {
     "at": "2026-11-06",
-    "result": "219 files / 1680 tests passed; isolated GST approval/save/amendment/advance/reload passed; no hosted financial writes; direct-write rollout staged",
+    "result": "219 files / 1681 tests passed; GST workflow rerun passed; late RCM and annual/monthly projections verified in automated tests; no hosted financial writes",
     "evidence": [
       "docs/VERIFICATION_RESULTS.md"
     ]
