@@ -14,7 +14,7 @@ beforeAll(async()=>{
  CREATE FUNCTION commit_document_intake(uuid,jsonb,boolean) RETURNS void LANGUAGE sql AS $$ SELECT $$;
  INSERT INTO finance_preferences VALUES('${owner}','{}',now()); INSERT INTO documents VALUES('${doc}','${owner}',false,'mutual_fund_statement');`);
  await db.exec(readFileSync('drizzle/migrations/0071_revision_checked_document_intake.sql','utf8'));
- await db.exec(readFileSync('.lovable/staged-sql/typed-intake.sql','utf8'));
+ await db.exec(readFileSync('drizzle/migrations/0074_typed_document_intake_validation.sql','utf8'));
 },20000);
 beforeEach(async()=>{
  await db.exec(`DELETE FROM document_intake_commits; UPDATE finance_preferences SET data='{}'; UPDATE documents SET evidence_locked=false,doc_type='mutual_fund_statement'`);
