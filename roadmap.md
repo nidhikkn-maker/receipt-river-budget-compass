@@ -777,3 +777,4 @@
 ## Manual prices & report dashboard (6 Nov 2026)
 - [x] Manual market-price overrides with source, price date, note and append-only change history; active override wins over feed/closing price until cleared (3 tests).
 - [x] In-app Required reports dashboard (/report-status, linked from Audit) with status, in-app evidence links and tests; test verifies every referenced file exists.
+- [ ] Priorities 2–15 from the recovery mandate in dependency order (see .lovable/requirements/execution.md); then continue v6.0/v6.1 audit.
