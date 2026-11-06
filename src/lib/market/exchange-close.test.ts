@@ -16,6 +16,13 @@ describe("NSE and BSE kept separate", () => {
     const b = latestByIsinExchange([rows[0]!]);
     expect(pickClose(new Map(), b, "INE002A01018", "BSE")).toBeUndefined();
   });
+  it("preserves actual per-exchange fetch timestamps instead of inventing evening times", () => {
+    const nse = rows[0]; const bse = rows[1];
+    if (!nse || !bse) throw new Error('Fixture rows absent');
+    const actual = [{ ...nse, fetched_at: '2026-11-05T03:12:47Z' }, { ...bse, fetched_at: '2026-11-04T14:25:19Z' }];
+    expect(latestByIsin(actual).get('INE002A01018')?.fetchedAt).toBe('2026-11-05T03:12:47Z');
+    expect(latestByIsinExchange(actual).get('INE002A01018|BSE')?.fetchedAt).toBe('2026-11-04T14:25:19Z');
+  });
   it("each net-worth part carries its own as-of date", () => {
     const nw = dynamicNetWorth({ bank: 1, bankBasis: "", investments: [], demat: 0, dematBasis: "", otherAssets: 0, property: 0, propertyBasis: "", liabilities: 0, liabilitiesBasis: "", asOf: { bank: "2026-11-03", investments: "2026-11-04", liabilities: "2026-10-31" } });
     expect(nw.assets[0]!.asOf).toBe("2026-11-03");
