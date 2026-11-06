@@ -4,7 +4,7 @@ Statuses follow the strict rule in MASTER_REQUIREMENTS.md. "PARTIAL" = real code
 
 | Rank | Gap | Status | What exists (code) | Still missing |
 |---|---|---|---|---|
-| 1 | Entity-level authorisation | PARTIAL | `0075_entity_level_access.sql` (entity_members, can_access_entity, grant/revoke RPCs, document + file read policies); `CompanyAccess.tsx`; owner list filtered to own documents in `store.tsx` | Write grants for registers; entity scoping of exports/register reads; hosted two-account check |
+| 1 | Entity-level authorisation | PARTIAL | `0075_entity_level_access.sql` (entity_members, can_access_entity, grant/revoke RPCs, document + file read policies); `CompanyAccess.tsx`; owner list filtered to own documents in `store.tsx` + `0076` company transactions readable by members, editable only with edit grant, no retagging (`entity-transactions-sql.test.ts`, 4 tests) | Shared-company screen for members; exports scoped per company; hosted two-account check (needs second account) |
 | 2 | Source-to-figure traceability | PARTIAL | DocField page/quote/confidence; `source-corrections.ts`; loan balances need a retained statement + quote (`loan-balances.ts`, prefill `proposePrintedBalance`) | Universal EvidenceRef on every register figure |
 | 3 | Server-enforced approvals | PARTIAL | Rule activation/approval history; period close via `change_accounting_period`; role permissions | Server approval step for document intake and register changes |
 | 4 | Atomic Statement Desk processing | PARTIAL | `commit_document_intake_reviewed` (revision, replay, evidence lock), typed validation `0074` | Full nested/provenance validation |
@@ -21,4 +21,4 @@ Statuses follow the strict rule in MASTER_REQUIREMENTS.md. "PARTIAL" = real code
 | 15 | Acceptance suite | PARTIAL | PGlite DB tests, scripts/browser checks | §71 22 cases end-to-end on real documents |
 
 ## Current task (resume here)
-Rank 1 follow-up: entity scoping for register reads/exports, then rank 3 server approval for document intake.
+Rank 1 follow-up: member-facing shared-company view and per-company exports, then rank 3 server approval for document intake.
