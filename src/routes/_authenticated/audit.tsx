@@ -2,6 +2,8 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { PageTitle } from "@/components/AppShell";
+import { evidenceCsv, registerEvidence } from "@/lib/books/evidence";
+import { downloadBlob } from "@/lib/reports";
 import { Fold } from "@/components/Fold";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -94,12 +96,13 @@ function Audit() {
       <Link to="/report-status" className="text-sm text-primary underline">Required reports status, evidence and tests</Link>
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">{tiles.map((t) => <div key={t.label} className="rounded-2xl border bg-card p-3"><p className="text-[11px] text-muted-foreground">{t.label}</p><p className="font-mono text-lg font-semibold">{t.value}</p></div>)}</div>
 
+      <FigureSources assets={preferences.assets ?? []} books={books} docs={documents} titleOf={(id) => transactions.find((t) => t.id === id)?.title} />
       <Fold title="Reconciliations" hint="Bank, card, loan, supplier, customer, investment, intercompany, GST" defaultOpen>
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">{hub.map((h) => <Link key={h.kind} to={h.to} className="rounded-xl border px-3 py-2 text-sm"><span className="block text-xs text-muted-foreground">{h.kind}</span><b className={h.open ? "text-destructive" : "text-primary"}>{h.open ? `${h.open} open` : "Clear"}</b></Link>)}</div>
         <div className="mt-3 space-y-2 text-xs">
           <details><summary className="cursor-pointer">Loan vs lender statement · {recon.loan.length ? `${recon.loan.length} differ` : "agree or no statement"}</summary>{recon.loan.map((r) => <p key={r.loanId} className="break-words">{r.name} on {r.statementDate}: lender {inr(r.lender)} · ledger {inr(r.ledger)} · <b className="text-destructive">difference {inr(r.difference)}</b></p>)}{!recon.loan.length && <p className="text-muted-foreground">Upload the lender's statement on Statement Desk and link it to the loan to compare.</p>}</details>
-          <details><summary className="cursor-pointer">Supplier invoices vs payments · FY {fyNow} · {recon.supplier.length} differ</summary>{recon.supplier.map((r) => <p key={r.gstin + r.party} className="break-words">{r.party} {r.gstin}: invoiced {inr(r.invoiced)} ({r.invoices}) · paid {inr(r.paid)} ({r.payments}) · <b className={r.difference > 0 ? "text-destructive" : ""}>{r.difference > 0 ? `${inr(r.difference)} unpaid` : `${inr(-r.difference)} paid without invoice`}</b></p>)}</details>
-          <details><summary className="cursor-pointer">Customer invoices vs receipts · FY {fyNow} · {recon.customer.length} differ</summary>{recon.customer.map((r) => <p key={r.gstin + r.party} className="break-words">{r.party} {r.gstin}: invoiced {inr(r.invoiced)} ({r.invoices}) · received {inr(r.received)} ({r.receipts}) · <b className={r.outstanding > 0 ? "text-destructive" : ""}>{r.outstanding > 0 ? `${inr(r.outstanding)} still owed` : `${inr(-r.outstanding)} received without invoice`}</b></p>)}</details>
+          <details><summary className="cursor-pointer">Supplier invoices vs payments · FY {fyNow} · {recon.supplier.length} differ</summary>{recon.supplier.map((r) => <div key={r.gstin + r.party}><p className="break-words">{r.party} {r.gstin}: invoiced {inr(r.invoiced)} ({r.invoices}) · paid {inr(r.paid)} ({r.payments}) · <b className={r.difference > 0 ? "text-destructive" : ""}>{r.difference > 0 ? `${inr(r.difference)} unpaid` : `${inr(-r.difference)} paid without invoice`}</b></p>{r.allocation && r.allocation.lines.length > 0 && <ul className="ml-3 text-muted-foreground">{r.allocation.lines.map((l) => <li key={l.number + l.date}>{l.number} · {l.date} · {inr(l.amount)} · {l.status === "paid" ? "settled" : l.status === "part" ? `part paid, ${inr(l.outstanding)} due` : `unpaid ${inr(l.outstanding)}`}{l.ageDays ? ` · ${l.ageDays} days` : ""}</li>)}{r.allocation.unallocated > 1 && <li>Unallocated / advance {inr(r.allocation.unallocated)}</li>}</ul>}</div>)}</details>
+          <details><summary className="cursor-pointer">Customer invoices vs receipts · FY {fyNow} · {recon.customer.length} differ</summary>{recon.customer.map((r) => <div key={r.gstin + r.party}><p className="break-words">{r.party} {r.gstin}: invoiced {inr(r.invoiced)} ({r.invoices}) · received {inr(r.received)} ({r.receipts}) · <b className={r.outstanding > 0 ? "text-destructive" : ""}>{r.outstanding > 0 ? `${inr(r.outstanding)} still owed` : `${inr(-r.outstanding)} received without invoice`}</b></p>{r.allocation && r.allocation.lines.length > 0 && <ul className="ml-3 text-muted-foreground">{r.allocation.lines.map((l) => <li key={l.number + l.date}>{l.number} · {l.date} · {inr(l.amount)} · {l.status === "paid" ? "settled" : l.status === "part" ? `part paid, ${inr(l.outstanding)} due` : `unpaid ${inr(l.outstanding)}`}{l.ageDays ? ` · ${l.ageDays} days` : ""}</li>)}{r.allocation.unallocated > 1 && <li>Unallocated / advance {inr(r.allocation.unallocated)}</li>}</ul>}</div>)}</details>
           <details><summary className="cursor-pointer">Holdings vs transaction history · {recon.investment.length} differ</summary>{recon.investment.map((r) => <p key={r.isin} className="break-words">{r.name} ({r.isin}): statement {r.statement} · from transactions {r.fromTransactions} · difference {r.difference}</p>)}</details>
           <details><summary className="cursor-pointer">Between companies · {recon.inter.length} pair{recon.inter.length === 1 ? "" : "s"}</summary>{recon.inter.map((r) => <p key={r.a + r.b} className="break-words">{entName(r.a)} → {entName(r.b)} {inr(r.aToB)} · {entName(r.b)} → {entName(r.a)} {inr(r.bToA)} · net {r.net >= 0 ? `${entName(r.b)} owes ${entName(r.a)}` : `${entName(r.a)} owes ${entName(r.b)}`} {inr(Math.abs(r.net))}{r.unconfirmed ? ` · ${r.unconfirmed} not confirmed` : ""}</p>)}{!recon.inter.length && <p className="text-muted-foreground">Link accounts to each company in its tax profile to see transfers between them.</p>}</details>
         </div>
@@ -161,5 +164,19 @@ function Audit() {
           <p className="text-[11px] text-muted-foreground">Approved fields stay searchable document details; no database columns are created automatically.</p></div>
       </Fold>}
     </div>
+  );
+}
+
+function FigureSources({ assets, books, docs, titleOf }: { assets: import("@/lib/assets").Asset[]; books: import("@/lib/books/types").BooksData; docs: { id: string; title: string }[]; titleOf: (id: string) => string | undefined }) {
+  const rows = useMemo(() => registerEvidence({ assets, books, docs, entryTitle: titleOf }), [assets, books, docs]); // eslint-disable-line react-hooks/exhaustive-deps
+  const missing = rows.filter((r) => !r.source).length;
+  return (
+    <Fold title="Figure sources" hint={rows.length ? `${rows.length - missing} of ${rows.length} register figures traced to a document or entry` : "No register figures yet"}>
+      <div className="space-y-2 text-xs">
+        {rows.length > 0 && <div className="max-h-80 divide-y overflow-y-auto rounded-lg border">{rows.map((r, i) => <div key={`${r.recordId}:${i}`} className="flex flex-wrap justify-between gap-2 px-2 py-1"><span className="min-w-0">{r.register} · {r.label}<span className="block text-muted-foreground">{r.source ? `${r.source.kind === "document" ? "Document" : "Entry"}: ${r.source.title}` : "No source — attach the document"}</span></span><span className="font-mono">{inr(r.amount)}</span></div>)}</div>}
+        {rows.length > 0 && <Button size="sm" variant="outline" onClick={() => downloadBlob(new Blob([evidenceCsv(rows)], { type: "text/csv" }), "figure-sources.csv")}>Download CSV</Button>}
+        <p className="text-muted-foreground">Read-only. A figure counts as traced only when its record names a document, a document is linked to it, or it is linked to a ledger entry.</p>
+      </div>
+    </Fold>
   );
 }

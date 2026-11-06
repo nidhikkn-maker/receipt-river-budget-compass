@@ -127,6 +127,10 @@ export interface TaxProfile { entityId: string; regime: "new" | "old"; obligatio
 export interface GstInvoice {
   id: string; gstin: string; kind: "sales" | "purchase"; number: string; date: Iso; party: string; partyGstin: string;
   taxable: number; igst: number; cgst: number; sgst: number; cess: number; docId?: string | undefined; transactionId?: string | undefined;
+  /** Credit/debit note against an earlier invoice (amounts entered positive; credit notes reduce tax) [§47]. */
+  note?: "credit" | "debit" | undefined; originalNumber?: string | undefined; originalDate?: Iso | undefined;
+  /** Amendment: this record replaces an earlier invoice, which then drops out of every draft. */
+  amendsId?: string | undefined;
 }
 export interface GstFiling { id: string; gstin: string; period: string; form: string; filedOn: Iso; arn: string; docId?: string | undefined }
 

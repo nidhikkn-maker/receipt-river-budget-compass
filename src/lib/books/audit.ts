@@ -1,3 +1,4 @@
+import { registerEvidence, unsourced } from "./evidence";
 /**
  * Continuous audit [§24, §52–54]: one set of findings from existing rules, grouped by entity, account, year,
  * issue type and risk; fed into the Financial Inbox (no second queue). Pure and read-only.
@@ -20,7 +21,7 @@ import { REQUIRED_SCHEDULES } from "./intake";
 import { ledgerTaxPayments, obligations, type Obligation } from "./compliance";
 import type { FindingState } from "./types";
 
-export type IssueType = "Unreconciled bank" | "Classification" | "Missing invoice" | "Duplicate" | "Asset register" | "Depreciation" | "Property/rent" | "Tax" | "GST" | "Investment cost basis" | "Investment overlap" | "Intercompany" | "Missing document" | "Profile" | "Opening balance";
+export type IssueType = "Unreconciled bank" | "Classification" | "Missing invoice" | "Duplicate" | "Asset register" | "Depreciation" | "Property/rent" | "Tax" | "GST" | "Investment cost basis" | "Investment overlap" | "Intercompany" | "Missing document" | "Profile" | "Opening balance" | "Missing source";
 export interface AuditItem { key: string; type: IssueType; entity: string; account: string | null; fy: string | null; risk: "high" | "medium" | "low"; text: string; evidence: string; to: string }
 
 const MAP: Record<string, IssueType> = { Profiles: "Profile", Invoices: "Missing invoice", Assets: "Asset register", Years: "Missing document" };
@@ -83,6 +84,10 @@ export function continuousAudit(p: { today: string; entities: EntityProfile[]; a
   const old = pastRetention(p.docs, p.today, p.books.retentionYears).length;
   if (old) out.push({ key: "retention", type: "Missing document", entity: "All", account: null, fy: null, risk: "low", text: `${old} document${old > 1 ? "s are" : " is"} past the retention period (review; nothing is deleted)`, evidence: "Retention policy", to: "/vault" });
   const order = { high: 0, medium: 1, low: 2 };
+  // Register figures with no source document or linked entry [§20, §61] — one finding per register.
+  const bare = new Map<string, { n: number; to: string; sample: string }>();
+  for (const r of unsourced(registerEvidence({ assets: p.assets, books: p.books, docs: p.docs.map((d) => ({ id: d.id, title: d.title })) }))) { const c = bare.get(r.register) ?? { n: 0, to: r.to, sample: r.label }; c.n++; bare.set(r.register, c); }
+  for (const [reg, c] of bare) out.push({ key: `nosrc:${reg}`, type: "Missing source", entity: "All", account: null, fy: null, risk: "low", text: `${reg}: ${c.n} figure${c.n > 1 ? "s have" : " has"} no source document (e.g. ${c.sample}) — attach the document so the figure can be traced`, evidence: "Figure sources", to: c.to });
   return [...new Map(out.map((x) => [x.key, x])).values()].sort((a, b) => order[a.risk] - order[b.risk]);
 }
 
