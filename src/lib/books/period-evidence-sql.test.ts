@@ -9,7 +9,7 @@ const id='00000000-0000-0000-0000-000000000003';
 const empty={closedPeriods:[],periodLog:[]};
 const change=(action='closed',operation=id,expected:object=empty,reason='Reviewed saved records')=>db.query<{e: Record<string,unknown>}>(`SELECT change_accounting_period($1,$2,'period-one','2025-04-01','2026-03-31',$3,$4::jsonb) e`,[operation,action,reason,JSON.stringify(expected)]);
 beforeAll(async()=>{
- await db.exec(`CREATE ROLE authenticated; CREATE ROLE anon; CREATE SCHEMA auth; CREATE FUNCTION auth.uid() RETURNS uuid LANGUAGE sql AS $$ SELECT nullif(current_setting('test.uid',true),'')::uuid $$;
+ await db.exec(`CREATE ROLE authenticated; CREATE ROLE anon; CREATE ROLE service_role; CREATE SCHEMA auth; CREATE FUNCTION auth.uid() RETURNS uuid LANGUAGE sql AS $$ SELECT nullif(current_setting('test.uid',true),'')::uuid $$;
  CREATE TABLE finance_preferences(owner_id uuid primary key,data jsonb,updated_at timestamptz);
  CREATE TABLE expenses(id uuid primary key,employee_id uuid,expense_date date,amount numeric,reconciled_at timestamptz);
  CREATE TABLE documents(id uuid,owner_id uuid,doc_date date,transaction_id uuid);
