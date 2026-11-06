@@ -37,3 +37,28 @@ describe("printed opening WDV on asset documents", () => {
     expect(r.missing).toContain("opening book value (tax WDV was printed)");
   });
 });
+
+describe("broker cash overlap", () => {
+  const cash = { id: "h1", kind: "broker_cash", name: "Zerodha broker cash", quantity: 50000 };
+  it("flags a cash-like account sharing the broker name", async () => {
+    const { brokerCashOverlap } = await import("./recon");
+    const rows = brokerCashOverlap([cash], [{ id: "a1", name: "Zerodha trading account", kind: "investment" }]);
+    expect(rows).toEqual([expect.objectContaining({ holdingId: "h1", accountId: "a1", amount: 50000, shared: "zerodha" })]);
+  });
+  it("stays silent for unrelated accounts, liabilities and archived accounts", async () => {
+    const { brokerCashOverlap } = await import("./recon");
+    expect(brokerCashOverlap([cash], [
+      { id: "a2", name: "HDFC savings", kind: "savings" },
+      { id: "a3", name: "Zerodha loan", kind: "loan" },
+      { id: "a4", name: "Zerodha old", kind: "investment", archived: true },
+    ])).toEqual([]);
+  });
+  it("ignores generic words like cash and balance on their own", async () => {
+    const { brokerCashOverlap } = await import("./recon");
+    expect(brokerCashOverlap([cash], [{ id: "a5", name: "Cash balance", kind: "cash" }])).toEqual([]);
+  });
+  it("ignores non-cash holdings", async () => {
+    const { brokerCashOverlap } = await import("./recon");
+    expect(brokerCashOverlap([{ ...cash, kind: "mutual_fund" }], [{ id: "a1", name: "Zerodha trading account", kind: "investment" }])).toEqual([]);
+  });
+});
