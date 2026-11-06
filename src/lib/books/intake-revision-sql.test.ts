@@ -27,9 +27,9 @@ it('rejects another operation on locked evidence',async()=>{await commit();await
 it('refuses cross-owner documents even with their current revision',async()=>{await db.exec(`SELECT set_config('test.uid','${other}',false)`);const r=await db.query<{r:number}>(`SELECT revision::int r FROM finance_preferences WHERE owner_id='${other}'`);await expect(commit(r.rows[0]?.r)).rejects.toThrow(/Owner document/);});
 it('refuses a commit that no approved run retained, and one that differs from the approved payload',async()=>{
  await expect(db.query('SELECT commit_document_intake_reviewed($1,$2,$3::jsonb,true,$4)',[op,doc,'{}',revision])).rejects.toThrow(/Review the document/);
- await seedRun(owner,op,doc,{books:{holdings:[{id:'h1',quantity:10}]}},true,revision);
- await expect(db.query('SELECT commit_document_intake_reviewed($1,$2,$3::jsonb,true,$4)',[op,doc,'{"books":{"holdings":[{"id":"h1","quantity":99}]}}',revision])).rejects.toThrow(/does not match the approved review/);
- await expect(db.query('SELECT commit_document_intake_reviewed($1,$2,$3::jsonb,false,$4)',[op,doc,'{"books":{"holdings":[{"id":"h1","quantity":10}]}}',revision])).rejects.toThrow(/does not match the approved review/);
+ await seedRun(owner,op,doc,{books:{holdings:[{id:'h1',name:'Fund',kind:'mutual_fund',quantity:10}]}},true,revision);
+ await expect(db.query('SELECT commit_document_intake_reviewed($1,$2,$3::jsonb,true,$4)',[op,doc,'{"books":{"holdings":[{"id":"h1","name":"Fund","kind":"mutual_fund","quantity":99}]}}',revision])).rejects.toThrow(/does not match the approved review/);
+ await expect(db.query('SELECT commit_document_intake_reviewed($1,$2,$3::jsonb,false,$4)',[op,doc,'{"books":{"holdings":[{"id":"h1","name":"Fund","kind":"mutual_fund","quantity":10}]}}',revision])).rejects.toThrow(/does not match the approved review/);
 });
 it('a committed retry still succeeds after the run attempt is removed',async()=>{
  const a=await commit();
