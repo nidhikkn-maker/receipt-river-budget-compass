@@ -12,7 +12,7 @@ beforeAll(async()=>{
  CREATE TABLE documents(id uuid primary key,owner_id uuid,evidence_locked boolean);
  CREATE FUNCTION commit_document_intake(uuid,jsonb,boolean) RETURNS void LANGUAGE sql AS $$ SELECT $$;
  INSERT INTO finance_preferences VALUES('${owner}','{}',now()),('${other}','{}',now()); INSERT INTO documents VALUES('${doc}','${owner}',false);`);
- await db.exec(readFileSync('.lovable/intake-revision.sql','utf8'));
+ await db.exec(readFileSync('drizzle/migrations/0071_revision_checked_document_intake.sql','utf8'));
 },20000);
 beforeEach(async()=>{await db.exec(`SELECT set_config('test.uid','${owner}',false); DELETE FROM document_intake_commits; UPDATE documents SET evidence_locked=false; UPDATE finance_preferences SET data='{}';`);const r=await db.query<{r:number}>(`SELECT revision::int r FROM finance_preferences WHERE owner_id='${owner}'`);revision=r.rows[0]?.r??0;});
 afterAll(()=>db.close());
