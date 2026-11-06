@@ -8,11 +8,14 @@
 - [x] Tax export registry labels state working draft, not official validation; full suite 1,541 tests passes.
 - [x] Server freeze for overlapping lease, company tax profile and asset financial inputs; period definitions/history protected. Applied safeguard confirmed in Cloud; 10 isolated PostgreSQL tests passed. Physical checks stay editable.
 - [x] Rechecked company tax-profile edit/reload and accountant PDF + three CSV downloads in the signed-in isolated browser; screenshots inspected, production financial writes blocked.
-- [ ] Database-generated immutable period-close evidence and Audit integration (client-only evidence is not authoritative).
+- [x] Database-generated owner-only close/reopen evidence and Audit download integration; 7 PostgreSQL tests and isolated close/download/reload/reopen browser check pass. Existing legacy closures remain explicitly without evidence; statutory certification is not asserted.
+- [ ] Harden all alternate period writes against evidence bypass, finish closing blockers and company-specific evidence acceptance.
 - [ ] Document detail corrections refresh suggestions; source references on figures.
 - [ ] Server approval step; typed document saves; company-level document access.
 - [ ] Fuller GST draft content; complete opening trial balance and asset postings.
 - [ ] v6.1 leftovers (broker cash, demat ownership share, loan outstanding); acceptance report.
+- [x] Signed external portfolio flows for contributions/redemptions, internal-transfer exclusion, snapshot/alert reuse and Demat allocation; 8 flow regressions. Actual fetched_at retained for exchange prices instead of invented refresh times; timestamp regression.
+- [x] Revision-checked, replay-protected atomic document intake/evidence lock; all preference updates bump common revision; 7 disposable PostgreSQL tests. Durable interrupted retry and typed proposal validation still open.
 ## Backup recovery verification (6 Nov 2026)
 - [x] Fixed team-visible expenses entering personal backups with explicit owner filters on every exported table.
 - [x] Isolated Settings/Drafts browser check: ZIP includes draft/photo, cancelled restore writes nothing, restored draft survives reload, failed restore cleans only staged files, retry keeps one draft. Production Cloud restore remains unverified; no real records changed.

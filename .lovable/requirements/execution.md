@@ -9,7 +9,10 @@
 ## Current implementation
 - Return draft registry now appears in Tax Centre exports; removed unsupported claims of official GST format validation.
 - Database register safeguard applied and confirmed present: leases, company tax-year profiles, asset financial facts, period definitions and historical logs. Physical checks remain editable. Ten isolated PostgreSQL tests pass; no production financial records changed.
-- Next executable requirement: authoritative period-close evidence, then source correction/typed intake/company access gaps and canonical net-worth input corrections.
+- Close/reopen now writes owner-scoped database-generated evidence with SHA-256 ledger/register revisions, source documents, approval history and rule versions. Audit downloads and shows retained snapshots; seven disposable PostgreSQL tests and isolated close/download/reload/reopen browser checks pass. Legacy closures without evidence are explicitly labelled.
+- Intake commits are owner-serialized, revision-checked and replay-protected with atomic evidence locking; seven disposable PostgreSQL tests pass. All preference updates advance the shared revision. Cross-device durable retry and typed proposal validation are still partial.
+- Portfolio signed flows now count contribution/redemption transfers across the portfolio boundary, exclude internal moves/counterparts, feed snapshots and movement alerts, and include Demat allocation. Actual stored price-fetch timestamps replace invented evening times. Eight flow/alert tests and a timestamp regression pass.
+- Next executable requirements: close-operation bypass hardening and source correction/durable typed intake recovery, company document access, broker cash/ownership/loan evidence and remaining acceptance.
 
 ## External dependencies
 - Licensed intraday feed choice and credentials (deferred by owner).
