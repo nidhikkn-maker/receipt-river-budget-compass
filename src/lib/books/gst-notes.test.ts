@@ -1,11 +1,15 @@
 import { describe, expect, it } from "vitest";
-import { effectiveInvoices, gstPayable, gstr1, gstr1Json, gstr3b, noteProblems } from "./gst";
+import { invoiceRegister, effectiveInvoices, gstPayable, gstr1, gstr1Json, gstr3b, noteProblems } from "./gst";
 import type { GstInvoice } from "./types";
 
 const G = "33AAAAA0000A1Z5", P = "33BBBBB1111B1Z6";
 const inv = (x: Partial<GstInvoice>): GstInvoice => ({ id: "i1", gstin: G, kind: "sales", number: "S1", date: "2026-10-05", party: "Acme", partyGstin: P, taxable: 1000, igst: 0, cgst: 90, sgst: 90, cess: 0, ...x });
 
 describe("GST credit/debit notes and amendments", () => {
+  it('register omits replaced invoices and keeps printed credit amounts for editing',()=>{
+    const list=[inv({}),inv({id:'amend',amendsId:'i1',taxable:1100}),inv({id:'credit',note:'credit',taxable:200}),inv({id:'other',gstin:'OTHER'})];
+    expect(invoiceRegister(list,G,'2026-10').map(i=>[i.id,i.taxable])).toEqual([['amend',1100],['credit',200]]);
+  });
   it("a sales credit note reduces output tax in 3B and set-off", () => {
     const list = [inv({}), inv({ id: "c1", number: "CN1", note: "credit", originalNumber: "S1", taxable: 200, cgst: 18, sgst: 18 })];
     expect(gstr3b(list, G, "2026-10").outputTax).toBe(144);

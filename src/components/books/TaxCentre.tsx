@@ -12,7 +12,7 @@ import { booksHeads, HEAD_LABEL, nextFy, openingProposal } from "@/lib/books/fy"
 import { OpeningBalances } from "./OpeningBalances";
 import { ItrHandoff } from "./ItrHandoff";
 import { REQUIRED_SCHEDULES } from "@/lib/books/intake";
-import { gstPayable, annualSummary, duplicateInvoices, gstr1, gstr1Json, gstr3b, gstr3bJson, gstr9, invoiceProblems, noteProblems, validateGstJson, matchGstPayments, unfiledPeriods } from "@/lib/books/gst";
+import { invoiceRegister, gstPayable, annualSummary, duplicateInvoices, gstr1, gstr1Json, gstr3b, gstr3bJson, gstr9, invoiceProblems, noteProblems, validateGstJson, matchGstPayments, unfiledPeriods } from "@/lib/books/gst";
 import { activateRule, OFFICIAL_SOURCES, proposeRule, ruleOn, validateRule, formFor, validateReturnDraft, ayOf } from "@/lib/books/regulatory";
 import type { GstInvoice, OpeningHead, RuleArea, TaxProfile } from "@/lib/books/types";
 import { supabase } from "@/integrations/supabase/client";
@@ -114,6 +114,8 @@ export function GstReturns({ fy }: { fy: string }) {
   const [period, setPeriod] = useState(months.at(-1) ?? "");
   const [inv, setInv] = useState<GstInvoice | null>(null);
   const [filing, setFiling] = useState({ form: "GSTR-3B", arn: "", filedOn: today() });
+  useEffect(()=>{if(!gstins.some(x=>x.g===gstin))setGstin(gstins[0]?.g??'');},[gstin,gstins.map(x=>x.g).join('|')]);
+  useEffect(()=>{if(!months.includes(period))setPeriod(months.at(-1)??'');},[period,months]);
   if (!gstins.length) return <Fold title="GST returns" hint="Add a GSTIN to a company first"><p className="text-sm text-muted-foreground">Add GSTINs on <Link to="/entities" className="underline">Companies & years</Link>.</p></Fold>;
   const owner = (preferences.entities ?? []).find((e) => e.gstins.includes(gstin));
   const profile = books.taxProfiles.find((p) => p.entityId === owner?.id);
@@ -125,8 +127,8 @@ export function GstReturns({ fy }: { fy: string }) {
   const g9 = gstr9(books.gstInvoices, gstin, Number(fy.slice(0, 4)), eligibleKeys);
   const yr = annualSummary(books.gstInvoices, gstin, Number(fy.slice(0, 4)));
   const unfiled: { form: string; period: string; due?: string; status?: string }[] = profile ? due.filter((o) => o.status === "overdue" || o.status === "due") : unfiledPeriods(books.gstFilings, gstin, "GSTR-3B", months).map((m) => ({ form: "GSTR-3B", period: m }));
-  const list = books.gstInvoices.filter((i) => i.gstin === gstin && i.date.startsWith(period));
-  const dups = duplicateInvoices(books.gstInvoices.filter((i) => i.gstin === gstin));
+  const list = invoiceRegister(books.gstInvoices,gstin,period);
+  const dups = duplicateInvoices(invoiceRegister(books.gstInvoices,gstin,period));
   const n = (v: string) => Math.max(0, Number(v) || 0);
   return (
     <Fold id="gst" title="GST returns (drafts)" hint={profile ? `${unfiled.length} return${unfiled.length === 1 ? "" : "s"} due or overdue · ${profile.gstScheme === "qrmp" ? "quarterly (QRMP)" : profile.gstScheme === "composition" ? "composition" : profile.gstScheme === "regular" ? "monthly" : "not registered"}` : "Set the filing scheme in the tax profile"}>

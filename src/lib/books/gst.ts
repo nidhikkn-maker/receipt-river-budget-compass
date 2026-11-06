@@ -10,6 +10,11 @@ export function effectiveInvoices(list: GstInvoice[]): GstInvoice[] {
   const replaced = new Set(list.map((i) => i.amendsId).filter(Boolean));
   return list.filter((i) => !replaced.has(i.id)).map((i) => (i.note === "credit" ? { ...i, taxable: -Math.abs(i.taxable), igst: -Math.abs(i.igst), cgst: -Math.abs(i.cgst), sgst: -Math.abs(i.sgst), cess: -Math.abs(i.cess) } : i));
 }
+/** Current register rows retain positive printed credit-note amounts for safe editing. */
+export function invoiceRegister(list:GstInvoice[],gstin:string,period:string):GstInvoice[]{
+  const replaced=new Set(list.map(i=>i.amendsId).filter(Boolean));
+  return list.filter(i=>!replaced.has(i.id)&&i.gstin===gstin&&periodOf(i.date)===period);
+}
 const isEligible = (i: GstInvoice, eligible?: Set<string>) => !!i.note || !eligible || eligible.has(`${i.partyGstin}|${i.number.trim().toUpperCase()}`);
 /** Note problems: a note must name the invoice it adjusts; an amendment must point at an existing record. */
 export function noteProblems(i: GstInvoice, list: GstInvoice[], closed: { from: string; to: string }[] = []): string[] {

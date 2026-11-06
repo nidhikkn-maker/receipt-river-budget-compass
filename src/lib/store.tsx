@@ -412,7 +412,7 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
     preferenceRequest.current=request;
     setPreferences(p);
     try {
-      const result = await supabase.rpc('save_reviewed_preferences',{_id:request.id,_data:p as unknown as Json,_expected:request.expected,_approved:sections.length>0});
+      const result = await supabase.rpc('save_reviewed_preferences',{_id:request.id,_data:p as unknown as Json,_expected:request.expected ?? -1,_approved:sections.length>0});
       check(result.error); preferencesRevision.current = result.data; preferenceRequest.current=null;
     }
     catch(e){setPreferences(previous);throw e;}

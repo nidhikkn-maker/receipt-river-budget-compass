@@ -13,8 +13,8 @@ export function registerEvidence(p: { assets: Asset[]; books: BooksData; docs: D
   const linkOf = (targetId: string) => p.books.docLinks.find((l) => l.targetId === targetId && docTitle.has(l.docId))?.docId;
   const resolve = (recordId: string, docId?: string, txId?: string): EvidenceRef | null => {
     const d = docId && docTitle.has(docId) ? docId : linkOf(recordId);
-    if (d) return { kind: "document", id: d, title: docTitle.get(d)! };
-    if (txId) return { kind: "entry", id: txId, title: p.entryTitle?.(txId) ?? "Linked entry" };
+    if (d) return { kind: "document", id: d, title: docTitle.get(d) ?? "Source document" };
+    if (txId && (!p.entryTitle || p.entryTitle(txId))) return { kind: "entry", id: txId, title: p.entryTitle?.(txId) ?? "Linked entry" };
     return null;
   };
   const out: FigureEvidence[] = [];
@@ -31,6 +31,17 @@ export function registerEvidence(p: { assets: Asset[]; books: BooksData; docs: D
   for (const f of p.books.fyRecords) for (const [head, v] of Object.entries(f.audited)) if (typeof v === "number")
     out.push({ register: "Prior-year accounts", recordId: f.id, label: `FY ${f.fy} · ${head}`, amount: v, source: resolve(f.id, f.docIds.find((d) => docTitle.has(d))), to: "/entities" });
   for (const b of p.books.loanBalances ?? []) out.push({ register: "Loan balances", recordId: b.id, label: `Outstanding ${b.asOf}`, amount: b.amount, source: resolve(b.id, b.docId), to: "/wealth" });
+  for(const c of p.books.taxCredits??[])out.push({register:'Tax credits',recordId:c.id,label:`${c.entityId} · ${c.fy} · ${c.kind}`,amount:c.amount,source:resolve(c.id,c.docId,c.transactionId),to:'/tax'});
+  for(const d of p.books.taxDeductions??[])out.push({register:'Tax deductions',recordId:d.id,label:`${d.entityId} · ${d.fy} · ${d.section} · ${d.evidence}`,amount:d.amount,source:resolve(d.id),to:'/tax'});
+  for(const s of p.books.salaryEvidence??[])out.push({register:'Salary evidence',recordId:`${s.entityId}:${s.fy}`,label:`${s.entityId} · ${s.fy} · salary`,amount:s.amount,source:resolve(`${s.entityId}:${s.fy}`,s.docId),to:'/tax'});
+  for(const y of p.books.entityTaxProfiles??[])for(const field of ['ownershipPct','capital','accumulatedProfits','bookProfit'] as const){const amount=y[field];if(amount!=null)out.push({register:'Company tax facts',recordId:y.id,label:`${y.entityId} · ${y.fy} · ${field}`,amount,source:resolve(y.id),to:'/entities'});}
+  for(const h of p.books.holdings){
+    out.push({register:'Investment holdings',recordId:h.id,label:`${h.name} · quantity`,amount:h.quantity,source:resolve(h.id),to:'/wealth'});
+    if(h.costBasis!=null)out.push({register:'Investment holdings',recordId:h.id,label:`${h.name} · acquisition cost`,amount:h.costBasis,source:resolve(h.id),to:'/wealth'});
+  }
+  for(const q of p.books.quotes)out.push({register:'Market prices',recordId:q.key,label:`${q.key} · ${q.at} · ${q.provider}`,amount:q.price,source:resolve(q.key),to:'/wealth'});
+  for(const o of p.books.priceOverrides??[])if(o.active)out.push({register:'Manual market prices',recordId:o.key,label:`${o.name} · ${o.priceDate} · ${o.source}`,amount:o.price,source:resolve(o.key),to:'/wealth'});
+  for(const j of p.books.journals)out.push({register:'Depreciation journals',recordId:j.id,label:`${j.assetId} · ${j.period}`,amount:j.amount,source:resolve(j.assetId,p.assets.find(a=>a.id===j.assetId)?.docId,j.transactionId),to:'/assets'});
   return out;
 }
 
