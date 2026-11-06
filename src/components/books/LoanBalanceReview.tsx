@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useStore } from '@/lib/store';
 import { useBooks } from './useBooks';
-import { standaloneLoanBalances, validateLoanBalance } from '@/lib/books/loan-balances';
+import { proposePrintedBalance, standaloneLoanBalances, validateLoanBalance } from '@/lib/books/loan-balances';
 import { money } from '@/lib/expenses';
 export function LoanBalanceReview({ loan }: { loan: { id: string; name: string; accountId: string | null; status: string } }) {
  const { documents }=useStore(); const { books,save }=useBooks();
@@ -16,7 +16,7 @@ export function LoanBalanceReview({ loan }: { loan: { id: string; name: string; 
  return <details className="mt-3 border-t pt-3 text-xs"><summary className="cursor-pointer font-medium">Lender balance · {row?.evidence?`${money(row.evidence.amount)} as of ${row.evidence.asOf}`:row?.conflict?'Conflicting source balances':'Needs dated statement evidence'}</summary>
   {!row?.evidence && <p className="py-2 text-destructive">Not included in net worth until a dated lender balance is confirmed.</p>}
   <div className="mt-2 grid gap-2">
-   <label>Lender statement<select aria-label={`Lender statement for ${loan.name}`} className="mt-1 w-full rounded-md border bg-background p-2" value={docId} onChange={e=>{setDocId(e.target.value);setConfirmed(false);}}><option value="">Choose linked statement</option>{sources.map(d=><option key={d.id} value={d.id}>{d.title}</option>)}</select></label>
+   <label>Lender statement<select aria-label={`Lender statement for ${loan.name}`} className="mt-1 w-full rounded-md border bg-background p-2" value={docId} onChange={e=>{const id=e.target.value;setDocId(id);setConfirmed(false);const d=documents.find(x=>x.id===id);const p=d?proposePrintedBalance(d):null;if(p&&!p.ambiguous){setAmount(String(p.amount));if(p.asOf)setAsOf(p.asOf);setQuote(p.sourceQuote);toast.message('Printed outstanding filled in — check it before confirming');}else if(p?.ambiguous)toast.warning(p.reason);}}><option value="">Choose linked statement</option>{sources.map(d=><option key={d.id} value={d.id}>{d.title}</option>)}</select></label>
    <div className="grid grid-cols-2 gap-2"><label>Outstanding (₹)<Input aria-label={`Lender outstanding for ${loan.name}`} type="number" min="0" value={amount} onChange={e=>{setAmount(e.target.value);setConfirmed(false);}}/></label><label>Balance date<Input aria-label={`Lender balance date for ${loan.name}`} type="date" max={today} value={asOf} onChange={e=>{setAsOf(e.target.value);setConfirmed(false);}}/></label></div>
    <label>Printed balance line / page<Input aria-label={`Balance source for ${loan.name}`} value={quote} onChange={e=>{setQuote(e.target.value);setConfirmed(false);}}/></label>
    <label className="flex gap-2"><input type="checkbox" checked={confirmed} onChange={e=>setConfirmed(e.target.checked)}/>I checked this outstanding balance and date against the lender statement.</label>
