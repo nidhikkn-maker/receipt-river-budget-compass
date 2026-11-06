@@ -51,11 +51,12 @@ export function duplicateInvoices(list: GstInvoice[]): string[] {
 /** GSTR-1 draft: B2B by recipient GSTIN and B2C totals for one GSTIN/month. */
 export function gstr1(list: GstInvoice[], gstin: string, period: string) {
   const all = effectiveInvoices(list).filter((i) => i.gstin === gstin && i.kind === "sales" && periodOf(i.date) === period);
-  const sales = all.filter((i) => !i.note), notes = all.filter((i) => i.note);
+  const sales = all.filter((i) => !i.note&&!i.treatment?.startsWith('export')), notes = all.filter((i) => i.note);
+  const exports=all.filter(i=>i.treatment?.startsWith('export'));
   const b2b = sales.filter((i) => i.partyGstin);
   const b2c = sales.filter((i) => !i.partyGstin);
   const sum = (xs: GstInvoice[]) => ({ count: xs.length, taxable: r2(xs.reduce((s, i) => s + i.taxable, 0)), igst: r2(xs.reduce((s, i) => s + i.igst, 0)), cgst: r2(xs.reduce((s, i) => s + i.cgst, 0)), sgst: r2(xs.reduce((s, i) => s + i.sgst, 0)), cess: r2(xs.reduce((s, i) => s + i.cess, 0)) });
-  return { gstin, period, b2b: sum(b2b), b2c: sum(b2c), notes: sum(notes), noteList: notes.map((i) => ({ type: i.note!, recipient: i.partyGstin, number: i.number, date: i.date, original: i.originalNumber ?? "", taxable: i.taxable, tax: taxOf(i) })), invoices: b2b.map((i) => ({ recipient: i.partyGstin, number: i.number, date: i.date, taxable: i.taxable, tax: taxOf(i) })) };
+  return { gstin, period, exports:sum(exports), b2b: sum(b2b), b2c: sum(b2c), notes: sum(notes), noteList: notes.map((i) => ({ type: i.note ?? 'debit', recipient: i.partyGstin, number: i.number, date: i.date, original: i.originalNumber ?? "", taxable: i.taxable, tax: taxOf(i) })), invoices: b2b.map((i) => ({ recipient: i.partyGstin, number: i.number, date: i.date, taxable: i.taxable, tax: taxOf(i) })) };
 }
 
 /** GSTR-3B draft: outward tax, eligible ITC (only purchases matched in GSTR-2B when given), net payable. */
@@ -126,7 +127,8 @@ const rate = (i: GstInvoice) => (i.taxable > 0 ? Math.round(((i.igst + i.cgst + 
  */
 export function gstr1Json(list: GstInvoice[], gstin: string, period: string) {
   const all = list.filter((i) => i.gstin === gstin && i.kind === "sales" && periodOf(i.date) === period && !list.some((x) => x.amendsId === i.id));
-  const sales = all.filter((i) => !i.note), notes = all.filter((i) => i.note && i.partyGstin);
+  const sales = all.filter((i) => !i.note&&!i.treatment?.startsWith('export')), notes = all.filter((i) => i.note && i.partyGstin);
+  const exports=all.filter(i=>!i.note&&i.treatment?.startsWith('export'));
   const byNote = new Map<string, GstInvoice[]>();
   for (const i of notes) byNote.set(i.partyGstin, [...(byNote.get(i.partyGstin) ?? []), i]);
   const byCtin = new Map<string, GstInvoice[]>();
@@ -142,20 +144,24 @@ export function gstr1Json(list: GstInvoice[], gstin: string, period: string) {
     gstin, fp: fp(period), version: "GST3.2", hash: "hash",
     b2b: [...byCtin.entries()].map(([ctin, inv]) => ({ ctin, inv: inv.map((i) => ({ inum: i.number.trim(), idt: ddmmyyyy(i.date), val: r2(i.taxable + taxOf(i)), pos: i.igst ? i.partyGstin.slice(0, 2) : gstin.slice(0, 2), rchrg: "N", inv_typ: "R", itms: [{ num: 1, itm_det: { rt: rate(i), txval: i.taxable, iamt: i.igst, camt: i.cgst, samt: i.sgst, csamt: i.cess } }] })) })),
     b2cs: [...b2cs.values()],
+    exp: ['export_paid','export_lut'].map(treatment=>({exp_typ:treatment==='export_paid'?'WPAY':'WOPAY',inv:exports.filter(i=>i.treatment===treatment).map(i=>({inum:i.number,idt:ddmmyyyy(i.date),val:r2(i.taxable+taxOf(i)),sbnum:i.shippingBill??'',sbdt:i.shippingDate?ddmmyyyy(i.shippingDate):'',sbpcode:i.portCode??'',itms:[{rt:rate(i),txval:i.taxable,iamt:i.igst,csamt:i.cess}]}))})).filter(x=>x.inv.length),
     cdnr: [...byNote.entries()].map(([ctin, nt]) => ({ ctin, nt: nt.map((i) => ({ ntty: i.note === "credit" ? "C" : "D", nt_num: i.number.trim(), nt_dt: ddmmyyyy(i.date), val: r2(Math.abs(i.taxable) + Math.abs(taxOf(i))), pos: i.igst ? i.partyGstin.slice(0, 2) : gstin.slice(0, 2), rchrg: "N", inv_typ: "R", itms: [{ num: 1, itm_det: { rt: rate(i), txval: Math.abs(i.taxable), iamt: Math.abs(i.igst), camt: Math.abs(i.cgst), samt: Math.abs(i.sgst), csamt: Math.abs(i.cess) } }] })) })),
   };
 }
 
 /** GSTR-3B in the GSTN JSON layout (sup_details.osup_det, itc_elg.itc_avl/itc_net). Working file only. */
-export function gstr3bJson(list: GstInvoice[], gstin: string, period: string, eligible?: Set<string>) {
+export function gstr3bJson(list: GstInvoice[], gstin: string, period: string, eligible?: Set<string>,advances:GstAdvance[]=[]) {
   const mine = effectiveInvoices(list).filter((i) => i.gstin === gstin && periodOf(i.date) === period);
-  const out = mine.filter((i) => i.kind === "sales");
-  const inn = mine.filter((i) => i.kind === "purchase" && isEligible(i, eligible));
+  const out = mine.filter((i) => i.kind === "sales"&&!i.treatment?.startsWith('export'));
+  const zero=mine.filter(i=>i.kind==='sales'&&i.treatment?.startsWith('export'));
+  const reverse=mine.filter(i=>i.kind==='purchase'&&i.treatment==='reverse_charge');
+  const inn = mine.filter((i) => i.kind === "purchase" && isEligible(i, eligible)&&(i.treatment!=='reverse_charge'||!!i.rcmPaymentId&&!!i.rcmPaidOn&&i.rcmPaidOn.slice(0,7)<=period));
   const s = (xs: GstInvoice[], k: "taxable" | "igst" | "cgst" | "sgst" | "cess") => r2(xs.reduce((t, i) => t + i[k], 0));
   const itc = { ty: "OTH", iamt: s(inn, "igst"), camt: s(inn, "cgst"), samt: s(inn, "sgst"), csamt: s(inn, "cess") };
+  const advance=advanceHeads(advances,gstin,period);
   return {
     gstin, ret_period: fp(period),
-    sup_details: { osup_det: { txval: s(out, "taxable"), iamt: s(out, "igst"), camt: s(out, "cgst"), samt: s(out, "sgst"), csamt: s(out, "cess") } },
+    sup_details: { osup_det: { txval: s(out, "taxable")+advance.taxable, iamt: s(out, "igst")+advance.igst, camt: s(out, "cgst")+advance.cgst, samt: s(out, "sgst")+advance.sgst, csamt: s(out, "cess")+advance.cess },osup_zero:{txval:s(zero,'taxable'),iamt:s(zero,'igst'),csamt:s(zero,'cess')},isup_rev:{txval:s(reverse,'taxable'),iamt:s(reverse,'igst'),camt:s(reverse,'cgst'),samt:s(reverse,'sgst'),csamt:s(reverse,'cess')} },
     itc_elg: { itc_avl: [itc], itc_rev: [], itc_net: { iamt: itc.iamt, camt: itc.camt, samt: itc.samt, csamt: itc.csamt }, itc_inelg: [] },
   };
 }

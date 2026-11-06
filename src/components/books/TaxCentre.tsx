@@ -148,7 +148,7 @@ export function GstReturns({ fy }: { fy: string }) {
         </div>
         <p className="text-xs">Exports: {special.exports.length} · taxable {inr(special.exportTaxable)}. Reverse-charge cash liability: {inr(special.reverseCash)}.</p>
         <GstAdvances gstin={gstin} period={period}/>
-        <div className="flex flex-wrap gap-2 text-xs">{([["GSTR-1", gstr1Json(books.gstInvoices, gstin, period)], ["GSTR-3B", gstr3bJson(books.gstInvoices, gstin, period, eligibleKeys)]] as const).map(([form, j]) => {
+        <div className="flex flex-wrap gap-2 text-xs">{([["GSTR-1", {...gstr1Json(books.gstInvoices, gstin, period),advanceWorking:(books.gstAdvances??[]).filter(a=>a.gstin===gstin)}], ["GSTR-3B", gstr3bJson(books.gstInvoices, gstin, period, eligibleKeys,books.gstAdvances)]] as const).map(([form, j]) => {
           const errs = validateGstJson(form, j as unknown as Record<string, unknown>);
           const validation = validateReturnDraft(form, period, owner?.kind ?? "individual", j as unknown as Record<string, unknown>, ["gstin"]);
           return <div key={form} className="min-w-0"><p className="mb-1 break-words text-muted-foreground">{form}: {validation.label}</p>{errs.length ? <p className="break-words text-destructive">{form} file not ready: {errs.slice(0, 3).join("; ")}</p>
