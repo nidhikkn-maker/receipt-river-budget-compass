@@ -8,15 +8,21 @@ export interface EvidenceRef { kind: "document" | "entry"; id: string; title: st
 export interface FigureEvidence { register: string; recordId: string; label: string; amount: number; source: EvidenceRef | null; to: string }
 interface Doc { id: string; title: string }
 
-export function registerEvidence(p: { assets: Asset[]; books: BooksData; docs: Doc[]; entryTitle?: (id: string) => string | undefined }): FigureEvidence[] {
+export type Resolver = (recordId: string, docId?: string, txId?: string) => EvidenceRef | null;
+/** Shared source resolver: direct document reference, else a DocuRepo link, else a linked ledger entry. */
+export function makeResolver(p: { books: BooksData; docs: Doc[]; entryTitle?: (id: string) => string | undefined }): Resolver {
   const docTitle = new Map(p.docs.map((d) => [d.id, d.title]));
   const linkOf = (targetId: string) => p.books.docLinks.find((l) => l.targetId === targetId && docTitle.has(l.docId))?.docId;
-  const resolve = (recordId: string, docId?: string, txId?: string): EvidenceRef | null => {
+  return (recordId, docId, txId) => {
     const d = docId && docTitle.has(docId) ? docId : linkOf(recordId);
     if (d) return { kind: "document", id: d, title: docTitle.get(d) ?? "Source document" };
     if (txId && (!p.entryTitle || p.entryTitle(txId))) return { kind: "entry", id: txId, title: p.entryTitle?.(txId) ?? "Linked entry" };
     return null;
   };
+}
+
+export function registerEvidence(p: { assets: Asset[]; books: BooksData; docs: Doc[]; entryTitle?: (id: string) => string | undefined }): FigureEvidence[] {
+  const resolve = makeResolver(p);
   const out: FigureEvidence[] = [];
   for (const a of p.assets) {
     out.push({ register: "Asset register", recordId: a.id, label: `${a.name} · cost`, amount: a.cost, source: resolve(a.id, a.docId, a.transactionId), to: "/assets" });
