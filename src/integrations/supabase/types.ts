@@ -1809,6 +1809,42 @@ export type Database = {
         }
         Relationships: []
       }
+      preference_approvals: {
+        Row: {
+          approved_at: string
+          approved_data: Json
+          changed_sections: string[]
+          expected_revision: number | null
+          id: string
+          owner_id: string
+          previous_data: Json
+          result_revision: number | null
+          transaction_id: number
+        }
+        Insert: {
+          approved_at?: string
+          approved_data: Json
+          changed_sections: string[]
+          expected_revision?: number | null
+          id: string
+          owner_id: string
+          previous_data: Json
+          result_revision?: number | null
+          transaction_id: number
+        }
+        Update: {
+          approved_at?: string
+          approved_data?: Json
+          changed_sections?: string[]
+          expected_revision?: number | null
+          id?: string
+          owner_id?: string
+          previous_data?: Json
+          result_revision?: number | null
+          transaction_id?: number
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string
@@ -2748,6 +2784,19 @@ export type Database = {
           _to: string
         }
         Returns: undefined
+      }
+      save_reviewed_preferences: {
+        Args: {
+          _approved: boolean
+          _data: Json
+          _expected: number
+          _id: string
+        }
+        Returns: number
+      }
+      sensitive_preference_sections: {
+        Args: { _new: Json; _old: Json }
+        Returns: string[]
       }
       start_demo_workspace: { Args: { _label: string }; Returns: undefined }
       team_company_tax: {
