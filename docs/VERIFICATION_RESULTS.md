@@ -36,3 +36,10 @@ Not verified: hosted two-account access, real-device behaviour, real-document ex
 
 ## 6 Nov 2026 — 0083 journal/rule/closed-event guards
 - Installed in Cloud (trigger confirmed present). 8 disposable PostgreSQL tests: closed-month posting refused, open posting allowed only as prepared, posted journals immutable, closed financial asset events frozen, physical checks allowed, rule activation needs approval date + passing checks, approved rules immutable/undeletable. Books suite 369/369 pass. No real records changed.
+
+## 6 Nov 2026 — P3 compatibility matrix + P12 derived-figure snapshots (0084)
+- Writer audit: every finance_preferences write path enumerated (RPC saves, document intake, period close/reopen, depreciation cron, finance_operation, claim inserts, erasing deletes, backup restore). Only restore needed the staged rewrite; all others already comply.
+- preference-approval-sql.test.ts extended to 12 tests: with the staged guard active, intake exemption, period-close writes, cron journal preparation and finance_operation upserts all pass; direct sensitive writes stay blocked.
+- 0084 installed in Cloud: change_accounting_period gains optional _figures (version-1 shape validated), freezes derivedFigures + SHA-256 figureRevision + owner-only account snapshot into close evidence; old 6-arg calls still resolve (backward compatible, verified by PGlite test).
+- period-figures.ts: 7 pure tests (in-period totals, credit-note/amendment handling, drift detection, reproducibility from evidence, parsing). period-figures-sql.test.ts: 4 PGlite tests (figures frozen, 6-arg compat, malformed rejected, replay immutable).
+- Full suite 222 files / 1,704 tests pass; typecheck clean; build OK. No real records changed; staged trigger still NOT installed (awaits owner-approved publish).
