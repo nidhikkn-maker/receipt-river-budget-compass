@@ -50,3 +50,6 @@
 - Tax workpaper ZIP gains a fourth sheet, 4_field_provenance.csv: per taxpayer, every field read from that company's linked documents, so the accountant can trace each figure to its printed source. Personal section stays entry-based (sheet 2).
 - Three new tests; workpaper suite 13 passed; typecheck clean.
 - Item 5 verified already complete: GST drafts (GSTR-1/3B/9 + JSON + validation + Rule 88A set-off), opening balance sheet (fy.ts openingBalanceSheet) and asset posting acceptance (scheduled-depreciation, phase1-acceptance) all exist with tests.
+
+## 6 Nov 2026 — §71 acceptance matrix completed (audit item 11, partial)
+- books.test.ts now covers all 22 mandatory cases: added 11 (ICICI Direct demat import), 12 (re-import without duplicates + investment recon), 17 (internal transfer pairing, no income/spend), 18 (card settlement lowers owed, no new spending), 19 (one account ↔ one company mapping), 20 (source-to-report traceability via recordProvenance), 22 (ledger integrity invariants). 37 matrix tests pass.
