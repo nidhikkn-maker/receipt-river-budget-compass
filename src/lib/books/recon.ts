@@ -24,7 +24,7 @@ export function loanRecon(loans: { id: string; name: string; accountId: string |
   return out;
 }
 
-export interface SupplierReconRow { party: string; gstin: string; invoiced: number; paid: number; difference: number; invoices: number; payments: number }
+export interface SupplierReconRow { party: string; gstin: string; invoiced: number; paid: number; difference: number; invoices: number; payments: number; allocation?: ReturnType<typeof allocatePayments> | undefined }
 /** Supplier: purchase invoices (incl. tax) per supplier vs payments naming that supplier, per GSTIN. */
 export function supplierRecon(invoices: GstInvoice[], payments: { id: string; amount: number; text: string; date: string }[], from: string, to: string): SupplierReconRow[] {
   const by = new Map<string, { party: string; gstin: string; invoiced: number; invoices: number }>();
