@@ -25,7 +25,7 @@ describe("shared company search", () => {
   const rows = [t("Office rent", "o1", "c1"), t("Laptop", "o1", "c1")];
   it("matches title, merchant and category without case", () => {
     expect(filterShared(rows, "RENT", (r) => [r.title, r.merchant, r.category]).map((r) => r.id)).toEqual(["Office rent"]);
-    expect(filterShared(rows, "office", (r) => [r.title, r.merchant, r.category]).map((r) => r.id)).toEqual(["Office rent"]);
+    expect(filterShared(rows, "office", (r) => [r.title, r.merchant, r.category]).map((r) => r.id)).toEqual(["Office rent", "Laptop"]); // Laptop's category is Office
   });
   it("empty query returns everything and no match returns nothing", () => {
     expect(filterShared(rows, "  ", (r) => [r.title])).toHaveLength(2);
