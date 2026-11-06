@@ -24,7 +24,6 @@ import type { TaxDeduction } from "@/lib/books/types";
 import { classifyPayment, fromEntities, withEntityIncome, type EntityFacts } from "@/lib/books/from-entities";
 import { profileFor } from "@/lib/books/entity-tax-profile";
 import { TaxWorkpaper } from "./TaxWorkpaper";
-import { TeamCompanyTax } from "@/components/TeamAccess";
 import { fyOf } from "@/lib/entities";
 
 const inr = (n: number) => "₹" + n.toLocaleString("en-IN", { maximumFractionDigits: 0 });
@@ -339,7 +338,6 @@ export function TaxComputationCard({ fy }: { fy: string }) {
         {c.notes.map((n) => <p key={n} className="text-[11px] text-muted-foreground">{n}</p>)}
         <ItrHandoff fy={fy} ent={ent} c={c} personal={personal} regime={regime} profileConfirmed={!unconfirmed} credits={cr.lines} unrecordedTaxDebits={challans.length} gains={ent ? [] : (demat ?? []).flatMap((d) => d.holdings.flatMap((h) => h.gains))} scope={accountIds} slabTax={slabTax} />
         <TaxWorkpaper fy={fy} personalLines={entityLines} />
-        <TeamCompanyTax />
       </div>
     </Fold>
   );
