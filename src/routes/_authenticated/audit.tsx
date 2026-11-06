@@ -173,7 +173,7 @@ function FigureSources({ assets, books, docs, titleOf }: { assets: import("@/lib
   return (
     <Fold title="Figure sources" hint={rows.length ? `${rows.length - missing} of ${rows.length} register figures traced to a document or entry` : "No register figures yet"}>
       <div className="space-y-2 text-xs">
-        <div className="max-h-80 divide-y overflow-y-auto rounded-lg border">{rows.map((r, i) => <div key={`${r.recordId}:${i}`} className="flex flex-wrap justify-between gap-2 px-2 py-1"><span className="min-w-0">{r.register} · {r.label}<span className="block text-muted-foreground">{r.source ? `${r.source.kind === "document" ? "Document" : "Entry"}: ${r.source.title}` : "No source — attach the document"}</span></span><span className="font-mono">{inr(r.amount)}</span></div>)}</div>
+        {rows.length > 0 && <div className="max-h-80 divide-y overflow-y-auto rounded-lg border">{rows.map((r, i) => <div key={`${r.recordId}:${i}`} className="flex flex-wrap justify-between gap-2 px-2 py-1"><span className="min-w-0">{r.register} · {r.label}<span className="block text-muted-foreground">{r.source ? `${r.source.kind === "document" ? "Document" : "Entry"}: ${r.source.title}` : "No source — attach the document"}</span></span><span className="font-mono">{inr(r.amount)}</span></div>)}</div>}
         {rows.length > 0 && <Button size="sm" variant="outline" onClick={() => downloadBlob(new Blob([evidenceCsv(rows)], { type: "text/csv" }), "figure-sources.csv")}>Download CSV</Button>}
         <p className="text-muted-foreground">Read-only. A figure counts as traced only when its record names a document, a document is linked to it, or it is linked to a ledger entry.</p>
       </div>
