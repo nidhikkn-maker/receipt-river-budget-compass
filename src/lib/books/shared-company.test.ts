@@ -4,6 +4,7 @@ import { filterShared, rowsFor, sharedCompanyCsv, sharedCompanyPdfData, type Sha
 const c: SharedCompany = { grant_id: "g", owner_id: "o1", entity_id: "c1", company_name: "Krupa Pvt Ltd", owner_email: "o@x.in", can_write: false };
 const t = (id: string, owner: string, ent: string | null): SharedTxn => ({ id, employee_id: owner, entity_id: ent, title: id, merchant: null, category: "Office", amount: 100, currency: "INR", expense_date: "2026-10-01", txn_type: "expense" });
 const d = (id: string, owner: string, ent: string | null): SharedDoc => ({ id, owner_id: owner, entity_id: ent, title: id, doc_type: "invoice", doc_date: null, file_path: "x" });
+const d_ = d;
 
 describe("shared company export", () => {
   it("includes only that owner's rows for that company", () => {
