@@ -16,9 +16,10 @@ beforeAll(async()=>{
  INSERT INTO finance_preferences VALUES('${owner}','{}',now()); INSERT INTO documents VALUES('${doc}','${owner}',false,'mutual_fund_statement');`);
  await db.exec(readFileSync('drizzle/migrations/0071_revision_checked_document_intake.sql','utf8'));
  await db.exec(readFileSync('drizzle/migrations/0074_typed_document_intake_validation.sql','utf8'));
+ await db.exec(readFileSync('drizzle/migrations/0079_intake_server_approval.sql','utf8'));
 },20000);
 beforeEach(async()=>{
- await db.exec(`DELETE FROM document_intake_commits; UPDATE finance_preferences SET data='{}'; UPDATE documents SET evidence_locked=false,doc_type='mutual_fund_statement'`);
+ await db.exec(`DELETE FROM document_intake_commits; DELETE FROM document_runs; UPDATE finance_preferences SET data='{}'; UPDATE documents SET evidence_locked=false,doc_type='mutual_fund_statement'`);
  revision=(await db.query<{r:number}>('SELECT revision::int r FROM finance_preferences')).rows[0]?.r??0;
 });
 afterAll(()=>db.close());
