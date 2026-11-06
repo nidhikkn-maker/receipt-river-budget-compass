@@ -90,8 +90,8 @@ function Audit() {
     const ledgerAt = (id: string, date: string) => { const a = accounts.find((x) => x.id === id); return a ? accountBalance(a, transactions.filter((t) => t.date <= date)) : 0; };
     return {
       loan: loanRecon(loans, documents.filter((d) => d.docType === "loan_statement").map((d) => ({ loanId: d.loanId ?? null, date: d.docDate, outstanding: d.amount })), ledgerAt).filter((r) => Math.abs(r.difference) > 1),
-      supplier: supplierRecon(books.gstInvoices, transactions.filter((t) => (t.txnType ?? "expense") === "expense").map((t) => ({ id: t.id, amount: t.amount, date: t.date, text: `${t.title} ${t.merchant ?? ""} ${t.description}` })), fyRange(fyNow).start, fyRange(fyNow).end),
-      customer: customerRecon(books.gstInvoices, transactions.filter((t) => t.txnType === "income").map((t) => ({ id: t.id, amount: t.amount, date: t.date, text: `${t.title} ${t.merchant ?? ""} ${t.description}` })), fyRange(fyNow).start, fyRange(fyNow).end),
+      supplier: supplierRecon(books.gstInvoices, transactions.filter((t) => (t.txnType ?? "expense") === "expense").map((t) => ({ id: t.id, amount: t.amount, date: t.date, text: `${t.title} ${t.merchant ?? ""} ${t.description}` })), fyRange(fyNow).start, fyRange(fyNow).end, books.allocationOrder),
+      customer: customerRecon(books.gstInvoices, transactions.filter((t) => t.txnType === "income").map((t) => ({ id: t.id, amount: t.amount, date: t.date, text: `${t.title} ${t.merchant ?? ""} ${t.description}` })), fyRange(fyNow).start, fyRange(fyNow).end, books.allocationOrder),
       investment: investmentRecon((demat ?? []).flatMap((d) => d.holdings)),
       inter: intercompanyRecon(transactions, books.entityAccounts ?? {}),
     };
