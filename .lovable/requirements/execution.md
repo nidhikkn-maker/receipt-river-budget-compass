@@ -53,3 +53,7 @@
 
 ## 6 Nov 2026 — §71 acceptance matrix completed (audit item 11, partial)
 - books.test.ts now covers all 22 mandatory cases: added 11 (ICICI Direct demat import), 12 (re-import without duplicates + investment recon), 17 (internal transfer pairing, no income/spend), 18 (card settlement lowers owed, no new spending), 19 (one account ↔ one company mapping), 20 (source-to-report traceability via recordProvenance), 22 (ledger integrity invariants). 37 matrix tests pass.
+
+## 6 Nov 2026 — §72 deliverables map
+- docs/DELIVERABLES.md maps all 20 required reports to their executable evidence; 17 done, 3 partial (real-document extraction accuracy, physical device screenshots, deployment readiness) — all three wait on owner inputs listed in OPEN_BLOCKERS.
+- Full suite after all additions: 1,639 tests passed; typecheck clean.
