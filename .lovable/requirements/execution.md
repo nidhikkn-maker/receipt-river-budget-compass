@@ -20,4 +20,5 @@
 
 ## Verification
 - Full suite: 195 test files, 1,541 tests passed on 6 November 2026. Preview compilation log reports build OK.
+- Isolated signed-in browser check passed: company tax profile edited from 60% to 75% and survived reload; accountant ZIP downloaded with PDF and three CSVs using the edited assumptions. Screenshots inspected. Production writes were intercepted, so this does not certify Cloud persistence.
 - Controlled browser evidence never certifies hosted saves or real-device behaviour.
