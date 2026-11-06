@@ -1,3 +1,12 @@
+-- STAGED — not installed. Deployment sequence (owner approval required before step 3):
+-- 1. DONE: save_reviewed_preferences RPC + preference_approvals audit installed (0080); every app save path
+--    already routes through it (store.tsx savePreferences) or is guard-compatible.
+-- 2. DONE: compatibility matrix proven in src/lib/books/preference-approval-sql.test.ts — document intake
+--    (document_runs exemption), period close/reopen (closedPeriods/periodLog are not sensitive sections),
+--    monthly depreciation cron (books.journals not sensitive), finance_operation upserts, claim '{}' inserts,
+--    erasing-mode deletes and the rewritten restore_finance_backup all pass with the guard active.
+-- 3. PENDING OWNER APPROVAL: publish the compatible client first, then install this file's trigger
+--    (guard_preference_approval) so the old published client is never broken.
 CREATE TABLE public.preference_approvals (
  id uuid PRIMARY KEY, owner_id uuid NOT NULL, expected_revision bigint,
  previous_data jsonb NOT NULL, approved_data jsonb NOT NULL,
