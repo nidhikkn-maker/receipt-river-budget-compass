@@ -498,6 +498,13 @@
       "when": 1793940834462,
       "tag": "0070_authoritative_period_close_evidence",
       "breakpoints": true
+    },
+    {
+      "idx": 71,
+      "version": "7",
+      "when": 1793941070367,
+      "tag": "0071_revision_checked_document_intake",
+      "breakpoints": true
     }
   ]
 }

@@ -447,6 +447,41 @@ export type Database = {
         }
         Relationships: []
       }
+      document_intake_commits: {
+        Row: {
+          created_at: string
+          document_id: string
+          id: string
+          owner_id: string
+          request: Json
+          result_revision: number
+        }
+        Insert: {
+          created_at?: string
+          document_id: string
+          id: string
+          owner_id: string
+          request: Json
+          result_revision: number
+        }
+        Update: {
+          created_at?: string
+          document_id?: string
+          id?: string
+          owner_id?: string
+          request?: Json
+          result_revision?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "document_intake_commits_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "finance_preferences"
+            referencedColumns: ["owner_id"]
+          },
+        ]
+      }
       document_runs: {
         Row: {
           attempts: number
@@ -979,16 +1014,19 @@ export type Database = {
         Row: {
           data: Json
           owner_id: string
+          revision: number
           updated_at: string
         }
         Insert: {
           data?: Json
           owner_id: string
+          revision?: number
           updated_at?: string
         }
         Update: {
           data?: Json
           owner_id?: string
+          revision?: number
           updated_at?: string
         }
         Relationships: []
@@ -2441,6 +2479,16 @@ export type Database = {
       commit_document_intake: {
         Args: { p_data: Json; p_document_id: string; p_lock: boolean }
         Returns: undefined
+      }
+      commit_document_intake_reviewed: {
+        Args: {
+          _data: Json
+          _document: string
+          _expected: number
+          _id: string
+          _lock: boolean
+        }
+        Returns: number
       }
       confirm_transfer: {
         Args: {
