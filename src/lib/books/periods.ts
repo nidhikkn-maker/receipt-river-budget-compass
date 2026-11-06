@@ -56,3 +56,20 @@ export const POLICY: { level: PolicyLevel; items: string[] }[] = [
 export function policyFor(action: string): PolicyLevel | null {
   return POLICY.find((p) => p.items.includes(action))?.level ?? null;
 }
+
+/** Proof stored when a period closes [rank 12]; reopening supersedes it instead of overwriting. */
+export interface CloseEvidence { id: string; periodId: string; from: string; to: string; at: string; ledgerRevision: string; entryCount: number; reconciled: number; sourceDocIds: string[]; approvalIds: string[]; ruleVersions: string[]; supersededBy: string | null }
+export function buildCloseEvidence(i: { id: string; period: { id: string; from: string; to: string }; at: string; entries: { id: string; date: string; updatedAt?: string; reconciled?: boolean; docId?: string | null }[]; approvalIds?: string[]; ruleVersions?: string[] }): CloseEvidence {
+  const inside = i.entries.filter((e) => e.date >= i.period.from && e.date <= i.period.to);
+  const rev = inside.map((e) => `${e.id}:${e.updatedAt ?? ""}`).sort().join("|");
+  let h = 0; for (let k = 0; k < rev.length; k++) h = (h * 31 + rev.charCodeAt(k)) >>> 0;
+  return { id: i.id, periodId: i.period.id, from: i.period.from, to: i.period.to, at: i.at, ledgerRevision: h.toString(16), entryCount: inside.length, reconciled: inside.filter((e) => e.reconciled).length, sourceDocIds: [...new Set(inside.map((e) => e.docId).filter((d): d is string => !!d))].sort(), approvalIds: [...(i.approvalIds ?? [])].sort(), ruleVersions: [...(i.ruleVersions ?? [])].sort(), supersededBy: null };
+}
+export function supersedeEvidence(list: CloseEvidence[], periodId: string, newId: string): CloseEvidence[] {
+  return list.map((e) => (e.periodId === periodId && !e.supersededBy ? { ...e, supersededBy: newId } : e));
+}
+/** Blocks register changes (assets, leases, tax profiles) dated inside a closed period. */
+export function registerBlocker(periods: ClosedPeriod[], dates: (string | null | undefined)[]): string | null {
+  for (const d of dates) if (d) { const p = closedPeriodFor(d, periods); if (p) return `${d} falls in a closed period (${p.from} to ${p.to}); reopen it first.`; }
+  return null;
+}

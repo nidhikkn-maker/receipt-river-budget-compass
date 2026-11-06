@@ -99,3 +99,21 @@ export function formFor(kind: string, hasBusiness: boolean, fy: string): { form:
   const version = FORM_VERSIONS.find((v) => v.form === form && v.assessmentYear === ay) ?? null;
   return { form, version, note: version ? `${form} for AY ${ay} (${version.schemaVersion}, ${version.source})` : `${form} for AY ${ay} has not been added yet — the draft is a working only` };
 }
+
+/** Official return format registry [rank 6]: a draft is "validated" only against a pinned official schema. */
+export interface ReturnSchema { form: string; period: string; entityKinds: string[]; source: string; schemaHash: string | null }
+export const RETURN_SCHEMAS: ReturnSchema[] = [
+  ...FORM_VERSIONS.map((v) => ({ form: v.form, period: v.assessmentYear, entityKinds: v.form === "ITR-6" ? ["company"] : ["individual", "proprietorship", "huf"], source: v.source, schemaHash: null })),
+  { form: "GSTR-1", period: "any", entityKinds: ["company", "llp", "partnership", "proprietorship"], source: "GSTN offline tool JSON — pin version before validating", schemaHash: null },
+  { form: "GSTR-3B", period: "any", entityKinds: ["company", "llp", "partnership", "proprietorship"], source: "GSTN offline tool JSON — pin version before validating", schemaHash: null },
+];
+export type DraftStatus = { status: "validated" | "working" | "unsupported"; label: string; problems: string[] };
+/** Checks a return draft against the registry; unsupported or unpinned schemas never count as validated. */
+export function validateReturnDraft(form: string, period: string, entityKind: string, draft: Record<string, unknown> | null, required: string[] = []): DraftStatus {
+  const s = RETURN_SCHEMAS.find((r) => r.form === form && (r.period === period || r.period === "any"));
+  if (!s) return { status: "unsupported", label: `${form} for ${period} is not registered — working draft only`, problems: ["No registered format"] };
+  if (!s.entityKinds.includes(entityKind)) return { status: "unsupported", label: `${form} does not apply to a ${entityKind}`, problems: ["Wrong taxpayer type"] };
+  const problems = required.filter((k) => draft?.[k] == null || draft[k] === "").map((k) => `Missing ${k}`);
+  if (!s.schemaHash) return { status: "working", label: "Working draft — not validated (official format not pinned)", problems };
+  return problems.length ? { status: "working", label: "Working draft — has missing fields", problems } : { status: "validated", label: `Checked against ${s.source}`, problems };
+}

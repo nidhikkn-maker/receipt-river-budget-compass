@@ -1,3 +1,10 @@
+## Remaining v6 items (6 Nov 2026 plan)
+- [x] Return format registry + validateReturnDraft (unpinned formats never "validated"); period-close evidence, supersede-on-reopen and register blocker rules; 8 tests.
+- [ ] Wire close evidence + registry labels into Audit/Tax screens; server freeze for register inputs.
+- [ ] Document detail corrections refresh suggestions; source references on figures.
+- [ ] Server approval step; typed document saves; company-level document access.
+- [ ] Fuller GST draft content; complete opening trial balance and asset postings.
+- [ ] v6.1 leftovers (broker cash, demat ownership share, loan outstanding); acceptance report.
 ## Backup recovery verification (6 Nov 2026)
 - [x] Fixed team-visible expenses entering personal backups with explicit owner filters on every exported table.
 - [x] Isolated Settings/Drafts browser check: ZIP includes draft/photo, cancelled restore writes nothing, restored draft survives reload, failed restore cleans only staged files, retry keeps one draft. Production Cloud restore remains unverified; no real records changed.
