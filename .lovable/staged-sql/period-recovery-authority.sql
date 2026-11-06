@@ -82,7 +82,10 @@ BEGIN
   RETURN OLD;
  END IF;
  IF EXISTS(SELECT 1 FROM public.period_operation_authority WHERE owner_id=NEW.owner_id AND transaction_id=txid_current()) THEN RETURN NEW; END IF;
- old_books:=CASE WHEN TG_OP='INSERT' THEN '{}'::jsonb ELSE coalesce(OLD.data->'books','{}') END;
+ IF TG_OP='INSERT' THEN
+  SELECT coalesce(data->'books','{}') INTO old_books FROM public.finance_preferences WHERE owner_id=NEW.owner_id FOR UPDATE;
+  old_books:=coalesce(old_books,'{}');
+ ELSE old_books:=coalesce(OLD.data->'books','{}'); END IF;
  new_books:=coalesce(NEW.data->'books','{}');
  IF coalesce(old_books->'closedPeriods','[]') IS DISTINCT FROM coalesce(new_books->'closedPeriods','[]') OR
     coalesce(old_books->'periodLog','[]') IS DISTINCT FROM coalesce(new_books->'periodLog','[]') THEN

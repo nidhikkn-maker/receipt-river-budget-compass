@@ -80,3 +80,10 @@ it('rejects anonymous archival and leaves the existing imported history unchange
  await db.exec("SELECT set_config('test.uid','',false)");
  await expect(db.query('SELECT archive_backup_period_history($1::jsonb)', ['{}'])).rejects.toThrow(/Invalid imported history/);
 });
+it('allows an ordinary preference upsert retaining closure state but blocks forged upserts', async () => {
+ await close(); const data = await state();
+ await db.query(`INSERT INTO finance_preferences(owner_id,data) VALUES($1,$2::jsonb) ON CONFLICT(owner_id) DO UPDATE SET data=excluded.data`, [owner, JSON.stringify({ ...data, name: 'New name' })]);
+ expect((await state())?.['name']).toBe('New name');
+ await expect(db.query(`INSERT INTO finance_preferences(owner_id,data) VALUES($1,'{}') ON CONFLICT(owner_id) DO UPDATE SET data=excluded.data`, [owner])).rejects.toThrow(/Audit/);
+ expect((await db.query('SELECT * FROM period_operation_authority')).rows).toHaveLength(0);
+});
