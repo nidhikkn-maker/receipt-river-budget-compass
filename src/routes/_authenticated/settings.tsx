@@ -64,6 +64,7 @@ function Settings() {
       }
       const paths = new Set<string>();
       for (const e of out.expenses ?? []) for (const r of (e["receipts"] ?? []) as { path: string }[]) paths.add(r.path);
+      for (const d of out.expense_drafts ?? []) for (const r of (d["receipts"] ?? []) as { path: string }[]) paths.add(r.path);
       for (const d of out.documents ?? []) if (typeof d["file_path"] === "string") paths.add(d["file_path"]);
       const files: Record<string, Uint8Array> = {};
       let bytes = 0;
