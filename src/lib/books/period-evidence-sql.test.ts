@@ -23,7 +23,7 @@ beforeEach(async()=>{
  INSERT INTO expenses VALUES('${other}','${other}','2025-05-01',999999,null);`);
 });
 afterAll(()=>db.close());
-it('captures owner-only canonical amount and cryptographic revision, not client counts',async()=>{const r=await change(); const e=r.rows[0]?.e; expect(e?.entryCount).toBe(1); expect(e?.reconciled).toBe(1); expect(e?.ledgerRevision).toMatch(/^[a-f0-9]{64}$/); expect((e?.ledger as {amount:number}[])[0]?.amount).toBe(1250);});
+it('captures owner-only canonical amount and cryptographic revision, not client counts',async()=>{const r=await change(); const e=r.rows[0]?.e; expect(e?.['entryCount']).toBe(1); expect(e?.['reconciled']).toBe(1); expect(e?.['ledgerRevision']).toMatch(/^[a-f0-9]{64}$/); expect((e?.['ledger'] as {amount:number}[])[0]?.amount).toBe(1250);});
 it('retries return exactly one immutable evidence record',async()=>{const a=await change(); const b=await change(); expect(a.rows).toEqual(b.rows); const r=await db.query<{n:number}>('SELECT count(*)::int n FROM period_close_evidence'); expect(r.rows[0]?.n).toBe(1);});
 it('refuses reusing an operation ID for another request',async()=>{await change(); await expect(change('closed',id,empty,'Different request')).rejects.toThrow(/already used/);});
 it('rejects stale period approval snapshots',async()=>{await expect(change('closed',id,{closedPeriods:[],periodLog:[{at:'fake'}]})).rejects.toThrow(/refresh/);});
