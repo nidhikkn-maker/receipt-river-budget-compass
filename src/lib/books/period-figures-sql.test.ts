@@ -22,7 +22,8 @@ beforeAll(async()=>{
  await db.exec(readFileSync('drizzle/migrations/0084_period_figure_snapshots.sql','utf8'));
 },20000);
 beforeEach(async()=>{
- await db.exec(`SELECT set_config('test.uid','${owner}',false); DELETE FROM period_close_evidence; DELETE FROM expenses; DELETE FROM accounts; UPDATE finance_preferences SET data='{"books":{"closedPeriods":[],"periodLog":[]}}';
+ await db.exec(`SELECT set_config('test.uid','${owner}',false); DELETE FROM period_close_evidence; DELETE FROM expenses; DELETE FROM accounts;
+ SELECT set_config('ledgerline.erasing','on',false); UPDATE finance_preferences SET data='{"books":{"closedPeriods":[],"periodLog":[]}}'; SELECT set_config('ledgerline.erasing','off',false);
  INSERT INTO expenses VALUES('${id}','${owner}','2025-05-01',1250,now());
  INSERT INTO accounts VALUES('00000000-0000-0000-0000-0000000000a1','${owner}','CUB savings','savings',5000),('00000000-0000-0000-0000-0000000000a2','${other}','Not yours','savings',1);`);
 });

@@ -51,11 +51,12 @@ it('server-approved document intake still saves directly',async()=>{
  expect((await db.query<{v:string}>("SELECT data->'books'->'gstInvoices'->0->>'id' v FROM finance_preferences")).rows[0]?.v).toBe('from-document');
 });
 it('period close/reopen writes (closedPeriods, periodLog) are not approval-gated',async()=>{
- await update({books:{closedPeriods:[{id:'p1',from:'2025-04-01',to:'2026-03-31',closedOn:'2026-04-10',note:'filed'}],periodLog:[{at:'2026-04-10',action:'closed',periodId:'p1',reason:'filed'}]}});
+ // Real writes carry the full preferences object; merge into books so no sensitive section is dropped.
+ await db.query(`UPDATE finance_preferences SET data=jsonb_set(data,'{books}',coalesce(data->'books','{}')||$1::jsonb) WHERE owner_id=$2`,[JSON.stringify({closedPeriods:[{id:'p1',from:'2025-04-01',to:'2026-03-31',closedOn:'2026-04-10',note:'filed'}],periodLog:[{at:'2026-04-10',action:'closed',periodId:'p1',reason:'filed'}]}),owner]);
  expect((await db.query<{n:number}>("SELECT jsonb_array_length(data->'books'->'closedPeriods')::int n FROM finance_preferences")).rows[0]?.n).toBe(1);
 });
 it('the monthly depreciation cron can still prepare journals',async()=>{
- await update({books:{journals:[{id:'j1',assetId:'a1',period:'2026-10',amount:500,kind:'book',status:'prepared'}]}});
+ await db.query(`UPDATE finance_preferences SET data=jsonb_set(data,'{books}',coalesce(data->'books','{}')||$1::jsonb) WHERE owner_id=$2`,[JSON.stringify({journals:[{id:'j1',assetId:'a1',period:'2026-10',amount:500,kind:'book',status:'prepared'}]}),owner]);
  expect((await db.query<{v:string}>("SELECT data->'books'->'journals'->0->>'status' v FROM finance_preferences")).rows[0]?.v).toBe('prepared');
 });
 it('finance_operation irregular-bill confirmations still upsert',async()=>{
