@@ -23,7 +23,8 @@ beforeAll(async () => {
  CREATE TRIGGER closed_guard BEFORE INSERT OR UPDATE ON expenses FOR EACH ROW EXECUTE FUNCTION guard_test_expense();`);
  await db.exec(readFileSync('drizzle/migrations/0070_authoritative_period_close_evidence.sql', 'utf8'));
  await db.exec(readFileSync('drizzle/migrations/0069_freeze_financial_registers.sql', 'utf8'));
- await db.exec(readFileSync('.lovable/staged-sql/period-recovery-authority.sql', 'utf8'));
+ await db.exec(readFileSync('drizzle/migrations/0072_period_recovery_authority.sql', 'utf8'));
+ await db.exec(readFileSync('drizzle/migrations/0073_period_authority_preference_upserts.sql', 'utf8'));
 }, 20000);
 beforeEach(async () => {
  await db.exec(`SELECT set_config('test.uid','${owner}',false); SELECT set_config('ledgerline.erasing','on',false);
