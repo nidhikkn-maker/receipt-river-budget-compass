@@ -16,7 +16,7 @@ export default defineTool({
     const end = new Date(Date.UTC(y, m, 0)).toISOString().slice(0, 10);
     const { data, error } = await supabaseForUser(ctx).from("expenses")
       .select("id, expense_date, txn_type, amount, category, allocations, account_id, to_account_id, adjustment_sign")
-      .gte("expense_date", `${month}-01`).lte("expense_date", end).limit(5000);
+      .eq("employee_id", ctx.getUserId() ?? "").gte("expense_date", `${month}-01`).lte("expense_date", end).limit(5000);
     if (error) throw new ToolError(error.message);
     const txns = (data ?? []).map((r) => ({ id: r.id, date: r.expense_date, txnType: r.txn_type as "expense", amount: Number(r.amount), category: r.category, allocations: Array.isArray(r.allocations) ? (r.allocations as { category: string; amount: number }[]) : [], accountId: r.account_id, toAccountId: r.to_account_id, adjustmentSign: (r.adjustment_sign === -1 ? -1 : 1) as 1 | -1 }));
     const f = cashflow(txns, `${month}-01`, end);

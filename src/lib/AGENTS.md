@@ -31,3 +31,4 @@
 - Upcoming payments are marked done via mark-done.ts (only an active commitment's current or overdue due date, once each); bulk uses scheduled amounts through confirmCommitment after an in-app confirm.
 - Master-record rules (duplicates, organisation usage/rename) live in src/lib/master-data.ts and setup readiness in src/lib/setup-status.ts; every add-account path uses the shared AccountForm so contextual and central creation follow one rule set.
 - Receipt-viewer problem reports keep device and browser reading in pure rules (src/lib/device-report.ts) so a saved report can be re-read years later without the phone that made it; the viewer's last twelve moves travel with the report, and reports are never financial records.
+- Team access goes only through can_access_expense / team_company_tax (admin role_permissions, app_admins); store filters expenses to own employee_id so team rows never enter personal totals.

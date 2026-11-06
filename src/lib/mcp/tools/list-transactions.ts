@@ -21,7 +21,7 @@ export default defineTool({
     if (!ctx.isAuthenticated()) throw new ToolError("Not signed in");
     let q = supabaseForUser(ctx).from("expenses")
       .select("id, expense_date, title, merchant, category, txn_type, amount, currency, original_amount, fx_rate, payment_method, scope, tags")
-      .order("expense_date", { ascending: false }).limit(limit ?? 50);
+      .eq("employee_id", ctx.getUserId() ?? "").order("expense_date", { ascending: false }).limit(limit ?? 50);
     if (from) q = q.gte("expense_date", from);
     if (to) q = q.lte("expense_date", to);
     if (type) q = q.eq("txn_type", type);

@@ -5,7 +5,7 @@
  */
 import type { Asset } from "../assets";
 import type { AssetEvent, ClosedPeriod, Journal } from "./types";
-import { monthlyBook, nextMonth } from "./depreciation";
+import { monthlyBook, nextMonth, prepareJournals } from "./depreciation";
 import { closedPeriodFor } from "./periods";
 
 /** Stable UUID (v5-style, SHA-1) so a retried post finds the entry it already created. */
@@ -94,3 +94,30 @@ export function capitalise(cost: number, min: number | undefined): "capitalise" 
   return cost >= min ? "capitalise" : "expense";
 }
 export { nextMonth };
+
+/**
+ * Scheduled monthly run [§34] — the same preparation the Assets page does on opening, so it happens even if the
+ * page is never opened. Journal ids are stable per asset-month, so a rerun (or a concurrent page open) never
+ * duplicates; closed months are skipped; posting still needs the owner's approval.
+ */
+export async function scheduledRun(assets: Asset[], journals: Journal[], closed: ClosedPeriod[], today: string): Promise<{ journals: Journal[]; added: Journal[]; exceptions: { assetId: string; name: string; reasons: string[] }[] }> {
+  const live = assets.filter((a) => a.kind !== "property" && !a.soldOn);
+  const exceptions = live.map((a) => ({ assetId: a.id, name: a.name, reasons: depreciationExceptions(a) })).filter((x) => x.reasons.length);
+  const runnable = live.filter((a) => !exceptions.some((x) => x.assetId === a.id && x.reasons.some((r) => r !== "no ledger asset account to post to")));
+  let all = journals; const added: Journal[] = [];
+  const months = [...new Set(runnable.flatMap((a) => dueMonths(a, all, today)))].sort();
+  for (const m of months) {
+    const r = prepareJournals(runnable, m, all, closed, () => crypto.randomUUID());
+    // Stable id per asset-month so reruns and retries never create a second journal.
+    const fixed = await Promise.all(r.journals.map(async (j) => ({ ...j, id: await stableUuid("journal", j.assetId, m) })));
+    all = [...all, ...fixed]; added.push(...fixed);
+  }
+  return { journals: all, added, exceptions };
+}
+
+/** What the Inbox card shows: prepared journals waiting for approval, grouped by month. */
+export function preparedSummary(journals: Journal[]): { month: string; count: number; total: number }[] {
+  const by = new Map<string, { count: number; total: number }>();
+  for (const j of journals) if (j.status === "prepared") { const v = by.get(j.period) ?? { count: 0, total: 0 }; v.count++; v.total = Math.round((v.total + j.amount) * 100) / 100; by.set(j.period, v); }
+  return [...by.entries()].sort(([a], [b]) => b.localeCompare(a)).map(([month, v]) => ({ month, ...v }));
+}

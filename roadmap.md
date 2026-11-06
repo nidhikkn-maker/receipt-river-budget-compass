@@ -1,3 +1,9 @@
+## Role access, tax tests, scheduled depreciation (6 Nov 2026)
+- [x] Employee/manager/finance access enforced in the database; admin Team access switches, roles and history in Settings; Team expenses and finance-only Company tax views; 14 role tests.
+- [x] Tax validation and fixed-figure regression tests (personal regimes, 87A, surcharge, company/firm, ownership shares, deemed dividend); tax profile form warnings.
+- [x] Monthly depreciation prepared automatically on the 1st–3rd (scheduled job) with an Inbox card; posting still needs approval.
+- [ ] Phone reminder for prepared depreciation — not built yet.
+
 ## Ledgerline v6.0 + v6.1 gap closure (4 Nov 2026)
 - [x] Customer invoices vs receipts on Audit; bonus/split/merger quantities and opening quantities in holding checks (never guessed); printed opening book/tax WDV kept from asset documents. 115 books tests pass.
 - [ ] Remaining checklist ranks 1–8, 12, 15 (company-level access, figure-level evidence, server approvals, typed intake writes, full tax/GST computations, official schemas, full opening trial balance, period-close evidence, acceptance suite) — continuing.

@@ -223,14 +223,14 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
     restP.catch(() => {});
     // Cold open (no device copy): fetch only the columns Home's totals need, then the full records in the background.
     const lite = !hadSnapshot.current;
-    const fullQuery = () => supabase.from("expenses").select("*").order("expense_date", { ascending: false }).order("created_at", { ascending: false });
+    const fullQuery = () => supabase.from("expenses").select("*").eq("employee_id", userId).order("expense_date", { ascending: false }).order("created_at", { ascending: false });
     const fullP = lite ? fullQuery() : null;
     if (lite) liteActive.current = true;
     fullP?.then(() => {}, () => {});
     const [p, e, b, a, c, l, pref] = await Promise.all([
       supabase.from("profiles").select("full_name").eq("id", userId).maybeSingle(),
       lite
-        ? (supabase.from("expenses").select(LITE_COLUMNS).order("expense_date", { ascending: false }).order("created_at", { ascending: false }) as unknown as ReturnType<typeof fullQuery>)
+        ? (supabase.from("expenses").select(LITE_COLUMNS).eq("employee_id", userId).order("expense_date", { ascending: false }).order("created_at", { ascending: false }) as unknown as ReturnType<typeof fullQuery>)
         : fullQuery(),
       supabase.from("category_budgets").select("category, monthly_amount"),
       supabase.from("accounts").select("*").order("created_at"),

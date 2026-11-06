@@ -142,6 +142,21 @@ export type Database = {
         }
         Relationships: []
       }
+      app_admins: {
+        Row: {
+          created_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       asset_valuations: {
         Row: {
           account_id: string
@@ -1925,6 +1940,54 @@ export type Database = {
         }
         Relationships: []
       }
+      role_permission_audit: {
+        Row: {
+          actor_id: string
+          change: string
+          created_at: string
+          details: Json
+          id: string
+        }
+        Insert: {
+          actor_id: string
+          change: string
+          created_at?: string
+          details?: Json
+          id?: string
+        }
+        Update: {
+          actor_id?: string
+          change?: string
+          created_at?: string
+          details?: Json
+          id?: string
+        }
+        Relationships: []
+      }
+      role_permissions: {
+        Row: {
+          action: string
+          allowed: boolean
+          role: Database["public"]["Enums"]["app_role"]
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          action: string
+          allowed?: boolean
+          role: Database["public"]["Enums"]["app_role"]
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          action?: string
+          allowed?: boolean
+          role?: Database["public"]["Enums"]["app_role"]
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
       security_holdings: {
         Row: {
           as_of: string | null
@@ -2232,6 +2295,24 @@ export type Database = {
     }
     Functions: {
       accept_family_invite: { Args: { _invite: string }; Returns: undefined }
+      admin_set_member: {
+        Args: { _department: string; _role: string; _user: string }
+        Returns: undefined
+      }
+      admin_set_permission: {
+        Args: { _action: string; _allowed: boolean; _role: string }
+        Returns: undefined
+      }
+      admin_team: {
+        Args: never
+        Returns: {
+          department: string
+          email: string
+          full_name: string
+          role: string
+          user_id: string
+        }[]
+      }
       apply_review_metadata: {
         Args: { _config: Json; _id: string; _items: Json }
         Returns: string
@@ -2240,6 +2321,11 @@ export type Database = {
         Args: { batch_id: string; items: Json; target: string }
         Returns: string
       }
+      can_access_expense: {
+        Args: { _action: string; _employee: string }
+        Returns: boolean
+      }
+      can_do: { Args: { _action: string }; Returns: boolean }
       cancel_transfer: { Args: { _id: string }; Returns: undefined }
       claim_import_ai: { Args: { _owner: string }; Returns: boolean }
       claim_import_batches: {
@@ -2340,6 +2426,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_admin: { Args: never; Returns: boolean }
       link_activity_expenses: {
         Args: { _items: Json; _tag: string }
         Returns: number
@@ -2458,6 +2545,23 @@ export type Database = {
         Returns: undefined
       }
       start_demo_workspace: { Args: { _label: string }; Returns: undefined }
+      team_company_tax: {
+        Args: never
+        Returns: {
+          entities: Json
+          owner_id: string
+          owner_name: string
+          profiles: Json
+        }[]
+      }
+      team_names: {
+        Args: never
+        Returns: {
+          department: string
+          full_name: string
+          id: string
+        }[]
+      }
       undo_category_change: { Args: { batch_id: string }; Returns: undefined }
       undo_financial_correction: { Args: { _id: string }; Returns: undefined }
       undo_opening_balances: { Args: { _id: string }; Returns: undefined }

@@ -5,6 +5,7 @@ import { effectiveEntity } from "@/lib/books/entity-accounts";
 import { History, Undo2 } from "lucide-react";
 import { PageTitle, Stat } from "@/components/AppShell";
 import { ExpenseTable } from "@/components/ExpenseTable";
+import { TeamExpenses } from "@/components/TeamAccess";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
@@ -129,6 +130,7 @@ function Expenses() {
       </section>}
       <ExpenseTable items={list.slice(0, shown)} empty="No expenses match these filters." selected={selecting ? picked : undefined} onToggle={selecting ? togglePick : undefined} />
       {list.length > shown && <div className="mt-4 flex flex-col items-center gap-1"><Button variant="outline" onClick={() => setShown((n) => n + 50)}>Show 50 more</Button><span className="text-xs text-muted-foreground">Showing {shown} of {list.length}</span></div>}
+      <TeamExpenses />
     </>
   );
 }

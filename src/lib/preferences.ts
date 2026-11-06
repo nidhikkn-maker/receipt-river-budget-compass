@@ -82,6 +82,8 @@ export interface FinancePreferences {
   receivables?: Receivable[];
   /** v6 books: closed periods, DocuRepo links, past years, property, depreciation journals, investments, GST and rules. */
   books?: BooksData;
+  /** Months whose depreciation Inbox card was dismissed. */
+  depreciationDismissed?: string[];
   /** Home arrangement; "custom" once the user hides or reorders sections themselves. */
   homeMode: HomeMode;
   categories: CategorySetting[];
@@ -196,6 +198,7 @@ export function normalizePreferences(raw: Partial<FinancePreferences> | null | u
   p.assets = cleanAssets(p.assets);
   p.receivables = cleanReceivables(p.receivables);
   p.books = cleanBooks(p.books);
+  p.depreciationDismissed = Array.isArray(p.depreciationDismissed) ? p.depreciationDismissed.filter((m) => typeof m === "string" && /^\d{4}-\d{2}$/.test(m)).slice(-24) : [];
   p.checkedAudit = Array.isArray(p.checkedAudit) ? [...new Set(p.checkedAudit.filter((k) => typeof k === "string" && k.length <= 200))].slice(-3000) : [];
   p.payees = cleanPayees(p.payees);
   p.reimbursementSettings = cleanReimbursementSettings(p.reimbursementSettings);
