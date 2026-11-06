@@ -1,4 +1,6 @@
 ## Company tax (all) filter and export (6 Nov 2026)
+- [ ] Track year-filter changes and CSV exports (usage events).
+- [ ] Stamp export date and selected tax year into the CSV.
 - [x] Tax-year filter on the finance-only Company tax (all) section.
 - [x] CSV export of the filtered company tax figures; role screen check extended to cover both.
 
