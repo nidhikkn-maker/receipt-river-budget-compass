@@ -5,11 +5,13 @@ import { beforeAll, beforeEach, afterAll, it, expect } from 'vitest';
 const db=new PGlite();
 const owner='00000000-0000-0000-0000-000000000001', other='00000000-0000-0000-0000-000000000002', doc='00000000-0000-0000-0000-000000000003', op='00000000-0000-0000-0000-000000000004';
 let revision=0;
-const commit=(expected=revision,id=op,lock=true,data:object={books:{holdings:[{id:'h1',quantity:10}]}})=>db.query<{revision:number}>('SELECT commit_document_intake_reviewed($1,$2,$3::jsonb,$4,$5)::int revision',[id,doc,JSON.stringify(data),lock,expected]);
+const seedRun=(uid:string,id:string,docId:string,data:object,lock:boolean,expected:number)=>db.query(`INSERT INTO document_runs(owner_id,data) VALUES ($1,jsonb_build_object('intakeAttempt',jsonb_build_object('id',$2,'documentId',$3,'data',$4::jsonb,'lock',$5,'expected',$6)))`,[uid,id,docId,JSON.stringify(data),lock,expected]);
+const commit=async(expected=revision,id=op,lock=true,data:object={books:{holdings:[{id:'h1',quantity:10}]}})=>{const uid=(await db.query<{u:string}>(`SELECT nullif(current_setting('test.uid',true),'') u`)).rows[0]?.u??owner;await seedRun(uid,id,doc,data,lock,expected);return db.query<{revision:number}>('SELECT commit_document_intake_reviewed($1,$2,$3::jsonb,$4,$5)::int revision',[id,doc,JSON.stringify(data),lock,expected]);};
 beforeAll(async()=>{
  await db.exec(`CREATE ROLE authenticated; CREATE ROLE anon; CREATE ROLE service_role; CREATE SCHEMA auth; CREATE FUNCTION auth.uid() RETURNS uuid LANGUAGE sql AS $$ SELECT nullif(current_setting('test.uid',true),'')::uuid $$;
  CREATE TABLE finance_preferences(owner_id uuid primary key,data jsonb,updated_at timestamptz);
  CREATE TABLE documents(id uuid primary key,owner_id uuid,evidence_locked boolean);
+ CREATE TABLE document_runs(owner_id uuid,data jsonb);
  CREATE FUNCTION commit_document_intake(uuid,jsonb,boolean) RETURNS void LANGUAGE sql AS $$ SELECT $$;
  INSERT INTO finance_preferences VALUES('${owner}','{}',now()),('${other}','{}',now()); INSERT INTO documents VALUES('${doc}','${owner}',false);`);
  await db.exec(readFileSync('drizzle/migrations/0071_revision_checked_document_intake.sql','utf8'));
