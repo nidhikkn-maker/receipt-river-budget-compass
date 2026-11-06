@@ -15,13 +15,27 @@ beforeAll(async()=>{
  CREATE FUNCTION commit_document_intake(uuid,jsonb,boolean) RETURNS void LANGUAGE sql AS $$ SELECT $$;
  INSERT INTO finance_preferences VALUES('${owner}','{}',now()),('${other}','{}',now()); INSERT INTO documents VALUES('${doc}','${owner}',false);`);
  await db.exec(readFileSync('drizzle/migrations/0071_revision_checked_document_intake.sql','utf8'));
+ await db.exec(readFileSync('drizzle/migrations/0074_typed_document_intake_validation.sql','utf8'));
+ await db.exec(readFileSync('drizzle/migrations/0079_intake_server_approval.sql','utf8'));
 },20000);
-beforeEach(async()=>{await db.exec(`SELECT set_config('test.uid','${owner}',false); DELETE FROM document_intake_commits; UPDATE documents SET evidence_locked=false; UPDATE finance_preferences SET data='{}';`);const r=await db.query<{r:number}>(`SELECT revision::int r FROM finance_preferences WHERE owner_id='${owner}'`);revision=r.rows[0]?.r??0;});
+beforeEach(async()=>{await db.exec(`SELECT set_config('test.uid','${owner}',false); DELETE FROM document_intake_commits; DELETE FROM document_runs; UPDATE documents SET evidence_locked=false; UPDATE finance_preferences SET data='{}';`);const r=await db.query<{r:number}>(`SELECT revision::int r FROM finance_preferences WHERE owner_id='${owner}'`);revision=r.rows[0]?.r??0;});
 afterAll(()=>db.close());
 it('fresh commit advances one revision and locks evidence',async()=>{const r=await commit();expect(r.rows[0]?.revision).toBe(revision+1);const d=await db.query<{locked:boolean}>('SELECT evidence_locked locked FROM documents');expect(d.rows[0]?.locked).toBe(true);});
 it('stale commit after an ordinary preference write changes neither records nor lock',async()=>{await db.exec(`UPDATE finance_preferences SET data='{"name":"newer"}' WHERE owner_id='${owner}'`);await expect(commit()).rejects.toThrow(/Records changed/);const r=await db.query<{name:string}>(`SELECT data->>'name' name FROM finance_preferences WHERE owner_id='${owner}'`);expect(r.rows[0]?.name).toBe('newer');const d=await db.query<{locked:boolean}>('SELECT evidence_locked locked FROM documents');expect(d.rows[0]?.locked).toBe(false);});
 it('retries a completed locked save without increment or duplicates',async()=>{const a=await commit();const b=await commit();expect(a.rows).toEqual(b.rows);const r=await db.query<{n:number}>('SELECT count(*)::int n FROM document_intake_commits');expect(r.rows[0]?.n).toBe(1);});
 it('rejects another operation on locked evidence',async()=>{await commit();await expect(commit(revision+1,'00000000-0000-0000-0000-000000000005')).rejects.toThrow(/locked/);});
-it('refuses cross-owner documents even with their current revision',async()=>{await db.exec(`SELECT set_config('test.uid','${other}',false)`);const r=await db.query<{r:number}>(`SELECT revision::int r FROM finance_preferences WHERE owner_id='${other}'`);await expect(commit(r.rows[0]?.r)).rejects.toThrow(/Owner document/);});
+it('refuses cross-owner documents even with their current revision',async()=>{await db.exec(`SELECT set_config('test.uid','${other}',false)`);const r=await db.query<{r:number}>(`SELECT revision::int r FROM finance_preferences WHERE owner_id='${other}'`);await expect(commit(r.rows[0]?.r)).rejects.toThrow(/Review the document/);});
+it('refuses a commit that no approved run retained, and one that differs from the approved payload',async()=>{
+ await expect(db.query('SELECT commit_document_intake_reviewed($1,$2,$3::jsonb,true,$4)',[op,doc,'{}',revision])).rejects.toThrow(/Review the document/);
+ await seedRun(owner,op,doc,{books:{holdings:[{id:'h1',quantity:10}]}},true,revision);
+ await expect(db.query('SELECT commit_document_intake_reviewed($1,$2,$3::jsonb,true,$4)',[op,doc,'{"books":{"holdings":[{"id":"h1","quantity":99}]}}',revision])).rejects.toThrow(/does not match the approved review/);
+ await expect(db.query('SELECT commit_document_intake_reviewed($1,$2,$3::jsonb,false,$4)',[op,doc,'{"books":{"holdings":[{"id":"h1","quantity":10}]}}',revision])).rejects.toThrow(/does not match the approved review/);
+});
+it('a committed retry still succeeds after the run attempt is removed',async()=>{
+ const a=await commit();
+ await db.exec(`DELETE FROM document_runs`);
+ const b=await commit();
+ expect(a.rows).toEqual(b.rows);
+});
 it('keeps document unlocked when no lock requested',async()=>{await commit(revision,op,false);const d=await db.query<{locked:boolean}>('SELECT evidence_locked locked FROM documents');expect(d.rows[0]?.locked).toBe(false);});
 it('one of two same-revision saves succeeds and the other is rejected',async()=>{await commit(revision,op,false);await expect(commit(revision,'00000000-0000-0000-0000-000000000005',false)).rejects.toThrow(/Records changed/);const r=await db.query<{n:number}>('SELECT count(*)::int n FROM document_intake_commits');expect(r.rows[0]?.n).toBe(1);});
