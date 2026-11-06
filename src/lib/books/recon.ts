@@ -112,3 +112,29 @@ export function intercompanyRecon(entries: { id: string; amount: number; txnType
   }
   return [...m.values()];
 }
+
+export interface BrokerCashOverlapRow { holdingId: string; holdingName: string; accountId: string; accountName: string; amount: number; shared: string }
+const OVERLAP_STOP = new Set(["cash", "account", "broker", "brokerage", "demat", "balance", "fund", "funds", "money"]);
+const sigWords = (s: string) => words(s).split(" ").filter((w) => w.length >= 4 && !OVERLAP_STOP.has(w));
+/**
+ * Broker cash vs accounts [§24]: a broker_cash holding and a cash-like account whose names share a
+ * significant word (e.g. the broker's name) probably hold the same money, so net worth would count it
+ * twice. Read-only: reported for review, never auto-excluded.
+ */
+export function brokerCashOverlap(
+  holdings: { id: string; kind: string; name: string; quantity: number }[],
+  accounts: { id: string; name: string; kind: string; archived?: boolean | undefined }[],
+): BrokerCashOverlapRow[] {
+  const cashKinds = new Set(["savings", "current", "cash", "wallet", "investment", "other_asset"]);
+  const out: BrokerCashOverlapRow[] = [];
+  for (const h of holdings.filter((x) => x.kind === "broker_cash")) {
+    const hw = sigWords(h.name);
+    if (!hw.length) continue;
+    for (const a of accounts) {
+      if (a.archived || !cashKinds.has(a.kind)) continue;
+      const shared = sigWords(a.name).find((w) => hw.includes(w));
+      if (shared) out.push({ holdingId: h.id, holdingName: h.name, accountId: a.id, accountName: a.name, amount: r2(h.quantity), shared });
+    }
+  }
+  return out;
+}
