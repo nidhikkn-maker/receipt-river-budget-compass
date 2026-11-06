@@ -17,6 +17,7 @@ import { DOC_LABEL, DOC_TYPES, duplicateDocuments, type DocField, type DocType }
 import { ENTITY_KINDS } from "@/lib/entities";
 import { autoName, fillLeaseFromTrusted, proposeAsset, proposeEntity, proposeFy, proposeLease, proposeProperty, proposeGstInvoice, proposeTaxStatement, suggestLinks, assetPayment, ROUTE_OF, trail, type IntakeContext, type Step } from "@/lib/books/intake";
 import { proposeFundHoldings } from "@/lib/books/fund-statement";
+import { correctSourceField } from "@/lib/books/source-corrections";
 import { commitIntake, type Confirmed } from "@/lib/books/commit";
 import { emptyBooks, LEASE_TERMS, LEASE_TERM_LABEL, leaseUnknowns, requiresApproval, type Lease } from "@/lib/books/types";
 import { HEAD_LABEL } from "@/lib/books/fy";
@@ -264,7 +265,16 @@ export function DocumentIntake({ file, context, onClose, resume, replacesId, onS
         {dup && <p className="rounded-lg bg-secondary px-3 py-2 text-xs">Already in DocuRepo as “{dup.title}” — the existing copy will be linked, not stored twice.</p>}
         {fields.length > 0 && <details><summary className="cursor-pointer text-muted-foreground">Details read ({fields.length}) — tap a value to correct it</summary>
           <div className="mt-2 grid gap-2">{fields.map((f, i) => <label key={i} className="grid gap-0.5"><span className="text-xs">{f.label}{f.confidence !== "high" && <span className={`ml-1 ${f.confidence === "low" ? "text-destructive" : "text-muted-foreground"}`}>{f.confidence} confidence</span>}{f.status === "corrected" && <span className="ml-1 text-primary">corrected</span>}</span>
-            <Input value={f.value} onChange={(e) => setFields(fields.map((y, j) => (j === i ? { ...y, value: e.target.value, status: "corrected" } : y)))} />
+            <Input value={f.value} disabled={!!runData.current.intakeAttempt} onChange={(e) => {
+              try {
+                const corrected = correctSourceField(x, f, e.target.value);
+                setX(corrected.read);
+                const nextFields = fields.map((y, j) => j === i ? corrected.field : y);
+                setFields(nextFields);
+                runData.current = { ...runData.current, read: corrected.read, fields: nextFields };
+                void updateRun(runId, { data: runData.current }).catch(() => undefined);
+              } catch (error) { toast.error((error as Error).message); }
+            }} />
             {!f.page && <Input aria-label={`Page or section for ${f.label}`} className="h-7 text-xs" placeholder="Page or section where this appears (required)" value={f.section ?? ""} onChange={(e) => setFields(fields.map((y, j) => (j === i ? { ...y, section: e.target.value } : y)))} />}
             <span className="text-[11px] text-muted-foreground">{f.page ? `Page ${f.page} · ` : f.section ? `${f.section} · ` : ""}printed “{f.originalValue ?? f.quote}”{f.quote && f.originalValue && f.quote !== f.originalValue ? ` · “${f.quote}”` : ""}</span></label>)}</div></details>}
 
