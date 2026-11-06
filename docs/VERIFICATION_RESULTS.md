@@ -33,3 +33,6 @@ Not verified: hosted two-account access, real-device behaviour, real-document ex
 - Outstanding: P3 direct-write rollout/journal transitions; P7 annual/payment/late-credit consistency; P2 derived dependencies; P12 other derived facts; individual audit of remaining NOT AUDITED clauses.
 
 - Follow-up: 219 files / 1,681 tests pass; late RCM credit is counted only in the payment month, annual liability includes RCM, and monthly payment projections include service advances. Controlled GST browser rerun passed after these changes; build OK.
+
+## 6 Nov 2026 — 0083 journal/rule/closed-event guards
+- Installed in Cloud (trigger confirmed present). 8 disposable PostgreSQL tests: closed-month posting refused, open posting allowed only as prepared, posted journals immutable, closed financial asset events frozen, physical checks allowed, rule activation needs approval date + passing checks, approved rules immutable/undeletable. Books suite 369/369 pass. No real records changed.
