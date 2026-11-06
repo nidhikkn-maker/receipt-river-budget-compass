@@ -1,6 +1,6 @@
 import { it,expect } from 'vitest';
 import { advanceCrossProblems,advanceHeads,advanceProblems,specialProblems } from './gst-special';
-import { gstr1,gstr1Json,gstr3b,gstr3bJson,gstr9,gstPayable } from './gst';
+import { gstr1,gstr1Json,gstr3b,gstr3bJson,gstr9,gstr9Heads,gstPayable } from './gst';
 import type { GstInvoice } from './types';
 const invoice=(patch:Partial<GstInvoice>):GstInvoice=>({id:'sale',gstin:'G',kind:'sales',number:'S1',date:'2026-10-01',party:'A',partyGstin:'',taxable:1000,igst:180,cgst:0,sgst:0,cess:0,...patch});
 it('LUT exports have no output tax and cannot carry domestic tax',()=>{
