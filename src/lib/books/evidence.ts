@@ -42,6 +42,7 @@ export function registerEvidence(p: { assets: Asset[]; books: BooksData; docs: D
   for(const q of p.books.quotes)out.push({register:'Market prices',recordId:q.key,label:`${q.key} · ${q.at} · ${q.provider}`,amount:q.price,source:resolve(q.key),to:'/wealth'});
   for(const o of p.books.priceOverrides??[])if(o.active)out.push({register:'Manual market prices',recordId:o.key,label:`${o.name} · ${o.priceDate} · ${o.source}`,amount:o.price,source:resolve(o.key),to:'/wealth'});
   for(const j of p.books.journals)out.push({register:'Depreciation journals',recordId:j.id,label:`${j.assetId} · ${j.period}`,amount:j.amount,source:resolve(j.assetId,p.assets.find(a=>a.id===j.assetId)?.docId,j.transactionId),to:'/assets'});
+  for(const a of p.books.gstAdvances??[])out.push({register:'GST advances',recordId:a.id,label:`${a.party} · ${a.number} · ${a.date}`,amount:a.taxable+a.igst+a.cgst+a.sgst+a.cess,source:resolve(a.id,a.docId),to:'/tax'});
   return out;
 }
 

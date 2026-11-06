@@ -194,6 +194,8 @@ export interface GstHeads { igst: number; cgst: number; sgst: number; cess: numb
  */
 export function gstSetOff(output: GstHeads, itc: GstHeads): { used: { from: keyof GstHeads; to: keyof GstHeads; amount: number }[]; cash: GstHeads; carry: GstHeads; cashTotal: number } {
   const due = { ...output }, cr = { ...itc }; const used: { from: keyof GstHeads; to: keyof GstHeads; amount: number }[] = [];
+  // Excess credit notes/advance adjustments reduce future liability; never show negative cash due.
+  for(const k of ['igst','cgst','sgst','cess'] as const){due[k]=Math.max(0,due[k]);cr[k]=Math.max(0,cr[k]);}
   const use = (from: keyof GstHeads, to: keyof GstHeads) => { const a = r2(Math.min(cr[from], due[to])); if (a > 0) { cr[from] = r2(cr[from] - a); due[to] = r2(due[to] - a); used.push({ from, to, amount: a }); } };
   use("igst", "igst"); use("igst", "cgst"); use("igst", "sgst");
   use("cgst", "cgst"); use("cgst", "igst"); use("sgst", "sgst"); use("sgst", "igst"); use("cess", "cess");

@@ -8,3 +8,4 @@
 | iPhone / iPad push, camera, Face ID | Physical devices. |
 | Hosted two-account company access check | A second real account invited by the owner. |
 | Production publish | Explicit owner approval each time. |
+| Direct preference-write approval trigger rollout | Compatible authorised publication: the current published client still writes preferences directly. Tested trigger/backup integration is staged, not enforced against that old client. Independent development continues. |
