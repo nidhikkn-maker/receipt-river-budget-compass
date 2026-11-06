@@ -11,11 +11,11 @@ const monthName = (m: string) => new Date(`${m}-01T00:00:00Z`).toLocaleString("e
 export function DepreciationInboxCard() {
   const { preferences, savePreferences } = useStore();
   const books = cleanBooks(preferences.books);
-  const dismissed = new Set((preferences as { depreciationDismissed?: string[] }).depreciationDismissed ?? []);
+  const dismissed = new Set(preferences.depreciationDismissed ?? []);
   const groups = preparedSummary(books.journals).filter((g) => !dismissed.has(g.month));
   const blocked = (preferences.assets ?? []).filter((a) => a.kind !== "property" && !a.soldOn).map((a) => ({ a, x: depreciationExceptions(a) })).filter((r) => r.x.length);
   if (!groups.length) return null;
-  const dismiss = (m: string) => savePreferences({ ...preferences, depreciationDismissed: [...dismissed, m].slice(-24) } as typeof preferences);
+  const dismiss = (m: string) => savePreferences({ ...preferences, depreciationDismissed: [...dismissed, m].slice(-24) });
   return (
     <section aria-label="Depreciation ready" className="space-y-2 rounded-2xl border p-4">
       {groups.map((g) => <div key={g.month} className="flex flex-wrap items-center justify-between gap-2">
