@@ -1,7 +1,7 @@
 /** Supplementary GST working. Explicit owner-entered treatment, never inferred from party names. */
 import type { GstInvoice } from './types';
 export interface GstSpecial {
- treatment?: 'domestic'|'export_paid'|'export_lut'|'reverse_charge';
+ treatment?: 'domestic'|'export_paid'|'export_lut'|'reverse_charge'|undefined;
  supply?: 'goods'|'services';
  shippingBill?: string; shippingDate?: string; portCode?: string;
  rcmPaidOn?: string; rcmPaymentId?: string;
