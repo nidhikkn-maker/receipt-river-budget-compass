@@ -13,7 +13,7 @@ export default defineTool({
     const sb = supabaseForUser(ctx);
     const [a, e] = await Promise.all([
       sb.from("accounts").select("id, name, kind, opening_balance, archived, credit_limit").eq("archived", false),
-      sb.from("expenses").select("id, expense_date, txn_type, amount, account_id, to_account_id, adjustment_sign").limit(20000),
+      sb.from("expenses").select("id, expense_date, txn_type, amount, account_id, to_account_id, adjustment_sign").eq("employee_id", ctx.getUserId() ?? "").limit(20000),
     ]);
     if (a.error) throw new ToolError(a.error.message);
     if (e.error) throw new ToolError(e.error.message);
