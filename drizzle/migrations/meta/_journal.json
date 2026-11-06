@@ -519,6 +519,13 @@
       "when": 1793942505398,
       "tag": "0073_period_authority_preference_upserts",
       "breakpoints": true
+    },
+    {
+      "idx": 74,
+      "version": "7",
+      "when": 1793942693976,
+      "tag": "0074_typed_document_intake_validation",
+      "breakpoints": true
     }
   ]
 }

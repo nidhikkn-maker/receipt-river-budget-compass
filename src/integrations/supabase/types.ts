@@ -2715,6 +2715,10 @@ export type Database = {
       undo_financial_correction: { Args: { _id: string }; Returns: undefined }
       undo_opening_balances: { Args: { _id: string }; Returns: undefined }
       undo_review_metadata: { Args: { _id: string }; Returns: undefined }
+      validate_intake_records: {
+        Args: { _new: Json; _old: Json; _type: string }
+        Returns: undefined
+      }
     }
     Enums: {
       app_role: "employee" | "manager" | "finance"
