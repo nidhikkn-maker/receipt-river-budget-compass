@@ -25,6 +25,18 @@ describe("Complete backups", () => {
     expect(result.data.expenses?.[0]?.["splits"]).toEqual([{ memberId: result.data.family_members?.[0]?.["id"], amount: 50 }]);
     expect(result.paths.get("a/receipt.jpg")).toMatch(/^b\/restored\//);
   });
+  it("carries unsaved drafts with their receipt files and remaps them across owners", () => {
+    const b: Backup = { ...backup, data: { ...backup.data, expense_drafts: [{ id: "draft", owner_id: "a", status: "ready", transaction_id: null, data: { accountId: "bank", memberId: "child", amount: "120" }, receipts: [{ path: "a/draft-photo.jpg" }] }] } };
+    const round = readBackup(createBackupZip(b, { "a/draft-photo.jpg": new Uint8Array([4, 5]) }), true);
+    expect(round.backup.data.expense_drafts?.[0]?.["status"]).toBe("ready");
+    expect([...round.files["a/draft-photo.jpg"] ?? []]).toEqual([4, 5]);
+    let n = 0; const result = prepareRestore(b, "b", () => `new-${++n}`);
+    const draft = result.data.expense_drafts?.[0] as { owner_id: string; data: { accountId: string; memberId: string }; receipts: { path: string }[] };
+    expect(draft.owner_id).toBe("b");
+    expect(draft.data.accountId).toBe(result.data.accounts?.[0]?.["id"]);
+    expect(draft.data.memberId).toBe(result.data.family_members?.[0]?.["id"]);
+    expect(draft.receipts[0]?.path).toMatch(/^b\/restored\//);
+  });
   it("rejects paths outside owner storage", () => {
     expect(() => prepareRestore({ ...backup, data: { documents: [{ file_path: "a/../private" }] } }, "a")).toThrow("invalid file path");
   });

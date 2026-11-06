@@ -1,6 +1,6 @@
 import { strFromU8, strToU8, unzipSync, zipSync } from "fflate";
 
-export const BACKUP_TABLES = ["finance_preferences", "family_members", "accounts", "category_budgets", "expenses", "commitments", "loans", "goals", "asset_valuations", "documents"] as const;
+export const BACKUP_TABLES = ["finance_preferences", "family_members", "accounts", "category_budgets", "expenses", "expense_drafts", "commitments", "loans", "goals", "asset_valuations", "documents"] as const;
 export type BackupTable = (typeof BACKUP_TABLES)[number];
 export type BackupRow = Record<string, unknown>;
 export interface Backup { app: "ledgerline"; version: number; owner: string; name?: string; exportedAt: string; data: Partial<Record<BackupTable, BackupRow[]>> }
@@ -38,9 +38,14 @@ export function prepareRestore(backup: Backup, owner: string, uuid: () => string
   for (const t of BACKUP_TABLES) data[t] = (backup.data[t] ?? []).map(original => {
     const row = { ...original, [t === "expenses" ? "employee_id" : "owner_id"]: owner };
     for (const k of ["id", "account_id", "to_account_id", "member_id", "transaction_id", "loan_id", "source_transaction_id"]) if (typeof row[k] === "string" && ids.has(row[k])) row[k] = ids.get(row[k]);
-    if (t === "expenses") {
+    if (t === "expenses" || t === "expense_drafts") {
       row["receipts"] = (Array.isArray(row["receipts"]) ? row["receipts"] : []).map((r: BackupRow) => ({ ...r, path: pathFor(r["path"]) }));
-      row["splits"] = (Array.isArray(row["splits"]) ? row["splits"] : []).map((s: BackupRow) => ({ ...s, memberId: typeof s["memberId"] === "string" ? ids.get(s["memberId"]) ?? s["memberId"] : null }));
+      if (t === "expenses") row["splits"] = (Array.isArray(row["splits"]) ? row["splits"] : []).map((s: BackupRow) => ({ ...s, memberId: typeof s["memberId"] === "string" ? ids.get(s["memberId"]) ?? s["memberId"] : null }));
+    }
+    if (t === "expense_drafts" && crossAccount && row["data"] && typeof row["data"] === "object" && !Array.isArray(row["data"])) {
+      const d = { ...row["data"] as BackupRow };
+      for (const k of ["accountId", "toAccountId", "memberId"]) if (typeof d[k] === "string" && ids.has(d[k])) d[k] = ids.get(d[k]);
+      row["data"] = d;
     }
     if (t === "documents") row["file_path"] = pathFor(row["file_path"]);
     if (crossAccount && t === "finance_preferences" && row["data"] && typeof row["data"] === "object") {
