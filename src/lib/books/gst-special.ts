@@ -31,6 +31,22 @@ export function advanceProblems(a:GstAdvance,invoices:GstInvoice[]):string[]{
  for(const x of a.adjustments){const inv=invoices.find(i=>i.id===x.invoiceId);
   if(!inv||inv.gstin!==a.gstin||inv.kind!=='sales'||inv.note)out.push('Adjustment requires a sales invoice for the same GSTIN');
   if(x.date<a.date||inv&&x.date<inv.date)out.push('Adjustment cannot precede the advance or invoice');
+  // Rate consistency: an adjustment may carry less tax than the advance's pro-rata share (the remainder
+  // stays on the advance), but never more — that would claim tax the advance never paid.
+  if(a.taxable>0&&x.taxable>0)for(const k of ['igst','cgst','sgst','cess'] as const){
+   if(x[k]>a[k]*(x.taxable/a.taxable)+0.01)out.push(`${k}: adjustment claims more than the advance's tax rate allows`);
+  }
+ }
+ return out;
+}
+/** Cross-record checks: adjustments from every advance together must not exceed the invoice they settle. */
+export function advanceCrossProblems(list:GstAdvance[],invoices:GstInvoice[]):string[]{
+ const out:string[]=[];const byInvoice=new Map<string,GstAdvance['adjustments']>();
+ for(const a of list)for(const x of a.adjustments)byInvoice.set(x.invoiceId,[...(byInvoice.get(x.invoiceId)??[]),x]);
+ for(const [invoiceId,xs] of byInvoice){const inv=invoices.find(i=>i.id===invoiceId);if(!inv)continue;
+  for(const k of ['taxable','igst','cgst','sgst','cess'] as const){
+   if(xs.reduce((s,x)=>s+x[k],0)>inv[k]+0.01)out.push(`${inv.number}: advances adjust more ${k} than the invoice carries`);
+  }
  }
  return out;
 }
