@@ -32,3 +32,4 @@
 - Master-record rules (duplicates, organisation usage/rename) live in src/lib/master-data.ts and setup readiness in src/lib/setup-status.ts; every add-account path uses the shared AccountForm so contextual and central creation follow one rule set.
 - Receipt-viewer problem reports keep device and browser reading in pure rules (src/lib/device-report.ts) so a saved report can be re-read years later without the phone that made it; the viewer's last twelve moves travel with the report, and reports are never financial records.
 - Team access goes only through can_access_expense / team_company_tax (admin role_permissions, app_admins); store filters expenses to own employee_id so team rows never enter personal totals.
+- Backup reads explicitly filter each table by its owner field, including employee_id on expenses, because team-visible records must never enter personal exports; recovery browser checks block external writes and use isolated records/storage.

@@ -56,7 +56,10 @@ function Settings() {
         out[t] = [];
         for (let start = 0; ; start += 500) {
           const order = t === "finance_preferences" ? "owner_id" : t === "category_budgets" ? "category" : "id";
-          const { data, error } = await supabase.from(t).select("*").order(order).range(start, start + 499);
+          const query = t === "expenses"
+            ? supabase.from("expenses").select("*").eq("employee_id", userId)
+            : supabase.from(t).select("*").eq("owner_id", userId);
+          const { data, error } = await query.order(order).range(start, start + 499);
           if (error) throw new Error(error.message);
           out[t]?.push(...(data ?? []));
           if (!data || data.length < 500) break;
