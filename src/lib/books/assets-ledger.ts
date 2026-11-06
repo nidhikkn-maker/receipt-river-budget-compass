@@ -121,3 +121,25 @@ export function preparedSummary(journals: Journal[]): { month: string; count: nu
   for (const j of journals) if (j.status === "prepared") { const v = by.get(j.period) ?? { count: 0, total: 0 }; v.count++; v.total = Math.round((v.total + j.amount) * 100) / 100; by.set(j.period, v); }
   return [...by.entries()].sort(([a], [b]) => b.localeCompare(a)).map(([month, v]) => ({ month, ...v }));
 }
+
+/** Non-cash ledger postings for recorded impairments and disposals [§29–30]. Impairment lowers the asset
+ * account by the write-down; disposal removes the remaining book value (sale proceeds are the separate bank
+ * entry you already record). Each has a stable key so a retry never posts twice; closed periods are refused. */
+export interface EventPosting { key: string[]; kind: "impairment" | "disposal"; title: string; date: string; amount: number; accountId: string; description: string }
+export function eventPostings(a: Asset, closed: ClosedPeriod[]): { postings: EventPosting[]; problems: string[] } {
+  const postings: EventPosting[] = []; const problems: string[] = [];
+  const add = (p: Omit<EventPosting, "accountId">) => {
+    if (!a.accountId) { problems.push(`${a.name}: link a ledger asset account first`); return; }
+    if (closedPeriodFor(p.date, closed)) { problems.push(`${a.name}: ${p.date} is in a closed period`); return; }
+    if (!Number.isFinite(p.amount)) { problems.push(`${a.name}: book value could not be worked out — check cost and depreciation rate`); return; }
+    if (!(p.amount > 0)) return;
+    postings.push({ ...p, accountId: a.accountId });
+  };
+  for (const adj of a.adjustments ?? []) if (adj.kind === "impairment" && adj.amount < 0) {
+    const amt = Math.round(-adj.amount * 100) / 100;
+    add({ key: ["impairment", a.id, adj.date, String(amt)], kind: "impairment", title: `Impairment · ${a.name}`, date: adj.date, amount: amt, description: `Write-down (non-cash)${adj.note ? `: ${adj.note}` : ""}. Asset ${a.tag || a.id}.` });
+  }
+  const d = disposalResult(a);
+  if (a.soldOn && d) add({ key: ["disposal", a.id, a.soldOn], kind: "disposal", title: `Disposal · ${a.name}`, date: a.soldOn, amount: Math.round(d.nbv * 100) / 100, description: `Book value removed on disposal (non-cash); proceeds ${d.proceeds}, ${d.gain >= 0 ? "gain" : "loss"} ${Math.abs(d.gain)}. Asset ${a.tag || a.id}.` });
+  return { postings, problems };
+}
