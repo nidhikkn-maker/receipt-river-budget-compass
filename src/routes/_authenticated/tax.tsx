@@ -7,6 +7,7 @@ import { taxDraft } from "@/lib/tax-summary";
 import { gstMonths } from "@/lib/receivables";
 import { estimateTax, rulesFor } from "@/lib/tax-rules";
 import { FilingCalendar, FyOnboarding, GstReturns, RulesRegister, TaxComputationCard, TaxProfiles } from "@/components/books/TaxCentre";
+import { TeamCompanyTax } from "@/components/TeamAccess";
 
 export const Route = createFileRoute("/_authenticated/tax")({
   head: () => ({ meta: [
@@ -54,6 +55,7 @@ function Tax() {
       </div>
       {d.billsMissing > 0 && <p className="text-sm">{d.billsMissing} business spends this year have no bill. <Link to="/gst-check" className="font-semibold text-primary underline">See them</Link></p>}
       <TaxComputationCard fy={fy} />
+      <TeamCompanyTax />
       <FilingCalendar fy={fy} />
       <TaxProfiles fy={fy} />
       <GstReturns fy={fy} />
