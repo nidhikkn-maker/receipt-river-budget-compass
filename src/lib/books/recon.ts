@@ -70,7 +70,9 @@ export function customerRecon(invoices: GstInvoice[], receipts: { id: string; am
 /** Invoice-level allocation [§49–50]: a payment naming an invoice number settles that invoice first, the rest
  * goes oldest-first; credit notes reduce their original invoice (or the oldest). Read-only, nothing is saved. */
 export interface InvoiceAllocation { number: string; date: string; amount: number; allocated: number; outstanding: number; status: "paid" | "part" | "open"; payments: string[] }
-export function allocatePayments(invoices: GstInvoice[], payments: { id: string; amount: number; text: string; date: string }[], today: string): { lines: (InvoiceAllocation & { ageDays: number })[]; unallocated: number } {
+/** Owner-chosen order for the invoices a payment settles after any invoice it names: oldest first (default), largest first or smallest first. */
+export type AllocationOrder = "oldest" | "largest" | "smallest";
+export function allocatePayments(invoices: GstInvoice[], payments: { id: string; amount: number; text: string; date: string }[], today: string, order: AllocationOrder = "oldest"): { lines: (InvoiceAllocation & { ageDays: number })[]; unallocated: number } {
   const bills = invoices.filter((i) => !i.note && !invoices.some((x) => x.amendsId === i.id)).sort((a, b) => a.date.localeCompare(b.date))
     .map((i) => ({ number: i.number.trim(), date: i.date, amount: r2(i.taxable + i.igst + i.cgst + i.sgst + i.cess), allocated: 0, payments: [] as string[] }));
   for (const n of invoices.filter((i) => i.note === "credit")) {
@@ -83,7 +85,10 @@ export function allocatePayments(invoices: GstInvoice[], payments: { id: string;
     let left = p.amount;
     const text = p.text.toUpperCase();
     const named = bills.filter((b) => b.number.length >= 2 && new RegExp(`(^|[^A-Z0-9])${b.number.toUpperCase().replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}([^A-Z0-9]|$)`).test(text));
-    for (const b of [...named, ...bills.filter((x) => !named.includes(x))]) {
+    const rest = bills.filter((x) => !named.includes(x));
+    if (order === "largest") rest.sort((a, b) => b.amount - a.amount || a.date.localeCompare(b.date));
+    else if (order === "smallest") rest.sort((a, b) => a.amount - b.amount || a.date.localeCompare(b.date));
+    for (const b of [...named, ...rest]) {
       if (left <= 0.005) break;
       const take = r2(Math.min(left, b.amount - b.allocated));
       if (take <= 0) continue;
