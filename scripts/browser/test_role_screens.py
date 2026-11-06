@@ -12,7 +12,7 @@ SALES=[{'id':'s1','employee_id':'mia','expense_date':'2026-10-04','title':'Sales
 OPS=[{'id':'o1','employee_id':'ravi','expense_date':'2026-10-06','title':'Ops warehouse tools','merchant':'Store','category':'Supplies','amount':5400,'department':'Ops'}]
 VISIBLE={'manager':SALES,'finance':SALES+OPS}
 NAMES=[{'id':'mia','full_name':'Mia Sales','department':'Sales'},{'id':'ravi','full_name':'Ravi Ops','department':'Ops'}]
-CTAX=[{'owner_id':'ravi','owner_name':'Ravi Ops','entities':[{'id':'c1','name':'Ravi Ventures Pvt Ltd','kind':'company'}],'profiles':[{'entityId':'c1','fy':'2025-26','ownershipPct':80,'bookProfit':900000,'accumulatedProfits':200000}]}]
+CTAX=[{'owner_id':'ravi','owner_name':'Ravi Ops','entities':[{'id':'c1','name':'Ravi Ventures Pvt Ltd','kind':'company'}],'profiles':[{'entityId':'c1','fy':'2025-26','ownershipPct':80,'bookProfit':900000,'accumulatedProfits':200000},{'entityId':'c1','fy':'2024-25','ownershipPct':60,'bookProfit':700000}]}]
 def session():
   if os.environ.get('LOVABLE_BROWSER_AUTH_STATUS')=='injected':
     return os.environ['LOVABLE_BROWSER_SUPABASE_STORAGE_KEY'],os.environ['LOVABLE_BROWSER_SUPABASE_SESSION_JSON']
@@ -51,6 +51,15 @@ async def run(p,role,off=None):
   if role=='finance' and off!='view_company_tax':
     await ct.wait_for(state='visible',timeout=60000); t=await ct.inner_text()  # visible without opening any fold
     assert 'Ravi Ventures Pvt Ltd' in t and 'personal tax is never shown' in t
+    assert '2025-26' in t and '2024-25' in t  # both years listed
+    yf=ct.get_by_label('Tax year'); await yf.click(); await page.get_by_role('option',name='2024-25').click()
+    t2=await ct.inner_text(); assert '2024-25' in t2 and '2025-26: book profit' not in t2, t2  # filter hides other years
+    async with page.expect_download() as dl:
+      await ct.get_by_role('button',name='Download CSV').click()
+    path=await (await dl.value).path(); csv=open(path).read()
+    assert csv.splitlines()[0]=='Company,Owner,Kind,Tax year,Book profit,Past profits,Owner share %', csv
+    assert 'Ravi Ventures Pvt Ltd,Ravi Ops,company,2024-25,700000,,60' in csv and '2025-26' not in csv, csv
+    await yf.click(); await page.get_by_role('option',name='All years').click()
     await ct.screenshot(path=str(ROOT/f'{tag}_tax.png'))
   else:
     assert await ct.count()==0 or not await ct.is_visible(), f'{tag}: company tax must be hidden'
