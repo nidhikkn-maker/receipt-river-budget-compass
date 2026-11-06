@@ -45,3 +45,22 @@ it('adjustments across advances together cannot exceed the invoice they settle',
  expect(advanceCrossProblems([mk('a',600,108),mk('b',500,90)],[inv])).toContain('S1: advances adjust more taxable than the invoice carries');
  expect(advanceCrossProblems([mk('a',500,108),mk('b',500,90)],[inv])).toContain('S1: advances adjust more igst than the invoice carries');
 });
+it('annual per-head working breaks output, credit, reverse charge and carry into IGST/CGST/SGST/cess',()=>{
+ const sales=invoice({id:'s1',date:'2026-06-10',taxable:1000,igst:180});
+ const purchase=invoice({id:'p1',kind:'purchase',date:'2026-06-12',taxable:500,igst:0,cgst:45,sgst:45});
+ const rcm=invoice({id:'r1',kind:'purchase',treatment:'reverse_charge',date:'2026-06-15',taxable:300,igst:54,rcmPaidOn:'2026-07-05',rcmPaymentId:'pay'});
+ const h=gstr9Heads([sales,purchase,rcm],'G',2026);
+ expect(h.output).toEqual({igst:180,cgst:0,sgst:0,cess:0});
+ expect(h.itc).toEqual({igst:54,cgst:45,sgst:45,cess:0});
+ expect(h.reverse).toEqual({igst:54,cgst:0,sgst:0,cess:0});
+ expect(h.onInvoices.igst).toBe(54);
+ expect(h.checks).toEqual([]);
+});
+it('per-head review flags credit on invoices that was never claimed',()=>{
+ const purchase=invoice({id:'p2',kind:'purchase',date:'2026-06-12',taxable:500,igst:90,cgst:0,sgst:0});
+ // No 2B eligibility: credit stays held, so the annual review names the head.
+ const h=gstr9Heads([purchase],'G',2026,new Set());
+ expect(h.itc.igst).toBe(0);
+ expect(h.checks.some(c=>c.startsWith('IGST:'))).toBe(true);
+ expect(h.checks.some(c=>c.startsWith('CGST:'))).toBe(false);
+});
