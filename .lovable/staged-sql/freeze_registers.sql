@@ -4,7 +4,7 @@ RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
 DECLARE p jsonb; previous jsonb; proposed jsonb; field text; a jsonb; b jsonb;
   active jsonb := CASE WHEN jsonb_typeof(NEW.data->'books'->'closedPeriods')='array' THEN NEW.data->'books'->'closedPeriods' ELSE '[]'::jsonb END;
   oldperiods jsonb := CASE WHEN jsonb_typeof(OLD.data->'books'->'closedPeriods')='array' THEN OLD.data->'books'->'closedPeriods' ELSE '[]'::jsonb END;
-  lo text; hi text;
+  lo text; hi text; record_id text;
 BEGIN
   IF current_setting('ledgerline.erasing',true)='on' THEN RETURN NEW; END IF;
   FOR p IN SELECT value FROM jsonb_array_elements(oldperiods) LOOP
@@ -23,8 +23,9 @@ BEGIN
     ELSE a:=OLD.data->'books'->field; b:=NEW.data->'books'->field; END IF;
     IF jsonb_typeof(a) IS DISTINCT FROM 'array' THEN a:='[]'::jsonb; END IF;
     IF jsonb_typeof(b) IS DISTINCT FROM 'array' THEN b:='[]'::jsonb; END IF;
-    FOR previous IN SELECT value FROM jsonb_array_elements(a) UNION SELECT value FROM jsonb_array_elements(b) LOOP
-      SELECT value INTO proposed FROM jsonb_array_elements(b) WHERE value->>'id'=previous->>'id';
+    FOR record_id IN SELECT value->>'id' FROM jsonb_array_elements(a) UNION SELECT value->>'id' FROM jsonb_array_elements(b) LOOP
+      SELECT value INTO previous FROM jsonb_array_elements(a) WHERE value->>'id'=record_id;
+      SELECT value INTO proposed FROM jsonb_array_elements(b) WHERE value->>'id'=record_id;
       IF field='assets' THEN
         previous:=previous-ARRAY['lastVerified','condition','location','custodian','tag','department','docIds','docId','warrantyUntil','insurance'];
         proposed:=proposed-ARRAY['lastVerified','condition','location','custodian','tag','department','docIds','docId','warrantyUntil','insurance'];
