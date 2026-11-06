@@ -34,7 +34,7 @@ export function TeamAccessSettings() {
   const refresh = () => Promise.all([qc.invalidateQueries({ queryKey: ["team-access"] }), qc.invalidateQueries({ queryKey: ["admin-team"] }), qc.invalidateQueries({ queryKey: ["admin-history"] })]);
   const setSwitch = async (role: TeamRole, action: TeamAction, value: boolean) => {
     const { error } = await supabase.rpc("admin_set_permission", { _role: role, _action: action, _allowed: value });
-    if (error) return toast.error("Couldn't change that switch");
+    if (error) { toast.error("Couldn't change that switch"); return; }
     await refresh();
   };
   const reset = async (role: "manager" | "finance") => {
@@ -43,7 +43,7 @@ export function TeamAccessSettings() {
   };
   const saveMember = async (id: string, role: string | null, department: string) => {
     const { error } = await supabase.rpc("admin_set_member", { _user: id, _role: role as string, _department: department });
-    if (error) return toast.error("Couldn't save this person's access");
+    if (error) { toast.error("Couldn't save this person's access"); return; }
     setEditing(null); await refresh(); toast.success("Access updated");
   };
   const changed = changedFromDefault(switches).length;
@@ -82,7 +82,7 @@ export function TeamAccessSettings() {
       <section>
         <h3 className="mb-2 text-sm font-semibold">Change history</h3>
         {(history.data ?? []).length === 0 ? <p className="text-xs text-muted-foreground">No changes yet.</p> :
-          <ul className="space-y-1 text-xs text-muted-foreground">{(history.data ?? []).map((h, i) => { const d = h.details as Record<string, unknown>; return <li key={i}>{new Date(h.created_at).toLocaleString("en-IN")} — {h.change === "switch" ? `${ROLE_LABEL[d.role as TeamRole]}: ${TEAM_ACTIONS.find((a) => a.key === d.action)?.label} ${d.allowed ? "on" : "off"}` : `Role set to ${d.role ? ROLE_LABEL[d.role as TeamRole] : "none"}${d.department ? ` · ${String(d.department)}` : ""}`}</li>; })}</ul>}
+          <ul className="space-y-1 text-xs text-muted-foreground">{(history.data ?? []).map((h, i) => { const d = h.details as { role?: string; action?: string; allowed?: boolean; department?: string }; return <li key={i}>{new Date(h.created_at).toLocaleString("en-IN")} — {h.change === "switch" ? `${ROLE_LABEL[d.role as TeamRole]}: ${TEAM_ACTIONS.find((a) => a.key === d.action)?.label} ${d.allowed ? "on" : "off"}` : `Role set to ${d.role ? ROLE_LABEL[d.role as TeamRole] : "none"}${d.department ? ` · ${String(d.department)}` : ""}`}</li>; })}</ul>}
       </section>
     </div>
   );

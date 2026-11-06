@@ -11,7 +11,7 @@ const comp = (p: Partial<TaxComputation>): TaxComputation => {
   const total = c.salary + c.business.net + c.otherSources + c.houseProperty.net + c.capitalGains.short + c.capitalGains.long;
   return { ...c, gross: total, total };
 };
-const ent = (kind: EntityProfile["kind"], id = kind): EntityProfile => ({ id, name: `${kind} co`, kind, pan: "", gstins: [] });
+const ent = (kind: EntityProfile["kind"], id = kind): EntityProfile => ({ id, name: `${kind} co`, kind, pan: "", gstins: [], booksFrom: "2024-25" } as EntityProfile);
 const paid = (p: Partial<EntityFacts["paid"]> = {}): EntityFacts["paid"] => ({ salary: 0, remuneration: 0, capitalInterest: 0, dividend: 0, loans: 0, rent: 0, interest: 0, ...p });
 
 describe("personal tax, FY 2025-26", () => {
