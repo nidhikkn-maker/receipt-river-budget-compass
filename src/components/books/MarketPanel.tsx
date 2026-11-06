@@ -12,6 +12,7 @@ import { statementActionAlerts } from "@/lib/books/investment-alerts";
 import { addSnapshot, FRESHNESS_LABEL, quantityByIsin, quoteKey, recordFailure, upsertQuote, valuationAlerts } from "@/lib/books/market";
 import type { Holding, HoldingKind } from "@/lib/books/types";
 import { useBooks, useNetWorth } from "./useBooks";
+import { PriceOverrides } from "./PriceOverrides";
 import { useStore } from "@/lib/store";
 import { investmentFlows } from "@/lib/books/investment-flows";
 
@@ -24,8 +25,7 @@ export function MarketPanel() {
   const { accounts, transactions } = useStore();
   const nav = useServerFn(getFundNav);
   const [edit, setEdit] = useState<Holding | null>(null);
-  const [price, setPrice] = useState<Record<string, string>>({});
-  const [gold, setGold] = useState(books.goldRate ? String(books.goldRate.perGram24k) : "");
+    const [gold, setGold] = useState(books.goldRate ? String(books.goldRate.perGram24k) : "");
   // Your own entries for a security are compared with the demat total across every account [v6.1 §4, §13].
   const statementQty = quantityByIsin(nw.demat ?? []);
   const actions = statementActionAlerts(nw.demat ?? []);
@@ -41,13 +41,6 @@ export function MarketPanel() {
     }
     await save({ quotes });
     toast[bad ? "message" : "success"](`${ok} NAV${ok === 1 ? "" : "s"} refreshed${bad ? ` · ${bad} failed — previous values kept and marked stale` : ""}`);
-  };
-  const setManual = async (h: Holding) => {
-    const key = quoteKey(h); const v = Number(price[h.id]);
-    if (!key || !(v > 0)) { toast.error("Enter a price above zero"); return; }
-    const at = new Date().toISOString();
-    await save({ quotes: upsertQuote(books.quotes, { key, price: v, at, provider: "entered by you", freshness: "manual", refreshedAt: at }) });
-    setPrice({ ...price, [h.id]: "" });
   };
   const snapshot = async () => {
     const allocation: Record<string, number> = {};
@@ -107,11 +100,11 @@ export function MarketPanel() {
             <span className="text-right"><b className="font-mono">{v.value == null ? "—" : money(v.value)}</b><span className={`block text-[11px] ${v.stale ? "text-destructive" : "text-muted-foreground"}`}>{v.stale ? "Stale · " : ""}{v.note}</span></span></div>
           {v.quote && <p className="mt-1 text-[11px] text-muted-foreground">{FRESHNESS_LABEL[v.quote.freshness]} price {v.quote.price} as of {v.quote.at.slice(0, 16).replace("T", " ")} · refreshed {v.quote.refreshedAt.slice(0, 10)}</p>}
           <div className="mt-2 flex flex-wrap gap-2">
-            {v.holding.kind !== "physical_gold" && v.holding.kind !== "mutual_fund" && <><Input aria-label={`Price for ${v.holding.name}`} className="h-8 w-28" type="number" placeholder="Price" value={price[v.holding.id] ?? ""} onChange={(e) => setPrice({ ...price, [v.holding.id]: e.target.value })} /><Button size="sm" variant="outline" onClick={() => setManual(v.holding)}>Set price</Button></>}
             <Button size="sm" variant="ghost" onClick={() => setEdit(v.holding)}>Edit</Button>
             <Button size="sm" variant="ghost" className="text-destructive" onClick={() => save({ holdings: books.holdings.filter((h) => h.id !== v.holding.id) })}>Remove</Button>
           </div>
         </div>)}
+        <PriceOverrides books={books} save={save} demat={nw.dematRows} />
         <div className="flex flex-wrap items-end gap-2 rounded-xl border p-3">
           <label className="text-xs">Physical gold rate per gram (24k)<Input type="number" value={gold} onChange={(e) => setGold(e.target.value)} /></label>
           <Button size="sm" variant="outline" onClick={async () => { const v = Number(gold); if (!(v > 0)) return; await save({ goldRate: { perGram24k: v, date: new Date().toISOString().slice(0, 10), source: "entered by you" } }); toast.success("Gold rate saved"); }}>Save rate</Button>
