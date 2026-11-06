@@ -30,3 +30,8 @@
 - The original GUC-based period authority prototype was superseded: Cloud refused setting its custom permission parameter. The applied implementation uses a private owner/transaction authority table, removed in the same close transaction; no permission marker leaks into later writes.
 - Isolated signed-in browser check passed: company tax profile edited from 60% to 75% and survived reload; accountant ZIP downloaded with PDF and three CSVs using the edited assumptions. Screenshots inspected. Production writes were intercepted, so this does not certify Cloud persistence.
 - Controlled browser evidence never certifies hosted saves or real-device behaviour.
+## 6 Nov 2026 — Priority 1 continued (company access)
+- Register relabelled: 890 unexamined clauses now NOT AUDITED (they never asserted missing code), 9 PARTIAL kept; status legend recorded in register.json.
+- Member uploads (migration 0078): edit-grant members can add documents owned by the granting owner and tagged only to a company they can edit; files upload into the owner's private prefix only while an active edit grant exists. View-only members, other companies, untagged rows and strangers are refused; revocation closes both paths immediately. Six disposable PostgreSQL tests pass.
+- Shared view: per-company search over entries and documents, PDF export (same company-only rows as CSV, access level and spending total printed), and an Add document control for edit members. Five new pure tests pass.
+- Company-access suite: 23 tests pass (documents, files, transactions, uploads, CSV/PDF/search). Remaining Priority 1 gap: a two-real-account hosted check, which needs a second sign-in (external).
