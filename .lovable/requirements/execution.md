@@ -35,3 +35,7 @@
 - Member uploads (migration 0078): edit-grant members can add documents owned by the granting owner and tagged only to a company they can edit; files upload into the owner's private prefix only while an active edit grant exists. View-only members, other companies, untagged rows and strangers are refused; revocation closes both paths immediately. Six disposable PostgreSQL tests pass.
 - Shared view: per-company search over entries and documents, PDF export (same company-only rows as CSV, access level and spending total printed), and an Add document control for edit members. Five new pure tests pass.
 - Company-access suite: 23 tests pass (documents, files, transactions, uploads, CSV/PDF/search). Remaining Priority 1 gap: a two-real-account hosted check, which needs a second sign-in (external).
+
+## 6 Nov 2026 — Document intake server approval (Priority: typed saves & centralized approvals)
+- Migration 0079: commit_document_intake_reviewed now requires the exact approved attempt (id, document, payload, lock, revision) retained in the owner's durable document run before saving; unreviewed or altered payloads are refused. Committed retries still replay even after the run attempt is removed.
+- Existing intake fixtures updated to seed approved runs; three new approval tests (no run, altered payload/lock, replay after run removal). All 310 books tests pass; typecheck clean.
