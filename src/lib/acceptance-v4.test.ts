@@ -144,7 +144,8 @@ describe("V4 acceptance (Part G)", () => {
     expect(expensePolicies.length).toBeGreaterThan(0);
     expect(prefPolicies.length).toBeGreaterThan(0);
     for (const p of [...expensePolicies, ...prefPolicies]) {
-      expect(p).toContain("auth.uid()");
+      // Team policies delegate to can_access_expense, which compares against auth.uid() and admin switches (see role-access.test.ts).
+      expect(p.includes("auth.uid()") || p.includes("public.can_access_expense(employee_id")).toBe(true);
       expect(p).not.toContain("TO anon");
     }
     for (const p of prefPolicies) expect(p).toContain("owner_id=auth.uid()");
