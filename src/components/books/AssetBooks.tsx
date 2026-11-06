@@ -10,7 +10,7 @@ import { fyOf } from "@/lib/entities";
 import { useStore } from "@/lib/store";
 import { saveExpense } from "@/lib/fx.functions";
 import { annualBook, blockSchedule, bookVsTax, monthlyBook, prepareJournals } from "@/lib/books/depreciation";
-import { applyEvent, depreciationEntry, depreciationEntryKey, depreciationExceptions, disposalResult, dueMonths, stableUuid, suggestPayment } from "@/lib/books/assets-ledger";
+import { applyEvent, depreciationEntry, depreciationEntryKey, depreciationExceptions, disposalResult, dueMonths, eventPostings, stableUuid, suggestPayment } from "@/lib/books/assets-ledger";
 import { requiresApproval, type AssetEventKind } from "@/lib/books/types";
 import { useBooks } from "./useBooks";
 
@@ -86,7 +86,10 @@ export function AssetLifecycle({ a }: { a: Asset }) {
 
 export function DepreciationBooks() {
   const { books, save, preferences } = useBooks();
-  const { ensureCategory } = useStore();
+  const { ensureCategory, transactions: allTx } = useStore();
+  const [evBusy, setEvBusy] = useState(false);
+  const [pendingEv, setPendingEv] = useState<{ id: string; p: import("@/lib/books/assets-ledger").EventPosting }[]>([]);
+  const [evProblems, setEvProblems] = useState<string[]>([]);
   const post = useServerFn(saveExpense);
   const assets = (preferences.assets ?? []).filter((a) => a.kind !== "property");
   const fy = fyOf(today());
@@ -109,6 +112,27 @@ export function DepreciationBooks() {
     else if (notes.length) toast.message(notes.slice(0, 2).join(" · "));
   }, [assets.length]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  useEffect(() => {
+    let live = true;
+    void (async () => {
+      const have = new Set(allTx.map((t) => t.id)); const out: { id: string; p: import("@/lib/books/assets-ledger").EventPosting }[] = []; const probs: string[] = [];
+      for (const a of assets) { const r = eventPostings(a, books.closedPeriods); probs.push(...r.problems); for (const p of r.postings) { const id = await stableUuid(...p.key); if (!have.has(id)) out.push({ id, p }); } }
+      if (live) { setPendingEv(out); setEvProblems(probs); }
+    })();
+    return () => { live = false; };
+  }, [assets, allTx, books.closedPeriods]);
+  const postEvents = async () => {
+    setEvBusy(true); let ok = 0; const problems: string[] = [];
+    try {
+      for (const c of ["Impairment", "Asset disposal"]) await ensureCategory(c).catch(() => undefined);
+      for (const { id, p } of pendingEv) {
+        const res = await post({ data: { id: null, createId: id, title: p.title, merchant: null, category: p.kind === "impairment" ? "Impairment" : "Asset disposal", scope: "business", workspaceAllocations: [], memberId: null, splits: [], currency: "INR", originalAmount: p.amount, date: p.date, description: p.description, paymentMethod: "other", txnType: "adjustment", reimbursementStatus: "none", adjustmentSign: -1, accountId: p.accountId, toAccountId: null, paymentInstrumentId: null, payeeId: null, tripId: null, principal: null, interest: null, tags: [p.kind] } });
+        if (res.ok) ok++; else problems.push(`${p.title}: ${res.error}`);
+      }
+      if (ok) toast.success(`${ok} write-down/disposal entr${ok === 1 ? "y" : "ies"} posted`);
+      if (problems.length) toast.error(problems.slice(0, 3).join(" · "));
+    } finally { setEvBusy(false); }
+  };
   const approve = async () => {
     setBusy(true);
     const posted: Record<string, { tx: string; on: string }> = {}; const problems: string[] = [];
@@ -139,6 +163,8 @@ export function DepreciationBooks() {
         <p className="font-semibold">Book vs tax · FY {fy}</p>
         <div className="space-y-1">{vs.map((v) => { const a = assets.find((x) => x.id === v.assetId)!; return <div key={v.assetId} className="flex flex-wrap justify-between gap-2 border-b py-1"><span>{v.name}</span><span>book {inr(v.book)} · tax {inr(v.tax)} · diff {inr(v.difference)} · NBV {inr(annualBook(a, fy).nbv)}</span></div>; })}</div>
         {prepared.length > 0 && <Button size="sm" loading={busy} onClick={approve}>{requiresApproval(books.policy, "postDepreciation") ? "Approve & post" : "Post"} {prepared.length}</Button>}
+        {pendingEv.length > 0 && <div className="space-y-1 rounded-lg border p-2"><p className="font-semibold">Write-downs & disposals waiting to post</p>{pendingEv.map(({ id, p }) => <p key={id}>{p.date} · {p.title} · {inr(p.amount)} — lowers the asset account (non-cash)</p>)}<Button size="sm" loading={evBusy} onClick={postEvents}>{requiresApproval(books.policy, "postDepreciation") ? "Approve & post" : "Post"} {pendingEv.length}</Button></div>}
+        {evProblems.length > 0 && <p className="text-destructive">{[...new Set(evProblems)].join(" · ")}</p>}
         {prepared.map((j) => <p key={j.id}>{j.period} · {assets.find((a) => a.id === j.assetId)?.name} · {inr(j.amount)} — Dr Depreciation / Cr asset account</p>)}
         <p className="text-muted-foreground">Approved depreciation is saved once per asset per month as a non-cash entry that lowers the asset's own account — never a bank account. Closed months are refused; a retry never posts twice.</p>
       </div>
