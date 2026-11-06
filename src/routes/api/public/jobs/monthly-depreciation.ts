@@ -27,7 +27,7 @@ export const Route = createFileRoute("/api/public/jobs/monthly-depreciation")({
         const books = cleanBooks(raw["books"]);
         const run = await scheduledRun(assets, books.journals, books.closedPeriods, today);
         if (!run.added.length) continue;
-        const next = { ...raw, books: { ...(raw["books"] as object ?? {}), journals: run.journals } };
+        const next = { ...raw, books: { ...((raw["books"] as object | undefined) ?? {}), journals: run.journals } };
         // Revision check: if the owner saved in the meantime, skip — the page or next run prepares it.
         const upd = await supabaseAdmin.from("finance_preferences").update({ data: next as never, updated_at: new Date().toISOString() }).eq("owner_id", row.owner_id).eq("updated_at", row.updated_at).select("owner_id");
         if (upd.error || !upd.data?.length) { conflicts++; continue; }

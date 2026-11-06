@@ -74,6 +74,7 @@ import { Route as AuthenticatedTripsTripIdRouteImport } from './routes/_authenti
 import { Route as ApiPublicJobsAccountantLinksRouteImport } from './routes/api/public/jobs/accountant-links'
 import { Route as ApiPublicJobsCleanupDemosRouteImport } from './routes/api/public/jobs/cleanup-demos'
 import { Route as ApiPublicJobsClosingPricesRouteImport } from './routes/api/public/jobs/closing-prices'
+import { Route as ApiPublicJobsMonthlyDepreciationRouteImport } from './routes/api/public/jobs/monthly-depreciation'
 import { Route as ApiPublicJobsPaymentRemindersRouteImport } from './routes/api/public/jobs/payment-reminders'
 import { Route as ApiPublicJobsReportJobsRouteImport } from './routes/api/public/jobs/report-jobs'
 import { Route as ApiPublicJobsRuleWatchRouteImport } from './routes/api/public/jobs/rule-watch'
@@ -429,6 +430,12 @@ const ApiPublicJobsClosingPricesRoute =
     path: '/api/public/jobs/closing-prices',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicJobsMonthlyDepreciationRoute =
+  ApiPublicJobsMonthlyDepreciationRouteImport.update({
+    id: '/api/public/jobs/monthly-depreciation',
+    path: '/api/public/jobs/monthly-depreciation',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicJobsPaymentRemindersRoute =
   ApiPublicJobsPaymentRemindersRouteImport.update({
     id: '/api/public/jobs/payment-reminders',
@@ -522,6 +529,7 @@ export interface FileRoutesByFullPath {
   '/api/public/jobs/accountant-links': typeof ApiPublicJobsAccountantLinksRoute
   '/api/public/jobs/cleanup-demos': typeof ApiPublicJobsCleanupDemosRoute
   '/api/public/jobs/closing-prices': typeof ApiPublicJobsClosingPricesRoute
+  '/api/public/jobs/monthly-depreciation': typeof ApiPublicJobsMonthlyDepreciationRoute
   '/api/public/jobs/payment-reminders': typeof ApiPublicJobsPaymentRemindersRoute
   '/api/public/jobs/report-jobs': typeof ApiPublicJobsReportJobsRoute
   '/api/public/jobs/rule-watch': typeof ApiPublicJobsRuleWatchRoute
@@ -592,6 +600,7 @@ export interface FileRoutesByTo {
   '/api/public/jobs/accountant-links': typeof ApiPublicJobsAccountantLinksRoute
   '/api/public/jobs/cleanup-demos': typeof ApiPublicJobsCleanupDemosRoute
   '/api/public/jobs/closing-prices': typeof ApiPublicJobsClosingPricesRoute
+  '/api/public/jobs/monthly-depreciation': typeof ApiPublicJobsMonthlyDepreciationRoute
   '/api/public/jobs/payment-reminders': typeof ApiPublicJobsPaymentRemindersRoute
   '/api/public/jobs/report-jobs': typeof ApiPublicJobsReportJobsRoute
   '/api/public/jobs/rule-watch': typeof ApiPublicJobsRuleWatchRoute
@@ -665,6 +674,7 @@ export interface FileRoutesById {
   '/api/public/jobs/accountant-links': typeof ApiPublicJobsAccountantLinksRoute
   '/api/public/jobs/cleanup-demos': typeof ApiPublicJobsCleanupDemosRoute
   '/api/public/jobs/closing-prices': typeof ApiPublicJobsClosingPricesRoute
+  '/api/public/jobs/monthly-depreciation': typeof ApiPublicJobsMonthlyDepreciationRoute
   '/api/public/jobs/payment-reminders': typeof ApiPublicJobsPaymentRemindersRoute
   '/api/public/jobs/report-jobs': typeof ApiPublicJobsReportJobsRoute
   '/api/public/jobs/rule-watch': typeof ApiPublicJobsRuleWatchRoute
@@ -738,6 +748,7 @@ export interface FileRouteTypes {
     | '/api/public/jobs/accountant-links'
     | '/api/public/jobs/cleanup-demos'
     | '/api/public/jobs/closing-prices'
+    | '/api/public/jobs/monthly-depreciation'
     | '/api/public/jobs/payment-reminders'
     | '/api/public/jobs/report-jobs'
     | '/api/public/jobs/rule-watch'
@@ -808,6 +819,7 @@ export interface FileRouteTypes {
     | '/api/public/jobs/accountant-links'
     | '/api/public/jobs/cleanup-demos'
     | '/api/public/jobs/closing-prices'
+    | '/api/public/jobs/monthly-depreciation'
     | '/api/public/jobs/payment-reminders'
     | '/api/public/jobs/report-jobs'
     | '/api/public/jobs/rule-watch'
@@ -880,6 +892,7 @@ export interface FileRouteTypes {
     | '/api/public/jobs/accountant-links'
     | '/api/public/jobs/cleanup-demos'
     | '/api/public/jobs/closing-prices'
+    | '/api/public/jobs/monthly-depreciation'
     | '/api/public/jobs/payment-reminders'
     | '/api/public/jobs/report-jobs'
     | '/api/public/jobs/rule-watch'
@@ -899,6 +912,7 @@ export interface RootRouteChildren {
   ApiPublicJobsAccountantLinksRoute: typeof ApiPublicJobsAccountantLinksRoute
   ApiPublicJobsCleanupDemosRoute: typeof ApiPublicJobsCleanupDemosRoute
   ApiPublicJobsClosingPricesRoute: typeof ApiPublicJobsClosingPricesRoute
+  ApiPublicJobsMonthlyDepreciationRoute: typeof ApiPublicJobsMonthlyDepreciationRoute
   ApiPublicJobsPaymentRemindersRoute: typeof ApiPublicJobsPaymentRemindersRoute
   ApiPublicJobsReportJobsRoute: typeof ApiPublicJobsReportJobsRoute
   ApiPublicJobsRuleWatchRoute: typeof ApiPublicJobsRuleWatchRoute
@@ -1363,6 +1377,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicJobsClosingPricesRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/jobs/monthly-depreciation': {
+      id: '/api/public/jobs/monthly-depreciation'
+      path: '/api/public/jobs/monthly-depreciation'
+      fullPath: '/api/public/jobs/monthly-depreciation'
+      preLoaderRoute: typeof ApiPublicJobsMonthlyDepreciationRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/jobs/payment-reminders': {
       id: '/api/public/jobs/payment-reminders'
       path: '/api/public/jobs/payment-reminders'
@@ -1543,6 +1564,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicJobsAccountantLinksRoute: ApiPublicJobsAccountantLinksRoute,
   ApiPublicJobsCleanupDemosRoute: ApiPublicJobsCleanupDemosRoute,
   ApiPublicJobsClosingPricesRoute: ApiPublicJobsClosingPricesRoute,
+  ApiPublicJobsMonthlyDepreciationRoute: ApiPublicJobsMonthlyDepreciationRoute,
   ApiPublicJobsPaymentRemindersRoute: ApiPublicJobsPaymentRemindersRoute,
   ApiPublicJobsReportJobsRoute: ApiPublicJobsReportJobsRoute,
   ApiPublicJobsRuleWatchRoute: ApiPublicJobsRuleWatchRoute,
