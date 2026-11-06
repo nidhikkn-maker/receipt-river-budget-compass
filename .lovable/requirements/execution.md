@@ -44,3 +44,9 @@
 - recon.ts brokerCashOverlap(): flags a broker_cash holding and a cash-like account (savings/current/cash/wallet/investment/other_asset) whose names share a significant word (e.g. the broker's name) — the same money would otherwise be counted twice in net worth. Read-only; clears when records are fixed. Generic words (cash/balance/fund) never match on their own; liabilities and archived accounts are ignored.
 - Surfaced in the continuous audit as a high-risk "Investment overlap" finding pointing to Wealth. Four new tests; full suite 1,629 passed.
 - Item 7 (demat legal ownership) verified already complete: sharePct stored and validated 0–100, applied in valuation, editable and shown as "% yours" in the Market panel.
+
+## 6 Nov 2026 — Field-level provenance (audit item 4)
+- docrepo.ts recordProvenance(): for any saved record, the linked source documents with every read field — saved value, printed original when corrected, page/section locator, status and confidence. Pure and read-only.
+- Tax workpaper ZIP gains a fourth sheet, 4_field_provenance.csv: per taxpayer, every field read from that company's linked documents, so the accountant can trace each figure to its printed source. Personal section stays entry-based (sheet 2).
+- Three new tests; workpaper suite 13 passed; typecheck clean.
+- Item 5 verified already complete: GST drafts (GSTR-1/3B/9 + JSON + validation + Rule 88A set-off), opening balance sheet (fy.ts openingBalanceSheet) and asset posting acceptance (scheduled-depreciation, phase1-acceptance) all exist with tests.
