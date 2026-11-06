@@ -39,3 +39,8 @@
 ## 6 Nov 2026 — Document intake server approval (Priority: typed saves & centralized approvals)
 - Migration 0079: commit_document_intake_reviewed now requires the exact approved attempt (id, document, payload, lock, revision) retained in the owner's durable document run before saving; unreviewed or altered payloads are refused. Committed retries still replay even after the run attempt is removed.
 - Existing intake fixtures updated to seed approved runs; three new approval tests (no run, altered payload/lock, replay after run removal). All 310 books tests pass; typecheck clean.
+
+## 6 Nov 2026 — Broker cash overlap check (audit item 6)
+- recon.ts brokerCashOverlap(): flags a broker_cash holding and a cash-like account (savings/current/cash/wallet/investment/other_asset) whose names share a significant word (e.g. the broker's name) — the same money would otherwise be counted twice in net worth. Read-only; clears when records are fixed. Generic words (cash/balance/fund) never match on their own; liabilities and archived accounts are ignored.
+- Surfaced in the continuous audit as a high-risk "Investment overlap" finding pointing to Wealth. Four new tests; full suite 1,629 passed.
+- Item 7 (demat legal ownership) verified already complete: sharePct stored and validated 0–100, applied in valuation, editable and shown as "% yours" in the Market panel.
