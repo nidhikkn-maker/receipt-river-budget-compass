@@ -19,5 +19,5 @@ it('service advances add tax once then reverse only the reviewed invoiced portio
  expect(advanceHeads([a],'G','2026-09').igst).toBe(180);
  expect(advanceHeads([a],'G','2026-10').igst).toBe(-90);
  expect(advanceHeads([{...a,supply:'goods'}],'G','2026-09').igst).toBe(0);
- expect(advanceProblems({...a,adjustments:[{...a.adjustments[0],taxable:1001}]},[invoice({})])).toContain('taxable: adjustments exceed advance');
+ expect(advanceProblems({...a,adjustments:[{invoiceId:'sale',date:'2026-10-01',taxable:1001,igst:90,cgst:0,sgst:0,cess:0}]},[invoice({})])).toContain('taxable: adjustments exceed advance');
 });
