@@ -57,8 +57,10 @@ async def run(p,role,off=None):
     async with page.expect_download() as dl:
       await ct.get_by_role('button',name='Download CSV').click()
     path=await (await dl.value).path(); csv=open(path).read()
-    assert csv.splitlines()[0]=='Company,Owner,Kind,Tax year,Book profit,Past profits,Owner share %', csv
-    assert 'Ravi Ventures Pvt Ltd,Ravi Ops,company,2024-25,700000,,60' in csv and '2025-26' not in csv, csv
+    assert csv.splitlines()[0]=='Company,Owner,Kind,Tax year,Book profit,Past profits,Owner share %,Exported on,Selected year', csv
+    assert 'Ravi Ventures Pvt Ltd,Ravi Ops,company,2024-25,700000,,60,' in csv and '2025-26' not in csv, csv
+    assert all(line.endswith(',2024-25') for line in csv.splitlines()[1:]), csv  # selected year stamped on every row
+    import datetime; assert datetime.date.today().isoformat() in csv, csv  # export date stamped
     await yf.click(); await page.get_by_role('option',name='All years').click()
     await ct.screenshot(path=str(ROOT/f'{tag}_tax.png'))
   else:
