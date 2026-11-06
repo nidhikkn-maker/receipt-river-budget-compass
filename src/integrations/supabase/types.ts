@@ -2534,6 +2534,7 @@ export type Database = {
         Args: {
           _action: string
           _expected: Json
+          _figures?: Json
           _from: string
           _id: string
           _period: string

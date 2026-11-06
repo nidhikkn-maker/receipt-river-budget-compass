@@ -589,6 +589,13 @@
       "when": 1793977898085,
       "tag": "0083_journal_rule_closed_guards",
       "breakpoints": true
+    },
+    {
+      "idx": 84,
+      "version": "7",
+      "when": 1793981970358,
+      "tag": "0084_period_figure_snapshots",
+      "breakpoints": true
     }
   ]
 }
