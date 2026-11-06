@@ -143,9 +143,12 @@ export function TeamCompanyTax() {
   if (!ok) return null;
   const fmt = (v: unknown) => (typeof v === "number" ? money(v) : "Unknown");
   const shown = companies.map((c) => ({ ...c, years: c.years.filter((y) => year === "all" || y.fy === year) }));
+  const pickYear = (y: string) => { setYear(y); window.__lovableEvents?.track?.("project.company_tax_year_filtered", { year: y }); };
   const exportCsv = () => {
     const rows = shown.flatMap((c) => c.years.map((y) => ({ company: c.name, owner: c.owner, kind: c.kind, fy: y.fy, bookProfit: y.bookProfit, accumulatedProfits: y.accumulatedProfits, ownershipPct: y.ownershipPct })));
-    downloadBlob(new Blob([companyTaxCsv(rows)], { type: "text/csv;charset=utf-8" }), `company-tax-${year === "all" ? "all-years" : year}.csv`);
+    const selectedYear = year === "all" ? "All years" : year;
+    downloadBlob(new Blob([companyTaxCsv(rows, { exportedOn: new Date().toISOString().slice(0, 10), selectedYear })], { type: "text/csv;charset=utf-8" }), `company-tax-${year === "all" ? "all-years" : year}.csv`);
+    window.__lovableEvents?.track?.("project.company_tax_csv_exported", { year: selectedYear, rows: rows.length });
   };
   return (
     <section className="mt-6 rounded-2xl border p-4">
@@ -153,7 +156,7 @@ export function TeamCompanyTax() {
         <div><h2 className="font-semibold">Company tax (all)</h2>
           <p className="text-xs text-muted-foreground">View only. Company figures entered by each person; personal tax is never shown.</p></div>
         <div className="flex items-center gap-2">
-          <Select value={year} onValueChange={setYear}><SelectTrigger className="w-36" aria-label="Tax year"><SelectValue /></SelectTrigger>
+          <Select value={year} onValueChange={pickYear}><SelectTrigger className="w-36" aria-label="Tax year"><SelectValue /></SelectTrigger>
             <SelectContent><SelectItem value="all">All years</SelectItem>{allYears.map((y) => <SelectItem key={y} value={y}>{y}</SelectItem>)}</SelectContent></Select>
           <Button size="sm" variant="outline" onClick={exportCsv} disabled={shown.every((c) => c.years.length === 0)}>Download CSV</Button>
         </div>

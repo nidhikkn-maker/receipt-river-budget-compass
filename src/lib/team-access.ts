@@ -41,11 +41,12 @@ export function changedFromDefault(switches: Switch[]): Switch[] {
 
 export interface CompanyTaxCsvRow { company: string; owner: string; kind: string; fy: string; bookProfit?: number | undefined; accumulatedProfits?: number | undefined; ownershipPct?: number | undefined }
 
-/** CSV for the Company tax (all) section: one row per company and tax year; blank for figures not entered. */
-export function companyTaxCsv(rows: CompanyTaxCsvRow[]): string {
+/** CSV for the Company tax (all) section: one row per company and tax year; blank for figures not entered.
+ *  Every row repeats the export date and the year filter the export was taken with, so a shared file stays identifiable. */
+export function companyTaxCsv(rows: CompanyTaxCsvRow[], meta: { exportedOn: string; selectedYear: string }): string {
   const cell = (v: unknown) => { const s = v === undefined || v === null ? "" : String(v); return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; };
-  const lines = ["Company,Owner,Kind,Tax year,Book profit,Past profits,Owner share %"];
-  for (const r of rows) lines.push([r.company, r.owner, r.kind, r.fy, r.bookProfit, r.accumulatedProfits, r.ownershipPct].map(cell).join(","));
+  const lines = ["Company,Owner,Kind,Tax year,Book profit,Past profits,Owner share %,Exported on,Selected year"];
+  for (const r of rows) lines.push([r.company, r.owner, r.kind, r.fy, r.bookProfit, r.accumulatedProfits, r.ownershipPct, meta.exportedOn, meta.selectedYear].map(cell).join(","));
   return lines.join("\n");
 }
 
