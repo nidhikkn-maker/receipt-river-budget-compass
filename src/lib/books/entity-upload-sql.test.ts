@@ -68,7 +68,8 @@ describe('company member uploads', () => {
   });
   it('revoking the grant closes both document and file uploads immediately', async () => {
     await as(OWNER);
-    await db.query(`UPDATE public.entity_members SET revoked_at = now() WHERE member_id = '${EDITOR}'`);
+    const gid = (await db.query<{ id: string }>(`SELECT id FROM public.entity_members WHERE member_id = '${EDITOR}'`)).rows[0]!.id;
+    await db.query('SELECT public.revoke_entity_access($1)', [gid]);
     await as(EDITOR);
     await expect(insDoc('ed5', OWNER, 'c1')).rejects.toThrow(/row-level security/);
     await expect(insFile(`${OWNER}/docs/ed5.pdf`)).rejects.toThrow(/row-level security/);
