@@ -2,6 +2,8 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { PageTitle } from "@/components/AppShell";
+import { evidenceCsv, registerEvidence } from "@/lib/books/evidence";
+import { downloadBlob } from "@/lib/reports";
 import { Fold } from "@/components/Fold";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -94,6 +96,7 @@ function Audit() {
       <Link to="/report-status" className="text-sm text-primary underline">Required reports status, evidence and tests</Link>
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">{tiles.map((t) => <div key={t.label} className="rounded-2xl border bg-card p-3"><p className="text-[11px] text-muted-foreground">{t.label}</p><p className="font-mono text-lg font-semibold">{t.value}</p></div>)}</div>
 
+      <FigureSources assets={preferences.assets ?? []} books={books} docs={documents} titleOf={(id) => transactions.find((t) => t.id === id)?.title} />
       <Fold title="Reconciliations" hint="Bank, card, loan, supplier, customer, investment, intercompany, GST" defaultOpen>
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">{hub.map((h) => <Link key={h.kind} to={h.to} className="rounded-xl border px-3 py-2 text-sm"><span className="block text-xs text-muted-foreground">{h.kind}</span><b className={h.open ? "text-destructive" : "text-primary"}>{h.open ? `${h.open} open` : "Clear"}</b></Link>)}</div>
         <div className="mt-3 space-y-2 text-xs">
@@ -161,5 +164,19 @@ function Audit() {
           <p className="text-[11px] text-muted-foreground">Approved fields stay searchable document details; no database columns are created automatically.</p></div>
       </Fold>}
     </div>
+  );
+}
+
+function FigureSources({ assets, books, docs, titleOf }: { assets: import("@/lib/assets").Asset[]; books: import("@/lib/books/types").BooksData; docs: { id: string; title: string }[]; titleOf: (id: string) => string | undefined }) {
+  const rows = useMemo(() => registerEvidence({ assets, books, docs, entryTitle: titleOf }), [assets, books, docs]); // eslint-disable-line react-hooks/exhaustive-deps
+  const missing = rows.filter((r) => !r.source).length;
+  return (
+    <Fold title="Figure sources" hint={rows.length ? `${rows.length - missing} of ${rows.length} register figures traced to a document or entry` : "No register figures yet"}>
+      <div className="space-y-2 text-xs">
+        <div className="max-h-80 divide-y overflow-y-auto rounded-lg border">{rows.map((r, i) => <div key={`${r.recordId}:${i}`} className="flex flex-wrap justify-between gap-2 px-2 py-1"><span className="min-w-0">{r.register} · {r.label}<span className="block text-muted-foreground">{r.source ? `${r.source.kind === "document" ? "Document" : "Entry"}: ${r.source.title}` : "No source — attach the document"}</span></span><span className="font-mono">{inr(r.amount)}</span></div>)}</div>
+        {rows.length > 0 && <Button size="sm" variant="outline" onClick={() => downloadBlob(new Blob([evidenceCsv(rows)], { type: "text/csv" }), "figure-sources.csv")}>Download CSV</Button>}
+        <p className="text-muted-foreground">Read-only. A figure counts as traced only when its record names a document, a document is linked to it, or it is linked to a ledger entry.</p>
+      </div>
+    </Fold>
   );
 }
