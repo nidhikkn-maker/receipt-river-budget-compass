@@ -137,7 +137,7 @@ describe("role administration", () => {
     await expect(as(EMP, `SELECT public.admin_set_member('${EMP}','finance',null)`)).rejects.toThrow(/Only an admin/);
     await expect(as(FIN, "SELECT public.admin_set_permission('finance','edit_expenses',true)")).rejects.toThrow(/Only an admin/);
     await expect(as(MGR, `INSERT INTO public.user_roles(user_id, role) VALUES ('${MGR}','finance')`)).rejects.toThrow();
-    await expect(as(MGR, "UPDATE public.role_permissions SET allowed = true")).resolves.toEqual([]);
+    await expect(as(MGR, "UPDATE public.role_permissions SET allowed = true")).rejects.toThrow(/permission denied/);
     expect((await db.query<{ allowed: boolean }>("SELECT allowed FROM public.role_permissions WHERE role='manager' AND action='delete_expenses'")).rows[0]!.allowed).toBe(false);
   });
   it("an admin change is recorded in the history", async () => {
