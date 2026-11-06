@@ -21,7 +21,7 @@ $$;
 
 CREATE FUNCTION public.save_reviewed_preferences(_id uuid,_data jsonb,_expected bigint,_approved boolean)
 RETURNS bigint LANGUAGE plpgsql SECURITY DEFINER SET search_path=public AS $$
-DECLARE uid uuid:=auth.uid(); previous jsonb; rev bigint; old public.preference_approvals; sections text[];
+DECLARE uid uuid:=auth.uid(); previous jsonb; rev bigint; old public.preference_approvals; sections text[]; existed boolean;
 BEGIN
  IF uid IS NULL THEN RAISE EXCEPTION 'Sign in required'; END IF;
  IF _id IS NULL OR jsonb_typeof(_data) IS DISTINCT FROM 'object' OR octet_length(_data::text)>20000000 THEN RAISE EXCEPTION 'Invalid preference review'; END IF;
@@ -32,14 +32,15 @@ BEGIN
    RETURN old.result_revision;
  END IF;
  SELECT data,revision INTO previous,rev FROM public.finance_preferences WHERE owner_id=uid FOR UPDATE;
- IF NOT FOUND THEN previous:='{}'; rev:=NULL; END IF;
+ existed:=FOUND;
+ IF NOT existed THEN previous:='{}'; rev:=NULL; END IF;
  IF rev IS DISTINCT FROM _expected THEN RAISE EXCEPTION 'Records changed; refresh and review again'; END IF;
  sections:=public.sensitive_preference_sections(previous,_data);
  IF cardinality(sections)>0 AND _approved IS DISTINCT FROM true THEN RAISE EXCEPTION 'Approve the financial changes before saving'; END IF;
  INSERT INTO public.preference_approvals(id,owner_id,expected_revision,previous_data,approved_data,changed_sections,transaction_id)
  VALUES(_id,uid,_expected,previous,_data,sections,txid_current());
- INSERT INTO public.finance_preferences(owner_id,data,updated_at) VALUES(uid,_data,now())
- ON CONFLICT(owner_id) DO UPDATE SET data=excluded.data,updated_at=now() RETURNING revision INTO rev;
+ IF existed THEN UPDATE public.finance_preferences SET data=_data,updated_at=now() WHERE owner_id=uid RETURNING revision INTO rev;
+ ELSE INSERT INTO public.finance_preferences(owner_id,data,updated_at) VALUES(uid,_data,now()) RETURNING revision INTO rev; END IF;
  UPDATE public.preference_approvals SET result_revision=rev WHERE id=_id;
  RETURN rev;
 END $$;
