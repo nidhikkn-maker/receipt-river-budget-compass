@@ -540,6 +540,13 @@
       "when": 1793961564632,
       "tag": "0076_entity_scoped_transactions",
       "breakpoints": true
+    },
+    {
+      "idx": 77,
+      "version": "7",
+      "when": 1793962099728,
+      "tag": "0077_my_shared_companies",
+      "breakpoints": true
     }
   ]
 }
