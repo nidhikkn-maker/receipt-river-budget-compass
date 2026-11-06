@@ -4,7 +4,7 @@ import { filterShared, rowsFor, sharedCompanyCsv, sharedCompanyPdfData, type Sha
 const c: SharedCompany = { grant_id: "g", owner_id: "o1", entity_id: "c1", company_name: "Krupa Pvt Ltd", owner_email: "o@x.in", can_write: false };
 const t = (id: string, owner: string, ent: string | null): SharedTxn => ({ id, employee_id: owner, entity_id: ent, title: id, merchant: null, category: "Office", amount: 100, currency: "INR", expense_date: "2026-10-01", txn_type: "expense" });
 const d = (id: string, owner: string, ent: string | null): SharedDoc => ({ id, owner_id: owner, entity_id: ent, title: id, doc_type: "invoice", doc_date: null, file_path: "x" });
-const d_ = d;
+
 
 describe("shared company export", () => {
   it("includes only that owner's rows for that company", () => {
@@ -35,7 +35,7 @@ describe("shared company search", () => {
 
 describe("shared company PDF data", () => {
   it("contains only that company's rows, the access level and the spending total", () => {
-    const d = sharedCompanyPdfData(c, [t("keep", "o1", "c1"), { ...t("keep2", "o1", "c1"), amount: 50 }, t("leak", "o1", "c2")], [d_("ok", "o1", "c1"), d_("no", "o2", "c1")]);
+    const d = sharedCompanyPdfData(c, [t("keep", "o1", "c1"), { ...t("keep2", "o1", "c1"), amount: 50 }, t("leak", "o1", "c2")], [d("ok", "o1", "c1"), d("no", "o2", "c1")]);
     expect(d.counts).toEqual({ entries: 2, documents: 1 });
     expect(d.totalSpend).toBe("INR 150.00");
     expect(d.lines.join(" ")).toContain("View only");
