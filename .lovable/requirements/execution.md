@@ -22,7 +22,8 @@
 - Consequential production publication requires explicit approval.
 
 ## Verification
-- Full suite: 200 test files, 1,567 tests passed on 6 November 2026. Preview compilation log reports build OK. The original source register now records partial status and concrete evidence for close evidence, recovery, timestamps, performance and allocations.
+- Full suite: 201 test files, 1,572 tests passed on 6 November 2026. Preview compilation log reports build OK. The original source register records partial status and concrete evidence for close evidence, recovery, timestamps, performance, allocations and source corrections.
+- Known unambiguous source-field corrections now refresh typed entity/asset/lease/GST proposals, persist in runs and retain printed originals. Ambiguous labels never silently change financial facts; five regressions pass. Full field/provenance coverage remains incomplete.
 - Alternate period-write authority prototype: 3 disposable PostgreSQL tests pass, but `.lovable/period-authority.sql` is deliberately not applied until backup restore can preserve closing evidence without forging new closure snapshots. This is an internal dependency, not an external block.
 - Isolated signed-in browser check passed: company tax profile edited from 60% to 75% and survived reload; accountant ZIP downloaded with PDF and three CSVs using the edited assumptions. Screenshots inspected. Production writes were intercepted, so this does not certify Cloud persistence.
 - Controlled browser evidence never certifies hosted saves or real-device behaviour.

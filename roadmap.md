@@ -17,7 +17,8 @@
 - [x] Signed external portfolio flows for contributions/redemptions, internal-transfer exclusion, snapshot/alert reuse and Demat allocation; 8 flow regressions. Actual fetched_at retained for exchange prices instead of invented refresh times; timestamp regression.
 - [x] Revision-checked, replay-protected atomic document intake/evidence lock; all preference updates bump common revision; 7 disposable PostgreSQL tests. Durable approved request survives lost response/reload and confirms one save in isolated Statement Desk browser check. Typed server proposal validation still open.
 - [ ] Period authority prototype passes 3 tests but remains unapplied: integrate backup closing-evidence preservation first, then enforce all direct-write bypasses.
-- [x] Latest verification: 200 test files / 1,567 tests passed; Audit and Statement Desk recovery screenshots inspected; original master register updated with evidence, no blanket completion.
+- [x] Latest verification: 201 test files / 1,572 tests passed; Audit and Statement Desk recovery screenshots inspected; original master register updated with evidence, no blanket completion.
+- [x] Exact known source-field corrections refresh typed proposals, retain printed originals and persist to runs; ambiguous amount labels never change money. Five regressions pass; complete provenance/field coverage remains open.
 ## Backup recovery verification (6 Nov 2026)
 - [x] Fixed team-visible expenses entering personal backups with explicit owner filters on every exported table.
 - [x] Isolated Settings/Drafts browser check: ZIP includes draft/photo, cancelled restore writes nothing, restored draft survives reload, failed restore cleans only staged files, retry keeps one draft. Production Cloud restore remains unverified; no real records changed.
