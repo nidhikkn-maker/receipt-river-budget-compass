@@ -1,3 +1,8 @@
+## Autonomous master execution (6 Nov 2026)
+- [ ] Recover and consolidate every original v6.0/v6.1 requirement with source wording, implementation evidence and actual verification status.
+- [ ] Execute all accessible gaps; keep the master register and next executable task current, with no routine continuation approvals.
+- [ ] Final line-by-line document audit and consolidated verification report; do not declare unverified requirements complete.
+
 ## Remaining v6 items (6 Nov 2026 plan)
 - [x] Return format registry + validateReturnDraft (unpinned formats never "validated"); period-close evidence, supersede-on-reopen and register blocker rules; 8 tests.
 - [ ] Wire close evidence + registry labels into Audit/Tax screens; server freeze for register inputs.
