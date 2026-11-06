@@ -94,3 +94,35 @@ export function capitalise(cost: number, min: number | undefined): "capitalise" 
   return cost >= min ? "capitalise" : "expense";
 }
 export { nextMonth };
+
+/**
+ * Scheduled monthly run [§34] — the same preparation the Assets page does on opening, so it happens even if the
+ * page is never opened. Journal ids are stable per asset-month, so a rerun (or a concurrent page open) never
+ * duplicates; closed months are skipped; posting still needs the owner's approval.
+ */
+export async function scheduledRun(assets: Asset[], journals: Journal[], closed: ClosedPeriod[], today: string): Promise<{ journals: Journal[]; added: Journal[]; exceptions: { assetId: string; name: string; reasons: string[] }[] }> {
+  const { prepareJournals } = await import("./depreciation");
+  const live = assets.filter((a) => a.kind !== "property" && !a.soldOn);
+  const exceptions = live.map((a) => ({ assetId: a.id, name: a.name, reasons: depreciationExceptions(a) })).filter((x) => x.reasons.length);
+  const runnable = live.filter((a) => !exceptions.some((x) => x.assetId === a.id && x.reasons.some((r) => r !== "no ledger asset account to post to")));
+  let all = journals; const added: Journal[] = [];
+  const months = [...new Set(runnable.flatMap((a) => dueMonths(a, all, today)))].sort();
+  for (const m of months) {
+    const ids = new Map<string, string>();
+    for (const a of runnable) ids.set(a.id, await stableUuid("journal", a.id, m));
+    const queue = runnable.map((a) => ids.get(a.id)!);
+    let i = 0;
+    const r = prepareJournals(runnable, m, all, closed, () => queue[i++] ?? crypto.randomUUID());
+    // prepareJournals skips assets, so re-key each journal by its own asset to keep ids stable.
+    const fixed = await Promise.all(r.journals.map(async (j) => ({ ...j, id: await stableUuid("journal", j.assetId, m) })));
+    all = [...all, ...fixed]; added.push(...fixed);
+  }
+  return { journals: all, added, exceptions };
+}
+
+/** What the Inbox card shows: prepared journals waiting for approval, grouped by month. */
+export function preparedSummary(journals: Journal[]): { month: string; count: number; total: number }[] {
+  const by = new Map<string, { count: number; total: number }>();
+  for (const j of journals) if (j.status === "prepared") { const v = by.get(j.period) ?? { count: 0, total: 0 }; v.count++; v.total = Math.round((v.total + j.amount) * 100) / 100; by.set(j.period, v); }
+  return [...by.entries()].sort(([a], [b]) => b.localeCompare(a)).map(([month, v]) => ({ month, ...v }));
+}
