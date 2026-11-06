@@ -25,7 +25,7 @@ const AS_OF = /(as\s+(on|of)|balance\s+date|statement\s+date|period\s+end|closin
 function num(v: string): number | null { const s=v.replace(/[₹,\s]|rs\.?|inr/gi,''); return /^\d+(\.\d+)?$/.test(s)?Number(s):null; }
 function isoDate(v: string): string | null {
  const t=v.trim(); if(/^\d{4}-\d{2}-\d{2}$/.test(t)) return t;
- const m=t.match(/^(\d{1,2})[/.-](\d{1,2})[/.-](\d{4})$/); if(!m) return null;
+ const m=t.match(/^(\d{1,2})[/.-](\d{1,2})[/.-](\d{4})$/); if(!m||!m[1]||!m[2]||!m[3]) return null;
  const iso=`${m[3]}-${m[2].padStart(2,'0')}-${m[1].padStart(2,'0')}`; const d=new Date(`${iso}T00:00:00Z`);
  return !Number.isNaN(d.getTime()) && d.toISOString().slice(0,10)===iso ? iso : null;
 }
@@ -36,7 +36,7 @@ export function proposePrintedBalance(doc: Pick<VaultDoc,'docType'|'docDate'|'fi
  if(!hits.length) return null;
  const values=[...new Set(hits.map(h=>h.n))];
  if(values.length>1) return {ambiguous:true,reason:`Statement prints ${values.length} different outstanding figures; enter the correct one yourself`};
- const h=hits[0];
+ const h=hits[0]; if(!h) return null;
  const dateField=fields.find(f=>AS_OF.test(f.label)&&isoDate(f.value));
  const asOf=dateField?isoDate(dateField.value):(doc.docDate&&isoDate(doc.docDate))||null;
  const where=h.f.page?` (page ${h.f.page})`:h.f.section?` (${h.f.section})`:'';
