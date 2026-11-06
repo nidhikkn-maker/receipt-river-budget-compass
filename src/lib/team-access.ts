@@ -39,6 +39,16 @@ export function changedFromDefault(switches: Switch[]): Switch[] {
   return switches.filter((s) => s.role !== "employee" && DEFAULT_SWITCHES[s.role][s.action] !== s.allowed);
 }
 
+export interface CompanyTaxCsvRow { company: string; owner: string; kind: string; fy: string; bookProfit?: number; accumulatedProfits?: number; ownershipPct?: number }
+
+/** CSV for the Company tax (all) section: one row per company and tax year; blank for figures not entered. */
+export function companyTaxCsv(rows: CompanyTaxCsvRow[]): string {
+  const cell = (v: unknown) => { const s = v === undefined || v === null ? "" : String(v); return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; };
+  const lines = ["Company,Owner,Kind,Tax year,Book profit,Past profits,Owner share %"];
+  for (const r of rows) lines.push([r.company, r.owner, r.kind, r.fy, r.bookProfit, r.accumulatedProfits, r.ownershipPct].map(cell).join(","));
+  return lines.join("\n");
+}
+
 export function useTeamAccess(userId: string | undefined) {
   return useQuery({
     queryKey: ["team-access", userId],

@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Switch as Toggle } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { DEFAULT_SWITCHES, ROLE_LABEL, TEAM_ACTIONS, allowed, changedFromDefault, useTeamAccess, type TeamAction, type TeamRole } from "@/lib/team-access";
+import { DEFAULT_SWITCHES, ROLE_LABEL, TEAM_ACTIONS, allowed, changedFromDefault, companyTaxCsv, useTeamAccess, type TeamAction, type TeamRole } from "@/lib/team-access";
 import { money } from "@/lib/expenses";
 import { downloadBlob } from "@/lib/reports";
 
