@@ -39,7 +39,7 @@ export function changedFromDefault(switches: Switch[]): Switch[] {
   return switches.filter((s) => s.role !== "employee" && DEFAULT_SWITCHES[s.role][s.action] !== s.allowed);
 }
 
-export interface CompanyTaxCsvRow { company: string; owner: string; kind: string; fy: string; bookProfit?: number; accumulatedProfits?: number; ownershipPct?: number }
+export interface CompanyTaxCsvRow { company: string; owner: string; kind: string; fy: string; bookProfit?: number | undefined; accumulatedProfits?: number | undefined; ownershipPct?: number | undefined }
 
 /** CSV for the Company tax (all) section: one row per company and tax year; blank for figures not entered. */
 export function companyTaxCsv(rows: CompanyTaxCsvRow[]): string {
