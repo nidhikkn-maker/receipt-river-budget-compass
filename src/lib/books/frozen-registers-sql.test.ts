@@ -12,7 +12,7 @@ const base = () => ({ assets: [asset], books: { closedPeriods: [period], periodL
 const write = (data: object) => db.query('UPDATE finance_preferences SET data=$1::jsonb',[JSON.stringify(data)]);
 beforeAll(async () => {
   await db.exec('CREATE TABLE finance_preferences(data jsonb); INSERT INTO finance_preferences VALUES (\'{}\');');
-  await db.exec(readFileSync('.lovable/staged-sql/freeze_registers.sql','utf8'));
+  await db.exec(readFileSync('drizzle/migrations/0069_freeze_financial_registers.sql','utf8'));
 },20000);
 beforeEach(async () => { await db.exec("SELECT set_config('ledgerline.erasing','on',false)"); await write(base()); await db.exec("SELECT set_config('ledgerline.erasing','off',false)"); });
 afterAll(() => db.close());

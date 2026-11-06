@@ -5,7 +5,9 @@
 
 ## Remaining v6 items (6 Nov 2026 plan)
 - [x] Return format registry + validateReturnDraft (unpinned formats never "validated"); period-close evidence, supersede-on-reopen and register blocker rules; 8 tests.
-- [ ] Wire close evidence + registry labels into Audit/Tax screens; server freeze for register inputs.
+- [x] Tax export registry labels state working draft, not official validation; full suite 1,541 tests passes.
+- [x] Server freeze for overlapping lease, company tax profile and asset financial inputs; period definitions/history protected. Applied safeguard confirmed in Cloud; 10 isolated PostgreSQL tests passed. Physical checks stay editable.
+- [ ] Database-generated immutable period-close evidence and Audit integration (client-only evidence is not authoritative).
 - [ ] Document detail corrections refresh suggestions; source references on figures.
 - [ ] Server approval step; typed document saves; company-level document access.
 - [ ] Fuller GST draft content; complete opening trial balance and asset postings.
