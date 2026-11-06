@@ -63,6 +63,50 @@
         }
       }
     },
+    "project.company_tax_csv_exported": {
+      "event_schema_version": 1,
+      "description": "Finance downloaded the Company tax (all) figures as a CSV.",
+      "privacy": {
+        "contains_pii": false,
+        "purpose": "product_analytics"
+      },
+      "properties_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "year",
+          "rows"
+        ],
+        "properties": {
+          "year": {
+            "type": "string"
+          },
+          "rows": {
+            "type": "number"
+          }
+        }
+      }
+    },
+    "project.company_tax_year_filtered": {
+      "event_schema_version": 1,
+      "description": "Finance changed the tax-year filter in the Company tax (all) section on the Tax page.",
+      "privacy": {
+        "contains_pii": false,
+        "purpose": "product_analytics"
+      },
+      "properties_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "year"
+        ],
+        "properties": {
+          "year": {
+            "type": "string"
+          }
+        }
+      }
+    },
     "project.expense_company_assigned": {
       "event_schema_version": 1,
       "description": "The owner picked a company by hand on an expense (new or edit); automatic fill from the account is not counted.",
