@@ -9,7 +9,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useStore } from "@/lib/store";
 import { loanRecon, supplierRecon, customerRecon, investmentRecon, intercompanyRecon } from "@/lib/books/recon";
-import { accountBalance } from "@/lib/ledger";
+import { accountBalance, balanceAsOf } from "@/lib/ledger";
+import { buildPeriodFigures } from "@/lib/books/period-figures";
 import { useDemat } from "@/components/books/useBooks";
 import { fieldExtensionPlan } from "@/lib/books/intake";
 import { approvalHistory, entityObligations, groupBy, readinessTiles, reconHub, setFindingState } from "@/lib/books/audit";
@@ -53,9 +54,17 @@ function Audit() {
     const key = JSON.stringify([action, start, end, reason, period]);
     const request = periodRequest?.key === key ? periodRequest : { key, id: crypto.randomUUID(), period: period ?? crypto.randomUUID() };
     setPeriodRequest(request);
+    // Freeze the calculated figures with the close evidence so the closed period stays reproducible.
+    const figures = action === 'closed' ? buildPeriodFigures({
+      from: start, to: end,
+      entries: transactions.map((t) => ({ date: t.date, amount: t.amount, txnType: t.txnType ?? "expense", reconciled: !!t.reconciledAt })),
+      accounts: accounts.map((a) => ({ id: a.id, balanceAt: (upto: string) => balanceAsOf(a, transactions, upto) })),
+      invoices: books.gstInvoices, journals: books.journals,
+    }) : null;
     const { error } = await supabase.rpc('change_accounting_period', {
       _id: request.id, _action: action, _period: request.period, _from: start, _to: end, _reason: reason,
       _expected: { closedPeriods: books.closedPeriods, periodLog: books.periodLog } as unknown as Json,
+      ...(figures ? { _figures: figures as unknown as Json } : {}),
     });
     if (error) throw new Error(error.message);
     await refresh(); setPeriodRequest(null); setNote('');
