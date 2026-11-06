@@ -20,7 +20,7 @@ const inr = (n: number) => (n < 0 ? "−" : "") + "₹" + Math.abs(Math.round(n)
 
 export function TaxWorkpaper({ fy, personalLines }: { fy: string; personalLines: FromEntityLine[] }) {
   const { books, preferences } = useBooks();
-  const { transactions, accounts, addDocument } = useStore();
+  const { transactions, accounts, addDocument, documents } = useStore();
   const [busy, setBusy] = useState(false);
   const [open, setOpen] = useState<string | null>(null);
   const entities = preferences.entities ?? [];
