@@ -2,12 +2,12 @@ import { useState } from 'react';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { toast } from 'sonner';
-import { advanceProblems,type GstAdvance } from '@/lib/books/gst-special';
+import { advanceCrossProblems,advanceProblems,type GstAdvance } from '@/lib/books/gst-special';
 import { useBooks } from './useBooks';
 export function GstAdvances({gstin,period}:{gstin:string;period:string}){
  const {books,save}=useBooks();const [draft,setDraft]=useState<GstAdvance|null>(null);const [adjust,setAdjust]=useState<{id:string;invoiceId:string;taxable:string}|null>(null);
  const list=books.gstAdvances??[];const visible=list.filter(a=>a.gstin===gstin);
- const put=async(a:GstAdvance)=>{const errors=advanceProblems(a,books.gstInvoices);if(errors.length){toast.error(errors.join(' · '));return;}await save({gstAdvances:[...list.filter(x=>x.id!==a.id),a]});setDraft(null);setAdjust(null);};
+ const put=async(a:GstAdvance)=>{const next=[...list.filter(x=>x.id!==a.id),a];const errors=[...advanceProblems(a,books.gstInvoices),...advanceCrossProblems(next,books.gstInvoices)];if(errors.length){toast.error(errors.join(' · '));return;}await save({gstAdvances:next});setDraft(null);setAdjust(null);};
  return <details><summary>Advance receipts · {visible.length}</summary><div className="space-y-2 py-2 text-xs">
  {visible.map(a=><div key={a.id} className="border-b py-2"><p>{a.date} · {a.number} · {a.party} · {a.supply} · ₹{a.taxable.toLocaleString('en-IN')}</p><p>Adjusted ₹{a.adjustments.reduce((s,x)=>s+x.taxable,0).toLocaleString('en-IN')}</p><div className="flex flex-wrap gap-1"><Button size="sm" variant="ghost" onClick={()=>setDraft(a)}>Edit</Button><Button size="sm" variant="ghost" onClick={()=>setAdjust({id:a.id,invoiceId:'',taxable:''})}>Apply to invoice</Button><Button size="sm" variant="ghost" onClick={()=>save({gstAdvances:list.filter(x=>x.id!==a.id)})}>Remove</Button></div></div>)}
  <Button size="sm" variant="outline" onClick={()=>setDraft({id:crypto.randomUUID(),gstin,number:'',date:`${period}-01`,party:'',partyGstin:'',supply:'services',taxable:0,igst:0,cgst:0,sgst:0,cess:0,adjustments:[]})}>Add advance</Button>

@@ -8,15 +8,21 @@ export interface EvidenceRef { kind: "document" | "entry"; id: string; title: st
 export interface FigureEvidence { register: string; recordId: string; label: string; amount: number; source: EvidenceRef | null; to: string }
 interface Doc { id: string; title: string }
 
-export function registerEvidence(p: { assets: Asset[]; books: BooksData; docs: Doc[]; entryTitle?: (id: string) => string | undefined }): FigureEvidence[] {
+export type Resolver = (recordId: string, docId?: string, txId?: string) => EvidenceRef | null;
+/** Shared source resolver: direct document reference, else a DocuRepo link, else a linked ledger entry. */
+export function makeResolver(p: { books: BooksData; docs: Doc[]; entryTitle?: (id: string) => string | undefined }): Resolver {
   const docTitle = new Map(p.docs.map((d) => [d.id, d.title]));
   const linkOf = (targetId: string) => p.books.docLinks.find((l) => l.targetId === targetId && docTitle.has(l.docId))?.docId;
-  const resolve = (recordId: string, docId?: string, txId?: string): EvidenceRef | null => {
+  return (recordId, docId, txId) => {
     const d = docId && docTitle.has(docId) ? docId : linkOf(recordId);
     if (d) return { kind: "document", id: d, title: docTitle.get(d) ?? "Source document" };
     if (txId && (!p.entryTitle || p.entryTitle(txId))) return { kind: "entry", id: txId, title: p.entryTitle?.(txId) ?? "Linked entry" };
     return null;
   };
+}
+
+export function registerEvidence(p: { assets: Asset[]; books: BooksData; docs: Doc[]; entryTitle?: (id: string) => string | undefined }): FigureEvidence[] {
+  const resolve = makeResolver(p);
   const out: FigureEvidence[] = [];
   for (const a of p.assets) {
     out.push({ register: "Asset register", recordId: a.id, label: `${a.name} · cost`, amount: a.cost, source: resolve(a.id, a.docId, a.transactionId), to: "/assets" });
@@ -29,7 +35,7 @@ export function registerEvidence(p: { assets: Asset[]; books: BooksData; docs: D
   for (const c of p.books.propertyCosts) out.push({ register: "Property costs", recordId: c.id, label: `${c.vendor || c.kind} · ${c.date}`, amount: c.amount, source: resolve(c.id, c.docId, c.transactionId), to: "/assets" });
   for (const g of p.books.gstInvoices) out.push({ register: "GST invoices", recordId: g.id, label: `${g.party} #${g.number}`, amount: g.taxable + g.igst + g.cgst + g.sgst + g.cess, source: resolve(g.id, g.docId, g.transactionId), to: "/tax" });
   for (const f of p.books.fyRecords) for (const [head, v] of Object.entries(f.audited)) if (typeof v === "number")
-    out.push({ register: "Prior-year accounts", recordId: f.id, label: `FY ${f.fy} · ${head}`, amount: v, source: resolve(f.id, f.docIds.find((d) => docTitle.has(d))), to: "/entities" });
+    out.push({ register: "Prior-year accounts", recordId: f.id, label: `FY ${f.fy} · ${head}`, amount: v, source: resolve(f.id, f.docIds.find((d) => resolve(f.id, d) !== null)), to: "/entities" });
   for (const b of p.books.loanBalances ?? []) out.push({ register: "Loan balances", recordId: b.id, label: `Outstanding ${b.asOf}`, amount: b.amount, source: resolve(b.id, b.docId), to: "/wealth" });
   for(const c of p.books.taxCredits??[])out.push({register:'Tax credits',recordId:c.id,label:`${c.entityId} · ${c.fy} · ${c.kind}`,amount:c.amount,source:resolve(c.id,c.docId,c.transactionId),to:'/tax'});
   for(const d of p.books.taxDeductions??[])out.push({register:'Tax deductions',recordId:d.id,label:`${d.entityId} · ${d.fy} · ${d.section} · ${d.evidence}`,amount:d.amount,source:resolve(d.id),to:'/tax'});

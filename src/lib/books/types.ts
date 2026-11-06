@@ -176,6 +176,8 @@ export interface BooksData {
   taxDeductions?: TaxDeduction[] | undefined;
   /** Owner-entered company facts per FY (ownership %, partner capital, accumulated profits). */
   entityTaxProfiles?: import("./entity-tax-profile").EntityTaxYear[] | undefined;
+  /** Order in which a payment settles the invoices it does not name [§49]: oldest (default), largest or smallest first. */
+  allocationOrder?: import("./recon").AllocationOrder | undefined;
 }
 export interface TaxDeduction { id: string; entityId: string; fy: string; section: "80C" | "80CCD1B" | "80D" | "80E" | "80G" | "80TTA" | "other"; amount: number; evidence: string }
 export interface SavedDraft { id: string; form: string; period: string; ref: string; createdAt: string; data: unknown }
@@ -229,6 +231,7 @@ export function cleanBooks(raw: unknown): BooksData {
     savedDrafts: arr<SavedDraft>(r["savedDrafts"], (x) => typeof x.id === "string" && typeof x.form === "string" && typeof x.period === "string", 500),
     taxDeductions: arr<TaxDeduction>(r["taxDeductions"], (x) => typeof x.id === "string" && typeof x.entityId === "string" && typeof x.fy === "string" && fin(x.amount) && x.amount > 0 && typeof x.evidence === "string" && x.evidence.trim().length >= 3, 1000),
     taxCredits: arr<TaxCredit>(r["taxCredits"], (x) => typeof x.id === "string" && typeof x.entityId === "string" && typeof x.fy === "string" && fin(x.amount) && x.amount > 0 && ["tds", "tcs", "advance", "self_assessment"].includes(x.kind), 2000),
+    allocationOrder: ["oldest", "largest", "smallest"].includes(String(r["allocationOrder"])) ? (r["allocationOrder"] as import("./recon").AllocationOrder) : undefined,
   };
 }
 
