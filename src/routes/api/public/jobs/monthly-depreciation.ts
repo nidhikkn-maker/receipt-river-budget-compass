@@ -16,6 +16,7 @@ export const Route = createFileRoute("/api/public/jobs/monthly-depreciation")({
     const { cleanBooks } = await import("@/lib/books/types");
     const { scheduledRun } = await import("@/lib/books/assets-ledger");
     const today = new Date().toISOString().slice(0, 10);
+    const ready: string[] = [];
     let owners = 0, prepared = 0, conflicts = 0;
     for (let from = 0; ; from += 200) {
       const { data, error } = await supabaseAdmin.from("finance_preferences").select("owner_id, data, updated_at").not("data->assets", "is", null).order("owner_id").range(from, from + 199);
@@ -31,10 +32,17 @@ export const Route = createFileRoute("/api/public/jobs/monthly-depreciation")({
         // Revision check: if the owner saved in the meantime, skip — the page or next run prepares it.
         const upd = await supabaseAdmin.from("finance_preferences").update({ data: next as never, updated_at: new Date().toISOString() }).eq("owner_id", row.owner_id).eq("updated_at", row.updated_at).select("owner_id");
         if (upd.error || !upd.data?.length) { conflicts++; continue; }
-        owners++; prepared += run.added.length;
+        ready.push(row.owner_id); owners++; prepared += run.added.length;
       }
       if ((data?.length ?? 0) < 200) break;
     }
-    return Response.json({ owners, prepared, conflicts });
+    let reminders = { sent: 0, skipped: 0 };
+    const seed = process.env.PUSH_VAPID_SEED;
+    if (ready.length && seed) {
+      const { dispatchDepreciationReminders } = await import("@/lib/push-dispatch.server");
+      const d = new Date(); d.setUTCDate(1); d.setUTCMonth(d.getUTCMonth() - 1);
+      reminders = await dispatchDepreciationReminders(supabaseAdmin, seed, ready, d.toISOString().slice(0, 7), today);
+    }
+    return Response.json({ owners, prepared, conflicts, reminders });
   } } },
 });

@@ -4,6 +4,7 @@ export const NOTIFICATION_TYPES = [
   { key: "documents", label: "Document renewals" },
   { key: "trips", label: "Trip plans & bookings" },
   { key: "checkIns", label: "Timed trip check-ins" },
+  { key: "depreciation", label: "Monthly depreciation ready" },
 ] as const;
 export type NotificationType = (typeof NOTIFICATION_TYPES)[number]["key"];
 export type NotificationSettings = Record<NotificationType, boolean>;
