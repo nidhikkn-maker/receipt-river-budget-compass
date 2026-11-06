@@ -43,3 +43,10 @@ Not verified: hosted two-account access, real-device behaviour, real-document ex
 - 0084 installed in Cloud: change_accounting_period gains optional _figures (version-1 shape validated), freezes derivedFigures + SHA-256 figureRevision + owner-only account snapshot into close evidence; old 6-arg calls still resolve (backward compatible, verified by PGlite test).
 - period-figures.ts: 7 pure tests (in-period totals, credit-note/amendment handling, drift detection, reproducibility from evidence, parsing). period-figures-sql.test.ts: 4 PGlite tests (figures frozen, 6-arg compat, malformed rejected, replay immutable).
 - Full suite 222 files / 1,704 tests pass; typecheck clean; build OK. No real records changed; staged trigger still NOT installed (awaits owner-approved publish).
+
+## 6 Nov 2026 (cont.) — P7 advance/annual working, P4 nested intake validation (0085), P2 derived chains
+- gst-special.ts: adjustments may under-claim but never over-claim the advance's pro-rata tax rate; advanceCrossProblems blocks adjustments that together exceed the invoice they settle; both enforced at GstAdvances save. 2 new tests.
+- gst.ts gstr9Heads: per-head (IGST/CGST/SGST/cess) annual output, credit claimed, reverse-charge cash, advance tax and year-end carry, with per-head held-credit reviews; shown under the GSTR-9 working in Tax Centre. 2 new tests.
+- 0085 installed: validate_intake_records now validates nested fyRecords structures — schedule lines (label/amount/page/quote), audited heads (known heads, non-negative), carried-forward losses, filed returns and earlier versions. typed-intake-sql.test.ts extended to 9 tests.
+- derived-evidence.ts: calculated figures (GST payable per registration/month, posted depreciation) chain to every input with its own document/entry source; unsourced inputs are counted and shown. Audit 'Figure sources' gained a 'Calculated figures' section. 4 new tests.
+- Full suite 1,713 tests pass; typecheck clean. No real records changed.
