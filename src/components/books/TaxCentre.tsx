@@ -13,7 +13,7 @@ import { OpeningBalances } from "./OpeningBalances";
 import { ItrHandoff } from "./ItrHandoff";
 import { REQUIRED_SCHEDULES } from "@/lib/books/intake";
 import { gstPayable, annualSummary, duplicateInvoices, gstr1, gstr1Json, gstr3b, gstr3bJson, gstr9, invoiceProblems, validateGstJson, matchGstPayments, unfiledPeriods } from "@/lib/books/gst";
-import { activateRule, OFFICIAL_SOURCES, proposeRule, ruleOn, validateRule, formFor } from "@/lib/books/regulatory";
+import { activateRule, OFFICIAL_SOURCES, proposeRule, ruleOn, validateRule, formFor, validateReturnDraft, ayOf } from "@/lib/books/regulatory";
 import type { GstInvoice, OpeningHead, RuleArea, TaxProfile } from "@/lib/books/types";
 import { supabase } from "@/integrations/supabase/client";
 import { useBooks, useDemat } from "./useBooks";
@@ -143,10 +143,11 @@ export function GstReturns({ fy }: { fy: string }) {
         </div>
         <div className="flex flex-wrap gap-2 text-xs">{([["GSTR-1", gstr1Json(books.gstInvoices, gstin, period)], ["GSTR-3B", gstr3bJson(books.gstInvoices, gstin, period, eligibleKeys)]] as const).map(([form, j]) => {
           const errs = validateGstJson(form, j as unknown as Record<string, unknown>);
-          return <div key={form} className="min-w-0">{errs.length ? <p className="break-words text-destructive">{form} file not ready: {errs.slice(0, 3).join("; ")}</p>
-            : <Button size="sm" variant="outline" onClick={() => { const b = new Blob([JSON.stringify(j, null, 1)], { type: "application/json" }); const a = document.createElement("a"); a.href = URL.createObjectURL(b); a.download = `${form}_${gstin}_${period}.json`; a.click(); URL.revokeObjectURL(a.href); }}>Download {form} JSON (offline-tool layout)</Button>}</div>;
+          const validation = validateReturnDraft(form, period, owner?.kind ?? "individual", j as unknown as Record<string, unknown>, ["gstin"]);
+          return <div key={form} className="min-w-0"><p className="mb-1 break-words text-muted-foreground">{form}: {validation.label}</p>{errs.length ? <p className="break-words text-destructive">{form} file not ready: {errs.slice(0, 3).join("; ")}</p>
+            : <Button size="sm" variant="outline" onClick={() => { const b = new Blob([JSON.stringify(j, null, 1)], { type: "application/json" }); const a = document.createElement("a"); a.href = URL.createObjectURL(b); a.download = `${form}_working_${gstin}_${period}.json`; a.click(); URL.revokeObjectURL(a.href); }}>Download {form} working JSON</Button>}</div>;
         })}</div>
-        <p className="text-[11px] text-muted-foreground">Files follow the GSTN offline-tool JSON layout and pass the format checks above. Check them in the official offline tool before your accountant files; nothing is uploaded.</p>
+        <p className="text-[11px] text-muted-foreground">Working files have local structural checks only, not official-schema validation. Your accountant must check the applicable official format before filing; nothing is uploaded.</p>
         {!profile && <p className="text-xs text-destructive">No filing scheme recorded for this GSTIN — set it in the tax profile above so monthly or quarterly returns are worked out correctly.</p>}
         {itc.lines.length > 0 && <details><summary className="cursor-pointer text-xs text-muted-foreground">Input tax credit review · {inr(itc.eligible)} claimable · {inr(itc.held)} held</summary>
           {itc.lines.map((l) => <p key={l.invoice.id} className="break-words text-xs">{l.invoice.number} · {l.invoice.party} · {inr(l.tax)} — {l.eligible ? <span className="text-primary">claimable</span> : <span className="text-destructive">held: {l.reasons.join(", ")}</span>}</p>)}</details>}
@@ -316,6 +317,7 @@ export function TaxComputationCard({ fy }: { fy: string }) {
           {liab.lines.map(([k, v]) => <p key={k} className="flex justify-between gap-2"><span>{k}</span><b className="shrink-0">{v < 0 ? "−" : ""}{inr(Math.abs(v))}</b></p>)}
           {other && <p className="mt-1 text-muted-foreground">Under the {other.regime} regime the tax would be {inr(other.total)} ({other.total < liab.total ? `${inr(liab.total - other.total)} less` : other.total > liab.total ? `${inr(other.total - liab.total)} more` : "the same"}).</p>}
           {liab.notes.map((n) => <p key={n} className="text-[11px] text-muted-foreground">{n}</p>)}
+          <p className="mt-1 break-words text-muted-foreground">{validateReturnDraft(itrForm, ayOf(fy), ent?.kind ?? "individual", null).label}</p>
           <Button size="sm" variant="outline" className="mt-2" onClick={() => { const j = itrComputationJson({ fy, pan: ent?.pan ?? null, name: ent?.name ?? "You", form: itrForm, c, l: liab }); const b = new Blob([JSON.stringify(j, null, 1)], { type: "application/json" }); const a = document.createElement("a"); a.href = URL.createObjectURL(b); a.download = `${itrForm}_computation_${fy}.json`; a.click(); URL.revokeObjectURL(a.href); }}>Download {itrForm} computation (JSON)</Button>
         </div> : <p className="text-xs text-muted-foreground">{unconfirmed ? "Tax is shown once the profile is confirmed." : "Choose the company tax option in its tax profile — no tax figure is shown rather than a guess."}</p>}
         {personal && !unconfirmed && <div className="rounded-xl border p-3 text-xs"><p className="font-semibold">Deductions with proof (old regime) · {dedLines.length}</p>

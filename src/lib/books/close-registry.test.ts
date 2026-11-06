@@ -21,13 +21,13 @@ describe("period close evidence", () => {
   });
   it("revision changes when an entry changes", () => {
     const a = buildCloseEvidence({ id: "e1", period, at: "x", entries });
-    const b = buildCloseEvidence({ id: "e1", period, at: "x", entries: [{ ...entries[0]!, updatedAt: "later" }] });
+    const b = buildCloseEvidence({ id: "e1", period, at: "x", entries: [{ id: "a", date: "2025-04-02", updatedAt: "later" }] });
     expect(a.ledgerRevision).not.toBe(b.ledgerRevision);
   });
   it("reopening supersedes, keeps the old proof", () => {
     const e = buildCloseEvidence({ id: "e1", period, at: "x", entries });
     const s = supersedeEvidence([e], "p1", "e2");
-    expect(s).toHaveLength(1); expect(s[0]!.supersededBy).toBe("e2");
+    expect(s).toHaveLength(1); expect(s[0]?.supersededBy).toBe("e2");
   });
   it("blocks register changes in closed periods", () => {
     const closed = [{ id: "p1", from: "2025-04-01", to: "2025-04-30", closedOn: "x", note: "" }];
