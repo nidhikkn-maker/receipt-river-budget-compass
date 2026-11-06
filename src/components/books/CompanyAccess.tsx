@@ -90,6 +90,7 @@ export function SharedWithMe() {
     const { error } = await supabase.from("documents").insert({
       owner_id: c.owner_id, entity_id: c.entity_id, title: file.name.replace(/\.[^.]+$/, ""), doc_type: "other",
       file_path: path, file_name: file.name.slice(0, 200), mime_type: file.type || "application/octet-stream", size_bytes: file.size,
+      currency: "INR", notes: "", extracted_text: "", fields: [],
     });
     if (error) { await supabase.storage.from("receipts").remove([path]); toast.error("Couldn't save the document"); return; }
     toast.success("Document added to the shared company"); void load();

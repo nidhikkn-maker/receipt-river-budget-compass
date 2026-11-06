@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { rowsFor, sharedCompanyCsv, type SharedCompany, type SharedTxn, type SharedDoc } from "./shared-company";
+import { filterShared, rowsFor, sharedCompanyCsv, sharedCompanyPdfData, type SharedCompany, type SharedTxn, type SharedDoc } from "./shared-company";
 
 const c: SharedCompany = { grant_id: "g", owner_id: "o1", entity_id: "c1", company_name: "Krupa Pvt Ltd", owner_email: "o@x.in", can_write: false };
 const t = (id: string, owner: string, ent: string | null): SharedTxn => ({ id, employee_id: owner, entity_id: ent, title: id, merchant: null, category: "Office", amount: 100, currency: "INR", expense_date: "2026-10-01", txn_type: "expense" });
