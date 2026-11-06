@@ -13344,14 +13344,19 @@
       },
       "original": "Offer correction directly on the extracted field.",
       "interpretation": "Account for this source clause in the context of 1. Search existing trusted records.; verify each enumerated feature and applicable safeguard, not merely screen presence.",
-      "modules": [],
+      "modules": [
+        "src/lib/books/source-corrections.ts",
+        "src/components/DocumentIntake.tsx"
+      ],
       "dependencies": [],
-      "status": "NOT IMPLEMENTED",
-      "requiredWork": "Map source clause to existing implementation and verification evidence; this initial status means not yet assessed, not an assertion that existing code is absent.",
+      "status": "PARTIAL",
+      "requiredWork": "Complete all supported document fields and verify source corrections through reports; exact known labels update proposals, ambiguous labels remain details.",
       "verificationMethod": "Source-to-code audit followed by applicable unit/database/integration/real-route checks; hosted/device evidence separately required.",
       "finalTestResult": {
-        "result": "NOT RUN",
-        "evidence": []
+        "result": "PARTIAL",
+        "evidence": [
+          "5 source-correction regressions PASS; printed originals retained; invalid numbers refused"
+        ]
       }
     },
     {
@@ -18049,8 +18054,8 @@
   ],
   "latestVerification": {
     "at": "2026-11-06",
-    "testFiles": 200,
-    "testsPassed": 1567,
+    "testFiles": 201,
+    "testsPassed": 1572,
     "hostedFinancialWritesVerified": false,
     "physicalDevicesVerified": false
   }
