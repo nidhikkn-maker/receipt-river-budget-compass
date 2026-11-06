@@ -1,5 +1,5 @@
 CREATE FUNCTION public.validate_intake_records(_old jsonb,_new jsonb,_type text) RETURNS void LANGUAGE plpgsql SET search_path=public AS $$
-DECLARE field text; a jsonb; b jsonb; item jsonb; prior jsonb; key text; kind text; date_value text;
+DECLARE field text; a jsonb; b jsonb; item jsonb; key text; date_value text;
 BEGIN
  IF jsonb_typeof(_new) IS DISTINCT FROM 'object' THEN RAISE EXCEPTION 'Invalid intake preferences'; END IF;
  IF _new ? 'books' AND jsonb_typeof(_new->'books') IS DISTINCT FROM 'object' THEN RAISE EXCEPTION 'Invalid intake books'; END IF;
@@ -8,6 +8,7 @@ BEGIN
   IF a IS NOT DISTINCT FROM b THEN CONTINUE; END IF;
   IF b IS NULL THEN b:='[]'; END IF;
   IF a IS NULL THEN a:='[]'; END IF;
+  IF a=b THEN CONTINUE; END IF;
   IF jsonb_typeof(b) IS DISTINCT FROM 'array' THEN RAISE EXCEPTION 'Invalid % record list',field; END IF;
   IF jsonb_array_length(b)>10000 THEN RAISE EXCEPTION 'Too many intake records'; END IF;
   IF field='entities' AND _type NOT IN ('incorporation','pan_gst_registration') OR
@@ -26,7 +27,7 @@ BEGIN
    IF jsonb_typeof(item->key) IS DISTINCT FROM 'string' OR length(item->>key)=0 THEN RAISE EXCEPTION '% record needs a valid identifier',field; END IF;
    IF field IN ('entities','assets','properties','holdings') AND jsonb_typeof(item->'name') IS DISTINCT FROM 'string' THEN RAISE EXCEPTION 'Invalid record name'; END IF;
    IF field='entities' THEN
-    IF coalesce(item->>'kind','') NOT IN ('individual','proprietor','partnership','llp','company','huf','trust','other') THEN RAISE EXCEPTION 'Invalid company type'; END IF;
+    IF coalesce(item->>'kind','') NOT IN ('individual','proprietorship','partnership','llp','company','huf','trust') THEN RAISE EXCEPTION 'Invalid company type'; END IF;
     IF item ? 'gstins' AND jsonb_typeof(item->'gstins') IS DISTINCT FROM 'array' THEN RAISE EXCEPTION 'Invalid GST registration list'; END IF;
    END IF;
    FOREACH key IN ARRAY ARRAY['cost','rent','quantity','sharePct','usefulLifeYears','residualPct','deposit','dueDay','noticeDays','escalationPct','escalationEveryMonths','taxable','igst','cgst','sgst','cess','amount','price'] LOOP
