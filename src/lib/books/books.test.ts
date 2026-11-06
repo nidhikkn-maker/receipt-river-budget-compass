@@ -217,3 +217,63 @@ describe("misc", () => {
     expect(again.id).toBe("f1"); expect(again.schedules).toEqual(["balanceSheet", "profitLoss"]); expect(again.filedReturns).toHaveLength(1); expect(again.docIds).toEqual(["d1", "d2"]);
   });
 });
+
+describe("§71 investments, transfers and traceability", () => {
+  it("11. ICICI Direct holdings import through the statement reader", async () => {
+    const { parseInvestmentDoc } = await import("../investments/demat");
+    const doc = parseInvestmentDoc(["ICICI Securities Ltd — Demat Holding Statement", "DP ID: IN303028 Client ID: 12345678", "Holding as on 31-10-2026", "INE002A01018 RELIANCE INDUSTRIES LTD 100 2,85,000.00"])!;
+    expect(doc.kind).toBe("demat");
+    expect(doc.broker).toBe("ICICI Direct");
+    expect(doc.holdings[0]).toMatchObject({ isin: "INE002A01018", quantity: 100 });
+  });
+  it("12. re-importing the same statement never duplicates a holding", async () => {
+    const { parseInvestmentDoc, mergeInvestmentDoc } = await import("../investments/demat");
+    const rows = ["ICICI Securities Ltd — Demat Holding Statement", "DP ID: IN303028 Client ID: 12345678", "Holding as on 31-10-2026", "INE002A01018 RELIANCE INDUSTRIES LTD 100 2,85,000.00"];
+    const once = mergeInvestmentDoc([], parseInvestmentDoc(rows)!, "d1").holdings;
+    const twice = mergeInvestmentDoc(once, parseInvestmentDoc(rows)!, "d2");
+    expect(twice.holdings).toHaveLength(1);
+    const { investmentRecon } = await import("./recon");
+    expect(investmentRecon([{ isin: "INE002A01018", name: "RELIANCE", quantity: 100, lots: [{ side: "buy", quantity: 100 }] }])).toEqual([]);
+  });
+  it("17. an internal transfer pairs without income or spending", async () => {
+    const { suggestTransfers } = await import("../transfer-match");
+    const { cashflow } = await import("../ledger");
+    const A = { id: "a", name: "IDFC", kind: "savings" as const, openingBalance: 0, archived: false };
+    const B = { id: "b", name: "SBI", kind: "savings" as const, openingBalance: 0, archived: false };
+    const debit = { id: "d", title: "t", merchant: null, category: "Other", amount: 50000, currency: "INR", originalAmount: 50000, fxRate: 1, date: "2026-10-01", description: "IMPS 612345678901 TO SBI", receipts: [], splits: [], scope: "personal", txnType: "expense" as const, accountId: "a", reconciledAt: null, statementRef: null } as never;
+    const credit = { ...(debit as object), id: "c", txnType: "income", accountId: "b", description: "IMPS 612345678901 FROM IDFC" } as never;
+    const s = suggestTransfers([debit, credit], [A, B], []);
+    expect(s[0]?.strength).toBe("strong");
+    expect(cashflow([{ ...(debit as object), txnType: "transfer", toAccountId: "b" } as never]).income).toBe(0);
+  });
+  it("18. a card settlement lowers the card owed without new spending", async () => {
+    const { cardLedger } = await import("../card-balance");
+    const { cashflow } = await import("../ledger");
+    const card = { id: "amex", name: "AMEX", kind: "credit_card" as const, openingBalance: 0, archived: false };
+    const spend = { id: "s1", txnType: "expense" as const, amount: 75000, accountId: "amex", date: "2026-10-01", reconciledAt: "x" };
+    const pay = { id: "p1", txnType: "card_payment" as const, amount: 50000, accountId: "idfc", toAccountId: "amex", date: "2026-10-10", reconciledAt: null };
+    expect(cardLedger(card, [spend, pay]).outstanding).toBe(25000);
+    expect(cashflow([pay as never]).expenses).toBe(0);
+  });
+  it("19. an account maps to at most one company and unlinking is complete", async () => {
+    const { linkAccounts, ownerOf, unlinkAccount } = await import("./entity-accounts");
+    let map = linkAccounts({}, "e1", ["a1", "a2"]);
+    map = linkAccounts(map, "e2", ["a2"]);
+    expect(ownerOf(map, "a1")).toBe("e1");
+    expect(ownerOf(map, "a2")).toBe("e2");
+    expect(ownerOf(unlinkAccount(map, "a1"), "a1")).toBeNull();
+  });
+  it("20. every material figure traces to its source document and printed value", async () => {
+    const { recordProvenance } = await import("./docrepo");
+    const docs = [{ id: "d1", title: "Lease deed", docType: "lease_agreement", fields: [{ label: "Monthly rent", value: "30000", originalValue: "28000", page: 2, status: "corrected", confidence: "high" }] }];
+    const out = recordProvenance("l1", [{ docId: "d1", kind: "lease", targetId: "l1", label: "t" }], docs as never);
+    expect(out[0]?.fields[0]).toMatchObject({ label: "Monthly rent", value: "30000", printed: "28000", where: "page 2" });
+  });
+  it("22. the established ledger integrity invariants hold", async () => {
+    const { cashflow, accountBalance } = await import("../ledger");
+    const acc = { id: "a", name: "A", kind: "savings" as const, openingBalance: 1000, archived: false };
+    const reimbursement = { id: "r", txnType: "reimbursement" as const, amount: 200, accountId: "a", date: "2026-10-01" };
+    expect(cashflow([reimbursement as never]).income).toBe(0);
+    expect(accountBalance(acc, [reimbursement as never])).toBe(1200);
+  });
+});
