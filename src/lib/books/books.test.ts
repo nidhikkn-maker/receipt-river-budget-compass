@@ -253,7 +253,7 @@ describe("§71 investments, transfers and traceability", () => {
     const spend = { id: "s1", txnType: "expense" as const, amount: 75000, accountId: "amex", date: "2026-10-01", reconciledAt: "x" };
     const pay = { id: "p1", txnType: "card_payment" as const, amount: 50000, accountId: "idfc", toAccountId: "amex", date: "2026-10-10", reconciledAt: null };
     expect(cardLedger(card, [spend, pay]).outstanding).toBe(25000);
-    expect(cashflow([pay as never]).expenses).toBe(0);
+    expect(cashflow([pay as never]).spent).toBe(0);
   });
   it("19. an account maps to at most one company and unlinking is complete", async () => {
     const { linkAccounts, ownerOf, unlinkAccount } = await import("./entity-accounts");
