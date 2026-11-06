@@ -18,3 +18,27 @@ export function standaloneLoanBalances(loans: LoanRef[], evidence: LoanBalanceEv
  const dates=rows.flatMap(r=>r.evidence?[r.evidence.asOf]:[]).sort();
  return {rows,amount:Math.round(rows.reduce((s,r)=>s+(r.evidence?.amount??0),0)*100)/100,missing,asOf:dates[0]??null};
 }
+/** Printed outstanding proposal read from a retained lender statement's extracted fields. Never confirms; ambiguous values return null. */
+export type PrintedBalanceProposal = { amount: number; asOf: string | null; sourceQuote: string; ambiguous: false } | { ambiguous: true; reason: string } | null;
+const OUTSTANDING = /(principal\s+outstanding|outstanding\s+(principal|balance|amount)|closing\s+(principal|balance)|balance\s+outstanding|loan\s+outstanding)/i;
+const AS_OF = /(as\s+(on|of)|balance\s+date|statement\s+date|period\s+end|closing\s+date)/i;
+function num(v: string): number | null { const s=v.replace(/[₹,\s]|rs\.?|inr/gi,''); return /^\d+(\.\d+)?$/.test(s)?Number(s):null; }
+function isoDate(v: string): string | null {
+ const t=v.trim(); if(/^\d{4}-\d{2}-\d{2}$/.test(t)) return t;
+ const m=t.match(/^(\d{1,2})[/.-](\d{1,2})[/.-](\d{4})$/); if(!m) return null;
+ const iso=`${m[3]}-${m[2].padStart(2,'0')}-${m[1].padStart(2,'0')}`; const d=new Date(`${iso}T00:00:00Z`);
+ return !Number.isNaN(d.getTime()) && d.toISOString().slice(0,10)===iso ? iso : null;
+}
+export function proposePrintedBalance(doc: Pick<VaultDoc,'docType'|'docDate'|'fields'>): PrintedBalanceProposal {
+ if(doc.docType!=='loan_statement') return null;
+ const fields=doc.fields??[];
+ const hits=fields.filter(f=>OUTSTANDING.test(f.label)).map(f=>({f,n:num(f.value)})).filter(h=>h.n!==null);
+ if(!hits.length) return null;
+ const values=[...new Set(hits.map(h=>h.n))];
+ if(values.length>1) return {ambiguous:true,reason:`Statement prints ${values.length} different outstanding figures; enter the correct one yourself`};
+ const h=hits[0];
+ const dateField=fields.find(f=>AS_OF.test(f.label)&&isoDate(f.value));
+ const asOf=dateField?isoDate(dateField.value):(doc.docDate&&isoDate(doc.docDate))||null;
+ const where=h.f.page?` (page ${h.f.page})`:h.f.section?` (${h.f.section})`:'';
+ return {amount:h.n as number,asOf,sourceQuote:`${(h.f.quote||`${h.f.label} ${h.f.originalValue??h.f.value}`).trim()}${where}`,ambiguous:false};
+}

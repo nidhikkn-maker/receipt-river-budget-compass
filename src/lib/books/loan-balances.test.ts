@@ -19,3 +19,17 @@ it('refuses negative balances, impossible dates and absent source confirmation',
  expect(()=>validateLoanBalance({...evidence,sourceQuote:''},'l1',[doc],'2026-11-06')).toThrow(/Confirm/);
 });
 it('zero lender outstanding is a recorded zero, unlike missing evidence',()=>{const r=standaloneLoanBalances([loan],[{...evidence,amount:0}],[doc],'2026-11-06');expect(r.amount).toBe(0);expect(r.missing).toEqual([]);});
+import { proposePrintedBalance } from './loan-balances';
+const f=(label:string,value:string,page:number|null=2)=>({label,value,page,quote:`${label}: ${value}`,confidence:'high' as const,status:'read' as const});
+it('proposes the printed outstanding and its as-on date from a lender statement',()=>{
+ const p=proposePrintedBalance({docType:'loan_statement',docDate:'2026-10-31',fields:[f('Principal Outstanding','₹1,03,74,241'),f('Balance as on','05/10/2026')]});
+ expect(p).toEqual({amount:10374241,asOf:'2026-10-05',sourceQuote:'Principal Outstanding: ₹1,03,74,241 (page 2)',ambiguous:false});
+});
+it('falls back to the document date and refuses conflicting printed figures',()=>{
+ expect(proposePrintedBalance({docType:'loan_statement',docDate:'2026-10-31',fields:[f('Outstanding balance','500000')]})).toMatchObject({amount:500000,asOf:'2026-10-31'});
+ expect(proposePrintedBalance({docType:'loan_statement',docDate:null,fields:[f('Outstanding balance','500000'),f('Closing principal','490000')]})).toMatchObject({ambiguous:true});
+});
+it('never proposes from other document types or unreadable values',()=>{
+ expect(proposePrintedBalance({docType:'invoice',docDate:null,fields:[f('Outstanding balance','5000')]})).toBeNull();
+ expect(proposePrintedBalance({docType:'loan_statement',docDate:null,fields:[f('Outstanding balance','see page 3')]})).toBeNull();
+});
