@@ -1,5 +1,7 @@
 ## Backup recovery verification (6 Nov 2026)
-- [ ] Verify owner-only ZIP download, receipt/draft recovery after reload, cancelled restores, and cleanup after failed restores using isolated browser data.
+- [x] Fixed team-visible expenses entering personal backups with explicit owner filters on every exported table.
+- [x] Isolated Settings/Drafts browser check: ZIP includes draft/photo, cancelled restore writes nothing, restored draft survives reload, failed restore cleans only staged files, retry keeps one draft. Production Cloud restore remains unverified; no real records changed.
+- [x] Full regression suite: 1,523 tests pass.
 
 ## Company tax (all) filter and export (6 Nov 2026)
 - [x] Track year-filter changes and CSV exports (usage events, registered and schema-checked).
