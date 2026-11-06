@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DEFAULT_SWITCHES, ROLE_LABEL, TEAM_ACTIONS, allowed, changedFromDefault, useTeamAccess, type TeamAction, type TeamRole } from "@/lib/team-access";
 import { money } from "@/lib/expenses";
+import { downloadBlob } from "@/lib/reports";
 
 /** Role badge for Settings → Account. */
 export function RoleBadge() {
@@ -125,27 +126,52 @@ export function TeamExpenses() {
   );
 }
 
+type CompanyTaxYear = { entityId: string; fy: string; ownershipPct?: number; bookProfit?: number; accumulatedProfits?: number };
+
+/** CSV for the Company tax (all) section: one row per company and tax year. */
+export function companyTaxCsv(rows: { company: string; owner: string; kind: string; fy: string; bookProfit?: number; accumulatedProfits?: number; ownershipPct?: number }[]): string {
+  const cell = (v: unknown) => { const s = v === undefined || v === null ? "" : String(v); return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; };
+  const lines = ["Company,Owner,Kind,Tax year,Book profit,Past profits,Owner share %"];
+  for (const r of rows) lines.push([r.company, r.owner, r.kind, r.fy, r.bookProfit, r.accumulatedProfits, r.ownershipPct].map(cell).join(","));
+  return lines.join("\n");
+}
+
 /** Tax Centre → Company tax (all): finance-only figures per company and year; personal tax never appears. */
 export function TeamCompanyTax() {
   const { userId } = useStore();
   const access = useTeamAccess(userId);
   const ok = allowed(access.data?.switches ?? [], access.data?.role ?? null, "view_company_tax");
   const q = useQuery({ queryKey: ["team-company-tax", userId], enabled: ok, queryFn: async () => { const r = await supabase.rpc("team_company_tax"); if (r.error) throw r.error; return r.data ?? []; } });
+  const [year, setYear] = useState("all");
+  const companies = useMemo(() => (q.data ?? []).flatMap((o) => (o.entities as { id: string; name: string; kind: string }[]).map((e) => ({
+    ...e, owner: String(o.owner_name ?? ""),
+    years: (o.profiles as CompanyTaxYear[]).filter((p) => p.entityId === e.id),
+  }))), [q.data]);
+  const allYears = useMemo(() => [...new Set(companies.flatMap((c) => c.years.map((y) => y.fy)))].sort().reverse(), [companies]);
   if (!ok) return null;
   const fmt = (v: unknown) => (typeof v === "number" ? money(v) : "Unknown");
+  const shown = companies.map((c) => ({ ...c, years: c.years.filter((y) => year === "all" || y.fy === year) }));
+  const exportCsv = () => {
+    const rows = shown.flatMap((c) => c.years.map((y) => ({ company: c.name, owner: c.owner, kind: c.kind, fy: y.fy, bookProfit: y.bookProfit, accumulatedProfits: y.accumulatedProfits, ownershipPct: y.ownershipPct })));
+    downloadBlob(new Blob([companyTaxCsv(rows)], { type: "text/csv;charset=utf-8" }), `company-tax-${year === "all" ? "all-years" : year}.csv`);
+  };
   return (
     <section className="mt-6 rounded-2xl border p-4">
-      <h2 className="font-semibold">Company tax (all)</h2>
-      <p className="mb-3 text-xs text-muted-foreground">View only. Company figures entered by each person; personal tax is never shown.</p>
-      {(q.data ?? []).filter((o) => (o.entities as unknown[]).length).length === 0 ? <p className="text-sm text-muted-foreground">No companies to show.</p> :
-        (q.data ?? []).map((o) => (o.entities as { id: string; name: string; kind: string }[]).map((e) => {
-          const years = (o.profiles as { entityId: string; fy: string; ownershipPct?: number; bookProfit?: number; accumulatedProfits?: number }[]).filter((p) => p.entityId === e.id);
-          return <div key={`${o.owner_id}-${e.id}`} className="border-t py-2 text-sm first:border-0">
-            <div className="font-medium">{e.name} <span className="text-xs text-muted-foreground">· {o.owner_name}</span></div>
-            {years.length === 0 ? <div className="text-xs text-muted-foreground">No tax years entered.</div> :
-              <ul className="text-xs text-muted-foreground">{years.map((y) => <li key={y.fy}>{y.fy}: book profit {fmt(y.bookProfit)} · past profits {fmt(y.accumulatedProfits)} · owner share {typeof y.ownershipPct === "number" ? `${y.ownershipPct}%` : "Unknown"}</li>)}</ul>}
-          </div>;
-        }))}
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+        <div><h2 className="font-semibold">Company tax (all)</h2>
+          <p className="text-xs text-muted-foreground">View only. Company figures entered by each person; personal tax is never shown.</p></div>
+        <div className="flex items-center gap-2">
+          <Select value={year} onValueChange={setYear}><SelectTrigger className="w-36" aria-label="Tax year"><SelectValue /></SelectTrigger>
+            <SelectContent><SelectItem value="all">All years</SelectItem>{allYears.map((y) => <SelectItem key={y} value={y}>{y}</SelectItem>)}</SelectContent></Select>
+          <Button size="sm" variant="outline" onClick={exportCsv} disabled={shown.every((c) => c.years.length === 0)}>Download CSV</Button>
+        </div>
+      </div>
+      {companies.length === 0 ? <p className="text-sm text-muted-foreground">No companies to show.</p> :
+        shown.map((c) => <div key={c.id} className="border-t py-2 text-sm first:border-0">
+          <div className="font-medium">{c.name} <span className="text-xs text-muted-foreground">· {c.owner}</span></div>
+          {c.years.length === 0 ? <div className="text-xs text-muted-foreground">{year === "all" ? "No tax years entered." : `Nothing entered for ${year}.`}</div> :
+            <ul className="text-xs text-muted-foreground">{c.years.map((y) => <li key={y.fy}>{y.fy}: book profit {fmt(y.bookProfit)} · past profits {fmt(y.accumulatedProfits)} · owner share {typeof y.ownershipPct === "number" ? `${y.ownershipPct}%` : "Unknown"}</li>)}</ul>}
+        </div>)}
     </section>
   );
 }
