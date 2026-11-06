@@ -125,6 +125,33 @@ export function gstr9(list: GstInvoice[], gstin: string, fyStart: number, eligib
   return { table4: t4, table6: t6, table9: t9, checks };
 }
 
+/**
+ * Per-head annual working [§47]: the year's output, claimed credit, reverse-charge cash and advance tax
+ * broken into IGST/CGST/SGST/cess, with the year-end credit carry per head and per-head reviews —
+ * e.g. tax on purchase invoices vs credit actually claimed, head by head.
+ */
+export function gstr9Heads(list: GstInvoice[], gstin: string, fyStart: number, eligibleKeys?: Set<string>, advances: GstAdvance[] = []) {
+  const months = Array.from({ length: 12 }, (_, i) => { const m = ((i + 3) % 12) + 1; const y = m >= 4 ? fyStart : fyStart + 1; return `${y}-${String(m).padStart(2, "0")}`; });
+  const zero: GstHeads = { igst: 0, cgst: 0, sgst: 0, cess: 0 };
+  const add = (a: GstHeads, b: GstHeads): GstHeads => ({ igst: r2(a.igst + b.igst), cgst: r2(a.cgst + b.cgst), sgst: r2(a.sgst + b.sgst), cess: r2(a.cess + b.cess) });
+  let output = { ...zero }, itc = { ...zero }, reverse = { ...zero }, advance = { ...zero }, carry = { ...zero };
+  for (const m of months) {
+    const p = gstPayable(list, gstin, m, eligibleKeys, undefined, advances);
+    output = add(output, p.output); itc = add(itc, p.itc); reverse = add(reverse, p.reverseCharge); carry = add(carry, p.carry);
+    advance = add(advance, advanceHeads(advances, gstin, m));
+  }
+  // Credit carried is a running balance, not a sum of monthly leftovers.
+  const yearEnd = gstPayable(list, gstin, months[11]!, eligibleKeys, undefined, advances).carry;
+  const from = `${fyStart}-04-01`, to = `${fyStart + 1}-03-31`;
+  const purchases = effectiveInvoices(list).filter((i) => i.gstin === gstin && i.kind === "purchase" && i.date >= from && i.date <= to);
+  const onInvoices: GstHeads = { igst: r2(purchases.reduce((s, i) => s + i.igst, 0)), cgst: r2(purchases.reduce((s, i) => s + i.cgst, 0)), sgst: r2(purchases.reduce((s, i) => s + i.sgst, 0)), cess: r2(purchases.reduce((s, i) => s + i.cess, 0)) };
+  const checks: string[] = [];
+  for (const k of ["igst", "cgst", "sgst", "cess"] as const) {
+    if (onInvoices[k] - itc[k] > 1) checks.push(`${k.toUpperCase()}: ${r2(onInvoices[k])} on purchase invoices but only ${itc[k]} claimed in 3B (held, unpaid reverse charge or ineligible)`);
+  }
+  return { output, itc, reverse, advance, carry: yearEnd, onInvoices, checks };
+}
+
 const fp = (period: string) => `${period.slice(5, 7)}${period.slice(0, 4)}`;
 const ddmmyyyy = (d: string) => `${d.slice(8, 10)}-${d.slice(5, 7)}-${d.slice(0, 4)}`;
 const rate = (i: GstInvoice) => (i.taxable > 0 ? Math.round(((i.igst + i.cgst + i.sgst) / i.taxable) * 1000) / 10 : 0);
