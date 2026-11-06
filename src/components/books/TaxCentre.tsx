@@ -25,6 +25,8 @@ import { classifyPayment, fromEntities, withEntityIncome, type EntityFacts } fro
 import { profileFor } from "@/lib/books/entity-tax-profile";
 import { TaxWorkpaper } from "./TaxWorkpaper";
 import { fyOf } from "@/lib/entities";
+import { GstAdvances } from './GstAdvances';
+import { specialProblems,specialSummary } from '@/lib/books/gst-special';
 
 const inr = (n: number) => "₹" + n.toLocaleString("en-IN", { maximumFractionDigits: 0 });
 const today = () => new Date().toISOString().slice(0, 10);
@@ -121,7 +123,8 @@ export function GstReturns({ fy }: { fy: string }) {
   const profile = books.taxProfiles.find((p) => p.entityId === owner?.id);
   const itc = itcReview(books.gstInvoices, gstin, period);
   const eligibleKeys = new Set(itc.lines.filter((l) => l.eligible).map((l) => `${l.invoice.partyGstin}|${l.invoice.number.trim().toUpperCase()}`));
-  const r1 = gstr1(books.gstInvoices, gstin, period), r3 = gstr3b(books.gstInvoices, gstin, period, eligibleKeys);
+  const r1 = gstr1(books.gstInvoices, gstin, period), r3 = gstr3b(books.gstInvoices, gstin, period, eligibleKeys,books.gstAdvances);
+  const special=specialSummary(invoiceRegister(books.gstInvoices,gstin,period),gstin,period);
   const due = owner ? obligations({ entity: owner, profile, fy, today: today(), gstFilings: books.gstFilings, fyRecords: books.fyRecords, rules: books.rules }).filter((o) => o.gstin === gstin) : [];
   const pay = matchGstPayments(months.map((m) => ({ period: m, amount: gstr3b(books.gstInvoices, gstin, m, new Set(itcReview(books.gstInvoices, gstin, m).lines.filter((l) => l.eligible).map((l) => `${l.invoice.partyGstin}|${l.invoice.number.trim().toUpperCase()}`))).netPayable })).filter((x) => x.amount > 0), transactions.filter((t) => (t.txnType ?? "expense") === "expense").map((t) => ({ id: t.id, date: t.date, amount: t.amount, accountId: t.accountId, text: `${t.title} ${t.merchant ?? ""} ${t.description}` })), { gstin, accountIds: owner ? new Set(books.entityAccounts?.[owner.id] ?? []) : undefined });
   const g9 = gstr9(books.gstInvoices, gstin, Number(fy.slice(0, 4)), eligibleKeys);
@@ -141,8 +144,10 @@ export function GstReturns({ fy }: { fy: string }) {
         <div className="grid gap-2 sm:grid-cols-2">
           <div className="rounded-xl border p-3 text-xs"><p className="font-semibold">GSTR-1 draft · {period}</p><p>B2B: {r1.b2b.count} invoices · taxable {inr(r1.b2b.taxable)} · tax {inr(r1.b2b.igst + r1.b2b.cgst + r1.b2b.sgst + r1.b2b.cess)}</p><p>B2C: {r1.b2c.count} invoices · taxable {inr(r1.b2c.taxable)}</p></div>
           <div className="rounded-xl border p-3 text-xs"><p className="font-semibold">GSTR-3B draft · {period}</p><p>Output tax {inr(r3.outputTax)} · ITC {inr(r3.itcClaimed)}</p><p className="font-semibold">Net payable {inr(r3.netPayable)}{r3.carryForward ? ` · credit carried ${inr(r3.carryForward)}` : ""}</p>
-            {(() => { const so = gstPayable(books.gstInvoices, gstin, period, eligibleKeys); return <div className="mt-1 border-t pt-1"><p>Cash to pay by head (after set-off in legal order): IGST {inr(so.cash.igst)} · CGST {inr(so.cash.cgst)} · SGST {inr(so.cash.sgst)} · cess {inr(so.cash.cess)} = <b>{inr(so.cashTotal)}</b></p>{so.used.length > 0 && <p className="text-muted-foreground">Credit used: {so.used.map((u) => `${u.from.toUpperCase()}→${u.to.toUpperCase()} ${inr(u.amount)}`).join(" · ")}</p>}{(so.carry.igst + so.carry.cgst + so.carry.sgst + so.carry.cess) > 0 && <p className="text-muted-foreground">Credit left: IGST {inr(so.carry.igst)} · CGST {inr(so.carry.cgst)} · SGST {inr(so.carry.sgst)}</p>}</div>; })()}</div>
+            {(() => { const so = gstPayable(books.gstInvoices, gstin, period, eligibleKeys,undefined,books.gstAdvances); return <div className="mt-1 border-t pt-1"><p>Cash to pay by head (after set-off in legal order): IGST {inr(so.cash.igst)} · CGST {inr(so.cash.cgst)} · SGST {inr(so.cash.sgst)} · cess {inr(so.cash.cess)} = <b>{inr(so.cashTotal)}</b></p>{so.used.length > 0 && <p className="text-muted-foreground">Credit used: {so.used.map((u) => `${u.from.toUpperCase()}→${u.to.toUpperCase()} ${inr(u.amount)}`).join(" · ")}</p>}{(so.carry.igst + so.carry.cgst + so.carry.sgst + so.carry.cess) > 0 && <p className="text-muted-foreground">Credit left: IGST {inr(so.carry.igst)} · CGST {inr(so.carry.cgst)} · SGST {inr(so.carry.sgst)}</p>}</div>; })()}</div>
         </div>
+        <p className="text-xs">Exports: {special.exports.length} · taxable {inr(special.exportTaxable)}. Reverse-charge cash liability: {inr(special.reverseCash)}.</p>
+        <GstAdvances gstin={gstin} period={period}/>
         <div className="flex flex-wrap gap-2 text-xs">{([["GSTR-1", gstr1Json(books.gstInvoices, gstin, period)], ["GSTR-3B", gstr3bJson(books.gstInvoices, gstin, period, eligibleKeys)]] as const).map(([form, j]) => {
           const errs = validateGstJson(form, j as unknown as Record<string, unknown>);
           const validation = validateReturnDraft(form, period, owner?.kind ?? "individual", j as unknown as Record<string, unknown>, ["gstin"]);
@@ -164,6 +169,9 @@ export function GstReturns({ fy }: { fy: string }) {
           {inv && <div className="mt-2 grid grid-cols-2 gap-2 text-xs">
             <select aria-label="Invoice kind" className="rounded-md border bg-background px-1" value={inv.kind} onChange={(e) => setInv({ ...inv, kind: e.target.value as "sales" })}><option value="sales">Sale</option><option value="purchase">Purchase</option></select>
             <select aria-label="Document type" className="rounded-md border bg-background px-1" value={inv.note ?? ""} onChange={(e) => setInv({ ...inv, note: (e.target.value || undefined) as GstInvoice["note"] })}><option value="">Invoice</option><option value="credit">Credit note</option><option value="debit">Debit note</option></select>
+            <select aria-label="GST treatment" className="col-span-2 rounded-md border bg-background px-1" value={inv.treatment??'domestic'} onChange={e=>setInv({...inv,treatment:e.target.value as GstInvoice['treatment']})}><option value="domestic">Domestic</option><option value="export_paid">Export with IGST</option><option value="export_lut">Export under LUT / without payment</option><option value="reverse_charge">Purchase subject to reverse charge</option></select>
+            {inv.treatment?.startsWith('export')&&<><Input aria-label="Shipping bill number" placeholder="Shipping bill number" value={inv.shippingBill??''} onChange={e=>setInv({...inv,shippingBill:e.target.value})}/><Input aria-label="Shipping bill date" type="date" value={inv.shippingDate??''} onChange={e=>setInv({...inv,shippingDate:e.target.value})}/><Input aria-label="Port code" placeholder="Port code" value={inv.portCode??''} onChange={e=>setInv({...inv,portCode:e.target.value})}/></>}
+            {inv.treatment==='reverse_charge'&&<><Input aria-label="RCM tax paid on" type="date" value={inv.rcmPaidOn??''} onChange={e=>setInv({...inv,rcmPaidOn:e.target.value})}/><select aria-label="RCM tax payment" className="border bg-background" value={inv.rcmPaymentId??''} onChange={e=>setInv({...inv,rcmPaymentId:e.target.value})}><option value="">Tax payment not linked</option>{transactions.filter(t=>owner&&(books.entityAccounts?.[owner.id]??[]).includes(t.accountId??'')&&/gst|challan|cbic/i.test(`${t.title} ${t.description}`)).map(t=><option key={t.id} value={t.id}>{t.date} · {t.title} · {inr(t.amount)}</option>)}</select></>}
             {inv.note && <Input aria-label="Original invoice number" placeholder="Original invoice number" value={inv.originalNumber ?? ""} onChange={(e) => setInv({ ...inv, originalNumber: e.target.value })} />}
             {inv.amendsId && <p className="col-span-2 text-muted-foreground">Amendment — the original invoice drops out of every draft once saved.</p>}
             <Input aria-label="Invoice number" placeholder="Number" value={inv.number} onChange={(e) => setInv({ ...inv, number: e.target.value })} />
@@ -171,7 +179,7 @@ export function GstReturns({ fy }: { fy: string }) {
             <Input aria-label="Party" placeholder="Party" value={inv.party} onChange={(e) => setInv({ ...inv, party: e.target.value })} />
             <Input aria-label="Party GSTIN" className="col-span-2" placeholder="Party GSTIN (blank for B2C)" value={inv.partyGstin} onChange={(e) => setInv({ ...inv, partyGstin: e.target.value.toUpperCase().trim() })} />
             {(["taxable", "igst", "cgst", "sgst", "cess"] as const).map((k) => <label key={k}>{k.toUpperCase()}<Input type="number" value={inv[k] || ""} onChange={(e) => setInv({ ...inv, [k]: n(e.target.value) })} /></label>)}
-            <div className="col-span-2 flex gap-2"><Button size="sm" disabled={!inv.number.trim() || !(inv.taxable > 0)} onClick={async () => { const p = noteProblems(inv, books.gstInvoices, books.closedPeriods); if (p.length) { toast.error(p.join(" · ")); return; } await save({ gstInvoices: books.gstInvoices.some((x) => x.id === inv.id) ? books.gstInvoices.map((x) => (x.id === inv.id ? inv : x)) : [...books.gstInvoices, inv] }); setInv(null); }}>Save invoice</Button><Button size="sm" variant="ghost" onClick={() => setInv(null)}>Cancel</Button></div>
+            <div className="col-span-2 flex gap-2"><Button size="sm" disabled={!inv.number.trim() || !(inv.taxable > 0)} onClick={async () => { const p = [...noteProblems(inv, books.gstInvoices, books.closedPeriods),...specialProblems(inv)]; if (p.length) { toast.error(p.join(" · ")); return; } await save({ gstInvoices: books.gstInvoices.some((x) => x.id === inv.id) ? books.gstInvoices.map((x) => (x.id === inv.id ? inv : x)) : [...books.gstInvoices, inv] }); setInv(null); }}>Save invoice</Button><Button size="sm" variant="ghost" onClick={() => setInv(null)}>Cancel</Button></div>
           </div>}
         </details>
         <details><summary className="cursor-pointer text-muted-foreground">Filing evidence · {books.gstFilings.filter((f) => f.gstin === gstin).length} recorded</summary>
