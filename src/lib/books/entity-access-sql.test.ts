@@ -18,7 +18,7 @@ beforeAll(async () => {
     CREATE TABLE public.documents(id text PRIMARY KEY, owner_id uuid, file_path text);
     CREATE TABLE storage.objects(bucket_id text, name text);
     GRANT USAGE ON SCHEMA auth, storage TO authenticated; GRANT EXECUTE ON FUNCTION auth.uid() TO authenticated;
-    GRANT SELECT ON public.documents, storage.objects TO authenticated;
+    GRANT SELECT, UPDATE ON public.documents TO authenticated; GRANT SELECT ON storage.objects TO authenticated;
     ALTER TABLE public.documents ENABLE ROW LEVEL SECURITY; ALTER TABLE storage.objects ENABLE ROW LEVEL SECURITY;
     CREATE POLICY own ON public.documents FOR ALL TO authenticated USING (owner_id = auth.uid());
     CREATE POLICY ownf ON storage.objects FOR SELECT TO authenticated USING (split_part(name,'/',1) = auth.uid()::text);
