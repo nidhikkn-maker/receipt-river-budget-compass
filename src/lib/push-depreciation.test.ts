@@ -22,8 +22,8 @@ describe("depreciation phone reminder", () => {
     expect((await dispatchDepreciationReminders(d, "s", ["o"], "2026-10", "2026-11-01")).sent).toBe(1);
     expect((await dispatchDepreciationReminders(d, "s", ["o"], "2026-10", "2026-11-02")).sent).toBe(0);
     expect(send).toHaveBeenCalledTimes(1);
-    expect(send.mock.calls[0][2].body).not.toMatch(/\d/);
-    expect(send.mock.calls[0][2].url).toBe("/inbox");
+    expect(send.mock.calls[0]![2].body).not.toMatch(/\d/);
+    expect(send.mock.calls[0]![2].url).toBe("/inbox");
   });
   it("respects the switch being off", async () => {
     expect((await dispatchDepreciationReminders(db({ depreciation: false }), "s", ["o"], "2026-10", "2026-11-01")).sent).toBe(0);
