@@ -42,3 +42,24 @@ it('confirmed recovery keeps the approval audit and cannot bypass the guard',asy
  await db.query("SELECT restore_finance_backup($1::jsonb,NULL)",[JSON.stringify({data:{books:{entityAccounts:{co:['bank2']}}}})]);
  expect((await db.query<{n:number}>('SELECT count(*)::int n FROM preference_approvals')).rows[0]?.n).toBe(2);
 });
+// Compatibility matrix: every existing write path must keep working once the guard is active.
+it('server-approved document intake still saves directly',async()=>{
+ const rev=(await db.query<{r:number}>('SELECT revision::int r FROM finance_preferences')).rows[0]?.r??0;
+ const data={books:{gstInvoices:[{id:'from-document'}]}};
+ await db.query('INSERT INTO document_runs VALUES($1,$2::jsonb)',[owner,JSON.stringify({intakeAttempt:{data,expected:rev}})]);
+ await update(data);
+ expect((await db.query<{v:string}>("SELECT data->'books'->'gstInvoices'->0->>'id' v FROM finance_preferences")).rows[0]?.v).toBe('from-document');
+});
+it('period close/reopen writes (closedPeriods, periodLog) are not approval-gated',async()=>{
+ await update({books:{closedPeriods:[{id:'p1',from:'2025-04-01',to:'2026-03-31',closedOn:'2026-04-10',note:'filed'}],periodLog:[{at:'2026-04-10',action:'closed',periodId:'p1',reason:'filed'}]}});
+ expect((await db.query<{n:number}>("SELECT jsonb_array_length(data->'books'->'closedPeriods')::int n FROM finance_preferences")).rows[0]?.n).toBe(1);
+});
+it('the monthly depreciation cron can still prepare journals',async()=>{
+ await update({books:{journals:[{id:'j1',assetId:'a1',period:'2026-10',amount:500,kind:'book',status:'prepared'}]}});
+ expect((await db.query<{v:string}>("SELECT data->'books'->'journals'->0->>'status' v FROM finance_preferences")).rows[0]?.v).toBe('prepared');
+});
+it('finance_operation irregular-bill confirmations still upsert',async()=>{
+ await db.query("INSERT INTO finance_preferences(owner_id,data) VALUES('00000000-0000-0000-0000-000000000009','{\"irregularConfirmed\":[\"a\"]}')");
+ await db.query("UPDATE finance_preferences SET data=jsonb_set(data,'{irregularConfirmed}',data->'irregularConfirmed'||'\"b\"') WHERE owner_id='00000000-0000-0000-0000-000000000009'");
+ expect((await db.query<{n:number}>("SELECT jsonb_array_length(data->'irregularConfirmed')::int n FROM finance_preferences WHERE owner_id='00000000-0000-0000-0000-000000000009'")).rows[0]?.n).toBe(2);
+});
