@@ -535,6 +535,7 @@ export type Database = {
           currency: string
           doc_date: string | null
           doc_type: string
+          entity_id: string | null
           evidence_locked: boolean
           expires_on: string | null
           extracted_text: string
@@ -559,6 +560,7 @@ export type Database = {
           currency?: string
           doc_date?: string | null
           doc_type?: string
+          entity_id?: string | null
           evidence_locked?: boolean
           expires_on?: string | null
           extracted_text?: string
@@ -583,6 +585,7 @@ export type Database = {
           currency?: string
           doc_date?: string | null
           doc_type?: string
+          entity_id?: string | null
           evidence_locked?: boolean
           expires_on?: string | null
           extracted_text?: string
@@ -630,6 +633,39 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      entity_members: {
+        Row: {
+          can_write: boolean
+          created_at: string
+          entity_id: string
+          id: string
+          member_email: string
+          member_id: string
+          owner_id: string
+          revoked_at: string | null
+        }
+        Insert: {
+          can_write?: boolean
+          created_at?: string
+          entity_id: string
+          id?: string
+          member_email: string
+          member_id: string
+          owner_id: string
+          revoked_at?: string | null
+        }
+        Update: {
+          can_write?: boolean
+          created_at?: string
+          entity_id?: string
+          id?: string
+          member_email?: string
+          member_id?: string
+          owner_id?: string
+          revoked_at?: string | null
+        }
+        Relationships: []
       }
       expense_drafts: {
         Row: {
@@ -2448,6 +2484,10 @@ export type Database = {
         Args: { batch_id: string; items: Json; target: string }
         Returns: string
       }
+      can_access_entity: {
+        Args: { _entity: string; _owner: string; _write?: boolean }
+        Returns: boolean
+      }
       can_access_expense: {
         Args: { _action: string; _employee: string }
         Returns: boolean
@@ -2568,6 +2608,10 @@ export type Database = {
         Returns: Json
       }
       finish_my_report_job: { Args: { _id: string }; Returns: undefined }
+      grant_entity_access: {
+        Args: { _email: string; _entity: string; _write: boolean }
+        Returns: string
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -2664,6 +2708,7 @@ export type Database = {
         Args: { _batch: string; _decision?: string; _items: Json; _patch: Json }
         Returns: number
       }
+      revoke_entity_access: { Args: { _id: string }; Returns: undefined }
       save_claim_preparation: {
         Args: { _data: Json; _expected: number; _id: string; _mutation: string }
         Returns: {

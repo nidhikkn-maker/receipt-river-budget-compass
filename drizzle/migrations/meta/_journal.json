@@ -526,6 +526,13 @@
       "when": 1793942693976,
       "tag": "0074_typed_document_intake_validation",
       "breakpoints": true
+    },
+    {
+      "idx": 75,
+      "version": "7",
+      "when": 1793958833509,
+      "tag": "0075_entity_level_access",
+      "breakpoints": true
     }
   ]
 }
