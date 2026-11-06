@@ -61,6 +61,7 @@ it('validates nested financial-year schedules line by line',async()=>{
  const fy={id:'f1',entityId:'e1',fy:'2025-26',audited:{bank:1000,fixedAssets:5000},schedules:[],qualifications:[],filedReturns:[{form:'ITR-3',ack:'ACK1',filedOn:'2026-07-31'}],lossesCarriedForward:[{fromFy:'2024-25',kind:'business',amount:2000}],docIds:[],details:[{schedule:'profitLoss',lines:[{label:'Revenue',amount:10000,page:3,quote:'Revenue from operations'}]}]};
  await commit({books:{fyRecords:[fy]}});
  expect((await db.query<{n:number}>("SELECT jsonb_array_length(data->'books'->'fyRecords')::int n FROM finance_preferences")).rows[0]?.n).toBe(1);
+ revision=(await db.query<{r:number}>('SELECT revision::int r FROM finance_preferences')).rows[0]?.r??0;
  await expect(commit({books:{fyRecords:[{...fy,id:'f2',details:[{schedule:'profitLoss',lines:[{label:'',amount:1}]}]}]}},fresh())).rejects.toThrow(/schedule line/);
  await expect(commit({books:{fyRecords:[{...fy,id:'f3',details:[{schedule:'unknown',lines:[]}]}]}},fresh())).rejects.toThrow(/schedule/);
  await expect(commit({books:{fyRecords:[{...fy,id:'f4',audited:{bank:-5}}]}},fresh())).rejects.toThrow(/audited head/);
