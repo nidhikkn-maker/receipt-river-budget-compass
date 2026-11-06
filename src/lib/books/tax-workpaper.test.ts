@@ -65,3 +65,46 @@ describe("company tax profile per year", () => {
     expect(dropEntityYears(l, "x").map((v) => v.id)).toEqual(["c"]);
   });
 });
+
+describe("field provenance sheet", () => {
+  const docs = [
+    { id: "d1", title: "PAN card", fields: [
+      { label: "PAN", value: "ABCDE1234F", page: 1, status: "confirmed" },
+      { label: "Legal name", value: "Acme Private Limited", originalValue: "Acme Pvt Ltd", page: 1, status: "corrected" },
+    ] },
+    { id: "d2", title: "Empty scan", fields: [] },
+  ];
+  const links = [
+    { docId: "d1", kind: "entity", targetId: "e1" },
+    { docId: "d2", kind: "entity", targetId: "e1" },
+    { docId: "d1", kind: "entity", targetId: "e2" },
+  ];
+  it("lists each linked document's fields with printed originals for corrections", async () => {
+    const { provenanceCsv } = await import("./tax-workpaper");
+    const rows = provenanceCsv([{ key: "e1", name: "Acme" }], links, docs);
+    expect(rows[0]).toEqual(["Taxpayer", "Document", "Field", "Saved value", "Printed original", "Where", "Status"]);
+    expect(rows).toContainEqual(["Acme", "PAN card", "PAN", "ABCDE1234F", "", "page 1", "confirmed"]);
+    expect(rows).toContainEqual(["Acme", "PAN card", "Legal name", "Acme Private Limited", "Acme Pvt Ltd", "page 1", "corrected"]);
+    expect(rows).toContainEqual(["Acme", "Empty scan", "(no fields read)", "", "", "", ""]);
+  });
+  it("scopes rows to the taxpayer and skips the personal section", async () => {
+    const { provenanceCsv } = await import("./tax-workpaper");
+    const rows = provenanceCsv([{ key: "personal", name: "You" }, { key: "e2", name: "Beta" }], links, docs);
+    expect(rows.filter((r) => r[0] === "You")).toEqual([]);
+    expect(rows.filter((r) => r[0] === "Beta").every((r) => r[1] === "PAN card")).toBe(true);
+    expect(rows.some((r) => r[1] === "Empty scan")).toBe(false);
+  });
+});
+
+describe("record provenance", () => {
+  it("returns linked documents with corrected fields keeping the printed value", async () => {
+    const { recordProvenance } = await import("./docrepo");
+    const docs = [
+      { id: "d1", title: "Lease", docType: "lease_agreement", fields: [{ label: "Monthly rent", value: "25000", originalValue: "23000", page: 2, status: "corrected", confidence: "high" }] },
+      { id: "d9", title: "Unrelated", docType: "other", fields: [] },
+    ];
+    const out = recordProvenance("l1", [{ docId: "d1", kind: "lease", targetId: "l1", label: "t" }], docs as never);
+    expect(out).toHaveLength(1);
+    expect(out[0]?.fields[0]).toEqual(expect.objectContaining({ label: "Monthly rent", value: "25000", printed: "23000", where: "page 2", status: "corrected" }));
+  });
+});
