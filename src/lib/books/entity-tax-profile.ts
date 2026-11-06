@@ -60,3 +60,20 @@ export function mergeEntityYears(list: EntityTaxYear[] | undefined, from: string
   const has = new Set(all.filter((x) => x.entityId === into).map((x) => x.fy));
   return all.filter((x) => x.entityId !== from || !has.has(x.fy)).map((x) => (x.entityId === from ? { ...x, entityId: into } : x));
 }
+
+/**
+ * Compliance checks on one entry. "errors" stop saving (impossible values); "warnings" are shown but saving
+ * stays allowed, because no field is mandatory.
+ */
+export function profileIssues(p: { fy: string; ownershipPct?: number | null; capital?: number | null; accumulatedProfits?: number | null; bookProfit?: number | null }): { errors: string[]; warnings: string[] } {
+  const errors: string[] = [], warnings: string[] = [];
+  const m = /^(\d{4})-(\d{2})$/.exec(p.fy);
+  if (!m) errors.push("Tax year looks like 2025-26");
+  else if ((Number(m[1]) + 1) % 100 !== Number(m[2])) errors.push(`Tax year ${p.fy} should end the year after it starts`);
+  if (p.ownershipPct != null && (p.ownershipPct < 0 || p.ownershipPct > 100)) errors.push("Ownership share is between 0 and 100");
+  if (p.capital != null && p.capital < 0) warnings.push("Partner capital is negative — the 12% interest cap will treat it as nil");
+  if (p.accumulatedProfits != null && p.accumulatedProfits < 0) warnings.push("Past accumulated profits are negative — no deemed dividend can arise");
+  if (p.ownershipPct == null) warnings.push("Share not entered — deemed-dividend and profit-share checks will be flagged as unknown");
+  if (p.bookProfit != null && p.bookProfit < 0) warnings.push("Book profit is a loss — partner remuneration is limited to ₹3,00,000");
+  return { errors, warnings };
+}

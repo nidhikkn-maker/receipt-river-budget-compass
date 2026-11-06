@@ -7,7 +7,7 @@ import { useStore } from "@/lib/store";
 import { emptyBooks } from "@/lib/books/types";
 import { fyOf, type EntityProfile } from "@/lib/entities";
 import { confirmAction } from "@/lib/confirm";
-import { copyTaxYear, removeTaxYear, upsertTaxYear, type EntityTaxYear } from "@/lib/books/entity-tax-profile";
+import { copyTaxYear, profileIssues, removeTaxYear, upsertTaxYear, type EntityTaxYear } from "@/lib/books/entity-tax-profile";
 
 const inr = (n: number) => "₹" + Math.round(n).toLocaleString("en-IN");
 const toNum = (s: string) => (s.trim() === "" ? null : Number(s));
@@ -25,9 +25,9 @@ export function CompanyTaxProfile({ entity }: { entity: EntityProfile }) {
   const startEdit = (y: EntityTaxYear) => setD({ id: y.id, fy: y.fy, ownershipPct: y.ownershipPct?.toString() ?? "", capital: y.capital?.toString() ?? "", accumulatedProfits: y.accumulatedProfits?.toString() ?? "", bookProfit: y.bookProfit?.toString() ?? "", notes: y.notes ?? "" });
   const submit = async () => {
     if (!d) return;
-    if (!/^\d{4}-\d{2}$/.test(d.fy)) { toast.error("Tax year looks like 2025-26"); return; }
     const pct = toNum(d.ownershipPct);
-    if (pct != null && (pct < 0 || pct > 100)) { toast.error("Ownership share is between 0 and 100"); return; }
+    const issues = profileIssues({ fy: d.fy, ownershipPct: pct, capital: toNum(d.capital), accumulatedProfits: toNum(d.accumulatedProfits), bookProfit: toNum(d.bookProfit) });
+    if (issues.errors.length) { toast.error(issues.errors[0]!); return; }
     await persist(upsertTaxYear(all, { id: d.id, entityId: entity.id, fy: d.fy, ownershipPct: pct, capital: toNum(d.capital), accumulatedProfits: toNum(d.accumulatedProfits), bookProfit: toNum(d.bookProfit), notes: d.notes }), `Tax profile for FY ${d.fy} saved`);
     setD(null);
   };
@@ -52,6 +52,7 @@ export function CompanyTaxProfile({ entity }: { entity: EntityProfile }) {
         {entity.kind === "company" && <label>Past accumulated profits<Input type="number" inputMode="decimal" value={d.accumulatedProfits} onChange={(e) => setD({ ...d, accumulatedProfits: e.target.value })} /></label>}
         <label>Book profit (optional)<Input type="number" inputMode="decimal" value={d.bookProfit} onChange={(e) => setD({ ...d, bookProfit: e.target.value })} /></label>
         <label className="col-span-2">Notes<Input value={d.notes} onChange={(e) => setD({ ...d, notes: e.target.value })} /></label>
+        {profileIssues({ fy: d.fy, ownershipPct: toNum(d.ownershipPct), capital: toNum(d.capital), accumulatedProfits: toNum(d.accumulatedProfits), bookProfit: toNum(d.bookProfit) }).warnings.map((w) => <p key={w} className="col-span-2 text-[11px] text-warning">{w}</p>)}
         <p className="col-span-2 text-[11px] text-muted-foreground">All fields are optional. Blank means unknown — tax working flags it instead of guessing.</p>
         <div className="col-span-2 flex gap-2"><Button size="sm" onClick={() => void submit()}>Save</Button><Button size="sm" variant="ghost" onClick={() => setD(null)}>Cancel</Button></div>
       </div> : <Button size="sm" variant="outline" onClick={startNew}>Add tax year</Button>}
