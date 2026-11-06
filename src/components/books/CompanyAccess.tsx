@@ -6,7 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useStore } from "@/lib/store";
 import { companyDocuments, type EntityAccounts } from "@/lib/books/entity-accounts";
 import { confirmAction } from "@/lib/confirm";
-import { rowsFor, sharedCompanyCsv, type SharedCompany, type SharedDoc, type SharedTxn } from "@/lib/books/shared-company";
+import { filterShared, rowsFor, sharedCompanyCsv, sharedCompanyPdf, type SharedCompany, type SharedDoc, type SharedTxn } from "@/lib/books/shared-company";
 
 type Grant = { id: string; member_email: string; created_at: string; can_write: boolean };
 
@@ -81,6 +81,17 @@ export function SharedWithMe() {
   const rename = async (id: string, title: string) => {
     const { data, error } = await supabase.from("expenses").update({ title }).eq("id", id).select("id");
     if (error || !data?.length) toast.error("You can only view this company"); else { toast.success("Saved"); void load(); }
+  };
+  const upload = async (c: SharedCompany, file: File) => {
+    const path = `${c.owner_id}/docs/${crypto.randomUUID()}-${file.name.replace(/[^\w.-]+/g, "_").slice(0, 80)}`;
+    const up = await supabase.storage.from("receipts").upload(path, file, { contentType: file.type || "application/octet-stream" });
+    if (up.error) { toast.error("Couldn't upload — you may only have view access"); return; }
+    const { error } = await supabase.from("documents").insert({
+      owner_id: c.owner_id, entity_id: c.entity_id, title: file.name.replace(/\.[^.]+$/, ""), doc_type: "other",
+      file_path: path, file_name: file.name.slice(0, 200), mime_type: file.type || "application/octet-stream", size_bytes: file.size,
+    });
+    if (error) { await supabase.storage.from("receipts").remove([path]); toast.error("Couldn't save the document"); return; }
+    toast.success("Document added to the shared company"); void load();
   };
   return (
     <div className="space-y-3 rounded-2xl border bg-card p-4">
