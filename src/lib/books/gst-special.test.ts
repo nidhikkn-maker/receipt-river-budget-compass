@@ -42,6 +42,6 @@ it('adjustments across advances together cannot exceed the invoice they settle',
  const inv=invoice({});
  const mk=(id:string,taxable:number,igst:number)=>({id,gstin:'G',number:id,date:'2026-09-01',party:'A',partyGstin:'',supply:'services' as const,taxable:2000,igst:360,cgst:0,sgst:0,cess:0,adjustments:[{invoiceId:'sale',date:'2026-10-01',taxable,igst,cgst:0,sgst:0,cess:0}]});
  expect(advanceCrossProblems([mk('a',600,108),mk('b',300,54)],[inv])).toEqual([]);
- expect(advanceCrossProblems([mk('a',600,108),mk('b',500,90)],[inv])).toContain('INV-1: advances adjust more taxable than the invoice carries');
- expect(advanceCrossProblems([mk('a',500,108),mk('b',500,90)],[inv])).toContain('INV-1: advances adjust more igst than the invoice carries');
+ expect(advanceCrossProblems([mk('a',600,108),mk('b',500,90)],[inv])).toContain('S1: advances adjust more taxable than the invoice carries');
+ expect(advanceCrossProblems([mk('a',500,108),mk('b',500,90)],[inv])).toContain('S1: advances adjust more igst than the invoice carries');
 });
