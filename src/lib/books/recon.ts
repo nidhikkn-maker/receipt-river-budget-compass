@@ -66,6 +66,35 @@ export function customerRecon(invoices: GstInvoice[], receipts: { id: string; am
   }).filter((r) => Math.abs(r.outstanding) > 1);
 }
 
+
+/** Invoice-level allocation [§49–50]: a payment naming an invoice number settles that invoice first, the rest
+ * goes oldest-first; credit notes reduce their original invoice (or the oldest). Read-only, nothing is saved. */
+export interface InvoiceAllocation { number: string; date: string; amount: number; allocated: number; outstanding: number; status: "paid" | "part" | "open"; payments: string[] }
+export function allocatePayments(invoices: GstInvoice[], payments: { id: string; amount: number; text: string; date: string }[], today: string): { lines: (InvoiceAllocation & { ageDays: number })[]; unallocated: number } {
+  const bills = invoices.filter((i) => !i.note && !invoices.some((x) => x.amendsId === i.id)).sort((a, b) => a.date.localeCompare(b.date))
+    .map((i) => ({ number: i.number.trim(), date: i.date, amount: r2(i.taxable + i.igst + i.cgst + i.sgst + i.cess), allocated: 0, payments: [] as string[] }));
+  for (const n of invoices.filter((i) => i.note === "credit")) {
+    const t = bills.find((b) => b.number.toUpperCase() === (n.originalNumber ?? "").trim().toUpperCase()) ?? bills.find((b) => b.allocated < b.amount);
+    if (t) { t.amount = r2(t.amount - Math.abs(n.taxable + n.igst + n.cgst + n.sgst + n.cess)); }
+  }
+  for (const n of invoices.filter((i) => i.note === "debit")) bills.push({ number: n.number.trim(), date: n.date, amount: r2(Math.abs(n.taxable + n.igst + n.cgst + n.sgst + n.cess)), allocated: 0, payments: [] });
+  let unallocated = 0;
+  for (const p of [...payments].sort((a, b) => a.date.localeCompare(b.date))) {
+    let left = p.amount;
+    const text = p.text.toUpperCase();
+    const named = bills.filter((b) => b.number.length >= 2 && new RegExp(`(^|[^A-Z0-9])${b.number.toUpperCase().replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}([^A-Z0-9]|$)`).test(text));
+    for (const b of [...named, ...bills.filter((x) => !named.includes(x))]) {
+      if (left <= 0.005) break;
+      const take = r2(Math.min(left, b.amount - b.allocated));
+      if (take <= 0) continue;
+      b.allocated = r2(b.allocated + take); left = r2(left - take); b.payments.push(p.id);
+    }
+    unallocated = r2(unallocated + left);
+  }
+  const day = (d: string) => Date.parse(`${d}T00:00:00Z`);
+  return { lines: bills.map((b) => { const outstanding = r2(Math.max(0, b.amount - b.allocated)); return { ...b, outstanding, status: outstanding <= 1 ? "paid" as const : b.allocated > 0 ? "part" as const : "open" as const, ageDays: outstanding > 1 ? Math.max(0, Math.round((day(today) - day(b.date)) / 86400000)) : 0 }; }), unallocated };
+}
+
 export interface InvestmentReconRow { isin: string; name: string; statement: number; fromTransactions: number; difference: number }
 /** Investment: holding quantity on the demat statement vs buys − sells from transaction statements (only when history exists). */
 export interface QtyAction { date: string; isin: string; kind: string; quantity: number | null }
