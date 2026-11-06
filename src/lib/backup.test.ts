@@ -1,7 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { createBackupZip, prepareRestore, readBackup, type Backup } from "./backup";
+import { BACKUP_TABLES, backupOwnerColumn, createBackupZip, prepareRestore, readBackup, type Backup } from "./backup";
 const backup: Backup = { app: "ledgerline", version: 2, owner: "a", exportedAt: "2026-10-31", data: { accounts: [{ id: "bank", owner_id: "a" }], family_members: [{ id: "child", owner_id: "a" }], expenses: [{ id: "bill", employee_id: "a", account_id: "bank", member_id: "child", splits: [{ memberId: "child", amount: 50 }], receipts: [{ path: "a/receipt.jpg" }] }], documents: [{ id: "doc", transaction_id: "bill", file_path: "a/document.pdf" }] } };
 describe("Complete backups", () => {
+  it("scopes expense exports to the employee and every other export to the owner", () => {
+    expect(backupOwnerColumn("expenses")).toBe("employee_id");
+    for (const table of BACKUP_TABLES.filter(t => t !== "expenses")) expect(backupOwnerColumn(table)).toBe("owner_id");
+  });
   it('remaps reimbursement receiving accounts and report responsibility records across owners', () => {
     const b = { ...backup, data: { ...backup.data, finance_preferences: [{ owner_id: 'a', data: { reimbursementSettings: { profiles: [{ id: 'role', accountId: 'bank' }], responsibilities: [{ entryId: 'bill', shares: [{ organisation: 'AET', amount: 100 }] }], mappings: [{ activity: 'entries:bill', organisation: 'AET', profileId: 'role' }] } } }] } };
     let n = 0; const result = prepareRestore(b, 'b', () => `new-${++n}`);

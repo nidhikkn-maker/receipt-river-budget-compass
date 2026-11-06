@@ -21,7 +21,7 @@ import { RoleBadge, TeamAccessSettings } from "@/components/TeamAccess";
 import { SmartDefaultsSettings } from "@/components/SmartDefaultsSettings";
 import { ReceiptProblemReports } from "@/components/ReceiptProblemReports";
 import { useStore } from "@/lib/store";
-import { BACKUP_TABLES, createBackupZip, prepareRestore, readBackup, type Backup } from "@/lib/backup";
+import { BACKUP_TABLES, backupOwnerColumn, createBackupZip, prepareRestore, readBackup, type Backup } from "@/lib/backup";
 import { downloadBlob } from "@/lib/reports";
 import type { Json } from "@/integrations/supabase/types";
 
@@ -56,7 +56,7 @@ function Settings() {
         out[t] = [];
         for (let start = 0; ; start += 500) {
           const order = t === "finance_preferences" ? "owner_id" : t === "category_budgets" ? "category" : "id";
-          const { data, error } = await supabase.from(t).select("*").order(order).range(start, start + 499);
+          const { data, error } = await supabase.from(t).select("*").eq(backupOwnerColumn(t), userId).order(order).range(start, start + 499);
           if (error) throw new Error(error.message);
           out[t]?.push(...(data ?? []));
           if (!data || data.length < 500) break;
