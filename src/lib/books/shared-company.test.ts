@@ -35,12 +35,12 @@ describe("shared company search", () => {
 
 describe("shared company PDF data", () => {
   it("contains only that company's rows, the access level and the spending total", () => {
-    const d = sharedCompanyPdfData(c, [t("keep", "o1", "c1"), { ...t("keep2", "o1", "c1"), amount: 50 }, t("leak", "o1", "c2")], [d("ok", "o1", "c1"), d("no", "o2", "c1")]);
-    expect(d.counts).toEqual({ entries: 2, documents: 1 });
-    expect(d.totalSpend).toBe("INR 150.00");
-    expect(d.lines.join(" ")).toContain("View only");
-    expect(d.entries.rows.flat().join(" ")).not.toContain("leak");
-    expect(d.documents.rows.flat().join(" ")).not.toContain("no");
+    const pdf = sharedCompanyPdfData(c, [t("keep", "o1", "c1"), { ...t("keep2", "o1", "c1"), amount: 50 }, t("leak", "o1", "c2")], [d("ok", "o1", "c1"), d("no", "o2", "c1")]);
+    expect(pdf.counts).toEqual({ entries: 2, documents: 1 });
+    expect(pdf.totalSpend).toBe("INR 150.00");
+    expect(pdf.lines.join(" ")).toContain("View only");
+    expect(pdf.entries.rows.flat().join(" ")).not.toContain("leak");
+    expect(pdf.documents.rows.flat().join(" ")).not.toContain("no");
   });
   it("labels edit access clearly", () => {
     expect(sharedCompanyPdfData({ ...c, can_write: true }, [], []).lines.join(" ")).toContain("Can edit");
