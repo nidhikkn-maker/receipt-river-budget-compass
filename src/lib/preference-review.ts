@@ -1,6 +1,6 @@
 import type { FinancePreferences } from './preferences';
 const top=['assets','entities','paymentInstruments','reimbursementProfiles'] as const;
-const books=['policy','rules','fieldMappings','entityAccounts','fyRecords','properties','leases','propertyCosts','assetEvents','holdings','priceOverrides','goldRate','taxProfiles','entityTaxProfiles','taxCredits','taxDeductions','salaryEvidence','gstInvoices','gstFilings','loanBalances'] as const;
+const books=['policy','rules','fieldMappings','entityAccounts','fyRecords','properties','leases','propertyCosts','assetEvents','holdings','priceOverrides','goldRate','taxProfiles','entityTaxProfiles','taxCredits','taxDeductions','salaryEvidence','gstInvoices','gstAdvances','gstFilings','loanBalances'] as const;
 const canonical=(v:unknown):string=>JSON.stringify(v==null?null:Array.isArray(v)?v.map(x=>JSON.parse(canonical(x))):typeof v==='object'?Object.fromEntries(Object.entries(v).sort(([a],[b])=>a.localeCompare(b)).map(([k,x])=>[k,JSON.parse(canonical(x))])):v);
 export function preferenceReviewSections(previous:FinancePreferences,next:FinancePreferences):string[]{
  const out:string[]=[];
