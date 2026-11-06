@@ -13344,14 +13344,19 @@
       },
       "original": "Offer correction directly on the extracted field.",
       "interpretation": "Account for this source clause in the context of 1. Search existing trusted records.; verify each enumerated feature and applicable safeguard, not merely screen presence.",
-      "modules": [],
+      "modules": [
+        "src/lib/books/source-corrections.ts",
+        "src/components/DocumentIntake.tsx"
+      ],
       "dependencies": [],
-      "status": "NOT IMPLEMENTED",
-      "requiredWork": "Map source clause to existing implementation and verification evidence; this initial status means not yet assessed, not an assertion that existing code is absent.",
+      "status": "PARTIAL",
+      "requiredWork": "Complete all supported document fields and verify source corrections through reports; exact known labels update proposals, ambiguous labels remain details.",
       "verificationMethod": "Source-to-code audit followed by applicable unit/database/integration/real-route checks; hosted/device evidence separately required.",
       "finalTestResult": {
-        "result": "NOT RUN",
-        "evidence": []
+        "result": "PARTIAL",
+        "evidence": [
+          "5 source-correction regressions PASS; printed originals retained; invalid numbers refused"
+        ]
       }
     },
     {
@@ -14084,15 +14089,26 @@
       },
       "original": "Implement proactive checks, review workflows and period-closing evidence.",
       "interpretation": "Account for this source clause in the context of 68. Phase 8 \u2014 Continuous auditing; verify each enumerated feature and applicable safeguard, not merely screen presence.",
-      "modules": [],
-      "dependencies": [],
-      "status": "NOT IMPLEMENTED",
-      "requiredWork": "Map source clause to existing implementation and verification evidence; this initial status means not yet assessed, not an assertion that existing code is absent.",
+      "modules": [
+        "src/routes/_authenticated/audit.tsx",
+        "src/components/books/PeriodEvidence.tsx",
+        "drizzle/migrations/0070_authoritative_period_close_evidence.sql"
+      ],
+      "dependencies": [
+        "owner-scoped canonical persisted records",
+        "remaining source-to-report acceptance"
+      ],
+      "status": "PARTIAL",
+      "requiredWork": "Finish all alternate period-write enforcement, closing blockers and complete continuous-audit acceptance.",
       "verificationMethod": "Source-to-code audit followed by applicable unit/database/integration/real-route checks; hosted/device evidence separately required.",
       "finalTestResult": {
-        "result": "NOT RUN",
-        "evidence": []
-      }
+        "result": "PARTIAL",
+        "evidence": [
+          "7 PostgreSQL period-evidence tests PASS",
+          "isolated /audit close/download/reload/reopen PASS; screenshots inspected"
+        ]
+      },
+      "verifiedAt": "2026-11-06"
     },
     {
       "id": "V60-0705",
@@ -14644,15 +14660,27 @@
       },
       "original": "21. Demonstrate safe failure, retry and recovery.",
       "interpretation": "Account for this source clause in the context of 71. Mandatory tests; verify each enumerated feature and applicable safeguard, not merely screen presence.",
-      "modules": [],
-      "dependencies": [],
-      "status": "NOT IMPLEMENTED",
-      "requiredWork": "Map source clause to existing implementation and verification evidence; this initial status means not yet assessed, not an assertion that existing code is absent.",
+      "modules": [
+        "src/components/DocumentIntake.tsx",
+        "src/lib/store.tsx",
+        "src/lib/books/runs.ts",
+        "drizzle/migrations/0071_revision_checked_document_intake.sql"
+      ],
+      "dependencies": [
+        "owner-scoped canonical persisted records",
+        "remaining source-to-report acceptance"
+      ],
+      "status": "PARTIAL",
+      "requiredWork": "Complete typed server-side proposal validation and all document-to-report recovery cases; controlled browser evidence is not hosted persistence certification.",
       "verificationMethod": "Source-to-code audit followed by applicable unit/database/integration/real-route checks; hosted/device evidence separately required.",
       "finalTestResult": {
-        "result": "NOT RUN",
-        "evidence": []
-      }
+        "result": "PARTIAL",
+        "evidence": [
+          "7 PostgreSQL intake tests PASS",
+          "isolated /statements lost response \u2192 reload \u2192 same durable request recovery PASS"
+        ]
+      },
+      "verifiedAt": "2026-11-06"
     },
     {
       "id": "V60-0733",
@@ -16204,15 +16232,24 @@
       },
       "original": "* Last successful refresh.",
       "interpretation": "Account for this source clause in the context of 5. Market status; verify each enumerated feature and applicable safeguard, not merely screen presence.",
-      "modules": [],
-      "dependencies": [],
-      "status": "NOT IMPLEMENTED",
-      "requiredWork": "Map source clause to existing implementation and verification evidence; this initial status means not yet assessed, not an assertion that existing code is absent.",
+      "modules": [
+        "src/lib/market/bhavcopy.ts",
+        "src/components/books/useBooks.ts"
+      ],
+      "dependencies": [
+        "owner-scoped canonical persisted records",
+        "remaining source-to-report acceptance"
+      ],
+      "status": "PARTIAL",
+      "requiredWork": "Verify actual timestamp/failure display end-to-end for each instrument and provider; licensed live feed deferred.",
       "verificationMethod": "Source-to-code audit followed by applicable unit/database/integration/real-route checks; hosted/device evidence separately required.",
       "finalTestResult": {
-        "result": "NOT RUN",
-        "evidence": []
-      }
+        "result": "PARTIAL",
+        "evidence": [
+          "actual per-exchange fetched_at regression PASS"
+        ]
+      },
+      "verifiedAt": "2026-11-06"
     },
     {
       "id": "V61-0041",
@@ -17284,15 +17321,27 @@
       },
       "original": "* Investment performance.",
       "interpretation": "Account for this source clause in the context of 12. Historical valuations; verify each enumerated feature and applicable safeguard, not merely screen presence.",
-      "modules": [],
-      "dependencies": [],
-      "status": "NOT IMPLEMENTED",
-      "requiredWork": "Map source clause to existing implementation and verification evidence; this initial status means not yet assessed, not an assertion that existing code is absent.",
+      "modules": [
+        "src/lib/books/investment-flows.ts",
+        "src/components/books/useBooks.ts",
+        "src/components/books/MarketPanel.tsx",
+        "src/lib/books/market.ts"
+      ],
+      "dependencies": [
+        "owner-scoped canonical persisted records",
+        "remaining source-to-report acceptance"
+      ],
+      "status": "PARTIAL",
+      "requiredWork": "Finish broker-cash/ownership correctness and performance acceptance; daily snapshots have end-of-day semantics.",
       "verificationMethod": "Source-to-code audit followed by applicable unit/database/integration/real-route checks; hosted/device evidence separately required.",
       "finalTestResult": {
-        "result": "NOT RUN",
-        "evidence": []
-      }
+        "result": "PARTIAL",
+        "evidence": [
+          "6 signed-flow tests PASS",
+          "2 movement-alert tests PASS"
+        ]
+      },
+      "verifiedAt": "2026-11-06"
     },
     {
       "id": "V61-0095",
@@ -17304,15 +17353,23 @@
       },
       "original": "* Asset allocation changes.",
       "interpretation": "Account for this source clause in the context of 12. Historical valuations; verify each enumerated feature and applicable safeguard, not merely screen presence.",
-      "modules": [],
-      "dependencies": [],
-      "status": "NOT IMPLEMENTED",
-      "requiredWork": "Map source clause to existing implementation and verification evidence; this initial status means not yet assessed, not an assertion that existing code is absent.",
+      "modules": [
+        "src/components/books/MarketPanel.tsx"
+      ],
+      "dependencies": [
+        "owner-scoped canonical persisted records",
+        "remaining source-to-report acceptance"
+      ],
+      "status": "PARTIAL",
+      "requiredWork": "Verify all asset/instrument allocation categories against canonical net worth, including investment-account values.",
       "verificationMethod": "Source-to-code audit followed by applicable unit/database/integration/real-route checks; hosted/device evidence separately required.",
       "finalTestResult": {
-        "result": "NOT RUN",
-        "evidence": []
-      }
+        "result": "PARTIAL",
+        "evidence": [
+          "Demat allocation included; full suite PASS"
+        ]
+      },
+      "verifiedAt": "2026-11-06"
     },
     {
       "id": "V61-0096",
@@ -17994,5 +18051,12 @@
         "evidence": []
       }
     }
-  ]
+  ],
+  "latestVerification": {
+    "at": "2026-11-06",
+    "testFiles": 201,
+    "testsPassed": 1572,
+    "hostedFinancialWritesVerified": false,
+    "physicalDevicesVerified": false
+  }
 }

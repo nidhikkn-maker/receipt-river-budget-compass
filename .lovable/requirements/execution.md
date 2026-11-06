@@ -9,7 +9,10 @@
 ## Current implementation
 - Return draft registry now appears in Tax Centre exports; removed unsupported claims of official GST format validation.
 - Database register safeguard applied and confirmed present: leases, company tax-year profiles, asset financial facts, period definitions and historical logs. Physical checks remain editable. Ten isolated PostgreSQL tests pass; no production financial records changed.
-- Next executable requirement: authoritative period-close evidence, then source correction/typed intake/company access gaps and canonical net-worth input corrections.
+- Close/reopen now writes owner-scoped database-generated evidence with SHA-256 ledger/register revisions, source documents, approval history and rule versions. Audit downloads and shows retained snapshots; seven disposable PostgreSQL tests and isolated close/download/reload/reopen browser checks pass. Legacy closures without evidence are explicitly labelled.
+- Intake commits are owner-serialized, revision-checked and replay-protected with atomic evidence locking; seven disposable PostgreSQL tests pass. All preference updates advance the shared revision. The exact approved request/payload/revision now persists in the document run before committing; isolated Statement Desk lost-response/reload/retry check passed with one save. Typed server proposal validation remains partial.
+- Portfolio signed flows now count contribution/redemption transfers across the portfolio boundary, exclude internal moves/counterparts, feed snapshots and movement alerts, and include Demat allocation. Actual stored price-fetch timestamps replace invented evening times. Eight flow/alert tests and a timestamp regression pass.
+- Next executable requirements: close-operation bypass hardening and source correction/durable typed intake recovery, company document access, broker cash/ownership/loan evidence and remaining acceptance.
 
 ## External dependencies
 - Licensed intraday feed choice and credentials (deferred by owner).
@@ -19,6 +22,8 @@
 - Consequential production publication requires explicit approval.
 
 ## Verification
-- Full suite: 195 test files, 1,541 tests passed on 6 November 2026. Preview compilation log reports build OK.
+- Full suite: 201 test files, 1,572 tests passed on 6 November 2026. Preview compilation log reports build OK. The original source register records partial status and concrete evidence for close evidence, recovery, timestamps, performance, allocations and source corrections.
+- Known unambiguous source-field corrections now refresh typed entity/asset/lease/GST proposals, persist in runs and retain printed originals. Ambiguous labels never silently change financial facts; five regressions pass. Full field/provenance coverage remains incomplete.
+- Alternate period-write authority prototype: 3 disposable PostgreSQL tests pass, but `.lovable/period-authority.sql` is deliberately not applied until backup restore can preserve closing evidence without forging new closure snapshots. This is an internal dependency, not an external block.
 - Isolated signed-in browser check passed: company tax profile edited from 60% to 75% and survived reload; accountant ZIP downloaded with PDF and three CSVs using the edited assumptions. Screenshots inspected. Production writes were intercepted, so this does not certify Cloud persistence.
 - Controlled browser evidence never certifies hosted saves or real-device behaviour.

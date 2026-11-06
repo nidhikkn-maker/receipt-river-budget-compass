@@ -12,6 +12,8 @@ import { statementActionAlerts } from "@/lib/books/investment-alerts";
 import { addSnapshot, FRESHNESS_LABEL, quantityByIsin, quoteKey, recordFailure, upsertQuote, valuationAlerts } from "@/lib/books/market";
 import type { Holding, HoldingKind } from "@/lib/books/types";
 import { useBooks, useNetWorth } from "./useBooks";
+import { useStore } from "@/lib/store";
+import { investmentFlows } from "@/lib/books/investment-flows";
 
 const KIND: Record<HoldingKind, string> = { mutual_fund: "Mutual fund", etf: "ETF", gold_etf: "Gold ETF", sgb: "Sovereign Gold Bond", physical_gold: "Physical gold", bond: "Bond", broker_cash: "Cash with broker", other: "Other" };
 const blank = (): Holding => ({ id: crypto.randomUUID(), kind: "mutual_fund", name: "", quantity: 0, sharePct: 100, source: "entered by you" });
@@ -19,6 +21,7 @@ const blank = (): Holding => ({ id: crypto.randomUUID(), kind: "mutual_fund", na
 export function MarketPanel() {
   const { books, save } = useBooks();
   const nw = useNetWorth();
+  const { accounts, transactions } = useStore();
   const nav = useServerFn(getFundNav);
   const [edit, setEdit] = useState<Holding | null>(null);
   const [price, setPrice] = useState<Record<string, string>>({});
@@ -49,7 +52,11 @@ export function MarketPanel() {
   const snapshot = async () => {
     const allocation: Record<string, number> = {};
     for (const v of nw.valued) if (v.value) allocation[KIND[v.holding.kind]] = (allocation[KIND[v.holding.kind]] ?? 0) + v.value;
-    await save({ snapshots: addSnapshot(books.snapshots, { date: new Date().toISOString().slice(0, 10), netWorth: nw.net, portfolio: nw.portfolio, liquid: nw.liquid, liabilities: nw.liabilities, allocation, invested: Math.round(books.holdings.reduce((s, h) => s + (h.costBasis ?? 0) * (h.sharePct / 100), 0)), demat: Math.round(nw.dematRows.reduce((s, h) => s + (h.value ?? 0), 0)), dematCount: nw.dematRows.length, flows: nw.flowsSinceSnapshot, pricesAsOf: nw.pricesAsOf }) });
+    const date = new Date().toISOString().slice(0, 10);
+    const previous = books.snapshots.filter((s) => s.date < date).at(-1);
+    const demat = Math.round(nw.dematRows.reduce((s, h) => s + (h.value ?? 0), 0));
+    allocation['Demat securities'] = demat;
+    await save({ snapshots: addSnapshot(books.snapshots, { date, netWorth: nw.net, portfolio: nw.portfolio, liquid: nw.liquid, liabilities: nw.liabilities, allocation, invested: Math.round(books.holdings.reduce((s, h) => s + (h.costBasis ?? 0) * (h.sharePct / 100), 0)), demat, dematCount: nw.dematRows.length, flows: previous ? investmentFlows(transactions, accounts, previous.date, date) : 0, pricesAsOf: nw.pricesAsOf }) });
     toast.success("Today's valuation saved — no entries were created");
   };
 

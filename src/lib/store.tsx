@@ -62,7 +62,8 @@ interface Ctx {
   preferences: FinancePreferences;
   savePreferences: (p: FinancePreferences) => Promise<void>;
   /** Saves records from a document and locks it as evidence in one database transaction [v6 §3]. */
-  commitDocumentRecords: (documentId: string, p: FinancePreferences, lock: boolean) => Promise<void>;
+  commitDocumentRecords: (documentId: string, p: FinancePreferences, lock: boolean, attempt?: { id: string; expected: number }) => Promise<void>;
+  preferencesRevision: number | null;
   /** Opening entries for one entity/year, posted atomically; same id = no duplicate [§19]. */
   postOpening: (x: { id: string; entityId: string; fy: string; date: string; lines: { txnId: string; accountId: string; amount: number; sign: 1 | -1; title: string; description: string; head: string; target: number; current: number }[]; exceptions: { line: string; reason: string }[]; docId: string | null }) => Promise<void>;
   undoOpening: (id: string) => Promise<void>;
@@ -182,6 +183,8 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
   const syncing = useRef(false);
   const deleting = useRef(false);
   const [preferences, setPreferences] = useState<FinancePreferences>(defaultPreferences);
+  const preferencesRevision = useRef<number | null>(null);
+  const intakeRequests = useRef(new Map<string, { id: string; key: string; expected: number }>());
 
   const firstLoad = useRef(true);
   // Only the very first cloud load uses the light expense query; later loads always fetch full records.
@@ -236,11 +239,12 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
       supabase.from("accounts").select("*").order("created_at"),
       supabase.from("commitments").select("*").order("next_due"),
       supabase.from("loans").select("*").order("created_at"),
-      supabase.from("finance_preferences").select("data").eq("owner_id", userId).maybeSingle(),
+      supabase.from("finance_preferences").select("data,revision").eq("owner_id", userId).maybeSingle(),
     ]);
     const firstError = [e, a, c, l].find((x) => x.error)?.error;
     if (firstError) toast.error("Some records couldn't load — pull to refresh or try again");
     setPreferences(normalizePreferences(pref.data?.data as unknown as Partial<FinancePreferences>));
+    preferencesRevision.current = pref.error ? null : pref.data?.revision ?? null;
     setCommitments((c.data ?? []).map((x) => ({ id: x.id, name: x.name, kind: x.kind as CommitmentKind, direction: x.direction as "in" | "out", amount: Number(x.amount),
       frequency: x.frequency as Frequency, intervalDays: x.interval_days, nextDue: x.next_due, accountId: x.account_id, category: x.category,
       confirmed: x.confirmed, essential: x.essential, status: x.status as CommitmentStatus })));
@@ -392,15 +396,28 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
   const savePreferences: Ctx["savePreferences"] = async (p) => {
     const previous=preferences;
     setPreferences(p);
-    try { check((await supabase.from("finance_preferences").upsert({ owner_id: userId, data: p as unknown as Json, updated_at: new Date().toISOString() })).error); }
+    try {
+      const result = await supabase.from("finance_preferences").upsert({ owner_id: userId, data: p as unknown as Json, updated_at: new Date().toISOString() }).select('revision').single();
+      check(result.error); preferencesRevision.current = result.data?.revision ?? null;
+    }
     catch(e){setPreferences(previous);throw e;}
   };
-  const commitDocumentRecords: Ctx["commitDocumentRecords"] = async (documentId, p, lock) => {
+  const commitDocumentRecords: Ctx["commitDocumentRecords"] = async (documentId, p, lock, attempt) => {
+    if (!navigator.onLine) throw new Error('Reconnect before saving document records');
+    const expected = attempt?.expected ?? preferencesRevision.current;
+    if (expected == null) throw new Error('Refresh your records before reviewing this document');
+    const key = JSON.stringify([p, lock]);
+    const prior = intakeRequests.current.get(documentId);
+    const request = attempt ? { id: attempt.id, key, expected } : prior?.key === key ? prior : { id: crypto.randomUUID(), key, expected };
+    intakeRequests.current.set(documentId, request);
     const previous = preferences;
     setPreferences(p);
-    try { check((await supabase.rpc("commit_document_intake", { p_document_id: documentId, p_data: p as unknown as Json, p_lock: lock })).error); }
+    try {
+      const result = await supabase.rpc("commit_document_intake_reviewed", { _id: request.id, _document: documentId, _data: p as unknown as Json, _lock: lock, _expected: request.expected });
+      check(result.error); preferencesRevision.current = result.data;
+    }
     catch (e) { setPreferences(previous); throw e; }
-    if (lock) await refresh().catch(() => undefined);
+    await refresh();
   };
   const postOpening: Ctx["postOpening"] = async (x) => {
     if (!navigator.onLine) throw new Error("Reconnect to post opening balances");
@@ -769,7 +786,7 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
   return (
     <StoreCtx.Provider value={{
       departmentBudgets, departmentBudgetError,
-      pendingCount, pendingItems, retrySync: (id?: string) => syncRef.current(id), discardPending: async (id: string) => { await removePending(id); setPendingItems((prev) => prev.filter((p) => p.id !== id)); setPendingCount((await pendingEntries(userId)).length); }, setTags, manageTripExpenses, applyReviewMapping, applyReviewMetadata, undoReviewMetadata, reviewMetadataHistory, saveRecurringReview, preferences, savePreferences, commitDocumentRecords, postOpening, undoOpening, openingPostings, ensureCategory, moveCategory, bulkSetCategory, categoryHistory, undoCategoryBatch, correctFinancialEntries, undoFinancialCorrection, financialCorrectionHistory, userId, name, updateName, members, memberName,
+      pendingCount, pendingItems, retrySync: (id?: string) => syncRef.current(id), discardPending: async (id: string) => { await removePending(id); setPendingItems((prev) => prev.filter((p) => p.id !== id)); setPendingCount((await pendingEntries(userId)).length); }, setTags, manageTripExpenses, applyReviewMapping, applyReviewMetadata, undoReviewMetadata, reviewMetadataHistory, saveRecurringReview, preferences, preferencesRevision: preferencesRevision.current, savePreferences, commitDocumentRecords, postOpening, undoOpening, openingPostings, ensureCategory, moveCategory, bulkSetCategory, categoryHistory, undoCategoryBatch, correctFinancialEntries, undoFinancialCorrection, financialCorrectionHistory, userId, name, updateName, members, memberName,
       expenses: expenses.filter((x) => (x.txnType ?? "expense") === "expense"), transactions: expenses.filter((x) => !x.transferCounterpartOf), transferCounterparts: expenses.filter((x) => !!x.transferCounterpartOf), confirmTransfer, cancelTransfer, accounts, addAccount, setArchived, adjustBalance,
       commitments, loans, goals, valuations, documents, saveCommitment, confirmIrregular, removeCommitment, confirmCommitment, saveLoan, removeLoan, recordLoanPayment, convertToEmi,
       saveGoal, removeGoal, updateAccount, addValuation, removeValuation, addDocument, updateDocument, removeDocument, history, setReimbursement, recordReimbursement, deleteAll,

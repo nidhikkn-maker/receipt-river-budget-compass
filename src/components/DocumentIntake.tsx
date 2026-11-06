@@ -17,6 +17,7 @@ import { DOC_LABEL, DOC_TYPES, duplicateDocuments, type DocField, type DocType }
 import { ENTITY_KINDS } from "@/lib/entities";
 import { autoName, fillLeaseFromTrusted, proposeAsset, proposeEntity, proposeFy, proposeLease, proposeProperty, proposeGstInvoice, proposeTaxStatement, suggestLinks, assetPayment, ROUTE_OF, trail, type IntakeContext, type Step } from "@/lib/books/intake";
 import { proposeFundHoldings } from "@/lib/books/fund-statement";
+import { correctSourceField } from "@/lib/books/source-corrections";
 import { commitIntake, type Confirmed } from "@/lib/books/commit";
 import { emptyBooks, LEASE_TERMS, LEASE_TERM_LABEL, leaseUnknowns, requiresApproval, type Lease } from "@/lib/books/types";
 import { HEAD_LABEL } from "@/lib/books/fy";
@@ -190,6 +191,17 @@ export function DocumentIntake({ file, context, onClose, resume, replacesId, onS
   };
 
   const save = async () => {
+    const pendingAttempt = runData.current.intakeAttempt;
+    if (pendingAttempt) {
+      setSaving(true);
+      try {
+        await store.commitDocumentRecords(pendingAttempt.documentId, pendingAttempt.data, pendingAttempt.lock, pendingAttempt);
+        await closeRun({ id: runId, data: runData.current }, 'done');
+        setDone(pendingAttempt.route); setFailed(null); toast.success('Saved document records confirmed');
+      } catch (e) { setFailed({ step: 'Save', note: (e as Error).message }); }
+      finally { setSaving(false); }
+      return;
+    }
     const c = confirmed();
     if (!c) { toast.error(ownerSuggested && !ownerOk ? "Confirm which company this belongs to first" : "Fill the missing details first"); return; }
     const unlocated = fields.filter((f) => !f.page && !f.section?.trim()).length;
@@ -211,7 +223,13 @@ export function DocumentIntake({ file, context, onClose, resume, replacesId, onS
       const known = new Set(preferences.contractObligations.map((o) => o.docId));
       const obs = !known.has(docId) ? toObligations(docId, x?.obligations ?? [], () => crypto.randomUUID()) : [];
       // Records and the evidence lock commit together: either both are saved or neither is [§3, §11].
-      await store.commitDocumentRecords(docId, { ...preferences, entities: next.entities, assets: next.assets, books: next.books, ...(obs.length ? { contractObligations: [...preferences.contractObligations, ...obs] } : {}) }, c.route !== "document");
+      const expected = store.preferencesRevision;
+      if (expected == null) throw new Error('Refresh your records before reviewing the document again');
+      const attempt = { id: crypto.randomUUID(), documentId: docId, expected, lock: c.route !== 'document', route: c.route,
+        data: { ...preferences, entities: next.entities, assets: next.assets, books: next.books, ...(obs.length ? { contractObligations: [...preferences.contractObligations, ...obs] } : {}) } };
+      runData.current = { ...runData.current, intakeAttempt: attempt };
+      await updateRun(runId, { data: runData.current });
+      await store.commitDocumentRecords(docId, attempt.data, attempt.lock, attempt);
       at = "Audit"; await step("Audit");
       await closeRun({ id: runId, data: runData.current }, "done").catch(() => undefined);
       setDone(c.route);
@@ -247,7 +265,16 @@ export function DocumentIntake({ file, context, onClose, resume, replacesId, onS
         {dup && <p className="rounded-lg bg-secondary px-3 py-2 text-xs">Already in DocuRepo as “{dup.title}” — the existing copy will be linked, not stored twice.</p>}
         {fields.length > 0 && <details><summary className="cursor-pointer text-muted-foreground">Details read ({fields.length}) — tap a value to correct it</summary>
           <div className="mt-2 grid gap-2">{fields.map((f, i) => <label key={i} className="grid gap-0.5"><span className="text-xs">{f.label}{f.confidence !== "high" && <span className={`ml-1 ${f.confidence === "low" ? "text-destructive" : "text-muted-foreground"}`}>{f.confidence} confidence</span>}{f.status === "corrected" && <span className="ml-1 text-primary">corrected</span>}</span>
-            <Input value={f.value} onChange={(e) => setFields(fields.map((y, j) => (j === i ? { ...y, value: e.target.value, status: "corrected" } : y)))} />
+            <Input value={f.value} disabled={!!runData.current.intakeAttempt} onChange={(e) => {
+              try {
+                const corrected = correctSourceField(x, f, e.target.value);
+                setX(corrected.read);
+                const nextFields = fields.map((y, j) => j === i ? corrected.field : y);
+                setFields(nextFields);
+                runData.current = { ...runData.current, read: corrected.read, fields: nextFields };
+                void updateRun(runId, { data: runData.current }).catch(() => undefined);
+              } catch (error) { toast.error((error as Error).message); }
+            }} />
             {!f.page && <Input aria-label={`Page or section for ${f.label}`} className="h-7 text-xs" placeholder="Page or section where this appears (required)" value={f.section ?? ""} onChange={(e) => setFields(fields.map((y, j) => (j === i ? { ...y, section: e.target.value } : y)))} />}
             <span className="text-[11px] text-muted-foreground">{f.page ? `Page ${f.page} · ` : f.section ? `${f.section} · ` : ""}printed “{f.originalValue ?? f.quote}”{f.quote && f.originalValue && f.quote !== f.originalValue ? ` · “${f.quote}”` : ""}</span></label>)}</div></details>}
 
@@ -338,6 +365,16 @@ export function DocumentIntake({ file, context, onClose, resume, replacesId, onS
         {missing.length > 0 && <p className="text-xs text-destructive">Still needed: {missing.join(", ")}.{missing.includes("which company") && <> <Link to="/entities" className="underline">Add the company first</Link></>}</p>}
         <div className="flex flex-wrap gap-2">
           <Button onClick={save} loading={saving} disabled={!!failed && !["Save", "Reconcile", "Audit"].includes(failed.step)}>{failed ? "Retry" : proposal ? "Confirm and save" : "Save to DocuRepo"}</Button>
+          {runData.current.intakeAttempt && failed && <Button variant="outline" onClick={async () => {
+            const attempt = runData.current.intakeAttempt;
+            if (!attempt) return;
+            const { data, error } = await (await import('@/integrations/supabase/client')).supabase.from('document_intake_commits').select('id').eq('id', attempt.id).maybeSingle();
+            if (error) { toast.error(error.message); return; }
+            if (data) { toast.message('This save already completed. Retry to confirm it.'); return; }
+            await store.refresh();
+            runData.current = { ...runData.current, intakeAttempt: undefined };
+            await updateRun(runId, { data: runData.current }); setFailed(null);
+          }}>Refresh and review again</Button>}
           <Button variant="ghost" onClick={async () => { await closeRun({ id: runId, data: runData.current }, "cancelled").catch(() => undefined); onClose(); }}>Discard</Button>
         </div>
       </>}
