@@ -2554,6 +2554,14 @@ export type Database = {
           profiles: Json
         }[]
       }
+      team_names: {
+        Args: never
+        Returns: {
+          department: string
+          full_name: string
+          id: string
+        }[]
+      }
       undo_category_change: { Args: { batch_id: string }; Returns: undefined }
       undo_financial_correction: { Args: { _id: string }; Returns: undefined }
       undo_opening_balances: { Args: { _id: string }; Returns: undefined }
