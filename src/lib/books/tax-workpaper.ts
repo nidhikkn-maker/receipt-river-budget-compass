@@ -83,3 +83,28 @@ export function workpaperCsv(sections: WpSection[]): { computation: (string | nu
   }
   return { computation, sources, assumptions: ass };
 }
+
+/**
+ * Field-level provenance sheet [§7]: for each taxpayer section, the fields read from every document linked
+ * to that taxpayer — saved value, the printed original when the owner corrected it, and where on the
+ * document it was found. Read-only; nothing is recomputed here.
+ */
+export function provenanceCsv(
+  sections: { key: string; name: string }[],
+  links: { docId: string; kind: string; targetId: string }[],
+  docs: { id: string; title: string; fields?: { label: string; value: string; originalValue?: string | undefined; page: number | null; section?: string | undefined; status: string }[] | undefined }[],
+): (string | number)[][] {
+  const rows: (string | number)[][] = [["Taxpayer", "Document", "Field", "Saved value", "Printed original", "Where", "Status"]];
+  for (const s of sections) {
+    if (s.key === "personal") continue;
+    const docIds = [...new Set(links.filter((l) => l.kind === "entity" && l.targetId === s.key).map((l) => l.docId))];
+    for (const id of docIds) {
+      const d = docs.find((x) => x.id === id);
+      if (!d) continue;
+      const fields = d.fields ?? [];
+      if (!fields.length) { rows.push([s.name, d.title, "(no fields read)", "", "", "", ""]); continue; }
+      for (const f of fields) rows.push([s.name, d.title, f.label, f.value, f.status === "corrected" ? f.originalValue ?? "" : "", f.page != null ? `page ${f.page}` : f.section ?? "", f.status]);
+    }
+  }
+  return rows;
+}
