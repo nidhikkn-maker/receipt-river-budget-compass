@@ -32,3 +32,11 @@ describe("GST credit/debit notes and amendments", () => {
     expect(noteProblems(inv({ note: "debit" }), [])).toContain("credit/debit note must name the original invoice number");
   });
 });
+
+describe("closed periods", () => {
+  it("refuses amending an invoice inside a closed period", () => {
+    const G = "33AAAAA0000A1Z5";
+    const orig = { id: "i1", gstin: G, kind: "sales" as const, number: "S1", date: "2026-05-05", party: "A", partyGstin: "", taxable: 1, igst: 0, cgst: 0, sgst: 0, cess: 0 };
+    expect(noteProblems({ ...orig, id: "a1", amendsId: "i1", date: "2026-10-01" }, [orig], [{ from: "2026-04-01", to: "2026-06-30" }])[0]).toMatch(/closed period/);
+  });
+});

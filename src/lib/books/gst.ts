@@ -12,8 +12,11 @@ export function effectiveInvoices(list: GstInvoice[]): GstInvoice[] {
 }
 const isEligible = (i: GstInvoice, eligible?: Set<string>) => !!i.note || !eligible || eligible.has(`${i.partyGstin}|${i.number.trim().toUpperCase()}`);
 /** Note problems: a note must name the invoice it adjusts; an amendment must point at an existing record. */
-export function noteProblems(i: GstInvoice, list: GstInvoice[]): string[] {
+export function noteProblems(i: GstInvoice, list: GstInvoice[], closed: { from: string; to: string }[] = []): string[] {
   const out: string[] = [];
+  const orig = i.amendsId ? list.find((x) => x.id === i.amendsId) : undefined;
+  // Amending would silently change a closed period's figures; a note in an open period is the lawful route.
+  if (orig && closed.some((c) => orig.date >= c.from && orig.date <= c.to)) out.push("original invoice is in a closed period — issue a credit or debit note instead");
   if (i.note && !i.originalNumber?.trim()) out.push("credit/debit note must name the original invoice number");
   if (i.note && i.originalDate && i.originalDate > i.date) out.push("original invoice date is after the note date");
   if (i.amendsId && !list.some((x) => x.id === i.amendsId)) out.push("amended invoice no longer exists");
