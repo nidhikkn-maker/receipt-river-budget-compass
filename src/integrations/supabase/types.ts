@@ -2643,6 +2643,17 @@ export type Database = {
           revoked: boolean
         }[]
       }
+      my_shared_companies: {
+        Args: never
+        Returns: {
+          can_write: boolean
+          company_name: string
+          entity_id: string
+          grant_id: string
+          owner_email: string
+          owner_id: string
+        }[]
+      }
       post_import_rows: {
         Args: { _batch: string; _rows: Json }
         Returns: number
