@@ -17,6 +17,7 @@ import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip } from "rec
 import { todayISO } from "@/lib/use-position";
 import { emiReconciliation, emiTargets, matchEmiDebit, type EmiRowStatus } from "@/lib/emi-match";
 import { LoanFundingPanel } from "./LoanFundingPanel";
+import { LoanBalanceReview } from './books/LoanBalanceReview';
 
 const months = (n: number) => (Number.isFinite(n) ? `${Math.floor(n / 12)}y ${n % 12}m` : "never");
 
@@ -148,6 +149,7 @@ function LoanCard({ l, onRemove }: { l: Loan; onRemove: () => void }) {
         </div>
       )}
       {l.status!=="closed"&&<div className="mt-4 grid gap-2 border-t pt-3"><Input aria-label={`Payment date for ${l.name}`} type="date" max={todayISO()} value={payDate} onChange={e=>setPayDate(e.target.value)}/>{l.loanType!=="credit_card_emi"&&<Select value={from} onValueChange={setFrom}><SelectTrigger aria-label={`Pay ${l.name} from`}><SelectValue/></SelectTrigger><SelectContent><SelectItem value="none">Payment account</SelectItem>{accounts.filter(x=>!x.archived&&["savings","current","cash","wallet"].includes(x.kind)).map(x=><SelectItem key={x.id} value={x.id}>{x.name}</SelectItem>)}</SelectContent></Select>}<Button size="sm" disabled={busy||(l.loanType!=="credit_card_emi"&&from==="none")} onClick={async()=>{setBusy(true);try{await recordLoanPayment(l,{fromAccountId:from==="none"?null:from,date:payDate});toast.success("EMI recorded");}catch(e){toast.error((e as Error).message);}finally{setBusy(false);}}}>{l.loanType==="credit_card_emi"?"Record billed instalment":"Record EMI payment"}</Button></div>}
+      <LoanBalanceReview loan={l} />
       {l.loanType !== "credit_card_emi" && <><LoanFundingPanel loan={l} /><EmiReconciliation l={l} /></>}
       <details className="mt-3"><summary className="cursor-pointer text-sm">Payment history & full schedule</summary><ul className="mt-2 divide-y text-xs">{l.payments.map((p,i)=><li key={i} className="py-2">{p.date} · principal {money(p.principal)} + interest {money(p.interest)} = {money(p.total)}</li>)}</ul><div className="mt-2 max-h-64 overflow-auto"><table className="w-full text-left text-xs"><thead><tr><th>Date</th><th>Principal</th><th>Interest</th><th>Balance</th></tr></thead><tbody>{a.schedule.map(row=><tr key={row.month} className="border-t"><td className="py-2">{addMonths(l.nextDue,row.month-1)}</td><td>{money(row.principal)}</td><td>{money(row.interest)}</td><td>{money(row.balance)}</td></tr>)}</tbody></table></div></details>
     </div>

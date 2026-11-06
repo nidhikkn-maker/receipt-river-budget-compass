@@ -12,6 +12,7 @@ import { latestByIsin, latestByIsinExchange, pickClose } from "@/lib/market/bhav
 import type { Quote } from "@/lib/books/types";
 import type { SavedClose } from "@/lib/market/bhavcopy";
 import { investmentFlows } from "@/lib/books/investment-flows";
+import { standaloneLoanBalances } from '@/lib/books/loan-balances';
 
 /** Books data with a single-write updater (owner preferences). */
 export function useBooks() {
@@ -61,7 +62,7 @@ export const closeQuote = (isin: string, c: { exchange: string; close: number; d
 
 /** Ownership-aware dynamic net worth with freshness per component [v6.1 §9–11]. */
 export function useNetWorth() {
-  const { accounts, transactions, valuations, loans } = useStore();
+  const { accounts, transactions, valuations, loans, documents } = useStore();
   const { books } = useBooks();
   const { preferences } = useStore();
   const demat = useDemat();
@@ -78,8 +79,9 @@ export function useNetWorth() {
       const v = accountValue(a, transactions, valuations).value;
       if (isLiability(a.kind)) raw.liabilities += v; else if (a.kind === "investment" || a.kind === "fixed_deposit") raw.investments += v; else if (a.kind === "other_asset") raw.other += v; else raw.assets += v;
     }
-    const loanOwed = loans.filter((l) => !l.accountId && l.status !== "closed").reduce((s, l) => s + l.principal, 0);
     const now = new Date();
+    const lender = standaloneLoanBalances(loans, books.loanBalances ?? [], documents, now.toISOString().slice(0, 10));
+    const loanOwed = lender.amount;
     // Canonical holdings: a security in a demat statement is counted once from the demat; a manual
     // holding with the same ISIN is shown but not added again [v6.1 §4, §9].
     const dematIsins = new Set(dematHoldings.map((h) => h.isin));
@@ -110,12 +112,12 @@ export function useNetWorth() {
       investments: valued, demat: Math.round((dematValue + raw.investments) * 100) / 100, dematBasis: dematRows.length ? [closeCount && `${closeCount}/${dematRows.length} demat at official closing price${closeDate ? ` (${closeDate})` : ""}`, closeCount < dematRows.length && `others at statement value${dematDate ? ` (${dematDate})` : ""}`, raw.investments > 0 && "investment & deposit accounts at their latest recorded value"].filter(Boolean).join(" · ") : raw.investments > 0 ? "investment & deposit accounts at their latest recorded value" : "",
       otherAssets: Math.round(raw.other * 100) / 100, property: Math.round(propVal), propertyBasis: books.properties.some((p) => p.valuation) ? "latest dated valuation or book value" : "book value from asset register",
       liabilities: raw.liabilities + loanOwed, liabilitiesBasis: "latest loan and card balances on record",
-      asOf: { bank: transactions.reduce((m, t) => (t.date > m ? t.date : m), "") || null, investments: closeDate ?? dematDate ?? null, property: books.properties.map((p) => p.valuation?.date ?? "").sort().pop() || null, liabilities: loans.filter((l) => l.status !== "closed").map((l) => (l as { asOf?: string }).asOf ?? "").sort().pop() || null },
+      asOf: { bank: transactions.reduce((m, t) => (t.date > m ? t.date : m), "") || null, investments: closeDate ?? dematDate ?? null, property: books.properties.map((p) => p.valuation?.date ?? "").sort().pop() || null, liabilities: lender.asOf },
     });
     const portfolio = nw.assets.find((a) => a.label === "Investments")?.value ?? 0;
     const last = books.snapshots.at(-1);
     // Market movement excludes money you put in or took out since the last snapshot [v6.1 §12].
     const flows = last ? investmentFlows(transactions, accounts, last.date) : 0;
-    return { ...nw, valued, portfolio, liquid: raw.assets, movement: last ? Math.round(portfolio - last.portfolio - flows) : null, flowsSinceSnapshot: Math.round(flows), lastSnapshot: last?.date ?? null, demat, dematRows, dematMissing, duplicates, closeJob: closes.job, pricesAsOf: closeDate ?? null, recordsAsOf: transactions.reduce((m, t) => (t.date > m ? t.date : m), "") || null };
-  }, [accounts, transactions, valuations, loans, books, demat, preferences.assets, closes]); // eslint-disable-line react-hooks/exhaustive-deps
+    return { ...nw, quality: [...nw.quality, ...(lender.missing.length ? [`Incomplete net worth: ${lender.missing.join(', ')} needs dated lender balance evidence (liability excluded, not zero)`] : [])], valued, portfolio, liquid: raw.assets, movement: last ? Math.round(portfolio - last.portfolio - flows) : null, flowsSinceSnapshot: Math.round(flows), lastSnapshot: last?.date ?? null, demat, dematRows, dematMissing, duplicates, closeJob: closes.job, pricesAsOf: closeDate ?? null, recordsAsOf: transactions.reduce((m, t) => (t.date > m ? t.date : m), "") || null };
+  }, [accounts, transactions, valuations, loans, books, demat, preferences.assets, closes, documents]); // eslint-disable-line react-hooks/exhaustive-deps
 }
