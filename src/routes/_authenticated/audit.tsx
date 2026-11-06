@@ -11,7 +11,10 @@ import { accountBalance } from "@/lib/ledger";
 import { useDemat } from "@/components/books/useBooks";
 import { fieldExtensionPlan } from "@/lib/books/intake";
 import { approvalHistory, entityObligations, groupBy, readinessTiles, reconHub, setFindingState } from "@/lib/books/audit";
-import { closePeriod, closableYears, closeYear, POLICY, reopenPeriod } from "@/lib/books/periods";
+import { closableYears, POLICY } from "@/lib/books/periods";
+import { PeriodEvidence } from "@/components/books/PeriodEvidence";
+import { supabase } from "@/integrations/supabase/client";
+import type { Json } from "@/integrations/supabase/types";
 import { missingInvoices } from "@/lib/gst-recon";
 import { receivableStatus } from "@/lib/receivables";
 import { useAuditAll } from "@/components/books/useAudit";
@@ -34,7 +37,7 @@ const LEVEL = { automatic: "Done automatically", confirm: "Needs your confirmati
 type By = "risk" | "type" | "entity" | "fy" | "account" | "evidence";
 
 function Audit() {
-  const { transactions, documents, accounts, preferences, loans } = useStore();
+  const { transactions, documents, accounts, preferences, loans, refresh } = useStore();
   const demat = useDemat();
   const { books, save } = useBooks();
   const { open: items, reviewed } = useAuditAll();
@@ -43,6 +46,18 @@ function Audit() {
   const today = new Date().toISOString().slice(0, 10);
   const lastFy = fyOf(new Date(Date.parse(today) - 365 * 864e5).toISOString().slice(0, 10));
   const [from, setFrom] = useState(fyRange(lastFy).start); const [to, setTo] = useState(fyRange(lastFy).end); const [note, setNote] = useState("");
+  const [periodRequest, setPeriodRequest] = useState<{ key: string; id: string; period: string } | null>(null);
+  const changePeriod = async (action: 'closed' | 'reopened', start: string, end: string, reason: string, period?: string) => {
+    const key = JSON.stringify([action, start, end, reason, period]);
+    const request = periodRequest?.key === key ? periodRequest : { key, id: crypto.randomUUID(), period: period ?? crypto.randomUUID() };
+    setPeriodRequest(request);
+    const { error } = await supabase.rpc('change_accounting_period', {
+      _id: request.id, _action: action, _period: request.period, _from: start, _to: end, _reason: reason,
+      _expected: { closedPeriods: books.closedPeriods, periodLog: books.periodLog } as unknown as Json,
+    });
+    if (error) throw new Error(error.message);
+    await refresh(); setPeriodRequest(null); setNote('');
+  };
   const obligations = useMemo(() => entities.flatMap((e) => entityObligations({ today, entities, books }, e.id)), [entities, books, today]);
   const tiles = useMemo(() => readinessTiles({ accounts, entries: transactions, items, books, docsMissing: missingInvoices(transactions, documents, 0).length, today, obligations, entitiesWithoutProfile: entities.filter((e) => !books.taxProfiles.some((p) => p.entityId === e.id)).length }), [accounts, transactions, items, books, documents, today, obligations, entities]);
   const history = useMemo(() => approvalHistory(books), [books]);
@@ -106,11 +121,12 @@ function Audit() {
       <Fold id="periods" title="Closed periods" hint={`${books.closedPeriods.length} closed · entries inside can't be changed`}>
         <div className="space-y-2 text-sm">
           {books.closedPeriods.map((p) => <div key={p.id} className="flex items-center justify-between gap-2 rounded-xl border px-3 py-2"><span>{p.from} → {p.to}<span className="block text-[11px] text-muted-foreground">Closed {p.closedOn}{p.note ? ` · ${p.note}` : ""}</span></span>
-            <Button size="sm" variant="ghost" onClick={async () => { const reason = window.prompt("Reopening a closed period needs a reason (kept permanently):"); if (!reason) return; try { const r = reopenPeriod(books.closedPeriods, books.periodLog, p.id, reason, today); await save({ closedPeriods: r.periods, periodLog: r.log }); toast.success("Period reopened"); } catch (e) { toast.error((e as Error).message); } }}>Reopen</Button></div>)}
+            <Button size="sm" variant="ghost" onClick={async () => { const reason = window.prompt("Reopening a closed period needs a reason (kept permanently):"); if (!reason) return; try { await changePeriod('reopened', p.from, p.to, reason, p.id); toast.success("Period reopened"); } catch (e) { toast.error((e as Error).message); } }}>Reopen</Button></div>)}
           <div className="grid grid-cols-2 gap-2"><label className="text-xs">From<Input type="date" value={from} onChange={(e) => setFrom(e.target.value)} /></label><label className="text-xs">To<Input type="date" value={to} onChange={(e) => setTo(e.target.value)} /></label>
             <Input className="col-span-2" placeholder="Note (e.g. FY audited and filed)" value={note} onChange={(e) => setNote(e.target.value)} /></div>
-          <Button size="sm" onClick={async () => { try { const r = closePeriod(books.closedPeriods, books.periodLog, from, to, note, today, crypto.randomUUID()); await save({ closedPeriods: r.periods, periodLog: r.log }); setNote(""); toast.success("Period closed"); } catch (e) { toast.error((e as Error).message); } }}>Close period</Button>
-          {closableYears(books.closedPeriods, today).length > 0 && <div className="flex flex-wrap items-center gap-1 text-xs"><span className="text-muted-foreground">Freeze a whole year:</span>{closableYears(books.closedPeriods, today).map((fy) => <Button key={fy} size="sm" variant="outline" className="h-7" onClick={async () => { if (!window.confirm(`Freeze FY ${fy}? Entries, opening balances and GST invoices dated 1 April ${fy.slice(0, 4)} – 31 March ${Number(fy.slice(0, 4)) + 1} can't be changed until it is reopened with a reason.`)) return; try { const r = closeYear(books.closedPeriods, books.periodLog, fy, note, today, crypto.randomUUID()); await save({ closedPeriods: r.periods, periodLog: r.log }); setNote(""); toast.success(`FY ${fy} frozen`); } catch (e) { toast.error((e as Error).message); } }}>Freeze FY {fy}</Button>)}</div>}
+          <Button size="sm" onClick={async () => { if (!window.confirm(`Close ${from} to ${to} and retain the saved records as evidence?`)) return; try { await changePeriod('closed', from, to, note); toast.success("Period closed with evidence"); } catch (e) { toast.error((e as Error).message); } }}>Close period</Button>
+          {closableYears(books.closedPeriods, today).length > 0 && <div className="flex flex-wrap items-center gap-1 text-xs"><span className="text-muted-foreground">Freeze a whole year:</span>{closableYears(books.closedPeriods, today).map((fy) => <Button key={fy} size="sm" variant="outline" className="h-7" onClick={async () => { if (!window.confirm(`Freeze FY ${fy}? Entries, opening balances and GST invoices dated 1 April ${fy.slice(0, 4)} – 31 March ${Number(fy.slice(0, 4)) + 1} can't be changed until it is reopened with a reason.`)) return; try { const r = fyRange(fy); await changePeriod('closed', r.start, r.end, note || `FY ${fy} frozen`); toast.success(`FY ${fy} frozen`); } catch (e) { toast.error((e as Error).message); } }}>Freeze FY {fy}</Button>)}</div>}
+          <PeriodEvidence revision={JSON.stringify(books.periodLog)} />
           {books.periodLog.length > 0 && <details className="text-xs"><summary className="cursor-pointer text-muted-foreground">History ({books.periodLog.length})</summary>{books.periodLog.slice().reverse().map((l, i) => <p key={i}>{l.at} · {l.action} · {l.reason}</p>)}</details>}
         </div>
       </Fold>

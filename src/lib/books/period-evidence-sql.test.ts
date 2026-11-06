@@ -15,7 +15,7 @@ beforeAll(async()=>{
  CREATE TABLE documents(id uuid,owner_id uuid,doc_date date,transaction_id uuid);
  CREATE TABLE expense_history(id uuid,expense_id uuid,action text);
  INSERT INTO finance_preferences VALUES('${owner}','{}',now()),('${other}','{}',now());`);
- await db.exec(readFileSync('.lovable/close-evidence.sql','utf8'));
+ await db.exec(readFileSync('drizzle/migrations/0070_authoritative_period_close_evidence.sql','utf8'));
 },20000);
 beforeEach(async()=>{
  await db.exec(`SELECT set_config('test.uid','${owner}',false); DELETE FROM period_close_evidence; DELETE FROM expenses; UPDATE finance_preferences SET data='{"books":{"closedPeriods":[],"periodLog":[]}}';
