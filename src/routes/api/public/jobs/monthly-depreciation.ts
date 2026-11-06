@@ -37,7 +37,7 @@ export const Route = createFileRoute("/api/public/jobs/monthly-depreciation")({
       if ((data?.length ?? 0) < 200) break;
     }
     let reminders = { sent: 0, skipped: 0 };
-    const seed = process.env.PUSH_VAPID_SEED;
+    const seed = process.env["WEB_PUSH_SIGNING_SEED"];
     if (ready.length && seed) {
       const { dispatchDepreciationReminders } = await import("@/lib/push-dispatch.server");
       const d = new Date(); d.setUTCDate(1); d.setUTCMonth(d.getUTCMonth() - 1);
