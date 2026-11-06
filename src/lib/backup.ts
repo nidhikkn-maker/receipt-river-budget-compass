@@ -1,6 +1,6 @@
 import { strFromU8, strToU8, unzipSync, zipSync } from "fflate";
 
-export const BACKUP_TABLES = ["finance_preferences", "family_members", "accounts", "category_budgets", "expenses", "expense_drafts", "commitments", "loans", "goals", "asset_valuations", "documents"] as const;
+export const BACKUP_TABLES = ["finance_preferences", "family_members", "accounts", "category_budgets", "expenses", "expense_drafts", "commitments", "loans", "goals", "asset_valuations", "documents", "period_close_evidence", "imported_period_history"] as const;
 export type BackupTable = (typeof BACKUP_TABLES)[number];
 /** Team visibility must never expand a personal backup's ownership scope. */
 export function backupOwnerColumn(table: BackupTable): "employee_id" | "owner_id" {

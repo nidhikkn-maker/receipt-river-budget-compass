@@ -14092,20 +14092,25 @@
       "modules": [
         "src/routes/_authenticated/audit.tsx",
         "src/components/books/PeriodEvidence.tsx",
-        "drizzle/migrations/0070_authoritative_period_close_evidence.sql"
+        "drizzle/migrations/0070_authoritative_period_close_evidence.sql",
+        "drizzle/migrations/0072_period_recovery_authority.sql",
+        "drizzle/migrations/0073_period_authority_preference_upserts.sql",
+        "src/lib/books/period-recovery-sql.test.ts"
       ],
       "dependencies": [
         "owner-scoped canonical persisted records",
         "remaining source-to-report acceptance"
       ],
       "status": "PARTIAL",
-      "requiredWork": "Finish all alternate period-write enforcement, closing blockers and complete continuous-audit acceptance.",
+      "requiredWork": "Finish closing blockers and company-specific evidence acceptance; restore bypass now guarded.",
       "verificationMethod": "Source-to-code audit followed by applicable unit/database/integration/real-route checks; hosted/device evidence separately required.",
       "finalTestResult": {
         "result": "PARTIAL",
         "evidence": [
           "7 PostgreSQL period-evidence tests PASS",
-          "isolated /audit close/download/reload/reopen PASS; screenshots inspected"
+          "isolated /audit close/download/reload/reopen PASS; screenshots inspected",
+          "8 isolated PostgreSQL recovery/authority cases PASS; applied safeguards read back in Cloud",
+          "isolated Audit imported-history label/download + close/reopen PASS; backup recovery PASS"
         ]
       },
       "verifiedAt": "2026-11-06"
@@ -14664,20 +14669,24 @@
         "src/components/DocumentIntake.tsx",
         "src/lib/store.tsx",
         "src/lib/books/runs.ts",
-        "drizzle/migrations/0071_revision_checked_document_intake.sql"
+        "drizzle/migrations/0071_revision_checked_document_intake.sql",
+        "drizzle/migrations/0074_typed_document_intake_validation.sql",
+        "src/lib/books/typed-intake-sql.test.ts"
       ],
       "dependencies": [
         "owner-scoped canonical persisted records",
         "remaining source-to-report acceptance"
       ],
       "status": "PARTIAL",
-      "requiredWork": "Complete typed server-side proposal validation and all document-to-report recovery cases; controlled browser evidence is not hosted persistence certification.",
+      "requiredWork": "Finish full nested/provenance validation, server approvals and all document-to-report recovery cases; hosted writes remain unverified.",
       "verificationMethod": "Source-to-code audit followed by applicable unit/database/integration/real-route checks; hosted/device evidence separately required.",
       "finalTestResult": {
         "result": "PARTIAL",
         "evidence": [
           "7 PostgreSQL intake tests PASS",
-          "isolated /statements lost response \u2192 reload \u2192 same durable request recovery PASS"
+          "isolated /statements lost response \u2192 reload \u2192 same durable request recovery PASS",
+          "8 typed-record SQL checks PASS; enforced validation read back in Cloud",
+          "isolated Statement Desk durable retry and Settings backup recovery PASS after safeguard changes"
         ]
       },
       "verifiedAt": "2026-11-06"
@@ -16981,15 +16990,26 @@
       },
       "original": "* Loans: Latest verified outstanding balance.",
       "interpretation": "Account for this source clause in the context of 10. Net-worth freshness; verify each enumerated feature and applicable safeguard, not merely screen presence.",
-      "modules": [],
-      "dependencies": [],
-      "status": "NOT IMPLEMENTED",
-      "requiredWork": "Map source clause to existing implementation and verification evidence; this initial status means not yet assessed, not an assertion that existing code is absent.",
+      "modules": [
+        "src/lib/books/loan-balances.ts",
+        "src/components/books/LoanBalanceReview.tsx",
+        "src/components/books/useBooks.ts"
+      ],
+      "dependencies": [
+        "retained lender statement linked to the loan",
+        "remaining source-to-report acceptance"
+      ],
+      "status": "PARTIAL",
+      "requiredWork": "Dated owner-confirmed statement evidence now values standalone loans; finish automatic printed outstanding extraction and server-enforced source/approval verification. Linked loans still use ledger balances, not duplicate register principal.",
       "verificationMethod": "Source-to-code audit followed by applicable unit/database/integration/real-route checks; hosted/device evidence separately required.",
       "finalTestResult": {
-        "result": "NOT RUN",
-        "evidence": []
-      }
+        "result": "PARTIAL",
+        "evidence": [
+          "7 loan-balance rules PASS",
+          "controlled signed-in Wealth source confirmation/save/reload PASS, mobile screenshot inspected; hosted writes blocked"
+        ]
+      },
+      "verifiedAt": "2026-11-06"
     },
     {
       "id": "V61-0078",
@@ -18054,8 +18074,8 @@
   ],
   "latestVerification": {
     "at": "2026-11-06",
-    "testFiles": 201,
-    "testsPassed": 1572,
+    "testFiles": 204,
+    "testsPassed": 1595,
     "hostedFinancialWritesVerified": false,
     "physicalDevicesVerified": false
   }

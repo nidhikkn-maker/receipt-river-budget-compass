@@ -1436,6 +1436,38 @@ export type Database = {
           },
         ]
       }
+      imported_period_history: {
+        Row: {
+          history: Json
+          id: string
+          imported_at: string
+          owner_id: string
+          verification: string
+        }
+        Insert: {
+          history: Json
+          id: string
+          imported_at?: string
+          owner_id: string
+          verification?: string
+        }
+        Update: {
+          history?: Json
+          id?: string
+          imported_at?: string
+          owner_id?: string
+          verification?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "imported_period_history_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "finance_preferences"
+            referencedColumns: ["owner_id"]
+          },
+        ]
+      }
       job_state: {
         Row: {
           detail: Json
@@ -1725,6 +1757,21 @@ export type Database = {
             referencedColumns: ["owner_id"]
           },
         ]
+      }
+      period_operation_authority: {
+        Row: {
+          owner_id: string
+          transaction_id: number
+        }
+        Insert: {
+          owner_id: string
+          transaction_id: number
+        }
+        Update: {
+          owner_id?: string
+          transaction_id?: number
+        }
+        Relationships: []
       }
       profiles: {
         Row: {
@@ -2393,6 +2440,10 @@ export type Database = {
         Args: { _config: Json; _id: string; _items: Json }
         Returns: string
       }
+      archive_backup_period_history: {
+        Args: { _history: Json }
+        Returns: undefined
+      }
       bulk_category_change: {
         Args: { batch_id: string; items: Json; target: string }
         Returns: string
@@ -2664,6 +2715,10 @@ export type Database = {
       undo_financial_correction: { Args: { _id: string }; Returns: undefined }
       undo_opening_balances: { Args: { _id: string }; Returns: undefined }
       undo_review_metadata: { Args: { _id: string }; Returns: undefined }
+      validate_intake_records: {
+        Args: { _new: Json; _old: Json; _type: string }
+        Returns: undefined
+      }
     }
     Enums: {
       app_role: "employee" | "manager" | "finance"

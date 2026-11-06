@@ -505,6 +505,27 @@
       "when": 1793941070367,
       "tag": "0071_revision_checked_document_intake",
       "breakpoints": true
+    },
+    {
+      "idx": 72,
+      "version": "7",
+      "when": 1793942455773,
+      "tag": "0072_period_recovery_authority",
+      "breakpoints": true
+    },
+    {
+      "idx": 73,
+      "version": "7",
+      "when": 1793942505398,
+      "tag": "0073_period_authority_preference_upserts",
+      "breakpoints": true
+    },
+    {
+      "idx": 74,
+      "version": "7",
+      "when": 1793942693976,
+      "tag": "0074_typed_document_intake_validation",
+      "breakpoints": true
     }
   ]
 }

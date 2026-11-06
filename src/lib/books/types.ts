@@ -139,6 +139,7 @@ export interface RuleVersion {
 }
 
 export interface BooksData {
+  loanBalances?: import('./loan-balances').LoanBalanceEvidence[] | undefined;
   closedPeriods: ClosedPeriod[]; periodLog: PeriodEvent[];
   docLinks: DocLink[]; proposedFields: ProposedField[]; retentionYears: Partial<Record<DocType, number>>;
   fyRecords: FyRecord[];
@@ -186,6 +187,7 @@ export function cleanBooks(raw: unknown): BooksData {
   const r = (raw && typeof raw === "object" ? raw : {}) as Record<string, unknown>;
   const d = emptyBooks();
   return {
+    loanBalances: arr<import('./loan-balances').LoanBalanceEvidence>(r['loanBalances'], (x) => typeof x.id === 'string' && typeof x.loanId === 'string' && fin(x.amount) && x.amount >= 0 && isDate(x.asOf) && typeof x.docId === 'string' && typeof x.sourceQuote === 'string' && typeof x.confirmedAt === 'string', 2000),
     closedPeriods: arr<ClosedPeriod>(r["closedPeriods"], (x) => typeof x.id === "string" && isDate(x.from) && isDate(x.to) && x.from <= x.to, 200),
     periodLog: arr<PeriodEvent>(r["periodLog"], (x) => typeof x.periodId === "string" && (x.action === "closed" || x.action === "reopened"), 500),
     docLinks: arr<DocLink>(r["docLinks"], (x) => typeof x.docId === "string" && typeof x.targetId === "string" && typeof x.kind === "string", 3000),
