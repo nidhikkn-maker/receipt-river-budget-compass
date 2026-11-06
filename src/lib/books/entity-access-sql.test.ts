@@ -25,7 +25,7 @@ beforeAll(async () => {
     INSERT INTO auth.users VALUES ('${OWNER}','owner@x.in',now()),('${MEMBER}','accountant@x.in',now()),('${STRANGER}','other@x.in',now());
     INSERT INTO public.finance_preferences VALUES ('${OWNER}','{"entities":[{"id":"c1"},{"id":"c2"}]}');
   `);
-  await db.exec(readFileSync('.lovable/staged-sql/entity-access.sql', 'utf8'));
+  await db.exec(readFileSync('drizzle/migrations/0075_entity_level_access.sql', 'utf8'));
   await db.exec(`GRANT SELECT ON public.entity_members TO authenticated;
     INSERT INTO public.documents VALUES ('d1','${OWNER}','${OWNER}/c1.pdf','c1'),('d2','${OWNER}','${OWNER}/c2.pdf','c2'),('d3','${OWNER}','${OWNER}/personal.pdf',NULL);
     INSERT INTO storage.objects VALUES ('receipts','${OWNER}/c1.pdf'),('receipts','${OWNER}/c2.pdf'),('receipts','${OWNER}/personal.pdf');`);
