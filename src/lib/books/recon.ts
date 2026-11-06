@@ -41,11 +41,11 @@ export function supplierRecon(invoices: GstInvoice[], payments: { id: string; am
     const mine = name.length >= 3 ? payments.filter((p) => !used.has(p.id) && p.date >= from && p.date <= to && words(p.text).includes(name)) : [];
     for (const p of mine) used.add(p.id);
     const paid = r2(mine.reduce((t, p) => t + p.amount, 0));
-    return { party: s.party, gstin: s.gstin, invoiced: s.invoiced, paid, difference: r2(s.invoiced - paid), invoices: s.invoices, payments: mine.length };
+    return { party: s.party, gstin: s.gstin, invoiced: s.invoiced, paid, difference: r2(s.invoiced - paid), invoices: s.invoices, payments: mine.length, allocation: allocatePayments(invoices.filter((i) => i.kind === "purchase" && i.date >= from && i.date <= to && (i.partyGstin || words(i.party)) === (s.gstin || name)), mine, to) };
   }).filter((r) => Math.abs(r.difference) > 1);
 }
 
-export interface CustomerReconRow { party: string; gstin: string; invoiced: number; received: number; outstanding: number; invoices: number; receipts: number }
+export interface CustomerReconRow { party: string; gstin: string; invoiced: number; received: number; outstanding: number; invoices: number; receipts: number; allocation?: ReturnType<typeof allocatePayments> | undefined }
 /** Customer: sales invoices (incl. tax) per customer vs receipts naming that customer; each receipt is used once. */
 export function customerRecon(invoices: GstInvoice[], receipts: { id: string; amount: number; text: string; date: string }[], from: string, to: string): CustomerReconRow[] {
   const by = new Map<string, { party: string; gstin: string; invoiced: number; invoices: number }>();
@@ -62,7 +62,7 @@ export function customerRecon(invoices: GstInvoice[], receipts: { id: string; am
     const mine = name.length >= 3 ? receipts.filter((p) => !used.has(p.id) && p.date >= from && p.date <= to && words(p.text).includes(name)) : [];
     for (const p of mine) used.add(p.id);
     const received = r2(mine.reduce((t, p) => t + p.amount, 0));
-    return { party: s.party, gstin: s.gstin, invoiced: s.invoiced, received, outstanding: r2(s.invoiced - received), invoices: s.invoices, receipts: mine.length };
+    return { party: s.party, gstin: s.gstin, invoiced: s.invoiced, received, outstanding: r2(s.invoiced - received), invoices: s.invoices, receipts: mine.length, allocation: allocatePayments(invoices.filter((i) => i.kind === "sales" && i.date >= from && i.date <= to && (i.partyGstin || words(i.party)) === (s.gstin || name)), mine, to) };
   }).filter((r) => Math.abs(r.outstanding) > 1);
 }
 
