@@ -50,23 +50,24 @@ export function candidateDays(now: Date, n = 5): Date[] {
 }
 
 /** Latest closing price per ISIN, preferring NSE over BSE on the same date [v6.1 §3]. */
-export function latestByIsin(rows: { exchange: string; isin: string | null; close: number; price_date: string; symbol: string }[]): Map<string, { exchange: string; close: number; date: string; symbol: string }> {
-  const m = new Map<string, { exchange: string; close: number; date: string; symbol: string }>();
+export interface SavedClose { exchange: string; close: number; date: string; symbol: string; fetchedAt?: string }
+export function latestByIsin(rows: { exchange: string; isin: string | null; close: number; price_date: string; symbol: string; fetched_at?: string }[]): Map<string, SavedClose> {
+  const m = new Map<string, SavedClose>();
   for (const r of rows) {
     if (!r.isin) continue;
     const p = m.get(r.isin);
-    if (!p || r.price_date > p.date || (r.price_date === p.date && r.exchange === "NSE" && p.exchange !== "NSE")) m.set(r.isin, { exchange: r.exchange, close: Number(r.close), date: r.price_date, symbol: r.symbol });
+    if (!p || r.price_date > p.date || (r.price_date === p.date && r.exchange === "NSE" && p.exchange !== "NSE")) m.set(r.isin, { exchange: r.exchange, close: Number(r.close), date: r.price_date, symbol: r.symbol, ...(r.fetched_at ? { fetchedAt: r.fetched_at } : {}) });
   }
   return m;
 }
 
 /** Latest close per ISIN on one exchange: NSE and BSE prices for the same ISIN stay separate [v6.1 §3]. */
-export function latestByIsinExchange(rows: { exchange: string; isin: string | null; close: number; price_date: string; symbol: string }[]): Map<string, { exchange: string; close: number; date: string; symbol: string }> {
-  const m = new Map<string, { exchange: string; close: number; date: string; symbol: string }>();
+export function latestByIsinExchange(rows: { exchange: string; isin: string | null; close: number; price_date: string; symbol: string; fetched_at?: string }[]): Map<string, SavedClose> {
+  const m = new Map<string, SavedClose>();
   for (const r of rows) {
     if (!r.isin) continue;
     const k = `${r.isin}|${r.exchange}`, p = m.get(k);
-    if (!p || r.price_date > p.date) m.set(k, { exchange: r.exchange, close: Number(r.close), date: r.price_date, symbol: r.symbol });
+    if (!p || r.price_date > p.date) m.set(k, { exchange: r.exchange, close: Number(r.close), date: r.price_date, symbol: r.symbol, ...(r.fetched_at ? { fetchedAt: r.fetched_at } : {}) });
   }
   return m;
 }

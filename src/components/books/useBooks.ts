@@ -10,6 +10,8 @@ import { loadDemat, type DematWithHoldings } from "@/lib/investments/holdings-st
 import { supabase } from "@/integrations/supabase/client";
 import { latestByIsin, latestByIsinExchange, pickClose } from "@/lib/market/bhavcopy";
 import type { Quote } from "@/lib/books/types";
+import type { SavedClose } from "@/lib/market/bhavcopy";
+import { investmentFlows } from "@/lib/books/investment-flows";
 
 /** Books data with a single-write updater (owner preferences). */
 export function useBooks() {
@@ -33,7 +35,7 @@ export function useDemat() {
   return d;
 }
 
-export interface ClosingPrices { byIsin: Map<string, { exchange: string; close: number; date: string; symbol: string }>; byIsinEx: Map<string, { exchange: string; close: number; date: string; symbol: string }>; job: { status: string; lastSuccess: string | null; reason: string | null } | null }
+export interface ClosingPrices { byIsin: Map<string, SavedClose>; byIsinEx: Map<string, SavedClose>; job: { status: string; lastSuccess: string | null; reason: string | null } | null }
 /** Official NSE/BSE end-of-day closes saved by the evening job, for the ISINs the owner holds [v6.1 §2–5]. */
 export function useClosingPrices(isins: string[]): ClosingPrices {
   const key = [...new Set(isins.filter((i) => /^IN[A-Z0-9]{10}$/.test(i)))].sort().join(",");
@@ -43,11 +45,11 @@ export function useClosingPrices(isins: string[]): ClosingPrices {
     void (async () => {
       const list = key ? key.split(",") : [];
       const [q, j] = await Promise.all([
-        list.length ? supabase.from("market_quotes").select("exchange,isin,close,price_date,symbol").in("isin", list).order("price_date", { ascending: false }).limit(list.length * 6) : Promise.resolve({ data: [] as never[] }),
+        list.length ? supabase.from("market_quotes").select("exchange,isin,close,price_date,symbol,fetched_at").in("isin", list).order("price_date", { ascending: false }).limit(list.length * 6) : Promise.resolve({ data: [] as never[] }),
         supabase.from("job_state").select("status,last_success,reason").eq("name", "closing-prices").maybeSingle(),
       ]);
       if (!live) return;
-      const rows = (q.data ?? []) as { exchange: string; isin: string | null; close: number; price_date: string; symbol: string }[];
+      const rows = q.data ?? [];
       setV({ byIsin: latestByIsin(rows), byIsinEx: latestByIsinExchange(rows), job: j.data ? { status: j.data.status, lastSuccess: j.data.last_success, reason: j.data.reason } : null });
     })().catch(() => undefined);
     return () => { live = false; };
@@ -55,7 +57,7 @@ export function useClosingPrices(isins: string[]): ClosingPrices {
   return v;
 }
 /** Closing price as a quote for the valuation rules; end-of-day, never live. */
-export const closeQuote = (isin: string, c: { exchange: string; close: number; date: string }): Quote => ({ key: `isin:${isin}`, price: c.close, at: `${c.date}T10:00:00.000Z` /* 15:30 IST market close */, provider: `${c.exchange} official closing price`, freshness: "eod", refreshedAt: `${c.date}T13:30:00.000Z` });
+export const closeQuote = (isin: string, c: { exchange: string; close: number; date: string; fetchedAt?: string }): Quote => ({ key: `isin:${isin}`, price: c.close, at: c.date, provider: `${c.exchange} official closing price`, freshness: "eod", refreshedAt: c.fetchedAt ?? "" });
 
 /** Ownership-aware dynamic net worth with freshness per component [v6.1 §9–11]. */
 export function useNetWorth() {
@@ -110,10 +112,10 @@ export function useNetWorth() {
       liabilities: raw.liabilities + loanOwed, liabilitiesBasis: "latest loan and card balances on record",
       asOf: { bank: transactions.reduce((m, t) => (t.date > m ? t.date : m), "") || null, investments: closeDate ?? dematDate ?? null, property: books.properties.map((p) => p.valuation?.date ?? "").sort().pop() || null, liabilities: loans.filter((l) => l.status !== "closed").map((l) => (l as { asOf?: string }).asOf ?? "").sort().pop() || null },
     });
-    const portfolio = nw.assets.find((a) => a.label === "Investments")!.value;
+    const portfolio = nw.assets.find((a) => a.label === "Investments")?.value ?? 0;
     const last = books.snapshots.at(-1);
     // Market movement excludes money you put in or took out since the last snapshot [v6.1 §12].
-    const flows = last ? transactions.filter((t) => t.txnType === "investment" && t.date > last.date).reduce((s, t) => s + t.amount, 0) : 0;
+    const flows = last ? investmentFlows(transactions, accounts, last.date) : 0;
     return { ...nw, valued, portfolio, liquid: raw.assets, movement: last ? Math.round(portfolio - last.portfolio - flows) : null, flowsSinceSnapshot: Math.round(flows), lastSnapshot: last?.date ?? null, demat, dematRows, dematMissing, duplicates, closeJob: closes.job, pricesAsOf: closeDate ?? null, recordsAsOf: transactions.reduce((m, t) => (t.date > m ? t.date : m), "") || null };
   }, [accounts, transactions, valuations, loans, books, demat, preferences.assets, closes]); // eslint-disable-line react-hooks/exhaustive-deps
 }
