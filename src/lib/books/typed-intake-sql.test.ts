@@ -62,6 +62,7 @@ it('validates nested financial-year schedules line by line',async()=>{
  await commit({books:{fyRecords:[fy]}});
  expect((await db.query<{n:number}>("SELECT jsonb_array_length(data->'books'->'fyRecords')::int n FROM finance_preferences")).rows[0]?.n).toBe(1);
  revision=(await db.query<{r:number}>('SELECT revision::int r FROM finance_preferences')).rows[0]?.r??0;
+ await db.exec("UPDATE documents SET evidence_locked=false");
  await expect(commit({books:{fyRecords:[{...fy,id:'f2',details:[{schedule:'profitLoss',lines:[{label:'',amount:1}]}]}]}},fresh())).rejects.toThrow(/schedule line/);
  await expect(commit({books:{fyRecords:[{...fy,id:'f3',details:[{schedule:'unknown',lines:[]}]}]}},fresh())).rejects.toThrow(/schedule/);
  await expect(commit({books:{fyRecords:[{...fy,id:'f4',audited:{bank:-5}}]}},fresh())).rejects.toThrow(/audited head/);
