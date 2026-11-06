@@ -1,3 +1,4 @@
+import { activeOverride, applyOverrides } from "@/lib/books/price-overrides";
 import { useEffect, useMemo, useState } from "react";
 import { useStore } from "@/lib/store";
 import { emptyBooks, type BooksData } from "@/lib/books/types";
@@ -91,11 +92,11 @@ export function useNetWorth() {
     const valued = books.holdings.filter((h) => !(h.isin && dematIsins.has(h.isin))).map((h) => {
       const c = h.isin && h.exchange ? pickClose(closes.byIsin, closes.byIsinEx, h.isin, h.exchange) : undefined;
       const qs = c && h.isin ? [...quotes.filter((x) => x.key !== `isin:${h.isin}`), closeQuote(h.isin, c)] : h.isin && h.exchange && closes.byIsin.has(h.isin) ? quotes.filter((x) => !(x.key === `isin:${h.isin}` && x.provider.endsWith("official closing price"))) : quotes;
-      return valueHolding(h, qs, books.goldRate, now, books.alerts);
+      return valueHolding(h, applyOverrides(qs, books.priceOverrides ?? []), books.goldRate, now, books.alerts);
     });
     const duplicates = books.holdings.filter((h) => h.isin && dematIsins.has(h.isin)).map((h) => h.name);
     let closeCount = 0;
-    const dematRows = dematHoldings.map((h) => { const c = closes.byIsin.get(h.isin); if (c && h.quantity > 0) { closeCount++; return { ...h, value: Math.round(h.quantity * c.close * 100) / 100, basis: `${c.exchange} close ${c.date}` }; } return { ...h, value: h.statementValue ?? null, basis: h.statementValue != null ? `statement ${h.asOf ?? ""}`.trim() : "no price" }; });
+    const dematRows = dematHoldings.map((h) => { const o = activeOverride(books.priceOverrides, `isin:${h.isin}`); if (o && h.quantity > 0) { closeCount++; return { ...h, value: Math.round(h.quantity * o.price * 100) / 100, basis: `manual price ${o.priceDate} · ${o.source}` }; } const c = closes.byIsin.get(h.isin); if (c && h.quantity > 0) { closeCount++; return { ...h, value: Math.round(h.quantity * c.close * 100) / 100, basis: `${c.exchange} close ${c.date}` }; } return { ...h, value: h.statementValue ?? null, basis: h.statementValue != null ? `statement ${h.asOf ?? ""}`.trim() : "no price" }; });
     // A missing price stays missing — never counted as zero [v6.1 §6, §15].
     const dematValue = dematRows.reduce((s, h) => s + (h.value ?? 0), 0);
     const dematMissing = dematRows.filter((h) => h.value == null).map((h) => h.name ?? h.isin);

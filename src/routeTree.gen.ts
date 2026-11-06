@@ -48,6 +48,7 @@ import { Route as AuthenticatedReconcileRouteImport } from './routes/_authentica
 import { Route as AuthenticatedRecordsCheckRouteImport } from './routes/_authenticated/records-check'
 import { Route as AuthenticatedReimbursementSettingsRouteImport } from './routes/_authenticated/reimbursement-settings'
 import { Route as AuthenticatedReportCentreRouteImport } from './routes/_authenticated/report-centre'
+import { Route as AuthenticatedReportStatusRouteImport } from './routes/_authenticated/report-status'
 import { Route as AuthenticatedReportsRouteImport } from './routes/_authenticated/reports'
 import { Route as AuthenticatedReviewRouteImport } from './routes/_authenticated/review'
 import { Route as AuthenticatedRulesRouteImport } from './routes/_authenticated/rules'
@@ -290,6 +291,12 @@ const AuthenticatedReportCentreRoute =
     path: '/report-centre',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedReportStatusRoute =
+  AuthenticatedReportStatusRouteImport.update({
+    id: '/report-status',
+    path: '/report-status',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedReportsRoute = AuthenticatedReportsRouteImport.update({
   id: '/reports',
   path: '/reports',
@@ -503,6 +510,7 @@ export interface FileRoutesByFullPath {
   '/records-check': typeof AuthenticatedRecordsCheckRoute
   '/reimbursement-settings': typeof AuthenticatedReimbursementSettingsRoute
   '/report-centre': typeof AuthenticatedReportCentreRoute
+  '/report-status': typeof AuthenticatedReportStatusRoute
   '/reports': typeof AuthenticatedReportsRoute
   '/review': typeof AuthenticatedReviewRoute
   '/rules': typeof AuthenticatedRulesRoute
@@ -575,6 +583,7 @@ export interface FileRoutesByTo {
   '/records-check': typeof AuthenticatedRecordsCheckRoute
   '/reimbursement-settings': typeof AuthenticatedReimbursementSettingsRoute
   '/report-centre': typeof AuthenticatedReportCentreRoute
+  '/report-status': typeof AuthenticatedReportStatusRoute
   '/reports': typeof AuthenticatedReportsRoute
   '/review': typeof AuthenticatedReviewRoute
   '/rules': typeof AuthenticatedRulesRoute
@@ -648,6 +657,7 @@ export interface FileRoutesById {
   '/_authenticated/records-check': typeof AuthenticatedRecordsCheckRoute
   '/_authenticated/reimbursement-settings': typeof AuthenticatedReimbursementSettingsRoute
   '/_authenticated/report-centre': typeof AuthenticatedReportCentreRoute
+  '/_authenticated/report-status': typeof AuthenticatedReportStatusRoute
   '/_authenticated/reports': typeof AuthenticatedReportsRoute
   '/_authenticated/review': typeof AuthenticatedReviewRoute
   '/_authenticated/rules': typeof AuthenticatedRulesRoute
@@ -722,6 +732,7 @@ export interface FileRouteTypes {
     | '/records-check'
     | '/reimbursement-settings'
     | '/report-centre'
+    | '/report-status'
     | '/reports'
     | '/review'
     | '/rules'
@@ -794,6 +805,7 @@ export interface FileRouteTypes {
     | '/records-check'
     | '/reimbursement-settings'
     | '/report-centre'
+    | '/report-status'
     | '/reports'
     | '/review'
     | '/rules'
@@ -866,6 +878,7 @@ export interface FileRouteTypes {
     | '/_authenticated/records-check'
     | '/_authenticated/reimbursement-settings'
     | '/_authenticated/report-centre'
+    | '/_authenticated/report-status'
     | '/_authenticated/reports'
     | '/_authenticated/review'
     | '/_authenticated/rules'
@@ -1195,6 +1208,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedReportCentreRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/report-status': {
+      id: '/_authenticated/report-status'
+      path: '/report-status'
+      fullPath: '/report-status'
+      preLoaderRoute: typeof AuthenticatedReportStatusRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/reports': {
       id: '/_authenticated/reports'
       path: '/reports'
@@ -1469,6 +1489,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedRecordsCheckRoute: typeof AuthenticatedRecordsCheckRoute
   AuthenticatedReimbursementSettingsRoute: typeof AuthenticatedReimbursementSettingsRoute
   AuthenticatedReportCentreRoute: typeof AuthenticatedReportCentreRoute
+  AuthenticatedReportStatusRoute: typeof AuthenticatedReportStatusRoute
   AuthenticatedReportsRoute: typeof AuthenticatedReportsRoute
   AuthenticatedReviewRoute: typeof AuthenticatedReviewRoute
   AuthenticatedRulesRoute: typeof AuthenticatedRulesRoute
@@ -1527,6 +1548,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedReimbursementSettingsRoute:
     AuthenticatedReimbursementSettingsRoute,
   AuthenticatedReportCentreRoute: AuthenticatedReportCentreRoute,
+  AuthenticatedReportStatusRoute: AuthenticatedReportStatusRoute,
   AuthenticatedReportsRoute: AuthenticatedReportsRoute,
   AuthenticatedReviewRoute: AuthenticatedReviewRoute,
   AuthenticatedRulesRoute: AuthenticatedRulesRoute,

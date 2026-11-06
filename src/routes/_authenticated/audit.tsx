@@ -91,6 +91,7 @@ function Audit() {
   return (
     <div className="mx-auto max-w-3xl space-y-4 p-4">
       <PageTitle title="Audit dashboard" sub={items.length ? `${items.length} open exceptions · they also appear in the Financial Inbox` : "Nothing open right now"} />
+      <Link to="/report-status" className="text-sm text-primary underline">Required reports status, evidence and tests</Link>
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">{tiles.map((t) => <div key={t.label} className="rounded-2xl border bg-card p-3"><p className="text-[11px] text-muted-foreground">{t.label}</p><p className="font-mono text-lg font-semibold">{t.value}</p></div>)}</div>
 
       <Fold title="Reconciliations" hint="Bank, card, loan, supplier, customer, investment, intercompany, GST" defaultOpen>
