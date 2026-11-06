@@ -124,7 +124,7 @@ export interface GoldRate { perGram24k: number; date: Iso; source: string }
 
 /** Tax & GST [§45–48]. */
 export interface TaxProfile { entityId: string; regime: "new" | "old"; obligations: string[]; gstScheme: "regular" | "composition" | "qrmp" | "none"; auditRequired: boolean; hasBusiness?: boolean | undefined; confirmedAt?: string | undefined; companyOption?: "115BAA" | "115BAB" | "normal25" | "normal30" | undefined }
-export interface GstInvoice {
+export interface GstInvoice extends importGstSpecial {
   id: string; gstin: string; kind: "sales" | "purchase"; number: string; date: Iso; party: string; partyGstin: string;
   taxable: number; igst: number; cgst: number; sgst: number; cess: number; docId?: string | undefined; transactionId?: string | undefined;
   /** Credit/debit note against an earlier invoice (amounts entered positive; credit notes reduce tax) [§47]. */
@@ -132,6 +132,7 @@ export interface GstInvoice {
   /** Amendment: this record replaces an earlier invoice, which then drops out of every draft. */
   amendsId?: string | undefined;
 }
+type importGstSpecial = import('./gst-special').GstSpecial;
 export interface GstFiling { id: string; gstin: string; period: string; form: string; filedOn: Iso; arn: string; docId?: string | undefined }
 
 /** Regulatory intelligence [§49–51]. */
@@ -144,6 +145,7 @@ export interface RuleVersion {
 }
 
 export interface BooksData {
+  gstAdvances?: import('./gst-special').GstAdvance[];
   loanBalances?: import('./loan-balances').LoanBalanceEvidence[] | undefined;
   priceOverrides?: import('./price-overrides').PriceOverride[] | undefined;
   closedPeriods: ClosedPeriod[]; periodLog: PeriodEvent[];
@@ -213,6 +215,7 @@ export function cleanBooks(raw: unknown): BooksData {
     ...(r["goldRate"] && fin((r["goldRate"] as GoldRate).perGram24k) ? { goldRate: r["goldRate"] as GoldRate } : {}),
     taxProfiles: arr<TaxProfile>(r["taxProfiles"], (x) => typeof x.entityId === "string", 100),
     gstInvoices: arr<GstInvoice>(r["gstInvoices"], (x) => typeof x.id === "string" && isDate(x.date) && fin(x.taxable), 10000),
+    gstAdvances: arr<import('./gst-special').GstAdvance>(r['gstAdvances'],x=>typeof x.id==='string'&&typeof x.gstin==='string'&&isDate(x.date)&&fin(x.taxable)&&Array.isArray(x.adjustments),2000),
     gstFilings: arr<GstFiling>(r["gstFilings"], (x) => typeof x.id === "string", 2000),
     rules: arr<RuleVersion>(r["rules"], (x) => typeof x.id === "string" && isDate(x.effectiveFrom), 1000),
     policy: cleanPolicy(r["policy"]),

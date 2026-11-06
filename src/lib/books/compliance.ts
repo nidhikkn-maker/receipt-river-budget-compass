@@ -7,7 +7,7 @@ import type { Expense } from "../expenses";
 import { fyOf, fyRange, type EntityProfile } from "../entities";
 import { closedPeriodFor } from "./periods";
 import { ruleOn } from "./regulatory";
-import { invoiceProblems, taxOf } from "./gst";
+import { effectiveInvoices, invoiceProblems, taxOf } from "./gst";
 import type { ClosedPeriod, CreditKind, FyRecord, GstFiling, GstInvoice, RuleVersion, TaxCredit, TaxProfile } from "./types";
 
 const r2 = (n: number) => Math.round(n * 100) / 100;
@@ -71,13 +71,14 @@ export interface ItcLine { invoice: GstInvoice; tax: number; eligible: boolean; 
  * Anything else is held with its reason, never dropped silently.
  */
 export function itcReview(list: GstInvoice[], gstin: string, period: string, in2b?: Set<string>): { lines: ItcLine[]; eligible: number; held: number } {
-  const mine = list.filter((i) => i.gstin === gstin && i.kind === "purchase" && i.date.startsWith(period));
+  const mine = effectiveInvoices(list).filter((i) => i.gstin === gstin && i.kind === "purchase" && i.date.startsWith(period));
   const seen = new Map<string, number>();
   for (const i of mine) { const k = `${i.partyGstin}|${i.number.trim().toUpperCase()}`; seen.set(k, (seen.get(k) ?? 0) + 1); }
   const lines = mine.map((i) => {
     const reasons: string[] = [];
     if (!i.partyGstin) reasons.push("no supplier GSTIN");
     reasons.push(...invoiceProblems(i));
+    if(i.treatment==='reverse_charge'&&(!i.rcmPaidOn||!i.rcmPaymentId||i.rcmPaidOn.slice(0,7)>period))reasons.push('reverse-charge tax payment not evidenced in this period');
     const k = `${i.partyGstin}|${i.number.trim().toUpperCase()}`;
     if ((seen.get(k) ?? 0) > 1) reasons.push("invoice number entered more than once");
     if (in2b && !in2b.has(k)) reasons.push("not in supplier-filed GSTR-2B");

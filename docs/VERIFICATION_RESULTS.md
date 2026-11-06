@@ -21,3 +21,15 @@ Not verified: hosted two-account access, real-device behaviour, real-document ex
 - Full suite: 215 files / 1,663 tests pass; typecheck clean.
 - New: price overrides (3), report-status (3), asset event postings (3), figure sources (4), GST notes/amendments (6), opening fixed assets (2), invoice allocation (3).
 - Browser (signed in, writes blocked): Required reports page, Wealth manual prices section, Audit Figure sources. Not browser-checked: GST note form, asset write-down posting.
+
+## 6 Nov 2026 — Priority 3 continuation
+- Full suite: 219 files / 1,680 tests passed after GST export/RCM/advance integration; preview build OK.
+- Approval: 4 disposable PostgreSQL checks for direct-write rejection, policy disabling, explicit confirmation, stale revision, altered retry, owner isolation and confirmed recovery. 2 client rules checks. Direct-write enforcement is staged, NOT active in Cloud; published old-client compatibility is the reason, not a claim of completion.
+- Installed: owner-only approval audit/reviewed-save RPC (`0080`, `0082`); closed GST amendment trigger (`0081`). Read-only database inventory confirms all three exist. No real record writes.
+- Closed GST: 5 disposable PostgreSQL checks including no-session bypass, removing the target in the same update, allowed open-period note, already-reopened original and wrong-company/nonexistent targets.
+- Source tracking: 2 new tests for salary/tax proof, missing linked entry and investment quantities/costs; no source labels are treated as retained documents.
+- GST: current-only register regression; 3 special-treatment tests assert LUT exports excluded from domestic supply, RCM payable in cash despite other ITC, payment-gated credit, service-advance adjustment and non-taxable goods advance.
+- `scripts/browser/test_priority_gst.py`: signed-in real Tax page with isolated preference/RPC responses; no write before approval, one invoice save, amendment displays one current row, advance saved, read-back after reload, no page errors. All external writes blocked. Screenshots inspected. This is NOT hosted write acceptance or real-document evidence.
+- Outstanding: P3 direct-write rollout/journal transitions; P7 annual/payment/late-credit consistency; P2 derived dependencies; P12 other derived facts; individual audit of remaining NOT AUDITED clauses.
+
+- Follow-up: 219 files / 1,681 tests pass; late RCM credit is counted only in the payment month, annual liability includes RCM, and monthly payment projections include service advances. Controlled GST browser rerun passed after these changes; build OK.

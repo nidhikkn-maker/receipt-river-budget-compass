@@ -1,5 +1,6 @@
 /** GSTIN-wise invoice register, GSTR-1 / GSTR-3B drafts, ITC review, payment matching [§47]. Drafts only. */
 import type { GstFiling, GstInvoice } from "./types";
+import { advanceHeads, type GstAdvance } from './gst-special';
 
 const r2 = (n: number) => Math.round(n * 100) / 100;
 export const taxOf = (i: GstInvoice) => r2(i.igst + i.cgst + i.sgst + i.cess);
@@ -10,7 +11,18 @@ export function effectiveInvoices(list: GstInvoice[]): GstInvoice[] {
   const replaced = new Set(list.map((i) => i.amendsId).filter(Boolean));
   return list.filter((i) => !replaced.has(i.id)).map((i) => (i.note === "credit" ? { ...i, taxable: -Math.abs(i.taxable), igst: -Math.abs(i.igst), cgst: -Math.abs(i.cgst), sgst: -Math.abs(i.sgst), cess: -Math.abs(i.cess) } : i));
 }
+/** Current register rows retain positive printed credit-note amounts for safe editing. */
+export function invoiceRegister(list:GstInvoice[],gstin:string,period:string):GstInvoice[]{
+  const replaced=new Set(list.map(i=>i.amendsId).filter(Boolean));
+  return list.filter(i=>!replaced.has(i.id)&&i.gstin===gstin&&periodOf(i.date)===period);
+}
 const isEligible = (i: GstInvoice, eligible?: Set<string>) => !!i.note || !eligible || eligible.has(`${i.partyGstin}|${i.number.trim().toUpperCase()}`);
+/** RCM credit belongs to the payment month, never to an unpaid invoice month. */
+function inputFor(list:GstInvoice[],gstin:string,period:string,eligible?:Set<string>):GstInvoice[]{
+ return effectiveInvoices(list).filter(i=>i.gstin===gstin&&i.kind==='purchase'&&(
+  i.treatment==='reverse_charge'?!!i.rcmPaymentId&&i.rcmPaidOn?.slice(0,7)===period:periodOf(i.date)===period&&isEligible(i,eligible)
+ ));
+}
 /** Note problems: a note must name the invoice it adjusts; an amendment must point at an existing record. */
 export function noteProblems(i: GstInvoice, list: GstInvoice[], closed: { from: string; to: string }[] = []): string[] {
   const out: string[] = [];
@@ -45,21 +57,24 @@ export function duplicateInvoices(list: GstInvoice[]): string[] {
 /** GSTR-1 draft: B2B by recipient GSTIN and B2C totals for one GSTIN/month. */
 export function gstr1(list: GstInvoice[], gstin: string, period: string) {
   const all = effectiveInvoices(list).filter((i) => i.gstin === gstin && i.kind === "sales" && periodOf(i.date) === period);
-  const sales = all.filter((i) => !i.note), notes = all.filter((i) => i.note);
+  const sales = all.filter((i) => !i.note&&!i.treatment?.startsWith('export')), notes = all.filter((i) => i.note);
+  const exports=all.filter(i=>i.treatment?.startsWith('export'));
   const b2b = sales.filter((i) => i.partyGstin);
   const b2c = sales.filter((i) => !i.partyGstin);
   const sum = (xs: GstInvoice[]) => ({ count: xs.length, taxable: r2(xs.reduce((s, i) => s + i.taxable, 0)), igst: r2(xs.reduce((s, i) => s + i.igst, 0)), cgst: r2(xs.reduce((s, i) => s + i.cgst, 0)), sgst: r2(xs.reduce((s, i) => s + i.sgst, 0)), cess: r2(xs.reduce((s, i) => s + i.cess, 0)) });
-  return { gstin, period, b2b: sum(b2b), b2c: sum(b2c), notes: sum(notes), noteList: notes.map((i) => ({ type: i.note!, recipient: i.partyGstin, number: i.number, date: i.date, original: i.originalNumber ?? "", taxable: i.taxable, tax: taxOf(i) })), invoices: b2b.map((i) => ({ recipient: i.partyGstin, number: i.number, date: i.date, taxable: i.taxable, tax: taxOf(i) })) };
+  return { gstin, period, exports:sum(exports), b2b: sum(b2b), b2c: sum(b2c), notes: sum(notes), noteList: notes.map((i) => ({ type: i.note ?? 'debit', recipient: i.partyGstin, number: i.number, date: i.date, original: i.originalNumber ?? "", taxable: i.taxable, tax: taxOf(i) })), invoices: b2b.map((i) => ({ recipient: i.partyGstin, number: i.number, date: i.date, taxable: i.taxable, tax: taxOf(i) })) };
 }
 
 /** GSTR-3B draft: outward tax, eligible ITC (only purchases matched in GSTR-2B when given), net payable. */
-export function gstr3b(list: GstInvoice[], gstin: string, period: string, in2b?: Set<string>) {
+export function gstr3b(list: GstInvoice[], gstin: string, period: string, in2b?: Set<string>, advances:GstAdvance[]=[]) {
   const mine = effectiveInvoices(list).filter((i) => i.gstin === gstin && periodOf(i.date) === period);
   const out = mine.filter((i) => i.kind === "sales"), inn = mine.filter((i) => i.kind === "purchase");
-  const eligible = inn.filter((i) => isEligible(i, in2b));
+  const eligible = inputFor(list,gstin,period,in2b);
   const t = (xs: GstInvoice[]) => r2(xs.reduce((s, i) => s + taxOf(i), 0));
-  const output = t(out), itc = t(eligible);
-  return { gstin, period, outwardTaxable: r2(out.reduce((s, i) => s + i.taxable, 0)), outputTax: output, itcClaimed: itc, itcHeld: r2(t(inn) - itc), netPayable: r2(Math.max(0, output - itc)), carryForward: r2(Math.max(0, itc - output)) };
+  const advance=advanceHeads(advances,gstin,period);
+  const output = t(out)+advance.igst+advance.cgst+advance.sgst+advance.cess, itc = t(eligible);
+  const setoff=gstPayable(list,gstin,period,in2b,undefined,advances);
+  return { gstin, period, outwardTaxable: r2(out.reduce((s, i) => s + i.taxable, 0)+advance.taxable), outputTax: output, itcClaimed: itc, itcHeld: r2(Math.max(0,t(inn) - t(eligible.filter(i=>periodOf(i.date)===period)))), netPayable: setoff.cashTotal, carryForward: r2(Object.values(setoff.carry).reduce((s,n)=>s+n,0)) };
 }
 
 /** Match GST payments in the ledger (narration with GST/CBIC/challan) to 3B liabilities by amount within ±₹1. */
@@ -95,12 +110,14 @@ export function unfiledPeriods(filings: GstFiling[], gstin: string, form: string
 }
 
 /** GSTR-9 working in its table layout (4 outward, 6 ITC, 9 tax payable) with checks against the monthly 3B drafts. */
-export function gstr9(list: GstInvoice[], gstin: string, fyStart: number, eligibleKeys?: Set<string>) {
+export function gstr9(list: GstInvoice[], gstin: string, fyStart: number, eligibleKeys?: Set<string>,advances:GstAdvance[]=[]) {
   const months = Array.from({ length: 12 }, (_, i) => { const m = ((i + 3) % 12) + 1; const y = m >= 4 ? fyStart : fyStart + 1; return `${y}-${String(m).padStart(2, "0")}`; });
   const a = annualSummary(list, gstin, fyStart);
-  const monthly = months.map((m) => gstr3b(list, gstin, m, eligibleKeys));
+  const monthly = months.map((m) => gstr3b(list, gstin, m, eligibleKeys,advances));
   const sum = (k: "outputTax" | "itcClaimed" | "netPayable") => r2(monthly.reduce((s, x) => s + x[k], 0));
-  const t4 = { taxable: a.sales, tax: a.outputTax }, t6 = { itc: sum("itcClaimed") }, t9 = { payable: a.outputTax, paidThrough3B: sum("outputTax") };
+  const advanceTax=months.reduce((s,m)=>{const h=advanceHeads(advances,gstin,m);return s+h.igst+h.cgst+h.sgst+h.cess;},0);
+  const reverseTax=months.reduce((s,m)=>s+taxOfHeads(gstPayable(list,gstin,m,eligibleKeys,undefined,advances).reverseCharge),0);
+  const t4 = { taxable: a.sales, tax: r2(a.outputTax+advanceTax) }, t6 = { itc: sum("itcClaimed") }, t9 = { payable: r2(a.outputTax+advanceTax+reverseTax), paidThrough3B: r2(sum("outputTax")+reverseTax) };
   const checks = [
     Math.abs(t9.payable - t9.paidThrough3B) > 1 && `Table 9 tax ${t9.payable} differs from monthly 3B total ${t9.paidThrough3B}`,
     a.inputTax - t6.itc > 1 && `Input tax ${a.inputTax} on invoices but only ${t6.itc} claimed in 3B (held or ineligible)`,
@@ -118,7 +135,8 @@ const rate = (i: GstInvoice) => (i.taxable > 0 ? Math.round(((i.igst + i.cgst + 
  */
 export function gstr1Json(list: GstInvoice[], gstin: string, period: string) {
   const all = list.filter((i) => i.gstin === gstin && i.kind === "sales" && periodOf(i.date) === period && !list.some((x) => x.amendsId === i.id));
-  const sales = all.filter((i) => !i.note), notes = all.filter((i) => i.note && i.partyGstin);
+  const sales = all.filter((i) => !i.note&&!i.treatment?.startsWith('export')), notes = all.filter((i) => i.note && i.partyGstin);
+  const exports=all.filter(i=>!i.note&&i.treatment?.startsWith('export'));
   const byNote = new Map<string, GstInvoice[]>();
   for (const i of notes) byNote.set(i.partyGstin, [...(byNote.get(i.partyGstin) ?? []), i]);
   const byCtin = new Map<string, GstInvoice[]>();
@@ -134,20 +152,24 @@ export function gstr1Json(list: GstInvoice[], gstin: string, period: string) {
     gstin, fp: fp(period), version: "GST3.2", hash: "hash",
     b2b: [...byCtin.entries()].map(([ctin, inv]) => ({ ctin, inv: inv.map((i) => ({ inum: i.number.trim(), idt: ddmmyyyy(i.date), val: r2(i.taxable + taxOf(i)), pos: i.igst ? i.partyGstin.slice(0, 2) : gstin.slice(0, 2), rchrg: "N", inv_typ: "R", itms: [{ num: 1, itm_det: { rt: rate(i), txval: i.taxable, iamt: i.igst, camt: i.cgst, samt: i.sgst, csamt: i.cess } }] })) })),
     b2cs: [...b2cs.values()],
+    exp: ['export_paid','export_lut'].map(treatment=>({exp_typ:treatment==='export_paid'?'WPAY':'WOPAY',inv:exports.filter(i=>i.treatment===treatment).map(i=>({inum:i.number,idt:ddmmyyyy(i.date),val:r2(i.taxable+taxOf(i)),sbnum:i.shippingBill??'',sbdt:i.shippingDate?ddmmyyyy(i.shippingDate):'',sbpcode:i.portCode??'',itms:[{rt:rate(i),txval:i.taxable,iamt:i.igst,csamt:i.cess}]}))})).filter(x=>x.inv.length),
     cdnr: [...byNote.entries()].map(([ctin, nt]) => ({ ctin, nt: nt.map((i) => ({ ntty: i.note === "credit" ? "C" : "D", nt_num: i.number.trim(), nt_dt: ddmmyyyy(i.date), val: r2(Math.abs(i.taxable) + Math.abs(taxOf(i))), pos: i.igst ? i.partyGstin.slice(0, 2) : gstin.slice(0, 2), rchrg: "N", inv_typ: "R", itms: [{ num: 1, itm_det: { rt: rate(i), txval: Math.abs(i.taxable), iamt: Math.abs(i.igst), camt: Math.abs(i.cgst), samt: Math.abs(i.sgst), csamt: Math.abs(i.cess) } }] })) })),
   };
 }
 
 /** GSTR-3B in the GSTN JSON layout (sup_details.osup_det, itc_elg.itc_avl/itc_net). Working file only. */
-export function gstr3bJson(list: GstInvoice[], gstin: string, period: string, eligible?: Set<string>) {
+export function gstr3bJson(list: GstInvoice[], gstin: string, period: string, eligible?: Set<string>,advances:GstAdvance[]=[]) {
   const mine = effectiveInvoices(list).filter((i) => i.gstin === gstin && periodOf(i.date) === period);
-  const out = mine.filter((i) => i.kind === "sales");
-  const inn = mine.filter((i) => i.kind === "purchase" && isEligible(i, eligible));
+  const out = mine.filter((i) => i.kind === "sales"&&!i.treatment?.startsWith('export'));
+  const zero=mine.filter(i=>i.kind==='sales'&&i.treatment?.startsWith('export'));
+  const reverse=mine.filter(i=>i.kind==='purchase'&&i.treatment==='reverse_charge');
+  const inn = inputFor(list,gstin,period,eligible);
   const s = (xs: GstInvoice[], k: "taxable" | "igst" | "cgst" | "sgst" | "cess") => r2(xs.reduce((t, i) => t + i[k], 0));
   const itc = { ty: "OTH", iamt: s(inn, "igst"), camt: s(inn, "cgst"), samt: s(inn, "sgst"), csamt: s(inn, "cess") };
+  const advance=advanceHeads(advances,gstin,period);
   return {
     gstin, ret_period: fp(period),
-    sup_details: { osup_det: { txval: s(out, "taxable"), iamt: s(out, "igst"), camt: s(out, "cgst"), samt: s(out, "sgst"), csamt: s(out, "cess") } },
+    sup_details: { osup_det: { txval: s(out, "taxable")+advance.taxable, iamt: s(out, "igst")+advance.igst, camt: s(out, "cgst")+advance.cgst, samt: s(out, "sgst")+advance.sgst, csamt: s(out, "cess")+advance.cess },osup_zero:{txval:s(zero,'taxable'),iamt:s(zero,'igst'),csamt:s(zero,'cess')},isup_rev:{txval:s(reverse,'taxable'),iamt:s(reverse,'igst'),camt:s(reverse,'cgst'),samt:s(reverse,'sgst'),csamt:s(reverse,'cess')} },
     itc_elg: { itc_avl: [itc], itc_rev: [], itc_net: { iamt: itc.iamt, camt: itc.camt, samt: itc.samt, csamt: itc.csamt }, itc_inelg: [] },
   };
 }
@@ -173,6 +195,7 @@ export function validateGstJson(kind: "GSTR-1" | "GSTR-3B", j: Record<string, un
 }
 
 export interface GstHeads { igst: number; cgst: number; sgst: number; cess: number }
+const taxOfHeads=(h:GstHeads)=>h.igst+h.cgst+h.sgst+h.cess;
 /**
  * ITC set-off in the order the GST law sets (s.49 / rule 88A): IGST credit against IGST, then CGST, then SGST;
  * CGST credit against CGST then IGST; SGST credit against SGST then IGST; cess only against cess. CGST and
@@ -180,6 +203,8 @@ export interface GstHeads { igst: number; cgst: number; sgst: number; cess: numb
  */
 export function gstSetOff(output: GstHeads, itc: GstHeads): { used: { from: keyof GstHeads; to: keyof GstHeads; amount: number }[]; cash: GstHeads; carry: GstHeads; cashTotal: number } {
   const due = { ...output }, cr = { ...itc }; const used: { from: keyof GstHeads; to: keyof GstHeads; amount: number }[] = [];
+  // Excess credit notes/advance adjustments reduce future liability; never show negative cash due.
+  for(const k of ['igst','cgst','sgst','cess'] as const){due[k]=Math.max(0,due[k]);cr[k]=Math.max(0,cr[k]);}
   const use = (from: keyof GstHeads, to: keyof GstHeads) => { const a = r2(Math.min(cr[from], due[to])); if (a > 0) { cr[from] = r2(cr[from] - a); due[to] = r2(due[to] - a); used.push({ from, to, amount: a }); } };
   use("igst", "igst"); use("igst", "cgst"); use("igst", "sgst");
   use("cgst", "cgst"); use("cgst", "igst"); use("sgst", "sgst"); use("sgst", "igst"); use("cess", "cess");
@@ -187,11 +212,17 @@ export function gstSetOff(output: GstHeads, itc: GstHeads): { used: { from: keyo
 }
 
 /** Head-wise output tax and eligible ITC for a GSTIN and month, then set off. */
-export function gstPayable(list: GstInvoice[], gstin: string, period: string, eligible?: Set<string>, carryIn?: GstHeads) {
+export function gstPayable(list: GstInvoice[], gstin: string, period: string, eligible?: Set<string>, carryIn?: GstHeads,advances:GstAdvance[]=[]) {
   const mine = effectiveInvoices(list).filter((i) => i.gstin === gstin && periodOf(i.date) === period);
   const h = (xs: GstInvoice[]): GstHeads => ({ igst: r2(xs.reduce((s, i) => s + i.igst, 0)), cgst: r2(xs.reduce((s, i) => s + i.cgst, 0)), sgst: r2(xs.reduce((s, i) => s + i.sgst, 0)), cess: r2(xs.reduce((s, i) => s + i.cess, 0)) });
   const out = h(mine.filter((i) => i.kind === "sales"));
-  const inn = h(mine.filter((i) => i.kind === "purchase" && isEligible(i, eligible)));
+  const advance=advanceHeads(advances,gstin,period);
+  for(const k of ['igst','cgst','sgst','cess'] as const)out[k]=r2(out[k]+advance[k]);
+  const reverse=h(mine.filter(i=>i.kind==='purchase'&&i.treatment==='reverse_charge'));
+  const inn = h(inputFor(list,gstin,period,eligible));
   const itc = carryIn ? { igst: r2(inn.igst + carryIn.igst), cgst: r2(inn.cgst + carryIn.cgst), sgst: r2(inn.sgst + carryIn.sgst), cess: r2(inn.cess + carryIn.cess) } : inn;
-  return { output: out, itc, ...gstSetOff(out, itc) };
+  const result=gstSetOff(out,itc);
+  for(const k of ['igst','cgst','sgst','cess'] as const)result.cash[k]=r2(result.cash[k]+reverse[k]);
+  result.cashTotal=r2(Object.values(result.cash).reduce((s,n)=>s+n,0));
+  return { output: out, itc, reverseCharge:reverse, ...result };
 }

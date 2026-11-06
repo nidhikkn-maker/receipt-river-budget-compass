@@ -7,6 +7,16 @@ const asset = (x: Partial<Asset>) => ({ id: "a1", name: "Laptop", kind: "compute
 const docs = [{ id: "d1", title: "Invoice 42" }];
 
 describe("register figure sources", () => {
+  it('traces salary and tax credits but never treats proof text or a missing entry as a retained source',()=>{
+    const books={...emptyBooks(),salaryEvidence:[{entityId:'personal',fy:'2026-27',amount:100000,docId:'d1'}],taxCredits:[{id:'c',entityId:'personal',fy:'2026-27',kind:'tds' as const,amount:1000,source:'printed',transactionId:'gone'}],taxDeductions:[{id:'ded',entityId:'personal',fy:'2026-27',section:'80C' as const,amount:500,evidence:'LIC receipt'}]};
+    const rows=registerEvidence({assets:[],books,docs,entryTitle:()=>undefined});
+    expect(rows.find(r=>r.register==='Salary evidence')?.source?.id).toBe('d1');
+    expect(unsourced(rows).map(r=>r.recordId)).toEqual(['c','ded']);
+  });
+  it('investment quantities and costs need actual links rather than a source label',()=>{
+    const books={...emptyBooks(),holdings:[{id:'h',kind:'mutual_fund' as const,name:'Fund',quantity:10,costBasis:200,sharePct:100,source:'Statement'}]};
+    expect(unsourced(registerEvidence({assets:[],books,docs}))).toHaveLength(2);
+  });
   it("uses the record's own document first", () => {
     const r = registerEvidence({ assets: [asset({ docId: "d1" })], books: emptyBooks(), docs });
     expect(r[0]!.source).toEqual({ kind: "document", id: "d1", title: "Invoice 42" });

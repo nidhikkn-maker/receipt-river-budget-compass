@@ -4,7 +4,7 @@ d=json.load(open('.lovable/requirements/register.json')); r=d['requirements']
 c=collections.Counter(x['status'] for x in r)
 out=['# Ledgerline v6.0 + v6.1 master requirements register','',
  'Generated from `.lovable/requirements/register.json`; edit the register, then run `python3 scripts/requirements/render_docs.py`.',
- 'Status rule: COMPLETE only with connected code, enforced security, executed tests and recorded evidence. "NOT IMPLEMENTED" here means *not yet re-verified against code*, not proven absent.','',
+ 'Status rule: VERIFIED COMPLETE only with connected code, enforced security, executed tests and recorded evidence. NOT AUDITED means the individual clause has not yet been assessed; MISSING means an audit found no implementation. PARTIAL retains the remaining development or verification work.','',
  '| Status | Count |','|---|---|']+[f'| {k} | {v} |' for k,v in sorted(c.items())]+['']
 cur=None
 for x in r:

@@ -561,6 +561,27 @@
       "when": 1793969041879,
       "tag": "0079_intake_server_approval",
       "breakpoints": true
+    },
+    {
+      "idx": 80,
+      "version": "7",
+      "when": 1793975074126,
+      "tag": "0080_reviewed_preference_saves",
+      "breakpoints": true
+    },
+    {
+      "idx": 81,
+      "version": "7",
+      "when": 1793975100108,
+      "tag": "0081_closed_gst_amendment_guard",
+      "breakpoints": true
+    },
+    {
+      "idx": 82,
+      "version": "7",
+      "when": 1793975486931,
+      "tag": "0082_advance_review_sections",
+      "breakpoints": true
     }
   ]
 }

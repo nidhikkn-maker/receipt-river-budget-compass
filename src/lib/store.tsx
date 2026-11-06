@@ -23,6 +23,8 @@ import { mappingStillCurrent, type ReviewMappingPreview } from './review-mapping
 import { recurringDuplicates } from './review-recurring';
 import { metadataStillCurrent, type MetadataPreview } from './review-metadata';
 import { validateBankBalance } from './loan-funding';
+import { preferenceReviewSections } from './preference-review';
+import { PreferenceReview } from '@/components/PreferenceReview';
 
 export interface Loan {
   id: string; name: string;
@@ -185,6 +187,9 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
   const [preferences, setPreferences] = useState<FinancePreferences>(defaultPreferences);
   const preferencesRevision = useRef<number | null>(null);
   const intakeRequests = useRef(new Map<string, { id: string; key: string; expected: number }>());
+  const [reviewSections,setReviewSections]=useState<string[]|null>(null);
+  const reviewDecision=useRef<((approved:boolean)=>void)|null>(null);
+  const preferenceRequest=useRef<{id:string;key:string;expected:number|null}|null>(null);
 
   const firstLoad = useRef(true);
   // Only the very first cloud load uses the light expense query; later loads always fetch full records.
@@ -395,10 +400,20 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
 
   const savePreferences: Ctx["savePreferences"] = async (p) => {
     const previous=preferences;
+    if(reviewDecision.current)throw new Error('Finish the current review before saving another change');
+    const sections=preferenceReviewSections(previous,p);
+    if(sections.length){
+      const approved=await new Promise<boolean>(resolve=>{reviewDecision.current=resolve;setReviewSections(sections);});
+      if(!approved)throw new Error('Changes were not approved; nothing saved');
+    }
+    const key=JSON.stringify(p);
+    const prior=preferenceRequest.current;
+    const request=prior?.key===key?prior:{id:crypto.randomUUID(),key,expected:preferencesRevision.current};
+    preferenceRequest.current=request;
     setPreferences(p);
     try {
-      const result = await supabase.from("finance_preferences").upsert({ owner_id: userId, data: p as unknown as Json, updated_at: new Date().toISOString() }).select('revision').single();
-      check(result.error); preferencesRevision.current = result.data?.revision ?? null;
+      const result = await supabase.rpc('save_reviewed_preferences',{_id:request.id,_data:p as unknown as Json,_expected:request.expected ?? -1,_approved:sections.length>0});
+      check(result.error); preferencesRevision.current = result.data; preferenceRequest.current=null;
     }
     catch(e){setPreferences(previous);throw e;}
   };
@@ -795,6 +810,7 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
       setAllocations, updateReimbursement, addReimbursementReceipt, listReviews, saveReview,
     }}>
       {children}
+      <PreferenceReview sections={reviewSections} onDecision={approved=>{const resolve=reviewDecision.current;reviewDecision.current=null;setReviewSections(null);resolve?.(approved);}} />
     </StoreCtx.Provider>
   );
 }

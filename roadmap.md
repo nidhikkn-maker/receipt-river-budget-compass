@@ -1,4 +1,6 @@
 ## Autonomous master execution (6 Nov 2026)
+- [x] Priority 3 reviewed-save RPC/owner audit and central approval dialog; closed-GST amendment database guard; current invoice list, export/RCM/advances and expanded tax/investment input sources. 1,681 automated checks pass; isolated GST save/amendment/advance/reload browser check passes; production records unchanged.
+- [ ] Resume narrow P3 journal/rule enforcement (direct-write rollout staged pending compatible publish), P7 allocation-rate and nested-validation consistency, P2 derived source chains, P12 snapshot rules, then remaining individually unaudited clauses. No partial priority declared complete.
 - [ ] Recover and consolidate every original v6.0/v6.1 requirement with source wording, implementation evidence and actual verification status.
 - [ ] Execute all accessible gaps; keep the master register and next executable task current, with no routine continuation approvals.
 - [ ] Final line-by-line document audit and consolidated verification report; do not declare unverified requirements complete.
