@@ -26,6 +26,8 @@ beforeAll(async () => {
   `);
   await db.exec(readFileSync('drizzle/migrations/0075_entity_level_access.sql', 'utf8'));
   await db.exec(readFileSync('drizzle/migrations/0076_entity_scoped_transactions.sql', 'utf8'));
+  await db.exec(readFileSync('drizzle/migrations/0077_my_shared_companies.sql', 'utf8'));
+  await db.exec(`UPDATE public.finance_preferences SET data='{"entities":[{"id":"c1","name":"Krupa Ltd"},{"id":"c2","name":"Other"}]}'`);
   await db.exec(`GRANT SELECT ON public.entity_members TO authenticated;
     INSERT INTO public.expenses VALUES ('t1','${OWNER}','c1',100),('t2','${OWNER}','c2',200),('t3','${OWNER}',NULL,300);`);
 }, 20000);
@@ -35,6 +37,8 @@ describe('company-scoped transactions', () => {
   it('view-only grant: reads only that company, cannot edit', async () => {
     await as(OWNER); await db.query("SELECT public.grant_entity_access('c1','acct@x.in',false)");
     await as(MEMBER); expect(await rows()).toEqual(['t1']);
+    const mine = (await db.query<{ company_name: string; can_write: boolean }>('SELECT company_name, can_write FROM public.my_shared_companies()')).rows;
+    expect(mine).toEqual([{ company_name: 'Krupa Ltd', can_write: false }]);
     expect((await db.query("UPDATE public.expenses SET amount=1 WHERE id='t1'")).affectedRows).toBe(0);
   });
   it('edit grant: can edit that company only and cannot move it to another company or personal', async () => {
@@ -49,6 +53,7 @@ describe('company-scoped transactions', () => {
     await as(OWNER); const id = (await db.query<{ id: string }>('SELECT id FROM public.entity_members WHERE revoked_at IS NULL')).rows[0]!.id;
     await db.query('SELECT public.revoke_entity_access($1)', [id]);
     await as(MEMBER); expect(await rows()).toEqual([]);
+    expect((await db.query('SELECT * FROM public.my_shared_companies()')).rows).toEqual([]);
     expect((await db.query("UPDATE public.expenses SET amount=1 WHERE id='t1'")).affectedRows).toBe(0);
   });
 });
