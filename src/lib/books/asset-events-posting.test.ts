@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { eventPostings } from "./assets-ledger";
 import type { Asset } from "../assets";
 
-const base = { id: "a1", name: "Laptop", kind: "computer", cost: 100000, inUse: "2026-04-01", accountId: "acc1" } as unknown as Asset;
+const base = { id: "a1", name: "Laptop", kind: "computer", cost: 100000, inUse: "2026-04-01", accountId: "acc1", sharePct: 100, bookMethod: "slm", bookRatePct: 20 } as unknown as Asset;
 
 describe("impairment and disposal postings", () => {
   it("posts an impairment write-down on the asset's own account", () => {

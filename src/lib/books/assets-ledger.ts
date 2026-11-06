@@ -131,6 +131,7 @@ export function eventPostings(a: Asset, closed: ClosedPeriod[]): { postings: Eve
   const add = (p: Omit<EventPosting, "accountId">) => {
     if (!a.accountId) { problems.push(`${a.name}: link a ledger asset account first`); return; }
     if (closedPeriodFor(p.date, closed)) { problems.push(`${a.name}: ${p.date} is in a closed period`); return; }
+    if (!Number.isFinite(p.amount)) { problems.push(`${a.name}: book value could not be worked out — check cost and depreciation rate`); return; }
     if (!(p.amount > 0)) return;
     postings.push({ ...p, accountId: a.accountId });
   };
