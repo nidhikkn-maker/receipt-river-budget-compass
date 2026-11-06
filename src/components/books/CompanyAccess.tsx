@@ -6,8 +6,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { useStore } from "@/lib/store";
 import { companyDocuments, type EntityAccounts } from "@/lib/books/entity-accounts";
 import { confirmAction } from "@/lib/confirm";
+import { rowsFor, sharedCompanyCsv, type SharedCompany, type SharedDoc, type SharedTxn } from "@/lib/books/shared-company";
 
-type Grant = { id: string; member_email: string; created_at: string };
+type Grant = { id: string; member_email: string; created_at: string; can_write: boolean };
 
 /** Owner-side: who may read this company's tagged documents, and which documents are tagged. Enforced in the database, not here. */
 export function CompanyAccess({ entityId, entityName, links }: { entityId: string; entityName: string; links: EntityAccounts }) {
@@ -15,7 +16,7 @@ export function CompanyAccess({ entityId, entityName, links }: { entityId: strin
   const [grants, setGrants] = useState<Grant[]>([]);
   const [email, setEmail] = useState("");
   const load = useCallback(async () => {
-    const { data } = await supabase.from("entity_members").select("id,member_email,created_at").eq("owner_id", userId).eq("entity_id", entityId).is("revoked_at", null).order("created_at");
+    const { data } = await supabase.from("entity_members").select("id,member_email,created_at,can_write").eq("owner_id", userId).eq("entity_id", entityId).is("revoked_at", null).order("created_at");
     setGrants(data ?? []);
   }, [entityId, userId]);
   useEffect(() => { void load(); }, [load]);
@@ -25,10 +26,10 @@ export function CompanyAccess({ entityId, entityName, links }: { entityId: strin
     <details className="rounded-xl border p-3 text-sm">
       <summary className="cursor-pointer text-xs font-semibold text-muted-foreground">Access & documents · {grants.length} people · {tagged.length} documents</summary>
       <div className="mt-3 space-y-3">
-        <p className="text-xs text-muted-foreground">People you add can view only documents tagged to {entityName}. Your personal and other companies' records stay private. They cannot change anything.</p>
+        <p className="text-xs text-muted-foreground">People you add see only documents and entries tagged to {entityName}. Your personal and other companies' records stay private. View-only people cannot change anything; editors can change this company's entries but never move them out of it.</p>
         {grants.map((g) => (
           <div key={g.id} className="flex items-center justify-between gap-2 rounded-lg bg-secondary/50 px-3 py-1.5">
-            <span className="truncate">{g.member_email}</span>
+            <span className="truncate">{g.member_email}<span className="ml-2 text-xs text-muted-foreground">{g.can_write ? "Can edit" : "View only"}</span></span>
             <Button size="sm" variant="ghost" className="text-destructive" onClick={async () => {
               if (!(await confirmAction(`Remove ${g.member_email}'s access to ${entityName}?`))) return;
               const { error } = await supabase.rpc("revoke_entity_access", { _id: g.id });
@@ -38,10 +39,13 @@ export function CompanyAccess({ entityId, entityName, links }: { entityId: strin
         ))}
         <div className="flex gap-2">
           <Input aria-label={`Email to share ${entityName}`} type="email" placeholder="accountant@example.com" value={email} onChange={(e) => setEmail(e.target.value)} />
-          <Button variant="outline" disabled={!email.includes("@")} onClick={async () => {
-            const { error } = await supabase.rpc("grant_entity_access", { _entity: entityId, _email: email, _write: false });
-            if (error) toast.error(error.message); else { toast.success("View access given"); setEmail(""); void load(); }
-          }}>Give view access</Button>
+          {([false, true] as const).map((w) => (
+            <Button key={String(w)} variant="outline" disabled={!email.includes("@")} onClick={async () => {
+              if (w && !(await confirmAction(`Let ${email} change ${entityName}'s entries?`))) return;
+              const { error } = await supabase.rpc("grant_entity_access", { _entity: entityId, _email: email, _write: w });
+              if (error) toast.error(error.message); else { toast.success(w ? "Edit access given" : "View access given"); setEmail(""); void load(); }
+            }}>{w ? "Can edit" : "View only"}</Button>
+          ))}
         </div>
         <div className="space-y-1">
           <p className="text-xs font-semibold text-muted-foreground">Tagged documents</p>
@@ -54,19 +58,57 @@ export function CompanyAccess({ entityId, entityName, links }: { entityId: strin
   );
 }
 
-type Shared = { id: string; title: string; doc_type: string; doc_date: string | null; file_path: string };
-
-/** Member-side: documents other owners shared with you through a company grant. */
+/** Member-side: companies other owners shared with you. The database decides what is visible; this only groups it. */
 export function SharedWithMe() {
-  const { userId, signedUrl } = useStore();
-  const [docs, setDocs] = useState<Shared[] | null>(null);
-  useEffect(() => { void supabase.from("documents").select("id,title,doc_type,doc_date,file_path").neq("owner_id", userId).order("created_at", { ascending: false }).limit(200).then(({ data }) => setDocs(data ?? [])); }, [userId]);
-  if (!docs?.length) return null;
+  const { signedUrl } = useStore();
+  const [companies, setCompanies] = useState<SharedCompany[] | null>(null);
+  const [txns, setTxns] = useState<SharedTxn[]>([]);
+  const [docs, setDocs] = useState<SharedDoc[]>([]);
+  const load = useCallback(async () => {
+    const { data: cs } = await supabase.rpc("my_shared_companies");
+    const list = (cs ?? []) as SharedCompany[];
+    setCompanies(list);
+    if (!list.length) { setTxns([]); setDocs([]); return; }
+    const ids = [...new Set(list.map((c) => c.entity_id))], owners = [...new Set(list.map((c) => c.owner_id))];
+    const [t, d] = await Promise.all([
+      supabase.from("expenses").select("id,employee_id,entity_id,title,merchant,category,amount,currency,expense_date,txn_type").in("employee_id", owners).in("entity_id", ids).order("expense_date", { ascending: false }).limit(1000),
+      supabase.from("documents").select("id,owner_id,entity_id,title,doc_type,doc_date,file_path").in("owner_id", owners).in("entity_id", ids).order("created_at", { ascending: false }).limit(500),
+    ]);
+    setTxns((t.data ?? []) as SharedTxn[]); setDocs((d.data ?? []) as SharedDoc[]);
+  }, []);
+  useEffect(() => { void load(); }, [load]);
+  if (!companies?.length) return null;
+  const rename = async (id: string, title: string) => {
+    const { data, error } = await supabase.from("expenses").update({ title }).eq("id", id).select("id");
+    if (error || !data?.length) toast.error("You can only view this company"); else { toast.success("Saved"); void load(); }
+  };
   return (
-    <div className="space-y-2 rounded-2xl border bg-card p-4">
+    <div className="space-y-3 rounded-2xl border bg-card p-4">
       <p className="font-semibold">Shared with you</p>
-      <p className="text-xs text-muted-foreground">Company documents other people gave you view access to. Not added to your own records.</p>
-      {docs.map((d) => <div key={d.id} className="flex items-center justify-between gap-2 text-sm"><span className="truncate">{d.title}<span className="block text-xs text-muted-foreground">{d.doc_type}{d.doc_date ? ` · ${d.doc_date}` : ""}</span></span><Button size="sm" variant="outline" onClick={async () => { const u = await signedUrl(d.file_path); if (u) window.open(u, "_blank", "noopener"); else toast.error("Could not open this file"); }}>Open</Button></div>)}
+      <p className="text-xs text-muted-foreground">Companies other people gave you access to. Never added to your own records or totals.</p>
+      {companies.map((c) => {
+        const t = rowsFor(txns, c, (r) => r.employee_id), d = rowsFor(docs, c, (r) => r.owner_id);
+        return (
+          <details key={c.grant_id} className="rounded-xl border p-3 text-sm">
+            <summary className="cursor-pointer"><span className="font-medium">{c.company_name}</span> <span className="text-xs text-muted-foreground">· {c.owner_email} · {c.can_write ? "Can edit" : "View only"} · {t.length} entries · {d.length} documents</span></summary>
+            <div className="mt-3 space-y-2">
+              <Button size="sm" variant="outline" onClick={() => {
+                const blob = new Blob([sharedCompanyCsv(c, txns, docs)], { type: "text/csv" });
+                const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = `${c.company_name.replace(/[^\w-]+/g, "_")}.csv`; a.click(); URL.revokeObjectURL(a.href);
+              }}>Download CSV</Button>
+              {t.slice(0, 100).map((r) => (
+                <div key={r.id} className="flex items-center justify-between gap-2">
+                  <span className="truncate">{r.title}<span className="block text-xs text-muted-foreground">{r.expense_date} · {r.category}</span></span>
+                  <span className="flex items-center gap-1 tabular-nums">₹{Number(r.amount).toLocaleString("en-IN")}
+                    {c.can_write && <Button size="sm" variant="ghost" onClick={() => { const v = window.prompt("Description", r.title); if (v && v.trim() && v !== r.title) void rename(r.id, v.trim()); }}>Edit</Button>}
+                  </span>
+                </div>
+              ))}
+              {d.map((r) => <div key={r.id} className="flex items-center justify-between gap-2"><span className="truncate">{r.title}<span className="block text-xs text-muted-foreground">{r.doc_type}{r.doc_date ? ` · ${r.doc_date}` : ""}</span></span><Button size="sm" variant="outline" onClick={async () => { const u = await signedUrl(r.file_path); if (u) window.open(u, "_blank", "noopener"); else toast.error("Could not open this file"); }}>Open</Button></div>)}
+            </div>
+          </details>
+        );
+      })}
     </div>
   );
 }
