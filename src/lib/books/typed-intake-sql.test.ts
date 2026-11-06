@@ -63,7 +63,7 @@ it('validates nested financial-year schedules line by line',async()=>{
  await expect(commit({books:{fyRecords:[{...fy,id:'f2',details:[{schedule:'profitLoss',lines:[{label:'',amount:1}]}]}]}})).rejects.toThrow(/schedule line/);
  await expect(commit({books:{fyRecords:[{...fy,id:'f3',details:[{schedule:'unknown',lines:[]}]}]}})).rejects.toThrow(/schedule/);
  await expect(commit({books:{fyRecords:[{...fy,id:'f4',audited:{bank:-5}}]}})).rejects.toThrow(/audited head/);
- await expect(commit({books:{fyRecords:[{...fy,id:'f5',audited:{madeUp:1}]}})).rejects.toThrow(/audited head/);
+ await expect(commit({books:{fyRecords:[{...fy,id:'f5',audited:{madeUp:1}}]}})).rejects.toThrow(/audited head/);
  await expect(commit({books:{fyRecords:[{...fy,id:'f6',lossesCarriedForward:[{fromFy:'24-25',kind:'business',amount:1}]}]}})).rejects.toThrow(/carried-forward loss/);
  await expect(commit({books:{fyRecords:[{...fy,id:'f7',filedReturns:[{form:'',ack:'A',filedOn:'2026-07-31'}]}]}})).rejects.toThrow(/filed return/);
  await expect(commit({books:{fyRecords:[{...fy,id:'f8',versions:[{at:'',reason:'',audited:{}}]}]}})).rejects.toThrow(/earlier version/);
