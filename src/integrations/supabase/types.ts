@@ -1650,6 +1650,44 @@ export type Database = {
         }
         Relationships: []
       }
+      period_close_evidence: {
+        Row: {
+          action: string
+          created_at: string
+          evidence: Json
+          id: string
+          owner_id: string
+          period_id: string
+          request: Json
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          evidence: Json
+          id: string
+          owner_id: string
+          period_id: string
+          request: Json
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          evidence?: Json
+          id?: string
+          owner_id?: string
+          period_id?: string
+          request?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "period_close_evidence_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "finance_preferences"
+            referencedColumns: ["owner_id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           created_at: string
@@ -2327,6 +2365,18 @@ export type Database = {
       }
       can_do: { Args: { _action: string }; Returns: boolean }
       cancel_transfer: { Args: { _id: string }; Returns: undefined }
+      change_accounting_period: {
+        Args: {
+          _action: string
+          _expected: Json
+          _from: string
+          _id: string
+          _period: string
+          _reason: string
+          _to: string
+        }
+        Returns: Json
+      }
       claim_import_ai: { Args: { _owner: string }; Returns: boolean }
       claim_import_batches: {
         Args: never
