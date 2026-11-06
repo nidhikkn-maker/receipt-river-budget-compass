@@ -5,7 +5,7 @@ import { normalizePreferences } from "./preferences";
 
 describe("Phone reminder configuration", () => {
   it("defaults every existing reminder type on without overwriting a saved off choice", () => {
-    expect(normalizeNotificationSettings({ loanFunding: false })).toEqual({ loanFunding: false, payments: true, documents: true, trips: true, checkIns: true });
+    expect(normalizeNotificationSettings({ loanFunding: false })).toEqual({ loanFunding: false, payments: true, documents: true, trips: true, checkIns: true, depreciation: true });
     expect(normalizePreferences({notifications:{...normalizeNotificationSettings(),documents:false}}).notifications?.documents).toBe(false);
   });
   it("disabled document and trip types never enter the phone queue", () => {

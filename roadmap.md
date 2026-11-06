@@ -2,7 +2,8 @@
 - [x] Employee/manager/finance access enforced in the database; admin Team access switches, roles and history in Settings; Team expenses and finance-only Company tax views; 14 role tests.
 - [x] Tax validation and fixed-figure regression tests (personal regimes, 87A, surcharge, company/firm, ownership shares, deemed dividend); tax profile form warnings.
 - [x] Monthly depreciation prepared automatically on the 1st–3rd (scheduled job) with an Inbox card; posting still needs approval.
-- [ ] Phone reminder for prepared depreciation — not built yet.
+- [x] Phone reminder for prepared depreciation (once per month, switch in Settings, opens Inbox).
+- [x] Manager and finance screen checks (scripts/browser/test_role_screens.py).
 
 ## Ledgerline v6.0 + v6.1 gap closure (4 Nov 2026)
 - [x] Customer invoices vs receipts on Audit; bonus/split/merger quantities and opening quantities in holding checks (never guessed); printed opening book/tax WDV kept from asset documents. 115 books tests pass.

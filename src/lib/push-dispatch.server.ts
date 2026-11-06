@@ -75,3 +75,23 @@ export async function dispatchCheckInReminders(db: SupabaseClient<Database>, see
   }
   return { checkInsSent: sent };
 }
+/** Lock-screen nudge when monthly depreciation is prepared and waiting for approval; claimed once per owner per month, no figures in the message. */
+export async function dispatchDepreciationReminders(db: SupabaseClient<Database>, seed: string, owners: string[], month: string, today: string) {
+  let sent = 0, skipped = 0;
+  for (const owner of [...new Set(owners)]) {
+    const pref = await db.from("finance_preferences").select("data").eq("owner_id", owner).maybeSingle();
+    if (pref.error) { skipped++; continue; }
+    const p = normalizePreferences(pref.data?.data as Partial<FinancePreferences> | null);
+    if (!p.reminders || !normalizeNotificationSettings(p.notifications).depreciation) { skipped++; continue; }
+    const key = `depreciation:${month}`;
+    const { data: devices } = await db.from("push_subscriptions").select("*").eq("owner_id", owner);
+    if (!devices?.length) { skipped++; continue; }
+    const { error: claim } = await db.from("push_reminder_log").insert({ owner_id: owner, sent_on: today, item_key: key });
+    if (claim) { skipped++; continue; }
+    const payload = { title: "Ledgerline", body: "Last month's depreciation is ready for your approval.", url: "/inbox", tag: key };
+    for (const device of devices) {
+      try { const r = await sendDevicePush(seed, device, payload); if (r.expired) await db.from("push_subscriptions").delete().eq("id", device.id); else if (r.ok) sent++; } catch { /* other devices still try */ }
+    }
+  }
+  return { sent, skipped };
+}
