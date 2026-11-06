@@ -2660,6 +2660,10 @@ export type Database = {
         Args: { _items: Json; _tag: string }
         Returns: number
       }
+      ll_closed_on: {
+        Args: { _date: string; _entity: string; _periods: Json }
+        Returns: boolean
+      }
       manage_trip_expenses: {
         Args: { _action: string; _items: Json; _trip: string; _value?: string }
         Returns: number
