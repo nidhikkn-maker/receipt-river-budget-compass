@@ -23,6 +23,8 @@ export interface VaultDoc {
   fields?: DocField[]; replacesId?: string | null;
   /** Original kept as audit evidence: cannot be deleted until unlocked [§11]. */
   evidenceLocked?: boolean;
+  /** Company this document belongs to; only tagged documents can be shared with company members [§10]. */
+  entityId?: string | null;
 }
 export interface VaultItem {
   key: string; source: "document" | "receipt"; docId: string | null; title: string; docType: DocType; path: string; fileName: string; mimeType: string;

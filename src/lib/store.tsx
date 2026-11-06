@@ -220,7 +220,7 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
       supabase.from("family_members").select("id, name, relation").order("created_at"),
       supabase.from("goals").select("*").order("created_at"),
       supabase.from("asset_valuations").select("*").order("valued_on", { ascending: false }),
-      supabase.from("documents").select("*").order("created_at", { ascending: false }),
+      supabase.from("documents").select("*").eq("owner_id", userId).order("created_at", { ascending: false }),
       supabase.from("department_budgets").select("department,amount"),
     ]);
     restP.catch(() => {});
@@ -293,7 +293,7 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
       id: x.id, title: x.title, docType: x.doc_type as DocType, filePath: x.file_path, fileName: x.file_name, mimeType: x.mime_type, size: x.size_bytes,
       docDate: x.doc_date, amount: x.amount == null ? null : Number(x.amount), currency: x.currency, merchant: x.merchant, notes: x.notes, text: x.extracted_text,
       transactionId: x.transaction_id, accountId: x.account_id, loanId: x.loan_id, expiresOn: x.expires_on, createdAt: x.created_at,
-      fields: Array.isArray(x.fields) ? (x.fields as unknown as DocField[]) : [], replacesId: x.replaces_id, evidenceLocked: !!x.evidence_locked,
+      fields: Array.isArray(x.fields) ? (x.fields as unknown as DocField[]) : [], replacesId: x.replaces_id, evidenceLocked: !!x.evidence_locked, entityId: x.entity_id ?? null,
     })));
     setMembers(m.data ?? []);
     hadSnapshot.current = true;
@@ -752,7 +752,8 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
     if (m.expiresOn !== undefined) row["expires_on"] = m.expiresOn || null;
     if (m.fields !== undefined) row["fields"] = m.fields as unknown as Json;
     if (m.evidenceLocked !== undefined) row["evidence_locked"] = m.evidenceLocked;
-    check((await supabase.from("documents").update(row).eq("id", id)).error);
+    if (m.entityId !== undefined) row["entity_id"] = m.entityId;
+    check((await supabase.from("documents").update(row).eq("id", id).eq("owner_id", userId)).error);
     await refresh();
   };
   const removeDocument: Ctx["removeDocument"] = async (d) => {
