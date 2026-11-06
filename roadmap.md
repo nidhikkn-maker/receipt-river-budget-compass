@@ -1,3 +1,7 @@
+## Company tax (all) filter and export (6 Nov 2026)
+- [x] Tax-year filter on the finance-only Company tax (all) section.
+- [x] CSV export of the filtered company tax figures; role screen check extended to cover both.
+
 ## Role access, tax tests, scheduled depreciation (6 Nov 2026)
 - [x] Employee/manager/finance access enforced in the database; admin Team access switches, roles and history in Settings; Team expenses and finance-only Company tax views; 14 role tests.
 - [x] Tax validation and fixed-figure regression tests (personal regimes, 87A, surcharge, company/firm, ownership shares, deemed dividend); tax profile form warnings.
