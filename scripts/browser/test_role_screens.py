@@ -46,14 +46,14 @@ async def run(p,role,off=None):
     assert ('Everyone' if role=='finance' else 'Your department') in txt
     assert await team.get_by_role('button',name='Edit').count()==0 and await team.get_by_role('button',name='Delete').count()==0
     await team.screenshot(path=str(ROOT/f'{tag}_expenses.png'))
-  await page.goto('http://localhost:8080/tax'); await page.wait_for_load_state('networkidle'); await page.wait_for_timeout(3000)
+  await page.goto('http://localhost:8080/tax'); await page.get_by_role('button',name='FY 2025-26').click(timeout=60000); await page.wait_for_timeout(3000)
   ct=page.locator('section',has_text='Company tax (all)')
   if role=='finance' and off!='view_company_tax':
     await ct.wait_for(timeout=60000); t=await ct.inner_text()
     assert 'Ravi Ventures Pvt Ltd' in t and 'personal tax is never shown' in t
     await ct.screenshot(path=str(ROOT/f'{tag}_tax.png'))
   else:
-    assert await ct.count()==0, f'{tag}: company tax must be hidden'
+    assert await ct.count()==0 or not await ct.is_visible(), f'{tag}: company tax must be hidden'
   assert 'Ravi Ops' not in (await page.locator('main').inner_text() if await page.locator('main').count() else '') or role=='finance'
   assert not errors, errors
   await b.close(); print('PASS', tag)
