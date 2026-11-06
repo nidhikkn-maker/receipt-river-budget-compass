@@ -19,3 +19,29 @@ describe("shared company export", () => {
     expect(sharedCompanyCsv(c, [{ ...t("x", "o1", "c1"), title: "=HYPERLINK(1)" }], [])).toContain(`"'=HYPERLINK(1)"`);
   });
 });
+
+describe("shared company search", () => {
+  const rows = [t("Office rent", "o1", "c1"), t("Laptop", "o1", "c1")];
+  it("matches title, merchant and category without case", () => {
+    expect(filterShared(rows, "RENT", (r) => [r.title, r.merchant, r.category]).map((r) => r.id)).toEqual(["Office rent"]);
+    expect(filterShared(rows, "office", (r) => [r.title, r.merchant, r.category]).map((r) => r.id)).toEqual(["Office rent"]);
+  });
+  it("empty query returns everything and no match returns nothing", () => {
+    expect(filterShared(rows, "  ", (r) => [r.title])).toHaveLength(2);
+    expect(filterShared(rows, "zzzz", (r) => [r.title])).toEqual([]);
+  });
+});
+
+describe("shared company PDF data", () => {
+  it("contains only that company's rows, the access level and the spending total", () => {
+    const d = sharedCompanyPdfData(c, [t("keep", "o1", "c1"), { ...t("keep2", "o1", "c1"), amount: 50 }, t("leak", "o1", "c2")], [d_("ok", "o1", "c1"), d_("no", "o2", "c1")]);
+    expect(d.counts).toEqual({ entries: 2, documents: 1 });
+    expect(d.totalSpend).toBe("INR 150.00");
+    expect(d.lines.join(" ")).toContain("View only");
+    expect(d.entries.rows.flat().join(" ")).not.toContain("leak");
+    expect(d.documents.rows.flat().join(" ")).not.toContain("no");
+  });
+  it("labels edit access clearly", () => {
+    expect(sharedCompanyPdfData({ ...c, can_write: true }, [], []).lines.join(" ")).toContain("Can edit");
+  });
+});
