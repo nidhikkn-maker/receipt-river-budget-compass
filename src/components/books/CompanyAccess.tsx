@@ -64,6 +64,7 @@ export function SharedWithMe() {
   const [companies, setCompanies] = useState<SharedCompany[] | null>(null);
   const [txns, setTxns] = useState<SharedTxn[]>([]);
   const [docs, setDocs] = useState<SharedDoc[]>([]);
+  const [queries, setQueries] = useState<Record<string, string>>({});
   const load = useCallback(async () => {
     const { data: cs } = await supabase.rpc("my_shared_companies");
     const list = (cs ?? []) as SharedCompany[];
