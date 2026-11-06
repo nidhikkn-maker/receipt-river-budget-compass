@@ -128,14 +128,6 @@ export function TeamExpenses() {
 
 type CompanyTaxYear = { entityId: string; fy: string; ownershipPct?: number; bookProfit?: number; accumulatedProfits?: number };
 
-/** CSV for the Company tax (all) section: one row per company and tax year. */
-export function companyTaxCsv(rows: { company: string; owner: string; kind: string; fy: string; bookProfit?: number; accumulatedProfits?: number; ownershipPct?: number }[]): string {
-  const cell = (v: unknown) => { const s = v === undefined || v === null ? "" : String(v); return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; };
-  const lines = ["Company,Owner,Kind,Tax year,Book profit,Past profits,Owner share %"];
-  for (const r of rows) lines.push([r.company, r.owner, r.kind, r.fy, r.bookProfit, r.accumulatedProfits, r.ownershipPct].map(cell).join(","));
-  return lines.join("\n");
-}
-
 /** Tax Centre → Company tax (all): finance-only figures per company and year; personal tax never appears. */
 export function TeamCompanyTax() {
   const { userId } = useStore();
