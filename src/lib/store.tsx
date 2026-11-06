@@ -62,7 +62,8 @@ interface Ctx {
   preferences: FinancePreferences;
   savePreferences: (p: FinancePreferences) => Promise<void>;
   /** Saves records from a document and locks it as evidence in one database transaction [v6 §3]. */
-  commitDocumentRecords: (documentId: string, p: FinancePreferences, lock: boolean) => Promise<void>;
+  commitDocumentRecords: (documentId: string, p: FinancePreferences, lock: boolean, attempt?: { id: string; expected: number }) => Promise<void>;
+  preferencesRevision: number | null;
   /** Opening entries for one entity/year, posted atomically; same id = no duplicate [§19]. */
   postOpening: (x: { id: string; entityId: string; fy: string; date: string; lines: { txnId: string; accountId: string; amount: number; sign: 1 | -1; title: string; description: string; head: string; target: number; current: number }[]; exceptions: { line: string; reason: string }[]; docId: string | null }) => Promise<void>;
   undoOpening: (id: string) => Promise<void>;
@@ -401,13 +402,13 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
     }
     catch(e){setPreferences(previous);throw e;}
   };
-  const commitDocumentRecords: Ctx["commitDocumentRecords"] = async (documentId, p, lock) => {
+  const commitDocumentRecords: Ctx["commitDocumentRecords"] = async (documentId, p, lock, attempt) => {
     if (!navigator.onLine) throw new Error('Reconnect before saving document records');
-    const expected = preferencesRevision.current;
+    const expected = attempt?.expected ?? preferencesRevision.current;
     if (expected == null) throw new Error('Refresh your records before reviewing this document');
     const key = JSON.stringify([p, lock]);
     const prior = intakeRequests.current.get(documentId);
-    const request = prior?.key === key ? prior : { id: crypto.randomUUID(), key, expected };
+    const request = attempt ? { id: attempt.id, key, expected } : prior?.key === key ? prior : { id: crypto.randomUUID(), key, expected };
     intakeRequests.current.set(documentId, request);
     const previous = preferences;
     setPreferences(p);
@@ -785,7 +786,7 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
   return (
     <StoreCtx.Provider value={{
       departmentBudgets, departmentBudgetError,
-      pendingCount, pendingItems, retrySync: (id?: string) => syncRef.current(id), discardPending: async (id: string) => { await removePending(id); setPendingItems((prev) => prev.filter((p) => p.id !== id)); setPendingCount((await pendingEntries(userId)).length); }, setTags, manageTripExpenses, applyReviewMapping, applyReviewMetadata, undoReviewMetadata, reviewMetadataHistory, saveRecurringReview, preferences, savePreferences, commitDocumentRecords, postOpening, undoOpening, openingPostings, ensureCategory, moveCategory, bulkSetCategory, categoryHistory, undoCategoryBatch, correctFinancialEntries, undoFinancialCorrection, financialCorrectionHistory, userId, name, updateName, members, memberName,
+      pendingCount, pendingItems, retrySync: (id?: string) => syncRef.current(id), discardPending: async (id: string) => { await removePending(id); setPendingItems((prev) => prev.filter((p) => p.id !== id)); setPendingCount((await pendingEntries(userId)).length); }, setTags, manageTripExpenses, applyReviewMapping, applyReviewMetadata, undoReviewMetadata, reviewMetadataHistory, saveRecurringReview, preferences, preferencesRevision: preferencesRevision.current, savePreferences, commitDocumentRecords, postOpening, undoOpening, openingPostings, ensureCategory, moveCategory, bulkSetCategory, categoryHistory, undoCategoryBatch, correctFinancialEntries, undoFinancialCorrection, financialCorrectionHistory, userId, name, updateName, members, memberName,
       expenses: expenses.filter((x) => (x.txnType ?? "expense") === "expense"), transactions: expenses.filter((x) => !x.transferCounterpartOf), transferCounterparts: expenses.filter((x) => !!x.transferCounterpartOf), confirmTransfer, cancelTransfer, accounts, addAccount, setArchived, adjustBalance,
       commitments, loans, goals, valuations, documents, saveCommitment, confirmIrregular, removeCommitment, confirmCommitment, saveLoan, removeLoan, recordLoanPayment, convertToEmi,
       saveGoal, removeGoal, updateAccount, addValuation, removeValuation, addDocument, updateDocument, removeDocument, history, setReimbursement, recordReimbursement, deleteAll,

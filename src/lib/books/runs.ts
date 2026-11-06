@@ -14,7 +14,8 @@ export interface DocRun {
   documentId: string | null; data: RunData; attempts: number; updatedAt: string;
 }
 /** What a run keeps between attempts: where the original is parked and what was read from it. */
-export interface RunData { stashPath?: string | undefined; mimeType?: string | undefined; size?: number | undefined; read?: unknown; docType?: string | undefined; fields?: unknown; replacesId?: string | undefined }
+export interface IntakeAttempt { id: string; documentId: string; data: import('../preferences').FinancePreferences; lock: boolean; expected: number; route: string }
+export interface RunData { stashPath?: string | undefined; mimeType?: string | undefined; size?: number | undefined; read?: unknown; docType?: string | undefined; fields?: unknown; replacesId?: string | undefined; intakeAttempt?: IntakeAttempt | undefined }
 
 /** A run owns exactly one document identity across every retry. */
 export const documentIdForRun = (runId: string) => runId;

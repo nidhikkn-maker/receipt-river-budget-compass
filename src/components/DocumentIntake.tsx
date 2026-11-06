@@ -190,6 +190,17 @@ export function DocumentIntake({ file, context, onClose, resume, replacesId, onS
   };
 
   const save = async () => {
+    const pendingAttempt = runData.current.intakeAttempt;
+    if (pendingAttempt) {
+      setSaving(true);
+      try {
+        await store.commitDocumentRecords(pendingAttempt.documentId, pendingAttempt.data, pendingAttempt.lock, pendingAttempt);
+        await closeRun({ id: runId, data: runData.current }, 'done');
+        setDone(pendingAttempt.route); setFailed(null); toast.success('Saved document records confirmed');
+      } catch (e) { setFailed({ step: 'Save', note: (e as Error).message }); }
+      finally { setSaving(false); }
+      return;
+    }
     const c = confirmed();
     if (!c) { toast.error(ownerSuggested && !ownerOk ? "Confirm which company this belongs to first" : "Fill the missing details first"); return; }
     const unlocated = fields.filter((f) => !f.page && !f.section?.trim()).length;
@@ -211,7 +222,13 @@ export function DocumentIntake({ file, context, onClose, resume, replacesId, onS
       const known = new Set(preferences.contractObligations.map((o) => o.docId));
       const obs = !known.has(docId) ? toObligations(docId, x?.obligations ?? [], () => crypto.randomUUID()) : [];
       // Records and the evidence lock commit together: either both are saved or neither is [§3, §11].
-      await store.commitDocumentRecords(docId, { ...preferences, entities: next.entities, assets: next.assets, books: next.books, ...(obs.length ? { contractObligations: [...preferences.contractObligations, ...obs] } : {}) }, c.route !== "document");
+      const expected = store.preferencesRevision;
+      if (expected == null) throw new Error('Refresh your records before reviewing the document again');
+      const attempt = { id: crypto.randomUUID(), documentId: docId, expected, lock: c.route !== 'document', route: c.route,
+        data: { ...preferences, entities: next.entities, assets: next.assets, books: next.books, ...(obs.length ? { contractObligations: [...preferences.contractObligations, ...obs] } : {}) } };
+      runData.current = { ...runData.current, intakeAttempt: attempt };
+      await updateRun(runId, { data: runData.current });
+      await store.commitDocumentRecords(docId, attempt.data, attempt.lock, attempt);
       at = "Audit"; await step("Audit");
       await closeRun({ id: runId, data: runData.current }, "done").catch(() => undefined);
       setDone(c.route);
@@ -338,6 +355,16 @@ export function DocumentIntake({ file, context, onClose, resume, replacesId, onS
         {missing.length > 0 && <p className="text-xs text-destructive">Still needed: {missing.join(", ")}.{missing.includes("which company") && <> <Link to="/entities" className="underline">Add the company first</Link></>}</p>}
         <div className="flex flex-wrap gap-2">
           <Button onClick={save} loading={saving} disabled={!!failed && !["Save", "Reconcile", "Audit"].includes(failed.step)}>{failed ? "Retry" : proposal ? "Confirm and save" : "Save to DocuRepo"}</Button>
+          {runData.current.intakeAttempt && failed && <Button variant="outline" onClick={async () => {
+            const attempt = runData.current.intakeAttempt;
+            if (!attempt) return;
+            const { data, error } = await (await import('@/integrations/supabase/client')).supabase.from('document_intake_commits').select('id').eq('id', attempt.id).maybeSingle();
+            if (error) { toast.error(error.message); return; }
+            if (data) { toast.message('This save already completed. Retry to confirm it.'); return; }
+            await store.refresh();
+            runData.current = { ...runData.current, intakeAttempt: undefined };
+            await updateRun(runId, { data: runData.current }); setFailed(null);
+          }}>Refresh and review again</Button>}
           <Button variant="ghost" onClick={async () => { await closeRun({ id: runId, data: runData.current }, "cancelled").catch(() => undefined); onClose(); }}>Discard</Button>
         </div>
       </>}
