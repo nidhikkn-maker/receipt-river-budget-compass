@@ -46,7 +46,11 @@ BEGIN
    SELECT string_agg(format('%I',c.column_name),', ' ORDER BY c.ordinal_position), string_agg(format('%I = EXCLUDED.%I',c.column_name,c.column_name),', ' ORDER BY c.ordinal_position)
    INTO cols,updates FROM information_schema.columns c WHERE c.table_schema='public' AND c.table_name=t AND r ? c.column_name AND c.column_name<>'revision';
    IF cols IS NULL THEN RAISE EXCEPTION 'Invalid backup columns'; END IF;
-   EXECUTE format('INSERT INTO public.%I (%s) SELECT %s FROM jsonb_populate_record(NULL::public.%I,$1) ON CONFLICT (%s) DO UPDATE SET %s',t,cols,cols,t,conflict_cols,updates) USING r;
+   IF t='finance_preferences' AND EXISTS(SELECT 1 FROM public.finance_preferences WHERE owner_id=uid) THEN
+    UPDATE public.finance_preferences SET data=r->'data',updated_at=now() WHERE owner_id=uid;
+   ELSE
+    EXECUTE format('INSERT INTO public.%I (%s) SELECT %s FROM jsonb_populate_record(NULL::public.%I,$1) ON CONFLICT (%s) DO UPDATE SET %s',t,cols,cols,t,conflict_cols,updates) USING r;
+   END IF;
    n:=n+1;
   END LOOP;
   counts:=counts || jsonb_build_object(t,n);

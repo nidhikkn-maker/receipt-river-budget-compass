@@ -60,7 +60,7 @@ it('fails a conflicting closed-ledger restore atomically, including earlier acco
  await close();
  await expect(restore({ accounts: [{ id: other, name: 'Should rollback' }], expenses: [{ id: entry, expense_date: '2025-05-01', amount: 500 }] })).rejects.toThrow(/Closed period/);
  expect((await db.query('SELECT * FROM accounts')).rows).toHaveLength(0);
- expect((await db.query<{amount:number}>('SELECT amount FROM expenses WHERE id=$1', [entry])).rows[0]?.amount).toBe(1250);
+ expect(Number((await db.query<{amount:string}>('SELECT amount FROM expenses WHERE id=$1', [entry])).rows[0]?.amount)).toBe(1250);
 });
 it('refuses preference deletion with history; confirmed erasure cascades only that owner', async () => {
  await close(); await restore({ period_close_evidence: [{ evidence: 'imported' }] });

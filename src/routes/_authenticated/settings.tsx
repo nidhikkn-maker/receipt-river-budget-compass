@@ -93,7 +93,7 @@ function Settings() {
       if (f.size > 150 * 1024 * 1024) throw Error("Backup must be under 150 MB");
       const { backup: j, files } = readBackup(new Uint8Array(await f.arrayBuffer()), /\.zip$/i.test(f.name));
       const { data: restored, paths } = prepareRestore(j, userId, undefined, true);
-      if (!await confirmAction("Restore this backup into your account? Existing matching records will be updated.")) return;
+      if (!await confirmAction("Restore this backup into your account? Existing matching records will be updated. Current closed periods stay protected; backup closing history is retained as an unverified copy.")) return;
       for (const [oldPath, newPath] of paths) {
         let bytes = files[oldPath];
         if (!bytes) {

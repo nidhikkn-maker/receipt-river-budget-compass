@@ -27,6 +27,7 @@
 - Money movements (reimbursements, scheduled payments, loan creation/repayment, card EMI conversions, claim receipts, yearly-bill confirmation) use the owner-scoped finance_operation database transaction with serialized idempotency records so retries cannot partially save; category allocation totals are validated on database writes.
 - ZIP backups include private receipt/document binaries and unsaved expense drafts and remap all owner-linked identifiers on cross-account restore; financial reporting and chart calculations remain browser-side pure functions.
 - Backup restore stages files at fresh owner paths and commits records through an RLS-scoped database transaction; failed restores clean staged files without overwriting existing records.
+- Backup closure history is archived separately as unverified imports; restore never creates authoritative close evidence or changes current closure state, so only the Audit operation can close or reopen periods.
 - AI calls enforce saved owner privacy; assistant facts come from authenticated server reads, and record text/history stay untrusted user data, never system instructions.
 - Receipt and voice categories resolve against the active owner catalog server-side; scanned statement extraction also enforces saved document privacy and requires explicit review.
 - Shortcut search parameters create validated drafts only; they never save entries or call AI automatically.
