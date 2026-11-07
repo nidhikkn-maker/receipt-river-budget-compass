@@ -790,3 +790,11 @@
 - [x] Staged guard_preference_approval trigger verified compatible with published client; NOT installed — awaits explicit owner activation.
 - [x] Full register audit: 899 clauses — 489 VERIFIED COMPLETE, 404 PARTIAL, 4 MISSING, 2 BLOCKED, 0 NOT AUDITED. Full suite 1,727 tests pass.
 - [ ] P13 real-asset posting browser check (needs owner-approved test posting), P14 licensed feed (BLOCKED), 4 MISSING governance/FX clauses.
+
+## Verification drive (7 Nov 2026)
+- [x] Full suite confirmed at 1,727 passing on latest code; count history matches successive versions.
+- [x] V61-0014 currency valuation implemented + 7 tests; governance clauses V60-0643/0647/0769 verified as process rules. Register: 513 VERIFIED / 384 PARTIAL / 0 MISSING / 2 BLOCKED.
+- [x] Four audit agents re-verified all 404 PARTIALs (20 promoted with re-run evidence; precise remaining work recorded per clause).
+- [ ] Four test-writing agents (sub_4fz6ph78, sub_qhwba5bn, sub_cem0xc90, sub_c7cyq4aj) are adding the focused tests each remaining PARTIAL needs (id lists /tmp/verify2-b1..b4-ids.json, results /tmp/verify2-b1..b4.json). On completion: merge results into register, re-render MASTER_REQUIREMENTS.md, run full suite + typecheck, update docs, then continue with whatever remains PARTIAL.
+- [ ] Staged guard_preference_approval trigger: still NOT installed — needs owner's explicit activation approval.
+- [ ] No further publishing without owner's approval.

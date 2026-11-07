@@ -26,6 +26,8 @@ export function MarketPanel() {
   const nav = useServerFn(getFundNav);
   const [edit, setEdit] = useState<Holding | null>(null);
     const [gold, setGold] = useState(books.goldRate ? String(books.goldRate.perGram24k) : "");
+  const [fxCcy, setFxCcy] = useState("USD");
+  const [fxRate, setFxRate] = useState("");
   // Your own entries for a security are compared with the demat total across every account [v6.1 §4, §13].
   const statementQty = quantityByIsin(nw.demat ?? []);
   const actions = statementActionAlerts(nw.demat ?? []);
@@ -109,6 +111,21 @@ export function MarketPanel() {
           <label className="text-xs">Physical gold rate per gram (24k)<Input type="number" value={gold} onChange={(e) => setGold(e.target.value)} /></label>
           <Button size="sm" variant="outline" onClick={async () => { const v = Number(gold); if (!(v > 0)) return; await save({ goldRate: { perGram24k: v, date: new Date().toISOString().slice(0, 10), source: "entered by you" } }); toast.success("Gold rate saved"); }}>Save rate</Button>
           <p className="w-full text-[11px] text-muted-foreground">Physical gold uses this rate × weight × purity. Gold ETF and SGB prices are never used for jewellery or coins.</p>
+        </div>
+        <div className="flex flex-wrap items-end gap-2 rounded-xl border p-3">
+          <label className="text-xs">Currency<Input aria-label="Currency code" className="w-20 uppercase" placeholder="USD" maxLength={3} value={fxCcy} onChange={(e) => setFxCcy(e.target.value.toUpperCase().replace(/[^A-Z]/g, "").slice(0, 3))} /></label>
+          <label className="text-xs">INR per 1 {fxCcy || "unit"}<Input aria-label="Exchange rate" type="number" value={fxRate} onChange={(e) => setFxRate(e.target.value)} /></label>
+          <Button size="sm" variant="outline" onClick={async () => {
+            const v = Number(fxRate);
+            if (!/^[A-Z]{3}$/.test(fxCcy) || fxCcy === "INR" || !(v > 0)) { toast.error("Enter a 3-letter currency and a rate above zero"); return; }
+            const today = new Date().toISOString().slice(0, 10);
+            await save({ fxRates: [...(books.fxRates ?? []).filter((r) => !(r.from === fxCcy && r.date === today)), { from: fxCcy, rate: v, date: today, source: "entered by you" }] });
+            setFxRate(""); toast.success(`${fxCcy} rate saved`);
+          }}>Save rate</Button>
+          {(books.fxRates ?? []).length > 0 && <ul className="w-full space-y-1 text-[11px] text-muted-foreground">
+            {[...(books.fxRates ?? [])].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 6).map((r) => <li key={`${r.from}-${r.date}`} className="flex justify-between gap-2"><span>1 {r.from} = ₹{r.rate} · {r.date} · {r.source}</span><button className="text-destructive" onClick={() => save({ fxRates: (books.fxRates ?? []).filter((x) => !(x.from === r.from && x.date === r.date)) })}>Remove</button></li>)}
+          </ul>}
+          <p className="w-full text-[11px] text-muted-foreground">A holding priced in another currency is valued only with a rate you enter here — never a guessed one. Rates older than 30 days are marked stale.</p>
         </div>
         <details className="text-xs"><summary className="cursor-pointer text-muted-foreground">Alert settings</summary>
           <div className="mt-2 grid grid-cols-2 gap-2">

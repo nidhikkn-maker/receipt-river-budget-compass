@@ -117,7 +117,9 @@ export interface Holding {
 export type TradingStatus = "active" | "suspended" | "delisted" | "illiquid";
 /** v6.1 §5 — a price as delivered, never relabelled. */
 export type Freshness = "live" | "delayed" | "eod" | "nav" | "manual" | "statement";
-export interface Quote { key: string; price: number; at: string; provider: string; freshness: Freshness; refreshedAt: string; failedAt?: string | undefined; tradingStatus?: TradingStatus | undefined }
+export interface Quote { key: string; price: number; at: string; provider: string; freshness: Freshness; refreshedAt: string; failedAt?: string | undefined; tradingStatus?: TradingStatus | undefined; /** ISO currency of the price; absent means INR [v6.1 §2]. */ currency?: string | undefined }
+/** Owner-entered exchange rate: INR per 1 unit of `from`. Never fetched or invented [v6.1 §2]. */
+export interface FxRate { from: string; rate: number; date: Iso; source: string }
 export interface Snapshot { date: Iso; netWorth: number; portfolio: number; liquid: number; liabilities: number; allocation: Record<string, number>; invested?: number | undefined; demat?: number | undefined; dematCount?: number | undefined; flows?: number | undefined; pricesAsOf?: string | null | undefined }
 export interface AlertSettings { portfolioMovePct: number; staleNavDays: number; missingPrices: boolean; corporateActions: boolean; quantityMismatch: boolean; unusualValuationPct: number }
 export interface GoldRate { perGram24k: number; date: Iso; source: string }
@@ -154,6 +156,8 @@ export interface BooksData {
   properties: Property[]; leases: Lease[]; propertyCosts: PropertyCost[];
   assetEvents: AssetEvent[]; journals: Journal[];
   holdings: Holding[]; quotes: Quote[]; snapshots: Snapshot[]; alerts: AlertSettings; goldRate?: GoldRate | undefined;
+  /** Owner-entered FX rates (INR per unit) used to value non-INR prices [v6.1 §2]. */
+  fxRates?: FxRate[] | undefined;
   taxProfiles: TaxProfile[]; gstInvoices: GstInvoice[]; gstFilings: GstFiling[];
   rules: RuleVersion[];
   policy?: ApprovalPolicy | undefined;
@@ -215,6 +219,7 @@ export function cleanBooks(raw: unknown): BooksData {
     snapshots: arr<Snapshot>(r["snapshots"], (x) => isDate(x.date) && fin(x.netWorth), 1500),
     alerts: { ...d.alerts, ...(r["alerts"] && typeof r["alerts"] === "object" ? (r["alerts"] as AlertSettings) : {}) },
     ...(r["goldRate"] && fin((r["goldRate"] as GoldRate).perGram24k) ? { goldRate: r["goldRate"] as GoldRate } : {}),
+    fxRates: arr<FxRate>(r["fxRates"], (x) => typeof x.from === "string" && /^[A-Z]{3}$/.test(x.from) && x.from !== "INR" && fin(x.rate) && x.rate > 0 && isDate(x.date) && typeof x.source === "string", 200),
     taxProfiles: arr<TaxProfile>(r["taxProfiles"], (x) => typeof x.entityId === "string", 100),
     gstInvoices: arr<GstInvoice>(r["gstInvoices"], (x) => typeof x.id === "string" && isDate(x.date) && fin(x.taxable), 10000),
     gstAdvances: arr<import('./gst-special').GstAdvance>(r['gstAdvances'],x=>typeof x.id==='string'&&typeof x.gstin==='string'&&isDate(x.date)&&fin(x.taxable)&&Array.isArray(x.adjustments),2000),

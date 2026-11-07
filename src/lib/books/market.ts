@@ -1,5 +1,5 @@
 /** v6.1 market data, valuation and dynamic net worth. Pure; never creates ledger entries or invents prices. */
-import type { AlertSettings, Freshness, GoldRate, Holding, Quote, Snapshot } from "./types";
+import type { AlertSettings, Freshness, FxRate, GoldRate, Holding, Quote, Snapshot } from "./types";
 
 export const FRESHNESS_LABEL: Record<Freshness, string> = { live: "Live", delayed: "Delayed", eod: "End of day", nav: "Latest NAV", manual: "Entered by you", statement: "From statement" };
 
@@ -69,8 +69,17 @@ export function fmtIst(iso: string): string {
 
 export interface Valued { holding: Holding; key: string | null; quote: Quote | null; value: number | null; stale: boolean; note: string }
 
-/** Holding value = verified quantity × applicable price × ownership share [v6.1 §4, §8]. */
-export function valueHolding(h: Holding, quotes: Quote[], gold: GoldRate | undefined, now: Date, alerts: AlertSettings): Valued {
+/** Latest dated owner-entered INR rate for a currency; null when none exists — a rate is never guessed [v6.1 §2]. */
+export function fxFor(currency: string, fxRates: FxRate[]): FxRate | null {
+  const c = currency.toUpperCase();
+  if (c === "INR") return null;
+  return fxRates.filter((r) => r.from === c).sort((a, b) => b.date.localeCompare(a.date))[0] ?? null;
+}
+/** An FX rate older than 30 days is treated as stale for valuation notes. */
+const FX_STALE_DAYS = 30;
+
+/** Holding value = verified quantity × applicable price × ownership share, converted to INR when the price is in another currency [v6.1 §2, §4, §8]. */
+export function valueHolding(h: Holding, quotes: Quote[], gold: GoldRate | undefined, now: Date, alerts: AlertSettings, fxRates: FxRate[] = []): Valued {
   const share = h.sharePct / 100;
   if (h.kind === "physical_gold") {
     if (!h.grams || !h.karat) return { holding: h, key: null, quote: null, value: null, stale: false, note: "Needs weight and purity" };
@@ -92,7 +101,17 @@ export function valueHolding(h: Holding, quotes: Quote[], gold: GoldRate | undef
   // Delisted or suspended securities are never valued at an old last price as if tradable [v6.1 §4].
   if (status === "delisted") return { holding: h, key, quote: q, value: null, stale: true, note: `Delisted — last price ${q.price} on ${fmtIst(q.at)} is not used; enter a confirmed value` };
   const flag = status === "suspended" ? "Trading suspended · last traded price · " : status === "illiquid" ? "Thinly traded · " : "";
-  return { holding: h, key, quote: q, value: Math.round(h.quantity * q.price * share * 100) / 100, stale: status === "suspended" || isStale(q, now, h.kind, alerts.staleNavDays), note: `${flag}${FRESHNESS_LABEL[q.freshness]} · ${q.provider} · price ${fmtIst(q.at)} · fetched ${fmtIst(q.refreshedAt)}` };
+  const base = `${flag}${FRESHNESS_LABEL[q.freshness]} · ${q.provider} · price ${fmtIst(q.at)} · fetched ${fmtIst(q.refreshedAt)}`;
+  const ccy = (q.currency ?? "INR").toUpperCase();
+  if (ccy !== "INR") {
+    const fx = fxFor(ccy, fxRates);
+    // A foreign-currency price is never valued at a guessed rate [v6.1 §2].
+    if (!fx) return { holding: h, key, quote: q, value: null, stale: false, note: `Price is in ${ccy} — add a ${ccy}→INR rate below to value this holding` };
+    const fxAge = (now.getTime() - Date.parse(fx.date)) / 864e5;
+    const value = Math.round(h.quantity * q.price * fx.rate * share * 100) / 100;
+    return { holding: h, key, quote: q, value, stale: status === "suspended" || fxAge > FX_STALE_DAYS || isStale(q, now, h.kind, alerts.staleNavDays), note: `${base} · ${q.price} ${ccy} × ${fx.rate} INR/${ccy} (${fx.source}, ${fx.date})${fxAge > FX_STALE_DAYS ? " · rate over 30 days old" : ""}` };
+  }
+  return { holding: h, key, quote: q, value: Math.round(h.quantity * q.price * share * 100) / 100, stale: status === "suspended" || isStale(q, now, h.kind, alerts.staleNavDays), note: base };
 }
 
 export interface NetWorthPart { label: string; value: number; basis: string; live: boolean; asOf?: string | null }
