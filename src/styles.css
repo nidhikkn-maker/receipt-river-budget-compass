@@ -1274,3 +1274,6 @@ html, body { max-width: 100%; }
 .cmp-more > summary { display: flex; min-height: 44px; align-items: center; cursor: pointer; font-size: 14px; font-weight: 500; color: var(--companion-muted); }
 .cmp-entry-foot { position: sticky; bottom: 0; z-index: 10; margin: 4px -16px 0; padding: 10px 16px calc(10px + env(safe-area-inset-bottom)); background: linear-gradient(180deg, transparent, var(--companion-ivory) 30%); }
 @media (prefers-reduced-motion: reduce) { .cmp-hero *, .smart-add-sheet *, .more-directory * { transition: none !important; animation: none !important; } }
+/* Grid children and date inputs may shrink: their intrinsic width pushed forms past 320px phones. */
+form.grid > *, .grid > .grid { min-width: 0; }
+input[type="date"], input[type="month"] { min-width: 0; max-width: 100%; }
