@@ -104,6 +104,10 @@ export async function completeReportJob(db: SupabaseClient<any>, job: { id: stri
       blob = stored.data;
       fileSize = stored.data.size;
     } else if (up.error) throw new Error("Couldn't store the PDF");
+    // Confirm uploaded bytes independently before recording acceptance in history.
+    const confirmed = await db.storage.from("receipts").download(path);
+    if (confirmed.error || !confirmed.data) throw Error("Uploaded report retrieval unconfirmed; evidence retained for retry");
+    await validatePdf(confirmed.data, fileSize, await validatePdf(blob, fileSize));
     const prior = await db.from("report_history").select("id", { count: "exact", head: true }).eq("owner_id", job.owner_id).eq("kind", job.kind).eq("period_from", filters.from).eq("period_to", filters.to);
     if (prior.error) throw Error("Couldn't check report version; uploaded evidence retained");
     const digest = await validatePdf(blob, fileSize);
