@@ -1,4 +1,5 @@
 import { NetWorthCard } from "@/components/books/NetWorthCard";
+import { JournalToday } from '@/components/JournalToday';
 import { HomeModePicker } from "@/components/HomeModePicker";
 import { HomeShortcuts } from "@/components/HomeShortcuts";
 import { MilestoneBanner } from "@/components/MilestoneBanner";
@@ -43,7 +44,7 @@ export const Route = createFileRoute("/_authenticated/dashboard")({
 type Readiness = { status: "Healthy" | "Attention required" | "Potential shortfall" | "Verification pending" | "Information incomplete"; detail: string; estimated: boolean };
 
 function Overview() {
-  const { expenses, transactions, accounts, preferences, savePreferences } = useStore();
+  const { expenses, transactions, accounts, preferences, savePreferences, name } = useStore();
   const today = todayISO();
   const scope: Scope | "all" = preferences.homeScope;
 
@@ -121,7 +122,9 @@ function Overview() {
   const hidden = (id: string) => preferences.homeHidden.includes(id);
 
   return (
-    <div className="flex min-w-0 flex-col">
+    <div className="min-w-0">
+      <JournalToday name={name} today={today} spending={total} cash={live.length ? cash : null} safe={live.length ? pos.safe.amount : null} cardDue={cardDue} estimated={readiness.estimated} readiness={readiness.detail} unmatched={unmatched} entries={transactions.filter(e => scope === 'all' || e.scope === scope)} upcoming={pos.upcoming} />
+      <details className="journal-details mt-8 border-t pt-5"><summary className="cursor-pointer text-sm font-medium">Financial overview & tools</summary><div className="mt-5 flex min-w-0 flex-col">
       <div className="mb-3 flex justify-end"><HomeModePicker compact /></div>
       <HomeShortcuts />
       <NetWorthCard />
@@ -321,6 +324,7 @@ function Overview() {
         </div>
         <ExpenseTable items={expenses.slice(0, 6)} empty="No expenses yet — tap + to add your first one." />
       </section>
+      </div></details>
     </div>
   );
 }

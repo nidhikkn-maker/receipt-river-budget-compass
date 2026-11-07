@@ -43,8 +43,8 @@ function Wealth() {
 
 
   return (
-    <>
-      <PageTitle eyebrow="Wealth" title="Accounts & net worth" sub="Balances come from your recorded entries; investments and property use their dated prices or valuations." />
+    <div className="journal-wealth">
+      <PageTitle eyebrow="The longer view" title="Wealth & Plan" sub="Accounts, investments and the plans ahead." />
       <div className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-3">
         <Stat label="Assets" value={money(nw.assets)} />
         <Stat label="Owed" value={money(nw.liabilities)} />
@@ -99,6 +99,6 @@ function Wealth() {
         <LoansPanel />
         <GoalsPanel />
       </div>
-    </>
+    </div>
   );
 }
