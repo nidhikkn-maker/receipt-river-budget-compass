@@ -26,7 +26,7 @@ describe("connected asset document review and installed database", () => {
     state.store = { preferences: { books: emptyBooks(), entities: [], assets: [], contractObligations: [] }, documents: [], accounts: [], loans: [], transactions: [], addDocument: add, commitDocumentRecords: commit };
   });
   afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
-  it.each(["maintenance", "warranty"] as const)("%s review → installed SQL → reload retains source, tax and book values through lost response and permission denial", async (type) => {
+  it.each(["maintenance", "warranty", "asset_invoice"] as const)("%s review → installed SQL → reload retains source, tax and book values through lost response and permission denial", async (type) => {
     const owner = "00000000-0000-0000-0000-000000000001", other = "00000000-0000-0000-0000-000000000002";
     const docId = "00000000-0000-0000-0000-000000000010";
     const asset = { id: "generator-1", name: "Generator", kind: "machinery" as const, cost: 150000, inUse: "2026-04-01", purchaseDate: "2026-04-01", sharePct: 100, bookMethod: "slm" as const, bookRatePct: 10, tag: "GEN-44", usefulLifeYears: 10, residualPct: 0, docId: "purchase-original", accountId: "asset-account" };
