@@ -78,7 +78,6 @@ async def main():
    await expect(sheet).to_be_hidden()
    await page.get_by_role('button',name='Smart Add',exact=True).filter(visible=True).first.click()
    await expect(sheet.get_by_role('heading',name='Intelligent Canvas')).to_be_visible()
-   await sheet.get_by_role('combobox',name='Receipt category').click(); await page.get_by_role('option').first.click()
    await sheet.get_by_role('button',name='Confirm details',exact=True).click()
    await sheet.get_by_role('button',name='Save expense').click()
    await expect(sheet.get_by_text('Saved to your records')).to_be_visible(timeout=15000)
