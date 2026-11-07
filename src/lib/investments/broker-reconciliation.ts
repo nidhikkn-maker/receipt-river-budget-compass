@@ -19,7 +19,7 @@ export function brokerCashReconciliation(lines: StmtLine[], account: Account, en
     return {line,entry:match??null,state:match?'matched' as const:candidates.length>1?'ambiguous' as const:'missing' as const};
   });
   const date=lines.map(l=>l.date).sort().at(-1);
-  const balance=accountBalance(account,entries,date);
+  const balance=accountBalance(account,entries.filter(e=>!date||e.date<=date));
   const foreign=lines.some(l=>l.currency!=='INR');
   return {rows,balance,difference:closing===null||foreign?null:Math.round((closing-balance)*100)/100,missing:rows.filter(r=>r.state!=='matched').length,foreign};
 }
