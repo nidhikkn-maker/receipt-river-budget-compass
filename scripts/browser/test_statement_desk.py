@@ -198,6 +198,7 @@ class StatementDeskFlow(unittest.IsolatedAsyncioTestCase):
         await expect(self.page.get_by_role("heading", name="Statement Desk")).to_be_visible()
         await expect(self.page.get_by_label('Recent uploads')).to_contain_text('interrupted')
         self.assertEqual(await self.page.evaluate('deskFixture.uploads[0].status'), 'interrupted')
+        print('PARTIAL',await self.page.evaluate('({uploads:deskFixture.uploads,rows:deskFixture.transactions})'),flush=True)
         await self.page.get_by_label('Recent uploads').screenshot(path=str(EVIDENCE / 'partial-remains-interrupted.png'))
         await self.page.get_by_label('Recent uploads').get_by_role('button', name='Undo', exact=True).click()
         await expect(self.page.get_by_label('Recent uploads')).to_have_count(0)
