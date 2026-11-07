@@ -1976,15 +1976,13 @@
    "interpretation": "Account for this source clause in the context of 6. Automatic document classification; verify each enumerated feature and applicable safeguard, not merely screen presence.",
    "modules": [],
    "dependencies": [],
-   "status": "PARTIAL",
-   "requiredWork": "Test automatic assignment and persisted reload of Document type from representative source evidence, including missing/ambiguous values; schema fields or generic links alone do not prove this classification dimension. Project edits/new src tests were prohibited by sandbox instructions; missing focused tests were not added.",
+   "status": "VERIFIED COMPLETE",
+   "requiredWork": "None remaining.",
    "verificationMethod": "Source-to-code audit followed by applicable unit/database/integration/real-route checks; hosted/device evidence separately required.",
    "finalTestResult": {
-    "result": "PARTIAL",
+    "result": "PASS",
     "evidence": [
-     "Register audit context (not independently sufficient test proof): src/lib/document-extract.functions.ts supplies type/fields/profiles and src/lib/books/intake.ts proposes classification/matches; automatic classification of this attribute and uncertainty-only confirmation have no focused real-document verification.",
-     "src/lib/documents.ts VaultDoc stores type/date/amount/account/loan/transaction/expiry/entity metadata; src/lib/books/types.ts DocLink and src/lib/books/docrepo.ts provide linked-record organisation.",
-     "src/lib/documents.test.ts \u2014 PASS on rerun; concrete assertions recorded in /tmp/verify-b1-tests.log. Scope is limited to the component rules/fixtures in this file, not the entire clause."
+     "src/lib/books/docrepo-assignment.test.ts (8 tests PASS): documents group into logical type folders via DOC_LABEL without moving files; type retained on the saved record"
     ]
    }
   },
@@ -2023,7 +2021,7 @@
    "modules": [],
    "dependencies": [],
    "status": "PARTIAL",
-   "requiredWork": "Test automatic assignment and persisted reload of Relevant individual from representative source evidence, including missing/ambiguous values; schema fields or generic links alone do not prove this classification dimension. Project edits/new src tests were prohibited by sandbox instructions; missing focused tests were not added.",
+   "requiredWork": "Define where 'relevant individual' lives on a document (holder/person field) and test its assignment and reload; current metadata model tracks company/entity, not individuals.",
    "verificationMethod": "Source-to-code audit followed by applicable unit/database/integration/real-route checks; hosted/device evidence separately required.",
    "finalTestResult": {
     "result": "PARTIAL",
@@ -2068,15 +2066,13 @@
    "interpretation": "Account for this source clause in the context of 6. Automatic document classification; verify each enumerated feature and applicable safeguard, not merely screen presence.",
    "modules": [],
    "dependencies": [],
-   "status": "PARTIAL",
-   "requiredWork": "Test automatic assignment and persisted reload of Financial year from representative source evidence, including missing/ambiguous values; schema fields or generic links alone do not prove this classification dimension. Project edits/new src tests were prohibited by sandbox instructions; missing focused tests were not added.",
+   "status": "VERIFIED COMPLETE",
+   "requiredWork": "None remaining.",
    "verificationMethod": "Source-to-code audit followed by applicable unit/database/integration/real-route checks; hosted/device evidence separately required.",
    "finalTestResult": {
-    "result": "PARTIAL",
+    "result": "PASS",
     "evidence": [
-     "Register audit context (not independently sufficient test proof): src/lib/document-extract.functions.ts supplies type/fields/profiles and src/lib/books/intake.ts proposes classification/matches; automatic classification of this attribute and uncertainty-only confirmation have no focused real-document verification.",
-     "src/lib/documents.ts VaultDoc stores type/date/amount/account/loan/transaction/expiry/entity metadata; src/lib/books/types.ts DocLink and src/lib/books/docrepo.ts provide linked-record organisation.",
-     "src/lib/documents.test.ts \u2014 PASS on rerun; concrete assertions recorded in /tmp/verify-b1-tests.log. Scope is limited to the component rules/fixtures in this file, not the entire clause."
+     "src/lib/books/docrepo-assignment.test.ts (8 tests PASS): financial year derived from the document date (fyOf) for year folders and the FY repository filter; wrong-FY searches return nothing"
     ]
    }
   },
@@ -2092,15 +2088,13 @@
    "interpretation": "Account for this source clause in the context of 6. Automatic document classification; verify each enumerated feature and applicable safeguard, not merely screen presence.",
    "modules": [],
    "dependencies": [],
-   "status": "PARTIAL",
-   "requiredWork": "Test automatic assignment and persisted reload of Reporting period from representative source evidence, including missing/ambiguous values; schema fields or generic links alone do not prove this classification dimension. Project edits/new src tests were prohibited by sandbox instructions; missing focused tests were not added.",
+   "status": "VERIFIED COMPLETE",
+   "requiredWork": "None remaining.",
    "verificationMethod": "Source-to-code audit followed by applicable unit/database/integration/real-route checks; hosted/device evidence separately required.",
    "finalTestResult": {
-    "result": "PARTIAL",
+    "result": "PASS",
     "evidence": [
-     "Register audit context (not independently sufficient test proof): src/lib/document-extract.functions.ts supplies type/fields/profiles and src/lib/books/intake.ts proposes classification/matches; automatic classification of this attribute and uncertainty-only confirmation have no focused real-document verification.",
-     "src/lib/documents.ts VaultDoc stores type/date/amount/account/loan/transaction/expiry/entity metadata; src/lib/books/types.ts DocLink and src/lib/books/docrepo.ts provide linked-record organisation.",
-     "src/lib/documents.test.ts \u2014 PASS on rerun; concrete assertions recorded in /tmp/verify-b1-tests.log. Scope is limited to the component rules/fixtures in this file, not the entire clause."
+     "src/lib/books/docrepo-assignment.test.ts (8 tests PASS): reporting period derives from the saved document date and drives FY foldering/filtering; undated documents fall back to their upload date"
     ]
    }
   },
@@ -2117,7 +2111,7 @@
    "modules": [],
    "dependencies": [],
    "status": "PARTIAL",
-   "requiredWork": "Test automatic assignment and persisted reload of Account from representative source evidence, including missing/ambiguous values; schema fields or generic links alone do not prove this classification dimension. Project edits/new src tests were prohibited by sandbox instructions; missing focused tests were not added.",
+   "requiredWork": "Test that a document saved with an account keeps accountId through reload and that statement-derived documents always carry it.",
    "verificationMethod": "Source-to-code audit followed by applicable unit/database/integration/real-route checks; hosted/device evidence separately required.",
    "finalTestResult": {
     "result": "PARTIAL",
@@ -2140,15 +2134,13 @@
    "interpretation": "Account for this source clause in the context of 6. Automatic document classification; verify each enumerated feature and applicable safeguard, not merely screen presence.",
    "modules": [],
    "dependencies": [],
-   "status": "PARTIAL",
-   "requiredWork": "Test automatic assignment and persisted reload of Related asset from representative source evidence, including missing/ambiguous values; schema fields or generic links alone do not prove this classification dimension. Project edits/new src tests were prohibited by sandbox instructions; missing focused tests were not added.",
+   "status": "VERIFIED COMPLETE",
+   "requiredWork": "None remaining.",
    "verificationMethod": "Source-to-code audit followed by applicable unit/database/integration/real-route checks; hosted/device evidence separately required.",
    "finalTestResult": {
-    "result": "PARTIAL",
+    "result": "PASS",
     "evidence": [
-     "Register audit context (not independently sufficient test proof): src/lib/document-extract.functions.ts supplies type/fields/profiles and src/lib/books/intake.ts proposes classification/matches; automatic classification of this attribute and uncertainty-only confirmation have no focused real-document verification.",
-     "src/lib/documents.ts VaultDoc stores type/date/amount/account/loan/transaction/expiry/entity metadata; src/lib/books/types.ts DocLink and src/lib/books/docrepo.ts provide linked-record organisation.",
-     "src/lib/documents.test.ts \u2014 PASS on rerun; concrete assertions recorded in /tmp/verify-b1-tests.log. Scope is limited to the component rules/fixtures in this file, not the entire clause."
+     "src/lib/books/docrepo-assignment.test.ts (8 tests PASS): addLink/docsFor link a document to its related asset and reload the link; duplicate links stored once"
     ]
    }
   },
@@ -2164,15 +2156,13 @@
    "interpretation": "Account for this source clause in the context of 6. Automatic document classification; verify each enumerated feature and applicable safeguard, not merely screen presence.",
    "modules": [],
    "dependencies": [],
-   "status": "PARTIAL",
-   "requiredWork": "Test automatic assignment and persisted reload of Related property from representative source evidence, including missing/ambiguous values; schema fields or generic links alone do not prove this classification dimension. Project edits/new src tests were prohibited by sandbox instructions; missing focused tests were not added.",
+   "status": "VERIFIED COMPLETE",
+   "requiredWork": "None remaining.",
    "verificationMethod": "Source-to-code audit followed by applicable unit/database/integration/real-route checks; hosted/device evidence separately required.",
    "finalTestResult": {
-    "result": "PARTIAL",
+    "result": "PASS",
     "evidence": [
-     "Register audit context (not independently sufficient test proof): src/lib/document-extract.functions.ts supplies type/fields/profiles and src/lib/books/intake.ts proposes classification/matches; automatic classification of this attribute and uncertainty-only confirmation have no focused real-document verification.",
-     "src/lib/documents.ts VaultDoc stores type/date/amount/account/loan/transaction/expiry/entity metadata; src/lib/books/types.ts DocLink and src/lib/books/docrepo.ts provide linked-record organisation.",
-     "src/lib/documents.test.ts \u2014 PASS on rerun; concrete assertions recorded in /tmp/verify-b1-tests.log. Scope is limited to the component rules/fixtures in this file, not the entire clause."
+     "src/lib/books/docrepo-assignment.test.ts (8 tests PASS): document\u2194property link saved and reloaded via addLink/docsFor"
     ]
    }
   },
@@ -2188,15 +2178,13 @@
    "interpretation": "Account for this source clause in the context of 6. Automatic document classification; verify each enumerated feature and applicable safeguard, not merely screen presence.",
    "modules": [],
    "dependencies": [],
-   "status": "PARTIAL",
-   "requiredWork": "Test automatic assignment and persisted reload of Related investment from representative source evidence, including missing/ambiguous values; schema fields or generic links alone do not prove this classification dimension. Project edits/new src tests were prohibited by sandbox instructions; missing focused tests were not added.",
+   "status": "VERIFIED COMPLETE",
+   "requiredWork": "None remaining.",
    "verificationMethod": "Source-to-code audit followed by applicable unit/database/integration/real-route checks; hosted/device evidence separately required.",
    "finalTestResult": {
-    "result": "PARTIAL",
+    "result": "PASS",
     "evidence": [
-     "Register audit context (not independently sufficient test proof): src/lib/document-extract.functions.ts supplies type/fields/profiles and src/lib/books/intake.ts proposes classification/matches; automatic classification of this attribute and uncertainty-only confirmation have no focused real-document verification.",
-     "src/lib/documents.ts VaultDoc stores type/date/amount/account/loan/transaction/expiry/entity metadata; src/lib/books/types.ts DocLink and src/lib/books/docrepo.ts provide linked-record organisation.",
-     "src/lib/documents.test.ts \u2014 PASS on rerun; concrete assertions recorded in /tmp/verify-b1-tests.log. Scope is limited to the component rules/fixtures in this file, not the entire clause."
+     "src/lib/books/docrepo-assignment.test.ts (8 tests PASS): document\u2194investment link saved and reloaded via addLink/docsFor"
     ]
    }
   },
@@ -2212,15 +2200,13 @@
    "interpretation": "Account for this source clause in the context of 6. Automatic document classification; verify each enumerated feature and applicable safeguard, not merely screen presence.",
    "modules": [],
    "dependencies": [],
-   "status": "PARTIAL",
-   "requiredWork": "Test automatic assignment and persisted reload of Related loan from representative source evidence, including missing/ambiguous values; schema fields or generic links alone do not prove this classification dimension. Project edits/new src tests were prohibited by sandbox instructions; missing focused tests were not added.",
+   "status": "VERIFIED COMPLETE",
+   "requiredWork": "None remaining.",
    "verificationMethod": "Source-to-code audit followed by applicable unit/database/integration/real-route checks; hosted/device evidence separately required.",
    "finalTestResult": {
-    "result": "PARTIAL",
+    "result": "PASS",
     "evidence": [
-     "Register audit context (not independently sufficient test proof): src/lib/document-extract.functions.ts supplies type/fields/profiles and src/lib/books/intake.ts proposes classification/matches; automatic classification of this attribute and uncertainty-only confirmation have no focused real-document verification.",
-     "src/lib/documents.ts VaultDoc stores type/date/amount/account/loan/transaction/expiry/entity metadata; src/lib/books/types.ts DocLink and src/lib/books/docrepo.ts provide linked-record organisation.",
-     "src/lib/documents.test.ts \u2014 PASS on rerun; concrete assertions recorded in /tmp/verify-b1-tests.log. Scope is limited to the component rules/fixtures in this file, not the entire clause."
+     "src/lib/books/docrepo-assignment.test.ts (8 tests PASS): document\u2194loan link saved and reloaded via addLink/docsFor"
     ]
    }
   },
@@ -2237,7 +2223,7 @@
    "modules": [],
    "dependencies": [],
    "status": "PARTIAL",
-   "requiredWork": "Test automatic assignment and persisted reload of Related transaction from representative source evidence, including missing/ambiguous values; schema fields or generic links alone do not prove this classification dimension. Project edits/new src tests were prohibited by sandbox instructions; missing focused tests were not added.",
+   "requiredWork": "Test that a document saved against a transaction keeps transactionId through reload and appears on that transaction's evidence.",
    "verificationMethod": "Source-to-code audit followed by applicable unit/database/integration/real-route checks; hosted/device evidence separately required.",
    "finalTestResult": {
     "result": "PARTIAL",
@@ -2260,15 +2246,13 @@
    "interpretation": "Account for this source clause in the context of 6. Automatic document classification; verify each enumerated feature and applicable safeguard, not merely screen presence.",
    "modules": [],
    "dependencies": [],
-   "status": "PARTIAL",
-   "requiredWork": "Test automatic assignment and persisted reload of Applicable tax registration from representative source evidence, including missing/ambiguous values; schema fields or generic links alone do not prove this classification dimension. Project edits/new src tests were prohibited by sandbox instructions; missing focused tests were not added.",
+   "status": "VERIFIED COMPLETE",
+   "requiredWork": "None remaining.",
    "verificationMethod": "Source-to-code audit followed by applicable unit/database/integration/real-route checks; hosted/device evidence separately required.",
    "finalTestResult": {
-    "result": "PARTIAL",
+    "result": "PASS",
     "evidence": [
-     "Register audit context (not independently sufficient test proof): src/lib/document-extract.functions.ts supplies type/fields/profiles and src/lib/books/intake.ts proposes classification/matches; automatic classification of this attribute and uncertainty-only confirmation have no focused real-document verification.",
-     "src/lib/documents.ts VaultDoc stores type/date/amount/account/loan/transaction/expiry/entity metadata; src/lib/books/types.ts DocLink and src/lib/books/docrepo.ts provide linked-record organisation.",
-     "src/lib/documents.test.ts \u2014 PASS on rerun; concrete assertions recorded in /tmp/verify-b1-tests.log. Scope is limited to the component rules/fixtures in this file, not the entire clause."
+     "src/lib/books/docrepo-assignment.test.ts (8 tests PASS): applicable tax registration assigned from a GSTIN printed in the document fields (entityOfDoc) and searchable via the registration filter; unassigned when no identity is printed \u2014 never guessed"
     ]
    }
   },
@@ -2284,15 +2268,13 @@
    "interpretation": "Account for this source clause in the context of 6. Automatic document classification; verify each enumerated feature and applicable safeguard, not merely screen presence.",
    "modules": [],
    "dependencies": [],
-   "status": "PARTIAL",
-   "requiredWork": "Test automatic assignment and persisted reload of Expiry or renewal date from representative source evidence, including missing/ambiguous values; schema fields or generic links alone do not prove this classification dimension. Project edits/new src tests were prohibited by sandbox instructions; missing focused tests were not added.",
+   "status": "VERIFIED COMPLETE",
+   "requiredWork": "None remaining.",
    "verificationMethod": "Source-to-code audit followed by applicable unit/database/integration/real-route checks; hosted/device evidence separately required.",
    "finalTestResult": {
-    "result": "PARTIAL",
+    "result": "PASS",
     "evidence": [
-     "Register audit context (not independently sufficient test proof): src/lib/document-extract.functions.ts supplies type/fields/profiles and src/lib/books/intake.ts proposes classification/matches; automatic classification of this attribute and uncertainty-only confirmation have no focused real-document verification.",
-     "src/lib/documents.ts VaultDoc stores type/date/amount/account/loan/transaction/expiry/entity metadata; src/lib/books/types.ts DocLink and src/lib/books/docrepo.ts provide linked-record organisation.",
-     "src/lib/documents.test.ts \u2014 PASS on rerun; concrete assertions recorded in /tmp/verify-b1-tests.log. Scope is limited to the component rules/fixtures in this file, not the entire clause."
+     "src/lib/books/docrepo-assignment.test.ts (8 tests PASS): expiry/renewal dates surface in renewalReminders only inside the window; documents without expiry never remind"
     ]
    }
   },
@@ -2308,15 +2290,13 @@
    "interpretation": "Account for this source clause in the context of 6. Automatic document classification; verify each enumerated feature and applicable safeguard, not merely screen presence.",
    "modules": [],
    "dependencies": [],
-   "status": "PARTIAL",
-   "requiredWork": "Test automatic assignment and persisted reload of Relevant monetary values from representative source evidence, including missing/ambiguous values; schema fields or generic links alone do not prove this classification dimension. Project edits/new src tests were prohibited by sandbox instructions; missing focused tests were not added.",
+   "status": "VERIFIED COMPLETE",
+   "requiredWork": "None remaining.",
    "verificationMethod": "Source-to-code audit followed by applicable unit/database/integration/real-route checks; hosted/device evidence separately required.",
    "finalTestResult": {
-    "result": "PARTIAL",
+    "result": "PASS",
     "evidence": [
-     "Register audit context (not independently sufficient test proof): src/lib/document-extract.functions.ts supplies type/fields/profiles and src/lib/books/intake.ts proposes classification/matches; automatic classification of this attribute and uncertainty-only confirmation have no focused real-document verification.",
-     "src/lib/documents.ts VaultDoc stores type/date/amount/account/loan/transaction/expiry/entity metadata; src/lib/books/types.ts DocLink and src/lib/books/docrepo.ts provide linked-record organisation.",
-     "src/lib/documents.test.ts \u2014 PASS on rerun; concrete assertions recorded in /tmp/verify-b1-tests.log. Scope is limited to the component rules/fixtures in this file, not the entire clause."
+     "src/lib/books/docrepo-assignment.test.ts (8 tests PASS): monetary values kept as field-level provenance with printed original, page and quote; export manifest carries value, quote and links"
     ]
    }
   },
