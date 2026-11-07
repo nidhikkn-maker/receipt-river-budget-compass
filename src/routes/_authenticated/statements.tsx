@@ -409,7 +409,7 @@ function StatementDeskPage() {
       } });
       setResult(null);
       const s = storeRef.current;
-      const completed = s.preferences.statementUploads?.find(u => u.id === target);
+      const completed = initial.find(u => u.id === target);
       if (completed && !left.length) await s.saveStatementUpload({ ...completed, status: 'undone' });
       if (left.length) toast.error(`${left.length} item${left.length === 1 ? "" : "s"} need review or cleanup. Changed evidence and unconfirmed saves are kept; review saved records and the original before retrying Undo.`);
       else toast.success("Upload reversed — your records are as they were");
