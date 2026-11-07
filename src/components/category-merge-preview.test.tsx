@@ -6,6 +6,7 @@ vi.mock("@/lib/store", () => ({ useStore: () => mock.store }));
 import { CategoryMergePreview } from "./CategoryMergePreview";
 afterEach(cleanup);
 it("preview and cancel never move records; split references block an unsafe merge", async () => {
+  Element.prototype.scrollIntoView = vi.fn();
   mock.move.mockReset(); mock.save.mockReset();
   mock.store = { transactions: [{ id: "e", date: "2026-11-01", title: "Split bill", amount: 10, category: "Other", allocations: [{ category: "Meals", amount: 5 }, { category: "Travel", amount: 5 }] }], commitments: [], budgets: { Meals: 100 }, preferences: { ...defaultPreferences(), categories: [{ name: "Meals", archived: false }, { name: "Travel", archived: false }] }, moveCategory: mock.move, savePreferences: mock.save };
   const close = vi.fn(); render(<CategoryMergePreview source="Meals" onClose={close} />);
