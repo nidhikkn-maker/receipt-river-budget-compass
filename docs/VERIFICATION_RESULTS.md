@@ -140,3 +140,9 @@ Not verified: hosted two-account access, real-device behaviour, real-document ex
 - `scripts/browser/test_asset_document_workflow.py` PASS: representative image → actual FileReader/preparation → controlled reader adapter → real review → interrupted-save Retry → reload/source/figures. Desktop saved and mobile figures screenshots inspected. Original adapter and private storage are controlled; **not actual AI extraction or hosted file-storage certification**.
 - Full suite **232 files / 1,793 tests PASS**; four Statement Desk browser workflows PASS; preview build OK. No shared database migration, production financial write, staged-trigger activation or publication performed.
 - Next: connect actual representative reader/private-storage/production-store paths for intake clauses; continue remaining 359 PARTIAL items. Existing local evidence should be reused rather than repeated.
+
+## 2026-11-07 — Historical requirements audit (Workstream 2)
+- 2,541 deduplicated clusters from 12,559 document clauses + 349 chat requests (38 pre-v6 documents), each audited read-only against the codebase. 0 unaudited.
+- Result: 1,535 implemented, 934 partial (capability exists; acceptance evidence incomplete), 53 missing, 19 superseded by recorded owner decisions.
+- Full per-cluster register: `.lovable/requirements/historical/audit.json`; classified report: `docs/HISTORICAL_COVERAGE_REPORT.md`.
+- iPad landscape list-and-detail expense layout: 3 component tests pass; full suite 245 files / 1,872 tests PASS; typecheck clean. Physical iPad check not possible in sandbox.
