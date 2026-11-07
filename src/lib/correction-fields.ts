@@ -23,7 +23,7 @@ export function correctionDestinationAccounts(type: TxnType | undefined, account
 export const TXN_INTENTS = [
   { id: "expense", label: "Expense", type: "expense", note: "Paid to a merchant or payee — no receiving bank account needed." },
   { id: "income", label: "Income", type: "income", note: "Money earned; choose the receiving account." },
-  { id: "own_transfer", label: "Transfer between my accounts", type: "transfer", note: "Use Internal transfers to link both statement lines as one movement." },
+  { id: "own_transfer", label: "Transfer between my accounts", type: "transfer", note: "Link both sides on the Moves between my accounts page so it counts once — not as spending or income." },
   { id: "third_party", label: "Payment to third party", type: "expense", note: "Goods or services from someone outside your accounts; pick them in Recipients." },
   { id: "card_bill", label: "Credit card bill payment", type: "card_payment", note: "Lowers the card’s amount owed; never another expense." },
   { id: "loan_given", label: "Loan given", type: "transfer", targets: ["other_asset"], note: "Moves money into a receivable account for that person — not spending." },

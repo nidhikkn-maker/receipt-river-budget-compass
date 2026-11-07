@@ -86,7 +86,7 @@ function TripPage() {
         <div className="my-1 font-display text-3xl font-bold">{money(s.total)}</div>
         {trip.budget > 0 && <Row label={s.variance >= 0 ? `Left of ${money(trip.budget)} budget` : "Over budget"} value={money(Math.abs(s.variance))} />}
         <Row label="Booked, not yet paid" value={money(f.committed)} />
-        <Row label="Outstanding advances" value={money(Math.abs(f.advanceBalance))} />
+        <Row label="Advance not yet accounted for" value={money(Math.abs(f.advanceBalance))} />
         <Row label="Reimbursement pending" value={money(f.reimbursablePending)} />
       </Card>
 

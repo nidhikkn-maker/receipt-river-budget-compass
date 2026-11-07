@@ -132,11 +132,11 @@ function Monthly() {
         <Box title="Budget performance">{shown.budgets.map((b) => <Row key={b.category} l={b.category} v={`${money(b.spent)} / ${money(b.budget)}`} bad={b.over} />)}</Box>
         <Box title="Unusual transactions">{shown.unusual.map((u, k) => <Row key={k} l={`${u.date} · ${u.title}`} v={money(u.amount)} />)}</Box>
         <Box title="Recurring expenses">{shown.recurring.map((u) => <Row key={u.name} l={u.name} v={`${money(u.monthly)}/mo`} />)}</Box>
-        <Box title="Credit card liabilities">{shown.creditCards.map((c) => <Row key={c.name} l={c.name} v={money(c.owed)} />)}</Box>
+        <Box title="What I owe on cards">{shown.creditCards.map((c) => <Row key={c.name} l={c.name} v={money(c.owed)} />)}</Box>
         <Box title="Upcoming commitments (30 days)">{shown.upcoming.map((u, k) => <Row key={k} l={`${u.date} · ${u.name}`} v={money(u.amount)} />)}</Box>
         <Box title="Savings goals">{shown.savings.map((g) => <Row key={g.name} l={g.name} v={`${money(g.saved)}${g.pct != null ? ` · ${g.pct}%` : ""}`} />)}</Box>
-        <Box title="Loan repayment">{shown.loans.map((l) => <Row key={l.name} l={`${l.name}${l.repaidPct != null ? ` · ${l.repaidPct}% repaid` : ""}`} v={money(l.outstanding)} />)}</Box>
-        <Box title="Pending reimbursements"><Row l="Outstanding" v={money(shown.reimbursements.outstanding)} />{Object.entries(shown.reimbursements.byPayer).map(([k, v]) => <Row key={k} l={k} v={money(v)} />)}</Box>
+        <Box title="Loans — still to pay">{shown.loans.map((l) => <Row key={l.name} l={`${l.name}${l.repaidPct != null ? ` · ${l.repaidPct}% repaid` : ""}`} v={money(l.outstanding)} />)}</Box>
+        <Box title="Money to be paid back to me"><Row l="Still to receive" v={money(shown.reimbursements.outstanding)} />{Object.entries(shown.reimbursements.byPayer).map(([k, v]) => <Row key={k} l={k} v={money(v)} />)}</Box>
         <Box title="Recommendations (rule-based)">{shown.recommendations.map((x, k) => <li key={k} className="py-1">{x}</li>)}</Box>
       </div>
 

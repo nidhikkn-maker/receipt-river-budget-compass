@@ -21,7 +21,7 @@ import { ModuleDirectory } from './ModuleDirectory';
 const PRIMARY_LINKS = [
   { to: '/dashboard', label: 'Today', icon: Home },
   { to: '/inbox', label: 'Review', icon: Inbox },
-  { to: '/expenses', label: 'Journal', icon: ListFilter },
+  { to: '/expenses', label: 'Activity', icon: ListFilter },
   { to: '/wealth', label: 'Wealth & Plan', icon: Gem },
   { to: '/statements', label: 'Statements', icon: FileText },
   { to: '/vault', label: 'Documents', icon: FileText },
