@@ -181,6 +181,7 @@ class StatementDeskFlow(unittest.IsolatedAsyncioTestCase):
         await expect(self.page.get_by_label('Recent uploads')).to_have_count(0)
         self.assertEqual(await self.page.evaluate('deskFixture.transactions.length'), 0)
         await self.page.reload()
+        await expect(self.page.get_by_role("heading", name="Statement Desk")).to_be_visible()
         self.assertEqual(await self.page.evaluate('deskFixture.transactions.length'), 0)
 
     async def test_partial_evidence_save_stays_interrupted_after_reload(self):
@@ -194,6 +195,7 @@ class StatementDeskFlow(unittest.IsolatedAsyncioTestCase):
         await self.page.wait_for_function('deskFixture.transactions.length === 1')
         self.assertEqual(await self.page.evaluate('deskFixture.transactions.length'), 1)
         await self.page.reload()
+        await expect(self.page.get_by_role("heading", name="Statement Desk")).to_be_visible()
         await expect(self.page.get_by_label('Recent uploads')).to_contain_text('interrupted')
         self.assertEqual(await self.page.evaluate('deskFixture.uploads[0].status'), 'interrupted')
         await self.page.get_by_label('Recent uploads').screenshot(path=str(EVIDENCE / 'partial-remains-interrupted.png'))
