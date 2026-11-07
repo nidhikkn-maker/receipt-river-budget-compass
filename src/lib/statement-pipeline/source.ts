@@ -1,3 +1,4 @@
+import { runningBalanceEnds } from "./running-balance";
 // Reads a statement file on this device: PDF text layer, CSV or Excel. Nothing is uploaded by reading.
 import { isAmex, parseAmexStatement, parseBalanceStatement, rowsFromItems } from "../statement-crosscheck";
 import { parseForexStatement } from "../forex-statement";
@@ -73,5 +74,7 @@ export async function readStatementFile(file: File, serverRead?: ServerReader): 
   }
   const lines = await readStatement(file);
   // A spreadsheet export carries no header text, so the file name is the only clue to its bank.
-  return { files: [fileOf(file.name, fromStatementLines(file.name, lines), null, null, "INR")], rows: [file.name] };
+  // A running Balance column gives opening/closing only when every step adds up exactly.
+  const ends = runningBalanceEnds(lines.map((l) => ({ amount: l.amount, direction: l.direction ?? "debit", balance: l.balance })));
+  return { files: [fileOf(file.name, fromStatementLines(file.name, lines), ends?.opening ?? null, ends?.closing ?? null, "INR")], rows: [file.name] };
 }
