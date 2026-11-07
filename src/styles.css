@@ -1041,3 +1041,5 @@ html[data-theme="apple-glass"] :where(.bg-card, .bg-popover, .bg-ink) {
 .uix-family-business :where(.flex) { flex-wrap: wrap; }
 .uix-family-reports :where(button) { white-space: normal; max-width: 100%; }
 .uix-family-reports :where(.flex) { flex-wrap: wrap; }
+
+@media (max-width: 480px) { .journal-wealth > div:nth-of-type(2) { grid-template-columns: 1fr; } .uix-stat { overflow: visible; } }
