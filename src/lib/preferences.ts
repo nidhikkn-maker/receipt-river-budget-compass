@@ -300,15 +300,17 @@ export function cleanMapPositions(raw: unknown): Record<string, { x: number; y: 
   return out;
 }
 
-export interface StatementUpload { id: string; at: string; label: string; posted: string[]; reconciled: string[]; createdAccounts: { id: string; name: string }[] }
+export interface StatementUpload { id: string; at: string; label: string; posted: string[]; reconciled: string[]; createdAccounts: { id: string; name: string }[]; status?: 'interrupted' | 'complete'; sources?: { documentId: string; accountId: string; file: string }[]; linkedDrafts?: { draftId: string; transactionId: string }[] }
 const ids = (v: unknown, max: number) => (Array.isArray(v) ? v.filter((x): x is string => typeof x === "string" && x.length <= 64).slice(0, max) : []);
 export function cleanStatementUploads(v: unknown): StatementUpload[] {
   if (!Array.isArray(v)) return [];
   return v.flatMap((u) => {
     if (!u || typeof u !== "object") return [];
-    const o = u as { id?: unknown; at?: unknown; label?: unknown; posted?: unknown; reconciled?: unknown; createdAccounts?: unknown };
+    const o = u as { id?: unknown; at?: unknown; label?: unknown; posted?: unknown; reconciled?: unknown; createdAccounts?: unknown; status?: unknown; sources?: unknown; linkedDrafts?: unknown };
     if (typeof o.id !== "string" || o.id.length > 64 || typeof o.at !== "string") return [];
     const created = Array.isArray(o.createdAccounts) ? o.createdAccounts.flatMap((c) => (c && typeof c === "object" && typeof (c as { id?: unknown }).id === "string" ? [{ id: String((c as { id: string }).id).slice(0, 64), name: String((c as { name?: unknown }).name ?? "").slice(0, 80) }] : [])).slice(0, 50) : [];
-    return [{ id: o.id, at: o.at.slice(0, 40), label: String(o.label ?? "").slice(0, 200), posted: ids(o.posted, 3000), reconciled: ids(o.reconciled, 3000), createdAccounts: created }];
-  }).slice(0, 10);
+    const sources = Array.isArray(o.sources) ? o.sources.flatMap(s => s && typeof s.documentId==='string' && typeof s.accountId==='string' && typeof s.file==='string' ? [{documentId:s.documentId.slice(0,64),accountId:s.accountId.slice(0,64),file:s.file.slice(0,200)}] : []).slice(0,50) : [];
+    const linkedDrafts = Array.isArray(o.linkedDrafts) ? o.linkedDrafts.flatMap(s => s && typeof s.draftId==='string' && typeof s.transactionId==='string' ? [{draftId:s.draftId.slice(0,64),transactionId:s.transactionId.slice(0,64)}] : []).slice(0,3000) : [];
+    return [{ id: o.id, at: o.at.slice(0, 40), label: String(o.label ?? "").slice(0, 200), posted: ids(o.posted, 3000), reconciled: ids(o.reconciled, 3000), createdAccounts: created, ...(o.status==='interrupted'||o.status==='complete'?{status:o.status}:{}), sources, linkedDrafts }];
+  }).filter((u,i,all)=>u.status==='interrupted'||all.slice(0,i+1).filter(x=>x.status!=='interrupted').length<=10);
 }
