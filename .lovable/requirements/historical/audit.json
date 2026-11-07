@@ -4927,11 +4927,11 @@
         "result": "Original LEDGERLINE_pasted-22.md:322-347 resolved: optional trip Budget Breakdown workspace/traveller/currency functions. Implemented cross-tab local staging, one atomic preference save, cancel and retained failed retry. Actual component5PASS and browser3sizesPASS; hosted persistence unverified.",
         "evidence": "docs/evidence/workstream-1-missing-features-2026-11-07.md"
       },
-      "followupEvidence": "docs/evidence/workstream-1-safety-recovery-2026-11-07.md",
+      "followupEvidence": "docs/evidence/workstream-1-safeguard-corrections-2026-11-07.md",
       "acceptanceCheckpoint": {
         "date": "2026-11-07",
         "status": "PARTIAL retained",
-        "result": "Main 262 files/1933PASS; isolated browser and source-preservation checks pass. Isolated hosted budget/merchant draft24PASS/2FAIL (complete-budget validation and immutable merchant history). No blanket promotion; staged SQL and publication held."
+        "result": "Budget completeness and immutable merchant-history authority staged and exercised with actual installed 0080 RPC in disposable PostgreSQL; connected trip precision and report filter identity fixed. Hosted corrected acceptance delegated to isolated draft, not yet returned; production activation held. No promotion."
       }
     },
     {
@@ -6455,11 +6455,11 @@
         "result": "Fixed unchecked history errors, false duplicate success, owner/path/kind mismatch, PDF overwrite on retry and ignored completion status failures. Actual server orchestration2PASS with controlled service adapter; PDF rendering mocked in these tests. Hosted job restart/lease and accepted report snapshot remain unverified.",
         "evidence": "docs/evidence/workstream-1-missing-features-2026-11-07.md"
       },
-      "followupEvidence": "docs/evidence/workstream-1-safety-recovery-2026-11-07.md",
+      "followupEvidence": "docs/evidence/workstream-1-safeguard-corrections-2026-11-07.md",
       "acceptanceCheckpoint": {
         "date": "2026-11-07",
         "status": "PARTIAL retained",
-        "result": "Main 262 files/1933PASS; isolated browser and source-preservation checks pass. Isolated hosted budget/merchant draft24PASS/2FAIL (complete-budget validation and immutable merchant history). No blanket promotion; staged SQL and publication held."
+        "result": "Budget completeness and immutable merchant-history authority staged and exercised with actual installed 0080 RPC in disposable PostgreSQL; connected trip precision and report filter identity fixed. Hosted corrected acceptance delegated to isolated draft, not yet returned; production activation held. No promotion."
       }
     },
     {
@@ -13075,11 +13075,11 @@
       ],
       "codeReferences": "src/lib/money.ts:1-34; src/lib/ledger.ts:71-155; src/lib/expenses.ts:108-280; src/lib/statement-pipeline/line.ts:78-102; src/lib/books/recon.ts:29-102",
       "verification": "{'date': '2026-11-07', 'evidence': 'docs/evidence/workstream-1-2026-11-07.md', 'result': 'Decimal-safe ledger/INR allocations/statement/invoice money implemented. Connected isolated figures and full suite pass. Broader tax/planning/report arithmetic inventory remains; not full financial migration acceptance.', 'scope': 'Isolated component/browser/local PostgreSQL regressions, not hosted financial saves'} Follow-up: docs/evidence/workstream-1-acceptance-2026-11-07.md; isolated connected acceptance only; broad hosted coverage stays PARTIAL.",
-      "followupEvidence": "docs/evidence/workstream-1-safety-recovery-2026-11-07.md",
+      "followupEvidence": "docs/evidence/workstream-1-safeguard-corrections-2026-11-07.md",
       "acceptanceCheckpoint": {
         "date": "2026-11-07",
         "status": "PARTIAL retained",
-        "result": "Main 262 files/1933PASS; isolated browser and source-preservation checks pass. Isolated hosted budget/merchant draft24PASS/2FAIL (complete-budget validation and immutable merchant history). No blanket promotion; staged SQL and publication held."
+        "result": "Budget completeness and immutable merchant-history authority staged and exercised with actual installed 0080 RPC in disposable PostgreSQL; connected trip precision and report filter identity fixed. Hosted corrected acceptance delegated to isolated draft, not yet returned; production activation held. No promotion."
       }
     },
     {
@@ -25468,11 +25468,11 @@
       ],
       "codeReferences": "src/lib/intelligence.ts:229-263; src/routes/_authenticated/patterns.tsx:68-132",
       "verification": "{'date': '2026-11-07', 'evidence': 'docs/evidence/workstream-1-2026-11-07.md', 'result': 'Existing alias merge/unmerge was wrongly classified absent. Added affected-entry review, cancellation, retry and alias-change guard. Browser/component adapter pass; hosted preference persistence and concurrent review coverage pending.', 'scope': 'Isolated component/browser/local PostgreSQL regressions, not hosted financial saves'} Follow-up: docs/evidence/workstream-1-acceptance-2026-11-07.md; isolated connected acceptance only; broad hosted coverage stays PARTIAL.",
-      "followupEvidence": "docs/evidence/workstream-1-safety-recovery-2026-11-07.md",
+      "followupEvidence": "docs/evidence/workstream-1-safeguard-corrections-2026-11-07.md",
       "acceptanceCheckpoint": {
         "date": "2026-11-07",
         "status": "PARTIAL retained",
-        "result": "Main 262 files/1933PASS; isolated browser and source-preservation checks pass. Isolated hosted budget/merchant draft24PASS/2FAIL (complete-budget validation and immutable merchant history). No blanket promotion; staged SQL and publication held."
+        "result": "Budget completeness and immutable merchant-history authority staged and exercised with actual installed 0080 RPC in disposable PostgreSQL; connected trip precision and report filter identity fixed. Hosted corrected acceptance delegated to isolated draft, not yet returned; production activation held. No promotion."
       }
     },
     {
