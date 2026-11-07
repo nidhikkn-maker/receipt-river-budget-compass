@@ -1278,3 +1278,4 @@ html, body { max-width: 100%; }
 .uix-content .grid > *, .smart-add-sheet .grid > * { min-width: 0; }
 input[type="date"], input[type="month"] { min-width: 0; max-width: 100%; }
 @media (min-width: 768px) { .cmp-hero { width: auto; min-height: 280px; padding: 26px 34px 88px; } .cmp-today-body { margin-top: -64px; } .cmp-greeting { font-size: 38px; } }
+.cmp-segments button { font-size: clamp(12.5px, 3.6vw, 14px); white-space: nowrap; padding-inline: 4px; }
