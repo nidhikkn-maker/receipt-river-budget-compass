@@ -29,3 +29,8 @@ it("preserves original pages and inserts missing-document evidence before the an
   const content = Buffer.from(await output.save({ useObjectStreams: false })).toString("latin1");
   expect(content).toContain("/MediaBox [ 0 0 321 456 ]");
 });
+ it("decodes actual PNG/JPEG evidence and refuses truncated images", async () => {
+  const png = new Uint8Array(Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Wl6L1sAAAAASUVORK5CYII=", "base64"));
+  expect(await reportDocumentError({bytes:png,type:"image/png"})).toBeNull();
+  expect(await reportDocumentError({bytes:new Uint8Array([137,80,78,71]),type:"image/png"})).toBe("File could not be read");
+ });
