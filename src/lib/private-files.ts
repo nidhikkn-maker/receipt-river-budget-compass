@@ -7,7 +7,7 @@ export async function privateFileUrl(path: string, api: PrivateFileApi): Promise
   return api.sign(path, PRIVATE_URL_SECONDS);
 }
 
-export interface ExpectedFile { size?: number | null; mimeType?: string | null; sha256?: string | null }
+export interface ExpectedFile { size?: number | null | undefined; mimeType?: string | null | undefined; sha256?: string | null | undefined }
 export class PrivateFileError extends Error {}
 
 export async function sha256Hex(bytes: ArrayBuffer): Promise<string> {
