@@ -920,3 +920,8 @@
 - [ ] Full hosted document-to-ledger/report/recovery acceptance; original upload/account-create lost responses, concurrent source-reference changes and stale-safe Undo remain outside staged guarantee.
 - [ ] Continue Statement Desk partials, then Financial Inbox, Account Reconciliation and DocuRepo. Universal receipt intake consolidation and full controlled-export hosted acceptance remain open.
 - [ ] Real-device/Cloud Inbox outlier observation and release acceptance require the corresponding environment; real records, approval activation and publication remain held.
+
+## Active request — 7 Nov 2026 17:42 UTC
+- [ ] Browser partial/lost requests and failed Undo across reload; persist cleanup visibility without duplicate saves.
+- [ ] Finish controlled document export acceptance; continue Statement Desk, Inbox, account reconciliation and DocuRepo partials.
+- [ ] Report exact test inventory, newly completed/verified IDs, evidence and separate historical/v6 counts. Preserve records and release holds.
