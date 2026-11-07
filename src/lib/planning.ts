@@ -1,3 +1,4 @@
+import { addMoney, decimal, moneyNumber, multiplyMoney, proportionMoney, roundMoney, subtractMoney, sumMoney } from "./money";
 // Commitments, forecast, safe-to-spend, loans, goals, income and subscription tracking (pure, tested).
 // All money in INR. Dates are YYYY-MM-DD strings.
 
@@ -33,7 +34,7 @@ export interface Commitment {
   status: CommitmentStatus;
 }
 
-const r2 = (n: number) => Math.round(n * 100) / 100;
+const r2 = roundMoney;
 const toD = (s: string) => new Date(s + "T00:00:00Z");
 const fromD = (d: Date) => d.toISOString().slice(0, 10);
 export const NEVER = "9999-12-31";
@@ -120,12 +121,17 @@ export function forecast(i: ForecastInput) {
   for (let k = 0; k <= i.days; k++) {
     const d = addDays(i.today, k);
     let inflow = 0, outflow = 0;
-    for (const o of all) if (o.date === d) (o.direction === "in" ? (inflow += o.amount) : (outflow += o.amount));
-    bal = r2(bal + inflow - outflow);
+    for (const o of all) if (o.date === d) {
+      if (o.direction === "in") inflow = addMoney(inflow, o.amount);
+      else outflow = addMoney(outflow, o.amount);
+    }
+    bal = subtractMoney(addMoney(bal, inflow), outflow);
     series.push({ date: d, balance: bal, inflow: r2(inflow), outflow: r2(outflow) });
   }
   const floor = i.floor ?? 0;
-  const lowest = series.reduce((m, x) => (x.balance < m.balance ? x : m), series[0]!);
+  const first = series[0];
+  if (!first) throw Error("Forecast requires a non-negative day count");
+  const lowest = series.reduce((m, x) => (x.balance < m.balance ? x : m), first);
   const shortDates = series.filter((x) => x.balance < floor).map((x) => x.date);
   return { series, lowest, shortDates, occurrences: occ };
 }
@@ -137,14 +143,14 @@ export interface SafeToSpend { amount: number; lowest: number; lowestDate: strin
  * Because it walks payments in date order, income arriving after a bill can't be used to pay it.
  */
 export function safeToSpend(i: ForecastInput & { reserves?: number; minBalance?: number }): SafeToSpend {
-  const floor = (i.reserves ?? 0) + (i.minBalance ?? 0);
+  const floor = addMoney(i.reserves ?? 0, i.minBalance ?? 0);
   const f = forecast({ ...i, floor });
   const end = addDays(i.today, i.days);
-  const outs = f.occurrences.filter((o) => o.direction === "out").reduce((s, o) => s + o.amount, 0) + (i.extraOut ?? []).filter((x) => x.date <= end).reduce((s, x) => s + x.amount, 0);
-  const ins = f.occurrences.filter((o) => o.direction === "in").reduce((s, o) => s + o.amount, 0);
+  const outs = sumMoney([...f.occurrences.filter((o) => o.direction === "out").map(o => o.amount), ...(i.extraOut ?? []).filter(x => x.date <= end).map(x => x.amount)]);
+  const ins = sumMoney(f.occurrences.filter(o => o.direction === "in").map(o => o.amount));
   const lowest = Math.min(f.lowest.balance, i.startBalance);
   return {
-    amount: Math.max(0, r2(lowest - floor)),
+    amount: Math.max(0, subtractMoney(lowest, floor)),
     lowest,
     lowestDate: f.lowest.date,
     steps: [
@@ -169,18 +175,18 @@ export interface Amortization { months: number; totalInterest: number; schedule:
 
 /** Reducing-balance schedule for a fixed EMI. */
 export function amortize(principal: number, annualRate: number, emi: number): Amortization {
-  const m = annualRate / 1200;
+  const m = decimal(annualRate).div(1200);
   if (principal <= 0) return { months: 0, totalInterest: 0, schedule: [], payable: true };
-  if (emi <= principal * m) return { months: Infinity, totalInterest: Infinity, schedule: [], payable: false };
+  if (decimal(emi).lte(decimal(principal).mul(m))) return { months: Infinity, totalInterest: Infinity, schedule: [], payable: false };
   let bal = principal, total = 0, n = 0;
   const schedule: Amortization["schedule"] = [];
   while (bal > 0.005 && n < 1200) {
     n++;
-    const interest = r2(bal * m);
-    const pay = Math.min(emi, bal + interest);
-    const principalPart = r2(pay - interest);
-    bal = r2(bal - principalPart);
-    total += interest;
+    const interest = moneyNumber(decimal(bal).mul(m));
+    const pay = Math.min(emi, addMoney(bal, interest));
+    const principalPart = subtractMoney(pay, interest);
+    bal = subtractMoney(bal, principalPart);
+    total = addMoney(total, interest);
     schedule.push({ month: n, interest, principal: principalPart, balance: Math.max(0, bal) });
   }
   return { months: n, totalInterest: r2(total), schedule, payable: true };
@@ -188,17 +194,18 @@ export function amortize(principal: number, annualRate: number, emi: number): Am
 
 /** EMI needed to clear `principal` in `months`. */
 export function emiFor(principal: number, annualRate: number, months: number) {
-  const m = annualRate / 1200;
+  const m = decimal(annualRate).div(1200);
   if (months <= 0) return principal;
-  if (m === 0) return r2(principal / months);
-  return r2((principal * m * (1 + m) ** months) / ((1 + m) ** months - 1));
+  if (m.isZero()) return proportionMoney(principal, 1, months);
+  const growth = m.plus(1).pow(months);
+  return moneyNumber(decimal(principal).mul(m).mul(growth).div(growth.minus(1)));
 }
 
 /** Split of the next EMI: interest on the outstanding balance, the rest repays principal. */
 export function emiSplit(principal: number, annualRate: number, emi: number) {
-  const interest = r2(Math.max(0, principal) * (annualRate / 1200));
-  const principalPart = r2(Math.min(Math.max(0, principal), Math.max(0, emi - interest)));
-  return { interest, principal: principalPart, total: r2(interest + principalPart) };
+  const interest = proportionMoney(Math.max(0, principal), annualRate, 1200);
+  const principalPart = r2(Math.min(Math.max(0, principal), Math.max(0, subtractMoney(emi, interest))));
+  return { interest, principal: principalPart, total: addMoney(interest, principalPart) };
 }
 
 /** Projected date of the last EMI. */
@@ -207,28 +214,28 @@ export const closureDate = (nextDue: string, months: number) => (Number.isFinite
 /** Compare paying `extra` today: keep EMI (shorter tenure) vs keep tenure (lower EMI). Charges use the prepayment %. */
 export function prepayment(principal: number, annualRate: number, emi: number, extra: number, chargePct = 0) {
   const base = amortize(principal, annualRate, emi);
-  const after = amortize(Math.max(0, principal - extra), annualRate, emi);
-  const lowerEmi = emiFor(Math.max(0, principal - extra), annualRate, base.months);
-  const lowerEmiPlan = amortize(Math.max(0, principal - extra), annualRate, lowerEmi);
-  const charge = r2(Math.min(extra, principal) * (chargePct / 100));
+  const after = amortize(Math.max(0, subtractMoney(principal, extra)), annualRate, emi);
+  const lowerEmi = emiFor(Math.max(0, subtractMoney(principal, extra)), annualRate, base.months);
+  const lowerEmiPlan = amortize(Math.max(0, subtractMoney(principal, extra)), annualRate, lowerEmi);
+  const charge = proportionMoney(Math.min(extra, principal), chargePct, 100);
   return {
     base,
     charge,
-    cashImpact: r2(Math.min(extra, principal) + charge),
-    reduceTenure: { monthsSaved: base.months - after.months, interestSaved: r2(base.totalInterest - after.totalInterest), netSaving: r2(base.totalInterest - after.totalInterest - charge), months: after.months },
-    reduceEmi: { newEmi: lowerEmi, emiDrop: r2(emi - lowerEmi), interestSaved: r2(base.totalInterest - lowerEmiPlan.totalInterest), netSaving: r2(base.totalInterest - lowerEmiPlan.totalInterest - charge) },
+    cashImpact: addMoney(Math.min(extra, principal), charge),
+    reduceTenure: { monthsSaved: base.months - after.months, interestSaved: subtractMoney(base.totalInterest, after.totalInterest), netSaving: subtractMoney(subtractMoney(base.totalInterest, after.totalInterest), charge), months: after.months },
+    reduceEmi: { newEmi: lowerEmi, emiDrop: subtractMoney(emi, lowerEmi), interestSaved: subtractMoney(base.totalInterest, lowerEmiPlan.totalInterest), netSaving: subtractMoney(subtractMoney(base.totalInterest, lowerEmiPlan.totalInterest), charge) },
   };
 }
 
 /** Cost of closing the loan today: outstanding principal plus foreclosure charges. */
 export function foreclosure(principal: number, chargePct = 0) {
-  const charge = r2(principal * (chargePct / 100));
-  return { charge, total: r2(principal + charge) };
+  const charge = proportionMoney(principal, chargePct, 100);
+  return { charge, total: addMoney(principal, charge) };
 }
 
 // ---------- Goals ----------
 export function goalProgress(g: { target: number; saved: number; monthly: number }, today: string) {
-  const remaining = Math.max(0, r2(g.target - g.saved));
+  const remaining = Math.max(0, subtractMoney(g.target, g.saved));
   const pct = g.target > 0 ? Math.min(100, Math.round((g.saved / g.target) * 100)) : 0;
   const months = remaining === 0 ? 0 : g.monthly > 0 ? Math.ceil(remaining / g.monthly) : null;
   return { remaining, pct, months, eta: months === null ? null : addMonths(today, months) };
@@ -242,18 +249,18 @@ export function incomeTracking(commitments: Commitment[], txns: FlowRow[], today
   const start = `${today.slice(0, 7)}-01`, end = monthEnd(today);
   const received = txns.filter((t) => t.txnType === "income" && t.date >= start && t.date <= today);
   const bySource: Record<string, number> = {};
-  for (const t of received) bySource[t.category] = r2((bySource[t.category] ?? 0) + t.amount);
+  for (const t of received) bySource[t.category] = addMoney(bySource[t.category] ?? 0, t.amount);
   const incomes = commitments.filter((c) => c.direction === "in" && c.status === "active");
   const late = incomes.filter((c) => c.nextDue < today).map((c) => ({ id: c.id, name: c.name, amount: c.amount, due: c.nextDue, daysLate: daysBetween(c.nextDue, today), confirmed: c.confirmed }));
   const upcoming = occurrences(incomes, today, end).filter((o) => !o.overdue);
   return {
-    received: r2(received.reduce((s, t) => s + t.amount, 0)),
+    received: sumMoney(received.map(t => t.amount)),
     bySource,
-    expectedRemaining: r2(upcoming.reduce((s, o) => s + o.amount, 0)),
-    expectedConfirmed: r2(upcoming.filter((o) => o.confirmed).reduce((s, o) => s + o.amount, 0)),
+    expectedRemaining: sumMoney(upcoming.map(o => o.amount)),
+    expectedConfirmed: sumMoney(upcoming.filter(o => o.confirmed).map(o => o.amount)),
     upcoming,
     late,
-    lateAmount: r2(late.reduce((s, l) => s + l.amount, 0)),
+    lateAmount: sumMoney(late.map(l => l.amount)),
   };
 }
 
@@ -281,7 +288,7 @@ export function detectSubscriptions(list: { merchant: string | null; amount: num
     const rhythm = [7, 30, 91, 365].some((p) => Math.abs(avgGap - p) <= p * 0.15);
     if (!steady || !rhythm) continue;
     const last = rows[rows.length - 1]!;
-    out.push({ merchant: name, avg: r2(rows.reduce((a, r) => a + r.amount, 0) / rows.length), last: last.amount, count: rows.length, everyDays: Math.round(avgGap), lastDate: last.date, increased: last.amount > rows[rows.length - 2]!.amount + 0.009 });
+    out.push({ merchant: name, avg: moneyNumber(rows.reduce((a, r) => a.plus(r.amount), decimal(0)).div(rows.length)), last: last.amount, count: rows.length, everyDays: Math.round(avgGap), lastDate: last.date, increased: last.amount > rows[rows.length - 2]!.amount + 0.009 });
   }
   return out.sort((a, b) => b.last - a.last);
 }
@@ -289,7 +296,7 @@ export function detectSubscriptions(list: { merchant: string | null; amount: num
 /** Monthly cost of a recurring commitment. One-off items have no monthly cost. */
 export function monthlyCost(c: Pick<Commitment, "amount" | "frequency" | "intervalDays">) {
   const per: Record<Frequency, number> = { once: 0, daily: 30.44, weekly: 4.345, monthly: 1, quarterly: 1 / 3, half_yearly: 1 / 6, yearly: 1 / 12, custom: 30.44 / Math.max(1, c.intervalDays ?? 30) };
-  return r2(c.amount * per[c.frequency]);
+  return multiplyMoney(c.amount, per[c.frequency]);
 }
 
 /**
@@ -299,7 +306,7 @@ export function monthlyCost(c: Pick<Commitment, "amount" | "frequency" | "interv
 export function subscriptionSummary(commitments: Commitment[], expenses: { merchant: string | null; title?: string; amount: number; date: string }[], today: string, windowDays = 30) {
   const subs = commitments.filter((c) => c.kind === "subscription");
   const active = subs.filter((c) => c.status === "active");
-  const monthly = r2(active.reduce((s, c) => s + monthlyCost(c), 0));
+  const monthly = sumMoney(active.map(c => monthlyCost(c)));
   const renewals = active.filter((c) => c.nextDue <= addDays(today, windowDays)).sort((a, b) => a.nextDue.localeCompare(b.nextDue));
   const charges = (c: Commitment) => {
     const k = key(c.name);
@@ -322,7 +329,7 @@ export function subscriptionSummary(commitments: Commitment[], expenses: { merch
   }
   return {
     counts: { active: active.length, paused: subs.filter((c) => c.status === "paused").length, cancelled: subs.filter((c) => c.status === "cancelled").length },
-    monthly, annual: r2(monthly * 12), renewals, increases, duplicates,
+    monthly, annual: multiplyMoney(monthly, 12), renewals, increases, duplicates,
   };
 }
 
@@ -330,12 +337,12 @@ export function subscriptionSummary(commitments: Commitment[], expenses: { merch
 export function debtScenarios(loans: { name: string; principal: number; rate: number; emi: number }[], extras = [10000, 50000], emiRaisePct = 10) {
   return loans.filter((l) => l.principal > 0 && amortize(l.principal, l.rate, l.emi).payable).map((l) => {
     const base = amortize(l.principal, l.rate, l.emi);
-    const raised = r2(l.emi * (1 + emiRaisePct / 100));
+    const raised = moneyNumber(decimal(l.emi).mul(decimal(emiRaisePct).div(100).plus(1)));
     const up = amortize(l.principal, l.rate, raised);
     return {
       loan: l.name, hypothetical: true as const, baseMonths: base.months, baseInterest: base.totalInterest,
       prepay: extras.map((x) => { const p = prepayment(l.principal, l.rate, l.emi, x); return { extra: x, monthsSaved: p.reduceTenure.monthsSaved, interestSaved: p.reduceTenure.interestSaved, newEmiIfTenureKept: p.reduceEmi.newEmi }; }),
-      raiseEmi: { pct: emiRaisePct, newEmi: raised, monthsSaved: base.months - up.months, interestSaved: r2(base.totalInterest - up.totalInterest) },
+      raiseEmi: { pct: emiRaisePct, newEmi: raised, monthsSaved: base.months - up.months, interestSaved: subtractMoney(base.totalInterest, up.totalInterest) },
     };
   });
 }
