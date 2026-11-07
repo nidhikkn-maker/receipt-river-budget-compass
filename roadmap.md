@@ -904,3 +904,4 @@
 - [x] Staged report version assignment under owner/kind/period transaction lock, stale count/older deletion/null-period/owner/duplicate evidence2PASS; final focused safeguards/report16PASS. Not installed; true contention/hosted acceptance pending.
 - [ ] Merchant/category independent-connection phantom concurrency and backup/closed-period compatibility; report frozen accepted inputs + atomic versions + hosted history recovery; remaining precision engines and partial implementation.
 - [ ] 31 missing real-device/owner-document/live-site/integration/final-process items stay accurately missing; no repeated historical audit, real-record changes, approval activation or publication. Evidence: docs/evidence/workstream-1-safeguard-corrections-2026-11-07.md.
+- [x] C-0181 share-to-app (Web Share Target) built: files kept on device, reviewed before saving; iOS Share Sheet platform limit; device acceptance pending. Missing 31→30.
