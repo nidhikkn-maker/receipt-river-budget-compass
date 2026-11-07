@@ -32,7 +32,7 @@ async def main():
         for mode,format,width,height in cases:
             context = await browser.new_context(viewport={'width':width,'height':height},accept_downloads=True)
             page = await context.new_page(); errors=[]
-            page.on('pageerror',lambda e:errors.append(str(e)))
+            page.on('pageerror',lambda e:errors.append(e.stack))
             async def intercept(route):
                 url=route.request.url
                 if not url.startswith('http://localhost:8080'): await route.abort(); return
@@ -55,7 +55,7 @@ async def main():
             if mode=='claim':
                 await page.screenshot(path=str(OUT/f'claim-{width}-state.png'));print(await page.locator('body').inner_text(),errors,flush=True)
                 if format=='summary': await page.get_by_role('radio',name='Summary + Bills').click()
-                await page.get_by_role('checkbox',name=re.compile('I reviewed this organisation')).check()
+                assert not errors,errors; await page.get_by_role('checkbox',name=re.compile('I reviewed this organisation')).check()
             await page.get_by_role('button',name='Generate claim PDF' if mode=='claim' else 'Generate statement PDF').click()
             await expect(page.get_by_role('dialog')).to_contain_text('1 readable')
             if mode=='claim':
