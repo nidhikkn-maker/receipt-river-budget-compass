@@ -9,9 +9,9 @@ by 12 independent audits plus manual review of the remainder. Full per-cluster r
 
 | Status | Clusters | Share |
 |---|---|---|
-| implemented | 1535 | 60% |
+| implemented | 1537 | 60% |
 | partial | 934 | 36% |
-| missing | 53 | 2% |
+| missing | 51 | 2% |
 | superseded | 19 | 0% |
 | **total** | 2541 | 100% |
 
@@ -19,9 +19,9 @@ by 12 independent audits plus manual review of the remainder. Full per-cluster r
 
 | Module | Implemented | Partial | Missing | Superseded |
 |---|---|---|---|---|
-| ai | 32 | 14 | 2 | 0 |
+| ai | 33 | 14 | 1 | 0 |
 | asset | 3 | 1 | 0 | 0 |
-| document | 34 | 28 | 5 | 0 |
+| document | 35 | 28 | 4 | 0 |
 | entry | 206 | 81 | 9 | 3 |
 | investment | 6 | 10 | 1 | 0 |
 | loan | 30 | 6 | 0 | 0 |
@@ -62,8 +62,6 @@ tracing) has not been produced. These are verification gaps, not absent features
 - **C-1857** (document): Include a missing-document list before the annexures.
 - **C-2024** (reporting): The summary should remain visible while scrolling.
 - **C-2094** (entry): Provide a merchant merge and unmerge function.
-- **C-2154** (ai): Suggest Self by default where appropriate.
-- **C-2232** (document): Show transactions without receipt attachments.
 - **C-2301** (entry): Automatically combine unrelated budget allocations.
 
 ### Verification-evidence gaps (15) — need physical device, live site, or benchmark run

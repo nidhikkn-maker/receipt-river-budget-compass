@@ -20,7 +20,7 @@ describe("business vs personal", () => {
     expect(applyFilters(list, { memberId: "me" }).map((e) => e.id)).toEqual(["a"]);
   });
   it("filters by receipt attachment", () => {
-    const list = [exp({ id: "a" }), exp({ id: "b", receipts: [{ path: "r/1.jpg", name: "bill.jpg" }] })];
+    const list = [exp({ id: "a" }), exp({ id: "b", receipts: [{ path: "r/1.jpg", name: "bill.jpg", type: "image/jpeg" }] })];
     expect(applyFilters(list, { receipt: "with" }).map((e) => e.id)).toEqual(["b"]);
     expect(applyFilters(list, { receipt: "without" }).map((e) => e.id)).toEqual(["a"]);
     expect(applyFilters(list, { receipt: "all" })).toHaveLength(2);
