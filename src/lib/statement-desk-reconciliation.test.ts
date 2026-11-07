@@ -10,7 +10,7 @@ const acct: Account = { id: "bank", name: "Demo Savings", kind: "savings", openi
 const t = (id: string, date: string, matched: boolean): Expense => ({ id, date, amount: 100, originalAmount: 100, currency: "INR", fxRate: 1, title: id, merchant: null, category: "Shopping", scope: "personal", memberId: null, splits: [], paymentMethod: "upi", description: "", receipts: [], accountId: "bank", reconciledAt: matched ? date : null, statementRef: matched ? `document:d · ${id}` : null } as Expense);
 const policy = { reviewDays: 14, outdatedDays: 45 };
 const status = (txns: Expense[], today: string) => {
-  const row = accountStatementStatus(acct, [], txns, defaultPreferences, today);
+  const row = accountStatementStatus(acct, [], txns, defaultPreferences(), today);
   return withStatementDeskEvidence(row, statementCoverage([acct], txns, today).find(c => c.accountId === "bank"), policy);
 };
 
