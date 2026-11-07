@@ -3,7 +3,7 @@ import { cn } from "@/lib/utils";
 
 export function Card({ title, children, className, action, "aria-label": label }: { title?: string; children: ReactNode; className?: string; action?: ReactNode; "aria-label"?: string }) {
   return (
-    <section aria-label={label} className={cn("mb-4 min-w-0 rounded-2xl border bg-card p-4", className)}>
+    <section aria-label={label} className={cn("uix-section mb-6 min-w-0 border-t bg-transparent py-5", className)}>
       {(title || action) && <div className="mb-3 flex items-center justify-between gap-2"><h2 className="font-display text-base font-semibold">{title}</h2>{action}</div>}
       {children}
     </section>
@@ -11,7 +11,7 @@ export function Card({ title, children, className, action, "aria-label": label }
 }
 export function Row({ label, value, strong, tone }: { label: string; value: ReactNode; strong?: boolean | undefined; tone?: "good" | "bad" | undefined }) {
   return (
-    <div className="flex items-baseline justify-between gap-3 border-b py-1.5 text-sm last:border-0">
+    <div className="flex items-baseline justify-between gap-3 border-b py-3 text-sm last:border-0">
       <span className="text-muted-foreground">{label}</span>
       <span className={cn("text-right font-mono font-semibold", strong && "text-base", tone === "good" && "text-success", tone === "bad" && "text-destructive")}>{value}</span>
     </div>
