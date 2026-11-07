@@ -14,7 +14,7 @@ class InboxTests(unittest.IsolatedAsyncioTestCase):
    elif u.path in ['/src/lib/store.tsx','/src/lib/import-repository.ts','/src/lib/offline.ts','/src/integrations/supabase/client.ts']:
     exports={'/src/lib/store.tsx':'useStore','/src/lib/import-repository.ts':'listImportRules,listImports,statementEvidence,listImportRows,reviseRows','/src/lib/offline.ts':'readReviewContext,writeReviewContext,localDrafts,localToFile,putLocalDraft,removeLocalDraft,fileToLocal','/src/integrations/supabase/client.ts':'supabase'}[u.path];await route.fulfill(content_type='application/javascript',body=f'export {{ {exports} }} from "/scripts/browser/financial-inbox-mocks.tsx";')
    else:await route.continue_()
-  await self.context.route('**/*',isolate);await self.page.goto('http://localhost:8080/inbox?section=review');await self.page.wait_for_timeout(1000);print('fixture errors',self.errors);await expect(self.page.get_by_role('heading',name='91 transactions needing attention')).to_be_visible()
+  await self.context.route('**/*',isolate);await self.page.goto('http://localhost:8080/inbox?section=review');await self.page.wait_for_timeout(1000);print('fixture errors',self.errors,'body',(await self.page.locator('body').inner_text())[:1000]);await expect(self.page.get_by_role('heading',name='91 transactions needing attention')).to_be_visible()
  async def asyncTearDown(self):
   Path('/tmp/browser/v512').mkdir(parents=True,exist_ok=True);self.assertEqual(await self.page.evaluate('Math.max(0,document.documentElement.scrollWidth-innerWidth)'),0);await self.page.screenshot(path=f'/tmp/browser/v512/{self._testMethodName}.png');self.assertEqual(self.errors,[]);self.assertEqual(self.blocked,[]);await self.browser.close();await self.p.stop()
  async def choose(self,name):
