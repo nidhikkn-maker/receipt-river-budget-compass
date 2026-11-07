@@ -27,7 +27,10 @@ afterEach(() => { cleanup(); state.listeners.clear(); vi.clearAllMocks(); });
 async function setup(options: { quotes?: Quote[]; lastPortfolio?: number } = {}) {
  const books = { ...emptyBooks(), holdings: [{ id: "fund", name: "Controlled Fund", kind: "mutual_fund" as const, schemeCode: "12345", quantity: 10, sharePct: 100, costBasis: 800, source: "retained source", exchange: "NSE" as const }], quotes: [{ key: "amfi:12345", price: 100, at: "2026-11-06", provider: "Controlled NAV source", freshness: "nav" as const, refreshedAt: "2026-11-06T12:00:00Z", failedAt: undefined as string | undefined }] };
  const preferences = { books, assets: [{ id: "land", name: "Factory land", kind: "property", cost: 2000, inUse: "2026-04-01", sharePct: 100, bookMethod: "slm", bookRatePct: 0 }], entities: [] };
- if (options.quotes) preferences.books.quotes = options.quotes as typeof books.quotes;
+ if (options.quotes) {
+  preferences.books.quotes = options.quotes as typeof books.quotes;
+  if (options.quotes.some(q => ["live", "delayed", "eod"].includes(q.freshness))) preferences.books.holdings = [{ ...books.holdings[0], kind: "etf", schemeCode: "12345" }] as unknown as typeof books.holdings;
+ }
  if (options.lastPortfolio !== undefined) preferences.books.snapshots = [{ date: "2026-11-01", netWorth: 4300, portfolio: options.lastPortfolio, liquid: 1000, liabilities: 300, allocation: {} }];
  const accounts = [{ id: "bank", name: "Bank", kind: "savings", openingBalance: 1000, archived: false }, { id: "invest", name: "Deposit", kind: "fixed_deposit", openingBalance: 200, archived: false }, { id: "other", name: "Other asset", kind: "other_asset", openingBalance: 500, archived: false }, { id: "debt", name: "Card", kind: "credit_card", openingBalance: 300, archived: false }];
  const db = new PGlite();
