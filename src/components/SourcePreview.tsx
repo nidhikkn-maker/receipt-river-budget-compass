@@ -39,7 +39,7 @@ export function SourcePreview({ file }: { file: File }) {
       <span>· {size(file.size)}{pages ? ` · ${pages} page${pages === 1 ? "" : "s"}` : ""}</span>
     </figcaption>
     {failed && <p role="alert" className="text-sm text-destructive">I couldn't open a preview of this file. It can still be read and checked.</p>}
-    {(kind === "image" || kind === "pdf") && (url ? <ReceiptZoomViewer src={url} type={kind === "pdf" ? "application/pdf" : file.type || "image/jpeg"} name={file.name} /> : !failed && <div className="h-64 animate-pulse rounded-xl bg-muted" aria-label="Loading preview" />)}
+    {(kind === "image" || kind === "pdf") && (url ? <ReceiptZoomViewer quiet src={url} type={kind === "pdf" ? "application/pdf" : file.type || "image/jpeg"} name={file.name} /> : !failed && <div className="h-64 animate-pulse rounded-xl bg-muted" aria-label="Loading preview" />)}
     {kind === "sheet" && rows && <div className="max-h-80 overflow-auto rounded-xl border"><table className="w-full text-left text-xs"><tbody>{rows.map((r, i) => <tr key={i} className={i === 0 ? "bg-muted font-medium" : "border-t"}>{r.map((c, j) => <td key={j} className="whitespace-nowrap px-2 py-1">{c}</td>)}</tr>)}</tbody></table><p className="px-2 py-1 text-xs text-muted-foreground">First {rows.length} rows</p></div>}
     {kind === "other" && <p className="rounded-xl border p-3 text-sm text-muted-foreground">No preview for this kind of file.</p>}
   </figure>;
