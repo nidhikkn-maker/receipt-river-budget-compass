@@ -6,7 +6,8 @@ import { LedgerlineSymbol } from './LedgerlineLogo';
 import sunrise from '@/assets/companion-sunrise.jpg';
 
 /** Opens the shell's in-place Smart Add sheet from anywhere on the page. */
-export const openSmartAdd = () => window.dispatchEvent(new CustomEvent('ledgerline:smart-add'));
+import { openSmartAdd as openSmartAddEvent } from '@/lib/smart-add-event';
+export const openSmartAdd = () => openSmartAddEvent();
 
 /** "Krupanidhi Karunanithi" → "KK"; single names stay as the first name. */
 export function shortName(name: string) {
