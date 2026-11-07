@@ -12,6 +12,7 @@ import { readFileSync } from "node:fs";
 import { afterEach, expect, it, vi } from "vitest";
 import { act, cleanup, fireEvent, render, waitFor } from "@testing-library/react";
 import { emptyBooks } from "@/lib/books/types";
+import type { Quote } from "@/lib/books/types";
 const state = vi.hoisted(() => ({ store: {} as Record<string, unknown>, version: 0, listeners: new Set<() => void>(), nav: vi.fn() }));
 vi.mock("@/lib/store", () => ({ useStore: () => { useSyncExternalStore(listener => { state.listeners.add(listener); return () => state.listeners.delete(listener); }, () => state.version); return state.store; } }));
 vi.mock("@tanstack/react-start", () => ({ useServerFn: () => state.nav }));
@@ -23,9 +24,11 @@ import { MarketPanel } from "./MarketPanel";
 import { NetWorthCard } from "./NetWorthCard";
 const owner = "00000000-0000-0000-0000-000000000001", other = "00000000-0000-0000-0000-000000000002";
 afterEach(() => { cleanup(); state.listeners.clear(); vi.clearAllMocks(); });
-async function setup() {
+async function setup(options: { quotes?: Quote[]; lastPortfolio?: number } = {}) {
  const books = { ...emptyBooks(), holdings: [{ id: "fund", name: "Controlled Fund", kind: "mutual_fund" as const, schemeCode: "12345", quantity: 10, sharePct: 100, costBasis: 800, source: "retained source", exchange: "NSE" as const }], quotes: [{ key: "amfi:12345", price: 100, at: "2026-11-06", provider: "Controlled NAV source", freshness: "nav" as const, refreshedAt: "2026-11-06T12:00:00Z", failedAt: undefined as string | undefined }] };
  const preferences = { books, assets: [{ id: "land", name: "Factory land", kind: "property", cost: 2000, inUse: "2026-04-01", sharePct: 100, bookMethod: "slm", bookRatePct: 0 }], entities: [] };
+ if (options.quotes) preferences.books.quotes = options.quotes as typeof books.quotes;
+ if (options.lastPortfolio !== undefined) preferences.books.snapshots = [{ date: "2026-11-01", netWorth: 4300, portfolio: options.lastPortfolio, liquid: 1000, liabilities: 300, allocation: {} }];
  const accounts = [{ id: "bank", name: "Bank", kind: "savings", openingBalance: 1000, archived: false }, { id: "invest", name: "Deposit", kind: "fixed_deposit", openingBalance: 200, archived: false }, { id: "other", name: "Other asset", kind: "other_asset", openingBalance: 500, archived: false }, { id: "debt", name: "Card", kind: "credit_card", openingBalance: 300, archived: false }];
  const db = new PGlite();
  await db.exec(`CREATE ROLE authenticated; CREATE ROLE anon; CREATE ROLE service_role; CREATE SCHEMA auth;
@@ -92,6 +95,31 @@ it("actual price refresh → installed reviewed-save RPC → net-worth/Home → 
   expect((await h.db.query("SELECT * FROM preference_approvals")).rows).toEqual([]);
   await h.db.exec("RESET ROLE; SET ROLE anon");
   await expect(h.db.query("SELECT * FROM finance_preferences")).rejects.toThrow(/permission denied/);
+ } finally { await h.db.close(); }
+}, 30000);
+it.each(["live", "delayed", "eod", "nav", "manual", "statement"] as const)("persisted %s quote displays its exact provenance and last-success facts without rewriting acquisition costs", async (freshness) => {
+ const h = await setup({ quotes: [{ key: "amfi:12345", price: 110, at: "2026-11-06T10:00:00Z", provider: "Controlled verified source", freshness, refreshedAt: "2026-11-06T11:00:00Z" }] });
+ try {
+  const view = render(<MarketPanel />); fireEvent.click(view.getByText("Investments & net worth"));
+  await waitFor(() => expect(view.container.textContent).toContain("Controlled verified source"));
+  expect(view.container.textContent).toContain("110");
+  expect(view.container.textContent).toContain("2026-11-06");
+  const row = await h.reload();
+  expect(row.data.books.quotes[0]?.refreshedAt).toBe("2026-11-06T11:00:00Z");
+  expect(row.data.books.holdings[0]?.costBasis).toBe(800);
+ } finally { await h.db.close(); }
+}, 30000);
+it("persisted Home snapshot shows contribution-adjusted movement and missing-price quality from the actual shared hook", async () => {
+ const h = await setup({ lastPortfolio: 900 });
+ try {
+  const view = render(<NetWorthCard />);
+  await waitFor(() => expect(view.container.textContent).toContain("+₹300.00 since 2026-11-01"));
+  expect(view.container.textContent).toContain("Updated from records");
+  const row = await h.reload();
+  await h.db.query("SELECT save_reviewed_preferences($1,$2::jsonb,$3,true)", [crypto.randomUUID(), JSON.stringify({ ...row.data, books: { ...row.data.books, quotes: [] } }), row.revision]);
+  await h.reload();
+  await waitFor(() => expect(view.container.textContent).toContain("without a price (left out, not zero)"));
+  expect(view.container.textContent).toContain("₹200.00");
  } finally { await h.db.close(); }
 }, 30000);
 it("failed NAV refresh preserves last successful price/refresh and displays stale valuation after owner reload", async () => {
