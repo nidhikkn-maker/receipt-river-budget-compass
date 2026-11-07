@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { InboxWork } from '@/components/InboxWork';
 import { AccountStatementStatus } from '@/components/AccountStatementStatus';
 import { useStore } from '@/lib/store';
-import { inboxItems, INBOX_LABEL } from '@/lib/inbox';
+import { inboxItems } from '@/lib/inbox';
 import { useAudit, auditInboxItems } from '@/components/books/useAudit';
 import { centreReview, matchesReview, reviewCounts, REVIEW_FILTERS, type ReviewFilter } from '@/lib/review-centre';
 import { groupReminders } from '@/lib/review-reminders';
