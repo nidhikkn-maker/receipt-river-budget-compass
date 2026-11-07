@@ -12,7 +12,7 @@ import { behaviour, mergeMerchants, mergeSuggestions, merchantProfiles, normalis
 import { useStore } from "@/lib/store";
 import { todayISO } from "@/lib/use-position";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { merchantGroupingChanges, merchantReviewSnapshot, reverseMerchantGrouping, type MerchantGroupingEvent } from "@/lib/merchant-management";
+import { merchantGroupingChanges, merchantEntrySnapshot, merchantReviewSnapshot, reverseMerchantGrouping, type MerchantGroupingEvent } from "@/lib/merchant-management";
 
 export const Route = createFileRoute("/_authenticated/patterns")({
   head: () => ({
@@ -85,7 +85,7 @@ export function Merchants() {
   const prepare = (aliases: typeof pr.merchantAliases, title: string, reverses?: string) => {
     const changes = merchantGroupingChanges(transactions, pr.merchantAliases, aliases);
     setError(""); setReview({ aliases, title, before: JSON.stringify(pr.merchantAliases), snapshot: merchantReviewSnapshot(transactions, pr.merchantAliases, aliases),
-      event: { id: crypto.randomUUID(), date: new Date().toISOString(), title, before: { ...pr.merchantAliases }, after: aliases, entryIds: changes.map(c => c.id), ...(reverses ? { reverses } : {}) } });
+      event: { id: crypto.randomUUID(), date: new Date().toISOString(), title, before: { ...pr.merchantAliases }, after: aliases, entryIds: changes.map(c => c.id), entrySnapshot: merchantEntrySnapshot(transactions, pr.merchantAliases, aliases), ...(reverses ? { reverses } : {}) } });
   };
   const merge = (keys: string[]) => {
     const ps = profiles.filter((p) => keys.includes(p.key)); const first = ps[0]; if (!first || ps.length < 2) return;

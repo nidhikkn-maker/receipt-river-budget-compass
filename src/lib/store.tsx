@@ -26,6 +26,7 @@ import { recurringDuplicates } from './review-recurring';
 import { metadataStillCurrent, type MetadataPreview } from './review-metadata';
 import { validateBankBalance } from './loan-funding';
 import { preferenceReviewSections } from './preference-review';
+import { validateCompleteAllocations } from './trip-budget';
 import { PreferenceReview } from '@/components/PreferenceReview';
 import { checkpointUpload } from './statement-pipeline/history';
 import type { StatementUpload } from './preferences';
@@ -406,6 +407,10 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
 
   const savePreferences: Ctx["savePreferences"] = async (p) => {
     const previous=preferences;
+    for (const trip of p.trips) {
+      const old = previous.trips.find(item => item.id === trip.id);
+      if (JSON.stringify(old) !== JSON.stringify(trip)) validateCompleteAllocations(trip);
+    }
     if(reviewDecision.current)throw new Error('Finish the current review before saving another change');
     const sections=preferenceReviewSections(previous,p);
     if(sections.length){

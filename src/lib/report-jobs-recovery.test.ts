@@ -24,7 +24,7 @@ function adapter(options:{history?:Record<string,unknown>;readError?:boolean;ins
 }
 it('existing accepted owner report completes without rendering/upload; read errors and wrong identity never mark done',async()=>{
  const row={id:'job',owner_id:'owner',kind:'monthly',file_path:'owner/reports/job.pdf',file_size:13};
- const valid=adapter({history:{...row,period_from:job.filters.from,period_to:job.filters.to,filters:{style:job.style}}});valid.files.set('owner/reports/job.pdf',new Blob(['%PDF-original'],{type:'application/pdf'}));await completeReportJob(valid.db,job);expect(valid.files.size).toBe(1);expect(valid.writes).toHaveLength(1);
+ const valid=adapter({history:{...row,period_from:job.filters.from,period_to:job.filters.to,filters:{...job.filters,style:job.style}}});valid.files.set('owner/reports/job.pdf',new Blob(['%PDF-original'],{type:'application/pdf'}));await completeReportJob(valid.db,job);expect(valid.files.size).toBe(1);expect(valid.writes).toHaveLength(1);
  const failed=adapter({readError:true});await expect(completeReportJob(failed.db,job)).rejects.toThrow('check report history');expect(failed.writes).toEqual([]);
  const wrong=adapter({history:{...row,owner_id:'someone-else'}});await expect(completeReportJob(wrong.db,job)).rejects.toThrow('identity');expect(wrong.writes).toEqual([]);
 });
@@ -51,4 +51,9 @@ it('orphan PDF is adopted unchanged before new ledger reads or rendering',async(
  const h=adapter();const original=new Blob(['%PDF-frozen-before-retry'],{type:'application/pdf'});h.files.set('owner/reports/job.pdf',original);
  await completeReportJob(h.db,job);
  expect(h.files.get('owner/reports/job.pdf')).toBe(original);expect(h.getHistory()?.['file_size']).toBe(original.size);
+});
+it('same report identity cannot certify evidence prepared with different workspace or category filters',async()=>{
+ const h=adapter();await completeReportJob(h.db,job);const before=h.writes.length;
+ await expect(completeReportJob(h.db,{...job,filters:{...job.filters,workspaces:['business']}})).rejects.toThrow(/identity differs/);
+ expect(h.writes).toHaveLength(before);expect(await h.files.get('owner/reports/job.pdf')?.text()).toBe('%PDF-original');
 });
