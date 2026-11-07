@@ -1,5 +1,5 @@
 import { confirmAction } from "@/lib/confirm";
-import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -167,7 +167,7 @@ function Auth() {
     } catch { setFaceError("Couldn't check your account. Use your account password."); setPasswordMode(true); }
     finally { setBusy(false); }
   };
-  return <AuthFrame>
+  return <AuthFrame creator>
     <h2 className="mb-2 text-2xl font-semibold">{signedEmail ? "Welcome back" : signup ? "Create your account" : "Welcome to Ledgerline"}</h2>
     <p className="mb-6 text-sm text-muted-foreground">{signedEmail ? "Continue with your remembered account." : signup ? "A clearer picture starts here." : "Sign in to your financial companion."}</p>
     {checking ? <p role="status" className="text-sm text-muted-foreground">Checking your account…</p> : signedEmail ? <>
