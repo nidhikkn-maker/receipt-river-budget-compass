@@ -69,8 +69,17 @@ export function fmtIst(iso: string): string {
 
 export interface Valued { holding: Holding; key: string | null; quote: Quote | null; value: number | null; stale: boolean; note: string }
 
-/** Holding value = verified quantity × applicable price × ownership share [v6.1 §4, §8]. */
-export function valueHolding(h: Holding, quotes: Quote[], gold: GoldRate | undefined, now: Date, alerts: AlertSettings): Valued {
+/** Latest dated owner-entered INR rate for a currency; null when none exists — a rate is never guessed [v6.1 §2]. */
+export function fxFor(currency: string, fxRates: FxRate[]): FxRate | null {
+  const c = currency.toUpperCase();
+  if (c === "INR") return null;
+  return fxRates.filter((r) => r.from === c).sort((a, b) => b.date.localeCompare(a.date))[0] ?? null;
+}
+/** An FX rate older than 30 days is treated as stale for valuation notes. */
+const FX_STALE_DAYS = 30;
+
+/** Holding value = verified quantity × applicable price × ownership share, converted to INR when the price is in another currency [v6.1 §2, §4, §8]. */
+export function valueHolding(h: Holding, quotes: Quote[], gold: GoldRate | undefined, now: Date, alerts: AlertSettings, fxRates: FxRate[] = []): Valued {
   const share = h.sharePct / 100;
   if (h.kind === "physical_gold") {
     if (!h.grams || !h.karat) return { holding: h, key: null, quote: null, value: null, stale: false, note: "Needs weight and purity" };
