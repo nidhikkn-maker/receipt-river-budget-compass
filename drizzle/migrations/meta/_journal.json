@@ -1,0 +1,622 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1793388304747,
+      "tag": "0000_expenses_core",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1793388660243,
+      "tag": "0001_multicurrency_payment_reconcile",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1793389001554,
+      "tag": "0002_personal_family_tracker",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1793389119156,
+      "tag": "0003_profile_trigger_anonymous",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1793389529162,
+      "tag": "0004_expense_splits",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1793390531907,
+      "tag": "0005_accounts_and_ledger",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1793391374157,
+      "tag": "0006_commitments_loans_goals",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1793413633624,
+      "tag": "0007_preferences_and_receipt_details",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1793413839788,
+      "tag": "0008_passkey_device_lock",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1793414797016,
+      "tag": "0009_prd_modules_cards_loans_docs_audit",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1793414853185,
+      "tag": "0010_adjustment_direction",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1793417045477,
+      "tag": "0011_atomic_finance_workflows",
+      "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1793417357786,
+      "tag": "0012_harden_finance_operation_validation",
+      "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1793420527943,
+      "tag": "0013_atomic_backup_restore",
+      "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1793427975557,
+      "tag": "0014_phase1_inbox_reviews_allocations",
+      "breakpoints": true
+    },
+    {
+      "idx": 15,
+      "version": "7",
+      "when": 1793432385455,
+      "tag": "0015_atomic_claim_receipts_and_irregular_confirmation",
+      "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1793434582930,
+      "tag": "0016_bulk_category_history_undo",
+      "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1793435080372,
+      "tag": "0017_restrict_budget_and_role_reads",
+      "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1793450106366,
+      "tag": "0018_complete_finance_data_deletion",
+      "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1793452344118,
+      "tag": "0019_expense_payment_instrument",
+      "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1793456909040,
+      "tag": "0020_statement_line_imports",
+      "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1793456946408,
+      "tag": "0021_delete_statement_imports_with_data",
+      "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "7",
+      "when": 1793460224659,
+      "tag": "0022_family_requests",
+      "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1793460322412,
+      "tag": "0023_family_invite_owner",
+      "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1793461048936,
+      "tag": "0024_four_workspaces_and_allocations",
+      "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1793461648652,
+      "tag": "0025_distinct_money_movement_types",
+      "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1793461847222,
+      "tag": "0026_expense_trip_and_loan_split",
+      "breakpoints": true
+    },
+    {
+      "idx": 27,
+      "version": "7",
+      "when": 1793473261780,
+      "tag": "0027_expense_drafts",
+      "breakpoints": true
+    },
+    {
+      "idx": 28,
+      "version": "7",
+      "when": 1793473993993,
+      "tag": "0028_report_history",
+      "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "7",
+      "when": 1793478845663,
+      "tag": "0029_report_jobs",
+      "breakpoints": true
+    },
+    {
+      "idx": 30,
+      "version": "7",
+      "when": 1793496794997,
+      "tag": "0030_historical_import_staging",
+      "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "7",
+      "when": 1793496898480,
+      "tag": "0031_secure_import_posting",
+      "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "7",
+      "when": 1793497482787,
+      "tag": "0032_import_post_snapshot_and_direction_guards",
+      "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "7",
+      "when": 1793497953456,
+      "tag": "0033_scanned_import_jobs_and_balance_evidence",
+      "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "7",
+      "when": 1793500640332,
+      "tag": "0034_atomic_trip_expense_actions",
+      "breakpoints": true
+    },
+    {
+      "idx": 35,
+      "version": "7",
+      "when": 1793500813644,
+      "tag": "0035_trip_action_snapshot_validation",
+      "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "7",
+      "when": 1793503487009,
+      "tag": "0036_atomic_import_review_changes",
+      "breakpoints": true
+    },
+    {
+      "idx": 37,
+      "version": "7",
+      "when": 1793503519593,
+      "tag": "0037_preserve_import_classification_enrichment",
+      "breakpoints": true
+    },
+    {
+      "idx": 38,
+      "version": "7",
+      "when": 1793507566099,
+      "tag": "0038_import_rule_conditions",
+      "breakpoints": true
+    },
+    {
+      "idx": 39,
+      "version": "7",
+      "when": 1793510962749,
+      "tag": "0039_family_request_revocation_guards",
+      "breakpoints": true
+    },
+    {
+      "idx": 40,
+      "version": "7",
+      "when": 1793515565757,
+      "tag": "0040_claim_preparations_and_activity_linking",
+      "breakpoints": true
+    },
+    {
+      "idx": 41,
+      "version": "7",
+      "when": 1793518204917,
+      "tag": "0041_financial_correction_confirmation_and_undo",
+      "breakpoints": true
+    },
+    {
+      "idx": 42,
+      "version": "7",
+      "when": 1793518734601,
+      "tag": "0042_statement_identity_coverage_and_checkpoints",
+      "breakpoints": true
+    },
+    {
+      "idx": 43,
+      "version": "7",
+      "when": 1793519040988,
+      "tag": "0043_guard_statement_identity_at_atomic_post",
+      "breakpoints": true
+    },
+    {
+      "idx": 44,
+      "version": "7",
+      "when": 1793521335655,
+      "tag": "0044_protected_review_metadata_mapping",
+      "breakpoints": true
+    },
+    {
+      "idx": 45,
+      "version": "7",
+      "when": 1793522819935,
+      "tag": "0045_isolate_metadata_undo_from_financial_undo",
+      "breakpoints": true
+    },
+    {
+      "idx": 46,
+      "version": "7",
+      "when": 1793531783136,
+      "tag": "0046_payee_links",
+      "breakpoints": true
+    },
+    {
+      "idx": 47,
+      "version": "7",
+      "when": 1793537294336,
+      "tag": "0047_internal_transfer_links",
+      "breakpoints": true
+    },
+    {
+      "idx": 48,
+      "version": "7",
+      "when": 1793539750444,
+      "tag": "0048_hide_revoked_family_invites",
+      "breakpoints": true
+    },
+    {
+      "idx": 49,
+      "version": "7",
+      "when": 1793544025677,
+      "tag": "0049_harden_transfer_approval_and_undo",
+      "breakpoints": true
+    },
+    {
+      "idx": 50,
+      "version": "7",
+      "when": 1793588097836,
+      "tag": "0050_migration",
+      "breakpoints": true
+    },
+    {
+      "idx": 51,
+      "version": "7",
+      "when": 1793588432446,
+      "tag": "0051_demo_dates_current_month",
+      "breakpoints": true
+    },
+    {
+      "idx": 52,
+      "version": "7",
+      "when": 1793591447625,
+      "tag": "0052_accountant_upload_links",
+      "breakpoints": true
+    },
+    {
+      "idx": 53,
+      "version": "7",
+      "when": 1793591926966,
+      "tag": "0053_upload_link_events",
+      "breakpoints": true
+    },
+    {
+      "idx": 54,
+      "version": "7",
+      "when": 1793593147954,
+      "tag": "0054_upload_link_reminder_events",
+      "breakpoints": true
+    },
+    {
+      "idx": 55,
+      "version": "7",
+      "when": 1793627858395,
+      "tag": "0055_receipt_problem_reports",
+      "breakpoints": true
+    },
+    {
+      "idx": 56,
+      "version": "7",
+      "when": 1793795624824,
+      "tag": "0056_investment_holdings",
+      "breakpoints": true
+    },
+    {
+      "idx": 57,
+      "version": "7",
+      "when": 1793796821734,
+      "tag": "0057_docurepo_fields_versions",
+      "breakpoints": true
+    },
+    {
+      "idx": 58,
+      "version": "7",
+      "when": 1793810444900,
+      "tag": "0058_migration",
+      "breakpoints": true
+    },
+    {
+      "idx": 59,
+      "version": "7",
+      "when": 1793827093321,
+      "tag": "0059_books_v6_gaps",
+      "breakpoints": true
+    },
+    {
+      "idx": 60,
+      "version": "7",
+      "when": 1793831872391,
+      "tag": "0060_commit_document_intake",
+      "breakpoints": true
+    },
+    {
+      "idx": 61,
+      "version": "7",
+      "when": 1793833392129,
+      "tag": "0061_opening_balance_postings",
+      "breakpoints": true
+    },
+    {
+      "idx": 62,
+      "version": "7",
+      "when": 1793849749978,
+      "tag": "0062_freeze_closed_years_books",
+      "breakpoints": true
+    },
+    {
+      "idx": 63,
+      "version": "7",
+      "when": 1793855704082,
+      "tag": "0063_shared_reference_reads_real_accounts",
+      "breakpoints": true
+    },
+    {
+      "idx": 64,
+      "version": "7",
+      "when": 1793902104474,
+      "tag": "0064_retain_investment_statement_events",
+      "breakpoints": true
+    },
+    {
+      "idx": 65,
+      "version": "7",
+      "when": 1793906658931,
+      "tag": "0065_expense_company",
+      "breakpoints": true
+    },
+    {
+      "idx": 66,
+      "version": "7",
+      "when": 1793930108392,
+      "tag": "0066_role_access",
+      "breakpoints": true
+    },
+    {
+      "idx": 67,
+      "version": "7",
+      "when": 1793930265163,
+      "tag": "0067_team_names",
+      "breakpoints": true
+    },
+    {
+      "idx": 68,
+      "version": "7",
+      "when": 1793937331257,
+      "tag": "0068_backup_drafts",
+      "breakpoints": true
+    },
+    {
+      "idx": 69,
+      "version": "7",
+      "when": 1793940541992,
+      "tag": "0069_freeze_financial_registers",
+      "breakpoints": true
+    },
+    {
+      "idx": 70,
+      "version": "7",
+      "when": 1793940834462,
+      "tag": "0070_authoritative_period_close_evidence",
+      "breakpoints": true
+    },
+    {
+      "idx": 71,
+      "version": "7",
+      "when": 1793941070367,
+      "tag": "0071_revision_checked_document_intake",
+      "breakpoints": true
+    },
+    {
+      "idx": 72,
+      "version": "7",
+      "when": 1793942455773,
+      "tag": "0072_period_recovery_authority",
+      "breakpoints": true
+    },
+    {
+      "idx": 73,
+      "version": "7",
+      "when": 1793942505398,
+      "tag": "0073_period_authority_preference_upserts",
+      "breakpoints": true
+    },
+    {
+      "idx": 74,
+      "version": "7",
+      "when": 1793942693976,
+      "tag": "0074_typed_document_intake_validation",
+      "breakpoints": true
+    },
+    {
+      "idx": 75,
+      "version": "7",
+      "when": 1793958833509,
+      "tag": "0075_entity_level_access",
+      "breakpoints": true
+    },
+    {
+      "idx": 76,
+      "version": "7",
+      "when": 1793961564632,
+      "tag": "0076_entity_scoped_transactions",
+      "breakpoints": true
+    },
+    {
+      "idx": 77,
+      "version": "7",
+      "when": 1793962099728,
+      "tag": "0077_my_shared_companies",
+      "breakpoints": true
+    },
+    {
+      "idx": 78,
+      "version": "7",
+      "when": 1793968875193,
+      "tag": "0078_entity_member_uploads",
+      "breakpoints": true
+    },
+    {
+      "idx": 79,
+      "version": "7",
+      "when": 1793969041879,
+      "tag": "0079_intake_server_approval",
+      "breakpoints": true
+    },
+    {
+      "idx": 80,
+      "version": "7",
+      "when": 1793975074126,
+      "tag": "0080_reviewed_preference_saves",
+      "breakpoints": true
+    },
+    {
+      "idx": 81,
+      "version": "7",
+      "when": 1793975100108,
+      "tag": "0081_closed_gst_amendment_guard",
+      "breakpoints": true
+    },
+    {
+      "idx": 82,
+      "version": "7",
+      "when": 1793975486931,
+      "tag": "0082_advance_review_sections",
+      "breakpoints": true
+    },
+    {
+      "idx": 83,
+      "version": "7",
+      "when": 1793977898085,
+      "tag": "0083_journal_rule_closed_guards",
+      "breakpoints": true
+    },
+    {
+      "idx": 84,
+      "version": "7",
+      "when": 1793981970358,
+      "tag": "0084_period_figure_snapshots",
+      "breakpoints": true
+    },
+    {
+      "idx": 85,
+      "version": "7",
+      "when": 1793982303134,
+      "tag": "0085_nested_schedule_intake_validation",
+      "breakpoints": true
+    },
+    {
+      "idx": 86,
+      "version": "7",
+      "when": 1794019636192,
+      "tag": "0086_role_permission_scope",
+      "breakpoints": true
+    },
+    {
+      "idx": 87,
+      "version": "7",
+      "when": 1794040189511,
+      "tag": "0087_internal_reference_rls",
+      "breakpoints": true
+    }
+  ]
+}
