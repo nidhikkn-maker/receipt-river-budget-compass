@@ -4,8 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { ScanFace } from "lucide-react";
-import { LedgerlineLogo } from "@/components/LedgerlineLogo";
-import kkLogo from "@/assets/kk-monogram-gold.png.asset.json";
+import { AuthFrame } from "@/components/AuthFrame";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -50,6 +49,7 @@ function Auth() {
   const [faceEnabled, setFaceEnabled] = useState(false);
   const [passwordMode, setPasswordMode] = useState(false);
   const [notice, setNotice] = useState("");
+  const [authError, setAuthError] = useState("");
   const [faceError, setFaceError] = useState("");
   const [mpinOn, setMpinOn] = useState(false);
   const [demoOpen, setDemoOpen] = useState(false);
@@ -119,7 +119,7 @@ function Auth() {
     catch { localStorage.setItem(`ll-face-offer-${id}`, "later"); }
   };
   const submit = async (e: React.FormEvent) => {
-    e.preventDefault(); setBusy(true);
+    e.preventDefault(); setAuthError(""); setBusy(true);
     try {
       if (signup) {
         if (anonymous) {
@@ -136,7 +136,7 @@ function Auth() {
         await offerDeviceUnlock();
         await go();
       }
-    } catch (e) { toast.error((e as Error).message); } finally { setBusy(false); }
+    } catch (e) { setAuthError(e instanceof Error ? e.message : "Couldn't sign in. Please try again."); } finally { setBusy(false); }
   };
   const startDemo = async (e: React.FormEvent) => {
     e.preventDefault(); setBusy(true);
@@ -167,16 +167,9 @@ function Auth() {
     } catch { setFaceError("Couldn't check your account. Use your account password."); setPasswordMode(true); }
     finally { setBusy(false); }
   };
-  return <div className="uix-auth relative min-h-dvh overflow-hidden bg-background">
-  <div className="pointer-events-none fixed z-0 flex flex-col items-center gap-1 text-muted-foreground opacity-70" style={{ right: "max(1rem, env(safe-area-inset-right))", bottom: "max(1rem, env(safe-area-inset-bottom))" }}>
-    <img src={kkLogo.url} alt="KK monogram" className="size-12 object-contain sm:size-16" />
-    <span className="text-[10px] tracking-wide sm:text-xs">A creation by KK</span>
-  </div>
-  <main className="relative z-10 mx-auto flex min-h-dvh max-w-md flex-col justify-center px-5 pb-32 pt-10 sm:pb-24">
-    <Link to="/dashboard" aria-label="Ledgerline home" className="mx-auto mb-8 inline-block"><LedgerlineLogo className="h-9 w-auto sm:h-11" /></Link>
-    <div className="py-6 sm:py-8">
-    <h1 className="mb-1 text-center font-display text-2xl font-semibold">{signedEmail ? "Welcome back" : signup ? "Create your account" : "Sign in"}</h1>
-    <p className="mb-6 text-center text-sm text-muted-foreground">{signedEmail ? "Unlock to open your accounts" : signup ? "Start tracking with Ledgerline" : "Your finances, in one place"}</p>
+  return <AuthFrame>
+    <h2 className="mb-2 text-2xl font-semibold">{signedEmail ? "Welcome back" : signup ? "Create your account" : "Welcome to Ledgerline"}</h2>
+    <p className="mb-6 text-sm text-muted-foreground">{signedEmail ? "Continue with your remembered account." : signup ? "A clearer picture starts here." : "Sign in to your financial companion."}</p>
     {checking ? <p role="status" className="text-sm text-muted-foreground">Checking your account…</p> : signedEmail ? <>
       <div className="mb-5 flex items-center justify-center gap-3"><span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-primary text-sm font-semibold text-primary-foreground">{signedEmail[0]?.toUpperCase()}</span><span className="min-w-0 truncate text-sm">{signedEmail}</span></div>
       {mpinOn && !passwordMode ? <div className="grid gap-2">
@@ -196,19 +189,20 @@ function Auth() {
         <Button variant="link" disabled={busy} onClick={() => void signOut()}>Sign out and use another sign-in method</Button>
       </div>}
     </> : <>
-      {!signup && <div className="mb-5 grid gap-3"><Button variant="gold" disabled={busy} className="min-h-12 whitespace-normal" onClick={() => void unlock()}><ScanFace className="h-5 w-5 shrink-0" />Face ID</Button><div className="flex items-center gap-3 text-xs text-muted-foreground"><span className="h-px flex-1 bg-border" />or use email<span className="h-px flex-1 bg-border" /></div></div>}
+      {!signup && <div className="mb-5 grid gap-3"><Button variant="outline" disabled={busy} className="min-h-12" onClick={() => social("google")}>Continue with Google</Button></div>}
       {faceError && <p role="alert" className="mb-4 text-sm text-destructive">{faceError}</p>}
       <form onSubmit={submit} className="grid gap-4">
+        {authError && <p role="alert" className="rounded-lg border border-destructive/30 p-3 text-sm text-destructive">{authError}</p>}
         {signup && <div className="grid gap-1"><Label htmlFor="display-name">Display name</Label><Input id="display-name" value={name} onChange={e => setName(e.target.value)} required /></div>}
         <div className="grid gap-1"><Label htmlFor="email">Email</Label><Input id="email" type="email" autoComplete="email" required value={email} onChange={e => setEmail(e.target.value)} /></div>
         <div className="grid gap-1"><Label htmlFor="password">Password</Label><Input id="password" type="password" autoComplete={signup ? "new-password" : "current-password"} minLength={8} required value={password} onChange={e => setPassword(e.target.value)} /></div>
         <Button disabled={busy} className="min-h-11">{busy ? "Please wait…" : signup ? "Create account" : "Sign in"}</Button>
         {notice && <p role="status" className="text-sm text-success">{notice}</p>}
       </form>
-      <div className="mt-4 grid gap-2"><Button variant="outline" disabled={busy} onClick={() => social("google")}>Continue with Google</Button><Button className="lovable-auth-button" disabled={busy} onClick={() => social("lovable")}>Continue with Lovable</Button></div>
+      <div className="mt-4 grid gap-2">{signup && <Button variant="outline" disabled={busy} onClick={() => social("google")}>Continue with Google</Button>}<Button variant="outline" disabled={busy} onClick={() => social("lovable")}>Continue with Lovable</Button><Button variant="ghost" disabled={busy} onClick={() => void unlock()}><ScanFace className="size-4" />Unlock a remembered account</Button></div>
       <div className="my-1" />
       <div className="mt-4 flex flex-wrap justify-between gap-2"><Button variant="link" onClick={() => { setSignup(!signup); setNotice(""); setFaceError(""); }}>{signup ? "Already have an account?" : "Create an account"}</Button><Button variant="link" onClick={async () => { if (!email) { toast.error("Enter your email first"); return; } const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: window.location.origin + "/reset-password" }); if (error) toast.error(error.message); else setNotice("Check your email for the password reset link."); }}>Forgot password?</Button></div>
-      <div className="mt-5 rounded-2xl border border-dashed bg-muted/40 p-4">
+      <div className="mt-5 border-t border-border pt-4">
         {demoOpen ? <form className="grid gap-2" onSubmit={startDemo}>
           <Label htmlFor="demo-email">Your email (any address, not verified)</Label>
           <Input id="demo-email" type="email" autoComplete="email" required maxLength={254} value={demoEmail} onChange={e => setDemoEmail(e.target.value)} />
@@ -218,7 +212,5 @@ function Auth() {
       </div>
       {anonymous && <p className="mt-4 text-xs text-muted-foreground">Create an email account to keep this browser’s records. Social sign-in may open a separate account; back up first.</p>}
     </>}
-    </div>
-  </main>
-  </div>;
+  </AuthFrame>;
 }
