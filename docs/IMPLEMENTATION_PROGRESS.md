@@ -76,3 +76,6 @@ See docs/evidence/workstream-1-batch-2026-11-07b.md. Fixed new-account statement
 
 ## Workstream 1 — 7 Nov 2026 recovery/evidence checkpoint
 Exact statement source/receipt completion, authoritative Undo absence checks, eight-stage isolated interruptions, document original hashing and separate confirmed-save cleanup retry; ambiguous DocuRepo identities and controlled original/provenance ZIP fixed. Six controlled Statement Desk browser tests pass. Nine synthetic Inbox observations: 1.10–1.94s; prior hosted 5.45s cause unresolved. Corrected unsupported test-count reporting; no removed historical test paths. No promotions: historical1553/948/21/19;v6566/331/2. See docs/evidence/workstream-1-batch-2026-11-07d.md. No real records, activation or publication.
+
+## Workstream 1 — 7 Nov 2026 17:42 continuation
+Persistent failed Undo, cleanup intent before original deletion, reopened cleanup-only retry and retained load/export errors. Past imports made read-only. Newly verified narrow historical C-0128/C-0343/C-0554/C-0210; counts1557/944/21/19, v6unchanged566/331/2. Full275files/2012PASS; StatementDesk9PASS/Inbox9PASS/document tools+actual search/history PASS with isolated adapters. Hosted sign-in/cross-device/source-concurrent Undo remain unverified. Evidence: docs/evidence/workstream-1-batch-2026-11-07e.md. No real records, activation or publication.

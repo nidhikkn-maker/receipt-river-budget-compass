@@ -1747,14 +1747,15 @@
   {
    "cid": "C-0128",
    "category": "statement",
-   "status": "partial",
+   "status": "implemented",
    "rep": "*Historical import has its own upload list** — it still carries a separate upload manifest. Turn it into a read-only \"past imports\" history that links to Statement Desk.",
    "sources": [
     "Clean-up_remove_overlapping_pages_and_options_pasted.md:8"
    ],
    "members": [
     "H-1861"
-   ]
+   ],
+   "evidence": " | 2026-11-07e: actual route browser acceptance with isolated records, zero external writes; exact cases/limits in docs/evidence/workstream-1-batch-2026-11-07e.md"
   },
   {
    "cid": "C-0129",
@@ -2732,14 +2733,15 @@
   {
    "cid": "C-0210",
    "category": "testing",
-   "status": "partial",
+   "status": "implemented",
    "rep": "Verify the cross-account matching flow with a sample statement and confirm that matched entries can be moved and undone safely.",
    "sources": [
     "chat #516 2026-11-01 19:39"
    ],
    "members": [
     "HC-0185"
-   ]
+   ],
+   "evidence": " | 2026-11-07e: actual route browser acceptance with isolated records, zero external writes; exact cases/limits in docs/evidence/workstream-1-batch-2026-11-07e.md"
   },
   {
    "cid": "C-0211",
@@ -4338,14 +4340,15 @@
   {
    "cid": "C-0343",
    "category": "document",
-   "status": "partial",
+   "status": "implemented",
    "rep": "Search should support merchant, date, amount, document type and recognised text where available.",
    "sources": [
     "Detailed_Functional_Requirements_-_Version_1.0_pasted.md:706"
    ],
    "members": [
     "H-0404"
-   ]
+   ],
+   "evidence": " | 2026-11-07e: actual route browser acceptance with isolated records, zero external writes; exact cases/limits in docs/evidence/workstream-1-batch-2026-11-07e.md"
   },
   {
    "cid": "C-0344",
@@ -6913,14 +6916,15 @@
   {
    "cid": "C-0554",
    "category": "other",
-   "status": "partial",
+   "status": "implemented",
    "rep": "Add browser tests for the complete Financial Inbox review workflow, including approvals and Undo actions.",
    "sources": [
     "chat #418 2026-11-01 14:37"
    ],
    "members": [
     "HC-0141"
-   ]
+   ],
+   "evidence": " | 2026-11-07e: actual route browser acceptance with isolated records, zero external writes; exact cases/limits in docs/evidence/workstream-1-batch-2026-11-07e.md"
   },
   {
    "cid": "C-0555",
@@ -13790,7 +13794,8 @@
    ],
    "members": [
     "H-3849"
-   ]
+   ],
+   "evidence": " | 2026-11-07e: durable failed Undo and document cleanup intent through reload, isolated browser proof; broader workflow/sign-in pending."
   },
   {
    "cid": "C-1124",
@@ -14607,7 +14612,8 @@
    ],
    "members": [
     "H-6469"
-   ]
+   ],
+   "evidence": " | 2026-11-07e: durable failed Undo and document cleanup intent through reload, isolated browser proof; broader workflow/sign-in pending."
   },
   {
    "cid": "C-1192",
@@ -30873,8 +30879,8 @@
   }
  ],
  "counts": {
-  "implemented": 1553,
-  "partial": 948,
+  "implemented": 1557,
+  "partial": 944,
   "superseded": 19,
   "missing": 21
  }
