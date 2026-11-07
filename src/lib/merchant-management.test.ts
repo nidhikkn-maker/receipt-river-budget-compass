@@ -13,3 +13,10 @@ it('preview covers indirect aliases and binds original fields and new entries', 
  const preexisting={...event,before:{...after,new:'outside'},after:{...before,new:'outside'}};
  expect(()=>reverseMerchantGrouping({...before,new:'middle'},preexisting)).toThrow('newer merchant');
 });
+it('refuses an old reversal after later changes return the alias to the same value',()=>{
+ const merge={id:'merge',date:'2026-11-07',title:'merge',before:{},after:{south:'north'},entryIds:['a']};
+ const later={...merge,id:'later',before:{south:'north'},after:{south:'west'}};
+ const returned={...merge,id:'returned',before:{south:'west'},after:{south:'north'}};
+ expect(()=>reverseMerchantGrouping({south:'north'},merge,[merge,later,returned])).toThrow('edited after');
+ expect(reverseMerchantGrouping({south:'north'},merge,[merge,{...later,before:{other:'a'},after:{other:'b'}}])).toEqual({});
+});

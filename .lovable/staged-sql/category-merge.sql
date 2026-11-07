@@ -31,11 +31,15 @@ LANGUAGE plpgsql SECURITY DEFINER SET search_path=public AS $$
 DECLARE uid uuid:=auth.uid(); old public.category_merge_operations; src_category text:=_preview->>'source'; dst_category text:=_preview->>'target'; current_plan jsonb; p jsonb; result jsonb; count_entries integer;
 BEGIN
  IF uid IS NULL OR _id IS NULL OR jsonb_typeof(_preview) IS DISTINCT FROM 'object' THEN RAISE EXCEPTION 'Invalid category review'; END IF;
+ -- Row locks alone cannot protect against new rows introduced after preview.
+ -- Serialize direct inserts/deletes as well as RPC writers for this short atomic operation.
+ LOCK TABLE public.expenses, public.commitments, public.category_budgets IN SHARE ROW EXCLUSIVE MODE;
  PERFORM owner_id FROM public.finance_preferences WHERE owner_id=uid FOR UPDATE;
  IF NOT FOUND THEN RAISE EXCEPTION 'Refresh preferences'; END IF;
  SELECT * INTO old FROM public.category_merge_operations WHERE id=_id;
  IF FOUND THEN
-  IF old.owner_id<>uid OR old.request<>_preview THEN RAISE EXCEPTION 'Operation ID already used'; END IF;
+  IF old.owner_id IS DISTINCT FROM uid OR old.request IS DISTINCT FROM _preview THEN RAISE EXCEPTION 'Operation ID already used'; END IF;
+  IF old.reversed_at IS NOT NULL THEN RAISE EXCEPTION 'Merge already reversed; prepare a new review'; END IF;
   RETURN old.result;
  END IF;
  -- Locks preserve a stable snapshot until every category reference has been moved.
@@ -43,7 +47,7 @@ BEGIN
  PERFORM id FROM public.commitments WHERE owner_id=uid ORDER BY id FOR UPDATE;
  PERFORM category FROM public.category_budgets WHERE owner_id=uid ORDER BY category FOR UPDATE;
  current_plan:=public.preview_category_merge(src_category,dst_category);
- IF current_plan<>_preview THEN RAISE EXCEPTION 'Records changed; refresh and review again'; END IF;
+ IF current_plan IS DISTINCT FROM _preview THEN RAISE EXCEPTION 'Records changed; refresh and review again'; END IF;
  UPDATE public.expenses e SET category=CASE WHEN category=src_category THEN dst_category ELSE category END,
   allocations=(SELECT coalesce(jsonb_agg(CASE WHEN a->>'category'=src_category THEN jsonb_set(a,'{category}',to_jsonb(dst_category)) ELSE a END ORDER BY ord),'[]'::jsonb)
    FROM jsonb_array_elements(e.allocations) WITH ORDINALITY x(a,ord))
@@ -61,6 +65,7 @@ BEGIN
  -- Preserve trip category plan amounts and unrelated trip fields.
  p:=jsonb_set(p,'{trips}',(SELECT coalesce(jsonb_agg(CASE WHEN t ? 'budgetLines' THEN jsonb_set(t,'{budgetLines}',(SELECT coalesce(jsonb_agg(CASE WHEN b->>'category'=src_category THEN jsonb_set(b,'{category}',to_jsonb(dst_category)) ELSE b END ORDER BY n),'[]'::jsonb) FROM jsonb_array_elements(t->'budgetLines') WITH ORDINALITY y(b,n))) ELSE t END ORDER BY ord),'[]'::jsonb) FROM jsonb_array_elements(coalesce(p->'trips','[]')) WITH ORDINALITY x(t,ord)));
  UPDATE public.finance_preferences SET data=p WHERE owner_id=uid;
+ SELECT data INTO p FROM public.finance_preferences WHERE owner_id=uid;
  result:=jsonb_build_object('entries',count_entries,'revision',(SELECT revision FROM public.finance_preferences WHERE owner_id=uid));
  INSERT INTO public.category_merge_operations(id,owner_id,request,result,after_snapshot) VALUES(_id,uid,_preview,result,
   jsonb_build_object('preferences',p,'revision',(SELECT revision FROM public.finance_preferences WHERE owner_id=uid),
@@ -78,6 +83,7 @@ LANGUAGE plpgsql SECURITY DEFINER SET search_path=public AS $$
 DECLARE uid uuid:=auth.uid(); operation public.category_merge_operations; snapshot jsonb; original jsonb; row_data jsonb;
 BEGIN
  IF uid IS NULL THEN RAISE EXCEPTION 'Sign in required'; END IF;
+ LOCK TABLE public.expenses, public.commitments, public.category_budgets IN SHARE ROW EXCLUSIVE MODE;
  PERFORM owner_id FROM public.finance_preferences WHERE owner_id=uid FOR UPDATE;
  SELECT * INTO operation FROM public.category_merge_operations WHERE id=_id AND owner_id=uid FOR UPDATE;
  IF NOT FOUND THEN RAISE EXCEPTION 'Merge not available'; END IF;
@@ -101,7 +107,8 @@ BEGIN
   UPDATE public.commitments SET category=row_data->>'category' WHERE id=(row_data->>'id')::uuid AND owner_id=uid AND category IS DISTINCT FROM row_data->>'category';
  END LOOP;
  DELETE FROM public.category_budgets WHERE owner_id=uid;
- INSERT INTO public.category_budgets(owner_id,category,monthly_amount) SELECT uid,b->>'category',(b->>'monthly_amount')::numeric FROM jsonb_array_elements(original->'monthlyBudgets') b;
+ -- Preserve timestamps and any future budget metadata, not only the amount.
+ INSERT INTO public.category_budgets SELECT (jsonb_populate_record(NULL::public.category_budgets,b)).* FROM jsonb_array_elements(original->'monthlyBudgets') b;
  UPDATE public.finance_preferences SET data=original->'preferences' WHERE owner_id=uid;
  UPDATE public.category_merge_operations SET reversed_at=now() WHERE id=_id AND owner_id=uid;
  RETURN jsonb_build_object('reversed',true,'id',_id);

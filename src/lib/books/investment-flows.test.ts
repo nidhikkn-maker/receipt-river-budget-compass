@@ -8,6 +8,10 @@ const accounts: Account[] = [
 ];
 const entry = (patch: Partial<Txn> = {}): Txn => ({ id: 't', date: '2026-11-02', amount: 200, txnType: 'investment', accountId: 'bank', toAccountId: 'fund', ...patch });
 describe('external portfolio cash flows', () => {
+  it('decimal contributions and redemptions preserve originals and exclude internal/counterpart rows',()=>{
+    const rows=[entry({id:'a',amount:1.005}),entry({id:'b',amount:0.1}),entry({id:'c',amount:0.2}),entry({id:'redeem',amount:0.1,accountId:'fund',toAccountId:'bank'}),entry({id:'internal',amount:999,accountId:'fund',toAccountId:'deposit'}),entry({id:'counterpart',amount:999,transferCounterpartOf:'a'})];
+    const before=JSON.stringify(rows);expect(investmentFlows(rows,accounts,'2026-11-01')).toBe(1.21);expect(JSON.stringify(rows)).toBe(before);
+  });
   it('excludes a 200 contribution from a 1000 to 1200 market move', () => { const flows=investmentFlows([entry()],accounts,'2026-11-01'); expect(flows).toBe(200); expect(1200-1000-flows).toBe(0); });
   it('excludes a 200 redemption stored as transfer from a 1000 to 800 move', () => { const flows=investmentFlows([entry({txnType:'transfer',accountId:'fund',toAccountId:'bank'})],accounts,'2026-11-01'); expect(flows).toBe(-200); expect(800-1000-flows).toBe(0); });
   it('does not count internal portfolio moves', () => { expect(investmentFlows([entry({accountId:'fund',toAccountId:'deposit'})],accounts,'2026-11-01')).toBe(0); });

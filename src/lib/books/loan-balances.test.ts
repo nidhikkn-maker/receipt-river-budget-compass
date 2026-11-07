@@ -8,6 +8,15 @@ it('uses dated confirmed lender balance, never original or undated register prin
  const absent=standaloneLoanBalances([loan],[],[doc],'2026-11-06');expect(absent.amount).toBe(0);expect(absent.missing).toEqual(['Vehicle loan']);
 });
 it('never counts linked loan accounts again',()=>expect(standaloneLoanBalances([{...loan,accountId:'a1'}],[evidence],[doc],'2026-11-06').rows).toEqual([]));
+it('decimal lender evidence totals retain each source and exclude linked liabilities',()=>{
+ const amounts=[1.005,0.1,0.2];
+ const loans=amounts.map((_,i)=>({...loan,id:`l${i}`}));
+ const documents=loans.map(l=>({...doc,id:`doc-${l.id}`,loanId:l.id}));
+ const balances=loans.map((l,i)=>({...evidence,id:`e-${l.id}`,loanId:l.id,docId:`doc-${l.id}`,amount:amounts[i]??0}));
+ const result=standaloneLoanBalances([...loans,{...loan,id:'linked',accountId:'bank'}],balances,documents,'2026-11-06');
+ expect(result.amount).toBe(1.31);expect(result.missing).toEqual([]);
+ expect(result.rows.map(r=>r.evidence?.docId)).toEqual(['doc-l0','doc-l1','doc-l2']);
+});
 it('selects latest eligible date and excludes future evidence',()=>{
  const r=standaloneLoanBalances([loan],[evidence,{...evidence,id:'e2',amount:750000,asOf:'2026-11-01'},{...evidence,id:'e3',amount:700000,asOf:'2026-12-01'}],[doc],'2026-11-06');expect(r.amount).toBe(750000);expect(r.asOf).toBe('2026-11-01');
 });

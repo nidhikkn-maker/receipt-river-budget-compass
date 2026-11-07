@@ -9,10 +9,11 @@ const commit=(p:object|undefined,id=op)=>db.query('SELECT commit_category_merge(
 beforeAll(async()=>{
  await db.exec(`CREATE ROLE authenticated; CREATE ROLE anon; CREATE ROLE service_role; CREATE SCHEMA auth;
  CREATE FUNCTION auth.uid() RETURNS uuid LANGUAGE sql AS $$ SELECT nullif(current_setting('app.uid',true),'')::uuid $$;
+ GRANT USAGE ON SCHEMA auth TO authenticated;
  CREATE TABLE finance_preferences(owner_id uuid PRIMARY KEY,data jsonb,revision bigint DEFAULT 1);
  CREATE TABLE expenses(id uuid PRIMARY KEY,employee_id uuid,category text,amount numeric,allocations jsonb,source text);
  CREATE TABLE commitments(id uuid PRIMARY KEY,owner_id uuid,category text,amount numeric);
- CREATE TABLE category_budgets(owner_id uuid,category text,monthly_amount numeric,PRIMARY KEY(owner_id,category));
+ CREATE TABLE category_budgets(owner_id uuid,category text,monthly_amount numeric,updated_at timestamptz DEFAULT '2026-11-01',PRIMARY KEY(owner_id,category));
  CREATE FUNCTION bump() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN NEW.revision:=OLD.revision+1; RETURN NEW; END $$;
  CREATE TRIGGER bump BEFORE UPDATE ON finance_preferences FOR EACH ROW EXECUTE FUNCTION bump();
  SELECT set_config('app.uid','${owner}',false);`);
@@ -43,6 +44,28 @@ it('atomic merge preserves split amounts/tags/original, scoped/trip plans, and d
  expect((await commit(p)).rows).toEqual(result.rows);
  expect((await db.query('SELECT * FROM category_merge_operations')).rows).toHaveLength(1);
 });
+it('new records invalidate an approved preview before any write',async()=>{
+ await db.exec(`SELECT set_config('app.uid','${other}',false)`);
+ const p=await preview();
+ const id='00000000-0000-4000-8000-000000000099';
+ await db.query('INSERT INTO commitments VALUES($1,$2,$3,0.01)',[id,other,'Meals']);
+ await expect(commit(p,id)).rejects.toThrow('Records changed');
+ expect((await db.query<{category:string}>('SELECT category FROM expenses WHERE employee_id=$1',[other])).rows[0]?.category).toBe('Meals');
+ await db.query('DELETE FROM commitments WHERE id=$1',[id]);
+});
+it('a SQL insert arriving during the merge is excluded from the accepted snapshot and blocks stale undo',async()=>{
+ await db.exec(`SELECT set_config('app.uid','${other}',false)`);
+ const id='00000000-0000-4000-8000-000000000097';
+ const inserted='00000000-0000-4000-8000-000000000096';
+ const p=await preview();
+ // Concurrent client requests share this disposable database; commit is queued first.
+ // PGlite serializes them: this is not independent-connection lock contention evidence.
+ await Promise.all([commit(p,id),db.query('INSERT INTO commitments VALUES($1,$2,$3,0.01)',[inserted,other,'Meals'])]);
+ await expect(db.query('SELECT undo_category_merge($1)',[id])).rejects.toThrow('Records changed');
+ expect((await db.query<{category:string}>('SELECT category FROM commitments WHERE id=$1',[inserted])).rows[0]?.category).toBe('Meals');
+ await db.query('DELETE FROM commitments WHERE id=$1',[inserted]);
+ await db.query('SELECT undo_category_merge($1)',[id]);
+});
 it('failed preference guard rolls back entries, commitments and monthly budgets together',async()=>{
  await db.exec(`SELECT set_config('app.uid','${other}',false);
  CREATE FUNCTION reject_test_write() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'Isolated write failure'; END $$;
@@ -52,13 +75,13 @@ it('failed preference guard rolls back entries, commitments and monthly budgets 
  expect((await db.query<{c:string}>('SELECT category c FROM expenses WHERE employee_id=$1',[other])).rows[0]?.c).toBe('Meals');
  expect((await db.query<{c:string}>('SELECT category c FROM commitments WHERE owner_id=$1',[other])).rows[0]?.c).toBe('Meals');
  expect((await db.query('SELECT * FROM category_budgets WHERE owner_id=$1',[other])).rows).toHaveLength(2);
- expect((await db.query('SELECT * FROM category_merge_operations WHERE owner_id=$1',[other])).rows).toHaveLength(0);
+ expect((await db.query('SELECT * FROM category_merge_operations WHERE owner_id=$1 AND reversed_at IS NULL',[other])).rows).toHaveLength(0);
  await db.exec('DROP TRIGGER reject_test_write ON finance_preferences;');
 });
 it('another owner cannot replay or read the operation and retains every financial record',async()=>{
  await db.exec(`SELECT set_config('app.uid','${other}',false)`);
  await expect(commit(await preview())).rejects.toThrow('Operation ID already used');
- await db.exec('SET ROLE authenticated'); expect((await db.query('SELECT * FROM category_merge_operations')).rows).toEqual([]); await db.exec('RESET ROLE');
+ await db.exec('SET ROLE authenticated'); expect((await db.query('SELECT * FROM category_merge_operations WHERE owner_id<>auth.uid()')).rows).toEqual([]); await db.exec('RESET ROLE');
  expect((await db.query<{c:string}>('SELECT category c FROM expenses WHERE employee_id=$1',[other])).rows[0]?.c).toBe('Meals');
 });
 it('reversal refuses later edits, restores original splits/budgets without financial writes, retains audit and replays',async()=>{
@@ -73,5 +96,23 @@ it('reversal refuses later edits, restores original splits/budgets without finan
  expect((await db.query<{category:string;amount:string;source:string;allocations:unknown}>('SELECT * FROM expenses WHERE employee_id=$1',[owner])).rows[0]).toMatchObject({category:'Meals',amount:'100',source:'original.pdf',allocations:[{category:'Meals',amount:40,tags:['original']},{category:'Travel',amount:60}]});
  expect((await db.query<{category:string;monthly_amount:string}>('SELECT * FROM category_budgets WHERE owner_id=$1 ORDER BY category',[owner])).rows).toMatchObject([{category:'Meals',monthly_amount:'0.1'},{category:'Travel',monthly_amount:'0.2'}]);
  expect((await db.query('SELECT undo_category_merge($1)',[op])).rows).toEqual(reversed.rows);
- expect((await db.query('SELECT * FROM category_merge_operations WHERE reversed_at IS NOT NULL')).rows).toHaveLength(1);
+ expect((await db.query('SELECT * FROM category_merge_operations WHERE id=$1 AND reversed_at IS NOT NULL',[op])).rows).toHaveLength(1);
+ expect((await db.query<{date:string}>("SELECT updated_at::date::text date FROM category_budgets WHERE owner_id=$1",[owner])).rows.map(r=>r.date)).toEqual(['2026-11-01','2026-11-01']);
+ await expect(commit((await db.query<{request:object}>('SELECT request FROM category_merge_operations WHERE id=$1',[op])).rows[0]?.request)).rejects.toThrow('already reversed');
+});
+it('closed-period write refusal rolls the entire merge back and refuses undo without discarding its audit',async()=>{
+ await db.exec(`SELECT set_config('app.uid','${other}',false);
+ CREATE FUNCTION closed_test_guard() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'Closed period'; END $$;
+ CREATE TRIGGER closed_test_guard BEFORE UPDATE ON expenses FOR EACH ROW EXECUTE FUNCTION closed_test_guard();`);
+ const id='00000000-0000-4000-8000-000000000098';
+ await expect(commit(await preview(),id)).rejects.toThrow('Closed period');
+ expect((await db.query<{category:string}>('SELECT category FROM commitments WHERE owner_id=$1',[other])).rows[0]?.category).toBe('Meals');
+ expect((await db.query('SELECT * FROM category_merge_operations WHERE id=$1',[id])).rows).toEqual([]);
+ await db.exec('DROP TRIGGER closed_test_guard ON expenses');
+ await commit(await preview(),id);
+ await db.exec('CREATE TRIGGER closed_test_guard BEFORE UPDATE ON expenses FOR EACH ROW EXECUTE FUNCTION closed_test_guard()');
+ await expect(db.query('SELECT undo_category_merge($1)',[id])).rejects.toThrow('Closed period');
+ expect((await db.query<{reversed_at:unknown}>('SELECT reversed_at FROM category_merge_operations WHERE id=$1',[id])).rows[0]?.reversed_at).toBeNull();
+ expect((await db.query<{category:string}>('SELECT category FROM commitments WHERE owner_id=$1',[other])).rows[0]?.category).toBe('Travel');
+ await db.exec('DROP TRIGGER closed_test_guard ON expenses');
 });

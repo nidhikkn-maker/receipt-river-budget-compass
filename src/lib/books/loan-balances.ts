@@ -1,4 +1,5 @@
 import type { VaultDoc } from '../documents';
+import { sumMoney } from '../money';
 export interface LoanBalanceEvidence { id: string; loanId: string; amount: number; asOf: string; docId: string; sourceQuote: string; confirmedAt: string }
 type LoanRef = { id: string; name: string; accountId: string | null; status: string };
 type DocRef = Pick<VaultDoc, 'id' | 'loanId' | 'docType'>;
@@ -16,7 +17,7 @@ export function standaloneLoanBalances(loans: LoanRef[], evidence: LoanBalanceEv
  });
  const missing=rows.filter(r=>!r.evidence).map(r=>r.loan.name);
  const dates=rows.flatMap(r=>r.evidence?[r.evidence.asOf]:[]).sort();
- return {rows,amount:Math.round(rows.reduce((s,r)=>s+(r.evidence?.amount??0),0)*100)/100,missing,asOf:dates[0]??null};
+ return {rows,amount:sumMoney(rows.map(r=>r.evidence?.amount??0)),missing,asOf:dates[0]??null};
 }
 /** Printed outstanding proposal read from a retained lender statement's extracted fields. Never confirms; ambiguous values return null. */
 export type PrintedBalanceProposal = { amount: number; asOf: string | null; sourceQuote: string; ambiguous: false } | { ambiguous: true; reason: string } | null;
