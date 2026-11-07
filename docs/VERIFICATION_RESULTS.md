@@ -79,3 +79,10 @@ Not verified: hosted two-account access, real-device behaviour, real-document ex
 - New `src/lib/books/intake-fixtures.test.ts` (21 tests, PASS): representative fixtures for company incorporation, PAN/GST registration, audited financial statements, property deeds, lease agreements and asset purchase invoices — covering identification/matching, expected-field extraction, missing-field handling with no invented values, and reviewed save via `commitIntake` with DocuRepo document links and module placement. Promoted V60-0041/0042/0043/0055/0056/0058 to VERIFIED COMPLETE.
 - Fixed a real gap found during verification (V60-0082): a Statement Desk save whose DocuRepo original-store failed previously left only a toast. Failed originals are now kept in a persistent on-page warning with an explicit retry that never duplicates posted entries. Typecheck and build pass.
 - Register: 519 VERIFIED COMPLETE / 378 PARTIAL / 0 MISSING / 2 BLOCKED.
+
+## 7 Nov 2026 (continued) — Document fixture and assignment verification
+- New `src/lib/investments/investment-doc-fixtures.test.ts` (7 tests, PASS): demat/transaction/capital-gains statement identification, field extraction, no invented quantities, unmatched securities reported not created, re-uploaded lots never duplicated, reviewed merge links every holding to its source document.
+- New `src/lib/books/docrepo-assignment.test.ts` (8 tests, PASS): automatic assignment and reload of document type, company (link or printed PAN/GSTIN, never guessed), financial year, related asset/property/investment/loan links, expiry reminders, monetary-value provenance with printed original and page, retention rules.
+- Promoted to VERIFIED COMPLETE: V60-0045, V60-0047, V60-0050, V60-0052, V60-0053, V60-0054, V60-0086, V60-0090, V60-0091, V60-0093–V60-0096, V60-0098–V60-0100.
+- Full suite: 228 files, 1,773 tests, all PASS. Typecheck and build clean.
+- Register: 535 VERIFIED COMPLETE / 362 PARTIAL / 0 MISSING / 2 BLOCKED.

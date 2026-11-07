@@ -795,6 +795,8 @@
 - [x] Full suite confirmed at 1,727 passing on latest code; count history matches successive versions.
 - [x] V61-0014 currency valuation implemented + 7 tests; governance clauses V60-0643/0647/0769 verified as process rules. Register: 513 VERIFIED / 384 PARTIAL / 0 MISSING / 2 BLOCKED.
 - [x] Four audit agents re-verified all 404 PARTIALs (20 promoted with re-run evidence; precise remaining work recorded per clause).
-- [ ] Four test-writing agents (sub_4fz6ph78, sub_qhwba5bn, sub_cem0xc90, sub_c7cyq4aj) are adding the focused tests each remaining PARTIAL needs (id lists /tmp/verify2-b1..b4-ids.json, results /tmp/verify2-b1..b4.json). On completion: merge results into register, re-render MASTER_REQUIREMENTS.md, run full suite + typecheck, update docs, then continue with whatever remains PARTIAL.
+- [x] Test-writing agents ran read-only (re-ran 682 existing tests, all pass) and found one real gap — fixed: Statement Desk now keeps failed DocuRepo original stores in a persistent retryable warning instead of a vanishing toast.
+- [x] Wrote the focused proof tests directly: intake-fixtures (24), investment-doc-fixtures (7), docrepo-assignment (8). Register now 535 VERIFIED / 362 PARTIAL / 0 MISSING / 2 BLOCKED; full suite 1,773 PASS.
+- [ ] Continue proving remaining PARTIALs in clusters: receipt/contract/utility fixtures (V60-0048/0049/0060-0062), extraction field fixtures (V60-0105-0119), invoice-derived linking (V60-0130+), navigation render tests (V60-0072-0080), then the umbrella workflow integration tests.
 - [ ] Staged guard_preference_approval trigger: still NOT installed — needs owner's explicit activation approval.
 - [ ] No further publishing without owner's approval.
