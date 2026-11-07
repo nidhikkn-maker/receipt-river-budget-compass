@@ -28,6 +28,20 @@ const fixture = {
 };
 
 describe("buildPeriodFigures", () => {
+  it("rounds decimal source totals once and reproduces the same closed evidence", () => {
+    const entries = [1.005, 0.1, 0.2].map(amount => ({ date:"2025-06-10", amount, txnType:"expense" }));
+    const invoices = [1.005, 0.1, 0.2].map((taxable,i) => inv({id:`fraction-${i}`, taxable, igst:0}));
+    const journals = [1.005, 0.1, 0.2].map((amount,i) => journal({id:`fraction-${i}`, amount}));
+    const f = buildPeriodFigures({...fixture, entries, invoices, journals, accounts:[{id:"bank",balanceAt:()=>1.005}]});
+    expect(f.entries.expenses).toBe(1.31);
+    expect(f.gst.outputTaxable).toBe(1.31);
+    expect(f.depreciation.posted).toBe(1.31);
+    expect(f.balances["bank"]).toBe(1.01);
+    const reproduced = reproduceFromEvidence({from:fixture.from,to:fixture.to,ledger:entries.map(e=>({expense_date:e.date,amount:String(e.amount),txn_type:e.txnType})),registers:{gstInvoices:invoices,journals}});
+    expect(reproduced?.entries).toEqual(f.entries);
+    expect(reproduced?.gst).toEqual(f.gst);
+    expect(reproduced?.depreciation).toEqual(f.depreciation);
+  });
   it("totals only in-period entries, invoices and posted journals", () => {
     const f = buildPeriodFigures(fixture);
     expect(f.entries).toEqual({ count: 4, income: 10000, expenses: 2500, moves: 4000, adjustments: 100, reconciled: 1 });

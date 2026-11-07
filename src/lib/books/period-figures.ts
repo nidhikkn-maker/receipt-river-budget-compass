@@ -9,6 +9,7 @@
 import type { GstInvoice, Journal } from "./types";
 import { effectiveInvoices, taxOf } from "./gst";
 import { isMove } from "../ledger";
+import { decimal, roundMoney, sumMoney } from "../money";
 
 export interface PeriodFigures {
   version: 1;
@@ -21,7 +22,7 @@ export interface PeriodFigures {
 
 export interface FigureCheck { key: string; label: string; stored: number; recomputed: number; match: boolean }
 
-const r2 = (n: number) => Math.round(n * 100) / 100;
+const r2 = roundMoney;
 const inRange = (date: string, from: string, to: string) => date >= from && date <= to;
 
 /** Minimal entry shape the figures need; both app Txn and saved evidence rows map onto it. */
@@ -36,7 +37,7 @@ export function buildPeriodFigures(p: {
   journals: Journal[];
 }): PeriodFigures {
   const entries = p.entries.filter((e) => inRange(e.date, p.from, p.to));
-  const sum = (list: FigureEntry[]) => r2(list.reduce((s, e) => s + e.amount, 0));
+  const sum = (list: FigureEntry[]) => sumMoney(list.map(e => e.amount));
   const income = entries.filter((e) => e.txnType === "income" || e.txnType === "refund");
   const expenses = entries.filter((e) => e.txnType === "expense");
   const moves = entries.filter((e) => isMove(e.txnType as never));
@@ -57,13 +58,13 @@ export function buildPeriodFigures(p: {
       reconciled: entries.filter((e) => e.reconciled).length,
     },
     gst: {
-      outputTaxable: r2(sales.reduce((s, i) => s + i.taxable, 0)),
-      outputTax: r2(sales.reduce((s, i) => s + taxOf(i), 0)),
-      inputTaxable: r2(purchases.reduce((s, i) => s + i.taxable, 0)),
-      inputTax: r2(purchases.reduce((s, i) => s + taxOf(i), 0)),
-      rcmCash: r2(rcm.reduce((s, i) => s + taxOf(i), 0)),
+      outputTaxable: sumMoney(sales.map(i => i.taxable)),
+      outputTax: sumMoney(sales.map(taxOf)),
+      inputTaxable: sumMoney(purchases.map(i => i.taxable)),
+      inputTax: sumMoney(purchases.map(taxOf)),
+      rcmCash: sumMoney(rcm.map(taxOf)),
     },
-    depreciation: { posted: r2(posted.reduce((s, j) => s + j.amount, 0)), journals: posted.length },
+    depreciation: { posted: sumMoney(posted.map(j => j.amount)), journals: posted.length },
     balances: Object.fromEntries(p.accounts.map((a) => [a.id, r2(a.balanceAt(p.to))])),
   };
 }
@@ -115,11 +116,11 @@ const CHECKS: { key: string; label: string; pick: (f: PeriodFigures) => number; 
 export function figureChecks(stored: PeriodFigures, recomputed: PeriodFigures, reproducibleOnly = false): FigureCheck[] {
   const out: FigureCheck[] = CHECKS.filter(() => true).map((c) => ({
     key: c.key, label: c.label, stored: c.pick(stored), recomputed: c.pick(recomputed),
-    match: Math.abs(c.pick(stored) - c.pick(recomputed)) < 0.005,
+    match: decimal(c.pick(stored)).minus(c.pick(recomputed)).abs().lt("0.005"),
   }));
   if (!reproducibleOnly) {
     const ids = [...new Set([...Object.keys(stored.balances), ...Object.keys(recomputed.balances)])].sort();
-    for (const id of ids) out.push({ key: `balances.${id}`, label: `Closing balance ${id.slice(0, 8)}…`, stored: stored.balances[id] ?? 0, recomputed: recomputed.balances[id] ?? 0, match: Math.abs((stored.balances[id] ?? 0) - (recomputed.balances[id] ?? 0)) < 0.005 });
+    for (const id of ids) out.push({ key: `balances.${id}`, label: `Closing balance ${id.slice(0, 8)}…`, stored: stored.balances[id] ?? 0, recomputed: recomputed.balances[id] ?? 0, match: decimal(stored.balances[id] ?? 0).minus(recomputed.balances[id] ?? 0).abs().lt("0.005") });
   }
   return out;
 }

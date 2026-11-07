@@ -1,5 +1,12 @@
 # Verification results (executed evidence only)
 
+## 7 Nov 2026 14:40 — merge, decimal, recovery and retired approval security
+- Historical **1543/948/31/19 unchanged**; v6 **566/331/2 unchanged**; newly verified IDs **none**.
+- Main full suite **262 files/1933 PASS**; six three-size browser workflows/PDF checks PASS with local controlled persistence and checksum-verified actual PDF originals.
+- Staged SQL8PASS; active role19/intake9 and revoked legacy approval3PASS; live read-only execute privileges false for authenticated/anon, staged approval trigger false.
+- Hosted isolated draft reports **24PASS/2FAIL**: complete-budget validation and immutable merchant history require fixes, not promotions. Draft not accepted; no production writes or deployment.
+- Exact boundaries, changes and next tasks: `docs/evidence/workstream-1-safety-recovery-2026-11-07.md`.
+
 ## 7 Nov 2026 13:15 — Workstream 1 defects and count reconciliation
 - Historical previous **1,537 implemented / 934 partial / 51 missing / 19 superseded**; current **1,539 / 941 / 42 / 19**. Narrow implemented changes: **C-0709**, **C-2301** (corrected prohibition, not a new feature). Seven MISSING→PARTIAL: **C-1065, C-0389, C-2094, C-1501, C-1487, C-1857, C-0409**. No v6 promotions; **566/331/2 unchanged**.
 - Actual defects fixed: half-cent binary rounding in ledger/allocations, foreign original principal/interest displayed as INR in loan export, receiving-side evidence in history, blank budget dialog on parent-controlled open, missing complete-dimension promises, immediate merchant grouping without review, failed/empty attachments reaching PDFs silently. Category split references now block unsafe merges rather than leaving orphaned category data.
