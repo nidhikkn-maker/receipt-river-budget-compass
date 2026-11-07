@@ -768,7 +768,7 @@ html[data-theme="apple-glass"] :where(.bg-card, .bg-popover, .bg-ink) {
     color: var(--color-foreground);
     /* V4.10 typography: system font, regular body, semibold hierarchy. */
     font-weight: 400;
-    font-size: 15px;
+    font-size: 16px;
     line-height: 1.45;
     -webkit-font-smoothing: antialiased;
     text-rendering: optimizeLegibility;
@@ -802,40 +802,98 @@ html[data-theme="apple-glass"] :where(.bg-card, .bg-popover, .bg-ink) {
   background-image: var(--gradient-hero);
 }
 
-/* Approved editorial journal: presentation only; all amounts and actions use existing records. */
-.journal-heading, .journal-review h1, .journal-wealth h1,
-.journal-spaces h2, .smart-add-sheet h2 { font-family: var(--font-editorial); font-weight: 400; letter-spacing: 0; }
-.journal-kicker { font-size: 11px; font-weight: 500; color: var(--muted-foreground); }
-.journal-hero { min-height: 200px; border-radius: 8px; }
-.journal-hero img { object-position: center 35%; opacity: .78; }
-.journal-hero > div { padding-bottom: 75px; }
-.journal-action { display: flex; align-items: center; gap: 14px; padding: 16px 0; min-height: 64px; }
-.journal-bottom { box-shadow: 0 4px 18px -8px color-mix(in oklab, var(--foreground) 18%, transparent); }
-.journal-bottom a[aria-current="page"] { color: var(--primary); background: var(--secondary); }
-.journal-bottom button:not([aria-label="Smart Add"]) { color: var(--muted-foreground); }
-.journal-bottom button[aria-expanded="true"] { color: var(--primary); background: var(--secondary); }
-.journal-bottom a:active, .journal-bottom button:active { transform: translateY(1px); }
-.journal-review > section[aria-label="Transaction attention counts"] { display: flex; flex-direction: column; gap: 0; }
-.journal-review > section[aria-label="Transaction attention counts"] > a { border-radius: 0; border: 0; border-bottom: 1px solid var(--border); background: transparent; box-shadow: none; min-height: 64px; padding: 12px 0; }
-.journal-review > section[aria-label="Transaction attention counts"] > a > span { display: flex; flex-direction: row-reverse; align-items: center; justify-content: space-between; width: 100%; gap: 16px; }
-.journal-review > section[aria-label="Transaction attention counts"] > a > span > span:last-child { font-size: 14px; color: var(--foreground); }
-.journal-review > section[aria-label="Review summary"] { border-radius: 0; border: 0; border-top: 1px solid var(--border); background: transparent; padding: 20px 0; }
-.journal-wealth > div:nth-of-type(2) { border-bottom: 1px solid var(--border); padding-bottom: 20px; }
-.journal-wealth > div:nth-of-type(2) > div { border: 0; border-radius: 0; background: transparent; padding-left: 0; }
-.smart-add-sheet { border-radius: 16px; background: var(--background); }
-.smart-add-sheet > .grid { gap: 0; }
-.smart-add-sheet > .grid > button { border: 0; border-bottom: 1px solid var(--border); border-radius: 0; box-shadow: none; background: transparent; min-height: 64px; }
-.journal-spaces { background: var(--background); }
-.receipt-desk [aria-label="Review scanned details"] { scroll-margin-top: 72px; background: var(--card); border-color: var(--border); }
-.receipt-desk [aria-label="Review scanned details"] h2 { font-family: var(--font-editorial); font-size: 24px; font-weight: 400; }
-@media (min-width: 1000px) {
-  .journal-columns { grid-template-columns: minmax(0, 1fr) minmax(230px, .5fr); }
-  .journal-side { border-left: 1px solid var(--border); padding-left: 28px; }
-  .journal-side > section:first-child { border-top: 0; padding-top: 0; }
-  .journal-review > section[aria-label="Transaction attention counts"] { display: grid; grid-template-columns: 1fr 1fr; column-gap: 32px; }
+/* Shared financial companion presentation. Theme colour roles remain owner-selected. */
+:root {
+  --uix-space-1: .25rem; --uix-space-2: .5rem; --uix-space-3: .75rem;
+  --uix-space-4: 1rem; --uix-space-6: 1.5rem; --uix-space-8: 2rem;
+  --uix-radius-sheet: 1.5rem;
+  --uix-elevation: 0 12px 36px -20px color-mix(in oklab, var(--foreground) 22%, transparent);
+  --uix-duration: 180ms;
 }
-@media (min-width: 1440px) { .journal-columns { grid-template-columns: minmax(0, 1fr) 320px; } }
-@media (max-width: 767px) { .journal-hero { border-radius: 0; } }
+.uix-shell { font-size: 16px; line-height: 1.5; }
+.uix-shell :where(h1,h2,h3,p,span) { letter-spacing: 0; }
+.uix-shell :where(button,a,input,select,textarea,[role="tab"]) { scroll-margin-block: 100px; }
+.uix-shell :where(button,[role="tab"],select:not([multiple]),input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),summary) { min-height: 44px; }
+.uix-shell :where(input[type="checkbox"],input[type="radio"]) { width: 20px; height: 20px; }
+.uix-content { padding-top: 28px; }
+.uix-content > :where(div,section) { min-width: 0; }
+.uix-page-title h1 { font-size: 30px; line-height: 1.2; }
+.uix-page-title p { max-width: 60ch; font-size: 15px; }
+.uix-page-title > div { color: var(--muted-foreground); font-size: 14px; margin-bottom: 8px; }
+.uix-content :where(.text-xs,.text-\[11px\]) { font-size: 13px; line-height: 1.45; }
+.uix-content :where(.rounded-3xl,.rounded-2xl).bg-card { border-radius: 8px; box-shadow: none; }
+.uix-content :where(section,form).bg-card { background: transparent; border-left: 0; border-right: 0; border-radius: 0; box-shadow: none; }
+.uix-surface .uix-surface { border: 0; background: transparent; box-shadow: none; }
+.uix-stat { border-left: 0; }
+.uix-stat > div:nth-child(2) { color: var(--foreground); font-size: 26px; margin-top: 8px; }
+.uix-section h2 { font-size: 18px; }
+.uix-header { padding-top: env(safe-area-inset-top); }
+.uix-header > div:first-child { min-height: 64px; }
+.header-search { display: flex; align-items: center; gap: 24px; }
+.workspace-chip { height: 44px; }
+.journal-rail { border-right: 1px solid var(--border); background: var(--background); color: var(--foreground); }
+.journal-rail > a:first-child { margin-bottom: 12px; }
+.journal-rail > button:first-of-type { color: var(--foreground); }
+.rail-add { justify-content: flex-start; margin: 8px 0 20px; }
+.rail-links { display: flex; flex-direction: column; gap: 4px; }
+.rail-link,.rail-more { display: flex; align-items: center; gap: 14px; min-height: 48px; border-radius: 10px; padding: 10px 12px; color: var(--muted-foreground); font-size: 15px; font-weight: 500; }
+.rail-link-selected { background: var(--secondary); color: var(--foreground); }
+.rail-link-selected svg { color: var(--gold-strong); }
+.rail-link:hover { background: var(--secondary); }
+.rail-more { justify-content: flex-start; width: 100%; }
+.module-directory { display: grid; grid-template-columns: 1fr 1fr; column-gap: 32px; row-gap: 24px; }
+.module-directory h2 { font-size: 14px; color: var(--muted-foreground); margin-bottom: 8px; font-weight: 500; }
+.module-link { display: flex; justify-content: space-between; align-items: center; gap: 12px; min-height: 48px; border-bottom: 1px solid var(--border); font-size: 15px; }
+.module-directory > p { grid-column: 1 / -1; }
+.uix-dialog { border-radius: var(--uix-radius-sheet); box-shadow: var(--uix-elevation); }
+.uix-dialog h2 { font-family: var(--font-sans); font-size: 22px; font-weight: 600; line-height: 1.3; }
+.smart-add-sheet > .grid { gap: 0; }
+.smart-add-sheet > .grid > button { min-height: 72px; border: 0; border-bottom: 1px solid var(--border); border-radius: 0; background: transparent; box-shadow: none; font-size: 16px; }
+.smart-add-sheet > .grid > button svg { width: 24px; height: 24px; color: var(--gold-strong); margin-right: 8px; }
+.journal-heading { font-family: var(--font-editorial); font-weight: 400; letter-spacing: 0; }
+.journal-kicker { font-size: 14px; font-weight: 500; color: var(--muted-foreground); }
+.journal-hero { min-height: 140px; border-radius: 0; border-bottom: 1px solid var(--border); }
+.journal-hero img { object-position: center 38%; opacity: .22; }
+.journal-hero > div { padding: 20px 0 24px; }
+.journal-action { display: flex; align-items: center; gap: 16px; padding: 20px 0; min-height: 76px; }
+.journal-bottom { box-shadow: var(--uix-elevation); backdrop-filter: blur(20px); }
+.journal-bottom a { min-height: 48px; }
+.journal-bottom a[aria-current="page"] { color: var(--foreground); background: var(--secondary); }
+.journal-bottom button:not([aria-label="Smart Add"]) { color: var(--muted-foreground); }
+.journal-bottom button[aria-expanded="true"] { color: var(--foreground); background: var(--secondary); }
+.journal-review > section[aria-label="Transaction attention counts"] { display: flex; flex-direction: column; gap: 0; }
+.journal-review > section[aria-label="Transaction attention counts"] > a { border: 0; border-bottom: 1px solid var(--border); border-radius: 0; background: transparent; box-shadow: none; min-height: 68px; padding: 12px 0; }
+.journal-review > section[aria-label="Transaction attention counts"] > a > span { display: flex; flex-direction: row-reverse; align-items: center; justify-content: space-between; width: 100%; gap: 16px; }
+.journal-review > section[aria-label="Transaction attention counts"] > a > span > span:last-child { font-size: 15px; color: var(--foreground); }
+.journal-review > section[aria-label="Review summary"] { border-radius: 0; border: 0; border-top: 1px solid var(--border); padding: 24px 0; }
+.journal-wealth > div:nth-of-type(2) { grid-template-columns: repeat(3,minmax(0,1fr)); gap: 16px; }
+.uix-entry .receipt-paper { filter: none; mask: none; border: 0; background: var(--receipt-desk); padding-block: 20px; font-family: var(--font-sans); }
+.receipt-desk [aria-label="Review scanned details"] { scroll-margin-top: 80px; border: 0; background: var(--card); padding: 24px; }
+.receipt-desk [aria-label="Review scanned details"] h2 { font-family: var(--font-sans); font-size: 24px; }
+.uix-content table { font-size: 14px; }
+.uix-content table :where(th,td) { padding-block: 14px; }
+.uix-content details > summary { display: flex; align-items: center; gap: 8px; padding-block: 12px; }
+.uix-content details[open] > summary { color: var(--foreground); }
+.uix-shell :focus-visible,.uix-dialog :focus-visible { outline: 2px solid var(--ring); outline-offset: 3px; }
+@media (min-width: 1000px) {
+  .journal-columns { grid-template-columns: minmax(0,1fr) minmax(240px,.45fr); }
+  .journal-side { border-left: 1px solid var(--border); padding-left: 32px; }
+  .journal-review > section[aria-label="Transaction attention counts"] { display: grid; grid-template-columns: 1fr 1fr; column-gap: 36px; }
+  .uix-page-title h1 { font-size: 36px; }
+}
+@media (max-width: 767px) {
+  .uix-content { padding-top: 20px; }
+  .journal-hero { margin-inline: 0; }
+  .uix-header .workspace-chip { height: 36px; min-height: 36px; font-size: 13px; }
+  .uix-header .header-search span { display: none; }
+  .uix-dialog.native-sheet,.uix-dialog.smart-add-sheet { top: auto; bottom: 0; left: 0; width: 100%; max-height: calc(92dvh - env(safe-area-inset-top)); transform: none; border-radius: 24px 24px 0 0; padding: 24px 24px calc(24px + env(safe-area-inset-bottom)); }
+  .module-directory { grid-template-columns: 1fr; }
+  .journal-wealth > div:nth-of-type(2) { gap: 8px; }
+  .uix-stat > div:nth-child(2) { font-size: 20px; }
+}
+@media (prefers-reduced-motion: reduce) { *,*::before,*::after { animation-duration: .01ms !important; transition-duration: .01ms !important; scroll-behavior: auto !important; } }
+@media (prefers-contrast: more) { .uix-shell { --muted-foreground: var(--foreground); } .uix-shell :where(input,button,select) { border-color: var(--foreground); } }
+@media (forced-colors: active) { .uix-shell a[aria-current="page"] { outline: 2px solid Highlight; } }
 @utility shadow-float {
   box-shadow: var(--shadow-float);
 }
