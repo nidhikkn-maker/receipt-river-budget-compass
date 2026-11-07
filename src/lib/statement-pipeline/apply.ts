@@ -30,6 +30,8 @@ export interface ApplyApi {
   transactions: Expense[];
   /** Authoritative owner read; prevents a stale/offline snapshot from certifying Undo absence. */
   readExistingIds?: (ids: string[]) => Promise<string[]>;
+  /** Fresh owner read after an evidence response fails; absence never certifies success. */
+  readEvidence?: (id: string) => Promise<{ statementRef: string | null; reconciledAt: string | null } | null>;
   /** Store the private original before the first financial write for this account. */
   prepareSource?: (request: ApplyRequest, accountId: string) => Promise<string>;
   /** Persist confirmed progress before proceeding; failure stops the next financial write. */
@@ -79,6 +81,13 @@ export async function applyUpload(requests: ApplyRequest[], api: ApplyApi, onPro
   const wanted = requests.filter((r) => r.decisions.length || r.reconcileIds.length);
   let done = 0;
   const total = wanted.reduce((s, r) => s + r.decisions.length + r.reconcileIds.length, 0);
+  const reconcileConfirmed = async (id: string, ref: string) => {
+    try { await api.reconcile(id, ref, { noRefresh: true }); }
+    catch (error) {
+      const saved = await api.readEvidence?.(id).catch(() => null);
+      if (!saved?.reconciledAt || saved.statementRef !== ref) throw error;
+    }
+  };
 
   try { for (const r of wanted) {
     let accountId = r.account.accountId;
@@ -113,7 +122,7 @@ export async function applyUpload(requests: ApplyRequest[], api: ApplyApi, onPro
         await api.save(input, { createId: id, noRefresh: true, files: await link.files() });
         result.posted.push(id);
         await api.checkpoint?.(structuredClone(result));
-        if (source) await api.reconcile(id, refs.get(id) ?? null, { noRefresh: true });
+        if (source) await reconcileConfirmed(id, refs.get(id) ?? '');
         if (api.linkDraft) { await api.linkDraft(link.draftId, id); (result.linkedDrafts ??= []).push({ draftId: link.draftId, transactionId: id }); }
         await api.checkpoint?.(structuredClone(result));
         continue;
@@ -121,12 +130,12 @@ export async function applyUpload(requests: ApplyRequest[], api: ApplyApi, onPro
       await api.save(input, { createId: id, noRefresh: true });
       result.posted.push(id);
       await api.checkpoint?.(structuredClone(result));
-      if (source) await api.reconcile(id, refs.get(id) ?? null, { noRefresh: true });
+      if (source) await reconcileConfirmed(id, refs.get(id) ?? '');
       await api.checkpoint?.(structuredClone(result));
     }
     for (const m of r.reconcileIds) {
       onProgress?.(`Marking ${++done} of ${total}…`);
-      await api.reconcile(m.id, source ? `document:${source} · ${m.ref}` : m.ref, { noRefresh: true });
+      await reconcileConfirmed(m.id, source ? `document:${source} · ${m.ref}` : m.ref);
       result.reconciled.push(m.id);
       await api.checkpoint?.(structuredClone(result));
     }

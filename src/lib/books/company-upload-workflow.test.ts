@@ -25,6 +25,13 @@ beforeEach(async()=>{
   await db.exec(readFileSync('drizzle/migrations/0075_entity_level_access.sql','utf8'));
   await db.exec(readFileSync('drizzle/migrations/0078_entity_member_uploads.sql','utf8'));
   await db.exec(readFileSync('.lovable/staged-sql/company-bound-uploads.sql','utf8'));
+  // Install the actual legacy team Storage policy with a controlled permission provider.
+  // This deliberately allows EDITOR and OTHER owner-wide receipt reads to expose policy-union leaks.
+  await db.exec(`CREATE FUNCTION public.can_access_expense(_employee uuid,_action text) RETURNS boolean LANGUAGE sql STABLE AS $$
+    SELECT _employee='${OWNER}'::uuid AND auth.uid() IN ('${EDITOR}'::uuid,'${OTHER}'::uuid) AND _action='view_receipts' $$;`);
+  const team = readFileSync('drizzle/migrations/0066_role_access.sql','utf8');
+  await db.exec(team.slice(team.indexOf('DROP POLICY IF EXISTS "Read team receipts"'), team.indexOf('ALTER POLICY "Finance updates budgets"')));
+  await db.exec(readFileSync('.lovable/staged-sql/document-storage-boundary.sql','utf8'));
   await db.exec(`INSERT INTO entity_members(owner_id,entity_id,member_id,member_email,can_write) VALUES('${OWNER}','c1','${EDITOR}','editor@test.invalid',true),('${OWNER}','c2','${OTHER}','other@test.invalid',true);
   INSERT INTO documents VALUES('personal','${OWNER}','${OWNER}/docs/personal.pdf',NULL),('c2-original','${OWNER}','${OWNER}/docs/c2.pdf','c2');`);
 },20000);
@@ -75,4 +82,20 @@ it.each(['failure','lost'] as const)('metadata %s safely cleans only uncommitted
   expect((await db.query('SELECT name FROM storage.objects')).rows).toHaveLength(mode==='failure'?0:1);
   expect((await db.query('SELECT id FROM documents')).rows).toHaveLength(mode==='failure'?0:1);
   if(mode==='lost')expect((await db.query('DELETE FROM storage.objects')).affectedRows).toBe(0);
+});
+it('permissive team receipt access cannot unlock private or other-company DocuRepo originals',async()=>{
+  await as(OWNER);
+  await insertFile(`${OWNER}/docs/personal.pdf`,OWNER);
+  await insertFile(`${OWNER}/docs/c2.pdf`,OWNER);
+  await insertFile(`${OWNER}/expense-receipt.jpg`,OWNER);
+  await as(EDITOR);
+  expect((await db.query<{name:string}>('SELECT name FROM storage.objects ORDER BY name')).rows.map(r=>r.name)).toEqual([`${OWNER}/expense-receipt.jpg`]);
+  const signed:string[]=[];
+  const urlApi={canRead:async(p:string)=>(await db.query('SELECT name FROM storage.objects WHERE name=$1',[p])).rows.length===1,
+    sign:async(p:string)=>{signed.push(p);return 'https://controlled.invalid/receipt';}};
+  expect(await privateFileUrl(`${OWNER}/docs/personal.pdf`,urlApi)).toBeNull();
+  expect(await privateFileUrl(`${OWNER}/docs/c2.pdf`,urlApi)).toBeNull();
+  expect(signed).toEqual([]);
+  await as(OWNER);
+  expect((await db.query('SELECT name FROM storage.objects')).rows).toHaveLength(3);
 });
