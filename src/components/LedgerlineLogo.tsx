@@ -1,15 +1,12 @@
-// Official Ledgerline brand artwork — the single source every page uses.
-// Colours come from --brand-ink / --brand-teal so dark mode only changes colour, never geometry.
+// Folded ledger: shared vector geometry across interface and exported icons.
 const ink = "var(--brand-ink)";
-const teal = "var(--brand-teal)";
+const gold = "var(--brand-accent)";
 
 function SymbolShapes() {
   return <>
-    <rect x="0" y="0" width="30" height="116" rx="6" fill={ink} />
-    <rect x="24" y="0" width="6" height="116" fill={ink} />
-    <path d="M42 0h64a6 6 0 0 1 6 6v16a6 6 0 0 1-6 6H42z" fill={teal} />
-    <path d="M42 44h58a6 6 0 0 1 6 6v14a6 6 0 0 1-6 6H42z" fill={teal} />
-    <path d="M42 86h80a6 6 0 0 1 6 6v18a6 6 0 0 1-6 6H42z" fill={teal} />
+    <path d="M18 26 42 12v69c0 5 3 8 8 8h64l-20 20H34c-10 0-16-6-16-16Z" fill={ink} />
+    <path d="M52 19 78 4v65L52 84Z" fill={ink} />
+    <path d="M82 76h26a4 4 0 0 1 0 8H68Z" fill={gold} />
   </>;
 }
 
@@ -20,7 +17,7 @@ export function LedgerlineSymbol({ className = "h-7 w-auto", title = "Ledgerline
 export function LedgerlineLogo({ className = "h-8 w-auto", title = "Ledgerline" }: { className?: string; title?: string }) {
   return <svg viewBox="0 0 620 116" className={className} role="img" aria-label={title}>
     <SymbolShapes />
-    <text x="156" y="94" fontFamily="-apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif" fontSize="92" fontWeight="500" textLength="460" lengthAdjust="spacingAndGlyphs" fill={ink}>LEDGERLINE</text>
+    <text x="148" y="90" fontFamily="-apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif" fontSize="91" fontWeight="500" textLength="460" lengthAdjust="spacingAndGlyphs" fill={ink}>Ledgerline</text>
   </svg>;
 }
 

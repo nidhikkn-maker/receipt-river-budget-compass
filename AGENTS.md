@@ -54,3 +54,4 @@
 - Related pages are grouped by src/components/SectionTabs.tsx; retired pages redirect via beforeLoad so old links work. Review lives only at /inbox?section=review.
 - docs/ holds MASTER_REQUIREMENTS (generated from .lovable/requirements/register.json by scripts/requirements/render_docs.py), IMPLEMENTATION_PROGRESS, VERIFICATION_RESULTS and OPEN_BLOCKERS; update the register, never hand-edit the generated file.
 
+
