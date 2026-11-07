@@ -1,6 +1,7 @@
 ## Brand and authentication transformation — active
 - [x] New folded-ledger vector logo and shared adaptive AuthFrame; provider/session handlers retained, errors shown inline.
-- [ ] Verify isolated auth states, responsive/dark captures, icon legibility, loading/consent; continue existing all-route migration. No publish/provider/policy changes authorised.
+- [x] Actual auth/reset screens: 8 width/theme combinations and 32 sign-in/error/signup/expired-recovery states; mocked success→next redirect, sign-out and keyboard traversal pass. 10 targeted automated checks pass. Vector16/24/32 legibility inspected.
+- [ ] Hosted OAuth/MFA/device unlock, valid recovery and consent approval acceptance remain unverified; detailed all-route migration remains open. No publish/provider/policy changes authorised.
 
 ## Full app-wide UIX directive — active, NOT complete
 - [x] Replaced long rail with short primary navigation and full grouped More directory; shared typography/controls/sheets/flat sections migrated.
