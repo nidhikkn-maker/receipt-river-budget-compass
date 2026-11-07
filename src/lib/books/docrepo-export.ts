@@ -14,7 +14,7 @@ export async function selectedDocumentZip(visible: VaultDoc[], picked: string[],
   for (const d of docs) {
     const url = await sign(d.filePath);
     if (!url) throw Error(`Access to ${d.fileName} has ended`);
-    const blob = await fetchPrivateFile(url, { size: d.size, mimeType: d.mimeType, sha256: d.sha256 }, fetcher);
+    const blob = await fetchPrivateFile(url, { size: d.size, mimeType: d.mimeType }, fetcher);
     files[`${d.id}-${d.fileName.replace(/[^\w.\- ]+/g, '_')}`] = new Uint8Array(await blob.arrayBuffer());
   }
   files['manifest.json'] = strToU8(JSON.stringify(exportManifest(docs, links, at), null, 2));
