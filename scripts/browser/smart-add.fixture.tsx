@@ -1,0 +1,17 @@
+import { createRoot } from 'react-dom/client';
+import { createRootRoute, createRoute, createRouter, Outlet, RouterProvider } from '@tanstack/react-router';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { AppShell } from '../../src/components/AppShell';
+import { Route as NewRoute } from '../../src/routes/_authenticated/new';
+import { StoreFixture } from './expense-mocks';
+import { Toaster } from '../../src/components/ui/sonner';
+import '../../src/styles.css';
+const query = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+const rootRoute = createRootRoute({ component: () => <QueryClientProvider client={query}><StoreFixture><AppShell><Outlet /></AppShell><Toaster /></StoreFixture></QueryClientProvider> });
+const auth = createRoute({ getParentRoute: () => rootRoute, id: '_authenticated', component: Outlet });
+const entry = NewRoute.update({ id: '/new', path: '/new', getParentRoute: () => auth });
+const dashboard = createRoute({ getParentRoute: () => auth, path: '/dashboard', component: () => <h1>Controlled Today</h1> });
+const statements = createRoute({ getParentRoute: () => auth, path: '/statements', component: () => <h1>Statement destination</h1> });
+const router = createRouter({ routeTree: rootRoute.addChildren([auth.addChildren([entry, dashboard, statements])]) });
+const root = document.getElementById('root');
+if (root) createRoot(root).render(<RouterProvider router={router} />);

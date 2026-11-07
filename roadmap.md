@@ -1,3 +1,8 @@
+## Approved UIX integration — 7 Nov 2026
+- [x] Global plus opens Smart Add; existing scan/voice/quick/message drafts and Statement Desk upload destination verified at390/834/1280 widths. Spaces and More retain Journal/company/module access.
+- [x] Receipt Canvas includes source preview/text, interpretation, category, editable workspace/instrument and destination/match facts; existing statement batch review labelled Canvas. Existing confirmation/posting paths unchanged.
+- [ ] Remaining UIX acceptance: full real upload-from-chooser→statement/document flow, draft reload/reconnect and hosted workspace/source security; asset/claim destination selection and exact five-screen asset mapping remain unverified. 33 targeted checks, four receipt browser cases and one card batch browser case pass; responsive chooser matrix pass. Release holds and300-credit reserve unchanged.
+
 ## Credit-controlled completion — 7 Nov 2026
 - Owner development cap: 1,100 credits (550 essential workflows / 250 critical fixes / 200 final tests and security / 100 reserve). Stop feature expansion near 200 remaining; no production changes or publication.
 - Current: historical 1,558 implemented / 943 partial / 21 missing / 19 superseded; v6 566 verified / 331 partial / 2 blocked.

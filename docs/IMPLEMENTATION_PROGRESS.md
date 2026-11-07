@@ -1,6 +1,7 @@
 # Implementation progress — top 15 gaps (baseline: Ledgerline_v6_Requirements_Checklist.md)
 
 ## Credit-controlled checkpoint — 7 Nov 2026
+- 18:47 owner-approved UIX: global Smart Add and Spaces navigation integrated; receipt Canvas reuses existing review, statement Canvas reuses batch plan. 33 targeted automated checks, responsive chooser matrix, four receipt browser cases and one card batch case PASS (controlled data, not hosted). No historical/v6 promotions. Evidence: docs/evidence/uix-smart-add-2026-11-07.md.
 - Emergency owner cap 1,100 credits supersedes sequential expansion; P0/P1 first, P2/P3 deferred. Existing release holds unchanged.
 - Prepared-report thrown committed responses now read back before status; evidence retained on unknown outcome. Targeted 23 tests and five actual-builder isolated PDF download cases PASS.
 - C-1857 verified narrowly through detailed/summary claim downloaded PDF ordering. Historical **1558 implemented / 943 partial / 21 missing / 19 superseded**; v6 **566/331/2 unchanged**.
