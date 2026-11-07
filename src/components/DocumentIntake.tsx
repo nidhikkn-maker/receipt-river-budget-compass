@@ -99,11 +99,13 @@ export function DocumentIntake({ file, context, onClose, resume, replacesId, onS
 
   const route = ROUTE_OF[docType];
   const supportingAsset = docType === "maintenance" || docType === "warranty";
+  const [newAssetConfirmed, setNewAssetConfirmed] = useState(false);
   const assetMatches = useMemo(() => {
     const serial = x?.asset?.serial?.trim().toUpperCase();
     return serial ? (preferences.assets ?? []).filter(a => a.tag?.trim().toUpperCase() === serial) : [];
   }, [x?.asset?.serial, preferences.assets]);
   const selectedAssetId = linkedAsset || (assetMatches.length === 1 ? assetMatches[0]?.id ?? "" : "");
+  const attachExistingAsset = supportingAsset || (docType === "asset_invoice" && !!selectedAssetId && !newAssetConfirmed);
   // Preselect the account/loan the document names; the owner can change it before saving [§6].
   const suggested = useMemo(() => (x ? suggestLinks(`${x.text ?? ""} ${fields.map((f) => `${f.label} ${f.value}`).join(" ")}`, accounts, loans.map((l) => ({ id: l.id, name: l.name }))) : null), [x, fields, accounts, loans]);
   const autoLinked = useRef(false);
@@ -155,7 +157,8 @@ export function DocumentIntake({ file, context, onClose, resume, replacesId, onS
   const belowCap = proposal?.kind === "asset" && !!proposal.asset && capMin != null && proposal.asset.cost < capMin;
 
   const confirmed = (): Confirmed | null => {
-    if (supportingAsset) {
+    if (docType === "asset_invoice" && assetMatches.length > 1 && !selectedAssetId && !newAssetConfirmed) return null;
+    if (attachExistingAsset) {
       const asset = preferences.assets?.find(a => a.id === selectedAssetId);
       const date = x?.date;
       if (!asset || !isIso(date) || !date) return null;
@@ -312,8 +315,9 @@ export function DocumentIntake({ file, context, onClose, resume, replacesId, onS
           </div>
           <p className="text-xs text-muted-foreground">{[proposal.profile.regNo && `CIN/LLPIN ${proposal.profile.regNo}`, proposal.profile.gstins.length && `${proposal.profile.gstins.length} GSTIN`, proposal.profile.incorporatedOn && `incorporated ${proposal.profile.incorporatedOn}`, proposal.profile.fyEnd && `year ends ${proposal.profile.fyEnd}`, proposal.profile.people?.length && `${proposal.profile.people.length} directors/partners`, proposal.profile.related?.length && `${proposal.profile.related.length} related entities`, proposal.profile.address].filter(Boolean).join(" · ")}</p>
         </div>}
-        {supportingAsset && <label className="block">Asset for this document<select aria-label="Asset for this document" className="mt-1 w-full rounded-md border bg-background px-3 py-2" value={selectedAssetId} onChange={e => setLinkedAsset(e.target.value)}><option value="">Choose existing asset…</option>{(preferences.assets ?? []).map(a => <option key={a.id} value={a.id}>{a.name}{a.tag ? ` · ${a.tag}` : ""}</option>)}</select>{assetMatches.length > 1 && <span className="text-destructive">Several assets share this serial number. Choose the correct one.</span>}</label>}
-        {proposal?.kind === "asset" && !supportingAsset && (proposal.asset ? <div className="grid grid-cols-2 gap-2 rounded-xl border p-3">
+        {(supportingAsset || (docType === "asset_invoice" && (preferences.assets ?? []).length > 0)) && <label className="block">Asset for this document<select aria-label="Asset for this document" className="mt-1 w-full rounded-md border bg-background px-3 py-2" value={newAssetConfirmed ? "" : selectedAssetId} onChange={e => { setLinkedAsset(e.target.value); setNewAssetConfirmed(false); }}><option value="">Choose existing asset…</option>{(preferences.assets ?? []).map(a => <option key={a.id} value={a.id}>{a.name}{a.tag ? ` · ${a.tag}` : ""}</option>)}</select>{assetMatches.length > 1 && !newAssetConfirmed && <span className="text-destructive">Several assets share this serial number. Choose the correct one.</span>}</label>}
+        {docType === "asset_invoice" && assetMatches.length > 0 && <label className="flex items-center gap-2"><input type="checkbox" checked={newAssetConfirmed} onChange={e => setNewAssetConfirmed(e.target.checked)} />This invoice is for a different, new asset</label>}
+        {proposal?.kind === "asset" && !attachExistingAsset && (proposal.asset ? <div className="grid grid-cols-2 gap-2 rounded-xl border p-3">
           <p className="col-span-2 font-semibold">{belowCap ? `Below your capitalisation limit (${inr(capMin!)}) — will be filed as an expense document, not an asset` : "Proposed asset"}</p>
           <Input aria-label="Asset name" className="col-span-2" value={v("name", proposal.asset.name)} onChange={(e) => setEdit({ ...edit, name: e.target.value })} />
           <label className="text-xs">Cost<Input aria-label="Cost" type="number" value={v("cost", proposal.asset.cost)} onChange={(e) => setEdit({ ...edit, cost: e.target.value })} /></label>
