@@ -37,13 +37,16 @@ it("marks dimensions independently, rejects partial promises and allows delibera
   fireEvent.click(screen.getByRole('button',{name:'Save breakdown'}));
   await waitFor(() => expect(mock.save).toHaveBeenCalledTimes(1));
   expect(mock.save.mock.calls[0]?.[0].trips[0]).toMatchObject({ budget: 100, completeBudgetDimensions: ["workspace"] });
+  unmount();
+  const current=mock.save.mock.calls[0]?.[0].trips[0] as TravelTrip;
+  const second=render(<BudgetBreakdown trip={current} />);
   fireEvent.click(screen.getByRole("tab", { name: "Traveller" }));
   fireEvent.click(screen.getByLabelText("Complete allocation"));
   fireEvent.click(screen.getByRole('button',{name:'Save breakdown'}));
   await waitFor(() => expect(mock.error).toHaveBeenCalledWith(expect.stringContaining("must match")));
   expect(mock.save).toHaveBeenCalledTimes(1);
   const saved = mock.save.mock.calls[0]?.[0].trips[0] as TravelTrip;
-  unmount(); render(<BudgetBreakdown trip={saved} />);
+  second.unmount(); render(<BudgetBreakdown trip={saved} />);
   expect(screen.getByLabelText("Complete allocation")).toBeChecked();
   fireEvent.click(screen.getByLabelText("Complete allocation"));
   fireEvent.click(screen.getByRole('button',{name:'Save breakdown'}));

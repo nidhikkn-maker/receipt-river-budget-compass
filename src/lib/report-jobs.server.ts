@@ -88,7 +88,7 @@ export async function completeReportJob(db: SupabaseClient<any>, job: { id: stri
     const ins = await db.from("report_history").insert({ id: job.id, owner_id: job.owner_id, kind: job.kind, title: reportLabel(job.kind as ReportType), period_from: filters.from, period_to: filters.to, workspace: filters.workspaces?.join(",") || "all", filters: { ...filters, style: job.style }, file_path: path, file_size: fileSize, version: (prior.count ?? 0) + 1 });
     if (ins.error) {
       const recovered = await read();
-      if (recovered.error || !valid(recovered.data) || Number(recovered.data.file_size) !== fileSize) throw Error("History save unconfirmed; uploaded evidence retained for retry");
+      if (recovered.error || !valid(recovered.data) || Number(recovered.data?.file_size) !== fileSize) throw Error("History save unconfirmed; uploaded evidence retained for retry");
     }
   }
   const done = await db.from("report_jobs").update({ status: "done", error: null, updated_at: new Date().toISOString() }).eq("id", job.id).eq("owner_id", job.owner_id);

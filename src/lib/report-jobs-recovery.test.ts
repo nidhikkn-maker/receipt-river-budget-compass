@@ -3,7 +3,7 @@
 import { expect, it, vi } from 'vitest';
 import { completeReportJob } from './report-jobs.server';
 vi.mock('./report-pdf',()=>({renderReportPdf:async()=>new Blob(['%PDF-original'],{type:'application/pdf'})}));
-const job={id:'job',owner_id:'owner',kind:'cashflow',filters:{from:'2026-11-01',to:'2026-11-30',workspaces:[]},style:'simple'};
+const job={id:'job',owner_id:'owner',kind:'monthly',filters:{from:'2026-11-01',to:'2026-11-30',workspaces:[]},style:'simple'};
 function adapter(options:{history?:Record<string,unknown>;readError?:boolean;insertLost?:boolean;doneError?:boolean}={}) {
  let history=options.history;const writes:unknown[]=[];const files=new Map<string,Blob>();
  const db={from:(table:string)=>{
@@ -22,7 +22,7 @@ function adapter(options:{history?:Record<string,unknown>;readError?:boolean;ins
  return {db:db as unknown as Parameters<typeof completeReportJob>[0],writes,files,getHistory:()=>history};
 }
 it('existing accepted owner report completes without rendering/upload; read errors and wrong identity never mark done',async()=>{
- const row={id:'job',owner_id:'owner',kind:'cashflow',file_path:'owner/reports/job.pdf',file_size:13};
+ const row={id:'job',owner_id:'owner',kind:'monthly',file_path:'owner/reports/job.pdf',file_size:13};
  const valid=adapter({history:row});await completeReportJob(valid.db,job);expect(valid.files.size).toBe(0);expect(valid.writes).toHaveLength(1);
  const failed=adapter({readError:true});await expect(completeReportJob(failed.db,job)).rejects.toThrow('check report history');expect(failed.writes).toEqual([]);
  const wrong=adapter({history:{...row,owner_id:'someone-else'}});await expect(completeReportJob(wrong.db,job)).rejects.toThrow('identity');expect(wrong.writes).toEqual([]);
