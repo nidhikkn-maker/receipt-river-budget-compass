@@ -20376,11 +20376,11 @@
         "src/components/books/market-workflow-persistence.test.tsx"
       ],
       "dependencies": [],
-      "status": "VERIFIED COMPLETE",
-      "requiredWork": "None for implemented instrument rules / explicitly linked broker-cash reconciliation. Actual MarketPanel/useNetWorth and persisted owner-reviewed SQL tested; live provider and hosted file-storage accuracy are not certified.",
+      "status": "PARTIAL",
+      "requiredWork": "Explicit cash-only ledger links and statement/ledger difference, persisted net-worth snapshots and combined Demat dedup are verified. Still missing actual broker statement import/source-linked cash evidence and reconciliation of investment accounts carrying combined cash/security values; no full brokerage reconciliation certification.",
       "verificationMethod": "Source-to-code audit followed by applicable unit/database/integration/real-route checks; hosted/device evidence separately required.",
       "finalTestResult": {
-        "result": "PASS",
+        "result": "PARTIAL",
         "evidence": [
           "src/components/books/useBooks.ts:useNetWorth; src/lib/books/market.ts \u2014 inspected canonical holdings filtering, ledger-account classification, valuation, snapshot and net-worth composition.",
           "src/lib/books/books.test.ts; src/lib/portfolio.test.ts; src/lib/books/loan-balances.test.ts; src/lib/books/investment-flows.test.ts \u2014 PASS re-run: ownership-adjusted ETF arithmetic, missing-price handling, NAV gains, lender evidence and net-flow calculations; no full composition/persistence test.",
