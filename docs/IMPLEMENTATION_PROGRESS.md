@@ -1,5 +1,11 @@
 # Implementation progress — top 15 gaps (baseline: Ledgerline_v6_Requirements_Checklist.md)
 
+## Workstream 1 checkpoint — 7 Nov 2026 15:31 UTC
+- Two hosted failure categories corrected independently: central changed-trip budget validation plus staged database complete-dimension and immutable merchant-history/source-snapshot/reversal authority. Disposable real-RPC acceptance passes; production activation and corrected hosted acceptance remain pending.
+- Decimal trip/booking/refund/advance/reimbursement/report connections extended; report retry now binds every accepted filter.
+- Counts unchanged **1543 implemented / 948 partial / 31 missing / 19 superseded**; v6 **566/331/2**. Updated C-0391/C-2094/C-1065/C-0517 evidence, no promotions.
+- Full suite264/1942PASS; additional staged-authority test8/8PASS; browser3widthsPASS. Exact outstanding work: `docs/evidence/workstream-1-safeguard-corrections-2026-11-07.md`.
+
 Statuses follow the strict rule in MASTER_REQUIREMENTS.md. "PARTIAL" = real code + tests exist but at least one condition is unmet. Nothing here is COMPLETE yet.
 
 | Rank | Gap | Status | What exists (code) | Still missing |
