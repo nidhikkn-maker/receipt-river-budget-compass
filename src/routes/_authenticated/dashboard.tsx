@@ -123,7 +123,7 @@ function Overview() {
 
   return (
     <div className="min-w-0">
-      <JournalToday name={name} today={today} spending={total} cash={live.length ? cash : null} safe={live.length ? pos.safe.amount : null} cardDue={cardDue} estimated={readiness.estimated} readiness={readiness.detail} unmatched={unmatched} entries={transactions.filter(e => scope === 'all' || e.scope === scope)} upcoming={pos.upcoming} />
+      <JournalToday name={name} today={today} spending={total} periodLabel={periodLabel} safe={live.length ? pos.safe.amount : null} cardDue={cardDue} estimated={readiness.estimated} unmatched={unmatched} entries={transactions.filter(e => scope === 'all' || e.scope === scope)} upcoming={pos.upcoming} />
       <details className="journal-details mt-8 border-t pt-5"><summary className="cursor-pointer text-sm font-medium">Financial overview & tools</summary><div className="mt-5 flex min-w-0 flex-col">
       <div className="mb-3 flex justify-end"><HomeModePicker compact /></div>
       <HomeShortcuts />
