@@ -98,7 +98,7 @@ async def main():
    await page.screenshot(path=str(OUT/f'{width}-smart-pdf.png'))
    await sheet.get_by_role('button',name='A statement or other document').click()
    await page.wait_for_timeout(2500)
-   print('DESK', errors[-2:], (await sheet.inner_text())[:300].replace('\n',' | '))
+   print('DESK', errors[-3:], (await page.locator('body').inner_text())[:400].replace('\n',' | '))
    await page.screenshot(path=str(OUT/f'{width}-smart-statement.png'))
    assert page.url==start_url
    assert await page.evaluate('expenseBrowserFixture.saves.length')==1, 'exactly one save'
