@@ -92,7 +92,7 @@ export function useNetWorth() {
     const valued = books.holdings.filter((h) => !(h.isin && dematIsins.has(h.isin))).map((h) => {
       const c = h.isin && h.exchange ? pickClose(closes.byIsin, closes.byIsinEx, h.isin, h.exchange) : undefined;
       const qs = c && h.isin ? [...quotes.filter((x) => x.key !== `isin:${h.isin}`), closeQuote(h.isin, c)] : h.isin && h.exchange && closes.byIsin.has(h.isin) ? quotes.filter((x) => !(x.key === `isin:${h.isin}` && x.provider.endsWith("official closing price"))) : quotes;
-      return valueHolding(h, applyOverrides(qs, books.priceOverrides ?? []), books.goldRate, now, books.alerts);
+      return valueHolding(h, applyOverrides(qs, books.priceOverrides ?? []), books.goldRate, now, books.alerts, books.fxRates ?? []);
     });
     const duplicates = books.holdings.filter((h) => h.isin && dematIsins.has(h.isin)).map((h) => h.name);
     let closeCount = 0;

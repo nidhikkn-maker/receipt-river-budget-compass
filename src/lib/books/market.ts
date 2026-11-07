@@ -101,7 +101,17 @@ export function valueHolding(h: Holding, quotes: Quote[], gold: GoldRate | undef
   // Delisted or suspended securities are never valued at an old last price as if tradable [v6.1 §4].
   if (status === "delisted") return { holding: h, key, quote: q, value: null, stale: true, note: `Delisted — last price ${q.price} on ${fmtIst(q.at)} is not used; enter a confirmed value` };
   const flag = status === "suspended" ? "Trading suspended · last traded price · " : status === "illiquid" ? "Thinly traded · " : "";
-  return { holding: h, key, quote: q, value: Math.round(h.quantity * q.price * share * 100) / 100, stale: status === "suspended" || isStale(q, now, h.kind, alerts.staleNavDays), note: `${flag}${FRESHNESS_LABEL[q.freshness]} · ${q.provider} · price ${fmtIst(q.at)} · fetched ${fmtIst(q.refreshedAt)}` };
+  const base = `${flag}${FRESHNESS_LABEL[q.freshness]} · ${q.provider} · price ${fmtIst(q.at)} · fetched ${fmtIst(q.refreshedAt)}`;
+  const ccy = (q.currency ?? "INR").toUpperCase();
+  if (ccy !== "INR") {
+    const fx = fxFor(ccy, fxRates);
+    // A foreign-currency price is never valued at a guessed rate [v6.1 §2].
+    if (!fx) return { holding: h, key, quote: q, value: null, stale: false, note: `Price is in ${ccy} — add a ${ccy}→INR rate below to value this holding` };
+    const fxAge = (now.getTime() - Date.parse(fx.date)) / 864e5;
+    const value = Math.round(h.quantity * q.price * fx.rate * share * 100) / 100;
+    return { holding: h, key, quote: q, value, stale: status === "suspended" || fxAge > FX_STALE_DAYS || isStale(q, now, h.kind, alerts.staleNavDays), note: `${base} · ${q.price} ${ccy} × ${fx.rate} INR/${ccy} (${fx.source}, ${fx.date})${fxAge > FX_STALE_DAYS ? " · rate over 30 days old" : ""}` };
+  }
+  return { holding: h, key, quote: q, value: Math.round(h.quantity * q.price * share * 100) / 100, stale: status === "suspended" || isStale(q, now, h.kind, alerts.staleNavDays), note: base };
 }
 
 export interface NetWorthPart { label: string; value: number; basis: string; live: boolean; asOf?: string | null }
