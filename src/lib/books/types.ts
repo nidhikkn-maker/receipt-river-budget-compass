@@ -219,6 +219,7 @@ export function cleanBooks(raw: unknown): BooksData {
     snapshots: arr<Snapshot>(r["snapshots"], (x) => isDate(x.date) && fin(x.netWorth), 1500),
     alerts: { ...d.alerts, ...(r["alerts"] && typeof r["alerts"] === "object" ? (r["alerts"] as AlertSettings) : {}) },
     ...(r["goldRate"] && fin((r["goldRate"] as GoldRate).perGram24k) ? { goldRate: r["goldRate"] as GoldRate } : {}),
+    fxRates: arr<FxRate>(r["fxRates"], (x) => typeof x.from === "string" && /^[A-Z]{3}$/.test(x.from) && x.from !== "INR" && fin(x.rate) && x.rate > 0 && isDate(x.date) && typeof x.source === "string", 200),
     taxProfiles: arr<TaxProfile>(r["taxProfiles"], (x) => typeof x.entityId === "string", 100),
     gstInvoices: arr<GstInvoice>(r["gstInvoices"], (x) => typeof x.id === "string" && isDate(x.date) && fin(x.taxable), 10000),
     gstAdvances: arr<import('./gst-special').GstAdvance>(r['gstAdvances'],x=>typeof x.id==='string'&&typeof x.gstin==='string'&&isDate(x.date)&&fin(x.taxable)&&Array.isArray(x.adjustments),2000),

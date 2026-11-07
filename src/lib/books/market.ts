@@ -1,5 +1,5 @@
 /** v6.1 market data, valuation and dynamic net worth. Pure; never creates ledger entries or invents prices. */
-import type { AlertSettings, Freshness, GoldRate, Holding, Quote, Snapshot } from "./types";
+import type { AlertSettings, Freshness, FxRate, GoldRate, Holding, Quote, Snapshot } from "./types";
 
 export const FRESHNESS_LABEL: Record<Freshness, string> = { live: "Live", delayed: "Delayed", eod: "End of day", nav: "Latest NAV", manual: "Entered by you", statement: "From statement" };
 
