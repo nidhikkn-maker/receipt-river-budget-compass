@@ -28,7 +28,7 @@ def main():
     # Resolve symlinks so PostgreSQL discovers its bundled shared libraries in this sandbox.
     initdb = str(Path(shutil.which('initdb') or 'initdb').resolve())
     pg_ctl = str(Path(shutil.which('pg_ctl') or 'pg_ctl').resolve())
-    subprocess.run(unprivileged + [initdb, '-D', str(data), '-A', 'trust', '--no-locale'], check=True, capture_output=True)
+    subprocess.run(unprivileged + [initdb, '-D', str(data), '-A', 'trust', '--no-locale', '--encoding=UTF8'], check=True, capture_output=True)
     subprocess.run(unprivileged + [pg_ctl, '-D', str(data), '-l', str(base/'server.log'), '-o', f"-k {sock} -h '' -p 55439", '-w', 'start'], check=True, capture_output=True)
     args = ['psql', '-X', '-qAt', '-v', 'ON_ERROR_STOP=1', '-h', str(sock), '-p', '55439', '-U', 'nobody' if unprivileged else os.environ.get('USER', 'root'), '-d', 'postgres']
     def sql(query, ok=True):
