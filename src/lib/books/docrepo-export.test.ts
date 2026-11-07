@@ -23,9 +23,9 @@ it('a selected inaccessible document refuses the entire bundle before any fetch'
   await expect(selectedDocumentZip([await doc('a')], ['a', 'revoked'], [], '', sign, fetcher)).rejects.toThrow('no longer available');
   expect(sign).not.toHaveBeenCalled();
 });
-it.each(['denied', 'failed', 'corrupt', 'empty'] as const)('%s original never produces an apparently complete export', async kind => {
+it.each(['denied', 'failed', 'truncated', 'empty'] as const)('%s original never produces an apparently complete export', async kind => {
   const a = await doc('a');
   const sign = async () => kind === 'denied' ? null : 'https://files.test/a';
-  const read = (async () => kind === 'failed' ? new Response('', { status: 503 }) : new Response(kind === 'empty' ? '' : kind === 'corrupt' ? 'changed invoice!' : bytes)) as typeof fetch;
+  const read = (async () => kind === 'failed' ? new Response('', { status: 503 }) : new Response(kind === 'empty' ? '' : kind === 'truncated' ? 'partial' : bytes)) as typeof fetch;
   await expect(selectedDocumentZip([a], ['a'], [], '', sign, read)).rejects.toThrow();
 });
