@@ -8,8 +8,6 @@ Totals: A 3 · B 281 · C 28 · D 19 (of 331 partial)
 
 | ID | Requirement | Next action |
 |---|---|---|
-| V60-0234 | * Notes to accounts. | Implement missing behaviour, then verify through the real screen. |
-| V60-0262 | * Audit qualifications. | Implement missing behaviour, then verify through the real screen. |
 | V60-0671 | On iPad landscape, prefer list-and-detail views. | Implement missing behaviour, then verify through the real screen. |
 
 ## C

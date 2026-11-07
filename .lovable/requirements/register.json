@@ -5610,8 +5610,8 @@
      "src/lib/books/books.test.ts — PASS on rerun; concrete assertions recorded in /tmp/verify-b1-tests.log. Scope is limited to the component rules/fixtures in this file, not the entire clause."
     ]
    },
-   "category": "A",
-   "nextAction": "Implement missing behaviour, then verify through the real screen."
+   "category": "B",
+   "nextAction": "Feature exists (audited intake schedules/qualifications shown in Tax Centre); verify with a real audited PDF through Statement Desk."
   },
   {
    "id": "V60-0235",
@@ -6289,8 +6289,8 @@
      "src/lib/books/intake.ts: proposeFy merges schedules, qualifications, filed returns, details and source docIds into FY records; src/lib/books/types.ts defines historical records."
     ]
    },
-   "category": "A",
-   "nextAction": "Implement missing behaviour, then verify through the real screen."
+   "category": "B",
+   "nextAction": "Feature exists (audited intake schedules/qualifications shown in Tax Centre); verify with a real audited PDF through Statement Desk."
   },
   {
    "id": "V60-0263",
