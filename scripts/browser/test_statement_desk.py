@@ -67,7 +67,7 @@ class StatementDeskFlow(unittest.IsolatedAsyncioTestCase):
             await self.playwright.stop()
 
     async def test_smart_add_statement_reviews_in_place(self):
-        await self.page.goto(BASE + "/smart", wait_until="domcontentloaded"); await self.page.wait_for_timeout(2000); print("SMART", self.errors, (await self.page.locator("body").inner_text())[:300])
+        await self.page.goto(BASE + "/smart", wait_until="domcontentloaded"); await self.page.wait_for_timeout(2000); print("SMART", (await self.page.content())[:1500])
         csv = "Date,Description,Debit,Credit\n2026-10-02,SWIGGY ORDER,250.00,\n2026-10-03,AMAZON PURCHASE,480.00,\n"
         await self.page.get_by_label("Choose files", exact=True).set_input_files(files=[{"name": "smart.csv", "mimeType": "text/csv", "buffer": csv.encode()}])
         sheet = self.page.get_by_role("dialog", name="Smart Add")
