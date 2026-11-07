@@ -80,7 +80,7 @@ it('breakdown review exposes partial traveller plans without changing the primar
   render(<BudgetBreakdown trip={trip} />);
   fireEvent.click(screen.getByRole('tab', { name: 'Traveller' }));
   expect(mock.save).not.toHaveBeenCalled(); expect(trip.budget).toBe(100);
-  expect(screen.getByText(/Partial allocation/)).toBeVisible();
+  expect(screen.getByText(/Only part of the trip budget is split/)).toBeVisible();
 });
 it('workspace, traveller and currency edits save together once; failed save retains the entire reviewed plan',async()=>{
  const trip:TravelTrip={id:'t',name:'Test',destination:'Test',start:'2026-11-01',end:'2026-11-02',budget:100,currencies:['INR']};
