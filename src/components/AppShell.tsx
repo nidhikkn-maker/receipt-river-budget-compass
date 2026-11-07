@@ -209,7 +209,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         <DialogContent className="journal-spaces sm:max-w-md"><DialogHeader><DialogTitle>Spaces</DialogTitle></DialogHeader>
           <WorkspaceSelector />
           <div className="divide-y">
-          {ACTIVE_SCOPES.filter(s => s !== 'official').map(s => <Button key={s} variant="ghost" aria-pressed={preferences.homeScope === s} className="h-16 w-full justify-between rounded-none px-1" onClick={async () => { await useSpace(s); }}><span className="flex items-center gap-3"><Users className="size-5 text-gold-strong" /><span>{SCOPE_LABEL[s]}</span></span><ArrowRight className="size-4" /></Button>)}
+          {ACTIVE_SCOPES.map(s => <Button key={s} variant="ghost" aria-pressed={preferences.homeScope === s} className="h-16 w-full justify-between rounded-none px-1" onClick={async () => { await useSpace(s); }}><span className="flex items-center gap-3"><Users className="size-5 text-gold-strong" /><span>{SCOPE_LABEL[s]}</span></span><ArrowRight className="size-4" /></Button>)}
           <Link to="/trips" onClick={() => setSpacesOpen(false)} className="flex min-h-16 items-center justify-between text-sm"><span className="flex items-center gap-3"><Plane className="size-5 text-gold-strong" />Travel</span><ArrowRight className="size-4" /></Link>
           <Link to="/wealth" onClick={() => setSpacesOpen(false)} className="flex min-h-16 items-center justify-between text-sm"><span className="flex items-center gap-3"><Gem className="size-5 text-gold-strong" />Investments</span><ArrowRight className="size-4" /></Link>
           </div>
