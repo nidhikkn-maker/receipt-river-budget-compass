@@ -912,3 +912,11 @@
 - [ ] Merchant/category independent-connection phantom concurrency and backup/closed-period compatibility; report frozen accepted inputs + atomic versions + hosted history recovery; remaining precision engines and partial implementation.
 - [ ] 31 missing real-device/owner-document/live-site/integration/final-process items stay accurately missing; no repeated historical audit, real-record changes, approval activation or publication. Evidence: docs/evidence/workstream-1-safeguard-corrections-2026-11-07.md.
 - [x] C-0181 share-to-app (Web Share Target) built: files kept on device, reviewed before saving; iOS Share Sheet platform limit; device acceptance pending. Missing 31→30.
+
+## Current saved checkpoint — 7 Nov 2026 recovery batch
+- [x] Exact source/line/receipt completion, owner-ID read Undo, eight-stage disposable interruption/retry/report/balance tests and six controlled browser recovery flows.
+- [x] Parked-original hash recovery, confirmed-save separate cleanup retry, ambiguous company refusal and controlled ZIP provenance/access/size validation.
+- [x] Test inventory discrepancy investigated: unsupported1894 report; historical1917→baseline1978, no removed paths. Nine synthetic Inbox timing runs recorded without blaming environment.
+- [ ] Full hosted document-to-ledger/report/recovery acceptance; original upload/account-create lost responses, concurrent source-reference changes and stale-safe Undo remain outside staged guarantee.
+- [ ] Continue Statement Desk partials, then Financial Inbox, Account Reconciliation and DocuRepo. Universal receipt intake consolidation and full controlled-export hosted acceptance remain open.
+- [ ] Real-device/Cloud Inbox outlier observation and release acceptance require the corresponding environment; real records, approval activation and publication remain held.
