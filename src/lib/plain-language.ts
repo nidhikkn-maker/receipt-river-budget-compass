@@ -133,6 +133,16 @@ export function positionWording(p: { cash: number | null; owed: number; investme
   ];
 }
 
+export type BalanceTone = "ok" | "zero" | "warn" | "owed";
+/** Honest label for one account's balance: a negative bank balance is overdrawn, never "available". */
+export function accountBalanceStatus(k: AccountKind, balance: number): { label: string; tone: BalanceTone } {
+  const b = Math.round(balance * 100) / 100;
+  if (isLiability(k)) return b > 0 ? { label: "You owe", tone: "owed" } : b < 0 ? { label: "Overpaid · in credit", tone: "ok" } : { label: "Nothing owed", tone: "zero" };
+  if (k === "investment" || k === "fixed_deposit" || k === "other_asset") return b < 0 ? { label: "Below zero · check entries", tone: "warn" } : b === 0 ? { label: "No value recorded", tone: "zero" } : { label: "Latest value", tone: "ok" };
+  if (b < 0) return { label: k === "savings" || k === "current" ? "Overdrawn" : "Below zero · check entries", tone: "warn" };
+  return b === 0 ? { label: "Zero balance", tone: "zero" } : { label: "Available", tone: "ok" };
+}
+
 export const accountKindNote = (k: AccountKind) => isLiability(k) ? "Money I owe" : k === "investment" || k === "fixed_deposit" ? "Investment" : k === "other_asset" ? "Something I own or am owed" : "Money available";
 
 export interface CanvasInput { kind: "receipt" | "statement" | "message"; merchant?: string | undefined; amount?: number | null | undefined; currencyText?: string | undefined; date?: string | undefined; category?: string | undefined; categoryReason?: string | undefined; account?: string | undefined; matchFound?: boolean | undefined; possibleDuplicate?: boolean | undefined; lines?: number | undefined; unmatched?: number | undefined }
