@@ -56,10 +56,15 @@ export async function loadOwnerReportData(db: SupabaseClient<any>, owner: string
 /** Builds, stores and records one claimed job. Re-running a finished job is a no-op (history id = job id). */
 export async function completeReportJob(db: SupabaseClient<any>, job: { id: string; owner_id: string; kind: string; filters: any; style: string }) {
   if (!REPORT_TYPES.some((r) => r[0] === job.kind)) {
-    await db.from("report_jobs").update({ status: "failed", error: "Unknown report type", updated_at: new Date().toISOString() }).eq("id", job.id);
+    await db.from("report_jobs").update({ status: "failed", error: "Unknown report type", updated_at: new Date().toISOString() }).eq("id", job.id).eq("owner_id", job.owner_id);
     return;
   }
-  const exists = await db.from("report_history").select("id").eq("id", job.id).maybeSingle();
+  const path = `${job.owner_id}/reports/${job.id}.pdf`;
+  const read = () => db.from("report_history").select("id,owner_id,file_path,file_size,kind").eq("id", job.id).eq("owner_id", job.owner_id).maybeSingle();
+  const exists = await read();
+  if (exists.error) throw Error("Couldn't check report history; retry without changing saved evidence");
+  const valid = (row: any) => row?.id === job.id && row.owner_id === job.owner_id && row.kind === job.kind && row.file_path === path && Number(row.file_size) > 0;
+  if (exists.data && !valid(exists.data)) throw Error("Saved report identity differs; evidence left unchanged");
   if (!exists.data) {
     const today = new Date().toISOString().slice(0, 10);
     const data = await loadOwnerReportData(db, job.owner_id, today);
@@ -67,14 +72,27 @@ export async function completeReportJob(db: SupabaseClient<any>, job: { id: stri
     const doc = buildReportDoc(job.kind as ReportType, filters, data as any);
     const { renderReportPdf } = await import("./report-pdf");
     const blob = await renderReportPdf(doc, job.style as any, new Date());
-    const path = `${job.owner_id}/reports/${job.id}.pdf`;
-    const up = await db.storage.from("receipts").upload(path, blob, { contentType: "application/pdf", upsert: true });
-    if (up.error) throw new Error("Couldn't store the PDF");
+    if (!blob.size) throw Error("Generated PDF is empty");
+    // Never overwrite a possibly committed original on a later retry.
+    const up = await db.storage.from("receipts").upload(path, blob, { contentType: "application/pdf", upsert: false });
+    let fileSize = blob.size;
+    if (up.error && /already exists|duplicate|resource exists/i.test(up.error.message ?? "")) {
+      const stored = await db.storage.from("receipts").download(path);
+      if (stored.error || !stored.data?.size || stored.data.type !== "application/pdf") throw Error("Existing report evidence could not be validated");
+      const header = new Uint8Array(await stored.data.slice(0,5).arrayBuffer());
+      if (String.fromCharCode(...header) !== "%PDF-") throw Error("Existing report evidence is not a PDF");
+      fileSize = stored.data.size;
+    } else if (up.error) throw new Error("Couldn't store the PDF");
     const prior = await db.from("report_history").select("id", { count: "exact", head: true }).eq("owner_id", job.owner_id).eq("kind", job.kind).eq("period_from", filters.from).eq("period_to", filters.to);
-    const ins = await db.from("report_history").insert({ id: job.id, owner_id: job.owner_id, kind: job.kind, title: reportLabel(job.kind as ReportType), period_from: filters.from, period_to: filters.to, workspace: filters.workspaces?.join(",") || "all", filters: { ...filters, style: job.style }, file_path: path, file_size: blob.size, version: (prior.count ?? 0) + 1 });
-    if (ins.error && !/duplicate/i.test(ins.error.message)) throw new Error("Couldn't save report history");
+    if (prior.error) throw Error("Couldn't check report version; uploaded evidence retained");
+    const ins = await db.from("report_history").insert({ id: job.id, owner_id: job.owner_id, kind: job.kind, title: reportLabel(job.kind as ReportType), period_from: filters.from, period_to: filters.to, workspace: filters.workspaces?.join(",") || "all", filters: { ...filters, style: job.style }, file_path: path, file_size: fileSize, version: (prior.count ?? 0) + 1 });
+    if (ins.error) {
+      const recovered = await read();
+      if (recovered.error || !valid(recovered.data) || Number(recovered.data.file_size) !== fileSize) throw Error("History save unconfirmed; uploaded evidence retained for retry");
+    }
   }
-  await db.from("report_jobs").update({ status: "done", error: null, updated_at: new Date().toISOString() }).eq("id", job.id);
+  const done = await db.from("report_jobs").update({ status: "done", error: null, updated_at: new Date().toISOString() }).eq("id", job.id).eq("owner_id", job.owner_id);
+  if (done.error) throw Error("Report saved; completion status needs retry");
 }
 
 export async function runReportJobs(db: SupabaseClient<any>) {
