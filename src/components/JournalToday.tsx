@@ -11,9 +11,9 @@ export function JournalToday({ name, today, spending, cash, safe, cardDue, estim
 }) {
   const recent = [...entries].sort((a,b) => b.date.localeCompare(a.date) || b.id.localeCompare(a.id)).slice(0,8);
   return <div className="journal-today">
-    <section className="journal-hero relative -mx-4 mb-6 overflow-hidden sm:mx-0">
+    <section className="journal-hero relative mb-7 overflow-hidden">
       <img src={sunrise} alt="" width={1536} height={512} className="absolute inset-0 h-full w-full object-cover" />
-      <div className="relative px-5 pb-8 pt-7 sm:px-8 sm:pb-10">
+      <div className="relative">
         <p className="text-xs font-medium text-foreground">{new Date(`${today}T12:00:00`).toLocaleDateString('en-IN',{weekday:'long',day:'numeric',month:'long'})}</p>
         <h1 className="journal-heading mt-3 text-3xl sm:text-4xl">Today{ name ? `, ${name.split(' ')[0]}` : ''}.</h1>
         <p className="mt-2 max-w-sm text-sm text-foreground">Your money, in perspective.</p>

@@ -2,13 +2,12 @@ import { OfflineBanner } from "@/components/OfflineBanner";
 import { PageSkeleton } from "@/components/PageSkeleton";
 import { NavProgress } from "@/components/NavProgress";
 import { DemoBanner } from "@/components/DemoBanner";
-import { FilePen } from "lucide-react";
 import { DraftsReminder } from "@/components/DraftsReminder";
 import { Link, useRouter, useRouterState , useNavigate } from "@tanstack/react-router";
 import { ArrowLeft, ArrowRight } from "lucide-react";
 import { backStep, showBackButton } from "@/lib/back-nav";
 import { useEffect, useState, type ReactNode } from "react";
-import { BarChart3, Bell, CalendarClock, Gem, Home, Landmark, ListFilter, PiggyBank, Plus, Settings, Sparkles, Users, Eye, EyeOff, FileText, UserRound, TrendingUp, Inbox, HeartPulse, Search, SlidersHorizontal, Split, Network, Plane, Wallet, Bot, Menu, X, MessageCircleQuestion, RefreshCw, CloudOff, Check, TriangleAlert } from "lucide-react";
+import { BarChart3, Bell, Gem, Home, ListFilter, Plus, Settings, Users, Eye, EyeOff, FileText, UserRound, Inbox, Search, Plane, Menu, X, RefreshCw, CloudOff, Check, TriangleAlert } from "lucide-react";
 import { DeviceLock } from "./DeviceLock";
 import { LedgerlineBrand } from "./LedgerlineLogo";
 import { Button } from "./ui/button";
@@ -17,70 +16,18 @@ import { useStore } from "@/lib/store";
 import { applyTheme } from "@/lib/themes";
 import { ACTIVE_SCOPES, SCOPE_LABEL, type Scope } from "@/lib/expenses";
 import { SmartAdd } from './SmartAdd';
+import { ModuleDirectory } from './ModuleDirectory';
 
-const LINKS = [
-  { to: "/dashboard", label: "Today", icon: Home },
-  { to: "/expenses", label: "Journal", icon: ListFilter },
-  { to: "/new", label: "Add", icon: Plus, primary: true },
-  { to: "/assistant", label: "AI", icon: Sparkles },
-  { to: "/reports", label: "Insights", icon: BarChart3 },
-  { to: "/wealth", label: "Wealth", icon: Gem },
-  { to: "/inbox", label: "Inbox", icon: Inbox },
-  { to: "/review", label: "Review", icon: HeartPulse },
-  { to: "/plan", label: "Plan", icon: CalendarClock },
-  { to: "/forecast", label: "Predict", icon: TrendingUp },
-  { to: "/budgets", label: "Budgets", icon: PiggyBank },
-  { to: "/search", label: "Search", icon: Search },
-  { to: "/rules", label: "Rules", icon: SlidersHorizontal },
-  { to: "/allocation", label: "Allocate", icon: Split },
-  { to: "/connections", label: "Links", icon: Network },
-  { to: "/family", label: "Family", icon: Users },
-  { to: "/trips", label: "Trips", icon: Plane },
-  { to: "/vault", label: "DocuRepo", icon: FileText },
-  { to: "/settings", label: "Settings", icon: Settings },
+const PRIMARY_LINKS = [
+  { to: '/dashboard', label: 'Today', icon: Home },
+  { to: '/inbox', label: 'Review', icon: Inbox },
+  { to: '/expenses', label: 'Journal', icon: ListFilter },
+  { to: '/wealth', label: 'Wealth & Plan', icon: Gem },
+  { to: '/statements', label: 'Statements', icon: FileText },
+  { to: '/vault', label: 'Documents', icon: FileText },
+  { to: '/trips', label: 'Travel', icon: Plane },
+  { to: '/reports', label: 'Reports', icon: BarChart3 },
 ] as const;
-
-/** "More" sheet groups: every module stays reachable, organised by purpose. */
-const MORE_GROUPS: { title: string; items: { to: string; label: string; icon: typeof Home }[] }[] = [
-  { title: "Money", items: [
-    { to: "/plan", label: "Plan, forecast & what-if", icon: CalendarClock },
-    { to: "/budgets", label: "Budgets", icon: PiggyBank },
-    { to: "/allocation", label: "Money allocation", icon: Split },
-    { to: "/rules", label: "Financial rules", icon: SlidersHorizontal },
-  ] },
-  { title: "Activity", items: [
-    { to: "/expenses", label: "Journal", icon: ListFilter },
-    { to: "/drafts", label: "Drafts", icon: FilePen },
-    { to: "/inbox", label: "Financial inbox", icon: Inbox },
-    { to: "/records-check", label: "Account health", icon: Search },
-    { to: "/statements", label: "Statement Desk", icon: Inbox },
-    { to: "/transfers", label: "Internal transfers", icon: Inbox },
-    { to: "/review", label: "Monthly review", icon: HeartPulse },
-    { to: "/search", label: "Search everything", icon: Search },
-    { to: "/vault", label: "DocuRepo", icon: FileText },
-  ] },
-  { title: "Insights", items: [
-    { to: "/reports", label: "Reports & PDFs", icon: BarChart3 },
-    { to: "/assistant", label: "AI assistant", icon: Sparkles },
-    { to: "/brief", label: "Weekly brief", icon: Sparkles },
-    { to: "/connections", label: "Money map", icon: Network },
-  ] },
-  { title: "Workspaces & travel", items: [
-    { to: "/trips", label: "Travel Manager", icon: Plane },
-    { to: "/family", label: "Family", icon: Users },
-    { to: "/wealth", label: "Wealth & Plan", icon: Gem },
-  ] },
-  { title: "Account", items: [
-    { to: "/entities", label: "Companies & years", icon: Users },
-    { to: "/assets", label: "Property & assets", icon: Gem },
-    { to: "/tax", label: "Income tax & GST", icon: BarChart3 },
-    { to: "/audit", label: "Audit dashboard", icon: Search },
-    { to: "/gst-check", label: "Suppliers & invoices", icon: FileText },
-    { to: "/receivables", label: "Customers owing", icon: Wallet },
-    { to: "/settings", label: "Settings & backup", icon: Settings },
-    { to: "/payment-methods", label: "Payment methods", icon: Wallet },
-  ] },
-];
 
 function WorkspaceSelector() {
   const { preferences, savePreferences } = useStore();
@@ -88,15 +35,16 @@ function WorkspaceSelector() {
   return (
     <div className="flex min-w-0 max-w-full gap-1 overflow-x-auto pb-0.5" role="group" aria-label="Workspace">
       {options.map((s) => (
-        <button
+        <Button
+          variant="ghost"
           key={s}
           type="button"
           onClick={() => void savePreferences({ ...preferences, homeScope: s })}
           aria-pressed={preferences.homeScope === s}
-          className={"shrink-0 rounded-full px-3 py-1 text-xs font-semibold transition " + (preferences.homeScope === s ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground hover:bg-accent")}
+          className={"shrink-0 workspace-chip rounded-full px-3 text-sm font-medium transition " + (preferences.homeScope === s ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground hover:bg-accent")}
         >
           {s === "all" ? "All workspaces" : SCOPE_LABEL[s]}
-        </button>
+        </Button>
       ))}
     </div>
   );
@@ -117,7 +65,8 @@ function SyncStatus() {
     mins == null || mins < 1 ? "Up to date" : `Updated ${mins} min ago`;
   const Icon = syncState === "syncing" ? RefreshCw : syncState === "offline" ? CloudOff : syncState === "error" ? TriangleAlert : Check;
   return (
-    <button
+    <Button
+      variant="ghost"
       type="button"
       onClick={() => (pendingCount > 0 ? void navigate({ to: "/sync-queue" }) : void refresh())}
       aria-live="polite"
@@ -127,7 +76,7 @@ function SyncStatus() {
     >
       <Icon className={"h-3.5 w-3.5" + (syncState === "syncing" ? " animate-spin" : "")} />
       <span className={(syncState === "error" || syncState === "offline" || pendingCount > 0 ? "max-w-24" : "sr-only sm:not-sr-only") + " truncate sm:max-w-none"}>{label}</span>
-    </button>
+    </Button>
   );
 }
 
@@ -151,29 +100,27 @@ export function AppShell({ children }: { children: ReactNode }) {
   useEffect(() => { setHidden(localStorage.getItem("ll-privacy") === "1"); }, []);
   useEffect(() => { document.documentElement.classList.toggle("privacy", hidden); localStorage.setItem("ll-privacy", hidden ? "1" : "0"); }, [hidden]);
   return (
-    <div className={"journal-shell min-h-screen bg-background " + (focused ? '' : 'md:pl-48 xl:pl-56')}>
-      <aside className={"journal-rail fixed inset-y-0 left-0 z-30 hidden w-48 flex-col gap-1 overflow-y-auto bg-ink px-3 py-6 text-ink-foreground xl:w-56 " + (focused ? '' : 'md:flex')}>
+    <div className={"journal-shell uix-shell min-h-screen bg-background " + (focused ? '' : 'md:pl-52 xl:pl-64')}>
+      <a href="#main-content" className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50 focus:bg-card focus:p-3">Skip to content</a>
+      <aside className={"journal-rail fixed inset-y-0 left-0 z-30 hidden w-52 flex-col gap-2 overflow-y-auto bg-sidebar px-4 py-6 text-sidebar-foreground xl:w-64 " + (focused ? '' : 'md:flex')}>
         <Link to="/dashboard" aria-label="Ledgerline home" className="mb-6 shrink-0"><img src="/app-icon.png" alt="Ledgerline" width={48} height={48} className="h-12 w-12 rounded-2xl shadow-float" /></Link>
         <Button variant="ghost" className="h-11 justify-start gap-3 text-ink-muted hover:bg-sidebar-accent hover:text-ink-foreground" onClick={() => setSpacesOpen(true)}><Users className="size-[18px]" />Spaces</Button>
-        {LINKS.map((l) => "primary" in l ? <Button key={l.to} variant="ghost" aria-label="Smart Add" onClick={() => setSmartOpen(true)} className="my-1 h-16 w-20 flex-col gap-1 text-ink-foreground hover:bg-sidebar-accent hover:text-ink-foreground"><span className="flex size-9 items-center justify-center rounded-full bg-gold text-gold-foreground"><Plus className="size-5" /></span><span className="text-[11px]">Add</span></Button> : (
-          <Link key={l.to} to={l.to} className="flex min-h-11 items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-ink-muted transition hover:bg-sidebar-accent hover:text-ink-foreground"
-            activeProps={{ className: "!text-gold bg-sidebar-accent ring-1 ring-gold" }}>
-            <span className="flex size-6 shrink-0 items-center justify-center"><l.icon className="size-[18px]" /></span>
-            {l.label}
-          </Link>
-        ))}
+        <Button aria-label="Smart Add" onClick={() => setSmartOpen(true)} variant="gold" className="rail-add"><Plus className="size-5" />Add to Ledgerline</Button>
+        <nav aria-label="Sidebar" className="rail-links">{PRIMARY_LINKS.map(l => <Link key={l.to} to={l.to} className="rail-link" activeProps={{ className: 'rail-link-selected', 'aria-current': 'page' }}><l.icon className="size-5" />{l.label}</Link>)}</nav>
+        <Button variant="ghost" className="rail-more" aria-label="More modules" onClick={() => setMoreOpen(true)}><Menu className="size-5" />More</Button>
+        <Link to="/settings" className="rail-link mt-auto"><Settings className="size-5" />Settings</Link>
       </aside>
 
-      <header hidden={focused} className="sticky top-0 z-20 border-b bg-background/85 backdrop-blur">
+      <header hidden={focused} className="uix-header sticky top-0 z-20 border-b bg-background/85 backdrop-blur">
         <div className="mx-auto flex max-w-[1440px] items-center gap-1 px-4 py-2.5 sm:px-8">
           <Link to="/dashboard" aria-label="Ledgerline home" className="flex items-center"><LedgerlineBrand /></Link>
           <div className="ml-auto flex items-center">
             <SyncStatus />
             <Button size="icon" variant="ghost" aria-label="Smart Add" title="Smart Add" className="hidden sm:inline-flex lg:hidden" onClick={() => setSmartOpen(true)}><Plus className="size-5" /></Button>
-            <Link to="/search" aria-label="Search" className="rounded-xl p-2 text-muted-foreground transition hover:text-foreground"><Search className="h-5 w-5" /></Link>
-            <Link to="/inbox" aria-label="Notifications" className="rounded-xl p-2 text-muted-foreground transition hover:text-foreground"><Bell className="h-5 w-5" /></Link>
+            <Link to="/search" aria-label="Search" className="header-search rounded-xl p-3 text-muted-foreground transition hover:text-foreground"><span className="hidden xl:inline">Search Ledgerline</span><Search className="h-5 w-5" /></Link>
+            <Link to="/inbox" aria-label="Notifications" className="rounded-xl p-3 text-muted-foreground transition hover:text-foreground"><Bell className="h-5 w-5" /></Link>
             <Button size="icon" variant="ghost" onClick={() => setHidden((h) => !h)} aria-label={hidden ? "Show amounts" : "Hide amounts"} className="rounded-xl text-muted-foreground">{hidden ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}</Button>
-            <Link to="/auth" aria-label={name ? `Account: ${name}` : "Account"} title={name || "Account"} className="rounded-xl p-2 text-muted-foreground transition hover:text-foreground"><UserRound className="h-5 w-5" /></Link>
+            <Link to="/auth" aria-label={name ? `Account: ${name}` : "Account"} title={name || "Account"} className="rounded-xl p-3 text-muted-foreground transition hover:text-foreground"><UserRound className="h-5 w-5" /></Link>
           </div>
         </div>
         <div className="mx-auto max-w-6xl px-4 pb-2 sm:px-8">
@@ -183,19 +130,19 @@ export function AppShell({ children }: { children: ReactNode }) {
 
       <NavProgress />
       <DemoBanner />
-      <main className={focused ? "mx-auto max-w-3xl px-4 pb-6 pt-2 sm:px-8" : wideClaim ? 'mx-auto max-w-[1800px] px-4 pb-[calc(8.5rem+env(safe-area-inset-bottom))] pt-5 sm:px-8 md:pb-12' : "mx-auto max-w-[1440px] px-4 pb-[calc(8.5rem+env(safe-area-inset-bottom))] pt-5 sm:px-8 md:pb-12"}>
+      <main id="main-content" className={focused ? "uix-content uix-entry mx-auto max-w-5xl px-4 pb-6 pt-2 sm:px-8" : wideClaim ? 'uix-content mx-auto max-w-[1800px] px-4 pb-[calc(8.5rem+env(safe-area-inset-bottom))] pt-5 sm:px-8 md:pb-12' : "uix-content mx-auto max-w-[1440px] px-4 pb-[calc(8.5rem+env(safe-area-inset-bottom))] pt-5 sm:px-8 md:pb-12"}>
         {!focused && <BackButton />}
         {!loading && <OfflineBanner />}
         {!focused && !loading && <DraftsReminder />}
         {loading ? <PageSkeleton /> : <DeviceLock>{children}</DeviceLock>}
       </main>
 
-      <nav hidden={focused} aria-label="Primary" className="journal-bottom fixed inset-x-3 bottom-[calc(0.75rem+env(safe-area-inset-bottom))] z-30 flex items-center justify-around rounded-2xl border bg-card px-2 py-2 text-muted-foreground md:hidden">
+      <nav hidden={focused} aria-label="Primary" className="journal-bottom fixed inset-x-0 bottom-0 z-30 flex items-center justify-around border-t bg-card/95 px-2 pb-[env(safe-area-inset-bottom)] pt-2 text-muted-foreground md:hidden">
         <Link to="/dashboard" className="flex flex-1 flex-col items-center gap-0.5 rounded-2xl py-1.5 text-[10px] font-semibold" activeProps={{ className: "!text-primary bg-secondary" }}>
           <Home className="h-5 w-5" />Today
         </Link>
         <Button variant="ghost" onClick={() => setSpacesOpen(true)} aria-label="Spaces" aria-expanded={spacesOpen} className="h-12 flex-1 flex-col gap-0.5 text-[10px] text-ink-muted hover:bg-sidebar-accent hover:text-ink-foreground"><Users className="h-5 w-5" />Spaces</Button>
-        <Button variant="ghost" aria-label="Smart Add" title="Smart Add" onClick={() => setSmartOpen(true)} className="-mt-8 h-14 w-14 shrink-0 rounded-full bg-gold text-gold-foreground shadow-gold hover:bg-gold hover:text-gold-foreground"><Plus className="h-7 w-7" /></Button>
+        <Button variant="ghost" aria-label="Smart Add" title="Smart Add" onClick={() => setSmartOpen(true)} className="-mt-5 h-14 w-14 shrink-0 rounded-full bg-gold text-gold-foreground shadow-gold hover:bg-gold hover:text-gold-foreground"><Plus className="h-7 w-7" /></Button>
         <Link to="/inbox" className="flex flex-1 flex-col items-center gap-0.5 rounded-2xl py-1.5 text-[10px] font-semibold" activeProps={{ className: "!text-primary bg-secondary" }}>
           <Inbox className="h-5 w-5" />Review
         </Link>
@@ -206,7 +153,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
       <SmartAdd open={smartOpen} onOpenChange={setSmartOpen} scope={preferences.homeScope === 'all' ? undefined : preferences.homeScope} />
       <Dialog open={spacesOpen} onOpenChange={setSpacesOpen}>
-        <DialogContent className="journal-spaces sm:max-w-md"><DialogHeader><DialogTitle>Spaces</DialogTitle></DialogHeader>
+        <DialogContent className="journal-spaces native-sheet sm:max-w-md"><DialogHeader><DialogTitle>Spaces</DialogTitle></DialogHeader>
           <WorkspaceSelector />
           <div className="divide-y">
           {ACTIVE_SCOPES.map(s => <Button key={s} variant="ghost" aria-pressed={preferences.homeScope === s} className="h-16 w-full justify-between rounded-none px-1" onClick={async () => { await useSpace(s); }}><span className="flex items-center gap-3"><Users className="size-5 text-gold-strong" /><span>{SCOPE_LABEL[s]}</span></span><ArrowRight className="size-4" /></Button>)}
@@ -220,26 +167,13 @@ export function AppShell({ children }: { children: ReactNode }) {
       </Dialog>
 
       <Dialog open={moreOpen} onOpenChange={setMoreOpen}>
-        <DialogContent className="max-h-[80vh] overflow-y-auto sm:max-w-lg" aria-label="All modules">
+        <DialogContent className="native-sheet max-h-[85dvh] overflow-y-auto sm:max-w-2xl" aria-label="All modules">
           <DialogHeader>
             <DialogTitle className="flex items-center justify-between">All modules
               <Button size="icon" variant="ghost" aria-label="Close" onClick={() => setMoreOpen(false)}><X className="h-5 w-5" /></Button>
             </DialogTitle>
           </DialogHeader>
-          <div className="space-y-5 pb-2">
-            {MORE_GROUPS.map((g) => (
-              <div key={g.title}>
-                <div className="mb-1.5 font-mono text-[11px] font-semibold text-muted-foreground">{g.title}</div>
-                <div className="grid grid-cols-2 gap-1.5">
-                  {g.items.map((item) => (
-                    <Link key={item.to} to={item.to} onClick={() => setMoreOpen(false)} className="flex items-center gap-2.5 rounded-2xl border bg-card px-3 py-2.5 text-sm font-semibold transition hover:bg-accent" activeProps={{ className: "ring-1 ring-gold" }}>
-                      <item.icon className="h-4 w-4 shrink-0 text-primary" />{item.label}
-                    </Link>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
+          <ModuleDirectory onNavigate={() => setMoreOpen(false)} />
         </DialogContent>
       </Dialog>
     </div>
@@ -248,10 +182,9 @@ export function AppShell({ children }: { children: ReactNode }) {
 
 export function PageTitle({ title, sub, eyebrow }: { title: string; sub?: string; eyebrow?: string }) {
   return (
-    <div className="mb-4 sm:mb-6">
+    <div className="uix-page-title mb-6 sm:mb-8">
       {eyebrow && <div className="mb-0.5 text-xs font-medium text-primary">{eyebrow}</div>}
-      <h1 className="font-display text-2xl font-semibold tracking-tight sm:text-3xl">{title}</h1>
-      <span className="mt-1.5 block h-0.5 w-12 rounded-full bg-gold-hero" aria-hidden="true" />
+      <h1 className="font-display text-3xl font-semibold sm:text-4xl">{title}</h1>
       {sub && <p className="mt-1.5 text-sm text-muted-foreground">{sub}</p>}
     </div>
   );
@@ -259,9 +192,9 @@ export function PageTitle({ title, sub, eyebrow }: { title: string; sub?: string
 
 export function Stat({ label, value, hint, tone }: { label: string; value: string; hint?: string; tone?: "business" | "personal" }) {
   return (
-    <div className={"@container h-full min-w-0 overflow-hidden rounded-2xl border border-l-4 bg-card p-3 sm:p-4 " + (tone === "business" ? "border-l-primary" : tone === "personal" ? "border-l-primary-glow" : "border-l-gold")}>
-      <div className="text-[11px] font-semibold text-muted-foreground">{label}</div>
-      <div className="mt-1 whitespace-nowrap font-mono text-[min(1.5rem,9.5cqw)] font-semibold tracking-tight text-gold-strong" title={value}>{value}</div>
+    <div className={"uix-stat @container h-full min-w-0 overflow-hidden border-b bg-transparent py-4 " + (tone === "business" ? "border-l-primary" : tone === "personal" ? "border-l-primary-glow" : "border-l-gold")}>
+      <div className="text-sm font-medium text-muted-foreground">{label}</div>
+      <div className="mt-1 whitespace-nowrap font-mono text-[min(1.5rem,9.5cqw)] font-semibold tracking-tight text-foreground" title={value}>{value}</div>
       {hint && <div className="text-xs text-muted-foreground">{hint}</div>}
     </div>
   );
@@ -300,8 +233,8 @@ function BackButton() {
   const btn = "inline-flex h-9 items-center gap-1 rounded-full px-2.5 text-sm font-medium text-muted-foreground transition hover:bg-accent hover:text-foreground active:scale-95";
   return (
     <nav aria-label="Page history" className="-ml-2.5 mb-2 flex items-center gap-1">
-      <button type="button" aria-label="Back" onClick={back} className={btn}><ArrowLeft className="size-[18px]" /> Back</button>
-      {canForward && <button type="button" aria-label="Forward" onClick={() => router.history.forward()} className={btn}>Forward <ArrowRight className="size-[18px]" /></button>}
+      <Button variant="ghost" type="button" aria-label="Back" onClick={back} className={btn}><ArrowLeft className="size-[18px]" /> Back</Button>
+      {canForward && <Button variant="ghost" type="button" aria-label="Forward" onClick={() => router.history.forward()} className={btn}>Forward <ArrowRight className="size-[18px]" /></Button>}
     </nav>
   );
 }

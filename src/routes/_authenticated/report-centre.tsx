@@ -133,7 +133,7 @@ function ReportCentre() {
   const toggleWs = (s: Scope) => setF((x) => ({ ...x, workspaces: x.workspaces.includes(s) ? x.workspaces.filter((w) => w !== s) : [...x.workspaces, s] }));
 
   return (
-    <div className="space-y-5 pb-24">
+    <div className="uix-family-reports space-y-6 pb-24">
       <SectionTabs group="reports" active="pdf" /><PageTitle title="Reports Centre" sub="Generate PDF reports from your recorded entries, then preview, download or share them." />
       <BackgroundReports onDone={() => void loadHistory()} />
 

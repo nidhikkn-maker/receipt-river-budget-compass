@@ -2,8 +2,8 @@ import { Link } from "@tanstack/react-router";
 import { cn } from "@/lib/utils";
 
 const tab = (on: boolean) => cn(
-  "inline-flex h-10 shrink-0 snap-start items-center whitespace-nowrap rounded-full border px-4 text-sm font-medium transition active:scale-[0.98]",
-  on ? "border-primary bg-primary text-primary-foreground" : "bg-card text-foreground hover:bg-accent",
+  "uix-section-tab inline-flex min-h-11 shrink-0 snap-start items-center whitespace-nowrap rounded-lg border px-4 text-sm font-medium transition active:scale-[0.98]",
+  on ? "border-transparent bg-primary text-primary-foreground" : "bg-card text-foreground hover:bg-accent",
 );
 
 /** Pages that do one job share one tab row, so each job has a single home in the menu. */

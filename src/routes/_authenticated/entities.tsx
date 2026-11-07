@@ -66,7 +66,7 @@ function Entities() {
   };
 
   return (
-    <div className="mx-auto max-w-2xl space-y-4 p-4">
+    <div className="uix-family-business mx-auto max-w-4xl space-y-6">
       <PageTitle title="Companies & years" sub="Each company or person you keep books for, and which past years are on record." />
       {!edit && <div className="flex flex-wrap gap-2"><Link to="/statements" search={{ context: "entity" }} className="inline-flex items-center rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground">Add from documents</Link><Button variant="outline" onClick={() => { setEdit(blank()); setGst(""); }}>Add manually</Button><Link to="/company-spending" className="inline-flex items-center rounded-md border px-4 py-2 text-sm font-semibold">Compare spending</Link></div>}
       {!edit && <p className="text-xs text-muted-foreground">Upload the incorporation certificate, PAN, GST certificate, MoA/AoA or partnership/LLP/trust deed — the profile is read for you to review. Re-uploading matches by PAN, CIN or GSTIN, so no duplicates.</p>}
@@ -112,9 +112,9 @@ function Entities() {
       {list.length === 0 && !edit && <p className="text-sm text-muted-foreground">No profiles yet. Add yourself and each company to track PAN, GST and past years.</p>}
       {list.map((p) => (
         <div key={p.id} className="space-y-3 rounded-2xl border bg-card p-4">
-          <div className="flex items-start justify-between gap-2">
-            <div>
-              <p className="font-semibold">{p.name}{needsDetails(p) && <span className="ml-2 rounded-full bg-secondary px-2 py-0.5 text-[10px] font-medium text-muted-foreground">Details to fill</span>}</p>
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div className="min-w-0 flex-1">
+              <p className="break-words font-semibold">{p.name}{needsDetails(p) && <span className="ml-2 rounded-full bg-secondary px-2 py-0.5 text-[10px] font-medium text-muted-foreground">Details to fill</span>}</p>
               <p className="text-xs text-muted-foreground">{ENTITY_KINDS[p.kind].label}{p.pan ? ` · PAN ${p.pan}` : ""}{p.regNo ? ` · ${p.regNo}` : ""}{p.gstins.length ? ` · ${p.gstins.length} GSTIN` : ""}{p.incorporatedOn ? ` · since ${p.incorporatedOn}` : ""}</p>
               {p.address && <p className="text-xs text-muted-foreground">{p.address}</p>}
               {!!p.people?.length && <p className="text-xs text-muted-foreground">{p.people.map((x) => `${x.name} (${x.role})`).join(", ")}</p>}
@@ -127,10 +127,10 @@ function Entities() {
           <div className="space-y-1">
             <p className="text-xs font-semibold text-muted-foreground">Bank accounts & cards ({(links[p.id] ?? []).length})</p>
             {(links[p.id] ?? []).map((id) => (
-              <div key={id} className="flex items-center justify-between gap-2 rounded-xl bg-secondary/50 px-3 py-1.5 text-sm">
+              <div key={id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-secondary/50 px-3 py-3 text-sm">
                 <span className="truncate">{accName(id)}</span>
                 <div className="flex shrink-0 items-center gap-1">
-                  <select aria-label="Move to" className="rounded-md border bg-background px-2 py-1 text-xs" value="" onChange={(e) => { const to = e.target.value || null; void saveLinks(linkAccounts(links, to, [id]), list, "Moved").then(() => window.__lovableEvents?.track?.("project.account_company_linked", { action: to ? "move" : "unlink", source: "companies_page" })); }}>
+                  <select aria-label="Move to" className="max-w-full min-w-0 rounded-lg border bg-background px-2 py-1 text-sm" value="" onChange={(e) => { const to = e.target.value || null; void saveLinks(linkAccounts(links, to, [id]), list, "Moved").then(() => window.__lovableEvents?.track?.("project.account_company_linked", { action: to ? "move" : "unlink", source: "companies_page" })); }}>
                     <option value="">Move to…</option>
                     {list.filter((x) => x.id !== p.id).map((x) => <option key={x.id} value={x.id}>{x.name}</option>)}
                   </select>
@@ -146,7 +146,7 @@ function Entities() {
                 <div className="flex gap-2"><Button size="sm" disabled={!pick.length} onClick={() => void saveLinks(linkAccounts(links, p.id, pick), list, "Linked").then(() => { window.__lovableEvents?.track?.("project.account_company_linked", { action: "link", source: "companies_page" }); setPicking(null); setPick([]); })}>Link {pick.length || ""}</Button><Button size="sm" variant="ghost" onClick={() => { setPicking(null); setPick([]); }}>Cancel</Button></div>
               </div>
             ) : <div className="flex flex-wrap gap-2"><Button size="sm" variant="outline" onClick={() => { setPicking(p.id); setPick([]); }}>Link accounts</Button>
-              {list.length > 1 && <select aria-label="Merge into" className="rounded-md border bg-background px-2 py-1 text-xs" value="" onChange={(e) => void merge(p.id, e.target.value)}><option value="">Merge into…</option>{list.filter((x) => x.id !== p.id).map((x) => <option key={x.id} value={x.id}>{x.name}</option>)}</select>}</div>}
+              {list.length > 1 && <select aria-label="Merge into" className="max-w-full min-w-0 rounded-lg border bg-background px-2 py-1 text-sm" value="" onChange={(e) => void merge(p.id, e.target.value)}><option value="">Merge into…</option>{list.filter((x) => x.id !== p.id).map((x) => <option key={x.id} value={x.id}>{x.name}</option>)}</select>}</div>}
           </div>
           <div className="space-y-1">
             <p className="text-xs font-semibold text-muted-foreground">Financial years on record</p>

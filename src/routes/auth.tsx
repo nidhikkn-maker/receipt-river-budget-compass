@@ -167,14 +167,14 @@ function Auth() {
     } catch { setFaceError("Couldn't check your account. Use your account password."); setPasswordMode(true); }
     finally { setBusy(false); }
   };
-  return <div className="relative min-h-dvh overflow-hidden bg-gradient-to-b from-secondary/60 via-background to-background">
+  return <div className="uix-auth relative min-h-dvh overflow-hidden bg-background">
   <div className="pointer-events-none fixed z-0 flex flex-col items-center gap-1 text-muted-foreground opacity-70" style={{ right: "max(1rem, env(safe-area-inset-right))", bottom: "max(1rem, env(safe-area-inset-bottom))" }}>
     <img src={kkLogo.url} alt="KK monogram" className="size-12 object-contain sm:size-16" />
     <span className="text-[10px] tracking-wide sm:text-xs">A creation by KK</span>
   </div>
   <main className="relative z-10 mx-auto flex min-h-dvh max-w-md flex-col justify-center px-5 pb-32 pt-10 sm:pb-24">
     <Link to="/dashboard" aria-label="Ledgerline home" className="mx-auto mb-8 inline-block"><LedgerlineLogo className="h-9 w-auto sm:h-11" /></Link>
-    <div className="rounded-3xl border bg-card/95 p-6 shadow-float backdrop-blur sm:p-8">
+    <div className="py-6 sm:py-8">
     <h1 className="mb-1 text-center font-display text-2xl font-semibold">{signedEmail ? "Welcome back" : signup ? "Create your account" : "Sign in"}</h1>
     <p className="mb-6 text-center text-sm text-muted-foreground">{signedEmail ? "Unlock to open your accounts" : signup ? "Start tracking with Ledgerline" : "Your finances, in one place"}</p>
     {checking ? <p role="status" className="text-sm text-muted-foreground">Checking your account…</p> : signedEmail ? <>

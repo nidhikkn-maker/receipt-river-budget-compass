@@ -31,7 +31,7 @@ function Vault() {
     if (!url) { toast.error("Couldn't open the file — reconnect and try again"); return; }
     const a = document.createElement("a"); a.href = url; a.target = "_blank"; a.rel = "noopener noreferrer"; a.click();
   };
-  return <>
+  return <div className="uix-family-documents">
     <PageTitle eyebrow="Documents" title="DocuRepo" />
     <NoticeDeadlines />
     <VaultBooks />
@@ -43,7 +43,7 @@ function Vault() {
       <Select value={type} onValueChange={v => setType(v as DocType | "all")}><SelectTrigger aria-label="Document type filter"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">All document types</SelectItem>{DOC_TYPES.map(t => <SelectItem key={t} value={t}>{DOC_LABEL[t]}</SelectItem>)}</SelectContent></Select>
     </div>
     <p className="mb-3 text-sm text-muted-foreground">{items.length} documents</p>
-    <div className="mb-8 grid gap-3 sm:grid-cols-2">{items.map(item => <article key={item.key} className="min-w-0 rounded-lg border bg-card p-4">
+    <div className="document-list mb-8 grid gap-0">{items.map(item => <article key={item.key} className="document-item min-w-0 border-b py-5">
       <Button variant="ghost" className="h-auto w-full justify-start gap-3 whitespace-normal p-0 text-left" onClick={() => void open(item)}><FileText className="h-6 w-6 shrink-0 text-primary" /><span className="min-w-0"><span className="block break-words font-semibold">{item.title}</span><span className="block text-xs text-muted-foreground">{DOC_LABEL[item.docType]} · {item.date ?? "No date"}{item.amount != null && ` · ${money(item.amount, item.currency)}`}</span><span className="block break-words text-xs text-muted-foreground">{item.fileName}</span></span><ExternalLink className="ml-auto h-4 w-4 shrink-0" /></Button>
       {item.source === "document" && <div className="mt-3 flex justify-end gap-2"><Button size="sm" variant="outline" aria-label={`Download ${item.title}`} onClick={() => { const doc = documents.find(d => d.id === item.docId); if (doc) void downloadFile(doc.filePath, doc.fileName, { size: doc.size, mimeType: doc.mimeType }).catch(e => toast.error(e.message)); }}>Download</Button><Button size="sm" variant="outline" onClick={() => { const title = window.prompt("Document title", item.title); if (title && item.docId) void updateDocument(item.docId, { title }).then(() => toast.success("Document updated")).catch(e => toast.error(e.message)); }}>Rename</Button><Button size="icon" variant="ghost" aria-label={`Delete document ${item.title}`} onClick={() => { const doc = documents.find(d => d.id === item.docId); if (doc) void confirmAction(`Delete ${doc.title} and its file?`).then(ok => ok ? removeDocument(doc).then(() => toast.success("Document deleted")) : undefined).catch(e => toast.error(e.message)); }}><Trash2 className="h-4 w-4" /></Button></div>}
       {item.docId && (() => { const d = documents.find(x => x.id === item.docId); const old = earlierVersions(documents, item.docId); return <>
@@ -59,5 +59,5 @@ function Vault() {
       <Button asChild className="w-full sm:w-auto"><Link to="/statements" search={{ context: "documents" }}><ScanLine className="h-4 w-4" />Scan or upload in Statement Desk</Link></Button>
     </section>
     <ExpenseDialog expense={selected} onClose={() => setSelected(null)} />
-  </>;
+  </div>;
 }

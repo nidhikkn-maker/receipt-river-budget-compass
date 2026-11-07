@@ -61,8 +61,8 @@ function Trips() {
   });
 
   return (
-    <div>
-      <PageTitle eyebrow="Travel" title="Travel Manager" sub="Every trip at a glance. Open one for bookings, itinerary, expenses, budget and reports." />
+    <div className="uix-family-travel">
+      <PageTitle eyebrow="Travel" title="Your travels" sub="Plans, bookings and money for every journey." />
       <Button asChild variant="outline" className="mb-4"><Link to="/travel-inbox">Travel inbox</Link></Button>
 
       {(dash.toReturn > 0 || dash.owedToYou > 0 || dueSoon.length > 0) && (
@@ -101,12 +101,12 @@ function Trips() {
           <p className="text-sm text-muted-foreground">{trips.length === 0 ? "Create your first trip to plan bookings, itinerary and travel money." : "No trips match these filters."}</p>
         </Card>
       )}
-      <div className="grid gap-3 sm:grid-cols-2">
+      <div className="travel-list grid gap-4 lg:grid-cols-2">
         {shown.map((t) => {
           const st = tripStatus(t, today);
           const total = spent.get(t.id) ?? 0;
           return (
-            <div key={t.id} className="rounded-2xl border bg-card p-4"><Link to="/trips/$tripId" params={{ tripId: t.id }} className="-m-2 block rounded-xl p-2 transition hover:bg-accent">
+            <div key={t.id} className="travel-item border-b py-5"><Link to="/trips/$tripId" params={{ tripId: t.id }} className="-m-2 block rounded-xl p-2 transition hover:bg-accent">
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0">
                   <div className="truncate font-display text-lg font-bold">{t.name}</div>

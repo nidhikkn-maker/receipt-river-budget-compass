@@ -10,11 +10,11 @@ export function Fold({ id, title, hint, children, defaultOpen = false }: { id?: 
     if (id && hash === id && ref.current) { ref.current.open = true; ref.current.scrollIntoView({ block: "start" }); }
   }, [hash, id]);
   return (
-    <details ref={ref} id={id} open={defaultOpen} className="group mb-3 scroll-mt-20 rounded-2xl border bg-card [&_summary::-webkit-details-marker]:hidden">
+    <details ref={ref} id={id} open={defaultOpen} className="uix-fold group mb-0 scroll-mt-20 border-b bg-transparent [&_summary::-webkit-details-marker]:hidden">
       <summary className="grid min-h-14 cursor-pointer grid-cols-[minmax(0,1fr)_auto] items-center gap-3 px-4 py-3 select-none">
         <span className="min-w-0">
-          <span className="block truncate font-semibold">{title}</span>
-          {hint && <span className="block truncate text-xs text-muted-foreground">{hint}</span>}
+          <span className="block font-medium">{title}</span>
+          {hint && <span className="block text-sm text-muted-foreground">{hint}</span>}
         </span>
         <ChevronDown className="size-5 shrink-0 text-muted-foreground transition-transform group-open:rotate-180 motion-reduce:transition-none" aria-hidden="true" />
       </summary>
