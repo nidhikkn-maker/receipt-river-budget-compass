@@ -1,3 +1,10 @@
+## Owner iPhone defects A–F — 7 Nov 2026 21:05 (development preview only)
+- [x] Smart Add panel mode: no nested page header/ticket/toolbar/zoom hints; framed real photo; "Here's what I found" fields open; kind chips; one primary action per step; claim/asset next steps after save; demat Add holdings opens Smart Add.
+- [x] Review: Needs checking / Checked / Set aside with Bring back; quick fixes only for non-zero counts (≤3 shown as the actual entries); reminders grouped and de-duplicated in folds.
+- [x] Accounts: compact rows with honest balance label (Overdrawn/You owe/Zero), last entry date, settings behind Manage account; loan form folded.
+- [x] More: 8 collapsed categories, search, recent, single close. Today hero/panel density and 320px overflow fixes. Browser fixture check passes at 320/375/390/430/834/1180/1440.
+- [ ] Open: owner's six screenshots were not received by the agent; real iPhone check; statement batch review styling inside Smart Add; remaining route-family migration; hosted save/readback.
+
 ## Brand and authentication transformation — active
 - [x] New folded-ledger vector logo and shared adaptive AuthFrame; provider/session handlers retained, errors shown inline.
 - [x] Actual auth/reset screens: 8 width/theme combinations and 32 sign-in/error/signup/expired-recovery states; mocked success→next redirect, sign-out and keyboard traversal pass. 10 targeted automated checks pass. Vector16/24/32 legibility inspected.

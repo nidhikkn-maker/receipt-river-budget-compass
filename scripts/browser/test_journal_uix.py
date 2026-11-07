@@ -19,7 +19,7 @@ async def main():
  OUT.mkdir(parents=True, exist_ok=True)
  async with async_playwright() as p:
   browser = await p.chromium.launch(headless=True)
-  for width,height in [(390,844),(430,932),(1180,820),(1440,1000)]:
+  for width,height in [(320,640),(375,812),(390,844),(430,932),(834,1112),(1180,820),(1440,1000)]:
    context = await browser.new_context(viewport={'width':width,'height':height})
    page = await context.new_page()
    errors=[]; blocked=[]
@@ -43,12 +43,17 @@ async def main():
     await page.goto('http://localhost:8080/'+route_name)
     await page.wait_for_timeout(1000); print(route_name,errors,(await page.locator('body').inner_text())[:500])
     await expect(page.get_by_role('heading',name=heading,**({} if isinstance(heading,re.Pattern) else {'exact':True})).first).to_be_visible(timeout=15000)
-    plain_checks={'dashboard':['Your Money Story','Recent activity'],'spaces':['Personal','Family','Business','Travel','Investments'],'inbox':['To review','Reconciled','Ignored','Ready to confirm','What to do next'],'wealth':['Net Worth','Investments','Goals','Plan & Forecast','What I own','What I owe','My total financial position','Accounting details'],'start':['What would you like to manage?','Money moved between my accounts','Paying my credit card bill','A bank statement','Buying something that lasts','Getting paid back']}
+    plain_checks={'dashboard':['Your Money Story','Recent activity'],'spaces':['Personal','Family','Business','Travel','Investments'],'inbox':['Needs checking','Checked','Set aside','Other things'],'wealth':['Net Worth','Investments','Goals','Plan & Forecast','What I own','What I owe','My total financial position','Accounting details'],'start':['What would you like to manage?','Money moved between my accounts','Paying my credit card bill','A bank statement','Buying something that lasts','Getting paid back']}
     for t in plain_checks.get(route_name,[]): await expect(page.get_by_text(t,exact=False).filter(visible=True).first).to_be_visible()
     if route_name=='start':
      await page.get_by_role('radio',name='Family').click(); await expect(page.get_by_text('Paying my credit card bill')).to_have_count(0); await page.get_by_role('radio',name='Family').click()
+    if route_name=='inbox':
+     assert await page.get_by_text('Confirm 0',exact=False).count()==0, 'zero-count action shown'
+     assert await page.get_by_text('More ways to review',exact=False).count()==0
     await page.screenshot(path=str(OUT/f'{width}-{route_name}.png'))
-    assert await page.evaluate('document.documentElement.scrollWidth <= innerWidth'), (width,route_name,'overflow')
+    await page.mouse.wheel(0,900); await page.wait_for_timeout(250); await page.screenshot(path=str(OUT/f'{width}-{route_name}-scrolled.png'))
+    off=await page.evaluate('()=>[...document.querySelectorAll("body *")].filter(n=>n.getBoundingClientRect().right>innerWidth+1&&n.getBoundingClientRect().width>0).slice(0,2).map(n=>{let c=[],x=n;for(let i=0;i<6&&x;i++){c.push(x.tagName+"."+String(x.className).slice(0,24)+" L"+Math.round(x.getBoundingClientRect().left)+" W"+Math.round(x.getBoundingClientRect().width)+" m="+getComputedStyle(x).margin);x=x.parentElement}return c.join(" < ")})')
+    assert await page.evaluate('document.documentElement.scrollWidth <= innerWidth'), (width,route_name,'overflow',off)
    await page.goto('http://localhost:8080/dashboard')
    await expect(page.get_by_role('heading',name=re.compile(r'^Good .*, Alex$'))).to_be_visible()
    await page.get_by_role('link',name='Spaces',exact=True).filter(visible=True).first.click()
@@ -71,22 +76,32 @@ async def main():
    await expect(sheet.get_by_label('Preview of receipt.png')).to_be_visible()
    await expect(sheet.get_by_label('Preview of receipt.png').locator('img').first).to_be_visible(timeout=10000)
    await page.screenshot(path=str(OUT/f'{width}-smart-preview.png'))
-   await expect(sheet.get_by_role('heading',name='Intelligent Canvas')).to_be_visible(timeout=15000)
+   await expect(sheet.get_by_role('heading',name="Here's what I found")).to_be_visible(timeout=15000)
    await expect(sheet.get_by_label('What I understood')).to_contain_text('I found a receipt')
+   for gone in ['Scroll, pinch','Report a problem','NEW EXPENSE','Extract receipt items','Intelligent Canvas']: assert await sheet.get_by_text(gone,exact=False).filter(visible=True).count()==0, ('legacy chrome visible',gone)
+   for gone in ['Scan and fill','Upload a receipt','Repeat an expense','Transaction type']: assert await sheet.get_by_role('button',name=gone).count()+await sheet.get_by_role('combobox',name=gone).count()==0, ('duplicate toolbar',gone)
+   assert await sheet.get_by_role('heading',name=re.compile('^New ')).count()==0, 'second page header'
+   assert await sheet.evaluate('e=>[...e.querySelectorAll("*")].every(n=>n.scrollWidth<=n.clientWidth+1||getComputedStyle(n).overflowX!="visible"||n.getBoundingClientRect().right<=innerWidth+1)'), 'sheet overflow'
+   await sheet.get_by_label('Merchant',exact=True).fill('Controlled Cafe Corrected')
    assert page.url==start_url, ('navigated',page.url)
    await page.screenshot(path=str(OUT/f'{width}-canvas.png'))
    await sheet.get_by_role('button',name='Hide Smart Add (your work stays here)').click()
    await expect(sheet).to_be_hidden()
    await page.get_by_role('button',name='Smart Add',exact=True).filter(visible=True).first.click()
-   await expect(sheet.get_by_role('heading',name='Intelligent Canvas')).to_be_visible()
-   await sheet.get_by_text('Check what I read from the receipt',exact=True).click()
-   await sheet.get_by_label("I've checked this date against the receipt").check()
-   await sheet.get_by_role('button',name='Confirm details',exact=True).click()
+   await expect(sheet.get_by_role('heading',name="Here's what I found")).to_be_visible()
+   assert await sheet.get_by_label('Merchant',exact=True).input_value()=='Controlled Cafe Corrected', 'correction lost on hide/resume'
+   chk=sheet.get_by_label("I've checked this date against the receipt")
+   if await chk.count(): await chk.check()
+   await sheet.get_by_role('button',name='Looks right',exact=True).click()
    gate=page.get_by_role('dialog',name='Check these receipt items before saving')
    if await gate.count(): await gate.get_by_role('button',name="I've checked these items",exact=True).click()
    await page.screenshot(path=str(OUT/f'{width}-smart-confirmed.png'))
+   await expect(sheet.get_by_role('radiogroup',name='What is this?')).to_be_visible()
    await sheet.get_by_role('button',name='Save expense').click()
    await expect(sheet.get_by_text('Saved to your records')).to_be_visible(timeout=15000)
+   await expect(sheet.get_by_text('Claim it back')).to_be_visible()
+   saved=await page.evaluate('expenseBrowserFixture.saves[0]')
+   print('saved merchant',str(saved)[:300])
    await page.screenshot(path=str(OUT/f'{width}-smart-saved.png'))
    assert await page.evaluate('expenseBrowserFixture.saves.length')==1
    assert page.url==start_url
@@ -99,6 +114,18 @@ async def main():
    await page.screenshot(path=str(OUT/f'{width}-smart-pdf.png'))
    assert page.url==start_url
    assert await page.evaluate('expenseBrowserFixture.saves.length')==1, 'exactly one save'
+   await page.keyboard.press('Escape'); await expect(sheet).to_be_hidden()
+   await page.get_by_role('button',name='More modules').filter(visible=True).first.click() if width<768 else None
+   if width<768:
+    more=page.get_by_role('dialog',name='More')
+    await expect(more).to_be_visible(); await page.wait_for_timeout(450)
+    assert await more.get_by_role('button',name='Close').count()==1, 'one close control'
+    assert await more.locator('.more-group').count()==8 and await more.locator('.more-link').count()==0, 'categories only at first open'
+    await page.screenshot(path=str(OUT/f'{width}-more.png'))
+    await more.locator('.more-group',has_text='Documents').click(); await expect(more.get_by_role('link',name='DocuRepo')).to_be_visible()
+    await more.get_by_label('Search pages').fill('claim'); await expect(more.get_by_role('link',name=re.compile('Expense claims'))).to_be_visible()
+    await page.screenshot(path=str(OUT/f'{width}-more-search.png'))
+    await more.get_by_role('button',name='Close').click()
    assert not errors, errors
    print('blocked',blocked)
    print(f'{width}: Today/Review/Wealth/Start/Spaces/Smart Add/Canvas plain wording, no overflow or posting PASS')

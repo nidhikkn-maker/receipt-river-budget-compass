@@ -1,5 +1,5 @@
 import { AccountingDetails } from "@/components/AccountingDetails";
-import { PLAIN_ACCOUNT_LABEL, accountKindNote } from "@/lib/plain-language";
+import { PLAIN_ACCOUNT_LABEL, accountKindNote, accountBalanceStatus } from "@/lib/plain-language";
 import { PaymentMethodsManager } from "@/components/PaymentMethodsManager";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
@@ -76,32 +76,42 @@ function Wealth() {
           </div>
           {!list.length && <p className="rounded-2xl border border-dashed p-6 text-center text-sm text-muted-foreground">No accounts yet. Add your bank, cards and cash to track balances.</p>}
           {list.map((a) => {
-            const bal = accountValue(a, transactions, valuations).value;
+            const v = accountValue(a, transactions, valuations);
+            const bal = v.value;
+            const status = accountBalanceStatus(a.kind, bal);
+            const lastEntry = transactions.reduce<string | null>((m, t) => (t.accountId === a.id || t.toAccountId === a.id) && (!m || t.date > m) ? t.date : m, null);
+            const updated = v.valuedOn ? `Value from ${v.valuedOn}` : lastEntry ? `Last entry ${new Date(`${lastEntry}T12:00:00`).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}` : "No entries yet";
+            const owner = (() => { const eid = Object.entries(preferences.books?.entityAccounts ?? {}).find(([, ids]) => ids.includes(a.id))?.[0]; return eid ? (preferences.entities ?? []).find((x) => x.id === eid)?.name : undefined; })();
             return (
-              <div key={a.id} className={"rounded-2xl border bg-card p-4 " + (a.archived ? "opacity-60" : "")}>
-              <div className="flex items-center gap-3">
+              <div key={a.id} className={"cmp-account " + (a.archived ? "opacity-60" : "")} data-tone={status.tone}>
+              <div className="flex min-w-0 items-start gap-3">
                 <div className="min-w-0 flex-1">
-                  <div className="truncate font-medium">{a.name}</div>
-                  <div className="text-xs text-muted-foreground">{PLAIN_ACCOUNT_LABEL[a.kind]} · {accountKindNote(a.kind)}{(() => { const eid = Object.entries(preferences.books?.entityAccounts ?? {}).find(([, ids]) => ids.includes(a.id))?.[0]; const n = eid && (preferences.entities ?? []).find((x) => x.id === eid)?.name; return n ? ` · ${n}` : ""; })()}</div>
+                  <div className="truncate text-[15px] font-medium">{a.name}</div>
+                  <div className="truncate text-xs text-muted-foreground">{PLAIN_ACCOUNT_LABEL[a.kind]}{owner ? ` · ${owner}` : ""} · {updated}</div>
                 </div>
-                <div className="font-mono">{money(bal)}</div>
-                <Button variant="ghost" size="icon" aria-label={a.archived ? `Restore ${a.name}` : `Archive ${a.name}`}
-                  onClick={() => setArchived(a.id, !a.archived).catch((e) => toast.error(e.message))}>
-                  {a.archived ? <ArchiveRestore className="h-4 w-4" /> : <Archive className="h-4 w-4" />}
-                </Button>
+                <div className="shrink-0 text-right">
+                  <div className="font-mono text-[15px] tabular-nums">{money(bal)}</div>
+                  <div className="cmp-balance-tag">{status.label}</div>
+                </div>
               </div>
+              {a.kind === "credit_card" && <Link to="/cards/$accountId" params={{ accountId: a.id }} className="mt-2 inline-flex min-h-11 items-center text-sm font-medium text-primary">Card bill & payments <ChevronRight className="size-4" /></Link>}
+              <details className="cmp-manage"><summary>Manage account</summary>
+              <p className="pt-2 text-xs text-muted-foreground">{accountKindNote(a.kind)}{a.archived ? " · archived" : ""}</p>
+              <Button variant="outline" size="sm" className="mt-2" onClick={() => setArchived(a.id, !a.archived).catch((e) => toast.error(e.message))}>
+                {a.archived ? <ArchiveRestore className="h-4 w-4" /> : <Archive className="h-4 w-4" />}{a.archived ? "Restore account" : "Archive account"}
+              </Button>
               {a.kind === "credit_card" && !a.archived && <CardDetails a={a} />}
-              {a.kind === "credit_card" && <Link to="/cards/$accountId" params={{ accountId: a.id }} className="mt-2 inline-block text-sm font-medium text-primary underline">View card balance & payments</Link>}
               {!a.archived && <AccountTools a={a} />}
               {!a.archived && ["savings","current","cash","wallet","credit_card"].includes(a.kind) && (
                 <details className="mt-2 border-t pt-2"><summary className="cursor-pointer text-xs font-semibold text-muted-foreground">Linked UPI IDs & cards ({preferences.paymentInstruments.filter(p=>p.accountId===a.id&&!p.archived).length})</summary><div className="mt-2"><PaymentMethodsManager accountId={a.id} /></div></details>
               )}
               {(a.kind === "savings" || a.kind === "current") && !a.archived && (
-                <label className="mt-2 flex items-center gap-2 border-t pt-2 text-xs text-muted-foreground">Keep at least ₹
+                <label className="mt-2 flex items-center gap-2 border-t pt-2 text-xs text-muted-foreground">Warn me if the balance goes below ₹
                   <input type="number" defaultValue={a.minBalance ?? 0} aria-label={`Minimum balance for ${a.name}`} className="w-24 rounded-md border bg-background px-2 py-1 font-mono"
                     onBlur={(e) => updateAccount(a.id, { minBalance: Number(e.target.value) || 0 }).catch((er) => toast.error(er.message))} />
                 </label>
               )}
+              </details>
               </div>
             );
           })}

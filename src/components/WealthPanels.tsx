@@ -71,7 +71,7 @@ export function LoansPanel() {
     <section className="space-y-3">
       <h2 className="font-display text-lg font-bold">Loans & EMIs</h2>
       {loans.map((l) => <LoanCard key={l.id} l={l} onRemove={() => removeLoan(l.id).catch((e) => toast.error(e.message))} />)}
-      <form onSubmit={add} className="grid grid-cols-2 gap-2 rounded-3xl border bg-card p-4">
+      <details className="cmp-manage"><summary>Add a loan</summary><form onSubmit={add} className="grid grid-cols-2 gap-2 rounded-3xl border bg-card p-4">
         <div className="col-span-2 grid gap-1"><Label htmlFor="ln">Loan</Label><Input id="ln" placeholder="Home loan — SBI" value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} /></div>
         <div className="grid gap-1"><Label htmlFor="loan-provider">Provider</Label><Input id="loan-provider" value={f.provider} onChange={e=>setF({...f,provider:e.target.value})}/></div><div className="grid gap-1"><Label>Loan type</Label><Select value={f.loanType} onValueChange={v=>setF({...f,loanType:v as LoanType})}><SelectTrigger aria-label="Loan type"><SelectValue/></SelectTrigger><SelectContent>{LOAN_TYPES.filter(t=>t!=="credit_card_emi").map(t=><SelectItem key={t} value={t}>{LOAN_TYPE_LABEL[t]}</SelectItem>)}</SelectContent></Select></div>
         <div className="grid gap-1"><Label htmlFor="loan-original">Original principal (₹)</Label><Input id="loan-original" type="number" value={f.original} onChange={e=>setF({...f,original:e.target.value})}/></div><div className="grid gap-1"><Label htmlFor="loan-start">Start date</Label><Input id="loan-start" type="date" value={f.startDate} onChange={e=>setF({...f,startDate:e.target.value})}/></div>
@@ -81,7 +81,7 @@ export function LoansPanel() {
         <div className="grid gap-1"><Label htmlFor="le">EMI (₹)</Label><Input id="le" type="number" value={f.emi} onChange={(e) => setF({ ...f, emi: e.target.value })} /></div>
         <div className="grid gap-1"><Label htmlFor="ld">Next EMI</Label><Input id="ld" type="date" value={f.nextDue} onChange={(e) => setF({ ...f, nextDue: e.target.value })} /></div>
         <Button type="submit" className="col-span-2">Add loan</Button>
-      </form>
+      </form></details>
     </section>
   );
 }
