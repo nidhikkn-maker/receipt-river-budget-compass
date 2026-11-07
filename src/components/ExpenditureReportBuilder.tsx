@@ -25,6 +25,9 @@ import type { Expense } from '@/lib/expenses';
 import { DEFAULT_DECLARATION, maskedText, organisationStatement, profileClaimant, reimbursementAccountLabel, resolveReimbursementProfile, responsibilityShares } from '@/lib/reimbursement-profiles';
 
 import { buildClaim, applyAdvance, type Claimant } from "@/lib/expense-claim";
+import { fetchPrivateFile } from "@/lib/private-files";
+import { reportDocumentError } from "@/lib/report-documents";
+import { ReportDocumentVerification, type ReportDocumentCheck } from "./ReportDocumentVerification";
 
 const STAGES = ["Collecting transactions", "Fetching original bills", "Building statement", "Attaching annexures", "Saving to report history"];
 const sel = "h-9 w-full rounded-md border border-input bg-background px-2 text-sm";
@@ -63,6 +66,9 @@ export function ExpenditureReportBuilder({ mode, search }: { mode: "statement" |
   const [stage, setStage] = useState(-1); const [failed, setFailed] = useState(false);
   const [result, setResult] = useState<{ blob: Blob; url: string; name: string; missing: string[] } | null>(null);
   const cancelled = useRef(false);
+  const [documentChecks, setDocumentChecks] = useState<ReportDocumentCheck[] | null>(null);
+  const documentDecision = useRef<((proceed: boolean) => void) | null>(null);
+  useEffect(() => () => { documentDecision.current?.(false); }, []);
   const initializedActivity = useRef('');
   const restoredProfile = useRef(false);
   const [rejected,setRejected]=useState<string[]>([]),[detail,setDetail]=useState<Expense|null>(null),[reviewSearch,setReviewSearch]=useState(''),[reviewSort,setReviewSort]=useState('date'),[priorClaimIds,setPriorClaimIds]=useState<string[]>([]),[allowRepeat,setAllowRepeat]=useState(false),[historyCheck,setHistoryCheck]=useState<'loading'|'ready'|'error'>('loading'),[advanceInput,setAdvanceInput]=useState(''),[priorAdvance,setPriorAdvance]=useState<Record<string,number>>({});
@@ -134,16 +140,28 @@ export function ExpenditureReportBuilder({ mode, search }: { mode: "statement" |
       if (claim && !claim.items.length) throw new Error("Nothing to claim: none of the chosen expenses are personally paid, marked for reimbursement and still outstanding.");
       setStage(1);
       const files: Record<string, AnnexFile | null> = {};
+      const checks: ReportDocumentCheck[] = [];
       for (const a of claim ? claim.annexures : st.annexures) {
         if (cancelled.current) return;
         try {
           const url = await store.signedUrl(a.path); if (!url) throw new Error();
-          const b = await (await fetch(url)).blob();
+          const b = await fetchPrivateFile(url, { mimeType: a.type });
           const type = b.type || a.type;
           files[a.no] = type === "application/pdf" || /\.pdf$/i.test(a.name) ? { bytes: new Uint8Array(await b.arrayBuffer()), type: "application/pdf" }
             : type === "image/png" || type === "image/jpeg" ? { bytes: new Uint8Array(await b.arrayBuffer()), type } : { bytes: await toJpeg(b), type: "image/jpeg" };
         } catch { files[a.no] = null; }
+        const error = await reportDocumentError(files[a.no] ?? null);
+        checks.push({ id: a.no, title: `${a.no} · ${a.name} · ${a.date}`, error });
+        if (error) files[a.no] = null;
       }
+      for (const row of claim ? claim.items : st.rows) {
+        const rowNo = "claimNo" in row ? row.claimNo : row.sno;
+        if (!(claim ? claim.annexures : st.annexures).some(a => a.row === rowNo)) checks.push({ id: row.id, title: `${row.date} · ${row.particulars}`, error: "No supporting bill attached" });
+      }
+      setStage(-1);
+      const proceed = await new Promise<boolean>(resolve => { documentDecision.current = resolve; setDocumentChecks(checks); });
+      documentDecision.current = null;
+      if (!proceed || cancelled.current) return;
       setStage(2);
       const { renderStatementPdf } = await import("@/lib/expenditure-pdf");
       const { renderClaimPdf } = await import("@/lib/claim-pdf");
@@ -169,7 +187,7 @@ export function ExpenditureReportBuilder({ mode, search }: { mode: "statement" |
       setStage(-1); toast.success(claim ? "Claim PDF ready" : "Statement ready", { description: historySaved ? 'Saved in Reports Centre history.' : 'Ready on this device; not saved to history.', action: { label: "Open", onClick: () => void navigate({ to: "/report-centre" }) } });
     } catch (e) { setFailed(true); toast.error(e instanceof Error ? e.message : "Couldn't prepare the statement"); }
   }
-  const busy = stage >= 0 && !failed;
+  const busy = (stage >= 0 && !failed) || documentChecks !== null;
   const openPreview = (b: Blob) => { const u = URL.createObjectURL(b); window.open(u, "_blank"); setTimeout(() => URL.revokeObjectURL(u), 60_000); };
 
   return (
@@ -257,6 +275,7 @@ export function ExpenditureReportBuilder({ mode, search }: { mode: "statement" |
       )}
       {!result&&claimMode&&<div className="hidden space-y-3 border-t py-5 min-[1600px]:block"><h2 className="font-semibold">Report preview</h2><p className="text-sm">{claimant.name||'Claimant required'} · {org||'Organisation required'}</p><p className="text-sm">{subjectName} · {from} — {to}</p><p className="font-semibold tabular-nums">{money(selectedClaimTotal)}</p><p className="text-xs text-muted-foreground">{claimFormat==='summary'?'Summary + Bills':'Detailed + Bills'}</p></div>}
       </div></div><ClaimExpenseDetails entry={detail} onClose={()=>setDetail(null)} />
+      {documentChecks && <ReportDocumentVerification rows={documentChecks} required={claimMode && profile?.documentRule === "required"} onDecision={proceed => { setDocumentChecks(null); documentDecision.current?.(proceed); }} />}
     </div>
   );
 }
