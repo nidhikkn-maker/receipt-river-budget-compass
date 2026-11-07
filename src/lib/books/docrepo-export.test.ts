@@ -1,11 +1,11 @@
+// @vitest-environment node
 import { expect, it, vi } from 'vitest';
 import { unzipSync, strFromU8 } from 'fflate';
 import { selectedDocumentZip } from './docrepo-export';
-import { sha256Hex } from '../private-files';
 import type { VaultDoc } from '../documents';
 
 const bytes = new TextEncoder().encode('original invoice');
-const doc = async (id: string): Promise<VaultDoc> => ({ id, title: id, docType: 'invoice', filePath: `owner/${id}`, fileName: 'invoice.pdf', size: bytes.length, sha256: await sha256Hex(bytes.buffer), mimeType: 'application/pdf', createdAt: '2026-11-07', fields: [{ label: 'Amount', value: '1050', originalValue: '1000', page: null, section: 'Clause 8', quote: '1000', confidence: 'high', status: 'corrected' }] } as VaultDoc);
+const doc = async (id: string): Promise<VaultDoc> => ({ id, title: id, docType: 'invoice', filePath: `owner/${id}`, fileName: 'invoice.pdf', size: bytes.length, mimeType: 'application/pdf', docDate: null, amount: null, currency: 'INR', merchant: null, notes: '', text: '', transactionId: null, accountId: null, loanId: null, expiresOn: null, createdAt: '2026-11-07', fields: [{ label: 'Amount', value: '1050', originalValue: '1000', page: null, section: 'Clause 8', quote: '1000', confidence: 'high', status: 'corrected' }] });
 const fetcher = (async () => new Response(bytes)) as typeof fetch;
 
 it('exports exactly selected visible originals and their complete provenance, preserving full identities', async () => {
