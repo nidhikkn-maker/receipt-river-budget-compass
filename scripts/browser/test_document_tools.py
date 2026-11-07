@@ -19,7 +19,7 @@ async def main():
    elif u.path.startswith('/__original/'):
     await route.fulfill(status=503 if mode['file']=='failed' else 200,body=b'original invoice' if mode['file']=='ok' else b'',content_type='application/pdf')
    else:await route.continue_()
-  await c.route('**/*',isolate);await page.goto('http://localhost:8080/vault#organise');await page.get_by_text('Controlled invoice a',exact=True).wait_for();await page.get_by_text('Personal / unassigned',exact=False).first.click()
+  await c.route('**/*',isolate);await page.goto('http://localhost:8080/vault#organise');await page.get_by_text('Folders, filters & export',exact=True).wait_for();await page.get_by_text('Personal / unassigned',exact=False).first.click()
   await page.get_by_label('Controlled invoice a',exact=False).check();await page.get_by_label('Controlled invoice b',exact=False).check()
   async with page.expect_download() as dl:await page.get_by_role('button',name='Export 2 as ZIP').click()
   d=await dl.value;path=OUT/'selected.zip';await d.save_as(path)
