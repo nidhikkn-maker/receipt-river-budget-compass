@@ -875,3 +875,10 @@
 - [x] Background reports owner identity/read failures/lost-response/status retry/non-overwrite evidence handling; isolated actual server orchestration passes.
 - [ ] Receipt browser upload→linked expense→attachment retrieval C-0553 investigation; do not change production records.
 - [ ] Hosted acceptance of new flows, staged category concurrency/phantom/closed-period rollout, remaining precision domains, outstanding missing external/device/owner-evidence items; publication and activation held.
+
+## Exact saved checkpoint — 7Nov2026 14:02UTC
+- [x] Remaining five previously buildable missing items addressed: C-0553 narrow browser-test request PASS; C-0391/C-0581/C-0517 implemented PARTIAL; C-0214 existing sent history found PARTIAL. Historical1543/948/31/19;v6unchanged566/331/2.
+- [x] Receipt browser4PASS1obsoleteapprovalSKIP after isolated fixture fixes; full261/1917PASS,3size workstreamPASS,buildOK. Merchant history/reversal, staged category undo, broader decimal/report recovery implemented.
+- [ ] Next staged category phantom/concurrency/closed-period compatible undo; ALL legacy category merge saves held until atomic authority can be activated.
+- [ ] Next partial implementation gaps: merchant durable authority/history dependency safety, accepted report frozen-data/orphan/history retrieval recovery, remaining downstream precision/reconciliation/investment formulas; no re-audit or repeat provider attempts.
+- [ ] Hosted new workflows, device benchmarks, owner evidence, external providers/schemas and deployment/publication holds remain; no real-record changes. Evidence: docs/evidence/workstream-1-missing-features-2026-11-07.md.

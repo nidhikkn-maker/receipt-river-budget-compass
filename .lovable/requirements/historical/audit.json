@@ -2777,14 +2777,22 @@
     {
       "cid": "C-0214",
       "category": "statement",
-      "status": "missing",
+      "status": "partial",
       "rep": "Add an admin view that shows statement upload status, reminder history, and confirmation email delivery for each monthly request.",
       "sources": [
         "chat #625 2026-11-02 06:12"
       ],
       "members": [
         "HC-0241"
-      ]
+      ],
+      "codeReferences": [
+        "src/routes/_authenticated/upload-requests.tsx:80-90",
+        "src/lib/upload-link.ts:82-151"
+      ],
+      "verification": {
+        "result": "Existing owner-scoped monthly request screen already displays upload status, reminder history and confirmation sent timestamp. Not rebuilt. Confirmed delivery vs merely sent distinction and hosted admin/privacy acceptance unverified; classification corrected from missing only.",
+        "evidence": "docs/evidence/workstream-1-missing-features-2026-11-07.md"
+      }
     },
     {
       "cid": "C-0215",
@@ -4903,14 +4911,22 @@
     {
       "cid": "C-0391",
       "category": "entry",
-      "status": "missing",
+      "status": "partial",
       "rep": "These functions must remain available through the optional Budget Breakdown view, where applicable.",
       "sources": [
         "LEDGERLINE_pasted-22.md:345"
       ],
       "members": [
         "H-9461"
-      ]
+      ],
+      "codeReferences": [
+        "src/components/trip/TripBudget.tsx:155-297",
+        "src/components/trip/budget-controls.test.tsx"
+      ],
+      "verification": {
+        "result": "Original LEDGERLINE_pasted-22.md:322-347 resolved: optional trip Budget Breakdown workspace/traveller/currency functions. Implemented cross-tab local staging, one atomic preference save, cancel and retained failed retry. Actual component5PASS and browser3sizesPASS; hosted persistence unverified.",
+        "evidence": "docs/evidence/workstream-1-missing-features-2026-11-07.md"
+      }
     },
     {
       "cid": "C-0392",
@@ -6417,14 +6433,22 @@
     {
       "cid": "C-0517",
       "category": "testing",
-      "status": "missing",
+      "status": "partial",
       "rep": "If background jobs are available, report generation should persist safely after acceptance by the backend.",
       "sources": [
         "LEDGERLINE_pasted-24.md:805"
       ],
       "members": [
         "H-10286"
-      ]
+      ],
+      "codeReferences": [
+        "src/lib/report-jobs.server.ts:57-96",
+        "src/lib/report-jobs-recovery.test.ts"
+      ],
+      "verification": {
+        "result": "Fixed unchecked history errors, false duplicate success, owner/path/kind mismatch, PDF overwrite on retry and ignored completion status failures. Actual server orchestration2PASS with controlled service adapter; PDF rendering mocked in these tests. Hosted job restart/lease and accepted report snapshot remain unverified.",
+        "evidence": "docs/evidence/workstream-1-missing-features-2026-11-07.md"
+      }
     },
     {
       "cid": "C-0518",
@@ -6849,14 +6873,23 @@
     {
       "cid": "C-0553",
       "category": "document",
-      "status": "missing",
+      "status": "implemented",
       "rep": "Add browser tests for uploading a receipt, viewing its attachment, and verifying it stays linked to the correct expense.",
       "sources": [
         "chat #411 2026-11-01 14:11"
       ],
       "members": [
         "HC-0138"
-      ]
+      ],
+      "codeReferences": [
+        "scripts/browser/test_expense_receipts.py:176-269",
+        "scripts/browser/expense.fixture.tsx:8-13",
+        "scripts/browser/expense-mocks.tsx:19-39"
+      ],
+      "verification": {
+        "result": "Existing actual New/Expenses/ExpenseDialog browser receipt flow executed successfully after fixing stale fixture QueryClient/Team request boundary and duplicate heading selector. Upload->review->432.10 save->correct expense attachment->image decoded240px->popup->edit same ID/path->unrelated entry has no attachment PASS. Suite4PASS1obsolete-approvalSKIP. OCR/storage are controlled fixtures, NOT hosted certification; narrow request was browser tests.",
+        "evidence": "docs/evidence/workstream-1-missing-features-2026-11-07.md"
+      }
     },
     {
       "cid": "C-0554",
@@ -7185,14 +7218,23 @@
     {
       "cid": "C-0581",
       "category": "entry",
-      "status": "missing",
+      "status": "partial",
       "rep": "Configurable alerts should be available when budget utilisation crosses selected thresholds.",
       "sources": [
         "Detailed_Functional_Requirements_-_Version_1.0_pasted.md:406"
       ],
       "members": [
         "H-0233"
-      ]
+      ],
+      "codeReferences": [
+        "src/lib/rules-engine.ts:107-120,166-170",
+        "src/routes/_authenticated/rules.tsx:31-46,118-125",
+        "src/components/budget-alert-workflow.test.tsx"
+      ],
+      "verification": {
+        "result": "Implemented owner-configurable saved category budget percentage alerts, split-aware spending, exact threshold, transfers excluded and missing budgets refused. Actual controls save/reload/threshold clearing PASS with isolated preferences. Phone delivery and hosted persistence unverified.",
+        "evidence": "docs/evidence/workstream-1-missing-features-2026-11-07.md"
+      }
     },
     {
       "cid": "C-0582",
@@ -13014,7 +13056,8 @@
         "H-0947"
       ],
       "codeReferences": "src/lib/money.ts:1-34; src/lib/ledger.ts:71-155; src/lib/expenses.ts:108-280; src/lib/statement-pipeline/line.ts:78-102; src/lib/books/recon.ts:29-102",
-      "verification": "{'date': '2026-11-07', 'evidence': 'docs/evidence/workstream-1-2026-11-07.md', 'result': 'Decimal-safe ledger/INR allocations/statement/invoice money implemented. Connected isolated figures and full suite pass. Broader tax/planning/report arithmetic inventory remains; not full financial migration acceptance.', 'scope': 'Isolated component/browser/local PostgreSQL regressions, not hosted financial saves'} Follow-up: docs/evidence/workstream-1-acceptance-2026-11-07.md; isolated connected acceptance only; broad hosted coverage stays PARTIAL."
+      "verification": "{'date': '2026-11-07', 'evidence': 'docs/evidence/workstream-1-2026-11-07.md', 'result': 'Decimal-safe ledger/INR allocations/statement/invoice money implemented. Connected isolated figures and full suite pass. Broader tax/planning/report arithmetic inventory remains; not full financial migration acceptance.', 'scope': 'Isolated component/browser/local PostgreSQL regressions, not hosted financial saves'} Follow-up: docs/evidence/workstream-1-acceptance-2026-11-07.md; isolated connected acceptance only; broad hosted coverage stays PARTIAL.",
+      "followupEvidence": "docs/evidence/workstream-1-missing-features-2026-11-07.md; PARTIAL retained: no broad hosted or all-domain decimal certification."
     },
     {
       "cid": "C-1066",
@@ -18269,7 +18312,8 @@
         "H-5536"
       ],
       "codeReferences": "src/components/CategoryMergePreview.tsx:8-42; src/components/FinanceSettings.tsx:15-41; drizzle/migrations/0007_preferences_and_receipt_details.sql:7-14",
-      "verification": "{'date': '2026-11-07', 'evidence': 'docs/evidence/workstream-1-2026-11-07.md', 'result': 'Added affected-entry/commitment/budget preview. Found RPC does not rewrite split allocations and catalogue save is separate; unsafe split merges disabled. Complete atomic category/split/catalogue/preview authority requires staged implementation and isolated persistence tests; no production policy changes.', 'scope': 'Isolated component/browser/local PostgreSQL regressions, not hosted financial saves'} Follow-up: docs/evidence/workstream-1-acceptance-2026-11-07.md; isolated connected acceptance only; broad hosted coverage stays PARTIAL."
+      "verification": "{'date': '2026-11-07', 'evidence': 'docs/evidence/workstream-1-2026-11-07.md', 'result': 'Added affected-entry/commitment/budget preview. Found RPC does not rewrite split allocations and catalogue save is separate; unsafe split merges disabled. Complete atomic category/split/catalogue/preview authority requires staged implementation and isolated persistence tests; no production policy changes.', 'scope': 'Isolated component/browser/local PostgreSQL regressions, not hosted financial saves'} Follow-up: docs/evidence/workstream-1-acceptance-2026-11-07.md; isolated connected acceptance only; broad hosted coverage stays PARTIAL.",
+      "followupEvidence": "docs/evidence/workstream-1-missing-features-2026-11-07.md; PARTIAL retained: no broad hosted or all-domain decimal certification."
     },
     {
       "cid": "C-1502",
@@ -25395,7 +25439,8 @@
         "H-0911"
       ],
       "codeReferences": "src/lib/intelligence.ts:229-263; src/routes/_authenticated/patterns.tsx:68-132",
-      "verification": "{'date': '2026-11-07', 'evidence': 'docs/evidence/workstream-1-2026-11-07.md', 'result': 'Existing alias merge/unmerge was wrongly classified absent. Added affected-entry review, cancellation, retry and alias-change guard. Browser/component adapter pass; hosted preference persistence and concurrent review coverage pending.', 'scope': 'Isolated component/browser/local PostgreSQL regressions, not hosted financial saves'} Follow-up: docs/evidence/workstream-1-acceptance-2026-11-07.md; isolated connected acceptance only; broad hosted coverage stays PARTIAL."
+      "verification": "{'date': '2026-11-07', 'evidence': 'docs/evidence/workstream-1-2026-11-07.md', 'result': 'Existing alias merge/unmerge was wrongly classified absent. Added affected-entry review, cancellation, retry and alias-change guard. Browser/component adapter pass; hosted preference persistence and concurrent review coverage pending.', 'scope': 'Isolated component/browser/local PostgreSQL regressions, not hosted financial saves'} Follow-up: docs/evidence/workstream-1-acceptance-2026-11-07.md; isolated connected acceptance only; broad hosted coverage stays PARTIAL.",
+      "followupEvidence": "docs/evidence/workstream-1-missing-features-2026-11-07.md; PARTIAL retained: no broad hosted or all-domain decimal certification."
     },
     {
       "cid": "C-2095",
@@ -30773,9 +30818,9 @@
     }
   ],
   "counts": {
-    "implemented": 1542,
-    "partial": 944,
+    "implemented": 1543,
+    "partial": 948,
     "superseded": 19,
-    "missing": 36
+    "missing": 31
   }
 }
