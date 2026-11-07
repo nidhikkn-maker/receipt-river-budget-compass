@@ -5,13 +5,13 @@
   "emergencyReserve": 100,
   "baselineRecordedPeriodUsage": 2569.98,
   "baselineEvidence": "Initial emergency directive turn recorded billing-period usage; rounded to two decimals in retained context",
-  "latestRecordedPeriodUsage": 2606.548285819,
-  "latestWorkspaceBalance": 1162.43,
-  "batchStartOwnerReportedWorkspaceBalance": 1170.54,
-  "observedBatchWorkspaceDecline": 8.11,
-  "conservativeCapCharge": 36.57,
-  "planningCapRemaining": 1063.43,
-  "planningExpansionAllowanceAfterReserves": 763.43,
+  "latestRecordedPeriodUsage": 2614.455525819,
+  "latestWorkspaceBalance": 1154.53,
+  "batchStartOwnerReportedWorkspaceBalance": 1162.43,
+  "observedBatchWorkspaceDecline": 7.9,
+  "conservativeCapCharge": 44.48,
+  "planningCapRemaining": 1055.52,
+  "planningExpansionAllowanceAfterReserves": 755.52,
   "attribution": "Conservative rounded workspace recorded-usage growth, charged against cap; may include other usage and recording lag. Not exact task-attributed development spend.",
-  "updatedAt": "2026-11-07T18:47:00Z"
+  "updatedAt": "2026-11-07T18:55:00Z"
 }
