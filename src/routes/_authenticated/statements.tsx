@@ -4,6 +4,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { SectionTabs } from "@/components/SectionTabs";
 import { AccountantSettings } from "@/components/AccountantSettings";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { settledUpload } from "@/lib/statement-pipeline/history";
 import { toast } from "sonner";
 import { Download, Inbox, ShieldCheck, Upload, X } from "lucide-react";
 import { Card } from "@/components/Money";
