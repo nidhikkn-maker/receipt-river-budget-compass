@@ -22634,7 +22634,7 @@
   {
    "cid": "C-1857",
    "category": "document",
-   "status": "partial",
+   "status": "implemented",
    "rep": "Include a missing-document list before the annexures.",
    "sources": [
     "LEDGERLINE_pasted-11.md:624"
@@ -22643,7 +22643,7 @@
     "H-5077"
    ],
    "codeReferences": "src/lib/claim-pdf.ts:79-81; src/lib/expenditure-pdf.ts:62-120",
-   "verification": "{'date': '2026-11-07', 'evidence': 'docs/evidence/workstream-1-2026-11-07.md', 'result': 'Unattached claim expenses and failed original retrieval/decoding listed before annexures. Real PDF generation/page readback passes. Full actual claim-builder to saved PDF/evidence download acceptance pending.', 'scope': 'Isolated component/browser/local PostgreSQL regressions, not hosted financial saves'} Follow-up: docs/evidence/workstream-1-acceptance-2026-11-07.md; isolated connected acceptance only; broad hosted coverage stays PARTIAL."
+   "verification": "{'date': '2026-11-07', 'evidence': 'docs/evidence/workstream-1-2026-11-07.md', 'result': 'Unattached claim expenses and failed original retrieval/decoding listed before annexures. Real PDF generation/page readback passes. Full actual claim-builder to saved PDF/evidence download acceptance pending.', 'scope': 'Isolated component/browser/local PostgreSQL regressions, not hosted financial saves'} Follow-up: docs/evidence/workstream-1-acceptance-2026-11-07.md; isolated connected acceptance only; broad hosted coverage stays PARTIAL. 2026-11-07 credit-controlled follow-up: docs/evidence/credit-controlled-2026-11-07.md; actual builder detailed desktop and summary phone claims, one valid original, unreadable attachment and unattached expense; confirmed review -> history save with thrown committed response -> downloaded exact PDF bytes; missing list precedes annexures and original dimensions retained. Narrow ordering requirement verified; Cloud/access/cross-device not certified."
   },
   {
    "cid": "C-1858",
