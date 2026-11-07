@@ -67,3 +67,6 @@ Historical1542/944/36/19→1543/948/31/19; new narrow verified C-0553 browser te
 ## 2026-11-07 — Speed check (C-0547, C-0605)
 - Page-open timings recorded on-device (never uploaded); Settings → Speed check compares median against targets (Financial Inbox 2 s). MISSING→PARTIAL pending real-phone measurement. Unit tests: src/lib/perf-check.test.ts.
 - Count reconciliation: partial 948→949 earlier came from C-0181 moving MISSING→PARTIAL.
+
+## 2026-11-07 (b) — performance causes, Statement Desk e2e, missing review
+See docs/evidence/workstream-1-batch-2026-11-07b.md. Fixed new-account statement save (D1/D2), spreadsheet balance self-check (D3), Inbox/Statement Desk duplicate and polling requests.
