@@ -12,7 +12,7 @@ export function SmartAdd({ open, onOpenChange, scope }: { open: boolean; onOpenC
   };
   return <Dialog open={open} onOpenChange={onOpenChange}>
     <DialogContent className="smart-add-sheet native-sheet max-h-[85dvh] overflow-y-auto sm:max-w-md">
-      <DialogHeader><DialogTitle>Smart Add</DialogTitle><DialogDescription>{scope ? `${scope.charAt(0).toUpperCase()}${scope.slice(1)}` : 'Choose a starting point'}</DialogDescription></DialogHeader>
+      <DialogHeader><DialogTitle>Smart Add</DialogTitle><DialogDescription>Show me your receipt, statement or message — or tell me what happened. I'll explain what I found before anything is saved.{scope ? ` Adding to ${scope.charAt(0).toUpperCase()}${scope.slice(1)}.` : ''}</DialogDescription></DialogHeader>
       <div className="grid gap-2">
         <Button variant="outline" className="h-14 justify-start gap-3" onClick={() => entry('scan')}><Camera className="size-5 text-primary" />Scan / Photo</Button>
         <Button variant="outline" className="h-14 justify-start gap-3" onClick={() => { onOpenChange(false); void navigate({ to: '/statements' }); }}><FileUp className="size-5 text-primary" />Upload File</Button>

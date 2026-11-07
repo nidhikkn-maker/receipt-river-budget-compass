@@ -10,10 +10,10 @@ import { useStore } from "@/lib/store";
 import { SETUP_LABEL, setupStatus } from "@/lib/setup-status";
 
 const STEPS = [
-  { key: "workspaces", title: "Primary workspace", body: "Personal is always available. Business and Official appear as soon as you record entries for them." },
+  { key: "workspaces", title: "What would you like to manage?", body: "My money is always here — your own spending, accounts and savings. Family is shared household money with people you invite. Business is a company or work; start it by adding its documents to Statement Desk, and I'll ask before saving anything." },
   { key: "accounts", title: "Bank or cash accounts", body: "Add the accounts you pay from.", form: ["savings", "current", "cash", "wallet"] as const },
-  { key: "cards", title: "Credit cards", body: "Add cards with limit and due day so reminders and utilisation work.", form: ["credit_card"] as const },
-  { key: "methods", title: "Payment methods", body: "Link UPI IDs and cards to the accounts they draw from.", to: "/payment-methods" },
+  { key: "cards", title: "Credit cards", body: "Add each card with its limit and bill due day, so I can remind you before the bill is due and show how much of the limit you use.", form: ["credit_card"] as const },
+  { key: "methods", title: "Payment methods", body: "Tell me which bank account each UPI ID or card takes money from, so balances stay right.", to: "/payment-methods" },
   { key: "categories", title: "Review categories", body: "Rename, add or archive categories once — every screen uses them.", to: "/settings", hash: "finance" },
   { key: "entry", title: "Default expense entry", body: "Choose the default currency and entry preferences.", to: "/settings", hash: "finance" },
   { key: "notifications", title: "Notifications", body: "Choose reminders and device alerts.", to: "/settings", hash: "notifications" },

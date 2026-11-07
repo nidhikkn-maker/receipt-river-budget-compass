@@ -9,7 +9,7 @@ export const MODULE_GROUPS = [
   { title: 'Business', icon: Users, items: [ ['/entities','Companies & years'], ['/company-spending','Company spending'], ['/assets','Things I own'], ['/tax','Income tax & GST'], ['/gst-check','Suppliers & invoices'], ['/family','Family members'] ] },
   { title: 'Reports', icon: FileText, items: [ ['/reports','Spending insights'], ['/report-centre','Reports & exports'], ['/report-status','Report progress'], ['/expenditure-statement','Detailed spending statement'], ['/review','Monthly review'], ['/brief','Weekly brief'] ] },
   { title: 'Planning', icon: CalendarDays, items: [ ['/plan','Plan & calendar'], ['/budgets','Monthly budgets'], ['/forecast','Long-term forecast'], ['/strategy','What if…'] ] },
-  { title: 'Administration & settings', icon: Settings, items: [ ['/settings','Settings & backup'], ['/audit','Checks & history of changes'], ['/search','Search everything'], ['/assistant','Financial assistant'], ['/assistants','Connected assistants'], ['/auth','Account & sign-in'] ] },
+  { title: 'Administration & settings', icon: Settings, items: [ ['/start','Getting started'], ['/settings','Settings & backup'], ['/audit','Checks & history of changes'], ['/search','Search everything'], ['/assistant','Financial assistant'], ['/assistants','Connected assistants'], ['/auth','Account & sign-in'] ] },
 ] as const;
 
 /** Directory only: links to existing modules; never changes permission or ownership. */
