@@ -19,3 +19,8 @@
 
 ## Safeguard status (7 Nov 2026 15:54 UTC, owner-accepted)
 - Budget completeness authority and append-only merchant history: isolated development and testing COMPLETE (owner accepted). Production activation PENDING owner release approval; do not retest unless related code changes.
+
+## P0 executable work — 7 Nov 2026 18:21 UTC
+- Interrupted evidence-response readback is implemented; unknown transaction/source/account/draft commit recovery still needs authoritative durable step receipts.
+- Atomic financial-row Undo passes six independent-session disposable PostgreSQL cases, but remains staged and needs caller/cleanup/before-snapshot/guard integration. Not a resolved production concurrency blocker.
+- Restrictive shared-original read policy passes actual legacy-team-policy union tests locally; hosted company-member signing/revocation and compatible approved access rollout remain unverified/held respectively.
