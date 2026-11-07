@@ -1102,7 +1102,7 @@ html[data-theme="apple-glass"] :where(.bg-card, .bg-popover, .bg-ink) {
 .cmp-hero { position: relative; overflow: hidden; isolation: isolate; color: var(--companion-pearl); margin: -20px calc(var(--cmp-bleed) * -1) 0; min-height: 380px; padding: calc(env(safe-area-inset-top) + 14px) 20px 96px; }
 .cmp-hero > img { position: absolute; inset: 0; z-index: -2; width: 100%; height: 100%; object-fit: cover; object-position: center 62%; }
 .cmp-hero::before { content: ""; position: absolute; inset: 0; z-index: -1; background: linear-gradient(180deg, color-mix(in oklab, var(--companion-navy) 72%, transparent) 0%, color-mix(in oklab, var(--companion-navy) 18%, transparent) 46%, color-mix(in oklab, var(--companion-navy) 40%, transparent) 100%); }
-.cmp-hero-bar { display: flex; align-items: center; gap: 4px; }
+.cmp-hero-bar { display: flex; align-items: center; gap: 4px; --brand-ink: var(--companion-gold); --brand-accent: var(--companion-pearl); }
 .cmp-hero-bar a, .cmp-hero-bar button { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 999px; color: var(--companion-pearl); }
 .cmp-hero-bar a:hover { background: color-mix(in oklab, var(--companion-pearl) 14%, transparent); }
 .cmp-avatar { width: 34px !important; height: 34px !important; margin-left: 4px; background: color-mix(in oklab, var(--companion-pearl) 16%, transparent); border: 1px solid color-mix(in oklab, var(--companion-gold) 70%, transparent); font-size: 12px; font-weight: 600; letter-spacing: .04em; color: var(--companion-pearl); }
@@ -1190,8 +1190,8 @@ html[data-theme="apple-glass"] :where(.bg-card, .bg-popover, .bg-ink) {
 }
 @media (min-width: 1000px) {
   .cmp-today-body { grid-template-columns: minmax(0,1.35fr) minmax(300px,1fr); align-items: start; gap: 20px; }
-  .cmp-today-side { display: grid; gap: 20px; }
-  .cmp-today-main { grid-row: span 2; }
+  .cmp-today-side { display: grid; gap: 20px; grid-column: 2; grid-row: 1; }
+  .cmp-today-main { grid-column: 1; grid-row: 1; }
   .cmp-greeting { font-size: 44px; }
   .cmp-wealth-grid { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); }
 }

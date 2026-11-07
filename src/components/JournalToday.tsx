@@ -2,7 +2,7 @@ import { Link } from '@tanstack/react-router';
 import { Bell, CalendarClock, ChevronRight, CreditCard, Inbox, Plus, Search, Sparkles, Compass } from 'lucide-react';
 import { money, type Expense } from '@/lib/expenses';
 import { TXN_LABEL } from '@/lib/ledger';
-import { LedgerlineMark } from './LedgerlineLogo';
+import { LedgerlineSymbol } from './LedgerlineLogo';
 import sunrise from '@/assets/companion-sunrise.jpg';
 
 /** Opens the shell's in-place Smart Add sheet from anywhere on the page. */
@@ -58,7 +58,7 @@ export function JournalToday({ name, today, spending, periodLabel, safe, cardDue
     <section className="cmp-hero" aria-label="Greeting">
       <img src={sunrise} alt="" width={1536} height={1152} fetchPriority="high" />
       <div className="cmp-hero-bar">
-        <Link to="/dashboard" aria-label="Ledgerline home" className="!w-auto !rounded-lg"><LedgerlineMark className="h-7 w-7" /></Link>
+        <Link to="/dashboard" aria-label="Ledgerline home" className="!w-auto !rounded-lg"><LedgerlineSymbol className="h-7 w-auto" /></Link>
         <span className="flex-1" />
         <Link to="/search" aria-label="Search"><Search className="size-5" /></Link>
         <Link to="/inbox" aria-label="Notifications"><Bell className="size-5" /></Link>
