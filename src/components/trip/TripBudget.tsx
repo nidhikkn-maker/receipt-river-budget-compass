@@ -47,7 +47,7 @@ export function TripBudgetCard({ trip, onEdit, onBreakdown }: { trip: TravelTrip
       {!s.hasBudget && s.needsConfirmation && (
         <div className="py-2">
           <p className="text-sm font-semibold">Budget requires confirmation</p>
-          <p className="mt-1 text-xs text-muted-foreground">This trip has saved allocations but no overall budget. Review the breakdown, then set the primary budget — allocations are never added together automatically.</p>
+          <p className="mt-1 text-xs text-muted-foreground">This trip has budget splits (by person, space or category) but no overall budget. Set the overall budget — I never add the splits together on my own.</p>
           <div className="mt-3 flex gap-2">
             {!closed && <Button variant="gold" size="sm" onClick={onEdit}>Set Budget</Button>}
             <Button variant="outline" size="sm" onClick={onBreakdown}>Review Breakdown</Button>
@@ -146,8 +146,8 @@ const TABS: { key: TabKey; label: string }[] = [
 ];
 
 const STATE_NOTE: Record<string, string> = {
-  partial: "Partial allocation — it does not cover the full trip budget.",
-  complete: "Fully allocated — matches the trip budget.",
+  partial: "Only part of the trip budget is split so far.",
+  complete: "The whole trip budget is split — it matches.",
   exceeds: "Exceeds the trip budget — review the amounts; nothing was changed automatically.",
 };
 
@@ -189,7 +189,7 @@ export function BudgetBreakdown({ trip: savedTrip }: { trip: TravelTrip }) {
   const add = () => {
     const n = Number(form.amount);
     try { validateAllocation(n, tab === "currency" ? Number(form.rate) : 1); } catch (e) { toast.error((e as Error).message); return; }
-    if (!form.key) { toast.error("Choose what to allocate"); return; }
+    if (!form.key) { toast.error("Choose what this budget split is for"); return; }
     if (tab === "workspace") {
       if (!["personal", "family", "business", "official"].includes(form.key)) return;
       void put({ workspaceBudgets: [...(trip.workspaceBudgets ?? []).filter((x) => x.workspace !== form.key), { workspace: form.key as Scope, amount: n }] }, "Workspace allocation saved");
@@ -219,7 +219,7 @@ export function BudgetBreakdown({ trip: savedTrip }: { trip: TravelTrip }) {
 
       {tab === "workspace" && (
         <>
-          {plans.workspace.length === 0 && <p className="text-sm text-muted-foreground">No workspace allocations yet.</p>}
+          {plans.workspace.length === 0 && <p className="text-sm text-muted-foreground">No budget split by space yet.</p>}
           {plans.workspace.map((x) => (
             <div key={x.label} className="flex items-center gap-2 border-b py-1.5 text-sm last:border-0">
               <span className="min-w-0 flex-1 truncate">{x.label}</span>
@@ -232,7 +232,7 @@ export function BudgetBreakdown({ trip: savedTrip }: { trip: TravelTrip }) {
       )}
       {tab === "traveller" && (
         <>
-          {plans.traveller.length === 0 && <p className="text-sm text-muted-foreground">No traveller allocations yet.</p>}
+          {plans.traveller.length === 0 && <p className="text-sm text-muted-foreground">No budget split by traveller yet.</p>}
           {plans.traveller.map((x) => (
             <div key={x.label} className="flex items-center gap-2 border-b py-1.5 text-sm last:border-0">
               <span className="min-w-0 flex-1 truncate">{memberName(x.label)}</span>
@@ -271,7 +271,7 @@ export function BudgetBreakdown({ trip: savedTrip }: { trip: TravelTrip }) {
       )}
       {tab === "organisation" && (
         <>
-          {(trip.organisationBudgets ?? []).length === 0 && <p className="text-sm text-muted-foreground">No organisation allocations yet. Organisations come from Settings.</p>}
+          {(trip.organisationBudgets ?? []).length === 0 && <p className="text-sm text-muted-foreground">No budget split by organisation yet. Organisations come from Settings.</p>}
           {(trip.organisationBudgets ?? []).map((x) => (
             <div key={x.organisation} className="flex items-center gap-2 border-b py-1.5 text-sm last:border-0">
               <span className="min-w-0 flex-1 truncate">{x.organisation}</span>
@@ -291,7 +291,7 @@ export function BudgetBreakdown({ trip: savedTrip }: { trip: TravelTrip }) {
           {tab === "organisation" && <select aria-label="Allocation organisation" className={sel} value={form.key} onChange={(e) => setForm({ ...form, key: e.target.value })}><option value="">Organisation…</option>{organisations.map((o) => <option key={o} value={o}>{o}</option>)}</select>}
           <Input aria-label="Allocation amount" type="number" min="0" placeholder="Amount" value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} />
           {tab === "currency" && <Input aria-label="Planning exchange rate" type="number" min="0" placeholder="Rate to INR" value={form.rate} onChange={(e) => setForm({ ...form, rate: e.target.value })} />}
-          <Button variant="outline" disabled={saving} onClick={add} className={tab === "currency" ? "" : "sm:col-span-1"}>Add allocation</Button>
+          <Button variant="outline" disabled={saving} onClick={add} className={tab === "currency" ? "" : "sm:col-span-1"}>Add budget split</Button>
         </div>
       )}
       {!closed && dirty && <div className="mt-3 flex justify-end gap-2"><Button variant="outline" disabled={saving} onClick={() => setPending({})}>Cancel changes</Button><Button variant="gold" loading={saving} onClick={commit}>Save breakdown</Button></div>}
