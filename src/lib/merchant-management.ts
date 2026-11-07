@@ -30,7 +30,7 @@ export function merchantReviewSnapshot(entries: Expense[], before: MerchantAlias
 export function merchantEntrySnapshot(entries: Expense[], before: MerchantAliases, after: MerchantAliases) {
   return merchantGroupingChanges(entries, before, after).map(({ entry }) => ({
     id: entry.id, merchant: entry.merchant, amount: entry.amount, date: entry.date,
-    currency: entry.currency, originalAmount: entry.originalAmount ?? null, title: entry.title,
+    currency: entry.currency, originalAmount: entry.originalAmount ?? entry.amount, title: entry.title,
   })).sort((a, b) => a.id.localeCompare(b.id));
 }
 

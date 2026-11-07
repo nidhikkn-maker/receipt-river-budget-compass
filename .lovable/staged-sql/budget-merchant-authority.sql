@@ -59,7 +59,7 @@ BEGIN
  -- Stored originals and new arrivals are read at commit, not trusted from the browser preview.
  SELECT coalesce(jsonb_agg(to_jsonb(e.id::text) ORDER BY e.id::text),'[]'),
   coalesce(jsonb_agg(jsonb_build_object('id',e.id::text,'merchant',e.merchant,'amount',e.amount,
-   'date',e.expense_date::text,'currency',e.currency,'originalAmount',e.original_amount,'title',e.title) ORDER BY e.id::text),'[]')
+   'date',e.expense_date::text,'currency',e.currency,'originalAmount',coalesce(e.original_amount,e.amount),'title',e.title) ORDER BY e.id::text),'[]')
  INTO affected,records FROM public.expenses e WHERE e.employee_id=NEW.owner_id AND e.merchant IS NOT NULL
   AND public.merchant_group_key(e.merchant,old_aliases) IS DISTINCT FROM public.merchant_group_key(e.merchant,new_aliases);
  IF affected IS DISTINCT FROM (SELECT coalesce(jsonb_agg(x ORDER BY x::text),'[]') FROM jsonb_array_elements(event->'entryIds') x)
