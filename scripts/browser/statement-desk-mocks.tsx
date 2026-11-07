@@ -81,6 +81,7 @@ Object.assign(window, { accountantConsumed });
 export const supabase = {
   from: (table: string) => {
     // Read-only lists the page refreshes after saving come back empty; any write still fails loudly.
+    if (table === 'expenses') return { select: () => chain(async () => fixture.transactions.map(t => ({ id: t.id }))) };
     if (table === "transfer_links" || table === "expense_drafts") return { select: () => chain(async () => []) };
     if (table !== "accountant_uploads") throw new Error(`No Cloud access in this test (${table})`);
     return {

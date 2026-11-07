@@ -1,6 +1,7 @@
 import { expect, it } from "vitest";
 import { mergeUploadHistory, settledUpload } from "./history";
 import { cleanStatementUploads, type StatementUpload } from "../preferences";
+import { undoUpload, type ApplyApi } from './apply';
 
 const base: StatementUpload = { id: "u", at: "2026-11-07T10:00:00Z", label: "s.csv", posted: ["p1", "p2"], reconciled: ["r1"], createdAccounts: [], status: "interrupted", sources: [{ documentId: "d", accountId: "bank", file: "s.csv" }], expected: { posted: 2, reconciled: 1 } };
 const ledger = [{ id: "p1", statementRef: "document:d · a" }, { id: "p2", statementRef: "document:d · b" }, { id: "r1", statementRef: "document:d · c" }];
@@ -61,4 +62,15 @@ it('receipt consumption must read back before completion and survives cleaning',
   expect(settledUpload(clean, ledger, [{ id: 'receipt', status: 'ready', transactionId: null }])).toBeNull();
   expect(settledUpload(clean, ledger, [{ id: 'receipt', status: 'saved', transactionId: 'p2' }])).toBeNull();
   expect(settledUpload(clean, ledger, [{ id: 'receipt', status: 'saved', transactionId: 'p1' }])?.status).toBe('complete');
+});
+
+it('Undo retains history when authoritative reads find a committed entry missing from the local snapshot', async () => {
+  const api = { transactions: [], readExistingIds: async () => ['lost-response'], refresh: async () => undefined } as unknown as ApplyApi;
+  const r = await undoUpload({ posted: ['lost-response'], reconciled: [], createdAccounts: [] }, api);
+  expect(r.left).toEqual(['lost-response']);
+});
+
+it('failed authoritative Undo reads never certify successful cleanup', async () => {
+  const api = { transactions: [], readExistingIds: async () => { throw Error('offline'); } } as unknown as ApplyApi;
+  await expect(undoUpload({ posted: ['p'], reconciled: [], createdAccounts: [] }, api)).rejects.toThrow('offline');
 });

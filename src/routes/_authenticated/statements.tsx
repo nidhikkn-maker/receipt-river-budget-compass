@@ -194,7 +194,18 @@ function StatementDeskPage() {
 
   const api = () => {
     const s = storeRef.current;
-    return { save: s.save, remove: s.remove, reconcile: s.reconcile, addAccount: s.addAccount, setArchived: s.setArchived, refresh: s.refresh, transactions: s.transactions, linkDraft: linkDraftToTransaction, unlinkDraft };
+    return { save: s.save, remove: s.remove, reconcile: s.reconcile, addAccount: s.addAccount, setArchived: s.setArchived, refresh: s.refresh, transactions: s.transactions, linkDraft: linkDraftToTransaction, unlinkDraft,
+      readExistingIds: async (ids: string[]) => {
+        if (!navigator.onLine) throw Error('Reconnect before Undo so saved records can be checked.');
+        const found: string[] = [];
+        for (let at = 0; at < ids.length; at += 100) {
+          const { data, error } = await supabase.from('expenses').select('id').eq('employee_id', s.userId).in('id', ids.slice(at, at + 100));
+          if (error) throw Error('Saved records could not be checked. Upload history is retained; retry Undo.');
+          found.push(...(data ?? []).map(e => e.id));
+        }
+        return found;
+      },
+    };
   };
 
   const applying = useRef(false);
