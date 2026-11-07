@@ -53,7 +53,8 @@ describe("automatic assignment from source evidence", () => {
     const docs = [doc({ id: "d1" }), doc({ id: "d2", docType: "gst_return" })];
     const links = addLink([], { docId: "d1", kind: "entity", targetId: "ent-acme", label: "Acme" });
     expect(filterRepo(docs, { entityId: "ent-acme" }, links, [acme]).map((d) => d.id)).toEqual(["d1"]);
-    expect(filterRepo(docs, { fy: "2026-27" }, [], []).map((d) => d.id)).toEqual(["d1"]);
+    expect(filterRepo(docs, { fy: "2026-27" }, [], []).map((d) => d.id)).toEqual(["d1", "d2"]); // both dated May 2026
+    expect(filterRepo(docs, { fy: "2024-25" }, [], [])).toEqual([]);
     expect(filterRepo(docs, { linkKind: "any" }, links, []).map((d) => d.id)).toEqual(["d1"]);
   });
 
