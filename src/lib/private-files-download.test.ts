@@ -1,3 +1,4 @@
+// @vitest-environment node
 import { describe, it, expect } from "vitest";
 import { fetchPrivateFile, sha256Hex, PrivateFileError } from "./private-files";
 
