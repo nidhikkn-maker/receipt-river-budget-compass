@@ -309,6 +309,34 @@ class StatementDeskFlow(unittest.IsolatedAsyncioTestCase):
         await expect(self.page.get_by_label('Recent uploads')).to_contain_text('Undo unfinished')
         self.assertEqual(await self.page.evaluate('deskFixture.transactions.length'), 2)
 
+    async def test_card_payment_connected_balances_duplicate_review_and_atomic_undo(self):
+        await self.page.evaluate("""() => {
+          deskFixture.accounts[0].openingBalance=50000;
+          deskFixture.accounts.push({id:'card',name:'Controlled Amex',kind:'credit_card',openingBalance:15000,archived:false});
+        }""")
+        csv='Date,Description,Debit,Credit\n2026-10-08,NEFT AMEX CARD PAYMENT,9000,\n'
+        await self.page.get_by_label('Statement files').set_input_files(files=[{'name':'card-payment.csv','mimeType':'text/csv','buffer':csv.encode()}])
+        await self.page.locator('select').first.select_option('desk-account')
+        await self.page.get_by_role('button',name='Accept all 1 asking items').click()
+        # The payment destination must be explicitly selected, never inferred from amount.
+        selectors=self.page.locator('select')
+        for i in range(await selectors.count()):
+            options=await selectors.nth(i).locator('option').all_text_contents()
+            if 'Controlled Amex' in options:
+                await selectors.nth(i).select_option('card')
+        await self.page.get_by_role('button',name='Apply everything (1 to save)').click()
+        await self.page.wait_for_function("deskFixture.uploads[0]?.status==='complete'")
+        figures=await self.page.evaluate("async()=>{const {accountBalance,cashflow}=await import('/src/lib/ledger.ts');return {bank:accountBalance(deskFixture.accounts[0],deskFixture.transactions),card:accountBalance(deskFixture.accounts[1],deskFixture.transactions),flow:cashflow(deskFixture.transactions)}}")
+        self.assertEqual(figures,{'bank':41000,'card':6000,'flow':{'income':0,'spent':0,'net':0}})
+        await self.page.get_by_role('button',name='Remove card-payment.csv').click()
+        await self.page.get_by_label('Statement files').set_input_files(files=[{'name':'card-payment.csv','mimeType':'text/csv','buffer':csv.encode()}])
+        await self.page.locator('select').first.select_option('desk-account')
+        await expect(self.page.get_by_role('button',name='Accept all 1 asking items')).to_have_count(0)
+        self.assertEqual(await self.page.evaluate('deskFixture.transactions.length'),1)
+        await self.page.get_by_label('Recent uploads').get_by_role('button',name='Undo',exact=True).click()
+        await expect(self.page.get_by_label('Recent uploads')).to_have_count(0)
+        self.assertEqual(await self.page.evaluate('deskFixture.transactions.length'),0)
+
     async def test_exact_transaction_response_recovery_and_missing_atomic_authority(self):
         await self.page.evaluate('deskFixture.loseSaveResponse = true')
         csv = 'Date,Description,Debit,Credit\n2026-10-02,SWIGGY ORDER,250,\n'
