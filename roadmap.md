@@ -1,3 +1,9 @@
+## 19:05 credit-controlled continuation
+- [x] Delivered 18 actual-component screenshots in phone/tablet/desktop sizes with synthetic local data; no exact reference claim.
+- [x] Terminal Undo marker prevents stale checkpoint resurrection: installed disposable SQL persistence regression and 14 actual Statement Desk browser cases pass; 34 targeted automated checks pass.
+- [ ] P0 remains: full operation receipts/account/source/draft interruptions, trusted upload-time before-snapshots and hosted isolated sharing acceptance. Production staged Undo/access rollout requires separate explicit approval; no activation.
+- [ ] P1 handoffs to assets/claims and full connected financial screens remain unfinished; no requirement promotions.
+
 ## Approved UIX integration — 7 Nov 2026
 - [x] Corrected visual redesign: editorial Today with sunrise header/action list/journal, five-space chooser, cream Review/Wealth/Smart Add/Canvas, landscape tablet sidebar and desktop journal/right panels. Actual rendered matrix390/1180/1440 passes; exact Photo2 mapping remains unavailable. No financial changes or release activation.
 - [x] Global plus opens Smart Add; existing scan/voice/quick/message drafts and Statement Desk upload destination verified at390/834/1280 widths. Spaces and More retain Journal/company/module access.

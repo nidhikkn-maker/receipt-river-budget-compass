@@ -47,6 +47,7 @@ export function useStore() {
     confirmTransfer: async () => {},
     savePreferences: async (next: FinancePreferences) => { if (fixture.failHistoryRemoval) throw Error('History cleanup interrupted'); fixture.uploads = next.statementUploads ?? []; sessionStorage.setItem('controlled-desk-uploads', JSON.stringify(fixture.uploads)); setPreferences(next); },
     saveStatementUpload: async (upload: StatementUpload) => {
+      if (upload.status === 'undone' && fixture.failHistoryRemoval) throw Error('History cleanup interrupted');
       if (upload.status === 'complete' && fixture.failCompletion) throw Error('Completion status response interrupted');
       const next = mergeUploadHistory({ ...preferences, statementUploads: fixture.uploads }, upload);
       fixture.uploads = next.statementUploads ?? []; sessionStorage.setItem('controlled-desk-uploads', JSON.stringify(fixture.uploads)); setPreferences(next);

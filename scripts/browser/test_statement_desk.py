@@ -85,6 +85,23 @@ class StatementDeskFlow(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(await self.page.evaluate("deskFixture.transactions.length"), 0)
         self.assertEqual(len(await self.page.evaluate("deskFixture.removes")), 2)
 
+    async def test_late_checkpoint_after_undo_cannot_resurrect_upload(self):
+        csv = 'Date,Description,Debit,Credit\n2026-10-02,SWIGGY ORDER,250,\n'
+        await self.page.get_by_label('Statement files').set_input_files(files=[{'name': 'terminal.csv', 'mimeType': 'text/csv', 'buffer': csv.encode()}])
+        await self.page.locator('select').first.select_option('desk-account')
+        await self.page.get_by_role('button', name='Accept all 1 asking items').click()
+        await self.page.get_by_role('button', name='Apply everything (1 to save)').click()
+        await self.page.wait_for_function("deskFixture.uploads[0]?.status === 'complete'")
+        late = await self.page.evaluate('structuredClone(deskFixture.uploads[0])')
+        await self.page.get_by_label('Recent uploads').get_by_role('button', name='Undo', exact=True).click()
+        await expect(self.page.get_by_label('Recent uploads')).to_have_count(0)
+        await self.page.evaluate("async late => { const { mergeUploadHistory } = await import('/src/lib/statement-pipeline/history.ts'); deskFixture.uploads = mergeUploadHistory({statementUploads: deskFixture.uploads}, late).statementUploads; sessionStorage.setItem('controlled-desk-uploads', JSON.stringify(deskFixture.uploads)); }", late)
+        await self.page.reload()
+        await expect(self.page.get_by_role('heading', name='Statement Desk')).to_be_visible()
+        await expect(self.page.get_by_label('Recent uploads')).to_have_count(0)
+        self.assertEqual(await self.page.evaluate('deskFixture.transactions.length'), 0)
+        self.assertEqual(await self.page.evaluate('deskFixture.uploads[0].status'), 'undone')
+
     async def test_saved_statement_reports_balance_match(self):
         pdf = EVIDENCE / "balanced.pdf"
         subprocess.run(["bun", str(Path(__file__).parent / "make_balanced_statement.ts"), str(pdf)], check=True)
