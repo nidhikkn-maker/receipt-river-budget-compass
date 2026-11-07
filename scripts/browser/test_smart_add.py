@@ -26,7 +26,6 @@ async def main():
    page.on('pageerror',lambda e: errors.append(str(e)))
    async def isolate(route):
     req=route.request; path=urlparse(req.url).path
-    if 'AppShell' in path: print('shell request',req.url)
     if urlparse(req.url).netloc!='localhost:8080' or req.method not in ('GET','HEAD'):
      blocked.append(path); await route.abort()
     elif req.is_navigation_request(): await route.fulfill(content_type='text/html',body=HTML)
@@ -37,7 +36,7 @@ async def main():
    await context.route('**/*',isolate)
    await page.goto('http://localhost:8080/dashboard')
    plus=page.get_by_role('button',name='Smart Add',exact=True).filter(visible=True).first
-   await page.wait_for_timeout(1500); print('shell errors', errors, 'body', (await page.locator('body').inner_text())[:600])
+   await expect(page.get_by_role('heading',name='Controlled Today')).to_be_visible()
    await expect(plus).to_be_visible()
    await plus.click()
    dialog=page.get_by_role('dialog',name='Smart Add')
