@@ -90,7 +90,7 @@ async def main():
    assert await page.evaluate('expenseBrowserFixture.saves.length')==1
    assert page.url==start_url
    pdf=OUT/'statement.pdf'; im.save(pdf,'PDF')
-   await sheet.get_by_role('button',name='Start over').click()
+   await sheet.get_by_role('button',name='Add another').click()
    await page.get_by_label('Choose files',exact=True).set_input_files(pdf)
    await expect(sheet.get_by_role('heading',name='What is this?')).to_be_visible()
    await expect(sheet.get_by_text('1 page',exact=False)).to_be_visible(timeout=10000)
