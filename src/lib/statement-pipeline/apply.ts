@@ -36,6 +36,8 @@ export interface ApplyApi {
   prepareSource?: (request: ApplyRequest, accountId: string) => Promise<string>;
   /** Persist confirmed progress before proceeding; failure stops the next financial write. */
   checkpoint?: (result: ApplyResult) => Promise<void>;
+  /** Actual application requires transactional financial reversal; legacy adapters remain test-only. */
+  atomicUndo?: (result: ApplyResult) => Promise<void>;
 }
 
 /** One account's accepted part of an upload: the lines to post, the destination for movements, the records to mark. */
@@ -166,12 +168,15 @@ export async function undoUpload(result: ApplyResult, api: ApplyApi): Promise<{ 
     if (existing.has(evidence.id) && (!current || (current.statementRef !== evidence.ref && !pendingNewLink))) left.push(evidence.id);
   }
   if (left.length) return { left: [...new Set(left)] };
+  if (api.atomicUndo) await api.atomicUndo(result);
+  else {
   for (const id of result.posted) {
     const e = api.transactions.find((t) => t.id === id);
     if (!e) { if (existing.has(id)) left.push(id); continue; }
     try { await api.remove(e); } catch { left.push(id); }
   }
   for (const id of result.reconciled) { try { await api.reconcile(id, null, { noRefresh: true }); } catch { left.push(id); } }
+  }
   for (const l of result.linkedDrafts ?? []) {
     if (left.includes(l.transactionId)) continue;
     try { if (!api.unlinkDraft) throw Error('Draft cleanup unavailable'); await api.unlinkDraft(l.draftId); }
