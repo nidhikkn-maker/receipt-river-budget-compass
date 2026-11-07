@@ -301,6 +301,7 @@ function StatementDeskPage() {
         files.push(new File([bytes],document.fileName,{type:document.mimeType||'application/octet-stream'}));
       }
       await add(files,true);
+      setDestinations(previous=>({...previous,...Object.fromEntries(u.sources.map(source=>[`${source.file}\u0000account`,source.accountId]))}));
       // Recovery opens review, never restores approval or posts automatically.
       toast.success('Stored originals reopened for fresh review. Already saved lines are matched again.');
     } catch(error) { toast.error(error instanceof Error?error.message:'Could not reopen this upload'); }
