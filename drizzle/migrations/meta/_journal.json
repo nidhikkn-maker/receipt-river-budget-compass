@@ -610,6 +610,13 @@
       "when": 1794019636192,
       "tag": "0086_role_permission_scope",
       "breakpoints": true
+    },
+    {
+      "idx": 87,
+      "version": "7",
+      "when": 1794040189511,
+      "tag": "0087_internal_reference_rls",
+      "breakpoints": true
     }
   ]
 }

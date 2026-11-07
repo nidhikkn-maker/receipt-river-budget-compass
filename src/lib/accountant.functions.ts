@@ -58,7 +58,7 @@ export const sendLinkNow = createServerFn({ method: "POST" })
     const { userId, supabase } = context;
     const { createFreshLink } = await import("@/lib/accountant.server");
     const { data: c } = await supabase.from("accountant_contacts").select("*").eq("owner_id", userId).maybeSingle();
-    if (data.email && !c?.email) return { ok: false as const, error: "Add your accountant's email first" };
+    if (data.email && (!c?.email || !z.string().email().safeParse(c.email).success)) return { ok: false as const, error: "Add a valid accountant email first" };
     if (data.email && c?.email) {
       const allow = emailAllowance(await recentEmails(supabase, userId), c.email);
       if (!allow.ok) return { ok: false as const, error: allow.error };
