@@ -66,6 +66,15 @@ describe("connected asset document review and installed database", () => {
       commit.mockImplementation(async (_doc: string, payload, lock: boolean, attempt) => {
         approved = attempt;
         await db.query("INSERT INTO document_runs VALUES ($1,$2::jsonb)", [owner, JSON.stringify({ intakeAttempt: attempt })]);
+        if (commit.mock.calls.length === 1) {
+          const stale = { ...attempt, expected: attempt.expected - 1 };
+          await db.query("UPDATE document_runs SET data=$1::jsonb WHERE owner_id=$2", [JSON.stringify({ intakeAttempt: stale }), owner]);
+          await expect(db.query("SELECT commit_document_intake_reviewed($1,$2,$3::jsonb,$4,$5)", [attempt.id, docId, JSON.stringify(payload), lock, stale.expected])).rejects.toThrow(/Records changed/);
+          expect((await db.query<{ data: typeof prefs }>("SELECT data FROM finance_preferences WHERE owner_id=$1", [owner])).rows[0]?.data).toEqual(prefs);
+          expect((await db.query<{ evidence_locked: boolean }>("SELECT evidence_locked FROM documents WHERE id=$1", [docId])).rows[0]?.evidence_locked).toBe(false);
+          expect((await db.query("SELECT * FROM document_intake_commits")).rows).toHaveLength(0);
+          await db.query("UPDATE document_runs SET data=$1::jsonb WHERE owner_id=$2", [JSON.stringify({ intakeAttempt: attempt }), owner]);
+        }
         await db.query("SELECT commit_document_intake_reviewed($1,$2,$3::jsonb,$4,$5)", [attempt.id, docId, JSON.stringify(payload), lock, attempt.expected]);
         if (commit.mock.calls.length === 1) throw new Error("Response lost after database commit");
       });
