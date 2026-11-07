@@ -1059,3 +1059,6 @@ html[data-theme="apple-glass"] :where(.bg-card, .bg-popover, .bg-ink) {
 @media (max-width: 1050px) { .auth-stage { gap: 40px; grid-template-columns: 1fr 360px; } .auth-introduction h1 { font-size: 44px; } .auth-form { padding-left: 28px; } }
 @media (max-width: 740px) { .auth-experience { padding: max(28px, env(safe-area-inset-top)) 24px max(24px, env(safe-area-inset-bottom)); } .auth-brand svg { height: 36px; } .auth-stage { display: block; max-width: 420px; padding-block: 36px; } .auth-introduction h1 { font-size: 36px; margin-block: 10px 14px; } .auth-story { font-size: 15px; } .auth-reassurance { display: none; } .auth-form { border: 0; padding: 36px 0 0; } .auth-footer { align-items: flex-end; font-size: 11px; } .auth-footer > span:first-child { max-width: 175px; } }
 @media (prefers-contrast: more) { .auth-form { border-color: var(--foreground); } .auth-story,.auth-reassurance,.auth-footer { color: var(--foreground); } }
+
+/* Smart Add hosts the receipt/statement review inside its sheet: keep page-edge bleed inside the pane. */
+.smart-add-review .receipt-desk { margin-inline: 0; }

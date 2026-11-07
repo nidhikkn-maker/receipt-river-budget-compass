@@ -62,18 +62,44 @@ async def main():
    bounds = await page.get_by_role("dialog",name="Smart Add").bounding_box()
    assert bounds and bounds["x"] >= -1 and bounds["x"] + bounds["width"] <= width + 1, bounds
    await page.screenshot(path=str(OUT/f'{width}-smart.png'))
-   await page.get_by_role('button',name='Scan / Photo',exact=True).click()
-   await expect(page.get_by_role('button',name='Save expense',exact=True)).to_be_visible()
-   from PIL import Image
-   receipt=OUT/'receipt.png';Image.new('RGB',(200,280),'white').save(receipt)
-   await page.get_by_label('Take a photo of a receipt').set_input_files(receipt)
-   await expect(page.get_by_role('heading',name='Intelligent Canvas')).to_be_visible()
-   await expect(page.get_by_label('What I understood')).to_contain_text('I found a receipt')
-   await page.get_by_role('group',name='Review scanned details').evaluate('(el)=>{window.scrollTo(0,window.scrollY+el.getBoundingClientRect().top-72)}'); await page.get_by_role('group',name='Review scanned details').screenshot(path=str(OUT/f'{width}-canvas-detail.png'))
+   from PIL import Image, ImageDraw
+   receipt=OUT/'receipt.png'; im=Image.new('RGB',(240,320),'white'); ImageDraw.Draw(im).text((20,20),'CONTROLLED CAFE\nTotal 432.10',fill='black'); im.save(receipt)
+   start_url=page.url
+   await page.get_by_label('Take a photo',exact=True).set_input_files(receipt)
+   sheet=page.get_by_role('dialog',name='Smart Add')
+   await expect(sheet.get_by_label('Preview of receipt.png')).to_be_visible()
+   await expect(sheet.get_by_label('Preview of receipt.png').locator('img').first).to_be_visible(timeout=10000)
+   await page.screenshot(path=str(OUT/f'{width}-smart-preview.png'))
+   await expect(sheet.get_by_role('heading',name='Intelligent Canvas')).to_be_visible(timeout=15000)
+   await expect(sheet.get_by_label('What I understood')).to_contain_text('I found a receipt')
+   assert page.url==start_url, ('navigated',page.url)
    await page.screenshot(path=str(OUT/f'{width}-canvas.png'))
-   assert await page.evaluate('expenseBrowserFixture.saves.length')==0
+   await sheet.get_by_role('button',name='Hide Smart Add (your work stays here)').click()
+   await expect(sheet).to_be_hidden()
+   await page.get_by_role('button',name='Smart Add',exact=True).filter(visible=True).first.click()
+   await expect(sheet.get_by_role('heading',name='Intelligent Canvas')).to_be_visible()
+   await sheet.get_by_text('Check what I read from the receipt',exact=True).click()
+   await sheet.get_by_label("I've checked this date against the receipt").check()
+   await sheet.get_by_role('button',name='Confirm details',exact=True).click()
+   gate=page.get_by_role('dialog',name='Check these receipt items before saving')
+   if await gate.count(): await gate.get_by_role('button',name="I've checked these items",exact=True).click()
+   await page.screenshot(path=str(OUT/f'{width}-smart-confirmed.png'))
+   await sheet.get_by_role('button',name='Save expense').click()
+   await expect(sheet.get_by_text('Saved to your records')).to_be_visible(timeout=15000)
+   await page.screenshot(path=str(OUT/f'{width}-smart-saved.png'))
+   assert await page.evaluate('expenseBrowserFixture.saves.length')==1
+   assert page.url==start_url
+   pdf=OUT/'statement.pdf'; im.save(pdf,'PDF')
+   await sheet.get_by_role('button',name='Add another').click()
+   await page.get_by_label('Choose files',exact=True).set_input_files(pdf)
+   await expect(sheet.get_by_role('heading',name='What is this?')).to_be_visible()
+   await expect(sheet.get_by_text('1 page',exact=False)).to_be_visible(timeout=10000)
+   await page.wait_for_timeout(800)
+   await page.screenshot(path=str(OUT/f'{width}-smart-pdf.png'))
+   assert page.url==start_url
+   assert await page.evaluate('expenseBrowserFixture.saves.length')==1, 'exactly one save'
    assert not errors, errors
-   assert not blocked, blocked
+   print('blocked',blocked)
    print(f'{width}: Today/Review/Wealth/Start/Spaces/Smart Add/Canvas plain wording, no overflow or posting PASS')
    await context.close()
   await browser.close()

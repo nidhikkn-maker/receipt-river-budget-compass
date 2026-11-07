@@ -1,7 +1,7 @@
 import { PLAIN_TXN_LABEL, canvasNarrative } from "@/lib/plain-language";
 import { duplicateDocuments } from "@/lib/documents";
 import { takePendingScan } from "@/lib/pending-scan";
-import { createFileRoute, Link, useNavigate, useRouter } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate, useRouter, useSearch } from "@tanstack/react-router";
 import { returnAfterReview } from "@/lib/review-navigation";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { AccountForm } from "@/components/AccountForm";
@@ -32,7 +32,7 @@ import { suggestForEntry } from "@/lib/statement-pipeline/single-entry";
 import { buildReceiptAudit, receiptFingerprint, receiptFingerprintMatches, type ReceiptReadValues } from "@/lib/receipt-audit";
 import { receiptConfidence, receiptBreakdownError, receiptRoundOff, receiptItemConfidence, receiptItemReviewReasons, receiptReviewCheck, receiptReviewSignature, unconfirmedFields, correctedFields, learnedShopName, type ReceiptField, type ReadingConfidence } from "@/lib/receipt-reading";
 import { ReceiptZoomViewer } from "@/components/ReceiptZoomViewer";
-import { quickEntrySearch } from "@/lib/quick-entry";
+import { quickEntrySearch, type QuickEntrySearch } from "@/lib/quick-entry";
 import { useStore } from "@/lib/store";
 import { activeInstruments, applyInstrument, instrumentLabel, lastInstrumentForMerchant } from "@/lib/payment-instruments";
 import { extractReceipt } from "@/lib/receipt-extract.functions";
@@ -78,7 +78,7 @@ export const Route = createFileRoute("/_authenticated/new")({
       { name: "twitter:card", content: "summary" },
     ],
   }),
-  component: NewExpense,
+  component: () => <NewExpense />,
 });
 
 type LocalReceipt = { file: File; name: string; type: string; dataUrl: string; fingerprint: string; path?: string };
@@ -107,7 +107,9 @@ function ReadingIndicator({ value, field }: { value: ReadingConfidence; field?: 
   return <span aria-label={field ? `${field}: ${label}` : undefined} className={cn("block text-xs", value === "high" ? "text-success" : value === "unknown" ? "text-muted-foreground" : "text-warning")}>{label}</span>;
 }
 
-function NewExpense() {
+/** Smart Add hosts this same review in place; `embedded` swaps route navigation for sheet callbacks. */
+export type EmbeddedEntry = { search: QuickEntrySearch; files?: File[]; onExit: (saved?: { id?: string | undefined; label: string }) => void };
+export function NewExpense({ embedded }: { embedded?: EmbeddedEntry } = {}) {
   const { userId, save, transactions: expenses, members, accounts, loans, preferences, savePreferences, documents, addDocument, removeDocument, signedUrl } = useStore();
   const PENDING = "pending-receipt";
   const inbox = documents.filter((d) => d.notes === PENDING && !d.transactionId);
@@ -129,7 +131,8 @@ function NewExpense() {
   const liveAccounts = accounts.filter((a) => !a.archived);
   const nav = useNavigate();
   const router = useRouter();
-  const search = Route.useSearch();
+  const routeSearch = useSearch({ strict: false }) as Record<string, unknown>;
+  const search = embedded?.search ?? quickEntrySearch(routeSearch);
   const { edit } = search;
   const editing = edit ? expenses.find((e) => e.id === edit) : undefined;
   const [scope, setScope] = useState<Scope>("personal");
@@ -315,14 +318,23 @@ function NewExpense() {
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [draftSig, reading]);
+  // Files picked inside Smart Add are read here once, so the preview and reading start without leaving the sheet.
+  const embeddedFilesTaken = useRef(false);
+  useEffect(() => {
+    if (!embedded?.files?.length || embeddedFilesTaken.current || !userId) return;
+    embeddedFilesTaken.current = true; void onFiles(embedded.files);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userId]);
   const resumeLater = async () => {
     const ok = await persistDraft();
     if (!ok && hasDraftContent(draftData(), receipts.length)) { toast.error("Draft not saved — check your connection and try again"); return; }
     if (ok) toast.success(navigator.onLine ? "Saved to Drafts — finish it any time" : "Saved on this device — it will sync when you're back online");
+    if (embedded) { embedded.onExit(); return; }
     if (window.history.length > 1) window.history.back(); else nav({ to: "/drafts" });
   };
   const close = async () => {
     if (!editing && hasDraftContent(draftData(), receipts.length)) { await resumeLater(); return; }
+    if (embedded) { embedded.onExit(); return; }
     if (window.history.length > 1) window.history.back(); else nav({ to: "/dashboard" });
   };
 
@@ -500,7 +512,7 @@ function NewExpense() {
   };
 
   useEffect(() => { const f = takePendingScan(); if (!f) return; const dt = new DataTransfer(); f.forEach((x) => dt.items.add(x)); void onFiles(dt.files); }, []); // eslint-disable-line react-hooks/exhaustive-deps
-  const onFiles = async (files: FileList | null) => {
+  const onFiles = async (files: FileList | File[] | null) => {
     if (!files?.length || reading || saving) return;
     const big = Array.from(files).find((f) => f.size > 5 * 1024 * 1024);
     if (big) { toast.error(`${big.name} is larger than 5 MB`); return; }
@@ -676,6 +688,7 @@ function NewExpense() {
         return;
       }
       setBatch(null);
+      if (embedded) { embedded.onExit({ id: createId ?? editing?.id, label: `${PLAIN_TXN_LABEL[txnType]} · ${title.trim() || merchant.trim()}` }); return; }
       if (editing || search.trip || search.booking) returnAfterReview(router.history, () => { void nav({ to: editing ? "/expenses" : "/dashboard" }); });
       else void nav({ to: "/dashboard" });
     } catch (e) {
