@@ -89,8 +89,14 @@ export function valueHolding(h: Holding, quotes: Quote[], gold: GoldRate | undef
     const ageD = (now.getTime() - Date.parse(gold.date)) / 864e5;
     return { holding: h, key: null, quote: { key: "gold", price: gold.perGram24k, at: gold.date, provider: gold.source, freshness: "manual", refreshedAt: gold.date }, value, stale: ageD > 7, note: `${h.grams} g × ${h.karat}k at ${gold.perGram24k}/g (24k) · ${gold.source}` };
   }
-  // Cash held with a broker is money, not a security: rupee amount × share, never priced [v6.1 §3].
-  if (h.kind === "broker_cash") return { holding: h, key: null, quote: null, value: Math.round(h.quantity * share * 100) / 100, stale: false, note: `Broker cash · ${h.source}` };
+  // Broker cash has no security price, but foreign cash still requires a dated INR conversion.
+  if (h.kind === "broker_cash") {
+    const currency = (h.currency ?? "INR").toUpperCase();
+    const fx = currency === "INR" ? null : fxFor(currency, fxRates);
+    if (currency !== "INR" && !fx) return { holding: h, key: null, quote: null, value: null, stale: false, note: `Cash is in ${currency} — add a ${currency}→INR rate below to value this holding` };
+    const stale = !!fx && (now.getTime() - Date.parse(fx.date)) / 864e5 > FX_STALE_DAYS;
+    return { holding: h, key: null, quote: null, value: Math.round(h.quantity * share * (fx?.rate ?? 1) * 100) / 100, stale, note: `Broker cash · ${h.source}${fx ? ` · ${h.quantity} ${currency} × ${fx.rate} INR/${currency} (${fx.source}, ${fx.date})${stale ? " · rate over 30 days old" : ""}` : ""}` };
+  }
   const key = quoteKey(h);
   const q = key ? quotes.find((x) => x.key === key) ?? null : null;
   if (!key) return { holding: h, key, quote: null, value: null, stale: false, note: "Needs ISIN, exchange symbol or fund code" };

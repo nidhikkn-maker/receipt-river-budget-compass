@@ -10,6 +10,12 @@ const usdQuote: Quote = { key: "NSE:USIX", price: 82.1, at: "2026-11-06T10:00:00
 const rates: FxRate[] = [{ from: "USD", rate: 83.2, date: "2026-11-06", source: "entered by you" }];
 
 describe("currency-aware valuation", () => {
+  it("converts foreign broker cash with ownership share and never guesses missing FX", () => {
+    const cash: Holding = {id:'cash',kind:'broker_cash',name:'USD broker',quantity:100,sharePct:50,source:'original statement',currency:'USD'};
+    expect(valueHolding(cash,[],undefined,now,alerts,[{from:'USD',rate:83,date:'2026-11-06',source:'Reviewed rate'}]).value).toBe(4150);
+    expect(valueHolding(cash,[],undefined,now,alerts,[]).value).toBeNull();
+    expect(valueHolding({...cash,currency:undefined},[],undefined,now,alerts,[]).value).toBe(50);
+  });
   it("values a foreign-currency price through the owner-entered rate", () => {
     const v = valueHolding(holding, [usdQuote], undefined, now, alerts, rates);
     expect(v.value).toBe(Math.round(10 * 82.1 * 83.2 * 100) / 100);
