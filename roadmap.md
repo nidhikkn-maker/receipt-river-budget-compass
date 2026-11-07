@@ -857,3 +857,12 @@
 - [ ] Re-audit remaining 11 formerly buildable missing gaps against actual code; implement only absent functionality, then systematically verify 941 partial historical clusters and overlapping v6 clauses.
 - [ ] Decimal coverage outside core ledger: tax, planning, depreciation and remaining reports require scoped migration and connected acceptance; C-1065 stays PARTIAL.
 - [ ] Hosted/device/external acceptance remains separate; no real financial writes, trigger activation or publication.
+
+## Exact Workstream 1 checkpoint — 7 Nov 2026 13:37 UTC
+- [x] Connected report fetch/decision/actual PDF/local history/download, lost-response and retry; actual browser3sizes checksum/decoderPASS. Loan actual CSV button, setup failure/retry/reload, historical budget review, merchant regressions, selected-summary scrolling3sizesPASS; Inbox9PASS.
+- [x] Decimal planning/allocation extension; staged atomic category exact-preview/owner/replay/rollback4PASS. Full257/1905PASS; buildOK.
+- [x] Historical1542implemented/944partial/36missing/19superseded; new narrow verified C-1252/C-1249/C-2024; v6 unchanged566/331/2. No blanket hosted promotions.
+- [ ] Next category merge concurrency/phantom/closed-period/undo acceptance; staged SQL not installed, split UI stays refused.
+- [ ] Remaining independent missing C-0214/C-0391/C-0517/C-0553/C-0581; inspect saved implementation before building. C-2024 is selected-transaction summary (not report summary).
+- [ ] Report Centre stored-history retrieval/hosted multi-device recovery, broader decimal tax/depreciation/reports, hosted budget/merchant revision acceptance; continue944partial clusters.
+- [ ] Approval trigger/access-policy rollout and publication remain held; no real-record changes. Evidence: docs/evidence/workstream-1-acceptance-2026-11-07.md.
