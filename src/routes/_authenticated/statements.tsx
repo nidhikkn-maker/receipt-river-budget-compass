@@ -66,7 +66,7 @@ export const Route = createFileRoute("/_authenticated/statements")({
       { name: "twitter:card", content: "summary" },
     ],
   }),
-  component: StatementDeskPage,
+  component: () => <StatementDeskPage />,
 });
 
 /** What one uploaded file would change, held together so the screen can show it before saving. */
@@ -78,8 +78,10 @@ interface Loaded {
   credits: number;
 }
 
-function StatementDeskPage() {
-  const { tab, context, replaces } = Route.useSearch();
+/** Smart Add hosts the same Statement Desk engine in place for statements and documents. */
+export function StatementDeskPage({ embedded }: { embedded?: { files: File[] } } = {}) {
+  const routeSearch = useSearch({ strict: false }) as { tab?: "accountant"; context?: IntakeContext; replaces?: string };
+  const { tab, context, replaces } = embedded ? { tab: undefined, context: undefined, replaces: undefined } : routeSearch;
   /** Non-bank documents (company papers, deeds, leases, audited accounts, invoices) — reviewed here, stored in DocuRepo. */
   const [docs, setDocs] = useState<{ key: string; file: File; resume?: ResumeState; context?: IntakeContext | undefined }[]>([]);
   const store = useStore();

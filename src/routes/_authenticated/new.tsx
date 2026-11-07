@@ -1,7 +1,7 @@
 import { PLAIN_TXN_LABEL, canvasNarrative } from "@/lib/plain-language";
 import { duplicateDocuments } from "@/lib/documents";
 import { takePendingScan } from "@/lib/pending-scan";
-import { createFileRoute, Link, useNavigate, useRouter } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate, useRouter, useSearch } from "@tanstack/react-router";
 import { returnAfterReview } from "@/lib/review-navigation";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { AccountForm } from "@/components/AccountForm";
@@ -32,7 +32,7 @@ import { suggestForEntry } from "@/lib/statement-pipeline/single-entry";
 import { buildReceiptAudit, receiptFingerprint, receiptFingerprintMatches, type ReceiptReadValues } from "@/lib/receipt-audit";
 import { receiptConfidence, receiptBreakdownError, receiptRoundOff, receiptItemConfidence, receiptItemReviewReasons, receiptReviewCheck, receiptReviewSignature, unconfirmedFields, correctedFields, learnedShopName, type ReceiptField, type ReadingConfidence } from "@/lib/receipt-reading";
 import { ReceiptZoomViewer } from "@/components/ReceiptZoomViewer";
-import { quickEntrySearch } from "@/lib/quick-entry";
+import { quickEntrySearch, type QuickEntrySearch } from "@/lib/quick-entry";
 import { useStore } from "@/lib/store";
 import { activeInstruments, applyInstrument, instrumentLabel, lastInstrumentForMerchant } from "@/lib/payment-instruments";
 import { extractReceipt } from "@/lib/receipt-extract.functions";
