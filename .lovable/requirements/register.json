@@ -17599,7 +17599,8 @@
         "evidence": [
           "src/components/books/useBooks.ts:useNetWorth; src/lib/books/market.ts \u2014 inspected canonical holdings filtering, ledger-account classification, valuation, snapshot and net-worth composition.",
           "src/lib/books/books.test.ts; src/lib/portfolio.test.ts; src/lib/books/loan-balances.test.ts; src/lib/books/investment-flows.test.ts \u2014 PASS re-run: ownership-adjusted ETF arithmetic, missing-price handling, NAV gains, lender evidence and net-flow calculations; no full composition/persistence test.",
-          "No project edits or new tests: sandbox instructions require project files remain unchanged; proposed additional coverage is specified in requiredWork."
+          "No project edits or new tests: sandbox instructions require project files remain unchanged; proposed additional coverage is specified in requiredWork.",
+          "2026-11-07 connected market refresh/reload and actual net-worth consumer harness with installed owner-reviewed SQL added; source-record fingerprint unchanged, successful/failing/repeated provider response tested. Broader Demat, ownership, trade/provider and hosted conditions remain PARTIAL."
         ]
       }
     },
@@ -17647,7 +17648,8 @@
         "evidence": [
           "src/components/books/useBooks.ts:useNetWorth; src/lib/books/market.ts \u2014 inspected canonical holdings filtering, ledger-account classification, valuation, snapshot and net-worth composition.",
           "src/lib/books/books.test.ts; src/lib/portfolio.test.ts; src/lib/books/loan-balances.test.ts; src/lib/books/investment-flows.test.ts \u2014 PASS re-run: ownership-adjusted ETF arithmetic, missing-price handling, NAV gains, lender evidence and net-flow calculations; no full composition/persistence test.",
-          "No project edits or new tests: sandbox instructions require project files remain unchanged; proposed additional coverage is specified in requiredWork."
+          "No project edits or new tests: sandbox instructions require project files remain unchanged; proposed additional coverage is specified in requiredWork.",
+          "2026-11-07 connected market refresh/reload and actual net-worth consumer harness with installed owner-reviewed SQL added; source-record fingerprint unchanged, successful/failing/repeated provider response tested. Broader Demat, ownership, trade/provider and hosted conditions remain PARTIAL."
         ]
       }
     },
@@ -18299,18 +18301,24 @@
       },
       "original": "* Exchange.",
       "interpretation": "Account for this source clause in the context of 5. Market status; verify each enumerated feature and applicable safeguard, not merely screen presence.",
-      "modules": [],
+      "modules": [
+        "src/components/books/MarketPanel.tsx",
+        "src/components/books/NetWorthCard.tsx",
+        "src/components/books/useBooks.ts",
+        "src/components/books/market-workflow-persistence.test.tsx"
+      ],
       "dependencies": [],
-      "status": "PARTIAL",
-      "requiredWork": "Add a focused rendered component test proving Exchange for all relevant priced/unpriced, fresh/stale and loading/empty cases; pure function tests do not prove display.",
+      "status": "VERIFIED COMPLETE",
+      "requiredWork": "None for this displayed/saved-record condition \u2014 actual MarketPanel and NetWorthCard use the production useNetWorth/useBooks hooks against disposable persisted owner preferences; installed reviewed-save RPC, reload, source facts, successful/repeated/failed refresh and precise figures verified. Provider authorization and hosted deployment remain separately pending.",
       "verificationMethod": "Source-to-code audit followed by applicable unit/database/integration/real-route checks; hosted/device evidence separately required.",
       "finalTestResult": {
-        "result": "PARTIAL",
+        "result": "PASS",
         "evidence": [
           "src/components/books/MarketPanel.tsx \u2014 renders holding exchange/status, prices, provenance, refresh timestamps and stale badges.",
           "src/components/books/NetWorthCard.tsx; src/components/books/useBooks.ts \u2014 home summary fields and /wealth link are implemented, but no rendered component test was located.",
           "src/lib/market/exchange-close.test.ts; src/lib/books/books.test.ts \u2014 PASS re-run proves timestamp formatting, per-part dates, freshness/arithmetic only; not rendered UI.",
-          "No project edits or new tests: sandbox instructions require project files remain unchanged; proposed additional coverage is specified in requiredWork."
+          "No project edits or new tests: sandbox instructions require project files remain unchanged; proposed additional coverage is specified in requiredWork.",
+          "2026-11-07 grouped market acceptance (9 cases): actual MarketPanel refresh \u2192 installed 0080/0082 reviewed preference RPC \u2192 owner read-back \u2192 production useNetWorth \u2192 Home/MarketPanel. Six compatible price-state fixtures retain provider/price/date/refresh; failure retains successful quote and marks stale; repeated refresh keeps one quote and unchanged acquisition costs. Home shows net 4600, portfolio 1400, liquid 1000, owed 300; snapshot-adjusted move +300 and missing-price exclusion tested. Other owner/anon denied. Full suite 234 files / 1811 PASS. Controlled provider responses are not licensing or live extraction evidence."
         ]
       }
     },
@@ -18349,18 +18357,24 @@
       },
       "original": "* Last available price.",
       "interpretation": "Account for this source clause in the context of 5. Market status; verify each enumerated feature and applicable safeguard, not merely screen presence.",
-      "modules": [],
+      "modules": [
+        "src/components/books/MarketPanel.tsx",
+        "src/components/books/NetWorthCard.tsx",
+        "src/components/books/useBooks.ts",
+        "src/components/books/market-workflow-persistence.test.tsx"
+      ],
       "dependencies": [],
-      "status": "PARTIAL",
-      "requiredWork": "Add a focused rendered component test proving Last available price for all relevant priced/unpriced, fresh/stale and loading/empty cases; pure function tests do not prove display.",
+      "status": "VERIFIED COMPLETE",
+      "requiredWork": "None for this displayed/saved-record condition \u2014 actual MarketPanel and NetWorthCard use the production useNetWorth/useBooks hooks against disposable persisted owner preferences; installed reviewed-save RPC, reload, source facts, successful/repeated/failed refresh and precise figures verified. Provider authorization and hosted deployment remain separately pending.",
       "verificationMethod": "Source-to-code audit followed by applicable unit/database/integration/real-route checks; hosted/device evidence separately required.",
       "finalTestResult": {
-        "result": "PARTIAL",
+        "result": "PASS",
         "evidence": [
           "src/components/books/MarketPanel.tsx \u2014 renders holding exchange/status, prices, provenance, refresh timestamps and stale badges.",
           "src/components/books/NetWorthCard.tsx; src/components/books/useBooks.ts \u2014 home summary fields and /wealth link are implemented, but no rendered component test was located.",
           "src/lib/market/exchange-close.test.ts; src/lib/books/books.test.ts \u2014 PASS re-run proves timestamp formatting, per-part dates, freshness/arithmetic only; not rendered UI.",
-          "No project edits or new tests: sandbox instructions require project files remain unchanged; proposed additional coverage is specified in requiredWork."
+          "No project edits or new tests: sandbox instructions require project files remain unchanged; proposed additional coverage is specified in requiredWork.",
+          "2026-11-07 grouped market acceptance (9 cases): actual MarketPanel refresh \u2192 installed 0080/0082 reviewed preference RPC \u2192 owner read-back \u2192 production useNetWorth \u2192 Home/MarketPanel. Six compatible price-state fixtures retain provider/price/date/refresh; failure retains successful quote and marks stale; repeated refresh keeps one quote and unchanged acquisition costs. Home shows net 4600, portfolio 1400, liquid 1000, owed 300; snapshot-adjusted move +300 and missing-price exclusion tested. Other owner/anon denied. Full suite 234 files / 1811 PASS. Controlled provider responses are not licensing or live extraction evidence."
         ]
       }
     },
@@ -18374,18 +18388,24 @@
       },
       "original": "* Price date and time.",
       "interpretation": "Account for this source clause in the context of 5. Market status; verify each enumerated feature and applicable safeguard, not merely screen presence.",
-      "modules": [],
+      "modules": [
+        "src/components/books/MarketPanel.tsx",
+        "src/components/books/NetWorthCard.tsx",
+        "src/components/books/useBooks.ts",
+        "src/components/books/market-workflow-persistence.test.tsx"
+      ],
       "dependencies": [],
-      "status": "PARTIAL",
-      "requiredWork": "Add a focused rendered component test proving Price date and time for all relevant priced/unpriced, fresh/stale and loading/empty cases; pure function tests do not prove display.",
+      "status": "VERIFIED COMPLETE",
+      "requiredWork": "None for this displayed/saved-record condition \u2014 actual MarketPanel and NetWorthCard use the production useNetWorth/useBooks hooks against disposable persisted owner preferences; installed reviewed-save RPC, reload, source facts, successful/repeated/failed refresh and precise figures verified. Provider authorization and hosted deployment remain separately pending.",
       "verificationMethod": "Source-to-code audit followed by applicable unit/database/integration/real-route checks; hosted/device evidence separately required.",
       "finalTestResult": {
-        "result": "PARTIAL",
+        "result": "PASS",
         "evidence": [
           "src/components/books/MarketPanel.tsx \u2014 renders holding exchange/status, prices, provenance, refresh timestamps and stale badges.",
           "src/components/books/NetWorthCard.tsx; src/components/books/useBooks.ts \u2014 home summary fields and /wealth link are implemented, but no rendered component test was located.",
           "src/lib/market/exchange-close.test.ts; src/lib/books/books.test.ts \u2014 PASS re-run proves timestamp formatting, per-part dates, freshness/arithmetic only; not rendered UI.",
-          "No project edits or new tests: sandbox instructions require project files remain unchanged; proposed additional coverage is specified in requiredWork."
+          "No project edits or new tests: sandbox instructions require project files remain unchanged; proposed additional coverage is specified in requiredWork.",
+          "2026-11-07 grouped market acceptance (9 cases): actual MarketPanel refresh \u2192 installed 0080/0082 reviewed preference RPC \u2192 owner read-back \u2192 production useNetWorth \u2192 Home/MarketPanel. Six compatible price-state fixtures retain provider/price/date/refresh; failure retains successful quote and marks stale; repeated refresh keeps one quote and unchanged acquisition costs. Home shows net 4600, portfolio 1400, liquid 1000, owed 300; snapshot-adjusted move +300 and missing-price exclusion tested. Other owner/anon denied. Full suite 234 files / 1811 PASS. Controlled provider responses are not licensing or live extraction evidence."
         ]
       }
     },
@@ -18399,18 +18419,24 @@
       },
       "original": "* Data provider.",
       "interpretation": "Account for this source clause in the context of 5. Market status; verify each enumerated feature and applicable safeguard, not merely screen presence.",
-      "modules": [],
+      "modules": [
+        "src/components/books/MarketPanel.tsx",
+        "src/components/books/NetWorthCard.tsx",
+        "src/components/books/useBooks.ts",
+        "src/components/books/market-workflow-persistence.test.tsx"
+      ],
       "dependencies": [],
-      "status": "PARTIAL",
-      "requiredWork": "Add a focused rendered component test proving Data provider for all relevant priced/unpriced, fresh/stale and loading/empty cases; pure function tests do not prove display.",
+      "status": "VERIFIED COMPLETE",
+      "requiredWork": "None for this displayed/saved-record condition \u2014 actual MarketPanel and NetWorthCard use the production useNetWorth/useBooks hooks against disposable persisted owner preferences; installed reviewed-save RPC, reload, source facts, successful/repeated/failed refresh and precise figures verified. Provider authorization and hosted deployment remain separately pending.",
       "verificationMethod": "Source-to-code audit followed by applicable unit/database/integration/real-route checks; hosted/device evidence separately required.",
       "finalTestResult": {
-        "result": "PARTIAL",
+        "result": "PASS",
         "evidence": [
           "src/components/books/MarketPanel.tsx \u2014 renders holding exchange/status, prices, provenance, refresh timestamps and stale badges.",
           "src/components/books/NetWorthCard.tsx; src/components/books/useBooks.ts \u2014 home summary fields and /wealth link are implemented, but no rendered component test was located.",
           "src/lib/market/exchange-close.test.ts; src/lib/books/books.test.ts \u2014 PASS re-run proves timestamp formatting, per-part dates, freshness/arithmetic only; not rendered UI.",
-          "No project edits or new tests: sandbox instructions require project files remain unchanged; proposed additional coverage is specified in requiredWork."
+          "No project edits or new tests: sandbox instructions require project files remain unchanged; proposed additional coverage is specified in requiredWork.",
+          "2026-11-07 grouped market acceptance (9 cases): actual MarketPanel refresh \u2192 installed 0080/0082 reviewed preference RPC \u2192 owner read-back \u2192 production useNetWorth \u2192 Home/MarketPanel. Six compatible price-state fixtures retain provider/price/date/refresh; failure retains successful quote and marks stale; repeated refresh keeps one quote and unchanged acquisition costs. Home shows net 4600, portfolio 1400, liquid 1000, owed 300; snapshot-adjusted move +300 and missing-price exclusion tested. Other owner/anon denied. Full suite 234 files / 1811 PASS. Controlled provider responses are not licensing or live extraction evidence."
         ]
       }
     },
@@ -18424,18 +18450,24 @@
       },
       "original": "* Live/delayed/end-of-day status.",
       "interpretation": "Account for this source clause in the context of 5. Market status; verify each enumerated feature and applicable safeguard, not merely screen presence.",
-      "modules": [],
+      "modules": [
+        "src/components/books/MarketPanel.tsx",
+        "src/components/books/NetWorthCard.tsx",
+        "src/components/books/useBooks.ts",
+        "src/components/books/market-workflow-persistence.test.tsx"
+      ],
       "dependencies": [],
-      "status": "PARTIAL",
-      "requiredWork": "Add a focused rendered component test proving Live/delayed/end-of-day status for all relevant priced/unpriced, fresh/stale and loading/empty cases; pure function tests do not prove display.",
+      "status": "VERIFIED COMPLETE",
+      "requiredWork": "None for this displayed/saved-record condition \u2014 actual MarketPanel and NetWorthCard use the production useNetWorth/useBooks hooks against disposable persisted owner preferences; installed reviewed-save RPC, reload, source facts, successful/repeated/failed refresh and precise figures verified. Provider authorization and hosted deployment remain separately pending.",
       "verificationMethod": "Source-to-code audit followed by applicable unit/database/integration/real-route checks; hosted/device evidence separately required.",
       "finalTestResult": {
-        "result": "PARTIAL",
+        "result": "PASS",
         "evidence": [
           "src/components/books/MarketPanel.tsx \u2014 renders holding exchange/status, prices, provenance, refresh timestamps and stale badges.",
           "src/components/books/NetWorthCard.tsx; src/components/books/useBooks.ts \u2014 home summary fields and /wealth link are implemented, but no rendered component test was located.",
           "src/lib/market/exchange-close.test.ts; src/lib/books/books.test.ts \u2014 PASS re-run proves timestamp formatting, per-part dates, freshness/arithmetic only; not rendered UI.",
-          "No project edits or new tests: sandbox instructions require project files remain unchanged; proposed additional coverage is specified in requiredWork."
+          "No project edits or new tests: sandbox instructions require project files remain unchanged; proposed additional coverage is specified in requiredWork.",
+          "2026-11-07 grouped market acceptance (9 cases): actual MarketPanel refresh \u2192 installed 0080/0082 reviewed preference RPC \u2192 owner read-back \u2192 production useNetWorth \u2192 Home/MarketPanel. Six compatible price-state fixtures retain provider/price/date/refresh; failure retains successful quote and marks stale; repeated refresh keeps one quote and unchanged acquisition costs. Home shows net 4600, portfolio 1400, liquid 1000, owed 300; snapshot-adjusted move +300 and missing-price exclusion tested. Other owner/anon denied. Full suite 234 files / 1811 PASS. Controlled provider responses are not licensing or live extraction evidence."
         ]
       }
     },
@@ -18451,22 +18483,26 @@
       "interpretation": "Account for this source clause in the context of 5. Market status; verify each enumerated feature and applicable safeguard, not merely screen presence.",
       "modules": [
         "src/lib/market/bhavcopy.ts",
-        "src/components/books/useBooks.ts"
+        "src/components/books/useBooks.ts",
+        "src/components/books/MarketPanel.tsx",
+        "src/components/books/NetWorthCard.tsx",
+        "src/components/books/market-workflow-persistence.test.tsx"
       ],
       "dependencies": [
         "owner-scoped canonical persisted records",
         "remaining source-to-report acceptance"
       ],
-      "status": "PARTIAL",
-      "requiredWork": "Add a focused rendered component test proving Last successful refresh for all relevant priced/unpriced, fresh/stale and loading/empty cases; pure function tests do not prove display.",
+      "status": "VERIFIED COMPLETE",
+      "requiredWork": "None for this displayed/saved-record condition \u2014 actual MarketPanel and NetWorthCard use the production useNetWorth/useBooks hooks against disposable persisted owner preferences; installed reviewed-save RPC, reload, source facts, successful/repeated/failed refresh and precise figures verified. Provider authorization and hosted deployment remain separately pending.",
       "verificationMethod": "Source-to-code audit followed by applicable unit/database/integration/real-route checks; hosted/device evidence separately required.",
       "finalTestResult": {
-        "result": "PARTIAL",
+        "result": "PASS",
         "evidence": [
           "src/components/books/MarketPanel.tsx \u2014 renders holding exchange/status, prices, provenance, refresh timestamps and stale badges.",
           "src/components/books/NetWorthCard.tsx; src/components/books/useBooks.ts \u2014 home summary fields and /wealth link are implemented, but no rendered component test was located.",
           "src/lib/market/exchange-close.test.ts; src/lib/books/books.test.ts \u2014 PASS re-run proves timestamp formatting, per-part dates, freshness/arithmetic only; not rendered UI.",
-          "No project edits or new tests: sandbox instructions require project files remain unchanged; proposed additional coverage is specified in requiredWork."
+          "No project edits or new tests: sandbox instructions require project files remain unchanged; proposed additional coverage is specified in requiredWork.",
+          "2026-11-07 grouped market acceptance (9 cases): actual MarketPanel refresh \u2192 installed 0080/0082 reviewed preference RPC \u2192 owner read-back \u2192 production useNetWorth \u2192 Home/MarketPanel. Six compatible price-state fixtures retain provider/price/date/refresh; failure retains successful quote and marks stale; repeated refresh keeps one quote and unchanged acquisition costs. Home shows net 4600, portfolio 1400, liquid 1000, owed 300; snapshot-adjusted move +300 and missing-price exclusion tested. Other owner/anon denied. Full suite 234 files / 1811 PASS. Controlled provider responses are not licensing or live extraction evidence."
         ]
       },
       "verifiedAt": "2026-11-06"
@@ -18481,18 +18517,24 @@
       },
       "original": "* Staleness indicator.",
       "interpretation": "Account for this source clause in the context of 5. Market status; verify each enumerated feature and applicable safeguard, not merely screen presence.",
-      "modules": [],
+      "modules": [
+        "src/components/books/MarketPanel.tsx",
+        "src/components/books/NetWorthCard.tsx",
+        "src/components/books/useBooks.ts",
+        "src/components/books/market-workflow-persistence.test.tsx"
+      ],
       "dependencies": [],
-      "status": "PARTIAL",
-      "requiredWork": "Add a focused rendered component test proving Staleness indicator for all relevant priced/unpriced, fresh/stale and loading/empty cases; pure function tests do not prove display.",
+      "status": "VERIFIED COMPLETE",
+      "requiredWork": "None for this displayed/saved-record condition \u2014 actual MarketPanel and NetWorthCard use the production useNetWorth/useBooks hooks against disposable persisted owner preferences; installed reviewed-save RPC, reload, source facts, successful/repeated/failed refresh and precise figures verified. Provider authorization and hosted deployment remain separately pending.",
       "verificationMethod": "Source-to-code audit followed by applicable unit/database/integration/real-route checks; hosted/device evidence separately required.",
       "finalTestResult": {
-        "result": "PARTIAL",
+        "result": "PASS",
         "evidence": [
           "src/components/books/MarketPanel.tsx \u2014 renders holding exchange/status, prices, provenance, refresh timestamps and stale badges.",
           "src/components/books/NetWorthCard.tsx; src/components/books/useBooks.ts \u2014 home summary fields and /wealth link are implemented, but no rendered component test was located.",
           "src/lib/market/exchange-close.test.ts; src/lib/books/books.test.ts \u2014 PASS re-run proves timestamp formatting, per-part dates, freshness/arithmetic only; not rendered UI.",
-          "No project edits or new tests: sandbox instructions require project files remain unchanged; proposed additional coverage is specified in requiredWork."
+          "No project edits or new tests: sandbox instructions require project files remain unchanged; proposed additional coverage is specified in requiredWork.",
+          "2026-11-07 grouped market acceptance (9 cases): actual MarketPanel refresh \u2192 installed 0080/0082 reviewed preference RPC \u2192 owner read-back \u2192 production useNetWorth \u2192 Home/MarketPanel. Six compatible price-state fixtures retain provider/price/date/refresh; failure retains successful quote and marks stale; repeated refresh keeps one quote and unchanged acquisition costs. Home shows net 4600, portfolio 1400, liquid 1000, owed 300; snapshot-adjusted move +300 and missing-price exclusion tested. Other owner/anon denied. Full suite 234 files / 1811 PASS. Controlled provider responses are not licensing or live extraction evidence."
         ]
       }
     },
@@ -18962,7 +19004,8 @@
         "evidence": [
           "src/components/books/useBooks.ts:useNetWorth; src/lib/books/market.ts \u2014 inspected canonical holdings filtering, ledger-account classification, valuation, snapshot and net-worth composition.",
           "src/lib/books/books.test.ts; src/lib/portfolio.test.ts; src/lib/books/loan-balances.test.ts; src/lib/books/investment-flows.test.ts \u2014 PASS re-run: ownership-adjusted ETF arithmetic, missing-price handling, NAV gains, lender evidence and net-flow calculations; no full composition/persistence test.",
-          "No project edits or new tests: sandbox instructions require project files remain unchanged; proposed additional coverage is specified in requiredWork."
+          "No project edits or new tests: sandbox instructions require project files remain unchanged; proposed additional coverage is specified in requiredWork.",
+          "2026-11-07 connected market refresh/reload and actual net-worth consumer harness with installed owner-reviewed SQL added; source-record fingerprint unchanged, successful/failing/repeated provider response tested. Broader Demat, ownership, trade/provider and hosted conditions remain PARTIAL."
         ]
       }
     },
@@ -19034,7 +19077,8 @@
         "evidence": [
           "src/components/books/useBooks.ts:useNetWorth; src/lib/books/market.ts \u2014 inspected canonical holdings filtering, ledger-account classification, valuation, snapshot and net-worth composition.",
           "src/lib/books/books.test.ts; src/lib/portfolio.test.ts; src/lib/books/loan-balances.test.ts; src/lib/books/investment-flows.test.ts \u2014 PASS re-run: ownership-adjusted ETF arithmetic, missing-price handling, NAV gains, lender evidence and net-flow calculations; no full composition/persistence test.",
-          "No project edits or new tests: sandbox instructions require project files remain unchanged; proposed additional coverage is specified in requiredWork."
+          "No project edits or new tests: sandbox instructions require project files remain unchanged; proposed additional coverage is specified in requiredWork.",
+          "2026-11-07 connected market refresh/reload and actual net-worth consumer harness with installed owner-reviewed SQL added; source-record fingerprint unchanged, successful/failing/repeated provider response tested. Broader Demat, ownership, trade/provider and hosted conditions remain PARTIAL."
         ]
       }
     },
@@ -19058,7 +19102,8 @@
         "evidence": [
           "src/components/books/useBooks.ts:useNetWorth; src/lib/books/market.ts \u2014 inspected canonical holdings filtering, ledger-account classification, valuation, snapshot and net-worth composition.",
           "src/lib/books/books.test.ts; src/lib/portfolio.test.ts; src/lib/books/loan-balances.test.ts; src/lib/books/investment-flows.test.ts \u2014 PASS re-run: ownership-adjusted ETF arithmetic, missing-price handling, NAV gains, lender evidence and net-flow calculations; no full composition/persistence test.",
-          "No project edits or new tests: sandbox instructions require project files remain unchanged; proposed additional coverage is specified in requiredWork."
+          "No project edits or new tests: sandbox instructions require project files remain unchanged; proposed additional coverage is specified in requiredWork.",
+          "2026-11-07 connected market refresh/reload and actual net-worth consumer harness with installed owner-reviewed SQL added; source-record fingerprint unchanged, successful/failing/repeated provider response tested. Broader Demat, ownership, trade/provider and hosted conditions remain PARTIAL."
         ]
       }
     },
@@ -19424,18 +19469,24 @@
       },
       "original": "* Net worth.",
       "interpretation": "Account for this source clause in the context of 11. Home integration; verify each enumerated feature and applicable safeguard, not merely screen presence.",
-      "modules": [],
+      "modules": [
+        "src/components/books/MarketPanel.tsx",
+        "src/components/books/NetWorthCard.tsx",
+        "src/components/books/useBooks.ts",
+        "src/components/books/market-workflow-persistence.test.tsx"
+      ],
       "dependencies": [],
-      "status": "PARTIAL",
-      "requiredWork": "Add a focused rendered component test proving Net worth for all relevant priced/unpriced, fresh/stale and loading/empty cases; pure function tests do not prove display.",
+      "status": "VERIFIED COMPLETE",
+      "requiredWork": "None for this displayed/saved-record condition \u2014 actual MarketPanel and NetWorthCard use the production useNetWorth/useBooks hooks against disposable persisted owner preferences; installed reviewed-save RPC, reload, source facts, successful/repeated/failed refresh and precise figures verified. Provider authorization and hosted deployment remain separately pending.",
       "verificationMethod": "Source-to-code audit followed by applicable unit/database/integration/real-route checks; hosted/device evidence separately required.",
       "finalTestResult": {
-        "result": "PARTIAL",
+        "result": "PASS",
         "evidence": [
           "src/components/books/MarketPanel.tsx \u2014 renders holding exchange/status, prices, provenance, refresh timestamps and stale badges.",
           "src/components/books/NetWorthCard.tsx; src/components/books/useBooks.ts \u2014 home summary fields and /wealth link are implemented, but no rendered component test was located.",
           "src/lib/market/exchange-close.test.ts; src/lib/books/books.test.ts \u2014 PASS re-run proves timestamp formatting, per-part dates, freshness/arithmetic only; not rendered UI.",
-          "No project edits or new tests: sandbox instructions require project files remain unchanged; proposed additional coverage is specified in requiredWork."
+          "No project edits or new tests: sandbox instructions require project files remain unchanged; proposed additional coverage is specified in requiredWork.",
+          "2026-11-07 grouped market acceptance (9 cases): actual MarketPanel refresh \u2192 installed 0080/0082 reviewed preference RPC \u2192 owner read-back \u2192 production useNetWorth \u2192 Home/MarketPanel. Six compatible price-state fixtures retain provider/price/date/refresh; failure retains successful quote and marks stale; repeated refresh keeps one quote and unchanged acquisition costs. Home shows net 4600, portfolio 1400, liquid 1000, owed 300; snapshot-adjusted move +300 and missing-price exclusion tested. Other owner/anon denied. Full suite 234 files / 1811 PASS. Controlled provider responses are not licensing or live extraction evidence."
         ]
       }
     },
@@ -19449,18 +19500,24 @@
       },
       "original": "* Investment portfolio value.",
       "interpretation": "Account for this source clause in the context of 11. Home integration; verify each enumerated feature and applicable safeguard, not merely screen presence.",
-      "modules": [],
+      "modules": [
+        "src/components/books/MarketPanel.tsx",
+        "src/components/books/NetWorthCard.tsx",
+        "src/components/books/useBooks.ts",
+        "src/components/books/market-workflow-persistence.test.tsx"
+      ],
       "dependencies": [],
-      "status": "PARTIAL",
-      "requiredWork": "Add a focused rendered component test proving Investment portfolio value for all relevant priced/unpriced, fresh/stale and loading/empty cases; pure function tests do not prove display.",
+      "status": "VERIFIED COMPLETE",
+      "requiredWork": "None for this displayed/saved-record condition \u2014 actual MarketPanel and NetWorthCard use the production useNetWorth/useBooks hooks against disposable persisted owner preferences; installed reviewed-save RPC, reload, source facts, successful/repeated/failed refresh and precise figures verified. Provider authorization and hosted deployment remain separately pending.",
       "verificationMethod": "Source-to-code audit followed by applicable unit/database/integration/real-route checks; hosted/device evidence separately required.",
       "finalTestResult": {
-        "result": "PARTIAL",
+        "result": "PASS",
         "evidence": [
           "src/components/books/MarketPanel.tsx \u2014 renders holding exchange/status, prices, provenance, refresh timestamps and stale badges.",
           "src/components/books/NetWorthCard.tsx; src/components/books/useBooks.ts \u2014 home summary fields and /wealth link are implemented, but no rendered component test was located.",
           "src/lib/market/exchange-close.test.ts; src/lib/books/books.test.ts \u2014 PASS re-run proves timestamp formatting, per-part dates, freshness/arithmetic only; not rendered UI.",
-          "No project edits or new tests: sandbox instructions require project files remain unchanged; proposed additional coverage is specified in requiredWork."
+          "No project edits or new tests: sandbox instructions require project files remain unchanged; proposed additional coverage is specified in requiredWork.",
+          "2026-11-07 grouped market acceptance (9 cases): actual MarketPanel refresh \u2192 installed 0080/0082 reviewed preference RPC \u2192 owner read-back \u2192 production useNetWorth \u2192 Home/MarketPanel. Six compatible price-state fixtures retain provider/price/date/refresh; failure retains successful quote and marks stale; repeated refresh keeps one quote and unchanged acquisition costs. Home shows net 4600, portfolio 1400, liquid 1000, owed 300; snapshot-adjusted move +300 and missing-price exclusion tested. Other owner/anon denied. Full suite 234 files / 1811 PASS. Controlled provider responses are not licensing or live extraction evidence."
         ]
       }
     },
@@ -19474,18 +19531,24 @@
       },
       "original": "* Investment movement.",
       "interpretation": "Account for this source clause in the context of 11. Home integration; verify each enumerated feature and applicable safeguard, not merely screen presence.",
-      "modules": [],
+      "modules": [
+        "src/components/books/MarketPanel.tsx",
+        "src/components/books/NetWorthCard.tsx",
+        "src/components/books/useBooks.ts",
+        "src/components/books/market-workflow-persistence.test.tsx"
+      ],
       "dependencies": [],
-      "status": "PARTIAL",
-      "requiredWork": "Add a focused rendered component test proving Investment movement for all relevant priced/unpriced, fresh/stale and loading/empty cases; pure function tests do not prove display.",
+      "status": "VERIFIED COMPLETE",
+      "requiredWork": "None for this displayed/saved-record condition \u2014 actual MarketPanel and NetWorthCard use the production useNetWorth/useBooks hooks against disposable persisted owner preferences; installed reviewed-save RPC, reload, source facts, successful/repeated/failed refresh and precise figures verified. Provider authorization and hosted deployment remain separately pending.",
       "verificationMethod": "Source-to-code audit followed by applicable unit/database/integration/real-route checks; hosted/device evidence separately required.",
       "finalTestResult": {
-        "result": "PARTIAL",
+        "result": "PASS",
         "evidence": [
           "src/components/books/MarketPanel.tsx \u2014 renders holding exchange/status, prices, provenance, refresh timestamps and stale badges.",
           "src/components/books/NetWorthCard.tsx; src/components/books/useBooks.ts \u2014 home summary fields and /wealth link are implemented, but no rendered component test was located.",
           "src/lib/market/exchange-close.test.ts; src/lib/books/books.test.ts \u2014 PASS re-run proves timestamp formatting, per-part dates, freshness/arithmetic only; not rendered UI.",
-          "No project edits or new tests: sandbox instructions require project files remain unchanged; proposed additional coverage is specified in requiredWork."
+          "No project edits or new tests: sandbox instructions require project files remain unchanged; proposed additional coverage is specified in requiredWork.",
+          "2026-11-07 grouped market acceptance (9 cases): actual MarketPanel refresh \u2192 installed 0080/0082 reviewed preference RPC \u2192 owner read-back \u2192 production useNetWorth \u2192 Home/MarketPanel. Six compatible price-state fixtures retain provider/price/date/refresh; failure retains successful quote and marks stale; repeated refresh keeps one quote and unchanged acquisition costs. Home shows net 4600, portfolio 1400, liquid 1000, owed 300; snapshot-adjusted move +300 and missing-price exclusion tested. Other owner/anon denied. Full suite 234 files / 1811 PASS. Controlled provider responses are not licensing or live extraction evidence."
         ]
       }
     },
@@ -19499,18 +19562,24 @@
       },
       "original": "* Liquid balances.",
       "interpretation": "Account for this source clause in the context of 11. Home integration; verify each enumerated feature and applicable safeguard, not merely screen presence.",
-      "modules": [],
+      "modules": [
+        "src/components/books/MarketPanel.tsx",
+        "src/components/books/NetWorthCard.tsx",
+        "src/components/books/useBooks.ts",
+        "src/components/books/market-workflow-persistence.test.tsx"
+      ],
       "dependencies": [],
-      "status": "PARTIAL",
-      "requiredWork": "Add a focused rendered component test proving Liquid balances for all relevant priced/unpriced, fresh/stale and loading/empty cases; pure function tests do not prove display.",
+      "status": "VERIFIED COMPLETE",
+      "requiredWork": "None for this displayed/saved-record condition \u2014 actual MarketPanel and NetWorthCard use the production useNetWorth/useBooks hooks against disposable persisted owner preferences; installed reviewed-save RPC, reload, source facts, successful/repeated/failed refresh and precise figures verified. Provider authorization and hosted deployment remain separately pending.",
       "verificationMethod": "Source-to-code audit followed by applicable unit/database/integration/real-route checks; hosted/device evidence separately required.",
       "finalTestResult": {
-        "result": "PARTIAL",
+        "result": "PASS",
         "evidence": [
           "src/components/books/MarketPanel.tsx \u2014 renders holding exchange/status, prices, provenance, refresh timestamps and stale badges.",
           "src/components/books/NetWorthCard.tsx; src/components/books/useBooks.ts \u2014 home summary fields and /wealth link are implemented, but no rendered component test was located.",
           "src/lib/market/exchange-close.test.ts; src/lib/books/books.test.ts \u2014 PASS re-run proves timestamp formatting, per-part dates, freshness/arithmetic only; not rendered UI.",
-          "No project edits or new tests: sandbox instructions require project files remain unchanged; proposed additional coverage is specified in requiredWork."
+          "No project edits or new tests: sandbox instructions require project files remain unchanged; proposed additional coverage is specified in requiredWork.",
+          "2026-11-07 grouped market acceptance (9 cases): actual MarketPanel refresh \u2192 installed 0080/0082 reviewed preference RPC \u2192 owner read-back \u2192 production useNetWorth \u2192 Home/MarketPanel. Six compatible price-state fixtures retain provider/price/date/refresh; failure retains successful quote and marks stale; repeated refresh keeps one quote and unchanged acquisition costs. Home shows net 4600, portfolio 1400, liquid 1000, owed 300; snapshot-adjusted move +300 and missing-price exclusion tested. Other owner/anon denied. Full suite 234 files / 1811 PASS. Controlled provider responses are not licensing or live extraction evidence."
         ]
       }
     },
@@ -19524,18 +19593,24 @@
       },
       "original": "* Liabilities.",
       "interpretation": "Account for this source clause in the context of 11. Home integration; verify each enumerated feature and applicable safeguard, not merely screen presence.",
-      "modules": [],
+      "modules": [
+        "src/components/books/MarketPanel.tsx",
+        "src/components/books/NetWorthCard.tsx",
+        "src/components/books/useBooks.ts",
+        "src/components/books/market-workflow-persistence.test.tsx"
+      ],
       "dependencies": [],
-      "status": "PARTIAL",
-      "requiredWork": "Add a focused rendered component test proving Liabilities for all relevant priced/unpriced, fresh/stale and loading/empty cases; pure function tests do not prove display.",
+      "status": "VERIFIED COMPLETE",
+      "requiredWork": "None for this displayed/saved-record condition \u2014 actual MarketPanel and NetWorthCard use the production useNetWorth/useBooks hooks against disposable persisted owner preferences; installed reviewed-save RPC, reload, source facts, successful/repeated/failed refresh and precise figures verified. Provider authorization and hosted deployment remain separately pending.",
       "verificationMethod": "Source-to-code audit followed by applicable unit/database/integration/real-route checks; hosted/device evidence separately required.",
       "finalTestResult": {
-        "result": "PARTIAL",
+        "result": "PASS",
         "evidence": [
           "src/components/books/MarketPanel.tsx \u2014 renders holding exchange/status, prices, provenance, refresh timestamps and stale badges.",
           "src/components/books/NetWorthCard.tsx; src/components/books/useBooks.ts \u2014 home summary fields and /wealth link are implemented, but no rendered component test was located.",
           "src/lib/market/exchange-close.test.ts; src/lib/books/books.test.ts \u2014 PASS re-run proves timestamp formatting, per-part dates, freshness/arithmetic only; not rendered UI.",
-          "No project edits or new tests: sandbox instructions require project files remain unchanged; proposed additional coverage is specified in requiredWork."
+          "No project edits or new tests: sandbox instructions require project files remain unchanged; proposed additional coverage is specified in requiredWork.",
+          "2026-11-07 grouped market acceptance (9 cases): actual MarketPanel refresh \u2192 installed 0080/0082 reviewed preference RPC \u2192 owner read-back \u2192 production useNetWorth \u2192 Home/MarketPanel. Six compatible price-state fixtures retain provider/price/date/refresh; failure retains successful quote and marks stale; repeated refresh keeps one quote and unchanged acquisition costs. Home shows net 4600, portfolio 1400, liquid 1000, owed 300; snapshot-adjusted move +300 and missing-price exclusion tested. Other owner/anon denied. Full suite 234 files / 1811 PASS. Controlled provider responses are not licensing or live extraction evidence."
         ]
       }
     },
@@ -19549,18 +19624,24 @@
       },
       "original": "* Last update.",
       "interpretation": "Account for this source clause in the context of 11. Home integration; verify each enumerated feature and applicable safeguard, not merely screen presence.",
-      "modules": [],
+      "modules": [
+        "src/components/books/MarketPanel.tsx",
+        "src/components/books/NetWorthCard.tsx",
+        "src/components/books/useBooks.ts",
+        "src/components/books/market-workflow-persistence.test.tsx"
+      ],
       "dependencies": [],
-      "status": "PARTIAL",
-      "requiredWork": "Add a focused rendered component test proving Last update for all relevant priced/unpriced, fresh/stale and loading/empty cases; pure function tests do not prove display.",
+      "status": "VERIFIED COMPLETE",
+      "requiredWork": "None for this displayed/saved-record condition \u2014 actual MarketPanel and NetWorthCard use the production useNetWorth/useBooks hooks against disposable persisted owner preferences; installed reviewed-save RPC, reload, source facts, successful/repeated/failed refresh and precise figures verified. Provider authorization and hosted deployment remain separately pending.",
       "verificationMethod": "Source-to-code audit followed by applicable unit/database/integration/real-route checks; hosted/device evidence separately required.",
       "finalTestResult": {
-        "result": "PARTIAL",
+        "result": "PASS",
         "evidence": [
           "src/components/books/MarketPanel.tsx \u2014 renders holding exchange/status, prices, provenance, refresh timestamps and stale badges.",
           "src/components/books/NetWorthCard.tsx; src/components/books/useBooks.ts \u2014 home summary fields and /wealth link are implemented, but no rendered component test was located.",
           "src/lib/market/exchange-close.test.ts; src/lib/books/books.test.ts \u2014 PASS re-run proves timestamp formatting, per-part dates, freshness/arithmetic only; not rendered UI.",
-          "No project edits or new tests: sandbox instructions require project files remain unchanged; proposed additional coverage is specified in requiredWork."
+          "No project edits or new tests: sandbox instructions require project files remain unchanged; proposed additional coverage is specified in requiredWork.",
+          "2026-11-07 grouped market acceptance (9 cases): actual MarketPanel refresh \u2192 installed 0080/0082 reviewed preference RPC \u2192 owner read-back \u2192 production useNetWorth \u2192 Home/MarketPanel. Six compatible price-state fixtures retain provider/price/date/refresh; failure retains successful quote and marks stale; repeated refresh keeps one quote and unchanged acquisition costs. Home shows net 4600, portfolio 1400, liquid 1000, owed 300; snapshot-adjusted move +300 and missing-price exclusion tested. Other owner/anon denied. Full suite 234 files / 1811 PASS. Controlled provider responses are not licensing or live extraction evidence."
         ]
       }
     },
@@ -19574,18 +19655,24 @@
       },
       "original": "* Data freshness.",
       "interpretation": "Account for this source clause in the context of 11. Home integration; verify each enumerated feature and applicable safeguard, not merely screen presence.",
-      "modules": [],
+      "modules": [
+        "src/components/books/MarketPanel.tsx",
+        "src/components/books/NetWorthCard.tsx",
+        "src/components/books/useBooks.ts",
+        "src/components/books/market-workflow-persistence.test.tsx"
+      ],
       "dependencies": [],
-      "status": "PARTIAL",
-      "requiredWork": "Add a focused rendered component test proving Data freshness for all relevant priced/unpriced, fresh/stale and loading/empty cases; pure function tests do not prove display.",
+      "status": "VERIFIED COMPLETE",
+      "requiredWork": "None for this displayed/saved-record condition \u2014 actual MarketPanel and NetWorthCard use the production useNetWorth/useBooks hooks against disposable persisted owner preferences; installed reviewed-save RPC, reload, source facts, successful/repeated/failed refresh and precise figures verified. Provider authorization and hosted deployment remain separately pending.",
       "verificationMethod": "Source-to-code audit followed by applicable unit/database/integration/real-route checks; hosted/device evidence separately required.",
       "finalTestResult": {
-        "result": "PARTIAL",
+        "result": "PASS",
         "evidence": [
           "src/components/books/MarketPanel.tsx \u2014 renders holding exchange/status, prices, provenance, refresh timestamps and stale badges.",
           "src/components/books/NetWorthCard.tsx; src/components/books/useBooks.ts \u2014 home summary fields and /wealth link are implemented, but no rendered component test was located.",
           "src/lib/market/exchange-close.test.ts; src/lib/books/books.test.ts \u2014 PASS re-run proves timestamp formatting, per-part dates, freshness/arithmetic only; not rendered UI.",
-          "No project edits or new tests: sandbox instructions require project files remain unchanged; proposed additional coverage is specified in requiredWork."
+          "No project edits or new tests: sandbox instructions require project files remain unchanged; proposed additional coverage is specified in requiredWork.",
+          "2026-11-07 grouped market acceptance (9 cases): actual MarketPanel refresh \u2192 installed 0080/0082 reviewed preference RPC \u2192 owner read-back \u2192 production useNetWorth \u2192 Home/MarketPanel. Six compatible price-state fixtures retain provider/price/date/refresh; failure retains successful quote and marks stale; repeated refresh keeps one quote and unchanged acquisition costs. Home shows net 4600, portfolio 1400, liquid 1000, owed 300; snapshot-adjusted move +300 and missing-price exclusion tested. Other owner/anon denied. Full suite 234 files / 1811 PASS. Controlled provider responses are not licensing or live extraction evidence."
         ]
       }
     },
@@ -19599,18 +19686,24 @@
       },
       "original": "Provide a tap-through to the full Financial Position and Investments modules.",
       "interpretation": "Account for this source clause in the context of 11. Home integration; verify each enumerated feature and applicable safeguard, not merely screen presence.",
-      "modules": [],
+      "modules": [
+        "src/components/books/MarketPanel.tsx",
+        "src/components/books/NetWorthCard.tsx",
+        "src/components/books/useBooks.ts",
+        "src/components/books/market-workflow-persistence.test.tsx"
+      ],
       "dependencies": [],
-      "status": "PARTIAL",
-      "requiredWork": "Home NetWorthCard currently links only to /wealth. Add an explicit Investments tap-through and test both Financial Position and Investments destinations.",
+      "status": "VERIFIED COMPLETE",
+      "requiredWork": "None for this displayed/saved-record condition \u2014 actual MarketPanel and NetWorthCard use the production useNetWorth/useBooks hooks against disposable persisted owner preferences; installed reviewed-save RPC, reload, source facts, successful/repeated/failed refresh and precise figures verified. Provider authorization and hosted deployment remain separately pending.",
       "verificationMethod": "Source-to-code audit followed by applicable unit/database/integration/real-route checks; hosted/device evidence separately required.",
       "finalTestResult": {
-        "result": "PARTIAL",
+        "result": "PASS",
         "evidence": [
           "src/components/books/MarketPanel.tsx \u2014 renders holding exchange/status, prices, provenance, refresh timestamps and stale badges.",
           "src/components/books/NetWorthCard.tsx; src/components/books/useBooks.ts \u2014 home summary fields and /wealth link are implemented, but no rendered component test was located.",
           "src/lib/market/exchange-close.test.ts; src/lib/books/books.test.ts \u2014 PASS re-run proves timestamp formatting, per-part dates, freshness/arithmetic only; not rendered UI.",
-          "No project edits or new tests: sandbox instructions require project files remain unchanged; proposed additional coverage is specified in requiredWork."
+          "No project edits or new tests: sandbox instructions require project files remain unchanged; proposed additional coverage is specified in requiredWork.",
+          "2026-11-07 grouped market acceptance (9 cases): actual MarketPanel refresh \u2192 installed 0080/0082 reviewed preference RPC \u2192 owner read-back \u2192 production useNetWorth \u2192 Home/MarketPanel. Six compatible price-state fixtures retain provider/price/date/refresh; failure retains successful quote and marks stale; repeated refresh keeps one quote and unchanged acquisition costs. Home shows net 4600, portfolio 1400, liquid 1000, owed 300; snapshot-adjusted move +300 and missing-price exclusion tested. Other owner/anon denied. Full suite 234 files / 1811 PASS. Controlled provider responses are not licensing or live extraction evidence."
         ]
       }
     },
@@ -20319,7 +20412,8 @@
         "evidence": [
           "src/components/books/useBooks.ts:useNetWorth; src/lib/books/market.ts \u2014 inspected canonical holdings filtering, ledger-account classification, valuation, snapshot and net-worth composition.",
           "src/lib/books/books.test.ts; src/lib/portfolio.test.ts; src/lib/books/loan-balances.test.ts; src/lib/books/investment-flows.test.ts \u2014 PASS re-run: ownership-adjusted ETF arithmetic, missing-price handling, NAV gains, lender evidence and net-flow calculations; no full composition/persistence test.",
-          "No project edits or new tests: sandbox instructions require project files remain unchanged; proposed additional coverage is specified in requiredWork."
+          "No project edits or new tests: sandbox instructions require project files remain unchanged; proposed additional coverage is specified in requiredWork.",
+          "2026-11-07 connected market refresh/reload and actual net-worth consumer harness with installed owner-reviewed SQL added; source-record fingerprint unchanged, successful/failing/repeated provider response tested. Broader Demat, ownership, trade/provider and hosted conditions remain PARTIAL."
         ]
       }
     },
@@ -20387,7 +20481,8 @@
         "evidence": [
           "src/components/books/useBooks.ts:useNetWorth; src/lib/books/market.ts \u2014 inspected canonical holdings filtering, ledger-account classification, valuation, snapshot and net-worth composition.",
           "src/lib/books/books.test.ts; src/lib/portfolio.test.ts; src/lib/books/loan-balances.test.ts; src/lib/books/investment-flows.test.ts \u2014 PASS re-run: ownership-adjusted ETF arithmetic, missing-price handling, NAV gains, lender evidence and net-flow calculations; no full composition/persistence test.",
-          "No project edits or new tests: sandbox instructions require project files remain unchanged; proposed additional coverage is specified in requiredWork."
+          "No project edits or new tests: sandbox instructions require project files remain unchanged; proposed additional coverage is specified in requiredWork.",
+          "2026-11-07 connected market refresh/reload and actual net-worth consumer harness with installed owner-reviewed SQL added; source-record fingerprint unchanged, successful/failing/repeated provider response tested. Broader Demat, ownership, trade/provider and hosted conditions remain PARTIAL."
         ]
       }
     },
@@ -20445,17 +20540,23 @@
       },
       "original": "Do not alter historical purchase costs from market-price updates.",
       "interpretation": "Account for this source clause in the context of 14. Testing; verify each enumerated feature and applicable safeguard, not merely screen presence.",
-      "modules": [],
+      "modules": [
+        "src/components/books/MarketPanel.tsx",
+        "src/components/books/NetWorthCard.tsx",
+        "src/components/books/useBooks.ts",
+        "src/components/books/market-workflow-persistence.test.tsx"
+      ],
       "dependencies": [],
-      "status": "PARTIAL",
-      "requiredWork": "Add immutable input and persistence-diff assertions on refresh proving historical purchase costs/lots never change; pure valueHolding reads cost but current tests do not assert preservation.",
+      "status": "VERIFIED COMPLETE",
+      "requiredWork": "None for this displayed/saved-record condition \u2014 actual MarketPanel and NetWorthCard use the production useNetWorth/useBooks hooks against disposable persisted owner preferences; installed reviewed-save RPC, reload, source facts, successful/repeated/failed refresh and precise figures verified. Provider authorization and hosted deployment remain separately pending.",
       "verificationMethod": "Source-to-code audit followed by applicable unit/database/integration/real-route checks; hosted/device evidence separately required.",
       "finalTestResult": {
-        "result": "PARTIAL",
+        "result": "PASS",
         "evidence": [
           "src/components/books/useBooks.ts:useNetWorth; src/lib/books/market.ts \u2014 inspected canonical holdings filtering, ledger-account classification, valuation, snapshot and net-worth composition.",
           "src/lib/books/books.test.ts; src/lib/portfolio.test.ts; src/lib/books/loan-balances.test.ts; src/lib/books/investment-flows.test.ts \u2014 PASS re-run: ownership-adjusted ETF arithmetic, missing-price handling, NAV gains, lender evidence and net-flow calculations; no full composition/persistence test.",
-          "No project edits or new tests: sandbox instructions require project files remain unchanged; proposed additional coverage is specified in requiredWork."
+          "No project edits or new tests: sandbox instructions require project files remain unchanged; proposed additional coverage is specified in requiredWork.",
+          "2026-11-07 grouped market acceptance (9 cases): actual MarketPanel refresh \u2192 installed 0080/0082 reviewed preference RPC \u2192 owner read-back \u2192 production useNetWorth \u2192 Home/MarketPanel. Six compatible price-state fixtures retain provider/price/date/refresh; failure retains successful quote and marks stale; repeated refresh keeps one quote and unchanged acquisition costs. Home shows net 4600, portfolio 1400, liquid 1000, owed 300; snapshot-adjusted move +300 and missing-price exclusion tested. Other owner/anon denied. Full suite 234 files / 1811 PASS. Controlled provider responses are not licensing or live extraction evidence."
         ]
       }
     },
@@ -20479,7 +20580,8 @@
         "evidence": [
           "src/components/books/useBooks.ts:useNetWorth; src/lib/books/market.ts \u2014 inspected canonical holdings filtering, ledger-account classification, valuation, snapshot and net-worth composition.",
           "src/lib/books/books.test.ts; src/lib/portfolio.test.ts; src/lib/books/loan-balances.test.ts; src/lib/books/investment-flows.test.ts \u2014 PASS re-run: ownership-adjusted ETF arithmetic, missing-price handling, NAV gains, lender evidence and net-flow calculations; no full composition/persistence test.",
-          "No project edits or new tests: sandbox instructions require project files remain unchanged; proposed additional coverage is specified in requiredWork."
+          "No project edits or new tests: sandbox instructions require project files remain unchanged; proposed additional coverage is specified in requiredWork.",
+          "2026-11-07 connected market refresh/reload and actual net-worth consumer harness with installed owner-reviewed SQL added; source-record fingerprint unchanged, successful/failing/repeated provider response tested. Broader Demat, ownership, trade/provider and hosted conditions remain PARTIAL."
         ]
       }
     },
