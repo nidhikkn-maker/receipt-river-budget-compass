@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { recordSample } from "@/lib/perf-check";
 import { useRouter, useRouterState } from "@tanstack/react-router";
 
 const WARM = ["/expenses", "/inbox", "/statements", "/reports", "/new", "/settings"] as const;
@@ -8,6 +9,25 @@ export function NavProgress() {
   const router = useRouter();
   const pending = useRouterState({ select: (s) => s.status === "pending" || s.isLoading });
   const [show, setShow] = useState(false);
+
+  // Record how long each page took to open on this device (Settings → Speed check).
+  const path = useRouterState({ select: (s) => s.location.pathname });
+  const startRef = useRef<{ path: string; t: number; first: boolean } | null>(null);
+  useEffect(() => {
+    if (startRef.current === null) startRef.current = { path, t: 0, first: true };
+    else if (pending && startRef.current.path !== path) startRef.current = { path, t: performance.now(), first: false };
+  }, [pending, path]);
+  useEffect(() => {
+    const st = startRef.current;
+    if (pending || !st || st.t < 0) return;
+    // Wait for the next paint so the measured time includes drawing the page.
+    const id = requestAnimationFrame(() => {
+      const ms = performance.now() - st.t;
+      recordSample({ path: st.path, kind: st.first ? "first" : "page", ms, at: Date.now() });
+      st.t = -1;
+    });
+    return () => cancelAnimationFrame(id);
+  }, [pending, path]);
 
   useEffect(() => {
     if (!pending) {
