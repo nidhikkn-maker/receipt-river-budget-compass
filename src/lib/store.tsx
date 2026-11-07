@@ -6,7 +6,8 @@ import type { Database, Json } from "@/integrations/supabase/types";
 import { queueEntry, pendingEntries, removePending, putSnapshot, getSnapshot } from "./offline";
 import { mergePending, setItem, type PendingItem } from "./pending-sync";
 import { deleteFinanceData } from "./delete-data";
-import { privateFileUrl } from "./private-files";
+import { privateFileUrl, fetchPrivateFile, type ExpectedFile } from "./private-files";
+import { downloadBlob } from "./reports";
 import { saveExpense } from "./fx.functions";
 import {
   CHARGES_CATEGORY, validateAllocations, validateBudget, validateExpense, type Allocation,
@@ -150,6 +151,7 @@ interface Ctx {
   updateMember: (id: string, name: string, relation: string) => Promise<void>;
   setBudget: (c: Category, amount: number) => Promise<void>;
   signedUrl: (path: string) => Promise<string | null>;
+  downloadFile: (path: string, fileName: string, expected?: ExpectedFile) => Promise<void>;
   setAllocations: (e: Expense, lines: Allocation[]) => Promise<void>;
   updateReimbursement: (e: Expense, info: ReimbursementInfo) => Promise<void>;
   addReimbursementReceipt: (e: Expense, r: { amount: number; date: string; accountId: string | null; note?: string; operationId: string }) => Promise<void>;
@@ -834,6 +836,11 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
       sign: async (name, seconds) => { const { data, error } = await supabase.storage.from("receipts").createSignedUrl(name, seconds); return error ? null : data?.signedUrl ?? null; },
     });
   }, [userId]);
+  const downloadFile = useCallback(async (path: string, fileName: string, expected: ExpectedFile = {}) => {
+    const url = await signedUrl(path);
+    if (!url) throw new Error("You no longer have access to this file");
+    downloadBlob(await fetchPrivateFile(url, expected), fileName || path.split("/").pop() || "document");
+  }, [signedUrl]);
 
   return (
     <StoreCtx.Provider value={{
@@ -843,7 +850,7 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
       expenses: expenses.filter((x) => (x.txnType ?? "expense") === "expense"), transactions: expenses.filter((x) => !x.transferCounterpartOf), transferCounterparts: expenses.filter((x) => !!x.transferCounterpartOf), confirmTransfer, cancelTransfer, accounts, addAccount, setArchived, adjustBalance,
       commitments, loans, goals, valuations, documents, saveCommitment, confirmIrregular, removeCommitment, confirmCommitment, saveLoan, removeLoan, recordLoanPayment, convertToEmi,
       saveGoal, removeGoal, updateAccount, addValuation, removeValuation, addDocument, updateDocument, removeDocument, history, setReimbursement, recordReimbursement, deleteAll,
-      budgets, loading, syncState, lastSyncedAt, refresh, save, remove, setScope, reconcile, addMember, removeMember, updateMember, setBudget, signedUrl,
+      budgets, loading, syncState, lastSyncedAt, refresh, save, remove, setScope, reconcile, addMember, removeMember, updateMember, setBudget, signedUrl, downloadFile,
       setAllocations, updateReimbursement, addReimbursementReceipt, listReviews, saveReview,
     }}>
       {children}

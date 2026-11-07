@@ -152,6 +152,22 @@ export function addSnapshot(list: Snapshot[], s: Snapshot): Snapshot[] {
   return [...list.filter((x) => x.date !== s.date), s].sort((a, b) => a.date.localeCompare(b.date)).slice(-1500);
 }
 
+export interface AllocationMove { kind: string; from: number; to: number; change: number; shareFrom: number; shareTo: number; shareChange: number }
+/**
+ * Asset allocation change between two saved snapshots [v6.1 §12]. Shares are of the snapshot's own allocated total
+ * (percentage points, 1 dp); a kind present in only one snapshot is shown against 0, never guessed.
+ */
+export function allocationChange(from: Snapshot, to: Snapshot): AllocationMove[] {
+  const tf = Object.values(from.allocation).reduce((a, b) => a + b, 0), tt = Object.values(to.allocation).reduce((a, b) => a + b, 0);
+  const r1 = (n: number) => Math.round(n * 10) / 10;
+  const kinds = [...new Set([...Object.keys(from.allocation), ...Object.keys(to.allocation)])];
+  return kinds.map((kind) => {
+    const a = from.allocation[kind] ?? 0, b = to.allocation[kind] ?? 0;
+    const sa = tf ? (a / tf) * 100 : 0, sb = tt ? (b / tt) * 100 : 0;
+    return { kind, from: a, to: b, change: b - a, shareFrom: r1(sa), shareTo: r1(sb), shareChange: r1(sb - sa) };
+  }).sort((x, y) => Math.abs(y.shareChange) - Math.abs(x.shareChange) || x.kind.localeCompare(y.kind));
+}
+
 /** Configurable valuation alerts [v6.1 §13]. */
 export function valuationAlerts(valued: Valued[], snapshots: Snapshot[], a: AlertSettings, statementQty: Record<string, number>, qtyHoldings: Holding[] = valued.map((v) => v.holding), corporateActions: { name: string; note: string }[] = [], dematMissing: string[] = []): string[] {
   const out: string[] = [];

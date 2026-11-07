@@ -9,7 +9,7 @@ import { Fold } from "@/components/Fold";
 import { money } from "@/lib/expenses";
 import { getFundNav } from "@/lib/mutual-funds.functions";
 import { statementActionAlerts } from "@/lib/books/investment-alerts";
-import { addSnapshot, FRESHNESS_LABEL, quantityByIsin, quoteKey, recordFailure, upsertQuote, valuationAlerts } from "@/lib/books/market";
+import { addSnapshot, allocationChange, FRESHNESS_LABEL, quantityByIsin, quoteKey, recordFailure, upsertQuote, valuationAlerts } from "@/lib/books/market";
 import type { Holding, HoldingKind } from "@/lib/books/types";
 import { useBooks, useNetWorth } from "./useBooks";
 import { PriceOverrides } from "./PriceOverrides";
@@ -152,7 +152,9 @@ export function MarketPanel() {
           </div></details>
         {books.snapshots.length > 0 && <details className="text-xs"><summary className="cursor-pointer text-muted-foreground">Valuation history ({books.snapshots.length})</summary>
           <table className="mt-2 w-full"><thead><tr className="text-muted-foreground"><th className="text-left">Date</th><th className="text-right">Portfolio</th><th className="text-right">Net worth</th></tr></thead>
-            <tbody>{books.snapshots.slice(-24).reverse().map((s) => <tr key={s.date}><td>{s.date}</td><td className="text-right">{money(s.portfolio)}</td><td className="text-right">{money(s.netWorth)}</td></tr>)}</tbody></table></details>}
+            <tbody>{books.snapshots.slice(-24).reverse().map((s) => <tr key={s.date}><td>{s.date}</td><td className="text-right">{money(s.portfolio)}</td><td className="text-right">{money(s.netWorth)}</td></tr>)}</tbody></table>
+          {books.snapshots.length >= 2 && (() => { const a = books.snapshots[0]!, b = books.snapshots.at(-1)!; return <table className="mt-3 w-full" aria-label="Allocation change"><caption className="text-left text-muted-foreground">Allocation change {a.date} → {b.date}</caption><thead><tr className="text-muted-foreground"><th className="text-left">Kind</th><th className="text-right">Then</th><th className="text-right">Now</th><th className="text-right">Share change</th></tr></thead>
+            <tbody>{allocationChange(a, b).map((m) => <tr key={m.kind}><td>{m.kind}</td><td className="text-right">{money(m.from)} · {m.shareFrom}%</td><td className="text-right">{money(m.to)} · {m.shareTo}%</td><td className="text-right">{m.shareChange > 0 ? "+" : ""}{m.shareChange} pts</td></tr>)}</tbody></table>; })()}</details>}
         <p className="text-[11px] text-muted-foreground">Mutual fund NAVs come from AMFI (published daily). NSE/BSE shares use the official end-of-day closing price saved each weekday evening (never live); without one they show the statement value or a price you enter, labelled as such. No prices are invented and trades are never placed.</p>
       </div>
     </Fold>

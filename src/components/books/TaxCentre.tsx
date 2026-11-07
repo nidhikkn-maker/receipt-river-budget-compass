@@ -1,3 +1,4 @@
+import { downloadBlob } from "@/lib/reports";
 /** Tax & audit centre sections: past-year onboarding, tax profiles, GST returns and rule register (v6 §17–20, §45–51). */
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "@tanstack/react-router";
@@ -154,7 +155,7 @@ export function GstReturns({ fy }: { fy: string }) {
           const errs = validateGstJson(form, j as unknown as Record<string, unknown>);
           const validation = validateReturnDraft(form, period, owner?.kind ?? "individual", j as unknown as Record<string, unknown>, ["gstin"]);
           return <div key={form} className="min-w-0"><p className="mb-1 break-words text-muted-foreground">{form}: {validation.label}</p>{errs.length ? <p className="break-words text-destructive">{form} file not ready: {errs.slice(0, 3).join("; ")}</p>
-            : <Button size="sm" variant="outline" onClick={() => { const b = new Blob([JSON.stringify(j, null, 1)], { type: "application/json" }); const a = document.createElement("a"); a.href = URL.createObjectURL(b); a.download = `${form}_working_${gstin}_${period}.json`; a.click(); URL.revokeObjectURL(a.href); }}>Download {form} working JSON</Button>}</div>;
+            : <Button size="sm" variant="outline" onClick={() => { const b = new Blob([JSON.stringify(j, null, 1)], { type: "application/json" }); downloadBlob(b, `${form}_working_${gstin}_${period}.json`); }}>Download {form} working JSON</Button>}</div>;
         })}</div>
         <p className="text-[11px] text-muted-foreground">Working files have local structural checks only, not official-schema validation. Your accountant must check the applicable official format before filing; nothing is uploaded.</p>
         {!profile && <p className="text-xs text-destructive">No filing scheme recorded for this GSTIN — set it in the tax profile above so monthly or quarterly returns are worked out correctly.</p>}
@@ -337,7 +338,7 @@ export function TaxComputationCard({ fy }: { fy: string }) {
           {other && <p className="mt-1 text-muted-foreground">Under the {other.regime} regime the tax would be {inr(other.total)} ({other.total < liab.total ? `${inr(liab.total - other.total)} less` : other.total > liab.total ? `${inr(other.total - liab.total)} more` : "the same"}).</p>}
           {liab.notes.map((n) => <p key={n} className="text-[11px] text-muted-foreground">{n}</p>)}
           <p className="mt-1 break-words text-muted-foreground">{validateReturnDraft(itrForm, ayOf(fy), ent?.kind ?? "individual", null).label}</p>
-          <Button size="sm" variant="outline" className="mt-2" onClick={() => { const j = itrComputationJson({ fy, pan: ent?.pan ?? null, name: ent?.name ?? "You", form: itrForm, c, l: liab }); const b = new Blob([JSON.stringify(j, null, 1)], { type: "application/json" }); const a = document.createElement("a"); a.href = URL.createObjectURL(b); a.download = `${itrForm}_computation_${fy}.json`; a.click(); URL.revokeObjectURL(a.href); }}>Download {itrForm} computation (JSON)</Button>
+          <Button size="sm" variant="outline" className="mt-2" onClick={() => { const j = itrComputationJson({ fy, pan: ent?.pan ?? null, name: ent?.name ?? "You", form: itrForm, c, l: liab }); const b = new Blob([JSON.stringify(j, null, 1)], { type: "application/json" }); downloadBlob(b, `${itrForm}_computation_${fy}.json`); }}>Download {itrForm} computation (JSON)</Button>
         </div> : <p className="text-xs text-muted-foreground">{unconfirmed ? "Tax is shown once the profile is confirmed." : "Choose the company tax option in its tax profile — no tax figure is shown rather than a guess."}</p>}
         {personal && !unconfirmed && <div className="rounded-xl border p-3 text-xs"><p className="font-semibold">Deductions with proof (old regime) · {dedLines.length}</p>
           {dedLines.map((d) => <p key={d.id} className="flex justify-between gap-2"><span className="break-words">{d.section} · {d.evidence}</span><span className="shrink-0">{inr(d.amount)}<Button size="sm" variant="ghost" className="h-6" onClick={() => save({ taxDeductions: (books.taxDeductions ?? []).filter((x) => x.id !== d.id) })}>Remove</Button></span></p>)}

@@ -2,7 +2,7 @@ import { csvCell } from "@/lib/csv-safe";
 
 /** Rows another owner shared through a company grant. Only rows the database already allowed are passed in. */
 export type SharedTxn = { id: string; employee_id: string; entity_id: string | null; title: string; merchant: string | null; category: string; amount: number; currency: string; expense_date: string; txn_type: string };
-export type SharedDoc = { id: string; owner_id: string; entity_id: string | null; title: string; doc_type: string; doc_date: string | null; file_path: string };
+export type SharedDoc = { id: string; owner_id: string; entity_id: string | null; title: string; doc_type: string; doc_date: string | null; file_path: string; file_name?: string | null; mime_type?: string | null; size_bytes?: number | null };
 export type SharedCompany = { grant_id: string; owner_id: string; entity_id: string; company_name: string; owner_email: string; can_write: boolean };
 
 /** Keeps only rows belonging to this exact owner+company — a second guard on top of the database rules, never a replacement. */
