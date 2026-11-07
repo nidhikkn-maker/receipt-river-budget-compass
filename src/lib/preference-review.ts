@@ -9,3 +9,19 @@ export function preferenceReviewSections(previous:FinancePreferences,next:Financ
  return out.sort();
 }
 export const reviewSectionLabel=(key:string)=>key.replace(/^books\./,'').replace(/([A-Z])/g,' $1').replace(/^./,c=>c.toUpperCase());
+/**
+ * Saved settings may omit protected sections that the app shows as empty defaults (a new
+ * account's first saves). For every protected section the owner did not change, send back
+ * exactly what is stored, so the database sees no protected change; changed sections keep
+ * the new value and still require approval.
+ */
+export function alignUnchangedSections(stored:Record<string,unknown>|null|undefined,next:FinancePreferences,changed:readonly string[]):FinancePreferences{
+ const raw=(stored??{}) as Record<string,unknown>,out={...next} as Record<string,unknown>;
+ for(const k of top) if(!changed.includes(k)){ if(k in raw) out[k]=raw[k]; else delete out[k]; }
+ if(out.books&&typeof out.books==='object'){
+  const rb=(raw.books&&typeof raw.books==='object'?raw.books:{}) as Record<string,unknown>,nb={...(out.books as Record<string,unknown>)};
+  for(const k of books) if(!changed.includes(`books.${k}`)){ if(k in rb) nb[k]=rb[k]; else delete nb[k]; }
+  out.books=nb;
+ }
+ return out as FinancePreferences;
+}
