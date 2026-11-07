@@ -65,6 +65,7 @@ beforeAll(async () => {
       ('${OTHER}', '{}');
   `);
   await db.exec(readFileSync("drizzle/migrations/0066_role_access.sql", "utf8").replace(/--> statement-breakpoint/g, ""));
+  await db.exec(readFileSync("drizzle/migrations/0086_role_permission_scope.sql", "utf8").replace(/--> statement-breakpoint/g, ""));
   await db.exec(`INSERT INTO public.app_admins(user_id) VALUES ('${ADMIN}')`);
 }, 30000);
 afterAll(async () => { await db.close(); });
@@ -144,5 +145,36 @@ describe("role administration", () => {
     await as(ADMIN, `SELECT public.admin_set_member('${OTHER}','manager','Sales')`);
     expect((await as<{ change: string }>(ADMIN, "SELECT change FROM public.role_permission_audit")).length).toBeGreaterThan(0);
     expect(await as(EMP, "SELECT change FROM public.role_permission_audit")).toEqual([]);
+  });
+});
+
+describe("who can read the access switches", () => {
+  const switches = (uid: string) => as<{ role: string; action: string; allowed: boolean }>(uid, "SELECT role, action, allowed FROM public.role_permissions");
+  it("a manager sees only the manager row for each action", async () => {
+    const rows = await switches(MGR);
+    expect(rows).toHaveLength(8);
+    expect(new Set(rows.map((r) => r.role))).toEqual(new Set(["manager"]));
+    expect(rows.find((r) => r.action === "view_expenses")!.allowed).toBe(true);
+    expect(rows.find((r) => r.action === "view_company_tax")!.allowed).toBe(false);
+  });
+  it("finance sees only the finance rows", async () => {
+    const rows = await switches(FIN);
+    expect(rows).toHaveLength(8);
+    expect(new Set(rows.map((r) => r.role))).toEqual(new Set(["finance"]));
+    expect(rows.find((r) => r.action === "view_company_tax")!.allowed).toBe(true);
+  });
+  it("an employee sees only their own all-off rows", async () => {
+    const rows = await switches(EMP);
+    expect(rows).toHaveLength(8);
+    expect(new Set(rows.map((r) => r.role))).toEqual(new Set(["employee"]));
+    expect(rows.filter((r) => r.allowed)).toEqual([]);
+  });
+  it("an admin sees every role's rows", async () => {
+    const rows = await switches(ADMIN);
+    expect(rows).toHaveLength(24);
+    expect(new Set(rows.map((r) => r.role))).toEqual(new Set(["employee", "manager", "finance"]));
+  });
+  it("someone with no role and no admin flag sees nothing", async () => {
+    expect(await switches("00000000-0000-0000-0000-000000000009")).toEqual([]);
   });
 });

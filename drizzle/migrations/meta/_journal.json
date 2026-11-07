@@ -603,6 +603,13 @@
       "when": 1793982303134,
       "tag": "0085_nested_schedule_intake_validation",
       "breakpoints": true
+    },
+    {
+      "idx": 86,
+      "version": "7",
+      "when": 1794019636192,
+      "tag": "0086_role_permission_scope",
+      "breakpoints": true
     }
   ]
 }
