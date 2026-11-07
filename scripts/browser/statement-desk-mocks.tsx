@@ -1,6 +1,9 @@
 import { useState } from "react";
 import { mergeUploadHistory } from '../../src/lib/statement-pipeline/history';
 import { defaultPreferences, type FinancePreferences, type StatementUpload } from '../../src/lib/preferences';
+import { atomicStatementUndo } from '../../src/lib/statement-pipeline/atomic-undo';
+import { saveWithRecovery } from '../../src/lib/statement-pipeline/save-recovery';
+import type { ExpenseInput } from '../../src/lib/expenses';
 
 // Controlled copies only: no account session, Cloud client or real records.
 const createFixture = () => ({
@@ -18,7 +21,11 @@ const createFixture = () => ({
   loseEvidenceResponse: false,
   failRemoveId: '',
   loseSaveResponse: false,
+  failSaveRead: false,
   failHistoryRemoval: false,
+  atomicUnavailable: false,
+  undoReceipts: JSON.parse(sessionStorage.getItem('controlled-undo-receipts') ?? '[]') as string[],
+  atomicCalls: 0,
 });
 export const fixture = (window as unknown as { deskFixture?: ReturnType<typeof createFixture> }).deskFixture ?? createFixture();
 Object.assign(window, { deskFixture: fixture });
@@ -46,10 +53,16 @@ export function useStore() {
     },
     save: async (input: Record<string, unknown>, opts?: { createId?: string }) => {
       const id = opts?.createId ?? crypto.randomUUID();
+      await saveWithRecovery(async () => {
       if (!fixture.transactions.some((t) => t.id === id)) fixture.transactions.push({ ...input, id, originalAmount: input.amount, currency: "INR", splits: [], reconciledAt: null, statementRef: null });
       fixture.saves.push(id);
       sessionStorage.setItem("controlled-desk-ledger", JSON.stringify(fixture.transactions));
       if (fixture.loseSaveResponse) { fixture.loseSaveResponse = false; throw Error('Saved response interrupted'); }
+      }, async () => {
+        if (fixture.failSaveRead) throw Error('Disconnected read');
+        const t = fixture.transactions.find(t => t['id'] === id);
+        return t ? { ...t, original_amount:t['amount'], expense_date:t['date'], txn_type:t['txnType'], account_id:t['accountId'], to_account_id:t['toAccountId'] ?? null, payment_method:t['paymentMethod'], member_id:t['memberId'] ?? null, fx_rate:1 } : null;
+      }, input as unknown as ExpenseInput);
     },
     remove: async (e: { id: string }) => { if (fixture.failRemoveId === e.id) throw Error('Controlled Undo denied'); fixture.removes.push(e.id); const index = fixture.transactions.findIndex(t => t.id === e.id); if (index >= 0) fixture.transactions.splice(index, 1); sessionStorage.setItem('controlled-desk-ledger', JSON.stringify(fixture.transactions)); },
     reconcile: async (id: string, ref: string | null) => {
@@ -103,3 +116,22 @@ export const supabase = {
   },
   storage: { from: () => ({ download: (path: string) => fetch(`/__fixture/file?path=${encodeURIComponent(path)}`).then(async (r) => ({ data: r.ok ? await r.blob() : null, error: r.ok ? null : new Error("missing") })) }) },
 };
+
+export async function undoStatement({ data }: { data: { id: string; posted: string[]; reconciled: string[]; evidence: { id: string; ref: string }[]; expected: { id: string; ref: string | null; revision: number }[] } }) {
+  await atomicStatementUndo(data.id, data, data.expected, {
+    receipt: async id => { if (fixture.atomicUnavailable) throw Error('Safe Undo is awaiting database release approval. Your records and recovery history are unchanged.'); return fixture.undoReceipts.includes(id); },
+    rows: async ids => fixture.transactions.filter(t => ids.includes(String(t['id']))).map(t => ({ ...t, correction_revision: t['correctionRevision'] ?? 0, statement_ref: t['statementRef'] ?? null })),
+    commit: async (id, items) => {
+      fixture.atomicCalls++;
+      if (items.some(x => x.snapshot['id'] === fixture.failRemoveId)) throw Error('Controlled atomic Undo failed');
+      const next = fixture.transactions.filter(t => !items.some(x => x.action === 'delete' && x.snapshot['id'] === t['id']));
+      for (const t of next) if (items.some(x => x.action === 'unreconcile' && x.snapshot['id'] === t['id'])) Object.assign(t, { statementRef: null, reconciledAt: null });
+      fixture.removes.push(...items.filter(x => x.action === 'delete').map(x => String(x.snapshot['id'])));
+      fixture.transactions = next;
+      fixture.undoReceipts.push(id);
+      sessionStorage.setItem('controlled-undo-receipts', JSON.stringify(fixture.undoReceipts));
+      sessionStorage.setItem('controlled-desk-ledger', JSON.stringify(next));
+    },
+  });
+  return { ok: true };
+}

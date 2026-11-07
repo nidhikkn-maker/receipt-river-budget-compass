@@ -9,6 +9,7 @@ import { deleteFinanceData } from "./delete-data";
 import { privateFileUrl, fetchPrivateFile, type ExpectedFile } from "./private-files";
 import { downloadBlob } from "./reports";
 import { saveExpense } from "./fx.functions";
+import { saveWithRecovery } from './statement-pipeline/save-recovery';
 import {
   CHARGES_CATEGORY, validateAllocations, validateBudget, validateExpense, type Allocation,
   type Budgets, type Category, type Expense, type ExpenseInput, type Member, type PaymentMethod, type Receipt, type ReceiptDetails, type ReimbursementStatus, type Scope, type Split,
@@ -359,6 +360,7 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
         receipts.push({ name: f.name, type: f.type, path });
       }
     }
+    await saveWithRecovery(async () => {
     const res = await saveExpense({ data: {
       id: opts?.id ?? null, ...(opts?.createId ? { createId: opts.createId } : {}), title: s.title.trim(), merchant: s.merchant, category: s.category, scope: s.scope, memberId: s.memberId, splits: s.splits ?? [],
       currency: s.currency, originalAmount: s.amount, date: s.date, description: s.description, paymentMethod: s.paymentMethod,
@@ -368,6 +370,12 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
       ...(receipts ? { receipts } : {}),
     } });
     if (!res.ok) throw new Error(res.error);
+    }, async () => {
+      if (opts?.id || !opts?.createId || receipts?.length) return null;
+      const result = await supabase.from('expenses').select('*').eq('id', opts.createId).eq('employee_id', userId).maybeSingle();
+      if (result.error) return null;
+      return result.data;
+    }, s);
     if (!opts?.noRefresh) await refresh();
   };
 

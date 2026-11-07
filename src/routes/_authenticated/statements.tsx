@@ -5,6 +5,7 @@ import { SectionTabs } from "@/components/SectionTabs";
 import { AccountantSettings } from "@/components/AccountantSettings";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { settledUpload } from "@/lib/statement-pipeline/history";
+import { undoStatement } from '@/lib/statement-pipeline/atomic-undo.functions';
 import { toast } from "sonner";
 import { Download, Inbox, ShieldCheck, Upload, X } from "lucide-react";
 import { Card } from "@/components/Money";
@@ -382,7 +383,11 @@ function StatementDeskPage() {
     if (failed.length) toast.error(`${failed.length} not linked — ${failed[0]}`);
   };
 
+  const undoStatementFn = useServerFn(undoStatement);
+  const undoing = useRef(false);
   const undo = async (r: ApplyResult, uploadId?: string) => {
+    if (undoing.current) return;
+    undoing.current = true;
     const initial = storeRef.current.preferences.statementUploads ?? [];
     const target = uploadId ?? initial.find(u => u.posted.join() === r.posted.join() && u.reconciled.join() === r.reconciled.join())?.id;
     try {
@@ -392,7 +397,16 @@ function StatementDeskPage() {
         if (u) await storeRef.current.saveStatementUpload({ ...u, undoError: 'Undo unfinished — retry to check remaining records and cleanup.' });
       }
       await storeRef.current.refresh();
-      const { left } = await undoUpload(r, api());
+      if (!target) throw Error('Upload history is required for safe Undo. Review the saved records first.');
+      const currentApi = api();
+      const { left } = await undoUpload(r, { ...currentApi, atomicUndo: async result => {
+        const ids = [...new Set([...result.posted, ...result.reconciled])];
+        const expected = ids.flatMap(id => {
+          const entry = currentApi.transactions.find(t => t.id === id);
+          return entry ? [{ id, ref: entry.statementRef, revision: entry.correctionRevision ?? 0 }] : [];
+        });
+        await undoStatementFn({ data: { id: target, posted: result.posted, reconciled: result.reconciled, evidence: result.evidence ?? [], expected } });
+      } });
       setResult(null);
       const s = storeRef.current;
       const list = s.preferences.statementUploads ?? [];
@@ -402,6 +416,7 @@ function StatementDeskPage() {
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Couldn’t reverse the upload.");
     } finally {
+      undoing.current = false;
       setProgress(null);
     }
   };

@@ -31,7 +31,8 @@ BEGIN
  FOR item IN SELECT value FROM jsonb_array_elements(_items) LOOP
   SELECT to_jsonb(e) INTO row_now FROM public.expenses e
    WHERE e.id=(item->'snapshot'->>'id')::uuid AND e.employee_id=uid;
-  IF NOT FOUND OR row_now IS DISTINCT FROM item->'snapshot' THEN
+  -- Canonicalise transport timestamps/numerics back through the real row type.
+  IF NOT FOUND OR row_now IS DISTINCT FROM to_jsonb(jsonb_populate_record(NULL::public.expenses,item->'snapshot')) THEN
    RAISE EXCEPTION 'Record changed; Undo retained for fresh review';
   END IF;
   IF row_now->>'statement_ref' IS DISTINCT FROM item->>'ref' THEN RAISE EXCEPTION 'Source evidence changed'; END IF;
