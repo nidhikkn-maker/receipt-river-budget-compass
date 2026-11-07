@@ -11,7 +11,7 @@ describe("on-device speed check", () => {
     expect(summarise(slow).find((r) => r.path === "/inbox")!.result).toBe("slow");
   });
   it("needs at least 3 opens before judging", () => {
-    expect(summarise([s("/inbox", 100), s("/inbox", 100)])[0].result).toBe("no_data");
+    expect(summarise([s("/inbox", 100), s("/inbox", 100)])[0]!.result).toBe("no_data");
   });
   it("drops invalid timings and keeps only the newest samples", () => {
     expect(addSample([], s("/inbox", -1))).toEqual([]);
@@ -19,7 +19,7 @@ describe("on-device speed check", () => {
     let l: ReturnType<typeof addSample> = [];
     for (let i = 0; i < PERF_MAX + 5; i++) l = addSample(l, s("/x", i));
     expect(l.length).toBe(PERF_MAX);
-    expect(l[0].ms).toBe(5);
+    expect(l[0]!.ms).toBe(5);
   });
   it("nearest-rank percentile", () => {
     expect(percentile([1, 2, 3, 4, 5, 6, 7, 8, 9, 10], 90)).toBe(9);
