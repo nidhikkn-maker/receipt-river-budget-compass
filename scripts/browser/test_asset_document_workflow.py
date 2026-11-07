@@ -27,6 +27,7 @@ async def main():
   await page.goto('http://localhost:8080/statements',wait_until='domcontentloaded')
   await page.get_by_label('Maintenance original').set_input_files(ROOT/'service.png')
   review=page.get_by_role('region',name='Document review service.png')
+  await page.wait_for_timeout(1500); print('STATE',await page.locator('main').inner_text()); print('ERRORS',errors)
   await expect(review.get_by_label('Asset for this document')).to_have_value('generator-1')
   await review.get_by_role('button',name='Confirm and save').click()
   await expect(review.get_by_role('button',name='Retry',exact=True)).to_be_visible()
