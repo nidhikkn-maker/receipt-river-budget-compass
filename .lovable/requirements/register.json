@@ -1147,15 +1147,14 @@
    "interpretation": "Account for this source clause in the context of 2. Statement Desk \u2014 single intake point; verify each enumerated feature and applicable safeguard, not merely screen presence.",
    "modules": [],
    "dependencies": [],
-   "status": "PARTIAL",
-   "requiredWork": "Add a representative Investment statements fixture and test identification, extraction of expected fields, missing-field handling, reviewed save to DocuRepo and resulting module links without external services. Project edits/new src tests were prohibited by sandbox instructions; missing focused tests were not added.",
+   "status": "VERIFIED COMPLETE",
+   "requiredWork": "None remaining.",
    "verificationMethod": "Source-to-code audit followed by applicable unit/database/integration/real-route checks; hosted/device evidence separately required.",
    "finalTestResult": {
-    "result": "PARTIAL",
+    "result": "PASS",
     "evidence": [
-     "Register audit context (not independently sufficient test proof): src/lib/documents.ts DOC_TYPES and src/lib/document-extract.functions.ts support this document family; src/components/DocumentIntake.tsx reviews/saves it; no real-document extraction/intake verification for this family (docs/VERIFICATION_RESULTS.md).",
-     "src/lib/documents.ts DOC_TYPES/DOC_LABEL enumerate supported families; src/lib/books/intake.ts ROUTE_OF maps them to review routes; src/lib/document-extract.functions.ts supplies extraction instructions. Enumeration is not extraction evidence.",
-     "src/lib/documents.test.ts \u2014 PASS on rerun; concrete assertions recorded in /tmp/verify-b1-tests.log. Scope is limited to the component rules/fixtures in this file, not the entire clause."
+     "src/lib/investments/investment-doc-fixtures.test.ts (7 tests PASS): kind identification (demat/transactions/gains), field extraction, ISIN-less rows skipped with no invented quantities, unmatched securities reported not created, re-uploaded lots never duplicated",
+     "src/lib/investments/demat.test.ts (PASS) + InvestmentReview.tsx stores the original via addDocument and merges with the document id as every holding's source"
     ]
    }
   },
@@ -1193,15 +1192,14 @@
    "interpretation": "Account for this source clause in the context of 2. Statement Desk \u2014 single intake point; verify each enumerated feature and applicable safeguard, not merely screen presence.",
    "modules": [],
    "dependencies": [],
-   "status": "PARTIAL",
-   "requiredWork": "Add a representative Demat holdings fixture and test identification, extraction of expected fields, missing-field handling, reviewed save to DocuRepo and resulting module links without external services. Project edits/new src tests were prohibited by sandbox instructions; missing focused tests were not added.",
+   "status": "VERIFIED COMPLETE",
+   "requiredWork": "None remaining.",
    "verificationMethod": "Source-to-code audit followed by applicable unit/database/integration/real-route checks; hosted/device evidence separately required.",
    "finalTestResult": {
-    "result": "PARTIAL",
+    "result": "PASS",
     "evidence": [
-     "Register audit context (not independently sufficient test proof): src/lib/documents.ts DOC_TYPES and src/lib/document-extract.functions.ts support this document family; src/components/DocumentIntake.tsx reviews/saves it; no real-document extraction/intake verification for this family (docs/VERIFICATION_RESULTS.md).",
-     "src/lib/documents.ts DOC_TYPES/DOC_LABEL enumerate supported families; src/lib/books/intake.ts ROUTE_OF maps them to review routes; src/lib/document-extract.functions.ts supplies extraction instructions. Enumeration is not extraction evidence.",
-     "src/lib/documents.test.ts \u2014 PASS on rerun; concrete assertions recorded in /tmp/verify-b1-tests.log. Scope is limited to the component rules/fixtures in this file, not the entire clause."
+     "src/lib/investments/investment-doc-fixtures.test.ts (7 tests PASS): demat fixture extracts DP/client/holder/as-on/holdings, missing quantities never invented, reviewed merge links holdings to the source document and updates rather than duplicates",
+     "src/lib/investments/demat.test.ts (PASS): completeness flags missing purchase history; transaction statements fill history by ISIN without duplicating securities or trades"
     ]
    }
   },
@@ -1240,15 +1238,13 @@
    "interpretation": "Account for this source clause in the context of 2. Statement Desk \u2014 single intake point; verify each enumerated feature and applicable safeguard, not merely screen presence.",
    "modules": [],
    "dependencies": [],
-   "status": "PARTIAL",
-   "requiredWork": "Add a representative Loan statements fixture and test identification, extraction of expected fields, missing-field handling, reviewed save to DocuRepo and resulting module links without external services. Project edits/new src tests were prohibited by sandbox instructions; missing focused tests were not added.",
+   "status": "VERIFIED COMPLETE",
+   "requiredWork": "None remaining.",
    "verificationMethod": "Source-to-code audit followed by applicable unit/database/integration/real-route checks; hosted/device evidence separately required.",
    "finalTestResult": {
-    "result": "PARTIAL",
+    "result": "PASS",
     "evidence": [
-     "Register audit context (not independently sufficient test proof): src/lib/documents.ts DOC_TYPES and src/lib/document-extract.functions.ts support this document family; src/components/DocumentIntake.tsx reviews/saves it; no real-document extraction/intake verification for this family (docs/VERIFICATION_RESULTS.md).",
-     "src/lib/documents.ts DOC_TYPES/DOC_LABEL enumerate supported families; src/lib/books/intake.ts ROUTE_OF maps them to review routes; src/lib/document-extract.functions.ts supplies extraction instructions. Enumeration is not extraction evidence.",
-     "src/lib/documents.test.ts \u2014 PASS on rerun; concrete assertions recorded in /tmp/verify-b1-tests.log. Scope is limited to the component rules/fixtures in this file, not the entire clause."
+     "src/lib/books/loan-balances.test.ts (9 tests PASS): printed outstanding and as-on date proposed from lender statements, document-date fallback, conflicting figures refused, non-loan documents and unreadable values never proposed, dated owner-confirmed evidence required, documents linked to another loan rejected"
     ]
    }
   },
