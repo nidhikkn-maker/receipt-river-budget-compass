@@ -2,7 +2,7 @@ import { StageStrip } from "@/components/StageStrip";
 import { canvasNarrative, statementStage } from "@/lib/plain-language";
 import { downloadBlob } from "@/lib/reports";
 import { csvCell } from "@/lib/csv-safe";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useSearch } from "@tanstack/react-router";
 import { SectionTabs } from "@/components/SectionTabs";
 import { AccountantSettings } from "@/components/AccountantSettings";
 import { useEffect, useMemo, useRef, useState } from "react";
