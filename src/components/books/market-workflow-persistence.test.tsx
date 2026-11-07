@@ -231,9 +231,28 @@ it("actual broker-cash account link saves/reloads, counts ledger cash once and p
   await waitFor(async () => expect((await h.reload()).data.books.holdings[0]?.cashAccountId).toBe("bank"));
   await waitFor(() => expect(view.container.textContent).toContain("Counted once in Bank ledger balance"));
   expect(view.container.textContent).toContain("statement cash 1100");
+  expect(view.container.textContent).toContain("statement/ledger difference 100.00 INR");
   expect(view.container.textContent).toContain("₹3,400.00");
   fireEvent.click(view.getByRole("button", { name: "Save today's valuation" }));
   await waitFor(async () => expect((await h.reload()).data.books.snapshots.at(-1)?.netWorth).toBe(3400));
   expect((await h.reload()).data.books.snapshots.at(-1)?.portfolio).toBe(200);
+ } finally { await h.db.close(); }
+}, 30000);
+it("linked broker cash, independent deposit and duplicate manual/Demat security remain separately accounted after reload", async () => {
+ const h = await setup();
+ try {
+  const current = await h.reload();
+  await h.db.query("SELECT save_reviewed_preferences($1,$2::jsonb,$3,true)", [crypto.randomUUID(), JSON.stringify({ ...current.data, books: { ...current.data.books, holdings: [{ id: "cash", name: "Broker cash", kind: "broker_cash", quantity: 1000, sharePct: 100, cashAccountId: "bank", source: "Reviewed broker statement" }, { id: "manual", name: "Manual duplicate security", kind: "etf", isin: "INE009A01021", quantity: 5, sharePct: 100, source: "Manual" }], quotes: [{ key: "isin:INE009A01021", price: 100, at: "2026-11-07", provider: "Original price", freshness: "statement", refreshedAt: "2026-11-07" }] } }), current.revision]);
+  await h.reload();
+  state.demat = [{ id: "demat", broker: "Broker", dpId: "D", clientId: "C", holder: "Owner", holdings: [{ id: "security", isin: "INE009A01021", name: "Actual security", quantity: 5, asOf: "2026-11-07", statementValue: 500, lots: [], gains: [], sources: ["original-demat"] }] }];
+  const view = render(<><NetWorthCard /><MarketPanel /></>); fireEvent.click(view.getByText("Investments & net worth"));
+  await waitFor(() => expect(view.container.textContent).toContain("Counted once from your demat statement: Manual duplicate security"));
+  expect(view.container.textContent).toContain("₹3,900.00");
+  expect(view.container.textContent).toContain("₹700.00");
+  expect(view.container.textContent).toContain("statement and ledger agree");
+  expect(view.container.textContent).not.toContain("without a price");
+  fireEvent.click(view.getByRole("button", { name: "Save today's valuation" }));
+  await waitFor(async () => expect((await h.reload()).data.books.snapshots.at(-1)?.netWorth).toBe(3900));
+  expect((await h.reload()).data.books.snapshots.at(-1)?.portfolio).toBe(700);
  } finally { await h.db.close(); }
 }, 30000);
