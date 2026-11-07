@@ -44,7 +44,7 @@ async def main():
     await page.wait_for_timeout(1000); print(route_name,errors,(await page.locator('body').inner_text())[:500])
     await expect(page.get_by_role('heading',name=heading,**({} if isinstance(heading,re.Pattern) else {'exact':True})).first).to_be_visible(timeout=15000)
     plain_checks={'dashboard':['Your Money Story','Recent activity'],'spaces':['Personal','Family','Business','Travel','Investments'],'inbox':['To review','Reconciled','Ignored','Ready to confirm','What to do next'],'wealth':['Net Worth','Investments','Goals','Plan & Forecast','What I own','What I owe','My total financial position','Accounting details'],'start':['What would you like to manage?','Money moved between my accounts','Paying my credit card bill','A bank statement','Buying something that lasts','Getting paid back']}
-    for t in plain_checks.get(route_name,[]): await expect(page.get_by_text(t,exact=False).first).to_be_visible()
+    for t in plain_checks.get(route_name,[]): await expect(page.get_by_text(t,exact=False).filter(visible=True).first).to_be_visible()
     if route_name=='start':
      await page.get_by_role('radio',name='Family').click(); await expect(page.get_by_text('Paying my credit card bill')).to_have_count(0); await page.get_by_role('radio',name='Family').click()
     await page.screenshot(path=str(OUT/f'{width}-{route_name}.png'))
