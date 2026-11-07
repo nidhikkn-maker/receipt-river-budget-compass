@@ -4757,7 +4757,7 @@
   {
    "cid": "C-0379",
    "category": "other",
-   "status": "unaudited",
+   "status": "implemented",
    "rep": "Ledgerline should support long-running financial processing tasks independently of the currently open page.",
    "sources": [
     "LEDGERLINE_pasted-14.md:426"
@@ -6485,7 +6485,7 @@
   {
    "cid": "C-0523",
    "category": "entry",
-   "status": "unaudited",
+   "status": "partial",
    "rep": "Do not blindly apply a merchant-level rule when the same merchant legitimately serves different purposes.",
    "sources": [
     "LEDGERLINE_pasted-25.md:281"
@@ -6533,7 +6533,7 @@
   {
    "cid": "C-0527",
    "category": "entry",
-   "status": "unaudited",
+   "status": "implemented",
    "rep": "Do not require individual confirmation for each transaction when a safe bulk action has been approved.",
    "sources": [
     "LEDGERLINE_pasted-27.md:306"
@@ -6545,7 +6545,7 @@
   {
    "cid": "C-0528",
    "category": "entry",
-   "status": "unaudited",
+   "status": "implemented",
    "rep": "Do not place the full transaction review table and account reconciliation forms on the Inbox overview page.",
    "sources": [
     "LEDGERLINE_pasted-28.md:48"
@@ -6557,7 +6557,7 @@
   {
    "cid": "C-0529",
    "category": "entry",
-   "status": "unaudited",
+   "status": "implemented",
    "rep": "If one transaction has several unresolved issues, resolving its category must not incorrectly mark the entire transaction complete.",
    "sources": [
     "LEDGERLINE_pasted-28.md:452"
@@ -6605,7 +6605,7 @@
   {
    "cid": "C-0533",
    "category": "entry",
-   "status": "unaudited",
+   "status": "implemented",
    "rep": "A \u20b94,500 UPI payment to an external merchant must be saved as an expense without requiring an owned receiving account.",
    "sources": [
     "LEDGERLINE_pasted-30.md:768"
@@ -18367,7 +18367,7 @@
   {
    "cid": "C-1513",
    "category": "other",
-   "status": "unaudited",
+   "status": "implemented",
    "rep": "Do not automatically merge records based solely on similar names.",
    "sources": [
     "LEDGERLINE_pasted-12.md:1213"
