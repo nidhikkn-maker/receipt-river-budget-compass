@@ -6,11 +6,12 @@ from playwright.async_api import async_playwright,expect
 HTML='''<!doctype html><html><head><meta name="viewport" content="width=device-width, initial-scale=1"><script>window.__oj_refresh_installed__=true;window.$RefreshReg$=()=>{};window.$RefreshSig$=()=>type=>type;</script></head><body><div id="root"></div><script type="module" src="/scripts/browser/financial-inbox.fixture.tsx"></script></body></html>'''
 class InboxTests(unittest.IsolatedAsyncioTestCase):
  async def asyncSetUp(self):
-  self.p=await async_playwright().start();self.browser=await self.p.chromium.launch(headless=True);self.context=await self.browser.new_context(viewport={'width':1280,'height':1800});self.page=await self.context.new_page();self.errors=[];self.blocked=[];self.page.on('pageerror',lambda e:self.errors.append(str(e)));self.page.on('console',lambda m:print(m.text) if m.type=='error' else None)
+  self.p=await async_playwright().start();self.browser=await self.p.chromium.launch(headless=True);self.context=await self.browser.new_context(viewport={'width':1280,'height':1800});self.page=await self.context.new_page();self.errors=[];self.blocked=[];self.page.on('pageerror',lambda e:self.errors.append(str(e)))
   async def isolate(route):
    r=route.request;u=urlparse(r.url)
    if u.netloc!='localhost:8080' or r.method not in ('GET','HEAD'):self.blocked.append(u.hostname);await route.abort()
    elif u.path in ['/inbox','/transfers']:await route.fulfill(content_type='text/html',body=HTML)
+   elif u.path=='/src/components/books/useAudit.ts':await route.fulfill(content_type='application/javascript',body='export const useAudit=()=>[];export const useAuditAll=()=>({open:[],all:[]});export const auditInboxItems=()=>[];')
    elif u.path in ['/src/lib/store.tsx','/src/lib/import-repository.ts','/src/lib/offline.ts','/src/integrations/supabase/client.ts']:
     exports={'/src/lib/store.tsx':'useStore','/src/lib/import-repository.ts':'listImportRules,listImports,statementEvidence,listImportRows,reviseRows','/src/lib/offline.ts':'readReviewContext,writeReviewContext,localDrafts,localToFile,putLocalDraft,removeLocalDraft,fileToLocal','/src/integrations/supabase/client.ts':'supabase'}[u.path];await route.fulfill(content_type='application/javascript',body=f'export {{ {exports} }} from "/scripts/browser/financial-inbox-mocks.tsx";')
    else:await route.continue_()
