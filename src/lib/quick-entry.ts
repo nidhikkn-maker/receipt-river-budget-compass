@@ -1,9 +1,10 @@
 import { CURRENCIES, PAYMENT_METHODS, type PaymentMethod, type Scope } from "./expenses";
 
-export interface QuickEntrySearch { edit?: string; text?: string; title?: string; merchant?: string; amount?: number; currency?: string; date?: string; payment?: PaymentMethod; account?: string; scope?: Scope; trip?: string; booking?: string; kind?: "advance" | "advance_settlement"; draft?: string; retry?: boolean }
+export interface QuickEntrySearch { mode?: 'scan' | 'voice' | 'quick' | 'message'; edit?: string; text?: string; title?: string; merchant?: string; amount?: number; currency?: string; date?: string; payment?: PaymentMethod; account?: string; scope?: Scope; trip?: string; booking?: string; kind?: "advance" | "advance_settlement"; draft?: string; retry?: boolean }
 /** Shortcut URLs prefill only; they never save or trigger AI without confirmation. */
 export function quickEntrySearch(raw: Record<string, unknown>): QuickEntrySearch {
   const out: QuickEntrySearch = {};
+  if (raw['mode'] === 'scan' || raw['mode'] === 'voice' || raw['mode'] === 'quick' || raw['mode'] === 'message') out.mode = raw['mode'];
   for (const key of ["edit", "title", "merchant", "account"] as const) {
     if (typeof raw[key] === "string" && raw[key].trim()) out[key] = raw[key].trim().slice(0, key === "title" ? 160 : 80);
   }
