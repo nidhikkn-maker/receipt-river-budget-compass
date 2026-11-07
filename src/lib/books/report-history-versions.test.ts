@@ -10,7 +10,7 @@ beforeAll(async()=>{
  await db.exec(readFileSync('.lovable/staged-sql/report-history-versions.sql','utf8'));
 });
 afterAll(()=>db.close());
-it('assigns monotonic versions rather than trusting stale client count and never reuses a deleted version',async()=>{
+it('assigns versions from the highest retained version rather than stale client counts after an older deletion',async()=>{
  expect((await insert(10)).rows[0]?.version).toBe(1);expect((await insert(11)).rows[0]?.version).toBe(2);
  await db.exec("DELETE FROM report_history WHERE version=1");
  expect((await insert(12)).rows[0]?.version).toBe(3);
