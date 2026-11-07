@@ -15,8 +15,8 @@ export const SECTION_GROUPS = {
   ] },
   health: { label: "Account health", tabs: [
     { key: "records", label: "Records check", to: "/records-check", search: {} },
-    { key: "coverage", label: "Statement coverage", to: "/statement-accounts", search: {} },
-    { key: "reconcile", label: "Reconciliation", to: "/account-reconciliation", search: {} },
+    { key: "coverage", label: "Which statements I have", to: "/statement-accounts", search: {} },
+    { key: "reconcile", label: "Check my balances", to: "/account-reconciliation", search: {} },
   ] },
   plan: { label: "Plan", tabs: [
     { key: "plan", label: "Plan & calendar", to: "/plan", search: {} },

@@ -210,14 +210,14 @@ function Overview() {
                   <Link to="/cards/$accountId" params={{ accountId: r.id }} className="block min-w-0 truncate font-medium text-primary">{r.name}</Link>
                   <div className="mt-0.5 text-[11px] leading-snug text-muted-foreground">{statementCaption(r.rec)} · {updatedCaption(r.rec)}</div>
                 </div>
-                <span className={"shrink-0 font-mono " + (r.bal < 0 ? "text-success" : "")}>{r.bal < 0 ? `${money(-r.bal)} credit` : money(r.bal)}</span>
+                <span className={"shrink-0 font-mono " + (r.bal < 0 ? "text-success" : "")}>{r.bal < 0 ? `${money(-r.bal)} in your favour` : money(r.bal)}</span>
               </li>
             ))}
             <li className="flex items-center justify-between gap-3 py-2 font-semibold"><span>Total owed</span><span className="font-mono">{money(cardDue)}</span></li>
           </ul>
           <div className="mt-3 rounded-2xl border bg-card p-3">
             <h3 className="font-display text-sm font-bold">Balance trend</h3>
-            <p className="mb-1 text-[11px] text-muted-foreground">Amount owed at each month end · credit shows below zero · last 6 months</p>
+            <p className="mb-1 text-[11px] text-muted-foreground">What you owed at each month end · below zero means the card owes you money · last 6 months</p>
             {duesOpen && <Suspense fallback={<div className="animate-pulse rounded-xl bg-muted" style={{ height: 180 }} />}><CardTrendChart points={cardTrend} names={cardTrendNames} height={180} /></Suspense>}
           </div>
         </details>

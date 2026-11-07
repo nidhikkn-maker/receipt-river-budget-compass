@@ -171,7 +171,7 @@ export const provisionFor = (amount: number, due: string, today: string) => r2(a
 // ---------- 12. Milestones ----------
 export const MILESTONE_METRICS = ["emergency_amount", "emergency_months", "net_worth", "savings", "card_debt", "loan_balance", "custom"] as const;
 export type MilestoneMetric = (typeof MILESTONE_METRICS)[number];
-export const METRIC_LABEL: Record<MilestoneMetric, string> = { emergency_amount: "Emergency reserve (₹)", emergency_months: "Emergency coverage (months)", net_worth: "Net worth (₹)", savings: "Total cash savings (₹)", card_debt: "Credit card dues down to (₹)", loan_balance: "Loan balance down to (₹)", custom: "Manual progress (₹)" };
+export const METRIC_LABEL: Record<MilestoneMetric, string> = { emergency_amount: "Emergency reserve (₹)", emergency_months: "Emergency coverage (months)", net_worth: "Total financial position (₹)", savings: "Total cash savings (₹)", card_debt: "Credit card dues down to (₹)", loan_balance: "Loan balance down to (₹)", custom: "Manual progress (₹)" };
 export interface Milestone { id: string; name: string; metric: MilestoneMetric; target: number; targetDate: string | null; loanName?: string | undefined; manual?: number | undefined; start?: number | undefined; notify: boolean; history: { date: string; value: number }[]; createdAt: string }
 export interface Metrics { emergencyAmount: number; emergencyMonths: number | null; netWorth: number; savings: number; cardDebt: number; loans: { name: string; principal: number }[] }
 export const isReduction = (m: MilestoneMetric) => m === "card_debt" || m === "loan_balance";

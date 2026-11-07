@@ -1,3 +1,5 @@
+import { AccountingDetails } from "@/components/AccountingDetails";
+import { PLAIN_ACCOUNT_LABEL, accountKindNote } from "@/lib/plain-language";
 import { PaymentMethodsManager } from "@/components/PaymentMethodsManager";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
@@ -46,10 +48,12 @@ function Wealth() {
     <div className="journal-wealth uix-family-money">
       <PageTitle eyebrow="The longer view" title="Wealth & Plan" sub="Accounts, investments and the plans ahead." />
       <div className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-3">
-        <Stat label="Assets" value={money(nw.assets)} />
-        <Stat label="Owed" value={money(nw.liabilities)} />
-        <Stat label="Net worth" value={money(nw.net)} />
+        <Stat label="What I own" value={money(nw.assets)} />
+        <Stat label="What I owe" value={money(nw.liabilities)} />
+        <Stat label="My total financial position" value={money(nw.net)} />
       </div>
+      <p className="-mt-3 mb-4 text-xs text-muted-foreground">What I own includes money available, investments and property at their latest recorded value. What I owe is card dues and loans. Your total position is the difference — it isn't cash you can spend today.</p>
+      <AccountingDetails terms={['cashBalance','investments','liabilities','netWorth']} />
       {canonical.quality.length > 0 && <p className="mb-5 text-xs text-destructive">{canonical.quality.join(' · ')}</p>}
       <FundPortfolio />
       <DematHoldings />
@@ -68,7 +72,7 @@ function Wealth() {
               <div className="flex items-center gap-3">
                 <div className="min-w-0 flex-1">
                   <div className="truncate font-medium">{a.name}</div>
-                  <div className="text-xs text-muted-foreground">{ACCOUNT_LABEL[a.kind]}{isLiability(a.kind) ? " · owed" : ""}{(() => { const eid = Object.entries(preferences.books?.entityAccounts ?? {}).find(([, ids]) => ids.includes(a.id))?.[0]; const n = eid && (preferences.entities ?? []).find((x) => x.id === eid)?.name; return n ? ` · ${n}` : ""; })()}</div>
+                  <div className="text-xs text-muted-foreground">{PLAIN_ACCOUNT_LABEL[a.kind]} · {accountKindNote(a.kind)}{(() => { const eid = Object.entries(preferences.books?.entityAccounts ?? {}).find(([, ids]) => ids.includes(a.id))?.[0]; const n = eid && (preferences.entities ?? []).find((x) => x.id === eid)?.name; return n ? ` · ${n}` : ""; })()}</div>
                 </div>
                 <div className="font-mono">{money(bal)}</div>
                 <Button variant="ghost" size="icon" aria-label={a.archived ? `Restore ${a.name}` : `Archive ${a.name}`}

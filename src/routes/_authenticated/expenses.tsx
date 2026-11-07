@@ -74,7 +74,7 @@ function Expenses() {
 
   return (
     <>
-      <PageTitle eyebrow="Your records" title="Journal" sub="Every money movement, with its original evidence." />
+      <PageTitle eyebrow="Your records" title="Activity" sub="Everything that happened to your money, with the original bill or statement." />
       <div className="mb-4 inline-grid grid-cols-3 rounded-2xl bg-secondary p-1 text-sm" role="radiogroup" aria-label="Show">
         {(["all", "business", "personal"] as const).map((s) => (
           <button key={s} role="radio" aria-checked={f.scope === s} onClick={() => setF({ ...f, scope: s })}

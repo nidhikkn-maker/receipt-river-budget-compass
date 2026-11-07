@@ -80,7 +80,7 @@ it('breakdown review exposes partial traveller plans without changing the primar
   render(<BudgetBreakdown trip={trip} />);
   fireEvent.click(screen.getByRole('tab', { name: 'Traveller' }));
   expect(mock.save).not.toHaveBeenCalled(); expect(trip.budget).toBe(100);
-  expect(screen.getByText(/Partial allocation/)).toBeVisible();
+  expect(screen.getByText(/Only part of the trip budget is split/)).toBeVisible();
 });
 it('workspace, traveller and currency edits save together once; failed save retains the entire reviewed plan',async()=>{
  const trip:TravelTrip={id:'t',name:'Test',destination:'Test',start:'2026-11-01',end:'2026-11-02',budget:100,currencies:['INR']};
@@ -88,11 +88,11 @@ it('workspace, traveller and currency edits save together once; failed save reta
  mock.store={preferences:{...defaultPreferences(),trips:[trip]},transactions:[],members:[],savePreferences:mock.save};
  render(<BudgetBreakdown trip={trip}/>);
  fireEvent.change(screen.getByLabelText('Allocation workspace'),{target:{value:'personal'}});
- fireEvent.change(screen.getByLabelText('Allocation amount'),{target:{value:'100'}});fireEvent.click(screen.getByRole('button',{name:'Add allocation'}));
+ fireEvent.change(screen.getByLabelText('Allocation amount'),{target:{value:'100'}});fireEvent.click(screen.getByRole('button',{name:'Add budget split'}));
  fireEvent.click(screen.getByRole('tab',{name:'Traveller'}));fireEvent.change(screen.getByLabelText('Allocation traveller'),{target:{value:'Me'}});
- fireEvent.change(screen.getByLabelText('Allocation amount'),{target:{value:'40'}});fireEvent.click(screen.getByRole('button',{name:'Add allocation'}));
+ fireEvent.change(screen.getByLabelText('Allocation amount'),{target:{value:'40'}});fireEvent.click(screen.getByRole('button',{name:'Add budget split'}));
  fireEvent.click(screen.getByRole('tab',{name:'Currency'}));fireEvent.change(screen.getByLabelText('Allocation currency'),{target:{value:'USD'}});
- fireEvent.change(screen.getByLabelText('Allocation amount'),{target:{value:'1'}});fireEvent.change(screen.getByLabelText('Planning exchange rate'),{target:{value:'80'}});fireEvent.click(screen.getByRole('button',{name:'Add allocation'}));
+ fireEvent.change(screen.getByLabelText('Allocation amount'),{target:{value:'1'}});fireEvent.change(screen.getByLabelText('Planning exchange rate'),{target:{value:'80'}});fireEvent.click(screen.getByRole('button',{name:'Add budget split'}));
  expect(mock.save).not.toHaveBeenCalled();fireEvent.click(screen.getByRole('button',{name:'Save breakdown'}));
  await waitFor(()=>expect(mock.save).toHaveBeenCalledTimes(1));await waitFor(()=>expect(screen.getByRole('button',{name:'Save breakdown'})).not.toBeDisabled());
  fireEvent.click(screen.getByRole('button',{name:'Save breakdown'}));await waitFor(()=>expect(mock.save).toHaveBeenCalledTimes(2));

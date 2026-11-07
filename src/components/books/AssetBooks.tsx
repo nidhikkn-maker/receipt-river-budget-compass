@@ -153,19 +153,20 @@ export function DepreciationBooks() {
   };
 
   return (
-    <Fold id="depreciation" title="Depreciation books" hint={`FY ${fy} · ${prepared.length} journal${prepared.length === 1 ? "" : "s"} waiting to post`}>
+    <Fold id="depreciation" title="Change in value of things I own" hint={`FY ${fy} · ${prepared.length} monthly value change${prepared.length === 1 ? "" : "s"} waiting for your approval (depreciation)`}>
       <div className="space-y-3 text-xs">
         {exceptions.length > 0 && <div className="rounded-lg bg-destructive/10 p-2 text-destructive"><p className="font-semibold">Exceptions</p>{exceptions.map((r) => <p key={r.a.id}>{r.a.name}: {r.x.join(", ")}</p>)}</div>}
+        <p className="text-sm text-foreground">Things like computers and vehicles are recorded as losing value each year. No money leaves your account — it only changes their recorded value. The tables below use the official income-tax terms your accountant needs.</p>
         <p className="font-semibold">Income-tax blocks (WDV)</p>
         <div className="overflow-x-auto"><table className="w-full min-w-[480px]"><thead><tr className="text-muted-foreground"><th className="text-left">Block</th><th className="text-right">Opening</th><th className="text-right">Additions</th><th className="text-right">Disposals</th><th className="text-right">Depreciation</th><th className="text-right">Closing</th></tr></thead>
           <tbody>{blocks.map((b) => <tr key={b.kind}><td>{ASSET_KINDS[b.kind]} {b.rate}%</td><td className="text-right">{inr(b.opening)}</td><td className="text-right">{inr(b.additionsFull + b.additionsHalf)}{b.additionsHalf ? "*" : ""}</td><td className="text-right">{inr(b.disposals)}</td><td className="text-right">{inr(b.depreciation)}</td><td className="text-right">{inr(b.closing)}</td></tr>)}</tbody></table></div>
         <p className="text-muted-foreground">* used under 180 days in the year — half rate.</p>
         <p className="font-semibold">Book vs tax · FY {fy}</p>
         <div className="space-y-1">{vs.map((v) => { const a = assets.find((x) => x.id === v.assetId)!; return <div key={v.assetId} className="flex flex-wrap justify-between gap-2 border-b py-1"><span>{v.name}</span><span>book {inr(v.book)} · tax {inr(v.tax)} · diff {inr(v.difference)} · NBV {inr(annualBook(a, fy).nbv)}</span></div>; })}</div>
-        {prepared.length > 0 && <Button size="sm" loading={busy} onClick={approve}>{requiresApproval(books.policy, "postDepreciation") ? "Approve & post" : "Post"} {prepared.length}</Button>}
-        {pendingEv.length > 0 && <div className="space-y-1 rounded-lg border p-2"><p className="font-semibold">Write-downs & disposals waiting to post</p>{pendingEv.map(({ id, p }) => <p key={id}>{p.date} · {p.title} · {inr(p.amount)} — lowers the asset account (non-cash)</p>)}<Button size="sm" loading={evBusy} onClick={postEvents}>{requiresApproval(books.policy, "postDepreciation") ? "Approve & post" : "Post"} {pendingEv.length}</Button></div>}
+        {prepared.length > 0 && <Button size="sm" loading={busy} onClick={approve}>{requiresApproval(books.policy, "postDepreciation") ? "Approve & add" : "Add"} {prepared.length} value change{prepared.length === 1 ? "" : "s"} to my records</Button>}
+        {pendingEv.length > 0 && <div className="space-y-1 rounded-lg border p-2"><p className="font-semibold">Value reductions & items sold or scrapped — waiting for your approval</p>{pendingEv.map(({ id, p }) => <p key={id}>{p.date} · {p.title} · {inr(p.amount)} — lowers the asset account (non-cash)</p>)}<Button size="sm" loading={evBusy} onClick={postEvents}>{requiresApproval(books.policy, "postDepreciation") ? "Approve & add" : "Add"} {pendingEv.length} to my records</Button></div>}
         {evProblems.length > 0 && <p className="text-destructive">{[...new Set(evProblems)].join(" · ")}</p>}
-        {prepared.map((j) => <p key={j.id}>{j.period} · {assets.find((a) => a.id === j.assetId)?.name} · {inr(j.amount)} — Dr Depreciation / Cr asset account</p>)}
+        {prepared.map((j) => <p key={j.id}>{j.period} · {assets.find((a) => a.id === j.assetId)?.name} · {inr(j.amount)} — lowers its recorded value <span className="text-muted-foreground">(Dr Depreciation / Cr asset account)</span></p>)}
         <p className="text-muted-foreground">Approved depreciation is saved once per asset per month as a non-cash entry that lowers the asset's own account — never a bank account. Closed months are refused; a retry never posts twice.</p>
       </div>
     </Fold>

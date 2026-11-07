@@ -1,3 +1,5 @@
+import { StageStrip } from "@/components/StageStrip";
+import { canvasNarrative, statementStage } from "@/lib/plain-language";
 import { downloadBlob } from "@/lib/reports";
 import { csvCell } from "@/lib/csv-safe";
 import { createFileRoute } from "@tanstack/react-router";
@@ -217,7 +219,7 @@ function StatementDeskPage() {
   const applying = useRef(false);
   const apply = async () => {
     if (!plan || applying.current) return;
-    if (!navigator.onLine) { toast.error("Reconnect before posting a statement. Your originals must be stored first."); return; }
+    if (!navigator.onLine) { toast.error("You're offline. Reconnect before saving — your original statement must be stored safely first."); return; }
     const requests = plan.accounts
       .map((a) => ({
         account: a,
@@ -379,7 +381,7 @@ function StatementDeskPage() {
       catch (e) { failed.push((e as Error).message); }
     }
     setLinking(null); await loadLinks();
-    if (ok) toast.success(`${ok} transfer${ok > 1 ? "s" : ""} linked between your accounts`);
+    if (ok) toast.success(`${ok} move${ok > 1 ? "s" : ""} between your accounts confirmed — not counted as spending`);
     if (failed.length) toast.error(`${failed.length} not linked — ${failed[0]}`);
   };
 
@@ -516,6 +518,7 @@ function StatementDeskPage() {
           <Button className="mt-2" variant="outline" onClick={() => inputRef.current?.click()}>Choose files</Button>
           <input ref={inputRef} aria-label="Statement files" type="file" multiple accept=".pdf,.csv,.xls,.xlsx,.png,.jpg,.jpeg,.webp" className="hidden" onChange={(e) => { void add(e.target.files); e.target.value = ""; }} />
         </div>
+        <StageStrip stage={statementStage({ files: loaded.length + docs.length, reading: busy, planned: !!plan, pendingDecisions: askKeys.length, confirmedSaved: !!result })} saving={!!progress} />
         {busy && <p role="status" className="text-sm text-muted-foreground">Reading statements on this device…</p>}
         {progress && <p role="status" className="text-sm text-muted-foreground">{progress}</p>}
         {errors.length > 0 && <ul className="space-y-1 text-sm text-destructive" role="alert">{errors.map((e) => <li key={e}>{e}</li>)}</ul>}
@@ -530,7 +533,7 @@ function StatementDeskPage() {
               <li key={l.file.name} className="flex items-start justify-between gap-3 p-3 text-sm">
                 <div className="min-w-0">
                   <p className="truncate font-medium">{l.file.name}</p>
-                  <p className="text-xs text-muted-foreground">{l.entries} entries · out {money(l.debits, l.file.currency)} · in {money(l.credits, l.file.currency)} · closing {l.file.closing !== null ? money(l.file.closing, l.file.currency) : "not printed"}</p>
+                  <p className="text-xs text-muted-foreground">{l.entries} transactions · money out {money(l.debits, l.file.currency)} · money in {money(l.credits, l.file.currency)} · closing {l.file.closing !== null ? money(l.file.closing, l.file.currency) : "not printed"}</p>
                   <p className="text-xs">Account: <span className="font-medium">{l.accountName}</span>{l.file.accountId ? "" : " · new account"}</p>
                   <label className="mt-1 block text-xs text-muted-foreground">This statement belongs to
                     <select
@@ -559,12 +562,12 @@ function StatementDeskPage() {
         <>
           <section aria-label="Statement Intelligent Canvas" className="space-y-1 border-b pb-3">
             <h2 className="font-display text-lg font-semibold">Intelligent Canvas · Statements</h2>
-            <p className="text-sm text-muted-foreground">{loaded.length} source{loaded.length === 1 ? '' : 's'} · {plan.totals.matched} matched · {plan.totals.ask} needing your decision · {plan.totals.later} held back</p>
+            {(() => { const n = canvasNarrative({ kind: "statement", lines: plan.totals.matched + plan.totals.auto + plan.totals.ask + plan.totals.later, unmatched: plan.totals.ask }); return <><p className="text-sm">{n.found} {n.match} {n.help}</p><p className="text-xs text-muted-foreground">{plan.totals.matched} already in your records · {plan.totals.later} held back until the balance adds up · nothing is saved until you confirm. Next: <b>{n.nextAction}</b></p></>; })()}
           </section>
           <div className="grid gap-2 sm:grid-cols-4">
             {[
-              { label: "Already recorded", value: plan.totals.matched },
-              { label: "Saved automatically", value: plan.totals.auto },
+              { label: "Already in my records", value: plan.totals.matched },
+              { label: "Ready to save when you confirm", value: plan.totals.auto },
               { label: "Needs your decision", value: plan.totals.ask },
               { label: "Held back", value: plan.totals.later },
             ].map((t) => (
@@ -580,14 +583,14 @@ function StatementDeskPage() {
               <p className="text-sm text-muted-foreground">
                 {a.isNew ? `New account: ${a.name}` : a.name}
                 {a.appBalance !== null ? ` · balance in the app ${money(a.appBalance)}` : ""}
-                {a.gate && a.newerEntries ? " · the app has newer entries than this statement, so its closing balance isn’t compared" : a.gate ? ` · after these postings ${money(a.gate.after)}${a.gate.difference !== null ? ` · statement says ${money(a.gate.after + a.gate.difference)}` : " · no printed closing figure"}` : ""}
+                {a.gate && a.newerEntries ? " · the app has newer entries than this statement, so its closing balance isn’t compared" : a.gate ? ` · after saving ${money(a.gate.after)}${a.gate.difference !== null ? ` · statement says ${money(a.gate.after + a.gate.difference)}` : " · no printed closing figure"}` : ""}
               </p>
-              {a.gateHeld && a.gate && <p className="text-sm text-destructive" role="status">Balance check off by {money(Math.abs(a.gate.difference ?? 0))} — postings for this account are held until it adds up.</p>}
+              {a.gateHeld && a.gate && <p className="text-sm text-destructive" role="status">Balance check off by {money(Math.abs(a.gate.difference ?? 0))} — nothing for this account will be saved until it adds up. Check the statement's opening and closing balance.</p>}
               {(() => { const r = reconSummary(a); const cur = a.file.currency; return (
-                <section aria-label="Reconciliation summary" className={`space-y-2 rounded-xl border-2 p-3 text-sm ${r.ok ? "border-border" : "border-warning bg-warning/10"}`}>
+                <section aria-label="Balance check summary" className={`space-y-2 rounded-xl border-2 p-3 text-sm ${r.ok ? "border-border" : "border-warning bg-warning/10"}`}>
                   <h3 className="font-semibold">{r.ok ? "Before you save · everything agrees" : "Before you save · check these"}</h3>
                   <dl className="grid grid-cols-2 gap-x-4 gap-y-1 sm:grid-cols-4">
-                    {([["Already in the app", r.matched], ["Will save", r.toSave], ["Unmatched lines", r.unmatchedLines], ["In app, not on statement", r.notOnStatement]] as const).map(([k, v]) => <div key={k}><dt className="text-xs text-muted-foreground">{k}</dt><dd className="font-semibold tabular-nums">{v}</dd></div>)}
+                    {([["Already in the app", r.matched], ["Will save", r.toSave], ["No matching record found", r.unmatchedLines], ["In app, not on statement", r.notOnStatement]] as const).map(([k, v]) => <div key={k}><dt className="text-xs text-muted-foreground">{k}</dt><dd className="font-semibold tabular-nums">{v}</dd></div>)}
                   </dl>
                   <ul className="space-y-0.5 text-xs">
                     <li>{r.statementGap === null ? "Statement balances: opening or closing not printed, so the file can't check itself." : r.statementGap === 0 ? "Statement balances: opening + entries = printed closing." : `Statement balances don't add up — off by ${money(Math.abs(r.statementGap), cur)}.`}</li>
@@ -696,11 +699,11 @@ function StatementDeskPage() {
           <div className="flex flex-wrap items-center gap-2">
             <Button onClick={apply} disabled={!!progress}>{progress ?? `Apply everything (${plan.totals.auto + accepted.length} to save)`}</Button>
             {askKeys.length > 0 && <Button variant="outline" onClick={() => setAccepted(askKeys)}>Accept all {askKeys.length} asking items</Button>}
-            {result && <Button variant="outline" onClick={() => void undo(result)}>Undo this upload ({result.posted.length} posted)</Button>}
+            {result && <Button variant="outline" onClick={() => void undo(result)}>Undo this upload ({result.posted.length} saved)</Button>}
             <Button variant="ghost" onClick={exportCsv}><Download className="size-4" /> Export the plan</Button>
           </div>
           {transferHints.length > 0 && (
-            <Card className="space-y-2 p-3" aria-label="Transfers between your accounts">
+            <Card className="space-y-2 p-3" aria-label="Money moved between your accounts">
               <h3 className="font-semibold">Transfers between your accounts · {transferHints.length}</h3>
               <p className="text-xs text-muted-foreground">Clear matches share a reference or name the other account. Ones that only match on amount stay for you to decide on the Transfers page.</p>
               <ul className="divide-y divide-border rounded-xl border border-border text-sm">{transferHints.map((s) => (
@@ -710,7 +713,7 @@ function StatementDeskPage() {
                 </li>))}</ul>
               <div className="flex flex-wrap gap-2">
                 {transferHints.some((s) => s.strength === "strong") && <Button size="sm" disabled={!!linking} onClick={() => void linkClear()}>{linking ?? `Link ${transferHints.filter((s) => s.strength === "strong").length} clear matches`}</Button>}
-                <Button size="sm" variant="outline" asChild><Link to="/transfers">Review on Transfers page</Link></Button>
+                <Button size="sm" variant="outline" asChild><Link to="/transfers">Review moves between my accounts</Link></Button>
               </div>
             </Card>
           )}

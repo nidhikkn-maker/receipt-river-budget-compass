@@ -39,10 +39,14 @@ async def main():
      name=path.split('/')[-1].removesuffix('.tsx'); await route.fulfill(content_type='application/javascript',body=f'export const {name}={STUBS[name]};')
     else: await route.continue_()
    await context.route('**/*',isolate)
-   for route_name,heading in [('dashboard','Today, Alex.'),('inbox','Review'),('wealth','Wealth & Plan')]:
+   for route_name,heading in [('dashboard','Today, Alex.'),('inbox','Review'),('wealth','Wealth & Plan'),('start','Your money, in plain words')]:
     await page.goto('http://localhost:8080/'+route_name)
     await page.wait_for_timeout(1000); print(route_name,errors,(await page.locator('body').inner_text())[:500])
     await expect(page.get_by_role('heading',name=heading,exact=True)).to_be_visible(timeout=15000)
+    plain_checks={'inbox':['Ready to confirm','Already organised','What to do next'],'wealth':['What I own','What I owe','My total financial position','Accounting details'],'start':['What would you like to manage?','Money moved between my accounts','Paying my credit card bill','A bank statement','Buying something that lasts','Getting paid back']}
+    for t in plain_checks.get(route_name,[]): await expect(page.get_by_text(t,exact=False).first).to_be_visible()
+    if route_name=='start':
+     await page.get_by_role('radio',name='Family').click(); await expect(page.get_by_text('Paying my credit card bill')).to_have_count(0); await page.get_by_role('radio',name='Family').click()
     await page.screenshot(path=str(OUT/f'{width}-{route_name}.png'))
     assert await page.evaluate('document.documentElement.scrollWidth <= innerWidth'), (width,route_name,'overflow')
    await page.goto('http://localhost:8080/dashboard')
@@ -64,12 +68,13 @@ async def main():
    receipt=OUT/'receipt.png';Image.new('RGB',(200,280),'white').save(receipt)
    await page.get_by_label('Take a photo of a receipt').set_input_files(receipt)
    await expect(page.get_by_role('heading',name='Intelligent Canvas')).to_be_visible()
+   await expect(page.get_by_label('What I understood')).to_contain_text('I found a receipt')
    await page.get_by_role('group',name='Review scanned details').evaluate('(el)=>{window.scrollTo(0,window.scrollY+el.getBoundingClientRect().top-72)}'); await page.get_by_role('group',name='Review scanned details').screenshot(path=str(OUT/f'{width}-canvas-detail.png'))
    await page.screenshot(path=str(OUT/f'{width}-canvas.png'))
    assert await page.evaluate('expenseBrowserFixture.saves.length')==0
    assert not errors, errors
    assert not blocked, blocked
-   print(f'{width}: Today/Review/Wealth/Spaces/Smart Add/Canvas no overflow or posting PASS')
+   print(f'{width}: Today/Review/Wealth/Start/Spaces/Smart Add/Canvas plain wording, no overflow or posting PASS')
    await context.close()
   await browser.close()
 asyncio.run(main())
