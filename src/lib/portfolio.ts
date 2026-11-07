@@ -1,6 +1,5 @@
 import { accountBalance, accountValue, type Account, type Txn, type Valuation } from "./ledger";
-
-const round = (n: number) => Math.round(n * 100) / 100;
+import { addMoney, subtractMoney, sumMoney } from "./money";
 const validDate = (date: string) => {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return false;
   const parsed = new Date(`${date}T00:00:00Z`);
@@ -36,7 +35,7 @@ export function buildPortfolio(accounts: Account[], txns: Txn[], valuations: Val
     const flows = accountBalance({ ...account, openingBalance: 0 }, txns.filter(t => t.date > first.valuedOn && t.date <= date));
     const baseline = accountValue(account, [], snapshots, first.valuedOn).value;
     return { accountId: account.id, name: account.name, date, firstDate: first.valuedOn, latestDate: current.valuedOn ?? first.valuedOn,
-      baseline, value: current.value, netFlows: flows, reference: round(baseline + flows), gain: round(current.value - baseline - flows), fundCount: 1 };
+      baseline, value: current.value, netFlows: flows, reference: addMoney(baseline, flows), gain: subtractMoney(subtractMoney(current.value, baseline), flows), fundCount: 1 };
   };
   const firstDate = funds.map(f => f.first.valuedOn).sort()[0];
   if (!firstDate) return empty;
@@ -49,7 +48,7 @@ export function buildPortfolio(accounts: Account[], txns: Txn[], valuations: Val
   }
   const points = [...dates].sort().map(date => {
     const rows = funds.flatMap(f => { const h = holdingAt(f, date); return h ? [h] : []; });
-    const sum = (key: "value" | "reference" | "netFlows" | "gain") => round(rows.reduce((s, h) => s + h[key], 0));
+    const sum = (key: "value" | "reference" | "netFlows" | "gain") => sumMoney(rows.map(h => h[key]));
     return { date, value: sum("value"), reference: sum("reference"), netFlows: sum("netFlows"), gain: sum("gain"), fundCount: rows.length };
   });
   const holdings = funds.flatMap(f => { const h = holdingAt(f, end); return h ? [h] : []; }).sort((a, b) => b.value - a.value);

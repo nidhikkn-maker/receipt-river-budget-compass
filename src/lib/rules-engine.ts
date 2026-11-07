@@ -5,10 +5,12 @@
 import type { Commitment } from "./planning";
 import type { Account, Txn } from "./ledger";
 import type { PaymentReadiness } from "./readiness";
+import { categoryTotals } from "./expenses";
+import { decimal, sumMoney } from "./money";
 
 export const RULE_TRIGGERS = [
   "category_spend", "large_transaction", "duplicate_merchant", "emergency_below",
-  "card_utilisation", "unverified_old", "recurring_increase", "payment_shortfall",
+  "card_utilisation", "unverified_old", "recurring_increase", "payment_shortfall", "budget_utilisation",
 ] as const;
 export type RuleTrigger = (typeof RULE_TRIGGERS)[number];
 
@@ -21,6 +23,7 @@ export const TRIGGER_LABEL: Record<RuleTrigger, string> = {
   unverified_old: "Transactions stay unverified too long",
   recurring_increase: "A recurring payment's price rises",
   payment_shortfall: "A scheduled payment may lack funds",
+  budget_utilisation: "Category budget reaches a percentage",
 };
 
 export type RuleFrequency = "daily" | "weekly" | "monthly";
@@ -62,7 +65,7 @@ export interface RuleEvent {
   to: string;
 }
 
-interface RuleTxn extends Txn { merchant?: string | null; category?: string; title?: string }
+interface RuleTxn extends Txn { merchant?: string | null; category?: string; title?: string; allocations?: { category: string; amount: number }[] }
 
 export interface RuleData {
   transactions: RuleTxn[];
@@ -76,9 +79,10 @@ export interface RuleData {
   recurringIncreases: { name: string; from: number; to: number }[];
   readiness: PaymentReadiness[];
   today: string;
+  /** Saved monthly category budgets, never inferred from spending. */
+  budgets?: Record<string, number>;
 }
 
-const r2 = (n: number) => Math.round(n * 100) / 100;
 const days = (f: RuleFrequency) => (f === "daily" ? 1 : f === "weekly" ? 7 : 30);
 const since = (today: string, n: number) => { const d = new Date(today + "T00:00:00Z"); d.setUTCDate(d.getUTCDate() - n); return d.toISOString().slice(0, 10); };
 const money = (n: number) => `₹${Math.round(n).toLocaleString("en-IN")}`;
@@ -95,8 +99,20 @@ export function evaluateRules(rules: FinanceRule[], d: RuleData): RuleEvent[] {
     switch (r.trigger) {
       case "category_spend": {
         if (!r.category) break;
-        const total = r2(spend.filter((t) => t.category === r.category && t.date.startsWith(month)).reduce((s, t) => s + t.amount, 0));
+        const rows = spend.filter(t => t.date.startsWith(month) && (!r.accountId || t.accountId === r.accountId));
+        const total = categoryTotals(rows.map(t => ({ ...t, category: t.category ?? "" })))[r.category] ?? 0;
         if (total > r.threshold) out.push({ ruleId: r.id, ruleName: r.name, priority: r.priority, message: `${r.category} spending is ${money(total)} this month — over your ${money(r.threshold)} limit`, to: "/expenses" });
+        break;
+      }
+      case "budget_utilisation": {
+        if (!r.category) break;
+        const budget = d.budgets?.[r.category];
+        if (budget == null || !Number.isFinite(budget) || budget <= 0) break;
+        const rows = spend.filter(t => t.date.startsWith(month) && (!r.accountId || t.accountId === r.accountId));
+        const total = categoryTotals(rows.map(t => ({ ...t, category: t.category ?? "" })))[r.category] ?? 0;
+        const pct = decimal(total).mul(100).div(budget);
+        if (pct.gte(r.threshold)) out.push({ ruleId: r.id, ruleName: r.name, priority: r.priority,
+          message: `${r.category} budget is ${pct.toDecimalPlaces(1).toString()}% used — ${money(total)} of ${money(budget)} (alert at ${r.threshold}%)`, to: "/budgets" });
         break;
       }
       case "large_transaction": {
@@ -108,7 +124,9 @@ export function evaluateRules(rules: FinanceRule[], d: RuleData): RuleEvent[] {
         const recent = spend.filter((t) => t.merchant?.trim() && t.date >= since(d.today, Math.max(2, r.threshold)));
         const seen = new Map<string, RuleTxn>();
         for (const t of recent) {
-          const k = `${t.merchant!.trim().toLowerCase()}|${t.amount}`;
+          const merchant = t.merchant?.trim();
+          if (!merchant) continue;
+          const k = `${merchant.toLowerCase()}|${t.amount}`;
           const prev = seen.get(k);
           if (prev) { out.push({ ruleId: r.id, ruleName: r.name, priority: r.priority, message: `${t.merchant} paid ${money(t.amount)} twice — ${prev.date} and ${t.date}`, to: "/expenses" }); break; }
           seen.set(k, t);
@@ -146,7 +164,8 @@ export function evaluateRules(rules: FinanceRule[], d: RuleData): RuleEvent[] {
 export function validateRule(r: Omit<FinanceRule, "id">): void {
   if (!r.name.trim()) throw new Error("Give the rule a name");
   if (!RULE_TRIGGERS.includes(r.trigger)) throw new Error("Pick a condition");
-  if (!(r.threshold >= 0)) throw new Error("Threshold can't be negative");
-  if (r.trigger === "category_spend" && !r.category) throw new Error("Pick the category to watch");
+  if (!Number.isFinite(r.threshold) || r.threshold < 0) throw new Error("Threshold must be a finite non-negative number");
+  if ((r.trigger === "category_spend" || r.trigger === "budget_utilisation") && !r.category) throw new Error("Pick the category to watch");
   if (r.trigger === "card_utilisation" && (r.threshold < 1 || r.threshold > 100)) throw new Error("Card percentage must be 1–100");
+  if (r.trigger === "budget_utilisation" && (r.threshold < 1 || r.threshold > 100)) throw new Error("Budget percentage must be 1–100");
 }
