@@ -409,8 +409,8 @@ function StatementDeskPage() {
       } });
       setResult(null);
       const s = storeRef.current;
-      const list = s.preferences.statementUploads ?? [];
-      if (target && !left.length) await s.savePreferences({ ...s.preferences, statementUploads: list.filter((u) => u.id !== target) });
+      const completed = s.preferences.statementUploads?.find(u => u.id === target);
+      if (completed && !left.length) await s.saveStatementUpload({ ...completed, status: 'undone' });
       if (left.length) toast.error(`${left.length} item${left.length === 1 ? "" : "s"} need review or cleanup. Changed evidence and unconfirmed saves are kept; review saved records and the original before retrying Undo.`);
       else toast.success("Upload reversed — your records are as they were");
     } catch (e) {
@@ -725,11 +725,11 @@ function StatementDeskPage() {
           <Button size="sm" variant="outline" onClick={retryOriginals}>Retry storing originals</Button>
         </Card>
       )}
-      {(preferences.statementUploads ?? []).length > 0 && (
+      {(preferences.statementUploads ?? []).some(u => u.status !== 'undone') && (
         <Card className="space-y-2 p-3" aria-label="Recent uploads">
           <h2 className="font-medium">Recent uploads (any device)</h2>
           <ul className="space-y-2">
-            {(preferences.statementUploads ?? []).map((u) => (
+            {(preferences.statementUploads ?? []).filter(u => u.status !== 'undone').map((u) => (
               <li key={u.id} className="flex flex-wrap items-center justify-between gap-2 text-sm">
                 <span className="min-w-0 flex-1"><span className="block truncate">{u.label || "Upload"}{u.status==='interrupted'?' · interrupted':''}</span><span className="text-xs text-muted-foreground">{new Date(u.at).toLocaleString()} · {u.posted.length} posted · {u.reconciled.length} matched</span>{u.undoError && <span role="alert" className="block text-xs text-destructive">{u.undoError}</span>}</span>
                 {u.status==='interrupted'&&!!u.sources?.length&&<Button size="sm" variant="outline" disabled={!!progress||busy} onClick={()=>recoverUpload(u)}>Review stored originals</Button>}

@@ -9,6 +9,12 @@ export interface UploadHistoryApi {
 export function mergeUploadHistory(data: FinancePreferences, next: StatementUpload): FinancePreferences {
   const history = data.statementUploads ?? [];
   const previous = history.find(u => u.id === next.id);
+  // Terminal markers survive late checkpoints from another device.
+  if (previous?.status === 'undone') return data;
+  if (next.status === 'undone') return { ...data, statementUploads: cleanStatementUploads([
+    { id: next.id, at: next.at, label: next.label, status: 'undone', posted: [], reconciled: [], createdAccounts: [] },
+    ...history.filter(u => u.id !== next.id),
+  ]) };
   const unique = <T,>(items: T[], key: (item: T) => string): T[] => [...new Map(items.map(item => [key(item), item])).values()];
   const merged: StatementUpload = previous ? {
     ...previous, ...next,

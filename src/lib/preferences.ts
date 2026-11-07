@@ -304,7 +304,7 @@ export function cleanMapPositions(raw: unknown): Record<string, { x: number; y: 
   return out;
 }
 
-export interface StatementUpload { id: string; at: string; label: string; posted: string[]; reconciled: string[]; createdAccounts: { id: string; name: string }[]; status?: 'interrupted' | 'complete'; undoError?: string; sources?: { documentId: string; accountId: string; file: string }[]; linkedDrafts?: { draftId: string; transactionId: string }[]; evidence?: { id: string; ref: string }[]; expected?: { posted: number; reconciled: number; drafts?: number } }
+export interface StatementUpload { id: string; at: string; label: string; posted: string[]; reconciled: string[]; createdAccounts: { id: string; name: string }[]; status?: 'interrupted' | 'complete' | 'undone'; undoError?: string; sources?: { documentId: string; accountId: string; file: string }[]; linkedDrafts?: { draftId: string; transactionId: string }[]; evidence?: { id: string; ref: string }[]; expected?: { posted: number; reconciled: number; drafts?: number } }
 const ids = (v: unknown, max: number) => (Array.isArray(v) ? v.filter((x): x is string => typeof x === "string" && x.length <= 64).slice(0, max) : []);
 export function cleanStatementUploads(v: unknown): StatementUpload[] {
   if (!Array.isArray(v)) return [];
@@ -318,6 +318,6 @@ export function cleanStatementUploads(v: unknown): StatementUpload[] {
     const evidence = Array.isArray(o.evidence) ? o.evidence.flatMap(e => e && typeof e.id === 'string' && typeof e.ref === 'string' ? [{ id: e.id.slice(0,64), ref: e.ref.slice(0,1000) }] : []) : undefined;
     const ex = o.expected as { posted?: unknown; reconciled?: unknown; drafts?: unknown } | undefined;
     const expected = ex && Number.isInteger(ex.posted) && Number.isInteger(ex.reconciled) && (ex.posted as number) >= 0 && (ex.reconciled as number) >= 0 ? { expected: { posted: Math.min(ex.posted as number, 3000), reconciled: Math.min(ex.reconciled as number, 3000), ...(Number.isInteger(ex.drafts) && (ex.drafts as number) >= 0 ? { drafts: ex.drafts as number } : {}) } } : {};
-    return [{ id: o.id, at: o.at.slice(0, 40), label: String(o.label ?? "").slice(0, 200), posted: ids(o.posted, 3000), reconciled: ids(o.reconciled, 3000), createdAccounts: created, ...(o.status==='interrupted'||o.status==='complete'?{status:o.status}:{}), ...(typeof o.undoError === 'string' ? { undoError: o.undoError.slice(0, 500) } : {}), sources, linkedDrafts, ...(evidence ? { evidence } : {}), ...expected }];
-  }).filter((u,i,all)=>u.status==='interrupted'||!!u.undoError||all.slice(0,i+1).filter(x=>x.status!=='interrupted'&&!x.undoError).length<=10);
+    return [{ id: o.id, at: o.at.slice(0, 40), label: String(o.label ?? "").slice(0, 200), posted: ids(o.posted, 3000), reconciled: ids(o.reconciled, 3000), createdAccounts: created, ...(o.status==='interrupted'||o.status==='complete'||o.status==='undone'?{status:o.status}:{}), ...(typeof o.undoError === 'string' ? { undoError: o.undoError.slice(0, 500) } : {}), sources, linkedDrafts, ...(evidence ? { evidence } : {}), ...expected }];
+  }).filter((u,i,all)=>u.status==='undone'||u.status==='interrupted'||!!u.undoError||all.slice(0,i+1).filter(x=>x.status!=='undone'&&x.status!=='interrupted'&&!x.undoError).length<=10);
 }
