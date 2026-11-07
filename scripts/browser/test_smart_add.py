@@ -44,25 +44,28 @@ async def main():
    await dialog.screenshot(path=str(OUT/f'{width}-chooser.png'))
    await page.keyboard.press('Escape')
    await expect(dialog).not_to_be_visible()
-   for label,mode in [('Scan or Photo','scan'),('Voice Entry','voice'),('Quick Entry','quick'),('From Message','message')]:
+   # Smart Add works in place: typed modes open the existing entry form inside the sheet, never a page jump.
+   for label,mode in [('Voice Entry','voice'),('Quick Entry','quick'),('From Message','message')]:
     await page.goto('http://localhost:8080/dashboard')
+    start_url=page.url
     await page.get_by_role('button',name='Smart Add',exact=True).filter(visible=True).first.click()
     await page.get_by_role('button',name=label,exact=True).click()
-    await expect(page.get_by_role('button',name='Save expense',exact=True)).to_be_visible()
-    assert f'mode={mode}' in page.url, page.url
+    await expect(dialog.get_by_role('button',name='Save expense',exact=True)).to_be_visible(timeout=15000)
+    assert page.url==start_url, page.url
     assert await page.evaluate('expenseBrowserFixture.saves.length')==0
-    if mode in ('voice','message'): await expect(page.get_by_label('Say or type an entry')).to_be_visible()
-    if mode=='scan': await expect(page.get_by_role('button',name='Take photo',exact=True)).to_be_visible()
+    if mode in ('voice','message'): await expect(dialog.get_by_label('Say or type an entry')).to_be_visible()
     assert await page.evaluate('document.documentElement.scrollWidth <= innerWidth'), 'horizontal overflow'
    await page.screenshot(path=str(OUT/f'{width}-message.png'))
    await page.goto('http://localhost:8080/dashboard')
    await page.get_by_role('button',name='Smart Add',exact=True).filter(visible=True).first.click()
-   await page.get_by_role('button',name='Upload File',exact=True).click()
-   await expect(page.get_by_role('heading',name='Statement destination')).to_be_visible()
-   assert page.url.endswith('/statements')
+   for label,accept in [('Scan or Photo','image/*'),('Upload File',None)]:
+    async with page.expect_file_chooser() as fc: await page.get_by_role('button',name=label,exact=True).click()
+    chooser=await fc.value
+    if accept: assert await chooser.element.get_attribute('accept')==accept
+   assert page.url.endswith('/dashboard'), page.url
    assert not errors, errors
    assert not blocked, blocked
-   print(f'{width}: plus, Escape, four draft modes, upload destination, no auto save/overflow PASS')
+   print(f'{width}: plus, Escape, three typed modes in place, photo/file pickers, no page jump/auto save/overflow PASS')
    await context.close()
   await browser.close()
 asyncio.run(main())
