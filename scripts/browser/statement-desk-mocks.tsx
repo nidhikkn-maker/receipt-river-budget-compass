@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { mergeUploadHistory } from '../../src/lib/statement-pipeline/history';
+import { defaultPreferences, type FinancePreferences, type StatementUpload } from '../../src/lib/preferences';
 
 // Controlled copies only: no account session, Cloud client or real records.
 export const fixture = {
@@ -6,17 +8,19 @@ export const fixture = {
   transactions: JSON.parse(sessionStorage.getItem("controlled-desk-ledger") ?? "[]") as Record<string, unknown>[],
   saves: [] as string[],
   removes: [] as string[],
-  uploads: [] as unknown[],
+  uploads: JSON.parse(sessionStorage.getItem('controlled-desk-uploads') ?? '[]') as StatementUpload[],
   moves: [] as { id: string; before: Record<string, unknown>[] }[],
   documents: [] as Record<string, unknown>[],
   originalAttempts: [] as string[],
   failOriginals: false,
+  failCompletion: false,
+  failReconcile: false,
 };
 Object.assign(window, { deskFixture: fixture });
 
 export function useStore() {
   const [, bump] = useState(0);
-  const [preferences, setPreferences] = useState<Record<string, unknown>>({ categories: [{ name: "Food", archived: false }, { name: "Other", archived: false }], tags: [], statementUploads: [] });
+  const [preferences, setPreferences] = useState<FinancePreferences>({ ...defaultPreferences(), categories: [{ name: "Food", archived: false }, { name: "Other", archived: false }], statementUploads: fixture.uploads });
   const refresh = async () => bump((n) => n + 1);
   return {
     userId: "controlled-statement-owner",
@@ -29,16 +33,21 @@ export function useStore() {
       return meta.id;
     },
     confirmTransfer: async () => {},
-    savePreferences: async (next: Record<string, unknown>) => { fixture.uploads = (next.statementUploads as unknown[]) ?? []; setPreferences(next); },
-    saveStatementUpload: async (upload: {id:string}) => { const history=fixture.uploads as {id:string}[]; fixture.uploads=[upload,...history.filter(u=>u.id!==upload.id)];setPreferences(previous=>({...previous,statementUploads:fixture.uploads})); },
+    savePreferences: async (next: FinancePreferences) => { fixture.uploads = next.statementUploads ?? []; sessionStorage.setItem('controlled-desk-uploads', JSON.stringify(fixture.uploads)); setPreferences(next); },
+    saveStatementUpload: async (upload: StatementUpload) => {
+      if (upload.status === 'complete' && fixture.failCompletion) throw Error('Completion status response interrupted');
+      const next = mergeUploadHistory({ ...preferences, statementUploads: fixture.uploads }, upload);
+      fixture.uploads = next.statementUploads ?? []; sessionStorage.setItem('controlled-desk-uploads', JSON.stringify(fixture.uploads)); setPreferences(next);
+    },
     save: async (input: Record<string, unknown>, opts?: { createId?: string }) => {
       const id = opts?.createId ?? crypto.randomUUID();
       if (!fixture.transactions.some((t) => t.id === id)) fixture.transactions.push({ ...input, id, originalAmount: input.amount, currency: "INR", splits: [], reconciledAt: null, statementRef: null });
       fixture.saves.push(id);
       sessionStorage.setItem("controlled-desk-ledger", JSON.stringify(fixture.transactions));
     },
-    remove: async (e: { id: string }) => { fixture.removes.push(e.id); fixture.transactions.splice(fixture.transactions.findIndex((t) => t.id === e.id), 1); },
+    remove: async (e: { id: string }) => { fixture.removes.push(e.id); const index = fixture.transactions.findIndex(t => t.id === e.id); if (index >= 0) fixture.transactions.splice(index, 1); sessionStorage.setItem('controlled-desk-ledger', JSON.stringify(fixture.transactions)); },
     reconcile: async (id: string, ref: string | null) => {
+      if (fixture.failReconcile) { fixture.failReconcile = false; throw Error('Evidence linking interrupted'); }
       const entry = fixture.transactions.find(t => t.id === id);
       if (!entry) throw new Error("Missing saved statement entry");
       Object.assign(entry, { statementRef: ref, reconciledAt: ref ? new Date().toISOString() : null });
