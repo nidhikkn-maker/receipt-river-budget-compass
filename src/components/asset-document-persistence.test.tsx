@@ -60,6 +60,7 @@ describe("connected asset document review and installed database", () => {
       expect(view.getByLabelText("Asset for this document")).toHaveValue(asset.id);
       fireEvent.click(view.getByRole("button", { name: "Confirm and save" }));
       await view.findByRole("button", { name: "Retry" }, { timeout: 10000 });
+      if (commit.mock.calls.length !== 1) throw new Error(view.getByRole("alert").textContent ?? "No commit attempted");
       fireEvent.click(view.getByRole("button", { name: "Retry" }));
       await waitFor(() => expect(commit).toHaveBeenCalledTimes(2));
       await new Promise(resolve => setTimeout(resolve, 100));
