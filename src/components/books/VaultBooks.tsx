@@ -20,6 +20,7 @@ export function VaultBooks() {
   const [entityId, setEntityId] = useState(""); const [fy, setFy] = useState(""); const [reg, setReg] = useState("");
   const [picked, setPicked] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
+  const [exportError, setExportError] = useState<string | null>(null);
   const today = new Date().toISOString().slice(0, 10);
   const [ask, setAsk] = useState("");
   const nl = ask.trim() ? parseDocQuery(ask, entities, today) : null;
@@ -34,13 +35,14 @@ export function VaultBooks() {
     const chosen = docs.filter((d) => picked.includes(d.id));
     if (!chosen.length) return;
     setBusy(true);
+    setExportError(null);
     try {
       const { selectedDocumentZip } = await import('@/lib/books/docrepo-export');
       const bytes = await selectedDocumentZip(docs, picked, books.docLinks, new Date().toISOString(), signedUrl);
       const blob = new Blob([new Uint8Array(bytes)], { type: "application/zip" });
       const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = `docurepo-export-${today}.zip`; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 30_000);
       toast.success(`${chosen.length} original document${chosen.length > 1 ? "s" : ""} exported with a manifest`);
-    } catch (e) { toast.error((e as Error).message); } finally { setBusy(false); }
+    } catch (e) { const message = (e as Error).message; setExportError(message); toast.error(message); } finally { setBusy(false); }
   };
 
   return (
@@ -60,6 +62,7 @@ export function VaultBooks() {
             <span className="min-w-0"><b className="break-words">{d.title}</b><span className="block text-muted-foreground">{DOC_LABEL[d.docType]} · {d.fileName}{ls.length ? ` · linked to ${ls.map((l) => `${l.kind} ${l.label}`).join(", ")}` : ""}</span></span></label>; })}
         </details>)}
         <div className="flex flex-wrap gap-2"><Button size="sm" variant="outline" disabled={!picked.length} loading={busy} onClick={exportZip}>Export {picked.length || ""} as ZIP</Button>{picked.length > 0 && <Button size="sm" variant="ghost" onClick={() => setPicked([])}>Clear</Button>}</div>
+        {exportError && <p role="alert" className="text-xs text-destructive">Export not created: {exportError}. Selection retained; retry Export.</p>}
         {renew.length > 0 && <div className="text-xs"><b>Renewals coming up</b>{renew.map((r) => <p key={r.key}>{r.title}</p>)}<p className="text-muted-foreground">These also appear in your reminders.</p></div>}
         <details className="text-xs"><summary className="cursor-pointer text-muted-foreground">Retention policy{old.length ? ` · ${old.length} past retention` : ""}</summary>
           <div className="mt-2 grid grid-cols-2 gap-1 sm:grid-cols-3">{(Object.keys(DEFAULT_RETENTION) as DocType[]).map((t) => <label key={t}>{DOC_LABEL[t]}<Input type="number" min={0} className="h-8" value={books.retentionYears[t] ?? DEFAULT_RETENTION[t] ?? 8} onChange={(e) => save({ retentionYears: { ...books.retentionYears, [t]: Math.max(0, Number(e.target.value) || 0) } })} /></label>)}</div>
