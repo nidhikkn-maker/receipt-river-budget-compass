@@ -1,4 +1,5 @@
 # Components
+- Smart Add dispatches draft-only modes to Universal Entry and files to Statement Desk; Canvas adds presentation to existing receipt review, never a second parser or posting path.
 - Long settings-style pages use the shared Fold (details) component, which opens itself for a matching URL hash; pop-ups use the shared centred Dialog so phone sizing stays consistent.
 
 # Receipt-reading rules (src/lib modules these components use)

@@ -4,7 +4,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Button } from './ui/button';
 import type { Scope } from '@/lib/expenses';
 
-export function SmartAdd({ open, onOpenChange, scope }: { open: boolean; onOpenChange: (open: boolean) => void; scope?: Scope }) {
+export function SmartAdd({ open, onOpenChange, scope }: { open: boolean; onOpenChange: (open: boolean) => void; scope?: Scope | undefined }) {
   const navigate = useNavigate();
   const entry = (mode: 'scan' | 'voice' | 'quick' | 'message') => {
     onOpenChange(false);
