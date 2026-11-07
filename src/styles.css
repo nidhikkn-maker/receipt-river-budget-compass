@@ -1034,3 +1034,10 @@ html[data-theme="apple-glass"] :where(.bg-card, .bg-popover, .bg-ink) {
 .uix-shell .journal-record:hover { background: var(--secondary); }
 .journal-rail :where(button,a):hover { background: var(--secondary); color: var(--foreground); }
 @media (max-width: 1000px) { .uix-family-reports :where(.recharts-responsive-container) { max-width: 100%; overflow: hidden; } }
+
+.uix-family-business :where(button,select) { max-width: 100%; white-space: normal; overflow-wrap: anywhere; }
+.uix-family-business .shrink-0 { flex-shrink: 1; min-width: 0; }
+.uix-family-business select { max-width: 100%; width: auto; }
+.uix-family-business :where(.flex) { flex-wrap: wrap; }
+.uix-family-reports :where(button) { white-space: normal; max-width: 100%; }
+.uix-family-reports :where(.flex) { flex-wrap: wrap; }
