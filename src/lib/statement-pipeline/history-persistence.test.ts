@@ -18,7 +18,7 @@ it('two sessions, stale revision and lost response retain unrelated preferences,
       GRANT SELECT ON finance_preferences TO authenticated; ALTER TABLE finance_preferences ENABLE ROW LEVEL SECURITY;
       CREATE POLICY own ON finance_preferences USING(owner_id=auth.uid());`);
     await db.exec(readFileSync('drizzle/migrations/0080_reviewed_preference_saves.sql','utf8'));
-    await db.query('INSERT INTO finance_preferences(owner_id,data) VALUES($1,$2)',[owner,JSON.stringify(defaultPreferences)]);
+    await db.query('INSERT INTO finance_preferences(owner_id,data) VALUES($1,$2)',[owner,JSON.stringify(defaultPreferences())]);
     await db.query("SELECT set_config('test.uid',$1,false)",[owner]);await db.exec('SET ROLE authenticated');
     const read:UploadHistoryApi['read']=async()=>{
       const row=(await db.query<{data:FinancePreferences;revision:number}>('SELECT data,revision::int FROM finance_preferences')).rows[0];
@@ -48,6 +48,6 @@ it('two sessions, stale revision and lost response retain unrelated preferences,
 
 it('persistent checkpoint failure stops after three attempts instead of claiming progress synced',async()=>{
   let writes=0;
-  await expect(checkpointUpload({id:'run',at:'2026-11-07',label:'file',posted:[],reconciled:[],createdAccounts:[]},{read:async()=>({data:defaultPreferences,revision:0}),write:async()=>{writes++;throw Error('Network offline');}})).rejects.toThrow('Network offline');
+  await expect(checkpointUpload({id:'run',at:'2026-11-07',label:'file',posted:[],reconciled:[],createdAccounts:[]},{read:async()=>({data:defaultPreferences(),revision:0}),write:async()=>{writes++;throw Error('Network offline');}})).rejects.toThrow('Network offline');
   expect(writes).toBe(3);
 });
