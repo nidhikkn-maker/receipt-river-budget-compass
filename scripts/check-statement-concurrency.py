@@ -25,8 +25,11 @@ def main():
     if unprivileged:
         os.chown(base, 65534, 65534)
         os.chown(sock, 65534, 65534)
-    subprocess.run(unprivileged + ['initdb', '-D', str(data), '-A', 'trust', '--no-locale'], check=True, capture_output=True)
-    subprocess.run(unprivileged + ['pg_ctl', '-D', str(data), '-l', str(base/'server.log'), '-o', f"-k {sock} -h '' -p 55439", '-w', 'start'], check=True, capture_output=True)
+    # Resolve symlinks so PostgreSQL discovers its bundled shared libraries in this sandbox.
+    initdb = str(Path(shutil.which('initdb') or 'initdb').resolve())
+    pg_ctl = str(Path(shutil.which('pg_ctl') or 'pg_ctl').resolve())
+    subprocess.run(unprivileged + [initdb, '-D', str(data), '-A', 'trust', '--no-locale'], check=True, capture_output=True)
+    subprocess.run(unprivileged + [pg_ctl, '-D', str(data), '-l', str(base/'server.log'), '-o', f"-k {sock} -h '' -p 55439", '-w', 'start'], check=True, capture_output=True)
     args = ['psql', '-X', '-qAt', '-v', 'ON_ERROR_STOP=1', '-h', str(sock), '-p', '55439', '-U', 'nobody' if unprivileged else os.environ.get('USER', 'root'), '-d', 'postgres']
     def sql(query, ok=True):
         result = subprocess.run(args + ['-c', query], capture_output=True, text=True)
@@ -110,7 +113,7 @@ def main():
         passed.append('concurrent direct edit wins safely, whole Undo refused')
         print(json.dumps({'passed': len(passed), 'cases': passed, 'scope': 'disposable multi-session PostgreSQL; staged function only'}, indent=2))
     finally:
-        subprocess.run(unprivileged + ['pg_ctl', '-D', str(data), '-m', 'immediate', '-w', 'stop'], capture_output=True)
+        subprocess.run(unprivileged + [pg_ctl, '-D', str(data), '-m', 'immediate', '-w', 'stop'], capture_output=True)
         shutil.rmtree(base)
 
 if __name__ == '__main__': main()
