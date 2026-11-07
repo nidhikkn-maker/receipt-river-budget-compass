@@ -11199,7 +11199,8 @@
         "evidence": [
           "src/lib/investments/demat.ts: parseInvestmentDoc/mergeInvestmentDoc maintain holdings, trades and events; src/lib/books/fund-statement.ts proposes mutual-fund holdings.",
           "2026-11-07: source-first Statement Desk now retains content-addressed originals before ledger writes, source IDs on reconciliation refs, partial result/new-account reuse; actual CSV/PDF route browser recovery passes plus disposable pipeline/report records (not production store/cloud storage). Bonds and explicit broker-cash links added with persisted net-worth UI/snapshot tests; broad source/provider/permission/statement association clauses remain PARTIAL.",
-          "7 Nov: four staged exact-company SQL/upload-orchestration security cases PASS, current grant/uploader/path checks and readback-before-cleanup. No live rollout or hosted file-service proof."
+          "7 Nov: four staged exact-company SQL/upload-orchestration security cases PASS, current grant/uploader/path checks and readback-before-cleanup. No live rollout or hosted file-service proof.",
+          "Final company-security suite: 5 isolated staged-SQL/orchestration cases PASS including retagging, uploader access removal, hidden-reference cleanup protection and evidence-path immutability; full 239 files/1,847 PASS. Live deployment and hosted download remain unverified."
         ]
       }
     },
