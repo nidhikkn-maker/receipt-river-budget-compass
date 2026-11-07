@@ -137,7 +137,7 @@ class StatementDeskFlow(unittest.IsolatedAsyncioTestCase):
             await self.page.get_by_role("button", name="Accept all 1 asking items").click()
             await self.page.get_by_role("button", name="Apply everything (1 to save)").click()
             await expect(self.page.get_by_role("button", name="Undo this upload (1 posted)")).to_be_visible()
-            print("SOURCE DEBUG", await self.page.evaluate("({refs: deskFixture.transactions.map(t=>t.statementRef), docs: deskFixture.documents.map(d=>d.id), toasts: [...document.querySelectorAll("[data-sonner-toast]")].map(n=>n.textContent)})"))
+            print("SOURCE DEBUG", await self.page.evaluate("({refs: deskFixture.transactions.map(t=>t.statementRef), docs: deskFixture.documents.map(d=>d.id)})"))
             await self.page.wait_for_function("amount => deskFixture.transactions.some(t => t.amount === amount && typeof t.statementRef === 'string' && t.statementRef.startsWith('document:'))", arg=amount)
             await self.page.get_by_role("button", name=f"Remove {name}").click()
         saved = await self.page.evaluate("({total: deskFixture.transactions.reduce((s,t) => s+t.amount,0), docs: deskFixture.documents.length, refs: deskFixture.transactions.map(t => t.statementRef)})")
