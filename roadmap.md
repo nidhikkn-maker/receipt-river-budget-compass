@@ -1,3 +1,6 @@
+
+## Safeguard status (7 Nov 2026 15:54 UTC, owner-accepted)
+- Budget completeness authority and append-only merchant history: isolated development and testing COMPLETE (owner accepted). Production activation PENDING owner release approval; do not retest unless related code changes.
 ## Active verification checkpoint (7 Nov 2026)
 - [x] 11:57 Main batch: foreign broker cash currency/form/INR valuation and comparison; monotone fresh-read revision-checked statement checkpoints, exact DP/client demat lost-response readback and same-file cash review handoff. Actual investment review/holdings-store + installed SQL source/retry/duplicate/owner/Home PASS; full 241/1,853 PASS; browser 4 PASS; build OK. 565/332/2 unchanged; zero promotions.
 - [ ] Isolated Hosted workflow acceptance draft completed: nine actual-API checks PASS but empty browser downloads FAIL. Inspect/fix draft download integrity; no acceptance/publish or Main storage rollout. Complete mixed brokerage reviewed posting/report and durable source/bank-account lost-response/stale-safe Undo, then hosted two-context recovery. Exact criteria/results in docs/evidence/connected-workflow-acceptance-2026-11-07.md.
@@ -901,3 +904,4 @@
 - [x] Staged report version assignment under owner/kind/period transaction lock, stale count/older deletion/null-period/owner/duplicate evidence2PASS; final focused safeguards/report16PASS. Not installed; true contention/hosted acceptance pending.
 - [ ] Merchant/category independent-connection phantom concurrency and backup/closed-period compatibility; report frozen accepted inputs + atomic versions + hosted history recovery; remaining precision engines and partial implementation.
 - [ ] 31 missing real-device/owner-document/live-site/integration/final-process items stay accurately missing; no repeated historical audit, real-record changes, approval activation or publication. Evidence: docs/evidence/workstream-1-safeguard-corrections-2026-11-07.md.
+- [x] C-0181 share-to-app (Web Share Target) built: files kept on device, reviewed before saving; iOS Share Sheet platform limit; device acceptance pending. Missing 31→30.

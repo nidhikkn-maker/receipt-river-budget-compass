@@ -14,6 +14,7 @@ import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as McpRouteImport } from './routes/mcp'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
+import { Route as ShareTargetRouteImport } from './routes/share-target'
 import { Route as Char91DotwellKnownChar93OauthProtectedResourceRouteImport } from './routes/[.well-known]/oauth-protected-resource'
 import { Route as AuthenticatedAccountReconciliationRouteImport } from './routes/_authenticated/account-reconciliation'
 import { Route as AuthenticatedAllocationRouteImport } from './routes/_authenticated/allocation'
@@ -54,6 +55,7 @@ import { Route as AuthenticatedReviewRouteImport } from './routes/_authenticated
 import { Route as AuthenticatedRulesRouteImport } from './routes/_authenticated/rules'
 import { Route as AuthenticatedSearchRouteImport } from './routes/_authenticated/search'
 import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings'
+import { Route as AuthenticatedSharedRouteImport } from './routes/_authenticated/shared'
 import { Route as AuthenticatedStatementAccountsRouteImport } from './routes/_authenticated/statement-accounts'
 import { Route as AuthenticatedStatementCrosscheckRouteImport } from './routes/_authenticated/statement-crosscheck'
 import { Route as AuthenticatedStatementsRouteImport } from './routes/_authenticated/statements'
@@ -104,6 +106,11 @@ const McpRoute = McpRouteImport.update({
 const ResetPasswordRoute = ResetPasswordRouteImport.update({
   id: '/reset-password',
   path: '/reset-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ShareTargetRoute = ShareTargetRouteImport.update({
+  id: '/share-target',
+  path: '/share-target',
   getParentRoute: () => rootRouteImport,
 } as any)
 const Char91DotwellKnownChar93OauthProtectedResourceRoute =
@@ -322,6 +329,11 @@ const AuthenticatedSettingsRoute = AuthenticatedSettingsRouteImport.update({
   path: '/settings',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedSharedRoute = AuthenticatedSharedRouteImport.update({
+  id: '/shared',
+  path: '/shared',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedStatementAccountsRoute =
   AuthenticatedStatementAccountsRouteImport.update({
     id: '/statement-accounts',
@@ -476,6 +488,7 @@ export interface FileRoutesByFullPath {
   '/auth': typeof AuthRoute
   '/mcp': typeof McpRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/share-target': typeof ShareTargetRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/account-reconciliation': typeof AuthenticatedAccountReconciliationRoute
   '/allocation': typeof AuthenticatedAllocationRoute
@@ -516,6 +529,7 @@ export interface FileRoutesByFullPath {
   '/rules': typeof AuthenticatedRulesRoute
   '/search': typeof AuthenticatedSearchRoute
   '/settings': typeof AuthenticatedSettingsRoute
+  '/shared': typeof AuthenticatedSharedRoute
   '/statement-accounts': typeof AuthenticatedStatementAccountsRoute
   '/statement-crosscheck': typeof AuthenticatedStatementCrosscheckRoute
   '/statements': typeof AuthenticatedStatementsRoute
@@ -549,6 +563,7 @@ export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
   '/mcp': typeof McpRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/share-target': typeof ShareTargetRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/account-reconciliation': typeof AuthenticatedAccountReconciliationRoute
   '/allocation': typeof AuthenticatedAllocationRoute
@@ -589,6 +604,7 @@ export interface FileRoutesByTo {
   '/rules': typeof AuthenticatedRulesRoute
   '/search': typeof AuthenticatedSearchRoute
   '/settings': typeof AuthenticatedSettingsRoute
+  '/shared': typeof AuthenticatedSharedRoute
   '/statement-accounts': typeof AuthenticatedStatementAccountsRoute
   '/statement-crosscheck': typeof AuthenticatedStatementCrosscheckRoute
   '/statements': typeof AuthenticatedStatementsRoute
@@ -623,6 +639,7 @@ export interface FileRoutesById {
   '/auth': typeof AuthRoute
   '/mcp': typeof McpRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/share-target': typeof ShareTargetRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/_authenticated/account-reconciliation': typeof AuthenticatedAccountReconciliationRoute
   '/_authenticated/allocation': typeof AuthenticatedAllocationRoute
@@ -663,6 +680,7 @@ export interface FileRoutesById {
   '/_authenticated/rules': typeof AuthenticatedRulesRoute
   '/_authenticated/search': typeof AuthenticatedSearchRoute
   '/_authenticated/settings': typeof AuthenticatedSettingsRoute
+  '/_authenticated/shared': typeof AuthenticatedSharedRoute
   '/_authenticated/statement-accounts': typeof AuthenticatedStatementAccountsRoute
   '/_authenticated/statement-crosscheck': typeof AuthenticatedStatementCrosscheckRoute
   '/_authenticated/statements': typeof AuthenticatedStatementsRoute
@@ -698,6 +716,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/mcp'
     | '/reset-password'
+    | '/share-target'
     | '/.well-known/oauth-protected-resource'
     | '/account-reconciliation'
     | '/allocation'
@@ -738,6 +757,7 @@ export interface FileRouteTypes {
     | '/rules'
     | '/search'
     | '/settings'
+    | '/shared'
     | '/statement-accounts'
     | '/statement-crosscheck'
     | '/statements'
@@ -771,6 +791,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/mcp'
     | '/reset-password'
+    | '/share-target'
     | '/.well-known/oauth-protected-resource'
     | '/account-reconciliation'
     | '/allocation'
@@ -811,6 +832,7 @@ export interface FileRouteTypes {
     | '/rules'
     | '/search'
     | '/settings'
+    | '/shared'
     | '/statement-accounts'
     | '/statement-crosscheck'
     | '/statements'
@@ -844,6 +866,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/mcp'
     | '/reset-password'
+    | '/share-target'
     | '/.well-known/oauth-protected-resource'
     | '/_authenticated/account-reconciliation'
     | '/_authenticated/allocation'
@@ -884,6 +907,7 @@ export interface FileRouteTypes {
     | '/_authenticated/rules'
     | '/_authenticated/search'
     | '/_authenticated/settings'
+    | '/_authenticated/shared'
     | '/_authenticated/statement-accounts'
     | '/_authenticated/statement-crosscheck'
     | '/_authenticated/statements'
@@ -919,6 +943,7 @@ export interface RootRouteChildren {
   AuthRoute: typeof AuthRoute
   McpRoute: typeof McpRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
+  ShareTargetRoute: typeof ShareTargetRoute
   Char91DotwellKnownChar93OauthProtectedResourceRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   UTokenRoute: typeof UTokenRoute
   DotlovableOauthConsentRoute: typeof DotlovableOauthConsentRoute
@@ -968,6 +993,13 @@ declare module '@tanstack/react-router' {
       path: '/reset-password'
       fullPath: '/reset-password'
       preLoaderRoute: typeof ResetPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/share-target': {
+      id: '/share-target'
+      path: '/share-target'
+      fullPath: '/share-target'
+      preLoaderRoute: typeof ShareTargetRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/.well-known/oauth-protected-resource': {
@@ -1250,6 +1282,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedSettingsRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/shared': {
+      id: '/_authenticated/shared'
+      path: '/shared'
+      fullPath: '/shared'
+      preLoaderRoute: typeof AuthenticatedSharedRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/statement-accounts': {
       id: '/_authenticated/statement-accounts'
       path: '/statement-accounts'
@@ -1495,6 +1534,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedRulesRoute: typeof AuthenticatedRulesRoute
   AuthenticatedSearchRoute: typeof AuthenticatedSearchRoute
   AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRoute
+  AuthenticatedSharedRoute: typeof AuthenticatedSharedRoute
   AuthenticatedStatementAccountsRoute: typeof AuthenticatedStatementAccountsRoute
   AuthenticatedStatementCrosscheckRoute: typeof AuthenticatedStatementCrosscheckRoute
   AuthenticatedStatementsRoute: typeof AuthenticatedStatementsRoute
@@ -1554,6 +1594,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedRulesRoute: AuthenticatedRulesRoute,
   AuthenticatedSearchRoute: AuthenticatedSearchRoute,
   AuthenticatedSettingsRoute: AuthenticatedSettingsRoute,
+  AuthenticatedSharedRoute: AuthenticatedSharedRoute,
   AuthenticatedStatementAccountsRoute: AuthenticatedStatementAccountsRoute,
   AuthenticatedStatementCrosscheckRoute: AuthenticatedStatementCrosscheckRoute,
   AuthenticatedStatementsRoute: AuthenticatedStatementsRoute,
@@ -1579,6 +1620,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthRoute: AuthRoute,
   McpRoute: McpRoute,
   ResetPasswordRoute: ResetPasswordRoute,
+  ShareTargetRoute: ShareTargetRoute,
   Char91DotwellKnownChar93OauthProtectedResourceRoute:
     Char91DotwellKnownChar93OauthProtectedResourceRoute,
   UTokenRoute: UTokenRoute,
