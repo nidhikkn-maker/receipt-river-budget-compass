@@ -15,3 +15,6 @@ it("outdated coupon periods and maturity never reuse stale prices as cash", () =
  expect(bondPrice(holding, quote, "2026-07-01").unitPrice).toBeNull();
  expect(bondPrice(holding, quote, "2027-01-01").note).toContain("Matured");
 });
+it("invalid printed dates cannot silently roll into another coupon period", () => {
+ expect(bondPrice({ ...holding, bond: { ...terms, lastCoupon: "2026-02-30" } }, quote, "2026-04-01").unitPrice).toBeNull();
+});

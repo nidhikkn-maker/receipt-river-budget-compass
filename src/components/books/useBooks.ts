@@ -91,6 +91,7 @@ export function useNetWorth() {
     // A holding that names its exchange is valued at that exchange's close, never the other one's [v6.1 §3].
     const valued = books.holdings.filter((h) => !(h.isin && dematIsins.has(h.isin))).map((h) => {
       if (h.kind === "broker_cash" && h.cashAccountId) {
+        if (h.sharePct !== 100) return { holding: h, key: null, quote: null, value: null, stale: false, note: "Confirm a fully owned cash account before linking this broker balance" };
         const account = live.find(a => a.id === h.cashAccountId && ["savings","current","cash","wallet"].includes(a.kind));
         const balance = account ? accountValue(account, transactions, valuations).value : null;
         const gap = balance == null ? null : Math.round((h.quantity * h.sharePct / 100 - balance)*100)/100;

@@ -7,7 +7,11 @@ export interface BondTerms {
   couponsPerYear: number; priceBasis: "amount" | "percent"; priceIncludesInterest: boolean;
   currency: string; docId: string; sourceQuote: string;
 }
-const day = (date: string) => /^\d{4}-\d{2}-\d{2}$/.test(date) ? Date.parse(`${date}T00:00:00Z`) : NaN;
+const day = (date: string) => {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return NaN;
+  const value = Date.parse(`${date}T00:00:00Z`);
+  return Number.isFinite(value) && new Date(value).toISOString().slice(0,10) === date ? value : NaN;
+};
 export function bondProblem(t: BondTerms): string | null {
   if (!(t.faceValue > 0) || !Number.isFinite(t.faceValue) || !(t.couponPct >= 0) || !Number.isFinite(t.couponPct)) return "Enter evidenced face value and coupon rate";
   if (![1,2,4,12].includes(t.couponsPerYear)) return "Choose the printed coupon frequency";

@@ -748,6 +748,7 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
       doc_date: meta.docDate || null, amount: meta.amount, currency: meta.currency, merchant: meta.merchant?.trim() || null, notes: meta.notes.slice(0, 2000), extracted_text: (meta.text ?? "").slice(0, 20000),
       transaction_id: meta.transactionId, account_id: meta.accountId, loan_id: meta.loanId, expires_on: meta.expiresOn || null,
       fields: (meta.fields ?? []).slice(0, 40) as unknown as Json, replaces_id: meta.replacesId ?? null, evidence_locked: !!meta.evidenceLocked,
+      entity_id: meta.entityId ?? null,
     });
     if (error) { await supabase.storage.from("receipts").remove([path]); throw new Error(error.message); }
     await refresh();
