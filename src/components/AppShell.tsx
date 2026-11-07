@@ -2,13 +2,12 @@ import { OfflineBanner } from "@/components/OfflineBanner";
 import { PageSkeleton } from "@/components/PageSkeleton";
 import { NavProgress } from "@/components/NavProgress";
 import { DemoBanner } from "@/components/DemoBanner";
-import { FilePen } from "lucide-react";
 import { DraftsReminder } from "@/components/DraftsReminder";
 import { Link, useRouter, useRouterState , useNavigate } from "@tanstack/react-router";
 import { ArrowLeft, ArrowRight } from "lucide-react";
 import { backStep, showBackButton } from "@/lib/back-nav";
 import { useEffect, useState, type ReactNode } from "react";
-import { BarChart3, Bell, CalendarClock, Gem, Home, Landmark, ListFilter, PiggyBank, Plus, Settings, Sparkles, Users, Eye, EyeOff, FileText, UserRound, TrendingUp, Inbox, HeartPulse, Search, SlidersHorizontal, Split, Network, Plane, Wallet, Bot, Menu, X, MessageCircleQuestion, RefreshCw, CloudOff, Check, TriangleAlert } from "lucide-react";
+import { BarChart3, Bell, Gem, Home, ListFilter, Plus, Settings, Users, Eye, EyeOff, FileText, UserRound, Inbox, Search, Plane, Menu, X, RefreshCw, CloudOff, Check, TriangleAlert } from "lucide-react";
 import { DeviceLock } from "./DeviceLock";
 import { LedgerlineBrand } from "./LedgerlineLogo";
 import { Button } from "./ui/button";
@@ -66,7 +65,8 @@ function SyncStatus() {
     mins == null || mins < 1 ? "Up to date" : `Updated ${mins} min ago`;
   const Icon = syncState === "syncing" ? RefreshCw : syncState === "offline" ? CloudOff : syncState === "error" ? TriangleAlert : Check;
   return (
-    <button
+    <Button
+      variant="ghost"
       type="button"
       onClick={() => (pendingCount > 0 ? void navigate({ to: "/sync-queue" }) : void refresh())}
       aria-live="polite"
@@ -76,7 +76,7 @@ function SyncStatus() {
     >
       <Icon className={"h-3.5 w-3.5" + (syncState === "syncing" ? " animate-spin" : "")} />
       <span className={(syncState === "error" || syncState === "offline" || pendingCount > 0 ? "max-w-24" : "sr-only sm:not-sr-only") + " truncate sm:max-w-none"}>{label}</span>
-    </button>
+    </Button>
   );
 }
 
@@ -101,6 +101,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   useEffect(() => { document.documentElement.classList.toggle("privacy", hidden); localStorage.setItem("ll-privacy", hidden ? "1" : "0"); }, [hidden]);
   return (
     <div className={"journal-shell uix-shell min-h-screen bg-background " + (focused ? '' : 'md:pl-52 xl:pl-64')}>
+      <a href="#main-content" className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50 focus:bg-card focus:p-3">Skip to content</a>
       <aside className={"journal-rail fixed inset-y-0 left-0 z-30 hidden w-52 flex-col gap-2 overflow-y-auto bg-sidebar px-4 py-6 text-sidebar-foreground xl:w-64 " + (focused ? '' : 'md:flex')}>
         <Link to="/dashboard" aria-label="Ledgerline home" className="mb-6 shrink-0"><img src="/app-icon.png" alt="Ledgerline" width={48} height={48} className="h-12 w-12 rounded-2xl shadow-float" /></Link>
         <Button variant="ghost" className="h-11 justify-start gap-3 text-ink-muted hover:bg-sidebar-accent hover:text-ink-foreground" onClick={() => setSpacesOpen(true)}><Users className="size-[18px]" />Spaces</Button>
@@ -117,9 +118,9 @@ export function AppShell({ children }: { children: ReactNode }) {
             <SyncStatus />
             <Button size="icon" variant="ghost" aria-label="Smart Add" title="Smart Add" className="hidden sm:inline-flex lg:hidden" onClick={() => setSmartOpen(true)}><Plus className="size-5" /></Button>
             <Link to="/search" aria-label="Search" className="header-search rounded-xl p-3 text-muted-foreground transition hover:text-foreground"><span className="hidden xl:inline">Search Ledgerline</span><Search className="h-5 w-5" /></Link>
-            <Link to="/inbox" aria-label="Notifications" className="rounded-xl p-2 text-muted-foreground transition hover:text-foreground"><Bell className="h-5 w-5" /></Link>
+            <Link to="/inbox" aria-label="Notifications" className="rounded-xl p-3 text-muted-foreground transition hover:text-foreground"><Bell className="h-5 w-5" /></Link>
             <Button size="icon" variant="ghost" onClick={() => setHidden((h) => !h)} aria-label={hidden ? "Show amounts" : "Hide amounts"} className="rounded-xl text-muted-foreground">{hidden ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}</Button>
-            <Link to="/auth" aria-label={name ? `Account: ${name}` : "Account"} title={name || "Account"} className="rounded-xl p-2 text-muted-foreground transition hover:text-foreground"><UserRound className="h-5 w-5" /></Link>
+            <Link to="/auth" aria-label={name ? `Account: ${name}` : "Account"} title={name || "Account"} className="rounded-xl p-3 text-muted-foreground transition hover:text-foreground"><UserRound className="h-5 w-5" /></Link>
           </div>
         </div>
         <div className="mx-auto max-w-6xl px-4 pb-2 sm:px-8">
@@ -232,8 +233,8 @@ function BackButton() {
   const btn = "inline-flex h-9 items-center gap-1 rounded-full px-2.5 text-sm font-medium text-muted-foreground transition hover:bg-accent hover:text-foreground active:scale-95";
   return (
     <nav aria-label="Page history" className="-ml-2.5 mb-2 flex items-center gap-1">
-      <button type="button" aria-label="Back" onClick={back} className={btn}><ArrowLeft className="size-[18px]" /> Back</button>
-      {canForward && <button type="button" aria-label="Forward" onClick={() => router.history.forward()} className={btn}>Forward <ArrowRight className="size-[18px]" /></button>}
+      <Button variant="ghost" type="button" aria-label="Back" onClick={back} className={btn}><ArrowLeft className="size-[18px]" /> Back</Button>
+      {canForward && <Button variant="ghost" type="button" aria-label="Forward" onClick={() => router.history.forward()} className={btn}>Forward <ArrowRight className="size-[18px]" /></Button>}
     </nav>
   );
 }
