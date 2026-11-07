@@ -3732,7 +3732,7 @@
    "members": [
     "H-7722"
    ],
-   "evidence": "2026-11-07: docs/evidence/workstream-1-batch-2026-11-07b.md (performance causes fixed, Statement Desk e2e incl. duplicate re-upload and undo; device/hosted pending)"
+   "evidence": "2026-11-07: docs/evidence/workstream-1-batch-2026-11-07b.md (performance causes fixed, Statement Desk e2e incl. duplicate re-upload and undo; device/hosted pending) | 2026-11-07d: exact source/receipt read-back, eight staged interruptions, owner-read Undo and original-integrity recovery; isolated tests only, full hosted workflow pending (docs/evidence/workstream-1-batch-2026-11-07d.md)"
   },
   {
    "cid": "C-0293",
@@ -12220,7 +12220,8 @@
    ],
    "members": [
     "H-12035"
-   ]
+   ],
+   "evidence": " | 2026-11-07d: exact source/receipt read-back, eight staged interruptions, owner-read Undo and original-integrity recovery; isolated tests only, full hosted workflow pending (docs/evidence/workstream-1-batch-2026-11-07d.md)"
   },
   {
    "cid": "C-0994",
@@ -13981,7 +13982,8 @@
    ],
    "members": [
     "H-4264"
-   ]
+   ],
+   "evidence": " | 2026-11-07d: exact source/receipt read-back, eight staged interruptions, owner-read Undo and original-integrity recovery; isolated tests only, full hosted workflow pending (docs/evidence/workstream-1-batch-2026-11-07d.md)"
   },
   {
    "cid": "C-1140",

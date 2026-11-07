@@ -73,3 +73,6 @@ See docs/evidence/workstream-1-batch-2026-11-07b.md. Fixed new-account statement
 
 ## 2026-11-07c
 - Save-status recovery and double-submit guard on Statement Desk; Account Reconciliation reads Statement Desk evidence; card bill payment flow verified; icon sizes verified; entries owner/date index. Historical register: 1,553 implemented / 948 partial / 21 missing / 19 superseded. Evidence: docs/evidence/workstream-1-batch-2026-11-07c.md
+
+## Workstream 1 — 7 Nov 2026 recovery/evidence checkpoint
+Exact statement source/receipt completion, authoritative Undo absence checks, eight-stage isolated interruptions, document original hashing and separate confirmed-save cleanup retry; ambiguous DocuRepo identities and controlled original/provenance ZIP fixed. Six controlled Statement Desk browser tests pass. Nine synthetic Inbox observations: 1.10–1.94s; prior hosted 5.45s cause unresolved. Corrected unsupported test-count reporting; no removed historical test paths. No promotions: historical1553/948/21/19;v6566/331/2. See docs/evidence/workstream-1-batch-2026-11-07d.md. No real records, activation or publication.

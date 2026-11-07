@@ -164,6 +164,45 @@ class StatementDeskFlow(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(await self.page.evaluate("deskFixture.transactions[0].accountId"), "card")
         self.assertEqual(await self.page.evaluate("deskFixture.saves.length"), 0)
 
+    async def test_completed_save_status_recovers_after_reload_without_duplicates(self):
+        await self.page.evaluate('deskFixture.failCompletion = true')
+        csv = 'Date,Description,Debit,Credit\n2026-10-02,SWIGGY ORDER,250,\n2026-10-03,AMAZON PURCHASE,480,\n'
+        await self.page.get_by_label('Statement files').set_input_files(files=[{'name': 'recover.csv', 'mimeType': 'text/csv', 'buffer': csv.encode()}])
+        await self.page.locator('select').first.select_option('desk-account')
+        await self.page.get_by_role('button', name='Accept all 2 asking items').click()
+        await self.page.get_by_role('button', name='Apply everything (2 to save)').dblclick()
+        await expect(self.page.get_by_role('button', name='Undo this upload (2 posted)')).to_be_visible()
+        self.assertEqual(await self.page.evaluate('deskFixture.transactions.length'), 2)
+        await self.page.reload(wait_until='domcontentloaded')
+        await self.page.wait_for_function("window.deskFixture && deskFixture.uploads.length === 1 && deskFixture.uploads[0].status === 'complete'")
+        self.assertEqual(await self.page.evaluate('deskFixture.transactions.length'), 2)
+        await self.page.get_by_label('Recent uploads').screenshot(path=str(EVIDENCE / 'recovered-completion.png'))
+        await self.page.get_by_label('Recent uploads').get_by_role('button', name='Undo', exact=True).click()
+        await expect(self.page.get_by_label('Recent uploads')).to_have_count(0)
+        self.assertEqual(await self.page.evaluate('deskFixture.transactions.length'), 0)
+        await self.page.reload()
+        await expect(self.page.get_by_role("heading", name="Statement Desk")).to_be_visible()
+        self.assertEqual(await self.page.evaluate('deskFixture.transactions.length'), 0)
+
+    async def test_partial_evidence_save_stays_interrupted_after_reload(self):
+        await self.page.evaluate('deskFixture.failReconcile = true')
+        csv = 'Date,Description,Debit,Credit\n2026-10-02,SWIGGY ORDER,250,\n2026-10-03,AMAZON PURCHASE,480,\n'
+        await self.page.get_by_label('Statement files').set_input_files(files=[{'name': 'partial.csv', 'mimeType': 'text/csv', 'buffer': csv.encode()}])
+        await self.page.locator('select').first.select_option('desk-account')
+        await self.page.get_by_role('button', name='Accept all 2 asking items').click()
+        await self.page.get_by_role('button', name='Apply everything (2 to save)').click()
+        await expect(self.page.get_by_label('Recent uploads')).to_contain_text('interrupted')
+        await self.page.wait_for_function('deskFixture.transactions.length === 1')
+        self.assertEqual(await self.page.evaluate('deskFixture.transactions.length'), 1)
+        await self.page.reload()
+        await expect(self.page.get_by_role("heading", name="Statement Desk")).to_be_visible()
+        await expect(self.page.get_by_label('Recent uploads')).to_contain_text('interrupted')
+        self.assertEqual(await self.page.evaluate('deskFixture.uploads[0].status'), 'interrupted')
+        await self.page.get_by_label('Recent uploads').screenshot(path=str(EVIDENCE / 'partial-remains-interrupted.png'))
+        await self.page.get_by_label('Recent uploads').get_by_role('button', name='Undo', exact=True).click()
+        await expect(self.page.get_by_label('Recent uploads')).to_have_count(0)
+        self.assertEqual(await self.page.evaluate('deskFixture.transactions.length'), 0)
+
 
 if __name__ == "__main__":
     unittest.main()
