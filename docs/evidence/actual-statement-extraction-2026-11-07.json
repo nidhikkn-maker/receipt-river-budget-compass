@@ -1,0 +1,42 @@
+[
+  {
+    "name": "statement.csv",
+    "extraction": "actual deterministic CSV parser",
+    "persistence": "disposable PostgreSQL adapters, not hosted Cloud",
+    "passed": true,
+    "rows": 2,
+    "spent": 730,
+    "closing": 270,
+    "source": "c55e314c-de88-5cb0-b465-af74d4a5a404"
+  },
+  {
+    "name": "scan.jpg",
+    "extraction": "actual AI Gateway streaming / Astra",
+    "persistence": "disposable PostgreSQL adapters, not hosted Cloud",
+    "passed": true,
+    "rows": 2,
+    "spent": 730,
+    "closing": 270,
+    "source": "7da5e439-d183-55d1-893c-b1076d23a228"
+  },
+  {
+    "name": "scanned.pdf",
+    "extraction": "actual AI Gateway streaming / Astra",
+    "persistence": "disposable PostgreSQL adapters, not hosted Cloud",
+    "passed": true,
+    "rows": 2,
+    "spent": 730,
+    "closing": 270,
+    "source": "f84b83b2-5752-55ac-8b9a-9d2ea597e230"
+  },
+  {
+    "name": "text.pdf",
+    "extraction": "actual AI Gateway streaming / Astra",
+    "persistence": "disposable PostgreSQL adapters, not hosted Cloud",
+    "passed": true,
+    "rows": 2,
+    "spent": 730,
+    "closing": 270,
+    "source": "1828ece5-0d02-58fc-aa68-e82732994e9f"
+  }
+]

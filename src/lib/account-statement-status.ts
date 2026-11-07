@@ -1,0 +1,88 @@
+import type { Expense } from "./expenses";
+import { accountBalance, isLiability, type Account } from "./ledger";
+import type { FinancePreferences } from "./preferences";
+import type { ImportBatch, ImportRow } from "./historical-import";
+import { verifyHistoricalBalances } from "./balance-verification";
+import { checkpointCurrent, checkpointSnapshot, type StatementCheckpoint } from "./statement-checkpoint";
+import { canonicalEvidence } from "./statement-evidence";
+import type { AccountCoverage } from "./statement-pipeline/coverage";
+export interface StatementStatusEvidence { batch: ImportBatch; rows: ImportRow[]; posted: { fingerprint: string; transaction_id: string; posted_at: string }[]; checkpoint?: StatementCheckpoint; currentHash?: string; snapshotKey?: string }
+const validDate = (s: string | null | undefined): s is string => !!s && /^\d{4}-\d{2}-\d{2}$/.test(s) && Number.isFinite(Date.parse(s));
+
+/** Account identity is the reviewed account selection, not filename inference. Import readiness is not reconciliation. */
+export function accountStatementStatus(account: Account, evidence: StatementStatusEvidence[], transactions: Expense[], preferences: FinancePreferences, today: string, calculationOnly = false) {
+  const mine = evidence.filter(s => s.batch.account_id === account.id);
+  const ordered = [...mine].sort((a, b) => (b.batch.period_to ?? "").localeCompare(a.batch.period_to ?? ""));
+  const latest = ordered[0];
+  const successful = ordered.find(s => s.batch.status === "review");
+  const batch = latest?.batch;
+  const periodValid = !!batch && validDate(batch.period_from) && validDate(batch.period_to) && batch.period_from <= batch.period_to && batch.period_to <= today && !!latest && latest.rows.every(r => r.line.date >= (batch.period_from ?? "") && r.line.date <= (batch.period_to ?? ""));
+  const review = batch?.balance_verification;
+  const identity = batch?.statement_review?.identity;
+  const identityConfirmed = !!identity?.confirmed && identity.accountId === account.id && !!identity.reference?.trim() && (!!identity.identifier?.trim() || identity.missingIdentifierConfirmed);
+  const coverage = batch?.statement_review?.coverage;
+  const coverageConfirmed = periodValid && identityConfirmed && !!coverage?.confirmed && coverage.from === batch?.period_from && coverage.to === batch?.period_to && !!coverage.reference?.trim();
+  const policy = preferences.freshness.perAccount[account.id] ?? preferences.freshness;
+  const days = coverageConfirmed && batch?.period_to ? Math.floor((Date.parse(today) - Date.parse(batch.period_to)) / 86400000) : null;
+  const freshness = days == null ? "Unknown" : days <= policy.reviewDays ? "Current" : days <= policy.outdatedDays ? "Becoming Outdated" : "Outdated";
+  const rows = latest?.rows ?? [];
+  const postMap = new Map((latest?.posted ?? []).map(p => [p.fingerprint, p]));
+  const matched = rows.filter(r => {
+    const post = postMap.get(r.fingerprint);
+    const t = transactions.find(t => t.id === (post?.transaction_id ?? (r.duplicate_kind === "exact" ? r.duplicate_id : null)));
+    if (!t || ((t.correctionRevision ?? 0) > 0 && !t.reconciledAt) || t.currency !== batch?.currency || t.date !== r.line.date || Math.abs(t.originalAmount - r.line.amount) >= 0.005) return false;
+    const incoming = ["income", "refund", "reimbursement", "advance"].includes(t.txnType ?? "expense") && t.accountId === account.id || t.toAccountId === account.id;
+    return r.line.direction === "credit" ? incoming : t.accountId === account.id && !incoming;
+  });
+  const unresolved = rows.length - matched.length;
+  const postedCount = rows.filter(r => postMap.has(r.fingerprint)).length;
+  const duplicates = rows.filter(r => r.duplicate_kind === "exact").length;
+  const imported = !batch ? "Not Imported" : ["queued", "processing"].includes(batch.status) ? "Importing" : batch.status !== "review" ? "Import Failed" : !identityConfirmed ? "Requires Account Matching" : "Imported";
+  const closing = review?.sourceClosing;
+  const usableBalance = coverageConfirmed && !!review?.checkedOriginal && !!review.sourceReference?.trim() && typeof closing === "number" && Number.isFinite(closing) && batch?.closing_balance != null && Math.abs(Number(batch.closing_balance) - closing) < 0.005;
+  const ledgerClosing = batch?.period_to ? accountBalance(account, transactions.filter(t => t.date <= (batch.period_to ?? ""))) : null;
+  const difference = usableBalance && ledgerClosing != null && batch?.currency === "INR" ? Math.round((closing - ledgerClosing) * 100) / 100 : null;
+  const conventionMatches = batch?.statement_review?.convention === (isLiability(account.kind) ? "liability" : "asset");
+  const calculatedBalance = !usableBalance ? "Not Verified" : batch?.currency !== "INR" || !conventionMatches ? "Verification Unavailable" : difference === 0 ? "Verified" : "Difference Found";
+  const matchedIds = new Set(matched.map(r => postMap.get(r.fingerprint)?.transaction_id ?? r.duplicate_id));
+  const unmatchedLedger = periodValid ? transactions.filter(t => (t.accountId === account.id || t.toAccountId === account.id) && t.date >= (batch?.period_from ?? "") && t.date <= (batch?.period_to ?? "") && !matchedIds.has(t.id)).length : 0;
+  const check = batch && latest && periodValid ? verifyHistoricalBalances({ opening: batch.opening_balance == null ? null : Number(batch.opening_balance), closing: batch.closing_balance == null ? null : Number(batch.closing_balance), sourceOpening: review?.sourceOpening ?? null, sourceClosing: review?.sourceClosing ?? null, checkedOriginal: review?.checkedOriginal ?? false, reference: review?.sourceReference ?? "", lines: rows.map(r => r.line), liability: batch.statement_review?.convention === "liability", ledgerOpening: batch.currency === "INR" ? accountBalance(account, transactions.filter(t => t.date < (batch.period_from ?? ""))) : null, ledgerClosing: batch.currency === "INR" ? ledgerClosing : null, unresolved: unresolved + unmatchedLedger }) : null;
+  const calculatedReconciliation = !latest || !rows.length ? "Not Started" : batch?.status !== "review" || !identityConfirmed || !coverageConfirmed || !conventionMatches ? "Requires Review" : unresolved ? matched.length ? "In Progress" : "Requires Review" : check?.fullyReconciled ? "Reconciled" : difference !== null && difference !== 0 || check?.difference != null && check.difference !== 0 ? "Differences Found" : "Requires Review";
+  const currentCheckpoint = latest && checkpointCurrent(latest) && (!latest.snapshotKey || latest.snapshotKey === canonicalEvidence(checkpointSnapshot(latest,account,transactions)));
+  const reconciliation = calculationOnly ? calculatedReconciliation : currentCheckpoint ? latest.checkpoint?.result.reconciliation ?? "Requires Review" : latest?.checkpoint ? "Requires Review" : matched.length ? "In Progress" : "Not Started";
+  const balance = calculationOnly ? calculatedBalance : currentCheckpoint ? latest.checkpoint?.result.balance ?? "Not Verified" : "Not Verified";
+  const missing = [!identityConfirmed ? "Statement account identity has not been confirmed." : "", !coverageConfirmed ? "Statement coverage has not been confirmed against the original." : "", !usableBalance ? "A reviewed closing balance is missing." : "", !conventionMatches && batch ? "Statement balance convention needs confirmation." : "", !currentCheckpoint && !calculationOnly && batch ? "Run and save a reconciliation check; previous checks may be outdated." : "", unresolved ? `${unresolved} statement rows are not matched to current ledger entries.` : "", unmatchedLedger ? `${unmatchedLedger} ledger entries in this period are not accounted for by statement matches.` : "", batch?.currency !== "INR" && batch ? "Original-currency comparison with the INR ledger is unavailable." : "", !batch ? "No historical import is linked to this account." : ""].filter(Boolean);
+  const toPost = Math.max(0, rows.length - postedCount - duplicates);
+  const nextStep = statementNextStep({ batch: !!batch, importing: !!batch && ["queued","processing"].includes(batch.status), failed: !!batch && !["queued","processing","review"].includes(batch.status), identityConfirmed, toPost, coverageConfirmed, usableBalance, checked: calculationOnly || !!currentCheckpoint });
+  return { nextStep, accountId: account.id, name: account.name, batchId: batch?.id, imported, statementThrough: coverageConfirmed ? batch?.period_to ?? null : null, periodFrom: batch?.period_from ?? null, periodTo: batch?.period_to ?? null, freshness, reconciliation, balance, difference, confirmedBalance: balance === "Verified" ? closing ?? null : null, reconciliationDate: currentCheckpoint ? latest.checkpoint?.created_at ?? null : null, lastSuccessfulImport: successful?.batch.file_name ?? null, parsed: rows.length, posted: postedCount, duplicates, unresolved, matched: matched.length, missing, attention: imported !== "Imported" || freshness !== "Current" || reconciliation !== "Reconciled" || balance !== "Verified" };
+}
+/**
+ * Accounts reconciled through Statement Desk have no historical import batch, so the batch-based status would
+ * keep saying "Upload a statement". Their saved statement-matched entries are the evidence instead. Balance is
+ * never marked verified here: only a reviewed closing figure can do that.
+ */
+export function withStatementDeskEvidence(row: ReturnType<typeof accountStatementStatus>, coverage: AccountCoverage | undefined, policy: { reviewDays: number; outdatedDays: number }) {
+  if (row.batchId || !coverage?.latestStatementDate) return { ...row, source: "historical" as const };
+  const days = coverage.daysBehind ?? Infinity;
+  const freshness = days <= policy.reviewDays ? "Current" : days <= policy.outdatedDays ? "Becoming Outdated" : "Outdated";
+  const gaps = coverage.missingMonths;
+  const reconciliation = gaps.length ? "In Progress" : "Statement-matched";
+  const nextStep = gaps.length ? `Upload statements for ${gaps.join(", ")} in Statement Desk` : freshness === "Current" ? null : "Upload the latest statement in Statement Desk";
+  const missing = [...(gaps.length ? [`${gaps.length} month${gaps.length === 1 ? "" : "s"} with entries but no statement: ${gaps.join(", ")}.`] : []), "Balance is verified only after a reviewed closing figure is saved."];
+  return { ...row, source: "statement-desk" as const, imported: "Imported", statementThrough: coverage.latestStatementDate, freshness, reconciliation, nextStep, missing, attention: true };
+}
+export function accountStatementSummary(rows: ReturnType<typeof accountStatementStatus>[]) {
+  return { total: rows.length, current: rows.filter(r => r.freshness === "Current").length, reconciled: rows.filter(r => r.reconciliation === "Reconciled").length, verified: rows.filter(r => r.balance === "Verified").length, attention: rows.filter(r => r.attention).length };
+}
+/** Plain next action for an account's statement; order follows the review workflow. */
+export function statementNextStep(s: { batch: boolean; importing: boolean; failed: boolean; identityConfirmed: boolean; toPost: number; coverageConfirmed: boolean; usableBalance: boolean; checked: boolean }): string | null {
+  if (!s.batch) return "Upload a statement for this account";
+  if (s.importing) return "Statement is still being read";
+  if (s.failed) return "Statement reading failed — open it to retry";
+  if (!s.identityConfirmed) return "Confirm the statement's account identity";
+  if (s.toPost) return `Approve and import ${s.toPost} statement ${s.toPost === 1 ? "line" : "lines"}`;
+  if (!s.coverageConfirmed) return "Confirm the statement period";
+  if (!s.usableBalance) return "Enter the closing balance shown on the statement";
+  if (!s.checked) return "Run and save the reconciliation check";
+  return null;
+}

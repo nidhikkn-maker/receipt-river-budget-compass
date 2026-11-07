@@ -1,0 +1,16 @@
+import React from 'react';
+import { createRoot } from 'react-dom/client';
+import { createRootRoute, createRoute, createRouter, RouterProvider, Outlet } from '@tanstack/react-router';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { Route as Vault } from '../../src/routes/_authenticated/vault';
+import { Route as Past } from '../../src/routes/_authenticated/historical-import';
+import { Toaster } from '../../src/components/ui/sonner';
+import '../../src/styles.css';
+const client = new QueryClient();
+const root = createRootRoute({ component: () => <QueryClientProvider client={client}><main><Outlet/></main><Toaster/></QueryClientProvider> });
+const layout = createRoute({ getParentRoute: () => root, id: '_authenticated', component: Outlet });
+const vault = createRoute({ getParentRoute: () => layout, path: '/vault', component: Vault.options.component });
+const past = createRoute({ getParentRoute: () => layout, path: '/historical-import', component: Past.options.component });
+const desk = createRoute({ getParentRoute: () => layout, path: '/statements', component: () => <h1>Statement Desk destination</h1> });
+const router = createRouter({ routeTree: root.addChildren([layout.addChildren([vault, past, desk])]) });
+const element = document.getElementById('root'); if (element) createRoot(element).render(<RouterProvider router={router}/>);
