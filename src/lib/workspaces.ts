@@ -1,3 +1,4 @@
+import { roundMoney, addMoney, subtractMoney, proportionMoney, sumMoney } from "./money";
 // Workspaces (Personal/Family/Business/Official), classification suggestions and
 // single-transaction multi-workspace allocations. Allocations reference the original
 // entry; they never create extra transactions, so totals are counted once.
@@ -8,14 +9,14 @@ export type AllocationMethod = "fixed" | "percent" | "equal";
 export type Confidence = "high" | "review" | "none";
 export interface Suggestion { workspace: Scope | null; confidence: Confidence; reason: string }
 
-const r2 = (n: number) => Math.round(n * 100) / 100;
+const r2 = roundMoney;
 
 /** Build shares from a method. Percent inputs are 0–100; the last share absorbs rounding so the sum is exact. */
 export function buildShares(total: number, method: AllocationMethod, parts: { workspace: Scope; value: number }[]): WorkspaceShare[] {
   if (!parts.length) return [];
-  const raw = method === "equal" ? parts.map(() => total / parts.length) : method === "percent" ? parts.map((p) => (total * p.value) / 100) : parts.map((p) => p.value);
-  const out = parts.map((p, i) => ({ workspace: p.workspace, amount: r2(raw[i]!) }));
-  if (method !== "fixed") { const head = out.slice(0, -1).reduce((s, x) => s + x.amount, 0); out[out.length - 1]!.amount = r2(total - head); }
+  const raw = method === "equal" ? parts.map(() => proportionMoney(total, 1, parts.length)) : method === "percent" ? parts.map((p) => proportionMoney(total, p.value, 100)) : parts.map((p) => p.value);
+  const out = parts.map((p, i) => ({ workspace: p.workspace, amount: r2(raw[i] ?? 0) }));
+  if (method !== "fixed") { const head = sumMoney(out.slice(0, -1).map(x => x.amount)); const last = out.at(-1); if (last) last.amount = subtractMoney(total, head); }
   return out;
 }
 
@@ -25,7 +26,7 @@ export function validateShares(shares: WorkspaceShare[], total: number): string 
   if (shares.length < 2) return "Split across at least two workspaces";
   if (new Set(shares.map((s) => s.workspace)).size !== shares.length) return "Each workspace can appear only once";
   if (shares.some((s) => !(s.amount > 0))) return "Every share must be more than zero";
-  const sum = r2(shares.reduce((s, x) => s + x.amount, 0));
+  const sum = sumMoney(shares.map(x => x.amount));
   if (Math.abs(sum - r2(total)) > 0.009) return `Shares add up to ${sum}, but the entry is ${r2(total)}`;
   return null;
 }
@@ -34,16 +35,17 @@ export function validateShares(shares: WorkspaceShare[], total: number): string 
 export function workspaceParts(e: { scope: Scope; amount: number; originalAmount?: number | null; workspaceAllocations?: WorkspaceShare[] }): WorkspaceShare[] {
   const a = e.workspaceAllocations ?? [];
   if (a.length < 2) return [{ workspace: e.scope, amount: e.amount }];
-  const orig = e.originalAmount || a.reduce((s, x) => s + x.amount, 0);
-  const out = a.map((x) => ({ workspace: x.workspace, amount: r2((x.amount / orig) * e.amount) }));
-  const head = out.slice(0, -1).reduce((s, x) => s + x.amount, 0);
-  out[out.length - 1]!.amount = r2(e.amount - head);
+  const orig = e.originalAmount || sumMoney(a.map(x => x.amount));
+  const out = a.map((x) => ({ workspace: x.workspace, amount: proportionMoney(e.amount, x.amount, orig) }));
+  const head = sumMoney(out.slice(0, -1).map(x => x.amount));
+  const last = out.at(-1);
+  if (last) last.amount = subtractMoney(e.amount, head);
   return out;
 }
 
 export function workspaceTotals(list: Parameters<typeof workspaceParts>[0][]): Record<Scope, number> & { total: number } {
   const t = { personal: 0, family: 0, business: 0, official: 0, total: 0 };
-  for (const e of list) { for (const p of workspaceParts(e)) t[p.workspace] = r2(t[p.workspace] + p.amount); t.total = r2(t.total + e.amount); }
+  for (const e of list) { for (const p of workspaceParts(e)) t[p.workspace] = addMoney(t[p.workspace], p.amount); t.total = addMoney(t.total, e.amount); }
   return t;
 }
 
