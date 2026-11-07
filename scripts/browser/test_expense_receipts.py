@@ -207,7 +207,6 @@ class ExpenseReceiptButtons(unittest.IsolatedAsyncioTestCase):
         await review.get_by_label("Subtotal before tax and tip", exact=True).fill("360")
         await expect(review.get_by_label("Tax included", exact=True)).to_have_value("32.1")
         await expect(review.get_by_label("Tip included", exact=True)).to_have_value("40")
-        print("DBG", await review.get_by_text("High reading confidence", exact=True).count(), await review.locator("details.canvas-fields").evaluate("e=>e.open"), [await l.is_visible() for l in await review.get_by_text("High reading confidence", exact=True).all()])
         await expect(review.get_by_text("High reading confidence", exact=True).first).to_be_visible()
         await expect(review.get_by_text("Double-check · low confidence", exact=True).first).to_be_visible()
         await expect(review.get_by_text("Double-check · medium confidence", exact=True)).to_be_visible()
