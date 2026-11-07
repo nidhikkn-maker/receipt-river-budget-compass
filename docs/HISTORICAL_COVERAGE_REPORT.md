@@ -9,9 +9,9 @@ by 12 independent audits plus manual review of the remainder. Full per-cluster r
 
 | Status | Clusters | Share |
 |---|---|---|
-| implemented | 1537 | 60% |
-| partial | 934 | 36% |
-| missing | 51 | 2% |
+| implemented | 1539 | 61% |
+| partial | 941 | 37% |
+| missing | 42 | 2% |
 | superseded | 19 | 0% |
 | **total** | 2541 | 100% |
 
@@ -21,48 +21,41 @@ by 12 independent audits plus manual review of the remainder. Full per-cluster r
 |---|---|---|---|---|
 | ai | 33 | 14 | 1 | 0 |
 | asset | 3 | 1 | 0 | 0 |
-| document | 35 | 28 | 4 | 0 |
-| entry | 206 | 81 | 9 | 3 |
+| document | 35 | 29 | 3 | 0 |
+| entry | 208 | 83 | 5 | 3 |
 | investment | 6 | 10 | 1 | 0 |
 | loan | 30 | 6 | 0 | 0 |
-| other | 799 | 430 | 5 | 9 |
+| other | 799 | 432 | 3 | 9 |
 | process | 31 | 31 | 0 | 1 |
 | reimbursement | 49 | 21 | 0 | 2 |
-| reporting | 76 | 51 | 7 | 0 |
+| reporting | 76 | 52 | 6 | 0 |
 | security | 14 | 32 | 0 | 0 |
 | statement | 102 | 53 | 2 | 0 |
 | taxation | 3 | 0 | 0 | 0 |
-| testing | 48 | 76 | 20 | 0 |
+| testing | 48 | 77 | 19 | 0 |
 | travel | 65 | 25 | 2 | 4 |
 | ux | 37 | 75 | 0 | 0 |
 
-PARTIAL almost always means: the capability exists in code, but the specific historical acceptance
-evidence (physical-device timing, live-site checks, owner's real records, or exhaustive cross-module
-tracing) has not been produced. These are verification gaps, not absent features.
+Historical classifications are code-audit assessments, not hosted acceptance certificates. PARTIAL can mean missing functionality or missing connected evidence; each audited update records the distinction. Original member clauses remain verbatim and restriction headings must be preserved.
 
-## Missing Functionality Register (51)
+## Count reconciliation and Workstream 1 changes
+The saved baseline was **1,537 / 934 / 51 / 19**. The earlier **1,535 / 934 / 53 / 19** summary predated C-2154 and C-2232 reclassification; it was not the final baseline.
+Current: **1,539 implemented / 941 partial / 42 missing / 19 superseded**. C-0709 narrow UI acceptance and C-2301 corrected prohibition are implemented. Seven genuine implementation/integration items moved MISSING → PARTIAL with explicit outstanding acceptance, not COMPLETE. Evidence: `docs/evidence/workstream-1-2026-11-07.md`.
 
-### Buildable feature gaps (19)
+## Remaining Missing Functionality Register (42)
+
+### Remaining previously classified buildable gaps (11)
 - **C-0214** (statement): Add an admin view that shows statement upload status, reminder history, and confirmation email delivery for each monthly request.
-- **C-0389** (entry): Each allocation dimension should reconcile independently with the primary budget when configured as a complete allocation.
 - **C-0391** (entry): These functions must remain available through the optional Budget Breakdown view, where applicable.
-- **C-0409** (reporting): Add a CSV export for each loan’s repayment history with payment dates, principal, interest, and remaining balance.
 - **C-0517** (testing): If background jobs are available, report generation should persist safely after acceptance by the backend.
 - **C-0553** (document): Add browser tests for uploading a receipt, viewing its attachment, and verifying it stays linked to the correct expense.
 - **C-0581** (entry): Configurable alerts should be available when budget utilisation crosses selected thresholds.
-- **C-0709** (entry): Selecting **Edit Budget** should open a small dedicated form or bottom sheet.
 - **C-0879** (testing): All original supporting bills and payment evidence must be included as annexures at the end of the same PDF.
-- **C-1065** (other): Do not rely on ordinary floating-point arithmetic for financial ledger calculations.
 - **C-1249** (entry): Partial allocations must be identified as partial, not assumed to cover the entire budget.
 - **C-1252** (entry): Where no authoritative primary budget exists, display **Budget requires confirmation**.
 - **C-1253** (entry): The user must be able to review ambiguous historical budget records.
-- **C-1487** (testing): Before generating the final PDF, provide a document verification screen.
 - **C-1493** (ai): Once completed, the setup assistant should not repeatedly appear.
-- **C-1501** (other): Merging categories must provide a review of affected records.
-- **C-1857** (document): Include a missing-document list before the annexures.
 - **C-2024** (reporting): The summary should remain visible while scrolling.
-- **C-2094** (entry): Provide a merchant merge and unmerge function.
-- **C-2301** (entry): Automatically combine unrelated budget allocations.
 
 ### Verification-evidence gaps (15) — need physical device, live site, or benchmark run
 - **C-0212** (testing): Verify that Face ID opens automatically on my iPhone after my first email sign-in and confirm the cold and repeat opening times.
