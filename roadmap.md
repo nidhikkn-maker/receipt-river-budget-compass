@@ -866,3 +866,12 @@
 - [ ] Remaining independent missing C-0214/C-0391/C-0517/C-0553/C-0581; inspect saved implementation before building. C-2024 is selected-transaction summary (not report summary).
 - [ ] Report Centre stored-history retrieval/hosted multi-device recovery, broader decimal tax/depreciation/reports, hosted budget/merchant revision acceptance; continue944partial clusters.
 - [ ] Approval trigger/access-policy rollout and publication remain held; no real-record changes. Evidence: docs/evidence/workstream-1-acceptance-2026-11-07.md.
+
+## Active continuation — 7 Nov 2026 13:54 UTC
+- [x] C-0391 original antecedent resolved: trip workspace/traveller/currency Budget Breakdown; stage across tabs with one save, cancel and retry, no automatic save per line.
+- [x] C-0581 category budget utilisation trigger with owner-chosen threshold, split-aware ledger input, saved monthly budgets and real Rules controls; isolated save/reload acceptance passes.
+- [x] Merchant alias-chain affected-record review/history/reversal with later-edit refusal; staged category undo restores metadata only, retains audit and refuses edited snapshots. Legacy non-atomic category save held pending rollout.
+- [x] Decimal portfolio/asset/tax-source/tax-liability/report/scoped-budget extension; connected balances/transfers/tax/report and half-cent checks.
+- [x] Background reports owner identity/read failures/lost-response/status retry/non-overwrite evidence handling; isolated actual server orchestration passes.
+- [ ] Receipt browser upload→linked expense→attachment retrieval C-0553 investigation; do not change production records.
+- [ ] Hosted acceptance of new flows, staged category concurrency/phantom/closed-period rollout, remaining precision domains, outstanding missing external/device/owner-evidence items; publication and activation held.

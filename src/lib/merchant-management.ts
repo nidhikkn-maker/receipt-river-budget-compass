@@ -28,6 +28,7 @@ export function merchantReviewSnapshot(entries: Expense[], before: MerchantAlias
 export function reverseMerchantGrouping(aliases: MerchantAliases, event: MerchantGroupingEvent): MerchantAliases {
   const next = { ...aliases };
   const keys = new Set([...Object.keys(event.before), ...Object.keys(event.after)]);
+  const changed = new Set([...keys].filter(key => event.before[key] !== event.after[key]));
   for (const key of keys) {
     if (event.before[key] === event.after[key]) continue;
     if (aliases[key] !== event.after[key]) throw Error("Merchant group changed later. Review its current names before separating.");
@@ -36,7 +37,7 @@ export function reverseMerchantGrouping(aliases: MerchantAliases, event: Merchan
   }
   // Unrelated new chains can now depend on an edited key; do not silently regroup them.
   for (const key of Object.keys(aliases)) {
-    if (!keys.has(key) && merchantKey(key, aliases) !== merchantKey(key, next)) {
+    if (!changed.has(key) && merchantKey(key, aliases) !== merchantKey(key, next) && event.before[key] !== aliases[key]) {
       throw Error("A newer merchant group depends on this merge. Review it before reversing.");
     }
   }

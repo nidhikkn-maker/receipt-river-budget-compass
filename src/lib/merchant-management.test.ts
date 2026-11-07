@@ -10,4 +10,6 @@ it('preview covers indirect aliases and binds original fields and new entries', 
  expect(reverseMerchantGrouping({...before,unrelated:'other'},event)).toEqual({...after,unrelated:'other'});
  expect(()=>reverseMerchantGrouping({...before,middle:'later'},event)).toThrow('changed later');
  expect(()=>reverseMerchantGrouping({...before,new:'middle'},event)).toThrow('newer merchant');
+ const preexisting={...event,before:{...after,new:'outside'},after:{...before,new:'outside'}};
+ expect(()=>reverseMerchantGrouping({...before,new:'middle'},preexisting)).toThrow('newer merchant');
 });
