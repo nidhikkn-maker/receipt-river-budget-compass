@@ -131,7 +131,8 @@ export function proposeProperty(read: PropertyRead, entities: EntityProfile[], n
 /** Lease proposal linked to a property/unit by name; missing pieces are asked, never guessed [§38, test 8]. */
 export function proposeLease(read: LeaseRead, properties: Property[], newId: string, docId: string | null): { lease: Lease | null; propertyId: string | null; missing: string[]; unknown: string[] } {
   const want = (read.property ?? "").toLowerCase();
-  const prop = properties.find((p) => want && (want.includes(p.name.toLowerCase()) || p.name.toLowerCase().includes(want) || (p.address && want.includes(p.address.toLowerCase().split(",")[0]!))));
+  const matches = properties.filter((p) => want && (want.includes(p.name.toLowerCase()) || p.name.toLowerCase().includes(want) || (p.address && want.includes(p.address.toLowerCase().split(",")[0] ?? ""))));
+  const prop = matches.length === 1 ? matches[0] : undefined;
   const unit = prop?.buildings.flatMap((b) => b.floors.flatMap((f) => f.units)).find((u) => read.unit && u.name.toLowerCase() === read.unit.toLowerCase());
   const missing = [!read.tenant && "tenant", read.rent == null && "monthly rent", !iso(read.start) && "lease start", !iso(read.end) && "lease end", !prop && "which property"].filter((x): x is string => !!x);
   if (!read.tenant || read.rent == null || !iso(read.start) || !iso(read.end)) return { lease: null, propertyId: prop?.id ?? null, missing, unknown: [] };

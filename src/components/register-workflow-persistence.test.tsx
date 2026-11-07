@@ -18,7 +18,6 @@ import type { Asset } from "@/lib/assets";
 import { taxSchedule } from "@/lib/assets";
 import { recordProvenance } from "@/lib/books/docrepo";
 import { gstr3b } from "@/lib/books/gst";
-import { commitIntake } from "@/lib/books/commit";
 import type { ExtractedDocument } from "@/lib/document-extract.functions";
 import type { VaultDoc } from "@/lib/documents";
 const state = vi.hoisted(() => ({ store: {} as Record<string, unknown>, reader: vi.fn() }));
@@ -106,6 +105,19 @@ async function harness(extracted: ExtractedDocument, extras: object = {}, transa
  } catch (e) { await db.close(); throw e; }
 }
 describe("grouped actual file-to-review, installed SQL and read-back acceptance", () => {
+ it("ambiguous property names require owner selection before any lease record or original is saved", async () => {
+  const h = await harness(leaseRead(), { books: { ...emptyBooks(), properties: [property, { ...property, id: "p2", address: "Other Road" }] } });
+  try {
+   expect(h.view.getByLabelText("Property for this lease")).toHaveValue("");
+   fireEvent.click(h.view.getByRole("button", { name: "Confirm and save" }));
+   await new Promise(resolve => setTimeout(resolve, 40));
+   expect(h.add).not.toHaveBeenCalled(); expect(h.commit).not.toHaveBeenCalled();
+   fireEvent.change(h.view.getByLabelText("Property for this lease"), { target: { value: "p2" } });
+   const { saved } = await h.finish();
+   expect(saved.books.leases[0]?.propertyId).toBe("p2");
+   expect(saved.books.docLinks.filter(l => l.kind === "property").map(l => l.targetId)).toEqual(["p2"]);
+  } finally { await h.db.close(); }
+ }, 30000);
  it("lease period, due date, payment terms and GST flag persist without manual duplication and feed rent/tax working", async () => {
   const h = await harness(leaseRead());
   try {
@@ -147,6 +159,26 @@ describe("grouped actual file-to-review, installed SQL and read-back acceptance"
    expect(saved.books.journals).toEqual([]);
    expect(annualBook(asset, "2026-27").depreciation).toBe(7459.68);
    expect(taxSchedule(asset, "2026-27")[0]?.depreciation).toBe(22500);
+  } finally { await h.db.close(); }
+ }, 30000);
+ it.each(["same", "party", "direction", "year"] as const)("GST invoice identity preserves unrelated saved records (%s) through review, SQL and report read-back", async (variant) => {
+  const gstin = "33AAACA1234A1Z5";
+  const previous = { id: "previous-invoice", gstin, kind: "sales" as const, party: "Customer One", partyGstin: "", number: "INV-44", date: "2026-10-02", taxable: 1000, igst: 0, cgst: 90, sgst: 90, cess: 0, docId: "older-original" };
+  const company = { id: "company", name: "Owner", kind: "company", pan: "AAACA1234A", gstins: [gstin], booksFrom: "2020-21" };
+  const invoice = { number: "INV-44", date: variant === "year" ? "2027-04-01" : "2026-10-02", seller: variant === "direction" ? "Customer One" : "Owner", sellerGstin: variant === "direction" ? null : gstin, buyer: variant === "direction" ? "Owner" : variant === "party" ? "Customer Two" : "Customer One", buyerGstin: variant === "direction" ? gstin : null, taxable: 2000, igst: 0, cgst: 180, sgst: 180, cess: 0 };
+  const h = await harness(read("invoice", { gstInvoice: invoice }), { books: { ...emptyBooks(), properties: [property], gstInvoices: [previous] }, entities: [company] });
+  try {
+   const { saved, original } = await h.finish();
+   expect(saved.books.gstInvoices).toHaveLength(variant === "same" ? 1 : 2);
+   const current = saved.books.gstInvoices.find(i => i.docId === original.id);
+   expect(current).toMatchObject({ kind: variant === "direction" ? "purchase" : "sales", taxable: 2000 });
+   expect(current?.id).toBe(variant === "same" ? previous.id : original.id);
+   if (variant !== "same") expect(saved.books.gstInvoices).toContainEqual(previous);
+   const result = gstr3b(saved.books.gstInvoices, gstin, "2026-10");
+   expect(result.outwardTaxable).toBe(variant === "same" ? 2000 : variant === "party" ? 3000 : 1000);
+   expect(result.outputTax).toBe(variant === "same" ? 360 : variant === "party" ? 540 : 180);
+   expect(result.itcClaimed).toBe(variant === "direction" ? 360 : 0);
+   expect(saved.books.docLinks).toContainEqual({ docId: original.id, kind: "gst", targetId: current?.id, label: "INV-44" });
   } finally { await h.db.close(); }
  }, 30000);
 });
