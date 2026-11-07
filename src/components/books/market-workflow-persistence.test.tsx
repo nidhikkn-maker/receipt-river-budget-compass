@@ -27,7 +27,7 @@ import { NetWorthCard } from "./NetWorthCard";
 const owner = "00000000-0000-0000-0000-000000000001", other = "00000000-0000-0000-0000-000000000002";
 afterEach(() => { cleanup(); state.listeners.clear(); state.demat = []; vi.clearAllMocks(); });
 async function setup(options: { quotes?: Quote[]; lastPortfolio?: number; alerts?: Partial<AlertSettings>; quantity?: number } = {}) {
- const books = { ...emptyBooks(), holdings: [{ id: "fund", name: "Controlled Fund", kind: "mutual_fund" as const, schemeCode: "12345", quantity: 10, sharePct: 100, costBasis: 800, source: "retained source", exchange: "NSE" as const }], quotes: [{ key: "amfi:12345", price: 100, at: "2026-11-06", provider: "Controlled NAV source", freshness: "nav" as const, refreshedAt: "2026-11-06T12:00:00Z", failedAt: undefined as string | undefined }] };
+ const books = { ...emptyBooks(), holdings: [{ id: "fund", name: "Controlled Fund", kind: "mutual_fund" as const, schemeCode: "12345", quantity: 10, sharePct: 100, costBasis: 800, source: "retained source", exchange: "NSE" as const }] as Holding[], quotes: [{ key: "amfi:12345", price: 100, at: "2026-11-06", provider: "Controlled NAV source", freshness: "nav" as const, refreshedAt: "2026-11-06T12:00:00Z", failedAt: undefined as string | undefined }] };
  const preferences = { books, assets: [{ id: "land", name: "Factory land", kind: "property", cost: 2000, inUse: "2026-04-01", sharePct: 100, bookMethod: "slm", bookRatePct: 0 }], entities: [] };
  if (options.quotes) {
   preferences.books.quotes = options.quotes as typeof books.quotes;
@@ -193,7 +193,7 @@ it.each([false, true])("persisted source-linked bond clean/dirty=%s accrual, FX 
   const holding: Holding = { id: "bond", kind: "bond", name: "Controlled bond", isin: "INE009A01021", quantity: 10, sharePct: 50, source: "Retained bond original", costBasis: 400000, bond: { ...bondTerms, priceIncludesInterest: dirty } };
   const current = await h.reload();
   await h.db.query("SELECT save_reviewed_preferences($1,$2::jsonb,$3,true)", [crypto.randomUUID(), JSON.stringify({ ...current.data, books: { ...current.data.books, holdings: [holding], quotes: [{ key: "isin:INE009A01021", price: 102, at: "2026-11-07", provider: "Retained bond quote", freshness: "manual", refreshedAt: "2026-11-07", currency: "USD" }], fxRates: [{ from: "USD", rate: 80, date: "2026-11-07", source: "Owner-confirmed FX source" }] } }), current.revision]);
-  await h.reload(); state.store.documents = [{ id: "terms", title: "Controlled original terms" }];
+  await h.reload(); state.store['documents'] = [{ id: "terms", title: "Controlled original terms" }];
   const view = render(<><NetWorthCard /><MarketPanel /></>); fireEvent.click(view.getByText("Investments & net worth"));
   const elapsedDays = (Date.parse(new Date().toISOString().slice(0,10)) - Date.parse("2026-07-01"))/864e5;
   const accrued = 40 * elapsedDays / 184;
@@ -212,7 +212,7 @@ it.each(["matured", "missing-fx", "missing-original", "missing-terms"])("persist
   const holding: Holding = { id: "bond", kind: "bond", name: "Controlled bond", isin: "INE009A01021", quantity: 10, sharePct: 100, source: "Printed terms", ...(reason === "missing-terms" ? {} : { bond: { ...bondTerms, ...(reason === "matured" ? { maturity: "2026-11-01", nextCoupon: "2026-11-01" } : {}) } }) };
   const current = await h.reload();
   await h.db.query("SELECT save_reviewed_preferences($1,$2::jsonb,$3,true)", [crypto.randomUUID(), JSON.stringify({ ...current.data, books: { ...current.data.books, holdings: [holding], quotes: [{ key: "isin:INE009A01021", price: 102, at: "2026-11-07", provider: "Bond price", freshness: "manual", refreshedAt: "2026-11-07", currency: "USD" }], fxRates: reason === "missing-fx" ? [] : [{ from: "USD", rate: 80, date: "2026-11-07", source: "Reviewed FX" }] } }), current.revision]);
-  await h.reload(); state.store.documents = reason === "missing-original" ? [] : [{ id: "terms", title: "Retained bond terms" }];
+  await h.reload(); state.store['documents'] = reason === "missing-original" ? [] : [{ id: "terms", title: "Retained bond terms" }];
   const view = render(<><NetWorthCard /><MarketPanel /></>); fireEvent.click(view.getByText("Investments & net worth"));
   await waitFor(() => expect(view.container.textContent).toContain("without a price"));
   expect(view.container.textContent).toContain(reason === "matured" ? "Matured 2026-11-01" : reason === "missing-fx" ? "add a USD→INR rate" : "Bond original document and reviewed terms required");
@@ -225,9 +225,9 @@ it("actual broker-cash account link saves/reloads, counts ledger cash once and p
   const current = await h.reload();
   await h.db.query("SELECT save_reviewed_preferences($1,$2::jsonb,$3,true)", [crypto.randomUUID(), JSON.stringify({ ...current.data, books: { ...current.data.books, holdings: [{ id: "cash", name: "Broker cash", kind: "broker_cash", quantity: 1100, sharePct: 100, source: "Retained cash statement" }], quotes: [] } }), current.revision]);
   await h.reload(); const view = render(<><NetWorthCard /><MarketPanel /></>); fireEvent.click(view.getByText("Investments & net worth"));
-  fireEvent.click(view.getByRole("button", { name: "Edit", exact: true }));
+  fireEvent.click(view.getByRole("button", { name: /^Edit$/ }));
   fireEvent.change(view.getByLabelText("Linked broker cash account"), { target: { value: "bank" } });
-  fireEvent.click(view.getByRole("button", { name: "Save", exact: true }));
+  fireEvent.click(view.getByRole("button", { name: /^Save$/ }));
   await waitFor(async () => expect((await h.reload()).data.books.holdings[0]?.cashAccountId).toBe("bank"));
   await waitFor(() => expect(view.container.textContent).toContain("Counted once in Bank ledger balance"));
   expect(view.container.textContent).toContain("statement cash 1100");
