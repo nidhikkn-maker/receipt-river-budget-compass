@@ -8,6 +8,9 @@ import { useStore } from "@/lib/store";
 import { completeness, mergeInvestmentDoc, type CheckState, type InvestDoc, type StoredHolding } from "@/lib/investments/demat";
 import { createDemat, loadDemat, matchDemat, restoreHoldings, saveHoldings, type DematWithHoldings } from "@/lib/investments/holdings-store";
 import { originalId } from '@/lib/statement-pipeline/apply';
+import { readStatementFile } from '@/lib/statement-pipeline/source';
+import type { StmtLine } from '@/lib/statement-pipeline/line';
+import { brokerCashReconciliation } from '@/lib/investments/broker-reconciliation';
 
 const TITLE: Record<InvestDoc["kind"], string> = { demat: "Demat Statement Review", transactions: "Transaction Statement Review", gains: "Capital Gains Statement Review" };
 const DOC_TYPE = { demat: "demat_statement", transactions: "transaction_statement", gains: "capital_gains_statement" } as const;
@@ -25,12 +28,15 @@ function Row({ label, state, text }: { label: string; state: CheckState; text: s
 
 /** One investment document: identify the demat account, fold rows in by ISIN, show the six checks, save on tap. */
 export function InvestmentReview({ file, doc, onClose, onUploadMore }: { file: File; doc: InvestDoc; onClose: () => void; onUploadMore: () => void }) {
-  const { addDocument, userId } = useStore();
+  const { addDocument, userId, accounts: ledgerAccounts, transactions } = useStore();
   const [accounts, setAccounts] = useState<DematWithHoldings[] | null>(null);
   const [pick, setPick] = useState<string>("");
   const [saved, setSaved] = useState<{ dematId: string; before: StoredHolding[]; after: StoredHolding[]; docId: string } | null>(null);
   const [busy, setBusy] = useState(false);
   const [createdAccountId, setCreatedAccountId] = useState<string|null>(null);
+  const [cashAccount, setCashAccount] = useState('');
+  const [cashStatement, setCashStatement] = useState<{lines:StmtLine[];closing:number|null}|null>(null);
+  useEffect(()=>{let live=true;setCashStatement(null);void readStatementFile(file).then(r=>{const part=r.files[0];if(live&&part?.lines.length)setCashStatement({lines:part.lines,closing:part.closing});}).catch(()=>{});return()=>{live=false;};},[file]);
   useEffect(() => { loadDemat().then(setAccounts).catch(() => setAccounts([])); }, []);
 
   const matched = accounts ? matchDemat(accounts, doc) : null;
@@ -91,6 +97,18 @@ export function InvestmentReview({ file, doc, onClose, onUploadMore }: { file: F
 
       {merge.unmatched.length > 0 && <p className="mt-3 text-sm text-muted-foreground">Not in your holdings, so not added: {merge.unmatched.map((u) => u.name || u.isin).join(", ")}.</p>}
       {!!doc.events?.length && <div className="mt-3 text-sm"><p className="font-semibold">Other events on this statement ({doc.events.length})</p>{doc.events.slice(0, 12).map((e, i) => <p key={i} className="text-xs text-muted-foreground">{e.date} · {e.name || e.isin} · {e.kind}{e.quantity != null ? ` · ${e.quantity} units` : ""}{e.amount != null ? ` · ₹${e.amount.toLocaleString("en-IN")}` : ""}</p>)}<p className="text-xs text-muted-foreground">Events are saved with their source for review. Dividends need matching bank receipts; redemptions require separate capital and gain checks. Quantities, cost and bank entries are never changed automatically.</p></div>}
+      {cashStatement&&<section aria-label="Broker statement cash check" className="mt-3 space-y-2 text-sm">
+        <h3 className="font-semibold">Broker statement cash</h3>
+        <select aria-label="Broker cash ledger account" className="w-full rounded-md border bg-background p-2" value={cashAccount} onChange={e=>setCashAccount(e.target.value)}>
+          <option value="">Choose cash-only account…</option>
+          {ledgerAccounts.filter(a=>!a.archived&&['savings','current','cash','wallet'].includes(a.kind)).map(a=><option key={a.id} value={a.id}>{a.name}</option>)}
+        </select>
+        {(()=>{const account=ledgerAccounts.find(a=>a.id===cashAccount);if(!account)return null;const r=brokerCashReconciliation(cashStatement.lines,account,transactions,cashStatement.closing);return <>
+          <p>{r.rows.length-r.missing} matched · {r.missing} unresolved{r.difference!==null?` · closing difference INR ${r.difference.toFixed(2)}`:' · closing not compared'}</p>
+          <ul>{r.rows.filter(x=>x.state!=='matched').slice(0,20).map(x=><li key={x.line.key} className="text-warning">{x.line.date} · {x.line.description} · {x.state}</li>)}</ul>
+          <Button asChild size="sm" variant="outline"><Link to="/statements">Review cash statement entries</Link></Button>
+        </>;})()}
+      </section>}
       {merge.duplicatesSkipped > 0 && <p className="mt-1 text-sm text-muted-foreground">{merge.duplicatesSkipped} line{merge.duplicatesSkipped === 1 ? "" : "s"} already on file, skipped.</p>}
 
       {check.needsHistoryUpload && (
