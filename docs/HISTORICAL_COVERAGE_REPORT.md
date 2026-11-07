@@ -40,9 +40,9 @@ PARTIAL almost always means: the capability exists in code, but the specific his
 evidence (physical-device timing, live-site checks, owner's real records, or exhaustive cross-module
 tracing) has not been produced. These are verification gaps, not absent features.
 
-## Missing Functionality Register (54)
+## Missing Functionality Register (51)
 
-### Buildable feature gaps (21)
+### Buildable feature gaps (19)
 - **C-0214** (statement): Add an admin view that shows statement upload status, reminder history, and confirmation email delivery for each monthly request.
 - **C-0389** (entry): Each allocation dimension should reconcile independently with the primary budget when configured as a complete allocation.
 - **C-0391** (entry): These functions must remain available through the optional Budget Breakdown view, where applicable.
