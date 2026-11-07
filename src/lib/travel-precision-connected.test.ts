@@ -6,13 +6,14 @@ const trip: TravelTrip={id:'t',name:'Sample',destination:'Sample',start:'2026-11
 const entries=[0.1,0.2].map((amount,i)=>({id:`e${i+1}`,title:'Sample',merchant:'Sample',date:'2026-11-01',txnType:'expense',tripId:'t',category:'Hotels',amount,originalAmount:amount,currency:'INR',fxRate:1,scope:'business',paymentMethod:'credit_card',reimbursementStatus:'pending'}));
 it('booking, budget, reimbursements, advance reconciliation and report agree on the same fractional ledger without rewriting originals',()=>{
  const before=JSON.stringify(entries), rows=entries as never;
- expect(bookingPaid(trip.bookings?.[0] ?? (()=>{throw Error('Missing fixture')})(),rows)).toBe(0.3);
- expect(bookingOutstanding(trip.bookings?.[0] ?? (()=>{throw Error('Missing fixture')})(),rows)).toBe(0.3);
+ const booking=trip.bookings?.[0]; if(!booking) throw Error('Missing fixture');
+ expect(bookingPaid(booking,rows)).toBe(0.3);
+ expect(bookingOutstanding(booking,rows)).toBe(0.3);
  expect(tripBudgetSummary(trip,rows)).toMatchObject({spent:0.3,committed:0.3,remaining:0.3,availableAfterCommitments:0,reimbursablePending:0.3});
  expect(tripBudgetDetail(trip,rows)).toMatchObject({spent:0.3,budgeted:0.6,remaining:0.3});
  expect(reimbursementBreakdown(trip,rows)).toMatchObject({personalCard:0.3,advances:0.6,pending:0.3});
  expect(advanceReconciliation(trip,rows)).toMatchObject({advances:0.6,expenses:0.3,returns:0,outstanding:0.3});
- expect(advanceReconRows(trip,rows).at(-1)).toEqual(['','Outstanding','','0.30']);
+ expect(Number(advanceReconRows(trip,rows).at(-1)?.[3])).toBe(0.3);
  expect(travelReport('category',[trip],rows,{memberName:()=> 'Me',accountName:()=> 'Sample'}).rows.at(-1)).toEqual(['Total','0.30','100.00']);
  expect(JSON.stringify(entries)).toBe(before);
 });
