@@ -153,10 +153,18 @@ export function canvasNarrative(i: CanvasInput): CanvasNarrative {
   }
   const missing = [!i.merchant?.trim() && "who you paid", !(Number(i.amount) > 0) && "the total", !i.date && "the date"].filter(Boolean) as string[];
   const what = i.kind === "message" ? "a payment message" : "a receipt";
-  const found = `I found ${what}${i.merchant?.trim() ? ` from ${i.merchant.trim()}` : ""}${Number(i.amount) > 0 && i.currencyText ? ` for ${i.currencyText}` : ""}${i.date ? ` on ${i.date}` : ""}.`;
+  const found = `I found ${what}${i.merchant?.trim() ? ` from ${i.merchant.trim()}` : ""}${Number(i.amount) > 0 && i.currencyText ? ` for ${i.currencyText}` : ""}${i.date ? ` on ${indianDate(i.date)}` : ""}.`;
   const belongs = i.category ? `I think this belongs to ${i.category}${i.categoryReason ? ` because ${i.categoryReason.replace(/^because\s+/i, "")}` : ""}. Please confirm.` : null;
   const match = i.possibleDuplicate ? "This may be a payment you've already saved. Compare before saving so it isn't counted twice." : i.matchFound ? "I found a matching payment in your records." : "I didn't find a matching payment in your records.";
   const help = missing.length ? `I need your help identifying ${missing.join(", ").replace(/, ([^,]*)$/, " and $1")}.` : !i.category ? "I need your help choosing a category." : null;
   const nextAction = i.possibleDuplicate ? "Compare with the saved payment" : missing.length ? `Add ${missing[0]}` : !i.category ? "Choose a category" : "Check and confirm";
   return { found, belongs, match, help, nextAction, confident: !missing.length && !!i.category && !i.possibleDuplicate };
+}
+
+/** Indian-style date for sentences: 5 Apr 2026. Non-ISO text is returned as given. */
+export function indianDate(iso: string) {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso);
+  if (!m) return iso;
+  const d = new Date(Date.UTC(+m[1]!, +m[2]! - 1, +m[3]!));
+  return new Intl.DateTimeFormat("en-IN", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" }).format(d);
 }

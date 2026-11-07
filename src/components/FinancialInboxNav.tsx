@@ -13,10 +13,10 @@ export function FinancialInboxNav({ active }: { active: View }) {
     <nav aria-label="Financial Inbox views" className="-mx-4 mb-4 flex snap-x gap-2 overflow-x-auto px-4 pb-1 [scrollbar-width:none] sm:mx-0 sm:flex-wrap sm:px-0">
       <Link to="/inbox" className={tab(active === 'overview')}>Overview</Link>
       <Link to="/inbox" search={{ section: 'review' }} className={tab(active === 'review')}>Review</Link>
-      <Link to="/transfers" className={tab(active === 'transfers')}>Transfers</Link>
-      <Link to="/account-reconciliation" className={tab(active === 'accounts')}>Reconcile</Link>
+      <Link to="/transfers" className={tab(active === 'transfers')}>Moves between my accounts</Link>
+      <Link to="/account-reconciliation" className={tab(active === 'accounts')}>Check balances</Link>
       <Link to="/inbox" search={{ section: 'history' }} aria-label="Review History" className={tab(active === 'history')}>History</Link>
-      <Link to="/inbox" search={{ section: 'statements' }} className={tab(false)}>Matched statements</Link>
+      <Link to="/inbox" search={{ section: 'statements' }} className={tab(false)}>Statement matches</Link>
       <Link to="/statements" className={tab(false)}>Statement Desk</Link>
       <Link to="/travel-inbox" className={tab(false)}>Travel</Link>
     </nav>

@@ -50,7 +50,7 @@ describe("Intelligent Canvas narrative", () => {
   });
   it("complete receipt with category asks to check and confirm", () => {
     const n = canvasNarrative({ kind: "receipt", merchant: "Uber", amount: 320, currencyText: "₹320.00", date: "2026-04-05", category: "Travel", categoryReason: "you chose Travel for Uber before" });
-    expect(n.found).toBe("I found a receipt from Uber for ₹320.00 on 2026-04-05.");
+    expect(n.found).toBe("I found a receipt from Uber for ₹320.00 on 5 Apr 2026.");
     expect(n.belongs).toBe("I think this belongs to Travel because you chose Travel for Uber before. Please confirm.");
     expect(n.confident).toBe(true);
   });
