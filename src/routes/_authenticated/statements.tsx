@@ -205,6 +205,7 @@ function StatementDeskPage() {
     }
     try {
       setProgress("Saving…");
+      setFailedOriginals([]);
       const r = await applyUpload(requests, api(), setProgress);
       setResult(r);
       // One event per saved statement: did the app's balance after saving match the printed closing figure?
@@ -244,6 +245,18 @@ function StatementDeskPage() {
     } finally {
       setProgress(null);
     }
+  };
+
+  // Retry storing statement originals that failed after a successful post; each success drops off the list, so the import is never left untracked.
+  const retryOriginals = async () => {
+    const left: { file: File; meta: DocumentMeta }[] = [];
+    for (const f of failedOriginals) {
+      try { await storeRef.current.addDocument(f.file, f.meta); }
+      catch { left.push(f); }
+    }
+    setFailedOriginals(left);
+    if (left.length) toast.error(`${left.length} original${left.length === 1 ? "" : "s"} still couldn’t be stored — check your connection and retry.`);
+    else toast.success("All statement originals are now stored in DocuRepo.");
   };
 
   const loadLinks = async () => {
