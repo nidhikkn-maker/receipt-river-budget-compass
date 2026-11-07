@@ -28,7 +28,7 @@ export const Route = createFileRoute("/_authenticated/rules")({
 
 const PRIORITY_TONE: Record<string, string> = { high: "text-destructive", medium: "text-gold-strong", low: "text-muted-foreground" };
 
-function RulesPage() {
+export function RulesPage() {
   const { preferences, savePreferences, transactions, accounts, commitments, goals, budgets } = useStore();
   const pos = usePosition(45);
   const today = todayISO();

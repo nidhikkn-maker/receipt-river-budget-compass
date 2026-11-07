@@ -18,3 +18,12 @@ it("preview and cancel never move records; split references block an unsafe merg
   fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
   expect(close).toHaveBeenCalled(); expect(mock.move).not.toHaveBeenCalled(); expect(mock.save).not.toHaveBeenCalled();
 });
+it('preview includes trip plans and refuses a legacy merge that cannot preserve them atomically',async()=>{
+ mock.move.mockReset();mock.save.mockReset();
+ mock.store={transactions:[],commitments:[{id:'c',name:'Rent',category:'Meals',amount:12}],budgets:{Meals:100},preferences:{...defaultPreferences(),categories:[{name:'Meals',archived:false},{name:'Travel',archived:false}],trips:[{id:'trip',name:'Original trip',budgetLines:[{category:'Meals',amount:40}]}]},moveCategory:mock.move,savePreferences:mock.save};
+ render(<CategoryMergePreview source='Meals' onClose={()=>{}}/>);
+ fireEvent.click(screen.getByRole('combobox',{name:'Merge into category'}));fireEvent.click(await screen.findByRole('option',{name:'Travel'}));
+ expect(screen.getByRole('button',{name:'Confirm merge'})).toBeDisabled();
+ expect(screen.getByRole('alert')).toHaveTextContent('atomic merge');
+ expect(mock.move).not.toHaveBeenCalled();expect(mock.save).not.toHaveBeenCalled();
+});
