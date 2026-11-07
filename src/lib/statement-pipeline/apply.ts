@@ -52,6 +52,7 @@ export interface ApplyResult {
   createdAccounts: { id: string; name: string }[];
   linkedDrafts?: { draftId: string; transactionId: string }[];
   sources?: { documentId: string; accountId: string; file: string }[];
+  evidence?: { id: string; ref: string }[];
 }
 
 export class PartialUploadError extends Error {
@@ -90,6 +91,13 @@ export async function applyUpload(requests: ApplyRequest[], api: ApplyApi, onPro
     }
     const source = await api.prepareSource?.(r, accountId);
     if (source) (result.sources ??= []).push({ documentId: source, accountId, file: r.account.file.name });
+    const refs = new Map<string, string>();
+    for (const d of r.decisions) {
+      const id = await stableId(accountId, d.line);
+      if (source) refs.set(id, `document:${source} · ${d.line.key} · ${d.line.date} · ${d.line.amount.toFixed(2)}`);
+    }
+    for (const m of r.reconcileIds) refs.set(m.id, source ? `document:${source} · ${m.ref}` : m.ref);
+    (result.evidence ??= []).push(...Array.from(refs, ([id, ref]) => ({ id, ref })));
     await api.checkpoint?.(structuredClone(result));
     for (const d of r.decisions) {
       onProgress?.(`Saving ${++done} of ${total}…`);
@@ -103,7 +111,7 @@ export async function applyUpload(requests: ApplyRequest[], api: ApplyApi, onPro
         await api.save(input, { createId: id, noRefresh: true, files: await link.files() });
         result.posted.push(id);
         await api.checkpoint?.(structuredClone(result));
-        if (source) await api.reconcile(id, `document:${source} · ${d.line.key} · ${d.line.date} · ${d.line.amount.toFixed(2)}`, { noRefresh: true });
+        if (source) await api.reconcile(id, refs.get(id) ?? null, { noRefresh: true });
         if (api.linkDraft) { await api.linkDraft(link.draftId, id); (result.linkedDrafts ??= []).push({ draftId: link.draftId, transactionId: id }); }
         await api.checkpoint?.(structuredClone(result));
         continue;
@@ -111,7 +119,8 @@ export async function applyUpload(requests: ApplyRequest[], api: ApplyApi, onPro
       await api.save(input, { createId: id, noRefresh: true });
       result.posted.push(id);
       await api.checkpoint?.(structuredClone(result));
-      if (source) await api.reconcile(id, `document:${source} · ${d.line.key} · ${d.line.date} · ${d.line.amount.toFixed(2)}`, { noRefresh: true });
+      if (source) await api.reconcile(id, refs.get(id) ?? null, { noRefresh: true });
+      await api.checkpoint?.(structuredClone(result));
     }
     for (const m of r.reconcileIds) {
       onProgress?.(`Marking ${++done} of ${total}…`);
@@ -123,21 +132,28 @@ export async function applyUpload(requests: ApplyRequest[], api: ApplyApi, onPro
     await api.refresh().catch(() => {});
     throw new PartialUploadError(error instanceof Error ? error.message : "Statement saving interrupted", result);
   }
-  await api.refresh();
+  // Read refresh is not a financial write: its failure must not relabel confirmed saves as failed.
+  await api.refresh().catch(() => {});
   return result;
 }
 
 /** Reverses one upload: removes what it posted, clears the matching marks, archives accounts it created. */
 export async function undoUpload(result: ApplyResult, api: ApplyApi): Promise<{ left: string[] }> {
   const left: string[] = [];
+  // A planned write with a lost response is not a confirmed undo manifest. Keep its history for review.
+  for (const e of result.evidence ?? []) if (!result.posted.includes(e.id) && !result.reconciled.includes(e.id) && api.transactions.some(t => t.id === e.id)) left.push(e.id);
   for (const id of result.posted) {
     const e = api.transactions.find((t) => t.id === id);
     if (!e) continue;
     try { await api.remove(e); } catch { left.push(id); }
   }
   for (const id of result.reconciled) { try { await api.reconcile(id, null, { noRefresh: true }); } catch { left.push(id); } }
-  for (const l of result.linkedDrafts ?? []) { if (!left.includes(l.transactionId)) await api.unlinkDraft?.(l.draftId).catch(() => {}); }
-  for (const c of result.createdAccounts) { try { await api.setArchived(c.id, true); } catch { /* the account stays for the person to remove */ } }
+  for (const l of result.linkedDrafts ?? []) {
+    if (left.includes(l.transactionId)) continue;
+    try { if (!api.unlinkDraft) throw Error('Draft cleanup unavailable'); await api.unlinkDraft(l.draftId); }
+    catch { left.push(`draft:${l.draftId}`); }
+  }
+  if (!left.length) for (const c of result.createdAccounts) { try { await api.setArchived(c.id, true); } catch { left.push(`account:${c.id}`); } }
   await api.refresh();
   return { left };
 }

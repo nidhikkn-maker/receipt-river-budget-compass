@@ -216,7 +216,7 @@ function StatementDeskPage() {
     }
     const uploadId = crypto.randomUUID(), at = new Date().toISOString();
     const label = plan.accounts.map(a=>a.file.name).join(', ').slice(0,200);
-    const expected = { posted: requests.reduce((n, q) => n + q.decisions.length, 0), reconciled: requests.reduce((n, q) => n + q.reconcileIds.length, 0) };
+    const expected = { posted: requests.reduce((n, q) => n + q.decisions.length, 0), reconciled: requests.reduce((n, q) => n + q.reconcileIds.length, 0), drafts: requests.reduce((n, q) => n + Object.keys(q.draftLinks).length, 0) };
     const checkpoint = async (r: ApplyResult, status: 'interrupted'|'complete'='interrupted') => {
       const s=storeRef.current;
       const upload: StatementUpload={...r,id:uploadId,at,label,status,expected};
@@ -282,11 +282,11 @@ function StatementDeskPage() {
   const settling = useRef(false);
   useEffect(() => {
     if (settling.current || applying.current || store.loading) return;
-    const done = (store.preferences.statementUploads ?? []).map(u => settledUpload(u, store.transactions)).filter((u): u is StatementUpload => !!u);
+    const done = (store.preferences.statementUploads ?? []).map(u => settledUpload(u, store.transactions, drafts)).filter((u): u is StatementUpload => !!u);
     if (!done.length) return;
     settling.current = true;
     (async () => { for (const u of done) await store.saveStatementUpload(u).catch(() => {}); })().finally(() => { settling.current = false; });
-  }, [store.preferences.statementUploads, store.transactions, store.loading]);
+  }, [store.preferences.statementUploads, store.transactions, store.loading, drafts]);
 
   // Retry storing statement originals that failed after a successful post; each success drops off the list, so the import is never left untracked.
   const retryOriginals = async () => {
@@ -369,6 +369,7 @@ function StatementDeskPage() {
   const undo = async (r: ApplyResult, uploadId?: string) => {
     try {
       setProgress("Undoing…");
+      await storeRef.current.refresh();
       const { left } = await undoUpload(r, api());
       setResult(null);
       const s = storeRef.current;
