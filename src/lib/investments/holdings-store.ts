@@ -30,7 +30,16 @@ export function matchDemat(accounts: DematAccount[], doc: Pick<InvestDoc, "dpId"
 
 export async function createDemat(doc: InvestDoc): Promise<string> {
   const { data, error } = await supabase.from("demat_accounts").insert({ broker: doc.broker, dp_id: doc.dpId, client_id: doc.clientId, holder: doc.holder }).select("id").single();
-  if (error) throw new Error(error.message);
+  if (error) {
+    // The unique owner/DP/client identity is authoritative even after a lost insert response.
+    // No read-back inference is safe for an unidentified account.
+    if (doc.dpId || doc.clientId) {
+      const existing = await supabase.from('demat_accounts').select('id').eq('dp_id',doc.dpId).eq('client_id',doc.clientId).maybeSingle();
+      if (!existing.error && existing.data) return existing.data.id;
+    }
+    throw new Error(error.message);
+  }
+  if (!data) throw Error('Demat account save status unavailable; refresh before retrying');
   return data.id;
 }
 

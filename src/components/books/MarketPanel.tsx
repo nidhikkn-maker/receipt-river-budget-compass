@@ -89,10 +89,10 @@ export function MarketPanel() {
           </>}
           <Input aria-label="Cost basis" type="number" placeholder="Cost (if evidenced)" value={edit.costBasis ?? ""} onChange={(e) => setEdit({ ...edit, costBasis: Number(e.target.value) || undefined })} />
           <Input aria-label="Ownership share percent" type="number" placeholder="Share %" value={edit.sharePct} onChange={(e) => setEdit({ ...edit, sharePct: Math.min(100, Math.max(0, Number(e.target.value) || 0)) })} />
-          {edit.kind === "broker_cash" && <select aria-label="Linked broker cash account" className="col-span-2 rounded-md border bg-background p-2" value={edit.cashAccountId ?? ""} onChange={e => setEdit({ ...edit, cashAccountId: e.target.value || undefined })}>
+          {edit.kind === "broker_cash" && <><Input aria-label="Broker cash currency" placeholder="Currency (INR)" value={edit.currency ?? "INR"} maxLength={3} onChange={e => setEdit({ ...edit, currency: e.target.value.toUpperCase().trim() })} /><select aria-label="Linked broker cash account" className="col-span-2 rounded-md border bg-background p-2" value={edit.cashAccountId ?? ""} onChange={e => setEdit({ ...edit, cashAccountId: e.target.value || undefined })}>
             <option value="">Separate cash balance (not already in an account)</option>
             {accounts.filter(a => !a.archived && ["savings","current","cash","wallet"].includes(a.kind)).map(a => <option key={a.id} value={a.id}>{a.name} · use ledger balance once</option>)}
-          </select>}
+          </select></>}
           {edit.kind === "bond" && <fieldset className="col-span-2 grid grid-cols-2 gap-2"><legend className="mb-2">Printed bond terms</legend>
             {(["faceValue","couponPct","lastCoupon","nextCoupon","maturity","currency"] as const).map(key => <label key={key} className="text-xs">{({ faceValue: "Face value per unit", couponPct: "Annual coupon %", lastCoupon: "Last coupon", nextCoupon: "Next coupon", maturity: "Maturity", currency: "Bond currency" })[key]}<Input aria-label={`Bond ${key}`} type={["faceValue","couponPct"].includes(key) ? "number" : ["lastCoupon","nextCoupon","maturity"].includes(key) ? "date" : "text"} value={edit.bond?.[key] ?? ""} onChange={e => setEdit({ ...edit, bond: { faceValue: 0, couponPct: 0, lastCoupon: "", nextCoupon: "", maturity: "", currency: "INR", dayCount: "ACT/365", couponsPerYear: 2, priceBasis: "amount", priceIncludesInterest: false, docId: "", sourceQuote: "", ...edit.bond, [key]: ["faceValue","couponPct"].includes(key) ? Number(e.target.value) : e.target.value.toUpperCase() } })} /></label>)}
             <select aria-label="Bond day count" className="rounded-md border bg-background p-2" value={edit.bond?.dayCount ?? ""} onChange={e => { if (edit.bond) setEdit({ ...edit, bond: { ...edit.bond, dayCount: e.target.value as BondTerms["dayCount"] } }); }}><option value="" disabled>Day-count convention</option>{["ACT/365","ACT/360","ACT/ACT","30E/360"].map(v => <option key={v}>{v}</option>)}</select>
@@ -104,6 +104,7 @@ export function MarketPanel() {
           </fieldset>}
           <div className="col-span-2 flex gap-2">
             <Button size="sm" disabled={!edit.name.trim() || !(edit.quantity > 0)} onClick={async () => {
+              if (edit.kind === "broker_cash" && !/^[A-Z]{3}$/.test(edit.currency ?? "INR")) { toast.error("Enter a 3-letter cash currency"); return; }
               if (edit.kind === "bond") { const problem = edit.bond ? bondProblem(edit.bond) : "Enter the printed bond terms"; if (problem) { toast.error(problem); return; } }
               const k = quoteKey(edit);
               if (k && books.holdings.some((h) => h.id !== edit.id && quoteKey(h) === k)) { toast.error("This security is already listed — edit that one instead"); return; }

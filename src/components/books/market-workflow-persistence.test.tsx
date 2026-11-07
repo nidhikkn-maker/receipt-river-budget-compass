@@ -219,6 +219,27 @@ it.each(["matured", "missing-fx", "missing-original", "missing-terms"])("persist
   expect((await h.reload()).data.books.holdings[0]?.quantity).toBe(10);
  } finally { await h.db.close(); }
 }, 30000);
+it.each([false,true])("foreign broker cash linked=%s saves currency through the real form, persists FX and produces an INR snapshot without double counting",async(linked)=>{
+ const h=await setup();
+ try{
+  const current=await h.reload();
+  await h.db.query('SELECT save_reviewed_preferences($1,$2::jsonb,$3,true)',[crypto.randomUUID(),JSON.stringify({...current.data,books:{...current.data.books,holdings:[{id:'cash',name:'USD broker cash',kind:'broker_cash',quantity:100,sharePct:100,source:'Original USD statement'}],quotes:[],fxRates:[{from:'USD',rate:83,date:'2026-11-07',source:'Reviewed FX'}]}}),current.revision]);
+  await h.reload();
+  const view=render(<><NetWorthCard/><MarketPanel/></>);fireEvent.click(view.getByText('Investments & net worth'));
+  fireEvent.click(view.getByRole('button',{name:/^Edit$/}));
+  fireEvent.change(view.getByLabelText('Broker cash currency'),{target:{value:'USD'}});
+  if(linked)fireEvent.change(view.getByLabelText('Linked broker cash account'),{target:{value:'bank'}});
+  fireEvent.click(view.getByRole('button',{name:/^Save$/}));
+  await waitFor(async()=>expect((await h.reload()).data.books.holdings[0]?.currency).toBe('USD'));
+  await waitFor(()=>expect(view.container.textContent).toContain(linked?'statement/ledger difference 7300.00 INR':'100 USD × 83 INR/USD'));
+  fireEvent.click(view.getByRole('button',{name:"Save today's valuation"}));
+  await waitFor(async()=>expect((await h.reload()).data.books.snapshots.at(-1)?.netWorth).toBe(linked?3400:11700));
+  expect((await h.reload()).data.books.snapshots.at(-1)?.portfolio).toBe(linked?200:8500);
+  expect(state.store['transactions']).toEqual([]);
+  view.unmount();const reopened=render(<NetWorthCard/>);
+  expect(reopened.container.textContent).toContain(linked?'3,400.00':'11,700.00');
+ }finally{await h.db.close();}
+},30000);
 it("actual broker-cash account link saves/reloads, counts ledger cash once and preserves a statement discrepancy", async () => {
  const h = await setup();
  try {

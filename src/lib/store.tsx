@@ -26,6 +26,8 @@ import { metadataStillCurrent, type MetadataPreview } from './review-metadata';
 import { validateBankBalance } from './loan-funding';
 import { preferenceReviewSections } from './preference-review';
 import { PreferenceReview } from '@/components/PreferenceReview';
+import { checkpointUpload } from './statement-pipeline/history';
+import type { StatementUpload } from './preferences';
 
 export interface Loan {
   id: string; name: string;
@@ -64,6 +66,7 @@ interface Ctx {
   discardPending: (id: string) => Promise<void>;
   preferences: FinancePreferences;
   savePreferences: (p: FinancePreferences) => Promise<void>;
+  saveStatementUpload: (upload: StatementUpload) => Promise<void>;
   /** Saves records from a document and locks it as evidence in one database transaction [v6 §3]. */
   commitDocumentRecords: (documentId: string, p: FinancePreferences, lock: boolean, attempt?: { id: string; expected: number }) => Promise<void>;
   preferencesRevision: number | null;
@@ -417,6 +420,21 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
       check(result.error); preferencesRevision.current = result.data; preferenceRequest.current=null;
     }
     catch(e){setPreferences(previous);throw e;}
+  };
+  const saveStatementUpload: Ctx["saveStatementUpload"] = async upload => {
+    if (!navigator.onLine) throw Error('Reconnect before syncing statement progress');
+    await checkpointUpload(upload, {
+      read: async () => {
+        const result = await supabase.from('finance_preferences').select('data,revision').eq('owner_id',userId).single();
+        check(result.error);
+        if (!result.data) throw Error('Refresh your records before saving statement progress');
+        return { data: result.data.data as unknown as FinancePreferences, revision: result.data.revision };
+      },
+      write: async (data, revision, id) => {
+        const result = await supabase.rpc('save_reviewed_preferences', { _id:id, _data:data as unknown as Json, _expected:revision, _approved:false });
+        check(result.error); preferencesRevision.current = result.data; setPreferences(normalizePreferences(data));
+      },
+    });
   };
   const commitDocumentRecords: Ctx["commitDocumentRecords"] = async (documentId, p, lock, attempt) => {
     if (!navigator.onLine) throw new Error('Reconnect before saving document records');
@@ -820,6 +838,7 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
   return (
     <StoreCtx.Provider value={{
       departmentBudgets, departmentBudgetError,
+      saveStatementUpload,
       pendingCount, pendingItems, retrySync: (id?: string) => syncRef.current(id), discardPending: async (id: string) => { await removePending(id); setPendingItems((prev) => prev.filter((p) => p.id !== id)); setPendingCount((await pendingEntries(userId)).length); }, setTags, manageTripExpenses, applyReviewMapping, applyReviewMetadata, undoReviewMetadata, reviewMetadataHistory, saveRecurringReview, preferences, preferencesRevision: preferencesRevision.current, savePreferences, commitDocumentRecords, postOpening, undoOpening, openingPostings, ensureCategory, moveCategory, bulkSetCategory, categoryHistory, undoCategoryBatch, correctFinancialEntries, undoFinancialCorrection, financialCorrectionHistory, userId, name, updateName, members, memberName,
       expenses: expenses.filter((x) => (x.txnType ?? "expense") === "expense"), transactions: expenses.filter((x) => !x.transferCounterpartOf), transferCounterparts: expenses.filter((x) => !!x.transferCounterpartOf), confirmTransfer, cancelTransfer, accounts, addAccount, setArchived, adjustBalance,
       commitments, loans, goals, valuations, documents, saveCommitment, confirmIrregular, removeCommitment, confirmCommitment, saveLoan, removeLoan, recordLoanPayment, convertToEmi,

@@ -1539,7 +1539,8 @@
           "src/lib/books/intake-revision-sql.test.ts — PASS on rerun; concrete assertions recorded in /tmp/verify-b1-tests.log. Scope is limited to the component rules/fixtures in this file, not the entire clause.",
           "src/lib/books/typed-intake-sql.test.ts — PASS on rerun; concrete assertions recorded in /tmp/verify-b1-tests.log. Scope is limited to the component rules/fixtures in this file, not the entire clause.",
           "2026-11-07: source-first Statement Desk now retains content-addressed originals before ledger writes, source IDs on reconciliation refs, partial result/new-account reuse; actual CSV/PDF route browser recovery passes plus disposable pipeline/report records (not production store/cloud storage). Bonds and explicit broker-cash links added with persisted net-worth UI/snapshot tests; broad source/provider/permission/statement association clauses remain PARTIAL.",
-          "7 Nov 11:23: actual CSV/JPEG/scanned-PDF/text-PDF reading → isolated persistence/source/retry/report 4 PASS; pipeline interrupted-session checkpoints/readback test PASS; real-route browser 4 PASS. Hosted privacy/store/CAS/atomicity still unverified."
+          "7 Nov 11:23: actual CSV/JPEG/scanned-PDF/text-PDF reading → isolated persistence/source/retry/report 4 PASS; pipeline interrupted-session checkpoints/readback test PASS; real-route browser 4 PASS. Hosted privacy/store/CAS/atomicity still unverified.",
+          "7 Nov 11:57: Full 241 files/1853 PASS; four real-route controlled Statement Desk browser PASS. New history fresh-read/CAS monotone merge verified with installed reviewed-save SQL across stale revision/lost response/owner isolation; foreign broker cash real form/SQL/reload/Home/snapshot correct INR and linked single-counting; actual InvestmentReview + production holdings-store/0056/0064 SQL source bytes, lost demat-create response, failed holdings retry, repeated trades/actions and unrelated owner denial PASS. Synthetic CSV/local API/storage adapters, not hosted certification. Isolated hosted draft established; completed delegate reports 9 API passes but empty browser downloads FAIL. No promotions; criteria/results docs/evidence/connected-workflow-acceptance-2026-11-07.md."
         ]
       }
     },
@@ -1910,7 +1911,8 @@
           "src/lib/books/typed-intake-sql.test.ts — PASS on rerun; concrete assertions recorded in /tmp/verify-b1-tests.log. Scope is limited to the component rules/fixtures in this file, not the entire clause.",
           "2026-11-07 connected verification batch: scripts/browser/test_statement_desk.py: 4 passing real-route controlled checks; failed originals retained across second upload/reload, recovered to two evidence-locked documents with same ids; ledger still 2 entries, INR730 spending, INR270 balance. No external writes.",
           "2026-11-07: source-first Statement Desk now retains content-addressed originals before ledger writes, source IDs on reconciliation refs, partial result/new-account reuse; actual CSV/PDF route browser recovery passes plus disposable pipeline/report records (not production store/cloud storage). Bonds and explicit broker-cash links added with persisted net-worth UI/snapshot tests; broad source/provider/permission/statement association clauses remain PARTIAL.",
-          "7 Nov: actual AI service synthetic JPEG/scanned-PDF/text-PDF accuracy verified, real CSV reader; source/hash recovery UI opens fresh review. Broader document types and hosted handler privacy/persistence remain open."
+          "7 Nov: actual AI service synthetic JPEG/scanned-PDF/text-PDF accuracy verified, real CSV reader; source/hash recovery UI opens fresh review. Broader document types and hosted handler privacy/persistence remain open.",
+          "7 Nov 11:57: Full 241 files/1853 PASS; four real-route controlled Statement Desk browser PASS. New history fresh-read/CAS monotone merge verified with installed reviewed-save SQL across stale revision/lost response/owner isolation; foreign broker cash real form/SQL/reload/Home/snapshot correct INR and linked single-counting; actual InvestmentReview + production holdings-store/0056/0064 SQL source bytes, lost demat-create response, failed holdings retry, repeated trades/actions and unrelated owner denial PASS. Synthetic CSV/local API/storage adapters, not hosted certification. Isolated hosted draft established; completed delegate reports 9 API passes but empty browser downloads FAIL. No promotions; criteria/results docs/evidence/connected-workflow-acceptance-2026-11-07.md."
         ]
       }
     },
@@ -11690,7 +11692,8 @@
           "src/components/books/useBooks.ts excludes linked property assets and matching demat ISINs; bank balances still enter net worth independently of cash holdings.",
           "PASS src/lib/books/recon-extra.test.ts (10 tests): brokerCashOverlap warns on matching cash accounts; it does not exclude their value.",
           "2026-11-07: source-first Statement Desk now retains content-addressed originals before ledger writes, source IDs on reconciliation refs, partial result/new-account reuse; actual CSV/PDF route browser recovery passes plus disposable pipeline/report records (not production store/cloud storage). Bonds and explicit broker-cash links added with persisted net-worth UI/snapshot tests; broad source/provider/permission/statement association clauses remain PARTIAL.",
-          "7 Nov: broker cash synthetic actual CSV + demat → isolated readback: funding 1000, security transfer 600, fee 10, dividend 20, cash 410/net 2010; ambiguity/repeat/bonus checks PASS. Full combined broker formats and UI-to-production-store path partial."
+          "7 Nov: broker cash synthetic actual CSV + demat → isolated readback: funding 1000, security transfer 600, fee 10, dividend 20, cash 410/net 2010; ambiguity/repeat/bonus checks PASS. Full combined broker formats and UI-to-production-store path partial.",
+          "7 Nov 11:57: Full 241 files/1853 PASS; four real-route controlled Statement Desk browser PASS. New history fresh-read/CAS monotone merge verified with installed reviewed-save SQL across stale revision/lost response/owner isolation; foreign broker cash real form/SQL/reload/Home/snapshot correct INR and linked single-counting; actual InvestmentReview + production holdings-store/0056/0064 SQL source bytes, lost demat-create response, failed holdings retry, repeated trades/actions and unrelated owner denial PASS. Synthetic CSV/local API/storage adapters, not hosted certification. Isolated hosted draft established; completed delegate reports 9 API passes but empty browser downloads FAIL. No promotions; criteria/results docs/evidence/connected-workflow-acceptance-2026-11-07.md."
         ]
       }
     },
@@ -16664,7 +16667,7 @@
         "remaining source-to-report acceptance"
       ],
       "status": "PARTIAL",
-      "requiredWork": "Durable atomic owner operation with revision/CAS and account-create lost-response recovery; source-preserving stale-safe Undo; hosted multi-device interrupted retry acceptance in isolated environment. Checkpointed preference history is staged recovery, not these guarantees.",
+      "requiredWork": "Fresh-read revision/CAS history merge tested, but staged history remains separate from ledger writes. Still required: durable pre-source/bank-account operation intent, bank-account lost-response recovery, source-preserving stale-safe Undo and hosted multi-device interruption/re-sign-in acceptance. Isolated draft exists; browser downloads currently empty.",
       "verificationMethod": "Source-to-code audit followed by applicable unit/database/integration/real-route checks; hosted/device evidence separately required.",
       "finalTestResult": {
         "result": "PARTIAL",
@@ -16673,7 +16676,8 @@
           "src/lib/books/commit.ts and src/lib/review-recovery.ts provide subset recovery logic.",
           "2026-11-07 connected verification batch: Actual Statement Desk upload/approval/original-failure/reload/retry tested with isolated store; canonical pipeline real disposable persistence covers partial saved line/lost response/replay/source retention/reconciliation/monthly report: 2 source lines, INR730 spend, INR270 balance.",
           "2026-11-07: source-first Statement Desk now retains content-addressed originals before ledger writes, source IDs on reconciliation refs, partial result/new-account reuse; actual CSV/PDF route browser recovery passes plus disposable pipeline/report records (not production store/cloud storage). Bonds and explicit broker-cash links added with persisted net-worth UI/snapshot tests; broad source/provider/permission/statement association clauses remain PARTIAL.",
-          "7 Nov: confirmed partial row/source checkpoint survives new-session readback; fresh plan matches one existing row and posts one missing row, final 730 spending/270 closing. Company staged SQL metadata failure/lost response cleanup PASS. Hosted multi-device/CAS/stale-safe undo not certified."
+          "7 Nov: confirmed partial row/source checkpoint survives new-session readback; fresh plan matches one existing row and posts one missing row, final 730 spending/270 closing. Company staged SQL metadata failure/lost response cleanup PASS. Hosted multi-device/CAS/stale-safe undo not certified.",
+          "7 Nov 11:57: Full 241 files/1853 PASS; four real-route controlled Statement Desk browser PASS. New history fresh-read/CAS monotone merge verified with installed reviewed-save SQL across stale revision/lost response/owner isolation; foreign broker cash real form/SQL/reload/Home/snapshot correct INR and linked single-counting; actual InvestmentReview + production holdings-store/0056/0064 SQL source bytes, lost demat-create response, failed holdings retry, repeated trades/actions and unrelated owner denial PASS. Synthetic CSV/local API/storage adapters, not hosted certification. Isolated hosted draft established; completed delegate reports 9 API passes but empty browser downloads FAIL. No promotions; criteria/results docs/evidence/connected-workflow-acceptance-2026-11-07.md."
         ]
       },
       "verifiedAt": "2026-11-06"
@@ -17809,7 +17813,8 @@
           "src/components/books/MarketPanel.tsx — invokes market-refresh and mutual-fund-nav; manual NAV refresh/store UI exists.",
           "No project edits or new tests: sandbox instructions require project files remain unchanged; proposed additional coverage is specified in requiredWork.",
           "2026-11-07: source-first Statement Desk now retains content-addressed originals before ledger writes, source IDs on reconciliation refs, partial result/new-account reuse; actual CSV/PDF route browser recovery passes plus disposable pipeline/report records (not production store/cloud storage). Bonds and explicit broker-cash links added with persisted net-worth UI/snapshot tests; broad source/provider/permission/statement association clauses remain PARTIAL.",
-          "7 Nov: progress and source/receipt-link histories retained with unfinished-upload preservation; actual file service extraction and report acceptance retained in docs/evidence/actual-statement-extraction-2026-11-07.json. Hosted device/storage acceptance still missing."
+          "7 Nov: progress and source/receipt-link histories retained with unfinished-upload preservation; actual file service extraction and report acceptance retained in docs/evidence/actual-statement-extraction-2026-11-07.json. Hosted device/storage acceptance still missing.",
+          "7 Nov 11:57: Full 241 files/1853 PASS; four real-route controlled Statement Desk browser PASS. New history fresh-read/CAS monotone merge verified with installed reviewed-save SQL across stale revision/lost response/owner isolation; foreign broker cash real form/SQL/reload/Home/snapshot correct INR and linked single-counting; actual InvestmentReview + production holdings-store/0056/0064 SQL source bytes, lost demat-create response, failed holdings retry, repeated trades/actions and unrelated owner denial PASS. Synthetic CSV/local API/storage adapters, not hosted certification. Isolated hosted draft established; completed delegate reports 9 API passes but empty browser downloads FAIL. No promotions; criteria/results docs/evidence/connected-workflow-acceptance-2026-11-07.md."
         ]
       }
     },
@@ -18262,7 +18267,8 @@
           "src/lib/books/books.test.ts; src/lib/portfolio.test.ts; src/lib/books/loan-balances.test.ts; src/lib/books/investment-flows.test.ts — PASS re-run: ownership-adjusted ETF arithmetic, missing-price handling, NAV gains, lender evidence and net-flow calculations; no full composition/persistence test.",
           "No project edits or new tests: sandbox instructions require project files remain unchanged; proposed additional coverage is specified in requiredWork.",
           "2026-11-07: source-first Statement Desk now retains content-addressed originals before ledger writes, source IDs on reconciliation refs, partial result/new-account reuse; actual CSV/PDF route browser recovery passes plus disposable pipeline/report records (not production store/cloud storage). Bonds and explicit broker-cash links added with persisted net-worth UI/snapshot tests; broad source/provider/permission/statement association clauses remain PARTIAL.",
-          "7 Nov: private-company original integrity and cleanup safeguards implemented, exact namespace/metadata checks staged only; hosted private storage and access revocation remain unverified."
+          "7 Nov: private-company original integrity and cleanup safeguards implemented, exact namespace/metadata checks staged only; hosted private storage and access revocation remain unverified.",
+          "7 Nov 11:57: Full 241 files/1853 PASS; four real-route controlled Statement Desk browser PASS. New history fresh-read/CAS monotone merge verified with installed reviewed-save SQL across stale revision/lost response/owner isolation; foreign broker cash real form/SQL/reload/Home/snapshot correct INR and linked single-counting; actual InvestmentReview + production holdings-store/0056/0064 SQL source bytes, lost demat-create response, failed holdings retry, repeated trades/actions and unrelated owner denial PASS. Synthetic CSV/local API/storage adapters, not hosted certification. Isolated hosted draft established; completed delegate reports 9 API passes but empty browser downloads FAIL. No promotions; criteria/results docs/evidence/connected-workflow-acceptance-2026-11-07.md."
         ]
       }
     },
@@ -20388,7 +20394,7 @@
       ],
       "dependencies": [],
       "status": "PARTIAL",
-      "requiredWork": "Explicit cash-only ledger links and statement/ledger difference, persisted net-worth snapshots and combined Demat dedup are verified. Still missing actual broker statement import/source-linked cash evidence and reconciliation of investment accounts carrying combined cash/security values; no full brokerage reconciliation certification.",
+      "requiredWork": "Foreign broker cash denomination and INR comparison fixed; same-file cash-review handoff implemented. Full mixed brokerage cash reviewed posting, security/account overlap, source-linked market-valued report and corporate-action confirmation across supported formats remain unverified.",
       "verificationMethod": "Source-to-code audit followed by applicable unit/database/integration/real-route checks; hosted/device evidence separately required.",
       "finalTestResult": {
         "result": "PARTIAL",
@@ -20397,7 +20403,8 @@
           "src/lib/books/books.test.ts; src/lib/portfolio.test.ts; src/lib/books/loan-balances.test.ts; src/lib/books/investment-flows.test.ts — PASS re-run: ownership-adjusted ETF arithmetic, missing-price handling, NAV gains, lender evidence and net-flow calculations; no full composition/persistence test.",
           "No project edits or new tests: sandbox instructions require project files remain unchanged; proposed additional coverage is specified in requiredWork.",
           "2026-11-07: actual MarketPanel/Home installed owner-reviewed SQL save/reload/valuation snapshot: clean/dirty bond per-unit/face-percent price, 50% share, explicit source terms, ACT/ACT accrued interest and USD-INR conversion; maturity/missing terms/source/FX excluded without money writes. Broker cash UI link saves/reloads, 1100 statement vs 1000 ledger flags 100 difference, counts ledger once; combined same-ISIN manual/Demat dedup 500 plus separate deposit 200 gives portfolio 700 and net 3900. Companion ACT/365, ACT/360, ACT/ACT,30E/360, invalid-date numerical regressions. Provider/storage boundaries controlled, no production claims.",
-          "7 Nov: brokerCashReconciliation unique amount/date/currency/account/narration matching displayed in InvestmentReview; actual synthetic CSV/demat + disposable ledger readback mixed balance/net-worth check PASS. Full brokerage workflow not complete."
+          "7 Nov: brokerCashReconciliation unique amount/date/currency/account/narration matching displayed in InvestmentReview; actual synthetic CSV/demat + disposable ledger readback mixed balance/net-worth check PASS. Full brokerage workflow not complete.",
+          "7 Nov 11:57: Full 241 files/1853 PASS; four real-route controlled Statement Desk browser PASS. New history fresh-read/CAS monotone merge verified with installed reviewed-save SQL across stale revision/lost response/owner isolation; foreign broker cash real form/SQL/reload/Home/snapshot correct INR and linked single-counting; actual InvestmentReview + production holdings-store/0056/0064 SQL source bytes, lost demat-create response, failed holdings retry, repeated trades/actions and unrelated owner denial PASS. Synthetic CSV/local API/storage adapters, not hosted certification. Isolated hosted draft established; completed delegate reports 9 API passes but empty browser downloads FAIL. No promotions; criteria/results docs/evidence/connected-workflow-acceptance-2026-11-07.md."
         ]
       }
     },
@@ -20712,17 +20719,14 @@
     }
   ],
   "latestVerification": {
-    "at": "2026-11-07T10:08:50Z",
-    "result": "538 VERIFIED COMPLETE / 359 PARTIAL / 0 MISSING / 2 BLOCKED. Promoted V60-0341, V60-0349, V60-0351 only. Full suite 232 files / 1793 tests PASS; 4 Statement Desk browser checks and 1 asset-document browser workflow PASS; preview build OK. No production records changed, approval trigger disabled, publication held.",
-    "promoted": [
-      "V60-0341",
-      "V60-0349",
-      "V60-0351"
-    ],
+    "at": "2026-11-07T11:57:00Z",
+    "result": "565 VERIFIED COMPLETE / 332 PARTIAL / 0 MISSING / 2 BLOCKED; no promotions. Full 241/1853 PASS, browser 4 PASS. Isolated hosted draft: delegated 9 API PASS, empty browser download FAIL; detailed draft evidence not merged. Approval guard disabled, Main records unchanged, publication held.",
+    "promoted": [],
     "evidence": [
+      "docs/evidence/connected-workflow-acceptance-2026-11-07.md",
       "docs/VERIFICATION_RESULTS.md",
-      "src/components/asset-document-persistence.test.tsx",
-      "scripts/browser/test_asset_document_workflow.py"
+      "src/components/investment-review-persistence.test.tsx",
+      "src/lib/statement-pipeline/history-persistence.test.ts"
     ]
   }
 }

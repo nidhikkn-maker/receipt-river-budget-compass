@@ -94,8 +94,9 @@ export function useNetWorth() {
         if (h.sharePct !== 100) return { holding: h, key: null, quote: null, value: null, stale: false, note: "Confirm a fully owned cash account before linking this broker balance" };
         const account = live.find(a => a.id === h.cashAccountId && ["savings","current","cash","wallet"].includes(a.kind));
         const balance = account ? accountValue(account, transactions, valuations).value : null;
-        const gap = balance == null ? null : Math.round((h.quantity * h.sharePct / 100 - balance)*100)/100;
-        return { holding: h, key: null, quote: null, value: null, stale: false, countedElsewhere: !!account, note: account ? `Counted once in ${account.name} ledger balance · statement cash ${h.quantity}${gap ? ` · statement/ledger difference ${gap.toFixed(2)} INR — review required` : " · statement and ledger agree"}` : "Linked cash account unavailable — review the link before valuation" };
+        const cashValue = valueHolding(h, [], undefined, now, books.alerts, books.fxRates ?? []);
+        const gap = balance == null || cashValue.value == null ? null : Math.round((cashValue.value - balance)*100)/100;
+        return { holding: h, key: null, quote: null, value: null, stale: cashValue.stale, countedElsewhere: !!account, note: account ? `Counted once in ${account.name} ledger balance · statement cash ${h.quantity}${h.currency && h.currency !== "INR" ? ` ${h.currency}` : ""}${cashValue.value == null ? ` · ${cashValue.note}; comparison unavailable` : gap ? ` · statement/ledger difference ${gap.toFixed(2)} INR — review required` : " · statement and ledger agree"}` : "Linked cash account unavailable — review the link before valuation" };
       }
       if (h.kind === "bond" && (!h.bond || !documents.some(d => d.id === h.bond?.docId))) return { holding: h, key: null, quote: null, value: null, stale: true, note: "Bond original document and reviewed terms required" };
       const c = h.isin && h.exchange ? pickClose(closes.byIsin, closes.byIsinEx, h.isin, h.exchange) : undefined;
