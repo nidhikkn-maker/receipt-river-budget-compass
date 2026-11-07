@@ -1,5 +1,5 @@
 {
- "note": "Requirements from sources before v6.0/v6.1. Clause text copied verbatim from uploaded files and chat; duplicates across later versions recorded in alsoIn. Nothing here is claimed verified.",
+ "note": "Requirements from sources before v6.0/v6.1. Clause text copied verbatim from uploaded files and chat; duplicates across later versions recorded in alsoIn. AUDITED 2026-11-07: all 12,559 clauses and 349 chat requests consolidated into 2,541 deduplicated clusters and audited read-only against the codebase \u2014 see audit.json and docs/HISTORICAL_COVERAGE_REPORT.md. Result: 1,535 implemented, 934 partial (capability exists, acceptance evidence incomplete), 53 missing (21 buildable feature gaps, 15 device/live-site verification gaps, 6 external dependencies, 4 need owner records, 6 meta/process, 1 reclassified), 19 superseded by recorded owner decisions.",
  "missingSources": [
   "Files attached in chat messages that are not in the uploads folder were not found: none detected beyond those listed; images and statement PDFs are evidence, not specifications."
  ],
@@ -171505,5 +171505,15 @@
    "status": "NOT YET AUDITED",
    "nextAction": "Audit; superseded/excluded items (approvals removed, Yaba, official workspace) must be marked SUPERSEDED with the later message."
   }
- ]
+ ],
+ "audit": {
+  "date": "2026-11-07",
+  "clusters": 2541,
+  "implemented": 1535,
+  "partial": 934,
+  "missing": 53,
+  "superseded": 19,
+  "register": ".lovable/requirements/historical/audit.json",
+  "report": "docs/HISTORICAL_COVERAGE_REPORT.md"
+ }
 }
