@@ -84,8 +84,8 @@ export function discrepancy(a: Account, txns: Expense[], prefs: Pick<FinancePref
 
 export type InboxType = "uncategorised" | "unverified_import" | "duplicate" | "unreconciled_account" | "missing_details" | "pending_reimbursement" | "pending_sync" | "commitment" | "inconsistency" | "audit";
 export const INBOX_LABEL: Record<InboxType, string> = {
-  uncategorised: "Uncategorised", unverified_import: "Unverified import", duplicate: "Possible duplicate", unreconciled_account: "Unreconciled account",
-  missing_details: "Missing details", pending_reimbursement: "Pending reimbursement", pending_sync: "Waiting to sync", commitment: "Confirm payment", inconsistency: "Data inconsistency", audit: "Audit check",
+  uncategorised: "Needs a category", unverified_import: "Imported — please check", duplicate: "Might be counted twice", unreconciled_account: "Balance not checked yet",
+  missing_details: "Missing a detail", pending_reimbursement: "Waiting to be paid back", pending_sync: "Waiting to sync", commitment: "Did this payment happen?", inconsistency: "Figures don't agree", audit: "Check needed",
 };
 export type Priority = "high" | "medium" | "low";
 export interface InboxItem {
