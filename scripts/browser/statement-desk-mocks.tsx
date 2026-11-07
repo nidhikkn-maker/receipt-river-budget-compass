@@ -15,6 +15,7 @@ const createFixture = () => ({
   failOriginals: false,
   failCompletion: false,
   failReconcile: false,
+  loseEvidenceResponse: false,
   failRemoveId: '',
   loseSaveResponse: false,
   failHistoryRemoval: false,
@@ -57,6 +58,7 @@ export function useStore() {
       if (!entry) throw new Error("Missing saved statement entry");
       Object.assign(entry, { statementRef: ref, reconciledAt: ref ? new Date().toISOString() : null });
       sessionStorage.setItem("controlled-desk-ledger", JSON.stringify(fixture.transactions));
+      if (fixture.loseEvidenceResponse) { fixture.loseEvidenceResponse = false; throw Error('Evidence committed; response interrupted'); }
     },
     addAccount: async () => { throw new Error("No new accounts in this test"); },
     setArchived: async () => {},
@@ -85,7 +87,13 @@ Object.assign(window, { accountantConsumed });
 export const supabase = {
   from: (table: string) => {
     // Read-only lists the page refreshes after saving come back empty; any write still fails loudly.
-    if (table === 'expenses') return { select: () => chain(async () => fixture.transactions.map(t => ({ id: t.id }))) };
+    if (table === 'expenses') return { select: () => {
+      let id: string | undefined;
+      const q = chain(async () => fixture.transactions.map(t => ({ id: t.id })));
+      q.eq = (key: string, value: string) => { if (key === 'id') id = value; return q; };
+      q.maybeSingle = async () => { const t = fixture.transactions.find(t => t.id === id); return { data: t ? { statement_ref: t.statementRef, reconciled_at: t.reconciledAt } : null, error: null }; };
+      return q;
+    } };
     if (table === "transfer_links" || table === "expense_drafts") return { select: () => chain(async () => []) };
     if (table !== "accountant_uploads") throw new Error(`No Cloud access in this test (${table})`);
     return {

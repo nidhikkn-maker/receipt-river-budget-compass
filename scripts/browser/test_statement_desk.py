@@ -266,6 +266,26 @@ class StatementDeskFlow(unittest.IsolatedAsyncioTestCase):
         await expect(self.page.get_by_label('Recent uploads')).to_contain_text('Undo unfinished')
         self.assertEqual(await self.page.evaluate('deskFixture.transactions.length'), 1)
 
+    async def test_lost_evidence_response_reads_back_then_reloads_and_undoes_exactly_once(self):
+        await self.page.evaluate('deskFixture.loseEvidenceResponse = true')
+        csv = 'Date,Description,Debit,Credit\n2026-10-02,SWIGGY ORDER,250,\n2026-10-03,AMAZON PURCHASE,480,\n'
+        await self.page.get_by_label('Statement files').set_input_files(files=[{'name': 'evidence-response.csv', 'mimeType': 'text/csv', 'buffer': csv.encode()}])
+        await self.page.locator('select').first.select_option('desk-account')
+        await self.page.get_by_role('button', name='Accept all 2 asking items').click()
+        await self.page.get_by_role('button', name='Apply everything (2 to save)').click()
+        await self.page.wait_for_function("deskFixture.uploads[0]?.status === 'complete'")
+        self.assertEqual(await self.page.evaluate('deskFixture.saves.length'), 2)
+        await self.page.reload()
+        await expect(self.page.get_by_role('heading', name='Statement Desk')).to_be_visible()
+        self.assertEqual(await self.page.evaluate('deskFixture.transactions.length'), 2)
+        self.assertEqual(await self.page.evaluate('deskFixture.uploads[0].status'), 'complete')
+        figures = await self.page.evaluate("async () => { const {cashflow,accountBalance} = await import('/src/lib/ledger.ts'); return {flow:cashflow(deskFixture.transactions),balance:accountBalance(deskFixture.accounts[0],deskFixture.transactions)} }")
+        self.assertEqual(figures, {'flow': {'income': 0, 'spent': 730, 'net': -730}, 'balance': 270})
+        await self.page.get_by_label('Recent uploads').get_by_role('button', name='Undo', exact=True).click()
+        await expect(self.page.get_by_label('Recent uploads')).to_have_count(0)
+        self.assertEqual(await self.page.evaluate('deskFixture.transactions.length'), 0)
+        self.assertEqual(await self.page.evaluate('deskFixture.removes.length'), 2)
+
     async def test_changed_statement_evidence_blocks_entire_undo_after_reload(self):
         csv = 'Date,Description,Debit,Credit\n2026-10-02,SWIGGY ORDER,250,\n2026-10-03,AMAZON PURCHASE,480,\n'
         await self.page.get_by_label('Statement files').set_input_files(files=[{'name': 'changed.csv', 'mimeType': 'text/csv', 'buffer': csv.encode()}])
