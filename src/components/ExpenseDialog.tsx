@@ -24,14 +24,26 @@ function ReceiptThumb({ path, name, type }: { path: string; name: string; type: 
 }
 
 export function ExpenseDialog({ expense, onClose }: { expense: Expense | null; onClose: () => void }) {
+  if (!expense) return null;
+  return (
+    <Dialog open onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="max-h-[90vh] max-w-xl overflow-y-auto rounded-3xl">
+        <DialogHeader><DialogTitle className="sr-only">{expense.title}</DialogTitle></DialogHeader>
+        <ExpenseDetail expense={expense} onClose={onClose} />
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+/** Expense detail body, shared by the modal dialog and the iPad-landscape side pane. */
+export function ExpenseDetail({ expense, onClose }: { expense: Expense; onClose: () => void }) {
   const { memberName, setScope, remove, accounts, setReimbursement, recordReimbursement, convertToEmi, history } = useStore();
   const [audit, setAudit] = useState<AuditEntry[]>([]);
   const [busy,setBusy]=useState(false);
-  useEffect(()=>{setAudit([]);if(expense)void history(expense.id).then(setAudit).catch(()=>{});},[expense?.id,history]);
+  useEffect(()=>{setAudit([]);void history(expense.id).then(setAudit).catch(()=>{});},[expense?.id,history]);
   const nav = useNavigate();
-  const [scope, setLocalScope] = useState(expense?.scope ?? "personal");
-  useEffect(() => { if (expense) setLocalScope(expense.scope); }, [expense]);
-  if (!expense) return null;
+  const [scope, setLocalScope] = useState(expense.scope);
+  useEffect(() => { setLocalScope(expense.scope); }, [expense]);
   const e = expense;
 
   const changeScope = async (s: typeof scope) => {
@@ -44,9 +56,8 @@ export function ExpenseDialog({ expense, onClose }: { expense: Expense | null; o
   };
 
   return (
-    <Dialog open onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="max-h-[90vh] max-w-xl overflow-y-auto rounded-3xl">
-        <DialogHeader><DialogTitle className="font-display text-2xl font-bold">{e.title}</DialogTitle></DialogHeader>
+    <div className="space-y-4">
+        <h2 className="font-display text-2xl font-bold">{e.title}</h2>
         <div className="flex flex-wrap gap-x-3 gap-y-1 text-sm text-muted-foreground">
           <span>{e.date}</span>·<span>{e.category}</span>·<span>{PAYMENT_LABEL[e.paymentMethod]}</span>·<span>For {whoLabel(e, memberName)}</span>
           {e.merchant && <>·<span>{e.merchant}</span></>}
@@ -94,7 +105,6 @@ export function ExpenseDialog({ expense, onClose }: { expense: Expense | null; o
           <Button variant="outline" onClick={() => { onClose(); nav({ to: "/new", search: { edit: e.id } }); }}>Edit</Button>
         </div>
         <details className="border-t pt-3"><summary className="cursor-pointer text-sm">Change history</summary><ul className="mt-2 divide-y text-xs">{audit.map(a=><li key={a.id} className="py-2"><b className="capitalize">{a.action}</b> · {new Date(a.createdAt).toLocaleString()}<div>{a.summary}</div>{Object.entries(a.changes).map(([key,value])=><p key={key} className="break-words text-muted-foreground">{key.replaceAll("_"," ")}: {JSON.stringify(value)}</p>)}</li>)}</ul></details>
-      </DialogContent>
-    </Dialog>
+    </div>
   );
 }

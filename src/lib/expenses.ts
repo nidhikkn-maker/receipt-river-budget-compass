@@ -236,7 +236,7 @@ export function validateBudget(amount: number) {
 
 export const convert = (amount: number, rate: number) => Math.round(amount * rate * 100) / 100;
 
-export interface Filters { scope?: Scope | "all"; memberId?: string | "all" | "me"; from?: string; to?: string; category?: Category | "all"; accountId?: string; paymentMethod?: string; paymentInstrumentId?: string; tag?: string; query?: string; txnType?: string; merchant?: string; tagAll?: string[]; department?: string }
+export interface Filters { scope?: Scope | "all"; memberId?: string | "all" | "me"; from?: string; to?: string; category?: Category | "all"; accountId?: string; paymentMethod?: string; paymentInstrumentId?: string; tag?: string; query?: string; txnType?: string; merchant?: string; tagAll?: string[]; department?: string; receipt?: "all" | "with" | "without" }
 
 export function applyFilters(list: Expense[], f: Filters): Expense[] {
   return list.filter((e) =>
@@ -252,6 +252,7 @@ export function applyFilters(list: Expense[], f: Filters): Expense[] {
     (!f.memberId || f.memberId === "all" || memberShares(e).some((x) => (f.memberId === "me" ? x.memberId === null : x.memberId === f.memberId))) &&
     (!f.category || f.category === "all" || e.category === f.category) &&
     (!f.department || f.department === "all" || (f.department === "unassigned" ? !e.department?.trim() : (e.department ?? "").trim() === f.department)) &&
+    (!f.receipt || f.receipt === "all" || (f.receipt === "with" ? (e.receipts?.length ?? 0) > 0 : (e.receipts?.length ?? 0) === 0)) &&
     (!f.from || e.date >= f.from) && (!f.to || e.date <= f.to));
 }
 
