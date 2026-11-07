@@ -1,5 +1,12 @@
 # Verification results (executed evidence only)
 
+## 7 Nov 2026 13:15 — Workstream 1 defects and count reconciliation
+- Historical previous **1,537 implemented / 934 partial / 51 missing / 19 superseded**; current **1,539 / 941 / 42 / 19**. Narrow implemented changes: **C-0709**, **C-2301** (corrected prohibition, not a new feature). Seven MISSING→PARTIAL: **C-1065, C-0389, C-2094, C-1501, C-1487, C-1857, C-0409**. No v6 promotions; **566/331/2 unchanged**.
+- Actual defects fixed: half-cent binary rounding in ledger/allocations, foreign original principal/interest displayed as INR in loan export, receiving-side evidence in history, blank budget dialog on parent-controlled open, missing complete-dimension promises, immediate merchant grouping without review, failed/empty attachments reaching PDFs silently. Category split references now block unsafe merges rather than leaving orphaned category data.
+- Full suite **251 files / 1,886 PASS**. Earlier failure was missing jsdom scrollIntoView; fixed and full rerun green. PDF FileReader/serialized dictionary assertions corrected to test actual PDF content rather than jsdom Blob or compressed syntax.
+- Browser actual controls at **1280×1800, 1180×820, 402×725**: merge/cancel/confirm/unmerge, stored budget values, explicit allocation rejection, required-document gate/cancel, no overflow or runtime errors. Screenshots inspected after animations. Controlled browser store, NOT hosted persistence. Actual generated PDF parser verifies preserved original page dimensions and missing-list ordering; document decoder rejects empty/broken/unsupported files.
+- Exact references and remaining acceptance in `docs/evidence/workstream-1-2026-11-07.md`; build OK. No real records, production policy installation, trigger activation or publication.
+
 ## 7 Nov 2026 11:57 UTC — isolated hosted testing available; cash/recovery gaps corrected
 - **565 → 565 verified, 332 partial, 2 external blocked; newly verified IDs: none.** Complete criteria/results saved in `docs/evidence/connected-workflow-acceptance-2026-11-07.md`. No unsupported promotion.
 - Main full suite **241 files / 1,853 PASS**; Statement Desk browser **4/4 PASS**, screenshot inspected; harness **build OK**. Actual investment review + production holdings-store + installed SQL verifies CSV source integrity, failed holdings retry, lost demat-create response, duplicate trades/events, owner isolation and Home readback. These use local API/storage adapters, not hosted services.
