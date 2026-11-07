@@ -95,9 +95,9 @@ function Reports() {
   };
 
   return (
-    <>
+    <div className="uix-family-reports">
       <SectionTabs group="reports" active="charts" /><PageTitle eyebrow="Insights" title="Spending & reports" />
-      <div className="mb-6 grid gap-3 rounded-3xl border bg-card p-5 sm:grid-cols-4 sm:items-end">
+      <details className="report-filters mb-6 border-y py-4"><summary className="font-medium">Filter report records</summary><div className="mt-4 grid gap-4 sm:grid-cols-4 sm:items-end">
         <div className="grid gap-1"><Label htmlFor="from">From</Label><Input id="from" type="date" value={from} onChange={(e) => setFrom(e.target.value)} /></div>
         <div className="grid gap-1"><Label htmlFor="to">To</Label><Input id="to" type="date" value={to} onChange={(e) => setTo(e.target.value)} /></div>
         <div className="grid gap-1">
@@ -112,7 +112,7 @@ function Reports() {
           </Select>
         </div>
         <p className="text-sm text-muted-foreground">{list.length} expense{list.length === 1 ? "" : "s"} in range</p>
-      </div>
+      </div></details>
       <div className="mb-6 grid gap-3 sm:grid-cols-4"><Select value={scope} onValueChange={v=>setScope(v as Scope|"all")}><SelectTrigger aria-label="Insight scope"><SelectValue/></SelectTrigger><SelectContent>{["all","personal","business"].map(v=><SelectItem key={v} value={v}>{v==="all"?"All spending":v}</SelectItem>)}</SelectContent></Select><Select value={account} onValueChange={setAccount}><SelectTrigger aria-label="Insight account"><SelectValue/></SelectTrigger><SelectContent><SelectItem value="all">All accounts</SelectItem>{accounts.map(a=><SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}</SelectContent></Select><Select value={payment} onValueChange={setPayment}><SelectTrigger aria-label="Insight payment method"><SelectValue/></SelectTrigger><SelectContent><SelectItem value="all">All payment methods</SelectItem>{PAYMENT_METHODS.map(v=><SelectItem key={v} value={v}>{PAYMENT_LABEL[v]}</SelectItem>)}</SelectContent></Select><Input aria-label="Search insights" placeholder="Merchant, title or tag" value={query} onChange={e=>setQuery(e.target.value)}/></div>
       <div className="mb-6 grid gap-3 sm:grid-cols-4"><Select value={department} onValueChange={setDepartment}><SelectTrigger aria-label="Filter by department"><SelectValue/></SelectTrigger><SelectContent><SelectItem value="all">All departments</SelectItem><SelectItem value="unassigned">Unassigned</SelectItem>{departmentOptions.map(d=><SelectItem key={d} value={d}>{d}</SelectItem>)}</SelectContent></Select><Select value={status} onValueChange={setStatus}><SelectTrigger aria-label="Filter by reimbursement status"><SelectValue/></SelectTrigger><SelectContent><SelectItem value="all">Any status</SelectItem><SelectItem value="none">Not tracked</SelectItem>{REIMB_STAGES.map(s=><SelectItem key={s} value={s}>{REIMB_STAGE_LABEL[s]}</SelectItem>)}</SelectContent></Select><Select value={receipt} onValueChange={setReceipt}><SelectTrigger aria-label="Filter by receipt attachment"><SelectValue/></SelectTrigger><SelectContent><SelectItem value="all">Any receipts</SelectItem><SelectItem value="with">With receipts</SelectItem><SelectItem value="without">Without receipts</SelectItem></SelectContent></Select></div>
       {tagGroups.length>0&&<div className="mb-6 grid gap-3 sm:grid-cols-4">{tagGroups.map(g=><Select key={g} value={tagGroup[g]??"all"} onValueChange={v=>setTagGroup(x=>({...x,[g]:v}))}><SelectTrigger aria-label={`Filter by ${g}`}><SelectValue/></SelectTrigger><SelectContent><SelectItem value="all">Any {g.toLowerCase()}</SelectItem>{preferences.tags.filter(t=>t.group===g).map(t=><SelectItem key={tagValue(t)} value={tagValue(t)}>{t.name}</SelectItem>)}</SelectContent></Select>)}</div>}
@@ -154,6 +154,6 @@ function Reports() {
           </div>
         ))}
       </div>
-    </>
+    </div>
   );
 }

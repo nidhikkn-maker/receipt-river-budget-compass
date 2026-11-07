@@ -25,3 +25,6 @@
 - Setup completion closes only after preference save succeeds; failure stays open for retry so the completion prompt is not falsely suppressed.
 - Trip Budget Breakdown stages all dimensions locally and saves once; Cancel discards the whole draft and failed saves retain it for retry.
 - PDF table cells with non-Latin text are rendered by the browser onto canvas images (src/lib/pdf-unicode.ts withUnicode) because jsPDF core fonts are Latin-only and cannot shape Indic scripts; titles, footers and bill-page labels use textU()/drawTextU() which image-render non-Latin text.
+
+- ModuleDirectory groups all existing module destinations; the adaptive shell uses a short primary rail and native phone sheets, never a replacement ledger.
+- Shared UIX controls use system typography, semantic theme roles and minimum touch sizing; Canvas disclosures retain mounted review fields and existing validation.
