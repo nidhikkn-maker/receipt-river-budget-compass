@@ -14,6 +14,13 @@ const base = {
 };
 
 describe("financial position", () => {
+  it('Home position and assistant facts agree on decimal balances, reserves and distinct merchant totals',()=>{
+    const input={...base,accounts:[{id:'b',name:'Bank',kind:'savings' as const,openingBalance:1.005,archived:false,minBalance:0.1},{id:'b2',name:'Bank2',kind:'savings' as const,openingBalance:0.2,archived:false,minBalance:0.2}],goals:[{name:'Reserve',target:1,saved:0.1,monthly:0,reserve:true},{name:'Reserve2',target:1,saved:0.2,monthly:0,reserve:true}],transactions:[{...base.transactions[0],id:'a',accountId:'b',amount:0.1,merchant:'Shop'},{...base.transactions[0],id:'b',accountId:'b2',amount:0.2,merchant:'Shop'}]};
+    const p=position(input);const facts=assistantFacts(input);
+    expect(p.cash).toBe(0.91);expect(p.minBalance).toBe(0.3);expect(p.reserves).toBe(0.3);
+    expect(facts.actual.cashInAccounts).toBe(0.91);expect(facts.actual.thisMonth.byCategory['Shopping']).toBe(0.3);
+    expect(facts.actual.last6Months.topMerchants).toEqual([['Shop',0.3]]);
+  });
   it("card due date rolls to next month when passed", () => {
     expect(nextDayOfMonth("2026-11-10", 5)).toBe("2026-12-05");
     expect(nextDayOfMonth("2026-11-02", 5)).toBe("2026-11-05");

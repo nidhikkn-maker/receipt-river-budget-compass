@@ -5,6 +5,7 @@ import { cardCycle, cardDues, type CardEmi, type LoanPayment } from "./cards";
 import { anomalies, budgetRecommendations, lastMonthCompare, monthToDateCompare, savingsIdeas, spendBy } from "./insights";
 import { isTracked, outstandingOf, type ReimbursementInfo } from "./reimbursements";
 import type { ReimbursementStatus } from "./expenses";
+import { addMoney, subtractMoney, sumMoney, roundMoney, decimal } from './money';
 
 export const CASH_KINDS = ["savings", "current", "cash", "wallet"];
 
@@ -49,9 +50,9 @@ export interface Alert { level: "high" | "medium" | "info"; text: string; to: st
 export function position(i: PositionInput) {
   const live = i.accounts.filter((a) => !a.archived);
   const cashAccounts = live.filter((a) => CASH_KINDS.includes(a.kind) && a.includeInCash !== false);
-  const cash = cashAccounts.reduce((s, a) => s + accountBalance(a, i.transactions), 0);
-  const minBalance = cashAccounts.reduce((s, a) => s + (a.minBalance ?? 0), 0);
-  const reserves = i.goals.filter((g) => g.reserve).reduce((s, g) => s + g.saved, 0);
+  const cash = sumMoney(cashAccounts.map(a => accountBalance(a, i.transactions)));
+  const minBalance = sumMoney(cashAccounts.map(a => a.minBalance ?? 0));
+  const reserves = sumMoney(i.goals.filter(g => g.reserve).map(g => g.saved));
   const emis = cardEmisOf(i.loans);
   const cards = live.filter((a) => a.kind === "credit_card").map((a) => {
     const cycle = cardCycle(a, i.transactions, emis, i.today, i.cardAlertPct ?? 30);
@@ -69,13 +70,13 @@ export function position(i: PositionInput) {
   const all = [...i.commitments, ...loanCommitments];
   const input = { startBalance: cash, commitments: all, today: i.today, days: i.days, includeUnconfirmed: !!i.includeUnconfirmed, extraOut: cardOut };
   const sts = safeToSpend({ ...input, reserves, minBalance });
-  const fc = forecast({ ...input, floor: minBalance + reserves });
+  const fc = forecast({ ...input, floor: addMoney(minBalance, reserves) });
   const month = i.today.slice(0, 7);
   const flow = cashflow(i.transactions, `${month}-01`, monthEnd(i.today));
   const end = addDays(i.today, i.days);
   const upcoming = [...occurrences(all, i.today, end), ...cardOut.filter((c) => c.date <= end).map((c) => ({ name: c.name, date: c.date, amount: c.amount, direction: "out" as const, confirmed: true, essential: true, overdue: false, commitmentId: "", kind: "bill" as const }))]
     .sort((a, b) => a.date.localeCompare(b.date));
-  const unlinkedLoanOwed = activeLoans.filter((l) => !l.accountId).reduce((s, l) => s + l.principal, 0);
+  const unlinkedLoanOwed = sumMoney(activeLoans.filter(l => !l.accountId).map(l => l.principal));
   const nw = netWorth(live, i.transactions, i.valuations ?? []);
   const pending = i.transactions.filter((t) => (t.txnType ?? "expense") === "expense" && isTracked(t) && outstandingOf(t) > 0);
   const subs = subscriptionSummary(i.commitments, i.transactions.filter((t) => (t.txnType ?? "expense") === "expense"), i.today);
@@ -94,17 +95,17 @@ export function position(i: PositionInput) {
   for (const a of cashAccounts) { const b = accountBalance(a, i.transactions); if ((a.minBalance ?? 0) > 0 && b < (a.minBalance ?? 0)) alerts.push({ level: "medium", text: `${a.name} is below its minimum balance`, to: "/wealth" }); }
   if (i.budgets) {
     const spentBy: Record<string, number> = {};
-    for (const t of i.transactions) if ((t.txnType ?? "expense") === "expense" && t.date.startsWith(month)) spentBy[t.category] = (spentBy[t.category] ?? 0) + t.amount;
+    for (const t of i.transactions) if ((t.txnType ?? "expense") === "expense" && t.date.startsWith(month)) spentBy[t.category] = addMoney(spentBy[t.category] ?? 0, t.amount);
     for (const [cat, b] of Object.entries(i.budgets)) if (b > 0 && (spentBy[cat] ?? 0) >= b * 0.9) alerts.push({ level: (spentBy[cat] ?? 0) > b ? "high" : "medium", text: `${cat}: ${Math.round(((spentBy[cat] ?? 0) / b) * 100)}% of budget used`, to: "/budgets" });
   }
   for (const d of subs.duplicates) alerts.push({ level: "info", text: `Possible duplicate subscriptions: ${d.names.join(" & ")}`, to: "/plan" });
   for (const x of anomalies(i.transactions, i.today, 7)) alerts.push({ level: "info", text: `Unusual: ${x.title} — ${x.reason}`, to: "/expenses" });
 
   return {
-    cash: Math.round(cash * 100) / 100, minBalance, reserves, cards, flow, safe: sts, forecast: fc, upcoming, alerts,
-    netWorth: { assets: nw.assets, liabilities: Math.round((nw.liabilities + unlinkedLoanOwed) * 100) / 100, net: Math.round((nw.net - unlinkedLoanOwed) * 100) / 100 },
+    cash: roundMoney(cash), minBalance, reserves, cards, flow, safe: sts, forecast: fc, upcoming, alerts,
+    netWorth: { assets: nw.assets, liabilities: addMoney(nw.liabilities, unlinkedLoanOwed), net: subtractMoney(nw.net, unlinkedLoanOwed) },
     liabilitiesFromLoans: unlinkedLoanOwed,
-    reimbursements: { pendingCount: pending.length, pendingAmount: Math.round(pending.reduce((s, t) => s + outstandingOf(t), 0) * 100) / 100 },
+    reimbursements: { pendingCount: pending.length, pendingAmount: sumMoney(pending.map(outstandingOf)) },
     income,
     subscriptions: { active: subs.counts.active, monthly: subs.monthly, annual: subs.annual, summary: subs, detected: detectSubscriptions(i.transactions.filter((t) => (t.txnType ?? "expense") === "expense")) },
     loans,
@@ -118,9 +119,9 @@ export function assistantFacts(i: PositionInput) {
   const p = position(i);
   const spend = i.transactions.filter((t) => (t.txnType ?? "expense") === "expense");
   const sumBy = (rows: Rec[], key: (t: Rec) => string) => {
-    const o: Record<string, number> = {};
-    for (const t of rows) o[key(t)] = Math.round(((o[key(t)] ?? 0) + t.amount) * 100) / 100;
-    return o;
+    const o = new Map<string, ReturnType<typeof decimal>>();
+    for (const t of rows) o.set(key(t), (o.get(key(t)) ?? decimal(0)).plus(t.amount));
+    return Object.fromEntries([...o].map(([k,v])=>[k,roundMoney(v.toString())]));
   };
   const months: Record<string, { spent: number; income: number }> = {};
   for (let k = 0; k < 6; k++) {
@@ -136,7 +137,7 @@ export function assistantFacts(i: PositionInput) {
     today: i.today,
     currency: "INR",
     actual: {
-      cashInAccounts: p.cash, accounts: p.accounts, netWorth: p.netWorth, loanPrincipalOutstanding: p.loans.reduce((s, l) => s + l.principal, 0),
+      cashInAccounts: p.cash, accounts: p.accounts, netWorth: p.netWorth, loanPrincipalOutstanding: sumMoney(p.loans.map(l => l.principal)),
       thisMonth: { ...p.flow, byCategory: sumBy(thisMonth, (t) => t.category) },
       last6Months: { byMonth: months, byCategory: sumBy(last6, (t) => t.category), byPaymentMethod: sumBy(last6, (t) => t.paymentMethod), byAccount, topMerchants: Object.entries(sumBy(last6, (t) => t.merchant ?? "Unknown")).sort((a, b) => b[1] - a[1]).slice(0, 10) },
       creditCards: p.cards.map((c) => ({ name: c.name, owed: c.cycle.owed, limit: c.limit, utilisation: c.utilisation, status: c.cycle.status, statementBalance: c.cycle.statementBalance, remainingDue: c.cycle.remainingDue, dueDate: c.cycle.dueDate, unbilled: c.cycle.unbilled, interestSinceStatement: c.cycle.interestSinceStatement, emiOutstanding: c.cycle.emiOutstanding })),
