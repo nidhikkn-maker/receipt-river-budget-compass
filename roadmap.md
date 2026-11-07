@@ -1,7 +1,7 @@
 ## Credit-controlled completion — 7 Nov 2026
 - Owner development cap: 1,100 credits (550 essential workflows / 250 critical fixes / 200 final tests and security / 100 reserve). Stop feature expansion near 200 remaining; no production changes or publication.
 - Baseline: historical 1,557 implemented / 944 partial / 21 missing / 19 superseded; v6 566 verified / 331 partial / 2 blocked.
-- [ ] P0: unresolved committed statement intentions and concurrent/stale-safe Undo; isolated hosted recovery required before release claims.
+- [ ] P0 active batch: prevent mixed confirmed/unknown Undo and changed-source reversal before any writes; validate isolated persistence/reload. Unknown committed statement recovery and atomic concurrent/stale-safe Undo remain release blockers.
 - [x] P1 selected batch: C-1857 claim-builder saved/downloaded ordering, detailed/summary; thrown committed report-save response recovery. Targeted23 and browser5 PASS; controlled adapters, not hosted.
 - [ ] P1 next: connected Statement Desk → Inbox → account/card reconciliation → DocuRepo/report acceptance; use saved evidence, no repeat historical audit.
 - [ ] Final acceptance/security: preserve reserved credits; staged approval/storage safeguards remain pending release approval.

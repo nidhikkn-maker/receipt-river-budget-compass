@@ -146,6 +146,14 @@ export async function undoUpload(result: ApplyResult, api: ApplyApi): Promise<{ 
   const existing = new Set(api.readExistingIds ? await api.readExistingIds(planned) : api.transactions.map(t => t.id));
   // A planned write with a lost response is not a confirmed undo manifest. Keep its history for review.
   for (const e of result.evidence ?? []) if (!result.posted.includes(e.id) && !result.reconciled.includes(e.id) && existing.has(e.id)) left.push(e.id);
+  // Preflight the entire manifest before reversing even one confirmed line. Otherwise a mixed
+  // upload loses its confirmed half while an unknown committed operation remains unresolved.
+  for (const evidence of result.evidence ?? []) {
+    if (!result.posted.includes(evidence.id) && !result.reconciled.includes(evidence.id)) continue;
+    const current = api.transactions.find(t => t.id === evidence.id);
+    if (existing.has(evidence.id) && (!current || current.statementRef !== evidence.ref)) left.push(evidence.id);
+  }
+  if (left.length) return { left: [...new Set(left)] };
   for (const id of result.posted) {
     const e = api.transactions.find((t) => t.id === id);
     if (!e) { if (existing.has(id)) left.push(id); continue; }
