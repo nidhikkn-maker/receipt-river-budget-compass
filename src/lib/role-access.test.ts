@@ -65,6 +65,7 @@ beforeAll(async () => {
       ('${OTHER}', '{}');
   `);
   await db.exec(readFileSync("drizzle/migrations/0066_role_access.sql", "utf8").replace(/--> statement-breakpoint/g, ""));
+  await db.exec(readFileSync("drizzle/migrations/0086_role_permission_scope.sql", "utf8").replace(/--> statement-breakpoint/g, ""));
   await db.exec(`INSERT INTO public.app_admins(user_id) VALUES ('${ADMIN}')`);
 }, 30000);
 afterAll(async () => { await db.close(); });
