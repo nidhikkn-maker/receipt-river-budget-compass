@@ -36,6 +36,7 @@ async def main():
    await context.route('**/*',isolate)
    await page.goto('http://localhost:8080/dashboard')
    plus=page.get_by_role('button',name='Smart Add',exact=True).filter(visible=True).first
+   print('shell errors', errors)
    await expect(plus).to_be_visible()
    await plus.click()
    dialog=page.get_by_role('dialog',name='Smart Add')
