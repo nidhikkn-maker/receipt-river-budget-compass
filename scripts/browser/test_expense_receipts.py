@@ -50,6 +50,8 @@ class ExpenseReceiptButtons(unittest.IsolatedAsyncioTestCase):
                 await route.abort()
             elif req.is_navigation_request() and parsed.path in ("/new", "/expenses", "/dashboard"):
                 await route.fulfill(status=200, content_type="text/html", body=HTML)
+            elif parsed.path == '/src/components/TeamAccess.tsx':
+                await route.fulfill(status=200, content_type='application/javascript', body='export const TeamExpenses=()=>null;')
             elif parsed.path in MOCKS:
                 await route.fulfill(status=200, content_type="application/javascript", body=f'export {{ {", ".join(MOCKS[parsed.path])} }} from "/scripts/browser/expense-mocks.tsx";')
             elif parsed.path == "/controlled-receipt/controlled-receipt.png":
