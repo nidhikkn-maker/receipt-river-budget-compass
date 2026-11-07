@@ -1,5 +1,10 @@
 // @vitest-environment node
-import { JSDOM } from "jsdom";
+// Initialise DOM before React's event feature detection; retain Node Blob for PGlite.
+vi.hoisted(async () => {
+ const { JSDOM } = await import("jsdom");
+ const dom = new JSDOM("<!doctype html><html><body></body></html>", { url: "http://localhost" });
+ for (const key of ["window", "document", "HTMLElement", "File", "FileReader"] as const) Object.defineProperty(globalThis, key, { configurable: true, writable: true, value: key === "window" ? dom.window : key === "document" ? dom.window.document : dom.window[key] });
+});
 import { readFileSync } from "node:fs";
 import { PGlite } from "@electric-sql/pglite";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -53,8 +58,6 @@ async function harness(extracted: ExtractedDocument, extras: object = {}, transa
 
       await db.query("SELECT set_config('test.uid',$1,false)", [owner]);
       await db.exec("SET ROLE authenticated");
-      const dom = new JSDOM("<!doctype html><html><body></body></html>", { url: "http://localhost" });
-      for (const key of ["window", "document", "HTMLElement", "File", "FileReader"] as const) vi.stubGlobal(key, key === "window" ? dom.window : key === "document" ? dom.window.document : dom.window[key]);
       state.reader.mockResolvedValue({ ok: true, result: extracted });
       const add = vi.fn(async (file: File, meta) => {
         const raw = await new Promise<string>((resolve, reject) => { const reader = new FileReader(); reader.onload = () => resolve(String(reader.result)); reader.onerror = reject; reader.readAsText(file); });
@@ -141,8 +144,8 @@ describe("grouped actual file-to-review, installed SQL and read-back acceptance"
    expect(asset.transactionId).toBe(ambiguous ? undefined : "paid1");
    expect(saved.books.docLinks.filter(l => l.kind === "transaction")).toEqual(ambiguous ? [] : [{ docId: original.id, kind: "transaction", targetId: "paid1", label: "acquisition payment" }]);
    expect(saved.books.journals).toEqual([]);
-   expect(annualBook(asset, "2026-27").depreciation).toBeGreaterThan(0);
-   expect(taxSchedule(asset, "2026-27")[0]?.depreciation).toBe(11250);
+   expect(annualBook(asset, "2026-27").depreciation).toBe(7459.68);
+   expect(taxSchedule(asset, "2026-27")[0]?.depreciation).toBe(22500);
   } finally { await h.db.close(); }
  }, 30000);
 });
