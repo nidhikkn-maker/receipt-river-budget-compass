@@ -20,7 +20,7 @@ it.each(['success','lost-response','mid-delete-failure','stale-revision'] as con
   if(mode==='mid-delete-failure')await db.exec(`CREATE FUNCTION fail() RETURNS trigger LANGUAGE plpgsql AS $$BEGIN IF OLD.id='${b}'::uuid THEN RAISE EXCEPTION 'injected deletion failure';END IF;RETURN OLD;END$$;CREATE TRIGGER fail BEFORE DELETE ON expenses FOR EACH ROW EXECUTE FUNCTION fail();`);
   if(mode==='stale-revision')await db.exec(`UPDATE expenses SET correction_revision=2 WHERE id='${b}'`);
   const api={receipt:async(id:string)=>(await db.query('SELECT id FROM statement_undo_receipts WHERE owner_id=$1 AND id=$2',[owner,id])).rows.length===1,
-   rows:async()=> (await db.query<Record<string,unknown>>('SELECT * FROM expenses ORDER BY id')).rows,
+   rows:async()=> (await db.query<{row:Record<string,unknown>}>('SELECT to_jsonb(e) AS row FROM expenses e ORDER BY id')).rows.map(r=>r.row),
    commit:async(id:string,items:unknown)=>{await db.query('SELECT undo_statement_rows($1,$2::jsonb)',[id,JSON.stringify(items)]);if(mode==='lost-response')throw Error('response interrupted');}};
   if(mode==='mid-delete-failure'||mode==='stale-revision'){
    await expect(atomicStatementUndo(op,result,expected,api)).rejects.toThrow();

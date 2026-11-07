@@ -303,6 +303,12 @@ class StatementDeskFlow(unittest.IsolatedAsyncioTestCase):
         await expect(self.page.get_by_label('Recent uploads')).to_contain_text('Undo unfinished')
         self.assertEqual(await self.page.evaluate('deskFixture.transactions.length'), 2)
 
+        self.assertEqual(await self.page.evaluate('deskFixture.removes.length'), 0)
+        await self.page.reload()
+        await expect(self.page.get_by_role('heading', name='Statement Desk')).to_be_visible()
+        await expect(self.page.get_by_label('Recent uploads')).to_contain_text('Undo unfinished')
+        self.assertEqual(await self.page.evaluate('deskFixture.transactions.length'), 2)
+
     async def test_exact_transaction_response_recovery_and_missing_atomic_authority(self):
         await self.page.evaluate('deskFixture.loseSaveResponse = true')
         csv = 'Date,Description,Debit,Credit\n2026-10-02,SWIGGY ORDER,250,\n'
@@ -325,11 +331,9 @@ class StatementDeskFlow(unittest.IsolatedAsyncioTestCase):
         await expect(self.page.get_by_label('Recent uploads')).to_have_count(0)
         self.assertEqual(await self.page.evaluate('deskFixture.transactions.length'),0)
         self.assertEqual(await self.page.evaluate('deskFixture.atomicCalls'),1)
-        self.assertEqual(await self.page.evaluate('deskFixture.removes.length'), 0)
         await self.page.reload()
         await expect(self.page.get_by_role('heading', name='Statement Desk')).to_be_visible()
-        await expect(self.page.get_by_label('Recent uploads')).to_contain_text('Undo unfinished')
-        self.assertEqual(await self.page.evaluate('deskFixture.transactions.length'), 2)
+        self.assertEqual(await self.page.evaluate('deskFixture.transactions.length'), 0)
 
 if __name__ == "__main__":
     unittest.main()
