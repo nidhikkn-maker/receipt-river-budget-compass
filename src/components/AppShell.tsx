@@ -16,10 +16,11 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "./ui/dialog";
 import { useStore } from "@/lib/store";
 import { applyTheme } from "@/lib/themes";
 import { ACTIVE_SCOPES, SCOPE_LABEL, type Scope } from "@/lib/expenses";
+import { SmartAdd } from './SmartAdd';
 
 const LINKS = [
-  { to: "/dashboard", label: "Home", icon: Home },
-  { to: "/expenses", label: "Activity", icon: ListFilter },
+  { to: "/dashboard", label: "Today", icon: Home },
+  { to: "/expenses", label: "Journal", icon: ListFilter },
   { to: "/new", label: "Add", icon: Plus, primary: true },
   { to: "/assistant", label: "AI", icon: Sparkles },
   { to: "/reports", label: "Insights", icon: BarChart3 },
@@ -48,6 +49,7 @@ const MORE_GROUPS: { title: string; items: { to: string; label: string; icon: ty
     { to: "/rules", label: "Financial rules", icon: SlidersHorizontal },
   ] },
   { title: "Activity", items: [
+    { to: "/expenses", label: "Journal", icon: ListFilter },
     { to: "/drafts", label: "Drafts", icon: FilePen },
     { to: "/inbox", label: "Financial inbox", icon: Inbox },
     { to: "/records-check", label: "Account health", icon: Search },
@@ -66,7 +68,7 @@ const MORE_GROUPS: { title: string; items: { to: string; label: string; icon: ty
   { title: "Workspaces & travel", items: [
     { to: "/trips", label: "Travel Manager", icon: Plane },
     { to: "/family", label: "Family", icon: Users },
-    { to: "/wealth", label: "Wealth & accounts", icon: Gem },
+    { to: "/wealth", label: "Wealth & Plan", icon: Gem },
   ] },
   { title: "Account", items: [
     { to: "/entities", label: "Companies & years", icon: Users },
@@ -143,13 +145,15 @@ export function AppShell({ children }: { children: ReactNode }) {
   const focused = useRouterState({ select: (st) => st.location.pathname === "/new" });
   const wideClaim = useRouterState({ select: (st) => st.location.pathname === '/claim-submission' });
   const [moreOpen, setMoreOpen] = useState(false);
+  const [smartOpen, setSmartOpen] = useState(false);
+  const [spacesOpen, setSpacesOpen] = useState(false);
   useEffect(() => { setHidden(localStorage.getItem("ll-privacy") === "1"); }, []);
   useEffect(() => { document.documentElement.classList.toggle("privacy", hidden); localStorage.setItem("ll-privacy", hidden ? "1" : "0"); }, [hidden]);
   return (
     <div className="min-h-screen bg-background lg:pl-24">
       <aside className="fixed inset-y-0 left-0 z-30 hidden w-24 flex-col items-center gap-1 overflow-y-auto bg-ink py-6 text-ink-foreground lg:flex">
         <Link to="/dashboard" aria-label="Ledgerline home" className="mb-6 shrink-0"><img src="/app-icon.png" alt="Ledgerline" width={48} height={48} className="h-12 w-12 rounded-2xl shadow-float" /></Link>
-        {LINKS.map((l) => (
+        {LINKS.map((l) => "primary" in l ? <Button key={l.to} variant="ghost" aria-label="Smart Add" onClick={() => setSmartOpen(true)} className="my-1 h-16 w-20 flex-col gap-1 text-ink-foreground hover:bg-sidebar-accent hover:text-ink-foreground"><span className="flex size-9 items-center justify-center rounded-full bg-gold text-gold-foreground"><Plus className="size-5" /></span><span className="text-[11px]">Add</span></Button> : (
           <Link key={l.to} to={l.to} className="flex w-20 flex-col items-center gap-1 rounded-2xl py-2.5 text-[11px] font-semibold text-ink-muted transition hover:text-ink-foreground"
             activeProps={{ className: "!text-gold bg-sidebar-accent ring-1 ring-gold" }}>
             <span className={"flex h-9 w-9 items-center justify-center rounded-xl " + ("primary" in l ? "bg-gold text-gold-foreground shadow-gold" : "")}><l.icon className="h-5 w-5" /></span>
@@ -163,6 +167,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           <Link to="/dashboard" aria-label="Ledgerline home" className="flex items-center"><LedgerlineBrand /></Link>
           <div className="ml-auto flex items-center">
             <SyncStatus />
+            <Button size="icon" variant="ghost" aria-label="Smart Add" title="Smart Add" className="hidden sm:inline-flex lg:hidden" onClick={() => setSmartOpen(true)}><Plus className="size-5" /></Button>
             <Link to="/search" aria-label="Search" className="rounded-xl p-2 text-muted-foreground transition hover:text-foreground"><Search className="h-5 w-5" /></Link>
             <Link to="/inbox" aria-label="Notifications" className="rounded-xl p-2 text-muted-foreground transition hover:text-foreground"><Bell className="h-5 w-5" /></Link>
             <Button size="icon" variant="ghost" onClick={() => setHidden((h) => !h)} aria-label={hidden ? "Show amounts" : "Hide amounts"} className="rounded-xl text-muted-foreground">{hidden ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}</Button>
@@ -185,21 +190,27 @@ export function AppShell({ children }: { children: ReactNode }) {
 
       <nav hidden={focused} aria-label="Primary" className="fixed inset-x-3 bottom-[calc(0.75rem+env(safe-area-inset-bottom))] z-30 sm:inset-x-auto sm:left-1/2 sm:w-[min(560px,calc(100%-3rem))] sm:-translate-x-1/2 flex items-center justify-around rounded-3xl bg-ink px-2 py-2 text-ink-muted shadow-float backdrop-blur-xl lg:hidden">
         <Link to="/dashboard" className="flex flex-1 flex-col items-center gap-0.5 rounded-2xl py-1.5 text-[10px] font-semibold" activeProps={{ className: "!text-gold" }}>
-          <Home className="h-5 w-5" />Home
+          <Home className="h-5 w-5" />Today
         </Link>
-        <Link to="/expenses" className="flex flex-1 flex-col items-center gap-0.5 rounded-2xl py-1.5 text-[10px] font-semibold" activeProps={{ className: "!text-gold" }}>
-          <ListFilter className="h-5 w-5" />Money
-        </Link>
-        <Link to="/new" aria-label="Add entry" className="flex flex-1 flex-col items-center">
-          <span className="-mt-8 flex h-14 w-14 items-center justify-center rounded-full bg-gold-hero text-gold-foreground shadow-gold transition active:scale-95"><Plus className="h-7 w-7" /></span>
-        </Link>
+        <Button variant="ghost" onClick={() => setSpacesOpen(true)} aria-label="Spaces" aria-expanded={spacesOpen} className="h-12 flex-1 flex-col gap-0.5 text-[10px] text-ink-muted hover:bg-sidebar-accent hover:text-ink-foreground"><Users className="h-5 w-5" />Spaces</Button>
+        <Button variant="ghost" aria-label="Smart Add" title="Smart Add" onClick={() => setSmartOpen(true)} className="-mt-8 h-14 w-14 shrink-0 rounded-full bg-gold text-gold-foreground shadow-gold hover:bg-gold hover:text-gold-foreground"><Plus className="h-7 w-7" /></Button>
         <Link to="/inbox" className="flex flex-1 flex-col items-center gap-0.5 rounded-2xl py-1.5 text-[10px] font-semibold" activeProps={{ className: "!text-gold" }}>
-          <Inbox className="h-5 w-5" />Inbox
+          <Inbox className="h-5 w-5" />Review
         </Link>
-        <button type="button" onClick={() => setMoreOpen(true)} aria-label="More modules" aria-expanded={moreOpen} className="flex flex-1 flex-col items-center gap-0.5 rounded-2xl py-1.5 text-[10px] font-semibold">
+        <Button variant="ghost" onClick={() => setMoreOpen(true)} aria-label="More modules" aria-expanded={moreOpen} className="h-12 flex-1 flex-col gap-0.5 text-[10px] text-ink-muted hover:bg-sidebar-accent hover:text-ink-foreground">
           <Menu className="h-5 w-5" />More
-        </button>
+        </Button>
       </nav>
+
+      <SmartAdd open={smartOpen} onOpenChange={setSmartOpen} scope={preferences.homeScope === 'all' ? undefined : preferences.homeScope} />
+      <Dialog open={spacesOpen} onOpenChange={setSpacesOpen}>
+        <DialogContent className="sm:max-w-md"><DialogHeader><DialogTitle>Spaces</DialogTitle></DialogHeader>
+          <WorkspaceSelector />
+          <Link to="/expenses" onClick={() => setSpacesOpen(false)} className="flex min-h-12 items-center gap-3 border-b text-sm"><ListFilter className="size-5 text-primary" />Journal</Link>
+          <Link to="/entities" onClick={() => setSpacesOpen(false)} className="flex min-h-12 items-center gap-3 text-sm"><Users className="size-5 text-primary" />Companies & years</Link>
+          <Button onClick={() => { setSpacesOpen(false); setSmartOpen(true); }}><Plus className="size-4" />Add to this space</Button>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={moreOpen} onOpenChange={setMoreOpen}>
         <DialogContent className="max-h-[80vh] overflow-y-auto sm:max-w-lg" aria-label="All modules">
