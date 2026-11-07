@@ -181,6 +181,7 @@ class ExpenseReceiptButtons(unittest.IsolatedAsyncioTestCase):
         async with self.page.expect_file_chooser() as chooser:
             await self.page.get_by_role("button", name="Files / PDF", exact=True).click()
         await (await chooser.value).set_files(self.receipt)
+        self.page.on("console", lambda m: print("CON0", m.text[:200]) if "MUT" in m.text else None)
         await expect(self.page.get_by_role("group", name="Review scanned details")).to_be_visible()
         self.assertEqual(await self.page.evaluate("expenseBrowserFixture.saves.length"), 0)
         review = self.page.get_by_role("group", name="Review scanned details")
