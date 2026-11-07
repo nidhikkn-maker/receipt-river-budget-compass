@@ -79,6 +79,7 @@ async def main():
    await page.get_by_role('button',name='Smart Add',exact=True).filter(visible=True).first.click()
    await expect(sheet.get_by_role('heading',name='Intelligent Canvas')).to_be_visible()
    await sheet.get_by_role('button',name='Confirm details',exact=True).click()
+   await page.wait_for_timeout(800); await page.screenshot(path=str(OUT/'dbg.png')); print('ALERTS', await sheet.get_by_role('alert').all_inner_texts())
    await sheet.get_by_role('button',name='Save expense').click()
    await expect(sheet.get_by_text('Saved to your records')).to_be_visible(timeout=15000)
    await page.screenshot(path=str(OUT/f'{width}-smart-saved.png'))
