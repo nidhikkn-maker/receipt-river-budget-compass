@@ -971,3 +971,5 @@
 ## Plain-language (non-accountant) UIX — 7 Nov 2026
 - [x] Shared wording helpers, Getting started guide (6 journeys), Accounting details disclosure, Statement stage strip; Review/Wealth/Canvas/Guide rendered-checked at 390/1180/1440 with fixtures.
 - [ ] Wording passes for Trip budget, Document intake, Balance verification, Asset/Tax books, Audit, Payment methods, Receivables, Settings, DocuRepo; app-wide toasts/validation text (see docs/UIX_PLAIN_LANGUAGE_COVERAGE.md).
+- [x] Smart Add in place: real photo/PDF/spreadsheet preview, receipt review and statement batch review inside the sheet, no page jump; browser-verified with fixtures.
+- [ ] Smart Add on a real phone camera and hosted save/DocuRepo read-back; remaining plain-language screens listed above.
