@@ -6,6 +6,7 @@ import type { Database, Json } from "@/integrations/supabase/types";
 import { queueEntry, pendingEntries, removePending, putSnapshot, getSnapshot } from "./offline";
 import { mergePending, setItem, type PendingItem } from "./pending-sync";
 import { deleteFinanceData } from "./delete-data";
+import { privateFileUrl } from "./private-files";
 import { saveExpense } from "./fx.functions";
 import {
   CHARGES_CATEGORY, validateAllocations, validateBudget, validateExpense, type Allocation,
@@ -795,9 +796,16 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
     }
   };
   const signedUrl = useCallback(async (path: string) => {
-    const { data } = await supabase.storage.from("receipts").createSignedUrl(path, 300);
-    return data?.signedUrl ?? null;
-  }, []);
+    return privateFileUrl(path, {
+      canRead: async name => {
+        // Owner receipts still rely on storage RLS; shared files also require a currently visible document.
+        if (name.split("/")[0] === userId) return true;
+        const result = await supabase.from("documents").select("id").eq("file_path", name).limit(1);
+        return !result.error && !!result.data?.length;
+      },
+      sign: async (name, seconds) => { const { data, error } = await supabase.storage.from("receipts").createSignedUrl(name, seconds); return error ? null : data?.signedUrl ?? null; },
+    });
+  }, [userId]);
 
   return (
     <StoreCtx.Provider value={{
