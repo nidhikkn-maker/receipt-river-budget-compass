@@ -6,8 +6,13 @@
  */
 import type { TaxComputation } from "./taxcomp";
 import type { TaxDeduction, TaxProfile } from "./types";
+import { decimal, addMoney, subtractMoney } from "../money";
 
-const r0 = (n: number) => Math.round(n);
+const r0 = (n: number) => decimal(n).toDecimalPlaces(0).toNumber();
+// Preserve sub-paise tax intermediates until existing statutory presentation boundaries.
+const add = (...values: number[]) => values.reduce((s,v)=>s.plus(v),decimal(0)).toNumber();
+const sub = (a:number,b:number) => decimal(a).minus(b).toNumber();
+const mul = (a:number,b:number) => decimal(a).mul(b).toNumber();
 type Slabs = [number, number][];
 interface YearRules { newSlabs: Slabs; oldSlabs: Slabs; newRebate: { limit: number; max: number }; oldRebate: { limit: number; max: number }; stdNew: number; stdOld: number; stcg: number; ltcg: number; ltcgExempt: number }
 
@@ -21,9 +26,9 @@ export function yearRules(fy: string): { rules: YearRules; carried: boolean } {
 }
 
 export function slab(income: number, slabs: Slabs): number {
-  let tax = 0, prev = 0;
-  for (const [upper, rate] of slabs) { if (income > prev) tax += (Math.min(income, upper) - prev) * rate; prev = upper; }
-  return tax;
+  let tax = decimal(0), prev = 0;
+  for (const [upper, rate] of slabs) { if (income > prev) tax = tax.plus(decimal(Math.min(income, upper)).minus(prev).mul(rate)); prev = upper; }
+  return tax.toNumber();
 }
 
 export const DEDUCTION_CAP: Record<TaxDeduction["section"], number> = { "80C": 150000, "80CCD1B": 50000, "80D": 100000, "80E": Infinity, "80G": Infinity, "80TTA": 10000, other: Infinity };
@@ -31,9 +36,9 @@ export const DEDUCTION_CAP: Record<TaxDeduction["section"], number> = { "80C": 1
 /** Old-regime Chapter VI-A total: each section capped, only lines with written evidence. */
 export function chapterVIA(lines: TaxDeduction[]): { total: number; bySection: Partial<Record<TaxDeduction["section"], number>> } {
   const by: Partial<Record<TaxDeduction["section"], number>> = {};
-  for (const l of lines) by[l.section] = (by[l.section] ?? 0) + l.amount;
-  for (const k of Object.keys(by) as TaxDeduction["section"][]) by[k] = Math.min(by[k]!, DEDUCTION_CAP[k]);
-  return { total: r0(Object.values(by).reduce((s, v) => s + (v ?? 0), 0)), bySection: by };
+  for (const l of lines) by[l.section] = add(by[l.section] ?? 0,l.amount);
+  for (const k of Object.keys(by) as TaxDeduction["section"][]) by[k] = Math.min(by[k] ?? 0, DEDUCTION_CAP[k]);
+  return { total: r0(Object.values(by).reduce((s,v)=>add(s,v ?? 0),0)), bySection: by };
 }
 
 /** Surcharge rate on total income; new regime and special-rate gains are capped. */
@@ -57,42 +62,42 @@ export function individualLiability(c: TaxComputation, fy: string, regime: "new"
   const std = c.salary > 0 ? Math.min(c.salary, regime === "new" ? rules.stdNew : rules.stdOld) : 0;
   const ded = regime === "old" ? chapterVIA(deductionLines).total : 0;
   if (regime === "new" && deductionLines.length) notes.push("Deductions under Chapter VI-A are not allowed in the new regime and are ignored");
-  const special = Math.max(0, c.capitalGains.short) + Math.max(0, c.capitalGains.long);
-  const normalIncome = Math.max(0, r0(c.total - special - std - ded));
+  const special = add(Math.max(0,c.capitalGains.short),Math.max(0,c.capitalGains.long));
+  const normalIncome = Math.max(0, r0(sub(sub(sub(c.total,special),std),ded)));
   const stcg = Math.max(0, c.capitalGains.short), ltcgGross = Math.max(0, c.capitalGains.long);
   const ltcgExempt = Math.min(ltcgGross, rules.ltcgExempt);
-  const taxable = normalIncome + stcg + ltcgGross - ltcgExempt;
+  const taxable = sub(add(normalIncome,stcg,ltcgGross),ltcgExempt);
   const slabs = regime === "new" ? rules.newSlabs : rules.oldSlabs;
   // Unused basic exemption can absorb special-rate gains for residents.
-  const basic = slabs[0]![0];
-  const unused = Math.max(0, basic - normalIncome);
-  const stcgTaxed = Math.max(0, stcg - unused), ltcgTaxed = Math.max(0, ltcgGross - ltcgExempt - Math.max(0, unused - stcg));
+  const basic = slabs[0]?.[0] ?? 0;
+  const unused = Math.max(0, sub(basic,normalIncome));
+  const stcgTaxed = Math.max(0, sub(stcg,unused)), ltcgTaxed = Math.max(0, sub(sub(ltcgGross,ltcgExempt),Math.max(0,sub(unused,stcg))));
   const slabTax = slab(normalIncome, slabs);
-  const sTax = { stcg: stcgTaxed * rules.stcg, ltcg: ltcgTaxed * rules.ltcg, ltcgExempt };
+  const sTax = { stcg: mul(stcgTaxed,rules.stcg), ltcg: mul(ltcgTaxed,rules.ltcg), ltcgExempt };
   // s.87A: rebate on slab tax only (not special-rate gains) with marginal relief just above the limit.
   const rb = regime === "new" ? rules.newRebate : rules.oldRebate;
   let rebate = 0;
   if (taxable <= rb.limit) rebate = Math.min(slabTax, rb.max);
-  else if (regime === "new" && normalIncome > rb.limit && slabTax > normalIncome - rb.limit) rebate = slabTax - (normalIncome - rb.limit);
-  const base = slabTax - rebate + sTax.stcg + sTax.ltcg;
+  else if (regime === "new" && normalIncome > rb.limit && slabTax > sub(normalIncome,rb.limit)) rebate = sub(slabTax,sub(normalIncome,rb.limit));
+  const base = add(sub(slabTax,rebate),sTax.stcg,sTax.ltcg);
   const capNormal = regime === "new" ? 0.25 : 0.37;
   const rN = surchargeRate(taxable, capNormal), rS = surchargeRate(taxable, 0.15);
-  let surcharge = (slabTax - rebate) * rN + (sTax.stcg + sTax.ltcg) * rS;
+  let surcharge = add(mul(sub(slabTax,rebate),rN),mul(add(sTax.stcg,sTax.ltcg),rS));
   // Marginal relief: tax + surcharge may not exceed tax at the threshold plus income above it.
   let relief = 0;
   const th = [...THRESHOLDS].reverse().find((t) => taxable > t);
   if (th && surcharge > 0) {
-    const scaled = th / taxable;
-    const atTh = (slab(normalIncome * scaled, slabs) + (sTax.stcg + sTax.ltcg) * scaled) * (1 + surchargeRate(th, capNormal));
-    const excess = base + surcharge - atTh;
-    if (excess > taxable - th) relief = Math.min(surcharge, excess - (taxable - th));
-    surcharge -= relief;
+    const scaled = decimal(th).div(taxable).toNumber();
+    const atTh = mul(add(slab(mul(normalIncome,scaled),slabs),mul(add(sTax.stcg,sTax.ltcg),scaled)),add(1,surchargeRate(th,capNormal)));
+    const excess = sub(add(base,surcharge),atTh);
+    if (excess > sub(taxable,th)) relief = Math.min(surcharge, sub(excess,sub(taxable,th)));
+    surcharge = sub(surcharge,relief);
   }
-  const cess = (base + surcharge) * 0.04;
-  const total = r0(base + surcharge + cess);
+  const cess = mul(add(base,surcharge),0.04);
+  const total = r0(add(base,surcharge,cess));
   if (c.capitalGains.short || c.capitalGains.long) notes.push("Capital gains are taxed as listed equity (s.111A 20%, s.112A 12.5% above ₹1,25,000); property or debt gains need the accountant's treatment");
-  const lines: [string, number][] = [["Total income (by head)", c.total], ["Standard deduction (salary)", -std], ["Chapter VI-A deductions", -ded], ["Income at slab rates", normalIncome], ["Tax at slab rates", r0(slabTax)], ["Rebate u/s 87A", -r0(rebate)], ["Short-term gains tax (111A)", r0(sTax.stcg)], ["Long-term gains tax (112A)", r0(sTax.ltcg)], ["Surcharge", r0(surcharge)], ["Health & education cess 4%", r0(cess)], ["Total tax", total], ["Taxes already paid", -credits], [total - credits >= 0 ? "Balance to pay" : "Refund due", Math.abs(total - credits)]];
-  return { regime, taxableIncome: r0(taxable), normalIncome, standardDeduction: std, deductions: ded, slabTax: r0(slabTax), specialTax: { stcg: r0(sTax.stcg), ltcg: r0(sTax.ltcg), ltcgExempt }, rebate: r0(rebate), surcharge: r0(surcharge), marginalRelief: r0(relief), cess: r0(cess), total, credits, balance: total - credits, lines, notes };
+  const lines: [string, number][] = [["Total income (by head)", c.total], ["Standard deduction (salary)", -std], ["Chapter VI-A deductions", -ded], ["Income at slab rates", normalIncome], ["Tax at slab rates", r0(slabTax)], ["Rebate u/s 87A", -r0(rebate)], ["Short-term gains tax (111A)", r0(sTax.stcg)], ["Long-term gains tax (112A)", r0(sTax.ltcg)], ["Surcharge", r0(surcharge)], ["Health & education cess 4%", r0(cess)], ["Total tax", total], ["Taxes already paid", -credits], [subtractMoney(total,credits) >= 0 ? "Balance to pay" : "Refund due", Math.abs(subtractMoney(total,credits))]];
+  return { regime, taxableIncome: r0(taxable), normalIncome, standardDeduction: std, deductions: ded, slabTax: r0(slabTax), specialTax: { stcg: r0(sTax.stcg), ltcg: r0(sTax.ltcg), ltcgExempt }, rebate: r0(rebate), surcharge: r0(surcharge), marginalRelief: r0(relief), cess: r0(cess), total, credits, balance: subtractMoney(total,credits), lines, notes };
 }
 
 /** Domestic company / firm liability for the chosen option. No option recorded → null (never assumed). */
@@ -104,11 +109,11 @@ export function entityLiability(c: TaxComputation, kind: "company" | "firm", opt
   else if (option === "115BAB") { rate = 0.15; sur = 0.1; }
   else if (option === "normal25" || option === "normal30") { rate = option === "normal25" ? 0.25 : 0.3; sur = income > 100000000 ? 0.12 : income > 10000000 ? 0.07 : 0; }
   else return null;
-  const base = income * rate, surcharge = base * sur, cess = (base + surcharge) * 0.04, total = r0(base + surcharge + cess);
+  const base = mul(income,rate), surcharge = mul(base,sur), cess = mul(add(base,surcharge),0.04), total = r0(add(base,surcharge,cess));
   const label = kind === "firm" ? "Firm / LLP 30%" : option === "115BAA" ? "Section 115BAA 22%" : option === "115BAB" ? "Section 115BAB 15%" : option === "normal25" ? "Normal 25% (turnover ≤ ₹400 crore)" : "Normal 30%";
   const notes = kind === "company" && (option === "normal25" || option === "normal30") ? ["Minimum alternate tax (s.115JB) is not worked out — the accountant checks book profit"] : [];
-  return { regime: kind, taxableIncome: income, normalIncome: income, standardDeduction: 0, deductions: 0, slabTax: r0(base), specialTax: { stcg: 0, ltcg: 0, ltcgExempt: 0 }, rebate: 0, surcharge: r0(surcharge), marginalRelief: 0, cess: r0(cess), total, credits, balance: total - credits,
-    lines: [["Total income", income], [`Tax at ${label}`, r0(base)], ["Surcharge", r0(surcharge)], ["Cess 4%", r0(cess)], ["Total tax", total], ["Taxes already paid", -credits], [total - credits >= 0 ? "Balance to pay" : "Refund due", Math.abs(total - credits)]], notes };
+  return { regime: kind, taxableIncome: income, normalIncome: income, standardDeduction: 0, deductions: 0, slabTax: r0(base), specialTax: { stcg: 0, ltcg: 0, ltcgExempt: 0 }, rebate: 0, surcharge: r0(surcharge), marginalRelief: 0, cess: r0(cess), total, credits, balance: subtractMoney(total,credits),
+    lines: [["Total income", income], [`Tax at ${label}`, r0(base)], ["Surcharge", r0(surcharge)], ["Cess 4%", r0(cess)], ["Total tax", total], ["Taxes already paid", -credits], [subtractMoney(total,credits) >= 0 ? "Balance to pay" : "Refund due", Math.abs(subtractMoney(total,credits))]], notes };
 }
 
 /**
@@ -121,7 +126,7 @@ export function itrComputationJson(p: { fy: string; pan: string | null; name: st
     _note: "Ledgerline working file in ITR part layout — not an official upload file. Review with your accountant.",
     AssessmentYear: ay, Form: p.form, PAN: p.pan, Name: p.name, Regime: p.l.regime === "old" ? "Old" : p.l.regime === "new" ? "New (115BAC)" : p.l.regime,
     "PartB-TI": { Salaries: p.c.salary, IncomeFromHP: p.c.houseProperty.net, ProfBusGain: p.c.business.net, CapGain: { ShortTerm111A: p.c.capitalGains.short, LongTerm112A: p.c.capitalGains.long }, IncFromOS: p.c.otherSources, GrossTotalIncome: p.c.gross, BFLossSetOff: p.c.lossesSetOff, DeductionsUnderScheduleVIA: p.l.deductions, TotalIncome: p.l.taxableIncome },
-    "PartB-TTI": { TaxAtNormalRates: p.l.slabTax, TaxAtSpecialRates: p.l.specialTax.stcg + p.l.specialTax.ltcg, Rebate87A: p.l.rebate, Surcharge: p.l.surcharge, MarginalRelief: p.l.marginalRelief, EducationCess: p.l.cess, GrossTaxLiability: p.l.total, TaxesPaid: p.l.credits, BalTaxPayable: Math.max(0, p.l.balance), RefundDue: Math.max(0, -p.l.balance) },
+    "PartB-TTI": { TaxAtNormalRates: p.l.slabTax, TaxAtSpecialRates: addMoney(p.l.specialTax.stcg,p.l.specialTax.ltcg), Rebate87A: p.l.rebate, Surcharge: p.l.surcharge, MarginalRelief: p.l.marginalRelief, EducationCess: p.l.cess, GrossTaxLiability: p.l.total, TaxesPaid: p.l.credits, BalTaxPayable: Math.max(0, p.l.balance), RefundDue: Math.max(0, -p.l.balance) },
   };
 }
 
