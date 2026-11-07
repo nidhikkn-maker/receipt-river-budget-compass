@@ -72,7 +72,7 @@ export function fromForex(file: string, wallet: ForexWallet): StmtLine[] {
 }
 
 export function fromStatementLines(file: string, lines: StatementLine[], currency = "INR"): StmtLine[] {
-  return lines.map((l, i) => ({ key: key(file, i), file, date: l.date, amount: l.amount, direction: (l.direction ?? "debit") as Dir, balance: null, description: l.description, currency }));
+  return lines.map((l, i) => ({ key: key(file, i), file, date: l.date, amount: l.amount, direction: (l.direction ?? "debit") as Dir, balance: typeof l.balance === "number" ? l.balance : null, description: l.description, currency }));
 }
 
 export function totals(lines: StmtLine[]) {

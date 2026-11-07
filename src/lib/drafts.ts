@@ -1,6 +1,7 @@
 // Expense drafts: unfinished entries kept apart from the ledger. They never touch balances,
 // reports or reimbursements; only the normal Save path turns one into a transaction.
 import { supabase } from "@/integrations/supabase/client";
+import { shareInflight } from "./request-dedupe";
 import type { Json } from "@/integrations/supabase/types";
 import { localDrafts, localToFile, removeLocalDraft, putLocalDraft, type LocalDraft } from "./offline";
 
@@ -42,10 +43,12 @@ export const pendingDrafts = (all: Draft[]) => all.filter((d) => d.status !== "s
 type Row = { id: string; data: Json; receipts: Json; status: string; transaction_id: string | null; created_at: string; updated_at: string };
 const fromRow = (r: Row): Draft => ({ id: r.id, data: (r.data ?? {}) as DraftData, receipts: (Array.isArray(r.receipts) ? r.receipts : []) as unknown as DraftReceipt[], status: r.status as DraftStatus, transactionId: r.transaction_id, createdAt: r.created_at, updatedAt: r.updated_at });
 
-export async function listDrafts(): Promise<Draft[]> {
-  const { data, error } = await supabase.from("expense_drafts").select("*").order("updated_at", { ascending: false }).limit(200);
-  if (error) throw new Error("Couldn't load your drafts");
-  return (data as Row[]).map(fromRow);
+export function listDrafts(): Promise<Draft[]> {
+  return shareInflight("drafts", async () => {
+    const { data, error } = await supabase.from("expense_drafts").select("*").order("updated_at", { ascending: false }).limit(200);
+    if (error) throw new Error("Couldn't load your drafts");
+    return (data as Row[]).map(fromRow);
+  });
 }
 export async function getDraft(id: string): Promise<Draft | null> {
   const { data } = await supabase.from("expense_drafts").select("*").eq("id", id).maybeSingle();

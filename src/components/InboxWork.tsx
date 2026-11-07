@@ -12,17 +12,17 @@ export function InboxWork() {
   const [imports,setImports]=useState<ImportInboxItem[]>([]);
   const [importError,setImportError]=useState(false);
   useEffect(() => {
-    let live = true;
+    let live = true;let busy = false;
     const refreshImports=async()=>{
       const {data,error}=await supabase.from('import_batches').select('id,file_name,status').in('status',['review','queued','processing','failed','paused','refused']).order('created_at',{ascending:false}).limit(30);
-      if(!live)return;setImportError(!!error);if(!error)setImports(data??[]);
+      if(!live)return;setImportError(!!error);if(!error)setImports(data??[]);busy=(data??[]).some(b=>b.status==='queued'||b.status==='processing');
     };
-    void refreshImports();const timer=window.setInterval(()=>{if(document.visibilityState==='visible')void refreshImports();},5000);
+    void refreshImports();const timer=window.setInterval(()=>{if(busy&&document.visibilityState==='visible')void refreshImports();},5000);const onFocus=()=>void refreshImports();window.addEventListener('focus',onFocus);
     listDrafts().then((d) => live && setDrafts(d.filter((x) => x.status !== "saved").length)).catch(() => live && setDrafts(0));
     const since = new Date(Date.now() - 7 * 864e5).toISOString();
     supabase.from("report_history").select("id,title,created_at").gte("created_at", since).order("created_at", { ascending: false }).limit(3)
       .then(({ data }) => live && setReports(data ?? []));
-    return () => { live = false;window.clearInterval(timer); };
+    return () => { live = false;window.clearInterval(timer);window.removeEventListener('focus',onFocus); };
   }, []);
   if (!drafts && !reports.length && !imports.length && !importError) return null;
   return (

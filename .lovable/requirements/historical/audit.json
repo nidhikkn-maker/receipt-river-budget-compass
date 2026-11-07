@@ -1656,7 +1656,8 @@
    ],
    "members": [
     "HC-0306"
-   ]
+   ],
+   "evidence": "2026-11-07: docs/evidence/workstream-1-batch-2026-11-07b.md (performance causes fixed, Statement Desk e2e incl. duplicate re-upload and undo; device/hosted pending)"
   },
   {
    "cid": "C-0121",
@@ -3729,7 +3730,8 @@
    ],
    "members": [
     "H-7722"
-   ]
+   ],
+   "evidence": "2026-11-07: docs/evidence/workstream-1-batch-2026-11-07b.md (performance causes fixed, Statement Desk e2e incl. duplicate re-upload and undo; device/hosted pending)"
   },
   {
    "cid": "C-0293",
@@ -4221,7 +4223,8 @@
    ],
    "members": [
     "HC-0307"
-   ]
+   ],
+   "evidence": "2026-11-07: docs/evidence/workstream-1-batch-2026-11-07b.md (performance causes fixed, Statement Desk e2e incl. duplicate re-upload and undo; device/hosted pending)"
   },
   {
    "cid": "C-0334",
@@ -5780,14 +5783,15 @@
   {
    "cid": "C-0462",
    "category": "reporting",
-   "status": "missing",
+   "status": "partial",
    "rep": "Proceed in the stated priority order, validate each stage and provide a final implementation report.",
    "sources": [
     "LEDGERLINE_pasted-2.md:777"
    ],
    "members": [
     "H-2729"
-   ]
+   ],
+   "evidence": "Per-batch reports delivered; final report pending. docs/evidence/workstream-1-batch-2026-11-07b.md"
   },
   {
    "cid": "C-0463",
@@ -9019,14 +9023,15 @@
   {
    "cid": "C-0728",
    "category": "statement",
-   "status": "partial",
+   "status": "implemented",
    "rep": "Do not automatically assume two transactions represent a transfer merely because their amounts match.",
    "sources": [
     "LEDGERLINE_pasted-25.md:121"
    ],
    "members": [
     "H-10586"
-   ]
+   ],
+   "evidence": "transfer-match.test.ts amount-only never strong; every link requires confirmation"
   },
   {
    "cid": "C-0729",
@@ -9098,7 +9103,8 @@
    ],
    "members": [
     "H-10791"
-   ]
+   ],
+   "evidence": "2026-11-07: docs/evidence/workstream-1-batch-2026-11-07b.md (performance causes fixed, Statement Desk e2e incl. duplicate re-upload and undo; device/hosted pending)"
   },
   {
    "cid": "C-0735",
@@ -9110,7 +9116,8 @@
    ],
    "members": [
     "H-10792"
-   ]
+   ],
+   "evidence": "2026-11-07: docs/evidence/workstream-1-batch-2026-11-07b.md (performance causes fixed, Statement Desk e2e incl. duplicate re-upload and undo; device/hosted pending)"
   },
   {
    "cid": "C-0736",
@@ -10159,14 +10166,15 @@
   {
    "cid": "C-0823",
    "category": "reporting",
-   "status": "missing",
+   "status": "partial",
    "rep": "Provide the implementation report, screenshots, financial checks and unresolved exception list.",
    "sources": [
     "LEDGERLINE_-_FINANCIAL_INBOX_v5.12_pasted.md:951"
    ],
    "members": [
     "H-1812"
-   ]
+   ],
+   "evidence": "Batch report with financial checks and defects: docs/evidence/workstream-1-batch-2026-11-07b.md"
   },
   {
    "cid": "C-0824",
@@ -12228,14 +12236,15 @@
   {
    "cid": "C-0995",
    "category": "document",
-   "status": "missing",
+   "status": "implemented",
    "rep": "Before testing, Lovable must inspect and document the existing financial architecture.",
    "sources": [
     "LEDGERLINE_pasted-31.md:88"
    ],
    "members": [
     "H-12086"
-   ]
+   ],
+   "evidence": "Architecture documented in root/src AGENTS.md files and docs/; reviewed docs/evidence/workstream-1-batch-2026-11-07b.md"
   },
   {
    "cid": "C-0996",
@@ -17122,14 +17131,15 @@
   {
    "cid": "C-1401",
    "category": "statement",
-   "status": "partial",
+   "status": "implemented",
    "rep": "Multiple similar amounts\tAmbiguous match requires review",
    "sources": [
     "LEDGERLINE_-_FINANCIAL_INBOX_v5.12_pasted.md:653"
    ],
    "members": [
     "H-1638"
-   ]
+   ],
+   "evidence": "transfer-match.test.ts \"two equally likely credits stay ambiguous\"; statement-pipeline tests pass (75)"
   },
   {
    "cid": "C-1402",
@@ -19885,14 +19895,15 @@
   {
    "cid": "C-1630",
    "category": "testing",
-   "status": "missing",
+   "status": "partial",
    "rep": "All test failures must be documented and resolved according to severity.",
    "sources": [
     "LEDGERLINE_pasted-24.md:1054"
    ],
    "members": [
     "H-10416"
-   ]
+   ],
+   "evidence": "Defects with severity logged in docs/evidence/workstream-1-batch-2026-11-07b.md"
   },
   {
    "cid": "C-1631",
@@ -20389,14 +20400,15 @@
   {
    "cid": "C-1672",
    "category": "statement",
-   "status": "partial",
+   "status": "implemented",
    "rep": "Do not match transactions solely because their amounts are identical.",
    "sources": [
     "LEDGERLINE_pasted-30.md:344"
    ],
    "members": [
     "H-11779"
-   ]
+   ],
+   "evidence": "transfer-match.test.ts \"never treats identical amounts alone as strong\""
   },
   {
    "cid": "C-1673",
@@ -21507,14 +21519,15 @@
   {
    "cid": "C-1765",
    "category": "testing",
-   "status": "missing",
+   "status": "partial",
    "rep": "Verify icon appearance at actual mobile sizes.",
    "sources": [
     "LEDGERLINE_-_Official_Logo_Brand_Integration_pasted.md:129"
    ],
    "members": [
     "H-1961"
-   ]
+   ],
+   "evidence": "Buildable: render icons headless at phone sizes next; real-device look pending"
   },
   {
    "cid": "C-1766",
@@ -28981,26 +28994,28 @@
   {
    "cid": "C-2386",
    "category": "document",
-   "status": "missing",
+   "status": "partial",
    "rep": "The document I uploaded do a complete plan for build",
    "sources": [
     "chat #26 2026-10-30 19:59"
    ],
    "members": [
     "HC-0013"
-   ]
+   ],
+   "evidence": "Plan in roadmap/IMPLEMENTATION_PROGRESS; owner confirmation pending"
   },
   {
    "cid": "C-2387",
    "category": "other",
-   "status": "missing",
+   "status": "implemented",
    "rep": "Give me in nos How many features left to build",
    "sources": [
     "chat #52 2026-10-31 05:31"
    ],
    "members": [
     "HC-0020"
-   ]
+   ],
+   "evidence": "Counts reported per batch from this register; docs/evidence/workstream-1-batch-2026-11-07b.md"
   },
   {
    "cid": "C-2388",
@@ -30854,9 +30869,9 @@
   }
  ],
  "counts": {
-  "implemented": 1543,
-  "partial": 951,
+  "implemented": 1548,
+  "partial": 953,
   "superseded": 19,
-  "missing": 28
+  "missing": 21
  }
 }
