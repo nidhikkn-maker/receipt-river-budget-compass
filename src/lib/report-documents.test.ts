@@ -21,7 +21,7 @@ it("preserves original pages and inserts missing-document evidence before the an
   const annexures = ["A-01", "A-02"].map((no, i) => ({ no, row: i + 1, name: `${no}.pdf`, type: "application/pdf", path: `test/${no}`, date: "2026-11-01", merchant: "Test", amount: 12.34, docType: "PDF bill", receiptIndex: 0 }));
   const result = await appendAnnexures(await body.save(), { reference: "TEST", annexures } as Statement, { "A-01": { bytes: originalBytes, type: "application/pdf" }, "A-02": null }, [{ row: 3, title: "Unattached meal", date: "2026-11-02" }]);
   expect(result.missing).toEqual(["A-02"]);
-  const bytes = new Uint8Array(await result.blob.arrayBuffer());
+  const bytes = new Uint8Array(await new Promise<ArrayBuffer>((resolve, reject) => { const reader = new FileReader(); reader.onload = () => { if (reader.result instanceof ArrayBuffer) resolve(reader.result); else reject(Error("No PDF bytes")); }; reader.onerror = reject; reader.readAsArrayBuffer(result.blob); }));
   const output = await PDFDocument.load(bytes);
   // Body, missing-document list, original cover, untouched original, failed-file page.
   expect(output.getPageCount()).toBe(5);

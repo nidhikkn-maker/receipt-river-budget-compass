@@ -27,8 +27,8 @@ it("opens with saved amounts and refuses a budget edit that breaks an explicit c
 });
 
 it("marks dimensions independently, rejects partial promises and allows deliberate return to partial", async () => {
-  const trip: TravelTrip = { id: "t", name: "Test", destination: "Test", start: "2026-11-01", end: "2026-11-02", budget: 100, workspaceBudgets: [{ workspace: "personal", amount: 100 }], travellerBudgets: [{ traveller: "Me", amount: 40 }] };
-  mock.save.mockReset().mockImplementation(async next => { mock.store.preferences = next; }); mock.error.mockReset();
+  const trip: TravelTrip = { id: "t", name: "Test", destination: "Test", start: "2026-11-01", end: "2026-11-02", budget: 100, currencies: ["INR"], workspaceBudgets: [{ workspace: "personal", amount: 100 }], travellerBudgets: [{ traveller: "Me", amount: 40 }] };
+  mock.save.mockReset().mockImplementation(async next => { mock.store["preferences"] = next; }); mock.error.mockReset();
   mock.store = { preferences: { ...defaultPreferences(), trips: [trip] }, savePreferences: mock.save, transactions: [], members: [] };
   const { unmount } = render(<BudgetBreakdown trip={trip} />);
   fireEvent.click(screen.getByLabelText("Complete allocation"));
