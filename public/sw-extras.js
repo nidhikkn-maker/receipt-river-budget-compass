@@ -28,3 +28,25 @@
     }).catch(function () {}));
   });
 })();
+
+/* Share to Ledgerline: files shared from WhatsApp, Photos or Files are kept on this phone only
+   (never uploaded here) and the shared page asks what to do with them. */
+(function () {
+  var SHARED = "ledgerline-shared";
+  self.addEventListener("fetch", function (event) {
+    var url = new URL(event.request.url);
+    if (event.request.method !== "POST" || url.origin !== self.location.origin || url.pathname !== "/share-target") return;
+    event.respondWith((async function () {
+      var batch = String(Date.now());
+      try {
+        var form = await event.request.formData();
+        var files = form.getAll("files").filter(function (f) { return f && typeof f === "object" && f.size > 0; }).slice(0, 10);
+        var cache = await caches.open(SHARED);
+        await Promise.all(files.map(function (f, i) {
+          return cache.put("/__shared/" + batch + "/" + i, new Response(f, { headers: { "content-type": f.type || "application/octet-stream", "x-file-name": encodeURIComponent(f.name || ("shared-" + i)) } }));
+        }));
+      } catch (e) { return Response.redirect("/shared?error=1", 303); }
+      return Response.redirect("/shared?batch=" + batch, 303);
+    })());
+  });
+})();
