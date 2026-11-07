@@ -205,7 +205,6 @@ function StatementDeskPage() {
     }
     try {
       setProgress("Saving…");
-      setFailedOriginals([]);
       const r = await applyUpload(requests, api(), setProgress);
       setResult(r);
       // One event per saved statement: did the app's balance after saving match the printed closing figure?
@@ -229,11 +228,11 @@ function StatementDeskPage() {
         if (!f || kept.has(f) || !requests.some((q) => q.account === a)) continue;
         kept.add(f);
         const ds = a.file.lines.map((l) => l.date).sort();
-        const meta: DocumentMeta = { title: `Statement · ${a.file.name}`, docType: a.file.hint?.kind === "credit_card" || /card/i.test(a.file.name) ? "card_statement" : "bank_statement", docDate: ds[ds.length - 1] ?? null, amount: null, currency: a.file.currency, merchant: null, notes: `Statement Desk upload ${upload.id}: ${a.file.lines.length} lines (${ds[0] ?? "?"} to ${ds[ds.length - 1] ?? "?"}).`, transactionId: null, accountId: a.file.accountId, loanId: null, expiresOn: null, evidenceLocked: true };
+        const meta: DocumentMeta = { id: crypto.randomUUID(), title: `Statement · ${a.file.name}`, docType: a.file.hint?.kind === "credit_card" || /card/i.test(a.file.name) ? "card_statement" : "bank_statement", docDate: ds[ds.length - 1] ?? null, amount: null, currency: a.file.currency, merchant: null, notes: `Statement Desk upload ${upload.id}: ${a.file.lines.length} lines (${ds[0] ?? "?"} to ${ds[ds.length - 1] ?? "?"}).`, transactionId: null, accountId: a.file.accountId, loanId: null, expiresOn: null, evidenceLocked: true };
         try { await storeRef.current.addDocument(f, meta); }
         catch { failed.push({ file: f, meta }); }
       }
-      setFailedOriginals(failed);
+      setFailedOriginals((pending) => [...pending, ...failed]);
       if (failed.length) toast.error(`Posted, but ${failed.length === 1 ? "the original of " + (failed[0]?.file.name ?? "one file") : failed.length + " statement originals"} couldn’t be stored in DocuRepo — retry below so the import stays traceable.`);
       try { const s = storeRef.current; await s.savePreferences({ ...s.preferences, statementUploads: [upload, ...(s.preferences.statementUploads ?? [])].slice(0, 10) }); }
       catch { toast.error("Saved, but undo history couldn’t sync to your other devices."); }

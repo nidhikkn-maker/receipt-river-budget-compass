@@ -8,6 +8,9 @@ export const fixture = {
   removes: [] as string[],
   uploads: [] as unknown[],
   moves: [] as { id: string; before: Record<string, unknown>[] }[],
+  documents: [] as Record<string, unknown>[],
+  originalAttempts: [] as string[],
+  failOriginals: false,
 };
 Object.assign(window, { deskFixture: fixture });
 
@@ -17,7 +20,13 @@ export function useStore() {
   const refresh = async () => bump((n) => n + 1);
   return {
     accounts: [...fixture.accounts], transactions: fixture.transactions.map((t) => ({ ...t })), preferences, loans: [], commitments: [], documents: [],
-    addDocument: async () => crypto.randomUUID(),
+    addDocument: async (_file: File, meta: Record<string, unknown>) => {
+      if (typeof meta.id !== "string") throw new Error("Original must have a stable identity");
+      fixture.originalAttempts.push(meta.id);
+      if (fixture.failOriginals) throw new Error("Controlled storage outage");
+      if (!fixture.documents.some((d) => d.id === meta.id)) fixture.documents.push(meta);
+      return meta.id;
+    },
     confirmTransfer: async () => {},
     savePreferences: async (next: Record<string, unknown>) => { fixture.uploads = (next.statementUploads as unknown[]) ?? []; setPreferences(next); },
     save: async (input: Record<string, unknown>, opts?: { createId?: string }) => {
