@@ -11,6 +11,7 @@ import type { MapLink } from "./graph";
 import type { PaymentInstrument } from "./payment-instruments";
 import type { AllocationPlan } from "./allocation";
 import type { FinanceRule } from "./rules-engine";
+import type { MerchantGroupingEvent } from "./merchant-management";
 import type { TravelMessage } from "./travel-inbox";
 import { cleanPayees, type Payee } from './payees';
 import { cleanReimbursementSettings, emptyReimbursementSettings, type ReimbursementSettings } from './reimbursement-profiles';
@@ -130,6 +131,8 @@ export interface FinancePreferences {
   milestones: Milestone[];
   trips: Trip[];
   merchantAliases: MerchantAliases;
+  /** Append-only grouping decisions; original ledger merchant fields are never rewritten. */
+  merchantGroupingHistory?: MerchantGroupingEvent[];
   brief: BriefSettings;
   briefs: { id: string; generatedAt: string; data: WeeklyBrief }[];
   /** Saved payment methods (UPI IDs, cards, wallets…), each linked to an account. */

@@ -1,11 +1,12 @@
 import { receiptRoundOffFor } from "./receipt-reading";
 import { whoLabel, PAYMENT_LABEL, SCOPE_LABEL, budgetUsage, totalsBy, categoryTotals, type Budgets, type Expense } from "./expenses";
 import { workspaceParts } from "./workspaces";
+import { decimal, roundMoney, addMoney, sumMoney, subtractMoney, proportionMoney } from "./money";
 
 export type ReportKind = "expenses" | "business" | "categories" | "reimbursements" | "reimbursement-payments" | "departments";
 export interface Report { title: string; headers: string[]; rows: (string | number)[][] }
 
-const fmt = (n: number) => n.toFixed(2);
+const fmt = (n: number) => decimal(n).toFixed(2);
 
 export function buildReport(kind: ReportKind, transactions: Expense[], memberName: (id: string | null) => string, budgets: Budgets, options: { departmentBudgets?: Record<string, number>; budgetMonth?: string; claims?: Expense[]; accountName?: (id: string | null) => string; companyOf?: (e: Expense) => string } = {}): Report {
   const expenses = transactions.filter((e) => (e.txnType ?? "expense") === "expense");
@@ -22,10 +23,10 @@ export function buildReport(kind: ReportKind, transactions: Expense[], memberNam
     const names = [...new Set([...expenses.map((e) => e.department?.trim() || "Unassigned"), ...Object.keys(limits)])].sort();
     return { title: "Department budgets - your spending", headers: ["Department", "Your expenses in range", "Your spending in range (INR)", "Budget month", "Monthly department limit (INR)", "Your filtered monthly spending (INR)", "Remaining balance (INR)", "Budget used (%)", "Status"], rows: names.map((name) => {
       const entries = expenses.filter((e) => (e.department?.trim() || "Unassigned") === name);
-      const sum = (list: Expense[]) => list.reduce((s, e) => s + Math.round(e.amount * 100), 0) / 100;
+      const sum = (list: Expense[]) => sumMoney(list.map(e => e.amount));
       const spent = sum(entries.filter((e) => e.date.startsWith(month)));
       const limit = limits[name];
-      return [name, entries.length, fmt(sum(entries)), month, limit === undefined ? "" : fmt(limit), fmt(spent), limit === undefined ? "" : fmt(limit - spent), limit && limit > 0 ? fmt(spent / limit * 100) : "", limit === undefined ? "No limit" : spent > limit ? "Over budget" : "Within budget"];
+      return [name, entries.length, fmt(sum(entries)), month, limit === undefined ? "" : fmt(limit), fmt(spent), limit === undefined ? "" : fmt(subtractMoney(limit, spent)), limit && limit > 0 ? decimal(spent).div(limit).mul(100).toFixed(2) : "", limit === undefined ? "No limit" : spent > limit ? "Over budget" : "Within budget"];
     }) };
   }
   const opt = (v: number | null | undefined) => (v == null ? "" : fmt(v));
@@ -38,9 +39,8 @@ export function buildReport(kind: ReportKind, transactions: Expense[], memberNam
   const inWorkspace = (scope: Expense["scope"]) => expenses.flatMap((e) => {
     const share = workspaceParts(e).find((p) => p.workspace === scope);
     if (!share || share.amount <= 0) return [];
-    const ratio = e.amount > 0 ? share.amount / e.amount : 0;
-    return [{ ...e, scope, amount: share.amount, originalAmount: e.originalAmount * ratio,
-      allocations: (e.allocations ?? []).map((a) => ({ ...a, amount: a.amount * ratio })) }];
+    return [{ ...e, scope, amount: share.amount, originalAmount: e.amount > 0 ? proportionMoney(e.originalAmount, share.amount, e.amount) : 0,
+      allocations: (e.allocations ?? []).map((a) => ({ ...a, amount: e.amount > 0 ? proportionMoney(a.amount, share.amount, e.amount) : 0 })) }];
   });
   if (kind === "business") return { title: "Business expenses", headers, rows: inWorkspace("business").map(rowC) };
   if (kind === "reimbursements") return { title: "Reimbursements", headers, rows: expenses.filter(e=>e.reimbursementStatus && e.reimbursementStatus!=="none").map(rowC) };
@@ -51,7 +51,7 @@ export function buildReport(kind: ReportKind, transactions: Expense[], memberNam
   return {
     title: "Spending by category",
     headers: ["Category", "Business (INR)", "Personal (INR)", "Total (INR)", "Monthly budget", "This month"],
-    rows: [...new Set([...Object.keys(biz), ...Object.keys(per), ...Object.keys(budgets)])].map((c) => [c, fmt(biz[c] ?? 0), fmt(per[c] ?? 0), fmt((biz[c] ?? 0) + (per[c] ?? 0)),
+    rows: [...new Set([...Object.keys(biz), ...Object.keys(per), ...Object.keys(budgets)])].map((c) => [c, fmt(biz[c] ?? 0), fmt(per[c] ?? 0), fmt(addMoney(biz[c] ?? 0, per[c] ?? 0)),
       budgets[c] ? fmt(budgets[c] ?? 0) : "", fmt(usage[c]?.spent ?? 0)]),
   };
 }
