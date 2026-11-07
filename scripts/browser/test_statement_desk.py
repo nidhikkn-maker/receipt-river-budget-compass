@@ -249,6 +249,7 @@ class StatementDeskFlow(unittest.IsolatedAsyncioTestCase):
 
     async def test_committed_but_lost_save_response_cannot_be_hidden_by_undo(self):
         await self.page.evaluate('deskFixture.loseSaveResponse = true')
+        await self.page.evaluate('deskFixture.failSaveRead = true')
         csv = 'Date,Description,Debit,Credit\n2026-10-02,SWIGGY ORDER,250,\n'
         await self.page.get_by_label('Statement files').set_input_files(files=[{'name': 'lost.csv', 'mimeType': 'text/csv', 'buffer': csv.encode()}])
         await self.page.locator('select').first.select_option('desk-account')
@@ -301,6 +302,29 @@ class StatementDeskFlow(unittest.IsolatedAsyncioTestCase):
         await self.page.get_by_label('Recent uploads').get_by_role('button', name='Undo', exact=True).click()
         await expect(self.page.get_by_label('Recent uploads')).to_contain_text('Undo unfinished')
         self.assertEqual(await self.page.evaluate('deskFixture.transactions.length'), 2)
+
+    async def test_exact_transaction_response_recovery_and_missing_atomic_authority(self):
+        await self.page.evaluate('deskFixture.loseSaveResponse = true')
+        csv = 'Date,Description,Debit,Credit\n2026-10-02,SWIGGY ORDER,250,\n'
+        await self.page.get_by_label('Statement files').set_input_files(files=[{'name':'transaction-response.csv','mimeType':'text/csv','buffer':csv.encode()}])
+        await self.page.locator('select').first.select_option('desk-account')
+        await self.page.get_by_role('button',name='Accept all 1 asking items').click()
+        await self.page.get_by_role('button',name='Apply everything (1 to save)').click()
+        await self.page.wait_for_function("deskFixture.uploads[0]?.status === 'complete'")
+        self.assertEqual(await self.page.evaluate('deskFixture.saves.length'),1)
+        await self.page.reload()
+        await expect(self.page.get_by_role('heading',name='Statement Desk')).to_be_visible()
+        await self.page.evaluate('deskFixture.atomicUnavailable = true')
+        await self.page.get_by_label('Recent uploads').get_by_role('button',name='Undo',exact=True).click()
+        await expect(self.page.get_by_text('Safe Undo is awaiting database release approval. Your records and recovery history are unchanged.')).to_be_visible()
+        self.assertEqual(await self.page.evaluate('deskFixture.transactions.length'),1)
+        self.assertEqual(await self.page.evaluate('deskFixture.atomicCalls'),0)
+        await expect(self.page.get_by_label('Recent uploads')).to_contain_text('Undo unfinished')
+        await self.page.evaluate('deskFixture.atomicUnavailable = false')
+        await self.page.get_by_label('Recent uploads').get_by_role('button',name='Undo',exact=True).dblclick()
+        await expect(self.page.get_by_label('Recent uploads')).to_have_count(0)
+        self.assertEqual(await self.page.evaluate('deskFixture.transactions.length'),0)
+        self.assertEqual(await self.page.evaluate('deskFixture.atomicCalls'),1)
         self.assertEqual(await self.page.evaluate('deskFixture.removes.length'), 0)
         await self.page.reload()
         await expect(self.page.get_by_role('heading', name='Statement Desk')).to_be_visible()
