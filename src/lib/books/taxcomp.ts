@@ -8,8 +8,9 @@ import { taxSchedule, type Asset } from "../assets";
 import type { FyRecord, Lease } from "./types";
 import { receiptKind } from "./property";
 import { calcValue } from "./regulatory";
+import { decimal, moneyNumber, roundMoney, addMoney, sumMoney, subtractMoney, multiplyMoney } from "../money";
 
-const r2 = (n: number) => Math.round(n * 100) / 100;
+const r2 = roundMoney;
 
 export interface TaxComputation {
   salary: number; houseProperty: { rent: number; standardDeduction: number; homeLoanInterest: number; net: number };
@@ -32,36 +33,36 @@ export function taxComputation(fy: string, entries: Expense[], assets: Asset[], 
   const tenants = leases.map((l) => l.tenant.toLowerCase()).filter((t) => t.length >= 3);
   const isRent = (e: Expense) => tenants.some((t) => text(e).toLowerCase().includes(t)) || /\brent\b/i.test(text(e));
   // Taxable salary comes from Form 16 / payslips when uploaded; bank credits are only a fallback estimate [§46].
-  const bankSalary = r2(income.filter((e) => /salary|payroll|stipend/i.test(text(e))).reduce((s, e) => s + e.amount, 0));
+  const bankSalary = r2(income.filter((e) => /salary|payroll|stipend/i.test(text(e))).map(e => e.amount).reduce((s,value)=>addMoney(s,value),0));
   const salary = salaryEvidence != null ? r2(salaryEvidence) : bankSalary;
-  const rent = r2(income.filter((e) => isRent(e) && receiptKind(text(e)) === "rent").reduce((s, e) => s + e.amount, 0));
-  const homeLoanInterest = r2(inYear.filter((e) => e.txnType === "loan_repayment" && /home|housing/i.test(text(e))).reduce((s, e) => s + (e.interest ?? 0), 0));
+  const rent = r2(income.filter((e) => isRent(e) && receiptKind(text(e)) === "rent").map(e => e.amount).reduce((s,value)=>addMoney(s,value),0));
+  const homeLoanInterest = r2(inYear.filter((e) => e.txnType === "loan_repayment" && /home|housing/i.test(text(e))).map(e => e.interest ?? 0).reduce((s,value)=>addMoney(s,value),0));
   // s.24(b): interest deduction and house-property loss set-off are both capped at ₹2,00,000.
-  const hpNet = r2(Math.max(-HP_CAP, rent - rent * 0.3 - (rent > 0 ? homeLoanInterest : Math.min(homeLoanInterest, HP_CAP))));
-  const other = r2(income.filter((e) => /interest|dividend/i.test(text(e))).reduce((s, e) => s + e.amount, 0));
+  const hpNet = r2(Math.max(-HP_CAP, moneyNumber(decimal(rent).mul(0.7).minus(rent > 0 ? homeLoanInterest : Math.min(homeLoanInterest, HP_CAP)))));
+  const other = r2(income.filter((e) => /interest|dividend/i.test(text(e))).map(e => e.amount).reduce((s,value)=>addMoney(s,value),0));
   const used = new Set(income.filter((e) => /salary|payroll|stipend|interest|dividend/i.test(text(e)) || isRent(e)).map((e) => e.id));
-  const receipts = r2(income.filter((e) => !used.has(e.id) && e.scope === "business").reduce((s, e) => s + e.amount, 0));
-  const expenses = r2(inYear.filter((e) => (e.txnType ?? "expense") === "expense" && e.scope === "business").reduce((s, e) => s + e.amount, 0));
-  const depreciation = r2(assets.reduce((s, a) => s + (taxSchedule(a, fy).find((y) => y.fy === fy)?.depreciation ?? 0) * (a.sharePct / 100), 0));
-  const bizNet = r2(receipts - expenses - depreciation);
+  const receipts = r2(income.filter((e) => !used.has(e.id) && e.scope === "business").map(e => e.amount).reduce((s,value)=>addMoney(s,value),0));
+  const expenses = r2(inYear.filter((e) => (e.txnType ?? "expense") === "expense" && e.scope === "business").map(e => e.amount).reduce((s,value)=>addMoney(s,value),0));
+  const depreciation = moneyNumber(assets.reduce((s,a)=>s.plus(decimal(taxSchedule(a,fy).find(y=>y.fy===fy)?.depreciation ?? 0).mul(a.sharePct).div(100)),decimal(0)));
+  const bizNet = subtractMoney(subtractMoney(receipts,expenses),depreciation);
   let short = 0, long = 0;
   let unknown = 0;
   for (const g of gains) if (g.gain != null && fyOf(g.sellDate) === fy) {
-    if (!g.buyDate) { unknown += g.gain; continue; }
-    if (gainTerm(g.kind ?? "listed_equity", g.buyDate, g.sellDate, months) === "long") long += g.gain; else short += g.gain;
+    if (!g.buyDate) { unknown = addMoney(unknown,g.gain); continue; }
+    if (gainTerm(g.kind ?? "listed_equity", g.buyDate, g.sellDate, months) === "long") long = addMoney(long,g.gain); else short = addMoney(short,g.gain);
   }
   const notes: string[] = [];
   if (salaryEvidence == null && bankSalary > 0) notes.push("Salary is estimated from bank credits (net pay). Upload Form 16 or payslips for the taxable figure");
   if (unknown) notes.push(`Gains of ₹${r2(unknown).toLocaleString("en-IN")} have no purchase date and are left out until the transaction statement is uploaded`);
   if (homeLoanInterest > HP_CAP) notes.push("Home-loan interest above ₹2,00,000 is not deducted (s.24(b) cap)");
   if (hpNet < 0) notes.push("House-property loss is set off against other income up to ₹2,00,000; any excess is carried forward");
-  const gross = r2(salary + hpNet + Math.max(0, bizNet) + Math.max(0, short) + Math.max(0, long) + other);
+  const gross = sumMoney([salary,hpNet,Math.max(0,bizNet),Math.max(0,short),Math.max(0,long),other]);
   const cf = broughtForward(records.filter((r) => !entityId || r.entityId === entityId), fy, calcValue(rules, "loss.carry_years", fyEndDate, 8));
-  const businessLoss = cf.filter((l) => l.kind === "business" || l.kind === "depreciation").reduce((s, l) => s + l.amount, 0);
+  const businessLoss = cf.filter((l) => l.kind === "business" || l.kind === "depreciation").map(l => l.amount).reduce((s,value)=>addMoney(s,value),0);
   const lossesSetOff = r2(Math.min(businessLoss, Math.max(0, bizNet)));
-  if (cf.length) notes.push(`Losses brought forward from filed returns: ₹${cf.reduce((s, l) => s + l.amount, 0).toLocaleString("en-IN")}`);
+  if (cf.length) notes.push(`Losses brought forward from filed returns: ₹${cf.map(l => l.amount).reduce((s,value)=>addMoney(s,value),0).toLocaleString("en-IN")}`);
   notes.push("No deductions under Chapter VI-A are assumed — add only those you have evidence for");
-  return { salary, houseProperty: { rent, standardDeduction: r2(rent * 0.3), homeLoanInterest, net: hpNet }, business: { receipts, expenses, depreciation, net: bizNet }, capitalGains: { short: r2(short), long: r2(long) }, otherSources: other, gross, lossesSetOff, total: r2(gross - lossesSetOff), notes };
+  return { salary, houseProperty: { rent, standardDeduction: multiplyMoney(rent,0.3), homeLoanInterest, net: hpNet }, business: { receipts, expenses, depreciation, net: bizNet }, capitalGains: { short: r2(short), long: r2(long) }, otherSources: other, gross, lossesSetOff, total: subtractMoney(gross,lossesSetOff), notes };
 }
 
 const HP_LOSS_CAP = 200000;
