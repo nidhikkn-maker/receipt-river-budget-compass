@@ -72,7 +72,7 @@ export function withStatementDeskEvidence(row: ReturnType<typeof accountStatemen
   return { ...row, source: "statement-desk" as const, imported: "Imported", statementThrough: coverage.latestStatementDate, freshness, reconciliation, nextStep, missing, attention: true };
 }
 export function accountStatementSummary(rows: ReturnType<typeof accountStatementStatus>[]) {
-  return { total: rows.length, current: rows.filter(r => r.freshness === "Current").length, reconciled: rows.filter(r => r.reconciliation === "Reconciled").length, statementMatched: rows.filter(r => r.reconciliation === "Statement-matched").length, verified: rows.filter(r => r.balance === "Verified").length, attention: rows.filter(r => r.attention).length };
+  return { total: rows.length, current: rows.filter(r => r.freshness === "Current").length, reconciled: rows.filter(r => r.reconciliation === "Reconciled").length, verified: rows.filter(r => r.balance === "Verified").length, attention: rows.filter(r => r.attention).length };
 }
 /** Plain next action for an account's statement; order follows the review workflow. */
 export function statementNextStep(s: { batch: boolean; importing: boolean; failed: boolean; identityConfirmed: boolean; toPost: number; coverageConfirmed: boolean; usableBalance: boolean; checked: boolean }): string | null {
