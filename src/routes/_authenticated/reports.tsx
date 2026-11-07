@@ -56,11 +56,11 @@ function Reports() {
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [catShown, setCatShown] = useState(50);
   const [scope,setScope]=useState<Scope|"all">("all");const [account,setAccount]=useState("all");const [payment,setPayment]=useState("all");const [query,setQuery]=useState("");
-  const [department,setDepartment]=useState("all");const [status,setStatus]=useState("all");
-  const filterKey = [from, to, member, selectedCategory, scope, account, payment, query, department, status, JSON.stringify(tagGroup)].join("|");
+  const [department,setDepartment]=useState("all");const [status,setStatus]=useState("all");const [receipt,setReceipt]=useState("all");
+  const filterKey = [from, to, member, selectedCategory, scope, account, payment, query, department, status, receipt, JSON.stringify(tagGroup)].join("|");
   useEffect(() => setCatShown(50), [filterKey]);
   const departmentOptions=[...new Set([...Object.keys(departmentBudgets),...transactions.map(e=>e.department?.trim()||"").filter(Boolean)])].sort();
-  const filtered = applyFilters(transactions, { from, to, memberId: member, scope, accountId:account, paymentMethod:payment, query, tagAll:Object.values(tagGroup).filter(v=>v!=="all"), department })
+  const filtered = applyFilters(transactions, { from, to, memberId: member, scope, accountId:account, paymentMethod:payment, query, tagAll:Object.values(tagGroup).filter(v=>v!=="all"), department, receipt: receipt as "all" | "with" | "without" })
     .filter(e=>status==="all"||(status==="none"?!isTracked(e):isTracked(e)&&stageOf(e)===status));
   const list=filtered.filter(e=>(e.txnType??"expense")==="expense");
   const tagGroups=[...new Set(preferences.tags.map(t=>t.group))];
