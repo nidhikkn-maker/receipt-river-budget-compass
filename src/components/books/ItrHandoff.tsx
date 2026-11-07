@@ -23,7 +23,7 @@ const TAX_DOC_TYPES = new Set(["tax_statement", "tax_return", "capital_gains_sta
 
 export function ItrHandoff(p: { fy: string; ent: EntityProfile | undefined; c: TaxComputation; personal: boolean; regime: "new" | "old" | undefined; profileConfirmed: boolean; credits: TaxCredit[]; unrecordedTaxDebits: number; gains: GainLine[]; scope: Set<string> | null; slabTax: number | null }) {
   const { books, save } = useBooks();
-  const { documents, transactions, accounts, addDocument, signedUrl, updateDocument } = useStore();
+  const { documents, transactions, accounts, addDocument, signedUrl, updateDocument, downloadFile } = useStore();
   const [busy, setBusy] = useState(false);
   const [ack, setAck] = useState("");
   const entityId = p.ent?.id ?? "personal";
@@ -84,7 +84,7 @@ export function ItrHandoff(p: { fy: string; ent: EntityProfile | undefined; c: T
     } catch (e) { toast.error((e as Error).message); } finally { setBusy(false); }
   };
   const setStatus = (h: HandoffRecord, status: HandoffStatus, extra: Partial<HandoffRecord> = {}) => save({ itrHandoffs: (books.itrHandoffs ?? []).map((x) => (x.id === h.id ? { ...x, status, ...extra } : x)) });
-  const download = async (h: HandoffRecord) => { const d = documents.find((x) => x.id === h.docId); const url = d ? await signedUrl(d.filePath) : null; if (!url) { toast.error("Couldn't open the saved handoff"); return; } const a = document.createElement("a"); a.href = url; a.target = "_blank"; a.rel = "noopener noreferrer"; a.click(); };
+  const download = async (h: HandoffRecord) => { const d = documents.find((x) => x.id === h.docId); if (!d) { toast.error("Couldn't open the saved handoff"); return; } try { await downloadFile(d.filePath, d.fileName, { size: d.size, mimeType: d.mimeType }); } catch (e) { toast.error((e as Error).message); } };
 
   return (
     <div className="space-y-2 rounded-xl border p-3 text-xs">

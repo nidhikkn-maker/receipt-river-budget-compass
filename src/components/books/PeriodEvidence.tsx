@@ -1,3 +1,4 @@
+import { downloadBlob } from "@/lib/reports";
 import { useEffect, useMemo, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useStore } from '@/lib/store';
@@ -65,8 +66,8 @@ export function PeriodEvidence({ revision }: { revision: string }) {
             {row.action === 'closed' && <span className="block text-muted-foreground">{String(e['entryCount'] ?? 0)} entries · {String(e['reconciled'] ?? 0)} reconciled · {later ? 'Reopened; original evidence retained' : 'Saved-record snapshot'}</span>}
           </span>
           <Button size="sm" variant="outline" onClick={() => {
-            const url = URL.createObjectURL(new Blob([JSON.stringify(row.evidence, null, 2)], { type: 'application/json' }));
-            const a = document.createElement('a'); a.href = url; a.download = `Ledgerline_close_evidence_${row.id}.json`; a.click(); URL.revokeObjectURL(url);
+            const blob = (new Blob([JSON.stringify(row.evidence, null, 2)], { type: 'application/json' }));
+            downloadBlob(blob, `Ledgerline_close_evidence_${row.id}.json`);
           }}>Download evidence</Button>
         </div>
         {row.action === 'closed' && stored && (
@@ -86,8 +87,8 @@ export function PeriodEvidence({ revision }: { revision: string }) {
     {imports.map((row) => <div className="flex flex-wrap items-center justify-between gap-2 border-b py-2" key={row.id}>
       <span className="text-muted-foreground">Imported closing history · {row.imported_at.slice(0, 10)}<span className="block">Unverified backup copy; not an active closure or authoritative snapshot</span></span>
       <Button size="sm" variant="outline" onClick={() => {
-        const url = URL.createObjectURL(new Blob([JSON.stringify({ verification: 'Unverified imported backup history', importedAt: row.imported_at, history: row.history }, null, 2)], { type: 'application/json' }));
-        const a = document.createElement('a'); a.href = url; a.download = `Ledgerline_imported_closing_history_${row.id}.json`; a.click(); URL.revokeObjectURL(url);
+        const blob = (new Blob([JSON.stringify({ verification: 'Unverified imported backup history', importedAt: row.imported_at, history: row.history }, null, 2)], { type: 'application/json' }));
+        downloadBlob(blob, `Ledgerline_imported_closing_history_${row.id}.json`);
       }}>Download imported history</Button>
     </div>)}
   </details>;
