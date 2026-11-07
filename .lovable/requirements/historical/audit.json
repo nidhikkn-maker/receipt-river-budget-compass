@@ -1549,7 +1549,7 @@
       "members": [
         "HC-0121"
       ],
-      "evidence": "2026-11-07c: card statement credit is held for review and never income; with the bank side uploaded it pairs to the source account and reduces outstanding once (card-payment-flow.test.ts). Pairing is ask-first by standing rule (never auto-posted)"
+      "evidence": "2026-11-07c: card statement credit is held for review and never income; with the bank side uploaded it pairs to the source account and reduces outstanding once (card-payment-flow.test.ts). Pairing is ask-first by standing rule (never auto-posted) | 2026-11-07 18:40: actual Statement Desk atomic caller and exact create-response recovery; 28 targeted automated, 13 browser cases across final runs, six independent SQL cases PASS. Card INR9000 settlement bank50000→41000/card15000→6000; duplicate review and Undo PASS. Controlled browser adapters/staged SQL; hosted full workflow remains PARTIAL. docs/evidence/credit-controlled-2026-11-07.md"
     },
     {
       "cid": "C-0112",
@@ -11327,7 +11327,7 @@
       "members": [
         "H-7217"
       ],
-      "evidence": " | 2026-11-07 18:21: exact evidence-response recovery; staged all-or-nothing financial Undo with durable replay receipt. 6 independent PostgreSQL session cases PASS; caller/draft/account cleanup and durable full-upload journal pending. Remains PARTIAL. See docs/evidence/credit-controlled-2026-11-07.md."
+      "evidence": " | 2026-11-07 18:21: exact evidence-response recovery; staged all-or-nothing financial Undo with durable replay receipt. 6 independent PostgreSQL session cases PASS; caller/draft/account cleanup and durable full-upload journal pending. Remains PARTIAL. See docs/evidence/credit-controlled-2026-11-07.md. | 2026-11-07 18:40: actual Statement Desk atomic caller and exact create-response recovery; 28 targeted automated, 13 browser cases across final runs, six independent SQL cases PASS. Card INR9000 settlement bank50000→41000/card15000→6000; duplicate review and Undo PASS. Controlled browser adapters/staged SQL; hosted full workflow remains PARTIAL. docs/evidence/credit-controlled-2026-11-07.md"
     },
     {
       "cid": "C-0919",
@@ -16189,7 +16189,7 @@
       "members": [
         "H-12209"
       ],
-      "evidence": "2026-11-07c: card-payment-flow.test.ts through real buildPlan/applyUpload: ₹9,000 partial bill lowers bank 50,000→41,000 and card owed 15,000→6,000, spending/income unchanged, re-upload of either statement matches the one entry, retry posts nothing new, undo restores both"
+      "evidence": "2026-11-07c: card-payment-flow.test.ts through real buildPlan/applyUpload: ₹9,000 partial bill lowers bank 50,000→41,000 and card owed 15,000→6,000, spending/income unchanged, re-upload of either statement matches the one entry, retry posts nothing new, undo restores both | 2026-11-07 18:40: actual Statement Desk atomic caller and exact create-response recovery; 28 targeted automated, 13 browser cases across final runs, six independent SQL cases PASS. Card INR9000 settlement bank50000→41000/card15000→6000; duplicate review and Undo PASS. Controlled browser adapters/staged SQL; hosted full workflow remains PARTIAL. docs/evidence/credit-controlled-2026-11-07.md"
     },
     {
       "cid": "C-1322",
@@ -24123,7 +24123,7 @@
       "members": [
         "H-9221"
       ],
-      "evidence": " | 2026-11-07 18:21: 6 real disposable multi-session PostgreSQL cases PASS including simultaneous Undo lock waiting and concurrent direct edit; staged function only, application/hosted concurrency acceptance pending. Remains PARTIAL. See docs/evidence/credit-controlled-2026-11-07.md."
+      "evidence": " | 2026-11-07 18:21: 6 real disposable multi-session PostgreSQL cases PASS including simultaneous Undo lock waiting and concurrent direct edit; staged function only, application/hosted concurrency acceptance pending. Remains PARTIAL. See docs/evidence/credit-controlled-2026-11-07.md. | 2026-11-07 18:40: actual Statement Desk atomic caller and exact create-response recovery; 28 targeted automated, 13 browser cases across final runs, six independent SQL cases PASS. Card INR9000 settlement bank50000→41000/card15000→6000; duplicate review and Undo PASS. Controlled browser adapters/staged SQL; hosted full workflow remains PARTIAL. docs/evidence/credit-controlled-2026-11-07.md"
     },
     {
       "cid": "C-1981",
