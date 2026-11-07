@@ -133,7 +133,7 @@ function StatementDeskPage() {
     const failed: string[] = [];
     for (const f of [...list]) {
       try {
-        const inv = parseInvestmentDoc(await readDocRows(f).catch(() => []));
+        const inv = asStatement ? null : parseInvestmentDoc(await readDocRows(f).catch(() => []));
         if (inv) { setInvest((p) => [...p.filter((x) => x.file.name !== f.name), { key: `${f.name}-${f.size}-${f.lastModified}`, file: f, doc: inv }]); continue; }
         const asDoc = () => setDocs((p) => [...p.filter((x) => x.file.name !== f.name), { key: `${f.name}-${f.size}-${f.lastModified}`, file: f }]);
         const docLike = /\.(pdf|png|jpe?g|webp)$/i.test(f.name);
@@ -471,7 +471,7 @@ function StatementDeskPage() {
 
         <UnfinishedRuns active={docs.map((d) => d.resume?.runId ?? d.key)} onResume={(file, resume, ctx) => setDocs((p) => [...p.filter((y) => y.resume?.runId !== resume.runId), { key: resume.runId, file, resume, context: parseContext(ctx) }])} />
         {docs.map((x) => <DocumentIntake key={x.key} file={x.file} context={x.context ?? context} resume={x.resume} replacesId={replaces} onClose={() => setDocs((p) => p.filter((y) => y.key !== x.key))} onStatement={() => { setDocs((p) => p.filter((y) => y.key !== x.key)); void add([x.file], true); }} />)}
-        {invest.map((x) => <InvestmentReview key={x.key} file={x.file} doc={x.doc} onClose={() => setInvest((p) => p.filter((y) => y.key !== x.key))} onUploadMore={() => inputRef.current?.click()} />)}
+        {invest.map((x) => <InvestmentReview key={x.key} file={x.file} doc={x.doc} onClose={() => setInvest((p) => p.filter((y) => y.key !== x.key))} onUploadMore={() => inputRef.current?.click()} onReviewCash={async (file, accountId) => { await add([file],true); setDestinations(previous=>({...previous,[`${file.name}\u0000account`]:accountId})); }} />)}
 
         {loaded.length > 0 && (
           <ul className="divide-y divide-border rounded-xl border border-border">

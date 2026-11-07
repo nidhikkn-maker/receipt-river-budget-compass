@@ -27,7 +27,7 @@ function Row({ label, state, text }: { label: string; state: CheckState; text: s
 }
 
 /** One investment document: identify the demat account, fold rows in by ISIN, show the six checks, save on tap. */
-export function InvestmentReview({ file, doc, onClose, onUploadMore }: { file: File; doc: InvestDoc; onClose: () => void; onUploadMore: () => void }) {
+export function InvestmentReview({ file, doc, onClose, onUploadMore, onReviewCash }: { file: File; doc: InvestDoc; onClose: () => void; onUploadMore: () => void; onReviewCash?: (file: File, accountId: string) => Promise<void> }) {
   const { addDocument, userId, accounts: ledgerAccounts, transactions } = useStore();
   const [accounts, setAccounts] = useState<DematWithHoldings[] | null>(null);
   const [pick, setPick] = useState<string>("");
@@ -106,7 +106,7 @@ export function InvestmentReview({ file, doc, onClose, onUploadMore }: { file: F
         {(()=>{const account=ledgerAccounts.find(a=>a.id===cashAccount);if(!account)return null;const r=brokerCashReconciliation(cashStatement.lines,account,transactions,cashStatement.closing);return <>
           <p>{r.rows.length-r.missing} matched · {r.missing} unresolved{r.difference!==null?` · closing difference INR ${r.difference.toFixed(2)}`:' · closing not compared'}</p>
           <ul>{r.rows.filter(x=>x.state!=='matched').slice(0,20).map(x=><li key={x.line.key} className="text-warning">{x.line.date} · {x.line.description} · {x.state}</li>)}</ul>
-          <Button asChild size="sm" variant="outline"><Link to="/statements">Review cash statement entries</Link></Button>
+          {onReviewCash && <Button size="sm" variant="outline" onClick={() => onReviewCash(file, account.id)}>Review cash statement entries</Button>}
         </>;})()}
       </section>}
       {merge.duplicatesSkipped > 0 && <p className="mt-1 text-sm text-muted-foreground">{merge.duplicatesSkipped} line{merge.duplicatesSkipped === 1 ? "" : "s"} already on file, skipped.</p>}
