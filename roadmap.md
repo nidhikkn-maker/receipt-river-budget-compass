@@ -818,3 +818,13 @@
 - [ ] Continue proving remaining PARTIALs in clusters: receipt/contract/utility fixtures (V60-0048/0049/0060-0062), extraction field fixtures (V60-0105-0119), invoice-derived linking (V60-0130+), navigation render tests (V60-0072-0080), then the umbrella workflow integration tests.
 - [ ] Staged guard_preference_approval trigger: still NOT installed — needs owner's explicit activation approval.
 - [ ] No further publishing without owner's approval.
+
+## 2026-11-07 — Break the development loop
+- [x] Fix empty browser downloads (hosted, checksum-verified)
+- [x] Classify all partial requirements A/B/C/D with next action (docs/PARTIAL_CLASSIFICATION.md)
+- [x] Separate pre-v6 register with source references (.lovable/requirements/historical/register.json) — audit pending
+- [x] DocuRepo search by linked account/transaction/asset/tenant/supplier
+- [x] Asset allocation change between valuation snapshots
+- [ ] Remaining A: iPad list-and-detail layout (V60-0671); persisted-reload checks for linked search
+- [ ] Audit historical register (349 chat requests, 12,559 document clauses) against code
+- [ ] Work through B items by module
