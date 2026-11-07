@@ -1,5 +1,6 @@
 import { lazy, Suspense, useEffect, useRef, useState } from 'react';
-import { Camera, FileUp, Mic, PencilLine, MessageSquare, X, ChevronLeft, CheckCircle2, Images, ChevronRight } from 'lucide-react';
+import { Camera, FileUp, Mic, PencilLine, MessageSquare, X, ChevronLeft, CheckCircle2, Images, ChevronRight, ReceiptText, Package } from 'lucide-react';
+import { SMART_ADD_EVENT, type SmartAddIntent } from '@/lib/smart-add-event';
 import night from '@/assets/companion-add-night.jpg';
 import { Link } from '@tanstack/react-router';
 import { Button } from './ui/button';
@@ -35,6 +36,8 @@ export function SmartAdd({ open, onOpenChange, scope }: { open: boolean; onOpenC
   const panelRef = useRef<HTMLDivElement>(null);
   const base: QuickEntrySearch = scope ? { scope } : {};
   const busy = stage.kind === 'receipt' || stage.kind === 'statement' || stage.kind === 'classify';
+  const [intent, setIntent] = useState<SmartAddIntent | undefined>();
+  useEffect(() => { const on = (e: Event) => setIntent((e as CustomEvent<{ intent?: SmartAddIntent }>).detail?.intent); window.addEventListener(SMART_ADD_EVENT, on); return () => window.removeEventListener(SMART_ADD_EVENT, on); }, []);
 
   useEffect(() => {
     if (!open) return;
@@ -49,7 +52,8 @@ export function SmartAdd({ open, onOpenChange, scope }: { open: boolean; onOpenC
   const take = (list: FileList | null) => {
     const files = Array.from(list ?? []); if (!files.length) return;
     setShown(0);
-    const where = routeFiles(files);
+    const routed = routeFiles(files);
+    const where = routed === 'ask' && intent === 'document' ? 'statement' : routed;
     if (where === 'receipt') setStage({ kind: 'receipt', files, search: { ...base, mode: 'scan' }, key: Date.now() });
     else if (where === 'statement') setStage({ kind: 'statement', files, key: Date.now() });
     else setStage({ kind: 'classify', files });
@@ -72,10 +76,10 @@ export function SmartAdd({ open, onOpenChange, scope }: { open: boolean; onOpenC
       <div className="absolute inset-0 bg-foreground/30 backdrop-blur-sm" aria-hidden onClick={() => onOpenChange(false)} />
       <div ref={panelRef} tabIndex={-1} role="dialog" aria-modal="true" aria-labelledby="smart-add-title"
         style={stage.kind === 'choose' ? { backgroundImage: `url(${night})` } : undefined}
-        className={`smart-add-sheet native-sheet ${stage.kind === 'choose' ? 'smart-add-night max-sm:top-0 max-sm:max-h-none max-sm:rounded-none ' : ''}absolute inset-x-0 bottom-0 flex max-h-[96dvh] flex-col overflow-clip rounded-t-3xl border bg-background shadow-xl outline-none sm:inset-y-4 sm:left-auto sm:right-4 sm:bottom-4 sm:max-h-none sm:rounded-3xl ${stage.kind === 'choose' ? 'sm:w-[28rem]' : 'sm:w-[min(72rem,calc(100vw-2rem))]'}`}>
-        <header className="flex min-h-14 items-center gap-2 border-b px-4 pt-[env(safe-area-inset-top)] sm:pt-0">
+        className={`smart-add-sheet native-sheet ${stage.kind === 'choose' ? 'smart-add-night max-sm:top-0 max-sm:max-h-none max-sm:rounded-none ' : 'smart-add-light max-sm:top-0 max-sm:max-h-none max-sm:rounded-none '}absolute inset-x-0 bottom-0 flex max-h-[96dvh] flex-col overflow-clip rounded-t-3xl border bg-background shadow-xl outline-none sm:inset-y-4 sm:left-auto sm:right-4 sm:bottom-4 sm:max-h-none sm:rounded-3xl ${stage.kind === 'choose' ? 'sm:w-[28rem]' : 'sm:w-[min(72rem,calc(100vw-2rem))]'}`}>
+        <header className="flex min-h-14 shrink-0 items-center gap-2 border-b px-3 pt-[env(safe-area-inset-top)] sm:pt-0">
           {busy && <Button variant="ghost" size="icon" aria-label="Start over" onClick={reset}><ChevronLeft className="size-5" /></Button>}
-          <h2 id="smart-add-title" className={stage.kind === 'choose' ? 'sr-only' : 'flex-1 text-base font-semibold'}>Smart Add</h2>{stage.kind === 'choose' && <span className="flex-1" />}
+          <h2 id="smart-add-title" className={stage.kind === 'choose' ? 'sr-only' : 'min-w-0 flex-1 truncate text-base font-semibold'}>{stage.kind === 'statement' ? 'Check this document' : stage.kind === 'receipt' ? (stage.files.length ? 'Check this bill' : 'Add an entry') : stage.kind === 'done' ? 'Saved' : stage.kind === 'classify' ? 'What is this?' : 'Smart Add'}</h2>{stage.kind === 'choose' && <span className="flex-1" />}
           <Button variant="ghost" size="icon" aria-label={busy ? 'Hide Smart Add (your work stays here)' : 'Close Smart Add'} onClick={() => onOpenChange(false)}><X className="size-5" /></Button>
         </header>
         <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 pb-[calc(env(safe-area-inset-bottom)+1rem)] pt-4">
@@ -101,8 +105,8 @@ export function SmartAdd({ open, onOpenChange, scope }: { open: boolean; onOpenC
             </div>
           </div>}
 
-          {(stage.kind === 'receipt' || stage.kind === 'statement') && <div className={files.length ? 'grid gap-6 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]' : ''}>
-            {files.length > 0 && <div className="lg:sticky lg:top-0 lg:self-start">{preview}</div>}
+          {(stage.kind === 'receipt' || stage.kind === 'statement') && <div className={files.length ? 'grid gap-5 md:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]' : 'mx-auto max-w-xl'}>
+            {files.length > 0 && <div className="md:sticky md:top-0 md:self-start">{preview}</div>}
             <Suspense fallback={<p role="status" className="text-sm text-muted-foreground">Opening review…</p>}>
               <div className="smart-add-review min-w-0">
                 {stage.kind === 'receipt'
@@ -116,6 +120,11 @@ export function SmartAdd({ open, onOpenChange, scope }: { open: boolean; onOpenC
             <CheckCircle2 className="mx-auto size-10 text-success" />
             <h3 className="text-lg font-semibold">Saved to your records</h3>
             <p className="text-sm text-muted-foreground">{stage.label}. The original bill is attached to it.</p>
+            {stage.id && <div className="mx-auto grid max-w-sm gap-2 text-left" aria-label="Suggested next steps">
+              <p className="text-xs font-medium text-muted-foreground">Also, if this applies:</p>
+              <Link to="/claim-submission" search={{ entry: stage.id }} onClick={() => { onOpenChange(false); reset(); }} className="cmp-list-row"><span className="cmp-icon"><ReceiptText /></span><span className="min-w-0 flex-1"><b>Claim it back</b><small>Put this bill on an expense claim</small></span><ChevronRight /></Link>
+              <Link to="/assets" onClick={() => { onOpenChange(false); reset(); }} className="cmp-list-row"><span className="cmp-icon"><Package /></span><span className="min-w-0 flex-1"><b>It's something I own</b><small>Add it to Things I own</small></span><ChevronRight /></Link>
+            </div>}
             <div className="flex flex-wrap justify-center gap-2">
               <Button asChild variant="outline"><Link to="/expenses" onClick={() => { onOpenChange(false); reset(); }}>View in Activity</Link></Button>
               <Button onClick={reset}>Add another</Button>
