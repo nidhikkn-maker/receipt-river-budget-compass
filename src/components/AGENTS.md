@@ -1,5 +1,5 @@
 # Components
-- Smart Add dispatches draft-only modes to Universal Entry and files to Statement Desk; Canvas adds presentation to existing receipt review, never a second parser or posting path.
+- Smart Add is an in-place sheet: it previews the real files (SourcePreview) and hosts the existing NewExpense (embedded prop) or StatementDeskPage (embedded prop) inside itself; hiding keeps in-flight work, and there is never a second parser or posting path.
 - JournalToday is presentation-only over dashboard-derived figures and owner-visible entries; original overview tools retain their existing preference ordering inside the disclosure.
 - Long settings-style pages use the shared Fold (details) component, which opens itself for a matching URL hash; pop-ups use the shared centred Dialog so phone sizing stays consistent.
 

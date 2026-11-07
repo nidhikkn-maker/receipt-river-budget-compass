@@ -115,3 +115,15 @@ Status as of this batch. Nothing here is marked done without the evidence named.
 - No hosted or real-device check; all screenshots use isolated fixture data.
 - Tamil/Hindi translations are not delivered; only text compatibility is preserved.
 - Layperson-ready is **not** claimed.
+
+## Smart Add acceptance matrix (fixture data, 390 / 1180 / 1440 px)
+| Journey | Status | Evidence |
+|---|---|---|
+| + → photo → real preview shown before reading | Pass | docs/evidence/smart-add/*-smart-preview.png |
+| Reading → plain-language Canvas, no page change | Pass | *-canvas.png, URL asserted unchanged |
+| Hide sheet and reopen keeps in-flight receipt | Pass | test_journal_uix.py |
+| Confirm date check → Save → exactly one save → success with Activity link | Pass | *-smart-saved.png |
+| PDF → page preview with page count → "What is this?" | Pass | *-smart-pdf.png |
+| CSV statement → table preview → batch review → apply → Undo, in sheet | Pass | smart-add-statement-batch.png (test_statement_desk.py) |
+| Voice / Quick / Message open inside sheet | Unit-tested only | SmartAdd.test.tsx |
+| Real camera, hosted save, DocuRepo read-back, real device | Not verified | needs device / hosted test |
