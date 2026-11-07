@@ -55,7 +55,9 @@ describe("automatic assignment from source evidence", () => {
     expect(filterRepo(docs, { entityId: "ent-acme" }, links, [acme]).map((d) => d.id)).toEqual(["d1"]);
     expect(filterRepo(docs, { fy: "2026-27" }, [], []).map((d) => d.id)).toEqual(["d1", "d2"]); // both dated May 2026
     expect(filterRepo(docs, { fy: "2024-25" }, [], [])).toEqual([]);
-    expect(filterRepo(docs, { linkKind: "any" }, links, []).map((d) => d.id)).toEqual(["d1"]);
+    expect(filterRepo(docs, { linkKind: "any" }, links, []).map((d) => d.id)).toEqual(["d1", "d2"]); // "any" = no link filter
+    expect(filterRepo(docs, { linkKind: "entity" }, links, []).map((d) => d.id)).toEqual(["d1"]); // only the linked one
+    expect(filterRepo(docs, { linkKind: "entity", linkTarget: "ent-acme" }, links, []).map((d) => d.id)).toEqual(["d1"]);
   });
 
   it("surfaces expiry/renewal dates inside the reminder window only", () => {
