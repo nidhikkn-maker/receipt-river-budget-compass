@@ -21,7 +21,7 @@ export function addSample(list: PerfSample[], s: PerfSample): PerfSample[] {
 export function percentile(values: number[], p: number): number | null {
   if (!values.length) return null;
   const v = [...values].sort((a, b) => a - b);
-  return v[Math.min(v.length - 1, Math.max(0, Math.ceil((p / 100) * v.length) - 1))];
+  return v[Math.min(v.length - 1, Math.max(0, Math.ceil((p / 100) * v.length) - 1))] ?? null;
 }
 
 export type PerfRow = PerfTarget & { count: number; median: number | null; p90: number | null; result: "pass" | "slow" | "no_data" };
