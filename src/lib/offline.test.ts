@@ -1,8 +1,24 @@
 import { describe,expect,it } from "vitest";
-import { queueEntry,pendingEntries,removePending,putSnapshot,getSnapshot,encryptOffline,decryptOffline,readReviewContext,writeReviewContext,clearOfflineOwner } from "./offline";
+import { queueEntry,pendingEntries,removePending,putSnapshot,getSnapshot,encryptOffline,decryptOffline,readReviewContext,writeReviewContext,clearOfflineOwner,keepOriginal,pendingOriginals,removeOriginal } from "./offline";
 import { indexedDB } from "fake-indexeddb";
 globalThis.indexedDB = indexedDB;
 describe("Offline entry isolation",()=>{
+  it("retains statement original bytes under one stable identity, isolates owners and clears recovery copies", async () => {
+    const file = new File(["Date,Debit\n2026-10-02,730"], "statement.csv", { type: "text/csv" });
+    // jsdom File lacks arrayBuffer; use real bytes for this browser API boundary.
+    Object.defineProperty(file, "arrayBuffer", { value: async () => new TextEncoder().encode("Date,Debit\n2026-10-02,730").buffer });
+    const meta = { id: "original-1", title: "Statement", docType: "bank_statement" as const, docDate: null, amount: null, currency: "INR", merchant: null, notes: "", transactionId: null, accountId: null, loanId: null, expiresOn: null };
+    await Promise.all([keepOriginal("original-owner", { file, meta }), keepOriginal("original-owner", { file, meta: { ...meta, id: "original-2" } })]);
+    await keepOriginal("original-owner", { file, meta });
+    const rows = await pendingOriginals("original-owner");
+    expect(rows.map(r => r.meta.id).sort()).toEqual(["original-1", "original-2"]);
+    expect(rows[0]?.file.size).toBe(25);
+    expect(await pendingOriginals("unrelated-owner")).toEqual([]);
+    await removeOriginal("original-owner", "original-1");
+    expect((await pendingOriginals("original-owner")).map(r => r.meta.id)).toEqual(["original-2"]);
+    await clearOfflineOwner("original-owner");
+    expect(await pendingOriginals("original-owner")).toEqual([]);
+  });
   it('restores unconfirmed review IDs only for their owner and removes them on data cleanup', async () => {
     const context = { selected: ['review-91'], query: 'Grab', group: 'category', category: 'Transport', account: 'all', workspace: 'all', organisation: 'all' };
     await writeReviewContext('review-owner', context);

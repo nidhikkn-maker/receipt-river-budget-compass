@@ -19,6 +19,7 @@ export function useStore() {
   const [preferences, setPreferences] = useState<Record<string, unknown>>({ categories: [{ name: "Food", archived: false }, { name: "Other", archived: false }], tags: [], statementUploads: [] });
   const refresh = async () => bump((n) => n + 1);
   return {
+    userId: "controlled-statement-owner",
     accounts: [...fixture.accounts], transactions: fixture.transactions.map((t) => ({ ...t })), preferences, loans: [], commitments: [], documents: [],
     addDocument: async (_file: File, meta: Record<string, unknown>) => {
       if (typeof meta.id !== "string") throw new Error("Original must have a stable identity");

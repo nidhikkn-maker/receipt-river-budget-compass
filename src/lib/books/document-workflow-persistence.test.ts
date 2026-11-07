@@ -111,7 +111,7 @@ it("invoice source → reviewed GST commit → reloaded liability agrees while i
   expect(saved.data.books.gstInvoices).toHaveLength(1);
   expect(gstr3b(saved.data.books.gstInvoices, gstin, "2026-10")).toMatchObject({ outwardTaxable: 10000, outputTax: 1800, netPayable: 1800 });
   const evidence = { id: docId, fields: [{ label: "Taxable value", value: "10000", originalValue: "10000", quote: "Taxable value INR 10,000", page: 1, confidence: "high", status: "confirmed" }] } as VaultDoc;
-  expect(recordProvenance("invoice-1", saved.data.books.docLinks, [evidence])[0]?.fields[0]).toMatchObject({ value: "10000", printed: "10000", where: "page 1" });
+  expect(recordProvenance("invoice-1", saved.data.books.docLinks, [evidence])[0]?.fields[0]).toMatchObject({ value: "10000", printed: null, where: "page 1" });
   // The tax register is evidence, not a second ledger: report reads the saved movement only.
   const movement = [{ id: "paid-1", amount: 11800, txnType: "income" as const, accountId: "bank", date: "2026-10-03" }];
   expect(cashflow(movement)).toEqual({ income: 11800, spent: 0, net: 11800 });

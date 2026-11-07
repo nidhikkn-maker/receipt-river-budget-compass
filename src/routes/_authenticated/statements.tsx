@@ -13,6 +13,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { money } from "@/lib/expenses";
 import { useStore, type DocumentMeta } from "@/lib/store";
 import { accountBalance } from "@/lib/ledger";
+import { keepOriginal, pendingOriginals, removeOriginal } from "@/lib/offline";
 import type { TxnType } from "@/lib/ledger";
 import { correctionPreview, type CorrectionPreview } from "@/lib/financial-corrections";
 import type { FinancialReview } from "@/lib/financial-review";
@@ -91,6 +92,12 @@ function StatementDeskPage() {
   const [result, setResult] = useState<ApplyResult | null>(null);
   // Statement originals that failed to store in DocuRepo after posting — kept so the owner can retry instead of leaving an untracked import.
   const [failedOriginals, setFailedOriginals] = useState<{ file: File; meta: DocumentMeta }[]>([]);
+  useEffect(() => {
+    let live = true;
+    pendingOriginals(store.userId).then(rows => { if (live) setFailedOriginals(rows); })
+      .catch(() => { if (live) toast.error("Saved statement originals on this device couldn’t be opened. Keep your source files and retry."); });
+    return () => { live = false; };
+  }, [store.userId]);
   const [hintEdits, setHintEdits] = useState<Record<string, Partial<AccountHint>>>({});
   const [links, setLinks] = useState<TransferLinkRow[] | null>(null);
   const [linking, setLinking] = useState<string | null>(null);
@@ -229,7 +236,13 @@ function StatementDeskPage() {
         kept.add(f);
         const ds = a.file.lines.map((l) => l.date).sort();
         const meta: DocumentMeta = { id: crypto.randomUUID(), title: `Statement · ${a.file.name}`, docType: a.file.hint?.kind === "credit_card" || /card/i.test(a.file.name) ? "card_statement" : "bank_statement", docDate: ds[ds.length - 1] ?? null, amount: null, currency: a.file.currency, merchant: null, notes: `Statement Desk upload ${upload.id}: ${a.file.lines.length} lines (${ds[0] ?? "?"} to ${ds[ds.length - 1] ?? "?"}).`, transactionId: null, accountId: a.file.accountId, loanId: null, expiresOn: null, evidenceLocked: true };
-        try { await storeRef.current.addDocument(f, meta); }
+        const owner = storeRef.current.userId;
+        try { await keepOriginal(owner, { file: f, meta }); }
+        catch { toast.error(`Keep ${f.name} until it is stored — this device couldn’t retain a recovery copy.`); }
+        try {
+          await storeRef.current.addDocument(f, meta);
+          await removeOriginal(owner, meta.id ?? "");
+        }
         catch { failed.push({ file: f, meta }); }
       }
       setFailedOriginals((pending) => [...pending, ...failed]);
@@ -250,7 +263,10 @@ function StatementDeskPage() {
   const retryOriginals = async () => {
     const left: { file: File; meta: DocumentMeta }[] = [];
     for (const f of failedOriginals) {
-      try { await storeRef.current.addDocument(f.file, f.meta); }
+      try {
+        await storeRef.current.addDocument(f.file, f.meta);
+        await removeOriginal(storeRef.current.userId, f.meta.id ?? "");
+      }
       catch { left.push(f); }
     }
     setFailedOriginals(left);
