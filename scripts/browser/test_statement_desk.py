@@ -31,6 +31,7 @@ class StatementDeskFlow(unittest.IsolatedAsyncioTestCase):
         self.errors = []
         self.blocked = []
         self.page.on("pageerror", lambda error: self.errors.append(str(error)))
+        self.page.on("console",lambda m: print(m.text,flush=True) if "UNDO_DEBUG" in m.text else None)
 
         async def isolate(route):
             request = route.request
@@ -43,6 +44,8 @@ class StatementDeskFlow(unittest.IsolatedAsyncioTestCase):
             elif parsed.path in ("/src/lib/store.tsx", "/src/integrations/supabase/client.ts"):
                 name = "useStore" if "store.tsx" in parsed.path else "supabase"
                 await route.fulfill(status=200, content_type="application/javascript", body=f'export {{ {name} }} from "/scripts/browser/statement-desk-mocks.tsx";')
+            elif parsed.path == '/src/lib/statement-pipeline/apply.ts':
+                response=await route.fetch();body=await response.text();body=body.replace('const left = [];','const left = []; console.log("UNDO_DEBUG", JSON.stringify(result), JSON.stringify(api.transactions));');await route.fulfill(response=response,body=body)
             elif request.method not in ("GET", "HEAD"):
                 self.blocked.append("unexpected write")
                 await route.abort()
