@@ -17,6 +17,7 @@ import { PayeeDirectory } from '@/components/PayeeDirectory';
 import { ImportRules } from '@/components/ImportRules';
 import { SettingsDirectory } from "@/components/SettingsDirectory";
 import { Fold } from "@/components/Fold";
+import { SpeedCheck } from "@/components/SpeedCheck";
 import { RoleBadge, TeamAccessSettings } from "@/components/TeamAccess";
 import { SmartDefaultsSettings } from "@/components/SmartDefaultsSettings";
 import { ReceiptProblemReports } from "@/components/ReceiptProblemReports";
@@ -147,6 +148,7 @@ function Settings() {
       <Fold id="rules" title="Import rules" hint="How statement lines are sorted automatically"><ImportRules /></Fold>
       <Fold id="team-access" title="Team access" hint="Who can view or edit team expenses and company tax"><TeamAccessSettings /></Fold>
       <Fold id="notifications" title="Notifications" hint="Phone alerts, reminder types and advance timing"><PushSettings /></Fold>
+      <Fold id="speed" title="Speed check" hint="How fast main pages open on this device"><SpeedCheck /></Fold>
       <Fold id="problems" title="Problem reports" hint="Things you flagged in the receipt viewer"><ReceiptProblemReports /></Fold>
       <Fold id="data" title="Data, backups & reports" hint="Back up, restore, export or delete"><div className="grid gap-3 sm:grid-cols-2">
         <Card title="Back up everything" body="Accounts, entries, budgets, valuations, family and original receipt and document files.">
