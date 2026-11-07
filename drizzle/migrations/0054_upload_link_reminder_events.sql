@@ -1,0 +1,2 @@
+ALTER TABLE public.upload_link_events DROP CONSTRAINT IF EXISTS upload_link_events_kind_check;
+ALTER TABLE public.upload_link_events ADD CONSTRAINT upload_link_events_kind_check CHECK (kind IN ('created','emailed','opened','uploaded','turned_off','reminded','owner_notified'));
