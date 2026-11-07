@@ -185,6 +185,8 @@ class ExpenseReceiptButtons(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(await self.page.evaluate("expenseBrowserFixture.saves.length"), 0)
         review = self.page.get_by_role("group", name="Review scanned details")
         await review.get_by_text("Original receipt", exact=True).click()
+        fields = review.get_by_text("Check what I read from the receipt", exact=True)
+        if await review.locator("details.canvas-fields:not([open])").count(): await fields.click()
         await expect(review.get_by_label("Item 1 name confidence: High reading confidence", exact=True)).to_be_visible()
         await expect(review.get_by_role('heading', name='Intelligent Canvas')).to_be_visible()
         await expect(review.get_by_text('A receipt from Controlled cafe', exact=False)).to_be_visible()
