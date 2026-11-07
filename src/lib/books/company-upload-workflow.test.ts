@@ -63,7 +63,6 @@ it('an edit grant cannot upload elsewhere, spoof the storage owner, or reference
 });
 it('owner retagging revokes uploader access too; shared editors cannot replace existing source evidence',async()=>{
   await as(EDITOR);await uploadCompanyDocument(OWNER,'c1',new File(['original'],'original.pdf'),api());
-  await db.exec(readFileSync('drizzle/migrations/0076_entity_scoped_transactions.sql','utf8').split('DROP POLICY IF EXISTS "Entity editors update company documents"')[1] ? 'SELECT 1' : 'SELECT 1');
   await db.exec('RESET ROLE; CREATE POLICY editorupdate ON documents FOR UPDATE TO authenticated USING(can_access_entity(owner_id,entity_id,true)) WITH CHECK(can_access_entity(owner_id,entity_id,true));');
   await as(EDITOR);
   await expect(db.query('UPDATE documents SET file_path=$1 WHERE entity_id=$2',[`${companyFilePrefix(OWNER,'c1')}replacement.pdf`,'c1'])).rejects.toThrow(/cannot replace/);
