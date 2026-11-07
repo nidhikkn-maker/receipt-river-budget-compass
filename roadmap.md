@@ -1,4 +1,11 @@
 
+## Current Workstream 1 — 7 Nov 2026 17:17 UTC
+- [ ] Statement Desk: exact source/draft recovery checks, multi-stage interruptions and incomplete Undo retention.
+- [ ] Document intake: integrity-checked parked originals and retryable cleanup.
+- [ ] Reconcile 1,917/1,894 test counts with an explicit collected inventory; retain coverage.
+- [ ] Observe Inbox slow opens with reproducible timings; environment attribution remains unproven.
+- [ ] Update exact evidence/register counts, then continue Inbox → Account Reconciliation → DocuRepo; no real records, activation or publication.
+
 ## Safeguard status (7 Nov 2026 15:54 UTC, owner-accepted)
 - Budget completeness authority and append-only merchant history: isolated development and testing COMPLETE (owner accepted). Production activation PENDING owner release approval; do not retest unless related code changes.
 ## Active verification checkpoint (7 Nov 2026)
