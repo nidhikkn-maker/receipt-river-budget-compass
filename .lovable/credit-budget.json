@@ -1,0 +1,17 @@
+{
+  "authorisedCap": 1100,
+  "currency": "Lovable credits",
+  "reservedFinalTestingSecurity": 200,
+  "emergencyReserve": 100,
+  "baselineRecordedPeriodUsage": 2569.98,
+  "baselineEvidence": "Initial emergency directive turn recorded billing-period usage; rounded to two decimals in retained context",
+  "latestRecordedPeriodUsage": 2590.62724432,
+  "latestWorkspaceBalance": 1178.35,
+  "batchStartOwnerReportedWorkspaceBalance": 1188.51,
+  "observedBatchWorkspaceDecline": 10.16,
+  "conservativeCapCharge": 20.65,
+  "planningCapRemaining": 1079.35,
+  "planningExpansionAllowanceAfterReserves": 779.35,
+  "attribution": "Conservative rounded workspace recorded-usage growth, charged against cap; may include other usage and recording lag. Not exact task-attributed development spend.",
+  "updatedAt": "2026-11-07T18:21:00Z"
+}
