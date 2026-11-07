@@ -24,14 +24,26 @@ function ReceiptThumb({ path, name, type }: { path: string; name: string; type: 
 }
 
 export function ExpenseDialog({ expense, onClose }: { expense: Expense | null; onClose: () => void }) {
+  if (!expense) return null;
+  return (
+    <Dialog open onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="max-h-[90vh] max-w-xl overflow-y-auto rounded-3xl">
+        <DialogHeader><DialogTitle className="font-display text-2xl font-bold">{expense.title}</DialogTitle></DialogHeader>
+        <ExpenseDetail expense={expense} onClose={onClose} />
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+/** Expense detail body, shared by the modal dialog and the iPad-landscape side pane. */
+export function ExpenseDetail({ expense, onClose }: { expense: Expense; onClose: () => void }) {
   const { memberName, setScope, remove, accounts, setReimbursement, recordReimbursement, convertToEmi, history } = useStore();
   const [audit, setAudit] = useState<AuditEntry[]>([]);
   const [busy,setBusy]=useState(false);
-  useEffect(()=>{setAudit([]);if(expense)void history(expense.id).then(setAudit).catch(()=>{});},[expense?.id,history]);
+  useEffect(()=>{setAudit([]);void history(expense.id).then(setAudit).catch(()=>{});},[expense?.id,history]);
   const nav = useNavigate();
-  const [scope, setLocalScope] = useState(expense?.scope ?? "personal");
-  useEffect(() => { if (expense) setLocalScope(expense.scope); }, [expense]);
-  if (!expense) return null;
+  const [scope, setLocalScope] = useState(expense.scope);
+  useEffect(() => { setLocalScope(expense.scope); }, [expense]);
   const e = expense;
 
   const changeScope = async (s: typeof scope) => {
