@@ -55,6 +55,8 @@ async def main():
    await page.get_by_role('button',name='Smart Add',exact=True).filter(visible=True).first.click()
    await expect(page.get_by_role('dialog',name='Smart Add')).to_be_visible()
    await page.wait_for_timeout(350)
+   bounds = await page.get_by_role("dialog",name="Smart Add").bounding_box()
+   assert bounds and bounds["x"] >= -1 and bounds["x"] + bounds["width"] <= width + 1, bounds
    await page.screenshot(path=str(OUT/f'{width}-smart.png'))
    await page.get_by_role('button',name='Scan / Photo',exact=True).click()
    await expect(page.get_by_role('button',name='Save expense',exact=True)).to_be_visible()
