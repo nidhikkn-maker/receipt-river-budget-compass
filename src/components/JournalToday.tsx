@@ -62,7 +62,7 @@ export function JournalToday({ name, today, spending, periodLabel, safe, cardDue
         <span className="flex-1" />
         <Link to="/search" aria-label="Search"><Search className="size-5" /></Link>
         <Link to="/inbox" aria-label="Notifications"><Bell className="size-5" /></Link>
-        <Link to="/settings" aria-label={name ? `Account: ${name}` : 'Account'} className="cmp-avatar">{initials(name || 'Ledgerline')}</Link>
+        <Link to="/auth" aria-label={name ? `Account: ${name}` : 'Account'} className="cmp-avatar">{initials(name || 'Ledgerline')}</Link>
       </div>
       <h1 className="cmp-greeting cmp-serif">{greetingFor(hour)}{who ? `, ${who}` : ''}</h1>
       <p className="cmp-greeting-sub">{new Date(`${today}T12:00:00`).toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long' })} · here's your day</p>
