@@ -41,7 +41,7 @@ it('saved merge reversal reviews changed grouping, preserves originals and retai
  let view=render(<Merchants/>);fireEvent.click(screen.getByRole('button',{name:'Merge'}));fireEvent.click(screen.getByRole('button',{name:'Confirm grouping'}));
  await waitFor(()=>expect(mock.save).toHaveBeenCalledTimes(1));view.unmount();view=render(<Merchants/>);
  fireEvent.click(screen.getByRole('button',{name:'Reverse grouping'}));
- expect(screen.getByRole('dialog')).toHaveTextContent('alpha south → alpha south');
+ expect(screen.getByRole('dialog')).toHaveTextContent('alpha north → alpha south');
  fireEvent.click(screen.getByRole('button',{name:'Confirm grouping'}));
  await waitFor(()=>expect(mock.store['preferences']).toMatchObject({merchantAliases:{},merchantGroupingHistory:[{title:'Merge into Alpha North'},{reverses:expect.any(String)}]}));
  expect(transactions.map(t=>t.amount)).toEqual([0.1,0.1]);
