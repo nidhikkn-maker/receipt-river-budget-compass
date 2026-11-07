@@ -781,3 +781,12 @@
 - [x] Manual market-price overrides with source, price date, note and append-only change history; active override wins over feed/closing price until cleared (3 tests).
 - [x] In-app Required reports dashboard (/report-status, linked from Audit) with status, in-app evidence links and tests; test verifies every referenced file exists.
 - [ ] Priorities 2–15: this session added ranks 2, 7, 8, 9, 12 (partial), 13, 14 work; resume at rank 3 per docs/IMPLEMENTATION_PROGRESS.md "Current task".
+
+## 7 Nov 2026 — security closure + full register audit
+- [x] 0087: guest sessions excluded from job_state/regulatory_changes; regulatory_snapshots service_role-only; market_quotes kept public (owner decision). 4 PGlite tests.
+- [x] Accountant email hardening: send-time validation, 4/day per-recipient cap (with existing 10/day, 3 addresses/day, 24h cooldown, audit events, 30-day expiry). 5 tests.
+- [x] All 5 warn security findings closed; 1 info (guest access model) remains by design.
+- [x] Publish confirmed: ledgerline.biz live (owner-authorised, code through 0086); 0087 + email hardening preview-only pending next approved publish.
+- [x] Staged guard_preference_approval trigger verified compatible with published client; NOT installed — awaits explicit owner activation.
+- [x] Full register audit: 899 clauses — 489 VERIFIED COMPLETE, 404 PARTIAL, 4 MISSING, 2 BLOCKED, 0 NOT AUDITED. Full suite 1,727 tests pass.
+- [ ] P13 real-asset posting browser check (needs owner-approved test posting), P14 licensed feed (BLOCKED), 4 MISSING governance/FX clauses.
