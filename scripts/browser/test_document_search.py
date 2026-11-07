@@ -8,7 +8,7 @@ async def main():
  OUT.mkdir(parents=True,exist_ok=True)
  async with async_playwright() as p:
   b=await p.chromium.launch(headless=True);c=await b.new_context(viewport={'width':1280,'height':1800});page=await c.new_page();errors=[];writes=[]
-  page.on('pageerror',lambda e:errors.append(str(e)))
+  page.on('pageerror',lambda e:(errors.append(str(e)),print('ERROR',str(e))))
   async def isolate(route):
    r=route.request;u=urlparse(r.url)
    if u.netloc!='localhost:8080' or r.method not in ['GET','HEAD']:writes.append(r.url);await route.abort();return
