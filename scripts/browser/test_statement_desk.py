@@ -43,6 +43,8 @@ class StatementDeskFlow(unittest.IsolatedAsyncioTestCase):
             elif parsed.path in ("/src/lib/store.tsx", "/src/integrations/supabase/client.ts"):
                 name = "useStore" if "store.tsx" in parsed.path else "supabase"
                 await route.fulfill(status=200, content_type="application/javascript", body=f'export {{ {name} }} from "/scripts/browser/statement-desk-mocks.tsx";')
+            elif parsed.path == '/src/lib/statement-pipeline/atomic-undo.functions.ts':
+                await route.fulfill(status=200, content_type='application/javascript', body='export { undoStatement } from "/scripts/browser/statement-desk-mocks.tsx";')
             elif request.method not in ("GET", "HEAD"):
                 self.blocked.append("unexpected write")
                 await route.abort()
@@ -192,8 +194,8 @@ class StatementDeskFlow(unittest.IsolatedAsyncioTestCase):
         await self.page.get_by_role('button', name='Accept all 2 asking items').click()
         await self.page.get_by_role('button', name='Apply everything (2 to save)').click()
         await expect(self.page.get_by_label('Recent uploads')).to_contain_text('interrupted')
-        await self.page.wait_for_function('deskFixture.transactions.length === 1')
-        self.assertEqual(await self.page.evaluate('deskFixture.transactions.length'), 1)
+        await self.page.wait_for_function('deskFixture.atomicCalls === 1')
+        self.assertEqual(await self.page.evaluate('deskFixture.transactions.length'), 2)
         await self.page.reload()
         await expect(self.page.get_by_role("heading", name="Statement Desk")).to_be_visible()
         await expect(self.page.get_by_label('Recent uploads')).to_contain_text('interrupted')

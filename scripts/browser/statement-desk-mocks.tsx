@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { mergeUploadHistory } from '../../src/lib/statement-pipeline/history';
 import { defaultPreferences, type FinancePreferences, type StatementUpload } from '../../src/lib/preferences';
+import { atomicStatementUndo } from '../../src/lib/statement-pipeline/atomic-undo';
 
 // Controlled copies only: no account session, Cloud client or real records.
 const createFixture = () => ({
@@ -19,6 +20,9 @@ const createFixture = () => ({
   failRemoveId: '',
   loseSaveResponse: false,
   failHistoryRemoval: false,
+  atomicUnavailable: false,
+  undoReceipts: JSON.parse(sessionStorage.getItem('controlled-undo-receipts') ?? '[]') as string[],
+  atomicCalls: 0,
 });
 export const fixture = (window as unknown as { deskFixture?: ReturnType<typeof createFixture> }).deskFixture ?? createFixture();
 Object.assign(window, { deskFixture: fixture });
@@ -103,3 +107,22 @@ export const supabase = {
   },
   storage: { from: () => ({ download: (path: string) => fetch(`/__fixture/file?path=${encodeURIComponent(path)}`).then(async (r) => ({ data: r.ok ? await r.blob() : null, error: r.ok ? null : new Error("missing") })) }) },
 };
+
+export async function undoStatement({ data }: { data: { id: string; posted: string[]; reconciled: string[]; evidence: { id: string; ref: string }[]; expected: { id: string; ref: string | null; revision: number }[] } }) {
+  await atomicStatementUndo(data.id, data, data.expected, {
+    receipt: async id => { if (fixture.atomicUnavailable) throw Error('Safe Undo is awaiting database release approval. Your records and recovery history are unchanged.'); return fixture.undoReceipts.includes(id); },
+    rows: async ids => fixture.transactions.filter(t => ids.includes(String(t['id']))).map(t => ({ ...t, correction_revision: t['correctionRevision'] ?? 0, statement_ref: t['statementRef'] ?? null })),
+    commit: async (id, items) => {
+      fixture.atomicCalls++;
+      if (items.some(x => x.snapshot['id'] === fixture.failRemoveId)) throw Error('Controlled atomic Undo failed');
+      const next = fixture.transactions.filter(t => !items.some(x => x.action === 'delete' && x.snapshot['id'] === t['id']));
+      for (const t of next) if (items.some(x => x.action === 'unreconcile' && x.snapshot['id'] === t['id'])) Object.assign(t, { statementRef: null, reconciledAt: null });
+      fixture.removes.push(...items.filter(x => x.action === 'delete').map(x => String(x.snapshot['id'])));
+      fixture.transactions = next;
+      fixture.undoReceipts.push(id);
+      sessionStorage.setItem('controlled-undo-receipts', JSON.stringify(fixture.undoReceipts));
+      sessionStorage.setItem('controlled-desk-ledger', JSON.stringify(next));
+    },
+  });
+  return { ok: true };
+}
