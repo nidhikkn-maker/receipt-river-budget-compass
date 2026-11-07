@@ -3,8 +3,9 @@ import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/re
 import { emptyBooks } from "@/lib/books/types";
 import { PGlite } from "@electric-sql/pglite";
 import { readFileSync } from "node:fs";
+import { Blob as NodeBlob } from "node:buffer";
 import { taxSchedule } from "@/lib/assets";
-import { bookDep } from "@/lib/books/assets-ledger";
+import { annualBook } from "@/lib/books/depreciation";
 
 const state = vi.hoisted(() => ({ store: {} as Record<string, unknown>, runs: [] as unknown[], close: vi.fn() }));
 vi.mock("@/lib/store", () => ({ useStore: () => state.store }));
@@ -137,7 +138,7 @@ describe("actual document review workflow (isolated persistence boundary)", () =
     const docId = "00000000-0000-0000-0000-000000000010";
     const asset = { id: "generator-1", name: "Generator", kind: "machinery" as const, cost: 150000, inUse: "2026-04-01", purchaseDate: "2026-04-01", sharePct: 100, bookMethod: "slm" as const, bookRatePct: 10, tag: "GEN-44", usefulLifeYears: 10, residualPct: 0, docId: "purchase-original", accountId: "asset-account" };
     const prefs = { books: emptyBooks(), entities: [], assets: [asset], contractObligations: [] };
-    const db = new PGlite();
+    const db = new PGlite({ fsBundle: new NodeBlob([readFileSync("node_modules/@electric-sql/pglite/dist/pglite.data")]) });
     try {
       await db.exec(`CREATE ROLE authenticated; CREATE ROLE anon; CREATE ROLE service_role;
         CREATE SCHEMA auth; CREATE FUNCTION auth.uid() RETURNS uuid LANGUAGE sql AS $$ SELECT nullif(current_setting('test.uid',true),'')::uuid $$;
@@ -175,7 +176,7 @@ describe("actual document review workflow (isolated persistence boundary)", () =
       expect(saved.books.docLinks).toContainEqual({ docId, kind: "asset", targetId: asset.id, label: asset.name });
       expect(saved.books.assetEvents).toHaveLength(type === "maintenance" ? 1 : 0);
       expect(saved.books.journals).toEqual([]);
-      expect(bookDep(saved.assets[0] ?? asset, "2026-27")).toMatchObject({ depreciation: 15000, closing: 135000 });
+      expect(annualBook(saved.assets[0] ?? asset, "2026-27")).toMatchObject({ depreciation: 15000, nbv: 135000 });
       expect(taxSchedule(saved.assets[0] ?? asset, "2026-27")[0]).toMatchObject({ depreciation: 22500, closing: 127500 });
       const original = (await db.query<{ original: Uint8Array; fields: unknown[]; evidence_locked: boolean }>("SELECT original,fields,evidence_locked FROM documents WHERE id=$1", [docId])).rows[0];
       expect(new TextDecoder().decode(original?.original)).toBe("representative original");
