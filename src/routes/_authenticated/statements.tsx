@@ -1,3 +1,4 @@
+import { downloadBlob } from "@/lib/reports";
 import { csvCell } from "@/lib/csv-safe";
 import { createFileRoute } from "@tanstack/react-router";
 import { SectionTabs } from "@/components/SectionTabs";
