@@ -6,6 +6,7 @@ vi.mock("@/lib/store", () => ({ useStore: () => mocks.store }));
 vi.mock("@tanstack/react-router", () => ({ useNavigate: () => vi.fn() }));
 
 import { ExpenseTable } from "./ExpenseTable";
+import { defaultPreferences } from "@/lib/preferences";
 import type { Expense } from "@/lib/expenses";
 
 const expense = (id: string, title: string): Expense => ({
@@ -53,7 +54,8 @@ function setupStore() {
     convertToEmi: vi.fn(),
     members: [],
     setAllocations: vi.fn(),
-    preferences: { categories: [], paymentInstruments: [], payees: [] },
+    savePreferences: vi.fn(),
+    preferences: defaultPreferences(),
   };
 }
 
