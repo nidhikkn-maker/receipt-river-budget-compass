@@ -54,5 +54,3 @@
 - Related pages are grouped by src/components/SectionTabs.tsx; retired pages redirect via beforeLoad so old links work. Review lives only at /inbox?section=review.
 - docs/ holds MASTER_REQUIREMENTS (generated from .lovable/requirements/register.json by scripts/requirements/render_docs.py), IMPLEMENTATION_PROGRESS, VERIFICATION_RESULTS and OPEN_BLOCKERS; update the register, never hand-edit the generated file.
 
-- INR ledger, expense allocations, statement balances and repayment history use src/lib/money.ts decimal arithmetic with half-up money boundaries; numeric storage stays unchanged to preserve compatibility.
-- Trip complete-allocation dimensions are explicit owner preferences; changes validate each promised dimension independently against the primary budget without auto-combining plans.
