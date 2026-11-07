@@ -133,6 +133,8 @@ export function NewExpense({ embedded }: { embedded?: EmbeddedEntry } = {}) {
   const router = useRouter();
   const routeSearch = useSearch({ strict: false }) as Record<string, unknown>;
   const search = embedded?.search ?? quickEntrySearch(routeSearch);
+  /** Inside Smart Add: same state, checks and save path, without this page's own header, toolbar, ticket or file pickers. */
+  const panel = !!embedded;
   const { edit } = search;
   const editing = edit ? expenses.find((e) => e.id === edit) : undefined;
   const [scope, setScope] = useState<Scope>("personal");
@@ -723,8 +725,8 @@ export function NewExpense({ embedded }: { embedded?: EmbeddedEntry } = {}) {
   const shortAccount = (name: string, kind: string) => { const digits = name.match(/\d{4,}/g)?.pop(); const base = name.replace(/\b\d{4,}\b/g, "").replace(/\s+/g, " ").trim(); return `${base || name} · ${kind}${digits ? ` ••${digits.slice(-4)}` : ""}`; };
 
   return (
-    <div className="receipt-desk -mx-4 min-h-dvh px-4 pb-2 sm:-mx-8 sm:px-8">
-      <header className="receipt-desk sticky top-0 z-20 -mx-4 mb-3 flex items-center gap-2 px-3 py-2 sm:-mx-8 sm:px-6">
+    <div className={panel ? "cmp-entry" : "receipt-desk -mx-4 min-h-dvh px-4 pb-2 sm:-mx-8 sm:px-8"}>
+      {!panel && <header className="receipt-desk sticky top-0 z-20 -mx-4 mb-3 flex items-center gap-2 px-3 py-2 sm:-mx-8 sm:px-6">
         <Button type="button" size="icon" variant="ghost" className="text-receipt-desk-foreground hover:bg-receipt-chip hover:text-receipt-desk-foreground" aria-label="Close" onClick={() => close()}><X className="h-5 w-5" /></Button>
         <h1 className="font-display text-lg font-bold">{editing ? "Edit entry" : `New ${TXN_LABEL[txnType].toLowerCase()}`}</h1>
         {!editing && <span aria-live="polite" className="hidden text-[11px] opacity-70 min-[380px]:inline">{draftState === "saving" ? "Saving draft…" : draftState === "uploading" ? "Uploading receipt…" : draftState === "saved" ? "Draft saved" : draftState === "device" ? "Saved on this device · syncs when online" : draftState === "error" ? <span className="text-destructive">Draft not saved</span> : ""}</span>}
@@ -734,12 +736,16 @@ export function NewExpense({ embedded }: { embedded?: EmbeddedEntry } = {}) {
             <SelectContent>{TXN_TYPES.map((t) => <SelectItem key={t} value={t}>{PLAIN_TXN_LABEL[t]}</SelectItem>)}</SelectContent>
           </Select>
         </div>
-      </header>
-      <form onSubmit={submit} className="mx-auto grid max-w-xl gap-3">
+      </header>}
+      <form onSubmit={submit} className={panel ? "grid gap-3" : "mx-auto grid max-w-xl gap-3"}>
+        {panel && !reading && (confirmed || scan) && <div role="radiogroup" aria-label="What is this?" className="cmp-kind">
+          {(["expense", "card_payment", "transfer", "income"] as const).map((t) => <button key={t} type="button" role="radio" aria-checked={txnType === t} onClick={() => setTxnType(t)}>{({ expense: "Spending", card_payment: "Card bill", transfer: "Own transfer", income: "Money in" } as const)[t]}</button>)}
+          {!(["expense", "card_payment", "transfer", "income"] as string[]).includes(txnType) && <button type="button" role="radio" aria-checked>{PLAIN_TXN_LABEL[txnType]}</button>}
+        </div>}
         {/* Amount */}
-        <div className="receipt-paper px-5 text-center">
-          <p aria-hidden className="text-xs font-semibold tracking-[0.2em] text-[color:var(--receipt-muted)]">{editing ? "EDIT ENTRY" : `NEW ${TXN_LABEL[txnType].toUpperCase()}`}</p>
-          <div aria-hidden className="receipt-rule my-3" />
+        {(!panel || (confirmed && !reading)) && <div className={panel ? "cmp-amount-field" : "receipt-paper px-5 text-center"}>
+          {!panel && <p aria-hidden className="text-xs font-semibold tracking-[0.2em] text-[color:var(--receipt-muted)]">{editing ? "EDIT ENTRY" : `NEW ${TXN_LABEL[txnType].toUpperCase()}`}</p>}
+          {panel ? <p className="text-xs font-medium text-muted-foreground">Amount</p> : <div aria-hidden className="receipt-rule my-3" />}
           <Label htmlFor="a" className="sr-only">Amount{af("amount")}</Label>
           <div className="mt-1 flex items-center justify-center gap-2">
             <select aria-label="Currency" value={currency} onChange={(e) => setCurrency(e.target.value)} disabled={!confirmed || reading || saving}
@@ -755,11 +761,11 @@ export function NewExpense({ embedded }: { embedded?: EmbeddedEntry } = {}) {
                 : <span title={`1 ${currency} = ${fx.rate.toFixed(4)} INR · rate of ${fx.date}`}>≈ <span className="font-mono font-semibold">{converted != null ? money(converted) : "—"}</span> <span className="text-muted-foreground">· rate in More details</span></span>}
             </p>
           )}
-          <div aria-hidden className="receipt-rule mt-3" />
-        </div>
+          {!panel && <div aria-hidden className="receipt-rule mt-3" />}
+        </div>}
 
         {/* Quick capture */}
-        {search.mode === 'scan' && !editing && !receipts.length && <div className="order-first flex items-center gap-2"><Button type="button" variant="outline" onClick={() => cameraRef.current?.click()}><Camera className="size-4" />Take photo</Button><Button type="button" variant="ghost" onClick={() => galleryRef.current?.click()}><ImageIcon className="size-4" />Choose photo</Button></div>}
+        {!panel && <>{search.mode === 'scan' && !editing && !receipts.length && <div className="order-first flex items-center gap-2"><Button type="button" variant="outline" onClick={() => cameraRef.current?.click()}><Camera className="size-4" />Take photo</Button><Button type="button" variant="ghost" onClick={() => galleryRef.current?.click()}><ImageIcon className="size-4" />Choose photo</Button></div>}
         <div className="order-first grid grid-cols-4 gap-2 pb-2">
           <Button type="button" disabled={reading || saving} variant="ghost" aria-label="Scan and fill" className="receipt-chip rounded-full mx-auto aspect-square h-auto w-16 flex-col gap-0.5" onClick={() => cameraRef.current?.click()}><Camera className="h-5 w-5" /><span className="text-[11px]">Scan</span></Button>
           <Popover>
@@ -792,7 +798,7 @@ export function NewExpense({ embedded }: { embedded?: EmbeddedEntry } = {}) {
           </section>
         )}
         {repeatedFrom && !repeatOpen && <p role="status" className="rounded-2xl bg-gold-soft px-3 py-2 text-xs">Copied from your last <b>{repeatedFrom}</b> entry with today's date. Adjust the amount and tap Save — nothing is saved until you do.</p>}
-        <Label className="flex items-center gap-2 text-sm text-receipt-desk-foreground/85"><input type="checkbox" checked={includeItems} disabled={reading || saving} onChange={e => setIncludeItems(e.target.checked)} />Extract receipt items</Label>
+        <Label className="flex items-center gap-2 text-sm text-receipt-desk-foreground/85"><input type="checkbox" checked={includeItems} disabled={reading || saving} onChange={e => setIncludeItems(e.target.checked)} />Extract receipt items</Label></>}
         <input ref={cameraRef} type="file" accept="image/*" capture="environment" className="sr-only" aria-label="Take a photo of a receipt" onChange={(e) => { void onFiles(e.target.files); e.target.value = ""; }} />
         <input ref={galleryRef} type="file" multiple accept="image/*" className="sr-only" aria-label="Choose receipt photos" onChange={(e) => { void onFiles(e.target.files); e.target.value = ""; }} />
         <input ref={fileRef} id="r" type="file" multiple accept="image/*,application/pdf" className="sr-only" aria-label="Choose receipt files" onChange={(e) => { void onFiles(e.target.files); e.target.value = ""; }} />
@@ -804,16 +810,17 @@ export function NewExpense({ embedded }: { embedded?: EmbeddedEntry } = {}) {
           <div className="flex gap-2 rounded-2xl border bg-card p-1.5">
             <Input aria-label="Say or type an entry" placeholder={search.mode === 'message' ? 'Paste a payment message' : 'Say or type an expense'} value={spoken} onChange={(e) => setSpoken(e.target.value)}
               onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); void applySpoken(spoken); } }} className="border-0 shadow-none focus-visible:ring-0" />
+            {panel && search.mode !== 'message' && <Button type="button" variant={listening ? "gold" : "ghost"} size="icon" aria-label={listening ? "Listening" : "Speak an entry"} onClick={() => startVoice()}><Mic className="h-4 w-4" /></Button>}
             <Button type="button" variant="ghost" onClick={() => applySpoken(spoken)} disabled={!spoken.trim() || reading}>Fill</Button>
           </div>
         )}
-        {inbox.length > 0 && (
+        {!panel && inbox.length > 0 && (
           <details className="rounded-2xl border bg-card px-3 py-2 text-sm">
             <summary className="flex cursor-pointer items-center gap-2 font-semibold"><Inbox className="h-4 w-4 text-gold" />Saved receipts to add ({inbox.length})</summary>
             <ul className="mt-1 divide-y">{inbox.map((d) => <li key={d.id} className="flex items-center justify-between gap-2 py-2"><span className="min-w-0 truncate">{d.fileName}</span><span className="flex shrink-0 gap-1"><Button type="button" size="sm" variant="outline" disabled={fromInbox.includes(d.id) || reading} onClick={() => void useSaved(d.id)}>Use</Button><Button type="button" size="icon" variant="ghost" aria-label={`Delete ${d.fileName}`} onClick={() => void removeDocument(d)}><X className="h-4 w-4" /></Button></span></li>)}</ul>
           </details>
         )}
-        {receipts.length > 0 && (
+        {receipts.length > 0 && !panel && (
           <div className="flex flex-wrap items-center gap-2">
             {receipts.map((r, i) => (
               <span key={i} className="relative">
@@ -869,11 +876,11 @@ export function NewExpense({ embedded }: { embedded?: EmbeddedEntry } = {}) {
         </section>}
         {scan && !reading && !confirmed && (
           <section ref={reviewRef} className={cn("rounded-lg border border-primary bg-card p-4", receipts[0] && "canvas-review w-full")} role="group" aria-label="Review scanned details">
-            {receipts[0] && <details className="canvas-source mb-4"><summary className="font-medium">Original receipt</summary><ReceiptZoomViewer src={receipts[0].dataUrl} type={receipts[0].type} name={receipts[0].name} /></details>}
+            {receipts[0] && !panel && <details className="canvas-source mb-4"><summary className="font-medium">Original receipt</summary><ReceiptZoomViewer src={receipts[0].dataUrl} type={receipts[0].type} name={receipts[0].name} /></details>}
             <div className="min-w-0 space-y-3">
-            <div className="flex items-start justify-between gap-3"><div className="min-w-0"><h2 className="font-display font-semibold">Intelligent Canvas</h2>{(() => { const n = canvasNarrative({ kind: 'receipt', merchant: scan.merchant, amount: Number(scan.amount), currencyText: Number(scan.amount) > 0 ? money(Number(scan.amount), scan.currency) : undefined, date: scan.date, category: scanCategory || undefined, matchFound: deskMatches.length > 0, possibleDuplicate: duplicates.length > 0 || receiptReuse.length > 0 }); return <div aria-label="What I understood" className="mt-1 space-y-1 text-sm"><p>{n.found}</p>{n.belongs && <p>{n.belongs}</p>}<p className="text-muted-foreground">{n.match}</p>{n.help && <p className="font-medium text-warning">{n.help}</p>}<p className="text-xs text-muted-foreground">Next: <b>{n.nextAction}</b> · nothing is saved until you confirm.</p></div>; })()}</div>
+            <div className="flex items-start justify-between gap-3"><div className="min-w-0"><h2 className={panel ? "cmp-serif text-xl" : "font-display font-semibold"}>{panel ? "Here's what I found" : "Intelligent Canvas"}</h2>{(() => { const n = canvasNarrative({ kind: 'receipt', merchant: scan.merchant, amount: Number(scan.amount), currencyText: Number(scan.amount) > 0 ? money(Number(scan.amount), scan.currency) : undefined, date: scan.date, category: scanCategory || undefined, matchFound: deskMatches.length > 0, possibleDuplicate: duplicates.length > 0 || receiptReuse.length > 0 }); return <div aria-label="What I understood" className="mt-1 space-y-1 text-sm"><p>{n.found}</p>{n.belongs && <p>{n.belongs}</p>}<p className="text-muted-foreground">{n.match}</p>{n.help && <p className="font-medium text-warning">{n.help}</p>}<p className="text-xs text-muted-foreground">Next: <b>{n.nextAction}</b> · nothing is saved until you confirm.</p></div>; })()}</div>
               <Button type="button" size="sm" variant="ghost" className="shrink-0" onClick={() => { setScan(null); setScanRead(null); setScanCategory(""); setReceiptDetails({}); setReviewApproval(""); setReviewDialog(false); setFieldChecks({}); setConfirmed(true); }}>Discard</Button></div>
-            <details className="canvas-fields" ref={fieldsRef}><summary className="font-medium">Check what I read from the receipt</summary><div className="grid gap-4 pt-4">
+            <details className="canvas-fields" ref={fieldsRef} open={panel || undefined}><summary className={panel ? "sr-only" : "font-medium"}>Check what I read from the receipt</summary><div className="grid gap-4 pt-4">
             <div className="grid gap-1"><Label htmlFor="sm">Merchant</Label><Input id="sm" value={scan.merchant} onChange={(e) => setScan({ ...scan, merchant: e.target.value })} /><ReadingIndicator value={receiptDetails.confidence?.merchant ?? "unknown"} /><FieldCheck f="merchant" /><Corrected f="merchant" /></div>
             <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] items-start gap-3">
               <div className="grid min-w-0 gap-1"><Label htmlFor="sd">Date</Label><Input id="sd" type="date" className="h-10 w-full min-w-0 appearance-none" value={scan.date} onChange={(e) => setScan({ ...scan, date: e.target.value })} /><ReadingIndicator value={receiptDetails.confidence?.date ?? "unknown"} /><FieldCheck f="date" /><Corrected f="date" /></div>
@@ -885,6 +892,7 @@ export function NewExpense({ embedded }: { embedded?: EmbeddedEntry } = {}) {
               </div>
             </div>
             <div className="grid gap-1"><Label htmlFor="sa">Total on bill</Label><Input id="sa" type="number" step="0.01" min="0" className="font-mono" value={scan.amount} onChange={(e) => setScan({ ...scan, amount: e.target.value })} /><ReadingIndicator value={receiptDetails.confidence?.total ?? "unknown"} /><FieldCheck f="total" /><Corrected f="total" /></div>
+            {(() => { const extra = <>
             <div className="grid gap-1"><Label htmlFor="receipt-subtotal">Subtotal before tax and tip</Label><Input id="receipt-subtotal" type="number" min="0" step="0.01" value={receiptDetails.subtotal ?? ""} onChange={e=>setReceiptDetails({...receiptDetails,subtotal:e.target.value===""?null:Number(e.target.value)})}/></div>
             <div className="grid grid-cols-2 gap-3">
               <div className="grid gap-1"><Label htmlFor="receipt-tax">Tax included</Label><Input id="receipt-tax" type="number" min="0" step="0.01" value={receiptDetails.tax ?? ""} onChange={e=>setReceiptDetails({...receiptDetails,tax:e.target.value===""?null:Number(e.target.value)})}/></div>
@@ -896,6 +904,7 @@ export function NewExpense({ embedded }: { embedded?: EmbeddedEntry } = {}) {
               {!(receiptDetails.charges?.length) && <p className="text-xs text-muted-foreground">No service charge, packing, delivery or discount printed. Discounts are entered as minus amounts.</p>}
               {(receiptDetails.taxParts?.length ?? 0) > 0 && <><Label>Tax parts</Label>{(receiptDetails.taxParts ?? []).map((t,i)=><div key={i} className="grid grid-cols-[1fr_7rem_auto] gap-2"><Input aria-label={`Tax ${i+1} label`} value={`${t.label}${t.rate != null ? ` ${t.rate}%` : ""}`} readOnly/><Input aria-label={`Tax ${i+1} amount`} type="number" step="0.01" value={t.amount} onChange={e=>setReceiptDetails({...receiptDetails,taxParts:(receiptDetails.taxParts ?? []).map((x,j)=>j===i?{...x,amount:Number(e.target.value)}:x)})}/><Button type="button" variant="ghost" size="sm" aria-label={`Remove tax ${i+1}`} onClick={()=>setReceiptDetails({...receiptDetails,taxParts:(receiptDetails.taxParts ?? []).filter((_,j)=>j!==i)})}><X className="h-4 w-4"/></Button></div>)}</>}
             </div>
+            </>; return panel ? <details className="cmp-more" open={reviewMessages.length > 0 || undefined}><summary>Tax, charges and discounts</summary><div className="grid gap-4 pt-3">{extra}</div></details> : extra; })()}
             {reviewMessages.length > 0 ? <p role="alert" className="text-sm text-destructive">{reviewMessages.join(" ")}</p> : <p role="status" className="text-xs text-muted-foreground">{receiptDetails.subtotal == null ? "Subtotal not read — total comparison unavailable." : `Subtotal${receiptDetails.charges?.length ? " + charges" : ""} + tax + tip matches the total.`}{roundNote ? ` ${roundNote}` : ""}</p>}
             <div className="grid gap-1"><Label>Suggested category</Label><Select value={scanCategory} onValueChange={setScanCategory}><SelectTrigger aria-label="Receipt category"><SelectValue placeholder="Choose category" /></SelectTrigger><SelectContent>{categoryNames.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent></Select></div>
             <div className="grid gap-1"><Label>Space</Label><Select value={scope} onValueChange={v => setScope(v as Scope)}><SelectTrigger aria-label="Receipt workspace"><SelectValue /></SelectTrigger><SelectContent>{ACTIVE_SCOPES.map(s => <SelectItem key={s} value={s}>{SCOPE_LABEL[s]}</SelectItem>)}</SelectContent></Select></div>
@@ -907,7 +916,7 @@ export function NewExpense({ embedded }: { embedded?: EmbeddedEntry } = {}) {
             </div></details>
             <div className="flex justify-end gap-2">
               <Button type="button" variant="ghost" size="sm" onClick={() => { setScan(null); setConfirmed(true); }}>Enter manually</Button>
-              <Button type="button" size="sm" onClick={() => confirmScan()}>Confirm details</Button>
+              <Button type="button" size={panel ? "lg" : "sm"} variant={panel ? "gold" : "default"} className={panel ? "rounded-full" : undefined} onClick={() => confirmScan()}>{panel ? "Looks right" : "Confirm details"}</Button>
             </div>
             </div>
           </section>
@@ -927,7 +936,7 @@ export function NewExpense({ embedded }: { embedded?: EmbeddedEntry } = {}) {
           </DialogContent>
         </Dialog>
 
-        <fieldset disabled={!confirmed || reading || saving} className={cn("receipt-paper grid min-w-0 gap-3 px-5", !confirmed && "opacity-50")}>
+        <fieldset hidden={panel && (!confirmed || reading)} disabled={!confirmed || reading || saving} className={cn(panel ? "cmp-found grid min-w-0 gap-3" : "receipt-paper grid min-w-0 gap-3 px-5", !confirmed && "opacity-50")}>
           {TYPE_HINT[txnType] && <p className="text-xs text-muted-foreground">{TYPE_HINT[txnType]}</p>}
           {defaultsNote && !editing && txnType === "expense" && <div role="status"><p className="flex items-center gap-1.5 text-xs text-muted-foreground"><Sparkles aria-hidden className="h-3 w-3 text-primary" />{defaultsNote.basis === "merchant" ? `Filled with what you usually choose for ${defaultsNote.merchant}` : "Filled with your usual choices"}</p>{defaultsNote.reasons.length > 0 && <details className="mt-1 text-xs text-muted-foreground"><summary className="cursor-pointer underline-offset-2 hover:underline">Why these choices?</summary><ul className="mt-1 grid gap-1">{defaultsNote.reasons.map((r) => <li key={r.label}><b className="text-foreground">{r.label}: {r.value}</b> — {r.reason ? <>chosen in {r.reason.matches} of your last {r.reason.lookedAt} {defaultsNote.basis === "merchant" ? `${defaultsNote.merchant} ` : ""}expenses{r.reason.examples.length ? `, most recently ${r.reason.examples.map((x) => `${x.merchant ?? "an expense"} on ${x.date}`).join(", ")}` : ""}.</> : "set by your rule for this shop."}</li>)}</ul><Link to="/settings" hash="smart-defaults" className="mt-1 inline-block underline">Change smart defaults or this shop's rules</Link></details>}</div>}
           {!isMove(txnType)&&<PayeePicker payees={preferences.payees??[]} merchant={merchant} onSelect={setMerchant}/>}
@@ -1138,7 +1147,8 @@ export function NewExpense({ embedded }: { embedded?: EmbeddedEntry } = {}) {
           )}
         </fieldset>
 
-        <div className="receipt-desk sticky bottom-0 z-10 -mx-4 px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-2 backdrop-blur sm:mx-0 sm:px-0">
+        <div hidden={panel && (!confirmed || reading)} className={panel ? "cmp-entry-foot" : "receipt-desk sticky bottom-0 z-10 -mx-4 px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-2 backdrop-blur sm:mx-0 sm:px-0"}>
+          {panel && draftState !== "idle" && !editing && <p aria-live="polite" className="mb-1 text-center text-[11px] text-muted-foreground">{draftState === "saving" ? "Saving draft…" : draftState === "uploading" ? "Keeping your photo safe…" : draftState === "saved" ? "Draft kept — you can close and come back" : draftState === "device" ? "Kept on this phone · syncs when online" : <span className="text-destructive">Draft not saved yet</span>}</p>}
           {saveError && !saving && <div role="alert" className="mb-2 flex items-center justify-between gap-2 rounded-xl border border-destructive/40 bg-card px-3 py-2 text-xs"><span className="text-destructive">{saveError}</span><Button type="submit" size="sm" variant="outline">Retry</Button></div>}
           <Button type="submit" size="lg" variant="gold" loading={saving} loadingText={editing ? "Saving changes…" : `Saving your ${TXN_LABEL[txnType].toLowerCase()}…`} className="h-12 w-full rounded-full text-base font-semibold" disabled={reading || saving || !confirmed || duplicateBlocked || matchBlocked || receiptBlocked || !(Number(amount) > 0)}>
             {editing ? "Save changes" : `Save ${TXN_LABEL[txnType].toLowerCase()}`}<ArrowRight aria-hidden className="h-4 w-4" />
