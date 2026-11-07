@@ -51,7 +51,24 @@ export function vaultItems(docs: VaultDoc[], txns: ReceiptTxn[]): VaultItem[] {
 export interface VaultFilter { q?: string; type?: DocType | "all"; from?: string; to?: string; min?: number | null; max?: number | null; linked?: "all" | "transaction" | "account" | "loan" | "none" }
 
 /** Search by merchant, title, file name, text and amount; filter by type, date range, amount range and link. */
-export function searchVault(items: VaultItem[], f: VaultFilter): VaultItem[] {
+/**
+ * Names of the records a document is linked to (account, transaction, asset, property, tenant, supplier…), keyed by
+ * VaultItem.key. Built only from records the caller can already see, so search never reveals other owners' labels.
+ */
+export function linkedLabels(items: VaultItem[], ctx: { accounts: { id: string; name: string }[]; transactions: { id: string; title: string; merchant?: string | null }[]; links: { docId: string; kind: string; label: string }[] }): Map<string, string> {
+  const acct = new Map(ctx.accounts.map((a) => [a.id, a.name])), txn = new Map(ctx.transactions.map((t) => [t.id, `${t.title} ${t.merchant ?? ""}`]));
+  const out = new Map<string, string>();
+  for (const x of items) {
+    const parts: string[] = [];
+    if (x.accountId && acct.has(x.accountId)) parts.push(acct.get(x.accountId)!);
+    if (x.transactionId && txn.has(x.transactionId)) parts.push(txn.get(x.transactionId)!);
+    if (x.docId) for (const l of ctx.links) if (l.docId === x.docId && l.label) parts.push(l.label);
+    if (parts.length) out.set(x.key, parts.join(" "));
+  }
+  return out;
+}
+
+export function searchVault(items: VaultItem[], f: VaultFilter, labels?: Map<string, string>): VaultItem[] {
   const words = (f.q ?? "").toLowerCase().split(/\s+/).filter(Boolean);
   return items.filter((x) => {
     if (f.type && f.type !== "all" && x.docType !== f.type) return false;
@@ -63,7 +80,7 @@ export function searchVault(items: VaultItem[], f: VaultFilter): VaultItem[] {
     if (f.linked === "account" && !x.accountId) return false;
     if (f.linked === "loan" && !x.loanId) return false;
     if (f.linked === "none" && (x.transactionId || x.accountId || x.loanId)) return false;
-    const hay = `${x.title} ${x.merchant ?? ""} ${x.fileName} ${x.text} ${x.date ?? ""} ${x.amount ?? ""} ${DOC_LABEL[x.docType]}`.toLowerCase();
+    const hay = `${x.title} ${x.merchant ?? ""} ${x.fileName} ${x.text} ${x.date ?? ""} ${x.amount ?? ""} ${DOC_LABEL[x.docType]} ${labels?.get(x.key) ?? ""}`.toLowerCase();
     return words.every((w) => hay.includes(w));
   });
 }

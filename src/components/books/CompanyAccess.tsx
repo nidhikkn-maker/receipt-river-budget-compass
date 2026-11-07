@@ -1,3 +1,4 @@
+import { downloadBlob } from "@/lib/reports";
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -61,7 +62,7 @@ export function CompanyAccess({ entityId, entityName, links }: { entityId: strin
 
 /** Member-side: companies other owners shared with you. The database decides what is visible; this only groups it. */
 export function SharedWithMe() {
-  const { signedUrl } = useStore();
+  const { signedUrl, downloadFile } = useStore();
   const [companies, setCompanies] = useState<SharedCompany[] | null>(null);
   const [txns, setTxns] = useState<SharedTxn[]>([]);
   const [docs, setDocs] = useState<SharedDoc[]>([]);
@@ -74,7 +75,7 @@ export function SharedWithMe() {
     const ids = [...new Set(list.map((c) => c.entity_id))], owners = [...new Set(list.map((c) => c.owner_id))];
     const [t, d] = await Promise.all([
       supabase.from("expenses").select("id,employee_id,entity_id,title,merchant,category,amount,currency,expense_date,txn_type").in("employee_id", owners).in("entity_id", ids).order("expense_date", { ascending: false }).limit(1000),
-      supabase.from("documents").select("id,owner_id,entity_id,title,doc_type,doc_date,file_path").in("owner_id", owners).in("entity_id", ids).order("created_at", { ascending: false }).limit(500),
+      supabase.from("documents").select("id,owner_id,entity_id,title,doc_type,doc_date,file_path,file_name,mime_type,size_bytes").in("owner_id", owners).in("entity_id", ids).order("created_at", { ascending: false }).limit(500),
     ]);
     setTxns((t.data ?? []) as SharedTxn[]); setDocs((d.data ?? []) as SharedDoc[]);
   }, []);
@@ -116,11 +117,11 @@ export function SharedWithMe() {
                 <Input aria-label={`Search ${c.company_name}`} placeholder="Search entries and documents" className="h-8 max-w-56" value={queries[c.grant_id] ?? ""} onChange={(e) => setQueries((s) => ({ ...s, [c.grant_id]: e.target.value }))} />
                 <Button size="sm" variant="outline" onClick={() => {
                   const blob = new Blob([sharedCompanyCsv(c, txns, docs)], { type: "text/csv" });
-                  const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = `${c.company_name.replace(/[^\w-]+/g, "_")}.csv`; a.click(); URL.revokeObjectURL(a.href);
+                  downloadBlob(blob, `${c.company_name.replace(/[^\w-]+/g, "_")}.csv`);
                 }}>Download CSV</Button>
                 <Button size="sm" variant="outline" onClick={async () => {
                   const blob = await sharedCompanyPdf(c, txns, docs);
-                  const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = `${c.company_name.replace(/[^\w-]+/g, "_")}.pdf`; a.click(); URL.revokeObjectURL(a.href);
+                  downloadBlob(blob, `${c.company_name.replace(/[^\w-]+/g, "_")}.pdf`);
                 }}>Download PDF</Button>
                 {c.can_write && (
                   <Button size="sm" variant="outline" onClick={() => document.getElementById(`shared-upload-${c.grant_id}`)?.click()}>Add document</Button>
@@ -137,7 +138,7 @@ export function SharedWithMe() {
                   </span>
                 </div>
               ))}
-              {d.map((r) => <div key={r.id} className="flex items-center justify-between gap-2"><span className="truncate">{r.title}<span className="block text-xs text-muted-foreground">{r.doc_type}{r.doc_date ? ` · ${r.doc_date}` : ""}</span></span><Button size="sm" variant="outline" onClick={async () => { const u = await signedUrl(r.file_path); if (u) window.open(u, "_blank", "noopener"); else toast.error("Could not open this file"); }}>Open</Button></div>)}
+              {d.map((r) => <div key={r.id} className="flex items-center justify-between gap-2"><span className="truncate">{r.title}<span className="block text-xs text-muted-foreground">{r.doc_type}{r.doc_date ? ` · ${r.doc_date}` : ""}</span></span><Button size="sm" variant="outline" onClick={async () => { const u = await signedUrl(r.file_path); if (u) window.open(u, "_blank", "noopener"); else toast.error("Could not open this file"); }}>Open</Button><Button size="sm" variant="outline" aria-label={`Download ${r.title}`} onClick={async () => { try { await downloadFile(r.file_path, r.file_name || r.title, { size: r.size_bytes, mimeType: r.mime_type }); } catch (e) { toast.error((e as Error).message); } }}>Download</Button></div>)}
             </div>
           </details>
         );

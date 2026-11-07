@@ -6,8 +6,8 @@ Status rule: VERIFIED COMPLETE only with connected code, enforced security, exec
 | Status | Count |
 |---|---|
 | BLOCKED | 2 |
-| PARTIAL | 332 |
-| VERIFIED COMPLETE | 565 |
+| PARTIAL | 331 |
+| VERIFIED COMPLETE | 566 |
 
 
 ## v6.0 — Preamble
@@ -1313,7 +1313,7 @@ Status rule: VERIFIED COMPLETE only with connected code, enforced security, exec
 | V61-0092 | 150 | * Portfolio history. | VERIFIED COMPLETE |  | src/lib/books/market.ts addSnapshot keeps dated daily snapshots; src/components/books/MarketPanel.tsx saves portfolio/netWorth through preferences only; src/lib/books/books.test.ts verifies daily replacement and no ledger API is used by snapshot path. |
 | V61-0093 | 151 | * Net-worth history. | VERIFIED COMPLETE |  | src/lib/books/market.ts addSnapshot keeps dated daily snapshots; src/components/books/MarketPanel.tsx saves portfolio/netWorth through preferences only; src/lib/books/books.test.ts verifies daily replacement and no ledger API is used by snapshot path. |
 | V61-0094 | 152 | * Investment performance. | PARTIAL | src/lib/books/investment-flows.ts, src/components/books/useBooks.ts, src/components/books/MarketPanel.tsx, src/lib/books/market.ts | src/lib/portfolio.ts; src/lib/portfolio.test.ts — PASS re-run: saved-NAV gains exclude purchases/redemptions; baseline and date filters preserved.; src/components/books/MarketPanel.tsx; src/components/books/useBooks.ts — stores daily allocation snapshots and calculates movement; no allocation-change UI test located.; No project edits or new tests: sandbox instructions require project files remain unchanged; proposed additional coverage is specified in requiredWork. |
-| V61-0095 | 153 | * Asset allocation changes. | PARTIAL | src/components/books/MarketPanel.tsx | src/lib/portfolio.ts; src/lib/portfolio.test.ts — PASS re-run: saved-NAV gains exclude purchases/redemptions; baseline and date filters preserved.; src/components/books/MarketPanel.tsx; src/components/books/useBooks.ts — stores daily allocation snapshots and calculates movement; no allocation-change UI test located.; No project edits or new tests: sandbox instructions require project files remain unchanged; proposed additional coverage is specified in requiredWork. |
+| V61-0095 | 153 | * Asset allocation changes. | VERIFIED COMPLETE | src/components/books/MarketPanel.tsx | src/lib/books/market.ts allocationChange + MarketPanel "Allocation change" table between first and latest saved snapshots; src/lib/books/allocation-change.test.ts — share points per snapshot total, new kinds vs 0, empty totals never NaN; full suite 243 files PASS (2026-11-07) |
 | V61-0096 | 155 | Snapshots must not create new ledger transactions. | VERIFIED COMPLETE |  | src/lib/books/market.ts addSnapshot keeps dated daily snapshots; src/components/books/MarketPanel.tsx saves portfolio/netWorth through preferences only; src/lib/books/books.test.ts verifies daily replacement and no ledger API is used by snapshot path. |
 
 ## v6.1 — 13. Alerts
