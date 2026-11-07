@@ -423,7 +423,7 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
     preferenceRequest.current=request;
     setPreferences(p);
     try {
-      const result = await supabase.rpc('save_reviewed_preferences',{_id:request.id,_data:p as unknown as Json,_expected:request.expected ?? -1,_approved:sections.length>0});
+      const result = await supabase.rpc('save_reviewed_preferences',{_id:request.id,_data:p as unknown as Json,_expected:(request.expected == null || request.expected < 0 ? null : request.expected) as number,_approved:sections.length>0});
       check(result.error); preferencesRevision.current = result.data; preferenceRequest.current=null;
     }
     catch(e){setPreferences(previous);throw e;}
@@ -432,14 +432,14 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
     if (!navigator.onLine) throw Error('Reconnect before syncing statement progress');
     await checkpointUpload(upload, {
       read: async () => {
-        // A new account has no saved preferences row yet; -1 asks the database to create it (same as savePreferences).
+        // A new account has no saved preferences row yet; -1 here becomes a null expected revision, which tells the database to create it.
         const result = await supabase.from('finance_preferences').select('data,revision').eq('owner_id',userId).maybeSingle();
         check(result.error);
         if (!result.data) return { data: normalizePreferences({}), revision: -1 };
         return { data: result.data.data as unknown as FinancePreferences, revision: result.data.revision };
       },
       write: async (data, revision, id) => {
-        const result = await supabase.rpc('save_reviewed_preferences', { _id:id, _data:data as unknown as Json, _expected:revision, _approved:false });
+        const result = await supabase.rpc('save_reviewed_preferences', { _id:id, _data:data as unknown as Json, _expected:(revision < 0 ? null : revision) as number, _approved:false });
         check(result.error); preferencesRevision.current = result.data; setPreferences(normalizePreferences(data));
       },
     });
