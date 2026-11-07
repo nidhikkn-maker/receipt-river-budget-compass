@@ -105,7 +105,6 @@ export function ExpenseDetail({ expense, onClose }: { expense: Expense; onClose:
           <Button variant="outline" onClick={() => { onClose(); nav({ to: "/new", search: { edit: e.id } }); }}>Edit</Button>
         </div>
         <details className="border-t pt-3"><summary className="cursor-pointer text-sm">Change history</summary><ul className="mt-2 divide-y text-xs">{audit.map(a=><li key={a.id} className="py-2"><b className="capitalize">{a.action}</b> · {new Date(a.createdAt).toLocaleString()}<div>{a.summary}</div>{Object.entries(a.changes).map(([key,value])=><p key={key} className="break-words text-muted-foreground">{key.replaceAll("_"," ")}: {JSON.stringify(value)}</p>)}</li>)}</ul></details>
-      </DialogContent>
-    </Dialog>
+    </div>
   );
 }
