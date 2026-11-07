@@ -61,3 +61,17 @@ it('another owner cannot replay or read the operation and retains every financia
  await db.exec('SET ROLE authenticated'); expect((await db.query('SELECT * FROM category_merge_operations')).rows).toEqual([]); await db.exec('RESET ROLE');
  expect((await db.query<{c:string}>('SELECT category c FROM expenses WHERE employee_id=$1',[other])).rows[0]?.c).toBe('Meals');
 });
+it('reversal refuses later edits, restores original splits/budgets without financial writes, retains audit and replays',async()=>{
+ await db.exec(`SELECT set_config('app.uid','${other}',false)`);
+ await expect(db.query('SELECT undo_category_merge($1)',[op])).rejects.toThrow('Merge not available');
+ await db.exec(`SELECT set_config('app.uid','${owner}',false)`);
+ await db.query('UPDATE expenses SET amount=101 WHERE employee_id=$1',[owner]);
+ await expect(db.query('SELECT undo_category_merge($1)',[op])).rejects.toThrow('Records changed');
+ expect((await db.query<{n:string}>('SELECT monthly_amount n FROM category_budgets WHERE owner_id=$1',[owner])).rows[0]?.n).toBe('0.3');
+ await db.query('UPDATE expenses SET amount=100 WHERE employee_id=$1',[owner]);
+ const reversed=await db.query('SELECT undo_category_merge($1)',[op]);
+ expect((await db.query<{category:string;amount:string;source:string;allocations:unknown}>('SELECT * FROM expenses WHERE employee_id=$1',[owner])).rows[0]).toMatchObject({category:'Meals',amount:'100',source:'original.pdf',allocations:[{category:'Meals',amount:40,tags:['original']},{category:'Travel',amount:60}]});
+ expect((await db.query<{category:string;monthly_amount:string}>('SELECT * FROM category_budgets WHERE owner_id=$1 ORDER BY category',[owner])).rows).toMatchObject([{category:'Meals',monthly_amount:'0.1'},{category:'Travel',monthly_amount:'0.2'}]);
+ expect((await db.query('SELECT undo_category_merge($1)',[op])).rows).toEqual(reversed.rows);
+ expect((await db.query('SELECT * FROM category_merge_operations WHERE reversed_at IS NOT NULL')).rows).toHaveLength(1);
+});

@@ -21,4 +21,5 @@
 - Reports Centre PDFs are built from src/lib/report-centre.ts (pure, reuses ledger/workspace/travel rules) and rendered by src/lib/report-pdf.ts; generated PDFs are frozen snapshots in report_history + owner receipts prefix so later edits never change them.
 - Detailed Expenditure Statements are pure (src/lib/expenditure-statement.ts) and merged with original bills by pdf-lib in src/lib/expenditure-pdf.ts; payer, payment source and eligibility come only from saved entry, instrument and reimbursement records.
 - Setup completion closes only after preference save succeeds; failure stays open for retry so the completion prompt is not falsely suppressed.
+- Trip Budget Breakdown stages all dimensions locally and saves once; Cancel discards the whole draft and failed saves retain it for retry.
 - PDF table cells with non-Latin text are rendered by the browser onto canvas images (src/lib/pdf-unicode.ts withUnicode) because jsPDF core fonts are Latin-only and cannot shape Indic scripts; titles, footers and bill-page labels use textU()/drawTextU() which image-render non-Latin text.

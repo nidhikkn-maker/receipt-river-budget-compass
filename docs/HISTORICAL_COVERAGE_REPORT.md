@@ -9,9 +9,9 @@ by 12 independent audits plus manual review of the remainder. Full per-cluster r
 
 | Status | Clusters | Share |
 |---|---|---|
-| implemented | 1542 | 61% |
-| partial | 944 | 37% |
-| missing | 36 | 2% |
+| implemented | 1543 | 61% |
+| partial | 948 | 37% |
+| missing | 31 | 2% |
 | superseded | 19 | 0% |
 | **total** | 2541 | 100% |
 
@@ -21,8 +21,8 @@ by 12 independent audits plus manual review of the remainder. Full per-cluster r
 |---|---|---|---|---|
 | ai | 33 | 15 | 0 | 0 |
 | asset | 3 | 1 | 0 | 0 |
-| document | 35 | 29 | 3 | 0 |
-| entry | 210 | 84 | 2 | 3 |
+| document | 36 | 29 | 2 | 0 |
+| entry | 210 | 86 | 0 | 3 |
 | investment | 6 | 10 | 1 | 0 |
 | loan | 30 | 6 | 0 | 0 |
 | other | 799 | 432 | 3 | 9 |
@@ -30,9 +30,9 @@ by 12 independent audits plus manual review of the remainder. Full per-cluster r
 | reimbursement | 49 | 21 | 0 | 2 |
 | reporting | 77 | 52 | 5 | 0 |
 | security | 14 | 32 | 0 | 0 |
-| statement | 102 | 53 | 2 | 0 |
+| statement | 102 | 54 | 1 | 0 |
 | taxation | 3 | 0 | 0 | 0 |
-| testing | 48 | 78 | 18 | 0 |
+| testing | 48 | 79 | 17 | 0 |
 | travel | 65 | 25 | 2 | 4 |
 | ux | 37 | 75 | 0 | 0 |
 
@@ -43,14 +43,10 @@ The saved baseline was **1,537 / 934 / 51 / 19**. The earlier **1,535 / 934 / 53
 Previous checkpoint: **1,539 implemented / 941 partial / 42 missing / 19 superseded**.
 Current: **1,542 implemented / 944 partial / 36 missing / 19 superseded**. C-1252/C-1249/C-2024 narrow UI acceptance passed; C-1253/C-1493/C-0879 now PARTIAL with explicit hosted boundaries. See `docs/evidence/workstream-1-acceptance-2026-11-07.md`. C-0709 narrow UI acceptance and C-2301 corrected prohibition are implemented. Seven genuine implementation/integration items moved MISSING → PARTIAL with explicit outstanding acceptance, not COMPLETE. Evidence: `docs/evidence/workstream-1-2026-11-07.md`.
 
-## Remaining Missing Functionality Register (36)
+## Remaining Missing Functionality Register (31)
 
-### Remaining previously classified buildable gaps (5)
-- **C-0214** (statement): Add an admin view that shows statement upload status, reminder history, and confirmation email delivery for each monthly request.
-- **C-0391** (entry): These functions must remain available through the optional Budget Breakdown view, where applicable.
-- **C-0517** (testing): If background jobs are available, report generation should persist safely after acceptance by the backend.
-- **C-0553** (document): Add browser tests for uploading a receipt, viewing its attachment, and verifying it stays linked to the correct expense.
-- **C-0581** (entry): Configurable alerts should be available when budget utilisation crosses selected thresholds.
+### Previously classified buildable gaps — implementation checkpoint
+C-0391/C-0581/C-0517 implemented but PARTIAL awaiting hosted acceptance. C-0214 already exists but sent-versus-delivered acceptance remains PARTIAL. C-0553 browser-test request verified; hosted storage not certified. These five are no longer MISSING.
 
 ### Verification-evidence gaps (15) — need physical device, live site, or benchmark run
 - **C-0212** (testing): Verify that Face ID opens automatically on my iPhone after my first email sign-in and confirm the cold and repeat opening times.
@@ -137,3 +133,6 @@ tracker. This historical audit confirms no pre-v6 requirement was silently dropp
 cluster is either implemented, superseded by a recorded owner decision, externally blocked, or carried
 forward as a partial/verification item overlapping the v6 partial set.
 
+
+## Workstream 1 14:02 UTC checkpoint
+Previous1542/944/36/19 → **1543implemented/948partial/31missing/19superseded**. New narrow implemented **C-0553**. Exact features, defects, tests and limits: `docs/evidence/workstream-1-missing-features-2026-11-07.md`. The31remaining missing are device/live/owner-record/external/process items, not31unbuilt independent modules. No historical re-audit or v6 promotion.

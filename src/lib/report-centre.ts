@@ -7,6 +7,7 @@ import { advanceReconciliation, bookingOutstanding, bookingPaid, closeBlockers, 
 import { tripTag } from "./intelligence";
 import { monthlyCost, occurrences, addDays, type Commitment } from "./planning";
 import { outstandingOf, receivedOf, isTracked } from "./reimbursements";
+import { decimal, roundMoney, addMoney, subtractMoney, multiplyMoney, sumMoney, proportionMoney } from "./money";
 
 export type ReportGroup = "Financial" | "Workspace" | "Travel" | "Operational";
 export const REPORT_TYPES = [
@@ -58,7 +59,7 @@ export interface ReportData {
 export interface Section { title: string; headers: string[]; rows: string[][]; total?: string[]; align?: ("l" | "r")[]; wide?: boolean; chart?: { label: string; value: number }[] }
 export interface ReportDoc { type: ReportType; title: string; period: string; filterLines: string[]; summary: [string, string][]; sections: Section[]; notes: string[]; landscape: boolean; rowCount: number }
 
-const r2 = (n: number) => Math.round(n * 100) / 100;
+const r2 = roundMoney;
 const IN = new Intl.NumberFormat("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 /** Indian digit grouping with an explicit currency code (PDF core fonts have no ₹ glyph). */
 export const amt = (n: number, cur = "INR") => `${cur} ${IN.format(r2(n))}`;
@@ -68,7 +69,7 @@ const kind = (e: Expense) => e.txnType ?? "expense";
 /** The INR share of an entry inside the selected workspaces (splits counted once, by share). */
 export function shareIn(e: Expense, ws: Scope[]): number {
   if (!ws.length) return e.amount;
-  return r2(workspaceParts(e).filter((p) => ws.includes(p.workspace)).reduce((s, p) => s + p.amount, 0));
+  return r2(workspaceParts(e).filter((p) => ws.includes(p.workspace)).map(p => p.amount).reduce((s, value) => addMoney(s,value), 0));
 }
 
 /** Confirmed ledger entries matching every filter except the date window. */
@@ -109,19 +110,19 @@ function txnRows(list: Expense[], d: ReportData, ws: Scope[]): string[][] {
 }
 const TXN_HEAD = ["Date", "Description", "Category", "Workspace", "Account", "Type", "Cur.", "Original", "Amount (INR)", "Status"];
 const TXN_ALIGN: ("l" | "r")[] = ["l", "l", "l", "l", "l", "l", "l", "r", "r", "l"];
-const txnSection = (title: string, list: Expense[], d: ReportData, ws: Scope[]): Section => ({ title, headers: TXN_HEAD, rows: txnRows(list, d, ws), align: TXN_ALIGN, wide: true, total: ["", "Total", "", "", "", "", "", "", num(list.reduce((s, e) => s + shareIn(e, ws), 0)), ""] });
+const txnSection = (title: string, list: Expense[], d: ReportData, ws: Scope[]): Section => ({ title, headers: TXN_HEAD, rows: txnRows(list, d, ws), align: TXN_ALIGN, wide: true, total: ["", "Total", "", "", "", "", "", "", num(sumMoney(list.map(e => shareIn(e, ws)))), ""] });
 
 function categorySection(list: Expense[], ws: Scope[], title = "Category breakdown"): Section {
   const c: Record<string, number> = {};
-  for (const e of list) { const f = e.amount ? shareIn(e, ws) / e.amount : 0; for (const p of categoryParts(e)) c[p.category] = r2((c[p.category] ?? 0) + p.amount * f); }
-  const total = Object.values(c).reduce((a, b) => a + b, 0);
+  for (const e of list) { const share = shareIn(e, ws); for (const p of categoryParts(e)) c[p.category] = addMoney(c[p.category] ?? 0, e.amount ? proportionMoney(p.amount,share,e.amount) : 0); }
+  const total = sumMoney(Object.values(c));
   const rows = Object.entries(c).sort((a, b) => b[1] - a[1]);
   return { title, headers: ["Category", "Amount (INR)", "Share"], align: ["l", "r", "r"], rows: rows.map(([k, v]) => [k, num(v), total ? `${(v / total * 100).toFixed(1)}%` : "—"]), total: ["Total", num(total), total ? "100%" : "—"], chart: rows.slice(0, 8).map(([label, value]) => ({ label, value })) };
 }
 function workspaceSection(list: Expense[]): Section {
   const t: Record<string, number> = {};
-  for (const e of list) for (const p of workspaceParts(e)) t[p.workspace] = r2((t[p.workspace] ?? 0) + p.amount);
-  const total = r2(list.reduce((s, e) => s + e.amount, 0));
+  for (const e of list) for (const p of workspaceParts(e)) t[p.workspace] = addMoney(t[p.workspace] ?? 0, p.amount);
+  const total = sumMoney(list.map(e => e.amount));
   return { title: "Workspace allocation", headers: ["Workspace", "Spending (INR)"], align: ["l", "r"], rows: SCOPES.filter((s) => s !== "official" || (t[s] ?? 0) !== 0).map((s) => [SCOPE_LABEL[s], num(t[s] ?? 0)]), total: ["Total (each entry counted once)", num(total)], chart: SCOPES.filter((s) => s !== "official" || (t[s] ?? 0) !== 0).map((s) => ({ label: SCOPE_LABEL[s], value: t[s] ?? 0 })) };
 }
 function trendSection(d: ReportData, f: ReportFilters, ws: Scope[]): Section {
@@ -178,9 +179,9 @@ export function buildReportDoc(type: ReportType, filters: ReportFilters, d: Repo
   const doc: ReportDoc = { type, title: reportLabel(type), period: `${f.from} to ${f.to}`, filterLines: filterLines(f, d), summary: [], sections: [], notes: [...STD_NOTES], landscape: false, rowCount: 0 };
   const exec = () => {
     const live = d.accounts.filter((a) => !a.archived && !isLiability(a.kind));
-    const avail = live.reduce((s, a) => s + accountBalance(a, d.transactions), 0);
-    const upcoming = occurrences(d.commitments.filter((c) => c.status === "active"), d.today, addDays(d.today, 30)).filter((o) => o.direction === "out").reduce((s, o) => s + o.amount, 0);
-    const budget = Object.values(d.budgets).reduce((s, v) => s + (v ?? 0), 0);
+    const avail = sumMoney(live.map(a => accountBalance(a, d.transactions)));
+    const upcoming = occurrences(d.commitments.filter((c) => c.status === "active"), d.today, addDays(d.today, 30)).filter((o) => o.direction === "out").map(o => o.amount).reduce((s, value) => addMoney(s,value), 0);
+    const budget = sumMoney(Object.values(d.budgets).map(v => v ?? 0));
     doc.summary.push(["Total income", amt(cf.income)], ["Total expenses", amt(cf.spent)], ["Net cash flow", amt(cf.net)], ["Available balances (today)", amt(avail)], ["Upcoming commitments (30 days)", amt(upcoming) + " (scheduled, not spent)"]);
     if (budget > 0) doc.summary.push(["Monthly budget utilisation", `${(cf.spent / budget * 100).toFixed(1)}% of ${amt(budget)}`]);
   };
@@ -192,7 +193,7 @@ export function buildReportDoc(type: ReportType, filters: ReportFilters, d: Repo
       const top = categorySection(spend, ws).rows[0];
       if (top) doc.notes.unshift(`Largest category: ${top[0]} at INR ${top[1]} (${top[2]} of spending).`);
       doc.sections.push(categorySection(spend, ws), workspaceSection(spend), trendSection(d, f, ws));
-      const acc: Record<string, number> = {}; for (const e of spend) acc[d.accountName(e.accountId ?? null)] = r2((acc[d.accountName(e.accountId ?? null)] ?? 0) + shareIn(e, ws));
+      const acc: Record<string, number> = {}; for (const e of spend) acc[d.accountName(e.accountId ?? null)] = addMoney(acc[d.accountName(e.accountId ?? null)] ?? 0, shareIn(e, ws));
       doc.sections.push({ title: "Account-wise spending", headers: ["Account", "Spending (INR)"], align: ["l", "r"], rows: Object.entries(acc).sort((a, b) => b[1] - a[1]).map(([k, v]) => [k, num(v)]) });
       doc.sections.push(txnSection("Detailed transactions", win, d, ws));
       break;
@@ -204,12 +205,12 @@ export function buildReportDoc(type: ReportType, filters: ReportFilters, d: Repo
       break;
     }
     case "expense": {
-      doc.summary.push(["Total expenses (gross)", amt(spend.reduce((s, e) => s + shareIn(e, ws), 0))], ["Net of refunds and reimbursements", amt(cf.spent)], ["Entries", String(spend.length)]);
+      doc.summary.push(["Total expenses (gross)", amt(sumMoney(spend.map(e => shareIn(e, ws))))], ["Net of refunds and reimbursements", amt(cf.spent)], ["Entries", String(spend.length)]);
       doc.sections.push(categorySection(spend, ws), txnSection("Expense entries", spend, d, ws));
       break;
     }
     case "category": {
-      doc.summary.push(["Total expenses", amt(spend.reduce((s, e) => s + shareIn(e, ws), 0))]);
+      doc.summary.push(["Total expenses", amt(sumMoney(spend.map(e => shareIn(e, ws))))]);
       doc.sections.push(categorySection(spend, ws, "Category-wise expenditure"));
       break;
     }
@@ -222,12 +223,12 @@ export function buildReportDoc(type: ReportType, filters: ReportFilters, d: Repo
     case "card": {
       const cards = d.accounts.filter((a) => a.kind === "credit_card" && (!f.accountIds.length || f.accountIds.includes(a.id)));
       const rows = cards.map((c) => {
-        const buys = win.filter((e) => e.accountId === c.id && kind(e) === "expense").reduce((s, e) => s + e.amount, 0);
-        const refunds = win.filter((e) => e.accountId === c.id && (kind(e) === "refund")).reduce((s, e) => s + e.amount, 0);
-        const paid = win.filter((e) => e.toAccountId === c.id && isMove(e.txnType)).reduce((s, e) => s + e.amount, 0);
+        const buys = win.filter((e) => e.accountId === c.id && kind(e) === "expense").map(e => e.amount).reduce((s, value) => addMoney(s,value), 0);
+        const refunds = win.filter((e) => e.accountId === c.id && (kind(e) === "refund")).map(e => e.amount).reduce((s, value) => addMoney(s,value), 0);
+        const paid = win.filter((e) => e.toAccountId === c.id && isMove(e.txnType)).map(e => e.amount).reduce((s, value) => addMoney(s,value), 0);
         return [c.name, num(buys), num(refunds), num(paid), num(accountBalance(c, d.transactions)), c.creditLimit ? num(c.creditLimit) : "—"];
       });
-      doc.summary.push(["Cards", String(cards.length)], ["Outstanding today", amt(cards.reduce((s, c) => s + accountBalance(c, d.transactions), 0))]);
+      doc.summary.push(["Cards", String(cards.length)], ["Outstanding today", amt(sumMoney(cards.map(c => accountBalance(c, d.transactions))))]);
       doc.sections.push({ title: "Card summary", headers: ["Card", "Purchases", "Refunds", "Bill payments", "Outstanding", "Limit"], align: ["l", "r", "r", "r", "r", "r"], rows });
       for (const c of cards) { const l = win.filter((e) => e.accountId === c.id && kind(e) === "expense"); if (l.length) doc.sections.push(txnSection(`${c.name} purchases`, l, d, ws)); }
       doc.notes.unshift("Card purchases are counted once as expenses when made; bill payments only reduce what the card owes and are never counted again as spending.");
@@ -238,18 +239,18 @@ export function buildReportDoc(type: ReportType, filters: ReportFilters, d: Repo
       const spentBy = Object.fromEntries(cat.rows.map((r) => [r[0], Number(r[1]!.replace(/,/g, ""))]));
       const names = [...new Set([...Object.keys(d.budgets), ...Object.keys(spentBy)])];
       const months = Math.max(1, (Number(f.to.slice(0, 4)) - Number(f.from.slice(0, 4))) * 12 + Number(f.to.slice(5, 7)) - Number(f.from.slice(5, 7)) + 1);
-      doc.sections.push({ title: `Budget versus actual (${months} month${months > 1 ? "s" : ""})`, headers: ["Category", "Budget", "Actual", "Remaining", "Used"], align: ["l", "r", "r", "r", "r"], rows: names.map((n) => { const b = (d.budgets[n] ?? 0) * months, a = spentBy[n] ?? 0; return [n, b ? num(b) : "No budget", num(a), b ? num(b - a) : "—", b ? `${(a / b * 100).toFixed(0)}%` : "—"]; }) });
+      doc.sections.push({ title: `Budget versus actual (${months} month${months > 1 ? "s" : ""})`, headers: ["Category", "Budget", "Actual", "Remaining", "Used"], align: ["l", "r", "r", "r", "r"], rows: names.map((n) => { const b = multiplyMoney(d.budgets[n] ?? 0, months), a = spentBy[n] ?? 0; return [n, b ? num(b) : "No budget", num(a), b ? num(subtractMoney(b,a)) : "—", b ? `${(a / b * 100).toFixed(0)}%` : "—"]; }) });
       break;
     }
     case "subscription": {
       const subs = d.commitments.filter((c) => c.kind === "subscription" && c.status !== "cancelled");
-      doc.summary.push(["Active subscriptions", String(subs.filter((s) => s.status === "active").length)], ["Monthly cost", amt(subs.filter((s) => s.status === "active").reduce((s, c) => s + monthlyCost(c), 0))]);
+      doc.summary.push(["Active subscriptions", String(subs.filter((s) => s.status === "active").length)], ["Monthly cost", amt(subs.filter((s) => s.status === "active").map(c => monthlyCost(c)).reduce((s,value) => addMoney(s,value),0))]);
       doc.sections.push({ title: "Subscriptions", headers: ["Name", "Frequency", "Amount", "Monthly cost", "Next due", "Status"], align: ["l", "l", "r", "r", "l", "l"], rows: subs.map((c) => [c.name, c.frequency, num(c.amount), num(monthlyCost(c)), c.nextDue, c.status]) });
       break;
     }
     case "loan": {
       const loans = d.loans;
-      doc.summary.push(["Outstanding principal", amt(loans.filter((l) => l.status === "active").reduce((s, l) => s + l.principal, 0))], ["Monthly EMIs", amt(loans.filter((l) => l.status === "active").reduce((s, l) => s + l.emi, 0))]);
+      doc.summary.push(["Outstanding principal", amt(loans.filter((l) => l.status === "active").map(l => l.principal).reduce((s, value) => addMoney(s,value), 0))], ["Monthly EMIs", amt(loans.filter((l) => l.status === "active").map(l => l.emi).reduce((s, value) => addMoney(s,value), 0))]);
       doc.sections.push({ title: "Loans", headers: ["Loan", "Provider", "Rate", "EMI", "Outstanding", "Next due", "Status"], align: ["l", "l", "r", "r", "r", "l", "l"], rows: loans.map((l) => [l.name, l.provider, `${l.rate}%`, num(l.emi), num(l.principal), l.nextDue, l.status]) });
       const pays = loans.flatMap((l) => l.payments.filter((p) => p.date >= f.from && p.date <= f.to).map((p) => [p.date, l.name, num(p.principal), num(p.interest), num(p.total)]));
       doc.sections.push({ title: "Repayments in period", headers: ["Date", "Loan", "Principal", "Interest", "Total"], align: ["l", "l", "r", "r", "r"], rows: pays.sort((a, b) => a[0]!.localeCompare(b[0]!)) });
@@ -258,9 +259,9 @@ export function buildReportDoc(type: ReportType, filters: ReportFilters, d: Repo
     case "forecast": {
       const to = addDays(d.today, 90);
       const occ = occurrences(d.commitments.filter((c) => c.status === "active"), d.today, to);
-      const inflow = occ.filter((o) => o.direction === "in").reduce((s, o) => s + o.amount, 0), outflow = occ.filter((o) => o.direction === "out").reduce((s, o) => s + o.amount, 0);
-      const avail = d.accounts.filter((a) => !a.archived && !isLiability(a.kind) && ["savings", "current", "cash", "wallet"].includes(a.kind)).reduce((s, a) => s + accountBalance(a, d.transactions), 0);
-      doc.summary.push(["Cash available today", amt(avail)], ["Scheduled inflows (90 days)", amt(inflow)], ["Scheduled outflows (90 days)", amt(outflow)], ["Projected cash in 90 days (estimate)", amt(avail + inflow - outflow)]);
+      const inflow = occ.filter((o) => o.direction === "in").map(o => o.amount).reduce((s, value) => addMoney(s,value), 0), outflow = occ.filter((o) => o.direction === "out").map(o => o.amount).reduce((s, value) => addMoney(s,value), 0);
+      const avail = d.accounts.filter((a) => !a.archived && !isLiability(a.kind) && ["savings", "current", "cash", "wallet"].includes(a.kind)).map(a => accountBalance(a,d.transactions)).reduce((s,value)=>addMoney(s,value),0);
+      doc.summary.push(["Cash available today", amt(avail)], ["Scheduled inflows (90 days)", amt(inflow)], ["Scheduled outflows (90 days)", amt(outflow)], ["Projected cash in 90 days (estimate)", amt(subtractMoney(addMoney(avail,inflow),outflow))]);
       doc.sections.push({ title: "Scheduled items (next 90 days)", headers: ["Date", "Item", "Direction", "Amount", "Confirmed"], align: ["l", "l", "l", "r", "l"], rows: occ.map((o) => [o.date, o.name, o.direction === "in" ? "In" : "Out", num(o.amount), o.confirmed ? "Yes" : "Estimate"]) });
       doc.notes.unshift("This forecast is an estimate based on your scheduled commitments; it is not a record of actual transactions.");
       break;
@@ -274,7 +275,7 @@ export function buildReportDoc(type: ReportType, filters: ReportFilters, d: Repo
     }
     case "organisation": {
       const by: Record<string, Expense[]> = {}; for (const e of spend) (by[orgOf(e)] ??= []).push(e);
-      doc.sections.push({ title: "Spending by organisation", headers: ["Organisation", "Entries", "Spending (INR)"], align: ["l", "r", "r"], rows: Object.entries(by).sort().map(([k, l]) => [k, String(l.length), num(l.reduce((s, e) => s + shareIn(e, ws), 0))]), total: ["Total", String(spend.length), num(spend.reduce((s, e) => s + shareIn(e, ws), 0))] });
+      doc.sections.push({ title: "Spending by organisation", headers: ["Organisation", "Entries", "Spending (INR)"], align: ["l", "r", "r"], rows: Object.entries(by).sort().map(([k, l]) => [k, String(l.length), num(sumMoney(l.map(e => shareIn(e, ws))))]), total: ["Total", String(spend.length), num(sumMoney(spend.map(e => shareIn(e, ws))))] });
       for (const [k, l] of Object.entries(by).sort()) doc.sections.push(txnSection(k, l, d, ws));
       break;
     }
@@ -300,7 +301,7 @@ export function buildReportDoc(type: ReportType, filters: ReportFilters, d: Repo
       break;
     }
     case "trip-travellers": {
-      for (const t of tripsSel) { const by: Record<string, number> = {}; for (const e of tripFinance(t, d.transactions).entries as Expense[]) { const f2 = 1; /* memberShares already returns INR */ for (const s of memberShares(e)) by[d.memberName(s.memberId)] = r2((by[d.memberName(s.memberId)] ?? 0) + s.amount * f2); } doc.sections.push({ title: t.name, headers: ["Traveller", "Share (INR)"], align: ["l", "r"], rows: Object.entries(by).map(([k, v]) => [k, num(v)]) }); }
+      for (const t of tripsSel) { const by: Record<string, number> = {}; for (const e of tripFinance(t, d.transactions).entries as Expense[]) { /* memberShares already returns INR */ for (const s of memberShares(e)) by[d.memberName(s.memberId)] = addMoney(by[d.memberName(s.memberId)] ?? 0, s.amount); } doc.sections.push({ title: t.name, headers: ["Traveller", "Share (INR)"], align: ["l", "r"], rows: Object.entries(by).map(([k, v]) => [k, num(v)]) }); }
       break;
     }
     case "trip-bookings": {
@@ -318,13 +319,13 @@ export function buildReportDoc(type: ReportType, filters: ReportFilters, d: Repo
     }
     case "pending-reimbursements": {
       const l = all.filter((e) => kind(e) === "expense" && isTracked(e) && outstandingOf(e) > 0);
-      doc.summary.push(["Claims pending", String(l.length)], ["Amount pending", amt(l.reduce((s, e) => s + outstandingOf(e), 0))]);
+      doc.summary.push(["Claims pending", String(l.length)], ["Amount pending", amt(sumMoney(l.map(e => outstandingOf(e))))]);
       doc.sections.push({ title: "Pending reimbursements", headers: ["Date", "Expense", "Payer", "Claimed", "Received", "Pending", "Age (days)"], align: ["l", "l", "l", "r", "r", "r", "r"], wide: true, rows: l.map((e) => [e.date, e.merchant || e.title, e.reimbursement?.payer ?? "—", num(e.amount), num(receivedOf(e)), num(outstandingOf(e)), String(Math.max(0, Math.round((Date.parse(d.today) - Date.parse(e.date)) / 864e5)))]) });
       break;
     }
     case "unreconciled": {
       const l = win.filter((e) => !e.reconciledAt);
-      doc.summary.push(["Unmatched entries", String(l.length)], ["Amount", amt(l.reduce((s, e) => s + e.amount, 0))]);
+      doc.summary.push(["Unmatched entries", String(l.length)], ["Amount", amt(sumMoney(l.map(e => e.amount)))]);
       doc.sections.push(txnSection("Not yet matched to a statement", l, d, ws));
       break;
     }
@@ -332,7 +333,7 @@ export function buildReportDoc(type: ReportType, filters: ReportFilters, d: Repo
       const occ = occurrences(d.commitments.filter((c) => c.status === "active"), f.from < d.today ? d.today : f.from, f.to > d.today ? f.to : addDays(d.today, 60)).filter((o) => o.direction === "out");
       const bookings = d.trips.flatMap((t) => (t.bookings ?? []).filter((b) => bookingOutstanding(b, d.transactions) > 0).map((b) => [b.date, `${t.name}: ${b.provider || b.kind}`, "Unpaid booking", num(bookingOutstanding(b, d.transactions))]));
       const rows = [...occ.map((o) => [o.date, o.name, o.overdue ? "Overdue" : "Scheduled", num(o.amount)]), ...bookings].sort((a, b) => a[0]!.localeCompare(b[0]!));
-      doc.summary.push(["Pending commitments", String(rows.length)], ["Total", amt(rows.reduce((s, r) => s + Number(r[3]!.replace(/,/g, "")), 0))]);
+      doc.summary.push(["Pending commitments", String(rows.length)], ["Total", amt(sumMoney(rows.map(r => Number((r[3] ?? "0").replace(/,/g, "")))))]);
       doc.sections.push({ title: "Pending commitments", headers: ["Due", "Item", "Status", "Amount (INR)"], align: ["l", "l", "l", "r"], rows });
       doc.notes.unshift("Commitments are future obligations, not confirmed spending.");
       break;
@@ -346,7 +347,7 @@ export function buildReportDoc(type: ReportType, filters: ReportFilters, d: Repo
     }
     case "imports": {
       const l = win.filter((e) => e.statementRef);
-      const by: Record<string, number[]> = {}; for (const e of l) { const k = d.accountName(e.accountId ?? null); (by[k] ??= [0, 0]); by[k]![0]! += 1; by[k]![1]! += e.amount; }
+      const by: Record<string, [number, number]> = {}; for (const e of l) { const k = d.accountName(e.accountId ?? null); const row = by[k] ?? [0, 0]; by[k] = [row[0]+1,addMoney(row[1],e.amount)]; }
       doc.summary.push(["Statement-matched entries", String(l.length)], ["Entries without a statement match", String(win.length - l.length)]);
       doc.sections.push({ title: "Statement matches by account", headers: ["Account", "Matched entries", "Amount (INR)"], align: ["l", "r", "r"], rows: Object.entries(by).map(([k, v]) => [k, String(v[0]), num(v[1]!)]) });
       break;

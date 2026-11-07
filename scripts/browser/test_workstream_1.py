@@ -39,12 +39,14 @@ async def main():
     else:await route.continue_()
    await page.route('**/*',intercept)
    await page.goto('http://localhost:8080',wait_until='networkidle')
-   await page.get_by_role('button',name='Merge',exact=True).click();await expect(page.get_by_role('dialog')).to_contain_text('2 entries');assert await page.evaluate('window.__writes||0')==0
+   await page.get_by_role('button',name='Merge',exact=True).click();await expect(page.get_by_role('dialog')).to_contain_text('1 affected entries');assert await page.evaluate('window.__writes||0')==0
    await page.get_by_role('button',name='Cancel',exact=True).click();assert await page.evaluate('window.__writes||0')==0
    await page.get_by_role('button',name='Merge',exact=True).click();await page.get_by_role('button',name='Confirm grouping').click();await expect(page.get_by_role('button',name='Unmerge Alpha South')).to_be_visible()
    await page.get_by_role('button',name='Unmerge Alpha South').click();await page.get_by_role('button',name='Confirm grouping').click();await expect(page.get_by_role('button',name='Merge',exact=True)).to_be_visible()
    await page.get_by_role('button',name='Edit test budget').click();await expect(page.get_by_label('Total budget',exact=True)).to_have_value('100');await page.get_by_role('dialog').evaluate('(el) => Promise.all(el.getAnimations().map(a => a.finished))');await page.screenshot(path=str(OUT/f'{width}-budget.png'));await page.get_by_role('button',name='Close',exact=True).click()
-   await page.get_by_label('Complete allocation').check();await page.get_by_role('tab',name='Traveller',exact=True).click();await page.get_by_label('Complete allocation').click();assert await page.evaluate('window.__writes')==3
+   await page.get_by_label('Complete allocation').check();assert await page.evaluate('window.__writes')==2
+   await page.get_by_role('button',name='Save breakdown',exact=True).click();assert await page.evaluate('window.__writes')==3
+   await page.get_by_role('tab',name='Traveller',exact=True).click();await page.get_by_label('Complete allocation').click();assert await page.evaluate('window.__writes')==3
    await page.get_by_role('button',name='Verify test documents').click();await expect(page.get_by_role('button',name='Confirm documents & generate')).to_be_disabled();await page.get_by_role('dialog').evaluate('(el) => Promise.all(el.getAnimations().map(a => a.finished))');await page.screenshot(path=str(OUT/f'{width}-documents.png'));await page.get_by_role('button',name='Cancel',exact=True).click();assert await page.evaluate('window.__decision')==False
    assert await page.evaluate('document.documentElement.scrollWidth<=window.innerWidth'),f'overflow {width}'
    assert not errors,errors

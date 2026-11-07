@@ -1,5 +1,6 @@
 /** Fixed assets, property ownership and depreciation (v6). Pure rules; saved in owner preferences. */
 import { fyOf, fyRange } from "./entities";
+import { decimal, moneyNumber, roundMoney, subtractMoney, sumMoney, proportionMoney } from "./money";
 
 export const ASSET_KINDS = { property: "Property / land", building: "Building", vehicle: "Vehicle", machinery: "Plant & machinery", computer: "Computer", furniture: "Furniture", other: "Other" } as const;
 export type AssetKind = keyof typeof ASSET_KINDS;
@@ -72,7 +73,7 @@ export function assetFollowUps(a: Asset, today: string): string[] {
   return out;
 }
 
-const r2 = (n: number) => Math.round(n * 100) / 100;
+const r2 = roundMoney;
 const daysBetween = (a: string, b: string) => Math.round((Date.parse(b) - Date.parse(a)) / 86400000) + 1;
 
 export interface DepYear { fy: string; opening: number; depreciation: number; closing: number }
@@ -88,11 +89,11 @@ export function bookSchedule(a: Asset, uptoFy: string): DepYear[] {
     const from = a.inUse > start ? a.inUse : start;
     const to = a.soldOn && a.soldOn < end ? a.soldOn : end;
     if (to < from) break;
-    const frac = Math.min(1, daysBetween(from, to) / daysBetween(start, end));
+    const frac = decimal(Math.min(daysBetween(from, to), daysBetween(start, end))).div(daysBetween(start, end));
     const base = a.bookMethod === "slm" ? a.cost : wdv;
-    const dep = r2(Math.min(wdv, base * (a.bookRatePct / 100) * frac));
-    out.push({ fy, opening: r2(wdv), depreciation: dep, closing: r2(wdv - dep) });
-    wdv -= dep;
+    const dep = Math.min(wdv, moneyNumber(decimal(base).mul(a.bookRatePct).div(100).mul(frac)));
+    out.push({ fy, opening: r2(wdv), depreciation: dep, closing: subtractMoney(wdv, dep) });
+    wdv = subtractMoney(wdv, dep);
     if (wdv <= 0.005 || (a.soldOn && a.soldOn <= end)) break;
   }
   return out;
@@ -109,9 +110,9 @@ export function taxSchedule(a: Asset, uptoFy: string): DepYear[] {
     const fy = `${s}-${String((s + 1) % 100).padStart(2, "0")}`;
     if (a.soldOn && fyOf(a.soldOn) <= fy && fy !== first && a.soldOn < fyRange(fy).start) break;
     const half = fy === first && daysBetween(a.inUse, fyRange(fy).end) < 180;
-    const dep = r2(wdv * (rate / 100) * (half ? 0.5 : 1));
-    out.push({ fy, opening: r2(wdv), depreciation: dep, closing: r2(wdv - dep) });
-    wdv -= dep;
+    const dep = moneyNumber(decimal(wdv).mul(rate).div(100).mul(half ? 0.5 : 1));
+    out.push({ fy, opening: r2(wdv), depreciation: dep, closing: subtractMoney(wdv, dep) });
+    wdv = subtractMoney(wdv, dep);
     if (a.soldOn && fyOf(a.soldOn) === fy) break;
   }
   return out;
@@ -120,8 +121,8 @@ export function taxSchedule(a: Asset, uptoFy: string): DepYear[] {
 /** Owner's share of an asset's current book value. */
 export function shareValue(a: Asset, fy: string): number {
   const sched = bookSchedule(a, fy);
-  const value = a.kind === "property" ? a.cost : sched.length ? sched[sched.length - 1]!.closing : a.cost;
-  return r2(value * (a.sharePct / 100));
+  const value = a.kind === "property" ? a.cost : (sched.at(-1)?.closing ?? a.cost);
+  return proportionMoney(value, a.sharePct, 100);
 }
 
 export type RentStatus = "paid" | "partial" | "unpaid" | "advance";
@@ -138,17 +139,18 @@ export interface RentMonth {
  * so arrears and advance rent are visible. Read-only — never posts entries.
  */
 export function rentCheck(a: Asset, income: { date: string; amount: number; text: string }[], months: string[]): RentMonth[] {
-  if (!a.monthlyRent) return [];
+  const monthlyRent = a.monthlyRent;
+  if (!monthlyRent) return [];
   const keys = [a.name, a.tenant].map((k) => k?.trim().toLowerCase()).filter((k): k is string => !!k);
   const mine = income.filter((i) => keys.some((k) => i.text.toLowerCase().includes(k)));
   let owed = 0;
   return months.map((m) => {
     const inMonth = mine.filter((i) => i.date.startsWith(m));
-    const deposits = r2(inMonth.filter((i) => /deposit|advance\s*security/i.test(i.text)).reduce((s, i) => s + i.amount, 0));
-    const received = r2(inMonth.filter((i) => !/deposit|advance\s*security/i.test(i.text)).reduce((s, i) => s + i.amount, 0));
-    owed = r2(owed + a.monthlyRent! - received);
+    const deposits = sumMoney(inMonth.filter((i) => /deposit|advance\s*security/i.test(i.text)).map(i => i.amount));
+    const received = sumMoney(inMonth.filter((i) => !/deposit|advance\s*security/i.test(i.text)).map(i => i.amount));
+    owed = moneyNumber(decimal(owed).plus(monthlyRent).minus(received));
     const status: RentStatus = owed < 0 ? "advance" : owed === 0 ? "paid" : received > 0 ? "partial" : "unpaid";
-    return { month: m, expected: a.monthlyRent!, received, balance: owed, status, deposits };
+    return { month: m, expected: monthlyRent, received, balance: owed, status, deposits };
   });
 }
 
