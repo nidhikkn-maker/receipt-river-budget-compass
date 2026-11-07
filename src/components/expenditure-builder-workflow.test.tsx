@@ -58,7 +58,8 @@ it('actual statement builder verifies fetched originals, saves exact PDF despite
 it('actual builder cancel creates no PDF/history; failed upload keeps local PDF and retries the same history identity', async () => {
   await prepare(); render(<ExpenditureReportBuilder mode="statement" search={{ entry: 'e' }} />);
   fireEvent.click(screen.getByRole('button', { name: 'Generate statement PDF' }));
-  fireEvent.click(await screen.findByRole('button', { name: /^Cancel$/ }));
+  await screen.findByRole('button', { name: 'Confirm documents & generate' });
+  fireEvent.click(screen.getByRole('button', { name: /^Cancel$/ }));
   expect(local.history).toBeNull(); expect(local.uploaded).toBeNull();
   await waitFor(() => expect(screen.getByRole('button', { name: 'Generate statement PDF' })).toBeEnabled());
   local.offline = true;
