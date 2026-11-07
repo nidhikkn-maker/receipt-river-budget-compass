@@ -58,6 +58,18 @@ describe("suggestAllocation", () => {
 });
 
 describe("validateAllocation", () => {
+  it('decimal plan controls reject nonfinite funds and conserve fractional budget through actuals and carry forward', () => {
+    const input = { amount: 1.005, today, commitments: [], cardDues: [], loanEmis: [], householdMonthly: 1, horizonDays: 30.44, emergency: { target: 0, saved: 0 }, goals: [] };
+    const result = suggestAllocation(input);
+    expect(result.total).toBe(1.01);
+    expect(result.lines).toMatchObject([{ bucket: 'household', amount: 1 }, { bucket: 'discretionary', amount: 0.01 }]);
+    expect(() => validateAllocation(result.lines, 1.01)).not.toThrow();
+    expect(() => validateAllocation(result.lines, Infinity)).toThrow();
+    expect(() => validateAllocation([{ bucket: 'goals', label: 'Goals', amount: Infinity }], 1)).toThrow();
+    const plan: AllocationPlan = { id: 'isolated', title: 'Test', amount: 1.01, incomeDate: today, createdAt: today, carryForward: true, lines: result.lines };
+    const actual = plannedVsActual(plan, { mandatory: 0, card: 0, loan: 0, household: 0.3, emergency: 0, annual: 0, goals: 0, investments: 0, discretionary: 0.01 });
+    expect(carryForwardAmounts(plan, actual).household).toBe(0.7);
+  });
   it("rejects plans whose total exceeds the eligible funds", () => {
     expect(() => validateAllocation([{ bucket: "goals", label: "Goals", amount: 6000 }, { bucket: "mandatory", label: "Bills", amount: 5000 }], 10000)).toThrow(/more than/);
   });

@@ -1,3 +1,4 @@
+import { addMoney, multiplyMoney, proportionMoney, roundMoney, subtractMoney, sumMoney } from "./money";
 // Money Allocation Engine: recommends how to distribute recorded income across commitments,
 // cards, loans, reserves and goals. Pure, tested. Allocations are internal plans — they never
 // move money between accounts, and a plan's total can never exceed the eligible funds.
@@ -31,7 +32,7 @@ export interface AllocationPlan {
   createdAt: string;
 }
 
-const r2 = (n: number) => Math.round(n * 100) / 100;
+const r2 = roundMoney;
 
 export interface AllocationInput {
   /** Income amount to distribute. */
@@ -65,20 +66,18 @@ export function suggestAllocation(i: AllocationInput): { lines: AllocationLine[]
   const until = addDaysLocal(i.today, horizon);
   const due = i.commitments.filter((c) => c.status === "active" && c.direction === "out" && c.nextDue <= until);
 
-  const mandatory = r2(due.filter((c) => c.essential).reduce((s, c) => s + c.amount, 0));
-  const card = r2(i.cardDues.reduce((s, c) => s + c.amount, 0));
-  const loan = r2(i.loanEmis.reduce((s, l) => s + l.amount, 0));
-  const fixed = r2(mandatory + card + loan);
+  const mandatory = sumMoney(due.filter(c => c.essential).map(c => c.amount));
+  const card = sumMoney(i.cardDues.map(c => c.amount));
+  const loan = sumMoney(i.loanEmis.map(l => l.amount));
+  const fixed = addMoney(mandatory, card, loan);
 
-  const household = r2(Math.max(0, i.householdMonthly) * (horizon / 30.44));
+  const household = proportionMoney(Math.max(0, i.householdMonthly), horizon, 30.44);
   // Yearly/half-yearly commitments accrue monthly so the money is there when the bill arrives.
-  const annual = r2(i.commitments
-    .filter((c) => c.status === "active" && c.direction === "out" && (c.frequency === "yearly" || c.frequency === "half_yearly" || c.frequency === "quarterly"))
-    .reduce((s, c) => s + monthlyCost(c), 0) * (horizon / 30.44));
-  const emergencyGap = Math.max(0, i.emergency.target - i.emergency.saved);
-  const emergency = r2(Math.min(emergencyGap, Math.max(0, i.amount) * 0.1));
-  const goals = r2(i.goals.reduce((s, g) => s + Math.max(0, g.monthly), 0) * (horizon / 30.44));
-  const investments = r2(Math.max(0, i.investmentsMonthly ?? 0) * (horizon / 30.44));
+  const annual = proportionMoney(sumMoney(i.commitments.filter(c => c.status === "active" && c.direction === "out" && ["yearly", "half_yearly", "quarterly"].includes(c.frequency)).map(c => monthlyCost(c))), horizon, 30.44);
+  const emergencyGap = Math.max(0, subtractMoney(i.emergency.target, i.emergency.saved));
+  const emergency = r2(Math.min(emergencyGap, multiplyMoney(Math.max(0, i.amount), 0.1)));
+  const goals = proportionMoney(sumMoney(i.goals.map(g => Math.max(0, g.monthly))), horizon, 30.44);
+  const investments = proportionMoney(Math.max(0, i.investmentsMonthly ?? 0), horizon, 30.44);
 
   const lines: AllocationLine[] = [];
   const push = (bucket: Bucket, amount: number, note?: string) => { if (amount > 0.004) lines.push({ bucket, label: BUCKET_LABEL[bucket], amount: r2(amount), note }); };
@@ -86,12 +85,12 @@ export function suggestAllocation(i: AllocationInput): { lines: AllocationLine[]
   if (fixed > i.amount) {
     // Obligations alone exceed the income: fund them in priority order, flag the gap.
     let left = Math.max(0, i.amount);
-    const take = (n: number) => { const t = r2(Math.min(n, left)); left = r2(left - t); return t; };
+    const take = (n: number) => { const t = r2(Math.min(n, left)); left = subtractMoney(left, t); return t; };
     push("mandatory", take(mandatory), `${due.filter((c) => c.essential).length} essential payments due by ${until}`);
     push("card", take(card), i.cardDues.map((c) => c.name).join(", "));
     push("loan", take(loan), i.loanEmis.map((l) => l.name).join(", "));
-    const total = r2(lines.reduce((s, l) => s + l.amount, 0));
-    return { lines, total, unallocated: 0, shortfall: r2(fixed - i.amount) };
+    const total = sumMoney(lines.map(l => l.amount));
+    return { lines, total, unallocated: 0, shortfall: subtractMoney(fixed, i.amount) };
   }
 
   push("mandatory", mandatory, `${due.filter((c) => c.essential).length} essential payments due by ${until}`);
@@ -99,10 +98,10 @@ export function suggestAllocation(i: AllocationInput): { lines: AllocationLine[]
   push("loan", loan, i.loanEmis.map((l) => l.name).join(", "));
   // Optional targets share only what remains after the fixed obligations.
   // Fund them in the displayed priority order, rounding after each allocation.
-  let remaining = r2(Math.max(0, i.amount - fixed));
+  let remaining = r2(Math.max(0, subtractMoney(i.amount, fixed)));
   const flexible = (bucket: Bucket, target: number, note?: string) => {
     const funded = r2(Math.min(target, remaining));
-    remaining = r2(remaining - funded);
+    remaining = subtractMoney(remaining, funded);
     push(bucket, funded, note);
   };
   flexible("household", household, "Monthly living budget");
@@ -111,20 +110,20 @@ export function suggestAllocation(i: AllocationInput): { lines: AllocationLine[]
   flexible("goals", goals, i.goals.filter((g) => g.monthly > 0).map((g) => g.name).join(", "));
   flexible("investments", investments);
 
-  const total = r2(lines.reduce((s, l) => s + l.amount, 0));
-  const unallocated = r2(Math.max(0, i.amount - total));
+  const total = sumMoney(lines.map(l => l.amount));
+  const unallocated = r2(Math.max(0, subtractMoney(i.amount, total)));
   if (unallocated > 0.004) lines.push({ bucket: "discretionary", label: BUCKET_LABEL.discretionary, amount: unallocated, note: "Left over after everything above" });
-  return { lines, total: r2(total + unallocated), unallocated, shortfall: 0 };
+  return { lines, total: addMoney(total, unallocated), unallocated, shortfall: 0 };
 }
 
 /** A plan is valid only when every line is non-negative and the total never exceeds the eligible funds. */
 export function validateAllocation(lines: AllocationLine[], available: number): void {
-  if (!(available > 0)) throw new Error("Enter the income amount first");
+  if (!Number.isFinite(available) || !(available > 0)) throw new Error("Enter the income amount first");
   for (const l of lines) {
-    if (!(l.amount >= 0)) throw new Error(`${l.label} can't be negative`);
+    if (!Number.isFinite(l.amount) || !(l.amount >= 0)) throw new Error(`${l.label} can't be negative`);
     if (!l.label.trim()) throw new Error("Every line needs a label");
   }
-  const total = r2(lines.reduce((s, l) => s + l.amount, 0));
+  const total = sumMoney(lines.map(l => l.amount));
   if (total > available + 0.005) throw new Error(`The plan adds up to ₹${total.toLocaleString("en-IN")} — more than the ₹${available.toLocaleString("en-IN")} available`);
 }
 
@@ -140,7 +139,7 @@ export function plannedVsActual(
 ): ActualLine[] {
   return plan.lines.map((l) => {
     const a = r2(actual[l.bucket] ?? 0);
-    return { bucket: l.bucket, label: l.label, planned: l.amount, actual: a, difference: r2(a - l.amount) };
+    return { bucket: l.bucket, label: l.label, planned: l.amount, actual: a, difference: subtractMoney(a, l.amount) };
   });
 }
 
@@ -148,7 +147,7 @@ export function plannedVsActual(
 export function carryForwardAmounts(plan: AllocationPlan, actual: ActualLine[]): Record<Bucket, number> {
   const out = Object.fromEntries(BUCKETS.map((b) => [b, 0])) as Record<Bucket, number>;
   if (!plan.carryForward) return out;
-  for (const l of actual) out[l.bucket] = r2(Math.max(0, l.planned - l.actual));
+  for (const l of actual) out[l.bucket] = r2(Math.max(0, subtractMoney(l.planned, l.actual)));
   return out;
 }
 

@@ -5,7 +5,8 @@ import type { TravelTrip } from "@/lib/travel";
 const mock = vi.hoisted(() => ({ store: {} as Record<string, unknown>, save: vi.fn(), error: vi.fn() }));
 vi.mock("@/lib/store", () => ({ useStore: () => mock.store }));
 vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: mock.error } }));
-import { BudgetBreakdown, EditBudgetDialog } from "./TripBudget";
+import { BudgetBreakdown, EditBudgetDialog, TripBudgetCard } from "./TripBudget";
+vi.mock('@tanstack/react-router', () => ({ Link: ({ children }: { children: React.ReactNode }) => <a>{children}</a> }));
 afterEach(cleanup);
 
 it("opens with saved amounts and refuses a budget edit that breaks an explicit complete dimension", async () => {
@@ -44,4 +45,33 @@ it("marks dimensions independently, rejects partial promises and allows delibera
   fireEvent.click(screen.getByLabelText("Complete allocation"));
   await waitFor(() => expect(mock.save).toHaveBeenCalledTimes(2));
   expect(mock.save.mock.calls[1]?.[0].trips[0].completeBudgetDimensions).toEqual([]);
+});
+it('ambiguous historical budget review and cancel preserve independent plans; explicit primary save survives isolated reload', async () => {
+  const trip: TravelTrip = { id: 't', name: 'Historical test', destination: 'Test', start: '2026-11-01', end: '2026-11-02', budget: 0, currencies: ['INR'], workspaceBudgets: [{ workspace: 'personal', amount: 100 }], travellerBudgets: [{ traveller: 'Me', amount: 40 }] };
+  mock.save.mockReset().mockImplementation(async next => { mock.store['preferences'] = JSON.parse(JSON.stringify(next)); });
+  mock.store = { preferences: { ...defaultPreferences(), trips: [trip] }, savePreferences: mock.save, transactions: [], members: [] };
+  const breakdown = vi.fn(); const edit = vi.fn();
+  let view = render(<TripBudgetCard trip={trip} onEdit={edit} onBreakdown={breakdown} />);
+  expect(screen.getByText('Budget requires confirmation')).toBeVisible();
+  fireEvent.click(screen.getByRole('button', { name: 'Review Breakdown' }));
+  expect(breakdown).toHaveBeenCalledTimes(1); expect(mock.save).not.toHaveBeenCalled();
+  view.unmount(); view = render(<EditBudgetDialog trip={trip} open onOpenChange={() => {}} />);
+  fireEvent.click(screen.getByRole('button', { name: 'Close' }));
+  expect(mock.save).not.toHaveBeenCalled();
+  fireEvent.change(screen.getByLabelText('Total budget'), { target: { value: '100' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }));
+  await waitFor(() => expect(mock.save).toHaveBeenCalledTimes(1));
+  const saved = mock.save.mock.calls[0]?.[0].trips[0] as TravelTrip;
+  expect(saved).toMatchObject({ budget: 100, workspaceBudgets: [{ workspace: 'personal', amount: 100 }], travellerBudgets: [{ traveller: 'Me', amount: 40 }] });
+  view.unmount(); render(<TripBudgetCard trip={saved} onEdit={edit} onBreakdown={breakdown} />);
+  expect(screen.getByText('Total Budget')).toBeVisible();
+  expect(saved.budget).toBe(100); // Never 140, the dimensions are independent.
+});
+it('breakdown review exposes partial traveller plans without changing the primary budget', () => {
+  const trip: TravelTrip = { id: 't', name: 'Test', destination: 'Test', start: '2026-11-01', end: '2026-11-02', budget: 100, currencies: ['INR'], travellerBudgets: [{ traveller: 'Me', amount: 40 }] };
+  mock.save.mockReset(); mock.store = { preferences: { ...defaultPreferences(), trips: [trip] }, savePreferences: mock.save, transactions: [], members: [] };
+  render(<BudgetBreakdown trip={trip} />);
+  fireEvent.click(screen.getByRole('tab', { name: 'Traveller' }));
+  expect(mock.save).not.toHaveBeenCalled(); expect(trip.budget).toBe(100);
+  expect(screen.getByText(/Partial allocation/)).toBeVisible();
 });

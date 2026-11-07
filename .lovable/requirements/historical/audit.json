@@ -4886,12 +4886,7 @@
         "H-9407"
       ],
       "codeReferences": "src/lib/trip-budget.ts:93-109,169-176; src/components/trip/TripBudget.tsx:155-208",
-      "verification": {
-        "date": "2026-11-07",
-        "evidence": "docs/evidence/workstream-1-2026-11-07.md",
-        "result": "Explicit complete-dimension control implemented, preserved on reopen; refuses unequal dimensions and edits breaking a complete promise. Controlled route/component/browser pass; hosted preference write/concurrency acceptance pending.",
-        "scope": "Isolated component/browser/local PostgreSQL regressions, not hosted financial saves"
-      }
+      "verification": "{'date': '2026-11-07', 'evidence': 'docs/evidence/workstream-1-2026-11-07.md', 'result': 'Explicit complete-dimension control implemented, preserved on reopen; refuses unequal dimensions and edits breaking a complete promise. Controlled route/component/browser pass; hosted preference write/concurrency acceptance pending.', 'scope': 'Isolated component/browser/local PostgreSQL regressions, not hosted financial saves'} Follow-up: docs/evidence/workstream-1-acceptance-2026-11-07.md; isolated connected acceptance only; broad hosted coverage stays PARTIAL."
     },
     {
       "cid": "C-0390",
@@ -5133,12 +5128,7 @@
         "HC-0075"
       ],
       "codeReferences": "src/components/WealthPanels.tsx:91,121-124; src/lib/loan-history.ts:14-63",
-      "verification": {
-        "date": "2026-11-07",
-        "evidence": "docs/evidence/workstream-1-2026-11-07.md",
-        "result": "Existing CSV button found, not rebuilt. Fixed original-currency loan principal/interest incorrectly exported as INR and excluded transfer counterparts. Ledger/history/CSV connected fixture passes. Actual loan button/download plus posted persistence acceptance pending.",
-        "scope": "Isolated component/browser/local PostgreSQL regressions, not hosted financial saves"
-      }
+      "verification": "{'date': '2026-11-07', 'evidence': 'docs/evidence/workstream-1-2026-11-07.md', 'result': 'Existing CSV button found, not rebuilt. Fixed original-currency loan principal/interest incorrectly exported as INR and excluded transfer counterparts. Ledger/history/CSV connected fixture passes. Actual loan button/download plus posted persistence acceptance pending.', 'scope': 'Isolated component/browser/local PostgreSQL regressions, not hosted financial saves'} Follow-up: docs/evidence/workstream-1-acceptance-2026-11-07.md; isolated connected acceptance only; broad hosted coverage stays PARTIAL."
     },
     {
       "cid": "C-0410",
@@ -10778,14 +10768,19 @@
     {
       "cid": "C-0879",
       "category": "testing",
-      "status": "missing",
+      "status": "partial",
       "rep": "All original supporting bills and payment evidence must be included as annexures at the end of the same PDF.",
       "sources": [
         "LEDGERLINE_pasted-10.md:418"
       ],
       "members": [
         "H-4817"
-      ]
+      ],
+      "codeReferences": [
+        "src/components/ExpenditureReportBuilder.tsx:143-198",
+        "src/lib/expenditure-pdf.ts:62-120"
+      ],
+      "verification": "Actual builder/PDF/claim/mocked history/exact bytes download PASS; original321x456 retained; three-size browser SHA256 match. Broad hosted matrix remains unverified. Evidence: docs/evidence/workstream-1-acceptance-2026-11-07.md"
     },
     {
       "cid": "C-0880",
@@ -13019,12 +13014,7 @@
         "H-0947"
       ],
       "codeReferences": "src/lib/money.ts:1-34; src/lib/ledger.ts:71-155; src/lib/expenses.ts:108-280; src/lib/statement-pipeline/line.ts:78-102; src/lib/books/recon.ts:29-102",
-      "verification": {
-        "date": "2026-11-07",
-        "evidence": "docs/evidence/workstream-1-2026-11-07.md",
-        "result": "Decimal-safe ledger/INR allocations/statement/invoice money implemented. Connected isolated figures and full suite pass. Broader tax/planning/report arithmetic inventory remains; not full financial migration acceptance.",
-        "scope": "Isolated component/browser/local PostgreSQL regressions, not hosted financial saves"
-      }
+      "verification": "{'date': '2026-11-07', 'evidence': 'docs/evidence/workstream-1-2026-11-07.md', 'result': 'Decimal-safe ledger/INR allocations/statement/invoice money implemented. Connected isolated figures and full suite pass. Broader tax/planning/report arithmetic inventory remains; not full financial migration acceptance.', 'scope': 'Isolated component/browser/local PostgreSQL regressions, not hosted financial saves'} Follow-up: docs/evidence/workstream-1-acceptance-2026-11-07.md; isolated connected acceptance only; broad hosted coverage stays PARTIAL."
     },
     {
       "cid": "C-1066",
@@ -15225,14 +15215,18 @@
     {
       "cid": "C-1249",
       "category": "entry",
-      "status": "missing",
+      "status": "implemented",
       "rep": "Partial allocations must be identified as partial, not assumed to cover the entire budget.",
       "sources": [
         "LEDGERLINE_pasted-22.md:228"
       ],
       "members": [
         "H-9408"
-      ]
+      ],
+      "codeReferences": [
+        "src/components/trip/TripBudget.tsx:147-153,207-210"
+      ],
+      "verification": "Actual partial traveller breakdown display and unchanged primary100 vs traveller40 PASS; narrow presentation acceptance. Evidence: docs/evidence/workstream-1-acceptance-2026-11-07.md"
     },
     {
       "cid": "C-1250",
@@ -15261,26 +15255,34 @@
     {
       "cid": "C-1252",
       "category": "entry",
-      "status": "missing",
+      "status": "implemented",
       "rep": "Where no authoritative primary budget exists, display **Budget requires confirmation**.",
       "sources": [
         "LEDGERLINE_pasted-22.md:424"
       ],
       "members": [
         "H-9504"
-      ]
+      ],
+      "codeReferences": [
+        "src/components/trip/TripBudget.tsx:47-55"
+      ],
+      "verification": "Actual card review/cancel/explicit save/isolated reload PASS; existing UI found; narrow no-primary display requirement, not hosted certification. Evidence: docs/evidence/workstream-1-acceptance-2026-11-07.md"
     },
     {
       "cid": "C-1253",
       "category": "entry",
-      "status": "missing",
+      "status": "partial",
       "rep": "The user must be able to review ambiguous historical budget records.",
       "sources": [
         "LEDGERLINE_pasted-22.md:426"
       ],
       "members": [
         "H-9505"
-      ]
+      ],
+      "codeReferences": [
+        "src/components/trip/TripBudget.tsx:47-55,106-117"
+      ],
+      "verification": "Historical review/cancel/save/isolated reload PASS; hosted preference/revision acceptance remains unverified. Evidence: docs/evidence/workstream-1-acceptance-2026-11-07.md"
     },
     {
       "cid": "C-1254",
@@ -18092,12 +18094,7 @@
         "H-5080"
       ],
       "codeReferences": "src/components/ExpenditureReportBuilder.tsx:143-168,278; src/components/ReportDocumentVerification.tsx:1-18; src/lib/report-documents.ts:1-19",
-      "verification": {
-        "date": "2026-11-07",
-        "evidence": "docs/evidence/workstream-1-2026-11-07.md",
-        "result": "Before PDF generation, fetched originals are checked for empty/unreadable files; explicit verification gate, required-document refusal and cancellation. Actual file decoder and component/browser tests pass; full builder-to-history recovery/permissions acceptance pending.",
-        "scope": "Isolated component/browser/local PostgreSQL regressions, not hosted financial saves"
-      }
+      "verification": "{'date': '2026-11-07', 'evidence': 'docs/evidence/workstream-1-2026-11-07.md', 'result': 'Before PDF generation, fetched originals are checked for empty/unreadable files; explicit verification gate, required-document refusal and cancellation. Actual file decoder and component/browser tests pass; full builder-to-history recovery/permissions acceptance pending.', 'scope': 'Isolated component/browser/local PostgreSQL regressions, not hosted financial saves'} Follow-up: docs/evidence/workstream-1-acceptance-2026-11-07.md; isolated connected acceptance only; broad hosted coverage stays PARTIAL."
     },
     {
       "cid": "C-1488",
@@ -18162,14 +18159,19 @@
     {
       "cid": "C-1493",
       "category": "ai",
-      "status": "missing",
+      "status": "partial",
       "rep": "Once completed, the setup assistant should not repeatedly appear.",
       "sources": [
         "LEDGERLINE_pasted-12.md:221"
       ],
       "members": [
         "H-5402"
-      ]
+      ],
+      "codeReferences": [
+        "src/components/SetupAssistant.tsx:26-35",
+        "src/components/SettingsDirectory.tsx:60,79-84"
+      ],
+      "verification": "Fixed premature close on failure; Settings completion failure/retry/done reload/explicit reopen PASS with isolated preferences; hosted persistence unverified. Evidence: docs/evidence/workstream-1-acceptance-2026-11-07.md"
     },
     {
       "cid": "C-1494",
@@ -18267,12 +18269,7 @@
         "H-5536"
       ],
       "codeReferences": "src/components/CategoryMergePreview.tsx:8-42; src/components/FinanceSettings.tsx:15-41; drizzle/migrations/0007_preferences_and_receipt_details.sql:7-14",
-      "verification": {
-        "date": "2026-11-07",
-        "evidence": "docs/evidence/workstream-1-2026-11-07.md",
-        "result": "Added affected-entry/commitment/budget preview. Found RPC does not rewrite split allocations and catalogue save is separate; unsafe split merges disabled. Complete atomic category/split/catalogue/preview authority requires staged implementation and isolated persistence tests; no production policy changes.",
-        "scope": "Isolated component/browser/local PostgreSQL regressions, not hosted financial saves"
-      }
+      "verification": "{'date': '2026-11-07', 'evidence': 'docs/evidence/workstream-1-2026-11-07.md', 'result': 'Added affected-entry/commitment/budget preview. Found RPC does not rewrite split allocations and catalogue save is separate; unsafe split merges disabled. Complete atomic category/split/catalogue/preview authority requires staged implementation and isolated persistence tests; no production policy changes.', 'scope': 'Isolated component/browser/local PostgreSQL regressions, not hosted financial saves'} Follow-up: docs/evidence/workstream-1-acceptance-2026-11-07.md; isolated connected acceptance only; broad hosted coverage stays PARTIAL."
     },
     {
       "cid": "C-1502",
@@ -22548,12 +22545,7 @@
         "H-5077"
       ],
       "codeReferences": "src/lib/claim-pdf.ts:79-81; src/lib/expenditure-pdf.ts:62-120",
-      "verification": {
-        "date": "2026-11-07",
-        "evidence": "docs/evidence/workstream-1-2026-11-07.md",
-        "result": "Unattached claim expenses and failed original retrieval/decoding listed before annexures. Real PDF generation/page readback passes. Full actual claim-builder to saved PDF/evidence download acceptance pending.",
-        "scope": "Isolated component/browser/local PostgreSQL regressions, not hosted financial saves"
-      }
+      "verification": "{'date': '2026-11-07', 'evidence': 'docs/evidence/workstream-1-2026-11-07.md', 'result': 'Unattached claim expenses and failed original retrieval/decoding listed before annexures. Real PDF generation/page readback passes. Full actual claim-builder to saved PDF/evidence download acceptance pending.', 'scope': 'Isolated component/browser/local PostgreSQL regressions, not hosted financial saves'} Follow-up: docs/evidence/workstream-1-acceptance-2026-11-07.md; isolated connected acceptance only; broad hosted coverage stays PARTIAL."
     },
     {
       "cid": "C-1858",
@@ -24550,14 +24542,18 @@
     {
       "cid": "C-2024",
       "category": "reporting",
-      "status": "missing",
+      "status": "implemented",
       "rep": "The summary should remain visible while scrolling.",
       "sources": [
         "LEDGERLINE_pasted-27.md:242"
       ],
       "members": [
         "H-11039"
-      ]
+      ],
+      "codeReferences": [
+        "src/components/FinancialReview.tsx:154"
+      ],
+      "verification": "Original clause concerns selected transaction summary, not report summary. Fixed phone/tablet sticky bounded region. Actual Inbox91-selection scrolling at1280x1800,1180x820,402x725 PASS; zero fixture saves; unrelated audit findings isolated, not hosted certificate. Evidence: docs/evidence/workstream-1-acceptance-2026-11-07.md"
     },
     {
       "cid": "C-2025",
@@ -25399,12 +25395,7 @@
         "H-0911"
       ],
       "codeReferences": "src/lib/intelligence.ts:229-263; src/routes/_authenticated/patterns.tsx:68-132",
-      "verification": {
-        "date": "2026-11-07",
-        "evidence": "docs/evidence/workstream-1-2026-11-07.md",
-        "result": "Existing alias merge/unmerge was wrongly classified absent. Added affected-entry review, cancellation, retry and alias-change guard. Browser/component adapter pass; hosted preference persistence and concurrent review coverage pending.",
-        "scope": "Isolated component/browser/local PostgreSQL regressions, not hosted financial saves"
-      }
+      "verification": "{'date': '2026-11-07', 'evidence': 'docs/evidence/workstream-1-2026-11-07.md', 'result': 'Existing alias merge/unmerge was wrongly classified absent. Added affected-entry review, cancellation, retry and alias-change guard. Browser/component adapter pass; hosted preference persistence and concurrent review coverage pending.', 'scope': 'Isolated component/browser/local PostgreSQL regressions, not hosted financial saves'} Follow-up: docs/evidence/workstream-1-acceptance-2026-11-07.md; isolated connected acceptance only; broad hosted coverage stays PARTIAL."
     },
     {
       "cid": "C-2095",
@@ -30782,9 +30773,9 @@
     }
   ],
   "counts": {
-    "implemented": 1539,
-    "partial": 941,
+    "implemented": 1542,
+    "partial": 944,
     "superseded": 19,
-    "missing": 42
+    "missing": 36
   }
 }
