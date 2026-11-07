@@ -26,6 +26,6 @@ it("preserves original pages and inserts missing-document evidence before the an
   // Body, missing-document list, original cover, untouched original, failed-file page.
   expect(output.getPageCount()).toBe(5);
   expect(output.getPage(3).getSize()).toEqual({ width: 321, height: 456 });
-  const content = Buffer.from(bytes).toString("latin1");
+  const content = Buffer.from(await output.save({ useObjectStreams: false })).toString("latin1");
   expect(content).toContain("/MediaBox [ 0 0 321 456 ]");
 });
