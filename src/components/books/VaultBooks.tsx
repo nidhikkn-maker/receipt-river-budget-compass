@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Fold } from "@/components/Fold";
 import { useStore } from "@/lib/store";
 import { DOC_LABEL, currentVersions, type DocType } from "@/lib/documents";
-import { applyDocQuery, parseDocQuery, DEFAULT_RETENTION, exportManifest, filterRepo, folders, linksOf, pastRetention, renewalReminders, type FolderBy } from "@/lib/books/docrepo";
+import { applyDocQuery, parseDocQuery, DEFAULT_RETENTION, filterRepo, folders, linksOf, pastRetention, renewalReminders, type FolderBy } from "@/lib/books/docrepo";
 import { fyOf } from "@/lib/entities";
 import { useBooks } from "./useBooks";
 
@@ -35,15 +35,9 @@ export function VaultBooks() {
     if (!chosen.length) return;
     setBusy(true);
     try {
-      const { zipSync, strToU8 } = await import("fflate");
-      const files: Record<string, Uint8Array> = { "manifest.json": strToU8(JSON.stringify(exportManifest(chosen, books.docLinks, new Date().toISOString()), null, 2)) };
-      for (const d of chosen) {
-        const url = await signedUrl(d.filePath);
-        if (!url) throw new Error(`Couldn't open ${d.fileName}`);
-        const res = await fetch(url); if (!res.ok) throw new Error(`Couldn't download ${d.fileName}`);
-        files[`${d.id.slice(0, 8)}-${d.fileName.replace(/[^\w.\- ]+/g, "_")}`] = new Uint8Array(await res.arrayBuffer());
-      }
-      const blob = new Blob([zipSync(files)], { type: "application/zip" });
+      const { selectedDocumentZip } = await import('@/lib/books/docrepo-export');
+      const bytes = await selectedDocumentZip(docs, picked, books.docLinks, new Date().toISOString(), signedUrl);
+      const blob = new Blob([new Uint8Array(bytes)], { type: "application/zip" });
       const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = `docurepo-export-${today}.zip`; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 30_000);
       toast.success(`${chosen.length} original document${chosen.length > 1 ? "s" : ""} exported with a manifest`);
     } catch (e) { toast.error((e as Error).message); } finally { setBusy(false); }
