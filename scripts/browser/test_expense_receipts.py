@@ -181,7 +181,6 @@ class ExpenseReceiptButtons(unittest.IsolatedAsyncioTestCase):
         async with self.page.expect_file_chooser() as chooser:
             await self.page.get_by_role("button", name="Files / PDF", exact=True).click()
         await (await chooser.value).set_files(self.receipt)
-        self.page.on("console", lambda m: print("CON0", m.text[:200]) if "MUT" in m.text else None)
         await expect(self.page.get_by_role("group", name="Review scanned details")).to_be_visible()
         self.assertEqual(await self.page.evaluate("expenseBrowserFixture.saves.length"), 0)
         review = self.page.get_by_role("group", name="Review scanned details")
@@ -205,9 +204,7 @@ class ExpenseReceiptButtons(unittest.IsolatedAsyncioTestCase):
         await expect(review.get_by_role("alert")).to_contain_text("Receipt items add up to 360.00")
         await self.page.get_by_role("button", name="Confirm details", exact=True).click()
         await expect(review).to_be_visible()
-        await self.page.locator("details.canvas-fields").evaluate("e=>{e.__m=1; new MutationObserver(r=>console.log(\"MUT\", r.map(x=>x.attributeName+\":\"+e.open).join(), new Error().stack.slice(0,300))).observe(e,{attributes:true})}"); self.page.on("console", lambda m: print("CON", m.text[:400]) if "MUT" in m.text else None)
         await review.get_by_label("Subtotal before tax and tip", exact=True).fill("360")
-        print("SAME", await self.page.locator("details.canvas-fields").evaluate("e=>e.__m"))
         await expect(review.get_by_label("Tax included", exact=True)).to_have_value("32.1")
         await expect(review.get_by_label("Tip included", exact=True)).to_have_value("40")
         await expect(review.get_by_text("High reading confidence", exact=True).first).to_be_visible()
