@@ -26,3 +26,25 @@ it('failed upload never creates a history row, and mismatched identity never upl
   await expect(savePreparedReport(expected, adapter)).rejects.toThrow('identity differs');
   expect(adapter.upload).toHaveBeenCalledTimes(1);
 });
+it('a rejected request after a committed insert recovers without duplicate upload or insert', async () => {
+  const adapter = {
+    read: vi.fn().mockResolvedValueOnce({ data: null, error: null }).mockResolvedValue({ data: row, error: null }),
+    upload: vi.fn().mockResolvedValue({ error: null }),
+    insert: vi.fn().mockRejectedValue(Error('Response interrupted after commit')),
+  };
+  await savePreparedReport(expected, adapter);
+  await savePreparedReport(expected, adapter);
+  expect(adapter.upload).toHaveBeenCalledTimes(1);
+  expect(adapter.insert).toHaveBeenCalledTimes(1);
+});
+it('rejected insert and readback retain evidence and retry only the same identity', async () => {
+  const adapter = {
+    read: vi.fn().mockResolvedValueOnce({ data: null, error: null }).mockRejectedValueOnce(Error('Offline')).mockResolvedValue({ data: row, error: null }),
+    upload: vi.fn().mockResolvedValue({ error: null }),
+    insert: vi.fn().mockRejectedValue(Error('Lost response')),
+  };
+  await expect(savePreparedReport(expected, adapter)).rejects.toThrow('Evidence retained');
+  await savePreparedReport(expected, adapter);
+  expect(adapter.upload).toHaveBeenCalledTimes(1);
+  expect(adapter.insert).toHaveBeenCalledTimes(1);
+});
