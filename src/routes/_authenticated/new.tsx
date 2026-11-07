@@ -78,7 +78,7 @@ export const Route = createFileRoute("/_authenticated/new")({
       { name: "twitter:card", content: "summary" },
     ],
   }),
-  component: NewExpense,
+  component: () => <NewExpense />,
 });
 
 type LocalReceipt = { file: File; name: string; type: string; dataUrl: string; fingerprint: string; path?: string };
@@ -107,7 +107,9 @@ function ReadingIndicator({ value, field }: { value: ReadingConfidence; field?: 
   return <span aria-label={field ? `${field}: ${label}` : undefined} className={cn("block text-xs", value === "high" ? "text-success" : value === "unknown" ? "text-muted-foreground" : "text-warning")}>{label}</span>;
 }
 
-function NewExpense() {
+/** Smart Add hosts this same review in place; `embedded` swaps route navigation for sheet callbacks. */
+export type EmbeddedEntry = { search: QuickEntrySearch; files?: File[]; onExit: (saved?: { id?: string | undefined; label: string }) => void };
+export function NewExpense({ embedded }: { embedded?: EmbeddedEntry } = {}) {
   const { userId, save, transactions: expenses, members, accounts, loans, preferences, savePreferences, documents, addDocument, removeDocument, signedUrl } = useStore();
   const PENDING = "pending-receipt";
   const inbox = documents.filter((d) => d.notes === PENDING && !d.transactionId);
@@ -129,7 +131,8 @@ function NewExpense() {
   const liveAccounts = accounts.filter((a) => !a.archived);
   const nav = useNavigate();
   const router = useRouter();
-  const search = Route.useSearch();
+  const routeSearch = useSearch({ strict: false }) as Record<string, unknown>;
+  const search = embedded?.search ?? quickEntrySearch(routeSearch);
   const { edit } = search;
   const editing = edit ? expenses.find((e) => e.id === edit) : undefined;
   const [scope, setScope] = useState<Scope>("personal");
@@ -315,14 +318,23 @@ function NewExpense() {
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [draftSig, reading]);
+  // Files picked inside Smart Add are read here once, so the preview and reading start without leaving the sheet.
+  const embeddedFilesTaken = useRef(false);
+  useEffect(() => {
+    if (!embedded?.files?.length || embeddedFilesTaken.current || !userId) return;
+    embeddedFilesTaken.current = true; void onFiles(embedded.files);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userId]);
   const resumeLater = async () => {
     const ok = await persistDraft();
     if (!ok && hasDraftContent(draftData(), receipts.length)) { toast.error("Draft not saved — check your connection and try again"); return; }
     if (ok) toast.success(navigator.onLine ? "Saved to Drafts — finish it any time" : "Saved on this device — it will sync when you're back online");
+    if (embedded) { embedded.onExit(); return; }
     if (window.history.length > 1) window.history.back(); else nav({ to: "/drafts" });
   };
   const close = async () => {
     if (!editing && hasDraftContent(draftData(), receipts.length)) { await resumeLater(); return; }
+    if (embedded) { embedded.onExit(); return; }
     if (window.history.length > 1) window.history.back(); else nav({ to: "/dashboard" });
   };
 
@@ -500,7 +512,7 @@ function NewExpense() {
   };
 
   useEffect(() => { const f = takePendingScan(); if (!f) return; const dt = new DataTransfer(); f.forEach((x) => dt.items.add(x)); void onFiles(dt.files); }, []); // eslint-disable-line react-hooks/exhaustive-deps
-  const onFiles = async (files: FileList | null) => {
+  const onFiles = async (files: FileList | File[] | null) => {
     if (!files?.length || reading || saving) return;
     const big = Array.from(files).find((f) => f.size > 5 * 1024 * 1024);
     if (big) { toast.error(`${big.name} is larger than 5 MB`); return; }
@@ -676,6 +688,7 @@ function NewExpense() {
         return;
       }
       setBatch(null);
+      if (embedded) { embedded.onExit({ id: createId ?? editing?.id, label: `${PLAIN_TXN_LABEL[txnType]} · ${title.trim() || merchant.trim()}` }); return; }
       if (editing || search.trip || search.booking) returnAfterReview(router.history, () => { void nav({ to: editing ? "/expenses" : "/dashboard" }); });
       else void nav({ to: "/dashboard" });
     } catch (e) {
@@ -856,7 +869,7 @@ function NewExpense() {
         </section>}
         {scan && !reading && !confirmed && (
           <section ref={reviewRef} className={cn("rounded-lg border border-primary bg-card p-4", receipts[0] && "canvas-review w-full")} role="group" aria-label="Review scanned details">
-            {receipts[0] && <details className="canvas-source mb-4"><summary className="font-medium">Original receipt</summary><ReceiptZoomViewer src={receipts[0].dataUrl} type={receipts[0].type} name={receipts[0].name} /></details>}
+            {receipts[0] && <details open className="canvas-source mb-4"><summary className="font-medium">Original receipt</summary><ReceiptZoomViewer src={receipts[0].dataUrl} type={receipts[0].type} name={receipts[0].name} /></details>}
             <div className="min-w-0 space-y-3">
             <div className="flex items-start justify-between gap-3"><div className="min-w-0"><h2 className="font-display font-semibold">Intelligent Canvas</h2>{(() => { const n = canvasNarrative({ kind: 'receipt', merchant: scan.merchant, amount: Number(scan.amount), currencyText: Number(scan.amount) > 0 ? money(Number(scan.amount), scan.currency) : undefined, date: scan.date, category: scanCategory || undefined, matchFound: deskMatches.length > 0, possibleDuplicate: duplicates.length > 0 || receiptReuse.length > 0 }); return <div aria-label="What I understood" className="mt-1 space-y-1 text-sm"><p>{n.found}</p>{n.belongs && <p>{n.belongs}</p>}<p className="text-muted-foreground">{n.match}</p>{n.help && <p className="font-medium text-warning">{n.help}</p>}<p className="text-xs text-muted-foreground">Next: <b>{n.nextAction}</b> · nothing is saved until you confirm.</p></div>; })()}</div>
               <Button type="button" size="sm" variant="ghost" className="shrink-0" onClick={() => { setScan(null); setScanRead(null); setScanCategory(""); setReceiptDetails({}); setReviewApproval(""); setReviewDialog(false); setFieldChecks({}); setConfirmed(true); }}>Discard</Button></div>
