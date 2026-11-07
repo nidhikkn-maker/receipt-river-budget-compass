@@ -112,8 +112,9 @@ class StatementDeskFlow(unittest.IsolatedAsyncioTestCase):
         await expect(warning).to_contain_text("first.csv")
         await expect(warning).to_contain_text("second.csv")
         before = await self.page.evaluate("({ids: deskFixture.transactions.map(t => t.id), total: deskFixture.transactions.reduce((s,t) => s+t.amount,0), attempts: [...deskFixture.originalAttempts]})")
-        self.assertEqual(before["total"], 730)
-        self.assertEqual(len(before["ids"]), 2)
+        # Source-first safety: failed private originals block all new financial writes.
+        self.assertEqual(before["total"], 0)
+        self.assertEqual(len(before["ids"]), 0)
         await self.page.reload(wait_until="domcontentloaded")
         await expect(warning).to_contain_text("first.csv")
         await expect(warning).to_contain_text("second.csv")
@@ -122,12 +123,25 @@ class StatementDeskFlow(unittest.IsolatedAsyncioTestCase):
         await expect(warning).to_have_count(0)
         after = await self.page.evaluate("({ids: deskFixture.transactions.map(t => t.id), total: deskFixture.transactions.reduce((s,t) => s+t.amount,0), attempts: deskFixture.originalAttempts, docs: deskFixture.documents})")
         self.assertEqual(after["ids"], before["ids"])
-        self.assertEqual(after["total"], 730)
+        self.assertEqual(after["total"], 0)
         self.assertEqual(after["attempts"], before["attempts"])
         self.assertEqual(len(after["docs"]), 2)
         self.assertTrue(all(d["evidenceLocked"] for d in after["docs"]))
         figures = await self.page.evaluate("async () => { const {cashflow,accountBalance} = await import('/src/lib/ledger.ts'); return {flow: cashflow(deskFixture.transactions), balance: accountBalance(deskFixture.accounts[0], deskFixture.transactions)}; }")
-        self.assertEqual(figures, {"flow": {"income": 0, "spent": 730, "net": -730}, "balance": 270})
+        self.assertEqual(figures, {"flow": {"income": 0, "spent": 0, "net": 0}, "balance": 1000})
+        # Re-upload the same actual CSVs after recovery; each source is reused and each line posted once.
+        for name, amount in [("first.csv", 250), ("second.csv", 480)]:
+            csv = f"Date,Description,Debit,Credit\n2026-10-02,SHOP {name},{amount},\n"
+            await self.page.get_by_label("Statement files").set_input_files(files=[{"name": name, "mimeType": "text/csv", "buffer": csv.encode()}])
+            await self.page.locator("select").first.select_option("desk-account")
+            await self.page.get_by_role("button", name="Accept all 1 asking items").click()
+            await self.page.get_by_role("button", name="Apply everything (1 to save)").click()
+            await expect(self.page.get_by_role("button", name="Undo this upload (1 posted)")).to_be_visible()
+            await self.page.get_by_role("button", name=f"Remove {name}").click()
+        saved = await self.page.evaluate("({total: deskFixture.transactions.reduce((s,t) => s+t.amount,0), docs: deskFixture.documents.length, refs: deskFixture.transactions.map(t => t.statementRef)})")
+        self.assertEqual(saved["total"], 730)
+        self.assertEqual(saved["docs"], 2)
+        self.assertTrue(all(ref.startswith("document:") for ref in saved["refs"]))
 
     async def test_cross_account_match_move_and_undo(self):
         await self.page.evaluate("""() => { deskFixture.accounts.push({ id: 'card', name: 'Controlled card', kind: 'credit_card', openingBalance: 0, archived: false, issuer: '', lastFour: null });

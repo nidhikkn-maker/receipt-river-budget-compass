@@ -37,7 +37,12 @@ export function useStore() {
       sessionStorage.setItem("controlled-desk-ledger", JSON.stringify(fixture.transactions));
     },
     remove: async (e: { id: string }) => { fixture.removes.push(e.id); fixture.transactions.splice(fixture.transactions.findIndex((t) => t.id === e.id), 1); },
-    reconcile: async () => {},
+    reconcile: async (id: string, ref: string | null) => {
+      const entry = fixture.transactions.find(t => t.id === id);
+      if (!entry) throw new Error("Missing saved statement entry");
+      Object.assign(entry, { statementRef: ref, reconciledAt: ref ? new Date().toISOString() : null });
+      sessionStorage.setItem("controlled-desk-ledger", JSON.stringify(fixture.transactions));
+    },
     addAccount: async () => { throw new Error("No new accounts in this test"); },
     setArchived: async () => {},
     refresh,
