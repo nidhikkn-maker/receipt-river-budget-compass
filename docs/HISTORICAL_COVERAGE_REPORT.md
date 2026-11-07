@@ -9,9 +9,9 @@ by 12 independent audits plus manual review of the remainder. Full per-cluster r
 
 | Status | Clusters | Share |
 |---|---|---|
-| implemented | 1539 | 61% |
-| partial | 941 | 37% |
-| missing | 42 | 2% |
+| implemented | 1542 | 61% |
+| partial | 944 | 37% |
+| missing | 36 | 2% |
 | superseded | 19 | 0% |
 | **total** | 2541 | 100% |
 
@@ -19,20 +19,20 @@ by 12 independent audits plus manual review of the remainder. Full per-cluster r
 
 | Module | Implemented | Partial | Missing | Superseded |
 |---|---|---|---|---|
-| ai | 33 | 14 | 1 | 0 |
+| ai | 33 | 15 | 0 | 0 |
 | asset | 3 | 1 | 0 | 0 |
 | document | 35 | 29 | 3 | 0 |
-| entry | 208 | 83 | 5 | 3 |
+| entry | 210 | 84 | 2 | 3 |
 | investment | 6 | 10 | 1 | 0 |
 | loan | 30 | 6 | 0 | 0 |
 | other | 799 | 432 | 3 | 9 |
 | process | 31 | 31 | 0 | 1 |
 | reimbursement | 49 | 21 | 0 | 2 |
-| reporting | 76 | 52 | 6 | 0 |
+| reporting | 77 | 52 | 5 | 0 |
 | security | 14 | 32 | 0 | 0 |
 | statement | 102 | 53 | 2 | 0 |
 | taxation | 3 | 0 | 0 | 0 |
-| testing | 48 | 77 | 19 | 0 |
+| testing | 48 | 78 | 18 | 0 |
 | travel | 65 | 25 | 2 | 4 |
 | ux | 37 | 75 | 0 | 0 |
 
@@ -40,22 +40,17 @@ Historical classifications are code-audit assessments, not hosted acceptance cer
 
 ## Count reconciliation and Workstream 1 changes
 The saved baseline was **1,537 / 934 / 51 / 19**. The earlier **1,535 / 934 / 53 / 19** summary predated C-2154 and C-2232 reclassification; it was not the final baseline.
-Current: **1,539 implemented / 941 partial / 42 missing / 19 superseded**. C-0709 narrow UI acceptance and C-2301 corrected prohibition are implemented. Seven genuine implementation/integration items moved MISSING → PARTIAL with explicit outstanding acceptance, not COMPLETE. Evidence: `docs/evidence/workstream-1-2026-11-07.md`.
+Previous checkpoint: **1,539 implemented / 941 partial / 42 missing / 19 superseded**.
+Current: **1,542 implemented / 944 partial / 36 missing / 19 superseded**. C-1252/C-1249/C-2024 narrow UI acceptance passed; C-1253/C-1493/C-0879 now PARTIAL with explicit hosted boundaries. See `docs/evidence/workstream-1-acceptance-2026-11-07.md`. C-0709 narrow UI acceptance and C-2301 corrected prohibition are implemented. Seven genuine implementation/integration items moved MISSING → PARTIAL with explicit outstanding acceptance, not COMPLETE. Evidence: `docs/evidence/workstream-1-2026-11-07.md`.
 
-## Remaining Missing Functionality Register (42)
+## Remaining Missing Functionality Register (36)
 
-### Remaining previously classified buildable gaps (11)
+### Remaining previously classified buildable gaps (5)
 - **C-0214** (statement): Add an admin view that shows statement upload status, reminder history, and confirmation email delivery for each monthly request.
 - **C-0391** (entry): These functions must remain available through the optional Budget Breakdown view, where applicable.
 - **C-0517** (testing): If background jobs are available, report generation should persist safely after acceptance by the backend.
 - **C-0553** (document): Add browser tests for uploading a receipt, viewing its attachment, and verifying it stays linked to the correct expense.
 - **C-0581** (entry): Configurable alerts should be available when budget utilisation crosses selected thresholds.
-- **C-0879** (testing): All original supporting bills and payment evidence must be included as annexures at the end of the same PDF.
-- **C-1249** (entry): Partial allocations must be identified as partial, not assumed to cover the entire budget.
-- **C-1252** (entry): Where no authoritative primary budget exists, display **Budget requires confirmation**.
-- **C-1253** (entry): The user must be able to review ambiguous historical budget records.
-- **C-1493** (ai): Once completed, the setup assistant should not repeatedly appear.
-- **C-2024** (reporting): The summary should remain visible while scrolling.
 
 ### Verification-evidence gaps (15) — need physical device, live site, or benchmark run
 - **C-0212** (testing): Verify that Face ID opens automatically on my iPhone after my first email sign-in and confirm the cold and repeat opening times.

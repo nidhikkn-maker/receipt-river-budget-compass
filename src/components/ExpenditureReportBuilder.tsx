@@ -27,6 +27,8 @@ import { DEFAULT_DECLARATION, maskedText, organisationStatement, profileClaimant
 import { buildClaim, applyAdvance, type Claimant } from "@/lib/expense-claim";
 import { fetchPrivateFile } from "@/lib/private-files";
 import { reportDocumentError } from "@/lib/report-documents";
+import { savePreparedReport } from "@/lib/report-save";
+import { subtractMoney, sumMoney } from "@/lib/money";
 import { ReportDocumentVerification, type ReportDocumentCheck } from "./ReportDocumentVerification";
 
 const STAGES = ["Collecting transactions", "Fetching original bills", "Building statement", "Attaching annexures", "Saving to report history"];
@@ -65,6 +67,8 @@ export function ExpenditureReportBuilder({ mode, search }: { mode: "statement" |
   const [excluded, setExcluded] = useState<string[]>([]);
   const [stage, setStage] = useState(-1); const [failed, setFailed] = useState(false);
   const [result, setResult] = useState<{ blob: Blob; url: string; name: string; missing: string[] } | null>(null);
+  const [historyState, setHistoryState] = useState<'local' | 'saving' | 'saved'>('local');
+  const pendingSave = useRef<(() => Promise<void>) | null>(null);
   const cancelled = useRef(false);
   const [documentChecks, setDocumentChecks] = useState<ReportDocumentCheck[] | null>(null);
   const documentDecision = useRef<((proceed: boolean) => void) | null>(null);
@@ -112,17 +116,17 @@ export function ExpenditureReportBuilder({ mode, search }: { mode: "statement" |
   const previewClaim = buildClaim(scopedStatement, claimant);
   const eligibleIds = previewClaim.items.filter(i => i.source !== NOT_RECORDED && (!priorClaimIds.includes(i.id)||allowRepeat) && !['submitted','under review'].includes(i.status) && (!profile?.categories.length || profile.categories.includes(i.category)) && (profile?.documentRule !== 'required' || i.billRef !== 'Bill Not Attached')).map(i => i.id);
   const visible = candidates.filter(e => (!categoryFilter || e.category === categoryFilter) && (!methodFilter || e.paymentMethod === methodFilter)&&(!reviewSearch||`${e.title} ${e.merchant??''} ${e.description}`.toLowerCase().includes(reviewSearch.toLowerCase()))).sort((a,b)=>reviewSort==='amount'?b.amount-a.amount:reviewSort==='merchant'?(a.merchant||a.title).localeCompare(b.merchant||b.title):a.date.localeCompare(b.date));
-  const selectedClaimTotal = previewClaim.items.filter(i => !excluded.includes(i.id) && eligibleIds.includes(i.id)).reduce((s, i) => s + i.claimed, 0);
+  const selectedClaimTotal = sumMoney(previewClaim.items.filter(i => !excluded.includes(i.id) && eligibleIds.includes(i.id)).map(i => i.claimed));
   const multiOrg = new Set(candidates.flatMap(e => responsibilityShares(e, settings, fallbackOrg).map(p => p.organisation))).size > 1;
   const unknownOrg = candidates.filter(e => !responsibilityShares(e, settings, fallbackOrg).length).length;
   const advanceEntries = store.transactions.filter(e => selectedTrip && (e.tripId === selectedTrip.id || e.tags?.includes(`Trip: ${selectedTrip.name}`)) && (e.txnType === 'advance' || e.txnType === 'advance_settlement'));
-  const advanceNet = Math.max(0, advanceEntries.reduce((s, e) => s + (e.txnType === 'advance' ? e.amount : -e.amount), 0) - (selectedTrip ? priorAdvance[selectedTrip.id] ?? 0 : 0));
+  const advanceNet = Math.max(0, subtractMoney(sumMoney(advanceEntries.map(e => e.txnType === 'advance' ? e.amount : -e.amount)), selectedTrip ? priorAdvance[selectedTrip.id] ?? 0 : 0));
   const advanceChosen = advanceNet <= 0 || advanceInput.trim() !== '';
   const changeOrganisation = (v: string) => { setOrg(v); setProfileId(''); setConfirmed(false); };
   useEffect(() => { setConfirmed(false); }, [org, profile?.id, claimant, receivingAccountId, claimFormat, from, to, purpose, selectedClaimTotal, excluded, JSON.stringify(scopedStatement.rows.map(r => [r.id, r.eligible, r.reimbursed, r.outstanding]))]);
 
   async function generate() {
-    cancelled.current = false; setFailed(false); setResult(null); setStage(0);
+    cancelled.current = false; setFailed(false); setResult(null); setHistoryState('local'); pendingSave.current = null; setStage(0);
     try {
       if (!included.length) throw new Error("Choose at least one transaction.");
       if (claimMode && (!org || !confirmed)) throw Error('Review and confirm the paying organisation and eligible expenses.');
@@ -158,6 +162,7 @@ export function ExpenditureReportBuilder({ mode, search }: { mode: "statement" |
         const rowNo = "claimNo" in row ? row.claimNo : row.sno;
         if (!(claim ? claim.annexures : st.annexures).some(a => a.row === rowNo)) checks.push({ id: row.id, title: `${row.date} · ${row.particulars}`, error: "No supporting bill attached" });
       }
+      if (cancelled.current) return;
       setStage(-1);
       const proceed = await new Promise<boolean>(resolve => { documentDecision.current = resolve; setDocumentChecks(checks); });
       documentDecision.current = null;
@@ -172,20 +177,27 @@ export function ExpenditureReportBuilder({ mode, search }: { mode: "statement" |
       setResult({ blob, url: URL.createObjectURL(blob), name, missing });
       setStage(4);
       const path = `${store.userId}/reports/${id}.pdf`;
-      let historySaved = false;
+      pendingSave.current = async () => {
       const previous = claim ? await supabase.from('report_history').select('id,version,filters').eq('kind', 'claim-submission').contains('filters', { activity, organisation: org }).order('version', { ascending: false }).limit(1) : null;
       if(previous?.error)throw Error('Could not check report versions. Your PDF is ready locally but was not saved.');
       const same = (previous?.data ?? []).filter(h => { const f = h.filters as { activity?: string; organisation?: string }; return f?.activity === activity && f?.organisation === org; });
       const version = 1 + Math.max(0, ...same.map(h => h.version));
-      const up = await supabase.storage.from("receipts").upload(path, blob, { contentType: "application/pdf" });
-      if (!up.error) {
-        const { error } = await supabase.from("report_history").insert({ id, owner_id: store.userId, kind: claim ? "claim-submission" : "expenditure-statement", title: `${claim ? `Expense Claim Submission · ${org} · v${version}` : "Detailed Expenditure Statement"} — ${subjectName}`, period_from: st.start, period_to: st.end, workspace: "all", filters: { subject, excluded, reference, activity, organisation: org, profileId: profile?.id, format: claimFormat, snapshot: claim ?? st } as never, file_path: path, file_size: blob.size, version });
-        historySaved = !error;
-        if (error) await supabase.storage.from("receipts").remove([path]);
-        if (error) toast.error("The PDF is ready, but it couldn't be saved to report history.");
-      } else toast.error("The PDF is ready, but it couldn't be saved to report history.");
-      setStage(-1); toast.success(claim ? "Claim PDF ready" : "Statement ready", { description: historySaved ? 'Saved in Reports Centre history.' : 'Ready on this device; not saved to history.', action: { label: "Open", onClick: () => void navigate({ to: "/report-centre" }) } });
+      await savePreparedReport({ id, owner: store.userId, path, size: blob.size }, {
+        read: async () => { const { data, error } = await supabase.from('report_history').select('id,owner_id,file_path,file_size').eq('id', id).eq('owner_id', store.userId).maybeSingle(); return { data, error }; },
+        upload: async () => supabase.storage.from('receipts').upload(path, blob, { contentType: 'application/pdf', upsert: true }),
+        insert: async () => supabase.from('report_history').insert({ id, owner_id: store.userId, kind: claim ? 'claim-submission' : 'expenditure-statement', title: `${claim ? `Expense Claim Submission · ${org} · v${version}` : 'Detailed Expenditure Statement'} — ${subjectName}`, period_from: st.start, period_to: st.end, workspace: 'all', filters: { subject, excluded, reference, activity, organisation: org, profileId: profile?.id, format: claimFormat, snapshot: claim ?? st } as never, file_path: path, file_size: blob.size, version }),
+      });
+      };
+      await retryHistory();
+      setStage(-1);
     } catch (e) { setFailed(true); toast.error(e instanceof Error ? e.message : "Couldn't prepare the statement"); }
+  }
+  async function retryHistory() {
+    const save = pendingSave.current;
+    if (!save) return;
+    setHistoryState('saving');
+    try { await save(); setHistoryState('saved'); toast.success('Saved in Reports Centre history.'); }
+    catch (error) { setHistoryState('local'); toast.error(error instanceof Error ? error.message : 'PDF ready locally; history save failed.'); }
   }
   const busy = (stage >= 0 && !failed) || documentChecks !== null;
   const openPreview = (b: Blob) => { const u = URL.createObjectURL(b); window.open(u, "_blank"); setTimeout(() => URL.revokeObjectURL(u), 60_000); };
@@ -270,7 +282,8 @@ export function ExpenditureReportBuilder({ mode, search }: { mode: "statement" |
             <Button variant="outline" onClick={() => downloadBlob(result.blob, result.name)}><Download className="mr-1 h-4 w-4" />Download</Button>
             <Button onClick={() => { void deliverFile(result.blob, result.name); }}><Share2 className="mr-1 h-4 w-4" />Share</Button>
           </div>
-          <p className="text-xs text-muted-foreground">Also saved in Reports Centre → Report history.</p>
+          <p role="status" className="text-xs text-muted-foreground">{historyState === 'saved' ? 'Saved in Reports Centre → Report history.' : historyState === 'saving' ? 'Saving to report history…' : 'Ready on this device; history save not confirmed.'}</p>
+          {historyState === 'local' && <Button variant="outline" onClick={retryHistory}>Retry saving to history</Button>}
         </section>
       )}
       {!result&&claimMode&&<div className="hidden space-y-3 border-t py-5 min-[1600px]:block"><h2 className="font-semibold">Report preview</h2><p className="text-sm">{claimant.name||'Claimant required'} · {org||'Organisation required'}</p><p className="text-sm">{subjectName} · {from} — {to}</p><p className="font-semibold tabular-nums">{money(selectedClaimTotal)}</p><p className="text-xs text-muted-foreground">{claimFormat==='summary'?'Summary + Bills':'Detailed + Bills'}</p></div>}

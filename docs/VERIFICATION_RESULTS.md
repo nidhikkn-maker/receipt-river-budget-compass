@@ -153,3 +153,6 @@ Not verified: hosted two-account access, real-device behaviour, real-document ex
 - Result: 1,535 implemented, 934 partial (capability exists; acceptance evidence incomplete), 53 missing, 19 superseded by recorded owner decisions.
 - Full per-cluster register: `.lovable/requirements/historical/audit.json`; classified report: `docs/HISTORICAL_COVERAGE_REPORT.md`.
 - iPad landscape list-and-detail expense layout: 3 component tests pass; full suite 245 files / 1,872 tests PASS; typecheck clean. Physical iPad check not possible in sandbox.
+
+## Workstream 1 connected acceptance — 7 Nov 2026 13:37 UTC
+Historical1539/941/42/19 →1542/944/36/19; narrow C-1252/C-1249/C-2024 verified; C-1253/C-1493/C-0879 now PARTIAL. v6 remains566/331/2. Decimal planning/allocation extension, report evidence-retaining recovery/retry, actual claim/statement PDF/CSV controls, setup failure-safe completion, bounded sticky selection summary; staged atomic category authority4SQL tests. Full257files/1905PASS, Inbox9browserPASS, report3sizesSHA256PASS, earlier workstream3sizesPASS, buildOK. Controlled storage/DB adapters are not hosted certificates. Exact code/results/gaps in `docs/evidence/workstream-1-acceptance-2026-11-07.md`. Real records unchanged; trigger and publication held.
