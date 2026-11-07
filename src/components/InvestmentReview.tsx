@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { useStore } from "@/lib/store";
 import { completeness, mergeInvestmentDoc, type CheckState, type InvestDoc, type StoredHolding } from "@/lib/investments/demat";
 import { createDemat, loadDemat, matchDemat, restoreHoldings, saveHoldings, type DematWithHoldings } from "@/lib/investments/holdings-store";
+import { originalId } from '@/lib/statement-pipeline/apply';
 
 const TITLE: Record<InvestDoc["kind"], string> = { demat: "Demat Statement Review", transactions: "Transaction Statement Review", gains: "Capital Gains Statement Review" };
 const DOC_TYPE = { demat: "demat_statement", transactions: "transaction_statement", gains: "capital_gains_statement" } as const;
@@ -24,11 +25,12 @@ function Row({ label, state, text }: { label: string; state: CheckState; text: s
 
 /** One investment document: identify the demat account, fold rows in by ISIN, show the six checks, save on tap. */
 export function InvestmentReview({ file, doc, onClose, onUploadMore }: { file: File; doc: InvestDoc; onClose: () => void; onUploadMore: () => void }) {
-  const { addDocument } = useStore();
+  const { addDocument, userId } = useStore();
   const [accounts, setAccounts] = useState<DematWithHoldings[] | null>(null);
   const [pick, setPick] = useState<string>("");
   const [saved, setSaved] = useState<{ dematId: string; before: StoredHolding[]; after: StoredHolding[]; docId: string } | null>(null);
   const [busy, setBusy] = useState(false);
+  const [createdAccountId, setCreatedAccountId] = useState<string|null>(null);
   useEffect(() => { loadDemat().then(setAccounts).catch(() => setAccounts([])); }, []);
 
   const matched = accounts ? matchDemat(accounts, doc) : null;
@@ -43,9 +45,10 @@ export function InvestmentReview({ file, doc, onClose, onUploadMore }: { file: F
   const save = async () => {
     setBusy(true);
     try {
-      const dematId = dest?.id ?? await createDemat(doc);
+      const dematId = dest?.id ?? createdAccountId ?? await createDemat(doc);
+      if(!dest)setCreatedAccountId(dematId);
       const before = dest?.holdings ?? [];
-      const docId = await addDocument(file, { title: `${doc.broker || "Investment"} ${TITLE[doc.kind].replace(" Review", "")}${doc.asOf ? ` ${doc.asOf}` : ""}`, docType: DOC_TYPE[doc.kind], docDate: doc.asOf, amount: null, currency: "INR", merchant: doc.broker || null, notes: `Read on Statement Desk: ${merge.added.holdings} new holdings, ${merge.added.lots} trades, ${merge.added.gains} gains.`, transactionId: null, accountId: null, loanId: null, expiresOn: null });
+      const docId = await addDocument(file, { id: await originalId(userId,await file.arrayBuffer()), evidenceLocked: true, title: `${doc.broker || "Investment"} ${TITLE[doc.kind].replace(" Review", "")}${doc.asOf ? ` ${doc.asOf}` : ""}`, docType: DOC_TYPE[doc.kind], docDate: doc.asOf, amount: null, currency: "INR", merchant: doc.broker || null, notes: `Read on Statement Desk: ${merge.added.holdings} new holdings, ${merge.added.lots} trades, ${merge.added.gains} gains.`, transactionId: null, accountId: null, loanId: null, expiresOn: null });
       const after = mergeInvestmentDoc(before, doc, docId).holdings;
       await saveHoldings(dematId, after);
       setSaved({ dematId, before, after, docId });
