@@ -16,7 +16,8 @@ import {
   type LeaseRead,
   type PropertyRead,
 } from "./intake";
-import type { EntityProfile, Property } from "./types";
+import type { Property } from "./types";
+import type { EntityProfile } from "../entities";
 import { emptyBooks } from "./types";
 import { commitIntake, type PrefsSlice } from "./commit";
 import { docsFor, linksOf } from "./docrepo";
@@ -147,7 +148,7 @@ describe("property deed fixture", () => {
 });
 
 describe("lease agreement fixture", () => {
-  const prop: Property = { id: "prop-1", name: "Anna Nagar Plot 44", address: "Plot 44, 2nd Avenue, Anna Nagar, Chennai", buildings: [] } as Property;
+  const prop: Property = { id: "prop-1", name: "Anna Nagar Plot 44", address: "Plot 44, 2nd Avenue, Anna Nagar, Chennai", buildings: [], docIds: [] } as Property;
   const read: LeaseRead = {
     tenant: "Bright Retail Co",
     property: "Anna Nagar",
@@ -192,8 +193,8 @@ describe("audited financial statements fixture", () => {
     pan: "AAACA1234A",
     fy: "2024-25",
     lines: [
-      { head: "shareCapital", amount: 100000 },
-      { head: "reserves", amount: 2450000 },
+      { head: "capitalReserves", amount: 100000 },
+      { head: "fixedAssets", amount: 2450000 },
     ],
     totalAssets: 9200000,
     totalLiabilities: 3100000,
@@ -208,7 +209,7 @@ describe("audited financial statements fixture", () => {
     const p = proposeFy(read, [acme], [], "fy-1", "doc-3");
     expect(p.record).not.toBeNull();
     expect(p.record!.entityId).toBe("ent-acme");
-    expect(p.record!.audited.shareCapital).toBe(100000);
+    expect(p.record!.audited.capitalReserves).toBe(100000);
     expect(p.record!.filedReturns).toEqual([{ form: "ITR-6", ack: "123456789010426", filedOn: "2025-10-31" }]);
     expect(p.missingSchedules).toEqual(REQUIRED_SCHEDULES.filter((s) => !["balanceSheet", "profitLoss"].includes(s)));
     expect(p.missing).toEqual([]);
@@ -222,9 +223,9 @@ describe("audited financial statements fixture", () => {
 
   it("merges a later upload into the same FY record and keeps the replaced version", () => {
     const first = proposeFy(read, [acme], [], "fy-1", "doc-3").record!;
-    const again = proposeFy({ ...read, lines: [{ head: "reserves", amount: 2600000 }] }, [acme], [first], "fy-x", "doc-4");
+    const again = proposeFy({ ...read, lines: [{ head: "fixedAssets", amount: 2600000 }] }, [acme], [first], "fy-x", "doc-4");
     expect(again.record!.id).toBe("fy-1");
-    expect(again.record!.audited.reserves).toBe(2600000);
+    expect(again.record!.audited.fixedAssets).toBe(2600000);
     expect(again.record!.versions?.length).toBe(1);
     expect(again.record!.docIds).toEqual(["doc-3", "doc-4"]);
   });
@@ -287,17 +288,17 @@ describe("reviewed save to DocuRepo with module links", () => {
 
   it("confirmed mutual fund holdings land in the register, each linked to the statement document", () => {
     const h = { id: "h1", kind: "mutual_fund" as const, name: "BOI Multicap", isin: "INF761K01FU4", quantity: 50502.525, sharePct: 100, source: "BOI SOA" };
-    const q = { symbol: "INF761K01FU4", price: 19.8, at: "2026-09-18", freshness: "statement" as const };
+    const q = { key: "INF761K01FU4", price: 19.8, at: "2026-09-18", provider: "statement", freshness: "statement" as const, refreshedAt: "2026-09-20T00:00:00Z" };
     const out = commitIntake(blank(), { route: "fund", holdings: [h], quotes: [q] }, doc, "2026-11-07", newId);
     expect(out.books.holdings.map((x) => x.id)).toContain("h1");
     expect(docsFor(out.books.docLinks, "investment", "h1")).toEqual(["doc-1"]);
-    expect(out.books.quotes.some((x) => x.symbol === "INF761K01FU4" && x.price === 19.8)).toBe(true);
+    expect(out.books.quotes.some((x) => x.key === "INF761K01FU4" && x.price === 19.8)).toBe(true);
   });
 
   it("a confirmed audited FY record lands under its company, linked to the document", () => {
     const slice = blank();
     slice.entities = [acme];
-    const read: AuditedRead = { entity: null, pan: "AAACA1234A", fy: "2024-25", lines: [{ head: "shareCapital", amount: 100000 }], totalAssets: null, totalLiabilities: null, schedules: ["balanceSheet"], qualifications: [], filedForm: null, ackNo: null, filedOn: null };
+    const read: AuditedRead = { entity: null, pan: "AAACA1234A", fy: "2024-25", lines: [{ head: "capitalReserves", amount: 100000 }], totalAssets: null, totalLiabilities: null, schedules: ["balanceSheet"], qualifications: [], filedForm: null, ackNo: null, filedOn: null };
     const { record } = proposeFy(read, [acme], [], "fy-1", "doc-1");
     const out = commitIntake(slice, { route: "fy", record: record! }, doc, "2026-11-07", newId);
     expect(out.books.fyRecords).toHaveLength(1);

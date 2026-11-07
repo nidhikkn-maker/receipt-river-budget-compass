@@ -21,7 +21,7 @@ describe("automatic assignment from source evidence", () => {
   it("assigns the company from an explicit link, else from a PAN/GSTIN printed in the fields", () => {
     const d = doc({ id: "d1" });
     expect(entityOfDoc(d, [], [acme])).toBeNull(); // no link, no printed identity → unassigned, never guessed
-    const withPan = doc({ id: "d2", fields: [{ label: "Seller GSTIN", value: "33AAACA1234A1Z5", page: 1, quote: "GSTIN: 33AAACA1234A1Z5", confidence: "high", status: "accepted" }] });
+    const withPan = doc({ id: "d2", fields: [{ label: "Seller GSTIN", value: "33AAACA1234A1Z5", page: 1, quote: "GSTIN: 33AAACA1234A1Z5", confidence: "high", status: "confirmed" }] });
     expect(entityOfDoc(withPan, [], [acme])?.id).toBe("ent-acme");
     const linked = addLink([], { docId: "d1", kind: "entity", targetId: "ent-acme", label: "Acme" });
     expect(entityOfDoc(d, linked, [acme])?.id).toBe("ent-acme");
