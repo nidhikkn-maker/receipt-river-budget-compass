@@ -43,6 +43,18 @@ it('atomic merge preserves split amounts/tags/original, scoped/trip plans, and d
  expect((await commit(p)).rows).toEqual(result.rows);
  expect((await db.query('SELECT * FROM category_merge_operations')).rows).toHaveLength(1);
 });
+it('failed preference guard rolls back entries, commitments and monthly budgets together',async()=>{
+ await db.exec(`SELECT set_config('app.uid','${other}',false);
+ CREATE FUNCTION reject_test_write() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'Isolated write failure'; END $$;
+ CREATE TRIGGER reject_test_write BEFORE UPDATE ON finance_preferences FOR EACH ROW EXECUTE FUNCTION reject_test_write();`);
+ const p=await preview();
+ await expect(commit(p,'00000000-0000-4000-8000-000000000011')).rejects.toThrow('Isolated write failure');
+ expect((await db.query<{c:string}>('SELECT category c FROM expenses WHERE employee_id=$1',[other])).rows[0]?.c).toBe('Meals');
+ expect((await db.query<{c:string}>('SELECT category c FROM commitments WHERE owner_id=$1',[other])).rows[0]?.c).toBe('Meals');
+ expect((await db.query('SELECT * FROM category_budgets WHERE owner_id=$1',[other])).rows).toHaveLength(2);
+ expect((await db.query('SELECT * FROM category_merge_operations WHERE owner_id=$1',[other])).rows).toHaveLength(0);
+ await db.exec('DROP TRIGGER reject_test_write ON finance_preferences;');
+});
 it('another owner cannot replay or read the operation and retains every financial record',async()=>{
  await db.exec(`SELECT set_config('app.uid','${other}',false)`);
  await expect(commit(await preview())).rejects.toThrow('Operation ID already used');
