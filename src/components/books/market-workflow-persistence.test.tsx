@@ -10,7 +10,7 @@ import { useSyncExternalStore } from "react";
 import { PGlite } from "@electric-sql/pglite";
 import { readFileSync } from "node:fs";
 import { afterEach, expect, it, vi } from "vitest";
-import { cleanup, fireEvent, render, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, waitFor } from "@testing-library/react";
 import { emptyBooks } from "@/lib/books/types";
 const state = vi.hoisted(() => ({ store: {} as Record<string, unknown>, version: 0, listeners: new Set<() => void>(), nav: vi.fn() }));
 vi.mock("@/lib/store", () => ({ useStore: () => { useSyncExternalStore(listener => { state.listeners.add(listener); return () => state.listeners.delete(listener); }, () => state.version); return state.store; } }));
@@ -48,7 +48,7 @@ async function setup() {
   state.store = { userId: owner, preferences: current.data, accounts, transactions: [], valuations: [], loans: [], documents: [], savePreferences: async (next: typeof preferences) => {
    await db.query("SELECT save_reviewed_preferences($1,$2::jsonb,$3,true)", [crypto.randomUUID(), JSON.stringify(next), current.revision]); await reload();
   } };
-  state.version++; state.listeners.forEach(f => f()); return current;
+  state.version++; act(() => { state.listeners.forEach(f => f()); }); return current;
  };
  await reload();
  await db.exec("RESET ROLE");
