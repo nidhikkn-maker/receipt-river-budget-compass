@@ -6,7 +6,7 @@ from playwright.async_api import async_playwright,expect
 HTML='''<!doctype html><html><head><meta name="viewport" content="width=device-width, initial-scale=1"><script>window.__oj_refresh_installed__=true;window.$RefreshReg$=()=>{};window.$RefreshSig$=()=>type=>type;</script></head><body><div id="root"></div><script type="module" src="/scripts/browser/financial-inbox.fixture.tsx"></script></body></html>'''
 class InboxTests(unittest.IsolatedAsyncioTestCase):
  async def asyncSetUp(self):
-  self.p=await async_playwright().start();self.browser=await self.p.chromium.launch(headless=True);self.context=await self.browser.new_context(viewport={'width':1280,'height':1800});self.page=await self.context.new_page();self.errors=[];self.blocked=[];self.page.on('pageerror',lambda e:self.errors.append(str(e)))
+  self.p=await async_playwright().start();self.browser=await self.p.chromium.launch(headless=True);self.context=await self.browser.new_context(viewport={'width':1280,'height':1800});self.page=await self.context.new_page();self.errors=[];self.blocked=[];self.page.on('pageerror',lambda e:self.errors.append(str(e)));self.page.on('console',lambda m:print(m.text) if m.type=='error' else None)
   async def isolate(route):
    r=route.request;u=urlparse(r.url)
    if u.netloc!='localhost:8080' or r.method not in ('GET','HEAD'):self.blocked.append(u.hostname);await route.abort()
