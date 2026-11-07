@@ -190,7 +190,7 @@ class ExpenseReceiptButtons(unittest.IsolatedAsyncioTestCase):
         await expect(review.get_by_text('A receipt from Controlled cafe', exact=False)).to_be_visible()
         await review.get_by_role('combobox', name='Receipt workspace').click()
         await self.page.get_by_role('option', name='Personal', exact=True).click()
-        await review.get_by_text('Source evidence', exact=True).click()
+        await review.get_by_text('Where this came from', exact=True).click()
         await expect(review.get_by_text('Controlled receipt', exact=True)).to_be_visible()
         await expect(review.get_by_label("Item 1 amount confidence: Double-check · low confidence", exact=True)).to_be_visible()
         await expect(review.get_by_text("1 need your check", exact=False)).to_be_visible()
