@@ -19959,18 +19959,23 @@
       },
       "original": "* Missing market prices.",
       "interpretation": "Account for this source clause in the context of 13. Alerts; verify each enumerated feature and applicable safeguard, not merely screen presence.",
-      "modules": [],
+      "modules": [
+        "src/components/books/MarketPanel.tsx",
+        "src/components/books/useBooks.ts",
+        "src/components/books/market-workflow-persistence.test.tsx"
+      ],
       "dependencies": [],
-      "status": "PARTIAL",
-      "requiredWork": "Add valuationAlerts tests for missing manual and Demat prices, enabled/disabled settings and user-visible output; null valuation arithmetic is covered, alert emission is not.",
+      "status": "VERIFIED COMPLETE",
+      "requiredWork": "None for this configured alert condition: actual MarketPanel and production valuation hooks tested with independently seeded disposable owner preferences, installed save RPC, changed settings, owner reload and concrete alert effects. Hosted/provider accuracy is not asserted.",
       "verificationMethod": "Source-to-code audit followed by applicable unit/database/integration/real-route checks; hosted/device evidence separately required.",
       "finalTestResult": {
-        "result": "PARTIAL",
+        "result": "PASS",
         "evidence": [
           "src/lib/books/market.ts:valuationAlerts; src/components/books/MarketPanel.tsx \u2014 alert rules and configurable settings exist.",
           "src/lib/books/investment-alerts.test.ts \u2014 PASS re-run proves corporate-action alert toggle and action deduplication, not the entire alert requirement.",
           "src/lib/books/books.test.ts \u2014 PASS re-run proves configured NAV staleness, not alert emission.",
-          "No project edits or new tests: sandbox instructions require project files remain unchanged; proposed additional coverage is specified in requiredWork."
+          "No project edits or new tests: sandbox instructions require project files remain unchanged; proposed additional coverage is specified in requiredWork.",
+          "2026-11-07 grouped persisted alert acceptance: missing price enabled/disabled toggles save and survive remount; retained NAV eight days old against seven/nine-day thresholds; same-ISIN Demat quantities 5+7 compared with held 12/13, toggle removes mismatch; unusual value 1000 vs cost 800 alerts at 20% and disabled at zero. Production MarketPanel/useBooks/useNetWorth with installed 0080/0082 SQL, no Cloud writes. Full suite 234 files / 1819 PASS."
         ]
       }
     },
@@ -19984,18 +19989,23 @@
       },
       "original": "* Stale NAVs.",
       "interpretation": "Account for this source clause in the context of 13. Alerts; verify each enumerated feature and applicable safeguard, not merely screen presence.",
-      "modules": [],
+      "modules": [
+        "src/components/books/MarketPanel.tsx",
+        "src/components/books/useBooks.ts",
+        "src/components/books/market-workflow-persistence.test.tsx"
+      ],
       "dependencies": [],
-      "status": "PARTIAL",
-      "requiredWork": "Test stale-NAV alert generation and configurable threshold boundaries, including refresh failures; isStale itself is tested but NAV alert wording currently also treats failed refresh as old NAV.",
+      "status": "VERIFIED COMPLETE",
+      "requiredWork": "None for this configured alert condition: actual MarketPanel and production valuation hooks tested with independently seeded disposable owner preferences, installed save RPC, changed settings, owner reload and concrete alert effects. Hosted/provider accuracy is not asserted.",
       "verificationMethod": "Source-to-code audit followed by applicable unit/database/integration/real-route checks; hosted/device evidence separately required.",
       "finalTestResult": {
-        "result": "PARTIAL",
+        "result": "PASS",
         "evidence": [
           "src/lib/books/market.ts:valuationAlerts; src/components/books/MarketPanel.tsx \u2014 alert rules and configurable settings exist.",
           "src/lib/books/investment-alerts.test.ts \u2014 PASS re-run proves corporate-action alert toggle and action deduplication, not the entire alert requirement.",
           "src/lib/books/books.test.ts \u2014 PASS re-run proves configured NAV staleness, not alert emission.",
-          "No project edits or new tests: sandbox instructions require project files remain unchanged; proposed additional coverage is specified in requiredWork."
+          "No project edits or new tests: sandbox instructions require project files remain unchanged; proposed additional coverage is specified in requiredWork.",
+          "2026-11-07 grouped persisted alert acceptance: missing price enabled/disabled toggles save and survive remount; retained NAV eight days old against seven/nine-day thresholds; same-ISIN Demat quantities 5+7 compared with held 12/13, toggle removes mismatch; unusual value 1000 vs cost 800 alerts at 20% and disabled at zero. Production MarketPanel/useBooks/useNetWorth with installed 0080/0082 SQL, no Cloud writes. Full suite 234 files / 1819 PASS."
         ]
       }
     },
@@ -20031,18 +20041,23 @@
       },
       "original": "* Holding quantity discrepancies.",
       "interpretation": "Account for this source clause in the context of 13. Alerts; verify each enumerated feature and applicable safeguard, not merely screen presence.",
-      "modules": [],
+      "modules": [
+        "src/components/books/MarketPanel.tsx",
+        "src/components/books/useBooks.ts",
+        "src/components/books/market-workflow-persistence.test.tsx"
+      ],
       "dependencies": [],
-      "status": "PARTIAL",
-      "requiredWork": "Test same-ISIN quantities across multiple Demat accounts, matching totals, discrepancies and disabled settings in valuationAlerts/quantityByIsin.",
+      "status": "VERIFIED COMPLETE",
+      "requiredWork": "None for this configured alert condition: actual MarketPanel and production valuation hooks tested with independently seeded disposable owner preferences, installed save RPC, changed settings, owner reload and concrete alert effects. Hosted/provider accuracy is not asserted.",
       "verificationMethod": "Source-to-code audit followed by applicable unit/database/integration/real-route checks; hosted/device evidence separately required.",
       "finalTestResult": {
-        "result": "PARTIAL",
+        "result": "PASS",
         "evidence": [
           "src/lib/books/market.ts:valuationAlerts; src/components/books/MarketPanel.tsx \u2014 alert rules and configurable settings exist.",
           "src/lib/books/investment-alerts.test.ts \u2014 PASS re-run proves corporate-action alert toggle and action deduplication, not the entire alert requirement.",
           "src/lib/books/books.test.ts \u2014 PASS re-run proves configured NAV staleness, not alert emission.",
-          "No project edits or new tests: sandbox instructions require project files remain unchanged; proposed additional coverage is specified in requiredWork."
+          "No project edits or new tests: sandbox instructions require project files remain unchanged; proposed additional coverage is specified in requiredWork.",
+          "2026-11-07 grouped persisted alert acceptance: missing price enabled/disabled toggles save and survive remount; retained NAV eight days old against seven/nine-day thresholds; same-ISIN Demat quantities 5+7 compared with held 12/13, toggle removes mismatch; unusual value 1000 vs cost 800 alerts at 20% and disabled at zero. Production MarketPanel/useBooks/useNetWorth with installed 0080/0082 SQL, no Cloud writes. Full suite 234 files / 1819 PASS."
         ]
       }
     },
@@ -20056,18 +20071,23 @@
       },
       "original": "* Unusual valuation differences.",
       "interpretation": "Account for this source clause in the context of 13. Alerts; verify each enumerated feature and applicable safeguard, not merely screen presence.",
-      "modules": [],
+      "modules": [
+        "src/components/books/MarketPanel.tsx",
+        "src/components/books/useBooks.ts",
+        "src/components/books/market-workflow-persistence.test.tsx"
+      ],
       "dependencies": [],
-      "status": "PARTIAL",
-      "requiredWork": "Test unusualValuationPct boundary, ownership-adjusted cost, zero/missing cost and disabled threshold in valuationAlerts.",
+      "status": "VERIFIED COMPLETE",
+      "requiredWork": "None for this configured alert condition: actual MarketPanel and production valuation hooks tested with independently seeded disposable owner preferences, installed save RPC, changed settings, owner reload and concrete alert effects. Hosted/provider accuracy is not asserted.",
       "verificationMethod": "Source-to-code audit followed by applicable unit/database/integration/real-route checks; hosted/device evidence separately required.",
       "finalTestResult": {
-        "result": "PARTIAL",
+        "result": "PASS",
         "evidence": [
           "src/lib/books/market.ts:valuationAlerts; src/components/books/MarketPanel.tsx \u2014 alert rules and configurable settings exist.",
           "src/lib/books/investment-alerts.test.ts \u2014 PASS re-run proves corporate-action alert toggle and action deduplication, not the entire alert requirement.",
           "src/lib/books/books.test.ts \u2014 PASS re-run proves configured NAV staleness, not alert emission.",
-          "No project edits or new tests: sandbox instructions require project files remain unchanged; proposed additional coverage is specified in requiredWork."
+          "No project edits or new tests: sandbox instructions require project files remain unchanged; proposed additional coverage is specified in requiredWork.",
+          "2026-11-07 grouped persisted alert acceptance: missing price enabled/disabled toggles save and survive remount; retained NAV eight days old against seven/nine-day thresholds; same-ISIN Demat quantities 5+7 compared with held 12/13, toggle removes mismatch; unusual value 1000 vs cost 800 alerts at 20% and disabled at zero. Production MarketPanel/useBooks/useNetWorth with installed 0080/0082 SQL, no Cloud writes. Full suite 234 files / 1819 PASS."
         ]
       }
     },
