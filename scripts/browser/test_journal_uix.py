@@ -52,7 +52,8 @@ async def main():
      assert await page.get_by_text('More ways to review',exact=False).count()==0
     await page.screenshot(path=str(OUT/f'{width}-{route_name}.png'))
     await page.mouse.wheel(0,900); await page.wait_for_timeout(250); await page.screenshot(path=str(OUT/f'{width}-{route_name}-scrolled.png'))
-    assert await page.evaluate('document.documentElement.scrollWidth <= innerWidth'), (width,route_name,'overflow')
+    off=await page.evaluate('()=>[...document.querySelectorAll("body *")].filter(n=>n.getBoundingClientRect().right>innerWidth+1&&n.getBoundingClientRect().width>0).slice(0,8).map(n=>n.tagName+"."+String(n.className).slice(0,60)+" w="+Math.round(n.getBoundingClientRect().right))')
+    assert await page.evaluate('document.documentElement.scrollWidth <= innerWidth'), (width,route_name,'overflow',off)
    await page.goto('http://localhost:8080/dashboard')
    await expect(page.get_by_role('heading',name=re.compile(r'^Good .*, Alex$'))).to_be_visible()
    await page.get_by_role('link',name='Spaces',exact=True).filter(visible=True).first.click()
