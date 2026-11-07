@@ -7,7 +7,7 @@ SIZES=[(360,800),(430,932),(834,1194),(1180,820),(1440,1800)]
 async def main():
  async with async_playwright() as p:
   b=await p.chromium.launch(headless=True)
-  for width,height in SIZES[int(sys.argv[1]):int(sys.argv[2])]:
+  for width,height in SIZES[int(sys.argv[1]) if len(sys.argv)>1 else 0:int(sys.argv[2]) if len(sys.argv)>2 else len(SIZES)]:
    c=await b.new_context(viewport={'width':width,'height':height});page=await c.new_page();errors=[];page.on('pageerror',lambda e:errors.append(str(e)))
    cookies=json.loads(os.environ.get('LOVABLE_BROWSER_SUPABASE_COOKIES_JSON') or '[]')
    if cookies:await c.add_cookies([{**x,'url':'http://localhost:8080'} for x in cookies])

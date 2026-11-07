@@ -1032,7 +1032,7 @@ html[data-theme="apple-glass"] :where(.bg-card, .bg-popover, .bg-ink) {
 .uix-shell .journal-record { mask: none; box-shadow: none; }
 .uix-shell .journal-record > div:last-child { padding-block: 20px; }
 .uix-shell .journal-record:hover { background: var(--secondary); }
-.journal-rail :where(button,a):hover { background: var(--secondary); color: var(--foreground); }
+.journal-rail :where(button,a):not(.rail-add):hover { background: var(--secondary); color: var(--foreground); }
 @media (max-width: 1000px) { .uix-family-reports :where(.recharts-responsive-container) { max-width: 100%; overflow: hidden; } }
 
 .uix-family-business :where(button,select) { max-width: 100%; white-space: normal; overflow-wrap: anywhere; }
