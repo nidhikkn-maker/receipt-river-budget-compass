@@ -38,7 +38,7 @@ class StatementDeskFlow(unittest.IsolatedAsyncioTestCase):
             if parsed.netloc != "localhost:8080":
                 self.blocked.append(parsed.hostname)
                 await route.abort()
-            elif parsed.path == "/statements":
+            elif parsed.path in ("/statements", "/smart"):
                 await route.fulfill(status=200, content_type="text/html", body=HTML)
             elif parsed.path in ("/src/lib/store.tsx", "/src/integrations/supabase/client.ts"):
                 name = "useStore" if "store.tsx" in parsed.path else "supabase"
@@ -65,6 +65,20 @@ class StatementDeskFlow(unittest.IsolatedAsyncioTestCase):
         finally:
             await self.browser.close()
             await self.playwright.stop()
+
+    async def test_smart_add_statement_reviews_in_place(self):
+        await self.page.goto(BASE + "/smart", wait_until="domcontentloaded")
+        csv = "Date,Description,Debit,Credit\n2026-10-02,SWIGGY ORDER,250.00,\n2026-10-03,AMAZON PURCHASE,480.00,\n"
+        await self.page.get_by_label("Choose files", exact=True).set_input_files(files=[{"name": "smart.csv", "mimeType": "text/csv", "buffer": csv.encode()}])
+        sheet = self.page.get_by_role("dialog", name="Smart Add")
+        await expect(sheet.get_by_label("Preview of smart.csv").get_by_text("SWIGGY ORDER")).to_be_visible()
+        await sheet.locator("select").first.select_option("desk-account")
+        await sheet.get_by_role("button", name="Accept all 2 asking items").click()
+        await self.page.screenshot(path=str(EVIDENCE / "smart-add-statement-batch.png"))
+        await sheet.get_by_role("button", name="Apply everything (2 to save)").dblclick()
+        await expect(sheet.get_by_role("button", name="Undo this upload (2 saved)")).to_be_visible()
+        self.assertEqual(len(await self.page.evaluate("deskFixture.saves")), 2)
+        self.assertTrue(self.page.url.endswith("/smart"))
 
     async def test_upload_review_apply_and_undo(self):
         csv = "Date,Description,Debit,Credit\n2026-10-02,SWIGGY ORDER,250.00,\n2026-10-03,AMAZON PURCHASE,480.00,\n"

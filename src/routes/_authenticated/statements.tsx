@@ -2,7 +2,7 @@ import { StageStrip } from "@/components/StageStrip";
 import { canvasNarrative, statementStage } from "@/lib/plain-language";
 import { downloadBlob } from "@/lib/reports";
 import { csvCell } from "@/lib/csv-safe";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useSearch } from "@tanstack/react-router";
 import { SectionTabs } from "@/components/SectionTabs";
 import { AccountantSettings } from "@/components/AccountantSettings";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -66,7 +66,7 @@ export const Route = createFileRoute("/_authenticated/statements")({
       { name: "twitter:card", content: "summary" },
     ],
   }),
-  component: StatementDeskPage,
+  component: () => <StatementDeskPage />,
 });
 
 /** What one uploaded file would change, held together so the screen can show it before saving. */
@@ -78,8 +78,10 @@ interface Loaded {
   credits: number;
 }
 
-function StatementDeskPage() {
-  const { tab, context, replaces } = Route.useSearch();
+/** Smart Add hosts the same Statement Desk engine in place for statements and documents. */
+export function StatementDeskPage({ embedded }: { embedded?: { files: File[] } } = {}) {
+  const routeSearch = useSearch({ strict: false }) as { tab?: "accountant"; context?: IntakeContext; replaces?: string };
+  const { tab, context, replaces } = embedded ? { tab: undefined, context: undefined, replaces: undefined } : routeSearch;
   /** Non-bank documents (company papers, deeds, leases, audited accounts, invoices) — reviewed here, stored in DocuRepo. */
   const [docs, setDocs] = useState<{ key: string; file: File; resume?: ResumeState; context?: IntakeContext | undefined }[]>([]);
   const store = useStore();
@@ -488,6 +490,12 @@ function StatementDeskPage() {
   };
 
   const askKeys = plan?.accounts.flatMap((a) => a.ask.map((d) => d.line.key)) ?? [];
+  const embeddedTaken = useRef(false);
+  useEffect(() => {
+    if (!embedded?.files.length || embeddedTaken.current || !store.userId) return;
+    embeddedTaken.current = true; void add(embedded.files);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [store.userId]);
 
   if (tab === "accountant") return (
     <div className="mx-auto max-w-5xl space-y-4 p-4">
@@ -497,15 +505,15 @@ function StatementDeskPage() {
     </div>
   );
   return (
-    <div className="mx-auto max-w-5xl space-y-4 p-4">
-      <SectionTabs group="statements" active="upload" />
-      <header className="space-y-1">
+    <div className={embedded ? "space-y-4" : "mx-auto max-w-5xl space-y-4 p-4"}>
+      {!embedded && <SectionTabs group="statements" active="upload" />}
+      {!embedded && <header className="space-y-1">
         <h1 className="flex items-center gap-2 text-xl font-semibold"><Inbox className="size-5" /> Statement Desk</h1>
         <p className="flex items-start gap-1.5 text-sm text-muted-foreground"><ShieldCheck className="mt-0.5 size-4 shrink-0" /> Drop in any financial or legal document — bank, card, loan, demat, trades, capital gains, company papers, audited accounts, deeds, leases, invoices; PDF, photo, CSV or Excel. They are read on this device, matched against your records, and nothing is saved until you say so.</p>
-      </header>
+      </header>}
 
       {context && <p className="rounded-xl bg-secondary px-3 py-2 text-sm">Adding for <b>{CONTEXTS[context]}</b> — any document you drop is identified, read and filed in DocuRepo, then you confirm what it creates.</p>}
-      <AccountantInbox onFiles={add} />
+      {!embedded && <AccountantInbox onFiles={add} />}
 
       <Card className="space-y-3 p-4">
         <div
