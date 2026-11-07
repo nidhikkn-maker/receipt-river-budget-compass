@@ -75,7 +75,7 @@ export function SmartAdd({ open, onOpenChange, scope }: { open: boolean; onOpenC
     <input ref={fileRef} type="file" accept={SMART_ADD_ACCEPT} multiple className="sr-only" tabIndex={-1} aria-label="Choose files" onChange={(e) => { take(e.target.files); e.target.value = ''; }} />
     <div hidden={!open} className="fixed inset-0 z-50">
       <div className="absolute inset-0 bg-foreground/30 backdrop-blur-sm" aria-hidden onClick={() => onOpenChange(false)} />
-      <div ref={panelRef} tabIndex={-1} role="dialog" aria-modal="true" aria-labelledby="smart-add-title"
+      <div ref={panelRef} tabIndex={-1} role="dialog" aria-modal="true" aria-label="Smart Add"
         style={stage.kind === 'choose' ? { backgroundImage: `url(${night})` } : undefined}
         className={`smart-add-sheet native-sheet ${stage.kind === 'choose' ? 'smart-add-night max-sm:top-0 max-sm:max-h-none max-sm:rounded-none ' : 'smart-add-light max-sm:top-0 max-sm:max-h-none max-sm:rounded-none '}absolute inset-x-0 bottom-0 flex max-h-[96dvh] flex-col overflow-clip rounded-t-3xl border bg-background shadow-xl outline-none sm:inset-y-4 sm:left-auto sm:right-4 sm:bottom-4 sm:max-h-none sm:rounded-3xl ${stage.kind === 'choose' ? 'sm:w-[28rem]' : 'sm:w-[min(72rem,calc(100vw-2rem))]'}`}>
         <header className="flex min-h-14 shrink-0 items-center gap-2 border-b px-3 pt-[env(safe-area-inset-top)] sm:pt-0">
