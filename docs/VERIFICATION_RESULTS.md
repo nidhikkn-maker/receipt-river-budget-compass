@@ -1,5 +1,12 @@
 # Verification results (executed evidence only)
 
+## 7 Nov 2026 11:57 UTC — isolated hosted testing available; cash/recovery gaps corrected
+- **565 → 565 verified, 332 partial, 2 external blocked; newly verified IDs: none.** Complete criteria/results saved in `docs/evidence/connected-workflow-acceptance-2026-11-07.md`. No unsupported promotion.
+- Main full suite **241 files / 1,853 PASS**; Statement Desk browser **4/4 PASS**, screenshot inspected; harness **build OK**. Actual investment review + production holdings-store + installed SQL verifies CSV source integrity, failed holdings retry, lost demat-create response, duplicate trades/events, owner isolation and Home readback. These use local API/storage adapters, not hosted services.
+- Corrected foreign broker cash valuation and linked-ledger discrepancy to compare INR with INR; form/save/reload/actual Home snapshot cases pass. Statement checkpoints now fresh-read/merge/CAS through existing RPC, preserve other-device preferences and confirmed progress, resist late partial completion downgrade; two isolated installed-SQL checks pass. Recovery refreshes documents first. No Main migrations or live records changed.
+- A newly created acceptance draft **has its own isolated test database**, independently confirmed. Completed delegate result: **9 actual-API checks PASS, browser downloads empty**. Hosted workflow remains failed/incomplete; draft evidence not merged or independently inspected on Main. Prior isolation-unavailable blocker superseded, not falsely converted into a pass.
+- All three broad workflows remain PARTIAL: hosted browser download integrity failure; complete broker cash posting/report/corporate-action review; durable pre-source/account lost-response intent, hosted two-device recovery and stale-safe Undo. Approval trigger disabled, publication held.
+
 ## 7 Nov 2026 11:23 UTC — connected continuation, no unsupported promotions
 - Previous/new **565 VERIFIED / 332 PARTIAL / 2 externally BLOCKED**. **Newly completed IDs: none**; added evidence to V60-0066/0082/0732/0512/0490 and V61-0012/0031/0116 without claiming complete hosted workflows.
 - Full suite **239 files / 1,847 PASS**; actual Statement Desk browser **4/4 PASS**, screenshot inspected. Preview latest **build OK** after narrowing recovered source references. Earlier full suite 237 files/1,843 PASS. No manual build/typecheck.
