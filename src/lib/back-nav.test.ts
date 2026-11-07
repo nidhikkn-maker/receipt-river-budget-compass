@@ -15,3 +15,12 @@ describe("back button", () => {
     expect(backStep(false, 1)).toBe("home");
   });
 });
+
+describe("primary tab pages", () => {
+  it("My Spaces is a starting point without a Back button", () => {
+    expect(showBackButton("/spaces")).toBe(false);
+  });
+  it("Review is a bottom-bar tab without a Back button", () => {
+    expect(showBackButton("/inbox")).toBe(false);
+  });
+});

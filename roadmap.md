@@ -18,6 +18,8 @@
 
 ## Approved UIX integration — 7 Nov 2026
 - [ ] First-pass visual treatment (not owner-accepted as complete): editorial Today with sunrise header/action list/journal, five-space chooser, cream Review/Wealth/Smart Add/Canvas, landscape tablet sidebar and desktop journal/right panels. Actual rendered matrix390/1180/1440 passes; exact Photo2 mapping remains unavailable. No financial changes or release activation.
+- [x] Financial Companion correction for the five main screens (Today, My Spaces, Add to Ledgerline, Review, Wealth & Plan) plus header, bottom bar and gold +; checked at 390/430/1180/1440 with sample data. Reference images weren't available to the agent.
+- [ ] Companion treatment for the remaining pages; light surfaces on Smart Add review stages; restoring Ignored items from Review; checks on a real iPhone/iPad and the hosted app.
 - [x] Global plus opens Smart Add; existing scan/voice/quick/message drafts and Statement Desk upload destination verified at390/834/1280 widths. Spaces and More retain Journal/company/module access.
 - [x] Receipt Canvas includes source preview/text, interpretation, category, editable workspace/instrument and destination/match facts; existing statement batch review labelled Canvas. Existing confirmation/posting paths unchanged.
 - [ ] Remaining UIX acceptance: full real upload-from-chooser→statement/document flow, draft reload/reconnect and hosted workspace/source security; asset/claim destination selection and exact five-screen asset mapping remain unverified. 33 targeted checks, four receipt browser cases and one card batch browser case pass; responsive chooser matrix pass. Release holds and300-credit reserve unchanged.

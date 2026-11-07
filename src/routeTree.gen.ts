@@ -56,6 +56,7 @@ import { Route as AuthenticatedRulesRouteImport } from './routes/_authenticated/
 import { Route as AuthenticatedSearchRouteImport } from './routes/_authenticated/search'
 import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings'
 import { Route as AuthenticatedSharedRouteImport } from './routes/_authenticated/shared'
+import { Route as AuthenticatedSpacesRouteImport } from './routes/_authenticated/spaces'
 import { Route as AuthenticatedStartRouteImport } from './routes/_authenticated/start'
 import { Route as AuthenticatedStatementAccountsRouteImport } from './routes/_authenticated/statement-accounts'
 import { Route as AuthenticatedStatementCrosscheckRouteImport } from './routes/_authenticated/statement-crosscheck'
@@ -335,6 +336,11 @@ const AuthenticatedSharedRoute = AuthenticatedSharedRouteImport.update({
   path: '/shared',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedSpacesRoute = AuthenticatedSpacesRouteImport.update({
+  id: '/spaces',
+  path: '/spaces',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedStartRoute = AuthenticatedStartRouteImport.update({
   id: '/start',
   path: '/start',
@@ -536,6 +542,7 @@ export interface FileRoutesByFullPath {
   '/search': typeof AuthenticatedSearchRoute
   '/settings': typeof AuthenticatedSettingsRoute
   '/shared': typeof AuthenticatedSharedRoute
+  '/spaces': typeof AuthenticatedSpacesRoute
   '/start': typeof AuthenticatedStartRoute
   '/statement-accounts': typeof AuthenticatedStatementAccountsRoute
   '/statement-crosscheck': typeof AuthenticatedStatementCrosscheckRoute
@@ -612,6 +619,7 @@ export interface FileRoutesByTo {
   '/search': typeof AuthenticatedSearchRoute
   '/settings': typeof AuthenticatedSettingsRoute
   '/shared': typeof AuthenticatedSharedRoute
+  '/spaces': typeof AuthenticatedSpacesRoute
   '/start': typeof AuthenticatedStartRoute
   '/statement-accounts': typeof AuthenticatedStatementAccountsRoute
   '/statement-crosscheck': typeof AuthenticatedStatementCrosscheckRoute
@@ -689,6 +697,7 @@ export interface FileRoutesById {
   '/_authenticated/search': typeof AuthenticatedSearchRoute
   '/_authenticated/settings': typeof AuthenticatedSettingsRoute
   '/_authenticated/shared': typeof AuthenticatedSharedRoute
+  '/_authenticated/spaces': typeof AuthenticatedSpacesRoute
   '/_authenticated/start': typeof AuthenticatedStartRoute
   '/_authenticated/statement-accounts': typeof AuthenticatedStatementAccountsRoute
   '/_authenticated/statement-crosscheck': typeof AuthenticatedStatementCrosscheckRoute
@@ -767,6 +776,7 @@ export interface FileRouteTypes {
     | '/search'
     | '/settings'
     | '/shared'
+    | '/spaces'
     | '/start'
     | '/statement-accounts'
     | '/statement-crosscheck'
@@ -843,6 +853,7 @@ export interface FileRouteTypes {
     | '/search'
     | '/settings'
     | '/shared'
+    | '/spaces'
     | '/start'
     | '/statement-accounts'
     | '/statement-crosscheck'
@@ -919,6 +930,7 @@ export interface FileRouteTypes {
     | '/_authenticated/search'
     | '/_authenticated/settings'
     | '/_authenticated/shared'
+    | '/_authenticated/spaces'
     | '/_authenticated/start'
     | '/_authenticated/statement-accounts'
     | '/_authenticated/statement-crosscheck'
@@ -1301,6 +1313,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedSharedRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/spaces': {
+      id: '/_authenticated/spaces'
+      path: '/spaces'
+      fullPath: '/spaces'
+      preLoaderRoute: typeof AuthenticatedSpacesRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/start': {
       id: '/_authenticated/start'
       path: '/start'
@@ -1554,6 +1573,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedSearchRoute: typeof AuthenticatedSearchRoute
   AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRoute
   AuthenticatedSharedRoute: typeof AuthenticatedSharedRoute
+  AuthenticatedSpacesRoute: typeof AuthenticatedSpacesRoute
   AuthenticatedStartRoute: typeof AuthenticatedStartRoute
   AuthenticatedStatementAccountsRoute: typeof AuthenticatedStatementAccountsRoute
   AuthenticatedStatementCrosscheckRoute: typeof AuthenticatedStatementCrosscheckRoute
@@ -1615,6 +1635,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedSearchRoute: AuthenticatedSearchRoute,
   AuthenticatedSettingsRoute: AuthenticatedSettingsRoute,
   AuthenticatedSharedRoute: AuthenticatedSharedRoute,
+  AuthenticatedSpacesRoute: AuthenticatedSpacesRoute,
   AuthenticatedStartRoute: AuthenticatedStartRoute,
   AuthenticatedStatementAccountsRoute: AuthenticatedStatementAccountsRoute,
   AuthenticatedStatementCrosscheckRoute: AuthenticatedStatementCrosscheckRoute,

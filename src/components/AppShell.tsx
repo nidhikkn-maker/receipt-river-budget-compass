@@ -7,14 +7,15 @@ import { Link, useRouter, useRouterState , useNavigate } from "@tanstack/react-r
 import { ArrowLeft, ArrowRight } from "lucide-react";
 import { backStep, showBackButton } from "@/lib/back-nav";
 import { useEffect, useState, type ReactNode } from "react";
-import { BarChart3, Bell, Gem, Home, ListFilter, Plus, Settings, Users, Eye, EyeOff, FileText, UserRound, Inbox, Search, Plane, Menu, X, RefreshCw, CloudOff, Check, TriangleAlert } from "lucide-react";
+import { BarChart3, Bell, Gem, Home, ListFilter, Plus, Settings, Users, Eye, EyeOff, FileText, Inbox, Search, Plane, Menu, X, RefreshCw, CloudOff, Check, TriangleAlert } from "lucide-react";
 import { DeviceLock } from "./DeviceLock";
 import { LedgerlineBrand } from "./LedgerlineLogo";
 import { Button } from "./ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "./ui/dialog";
 import { useStore } from "@/lib/store";
 import { applyTheme } from "@/lib/themes";
-import { ACTIVE_SCOPES, SCOPE_LABEL, type Scope } from "@/lib/expenses";
+import { SCOPE_LABEL } from "@/lib/expenses";
+import { initials } from "./JournalToday";
 import { SmartAdd } from './SmartAdd';
 import { ModuleDirectory } from './ModuleDirectory';
 
@@ -28,27 +29,6 @@ const PRIMARY_LINKS = [
   { to: '/trips', label: 'Travel', icon: Plane },
   { to: '/reports', label: 'Reports', icon: BarChart3 },
 ] as const;
-
-function WorkspaceSelector() {
-  const { preferences, savePreferences } = useStore();
-  const options: ("all" | Scope)[] = ["all", ...ACTIVE_SCOPES];
-  return (
-    <div className="flex min-w-0 max-w-full gap-1 overflow-x-auto pb-0.5" role="group" aria-label="Workspace">
-      {options.map((s) => (
-        <Button
-          variant="ghost"
-          key={s}
-          type="button"
-          onClick={() => void savePreferences({ ...preferences, homeScope: s })}
-          aria-pressed={preferences.homeScope === s}
-          className={"shrink-0 workspace-chip rounded-full px-3 text-sm font-medium transition " + (preferences.homeScope === s ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground hover:bg-accent")}
-        >
-          {s === "all" ? "All workspaces" : SCOPE_LABEL[s]}
-        </Button>
-      ))}
-    </div>
-  );
-}
 
 /** Small header pill showing whether saved figures are refreshing, current, offline or failed. Tap to refresh. */
 function SyncStatus() {
@@ -72,7 +52,7 @@ function SyncStatus() {
       aria-live="polite"
       title={label}
       className={"flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold transition " +
-        (syncState === "error" ? "bg-destructive/10 text-destructive" : syncState === "offline" ? "bg-secondary text-secondary-foreground" : "bg-secondary text-muted-foreground hover:text-foreground")}
+        (syncState === "error" ? "bg-destructive/10 text-destructive" : syncState === "offline" ? "bg-secondary text-secondary-foreground" : pendingCount > 0 || syncState === "syncing" ? "bg-secondary text-muted-foreground hover:text-foreground" : "bg-transparent text-muted-foreground hover:text-foreground")}
     >
       <Icon className={"h-3.5 w-3.5" + (syncState === "syncing" ? " animate-spin" : "")} />
       <span className={(syncState === "error" || syncState === "offline" || pendingCount > 0 ? "max-w-24" : "sr-only sm:not-sr-only") + " truncate sm:max-w-none"}>{label}</span>
@@ -81,7 +61,7 @@ function SyncStatus() {
 }
 
 export function AppShell({ children }: { children: ReactNode }) {
-  const { loading, preferences, name, savePreferences } = useStore();
+  const { loading, preferences, name } = useStore();
   useEffect(() => {
     const media = window.matchMedia("(prefers-color-scheme: dark)");
     const apply = () => applyTheme(preferences.themeName, preferences.theme, media.matches);
@@ -95,8 +75,8 @@ export function AppShell({ children }: { children: ReactNode }) {
   const wideClaim = useRouterState({ select: (st) => st.location.pathname === '/claim-submission' });
   const [moreOpen, setMoreOpen] = useState(false);
   const [smartOpen, setSmartOpen] = useState(false);
-  const [spacesOpen, setSpacesOpen] = useState(false);
-  const useSpace = async (scope: Scope) => { await savePreferences({ ...preferences, homeScope: scope }); setSpacesOpen(false); };
+  const onToday = useRouterState({ select: (st) => st.location.pathname === "/dashboard" });
+  useEffect(() => { const open = () => setSmartOpen(true); window.addEventListener("ledgerline:smart-add", open); return () => window.removeEventListener("ledgerline:smart-add", open); }, []);
   useEffect(() => { setHidden(localStorage.getItem("ll-privacy") === "1"); }, []);
   useEffect(() => { document.documentElement.classList.toggle("privacy", hidden); localStorage.setItem("ll-privacy", hidden ? "1" : "0"); }, [hidden]);
   return (
@@ -104,14 +84,14 @@ export function AppShell({ children }: { children: ReactNode }) {
       <a href="#main-content" className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50 focus:bg-card focus:p-3">Skip to content</a>
       <aside className={"journal-rail fixed inset-y-0 left-0 z-30 hidden w-52 flex-col gap-2 overflow-y-auto bg-sidebar px-4 py-6 text-sidebar-foreground xl:w-64 " + (focused ? '' : 'md:flex')}>
         <Link to="/dashboard" aria-label="Ledgerline home" className="mb-6 shrink-0"><img src="/app-icon.png" alt="Ledgerline" width={48} height={48} className="h-12 w-12 rounded-2xl shadow-float" /></Link>
-        <Button variant="ghost" className="h-11 justify-start gap-3 text-ink-muted hover:bg-sidebar-accent hover:text-ink-foreground" onClick={() => setSpacesOpen(true)}><Users className="size-[18px]" />Spaces</Button>
+        <Link to="/spaces" className="rail-link" activeProps={{ className: 'rail-link-selected', 'aria-current': 'page' }}><Users className="size-5" />Spaces</Link>
         <Button aria-label="Smart Add" onClick={() => setSmartOpen(true)} variant="gold" className="rail-add"><Plus className="size-5" />Add to Ledgerline</Button>
         <nav aria-label="Sidebar" className="rail-links">{PRIMARY_LINKS.map(l => <Link key={l.to} to={l.to} className="rail-link" activeProps={{ className: 'rail-link-selected', 'aria-current': 'page' }}><l.icon className="size-5" />{l.label}</Link>)}</nav>
         <Button variant="ghost" className="rail-more" aria-label="More modules" onClick={() => setMoreOpen(true)}><Menu className="size-5" />More</Button>
         <Link to="/settings" className="rail-link mt-auto"><Settings className="size-5" />Settings</Link>
       </aside>
 
-      <header hidden={focused} className="uix-header sticky top-0 z-20 border-b bg-background/85 backdrop-blur">
+      <header hidden={focused} className={(onToday ? "max-md:hidden " : "") + "uix-header sticky top-0 z-20 border-b bg-background/85 backdrop-blur"}>
         <div className="mx-auto flex max-w-[1440px] items-center gap-1 px-4 py-2.5 sm:px-8">
           <Link to="/dashboard" aria-label="Ledgerline home" className="flex items-center"><LedgerlineBrand /></Link>
           <div className="ml-auto flex items-center">
@@ -119,12 +99,10 @@ export function AppShell({ children }: { children: ReactNode }) {
             <Button size="icon" variant="ghost" aria-label="Smart Add" title="Smart Add" className="hidden sm:inline-flex lg:hidden" onClick={() => setSmartOpen(true)}><Plus className="size-5" /></Button>
             <Link to="/search" aria-label="Search" className="header-search rounded-xl p-3 text-muted-foreground transition hover:text-foreground"><span className="hidden xl:inline">Search Ledgerline</span><Search className="h-5 w-5" /></Link>
             <Link to="/inbox" aria-label="Notifications" className="rounded-xl p-3 text-muted-foreground transition hover:text-foreground"><Bell className="h-5 w-5" /></Link>
-            <Button size="icon" variant="ghost" onClick={() => setHidden((h) => !h)} aria-label={hidden ? "Show amounts" : "Hide amounts"} className="rounded-xl text-muted-foreground">{hidden ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}</Button>
-            <Link to="/auth" aria-label={name ? `Account: ${name}` : "Account"} title={name || "Account"} className="rounded-xl p-3 text-muted-foreground transition hover:text-foreground"><UserRound className="h-5 w-5" /></Link>
+            <Link to="/spaces" className="mx-1 hidden rounded-full border px-3 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground md:inline-flex">{preferences.homeScope === "all" ? "All spaces" : SCOPE_LABEL[preferences.homeScope]}</Link>
+            <Button size="icon" variant="ghost" onClick={() => setHidden((h) => !h)} aria-label={hidden ? "Show amounts" : "Hide amounts"} className="hidden rounded-xl text-muted-foreground sm:inline-flex">{hidden ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}</Button>
+            <Link to="/auth" aria-label={name ? `Account: ${name}` : "Account"} title={name || "Account"} className="cmp-header-avatar">{initials(name || "Ledgerline")}</Link>
           </div>
-        </div>
-        <div className="mx-auto max-w-6xl px-4 pb-2 sm:px-8">
-          <WorkspaceSelector />
         </div>
       </header>
 
@@ -138,12 +116,12 @@ export function AppShell({ children }: { children: ReactNode }) {
       </main>
 
       <nav hidden={focused} aria-label="Primary" className="journal-bottom fixed inset-x-0 bottom-0 z-30 flex items-center justify-around border-t bg-card/95 px-2 pb-[env(safe-area-inset-bottom)] pt-2 text-muted-foreground md:hidden">
-        <Link to="/dashboard" className="flex flex-1 flex-col items-center gap-0.5 rounded-2xl py-1.5 text-[10px] font-semibold" activeProps={{ className: "!text-primary bg-secondary" }}>
+        <Link to="/dashboard" className="flex flex-1 flex-col items-center gap-0.5 rounded-2xl py-1.5 text-[10px] font-semibold" activeProps={{ "aria-current": "page" }}>
           <Home className="h-5 w-5" />Today
         </Link>
-        <Button variant="ghost" onClick={() => setSpacesOpen(true)} aria-label="Spaces" aria-expanded={spacesOpen} className="h-12 flex-1 flex-col gap-0.5 text-[10px] text-ink-muted hover:bg-sidebar-accent hover:text-ink-foreground"><Users className="h-5 w-5" />Spaces</Button>
-        <Button variant="ghost" aria-label="Smart Add" title="Smart Add" onClick={() => setSmartOpen(true)} className="-mt-5 h-14 w-14 shrink-0 rounded-full bg-gold text-gold-foreground shadow-gold hover:bg-gold hover:text-gold-foreground"><Plus className="h-7 w-7" /></Button>
-        <Link to="/inbox" className="flex flex-1 flex-col items-center gap-0.5 rounded-2xl py-1.5 text-[10px] font-semibold" activeProps={{ className: "!text-primary bg-secondary" }}>
+        <Link to="/spaces" aria-label="Spaces" className="flex flex-1 flex-col items-center gap-0.5 rounded-2xl py-1.5 text-[10px] font-semibold" activeProps={{ "aria-current": "page" }}><Users className="h-5 w-5" />Spaces</Link>
+        <Button variant="ghost" aria-label="Smart Add" title="Smart Add" onClick={() => setSmartOpen(true)} className="cmp-plus shrink-0"><Plus /></Button>
+        <Link to="/inbox" className="flex flex-1 flex-col items-center gap-0.5 rounded-2xl py-1.5 text-[10px] font-semibold" activeProps={{ "aria-current": "page" }}>
           <Inbox className="h-5 w-5" />Review
         </Link>
         <Button variant="ghost" onClick={() => setMoreOpen(true)} aria-label="More modules" aria-expanded={moreOpen} className="h-12 flex-1 flex-col gap-0.5 text-[10px] text-ink-muted hover:bg-sidebar-accent hover:text-ink-foreground">
@@ -152,20 +130,6 @@ export function AppShell({ children }: { children: ReactNode }) {
       </nav>
 
       <SmartAdd open={smartOpen} onOpenChange={setSmartOpen} scope={preferences.homeScope === 'all' ? undefined : preferences.homeScope} />
-      <Dialog open={spacesOpen} onOpenChange={setSpacesOpen}>
-        <DialogContent className="journal-spaces native-sheet sm:max-w-md"><DialogHeader><DialogTitle>Spaces</DialogTitle></DialogHeader>
-          <WorkspaceSelector />
-          <div className="divide-y">
-          {ACTIVE_SCOPES.map(s => <Button key={s} variant="ghost" aria-pressed={preferences.homeScope === s} className="h-16 w-full justify-between rounded-none px-1" onClick={async () => { await useSpace(s); }}><span className="flex items-center gap-3"><Users className="size-5 text-gold-strong" /><span>{SCOPE_LABEL[s]}</span></span><ArrowRight className="size-4" /></Button>)}
-          <Link to="/trips" onClick={() => setSpacesOpen(false)} className="flex min-h-16 items-center justify-between text-sm"><span className="flex items-center gap-3"><Plane className="size-5 text-gold-strong" />Travel</span><ArrowRight className="size-4" /></Link>
-          <Link to="/wealth" onClick={() => setSpacesOpen(false)} className="flex min-h-16 items-center justify-between text-sm"><span className="flex items-center gap-3"><Gem className="size-5 text-gold-strong" />Investments</span><ArrowRight className="size-4" /></Link>
-          </div>
-          <Link to="/expenses" onClick={() => setSpacesOpen(false)} className="flex min-h-12 items-center gap-3 border-b text-sm"><ListFilter className="size-5 text-primary" />Journal</Link>
-          <Link to="/entities" onClick={() => setSpacesOpen(false)} className="flex min-h-12 items-center gap-3 text-sm"><Users className="size-5 text-primary" />Companies & years</Link>
-          <Button onClick={() => { setSpacesOpen(false); setSmartOpen(true); }}><Plus className="size-4" />Add to this space</Button>
-        </DialogContent>
-      </Dialog>
-
       <Dialog open={moreOpen} onOpenChange={setMoreOpen}>
         <DialogContent className="native-sheet max-h-[85dvh] overflow-y-auto sm:max-w-2xl" aria-label="All modules">
           <DialogHeader>
@@ -173,6 +137,7 @@ export function AppShell({ children }: { children: ReactNode }) {
               <Button size="icon" variant="ghost" aria-label="Close" onClick={() => setMoreOpen(false)}><X className="h-5 w-5" /></Button>
             </DialogTitle>
           </DialogHeader>
+          <Button variant="outline" className="mb-2 h-11 w-full justify-start gap-3 sm:hidden" onClick={() => setHidden((h) => !h)} aria-pressed={hidden}>{hidden ? <EyeOff className="size-5" /> : <Eye className="size-5" />}{hidden ? "Show amounts" : "Hide amounts"}</Button>
           <ModuleDirectory onNavigate={() => setMoreOpen(false)} />
         </DialogContent>
       </Dialog>

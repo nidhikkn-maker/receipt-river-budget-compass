@@ -1,44 +1,99 @@
 import { Link } from '@tanstack/react-router';
-import { ArrowUpRight, CheckCheck, Wallet, CalendarDays, BookOpen } from 'lucide-react';
+import { Bell, CalendarClock, ChevronRight, CreditCard, Inbox, Plus, Search, Sparkles, Compass } from 'lucide-react';
 import { money, type Expense } from '@/lib/expenses';
 import { TXN_LABEL } from '@/lib/ledger';
-import sunrise from '@/assets/journal-sunrise.jpg';
+import { LedgerlineSymbol } from './LedgerlineLogo';
+import sunrise from '@/assets/companion-sunrise.jpg';
 
-export function JournalToday({ name, today, spending, cash, safe, cardDue, estimated, readiness, unmatched, entries, upcoming }: {
-  name: string; today: string; spending: number; cash: number | null; safe: number | null; cardDue: number;
-  estimated: boolean; readiness: string; unmatched: number; entries: Expense[];
+/** Opens the shell's in-place Smart Add sheet from anywhere on the page. */
+export const openSmartAdd = () => window.dispatchEvent(new CustomEvent('ledgerline:smart-add'));
+
+/** "Krupanidhi Karunanithi" → "KK"; single names stay as the first name. */
+export function shortName(name: string) {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length >= 2) return parts.slice(0, 2).map(p => p[0]!.toUpperCase()).join('');
+  return parts[0] ?? '';
+}
+export function initials(name: string) {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  return (parts.length >= 2 ? parts.slice(0, 2).map(p => p[0]) : [parts[0]?.[0] ?? 'L']).join('').toUpperCase();
+}
+export function greetingFor(hour: number) { return hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening'; }
+
+const friendlyDay = (iso: string, today: string) => {
+  if (iso === today) return 'Today';
+  const y = new Date(`${today}T12:00:00`); y.setDate(y.getDate() - 1);
+  if (iso === y.toISOString().slice(0, 10)) return 'Yesterday';
+  return new Date(`${iso}T12:00:00`).toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short' });
+};
+
+type Action = { key: string; icon: typeof Inbox; title: string; sub: string; to?: string; onClick?: () => void };
+
+export function JournalToday({ name, today, spending, periodLabel, safe, cardDue, estimated, unmatched, entries, upcoming }: {
+  name: string; today: string; spending: number; periodLabel: string; safe: number | null; cardDue: number;
+  estimated: boolean; unmatched: number; entries: Expense[];
   upcoming: { name: string; date: string; amount: number }[];
 }) {
-  const recent = [...entries].sort((a,b) => b.date.localeCompare(a.date) || b.id.localeCompare(a.id)).slice(0,8);
-  return <div className="journal-today">
-    <section className="journal-hero relative mb-7 overflow-hidden">
-      <img src={sunrise} alt="" width={1536} height={512} className="absolute inset-0 h-full w-full object-cover" />
-      <div className="relative">
-        <p className="text-xs font-medium text-foreground">{new Date(`${today}T12:00:00`).toLocaleDateString('en-IN',{weekday:'long',day:'numeric',month:'long'})}</p>
-        <h1 className="journal-heading mt-3 text-3xl sm:text-4xl">Today{ name ? `, ${name.split(' ')[0]}` : ''}.</h1>
-        <p className="mt-2 max-w-sm text-sm text-foreground">Your money, in perspective.</p>
+  const recent = [...entries].sort((a, b) => b.date.localeCompare(a.date) || b.id.localeCompare(a.id)).slice(0, 6);
+  const who = shortName(name);
+  const hour = new Date().getHours();
+  const next = upcoming[0];
+
+  // Up to three grounded next steps, each from saved records only.
+  const actions: Action[] = [];
+  actions.push(unmatched
+    ? { key: 'review', icon: Inbox, title: `${unmatched} ${unmatched === 1 ? 'payment' : 'payments'} to check`, sub: 'Confirm what they were', to: '/inbox' }
+    : { key: 'review', icon: Inbox, title: 'Nothing waiting for you', sub: 'Your review list is clear', to: '/inbox' });
+  if (next) actions.push({ key: 'due', icon: CalendarClock, title: next.name, sub: `Due ${friendlyDay(next.date, today)} · ${money(next.amount)}`, to: '/plan' });
+  if (cardDue > 0.005) actions.push({ key: 'cards', icon: CreditCard, title: 'Card balances to pay', sub: money(cardDue), to: '/wealth' });
+  if (actions.length < 3) actions.push({ key: 'add', icon: Plus, title: 'Add a receipt or statement', sub: 'Photo, file, voice or a quick note', onClick: openSmartAdd });
+  if (actions.length < 3) actions.push({ key: 'start', icon: Compass, title: 'See how Ledgerline works', sub: 'A two-minute guide', to: '/start' });
+
+  const story = spending > 0
+    ? `You've spent ${money(spending)} ${periodLabel}.${safe !== null ? ` Around ${money(safe)} looks free to spend${estimated ? ', as an estimate' : ''}.` : ''}`
+    : `Nothing spent ${periodLabel} yet. Add a receipt or statement and your story begins here.`;
+  const periodTitle = periodLabel === 'this month' ? new Date(`${today}T12:00:00`).toLocaleDateString('en-IN', { month: 'long', year: 'numeric' }) : periodLabel.replace(/^in the /, '').replace(/^\w/, c => c.toUpperCase());
+
+  return <div className="cmp-today">
+    <section className="cmp-hero" aria-label="Greeting">
+      <img src={sunrise} alt="" width={1536} height={1152} fetchPriority="high" />
+      <div className="cmp-hero-bar">
+        <Link to="/dashboard" aria-label="Ledgerline home" className="!w-auto !rounded-lg"><LedgerlineSymbol className="h-7 w-auto" /></Link>
+        <span className="flex-1" />
+        <Link to="/search" aria-label="Search"><Search className="size-5" /></Link>
+        <Link to="/inbox" aria-label="Notifications"><Bell className="size-5" /></Link>
+        <Link to="/auth" aria-label={name ? `Account: ${name}` : 'Account'} className="cmp-avatar">{initials(name || 'Ledgerline')}</Link>
       </div>
+      <h1 className="cmp-greeting cmp-serif">{greetingFor(hour)}{who ? `, ${who}` : ''}</h1>
+      <p className="cmp-greeting-sub">{new Date(`${today}T12:00:00`).toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long' })} · here's your day</p>
     </section>
-    <div className="journal-columns grid min-w-0 gap-8 xl:gap-12">
-      <div className="min-w-0">
-        <section className="mb-7 border-b pb-6" aria-label="Your money story">
-          <p className="journal-kicker">Your money story</p>
-          <div className="mt-3 flex items-end justify-between gap-3"><div><p className="text-xs text-muted-foreground">Recorded spending · selected period</p><p className="financial-amount mt-1 text-3xl font-medium">{money(spending)}</p></div><Link to="/reports" aria-label="Open spending reports" className="flex size-11 items-center justify-center rounded-full border"><ArrowUpRight className="size-5" /></Link></div>
-          <div className="mt-5 grid grid-cols-2 gap-4"><div><p className="text-xs text-muted-foreground">Available cash</p><p className="financial-amount mt-1 text-lg">{cash === null ? 'Not available' : money(cash)}</p></div><div><p className="text-xs text-muted-foreground">Safe to spend{estimated ? ' · estimated' : ''}</p><p className="financial-amount mt-1 text-lg">{safe === null ? 'Not available' : money(safe)}</p></div></div>
+
+    <div className="cmp-today-body">
+      <div className="cmp-today-side">
+        <section className="cmp-panel" aria-label="Today actions">
+          <div className="cmp-panel-head"><h2 className="cmp-serif">Today</h2><span>{actions.length > 2 ? '3 things' : `${actions.length} things`}</span></div>
+          {actions.slice(0, 3).map(a => {
+            const body = <><span className="cmp-icon"><a.icon /></span><span className="min-w-0 flex-1"><b className="truncate">{a.title}</b><small className="truncate">{a.sub}</small></span><ChevronRight /></>;
+            return a.to ? <Link key={a.key} to={a.to} className="cmp-row">{body}</Link> : <button key={a.key} type="button" onClick={a.onClick} className="cmp-row">{body}</button>;
+          })}
         </section>
-        <section aria-label="Today actions" className="mb-8"><h2 className="journal-heading text-2xl">A little attention today</h2>
-          <div className="mt-3 divide-y"><Link to="/inbox" className="journal-action"><CheckCheck className="size-5 text-gold-strong" /><div className="min-w-0 flex-1"><p className="font-medium">{unmatched ? `${unmatched} ${unmatched === 1 ? 'entry' : 'entries'} to reconcile` : 'Your review desk'}</p><p className="mt-0.5 text-xs text-muted-foreground">{readiness}</p></div><ArrowUpRight className="size-4 shrink-0" /></Link>
-          <Link to="/statements" className="journal-action"><BookOpen className="size-5 text-gold-strong" /><div className="flex-1"><p className="font-medium">Bring your records together</p><p className="text-xs"><Link to="/start" className="text-primary underline">New here? See how Ledgerline works</Link></p><p className="mt-0.5 text-xs text-muted-foreground">Statements & supporting documents</p></div><ArrowUpRight className="size-4" /></Link></div>
-        </section>
-        <section aria-label="Financial journal"><div className="flex items-center justify-between"><h2 className="journal-heading text-2xl">The journal</h2><Link to="/expenses" className="text-xs font-medium text-muted-foreground">View all <ArrowUpRight className="inline size-3" /></Link></div>
-          {!recent.length && <p className="py-8 text-sm text-muted-foreground">Your journal is quiet. No recorded activity yet.</p>}
-          <ol className="mt-4">{recent.map((e,i) => <li key={e.id} className="journal-entry relative border-l pl-6 pb-5"><span className="absolute -left-1 top-1 size-2 rounded-full bg-gold" />{(i === 0 || recent[i-1]?.date !== e.date) && <p className="mb-2 text-xs text-muted-foreground">{e.date}</p>}<Link to="/new" search={{edit:e.id}} className="flex min-w-0 items-start justify-between gap-3"><div className="min-w-0"><p className="truncate font-medium">{e.merchant || e.title}</p><p className="mt-1 text-xs text-muted-foreground">{TXN_LABEL[e.txnType ?? 'expense']} · {e.category}{e.reconciledAt ? ' · Reconciled' : ''}</p></div><span className="financial-amount shrink-0 text-sm">{money(e.originalAmount ?? e.amount,e.currency)}</span></Link></li>)}</ol>
+        <section className="cmp-panel" aria-label="Your money story">
+          <div className="cmp-panel-head"><h2 className="cmp-serif">Your Money Story</h2><span>{periodTitle}</span></div>
+          <div className="cmp-story"><p className="flex gap-2"><Sparkles className="mt-1 size-4 shrink-0 text-companion-gold" aria-hidden />{story}</p><Link to="/reports">See the full story <ChevronRight className="size-4" /></Link></div>
         </section>
       </div>
-      <aside className="journal-side min-w-0 space-y-7">
-        <section className="border-t pt-5"><div className="flex items-center gap-2"><CalendarDays className="size-4 text-gold-strong" /><h2 className="journal-heading text-xl">On the horizon</h2></div><ul className="mt-3 divide-y">{upcoming.slice(0,4).map((u,i) => <li key={`${u.name}-${i}`} className="py-3"><p className="text-xs text-muted-foreground">{u.date}</p><div className="mt-1 flex justify-between gap-3 text-sm"><span className="min-w-0 break-words">{u.name}</span><span className="financial-amount">{money(u.amount)}</span></div></li>)}</ul>{!upcoming.length && <p className="py-4 text-sm text-muted-foreground">Nothing scheduled in the available plan.</p>}<Link to="/plan" className="text-xs font-medium">Open plan <ArrowUpRight className="inline size-3" /></Link></section>
-        <section className="border-t pt-5"><div className="flex items-center gap-2"><Wallet className="size-4 text-gold-strong" /><h2 className="journal-heading text-xl">Wealth & Plan</h2></div><p className="mt-4 text-xs text-muted-foreground">Recorded card balances</p><p className="financial-amount mt-1 text-2xl">{money(cardDue)}</p><Link to="/wealth" className="mt-4 block text-xs font-medium">Accounts & investments <ArrowUpRight className="inline size-3" /></Link></section>
-      </aside>
+
+      <section className="cmp-panel cmp-today-main cmp-timeline" aria-label="Financial journal">
+        <div className="cmp-panel-head"><h2 className="cmp-serif">Recent activity</h2><Link to="/expenses">View all</Link></div>
+        {!recent.length && <p className="px-1 pb-4 text-sm cmp-muted">Nothing recorded yet. Tap + to add your first receipt.</p>}
+        {recent.map((e, i) => <div key={e.id}>
+          {(i === 0 || recent[i - 1]?.date !== e.date) && <p className="cmp-day">{friendlyDay(e.date, today)}</p>}
+          <Link to="/new" search={{ edit: e.id }} className="cmp-row">
+            <span className="min-w-0 flex-1"><b className="truncate">{e.merchant || e.title}</b><small className="truncate">{TXN_LABEL[e.txnType ?? 'expense']} · {e.category}</small></span>
+            <span className="cmp-amount">{money(e.originalAmount ?? e.amount, e.currency)}</span>
+          </Link>
+        </div>)}
+      </section>
     </div>
   </div>;
 }

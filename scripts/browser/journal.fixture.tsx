@@ -7,6 +7,7 @@ import { Route as ReviewRoute } from '../../src/routes/_authenticated/inbox';
 import { Route as WealthRoute } from '../../src/routes/_authenticated/wealth';
 import { Route as NewRoute } from '../../src/routes/_authenticated/new';
 import { Route as StartRoute } from '../../src/routes/_authenticated/start';
+import { Route as SpacesRoute } from '../../src/routes/_authenticated/spaces';
 import { StoreFixture } from './expense-mocks';
 import { Toaster } from '../../src/components/ui/sonner';
 import '../../src/styles.css';
@@ -18,6 +19,7 @@ const review = ReviewRoute.update({ id: '/inbox', path: '/inbox', getParentRoute
 const wealth = WealthRoute.update({ id: '/wealth', path: '/wealth', getParentRoute: () => auth });
 const entry = NewRoute.update({ id: '/new', path: '/new', getParentRoute: () => auth });
 const start = StartRoute.update({ id: '/start', path: '/start', getParentRoute: () => auth });
-const router = createRouter({ routeTree: root.addChildren([auth.addChildren([today,review,wealth,entry,start])]) });
+const spaces = SpacesRoute.update({ id: '/spaces', path: '/spaces', getParentRoute: () => auth });
+const router = createRouter({ routeTree: root.addChildren([auth.addChildren([today,review,wealth,entry,start,spaces])]) });
 const node = document.getElementById('root');
 if (node) createRoot(node).render(<RouterProvider router={router} />);
