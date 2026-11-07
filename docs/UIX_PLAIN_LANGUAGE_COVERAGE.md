@@ -127,3 +127,15 @@ Status as of this batch. Nothing here is marked done without the evidence named.
 | CSV statement → table preview → batch review → apply → Undo, in sheet | Pass | smart-add-statement-batch.png (test_statement_desk.py) |
 | Voice / Quick / Message open inside sheet | Unit-tested only | SmartAdd.test.tsx |
 | Real camera, hosted save, DocuRepo read-back, real device | Not verified | needs device / hosted test |
+
+## Financial Companion visual correction (Nov 2026)
+The owner rejected the flat journal Today page. The two attached screenshots were not available to the agent, so this pass follows the owner's written description of the approved five-screen reference. Evidence (sample data, offline fixture): `docs/evidence/companion/`.
+
+| Screen | Built | Checked at | Remaining differences |
+|---|---|---|---|
+| Today | Sunrise top area, gold L, search/bell/initials, greeting, overlapping Today panel (3 real actions), Money Story line, recent activity; split view on iPad and desktop | 390, 430, 1180, 1440 | Exact artwork and spacing vs the reference not compared; greeting uses initials only for two-word names |
+| My Spaces | New page, raised rows, bottom band; tapping a space sets the view and returns to Today | 390, 430, 1180, 1440 | Travel/Investments open their existing pages |
+| Add to Ledgerline | Dark sunrise sheet, 4 pearl rows, extras as small links; preview/Canvas in place | 390, 430, 1180, 1440 | Review stages after the chooser stay on light surfaces |
+| Review | To review / Reconciled / Ignored with Today/Yesterday groups; older tools under "More ways to review" | 390, 430, 1180, 1440 | Ignored items can't be restored from this view yet |
+| Wealth & Plan | Landscape band, Net Worth / Investments / Goals / Plan & Forecast rows, details below | 390, 430, 1180, 1440 | Lower detail sections keep their earlier styling |
+| All other pages | Shared header/bottom-bar updates only | — | Still need the companion treatment |

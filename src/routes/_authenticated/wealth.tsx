@@ -5,7 +5,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Archive, ArchiveRestore } from "lucide-react";
-import { PageTitle, Stat } from "@/components/AppShell";
+import { Stat } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -20,6 +20,8 @@ import { FundPortfolio } from "@/components/FundPortfolio";
 import { DematHoldings } from "@/components/DematHoldings";
 import { MarketPanel } from "@/components/books/MarketPanel";
 import { useNetWorth } from "@/components/books/useBooks";
+import { ChevronRight, Scale, LineChart, Target, CalendarRange } from "lucide-react";
+import band from "@/assets/companion-wealth-band.jpg";
 
 export const Route = createFileRoute("/_authenticated/wealth")({
   head: () => ({
@@ -36,7 +38,7 @@ export const Route = createFileRoute("/_authenticated/wealth")({
 });
 
 function Wealth() {
-  const { accounts, transactions, valuations, setArchived, updateAccount, loans, preferences } = useStore();
+  const { accounts, transactions, valuations, setArchived, updateAccount, loans, preferences, goals, commitments } = useStore();
   const [showArchived, setShowArchived] = useState(false);
   // Same net worth as Home: each account, holding, property and loan counted once [v6.1 §9].
   const canonical = useNetWorth();
@@ -46,8 +48,15 @@ function Wealth() {
 
   return (
     <div className="journal-wealth uix-family-money">
-      <PageTitle eyebrow="The longer view" title="Wealth & Plan" sub="Accounts, investments and the plans ahead." />
-      <div className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-3">
+      <section className="cmp-band" aria-label="Wealth & Plan"><img src={band} alt="" width={1792} height={640} /><header className="cmp-page-head"><h1 className="cmp-serif">Wealth & Plan</h1><p>What you own, what you're working towards.</p></header></section>
+      <nav aria-label="Wealth sections" className="cmp-list cmp-wealth-grid -mt-6 relative mb-8 gap-3">
+        <a href="#net-worth" className="cmp-list-row"><span className="cmp-icon"><Scale /></span><span className="min-w-0 flex-1"><b>Net Worth</b><small>What you own minus what you owe</small></span><span className="cmp-amount">{money(nw.net)}</span><ChevronRight /></a>
+        <a href="#investments" className="cmp-list-row"><span className="cmp-icon"><LineChart /></span><span className="min-w-0 flex-1"><b>Investments</b><small>Funds, shares and deposits</small></span><span className="cmp-amount">{canonical.portfolio ? money(canonical.portfolio) : "None yet"}</span><ChevronRight /></a>
+        <a href="#goals" className="cmp-list-row"><span className="cmp-icon"><Target /></span><span className="min-w-0 flex-1"><b>Goals</b><small>{goals.length ? `${money(goals.reduce((t, g) => t + (g.saved ?? 0), 0))} saved so far` : "Set something to save for"}</small></span><span className="cmp-amount">{goals.length ? `${goals.length} ${goals.length === 1 ? "goal" : "goals"}` : "Add"}</span><ChevronRight /></a>
+        <Link to="/plan" className="cmp-list-row"><span className="cmp-icon"><CalendarRange /></span><span className="min-w-0 flex-1"><b>Plan & Forecast</b><small>Bills ahead and how cash looks</small></span><span className="cmp-amount">{commitments.length ? `${commitments.length} planned` : "Start a plan"}</span><ChevronRight /></Link>
+      </nav>
+      <h2 id="net-worth" className="cmp-serif mb-3 scroll-mt-24 text-xl">The details</h2>
+      <div className="wealth-stats mb-6 grid grid-cols-1 gap-3 sm:grid-cols-3">
         <Stat label="What I own" value={money(nw.assets)} />
         <Stat label="What I owe" value={money(nw.liabilities)} />
         <Stat label="My total financial position" value={money(nw.net)} />
@@ -55,6 +64,7 @@ function Wealth() {
       <p className="-mt-3 mb-4 text-xs text-muted-foreground">What I own includes money available, investments and property at their latest recorded value. What I owe is card dues and loans. Your total position is the difference — it isn't cash you can spend today.</p>
       <AccountingDetails terms={['cashBalance','investments','liabilities','netWorth']} />
       {canonical.quality.length > 0 && <p className="mb-5 text-xs text-destructive">{canonical.quality.join(' · ')}</p>}
+      <div id="investments" className="scroll-mt-24" />
       <FundPortfolio />
       <DematHoldings />
       <MarketPanel />
@@ -101,7 +111,7 @@ function Wealth() {
       </div>
       <div className="mt-8 grid gap-6 lg:grid-cols-2">
         <LoansPanel />
-        <GoalsPanel />
+        <div id="goals" className="scroll-mt-24"><GoalsPanel /></div>
       </div>
     </div>
   );

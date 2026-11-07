@@ -1,5 +1,5 @@
 """Actual shell/entry UI, synthetic local store; no Cloud writes or hosted claims."""
-import asyncio
+import asyncio, re
 from pathlib import Path
 from urllib.parse import urlparse
 from playwright.async_api import async_playwright, expect
@@ -19,7 +19,7 @@ async def main():
  OUT.mkdir(parents=True, exist_ok=True)
  async with async_playwright() as p:
   browser = await p.chromium.launch(headless=True)
-  for width,height in [(390,844),(1180,820),(1440,1800)]:
+  for width,height in [(390,844),(430,932),(1180,820),(1440,1000)]:
    context = await browser.new_context(viewport={'width':width,'height':height})
    page = await context.new_page()
    errors=[]; blocked=[]
@@ -39,28 +39,29 @@ async def main():
      name=path.split('/')[-1].removesuffix('.tsx'); await route.fulfill(content_type='application/javascript',body=f'export const {name}={STUBS[name]};')
     else: await route.continue_()
    await context.route('**/*',isolate)
-   for route_name,heading in [('dashboard','Today, Alex.'),('inbox','Review'),('wealth','Wealth & Plan'),('start','Your money, in plain words')]:
+   for route_name,heading in [('dashboard',re.compile(r'^Good (morning|afternoon|evening), Alex$')),('spaces','My Spaces'),('inbox','Review'),('wealth','Wealth & Plan'),('start','Your money, in plain words')]:
     await page.goto('http://localhost:8080/'+route_name)
     await page.wait_for_timeout(1000); print(route_name,errors,(await page.locator('body').inner_text())[:500])
-    await expect(page.get_by_role('heading',name=heading,exact=True)).to_be_visible(timeout=15000)
-    plain_checks={'inbox':['Ready to confirm','Already organised','What to do next'],'wealth':['What I own','What I owe','My total financial position','Accounting details'],'start':['What would you like to manage?','Money moved between my accounts','Paying my credit card bill','A bank statement','Buying something that lasts','Getting paid back']}
-    for t in plain_checks.get(route_name,[]): await expect(page.get_by_text(t,exact=False).first).to_be_visible()
+    await expect(page.get_by_role('heading',name=heading,**({} if isinstance(heading,re.Pattern) else {'exact':True})).first).to_be_visible(timeout=15000)
+    plain_checks={'dashboard':['Your Money Story','Recent activity'],'spaces':['Personal','Family','Business','Travel','Investments'],'inbox':['To review','Reconciled','Ignored','Ready to confirm','What to do next'],'wealth':['Net Worth','Investments','Goals','Plan & Forecast','What I own','What I owe','My total financial position','Accounting details'],'start':['What would you like to manage?','Money moved between my accounts','Paying my credit card bill','A bank statement','Buying something that lasts','Getting paid back']}
+    for t in plain_checks.get(route_name,[]): await expect(page.get_by_text(t,exact=False).filter(visible=True).first).to_be_visible()
     if route_name=='start':
      await page.get_by_role('radio',name='Family').click(); await expect(page.get_by_text('Paying my credit card bill')).to_have_count(0); await page.get_by_role('radio',name='Family').click()
     await page.screenshot(path=str(OUT/f'{width}-{route_name}.png'))
     assert await page.evaluate('document.documentElement.scrollWidth <= innerWidth'), (width,route_name,'overflow')
    await page.goto('http://localhost:8080/dashboard')
-   await expect(page.get_by_role('heading',name='Today, Alex.',exact=True)).to_be_visible()
-   await page.get_by_role('button',name='Spaces',exact=True).filter(visible=True).first.click()
-   await expect(page.get_by_role('dialog',name='Spaces')).to_be_visible()
-   await page.wait_for_timeout(350)
-   await page.screenshot(path=str(OUT/f'{width}-spaces.png'))
-   await page.keyboard.press('Escape')
+   await expect(page.get_by_role('heading',name=re.compile(r'^Good .*, Alex$'))).to_be_visible()
+   await page.get_by_role('link',name='Spaces',exact=True).filter(visible=True).first.click()
+   await expect(page.get_by_role('heading',name='My Spaces')).to_be_visible()
+   await page.locator('button.cmp-list-row',has_text='Business').click()
+   await expect(page.get_by_role('heading',name=re.compile(r'^Good .*, Alex$'))).to_be_visible()
    await page.get_by_role('button',name='Smart Add',exact=True).filter(visible=True).first.click()
    await expect(page.get_by_role('dialog',name='Smart Add')).to_be_visible()
    await page.wait_for_timeout(350)
    bounds = await page.get_by_role("dialog",name="Smart Add").bounding_box()
    assert bounds and bounds["x"] >= -1 and bounds["x"] + bounds["width"] <= width + 1, bounds
+   await expect(page.get_by_text('Add to Ledgerline').filter(visible=True).first).to_be_visible()
+   for label in ['Scan or Photo','Upload File','Voice Entry','Quick Entry']: await expect(page.get_by_role('button',name=label,exact=True)).to_be_visible()
    await page.screenshot(path=str(OUT/f'{width}-smart.png'))
    from PIL import Image, ImageDraw
    receipt=OUT/'receipt.png'; im=Image.new('RGB',(240,320),'white'); ImageDraw.Draw(im).text((20,20),'CONTROLLED CAFE\nTotal 432.10',fill='black'); im.save(receipt)

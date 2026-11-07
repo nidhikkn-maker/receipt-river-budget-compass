@@ -30,7 +30,7 @@ describe('Smart Add stays in place', () => {
     await waitFor(() => expect(screen.getByText('statement review')).toBeTruthy());
     expect(navigate).not.toHaveBeenCalled();
   });
-  it.each([['Voice', 'voice'], ['Quick Entry', 'quick'], ['From Message', 'message']])('%s opens the typed review in place', async (label, mode) => {
+  it.each([['Voice Entry', 'voice'], ['Quick Entry', 'quick'], ['From Message', 'message']])('%s opens the typed review in place', async (label, mode) => {
     render(<SmartAdd open onOpenChange={() => {}} />);
     fireEvent.click(screen.getAllByRole('button', { name: label })[0]!);
     expect(await screen.findByText('receipt review')).toBeTruthy();
