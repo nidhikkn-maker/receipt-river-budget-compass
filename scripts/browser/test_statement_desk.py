@@ -43,6 +43,8 @@ class StatementDeskFlow(unittest.IsolatedAsyncioTestCase):
             elif parsed.path in ("/src/lib/store.tsx", "/src/integrations/supabase/client.ts"):
                 name = "useStore" if "store.tsx" in parsed.path else "supabase"
                 await route.fulfill(status=200, content_type="application/javascript", body=f'export {{ {name} }} from "/scripts/browser/statement-desk-mocks.tsx";')
+            elif parsed.path == '/src/lib/statement-pipeline/atomic-undo.functions.ts':
+                await route.fulfill(status=200, content_type='application/javascript', body='export { undoStatement } from "/scripts/browser/statement-desk-mocks.tsx";')
             elif request.method not in ("GET", "HEAD"):
                 self.blocked.append("unexpected write")
                 await route.abort()
@@ -213,12 +215,12 @@ class StatementDeskFlow(unittest.IsolatedAsyncioTestCase):
         await expect(self.page.get_by_role('button', name='Undo this upload (2 posted)')).to_be_visible()
         await self.page.evaluate('deskFixture.failRemoveId = deskFixture.transactions[0].id')
         await self.page.get_by_label('Recent uploads').get_by_role('button', name='Undo', exact=True).click()
-        await self.page.wait_for_function('deskFixture.transactions.length === 1')
+        await self.page.wait_for_function('deskFixture.atomicCalls === 1')
         await expect(self.page.get_by_label('Recent uploads')).to_contain_text('Undo unfinished')
         await self.page.reload()
         await expect(self.page.get_by_role('heading', name='Statement Desk')).to_be_visible()
         await expect(self.page.get_by_label('Recent uploads')).to_contain_text('Undo unfinished')
-        self.assertEqual(await self.page.evaluate('deskFixture.transactions.length'), 1)
+        self.assertEqual(await self.page.evaluate('deskFixture.transactions.length'), 2)
         await self.page.get_by_label('Recent uploads').screenshot(path=str(EVIDENCE / 'failed-undo-reloaded.png'))
         await self.page.get_by_label('Recent uploads').get_by_role('button', name='Undo', exact=True).click()
         await expect(self.page.get_by_label('Recent uploads')).to_have_count(0)
@@ -247,6 +249,7 @@ class StatementDeskFlow(unittest.IsolatedAsyncioTestCase):
 
     async def test_committed_but_lost_save_response_cannot_be_hidden_by_undo(self):
         await self.page.evaluate('deskFixture.loseSaveResponse = true')
+        await self.page.evaluate('deskFixture.failSaveRead = true')
         csv = 'Date,Description,Debit,Credit\n2026-10-02,SWIGGY ORDER,250,\n'
         await self.page.get_by_label('Statement files').set_input_files(files=[{'name': 'lost.csv', 'mimeType': 'text/csv', 'buffer': csv.encode()}])
         await self.page.locator('select').first.select_option('desk-account')
@@ -299,11 +302,66 @@ class StatementDeskFlow(unittest.IsolatedAsyncioTestCase):
         await self.page.get_by_label('Recent uploads').get_by_role('button', name='Undo', exact=True).click()
         await expect(self.page.get_by_label('Recent uploads')).to_contain_text('Undo unfinished')
         self.assertEqual(await self.page.evaluate('deskFixture.transactions.length'), 2)
+
         self.assertEqual(await self.page.evaluate('deskFixture.removes.length'), 0)
         await self.page.reload()
         await expect(self.page.get_by_role('heading', name='Statement Desk')).to_be_visible()
         await expect(self.page.get_by_label('Recent uploads')).to_contain_text('Undo unfinished')
         self.assertEqual(await self.page.evaluate('deskFixture.transactions.length'), 2)
+
+    async def test_card_payment_connected_balances_duplicate_review_and_atomic_undo(self):
+        await self.page.evaluate("""() => {
+          deskFixture.accounts[0].openingBalance=50000;
+          deskFixture.accounts.push({id:'card',name:'Controlled Amex',kind:'credit_card',openingBalance:15000,archived:false});
+        }""")
+        csv='Date,Description,Debit,Credit\n2026-10-08,NEFT AMEX CARD PAYMENT,9000,\n'
+        await self.page.get_by_label('Statement files').set_input_files(files=[{'name':'card-payment.csv','mimeType':'text/csv','buffer':csv.encode()}])
+        await self.page.locator('select').first.select_option('desk-account')
+        await self.page.get_by_role('button',name='Accept all 1 asking items').click()
+        # The payment destination must be explicitly selected, never inferred from amount.
+        selectors=self.page.locator('select')
+        for i in range(1, await selectors.count()):
+            options=await selectors.nth(i).locator('option').all_text_contents()
+            if 'Controlled Amex' in options:
+                await selectors.nth(i).select_option('card')
+        await self.page.get_by_role('button',name='Apply everything (1 to save)').click()
+        await self.page.wait_for_function("deskFixture.uploads[0]?.status==='complete'")
+        figures=await self.page.evaluate("async()=>{const {accountBalance,cashflow}=await import('/src/lib/ledger.ts');return {bank:accountBalance(deskFixture.accounts[0],deskFixture.transactions),card:accountBalance(deskFixture.accounts[1],deskFixture.transactions),flow:cashflow(deskFixture.transactions)}}")
+        self.assertEqual(figures,{'bank':41000,'card':6000,'flow':{'income':0,'spent':0,'net':0}})
+        await self.page.get_by_role('button',name='Remove card-payment.csv').click()
+        await self.page.get_by_label('Statement files').set_input_files(files=[{'name':'card-payment.csv','mimeType':'text/csv','buffer':csv.encode()}])
+        await self.page.locator('select').first.select_option('desk-account')
+        await expect(self.page.get_by_role('button',name='Accept all 1 asking items')).to_have_count(0)
+        self.assertEqual(await self.page.evaluate('deskFixture.transactions.length'),1)
+        await self.page.get_by_label('Recent uploads').get_by_role('button',name='Undo',exact=True).click()
+        await expect(self.page.get_by_label('Recent uploads')).to_have_count(0)
+        self.assertEqual(await self.page.evaluate('deskFixture.transactions.length'),0)
+
+    async def test_exact_transaction_response_recovery_and_missing_atomic_authority(self):
+        await self.page.evaluate('deskFixture.loseSaveResponse = true')
+        csv = 'Date,Description,Debit,Credit\n2026-10-02,SWIGGY ORDER,250,\n'
+        await self.page.get_by_label('Statement files').set_input_files(files=[{'name':'transaction-response.csv','mimeType':'text/csv','buffer':csv.encode()}])
+        await self.page.locator('select').first.select_option('desk-account')
+        await self.page.get_by_role('button',name='Accept all 1 asking items').click()
+        await self.page.get_by_role('button',name='Apply everything (1 to save)').click()
+        await self.page.wait_for_function("deskFixture.uploads[0]?.status === 'complete'")
+        self.assertEqual(await self.page.evaluate('deskFixture.saves.length'),1)
+        await self.page.reload()
+        await expect(self.page.get_by_role('heading',name='Statement Desk')).to_be_visible()
+        await self.page.evaluate('deskFixture.atomicUnavailable = true')
+        await self.page.get_by_label('Recent uploads').get_by_role('button',name='Undo',exact=True).click()
+        await expect(self.page.get_by_text('Safe Undo is awaiting database release approval. Your records and recovery history are unchanged.')).to_be_visible()
+        self.assertEqual(await self.page.evaluate('deskFixture.transactions.length'),1)
+        self.assertEqual(await self.page.evaluate('deskFixture.atomicCalls'),0)
+        await expect(self.page.get_by_label('Recent uploads')).to_contain_text('Undo unfinished')
+        await self.page.evaluate('deskFixture.atomicUnavailable = false')
+        await self.page.get_by_label('Recent uploads').get_by_role('button',name='Undo',exact=True).dblclick()
+        await expect(self.page.get_by_label('Recent uploads')).to_have_count(0)
+        self.assertEqual(await self.page.evaluate('deskFixture.transactions.length'),0)
+        self.assertEqual(await self.page.evaluate('deskFixture.atomicCalls'),1)
+        await self.page.reload()
+        await expect(self.page.get_by_role('heading', name='Statement Desk')).to_be_visible()
+        self.assertEqual(await self.page.evaluate('deskFixture.transactions.length'), 0)
 
 if __name__ == "__main__":
     unittest.main()
