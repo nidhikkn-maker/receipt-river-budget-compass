@@ -1,0 +1,10 @@
+CREATE TABLE public.device_passkeys(owner_id uuid NOT NULL, credential_id text PRIMARY KEY, public_key text NOT NULL, counter bigint NOT NULL DEFAULT 0, transports jsonb NOT NULL DEFAULT '[]', created_at timestamptz NOT NULL DEFAULT now());
+GRANT SELECT,INSERT,UPDATE,DELETE ON public.device_passkeys TO authenticated;
+GRANT ALL ON public.device_passkeys TO service_role;
+ALTER TABLE public.device_passkeys ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Own passkeys" ON public.device_passkeys FOR ALL TO authenticated USING(owner_id=auth.uid()) WITH CHECK(owner_id=auth.uid());
+CREATE TABLE public.passkey_challenges(owner_id uuid PRIMARY KEY, challenge text NOT NULL, origin text NOT NULL, kind text NOT NULL, expires_at timestamptz NOT NULL);
+GRANT SELECT,INSERT,UPDATE,DELETE ON public.passkey_challenges TO authenticated;
+GRANT ALL ON public.passkey_challenges TO service_role;
+ALTER TABLE public.passkey_challenges ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Own challenges" ON public.passkey_challenges FOR ALL TO authenticated USING(owner_id=auth.uid()) WITH CHECK(owner_id=auth.uid());
