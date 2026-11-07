@@ -48,7 +48,8 @@ it('upload → private read → revocation keeps exact company original, no pers
   const urlApi={canRead:async(p:string)=>(await db.query('SELECT name FROM storage.objects WHERE name=$1',[p])).rows.length===1,sign:async(_p:string,s:number)=>{expect(s).toBe(60);return 'https://controlled.invalid/download';}};
   expect(await privateFileUrl(path,urlApi)).toBe('https://controlled.invalid/download');
   await as(OTHER); expect(await privateFileUrl(path,urlApi)).toBeNull();
-  await as(OWNER); await db.query('UPDATE entity_members SET revoked_at=now() WHERE member_id=$1',[EDITOR]);
+  await as(OWNER); const grant=(await db.query<{id:string}>('SELECT id FROM entity_members WHERE member_id=$1',[EDITOR])).rows[0];
+  if(!grant)throw Error('Missing grant'); await db.query('SELECT revoke_entity_access($1)',[grant.id]);
   await as(EDITOR); expect(await privateFileUrl(path,urlApi)).toBeNull();
   await expect(uploadCompanyDocument(OWNER,'c1',file,api())).rejects.toThrow(/edit access/);
   await as(OWNER); expect((await db.query('SELECT name FROM storage.objects')).rows).toHaveLength(1);
