@@ -378,14 +378,19 @@ function StatementDeskPage() {
   };
 
   const undo = async (r: ApplyResult, uploadId?: string) => {
+    const initial = storeRef.current.preferences.statementUploads ?? [];
+    const target = uploadId ?? initial.find(u => u.posted.join() === r.posted.join() && u.reconciled.join() === r.reconciled.join())?.id;
     try {
       setProgress("Undoing…");
+      if (target) {
+        const u = initial.find(u => u.id === target);
+        if (u) await storeRef.current.saveStatementUpload({ ...u, undoError: 'Undo unfinished — retry to check remaining records and cleanup.' });
+      }
       await storeRef.current.refresh();
       const { left } = await undoUpload(r, api());
       setResult(null);
       const s = storeRef.current;
       const list = s.preferences.statementUploads ?? [];
-      const target = uploadId ?? list.find((u) => u.posted.join() === r.posted.join() && u.reconciled.join() === r.reconciled.join())?.id;
       if (target && !left.length) await s.savePreferences({ ...s.preferences, statementUploads: list.filter((u) => u.id !== target) });
       if (left.length) toast.error(`${left.length} item${left.length === 1 ? "" : "s"} couldn’t be reversed — try Undo again.`);
       else toast.success("Upload reversed — your records are as they were");
@@ -702,7 +707,7 @@ function StatementDeskPage() {
           <ul className="space-y-2">
             {(preferences.statementUploads ?? []).map((u) => (
               <li key={u.id} className="flex flex-wrap items-center justify-between gap-2 text-sm">
-                <span className="min-w-0 flex-1"><span className="block truncate">{u.label || "Upload"}{u.status==='interrupted'?' · interrupted':''}</span><span className="text-xs text-muted-foreground">{new Date(u.at).toLocaleString()} · {u.posted.length} posted · {u.reconciled.length} matched</span></span>
+                <span className="min-w-0 flex-1"><span className="block truncate">{u.label || "Upload"}{u.status==='interrupted'?' · interrupted':''}</span><span className="text-xs text-muted-foreground">{new Date(u.at).toLocaleString()} · {u.posted.length} posted · {u.reconciled.length} matched</span>{u.undoError && <span role="alert" className="block text-xs text-destructive">{u.undoError}</span>}</span>
                 {u.status==='interrupted'&&!!u.sources?.length&&<Button size="sm" variant="outline" disabled={!!progress||busy} onClick={()=>recoverUpload(u)}>Review stored originals</Button>}
                 <Button size="sm" variant="outline" disabled={!!progress} onClick={() => void undo(u, u.id)}>Undo</Button>
               </li>

@@ -16,7 +16,7 @@ export interface DocRun {
 }
 /** What a run keeps between attempts: where the original is parked and what was read from it. */
 export interface IntakeAttempt { id: string; documentId: string; data: import('../preferences').FinancePreferences; lock: boolean; expected: number; route: string }
-export interface RunData { stashPath?: string | undefined; mimeType?: string | undefined; size?: number | undefined; sha256?: string | undefined; read?: unknown; docType?: string | undefined; fields?: unknown; replacesId?: string | undefined; intakeAttempt?: IntakeAttempt | undefined }
+export interface RunData { cleanupPending?: 'done' | 'cancelled' | undefined; stashPath?: string | undefined; mimeType?: string | undefined; size?: number | undefined; sha256?: string | undefined; read?: unknown; docType?: string | undefined; fields?: unknown; replacesId?: string | undefined; intakeAttempt?: IntakeAttempt | undefined }
 
 /** A run owns exactly one document identity across every retry. */
 export const documentIdForRun = (runId: string) => runId;
@@ -92,9 +92,11 @@ export async function verifyRunOriginal(file: Blob, expected: RunData): Promise<
 
 /** Finish or discard a run and remove its parked copy (the DocuRepo copy, if any, stays). */
 export async function closeRun(r: Pick<DocRun, "id" | "data">, status: "done" | "cancelled"): Promise<void> {
+  // Record cleanup intent first: a lost final update must be recoverable without the deleted bytes.
+  await updateRun(r.id, { status: 'waiting', stage: 'Audit', data: { ...r.data, cleanupPending: status } });
   if (r.data.stashPath) {
     const { error } = await supabase.storage.from("receipts").remove([r.data.stashPath]);
     if (error) throw new Error("The parked original could not be removed. Retry cleanup; your saved document is unchanged.");
   }
-  await updateRun(r.id, { status, data: { ...r.data, stashPath: undefined } });
+  await updateRun(r.id, { status, error: null, data: { ...r.data, stashPath: undefined, cleanupPending: undefined } });
 }

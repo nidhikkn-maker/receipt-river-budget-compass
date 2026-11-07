@@ -42,7 +42,7 @@ export async function checkpointUpload(next: StatementUpload, api: UploadHistory
  * Without planned counts nothing is inferred, so a genuinely unfinished save is never shown as finished.
  */
 export function settledUpload(u: StatementUpload, ledger: { id: string; statementRef?: string | null }[], drafts: { id: string; status: string; transactionId: string | null }[] = []): StatementUpload | null {
-  if (u.status !== "interrupted" || !u.expected) return null;
+  if (u.status !== "interrupted" || u.undoError || !u.expected) return null;
   if (new Set(u.posted).size !== u.expected.posted || new Set(u.reconciled).size !== u.expected.reconciled) return null;
   if (u.posted.length + u.reconciled.length === 0) return null;
   const byId = new Map(ledger.map(e => [e.id, e]));

@@ -18,8 +18,9 @@ export function UnfinishedRuns({ active, onResume }: { active: string[]; onResum
       <p className="font-semibold">Unfinished documents ({list.length})</p>
       {list.map((r) => (
         <div key={r.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-secondary/50 px-3 py-2 text-xs">
-          <div className="min-w-0"><p className="truncate font-medium">{r.fileName}</p><p className="text-muted-foreground">{effectiveStatus(r) === "waiting" ? "Waiting for your confirmation" : `Stopped at ${r.stage}${r.error ? ` — ${r.error}` : ""}`} · {r.attempts} attempt{r.attempts === 1 ? "" : "s"}</p></div>
+          <div className="min-w-0"><p className="truncate font-medium">{r.fileName}</p><p className="text-muted-foreground">{r.data.cleanupPending ? `${r.data.cleanupPending === 'done' ? 'Records saved' : 'Discard requested'} · original cleanup pending` : effectiveStatus(r) === "waiting" ? "Waiting for your confirmation" : `Stopped at ${r.stage}${r.error ? ` — ${r.error}` : ""}`} · {r.attempts} attempt{r.attempts === 1 ? "" : "s"}</p></div>
           <div className="flex gap-1">
+            {r.data.cleanupPending ? <Button size="sm" variant="outline" onClick={async () => { try { await closeRun(r, r.data.cleanupPending ?? 'done'); await load(); } catch (error) { toast.error((error as Error).message); } }}>Retry original cleanup</Button> : <>
             <Button size="sm" variant="outline" onClick={async () => {
               try {
                 const file = await runFile(r);
@@ -27,6 +28,7 @@ export function UnfinishedRuns({ active, onResume }: { active: string[]; onResum
               } catch (e) { toast.error((e as Error).message); }
             }}>{r.data.read ? "Resume" : "Retry"}</Button>
             <Button size="sm" variant="ghost" onClick={async () => { await closeRun(r, "cancelled").catch((e) => toast.error((e as Error).message)); void load(); }}>Discard</Button>
+            </>}
           </div>
         </div>
       ))}
