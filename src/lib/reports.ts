@@ -1,7 +1,7 @@
 import { receiptRoundOffFor } from "./receipt-reading";
 import { whoLabel, PAYMENT_LABEL, SCOPE_LABEL, budgetUsage, totalsBy, categoryTotals, type Budgets, type Expense } from "./expenses";
 import { workspaceParts } from "./workspaces";
-import { decimal, roundMoney, addMoney, sumMoney, subtractMoney, proportionMoney } from "./money";
+import { decimal, addMoney, sumMoney, subtractMoney, proportionMoney } from "./money";
 
 export type ReportKind = "expenses" | "business" | "categories" | "reimbursements" | "reimbursement-payments" | "departments";
 export interface Report { title: string; headers: string[]; rows: (string | number)[][] }

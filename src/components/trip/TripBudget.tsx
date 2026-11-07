@@ -152,8 +152,11 @@ const STATE_NOTE: Record<string, string> = {
 };
 
 /** Optional detailed allocations. Each dimension reconciles independently with the primary budget. */
-export function BudgetBreakdown({ trip }: { trip: TravelTrip }) {
+export function BudgetBreakdown({ trip: savedTrip }: { trip: TravelTrip }) {
   const { preferences: pr, savePreferences, transactions, members } = useStore();
+  const [pending, setPending] = useState<Partial<TravelTrip>>({});
+  const trip = { ...savedTrip, ...pending };
+  const dirty = Object.keys(pending).length > 0;
   const closed = !!trip.closedAt;
   const [tab, setTab] = useState<TabKey>("workspace");
   const plans = useMemo(() => tripAllocationPlans(trip, transactions), [trip, transactions]);
@@ -163,14 +166,21 @@ export function BudgetBreakdown({ trip }: { trip: TravelTrip }) {
   const [form, setForm] = useState({ key: "", amount: "", rate: "1" });
   const [saving, setSaving] = useState(false);
 
-  const put = async (patch: Partial<TravelTrip>, msg: string) => {
+  const put = async (patch: Partial<TravelTrip>, _msg: string) => {
+    if (closed || saving) return;
+    setPending(current => ({ ...current, ...patch }));
+    setForm({ key: "", amount: "", rate: "1" });
+  };
+  const commit = async () => {
     if (saving) return;
     setSaving(true);
     try {
-      validateCompleteAllocations({ ...trip, ...patch });
-      await savePreferences({ ...pr, trips: (pr.trips as TravelTrip[]).map((t) => (t.id === trip.id ? { ...t, ...patch } : t)) });
-      toast.success(msg);
-      setForm({ key: "", amount: "", rate: "1" });
+      const latest = pr.trips.find(t => t.id === savedTrip.id);
+      if (!latest || JSON.stringify(latest) !== JSON.stringify(savedTrip)) throw Error("Trip changed. Cancel and review the updated budget.");
+      validateCompleteAllocations(trip);
+      await savePreferences({ ...pr, trips: (pr.trips as TravelTrip[]).map((t) => (t.id === trip.id ? { ...t, ...pending } : t)) });
+      toast.success("Budget breakdown saved");
+      setPending({});
     } catch (e) { toast.error(`Unable to save — Retry. ${(e as Error).message}`); }
     finally { setSaving(false); }
   };
@@ -281,9 +291,10 @@ export function BudgetBreakdown({ trip }: { trip: TravelTrip }) {
           {tab === "organisation" && <select aria-label="Allocation organisation" className={sel} value={form.key} onChange={(e) => setForm({ ...form, key: e.target.value })}><option value="">Organisation…</option>{organisations.map((o) => <option key={o} value={o}>{o}</option>)}</select>}
           <Input aria-label="Allocation amount" type="number" min="0" placeholder="Amount" value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} />
           {tab === "currency" && <Input aria-label="Planning exchange rate" type="number" min="0" placeholder="Rate to INR" value={form.rate} onChange={(e) => setForm({ ...form, rate: e.target.value })} />}
-          <Button variant="gold" loading={saving} onClick={add} className={tab === "currency" ? "" : "sm:col-span-1"}>{saving ? "Saving…" : "Save allocation"}</Button>
+          <Button variant="outline" disabled={saving} onClick={add} className={tab === "currency" ? "" : "sm:col-span-1"}>Add allocation</Button>
         </div>
       )}
+      {!closed && dirty && <div className="mt-3 flex justify-end gap-2"><Button variant="outline" disabled={saving} onClick={() => setPending({})}>Cancel changes</Button><Button variant="gold" loading={saving} onClick={commit}>Save breakdown</Button></div>}
     </Card>
   );
 }

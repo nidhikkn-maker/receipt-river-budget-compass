@@ -6,7 +6,7 @@ import type { Commitment } from "./planning";
 import type { Account, Txn } from "./ledger";
 import type { PaymentReadiness } from "./readiness";
 import { categoryTotals } from "./expenses";
-import { decimal, sumMoney } from "./money";
+import { decimal } from "./money";
 
 export const RULE_TRIGGERS = [
   "category_spend", "large_transaction", "duplicate_merchant", "emergency_below",
@@ -80,7 +80,7 @@ export interface RuleData {
   readiness: PaymentReadiness[];
   today: string;
   /** Saved monthly category budgets, never inferred from spending. */
-  budgets?: Record<string, number>;
+  budgets?: Partial<Record<string, number>>;
 }
 
 const days = (f: RuleFrequency) => (f === "daily" ? 1 : f === "weekly" ? 7 : 30);

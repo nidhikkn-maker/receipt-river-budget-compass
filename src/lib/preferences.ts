@@ -16,7 +16,8 @@ import type { TravelMessage } from "./travel-inbox";
 import { cleanPayees, type Payee } from './payees';
 import { cleanReimbursementSettings, emptyReimbursementSettings, type ReimbursementSettings } from './reimbursement-profiles';
 import { cleanShortcuts, DEFAULT_SHORTCUTS, type ShortcutId } from "./home-shortcuts";
-import { ACTIVE_SCOPES, CATEGORIES, memberShares, SCOPES, type Expense, type Scope } from "./expenses";
+import { ACTIVE_SCOPES, CATEGORIES, memberShares, categoryParts, SCOPES, type Expense, type Scope } from "./expenses";
+import { decimal, moneyNumber, sumMoney, addMoney, subtractMoney } from "./money";
 import { cleanThemeName, type ThemeName } from "./themes";
 import { defaultEmergency, type BriefSettings, type EmergencySettings, type MerchantAliases, type Milestone, type Trip, type WeeklyBrief } from "./intelligence";
 
@@ -265,7 +266,7 @@ export function validateActiveCategory(categories: CategorySetting[], name: stri
 }
 export function budgetSpend(e: Expense, b: ScopedBudget): number {
   if ((e.txnType ?? "expense") !== "expense") return 0;
-  if (b.kind === "category") return e.category === b.value ? e.amount : 0;
+  if (b.kind === "category") return sumMoney(categoryParts(e).filter(p => p.category === b.value).map(p => p.amount));
   if (b.kind === "person") return memberShares(e).find((s) => (s.memberId ?? "me") === b.value)?.amount ?? 0;
   if (b.kind === "project" || b.kind === "travel") return (e.tags ?? []).includes(b.value) ? e.amount : 0;
   return e.amount;
@@ -280,15 +281,15 @@ export function scopedBudgetUsage(b: ScopedBudget, entries: Expense[], today: st
     let cursor = b.period === "annual" ? `${b.start.slice(0, 4)}-01-01` : `${b.start.slice(0, 7)}-01`;
     for (let n = 0; cursor < start && n < 1200; n++) {
       const next = b.period === "annual" ? `${Number(cursor.slice(0, 4)) + 1}-01-01` : new Date(Date.UTC(Number(cursor.slice(0, 4)), Number(cursor.slice(5, 7)), 1)).toISOString().slice(0, 10);
-      const spent = entries.filter((e) => e.date >= b.start && e.date >= cursor && e.date < next).reduce((s, e) => s + budgetSpend(e, b), 0);
-      carry = Math.max(0, b.amount + carry - spent); cursor = next;
+      const spent = sumMoney(entries.filter((e) => e.date >= b.start && e.date >= cursor && e.date < next).map(e => budgetSpend(e,b)));
+      carry = Math.max(0, moneyNumber(decimal(b.amount).plus(carry).minus(spent))); cursor = next;
     }
   }
-  const spent = entries.filter((e) => e.date >= currentStart && e.date <= today && e.date <= end).reduce((s, e) => s + budgetSpend(e, b), 0);
-  const allowance = b.amount + carry;
+  const spent = sumMoney(entries.filter((e) => e.date >= currentStart && e.date <= today && e.date <= end).map(e => budgetSpend(e,b)));
+  const allowance = addMoney(b.amount,carry);
   const elapsed = Math.max(1, (Date.parse(today) - Date.parse(currentStart)) / 864e5 + 1);
   const length = Math.max(1, (Date.parse(end) - Date.parse(currentStart)) / 864e5 + 1);
-  return { spent, carry, allowance, remaining: allowance - spent, percent: allowance ? (spent / allowance) * 100 : 0, estimate: (spent / elapsed) * length, end };
+  return { spent, carry, allowance, remaining: subtractMoney(allowance,spent), percent: allowance ? decimal(spent).div(allowance).mul(100).toNumber() : 0, estimate: moneyNumber(decimal(spent).div(elapsed).mul(length)), end };
 }
 
 /** Keep only finite, in-bounds map positions (max 800 entries). */

@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { money, type Expense } from "@/lib/expenses";
-import { behaviour, mergeMerchants, mergeSuggestions, merchantProfiles, normaliseMerchant, unmergeMerchant } from "@/lib/intelligence";
+import { behaviour, mergeMerchants, mergeSuggestions, merchantProfiles, unmergeMerchant } from "@/lib/intelligence";
 import { useStore } from "@/lib/store";
 import { todayISO } from "@/lib/use-position";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
