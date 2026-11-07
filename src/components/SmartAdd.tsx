@@ -87,7 +87,7 @@ export function SmartAdd({ open, onOpenChange, scope }: { open: boolean; onOpenC
               <button type="button" aria-label="Voice Entry" className="cmp-pearl-row" onClick={() => typed('voice')}><span className="cmp-icon"><Mic /></span><span className="min-w-0 flex-1"><b>Voice Entry</b><small>Say what you spent</small></span><ChevronRight /></button>
               <button type="button" aria-label="Quick Entry" className="cmp-pearl-row" onClick={() => typed('quick')}><span className="cmp-icon"><PencilLine /></span><span className="min-w-0 flex-1"><b>Quick Entry</b><small>Type an amount and a note</small></span><ChevronRight /></button>
             </div>
-            <p className="cmp-night-link mt-auto text-sm">Also: <button type="button" onClick={() => galleryRef.current?.click()}><Images className="mr-1 inline size-4" />choose from photos</button> · <button type="button" onClick={() => typed('message')}><MessageSquare className="mr-1 inline size-4" />paste a bank message</button> · <Link to="/statements" onClick={() => onOpenChange(false)}>many statements at once</Link></p>
+            <p className="cmp-night-link mt-auto text-sm">Also: <button type="button" onClick={() => galleryRef.current?.click()}><Images className="mr-1 inline size-4" />choose from photos</button> · <button type="button" aria-label="From Message" onClick={() => typed('message')}><MessageSquare className="mr-1 inline size-4" />paste a bank message</button> · <Link to="/statements" onClick={() => onOpenChange(false)}>many statements at once</Link></p>
           </div>}
 
           {stage.kind === 'classify' && <div className="grid gap-6 lg:grid-cols-2">
