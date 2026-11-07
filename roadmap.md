@@ -828,3 +828,13 @@
 - [ ] Remaining A: iPad list-and-detail layout (V60-0671); persisted-reload checks for linked search
 - [ ] Audit historical register (349 chat requests, 12,559 document clauses) against code
 - [ ] Work through B items by module
+
+## 2026-11-07 — Workstream 2: historical consolidation + audit (MASTER EXECUTION DIRECTIVE)
+- [x] Dedup audit: 12,559 clauses + 349 chat requests → 2,541 clusters; 12 read-only codebase audits + manual remainder; 0 unaudited.
+- [x] Consolidated register: .lovable/requirements/historical/audit.json; report: docs/HISTORICAL_COVERAGE_REPORT.md.
+- [x] Result: 1,535 implemented / 934 partial (verification-evidence gaps) / 53 missing / 19 superseded by recorded owner decisions.
+- [x] Missing classified: 21 buildable feature gaps, 15 device/live-site verification gaps, 6 external dependencies, 4 need owner records, 6 meta/process.
+- [x] iPad landscape list-and-detail layout (V60-0671): ExpenseDetail side pane in ExpenseTable via useTabletLandscape; 3 tests; full suite 245 files / 1,872 tests PASS; typecheck clean.
+- [ ] Buildable feature gaps (next, in order): budget module gaps (C-0389/0391/0581/0709/1249/1252/1253/2301), merchant merge/unmerge (C-2094), no-receipt filter (C-2232), missing-document list in claim PDF (C-1857), document verification screen (C-1487), category-merge affected-record preview (C-1501), loan repayment CSV export (C-0409), Self default (C-2154), setup-assistant completion suppression (C-1493), sticky report summary (C-2024), integer money arithmetic (C-1065 — large, plan separately), statement admin view (C-0214), receipt browser tests (C-0553), report-job interruption test (C-0517).
+- [ ] Verification gaps needing physical device / live site / owner records: 15 + 4 — parked until available.
+- [ ] External: price feed, publish approval, bank/email providers, ChatGPT MCP publish test — unchanged.
