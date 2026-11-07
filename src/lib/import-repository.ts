@@ -1,4 +1,5 @@
 import { supabase } from '@/integrations/supabase/client';
+import { shareInflight } from './request-dedupe';
 import type { Json } from '@/integrations/supabase/types';
 import type { ImportBatch, ImportRow, ImportRule, ImportProposal } from './historical-import';
 import type { Account } from './ledger';
@@ -19,7 +20,8 @@ export async function statementEvidence(batch:ImportBatch,account:Account,transa
   const snapshot=checkpointSnapshot(evidence,account,transactions);evidence.snapshotKey=canonicalEvidence(snapshot);evidence.currentHash=await checkpointHash(snapshot);return evidence;
 }
 
-export async function listImports(): Promise<ImportBatch[]> {
+export function listImports(): Promise<ImportBatch[]> { return shareInflight('import_batches', readImports); }
+async function readImports(): Promise<ImportBatch[]> {
   const batches: ImportBatch[] = [];
   for(let from=0;;from+=1000) {
     const r=await supabase.from('import_batches').select('*').order('created_at',{ascending:false}).order('id').range(from,from+999);
@@ -37,9 +39,11 @@ export async function listImportRows(batch:string):Promise<ImportRow[]> {
   }
   return rows;
 }
-export async function listImportRules():Promise<ImportRule[]> {
-  const r=await supabase.from('import_rules').select('*').order('created_at');
-  if(r.error) throw Error('Could not load import rules'); return r.data as unknown as ImportRule[];
+export function listImportRules():Promise<ImportRule[]> {
+  return shareInflight('import_rules', async () => {
+    const r=await supabase.from('import_rules').select('*').order('created_at');
+    if(r.error) throw Error('Could not load import rules'); return r.data as unknown as ImportRule[];
+  });
 }
 export async function reviseRows(batch:string,rows:ImportRow[],patch:Partial<ImportProposal>,decision?:ImportRow['decision']) {
   const fields=new Set(['title','merchant','category','scope','memberId','paymentMethod','txnType','accountId','toAccountId','description','tags','reviewed','categoryConfirmed','duplicateOverride','reimbursable','organisation','subcategory','reimbursementOrganisation']);

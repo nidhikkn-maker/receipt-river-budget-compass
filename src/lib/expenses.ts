@@ -295,7 +295,7 @@ export const money = (n: number, currency: string = BASE_CURRENCY) => {
 export const moneyIn = money;
 
 // ---------- Bank statement reconciliation ----------
-export interface StatementLine { ref: string; date: string; description: string; amount: number; direction?: "debit" | "credit" }
+export interface StatementLine { ref: string; date: string; description: string; amount: number; direction?: "debit" | "credit"; /** Running balance printed on this row, when the file has a Balance column. */ balance?: number }
 export interface Match { line: StatementLine; expense: Expense | null; score: number }
 
 const dayDiff = (a: string, b: string) => Math.abs(new Date(a).getTime() - new Date(b).getTime()) / 864e5;
@@ -355,20 +355,22 @@ export function parseStatementCsv(text: string, includeCredits = false): Stateme
   const debit = find("debit", "withdrawal", "paid out");
   const credit = find("credit", "deposit", "paid in");
   const ai = debit >= 0 ? debit : find("amount", "value");
+  const bi = h.findIndex((c) => /\bbalance\b/.test(c) && !/opening|closing/.test(c));
   if (di < 0 || ai < 0) throw new ValidationError("Couldn't find date and amount columns in this file");
   const num = (v: string | undefined) => Number((v ?? "").replace(/[^0-9.\-]/g, ""));
   const signed = debit < 0 && rows.slice(1).some((x) => num(x[ai]) < 0);
   const out: StatementLine[] = [];
+  const withBal = (l: StatementLine, r: string[]) => { const v = bi >= 0 ? (r[bi] ?? "").trim() : ""; const b = num(v); if (v && /\d/.test(v) && Number.isFinite(b)) l.balance = b; out.push(l); };
   rows.slice(1).forEach((r, i) => {
     const raw = (r[ai] ?? "").trim();
     const amt = num(raw);
     const date = normalizeDate(r[di] ?? "");
     if (includeCredits && date && credit >= 0 && num(r[credit]) > 0 && (!raw || amt===0)) {
-      out.push({ref:`L${i+1}`,date,description:(ni>=0?r[ni]:"")??"",amount:num(r[credit]),direction:"credit"});return;
+      withBal({ref:`L${i+1}`,date,description:(ni>=0?r[ni]:"")??"",amount:num(r[credit]),direction:"credit"},r);return;
     }
     if (!raw || !Number.isFinite(amt) || amt === 0 || !date) return;
-    if (signed && amt > 0) {if(includeCredits)out.push({ref:`L${i+1}`,date,description:(ni>=0?r[ni]:"")??"",amount:amt,direction:"credit"});return;}
-    out.push({ ref: `L${i + 1}`, date, description: (ni >= 0 ? r[ni] : "") ?? "", amount: Math.abs(amt) });
+    if (signed && amt > 0) {if(includeCredits)withBal({ref:`L${i+1}`,date,description:(ni>=0?r[ni]:"")??"",amount:amt,direction:"credit"},r);return;}
+    withBal({ ref: `L${i + 1}`, date, description: (ni >= 0 ? r[ni] : "") ?? "", amount: Math.abs(amt) }, r);
   });
   return out;
 }

@@ -30,12 +30,13 @@ export function AccountStatementStatus({ onAttention }: { onAttention?: (count: 
     } catch { if (run === generation.current) setStatus("Statement evidence could not refresh. Account checks are unavailable until retry succeeds."); }
   };
   useEffect(() => {
-    void load();
+    // Initial load comes from the records effect below. The timer re-reads statement evidence only;
+    // a full records refresh runs on focus, reconnect or a statement update.
     const tick = () => { if (document.visibilityState === "visible") void load(true); };
-    const timer = window.setInterval(tick, 20000); window.addEventListener("focus", tick); window.addEventListener("online", tick);window.addEventListener("ledgerline:statement-updated",tick);
+    const timer = window.setInterval(() => { if (document.visibilityState === "visible") void load(); }, 20000); window.addEventListener("focus", tick); window.addEventListener("online", tick);window.addEventListener("ledgerline:statement-updated",tick);
     return () => { generation.current++; clearInterval(timer); window.removeEventListener("focus", tick); window.removeEventListener("online", tick);window.removeEventListener("ledgerline:statement-updated",tick); };
   }, []);
-  useEffect(()=>{void load();},[transactions,accounts]);
+  useEffect(()=>{const t=window.setTimeout(()=>void load(),150);return()=>clearTimeout(t);},[transactions,accounts]);
   const rows = accounts.filter(a => !a.archived).map(a => accountStatementStatus(a, evidence, transactions, preferences, new Date().toISOString().slice(0, 10)));
   const summary = accountStatementSummary(rows), focused = rows.find(r => r.accountId === selected);
   useEffect(() => { onAttention?.(status ? null : summary.attention); }, [status, summary.attention, onAttention]);
