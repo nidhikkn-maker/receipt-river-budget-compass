@@ -1109,7 +1109,7 @@ html[data-theme="apple-glass"] :where(.bg-card, .bg-popover, .bg-ink) {
 .cmp-greeting { margin-top: 44px; font-size: 32px; line-height: 1.12; text-shadow: 0 1px 18px color-mix(in oklab, var(--companion-navy) 45%, transparent); }
 .cmp-greeting-sub { margin-top: 8px; font-size: 15px; opacity: .88; }
 .cmp-today-body { position: relative; margin-top: -72px; display: grid; gap: 14px; }
-.cmp-panel { background: color-mix(in oklab, var(--companion-panel) 94%, transparent); backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px); border: 1px solid color-mix(in oklab, var(--companion-gold) 20%, transparent); border-radius: 22px; box-shadow: var(--shadow-companion); color: var(--companion-ink); padding: 16px 16px 6px; }
+.cmp-panel { background: color-mix(in oklab, var(--companion-panel) 97%, transparent); backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px); border: 1px solid color-mix(in oklab, var(--companion-gold) 20%, transparent); border-radius: 22px; box-shadow: var(--shadow-companion); color: var(--companion-ink); padding: 16px 16px 6px; }
 .cmp-panel-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding: 0 4px 4px; }
 .cmp-panel-head h2 { font-size: 21px; }
 .cmp-panel-head span, .cmp-panel-head a { font-size: 13px; color: var(--companion-muted); }
@@ -1195,3 +1195,5 @@ html[data-theme="apple-glass"] :where(.bg-card, .bg-popover, .bg-ink) {
   .cmp-greeting { font-size: 44px; }
   .cmp-wealth-grid { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); }
 }
+
+.rail-add { background: var(--gradient-companion-gold) !important; color: var(--companion-navy) !important; border: 0; box-shadow: 0 8px 18px -12px color-mix(in oklab, var(--companion-navy) 60%, transparent), inset 0 1px 0 color-mix(in oklab, white 55%, transparent); }
