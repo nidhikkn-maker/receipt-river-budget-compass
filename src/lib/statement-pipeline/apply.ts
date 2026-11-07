@@ -151,7 +151,10 @@ export async function undoUpload(result: ApplyResult, api: ApplyApi): Promise<{ 
   for (const evidence of result.evidence ?? []) {
     if (!result.posted.includes(evidence.id) && !result.reconciled.includes(evidence.id)) continue;
     const current = api.transactions.find(t => t.id === evidence.id);
-    if (existing.has(evidence.id) && (!current || current.statementRef !== evidence.ref)) left.push(evidence.id);
+    // A confirmed new row whose evidence-link step failed has no prior source to overwrite.
+    // Matched existing rows, or a row carrying a different later source, must remain untouched.
+    const pendingNewLink = result.posted.includes(evidence.id) && current?.statementRef == null;
+    if (existing.has(evidence.id) && (!current || (current.statementRef !== evidence.ref && !pendingNewLink))) left.push(evidence.id);
   }
   if (left.length) return { left: [...new Set(left)] };
   for (const id of result.posted) {
