@@ -90,7 +90,6 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { name: "description", content: "Private accounts, family spending, budgets and financial planning." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
-      { name: "twitter:site", content: "@Lovable" },
     ],
     links: [
       {
@@ -104,6 +103,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { rel: "preconnect", href: (import.meta.env['VITE_SUPABASE_URL'] ?? "").replace(/\/$/, "") },
       { rel: "dns-prefetch", href: (import.meta.env['VITE_SUPABASE_URL'] ?? "").replace(/\/$/, "") },
       { rel: "icon", href: "/favicon.png", type: "image/png" },
+      { rel: "icon", href: "/brand/ledgerline-symbol-light.svg", type: "image/svg+xml" },
       { rel: "manifest", href: "/manifest.webmanifest" },
       { rel: "apple-touch-icon", href: "/apple-touch-icon.png" },
       // iPhone launch screens: shown the instant the home-screen icon is tapped, before any page work starts.
