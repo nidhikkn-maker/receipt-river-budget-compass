@@ -11,6 +11,7 @@ it('does not mistake object key ordering or scheduled prepared journals for fina
  const p={...defaultPreferences(),books:{...emptyBooks(),entityAccounts:{a:['1'],b:['2']}}};
  expect(preferenceReviewSections(p,{...p,books:{...p.books,entityAccounts:{b:['2'],a:['1']},journals:[{id:'j',assetId:'a',period:'2026-11',amount:100,kind:'book',status:'prepared'}]}})).toEqual([]);
 });
+import { describe } from 'vitest';
 import { alignUnchangedSections } from './preference-review';
 import { normalizePreferences } from './preferences';
 describe('first saves on a new account', () => {
