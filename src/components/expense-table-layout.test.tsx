@@ -51,7 +51,9 @@ function setupStore() {
     setReimbursement: vi.fn(),
     recordReimbursement: vi.fn(),
     convertToEmi: vi.fn(),
-    preferences: { categories: [], paymentInstruments: [] },
+    members: [],
+    setAllocations: vi.fn(),
+    preferences: { categories: [], paymentInstruments: [], payees: [] },
   };
 }
 
