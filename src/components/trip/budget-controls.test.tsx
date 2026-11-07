@@ -55,7 +55,7 @@ it('ambiguous historical budget review and cancel preserve independent plans; ex
   fireEvent.click(screen.getByRole('button', { name: 'Review Breakdown' }));
   expect(breakdown).toHaveBeenCalledTimes(1); expect(mock.save).not.toHaveBeenCalled();
   view.unmount(); view = render(<EditBudgetDialog trip={trip} open onOpenChange={() => {}} />);
-  fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Close' }));
   expect(mock.save).not.toHaveBeenCalled();
   fireEvent.change(screen.getByLabelText('Total budget'), { target: { value: '100' } });
   fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }));
