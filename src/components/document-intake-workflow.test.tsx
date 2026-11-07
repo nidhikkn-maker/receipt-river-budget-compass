@@ -29,6 +29,22 @@ describe("actual document review workflow (isolated persistence boundary)", () =
   });
   afterEach(cleanup);
 
+  it("utility bill cannot duplicate or choose between existing properties until the owner selects one", async () => {
+    const properties = [{ id: "p1", name: "Factory", address: "44 Industrial Road", buildings: [], docIds: [], assetId: "a1" }, { id: "p2", name: "Factory", address: "Other Road", buildings: [], docIds: [] }];
+    state.store['preferences'] = { books: { ...emptyBooks(), properties }, entities: [], assets: [], contractObligations: [] };
+    open(baseRead("utility_bill", { property: { name: "Factory", address: "44 Industrial Road", owner: null, cost: 730, acquiredOn: "2026-10-02", surveyNo: null, valuation: null, valuationDate: null, utilityConsumerNo: "04477112", insurer: null, propertyTaxId: null } }));
+    fireEvent.click(screen.getByRole("button", { name: "Confirm and save" }));
+    expect(add).not.toHaveBeenCalled();
+    fireEvent.change(screen.getByLabelText("Property for this utility bill"), { target: { value: "p1" } });
+    await waitFor(() => expect(screen.getByRole("button", { name: "Confirm and save" })).toBeEnabled());
+    fireEvent.click(screen.getByRole("button", { name: "Confirm and save" }));
+    await waitFor(() => expect(commit).toHaveBeenCalledTimes(1));
+    expect(commit.mock.calls[0]?.[1].books.properties).toHaveLength(2);
+    expect(commit.mock.calls[0]?.[1].books.properties[0]).toMatchObject({ id: "p1", assetId: "a1", notes: "Consumer 04477112" });
+    expect(commit.mock.calls[0]?.[1].assets).toEqual([]);
+    expect(commit.mock.calls[0]?.[1].books.docLinks).toEqual(expect.arrayContaining([expect.objectContaining({ kind: "property", targetId: "p1" })]));
+  });
+
   it("correcting an invoice field changes the approved GST amount and preserves its printed original", async () => {
     state.store['preferences'] = { books: emptyBooks(), entities: [{ id: "company-1", name: "Owner", kind: "company", pan: "AAACA1234A", gstins: ["33AAACA1234A1Z5"], booksFrom: "2020-21" }], assets: [], contractObligations: [] };
     open(baseRead("invoice", { amount: 1180, fields: [{ label: "Taxable value", value: "1000", originalValue: "1000", page: 2, quote: "Taxable value 1000", confidence: "high" }], gstInvoice: { number: "INV-44", date: "2026-10-02", seller: "Owner", sellerGstin: "33AAACA1234A1Z5", buyer: "Customer", buyerGstin: null, taxable: 1000, igst: 0, cgst: 90, sgst: 90, cess: 0 } }));
