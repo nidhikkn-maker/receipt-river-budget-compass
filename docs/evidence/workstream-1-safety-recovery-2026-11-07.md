@@ -14,7 +14,7 @@
 5. `expense-review-security.test.ts`: actual retained function + actual 0002 execution revocation denies reviewer, owner reimbursement and anonymous calls without changing status/12.34/history. Live read-only privilege query confirms authenticated=false, anonymous=false and staged approval trigger=false. `role-access.test.ts`19 and `intake-revision-sql.test.ts`9 pass for active boundaries. See `approval-test-replacement.md`; the retired sequential approval workflow is not certified or restored.
 
 ## Executed evidence
-- Full Main suite: **262 files / 1,933 tests PASS**. Final fixture typing correction narrows the seed before spread; latest preview build must be checked after that edit.
+- Full Main suite: **262 files / 1,933 tests PASS**. Final fixture typing correction narrows the seed before spread; focused position4PASS and latest preview **build OK at 14:40:28 UTC** after that edit.
 - Browser: Workstream1 three sizes PASS; report builder three sizes PASS. Controlled local persistence, not hosted. Actual PDF bytes are identical to uploaded bytes and original page dimensions survive; screenshots inspected.
 - Hosted acceptance delegated in isolated draft **Budget and merchant hosted acceptance**, not Main: completion notification reports **24 PASS / 2 FAIL**. Failures: complete-budget validation and immutable merchant history. Three draft files changed, build passing; no draft acceptance or policy installation. Evidence in draft `docs/evidence/hosted-budget-merchant-acceptance.md` must be read/merged safely before detailed conclusions; Main current-turn edits were absent there. Requirements remain partial.
 
