@@ -1,0 +1,24 @@
+import { expect,it } from 'vitest';
+import { extractStatementIdentity,identityCandidates,statementReviewBlockers,canonicalEvidence,type StatementReview } from './statement-evidence';
+import { checkpointHash,checkpointSnapshot } from './statement-checkpoint';
+import { accountStatementStatus,type StatementStatusEvidence } from './account-statement-status';
+import { defaultPreferences } from './preferences';
+import type { Account } from './ledger';
+const bank:Account={id:'bank',name:'IDFC Bank 123456789',kind:'savings',openingBalance:1000,archived:false,lastFour:'6789'};
+const review:StatementReview={identity:{bank:'IDFC',identifier:'123456789',reference:'page 1',confirmed:true,missingIdentifierConfirmed:false,accountId:'bank',reviewedAt:'2026-10-31'},coverage:{from:'2026-10-01',to:'2026-10-31',reference:'page 1',confirmed:true,reviewedAt:'2026-10-31'},convention:'asset'};
+it('extracts labelled account header and exact provenance, never filename clues',()=>{expect(extractStatementIdentity('IDFC FIRST Bank\nAccount Number: 123456789',1)).toEqual([{bank:'IDFC FIRST',identifier:'123456789',quote:'Account Number: 123456789',page:1}]);expect(extractStatementIdentity('UPI/IDFC/payee/123456789')).toEqual([]);});
+it('correct mapping requires identifier, bank alone cannot identify an account',()=>{expect(identityCandidates({bank:'IDFC',identifier:null,quote:'',page:null},[bank])).toEqual([]);expect(identityCandidates({bank:'IDFC',identifier:'123456789',quote:'',page:null},[bank]).map(a=>a.id)).toEqual(['bank']);});
+it('wrong full identifier never matches another bank account merely by last four',()=>{expect(identityCandidates({bank:'IDFC',identifier:'987656789',quote:'',page:null},[bank])).toEqual([]);});
+it('ambiguous masked identifiers preserve every candidate for explicit review',()=>{expect(identityCandidates({bank:'IDFC',identifier:'XXXX6789',quote:'',page:null},[bank,{...bank,id:'second'}])).toHaveLength(2);});
+it('missing account identifier requires explicit manual matching',()=>{expect(statementReviewBlockers({...review,identity:{...review.identity,bank:'',identifier:'',reference:'page 1',confirmed:true,missingIdentifierConfirmed:false,accountId:'bank',reviewedAt:''}},bank,[],'2026-11-01')).toContain('The account identifier is missing; explicitly confirm manual account matching.');});
+it('coverage cannot omit parsed rows or use a future cutoff',()=>{expect(statementReviewBlockers(review,bank,['2026-09-30'],'2026-11-01')).toContain('Confirm the actual statement period containing every parsed row.');});
+it('identity confirmation alone does not claim statement coverage',()=>{expect(statementReviewBlockers({...(review.identity?{identity:review.identity}:{}),convention:'asset'},bank,[],'2026-11-01')).toEqual([]);});
+it('canonical hashes are consistent across reordered JSON keys',()=>{expect(canonicalEvidence({b:2,a:{d:4,c:3}})).toBe(canonicalEvidence({a:{c:3,d:4},b:2}));});
+it('persisted check survives reload but becomes invalid after account/ledger changes',async()=>{
+ const evidence:StatementStatusEvidence={batch:{id:'batch',account_id:'bank',file_name:'copy',file_path:'copy',status:'review',error:null,currency:'INR',period_from:'2026-10-01',period_to:'2026-10-31',opening_balance:1000,closing_balance:1000,statement_review:review},rows:[],posted:[]};
+ const hash=await checkpointHash(checkpointSnapshot(evidence,bank,[]));
+ const saved:StatementStatusEvidence={...evidence,currentHash:hash,checkpoint:{id:'check',batch_id:'batch',created_at:'2026-11-01T10:00:00Z',evidence_hash:hash,result:{reconciliation:'Not Started',balance:'Not Verified',difference:null,unresolved:0,matched:0}}};
+ expect(accountStatementStatus(bank,[JSON.parse(JSON.stringify(saved))],[],defaultPreferences(),'2026-11-01').reconciliationDate).toBe('2026-11-01T10:00:00Z');
+ const changed=await checkpointHash(checkpointSnapshot(saved,{...bank,openingBalance:1500},[]));
+ expect(accountStatementStatus(bank,[{...saved,currentHash:changed}],[],defaultPreferences(),'2026-11-01')).toMatchObject({balance:'Not Verified',reconciliation:'Requires Review',reconciliationDate:null});
+});

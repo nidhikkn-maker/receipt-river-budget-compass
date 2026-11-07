@@ -1,0 +1,3 @@
+{"rows":100,"median_ms":0.03403799999999979,"p95_ms":1.0108440000000005,"expected_balance":99900,"actual_balance":99900,"expected_spent":100,"actual_spent":100,"workspace_total":100,"scope":"pure helpers only; no UI/network/write performance claim"}
+{"rows":1000,"median_ms":0.0618199999999991,"p95_ms":1.875966,"expected_balance":99000,"actual_balance":99000,"expected_spent":1000,"actual_spent":1000,"workspace_total":1000,"scope":"pure helpers only; no UI/network/write performance claim"}
+{"rows":10000,"median_ms":0.3759750000000004,"p95_ms":4.032636999999999,"expected_balance":90000,"actual_balance":90000,"expected_spent":10000,"actual_spent":10000,"workspace_total":10000,"scope":"pure helpers only; no UI/network/write performance claim"}

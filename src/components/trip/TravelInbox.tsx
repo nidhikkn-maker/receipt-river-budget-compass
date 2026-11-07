@@ -1,0 +1,35 @@
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { useState } from "react";
+import { Link } from "@tanstack/react-router";
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { useStore } from "@/lib/store";
+import { confirmationItems } from "@/lib/travel-inbox";
+import { smartTripSuggestions } from "@/lib/trip-suggestions";
+import type { TravelTrip } from "@/lib/travel";
+import { money, type Expense } from "@/lib/expenses";
+import { ExpenseDialog } from "@/components/ExpenseDialog";
+export function TravelInbox() {
+  const { preferences, savePreferences, documents, transactions, signedUrl, manageTripExpenses } = useStore();
+  const trips = preferences.trips as TravelTrip[];
+  const [done, setDone] = useState(false), [showForm, setShowForm] = useState(false);
+  const [title, setTitle] = useState(""), [text, setText] = useState(""), [tripId, setTripId] = useState("");
+  const [open, setOpen] = useState<Expense | null>(null), [link, setLink] = useState<{ e: Expense; trip: TravelTrip } | null>(null);
+  const confirmations = confirmationItems(documents, trips).filter((x) => x.linked === done);
+  const messages = preferences.travelMessages.filter((m) => m.reviewed === done);
+  const suggestions = transactions.flatMap((e) => { const matches = smartTripSuggestions(e, trips); return matches.length ? [{ e, matches }] : []; });
+  return <section className="space-y-4" aria-label="Travel inbox">
+    <div className="flex flex-wrap items-center justify-between gap-2"><h2 className="font-semibold">Travel inbox</h2><div className="flex gap-2"><Button variant="outline" size="sm" onClick={() => setDone((v) => !v)}>{done ? "Pending" : "Reviewed"}</Button><Button size="sm" onClick={() => setShowForm((v) => !v)}>Add message</Button></div></div>
+    {showForm && <form className="space-y-2 border-y py-3" onSubmit={async (e) => { e.preventDefault(); if (!title.trim() || !text.trim()) return; try { await savePreferences({ ...preferences, travelMessages: [...preferences.travelMessages, { id: crypto.randomUUID(), title: title.trim(), text: text.trim(), tripId: tripId || null, source: "Added manually", createdAt: new Date().toISOString(), reviewed: false }] }); setTitle(""); setText(""); setShowForm(false); toast.success("Travel message saved"); } catch (err) { toast.error(err instanceof Error ? err.message : "Couldn't save message"); } }}>
+      <Input aria-label="Travel message title" placeholder="Message title" required maxLength={120} value={title} onChange={(e) => setTitle(e.target.value)} />
+      <textarea aria-label="Travel message text" placeholder="Paste a travel message" required maxLength={4000} className="min-h-28 w-full rounded-lg border bg-background p-3 text-sm" value={text} onChange={(e) => setText(e.target.value)} />
+      <select aria-label="Message trip" className="h-10 w-full rounded-lg border bg-background px-2 text-sm" value={tripId} onChange={(e) => setTripId(e.target.value)}><option value="">Trip not selected</option>{trips.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}</select><Button type="submit">Save message</Button>
+    </form>}
+    <div><h3 className="mb-2 text-sm font-semibold">Booking confirmations ({confirmations.length})</h3>{confirmations.map(({ doc, trip }) => <article key={doc.id} className="border-b py-3"><p className="break-words text-sm font-medium">{doc.title}</p><div className="mt-2 flex flex-wrap gap-2"><Button size="sm" variant="outline" onClick={async () => { const url = await signedUrl(doc.filePath); if (url) window.open(url, "_blank", "noopener,noreferrer"); }}>Open original</Button>{trip && <Button asChild size="sm"><Link to="/trips/$tripId" params={{ tripId: trip.id }} search={{ section: "bookings" }}>Review booking</Link></Button>}</div></article>)}</div>
+    <div><h3 className="mb-2 text-sm font-semibold">Trip messages ({messages.length})</h3>{messages.map((m) => <article key={m.id} className="border-b py-3"><h4 className="break-words text-sm font-medium">{m.title}</h4><p className="text-xs text-muted-foreground">{m.source} · {m.createdAt.slice(0, 10)}</p><p className="my-2 whitespace-pre-wrap break-words text-sm">{m.text}</p><select aria-label={`Trip for ${m.title}`} className="h-10 max-w-full rounded-lg border bg-background px-2 text-sm" value={m.tripId ?? ""} onChange={async (e) => { try { await savePreferences({ ...preferences, travelMessages: preferences.travelMessages.map((x) => x.id === m.id ? { ...x, tripId: e.target.value || null } : x) }); } catch (err) { toast.error(err instanceof Error ? err.message : "Couldn't link message"); } }}><option value="">Trip not selected</option>{trips.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}</select><Button size="sm" variant="ghost" onClick={async () => { try { await savePreferences({ ...preferences, travelMessages: preferences.travelMessages.map((x) => x.id === m.id ? { ...x, reviewed: !x.reviewed } : x) }); } catch (e) { toast.error(e instanceof Error ? e.message : "Couldn't update message"); } }}>{done ? "Reopen" : "Mark reviewed"}</Button></article>)}</div>
+    {!done && <div><h3 className="mb-2 text-sm font-semibold">Suggested trip links ({suggestions.length})</h3>{suggestions.slice(0, 30).map(({ e, matches }) => <article key={e.id} className="border-b py-3"><Button variant="ghost" className="h-auto w-full justify-between gap-3 whitespace-normal p-0 text-left" onClick={() => setOpen(e)}><span className="min-w-0 break-words text-sm font-medium">{e.title} · {e.date}</span><span className="shrink-0 text-sm">{money(e.amount)}</span></Button>{matches.slice(0, 3).map((s) => <div key={s.trip.id} className="mt-2"><p className="text-sm">{s.trip.name} · {s.confidence}{s.ambiguous ? " · Multiple possible trips" : ""}</p><p className="text-xs text-muted-foreground">{s.reasons.join(" · ")}</p><Button size="sm" variant="outline" className="mt-1" onClick={() => setLink({ e, trip: s.trip })}>Review link</Button></div>)}</article>)}</div>}
+    <Dialog open={!!link} onOpenChange={(o) => { if (!o) setLink(null); }}><DialogContent aria-label="Confirm trip link" className="sm:max-w-sm"><DialogHeader><DialogTitle>Link to trip?</DialogTitle><DialogDescription>{link ? `${link.e.title} will be linked to ${link.trip.name}.` : ""}</DialogDescription></DialogHeader><DialogFooter className="gap-2"><Button variant="ghost" onClick={() => setLink(null)}>Cancel</Button><Button onClick={async () => { if (!link) return; try { await manageTripExpenses(link.trip.id, [link.e], "link"); setLink(null); toast.success("Expense linked to trip"); } catch (e) { toast.error(e instanceof Error ? e.message : "Couldn't link expense"); } }}>Confirm link</Button></DialogFooter></DialogContent></Dialog>
+    <ExpenseDialog expense={open} onClose={() => setOpen(null)} />
+  </section>;
+}

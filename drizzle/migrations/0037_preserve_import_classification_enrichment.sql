@@ -1,0 +1,6 @@
+DO $migration$ DECLARE definition text; BEGIN
+ SELECT pg_get_functiondef('public.post_import_rows_secure(uuid,uuid,jsonb)'::regprocedure) INTO definition;
+ definition:=replace(definition,'INSERT INTO public.expenses(id,employee_id,title,merchant,category,amount,expense_date,description,currency,original_amount,fx_rate,fx_date,payment_method,scope,member_id,txn_type,account_id,to_account_id,tags,reimbursement_status,statement_ref)', $guard$p:=jsonb_set(p,'{tags}',(SELECT COALESCE(jsonb_agg(t),'[]') FROM (SELECT DISTINCT value AS t FROM jsonb_array_elements(COALESCE(p->'tags','[]') || CASE WHEN NULLIF(p->>'organisation','') IS NOT NULL THEN jsonb_build_array('Organisation: ' || (p->>'organisation')) ELSE '[]'::jsonb END || CASE WHEN NULLIF(p->>'subcategory','') IS NOT NULL THEN jsonb_build_array('Subcategory: ' || (p->>'subcategory')) ELSE '[]'::jsonb END)) tags));
+ INSERT INTO public.expenses(id,employee_id,title,merchant,category,amount,expense_date,description,currency,original_amount,fx_rate,fx_date,payment_method,scope,member_id,txn_type,account_id,to_account_id,tags,reimbursement_status,statement_ref)$guard$);
+ EXECUTE definition;
+END; $migration$;
