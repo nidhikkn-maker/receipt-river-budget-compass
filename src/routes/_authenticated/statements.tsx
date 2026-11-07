@@ -234,7 +234,7 @@ function StatementDeskPage() {
         catch { failed.push({ file: f, meta }); }
       }
       setFailedOriginals(failed);
-      if (failed.length) toast.error(`Posted, but ${failed.length === 1 ? "the original of " + failed[0].file.name : failed.length + " statement originals"} couldn’t be stored in DocuRepo — retry below so the import stays traceable.`);
+      if (failed.length) toast.error(`Posted, but ${failed.length === 1 ? "the original of " + (failed[0]?.file.name ?? "one file") : failed.length + " statement originals"} couldn’t be stored in DocuRepo — retry below so the import stays traceable.`);
       try { const s = storeRef.current; await s.savePreferences({ ...s.preferences, statementUploads: [upload, ...(s.preferences.statementUploads ?? [])].slice(0, 10) }); }
       catch { toast.error("Saved, but undo history couldn’t sync to your other devices."); }
       toast.success(`${r.posted.length} entries posted · ${r.reconciled.length} records marked as matched${r.createdAccounts.length ? ` · ${r.createdAccounts.length} account${r.createdAccounts.length === 1 ? "" : "s"} created` : ""}`, {
