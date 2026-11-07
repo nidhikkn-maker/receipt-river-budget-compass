@@ -530,6 +530,9 @@ function NewExpense() {
   const review = useMemo(() => receiptReviewCheck(reviewTotal, receiptDetails, currency), [reviewTotal, receiptDetails, currency]);
   const reviewSig = useMemo(() => receiptReviewSignature(reviewTotal, receiptDetails), [reviewTotal, receiptDetails]);
   const reviewMessages = [receiptBreakdownError(reviewTotal, receiptDetails, currency), review.itemTotalError].filter((m): m is string => !!m);
+  // The details fold opens when something needs checking and stays open while the owner fixes it.
+  const [fieldsOpen, setFieldsOpen] = useState(false);
+  useEffect(() => { if (reviewMessages.length > 0) setFieldsOpen(true); }, [reviewMessages.length]);
 
   const roundInfo = receiptRoundOff(reviewTotal, receiptDetails, currency);
   const roundAmt = roundInfo.printed || roundInfo.implied;
@@ -857,7 +860,7 @@ function NewExpense() {
             <div className="min-w-0 space-y-3">
             <div className="flex items-start justify-between gap-3"><div className="min-w-0"><h2 className="font-display font-semibold">Intelligent Canvas</h2>{(() => { const n = canvasNarrative({ kind: 'receipt', merchant: scan.merchant, amount: Number(scan.amount), currencyText: Number(scan.amount) > 0 ? money(Number(scan.amount), scan.currency) : undefined, date: scan.date, category: scanCategory || undefined, matchFound: deskMatches.length > 0, possibleDuplicate: duplicates.length > 0 || receiptReuse.length > 0 }); return <div aria-label="What I understood" className="mt-1 space-y-1 text-sm"><p>{n.found}</p>{n.belongs && <p>{n.belongs}</p>}<p className="text-muted-foreground">{n.match}</p>{n.help && <p className="font-medium text-warning">{n.help}</p>}<p className="text-xs text-muted-foreground">Next: <b>{n.nextAction}</b> · nothing is saved until you confirm.</p></div>; })()}</div>
               <Button type="button" size="sm" variant="ghost" className="shrink-0" onClick={() => { setScan(null); setScanRead(null); setScanCategory(""); setReceiptDetails({}); setReviewApproval(""); setReviewDialog(false); setFieldChecks({}); setConfirmed(true); }}>Discard</Button></div>
-            <details className="canvas-fields" open={reviewMessages.length > 0}><summary className="font-medium">Check what I read from the receipt</summary><div className="grid gap-4 pt-4">
+            <details className="canvas-fields" open={fieldsOpen} onToggle={(e) => setFieldsOpen(e.currentTarget.open)}><summary className="font-medium">Check what I read from the receipt</summary><div className="grid gap-4 pt-4">
             <div className="grid gap-1"><Label htmlFor="sm">Merchant</Label><Input id="sm" value={scan.merchant} onChange={(e) => setScan({ ...scan, merchant: e.target.value })} /><ReadingIndicator value={receiptDetails.confidence?.merchant ?? "unknown"} /><FieldCheck f="merchant" /><Corrected f="merchant" /></div>
             <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] items-start gap-3">
               <div className="grid min-w-0 gap-1"><Label htmlFor="sd">Date</Label><Input id="sd" type="date" className="h-10 w-full min-w-0 appearance-none" value={scan.date} onChange={(e) => setScan({ ...scan, date: e.target.value })} /><ReadingIndicator value={receiptDetails.confidence?.date ?? "unknown"} /><FieldCheck f="date" /><Corrected f="date" /></div>
