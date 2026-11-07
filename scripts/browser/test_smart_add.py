@@ -26,6 +26,7 @@ async def main():
    page.on('pageerror',lambda e: errors.append(str(e)))
    async def isolate(route):
     req=route.request; path=urlparse(req.url).path
+    if 'AppShell' in path: print('shell request',req.url)
     if urlparse(req.url).netloc!='localhost:8080' or req.method not in ('GET','HEAD'):
      blocked.append(path); await route.abort()
     elif req.is_navigation_request(): await route.fulfill(content_type='text/html',body=HTML)
