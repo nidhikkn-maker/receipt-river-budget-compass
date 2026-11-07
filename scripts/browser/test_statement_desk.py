@@ -45,7 +45,7 @@ class StatementDeskFlow(unittest.IsolatedAsyncioTestCase):
                 name = "useStore" if "store.tsx" in parsed.path else "supabase"
                 await route.fulfill(status=200, content_type="application/javascript", body=f'export {{ {name} }} from "/scripts/browser/statement-desk-mocks.tsx";')
             elif parsed.path == '/src/lib/statement-pipeline/apply.ts':
-                response=await route.fetch();body=await response.text();body=body.replace('const left = [];','const left = []; console.log("UNDO_DEBUG", JSON.stringify(result), JSON.stringify(api.transactions));');await route.fulfill(response=response,body=body)
+                response=await route.fetch();body=await response.text();body=body.replace('const left = [];','const left = []; console.log("UNDO_DEBUG", JSON.stringify(result), JSON.stringify(api.transactions), JSON.stringify(existing));');await route.fulfill(response=response,body=body)
             elif request.method not in ("GET", "HEAD"):
                 self.blocked.append("unexpected write")
                 await route.abort()
