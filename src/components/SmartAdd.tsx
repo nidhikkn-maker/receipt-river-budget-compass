@@ -1,5 +1,6 @@
 import { lazy, Suspense, useEffect, useRef, useState } from 'react';
-import { Camera, FileUp, Mic, PencilLine, MessageSquare, X, ChevronLeft, CheckCircle2, Images } from 'lucide-react';
+import { Camera, FileUp, Mic, PencilLine, MessageSquare, X, ChevronLeft, CheckCircle2, Images, ChevronRight } from 'lucide-react';
+import night from '@/assets/companion-add-night.jpg';
 import { Link } from '@tanstack/react-router';
 import { Button } from './ui/button';
 import { SourcePreview, sourceKind } from './SourcePreview';
@@ -70,24 +71,23 @@ export function SmartAdd({ open, onOpenChange, scope }: { open: boolean; onOpenC
     <div hidden={!open} className="fixed inset-0 z-50">
       <div className="absolute inset-0 bg-foreground/30 backdrop-blur-sm" aria-hidden onClick={() => onOpenChange(false)} />
       <div ref={panelRef} tabIndex={-1} role="dialog" aria-modal="true" aria-labelledby="smart-add-title"
-        className={`smart-add-sheet native-sheet absolute inset-x-0 bottom-0 flex max-h-[96dvh] flex-col overflow-clip rounded-t-3xl border bg-background shadow-xl outline-none sm:inset-y-4 sm:left-auto sm:right-4 sm:bottom-4 sm:max-h-none sm:rounded-3xl ${stage.kind === 'choose' ? 'sm:w-[28rem]' : 'sm:w-[min(72rem,calc(100vw-2rem))]'}`}>
+        style={stage.kind === 'choose' ? { backgroundImage: `url(${night})` } : undefined}
+        className={`smart-add-sheet native-sheet ${stage.kind === 'choose' ? 'smart-add-night ' : ''}absolute inset-x-0 bottom-0 flex max-h-[96dvh] flex-col overflow-clip rounded-t-3xl border bg-background shadow-xl outline-none sm:inset-y-4 sm:left-auto sm:right-4 sm:bottom-4 sm:max-h-none sm:rounded-3xl ${stage.kind === 'choose' ? 'sm:w-[28rem]' : 'sm:w-[min(72rem,calc(100vw-2rem))]'}`}>
         <header className="flex min-h-14 items-center gap-2 border-b px-4 pt-[env(safe-area-inset-top)] sm:pt-0">
           {busy && <Button variant="ghost" size="icon" aria-label="Start over" onClick={reset}><ChevronLeft className="size-5" /></Button>}
-          <h2 id="smart-add-title" className="flex-1 text-base font-semibold">Smart Add</h2>
+          <h2 id="smart-add-title" className={stage.kind === 'choose' ? 'sr-only' : 'flex-1 text-base font-semibold'}>Smart Add</h2>{stage.kind === 'choose' && <span className="flex-1" />}
           <Button variant="ghost" size="icon" aria-label={busy ? 'Hide Smart Add (your work stays here)' : 'Close Smart Add'} onClick={() => onOpenChange(false)}><X className="size-5" /></Button>
         </header>
         <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 pb-[calc(env(safe-area-inset-bottom)+1rem)] pt-4">
-          {stage.kind === 'choose' && <div className="space-y-4">
-            <p className="text-sm text-muted-foreground">Show me your receipt, statement or message — or tell me what happened. I'll explain what I found here, and nothing is saved until you confirm.{scope ? ` Adding to ${scope.charAt(0).toUpperCase()}${scope.slice(1)}.` : ''}</p>
-            <div className="grid gap-2">
-              <Button variant="outline" className="h-14 justify-start gap-3" onClick={() => cameraRef.current?.click()}><Camera className="size-5 text-primary" />Scan / Photo</Button>
-              <Button variant="outline" className="h-12 justify-start gap-3 pl-11 text-sm" onClick={() => galleryRef.current?.click()}><Images className="size-4 text-primary" />Choose from photos</Button>
-              <Button variant="outline" className="h-14 justify-start gap-3" onClick={() => fileRef.current?.click()}><FileUp className="size-5 text-primary" />Upload File</Button>
-              <Button variant="outline" className="h-14 justify-start gap-3" onClick={() => typed('voice')}><Mic className="size-5 text-primary" />Voice</Button>
-              <Button variant="outline" className="h-14 justify-start gap-3" onClick={() => typed('quick')}><PencilLine className="size-5 text-primary" />Quick Entry</Button>
-              <Button variant="outline" className="h-14 justify-start gap-3" onClick={() => typed('message')}><MessageSquare className="size-5 text-primary" />From Message</Button>
+          {stage.kind === 'choose' && <div className="flex min-h-full flex-col gap-6 pb-4 pt-6 sm:pt-10">
+            <div><p className="cmp-add-title cmp-serif" aria-hidden>Add to Ledgerline</p><p className="cmp-add-sub">Show me a receipt or statement, or just tell me. Nothing is saved until you confirm.{scope ? ` Adding to ${scope.charAt(0).toUpperCase()}${scope.slice(1)}.` : ''}</p></div>
+            <div className="grid gap-3">
+              <button type="button" aria-label="Scan or Photo" className="cmp-pearl-row" onClick={() => cameraRef.current?.click()}><span className="cmp-icon"><Camera /></span><span className="min-w-0 flex-1"><b>Scan or Photo</b><small>Snap a receipt or bill</small></span><ChevronRight /></button>
+              <button type="button" aria-label="Upload File" className="cmp-pearl-row" onClick={() => fileRef.current?.click()}><span className="cmp-icon"><FileUp /></span><span className="min-w-0 flex-1"><b>Upload File</b><small>PDF, statement, spreadsheet or photo</small></span><ChevronRight /></button>
+              <button type="button" aria-label="Voice Entry" className="cmp-pearl-row" onClick={() => typed('voice')}><span className="cmp-icon"><Mic /></span><span className="min-w-0 flex-1"><b>Voice Entry</b><small>Say what you spent</small></span><ChevronRight /></button>
+              <button type="button" aria-label="Quick Entry" className="cmp-pearl-row" onClick={() => typed('quick')}><span className="cmp-icon"><PencilLine /></span><span className="min-w-0 flex-1"><b>Quick Entry</b><small>Type an amount and a note</small></span><ChevronRight /></button>
             </div>
-            <p className="text-xs text-muted-foreground">Photos, PDFs, CSV and Excel files. Many statements at once? <Link to="/statements" onClick={() => onOpenChange(false)} className="underline">Open Statement Desk</Link>.</p>
+            <p className="cmp-night-link mt-auto text-sm">Also: <button type="button" onClick={() => galleryRef.current?.click()}><Images className="mr-1 inline size-4" />choose from photos</button> · <button type="button" onClick={() => typed('message')}><MessageSquare className="mr-1 inline size-4" />paste a bank message</button> · <Link to="/statements" onClick={() => onOpenChange(false)}>many statements at once</Link></p>
           </div>}
 
           {stage.kind === 'classify' && <div className="grid gap-6 lg:grid-cols-2">
