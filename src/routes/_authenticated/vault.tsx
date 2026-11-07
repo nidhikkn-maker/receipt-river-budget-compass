@@ -11,16 +11,19 @@ import { ExpenseDialog } from "@/components/ExpenseDialog";
 import { Button } from "@/components/ui/button";
 import { useStore } from "@/lib/store";
 import { money, type Expense } from "@/lib/expenses";
-import { DOC_TYPES, DOC_LABEL, earlierVersions, expiringDocuments, searchVault, vaultItems, type DocType, type VaultItem } from "@/lib/documents";
+import { DOC_TYPES, DOC_LABEL, earlierVersions, expiringDocuments, searchVault, vaultItems, linkedLabels, type DocType, type VaultItem } from "@/lib/documents";
 import { todayISO } from "@/lib/use-position";
 import { VaultBooks } from "@/components/books/VaultBooks";
+import { useBooks } from "@/components/books/useBooks";
 export const Route=createFileRoute("/_authenticated/vault")({head:()=>({meta:[{title:"DocuRepo — Ledgerline"},{name:"description",content:"Search receipts and every financial document filed through Statement Desk."},{property:"og:title",content:"DocuRepo — Ledgerline"},{property:"og:description",content:"Receipts, statements, insurance and warranties with renewal dates."},{property:"og:type",content:"website"},{name:"twitter:card",content:"summary"}]}),component:Vault});
 function Vault() {
-  const { transactions, documents, updateDocument, removeDocument, signedUrl, downloadFile } = useStore();
+  const { accounts, transactions, documents, updateDocument, removeDocument, signedUrl, downloadFile } = useStore();
   const [q, setQ] = useState(""); const [from, setFrom] = useState(""); const [to, setTo] = useState("");
   const [type, setType] = useState<DocType | "all">("all"); const [selected, setSelected] = useState<Expense | null>(null);
   const navigate = useNavigate();
-  const items = searchVault(vaultItems(documents, transactions), { q, type, from, to });
+  const { books } = useBooks();
+  const all = vaultItems(documents, transactions);
+  const items = searchVault(all, { q, type, from, to }, linkedLabels(all, { accounts, transactions, links: books.docLinks }));
   const expires = expiringDocuments(documents, todayISO());
   const open = async (item: VaultItem) => {
     if (item.source === "receipt") { setSelected(transactions.find(e => e.id === item.transactionId) ?? null); return; }
@@ -34,7 +37,7 @@ function Vault() {
     <VaultBooks />
     {expires.length > 0 && <div className="mb-4 border-l-4 border-destructive bg-secondary p-3 text-sm">{expires.map(d => <p key={d.id}>{d.title} · expires {d.expiresOn}</p>)}</div>}
     <div className="mb-5 grid gap-3 sm:grid-cols-4">
-      <Input aria-label="Search documents" placeholder="Merchant, amount, filename or text" value={q} onChange={e => setQ(e.target.value)} />
+      <Input aria-label="Search documents" placeholder="Merchant, account, asset, tenant, supplier or text" value={q} onChange={e => setQ(e.target.value)} />
       <Input aria-label="Documents from" type="date" value={from} onChange={e => setFrom(e.target.value)} />
       <Input aria-label="Documents to" type="date" value={to} onChange={e => setTo(e.target.value)} />
       <Select value={type} onValueChange={v => setType(v as DocType | "all")}><SelectTrigger aria-label="Document type filter"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">All document types</SelectItem>{DOC_TYPES.map(t => <SelectItem key={t} value={t}>{DOC_LABEL[t]}</SelectItem>)}</SelectContent></Select>
