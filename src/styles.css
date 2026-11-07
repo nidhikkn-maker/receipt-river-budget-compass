@@ -915,8 +915,8 @@ html[data-theme="apple-glass"] :where(.bg-card, .bg-popover, .bg-ink) {
 .privacy .font-mono, .privacy .financial-amount { filter: blur(7px); transition: filter .2s; }
 
 /* Official Ledgerline logo colours (logo only; app theme unchanged) */
-:root { --brand-ink: #17242B; --brand-teal: #168F80; }
-.dark, html.dark { --brand-ink: #FFFFFF; --brand-teal: #2BB3A1; }
+:root { --brand-ink: oklch(0.28 0.045 258); --brand-accent: oklch(0.72 0.075 85); }
+.dark, html.dark { --brand-ink: oklch(0.96 0.012 88); --brand-accent: oklch(0.79 0.07 85); }
 
 /* Page-change progress bar and instant press feedback on every tappable item. */
 @keyframes nav-progress { 0% { width: 0; } 60% { width: 75%; } 100% { width: 92%; } }
@@ -1043,3 +1043,19 @@ html[data-theme="apple-glass"] :where(.bg-card, .bg-popover, .bg-ink) {
 .uix-family-reports :where(.flex) { flex-wrap: wrap; }
 
 @media (max-width: 480px) { .journal-wealth > div:nth-of-type(2) { grid-template-columns: 1fr; } .uix-stat { overflow: visible; } }
+
+/* Brand/auth surfaces share the app tokens, without decorative cards. */
+.auth-experience { min-height: 100dvh; display: flex; flex-direction: column; padding: 40px 6%; }
+.auth-brand { width: 100%; max-width: 1180px; margin-inline: auto; }
+.auth-stage { width: 100%; max-width: 1100px; margin: auto; display: grid; grid-template-columns: 1fr 400px; align-items: center; gap: 100px; padding-block: 64px; }
+.auth-introduction h1 { font-size: 56px; font-weight: 500; line-height: 1.12; margin-block: 18px 24px; }
+.auth-story { font-size: 19px; line-height: 1.7; color: var(--muted-foreground); }
+.auth-reassurance { display: grid; gap: 8px; margin-top: 48px; font-size: 14px; color: var(--muted-foreground); }
+.auth-form { min-width: 0; border-left: 1px solid var(--border); padding-left: 40px; }
+.auth-form :where(input,button) { min-height: 44px; }
+.auth-form input { box-shadow: none; background: var(--card); }
+.auth-footer { display: flex; align-items: center; justify-content: space-between; gap: 20px; font-size: 12px; color: var(--muted-foreground); }
+.auth-creator { display: flex; align-items: center; gap: 8px; opacity: .65; flex-shrink: 0; }
+@media (max-width: 1050px) { .auth-stage { gap: 40px; grid-template-columns: 1fr 360px; } .auth-introduction h1 { font-size: 44px; } .auth-form { padding-left: 28px; } }
+@media (max-width: 740px) { .auth-experience { padding: max(28px, env(safe-area-inset-top)) 24px max(24px, env(safe-area-inset-bottom)); } .auth-brand svg { height: 36px; } .auth-stage { display: block; max-width: 420px; padding-block: 36px; } .auth-introduction h1 { font-size: 36px; margin-block: 10px 14px; } .auth-story { font-size: 15px; } .auth-reassurance { display: none; } .auth-form { border: 0; padding: 36px 0 0; } .auth-footer { align-items: flex-end; font-size: 11px; } .auth-footer > span:first-child { max-width: 175px; } }
+@media (prefers-contrast: more) { .auth-form { border-color: var(--foreground); } .auth-story,.auth-reassurance,.auth-footer { color: var(--foreground); } }
