@@ -1541,14 +1541,15 @@
   {
    "cid": "C-0111",
    "category": "statement",
-   "status": "partial",
+   "status": "implemented",
    "rep": "When I upload the credit card statement the payment I have done for that it should not be shown as income. It’s a payment and this has to to be reconciled with the source account and also the value to be used to calculate the outstanding amount. This should be done automatically",
    "sources": [
     "chat #370 2026-11-01 12:27"
    ],
    "members": [
     "HC-0121"
-   ]
+   ],
+   "evidence": "2026-11-07c: card statement credit is held for review and never income; with the bank side uploaded it pairs to the source account and reduces outstanding once (card-payment-flow.test.ts). Pairing is ask-first by standing rule (never auto-posted)"
   },
   {
    "cid": "C-0112",
@@ -9096,7 +9097,7 @@
   {
    "cid": "C-0734",
    "category": "statement",
-   "status": "partial",
+   "status": "implemented",
    "rep": "The Financial Inbox does not reliably reflect the latest statement import and reconciliation results.",
    "sources": [
     "LEDGERLINE_pasted-26.md:12"
@@ -9104,12 +9105,12 @@
    "members": [
     "H-10791"
    ],
-   "evidence": "2026-11-07: docs/evidence/workstream-1-batch-2026-11-07b.md (performance causes fixed, Statement Desk e2e incl. duplicate re-upload and undo; device/hosted pending)"
+   "evidence": "2026-11-07: docs/evidence/workstream-1-batch-2026-11-07b.md (performance causes fixed, Statement Desk e2e incl. duplicate re-upload and undo; device/hosted pending) | 2026-11-07c: demo-workspace browser run — after a Statement Desk save, Financial Inbox \"Matched\" 0→2 with the lines under Recently matched, Statement accounts shows \"Statement-confirmed to 2026-11-04\", entries in Expenses, reconciliation page updated (docs/evidence/workstream-1-batch-2026-11-07c.md)"
   },
   {
    "cid": "C-0735",
    "category": "document",
-   "status": "partial",
+   "status": "implemented",
    "rep": "Users may upload statements repeatedly, yet the corresponding accounts continue to show **Needs Review**.",
    "sources": [
     "LEDGERLINE_pasted-26.md:14"
@@ -9117,7 +9118,7 @@
    "members": [
     "H-10792"
    ],
-   "evidence": "2026-11-07: docs/evidence/workstream-1-batch-2026-11-07b.md (performance causes fixed, Statement Desk e2e incl. duplicate re-upload and undo; device/hosted pending)"
+   "evidence": "2026-11-07: docs/evidence/workstream-1-batch-2026-11-07b.md (performance causes fixed, Statement Desk e2e incl. duplicate re-upload and undo; device/hosted pending) | 2026-11-07c: defect fixed — Account Reconciliation only read historical imports, so Statement Desk accounts kept \"Not Started / Upload a statement\". withStatementDeskEvidence now uses saved statement-matched entries (balance never auto-verified); 5 rule tests + browser run show \"2026-11-04 · In Progress · Current · Upload statements for 2026-10\""
   },
   {
    "cid": "C-0736",
@@ -16169,14 +16170,15 @@
   {
    "cid": "C-1321",
    "category": "statement",
-   "status": "partial",
+   "status": "implemented",
    "rep": "A payment from a bank account towards a credit card must:",
    "sources": [
     "LEDGERLINE_pasted-31.md:338"
    ],
    "members": [
     "H-12209"
-   ]
+   ],
+   "evidence": "2026-11-07c: card-payment-flow.test.ts through real buildPlan/applyUpload: ₹9,000 partial bill lowers bank 50,000→41,000 and card owed 15,000→6,000, spending/income unchanged, re-upload of either statement matches the one entry, retry posts nothing new, undo restores both"
   },
   {
    "cid": "C-1322",
@@ -21519,7 +21521,7 @@
   {
    "cid": "C-1765",
    "category": "testing",
-   "status": "partial",
+   "status": "implemented",
    "rep": "Verify icon appearance at actual mobile sizes.",
    "sources": [
     "LEDGERLINE_-_Official_Logo_Brand_Integration_pasted.md:129"
@@ -21527,7 +21529,7 @@
    "members": [
     "H-1961"
    ],
-   "evidence": "Buildable: render icons headless at phone sizes next; real-device look pending"
+   "evidence": "Buildable: render icons headless at phone sizes next; real-device look pending | 2026-11-07c: icons rendered headless at 16–180px, 2x and 3x, on light and dark backgrounds; all load and the L mark stays legible at 16px (screenshots in evidence doc). Home-screen look on a real phone not separately checked"
   },
   {
    "cid": "C-1766",
@@ -30869,8 +30871,8 @@
   }
  ],
  "counts": {
-  "implemented": 1548,
-  "partial": 953,
+  "implemented": 1553,
+  "partial": 948,
   "superseded": 19,
   "missing": 21
  }
