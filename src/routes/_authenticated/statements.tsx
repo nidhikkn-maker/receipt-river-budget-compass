@@ -427,11 +427,7 @@ function StatementDeskPage() {
       for (const d of [...a.auto, ...a.ask]) rows.push([a.file.name, a.name, d.line.date, d.line.description, d.line.amount, d.line.direction, d.group === "auto" ? "save automatically" : "needs your decision", d.reason].map(q).join(","));
       for (const l of a.later) rows.push([a.file.name, a.name, l.line.date, l.line.description, l.line.amount, l.line.direction, "held back", l.reason].map(q).join(","));
     }
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(new Blob([rows.join("\n")], { type: "text/csv" }));
-    a.download = "statement-desk-plan.csv";
-    a.click();
-    URL.revokeObjectURL(a.href);
+    downloadBlob(new Blob([rows.join("\n")], { type: "text/csv" }), "statement-desk-plan.csv");
   };
 
   const askKeys = plan?.accounts.flatMap((a) => a.ask.map((d) => d.line.key)) ?? [];
