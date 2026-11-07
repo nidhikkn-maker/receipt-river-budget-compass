@@ -78,6 +78,13 @@ async def main():
    await expect(sheet).to_be_hidden()
    await page.get_by_role('button',name='Smart Add',exact=True).filter(visible=True).first.click()
    await expect(sheet.get_by_role('heading',name='Intelligent Canvas')).to_be_visible()
+   await sheet.get_by_role('combobox',name='Receipt category').click(); await page.get_by_role('option').first.click()
+   await sheet.get_by_role('button',name='Confirm details',exact=True).click()
+   await sheet.get_by_role('button',name='Save expense').click()
+   await expect(sheet.get_by_text('Saved to your records')).to_be_visible(timeout=15000)
+   await page.screenshot(path=str(OUT/f'{width}-smart-saved.png'))
+   assert await page.evaluate('expenseBrowserFixture.saves.length')==1
+   assert page.url==start_url
    pdf=OUT/'statement.pdf'; im.save(pdf,'PDF')
    await sheet.get_by_role('button',name='Start over').click()
    await page.get_by_label('Choose files',exact=True).set_input_files(pdf)
@@ -86,7 +93,7 @@ async def main():
    await page.wait_for_timeout(800)
    await page.screenshot(path=str(OUT/f'{width}-smart-pdf.png'))
    assert page.url==start_url
-   assert await page.evaluate('expenseBrowserFixture.saves.length')==0
+   assert await page.evaluate('expenseBrowserFixture.saves.length')==1, 'exactly one save'
    assert not errors, errors
    print('blocked',blocked)
    print(f'{width}: Today/Review/Wealth/Start/Spaces/Smart Add/Canvas plain wording, no overflow or posting PASS')
