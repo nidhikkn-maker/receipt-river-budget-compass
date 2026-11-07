@@ -1,3 +1,10 @@
+## Full app-wide UIX directive — active, NOT complete
+- [x] Replaced long rail with short primary navigation and full grouped More directory; shared typography/controls/sheets/flat sections migrated.
+- [x] Journal, Canvas disclosures, Money/account creation, Travel list, DocuRepo rows, Reports filters and Settings folds changed in actual code.
+- [x] Sixteen real signed-in route screens rendered at 360/430/834/1180/1440, light/dark; initial entities/report overflow corrected and exact failing elements rechecked. Zero page errors across matrix. 54 automated +14 Statement Desk +9 Inbox +4 receipt browser cases pass (one pre-existing skipped).
+- [ ] Remaining family-specific migration/acceptance: detailed business/tax/access, planning subpages, claims, trip detail, assistant/public pages, advanced reconciliation/source tables; complete route reachability/accessibility and final light/dark capture matrix. No full UIX completion claim.
+- [ ] P0/P1 recovery work preserved; no financial rules/policies/approval activation/publication changed. Credit reserve untouched.
+
 ## 19:05 credit-controlled continuation
 - [x] Delivered 18 actual-component screenshots in phone/tablet/desktop sizes with synthetic local data; no exact reference claim.
 - [x] Terminal Undo marker prevents stale checkpoint resurrection: installed disposable SQL persistence regression and 14 actual Statement Desk browser cases pass; 34 targeted automated checks pass.
@@ -5,7 +12,7 @@
 - [ ] P1 handoffs to assets/claims and full connected financial screens remain unfinished; no requirement promotions.
 
 ## Approved UIX integration — 7 Nov 2026
-- [x] Corrected visual redesign: editorial Today with sunrise header/action list/journal, five-space chooser, cream Review/Wealth/Smart Add/Canvas, landscape tablet sidebar and desktop journal/right panels. Actual rendered matrix390/1180/1440 passes; exact Photo2 mapping remains unavailable. No financial changes or release activation.
+- [ ] First-pass visual treatment (not owner-accepted as complete): editorial Today with sunrise header/action list/journal, five-space chooser, cream Review/Wealth/Smart Add/Canvas, landscape tablet sidebar and desktop journal/right panels. Actual rendered matrix390/1180/1440 passes; exact Photo2 mapping remains unavailable. No financial changes or release activation.
 - [x] Global plus opens Smart Add; existing scan/voice/quick/message drafts and Statement Desk upload destination verified at390/834/1280 widths. Spaces and More retain Journal/company/module access.
 - [x] Receipt Canvas includes source preview/text, interpretation, category, editable workspace/instrument and destination/match facts; existing statement batch review labelled Canvas. Existing confirmation/posting paths unchanged.
 - [ ] Remaining UIX acceptance: full real upload-from-chooser→statement/document flow, draft reload/reconnect and hosted workspace/source security; asset/claim destination selection and exact five-screen asset mapping remain unverified. 33 targeted checks, four receipt browser cases and one card batch browser case pass; responsive chooser matrix pass. Release holds and300-credit reserve unchanged.

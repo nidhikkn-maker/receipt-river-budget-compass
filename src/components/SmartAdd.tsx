@@ -11,7 +11,7 @@ export function SmartAdd({ open, onOpenChange, scope }: { open: boolean; onOpenC
     void navigate({ to: '/new', search: { mode, ...(scope ? { scope } : {}) } });
   };
   return <Dialog open={open} onOpenChange={onOpenChange}>
-    <DialogContent className="smart-add-sheet max-h-[85dvh] overflow-y-auto sm:max-w-md">
+    <DialogContent className="smart-add-sheet native-sheet max-h-[85dvh] overflow-y-auto sm:max-w-md">
       <DialogHeader><DialogTitle>Smart Add</DialogTitle><DialogDescription>{scope ? `${scope.charAt(0).toUpperCase()}${scope.slice(1)}` : 'Choose a starting point'}</DialogDescription></DialogHeader>
       <div className="grid gap-2">
         <Button variant="outline" className="h-14 justify-start gap-3" onClick={() => entry('scan')}><Camera className="size-5 text-primary" />Scan / Photo</Button>
