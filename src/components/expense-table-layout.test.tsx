@@ -25,7 +25,7 @@ const expense = (id: string, title: string): Expense => ({
   memberId: "me",
   accountId: "a1",
   txnType: "expense",
-} as Expense);
+} as unknown as Expense);
 
 function setTabletLandscape(matches: boolean) {
   window.matchMedia = ((query: string) => ({
