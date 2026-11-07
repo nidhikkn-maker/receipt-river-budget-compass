@@ -62,7 +62,7 @@ async def main():
             await page.get_by_role('button',name='Generate claim PDF' if mode=='claim' else 'Generate statement PDF').click()
             await expect(page.get_by_role('dialog')).to_contain_text('1 readable')
             if mode=='claim':
-                await expect(page.get_by_role('dialog')).to_contain_text('2 need attention')
+                await expect(page.get_by_role('dialog')).to_contain_text('2 missing or unreadable')
             assert await page.evaluate('window.__history||null') is None
             await page.get_by_role('button',name='Confirm documents & generate').click()
             await expect(page.get_by_text('Saved in Reports Centre → Report history.',exact=True)).to_be_visible(timeout=30000)
