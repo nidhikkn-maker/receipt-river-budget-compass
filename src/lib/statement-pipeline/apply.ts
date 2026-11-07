@@ -28,6 +28,8 @@ export interface ApplyApi {
   setArchived: (id: string, archived: boolean) => Promise<void>;
   refresh: () => Promise<void>;
   transactions: Expense[];
+  /** Store the private original before the first financial write for this account. */
+  prepareSource?: (request: ApplyRequest, accountId: string) => Promise<string>;
 }
 
 /** One account's accepted part of an upload: the lines to post, the destination for movements, the records to mark. */
@@ -47,6 +49,20 @@ export interface ApplyResult {
   reconciled: string[];
   createdAccounts: { id: string; name: string }[];
   linkedDrafts?: { draftId: string; transactionId: string }[];
+  sources?: { documentId: string; accountId: string; file: string }[];
+}
+
+export class PartialUploadError extends Error {
+  constructor(message: string, public readonly result: ApplyResult) { super(message); this.name = "PartialUploadError"; }
+}
+
+/** Same bytes always identify the same owner-private original, independent of the filename. */
+export async function originalId(owner: string, bytes: ArrayBuffer): Promise<string> {
+  const hash = new Uint8Array(await crypto.subtle.digest("SHA-256", bytes));
+  const digest = new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(`${owner}|${Array.from(hash, b => b.toString(16).padStart(2, "0")).join("")}`))).slice(0, 16);
+  digest[6] = ((digest[6] ?? 0) & 15) | 80; digest[8] = ((digest[8] ?? 0) & 63) | 128;
+  const hex = Array.from(digest, b => b.toString(16).padStart(2, "0")).join("");
+  return `${hex.slice(0,8)}-${hex.slice(8,12)}-${hex.slice(12,16)}-${hex.slice(16,20)}-${hex.slice(20)}`;
 }
 
 /**
@@ -59,14 +75,18 @@ export async function applyUpload(requests: ApplyRequest[], api: ApplyApi, onPro
   let done = 0;
   const total = wanted.reduce((s, r) => s + r.decisions.length + r.reconcileIds.length, 0);
 
-  for (const r of wanted) {
+  try { for (const r of wanted) {
     let accountId = r.account.accountId;
     if (!accountId) {
       const hint = r.account.hint;
       if (!hint) throw Error(`We couldn't tell which account ${r.account.file.name} belongs to — choose one before posting.`);
       accountId = await api.addAccount(newAccountFromHint(hint, r.account.file.opening));
       result.createdAccounts.push({ id: accountId, name: hint.name });
+      // Retain the returned account in the accepted plan even if a subsequent stage fails.
+      r.account.accountId = accountId;
     }
+    const source = await api.prepareSource?.(r, accountId);
+    if (source) (result.sources ??= []).push({ documentId: source, accountId, file: r.account.file.name });
     for (const d of r.decisions) {
       onProgress?.(`Saving ${++done} of ${total}…`);
       if (d.needsDestination && !r.destination) throw Error(`Choose where “${d.line.description.slice(0, 60)}” went before posting.`);
@@ -78,17 +98,22 @@ export async function applyUpload(requests: ApplyRequest[], api: ApplyApi, onPro
         Object.assign(input, Object.fromEntries(Object.entries(link.overrides).filter(([, v]) => v !== undefined && v !== "")));
         await api.save(input, { createId: id, noRefresh: true, files: await link.files() });
         result.posted.push(id);
+        if (source) await api.reconcile(id, `document:${source} · ${d.line.key} · ${d.line.date} · ${d.line.amount.toFixed(2)}`, { noRefresh: true });
         if (api.linkDraft) { await api.linkDraft(link.draftId, id); (result.linkedDrafts ??= []).push({ draftId: link.draftId, transactionId: id }); }
         continue;
       }
       await api.save(input, { createId: id, noRefresh: true });
       result.posted.push(id);
+      if (source) await api.reconcile(id, `document:${source} · ${d.line.key} · ${d.line.date} · ${d.line.amount.toFixed(2)}`, { noRefresh: true });
     }
     for (const m of r.reconcileIds) {
       onProgress?.(`Marking ${++done} of ${total}…`);
-      await api.reconcile(m.id, m.ref, { noRefresh: true });
+      await api.reconcile(m.id, source ? `document:${source} · ${m.ref}` : m.ref, { noRefresh: true });
       result.reconciled.push(m.id);
     }
+  } } catch (error) {
+    await api.refresh().catch(() => {});
+    throw new PartialUploadError(error instanceof Error ? error.message : "Statement saving interrupted", result);
   }
   await api.refresh();
   return result;

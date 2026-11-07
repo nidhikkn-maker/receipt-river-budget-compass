@@ -3,6 +3,7 @@
 import { PGlite } from '@electric-sql/pglite';
 import { beforeAll, afterAll, describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
+import { privateFileUrl, PRIVATE_URL_SECONDS } from '../private-files';
 const OWNER = '00000000-0000-4000-8000-000000000001', MEMBER = '00000000-0000-4000-8000-000000000002', STRANGER = '00000000-0000-4000-8000-000000000003';
 const db = new PGlite();
 const as = (uid: string) => db.exec(`RESET ROLE; SELECT set_config('test.uid','${uid}',false); SET ROLE authenticated;`);
@@ -57,5 +58,19 @@ describe('company-level access', () => {
     await as(MEMBER); await expect(db.query('SELECT public.revoke_entity_access($1)', [id])).rejects.toThrow(/not found/);
     await as(OWNER); await db.query('SELECT public.revoke_entity_access($1)', [id]);
     await as(MEMBER); expect(await docs()).toEqual([]); expect(await files()).toEqual([]);
+  });
+  it('current installed company/file policies gate URL issuance before and after revoke; old bearer lifetime is explicit', async () => {
+    let signed = 0;
+    const api = { canRead: async (path: string) => (await db.query("SELECT name FROM storage.objects WHERE bucket_id='receipts' AND name=$1", [path])).rows.length === 1, sign: async (_path: string, seconds: number) => { signed++; expect(seconds).toBe(60); return 'https://controlled.invalid/private-token'; } };
+    await as(OWNER); await db.query("SELECT grant_entity_access('c1','accountant@x.in',false)");
+    await as(MEMBER);
+    expect(await privateFileUrl(`${OWNER}/c1.pdf`, api)).toBe('https://controlled.invalid/private-token');
+    expect(await privateFileUrl(`${OWNER}/c2.pdf`, api)).toBeNull();
+    expect(await privateFileUrl(`${OWNER}/personal.pdf`, api)).toBeNull();
+    expect(await privateFileUrl(`${OWNER}/../personal.pdf`, api)).toBeNull();
+    await as(OWNER); const grant = (await db.query<{ id: string }>('SELECT id FROM entity_members WHERE revoked_at IS NULL')).rows[0];
+    if (!grant) throw Error('Missing test grant'); await db.query('SELECT revoke_entity_access($1)', [grant.id]);
+    await as(MEMBER); expect(await privateFileUrl(`${OWNER}/c1.pdf`, api)).toBeNull();
+    expect(signed).toBe(1); expect(PRIVATE_URL_SECONDS).toBe(60);
   });
 });
