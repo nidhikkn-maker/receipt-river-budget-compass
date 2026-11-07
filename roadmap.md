@@ -968,3 +968,6 @@
 - [x] C-1857 actual claim-builder saved/downloaded PDF evidence ordering verified in both formats; remaining account reconciliation and document-to-report gaps next.
 - [ ] Unknown committed statement intent fresh review, stale-safe Undo and source concurrency; hosted re-sign-in/cross-device acceptance not verified.
 - [ ] V60-0173 hosted export authorization/legacy same-size integrity, universal receipt intake and real-device/Cloud Inbox outlier observation remain open. No records/activation/publication.
+## Plain-language (non-accountant) UIX — 7 Nov 2026
+- [x] Shared wording helpers, Getting started guide (6 journeys), Accounting details disclosure, Statement stage strip; Review/Wealth/Canvas/Guide rendered-checked at 390/1180/1440 with fixtures.
+- [ ] Wording passes for Trip budget, Document intake, Balance verification, Asset/Tax books, Audit, Payment methods, Receivables, Settings, DocuRepo; app-wide toasts/validation text (see docs/UIX_PLAIN_LANGUAGE_COVERAGE.md).
