@@ -180,6 +180,8 @@ export function nextResendAt(lastReminderAt: string | null, now = new Date()): s
 export const DAILY_EMAIL_LIMIT = 10;
 /** Most different accountant addresses one owner may email in 24 hours. */
 export const DAILY_RECIPIENT_LIMIT = 3;
+/** Most emails one owner may send to the same address in 24 hours. */
+export const DAILY_PER_RECIPIENT_LIMIT = 4;
 
 /** Decides whether another accountant email to `to` is allowed, from the owner's emails in the last 24h. */
 export function emailAllowance(recent: { detail: string | null; at: string }[], to: string, now = new Date()): { ok: true } | { ok: false; error: string } {
@@ -187,7 +189,9 @@ export function emailAllowance(recent: { detail: string | null; at: string }[], 
   const day = recent.filter((e) => new Date(e.at).getTime() > since);
   if (day.length >= DAILY_EMAIL_LIMIT) return { ok: false, error: `You've sent ${DAILY_EMAIL_LIMIT} accountant emails today — try again tomorrow` };
   const addr = (d: string | null) => (d ?? "").replace(MANUAL_REMINDER_PREFIX, "").trim().toLowerCase();
+  const target = to.trim().toLowerCase();
+  if (day.filter((e) => addr(e.detail) === target).length >= DAILY_PER_RECIPIENT_LIMIT) return { ok: false, error: `You've emailed this address ${DAILY_PER_RECIPIENT_LIMIT} times today — try again tomorrow` };
   const seen = new Set(day.map((e) => addr(e.detail)).filter(Boolean));
-  if (!seen.has(to.trim().toLowerCase()) && seen.size >= DAILY_RECIPIENT_LIMIT) return { ok: false, error: `You've emailed ${DAILY_RECIPIENT_LIMIT} different addresses today — try again tomorrow` };
+  if (!seen.has(target) && seen.size >= DAILY_RECIPIENT_LIMIT) return { ok: false, error: `You've emailed ${DAILY_RECIPIENT_LIMIT} different addresses today — try again tomorrow` };
   return { ok: true };
 }

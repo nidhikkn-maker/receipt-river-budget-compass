@@ -58,7 +58,7 @@ export const sendLinkNow = createServerFn({ method: "POST" })
     const { userId, supabase } = context;
     const { createFreshLink } = await import("@/lib/accountant.server");
     const { data: c } = await supabase.from("accountant_contacts").select("*").eq("owner_id", userId).maybeSingle();
-    if (data.email && !c?.email) return { ok: false as const, error: "Add your accountant's email first" };
+    if (data.email && (!c?.email || !z.string().email().safeParse(c.email).success)) return { ok: false as const, error: "Add a valid accountant email first" };
     if (data.email && c?.email) {
       const allow = emailAllowance(await recentEmails(supabase, userId), c.email);
       if (!allow.ok) return { ok: false as const, error: allow.error };
@@ -111,7 +111,7 @@ export const resendReminder = createServerFn({ method: "POST" })
     const { data: last } = await supabase.from("upload_link_events").select("at").eq("owner_id", userId).eq("link_id", l.id).eq("kind", "reminded").order("at", { ascending: false }).limit(1).maybeSingle();
     const wait = nextResendAt(last?.at ?? null);
     if (wait) return { ok: false as const, error: `A reminder was sent recently — you can resend after ${new Date(wait).toLocaleString("en-IN", { timeZone: "Asia/Kolkata", dateStyle: "medium", timeStyle: "short" })}` };
-    if (!c?.email) return { ok: false as const, error: "Add your accountant's email first" };
+    if (!c?.email || !z.string().email().safeParse(c.email).success) return { ok: false as const, error: "Add a valid accountant email first" };
     const allow = emailAllowance(await recentEmails(supabase, userId), c.email);
     if (!allow.ok) return { ok: false as const, error: allow.error };
     const { send, tokenFor } = await import("@/lib/upload-link.server");
