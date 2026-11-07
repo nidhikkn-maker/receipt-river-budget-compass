@@ -31,7 +31,6 @@ class StatementDeskFlow(unittest.IsolatedAsyncioTestCase):
         self.errors = []
         self.blocked = []
         self.page.on("pageerror", lambda error: self.errors.append(str(error)))
-        self.page.on("console",lambda m: print(m.text,flush=True) if ("EXISTING" in m.text or "LEFT" in m.text) else None)
 
         async def isolate(route):
             request = route.request
@@ -44,8 +43,6 @@ class StatementDeskFlow(unittest.IsolatedAsyncioTestCase):
             elif parsed.path in ("/src/lib/store.tsx", "/src/integrations/supabase/client.ts"):
                 name = "useStore" if "store.tsx" in parsed.path else "supabase"
                 await route.fulfill(status=200, content_type="application/javascript", body=f'export {{ {name} }} from "/scripts/browser/statement-desk-mocks.tsx";')
-            elif parsed.path == '/src/lib/statement-pipeline/apply.ts':
-                response=await route.fetch();body=await response.text();body=body.replace('const existing = new Set(', 'const existing = new Set(').replace('for (const e of result.evidence', 'console.log("EXISTING", JSON.stringify([...existing])); for (const e of result.evidence').replace('if (left.length) return', 'console.log("LEFT",JSON.stringify(left)); if (left.length) return');await route.fulfill(response=response,body=body)
             elif request.method not in ("GET", "HEAD"):
                 self.blocked.append("unexpected write")
                 await route.abort()
@@ -180,7 +177,6 @@ class StatementDeskFlow(unittest.IsolatedAsyncioTestCase):
         await self.page.wait_for_function("window.deskFixture && deskFixture.uploads.length === 1 && deskFixture.uploads[0].status === 'complete'")
         self.assertEqual(await self.page.evaluate('deskFixture.transactions.length'), 2)
         await self.page.get_by_label('Recent uploads').screenshot(path=str(EVIDENCE / 'recovered-completion.png'))
-        if self._testMethodName=='test_changed_statement_evidence_blocks_entire_undo_after_reload': print('RELOADED',await self.page.evaluate('deskFixture.transactions'),flush=True)
         await self.page.get_by_label('Recent uploads').get_by_role('button', name='Undo', exact=True).click()
         await expect(self.page.get_by_label('Recent uploads')).to_have_count(0)
         self.assertEqual(await self.page.evaluate('deskFixture.transactions.length'), 0)
@@ -203,7 +199,6 @@ class StatementDeskFlow(unittest.IsolatedAsyncioTestCase):
         await expect(self.page.get_by_label('Recent uploads')).to_contain_text('interrupted')
         self.assertEqual(await self.page.evaluate('deskFixture.uploads[0].status'), 'interrupted')
         await self.page.get_by_label('Recent uploads').screenshot(path=str(EVIDENCE / 'partial-remains-interrupted.png'))
-        if self._testMethodName=='test_changed_statement_evidence_blocks_entire_undo_after_reload': print('RELOADED',await self.page.evaluate('deskFixture.transactions'),flush=True)
         await self.page.get_by_label('Recent uploads').get_by_role('button', name='Undo', exact=True).click()
         await expect(self.page.get_by_label('Recent uploads')).to_have_count(0)
         self.assertEqual(await self.page.evaluate('deskFixture.transactions.length'), 0)
@@ -217,18 +212,14 @@ class StatementDeskFlow(unittest.IsolatedAsyncioTestCase):
         await self.page.get_by_role('button', name='Apply everything (2 to save)').click()
         await expect(self.page.get_by_role('button', name='Undo this upload (2 posted)')).to_be_visible()
         await self.page.evaluate('deskFixture.failRemoveId = deskFixture.transactions[0].id')
-        if self._testMethodName=='test_changed_statement_evidence_blocks_entire_undo_after_reload': print('RELOADED',await self.page.evaluate('deskFixture.transactions'),flush=True)
         await self.page.get_by_label('Recent uploads').get_by_role('button', name='Undo', exact=True).click()
         await self.page.wait_for_function('deskFixture.transactions.length === 1')
-        if self._testMethodName=='test_changed_statement_evidence_blocks_entire_undo_after_reload': print('AFTER_UNDO',await self.page.evaluate('deskFixture.uploads'),flush=True)
         await expect(self.page.get_by_label('Recent uploads')).to_contain_text('Undo unfinished')
         await self.page.reload()
         await expect(self.page.get_by_role('heading', name='Statement Desk')).to_be_visible()
-        if self._testMethodName=='test_changed_statement_evidence_blocks_entire_undo_after_reload': print('AFTER_UNDO',await self.page.evaluate('deskFixture.uploads'),flush=True)
         await expect(self.page.get_by_label('Recent uploads')).to_contain_text('Undo unfinished')
         self.assertEqual(await self.page.evaluate('deskFixture.transactions.length'), 1)
         await self.page.get_by_label('Recent uploads').screenshot(path=str(EVIDENCE / 'failed-undo-reloaded.png'))
-        if self._testMethodName=='test_changed_statement_evidence_blocks_entire_undo_after_reload': print('RELOADED',await self.page.evaluate('deskFixture.transactions'),flush=True)
         await self.page.get_by_label('Recent uploads').get_by_role('button', name='Undo', exact=True).click()
         await expect(self.page.get_by_label('Recent uploads')).to_have_count(0)
         self.assertEqual(await self.page.evaluate('deskFixture.transactions.length'), 0)
@@ -244,16 +235,12 @@ class StatementDeskFlow(unittest.IsolatedAsyncioTestCase):
         await self.page.get_by_role('button', name='Apply everything (1 to save)').click()
         await expect(self.page.get_by_role('button', name='Undo this upload (1 posted)')).to_be_visible()
         await self.page.evaluate('deskFixture.failHistoryRemoval = true')
-        if self._testMethodName=='test_changed_statement_evidence_blocks_entire_undo_after_reload': print('RELOADED',await self.page.evaluate('deskFixture.transactions'),flush=True)
         await self.page.get_by_label('Recent uploads').get_by_role('button', name='Undo', exact=True).click()
         await self.page.wait_for_function('deskFixture.transactions.length === 0')
-        if self._testMethodName=='test_changed_statement_evidence_blocks_entire_undo_after_reload': print('AFTER_UNDO',await self.page.evaluate('deskFixture.uploads'),flush=True)
         await expect(self.page.get_by_label('Recent uploads')).to_contain_text('Undo unfinished')
         await self.page.reload()
         await expect(self.page.get_by_role('heading', name='Statement Desk')).to_be_visible()
-        if self._testMethodName=='test_changed_statement_evidence_blocks_entire_undo_after_reload': print('AFTER_UNDO',await self.page.evaluate('deskFixture.uploads'),flush=True)
         await expect(self.page.get_by_label('Recent uploads')).to_contain_text('Undo unfinished')
-        if self._testMethodName=='test_changed_statement_evidence_blocks_entire_undo_after_reload': print('RELOADED',await self.page.evaluate('deskFixture.transactions'),flush=True)
         await self.page.get_by_label('Recent uploads').get_by_role('button', name='Undo', exact=True).click()
         await expect(self.page.get_by_label('Recent uploads')).to_have_count(0)
         self.assertEqual(await self.page.evaluate('deskFixture.transactions.length'), 0)
@@ -269,9 +256,13 @@ class StatementDeskFlow(unittest.IsolatedAsyncioTestCase):
         await self.page.reload()
         await expect(self.page.get_by_role('heading', name='Statement Desk')).to_be_visible()
         await expect(self.page.get_by_label('Recent uploads')).to_contain_text('interrupted')
-        if self._testMethodName=='test_changed_statement_evidence_blocks_entire_undo_after_reload': print('RELOADED',await self.page.evaluate('deskFixture.transactions'),flush=True)
         await self.page.get_by_label('Recent uploads').get_by_role('button', name='Undo', exact=True).click()
-        if self._testMethodName=='test_changed_statement_evidence_blocks_entire_undo_after_reload': print('AFTER_UNDO',await self.page.evaluate('deskFixture.uploads'),flush=True)
+        await expect(self.page.get_by_label('Recent uploads')).to_contain_text('Undo unfinished')
+        self.assertEqual(await self.page.evaluate('deskFixture.transactions.length'), 1)
+
+        # An unacknowledged committed row remains for explicit recovery review, never guessed removable.
+        await self.page.reload()
+        await expect(self.page.get_by_role('heading', name='Statement Desk')).to_be_visible()
         await expect(self.page.get_by_label('Recent uploads')).to_contain_text('Undo unfinished')
         self.assertEqual(await self.page.evaluate('deskFixture.transactions.length'), 1)
 
@@ -282,26 +273,17 @@ class StatementDeskFlow(unittest.IsolatedAsyncioTestCase):
         await self.page.get_by_role('button', name='Accept all 2 asking items').click()
         await self.page.get_by_role('button', name='Apply everything (2 to save)').click()
         await expect(self.page.get_by_role('button', name='Undo this upload (2 posted)')).to_be_visible()
-        print('HISTORY_BEFORE',await self.page.evaluate('deskFixture.uploads'),flush=True)
         await self.page.evaluate("deskFixture.transactions[0].statementRef='document:other · newer evidence';sessionStorage.setItem('controlled-desk-ledger',JSON.stringify(deskFixture.transactions))")
         await self.page.reload()
         await expect(self.page.get_by_role('heading', name='Statement Desk')).to_be_visible()
-        if self._testMethodName=='test_changed_statement_evidence_blocks_entire_undo_after_reload': print('RELOADED',await self.page.evaluate('deskFixture.transactions'),flush=True)
         await self.page.get_by_label('Recent uploads').get_by_role('button', name='Undo', exact=True).click()
-        if self._testMethodName=='test_changed_statement_evidence_blocks_entire_undo_after_reload': print('AFTER_UNDO',await self.page.evaluate('deskFixture.uploads'),flush=True)
         await expect(self.page.get_by_label('Recent uploads')).to_contain_text('Undo unfinished')
         self.assertEqual(await self.page.evaluate('deskFixture.transactions.length'), 2)
         self.assertEqual(await self.page.evaluate('deskFixture.removes.length'), 0)
         await self.page.reload()
-        if self._testMethodName=='test_changed_statement_evidence_blocks_entire_undo_after_reload': print('AFTER_UNDO',await self.page.evaluate('deskFixture.uploads'),flush=True)
+        await expect(self.page.get_by_role('heading', name='Statement Desk')).to_be_visible()
         await expect(self.page.get_by_label('Recent uploads')).to_contain_text('Undo unfinished')
         self.assertEqual(await self.page.evaluate('deskFixture.transactions.length'), 2)
-        # An unacknowledged committed row remains for explicit recovery review, never guessed removable.
-        await self.page.reload()
-        await expect(self.page.get_by_role('heading', name='Statement Desk')).to_be_visible()
-        if self._testMethodName=='test_changed_statement_evidence_blocks_entire_undo_after_reload': print('AFTER_UNDO',await self.page.evaluate('deskFixture.uploads'),flush=True)
-        await expect(self.page.get_by_label('Recent uploads')).to_contain_text('Undo unfinished')
-        self.assertEqual(await self.page.evaluate('deskFixture.transactions.length'), 1)
 
 if __name__ == "__main__":
     unittest.main()
