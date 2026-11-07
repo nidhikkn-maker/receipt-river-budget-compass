@@ -6,6 +6,14 @@ import type { TaxComputation } from "./taxcomp";
 const c: TaxComputation = { salary: 100, houseProperty: { rent: 0, standardDeduction: 0, homeLoanInterest: 0, net: 0 }, business: { receipts: 1000, expenses: 300, depreciation: 50, net: 650 }, capitalGains: { short: 0, long: 0 }, otherSources: 20, gross: 770, lossesSetOff: 0, total: 770, notes: [] };
 
 describe("tax workpaper", () => {
+  it("decimal source groups retain original rows for accountant export without counting transfers", () => {
+    const entries = [1.005, 0.1, 0.2].map((amount,i)=>({id:`fraction-${i}`,date:"2025-06-10",txnType:"expense",title:"Source",category:"Fees",amount}));
+    const groups = sourceGroups([...entries,{...entries[0],id:"move",txnType:"transfer",amount:999}],()=>"Bank");
+    expect(groups[0]?.total).toBe(1.31);
+    const exported = workpaperCsv([{key:"personal",name:"You",kind:"personal",heads:[],tax:null,taxTotal:null,fromCompanies:[],sources:groups,assumptions:[]}]);
+    expect(exported.sources.slice(1).map(row=>row[5])).toEqual([1.005,0.1,0.2]);
+    expect(exported.sources.slice(1).map(row=>row[6])).toEqual(["fraction-0","fraction-1","fraction-2"]);
+  });
   it("heads reproduce total income", () => {
     const h = Object.fromEntries(computationHeads(c));
     expect(h["Total income"]).toBe(770);

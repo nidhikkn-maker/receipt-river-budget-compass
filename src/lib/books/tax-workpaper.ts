@@ -7,6 +7,7 @@ import type { TaxComputation } from "./taxcomp";
 import type { Liability } from "./tax-full";
 import type { FromEntityLine } from "./from-entities";
 import type { EntityTaxYear } from "./entity-tax-profile";
+import { sumMoney } from "../money";
 
 export interface WpEntry { id: string; date: string; txnType?: string | null | undefined; title: string; category: string; amount: number; accountId?: string | null | undefined }
 export interface WpSource { group: string; entries: { id: string; date: string; title: string; account: string; amount: number }[]; total: number }
@@ -41,10 +42,9 @@ export function sourceGroups(entries: WpEntry[], accountName: (id: string | null
     const g = GROUP[type] ?? type.replace(/_/g, " ");
     const s = by.get(g) ?? { group: g, entries: [], total: 0 };
     s.entries.push({ id: t.id, date: t.date, title: t.title, account: accountName(t.accountId), amount: t.amount });
-    s.total += t.amount;
     by.set(g, s);
   }
-  for (const s of by.values()) { s.entries.sort((a, b) => a.date.localeCompare(b.date)); s.total = Math.round(s.total * 100) / 100; }
+  for (const s of by.values()) { s.entries.sort((a, b) => a.date.localeCompare(b.date)); s.total = sumMoney(s.entries.map(e => e.amount)); }
   return [...by.values()].sort((a, b) => a.group.localeCompare(b.group));
 }
 
