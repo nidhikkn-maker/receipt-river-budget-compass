@@ -304,7 +304,7 @@ export interface StatementUpload { id: string; at: string; label: string; posted
 const ids = (v: unknown, max: number) => (Array.isArray(v) ? v.filter((x): x is string => typeof x === "string" && x.length <= 64).slice(0, max) : []);
 export function cleanStatementUploads(v: unknown): StatementUpload[] {
   if (!Array.isArray(v)) return [];
-  return v.flatMap((u) => {
+  return v.flatMap<StatementUpload>((u) => {
     if (!u || typeof u !== "object") return [];
     const o = u as { id?: unknown; at?: unknown; label?: unknown; posted?: unknown; reconciled?: unknown; createdAccounts?: unknown; status?: unknown; sources?: unknown; linkedDrafts?: unknown };
     if (typeof o.id !== "string" || o.id.length > 64 || typeof o.at !== "string") return [];
