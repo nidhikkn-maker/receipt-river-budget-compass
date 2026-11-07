@@ -922,6 +922,12 @@
 - [ ] Real-device/Cloud Inbox outlier observation and release acceptance require the corresponding environment; real records, approval activation and publication remain held.
 
 ## Active request — 7 Nov 2026 17:42 UTC
-- [ ] Browser partial/lost requests and failed Undo across reload; persist cleanup visibility without duplicate saves.
+- [x] Browser partial/lost requests and failed Undo across reload; persistent cleanup intent and unfinished Undo. Sign-in/cross-device acceptance remains pending.
 - [ ] Finish controlled document export acceptance; continue Statement Desk, Inbox, account reconciliation and DocuRepo partials.
-- [ ] Report exact test inventory, newly completed/verified IDs, evidence and separate historical/v6 counts. Preserve records and release holds.
+- [x] Exact test inventory2012, four narrow historical promotions, separate historical1557/944/21/19 and v6566/331/2; release holds preserved.
+
+## Next executable checkpoint — 7 Nov 2026
+- [x] Controlled export actual ZIP/failure/retry and DocuRepo search complete; Past imports read-only; Inbox nine-case requested browser coverage accepted in isolation.
+- [ ] Next C-1857 actual claim-builder saved/downloaded PDF evidence ordering, then remaining account reconciliation and document-to-report gaps.
+- [ ] Unknown committed statement intent fresh review, stale-safe Undo and source concurrency; hosted re-sign-in/cross-device acceptance not verified.
+- [ ] V60-0173 hosted export authorization/legacy same-size integrity, universal receipt intake and real-device/Cloud Inbox outlier observation remain open. No records/activation/publication.

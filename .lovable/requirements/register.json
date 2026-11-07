@@ -4153,7 +4153,8 @@
         "evidence": [
           "Register audit context (not independently sufficient test proof): src/components/books/VaultBooks.tsx exports selected original files plus docrepo.ts exportManifest; no focused ZIP/permission/end-to-end export test found.",
           "src/lib/books/docrepo.ts exportManifest includes identities, links and field provenance; src/components/books/VaultBooks.tsx constructs a selected-document archive.",
-          "2026-11-07d: Demat context corrected; controlled ZIP selection/access/size/provenance tests added. Full navigation/hosted export acceptance remains pending. docs/evidence/workstream-1-batch-2026-11-07d.md"
+          "2026-11-07d: Demat context corrected; controlled ZIP selection/access/size/provenance tests added. Full navigation/hosted export acceptance remains pending. docs/evidence/workstream-1-batch-2026-11-07d.md",
+          "2026-11-07e: actual selected ZIP downloaded/inspected; access/download failure no ZIP and retry PASS. Isolated adapters, not hosted authorization; remains PARTIAL. docs/evidence/workstream-1-batch-2026-11-07e.md"
         ]
       },
       "category": "B",
