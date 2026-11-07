@@ -52,6 +52,7 @@ it('ambiguous historical budget review and cancel preserve independent plans; ex
   mock.store = { preferences: { ...defaultPreferences(), trips: [trip] }, savePreferences: mock.save, transactions: [], members: [] };
   const breakdown = vi.fn(); const edit = vi.fn();
   let view = render(<TripBudgetCard trip={trip} onEdit={edit} onBreakdown={breakdown} />);
+  expect(screen.getByText('Budget requires confirmation')).toBeVisible();
   fireEvent.click(screen.getByRole('button', { name: 'Review Breakdown' }));
   expect(breakdown).toHaveBeenCalledTimes(1); expect(mock.save).not.toHaveBeenCalled();
   view.unmount(); view = render(<EditBudgetDialog trip={trip} open onOpenChange={() => {}} />);
@@ -65,4 +66,12 @@ it('ambiguous historical budget review and cancel preserve independent plans; ex
   view.unmount(); render(<TripBudgetCard trip={saved} onEdit={edit} onBreakdown={breakdown} />);
   expect(screen.getByText('Total Budget')).toBeVisible();
   expect(saved.budget).toBe(100); // Never 140, the dimensions are independent.
+});
+it('breakdown review exposes partial traveller plans without changing the primary budget', () => {
+  const trip: TravelTrip = { id: 't', name: 'Test', destination: 'Test', start: '2026-11-01', end: '2026-11-02', budget: 100, currencies: ['INR'], travellerBudgets: [{ traveller: 'Me', amount: 40 }] };
+  mock.save.mockReset(); mock.store = { preferences: { ...defaultPreferences(), trips: [trip] }, savePreferences: mock.save, transactions: [], members: [] };
+  render(<BudgetBreakdown trip={trip} />);
+  fireEvent.click(screen.getByRole('tab', { name: 'Traveller' }));
+  expect(mock.save).not.toHaveBeenCalled(); expect(trip.budget).toBe(100);
+  expect(screen.getByText(/Partial allocation/)).toBeVisible();
 });
