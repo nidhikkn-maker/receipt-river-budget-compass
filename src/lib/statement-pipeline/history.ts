@@ -13,7 +13,7 @@ export function mergeUploadHistory(data: FinancePreferences, next: StatementUplo
   const merged: StatementUpload = previous ? {
     ...previous, ...next,
     status: previous.status === "complete" || next.status === "complete" ? "complete" : "interrupted",
-    expected: previous.expected ?? next.expected,
+    ...((previous.expected ?? next.expected) ? { expected: (previous.expected ?? next.expected)! } : {}),
     posted: unique([...previous.posted, ...next.posted], id => id),
     reconciled: unique([...previous.reconciled, ...next.reconciled], id => id),
     createdAccounts: unique([...previous.createdAccounts, ...next.createdAccounts], a => a.id),
