@@ -65,4 +65,5 @@ export const fileToLocal = async () => ({});
 export const localToFile = () => { throw new Error("No stored draft files"); };
 export const PageTitle = ({ title }: { title: string }) => <h1>{title}</h1>;
 export const Stat = () => null;
+export const TeamExpenses = () => null;
 export const reportReceiptProblem = async ({ data }: { data: ReportRow }) => { fixture.reports.push(data); return { ok: true, id: "controlled-report", emailed: false }; };
