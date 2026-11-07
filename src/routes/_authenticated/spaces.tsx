@@ -29,15 +29,15 @@ function Spaces() {
   const current = preferences.homeScope;
   return <div className="mx-auto max-w-2xl">
     <header className="cmp-page-head mb-6 pt-2"><h1 className="cmp-serif">My Spaces</h1><p>Each space keeps its own money. Choose one to see just that.</p></header>
-    <div className="cmp-list" role="list" aria-label="Spaces">
-      {SPACE_ROWS.map(r => <button key={r.scope} role="listitem" type="button" aria-pressed={current === r.scope} onClick={() => void choose(r.scope)} className="cmp-list-row">
+    <nav className="cmp-list" aria-label="Spaces">
+      {SPACE_ROWS.map(r => <button key={r.scope} type="button" aria-pressed={current === r.scope} onClick={() => void choose(r.scope)} className="cmp-list-row">
         <span className="cmp-icon"><r.icon /></span>
         <span className="min-w-0 flex-1"><b>{SCOPE_LABEL[r.scope]}</b><small>{r.purpose}</small></span>
         {current === r.scope ? <Check aria-label="Showing now" className="size-[18px] text-companion-gold" /> : <ChevronRight />}
       </button>)}
-      <Link role="listitem" to="/trips" className="cmp-list-row"><span className="cmp-icon"><Plane /></span><span className="min-w-0 flex-1"><b>Travel</b><small>Trips, bookings and travel spending</small></span><ChevronRight /></Link>
-      <Link role="listitem" to="/wealth" className="cmp-list-row"><span className="cmp-icon"><Gem /></span><span className="min-w-0 flex-1"><b>Investments</b><small>Funds, shares and what you own</small></span><ChevronRight /></Link>
-    </div>
+      <Link to="/trips" className="cmp-list-row"><span className="cmp-icon"><Plane /></span><span className="min-w-0 flex-1"><b>Travel</b><small>Trips, bookings and travel spending</small></span><ChevronRight /></Link>
+      <Link to="/wealth" className="cmp-list-row"><span className="cmp-icon"><Gem /></span><span className="min-w-0 flex-1"><b>Investments</b><small>Funds, shares and what you own</small></span><ChevronRight /></Link>
+    </nav>
     <div className="mt-6 cmp-list">
       <button type="button" aria-pressed={current === 'all'} onClick={() => void choose('all')} className="cmp-list-row !min-h-14"><span className="cmp-icon"><Layers /></span><span className="min-w-0 flex-1"><b>Everything together</b><small>See all spaces at once</small></span>{current === 'all' ? <Check aria-label="Showing now" className="size-[18px] text-companion-gold" /> : <ChevronRight />}</button>
       <Link to="/entities" className="cmp-list-row !min-h-14"><span className="cmp-icon"><Building2 /></span><span className="min-w-0 flex-1"><b>Companies & financial years</b><small>Set up who a business space belongs to</small></span><ChevronRight /></Link>
