@@ -67,3 +67,12 @@ First pass NOT accepted. No family is complete until rendered checks pass.
 - Prior screenshots: real components with synthetic adapters, not live user data.
 - Release holds: no financial writes, policy changes, approval activation or publication.
 - Next: family-specific layouts, source-first collapsed Canvas, live settled screen matrix, narrow/large phone, portrait/landscape tablet, desktop light/dark, navigation and financial regressions.
+
+## 19:25 acceptance checkpoint
+- Shared shell, directory, controls, sections and disclosures implemented; main Journal/Review/Money/Travel/Documents/Reports layouts migrated. Detailed family coverage remains OPEN.
+- 16 real signed-in routes × five widths × light/dark visited; zero page errors. Initial narrow company and portrait report overflow found and fixed; exact overflowing element checks return empty. Captures before corrections are baseline evidence, not final approval images.
+- Theme transitions require 350ms settling before contrast captures; final measured document action text matches dark foreground token. Final portrait matrix reports no overflow.
+- 54 targeted automated checks; Statement Desk14, Inbox9 and receipt4 browser cases pass, with one existing skipped receipt case. Controlled write adapters, not hosted financial acceptance.
+- Narrow Wealth large values were visibly clipped in review sheets; changed to one-column summaries, final recapture still pending. Do not deliver old sheet as final.
+- Full source/claim/trip-detail/access/public-route acceptance, expert layouts and final screenshot approval package remain unfinished; no completion claim.
+- Credit snapshot1135.01; conservative cap remaining1036.00 includes untouched300 reserve. Workspace usage proxy, not task-attributed spending.
