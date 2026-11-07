@@ -6,7 +6,7 @@ import type { BooksData } from "./types";
 
 export interface EvidenceRef { kind: "document" | "entry"; id: string; title: string }
 export interface FigureEvidence { register: string; recordId: string; label: string; amount: number; source: EvidenceRef | null; to: string }
-interface Doc { id: string; title: string }
+interface Doc { id: string; title: string; docType?: string }
 
 export type Resolver = (recordId: string, docId?: string, txId?: string) => EvidenceRef | null;
 /** Shared source resolver: direct document reference, else a DocuRepo link, else a linked ledger entry. */
@@ -24,8 +24,13 @@ export function makeResolver(p: { books: BooksData; docs: Doc[]; entryTitle?: (i
 export function registerEvidence(p: { assets: Asset[]; books: BooksData; docs: Doc[]; entryTitle?: (id: string) => string | undefined }): FigureEvidence[] {
   const resolve = makeResolver(p);
   const out: FigureEvidence[] = [];
+  // A service/warranty document proves attachment, never the asset's acquisition cost.
+  const acquisitionResolve = makeResolver({ ...p, docs: p.docs.filter(d => !d.docType || d.docType === "asset_invoice" || d.docType === "property_deed" || d.docType === "audited_financials" || d.docType === "depreciation_schedule") });
   for (const a of p.assets) {
-    out.push({ register: "Asset register", recordId: a.id, label: `${a.name} · cost`, amount: a.cost, source: resolve(a.id, a.docId, a.transactionId), to: "/assets" });
+    const costSource = a.docId && !p.docs.some(d => d.id === a.docId)
+      ? (a.transactionId ? acquisitionResolve("", undefined, a.transactionId) : null)
+      : acquisitionResolve(a.id, a.docId, a.transactionId);
+    out.push({ register: "Asset register", recordId: a.id, label: `${a.name} · cost`, amount: a.cost, source: costSource, to: "/assets" });
     if (a.soldOn && a.saleValue != null) out.push({ register: "Asset register", recordId: a.id, label: `${a.name} · sale proceeds`, amount: a.saleValue, source: resolve(a.id, a.docId), to: "/assets" });
   }
   for (const l of p.books.leases) {

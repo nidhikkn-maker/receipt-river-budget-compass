@@ -11,6 +11,7 @@ import type { DocType } from "../documents";
 export type Confirmed =
   | { route: "entity"; profile: EntityProfile }
   | { route: "asset"; asset: Asset }
+  | { route: "assetDocument"; assetId: string; date: string; note: string }
   | { route: "property"; property: Property; asset: Asset | null }
   | { route: "lease"; lease: Lease }
   | { route: "fy"; record: FyRecord }
@@ -28,6 +29,17 @@ export function commitIntake(p: PrefsSlice, c: Confirmed, doc: { id: string; tit
   books = { ...books, proposedFields: unmappedFields(doc.fieldLabels, doc.docType, books.proposedFields) };
   const link = (kind: Parameters<typeof addLink>[1]["kind"], targetId: string, label: string) => { books = { ...books, docLinks: addLink(books.docLinks, { docId: doc.id, kind, targetId, label }) }; };
   switch (c.route) {
+    case "assetDocument": {
+      const asset = assets.find(a => a.id === c.assetId);
+      if (!asset) throw new Error("Choose an existing asset for this document");
+      assets = upsert(assets, { ...asset, docIds: [...new Set([...(asset.docIds ?? []), doc.id])] });
+      link("asset", asset.id, asset.name);
+      if (asset.ownerEntityId) link("entity", asset.ownerEntityId, "owner");
+      if (doc.docType === "maintenance" && !books.assetEvents.some(e => e.assetId === asset.id && e.docId === doc.id && e.kind === "maintenance")) {
+        books = { ...books, assetEvents: [...books.assetEvents, { id: newId(), assetId: asset.id, date: c.date, kind: "maintenance", note: c.note, docId: doc.id }] };
+      }
+      break;
+    }
     case "entity": entities = upsert(entities, c.profile); link("entity", c.profile.id, c.profile.name); break;
     case "asset":
       assets = upsert(assets, c.asset); link("asset", c.asset.id, c.asset.name);

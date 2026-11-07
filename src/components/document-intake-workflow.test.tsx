@@ -113,4 +113,20 @@ describe("actual document review workflow (isolated persistence boundary)", () =
     expect(commit.mock.calls[1]).toEqual(approved); expect(add).toHaveBeenCalledTimes(1);
     expect(state.close).toHaveBeenCalledWith(expect.anything(), "done");
   });
+
+  it.each(["maintenance", "asset_invoice"] as const)("%s ambiguous serials need an explicit existing asset; never duplicate or capitalise the asset", async (type) => {
+    const asset = { id: "a1", name: "Generator", kind: "machinery", cost: 150000, inUse: "2026-04-01", sharePct: 100, bookMethod: "slm", bookRatePct: 10, tag: "GEN-44" };
+    state.store['preferences'] = { books: emptyBooks(), entities: [], assets: [asset, { ...asset, id: "a2" }], contractObligations: [] };
+    open(baseRead(type, { amount: 8000, asset: { name: "Generator service", kind: "machinery", cost: 8000, purchaseDate: "2026-10-02", supplier: "Engineering Works", owner: null, warrantyUntil: null, insurance: null, serial: "GEN-44", putToUseOn: null, method: null, usefulLifeYears: null, residualPct: null, openingTaxWdv: null, openingBookWdv: null, wdvFy: null } }));
+    fireEvent.click(screen.getByRole("button", { name: "Confirm and save" }));
+    expect(add).not.toHaveBeenCalled(); expect(commit).not.toHaveBeenCalled();
+    fireEvent.change(screen.getByLabelText("Asset for this document"), { target: { value: "a2" } });
+    await waitFor(() => expect(screen.getByRole("button", { name: "Confirm and save" })).toBeEnabled());
+    fireEvent.click(screen.getByRole("button", { name: "Confirm and save" }));
+    await waitFor(() => expect(commit).toHaveBeenCalledTimes(1));
+    expect(commit.mock.calls[0]?.[1].assets).toEqual([asset, { ...asset, id: "a2", docIds: ["00000000-0000-0000-0000-000000000010"] }]);
+    expect(commit.mock.calls[0]?.[1].books.assetEvents).toEqual(type === "maintenance" ? [expect.objectContaining({ kind: "maintenance", assetId: "a2" })] : []);
+  });
+
+
 });
