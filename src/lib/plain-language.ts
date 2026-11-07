@@ -135,7 +135,7 @@ export function positionWording(p: { cash: number | null; owed: number; investme
 
 export const accountKindNote = (k: AccountKind) => isLiability(k) ? "Money I owe" : k === "investment" || k === "fixed_deposit" ? "Investment" : k === "other_asset" ? "Something I own or am owed" : "Money available";
 
-export interface CanvasInput { kind: "receipt" | "statement" | "message"; merchant?: string; amount?: number | null; currencyText?: string; date?: string; category?: string; categoryReason?: string; account?: string; matchFound?: boolean; possibleDuplicate?: boolean; lines?: number; unmatched?: number }
+export interface CanvasInput { kind: "receipt" | "statement" | "message"; merchant?: string | undefined; amount?: number | null | undefined; currencyText?: string | undefined; date?: string | undefined; category?: string | undefined; categoryReason?: string | undefined; account?: string | undefined; matchFound?: boolean | undefined; possibleDuplicate?: boolean | undefined; lines?: number | undefined; unmatched?: number | undefined }
 export interface CanvasNarrative { found: string; belongs: string | null; match: string | null; help: string | null; nextAction: string; confident: boolean }
 
 /** What Intelligent Canvas says. Missing evidence is stated as missing; it never sounds confident. */
