@@ -13,6 +13,7 @@ export function mergeUploadHistory(data: FinancePreferences, next: StatementUplo
   const merged: StatementUpload = previous ? {
     ...previous, ...next,
     status: previous.status === "complete" || next.status === "complete" ? "complete" : "interrupted",
+    ...((previous.expected ?? next.expected) ? { expected: (previous.expected ?? next.expected)! } : {}),
     posted: unique([...previous.posted, ...next.posted], id => id),
     reconciled: unique([...previous.reconciled, ...next.reconciled], id => id),
     createdAccounts: unique([...previous.createdAccounts, ...next.createdAccounts], a => a.id),
@@ -32,4 +33,20 @@ export async function checkpointUpload(next: StatementUpload, api: UploadHistory
     try { await api.write(data, current.revision, crypto.randomUUID()); return; }
     catch (error) { if (attempt === 2) throw error; }
   }
+}
+/**
+ * An upload left "interrupted" is settled as complete only from saved evidence: the planned counts were
+ * recorded before the first write, every planned entry and mark is in the confirmed history, every posted
+ * entry is in the ledger, and (when an original was stored) every posted entry carries its statement link.
+ * Without planned counts nothing is inferred, so a genuinely unfinished save is never shown as finished.
+ */
+export function settledUpload(u: StatementUpload, ledger: { id: string; statementRef?: string | null }[]): StatementUpload | null {
+  if (u.status !== "interrupted" || !u.expected) return null;
+  if (u.posted.length < u.expected.posted || u.reconciled.length < u.expected.reconciled) return null;
+  if (u.posted.length + u.reconciled.length === 0) return null;
+  const byId = new Map(ledger.map(e => [e.id, e]));
+  const linked = !!u.sources?.length;
+  for (const id of u.posted) { const e = byId.get(id); if (!e || (linked && !e.statementRef)) return null; }
+  for (const id of u.reconciled) { const e = byId.get(id); if (!e || !e.statementRef) return null; }
+  return { ...u, status: "complete" };
 }
