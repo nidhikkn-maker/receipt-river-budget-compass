@@ -8,7 +8,7 @@ import { clearSharedBatch, readSharedBatch, sharedKind, validBatch } from "@/lib
 
 const desc = "Bills, receipts and payment screenshots shared from WhatsApp or other apps, kept on this phone until you choose what to do.";
 export const Route = createFileRoute("/_authenticated/shared")({
-  validateSearch: (s: Record<string, unknown>) => ({ batch: validBatch(s.batch) ? s.batch : undefined, error: typeof s.error === "string" ? s.error : undefined }),
+  validateSearch: (s: Record<string, unknown>) => ({ batch: validBatch(s["batch"]) ? s["batch"] : undefined, error: typeof s["error"] === "string" ? s["error"] : undefined }),
   head: () => ({ meta: [
     { title: "Shared files — Ledgerline" }, { name: "description", content: desc },
     { property: "og:title", content: "Shared files — Ledgerline" }, { property: "og:description", content: desc },
