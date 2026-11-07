@@ -44,6 +44,10 @@ async def main():
                 elif path=='/src/integrations/supabase/client.ts': await route.fulfill(body=CLIENT,content_type='application/javascript')
                 elif path=='/src/components/AppShell.tsx': await route.fulfill(body='export const PageTitle=({title})=>title;',content_type='application/javascript')
                 elif path=='/src/components/useClaimPreparation.ts': await route.fulfill(body='export const useClaimPreparation=()=>({status:"",saveNow:()=>{}});',content_type='application/javascript')
+                elif path=='/src/components/ClaimProfilePanel.tsx':
+                    response=await route.fetch();body=await response.text()
+                    body=re.sub(r'import \{ Link \} from "[^"]+";', 'const Link=({to,children,...props})=>_jsxDEV("a",{href:to,...props,children});',body)
+                    await route.fulfill(response=response,body=body)
                 elif path=='/src/components/ExpenditureReportBuilder.tsx':
                     response=await route.fetch(); body=await response.text()
                     # Navigation is unused; avoid requiring an app Router for this isolated fixture.
@@ -53,13 +57,11 @@ async def main():
             await page.route('**/*',intercept)
             await page.goto('http://localhost:8080/?mode='+mode,wait_until='networkidle')
             if mode=='claim':
-                await page.screenshot(path=str(OUT/f'claim-{width}-state.png'));print(await page.locator('body').inner_text(),errors,flush=True)
                 if format=='summary': await page.get_by_role('radio',name='Summary + Bills').click()
                 assert not errors,errors; await page.get_by_role('checkbox',name=re.compile('I reviewed this organisation')).check()
             await page.get_by_role('button',name='Generate claim PDF' if mode=='claim' else 'Generate statement PDF').click()
             await expect(page.get_by_role('dialog')).to_contain_text('1 readable')
             if mode=='claim':
-                await page.screenshot(path=str(OUT/f'claim-{width}-state.png'));print(await page.locator('body').inner_text(),errors,flush=True)
                 await expect(page.get_by_role('dialog')).to_contain_text('2 need attention')
             assert await page.evaluate('window.__history||null') is None
             await page.get_by_role('button',name='Confirm documents & generate').click()
@@ -73,7 +75,6 @@ async def main():
             pdf=PdfReader(path);assert any(float(p.mediabox.width)==321 and float(p.mediabox.height)==456 for p in pdf.pages)
             history=await page.evaluate('window.__history');assert history['file_size']==len(actual)
             if mode=='claim':
-                await page.screenshot(path=str(OUT/f'claim-{width}-state.png'));print(await page.locator('body').inner_text(),errors,flush=True)
                 snapshot=history['filters']['snapshot'];assert len(snapshot['items'])==3 and snapshot['totals']['claimed']==37.02
                 texts=[p.extract_text() or '' for p in pdf.pages]
                 gap=next(i for i,t in enumerate(texts) if 'Missing supporting documents' in t)
