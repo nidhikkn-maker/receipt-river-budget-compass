@@ -118,10 +118,10 @@ it.each([true, false])("missing-price setting=%s survives owner save/reload and 
 }, 30000);
 it.each([7, 9])("saved NAV staleness threshold %s days drives the actual exception without changing price", async (threshold) => {
  const date = new Date(Date.now() - 8 * 864e5).toISOString();
- const h = await setup({ quotes: [{ key: "amfi:12345", price: 100, at: date, provider: "Retained NAV", freshness: "nav", refreshedAt: date }], alerts: { staleNavDays: threshold } });
+ const h = await setup({ quotes: [{ key: "amfi:12345", price: 100, at: date, provider: "Retained NAV", freshness: "nav", refreshedAt: date }], alerts: { staleNavDays: threshold, unusualValuationPct: 0 } });
  try {
   const view = render(<MarketPanel />); fireEvent.click(view.getByText("Investments & net worth"));
-  await waitFor(() => expect(view.container.querySelectorAll("ul li").length).toBe(threshold === 7 ? 1 : 0));
+  await waitFor(() => expect(view.container.textContent?.includes(`NAV older than ${threshold} days`)).toBe(threshold === 7));
   expect((await h.reload()).data.books.quotes[0]?.price).toBe(100);
  } finally { await h.db.close(); }
 }, 30000);
