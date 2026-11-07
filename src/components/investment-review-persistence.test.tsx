@@ -25,13 +25,13 @@ vi.mock('@/integrations/supabase/client',()=>({supabase:{auth:{getSession:async(
   if(table==='market_quotes'||table==='job_state')return {data:one?null:[],error:null};
   try{
    if(mode==='insert'){
-    const p=payload as Record<string,unknown>;const rows=await db.query<{id:string}>('INSERT INTO demat_accounts(broker,dp_id,client_id,holder) VALUES($1,$2,$3,$4) RETURNING id',[p.broker,p.dp_id,p.client_id,p.holder]);
+    const p=payload as Record<string,unknown>;const rows=await db.query<{id:string}>('INSERT INTO demat_accounts(broker,dp_id,client_id,holder) VALUES($1,$2,$3,$4) RETURNING id',[p['broker'],p['dp_id'],p['client_id'],p['holder']]);
     if(local.loseAccountResponse){local.loseAccountResponse=false;return {data:null,error:{message:'Lost account response'}};}
     return {data:rows.rows[0],error:null};
    }
    if(mode==='upsert'){
     if(local.failHoldings){local.failHoldings=false;return {data:null,error:{message:'Holdings network outage'}};}
-    for(const p of payload as Record<string,unknown>[]){await db.query(`INSERT INTO security_holdings(owner_id,demat_id,isin,name,quantity,as_of,statement_value,lots,gains,sources,events) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) ON CONFLICT(owner_id,demat_id,isin) DO UPDATE SET name=excluded.name,quantity=excluded.quantity,as_of=excluded.as_of,statement_value=excluded.statement_value,lots=excluded.lots,gains=excluded.gains,sources=excluded.sources,events=excluded.events`,[p.owner_id,p.demat_id,p.isin,p.name,p.quantity,p.as_of,p.statement_value,...['lots','gains','sources','events'].map(k=>JSON.stringify(p[k]))]);}
+    for(const p of payload as Record<string,unknown>[]){await db.query(`INSERT INTO security_holdings(owner_id,demat_id,isin,name,quantity,as_of,statement_value,lots,gains,sources,events) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) ON CONFLICT(owner_id,demat_id,isin) DO UPDATE SET name=excluded.name,quantity=excluded.quantity,as_of=excluded.as_of,statement_value=excluded.statement_value,lots=excluded.lots,gains=excluded.gains,sources=excluded.sources,events=excluded.events`,[p['owner_id'],p['demat_id'],p['isin'],p['name'],p['quantity'],p['as_of'],p['statement_value'],...['lots','gains','sources','events'].map(k=>JSON.stringify(p[k]))]);}
     return {data:null,error:null};
    }
    if(!['demat_accounts','security_holdings'].includes(table))throw Error('Unexpected table');
@@ -41,8 +41,8 @@ vi.mock('@/integrations/supabase/client',()=>({supabase:{auth:{getSession:async(
  };
  const q:Record<string,unknown>={then:(done:(r:unknown)=>unknown)=>run().then(done)};
  for(const method of ['select','order','in','limit'])q[method]=()=>q;
- q.eq=(key:string,value:unknown)=>{filters.push([key,value]);return q;};q.maybeSingle=q.single=()=>{one=true;return q;};
- q.insert=(data:Record<string,unknown>)=>{mode='insert';payload=data;return q;};q.upsert=(data:Record<string,unknown>[])=>{mode='upsert';payload=data;return q;};return q;
+ q['eq']=(key:string,value:unknown)=>{filters.push([key,value]);return q;};q['maybeSingle']=q['single']=()=>{one=true;return q;};
+ q['insert']=(data:Record<string,unknown>)=>{mode='insert';payload=data;return q;};q['upsert']=(data:Record<string,unknown>[])=>{mode='upsert';payload=data;return q;};return q;
 }}}));
 
 it('real CSV files → review → source save → failed holdings retry → owner SQL readback → Home; repeat trades/actions never duplicate',async()=>{
