@@ -1,0 +1,1 @@
+CREATE INDEX IF NOT EXISTS expenses_employee_date_idx ON public.expenses (employee_id, expense_date DESC, created_at DESC);

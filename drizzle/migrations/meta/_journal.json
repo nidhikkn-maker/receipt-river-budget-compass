@@ -617,6 +617,13 @@
       "when": 1794040189511,
       "tag": "0087_internal_reference_rls",
       "breakpoints": true
+    },
+    {
+      "idx": 88,
+      "version": "7",
+      "when": 1794070328030,
+      "tag": "0088_expenses_owner_date_index",
+      "breakpoints": true
     }
   ]
 }
