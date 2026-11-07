@@ -1,6 +1,7 @@
 // Expense drafts: unfinished entries kept apart from the ledger. They never touch balances,
 // reports or reimbursements; only the normal Save path turns one into a transaction.
 import { supabase } from "@/integrations/supabase/client";
+import { shareInflight } from "./request-dedupe";
 import type { Json } from "@/integrations/supabase/types";
 import { localDrafts, localToFile, removeLocalDraft, putLocalDraft, type LocalDraft } from "./offline";
 

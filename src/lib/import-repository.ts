@@ -1,4 +1,5 @@
 import { supabase } from '@/integrations/supabase/client';
+import { shareInflight } from './request-dedupe';
 import type { Json } from '@/integrations/supabase/types';
 import type { ImportBatch, ImportRow, ImportRule, ImportProposal } from './historical-import';
 import type { Account } from './ledger';
@@ -19,7 +20,8 @@ export async function statementEvidence(batch:ImportBatch,account:Account,transa
   const snapshot=checkpointSnapshot(evidence,account,transactions);evidence.snapshotKey=canonicalEvidence(snapshot);evidence.currentHash=await checkpointHash(snapshot);return evidence;
 }
 
-export async function listImports(): Promise<ImportBatch[]> {
+export function listImports(): Promise<ImportBatch[]> { return shareInflight('import_batches', readImports); }
+async function readImports(): Promise<ImportBatch[]> {
   const batches: ImportBatch[] = [];
   for(let from=0;;from+=1000) {
     const r=await supabase.from('import_batches').select('*').order('created_at',{ascending:false}).order('id').range(from,from+999);
