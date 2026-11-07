@@ -24,6 +24,7 @@ MOCKS = {
     "/src/lib/drafts.ts": ["hasDraftContent", "draftStatus", "getDraft", "completeDraft", "upsertDraft", "uploadDraftReceipt", "draftReceiptFile"],
     "/src/lib/offline.ts": ["fileToLocal", "localDrafts", "localToFile", "putLocalDraft", "removeLocalDraft"],
     "/src/components/AppShell.tsx": ["PageTitle", "Stat"],
+    "/src/components/TeamAccess.tsx": ["TeamExpenses"],
 }
 
 class ExpenseReceiptButtons(unittest.IsolatedAsyncioTestCase):
