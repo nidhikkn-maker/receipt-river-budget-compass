@@ -53,3 +53,6 @@
 - Accountant upload links are HMAC-signed link ids (src/lib/upload-link.ts), verified in /api/public/upload/$token with atomic slot claims; uploads land in the private statement-uploads bucket and only enter the ledger through the normal Statement Desk flow. /upload-requests is read-only: requestReport derives rows from stored links, events and uploads.
 - Related pages are grouped by src/components/SectionTabs.tsx; retired pages redirect via beforeLoad so old links work. Review lives only at /inbox?section=review.
 - docs/ holds MASTER_REQUIREMENTS (generated from .lovable/requirements/register.json by scripts/requirements/render_docs.py), IMPLEMENTATION_PROGRESS, VERIFICATION_RESULTS and OPEN_BLOCKERS; update the register, never hand-edit the generated file.
+
+- INR ledger, expense allocations, statement balances and repayment history use src/lib/money.ts decimal arithmetic with half-up money boundaries; numeric storage stays unchanged to preserve compatibility.
+- Trip complete-allocation dimensions are explicit owner preferences; changes validate each promised dimension independently against the primary budget without auto-combining plans.

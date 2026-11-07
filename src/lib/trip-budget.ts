@@ -1,3 +1,4 @@
+import { roundMoney, addMoney, subtractMoney, sumMoney, multiplyMoney } from "./money";
 // Compact Trip Budget (Version 5.5). One primary trip budget plus optional allocation
 // dimensions (workspace, traveller, category, currency, organisation). Dimensions are
 // views of the same plan — they are NEVER added together. Actuals come only from the
@@ -6,7 +7,7 @@ import { tripFinance, type TravelTrip } from "./travel";
 import { isTracked, outstandingOf, receivedOf } from "./reimbursements";
 import { CURRENCIES } from "./expenses";
 
-const r2 = (n: number) => Math.round(n * 100) / 100;
+const r2 = roundMoney;
 type Txns = Parameters<typeof tripFinance>[1];
 
 export type BudgetStatus = "not_set" | "within" | "approaching" | "full" | "over";
@@ -62,7 +63,7 @@ export function tripBudgetSummary(t: TravelTrip, txns: Txns, warnAt = 80): TripB
   const budget = r2(t.budget > 0 ? t.budget : 0);
   const spent = r2(f.total);
   const committed = r2(f.committed);
-  const remaining = r2(budget - spent);
+  const remaining = subtractMoney(budget, spent);
   return {
     hasBudget: budget > 0,
     needsConfirmation: budgetNeedsConfirmation(t),
@@ -75,7 +76,7 @@ export function tripBudgetSummary(t: TravelTrip, txns: Txns, warnAt = 80): TripB
     remaining,
     overAmount: remaining < 0 ? r2(-remaining) : 0,
     committed,
-    availableAfterCommitments: r2(budget - spent - committed),
+    availableAfterCommitments: subtractMoney(subtractMoney(budget, spent), committed),
     reimbursablePending: r2(f.reimbursablePending),
     status: budgetStatus(spent, budget, warnAt),
   };
@@ -98,12 +99,12 @@ export function allocationReconciliation(t: TravelTrip): AllocationDimension[] {
     return Math.abs(total - budget) <= 0.005 ? "complete" : "partial";
   };
   const dims: AllocationDimension[] = [
-    { key: "workspace", label: "By workspace", total: r2((t.workspaceBudgets ?? []).reduce((s, x) => s + x.amount, 0)), state: "none" },
-    { key: "traveller", label: "By traveller", total: r2((t.travellerBudgets ?? []).reduce((s, x) => s + x.amount, 0)), state: "none" },
-    { key: "category", label: "By category", total: r2((t.budgetLines ?? []).reduce((s, x) => s + x.amount, 0)), state: "none" },
+    { key: "workspace", label: "By workspace", total: sumMoney((t.workspaceBudgets ?? []).map(x => x.amount)), state: "none" },
+    { key: "traveller", label: "By traveller", total: sumMoney((t.travellerBudgets ?? []).map(x => x.amount)), state: "none" },
+    { key: "category", label: "By category", total: sumMoney((t.budgetLines ?? []).map(x => x.amount)), state: "none" },
     // Currency allocations convert at their saved planning rates; historic rates are never recalculated.
-    { key: "currency", label: "By currency", total: r2((t.currencyBudgets ?? []).reduce((s, x) => s + x.amount * x.planningRate, 0)), state: "none" },
-    { key: "organisation", label: "By organisation", total: r2((t.organisationBudgets ?? []).reduce((s, x) => s + x.amount, 0)), state: "none" },
+    { key: "currency", label: "By currency", total: sumMoney((t.currencyBudgets ?? []).map(x => multiplyMoney(x.amount, x.planningRate))), state: "none" },
+    { key: "organisation", label: "By organisation", total: sumMoney((t.organisationBudgets ?? []).map(x => x.amount)), state: "none" },
   ];
   return dims.map((d) => ({ ...d, state: state(d.total) }));
 }
@@ -162,4 +163,13 @@ export function validateBudgetEdit(x: BudgetEdit): Pick<TravelTrip, "budget" | "
 export function validateAllocation(amount: number, rate = 1): void {
   if (!Number.isFinite(amount) || amount <= 0) throw new Error("Enter an amount above zero");
   if (!Number.isFinite(rate) || rate <= 0) throw new Error("Enter a positive planning exchange rate");
+}
+
+/** Complete dimensions are deliberate promises, not inferred from old allocations. */
+export function validateCompleteAllocations(t: TravelTrip): void {
+  const dimensions = allocationReconciliation(t);
+  for (const key of t.completeBudgetDimensions ?? []) {
+    const dimension = dimensions.find(d => d.key === key);
+    if (!dimension || dimension.state !== "complete") throw new Error(`${dimension?.label ?? key} must match the primary budget before it can be marked complete`);
+  }
 }

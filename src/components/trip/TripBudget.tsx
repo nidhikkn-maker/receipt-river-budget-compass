@@ -1,7 +1,7 @@
 // Compact Trip Budget (Version 5.5): one primary budget card, an Edit Budget sheet,
 // and an optional tabbed Budget Breakdown. Allocation dimensions are views of the same
 // plan — never summed. Actuals come from the shared ledger only.
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { toast } from "sonner";
 import { Pencil, Plus, SlidersHorizontal } from "lucide-react";
@@ -14,7 +14,7 @@ import { CURRENCIES, SCOPE_LABEL, money, type Scope } from "@/lib/expenses";
 import { tagsInGroup } from "@/lib/preferences";
 import { useStore } from "@/lib/store";
 import { tripAllocationPlans } from "@/lib/trip-planning";
-import { allocationReconciliation, budgetNeedsConfirmation, reimbursementBreakdown, tripBudgetSummary, validateAllocation, validateBudgetEdit, BUDGET_STATUS_LABEL, type AllocationDimension } from "@/lib/trip-budget";
+import { allocationReconciliation, budgetNeedsConfirmation, reimbursementBreakdown, tripBudgetSummary, validateAllocation, validateBudgetEdit, validateCompleteAllocations, BUDGET_STATUS_LABEL, type AllocationDimension } from "@/lib/trip-budget";
 import { tripBudgetDetail, type TravelTrip } from "@/lib/travel";
 
 const sel = "h-10 rounded-xl border bg-background px-2 text-sm";
@@ -91,21 +91,18 @@ export function EditBudgetDialog({ trip, open, onOpenChange }: { trip: TravelTri
   const [saving, setSaving] = useState(false);
   const [lastKey, setLastKey] = useState<string | null>(null);
 
-  // Initialise fields from the trip each time the sheet opens.
-  const sync = (o: boolean) => {
-    if (o) {
-      setAmount(trip.budget > 0 ? String(trip.budget) : "");
-      setCurrency(trip.currencies?.[0] ?? "INR");
-      setContingency(trip.contingency ? String(trip.contingency) : "");
-      setNotes(trip.budgetNotes ?? "");
-      setLastKey(null);
-    }
-    onOpenChange(o);
-  };
+  useEffect(() => {
+    if (!open) return;
+    setAmount(trip.budget > 0 ? String(trip.budget) : "");
+    setCurrency(trip.currencies?.[0] ?? "INR");
+    setContingency(trip.contingency ? String(trip.contingency) : "");
+    setNotes(trip.budgetNotes ?? "");
+    setLastKey(null);
+  }, [open, trip]);
 
   const save = async () => {
     let patch: ReturnType<typeof validateBudgetEdit>;
-    try { patch = validateBudgetEdit({ amount: Number(amount) || 0, currency, contingency: Number(contingency) || 0, notes }); }
+    try { patch = validateBudgetEdit({ amount: amount.trim() ? Number(amount) : 0, currency, contingency: contingency.trim() ? Number(contingency) : 0, notes }); validateCompleteAllocations({ ...trip, ...patch }); }
     catch (e) { toast.error((e as Error).message); return; }
     // Repeat taps with the same values write the same patch — no duplicate records.
     const key = JSON.stringify([patch.budget, patch.currencies[0], patch.contingency, patch.budgetNotes]);
@@ -122,7 +119,7 @@ export function EditBudgetDialog({ trip, open, onOpenChange }: { trip: TravelTri
   };
 
   return (
-    <Dialog open={open} onOpenChange={sync}>
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md" aria-label="Edit trip budget">
         <DialogHeader><DialogTitle>Edit Budget</DialogTitle></DialogHeader>
         <div className="grid gap-3">
@@ -170,6 +167,7 @@ export function BudgetBreakdown({ trip }: { trip: TravelTrip }) {
     if (saving) return;
     setSaving(true);
     try {
+      validateCompleteAllocations({ ...trip, ...patch });
       await savePreferences({ ...pr, trips: (pr.trips as TravelTrip[]).map((t) => (t.id === trip.id ? { ...t, ...patch } : t)) });
       toast.success(msg);
       setForm({ key: "", amount: "", rate: "1" });
@@ -206,6 +204,7 @@ export function BudgetBreakdown({ trip }: { trip: TravelTrip }) {
       <div className="mb-3 flex gap-2 overflow-x-auto pb-1" role="tablist" aria-label="Budget breakdown dimensions">
         {TABS.map((t) => <Button key={t.key} size="sm" variant={tab === t.key ? "default" : "outline"} role="tab" aria-selected={tab === t.key} onClick={() => { setTab(t.key); setForm({ key: "", amount: "", rate: "1" }); }} className="shrink-0">{t.label}</Button>)}
       </div>
+      {!closed && <label className="mb-2 flex items-center gap-2 text-sm"><input type="checkbox" aria-label="Complete allocation" checked={trip.completeBudgetDimensions?.includes(tab) ?? false} disabled={saving} onChange={e => void put({ completeBudgetDimensions: e.target.checked ? [...(trip.completeBudgetDimensions ?? []).filter(k => k !== tab), tab] : (trip.completeBudgetDimensions ?? []).filter(k => k !== tab) }, "Allocation control saved")} />Must match the full budget</label>}
       {dim && dim.state !== "none" && <p className={`mb-2 text-xs ${dim.state === "exceeds" ? "text-destructive" : "text-muted-foreground"}`}>{dim.label}: {money(dim.total)} allocated. {STATE_NOTE[dim.state]}</p>}
 
       {tab === "workspace" && (
