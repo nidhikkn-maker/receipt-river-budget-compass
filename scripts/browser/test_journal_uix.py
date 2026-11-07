@@ -53,7 +53,7 @@ async def main():
    await expect(page.get_by_role('heading',name=re.compile(r'^Good .*, Alex$'))).to_be_visible()
    await page.get_by_role('link',name='Spaces',exact=True).filter(visible=True).first.click()
    await expect(page.get_by_role('heading',name='My Spaces')).to_be_visible()
-   await page.get_by_role('button',name=re.compile('^Business')).click()
+   await page.locator('button.cmp-list-row',has_text='Business').click()
    await expect(page.get_by_role('heading',name=re.compile(r'^Good .*, Alex$'))).to_be_visible()
    await page.get_by_role('button',name='Smart Add',exact=True).filter(visible=True).first.click()
    await expect(page.get_by_role('dialog',name='Smart Add')).to_be_visible()
