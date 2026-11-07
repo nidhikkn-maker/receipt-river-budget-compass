@@ -74,3 +74,9 @@ it('failed authoritative Undo reads never certify successful cleanup', async () 
   const api = { transactions: [], readExistingIds: async () => { throw Error('offline'); } } as unknown as ApplyApi;
   await expect(undoUpload({ posted: ['p'], reconciled: [], createdAccounts: [] }, api)).rejects.toThrow('offline');
 });
+it('pending Undo cannot settle complete and survives cleaning even beyond completed-history limits', () => {
+  const pending = { ...base, status: 'complete' as const, undoError: 'Undo unfinished' };
+  const history = cleanStatementUploads([...Array.from({ length: 12 }, (_, i) => ({ ...base, id: String(i), status: 'complete' })), pending]);
+  expect(history.find(u => u.id === 'u')?.undoError).toBe('Undo unfinished');
+  expect(settledUpload({ ...base, undoError: 'Undo unfinished' }, ledger)).toBeNull();
+});

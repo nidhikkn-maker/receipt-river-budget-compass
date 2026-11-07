@@ -15,6 +15,9 @@ const createFixture = () => ({
   failOriginals: false,
   failCompletion: false,
   failReconcile: false,
+  failRemoveId: '',
+  loseSaveResponse: false,
+  failHistoryRemoval: false,
 });
 export const fixture = (window as unknown as { deskFixture?: ReturnType<typeof createFixture> }).deskFixture ?? createFixture();
 Object.assign(window, { deskFixture: fixture });
@@ -34,7 +37,7 @@ export function useStore() {
       return meta.id;
     },
     confirmTransfer: async () => {},
-    savePreferences: async (next: FinancePreferences) => { fixture.uploads = next.statementUploads ?? []; sessionStorage.setItem('controlled-desk-uploads', JSON.stringify(fixture.uploads)); setPreferences(next); },
+    savePreferences: async (next: FinancePreferences) => { if (fixture.failHistoryRemoval) throw Error('History cleanup interrupted'); fixture.uploads = next.statementUploads ?? []; sessionStorage.setItem('controlled-desk-uploads', JSON.stringify(fixture.uploads)); setPreferences(next); },
     saveStatementUpload: async (upload: StatementUpload) => {
       if (upload.status === 'complete' && fixture.failCompletion) throw Error('Completion status response interrupted');
       const next = mergeUploadHistory({ ...preferences, statementUploads: fixture.uploads }, upload);
@@ -45,8 +48,9 @@ export function useStore() {
       if (!fixture.transactions.some((t) => t.id === id)) fixture.transactions.push({ ...input, id, originalAmount: input.amount, currency: "INR", splits: [], reconciledAt: null, statementRef: null });
       fixture.saves.push(id);
       sessionStorage.setItem("controlled-desk-ledger", JSON.stringify(fixture.transactions));
+      if (fixture.loseSaveResponse) { fixture.loseSaveResponse = false; throw Error('Saved response interrupted'); }
     },
-    remove: async (e: { id: string }) => { fixture.removes.push(e.id); const index = fixture.transactions.findIndex(t => t.id === e.id); if (index >= 0) fixture.transactions.splice(index, 1); sessionStorage.setItem('controlled-desk-ledger', JSON.stringify(fixture.transactions)); },
+    remove: async (e: { id: string }) => { if (fixture.failRemoveId === e.id) throw Error('Controlled Undo denied'); fixture.removes.push(e.id); const index = fixture.transactions.findIndex(t => t.id === e.id); if (index >= 0) fixture.transactions.splice(index, 1); sessionStorage.setItem('controlled-desk-ledger', JSON.stringify(fixture.transactions)); },
     reconcile: async (id: string, ref: string | null) => {
       if (fixture.failReconcile) { fixture.failReconcile = false; throw Error('Evidence linking interrupted'); }
       const entry = fixture.transactions.find(t => t.id === id);
