@@ -8,6 +8,7 @@ export interface MerchantGroupingEvent {
   before: MerchantAliases;
   after: MerchantAliases;
   entryIds: string[];
+  entrySnapshot?: ReturnType<typeof merchantEntrySnapshot>;
   reverses?: string;
 }
 
@@ -23,6 +24,14 @@ export function merchantGroupingChanges(entries: Expense[], before: MerchantAlia
 /** All affected original fields are bound to the review; incoming records invalidate it too. */
 export function merchantReviewSnapshot(entries: Expense[], before: MerchantAliases, after: MerchantAliases) {
   return JSON.stringify(merchantGroupingChanges(entries, before, after).sort((a, b) => a.id.localeCompare(b.id)));
+}
+
+/** Original financial fields bound to the authoritative review, in stable identifier order. */
+export function merchantEntrySnapshot(entries: Expense[], before: MerchantAliases, after: MerchantAliases) {
+  return merchantGroupingChanges(entries, before, after).map(({ entry }) => ({
+    id: entry.id, merchant: entry.merchant, amount: entry.amount, date: entry.date,
+    currency: entry.currency, originalAmount: entry.originalAmount ?? null, title: entry.title,
+  })).sort((a, b) => a.id.localeCompare(b.id));
 }
 
 export function reverseMerchantGrouping(aliases: MerchantAliases, event: MerchantGroupingEvent, history: MerchantGroupingEvent[] = []): MerchantAliases {
