@@ -59,12 +59,13 @@ export async function renderStatementPdf(s: Statement, files: Record<string, Ann
 }
 
 /** Appends every bill as numbered annexures (in register order) and page-numbers the whole PDF. */
-export async function appendAnnexures(body: Uint8Array, s: Statement, files: Record<string, AnnexFile | null>): Promise<{ blob: Blob; missing: string[] }> {
+export async function appendAnnexures(body: Uint8Array, s: Statement, files: Record<string, AnnexFile | null>, unattached: { row: number; title: string; date: string }[] = []): Promise<{ blob: Blob; missing: string[] }> {
   // Annexures via pdf-lib
   const { PDFDocument, StandardFonts, rgb } = await import("pdf-lib");
   const out = await PDFDocument.load(body);
   const font = await out.embedFont(StandardFonts.Helvetica), bold = await out.embedFont(StandardFonts.HelveticaBold);
   const missing: string[] = [];
+  const annexureStart = out.getPageCount();
   const A4: [number, number] = [595.28, 841.89];
   const header = async (page: import("pdf-lib").PDFPage, a: Statement["annexures"][number], extra = "") => {
     const { height } = page.getSize();
@@ -75,11 +76,13 @@ export async function appendAnnexures(body: Uint8Array, s: Statement, files: Rec
   for (const a of s.annexures) {
     const f = files[a.no];
     try {
-      if (!f) throw new Error("missing");
+      if (!f || !f.bytes.byteLength) throw new Error("missing");
       if (f.type === "application/pdf") {
         const src = await PDFDocument.load(f.bytes, { ignoreEncryption: true });
+        if (!src.getPageCount()) throw new Error("empty PDF");
+        const pages = await out.copyPages(src, src.getPageIndices());
         const cover = out.addPage(A4); await header(cover, a); cover.drawText(`Original document follows (${src.getPageCount()} page${src.getPageCount() > 1 ? "s" : ""}).`, { x: 36, y: 760, size: 10, font });
-        for (const p of await out.copyPages(src, src.getPageIndices())) out.addPage(p);
+        for (const p of pages) out.addPage(p);
       } else {
         const img = f.type === "image/png" ? await out.embedPng(f.bytes) : await out.embedJpg(f.bytes);
         const land = img.width > img.height * 1.15;
@@ -92,8 +95,20 @@ export async function appendAnnexures(body: Uint8Array, s: Statement, files: Rec
     } catch {
       missing.push(a.no);
       const page = out.addPage(A4); await header(page, a, " - NOT READABLE");
-      await drawTextU(out, page, `The attached file "${a.name}" could not be included. It remains stored in Ledgerline.`, { x: 36, y: 760, size: 10, font, color: rgb(0, 0, 0), rgb255: [0, 0, 0] });
+      await drawTextU(out, page, `The attached file "${a.name}" could not be included. Retrieval or reading failed; check the original in Ledgerline.`, { x: 36, y: 760, size: 10, font, color: rgb(0, 0, 0), rgb255: [0, 0, 0] });
     }
+  }
+  // Insert after the claim body and before the first annexure, including files that
+  // failed decoding (not just files the network failed to retrieve).
+  const gaps = [
+    ...unattached.map(row => `Transaction ${row.row} | ${row.date} | ${row.title} | No supporting bill attached`),
+    ...s.annexures.filter(a => missing.includes(a.no)).map(a => `${a.no} | Transaction ${a.row} | ${a.date} | ${a.name} | Not retrievable or readable`),
+  ];
+  let insertion = annexureStart;
+  for (let start = 0; start < gaps.length; start += 25) {
+    const page = out.insertPage(insertion++, A4);
+    page.drawText("Missing supporting documents", { x: 36, y: 800, size: 14, font: bold });
+    for (const [i, gap] of gaps.slice(start, start + 25).entries()) await drawTextU(out, page, gap, { x: 36, y: 770 - i * 27, size: 9, font, color: rgb(0, 0, 0), rgb255: [0, 0, 0], maxChars: 108 });
   }
   const total = out.getPageCount();
   for (const [i, p] of out.getPages().entries()) await drawTextU(out, p, `Ledgerline - ${s.reference} - Page ${i + 1} of ${total}`, { x: 36, y: 14, size: 7, font, color: rgb(0.5, 0.5, 0.5), rgb255: [128, 128, 128] });

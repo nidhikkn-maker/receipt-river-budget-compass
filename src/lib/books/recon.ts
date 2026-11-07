@@ -1,10 +1,11 @@
+import { roundMoney, addMoney, subtractMoney, sumMoney } from "../money";
 /**
  * Reconciliations that compare figures, not just count issues [§24]. Pure and read-only:
  * differences are reported for review and nothing is posted or adjusted.
  */
 import type { GstInvoice } from "./types";
 
-const r2 = (n: number) => Math.round(n * 100) / 100;
+const r2 = roundMoney;
 const words = (s: string) => s.toLowerCase().replace(/\b(private|pvt|limited|ltd|llp|the|and|co|company)\b/g, " ").replace(/[^a-z0-9 ]/g, " ").replace(/\s+/g, " ").trim();
 
 export interface LoanReconRow { loanId: string; name: string; statementDate: string; lender: number; ledger: number; difference: number }
@@ -32,7 +33,7 @@ export function supplierRecon(invoices: GstInvoice[], payments: { id: string; am
     if (i.kind !== "purchase" || i.date < from || i.date > to) continue;
     const k = i.partyGstin || words(i.party);
     const cur = by.get(k) ?? { party: i.party, gstin: i.partyGstin, invoiced: 0, invoices: 0 };
-    cur.invoiced = r2(cur.invoiced + i.taxable + i.igst + i.cgst + i.sgst + i.cess); cur.invoices++;
+    cur.invoiced = addMoney(cur.invoiced, i.taxable, i.igst, i.cgst, i.sgst, i.cess); cur.invoices++;
     by.set(k, cur);
   }
   const used = new Set<string>();
@@ -40,8 +41,8 @@ export function supplierRecon(invoices: GstInvoice[], payments: { id: string; am
     const name = words(s.party);
     const mine = name.length >= 3 ? payments.filter((p) => !used.has(p.id) && p.date >= from && p.date <= to && words(p.text).includes(name)) : [];
     for (const p of mine) used.add(p.id);
-    const paid = r2(mine.reduce((t, p) => t + p.amount, 0));
-    return { party: s.party, gstin: s.gstin, invoiced: s.invoiced, paid, difference: r2(s.invoiced - paid), invoices: s.invoices, payments: mine.length, allocation: allocatePayments(invoices.filter((i) => i.kind === "purchase" && i.date >= from && i.date <= to && (i.partyGstin || words(i.party)) === (s.gstin || name)), mine, to, order) };
+    const paid = sumMoney(mine.map(p => p.amount));
+    return { party: s.party, gstin: s.gstin, invoiced: s.invoiced, paid, difference: subtractMoney(s.invoiced, paid), invoices: s.invoices, payments: mine.length, allocation: allocatePayments(invoices.filter((i) => i.kind === "purchase" && i.date >= from && i.date <= to && (i.partyGstin || words(i.party)) === (s.gstin || name)), mine, to, order) };
   }).filter((r) => Math.abs(r.difference) > 1);
 }
 
@@ -53,7 +54,7 @@ export function customerRecon(invoices: GstInvoice[], receipts: { id: string; am
     if (i.kind !== "sales" || i.date < from || i.date > to) continue;
     const k = i.partyGstin || words(i.party);
     const cur = by.get(k) ?? { party: i.party, gstin: i.partyGstin, invoiced: 0, invoices: 0 };
-    cur.invoiced = r2(cur.invoiced + i.taxable + i.igst + i.cgst + i.sgst + i.cess); cur.invoices++;
+    cur.invoiced = addMoney(cur.invoiced, i.taxable, i.igst, i.cgst, i.sgst, i.cess); cur.invoices++;
     by.set(k, cur);
   }
   const used = new Set<string>();
@@ -61,8 +62,8 @@ export function customerRecon(invoices: GstInvoice[], receipts: { id: string; am
     const name = words(s.party);
     const mine = name.length >= 3 ? receipts.filter((p) => !used.has(p.id) && p.date >= from && p.date <= to && words(p.text).includes(name)) : [];
     for (const p of mine) used.add(p.id);
-    const received = r2(mine.reduce((t, p) => t + p.amount, 0));
-    return { party: s.party, gstin: s.gstin, invoiced: s.invoiced, received, outstanding: r2(s.invoiced - received), invoices: s.invoices, receipts: mine.length, allocation: allocatePayments(invoices.filter((i) => i.kind === "sales" && i.date >= from && i.date <= to && (i.partyGstin || words(i.party)) === (s.gstin || name)), mine, to, order) };
+    const received = sumMoney(mine.map(p => p.amount));
+    return { party: s.party, gstin: s.gstin, invoiced: s.invoiced, received, outstanding: subtractMoney(s.invoiced, received), invoices: s.invoices, receipts: mine.length, allocation: allocatePayments(invoices.filter((i) => i.kind === "sales" && i.date >= from && i.date <= to && (i.partyGstin || words(i.party)) === (s.gstin || name)), mine, to, order) };
   }).filter((r) => Math.abs(r.outstanding) > 1);
 }
 
@@ -74,12 +75,12 @@ export interface InvoiceAllocation { number: string; date: string; amount: numbe
 export type AllocationOrder = "oldest" | "largest" | "smallest";
 export function allocatePayments(invoices: GstInvoice[], payments: { id: string; amount: number; text: string; date: string }[], today: string, order: AllocationOrder = "oldest"): { lines: (InvoiceAllocation & { ageDays: number })[]; unallocated: number } {
   const bills = invoices.filter((i) => !i.note && !invoices.some((x) => x.amendsId === i.id)).sort((a, b) => a.date.localeCompare(b.date))
-    .map((i) => ({ number: i.number.trim(), date: i.date, amount: r2(i.taxable + i.igst + i.cgst + i.sgst + i.cess), allocated: 0, payments: [] as string[] }));
+    .map((i) => ({ number: i.number.trim(), date: i.date, amount: addMoney(i.taxable, i.igst, i.cgst, i.sgst, i.cess), allocated: 0, payments: [] as string[] }));
   for (const n of invoices.filter((i) => i.note === "credit")) {
     const t = bills.find((b) => b.number.toUpperCase() === (n.originalNumber ?? "").trim().toUpperCase()) ?? bills.find((b) => b.allocated < b.amount);
-    if (t) { t.amount = r2(t.amount - Math.abs(n.taxable + n.igst + n.cgst + n.sgst + n.cess)); }
+    if (t) { t.amount = subtractMoney(t.amount, Math.abs(addMoney(n.taxable, n.igst, n.cgst, n.sgst, n.cess))); }
   }
-  for (const n of invoices.filter((i) => i.note === "debit")) bills.push({ number: n.number.trim(), date: n.date, amount: r2(Math.abs(n.taxable + n.igst + n.cgst + n.sgst + n.cess)), allocated: 0, payments: [] });
+  for (const n of invoices.filter((i) => i.note === "debit")) bills.push({ number: n.number.trim(), date: n.date, amount: Math.abs(addMoney(n.taxable, n.igst, n.cgst, n.sgst, n.cess)), allocated: 0, payments: [] });
   let unallocated = 0;
   for (const p of [...payments].sort((a, b) => a.date.localeCompare(b.date))) {
     let left = p.amount;
@@ -90,14 +91,14 @@ export function allocatePayments(invoices: GstInvoice[], payments: { id: string;
     else if (order === "smallest") rest.sort((a, b) => a.amount - b.amount || a.date.localeCompare(b.date));
     for (const b of [...named, ...rest]) {
       if (left <= 0.005) break;
-      const take = r2(Math.min(left, b.amount - b.allocated));
+      const take = r2(Math.min(left, subtractMoney(b.amount, b.allocated)));
       if (take <= 0) continue;
-      b.allocated = r2(b.allocated + take); left = r2(left - take); b.payments.push(p.id);
+      b.allocated = addMoney(b.allocated, take); left = subtractMoney(left, take); b.payments.push(p.id);
     }
-    unallocated = r2(unallocated + left);
+    unallocated = addMoney(unallocated, left);
   }
   const day = (d: string) => Date.parse(`${d}T00:00:00Z`);
-  return { lines: bills.map((b) => { const outstanding = r2(Math.max(0, b.amount - b.allocated)); return { ...b, outstanding, status: outstanding <= 1 ? "paid" as const : b.allocated > 0 ? "part" as const : "open" as const, ageDays: outstanding > 1 ? Math.max(0, Math.round((day(today) - day(b.date)) / 86400000)) : 0 }; }), unallocated };
+  return { lines: bills.map((b) => { const outstanding = r2(Math.max(0, subtractMoney(b.amount, b.allocated))); return { ...b, outstanding, status: outstanding <= 1 ? "paid" as const : b.allocated > 0 ? "part" as const : "open" as const, ageDays: outstanding > 1 ? Math.max(0, Math.round((day(today) - day(b.date)) / 86400000)) : 0 }; }), unallocated };
 }
 
 export interface InvestmentReconRow { isin: string; name: string; statement: number; fromTransactions: number; difference: number }
@@ -139,9 +140,9 @@ export function intercompanyRecon(entries: { id: string; amount: number; txnType
     if (!from || !to || from === to) continue;
     const [a, b] = from < to ? [from, to] : [to, from];
     const row = m.get(`${a}|${b}`) ?? { a, b, aToB: 0, bToA: 0, net: 0, unconfirmed: 0 };
-    if (from === a) row.aToB = r2(row.aToB + t.amount); else row.bToA = r2(row.bToA + t.amount);
+    if (from === a) row.aToB = addMoney(row.aToB, t.amount); else row.bToA = addMoney(row.bToA, t.amount);
     if (!t.reconciledAt) row.unconfirmed++;
-    row.net = r2(row.aToB - row.bToA);
+    row.net = subtractMoney(row.aToB, row.bToA);
     m.set(`${a}|${b}`, row);
   }
   return [...m.values()];

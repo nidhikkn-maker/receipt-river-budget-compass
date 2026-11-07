@@ -839,3 +839,21 @@
 - [ ] Buildable feature gaps (next, in order): budget module gaps (C-0389/0391/0581/0709/1249/1252/1253/2301), merchant merge/unmerge (C-2094), missing-document list in claim PDF (C-1857), document verification screen (C-1487), category-merge affected-record preview (C-1501), loan repayment CSV export (C-0409), setup-assistant completion suppression (C-1493), sticky report summary (C-2024), integer money arithmetic (C-1065 — large, plan separately), statement admin view (C-0214), receipt browser tests (C-0553), report-job interruption test (C-0517).
 - [ ] Verification gaps needing physical device / live site / owner records: 15 + 4 — parked until available.
 - [ ] External: price feed, publish approval, bank/email providers, ChatGPT MCP publish test — unchanged.
+
+## Workstream 1 checkpoint — 7 Nov 2026 13:00 UTC
+- [x] Reconciled saved historical audit: 1,537 implemented / 934 partial / 51 missing / 19 superseded. Earlier 1,535/53 was before C-2154/C-2232 reclassification, not the final baseline.
+- [x] Decimal-safe core ledger, allocations, statement/invoice money and FX repayment/history figures; isolated connected acceptance PASS. Broader financial arithmetic and hosted acceptance remain PARTIAL.
+- [ ] Budget complete-allocation controls; merchant merge/unmerge; category affected-record preview.
+- [ ] Document verification and claim missing-evidence PDFs; independent historical gaps and responsive acceptance.
+- [ ] Verify remaining partial workflows with exact code/evidence; correct classifications only on actual evidence.
+- Safeguards: no real-record writes, approval trigger activation, production policy installation or publication.
+
+## Exact Workstream 1 resume — 13:15 UTC
+- [x] Counts reconciled; C-2301 was a Do-not restriction, not a feature to build. Historical 1,539 implemented / 941 partial / 42 missing / 19 superseded; v6 566/331/2 unchanged.
+- [x] Budget complete-dimension controls and saved-value Edit Budget; merchant review/merge/retry/unmerge; pre-PDF actual decoder + required-file gate; missing-document PDF list; category preview + unsafe split refusal.
+- [x] Full 251 files / 1,886 PASS; isolated browser three widths PASS, screenshots inspected, build OK.
+- [ ] Next: category merge atomic catalogue/split/commitment/budget preview & revision authority in staged SQL and disposable tests (no installation). Existing category RPC does not move splits and catalogue save is separate.
+- [ ] Connect actual ExpenditureReportBuilder file fetch→verification→PDF→saved history→download in isolated harness; include required missing documents and lost-response recovery. Current dialog/decoder/PDF component evidence is not that full flow.
+- [ ] Re-audit remaining 11 formerly buildable missing gaps against actual code; implement only absent functionality, then systematically verify 941 partial historical clusters and overlapping v6 clauses.
+- [ ] Decimal coverage outside core ledger: tax, planning, depreciation and remaining reports require scoped migration and connected acceptance; C-1065 stays PARTIAL.
+- [ ] Hosted/device/external acceptance remains separate; no real financial writes, trigger activation or publication.

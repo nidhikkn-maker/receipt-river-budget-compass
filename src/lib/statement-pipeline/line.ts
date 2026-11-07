@@ -1,3 +1,4 @@
+import { roundMoney, addMoney, subtractMoney, sumMoney } from "../money";
 // The one statement-line model every statement flow speaks (pure, tested).
 // Bank-specific parsers convert into this shape; matching, planning and posting only ever see it.
 import type { AccountKind } from "../ledger";
@@ -50,7 +51,7 @@ export interface StmtFile {
   scanned?: boolean;
 }
 
-const r2 = (n: number) => Math.round(n * 100) / 100;
+const r2 = roundMoney;
 const key = (file: string, i: number) => `${file}#${i}`;
 
 export function fromBalanceLines(file: string, lines: BalanceLine[], currency = "INR"): StmtLine[] {
@@ -75,7 +76,7 @@ export function fromStatementLines(file: string, lines: StatementLine[], currenc
 }
 
 export function totals(lines: StmtLine[]) {
-  const sum = (d: Dir) => r2(lines.filter((l) => l.direction === d).reduce((s, l) => s + l.amount, 0));
+  const sum = (d: Dir) => sumMoney(lines.filter(l => l.direction === d).map(l => l.amount));
   return { debits: sum("debit"), credits: sum("credit"), count: lines.length };
 }
 
@@ -84,8 +85,8 @@ export function balanceAddsUp(opening: number | null, closing: number | null, li
   if (opening === null || closing === null) return null;
   const t = totals(lines);
   // An account's balance rises with credits; what you owe on a card rises with debits.
-  const expected = r2(opening + (liability ? -1 : 1) * (t.credits - t.debits));
-  return r2(closing - expected);
+  const expected = addMoney(opening, liability ? subtractMoney(t.debits, t.credits) : subtractMoney(t.credits, t.debits));
+  return subtractMoney(closing, expected);
 }
 
 /**
@@ -94,9 +95,9 @@ export function balanceAddsUp(opening: number | null, closing: number | null, li
  */
 export function projectBalance(appBalance: number, lines: readonly { direction: Dir; amount: number }[], closing: number | null, liability = false) {
   const sign = liability ? -1 : 1;
-  const net = r2(lines.reduce((s, l) => s + sign * (l.direction === "credit" ? l.amount : -l.amount), 0));
-  const after = r2(appBalance + net);
-  const difference = closing === null ? null : r2(closing - after);
+  const net = sumMoney(lines.map(l => sign * (l.direction === "credit" ? l.amount : -l.amount)));
+  const after = addMoney(appBalance, net);
+  const difference = closing === null ? null : subtractMoney(closing, after);
   return { net, after, difference, ok: difference !== null && Math.abs(difference) <= 0.01 };
 }
 
