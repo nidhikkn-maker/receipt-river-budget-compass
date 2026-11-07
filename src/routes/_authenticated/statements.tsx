@@ -11,7 +11,7 @@ import { Clipped } from "@/components/Clipped";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import { money } from "@/lib/expenses";
-import { useStore } from "@/lib/store";
+import { useStore, type DocumentMeta } from "@/lib/store";
 import { accountBalance } from "@/lib/ledger";
 import type { TxnType } from "@/lib/ledger";
 import { correctionPreview, type CorrectionPreview } from "@/lib/financial-corrections";
@@ -89,6 +89,8 @@ function StatementDeskPage() {
   const [accepted, setAccepted] = useState<string[]>([]);
   const [destinations, setDestinations] = useState<Record<string, string>>({});
   const [result, setResult] = useState<ApplyResult | null>(null);
+  // Statement originals that failed to store in DocuRepo after posting — kept so the owner can retry instead of leaving an untracked import.
+  const [failedOriginals, setFailedOriginals] = useState<{ file: File; meta: DocumentMeta }[]>([]);
   const [hintEdits, setHintEdits] = useState<Record<string, Partial<AccountHint>>>({});
   const [links, setLinks] = useState<TransferLinkRow[] | null>(null);
   const [linking, setLinking] = useState<string | null>(null);
