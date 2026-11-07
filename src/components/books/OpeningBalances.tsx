@@ -58,7 +58,7 @@ export function OpeningBalances({ rec, missingSchedules }: { rec: FyRecord; miss
       lines: plan.postings.map((x) => ({ txnId: x.txnId, accountId: x.accountId, amount: x.amount, sign: x.sign, head: x.head, target: x.target, current: x.current,
         title: `Opening balance FY ${nextFy(rec.fy)} — ${name(x.accountId)}`, description: `${HEAD_LABEL[x.head]}: ${inr(x.current)} in Ledgerline at ${fyEnd} set to audited ${inr(x.target)}` })),
     });
-    toast.success(plan.postings.length ? `${plan.postings.length} opening entr${plan.postings.length > 1 ? "ies" : "y"} posted on ${plan.openingDate}` : "Opening balances recorded — every account already agrees");
+    toast.success(plan.postings.length ? `${plan.postings.length} starting balance${plan.postings.length > 1 ? "s" : ""} saved for ${plan.openingDate}` : "Opening balances recorded — every account already agrees");
     await load();
   };
 
@@ -77,7 +77,7 @@ export function OpeningBalances({ rec, missingSchedules }: { rec: FyRecord; miss
     <div className="space-y-2 rounded-lg border p-2 text-xs">
       {(() => { const bs = openingBalanceSheet(rec); return <div className="rounded-md border p-2"><p className="font-semibold">Opening balance sheet · 1 April {plan.openingDate.slice(0, 4)}</p>
         <div className="mt-1 grid gap-2 sm:grid-cols-2"><div><p className="text-muted-foreground">Assets</p>{bs.assets.map((x) => <p key={x.head} className="flex justify-between gap-2"><span>{HEAD_LABEL[x.head]}</span><span>{inr(x.amount)}</span></p>)}{rec.audited.accumulatedDepreciation != null && <p className="flex justify-between gap-2"><span>Less accumulated depreciation</span><span>−{inr(rec.audited.accumulatedDepreciation)}</span></p>}<p className="flex justify-between gap-2 border-t font-semibold"><span>Total assets</span><span>{inr(bs.totalAssets)}</span></p></div>
-          <div><p className="text-muted-foreground">Capital & liabilities</p>{bs.liabilities.map((x) => <p key={x.head} className="flex justify-between gap-2"><span>{HEAD_LABEL[x.head]}</span><span>{inr(x.amount)}</span></p>)}<p className="flex justify-between gap-2 border-t font-semibold"><span>Total</span><span>{inr(bs.totalLiabilities)}</span></p></div></div>
+          <div><p className="text-muted-foreground">Owner's money & what is owed <span className="text-xs">(capital & liabilities)</span></p>{bs.liabilities.map((x) => <p key={x.head} className="flex justify-between gap-2"><span>{HEAD_LABEL[x.head]}</span><span>{inr(x.amount)}</span></p>)}<p className="flex justify-between gap-2 border-t font-semibold"><span>Total</span><span>{inr(bs.totalLiabilities)}</span></p></div></div>
         <p className={bs.balanced ? "mt-1 text-primary" : "mt-1 text-destructive"}>{bs.balanced ? "Balances — both sides agree" : `Does not balance by ${inr(bs.difference)}`}{bs.missing.length ? ` · not in the upload: ${bs.missing.map((h) => HEAD_LABEL[h]).join(", ")}` : ""}</p></div>; })()}
       <p className="font-semibold">Post opening balances for FY {nextFy(rec.fy)} (dated {plan.openingDate})</p>
       {plan.rows.map((r) => <div key={r.head} className="space-y-1 border-b pb-2 last:border-0">
@@ -99,7 +99,7 @@ export function OpeningBalances({ rec, missingSchedules }: { rec: FyRecord; miss
       {plan.blockers.some((b) => b.startsWith("Schedules")) && <Input aria-label="Reason schedules are missing" className="h-8" placeholder="Why the missing schedules aren't needed (kept as an exception)" value={why.schedules ?? ""} onChange={(e) => setWhy({ ...why, schedules: e.target.value })} />}
       {blockers.length > 0 && <ul className="list-disc pl-4 text-destructive">{blockers.map((b) => <li key={b}>{b}</li>)}</ul>}
       <Button size="sm" disabled={blockers.length > 0 || posted == null} onClick={() => post().catch((e: Error) => toast.error(e.message))}>
-        {plan.postings.length ? `Post ${plan.postings.length} opening entr${plan.postings.length > 1 ? "ies" : "y"}` : "Record opening balances (nothing to post)"}
+        {plan.postings.length ? `Save ${plan.postings.length} starting balance${plan.postings.length > 1 ? "s" : ""} for the new year` : "Record starting balances (nothing new to save)"}
       </Button>
       <p className="text-[11px] text-muted-foreground">Opening entries never count as income or spending. They are saved once, linked to the audited document, and can be undone together while unedited.</p>
     </div>

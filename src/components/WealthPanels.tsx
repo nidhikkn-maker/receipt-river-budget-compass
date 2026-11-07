@@ -76,7 +76,7 @@ export function LoansPanel() {
         <div className="grid gap-1"><Label htmlFor="loan-provider">Provider</Label><Input id="loan-provider" value={f.provider} onChange={e=>setF({...f,provider:e.target.value})}/></div><div className="grid gap-1"><Label>Loan type</Label><Select value={f.loanType} onValueChange={v=>setF({...f,loanType:v as LoanType})}><SelectTrigger aria-label="Loan type"><SelectValue/></SelectTrigger><SelectContent>{LOAN_TYPES.filter(t=>t!=="credit_card_emi").map(t=><SelectItem key={t} value={t}>{LOAN_TYPE_LABEL[t]}</SelectItem>)}</SelectContent></Select></div>
         <div className="grid gap-1"><Label htmlFor="loan-original">Original principal (₹)</Label><Input id="loan-original" type="number" value={f.original} onChange={e=>setF({...f,original:e.target.value})}/></div><div className="grid gap-1"><Label htmlFor="loan-start">Start date</Label><Input id="loan-start" type="date" value={f.startDate} onChange={e=>setF({...f,startDate:e.target.value})}/></div>
         <div className="grid gap-1"><Label htmlFor="loan-foreclosure">Foreclosure charge %</Label><Input id="loan-foreclosure" type="number" min="0" max="20" value={f.foreclosure} onChange={e=>setF({...f,foreclosure:e.target.value})}/></div><div className="grid gap-1"><Label htmlFor="loan-terms">Prepayment terms</Label><Input id="loan-terms" value={f.prepaymentTerms} onChange={e=>setF({...f,prepaymentTerms:e.target.value})}/></div>
-        <div className="grid gap-1"><Label htmlFor="lp">Outstanding (₹)</Label><Input id="lp" type="number" value={f.principal} onChange={(e) => setF({ ...f, principal: e.target.value })} /></div>
+        <div className="grid gap-1"><Label htmlFor="lp">Still to pay (₹)</Label><Input id="lp" type="number" value={f.principal} onChange={(e) => setF({ ...f, principal: e.target.value })} /></div>
         <div className="grid gap-1"><Label htmlFor="lr">Interest % / yr</Label><Input id="lr" type="number" step="0.01" value={f.rate} onChange={(e) => setF({ ...f, rate: e.target.value })} /></div>
         <div className="grid gap-1"><Label htmlFor="le">EMI (₹)</Label><Input id="le" type="number" value={f.emi} onChange={(e) => setF({ ...f, emi: e.target.value })} /></div>
         <div className="grid gap-1"><Label htmlFor="ld">Next EMI</Label><Input id="ld" type="date" value={f.nextDue} onChange={(e) => setF({ ...f, nextDue: e.target.value })} /></div>
@@ -199,8 +199,8 @@ const EMI_STATUS: Record<EmiRowStatus, { label: string; tone: string }> = {
   matched: { label: "Matched", tone: "text-muted-foreground" },
   amount: { label: "Amount differs", tone: "text-destructive" },
   date: { label: "Date differs", tone: "text-warning" },
-  missing: { label: "No bank debit", tone: "text-destructive" },
-  funded_only: { label: "Funded, EMI debit not yet seen", tone: "text-muted-foreground" },
+  missing: { label: "No payment seen in the bank", tone: "text-destructive" },
+  funded_only: { label: "Money arrived, EMI payment not seen yet", tone: "text-muted-foreground" },
   lender_only: { label: "Lender only", tone: "text-muted-foreground" },
   upcoming: { label: "Upcoming", tone: "text-muted-foreground" },
 };
@@ -224,7 +224,7 @@ function EmiReconciliation({ l }: { l: Loan }) {
     <details className="mt-3 rounded-xl border p-2">
       <summary className="cursor-pointer text-sm font-medium">EMI reconciliation · {rows.length} EMIs · {flagged ? `${flagged} to check` : "all clear"}</summary>
       <p className="mt-1 text-[11px] text-muted-foreground">Scheduled EMI on day {target.dueDay}{payFrom ? ` from ${payFrom}` : ""} beside the bank debit found within 7 days before or 5 days after. Gaps up to ₹{Math.max(100, Math.round(l.emi * 0.005)).toLocaleString("en-IN")} count as matched; "Lender only" means the loan statement shows it paid but your bank records don't go back that far.</p>
-      <div className="mt-2 grid grid-cols-[1fr_1fr_1fr_auto] gap-1 text-[11px] text-muted-foreground"><span>Due</span><span>Bank debit</span><span>Difference</span><span>Status</span></div>
+      <div className="mt-2 grid grid-cols-[1fr_1fr_1fr_auto] gap-1 text-[11px] text-muted-foreground"><span>Due</span><span>Paid from bank</span><span>Difference</span><span>Status</span></div>
       {rows.map((r) => {
         const st = EMI_STATUS[r.status];
         return (

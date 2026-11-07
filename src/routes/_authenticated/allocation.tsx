@@ -14,9 +14,9 @@ import { Trash2 } from "lucide-react";
 export const Route = createFileRoute("/_authenticated/allocation")({
   head: () => ({
     meta: [
-      { title: "Money allocation — Ledgerline" },
+      { title: "Plan where income goes — Ledgerline" },
       { name: "description", content: "Plan how to distribute incoming money across commitments, cards, loans, reserves and goals. Plans never move money." },
-      { property: "og:title", content: "Money allocation — Ledgerline" },
+      { property: "og:title", content: "Plan where income goes — Ledgerline" },
       { property: "og:description", content: "Plan how to distribute incoming money across commitments, cards, loans, reserves and goals." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
@@ -61,16 +61,16 @@ function AllocationPage() {
       const plan: AllocationPlan = { id: crypto.randomUUID(), title: title.trim() || "Income", incomeDate: today, amount: amt, lines, carryForward: true, createdAt: new Date().toISOString() };
       await savePreferences({ ...preferences, allocationPlans: [plan, ...preferences.allocationPlans].slice(0, 60) });
       setLines(null); setAmount("");
-      toast.success("Allocation plan saved — no money was moved");
+      toast.success("Plan saved — no money was moved");
     } catch (e) { toast.error(e instanceof Error ? e.message : "Couldn't save the plan"); }
   };
 
   return (
     <div className="mx-auto max-w-3xl">
-      <PageTitle eyebrow="Wealth" title="Money allocation" sub="When income comes in, plan where it goes — commitments, cards, loans, reserves and goals. This is a plan only; it never moves money between accounts." />
+      <PageTitle eyebrow="Wealth" title="Plan where income goes" sub="When income comes in, plan where it goes — commitments, cards, loans, reserves and goals. This is a plan only; it never moves money between accounts." />
 
       <section className="mb-6 rounded-3xl border bg-card p-5">
-        <h2 className="mb-3 font-display text-lg font-bold">New allocation plan</h2>
+        <h2 className="mb-3 font-display text-lg font-bold">New plan for my income</h2>
         <div className="grid gap-3 sm:grid-cols-3">
           <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Income name (e.g. October salary)" aria-label="Income name" />
           <Input value={amount} onChange={(e) => setAmount(e.target.value)} inputMode="decimal" placeholder="Amount received (₹)" aria-label="Amount received" />
@@ -78,7 +78,7 @@ function AllocationPage() {
             <option value={30}>Cover 1 month</option><option value={15}>Cover 2 weeks</option><option value={60}>Cover 2 months</option><option value={90}>Cover 3 months</option>
           </select>
         </div>
-        <Button className="mt-3" variant="gold" onClick={suggest}>Suggest allocation</Button>
+        <Button className="mt-3" variant="gold" onClick={suggest}>Suggest a plan</Button>
 
         {lines && (
           <div className="mt-4">
@@ -107,7 +107,7 @@ function AllocationPage() {
 
       <section className="rounded-3xl border bg-card p-5">
         <h2 className="mb-3 font-display text-lg font-bold">Saved plans</h2>
-        {!preferences.allocationPlans.length && <p className="text-sm text-muted-foreground">No plans yet. Enter an income amount above and tap “Suggest allocation”.</p>}
+        {!preferences.allocationPlans.length && <p className="text-sm text-muted-foreground">No plans yet. Enter an income amount above and tap “Suggest a plan”.</p>}
         <ul className="divide-y">
           {preferences.allocationPlans.map((p) => <PlanRow key={p.id} plan={p} onDelete={async () => { await savePreferences({ ...preferences, allocationPlans: preferences.allocationPlans.filter((x) => x.id !== p.id) }); toast.success("Plan removed"); }} />)}
         </ul>

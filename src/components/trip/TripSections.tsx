@@ -246,7 +246,7 @@ export function TripBudgetSection({ trip }: { trip: TravelTrip }) {
       {breakdownOpen && <BudgetBreakdown trip={trip} />}
       <ReimbursementBreakdownCard trip={trip} />
 
-      <Card title="Ledger detail" action={<Button size="sm" variant="outline" onClick={() => saveCsv(tripReportRows(trip, transactions), `trip-${slug(trip.name)}.csv`)}>CSV</Button>}>
+      <Card title="Every payment on this trip" action={<Button size="sm" variant="outline" onClick={() => saveCsv(tripReportRows(trip, transactions), `trip-${slug(trip.name)}.csv`)}>CSV</Button>}>
         <Row label="Spent (in your records)" value={money(f.total)} />
         <Row label="Booked, not yet paid" value={money(f.committed)} />
         <Row label="Spent + booked" value={money(f.projected)} />
@@ -271,7 +271,7 @@ export function TripBudgetSection({ trip }: { trip: TravelTrip }) {
         </div>}
       </Card>
 
-      <Card title="Advance reconciliation" action={<Button size="sm" variant="outline" onClick={() => saveCsv(advanceReconRows(trip, transactions), `trip-${slug(trip.name)}-advances.csv`)}>CSV</Button>}>
+      <Card title="Advance — what was spent and what's left" action={<Button size="sm" variant="outline" onClick={() => saveCsv(advanceReconRows(trip, transactions), `trip-${slug(trip.name)}-advances.csv`)}>CSV</Button>}>
         {recon.lines.length === 0 ? <p className="text-sm text-muted-foreground">No advances, business or official expenses, or returns on this trip yet.</p> : <>
           <div className="mb-2 text-xs text-muted-foreground">Advances received, compared with the business and official share of trip spending and anything you've returned.</div>
           {recon.lines.map((l, i) => <div key={i} className="flex gap-2 border-b py-1.5 text-sm last:border-0"><span className="w-24 shrink-0 text-muted-foreground">{l.date}</span><span className="flex-1 truncate">{l.label}</span><span className="font-mono">{l.kind === "advance" ? "+" : "−"}{money(l.amount)}</span></div>)}
@@ -279,7 +279,7 @@ export function TripBudgetSection({ trip }: { trip: TravelTrip }) {
             <Row label="Advances received" value={money(recon.advances)} />
             <Row label="Trip expenses (business/official)" value={money(recon.expenses)} />
             <Row label="Returned" value={money(recon.returns)} />
-            <Row label={recon.outstanding > 0 ? "Outstanding — to return" : recon.outstanding < 0 ? "Outstanding — owed to you" : "Fully reconciled"} value={money(Math.abs(recon.outstanding))} />
+            <Row label={recon.outstanding > 0 ? "Money to pay back" : recon.outstanding < 0 ? "Money to receive" : "Settled — nothing left to pay or receive"} value={money(Math.abs(recon.outstanding))} />
           </div>
           {recon.outstanding > 0 && !closed && <Button asChild variant="outline" size="sm" className="mt-2"><Link to="/new" search={{ kind: "advance_settlement", amount: recon.outstanding, trip: trip.id }}>Record return of {money(recon.outstanding)}</Link></Button>}
         </>}

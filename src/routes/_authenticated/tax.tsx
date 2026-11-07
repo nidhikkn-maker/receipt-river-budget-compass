@@ -36,6 +36,8 @@ function Tax() {
   return (
     <div className="mx-auto max-w-2xl space-y-4 p-4">
       <PageTitle title="Tax & audit" sub="Working drafts from your records — never filed by Ledgerline. Your accountant files with your approval." />
+      <p className="mb-3 text-sm text-muted-foreground">In everyday terms: this shows how much tax your records suggest, what GST you paid that may be claimed back, and which documents your accountant will need. Official form names and tax heads are kept exactly as the law uses them, so your accountant sees the correct terms.</p>
+      <AccountingDetails terms={['inputCredit','depreciation','accrual','payable','receivable']} />
       <div className="flex flex-wrap gap-2">
         {years.map((y) => <button key={y} type="button" onClick={() => setFy(y)} className={`rounded-full border px-3 py-1 text-sm ${y === fy ? "bg-primary text-primary-foreground" : "bg-card"}`}>FY {y}</button>)}
       </div>

@@ -56,7 +56,7 @@ function CardBalancePage() {
       </Card>
 
       <Card title="Balance trend" className="mt-4">
-        <p className="text-[11px] text-muted-foreground">Amount owed at each month end · credit shows below zero · last 12 months</p>
+        <p className="text-[11px] text-muted-foreground">What you owed at each month end · below zero means the card owes you money · last 12 months</p>
         <CardTrendChart points={trend} names={cardTrendKeys([card])} height={180} />
       </Card>
 

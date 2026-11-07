@@ -102,12 +102,12 @@ function Audit() {
 
   return (
     <div className="mx-auto max-w-3xl space-y-4 p-4">
-      <PageTitle title="Audit dashboard" sub={items.length ? `${items.length} open exceptions · they also appear in the Financial Inbox` : "Nothing open right now"} />
+      <PageTitle title="Checks & history of changes" sub={items.length ? `${items.length} thing${items.length === 1 ? "" : "s"} to look at · also shown in Review` : "Nothing needs your attention right now"} />
       <Link to="/report-status" className="text-sm text-primary underline">Required reports status, evidence and tests</Link>
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">{tiles.map((t) => <div key={t.label} className="rounded-2xl border bg-card p-3"><p className="text-[11px] text-muted-foreground">{t.label}</p><p className="font-mono text-lg font-semibold">{t.value}</p></div>)}</div>
 
       <FigureSources assets={preferences.assets ?? []} books={books} docs={documents} titleOf={(id) => transactions.find((t) => t.id === id)?.title} />
-      <Fold title="Reconciliations" hint="Bank, card, loan, supplier, customer, investment, intercompany, GST" defaultOpen>
+      <Fold title="Balance checks" hint="Bank, card, loan, supplier, customer, investment, between-company and GST (reconciliations)" defaultOpen>
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">{hub.map((h) => <Link key={h.kind} to={h.to} className="rounded-xl border px-3 py-2 text-sm"><span className="block text-xs text-muted-foreground">{h.kind}</span><b className={h.open ? "text-destructive" : "text-primary"}>{h.open ? `${h.open} open` : "Clear"}</b></Link>)}</div>
         <div className="mt-3 space-y-2 text-xs">
           <label className="flex flex-wrap items-center gap-2">Payments settle unnamed invoices
@@ -188,7 +188,7 @@ function FigureSources({ assets, books, docs, titleOf }: { assets: import("@/lib
   const derived = useMemo(() => derivedEvidence({ assets, books, docs, entryTitle: titleOf }), [assets, books, docs]); // eslint-disable-line react-hooks/exhaustive-deps
   const missing = rows.filter((r) => !r.source).length;
   return (
-    <Fold title="Figure sources" hint={rows.length ? `${rows.length - missing} of ${rows.length} register figures traced to a document or entry` : "No register figures yet"}>
+    <Fold title="Where each figure came from" hint={rows.length ? `${rows.length - missing} of ${rows.length} register figures traced to a document or entry` : "No register figures yet"}>
       <div className="space-y-2 text-xs">
         {rows.length > 0 && <div className="max-h-80 divide-y overflow-y-auto rounded-lg border">{rows.map((r, i) => <div key={`${r.recordId}:${i}`} className="flex flex-wrap justify-between gap-2 px-2 py-1"><span className="min-w-0">{r.register} · {r.label}<span className="block text-muted-foreground">{r.source ? `${r.source.kind === "document" ? "Document" : "Entry"}: ${r.source.title}` : "No source — attach the document"}</span></span><span className="font-mono">{inr(r.amount)}</span></div>)}</div>}
         {rows.length > 0 && <Button size="sm" variant="outline" onClick={() => downloadBlob(new Blob([evidenceCsv(rows)], { type: "text/csv" }), "figure-sources.csv")}>Download CSV</Button>}
