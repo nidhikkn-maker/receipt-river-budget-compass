@@ -98,7 +98,7 @@ describe("connected asset document review and installed database", () => {
       const costSource = registerEvidence({ assets: saved.assets, books: saved.books, docs: [{ id: docId, title: "Original service document", docType: type }] })[0];
       expect(costSource?.amount).toBe(150000);
       // Even an attached purchase invoice must not replace an explicitly retained original's facts.
-      expect(costSource?.source).toEqual(type === "asset_invoice" ? { kind: "document", id: docId, title: "Original service document" } : null);
+      expect(costSource?.source).toBe(null);
       await db.exec("SET ROLE authenticated");
       expect((await db.query("SELECT * FROM document_intake_commits")).rows).toHaveLength(1);
       expect((await db.query("SELECT * FROM documents")).rows).toHaveLength(1);

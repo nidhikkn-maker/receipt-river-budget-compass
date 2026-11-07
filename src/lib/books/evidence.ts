@@ -27,7 +27,10 @@ export function registerEvidence(p: { assets: Asset[]; books: BooksData; docs: D
   // A service/warranty document proves attachment, never the asset's acquisition cost.
   const acquisitionResolve = makeResolver({ ...p, docs: p.docs.filter(d => !d.docType || d.docType === "asset_invoice" || d.docType === "property_deed" || d.docType === "audited_financials" || d.docType === "depreciation_schedule") });
   for (const a of p.assets) {
-    out.push({ register: "Asset register", recordId: a.id, label: `${a.name} · cost`, amount: a.cost, source: acquisitionResolve(a.id, a.docId, a.transactionId), to: "/assets" });
+    const costSource = a.docId && !p.docs.some(d => d.id === a.docId)
+      ? (a.transactionId ? acquisitionResolve("", undefined, a.transactionId) : null)
+      : acquisitionResolve(a.id, a.docId, a.transactionId);
+    out.push({ register: "Asset register", recordId: a.id, label: `${a.name} · cost`, amount: a.cost, source: costSource, to: "/assets" });
     if (a.soldOn && a.saleValue != null) out.push({ register: "Asset register", recordId: a.id, label: `${a.name} · sale proceeds`, amount: a.saleValue, source: resolve(a.id, a.docId), to: "/assets" });
   }
   for (const l of p.books.leases) {
