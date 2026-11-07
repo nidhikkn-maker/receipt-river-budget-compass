@@ -5,7 +5,7 @@
  * (account: credits raise it; card: debits raise what is owed). Anything else returns null,
  * so the file keeps reporting "closing not printed" instead of a guessed figure.
  */
-export type RunLine = { amount: number; direction: "debit" | "credit"; balance?: number | null };
+export type RunLine = { amount: number; direction: "debit" | "credit"; balance?: number | null | undefined };
 const paise = (n: number) => Math.round(n * 100);
 
 export function runningBalanceEnds(lines: readonly RunLine[]): { opening: number; closing: number; owed: boolean } | null {
