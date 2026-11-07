@@ -29,6 +29,27 @@ describe("actual document review workflow (isolated persistence boundary)", () =
   });
   afterEach(cleanup);
 
+  it("correcting an invoice field changes the approved GST amount and preserves its printed original", async () => {
+    state.store.preferences = { books: emptyBooks(), entities: [{ id: "company-1", name: "Owner", kind: "company", pan: "AAACA1234A", gstins: ["33AAACA1234A1Z5"], booksFrom: "2020-21" }], assets: [], contractObligations: [] };
+    open(baseRead("invoice", { amount: 1180, fields: [{ label: "Taxable value", value: "1000", originalValue: "1000", page: 2, quote: "Taxable value 1000", confidence: "high" }], gstInvoice: { number: "INV-44", date: "2026-10-02", seller: "Owner", sellerGstin: "33AAACA1234A1Z5", buyer: "Customer", buyerGstin: null, taxable: 1000, igst: 0, cgst: 90, sgst: 90, cess: 0 } }));
+    fireEvent.click(screen.getByText(/Details read/));
+    fireEvent.change(screen.getByLabelText("Taxable value", { selector: "input" }), { target: { value: "1100" } });
+    fireEvent.click(screen.getByRole("button", { name: "Confirm and save" }));
+    await waitFor(() => expect(commit).toHaveBeenCalledTimes(1));
+    expect(commit.mock.calls[0]?.[1].books.gstInvoices[0]).toMatchObject({ taxable: 1100, docId: "00000000-0000-0000-0000-000000000010" });
+    expect(add.mock.calls[0]?.[1].fields[0]).toMatchObject({ value: "1100", originalValue: "1000", status: "corrected", page: 2 });
+  });
+
+  it("utility review requires no invented cost and saves the consumer number with property links", async () => {
+    open(baseRead("utility_bill", { property: { name: "Factory", address: "44 Industrial Road", owner: null, cost: null, acquiredOn: null, surveyNo: null, valuation: null, valuationDate: null, utilityConsumerNo: "04477112" } }));
+    fireEvent.click(screen.getByRole("button", { name: "Confirm and save" }));
+    await waitFor(() => expect(commit).toHaveBeenCalledTimes(1));
+    const payload = commit.mock.calls[0]?.[1];
+    expect(payload.assets).toEqual([]);
+    expect(payload.books.properties[0]).toMatchObject({ name: "Factory", notes: "Consumer 04477112" });
+    expect(payload.books.docLinks).toEqual(expect.arrayContaining([expect.objectContaining({ kind: "property", docId: "00000000-0000-0000-0000-000000000010" })]));
+  });
+
   it("receipt preserves printed total, low confidence and source location; never creates a payment", async () => {
     open(baseRead("receipt", { amount: 1180, merchant: "Cafe", fields: [{ label: "Total", value: "1180", originalValue: "1180", page: 1, quote: "Grand total 1180", confidence: "low" }] }));
     fireEvent.click(screen.getByText(/Details read/));
