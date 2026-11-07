@@ -28,7 +28,7 @@ async function pdfToImage(src: string): Promise<string> {
   return out.toDataURL("image/jpeg", 0.92);
 }
 
-export function ReceiptZoomViewer({ src, type, name }: { src: string; type: string; name: string }) {
+export function ReceiptZoomViewer({ src, type, name, quiet = false }: { src: string; type: string; name: string; quiet?: boolean }) {
   const isPdf = type === "application/pdf";
   const [pdfImg, setPdfImg] = useState<string | null>(null);
   const [pdfFailed, setPdfFailed] = useState(false);
@@ -107,15 +107,15 @@ export function ReceiptZoomViewer({ src, type, name }: { src: string; type: stri
 
   return (
     <div className="space-y-2">
-      <div ref={box} role="img" aria-label={`Receipt ${name}, zoom ${Math.round(view.z * 100)}%`} className="relative h-[24rem] overflow-hidden rounded-2xl border bg-muted lg:h-[34rem]" style={{ touchAction: "none", cursor: view.z > 1 ? "grab" : "zoom-in" }}
+      <div ref={box} role="img" aria-label={`Receipt ${name}, zoom ${Math.round(view.z * 100)}%`} className={quiet ? "cmp-source-frame relative overflow-hidden" : "relative h-[24rem] overflow-hidden rounded-2xl border bg-muted lg:h-[34rem]"} style={{ touchAction: "none", cursor: view.z > 1 ? "grab" : "zoom-in" }}
         onPointerDown={onDown} onPointerMove={onMove} onPointerUp={onUp} onPointerCancel={onUp}>
         {!shown && <div role="status" className="absolute inset-0 flex items-center justify-center text-sm text-muted-foreground">Preparing PDF…</div>}
         {shown && <img src={shown} alt="" draggable={false} className="h-full w-full select-none object-contain" style={{ transformOrigin: "0 0", transform: `translate(${view.x}px, ${view.y}px) scale(${view.z})`, transition: smooth ? "transform 220ms cubic-bezier(.2,.8,.2,1)" : "none" }} />}
       </div>
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="text-xs text-muted-foreground">Scroll, pinch or double-tap to zoom · drag to move</p>
+      <div className={quiet ? "flex justify-end" : "flex flex-wrap items-center justify-between gap-2"}>
+        {!quiet && <p className="text-xs text-muted-foreground">Scroll, pinch or double-tap to zoom · drag to move</p>}
         <div className="flex items-center gap-1">
-          <Button type="button" size="sm" variant="ghost" onClick={() => setReport({ ...collectDeviceFacts(), log: [...log.current] })}><Flag className="h-4 w-4" />Report a problem</Button>
+          {!quiet && <Button type="button" size="sm" variant="ghost" onClick={() => setReport({ ...collectDeviceFacts(), log: [...log.current] })}><Flag className="h-4 w-4" />Report a problem</Button>}
           <Button type="button" size="icon" variant="outline" aria-label="Zoom out" disabled={view.z <= MIN} onClick={() => { note("zoom out tapped"); zoomAt(view.z / 1.5, ...center(), true); }}><Minus className="h-4 w-4" /></Button>
           <Button type="button" size="icon" variant="outline" aria-label="Zoom in" disabled={view.z >= MAX} onClick={() => { note("zoom in tapped"); zoomAt(view.z * 1.5, ...center(), true); }}><Plus className="h-4 w-4" /></Button>
           <Button type="button" size="icon" variant="outline" aria-label="Reset zoom" onClick={() => { note("reset tapped"); setSmooth(true); setView({ z: 1, x: 0, y: 0 }); }}><RotateCcw className="h-4 w-4" /></Button>
