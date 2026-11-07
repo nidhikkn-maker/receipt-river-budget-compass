@@ -2695,6 +2695,10 @@ export type Database = {
           owner_id: string
         }[]
       }
+      my_team_role: {
+        Args: never
+        Returns: Database["public"]["Enums"]["app_role"]
+      }
       post_import_rows: {
         Args: { _batch: string; _rows: Json }
         Returns: number
