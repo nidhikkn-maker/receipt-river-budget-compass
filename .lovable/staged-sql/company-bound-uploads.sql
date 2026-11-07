@@ -17,16 +17,21 @@ RETURNS boolean LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS
 $$;
 REVOKE ALL ON FUNCTION public.can_upload_company_file(text) FROM public, anon;
 GRANT EXECUTE ON FUNCTION public.can_upload_company_file(text) TO authenticated;
+-- Test reference existence behind RLS: a retagged hidden document is still linked, never an orphan.
+CREATE OR REPLACE FUNCTION public.is_unlinked_company_file(_path text)
+RETURNS boolean LANGUAGE sql STABLE SECURITY DEFINER SET search_path=public AS $$
+ SELECT public.can_upload_company_file(_path) AND NOT EXISTS(SELECT 1 FROM public.documents d WHERE d.file_path=_path)
+$$;
+REVOKE ALL ON FUNCTION public.is_unlinked_company_file(text) FROM public,anon;
+GRANT EXECUTE ON FUNCTION public.is_unlinked_company_file(text) TO authenticated;
 DROP POLICY IF EXISTS "Entity editors upload document files" ON storage.objects;
 CREATE POLICY "Entity editors upload document files" ON storage.objects FOR INSERT TO authenticated
 WITH CHECK (bucket_id='receipts' AND owner_id=auth.uid()::text AND public.can_upload_company_file(name));
 -- Do not remove originals after a successful/lost-response document save. Owner cleanup remains unchanged.
 CREATE POLICY "Entity editors clean unlinked company uploads" ON storage.objects FOR DELETE TO authenticated
-USING (bucket_id='receipts' AND owner_id=auth.uid()::text AND public.can_upload_company_file(name)
- AND NOT EXISTS (SELECT 1 FROM public.documents d WHERE d.file_path=storage.objects.name));
+USING (bucket_id='receipts' AND owner_id=auth.uid()::text AND public.is_unlinked_company_file(name));
 CREATE POLICY "Entity editors read own pending uploads" ON storage.objects FOR SELECT TO authenticated
-USING (bucket_id='receipts' AND owner_id=auth.uid()::text AND public.can_upload_company_file(name)
- AND NOT EXISTS (SELECT 1 FROM public.documents d WHERE d.file_path=storage.objects.name));
+USING (bucket_id='receipts' AND owner_id=auth.uid()::text AND public.is_unlinked_company_file(name));
 -- Metadata may reference only its company's namespace, not a personal/other-company original.
 CREATE OR REPLACE FUNCTION public.guard_company_document_path()
 RETURNS trigger LANGUAGE plpgsql SET search_path=public AS $$
