@@ -12,19 +12,20 @@ import { readFileSync } from "node:fs";
 import { afterEach, expect, it, vi } from "vitest";
 import { act, cleanup, fireEvent, render, waitFor } from "@testing-library/react";
 import { emptyBooks } from "@/lib/books/types";
-import type { Quote } from "@/lib/books/types";
-const state = vi.hoisted(() => ({ store: {} as Record<string, unknown>, version: 0, listeners: new Set<() => void>(), nav: vi.fn() }));
+import type { Quote, AlertSettings } from "@/lib/books/types";
+import type { DematWithHoldings } from "@/lib/investments/holdings-store";
+const state = vi.hoisted(() => ({ store: {} as Record<string, unknown>, version: 0, listeners: new Set<() => void>(), nav: vi.fn(), demat: [] as DematWithHoldings[] }));
 vi.mock("@/lib/store", () => ({ useStore: () => { useSyncExternalStore(listener => { state.listeners.add(listener); return () => state.listeners.delete(listener); }, () => state.version); return state.store; } }));
 vi.mock("@tanstack/react-start", () => ({ useServerFn: () => state.nav }));
 vi.mock("@/lib/mutual-funds.functions", () => ({ getFundNav: vi.fn() }));
-vi.mock("@/lib/investments/holdings-store", () => ({ loadDemat: async () => [] }));
+vi.mock("@/lib/investments/holdings-store", () => ({ loadDemat: async () => state.demat }));
 vi.mock("@/integrations/supabase/client", () => ({ supabase: { from: () => { const q: Record<string, unknown> = { then: (done: (x: unknown) => unknown) => Promise.resolve(done({ data: [], error: null })) }; for (const name of ["select", "in", "order", "limit", "eq", "maybeSingle"]) q[name] = () => q; return q; } } }));
 vi.mock("@tanstack/react-router", () => ({ useRouterState: () => "", Link: ({ to, hash, children, ...props }: { to: string; hash?: string; children: React.ReactNode }) => <a href={to + (hash ? "#" + hash : "")} {...props}>{children}</a> }));
 import { MarketPanel } from "./MarketPanel";
 import { NetWorthCard } from "./NetWorthCard";
 const owner = "00000000-0000-0000-0000-000000000001", other = "00000000-0000-0000-0000-000000000002";
-afterEach(() => { cleanup(); state.listeners.clear(); vi.clearAllMocks(); });
-async function setup(options: { quotes?: Quote[]; lastPortfolio?: number } = {}) {
+afterEach(() => { cleanup(); state.listeners.clear(); state.demat = []; vi.clearAllMocks(); });
+async function setup(options: { quotes?: Quote[]; lastPortfolio?: number; alerts?: Partial<AlertSettings>; quantity?: number } = {}) {
  const books = { ...emptyBooks(), holdings: [{ id: "fund", name: "Controlled Fund", kind: "mutual_fund" as const, schemeCode: "12345", quantity: 10, sharePct: 100, costBasis: 800, source: "retained source", exchange: "NSE" as const }], quotes: [{ key: "amfi:12345", price: 100, at: "2026-11-06", provider: "Controlled NAV source", freshness: "nav" as const, refreshedAt: "2026-11-06T12:00:00Z", failedAt: undefined as string | undefined }] };
  const preferences = { books, assets: [{ id: "land", name: "Factory land", kind: "property", cost: 2000, inUse: "2026-04-01", sharePct: 100, bookMethod: "slm", bookRatePct: 0 }], entities: [] };
  if (options.quotes) {
@@ -32,6 +33,8 @@ async function setup(options: { quotes?: Quote[]; lastPortfolio?: number } = {})
   if (options.quotes.some(q => ["live", "delayed", "eod"].includes(q.freshness))) preferences.books.holdings = [{ ...books.holdings[0], kind: "etf", schemeCode: "12345" }] as unknown as typeof books.holdings;
  }
  if (options.lastPortfolio !== undefined) preferences.books.snapshots = [{ date: "2026-11-01", netWorth: 4300, portfolio: options.lastPortfolio, liquid: 1000, liabilities: 300, allocation: {} }];
+ if (options.alerts) preferences.books.alerts = { ...books.alerts, ...options.alerts };
+ if (options.quantity !== undefined) preferences.books.holdings = [{ ...books.holdings[0], quantity: options.quantity, isin: "INE009A01021" }] as typeof books.holdings;
  const accounts = [{ id: "bank", name: "Bank", kind: "savings", openingBalance: 1000, archived: false }, { id: "invest", name: "Deposit", kind: "fixed_deposit", openingBalance: 200, archived: false }, { id: "other", name: "Other asset", kind: "other_asset", openingBalance: 500, archived: false }, { id: "debt", name: "Card", kind: "credit_card", openingBalance: 300, archived: false }];
  const db = new PGlite();
  await db.exec(`CREATE ROLE authenticated; CREATE ROLE anon; CREATE ROLE service_role; CREATE SCHEMA auth;
@@ -98,6 +101,48 @@ it("actual price refresh → installed reviewed-save RPC → net-worth/Home → 
   expect((await h.db.query("SELECT * FROM preference_approvals")).rows).toEqual([]);
   await h.db.exec("RESET ROLE; SET ROLE anon");
   await expect(h.db.query("SELECT * FROM finance_preferences")).rejects.toThrow(/permission denied/);
+ } finally { await h.db.close(); }
+}, 30000);
+it.each([true, false])("missing-price setting=%s survives owner save/reload and controls the actual rendered exception", async (enabled) => {
+ const h = await setup({ quotes: [], alerts: { missingPrices: enabled } });
+ try {
+  const view = render(<MarketPanel />); fireEvent.click(view.getByText("Investments & net worth"));
+  await waitFor(() => expect(view.container.querySelectorAll("ul li").length).toBe(enabled ? 1 : 0));
+  fireEvent.click(view.getByText("Alert settings"));
+  fireEvent.click(view.getByLabelText("Missing prices"));
+  await waitFor(async () => expect((await h.reload()).data.books.alerts.missingPrices).toBe(!enabled));
+  await waitFor(() => expect(view.container.querySelectorAll("ul li").length).toBe(enabled ? 0 : 1));
+  view.unmount(); const reopened = render(<MarketPanel />); fireEvent.click(reopened.getByText("Investments & net worth"));
+  await waitFor(() => expect(reopened.container.querySelectorAll("ul li").length).toBe(enabled ? 0 : 1));
+ } finally { await h.db.close(); }
+}, 30000);
+it.each([7, 9])("saved NAV staleness threshold %s days drives the actual exception without changing price", async (threshold) => {
+ const date = new Date(Date.now() - 8 * 864e5).toISOString();
+ const h = await setup({ quotes: [{ key: "amfi:12345", price: 100, at: date, provider: "Retained NAV", freshness: "nav", refreshedAt: date }], alerts: { staleNavDays: threshold } });
+ try {
+  const view = render(<MarketPanel />); fireEvent.click(view.getByText("Investments & net worth"));
+  await waitFor(() => expect(view.container.querySelectorAll("ul li").length).toBe(threshold === 7 ? 1 : 0));
+  expect((await h.reload()).data.books.quotes[0]?.price).toBe(100);
+ } finally { await h.db.close(); }
+}, 30000);
+it.each([12, 13])("quantity %s compares against pooled same-ISIN Demat totals and configured alert persists", async (quantity) => {
+ const h = await setup({ quantity, alerts: { quantityMismatch: true, missingPrices: false } });
+ state.demat = [5, 7].map((q, i) => ({ id: `demat-${i}`, broker: "Controlled", dpId: "D", clientId: `C${i}`, holder: "Owner", holdings: [{ id: `holding-${i}`, isin: "INE009A01021", name: "Controlled security", quantity: q, asOf: "2026-11-01", statementValue: null, lots: [], gains: [], sources: [] }] }));
+ try {
+  const view = render(<MarketPanel />); fireEvent.click(view.getByText("Investments & net worth"));
+  await waitFor(() => expect(view.container.textContent).toContain("Demat holdings (2)"));
+  expect(view.container.textContent?.includes("held vs 12 on the latest statement")).toBe(quantity === 13);
+  fireEvent.click(view.getByText("Alert settings")); fireEvent.click(view.getByLabelText("Quantity differences"));
+  await waitFor(async () => expect((await h.reload()).data.books.alerts.quantityMismatch).toBe(false));
+  expect(view.container.textContent).not.toContain("held vs 12 on the latest statement");
+ } finally { await h.db.close(); }
+}, 30000);
+it.each([true, false])("unusual-value threshold enabled=%s compares owned cost, not full acquisition cost", async (enabled) => {
+ const h = await setup({ alerts: { unusualValuationPct: enabled ? 20 : 0 } });
+ try {
+  const view = render(<MarketPanel />); fireEvent.click(view.getByText("Investments & net worth"));
+  await waitFor(() => expect(view.container.textContent?.includes("value is 25% from cost")).toBe(enabled));
+  expect((await h.reload()).data.books.holdings[0]?.costBasis).toBe(800);
  } finally { await h.db.close(); }
 }, 30000);
 it.each(["live", "delayed", "eod", "nav", "manual", "statement"] as const)("persisted %s quote displays its exact provenance and last-success facts without rewriting acquisition costs", async (freshness) => {
