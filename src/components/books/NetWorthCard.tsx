@@ -6,7 +6,7 @@ import { useNetWorth } from "./useBooks";
 export function NetWorthCard() {
   const nw = useNetWorth();
   return (
-    <Link to="/wealth" className="mb-5 block rounded-2xl border bg-card p-4" aria-label="Open financial position">
+    <section className="mb-5 block rounded-2xl border bg-card p-4" aria-label="Net worth summary">
       <div className="flex items-baseline justify-between gap-2">
         <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Net worth</span>
         <span className="text-[11px] text-muted-foreground">{nw.label}</span>
@@ -19,6 +19,10 @@ export function NetWorthCard() {
       </div>
       <p className="mt-2 text-[11px] text-muted-foreground">Updated from records to {nw.recordsAsOf ?? "—"}{nw.pricesAsOf ? ` · share prices: closing ${nw.pricesAsOf}` : ""}{nw.dematMissing.length ? ` · ${nw.dematMissing.length} holding${nw.dematMissing.length > 1 ? "s" : ""} without a price` : ""}</p>
       {nw.quality.length > 0 && <p className="mt-2 text-[11px] text-muted-foreground">{nw.quality.join(" · ")}</p>}
-    </Link>
+      <div className="mt-3 flex gap-4 text-xs text-primary">
+        <Link to="/wealth" aria-label="Open financial position" className="underline">Financial position</Link>
+        <Link to="/wealth" hash="investments" aria-label="Open investments" className="underline">Investments</Link>
+      </div>
+    </section>
   );
 }

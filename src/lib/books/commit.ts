@@ -43,6 +43,7 @@ export function commitIntake(p: PrefsSlice, c: Confirmed, doc: { id: string; tit
     case "entity": entities = upsert(entities, c.profile); link("entity", c.profile.id, c.profile.name); break;
     case "asset":
       assets = upsert(assets, c.asset); link("asset", c.asset.id, c.asset.name);
+      if (c.asset.transactionId) link("transaction", c.asset.transactionId, "acquisition payment");
       if (!books.assetEvents.some((e) => e.assetId === c.asset.id && e.kind === "received")) books = { ...books, assetEvents: [...books.assetEvents, { id: newId(), assetId: c.asset.id, date: c.asset.inUse, kind: "received", note: `From ${doc.title}`, docId: doc.id }] };
       if (c.asset.ownerEntityId) link("entity", c.asset.ownerEntityId, "owner");
       break;
@@ -64,7 +65,7 @@ export function commitIntake(p: PrefsSlice, c: Confirmed, doc: { id: string; tit
     case "fy": books = { ...books, fyRecords: upsert(books.fyRecords, c.record) }; link("fy", c.record.id, `FY ${c.record.fy}`); link("entity", c.record.entityId, "accounts"); break;
     case "gst": {
       // Same GSTIN + party + invoice number is the same invoice: update, never duplicate.
-      const key = (i: GstInvoice) => `${i.gstin}|${i.partyGstin}|${i.number.trim().toUpperCase()}`;
+      const key = (i: GstInvoice) => `${i.gstin}|${i.kind}|${i.partyGstin || i.party.trim().toUpperCase()}|${i.number.trim().toUpperCase()}|${Number(i.date.slice(5, 7)) >= 4 ? i.date.slice(0, 4) : String(Number(i.date.slice(0, 4)) - 1)}`;
       const prev = books.gstInvoices.find((i) => key(i) === key(c.invoice));
       const inv = { ...c.invoice, id: prev?.id ?? c.invoice.id, docId: doc.id };
       books = { ...books, gstInvoices: upsert(books.gstInvoices, inv) }; link("gst", inv.id, `${inv.number}`);

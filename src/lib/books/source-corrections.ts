@@ -10,6 +10,10 @@ const mappings: Record<string, { group: string; key: string; number?: boolean }>
   'useful life': { group: 'asset', key: 'usefulLifeYears', number: true }, 'residual value percent': { group: 'asset', key: 'residualPct', number: true },
   'tenant': { group: 'lease', key: 'tenant' }, 'lease start': { group: 'lease', key: 'start' }, 'lease end': { group: 'lease', key: 'end' },
   'monthly rent': { group: 'lease', key: 'rent', number: true }, 'security deposit': { group: 'lease', key: 'deposit', number: true },
+  'rent due day': { group: 'lease', key: 'dueDay', number: true }, 'payment terms': { group: 'lease', key: 'paymentTerms' },
+  'notice period': { group: 'lease', key: 'noticeDays', number: true },
+  'escalation percent': { group: 'lease', key: 'escalationPct', number: true },
+  'escalation every months': { group: 'lease', key: 'escalationEveryMonths', number: true },
   'invoice number': { group: 'gstInvoice', key: 'number' }, 'taxable value': { group: 'gstInvoice', key: 'taxable', number: true },
   'igst': { group: 'gstInvoice', key: 'igst', number: true }, 'cgst': { group: 'gstInvoice', key: 'cgst', number: true }, 'sgst': { group: 'gstInvoice', key: 'sgst', number: true },
 };

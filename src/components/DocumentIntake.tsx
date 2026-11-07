@@ -197,6 +197,7 @@ export function DocumentIntake({ file, context, onClose, resume, replacesId, onS
     if (proposal.kind === "lease") {
       if (!proposal.lease) return null;
       const l = proposal.lease;
+      if (!leaseProperty && !l.propertyId) return null;
       const lease: Lease = { ...l, propertyId: leaseProperty || l.propertyId, rent: Number(v("rent", l.rent)) };
       for (const k of LEASE_TERMS) { if (k === "gst") { const g = edit["gst"]; if (g !== undefined) lease.gst = g === "" ? undefined : g === "yes"; } else lease[k] = optNum(k, l[k]); }
       return { route: "lease", lease };

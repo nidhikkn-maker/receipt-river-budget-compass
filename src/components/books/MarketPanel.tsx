@@ -98,7 +98,7 @@ export function MarketPanel() {
           </div>
         </div>}
         {nw.valued.map((v) => <div key={v.holding.id} className="rounded-xl border p-3">
-          <div className="flex justify-between gap-2"><span className="min-w-0"><b className="block truncate">{v.holding.name}</b><span className="text-[11px] text-muted-foreground">{KIND[v.holding.kind]} · {v.holding.kind === "physical_gold" ? `${v.holding.grams ?? "?"} g` : `${v.holding.quantity} units`}{v.holding.sharePct !== 100 ? ` · ${v.holding.sharePct}% yours` : ""}</span></span>
+          <div className="flex justify-between gap-2"><span className="min-w-0"><b className="block truncate">{v.holding.name}</b><span className="text-[11px] text-muted-foreground">{KIND[v.holding.kind]}{v.holding.exchange ? ` · ${v.holding.exchange}` : ""} · {v.holding.kind === "physical_gold" ? `${v.holding.grams ?? "?"} g` : `${v.holding.quantity} units`}{v.holding.sharePct !== 100 ? ` · ${v.holding.sharePct}% yours` : ""}</span></span>
             <span className="text-right"><b className="font-mono">{v.value == null ? "—" : money(v.value)}</b><span className={`block text-[11px] ${v.stale ? "text-destructive" : "text-muted-foreground"}`}>{v.stale ? "Stale · " : ""}{v.note}</span></span></div>
           {v.quote && <p className="mt-1 text-[11px] text-muted-foreground">{FRESHNESS_LABEL[v.quote.freshness]} price {v.quote.price} as of {v.quote.at.slice(0, 16).replace("T", " ")} · refreshed {v.quote.refreshedAt.slice(0, 10)}</p>}
           <div className="mt-2 flex flex-wrap gap-2">
