@@ -1,0 +1,175 @@
+{
+  "schema_version": 1,
+  "events": {
+    "project.account_company_linked": {
+      "event_schema_version": 1,
+      "description": "A bank account was linked to, moved between, or unlinked from a company.",
+      "privacy": {
+        "contains_pii": false,
+        "purpose": "product_analytics"
+      },
+      "properties_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "action",
+          "source"
+        ],
+        "properties": {
+          "action": {
+            "type": "string",
+            "enum": [
+              "link",
+              "move",
+              "unlink"
+            ]
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "companies_page",
+              "account_settings",
+              "statement_upload"
+            ]
+          }
+        }
+      }
+    },
+    "project.company_created": {
+      "event_schema_version": 1,
+      "description": "A company profile was created (Companies page, account settings, or statement upload).",
+      "privacy": {
+        "contains_pii": false,
+        "purpose": "product_analytics"
+      },
+      "properties_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "source"
+        ],
+        "properties": {
+          "source": {
+            "type": "string",
+            "enum": [
+              "companies_page",
+              "account_settings",
+              "statement_upload"
+            ]
+          },
+          "kind": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "project.company_tax_csv_exported": {
+      "event_schema_version": 1,
+      "description": "Finance downloaded the Company tax (all) figures as a CSV.",
+      "privacy": {
+        "contains_pii": false,
+        "purpose": "product_analytics"
+      },
+      "properties_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "year",
+          "rows"
+        ],
+        "properties": {
+          "year": {
+            "type": "string"
+          },
+          "rows": {
+            "type": "number"
+          }
+        }
+      }
+    },
+    "project.company_tax_year_filtered": {
+      "event_schema_version": 1,
+      "description": "Finance changed the tax-year filter in the Company tax (all) section on the Tax page.",
+      "privacy": {
+        "contains_pii": false,
+        "purpose": "product_analytics"
+      },
+      "properties_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "year"
+        ],
+        "properties": {
+          "year": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "project.expense_company_assigned": {
+      "event_schema_version": 1,
+      "description": "The owner picked a company by hand on an expense (new or edit); automatic fill from the account is not counted.",
+      "privacy": {
+        "contains_pii": false,
+        "purpose": "product_analytics"
+      },
+      "properties_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "mode"
+        ],
+        "properties": {
+          "mode": {
+            "type": "string",
+            "enum": [
+              "new",
+              "edit"
+            ]
+          }
+        }
+      }
+    },
+    "project.statement_saved": {
+      "event_schema_version": 1,
+      "description": "A statement was saved in Statement Desk (one per account), with whether the app balance after saving matches the printed closing figure.",
+      "privacy": {
+        "contains_pii": false,
+        "purpose": "product_analytics"
+      },
+      "properties_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "balance"
+        ],
+        "properties": {
+          "balance": {
+            "type": "string",
+            "enum": [
+              "matched",
+              "differs",
+              "not_compared"
+            ]
+          },
+          "statement_adds_up": {
+            "type": "string",
+            "enum": [
+              "yes",
+              "no",
+              "not_printed"
+            ]
+          },
+          "entries_posted": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "fully_reconciled": {
+            "type": "boolean"
+          }
+        }
+      }
+    }
+  }
+}

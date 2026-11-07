@@ -1,0 +1,40 @@
+DROP FUNCTION public.change_accounting_period(uuid,text,text,date,date,text,jsonb);
+CREATE FUNCTION public.change_accounting_period(_id uuid, _action text, _period text, _from date, _to date, _reason text, _expected jsonb, _figures jsonb DEFAULT NULL) RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path=public AS $$
+DECLARE uid uuid:=auth.uid(); prefs jsonb; books jsonb; periods jsonb; logs jsonb; req jsonb; previous public.period_close_evidence; result jsonb; ledger jsonb; docs jsonb; approvals jsonb; rules jsonb; p jsonb; accts jsonb;
+BEGIN
+ IF uid IS NULL THEN RAISE EXCEPTION 'Sign in required'; END IF;
+ IF _id IS NULL OR length(coalesce(_period,''))=0 OR _action NOT IN ('closed','reopened') OR _action IS NULL THEN RAISE EXCEPTION 'Invalid period operation'; END IF;
+ IF _figures IS NOT NULL AND (jsonb_typeof(_figures) IS DISTINCT FROM 'object' OR _figures->>'version' IS DISTINCT FROM '1' OR jsonb_typeof(_figures->'entries') IS DISTINCT FROM 'object' OR jsonb_typeof(_figures->'gst') IS DISTINCT FROM 'object' OR jsonb_typeof(_figures->'balances') IS DISTINCT FROM 'object' OR octet_length(_figures::text)>2000000) THEN RAISE EXCEPTION 'Invalid period figures'; END IF;
+ req:=jsonb_build_object('action',_action,'period',_period,'from',_from,'to',_to,'reason',trim(coalesce(_reason,'')));
+ SELECT data INTO prefs FROM public.finance_preferences WHERE owner_id=uid FOR UPDATE;
+ IF prefs IS NULL THEN RAISE EXCEPTION 'Owner preferences not found'; END IF;
+ SELECT * INTO previous FROM public.period_close_evidence WHERE id=_id;
+ IF FOUND THEN IF previous.owner_id<>uid OR previous.request<>req THEN RAISE EXCEPTION 'Operation ID already used'; END IF; RETURN previous.evidence; END IF;
+ books:=coalesce(prefs->'books','{}'); periods:=coalesce(books->'closedPeriods','[]'); logs:=coalesce(books->'periodLog','[]');
+ IF jsonb_build_object('closedPeriods',periods,'periodLog',logs) IS DISTINCT FROM _expected THEN RAISE EXCEPTION 'Periods changed; refresh before approving'; END IF;
+ IF _action='closed' THEN
+  IF _from IS NULL OR _to IS NULL OR _from>_to OR _to>=current_date THEN RAISE EXCEPTION 'Only an ended valid period can close'; END IF;
+  IF EXISTS(SELECT 1 FROM jsonb_array_elements(periods) c WHERE c->>'id'=_period OR _from<=(c->>'to')::date AND _to>=(c->>'from')::date) THEN RAISE EXCEPTION 'Period overlaps an existing closure'; END IF;
+  SELECT coalesce(jsonb_agg(to_jsonb(e) ORDER BY e.id),'[]') INTO ledger FROM public.expenses e WHERE employee_id=uid AND expense_date BETWEEN _from AND _to;
+  SELECT coalesce(jsonb_agg(to_jsonb(d) ORDER BY d.id),'[]') INTO docs FROM public.documents d WHERE owner_id=uid AND (doc_date BETWEEN _from AND _to OR transaction_id IN(SELECT id FROM public.expenses WHERE employee_id=uid AND expense_date BETWEEN _from AND _to));
+  SELECT coalesce(jsonb_agg(to_jsonb(h) ORDER BY h.id),'[]') INTO approvals FROM public.expense_history h WHERE expense_id IN(SELECT id FROM public.expenses WHERE employee_id=uid AND expense_date BETWEEN _from AND _to);
+  SELECT coalesce(jsonb_agg(r ORDER BY r->>'id'),'[]') INTO rules FROM jsonb_array_elements(coalesce(books->'rules','[]')) r WHERE r->>'status'='active' AND r->>'effectiveFrom'<=_to::text;
+  SELECT coalesce(jsonb_agg(to_jsonb(a) ORDER BY a.id),'[]') INTO accts FROM public.accounts a WHERE a.owner_id=uid;
+  result:=jsonb_build_object('id',_id,'periodId',_period,'from',_from,'to',_to,'at',now(),'action',_action,'ledgerRevision',encode(sha256(convert_to(ledger::text,'UTF8')),'hex'),'entryCount',jsonb_array_length(ledger),'reconciled',(SELECT count(*) FROM jsonb_array_elements(ledger) e WHERE e->>'reconciled_at' IS NOT NULL),'sourceDocuments',docs,'approvalHistory',approvals,'ruleVersions',rules,'registerRevision',encode(sha256(convert_to(prefs::text,'UTF8')),'hex'),'ledger',ledger,'registers',books,'assets',coalesce(prefs->'assets','[]'),'accounts',accts,'approvedBy',uid,'verification','Snapshot of saved records; not statutory certification');
+  IF _figures IS NOT NULL THEN result:=result||jsonb_build_object('derivedFigures',_figures,'figureRevision',encode(sha256(convert_to(_figures::text,'UTF8')),'hex')); END IF;
+  p:=jsonb_build_object('id',_period,'from',_from,'to',_to,'closedOn',current_date,'note',trim(coalesce(_reason,''))); periods:=periods||jsonb_build_array(p);
+ ELSE
+  IF length(trim(coalesce(_reason,'')))<5 THEN RAISE EXCEPTION 'Reopening needs a written reason'; END IF;
+  SELECT value INTO p FROM jsonb_array_elements(periods) WHERE value->>'id'=_period; IF p IS NULL THEN RAISE EXCEPTION 'Period is not closed'; END IF;
+  SELECT coalesce(jsonb_agg(value),'[]') INTO periods FROM jsonb_array_elements(periods) WHERE value->>'id'<>_period;
+  result:=jsonb_build_object('id',_id,'periodId',_period,'action',_action,'at',now(),'approvedBy',uid,'reason',trim(_reason),'period',p);
+ END IF;
+ logs:=logs||jsonb_build_array(jsonb_build_object('at',now(),'action',_action,'periodId',_period,'reason',trim(coalesce(_reason,'')))); books:=books||jsonb_build_object('closedPeriods',periods,'periodLog',logs);
+ INSERT INTO public.period_operation_authority(owner_id,transaction_id) VALUES(uid,txid_current());
+ UPDATE public.finance_preferences SET data=jsonb_set(prefs,'{books}',books),updated_at=now() WHERE owner_id=uid;
+ DELETE FROM public.period_operation_authority WHERE owner_id=uid AND transaction_id=txid_current();
+ INSERT INTO public.period_close_evidence(id,owner_id,period_id,action,request,evidence) VALUES(_id,uid,_period,_action,req,result); RETURN result;
+END $$;
+REVOKE ALL ON FUNCTION public.change_accounting_period(uuid,text,text,date,date,text,jsonb,jsonb) FROM PUBLIC,anon;
+GRANT EXECUTE ON FUNCTION public.change_accounting_period(uuid,text,text,date,date,text,jsonb,jsonb) TO authenticated;
+COMMENT ON FUNCTION public.change_accounting_period(uuid,text,text,date,date,text,jsonb,jsonb) IS 'Close/reopen with canonical record snapshots, account snapshot and optional browser-computed derived figures (version 1) frozen into the evidence; figures are owner-approved calculated totals, never statutory certification.';
