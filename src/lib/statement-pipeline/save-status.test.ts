@@ -74,6 +74,30 @@ it('failed authoritative Undo reads never certify successful cleanup', async () 
   const api = { transactions: [], readExistingIds: async () => { throw Error('offline'); } } as unknown as ApplyApi;
   await expect(undoUpload({ posted: ['p'], reconciled: [], createdAccounts: [] }, api)).rejects.toThrow('offline');
 });
+it('mixed confirmed and unknown committed writes refuse Undo before changing any record or cleanup', async () => {
+  const changes: string[] = [];
+  const api = {
+    transactions: [{ id: 'confirmed', statementRef: 'document:d · first' }, { id: 'unknown' }],
+    readExistingIds: async () => ['confirmed', 'unknown'],
+    remove: async () => { changes.push('remove'); }, reconcile: async () => { changes.push('reconcile'); },
+    unlinkDraft: async () => { changes.push('draft'); }, setArchived: async () => { changes.push('archive'); },
+    refresh: async () => {},
+  } as unknown as ApplyApi;
+  const result = await undoUpload({ posted: ['confirmed'], reconciled: [], createdAccounts: [{ id: 'bank', name: 'Bank' }], linkedDrafts: [{ draftId: 'receipt', transactionId: 'confirmed' }], evidence: [{ id: 'confirmed', ref: 'document:d · first' }, { id: 'unknown', ref: 'document:d · second' }] }, api);
+  expect(result.left).toEqual(['unknown']);
+  expect(changes).toEqual([]);
+});
+it.each(['posted', 'reconciled'] as const)('changed source evidence on a %s record blocks the whole Undo', async kind => {
+  const changes: string[] = [];
+  const api = {
+    transactions: [{ id: 'a', statementRef: 'document:new · updated' }, { id: 'b', statementRef: 'document:d · second' }],
+    readExistingIds: async () => ['a', 'b'], remove: async () => { changes.push('remove'); },
+    reconcile: async () => { changes.push('reconcile'); }, refresh: async () => {},
+  } as unknown as ApplyApi;
+  const result = await undoUpload({ posted: kind === 'posted' ? ['a', 'b'] : ['b'], reconciled: kind === 'reconciled' ? ['a'] : [], createdAccounts: [], evidence: [{ id: 'a', ref: 'document:d · first' }, { id: 'b', ref: 'document:d · second' }] }, api);
+  expect(result.left).toEqual(['a']);
+  expect(changes).toEqual([]);
+});
 it('pending Undo cannot settle complete and survives cleaning even beyond completed-history limits', () => {
   const pending = { ...base, status: 'complete' as const, undoError: 'Undo unfinished' };
   const history = cleanStatementUploads([...Array.from({ length: 12 }, (_, i) => ({ ...base, id: String(i), status: 'complete' })), pending]);

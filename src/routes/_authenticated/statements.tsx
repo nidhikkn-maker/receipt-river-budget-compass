@@ -392,7 +392,7 @@ function StatementDeskPage() {
       const s = storeRef.current;
       const list = s.preferences.statementUploads ?? [];
       if (target && !left.length) await s.savePreferences({ ...s.preferences, statementUploads: list.filter((u) => u.id !== target) });
-      if (left.length) toast.error(`${left.length} item${left.length === 1 ? "" : "s"} couldn’t be reversed — try Undo again.`);
+      if (left.length) toast.error(`${left.length} item${left.length === 1 ? "" : "s"} need review or cleanup. Changed evidence and unconfirmed saves are kept; review saved records and the original before retrying Undo.`);
       else toast.success("Upload reversed — your records are as they were");
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Couldn’t reverse the upload.");
