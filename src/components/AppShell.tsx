@@ -52,7 +52,7 @@ function SyncStatus() {
       aria-live="polite"
       title={label}
       className={"flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold transition " +
-        (syncState === "error" ? "bg-destructive/10 text-destructive" : syncState === "offline" ? "bg-secondary text-secondary-foreground" : "bg-secondary text-muted-foreground hover:text-foreground")}
+        (syncState === "error" ? "bg-destructive/10 text-destructive" : syncState === "offline" ? "bg-secondary text-secondary-foreground" : pendingCount > 0 || syncState === "syncing" ? "bg-secondary text-muted-foreground hover:text-foreground" : "bg-transparent text-muted-foreground hover:text-foreground")}
     >
       <Icon className={"h-3.5 w-3.5" + (syncState === "syncing" ? " animate-spin" : "")} />
       <span className={(syncState === "error" || syncState === "offline" || pendingCount > 0 ? "max-w-24" : "sr-only sm:not-sr-only") + " truncate sm:max-w-none"}>{label}</span>
