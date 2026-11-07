@@ -2,6 +2,7 @@
 // "done" to owner preferences so it never reappears on its own, and Settings can reopen it.
 import { Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
+import { toast } from 'sonner';
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { AccountForm } from "@/components/AccountForm";
@@ -21,10 +22,18 @@ const STEPS = [
 export function SetupAssistant({ open, onOpenChange }: { open: boolean; onOpenChange: (v: boolean) => void }) {
   const { preferences, savePreferences, accounts, expenses } = useStore();
   const [i, setI] = useState(0);
+  const [saving, setSaving] = useState(false);
   useEffect(() => { if (open) setI(0); }, [open]);
   const status = useMemo(() => Object.fromEntries(setupStatus({ accounts, expenses, preferences }).map((s) => [s.key, s.state])), [accounts, expenses, preferences]);
-  const finish = async () => { onOpenChange(false); if (preferences.setupAssistant !== "done") await savePreferences({ ...preferences, setupAssistant: "done" }); };
-  const step = STEPS[i]!;
+  const finish = async () => {
+    if (saving) return;
+    setSaving(true);
+    try { if (preferences.setupAssistant !== 'done') await savePreferences({ ...preferences, setupAssistant: 'done' }); onOpenChange(false); }
+    catch { toast.error('Setup completion could not be saved. Retry; your financial records are unchanged.'); }
+    finally { setSaving(false); }
+  };
+  const step = STEPS[i];
+  if (!step) return null;
   const st = step.key === "cards" ? (accounts.some((a) => a.kind === "credit_card" && !a.archived) ? "ready" : "optional") : status[step.key];
   const jump = () => { onOpenChange(false); if ("hash" in step) setTimeout(() => document.getElementById(step.hash)?.scrollIntoView({ behavior: "smooth" }), 50); };
 
@@ -38,9 +47,9 @@ export function SetupAssistant({ open, onOpenChange }: { open: boolean; onOpenCh
         {"form" in step && <AccountForm compact kinds={step.form} />}
         {"to" in step && <Button asChild variant="secondary"><Link to={step.to} onClick={jump}>Open {step.title.toLowerCase()}</Link></Button>}
         <DialogFooter className="gap-2">
-          {i > 0 && <Button variant="ghost" onClick={() => setI(i - 1)}>Back</Button>}
-          {i < STEPS.length - 1 ? <><Button variant="outline" onClick={() => setI(i + 1)}>Skip</Button><Button onClick={() => setI(i + 1)}>Next</Button></>
-            : <Button onClick={() => void finish()}>Complete setup</Button>}
+          {i > 0 && <Button disabled={saving} variant="ghost" onClick={() => setI(i - 1)}>Back</Button>}
+          {i < STEPS.length - 1 ? <><Button disabled={saving} variant="outline" onClick={() => setI(i + 1)}>Skip</Button><Button disabled={saving} onClick={() => setI(i + 1)}>Next</Button></>
+            : <Button loading={saving} onClick={finish}>Complete setup</Button>}
         </DialogFooter>
       </DialogContent>
     </Dialog>
