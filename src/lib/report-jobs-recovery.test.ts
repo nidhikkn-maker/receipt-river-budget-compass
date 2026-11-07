@@ -2,8 +2,9 @@
 // Controlled service adapter only; never calls hosted storage or database.
 import { expect, it, vi } from 'vitest';
 import { completeReportJob } from './report-jobs.server';
+import { emptyFilters } from './report-centre';
 vi.mock('./report-pdf',()=>({renderReportPdf:async()=>new Blob(['%PDF-original'],{type:'application/pdf'})}));
-const job={id:'job',owner_id:'owner',kind:'monthly',filters:{from:'2026-11-01',to:'2026-11-30',workspaces:[]},style:'simple'};
+const job={id:'job',owner_id:'owner',kind:'monthly',filters:emptyFilters('2026-11-01','2026-11-30'),style:'simple'};
 function adapter(options:{history?:Record<string,unknown>;readError?:boolean;insertLost?:boolean;doneError?:boolean}={}) {
  let history=options.history;const writes:unknown[]=[];const files=new Map<string,Blob>();
  const db={from:(table:string)=>{
