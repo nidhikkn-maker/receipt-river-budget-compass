@@ -30,7 +30,8 @@ describe("actual document review workflow (isolated persistence boundary)", () =
   afterEach(cleanup);
 
   it("receipt preserves printed total, low confidence and source location; never creates a payment", async () => {
-    open(baseRead("receipt", { amount: 1180, merchant: "Cafe", fields: [{ label: "Total", value: "1180", page: 1, quote: "Grand total 1180", confidence: "low" }] }));
+    open(baseRead("receipt", { amount: 1180, merchant: "Cafe", fields: [{ label: "Total", value: "1180", originalValue: "1180", page: 1, quote: "Grand total 1180", confidence: "low" }] }));
+    fireEvent.click(screen.getByText(/Details read/));
     expect(screen.getByText("low confidence")).toBeVisible();
     expect(add).not.toHaveBeenCalled(); expect(commit).not.toHaveBeenCalled();
     fireEvent.click(screen.getByRole("button", { name: "Save to DocuRepo" }));
@@ -42,11 +43,12 @@ describe("actual document review workflow (isolated persistence boundary)", () =
   });
 
   it("contract waits for a source locator and stores obligations for review, never as paid or planned", async () => {
-    open(baseRead("contract", { expiresOn: "2027-10-01", fields: [{ label: "Notice period", value: "30", page: null, quote: "30 days notice", confidence: "medium" }], obligations: [{ label: "Annual maintenance", amount: 12000, frequency: "yearly", dueDate: "2027-10-01", noticeDays: 30, evidence: "Annual fee INR 12000" }] }));
+    open(baseRead("contract", { expiresOn: "2027-10-01", fields: [{ label: "Notice period", value: "30", originalValue: "30", page: null, quote: "30 days notice", confidence: "medium" }], obligations: [{ label: "Annual maintenance", amount: 12000, frequency: "yearly", dueDate: "2027-10-01", noticeDays: 30, evidence: "Annual fee INR 12000" }] }));
     fireEvent.click(screen.getByRole("button", { name: "Save to DocuRepo" }));
     expect(add).not.toHaveBeenCalled();
     fireEvent.click(screen.getByText(/Details read/));
     fireEvent.change(screen.getByLabelText("Page or section for Notice period"), { target: { value: "Termination clause 8" } });
+    await waitFor(() => expect(screen.getByRole("button", { name: "Save to DocuRepo" })).toBeEnabled());
     fireEvent.click(screen.getByRole("button", { name: "Save to DocuRepo" }));
     await waitFor(() => expect(commit).toHaveBeenCalledTimes(1));
     expect(add.mock.calls[0]?.[1]).toMatchObject({ expiresOn: "2027-10-01", fields: [{ section: "Termination clause 8", page: null }] });
@@ -65,9 +67,9 @@ describe("actual document review workflow (isolated persistence boundary)", () =
     commit.mockRejectedValueOnce(new Error("Connection lost after commit"));
     open(baseRead("contract", { obligations: [{ label: "Fee", amount: 800, frequency: "once", dueDate: "2026-12-01", noticeDays: null, evidence: "Fee 800" }] }));
     fireEvent.click(screen.getByRole("button", { name: "Save to DocuRepo" }));
-    await screen.findByRole("button", { name: "Retry", exact: true });
+    await screen.findByRole("button", { name: "Retry" });
     const approved = commit.mock.calls[0];
-    fireEvent.click(screen.getByRole("button", { name: "Retry", exact: true }));
+    fireEvent.click(screen.getByRole("button", { name: "Retry" }));
     await waitFor(() => expect(commit).toHaveBeenCalledTimes(2));
     expect(commit.mock.calls[1]).toEqual(approved); expect(add).toHaveBeenCalledTimes(1);
     expect(state.close).toHaveBeenCalledWith(expect.anything(), "done");

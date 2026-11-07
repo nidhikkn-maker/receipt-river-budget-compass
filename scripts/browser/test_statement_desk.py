@@ -100,6 +100,8 @@ class StatementDeskFlow(unittest.IsolatedAsyncioTestCase):
     async def test_failed_original_survives_next_upload_and_retry_never_reposts(self):
         await self.page.evaluate("deskFixture.failOriginals = true")
         for name, amount in [("first.csv", 250), ("second.csv", 480)]:
+            if name == "second.csv":
+                await self.page.get_by_role("button", name="Remove first.csv").click()
             csv = f"Date,Description,Debit,Credit\n2026-10-02,SHOP {name},{amount},\n"
             await self.page.get_by_label("Statement files").set_input_files(files=[{"name": name, "mimeType": "text/csv", "buffer": csv.encode()}])
             await self.page.locator("select").first.select_option("desk-account")
