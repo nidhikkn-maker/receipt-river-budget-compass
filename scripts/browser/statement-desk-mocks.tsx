@@ -3,7 +3,7 @@ import { mergeUploadHistory } from '../../src/lib/statement-pipeline/history';
 import { defaultPreferences, type FinancePreferences, type StatementUpload } from '../../src/lib/preferences';
 
 // Controlled copies only: no account session, Cloud client or real records.
-export const fixture = {
+const createFixture = () => ({
   accounts: [{ id: "desk-account", name: "Controlled bank", kind: "savings", openingBalance: 1000, archived: false, issuer: "", lastFour: null }],
   transactions: JSON.parse(sessionStorage.getItem("controlled-desk-ledger") ?? "[]") as Record<string, unknown>[],
   saves: [] as string[],
@@ -15,7 +15,8 @@ export const fixture = {
   failOriginals: false,
   failCompletion: false,
   failReconcile: false,
-};
+});
+export const fixture = (window as unknown as { deskFixture?: ReturnType<typeof createFixture> }).deskFixture ?? createFixture();
 Object.assign(window, { deskFixture: fixture });
 
 export function useStore() {
