@@ -28,6 +28,8 @@ export interface ApplyApi {
   setArchived: (id: string, archived: boolean) => Promise<void>;
   refresh: () => Promise<void>;
   transactions: Expense[];
+  /** Authoritative owner read; prevents a stale/offline snapshot from certifying Undo absence. */
+  readExistingIds?: (ids: string[]) => Promise<string[]>;
   /** Store the private original before the first financial write for this account. */
   prepareSource?: (request: ApplyRequest, accountId: string) => Promise<string>;
   /** Persist confirmed progress before proceeding; failure stops the next financial write. */
@@ -140,11 +142,13 @@ export async function applyUpload(requests: ApplyRequest[], api: ApplyApi, onPro
 /** Reverses one upload: removes what it posted, clears the matching marks, archives accounts it created. */
 export async function undoUpload(result: ApplyResult, api: ApplyApi): Promise<{ left: string[] }> {
   const left: string[] = [];
+  const planned = [...new Set([...result.posted, ...result.reconciled, ...(result.evidence ?? []).map(e => e.id)])];
+  const existing = new Set(api.readExistingIds ? await api.readExistingIds(planned) : api.transactions.map(t => t.id));
   // A planned write with a lost response is not a confirmed undo manifest. Keep its history for review.
-  for (const e of result.evidence ?? []) if (!result.posted.includes(e.id) && !result.reconciled.includes(e.id) && api.transactions.some(t => t.id === e.id)) left.push(e.id);
+  for (const e of result.evidence ?? []) if (!result.posted.includes(e.id) && !result.reconciled.includes(e.id) && existing.has(e.id)) left.push(e.id);
   for (const id of result.posted) {
     const e = api.transactions.find((t) => t.id === id);
-    if (!e) continue;
+    if (!e) { if (existing.has(id)) left.push(id); continue; }
     try { await api.remove(e); } catch { left.push(id); }
   }
   for (const id of result.reconciled) { try { await api.reconcile(id, null, { noRefresh: true }); } catch { left.push(id); } }
