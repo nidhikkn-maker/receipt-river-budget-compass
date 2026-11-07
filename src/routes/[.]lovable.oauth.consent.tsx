@@ -1,5 +1,5 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
-import { LedgerlineLogo } from "@/components/LedgerlineLogo";
+import { AuthFrame } from "@/components/AuthFrame";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -35,10 +35,10 @@ export const Route = createFileRoute("/.lovable/oauth/consent")({
   },
   component: Consent,
   errorComponent: ({ error }) => (
-    <main className="mx-auto max-w-md px-6 py-16">
+    <AuthFrame>
       <h1 className="font-display text-2xl font-bold">Connection request unavailable</h1>
       <p className="mt-3 text-sm text-muted-foreground">{error instanceof Error ? error.message : String(error)}. The link may have expired — start the connection again from your assistant.</p>
-    </main>
+    </AuthFrame>
   ),
 });
 
@@ -66,9 +66,8 @@ function Consent() {
   }
 
   return (
-    <main className="mx-auto max-w-md px-6 py-12">
-      <LedgerlineLogo className="h-8 w-auto" />
-      <div className="mt-8 rounded-2xl border bg-card p-6">
+    <AuthFrame>
+      <div>
         <h1 className="font-display text-2xl font-bold">Connect {name} to Ledgerline</h1>
         <p className="mt-2 text-sm">This lets {name} use Ledgerline as you{email ? <> (<b>{email}</b>)</> : null}.</p>
         {redirectUri && <p className="mt-1 break-all text-xs text-muted-foreground">Returns to {redirectUri}</p>}
@@ -85,6 +84,6 @@ function Consent() {
           <Button variant="outline" disabled={busy} onClick={() => decide(false)}>Cancel connection</Button>
         </div>
       </div>
-    </main>
+    </AuthFrame>
   );
 }
