@@ -15,7 +15,7 @@ it('exports the actual loan CSV button with ledger-consistent FX principal, inte
   const account: Account = { id: 'loan', name: 'Test loan', kind: 'loan', openingBalance: 500, archived: false };
   const repayment = { id: 'repay', date: '2026-10-05', txnType: 'loan_repayment' as const, accountId: 'bank', toAccountId: 'loan', amount: 83, originalAmount: 1, principal: 0.9, interest: 0.1 };
   const principal = accountBalance(account, [repayment]);
-  local.store = { accounts: [account], transactions: [repayment], loans: [{ id: 'l', name: 'Test loan', accountId: 'loan', principal, rate: 12, emi: 83, nextDue: '2026-11-05', loanType: 'personal', status: 'active', foreclosurePct: 0 }], commitments: [], preferences: defaultPreferences() };
+  local.store = { accounts: [account], transactions: [repayment], loans: [{ id: 'l', name: 'Test loan', accountId: 'loan', principal, rate: 12, emi: 83, nextDue: '2026-11-05', loanType: 'personal', status: 'active', payments: [], foreclosurePct: 0 }], commitments: [], preferences: defaultPreferences() };
   const snapshot = JSON.stringify(local.store);
   render(<LoansPanel />);
   fireEvent.click(screen.getByText(/Repayment history/));

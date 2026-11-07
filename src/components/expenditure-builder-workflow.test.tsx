@@ -7,7 +7,7 @@ import type { Expense } from '@/lib/expenses';
 import { newReimbursementProfile } from '@/lib/reimbursement-profiles';
 const local = vi.hoisted(() => ({ store: {} as Record<string, unknown>, uploaded: null as Blob | null, history: null as Record<string, unknown> | null, loseReply: true, offline: false, download: vi.fn() }));
 vi.mock('@/lib/store', () => ({ useStore: () => local.store }));
-vi.mock('@tanstack/react-router', () => ({ useNavigate: () => vi.fn() }));
+vi.mock('@tanstack/react-router', () => ({ useNavigate: () => vi.fn(), Link: ({ children }: { children: React.ReactNode }) => <a>{children}</a> }));
 vi.mock('@/components/AppShell', () => ({ PageTitle: ({ title }: { title: string }) => <h1>{title}</h1> }));
 vi.mock('./useClaimPreparation', () => ({ useClaimPreparation: () => ({ status: '', saveNow: vi.fn() }) }));
 vi.mock('@/lib/reports', async importOriginal => ({ ...await importOriginal<typeof import('@/lib/reports')>(), downloadBlob: local.download }));
