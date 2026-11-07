@@ -7,7 +7,7 @@ import { Link, useRouter, useRouterState , useNavigate } from "@tanstack/react-r
 import { ArrowLeft, ArrowRight } from "lucide-react";
 import { backStep, showBackButton } from "@/lib/back-nav";
 import { useEffect, useState, type ReactNode } from "react";
-import { BarChart3, Bell, Gem, Home, ListFilter, Plus, Settings, Users, Eye, EyeOff, FileText, UserRound, Inbox, Search, Plane, Menu, X, RefreshCw, CloudOff, Check, TriangleAlert } from "lucide-react";
+import { BarChart3, Bell, Gem, Home, ListFilter, Plus, Settings, Users, Eye, EyeOff, FileText, Inbox, Search, Plane, Menu, X, RefreshCw, CloudOff, Check, TriangleAlert } from "lucide-react";
 import { DeviceLock } from "./DeviceLock";
 import { LedgerlineBrand } from "./LedgerlineLogo";
 import { Button } from "./ui/button";
@@ -61,7 +61,7 @@ function SyncStatus() {
 }
 
 export function AppShell({ children }: { children: ReactNode }) {
-  const { loading, preferences, name, savePreferences } = useStore();
+  const { loading, preferences, name } = useStore();
   useEffect(() => {
     const media = window.matchMedia("(prefers-color-scheme: dark)");
     const apply = () => applyTheme(preferences.themeName, preferences.theme, media.matches);
@@ -76,7 +76,6 @@ export function AppShell({ children }: { children: ReactNode }) {
   const [moreOpen, setMoreOpen] = useState(false);
   const [smartOpen, setSmartOpen] = useState(false);
   const onToday = useRouterState({ select: (st) => st.location.pathname === "/dashboard" });
-  const onSpaces = useRouterState({ select: (st) => st.location.pathname === "/spaces" });
   useEffect(() => { const open = () => setSmartOpen(true); window.addEventListener("ledgerline:smart-add", open); return () => window.removeEventListener("ledgerline:smart-add", open); }, []);
   useEffect(() => { setHidden(localStorage.getItem("ll-privacy") === "1"); }, []);
   useEffect(() => { document.documentElement.classList.toggle("privacy", hidden); localStorage.setItem("ll-privacy", hidden ? "1" : "0"); }, [hidden]);
