@@ -20,9 +20,6 @@ const open = (read: ExtractedDocument) => render(<DocumentIntake file={new File(
 describe("connected asset document review and installed database", () => {
   const add = vi.fn(), commit = vi.fn();
   beforeEach(() => {
-    const dom = new JSDOM("<!doctype html><html><body></body></html>", { url: "http://localhost" });
-    vi.stubGlobal("document", dom.window.document); vi.stubGlobal("HTMLElement", dom.window.HTMLElement); vi.stubGlobal("File", dom.window.File);
-    state.store['testWindow'] = dom.window;
     vi.clearAllMocks();
     state.store = { preferences: { books: emptyBooks(), entities: [], assets: [], contractObligations: [] }, documents: [], accounts: [], loans: [], transactions: [], addDocument: add, commitDocumentRecords: commit };
   });
@@ -45,7 +42,8 @@ describe("connected asset document review and installed database", () => {
       await db.query("SELECT set_config('test.uid',$1,false)", [owner]);
       const row = (await db.query<{ revision: number }>("SELECT revision::int FROM finance_preferences WHERE owner_id=$1", [owner])).rows[0];
       if (!row) throw new Error("Owner absent");
-      vi.stubGlobal("window", state.store['testWindow']);
+      const dom = new JSDOM("<!doctype html><html><body></body></html>", { url: "http://localhost" });
+      vi.stubGlobal("window", dom.window); vi.stubGlobal("document", dom.window.document); vi.stubGlobal("HTMLElement", dom.window.HTMLElement); vi.stubGlobal("File", dom.window.File);
       let approved: { id: string; documentId: string; expected: number; data: unknown; lock: boolean } | undefined;
       add.mockImplementation(async (_file: File, meta) => {
         await db.query("INSERT INTO documents VALUES ($1,$2,$3,false,$4,$5::jsonb)", [meta.id, owner, meta.docType, new TextEncoder().encode("representative original"), JSON.stringify(meta.fields)]);
