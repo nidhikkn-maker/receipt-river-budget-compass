@@ -320,7 +320,7 @@ class StatementDeskFlow(unittest.IsolatedAsyncioTestCase):
         await self.page.get_by_role('button',name='Accept all 1 asking items').click()
         # The payment destination must be explicitly selected, never inferred from amount.
         selectors=self.page.locator('select')
-        for i in range(await selectors.count()):
+        for i in range(1, await selectors.count()):
             options=await selectors.nth(i).locator('option').all_text_contents()
             if 'Controlled Amex' in options:
                 await selectors.nth(i).select_option('card')
