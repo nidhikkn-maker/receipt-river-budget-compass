@@ -51,3 +51,10 @@ Not verified: hosted two-account access, real-device behaviour, real-document ex
 - derived-evidence.ts: calculated figures (GST payable per registration/month, posted depreciation) chain to every input with its own document/entry source; unsourced inputs are counted and shown. Audit 'Figure sources' gained a 'Calculated figures' section. 4 new tests.
 - Full suite 1,713 tests pass; typecheck clean. No real records changed.
 - P9: owner-chosen payment settlement order (oldest/largest/smallest first) on allocatePayments, supplierRecon and customerRecon; named invoices still settle first; saved as books.allocationOrder (cleanBooks passthrough) with a selector in Audit > Reconciliations. 3 new tests. Full suite 1,716 tests pass; typecheck clean; build OK.
+
+## 2026-11-07 — role_permissions access scope + publish
+
+- Critical RLS tautology on public.role_permissions (policy `USING (true)`) replaced by migration `0086_role_permission_scope.sql`: `USING (role = public.my_team_role() OR public.is_admin())`, helper SECURITY DEFINER. Live `pg_policy` read confirms the new expression.
+- `src/lib/role-access.test.ts` +5 tests (19 pass): manager/finance/employee see only their own role's 8 switches, admin sees all 24, role-less non-admin sees none.
+- Full suite: 1,721 tests / 223 files pass. Fresh `run_security_scan`: 0 critical, 4 warn + 1 info (shared reference tables job_state, market_quotes, regulatory_changes, regulatory_snapshots readable by any signed-in user or guest; guest sign-in note).
+- Publish scheduled for https://ledgerline.biz (apex 200, www 302 at check time). Staged `guard_preference_approval` trigger NOT installed — awaits explicit owner go-ahead.
