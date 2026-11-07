@@ -17,6 +17,9 @@ import {
   type PropertyRead,
 } from "./intake";
 import type { EntityProfile, Property } from "./types";
+import { emptyBooks } from "./types";
+import { commitIntake, type PrefsSlice } from "./commit";
+import { docsFor, linksOf } from "./docrepo";
 
 // Representative document fixtures for the Statement Desk / DocumentIntake pipeline [§3, §13–§16].
 // Every fixture asserts three things: identification/matching, extraction of expected fields,
@@ -224,6 +227,57 @@ describe("audited financial statements fixture", () => {
     expect(again.record!.audited.reserves).toBe(2600000);
     expect(again.record!.versions?.length).toBe(1);
     expect(again.record!.docIds).toEqual(["doc-3", "doc-4"]);
+  });
+});
+
+describe("reviewed save to DocuRepo with module links", () => {
+  const blank = (): PrefsSlice => ({ entities: [], assets: [], books: emptyBooks() });
+  const doc = { id: "doc-1", title: "Uploaded original", docType: "other" as const, fieldLabels: ["GSTIN", "Mystery label"] };
+  let seq = 0;
+  const newId = () => `gen-${++seq}`;
+
+  it("a confirmed company lands in entities, linked to its source document", () => {
+    const read: EntityRead = { legalName: "New Co LLP", kind: "llp", pan: "AAAFN9999K", gstins: [], cin: "AAN-1234", incorporatedOn: "2021-02-01", address: null, people: [], shareholding: [], activities: [], fyEnd: null };
+    const { profile } = proposeEntity(read, [], "ent-new", "2026-11-07");
+    const out = commitIntake(blank(), { route: "entity", profile }, doc, "2026-11-07", newId);
+    expect(out.entities.map((e) => e.id)).toContain("ent-new");
+    expect(linksOf(out.books.docLinks, "doc-1").some((l) => l.kind === "entity" && l.targetId === "ent-new")).toBe(true);
+    // Unknown printed labels are kept as proposed fields, never dropped or forced into a column.
+    expect(out.books.proposedFields.some((f) => f.label === "Mystery label")).toBe(true);
+  });
+
+  it("a confirmed asset lands in the register with a received event and document links", () => {
+    const read: AssetRead = { name: "Lathe Machine", kind: "machinery", owner: null, cost: 450000, purchaseDate: "2025-09-01", supplier: "Tools India", warrantyUntil: null, insurance: null, serial: "LT-009", putToUseOn: "2025-09-03", usefulLifeYears: 15, residualPct: 5 };
+    const { asset } = proposeAsset(read, [], "asset-9", "doc-1");
+    const out = commitIntake(blank(), { route: "asset", asset: asset! }, doc, "2026-11-07", newId);
+    expect(out.assets.map((a) => a.id)).toContain("asset-9");
+    expect(out.books.assetEvents.some((e) => e.assetId === "asset-9" && e.kind === "received" && e.docId === "doc-1")).toBe(true);
+    expect(docsFor(out.books.docLinks, "asset", "asset-9")).toEqual(["doc-1"]);
+  });
+
+  it("a confirmed lease lands under its property with both links, and a re-upload never duplicates it", () => {
+    const prop: Property = { id: "prop-1", name: "Anna Nagar Plot 44", address: "Chennai", buildings: [], docIds: [] } as Property;
+    const slice = blank();
+    slice.books = { ...slice.books, properties: [prop] };
+    const read: LeaseRead = { tenant: "Bright Retail Co", property: "Anna Nagar", unit: null, start: "2026-04-01", end: "2029-03-31", rent: 75000, dueDay: 5, escalationPct: null, escalationEveryMonths: null, deposit: null, noticeDays: null, paymentTerms: null, gst: null };
+    const { lease } = proposeLease(read, [prop], "lease-1", "doc-1");
+    const once = commitIntake(slice, { route: "lease", lease: lease! }, doc, "2026-11-07", newId);
+    expect(once.books.leases).toHaveLength(1);
+    expect(linksOf(once.books.docLinks, "doc-1").some((l) => l.kind === "property" && l.targetId === "prop-1")).toBe(true);
+    const twice = commitIntake({ ...slice, books: once.books }, { route: "lease", lease: { ...lease!, id: "lease-other" } }, doc, "2026-11-07", newId);
+    expect(twice.books.leases).toHaveLength(1);
+    expect(twice.books.leases[0]!.id).toBe("lease-1");
+  });
+
+  it("a confirmed audited FY record lands under its company, linked to the document", () => {
+    const slice = blank();
+    slice.entities = [acme];
+    const read: AuditedRead = { entity: null, pan: "AAACA1234A", fy: "2024-25", lines: [{ head: "shareCapital", amount: 100000 }], totalAssets: null, totalLiabilities: null, schedules: ["balanceSheet"], qualifications: [], filedForm: null, ackNo: null, filedOn: null };
+    const { record } = proposeFy(read, [acme], [], "fy-1", "doc-1");
+    const out = commitIntake(slice, { route: "fy", record: record! }, doc, "2026-11-07", newId);
+    expect(out.books.fyRecords).toHaveLength(1);
+    expect(out.books.fyRecords[0]!.entityId).toBe("ent-acme");
+    expect(linksOf(out.books.docLinks, "doc-1").some((l) => l.kind === "entity" && l.targetId === "ent-acme")).toBe(true);
   });
 });
 
