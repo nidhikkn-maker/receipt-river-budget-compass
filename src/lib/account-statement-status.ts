@@ -5,6 +5,7 @@ import type { ImportBatch, ImportRow } from "./historical-import";
 import { verifyHistoricalBalances } from "./balance-verification";
 import { checkpointCurrent, checkpointSnapshot, type StatementCheckpoint } from "./statement-checkpoint";
 import { canonicalEvidence } from "./statement-evidence";
+import type { AccountCoverage } from "./statement-pipeline/coverage";
 export interface StatementStatusEvidence { batch: ImportBatch; rows: ImportRow[]; posted: { fingerprint: string; transaction_id: string; posted_at: string }[]; checkpoint?: StatementCheckpoint; currentHash?: string; snapshotKey?: string }
 const validDate = (s: string | null | undefined): s is string => !!s && /^\d{4}-\d{2}-\d{2}$/.test(s) && Number.isFinite(Date.parse(s));
 
@@ -55,8 +56,23 @@ export function accountStatementStatus(account: Account, evidence: StatementStat
   const nextStep = statementNextStep({ batch: !!batch, importing: !!batch && ["queued","processing"].includes(batch.status), failed: !!batch && !["queued","processing","review"].includes(batch.status), identityConfirmed, toPost, coverageConfirmed, usableBalance, checked: calculationOnly || !!currentCheckpoint });
   return { nextStep, accountId: account.id, name: account.name, batchId: batch?.id, imported, statementThrough: coverageConfirmed ? batch?.period_to ?? null : null, periodFrom: batch?.period_from ?? null, periodTo: batch?.period_to ?? null, freshness, reconciliation, balance, difference, confirmedBalance: balance === "Verified" ? closing ?? null : null, reconciliationDate: currentCheckpoint ? latest.checkpoint?.created_at ?? null : null, lastSuccessfulImport: successful?.batch.file_name ?? null, parsed: rows.length, posted: postedCount, duplicates, unresolved, matched: matched.length, missing, attention: imported !== "Imported" || freshness !== "Current" || reconciliation !== "Reconciled" || balance !== "Verified" };
 }
+/**
+ * Accounts reconciled through Statement Desk have no historical import batch, so the batch-based status would
+ * keep saying "Upload a statement". Their saved statement-matched entries are the evidence instead. Balance is
+ * never marked verified here: only a reviewed closing figure can do that.
+ */
+export function withStatementDeskEvidence(row: ReturnType<typeof accountStatementStatus>, coverage: AccountCoverage | undefined, policy: { reviewDays: number; outdatedDays: number }) {
+  if (row.batchId || !coverage?.latestStatementDate) return { ...row, source: "historical" as const };
+  const days = coverage.daysBehind ?? Infinity;
+  const freshness = days <= policy.reviewDays ? "Current" : days <= policy.outdatedDays ? "Becoming Outdated" : "Outdated";
+  const gaps = coverage.missingMonths;
+  const reconciliation = gaps.length ? "In Progress" : "Statement-matched";
+  const nextStep = gaps.length ? `Upload statements for ${gaps.join(", ")} in Statement Desk` : freshness === "Current" ? null : "Upload the latest statement in Statement Desk";
+  const missing = [...(gaps.length ? [`${gaps.length} month${gaps.length === 1 ? "" : "s"} with entries but no statement: ${gaps.join(", ")}.`] : []), "Balance is verified only after a reviewed closing figure is saved."];
+  return { ...row, source: "statement-desk" as const, imported: "Imported", statementThrough: coverage.latestStatementDate, freshness, reconciliation, nextStep, missing, attention: true };
+}
 export function accountStatementSummary(rows: ReturnType<typeof accountStatementStatus>[]) {
-  return { total: rows.length, current: rows.filter(r => r.freshness === "Current").length, reconciled: rows.filter(r => r.reconciliation === "Reconciled").length, verified: rows.filter(r => r.balance === "Verified").length, attention: rows.filter(r => r.attention).length };
+  return { total: rows.length, current: rows.filter(r => r.freshness === "Current").length, reconciled: rows.filter(r => r.reconciliation === "Reconciled").length, statementMatched: rows.filter(r => r.reconciliation === "Statement-matched").length, verified: rows.filter(r => r.balance === "Verified").length, attention: rows.filter(r => r.attention).length };
 }
 /** Plain next action for an account's statement; order follows the review workflow. */
 export function statementNextStep(s: { batch: boolean; importing: boolean; failed: boolean; identityConfirmed: boolean; toPost: number; coverageConfirmed: boolean; usableBalance: boolean; checked: boolean }): string | null {
