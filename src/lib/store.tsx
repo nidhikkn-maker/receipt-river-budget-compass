@@ -750,7 +750,16 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
       fields: (meta.fields ?? []).slice(0, 40) as unknown as Json, replaces_id: meta.replacesId ?? null, evidence_locked: !!meta.evidenceLocked,
       entity_id: meta.entityId ?? null,
     });
-    if (error) { await supabase.storage.from("receipts").remove([path]); throw new Error(error.message); }
+    if (error) {
+      // An insert response can be lost after commit. Never delete a now-referenced original.
+      const saved = await supabase.from("documents").select("id,file_path").eq("id", docId).eq("owner_id", userId).maybeSingle();
+      if (saved.error) throw new Error("Document save status could not be checked. The original was retained; refresh before retrying.");
+      if (saved.data?.file_path === path) { await refresh(); return docId; }
+      const cleanup = await supabase.storage.from("receipts").remove([path]);
+      if (cleanup.error) throw new Error("Document was not saved, and its uploaded file could not be removed. Refresh before retrying.");
+      if (saved.data) { await refresh(); return saved.data.id; }
+      throw new Error(error.message);
+    }
     await refresh();
     return docId;
   };

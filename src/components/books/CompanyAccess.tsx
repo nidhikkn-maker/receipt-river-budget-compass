@@ -7,6 +7,7 @@ import { useStore } from "@/lib/store";
 import { companyDocuments, type EntityAccounts } from "@/lib/books/entity-accounts";
 import { confirmAction } from "@/lib/confirm";
 import { filterShared, rowsFor, sharedCompanyCsv, sharedCompanyPdf, type SharedCompany, type SharedDoc, type SharedTxn } from "@/lib/books/shared-company";
+import { uploadCompanyDocument } from "@/lib/books/company-upload";
 
 type Grant = { id: string; member_email: string; created_at: string; can_write: boolean };
 
@@ -84,15 +85,18 @@ export function SharedWithMe() {
     if (error || !data?.length) toast.error("You can only view this company"); else { toast.success("Saved"); void load(); }
   };
   const upload = async (c: SharedCompany, file: File) => {
-    const path = `${c.owner_id}/docs/${crypto.randomUUID()}-${file.name.replace(/[^\w.-]+/g, "_").slice(0, 80)}`;
-    const up = await supabase.storage.from("receipts").upload(path, file, { contentType: file.type || "application/octet-stream" });
-    if (up.error) { toast.error("Couldn't upload — you may only have view access"); return; }
-    const { error } = await supabase.from("documents").insert({
+    try { await uploadCompanyDocument(c.owner_id, c.entity_id, file, {
+      canWrite: async (owner, entity) => { const r = await supabase.rpc("can_access_entity", { _owner: owner, _entity: entity, _write: true }); return !r.error && r.data === true; },
+      upload: async (path, source) => { const r = await supabase.storage.from("receipts").upload(path, source, { contentType: source.type || "application/octet-stream" }); if (r.error) throw Error("Couldn't upload this document"); },
+      save: async (id, path) => { const { error } = await supabase.from("documents").insert({
+      id,
       owner_id: c.owner_id, entity_id: c.entity_id, title: file.name.replace(/\.[^.]+$/, ""), doc_type: "other",
       file_path: path, file_name: file.name.slice(0, 200), mime_type: file.type || "application/octet-stream", size_bytes: file.size,
       currency: "INR", notes: "", extracted_text: "", fields: [],
-    });
-    if (error) { await supabase.storage.from("receipts").remove([path]); toast.error("Couldn't save the document"); return; }
+      }); if (error) throw Error("Couldn't save the document"); },
+      find: async (id, path) => { const r = await supabase.from("documents").select("id").eq("id", id).eq("file_path", path).eq("owner_id", c.owner_id).eq("entity_id", c.entity_id); if (r.error) throw Error("Could not check upload"); return !!r.data?.length; },
+      remove: async path => { const r = await supabase.storage.from("receipts").remove([path]); if (r.error) throw Error("Could not remove upload"); },
+    }); } catch (error) { toast.error(error instanceof Error ? error.message : "Couldn't upload this document"); void load(); return; }
     toast.success("Document added to the shared company"); void load();
   };
   return (

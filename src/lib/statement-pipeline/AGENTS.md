@@ -1,4 +1,5 @@
 # Statement and import rules
+- Accepted bank uploads checkpoint confirmed account/source/entry/draft links in owner preferences before the next write; unfinished history is never evicted by completed-history limits. Recovery downloads and hashes original bytes, then opens fresh review without restoring approval. This is staged recovery, not an atomic cross-device operation or stale-safe undo guarantee.
 - financial-corrections.ts previews reuse ledger rules; atomic RPCs preserve source money and audit stale-safe undo. statement-evidence.ts extracts only labelled headers; identity/coverage require separate owner confirmations. statement-checkpoint.functions.ts derives saved immutable results from owner reads with atomic snapshot guards; account-statement-status.ts invalidates changed evidence and never uses upload dates for freshness.
 - Excel statements use a dynamically loaded BIFF-capable SheetJS reader and real workbook fixtures so legacy XLS and XLSX share review rules.
 - Statement transfer matching requires a selected account and its debit/credit side; competing near-equal matches remain manual to prevent arbitrary reconciliation.
