@@ -50,6 +50,27 @@ export function ExpenseTable({ items, empty = "Nothing here yet.", selected, onT
           );
         })}
       </ul>
+  );
+  if (sideBySide) {
+    return (
+      <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_minmax(0,26rem)] items-start gap-4">
+        {list}
+        <aside aria-label="Expense details" className="sticky top-4 max-h-[calc(100vh-2rem)] overflow-y-auto rounded-2xl border bg-card p-5">
+          {open ? (
+            <>
+              <div className="mb-3 flex justify-end"><Button variant="ghost" size="sm" onClick={() => setOpen(null)}>Close</Button></div>
+              <ExpenseDetail expense={open} onClose={() => setOpen(null)} />
+            </>
+          ) : (
+            <p className="py-10 text-center text-sm text-muted-foreground">Choose an expense to see its details here.</p>
+          )}
+        </aside>
+      </div>
+    );
+  }
+  return (
+    <>
+      {list}
       <ExpenseDialog expense={open} onClose={() => setOpen(null)} />
     </>
   );
