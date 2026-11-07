@@ -28,7 +28,7 @@ vi.mock("@/lib/document-extract.functions", () => ({ extractDocument: vi.fn() })
 vi.mock("@/lib/books/runs", () => ({ documentIdForRun: (id: string) => id, startRun: async () => ({ data: {} }), updateRun: async () => undefined, closeRun: async () => undefined }));
 import { DocumentIntake } from "./DocumentIntake";
 const owner = "00000000-0000-0000-0000-000000000001", other = "00000000-0000-0000-0000-000000000002";
-const read = (docType: ExtractedDocument["docType"], extra: object): ExtractedDocument => ({ docType, title: "Controlled source", date: "2026-10-02", amount: null, currency: "INR", merchant: null, notes: "", text: "", fields: [], ...extra } as ExtractedDocument);
+const read = (docType: ExtractedDocument["docType"], extra: object): ExtractedDocument => ({ docType, title: "Controlled source", date: "2026-10-02", amount: null, currency: "INR", merchant: null, notes: "", text: "", fields: [], ...extra } as unknown as ExtractedDocument);
 const leaseRead = (extra: object = {}) => read("lease_agreement", { fields: [{ label: "Lease start", value: "2026-10-01", page: 1, quote: "Lease starts 2026-10-01", confidence: "high" }, { label: "Rent due day", value: "5", page: 1, quote: "Rent payable by the fifth", confidence: "medium" }, { label: "Payment terms", value: "Bank transfer", page: 2, quote: "Payment by bank transfer", confidence: "high" }], lease: { tenant: "Ramesh Kumar", property: "Factory", unit: null, start: "2026-10-01", end: "2027-09-30", rent: 30000, dueDay: 5, escalationPct: 5, escalationEveryMonths: 6, deposit: 100000, noticeDays: 60, paymentTerms: "Bank transfer", gst: false }, ...extra });
 const property = { id: "p1", name: "Factory", address: "44 Industrial Road", buildings: [], docIds: [] };
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); vi.clearAllMocks(); });
@@ -79,8 +79,8 @@ async function harness(extracted: ExtractedDocument, extras: object = {}, transa
       expect(state.reader).toHaveBeenCalledWith({ data: expect.objectContaining({ mimeType: "application/pdf", dataUrl: expect.stringContaining("data:application/pdf;base64,") }) });
       const finish = async () => {
         fireEvent.click(view.getByRole("button", { name: "Confirm and save" }));
-        await view.findByRole("button", { name: "Retry", exact: true }, { timeout: 10000 });
-        fireEvent.click(view.getByRole("button", { name: "Retry", exact: true }));
+        await view.findByRole("button", { name: /^Retry$/ }, { timeout: 10000 });
+        fireEvent.click(view.getByRole("button", { name: /^Retry$/ }));
         await view.findByText("Saved", {}, { timeout: 10000 });
         expect(add).toHaveBeenCalledTimes(1); expect(commit).toHaveBeenCalledTimes(2);
         expect(commit.mock.calls[1]).toEqual(commit.mock.calls[0]);
@@ -129,7 +129,7 @@ describe("grouped actual file-to-review, installed SQL and read-back acceptance"
    expect(tenantLedger(lease, property, receipts, ["2026-10"], { leases: saved.books.leases, properties: saved.books.properties })[0]).toMatchObject({ rent: 30000, deposit: 100000, balance: 0, status: "paid" });
    const c = taxComputation("2026-27", receipts.map(r => ({ id: r.id, date: r.date, amount: r.amount, title: r.text, txnType: "income", category: "Rent", description: "", scope: "personal" })) as never, [], saved.books.leases, [], []);
    expect(c.houseProperty).toMatchObject({ rent: 30000, standardDeduction: 9000, net: 21000 });
-   expect(recordProvenance(lease.id, saved.books.docLinks, [{ ...original, title: "Lease source", docType: "lease_agreement" } as VaultDoc])[0]?.fields).toEqual(expect.arrayContaining([expect.objectContaining({ label: "Payment terms", value: "Bank transfer", where: "page 2" })]));
+   expect(recordProvenance(lease.id, saved.books.docLinks, [{ ...original, title: "Lease source", docType: "lease_agreement" } as unknown as VaultDoc])[0]?.fields).toEqual(expect.arrayContaining([expect.objectContaining({ label: "Payment terms", value: "Bank transfer", where: "page 2" })]));
   } finally { await h.db.close(); }
  }, 30000);
  it("direct lease-source correction updates approved records while first printed values remain accessible", async () => {
