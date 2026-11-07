@@ -44,7 +44,7 @@ async def main():
    await dialog.screenshot(path=str(OUT/f'{width}-chooser.png'))
    await page.keyboard.press('Escape')
    await expect(dialog).not_to_be_visible()
-   for label,mode in [('Scan / Photo','scan'),('Voice','voice'),('Quick Entry','quick'),('From Message','message')]:
+   for label,mode in [('Scan or Photo','scan'),('Voice Entry','voice'),('Quick Entry','quick'),('From Message','message')]:
     await page.goto('http://localhost:8080/dashboard')
     await page.get_by_role('button',name='Smart Add',exact=True).filter(visible=True).first.click()
     await page.get_by_role('button',name=label,exact=True).click()
