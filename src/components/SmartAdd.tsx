@@ -37,6 +37,7 @@ export function SmartAdd({ open, onOpenChange, scope }: { open: boolean; onOpenC
   const base: QuickEntrySearch = scope ? { scope } : {};
   const busy = stage.kind === 'receipt' || stage.kind === 'statement' || stage.kind === 'classify';
   const [intent, setIntent] = useState<SmartAddIntent | undefined>();
+  useEffect(() => { if (!open) setIntent(undefined); }, [open]);
   useEffect(() => { const on = (e: Event) => setIntent((e as CustomEvent<{ intent?: SmartAddIntent }>).detail?.intent); window.addEventListener(SMART_ADD_EVENT, on); return () => window.removeEventListener(SMART_ADD_EVENT, on); }, []);
 
   useEffect(() => {
