@@ -73,39 +73,40 @@
   --font-mono: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, "Noto Sans Tamil", sans-serif;
   --font-display: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, "Noto Sans Tamil", sans-serif;
   --font-brand: "Space Grotesk", ui-sans-serif, sans-serif;
+  --font-editorial: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Georgia, serif;
 }
 
 :root {
-  --radius: 0.9rem;
+  --radius: 0.5rem;
   --background: oklch(0.977 0.009 88);
   --foreground: oklch(0.25 0.06 268);
-  --card: oklch(0.995 0.004 258);
+  --card: oklch(0.993 0.006 88);
   --card-foreground: oklch(0.25 0.06 268);
-  --popover: oklch(0.995 0.004 258);
+  --popover: oklch(0.993 0.006 88);
   --popover-foreground: oklch(0.25 0.06 268);
-  --primary: oklch(0.33 0.12 266);
+  --primary: oklch(0.28 0.055 266);
   --primary-foreground: oklch(0.97 0.02 88);
   --primary-glow: oklch(0.52 0.15 258);
-  --secondary: oklch(0.94 0.025 262);
+  --secondary: oklch(0.95 0.012 88);
   --secondary-foreground: oklch(0.28 0.08 266);
-  --muted: oklch(0.945 0.012 260);
-  --muted-foreground: oklch(0.47 0.045 266);
-  --accent: oklch(0.89 0.11 86);
+  --muted: oklch(0.945 0.01 88);
+  --muted-foreground: oklch(0.46 0.022 266);
+  --accent: oklch(0.93 0.025 86);
   --accent-foreground: oklch(0.28 0.07 72);
   --destructive: oklch(0.58 0.2 22);
   --destructive-foreground: oklch(0.99 0 0);
   --success: oklch(0.6 0.14 165);
   --warning: oklch(0.75 0.15 78);
   --info: oklch(0.56 0.14 240);
-  --border: oklch(0.885 0.02 260);
-  --input: oklch(0.885 0.02 260);
+  --border: oklch(0.875 0.015 88);
+  --input: oklch(0.875 0.015 88);
   --ring: oklch(0.7 0.13 85);
   --gold: oklch(0.81 0.07 85);
   --gold-foreground: oklch(0.22 0.05 70);
-  --gold-strong: oklch(0.58 0.12 78);
+  --gold-strong: oklch(0.47 0.06 78);
   --gold-soft: oklch(0.95 0.045 88);
-  --gradient-gold: linear-gradient(135deg, oklch(0.85 0.13 88) 0%, oklch(0.74 0.15 78) 100%);
-  --shadow-gold: 0 16px 34px -16px color-mix(in oklab, var(--gold) 60%, transparent);
+  --gradient-gold: linear-gradient(var(--gold), var(--gold));
+  --shadow-gold: 0 4px 12px -6px color-mix(in oklab, var(--foreground) 20%, transparent);
   --ink: oklch(0.21 0.085 268);
   --ink-foreground: oklch(0.96 0.015 88);
   --ink-muted: oklch(0.68 0.05 262);
@@ -775,7 +776,7 @@ html[data-theme="apple-glass"] :where(.bg-card, .bg-popover, .bg-ink) {
 
   h1, h2, h3, h4, h5, h6 {
     font-weight: 600;
-    letter-spacing: -0.01em;
+    letter-spacing: 0;
   }
 
   input, textarea, select { font-size: 16px; }
@@ -785,14 +786,14 @@ html[data-theme="apple-glass"] :where(.bg-card, .bg-popover, .bg-ink) {
 
   .font-display {
     font-weight: 600;
-    letter-spacing: -0.015em;
+    letter-spacing: 0;
   }
 
   /* Money figures: tabular numerals, semibold, never broken across lines. */
   .font-mono, .financial-amount {
     font-weight: 600;
     font-variant-numeric: tabular-nums;
-    letter-spacing: -0.01em;
+    letter-spacing: 0;
     white-space: nowrap;
   }
 }
@@ -800,6 +801,41 @@ html[data-theme="apple-glass"] :where(.bg-card, .bg-popover, .bg-ink) {
 @utility bg-hero {
   background-image: var(--gradient-hero);
 }
+
+/* Approved editorial journal: presentation only; all amounts and actions use existing records. */
+.journal-heading, .journal-review h1, .journal-wealth h1,
+.journal-spaces h2, .smart-add-sheet h2 { font-family: var(--font-editorial); font-weight: 400; letter-spacing: 0; }
+.journal-kicker { font-size: 11px; font-weight: 500; color: var(--muted-foreground); }
+.journal-hero { min-height: 200px; border-radius: 8px; }
+.journal-hero img { object-position: center 35%; opacity: .78; }
+.journal-hero > div { padding-bottom: 75px; }
+.journal-action { display: flex; align-items: center; gap: 14px; padding: 16px 0; min-height: 64px; }
+.journal-bottom { box-shadow: 0 4px 18px -8px color-mix(in oklab, var(--foreground) 18%, transparent); }
+.journal-bottom a[aria-current="page"] { color: var(--primary); background: var(--secondary); }
+.journal-bottom button:not([aria-label="Smart Add"]) { color: var(--muted-foreground); }
+.journal-bottom button[aria-expanded="true"] { color: var(--primary); background: var(--secondary); }
+.journal-bottom a:active, .journal-bottom button:active { transform: translateY(1px); }
+.journal-review > section[aria-label="Transaction attention counts"] { display: flex; flex-direction: column; gap: 0; }
+.journal-review > section[aria-label="Transaction attention counts"] > a { border-radius: 0; border: 0; border-bottom: 1px solid var(--border); background: transparent; box-shadow: none; min-height: 64px; padding: 12px 0; }
+.journal-review > section[aria-label="Transaction attention counts"] > a > span { display: flex; flex-direction: row-reverse; align-items: center; justify-content: space-between; width: 100%; gap: 16px; }
+.journal-review > section[aria-label="Transaction attention counts"] > a > span > span:last-child { font-size: 14px; color: var(--foreground); }
+.journal-review > section[aria-label="Review summary"] { border-radius: 0; border: 0; border-top: 1px solid var(--border); background: transparent; padding: 20px 0; }
+.journal-wealth > div:nth-of-type(2) { border-bottom: 1px solid var(--border); padding-bottom: 20px; }
+.journal-wealth > div:nth-of-type(2) > div { border: 0; border-radius: 0; background: transparent; padding-left: 0; }
+.smart-add-sheet { border-radius: 16px; background: var(--background); }
+.smart-add-sheet > .grid { gap: 0; }
+.smart-add-sheet > .grid > button { border: 0; border-bottom: 1px solid var(--border); border-radius: 0; box-shadow: none; background: transparent; min-height: 64px; }
+.journal-spaces { background: var(--background); }
+.receipt-desk [aria-label="Review scanned details"] { scroll-margin-top: 72px; background: var(--card); border-color: var(--border); }
+.receipt-desk [aria-label="Review scanned details"] h2 { font-family: var(--font-editorial); font-size: 24px; font-weight: 400; }
+@media (min-width: 1000px) {
+  .journal-columns { grid-template-columns: minmax(0, 1fr) minmax(230px, .5fr); }
+  .journal-side { border-left: 1px solid var(--border); padding-left: 28px; }
+  .journal-side > section:first-child { border-top: 0; padding-top: 0; }
+  .journal-review > section[aria-label="Transaction attention counts"] { display: grid; grid-template-columns: 1fr 1fr; column-gap: 32px; }
+}
+@media (min-width: 1440px) { .journal-columns { grid-template-columns: minmax(0, 1fr) 320px; } }
+@media (max-width: 767px) { .journal-hero { border-radius: 0; } }
 @utility shadow-float {
   box-shadow: var(--shadow-float);
 }
@@ -818,7 +854,7 @@ html[data-theme="apple-glass"] :where(.bg-card, .bg-popover, .bg-ink) {
 }
 
 /* Privacy mode: blur amounts */
-.privacy .font-mono { filter: blur(7px); transition: filter .2s; }
+.privacy .font-mono, .privacy .financial-amount { filter: blur(7px); transition: filter .2s; }
 
 /* Official Ledgerline logo colours (logo only; app theme unchanged) */
 :root { --brand-ink: #17242B; --brand-teal: #168F80; }

@@ -19,7 +19,7 @@ const history = async () => [];
 const signedUrl = async (path: string) => `/controlled-receipt/${path.split("/").pop()}`;
 function makeStore(transactions: Expense[], update: (next: Expense[]) => void) {
   return {
-    userId: "controlled-owner", transactions, expenses: transactions, members: [], loans: [], documents: [],
+    userId: "controlled-owner", name: 'Alex', loading: false, syncState: 'current', pendingCount: 0, lastSyncedAt: null, refresh: async () => {}, transactions, expenses: transactions, members: [], loans: [], documents: [], commitments: [], goals: [], valuations: [], budgets: {},
     accounts: [{ id: "controlled-account", name: "Controlled bank", kind: "savings", openingBalance: 10000, archived: false }],
     preferences: defaultPreferences(), memberName: () => "Me", history, signedUrl,
     savePreferences: async () => {},

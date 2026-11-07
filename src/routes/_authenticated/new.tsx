@@ -205,7 +205,7 @@ function NewExpense() {
   const fileRef = useRef<HTMLInputElement>(null);
   const reviewRef = useRef<HTMLElement>(null);
   useEffect(() => {
-    if (!reading && (readingError || (scan && !confirmed))) reviewRef.current?.scrollIntoView({ block: "center", behavior: "instant" });
+    if (!reading && (readingError || (scan && !confirmed))) reviewRef.current?.scrollIntoView({ block: "start", behavior: "instant" });
   }, [reading, readingError, scan !== null, confirmed]);
   const parseSpoken = useServerFn(parseSpokenEntry);
   const [listening, setListening] = useState(false);
