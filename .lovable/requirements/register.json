@@ -1402,10 +1402,14 @@
       },
       "original": "* Maintenance documents.",
       "interpretation": "Account for this source clause in the context of 2. Statement Desk — single intake point; verify each enumerated feature and applicable safeguard, not merely screen presence.",
-      "modules": [],
+      "modules": [
+        "src/components/DocumentIntake.tsx",
+        "src/lib/books/commit.ts",
+        "src/components/asset-document-persistence.test.tsx"
+      ],
       "dependencies": [],
       "status": "PARTIAL",
-      "requiredWork": "Add a representative Maintenance documents fixture and test identification, extraction of expected fields, missing-field handling, reviewed save to DocuRepo and resulting module links without external services. Connected review/persistence evidence added 7 Nov; retain PARTIAL until actual reader/file storage, applicable full permission paths and remaining original-clause conditions are verified. Controlled fixtures do not certify hosted saves or real-document accuracy.",
+      "requiredWork": "Remaining: actual representative-file AI extraction, production store/private storage and applicable shared-company policy paths in a connected acceptance harness. Existing-asset serial matching/explicit ambiguity selection, supporting-doc attachment, stale/replay safeguards and persisted figures now verified; do not repeat these. No real financial writes authorised.",
       "verificationMethod": "Source-to-code audit followed by applicable unit/database/integration/real-route checks; hosted/device evidence separately required.",
       "finalTestResult": {
         "result": "PARTIAL",
@@ -1413,7 +1417,8 @@
           "Register audit context (not independently sufficient test proof): src/lib/documents.ts DOC_TYPES and src/lib/document-extract.functions.ts support this document family; src/components/DocumentIntake.tsx reviews/saves it; no real-document extraction/intake verification for this family (docs/VERIFICATION_RESULTS.md).",
           "src/lib/documents.ts DOC_TYPES/DOC_LABEL enumerate supported families; src/lib/books/intake.ts ROUTE_OF maps them to review routes; src/lib/document-extract.functions.ts supplies extraction instructions. Enumeration is not extraction evidence.",
           "src/lib/documents.test.ts — PASS on rerun; concrete assertions recorded in /tmp/verify-b1-tests.log. Scope is limited to the component rules/fixtures in this file, not the entire clause.",
-          "2026-11-07 connected verification batch: Representative maintenance-derived asset payload passes installed reviewed-intake SQL, source links and single received event read back after retry. Maintenance update-to-existing-asset workflow still unverified."
+          "2026-11-07 connected verification batch: Representative maintenance-derived asset payload passes installed reviewed-intake SQL, source links and single received event read back after retry. Maintenance update-to-existing-asset workflow still unverified.",
+          "2026-11-07 connected asset-document acceptance: asset-document-persistence.test.tsx renders actual DocumentIntake; approved output passes installed 0071/0074/0079/0085 SQL and production owner document/preferences policies. Stale revision rolls back records/lock/audit; lost-response replay stores one document link/event. Owner read-back, other-owner read/update/insert denial and anon denial pass. Acquisition cost 150000, book NBV 135000 and tax WDV 127500 unchanged; supporting document never becomes acquisition-cost evidence."
         ]
       }
     },
@@ -2975,10 +2980,14 @@
       },
       "original": "* Asset register.",
       "interpretation": "Account for this source clause in the context of 8. Document relationships; verify each enumerated feature and applicable safeguard, not merely screen presence.",
-      "modules": [],
+      "modules": [
+        "src/components/DocumentIntake.tsx",
+        "src/lib/books/commit.ts",
+        "src/components/asset-document-persistence.test.tsx"
+      ],
       "dependencies": [],
       "status": "PARTIAL",
-      "requiredWork": "Test an invoice-derived asset automatically links to the correct Asset register using validated identity, rejects ambiguous matches, and preserves the link and evidence after saving/reloading. Connected review/persistence evidence added 7 Nov; retain PARTIAL until actual reader/file storage, applicable full permission paths and remaining original-clause conditions are verified. Controlled fixtures do not certify hosted saves or real-document accuracy.",
+      "requiredWork": "Remaining: actual representative-file AI extraction, production store/private storage and applicable shared-company policy paths in a connected acceptance harness. Existing-asset serial matching/explicit ambiguity selection, supporting-doc attachment, stale/replay safeguards and persisted figures now verified; do not repeat these. No real financial writes authorised.",
       "verificationMethod": "Source-to-code audit followed by applicable unit/database/integration/real-route checks; hosted/device evidence separately required.",
       "finalTestResult": {
         "result": "PARTIAL",
@@ -2986,7 +2995,8 @@
           "Register audit context (not independently sufficient test proof): src/lib/books/types.ts LinkKind and src/lib/books/docrepo.ts addLink support shared record associations; automatic vehicle-invoice linkage to this specific record has no focused verification.",
           "src/lib/books/intake.ts proposeAsset and src/components/DocumentIntake.tsx prepare asset-related proposals; src/lib/books/docrepo.ts addLink represents associations.",
           "src/lib/books/books.test.ts — PASS on rerun; concrete assertions recorded in /tmp/verify-b1-tests.log. Scope is limited to the component rules/fixtures in this file, not the entire clause.",
-          "2026-11-07 connected verification batch: Invoice GST reviewed source correction tested through actual UI; source-linked typed asset commit read back through installed SQL. Existing-asset identity and ambiguity workflow remains to be implemented/verified."
+          "2026-11-07 connected verification batch: Invoice GST reviewed source correction tested through actual UI; source-linked typed asset commit read back through installed SQL. Existing-asset identity and ambiguity workflow remains to be implemented/verified.",
+          "2026-11-07 connected asset-document acceptance: asset-document-persistence.test.tsx renders actual DocumentIntake; approved output passes installed 0071/0074/0079/0085 SQL and production owner document/preferences policies. Stale revision rolls back records/lock/audit; lost-response replay stores one document link/event. Owner read-back, other-owner read/update/insert denial and anon denial pass. Acquisition cost 150000, book NBV 135000 and tax WDV 127500 unchanged; supporting document never becomes acquisition-cost evidence."
         ]
       }
     },
@@ -7462,17 +7472,22 @@
       },
       "original": "* Identify warranty and insurance.",
       "interpretation": "Account for this source clause in the context of 27. Automated asset registration; verify each enumerated feature and applicable safeguard, not merely screen presence.",
-      "modules": [],
+      "modules": [
+        "src/components/DocumentIntake.tsx",
+        "src/lib/books/commit.ts",
+        "src/components/asset-document-persistence.test.tsx"
+      ],
       "dependencies": [],
       "status": "PARTIAL",
-      "requiredWork": "Add focused tests for identify warranty and insurance including source linkage and save/reload; the existing invoice proposal test does not establish this specific lifecycle/document safeguard. New verification tests were not added because sandbox instructions prohibit repository edits.",
+      "requiredWork": "Remaining: actual representative-file AI extraction, production store/private storage and applicable shared-company policy paths in a connected acceptance harness. Existing-asset serial matching/explicit ambiguity selection, supporting-doc attachment, stale/replay safeguards and persisted figures now verified; do not repeat these. No real financial writes authorised.",
       "verificationMethod": "Source-to-code audit followed by applicable unit/database/integration/real-route checks; hosted/device evidence separately required.",
       "finalTestResult": {
         "result": "PARTIAL",
         "evidence": [
           "src/lib/books/intake.ts: proposeAsset maps extracted owner/supplier/warranty/insurance; src/lib/books/commit.ts links intake records to DocuRepo.",
           "src/lib/assets.ts and src/lib/books/types.ts: asset facts, lifecycle events and document links; src/lib/books/assets-ledger.ts: applyEvent/capitalise/payment links.",
-          "PASS src/lib/books/books.test.ts: printed warrantyUntil retained; insurance input is null so insurance extraction remains unproved."
+          "PASS src/lib/books/books.test.ts: printed warrantyUntil retained; insurance input is null so insurance extraction remains unproved.",
+          "2026-11-07 connected asset-document acceptance: asset-document-persistence.test.tsx renders actual DocumentIntake; approved output passes installed 0071/0074/0079/0085 SQL and production owner document/preferences policies. Stale revision rolls back records/lock/audit; lost-response replay stores one document link/event. Owner read-back, other-owner read/update/insert denial and anon denial pass. Acquisition cost 150000, book NBV 135000 and tax WDV 127500 unchanged; supporting document never becomes acquisition-cost evidence."
         ]
       }
     },
@@ -7756,16 +7771,22 @@
       },
       "original": "* Maintenance.",
       "interpretation": "Account for this source clause in the context of 28. Asset lifecycle; verify each enumerated feature and applicable safeguard, not merely screen presence.",
-      "modules": [],
+      "modules": [
+        "src/components/DocumentIntake.tsx",
+        "src/lib/books/commit.ts",
+        "src/components/asset-document-persistence.test.tsx"
+      ],
       "dependencies": [],
-      "status": "PARTIAL",
-      "requiredWork": "Add focused tests for maintenance including source linkage and save/reload; the existing invoice proposal test does not establish this specific lifecycle/document safeguard. New verification tests were not added because sandbox instructions prohibit repository edits.",
+      "status": "VERIFIED COMPLETE",
+      "requiredWork": "None for this lifecycle/documentation clause: owner-reviewed attachment and maintenance event persisted, permissions/failure recovery/source/figures verified in an independent disposable database. External reader accuracy and hosted file storage belong to separate intake/acceptance clauses, not certified here.",
       "verificationMethod": "Source-to-code audit followed by applicable unit/database/integration/real-route checks; hosted/device evidence separately required.",
       "finalTestResult": {
-        "result": "PARTIAL",
+        "result": "PASS",
         "evidence": [
           "src/lib/books/intake.ts: proposeAsset maps extracted owner/supplier/warranty/insurance; src/lib/books/commit.ts links intake records to DocuRepo.",
-          "src/lib/assets.ts and src/lib/books/types.ts: asset facts, lifecycle events and document links; src/lib/books/assets-ledger.ts: applyEvent/capitalise/payment links."
+          "src/lib/assets.ts and src/lib/books/types.ts: asset facts, lifecycle events and document links; src/lib/books/assets-ledger.ts: applyEvent/capitalise/payment links.",
+          "2026-11-07 connected asset-document acceptance: asset-document-persistence.test.tsx renders actual DocumentIntake; approved output passes installed 0071/0074/0079/0085 SQL and production owner document/preferences policies. Stale revision rolls back records/lock/audit; lost-response replay stores one document link/event. Owner read-back, other-owner read/update/insert denial and anon denial pass. Acquisition cost 150000, book NBV 135000 and tax WDV 127500 unchanged; supporting document never becomes acquisition-cost evidence.",
+          "scripts/browser/test_asset_document_workflow.py PASS: representative PNG → actual FileReader/image preparation → controlled reader adapter → actual review → interrupted save retry → reload retained original and figures. Screenshots inspected. Reader output/storage adapters are controlled, not real extraction or Cloud-storage certification."
         ]
       }
     },
@@ -7913,16 +7934,21 @@
       },
       "original": "* Purchase invoices.",
       "interpretation": "Account for this source clause in the context of 29. Asset documentation; verify each enumerated feature and applicable safeguard, not merely screen presence.",
-      "modules": [],
+      "modules": [
+        "src/components/DocumentIntake.tsx",
+        "src/lib/books/commit.ts",
+        "src/components/asset-document-persistence.test.tsx"
+      ],
       "dependencies": [],
       "status": "PARTIAL",
-      "requiredWork": "Add focused tests for purchase invoices including source linkage and save/reload; the existing invoice proposal test does not establish this specific lifecycle/document safeguard. New verification tests were not added because sandbox instructions prohibit repository edits.",
+      "requiredWork": "Remaining: actual representative-file AI extraction, production store/private storage and applicable shared-company policy paths in a connected acceptance harness. Existing-asset serial matching/explicit ambiguity selection, supporting-doc attachment, stale/replay safeguards and persisted figures now verified; do not repeat these. No real financial writes authorised.",
       "verificationMethod": "Source-to-code audit followed by applicable unit/database/integration/real-route checks; hosted/device evidence separately required.",
       "finalTestResult": {
         "result": "PARTIAL",
         "evidence": [
           "src/lib/books/intake.ts: proposeAsset maps extracted owner/supplier/warranty/insurance; src/lib/books/commit.ts links intake records to DocuRepo.",
-          "src/lib/assets.ts and src/lib/books/types.ts: asset facts, lifecycle events and document links; src/lib/books/assets-ledger.ts: applyEvent/capitalise/payment links."
+          "src/lib/assets.ts and src/lib/books/types.ts: asset facts, lifecycle events and document links; src/lib/books/assets-ledger.ts: applyEvent/capitalise/payment links.",
+          "2026-11-07 connected asset-document acceptance: asset-document-persistence.test.tsx renders actual DocumentIntake; approved output passes installed 0071/0074/0079/0085 SQL and production owner document/preferences policies. Stale revision rolls back records/lock/audit; lost-response replay stores one document link/event. Owner read-back, other-owner read/update/insert denial and anon denial pass. Acquisition cost 150000, book NBV 135000 and tax WDV 127500 unchanged; supporting document never becomes acquisition-cost evidence."
         ]
       }
     },
@@ -7936,16 +7962,22 @@
       },
       "original": "* Warranty documents.",
       "interpretation": "Account for this source clause in the context of 29. Asset documentation; verify each enumerated feature and applicable safeguard, not merely screen presence.",
-      "modules": [],
+      "modules": [
+        "src/components/DocumentIntake.tsx",
+        "src/lib/books/commit.ts",
+        "src/components/asset-document-persistence.test.tsx"
+      ],
       "dependencies": [],
-      "status": "PARTIAL",
-      "requiredWork": "Add focused tests for warranty documents including source linkage and save/reload; the existing invoice proposal test does not establish this specific lifecycle/document safeguard. New verification tests were not added because sandbox instructions prohibit repository edits.",
+      "status": "VERIFIED COMPLETE",
+      "requiredWork": "None for this lifecycle/documentation clause: owner-reviewed attachment and maintenance event persisted, permissions/failure recovery/source/figures verified in an independent disposable database. External reader accuracy and hosted file storage belong to separate intake/acceptance clauses, not certified here.",
       "verificationMethod": "Source-to-code audit followed by applicable unit/database/integration/real-route checks; hosted/device evidence separately required.",
       "finalTestResult": {
-        "result": "PARTIAL",
+        "result": "PASS",
         "evidence": [
           "src/lib/books/intake.ts: proposeAsset maps extracted owner/supplier/warranty/insurance; src/lib/books/commit.ts links intake records to DocuRepo.",
-          "src/lib/assets.ts and src/lib/books/types.ts: asset facts, lifecycle events and document links; src/lib/books/assets-ledger.ts: applyEvent/capitalise/payment links."
+          "src/lib/assets.ts and src/lib/books/types.ts: asset facts, lifecycle events and document links; src/lib/books/assets-ledger.ts: applyEvent/capitalise/payment links.",
+          "2026-11-07 connected asset-document acceptance: asset-document-persistence.test.tsx renders actual DocumentIntake; approved output passes installed 0071/0074/0079/0085 SQL and production owner document/preferences policies. Stale revision rolls back records/lock/audit; lost-response replay stores one document link/event. Owner read-back, other-owner read/update/insert denial and anon denial pass. Acquisition cost 150000, book NBV 135000 and tax WDV 127500 unchanged; supporting document never becomes acquisition-cost evidence.",
+          "scripts/browser/test_asset_document_workflow.py PASS: representative PNG → actual FileReader/image preparation → controlled reader adapter → actual review → interrupted save retry → reload retained original and figures. Screenshots inspected. Reader output/storage adapters are controlled, not real extraction or Cloud-storage certification."
         ]
       }
     },
@@ -7982,16 +8014,22 @@
       },
       "original": "* Maintenance records.",
       "interpretation": "Account for this source clause in the context of 29. Asset documentation; verify each enumerated feature and applicable safeguard, not merely screen presence.",
-      "modules": [],
+      "modules": [
+        "src/components/DocumentIntake.tsx",
+        "src/lib/books/commit.ts",
+        "src/components/asset-document-persistence.test.tsx"
+      ],
       "dependencies": [],
-      "status": "PARTIAL",
-      "requiredWork": "Add focused tests for maintenance records including source linkage and save/reload; the existing invoice proposal test does not establish this specific lifecycle/document safeguard. New verification tests were not added because sandbox instructions prohibit repository edits.",
+      "status": "VERIFIED COMPLETE",
+      "requiredWork": "None for this lifecycle/documentation clause: owner-reviewed attachment and maintenance event persisted, permissions/failure recovery/source/figures verified in an independent disposable database. External reader accuracy and hosted file storage belong to separate intake/acceptance clauses, not certified here.",
       "verificationMethod": "Source-to-code audit followed by applicable unit/database/integration/real-route checks; hosted/device evidence separately required.",
       "finalTestResult": {
-        "result": "PARTIAL",
+        "result": "PASS",
         "evidence": [
           "src/lib/books/intake.ts: proposeAsset maps extracted owner/supplier/warranty/insurance; src/lib/books/commit.ts links intake records to DocuRepo.",
-          "src/lib/assets.ts and src/lib/books/types.ts: asset facts, lifecycle events and document links; src/lib/books/assets-ledger.ts: applyEvent/capitalise/payment links."
+          "src/lib/assets.ts and src/lib/books/types.ts: asset facts, lifecycle events and document links; src/lib/books/assets-ledger.ts: applyEvent/capitalise/payment links.",
+          "2026-11-07 connected asset-document acceptance: asset-document-persistence.test.tsx renders actual DocumentIntake; approved output passes installed 0071/0074/0079/0085 SQL and production owner document/preferences policies. Stale revision rolls back records/lock/audit; lost-response replay stores one document link/event. Owner read-back, other-owner read/update/insert denial and anon denial pass. Acquisition cost 150000, book NBV 135000 and tax WDV 127500 unchanged; supporting document never becomes acquisition-cost evidence.",
+          "scripts/browser/test_asset_document_workflow.py PASS: representative PNG → actual FileReader/image preparation → controlled reader adapter → actual review → interrupted save retry → reload retained original and figures. Screenshots inspected. Reader output/storage adapters are controlled, not real extraction or Cloud-storage certification."
         ]
       }
     },
@@ -16122,16 +16160,21 @@
       },
       "original": "2. Re-upload the same documents without creating duplicates.",
       "interpretation": "Account for this source clause in the context of 71. Mandatory tests; verify each enumerated feature and applicable safeguard, not merely screen presence.",
-      "modules": [],
+      "modules": [
+        "src/components/DocumentIntake.tsx",
+        "src/lib/books/commit.ts",
+        "src/components/asset-document-persistence.test.tsx"
+      ],
       "dependencies": [],
       "status": "PARTIAL",
-      "requiredWork": "Add actual isolated file-upload/extraction fixtures proving same-file re-upload without duplicate records, then review/persist and assert source links and exact values. Existing tests inject already-parsed reads and cannot prove the upload requirement.",
+      "requiredWork": "Remaining: actual representative-file AI extraction, production store/private storage and applicable shared-company policy paths in a connected acceptance harness. Existing-asset serial matching/explicit ambiguity selection, supporting-doc attachment, stale/replay safeguards and persisted figures now verified; do not repeat these. No real financial writes authorised.",
       "verificationMethod": "Source-to-code audit followed by applicable unit/database/integration/real-route checks; hosted/device evidence separately required.",
       "finalTestResult": {
         "result": "PARTIAL",
         "evidence": [
           "src/lib/books/intake.ts and commit.ts implement parsed-read proposals and upserts; src/components/DocumentIntake.tsx orchestrates review.",
-          "PASS src/lib/books/books.test.ts mandatory cases 1–8 prove supplied parsed-data transformations, not file extraction; typed-intake-sql.test.ts proves disposable-store commit boundaries."
+          "PASS src/lib/books/books.test.ts mandatory cases 1–8 prove supplied parsed-data transformations, not file extraction; typed-intake-sql.test.ts proves disposable-store commit boundaries.",
+          "2026-11-07 connected asset-document acceptance: asset-document-persistence.test.tsx renders actual DocumentIntake; approved output passes installed 0071/0074/0079/0085 SQL and production owner document/preferences policies. Stale revision rolls back records/lock/audit; lost-response replay stores one document link/event. Owner read-back, other-owner read/update/insert denial and anon denial pass. Acquisition cost 150000, book NBV 135000 and tax WDV 127500 unchanged; supporting document never becomes acquisition-cost evidence."
         ]
       }
     },
@@ -20472,14 +20515,17 @@
     }
   ],
   "latestVerification": {
-    "at": "2026-11-07T09:40:00Z",
-    "result": "231 files / 1788 tests PASS; 4 Statement Desk browser workflows PASS; preview build OK. No requirements promoted from controlled evidence alone; 535 verified / 362 partial / 0 missing / 2 blocked.",
+    "at": "2026-11-07T10:08:50Z",
+    "result": "538 VERIFIED COMPLETE / 359 PARTIAL / 0 MISSING / 2 BLOCKED. Promoted V60-0341, V60-0349, V60-0351 only. Full suite 232 files / 1793 tests PASS; 4 Statement Desk browser checks and 1 asset-document browser workflow PASS; preview build OK. No production records changed, approval trigger disabled, publication held.",
+    "promoted": [
+      "V60-0341",
+      "V60-0349",
+      "V60-0351"
+    ],
     "evidence": [
       "docs/VERIFICATION_RESULTS.md",
-      "src/components/document-intake-workflow.test.tsx",
-      "src/lib/books/document-workflow-persistence.test.ts",
-      "src/lib/statement-pipeline/workflow-persistence.test.ts",
-      "scripts/browser/test_statement_desk.py"
+      "src/components/asset-document-persistence.test.tsx",
+      "scripts/browser/test_asset_document_workflow.py"
     ]
   }
 }
