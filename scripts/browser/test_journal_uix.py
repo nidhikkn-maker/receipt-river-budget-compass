@@ -118,7 +118,7 @@ async def main():
    await page.get_by_role('button',name='More modules').filter(visible=True).first.click() if width<768 else None
    if width<768:
     more=page.get_by_role('dialog',name='More')
-    await expect(more).to_be_visible()
+    await expect(more).to_be_visible(); await page.wait_for_timeout(450)
     assert await more.get_by_role('button',name='Close').count()==1, 'one close control'
     assert await more.locator('.more-group').count()==8 and await more.locator('.more-link').count()==0, 'categories only at first open'
     await page.screenshot(path=str(OUT/f'{width}-more.png'))
