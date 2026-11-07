@@ -20,10 +20,10 @@ async def main():
    elif u.path=='/src/components/AppShell.tsx':await route.fulfill(content_type='application/javascript',body='import React from "/node_modules/.vite/deps/react.js";export const PageTitle=({title})=>React.createElement("h1",null,title);')
    else:await route.continue_()
   await c.route('**/*',isolate);await page.goto('http://localhost:8080/vault');await page.get_by_role('heading',name='DocuRepo').wait_for()
-  await page.evaluate("documentTools.documents[0].merchant='Alpha';documentTools.documents[0].text='OCR_ONLY_TOKEN';documentTools.documents[1].merchant='Beta';documentTools.documents[1].docDate='2026-09-01';documentTools.documents[1].amount=250;documentTools.documents[1].docType='insurance';documentTools.documents[2].amount=null;documentTools.documents[2].text='';documentTools.documents[2].docDate=null")
+  await page.evaluate("documentTools.documents[0].merchant='Alpha';documentTools.documents[0].text='OCR_ONLY_TOKEN';documentTools.documents[1].merchant='Beta';documentTools.documents[1].docDate='2026-09-01';documentTools.documents[1].amount=250;documentTools.documents[1].docType='insurance';documentTools.documents[2].amount=null;documentTools.documents[2].text='';documentTools.documents[1].fields=[];documentTools.documents[2].fields=[];documentTools.documents[2].docDate=null")
   q=page.get_by_label('Search documents')
   for query,count in [('Alpha',1),('2026-09-01',1),('1050',1),('OCR_ONLY_TOKEN',1),('missing token',0)]:
-   await q.fill(query);print('QUERY',query,await page.locator('main').inner_text());await expect(page.get_by_text(f'{count} documents',exact=True)).to_be_visible()
+   await q.fill(query);await expect(page.get_by_text(f'{count} documents',exact=True)).to_be_visible()
   await q.fill('');await page.get_by_label('Document type filter').click();await page.get_by_role('option',name='Insurance',exact=True).click();await expect(page.get_by_text('1 documents',exact=True)).to_be_visible()
   await q.fill('Beta');await page.get_by_label('Documents from').fill('2026-10-01');await expect(page.get_by_text('0 documents',exact=True)).to_be_visible();await page.get_by_label('Documents from').fill('2026-09-01');await expect(page.get_by_text('1 documents',exact=True)).to_be_visible()
   await page.screenshot(path=str(OUT/'combined-search.png'))
