@@ -114,15 +114,20 @@ class StatementDeskFlow(unittest.IsolatedAsyncioTestCase):
         before = await self.page.evaluate("({ids: deskFixture.transactions.map(t => t.id), total: deskFixture.transactions.reduce((s,t) => s+t.amount,0), attempts: [...deskFixture.originalAttempts]})")
         self.assertEqual(before["total"], 730)
         self.assertEqual(len(before["ids"]), 2)
-        await self.page.evaluate("deskFixture.failOriginals = false")
+        await self.page.reload(wait_until="domcontentloaded")
+        await expect(warning).to_contain_text("first.csv")
+        await expect(warning).to_contain_text("second.csv")
+        # Reloaded page restores encrypted source bytes. The isolated ledger fixture is retained separately.
         await warning.get_by_role("button", name="Retry storing originals").click()
         await expect(warning).to_have_count(0)
         after = await self.page.evaluate("({ids: deskFixture.transactions.map(t => t.id), total: deskFixture.transactions.reduce((s,t) => s+t.amount,0), attempts: deskFixture.originalAttempts, docs: deskFixture.documents})")
         self.assertEqual(after["ids"], before["ids"])
         self.assertEqual(after["total"], 730)
-        self.assertEqual(after["attempts"][2:], before["attempts"])
+        self.assertEqual(after["attempts"], before["attempts"])
         self.assertEqual(len(after["docs"]), 2)
         self.assertTrue(all(d["evidenceLocked"] for d in after["docs"]))
+        figures = await self.page.evaluate("async () => { const {cashflow,accountBalance} = await import('/src/lib/ledger.ts'); return {flow: cashflow(deskFixture.transactions), balance: accountBalance(deskFixture.accounts[0], deskFixture.transactions)}; }")
+        self.assertEqual(figures, {"flow": {"income": 0, "spent": 730, "net": -730}, "balance": 270})
 
     async def test_cross_account_match_move_and_undo(self):
         await self.page.evaluate("""() => { deskFixture.accounts.push({ id: 'card', name: 'Controlled card', kind: 'credit_card', openingBalance: 0, archived: false, issuer: '', lastFour: null });

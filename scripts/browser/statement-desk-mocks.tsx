@@ -3,7 +3,7 @@ import { useState } from "react";
 // Controlled copies only: no account session, Cloud client or real records.
 export const fixture = {
   accounts: [{ id: "desk-account", name: "Controlled bank", kind: "savings", openingBalance: 1000, archived: false, issuer: "", lastFour: null }],
-  transactions: [] as Record<string, unknown>[],
+  transactions: JSON.parse(sessionStorage.getItem("controlled-desk-ledger") ?? "[]") as Record<string, unknown>[],
   saves: [] as string[],
   removes: [] as string[],
   uploads: [] as unknown[],
@@ -34,6 +34,7 @@ export function useStore() {
       const id = opts?.createId ?? crypto.randomUUID();
       if (!fixture.transactions.some((t) => t.id === id)) fixture.transactions.push({ ...input, id, originalAmount: input.amount, currency: "INR", splits: [], reconciledAt: null, statementRef: null });
       fixture.saves.push(id);
+      sessionStorage.setItem("controlled-desk-ledger", JSON.stringify(fixture.transactions));
     },
     remove: async (e: { id: string }) => { fixture.removes.push(e.id); fixture.transactions.splice(fixture.transactions.findIndex((t) => t.id === e.id), 1); },
     reconcile: async () => {},
