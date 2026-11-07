@@ -195,6 +195,11 @@ function StatementDeskPage() {
   const api = () => {
     const s = storeRef.current;
     return { save: s.save, remove: s.remove, reconcile: s.reconcile, addAccount: s.addAccount, setArchived: s.setArchived, refresh: s.refresh, transactions: s.transactions, linkDraft: linkDraftToTransaction, unlinkDraft,
+      readEvidence: async (id: string) => {
+        const { data, error } = await supabase.from('expenses').select('statement_ref,reconciled_at').eq('employee_id', s.userId).eq('id', id).maybeSingle();
+        if (error || !data) return null;
+        return { statementRef: data.statement_ref, reconciledAt: data.reconciled_at };
+      },
       readExistingIds: async (ids: string[]) => {
         if (!navigator.onLine) throw Error('Reconnect before Undo so saved records can be checked.');
         const found: string[] = [];
