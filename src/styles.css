@@ -1021,3 +1021,16 @@ html[data-theme="apple-glass"] :where(.bg-card, .bg-popover, .bg-ink) {
 .uix-entry .canvas-source > summary { min-height: 48px; }
 .uix-entry .canvas-fields > summary { min-height: 48px; }
 .uix-fold > summary { display: grid !important; }
+
+.uix-shell { color-scheme: light; }
+.dark .uix-shell { color-scheme: dark; }
+.uix-shell :where(select,textarea,input) { color: var(--foreground); }
+.uix-shell :where(input,textarea) { background-color: var(--background); }
+.uix-family-reports { min-width: 0; }
+.uix-family-reports :where(.recharts-responsive-container,section,div) { min-width: 0; }
+.uix-family-reports > section > div { min-width: 0; }
+.uix-shell .journal-record { mask: none; box-shadow: none; }
+.uix-shell .journal-record > div:last-child { padding-block: 20px; }
+.uix-shell .journal-record:hover { background: var(--secondary); }
+.journal-rail :where(button,a):hover { background: var(--secondary); color: var(--foreground); }
+@media (max-width: 1000px) { .uix-family-reports :where(.recharts-responsive-container) { max-width: 100%; overflow: hidden; } }
