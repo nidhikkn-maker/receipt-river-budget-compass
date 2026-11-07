@@ -1277,3 +1277,4 @@ html, body { max-width: 100%; }
 /* Grid children and date inputs may shrink: their intrinsic width pushed forms past 320px phones. */
 .uix-content .grid > *, .smart-add-sheet .grid > * { min-width: 0; }
 input[type="date"], input[type="month"] { min-width: 0; max-width: 100%; }
+@media (min-width: 768px) { .cmp-hero { width: auto; min-height: 280px; padding: 26px 34px 88px; } .cmp-today-body { margin-top: -64px; } .cmp-greeting { font-size: 38px; } }
