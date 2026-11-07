@@ -61,6 +61,9 @@ describe("connected asset document review and installed database", () => {
       fireEvent.click(view.getByRole("button", { name: "Confirm and save" }));
       await view.findByRole("button", { name: "Retry" }, { timeout: 10000 });
       fireEvent.click(view.getByRole("button", { name: "Retry" }));
+      await waitFor(() => expect(commit).toHaveBeenCalledTimes(2));
+      await new Promise(resolve => setTimeout(resolve, 100));
+      if (view.queryByRole("alert")) throw new Error(view.getByRole("alert").textContent ?? "Review failed");
       await view.findByText("Saved", {}, { timeout: 10000 });
       expect(add).toHaveBeenCalledTimes(1);
       const saved = (await db.query<{ data: typeof prefs }>("SELECT data FROM finance_preferences WHERE owner_id=$1", [owner])).rows[0]?.data;
