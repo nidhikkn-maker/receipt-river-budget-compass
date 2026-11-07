@@ -49,6 +49,7 @@ export function DocumentIntake({ file, context, onClose, resume, replacesId, onS
   const [done, setDone] = useState<string | null>(null);
   const [edit, setEdit] = useState<Record<string, string>>({});
   const [leaseProperty, setLeaseProperty] = useState("");
+  const [utilityProperty, setUtilityProperty] = useState("");
   const [ownerOk, setOwnerOk] = useState(false);
   const [capOk, setCapOk] = useState(false);
   const books = preferences.books ?? emptyBooks();
@@ -163,10 +164,18 @@ export function DocumentIntake({ file, context, onClose, resume, replacesId, onS
       return { route: "asset", asset: { ...a, usefulLifeYears: life, residualPct: resid, name: v("name", a.name), cost: Number(v("cost", a.cost)) || a.cost, inUse: v("inUse", a.inUse), purchaseDate: purchase, capitalisedOn: v("capOn", purchase), kind: v("akind", a.kind) as AssetKind, supplier: x?.asset?.supplier ?? undefined, warrantyUntil: x?.asset?.warrantyUntil ?? undefined, insurance: x?.asset?.insurance ?? undefined, ...(ownerSuggested && !ownerOk ? { ownerEntityId: undefined } : {}) } as typeof a };
     }
     if (proposal.kind === "property") {
+      if (docType === "utility_bill" && books.properties.length) {
+        const existing = books.properties.find(p => p.id === utilityProperty);
+        if (!existing) return null;
+        // A utility payment is never a property's acquisition cost. Preserve its master facts.
+        const consumer = x?.property?.utilityConsumerNo;
+        const note = consumer ? `Consumer ${consumer}` : "";
+        return { route: "property", property: { ...existing, notes: note && !existing.notes?.includes(note) ? [existing.notes, note].filter(Boolean).join(" · ") : existing.notes }, asset: null };
+      }
       const cost = Number(v("cost", x?.property?.cost ?? "")) || 0;
       const date = v("acq", x?.property?.acquiredOn ?? "");
       const p = { ...proposal.property, name: v("name", proposal.property.name), ...(ownerSuggested && !ownerOk ? { ownerEntityId: undefined } : {}) };
-      const asset = cost > 0 && isIso(date) ? { id: `${runId.slice(0, 30)}-asset`, name: p.name, kind: "property" as const, cost, inUse: date, purchaseDate: date, sharePct: 100, bookMethod: "slm" as const, bookRatePct: 0, ownerEntityId: p.ownerEntityId } : null;
+      const asset = docType !== "utility_bill" && cost > 0 && isIso(date) ? { id: `${runId.slice(0, 30)}-asset`, name: p.name, kind: "property" as const, cost, inUse: date, purchaseDate: date, sharePct: 100, bookMethod: "slm" as const, bookRatePct: 0, ownerEntityId: p.ownerEntityId } : null;
       return { route: "property", property: p, asset };
     }
     if (proposal.kind === "lease") {
@@ -331,6 +340,7 @@ export function DocumentIntake({ file, context, onClose, resume, replacesId, onS
         </div>}
         {proposal?.kind === "property" && <div className="grid grid-cols-2 gap-2 rounded-xl border p-3">
           <p className="col-span-2 font-semibold">Proposed property</p>
+          {docType === "utility_bill" && books.properties.length > 0 && <label className="col-span-2">Property for this bill<select aria-label="Property for this utility bill" className="mt-1 w-full rounded-md border bg-background px-2 py-2" value={utilityProperty} onChange={e => setUtilityProperty(e.target.value)}><option value="">Choose property…</option>{books.properties.map(p => <option key={p.id} value={p.id}>{p.name} · {p.address}</option>)}</select></label>}
           <Input aria-label="Property name" className="col-span-2" value={v("name", proposal.property.name)} onChange={(e) => setEdit({ ...edit, name: e.target.value })} />
           <Input aria-label="Acquisition cost" type="number" placeholder="Cost" value={v("cost", x.property?.cost)} onChange={(e) => setEdit({ ...edit, cost: e.target.value })} />
           <Input aria-label="Acquired on" type="date" value={v("acq", x.property?.acquiredOn)} onChange={(e) => setEdit({ ...edit, acq: e.target.value })} />

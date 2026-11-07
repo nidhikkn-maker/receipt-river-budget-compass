@@ -13,7 +13,7 @@ export async function pendingEntries(owner:string){const rows=await operation<(S
 export const removePending=(id:string)=>operation("entries","readwrite",s=>s.delete(id));
 export const putSnapshot=async(owner:string,data:unknown)=>{const sealed=await encryptOffline(owner,data);return operation("snapshots","readwrite",s=>s.put(sealed,owner));};
 export async function getSnapshot<T>(owner:string):Promise<T|undefined>{const data=await operation<T|Sealed|undefined>("snapshots","readonly",s=>s.get(owner));if(data===undefined)return undefined;if(data&&typeof data==="object"&&"encrypted" in data)return decryptOffline<T>(owner,data as Sealed);await putSnapshot(owner,data);return data as T;}
-export async function clearOfflineOwner(owner:string){const entries=await operation<{id:string;owner:string}[]>("entries","readonly",s=>s.getAll());for(const e of entries.filter(x=>x.owner===owner))await removePending(e.id);await operation("snapshots","readwrite",s=>s.delete(owner));await operation("snapshots","readwrite",s=>s.delete(`drafts:${owner}`));await operation("snapshots","readwrite",s=>s.delete(`review:${owner}`));await operation("keys","readwrite",s=>s.delete(owner));keyPromises.delete(owner);}
+export async function clearOfflineOwner(owner:string){const entries=await operation<{id:string;owner:string}[]>("entries","readonly",s=>s.getAll());for(const e of entries.filter(x=>x.owner===owner))await removePending(e.id);await operation("snapshots","readwrite",s=>s.delete(owner));await operation("snapshots","readwrite",s=>s.delete(`drafts:${owner}`));await operation("snapshots","readwrite",s=>s.delete(`review:${owner}`));await operation("snapshots","readwrite",s=>s.delete(`originals:${owner}`));await operation("keys","readwrite",s=>s.delete(owner));keyPromises.delete(owner);}
 
 export interface ReviewContext { selected: string[]; query: string; group: string; category: string; account: string; workspace: string; organisation: string; confidence?: string; sort?: string; from?: string; to?: string; minimum?: string; maximum?: string; view?: string; limit?: number; missingField?: string; transactionType?: string; categoryFilter?: string }
 export async function readReviewContext(owner: string): Promise<ReviewContext | undefined> {
@@ -40,3 +40,33 @@ export async function putLocalDraft(owner: string, d: LocalDraft) { const m = aw
 export async function removeLocalDraft(owner: string, id: string) { const m = await readDraftMap(owner); if (!(id in m)) return; delete m[id]; await writeDraftMap(owner, m); }
 export async function fileToLocal(f: File, extra: { fingerprint?: string; path?: string } = {}): Promise<LocalDraftFile> { return { name: f.name, type: f.type, ...extra, bytes: Array.from(new Uint8Array(await f.arrayBuffer())) }; }
 export const localToFile = (f: LocalDraftFile) => new File([new Uint8Array(f.bytes)], f.name, { type: f.type });
+
+// Statement originals have a separate encrypted owner-bound queue, never a ledger entry.
+export interface PendingOriginal { file: File; meta: import("./store").DocumentMeta }
+interface StoredOriginal { file: LocalDraftFile; meta: import("./store").DocumentMeta }
+const originalWrites = new Map<string, Promise<unknown>>();
+async function originalMap(owner: string): Promise<Record<string, StoredOriginal>> {
+  const value = await operation<Sealed | undefined>("snapshots", "readonly", s => s.get(`originals:${owner}`));
+  return value ? decryptOffline<Record<string, StoredOriginal>>(owner, value) : {};
+}
+async function changeOriginals(owner: string, change: (rows: Record<string, StoredOriginal>) => Promise<void> | void) {
+  const work = (originalWrites.get(owner) ?? Promise.resolve()).catch(() => undefined).then(async () => {
+    const rows = await originalMap(owner); await change(rows);
+    const sealed = await encryptOffline(owner, rows);
+    await operation("snapshots", "readwrite", s => s.put(sealed, `originals:${owner}`));
+  });
+  originalWrites.set(owner, work);
+  try { await work; } finally { if (originalWrites.get(owner) === work) originalWrites.delete(owner); }
+}
+export async function pendingOriginals(owner: string): Promise<PendingOriginal[]> {
+  await originalWrites.get(owner);
+  return Object.values(await originalMap(owner)).map(row => ({ file: localToFile(row.file), meta: row.meta }));
+}
+export async function keepOriginal(owner: string, row: PendingOriginal) {
+  const id = row.meta.id;
+  if (!id || !owner) throw new Error("Original needs an owner and stable document identity");
+  await changeOriginals(owner, async rows => { rows[id] = { meta: row.meta, file: await fileToLocal(row.file) }; });
+}
+export async function removeOriginal(owner: string, id: string) {
+  await changeOriginals(owner, rows => { delete rows[id]; });
+}

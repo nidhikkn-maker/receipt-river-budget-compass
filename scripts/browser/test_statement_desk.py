@@ -97,6 +97,38 @@ class StatementDeskFlow(unittest.IsolatedAsyncioTestCase):
         events = await self.page.evaluate("deskEvents")
         self.assertEqual(events, [{"name": "project.statement_saved", "props": {"balance": "matched", "statement_adds_up": "yes", "entries_posted": 2, "fully_reconciled": True}}])
 
+    async def test_failed_original_survives_next_upload_and_retry_never_reposts(self):
+        await self.page.evaluate("deskFixture.failOriginals = true")
+        for name, amount in [("first.csv", 250), ("second.csv", 480)]:
+            if name == "second.csv":
+                await self.page.get_by_role("button", name="Remove first.csv").click()
+            csv = f"Date,Description,Debit,Credit\n2026-10-02,SHOP {name},{amount},\n"
+            await self.page.get_by_label("Statement files").set_input_files(files=[{"name": name, "mimeType": "text/csv", "buffer": csv.encode()}])
+            await self.page.locator("select").first.select_option("desk-account")
+            await self.page.get_by_role("button", name="Accept all 1 asking items").click()
+            await self.page.get_by_role("button", name="Apply everything (1 to save)").click()
+            await expect(self.page.get_by_label("Statement originals not stored")).to_contain_text(name)
+        warning = self.page.get_by_label("Statement originals not stored")
+        await expect(warning).to_contain_text("first.csv")
+        await expect(warning).to_contain_text("second.csv")
+        before = await self.page.evaluate("({ids: deskFixture.transactions.map(t => t.id), total: deskFixture.transactions.reduce((s,t) => s+t.amount,0), attempts: [...deskFixture.originalAttempts]})")
+        self.assertEqual(before["total"], 730)
+        self.assertEqual(len(before["ids"]), 2)
+        await self.page.reload(wait_until="domcontentloaded")
+        await expect(warning).to_contain_text("first.csv")
+        await expect(warning).to_contain_text("second.csv")
+        # Reloaded page restores encrypted source bytes. The isolated ledger fixture is retained separately.
+        await warning.get_by_role("button", name="Retry storing originals").click()
+        await expect(warning).to_have_count(0)
+        after = await self.page.evaluate("({ids: deskFixture.transactions.map(t => t.id), total: deskFixture.transactions.reduce((s,t) => s+t.amount,0), attempts: deskFixture.originalAttempts, docs: deskFixture.documents})")
+        self.assertEqual(after["ids"], before["ids"])
+        self.assertEqual(after["total"], 730)
+        self.assertEqual(after["attempts"], before["attempts"])
+        self.assertEqual(len(after["docs"]), 2)
+        self.assertTrue(all(d["evidenceLocked"] for d in after["docs"]))
+        figures = await self.page.evaluate("async () => { const {cashflow,accountBalance} = await import('/src/lib/ledger.ts'); return {flow: cashflow(deskFixture.transactions), balance: accountBalance(deskFixture.accounts[0], deskFixture.transactions)}; }")
+        self.assertEqual(figures, {"flow": {"income": 0, "spent": 730, "net": -730}, "balance": 270})
+
     async def test_cross_account_match_move_and_undo(self):
         await self.page.evaluate("""() => { deskFixture.accounts.push({ id: 'card', name: 'Controlled card', kind: 'credit_card', openingBalance: 0, archived: false, issuer: '', lastFour: null });
           deskFixture.transactions.push({ id: 'wrong-1', title: 'SWIGGY ORDER', merchant: 'Swiggy', date: '2026-10-02', amount: 250, originalAmount: 250, currency: 'INR', txnType: 'expense', accountId: 'card', toAccountId: null, splits: [], reconciledAt: null, statementRef: null, correctionRevision: 0, fxRate: 1 }); }""")
