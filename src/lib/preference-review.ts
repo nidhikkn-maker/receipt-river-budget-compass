@@ -19,10 +19,10 @@ export const reviewSectionLabel=(key:string)=>key.replace(/^books\./,'').replace
 export function alignUnchangedSections(stored:Record<string,unknown>|null|undefined,next:FinancePreferences,changed:readonly string[]):FinancePreferences{
  const raw=(stored??{}) as Record<string,unknown>,out={...next} as Record<string,unknown>;
  for(const k of top) if(!changed.includes(k)&&!(k in raw)) delete out[k];
- if(out.books&&typeof out.books==='object'){
-  const rb=(raw.books&&typeof raw.books==='object'?raw.books:{}) as Record<string,unknown>,nb={...(out.books as Record<string,unknown>)};
+ if(out['books']&&typeof out['books']==='object'){
+  const rb=(raw['books']&&typeof raw['books']==='object'?raw['books']:{}) as Record<string,unknown>,nb={...(out['books'] as Record<string,unknown>)};
   for(const k of books) if(!changed.includes(`books.${k}`)&&!(k in rb)) delete nb[k];
-  out.books=nb;
+  out['books']=nb;
  }
- return out as FinancePreferences;
+ return out as unknown as FinancePreferences;
 }
