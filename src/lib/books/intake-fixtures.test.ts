@@ -269,6 +269,22 @@ describe("reviewed save to DocuRepo with module links", () => {
     expect(twice.books.leases[0]!.id).toBe("lease-1");
   });
 
+  it("a confirmed GST invoice is linked to its source document", () => {
+    const inv = { id: "g1", gstin: "33AAACA1234A1Z5", kind: "purchase" as const, number: "INV-7", date: "2026-05-02", party: "Acme", partyGstin: "29ABCDE1234F1Z5", taxable: 1000, igst: 180, cgst: 0, sgst: 0, cess: 0 };
+    const out = commitIntake(blank(), { route: "gst", invoice: inv }, doc, "2026-11-07", newId);
+    expect(out.books.gstInvoices).toHaveLength(1);
+    expect(out.books.gstInvoices[0]!.docId).toBe("doc-1");
+    expect(docsFor(out.books.docLinks, "gst", "g1")).toEqual(["doc-1"]);
+  });
+
+  it("confirmed tax statement credits and salary evidence carry their source document", () => {
+    const c = { route: "tax" as const, entityId: "personal", fy: "2025-26", salary: 900000, credits: [{ kind: "tds" as const, amount: 50000, source: "26AS" }] };
+    const out = commitIntake(blank(), c, doc, "2026-11-07", newId);
+    expect(out.books.taxCredits?.[0]?.docId).toBe("doc-1");
+    expect(out.books.salaryEvidence?.[0]?.docId).toBe("doc-1");
+    expect(linksOf(out.books.docLinks, "doc-1").some((l) => l.kind === "entity" && l.targetId === "personal")).toBe(true);
+  });
+
   it("a confirmed audited FY record lands under its company, linked to the document", () => {
     const slice = blank();
     slice.entities = [acme];
