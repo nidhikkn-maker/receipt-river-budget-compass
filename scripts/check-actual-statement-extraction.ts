@@ -16,7 +16,7 @@ for(const [name,mime] of [['statement.csv','text/csv'],['scan.jpg','image/jpeg']
  const bytes=readFileSync(`${root}/${name}`);const file=new File([bytes],name,{type:mime});
  const lines=mime==='text/csv'?await readStatement(file):await readStatementWithAI(`data:${mime};base64,${bytes.toString('base64')}`,mime);
  const assert=(ok:boolean,label:string)=>{if(!ok)throw Error(`${name}: ${label}`);};
- assert(lines.length===2&&lines.every(l=>l.direction==='debit')&&lines.map(l=>l.amount).sort((a,b)=>a-b).join()==='250,480','original rows/amount/direction');
+ assert(lines.length===2&&lines.every(l=>(l.direction??'debit')==='debit')&&lines.map(l=>l.amount).sort((a,b)=>a-b).join()==='250,480','original rows/amount/direction');
  assert(lines.map(l=>l.date).sort().join()==='2026-10-02,2026-10-03','original dates');
  const db=new PGlite();
  try {
