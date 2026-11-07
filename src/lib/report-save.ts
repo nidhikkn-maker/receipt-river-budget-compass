@@ -14,9 +14,13 @@ export async function savePreparedReport(expected: { id: string; path: string; s
   }
   const upload = await adapter.upload();
   if (upload.error) throw Error('PDF ready on this device; upload failed. Retry saving to history.');
-  const insert = await adapter.insert();
+  // A transport rejection can follow a committed insert just like an error response.
+  // Read back either outcome before presenting the save as unconfirmed.
+  let insert: { error: unknown };
+  try { insert = await adapter.insert(); }
+  catch (error) { insert = { error }; }
   if (!insert.error) return;
-  const after = await adapter.read();
+  const after = await adapter.read().catch(error => ({ data: null, error }));
   if (!after.error && matches(after.data)) return;
   // Never delete an object after an unknown database outcome: the row may exist.
   throw Error('PDF ready; history save could not be confirmed. Evidence retained. Retry saving.');

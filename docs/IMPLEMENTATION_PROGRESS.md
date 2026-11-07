@@ -1,5 +1,11 @@
 # Implementation progress — top 15 gaps (baseline: Ledgerline_v6_Requirements_Checklist.md)
 
+## Credit-controlled checkpoint — 7 Nov 2026
+- Emergency owner cap 1,100 credits supersedes sequential expansion; P0/P1 first, P2/P3 deferred. Existing release holds unchanged.
+- Prepared-report thrown committed responses now read back before status; evidence retained on unknown outcome. Targeted 23 tests and five actual-builder isolated PDF download cases PASS.
+- C-1857 verified narrowly through detailed/summary claim downloaded PDF ordering. Historical **1558 implemented / 943 partial / 21 missing / 19 superseded**; v6 **566/331/2 unchanged**.
+- Unknown committed statement intentions, stale/concurrent Undo and hosted access/recovery acceptance remain open. Exact evidence: `docs/evidence/credit-controlled-2026-11-07.md`.
+
 ## Workstream 1 checkpoint — 7 Nov 2026 15:31 UTC
 - Two hosted failure categories corrected independently: central changed-trip budget validation plus staged database complete-dimension and immutable merchant-history/source-snapshot/reversal authority. Disposable real-RPC acceptance passes; production activation and corrected hosted acceptance remain pending.
 - Decimal trip/booking/refund/advance/reimbursement/report connections extended; report retry now binds every accepted filter.
