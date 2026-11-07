@@ -138,6 +138,8 @@ describe("actual document review workflow (isolated persistence boundary)", () =
     const docId = "00000000-0000-0000-0000-000000000010";
     const asset = { id: "generator-1", name: "Generator", kind: "machinery" as const, cost: 150000, inUse: "2026-04-01", purchaseDate: "2026-04-01", sharePct: 100, bookMethod: "slm" as const, bookRatePct: 10, tag: "GEN-44", usefulLifeYears: 10, residualPct: 0, docId: "purchase-original", accountId: "asset-account" };
     const prefs = { books: emptyBooks(), entities: [], assets: [asset], contractObligations: [] };
+    const originalBlob = globalThis.Blob;
+    vi.stubGlobal("Blob", NodeBlob);
     const db = new PGlite({ fsBundle: new NodeBlob([readFileSync("node_modules/@electric-sql/pglite/dist/pglite.data")]) });
     try {
       await db.exec(`CREATE ROLE authenticated; CREATE ROLE anon; CREATE ROLE service_role;
@@ -187,6 +189,6 @@ describe("actual document review workflow (isolated persistence boundary)", () =
       await db.query("SELECT set_config('test.uid',$1,false)", [other]);
       expect((await db.query("SELECT * FROM document_intake_commits")).rows).toHaveLength(0);
       await expect(db.query("SELECT commit_document_intake_reviewed($1,$2,$3::jsonb,$4,$5)", [approved.id, docId, JSON.stringify(approved.data), approved.lock, approved.expected])).rejects.toThrow(/operation ID already used/);
-    } finally { await db.close(); }
+    } finally { await db.close(); vi.stubGlobal("Blob", originalBlob); }
   }, 30000);
 });
