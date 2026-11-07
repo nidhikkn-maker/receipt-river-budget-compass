@@ -1,3 +1,7 @@
+## Brand and authentication transformation — active
+- [x] New folded-ledger vector logo and shared adaptive AuthFrame; provider/session handlers retained, errors shown inline.
+- [ ] Verify isolated auth states, responsive/dark captures, icon legibility, loading/consent; continue existing all-route migration. No publish/provider/policy changes authorised.
+
 ## Full app-wide UIX directive — active, NOT complete
 - [x] Replaced long rail with short primary navigation and full grouped More directory; shared typography/controls/sheets/flat sections migrated.
 - [x] Journal, Canvas disclosures, Money/account creation, Travel list, DocuRepo rows, Reports filters and Settings folds changed in actual code.
