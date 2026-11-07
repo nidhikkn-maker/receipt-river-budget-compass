@@ -30,6 +30,7 @@ export function useStore() {
     },
     confirmTransfer: async () => {},
     savePreferences: async (next: Record<string, unknown>) => { fixture.uploads = (next.statementUploads as unknown[]) ?? []; setPreferences(next); },
+    saveStatementUpload: async (upload: {id:string}) => { const history=fixture.uploads as {id:string}[]; fixture.uploads=[upload,...history.filter(u=>u.id!==upload.id)];setPreferences(previous=>({...previous,statementUploads:fixture.uploads})); },
     save: async (input: Record<string, unknown>, opts?: { createId?: string }) => {
       const id = opts?.createId ?? crypto.randomUUID();
       if (!fixture.transactions.some((t) => t.id === id)) fixture.transactions.push({ ...input, id, originalAmount: input.amount, currency: "INR", splits: [], reconciledAt: null, statementRef: null });
