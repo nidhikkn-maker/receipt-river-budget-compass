@@ -55,4 +55,3 @@
 - docs/ holds MASTER_REQUIREMENTS (generated from .lovable/requirements/register.json by scripts/requirements/render_docs.py), IMPLEMENTATION_PROGRESS, VERIFICATION_RESULTS and OPEN_BLOCKERS; update the register, never hand-edit the generated file.
 
 
-- Brand geometry is shared by LedgerlineLogo and scripts/brand/build_icons.py; rebuild public variants/icons/splashes together so sign-in and installed apps stay consistent.
