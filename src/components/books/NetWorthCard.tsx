@@ -8,7 +8,7 @@ export function NetWorthCard() {
   return (
     <section className="mb-5 block rounded-2xl border bg-card p-4" aria-label="Net worth summary">
       <div className="flex items-baseline justify-between gap-2">
-        <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Net worth</span>
+        <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">My total financial position</span>
         <span className="text-[11px] text-muted-foreground">{nw.label}</span>
       </div>
       <p className="mt-1 font-mono text-2xl font-semibold">{money(nw.net)}</p>
