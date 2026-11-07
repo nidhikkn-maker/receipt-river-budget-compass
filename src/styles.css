@@ -820,11 +820,11 @@ html[data-theme="apple-glass"] :where(.bg-card, .bg-popover, .bg-ink) {
 .journal-review > section[aria-label="Transaction attention counts"] > a > span { display: flex; flex-direction: row-reverse; align-items: center; justify-content: space-between; width: 100%; gap: 16px; }
 .journal-review > section[aria-label="Transaction attention counts"] > a > span > span:last-child { font-size: 14px; color: var(--foreground); }
 .journal-review > section[aria-label="Review summary"] { border-radius: 0; border: 0; border-top: 1px solid var(--border); background: transparent; padding: 20px 0; }
-.journal-wealth > div:first-of-type { border-bottom: 1px solid var(--border); padding-bottom: 20px; }
-.journal-wealth > div:first-of-type > div { border: 0; border-radius: 0; background: transparent; padding-left: 0; }
+.journal-wealth > div:nth-of-type(2) { border-bottom: 1px solid var(--border); padding-bottom: 20px; }
+.journal-wealth > div:nth-of-type(2) > div { border: 0; border-radius: 0; background: transparent; padding-left: 0; }
 .smart-add-sheet { border-radius: 16px; background: var(--background); }
-.smart-add-sheet > div:last-child { gap: 0; }
-.smart-add-sheet > div:last-child > button { border: 0; border-bottom: 1px solid var(--border); border-radius: 0; box-shadow: none; background: transparent; min-height: 64px; }
+.smart-add-sheet > .grid { gap: 0; }
+.smart-add-sheet > .grid > button { border: 0; border-bottom: 1px solid var(--border); border-radius: 0; box-shadow: none; background: transparent; min-height: 64px; }
 .journal-spaces { background: var(--background); }
 .receipt-desk [aria-label="Review scanned details"] { background: var(--card); border-color: var(--border); }
 .receipt-desk [aria-label="Review scanned details"] h2 { font-family: var(--font-editorial); font-size: 24px; font-weight: 400; }
@@ -854,7 +854,7 @@ html[data-theme="apple-glass"] :where(.bg-card, .bg-popover, .bg-ink) {
 }
 
 /* Privacy mode: blur amounts */
-.privacy .font-mono { filter: blur(7px); transition: filter .2s; }
+.privacy .font-mono, .privacy .financial-amount { filter: blur(7px); transition: filter .2s; }
 
 /* Official Ledgerline logo colours (logo only; app theme unchanged) */
 :root { --brand-ink: #17242B; --brand-teal: #168F80; }
