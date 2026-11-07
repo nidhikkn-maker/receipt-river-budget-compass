@@ -1,0 +1,36 @@
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { afterEach, expect, it, vi } from "vitest";
+import { defaultPreferences } from "@/lib/preferences";
+import type { Expense } from "@/lib/expenses";
+const mock = vi.hoisted(() => ({ store: {} as Record<string, unknown>, save: vi.fn() }));
+vi.mock("@/lib/store", () => ({ useStore: () => mock.store }));
+vi.mock("@/components/AppShell", () => ({ PageTitle: () => null }));
+vi.mock("@/components/ExpenseDialog", () => ({ ExpenseDialog: () => null }));
+import { Merchants } from "@/routes/_authenticated/patterns";
+afterEach(cleanup);
+
+it("merge/cancel/retry/reopen/unmerge preserves source entries and money", async () => {
+  const preferences = defaultPreferences();
+  const transactions = ["Alpha North", "Alpha South"].map((merchant, i) => ({ id: `e${i}`, merchant, title: merchant, amount: 12.34, date: "2026-11-01", txnType: "expense", scope: "personal", category: "Meals" })) as Expense[];
+  const before = JSON.stringify(transactions);
+  mock.save.mockReset().mockRejectedValueOnce(Error("Connection interrupted")).mockImplementation(async next => { mock.store["preferences"] = next; });
+  mock.store = { transactions, preferences, savePreferences: mock.save };
+  const { unmount } = render(<Merchants />);
+  fireEvent.click(screen.getByRole("button", { name: "Merge" }));
+  expect(mock.save).not.toHaveBeenCalled();
+  fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+  expect(mock.save).not.toHaveBeenCalled();
+  fireEvent.click(screen.getByRole("button", { name: "Merge" }));
+  fireEvent.click(screen.getByRole("button", { name: "Confirm grouping" }));
+  expect(await screen.findByRole("alert")).toHaveTextContent("Connection interrupted");
+  fireEvent.click(screen.getByRole("button", { name: "Retry save" }));
+  await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+  expect(mock.save.mock.calls[0]?.[0].merchantAliases).toEqual(mock.save.mock.calls[1]?.[0].merchantAliases);
+  expect(mock.store["preferences"]).toMatchObject({ merchantAliases: { "alpha south": "alpha north" } });
+  unmount(); render(<Merchants />);
+  fireEvent.click(screen.getByRole("button", { name: "Unmerge Alpha South" }));
+  expect(mock.save).toHaveBeenCalledTimes(2);
+  fireEvent.click(screen.getByRole("button", { name: "Confirm grouping" }));
+  await waitFor(() => expect(mock.store["preferences"]).toMatchObject({ merchantAliases: {} }));
+  expect(JSON.stringify(transactions)).toBe(before);
+});

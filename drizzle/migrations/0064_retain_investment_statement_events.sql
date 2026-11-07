@@ -1,0 +1,2 @@
+ALTER TABLE public.security_holdings ADD COLUMN IF NOT EXISTS events jsonb NOT NULL DEFAULT '[]'::jsonb;
+COMMENT ON COLUMN public.security_holdings.events IS 'Reviewed statement investment events with original document ids; preserved for alerts, never automatic ledger postings.';
