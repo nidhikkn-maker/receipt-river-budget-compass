@@ -1,3 +1,5 @@
+import { StageStrip } from "@/components/StageStrip";
+import { canvasNarrative, statementStage } from "@/lib/plain-language";
 import { downloadBlob } from "@/lib/reports";
 import { csvCell } from "@/lib/csv-safe";
 import { createFileRoute } from "@tanstack/react-router";

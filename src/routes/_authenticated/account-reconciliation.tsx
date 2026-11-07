@@ -1,3 +1,4 @@
+import { AccountingDetails } from "@/components/AccountingDetails";
 import { SectionTabs } from "@/components/SectionTabs";
 import { createFileRoute, Link } from '@tanstack/react-router';
 import { useState } from 'react';

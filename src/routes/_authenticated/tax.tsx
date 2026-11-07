@@ -1,3 +1,4 @@
+import { AccountingDetails } from "@/components/AccountingDetails";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { PageTitle } from "@/components/AppShell";

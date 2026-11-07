@@ -1,3 +1,5 @@
+import { AccountingDetails } from "@/components/AccountingDetails";
+import { PLAIN_ACCOUNT_LABEL, accountKindNote } from "@/lib/plain-language";
 import { PaymentMethodsManager } from "@/components/PaymentMethodsManager";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
