@@ -132,7 +132,7 @@ function SyncStatus() {
 }
 
 export function AppShell({ children }: { children: ReactNode }) {
-  const { loading, preferences, name } = useStore();
+  const { loading, preferences, name, savePreferences } = useStore();
   useEffect(() => {
     const media = window.matchMedia("(prefers-color-scheme: dark)");
     const apply = () => applyTheme(preferences.themeName, preferences.theme, media.matches);
@@ -147,12 +147,14 @@ export function AppShell({ children }: { children: ReactNode }) {
   const [moreOpen, setMoreOpen] = useState(false);
   const [smartOpen, setSmartOpen] = useState(false);
   const [spacesOpen, setSpacesOpen] = useState(false);
+  const useSpace = async (scope: Scope) => { await savePreferences({ ...preferences, homeScope: scope }); setSpacesOpen(false); };
   useEffect(() => { setHidden(localStorage.getItem("ll-privacy") === "1"); }, []);
   useEffect(() => { document.documentElement.classList.toggle("privacy", hidden); localStorage.setItem("ll-privacy", hidden ? "1" : "0"); }, [hidden]);
   return (
     <div className="journal-shell min-h-screen bg-background md:pl-48 xl:pl-56">
       <aside className="journal-rail fixed inset-y-0 left-0 z-30 hidden w-48 flex-col gap-1 overflow-y-auto bg-ink px-3 py-6 text-ink-foreground md:flex xl:w-56">
         <Link to="/dashboard" aria-label="Ledgerline home" className="mb-6 shrink-0"><img src="/app-icon.png" alt="Ledgerline" width={48} height={48} className="h-12 w-12 rounded-2xl shadow-float" /></Link>
+        <Button variant="ghost" className="h-11 justify-start gap-3 text-ink-muted hover:bg-sidebar-accent hover:text-ink-foreground" onClick={() => setSpacesOpen(true)}><Users className="size-[18px]" />Spaces</Button>
         {LINKS.map((l) => "primary" in l ? <Button key={l.to} variant="ghost" aria-label="Smart Add" onClick={() => setSmartOpen(true)} className="my-1 h-16 w-20 flex-col gap-1 text-ink-foreground hover:bg-sidebar-accent hover:text-ink-foreground"><span className="flex size-9 items-center justify-center rounded-full bg-gold text-gold-foreground"><Plus className="size-5" /></span><span className="text-[11px]">Add</span></Button> : (
           <Link key={l.to} to={l.to} className="flex min-h-11 items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-ink-muted transition hover:bg-sidebar-accent hover:text-ink-foreground"
             activeProps={{ className: "!text-gold bg-sidebar-accent ring-1 ring-gold" }}>
