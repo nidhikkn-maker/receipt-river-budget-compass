@@ -39,6 +39,12 @@ it('two sessions, stale revision and lost response retain unrelated preferences,
     expect(saved.data.tags).toEqual(['Other device change']);
     expect(saved.data.statementUploads).toHaveLength(1);
     expect(saved.data.statementUploads?.[0]).toMatchObject({posted:['p1','p2'],status:'complete',sources:upload.sources});
+    await checkpointUpload({ ...upload, status: 'undone' }, api);
+    await checkpointUpload({ ...upload, status: 'complete' }, api);
+    await checkpointUpload(upload, api);
+    const terminal = await read();
+    expect(terminal.data.tags).toEqual(['Other device change']);
+    expect(terminal.data.statementUploads).toEqual([{ id: 'run', at: '2026-11-07', label: 'original.csv', status: 'undone', posted: [], reconciled: [], createdAccounts: [], sources: [], linkedDrafts: [] }]);
     await db.query("SELECT set_config('test.uid',$1,false)",['00000000-0000-4000-8000-000000000002']);
     await expect(checkpointUpload(upload,api)).rejects.toThrow('Owner preferences unavailable');
     await db.exec('RESET ROLE');
