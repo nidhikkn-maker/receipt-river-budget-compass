@@ -36,7 +36,7 @@ describe("buildPeriodFigures", () => {
     expect(f.entries.expenses).toBe(1.31);
     expect(f.gst.outputTaxable).toBe(1.31);
     expect(f.depreciation.posted).toBe(1.31);
-    expect(f.balances.bank).toBe(1.01);
+    expect(f.balances["bank"]).toBe(1.01);
     const reproduced = reproduceFromEvidence({from:fixture.from,to:fixture.to,ledger:entries.map(e=>({expense_date:e.date,amount:String(e.amount),txn_type:e.txnType})),registers:{gstInvoices:invoices,journals}});
     expect(reproduced?.entries).toEqual(f.entries);
     expect(reproduced?.gst).toEqual(f.gst);

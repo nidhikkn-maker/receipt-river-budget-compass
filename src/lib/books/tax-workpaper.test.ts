@@ -8,7 +8,7 @@ const c: TaxComputation = { salary: 100, houseProperty: { rent: 0, standardDeduc
 describe("tax workpaper", () => {
   it("decimal source groups retain original rows for accountant export without counting transfers", () => {
     const entries = [1.005, 0.1, 0.2].map((amount,i)=>({id:`fraction-${i}`,date:"2025-06-10",txnType:"expense",title:"Source",category:"Fees",amount}));
-    const groups = sourceGroups([...entries,{...entries[0],id:"move",txnType:"transfer",amount:999}],()=>"Bank");
+    const groups = sourceGroups([...entries,{id:"move",date:"2025-06-10",title:"Transfer",category:"Fees",txnType:"transfer",amount:999}],()=>"Bank");
     expect(groups[0]?.total).toBe(1.31);
     const exported = workpaperCsv([{key:"personal",name:"You",kind:"personal",heads:[],tax:null,taxTotal:null,fromCompanies:[],sources:groups,assumptions:[]}]);
     expect(exported.sources.slice(1).map(row=>row[5])).toEqual([1.005,0.1,0.2]);
