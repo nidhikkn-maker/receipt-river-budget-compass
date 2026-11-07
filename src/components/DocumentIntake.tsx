@@ -47,6 +47,7 @@ export function DocumentIntake({ file, context, onClose, resume, replacesId, onS
   const [stage, setStage] = useState<Step>(resume?.read ? "Confirm" : "Upload");
   const [saving, setSaving] = useState(false);
   const [done, setDone] = useState<string | null>(null);
+  const [cleanupError, setCleanupError] = useState<string | null>(null);
   const [edit, setEdit] = useState<Record<string, string>>({});
   const [leaseProperty, setLeaseProperty] = useState("");
   const [utilityProperty, setUtilityProperty] = useState("");
@@ -216,13 +217,18 @@ export function DocumentIntake({ file, context, onClose, resume, replacesId, onS
     return { route: "document" };
   };
 
+  const finishCleanup = async () => {
+    try { await closeRun({ id: runId, data: runData.current }, 'done'); setCleanupError(null); }
+    catch (error) { setCleanupError(error instanceof Error ? error.message : 'Saved records are confirmed; original cleanup needs retry.'); }
+  };
+
   const save = async () => {
     const pendingAttempt = runData.current.intakeAttempt;
     if (pendingAttempt) {
       setSaving(true);
       try {
         await store.commitDocumentRecords(pendingAttempt.documentId, pendingAttempt.data, pendingAttempt.lock, pendingAttempt);
-        await closeRun({ id: runId, data: runData.current }, 'done');
+        await finishCleanup();
         setDone(pendingAttempt.route); setFailed(null); toast.success('Saved document records confirmed');
       } catch (e) { setFailed({ step: 'Save', note: (e as Error).message }); }
       finally { setSaving(false); }
@@ -257,7 +263,7 @@ export function DocumentIntake({ file, context, onClose, resume, replacesId, onS
       await updateRun(runId, { data: runData.current });
       await store.commitDocumentRecords(docId, attempt.data, attempt.lock, attempt);
       at = "Audit"; await step("Audit");
-      await closeRun({ id: runId, data: runData.current }, "done").catch(() => undefined);
+      await finishCleanup();
       setDone(c.route);
       toast.success(dup ? "Linked to the copy already in DocuRepo" : "Saved to DocuRepo");
     } catch (e) {
@@ -404,10 +410,11 @@ export function DocumentIntake({ file, context, onClose, resume, replacesId, onS
             runData.current = { ...runData.current, intakeAttempt: undefined };
             await updateRun(runId, { data: runData.current }); setFailed(null);
           }}>Refresh and review again</Button>}
-          <Button variant="ghost" onClick={async () => { await closeRun({ id: runId, data: runData.current }, "cancelled").catch(() => undefined); onClose(); }}>Discard</Button>
+          <Button variant="ghost" onClick={async () => { try { await closeRun({ id: runId, data: runData.current }, "cancelled"); onClose(); } catch (error) { toast.error(error instanceof Error ? error.message : 'Discard failed. Retry.'); } }}>Discard</Button>
         </div>
       </>}
       {done && <p className="text-xs">Stored in DocuRepo and linked. Open <Link to={done === "entity" ? "/entities" : done === "fy" ? "/tax" : done === "document" ? "/vault" : "/assets"} className="font-semibold text-primary underline">{done === "entity" ? "Companies" : done === "fy" ? "Tax" : done === "document" ? "DocuRepo" : "Property & assets"}</Link>.</p>}
+      {done && cleanupError && <div role="alert" className="text-xs text-destructive"><p>Records saved. {cleanupError}</p><Button variant="outline" size="sm" onClick={finishCleanup}>Retry original cleanup</Button></div>}
     </section>
   );
 }

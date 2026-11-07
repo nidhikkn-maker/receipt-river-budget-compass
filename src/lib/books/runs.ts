@@ -7,6 +7,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { Database, Json } from "@/integrations/supabase/types";
 import type { Step } from "./intake";
+import { sha256Hex } from "../private-files";
 
 export type RunStatus = "running" | "waiting" | "failed" | "done" | "cancelled";
 export interface DocRun {
@@ -15,7 +16,7 @@ export interface DocRun {
 }
 /** What a run keeps between attempts: where the original is parked and what was read from it. */
 export interface IntakeAttempt { id: string; documentId: string; data: import('../preferences').FinancePreferences; lock: boolean; expected: number; route: string }
-export interface RunData { stashPath?: string | undefined; mimeType?: string | undefined; size?: number | undefined; read?: unknown; docType?: string | undefined; fields?: unknown; replacesId?: string | undefined; intakeAttempt?: IntakeAttempt | undefined }
+export interface RunData { stashPath?: string | undefined; mimeType?: string | undefined; size?: number | undefined; sha256?: string | undefined; read?: unknown; docType?: string | undefined; fields?: unknown; replacesId?: string | undefined; intakeAttempt?: IntakeAttempt | undefined }
 
 /** A run owns exactly one document identity across every retry. */
 export const documentIdForRun = (runId: string) => runId;
@@ -50,7 +51,8 @@ export async function startRun(id: string, file: File, context: string, extra: R
   // Park the original so the run can resume on any device without re-uploading.
   const stashPath = `${uid}/runs/${id}-${file.name.replace(/[^\w.\-]+/g, "_").slice(-80)}`;
   const st = await supabase.storage.from("receipts").upload(stashPath, file, { contentType: file.type || "application/octet-stream", upsert: true });
-  const data: RunData = { ...extra, mimeType: file.type, size: file.size, ...(st.error ? {} : { stashPath }) };
+  if (st.error) throw new Error("The original could not be safely stored. Keep this page open and retry the upload.");
+  const data: RunData = { ...extra, mimeType: file.type, size: file.size, sha256: await sha256Hex(await file.arrayBuffer()), stashPath };
   const ins = await supabase.from("document_runs").insert({ id, owner_id: uid, file_name: file.name.slice(0, 200), context, stage: "Upload", status: "running", data: data as unknown as Json, attempts: 1 }).select("*").single();
   if (ins.error) throw new Error(ins.error.message);
   return toRun(ins.data);
@@ -78,11 +80,21 @@ export async function runFile(r: DocRun): Promise<File> {
   if (!r.data.stashPath) throw new Error("The original was not kept for this run — upload it again");
   const { data, error } = await supabase.storage.from("receipts").download(r.data.stashPath);
   if (error || !data) throw new Error("Couldn't fetch the original for this run");
+  await verifyRunOriginal(data, r.data);
   return new File([data], r.fileName, { type: r.data.mimeType || data.type });
+}
+
+/** Older runs lack a digest: require a fresh original instead of trusting saved extraction. */
+export async function verifyRunOriginal(file: Blob, expected: RunData): Promise<void> {
+  if (!expected.sha256) throw new Error("This older upload has no original integrity check — upload the source again for fresh review.");
+  if (!file.size || file.size !== expected.size || await sha256Hex(await file.arrayBuffer()) !== expected.sha256) throw new Error("Original integrity check failed. Nothing was extracted or saved; upload the source again.");
 }
 
 /** Finish or discard a run and remove its parked copy (the DocuRepo copy, if any, stays). */
 export async function closeRun(r: Pick<DocRun, "id" | "data">, status: "done" | "cancelled"): Promise<void> {
-  if (r.data.stashPath) await supabase.storage.from("receipts").remove([r.data.stashPath]);
+  if (r.data.stashPath) {
+    const { error } = await supabase.storage.from("receipts").remove([r.data.stashPath]);
+    if (error) throw new Error("The parked original could not be removed. Retry cleanup; your saved document is unchanged.");
+  }
   await updateRun(r.id, { status, data: { ...r.data, stashPath: undefined } });
 }
