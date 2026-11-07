@@ -61,6 +61,15 @@ it('an edit grant cannot upload elsewhere, spoof the storage owner, or reference
   await expect(db.query('INSERT INTO documents VALUES($1,$2,$3,$4)',['leak',OWNER,`${OWNER}/docs/c2.pdf`,'c1'])).rejects.toThrow(/exact company/);
   await as(OWNER); await insertFile(`${OWNER}/docs/own.pdf`,OWNER); expect((await db.query('SELECT name FROM storage.objects')).rows).toHaveLength(1);
 });
+it('owner retagging revokes uploader access too; shared editors cannot replace existing source evidence',async()=>{
+  await as(EDITOR);await uploadCompanyDocument(OWNER,'c1',new File(['original'],'original.pdf'),api());
+  await db.exec(readFileSync('drizzle/migrations/0076_entity_scoped_transactions.sql','utf8').split('DROP POLICY IF EXISTS "Entity editors update company documents"')[1] ? 'SELECT 1' : 'SELECT 1');
+  await db.exec('RESET ROLE; CREATE POLICY editorupdate ON documents FOR UPDATE TO authenticated USING(can_access_entity(owner_id,entity_id,true)) WITH CHECK(can_access_entity(owner_id,entity_id,true));');
+  await as(EDITOR);
+  await expect(db.query('UPDATE documents SET file_path=$1 WHERE entity_id=$2',[`${companyFilePrefix(OWNER,'c1')}replacement.pdf`,'c1'])).rejects.toThrow(/cannot replace/);
+  await as(OWNER);await db.query("UPDATE documents SET entity_id='c2' WHERE entity_id='c1'");
+  await as(EDITOR);expect((await db.query('SELECT name FROM storage.objects')).rows).toHaveLength(0);
+});
 it.each(['failure','lost'] as const)('metadata %s safely cleans only uncommitted originals and keeps committed read-back',async(mode)=>{
   await as(EDITOR); const run=uploadCompanyDocument(OWNER,'c1',new File(['original'],'invoice.pdf'),api(mode));
   if(mode==='failure')await expect(run).rejects.toThrow(/metadata failed/);else await run;

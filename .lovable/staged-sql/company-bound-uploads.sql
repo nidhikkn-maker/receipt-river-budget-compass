@@ -25,7 +25,8 @@ CREATE POLICY "Entity editors clean unlinked company uploads" ON storage.objects
 USING (bucket_id='receipts' AND owner_id=auth.uid()::text AND public.can_upload_company_file(name)
  AND NOT EXISTS (SELECT 1 FROM public.documents d WHERE d.file_path=storage.objects.name));
 CREATE POLICY "Entity editors read own pending uploads" ON storage.objects FOR SELECT TO authenticated
-USING (bucket_id='receipts' AND owner_id=auth.uid()::text AND public.can_upload_company_file(name));
+USING (bucket_id='receipts' AND owner_id=auth.uid()::text AND public.can_upload_company_file(name)
+ AND NOT EXISTS (SELECT 1 FROM public.documents d WHERE d.file_path=storage.objects.name));
 -- Metadata may reference only its company's namespace, not a personal/other-company original.
 CREATE OR REPLACE FUNCTION public.guard_company_document_path()
 RETURNS trigger LANGUAGE plpgsql SET search_path=public AS $$
@@ -38,7 +39,10 @@ BEGIN
       IF NEW.owner_id IS DISTINCT FROM OLD.owner_id OR NEW.entity_id IS DISTINCT FROM OLD.entity_id THEN
         RAISE EXCEPTION 'Company ownership cannot be changed';
       END IF;
-      IF NEW.file_path IS NOT DISTINCT FROM OLD.file_path THEN RETURN NEW; END IF;
+      IF NEW.file_path IS DISTINCT FROM OLD.file_path THEN
+        RAISE EXCEPTION 'Shared editors cannot replace source evidence';
+      END IF;
+      RETURN NEW;
     END IF;
     IF split_part(NEW.file_path,'/',1)<>NEW.owner_id::text
        OR split_part(NEW.file_path,'/',2)<>'companies'
