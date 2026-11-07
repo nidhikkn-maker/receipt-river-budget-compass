@@ -6,6 +6,7 @@
 - C-1857 verified narrowly through detailed/summary claim downloaded PDF ordering. Historical **1558 implemented / 943 partial / 21 missing / 19 superseded**; v6 **566/331/2 unchanged**.
 - Unknown committed statement intentions, stale/concurrent Undo and hosted access/recovery acceptance remain open. Exact evidence: `docs/evidence/credit-controlled-2026-11-07.md`.
 - 18:21: exact evidence-response recovery implemented; staged atomic Undo passes six independent-session PostgreSQL cases; restrictive shared-original policy passes combined-policy tests. 45 distinct targeted checks and 11 browser cases pass. P0 remains open pending durable journal, cleanup/caller integration and isolated hosted acceptance; zero promotions.
+- 18:40: actual store exact-create readback and actual Statement Desk atomic caller integrated; unavailable authority fails closed. 28 distinct targeted automated checks, 13 browser cases across final runs and six independent SQL cases PASS. Card payment balance/duplicate/Undo acceptance added. Durable full-upload recovery and hosted/approved activation remain open; counts unchanged.
 
 ## Workstream 1 checkpoint — 7 Nov 2026 15:31 UTC
 - Two hosted failure categories corrected independently: central changed-trip budget validation plus staged database complete-dimension and immutable merchant-history/source-snapshot/reversal authority. Disposable real-RPC acceptance passes; production activation and corrected hosted acceptance remain pending.
