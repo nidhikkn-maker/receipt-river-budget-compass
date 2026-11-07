@@ -8,6 +8,7 @@ import { taxSchedule } from "@/lib/assets";
 import { annualBook } from "@/lib/books/depreciation";
 import { emptyBooks } from "@/lib/books/types";
 import { recordProvenance } from "@/lib/books/docrepo";
+import { registerEvidence } from "@/lib/books/evidence";
 import type { VaultDoc } from "@/lib/documents";
 const state = vi.hoisted(() => ({ store: {} as Record<string, unknown> }));
 vi.mock("@/lib/store", () => ({ useStore: () => state.store }));
@@ -94,6 +95,10 @@ describe("connected asset document review and installed database", () => {
       expect(original?.evidence_locked).toBe(true);
       const evidence = recordProvenance(asset.id, saved.books.docLinks, [{ id: docId, title: "Original service document", docType: type, fields: original?.fields } as VaultDoc]);
       expect(evidence[0]?.fields[0]).toMatchObject({ value: "GEN-44", where: "page 1", confidence: "high" });
+      const costSource = registerEvidence({ assets: saved.assets, books: saved.books, docs: [{ id: docId, title: "Original service document", docType: type }] })[0];
+      expect(costSource?.amount).toBe(150000);
+      // Even an attached purchase invoice must not replace an explicitly retained original's facts.
+      expect(costSource?.source).toEqual(type === "asset_invoice" ? { kind: "document", id: docId, title: "Original service document" } : null);
       await db.exec("SET ROLE authenticated");
       expect((await db.query("SELECT * FROM document_intake_commits")).rows).toHaveLength(1);
       expect((await db.query("SELECT * FROM documents")).rows).toHaveLength(1);
