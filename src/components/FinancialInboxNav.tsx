@@ -3,7 +3,7 @@ import { cn } from '@/lib/utils';
 
 type View = 'overview' | 'review' | 'transfers' | 'accounts' | 'history';
 const tab = (on: boolean) => cn(
-  'inline-flex h-10 shrink-0 snap-start items-center whitespace-nowrap rounded-full border px-4 text-sm font-medium transition active:scale-[0.98]',
+  'uix-section-tab inline-flex min-h-11 shrink-0 snap-start items-center whitespace-nowrap rounded-lg border px-4 text-sm font-medium transition active:scale-[0.98]',
   on ? 'border-primary bg-primary text-primary-foreground' : 'bg-card text-foreground hover:bg-accent',
 );
 
