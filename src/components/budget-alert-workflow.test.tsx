@@ -1,0 +1,25 @@
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { afterEach, expect, it, vi } from 'vitest';
+import { defaultPreferences } from '@/lib/preferences';
+const mock=vi.hoisted(()=>({store:{} as Record<string,unknown>,save:vi.fn()}));
+vi.mock('@/lib/store',()=>({useStore:()=>mock.store}));
+vi.mock('@/lib/use-position',()=>({todayISO:()=> '2026-11-07',usePosition:()=>({cards:[],subscriptions:{summary:{increases:[]}}})}));
+vi.mock('@/components/AppShell',()=>({PageTitle:()=>null}));
+vi.mock('@/components/ImportRules',()=>({ImportRules:()=>null}));
+vi.mock('@tanstack/react-router',()=>({createFileRoute:()=> (value:unknown)=>value,Link:({children}:{children:React.ReactNode})=><a>{children}</a>}));
+import { RulesPage } from '@/routes/_authenticated/rules';
+afterEach(cleanup);
+it('owner chooses threshold and saves; reloaded alert follows split expenditure and clears below threshold',async()=>{
+ const expense={id:'e',date:'2026-11-07',category:'Other',amount:100,txnType:'expense',allocations:[{category:'Food',amount:80},{category:'Other',amount:20}]};
+ const p=defaultPreferences();p.categories=[{name:'Food',archived:false}];
+ mock.save.mockReset().mockImplementation(async next=>{mock.store['preferences']=JSON.parse(JSON.stringify(next));});
+ mock.store={preferences:p,savePreferences:mock.save,transactions:[expense],accounts:[],commitments:[],goals:[],budgets:{Food:100}};
+ let view=render(<RulesPage/>);fireEvent.click(screen.getByRole('button',{name:'New rule'}));
+ fireEvent.change(screen.getByLabelText('Rule name'),{target:{value:'Food at eighty'}});
+ fireEvent.change(screen.getByLabelText('Condition'),{target:{value:'budget_utilisation'}});
+ fireEvent.change(screen.getByLabelText('Category'),{target:{value:'Food'}});fireEvent.change(screen.getByLabelText('Threshold'),{target:{value:'80'}});
+ fireEvent.click(screen.getByRole('button',{name:'Add rule'}));await waitFor(()=>expect(mock.save).toHaveBeenCalledTimes(1));
+ view.unmount();view=render(<RulesPage/>);expect(screen.getByText(/Food budget is 80% used/)).toBeVisible();
+ mock.store['budgets']={Food:100.01};view.unmount();render(<RulesPage/>);expect(screen.queryByText(/Food budget is/)).toBeNull();
+ expect(expense.amount).toBe(100);
+});
