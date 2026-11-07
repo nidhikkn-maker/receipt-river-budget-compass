@@ -28,7 +28,7 @@ import { buildClaim, applyAdvance, type Claimant } from "@/lib/expense-claim";
 import { fetchPrivateFile } from "@/lib/private-files";
 import { reportDocumentError } from "@/lib/report-documents";
 import { savePreparedReport } from "@/lib/report-save";
-import { addMoney, subtractMoney, sumMoney } from "@/lib/money";
+import { subtractMoney, sumMoney } from "@/lib/money";
 import { ReportDocumentVerification, type ReportDocumentCheck } from "./ReportDocumentVerification";
 
 const STAGES = ["Collecting transactions", "Fetching original bills", "Building statement", "Attaching annexures", "Saving to report history"];

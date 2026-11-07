@@ -3,7 +3,7 @@ import { savePreparedReport, type ReportSaveAdapter } from './report-save';
 const expected = { id: 'report', owner: 'isolated', path: 'isolated/reports/report.pdf', size: 42 };
 const row = { id: expected.id, owner_id: expected.owner, file_path: expected.path, file_size: expected.size };
 it('lost insert response reads back the identical owner report and never removes evidence', async () => {
-  const read = vi.fn().mockResolvedValueOnce({ data: null, error: null }).mockResolvedValueOnce({ data: row, error: null });
+  const read = vi.fn().mockResolvedValueOnce({ data: null, error: null }).mockResolvedValueOnce({ data: row, error: null }).mockResolvedValue({ data: row, error: null });
   const adapter = { read, upload: vi.fn().mockResolvedValue({ error: null }), insert: vi.fn().mockResolvedValue({ error: Error('Lost reply') }) };
   await savePreparedReport(expected, adapter);
   expect(adapter.upload).toHaveBeenCalledTimes(1);

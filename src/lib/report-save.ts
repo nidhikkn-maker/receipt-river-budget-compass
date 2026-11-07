@@ -2,7 +2,7 @@
 export interface ReportSaveAdapter {
   upload: () => Promise<{ error: unknown }>;
   insert: () => Promise<{ error: unknown }>;
-  read: () => Promise<{ data: { id: string; file_path: string; file_size: number; owner_id: string } | null; error: unknown }>;
+  read: () => Promise<{ data: { id: string; file_path: string | null; file_size: number | null; owner_id: string } | null; error: unknown }>;
 }
 export async function savePreparedReport(expected: { id: string; path: string; size: number; owner: string }, adapter: ReportSaveAdapter): Promise<void> {
   const matches = (row: Awaited<ReturnType<ReportSaveAdapter['read']>>['data']) => row?.id === expected.id && row.owner_id === expected.owner && row.file_path === expected.path && row.file_size === expected.size;

@@ -30,9 +30,10 @@ async function prepare() {
   vi.stubGlobal('URL', Object.assign(URL, { createObjectURL: vi.fn(() => 'blob:isolated-report'), revokeObjectURL: vi.fn() }));
   const original = await PDFDocument.create(); const page = original.addPage([321, 456]); const font = await original.embedFont(StandardFonts.Helvetica); page.drawText('ISOLATED ORIGINAL BILL', { x: 20, y: 100, font });
   const originalBytes = await original.save();
-  const nativeBlob = (await import('node:buffer')).Blob;
-  vi.stubGlobal('fetch', vi.fn(async () => ({ ok: true, status: 200, blob: async () => new nativeBlob([originalBytes], { type: 'application/pdf' }) })));
-  const entry = { id: 'e', title: 'Test hotel', merchant: 'Test hotel', category: 'Hotels', scope: 'business', amount: 12.34, originalAmount: 12.34, currency: 'INR', fxRate: 1, date: '2026-11-01', description: '', paymentMethod: 'bank_transfer', accountId: 'bank', receipts: [{ name: 'bill.pdf', path: 'isolated/bill.pdf', type: 'application/pdf' }], tags: [], splits: [], reimbursementStatus: 'pending', reimbursement: { reimbursable: 12.34, receipts: [] } } as Expense;
+  vi.stubGlobal('fetch', vi.fn(async () => ({ ok: true, status: 200, headers: new Headers({ 'content-type': 'application/pdf' }), arrayBuffer: async () => originalBytes.buffer })));
+  // jsdom Blob lacks arrayBuffer; bridge actual bytes via FileReader.
+  Object.defineProperty(Blob.prototype, 'arrayBuffer', { configurable: true, value: function(this: Blob) { return bytes(this).then(b => b.buffer); } });
+  const entry = { id: 'e', title: 'Test hotel', merchant: 'Test hotel', category: 'Hotels', scope: 'business', amount: 12.34, originalAmount: 12.34, currency: 'INR', fxRate: 1, date: '2026-11-01', description: '', paymentMethod: 'bank_transfer', accountId: 'bank', receipts: [{ name: 'bill.pdf', path: 'isolated/bill.pdf', type: 'application/pdf' }], tags: [], splits: [], memberId: null, reconciledAt: null, statementRef: null, reimbursementStatus: 'pending', reimbursement: { reimbursable: 12.34, receipts: [] } } as Expense;
   local.store = { userId: 'isolated', name: 'Test owner', loading: false, preferences: defaultPreferences(), transactions: [entry], expenses: [entry], accounts: [{ id: 'bank', name: 'Test bank', kind: 'savings', openingBalance: 100, archived: false }], memberName: () => 'Test owner', signedUrl: async () => 'https://isolated.invalid/bill.pdf' };
   return entry;
 }
@@ -57,7 +58,7 @@ it('actual statement builder verifies fetched originals, saves exact PDF despite
 it('actual builder cancel creates no PDF/history; failed upload keeps local PDF and retries the same history identity', async () => {
   await prepare(); render(<ExpenditureReportBuilder mode="statement" search={{ entry: 'e' }} />);
   fireEvent.click(screen.getByRole('button', { name: 'Generate statement PDF' }));
-  fireEvent.click(await screen.findByRole('button', { name: 'Cancel', exact: true }));
+  fireEvent.click(await screen.findByRole('button', { name: /^Cancel$/ }));
   expect(local.history).toBeNull(); expect(local.uploaded).toBeNull();
   await waitFor(() => expect(screen.getByRole('button', { name: 'Generate statement PDF' })).toBeEnabled());
   local.offline = true;

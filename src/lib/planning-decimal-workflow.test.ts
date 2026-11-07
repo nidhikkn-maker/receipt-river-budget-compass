@@ -3,7 +3,7 @@ import { accountBalance } from './ledger';
 import { amortize, emiSplit, forecast, foreclosure, goalProgress, safeToSpend } from './planning';
 
 it('isolated ledger → forecast → safe-to-spend retains cents and holds reserves without posting', () => {
-  const txns = [{ amount: 0.1, txnType: 'income' as const, accountId: 'bank', date: '2026-11-01' }, { amount: 0.2, txnType: 'income' as const, accountId: 'bank', date: '2026-11-01' }];
+  const txns = [{ id: "a", amount: 0.1, txnType: 'income' as const, accountId: 'bank', date: '2026-11-01' }, { id: "b", amount: 0.2, txnType: 'income' as const, accountId: 'bank', date: '2026-11-01' }];
   const snapshot = JSON.stringify(txns);
   const balance = accountBalance({ id: 'bank', name: 'Test', kind: 'savings', openingBalance: 1.005, archived: false }, txns);
   expect(balance).toBe(1.31);
