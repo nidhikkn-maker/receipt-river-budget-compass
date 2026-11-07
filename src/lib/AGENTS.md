@@ -36,3 +36,6 @@
 - Team access goes only through can_access_expense / team_company_tax (admin role_permissions, app_admins); store filters expenses to own employee_id so team rows never enter personal totals.
 - Backup reads explicitly filter each table by its owner field, including employee_id on expenses, because team-visible records must never enter personal exports; recovery browser checks block external writes and use isolated records/storage.
 - Original-file downloads go through store.downloadFile → fetchPrivateFile (private-files.ts): fetch the signed bytes, refuse empty/size/checksum mismatch, save via downloadBlob; opening a cross-origin signed URL never saves a file.
+
+- INR ledger, expense allocations, statement balances and repayment history use src/lib/money.ts decimal arithmetic with half-up money boundaries; numeric storage stays unchanged to preserve compatibility.
+- Trip complete-allocation dimensions are explicit owner preferences; changes validate each promised dimension independently against the primary budget without auto-combining plans.

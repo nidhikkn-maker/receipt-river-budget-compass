@@ -76,5 +76,6 @@ export async function renderClaimPdf(c: Claim, files: Record<string, AnnexFile |
   const sig = (x: number, label: string, name = "") => { doc.line(x, y, x + 55, y); doc.text(label, x, y + 4); if (name) textU(doc, name, x, y + 8, { maxW: 55 }); doc.text("Date: ____________", x, y + 13); };
   doc.setDrawColor(120, 120, 120); doc.setLineWidth(0.2);
   sig(M, "Claimant signature", k.name); sig(M + 63, "Approver signature required", k.approver); sig(M + 126, "Accounts / Finance");
-  return appendAnnexures(new Uint8Array(doc.output("arraybuffer")), { reference: c.reference, annexures: c.annexures } as Statement, files);
+  return appendAnnexures(new Uint8Array(doc.output("arraybuffer")), { reference: c.reference, annexures: c.annexures } as Statement, files,
+    c.items.filter(i => !c.annexures.some(a => a.row === i.claimNo)).map(i => ({ row: i.claimNo, title: i.particulars, date: i.date })));
 }

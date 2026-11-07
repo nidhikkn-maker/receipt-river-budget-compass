@@ -1,3 +1,4 @@
+import { decimal, roundMoney, addMoney, subtractMoney, multiplyMoney, proportionMoney, sumMoney } from "./money";
 import { workspaceParts } from "./workspaces";
 import { receiptBreakdownError } from "./receipt-reading";
 // Personal + family expense tracker domain logic (pure, tested).
@@ -108,9 +109,9 @@ export interface Allocation { category: string; amount: number; tags?: string[];
 export function validateAllocations(lines: Allocation[], total: number) {
   if (!lines.length) return;
   if (lines.length < 2) throw new Error("A split needs at least two lines");
-  for (const l of lines) { if (!l.category) throw new Error("Choose a category for every line"); if (!Number.isFinite(l.amount) || l.amount <= 0 || Math.round(l.amount * 100) / 100 !== l.amount) throw new Error("Every line needs a positive amount with no more than two decimal places"); }
-  const sum = Math.round(lines.reduce((s, l) => s + l.amount, 0) * 100);
-  if (sum !== Math.round(total * 100)) throw new Error(`Lines add up to ${money(sum / 100)}, but the transaction is ${money(total)}`);
+  for (const l of lines) { if (!l.category) throw new Error("Choose a category for every line"); if (!Number.isFinite(l.amount) || l.amount <= 0 || roundMoney(l.amount) !== l.amount) throw new Error("Every line needs a positive amount with no more than two decimal places"); }
+  const sum = sumMoney(lines.map(l => l.amount));
+  if (sum !== roundMoney(total)) throw new Error(`Lines add up to ${money(sum)}, but the transaction is ${money(total)}`);
 }
 
 /** Split percentages into amounts that sum exactly to total (rounding remainder goes to the last line). */
@@ -119,8 +120,8 @@ export function allocateByPercent(total: number, lines: { category: string; pct:
   if (Math.abs(pctSum - 100) > 0.001) throw new Error("Percentages must add up to 100");
   let used = 0;
   return lines.map((l, i) => {
-    const amount = i === lines.length - 1 ? Math.round((total - used) * 100) / 100 : Math.round(total * l.pct) / 100;
-    used += amount; return { category: l.category, amount };
+    const amount = i === lines.length - 1 ? subtractMoney(total, used) : proportionMoney(total, l.pct, 100);
+    used = addMoney(used, amount); return { category: l.category, amount };
   });
 }
 
@@ -130,7 +131,7 @@ export function categoryParts(e: Pick<Expense, "category" | "amount" | "allocati
 }
 export function categoryTotals(list: Pick<Expense, "category" | "amount" | "allocations">[]): Record<string, number> {
   const o: Record<string, number> = {};
-  for (const e of list) for (const p of categoryParts(e)) o[p.category] = Math.round(((o[p.category] ?? 0) + p.amount) * 100) / 100;
+  for (const e of list) for (const p of categoryParts(e)) o[p.category] = addMoney(o[p.category] ?? 0, p.amount);
   return o;
 }
 
@@ -188,12 +189,12 @@ export function validateExpense(s: ExpenseInput) {
     if (s.txnType !== "loan_repayment") throw new ValidationError("Only loan repayments have a principal/interest split");
     if (s.principal == null || s.interest == null) throw new ValidationError("Fill in both principal and interest, or neither");
     if (!(s.principal >= 0) || !(s.interest >= 0)) throw new ValidationError("Principal and interest can't be negative");
-    if (Math.abs(r2(s.principal + s.interest) - r2(s.amount)) > 0.009) throw new ValidationError(`Principal and interest add up to ${r2(s.principal + s.interest)}, but the payment is ${r2(s.amount)}`);
+    if (Math.abs(addMoney(s.principal, s.interest) - r2(s.amount)) > 0.009) throw new ValidationError(`Principal and interest add up to ${addMoney(s.principal, s.interest)}, but the payment is ${r2(s.amount)}`);
   }
   if (s.splits?.length) validateSplits(s.splits, s.amount);
 }
 
-const r2 = (n: number) => Math.round(n * 100) / 100;
+const r2 = roundMoney;
 
 /** Shares must be positive, one per person, and add up exactly to the bill total. */
 export function validateSplits(splits: Split[], total: number) {
@@ -201,13 +202,13 @@ export function validateSplits(splits: Split[], total: number) {
   const ids = new Set(splits.map((x) => x.memberId ?? "me"));
   if (ids.size !== splits.length) throw new ValidationError("Each person can appear only once");
   if (splits.some((x) => !(x.amount > 0))) throw new ValidationError("Every share must be more than zero");
-  const sum = r2(splits.reduce((a, x) => a + x.amount, 0));
+  const sum = sumMoney(splits.map(x => x.amount));
   if (Math.abs(sum - r2(total)) > 0.009) throw new ValidationError(`Shares add up to ${sum}, but the bill is ${r2(total)}`);
 }
 
 /** Splits total evenly; leftover paise go to the first people so it sums exactly. */
 export function splitEvenly(total: number, ids: (string | null)[]): Split[] {
-  const cents = Math.round(total * 100), n = ids.length;
+  const cents = decimal(total).mul(100).toDecimalPlaces(0).toNumber(), n = ids.length;
   if (!n) return [];
   const base = Math.floor(cents / n), extra = cents - base * n;
   return ids.map((memberId, i) => ({ memberId, amount: (base + (i < extra ? 1 : 0)) / 100 }));
@@ -216,17 +217,17 @@ export function splitEvenly(total: number, ids: (string | null)[]): Split[] {
 /** Each person's share of an expense in INR (home currency). */
 export function memberShares(e: Pick<Expense, "memberId" | "splits" | "amount" | "originalAmount">): Split[] {
   if (!e.splits?.length) return [{ memberId: e.memberId, amount: e.amount }];
-  const ratio = e.originalAmount > 0 ? e.amount / e.originalAmount : 1;
-  const out = e.splits.map((x) => ({ memberId: x.memberId, amount: r2(x.amount * ratio) }));
-  const drift = r2(e.amount - out.reduce((a, x) => a + x.amount, 0));
-  out[0]!.amount = r2(out[0]!.amount + drift);
+  const out = e.splits.map((x) => ({ memberId: x.memberId, amount: e.originalAmount > 0 ? proportionMoney(e.amount, x.amount, e.originalAmount) : roundMoney(x.amount) }));
+  const drift = subtractMoney(e.amount, sumMoney(out.map(x => x.amount)));
+  const first = out[0];
+  if (first) first.amount = addMoney(first.amount, drift);
   return out;
 }
 
 /** Total INR per person ("me" for yourself), counting split shares. */
 export function totalsByMember(list: Expense[]): Record<string, number> {
   const out: Record<string, number> = {};
-  for (const e of list) for (const s of memberShares(e)) { const k = s.memberId ?? "me"; out[k] = r2((out[k] ?? 0) + s.amount); }
+  for (const e of list) for (const s of memberShares(e)) { const k = s.memberId ?? "me"; out[k] = addMoney(out[k] ?? 0, s.amount); }
   return out;
 }
 
@@ -234,7 +235,7 @@ export function validateBudget(amount: number) {
   if (!Number.isFinite(amount) || amount < 0) throw new ValidationError("Budget must be zero or more");
 }
 
-export const convert = (amount: number, rate: number) => Math.round(amount * rate * 100) / 100;
+export const convert = (amount: number, rate: number) => multiplyMoney(amount, rate);
 
 export interface Filters { scope?: Scope | "all"; memberId?: string | "all" | "me"; from?: string; to?: string; category?: Category | "all"; accountId?: string; paymentMethod?: string; paymentInstrumentId?: string; tag?: string; query?: string; txnType?: string; merchant?: string; tagAll?: string[]; department?: string; receipt?: "all" | "with" | "without" }
 
@@ -264,18 +265,18 @@ export function bulkRecategorize(list: Pick<Expense, "id">[], ids: string[], cat
 
 export function totalsByScope(list: Expense[]) {
   const t = { personal: 0, family: 0, business: 0, official: 0, total: 0 };
-  for (const e of list) { for (const p of workspaceParts(e)) t[p.workspace] += p.amount; t.total += e.amount; }
+  for (const e of list) { for (const p of workspaceParts(e)) t[p.workspace] = addMoney(t[p.workspace], p.amount); t.total = addMoney(t.total, e.amount); }
   return roundAll(t);
 }
 
 export function totalsBy<K extends string>(list: Expense[], key: (e: Expense) => K): Record<K, number> {
   const out = {} as Record<K, number>;
-  for (const e of list) { const k = key(e); out[k] = Math.round(((out[k] ?? 0) + e.amount) * 100) / 100; }
+  for (const e of list) { const k = key(e); out[k] = addMoney(out[k] ?? 0, e.amount); }
   return out;
 }
 
 const roundAll = <T extends Record<string, number>>(o: T) =>
-  Object.fromEntries(Object.entries(o).map(([k, v]) => [k, Math.round(v * 100) / 100])) as T;
+  Object.fromEntries(Object.entries(o).map(([k, v]) => [k, roundMoney(v)])) as T;
 
 /** Month-to-date spend vs monthly budget per category (personal + business combined). */
 export function budgetUsage(list: Expense[], budgets: Budgets, month: string /* YYYY-MM */) {
