@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link } from "@tanstack/react-router";
+import { openSmartAdd } from "@/lib/smart-add-event";
 import { Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { completeness, netQuantity } from "@/lib/investments/demat";
@@ -11,12 +11,12 @@ export function DematHoldings() {
   useEffect(() => { loadDemat().then(setRows).catch(() => setRows([])); }, []);
   if (!rows) return null;
   return (
-    <section className="mb-6 rounded-3xl border bg-card p-5">
+    <section className="cmp-section mb-6">
       <div className="flex items-center justify-between gap-3">
         <h2 className="font-display text-lg font-bold">Demat holdings</h2>
-        <Button asChild variant="outline" size="sm"><Link to="/statements" search={{ context: 'investments' }}><Upload className="h-4 w-4" />Upload</Link></Button>
+        <Button variant="outline" size="sm" onClick={() => openSmartAdd('document')}><Upload className="h-4 w-4" />Add holdings</Button>
       </div>
-      {!rows.length && <p className="mt-2 text-sm text-muted-foreground">Upload your demat holding statement on Statement Desk to see holdings here.</p>}
+      {!rows.length && <p className="mt-2 text-sm text-muted-foreground">No holdings yet. Tap Add holdings and choose your demat holding statement; you check what was read before anything is saved.</p>}
       {rows.map((d) => {
         const c = completeness({ dpId: d.dpId, clientId: d.clientId, holdings: d.holdings, stored: true });
         return (

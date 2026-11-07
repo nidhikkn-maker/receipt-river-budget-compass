@@ -515,8 +515,9 @@ export function StatementDeskPage({ embedded }: { embedded?: { files: File[] } }
       {context && <p className="rounded-xl bg-secondary px-3 py-2 text-sm">Adding for <b>{CONTEXTS[context]}</b> — any document you drop is identified, read and filed in DocuRepo, then you confirm what it creates.</p>}
       {!embedded && <AccountantInbox onFiles={add} />}
 
-      <Card className="space-y-3 p-4">
+      <Card className={embedded ? "space-y-3 border-0 bg-transparent p-0 shadow-none" : "space-y-3 p-4"}>
         <div
+          hidden={!!embedded}
           className="rounded-2xl border border-dashed p-6 text-center"
           onDragOver={(e) => e.preventDefault()}
           onDrop={(e) => { e.preventDefault(); void add(e.dataTransfer.files); }}
