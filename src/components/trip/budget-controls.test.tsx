@@ -19,6 +19,7 @@ it("opens with saved amounts and refuses a budget edit that breaks an explicit c
   fireEvent.click(screen.getByRole("button", { name: "Save Changes" }));
   expect(mock.save).not.toHaveBeenCalled();
   expect(mock.error).toHaveBeenCalledWith(expect.stringContaining("must match"));
+  await waitFor(() => expect(screen.getByRole("button", { name: "Save Changes" })).not.toBeDisabled());
   fireEvent.change(screen.getByLabelText("Total budget"), { target: { value: "100" } });
   fireEvent.click(screen.getByRole("button", { name: "Save Changes" }));
   await waitFor(() => expect(mock.save).toHaveBeenCalledTimes(1));
