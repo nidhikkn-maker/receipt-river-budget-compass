@@ -89,7 +89,7 @@ async function harness(extracted: ExtractedDocument, extras: object = {}, transa
         expect((await db.query("SELECT * FROM document_intake_commits")).rows).toHaveLength(1);
         await db.query("SELECT set_config('test.uid',$1,false)", [other]);
         expect((await db.query("SELECT * FROM documents")).rows).toEqual([]);
-        expect((await db.query("SELECT * FROM finance_preferences")).rows).toEqual([]);
+        expect((await db.query("SELECT * FROM finance_preferences WHERE owner_id=$1", [owner])).rows).toEqual([]);
         expect((await db.query("SELECT * FROM document_intake_commits")).rows).toEqual([]);
         await expect(db.query("INSERT INTO documents(id,owner_id,doc_type,evidence_locked) VALUES ($1,$2,'other',false)", [crypto.randomUUID(), owner])).rejects.toThrow(/row-level security/);
         await db.exec("RESET ROLE; SET ROLE anon");
@@ -131,6 +131,10 @@ describe("grouped actual file-to-review, installed SQL and read-back acceptance"
   const payment = { id: "paid1", date: "2026-10-02", amount: 150000, title: "Engineering Works generator", merchant: "Engineering Works", txnType: "expense" };
   const h = await harness(read("asset_invoice", { asset: { name: "Generator", kind: "machinery", owner: null, cost: 150000, purchaseDate: "2026-10-02", putToUseOn: "2026-10-02", usefulLifeYears: 10, residualPct: 0, supplier: "Engineering Works", serial: "GEN-NEW", warrantyUntil: "2027-10-02", insurance: "Policy ENG-44" } }), {}, ambiguous ? [payment, { ...payment, id: "paid2" }] : [payment]);
   try {
+   fireEvent.change(h.view.getByLabelText("Useful life"), { target: { value: "10" } });
+   fireEvent.change(h.view.getByLabelText("Residual value"), { target: { value: "0" } });
+   const approval = h.view.getByLabelText(/Capitalise this as a fixed asset/);
+   fireEvent.click(approval);
    const { saved, original } = await h.finish();
    const asset = saved.assets[0]; if (!asset) throw new Error("Missing acquisition asset");
    expect(asset).toMatchObject({ cost: 150000, supplier: "Engineering Works", warrantyUntil: "2027-10-02", insurance: "Policy ENG-44" });
