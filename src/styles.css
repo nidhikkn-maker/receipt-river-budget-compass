@@ -826,7 +826,7 @@ html[data-theme="apple-glass"] :where(.bg-card, .bg-popover, .bg-ink) {
 .smart-add-sheet > .grid { gap: 0; }
 .smart-add-sheet > .grid > button { border: 0; border-bottom: 1px solid var(--border); border-radius: 0; box-shadow: none; background: transparent; min-height: 64px; }
 .journal-spaces { background: var(--background); }
-.receipt-desk [aria-label="Review scanned details"] { background: var(--card); border-color: var(--border); }
+.receipt-desk [aria-label="Review scanned details"] { scroll-margin-top: 72px; background: var(--card); border-color: var(--border); }
 .receipt-desk [aria-label="Review scanned details"] h2 { font-family: var(--font-editorial); font-size: 24px; font-weight: 400; }
 @media (min-width: 1000px) {
   .journal-columns { grid-template-columns: minmax(0, 1fr) minmax(230px, .5fr); }
