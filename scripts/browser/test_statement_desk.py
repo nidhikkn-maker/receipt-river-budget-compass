@@ -38,7 +38,7 @@ class StatementDeskFlow(unittest.IsolatedAsyncioTestCase):
             if parsed.netloc != "localhost:8080":
                 self.blocked.append(parsed.hostname)
                 await route.abort()
-            elif parsed.path == "/statements":
+            elif parsed.path in ("/statements", "/smart"):
                 await route.fulfill(status=200, content_type="text/html", body=HTML)
             elif parsed.path in ("/src/lib/store.tsx", "/src/integrations/supabase/client.ts"):
                 name = "useStore" if "store.tsx" in parsed.path else "supabase"
