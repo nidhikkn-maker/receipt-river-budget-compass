@@ -17,12 +17,7 @@ export function CategoryMergePreview({ source, onClose }: { source: string; onCl
   const monthly = store.budgets[source] ?? 0;
   const confirm = async () => {
     setError("");
-    if (!target || splitRefs.length || tripPlans.length) return;
-    try {
-      await store.moveCategory(source, target);
-      await store.savePreferences({ ...store.preferences, budgets: store.preferences.budgets.map(b => b.kind === "category" && b.value === source ? { ...b, value: target } : b), categories: store.preferences.categories.filter(c => c.name !== source) });
-      onClose();
-    } catch (e) { setError((e as Error).message); }
+    setError("Atomic category merge and safe reversal are not active yet. Nothing was changed.");
   };
   return <Dialog open onOpenChange={open => { if (!open) onClose(); }}>
     <DialogContent><DialogHeader><DialogTitle>Review category merge</DialogTitle></DialogHeader>
@@ -36,7 +31,8 @@ export function CategoryMergePreview({ source, onClose }: { source: string; onCl
       {splitRefs.length > 0 && <p role="alert" className="text-sm text-destructive">This category is used in split allocations. Merge is unavailable until those references can be moved safely together.</p>}
       {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
       <p className="text-xs text-muted-foreground">Amounts, receipts and statement sources are unchanged. Closed-period protection still applies.</p>
-      <div className="flex justify-end gap-2"><Button variant="outline" onClick={onClose}>Cancel</Button><Button disabled={!target || splitRefs.length > 0 || tripPlans.length > 0} onClick={confirm}>Confirm merge</Button></div>
+      <p className="text-sm text-muted-foreground">Saving is on hold until the atomic merge and safe reversal update is activated.</p>
+      <div className="flex justify-end gap-2"><Button variant="outline" onClick={onClose}>Cancel</Button><Button disabled onClick={confirm}>Confirm merge</Button></div>
     </DialogContent>
   </Dialog>;
 }
