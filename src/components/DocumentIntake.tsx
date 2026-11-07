@@ -50,6 +50,7 @@ export function DocumentIntake({ file, context, onClose, resume, replacesId, onS
   const [edit, setEdit] = useState<Record<string, string>>({});
   const [leaseProperty, setLeaseProperty] = useState("");
   const [utilityProperty, setUtilityProperty] = useState("");
+  const [linkedAsset, setLinkedAsset] = useState("");
   const [ownerOk, setOwnerOk] = useState(false);
   const [capOk, setCapOk] = useState(false);
   const books = preferences.books ?? emptyBooks();
@@ -97,6 +98,12 @@ export function DocumentIntake({ file, context, onClose, resume, replacesId, onS
   }, [file]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const route = ROUTE_OF[docType];
+  const supportingAsset = docType === "maintenance" || docType === "warranty";
+  const assetMatches = useMemo(() => {
+    const serial = x?.asset?.serial?.trim().toUpperCase();
+    return serial ? (preferences.assets ?? []).filter(a => a.tag?.trim().toUpperCase() === serial) : [];
+  }, [x?.asset?.serial, preferences.assets]);
+  const selectedAssetId = linkedAsset || (assetMatches.length === 1 ? assetMatches[0]?.id ?? "" : "");
   // Preselect the account/loan the document names; the owner can change it before saving [§6].
   const suggested = useMemo(() => (x ? suggestLinks(`${x.text ?? ""} ${fields.map((f) => `${f.label} ${f.value}`).join(" ")}`, accounts, loans.map((l) => ({ id: l.id, name: l.name }))) : null), [x, fields, accounts, loans]);
   const autoLinked = useRef(false);
@@ -148,6 +155,12 @@ export function DocumentIntake({ file, context, onClose, resume, replacesId, onS
   const belowCap = proposal?.kind === "asset" && !!proposal.asset && capMin != null && proposal.asset.cost < capMin;
 
   const confirmed = (): Confirmed | null => {
+    if (supportingAsset) {
+      const asset = preferences.assets?.find(a => a.id === selectedAssetId);
+      const date = x?.date;
+      if (!asset || !isIso(date) || !date) return null;
+      return { route: "assetDocument", assetId: asset.id, date, note: x?.notes || title };
+    }
     if (!proposal) return { route: "document" };
     if (proposal.kind === "entity") {
       const p = proposal.profile;
@@ -299,7 +312,8 @@ export function DocumentIntake({ file, context, onClose, resume, replacesId, onS
           </div>
           <p className="text-xs text-muted-foreground">{[proposal.profile.regNo && `CIN/LLPIN ${proposal.profile.regNo}`, proposal.profile.gstins.length && `${proposal.profile.gstins.length} GSTIN`, proposal.profile.incorporatedOn && `incorporated ${proposal.profile.incorporatedOn}`, proposal.profile.fyEnd && `year ends ${proposal.profile.fyEnd}`, proposal.profile.people?.length && `${proposal.profile.people.length} directors/partners`, proposal.profile.related?.length && `${proposal.profile.related.length} related entities`, proposal.profile.address].filter(Boolean).join(" · ")}</p>
         </div>}
-        {proposal?.kind === "asset" && (proposal.asset ? <div className="grid grid-cols-2 gap-2 rounded-xl border p-3">
+        {supportingAsset && <label className="block">Asset for this document<select aria-label="Asset for this document" className="mt-1 w-full rounded-md border bg-background px-3 py-2" value={selectedAssetId} onChange={e => setLinkedAsset(e.target.value)}><option value="">Choose existing asset…</option>{(preferences.assets ?? []).map(a => <option key={a.id} value={a.id}>{a.name}{a.tag ? ` · ${a.tag}` : ""}</option>)}</select>{assetMatches.length > 1 && <span className="text-destructive">Several assets share this serial number. Choose the correct one.</span>}</label>}
+        {proposal?.kind === "asset" && !supportingAsset && (proposal.asset ? <div className="grid grid-cols-2 gap-2 rounded-xl border p-3">
           <p className="col-span-2 font-semibold">{belowCap ? `Below your capitalisation limit (${inr(capMin!)}) — will be filed as an expense document, not an asset` : "Proposed asset"}</p>
           <Input aria-label="Asset name" className="col-span-2" value={v("name", proposal.asset.name)} onChange={(e) => setEdit({ ...edit, name: e.target.value })} />
           <label className="text-xs">Cost<Input aria-label="Cost" type="number" value={v("cost", proposal.asset.cost)} onChange={(e) => setEdit({ ...edit, cost: e.target.value })} /></label>
@@ -374,7 +388,7 @@ export function DocumentIntake({ file, context, onClose, resume, replacesId, onS
         {!!x.obligations?.length && <p className="text-xs text-muted-foreground">{x.obligations.length} payment obligation{x.obligations.length > 1 ? "s" : ""} found — they'll be listed on the document for review.</p>}
         {missing.length > 0 && <p className="text-xs text-destructive">Still needed: {missing.join(", ")}.{missing.includes("which company") && <> <Link to="/entities" className="underline">Add the company first</Link></>}</p>}
         <div className="flex flex-wrap gap-2">
-          <Button onClick={save} loading={saving} disabled={!!failed && !["Save", "Reconcile", "Audit"].includes(failed.step)}>{failed ? "Retry" : proposal ? "Confirm and save" : "Save to DocuRepo"}</Button>
+          <Button onClick={save} loading={saving} disabled={!!failed && !["Save", "Reconcile", "Audit"].includes(failed.step)}>{failed ? "Retry" : proposal || supportingAsset ? "Confirm and save" : "Save to DocuRepo"}</Button>
           {runData.current.intakeAttempt && failed && <Button variant="outline" onClick={async () => {
             const attempt = runData.current.intakeAttempt;
             if (!attempt) return;
