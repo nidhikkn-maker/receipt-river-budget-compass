@@ -886,7 +886,7 @@ html[data-theme="apple-glass"] :where(.bg-card, .bg-popover, .bg-ink) {
   .journal-hero { margin-inline: 0; }
   .uix-header .workspace-chip { height: 36px; min-height: 36px; font-size: 13px; }
   .uix-header .header-search span { display: none; }
-  .uix-dialog.native-sheet,.uix-dialog.smart-add-sheet { top: auto; bottom: 0; left: 0; width: 100%; max-height: calc(92dvh - env(safe-area-inset-top)); transform: none; translate: none; border-radius: 24px 24px 0 0; padding: 24px 24px calc(24px + env(safe-area-inset-bottom)); }
+  .uix-dialog.native-sheet,.uix-dialog.smart-add-sheet { top: auto; bottom: 0; left: 0; width: 100%; max-height: calc(92dvh - env(safe-area-inset-top)); transform: none !important; translate: 0 0 !important; --tw-translate-x: 0px; --tw-translate-y: 0px; border-radius: 24px 24px 0 0; padding: 24px 24px calc(24px + env(safe-area-inset-bottom)); }
   .module-directory { grid-template-columns: 1fr; }
   .journal-wealth > div:nth-of-type(2) { gap: 8px; }
   .uix-stat > div:nth-child(2) { font-size: 20px; }
