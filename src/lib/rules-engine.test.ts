@@ -81,6 +81,15 @@ describe("evaluateRules", () => {
 });
 
 describe("validateRule + templates", () => {
+  it('budget threshold uses saved limits, split category amounts, exact boundary and no transfers',()=>{
+    const watched=rule({trigger:'budget_utilisation',category:'Food',threshold:80});
+    const tx={id:'split',date:today,txnType:'expense' as const,category:'Other',amount:100,allocations:[{category:'Food',amount:80},{category:'Other',amount:20}]};
+    expect(evaluateRules([watched],data({budgets:{Food:100},transactions:[tx,{...tx,id:'transfer',txnType:'transfer'}]}))).toHaveLength(1);
+    expect(evaluateRules([watched],data({budgets:{Food:100.01},transactions:[tx]}))).toHaveLength(0);
+    expect(evaluateRules([watched],data({transactions:[tx]}))).toHaveLength(0);
+    expect(()=>validateRule({...watched,threshold:Infinity})).toThrow('finite');
+    expect(()=>validateRule({...watched,threshold:101})).toThrow('1–100');
+  });
   it("requires a category for category_spend and 1–100 for card utilisation", () => {
     expect(() => validateRule(rule({ trigger: "category_spend", category: null }))).toThrow(/category/);
     expect(() => validateRule(rule({ trigger: "card_utilisation", threshold: 150 }))).toThrow(/1–100/);

@@ -4,9 +4,12 @@ import { Route as NewRoute } from "../../src/routes/_authenticated/new";
 import { Route as ExpensesRoute } from "../../src/routes/_authenticated/expenses";
 import { StoreFixture } from "./expense-mocks.tsx";
 import { Toaster } from "../../src/components/ui/sonner";
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import "../../src/styles.css";
 
-const rootRoute = createRootRoute({ component: () => <StoreFixture><Outlet /><Toaster duration={60000} /></StoreFixture> });
+const queryClient = new QueryClient({ defaultOptions:{queries:{retry:false}} });
+queryClient.setQueryData(['team-access','controlled-owner'],{role:null,admin:false,switches:[]});
+const rootRoute = createRootRoute({ component: () => <QueryClientProvider client={queryClient}><StoreFixture><Outlet /><Toaster duration={60000} /></StoreFixture></QueryClientProvider> });
 const authenticated = createRoute({ getParentRoute: () => rootRoute, id: "_authenticated", component: () => <main className="px-4 sm:px-8"><Outlet /></main> });
 const entry = NewRoute.update({ id: "/new", path: "/new", getParentRoute: () => authenticated });
 const expenses = ExpensesRoute.update({ id: "/expenses", path: "/expenses", getParentRoute: () => authenticated });

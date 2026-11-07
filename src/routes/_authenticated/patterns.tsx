@@ -12,6 +12,7 @@ import { behaviour, mergeMerchants, mergeSuggestions, merchantProfiles, normalis
 import { useStore } from "@/lib/store";
 import { todayISO } from "@/lib/use-position";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { merchantGroupingChanges, merchantReviewSnapshot, reverseMerchantGrouping, type MerchantGroupingEvent } from "@/lib/merchant-management";
 
 export const Route = createFileRoute("/_authenticated/patterns")({
   head: () => ({
@@ -72,20 +73,26 @@ export function Merchants() {
   const sugg = mergeSuggestions(profiles);
   const [q, setQ] = useState("");
   const [sel, setSel] = useState<string[]>([]);
-  const [review, setReview] = useState<{ aliases: typeof pr.merchantAliases; before: string; title: string; ids: string[] } | null>(null);
+  const [review, setReview] = useState<{ aliases: typeof pr.merchantAliases; before: string; title: string; snapshot: string; event: MerchantGroupingEvent } | null>(null);
   const [error, setError] = useState("");
   const save = async () => {
     if (!review) return;
     if (review.before !== JSON.stringify(pr.merchantAliases)) { setError("Merchant groups changed. Close and review again."); return; }
-    try { await savePreferences({ ...pr, merchantAliases: review.aliases }); setSel([]); setReview(null); setError(""); toast.success("Merchant groups saved"); }
+    if (review.snapshot !== merchantReviewSnapshot(transactions, pr.merchantAliases, review.aliases)) { setError("Affected records changed. Close and review again."); return; }
+    try { await savePreferences({ ...pr, merchantAliases: review.aliases, merchantGroupingHistory: [...(pr.merchantGroupingHistory ?? []), review.event] }); setSel([]); setReview(null); setError(""); toast.success("Merchant groups saved"); }
     catch (e) { setError((e as Error).message); }
+  };
+  const prepare = (aliases: typeof pr.merchantAliases, title: string, reverses?: string) => {
+    const changes = merchantGroupingChanges(transactions, pr.merchantAliases, aliases);
+    setError(""); setReview({ aliases, title, before: JSON.stringify(pr.merchantAliases), snapshot: merchantReviewSnapshot(transactions, pr.merchantAliases, aliases),
+      event: { id: crypto.randomUUID(), date: new Date().toISOString(), title, before: { ...pr.merchantAliases }, after: aliases, entryIds: changes.map(c => c.id), ...(reverses ? { reverses } : {}) } });
   };
   const merge = (keys: string[]) => {
     const ps = profiles.filter((p) => keys.includes(p.key)); const first = ps[0]; if (!first || ps.length < 2) return;
-    setError(""); setReview({ aliases: mergeMerchants(pr.merchantAliases, ps.slice(1).flatMap((p) => p.names), first.key), before: JSON.stringify(pr.merchantAliases), title: `Merge into ${first.name}`, ids: [...new Set(ps.flatMap(p => p.ids))] });
+    prepare(mergeMerchants(pr.merchantAliases, ps.slice(1).flatMap((p) => p.names), first.key), `Merge into ${first.name}`);
   };
   const separate = (name: string) => {
-    setError(""); setReview({ aliases: unmergeMerchant(pr.merchantAliases, name), before: JSON.stringify(pr.merchantAliases), title: `Separate ${name}`, ids: transactions.filter(t => t.merchant && normaliseMerchant(t.merchant) === normaliseMerchant(name)).map(t => t.id) });
+    prepare(unmergeMerchant(pr.merchantAliases, name), `Separate ${name}`);
   };
   const shown = profiles.filter((p) => !q || p.names.some((n) => n.toLowerCase().includes(q.toLowerCase())));
   return (
@@ -106,10 +113,14 @@ export function Merchants() {
         </Card>
       ))}
       <p className="text-xs text-muted-foreground">Merging only groups names for reports. Original statement names and amounts are kept unchanged.</p>
+      {!!pr.merchantGroupingHistory?.length && <details className="mt-4"><summary className="cursor-pointer text-sm font-semibold">Merchant grouping history</summary><ul className="divide-y">{[...pr.merchantGroupingHistory].reverse().map(event => {
+        const reversed = pr.merchantGroupingHistory?.some(item => item.reverses === event.id);
+        return <li key={event.id} className="flex items-center justify-between gap-3 py-2 text-sm"><span className="min-w-0 break-words">{event.title} · {event.date.slice(0,10)} · {event.entryIds.length} entries{reversed && " · reversed"}</span>{!event.reverses && !reversed && <Button variant="outline" size="sm" onClick={() => { try { prepare(reverseMerchantGrouping(pr.merchantAliases, event), `Reverse ${event.title}`, event.id); } catch(e) { toast.error((e as Error).message); } }}>Reverse grouping</Button>}</li>;
+      })}</ul></details>}
       <Dialog open={!!review} onOpenChange={o => { if (!o) setReview(null); }}>
         <DialogContent><DialogHeader><DialogTitle>{review?.title}</DialogTitle></DialogHeader>
-          <p className="text-sm">{review?.ids.length ?? 0} entries · Original names, amounts and receipts stay unchanged.</p>
-          <ul className="max-h-64 overflow-auto divide-y">{transactions.filter(t => review?.ids.includes(t.id)).map(t => <li key={t.id} className="flex justify-between gap-3 py-2 text-sm"><span className="min-w-0 break-words">{t.date} · {t.merchant ?? t.title}</span><span className="shrink-0 font-mono">{money(t.amount)}</span></li>)}</ul>
+          <p className="text-sm">{review?.event.entryIds.length ?? 0} affected entries · Original names, amounts and receipts stay unchanged.</p>
+          <ul className="max-h-64 overflow-auto divide-y">{review && merchantGroupingChanges(transactions, pr.merchantAliases, review.aliases).map(({entry:t,from,to}) => <li key={t.id} className="flex justify-between gap-3 py-2 text-sm"><span className="min-w-0 break-words">{t.date} · {t.merchant ?? t.title}<span className="block text-xs text-muted-foreground">{from} → {to}</span></span><span className="shrink-0 font-mono">{money(t.amount)}</span></li>)}</ul>
           {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
           <div className="flex justify-end gap-2"><Button variant="outline" onClick={() => setReview(null)}>Cancel</Button><Button onClick={save}>{error ? "Retry save" : "Confirm grouping"}</Button></div>
         </DialogContent>

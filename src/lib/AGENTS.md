@@ -37,6 +37,9 @@
 - Backup reads explicitly filter each table by its owner field, including employee_id on expenses, because team-visible records must never enter personal exports; recovery browser checks block external writes and use isolated records/storage.
 - Original-file downloads go through store.downloadFile → fetchPrivateFile (private-files.ts): fetch the signed bytes, refuse empty/size/checksum mismatch, save via downloadBlob; opening a cross-origin signed URL never saves a file.
 
-- INR ledger, expense allocations, statement balances, repayment history and planning/allocation forecasts use src/lib/money.ts decimal arithmetic with half-up money boundaries; numeric storage stays unchanged to preserve compatibility.
+- INR ledger, expense allocations, statement balances, repayment history, planning/allocation, portfolio, asset schedules, tax source/liability and report sums use src/lib/money.ts decimal arithmetic with existing rounding boundaries; numeric storage stays unchanged to preserve compatibility.
 - Trip complete-allocation dimensions are explicit owner preferences; changes validate each promised dimension independently against the primary budget without auto-combining plans.
 - Prepared report saves use stable IDs, owner/size/path readback and same-blob retry; unknown insert outcomes retain uploaded evidence rather than deleting possibly committed files.
+- Merchant grouping compares every original name before/after, binds affected records to review and retains reversible alias history in owner preferences; reversal refuses later dependent edits and never rewrites ledger sources.
+- Budget utilisation rules use saved category limits and split-aware monthly spending; transfers never contribute and thresholds are finite owner choices.
+- Background report completion checks owner/path/kind identity and lost-response readback, never overwrites existing PDF evidence, and treats failed completion status as retryable.

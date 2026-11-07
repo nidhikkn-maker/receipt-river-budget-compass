@@ -24,6 +24,7 @@ MOCKS = {
     "/src/lib/drafts.ts": ["hasDraftContent", "draftStatus", "getDraft", "completeDraft", "upsertDraft", "uploadDraftReceipt", "draftReceiptFile"],
     "/src/lib/offline.ts": ["fileToLocal", "localDrafts", "localToFile", "putLocalDraft", "removeLocalDraft"],
     "/src/components/AppShell.tsx": ["PageTitle", "Stat"],
+    "/src/components/TeamAccess.tsx": ["TeamExpenses"],
 }
 
 class ExpenseReceiptButtons(unittest.IsolatedAsyncioTestCase):
@@ -49,6 +50,8 @@ class ExpenseReceiptButtons(unittest.IsolatedAsyncioTestCase):
                 await route.abort()
             elif req.is_navigation_request() and parsed.path in ("/new", "/expenses", "/dashboard"):
                 await route.fulfill(status=200, content_type="text/html", body=HTML)
+            elif parsed.path == '/src/components/TeamAccess.tsx':
+                await route.fulfill(status=200, content_type='application/javascript', body='export const TeamExpenses=()=>null;')
             elif parsed.path in MOCKS:
                 await route.fulfill(status=200, content_type="application/javascript", body=f'export {{ {", ".join(MOCKS[parsed.path])} }} from "/scripts/browser/expense-mocks.tsx";')
             elif parsed.path == "/controlled-receipt/controlled-receipt.png":
@@ -84,7 +87,7 @@ class ExpenseReceiptButtons(unittest.IsolatedAsyncioTestCase):
         await self.page.goto(BASE + "/expenses", wait_until="domcontentloaded")
         await self.page.get_by_role("button").filter(has_text=title).click()
         dialog = self.page.get_by_role("dialog")
-        await expect(dialog.get_by_role("heading", name=title, exact=True)).to_be_visible()
+        await expect(dialog.get_by_role("heading", name=title, exact=True).last).to_be_visible()
         return dialog
 
     async def test_submit_expense_and_read_back_through_list(self):

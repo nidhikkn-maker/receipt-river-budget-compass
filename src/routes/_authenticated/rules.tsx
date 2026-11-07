@@ -28,8 +28,8 @@ export const Route = createFileRoute("/_authenticated/rules")({
 
 const PRIORITY_TONE: Record<string, string> = { high: "text-destructive", medium: "text-gold-strong", low: "text-muted-foreground" };
 
-function RulesPage() {
-  const { preferences, savePreferences, transactions, accounts, commitments, goals } = useStore();
+export function RulesPage() {
+  const { preferences, savePreferences, transactions, accounts, commitments, goals, budgets } = useStore();
   const pos = usePosition(45);
   const today = todayISO();
   const [adding, setAdding] = useState(false);
@@ -41,8 +41,8 @@ function RulesPage() {
     reserves: goals.filter((g) => g.reserve).map((g) => ({ name: g.name, target: g.target, saved: g.saved })),
     cardUtilisation: pos.cards.map((c) => ({ accountId: c.id, name: c.name, pct: c.utilisation ?? 0 })),
     recurringIncreases: pos.subscriptions.summary.increases,
-    readiness, today,
-  }).filter((e) => !preferences.ruleDismissed.includes(`${e.ruleId}|${e.message}`)), [preferences.rules, preferences.ruleDismissed, transactions, accounts, commitments, goals, pos, readiness, today]);
+    readiness, today, budgets,
+  }).filter((e) => !preferences.ruleDismissed.includes(`${e.ruleId}|${e.message}`)), [preferences.rules, preferences.ruleDismissed, transactions, accounts, commitments, goals, pos, readiness, today, budgets]);
 
   const save = async (rules: FinanceRule[]) => { await savePreferences({ ...preferences, rules }); };
   const addTemplate = async (t: Omit<FinanceRule, "id">) => {
@@ -98,7 +98,7 @@ function RulesPage() {
               <Switch checked={r.enabled} onCheckedChange={(v) => void save(preferences.rules.map((x) => (x.id === r.id ? { ...x, enabled: v } : x)))} aria-label={`Enable ${r.name}`} />
               <div className="min-w-0 flex-1">
                 <span className="font-semibold">{r.name}</span>
-                <span className="block text-xs text-muted-foreground">{TRIGGER_LABEL[r.trigger]}{r.threshold ? ` · ${r.trigger === "card_utilisation" ? `${r.threshold}%` : r.trigger === "unverified_old" || r.trigger === "duplicate_merchant" ? `${r.threshold} days` : `₹${r.threshold.toLocaleString("en-IN")}`}` : ""}{r.category ? ` · ${r.category}` : ""} · checks {r.frequency}</span>
+                <span className="block text-xs text-muted-foreground">{TRIGGER_LABEL[r.trigger]}{r.threshold ? ` · ${r.trigger === "card_utilisation" || r.trigger === "budget_utilisation" ? `${r.threshold}%` : r.trigger === "unverified_old" || r.trigger === "duplicate_merchant" ? `${r.threshold} days` : `₹${r.threshold.toLocaleString("en-IN")}`}` : ""}{r.category ? ` · ${r.category}` : ""} · checks {r.frequency}</span>
               </div>
               <Button size="icon" variant="ghost" aria-label={r.notify ? "Notifications on" : "Notifications off"} onClick={() => void save(preferences.rules.map((x) => (x.id === r.id ? { ...x, notify: !x.notify } : x)))}>
                 {r.notify ? <Bell className="h-4 w-4" /> : <BellOff className="h-4 w-4" />}
@@ -116,7 +116,7 @@ function RulesPage() {
                 {RULE_TRIGGERS.map((t) => <option key={t} value={t}>{TRIGGER_LABEL[t]}</option>)}
               </select>
               <Input value={String(draft.threshold)} onChange={(e) => setDraft({ ...draft, threshold: Number(e.target.value) || 0 })} inputMode="decimal" placeholder="Threshold" aria-label="Threshold" />
-              {draft.trigger === "category_spend" && (
+              {(draft.trigger === "category_spend" || draft.trigger === "budget_utilisation") && (
                 <select value={draft.category ?? ""} onChange={(e) => setDraft({ ...draft, category: e.target.value || null })} className="h-10 rounded-md border bg-background px-3 text-sm" aria-label="Category">
                   <option value="">Pick category…</option>
                   {activeCategories.map((c) => <option key={c} value={c}>{c}</option>)}

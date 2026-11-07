@@ -1,6 +1,6 @@
 -- STAGED ONLY. Do not install until compatible client and access-change approval.
 -- Uses owner preference lock + exact full-record preview; no monetary columns are changed.
-CREATE TABLE public.category_merge_operations(id uuid PRIMARY KEY, owner_id uuid NOT NULL, request jsonb NOT NULL, result jsonb NOT NULL, created_at timestamptz NOT NULL DEFAULT now());
+CREATE TABLE public.category_merge_operations(id uuid PRIMARY KEY, owner_id uuid NOT NULL, request jsonb NOT NULL, result jsonb NOT NULL, after_snapshot jsonb, reversed_at timestamptz, created_at timestamptz NOT NULL DEFAULT now());
 GRANT SELECT ON public.category_merge_operations TO authenticated;
 GRANT ALL ON public.category_merge_operations TO service_role;
 ALTER TABLE public.category_merge_operations ENABLE ROW LEVEL SECURITY;
@@ -62,8 +62,49 @@ BEGIN
  p:=jsonb_set(p,'{trips}',(SELECT coalesce(jsonb_agg(CASE WHEN t ? 'budgetLines' THEN jsonb_set(t,'{budgetLines}',(SELECT coalesce(jsonb_agg(CASE WHEN b->>'category'=src_category THEN jsonb_set(b,'{category}',to_jsonb(dst_category)) ELSE b END ORDER BY n),'[]'::jsonb) FROM jsonb_array_elements(t->'budgetLines') WITH ORDINALITY y(b,n))) ELSE t END ORDER BY ord),'[]'::jsonb) FROM jsonb_array_elements(coalesce(p->'trips','[]')) WITH ORDINALITY x(t,ord)));
  UPDATE public.finance_preferences SET data=p WHERE owner_id=uid;
  result:=jsonb_build_object('entries',count_entries,'revision',(SELECT revision FROM public.finance_preferences WHERE owner_id=uid));
- INSERT INTO public.category_merge_operations(id,owner_id,request,result) VALUES(_id,uid,_preview,result);
+ INSERT INTO public.category_merge_operations(id,owner_id,request,result,after_snapshot) VALUES(_id,uid,_preview,result,
+  jsonb_build_object('preferences',p,'revision',(SELECT revision FROM public.finance_preferences WHERE owner_id=uid),
+   'entries',(SELECT coalesce(jsonb_agg(to_jsonb(e) ORDER BY e.id),'[]') FROM public.expenses e WHERE employee_id=uid),
+   'commitments',(SELECT coalesce(jsonb_agg(to_jsonb(c) ORDER BY c.id),'[]') FROM public.commitments c WHERE owner_id=uid),
+   'monthlyBudgets',(SELECT coalesce(jsonb_agg(to_jsonb(b) ORDER BY b.category),'[]') FROM public.category_budgets b WHERE owner_id=uid)));
  RETURN result;
 END $$;
 REVOKE ALL ON FUNCTION public.commit_category_merge(uuid,jsonb) FROM PUBLIC,anon;
 GRANT EXECUTE ON FUNCTION public.commit_category_merge(uuid,jsonb) TO authenticated;
+
+-- Refuse later edits rather than restoring old financial values. Only category metadata moves back.
+CREATE FUNCTION public.undo_category_merge(_id uuid) RETURNS jsonb
+LANGUAGE plpgsql SECURITY DEFINER SET search_path=public AS $$
+DECLARE uid uuid:=auth.uid(); operation public.category_merge_operations; snapshot jsonb; original jsonb; row_data jsonb;
+BEGIN
+ IF uid IS NULL THEN RAISE EXCEPTION 'Sign in required'; END IF;
+ PERFORM owner_id FROM public.finance_preferences WHERE owner_id=uid FOR UPDATE;
+ SELECT * INTO operation FROM public.category_merge_operations WHERE id=_id AND owner_id=uid FOR UPDATE;
+ IF NOT FOUND THEN RAISE EXCEPTION 'Merge not available'; END IF;
+ IF operation.reversed_at IS NOT NULL THEN RETURN jsonb_build_object('reversed',true,'id',_id); END IF;
+ PERFORM id FROM public.expenses WHERE employee_id=uid ORDER BY id FOR UPDATE;
+ PERFORM id FROM public.commitments WHERE owner_id=uid ORDER BY id FOR UPDATE;
+ PERFORM category FROM public.category_budgets WHERE owner_id=uid ORDER BY category FOR UPDATE;
+ SELECT jsonb_build_object('preferences',data,'revision',revision,
+  'entries',(SELECT coalesce(jsonb_agg(to_jsonb(e) ORDER BY e.id),'[]') FROM public.expenses e WHERE employee_id=uid),
+  'commitments',(SELECT coalesce(jsonb_agg(to_jsonb(c) ORDER BY c.id),'[]') FROM public.commitments c WHERE owner_id=uid),
+  'monthlyBudgets',(SELECT coalesce(jsonb_agg(to_jsonb(b) ORDER BY b.category),'[]') FROM public.category_budgets b WHERE owner_id=uid))
+ INTO snapshot FROM public.finance_preferences WHERE owner_id=uid;
+ IF snapshot IS DISTINCT FROM operation.after_snapshot THEN RAISE EXCEPTION 'Records changed after merge; reversal refused'; END IF;
+ original:=operation.request;
+ FOR row_data IN SELECT value FROM jsonb_array_elements(original->'entries') LOOP
+  IF EXISTS(SELECT 1 FROM jsonb_array_elements(operation.after_snapshot->'entries') e WHERE e->>'id'=row_data->>'id' AND (e->'category' IS DISTINCT FROM row_data->'category' OR e->'allocations' IS DISTINCT FROM row_data->'allocations')) THEN
+   UPDATE public.expenses SET category=row_data->>'category',allocations=row_data->'allocations' WHERE id=(row_data->>'id')::uuid AND employee_id=uid;
+  END IF;
+ END LOOP;
+ FOR row_data IN SELECT value FROM jsonb_array_elements(original->'commitments') LOOP
+  UPDATE public.commitments SET category=row_data->>'category' WHERE id=(row_data->>'id')::uuid AND owner_id=uid AND category IS DISTINCT FROM row_data->>'category';
+ END LOOP;
+ DELETE FROM public.category_budgets WHERE owner_id=uid;
+ INSERT INTO public.category_budgets(owner_id,category,monthly_amount) SELECT uid,b->>'category',(b->>'monthly_amount')::numeric FROM jsonb_array_elements(original->'monthlyBudgets') b;
+ UPDATE public.finance_preferences SET data=original->'preferences' WHERE owner_id=uid;
+ UPDATE public.category_merge_operations SET reversed_at=now() WHERE id=_id AND owner_id=uid;
+ RETURN jsonb_build_object('reversed',true,'id',_id);
+END $$;
+REVOKE ALL ON FUNCTION public.undo_category_merge(uuid) FROM PUBLIC,anon;
+GRANT EXECUTE ON FUNCTION public.undo_category_merge(uuid) TO authenticated;
