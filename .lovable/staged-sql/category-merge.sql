@@ -28,7 +28,7 @@ GRANT EXECUTE ON FUNCTION public.preview_category_merge(text,text) TO authentica
 
 CREATE FUNCTION public.commit_category_merge(_id uuid,_preview jsonb) RETURNS jsonb
 LANGUAGE plpgsql SECURITY DEFINER SET search_path=public AS $$
-DECLARE uid uuid:=auth.uid(); old public.category_merge_operations; source text:=_preview->>'source'; target text:=_preview->>'target'; current_plan jsonb; p jsonb; result jsonb; count_entries integer;
+DECLARE uid uuid:=auth.uid(); old public.category_merge_operations; src_category text:=_preview->>'source'; dst_category text:=_preview->>'target'; current_plan jsonb; p jsonb; result jsonb; count_entries integer;
 BEGIN
  IF uid IS NULL OR _id IS NULL OR jsonb_typeof(_preview) IS DISTINCT FROM 'object' THEN RAISE EXCEPTION 'Invalid category review'; END IF;
  PERFORM owner_id FROM public.finance_preferences WHERE owner_id=uid FOR UPDATE;
@@ -42,24 +42,24 @@ BEGIN
  PERFORM id FROM public.expenses WHERE employee_id=uid ORDER BY id FOR UPDATE;
  PERFORM id FROM public.commitments WHERE owner_id=uid ORDER BY id FOR UPDATE;
  PERFORM category FROM public.category_budgets WHERE owner_id=uid ORDER BY category FOR UPDATE;
- current_plan:=public.preview_category_merge(source,target);
+ current_plan:=public.preview_category_merge(src_category,dst_category);
  IF current_plan<>_preview THEN RAISE EXCEPTION 'Records changed; refresh and review again'; END IF;
- UPDATE public.expenses e SET category=CASE WHEN category=source THEN target ELSE category END,
-  allocations=(SELECT coalesce(jsonb_agg(CASE WHEN a->>'category'=source THEN jsonb_set(a,'{category}',to_jsonb(target)) ELSE a END ORDER BY ord),'[]'::jsonb)
+ UPDATE public.expenses e SET category=CASE WHEN category=src_category THEN dst_category ELSE category END,
+  allocations=(SELECT coalesce(jsonb_agg(CASE WHEN a->>'category'=src_category THEN jsonb_set(a,'{category}',to_jsonb(dst_category)) ELSE a END ORDER BY ord),'[]'::jsonb)
    FROM jsonb_array_elements(e.allocations) WITH ORDINALITY x(a,ord))
- WHERE employee_id=uid AND (category=source OR EXISTS(SELECT 1 FROM jsonb_array_elements(e.allocations) a WHERE a->>'category'=source));
+ WHERE employee_id=uid AND (category=src_category OR EXISTS(SELECT 1 FROM jsonb_array_elements(e.allocations) a WHERE a->>'category'=src_category));
  GET DIAGNOSTICS count_entries=ROW_COUNT;
- UPDATE public.commitments SET category=target WHERE owner_id=uid AND category=source;
+ UPDATE public.commitments SET category=dst_category WHERE owner_id=uid AND category=src_category;
  INSERT INTO public.category_budgets(owner_id,category,monthly_amount)
- SELECT uid,target,monthly_amount FROM public.category_budgets WHERE owner_id=uid AND category=source
+ SELECT uid,dst_category,monthly_amount FROM public.category_budgets WHERE owner_id=uid AND category=src_category
  ON CONFLICT(owner_id,category) DO UPDATE SET monthly_amount=public.category_budgets.monthly_amount+excluded.monthly_amount;
- DELETE FROM public.category_budgets WHERE owner_id=uid AND category=source;
+ DELETE FROM public.category_budgets WHERE owner_id=uid AND category=src_category;
  p:=_preview->'preferences';
- p:=jsonb_set(p,'{categories}',(SELECT coalesce(jsonb_agg(c ORDER BY ord),'[]'::jsonb) FROM jsonb_array_elements(p->'categories') WITH ORDINALITY x(c,ord) WHERE c->>'name'<>source));
+ p:=jsonb_set(p,'{categories}',(SELECT coalesce(jsonb_agg(c ORDER BY ord),'[]'::jsonb) FROM jsonb_array_elements(p->'categories') WITH ORDINALITY x(c,ord) WHERE c->>'name'<>src_category));
  -- Scoped budgets retain independent IDs/periods/amounts, never sum unlike plans.
- p:=jsonb_set(p,'{budgets}',(SELECT coalesce(jsonb_agg(CASE WHEN b->>'kind'='category' AND b->>'value'=source THEN jsonb_set(b,'{value}',to_jsonb(target)) ELSE b END ORDER BY ord),'[]'::jsonb) FROM jsonb_array_elements(coalesce(p->'budgets','[]')) WITH ORDINALITY x(b,ord)));
+ p:=jsonb_set(p,'{budgets}',(SELECT coalesce(jsonb_agg(CASE WHEN b->>'kind'='category' AND b->>'value'=src_category THEN jsonb_set(b,'{value}',to_jsonb(dst_category)) ELSE b END ORDER BY ord),'[]'::jsonb) FROM jsonb_array_elements(coalesce(p->'budgets','[]')) WITH ORDINALITY x(b,ord)));
  -- Preserve trip category plan amounts and unrelated trip fields.
- p:=jsonb_set(p,'{trips}',(SELECT coalesce(jsonb_agg(CASE WHEN t ? 'budgetLines' THEN jsonb_set(t,'{budgetLines}',(SELECT coalesce(jsonb_agg(CASE WHEN b->>'category'=source THEN jsonb_set(b,'{category}',to_jsonb(target)) ELSE b END ORDER BY n),'[]'::jsonb) FROM jsonb_array_elements(t->'budgetLines') WITH ORDINALITY y(b,n))) ELSE t END ORDER BY ord),'[]'::jsonb) FROM jsonb_array_elements(coalesce(p->'trips','[]')) WITH ORDINALITY x(t,ord)));
+ p:=jsonb_set(p,'{trips}',(SELECT coalesce(jsonb_agg(CASE WHEN t ? 'budgetLines' THEN jsonb_set(t,'{budgetLines}',(SELECT coalesce(jsonb_agg(CASE WHEN b->>'category'=src_category THEN jsonb_set(b,'{category}',to_jsonb(dst_category)) ELSE b END ORDER BY n),'[]'::jsonb) FROM jsonb_array_elements(t->'budgetLines') WITH ORDINALITY y(b,n))) ELSE t END ORDER BY ord),'[]'::jsonb) FROM jsonb_array_elements(coalesce(p->'trips','[]')) WITH ORDINALITY x(t,ord)));
  UPDATE public.finance_preferences SET data=p WHERE owner_id=uid;
  result:=jsonb_build_object('entries',count_entries,'revision',(SELECT revision FROM public.finance_preferences WHERE owner_id=uid));
  INSERT INTO public.category_merge_operations(id,owner_id,request,result) VALUES(_id,uid,_preview,result);
