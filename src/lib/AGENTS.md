@@ -42,4 +42,4 @@
 - Prepared report saves use stable IDs, owner/size/path readback and same-blob retry; unknown insert outcomes retain uploaded evidence rather than deleting possibly committed files.
 - Merchant grouping compares every original name before/after, binds affected records to review and retains reversible alias history in owner preferences; reversal refuses later dependent edits and never rewrites ledger sources.
 - Budget utilisation rules use saved category limits and split-aware monthly spending; transfers never contribute and thresholds are finite owner choices.
-- Background report completion checks owner/path/kind identity and lost-response readback, never overwrites existing PDF evidence, and treats failed completion status as retryable.
+- Background report retries retrieve an existing PDF before loading new figures, verify readback bytes and store SHA-256 in history filters; completion rechecks saved evidence, so missing/corrupted originals never become successful jobs.
