@@ -20,14 +20,13 @@ async def main():
    if path=='/statements': await route.fulfill(status=200,content_type='text/html',body=HTML); return
    exports={'/src/lib/store.tsx':'useStore','/src/lib/document-extract.functions.ts':'extractDocument','/src/lib/books/runs.ts':'documentIdForRun,startRun,updateRun,closeRun'}
    if path in exports: await route.fulfill(status=200,content_type='application/javascript',body=f'export {{ {exports[path]} }} from "/scripts/browser/asset-document-mocks.tsx";'); return
-   if path.startswith('/node_modules/.vite/deps/') and 'tanstack_react-start' in path and not path.endswith('.map'): await route.fulfill(status=200,content_type='application/javascript',body='export { useServerFn } from "/scripts/browser/asset-document-mocks.tsx";'); return
+   if ('tanstack/react-start/dist/esm/index.js' in path or 'tanstack_react-start' in path) and not path.endswith('.map'): await route.fulfill(status=200,content_type='application/javascript',body='export { useServerFn } from "/scripts/browser/asset-document-mocks.tsx";'); return
    if req.method not in ('GET','HEAD'): raise AssertionError('Unexpected external write')
    await route.continue_()
   await context.route('**/*',isolate)
   await page.goto('http://localhost:8080/statements',wait_until='domcontentloaded')
   await page.get_by_label('Maintenance original').set_input_files(ROOT/'service.png')
   review=page.get_by_role('region',name='Document review service.png')
-  await page.wait_for_timeout(1500); print('STATE',await page.locator('main').inner_text()); print('ERRORS',errors)
   await expect(review.get_by_label('Asset for this document')).to_have_value('generator-1')
   await review.get_by_role('button',name='Confirm and save').click()
   await expect(review.get_by_role('button',name='Retry',exact=True)).to_be_visible()
