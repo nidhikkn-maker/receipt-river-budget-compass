@@ -175,7 +175,7 @@ export function DocumentIntake({ file, context, onClose, resume, replacesId, onS
       const cost = Number(v("cost", x?.property?.cost ?? "")) || 0;
       const date = v("acq", x?.property?.acquiredOn ?? "");
       const p = { ...proposal.property, name: v("name", proposal.property.name), ...(ownerSuggested && !ownerOk ? { ownerEntityId: undefined } : {}) };
-      const asset = cost > 0 && isIso(date) ? { id: `${runId.slice(0, 30)}-asset`, name: p.name, kind: "property" as const, cost, inUse: date, purchaseDate: date, sharePct: 100, bookMethod: "slm" as const, bookRatePct: 0, ownerEntityId: p.ownerEntityId } : null;
+      const asset = docType !== "utility_bill" && cost > 0 && isIso(date) ? { id: `${runId.slice(0, 30)}-asset`, name: p.name, kind: "property" as const, cost, inUse: date, purchaseDate: date, sharePct: 100, bookMethod: "slm" as const, bookRatePct: 0, ownerEntityId: p.ownerEntityId } : null;
       return { route: "property", property: p, asset };
     }
     if (proposal.kind === "lease") {

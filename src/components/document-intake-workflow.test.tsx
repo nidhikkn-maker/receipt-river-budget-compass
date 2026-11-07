@@ -59,7 +59,7 @@ describe("actual document review workflow (isolated persistence boundary)", () =
   });
 
   it("utility review requires no invented cost and saves the consumer number with property links", async () => {
-    open(baseRead("utility_bill", { property: { name: "Factory", address: "44 Industrial Road", owner: null, cost: null, acquiredOn: null, surveyNo: null, valuation: null, valuationDate: null, utilityConsumerNo: "04477112", insurer: null, propertyTaxId: null } }));
+    open(baseRead("utility_bill", { property: { name: "Factory", address: "44 Industrial Road", owner: null, cost: 730, acquiredOn: "2026-10-02", surveyNo: null, valuation: null, valuationDate: null, utilityConsumerNo: "04477112", insurer: null, propertyTaxId: null } }));
     fireEvent.click(screen.getByRole("button", { name: "Confirm and save" }));
     await waitFor(() => expect(commit).toHaveBeenCalledTimes(1));
     const payload = commit.mock.calls[0]?.[1];
