@@ -589,6 +589,14 @@ function StatementDeskPage() {
             </DialogContent>
           </Dialog>
 
+          {failedOriginals.length > 0 && (
+            <Card className="space-y-2 border-destructive/50 p-3" aria-label="Statement originals not stored">
+              <h3 className="font-semibold text-destructive">Originals not stored · {failedOriginals.length}</h3>
+              <p className="text-xs text-muted-foreground">The entries were posted, but these statement files aren’t in DocuRepo yet, so the import isn’t fully traceable. Retry to store them — no entries will be duplicated.</p>
+              <ul className="list-disc pl-5 text-sm">{failedOriginals.map((f) => <li key={f.file.name} className="truncate">{f.file.name}</li>)}</ul>
+              <Button size="sm" variant="outline" onClick={() => void retryOriginals()}>Retry storing originals</Button>
+            </Card>
+          )}
           <div className="flex flex-wrap items-center gap-2">
             <Button onClick={apply} disabled={!!progress}>{progress ?? `Apply everything (${plan.totals.auto + accepted.length} to save)`}</Button>
             {askKeys.length > 0 && <Button variant="outline" onClick={() => setAccepted(askKeys)}>Accept all {askKeys.length} asking items</Button>}
