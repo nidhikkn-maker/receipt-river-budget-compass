@@ -90,6 +90,14 @@ export function useNetWorth() {
     for (const [isin, c] of closes.byIsin) { const q = closeQuote(isin, c); const prev = quotes.find((x) => x.key === q.key); if (!prev || prev.at < q.at) quotes = [...quotes.filter((x) => x.key !== q.key), q]; }
     // A holding that names its exchange is valued at that exchange's close, never the other one's [v6.1 §3].
     const valued = books.holdings.filter((h) => !(h.isin && dematIsins.has(h.isin))).map((h) => {
+      if (h.kind === "broker_cash" && h.cashAccountId) {
+        if (h.sharePct !== 100) return { holding: h, key: null, quote: null, value: null, stale: false, note: "Confirm a fully owned cash account before linking this broker balance" };
+        const account = live.find(a => a.id === h.cashAccountId && ["savings","current","cash","wallet"].includes(a.kind));
+        const balance = account ? accountValue(account, transactions, valuations).value : null;
+        const gap = balance == null ? null : Math.round((h.quantity * h.sharePct / 100 - balance)*100)/100;
+        return { holding: h, key: null, quote: null, value: null, stale: false, countedElsewhere: !!account, note: account ? `Counted once in ${account.name} ledger balance · statement cash ${h.quantity}${gap ? ` · statement/ledger difference ${gap.toFixed(2)} INR — review required` : " · statement and ledger agree"}` : "Linked cash account unavailable — review the link before valuation" };
+      }
+      if (h.kind === "bond" && (!h.bond || !documents.some(d => d.id === h.bond?.docId))) return { holding: h, key: null, quote: null, value: null, stale: true, note: "Bond original document and reviewed terms required" };
       const c = h.isin && h.exchange ? pickClose(closes.byIsin, closes.byIsinEx, h.isin, h.exchange) : undefined;
       const qs = c && h.isin ? [...quotes.filter((x) => x.key !== `isin:${h.isin}`), closeQuote(h.isin, c)] : h.isin && h.exchange && closes.byIsin.has(h.isin) ? quotes.filter((x) => !(x.key === `isin:${h.isin}` && x.provider.endsWith("official closing price"))) : quotes;
       return valueHolding(h, applyOverrides(qs, books.priceOverrides ?? []), books.goldRate, now, books.alerts, books.fxRates ?? []);

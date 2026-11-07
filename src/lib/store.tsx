@@ -6,6 +6,7 @@ import type { Database, Json } from "@/integrations/supabase/types";
 import { queueEntry, pendingEntries, removePending, putSnapshot, getSnapshot } from "./offline";
 import { mergePending, setItem, type PendingItem } from "./pending-sync";
 import { deleteFinanceData } from "./delete-data";
+import { privateFileUrl } from "./private-files";
 import { saveExpense } from "./fx.functions";
 import {
   CHARGES_CATEGORY, validateAllocations, validateBudget, validateExpense, type Allocation,
@@ -747,6 +748,7 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
       doc_date: meta.docDate || null, amount: meta.amount, currency: meta.currency, merchant: meta.merchant?.trim() || null, notes: meta.notes.slice(0, 2000), extracted_text: (meta.text ?? "").slice(0, 20000),
       transaction_id: meta.transactionId, account_id: meta.accountId, loan_id: meta.loanId, expires_on: meta.expiresOn || null,
       fields: (meta.fields ?? []).slice(0, 40) as unknown as Json, replaces_id: meta.replacesId ?? null, evidence_locked: !!meta.evidenceLocked,
+      entity_id: meta.entityId ?? null,
     });
     if (error) { await supabase.storage.from("receipts").remove([path]); throw new Error(error.message); }
     await refresh();
@@ -795,9 +797,16 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
     }
   };
   const signedUrl = useCallback(async (path: string) => {
-    const { data } = await supabase.storage.from("receipts").createSignedUrl(path, 300);
-    return data?.signedUrl ?? null;
-  }, []);
+    return privateFileUrl(path, {
+      canRead: async name => {
+        // Owner receipts still rely on storage RLS; shared files also require a currently visible document.
+        if (name.split("/")[0] === userId) return true;
+        const result = await supabase.from("documents").select("id").eq("file_path", name).limit(1);
+        return !result.error && !!result.data?.length;
+      },
+      sign: async (name, seconds) => { const { data, error } = await supabase.storage.from("receipts").createSignedUrl(name, seconds); return error ? null : data?.signedUrl ?? null; },
+    });
+  }, [userId]);
 
   return (
     <StoreCtx.Provider value={{

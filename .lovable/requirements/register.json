@@ -1537,7 +1537,8 @@
           "src/lib/books/intake.ts STEPS/trail describe the pipeline; src/routes/_authenticated/statements.tsx separately saves statement evidence after import; a trail alone is not an atomic workflow.",
           "src/lib/books/books.test.ts \u2014 PASS on rerun; concrete assertions recorded in /tmp/verify-b1-tests.log. Scope is limited to the component rules/fixtures in this file, not the entire clause.",
           "src/lib/books/intake-revision-sql.test.ts \u2014 PASS on rerun; concrete assertions recorded in /tmp/verify-b1-tests.log. Scope is limited to the component rules/fixtures in this file, not the entire clause.",
-          "src/lib/books/typed-intake-sql.test.ts \u2014 PASS on rerun; concrete assertions recorded in /tmp/verify-b1-tests.log. Scope is limited to the component rules/fixtures in this file, not the entire clause."
+          "src/lib/books/typed-intake-sql.test.ts \u2014 PASS on rerun; concrete assertions recorded in /tmp/verify-b1-tests.log. Scope is limited to the component rules/fixtures in this file, not the entire clause.",
+          "2026-11-07: source-first Statement Desk now retains content-addressed originals before ledger writes, source IDs on reconciliation refs, partial result/new-account reuse; actual CSV/PDF route browser recovery passes plus disposable pipeline/report records (not production store/cloud storage). Bonds and explicit broker-cash links added with persisted net-worth UI/snapshot tests; broad source/provider/permission/statement association clauses remain PARTIAL."
         ]
       }
     },
@@ -1896,7 +1897,7 @@
       "modules": [],
       "dependencies": [],
       "status": "PARTIAL",
-      "requiredWork": "Prove every successful Statement Desk path persists the source in DocuRepo with correct company tag and file permissions, and that failed evidence storage cannot leave an untracked successful financial import. Connected review/persistence evidence added 7 Nov; retain PARTIAL until actual reader/file storage, applicable full permission paths and remaining original-clause conditions are verified. Controlled fixtures do not certify hosted saves or real-document accuracy.",
+      "requiredWork": "Source-first bank originals, stable content IDs and line references now implemented with controlled browser/persistence coverage. Remaining actual private storage, all company tagging and edit-member file permissions, all document readers and durable cross-device operation history.",
       "verificationMethod": "Source-to-code audit followed by applicable unit/database/integration/real-route checks; hosted/device evidence separately required.",
       "finalTestResult": {
         "result": "PARTIAL",
@@ -1906,7 +1907,8 @@
           "src/lib/books/entity-upload-sql.test.ts \u2014 PASS on rerun; concrete assertions recorded in /tmp/verify-b1-tests.log. Scope is limited to the component rules/fixtures in this file, not the entire clause.",
           "src/lib/books/intake-revision-sql.test.ts \u2014 PASS on rerun; concrete assertions recorded in /tmp/verify-b1-tests.log. Scope is limited to the component rules/fixtures in this file, not the entire clause.",
           "src/lib/books/typed-intake-sql.test.ts \u2014 PASS on rerun; concrete assertions recorded in /tmp/verify-b1-tests.log. Scope is limited to the component rules/fixtures in this file, not the entire clause.",
-          "2026-11-07 connected verification batch: scripts/browser/test_statement_desk.py: 4 passing real-route controlled checks; failed originals retained across second upload/reload, recovered to two evidence-locked documents with same ids; ledger still 2 entries, INR730 spending, INR270 balance. No external writes."
+          "2026-11-07 connected verification batch: scripts/browser/test_statement_desk.py: 4 passing real-route controlled checks; failed originals retained across second upload/reload, recovered to two evidence-locked documents with same ids; ledger still 2 entries, INR730 spending, INR270 balance. No external writes.",
+          "2026-11-07: source-first Statement Desk now retains content-addressed originals before ledger writes, source IDs on reconciliation refs, partial result/new-account reuse; actual CSV/PDF route browser recovery passes plus disposable pipeline/report records (not production store/cloud storage). Bonds and explicit broker-cash links added with persisted net-worth UI/snapshot tests; broad source/provider/permission/statement association clauses remain PARTIAL."
         ]
       }
     },
@@ -11193,7 +11195,8 @@
       "finalTestResult": {
         "result": "PARTIAL",
         "evidence": [
-          "src/lib/investments/demat.ts: parseInvestmentDoc/mergeInvestmentDoc maintain holdings, trades and events; src/lib/books/fund-statement.ts proposes mutual-fund holdings."
+          "src/lib/investments/demat.ts: parseInvestmentDoc/mergeInvestmentDoc maintain holdings, trades and events; src/lib/books/fund-statement.ts proposes mutual-fund holdings.",
+          "2026-11-07: source-first Statement Desk now retains content-addressed originals before ledger writes, source IDs on reconciliation refs, partial result/new-account reuse; actual CSV/PDF route browser recovery passes plus disposable pipeline/report records (not production store/cloud storage). Bonds and explicit broker-cash links added with persisted net-worth UI/snapshot tests; broad source/provider/permission/statement association clauses remain PARTIAL."
         ]
       }
     },
@@ -11681,7 +11684,8 @@
         "result": "PARTIAL",
         "evidence": [
           "src/components/books/useBooks.ts excludes linked property assets and matching demat ISINs; bank balances still enter net worth independently of cash holdings.",
-          "PASS src/lib/books/recon-extra.test.ts (10 tests): brokerCashOverlap warns on matching cash accounts; it does not exclude their value."
+          "PASS src/lib/books/recon-extra.test.ts (10 tests): brokerCashOverlap warns on matching cash accounts; it does not exclude their value.",
+          "2026-11-07: source-first Statement Desk now retains content-addressed originals before ledger writes, source IDs on reconciliation refs, partial result/new-account reuse; actual CSV/PDF route browser recovery passes plus disposable pipeline/report records (not production store/cloud storage). Bonds and explicit broker-cash links added with persisted net-worth UI/snapshot tests; broad source/provider/permission/statement association clauses remain PARTIAL."
         ]
       }
     },
@@ -16662,7 +16666,8 @@
         "evidence": [
           "PASS books.test.ts failed commit leaves original state; period-recovery-sql.test.ts (8) tests disposable-store atomic rollback/recovery; review-recovery.test.ts (3) tests review recovery.",
           "src/lib/books/commit.ts and src/lib/review-recovery.ts provide subset recovery logic.",
-          "2026-11-07 connected verification batch: Actual Statement Desk upload/approval/original-failure/reload/retry tested with isolated store; canonical pipeline real disposable persistence covers partial saved line/lost response/replay/source retention/reconciliation/monthly report: 2 source lines, INR730 spend, INR270 balance."
+          "2026-11-07 connected verification batch: Actual Statement Desk upload/approval/original-failure/reload/retry tested with isolated store; canonical pipeline real disposable persistence covers partial saved line/lost response/replay/source retention/reconciliation/monthly report: 2 source lines, INR730 spend, INR270 balance.",
+          "2026-11-07: source-first Statement Desk now retains content-addressed originals before ledger writes, source IDs on reconciliation refs, partial result/new-account reuse; actual CSV/PDF route browser recovery passes plus disposable pipeline/report records (not production store/cloud storage). Bonds and explicit broker-cash links added with persisted net-worth UI/snapshot tests; broad source/provider/permission/statement association clauses remain PARTIAL."
         ]
       },
       "verifiedAt": "2026-11-06"
@@ -17796,7 +17801,8 @@
           "src/lib/market/bhavcopy.ts \u2014 official NSE/BSE UDiFF parser, URL builders, candidate dates and close selection; not provider authorization evidence.",
           "src/lib/market/bhavcopy.test.ts; src/lib/market/exchange-close.test.ts \u2014 PASS re-run: parsing, invalid price rejection, dated/exchange-specific close selection and real fetch timestamp retention.",
           "src/components/books/MarketPanel.tsx \u2014 invokes market-refresh and mutual-fund-nav; manual NAV refresh/store UI exists.",
-          "No project edits or new tests: sandbox instructions require project files remain unchanged; proposed additional coverage is specified in requiredWork."
+          "No project edits or new tests: sandbox instructions require project files remain unchanged; proposed additional coverage is specified in requiredWork.",
+          "2026-11-07: source-first Statement Desk now retains content-addressed originals before ledger writes, source IDs on reconciliation refs, partial result/new-account reuse; actual CSV/PDF route browser recovery passes plus disposable pipeline/report records (not production store/cloud storage). Bonds and explicit broker-cash links added with persisted net-worth UI/snapshot tests; broad source/provider/permission/statement association clauses remain PARTIAL."
         ]
       }
     },
@@ -18206,17 +18212,24 @@
       },
       "original": "Use appropriate instrument-specific valuation rules.",
       "interpretation": "Account for this source clause in the context of 4. Automatic valuation; verify each enumerated feature and applicable safeguard, not merely screen presence.",
-      "modules": [],
+      "modules": [
+        "src/lib/books/bonds.ts",
+        "src/lib/books/market.ts",
+        "src/components/books/useBooks.ts",
+        "src/components/books/MarketPanel.tsx",
+        "src/components/books/market-workflow-persistence.test.tsx"
+      ],
       "dependencies": [],
-      "status": "PARTIAL",
-      "requiredWork": "Add bond-specific accrual/face-value conventions and supported instrument rules with tests; current valueHolding uses generic quantity\u00d7price except gold/cash and FX.",
+      "status": "VERIFIED COMPLETE",
+      "requiredWork": "None for implemented instrument rules / explicitly linked broker-cash reconciliation. Actual MarketPanel/useNetWorth and persisted owner-reviewed SQL tested; live provider and hosted file-storage accuracy are not certified.",
       "verificationMethod": "Source-to-code audit followed by applicable unit/database/integration/real-route checks; hosted/device evidence separately required.",
       "finalTestResult": {
-        "result": "PARTIAL",
+        "result": "PASS",
         "evidence": [
           "src/components/books/useBooks.ts:useNetWorth; src/lib/books/market.ts \u2014 inspected canonical holdings filtering, ledger-account classification, valuation, snapshot and net-worth composition.",
           "src/lib/books/books.test.ts; src/lib/portfolio.test.ts; src/lib/books/loan-balances.test.ts; src/lib/books/investment-flows.test.ts \u2014 PASS re-run: ownership-adjusted ETF arithmetic, missing-price handling, NAV gains, lender evidence and net-flow calculations; no full composition/persistence test.",
-          "No project edits or new tests: sandbox instructions require project files remain unchanged; proposed additional coverage is specified in requiredWork."
+          "No project edits or new tests: sandbox instructions require project files remain unchanged; proposed additional coverage is specified in requiredWork.",
+          "2026-11-07: actual MarketPanel/Home installed owner-reviewed SQL save/reload/valuation snapshot: clean/dirty bond per-unit/face-percent price, 50% share, explicit source terms, ACT/ACT accrued interest and USD-INR conversion; maturity/missing terms/source/FX excluded without money writes. Broker cash UI link saves/reloads, 1100 statement vs 1000 ledger flags 100 difference, counts ledger once; combined same-ISIN manual/Demat dedup 500 plus separate deposit 200 gives portfolio 700 and net 3900. Companion ACT/365, ACT/360, ACT/ACT,30E/360, invalid-date numerical regressions. Provider/storage boundaries controlled, no production claims."
         ]
       }
     },
@@ -18233,14 +18246,15 @@
       "modules": [],
       "dependencies": [],
       "status": "PARTIAL",
-      "requiredWork": "Test overlapping manual/Demat/account statements and brokerage cash together. ISIN exclusion exists, but raw investment-account values may overlap securities and no complete integration test proves deduplication.",
+      "requiredWork": "Combined linked broker cash + independent deposit + duplicate manual/Demat ISIN read-back and snapshot now tested. Remaining: reconcile investment accounts that contain combined cash-and-security valuations against detailed broker statements; do not silently exclude whole account values.",
       "verificationMethod": "Source-to-code audit followed by applicable unit/database/integration/real-route checks; hosted/device evidence separately required.",
       "finalTestResult": {
         "result": "PARTIAL",
         "evidence": [
           "src/components/books/useBooks.ts:useNetWorth; src/lib/books/market.ts \u2014 inspected canonical holdings filtering, ledger-account classification, valuation, snapshot and net-worth composition.",
           "src/lib/books/books.test.ts; src/lib/portfolio.test.ts; src/lib/books/loan-balances.test.ts; src/lib/books/investment-flows.test.ts \u2014 PASS re-run: ownership-adjusted ETF arithmetic, missing-price handling, NAV gains, lender evidence and net-flow calculations; no full composition/persistence test.",
-          "No project edits or new tests: sandbox instructions require project files remain unchanged; proposed additional coverage is specified in requiredWork."
+          "No project edits or new tests: sandbox instructions require project files remain unchanged; proposed additional coverage is specified in requiredWork.",
+          "2026-11-07: source-first Statement Desk now retains content-addressed originals before ledger writes, source IDs on reconciliation refs, partial result/new-account reuse; actual CSV/PDF route browser recovery passes plus disposable pipeline/report records (not production store/cloud storage). Bonds and explicit broker-cash links added with persisted net-worth UI/snapshot tests; broad source/provider/permission/statement association clauses remain PARTIAL."
         ]
       }
     },
@@ -20354,17 +20368,24 @@
       },
       "original": "9. Brokerage cash reconciliation.",
       "interpretation": "Account for this source clause in the context of 14. Testing; verify each enumerated feature and applicable safeguard, not merely screen presence.",
-      "modules": [],
+      "modules": [
+        "src/lib/books/bonds.ts",
+        "src/lib/books/market.ts",
+        "src/components/books/useBooks.ts",
+        "src/components/books/MarketPanel.tsx",
+        "src/components/books/market-workflow-persistence.test.tsx"
+      ],
       "dependencies": [],
       "status": "PARTIAL",
-      "requiredWork": "Implement/test brokerage cash reconciliation against statements and ledger cash, explicitly preventing investment cash/security double counting.",
+      "requiredWork": "Explicit cash-only ledger links and statement/ledger difference, persisted net-worth snapshots and combined Demat dedup are verified. Still missing actual broker statement import/source-linked cash evidence and reconciliation of investment accounts carrying combined cash/security values; no full brokerage reconciliation certification.",
       "verificationMethod": "Source-to-code audit followed by applicable unit/database/integration/real-route checks; hosted/device evidence separately required.",
       "finalTestResult": {
         "result": "PARTIAL",
         "evidence": [
           "src/components/books/useBooks.ts:useNetWorth; src/lib/books/market.ts \u2014 inspected canonical holdings filtering, ledger-account classification, valuation, snapshot and net-worth composition.",
           "src/lib/books/books.test.ts; src/lib/portfolio.test.ts; src/lib/books/loan-balances.test.ts; src/lib/books/investment-flows.test.ts \u2014 PASS re-run: ownership-adjusted ETF arithmetic, missing-price handling, NAV gains, lender evidence and net-flow calculations; no full composition/persistence test.",
-          "No project edits or new tests: sandbox instructions require project files remain unchanged; proposed additional coverage is specified in requiredWork."
+          "No project edits or new tests: sandbox instructions require project files remain unchanged; proposed additional coverage is specified in requiredWork.",
+          "2026-11-07: actual MarketPanel/Home installed owner-reviewed SQL save/reload/valuation snapshot: clean/dirty bond per-unit/face-percent price, 50% share, explicit source terms, ACT/ACT accrued interest and USD-INR conversion; maturity/missing terms/source/FX excluded without money writes. Broker cash UI link saves/reloads, 1100 statement vs 1000 ledger flags 100 difference, counts ledger once; combined same-ISIN manual/Demat dedup 500 plus separate deposit 200 gives portfolio 700 and net 3900. Companion ACT/365, ACT/360, ACT/ACT,30E/360, invalid-date numerical regressions. Provider/storage boundaries controlled, no production claims."
         ]
       }
     },

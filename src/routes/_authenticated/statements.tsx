@@ -29,7 +29,7 @@ import { extractStatement } from "@/lib/statement-extract.functions";
 import type { StatementUpload } from "@/lib/preferences";
 import { Link } from "@tanstack/react-router";
 import { buildPlan, type AccountPlan, type StatementPlan } from "@/lib/statement-pipeline/plan";
-import { applyUpload, undoUpload, type ApplyResult } from "@/lib/statement-pipeline/apply";
+import { applyUpload, undoUpload, originalId, PartialUploadError, type ApplyResult, type ApplyRequest } from "@/lib/statement-pipeline/apply";
 import { totals, type StmtFile } from "@/lib/statement-pipeline/line";
 import { AccountantInbox } from "@/components/AccountantInbox";
 import { emiTargets } from "@/lib/emi-match";
@@ -197,6 +197,7 @@ function StatementDeskPage() {
 
   const apply = async () => {
     if (!plan) return;
+    if (!navigator.onLine) { toast.error("Reconnect before posting a statement. Your originals must be stored first."); return; }
     const requests = plan.accounts
       .map((a) => ({
         account: a,
@@ -212,7 +213,25 @@ function StatementDeskPage() {
     }
     try {
       setProgress("Saving…");
-      const r = await applyUpload(requests, api(), setProgress);
+      const prepareSource = async (q: ApplyRequest, accountId: string) => {
+        const f = originals.current.get(q.account.file.name);
+        if (!f) throw Error(`Choose ${q.account.file.name} again — its original is required before saving.`);
+        const owner = storeRef.current.userId;
+        const id = await originalId(owner, await f.arrayBuffer());
+        const dates = q.account.file.lines.map(l => l.date).sort();
+        const meta: DocumentMeta = { id, title: `Statement · ${f.name}`, docType: q.account.hint?.kind === "credit_card" || /card/i.test(f.name) ? "card_statement" : "bank_statement", docDate: dates[dates.length - 1] ?? null, amount: null, currency: q.account.file.currency, merchant: null, notes: `Statement Desk source: ${q.account.file.lines.length} lines (${dates[0] ?? "?"} to ${dates[dates.length - 1] ?? "?"}).`, transactionId: null, accountId, loanId: null, expiresOn: null, evidenceLocked: true };
+        await keepOriginal(owner, { file: f, meta });
+        try {
+          await storeRef.current.addDocument(f, meta);
+          await removeOriginal(owner, id);
+          setFailedOriginals(rows => rows.filter(row => row.meta.id !== id));
+          return id;
+        } catch (error) {
+          setFailedOriginals(rows => [...rows.filter(row => row.meta.id !== id), { file: f, meta }]);
+          throw error;
+        }
+      };
+      const r = await applyUpload(requests, { ...api(), prepareSource }, setProgress);
       setResult(r);
       // One event per saved statement: did the app's balance after saving match the printed closing figure?
       // Lines still open after saving: asked lines not accepted, held lines and lines saved on another account.
@@ -226,34 +245,18 @@ function StatementDeskPage() {
       void loadLinks();
       listDrafts().then(setDrafts).catch(() => {}); setDraftFlip([]);
       const upload: StatementUpload = { id: crypto.randomUUID(), at: new Date().toISOString(), label: plan.accounts.map((a) => a.file.name).join(", ").slice(0, 200), posted: r.posted, reconciled: r.reconciled, createdAccounts: r.createdAccounts };
-      // Keep each statement original once in DocuRepo, evidence-locked, so posted lines trace back to their file [§3].
-      // A failed store must not vanish into a toast: keep the file for an explicit retry so no import is left untracked.
-      const kept = new Set<File>();
-      const failed: { file: File; meta: DocumentMeta }[] = [];
-      for (const a of plan.accounts) {
-        const f = originals.current.get(a.file.name);
-        if (!f || kept.has(f) || !requests.some((q) => q.account === a)) continue;
-        kept.add(f);
-        const ds = a.file.lines.map((l) => l.date).sort();
-        const meta: DocumentMeta = { id: crypto.randomUUID(), title: `Statement · ${a.file.name}`, docType: a.file.hint?.kind === "credit_card" || /card/i.test(a.file.name) ? "card_statement" : "bank_statement", docDate: ds[ds.length - 1] ?? null, amount: null, currency: a.file.currency, merchant: null, notes: `Statement Desk upload ${upload.id}: ${a.file.lines.length} lines (${ds[0] ?? "?"} to ${ds[ds.length - 1] ?? "?"}).`, transactionId: null, accountId: a.file.accountId, loanId: null, expiresOn: null, evidenceLocked: true };
-        const owner = storeRef.current.userId;
-        try { await keepOriginal(owner, { file: f, meta }); }
-        catch { toast.error(`Keep ${f.name} until it is stored — this device couldn’t retain a recovery copy.`); }
-        try {
-          await storeRef.current.addDocument(f, meta);
-          await removeOriginal(owner, meta.id ?? "");
-        }
-        catch { failed.push({ file: f, meta }); }
-      }
-      setFailedOriginals((pending) => [...pending, ...failed]);
-      if (failed.length) toast.error(`Posted, but ${failed.length === 1 ? "the original of " + (failed[0]?.file.name ?? "one file") : failed.length + " statement originals"} couldn’t be stored in DocuRepo — retry below so the import stays traceable.`);
       try { const s = storeRef.current; await s.savePreferences({ ...s.preferences, statementUploads: [upload, ...(s.preferences.statementUploads ?? [])].slice(0, 10) }); }
       catch { toast.error("Saved, but undo history couldn’t sync to your other devices."); }
       toast.success(`${r.posted.length} entries posted · ${r.reconciled.length} records marked as matched${r.createdAccounts.length ? ` · ${r.createdAccounts.length} account${r.createdAccounts.length === 1 ? "" : "s"} created` : ""}`, {
         action: { label: "Undo", onClick: () => void undo(r) },
       });
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Nothing was saved — try again.");
+      if (e instanceof PartialUploadError) {
+        setResult(e.result);
+        // Keep newly-created account selections across retries; never create another account.
+        setDestinations(previous => ({ ...previous, ...Object.fromEntries(requests.filter(q => q.account.accountId).map(q => [`${q.account.file.name}\u0000account`, q.account.accountId ?? ""])) }));
+        toast.error(`Statement processing stopped: ${e.message}. ${e.result.posted.length} entries confirmed saved. Review the refreshed records and retry; saved lines won’t be duplicated.`);
+      } else toast.error(e instanceof Error ? e.message : "Statement processing stopped — review and retry.");
     } finally {
       setProgress(null);
     }
@@ -631,7 +634,7 @@ function StatementDeskPage() {
       {failedOriginals.length > 0 && (
         <Card className="space-y-2 border-destructive/50 p-3" aria-label="Statement originals not stored">
           <h3 className="font-semibold text-destructive">Originals not stored · {failedOriginals.length}</h3>
-          <p className="text-xs text-muted-foreground">The entries were posted, but these statement files aren’t in DocuRepo yet, so the import isn’t fully traceable. Retry to store them — no entries will be duplicated.</p>
+          <p className="text-xs text-muted-foreground">These originals still need to be stored in DocuRepo. New statement entries wait until their original is stored. Retry, then review any unfinished entries.</p>
           <ul className="list-disc pl-5 text-sm">{failedOriginals.map((f) => <li key={f.meta.id} className="truncate">{f.file.name}</li>)}</ul>
           <Button size="sm" variant="outline" onClick={retryOriginals}>Retry storing originals</Button>
         </Card>

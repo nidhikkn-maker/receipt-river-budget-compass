@@ -1,5 +1,6 @@
 /** v6.1 market data, valuation and dynamic net worth. Pure; never creates ledger entries or invents prices. */
 import type { AlertSettings, Freshness, FxRate, GoldRate, Holding, Quote, Snapshot } from "./types";
+import { bondPrice } from "./bonds";
 
 export const FRESHNESS_LABEL: Record<Freshness, string> = { live: "Live", delayed: "Delayed", eod: "End of day", nav: "Latest NAV", manual: "Entered by you", statement: "From statement" };
 
@@ -67,7 +68,7 @@ export function fmtIst(iso: string): string {
   return `${d.getUTCDate()} ${["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][d.getUTCMonth()]} ${d.getUTCFullYear()}, ${String(d.getUTCHours()).padStart(2,"0")}:${String(d.getUTCMinutes()).padStart(2,"0")} IST`;
 }
 
-export interface Valued { holding: Holding; key: string | null; quote: Quote | null; value: number | null; stale: boolean; note: string }
+export interface Valued { holding: Holding; key: string | null; quote: Quote | null; value: number | null; stale: boolean; note: string; countedElsewhere?: boolean }
 
 /** Latest dated owner-entered INR rate for a currency; null when none exists — a rate is never guessed [v6.1 §2]. */
 export function fxFor(currency: string, fxRates: FxRate[]): FxRate | null {
@@ -102,16 +103,20 @@ export function valueHolding(h: Holding, quotes: Quote[], gold: GoldRate | undef
   if (status === "delisted") return { holding: h, key, quote: q, value: null, stale: true, note: `Delisted — last price ${q.price} on ${fmtIst(q.at)} is not used; enter a confirmed value` };
   const flag = status === "suspended" ? "Trading suspended · last traded price · " : status === "illiquid" ? "Thinly traded · " : "";
   const base = `${flag}${FRESHNESS_LABEL[q.freshness]} · ${q.provider} · price ${fmtIst(q.at)} · fetched ${fmtIst(q.refreshedAt)}`;
+  const bond = h.kind === "bond" ? bondPrice(h, q, now.toISOString().slice(0,10)) : null;
+  if (bond && bond.unitPrice == null) return { holding: h, key, quote: q, value: null, stale: true, note: bond.note };
+  const unitPrice = bond?.unitPrice ?? q.price;
+  const basis = bond ? `${base} · ${bond.note}` : base;
   const ccy = (q.currency ?? "INR").toUpperCase();
   if (ccy !== "INR") {
     const fx = fxFor(ccy, fxRates);
     // A foreign-currency price is never valued at a guessed rate [v6.1 §2].
     if (!fx) return { holding: h, key, quote: q, value: null, stale: false, note: `Price is in ${ccy} — add a ${ccy}→INR rate below to value this holding` };
     const fxAge = (now.getTime() - Date.parse(fx.date)) / 864e5;
-    const value = Math.round(h.quantity * q.price * fx.rate * share * 100) / 100;
-    return { holding: h, key, quote: q, value, stale: status === "suspended" || fxAge > FX_STALE_DAYS || isStale(q, now, h.kind, alerts.staleNavDays), note: `${base} · ${q.price} ${ccy} × ${fx.rate} INR/${ccy} (${fx.source}, ${fx.date})${fxAge > FX_STALE_DAYS ? " · rate over 30 days old" : ""}` };
+    const value = Math.round(h.quantity * unitPrice * fx.rate * share * 100) / 100;
+    return { holding: h, key, quote: q, value, stale: status === "suspended" || fxAge > FX_STALE_DAYS || isStale(q, now, h.kind, alerts.staleNavDays), note: `${basis} · ${unitPrice} ${ccy} × ${fx.rate} INR/${ccy} (${fx.source}, ${fx.date})${fxAge > FX_STALE_DAYS ? " · rate over 30 days old" : ""}` };
   }
-  return { holding: h, key, quote: q, value: Math.round(h.quantity * q.price * share * 100) / 100, stale: status === "suspended" || isStale(q, now, h.kind, alerts.staleNavDays), note: base };
+  return { holding: h, key, quote: q, value: Math.round(h.quantity * unitPrice * share * 100) / 100, stale: status === "suspended" || isStale(q, now, h.kind, alerts.staleNavDays), note: basis };
 }
 
 export interface NetWorthPart { label: string; value: number; basis: string; live: boolean; asOf?: string | null }
@@ -125,7 +130,7 @@ export function dynamicNetWorth(parts: { bank: number; bankBasis: string; invest
     { label: "Other assets", value: parts.otherAssets, basis: "latest recorded value", live: false },
   ];
   const total = assets.reduce((s, a) => s + a.value, 0);
-  const missing = parts.investments.filter((v) => v.value == null).length;
+  const missing = parts.investments.filter((v) => v.value == null && !v.countedElsewhere).length;
   const stale = parts.investments.filter((v) => v.stale).length;
   return {
     assets, liabilities: parts.liabilities, liabilitiesBasis: parts.liabilitiesBasis, liabilitiesAsOf: parts.asOf?.liabilities ?? null,
@@ -144,7 +149,7 @@ export function addSnapshot(list: Snapshot[], s: Snapshot): Snapshot[] {
 /** Configurable valuation alerts [v6.1 §13]. */
 export function valuationAlerts(valued: Valued[], snapshots: Snapshot[], a: AlertSettings, statementQty: Record<string, number>, qtyHoldings: Holding[] = valued.map((v) => v.holding), corporateActions: { name: string; note: string }[] = [], dematMissing: string[] = []): string[] {
   const out: string[] = [];
-  if (a.missingPrices) { const m = valued.filter((v) => v.value == null); if (m.length) out.push(`${m.length} holding${m.length > 1 ? "s have" : " has"} no price`); }
+  if (a.missingPrices) { const m = valued.filter((v) => v.value == null && !v.countedElsewhere); if (m.length) out.push(`${m.length} holding${m.length > 1 ? "s have" : " has"} no price`); }
   for (const v of valued) if (v.stale && v.holding.kind === "mutual_fund") out.push(`${v.holding.name}: NAV older than ${a.staleNavDays} days`);
   if (snapshots.length >= 2) {
     const [p, c] = snapshots.slice(-2) as [Snapshot, Snapshot];

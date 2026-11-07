@@ -15,6 +15,7 @@ import { useBooks, useNetWorth } from "./useBooks";
 import { PriceOverrides } from "./PriceOverrides";
 import { useStore } from "@/lib/store";
 import { investmentFlows } from "@/lib/books/investment-flows";
+import { bondProblem, type BondTerms } from "@/lib/books/bonds";
 
 const KIND: Record<HoldingKind, string> = { mutual_fund: "Mutual fund", etf: "ETF", gold_etf: "Gold ETF", sgb: "Sovereign Gold Bond", physical_gold: "Physical gold", bond: "Bond", broker_cash: "Cash with broker", other: "Other" };
 const blank = (): Holding => ({ id: crypto.randomUUID(), kind: "mutual_fund", name: "", quantity: 0, sharePct: 100, source: "entered by you" });
@@ -22,7 +23,7 @@ const blank = (): Holding => ({ id: crypto.randomUUID(), kind: "mutual_fund", na
 export function MarketPanel() {
   const { books, save } = useBooks();
   const nw = useNetWorth();
-  const { accounts, transactions } = useStore();
+  const { accounts, transactions, documents } = useStore();
   const nav = useServerFn(getFundNav);
   const [edit, setEdit] = useState<Holding | null>(null);
     const [gold, setGold] = useState(books.goldRate ? String(books.goldRate.perGram24k) : "");
@@ -88,8 +89,22 @@ export function MarketPanel() {
           </>}
           <Input aria-label="Cost basis" type="number" placeholder="Cost (if evidenced)" value={edit.costBasis ?? ""} onChange={(e) => setEdit({ ...edit, costBasis: Number(e.target.value) || undefined })} />
           <Input aria-label="Ownership share percent" type="number" placeholder="Share %" value={edit.sharePct} onChange={(e) => setEdit({ ...edit, sharePct: Math.min(100, Math.max(0, Number(e.target.value) || 0)) })} />
+          {edit.kind === "broker_cash" && <select aria-label="Linked broker cash account" className="col-span-2 rounded-md border bg-background p-2" value={edit.cashAccountId ?? ""} onChange={e => setEdit({ ...edit, cashAccountId: e.target.value || undefined })}>
+            <option value="">Separate cash balance (not already in an account)</option>
+            {accounts.filter(a => !a.archived && ["savings","current","cash","wallet"].includes(a.kind)).map(a => <option key={a.id} value={a.id}>{a.name} · use ledger balance once</option>)}
+          </select>}
+          {edit.kind === "bond" && <fieldset className="col-span-2 grid grid-cols-2 gap-2"><legend className="mb-2">Printed bond terms</legend>
+            {(["faceValue","couponPct","lastCoupon","nextCoupon","maturity","currency"] as const).map(key => <label key={key} className="text-xs">{({ faceValue: "Face value per unit", couponPct: "Annual coupon %", lastCoupon: "Last coupon", nextCoupon: "Next coupon", maturity: "Maturity", currency: "Bond currency" })[key]}<Input aria-label={`Bond ${key}`} type={["faceValue","couponPct"].includes(key) ? "number" : ["lastCoupon","nextCoupon","maturity"].includes(key) ? "date" : "text"} value={edit.bond?.[key] ?? ""} onChange={e => setEdit({ ...edit, bond: { faceValue: 0, couponPct: 0, lastCoupon: "", nextCoupon: "", maturity: "", currency: "INR", dayCount: "ACT/365", couponsPerYear: 2, priceBasis: "amount", priceIncludesInterest: false, docId: "", sourceQuote: "", ...edit.bond, [key]: ["faceValue","couponPct"].includes(key) ? Number(e.target.value) : e.target.value.toUpperCase() } })} /></label>)}
+            <select aria-label="Bond day count" className="rounded-md border bg-background p-2" value={edit.bond?.dayCount ?? ""} onChange={e => { if (edit.bond) setEdit({ ...edit, bond: { ...edit.bond, dayCount: e.target.value as BondTerms["dayCount"] } }); }}><option value="" disabled>Day-count convention</option>{["ACT/365","ACT/360","ACT/ACT","30E/360"].map(v => <option key={v}>{v}</option>)}</select>
+            <select aria-label="Bond coupon frequency" className="rounded-md border bg-background p-2" value={edit.bond?.couponsPerYear ?? ""} onChange={e => { if (edit.bond) setEdit({ ...edit, bond: { ...edit.bond, couponsPerYear: Number(e.target.value) } }); }}><option value="" disabled>Coupons per year</option>{[1,2,4,12].map(v => <option key={v} value={v}>{v}</option>)}</select>
+            <select aria-label="Bond price basis" className="rounded-md border bg-background p-2" value={edit.bond?.priceBasis ?? ""} onChange={e => { if (edit.bond) setEdit({ ...edit, bond: { ...edit.bond, priceBasis: e.target.value as BondTerms["priceBasis"] } }); }}><option value="" disabled>Quote units</option><option value="amount">Currency per unit</option><option value="percent">Percent of face value</option></select>
+            <label className="flex items-center gap-2 text-xs"><input type="checkbox" checked={edit.bond?.priceIncludesInterest ?? false} onChange={e => { if (edit.bond) setEdit({ ...edit, bond: { ...edit.bond, priceIncludesInterest: e.target.checked } }); }} />Price includes interest</label>
+            <select aria-label="Bond source document" className="col-span-2 rounded-md border bg-background p-2" value={edit.bond?.docId ?? ""} onChange={e => { if (edit.bond) setEdit({ ...edit, bond: { ...edit.bond, docId: e.target.value } }); }}><option value="">Source document</option>{documents.map(d => <option key={d.id} value={d.id}>{d.title}</option>)}</select>
+            <Input aria-label="Bond printed source terms" className="col-span-2" placeholder="Printed terms / page reference" value={edit.bond?.sourceQuote ?? ""} onChange={e => { if (edit.bond) setEdit({ ...edit, bond: { ...edit.bond, sourceQuote: e.target.value } }); }} />
+          </fieldset>}
           <div className="col-span-2 flex gap-2">
             <Button size="sm" disabled={!edit.name.trim() || !(edit.quantity > 0)} onClick={async () => {
+              if (edit.kind === "bond") { const problem = edit.bond ? bondProblem(edit.bond) : "Enter the printed bond terms"; if (problem) { toast.error(problem); return; } }
               const k = quoteKey(edit);
               if (k && books.holdings.some((h) => h.id !== edit.id && quoteKey(h) === k)) { toast.error("This security is already listed — edit that one instead"); return; }
               await save({ holdings: books.holdings.some((h) => h.id === edit.id) ? books.holdings.map((h) => (h.id === edit.id ? edit : h)) : [...books.holdings, edit] }); setEdit(null);
