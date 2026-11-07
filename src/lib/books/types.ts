@@ -113,6 +113,9 @@ export interface Holding {
   costBasis?: number | undefined; source: string;
   /** v6.1 §4 — exchange trading status as published by the exchange or statement. */
   tradingStatus?: TradingStatus | undefined;
+  bond?: import("./bonds").BondTerms;
+  /** Explicit cash-only ledger account link; the linked balance replaces this broker-cash amount. */
+  cashAccountId?: string;
 }
 export type TradingStatus = "active" | "suspended" | "delisted" | "illiquid";
 /** v6.1 §5 — a price as delivered, never relabelled. */
