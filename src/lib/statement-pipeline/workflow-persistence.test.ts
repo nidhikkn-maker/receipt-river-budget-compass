@@ -8,6 +8,7 @@ import { savedBalanceCheck } from "./summary";
 import { accountBalance, cashflow, type Account } from "../ledger";
 import { buildReportDoc, emptyFilters } from "../report-centre";
 import type { Expense } from "../expenses";
+import { cleanStatementUploads } from '../preferences';
 
 // Exercises canonical pipeline against real disposable persistence. The adapter is a test-only
 // store boundary, NOT a substitute for testing the production store/RPC or hosted permissions.
@@ -107,3 +108,26 @@ it("account creation survives a later failure so an accepted-plan retry reuses t
  await expect(applyUpload(request, api)).rejects.toThrow("Store interrupted");
  expect(reviewed.accountId).toBe("created-bank"); await applyUpload(request, api); expect(created).toBe(1);
 });
+
+it('confirmed partial upload survives a new session; stored original retry posts once and financial report agrees',async()=>{
+ await db.exec('CREATE TABLE controlled_history(id text PRIMARY KEY,data jsonb NOT NULL)');
+ const reviewed=buildPlan([file],[account],[],[{name:'Food',archived:false},{name:'Other',archived:false}]).accounts[0];
+ if(!reviewed)throw Error('Missing plan');
+ let interrupted=true;
+ const checkpoint:ApplyApi['checkpoint']=async r=>{await db.query('INSERT INTO controlled_history VALUES($1,$2::jsonb) ON CONFLICT(id) DO UPDATE SET data=excluded.data',['run',JSON.stringify({id:'run',at:'2026-11-07T11:10:00Z',label:file.name,status:'interrupted',...r})]);};
+ const api:ApplyApi={transactions:[],addAccount:async()=>{throw Error('Unexpected new account');},setArchived:async()=>{},remove:async()=>{},refresh:async()=>{},checkpoint,
+ prepareSource:async()=>{await db.query("INSERT INTO controlled_documents VALUES('source','250,480') ON CONFLICT DO NOTHING");return 'source';},
+ save:async(input,options)=>{await db.query('INSERT INTO controlled_ledger VALUES($1,$2::jsonb) ON CONFLICT DO NOTHING',[options?.createId,JSON.stringify({...input,id:options?.createId,originalAmount:input.amount,fxRate:1,receipts:[],splits:[],statementRef:null,reconciledAt:null})]);},
+ reconcile:async(id,ref)=>{if(interrupted){interrupted=false;throw Error('Session interrupted');} await db.query("UPDATE controlled_ledger SET data=jsonb_set(jsonb_set(data,'{statementRef}',$2::jsonb),'{reconciledAt}','\"2026-11-07\"') WHERE id=$1",[id,JSON.stringify(ref)]);},
+ };
+ await expect(applyUpload([{account:reviewed,decisions:[...reviewed.auto,...reviewed.ask],reconcileIds:[]}],api)).rejects.toThrow('Session interrupted');
+ const history=cleanStatementUploads((await db.query<{data:unknown}>('SELECT data FROM controlled_history')).rows.map(r=>r.data))[0];
+ expect(history?.posted).toHaveLength(1);expect(history?.sources).toEqual([{documentId:'source',accountId:'bank',file:'controlled.csv'}]);
+ const otherSession=buildPlan([file],[account],await entries(),[{name:'Food',archived:false},{name:'Other',archived:false}]).accounts[0];
+ if(!otherSession)throw Error('No recovered plan');
+ const recovered=await applyUpload([{account:otherSession,decisions:[...otherSession.auto,...otherSession.ask],reconcileIds:otherSession.matched.flatMap(m=>m.record?[{id:m.record.id,ref:m.line.key}]:[])}],{...api,transactions:await entries()});
+ expect(recovered.posted).toHaveLength(1);expect(recovered.reconciled).toHaveLength(1);
+ const saved=await entries();expect(saved).toHaveLength(2);expect(saved.every(e=>e.statementRef?.startsWith('document:source'))).toBe(true);
+ expect(accountBalance(account,saved)).toBe(270);expect(cashflow(saved).spent).toBe(730);
+ expect((await db.query('SELECT * FROM controlled_documents')).rows).toHaveLength(1);
+},20000);
