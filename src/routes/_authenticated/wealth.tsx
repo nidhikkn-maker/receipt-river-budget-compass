@@ -56,7 +56,7 @@ function Wealth() {
         <Link to="/plan" className="cmp-list-row"><span className="cmp-icon"><CalendarRange /></span><span className="min-w-0 flex-1"><b>Plan & Forecast</b><small>Bills ahead and how cash looks</small></span><span className="cmp-amount">{commitments.length ? `${commitments.length} planned` : "Start a plan"}</span><ChevronRight /></Link>
       </nav>
       <h2 id="net-worth" className="cmp-serif mb-3 scroll-mt-24 text-xl">The details</h2>
-      <div className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-3">
+      <div className="wealth-stats mb-6 grid grid-cols-1 gap-3 sm:grid-cols-3">
         <Stat label="What I own" value={money(nw.assets)} />
         <Stat label="What I owe" value={money(nw.liabilities)} />
         <Stat label="My total financial position" value={money(nw.net)} />
