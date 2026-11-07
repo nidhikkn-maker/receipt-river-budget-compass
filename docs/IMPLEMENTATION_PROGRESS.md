@@ -63,3 +63,7 @@ Historical1542/944/36/19→1543/948/31/19; new narrow verified C-0553 browser te
 
 ## Safeguard status (7 Nov 2026 15:54 UTC, owner-accepted)
 - Budget completeness authority and append-only merchant history: isolated development and testing COMPLETE (owner accepted). Production activation PENDING owner release approval; do not retest unless related code changes.
+
+## 2026-11-07 — Speed check (C-0547, C-0605)
+- Page-open timings recorded on-device (never uploaded); Settings → Speed check compares median against targets (Financial Inbox 2 s). MISSING→PARTIAL pending real-phone measurement. Unit tests: src/lib/perf-check.test.ts.
+- Count reconciliation: partial 948→949 earlier came from C-0181 moving MISSING→PARTIAL.

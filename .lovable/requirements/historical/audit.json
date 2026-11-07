@@ -6,7 +6,7 @@
    "cid": "C-0001",
    "category": "process",
    "status": "implemented",
-   "rep": "Do not publish or deploy the changes to Ledgerline\u2019s live application without explicit approval.",
+   "rep": "Do not publish or deploy the changes to Ledgerline’s live application without explicit approval.",
    "sources": [
     "LEDGERLINE_-_FINANCIAL_INBOX_v5.12_pasted.md:971",
     "LEDGERLINE_pasted-10.md:424",
@@ -248,7 +248,7 @@
    "cid": "C-0015",
    "category": "statement",
    "status": "partial",
-   "rep": "Add a read-only workflow to upload April\u2013September IDFC Krupa statements and match them against the 128 dated records without changing or posting anything.",
+   "rep": "Add a read-only workflow to upload April–September IDFC Krupa statements and match them against the 128 dated records without changing or posting anything.",
    "sources": [
     "chat #436 2026-11-01 16:00",
     "chat #438 2026-11-01 16:01"
@@ -332,7 +332,7 @@
    "cid": "C-0021",
    "category": "investment",
    "status": "partial",
-   "rep": "Retain Signature Blue & Gold as the default theme and Apple \u00d7 Ledgerline as the recommended alternative.",
+   "rep": "Retain Signature Blue & Gold as the default theme and Apple × Ledgerline as the recommended alternative.",
    "sources": [
     "LEDGERLINE_pasted-14.md:13",
     "LEDGERLINE_pasted-14.md:1539"
@@ -656,7 +656,7 @@
    "cid": "C-0044",
    "category": "statement",
    "status": "partial",
-   "rep": "Business \u2192 Select Organisation \u2192 Select Activity \u2192 Generate Expenditure Statement.",
+   "rep": "Business → Select Organisation → Select Activity → Generate Expenditure Statement.",
    "sources": [
     "LEDGERLINE_pasted-11.md:102",
     "LEDGERLINE_pasted-11.md:94"
@@ -1206,7 +1206,7 @@
    "cid": "C-0083",
    "category": "security",
    "status": "partial",
-   "rep": "This is ICICI Krupa Savings and ICICI EMERALD CREDIT CARD account statement Post this as well and reconcile I give full permission to go ahead and publish it with reconciliation I set a monthly payment of about \u20b91,52,110 for 36 months, starting 30 Sep, so the app has a plan to track. You only said \"within 3 years\", so tell me if you'd rather have a different repayment plan. Make it 7years. Card loads of \u20b997,315 (26 May) and \u20b997,635 (6 Jun): I didn't move these to cash, because your HDFC Krupa statement shows both leaving that account. HDFC Krupa only matches its statement (\u20b972,701.02) with them left as they are. They're just missing from the four Forex Card statements. If you did add cash on top of these, tell me the amounts and dates. Don\u2019t add as cash then, if u can find the source. Something you may want to look at: another \u20b950 lakh left IDFC KRNA and arrived in MOVAC on 3 Sep. Right now it's counted as spending on one side and income on the other. Should I record it as a transfer between your own accounts? That\u2019s the 50 lakhs I borrowed from AK MERIDIAN. It\u2019s an investment I made in MOVAC company taken as loan for 7 years [User attached 7 files: ICICI Emerald Credit April 26.pd",
+   "rep": "This is ICICI Krupa Savings and ICICI EMERALD CREDIT CARD account statement Post this as well and reconcile I give full permission to go ahead and publish it with reconciliation I set a monthly payment of about ₹1,52,110 for 36 months, starting 30 Sep, so the app has a plan to track. You only said \"within 3 years\", so tell me if you'd rather have a different repayment plan. Make it 7years. Card loads of ₹97,315 (26 May) and ₹97,635 (6 Jun): I didn't move these to cash, because your HDFC Krupa statement shows both leaving that account. HDFC Krupa only matches its statement (₹72,701.02) with them left as they are. They're just missing from the four Forex Card statements. If you did add cash on top of these, tell me the amounts and dates. Don’t add as cash then, if u can find the source. Something you may want to look at: another ₹50 lakh left IDFC KRNA and arrived in MOVAC on 3 Sep. Right now it's counted as spending on one side and income on the other. Should I record it as a transfer between your own accounts? That’s the 50 lakhs I borrowed from AK MERIDIAN. It’s an investment I made in MOVAC company taken as loan for 7 years [User attached 7 files: ICICI Emerald Credit April 26.pd",
    "sources": [
     "chat #480 2026-11-01 17:47"
    ],
@@ -1218,7 +1218,7 @@
    "cid": "C-0084",
    "category": "investment",
    "status": "partial",
-   "rep": "A second pair you didn't ask about: The same section also found \u20b950 lakh involving AK Meridian on IDFC KRNA. I haven't recorded either pair as a transfer; that's your call. AK Meridian is a my another company I haven\u2019t included that in this app yet. It\u2019s a transfer I made from AK Meridian as a loan to KRNA. I have to repay it within 3 years. Interest part is 6 percent per annum. The EUR gap is H&M: The H&M purchase (EUR 244.84, \u20b927,137.45) isn't on the forex statement. With it, the app shows EUR 371.65 left instead of 616.49. Was it paid by another card? Tell me where it belongs. It was paid by my wife through her credit card. By mistake I uploaded that bill. Card loads I can't trace: The \u20b997,315 load on 26 May and the \u20b997,635 load on 6 Jun don't show up in any of the four statements. Statements for those dates would let me check them. If it\u2019s not from any of the account statements I have shared then it\u2019s the cash reserve I had in hand. Received and sent straight on\": This is a new section on the Transfers page. It shows your \u20b91.25 crore pair: in from Allwin Laboratories and out to AK Meridian on 31 Aug. For each pair, you can: Record as transfer: pick a holding account. Income and",
+   "rep": "A second pair you didn't ask about: The same section also found ₹50 lakh involving AK Meridian on IDFC KRNA. I haven't recorded either pair as a transfer; that's your call. AK Meridian is a my another company I haven’t included that in this app yet. It’s a transfer I made from AK Meridian as a loan to KRNA. I have to repay it within 3 years. Interest part is 6 percent per annum. The EUR gap is H&M: The H&M purchase (EUR 244.84, ₹27,137.45) isn't on the forex statement. With it, the app shows EUR 371.65 left instead of 616.49. Was it paid by another card? Tell me where it belongs. It was paid by my wife through her credit card. By mistake I uploaded that bill. Card loads I can't trace: The ₹97,315 load on 26 May and the ₹97,635 load on 6 Jun don't show up in any of the four statements. Statements for those dates would let me check them. If it’s not from any of the account statements I have shared then it’s the cash reserve I had in hand. Received and sent straight on\": This is a new section on the Transfers page. It shows your ₹1.25 crore pair: in from Allwin Laboratories and out to AK Meridian on 31 Aug. For each pair, you can: Record as transfer: pick a holding account. Income and",
    "sources": [
     "chat #478 2026-11-01 17:38"
    ],
@@ -1230,7 +1230,7 @@
    "cid": "C-0085",
    "category": "statement",
    "status": "partial",
-   "rep": "The two IDFC statements listed under \"Statement imports\" are earlier upload attempts from yesterday morning. They were never used. Your entries came in through Statement Desk instead, so these two just sit there as \"Ready for review\". I can close them without touching any of your entries. Should I? Yes please close that \"Missing information \u00b7 270\": most new entries came from bank statements with no payee name filled in. About 366 of your 885 entries have no payee. No need to add payee fo these. Not all the transaction I can record payee. Make it optional and close this issue. \"Categorisation required \u00b7 199\": these entries got a category guess that still needs your OK. Only 10 have no category at all. You itself categorise all. Make statement desk uploaded documents as only source of truth for the bank statements. Link where is required and appropriate and make design accordingly. I don\u2019t want to may uploading areas.",
+   "rep": "The two IDFC statements listed under \"Statement imports\" are earlier upload attempts from yesterday morning. They were never used. Your entries came in through Statement Desk instead, so these two just sit there as \"Ready for review\". I can close them without touching any of your entries. Should I? Yes please close that \"Missing information · 270\": most new entries came from bank statements with no payee name filled in. About 366 of your 885 entries have no payee. No need to add payee fo these. Not all the transaction I can record payee. Make it optional and close this issue. \"Categorisation required · 199\": these entries got a category guess that still needs your OK. Only 10 have no category at all. You itself categorise all. Make statement desk uploaded documents as only source of truth for the bank statements. Link where is required and appropriate and make design accordingly. I don’t want to may uploading areas.",
    "sources": [
     "chat #636 2026-11-02 07:40"
    ],
@@ -1242,7 +1242,7 @@
    "cid": "C-0086",
    "category": "travel",
    "status": "missing",
-   "rep": "MOVAC gap: Three records appear on none of the statements: Lazio Pizzeria \u20b95,408.71, H&M \u20b927,137.45 and Raki taksi \u20b91,732.99. Together they make up the \u20b934,279.15. They look like Finland trip spending, probably paid by card, so I left them unchanged. Tell me whether to remove them or move them to a card. Paid using my HDFC Forex Card from HDFC Krupa account AMEX payments: Five AMEX credits totalling \u20b913,80,969.45 had no matching payment on your other statements. They lower what you owe but don't count as income. Tell me which account paid them. Paid by AET",
+   "rep": "MOVAC gap: Three records appear on none of the statements: Lazio Pizzeria ₹5,408.71, H&M ₹27,137.45 and Raki taksi ₹1,732.99. Together they make up the ₹34,279.15. They look like Finland trip spending, probably paid by card, so I left them unchanged. Tell me whether to remove them or move them to a card. Paid using my HDFC Forex Card from HDFC Krupa account AMEX payments: Five AMEX credits totalling ₹13,80,969.45 had no matching payment on your other statements. They lower what you owe but don't count as income. Tell me which account paid them. Paid by AET",
    "sources": [
     "chat #462 2026-11-01 16:34"
    ],
@@ -1290,7 +1290,7 @@
    "cid": "C-0090",
    "category": "other",
    "status": "partial",
-   "rep": "Redesign the sign in page into more modern A quick sign in using a mpin and also Face ID as well as when I load the page from my Home Screen it\u2019s taking more then usual time to open. Generally the application is very slow in response One more problem in the alignment and also the key guides are given at the bottom. Have attached the photo for this. [User attached an image]",
+   "rep": "Redesign the sign in page into more modern A quick sign in using a mpin and also Face ID as well as when I load the page from my Home Screen it’s taking more then usual time to open. Generally the application is very slow in response One more problem in the alignment and also the key guides are given at the bottom. Have attached the photo for this. [User attached an image]",
    "sources": [
     "chat #543 2026-11-02 01:58"
    ],
@@ -1302,7 +1302,7 @@
    "cid": "C-0091",
    "category": "reporting",
    "status": "missing",
-   "rep": "Still Uncategorised (2): two \u20b910,000 transfers to \"Self\" on 19 Aug. Which account did they go to? It\u2019s my ICICI kids joint accounts for each one I have transferred 10,000 each. I\u2019ll share the statements. I have ICICI Amazon credit card last financial year statement. That\u2019s the last transaction I have made after which I think I have stopped using that card [User attached 7 files: ICICI Kid 2 Savings.pdf, ICICI Kid 1 Savings.pdf, ICICI AMAZON CREDIT CARD FIN 2025.pdf, ICICI AMAZON Credit Card Jan Statement.pdf, ICICI AMAZON Credit Card March Statement.pdf, ICICI AMAZON Credit Card FEB Statement.pdf, ICICI AMAZON Credit Card June Statement.pdf]",
+   "rep": "Still Uncategorised (2): two ₹10,000 transfers to \"Self\" on 19 Aug. Which account did they go to? It’s my ICICI kids joint accounts for each one I have transferred 10,000 each. I’ll share the statements. I have ICICI Amazon credit card last financial year statement. That’s the last transaction I have made after which I think I have stopped using that card [User attached 7 files: ICICI Kid 2 Savings.pdf, ICICI Kid 1 Savings.pdf, ICICI AMAZON CREDIT CARD FIN 2025.pdf, ICICI AMAZON Credit Card Jan Statement.pdf, ICICI AMAZON Credit Card March Statement.pdf, ICICI AMAZON Credit Card FEB Statement.pdf, ICICI AMAZON Credit Card June Statement.pdf]",
    "sources": [
     "chat #486 2026-11-01 18:10"
    ],
@@ -1314,7 +1314,7 @@
    "cid": "C-0092",
    "category": "travel",
    "status": "partial",
-   "rep": "Not always need to select a trip give an option where trip selection is optional. And also keep a link to create a trip or organization. Give an option to assign only organization and map to existing organisation. Also one more bug I have attached the photo. Inspite of selecting it\u2019s not accepting especially the expense mapping account and financial activity [User attached 2 images]",
+   "rep": "Not always need to select a trip give an option where trip selection is optional. And also keep a link to create a trip or organization. Give an option to assign only organization and map to existing organisation. Also one more bug I have attached the photo. Inspite of selecting it’s not accepting especially the expense mapping account and financial activity [User attached 2 images]",
    "sources": [
     "chat #347 2026-11-01 11:27"
    ],
@@ -1374,7 +1374,7 @@
    "cid": "C-0097",
    "category": "reporting",
    "status": "partial",
-   "rep": "There are some alignment issues in the app in all the pages and where the tiles and the numbers and text inside doesn\u2019t fit properly Also the settings page home layout is not working properly I have attached the latest statement of Amex card four you to publish. [User attached 3 images]",
+   "rep": "There are some alignment issues in the app in all the pages and where the tiles and the numbers and text inside doesn’t fit properly Also the settings page home layout is not working properly I have attached the latest statement of Amex card four you to publish. [User attached 3 images]",
    "sources": [
     "chat #490 2026-11-01 18:25"
    ],
@@ -1386,7 +1386,7 @@
    "cid": "C-0098",
    "category": "other",
    "status": "partial",
-   "rep": "Now after the login page all the pages loads very slow, reduce the loading time of all the pages and make it open immediately and also if I press the any icons or tiles or anything I don\u2019t whether it\u2019s loading or not I have to wait till responds and leads to multiple pressing do something for that",
+   "rep": "Now after the login page all the pages loads very slow, reduce the loading time of all the pages and make it open immediately and also if I press the any icons or tiles or anything I don’t whether it’s loading or not I have to wait till responds and leads to multiple pressing do something for that",
    "sources": [
     "chat #585 2026-11-02 02:57"
    ],
@@ -1446,7 +1446,7 @@
    "cid": "C-0103",
    "category": "loan",
    "status": "partial",
-   "rep": "One line to check: on 27 Jun, ICICI paid \u20b913,511.50 to a card ending 1000. None of your statements cover that card, so I recorded it as spending marked \"Uncategorised\". Is it another card of yours? It\u2019s my another ICICI Amazon credit card tagged to same ICICI Krupa savings account. I don\u2019t use it now a days.",
+   "rep": "One line to check: on 27 Jun, ICICI paid ₹13,511.50 to a card ending 1000. None of your statements cover that card, so I recorded it as spending marked \"Uncategorised\". Is it another card of yours? It’s my another ICICI Amazon credit card tagged to same ICICI Krupa savings account. I don’t use it now a days.",
    "sources": [
     "chat #482 2026-11-01 17:56"
    ],
@@ -1542,7 +1542,7 @@
    "cid": "C-0111",
    "category": "statement",
    "status": "partial",
-   "rep": "When I upload the credit card statement the payment I have done for that it should not be shown as income. It\u2019s a payment and this has to to be reconciled with the source account and also the value to be used to calculate the outstanding amount. This should be done automatically",
+   "rep": "When I upload the credit card statement the payment I have done for that it should not be shown as income. It’s a payment and this has to to be reconciled with the source account and also the value to be used to calculate the outstanding amount. This should be done automatically",
    "sources": [
     "chat #370 2026-11-01 12:27"
    ],
@@ -1566,7 +1566,7 @@
    "cid": "C-0113",
    "category": "testing",
    "status": "partial",
-   "rep": "It\u2019s showing 13 transactions needs attention but only 2 showing inspite of clearing all the selection and also I couldn\u2019t find what\u2019s the cause of the problem or solution suggestion Also publish and and verify all the fixes so far made [User attached an image]",
+   "rep": "It’s showing 13 transactions needs attention but only 2 showing inspite of clearing all the selection and also I couldn’t find what’s the cause of the problem or solution suggestion Also publish and and verify all the fixes so far made [User attached an image]",
    "sources": [
     "chat #353 2026-11-01 11:39"
    ],
@@ -1590,7 +1590,7 @@
    "cid": "C-0115",
    "category": "document",
    "status": "partial",
-   "rep": "there is a problem in offline opening of the app. It\u2019s not opening. It gets stuck there while loading I think. Also scan receipts and add expense opens to same page. So make scan receipts page opens the phone camera directly and the other opens as usual what is there now.",
+   "rep": "there is a problem in offline opening of the app. It’s not opening. It gets stuck there while loading I think. Also scan receipts and add expense opens to same page. So make scan receipts page opens the phone camera directly and the other opens as usual what is there now.",
    "sources": [
     "chat #834 2026-11-04 09:35"
    ],
@@ -1698,7 +1698,7 @@
    "cid": "C-0124",
    "category": "security",
    "status": "implemented",
-   "rep": "Need a link each time I can send it to my accountant to upload the statements so that I don\u2019t have to worry about me uploading each time. Also auto mail the link to my accountant to upload. Single link for uploading minimum of 25 documents. No need to give access to the app.",
+   "rep": "Need a link each time I can send it to my accountant to upload the statements so that I don’t have to worry about me uploading each time. Also auto mail the link to my accountant to upload. Single link for uploading minimum of 25 documents. No need to give access to the app.",
    "sources": [
     "chat #602 2026-11-02 03:46"
    ],
@@ -1746,7 +1746,7 @@
    "cid": "C-0128",
    "category": "statement",
    "status": "partial",
-   "rep": "*Historical import has its own upload list** \u2014 it still carries a separate upload manifest. Turn it into a read-only \"past imports\" history that links to Statement Desk.",
+   "rep": "*Historical import has its own upload list** — it still carries a separate upload manifest. Turn it into a read-only \"past imports\" history that links to Statement Desk.",
    "sources": [
     "Clean-up_remove_overlapping_pages_and_options_pasted.md:8"
    ],
@@ -1806,7 +1806,7 @@
    "cid": "C-0133",
    "category": "statement",
    "status": "partial",
-   "rep": "*Old statement pages still exist** \u2014 \"Match & fix\", \"Forex reconcile\" and \"Statement cross-check\" only redirect to Statement Desk now. Remove them fully (keep the redirect so old links still work).",
+   "rep": "*Old statement pages still exist** — \"Match & fix\", \"Forex reconcile\" and \"Statement cross-check\" only redirect to Statement Desk now. Remove them fully (keep the redirect so old links still work).",
    "sources": [
     "Clean-up_remove_overlapping_pages_and_options_pasted.md:7"
    ],
@@ -1866,7 +1866,7 @@
    "cid": "C-0138",
    "category": "statement",
    "status": "implemented",
-   "rep": "Redesign Ledgerline\u2019s existing bank and credit card statement import experience to make importing and classifying large numbers of transactions simple, accurate and reliable.",
+   "rep": "Redesign Ledgerline’s existing bank and credit card statement import experience to make importing and classifying large numbers of transactions simple, accurate and reliable.",
    "sources": [
     "LEDGERLINE_pasted-18.md:17"
    ],
@@ -1986,7 +1986,7 @@
    "cid": "C-0148",
    "category": "ux",
    "status": "partial",
-   "rep": "The supplied screenshots show that Ledgerline\u2019s desktop layout is being compressed onto an iPad, creating excessively small text and lengthy scrolling.",
+   "rep": "The supplied screenshots show that Ledgerline’s desktop layout is being compressed onto an iPad, creating excessively small text and lengthy scrolling.",
    "sources": [
     "LEDGERLINE_-_FINANCIAL_INBOX_v5.12_pasted.md:505"
    ],
@@ -2046,7 +2046,7 @@
    "cid": "C-0153",
    "category": "statement",
    "status": "implemented",
-   "rep": "Further refine Ledgerline\u2019s bank and credit card statement import functionality to reduce manual work while preventing inaccurate financial records.",
+   "rep": "Further refine Ledgerline’s bank and credit card statement import functionality to reduce manual work while preventing inaccurate financial records.",
    "sources": [
     "LEDGERLINE_pasted-19.md:16"
    ],
@@ -2094,7 +2094,7 @@
    "cid": "C-0157",
    "category": "other",
    "status": "partial",
-   "rep": "Inspite repeated categorization it\u2019s not settling and also in financial inbox accounts are al in review status and turned to current status inspite of uploading all the statements [User attached an image]",
+   "rep": "Inspite repeated categorization it’s not settling and also in financial inbox accounts are al in review status and turned to current status inspite of uploading all the statements [User attached an image]",
    "sources": [
     "chat #335 2026-11-01 10:19"
    ],
@@ -2106,7 +2106,7 @@
    "cid": "C-0158",
    "category": "testing",
    "status": "partial",
-   "rep": "Verify the remaining fixes on the published site, including saving an organisation without a trip, opening a transaction from \u201cSee transaction,\u201d and clearing the corrected rows from review.",
+   "rep": "Verify the remaining fixes on the published site, including saving an organisation without a trip, opening a transaction from “See transaction,” and clearing the corrected rows from review.",
    "sources": [
     "chat #356 2026-11-01 11:46"
    ],
@@ -2118,7 +2118,7 @@
    "cid": "C-0159",
    "category": "entry",
    "status": "partial",
-   "rep": "Add a linked-transaction review for the \u20b91.25 crore received from Allwin Laboratories and sent to AK Meridian so I can decide whether to record it as a transfer instead of income and spending.",
+   "rep": "Add a linked-transaction review for the ₹1.25 crore received from Allwin Laboratories and sent to AK Meridian so I can decide whether to record it as a transfer instead of income and spending.",
    "sources": [
     "chat #471 2026-11-01 17:01"
    ],
@@ -2166,7 +2166,7 @@
    "cid": "C-0163",
    "category": "other",
    "status": "implemented",
-   "rep": "It\u2019s the value round off problem which is not mentioned in the receipts but understood. Make a plan to avoid this problem while reading receipts in future. [User attached an image]",
+   "rep": "It’s the value round off problem which is not mentioned in the receipts but understood. Make a plan to avoid this problem while reading receipts in future. [User attached an image]",
    "sources": [
     "chat #830 2026-11-04 09:21"
    ],
@@ -2190,7 +2190,7 @@
    "cid": "C-0165",
    "category": "entry",
    "status": "implemented",
-   "rep": "Buttons: \"Same transaction \u2014 keep left / keep right\" (other one removed, with Undo) and \"Separate transactions\" (remembered, never flagged again).",
+   "rep": "Buttons: \"Same transaction — keep left / keep right\" (other one removed, with Undo) and \"Separate transactions\" (remembered, never flagged again).",
    "sources": [
     "Clean-up_remove_overlapping_pages_and_options_pasted.md:21"
    ],
@@ -2695,7 +2695,7 @@
    "cid": "C-0207",
    "category": "statement",
    "status": "partial",
-   "rep": "Reconcile the two omitted \u20b990 SGST charges, the \u20b90.01 debit-total difference, and the MOVAC balance gap against the source statement without applying corrections.",
+   "rep": "Reconcile the two omitted ₹90 SGST charges, the ₹0.01 debit-total difference, and the MOVAC balance gap against the source statement without applying corrections.",
    "sources": [
     "chat #426 2026-11-01 15:37"
    ],
@@ -2883,7 +2883,7 @@
    "cid": "C-0222",
    "category": "other",
    "status": "implemented",
-   "rep": "The payment account and workspace should be intelligently suggested based on the user\u2019s previous confirmed selections and current application context.",
+   "rep": "The payment account and workspace should be intelligently suggested based on the user’s previous confirmed selections and current application context.",
    "sources": [
     "LEDGERLINE_VERSION_4.4_pasted.md:23"
    ],
@@ -2895,7 +2895,7 @@
    "cid": "C-0223",
    "category": "entry",
    "status": "implemented",
-   "rep": "When selected, Ledgerline should retrieve the user\u2019s most recent eligible expense or allow selection from recent transactions.",
+   "rep": "When selected, Ledgerline should retrieve the user’s most recent eligible expense or allow selection from recent transactions.",
    "sources": [
     "LEDGERLINE_VERSION_4.4_pasted.md:57"
    ],
@@ -3039,7 +3039,7 @@
    "cid": "C-0235",
    "category": "investment",
    "status": "partial",
-   "rep": "Retain all existing colour themes, including Signature Blue & Gold, and provide Apple \u00d7 Ledgerline as the recommended minimalist alternative.",
+   "rep": "Retain all existing colour themes, including Signature Blue & Gold, and provide Apple × Ledgerline as the recommended minimalist alternative.",
    "sources": [
     "LEDGERLINE_pasted-13.md:944"
    ],
@@ -3243,7 +3243,7 @@
    "cid": "C-0252",
    "category": "other",
    "status": "implemented",
-   "rep": "Update the demo sample data dates so the Home screen's \u201cThis month\u201d totals stay accurate throughout the year.",
+   "rep": "Update the demo sample data dates so the Home screen's “This month” totals stay accurate throughout the year.",
    "sources": [
     "chat #587 2026-11-02 02:58"
    ],
@@ -3843,7 +3843,7 @@
    "cid": "C-0302",
    "category": "statement",
    "status": "implemented",
-   "rep": "This must be saved as a valid expense without requiring the external merchant to be configured as one of the user\u2019s bank accounts.",
+   "rep": "This must be saved as a valid expense without requiring the external merchant to be configured as one of the user’s bank accounts.",
    "sources": [
     "LEDGERLINE_pasted-30.md:170"
    ],
@@ -3975,7 +3975,7 @@
    "cid": "C-0313",
    "category": "other",
    "status": "implemented",
-   "rep": "Can we move this statements uploading page in the financial inbox itself. I don\u2019t want a separate page this. [User attached an image]",
+   "rep": "Can we move this statements uploading page in the financial inbox itself. I don’t want a separate page this. [User attached an image]",
    "sources": [
     "chat #368 2026-11-01 12:25"
    ],
@@ -3987,7 +3987,7 @@
    "cid": "C-0314",
    "category": "travel",
    "status": "implemented",
-   "rep": "Add clear active, cancelled, and restored status labels to the All trips list so I can quickly see each trip\u2019s current state.",
+   "rep": "Add clear active, cancelled, and restored status labels to the All trips list so I can quickly see each trip’s current state.",
    "sources": [
     "chat #383 2026-11-01 12:39"
    ],
@@ -4131,7 +4131,7 @@
    "cid": "C-0326",
    "category": "ux",
    "status": "implemented",
-   "rep": "Add an automatic reminder email to my accountant if they haven\u2019t uploaded statements a few days after receiving the monthly link.",
+   "rep": "Add an automatic reminder email to my accountant if they haven’t uploaded statements a few days after receiving the monthly link.",
    "sources": [
     "chat #611 2026-11-02 04:18"
    ],
@@ -4419,7 +4419,7 @@
    "cid": "C-0350",
    "category": "testing",
    "status": "partial",
-   "rep": "Redesign and thoroughly test Ledgerline\u2019s Financial Inbox to provide a fast, intuitive and reliable financial review process.",
+   "rep": "Redesign and thoroughly test Ledgerline’s Financial Inbox to provide a fast, intuitive and reliable financial review process.",
    "sources": [
     "LEDGERLINE_-_FINANCIAL_INBOX_v5.12_pasted.md:15"
    ],
@@ -4587,7 +4587,7 @@
    "cid": "C-0364",
    "category": "other",
    "status": "partial",
-   "rep": "The redesigned interface must support the complexity of the application\u2019s financial capabilities while remaining simple for everyday use.",
+   "rep": "The redesigned interface must support the complexity of the application’s financial capabilities while remaining simple for everyday use.",
    "sources": [
     "LEDGERLINE_pasted-3.md:1250"
    ],
@@ -4815,7 +4815,7 @@
    "cid": "C-0383",
    "category": "other",
    "status": "implemented",
-   "rep": "Do not call the total imported amount \u201cspending\u201d until the included transactions have been classified appropriately.",
+   "rep": "Do not call the total imported amount “spending” until the included transactions have been classified appropriately.",
    "sources": [
     "LEDGERLINE_pasted-18.md:84"
    ],
@@ -4839,7 +4839,7 @@
    "cid": "C-0385",
    "category": "process",
    "status": "partial",
-   "rep": "Do not use ambiguous wording such as \u201cRegister 37 automatically\u201d when the system is about to post confirmed financial records.",
+   "rep": "Do not use ambiguous wording such as “Register 37 automatically” when the system is about to post confirmed financial records.",
    "sources": [
     "LEDGERLINE_pasted-18.md:763"
    ],
@@ -5131,7 +5131,7 @@
    "cid": "C-0408",
    "category": "reporting",
    "status": "implemented",
-   "rep": "Add a dashboard that summarizes outstanding advance balances across trips and links to each trip\u2019s reconciliation.",
+   "rep": "Add a dashboard that summarizes outstanding advance balances across trips and links to each trip’s reconciliation.",
    "sources": [
     "chat #174 2026-10-31 16:16"
    ],
@@ -5143,7 +5143,7 @@
    "cid": "C-0409",
    "category": "reporting",
    "status": "partial",
-   "rep": "Add a CSV export for each loan\u2019s repayment history with payment dates, principal, interest, and remaining balance.",
+   "rep": "Add a CSV export for each loan’s repayment history with payment dates, principal, interest, and remaining balance.",
    "sources": [
     "chat #175 2026-10-31 16:16"
    ],
@@ -5217,7 +5217,7 @@
    "cid": "C-0415",
    "category": "other",
    "status": "implemented",
-   "rep": "Add a chart showing how each card\u2019s dues and credits change over time so I can spot balance trends.",
+   "rep": "Add a chart showing how each card’s dues and credits change over time so I can spot balance trends.",
    "sources": [
     "chat #498 2026-11-01 18:43"
    ],
@@ -5601,7 +5601,7 @@
    "cid": "C-0447",
    "category": "other",
    "status": "implemented",
-   "rep": "These are illustrative examples only. Actual counts must come from Ledgerline\u2019s database.",
+   "rep": "These are illustrative examples only. Actual counts must come from Ledgerline’s database.",
    "sources": [
     "LEDGERLINE_-_FINANCIAL_INBOX_v5.12_pasted.md:121"
    ],
@@ -5661,7 +5661,7 @@
    "cid": "C-0452",
    "category": "entry",
    "status": "implemented",
-   "rep": "Implement Select \u2192 Correct \u2192 Preview \u2192 Confirm, including merchant grouping and selected-item summaries.",
+   "rep": "Implement Select → Correct → Preview → Confirm, including merchant grouping and selected-item summaries.",
    "sources": [
     "LEDGERLINE_-_FINANCIAL_INBOX_v5.12_pasted.md:933"
    ],
@@ -5685,7 +5685,7 @@
    "cid": "C-0454",
    "category": "ux",
    "status": "implemented",
-   "rep": "*Two review places** \u2014 \"Transaction Review Centre\" and the Inbox \"Review\" tab show the same entries. Keep one (Inbox \u2192 Review), redirect the other.",
+   "rep": "*Two review places** — \"Transaction Review Centre\" and the Inbox \"Review\" tab show the same entries. Keep one (Inbox → Review), redirect the other.",
    "sources": [
     "Clean-up_remove_overlapping_pages_and_options_pasted.md:9"
    ],
@@ -6009,7 +6009,7 @@
    "cid": "C-0481",
    "category": "reporting",
    "status": "partial",
-   "rep": "Removing an attachment from a particular report must not delete the original document from Ledgerline\u2019s vault.",
+   "rep": "Removing an attachment from a particular report must not delete the original document from Ledgerline’s vault.",
    "sources": [
     "LEDGERLINE_pasted-11.md:651"
    ],
@@ -6021,7 +6021,7 @@
    "cid": "C-0482",
    "category": "other",
    "status": "partial",
-   "rep": "The Universal Expenditure Reporting System must become Ledgerline\u2019s standard reporting mechanism for any selected activity.",
+   "rep": "The Universal Expenditure Reporting System must become Ledgerline’s standard reporting mechanism for any selected activity.",
    "sources": [
     "LEDGERLINE_pasted-11.md:1054"
    ],
@@ -6647,7 +6647,7 @@
    "cid": "C-0533",
    "category": "entry",
    "status": "implemented",
-   "rep": "A \u20b94,500 UPI payment to an external merchant must be saved as an expense without requiring an owned receiving account.",
+   "rep": "A ₹4,500 UPI payment to an external merchant must be saved as an expense without requiring an owned receiving account.",
    "sources": [
     "LEDGERLINE_pasted-30.md:768"
    ],
@@ -6743,7 +6743,7 @@
    "cid": "C-0541",
    "category": "other",
    "status": "partial",
-   "rep": "All the changes made so far is not updated. Imran existing one doesn\u2019t look like so far what we have build",
+   "rep": "All the changes made so far is not updated. Imran existing one doesn’t look like so far what we have build",
    "sources": [
     "chat #68 2026-10-31 06:45"
    ],
@@ -6779,7 +6779,7 @@
    "cid": "C-0544",
    "category": "loan",
    "status": "implemented",
-   "rep": "Add a chart to each loan\u2019s repayment history showing how the remaining balance changes over time.",
+   "rep": "Add a chart to each loan’s repayment history showing how the remaining balance changes over time.",
    "sources": [
     "chat #172 2026-10-31 15:56"
    ],
@@ -6814,14 +6814,15 @@
   {
    "cid": "C-0547",
    "category": "testing",
-   "status": "missing",
+   "status": "partial",
    "rep": "Add mobile performance testing so I can verify that the faster loading experience works well on my phone.",
    "sources": [
     "chat #250 2026-11-01 02:12"
    ],
    "members": [
     "HC-0090"
-   ]
+   ],
+   "evidence": "On-device speed check: NavProgress records page-open timings locally (src/lib/perf-check.ts + test), Settings → Speed check shows median/p90 vs targets (Inbox 2 s). Real-phone measurement pending."
   },
   {
    "cid": "C-0548",
@@ -6851,7 +6852,7 @@
    "cid": "C-0550",
    "category": "entry",
    "status": "partial",
-   "rep": "When I click the the see transaction it\u2019s showing or routing the particular page or showing the details. [User attached an image]",
+   "rep": "When I click the the see transaction it’s showing or routing the particular page or showing the details. [User attached an image]",
    "sources": [
     "chat #349 2026-11-01 11:31"
    ],
@@ -6944,7 +6945,7 @@
    "cid": "C-0557",
    "category": "other",
    "status": "partial",
-   "rep": "Optimize the app\u2019s startup and screen loading so it responds faster, especially when opened from my Home Screen.",
+   "rep": "Optimize the app’s startup and screen loading so it responds faster, especially when opened from my Home Screen.",
    "sources": [
     "chat #545 2026-11-02 02:09"
    ],
@@ -7148,7 +7149,7 @@
    "cid": "C-0574",
    "category": "other",
    "status": "partial",
-   "rep": "Have checked the opening I even don\u2019t want this 5 sec lag in opening Make it immediate opening tge moment I press the app icon",
+   "rep": "Have checked the opening I even don’t want this 5 sec lag in opening Make it immediate opening tge moment I press the app icon",
    "sources": [
     "chat #800 2026-11-02 17:54"
    ],
@@ -7534,14 +7535,15 @@
   {
    "cid": "C-0605",
    "category": "testing",
-   "status": "missing",
+   "status": "partial",
    "rep": "Financial Inbox initial view: approximately 2 seconds under normal test conditions.",
    "sources": [
     "LEDGERLINE_-_FINANCIAL_INBOX_v5.12_pasted.md:839"
    ],
    "members": [
     "H-1749"
-   ]
+   ],
+   "evidence": "On-device speed check: NavProgress records page-open timings locally (src/lib/perf-check.ts + test), Settings → Speed check shows median/p90 vs targets (Inbox 2 s). Real-phone measurement pending."
   },
   {
    "cid": "C-0606",
@@ -8063,7 +8065,7 @@
    "cid": "C-0649",
    "category": "reporting",
    "status": "partial",
-   "rep": "Every PDF report must reconcile with Ledgerline\u2019s underlying financial calculation services.",
+   "rep": "Every PDF report must reconcile with Ledgerline’s underlying financial calculation services.",
    "sources": [
     "LEDGERLINE_pasted-8.md:331"
    ],
@@ -8135,7 +8137,7 @@
    "cid": "C-0655",
    "category": "statement",
    "status": "partial",
-   "rep": "Do not incorrectly represent the payment as having been made from MOVAC\u2019s bank account.",
+   "rep": "Do not incorrectly represent the payment as having been made from MOVAC’s bank account.",
    "sources": [
     "LEDGERLINE_pasted-11.md:467"
    ],
@@ -8147,7 +8149,7 @@
    "cid": "C-0656",
    "category": "document",
    "status": "implemented",
-   "rep": "The system must retrieve existing documents from Ledgerline\u2019s secure document vault.",
+   "rep": "The system must retrieve existing documents from Ledgerline’s secure document vault.",
    "sources": [
     "LEDGERLINE_pasted-11.md:577"
    ],
@@ -8183,7 +8185,7 @@
    "cid": "C-0659",
    "category": "reporting",
    "status": "partial",
-   "rep": "Every generated report must reconcile with Ledgerline\u2019s existing financial records.",
+   "rep": "Every generated report must reconcile with Ledgerline’s existing financial records.",
    "sources": [
     "LEDGERLINE_pasted-11.md:864"
    ],
@@ -8219,7 +8221,7 @@
    "cid": "C-0662",
    "category": "other",
    "status": "implemented",
-   "rep": "The setup panel should identify missing requirements relevant to the user\u2019s enabled features.",
+   "rep": "The setup panel should identify missing requirements relevant to the user’s enabled features.",
    "sources": [
     "LEDGERLINE_pasted-12.md:191"
    ],
@@ -8447,7 +8449,7 @@
    "cid": "C-0681",
    "category": "other",
    "status": "implemented",
-   "rep": "Opening balances should represent each account\u2019s position at the beginning of the historical period.",
+   "rep": "Opening balances should represent each account’s position at the beginning of the historical period.",
    "sources": [
     "LEDGERLINE_pasted-16.md:303"
    ],
@@ -8627,7 +8629,7 @@
    "cid": "C-0696",
    "category": "entry",
    "status": "implemented",
-   "rep": "If a transaction\u2019s accounting treatment is uncertain, it must remain outside automatic final approval.",
+   "rep": "If a transaction’s accounting treatment is uncertain, it must remain outside automatic final approval.",
    "sources": [
     "LEDGERLINE_pasted-18.md:415"
    ],
@@ -8898,7 +8900,7 @@
    "cid": "C-0718",
    "category": "other",
    "status": "implemented",
-   "rep": "One Person \u2192 Multiple Organisations \u2192 Multiple Roles \u2192 Linked Activities \u2192 Automatically Prepared Reimbursement Reports**",
+   "rep": "One Person → Multiple Organisations → Multiple Roles → Linked Activities → Automatically Prepared Reimbursement Reports**",
    "sources": [
     "LEDGERLINE_pasted-23.md:596"
    ],
@@ -9258,7 +9260,7 @@
    "cid": "C-0748",
    "category": "other",
    "status": "implemented",
-   "rep": "The Select \u2192 Correct \u2192 Preview \u2192 Confirm workflow must remain consistent across devices.",
+   "rep": "The Select → Correct → Preview → Confirm workflow must remain consistent across devices.",
    "sources": [
     "LEDGERLINE_pasted-29.md:192"
    ],
@@ -9270,7 +9272,7 @@
    "cid": "C-0749",
    "category": "other",
    "status": "implemented",
-   "rep": "Recipient records must remain separate from the user\u2019s owned financial accounts.",
+   "rep": "Recipient records must remain separate from the user’s owned financial accounts.",
    "sources": [
     "LEDGERLINE_pasted-30.md:242"
    ],
@@ -9558,7 +9560,7 @@
    "cid": "C-0773",
    "category": "other",
    "status": "partial",
-   "rep": "[User attached 1 image(s) and 1 file(s): LEDGERLINE \u2014 Official Logo & Brand Integration (pasted).md]",
+   "rep": "[User attached 1 image(s) and 1 file(s): LEDGERLINE — Official Logo & Brand Integration (pasted).md]",
    "sources": [
     "chat #539 2026-11-02 01:44"
    ],
@@ -9798,7 +9800,7 @@
    "cid": "C-0793",
    "category": "ai",
    "status": "implemented",
-   "rep": "The assistant should be capable of answering questions using the user\u2019s financial information.",
+   "rep": "The assistant should be capable of answering questions using the user’s financial information.",
    "sources": [
     "Detailed_Functional_Requirements_-_Version_1.0_pasted.md:548"
    ],
@@ -10026,7 +10028,7 @@
    "cid": "C-0812",
    "category": "statement",
    "status": "implemented",
-   "rep": "The destination of an ordinary expense must not be restricted to Ledgerline\u2019s saved bank accounts.",
+   "rep": "The destination of an ordinary expense must not be restricted to Ledgerline’s saved bank accounts.",
    "sources": [
     "LEDGERLINE_-_FINANCIAL_INBOX_v5.12_pasted.md:275"
    ],
@@ -10194,7 +10196,7 @@
    "cid": "C-0826",
    "category": "ai",
    "status": "implemented",
-   "rep": "*Two assistant pages** \u2014 AI assistant and Connected assistants. Keep the chat; move \"Connected assistants\" into Settings.",
+   "rep": "*Two assistant pages** — AI assistant and Connected assistants. Keep the chat; move \"Connected assistants\" into Settings.",
    "sources": [
     "Clean-up_remove_overlapping_pages_and_options_pasted.md:14"
    ],
@@ -10494,7 +10496,7 @@
    "cid": "C-0851",
    "category": "entry",
    "status": "implemented",
-   "rep": "Allow the existing application\u2019s supported draft or pending-entry workflow, if available.",
+   "rep": "Allow the existing application’s supported draft or pending-entry workflow, if available.",
    "sources": [
     "LEDGERLINE_pasted-4.md:501"
    ],
@@ -10907,7 +10909,7 @@
    "cid": "C-0885",
    "category": "other",
    "status": "implemented",
-   "rep": "This panel should provide a consolidated view of the application\u2019s configuration readiness.",
+   "rep": "This panel should provide a consolidated view of the application’s configuration readiness.",
    "sources": [
     "LEDGERLINE_pasted-12.md:145"
    ],
@@ -11447,7 +11449,7 @@
    "cid": "C-0930",
    "category": "travel",
    "status": "implemented",
-   "rep": "Do not add complex travel-operating features that are unrelated to Ledgerline\u2019s existing purpose.",
+   "rep": "Do not add complex travel-operating features that are unrelated to Ledgerline’s existing purpose.",
    "sources": [
     "LEDGERLINE_pasted-17.md:614"
    ],
@@ -11471,7 +11473,7 @@
    "cid": "C-0932",
    "category": "statement",
    "status": "partial",
-   "rep": "Do not infer ownership solely from a person\u2019s name appearing in the bank description.",
+   "rep": "Do not infer ownership solely from a person’s name appearing in the bank description.",
    "sources": [
     "LEDGERLINE_pasted-18.md:574"
    ],
@@ -11603,7 +11605,7 @@
    "cid": "C-0943",
    "category": "process",
    "status": "implemented",
-   "rep": "These values should be treated only as the reference session\u2019s displayed results.",
+   "rep": "These values should be treated only as the reference session’s displayed results.",
    "sources": [
     "LEDGERLINE_pasted-20.md:400"
    ],
@@ -12167,7 +12169,7 @@
    "cid": "C-0990",
    "category": "other",
    "status": "implemented",
-   "rep": "Both accounts must belong to the user\u2019s configured financial account structure.",
+   "rep": "Both accounts must belong to the user’s configured financial account structure.",
    "sources": [
     "LEDGERLINE_pasted-30.md:261"
    ],
@@ -12179,7 +12181,7 @@
    "cid": "C-0991",
    "category": "other",
    "status": "partial",
-   "rep": "Exchange differences and fees must follow Ledgerline\u2019s established accounting treatment.",
+   "rep": "Exchange differences and fees must follow Ledgerline’s established accounting treatment.",
    "sources": [
     "LEDGERLINE_pasted-30.md:642"
    ],
@@ -12275,7 +12277,7 @@
    "cid": "C-0999",
    "category": "reimbursement",
    "status": "partial",
-   "rep": "Do not assume that an organisation\u2019s linked account makes every transaction on that account an expense of that organisation.",
+   "rep": "Do not assume that an organisation’s linked account makes every transaction on that account an expense of that organisation.",
    "sources": [
     "LEDGERLINE_pasted-31.md:487"
    ],
@@ -12935,7 +12937,7 @@
    "cid": "C-1054",
    "category": "other",
    "status": "implemented",
-   "rep": "This module should estimate the user\u2019s future financial position.",
+   "rep": "This module should estimate the user’s future financial position.",
    "sources": [
     "Detailed_Functional_Requirements_-_Version_1.0_pasted.md:493"
    ],
@@ -12947,7 +12949,7 @@
    "cid": "C-1055",
    "category": "other",
    "status": "implemented",
-   "rep": "Numerical financial calculations should be performed by the application\u2019s financial calculation engine.",
+   "rep": "Numerical financial calculations should be performed by the application’s financial calculation engine.",
    "sources": [
     "Detailed_Functional_Requirements_-_Version_1.0_pasted.md:582"
    ],
@@ -13603,7 +13605,7 @@
    "cid": "C-1109",
    "category": "security",
    "status": "partial",
-   "rep": "This must remain Ledgerline\u2019s signature quick-access feature.",
+   "rep": "This must remain Ledgerline’s signature quick-access feature.",
    "sources": [
     "LEDGERLINE_pasted-3.md:646"
    ],
@@ -13855,7 +13857,7 @@
    "cid": "C-1130",
    "category": "other",
    "status": "implemented",
-   "rep": "Allow the keyboard to be dismissed using the system\u2019s normal dismissal behaviour.",
+   "rep": "Allow the keyboard to be dismissed using the system’s normal dismissal behaviour.",
    "sources": [
     "LEDGERLINE_pasted-6.md:43"
    ],
@@ -14143,7 +14145,7 @@
    "cid": "C-1154",
    "category": "entry",
    "status": "implemented",
-   "rep": "The system must reuse Ledgerline\u2019s existing unified transaction ledger.",
+   "rep": "The system must reuse Ledgerline’s existing unified transaction ledger.",
    "sources": [
     "LEDGERLINE_pasted-11.md:50"
    ],
@@ -14167,7 +14169,7 @@
    "cid": "C-1156",
    "category": "statement",
    "status": "partial",
-   "rep": "Official \u2192 Select Organisation \u2192 Select Event or Project \u2192 Generate Expenditure Statement.",
+   "rep": "Official → Select Organisation → Select Event or Project → Generate Expenditure Statement.",
    "sources": [
     "LEDGERLINE_pasted-11.md:106"
    ],
@@ -14215,7 +14217,7 @@
    "cid": "C-1160",
    "category": "reporting",
    "status": "implemented",
-   "rep": "The sum of payment-source expenditure must equal the report\u2019s actual expenditure total.",
+   "rep": "The sum of payment-source expenditure must equal the report’s actual expenditure total.",
    "sources": [
     "LEDGERLINE_pasted-11.md:269"
    ],
@@ -14323,7 +14325,7 @@
    "cid": "C-1169",
    "category": "entry",
    "status": "implemented",
-   "rep": "Changing a workspace\u2019s name must not alter its historical transaction relationships.",
+   "rep": "Changing a workspace’s name must not alter its historical transaction relationships.",
    "sources": [
     "LEDGERLINE_pasted-12.md:498"
    ],
@@ -14491,7 +14493,7 @@
    "cid": "C-1183",
    "category": "investment",
    "status": "implemented",
-   "rep": "Keep Signature Blue & Gold as Ledgerline\u2019s primary brand theme.",
+   "rep": "Keep Signature Blue & Gold as Ledgerline’s primary brand theme.",
    "sources": [
     "LEDGERLINE_pasted-13.md:552"
    ],
@@ -15163,7 +15165,7 @@
    "cid": "C-1239",
    "category": "other",
    "status": "implemented",
-   "rep": "Transactions labelled \u201cMiscellaneous \u2014 check\u201d must not be silently treated as verified.",
+   "rep": "Transactions labelled “Miscellaneous — check” must not be silently treated as verified.",
    "sources": [
     "LEDGERLINE_pasted-20.md:443"
    ],
@@ -15403,7 +15405,7 @@
    "cid": "C-1258",
    "category": "reimbursement",
    "status": "implemented",
-   "rep": "Version 5.6 \u2014 Organisation-Based Reimbursement Profiles & Automatic Claim Prefilling",
+   "rep": "Version 5.6 — Organisation-Based Reimbursement Profiles & Automatic Claim Prefilling",
    "sources": [
     "LEDGERLINE_pasted-23.md:2"
    ],
@@ -15799,7 +15801,7 @@
    "cid": "C-1291",
    "category": "entry",
    "status": "partial",
-   "rep": "Version 5.9 \u2014 Smart Financial Inbox & Historical Transaction Auto-Resolution",
+   "rep": "Version 5.9 — Smart Financial Inbox & Historical Transaction Auto-Resolution",
    "sources": [
     "LEDGERLINE_pasted-25.md:2"
    ],
@@ -16111,7 +16113,7 @@
    "cid": "C-1317",
    "category": "statement",
    "status": "implemented",
-   "rep": "A third-party payee must not be treated as one of the user\u2019s bank accounts.",
+   "rep": "A third-party payee must not be treated as one of the user’s bank accounts.",
    "sources": [
     "LEDGERLINE_pasted-30.md:909"
    ],
@@ -16303,7 +16305,7 @@
    "cid": "C-1333",
    "category": "reporting",
    "status": "implemented",
-   "rep": "Add a CSV export for each trip\u2019s advances, expenses, returns, and outstanding balance.",
+   "rep": "Add a CSV export for each trip’s advances, expenses, returns, and outstanding balance.",
    "sources": [
     "chat #171 2026-10-31 15:56"
    ],
@@ -16351,7 +16353,7 @@
    "cid": "C-1337",
    "category": "other",
    "status": "partial",
-   "rep": "One more bug. I couldn\u2019t change or it\u2019s not saved again [User attached an image]",
+   "rep": "One more bug. I couldn’t change or it’s not saved again [User attached an image]",
    "sources": [
     "chat #351 2026-11-01 11:37"
    ],
@@ -17805,7 +17807,7 @@
    "cid": "C-1458",
    "category": "ux",
    "status": "partial",
-   "rep": "Loading indicators should follow Ledgerline\u2019s selected theme.",
+   "rep": "Loading indicators should follow Ledgerline’s selected theme.",
    "sources": [
     "LEDGERLINE_pasted-5.md:393"
    ],
@@ -19092,7 +19094,7 @@
    "cid": "C-1564",
    "category": "other",
    "status": "partial",
-   "rep": "Do not display \u201cEverything is settled\u201d unless the relevant records support it.",
+   "rep": "Do not display “Everything is settled” unless the relevant records support it.",
    "sources": [
     "LEDGERLINE_pasted-17.md:642"
    ],
@@ -19128,7 +19130,7 @@
    "cid": "C-1567",
    "category": "statement",
    "status": "implemented",
-   "rep": "Version 5.3 \u2014 Intelligent Statement Import, Bulk Review & Reconciliation",
+   "rep": "Version 5.3 — Intelligent Statement Import, Bulk Review & Reconciliation",
    "sources": [
     "LEDGERLINE_pasted-18.md:3"
    ],
@@ -19188,7 +19190,7 @@
    "cid": "C-1572",
    "category": "entry",
    "status": "partial",
-   "rep": "Import Overview \u2192 Review Groups \u2192 Transaction Details \u2192 Confirm Import",
+   "rep": "Import Overview → Review Groups → Transaction Details → Confirm Import",
    "sources": [
     "LEDGERLINE_pasted-18.md:618"
    ],
@@ -19284,7 +19286,7 @@
    "cid": "C-1580",
    "category": "other",
    "status": "implemented",
-   "rep": "The label Miscellaneous \u2014 check must not be treated as a verified classification.",
+   "rep": "The label Miscellaneous — check must not be treated as a verified classification.",
    "sources": [
     "LEDGERLINE_pasted-19.md:72"
    ],
@@ -19572,7 +19574,7 @@
    "cid": "C-1604",
    "category": "entry",
    "status": "partial",
-   "rep": "Add a \u20b92,000 eligible business expense paid using a personal card.",
+   "rep": "Add a ₹2,000 eligible business expense paid using a personal card.",
    "sources": [
     "LEDGERLINE_pasted-22.md:541"
    ],
@@ -20472,7 +20474,7 @@
    "cid": "C-1679",
    "category": "other",
    "status": "implemented",
-   "rep": "All financial modules must use Ledgerline\u2019s existing shared financial ledger.",
+   "rep": "All financial modules must use Ledgerline’s existing shared financial ledger.",
    "sources": [
     "LEDGERLINE_pasted-31.md:56"
    ],
@@ -20508,7 +20510,7 @@
    "cid": "C-1682",
    "category": "testing",
    "status": "implemented",
-   "rep": "Transfer \u20b950,000 between two owned accounts using test data.",
+   "rep": "Transfer ₹50,000 between two owned accounts using test data.",
    "sources": [
     "LEDGERLINE_pasted-31.md:285"
    ],
@@ -20750,7 +20752,7 @@
    "cid": "C-1702",
    "category": "other",
    "status": "superseded",
-   "rep": "It\u2019s ok leave the email connection build and proceed with the remaining",
+   "rep": "It’s ok leave the email connection build and proceed with the remaining",
    "sources": [
     "chat #270 2026-11-01 03:23"
    ],
@@ -21470,7 +21472,7 @@
    "cid": "C-1762",
    "category": "other",
    "status": "implemented",
-   "rep": "Do not incorporate KK into Ledgerline\u2019s main brand identity.",
+   "rep": "Do not incorporate KK into Ledgerline’s main brand identity.",
    "sources": [
     "LEDGERLINE_-_Official_Logo_Brand_Integration_pasted.md:63"
    ],
@@ -22550,7 +22552,7 @@
    "cid": "C-1852",
    "category": "statement",
    "status": "partial",
-   "rep": "Family \u2192 Select Activity \u2192 Generate Expenditure Statement.",
+   "rep": "Family → Select Activity → Generate Expenditure Statement.",
    "sources": [
     "LEDGERLINE_pasted-11.md:98"
    ],
@@ -22562,7 +22564,7 @@
    "cid": "C-1853",
    "category": "statement",
    "status": "partial",
-   "rep": "Travel \u2192 Select Trip \u2192 Generate Expenditure Statement.",
+   "rep": "Travel → Select Trip → Generate Expenditure Statement.",
    "sources": [
     "LEDGERLINE_pasted-11.md:110"
    ],
@@ -23152,7 +23154,7 @@
    "cid": "C-1902",
    "category": "other",
    "status": "implemented",
-   "rep": "Do not display an unconfigured account as having a verified \u20b90 balance.",
+   "rep": "Do not display an unconfigured account as having a verified ₹0 balance.",
    "sources": [
     "LEDGERLINE_pasted-14.md:792"
    ],
@@ -23296,7 +23298,7 @@
    "cid": "C-1914",
    "category": "other",
    "status": "implemented",
-   "rep": "Version 5.1 \u2014 Smart Historical Import & Bulk Reconciliation",
+   "rep": "Version 5.1 — Smart Historical Import & Bulk Reconciliation",
    "sources": [
     "LEDGERLINE_pasted-15.md:3"
    ],
@@ -23728,7 +23730,7 @@
    "cid": "C-1950",
    "category": "other",
    "status": "implemented",
-   "rep": "Problem A \u2014 Uncertain Classifications Included in Automatic Registration",
+   "rep": "Problem A — Uncertain Classifications Included in Automatic Registration",
    "sources": [
     "LEDGERLINE_pasted-18.md:57"
    ],
@@ -23800,7 +23802,7 @@
    "cid": "C-1956",
    "category": "other",
    "status": "implemented",
-   "rep": "Do not treat \u201cMiscellaneous \u2014 check\u201d as a high-confidence category.",
+   "rep": "Do not treat “Miscellaneous — check” as a high-confidence category.",
    "sources": [
     "LEDGERLINE_pasted-18.md:413"
    ],
@@ -24124,7 +24126,7 @@
    "cid": "C-1983",
    "category": "entry",
    "status": "implemented",
-   "rep": "Do not display \u20b90 as though a budget has been intentionally configured.",
+   "rep": "Do not display ₹0 as though a budget has been intentionally configured.",
    "sources": [
     "LEDGERLINE_pasted-22.md:115"
    ],
@@ -25064,7 +25066,7 @@
    "cid": "C-2061",
    "category": "testing",
    "status": "implemented",
-   "rep": "Recommendation 4 \u2014 Create Permanent Financial Test Cases",
+   "rep": "Recommendation 4 — Create Permanent Financial Test Cases",
    "sources": [
     "LEDGERLINE_pasted-31.md:1107"
    ],
@@ -25088,7 +25090,7 @@
    "cid": "C-2063",
    "category": "reimbursement",
    "status": "superseded",
-   "rep": "Let me set each department\u2019s budget and update budget limits from the app.",
+   "rep": "Let me set each department’s budget and update budget limits from the app.",
    "sources": [
     "chat #12 2026-10-30 19:24"
    ],
@@ -25184,7 +25186,7 @@
    "cid": "C-2071",
    "category": "process",
    "status": "partial",
-   "rep": "Show me the E1\u2013E7 audit corrections so I can review and approve them.",
+   "rep": "Show me the E1–E7 audit corrections so I can review and approve them.",
    "sources": [
     "chat #524 2026-11-01 20:00"
    ],
@@ -25232,7 +25234,7 @@
    "cid": "C-2075",
    "category": "other",
    "status": "implemented",
-   "rep": "I couldn\u2019t find the link for uploading to my accountant also",
+   "rep": "I couldn’t find the link for uploading to my accountant also",
    "sources": [
     "chat #632 2026-11-02 07:27"
    ],
@@ -26236,7 +26238,7 @@
    "cid": "C-2158",
    "category": "other",
    "status": "implemented",
-   "rep": "Confirmation Required \u2014 User action is needed.",
+   "rep": "Confirmation Required — User action is needed.",
    "sources": [
     "LEDGERLINE_pasted-5.md:41"
    ],
@@ -26608,7 +26610,7 @@
    "cid": "C-2189",
    "category": "statement",
    "status": "partial",
-   "rep": "Select Purchase \u2192 Generate Expenditure Statement.",
+   "rep": "Select Purchase → Generate Expenditure Statement.",
    "sources": [
     "LEDGERLINE_pasted-11.md:114"
    ],
@@ -26812,7 +26814,7 @@
    "cid": "C-2206",
    "category": "other",
    "status": "implemented",
-   "rep": "Do not duplicate those modules\u2019 accounting logic.",
+   "rep": "Do not duplicate those modules’ accounting logic.",
    "sources": [
     "LEDGERLINE_pasted-12.md:251"
    ],
@@ -27256,7 +27258,7 @@
    "cid": "C-2243",
    "category": "ai",
    "status": "partial",
-   "rep": "Settings \u2192 Financial Automation \u2192 Import Rules",
+   "rep": "Settings → Financial Automation → Import Rules",
    "sources": [
     "LEDGERLINE_pasted-15.md:417"
    ],
@@ -27400,7 +27402,7 @@
    "cid": "C-2255",
    "category": "testing",
    "status": "implemented",
-   "rep": "Test imports using one month\u2019s statements.",
+   "rep": "Test imports using one month’s statements.",
    "sources": [
     "LEDGERLINE_pasted-16.md:1111"
    ],
@@ -27436,7 +27438,7 @@
    "cid": "C-2258",
    "category": "travel",
    "status": "implemented",
-   "rep": "Display an individual trip\u2019s overview and navigation.",
+   "rep": "Display an individual trip’s overview and navigation.",
    "sources": [
     "LEDGERLINE_pasted-17.md:39"
    ],
@@ -28080,7 +28082,7 @@
    "cid": "C-2311",
    "category": "other",
    "status": "implemented",
-   "rep": "Ready to generate \u2014 2 expenses need bills.**",
+   "rep": "Ready to generate — 2 expenses need bills.**",
    "sources": [
     "LEDGERLINE_pasted-23.md:554"
    ],
@@ -28764,7 +28766,7 @@
    "cid": "C-2368",
    "category": "other",
    "status": "implemented",
-   "rep": "Recommendation 4 \u2014 Prevent Duplicate Financial Effects",
+   "rep": "Recommendation 4 — Prevent Duplicate Financial Effects",
    "sources": [
     "LEDGERLINE_pasted-30.md:915"
    ],
@@ -28776,7 +28778,7 @@
    "cid": "C-2369",
    "category": "statement",
    "status": "implemented",
-   "rep": "Recommendation 5 \u2014 Support Incomplete Statement Coverage",
+   "rep": "Recommendation 5 — Support Incomplete Statement Coverage",
    "sources": [
     "LEDGERLINE_pasted-30.md:919"
    ],
@@ -28860,7 +28862,7 @@
    "cid": "C-2376",
    "category": "other",
    "status": "implemented",
-   "rep": "Phase 1 \u2014 Inventory and Read-Only Diagnostics",
+   "rep": "Phase 1 — Inventory and Read-Only Diagnostics",
    "sources": [
     "LEDGERLINE_pasted-31.md:940"
    ],
@@ -28872,7 +28874,7 @@
    "cid": "C-2377",
    "category": "testing",
    "status": "implemented",
-   "rep": "Phase 2 \u2014 Controlled Financial Test Suite",
+   "rep": "Phase 2 — Controlled Financial Test Suite",
    "sources": [
     "LEDGERLINE_pasted-31.md:950"
    ],
@@ -28956,7 +28958,7 @@
    "cid": "C-2384",
    "category": "other",
    "status": "implemented",
-   "rep": "Recommendation 5 \u2014 Keep Import and Reconciliation Separate",
+   "rep": "Recommendation 5 — Keep Import and Reconciliation Separate",
    "sources": [
     "LEDGERLINE_pasted-31.md:1111"
    ],
@@ -29292,7 +29294,7 @@
    "cid": "C-2412",
    "category": "testing",
    "status": "partial",
-   "rep": "Test Group F \u2014 Organisations and Reimbursements",
+   "rep": "Test Group F — Organisations and Reimbursements",
    "sources": [
     "LEDGERLINE_-_FINANCIAL_INBOX_v5.12_pasted.md:675"
    ],
@@ -29798,7 +29800,7 @@
    "cid": "C-2454",
    "category": "other",
    "status": "implemented",
-   "rep": "Priority 1 \u2014 Historical Import Foundation",
+   "rep": "Priority 1 — Historical Import Foundation",
    "sources": [
     "LEDGERLINE_pasted-15.md:460"
    ],
@@ -30302,7 +30304,7 @@
    "cid": "C-2496",
    "category": "other",
    "status": "implemented",
-   "rep": "Recommendation 3 \u2014 Automatic Activity Mapping",
+   "rep": "Recommendation 3 — Automatic Activity Mapping",
    "sources": [
     "LEDGERLINE_pasted-24.md:1228"
    ],
@@ -30518,7 +30520,7 @@
    "cid": "C-2514",
    "category": "testing",
    "status": "implemented",
-   "rep": "Recommendation 9 \u2014 Verify Financial Totals",
+   "rep": "Recommendation 9 — Verify Financial Totals",
    "sources": [
     "LEDGERLINE_pasted-30.md:935"
    ],
@@ -30530,7 +30532,7 @@
    "cid": "C-2515",
    "category": "process",
    "status": "implemented",
-   "rep": "Recommendation 10 \u2014 Do Not Deploy Without Approval",
+   "rep": "Recommendation 10 — Do Not Deploy Without Approval",
    "sources": [
     "LEDGERLINE_pasted-30.md:939"
    ],
@@ -30578,7 +30580,7 @@
    "cid": "C-2519",
    "category": "testing",
    "status": "partial",
-   "rep": "Recommendation 8 \u2014 Require Evidence of Completion",
+   "rep": "Recommendation 8 — Require Evidence of Completion",
    "sources": [
     "LEDGERLINE_pasted-31.md:1123"
    ],
@@ -30590,7 +30592,7 @@
    "cid": "C-2520",
    "category": "document",
    "status": "partial",
-   "rep": "What\u2019s remaining in the document to build?",
+   "rep": "What’s remaining in the document to build?",
    "sources": [
     "chat #50 2026-10-31 05:27"
    ],
@@ -30830,7 +30832,7 @@
    "cid": "C-2540",
    "category": "other",
    "status": "partial",
-   "rep": "delete dat\u00e2 is not working",
+   "rep": "delete datâ is not working",
    "sources": [
     "chat #131 2026-10-31 12:33"
    ],
@@ -30853,8 +30855,8 @@
  ],
  "counts": {
   "implemented": 1543,
-  "partial": 948,
+  "partial": 951,
   "superseded": 19,
-  "missing": 31
+  "missing": 28
  }
 }
