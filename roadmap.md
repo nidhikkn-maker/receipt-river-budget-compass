@@ -1,3 +1,8 @@
+## Approved UIX integration — 7 Nov 2026
+- [ ] Extend global plus with existing Smart Add modes and preserve all navigation access.
+- [ ] Connect receipt interpretation and statement batch review without new parsing/posting paths.
+- [ ] Verify phone/tablet/desktop entry, review, recovery and permission boundaries using isolated tests; retain release holds and 300-credit reserve.
+
 ## Credit-controlled completion — 7 Nov 2026
 - Owner development cap: 1,100 credits (550 essential workflows / 250 critical fixes / 200 final tests and security / 100 reserve). Stop feature expansion near 200 remaining; no production changes or publication.
 - Current: historical 1,558 implemented / 943 partial / 21 missing / 19 superseded; v6 566 verified / 331 partial / 2 blocked.
