@@ -1,3 +1,12 @@
+## Credit-controlled completion — 7 Nov 2026
+- Owner development cap: 1,100 credits (550 essential workflows / 250 critical fixes / 200 final tests and security / 100 reserve). Stop feature expansion near 200 remaining; no production changes or publication.
+- Baseline: historical 1,557 implemented / 944 partial / 21 missing / 19 superseded; v6 566 verified / 331 partial / 2 blocked.
+- [ ] P0: unresolved committed statement intentions and concurrent/stale-safe Undo; isolated hosted recovery required before release claims.
+- [ ] P1 selected batch: claim-builder saved/downloaded evidence ordering and interrupted report-save response recovery.
+- [ ] P1 next: connected Statement Desk → Inbox → account/card reconciliation → DocuRepo/report acceptance; use saved evidence, no repeat historical audit.
+- [ ] Final acceptance/security: preserve reserved credits; staged approval/storage safeguards remain pending release approval.
+- P2 deferred: conveniences and refinements. P3 deferred: physical devices, external providers, real-record acceptance, optional integrations and UIX redesign.
+
 
 ## Current Workstream 1 — 7 Nov 2026 17:17 UTC
 - [ ] Statement Desk: exact source/draft recovery checks, multi-stage interruptions and incomplete Undo retention.
