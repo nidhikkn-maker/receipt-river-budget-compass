@@ -148,7 +148,6 @@ class ExpenseReceiptButtons(unittest.IsolatedAsyncioTestCase):
         await (await chooser.value).set_files(self.receipt)
         review = self.page.get_by_role("group", name="Review scanned details")
         await review.get_by_text("Original receipt", exact=True).click()
-        print("DBG", await review.locator("details.canvas-source").evaluate_all("es=>es.map(e=>e.open)"))
         await expect(review).to_be_visible()
         await review.get_by_role("button", name="Zoom in", exact=True).click()
         await expect(review.get_by_role("img", name="Receipt controlled-receipt.png, zoom 150%")).to_be_visible()
