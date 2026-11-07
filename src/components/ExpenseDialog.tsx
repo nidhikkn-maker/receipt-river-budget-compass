@@ -28,7 +28,7 @@ export function ExpenseDialog({ expense, onClose }: { expense: Expense | null; o
   return (
     <Dialog open onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="max-h-[90vh] max-w-xl overflow-y-auto rounded-3xl">
-        <DialogHeader><DialogTitle className="font-display text-2xl font-bold">{expense.title}</DialogTitle></DialogHeader>
+        <DialogHeader><DialogTitle className="sr-only">{expense.title}</DialogTitle></DialogHeader>
         <ExpenseDetail expense={expense} onClose={onClose} />
       </DialogContent>
     </Dialog>
@@ -56,9 +56,8 @@ export function ExpenseDetail({ expense, onClose }: { expense: Expense; onClose:
   };
 
   return (
-    <Dialog open onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="max-h-[90vh] max-w-xl overflow-y-auto rounded-3xl">
-        <DialogHeader><DialogTitle className="font-display text-2xl font-bold">{e.title}</DialogTitle></DialogHeader>
+    <div className="space-y-4">
+        <h2 className="font-display text-2xl font-bold">{e.title}</h2>
         <div className="flex flex-wrap gap-x-3 gap-y-1 text-sm text-muted-foreground">
           <span>{e.date}</span>·<span>{e.category}</span>·<span>{PAYMENT_LABEL[e.paymentMethod]}</span>·<span>For {whoLabel(e, memberName)}</span>
           {e.merchant && <>·<span>{e.merchant}</span></>}
