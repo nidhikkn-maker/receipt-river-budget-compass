@@ -43,7 +43,7 @@ function Wealth() {
 
 
   return (
-    <div className="journal-wealth">
+    <div className="journal-wealth uix-family-money">
       <PageTitle eyebrow="The longer view" title="Wealth & Plan" sub="Accounts, investments and the plans ahead." />
       <div className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-3">
         <Stat label="Assets" value={money(nw.assets)} />
@@ -93,7 +93,7 @@ function Wealth() {
           })}
         </section>
 
-        <AccountForm />
+        <details className="uix-account-create border-t pt-4"><summary className="font-medium">Add an account</summary><div className="pt-4"><AccountForm /></div></details>
       </div>
       <div className="mt-8 grid gap-6 lg:grid-cols-2">
         <LoansPanel />
