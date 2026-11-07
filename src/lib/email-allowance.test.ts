@@ -15,4 +15,13 @@ describe("accountant email allowance", () => {
     expect(emailAllowance(r, "d@x.com", now).ok).toBe(false);
     expect(emailAllowance(r, "B@x.com", now).ok).toBe(true);
   });
+  it("blocks the 5th email to the same address within 24 hours", () => {
+    const r = Array.from({ length: 4 }, () => ev("a@x.com", 2));
+    expect(emailAllowance(r, "a@x.com", now).ok).toBe(false);
+    expect(emailAllowance(r, "b@x.com", now).ok).toBe(true);
+  });
+  it("counts manual resends toward the same-address limit", () => {
+    const r = [ev("a@x.com", 3), ev("resent:a@x.com", 2), ev("resent:a@x.com", 1), ev("a@x.com", 1)];
+    expect(emailAllowance(r, "A@x.com", now).ok).toBe(false);
+  });
 });
