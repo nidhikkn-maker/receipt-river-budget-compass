@@ -1,9 +1,10 @@
 ## Active verification checkpoint (7 Nov 2026)
+- [x] 10:09 batch: existing-asset supporting-document/invoice attachment, serial ambiguity, source integrity; three connected actual-review/installed-SQL/owner-policy/stale/replay/figure cases and original-upload browser check. Promoted V60-0341/0349/0351 only; 538 verified / 359 partial / 2 blocked; 1,793 regressions pass.
 - [x] Connected receipt/contract/utility/invoice review checks plus installed-SQL persistence, permissions/replay/rollback; original recovery across next upload/reload; canonical pipeline saved rows → reconciliation → monthly report. Full suite 1,788 and 4 browser checks pass.
 - [x] Fix stable original ids, encrypted owner-bound recovery, pending-warning visibility, next-upload retention and utility property duplicate/capitalisation safeguards. Real financial records unchanged; not published; staged trigger disabled.
 - [ ] File-to-reader representative extraction through actual review and installed SQL in one harness; preserve uncertainty and source originals.
-- [ ] Existing-asset invoice identity/ambiguity matching, source linking and persisted depreciation/tax/report integration.
-- [ ] Remaining 362 PARTIAL clauses: continue connected verification; no promotions based only on helper or controlled adapter tests. Two external blockers remain separate.
+- [x] Existing-asset invoice identity/ambiguity selection, source linking and persisted unchanged depreciation/tax figures. Actual extraction, production store/private storage remain separate acceptance gaps.
+- [ ] Remaining 359 PARTIAL clauses: next actual reader + production private storage/store harness for V60-0060/0061/0130; then connected receipt/contract/tax/property workflows. No helper-only or controlled-extraction promotions. Two external blockers remain separate.
 
 ## Autonomous master execution (6 Nov 2026)
 - [x] Priority 3 reviewed-save RPC/owner audit and central approval dialog; closed-GST amendment database guard; current invoice list, export/RCM/advances and expanded tax/investment input sources. 1,681 automated checks pass; isolated GST save/amendment/advance/reload browser check passes; production records unchanged.
