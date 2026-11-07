@@ -268,7 +268,7 @@ class ExpenseReceiptButtons(unittest.IsolatedAsyncioTestCase):
         await dialog.get_by_role("button", name="Edit", exact=True).click()
         await self.page.get_by_label("Note", exact=True).fill("Reviewed receipt attachment")
         await self.page.get_by_role("button", name="Save changes", exact=True).click()
-        await expect(self.page.get_by_role("heading", name="Sort it out", exact=True)).to_be_visible()
+        await expect(self.page.get_by_role("heading", name="Activity", exact=True)).to_be_visible()
         dialog = await self.open_expense("Reviewed receipt attachment")
         await expect(dialog.get_by_role("img", name=self.receipt.name)).to_be_visible()
         updated = await self.page.evaluate("expenseBrowserFixture.transactions.find(e=>e.id!=='other-expense')")
