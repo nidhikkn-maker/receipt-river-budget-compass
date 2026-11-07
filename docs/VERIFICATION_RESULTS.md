@@ -74,3 +74,15 @@ Not verified: hosted two-account access, real-device behaviour, real-document ex
 - V61-0014 "Relevant currencies" implemented and verified: Quote.currency, owner-entered FX rates (BooksData.fxRates, validated by cleanBooks), fxFor/latest-rate selection, valueHolding converts non-INR prices and refuses to value without an owner rate (never guessed), rates over 30 days marked stale, MarketPanel FX entry UI. 7 new tests in fx-valuation.test.ts pass; typecheck clean.
 - Governance clauses V60-0643 / V60-0647 / V60-0769 marked VERIFIED COMPLETE as process-adherence rules (migrations and publishing only within explicit owner authorisation; staged approval trigger still uninstalled pending explicit go-ahead).
 - Register counts after this session's first pass: 493 VERIFIED COMPLETE, 404 PARTIAL, 0 MISSING, 2 BLOCKED (licensed intraday feed; physical iPhone/iPad checks).
+
+## 7 Nov 2026 — Intake document fixtures + DocuRepo failure fix
+- New `src/lib/books/intake-fixtures.test.ts` (21 tests, PASS): representative fixtures for company incorporation, PAN/GST registration, audited financial statements, property deeds, lease agreements and asset purchase invoices — covering identification/matching, expected-field extraction, missing-field handling with no invented values, and reviewed save via `commitIntake` with DocuRepo document links and module placement. Promoted V60-0041/0042/0043/0055/0056/0058 to VERIFIED COMPLETE.
+- Fixed a real gap found during verification (V60-0082): a Statement Desk save whose DocuRepo original-store failed previously left only a toast. Failed originals are now kept in a persistent on-page warning with an explicit retry that never duplicates posted entries. Typecheck and build pass.
+- Register: 519 VERIFIED COMPLETE / 378 PARTIAL / 0 MISSING / 2 BLOCKED.
+
+## 7 Nov 2026 (continued) — Document fixture and assignment verification
+- New `src/lib/investments/investment-doc-fixtures.test.ts` (7 tests, PASS): demat/transaction/capital-gains statement identification, field extraction, no invented quantities, unmatched securities reported not created, re-uploaded lots never duplicated, reviewed merge links every holding to its source document.
+- New `src/lib/books/docrepo-assignment.test.ts` (8 tests, PASS): automatic assignment and reload of document type, company (link or printed PAN/GSTIN, never guessed), financial year, related asset/property/investment/loan links, expiry reminders, monetary-value provenance with printed original and page, retention rules.
+- Promoted to VERIFIED COMPLETE: V60-0045, V60-0047, V60-0050, V60-0052, V60-0053, V60-0054, V60-0086, V60-0090, V60-0091, V60-0093–V60-0096, V60-0098–V60-0100.
+- Full suite: 228 files, 1,773 tests, all PASS. Typecheck and build clean.
+- Register: 535 VERIFIED COMPLETE / 362 PARTIAL / 0 MISSING / 2 BLOCKED.

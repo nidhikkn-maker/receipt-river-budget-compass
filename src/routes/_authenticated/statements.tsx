@@ -11,7 +11,7 @@ import { Clipped } from "@/components/Clipped";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import { money } from "@/lib/expenses";
-import { useStore } from "@/lib/store";
+import { useStore, type DocumentMeta } from "@/lib/store";
 import { accountBalance } from "@/lib/ledger";
 import type { TxnType } from "@/lib/ledger";
 import { correctionPreview, type CorrectionPreview } from "@/lib/financial-corrections";
@@ -89,6 +89,8 @@ function StatementDeskPage() {
   const [accepted, setAccepted] = useState<string[]>([]);
   const [destinations, setDestinations] = useState<Record<string, string>>({});
   const [result, setResult] = useState<ApplyResult | null>(null);
+  // Statement originals that failed to store in DocuRepo after posting — kept so the owner can retry instead of leaving an untracked import.
+  const [failedOriginals, setFailedOriginals] = useState<{ file: File; meta: DocumentMeta }[]>([]);
   const [hintEdits, setHintEdits] = useState<Record<string, Partial<AccountHint>>>({});
   const [links, setLinks] = useState<TransferLinkRow[] | null>(null);
   const [linking, setLinking] = useState<string | null>(null);
@@ -203,6 +205,7 @@ function StatementDeskPage() {
     }
     try {
       setProgress("Saving…");
+      setFailedOriginals([]);
       const r = await applyUpload(requests, api(), setProgress);
       setResult(r);
       // One event per saved statement: did the app's balance after saving match the printed closing figure?
@@ -218,15 +221,20 @@ function StatementDeskPage() {
       listDrafts().then(setDrafts).catch(() => {}); setDraftFlip([]);
       const upload: StatementUpload = { id: crypto.randomUUID(), at: new Date().toISOString(), label: plan.accounts.map((a) => a.file.name).join(", ").slice(0, 200), posted: r.posted, reconciled: r.reconciled, createdAccounts: r.createdAccounts };
       // Keep each statement original once in DocuRepo, evidence-locked, so posted lines trace back to their file [§3].
+      // A failed store must not vanish into a toast: keep the file for an explicit retry so no import is left untracked.
       const kept = new Set<File>();
+      const failed: { file: File; meta: DocumentMeta }[] = [];
       for (const a of plan.accounts) {
         const f = originals.current.get(a.file.name);
         if (!f || kept.has(f) || !requests.some((q) => q.account === a)) continue;
         kept.add(f);
         const ds = a.file.lines.map((l) => l.date).sort();
-        try { await storeRef.current.addDocument(f, { title: `Statement · ${a.file.name}`, docType: a.file.hint?.kind === "credit_card" || /card/i.test(a.file.name) ? "card_statement" : "bank_statement", docDate: ds[ds.length - 1] ?? null, amount: null, currency: a.file.currency, merchant: null, notes: `Statement Desk upload ${upload.id}: ${a.file.lines.length} lines (${ds[0] ?? "?"} to ${ds[ds.length - 1] ?? "?"}).`, transactionId: null, accountId: a.file.accountId, loanId: null, expiresOn: null, evidenceLocked: true }); }
-        catch { toast.error(`Posted, but the original of ${f.name} couldn’t be stored in DocuRepo.`); }
+        const meta: DocumentMeta = { title: `Statement · ${a.file.name}`, docType: a.file.hint?.kind === "credit_card" || /card/i.test(a.file.name) ? "card_statement" : "bank_statement", docDate: ds[ds.length - 1] ?? null, amount: null, currency: a.file.currency, merchant: null, notes: `Statement Desk upload ${upload.id}: ${a.file.lines.length} lines (${ds[0] ?? "?"} to ${ds[ds.length - 1] ?? "?"}).`, transactionId: null, accountId: a.file.accountId, loanId: null, expiresOn: null, evidenceLocked: true };
+        try { await storeRef.current.addDocument(f, meta); }
+        catch { failed.push({ file: f, meta }); }
       }
+      setFailedOriginals(failed);
+      if (failed.length) toast.error(`Posted, but ${failed.length === 1 ? "the original of " + (failed[0]?.file.name ?? "one file") : failed.length + " statement originals"} couldn’t be stored in DocuRepo — retry below so the import stays traceable.`);
       try { const s = storeRef.current; await s.savePreferences({ ...s.preferences, statementUploads: [upload, ...(s.preferences.statementUploads ?? [])].slice(0, 10) }); }
       catch { toast.error("Saved, but undo history couldn’t sync to your other devices."); }
       toast.success(`${r.posted.length} entries posted · ${r.reconciled.length} records marked as matched${r.createdAccounts.length ? ` · ${r.createdAccounts.length} account${r.createdAccounts.length === 1 ? "" : "s"} created` : ""}`, {
@@ -237,6 +245,18 @@ function StatementDeskPage() {
     } finally {
       setProgress(null);
     }
+  };
+
+  // Retry storing statement originals that failed after a successful post; each success drops off the list, so the import is never left untracked.
+  const retryOriginals = async () => {
+    const left: { file: File; meta: DocumentMeta }[] = [];
+    for (const f of failedOriginals) {
+      try { await storeRef.current.addDocument(f.file, f.meta); }
+      catch { left.push(f); }
+    }
+    setFailedOriginals(left);
+    if (left.length) toast.error(`${left.length} original${left.length === 1 ? "" : "s"} still couldn’t be stored — check your connection and retry.`);
+    else toast.success("All statement originals are now stored in DocuRepo.");
   };
 
   const loadLinks = async () => {
@@ -569,6 +589,14 @@ function StatementDeskPage() {
             </DialogContent>
           </Dialog>
 
+          {failedOriginals.length > 0 && (
+            <Card className="space-y-2 border-destructive/50 p-3" aria-label="Statement originals not stored">
+              <h3 className="font-semibold text-destructive">Originals not stored · {failedOriginals.length}</h3>
+              <p className="text-xs text-muted-foreground">The entries were posted, but these statement files aren’t in DocuRepo yet, so the import isn’t fully traceable. Retry to store them — no entries will be duplicated.</p>
+              <ul className="list-disc pl-5 text-sm">{failedOriginals.map((f) => <li key={f.file.name} className="truncate">{f.file.name}</li>)}</ul>
+              <Button size="sm" variant="outline" onClick={() => void retryOriginals()}>Retry storing originals</Button>
+            </Card>
+          )}
           <div className="flex flex-wrap items-center gap-2">
             <Button onClick={apply} disabled={!!progress}>{progress ?? `Apply everything (${plan.totals.auto + accepted.length} to save)`}</Button>
             {askKeys.length > 0 && <Button variant="outline" onClick={() => setAccepted(askKeys)}>Accept all {askKeys.length} asking items</Button>}
