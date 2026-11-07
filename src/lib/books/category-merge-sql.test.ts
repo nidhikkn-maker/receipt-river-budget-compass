@@ -9,6 +9,7 @@ const commit=(p:object|undefined,id=op)=>db.query('SELECT commit_category_merge(
 beforeAll(async()=>{
  await db.exec(`CREATE ROLE authenticated; CREATE ROLE anon; CREATE ROLE service_role; CREATE SCHEMA auth;
  CREATE FUNCTION auth.uid() RETURNS uuid LANGUAGE sql AS $$ SELECT nullif(current_setting('app.uid',true),'')::uuid $$;
+ GRANT USAGE ON SCHEMA auth TO authenticated;
  CREATE TABLE finance_preferences(owner_id uuid PRIMARY KEY,data jsonb,revision bigint DEFAULT 1);
  CREATE TABLE expenses(id uuid PRIMARY KEY,employee_id uuid,category text,amount numeric,allocations jsonb,source text);
  CREATE TABLE commitments(id uuid PRIMARY KEY,owner_id uuid,category text,amount numeric);
