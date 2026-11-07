@@ -3,9 +3,10 @@
 import { accountBalance, cashflow, isLiability, netWorth, type Account, type Txn, type Valuation } from "./ledger";
 import { addDays, addMonths, daysBetween, forecast, monthEnd, prepayment, type Commitment } from "./planning";
 import { categoryParts } from "./expenses";
+import { roundMoney, sumMoney, addMoney, subtractMoney, decimal, moneyNumber } from './money';
 
-const r2 = (n: number) => Math.round(n * 100) / 100;
-const sum = (xs: number[]) => r2(xs.reduce((s, x) => s + x, 0));
+const r2 = roundMoney;
+const sum = sumMoney;
 export interface Row extends Txn { id: string; category: string; merchant: string | null; title: string; tripId?: string | null; tags?: string[]; currency?: string; originalAmount?: number; fxRate?: number; allocations?: { category: string; amount: number }[]; reimbursementStatus?: string; paymentMethod?: string }
 const isSpend = (t: Txn) => (t.txnType ?? "expense") === "expense";
 const CASH = ["savings", "current", "cash", "wallet"];
@@ -212,12 +213,12 @@ export function tripSummary(t: Trip, txns: Row[]) {
   const list = txns.filter((x) => isSpend(x) && (x.tripId === t.id || (x.tags ?? []).includes(tag)));
   const total = sum(list.map((x) => x.amount));
   const days = Math.max(1, daysBetween(t.start, t.end) + 1);
-  const daily: Record<string, number> = {}; for (const x of list) daily[x.date] = r2((daily[x.date] ?? 0) + x.amount);
-  const cats: Record<string, number> = {}; for (const x of list) for (const p of categoryParts(x)) cats[p.category] = r2((cats[p.category] ?? 0) + p.amount);
+  const daily: Record<string, number> = {}; for (const x of list) daily[x.date] = addMoney(daily[x.date] ?? 0, x.amount);
+  const cats: Record<string, number> = {}; for (const x of list) for (const p of categoryParts(x)) cats[p.category] = addMoney(cats[p.category] ?? 0, p.amount);
   const cur: Record<string, { original: number; inr: number; rates: number[] }> = {};
-  for (const x of list) { const c = x.currency ?? "INR"; const v = (cur[c] ??= { original: 0, inr: 0, rates: [] }); v.original = r2(v.original + (x.originalAmount ?? x.amount)); v.inr = r2(v.inr + x.amount); if (x.fxRate && !v.rates.includes(x.fxRate)) v.rates.push(x.fxRate); }
+  for (const x of list) { const c = x.currency ?? "INR"; const v = (cur[c] ??= { original: 0, inr: 0, rates: [] }); v.original = addMoney(v.original, x.originalAmount ?? x.amount); v.inr = addMoney(v.inr, x.amount); if (x.fxRate && !v.rates.includes(x.fxRate)) v.rates.push(x.fxRate); }
   const reimbursable = sum(list.filter((x) => (x.tags ?? []).includes("Purpose: Reimbursable") || x.reimbursementStatus === "pending").map((x) => x.amount));
-  return { tag, entries: list, total, perDay: r2(total / days), days, daily: Object.entries(daily).sort().map(([date, amount]) => ({ date, amount })), categories: Object.entries(cats).sort((a, b) => b[1] - a[1]).map(([category, amount]) => ({ category, amount })), currencies: Object.entries(cur).map(([currency, v]) => ({ currency, ...v })), variance: r2(t.budget - total), reimbursable, overBudget: t.budget > 0 && total > t.budget };
+  return { tag, entries: list, total, perDay: moneyNumber(decimal(total).div(days)), days, daily: Object.entries(daily).sort().map(([date, amount]) => ({ date, amount })), categories: Object.entries(cats).sort((a, b) => b[1] - a[1]).map(([category, amount]) => ({ category, amount })), currencies: Object.entries(cur).map(([currency, v]) => ({ currency, ...v })), variance: subtractMoney(t.budget, total), reimbursable, overBudget: t.budget > 0 && total > t.budget };
 }
 
 // ---------- 14. Merchant intelligence ----------

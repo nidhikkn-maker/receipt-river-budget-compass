@@ -1,5 +1,13 @@
 # Verification results (executed evidence only)
 
+## 7 Nov 2026 15:31 — two safeguard corrections and independent precision/report work
+- Historical **1543/948/31/19 unchanged**, v6 **566/331/2 unchanged**; newly verified IDs **none**.
+- Full suite **264 files/1942 PASS**; subsequently added authority ABA/direct-tamper regression **8/8 focused PASS**.
+- Staged budget and append-only merchant authority tested through actual installed 0080 RPC in disposable PostgreSQL. No production activation; corrected hosted draft acceptance still pending.
+- Three-width isolated browser interactions PASS; screenshots inspected. Latest observed preview build OK 15:28:22 UTC.
+- Continued decimal trip/booking/advance/reimbursement/report agreement and strict report-retry filter identity. Evidence: `docs/evidence/workstream-1-safeguard-corrections-2026-11-07.md`.
+- Subsequent report version authority2PASS, final focused safeguards/report16PASS; SQL staged only. Full suite totals above predate these two additional tests.
+
 ## 7 Nov 2026 14:40 — merge, decimal, recovery and retired approval security
 - Historical **1543/948/31/19 unchanged**; v6 **566/331/2 unchanged**; newly verified IDs **none**.
 - Main full suite **262 files/1933 PASS**; six three-size browser workflows/PDF checks PASS with local controlled persistence and checksum-verified actual PDF originals.

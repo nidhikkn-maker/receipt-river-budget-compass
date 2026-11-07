@@ -65,7 +65,12 @@ export async function completeReportJob(db: SupabaseClient<any>, job: { id: stri
   const exists = await read();
   if (exists.error) throw Error("Couldn't check report history; retry without changing saved evidence");
   const filters = job.filters as ReportFilters;
-  const valid = (row: any) => row?.id === job.id && row.owner_id === job.owner_id && row.kind === job.kind && row.file_path === path && Number(row.file_size) > 0 && row.period_from === filters.from && row.period_to === filters.to && row.filters?.style === job.style;
+  const canonical = (value: any): string => JSON.stringify(value, (_key, item) => item && typeof item === 'object' && !Array.isArray(item) ? Object.fromEntries(Object.entries(item).sort(([a],[b])=>a.localeCompare(b))) : item);
+  const valid = (row: any) => {
+    if (!row?.filters) return false;
+    const { style, evidenceSha256: _digest, ...acceptedFilters } = row.filters;
+    return row.id === job.id && row.owner_id === job.owner_id && row.kind === job.kind && row.file_path === path && Number(row.file_size) > 0 && row.period_from === filters.from && row.period_to === filters.to && style === job.style && canonical(acceptedFilters) === canonical(filters);
+  };
   const validatePdf = async (blob: Blob, expectedSize?: number, digest?: string) => {
     if (!blob.size || blob.type !== "application/pdf" || (expectedSize != null && blob.size !== expectedSize)) throw Error("Saved report evidence size or type differs; retry without changing evidence");
     const bytes = await blob.arrayBuffer();

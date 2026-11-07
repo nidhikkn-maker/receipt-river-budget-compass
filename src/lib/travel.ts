@@ -5,6 +5,7 @@ import { tripSummary, tripTag, type Trip } from "./intelligence";
 import { workspaceParts } from "./workspaces";
 import { categoryParts, type Scope, type ReimbursementStatus } from "./expenses";
 import { isTracked, outstandingOf, receivedOf, type ReimbursementInfo } from "./reimbursements";
+import { roundMoney, sumMoney, addMoney, subtractMoney, decimal, moneyNumber } from './money';
 
 export const TRIP_TYPES = ["personal", "family", "business", "official", "mixed"] as const;
 export type TripType = (typeof TRIP_TYPES)[number];
@@ -31,7 +32,7 @@ export function tripStatus(t: Pick<TravelTrip, "start" | "end" | "closedAt" | "c
   return "active";
 }
 
-const r2 = (n: number) => Math.round(n * 100) / 100;
+const r2 = roundMoney;
 type Row = Parameters<typeof tripSummary>[1][number] & { id: string; title?: string; scope?: Scope; reimbursementStatus?: ReimbursementStatus; reimbursement?: ReimbursementInfo; workspaceAllocations?: import("./workspaces").WorkspaceShare[]; originalAmount?: number | null; tripId?: string | null };
 
 export function validateBooking(b: Booking) {
@@ -50,13 +51,13 @@ export function bookingPaymentIds(b: Booking): string[] {
 /** How much of a booking is already covered by linked ledger entries. */
 export function bookingPaid(b: Booking, txns: Row[]) {
   const ids = new Set(bookingPaymentIds(b));
-  return r2(txns.filter((x) => ids.has(x.id)).reduce((s, x) => s + (x.txnType === "refund" ? -x.amount : x.amount), 0));
+  return sumMoney(txns.filter((x) => ids.has(x.id)).map(x => x.txnType === "refund" ? -x.amount : x.amount));
 }
 
 /** Still to pay on a booking. Cancelled bookings owe nothing; a paid booking is considered settled. */
 export function bookingOutstanding(b: Booking, txns: Row[]) {
   if (b.status === "cancelled" || b.status === "paid") return 0;
-  return r2(Math.max(0, b.amount - bookingPaid(b, txns)));
+  return Math.max(0, subtractMoney(b.amount, bookingPaid(b, txns)));
 }
 
 /** Trip money picture. Actual = ledger entries tagged to the trip. Committed = unpaid bookings (not yet spent). Nothing is counted twice. */
@@ -64,38 +65,38 @@ export function tripFinance(t: TravelTrip, txns: Row[]) {
   const s = tripSummary(t, txns);
   const ids = new Set(s.entries.map((e) => (e as Row).id));
   const bookings = t.bookings ?? [];
-  const committed = r2(bookings.reduce((a, b) => a + bookingOutstanding(b, txns), 0));
+  const committed = sumMoney(bookings.map(b => bookingOutstanding(b, txns)));
   const paidUnlinked = bookings.filter((b) => b.status === "paid" && b.expenseId && !ids.has(b.expenseId));
   const ws: Record<string, number> = {};
-  for (const e of s.entries as Row[]) for (const p of workspaceParts({ scope: e.scope ?? "personal", amount: e.amount, originalAmount: e.originalAmount ?? null, workspaceAllocations: e.workspaceAllocations ?? [] })) ws[p.workspace] = r2((ws[p.workspace] ?? 0) + p.amount);
+  for (const e of s.entries as Row[]) for (const p of workspaceParts({ scope: e.scope ?? "personal", amount: e.amount, originalAmount: e.originalAmount ?? null, workspaceAllocations: e.workspaceAllocations ?? [] })) ws[p.workspace] = addMoney(ws[p.workspace] ?? 0, p.amount);
   const tag = tripTag(t);
-  const ledgerAdv = txns.filter((x) => (x.tripId ? x.tripId === t.id : (x.tags ?? []).includes(tag))).reduce((a, x) => a + (x.txnType === "advance" ? x.amount : x.txnType === "advance_settlement" ? -x.amount : 0), 0);
+  const ledgerAdv = sumMoney(txns.filter((x) => (x.tripId ? x.tripId === t.id : (x.tags ?? []).includes(tag))).map(x => x.txnType === "advance" ? x.amount : x.txnType === "advance_settlement" ? -x.amount : 0));
   // Advances come from trip notes plus "Travel advance" ledger entries linked to the trip (by picker or tag); returns reduce them.
-  const advanced = r2((t.advances ?? []).reduce((a, x) => a + x.amount, 0) + ledgerAdv);
+  const advanced = addMoney(sumMoney((t.advances ?? []).map(x => x.amount)), ledgerAdv);
   const claims = (s.entries as Row[]).map(e => ({ ...e, title: e.title ?? "Trip expense" })).filter(isTracked);
-  const reimbursablePending = r2(claims.reduce((a, e) => a + outstandingOf(e), 0));
-  const reimbursed = r2(claims.reduce((a, e) => a + receivedOf(e), 0));
-  const businessShare = r2((ws["business"] ?? 0) + (ws["official"] ?? 0));
+  const reimbursablePending = sumMoney(claims.map(outstandingOf));
+  const reimbursed = sumMoney(claims.map(receivedOf));
+  const businessShare = addMoney(ws["business"] ?? 0, ws["official"] ?? 0);
   // Advance balance: money given in advance minus the business/official share spent; positive = to return, negative = still owed to you.
-  const advanceBalance = advanced ? r2(advanced - businessShare) : 0;
-  const projected = r2(s.total + committed);
-  return { ...s, committed, projected, remainingAfterCommitted: t.budget ? r2(t.budget - projected) : 0, byWorkspace: ws, advanced, advanceBalance, reimbursablePending, reimbursed, paidUnlinked };
+  const advanceBalance = advanced ? subtractMoney(advanced, businessShare) : 0;
+  const projected = addMoney(s.total, committed);
+  return { ...s, committed, projected, remainingAfterCommitted: t.budget ? subtractMoney(t.budget, projected) : 0, byWorkspace: ws, advanced, advanceBalance, reimbursablePending, reimbursed, paidUnlinked };
 }
 
 /** Trip plan (§7.1): category-wise budget, contingency allowance and what the plan says against what is actually recorded. */
 export function tripBudgetDetail(t: TravelTrip, txns: Row[]) {
   const s = tripSummary(t, txns);
   const spent: Record<string, number> = {};
-  for (const e of s.entries as Row[]) for (const p of categoryParts(e)) spent[p.category] = r2((spent[p.category] ?? 0) + p.amount);
+  for (const e of s.entries as Row[]) for (const p of categoryParts(e)) spent[p.category] = addMoney(spent[p.category] ?? 0, p.amount);
   const lines = (t.budgetLines ?? []).filter((l) => l.category.trim()).map((l) => {
     const actual = spent[l.category] ?? 0;
-    return { category: l.category, budget: r2(l.amount), actual, left: r2(l.amount - actual), over: actual > r2(l.amount) };
+    return { category: l.category, budget: r2(l.amount), actual, left: subtractMoney(l.amount, actual), over: actual > r2(l.amount) };
   });
-  const budgeted = r2(lines.reduce((a, l) => a + l.budget, 0));
+  const budgeted = sumMoney(lines.map(l => l.budget));
   const contingency = r2(t.contingency ?? 0);
-  const planned = r2((t.budget ?? 0) + contingency);
-  const unbudgeted = r2(Object.entries(spent).filter(([c]) => !lines.some((l) => l.category === c)).reduce((a, [, v]) => a + v, 0));
-  return { lines, budgeted, contingency, planned, spent: s.total, unbudgeted, remaining: r2(planned - s.total), hasPlan: lines.length > 0 || contingency > 0 };
+  const planned = addMoney(t.budget ?? 0, contingency);
+  const unbudgeted = sumMoney(Object.entries(spent).filter(([c]) => !lines.some((l) => l.category === c)).map(([, v]) => v));
+  return { lines, budgeted, contingency, planned, spent: s.total, unbudgeted, remaining: subtractMoney(planned, s.total), hasPlan: lines.length > 0 || contingency > 0 };
 }
 
 /** Entries within the trip dates that aren't on the trip yet — suggestions only, never auto-linked. */
@@ -166,7 +167,7 @@ export function tripInsights(t: TravelTrip, txns: Row[], today: string): string[
   if (t.budget > 0) {
     const elapsed = today < t.start ? 0 : Math.min(days, Math.round((Date.parse(today) - Date.parse(t.start)) / 864e5) + 1);
     if (f.projected > t.budget) out.push(`Spent plus booked (₹${f.projected.toLocaleString("en-IN")}) is already over the ₹${t.budget.toLocaleString("en-IN")} budget.`);
-    else if (elapsed > 0 && elapsed < days) { const pace = r2(((f.total - 0) / elapsed) * days + f.committed); if (pace > t.budget) out.push(`At the current daily pace the trip would end around ₹${Math.round(pace).toLocaleString("en-IN")}, above budget.`); }
+    else if (elapsed > 0 && elapsed < days) { const pace = moneyNumber(decimal(f.total).div(elapsed).mul(days).plus(f.committed)); if (pace > t.budget) out.push(`At the current daily pace the trip would end around ₹${Math.round(pace).toLocaleString("en-IN")}, above budget.`); }
   }
   const top = f.categories[0]; if (top && f.total) out.push(`${top.category} is the biggest cost at ${Math.round((top.amount / f.total) * 100)}% of spending.`);
   if (f.currencies.length > 1) out.push(`Spending is in ${f.currencies.length} currencies; each entry keeps the rate from its bill date.`);
@@ -200,13 +201,13 @@ export function advanceReconciliation(t: TravelTrip, txns: Row[]) {
     if (x.txnType === "advance_settlement") lines.push({ date: x.date, label: name || "Advance returned", kind: "return", amount: r2(x.amount) });
   }
   for (const e of tripSummary(t, txns).entries as Row[]) {
-    const share = workspaceParts({ scope: e.scope ?? "personal", amount: e.amount, originalAmount: e.originalAmount ?? null, workspaceAllocations: e.workspaceAllocations ?? [] }).filter((p) => p.workspace === "business" || p.workspace === "official").reduce((s, p) => s + p.amount, 0);
+    const share = sumMoney(workspaceParts({ scope: e.scope ?? "personal", amount: e.amount, originalAmount: e.originalAmount ?? null, workspaceAllocations: e.workspaceAllocations ?? [] }).filter((p) => p.workspace === "business" || p.workspace === "official").map(p => p.amount));
     if (share > 0) lines.push({ date: e.date, label: (e as Row & { merchant?: string; title?: string }).merchant || (e as Row & { title?: string }).title || "Trip expense", kind: "expense", amount: r2(share) });
   }
   lines.sort((a, b) => a.date.localeCompare(b.date));
-  const sum = (k: ReconLine["kind"]) => r2(lines.filter((l) => l.kind === k).reduce((s, l) => s + l.amount, 0));
+  const sum = (k: ReconLine["kind"]) => sumMoney(lines.filter((l) => l.kind === k).map(l => l.amount));
   const advances = sum("advance"), expenses = sum("expense"), returns = sum("return");
-  return { lines, advances, expenses, returns, outstanding: r2(advances - expenses - returns) };
+  return { lines, advances, expenses, returns, outstanding: subtractMoney(subtractMoney(advances, expenses), returns) };
 }
 
 /** CSV rows for the reconciliation: every advance, business/official expense and return in date order, then the four totals. */
@@ -240,7 +241,7 @@ export function advanceDashboard(trips: TravelTrip[], txns: Row[], today = new D
     rows.push({ tripId: t.id, name: t.name, closed: !!t.closedAt, advances: r.advances, expenses: r.expenses, returns: r.returns, outstanding: r.outstanding, end: t.end, ...advanceAge(t.end, r.outstanding, today) });
   }
   rows.sort((a, b) => Number(b.overdue) - Number(a.overdue) || Math.abs(b.outstanding) - Math.abs(a.outstanding));
-  const toReturn = r2(rows.filter((r) => r.outstanding > 0).reduce((s, r) => s + r.outstanding, 0));
-  const owedToYou = r2(rows.filter((r) => r.outstanding < 0).reduce((s, r) => s - r.outstanding, 0));
+  const toReturn = sumMoney(rows.filter((r) => r.outstanding > 0).map(r => r.outstanding));
+  const owedToYou = sumMoney(rows.filter((r) => r.outstanding < 0).map(r => -r.outstanding));
   return { rows, toReturn, owedToYou };
 }
