@@ -557,6 +557,10 @@ function StatementDeskPage() {
 
       {plan && (
         <>
+          <section aria-label="Statement Intelligent Canvas" className="space-y-1 border-b pb-3">
+            <h2 className="font-display text-lg font-semibold">Intelligent Canvas · Statements</h2>
+            <p className="text-sm text-muted-foreground">{loaded.length} source{loaded.length === 1 ? '' : 's'} · {plan.totals.matched} matched · {plan.totals.ask} needing your decision · {plan.totals.later} held back</p>
+          </section>
           <div className="grid gap-2 sm:grid-cols-4">
             {[
               { label: "Already recorded", value: plan.totals.matched },
