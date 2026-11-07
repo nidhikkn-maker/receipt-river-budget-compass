@@ -87,7 +87,7 @@ class ExpenseReceiptButtons(unittest.IsolatedAsyncioTestCase):
         await self.page.goto(BASE + "/expenses", wait_until="domcontentloaded")
         await self.page.get_by_role("button").filter(has_text=title).click()
         dialog = self.page.get_by_role("dialog")
-        await expect(dialog.get_by_role("heading", name=title, exact=True)).to_be_visible()
+        await expect(dialog.get_by_role("heading", name=title, exact=True).last).to_be_visible()
         return dialog
 
     async def test_submit_expense_and_read_back_through_list(self):
