@@ -8,7 +8,7 @@ const fixtures = [
   ["image/jpeg", Buffer.from([0xff, 0xd8, 0xff, 0xe0, ...Array.from({ length: 4000 }, (_, i) => i % 256), 0xff, 0xd9])],
   ["application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", Buffer.from([0x50, 0x4b, 0x03, 0x04, ...Array.from({ length: 2048 }, (_, i) => (i * 7) % 256)])],
 ] as const;
-const serve = (body: Uint8Array, status = 200, type = "application/octet-stream") => (async () => new Response(status === 200 ? body : "denied", { status, headers: { "content-type": type } })) as unknown as typeof fetch;
+const serve = (body: Uint8Array, status = 200, type = "application/octet-stream") => (async () => new Response(status === 200 ? (body as unknown as BodyInit) : "denied", { status, headers: { "content-type": type } })) as unknown as typeof fetch;
 describe("private file download returns original bytes", () => {
   for (const [mime, bytes] of fixtures) it(`${mime} is byte-identical with checksum`, async () => {
     const want = await sha256Hex(bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer);
