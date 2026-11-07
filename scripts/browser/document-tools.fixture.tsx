@@ -1,0 +1,10 @@
+import React from 'react';
+import { createRoot } from 'react-dom/client';
+import { createRootRoute, createRouter, RouterProvider } from '@tanstack/react-router';
+import { VaultBooks } from '../../src/components/books/VaultBooks';
+import { UnfinishedRuns } from '../../src/components/books/UnfinishedRuns';
+import { Toaster } from '../../src/components/ui/sonner';
+import '../../src/styles.css';
+const root = createRootRoute({ component: () => <main><VaultBooks/><UnfinishedRuns active={[]} onResume={() => { throw Error('Cleanup must not reopen financial review'); }}/><Toaster/></main> });
+const router = createRouter({ routeTree: root, defaultNotFoundComponent: root.options.component });
+const element = document.getElementById('root'); if (element) createRoot(element).render(<RouterProvider router={router}/>);

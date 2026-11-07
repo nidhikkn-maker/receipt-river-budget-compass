@@ -1,0 +1,32 @@
+// Actual Settings directory and guide with isolated preference adapter; not hosted.
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { afterEach, expect, it, vi } from 'vitest';
+import { defaultPreferences } from '@/lib/preferences';
+const local = vi.hoisted(() => ({ store: {} as Record<string, unknown>, save: vi.fn(), error: vi.fn() }));
+vi.mock('@/lib/store', () => ({ useStore: () => local.store }));
+vi.mock('@tanstack/react-router', () => ({ Link: ({ children }: { children: React.ReactNode }) => <a>{children}</a> }));
+vi.mock('./AccountForm', () => ({ AccountForm: () => null }));
+vi.mock('sonner', () => ({ toast: { error: local.error } }));
+import { SettingsDirectory } from './SettingsDirectory';
+afterEach(cleanup);
+it('setup completion failure stays open; retry persists done and reload suppresses repeated prompt but permits explicit reopen', async () => {
+  const prefs = defaultPreferences();
+  local.store = { preferences: prefs, accounts: [], expenses: [], savePreferences: local.save };
+  local.save.mockReset().mockRejectedValueOnce(Error('Offline')).mockImplementation(async next => { local.store['preferences'] = JSON.parse(JSON.stringify(next)); });
+  local.error.mockReset();
+  const view = render(<SettingsDirectory />);
+  fireEvent.click(screen.getByRole('button', { name: 'Start setup' }));
+  for (let i = 0; i < 6; i++) fireEvent.click(screen.getByRole('button', { name: 'Skip' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Complete setup' }));
+  await waitFor(() => expect(local.error).toHaveBeenCalledTimes(1));
+  expect(screen.getByRole('dialog')).toBeVisible();
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Complete setup' })).toBeEnabled());
+  fireEvent.click(screen.getByRole('button', { name: 'Complete setup' }));
+  await waitFor(() => expect(local.save).toHaveBeenCalledTimes(2));
+  view.unmount(); render(<SettingsDirectory />);
+  expect(screen.queryByRole('button', { name: 'Start setup' })).toBeNull();
+  expect(screen.queryByRole('dialog')).toBeNull();
+  fireEvent.click(screen.getByRole('button', { name: 'Setup guide' }));
+  expect(screen.getByRole('dialog')).toBeVisible();
+  expect(local.store['accounts']).toEqual([]); expect(local.store['expenses']).toEqual([]);
+});
