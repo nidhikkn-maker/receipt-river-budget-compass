@@ -34,7 +34,7 @@ async function setup(options: { quotes?: Quote[]; lastPortfolio?: number; alerts
  }
  if (options.lastPortfolio !== undefined) preferences.books.snapshots = [{ date: "2026-11-01", netWorth: 4300, portfolio: options.lastPortfolio, liquid: 1000, liabilities: 300, allocation: {} }];
  if (options.alerts) preferences.books.alerts = { ...books.alerts, ...options.alerts };
- if (options.quantity !== undefined) preferences.books.holdings = [{ ...books.holdings[0], quantity: options.quantity, isin: "INE009A01021" }] as typeof books.holdings;
+ if (options.quantity !== undefined) preferences.books.holdings = [{ ...books.holdings[0], quantity: options.quantity, isin: "INE009A01021" }] as unknown as typeof books.holdings;
  const accounts = [{ id: "bank", name: "Bank", kind: "savings", openingBalance: 1000, archived: false }, { id: "invest", name: "Deposit", kind: "fixed_deposit", openingBalance: 200, archived: false }, { id: "other", name: "Other asset", kind: "other_asset", openingBalance: 500, archived: false }, { id: "debt", name: "Card", kind: "credit_card", openingBalance: 300, archived: false }];
  const db = new PGlite();
  await db.exec(`CREATE ROLE authenticated; CREATE ROLE anon; CREATE ROLE service_role; CREATE SCHEMA auth;
