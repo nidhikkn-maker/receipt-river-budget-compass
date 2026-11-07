@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { fetchPrivateFile, sha256Hex, PrivateFileError } from "./private-files";
-import { readFileSync, existsSync } from "node:fs";
+
 const fixtures = [
   ["application/pdf", Buffer.from("%PDF-1.4\n%\xe2\xe3\n1 0 obj<<>>endobj\ntrailer<<>>\n%%EOF", "latin1")],
   ["text/csv", Buffer.from("Date,Narration,Amount\n2026-04-05,EMI GLS,125000\n")],
@@ -25,5 +25,4 @@ describe("private file download returns original bytes", () => {
   it("expired or revoked signed URL reports ended access", async () => {
     await expect(fetchPrivateFile("u", {}, serve(new Uint8Array([1]), 400))).rejects.toThrow("Access to this file has ended");
   });
-  it.skipIf(!existsSync("src/lib/statement-pipeline/__fixtures__"))("noop", () => { void readFileSync; });
 });
