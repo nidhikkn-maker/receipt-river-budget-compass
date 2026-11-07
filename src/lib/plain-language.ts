@@ -1,6 +1,7 @@
 // Everyday wording for screens. Display-only: never used for saving, exports,
 // statutory labels or calculations, which keep their exact accounting names.
-import { isLiability, type Account, type AccountKind, type Txn, type TxnType } from "./ledger";
+import { isLiability, TXN_TYPES, type Account, type AccountKind, type Txn, type TxnType } from "./ledger";
+export const TXN_TYPES_COVERED = TXN_TYPES;
 
 export interface PlainTerm { plain: string; explain: string; technical: string }
 
@@ -133,3 +134,29 @@ export function positionWording(p: { cash: number | null; owed: number; investme
 }
 
 export const accountKindNote = (k: AccountKind) => isLiability(k) ? "Money I owe" : k === "investment" || k === "fixed_deposit" ? "Investment" : k === "other_asset" ? "Something I own or am owed" : "Money available";
+
+export interface CanvasInput { kind: "receipt" | "statement" | "message"; merchant?: string; amount?: number | null; currencyText?: string; date?: string; category?: string; categoryReason?: string; account?: string; matchFound?: boolean; possibleDuplicate?: boolean; lines?: number; unmatched?: number }
+export interface CanvasNarrative { found: string; belongs: string | null; match: string | null; help: string | null; nextAction: string; confident: boolean }
+
+/** What Intelligent Canvas says. Missing evidence is stated as missing; it never sounds confident. */
+export function canvasNarrative(i: CanvasInput): CanvasNarrative {
+  if (i.kind === "statement") {
+    const lines = i.lines ?? 0, un = i.unmatched ?? 0;
+    return {
+      found: lines ? `I found ${countPhrase(lines, "transaction")} in this statement.` : "I couldn't find any transactions in this statement yet.",
+      belongs: null,
+      match: un ? couldNotMatch(un) : lines ? "Every line is either already recorded or ready to review." : null,
+      help: un ? `I need your help identifying ${un === 1 ? "it" : "them"}.` : null,
+      nextAction: !lines ? "Check the file" : un ? `Review ${countPhrase(un, "payment")}` : "Review and save",
+      confident: lines > 0 && un === 0,
+    };
+  }
+  const missing = [!i.merchant?.trim() && "who you paid", !(Number(i.amount) > 0) && "the total", !i.date && "the date"].filter(Boolean) as string[];
+  const what = i.kind === "message" ? "a payment message" : "a receipt";
+  const found = `I found ${what}${i.merchant?.trim() ? ` from ${i.merchant.trim()}` : ""}${Number(i.amount) > 0 && i.currencyText ? ` for ${i.currencyText}` : ""}${i.date ? ` on ${i.date}` : ""}.`;
+  const belongs = i.category ? `I think this belongs to ${i.category}${i.categoryReason ? ` because ${i.categoryReason.replace(/^because\s+/i, "")}` : ""}. Please confirm.` : null;
+  const match = i.possibleDuplicate ? "This may be a payment you've already saved. Compare before saving so it isn't counted twice." : i.matchFound ? "I found a matching payment in your records." : "I didn't find a matching payment in your records.";
+  const help = missing.length ? `I need your help identifying ${missing.join(", ").replace(/, ([^,]*)$/, " and $1")}.` : !i.category ? "I need your help choosing a category." : null;
+  const nextAction = i.possibleDuplicate ? "Compare with the saved payment" : missing.length ? `Add ${missing[0]}` : !i.category ? "Choose a category" : "Check and confirm";
+  return { found, belongs, match, help, nextAction, confident: !missing.length && !!i.category && !i.possibleDuplicate };
+}
