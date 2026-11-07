@@ -20,16 +20,16 @@ describe('first saves on a new account', () => {
     const out = alignUnchangedSections({ statementUploads: [] }, next, []) as unknown as Record<string, unknown>;
     expect('entities' in out).toBe(false);
     expect('assets' in out).toBe(false);
-    expect('policy' in (out.books as object)).toBe(false);
+    expect('policy' in (out['books'] as object)).toBe(false);
   });
   it('keeps a changed protected section so it still needs approval', () => {
     const next = { ...normalizePreferences({}), entities: [{ id: 'e1' }] } as never;
     const out = alignUnchangedSections({}, next, ['entities']) as unknown as Record<string, unknown>;
-    expect(out.entities).toEqual([{ id: 'e1' }]);
+    expect(out['entities']).toEqual([{ id: 'e1' }]);
   });
   it('never substitutes the stored value for an existing section', () => {
     const next = { ...normalizePreferences({}), entities: [{ id: 'new' }] } as never;
     const out = alignUnchangedSections({ entities: [{ id: 'old' }] }, next, []) as unknown as Record<string, unknown>;
-    expect(out.entities).toEqual([{ id: 'new' }]);
+    expect(out['entities']).toEqual([{ id: 'new' }]);
   });
 });
