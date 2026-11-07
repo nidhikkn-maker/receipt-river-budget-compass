@@ -33,7 +33,9 @@ describe("actual document review workflow (isolated persistence boundary)", () =
     state.store['preferences'] = { books: emptyBooks(), entities: [{ id: "company-1", name: "Owner", kind: "company", pan: "AAACA1234A", gstins: ["33AAACA1234A1Z5"], booksFrom: "2020-21" }], assets: [], contractObligations: [] };
     open(baseRead("invoice", { amount: 1180, fields: [{ label: "Taxable value", value: "1000", originalValue: "1000", page: 2, quote: "Taxable value 1000", confidence: "high" }], gstInvoice: { number: "INV-44", date: "2026-10-02", seller: "Owner", sellerGstin: "33AAACA1234A1Z5", buyer: "Customer", buyerGstin: null, taxable: 1000, igst: 0, cgst: 90, sgst: 90, cess: 0 } }));
     fireEvent.click(screen.getByText(/Details read/));
-    fireEvent.change(screen.getByDisplayValue("1000", { selector: "details input" }), { target: { value: "1100" } });
+    const sourceInput = document.querySelector("details input");
+    if (!sourceInput) throw new Error("Missing source correction control");
+    fireEvent.change(sourceInput, { target: { value: "1100" } });
     fireEvent.click(screen.getByRole("button", { name: "Confirm and save" }));
     await waitFor(() => expect(commit).toHaveBeenCalledTimes(1));
     expect(commit.mock.calls[0]?.[1].books.gstInvoices[0]).toMatchObject({ taxable: 1100, docId: "00000000-0000-0000-0000-000000000010" });
