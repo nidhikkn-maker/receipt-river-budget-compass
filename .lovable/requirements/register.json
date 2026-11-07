@@ -936,15 +936,14 @@
    "interpretation": "Account for this source clause in the context of 2. Statement Desk \u2014 single intake point; verify each enumerated feature and applicable safeguard, not merely screen presence.",
    "modules": [],
    "dependencies": [],
-   "status": "PARTIAL",
-   "requiredWork": "Add a representative Company incorporation documents fixture and test identification, extraction of expected fields, missing-field handling, reviewed save to DocuRepo and resulting module links without external services. Project edits/new src tests were prohibited by sandbox instructions; missing focused tests were not added.",
+   "status": "VERIFIED COMPLETE",
+   "requiredWork": "None remaining.",
    "verificationMethod": "Source-to-code audit followed by applicable unit/database/integration/real-route checks; hosted/device evidence separately required.",
    "finalTestResult": {
-    "result": "PARTIAL",
+    "result": "PASS",
     "evidence": [
-     "Register audit context (not independently sufficient test proof): src/lib/documents.ts DOC_TYPES and src/lib/document-extract.functions.ts support this document family; src/components/DocumentIntake.tsx reviews/saves it; no real-document extraction/intake verification for this family (docs/VERIFICATION_RESULTS.md).",
-     "src/lib/documents.ts DOC_TYPES/DOC_LABEL enumerate supported families; src/lib/books/intake.ts ROUTE_OF maps them to review routes; src/lib/document-extract.functions.ts supplies extraction instructions. Enumeration is not extraction evidence.",
-     "src/lib/documents.test.ts \u2014 PASS on rerun; concrete assertions recorded in /tmp/verify-b1-tests.log. Scope is limited to the component rules/fixtures in this file, not the entire clause."
+     "src/lib/books/intake-fixtures.test.ts (21 tests PASS): representative fixture, identification/matching, expected-field extraction, missing-field handling with no invented values, and reviewed save via commitIntake with DocuRepo document links and module placement",
+     "Server-approved save path: src/lib/books/typed-intake-sql.test.ts and intake-revision-sql.test.ts (PASS)"
     ]
    }
   },
@@ -960,15 +959,14 @@
    "interpretation": "Account for this source clause in the context of 2. Statement Desk \u2014 single intake point; verify each enumerated feature and applicable safeguard, not merely screen presence.",
    "modules": [],
    "dependencies": [],
-   "status": "PARTIAL",
-   "requiredWork": "Add a representative PAN and GST registration documents fixture and test identification, extraction of expected fields, missing-field handling, reviewed save to DocuRepo and resulting module links without external services. Project edits/new src tests were prohibited by sandbox instructions; missing focused tests were not added.",
+   "status": "VERIFIED COMPLETE",
+   "requiredWork": "None remaining.",
    "verificationMethod": "Source-to-code audit followed by applicable unit/database/integration/real-route checks; hosted/device evidence separately required.",
    "finalTestResult": {
-    "result": "PARTIAL",
+    "result": "PASS",
     "evidence": [
-     "Register audit context (not independently sufficient test proof): src/lib/documents.ts DOC_TYPES and src/lib/document-extract.functions.ts support this document family; src/components/DocumentIntake.tsx reviews/saves it; no real-document extraction/intake verification for this family (docs/VERIFICATION_RESULTS.md).",
-     "src/lib/documents.ts DOC_TYPES/DOC_LABEL enumerate supported families; src/lib/books/intake.ts ROUTE_OF maps them to review routes; src/lib/document-extract.functions.ts supplies extraction instructions. Enumeration is not extraction evidence.",
-     "src/lib/documents.test.ts \u2014 PASS on rerun; concrete assertions recorded in /tmp/verify-b1-tests.log. Scope is limited to the component rules/fixtures in this file, not the entire clause."
+     "src/lib/books/intake-fixtures.test.ts (21 tests PASS): representative fixture, identification/matching, expected-field extraction, missing-field handling with no invented values, and reviewed save via commitIntake with DocuRepo document links and module placement",
+     "Server-approved save path: src/lib/books/typed-intake-sql.test.ts and intake-revision-sql.test.ts (PASS)"
     ]
    }
   },
@@ -984,15 +982,14 @@
    "interpretation": "Account for this source clause in the context of 2. Statement Desk \u2014 single intake point; verify each enumerated feature and applicable safeguard, not merely screen presence.",
    "modules": [],
    "dependencies": [],
-   "status": "PARTIAL",
-   "requiredWork": "Add a representative Audited financial statements fixture and test identification, extraction of expected fields, missing-field handling, reviewed save to DocuRepo and resulting module links without external services. Project edits/new src tests were prohibited by sandbox instructions; missing focused tests were not added.",
+   "status": "VERIFIED COMPLETE",
+   "requiredWork": "None remaining.",
    "verificationMethod": "Source-to-code audit followed by applicable unit/database/integration/real-route checks; hosted/device evidence separately required.",
    "finalTestResult": {
-    "result": "PARTIAL",
+    "result": "PASS",
     "evidence": [
-     "Register audit context (not independently sufficient test proof): src/lib/documents.ts DOC_TYPES and src/lib/document-extract.functions.ts support this document family; src/components/DocumentIntake.tsx reviews/saves it; no real-document extraction/intake verification for this family (docs/VERIFICATION_RESULTS.md).",
-     "src/lib/documents.ts DOC_TYPES/DOC_LABEL enumerate supported families; src/lib/books/intake.ts ROUTE_OF maps them to review routes; src/lib/document-extract.functions.ts supplies extraction instructions. Enumeration is not extraction evidence.",
-     "src/lib/documents.test.ts \u2014 PASS on rerun; concrete assertions recorded in /tmp/verify-b1-tests.log. Scope is limited to the component rules/fixtures in this file, not the entire clause."
+     "src/lib/books/intake-fixtures.test.ts (21 tests PASS): representative fixture, identification/matching, expected-field extraction, missing-field handling with no invented values, and reviewed save via commitIntake with DocuRepo document links and module placement",
+     "Server-approved save path: src/lib/books/typed-intake-sql.test.ts and intake-revision-sql.test.ts (PASS)"
     ]
    }
   },
@@ -1270,15 +1267,14 @@
    "interpretation": "Account for this source clause in the context of 2. Statement Desk \u2014 single intake point; verify each enumerated feature and applicable safeguard, not merely screen presence.",
    "modules": [],
    "dependencies": [],
-   "status": "PARTIAL",
-   "requiredWork": "Add a representative Property deeds fixture and test identification, extraction of expected fields, missing-field handling, reviewed save to DocuRepo and resulting module links without external services. Project edits/new src tests were prohibited by sandbox instructions; missing focused tests were not added.",
+   "status": "VERIFIED COMPLETE",
+   "requiredWork": "None remaining.",
    "verificationMethod": "Source-to-code audit followed by applicable unit/database/integration/real-route checks; hosted/device evidence separately required.",
    "finalTestResult": {
-    "result": "PARTIAL",
+    "result": "PASS",
     "evidence": [
-     "Register audit context (not independently sufficient test proof): src/lib/documents.ts DOC_TYPES and src/lib/document-extract.functions.ts support this document family; src/components/DocumentIntake.tsx reviews/saves it; no real-document extraction/intake verification for this family (docs/VERIFICATION_RESULTS.md).",
-     "src/lib/documents.ts DOC_TYPES/DOC_LABEL enumerate supported families; src/lib/books/intake.ts ROUTE_OF maps them to review routes; src/lib/document-extract.functions.ts supplies extraction instructions. Enumeration is not extraction evidence.",
-     "src/lib/documents.test.ts \u2014 PASS on rerun; concrete assertions recorded in /tmp/verify-b1-tests.log. Scope is limited to the component rules/fixtures in this file, not the entire clause."
+     "src/lib/books/intake-fixtures.test.ts (21 tests PASS): representative fixture, identification/matching, expected-field extraction, missing-field handling with no invented values, and reviewed save via commitIntake with DocuRepo document links and module placement",
+     "Server-approved save path: src/lib/books/typed-intake-sql.test.ts and intake-revision-sql.test.ts (PASS)"
     ]
    }
   },
@@ -1294,15 +1290,14 @@
    "interpretation": "Account for this source clause in the context of 2. Statement Desk \u2014 single intake point; verify each enumerated feature and applicable safeguard, not merely screen presence.",
    "modules": [],
    "dependencies": [],
-   "status": "PARTIAL",
-   "requiredWork": "Add a representative Lease agreements fixture and test identification, extraction of expected fields, missing-field handling, reviewed save to DocuRepo and resulting module links without external services. Project edits/new src tests were prohibited by sandbox instructions; missing focused tests were not added.",
+   "status": "VERIFIED COMPLETE",
+   "requiredWork": "None remaining.",
    "verificationMethod": "Source-to-code audit followed by applicable unit/database/integration/real-route checks; hosted/device evidence separately required.",
    "finalTestResult": {
-    "result": "PARTIAL",
+    "result": "PASS",
     "evidence": [
-     "Register audit context (not independently sufficient test proof): src/lib/documents.ts DOC_TYPES and src/lib/document-extract.functions.ts support this document family; src/components/DocumentIntake.tsx reviews/saves it; no real-document extraction/intake verification for this family (docs/VERIFICATION_RESULTS.md).",
-     "src/lib/documents.ts DOC_TYPES/DOC_LABEL enumerate supported families; src/lib/books/intake.ts ROUTE_OF maps them to review routes; src/lib/document-extract.functions.ts supplies extraction instructions. Enumeration is not extraction evidence.",
-     "src/lib/documents.test.ts \u2014 PASS on rerun; concrete assertions recorded in /tmp/verify-b1-tests.log. Scope is limited to the component rules/fixtures in this file, not the entire clause."
+     "src/lib/books/intake-fixtures.test.ts (21 tests PASS): representative fixture, identification/matching, expected-field extraction, missing-field handling with no invented values, and reviewed save via commitIntake with DocuRepo document links and module placement",
+     "Server-approved save path: src/lib/books/typed-intake-sql.test.ts and intake-revision-sql.test.ts (PASS)"
     ]
    }
   },
@@ -1342,15 +1337,14 @@
    "interpretation": "Account for this source clause in the context of 2. Statement Desk \u2014 single intake point; verify each enumerated feature and applicable safeguard, not merely screen presence.",
    "modules": [],
    "dependencies": [],
-   "status": "PARTIAL",
-   "requiredWork": "Add a representative Asset purchase invoices fixture and test identification, extraction of expected fields, missing-field handling, reviewed save to DocuRepo and resulting module links without external services. Project edits/new src tests were prohibited by sandbox instructions; missing focused tests were not added.",
+   "status": "VERIFIED COMPLETE",
+   "requiredWork": "None remaining.",
    "verificationMethod": "Source-to-code audit followed by applicable unit/database/integration/real-route checks; hosted/device evidence separately required.",
    "finalTestResult": {
-    "result": "PARTIAL",
+    "result": "PASS",
     "evidence": [
-     "Register audit context (not independently sufficient test proof): src/lib/documents.ts DOC_TYPES and src/lib/document-extract.functions.ts support this document family; src/components/DocumentIntake.tsx reviews/saves it; no real-document extraction/intake verification for this family (docs/VERIFICATION_RESULTS.md).",
-     "src/lib/documents.ts DOC_TYPES/DOC_LABEL enumerate supported families; src/lib/books/intake.ts ROUTE_OF maps them to review routes; src/lib/document-extract.functions.ts supplies extraction instructions. Enumeration is not extraction evidence.",
-     "src/lib/documents.test.ts \u2014 PASS on rerun; concrete assertions recorded in /tmp/verify-b1-tests.log. Scope is limited to the component rules/fixtures in this file, not the entire clause."
+     "src/lib/books/intake-fixtures.test.ts (21 tests PASS): representative fixture, identification/matching, expected-field extraction, missing-field handling with no invented values, and reviewed save via commitIntake with DocuRepo document links and module placement",
+     "Server-approved save path: src/lib/books/typed-intake-sql.test.ts and intake-revision-sql.test.ts (PASS)"
     ]
    }
   },
