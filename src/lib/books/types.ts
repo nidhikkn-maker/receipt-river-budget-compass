@@ -116,6 +116,8 @@ export interface Holding {
   bond?: import("./bonds").BondTerms;
   /** Explicit cash-only ledger account link; the linked balance replaces this broker-cash amount. */
   cashAccountId?: string | undefined;
+  /** Original broker-cash denomination; legacy balances are INR. */
+  currency?: string | undefined;
 }
 export type TradingStatus = "active" | "suspended" | "delisted" | "illiquid";
 /** v6.1 §5 — a price as delivered, never relabelled. */

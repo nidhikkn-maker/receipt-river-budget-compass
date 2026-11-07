@@ -216,8 +216,7 @@ function StatementDeskPage() {
     const checkpoint = async (r: ApplyResult, status: 'interrupted'|'complete'='interrupted') => {
       const s=storeRef.current;
       const upload: StatementUpload={...r,id:uploadId,at,label,status};
-      const history=s.preferences.statementUploads??[];
-      await s.savePreferences({...s.preferences,statementUploads:[upload,...history.filter(u=>u.id!==uploadId)]});
+      await s.saveStatementUpload(upload);
     };
     try {
       setProgress("Saving…");
@@ -289,6 +288,7 @@ function StatementDeskPage() {
   const recoverUpload = async (u: StatementUpload) => {
     try {
       if (!u.sources?.length) { toast.error('No stored original is available yet. Choose the source file again.'); return; }
+      await storeRef.current.refresh();
       const files: File[]=[];
       for(const source of u.sources) {
         const document=storeRef.current.documents.find(d=>d.id===source.documentId);
