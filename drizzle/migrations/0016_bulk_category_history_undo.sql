@@ -1,0 +1,41 @@
+ALTER TABLE public.expenses ADD COLUMN category_revision bigint NOT NULL DEFAULT 0;
+CREATE FUNCTION public.bump_category_revision() RETURNS trigger LANGUAGE plpgsql SET search_path=public AS $$ BEGIN IF NEW.category IS DISTINCT FROM OLD.category OR NEW.allocations IS DISTINCT FROM OLD.allocations OR NEW.amount IS DISTINCT FROM OLD.amount OR NEW.txn_type IS DISTINCT FROM OLD.txn_type THEN NEW.category_revision=OLD.category_revision+1; ELSE NEW.category_revision=OLD.category_revision; END IF; RETURN NEW; END $$;
+CREATE TRIGGER category_revision_before_update BEFORE UPDATE ON public.expenses FOR EACH ROW EXECUTE FUNCTION public.bump_category_revision();
+CREATE TABLE public.category_batches(id uuid PRIMARY KEY DEFAULT gen_random_uuid(),owner_id uuid NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,category text NOT NULL,created_at timestamptz NOT NULL DEFAULT now(),undone_at timestamptz,entries jsonb NOT NULL);
+GRANT SELECT ON public.category_batches TO authenticated;
+GRANT ALL ON public.category_batches TO service_role;
+ALTER TABLE public.category_batches ENABLE ROW LEVEL SECURITY;
+CREATE POLICY own_category_batches ON public.category_batches FOR SELECT TO authenticated USING(owner_id=auth.uid());
+CREATE FUNCTION public.bulk_category_change(batch_id uuid, items jsonb, target text) RETURNS uuid LANGUAGE plpgsql SECURITY DEFINER SET search_path=public AS $$ DECLARE uid uuid:=auth.uid(); snapshot jsonb; n integer; BEGIN
+IF uid IS NULL THEN RAISE EXCEPTION 'Sign in to change categories'; END IF;
+PERFORM pg_advisory_xact_lock(hashtextextended(uid::text,0));
+IF EXISTS(SELECT 1 FROM public.category_batches WHERE id=batch_id AND owner_id=uid) THEN RETURN batch_id; END IF;
+IF jsonb_typeof(items) IS DISTINCT FROM 'array' OR jsonb_array_length(items)=0 THEN RAISE EXCEPTION 'Select entries'; END IF;
+IF target IS NULL OR length(trim(target))=0 OR length(target)>60 THEN RAISE EXCEPTION 'Invalid category'; END IF;
+IF NOT EXISTS(SELECT 1 FROM public.finance_preferences p, jsonb_array_elements(p.data->'categories') c WHERE p.owner_id=uid AND c->>'name'=target AND COALESCE((c->>'archived')::boolean,false)=false) THEN RAISE EXCEPTION 'Choose an active category'; END IF;
+SELECT count(DISTINCT x->>'id') INTO n FROM jsonb_array_elements(items) x;
+IF n<>jsonb_array_length(items) THEN RAISE EXCEPTION 'Duplicate selected entries'; END IF;
+PERFORM id FROM public.expenses WHERE employee_id=uid AND id IN(SELECT (x->>'id')::uuid FROM jsonb_array_elements(items) x) ORDER BY id FOR UPDATE;
+IF (SELECT count(*) FROM public.expenses e JOIN jsonb_array_elements(items) x ON e.id=(x->>'id')::uuid WHERE e.employee_id=uid AND e.category_revision=(x->>'revision')::bigint)<>n THEN RAISE EXCEPTION 'Entries changed or are unavailable. Refresh and select again'; END IF;
+SELECT jsonb_agg(jsonb_build_object('id',e.id,'title',e.title,'from',e.category,'allocations',e.allocations,'revision',e.category_revision+1)) INTO snapshot FROM public.expenses e WHERE e.employee_id=uid AND e.id IN(SELECT (x->>'id')::uuid FROM jsonb_array_elements(items) x);
+UPDATE public.expenses SET category=target,allocations='[]'::jsonb WHERE employee_id=uid AND id IN(SELECT (x->>'id')::uuid FROM jsonb_array_elements(items) x);
+-- A no-op category change does not bump the revision.
+SELECT jsonb_agg(x||jsonb_build_object('revision',e.category_revision)) INTO snapshot FROM jsonb_array_elements(snapshot) x JOIN public.expenses e ON e.id=(x->>'id')::uuid;
+INSERT INTO public.category_batches(id,owner_id,category,entries) VALUES(batch_id,uid,target,snapshot); RETURN batch_id; END $$;
+REVOKE ALL ON FUNCTION public.bulk_category_change(uuid,jsonb,text) FROM PUBLIC,anon;
+GRANT EXECUTE ON FUNCTION public.bulk_category_change(uuid,jsonb,text) TO authenticated;
+CREATE FUNCTION public.undo_category_change(batch_id uuid) RETURNS void LANGUAGE plpgsql SECURITY DEFINER SET search_path=public AS $$ DECLARE uid uuid:=auth.uid(); b public.category_batches; BEGIN
+IF uid IS NULL THEN RAISE EXCEPTION 'Sign in to undo'; END IF;
+PERFORM pg_advisory_xact_lock(hashtextextended(uid::text,0));
+SELECT * INTO b FROM public.category_batches WHERE id=batch_id AND owner_id=uid FOR UPDATE;
+IF NOT FOUND THEN RAISE EXCEPTION 'Category history unavailable'; END IF;
+IF b.undone_at IS NOT NULL THEN RETURN; END IF;
+PERFORM id FROM public.expenses WHERE employee_id=uid AND id IN(SELECT (x->>'id')::uuid FROM jsonb_array_elements(b.entries) x) ORDER BY id FOR UPDATE;
+IF (SELECT count(*) FROM public.expenses e JOIN jsonb_array_elements(b.entries) x ON e.id=(x->>'id')::uuid WHERE e.employee_id=uid AND e.category_revision=(x->>'revision')::bigint)<>jsonb_array_length(b.entries) THEN RAISE EXCEPTION 'Cannot undo: an entry was changed or deleted afterwards. No entries were restored'; END IF;
+UPDATE public.expenses e SET category=x->>'from',allocations=x->'allocations' FROM jsonb_array_elements(b.entries) x WHERE e.id=(x->>'id')::uuid AND e.employee_id=uid;
+UPDATE public.category_batches SET undone_at=now() WHERE id=batch_id AND owner_id=uid; END $$;
+REVOKE ALL ON FUNCTION public.undo_category_change(uuid) FROM PUBLIC,anon;
+GRANT EXECUTE ON FUNCTION public.undo_category_change(uuid) TO authenticated;
+CREATE FUNCTION public.clear_category_history_on_delete() RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path=public AS $$ BEGIN DELETE FROM public.category_batches WHERE owner_id=OLD.employee_id AND NOT EXISTS(SELECT 1 FROM public.expenses WHERE employee_id=OLD.employee_id); RETURN OLD; END $$;
+CREATE TRIGGER clear_empty_category_history AFTER DELETE ON public.expenses FOR EACH ROW EXECUTE FUNCTION public.clear_category_history_on_delete();
+REVOKE ALL ON FUNCTION public.clear_category_history_on_delete() FROM PUBLIC,anon,authenticated;

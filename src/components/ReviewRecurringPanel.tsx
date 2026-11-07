@@ -1,0 +1,22 @@
+import { useRef, useState } from 'react';
+import { useStore } from '@/lib/store';
+import type { Expense } from '@/lib/expenses';
+import { money } from '@/lib/expenses';
+import { recurringDuplicates, recurringSeed } from '@/lib/review-recurring';
+import { COMMITMENT_KINDS, FREQUENCIES, FREQ_LABEL, KIND_LABEL, type CommitmentKind, type Frequency } from '@/lib/planning';
+import { Button } from './ui/button';
+import { Input } from './ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
+import { Link } from '@tanstack/react-router';
+
+export function ReviewRecurringPanel({ expense, cadence, onSaved }: { expense: Expense; cadence: number | null; onSaved: () => void }) {
+  const store = useStore();
+  const [draft, setDraft] = useState<Omit<import('@/lib/planning').Commitment, 'id'>>(() => recurringSeed(expense, cadence));
+  const [kind, setKind] = useState<CommitmentKind>('subscription'), [frequency, setFrequency] = useState<Frequency>(draft.frequency);
+  const [preview, setPreview] = useState(false), [error, setError] = useState('');
+  const id = useRef(crypto.randomUUID());
+  const value = { ...draft, kind, frequency, intervalDays: frequency === 'custom' ? draft.intervalDays ?? 30 : null };
+  const duplicates = recurringDuplicates(value, store.commitments);
+  const validate = () => { if (!value.name.trim() || !Number.isFinite(value.amount) || value.amount <= 0 || !/^\d{4}-\d{2}-\d{2}$/.test(value.nextDue) || (frequency === 'custom' && (value.intervalDays ?? 0) < 1)) throw Error('Enter a name, positive amount, valid repeat interval and next date.'); };
+  return <div className="space-y-3">{!preview ? <><label className="block text-xs">Merchant<Input aria-label="Recurring profile name" value={draft.name} onChange={e => setDraft({ ...draft, name: e.target.value })} /></label><div className="grid grid-cols-2 gap-2"><label className="text-xs">Planned amount ₹<Input type="number" aria-label="Recurring profile amount" value={draft.amount} onChange={e => setDraft({ ...draft, amount: Number(e.target.value) })} /></label><label className="text-xs">Next due<Input type="date" aria-label="Recurring profile next date" value={draft.nextDue} onChange={e => setDraft({ ...draft, nextDue: e.target.value })} /></label></div><Select value={kind} onValueChange={v => setKind(v as CommitmentKind)}><SelectTrigger aria-label="Recurring profile kind"><SelectValue /></SelectTrigger><SelectContent>{COMMITMENT_KINDS.filter(k => k !== 'income').map(k => <SelectItem key={k} value={k}>{KIND_LABEL[k]}</SelectItem>)}</SelectContent></Select><Select value={frequency} onValueChange={v => setFrequency(v as Frequency)}><SelectTrigger aria-label="Recurring profile frequency"><SelectValue /></SelectTrigger><SelectContent>{FREQUENCIES.filter(f => f !== 'once').map(f => <SelectItem key={f} value={f}>{FREQ_LABEL[f]}</SelectItem>)}</SelectContent></Select>{frequency === 'custom' && <label className="text-xs">Repeat interval<Input type="number" min="1" value={value.intervalDays ?? 30} onChange={e => setDraft({ ...draft, intervalDays: Number(e.target.value) })} /></label>}<Button onClick={() => { try { validate(); setError(''); setPreview(true); } catch (e) { setError((e as Error).message); } }}>Preview recurring profile</Button></> : <><h3 className="font-semibold">Confirm recurring profile</h3><p className="text-sm">{value.name} · {money(value.amount)} · {FREQ_LABEL[value.frequency]} · {value.nextDue}</p><p className="text-xs text-muted-foreground">Account: {store.accounts.find(a => a.id === value.accountId)?.name ?? 'Unknown'} · {value.category}. This saves a planned payment only; no expense is created and no existing record is marked resolved.</p>{duplicates.length > 0 && <p className="text-sm text-warning">{duplicates.length} active matching profiles already exist. Review the existing plan instead.</p>}<div className="flex flex-wrap gap-2"><Button variant="outline" onClick={() => setPreview(false)}>Cancel</Button>{duplicates.length ? <Button asChild variant="outline"><Link to="/plan">Review existing profiles</Link></Button> : <Button loadingText="Saving profile…" onClick={async () => { try { validate(); await store.saveRecurringReview(value, id.current); onSaved(); } catch (e) { setError((e as Error).message); } }}>Confirm & Save Profile</Button>}</div></>}{error && <p role="alert" className="text-sm text-destructive">{error}</p>}</div>;
+}
