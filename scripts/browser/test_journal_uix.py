@@ -65,7 +65,7 @@ async def main():
    from PIL import Image, ImageDraw
    receipt=OUT/'receipt.png'; im=Image.new('RGB',(240,320),'white'); ImageDraw.Draw(im).text((20,20),'CONTROLLED CAFE\nTotal 432.10',fill='black'); im.save(receipt)
    start_url=page.url
-   print('INPUTS', await page.evaluate("[...document.querySelectorAll('input[type=file]')].map(i=>i.getAttribute('aria-label'))"), await page.get_by_role('dialog').count())
+   print('INPUTS', page.url, errors, await page.evaluate("[...document.querySelectorAll('input[type=file]')].map(i=>i.getAttribute('aria-label'))"), await page.get_by_role('dialog').count())
    await page.get_by_label('Take a photo',exact=True).set_input_files(receipt)
    sheet=page.get_by_role('dialog',name='Smart Add')
    await expect(sheet.get_by_label('Preview of receipt.png')).to_be_visible()
