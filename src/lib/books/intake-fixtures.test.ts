@@ -285,6 +285,15 @@ describe("reviewed save to DocuRepo with module links", () => {
     expect(linksOf(out.books.docLinks, "doc-1").some((l) => l.kind === "entity" && l.targetId === "personal")).toBe(true);
   });
 
+  it("confirmed mutual fund holdings land in the register, each linked to the statement document", () => {
+    const h = { id: "h1", kind: "mutual_fund" as const, name: "BOI Multicap", isin: "INF761K01FU4", quantity: 50502.525, sharePct: 100, source: "BOI SOA" };
+    const q = { symbol: "INF761K01FU4", price: 19.8, at: "2026-09-18", freshness: "statement" as const };
+    const out = commitIntake(blank(), { route: "fund", holdings: [h], quotes: [q] }, doc, "2026-11-07", newId);
+    expect(out.books.holdings.map((x) => x.id)).toContain("h1");
+    expect(docsFor(out.books.docLinks, "investment", "h1")).toEqual(["doc-1"]);
+    expect(out.books.quotes.some((x) => x.symbol === "INF761K01FU4" && x.price === 19.8)).toBe(true);
+  });
+
   it("a confirmed audited FY record lands under its company, linked to the document", () => {
     const slice = blank();
     slice.entities = [acme];
