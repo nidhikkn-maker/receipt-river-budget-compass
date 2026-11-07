@@ -267,6 +267,7 @@ class StatementDeskFlow(unittest.IsolatedAsyncioTestCase):
         await self.page.get_by_role('button', name='Accept all 2 asking items').click()
         await self.page.get_by_role('button', name='Apply everything (2 to save)').click()
         await expect(self.page.get_by_role('button', name='Undo this upload (2 posted)')).to_be_visible()
+        print('HISTORY_BEFORE',await self.page.evaluate('deskFixture.uploads'),flush=True)
         await self.page.evaluate("deskFixture.transactions[0].statementRef='document:other · newer evidence';sessionStorage.setItem('controlled-desk-ledger',JSON.stringify(deskFixture.transactions))")
         await self.page.reload()
         await expect(self.page.get_by_role('heading', name='Statement Desk')).to_be_visible()
