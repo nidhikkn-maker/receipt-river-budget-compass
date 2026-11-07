@@ -8,9 +8,10 @@ export const fixture = { documents, denied: '', runs: JSON.parse(sessionStorage.
 Object.assign(window, { documentTools: fixture });
 export function useStore() {
   const [, bump] = useState(0);
-  return { documents: fixture.documents, signedUrl: async (path: string) => path === fixture.denied ? null : `/__original/${path.split('/').at(-1)}`, preferences: { ...defaultPreferences(), books: emptyBooks() }, savePreferences: async () => {}, refresh: async () => bump(n => n + 1) };
+  return { accounts: [], transactions: [], documents: fixture.documents, updateDocument: async () => { throw Error('Mutation forbidden'); }, removeDocument: async () => { throw Error('Mutation forbidden'); }, downloadFile: async () => {}, signedUrl: async (path: string) => path === fixture.denied ? null : `/__original/${path.split('/').at(-1)}`, preferences: { ...defaultPreferences(), books: emptyBooks() }, savePreferences: async () => {}, refresh: async () => bump(n => n + 1) };
 }
 export const useBooks = () => ({ books: emptyBooks(), preferences: defaultPreferences(), save: async () => {} });
+export const listImports = async () => ['review', 'failed', 'paused', 'queued'].map((status, i) => ({ id: `past-${i}`, file_name: `${status}.pdf`, status, account_id: 'bank', period_from: '2026-10-01', period_to: '2026-10-31', currency: 'INR', error: status === 'failed' ? 'Reading interrupted' : null }));
 const persist = () => sessionStorage.setItem('cleanup-runs', JSON.stringify(fixture.runs));
 export const supabase = {
   from: () => ({
