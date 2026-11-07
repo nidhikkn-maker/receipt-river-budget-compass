@@ -27,8 +27,8 @@ it("older uploads without planned counts are never guessed complete", () => {
 });
 
 it("planned counts survive cleaning and merging, and are not overwritten by later checkpoints", () => {
-  const [clean] = cleanStatementUploads([base]);
+  const clean = cleanStatementUploads([base])[0]!;
   expect(clean.expected).toEqual({ posted: 2, reconciled: 1 });
   const merged = mergeUploadHistory({ statementUploads: [clean] } as never, { ...clean, expected: { posted: 0, reconciled: 0 } });
-  expect(merged.statementUploads?.[0].expected).toEqual({ posted: 2, reconciled: 1 });
+  expect(merged.statementUploads?.[0]?.expected).toEqual({ posted: 2, reconciled: 1 });
 });
