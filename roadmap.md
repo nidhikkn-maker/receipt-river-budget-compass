@@ -839,3 +839,11 @@
 - [ ] Buildable feature gaps (next, in order): budget module gaps (C-0389/0391/0581/0709/1249/1252/1253/2301), merchant merge/unmerge (C-2094), missing-document list in claim PDF (C-1857), document verification screen (C-1487), category-merge affected-record preview (C-1501), loan repayment CSV export (C-0409), setup-assistant completion suppression (C-1493), sticky report summary (C-2024), integer money arithmetic (C-1065 — large, plan separately), statement admin view (C-0214), receipt browser tests (C-0553), report-job interruption test (C-0517).
 - [ ] Verification gaps needing physical device / live site / owner records: 15 + 4 — parked until available.
 - [ ] External: price feed, publish approval, bank/email providers, ChatGPT MCP publish test — unchanged.
+
+## Workstream 1 checkpoint — 7 Nov 2026 13:00 UTC
+- [x] Reconciled saved historical audit: 1,537 implemented / 934 partial / 51 missing / 19 superseded. Earlier 1,535/53 was before C-2154/C-2232 reclassification, not the final baseline.
+- [ ] Decimal-safe ledger, allocation and repayment calculations; connected figure/export acceptance.
+- [ ] Budget complete-allocation controls; merchant merge/unmerge; category affected-record preview.
+- [ ] Document verification and claim missing-evidence PDFs; independent historical gaps and responsive acceptance.
+- [ ] Verify remaining partial workflows with exact code/evidence; correct classifications only on actual evidence.
+- Safeguards: no real-record writes, approval trigger activation, production policy installation or publication.
