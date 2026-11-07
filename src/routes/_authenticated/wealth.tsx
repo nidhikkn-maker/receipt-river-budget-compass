@@ -5,7 +5,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Archive, ArchiveRestore } from "lucide-react";
-import { PageTitle, Stat } from "@/components/AppShell";
+import { Stat } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
