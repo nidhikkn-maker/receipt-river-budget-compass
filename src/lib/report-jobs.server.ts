@@ -6,6 +6,7 @@ import { REPORT_TYPES, buildReportDoc, reportLabel, type ReportFilters, type Rep
 import { accountBalance } from "./ledger";
 import { normalizePreferences } from "./preferences";
 import type { TravelTrip } from "./travel";
+import { sha256Hex } from "./private-files";
 
 const n = (x: unknown) => (x == null ? null : Number(x));
 
@@ -60,35 +61,56 @@ export async function completeReportJob(db: SupabaseClient<any>, job: { id: stri
     return;
   }
   const path = `${job.owner_id}/reports/${job.id}.pdf`;
-  const read = () => db.from("report_history").select("id,owner_id,file_path,file_size,kind").eq("id", job.id).eq("owner_id", job.owner_id).maybeSingle();
+  const read = () => db.from("report_history").select("id,owner_id,file_path,file_size,kind,period_from,period_to,filters").eq("id", job.id).eq("owner_id", job.owner_id).maybeSingle();
   const exists = await read();
   if (exists.error) throw Error("Couldn't check report history; retry without changing saved evidence");
-  const valid = (row: any) => row?.id === job.id && row.owner_id === job.owner_id && row.kind === job.kind && row.file_path === path && Number(row.file_size) > 0;
+  const filters = job.filters as ReportFilters;
+  const valid = (row: any) => row?.id === job.id && row.owner_id === job.owner_id && row.kind === job.kind && row.file_path === path && Number(row.file_size) > 0 && row.period_from === filters.from && row.period_to === filters.to && row.filters?.style === job.style;
+  const validatePdf = async (blob: Blob, expectedSize?: number, digest?: string) => {
+    if (!blob.size || blob.type !== "application/pdf" || (expectedSize != null && blob.size !== expectedSize)) throw Error("Saved report evidence size or type differs; retry without changing evidence");
+    const bytes = await blob.arrayBuffer();
+    if (String.fromCharCode(...new Uint8Array(bytes).slice(0,5)) !== "%PDF-") throw Error("Existing report evidence is not a PDF");
+    const hash = await sha256Hex(bytes);
+    if (digest && hash !== digest) throw Error("Saved report checksum differs; evidence left unchanged");
+    return hash;
+  };
   if (exists.data && !valid(exists.data)) throw Error("Saved report identity differs; evidence left unchanged");
+  if (exists.data) {
+    const saved = await db.storage.from("receipts").download(path);
+    if (saved.error || !saved.data) throw Error("Saved report evidence unavailable; completion needs retry");
+    await validatePdf(saved.data, Number(exists.data.file_size), exists.data.filters?.evidenceSha256);
+  }
   if (!exists.data) {
-    const today = new Date().toISOString().slice(0, 10);
-    const data = await loadOwnerReportData(db, job.owner_id, today);
-    const filters = job.filters as ReportFilters;
-    const doc = buildReportDoc(job.kind as ReportType, filters, data as any);
-    const { renderReportPdf } = await import("./report-pdf");
-    const blob = await renderReportPdf(doc, job.style as any, new Date());
-    if (!blob.size) throw Error("Generated PDF is empty");
+    // Recover uploaded evidence before reading changed ledger data or rendering a replacement.
+    const orphan = await db.storage.from("receipts").download(path);
+    if (orphan.error && !/not found|does not exist|404/i.test(orphan.error.message ?? "")) throw Error("Couldn't check stored report evidence; retry");
+    let blob: Blob;
+    if (orphan.data) { blob = orphan.data; await validatePdf(blob); }
+    else {
+      const today = new Date().toISOString().slice(0, 10);
+      const data = await loadOwnerReportData(db, job.owner_id, today);
+      const doc = buildReportDoc(job.kind as ReportType, filters, data as any);
+      const { renderReportPdf } = await import("./report-pdf");
+      blob = await renderReportPdf(doc, job.style as any, new Date());
+      await validatePdf(blob);
+    }
     // Never overwrite a possibly committed original on a later retry.
-    const up = await db.storage.from("receipts").upload(path, blob, { contentType: "application/pdf", upsert: false });
+    const up = orphan.data ? { error:null } : await db.storage.from("receipts").upload(path, blob, { contentType: "application/pdf", upsert: false });
     let fileSize = blob.size;
     if (up.error && /already exists|duplicate|resource exists/i.test(up.error.message ?? "")) {
       const stored = await db.storage.from("receipts").download(path);
       if (stored.error || !stored.data?.size || stored.data.type !== "application/pdf") throw Error("Existing report evidence could not be validated");
-      const header = new Uint8Array(await stored.data.slice(0,5).arrayBuffer());
-      if (String.fromCharCode(...header) !== "%PDF-") throw Error("Existing report evidence is not a PDF");
+      await validatePdf(stored.data);
+      blob = stored.data;
       fileSize = stored.data.size;
     } else if (up.error) throw new Error("Couldn't store the PDF");
     const prior = await db.from("report_history").select("id", { count: "exact", head: true }).eq("owner_id", job.owner_id).eq("kind", job.kind).eq("period_from", filters.from).eq("period_to", filters.to);
     if (prior.error) throw Error("Couldn't check report version; uploaded evidence retained");
-    const ins = await db.from("report_history").insert({ id: job.id, owner_id: job.owner_id, kind: job.kind, title: reportLabel(job.kind as ReportType), period_from: filters.from, period_to: filters.to, workspace: filters.workspaces?.join(",") || "all", filters: { ...filters, style: job.style }, file_path: path, file_size: fileSize, version: (prior.count ?? 0) + 1 });
+    const digest = await validatePdf(blob, fileSize);
+    const ins = await db.from("report_history").insert({ id: job.id, owner_id: job.owner_id, kind: job.kind, title: reportLabel(job.kind as ReportType), period_from: filters.from, period_to: filters.to, workspace: filters.workspaces?.join(",") || "all", filters: { ...filters, style: job.style, evidenceSha256:digest }, file_path: path, file_size: fileSize, version: (prior.count ?? 0) + 1 });
     if (ins.error) {
       const recovered = await read();
-      if (recovered.error || !valid(recovered.data) || Number(recovered.data?.file_size) !== fileSize) throw Error("History save unconfirmed; uploaded evidence retained for retry");
+      if (recovered.error || !valid(recovered.data) || Number(recovered.data?.file_size) !== fileSize || recovered.data?.filters?.evidenceSha256 !== digest) throw Error("History save unconfirmed; uploaded evidence retained for retry");
     }
   }
   const done = await db.from("report_jobs").update({ status: "done", error: null, updated_at: new Date().toISOString() }).eq("id", job.id).eq("owner_id", job.owner_id);

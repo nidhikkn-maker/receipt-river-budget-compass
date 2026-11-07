@@ -28,9 +28,9 @@ MOCKS = {
 }
 
 class ExpenseReceiptButtons(unittest.IsolatedAsyncioTestCase):
-    @unittest.skip("Manager/Finance expense approvals were removed in migration 0002; no current page buttons exist.")
+    @unittest.skip("Obsolete sequential approval UI removed in 0002. Current review/authorization coverage: src/lib/expense-review-security.test.ts and src/lib/role-access.test.ts; see docs/evidence/approval-test-replacement.md. These are not sequential-approval acceptance.")
     async def test_department_manager_then_finance_approval(self):
-        """Explicit coverage gap: do not replace missing approvals with mock buttons."""
+        """Retired workflow only; current security boundaries run in isolated PostgreSQL, not mock buttons."""
 
     async def asyncSetUp(self):
         OUTPUT.mkdir(parents=True, exist_ok=True)
