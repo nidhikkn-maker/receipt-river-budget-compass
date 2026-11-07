@@ -116,12 +116,12 @@ export function AppShell({ children }: { children: ReactNode }) {
       </main>
 
       <nav hidden={focused} aria-label="Primary" className="journal-bottom fixed inset-x-0 bottom-0 z-30 flex items-center justify-around border-t bg-card/95 px-2 pb-[env(safe-area-inset-bottom)] pt-2 text-muted-foreground md:hidden">
-        <Link to="/dashboard" className="flex flex-1 flex-col items-center gap-0.5 rounded-2xl py-1.5 text-[10px] font-semibold" >
+        <Link to="/dashboard" className="flex flex-1 flex-col items-center gap-0.5 rounded-2xl py-1.5 text-[10px] font-semibold" activeProps={{ "aria-current": "page" }}>
           <Home className="h-5 w-5" />Today
         </Link>
         <Link to="/spaces" aria-label="Spaces" className="flex flex-1 flex-col items-center gap-0.5 rounded-2xl py-1.5 text-[10px] font-semibold" activeProps={{ "aria-current": "page" }}><Users className="h-5 w-5" />Spaces</Link>
         <Button variant="ghost" aria-label="Smart Add" title="Smart Add" onClick={() => setSmartOpen(true)} className="cmp-plus shrink-0"><Plus /></Button>
-        <Link to="/inbox" className="flex flex-1 flex-col items-center gap-0.5 rounded-2xl py-1.5 text-[10px] font-semibold" >
+        <Link to="/inbox" className="flex flex-1 flex-col items-center gap-0.5 rounded-2xl py-1.5 text-[10px] font-semibold" activeProps={{ "aria-current": "page" }}>
           <Inbox className="h-5 w-5" />Review
         </Link>
         <Button variant="ghost" onClick={() => setMoreOpen(true)} aria-label="More modules" aria-expanded={moreOpen} className="h-12 flex-1 flex-col gap-0.5 text-[10px] text-ink-muted hover:bg-sidebar-accent hover:text-ink-foreground">
