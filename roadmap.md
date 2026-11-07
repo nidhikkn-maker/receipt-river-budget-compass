@@ -2,7 +2,7 @@
 - Owner development cap: 1,100 credits (550 essential workflows / 250 critical fixes / 200 final tests and security / 100 reserve). Stop feature expansion near 200 remaining; no production changes or publication.
 - Current: historical 1,558 implemented / 943 partial / 21 missing / 19 superseded; v6 566 verified / 331 partial / 2 blocked.
 - [x] P0 local guard: mixed confirmed/unknown and changed-source Undo preflight before any writes; targeted34/browser10 PASS including reload warning and zero deletes. Not atomic concurrency proof.
-- [ ] P0 next: durable unknown-commit recovery and revision-checked atomic Undo (staged only); isolated hosted access/recovery acceptance remains open.
+- [ ] P0 current batch: interrupted evidence-response recovery; staged atomic snapshot-checked Undo with independent local database sessions; shared-file policy-union acceptance. No hosted changes or P0 closure without end-to-end evidence.
 - [x] P1 selected batch: C-1857 claim-builder saved/downloaded ordering, detailed/summary; thrown committed report-save response recovery. Targeted23 and browser5 PASS; controlled adapters, not hosted.
 - [ ] P1 next: connected Statement Desk → Inbox → account/card reconciliation → DocuRepo/report acceptance; use saved evidence, no repeat historical audit.
 - [ ] Final acceptance/security: preserve reserved credits; staged approval/storage safeguards remain pending release approval.
