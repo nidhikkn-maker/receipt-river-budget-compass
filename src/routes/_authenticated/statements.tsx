@@ -196,8 +196,9 @@ function StatementDeskPage() {
     return { save: s.save, remove: s.remove, reconcile: s.reconcile, addAccount: s.addAccount, setArchived: s.setArchived, refresh: s.refresh, transactions: s.transactions, linkDraft: linkDraftToTransaction, unlinkDraft };
   };
 
+  const applying = useRef(false);
   const apply = async () => {
-    if (!plan) return;
+    if (!plan || applying.current) return;
     if (!navigator.onLine) { toast.error("Reconnect before posting a statement. Your originals must be stored first."); return; }
     const requests = plan.accounts
       .map((a) => ({
@@ -214,11 +215,13 @@ function StatementDeskPage() {
     }
     const uploadId = crypto.randomUUID(), at = new Date().toISOString();
     const label = plan.accounts.map(a=>a.file.name).join(', ').slice(0,200);
+    const expected = { posted: requests.reduce((n, q) => n + q.decisions.length, 0), reconciled: requests.reduce((n, q) => n + q.reconcileIds.length, 0) };
     const checkpoint = async (r: ApplyResult, status: 'interrupted'|'complete'='interrupted') => {
       const s=storeRef.current;
-      const upload: StatementUpload={...r,id:uploadId,at,label,status};
+      const upload: StatementUpload={...r,id:uploadId,at,label,status,expected};
       await s.saveStatementUpload(upload);
     };
+    applying.current = true;
     try {
       setProgress("Saving…");
       await checkpoint({posted:[],reconciled:[],createdAccounts:[]});
@@ -253,8 +256,9 @@ function StatementDeskPage() {
       setAccepted([]);
       void loadLinks();
       listDrafts().then(setDrafts).catch(() => {}); setDraftFlip([]);
+      // The ledger writes are confirmed; only the history label may lag. It settles from saved evidence on the next open.
       try { await checkpoint(r,'complete'); }
-      catch { toast.error("Saved, but completion history couldn’t sync. The upload stays marked interrupted; refresh before retrying."); }
+      catch { setTimeout(() => { void checkpoint(r,'complete').catch(() => {}); }, 3000); }
       toast.success(`${r.posted.length} entries posted · ${r.reconciled.length} records marked as matched${r.createdAccounts.length ? ` · ${r.createdAccounts.length} account${r.createdAccounts.length === 1 ? "" : "s"} created` : ""}`, {
         action: { label: "Undo", onClick: () => void undo(r) },
       });
@@ -267,9 +271,21 @@ function StatementDeskPage() {
         toast.error(`Statement processing stopped: ${e.message}. ${e.result.posted.length} entries confirmed saved. Review the refreshed records and retry; saved lines won’t be duplicated.`);
       } else toast.error(e instanceof Error ? e.message : "Statement processing stopped — review and retry.");
     } finally {
+      applying.current = false;
       setProgress(null);
     }
   };
+
+  // Uploads whose save finished but whose completion label never synced (page closed, connection lost)
+  // are settled from the saved ledger, so a completed save is never shown as unsuccessful.
+  const settling = useRef(false);
+  useEffect(() => {
+    if (settling.current || applying.current || store.loading) return;
+    const done = (store.preferences.statementUploads ?? []).map(u => settledUpload(u, store.transactions)).filter((u): u is StatementUpload => !!u);
+    if (!done.length) return;
+    settling.current = true;
+    (async () => { for (const u of done) await store.saveStatementUpload(u).catch(() => {}); })().finally(() => { settling.current = false; });
+  }, [store.preferences.statementUploads, store.transactions, store.loading]);
 
   // Retry storing statement originals that failed after a successful post; each success drops off the list, so the import is never left untracked.
   const retryOriginals = async () => {
