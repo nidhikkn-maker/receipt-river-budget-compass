@@ -162,6 +162,7 @@ export function ExpenditureReportBuilder({ mode, search }: { mode: "statement" |
         const rowNo = "claimNo" in row ? row.claimNo : row.sno;
         if (!(claim ? claim.annexures : st.annexures).some(a => a.row === rowNo)) checks.push({ id: row.id, title: `${row.date} · ${row.particulars}`, error: "No supporting bill attached" });
       }
+      if (cancelled.current) return;
       setStage(-1);
       const proceed = await new Promise<boolean>(resolve => { documentDecision.current = resolve; setDocumentChecks(checks); });
       documentDecision.current = null;
