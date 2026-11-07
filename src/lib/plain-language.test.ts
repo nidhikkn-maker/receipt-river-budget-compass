@@ -76,3 +76,11 @@ describe("status and stage wording", () => {
   });
   it("couldNotMatch", () => { expect(couldNotMatch(1)).toBe("I couldn't match this payment."); expect(couldNotMatch(0)).toBe("Every payment matched."); });
 });
+
+import { accountBalanceStatus } from "./plain-language";
+describe("accountBalanceStatus", () => {
+  it("never calls a negative savings balance available", () => { expect(accountBalanceStatus("savings", -2500)).toEqual({ label: "Overdrawn", tone: "warn" }); });
+  it("labels a zero bank balance as zero", () => { expect(accountBalanceStatus("current", 0).label).toBe("Zero balance"); });
+  it("labels a card with dues as owed", () => { expect(accountBalanceStatus("credit_card", 1200).label).toBe("You owe"); });
+  it("labels a card with nothing due", () => { expect(accountBalanceStatus("credit_card", 0).label).toBe("Nothing owed"); });
+});
