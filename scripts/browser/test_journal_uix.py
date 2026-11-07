@@ -52,7 +52,7 @@ async def main():
      assert await page.get_by_text('More ways to review',exact=False).count()==0
     await page.screenshot(path=str(OUT/f'{width}-{route_name}.png'))
     await page.mouse.wheel(0,900); await page.wait_for_timeout(250); await page.screenshot(path=str(OUT/f'{width}-{route_name}-scrolled.png'))
-    off=await page.evaluate('()=>[...document.querySelectorAll("body *")].filter(n=>n.getBoundingClientRect().right>innerWidth+1&&n.getBoundingClientRect().width>0).slice(0,2).map(n=>{let c=[],x=n;for(let i=0;i<6&&x;i++){c.push(x.tagName+"."+String(x.className).slice(0,50)+"["+(x.textContent||"").slice(0,30)+"]");x=x.parentElement}return c.join(" < ")})')
+    off=await page.evaluate('()=>[...document.querySelectorAll("body *")].filter(n=>n.getBoundingClientRect().right>innerWidth+1&&n.getBoundingClientRect().width>0).slice(0,2).map(n=>{let c=[],x=n;for(let i=0;i<6&&x;i++){c.push(x.tagName+"."+String(x.className).slice(0,24)+" L"+Math.round(x.getBoundingClientRect().left)+" W"+Math.round(x.getBoundingClientRect().width)+" m="+getComputedStyle(x).margin);x=x.parentElement}return c.join(" < ")})')
     assert await page.evaluate('document.documentElement.scrollWidth <= innerWidth'), (width,route_name,'overflow',off)
    await page.goto('http://localhost:8080/dashboard')
    await expect(page.get_by_role('heading',name=re.compile(r'^Good .*, Alex$'))).to_be_visible()
