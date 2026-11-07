@@ -24,7 +24,7 @@ async def main():
   q=page.get_by_label('Search documents')
   for query,count in [('Alpha',1),('2026-09-01',1),('1050',1),('OCR_ONLY_TOKEN',1),('missing token',0)]:
    await q.fill(query);await expect(page.get_by_text(f'{count} documents',exact=True)).to_be_visible()
-  await q.fill('');await page.get_by_label('Document type filter').click();await page.get_by_role('option',name='Insurance',exact=True).click();await expect(page.get_by_text('1 documents',exact=True)).to_be_visible()
+  await q.fill('');await page.get_by_label('Document type filter').click();await page.get_by_role('option',name='Insurance document',exact=True).click();await expect(page.get_by_text('1 documents',exact=True)).to_be_visible()
   await q.fill('Beta');await page.get_by_label('Documents from').fill('2026-10-01');await expect(page.get_by_text('0 documents',exact=True)).to_be_visible();await page.get_by_label('Documents from').fill('2026-09-01');await expect(page.get_by_text('1 documents',exact=True)).to_be_visible()
   await page.screenshot(path=str(OUT/'combined-search.png'))
   await q.fill('');await page.get_by_label('Documents from').fill('');await page.get_by_label('Document type filter').click();await page.get_by_role('option',name='All document types',exact=True).click();await expect(page.get_by_text('3 documents',exact=True)).to_be_visible()
