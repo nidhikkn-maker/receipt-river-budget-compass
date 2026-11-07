@@ -81,3 +81,16 @@ it('refuses stale cross-device revisions and hides owner audit from other authen
  expect((await db.query('SELECT * FROM preference_approvals')).rows).toEqual([]);
  await db.exec(`RESET ROLE; SELECT set_config('app.uid','${owner}',false)`);
 });
+it('server reversal refuses ABA alias edits even when the current mapping matches the earlier merge',async()=>{
+ let saved=await data(); let history=saved['merchantGroupingHistory'] as ReturnType<typeof event>[];
+ const first=event({}, {alpha:'beta'}); await save({merchantAliases:first.after,merchantGroupingHistory:[...history,first]});
+ history=[...history,first]; const later=event(first.after,{alpha:'gamma'});
+ await save({merchantAliases:later.after,merchantGroupingHistory:[...history,later]});
+ history=[...history,later]; const back=event(later.after,first.after);
+ await save({merchantAliases:back.after,merchantGroupingHistory:[...history,back]});
+ history=[...history,back]; saved=await data(); const rev=await revision();
+ const undo=event(first.after,first.before,{reverses:first.id});
+ await expect(save({merchantAliases:undo.after,merchantGroupingHistory:[...history,undo]})).rejects.toThrow(/edited after this merge/);
+ await expect(db.query('UPDATE finance_preferences SET data=$1 WHERE owner_id=$2',[JSON.stringify({...saved,merchantGroupingHistory:[]}),owner])).rejects.toThrow(/append-only/);
+ expect(await revision()).toBe(rev); expect(await data()).toEqual(saved);
+});
