@@ -1,4 +1,4 @@
-import { roundMoney, addMoney, subtractMoney, sumMoney, multiplyMoney } from "./money";
+import { roundMoney, addMoney, subtractMoney, sumMoney, multiplyMoney, decimal } from "./money";
 // Compact Trip Budget (Version 5.5). One primary trip budget plus optional allocation
 // dimensions (workspace, traveller, category, currency, organisation). Dimensions are
 // views of the same plan — they are NEVER added together. Actuals come only from the
@@ -22,7 +22,7 @@ export const BUDGET_STATUS_LABEL: Record<BudgetStatus, string> = {
 /** Utilisation status against the primary budget. warnAt/fullAt are percentages (defaults 80/100). */
 export function budgetStatus(spent: number, budget: number, warnAt = 80, fullAt = 100): BudgetStatus {
   if (!(budget > 0)) return "not_set";
-  const pct = (spent / budget) * 100;
+  const pct = decimal(spent).div(budget).mul(100).toNumber();
   if (pct > fullAt) return "over";
   if (pct === fullAt) return "full";
   if (pct >= warnAt) return "approaching";
@@ -95,8 +95,8 @@ export function allocationReconciliation(t: TravelTrip): AllocationDimension[] {
   const state = (total: number): AllocationState => {
     if (total <= 0) return "none";
     if (!budget) return "partial"; // no primary budget to reconcile against
-    if (total > budget + 0.005) return "exceeds";
-    return Math.abs(total - budget) <= 0.005 ? "complete" : "partial";
+    if (decimal(total).gt(budget)) return "exceeds";
+    return decimal(total).eq(budget) ? "complete" : "partial";
   };
   const dims: AllocationDimension[] = [
     { key: "workspace", label: "By workspace", total: sumMoney((t.workspaceBudgets ?? []).map(x => x.amount)), state: "none" },
@@ -133,12 +133,12 @@ export function reimbursementBreakdown(t: TravelTrip, txns: Txns): Reimbursement
   for (const raw of f.entries) {
     const e = raw as Parameters<typeof isTracked>[0] & { paymentMethod?: string };
     if (!isTracked(e)) continue;
-    const eligible = outstandingOf(e) + receivedOf(e);
-    if (e.paymentMethod === "company_card") out.organisationPaid = r2(out.organisationPaid + eligible);
-    else if (CARD_METHODS.has(e.paymentMethod ?? "")) out.personalCard = r2(out.personalCard + eligible);
-    else out.personalCash = r2(out.personalCash + eligible);
-    out.received = r2(out.received + receivedOf(e));
-    out.pending = r2(out.pending + outstandingOf(e));
+    const eligible = addMoney(outstandingOf(e), receivedOf(e));
+    if (e.paymentMethod === "company_card") out.organisationPaid = addMoney(out.organisationPaid, eligible);
+    else if (CARD_METHODS.has(e.paymentMethod ?? "")) out.personalCard = addMoney(out.personalCard, eligible);
+    else out.personalCash = addMoney(out.personalCash, eligible);
+    out.received = addMoney(out.received, receivedOf(e));
+    out.pending = addMoney(out.pending, outstandingOf(e));
   }
   return out;
 }
