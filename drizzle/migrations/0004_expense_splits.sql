@@ -1,0 +1,2 @@
+ALTER TABLE public.expenses ADD COLUMN IF NOT EXISTS splits jsonb NOT NULL DEFAULT '[]'::jsonb;
+COMMENT ON COLUMN public.expenses.splits IS 'Per-person shares [{memberId: uuid|null (null=owner), amount: number in original currency}]; empty = whole expense for member_id';

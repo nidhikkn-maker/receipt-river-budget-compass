@@ -1,0 +1,255 @@
+import { matchEmiDebit, matchEmiFunding, type EmiTarget } from "./emi-match";
+// Automatic registration of bank-statement lines as ledger entries (pure, tested).
+// A line is only auto-registered when the rules are confident; anything that needs a
+// person's decision (transfers, cash withdrawals, unclear credits) is returned for review.
+
+import { matchScore, PAYMENT_METHODS, type Expense, type ExpenseInput, type PaymentMethod, type Scope, type StatementLine, type Match } from "./expenses";
+import { suggestForMerchant, type Account, type AccountKind, type TxnType } from "./ledger";
+import { resolveCategory, type CategorySetting } from "./preferences";
+import { bankRef } from "./statement-fingerprint";
+
+export interface StatementDraft {
+  toAccountId?: string | null;
+  existingPaymentId?: string;
+  line: StatementLine;
+  title: string;
+  merchant: string;
+  category: string;
+  paymentMethod: PaymentMethod;
+  scope: Scope;
+  txnType: TxnType;
+  accountId: string | null;
+  currency: string;
+  /** Plain-words reason this line was read this way. */
+  reason: string;
+  /** True when the category or payment method was a fallback guess — show it for confirmation. */
+  uncertain?: boolean;
+}
+
+export interface StatementPlan {
+  /** Safe to save without asking. */
+  register: StatementDraft[];
+  /** Needs a person's choice (usually which account it went to). */
+  review: StatementDraft[];
+  /** Left alone because it is already recorded or matched. */
+  skipped: { line: StatementLine; reason: string }[];
+  /** Looks like something already in the ledger — never registered unless the user says so. */
+  possibleDuplicates: { draft: StatementDraft; existing: { id: string; title: string; date: string; amount: number } }[];
+  /** Merchants that look recurring — offered as planned payments after import. */
+  recurringHints: { merchant: string; amount: number; count: number }[];
+}
+
+export interface StatementContext {
+  transactions: Expense[];
+  accounts: Account[];
+  categories: CategorySetting[];
+  /** Account the statement came from, when the user picked one. */
+  accountId: string | null;
+  currency: string;
+  /** Loan EMIs a debit from this account may pay (see emi-match.ts). */
+  emiTargets?: EmiTarget[];
+}
+
+/** Keyword -> category. Checked in order, first hit wins. Names must exist in the catalog. */
+const CATEGORY_RULES: [RegExp, string][] = [
+  [/\b(PETROL|DIESEL|FUEL|HPCL|BPCL|IOC|INDICAN|SHELL|CASTROL|FASTAG|FAST TAG|TOLL|PARIVAHAN)\b/, "Fuel and vehicle expenses"],
+  [/\b(SWIGGY|ZOMATO|DOMINO|MCDONALD|KFC|BURGER|PIZZA|RESTAURANT|CAFE|COFFEE|BAKERY|BIRYANI|TIFFIN|EATS|BERMICO|SHUTTLER|RAAGA|DINE|BUFFET|ICE CREAM|FOOD)\b/, "Food and beverages"],
+  [/\b(BIGBASKET|BLINKIT|ZEPTO|JIO MART|DMART|RELIANCE FRESH|LOCALCIRCLE|SUPERMARKET|GROCERY|GROCERS|SPENCERS|METRO|NILGIRIS|LILAVATI|KIRANA)\b/, "Groceries"],
+  [/\b(AMAZON|FLIPKART|MYNTRA|AJIO|NYKAA|CROMA|MEESHO|ALIEXPRESS|EBAY|SHOP|SHOPS|STORE)\b/, "Shopping"],
+  [/\b(ELECTRICITY|ELECTRIC|POWER|TNEB|BESCOM|MSEB|GAS|LPG|PIPED|WATER|BROADBAND|AIRTEL|VODAFONE|IDEA|BSNL|JIO|POSTPAID|RECHARGE|UTILITY|UTILITIES)\b/, "Utility bills"],
+  [/\b(NETFLIX|SPOTIFY|PRIME|YOUTUBE|APPLE COM|APPLE|GOOGLE ONE|HOTSTAR|SONYLIV|JIOHOTSTAR|SUBSCRIPTION|MEMBERSHIP|CHAIPPT|TATASCAP)\b/, "Digital subscriptions"],
+  [/\b(UBER|OLA|IRCTC|RAIL|INDIGO|AIRASIA|FLIGHT|AIR INDIA|MAKEMYTRIP|MAKE MY TRIP|REDBUS|ABHIBUS|AKULE|PARKING|HOTEL|TRAVEL|ACCOMMODATION)\b/, "Travel and accommodation"],
+  [/\b(PHARMACY|PHARMA|MEDICINE|MEDICARE|HOSPITAL|CLINIC|DIAGNOSTIC|LAB|APOLLO|1MG|PRACTO|HEALTHCARE|DENTAL|SCAN|THERAPY)\b/, "Medical and healthcare"],
+  [/\b(SCHOOL|COLLEGE|UNIVERSITY|TUITION|COACHING|ACADEMY|COURSE|UDEMY|EDUCATION|EXAM|FEES)\b/, "Education"],
+  [/\b(LIC|INSURANCE|POLICY|PREMIUM|HDFC LIFE|ICICI LIFE|TATTA|HEALTH INSURANCE)\b/, "Insurance"],
+  [/\b(PVR|INOX|CINEPOLIS|BOOKMYSHOW|MOVIE|CINEMA|STEAM|CONCERT|GAMES)\b/, "Entertainment"],
+  [/\b(SALON|GROOMING|COSMETIC|GYM|FITNESS|SPA|BARBER|HAIRCUT)\b/, "Personal care"],
+  [/\b(MAID|DOMESTIC|COOK|NANNY|HOUSE KEEP|STAFF)\b/, "Domestic staff"],
+  [/\b(RENT|RENTAL|LANDLORD|MAINTENANCE|FURNITURE|IKEA|ELECTRONIC|APPLIANCE|CLEANING|HARDWARE|PAINT)\b/, "Household expenses"],
+  [/\b(GIFT|FLOWER|DONATION|CHARITY|PUJA|DIWALI|CRACKER)\b/, "Gifts and occasions"],
+  [/\b(KIDS|KID|CHILD|TOY|DIAPER|BABY|CRCHE|CRECHE|DAYCARE)\b/, "Family and children"],
+  // v6 §22: tax payments are recognised as taxes, never ordinary spending or bank charges.
+  [/\b(ADVANCE TAX|SELF ASSESSMENT TAX|INCOME TAX|CBDT|OLTAS|ITNS ?28[01]|CHALLAN 28[01]|TIN NSDL|GST CHALLAN|GST PMT|CBIC|CPIN|GSTN|PROFESSIONAL TAX|PROPERTY TAX)\b/, "Taxes and duties"],
+  [/\b(CHARGE|CHARGES|PENALTY|SURCHARGE|FINE|AMCC|MINIMUM BALANCE|MARKUP|FOREX FEE|ATM FEE|LATE FEE|GST)\b/, "Financial charges"],
+  [/\b(OFFICE|STATIONERY|PAPERMARK|CANVA|ADOBE|ZOOM|SLACK|DOMAIN|HOSTING)\b/, "Office & Supplies"],
+];
+
+/** Keyword -> payment method. "card" resolves to credit or debit from the statement account. */
+const METHOD_RULES: [RegExp, PaymentMethod | "card"][] = [
+  [/\b(UPI|VPA|PAYTM|PHONEPE|PHONE PE|GPAY|G PAY|BHIM|TEZ|GOOGLE PAY|APPLE PAY|CRED|FUPO)\b/, "upi"],
+  [/\b(CASH|ATM|CWD|WDL)\b/, "cash"],
+  [/\b(NEFT|IMPS|RTGS|CHQ|CHEQUE|DD|DRAFT|TRANSFER|FUND TRANSFER)\b/, "bank_transfer"],
+  [/\b(CARD|POS|VISA|MASTERCARD|RUPAY|AMEX|EHC|SWIPE|CHIP|ECOM)\b/, "card"],
+];
+
+const TRANSFER_DEBIT = /\b(TRANSFER|UTDR|UDR|SELF A C|A C TRANSFER|FUND TRANSFER|NEFT|IMPS|RTGS|CHQ WDL|WDL|CWD|CASH WDL|ATM)\b/;
+const CARD_OR_LOAN_PAYMENT = /\b(CREDIT CARD|CARD)\b.{0,18}\b(PAYMENT|BILL|DUE|OUTSTANDING)\b|\b(LOAN|CARD|CREDIT CARD)\b.{0,12}\bPAYMENT\b|\bLOAN\b.{0,14}\b(EMI|REPAYMENT|PAYMENT|INSTALLMENT|DUE)\b|\bEMI\b|\bSIP\b|\bMUTUAL FUND\b|\bDEMAT\b|\bFD\b|\bINVESTMENT\b|\bSHARES?\b|\bGOLD BEES\b/;
+const REFUND_CREDIT = /\b(REFUND|REVERSAL|REVERSED|CASH BACK|CASHBACK|RETURN|CHARGEBACK)\b/;
+const INCOME_CREDIT = /\b(SALARY|STIPEND|PAYROLL|INTEREST|DIVIDEND|BONUS|REWARD|PAYOUT|RENT IN)\b/;
+const TRANSFER_CREDIT = /\b(TRANSFER|UTCR|UDR|NEFT|IMPS|RTGS|FUND TRANSFER|SELF A C)\b/;
+
+const up = (s: string) => (s || "").toUpperCase();
+
+/** Turn a bank narration into a readable merchant name. */
+export function cleanMerchant(description: string): string {
+  const raw = (description || "")
+    .replace(/\b\d{5,}\b/g, " ")
+    .replace(/\b\d{2}[./-]\d{2}[./-]\d{2,4}\b/g, " ")
+    .replace(/\b(UTR|NARN|REF|TXN|CRR|CHQ|DR|CR)\b/gi, " ")
+    .replace(/[^\w\s&]/g, " ")
+    .replace(/\s{2,}/g, " ")
+    .trim();
+  const words = raw.split(/\s+/).filter((w) => !/^\d+$/.test(w) && w.length > 1).slice(0, 4);
+  const out = words.map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(" ").trim();
+  if (!out) return (description || "").trim().slice(0, 40) || "Statement entry";
+  return out;
+}
+
+function paymentMethodFor(description: string, accountKind: AccountKind | undefined): PaymentMethod {
+  const text = up(description);
+  for (const [re, method] of METHOD_RULES) {
+    if (!re.test(text)) continue;
+    if (method === "card") return accountKind === "credit_card" ? "credit_card" : "debit_card";
+    return method;
+  }
+  return "other";
+}
+
+function categoryFor(description: string, categories: CategorySetting[]): string {
+  const text = up(description);
+  for (const [re, name] of CATEGORY_RULES) {
+    if (!re.test(text)) continue;
+    const resolved = resolveCategory(categories, name);
+    if (resolved) return resolved;
+  }
+  return resolveCategory(categories, "Miscellaneous") ?? categories.find((c) => !c.archived)?.name ?? "Miscellaneous";
+}
+
+const isPaymentMethod = (v: string | null | undefined): v is PaymentMethod =>
+  !!v && (PAYMENT_METHODS as readonly string[]).includes(v);
+
+/** Read one statement line into a draft entry, or say why a person must decide. */
+export function classifyStatementLine(line: StatementLine, ctx: StatementContext): StatementDraft {
+  const text = up(line.description || "");
+  const merchant = cleanMerchant(line.description || "");
+  const account = ctx.accounts.find((a) => a.id === ctx.accountId);
+  const memory = suggestForMerchant(merchant, ctx.transactions);
+  const method = isPaymentMethod(memory?.paymentMethod) ? memory.paymentMethod : paymentMethodFor(text, account?.kind);
+  const base = {
+    line,
+    title: merchant,
+    merchant,
+    accountId: ctx.accountId,
+    currency: ctx.currency,
+    paymentMethod: method,
+    scope: (memory?.scope === "business" ? "business" : "personal") as Scope,
+  };
+  const knownCategory = memory?.category && resolveCategory(ctx.categories, memory.category);
+  const ruleCategory = CATEGORY_RULES.some(([re]) => re.test(text));
+  const category = knownCategory || categoryFor(text, ctx.categories);
+  // Unsure when neither merchant memory nor a keyword rule picked the category, or the method is a guess.
+  const uncertain = !knownCategory && !ruleCategory;
+
+  if (line.direction === "credit") {
+    if (REFUND_CREDIT.test(text)) return { ...base, category, txnType: "refund", reason: "Refund or reversal credited back" };
+    if (account?.kind === "credit_card") {
+      const payment = existingCardPayment(line, ctx);
+      return { ...base, accountId: payment?.accountId ?? null, toAccountId: account.id, category: resolveCategory(ctx.categories, "Financial charges") ?? category, txnType: "card_payment", paymentMethod: "bank_transfer", ...(payment ? { existingPaymentId: payment.id } : {}), reason: payment ? "Existing source-account card payment — reduces outstanding once, not income" : "Card credit or repayment — confirm the paying account; never income", uncertain: !payment };
+    }
+    if (INCOME_CREDIT.test(text)) return { ...base, category, txnType: "income", reason: "Money coming in (salary, interest or dividend)", uncertain };
+    if (TRANSFER_CREDIT.test(text)) return { ...base, category, txnType: "transfer", reason: "Money moved in from another account — pick where it came from" };
+    return { ...base, category, txnType: "income", reason: "Credit line — confirm it is income before saving", uncertain: true };
+  }
+
+  const emi = ctx.emiTargets?.length ? matchEmiDebit({ date: line.date, amount: line.amount, direction: "debit", accountId: ctx.accountId, description: line.description || "" }, ctx.emiTargets) : null;
+  if (emi) {
+    const gap = emi.amountDiff === 0 ? "exact EMI" : `₹${Math.abs(emi.amountDiff).toLocaleString("en-IN")} ${emi.amountDiff < 0 ? "less" : "more"} than the EMI${emi.linked ? " (linked account may cover the rest)" : ""}`;
+    const when = emi.dayDiff === 0 ? "on the due date" : `${Math.abs(emi.dayDiff)} day${Math.abs(emi.dayDiff) === 1 ? "" : "s"} ${emi.dayDiff < 0 ? "before" : "after"} the ${emi.due} due date`;
+    return { ...base, title: `${emi.target.name} EMI`, category: resolveCategory(ctx.categories, "Financial charges") ?? category, txnType: "loan_repayment", toAccountId: emi.target.loanAccountId, paymentMethod: "bank_transfer", reason: `Looks like the ${emi.target.name} EMI — ${gap}, ${when}. Confirm before saving.` };
+  }
+  const fund = ctx.emiTargets?.length ? matchEmiFunding({ date: line.date, amount: line.amount, direction: "debit", accountId: ctx.accountId }, ctx.emiTargets) : null;
+  if (fund) {
+    const dest = ctx.accounts.find((a) => a.id === fund.target.payFromAccountId)?.name ?? "the EMI account";
+    return { ...base, title: `Transfer to ${dest} (${fund.target.name} EMI)`, category: resolveCategory(ctx.categories, "Transfers") ?? category, txnType: "transfer", toAccountId: fund.target.payFromAccountId, paymentMethod: "bank_transfer", reason: `Looks like the monthly top-up of ${dest} before the ${fund.target.name} EMI. Confirm before saving.` };
+  }
+  if (CARD_OR_LOAN_PAYMENT.test(text)) return { ...base, category, txnType: "transfer", reason: "Card, loan or investment payment — pick the account it went to" };
+  if (TRANSFER_DEBIT.test(text)) return { ...base, category, txnType: "transfer", reason: "Transfer or cash withdrawal — pick where the money went" };
+  if (/\b(CHARGES?|PENALTY|SURCHARGE|MINIMUM BALANCE|AMCC|MARKUP|FOREX FEE|LATE FEE)\b/.test(text)) {
+    return { ...base, category: resolveCategory(ctx.categories, "Financial charges") ?? category, txnType: "expense", reason: "Bank or card charge" };
+  }
+  return { ...base, category, txnType: "expense", reason: uncertain ? "Regular purchase — category unsure, please check" : "Regular purchase", uncertain };
+}
+
+/** Split statement lines into auto-register, needs-review, possible duplicates and already-recorded. */
+export function planStatementRegistration(lines: StatementLine[], matches: Match[], ctx: StatementContext): StatementPlan {
+  const plan: StatementPlan = { register: [], review: [], skipped: [], possibleDuplicates: [], recurringHints: [] };
+  const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, "");
+  for (const line of lines) {
+    const draft = classifyStatementLine(line, ctx);
+    if (draft.existingPaymentId) { plan.skipped.push({ line, reason: `Existing card payment from ${ctx.accounts.find(a => a.id === draft.accountId)?.name ?? "source account"}; already reduces outstanding, not income` }); continue; }
+    const match = matches.find((m) => m.line.ref === line.ref);
+    if (match?.expense) {
+      plan.skipped.push({ line, reason: `Already matched to "${match.expense.title}"` });
+      continue;
+    }
+    let best = 0;
+    let bestTxn: Expense | null = null;
+    for (const t of ctx.transactions) {
+      const s = matchScore(line, t, ctx.currency, ctx.accountId ?? undefined);
+      if (s > best) { best = s; bestTxn = t; }
+    }
+    if (best >= 0.7) {
+      plan.skipped.push({ line, reason: "Already in your ledger" });
+      continue;
+    }
+    if (best >= 0.4 && bestTxn) {
+      // Close to an existing record but not clearly the same — the user decides.
+      plan.possibleDuplicates.push({ draft, existing: { id: bestTxn.id, title: bestTxn.title, date: bestTxn.date, amount: bestTxn.amount } });
+      continue;
+    }
+    if (draft.txnType === "transfer" || draft.txnType === "card_payment" || /confirm it is income/.test(draft.reason)) plan.review.push(draft);
+    else plan.register.push(draft);
+  }
+  // Recurring hints: a merchant being registered now that already appears 3+ times in history.
+  const seen = new Set<string>();
+  const sameMerchant = (a: string, b: string) => { const x = norm(a), y = norm(b); return x.length >= 4 && y.length >= 4 && (x.includes(y) || y.includes(x)); };
+  for (const d of plan.register) {
+    const k = norm(d.merchant);
+    if (!k || seen.has(k)) continue;
+    const history = ctx.transactions.filter((t) => t.merchant && sameMerchant(t.merchant, d.merchant));
+    if (history.length >= 3) {
+      seen.add(k);
+      const known = history.sort((a, b) => b.date.localeCompare(a.date))[0]!.merchant!;
+      plan.recurringHints.push({ merchant: known, amount: d.line.amount, count: history.length });
+    }
+  }
+  return plan;
+}
+
+/** The saved-entry shape for a draft. */
+export function draftToInput(draft: StatementDraft): ExpenseInput {
+  return {
+    title: draft.title,
+    merchant: draft.merchant,
+    category: draft.category,
+    scope: draft.scope,
+    memberId: null,
+    amount: draft.line.amount,
+    currency: draft.currency,
+    paymentMethod: draft.paymentMethod,
+    date: draft.line.date,
+    description: "Statement import",
+    txnType: draft.txnType,
+    accountId: draft.accountId,
+    toAccountId: draft.toAccountId ?? null,
+    tags: [],
+  };
+}
+
+/** Reuse only an existing, fully identified movement: no amount-only pairing or new money. */
+export function existingCardPayment(line: StatementLine, ctx: StatementContext): Expense | null {
+  if (line.direction !== "credit" || ctx.accounts.find(a => a.id === ctx.accountId)?.kind !== "credit_card") return null;
+  const ref = bankRef(line.description);
+  const candidates = ctx.transactions.filter(t => t.txnType === "card_payment" && t.toAccountId === ctx.accountId && t.accountId && ctx.accounts.some(a => a.id === t.accountId && !a.archived && ["savings", "current", "cash", "wallet"].includes(a.kind)) && t.currency === ctx.currency && Math.abs(t.originalAmount - line.amount) < 0.01 && t.date === line.date && ((ref && bankRef(t.statementRef ?? t.description) === ref) || matchScore(line, t, ctx.currency, ctx.accountId ?? undefined) >= 0.95));
+  return candidates.length === 1 ? candidates[0] ?? null : null;
+}
