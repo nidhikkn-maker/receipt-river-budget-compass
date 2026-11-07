@@ -898,5 +898,6 @@
 - [x] Decimal trip/booking/advance/reimbursement/reconciliation/report connected figures extended; report retries refuse altered full filters and retain originals.
 - [x] Full264files/1942PASS plus final authority8PASS; browser3widthsPASS/screenshots inspected; buildOK. Counts1543/948/31/19 and v6566/331/2 unchanged, newly verified IDs none.
 - [ ] Fresh isolated draft "Budget merchant safeguard corrections" (drft_01m6v9sf31esbbnzb37f6q88c0) reproduced invalid budget saves and merchant history deletion. Await/inspect corrected hosted API/browser evidence; no automatic acceptance or production activation.
+- [x] Staged report version assignment under owner/kind/period transaction lock, stale count/older deletion/null-period/owner/duplicate evidence2PASS; final focused safeguards/report16PASS. Not installed; true contention/hosted acceptance pending.
 - [ ] Merchant/category independent-connection phantom concurrency and backup/closed-period compatibility; report frozen accepted inputs + atomic versions + hosted history recovery; remaining precision engines and partial implementation.
 - [ ] 31 missing real-device/owner-document/live-site/integration/final-process items stay accurately missing; no repeated historical audit, real-record changes, approval activation or publication. Evidence: docs/evidence/workstream-1-safeguard-corrections-2026-11-07.md.
