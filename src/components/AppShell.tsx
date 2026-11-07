@@ -131,11 +131,9 @@ export function AppShell({ children }: { children: ReactNode }) {
 
       <SmartAdd open={smartOpen} onOpenChange={setSmartOpen} scope={preferences.homeScope === 'all' ? undefined : preferences.homeScope} />
       <Dialog open={moreOpen} onOpenChange={setMoreOpen}>
-        <DialogContent className="native-sheet max-h-[85dvh] overflow-y-auto sm:max-w-2xl" aria-label="All modules">
+        <DialogContent className="native-sheet more-sheet max-h-[85dvh] overflow-y-auto sm:max-w-lg" aria-label="More">
           <DialogHeader>
-            <DialogTitle className="flex items-center justify-between">All modules
-              <Button size="icon" variant="ghost" aria-label="Close" onClick={() => setMoreOpen(false)}><X className="h-5 w-5" /></Button>
-            </DialogTitle>
+            <DialogTitle className="pr-12 text-left">More</DialogTitle>
           </DialogHeader>
           <Button variant="outline" className="mb-2 h-11 w-full justify-start gap-3 sm:hidden" onClick={() => setHidden((h) => !h)} aria-pressed={hidden}>{hidden ? <EyeOff className="size-5" /> : <Eye className="size-5" />}{hidden ? "Show amounts" : "Hide amounts"}</Button>
           <ModuleDirectory onNavigate={() => setMoreOpen(false)} />
