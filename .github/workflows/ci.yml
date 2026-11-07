@@ -1,0 +1,80 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+
+      # Install exactly what the lockfile pins; fails if package.json and
+      # bun.lock disagree, so dependency changes must be committed together.
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Typecheck
+        run: bun run typecheck
+
+      - name: Production build
+        run: bun run build
+
+      - name: Test suite
+        run: bun run test
+
+  dependency-advisories:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+
+      - name: Install locked dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Record lockfile checksum
+        run: sha256sum bun.lock > "$RUNNER_TEMP/bun-lock.sha256"
+
+      # Report all dependency types, including build/test tooling. Never run
+      # `bun audit fix`: advisories are informational, not automatic upgrades.
+      - name: Report dependency advisories
+        id: audit
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -o pipefail
+          bun audit 2>&1 | tee "$RUNNER_TEMP/dependency-advisories.txt"
+
+      - name: Verify audit did not change the lockfile
+        if: always() && steps.audit.outcome != 'skipped'
+        run: sha256sum --check "$RUNNER_TEMP/bun-lock.sha256"
+
+      - name: Summarize dependency check
+        if: always() && steps.audit.outcome != 'skipped'
+        env:
+          AUDIT_OUTCOME: ${{ steps.audit.outcome }}
+        run: |
+          if [ "$AUDIT_OUTCOME" = "failure" ]; then
+            echo "::warning::Dependency check reported advisories or could not complete. Review the attached report. No fixes were applied."
+          fi
+          {
+            echo '## Dependency advisory report'
+            echo 'Read-only check of locked production and development dependencies. No fixes applied.'
+            echo "Check outcome: $AUDIT_OUTCOME"
+            echo 'Full output is available in the dependency-advisories artifact and check log.'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Save dependency advisory report
+        if: always() && steps.audit.outcome != 'skipped'
+        uses: actions/upload-artifact@v4
+        with:
+          name: dependency-advisories
+          path: ${{ runner.temp }}/dependency-advisories.txt
+          if-no-files-found: warn

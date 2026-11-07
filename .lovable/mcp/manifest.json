@@ -1,0 +1,150 @@
+{
+  "version": 1,
+  "sdk_version": "3.4.0",
+  "path": "/mcp",
+  "auth": {
+    "type": "oauth",
+    "issuer": "https://pacvdtffengkzmtzgnhd.supabase.co/auth/v1",
+    "require_oauth_client_claim": true,
+    "accepted_audiences": [
+      "authenticated"
+    ]
+  },
+  "mcp": {
+    "server": {
+      "name": "receipt-river-budget-compass",
+      "version": "0.1.0",
+      "title": "Receipt River Budget Compass"
+    },
+    "tools": [
+      {
+        "name": "list_transactions",
+        "title": "List transactions",
+        "description": "List your ledger entries (expenses, income, transfers, refunds) in INR, newest first, optionally filtered by date range, type, category or merchant.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "from": {
+              "description": "Start date, inclusive (YYYY-MM-DD).",
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+            },
+            "to": {
+              "description": "End date, inclusive (YYYY-MM-DD).",
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+            },
+            "type": {
+              "description": "Entry type.",
+              "type": "string",
+              "enum": [
+                "expense",
+                "income",
+                "transfer",
+                "refund",
+                "reimbursement",
+                "adjustment",
+                "card_payment",
+                "loan_repayment",
+                "investment",
+                "advance",
+                "advance_settlement"
+              ]
+            },
+            "category": {
+              "description": "Exact category name, e.g. Groceries.",
+              "type": "string",
+              "maxLength": 80
+            },
+            "merchant": {
+              "description": "Text the merchant name contains.",
+              "type": "string",
+              "maxLength": 80
+            },
+            "limit": {
+              "description": "Maximum rows (default 50).",
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200
+            }
+          },
+          "additionalProperties": false
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "spending_summary",
+        "title": "Monthly spending summary",
+        "description": "Income, spending, net and spending by category for one month, using the app's own accounting rules (transfers and card payments excluded, splits counted once).",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "month": {
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}$",
+              "description": "Month as YYYY-MM."
+            }
+          },
+          "required": [
+            "month"
+          ],
+          "additionalProperties": false
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_accounts",
+        "title": "List accounts and balances",
+        "description": "List your active bank, card, cash, loan and investment accounts with balances derived from recorded entries.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {},
+          "additionalProperties": false
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "upcoming_payments",
+        "title": "Upcoming payments and income",
+        "description": "List active scheduled bills, subscriptions, EMIs and expected income due within the next N days.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "days": {
+              "description": "Days ahead to look (default 30).",
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 365
+            }
+          },
+          "additionalProperties": false
+        },
+        "outputSchema": null
+      }
+    ]
+  }
+}
