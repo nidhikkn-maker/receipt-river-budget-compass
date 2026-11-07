@@ -37,9 +37,11 @@ export async function listImportRows(batch:string):Promise<ImportRow[]> {
   }
   return rows;
 }
-export async function listImportRules():Promise<ImportRule[]> {
-  const r=await supabase.from('import_rules').select('*').order('created_at');
-  if(r.error) throw Error('Could not load import rules'); return r.data as unknown as ImportRule[];
+export function listImportRules():Promise<ImportRule[]> {
+  return shareInflight('import_rules', async () => {
+    const r=await supabase.from('import_rules').select('*').order('created_at');
+    if(r.error) throw Error('Could not load import rules'); return r.data as unknown as ImportRule[];
+  });
 }
 export async function reviseRows(batch:string,rows:ImportRow[],patch:Partial<ImportProposal>,decision?:ImportRow['decision']) {
   const fields=new Set(['title','merchant','category','scope','memberId','paymentMethod','txnType','accountId','toAccountId','description','tags','reviewed','categoryConfirmed','duplicateOverride','reimbursable','organisation','subcategory','reimbursementOrganisation']);
