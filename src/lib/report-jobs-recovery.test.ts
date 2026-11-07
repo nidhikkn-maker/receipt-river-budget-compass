@@ -36,7 +36,7 @@ it('lost history response reads back exact report and retry never overwrites evi
 it('completion failure retains checksum-bound evidence and a later retry marks done without replacement',async()=>{
  const options={doneError:true};const h=adapter(options);
  await expect(completeReportJob(h.db,job)).rejects.toThrow('completion status');
- const original=h.files.get('owner/reports/job.pdf');expect(h.getHistory()?.filters).toMatchObject({evidenceSha256:expect.stringMatching(/^[a-f0-9]{64}$/)});
+ const original=h.files.get('owner/reports/job.pdf');expect(h.getHistory()?.['filters']).toMatchObject({evidenceSha256:expect.stringMatching(/^[a-f0-9]{64}$/)});
  options.doneError=false;await completeReportJob(h.db,job);
  expect(h.files.get('owner/reports/job.pdf')).toBe(original);
  expect(h.writes.filter(x=>(x as {id?:string}).id==='job')).toHaveLength(1);
@@ -50,5 +50,5 @@ it('same-size corruption and unavailable accepted evidence never mark done',asyn
 it('orphan PDF is adopted unchanged before new ledger reads or rendering',async()=>{
  const h=adapter();const original=new Blob(['%PDF-frozen-before-retry'],{type:'application/pdf'});h.files.set('owner/reports/job.pdf',original);
  await completeReportJob(h.db,job);
- expect(h.files.get('owner/reports/job.pdf')).toBe(original);expect(h.getHistory()?.file_size).toBe(original.size);
+ expect(h.files.get('owner/reports/job.pdf')).toBe(original);expect(h.getHistory()?.['file_size']).toBe(original.size);
 });
