@@ -26061,7 +26061,7 @@
   {
    "cid": "C-2154",
    "category": "ai",
-   "status": "missing",
+   "status": "implemented",
    "rep": "Suggest Self by default where appropriate.",
    "sources": [
     "LEDGERLINE_pasted-4.md:453"
@@ -26997,7 +26997,7 @@
   {
    "cid": "C-2232",
    "category": "document",
-   "status": "missing",
+   "status": "implemented",
    "rep": "Show transactions without receipt attachments.",
    "sources": [
     "LEDGERLINE_pasted-14.md:658"
