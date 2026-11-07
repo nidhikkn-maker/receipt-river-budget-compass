@@ -37,7 +37,7 @@ it('failed cleanup keeps the parked path available and successful retry closes o
   cloud.remove.mockResolvedValueOnce({ error: { message: 'outage' } }).mockResolvedValueOnce({ error: null });
   cloud.update.mockResolvedValue({ error: null });
   await expect(closeRun(run, 'done')).rejects.toThrow('Retry cleanup');
-  expect(cloud.patches[0]?.data).toMatchObject({ cleanupPending: 'done', stashPath: run.data.stashPath });
+  expect(cloud.patches[0]?.['data']).toMatchObject({ cleanupPending: 'done', stashPath: run.data.stashPath });
   await closeRun(run, 'done'); expect(cloud.update).toHaveBeenCalledTimes(3);
   expect(cloud.remove).toHaveBeenLastCalledWith(['synthetic-owner/runs/run']);
 });
@@ -46,7 +46,7 @@ it('deleted original with lost final status leaves durable cleanup intent and re
   cloud.update.mockResolvedValueOnce({ error: null }).mockResolvedValueOnce({ error: { message: 'lost final update' } });
   const run = { ...base, data: { stashPath: 'synthetic-owner/runs/run' } };
   await expect(closeRun(run, 'done')).rejects.toThrow('lost final update');
-  expect(cloud.patches[0]?.data).toMatchObject({ cleanupPending: 'done' });
+  expect(cloud.patches[0]?.['data']).toMatchObject({ cleanupPending: 'done' });
   cloud.update.mockResolvedValue({ error: null });
   await closeRun({ ...run, data: { ...run.data, cleanupPending: 'done' } }, 'done');
   expect(cloud.download).not.toHaveBeenCalled();
