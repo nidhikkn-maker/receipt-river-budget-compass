@@ -1,3 +1,6 @@
+
+## Safeguard status (7 Nov 2026 15:54 UTC, owner-accepted)
+- Budget completeness authority and append-only merchant history: isolated development and testing COMPLETE (owner accepted). Production activation PENDING owner release approval; do not retest unless related code changes.
 ## Active verification checkpoint (7 Nov 2026)
 - [x] 11:57 Main batch: foreign broker cash currency/form/INR valuation and comparison; monotone fresh-read revision-checked statement checkpoints, exact DP/client demat lost-response readback and same-file cash review handoff. Actual investment review/holdings-store + installed SQL source/retry/duplicate/owner/Home PASS; full 241/1,853 PASS; browser 4 PASS; build OK. 565/332/2 unchanged; zero promotions.
 - [ ] Isolated Hosted workflow acceptance draft completed: nine actual-API checks PASS but empty browser downloads FAIL. Inspect/fix draft download integrity; no acceptance/publish or Main storage rollout. Complete mixed brokerage reviewed posting/report and durable source/bank-account lost-response/stale-safe Undo, then hosted two-context recovery. Exact criteria/results in docs/evidence/connected-workflow-acceptance-2026-11-07.md.
