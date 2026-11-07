@@ -2,25 +2,27 @@ import { useState } from "react";
 import { BadgeCheck } from "lucide-react";
 import { whoLabel, PAYMENT_LABEL, BASE_CURRENCY, money, type Expense } from "@/lib/expenses";
 import { ScopeBadge } from "./ScopeBadge";
-import { ExpenseDialog } from "./ExpenseDialog";
+import { ExpenseDialog, ExpenseDetail } from "./ExpenseDialog";
 import { useStore } from "@/lib/store";
+import { useTabletLandscape } from "@/hooks/use-mobile";
 import { Button } from "./ui/button";
 
-/** Expenses as perforated "ticket" cards. Pass selected/onToggle to turn cards into multi-select rows. */
+/** Expenses as perforated "ticket" cards. Pass selected/onToggle to turn cards into multi-select rows. On iPad landscape the detail opens in a side pane next to the list. */
 export function ExpenseTable({ items, empty = "Nothing here yet.", selected, onToggle }: { items: Expense[]; empty?: string; selected?: Set<string> | undefined; onToggle?: ((id: string) => void) | undefined }) {
   const { memberName } = useStore();
   const [open, setOpen] = useState<Expense | null>(null);
   const selecting = !!onToggle;
+  const sideBySide = useTabletLandscape() && !selecting;
   if (items.length === 0) return <div className="rounded-2xl border border-dashed p-10 text-center text-sm text-muted-foreground">{empty}</div>;
-  return (
-    <>
-      <ul className="grid min-w-0 grid-cols-1 gap-3 md:grid-cols-2">
+  const list = (
+      <ul className={"grid min-w-0 grid-cols-1 gap-3" + (sideBySide ? "" : " md:grid-cols-2")}>
         {items.map((e) => {
           const day = new Date(e.date + "T00:00:00");
           const checked = selected?.has(e.id) ?? false;
+          const isOpen = sideBySide && open?.id === e.id;
           return (
             <li key={e.id} className="min-w-0">
-              <Button variant="ghost" onClick={() => (selecting ? onToggle(e.id) : setOpen(e))} aria-pressed={selecting ? checked : undefined} className={"ticket flex h-auto w-full items-stretch justify-start gap-0 overflow-hidden whitespace-normal rounded-2xl border bg-card p-0 text-left transition hover:shadow-float" + (checked ? " ring-2 ring-gold" : "")}>
+              <Button variant="ghost" onClick={() => (selecting ? onToggle(e.id) : setOpen(e))} aria-pressed={selecting ? checked : isOpen} className={"ticket flex h-auto w-full items-stretch justify-start gap-0 overflow-hidden whitespace-normal rounded-2xl border bg-card p-0 text-left transition hover:shadow-float" + (checked || isOpen ? " ring-2 ring-gold" : "")}>
                 {selecting && <span className={"flex w-8 shrink-0 items-center justify-center border-r " + (checked ? "bg-gold text-gold-foreground" : "bg-secondary/50 text-muted-foreground")} aria-hidden>{checked ? "✓" : ""}</span>}
                 <div className={"flex w-16 shrink-0 flex-col items-center justify-center border-r border-dashed py-3 " + (e.scope === "business" ? "bg-primary text-primary-foreground" : "bg-secondary/70")}>
                   <span className="font-mono text-[10px] opacity-70">{day.toLocaleString("en", { month: "short" })}</span>
