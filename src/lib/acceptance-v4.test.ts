@@ -30,7 +30,8 @@ describe("V4 acceptance (Part G)", () => {
     // the dashboard's entry point is the shell's floating + button (V4.3).
     for (const f of ["src/routes/_authenticated/trips.$tripId.tsx", "src/components/trip/TripSections.tsx"]) expect(readFileSync(f, "utf8")).toContain('to="/new');
     // Global plus now opens Smart Add; its dispatch is exercised in SmartAdd.test.tsx.
-    expect(readFileSync('src/components/SmartAdd.tsx', 'utf8')).toContain("to: '/new'");
+    // Global plus hosts that same NewExpense form inside Smart Add rather than a second form.
+    expect(readFileSync('src/components/SmartAdd.tsx', 'utf8')).toContain("import('@/routes/_authenticated/new')");
     expect(readFileSync("src/routes/_authenticated/new.tsx", "utf8")).toContain("search.booking");
   });
 
