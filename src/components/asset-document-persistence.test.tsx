@@ -12,7 +12,7 @@ vi.mock("@/lib/store", () => ({ useStore: () => state.store }));
 vi.mock("@tanstack/react-start", () => ({ useServerFn: () => vi.fn() }));
 vi.mock("@tanstack/react-router", () => ({ Link: ({ children }: { children: React.ReactNode }) => <span>{children}</span> }));
 vi.mock("@/lib/document-extract.functions", () => ({ extractDocument: vi.fn() }));
-vi.mock("@/lib/books/runs", () => ({ documentIdForRun: (id: string) => id, startRun: vi.fn(), updateRun: vi.fn(), closeRun: vi.fn() }));
+vi.mock("@/lib/books/runs", () => ({ documentIdForRun: (id: string) => id, startRun: vi.fn(), updateRun: async () => undefined, closeRun: async () => undefined }));
 import { DocumentIntake } from "./DocumentIntake";
 import type { ExtractedDocument } from "@/lib/document-extract.functions";
 const baseRead = (docType: ExtractedDocument["docType"], overrides: Partial<ExtractedDocument> = {}): ExtractedDocument => ({ docType, title: "Controlled original", date: "2026-10-02", amount: null, currency: "INR", merchant: null, notes: "", text: "", fields: [], ...overrides } as ExtractedDocument);
