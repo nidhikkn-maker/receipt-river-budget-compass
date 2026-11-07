@@ -1,5 +1,6 @@
 # Finance rule modules
 - Private file URLs re-check current shared-document visibility and storage RLS on issuance and expire after one minute; revoked access blocks new URLs but previously issued bearer URLs survive until expiry.
+- Original-document insert errors require owner read-back before file cleanup; an unknown outcome retains bytes and reports recovery rather than deleting possibly committed evidence.
 - Phone notification choices live in owner preferences and notification-settings.ts; funding pushes use independent daily device claims so earlier payment reminders cannot suppress them.
 - Subdirectories hold the rest of these notes: src/lib/statement-pipeline/AGENTS.md (statement, import and transfer rules), src/lib/books/AGENTS.md (books, tax, GST, asset and compliance rules) and src/components/AGENTS.md (review, claim, trip, report and receipt-reading rules).
 - payees.ts stores external directory records in owner preferences; explicit selection fills the existing merchant draft only, never an owned account or automatic financial classification. Directory changes do not relabel old ledger records.

@@ -211,8 +211,17 @@ function StatementDeskPage() {
       toast.error("Nothing selected to save yet.");
       return;
     }
+    const uploadId = crypto.randomUUID(), at = new Date().toISOString();
+    const label = plan.accounts.map(a=>a.file.name).join(', ').slice(0,200);
+    const checkpoint = async (r: ApplyResult, status: 'interrupted'|'complete'='interrupted') => {
+      const s=storeRef.current;
+      const upload: StatementUpload={...r,id:uploadId,at,label,status};
+      const history=s.preferences.statementUploads??[];
+      await s.savePreferences({...s.preferences,statementUploads:[upload,...history.filter(u=>u.id!==uploadId)]});
+    };
     try {
       setProgress("Saving…");
+      await checkpoint({posted:[],reconciled:[],createdAccounts:[]});
       const prepareSource = async (q: ApplyRequest, accountId: string) => {
         const f = originals.current.get(q.account.file.name);
         if (!f) throw Error(`Choose ${q.account.file.name} again — its original is required before saving.`);
@@ -231,7 +240,7 @@ function StatementDeskPage() {
           throw error;
         }
       };
-      const r = await applyUpload(requests, { ...api(), prepareSource }, setProgress);
+      const r = await applyUpload(requests, { ...api(), prepareSource, checkpoint }, setProgress);
       setResult(r);
       // One event per saved statement: did the app's balance after saving match the printed closing figure?
       // Lines still open after saving: asked lines not accepted, held lines and lines saved on another account.
@@ -244,15 +253,15 @@ function StatementDeskPage() {
       setAccepted([]);
       void loadLinks();
       listDrafts().then(setDrafts).catch(() => {}); setDraftFlip([]);
-      const upload: StatementUpload = { id: crypto.randomUUID(), at: new Date().toISOString(), label: plan.accounts.map((a) => a.file.name).join(", ").slice(0, 200), posted: r.posted, reconciled: r.reconciled, createdAccounts: r.createdAccounts };
-      try { const s = storeRef.current; await s.savePreferences({ ...s.preferences, statementUploads: [upload, ...(s.preferences.statementUploads ?? [])].slice(0, 10) }); }
-      catch { toast.error("Saved, but undo history couldn’t sync to your other devices."); }
+      try { await checkpoint(r,'complete'); }
+      catch { toast.error("Saved, but completion history couldn’t sync. The upload stays marked interrupted; refresh before retrying."); }
       toast.success(`${r.posted.length} entries posted · ${r.reconciled.length} records marked as matched${r.createdAccounts.length ? ` · ${r.createdAccounts.length} account${r.createdAccounts.length === 1 ? "" : "s"} created` : ""}`, {
         action: { label: "Undo", onClick: () => void undo(r) },
       });
     } catch (e) {
       if (e instanceof PartialUploadError) {
         setResult(e.result);
+        await checkpoint(e.result).catch(()=>toast.error('Confirmed progress could not sync. Keep this page open and reconnect before retrying.'));
         // Keep newly-created account selections across retries; never create another account.
         setDestinations(previous => ({ ...previous, ...Object.fromEntries(requests.filter(q => q.account.accountId).map(q => [`${q.account.file.name}\u0000account`, q.account.accountId ?? ""])) }));
         toast.error(`Statement processing stopped: ${e.message}. ${e.result.posted.length} entries confirmed saved. Review the refreshed records and retry; saved lines won’t be duplicated.`);
@@ -275,6 +284,28 @@ function StatementDeskPage() {
     setFailedOriginals(left);
     if (left.length) toast.error(`${left.length} original${left.length === 1 ? "" : "s"} still couldn’t be stored — check your connection and retry.`);
     else toast.success("All statement originals are now stored in DocuRepo.");
+  };
+
+  const recoverUpload = async (u: StatementUpload) => {
+    try {
+      if (!u.sources?.length) { toast.error('No stored original is available yet. Choose the source file again.'); return; }
+      const files: File[]=[];
+      for(const source of u.sources) {
+        const document=storeRef.current.documents.find(d=>d.id===source.documentId);
+        if(!document) throw Error('The original is not currently available to this account. Refresh and retry.');
+        const url=await storeRef.current.signedUrl(document.filePath);
+        if(!url)throw Error('You no longer have access to this original.');
+        const response=await fetch(url); if(!response.ok)throw Error('Could not download the original. Retry when connected.');
+        const bytes=await response.arrayBuffer();
+        if(await originalId(storeRef.current.userId,bytes)!==source.documentId)throw Error('Original integrity check failed. No entries were changed.');
+        files.push(new File([bytes],document.fileName,{type:document.mimeType||'application/octet-stream'}));
+      }
+      await add(files,true);
+      const sources=u.sources;
+      setDestinations(previous=>({...previous,...Object.fromEntries(sources.map(source=>[`${source.file}\u0000account`,source.accountId]))}));
+      // Recovery opens review, never restores approval or posts automatically.
+      toast.success('Stored originals reopened for fresh review. Already saved lines are matched again.');
+    } catch(error) { toast.error(error instanceof Error?error.message:'Could not reopen this upload'); }
   };
 
   const loadLinks = async () => {
@@ -645,7 +676,8 @@ function StatementDeskPage() {
           <ul className="space-y-2">
             {(preferences.statementUploads ?? []).map((u) => (
               <li key={u.id} className="flex flex-wrap items-center justify-between gap-2 text-sm">
-                <span className="min-w-0 flex-1"><span className="block truncate">{u.label || "Upload"}</span><span className="text-xs text-muted-foreground">{new Date(u.at).toLocaleString()} · {u.posted.length} posted · {u.reconciled.length} matched</span></span>
+                <span className="min-w-0 flex-1"><span className="block truncate">{u.label || "Upload"}{u.status==='interrupted'?' · interrupted':''}</span><span className="text-xs text-muted-foreground">{new Date(u.at).toLocaleString()} · {u.posted.length} posted · {u.reconciled.length} matched</span></span>
+                {u.status==='interrupted'&&!!u.sources?.length&&<Button size="sm" variant="outline" disabled={!!progress||busy} onClick={()=>recoverUpload(u)}>Review stored originals</Button>}
                 <Button size="sm" variant="outline" disabled={!!progress} onClick={() => void undo(u, u.id)}>Undo</Button>
               </li>
             ))}

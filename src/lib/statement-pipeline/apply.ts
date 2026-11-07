@@ -11,8 +11,8 @@ export async function stableId(accountId: string, l: StmtLine): Promise<string> 
   const digest = new Uint8Array(
     await crypto.subtle.digest("SHA-256", new TextEncoder().encode(`${accountId}|${l.date}|${l.direction}|${l.amount.toFixed(2)}|${(l.balance ?? 0).toFixed(2)}|${l.description}`)),
   ).slice(0, 16);
-  digest[6] = (digest[6]! & 0x0f) | 0x50;
-  digest[8] = (digest[8]! & 0x3f) | 0x80;
+  digest[6] = ((digest[6] ?? 0) & 0x0f) | 0x50;
+  digest[8] = ((digest[8] ?? 0) & 0x3f) | 0x80;
   const hex = [...digest].map((b) => b.toString(16).padStart(2, "0")).join("");
   return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
 }
@@ -30,6 +30,8 @@ export interface ApplyApi {
   transactions: Expense[];
   /** Store the private original before the first financial write for this account. */
   prepareSource?: (request: ApplyRequest, accountId: string) => Promise<string>;
+  /** Persist confirmed progress before proceeding; failure stops the next financial write. */
+  checkpoint?: (result: ApplyResult) => Promise<void>;
 }
 
 /** One account's accepted part of an upload: the lines to post, the destination for movements, the records to mark. */
@@ -84,9 +86,11 @@ export async function applyUpload(requests: ApplyRequest[], api: ApplyApi, onPro
       result.createdAccounts.push({ id: accountId, name: hint.name });
       // Retain the returned account in the accepted plan even if a subsequent stage fails.
       r.account.accountId = accountId;
+      await api.checkpoint?.(structuredClone(result));
     }
     const source = await api.prepareSource?.(r, accountId);
     if (source) (result.sources ??= []).push({ documentId: source, accountId, file: r.account.file.name });
+    await api.checkpoint?.(structuredClone(result));
     for (const d of r.decisions) {
       onProgress?.(`Saving ${++done} of ${total}…`);
       if (d.needsDestination && !r.destination) throw Error(`Choose where “${d.line.description.slice(0, 60)}” went before posting.`);
@@ -98,18 +102,22 @@ export async function applyUpload(requests: ApplyRequest[], api: ApplyApi, onPro
         Object.assign(input, Object.fromEntries(Object.entries(link.overrides).filter(([, v]) => v !== undefined && v !== "")));
         await api.save(input, { createId: id, noRefresh: true, files: await link.files() });
         result.posted.push(id);
+        await api.checkpoint?.(structuredClone(result));
         if (source) await api.reconcile(id, `document:${source} · ${d.line.key} · ${d.line.date} · ${d.line.amount.toFixed(2)}`, { noRefresh: true });
         if (api.linkDraft) { await api.linkDraft(link.draftId, id); (result.linkedDrafts ??= []).push({ draftId: link.draftId, transactionId: id }); }
+        await api.checkpoint?.(structuredClone(result));
         continue;
       }
       await api.save(input, { createId: id, noRefresh: true });
       result.posted.push(id);
+      await api.checkpoint?.(structuredClone(result));
       if (source) await api.reconcile(id, `document:${source} · ${d.line.key} · ${d.line.date} · ${d.line.amount.toFixed(2)}`, { noRefresh: true });
     }
     for (const m of r.reconcileIds) {
       onProgress?.(`Marking ${++done} of ${total}…`);
       await api.reconcile(m.id, source ? `document:${source} · ${m.ref}` : m.ref, { noRefresh: true });
       result.reconciled.push(m.id);
+      await api.checkpoint?.(structuredClone(result));
     }
   } } catch (error) {
     await api.refresh().catch(() => {});
