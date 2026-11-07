@@ -114,6 +114,18 @@ describe("actual document review workflow (isolated persistence boundary)", () =
     expect(state.close).toHaveBeenCalledWith(expect.anything(), "done");
   });
 
+  it('successful save with failed original cleanup remains successful and retry never recommits records', async () => {
+    state.close.mockRejectedValueOnce(new Error('Original cleanup interrupted')).mockResolvedValue(undefined);
+    open(baseRead('other'));
+    fireEvent.click(screen.getByRole('button', { name: 'Save to DocuRepo' }));
+    await screen.findByRole('button', { name: 'Retry original cleanup' });
+    expect(commit).toHaveBeenCalledTimes(1); expect(add).toHaveBeenCalledTimes(1);
+    fireEvent.click(screen.getByRole('button', { name: 'Retry original cleanup' }));
+    await waitFor(() => expect(state.close).toHaveBeenCalledTimes(2));
+    expect(commit).toHaveBeenCalledTimes(1); expect(add).toHaveBeenCalledTimes(1);
+    await waitFor(() => expect(screen.queryByRole('button', { name: 'Retry original cleanup' })).toBeNull());
+  });
+
   it.each(["maintenance", "asset_invoice"] as const)("%s ambiguous serials need an explicit existing asset; never duplicate or capitalise the asset", async (type) => {
     const asset = { id: "a1", name: "Generator", kind: "machinery", cost: 150000, inUse: "2026-04-01", sharePct: 100, bookMethod: "slm", bookRatePct: 10, tag: "GEN-44" };
     state.store['preferences'] = { books: emptyBooks(), entities: [], assets: [asset, { ...asset, id: "a2" }], contractObligations: [] };
