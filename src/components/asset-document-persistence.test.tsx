@@ -7,6 +7,8 @@ import { readFileSync } from "node:fs";
 import { taxSchedule } from "@/lib/assets";
 import { annualBook } from "@/lib/books/depreciation";
 import { emptyBooks } from "@/lib/books/types";
+import { recordProvenance } from "@/lib/books/docrepo";
+import type { VaultDoc } from "@/lib/documents";
 const state = vi.hoisted(() => ({ store: {} as Record<string, unknown> }));
 vi.mock("@/lib/store", () => ({ useStore: () => state.store }));
 vi.mock("@tanstack/react-start", () => ({ useServerFn: () => vi.fn() }));
@@ -36,7 +38,18 @@ describe("connected asset document review and installed database", () => {
         CREATE TABLE finance_preferences(owner_id uuid PRIMARY KEY,data jsonb NOT NULL,updated_at timestamptz);
         CREATE TABLE documents(id uuid PRIMARY KEY,owner_id uuid,doc_type text,evidence_locked boolean,original bytea,fields jsonb);
         CREATE TABLE document_runs(owner_id uuid,data jsonb);
+        CREATE TABLE expenses(id uuid PRIMARY KEY,employee_id uuid);
+        CREATE TABLE accounts(id uuid PRIMARY KEY,owner_id uuid);
+        CREATE TABLE loans(id uuid PRIMARY KEY,owner_id uuid);
         CREATE FUNCTION commit_document_intake(uuid,jsonb,boolean) RETURNS void LANGUAGE sql AS $$ SELECT $$;`);
+      const docPolicy = readFileSync("drizzle/migrations/0009_prd_modules_cards_loans_docs_audit.sql", "utf8").match(/CREATE POLICY "Own documents"[\s\S]*?\n  \);/)?.[0];
+      const prefPolicy = readFileSync("drizzle/migrations/0007_preferences_and_receipt_details.sql", "utf8").split("\n").find(line => line.startsWith('CREATE POLICY "Own finance preferences"'));
+      if (!docPolicy || !prefPolicy) throw new Error("Production owner policies missing");
+      await db.exec(`ALTER TABLE documents ADD COLUMN transaction_id uuid; ALTER TABLE documents ADD COLUMN account_id uuid; ALTER TABLE documents ADD COLUMN loan_id uuid;
+        GRANT SELECT,INSERT,UPDATE,DELETE ON documents,finance_preferences TO authenticated;
+        GRANT SELECT ON expenses,accounts,loans TO authenticated;
+        ALTER TABLE documents ENABLE ROW LEVEL SECURITY; ALTER TABLE finance_preferences ENABLE ROW LEVEL SECURITY;
+        ${docPolicy} ${prefPolicy}`);
       await db.query("INSERT INTO finance_preferences VALUES ($1,$2::jsonb,now()),($3,'{}',now())", [owner, JSON.stringify(prefs), other]);
       for (const file of ["0071_revision_checked_document_intake", "0074_typed_document_intake_validation", "0079_intake_server_approval", "0085_nested_schedule_intake_validation"]) await db.exec(readFileSync(`drizzle/migrations/${file}.sql`, "utf8"));
       await db.query("SELECT set_config('test.uid',$1,false)", [owner]);
@@ -46,7 +59,7 @@ describe("connected asset document review and installed database", () => {
       vi.stubGlobal("window", dom.window); vi.stubGlobal("document", dom.window.document); vi.stubGlobal("HTMLElement", dom.window.HTMLElement); vi.stubGlobal("File", dom.window.File);
       let approved: { id: string; documentId: string; expected: number; data: unknown; lock: boolean } | undefined;
       add.mockImplementation(async (_file: File, meta) => {
-        await db.query("INSERT INTO documents VALUES ($1,$2,$3,false,$4,$5::jsonb)", [meta.id, owner, meta.docType, new TextEncoder().encode("representative original"), JSON.stringify(meta.fields)]);
+        await db.query("INSERT INTO documents(id,owner_id,doc_type,evidence_locked,original,fields) VALUES ($1,$2,$3,false,$4,$5::jsonb)", [meta.id, owner, meta.docType, new TextEncoder().encode("representative original"), JSON.stringify(meta.fields)]);
         return meta.id;
       });
       commit.mockImplementation(async (_doc: string, payload, lock: boolean, attempt) => {
@@ -79,11 +92,21 @@ describe("connected asset document review and installed database", () => {
       expect(new TextDecoder().decode(original?.original)).toBe("representative original");
       expect(original?.fields).toEqual([expect.objectContaining({ page: 1, quote: "Serial GEN-44", originalValue: "GEN-44" })]);
       expect(original?.evidence_locked).toBe(true);
+      const evidence = recordProvenance(asset.id, saved.books.docLinks, [{ id: docId, title: "Original service document", docType: type, fields: original?.fields } as VaultDoc]);
+      expect(evidence[0]?.fields[0]).toMatchObject({ value: "GEN-44", where: "page 1", confidence: "high" });
       await db.exec("SET ROLE authenticated");
       expect((await db.query("SELECT * FROM document_intake_commits")).rows).toHaveLength(1);
+      expect((await db.query("SELECT * FROM documents")).rows).toHaveLength(1);
       await db.query("SELECT set_config('test.uid',$1,false)", [other]);
       expect((await db.query("SELECT * FROM document_intake_commits")).rows).toHaveLength(0);
+      expect((await db.query("SELECT * FROM documents")).rows).toHaveLength(0);
+      expect((await db.query("SELECT data FROM finance_preferences WHERE owner_id=$1", [owner])).rows).toHaveLength(0);
+      expect((await db.query("UPDATE documents SET doc_type='other' WHERE id=$1 RETURNING id", [docId])).rows).toHaveLength(0);
+      await expect(db.query("INSERT INTO documents(id,owner_id,doc_type,evidence_locked) VALUES ($1,$2,'maintenance',false)", [crypto.randomUUID(), owner])).rejects.toThrow(/row-level security/);
       await expect(db.query("SELECT commit_document_intake_reviewed($1,$2,$3::jsonb,$4,$5)", [approved.id, docId, JSON.stringify(approved.data), approved.lock, approved.expected])).rejects.toThrow(/operation ID already used/);
+      await db.exec("RESET ROLE; SET ROLE anon");
+      await expect(db.query("SELECT * FROM documents")).rejects.toThrow(/permission denied/);
+      await expect(db.query("SELECT commit_document_intake_reviewed($1,$2,$3::jsonb,$4,$5)", [approved.id, docId, JSON.stringify(approved.data), approved.lock, approved.expected])).rejects.toThrow(/permission denied/);
     } finally { await db.close(); }
   }, 30000);
 });
