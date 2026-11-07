@@ -19,7 +19,7 @@ async def main():
  OUT.mkdir(parents=True, exist_ok=True)
  async with async_playwright() as p:
   browser = await p.chromium.launch(headless=True)
-  for width,height in [(834,1112),(1180,820),(1440,1000)]:
+  for width,height in [(320,640),(375,812),(390,844),(430,932),(834,1112),(1180,820),(1440,1000)]:
    context = await browser.new_context(viewport={'width':width,'height':height})
    page = await context.new_page()
    errors=[]; blocked=[]
