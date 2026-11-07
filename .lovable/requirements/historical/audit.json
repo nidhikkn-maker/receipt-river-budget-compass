@@ -12581,7 +12581,7 @@
   {
    "cid": "C-1031",
    "category": "document",
-   "status": "missing",
+   "status": "implemented",
    "rep": "Document why the entities compatibility patches are needed and how to safely update or remove them.",
    "sources": [
     "chat #619 2026-11-02 04:55"

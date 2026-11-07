@@ -9,9 +9,9 @@ by 12 independent audits plus manual review of the remainder. Full per-cluster r
 
 | Status | Clusters | Share |
 |---|---|---|
-| implemented | 1534 | 60% |
+| implemented | 1535 | 60% |
 | partial | 934 | 36% |
-| missing | 54 | 2% |
+| missing | 53 | 2% |
 | superseded | 19 | 0% |
 | **total** | 2541 | 100% |
 
@@ -21,7 +21,7 @@ by 12 independent audits plus manual review of the remainder. Full per-cluster r
 |---|---|---|---|---|
 | ai | 32 | 14 | 2 | 0 |
 | asset | 3 | 1 | 0 | 0 |
-| document | 33 | 28 | 6 | 0 |
+| document | 34 | 28 | 5 | 0 |
 | entry | 206 | 81 | 9 | 3 |
 | investment | 6 | 10 | 1 | 0 |
 | loan | 30 | 6 | 0 | 0 |
@@ -42,7 +42,7 @@ tracing) has not been produced. These are verification gaps, not absent features
 
 ## Missing Functionality Register (54)
 
-### Buildable feature gaps (22)
+### Buildable feature gaps (21)
 - **C-0214** (statement): Add an admin view that shows statement upload status, reminder history, and confirmation email delivery for each monthly request.
 - **C-0389** (entry): Each allocation dimension should reconcile independently with the primary budget when configured as a complete allocation.
 - **C-0391** (entry): These functions must remain available through the optional Budget Breakdown view, where applicable.
@@ -83,8 +83,9 @@ tracing) has not been produced. These are verification gaps, not absent features
 - **C-2065** (testing): Test Face ID unlock on the live site and fix any issues.
 - **C-2300** (testing): Test the complete workflow on iPhone Safari.
 
-### External dependencies (5) — blocked outside the codebase
+### External dependencies (6) — blocked outside the codebase
 - **C-0146** (statement): Automatic financial data connections should be evaluated separately according to actual provider availability, bank support, regulatory requirements and user consent.
+- **C-0181** (investment): Users should be able to share bills, invoices, receipts and payment screenshots from WhatsApp directly to the application using the iOS Share Sheet.
 - **C-0204** (travel): Add an email connection or forwarding address so I can automatically bring booking confirmations and trip-related messages into my travel inbox for review.
 - **C-1697** (testing): Give me a demo link for testing for my chat gpt account to verify
 - **C-1698** (testing): Publish my app and configure the ChatGPT MCP endpoint so I can test it with my account.
