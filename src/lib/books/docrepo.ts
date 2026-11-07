@@ -12,10 +12,11 @@ export const docsFor = (links: DocLink[], kind: LinkKind, targetId: string) => l
 
 /** Entity a document belongs to: an explicit link, else a PAN/GSTIN printed in its fields. */
 export function entityOfDoc(d: VaultDoc, links: DocLink[], entities: EntityProfile[]): EntityProfile | null {
-  const l = links.find((x) => x.docId === d.id && x.kind === "entity");
-  if (l) return entities.find((e) => e.id === l.targetId) ?? null;
+  const ids = [...new Set(links.filter(x => x.docId === d.id && x.kind === 'entity').map(x => x.targetId))];
+  if (ids.length) return ids.length === 1 ? entities.find(e => e.id === ids[0]) ?? null : null;
   const vals = (d.fields ?? []).map((f) => f.value.toUpperCase().replace(/\s/g, ""));
-  return entities.find((e) => (e.pan && vals.some((v) => v.includes(e.pan))) || e.gstins.some((g) => vals.includes(g))) ?? null;
+  const candidates = entities.filter(e => (e.pan && vals.some(v => v.includes(e.pan))) || e.gstins.some(g => vals.includes(g)));
+  return candidates.length === 1 ? candidates[0] ?? null : null;
 }
 
 /** Logical folders — no rigid physical hierarchy [§9]. */
@@ -57,7 +58,7 @@ export function pastRetention(docs: VaultDoc[], today: string, years: Partial<Re
 
 /** Export manifest for a controlled export: what is in the bundle and its source identity [§11]. */
 export function exportManifest(docs: VaultDoc[], links: DocLink[], at: string) {
-  return { exportedAt: at, count: docs.length, documents: docs.map((d) => ({ id: d.id, title: d.title, type: DOC_LABEL[d.docType], originalFileName: d.fileName, size: d.size, date: d.docDate, uploadedAt: d.createdAt, replaces: d.replacesId ?? null, links: linksOf(links, d.id).map((l) => `${l.kind}:${l.label}`), fields: (d.fields ?? []).map((f) => ({ label: f.label, value: f.value, page: f.page, quote: f.quote, confidence: f.confidence, status: f.status })) })) };
+  return { exportedAt: at, count: docs.length, documents: docs.map((d) => ({ id: d.id, title: d.title, type: DOC_LABEL[d.docType], originalFileName: d.fileName, size: d.size, date: d.docDate, uploadedAt: d.createdAt, replaces: d.replacesId ?? null, links: linksOf(links, d.id).map((l) => `${l.kind}:${l.label}`), fields: (d.fields ?? []).map((f) => ({ label: f.label, value: f.value, originalValue: f.originalValue ?? null, page: f.page, section: f.section ?? null, quote: f.quote, confidence: f.confidence, status: f.status })) })) };
 }
 
 /** Upcoming renewals as reminder items for the shared reminder engine [§11]. */

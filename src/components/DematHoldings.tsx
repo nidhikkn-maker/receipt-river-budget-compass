@@ -14,7 +14,7 @@ export function DematHoldings() {
     <section className="mb-6 rounded-3xl border bg-card p-5">
       <div className="flex items-center justify-between gap-3">
         <h2 className="font-display text-lg font-bold">Demat holdings</h2>
-        <Button asChild variant="outline" size="sm"><Link to="/statements"><Upload className="h-4 w-4" />Upload</Link></Button>
+        <Button asChild variant="outline" size="sm"><Link to="/statements" search={{ context: 'investments' }}><Upload className="h-4 w-4" />Upload</Link></Button>
       </div>
       {!rows.length && <p className="mt-2 text-sm text-muted-foreground">Upload your demat holding statement on Statement Desk to see holdings here.</p>}
       {rows.map((d) => {

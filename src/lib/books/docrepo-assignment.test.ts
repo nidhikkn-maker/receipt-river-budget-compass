@@ -18,6 +18,20 @@ const doc = (over: Partial<VaultDoc>): VaultDoc => ({
 });
 
 describe("automatic assignment from source evidence", () => {
+  it('seller and buyer identities never choose an arbitrary company; explicit owner selection resolves ambiguity', () => {
+    const buyer = { ...acme, id: 'buyer', name: 'Buyer Ltd', pan: 'AAACB1234A', gstins: ['33AAACB1234A1Z5'] };
+    const d = doc({ fields: [{ label: 'Seller GSTIN', value: acme.gstins[0] ?? '', page: 1, quote: '', confidence: 'high', status: 'confirmed' }, { label: 'Buyer GSTIN', value: buyer.gstins[0] ?? '', page: 1, quote: '', confidence: 'high', status: 'confirmed' }] });
+    expect(entityOfDoc(d, [], [acme, buyer])).toBeNull();
+    expect(entityOfDoc(d, [], [buyer, acme])).toBeNull();
+    expect(entityOfDoc(d, [{ docId: d.id, kind: 'entity', targetId: buyer.id, label: buyer.name }], [acme, buyer])?.id).toBe('buyer');
+    expect(entityOfDoc(d, [acme, buyer].map(e => ({ docId: d.id, kind: 'entity' as const, targetId: e.id, label: e.name })), [acme, buyer])).toBeNull();
+  });
+
+  it('export and reload retain original corrected values and section-based source locators', () => {
+    const d = doc({ fields: [{ label: 'Amount', value: '1050', originalValue: '1000', page: null, section: 'Clause 8', quote: 'Amount 1000', confidence: 'high', status: 'corrected' }] });
+    const reloaded = JSON.parse(JSON.stringify(exportManifest([d], [], '2026-11-07')));
+    expect(reloaded.documents[0].fields[0]).toMatchObject({ value: '1050', originalValue: '1000', section: 'Clause 8', page: null });
+  });
   it("assigns the company from an explicit link, else from a PAN/GSTIN printed in the fields", () => {
     const d = doc({ id: "d1" });
     expect(entityOfDoc(d, [], [acme])).toBeNull(); // no link, no printed identity → unassigned, never guessed
