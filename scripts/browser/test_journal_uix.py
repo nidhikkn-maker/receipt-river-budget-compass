@@ -62,7 +62,7 @@ async def main():
    receipt=OUT/'receipt.png';Image.new('RGB',(200,280),'white').save(receipt)
    await page.get_by_label('Take a photo of a receipt').set_input_files(receipt)
    await expect(page.get_by_role('heading',name='Intelligent Canvas')).to_be_visible()
-   await page.get_by_role('group',name='Review scanned details').scroll_into_view_if_needed()
+   await page.evaluate('window.scrollTo(0,0)'); await page.get_by_role('group',name='Review scanned details').screenshot(path=str(OUT/f'{width}-canvas-detail.png'))
    await page.screenshot(path=str(OUT/f'{width}-canvas.png'))
    assert await page.evaluate('expenseBrowserFixture.saves.length')==0
    assert not errors, errors
