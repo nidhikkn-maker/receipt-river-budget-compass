@@ -18,7 +18,7 @@ vi.mock("@tanstack/react-start", () => ({ useServerFn: () => state.nav }));
 vi.mock("@/lib/mutual-funds.functions", () => ({ getFundNav: vi.fn() }));
 vi.mock("@/lib/investments/holdings-store", () => ({ loadDemat: async () => [] }));
 vi.mock("@/integrations/supabase/client", () => ({ supabase: { from: () => { const q: Record<string, unknown> = { then: (done: (x: unknown) => unknown) => Promise.resolve(done({ data: [], error: null })) }; for (const name of ["select", "in", "order", "limit", "eq", "maybeSingle"]) q[name] = () => q; return q; } } }));
-vi.mock("@tanstack/react-router", () => ({ Link: ({ to, hash, children, ...props }: { to: string; hash?: string; children: React.ReactNode }) => <a href={to + (hash ? "#" + hash : "")} {...props}>{children}</a> }));
+vi.mock("@tanstack/react-router", () => ({ useRouterState: () => "", Link: ({ to, hash, children, ...props }: { to: string; hash?: string; children: React.ReactNode }) => <a href={to + (hash ? "#" + hash : "")} {...props}>{children}</a> }));
 import { MarketPanel } from "./MarketPanel";
 import { NetWorthCard } from "./NetWorthCard";
 const owner = "00000000-0000-0000-0000-000000000001", other = "00000000-0000-0000-0000-000000000002";
