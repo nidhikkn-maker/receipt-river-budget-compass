@@ -92,7 +92,9 @@ export function useNetWorth() {
     const valued = books.holdings.filter((h) => !(h.isin && dematIsins.has(h.isin))).map((h) => {
       if (h.kind === "broker_cash" && h.cashAccountId) {
         const account = live.find(a => a.id === h.cashAccountId && ["savings","current","cash","wallet"].includes(a.kind));
-        return { holding: h, key: null, quote: null, value: null, stale: false, note: account ? `Counted once in ${account.name} ledger balance · statement cash ${h.quantity}` : "Linked cash account unavailable — review the link before valuation" };
+        const balance = account ? accountValue(account, transactions, valuations).value : null;
+        const gap = balance == null ? null : Math.round((h.quantity * h.sharePct / 100 - balance)*100)/100;
+        return { holding: h, key: null, quote: null, value: null, stale: false, countedElsewhere: !!account, note: account ? `Counted once in ${account.name} ledger balance · statement cash ${h.quantity}${gap ? ` · statement/ledger difference ${gap.toFixed(2)} INR — review required` : " · statement and ledger agree"}` : "Linked cash account unavailable — review the link before valuation" };
       }
       if (h.kind === "bond" && (!h.bond || !documents.some(d => d.id === h.bond?.docId))) return { holding: h, key: null, quote: null, value: null, stale: true, note: "Bond original document and reviewed terms required" };
       const c = h.isin && h.exchange ? pickClose(closes.byIsin, closes.byIsinEx, h.isin, h.exchange) : undefined;

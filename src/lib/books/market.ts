@@ -68,7 +68,7 @@ export function fmtIst(iso: string): string {
   return `${d.getUTCDate()} ${["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][d.getUTCMonth()]} ${d.getUTCFullYear()}, ${String(d.getUTCHours()).padStart(2,"0")}:${String(d.getUTCMinutes()).padStart(2,"0")} IST`;
 }
 
-export interface Valued { holding: Holding; key: string | null; quote: Quote | null; value: number | null; stale: boolean; note: string }
+export interface Valued { holding: Holding; key: string | null; quote: Quote | null; value: number | null; stale: boolean; note: string; countedElsewhere?: boolean }
 
 /** Latest dated owner-entered INR rate for a currency; null when none exists — a rate is never guessed [v6.1 §2]. */
 export function fxFor(currency: string, fxRates: FxRate[]): FxRate | null {
@@ -130,7 +130,7 @@ export function dynamicNetWorth(parts: { bank: number; bankBasis: string; invest
     { label: "Other assets", value: parts.otherAssets, basis: "latest recorded value", live: false },
   ];
   const total = assets.reduce((s, a) => s + a.value, 0);
-  const missing = parts.investments.filter((v) => v.value == null).length;
+  const missing = parts.investments.filter((v) => v.value == null && !v.countedElsewhere).length;
   const stale = parts.investments.filter((v) => v.stale).length;
   return {
     assets, liabilities: parts.liabilities, liabilitiesBasis: parts.liabilitiesBasis, liabilitiesAsOf: parts.asOf?.liabilities ?? null,
@@ -149,7 +149,7 @@ export function addSnapshot(list: Snapshot[], s: Snapshot): Snapshot[] {
 /** Configurable valuation alerts [v6.1 §13]. */
 export function valuationAlerts(valued: Valued[], snapshots: Snapshot[], a: AlertSettings, statementQty: Record<string, number>, qtyHoldings: Holding[] = valued.map((v) => v.holding), corporateActions: { name: string; note: string }[] = [], dematMissing: string[] = []): string[] {
   const out: string[] = [];
-  if (a.missingPrices) { const m = valued.filter((v) => v.value == null); if (m.length) out.push(`${m.length} holding${m.length > 1 ? "s have" : " has"} no price`); }
+  if (a.missingPrices) { const m = valued.filter((v) => v.value == null && !v.countedElsewhere); if (m.length) out.push(`${m.length} holding${m.length > 1 ? "s have" : " has"} no price`); }
   for (const v of valued) if (v.stale && v.holding.kind === "mutual_fund") out.push(`${v.holding.name}: NAV older than ${a.staleNavDays} days`);
   if (snapshots.length >= 2) {
     const [p, c] = snapshots.slice(-2) as [Snapshot, Snapshot];
