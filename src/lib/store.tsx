@@ -432,9 +432,10 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
     if (!navigator.onLine) throw Error('Reconnect before syncing statement progress');
     await checkpointUpload(upload, {
       read: async () => {
-        const result = await supabase.from('finance_preferences').select('data,revision').eq('owner_id',userId).single();
+        // A new account has no saved preferences row yet; -1 asks the database to create it (same as savePreferences).
+        const result = await supabase.from('finance_preferences').select('data,revision').eq('owner_id',userId).maybeSingle();
         check(result.error);
-        if (!result.data) throw Error('Refresh your records before saving statement progress');
+        if (!result.data) return { data: normalizePreferences({}), revision: -1 };
         return { data: result.data.data as unknown as FinancePreferences, revision: result.data.revision };
       },
       write: async (data, revision, id) => {
