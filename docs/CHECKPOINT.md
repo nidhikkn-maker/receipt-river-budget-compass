@@ -1,4 +1,12 @@
-# Ledgerline continuation checkpoint — 7 Nov 2026 21:35 UTC
+# Ledgerline continuation checkpoint — 8 Nov 2026 01:22 UTC
+
+## Latest P0 batch
+- Upload-time owner-read Undo baseline retained, same-source later edits blocked, server uses saved owner upload history. Preferences are not immutable authority; staged database release still pending.
+- 17 actual-component synthetic browser cases passed; full suite 2,080 passed before one final added privacy test; final privacy/snapshot 9 passed. Exact evidence: docs/evidence/p0-checkpoint-2026-11-08.md.
+- Hosted workflow acceptance draft is confirmed isolated, but this Main session cannot execute its authenticated storage tests. Do not use drafts sharing the live database. Original-byte hosted downloads/revocation/expiry remain open.
+- Full account/source/draft unknown-outcome cross-device recovery and immutable operation receipts remain open; no false P0 completion.
+- Old one-off test failure identity/stack unavailable; current captured full suite passes, intermittent defect remains undiagnosed.
+- Latest observed balance 1,035.71; conservative cap remaining 931.70 including protected 300 reserve. No real records, publishing, policies, migrations or approvals changed; no UI redesign.
 
 ## Credit position
 - Workspace balance 1,039.12 (was 1,148.01 at the 19:05 snapshot). Conservative cap remaining ≈ 940 of 1,100 including the untouched 300 reserve.
