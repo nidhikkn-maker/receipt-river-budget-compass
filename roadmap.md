@@ -1056,4 +1056,6 @@
 ## Independent-input Milestone 1 + Milestone 2 batch — 8 Nov 2026 10:10 UTC
 - [x] Independent bank-vs-books matching check (separately authored statement and documents): one-to-one matches, duplicate bank debit, unrecorded charges and short receipt all stay visible (5 tests).
 - [ ] Actual-extraction upload→review→post→reconcile→statements→close screen journey with accountant change/interruption; statutory disclosures; V60-0013/0026/0023 acceptance. Not done this turn.
-- [ ] Milestone 2: loan statement extraction, principal/interest split, EMI matching, financed assets, depreciation, investment holdings reconciliation, net worth. Not started this turn.
+- [x] Milestone 2 slice: independent broker/demat/gains documents through the real reader, holdings reconciliation, dividend evidence, re-upload dedup, unknown-ISIN refusal, EMI debit matching (8 tests). Fixed partial-lot sale double count.
+- [ ] Milestone 2 remaining: lender-statement principal/interest extraction, financed-asset registration+depreciation link, net worth end-to-end.
+- [ ] Repeat request 8 Nov 10:15: on-screen M1 journey with actual AI extraction, accountant approval/close, statutory disclosures — still open.
