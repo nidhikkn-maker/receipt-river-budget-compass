@@ -1,4 +1,4 @@
-import {useEffect,useState} from 'react';
+import {useEffect,useRef,useState} from 'react';
 import {toast} from 'sonner';
 import {useStore} from '@/lib/store';
 import {Button} from '@/components/ui/button';
@@ -13,10 +13,11 @@ const newLeg=():AccountingLeg=>({code:'',label:'',role:'asset',debit:0,credit:0}
 export function AccountingJournalReview({entityId}:{entityId:string}){
  const store=useStore();const [open,setOpen]=useState(false),[available,setAvailable]=useState(false),[loaded,setLoaded]=useState(false);
  const [attempt,setAttempt]=useState<AccountingAttempt|null>(null);
+ const latest=useRef<AccountingAttempt|null>(null),writes=useRef<Promise<unknown>>(Promise.resolve());
  const key=`accounting-draft:${store.userId}:${entityId}`;
- useEffect(()=>{let live=true;setLoaded(false);setAttempt(null);void Promise.all([store.accountingAvailable(),getSnapshot<AccountingAttempt|null>(key)]).then(([enabled,saved])=>{if(live){setAvailable(enabled);setAttempt(saved??null);setLoaded(true);}}).catch(()=>{if(live){setAvailable(false);setLoaded(true);}});return()=>{live=false;};},[key]);
+ useEffect(()=>{let live=true;setLoaded(false);setAttempt(null);void Promise.all([store.accountingAvailable(),getSnapshot<AccountingAttempt|null>(key)]).then(([enabled,saved])=>{if(live){setAvailable(enabled);latest.current=saved??null;setAttempt(saved??null);setLoaded(true);}}).catch(()=>{if(live){setAvailable(false);setLoaded(true);}});return()=>{live=false;};},[key]);
  const j=attempt?.journal;const errors=j?accountingErrors(j,store.accounts,store.preferences.books??emptyBooks(),store.documents):[];
- const keep=async(journal:AccountingJournal)=>{const next:AccountingAttempt={owner:store.userId,requestId:attempt?.requestId??crypto.randomUUID(),expected:attempt?.expected??store.preferencesRevision??-1,journal};await putSnapshot(key,next);setAttempt(next);};
+ const keep=async(journal:AccountingJournal)=>{const prior=latest.current;const next:AccountingAttempt={owner:store.userId,requestId:prior?.requestId??crypto.randomUUID(),expected:prior?.expected??store.preferencesRevision??-1,journal};latest.current=next;setAttempt(next);const work=writes.current.catch(()=>undefined).then(()=>putSnapshot(key,next));writes.current=work;await work;};
  const start=()=>keep({id:crypto.randomUUID(),entityId,date:new Date().toISOString().slice(0,10),kind:'accrual',description:'',documentIds:[],legs:[newLeg(),newLeg()]}).then(()=>setOpen(true));
  const edit=(i:number,patch:Partial<AccountingLeg>)=>{if(j)void keep({...j,legs:j.legs.map((l,n)=>n===i?{...l,...patch}:l)}).catch(e=>toast.error(e.message));};
  const journals=store.transactions.flatMap(e=>{const a=journalFromEntry(e);return a?.primary&&a.journal.entityId===entityId?[a.journal]:[];});
@@ -30,7 +31,7 @@ export function AccountingJournalReview({entityId}:{entityId:string}){
  {j.legs.map((l,i)=><div key={i} className="grid gap-2 border-b pb-2 sm:grid-cols-3"><Input aria-label={`Account code ${i+1}`} value={l.code} onChange={e=>edit(i,{code:e.target.value})}/><Input aria-label={`Account label ${i+1}`} value={l.label} onChange={e=>edit(i,{label:e.target.value})}/><select aria-label={`Account role ${i+1}`} className="rounded-md border bg-background p-2" value={l.role} onChange={e=>edit(i,{role:e.target.value as AccountingLeg['role']})}>{roles.map(r=><option key={r}>{r}</option>)}</select><select aria-label={`Money account ${i+1}`} className="rounded-md border bg-background p-2" value={l.accountId??''} onChange={e=>{const a=store.accounts.find(a=>a.id===e.target.value);edit(i,{accountId:a?.id,code:a?`account:${a.id}`:l.code,label:a?.name??l.label});}}><option value="">Noncash accounting account</option>{store.accounts.filter(a=>store.preferences.books?.entityAccounts?.[entityId]?.includes(a.id)).map(a=><option key={a.id} value={a.id}>{a.name}</option>)}</select><Input type="number" aria-label={`Debit ${i+1}`} value={l.debit} onChange={e=>edit(i,{debit:Number(e.target.value),credit:0})}/><Input type="number" aria-label={`Credit ${i+1}`} value={l.credit} onChange={e=>edit(i,{credit:Number(e.target.value),debit:0})}/><select aria-label={`Cash flow ${i+1}`} className="rounded-md border bg-background p-2" value={l.cashFlow??''} onChange={e=>edit(i,{cashFlow:e.target.value as AccountingLeg['cashFlow']||undefined})}><option value="">Cash flow unclassified</option>{['operating','investing','financing'].map(k=><option key={k}>{k}</option>)}</select><Button variant="ghost" onClick={()=>void keep({...j,legs:j.legs.filter((_,n)=>n!==i)})}>Remove leg</Button></div>)}
  <Button variant="outline" onClick={()=>void keep({...j,legs:[...j.legs,newLeg()]})}>Add leg</Button>
  {!!errors.length&&<ul className="list-disc pl-4 text-sm text-destructive">{errors.map(e=><li key={e}>{e}</li>)}</ul>}
- <Button disabled={!available||!!errors.length} onClick={async()=>{if(!attempt)return;try{await store.postAccounting(attempt);await putSnapshot(key,null);setAttempt(null);setOpen(false);toast.success('Balanced journal saved');}catch(e){toast.error((e as Error).message);}}}>Confirm balanced journal</Button>
+ <Button disabled={!available||!!errors.length} onClick={async()=>{if(!attempt)return;try{await writes.current;await store.postAccounting(attempt);await putSnapshot(key,null);latest.current=null;setAttempt(null);setOpen(false);toast.success('Balanced journal saved');}catch(e){toast.error((e as Error).message);}}}>Confirm balanced journal</Button>
  </div>}</DialogContent></Dialog>
  </div></details>;
 }
