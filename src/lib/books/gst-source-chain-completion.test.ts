@@ -15,3 +15,8 @@ it('later paid reverse charge retains the original and linked payment in the cre
  const chain=derivedEvidence({assets:[],books,docs:[{id:'rcm-source',title:'RCM original'}],entryTitle:id=>id}) .find(r=>r.id.endsWith('2026-11'));
  expect(chain?.inputs.map(i=>i.amount)).toEqual([180,-180]);expect(chain?.inputs[1]?.source?.id).toBe('rcm-source');expect(chain?.amount).toBe(0);
 });
+it('display limits retain every material input in the downloadable dependency manifest',()=>{
+ const invoices=Array.from({length:105},(_,n)=>({...invoice,id:`i${n}`,number:String(n),docId:`d${n}`}));
+ const chain=derivedEvidence({assets:[],books:{...emptyBooks(),gstInvoices:invoices},docs:invoices.map(i=>({id:i.docId,title:i.number}))})[0];
+ expect(chain?.inputs).toHaveLength(100);expect(chain?.allInputs).toHaveLength(105);expect(chain?.omittedInputs).toBe(5);expect(chain?.allInputs?.[104]?.source?.id).toBe('d104');expect(chain?.amount).toBe(18900);
+});
