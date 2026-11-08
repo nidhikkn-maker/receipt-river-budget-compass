@@ -37,7 +37,7 @@ async def main():
   await page.screenshot(path=str(OUT/'interrupted.png'))
   await page.reload()
   await expect(page.get_by_text('Ready on this device; history save not confirmed.',exact=True)).to_be_visible(timeout=15000)
-  await page.get_by_role('button',name='Retry saving history',exact=False).click()
+  await page.get_by_role('button',name='Retry saving to history',exact=False).click()
   await expect(page.get_by_text('Saved in Reports Centre → Report history.',exact=True)).to_be_visible()
   async with page.expect_download() as pending:await page.get_by_role('button',name='Download',exact=True).click()
   d=await pending.value;await d.save_as(OUT/'claim.pdf')
