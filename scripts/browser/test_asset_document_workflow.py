@@ -53,7 +53,7 @@ async def main():
   await expect(review.get_by_label('Asset name',exact=True)).to_have_value('Invoice generator')
   await expect(review.get_by_label('Cost',exact=True)).to_have_value('150000')
   await review.screenshot(path=str(ROOT/'invoice-proposal.png'))
-  await review.get_by_label('Put to use',exact=True).fill('2026-04-01')
+  await review.get_by_label('Put to use',exact=True).fill('2026-04-02')
   await review.get_by_label('Useful life',exact=True).fill('10')
   await review.get_by_label('Residual value',exact=True).fill('0')
   cap=review.get_by_role('checkbox',name='Capitalise this as a fixed asset',exact=False)
