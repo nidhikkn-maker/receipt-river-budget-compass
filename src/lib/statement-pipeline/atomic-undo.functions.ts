@@ -2,6 +2,7 @@ import { createServerFn } from '@tanstack/react-start';
 import { z } from 'zod';
 import { requireSupabaseAuth } from '@/integrations/supabase/auth-middleware';
 import { atomicStatementUndo } from './atomic-undo';
+import { cleanStatementUploads } from '../preferences';
 
 const input = z.object({
   id: z.string().uuid(),
@@ -16,12 +17,17 @@ export const undoStatement = createServerFn({ method: 'POST' })
   .inputValidator((data: unknown) => input.parse(data))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
+    const saved = await supabase.from('finance_preferences').select('data').eq('owner_id', userId).maybeSingle();
+    if (saved.error || !saved.data) throw Error('Upload history is unavailable. Recovery is retained.');
+    const prefs = saved.data.data as { statementUploads?: unknown };
+    const upload = cleanStatementUploads(prefs.statementUploads).find(u => u.id === data.id);
+    if (!upload || JSON.stringify([...upload.posted].sort()) !== JSON.stringify([...data.posted].sort()) || JSON.stringify([...upload.reconciled].sort()) !== JSON.stringify([...data.reconciled].sort())) throw Error('Undo does not match the saved upload. Recovery is retained.');
     // Narrow typed boundary until the owner authorises installing the staged SQL/type refresh.
     const staged = supabase as unknown as {
       from: (table: 'statement_undo_receipts') => { select: (columns: string) => { eq: (column: string, value: string) => { eq: (column: string, value: string) => { maybeSingle: () => Promise<{ data: { id: string } | null; error: { message: string } | null }> } } } };
       rpc: (name: 'undo_statement_rows', args: { _id: string; _items: unknown }) => Promise<{ data: string | null; error: { message: string } | null }>;
     };
-    await atomicStatementUndo(data.id, data, data.expected, {
+    await atomicStatementUndo(data.id, upload, upload.undoRows ?? [], {
       receipt: async id => {
         const result = await staged.from('statement_undo_receipts').select('id').eq('owner_id', userId).eq('id', id).maybeSingle();
         if (result.error) throw Error('Safe Undo is awaiting database release approval. Your records and recovery history are unchanged.');

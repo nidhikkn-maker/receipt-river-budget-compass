@@ -1,3 +1,13 @@
+## P0 checkpoint continuation — 8 Nov 2026
+- [x] Upload-time owner-read revision/reference baselines persisted; later same-source edits block Undo, and server ignores client-supplied replacement baselines. Legacy/missing baselines fail closed.
+- [x] Isolated CSV Smart Add preview → review → double confirmation → save → reload/re-upload and interrupted-evidence recovery; no navigation or duplicate entries. 17 browser cases passed, synthetic local adapters only.
+- [x] Disposable database interruption/source/draft/report recovery and staged atomic Undo regressions passed. No production migrations or financial changes.
+- [ ] P0 durable cross-device journal: lost account/source receipts and unknown commit outcomes still need upload-bound database authority; do not reconstruct missing outcomes/baselines from current records.
+- [ ] P0 trusted immutable baseline/atomic Undo activation: client preferences retain a captured baseline but are not immutable authority. Staged database release remains unapproved.
+- [ ] P0 hosted sharing: existing Hosted workflow acceptance draft has its own database, confirmed again; this main session cannot execute that draft's authenticated storage acceptance. Previous empty-download/issued-URL expiry cases remain unverified.
+- [ ] Previous one-off automated failure: original test identity/stack absent from retained logs; full current suite passed 2,080 tests with captured JSON. Intermittency is undiagnosed, not dismissed as harmless.
+- Current design preserved; no publish, approval-trigger activation or live access changes. See docs/evidence/p0-checkpoint-2026-11-08.md.
+
 ## Owner iPhone defects A–F — 7 Nov 2026 21:05 (development preview only)
 - [x] Smart Add panel mode: no nested page header/ticket/toolbar/zoom hints; framed real photo; "Here's what I found" fields open; kind chips; one primary action per step; claim/asset next steps after save; demat Add holdings opens Smart Add.
 - [x] Review: Needs checking / Checked / Set aside with Bring back; quick fixes only for non-zero counts (≤3 shown as the actual entries); reminders grouped and de-duplicated in folds.
