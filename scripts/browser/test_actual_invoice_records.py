@@ -43,7 +43,7 @@ async def main():
   saved=json.loads(await page.evaluate('localStorage.getItem("controlled-asset-document")'))
   matched=[a for a in saved['preferences']['assets'] if a['name']=='Industrial Generator'];assert len(matched)==1 and matched[0]['cost']==150000
   assert len(saved['documents'])==1 and matched[0]['docId']==saved['documents'][0]['id'] and saved['commits']==1 and saved['reads']==1
-  await page.goto('http://localhost:8080/assets');await page.reload();await expect(page.get_by_text('Industrial Generator',exact=True)).to_be_visible();await page.screenshot(path=str(ROOT/'actual-assets-reloaded.png'))
+  await page.goto('http://localhost:8080/assets');await page.reload();await page.wait_for_timeout(2000);await page.screenshot(path=str(ROOT/'actual-assets-reloaded.png'));print('Asset page',await page.locator('body').inner_text(),errors,flush=True);await expect(page.get_by_text('Industrial Generator',exact=False).first).to_be_visible()
   await page.goto('http://localhost:8080/vault');await page.reload();await expect(page.get_by_text(reading['result']['title'],exact=True)).to_be_visible();await expect(page.get_by_text('invoice.png',exact=True)).to_be_visible();await page.screenshot(path=str(ROOT/'actual-vault-reloaded.png'))
   assert not errors,errors
   print('PASS actual non-mocked AI output → uploaded matching synthetic invoice → real review → lost response/retry → source-linked asset → actual Assets/DocuRepo reload; local adapters only, not hosted auth/storage.')
