@@ -1,3 +1,8 @@
+## Six-requirement completion acceptance — 8 Nov 2026
+- [ ] Read exact V60-0016/0026/0058/0066/0082/0716 source criteria; reconcile prior status, close actual connected-screen gaps and classify external acceptance separately.
+- [ ] Complete claim interruption/reopen/retry/deduplication and compare original records/documents/downloads.
+- [ ] Promote only complete acceptance; continue directly related independently completable historical criteria; maintain reserve and release holds.
+
 ## P1 source handoffs and connected exports — 8 Nov 2026
 - [x] Asset follow-up links the existing payment in place; repeat/double click creates no second asset/payment. Claim follow-up reuses the existing builder and exact saved entry ID; full in-sheet claim PDF/resume acceptance remains open.
 - [x] Same CSV original → 2 saved lines → Inbox/reconciliation/DocuRepo pure readback → actual Reports CSV/Excel/PDF downloads → Undo restoring 1000 balance passes in synthetic browser. Separate asset maintenance originals/retry and claim/report PDF annexures pass; not a full connected-screen/hosted claim.
