@@ -92,6 +92,7 @@ BEGIN
   SELECT * INTO prior FROM public.accounting_journal_evidence WHERE id=(_journal->>'reversesId')::uuid AND owner_id=uid AND entity_id=ent;
   IF NOT FOUND OR _journal->>'kind'<>'reversal' OR dt<(prior.journal->>'date')::date THEN RAISE EXCEPTION 'Invalid reversal'; END IF;
   IF EXISTS(SELECT 1 FROM public.accounting_journal_evidence WHERE owner_id=uid AND journal->>'reversesId'=_journal->>'reversesId') THEN RAISE EXCEPTION 'Journal already reversed'; END IF;
+  IF EXISTS(SELECT 1 FROM public.accounting_journal_evidence s WHERE s.owner_id=uid AND s.journal->'settlement'->>'journalId'=prior.id::text AND s.journal->>'kind'<>'reversal' AND NOT EXISTS(SELECT 1 FROM public.accounting_journal_evidence r WHERE r.owner_id=uid AND r.journal->>'reversesId'=s.id::text)) THEN RAISE EXCEPTION 'Reverse retained settlements before correcting the accrual'; END IF;
   IF (SELECT jsonb_agg(jsonb_set(jsonb_set(x,'{debit}',x->'credit'),'{credit}',x->'debit') ORDER BY x->>'code') FROM jsonb_array_elements(prior.journal->'legs') x) IS DISTINCT FROM (SELECT jsonb_agg(x ORDER BY x->>'code') FROM jsonb_array_elements(_journal->'legs') x) THEN RAISE EXCEPTION 'Reversal must exactly swap original legs'; END IF;
  END IF;
  -- Only linked money legs affect accountBalance. Noncash journals retain one zero-delta canonical anchor.

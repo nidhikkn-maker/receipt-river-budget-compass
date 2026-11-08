@@ -60,6 +60,7 @@ it('isolated opening → accrual → correction → disk restart → frozen stat
  await expect(post({...fake,legs:fake.legs.map(l=>l.role==='expense'?{...l,code:'expense:invented'}:l)} as AccountingJournal,92)).rejects.toThrow('exact bank');
  await db.query('DELETE FROM expenses WHERE id=$1',[uuid(91)]);
  await expect(post({...settlement,id:uuid(73)},74)).rejects.toThrow('already settled');
+ await expect(post(reverseAccountingJournal(rent,uuid(93),'2026-05-04','Correct rent with active settlement'),94)).rejects.toThrow('Reverse retained settlements');
  await expect(db.query('UPDATE expenses SET amount=499 WHERE id=$1',[payment.id])).rejects.toThrow('retained');
  const settled=corporateStatements({entityId:'A',entities:prefs.entities as never,books:prefs.books,accounts:[{id:bank,name:'Bank',kind:'current',openingBalance:0,archived:false}],documents:[{id:document,entityId:'A',filePath:`${owner}/audited.pdf`} as VaultDoc],entries:await entries(),from:'2026-04-01',to:'2027-03-31'});
  expect(settled.profit).toBe(2000);expect(settled.liabilities).toBe(25500);expect(settled.cash.closing).toBe(99500);expect(settled.cash.operating).toBe(-500);expect(settled.trialDifference).toBe(0);expect(settled.balanceDifference).toBe(0);
