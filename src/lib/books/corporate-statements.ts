@@ -135,7 +135,7 @@ export function corporateStatements(p: { entityId: string; entities: EntityProfi
     if (company!==entity.id && touched.length && !['transfer','investment','card_payment','loan_repayment'].includes(kind)) issue(e.id,'Company account movement is manually attributed elsewhere; counterpart requires review.');
   }
   // Registers are supporting schedules, not extra postings. Their absence must not imply completeness.
-  for(const i of p.books.gstInvoices)if(entity.gstins.includes(i.gstin)&&i.date<=p.to&&!i.transactionId)issue(i.id,'Invoice is register-only: accrual/settlement has not been posted to the ledger.');
+  for(const i of p.books.gstInvoices)if(entity.gstins.includes(i.gstin)&&i.date<=p.to&&!i.transactionId&&![...entries.values()].some(e=>journalEntries.has(e.id)&&journalFromEntry(e)?.journal.invoiceId===i.id))issue(i.id,'Invoice is register-only: accrual/settlement has not been posted to the ledger.');
   for(const j of p.books.journals)if(j.status==='prepared'&&j.period<=p.to.slice(0,7)&&p.books.docLinks.some(l=>l.kind==='asset'&&l.targetId===j.assetId&&p.documents.some(d=>d.id===l.docId&&d.entityId===entity.id)))issue(j.id,'Prepared depreciation is not posted; financial statements exclude it.');
   const balances:CorporateBalance[]=[];
   for(const group of balancedGroups(lines))issue(group,'Accounting group is not balanced; review its source legs.');

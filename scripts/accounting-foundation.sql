@@ -67,6 +67,10 @@ BEGIN
   deb:=deb+(l->>'debit')::numeric;cred:=cred+(l->>'credit')::numeric;
  END LOOP;
  IF deb<>cred THEN RAISE EXCEPTION 'Unbalanced journal; differences cannot be accepted'; END IF;
+ IF _journal->>'invoiceId' IS NOT NULL THEN
+  IF NOT EXISTS(SELECT 1 FROM jsonb_array_elements(coalesce(prefs->'books'->'gstInvoices','[]')) i WHERE i->>'id'=_journal->>'invoiceId' AND (i->>'transactionId' IS NULL) AND _journal->'documentIds' ? (i->>'docId') AND coalesce((SELECT e->'gstins' FROM jsonb_array_elements(prefs->'entities') e WHERE e->>'id'=ent),'[]') ? (i->>'gstin')) THEN RAISE EXCEPTION 'Invoice source or company differs, or already linked'; END IF;
+  IF EXISTS(SELECT 1 FROM public.accounting_journal_evidence WHERE owner_id=uid AND journal->>'invoiceId'=_journal->>'invoiceId' AND journal->>'kind'<>'reversal') THEN RAISE EXCEPTION 'Invoice already posted; correct with source-preserving reversal'; END IF;
+ END IF;
  IF _journal->>'kind'='opening' AND EXISTS(SELECT 1 FROM public.accounting_journal_evidence WHERE owner_id=uid AND entity_id=ent AND journal->>'kind'='opening' AND (journal->>'date')::date=dt) THEN RAISE EXCEPTION 'Opening already posted for this date'; END IF;
  IF _journal->>'reversesId' IS NOT NULL THEN
   SELECT * INTO prior FROM public.accounting_journal_evidence WHERE id=(_journal->>'reversesId')::uuid AND owner_id=uid AND entity_id=ent;
