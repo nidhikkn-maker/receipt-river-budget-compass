@@ -8,7 +8,8 @@ describe("requested exports", () => {
   it('Excel keeps report rows exact and formula-looking text literal', async () => {
     const { read, utils } = await import('xlsx');
     const blob = await toExcel({ title: 'Test', headers: ['Name', 'INR'], rows: [['=SUM(1,2)', '432.10']] });
-    const book = read(await blob.arrayBuffer(), { type: 'array' });
+    const bytes = await new Promise<ArrayBuffer>((resolve, reject) => { const reader = new FileReader(); reader.onload = () => resolve(reader.result as ArrayBuffer); reader.onerror = reject; reader.readAsArrayBuffer(blob); });
+    const book = read(bytes, { type: 'array' });
     const sheet = book.Sheets['Report'];
     expect(sheet?.['A2']?.f).toBeUndefined();
     expect(sheet && utils.sheet_to_json(sheet, { header: 1 })).toEqual([['Name', 'INR'], ['=SUM(1,2)', '432.10']]);
