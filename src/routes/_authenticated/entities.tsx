@@ -1,5 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
+import { openSmartAdd } from '@/lib/smart-add-event';
 import { toast } from "sonner";
 import { PageTitle } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
@@ -68,7 +69,7 @@ function Entities() {
   return (
     <div className="uix-family-business mx-auto max-w-4xl space-y-6">
       <PageTitle title="Companies & years" sub="Each company or person you keep books for, and which past years are on record." />
-      {!edit && <div className="flex flex-wrap gap-2"><Link to="/statements" search={{ context: "entity" }} className="inline-flex items-center rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground">Add from documents</Link><Button variant="outline" onClick={() => { setEdit(blank()); setGst(""); }}>Add manually</Button><Link to="/company-spending" className="inline-flex items-center rounded-md border px-4 py-2 text-sm font-semibold">Compare spending</Link></div>}
+      {!edit && <div className="flex flex-wrap gap-2"><Button onClick={() => openSmartAdd('entity')}>Add from documents</Button><Button variant="outline" onClick={() => { setEdit(blank()); setGst(""); }}>Add manually</Button><Link to="/company-spending" className="inline-flex items-center rounded-md border px-4 py-2 text-sm font-semibold">Compare spending</Link></div>}
       {!edit && <p className="text-xs text-muted-foreground">Upload the incorporation certificate, PAN, GST certificate, MoA/AoA or partnership/LLP/trust deed — the profile is read for you to review. Re-uploading matches by PAN, CIN or GSTIN, so no duplicates.</p>}
 
       {edit && (

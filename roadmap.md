@@ -1,4 +1,5 @@
 ## Larger-batch completion — 8 Nov 2026
+- [ ] 06:15 broader batch: preserve every module capture context through Smart Add/Statement Desk; complete in-place claim bill edits and frozen expenditure recovery; record focused connected acceptance and exact broad-ID gaps, then select next functional work without repeating GST/report audits.
 - [x] 05:43 batch: GST liability/payment/frozen-return exceptions, stable working refresh,23 specialized PDFs with isolated frozen history, loan scope/historical dependencies and GST source-chain accuracy;104 distinct tests and actual Inbox→Tax/save/reload pass. No new broad IDs verified.
 - [ ] Next: all-family connected source-backed reconciliation and non-Centre export/material source acceptance; hosted0016/0026 and blocked0066/0082 need the exact isolated environment/approval in latest evidence.
 - [x] Registration/company-isolated settlement, retained investment events/precision, filtered report balances, exact encrypted Reports Centre retry and eight-family frozen PDF/source comparisons completed; final 94/94 plus last 13/13 targeted tests pass.
