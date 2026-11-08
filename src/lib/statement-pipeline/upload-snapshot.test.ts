@@ -19,16 +19,16 @@ it('captures original revision during upload, persists it, and refuses later sam
     transactions:[], addAccount:async()=>{throw Error('Unexpected account');}, setArchived:async()=>{}, remove:async()=>{}, refresh:async()=>{},
     prepareSource:async()=> 'original',
     save:async(input,opts)=>{row={id:opts?.createId,amount:input.amount,statement_ref:null,correction_revision:0};},
-    reconcile:async(_id,ref)=>{if(row){row.statement_ref=ref;row.correction_revision=Number(row.correction_revision)+1;}},
-    readUndoRow:async(id)=>row ? {id,ref:row.statement_ref as string|null,revision:Number(row.correction_revision)} : null,
+    reconcile:async(_id,ref)=>{if(row){row['statement_ref']=ref;row['correction_revision']=Number(row['correction_revision'])+1;}},
+    readUndoRow:async(id)=>row ? {id,ref:row['statement_ref'] as string|null,revision:Number(row['correction_revision'])} : null,
     checkpoint:async(r)=>{history=mergeUploadHistory(history,{...r,id:'upload',at:'2026-11-08',label:file.name,status:'interrupted'});},
   };
   const result=await applyUpload([{account:reviewed,decisions:[...reviewed.auto,...reviewed.ask],reconcileIds:[]}],api);
   expect(result.undoRows?.[0]?.revision).toBe(1);
   expect(history.statementUploads?.[0]?.undoRows).toEqual(result.undoRows);
   if(!row)throw Error('No saved row');
-  row.amount=251;row.correction_revision=2;
-  const forged={...result,undoRows:[{...result.undoRows?.[0],id:String(row.id),ref:String(row.statement_ref),revision:2}]};
+  row['amount']=251;row['correction_revision']=2;
+  const forged={...result,undoRows:[{...result.undoRows?.[0],id:String(row['id']),ref:String(row['statement_ref']),revision:2}]};
   history=mergeUploadHistory(history,{...forged,id:'upload',at:'2026-11-08',label:file.name,status:'complete'});
   expect(history.statementUploads?.[0]?.undoRows?.[0]?.revision).toBe(1);
   let commits=0;
