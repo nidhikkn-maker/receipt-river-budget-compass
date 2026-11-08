@@ -71,6 +71,12 @@ export function DocumentIntake({ file, context, onClose, resume, replacesId, onS
       try {
         const run = await startRun(runId, file, context ?? "", replacesId ? { replacesId } : {});
         runData.current = run.data;
+        if (run.data.read) {
+          const saved = run.data.read as ExtractedDocument;
+          setX(saved); setFields((run.data.fields ?? []) as DocField[]); setDocType((run.data.docType ?? saved.docType) as DocType);
+          await step('Confirm', {status:'waiting',data:runData.current});
+          return;
+        }
         at = "Identify"; await step("Identify");
         if (!(file.type.startsWith("image/") || /\.pdf$/i.test(file.name))) throw new Error("Only PDFs and photos can be read as documents");
         at = "Extract"; await step("Extract");
