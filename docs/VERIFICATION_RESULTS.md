@@ -1,5 +1,11 @@
 # Verification results (executed evidence only)
 
+## Focused capture/claims/recovery acceptance — 06:25 UTC
+- Shared eight-context capture, in-place exact-entry claim bill editing, separate encrypted expenditure recovery and checkpointed document retry completed. V60-0072/0073 newly verified narrowly; broader IDs partial,0066/0082 blocked.
+- Focused tests and actual eight-context/PDF/reload/duplicate checks pass; local adapters only. Exact evidence and remaining source/hosted criteria: `docs/evidence/capture-claims-recovery-2026-11-08.md`.
+- Measured941.97 workspace;11.34 decline; conservative cap837.97 includes protected300; no UIX redesign, production records/policies/migrations/publishing.
+
+
 ## 7 Nov 2026 15:31 — two safeguard corrections and independent precision/report work
 - Historical **1543/948/31/19 unchanged**, v6 **566/331/2 unchanged**; newly verified IDs **none**.
 - Full suite **264 files/1942 PASS**; subsequently added authority ABA/direct-tamper regression **8/8 focused PASS**.

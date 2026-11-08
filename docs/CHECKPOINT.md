@@ -1,5 +1,11 @@
 # Ledgerline continuation checkpoint — 8 Nov 2026 six-requirement acceptance
 
+## Latest capture/claims/recovery batch — 06:25 UTC
+- Shared eight-context capture, in-place exact-entry claim bill editing, separate encrypted expenditure recovery and checkpointed document retry completed. V60-0072/0073 newly verified narrowly; broader IDs partial,0066/0082 blocked.
+- Focused tests and actual eight-context/PDF/reload/duplicate checks pass; local adapters only. Exact evidence and remaining source/hosted criteria: `docs/evidence/capture-claims-recovery-2026-11-08.md`.
+- Measured941.97 workspace;11.34 decline; conservative cap837.97 includes protected300; no UIX redesign, production records/policies/migrations/publishing.
+
+
 ## Latest connected GST/report batch — 05:43 UTC
 - Implemented GST liability/payment/frozen-working/filed-document variance -> existing Inbox/Tax. Unique owner/company matching, multi-registration fail-closed behavior, stable draft refresh, explicit return document link and unavailable-evidence warnings.
 - Remaining 23 Reports Centre PDF families persisted with actual bytes/frozen source metadata/interrupted reply/retry and disk restart; all31 centre families now covered alongside prior8. Loan account scope and historical balance dependencies corrected.
