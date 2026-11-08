@@ -7,8 +7,8 @@ import type { BooksData } from './types';
 import { ownerOf } from './entity-accounts';
 import { periodBlocker } from './periods';
 export type AccountingRole = 'asset'|'liability'|'equity'|'income'|'expense';
-export interface AccountingLeg { code:string; label:string; role:AccountingRole; debit:number; credit:number; accountId?:string|undefined; cashFlow?:'operating'|'investing'|'financing'|undefined }
-export interface AccountingJournal { id:string; entityId:string; date:string; kind:'opening'|'accrual'|'advance'|'prepayment'|'depreciation'|'adjustment'|'reversal'; description:string; documentIds:string[]; legs:AccountingLeg[]; reversesId?:string; invoiceId?:string; settlement?:import('./accounting-settlement').SettlementSource }
+export interface AccountingLeg { code:string; label:string; role:AccountingRole; debit:number; credit:number; accountId?:string|undefined; cashFlow?:'operating'|'investing'|'financing'|undefined; statutory?:import('./statutory-mappings').StatutoryMapping; source?:{docId:string;page:number|null;quote:string;head:string;detail:number;line:number;printedAmount:number}; }
+export interface AccountingJournal { id:string; entityId:string; date:string; kind:'opening'|'accrual'|'advance'|'prepayment'|'depreciation'|'adjustment'|'reversal'; description:string; documentIds:string[]; legs:AccountingLeg[]; reversesId?:string; invoiceId?:string; settlement?:import('./accounting-settlement').SettlementSource; recurrence?:import('./accounting-recurring').AccountingRecurrence; recurringSource?:{templateId:string;date:string;amount:number}; }
 export interface AccountingAttachment { journal:AccountingJournal; primary:boolean; requestId:string }
 export function accountingErrors(j:AccountingJournal,accounts:Account[],books:BooksData,documents:VaultDoc[]):string[]{
  const out:string[]=[];
@@ -19,6 +19,7 @@ export function accountingErrors(j:AccountingJournal,accounts:Account[],books:Bo
  if(j.legs.length<2)out.push('A journal requires at least two accounting legs.');
  const seen=new Set<string>();
  for(const l of j.legs){
+  if(l.source&&!j.documentIds.includes(l.source.docId))out.push('Schedule originals must be included in the journal evidence.');
   if(!l.code||!l.label||!['asset','liability','equity','income','expense'].includes(l.role))out.push('Every leg needs an account code, label and accounting role.');
   if(!Number.isFinite(l.debit)||!Number.isFinite(l.credit)||l.debit<0||l.credit<0||roundMoney(l.debit)!==l.debit||roundMoney(l.credit)!==l.credit||(l.debit>0)===(l.credit>0))out.push('Every leg requires one positive debit or credit, to two decimal places.');
   if(seen.has(l.code))out.push('Combine repeated accounting codes before posting.');seen.add(l.code);
@@ -35,7 +36,7 @@ export function accrualProposal(p:{id:string;entityId:string;date:string;descrip
  const creditBalance=['unpaid-expense','customer-advance','release-prepayment','depreciation'].includes(p.kind);
  return {id:p.id,entityId:p.entityId,date:p.date,description:p.description,documentIds:p.documentIds,kind:p.kind.includes('advance')?'advance':p.kind.includes('prepayment')?'prepayment':p.kind==='depreciation'?'depreciation':'accrual',legs:[{...p.balance,debit:creditBalance?0:p.amount,credit:creditBalance?p.amount:0},{...p.counter,debit:creditBalance?p.amount:0,credit:creditBalance?0:p.amount}]};
 }
-export function reverseAccountingJournal(j:AccountingJournal,id:string,date:string,reason:string):AccountingJournal{if(reason.trim().length<5)throw Error('Write the correction reason.');return {...j,id,date,kind:'reversal',description:reason,reversesId:j.id,legs:j.legs.map(l=>({...l,debit:l.credit,credit:l.debit}))};}
+export function reverseAccountingJournal(j:AccountingJournal,id:string,date:string,reason:string):AccountingJournal{if(reason.trim().length<5)throw Error('Write the correction reason.');const {recurrence:_schedule,...source}=j;return {...source,id,date,kind:'reversal',description:reason,reversesId:j.id,legs:j.legs.map(l=>({...l,debit:l.credit,credit:l.debit}))};}
 export function journalTotal(j:AccountingJournal){return sumMoney(j.legs.map(l=>l.debit));}
 export function journalAccountDelta(l:AccountingLeg){return l.role==='liability'?subtractMoney(l.credit,l.debit):subtractMoney(l.debit,l.credit);}
 export function balancedGroups(lines:{groupId:string;debit:number;credit:number}[]):string[]{const sums=new Map<string,number>();for(const l of lines)sums.set(l.groupId,addMoney(sums.get(l.groupId)??0,l.debit,-l.credit));return [...sums].filter(([,n])=>n!==0).map(([id])=>id);}
