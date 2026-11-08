@@ -25,6 +25,7 @@ async def main():
    await page.get_by_role('button',name=module,exact=True).click()
    await page.get_by_label('Choose files',exact=True).set_input_files(files=[{'name':'original.png','mimeType':'image/png','buffer':b'synthetic original'}])
    await expect(page.get_by_role('dialog',name='Smart Add')).to_be_visible()
+   await page.screenshot(path=str(OUT/(module+'-debug.png')));print(module,errors,await page.locator('body').inner_text(),flush=True)
    await page.wait_for_function('window.__capture!==undefined')
    assert await page.evaluate('window.__capture')=={'context':module,'name':'original.png'}
    assert page.url=='http://localhost:8080/capture'
