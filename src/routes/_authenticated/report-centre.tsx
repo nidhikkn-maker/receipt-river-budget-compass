@@ -17,6 +17,7 @@ import { downloadBlob, deliverFile, toCsv, toExcel } from "@/lib/reports";
 import { corporateReport, type CorporateType } from '@/lib/books/corporate-statements';
 import { corporateAuditPack } from '@/lib/books/corporate-audit-pack';
 import {AccountingJournalReview} from '@/components/books/AccountingJournalReview';
+import {AccountantReviews} from '@/components/books/AccountantReviews';
 import { listDrafts } from "@/lib/drafts";
 import { localDrafts } from "@/lib/offline";
 import type { TravelTrip } from "@/lib/travel";
@@ -168,6 +169,7 @@ function ReportCentre() {
     <div className="uix-family-reports space-y-6 pb-24">
       <SectionTabs group="reports" active="pdf" /><PageTitle title="Reports Centre" sub="Generate PDF reports from your recorded entries, then preview, download or share them." />
       <BackgroundReports onDone={() => void loadHistory()} />
+      <AccountantReviews/>
 
       <Link to="/expenditure-statement" className="flex items-center justify-between rounded-xl border bg-card p-4 text-sm"><span><span className="block font-semibold">Detailed Expenditure Statement</span><span className="text-muted-foreground">One trip, event, project or purchase, with original bills attached</span></span><FileText className="h-5 w-5 text-primary" /></Link>
       <Link to="/claim-submission" className="flex items-center justify-between rounded-xl border bg-card p-4 text-sm"><span><span className="block font-semibold">Expense Claim Submission</span><span className="text-muted-foreground">Formal reimbursement claim with declaration, approval lines and bills</span></span><FileText className="h-5 w-5 text-primary" /></Link>
