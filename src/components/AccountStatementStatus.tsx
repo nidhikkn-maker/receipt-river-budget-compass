@@ -7,6 +7,9 @@ import { useStore } from "@/lib/store";
 import { money } from "@/lib/expenses";
 import { statementCoverage } from "@/lib/statement-pipeline/coverage";
 import { Button } from "./ui/button";
+import { reconciliationReport } from '@/lib/reconciliation-report';
+import { toCsv,toExcel,toPdf,deliverFile } from '@/lib/reports';
+import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "./ui/dialog";
 
 export function AccountStatementStatus({ onAttention }: { onAttention?: (count: number | null) => void } = {}) {
@@ -42,9 +45,17 @@ export function AccountStatementStatus({ onAttention }: { onAttention?: (count: 
   const coverage = useMemo(() => new Map(statementCoverage(accounts, transactions, today).map(c => [c.accountId, c])), [accounts, transactions, today]);
   const rows = accounts.filter(a => !a.archived).map(a => withStatementDeskEvidence(accountStatementStatus(a, evidence, transactions, preferences, today), coverage.get(a.id), preferences.freshness.perAccount[a.id] ?? preferences.freshness));
   const summary = accountStatementSummary(rows), focused = rows.find(r => r.accountId === selected);
+  const [preparedExport,setPreparedExport]=useState<{key:string;blob:Blob}|null>(null);
+  const exportReport=reconciliationReport(rows,evidence,transactions), exportKey=JSON.stringify(exportReport);
+  const exportFile=async(format:'csv'|'xlsx'|'pdf')=>{try{
+    if(format==='pdf'&&preparedExport?.key!==exportKey){setPreparedExport({key:exportKey,blob:await toPdf(exportReport,`Saved evidence as of ${today}; unavailable checks remain unverified`)});return;}
+    const blob=format==='pdf'?preparedExport?.blob:format==='csv'?new Blob([toCsv(exportReport)],{type:'text/csv'}):await toExcel(exportReport);
+    if(blob)await deliverFile(blob,`ledgerline-reconciliation-${today}.${format}`);
+  }catch{toast.error('Could not prepare reconciliation export; saved checks are unchanged');}};
   useEffect(() => { onAttention?.(status ? null : summary.attention); }, [status, summary.attention, onAttention]);
   if (status) return <div className="flex flex-wrap items-center gap-2 py-4 text-sm" role="status"><p>{status}</p><Button size="sm" variant="outline" onClick={() => load(true)}>Retry account checks</Button></div>;
   return <section className="space-y-4" aria-label="Statement account status">
+    <div className="flex flex-wrap gap-2"><Button size="sm" variant="outline" onClick={()=>exportFile('csv')}>Export reconciliation CSV</Button><Button size="sm" variant="outline" onClick={()=>exportFile('xlsx')}>Export reconciliation Excel</Button><Button size="sm" variant="outline" onClick={()=>exportFile('pdf')}>{preparedExport?.key===exportKey?'Download':'Prepare'} reconciliation PDF</Button></div>
     <div className="grid grid-cols-2 gap-3 sm:grid-cols-6">{[["Total accounts", summary.total], ["Current statements", summary.current], ["Reconciled accounts", summary.reconciled], ["Statement-matched", rows.filter(r => r.reconciliation === "Statement-matched").length], ["Verified balances", summary.verified], ["Requiring attention", summary.attention]].map(([label, count]) => <div key={label} className="border-b py-2"><p className="text-xs text-muted-foreground">{label}</p><p className="text-xl font-semibold tabular-nums">{count}</p></div>)}</div>
     <div className="hidden overflow-x-auto md:block"><table className="w-full text-left text-sm"><thead className="text-xs text-muted-foreground"><tr>{["Account", "Statement through", "Reconciliation", "Balance", "Freshness", ""].map((s, i) => <th key={i} className="px-2 py-2">{s}</th>)}</tr></thead><tbody>{rows.map(r => <tr key={r.accountId} className="border-t"><td className="px-2 py-3 font-medium">{r.name}</td><td className="px-2">{r.statementThrough ?? "Not available"}</td><td className="px-2">{r.reconciliation}</td><td className="px-2">{r.balance}</td><td className="px-2">{r.freshness}{r.nextStep && <p className="text-xs text-muted-foreground">Next: {r.nextStep}</p>}</td><td className="px-2"><Button variant="ghost" size="sm" onClick={() => setSelected(r.accountId)}>View details<span className="sr-only"> for {r.name}</span></Button></td></tr>)}</tbody></table></div>
     <ul className="divide-y md:hidden">{rows.map(r => <li key={r.accountId} className="space-y-2 py-3"><div className="flex flex-wrap items-center justify-between gap-2"><h3 className="font-medium">{r.name}</h3><Button variant="ghost" size="sm" onClick={() => setSelected(r.accountId)}>View details<span className="sr-only"> for {r.name}</span></Button></div><dl className="grid grid-cols-2 gap-2 text-xs">{[["Statement through", r.statementThrough ?? "Not available"], ["Reconciliation", r.reconciliation], ["Balance", r.balance], ["Freshness", r.freshness]].map(([l, v]) => <div key={l}><dt className="text-muted-foreground">{l}</dt><dd>{v}</dd></div>)}</dl>{r.nextStep && (r.source === "statement-desk" ? <Link className="block text-xs font-medium text-primary underline" to="/statements">Next: {r.nextStep}</Link> : <Link className="block text-xs font-medium text-primary underline" to="/historical-import" search={r.batchId ? { batch: r.batchId } : {}}>Next: {r.nextStep}</Link>)}</li>)}</ul>
