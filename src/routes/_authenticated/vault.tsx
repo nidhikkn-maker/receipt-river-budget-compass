@@ -1,6 +1,7 @@
 import { confirmAction } from "@/lib/confirm";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
+import { openSmartAdd } from '@/lib/smart-add-event';
 import { FileText, ExternalLink, Trash2, ScanLine } from "lucide-react";
 import { ContractObligations, NoticeDeadlines } from "@/components/ContractObligations";
 import { toast } from "sonner";
@@ -56,7 +57,7 @@ function Vault() {
     <section className="space-y-2 border-t pt-6">
       <h2 className="font-display text-xl font-bold">Add document</h2>
       <p className="text-sm text-muted-foreground">Every document goes through Statement Desk, so it is identified, read, checked for duplicates and linked in one place before it is filed here.</p>
-      <Button asChild className="w-full sm:w-auto"><Link to="/statements" search={{ context: "documents" }}><ScanLine className="h-4 w-4" />Scan or upload in Statement Desk</Link></Button>
+      <Button className="w-full sm:w-auto" onClick={() => openSmartAdd('documents')}><ScanLine className="h-4 w-4" />Scan or upload in Statement Desk</Button>
     </section>
     <ExpenseDialog expense={selected} onClose={() => setSelected(null)} />
   </div>;
