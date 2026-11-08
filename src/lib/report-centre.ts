@@ -52,7 +52,7 @@ export const emptyFilters = (from: string, to: string): ReportFilters => ({ from
 export interface DraftLite { id: string; status: string; updatedAt: string; data: { amount?: string | number; merchant?: string; date?: string; category?: string; scope?: string } ; localOnly?: boolean }
 export interface ReportData {
   transactions: Expense[]; accounts: Account[]; valuations: Valuation[]; commitments: Commitment[];
-  loans: { id: string; name: string; principal: number; rate: number; emi: number; nextDue: string; provider: string; status: string; payments: { date: string; principal: number; interest: number; total: number }[] }[];
+  loans: { id: string; name: string; principal: number; rate: number; emi: number; nextDue: string; provider: string; status: string; accountId?: string | null; payments: { date: string; principal: number; interest: number; total: number }[] }[];
   budgets: Record<string, number>; trips: TravelTrip[]; drafts: DraftLite[];
   memberName: (id: string | null) => string; accountName: (id: string | null) => string; today: string;
 }
@@ -177,8 +177,10 @@ export function buildReportDoc(type: ReportType, filters: ReportFilters, d: Repo
   const spend = win.filter((e) => kind(e) === "expense");
   const cf = totalsFor(win, ws);
   const selectedAccounts = d.accounts.filter(a => !f.accountIds.length || f.accountIds.includes(a.id));
+  const balanceTypes = ['monthly','consolidated','ws-personal','ws-family','ws-business','ws-official','account','card','forecast','wealth'];
+  const sources = balanceTypes.includes(type) ? [...new Map([...all,...d.transactions.filter(e=>selectedAccounts.some(a=>a.id===e.accountId||a.id===e.toAccountId))].map(e=>[e.id,e])).values()] : all;
   const doc: ReportDoc = { type, title: reportLabel(type), period: `${f.from} to ${f.to}`, filterLines: filterLines(f, d), summary: [], sections: [], notes: [...STD_NOTES], landscape: false, rowCount: 0,
-    sourceEntryIds: all.map(e => e.id), sourceDocumentRefs: [...new Set(all.flatMap(e => [e.statementRef, ...e.receipts.map(r => r.path)].filter((s): s is string => !!s)))] };
+    sourceEntryIds: sources.map(e => e.id), sourceDocumentRefs: [...new Set(sources.flatMap(e => [e.statementRef, ...e.receipts.map(r => r.path)].filter((s): s is string => !!s)))] };
   const exec = () => {
     const live = selectedAccounts.filter((a) => !a.archived && !isLiability(a.kind));
     const avail = sumMoney(live.map(a => accountBalance(a, d.transactions)));
@@ -251,7 +253,7 @@ export function buildReportDoc(type: ReportType, filters: ReportFilters, d: Repo
       break;
     }
     case "loan": {
-      const loans = d.loans;
+      const loans = d.loans.filter(l=>!f.accountIds.length||f.accountIds.includes(l.accountId??''));
       doc.summary.push(["Outstanding principal", amt(loans.filter((l) => l.status === "active").map(l => l.principal).reduce((s, value) => addMoney(s,value), 0))], ["Monthly EMIs", amt(loans.filter((l) => l.status === "active").map(l => l.emi).reduce((s, value) => addMoney(s,value), 0))]);
       doc.sections.push({ title: "Loans", headers: ["Loan", "Provider", "Rate", "EMI", "Outstanding", "Next due", "Status"], align: ["l", "l", "r", "r", "r", "l", "l"], rows: loans.map((l) => [l.name, l.provider, `${l.rate}%`, num(l.emi), num(l.principal), l.nextDue, l.status]) });
       const pays = loans.flatMap((l) => l.payments.filter((p) => p.date >= f.from && p.date <= f.to).map((p) => [p.date, l.name, num(p.principal), num(p.interest), num(p.total)]));

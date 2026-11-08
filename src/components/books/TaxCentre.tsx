@@ -28,6 +28,7 @@ import { TaxWorkpaper } from "./TaxWorkpaper";
 import { fyOf } from "@/lib/entities";
 import { GstAdvances } from './GstAdvances';
 import { specialProblems,specialSummary } from '@/lib/books/gst-special';
+import { gstReconciliation, replaceGstDrafts } from '@/lib/books/gst-reconciliation';
 
 const inr = (n: number) => "₹" + n.toLocaleString("en-IN", { maximumFractionDigits: 0 });
 const today = () => new Date().toISOString().slice(0, 10);
@@ -110,13 +111,13 @@ const blankInv = (gstin: string): GstInvoice => ({ id: crypto.randomUUID(), gsti
 
 export function GstReturns({ fy }: { fy: string }) {
   const { books, save, preferences } = useBooks();
-  const { transactions } = useStore();
+  const { transactions, documents } = useStore();
   const gstins = (preferences.entities ?? []).flatMap((e) => e.gstins.map((g) => ({ g, name: e.name })));
   const [gstin, setGstin] = useState(gstins[0]?.g ?? "");
   const months = useMemo(() => { const s = Number(fy.slice(0, 4)); return Array.from({ length: 12 }, (_, i) => { const m = 4 + i; const y = m > 12 ? s + 1 : s; return `${y}-${String(((m - 1) % 12) + 1).padStart(2, "0")}`; }).filter((m) => m <= today().slice(0, 7)); }, [fy]);
   const [period, setPeriod] = useState(months.at(-1) ?? "");
   const [inv, setInv] = useState<GstInvoice | null>(null);
-  const [filing, setFiling] = useState({ form: "GSTR-3B", arn: "", filedOn: today() });
+  const [filing, setFiling] = useState({ form: "GSTR-3B", arn: "", filedOn: today(), docId: '' });
   useEffect(()=>{if(!gstins.some(x=>x.g===gstin))setGstin(gstins[0]?.g??'');},[gstin,gstins.map(x=>x.g).join('|')]);
   useEffect(()=>{if(!months.includes(period))setPeriod(months.at(-1)??'');},[period,months]);
   if (!gstins.length) return <Fold title="GST returns" hint="Add a GSTIN to a company first"><p className="text-sm text-muted-foreground">Add GSTINs on <Link to="/entities" className="underline">Companies & years</Link>.</p></Fold>;
@@ -127,7 +128,8 @@ export function GstReturns({ fy }: { fy: string }) {
   const r1 = gstr1(books.gstInvoices, gstin, period), r3 = gstr3b(books.gstInvoices, gstin, period, eligibleKeys,books.gstAdvances);
   const special=specialSummary(invoiceRegister(books.gstInvoices,gstin,period),gstin,period);
   const due = owner ? obligations({ entity: owner, profile, fy, today: today(), gstFilings: books.gstFilings, fyRecords: books.fyRecords, rules: books.rules }).filter((o) => o.gstin === gstin) : [];
-  const pay = matchGstPayments(months.map((m) => ({ period: m, amount: gstr3b(books.gstInvoices, gstin, m, new Set(itcReview(books.gstInvoices, gstin, m).lines.filter((l) => l.eligible).map((l) => `${l.invoice.partyGstin}|${l.invoice.number.trim().toUpperCase()}`)),books.gstAdvances).netPayable })).filter((x) => x.amount > 0), transactions.filter((t) => (t.txnType ?? "expense") === "expense").map((t) => ({ id: t.id, date: t.date, amount: t.amount, accountId: t.accountId, text: `${t.title} ${t.merchant ?? ""} ${t.description}` })), { gstin, accountIds: owner ? new Set(books.entityAccounts?.[owner.id] ?? []) : undefined });
+  const pay = matchGstPayments(months.map((m) => ({ period: m, amount: gstr3b(books.gstInvoices, gstin, m, new Set(itcReview(books.gstInvoices, gstin, m).lines.filter((l) => l.eligible).map((l) => `${l.invoice.partyGstin}|${l.invoice.number.trim().toUpperCase()}`)),books.gstAdvances).netPayable })).filter((x) => x.amount > 0), transactions.filter((t) => owner && (t.txnType ?? "expense") === "expense" && (books.entityAccounts?.[owner.id]??[]).includes(t.accountId??'') && (owner.gstins.length===1 || `${t.title} ${t.description}`.toUpperCase().includes(gstin))).map((t) => ({ id: t.id, date: t.date, amount: t.amount, accountId: t.accountId, text: `${t.title} ${t.merchant ?? ""} ${t.description}` })), { gstin });
+  const differences=gstReconciliation(books,preferences.entities??[],transactions,today(),documents).filter(i=>i.key.startsWith(`recon:gst:${gstin}:`));
   const annualEligible=new Set(months.flatMap(m=>itcReview(books.gstInvoices,gstin,m).lines.filter(l=>l.eligible).map(l=>`${l.invoice.partyGstin}|${l.invoice.number.trim().toUpperCase()}`)));
   const g9 = gstr9(books.gstInvoices, gstin, Number(fy.slice(0, 4)), annualEligible,books.gstAdvances);
   const g9h = gstr9Heads(books.gstInvoices, gstin, Number(fy.slice(0, 4)), annualEligible, books.gstAdvances);
@@ -168,7 +170,8 @@ export function GstReturns({ fy }: { fy: string }) {
             {([["Output tax", g9h.output], ["Credit claimed", g9h.itc], ["Reverse-charge cash", g9h.reverse], ["Advance tax", g9h.advance], ["Credit carried forward", g9h.carry]] as const).map(([label, h]) => <p key={label}>{label}: IGST {inr(h.igst)} · CGST {inr(h.cgst)} · SGST {inr(h.sgst)} · cess {inr(h.cess)}</p>)}
             {g9h.checks.map((c) => <p key={c} className="text-destructive">{c}</p>)}
           </details>
-          <Button size="sm" variant="outline" className="mt-2" onClick={() => save({ savedDrafts: [...(books.savedDrafts ?? []).filter((d) => !(d.form === "GSTR-9" && d.period === fy && d.ref === gstin)), { id: crypto.randomUUID(), form: "GSTR-9", period: fy, ref: gstin, createdAt: new Date().toISOString(), data: g9 }, ...[{ form: "GSTR-1", data: r1 }, { form: "GSTR-3B", data: r3 }].map((x) => ({ id: crypto.randomUUID(), form: x.form, period, ref: gstin, createdAt: new Date().toISOString(), data: x.data }))].filter((d, i, all) => all.findIndex((o) => o.form === d.form && o.period === d.period && o.ref === d.ref) === i) })}>Save drafts for review</Button></div>
+          <Button size="sm" variant="outline" className="mt-2" onClick={() => save({ savedDrafts: replaceGstDrafts(books.savedDrafts??[],[{ id: crypto.randomUUID(), form: "GSTR-9", period: fy, ref: gstin, createdAt: new Date().toISOString(), data: g9 }, ...[{ form: "GSTR-1", data: r1 }, { form: "GSTR-3B", data: r3 }].map((x) => ({ id: crypto.randomUUID(), form: x.form, period, ref: gstin, createdAt: new Date().toISOString(), data: x.data }))]) })}>Save drafts for review</Button></div>
+        {differences.length>0&&<div className="text-xs">{differences.map(i=><p key={i.key} className="text-destructive">{i.text}</p>)}</div>}
         {pay.length > 0 && <div className="text-xs"><b>GST payments</b>{pay.map((p) => <p key={p.period}>{p.period}: {inr(p.amount)} — {p.paymentId ? `paid ${p.paidOn}` : <span className="text-destructive">no matching payment found</span>}</p>)}</div>}
         <details><summary className="cursor-pointer text-muted-foreground">Invoice register · {list.length} in {period}{dups.length ? ` · ${dups.length} duplicate number${dups.length > 1 ? "s" : ""}` : ""}</summary>
           {list.map((i) => <div key={i.id} className="flex justify-between gap-2 border-b py-1 text-xs"><span>{i.kind === "sales" ? "Sale" : "Purchase"}{i.note ? ` ${i.note} note` : ""} {i.number}{i.originalNumber ? ` (against ${i.originalNumber})` : ""} · {i.party} {i.partyGstin}{books.gstInvoices.some((x) => x.amendsId === i.id) ? " · replaced by amendment" : ""}{i.amendsId ? " · amendment" : ""}<span className="block text-destructive">{[...invoiceProblems(i), ...noteProblems(i, books.gstInvoices)].join(" · ")}</span></span><span>{inr(i.taxable)} + {inr(i.igst + i.cgst + i.sgst + i.cess)}<Button size="sm" variant="ghost" className="h-6" onClick={() => setInv(i)}>Edit</Button><Button size="sm" variant="ghost" className="h-6" onClick={() => setInv({ ...i, id: crypto.randomUUID(), amendsId: i.id })}>Amend</Button><Button size="sm" variant="ghost" className="h-6" onClick={() => save({ gstInvoices: books.gstInvoices.filter((x) => x.id !== i.id) })}>Remove</Button></span></div>)}
@@ -194,6 +197,7 @@ export function GstReturns({ fy }: { fy: string }) {
           <div className="mt-2 flex flex-wrap gap-1 text-xs"><select aria-label="Form" className="rounded-md border bg-background px-1" value={filing.form} onChange={(e) => setFiling({ ...filing, form: e.target.value })}>{["GSTR-1", "GSTR-3B", "GSTR-9", "CMP-08"].map((f) => <option key={f}>{f}</option>)}</select>
             <Input aria-label="ARN" className="h-8 w-40" placeholder="ARN" value={filing.arn} onChange={(e) => setFiling({ ...filing, arn: e.target.value })} />
             <Input aria-label="Filed on" className="h-8 w-36" type="date" value={filing.filedOn} onChange={(e) => setFiling({ ...filing, filedOn: e.target.value })} />
+            <select aria-label="Filed return document" className="rounded-md border bg-background px-1" value={filing.docId} onChange={e=>setFiling({...filing,docId:e.target.value})}><option value="">No return document linked</option>{documents.filter(d=>d.docType==='gst_return'&&d.entityId===owner?.id).map(d=><option key={d.id} value={d.id}>{d.title}</option>)}</select>
             <Button size="sm" variant="outline" disabled={filing.arn.trim().length < 6} onClick={() => save({ gstFilings: [...books.gstFilings, { id: crypto.randomUUID(), gstin, period, ...filing }] })}>Record filing for {period}</Button></div>
           <p className="mt-1 text-[11px] text-muted-foreground">Ledgerline never files returns. File on the GST portal, then record the ARN here as evidence.</p>
         </details>
