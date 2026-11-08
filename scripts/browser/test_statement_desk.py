@@ -102,6 +102,7 @@ class StatementDeskFlow(unittest.IsolatedAsyncioTestCase):
         sheet = await review()
         await sheet.get_by_role('button', name='Accept all 2 asking items').click()
         await sheet.get_by_role('button', name='Apply everything (2 to save)').click()
+        await self.page.wait_for_function('deskFixture.transactions.length === 1')
         await expect(sheet.get_by_label('Recent uploads')).to_contain_text('interrupted')
         self.assertEqual(await self.page.evaluate('deskFixture.transactions.length'), 1)
         await self.page.reload()
