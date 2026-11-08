@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { useStore } from "@/lib/store";
 import { dropEntity, linkAccounts, mergeEntity, needsDetails, unlinkAccount } from "@/lib/books/entity-accounts";
 import { emptyBooks } from "@/lib/books/types";
+import { companyYearEvidence } from '@/lib/books/company-report';
 import { confirmAction } from "@/lib/confirm";
 import { CompanyTaxProfile } from "@/components/books/CompanyTaxProfile";
 import { CompanyAccess, SharedWithMe } from "@/components/books/CompanyAccess";
@@ -40,11 +41,7 @@ function Entities() {
   const [edit, setEdit] = useState<EntityProfile | null>(null);
   const [gst, setGst] = useState("");
   const today = new Date().toISOString().slice(0, 10);
-  const dates = useMemo(() => ({
-    entries: transactions.map((t) => t.date),
-    statements: transactions.filter((t) => t.statementRef || t.reconciledAt).map((t) => t.date),
-    docs: documents.map((d) => d.docDate ?? d.createdAt.slice(0, 10)),
-  }), [transactions, documents]);
+  const dates = useMemo(() => Object.fromEntries(list.map(p=>[p.id,companyYearEvidence(transactions,documents,p.id,links,books.docLinks)])), [transactions, documents,list,links,books.docLinks]);
 
   const panErr = edit ? panProblem(edit.pan, edit.kind) : null;
   const gstErrs = edit ? edit.gstins.map((g) => gstinProblem(g, edit.pan)) : [];
@@ -151,7 +148,7 @@ function Entities() {
           </div>
           <div className="space-y-1">
             <p className="text-xs font-semibold text-muted-foreground">Financial years on record</p>
-            {yearStatuses(p.booksFrom, today, dates.entries, dates.statements, dates.docs).map((y) => (
+            {yearStatuses(p.booksFrom, today, dates[p.id]?.entries??[], dates[p.id]?.statements??[], dates[p.id]?.docs??[]).map((y) => (
               <div key={y.fy} className="flex items-center justify-between rounded-xl bg-secondary/50 px-3 py-1.5 text-sm">
                 <span>FY {y.fy}</span>
                 <span className="text-xs text-muted-foreground">{y.entries} entries · {y.statements} from statements · {y.documents} docs — <b className={y.state === "covered" ? "text-primary" : ""}>{STATE[y.state]}</b></span>
