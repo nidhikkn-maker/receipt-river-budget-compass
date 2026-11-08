@@ -59,7 +59,7 @@ export const emptyFilters = (from: string, to: string): ReportFilters => ({ from
 
 export interface DraftLite { id: string; status: string; updatedAt: string; data: { amount?: string | number; merchant?: string; date?: string; category?: string; scope?: string } ; localOnly?: boolean }
 export interface ReportData {
-  books?: BooksData; entities?: EntityProfile[]; documents?: VaultDoc[];
+  books?: BooksData | undefined; entities?: EntityProfile[] | undefined; documents?: VaultDoc[] | undefined;
   transactions: Expense[]; accounts: Account[]; valuations: Valuation[]; commitments: Commitment[];
   loans: { id: string; name: string; principal: number; rate: number; emi: number; nextDue: string; provider: string; status: string; accountId?: string | null; payments: { date: string; principal: number; interest: number; total: number }[] }[];
   budgets: Record<string, number>; trips: TravelTrip[]; drafts: DraftLite[];

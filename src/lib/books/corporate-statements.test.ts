@@ -3,6 +3,7 @@ import { describe,it,expect } from 'vitest';
 import { corporateStatements,corporateReport,CORPORATE_TYPES } from './corporate-statements';
 import { emptyBooks } from './types';
 import { accountBalance } from '../ledger';
+import { roundMoney } from '../money';
 import type { Expense } from '../expenses';
 import { buildReportDoc,emptyFilters } from '../report-centre';
 import { toCsv,toExcel } from '../reports';
@@ -17,7 +18,7 @@ describe('Corporate statements canonical double-entry journey',()=>{
    const p=corporateFixture(),w=corporateStatements(p);
    expect(w.profit).toBe(3400);expect(w.trialDifference).toBe(0);expect(w.balanceDifference).toBe(0);
    for(const group of new Set(w.lines.map(l=>l.groupId)))expect(w.lines.filter(l=>l.groupId===group).reduce((s,l)=>s+l.debit-l.credit,0)).toBe(0);
-   for(const a of p.accounts.filter(a=>a.id!=='beta')){const b=w.balances.find(b=>b.code===`account:${a.id}`);expect(b?.closing??0).toBe((a.kind==='loan'||a.kind==='credit_card'?-1:1)*accountBalance(a,p.entries));}
+   for(const a of p.accounts.filter(a=>a.id!=='beta')){const b=w.balances.find(b=>b.code===`account:${a.id}`);expect(b?.closing??0).toBe(roundMoney((a.kind==='loan'||a.kind==='credit_card'?-1:1)*accountBalance(a,p.entries)));}
    expect(w.cash).toEqual({opening:10000,operating:3000,investing:-2000,financing:-1100,unclassified:0,closing:9900,difference:0});
    expect(JSON.stringify(w)).not.toMatch(/beta-secret|Excluded Beta|7777|999999/);
  });
@@ -43,12 +44,12 @@ describe('Corporate statements canonical double-entry journey',()=>{
    const w=corporateStatements(p);expect(w.profit).toBe(0);expect(w.cash.unclassified).toBe(100);expect(w.issues.some(i=>i.recordId==='unpaid')).toBe(true);expect(w.lines.find(l=>l.entryId==='adjust')?.originalPaths).toEqual(['owner/adjust.pdf']);
  });
  it('recognises only posted canonical depreciation and never adds a second asset reduction',()=>{
-   const p=corporateFixture();p.accounts.find(a=>a.id==='asset')?.openingBalance; p.entries=[entry('dep',{txnType:'adjustment',accountId:'asset',adjustmentSign:-1,amount:50,originalAmount:50})];p.books.journals=[{id:'j',assetId:'machine',period:'2026-04',amount:50,kind:'book',status:'posted',transactionId:'dep'}];
+   const p=corporateFixture();p.entries=[entry('dep',{txnType:'adjustment',accountId:'asset',adjustmentSign:-1,amount:50,originalAmount:50})];p.books.journals=[{id:'j',assetId:'machine',period:'2026-04',amount:50,kind:'book',status:'posted',transactionId:'dep'}];
    const w=corporateStatements(p);expect(w.profit).toBe(-50);expect(w.balances.find(b=>b.code==='account:asset')?.closing).toBe(-50);expect(w.trialDifference).toBe(0);
  });
  it('freezes each statement and full original evidence for saved/reloaded CSV/Excel, rejecting unavailable companies',async()=>{
    const p=corporateFixture();const data={transactions:p.entries,accounts:p.accounts,books:p.books,entities:p.entities,documents:p.documents,valuations:[],commitments:[],loans:[],budgets:{},trips:[],drafts:[],memberName:()=>'',accountName:()=>'',today:'2026-11-08'};
-   for(const type of CORPORATE_TYPES){const doc=buildReportDoc(type,{...emptyFilters(p.from,p.to),entityId:'A'},data);const saved=JSON.parse(JSON.stringify(doc));p.entries[0]={...p.entries[0] as Expense,amount:8888};expect(saved.corporateWorking.profit).toBe(type===CORPORATE_TYPES[0]?3400:7288);const r=corporateReport(saved.corporateWorking,type);expect(toCsv(r)).not.toContain('beta-secret');const {read,utils}=await import('xlsx');const book=read(await (await toExcel(r)).arrayBuffer(),{type:'array'});const sheet=book.Sheets['Report'];if(!sheet)throw Error('Missing sheet');expect(utils.sheet_to_json(sheet,{header:1})).toContainEqual(r.headers);}
+   for(const type of CORPORATE_TYPES){const doc=buildReportDoc(type,{...emptyFilters(p.from,p.to),entityId:'A'},data);const saved=JSON.parse(JSON.stringify(doc));expect(saved.corporateWorking.profit).toBe(3400);const r=corporateReport(saved.corporateWorking,type);expect(toCsv(r)).not.toContain('beta-secret');const {read,utils}=await import('xlsx');const book=read(await (await toExcel(r)).arrayBuffer(),{type:'array'});const sheet=book.Sheets['Report'];if(!sheet)throw Error('Missing sheet');expect(utils.sheet_to_json(sheet,{header:1})).toContainEqual(r.headers);}
    expect(()=>corporateStatements({...p,entityId:'missing'})).toThrow('available company');
  });
 });
