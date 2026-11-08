@@ -9,6 +9,7 @@ import type { EntityProfile } from '../entities';
 import type { BooksData } from './types';
 import { effectiveEntity, ownerOf } from './entity-accounts';
 import type { Report } from '../reports';
+import { accountingErrors, balancedGroups, journalAccountDelta, journalFromEntry } from './accounting-journal';
 
 export const CORPORATE_TYPES = ['company-trial-balance','company-profit-loss','company-balance-sheet','company-cash-flow','company-audit-schedules'] as const;
 export type CorporateType = typeof CORPORATE_TYPES[number];
@@ -61,7 +62,27 @@ export function corporateStatements(p: { entityId: string; entities: EntityProfi
     if (entries.has(e.id)) { if(JSON.stringify(entries.get(e.id))!==JSON.stringify(e)) issue(e.id,'Conflicting duplicate entry ID; only the first visible record is used.'); continue; }
     entries.set(e.id,e);
   }
+  const journalEntries=new Set<string>();
+  const journalIds=[...new Set([...entries.values()].flatMap(e=>{const a=journalFromEntry(e);return a?.journal.entityId===entity.id?[a.journal.id]:[];}))];
+  for(const id of journalIds){
+    const members=[...entries.values()].filter(e=>journalFromEntry(e)?.journal.id===id);
+    const primary=members.filter(e=>journalFromEntry(e)?.primary);
+    const j=primary[0]?journalFromEntry(primary[0])?.journal:undefined;
+    if(!j||primary.length!==1){issue(id,'Journal primary evidence is missing or duplicated; journal requires recovery.');continue;}
+    // A period may subsequently close; validation of saved facts must not reject that closure.
+    const errors=accountingErrors(j,p.accounts,{...p.books,closedPeriods:[]},p.documents);
+    const linked=j.legs.filter(l=>l.accountId);
+    if(members.length!==Math.max(1,linked.length))errors.push('Journal ledger membership is incomplete.');
+    if(members.some(e=>JSON.stringify(journalFromEntry(e)?.journal)!==JSON.stringify(j)||e.date!==j.date))errors.push('Journal evidence changed between canonical legs.');
+    for(const l of linked){const candidates=members.filter(e=>e.accountId===l.accountId);const a=p.accounts.find(a=>a.id===l.accountId);if(candidates.length!==1||!a||accountBalance({...a,openingBalance:0},candidates)!==journalAccountDelta(l))errors.push('Journal and canonical account movement differ.');}
+    if(!linked.length&&members.some(e=>e.accountId||e.toAccountId))errors.push('Noncash journal unexpectedly moves a money account.');
+    if(errors.length){errors.forEach(message=>issue(id,message));continue;}
+    members.forEach(e=>journalEntries.add(e.id));
+    const docs=p.documents.filter(d=>j.documentIds.includes(d.id));
+    for(const l of j.legs)emit(`journal:${id}`,j.kind==='opening'?j.date.slice(0,4)+'-03-31':j.date,l.code,l.label,l.role,subtractMoney(l.debit,l.credit),primary[0]??null,docs.map(d=>d.id),docs.map(d=>d.filePath),`${j.kind}: ${j.description}${j.reversesId?`; exact reversal of ${j.reversesId}`:''}`);
+  }
   for (const e of entries.values()) {
+    if(journalEntries.has(e.id))continue;
     const company=effectiveEntity(e,map);
     const touched=accounts.filter(a=>a.id===e.accountId||a.id===e.toAccountId);
     if (!touched.length && company!==entity.id) continue;
@@ -117,8 +138,10 @@ export function corporateStatements(p: { entityId: string; entities: EntityProfi
   for(const i of p.books.gstInvoices)if(entity.gstins.includes(i.gstin)&&i.date<=p.to&&!i.transactionId)issue(i.id,'Invoice is register-only: accrual/settlement has not been posted to the ledger.');
   for(const j of p.books.journals)if(j.status==='prepared'&&j.period<=p.to.slice(0,7)&&p.books.docLinks.some(l=>l.kind==='asset'&&l.targetId===j.assetId&&p.documents.some(d=>d.id===l.docId&&d.entityId===entity.id)))issue(j.id,'Prepared depreciation is not posted; financial statements exclude it.');
   const balances:CorporateBalance[]=[];
+  for(const group of balancedGroups(lines))issue(group,'Accounting group is not balanced; review its source legs.');
   for(const code of [...new Set(lines.map(l=>l.code))]){
     const all=lines.filter(l=>l.code===code);const first=all[0];if(!first)continue;
+    if(all.some(l=>l.role!==first.role))issue(code,'Accounting role differs between source records; account mapping requires correction.');
     const opening=sumMoney(all.filter(l=>l.date<p.from).map(l=>subtractMoney(l.debit,l.credit)));
     const win=all.filter(l=>l.date>=p.from);const debit=sumMoney(win.map(l=>l.debit));const credit=sumMoney(win.map(l=>l.credit));
     balances.push({code,label:first.label,role:first.role,opening,debit,credit,closing:addMoney(opening,debit,-credit),lineIds:all.map(l=>l.id)});
@@ -132,6 +155,13 @@ export function corporateStatements(p: { entityId: string; entities: EntityProfi
   const cash={opening:sumMoney(balances.filter(b=>cashIds.has(b.code)).map(b=>b.opening)),operating:0,investing:0,financing:0,unclassified:0,closing:sumMoney(balances.filter(b=>cashIds.has(b.code)).map(b=>b.closing)),difference:0};
   for(const group of [...new Set(lines.filter(l=>l.date>=p.from).map(l=>l.groupId))]){
     const ls=lines.filter(l=>l.groupId===group);const delta=sumMoney(ls.filter(l=>cashIds.has(l.code)).map(l=>subtractMoney(l.debit,l.credit)));if(!delta)continue;
+    if(group.startsWith('journal:')){
+      const source=[...entries.values()].find(e=>journalFromEntry(e)?.journal.id===group.slice(8));const j=source?journalFromEntry(source)?.journal:undefined;
+      const bucket=j?.legs.find(l=>l.accountId&&cashIds.has(l.code))?.cashFlow;
+      cash[bucket??'unclassified']=addMoney(cash[bucket??'unclassified'],delta);
+      if(!bucket)issue(group,'Cash journal has no confirmed cash-flow classification.');
+      continue;
+    }
     const e=entries.get(group);const other=e?[byAccount.get(e.accountId??''),byAccount.get(e.toAccountId??'')].filter((a):a is Account=>!!a&&!cashKinds.includes(a.kind)):[];
     if(e?.txnType==='loan_repayment'&&ids.has(e.accountId??'')&&ids.has(e.toAccountId??'')){
       const interest=repaymentParts(e).interest;cash.operating=addMoney(cash.operating,-interest);cash.financing=addMoney(cash.financing,delta,interest);continue;
