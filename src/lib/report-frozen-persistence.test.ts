@@ -28,7 +28,7 @@ it('owner/entity source figures freeze in a real PDF; lost insert and readback r
   const data:ReportData={transactions:visible,accounts:[],valuations:[],commitments:[],loans:[],budgets:{},trips:[],drafts:[],memberName:()=>'',accountName:()=> 'Synthetic bank',today:'2026-10-31'};
   const filters={...emptyFilters('2026-10-01','2026-10-31'),accountIds:['bank-a']};
   const report=buildReportDoc('expense',filters,data);
-  expect(report.rowCount).toBe(1);expect(JSON.stringify(report)).toContain('200.25');expect(JSON.stringify(report)).not.toMatch(/OTHER-ENTITY|OTHER-OWNER|999.99|888.88/);
+  expect(report.sections.find(s=>s.title==='Expense entries')?.rows).toHaveLength(1);expect(report.summary).toContainEqual(['Entries','1']);expect(JSON.stringify(report)).toContain('200.25');expect(JSON.stringify(report)).not.toMatch(/OTHER-ENTITY|OTHER-OWNER|999.99|888.88/);
   const pdf=await renderReportPdf(report,'mono',new Date('2026-10-31T12:00:00Z'));
   const bytes=new Uint8Array(await pdf.arrayBuffer());
   expect((await PDFDocument.load(bytes)).getPageCount()).toBeGreaterThan(0);

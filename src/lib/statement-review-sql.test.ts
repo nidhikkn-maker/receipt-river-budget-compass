@@ -96,6 +96,7 @@ it('saved exception survives restart; reviewed source resolves it once, stale re
  await db.exec('RESET ROLE');
  const revision=(await db.query<{correction_revision:number}>('SELECT correction_revision FROM expenses WHERE id=$1',[entry.id])).rows[0]?.correction_revision;
  expect(revision).toBe(1);
+ if(revision===undefined)throw Error('Persisted correction revision missing');
  const changed={...entry,correctionRevision:revision};
  const e=await evidence();e.checkpoint=final;e.currentHash=await checkpointHash(checkpointSnapshot(e,account,[changed]));
  expect(accountStatementStatus(account,[e],[changed],defaultPreferences(),'2026-11-01')).toMatchObject({reconciliation:'Requires Review',balance:'Not Verified'});

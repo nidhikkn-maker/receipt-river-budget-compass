@@ -26,10 +26,7 @@ async def main():
   await context.route('**/*',isolate)
   await page.goto('http://localhost:8080/statements?invoice=1')
   await page.evaluate('r=>{localStorage.setItem("actual-synthetic-invoice-reading",JSON.stringify(r));localStorage.removeItem("controlled-asset-document");}',reading)
-  await page.evaluate('''()=>{const s={preferences:{books:{},entities:[],assets:[],contractObligations:[]},documents:[],runs:{},reads:0,commits:0,failNext:true};localStorage.setItem('controlled-asset-document',JSON.stringify(s));}''')
-  # Let the existing adapter provide its canonical emptyBooks shape, removing only the seeded asset.
-  await page.evaluate('()=>localStorage.removeItem("controlled-asset-document")');await page.reload()
-  await page.evaluate('''()=>{const s={...JSON.parse(localStorage.getItem('controlled-asset-document')||'null')};}''')
+  await page.evaluate('''async()=>{const {state}=await import('/scripts/browser/asset-document-mocks.tsx');const s=state();s.preferences.assets=[];localStorage.setItem('controlled-asset-document',JSON.stringify(s));}''');await page.reload()
   await page.get_by_label('Maintenance original').set_input_files(ROOT/'invoice.png')
   review=page.get_by_role('region',name='Document review invoice.png')
   await expect(review.get_by_label('Asset name',exact=True)).to_have_value('Industrial Generator')
