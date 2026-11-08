@@ -26,6 +26,12 @@ export function mergeUploadHistory(data: FinancePreferences, next: StatementUplo
     sources: unique([...(previous.sources ?? []), ...(next.sources ?? [])], s => `${s.documentId}|${s.accountId}|${s.file}`),
     linkedDrafts: unique([...(previous.linkedDrafts ?? []), ...(next.linkedDrafts ?? [])], s => s.draftId),
     evidence: unique([...(previous.evidence ?? []), ...(next.evidence ?? [])], e => `${e.id}|${e.ref}`),
+    // Only this upload's null→linked evidence step may advance its baseline by one revision.
+    // Later checkpoints cannot replace it with an edited ledger row or downgrade it.
+    undoRows: [...(previous.undoRows ?? []), ...(next.undoRows ?? []).filter(r => !previous.undoRows?.some(p => p.id === r.id))].map(p => {
+      const n = next.undoRows?.find(r => r.id === p.id);
+      return n && p.ref === null && n.ref !== null && n.revision === p.revision + 1 && next.evidence?.some(e => e.id === n.id && e.ref === n.ref) ? n : p;
+    }),
   } : next;
   return { ...data, statementUploads: cleanStatementUploads([merged, ...history.filter(u => u.id !== next.id)]) };
 }

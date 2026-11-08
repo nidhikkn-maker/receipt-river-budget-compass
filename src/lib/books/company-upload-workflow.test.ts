@@ -99,3 +99,23 @@ it('permissive team receipt access cannot unlock private or other-company DocuRe
   await as(OWNER);
   expect((await db.query('SELECT name FROM storage.objects')).rows).toHaveLength(3);
 });
+
+it('view-only grants read the original but cannot upload; revocation and signed-out access deny it',async()=>{
+  await as(EDITOR);
+  await uploadCompanyDocument(OWNER,'c1',new File(['synthetic original'],'viewer.csv'),api());
+  await db.exec('RESET ROLE');
+  await db.query('UPDATE entity_members SET can_write=false WHERE member_id=$1',[EDITOR]);
+  await as(EDITOR);
+  expect((await db.query('SELECT name FROM storage.objects')).rows).toHaveLength(1);
+  await expect(uploadCompanyDocument(OWNER,'c1',new File(['second'],'other.csv'),api())).rejects.toThrow(/edit access/);
+  await as(OWNER);
+  const grant=(await db.query<{id:string}>('SELECT id FROM entity_members WHERE member_id=$1',[EDITOR])).rows[0];
+  if(!grant)throw Error('Missing viewer grant');
+  await db.query('SELECT revoke_entity_access($1)',[grant.id]);
+  await as(EDITOR);
+  expect((await db.query('SELECT name FROM storage.objects')).rows).toHaveLength(0);
+  await db.exec("RESET ROLE; SELECT set_config('test.uid','',false); SET ROLE authenticated");
+  expect((await db.query('SELECT name FROM storage.objects')).rows).toHaveLength(0);
+  await as(OWNER);
+  expect((await db.query('SELECT name FROM storage.objects')).rows).toHaveLength(1);
+});

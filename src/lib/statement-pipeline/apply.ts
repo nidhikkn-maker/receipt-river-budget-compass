@@ -5,6 +5,7 @@ import { decisionInput, type LineDecision } from "./classify";
 import type { AccountPlan } from "./plan";
 import type { AccountHint, StmtLine } from "./line";
 import type { AccountDetails } from "../ledger";
+import type { UndoRow } from './atomic-undo';
 
 /** Same recipe the statement cross-check already uses, so re-uploading a file never posts it twice. */
 export async function stableId(accountId: string, l: StmtLine): Promise<string> {
@@ -38,6 +39,8 @@ export interface ApplyApi {
   checkpoint?: (result: ApplyResult) => Promise<void>;
   /** Actual application requires transactional financial reversal; legacy adapters remain test-only. */
   atomicUndo?: (result: ApplyResult) => Promise<void>;
+  /** Owner read during posting, never a baseline reconstructed at Undo time. */
+  readUndoRow?: (id: string) => Promise<UndoRow | null>;
 }
 
 /** One account's accepted part of an upload: the lines to post, the destination for movements, the records to mark. */
@@ -59,6 +62,7 @@ export interface ApplyResult {
   linkedDrafts?: { draftId: string; transactionId: string }[];
   sources?: { documentId: string; accountId: string; file: string }[];
   evidence?: { id: string; ref: string }[];
+  undoRows?: UndoRow[];
 }
 
 export class PartialUploadError extends Error {
@@ -83,6 +87,13 @@ export async function applyUpload(requests: ApplyRequest[], api: ApplyApi, onPro
   const wanted = requests.filter((r) => r.decisions.length || r.reconcileIds.length);
   let done = 0;
   const total = wanted.reduce((s, r) => s + r.decisions.length + r.reconcileIds.length, 0);
+  const capture = async (id: string, revision: number, ref: string | null) => {
+    if (!api.readUndoRow) return;
+    const row = await api.readUndoRow(id);
+    if (!row || row.revision !== revision || row.ref !== ref) throw Error('Upload-time safety snapshot could not be confirmed. Keep this upload for recovery; no later snapshot will be substituted.');
+    result.undoRows = [...(result.undoRows ?? []).filter(r => r.id !== id), row];
+    await api.checkpoint?.(structuredClone(result));
+  };
   const reconcileConfirmed = async (id: string, ref: string) => {
     try { await api.reconcile(id, ref, { noRefresh: true }); }
     catch (error) {
@@ -123,22 +134,31 @@ export async function applyUpload(requests: ApplyRequest[], api: ApplyApi, onPro
         Object.assign(input, Object.fromEntries(Object.entries(link.overrides).filter(([, v]) => v !== undefined && v !== "")));
         await api.save(input, { createId: id, noRefresh: true, files: await link.files() });
         result.posted.push(id);
+        await capture(id, 0, null);
         await api.checkpoint?.(structuredClone(result));
         if (source) await reconcileConfirmed(id, refs.get(id) ?? '');
+        if (source) await capture(id, 1, refs.get(id) ?? '');
         if (api.linkDraft) { await api.linkDraft(link.draftId, id); (result.linkedDrafts ??= []).push({ draftId: link.draftId, transactionId: id }); }
         await api.checkpoint?.(structuredClone(result));
         continue;
       }
       await api.save(input, { createId: id, noRefresh: true });
       result.posted.push(id);
+      await capture(id, 0, null);
       await api.checkpoint?.(structuredClone(result));
       if (source) await reconcileConfirmed(id, refs.get(id) ?? '');
+      if (source) await capture(id, 1, refs.get(id) ?? '');
       await api.checkpoint?.(structuredClone(result));
     }
     for (const m of r.reconcileIds) {
       onProgress?.(`Marking ${++done} of ${total}…`);
+      const before = api.transactions.find(t => t.id === m.id);
+      if (api.readUndoRow && !before) throw Error('Matched record is unavailable for upload-time review.');
+      const revision = before?.correctionRevision ?? 0;
+      await capture(m.id, revision, before?.statementRef ?? null);
       await reconcileConfirmed(m.id, source ? `document:${source} · ${m.ref}` : m.ref);
       result.reconciled.push(m.id);
+      await capture(m.id, revision + 1, source ? `document:${source} · ${m.ref}` : m.ref);
       await api.checkpoint?.(structuredClone(result));
     }
   } } catch (error) {
