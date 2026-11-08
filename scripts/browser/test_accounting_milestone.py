@@ -32,7 +32,7 @@ async def main():
    await route.continue_()
   await c.route('**/*',isolate)
   async def open_company():
-   await page.goto('http://localhost:8080/report-centre',wait_until='networkidle');await page.get_by_role('combobox').first.select_option('company-profit-loss');await page.get_by_label('Accounting company').select_option('A');await page.get_by_text('Opening balances & adjusting entries',exact=True).click()
+   await page.goto('http://localhost:8080/report-centre',wait_until='networkidle');print('errors',errors);await page.screenshot(path='/tmp/browser/accounting-milestone/report-error.png');await page.get_by_role('combobox').first.select_option('company-profit-loss');await page.get_by_label('Accounting company').select_option('A');await page.get_by_text('Opening balances & adjusting entries',exact=True).click()
   await page.goto('http://localhost:8080/statements',wait_until='networkidle');await page.get_by_label('Company financial original').set_input_files('/tmp/browser/accounting-document/invoice.png')
   await page.get_by_text('Tick to confirm it belongs to this company.',exact=False).locator('..').get_by_role('checkbox').check()
   await page.get_by_role('button',name='Confirm and save',exact=True).click();await page.screenshot(path='/tmp/browser/accounting-milestone/intake.png');await expect(page.get_by_text('Reconcile: Interrupted committed intake.',exact=False)).to_be_visible();await page.get_by_role('button',name='Retry',exact=True).click();await expect(page.get_by_text('Saved',exact=True)).to_be_visible()
@@ -46,7 +46,7 @@ async def main():
    await page.get_by_label(f'Opening side 0-{i}',exact=True).select_option('credit' if i>=3 else 'debit')
    if head in ['bank','loans']:await page.get_by_label(f'Opening account 0-{i}',exact=True).select_option('bank-a' if head=='bank' else 'loan-a')
   await page.get_by_role('button',name='Prepare detailed opening',exact=True).click();await expect(page.get_by_label('Debit 1',exact=True)).to_have_value('100000');await page.get_by_role('button',name='Confirm balanced journal').click();await expect(page.get_by_role('dialog')).not_to_be_visible()
-  await page.reload(wait_until='networkidle');await page.get_by_role('combobox').first.select_option('company-profit-loss');await page.get_by_label('Accounting company').select_option('A');await page.get_by_text('Opening balances & adjusting entries',exact=True).click();await page.get_by_role('button',name='Prepare journal',exact=True).click()
+  await page.reload(wait_until='networkidle');print('errors',errors);await page.screenshot(path='/tmp/browser/accounting-milestone/report-error.png');await page.get_by_role('combobox').first.select_option('company-profit-loss');await page.get_by_label('Accounting company').select_option('A');await page.get_by_text('Opening balances & adjusting entries',exact=True).click();await page.get_by_role('button',name='Prepare journal',exact=True).click()
   await page.get_by_label('Journal date',exact=True).fill('2026-11-01');await page.get_by_label('Journal explanation').fill('Unpaid November rent');await page.get_by_label('Journal original').select_option('doc-a')
   for i,code,label,role,field in [(1,'expense:rent','Rent','expense','Debit'),(2,'payable:rent','Rent payable','liability','Credit')]:
    await page.get_by_label(f'Account code {i}',exact=True).fill(code);await page.get_by_label(f'Account label {i}',exact=True).fill(label);await page.get_by_label(f'Account role {i}',exact=True).select_option(role);await page.get_by_label(f'{field} {i}',exact=True).fill('1200')
