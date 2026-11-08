@@ -1,3 +1,6 @@
+# 8 Nov 2026 — annual accounting demonstration
+26 distinct focused tests and actual report export/retry browser passed; annual figures reconcile but full document-to-close acceptance remains PARTIAL. Cash reconciliation/loan-interest fixes, statutory roll-forwards and Milestone2 literal lender matching implemented. No IDs closed; exact results/gaps: docs/evidence/accounting-annual-2026-11-08.md.
+
 # 8 Nov 2026 08:33 — connected accounting schedules
 Detailed printed opening controls/provenance, recurring accrual/prepaid/reversal proposals, verified accountant grant authority, encrypted note retry and statutory working mapping implemented; FY company/source link omissions corrected.52 distinct focused tests and actual isolated upload-to-opening-to-settlement/note recovery pass. No broad IDs promoted; full database/browser close and statutory/hosted gaps remain. See docs/evidence/accounting-schedules-2026-11-08.md.
 
