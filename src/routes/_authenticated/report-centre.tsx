@@ -15,6 +15,7 @@ import { ACTIVE_SCOPES, SCOPE_LABEL, type Scope } from "@/lib/expenses";
 import { PERIOD_LABEL, REPORT_TYPES, buildReportDoc, emptyFilters, needsTrip, orgOf, periodRange, reportLabel, type DraftLite, type Period, type ReportDoc, type ReportFilters, type ReportType, type StatusFilter } from "@/lib/report-centre";
 import { downloadBlob, deliverFile, toCsv, toExcel } from "@/lib/reports";
 import { corporateReport, type CorporateType } from '@/lib/books/corporate-statements';
+import { corporateAuditPack } from '@/lib/books/corporate-audit-pack';
 import { listDrafts } from "@/lib/drafts";
 import { localDrafts } from "@/lib/offline";
 import type { TravelTrip } from "@/lib/travel";
@@ -153,8 +154,9 @@ function ReportCentre() {
   const openPreview = (b: Blob) => { const u = URL.createObjectURL(b); window.open(u, "_blank"); setTimeout(() => URL.revokeObjectURL(u), 60_000); };
   const busy = stage >= 0 && !failed;
   const toggleWs = (s: Scope) => setF((x) => ({ ...x, workspaces: x.workspaces.includes(s) ? x.workspaces.filter((w) => w !== s) : [...x.workspaces, s] }));
-  const corporateDownload = async (doc:ReportDoc,format:'csv'|'excel'|'evidence') => {
+  const corporateDownload = async (doc:ReportDoc,format:'csv'|'excel'|'evidence'|'pack') => {
     if(!doc.corporateWorking)return;
+    if(format==='pack'){await deliverFile(await corporateAuditPack(doc.corporateWorking,store.documents,store.signedUrl),`ledgerline-company-audit-${doc.corporateWorking.entityId}.zip`);return;}
     if(format==='evidence'){downloadBlob(new Blob([JSON.stringify(doc.corporateWorking,null,2)],{type:'application/json'}),'company-accounting-evidence.json');return;}
     const r=corporateReport(doc.corporateWorking,doc.type as CorporateType);
     const blob=format==='excel'?await toExcel(r):new Blob(['\uFEFF',toCsv(r)],{type:'text/csv;charset=utf-8'});
@@ -235,7 +237,7 @@ function ReportCentre() {
             <Button onClick={() => { void deliverFile(result.blob, result.name); }}><Share2 className="mr-1 h-4 w-4" />Share</Button>
           </div>
           {!!result.doc.figureEvidence?.length&&<Button variant="outline" onClick={()=>downloadBlob(new Blob([JSON.stringify(result.doc.figureEvidence,null,2)],{type:'application/json'}),'report-figure-evidence.json')}>Download figure evidence</Button>}
-          {result.doc.corporateWorking&&<div className="flex flex-wrap gap-2"><Button variant="outline" onClick={()=>corporateDownload(result.doc,'csv')}>CSV</Button><Button variant="outline" onClick={()=>corporateDownload(result.doc,'excel')}>Excel</Button><Button variant="outline" onClick={()=>corporateDownload(result.doc,'evidence')}>Accounting evidence</Button></div>}
+          {result.doc.corporateWorking&&<div className="flex flex-wrap gap-2"><Button variant="outline" onClick={()=>corporateDownload(result.doc,'csv')}>CSV</Button><Button variant="outline" onClick={()=>corporateDownload(result.doc,'excel')}>Excel</Button><Button variant="outline" onClick={()=>corporateDownload(result.doc,'evidence')}>Accounting evidence</Button><Button variant="outline" onClick={()=>corporateDownload(result.doc,'pack').catch(e=>toast.error((e as Error).message))}>Audit pack</Button></div>}
         </section>
       )}
 
@@ -249,7 +251,7 @@ function ReportCentre() {
               <div className="flex justify-between gap-2"><span className="font-semibold">{h.title}{h.version > 1 ? ` · v${h.version}` : ""}</span><span className="text-xs text-muted-foreground">{kb(h.file_size)}</span></div>
               <div className="text-xs text-muted-foreground">{h.period_from} to {h.period_to} · {h.workspace === "all" ? "All workspaces" : h.workspace.split(",").map((w) => SCOPE_LABEL[w as Scope] ?? w).join(", ")} · generated {new Date(h.created_at).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" })} · {h.status === "ready" ? "Ready" : "Failed"}</div>
               <div className="mt-2 flex flex-wrap gap-1.5">
-                {(h.filters as {snapshot?:ReportDoc})?.snapshot?.corporateWorking&&<><Button size="sm" variant="outline" onClick={()=>corporateDownload((h.filters as {snapshot:ReportDoc}).snapshot,'csv')}>Saved CSV</Button><Button size="sm" variant="outline" onClick={()=>corporateDownload((h.filters as {snapshot:ReportDoc}).snapshot,'excel')}>Saved Excel</Button><Button size="sm" variant="outline" onClick={()=>corporateDownload((h.filters as {snapshot:ReportDoc}).snapshot,'evidence')}>Accounting evidence</Button></>}
+                {(h.filters as {snapshot?:ReportDoc})?.snapshot?.corporateWorking&&<><Button size="sm" variant="outline" onClick={()=>corporateDownload((h.filters as {snapshot:ReportDoc}).snapshot,'csv')}>Saved CSV</Button><Button size="sm" variant="outline" onClick={()=>corporateDownload((h.filters as {snapshot:ReportDoc}).snapshot,'excel')}>Saved Excel</Button><Button size="sm" variant="outline" onClick={()=>corporateDownload((h.filters as {snapshot:ReportDoc}).snapshot,'evidence')}>Accounting evidence</Button><Button size="sm" variant="outline" onClick={()=>corporateDownload((h.filters as {snapshot:ReportDoc}).snapshot,'pack').catch(e=>toast.error((e as Error).message))}>Audit pack</Button></>}
                 {!!(h.filters as {snapshot?:ReportDoc})?.snapshot?.figureEvidence?.length&&<Button size="sm" variant="outline" onClick={()=>downloadBlob(new Blob([JSON.stringify((h.filters as {snapshot:ReportDoc}).snapshot.figureEvidence,null,2)],{type:'application/json'}),'saved-report-figure-evidence.json')}>Figure evidence</Button>}
                 <Button size="sm" variant="outline" disabled={!b} onClick={() => b && openPreview(b)}><Eye className="mr-1 h-3.5 w-3.5" />Preview</Button>
                 <Button size="sm" variant="outline" disabled={!b} onClick={() => b && downloadBlob(b, name)}><Download className="mr-1 h-3.5 w-3.5" />Download</Button>

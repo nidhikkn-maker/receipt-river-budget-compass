@@ -15,6 +15,7 @@ it('company exports preserve manual ownership and account inheritance, exclude p
 it('company year coverage never uses another company or personal entry/statement/document',()=>{
  const e={id:'a',date:'2026-04-01',accountId:'bank-a',reconciledAt:'2026-04-30'} as Expense;
  const entries=[e,{...e,id:'b',accountId:'bank-b'},{...e,id:'personal',accountId:'cash'}];
- const docs=[{id:'a-doc',entityId:'a',docDate:'2026-04-10'},{id:'b-doc',entityId:'b',docDate:'2026-05-10',accountId:'bank-a'},{id:'linked',transactionId:'a',docDate:'2026-06-10'},{id:'personal-doc',docDate:'2026-07-10'}] as VaultDoc[];
+ const blank:VaultDoc={id:'',title:'Synthetic original',docType:'invoice',filePath:'owner/original.pdf',fileName:'original.pdf',mimeType:'application/pdf',size:100,docDate:null,amount:null,currency:'INR',merchant:null,notes:'',text:'',transactionId:null,accountId:null,loanId:null,expiresOn:null,createdAt:'2026-04-10'};
+ const docs=[{...blank,id:'a-doc',entityId:'a',docDate:'2026-04-10'},{...blank,id:'b-doc',entityId:'b',docDate:'2026-05-10',accountId:'bank-a'},{...blank,id:'linked',transactionId:'a',docDate:'2026-06-10'},{...blank,id:'personal-doc',docDate:'2026-07-10'}];
  expect(companyYearEvidence(entries,docs,'a',{a:['bank-a'],b:['bank-b']})).toEqual({entries:['2026-04-01'],statements:['2026-04-01'],docs:['2026-04-10','2026-06-10']});
 });
