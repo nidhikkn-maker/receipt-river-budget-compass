@@ -88,7 +88,6 @@ async def main():
    await dialog.get_by_role('button',name='Hide Smart Add (your work stays here)',exact=True).click()
    await page.get_by_role('button',name='Smart Add',exact=True).filter(visible=True).first.click()
    await page.screenshot(path=str(OUT/f'{width}-resume-debug.png'))
-   print('resume state:',await dialog.inner_text())
    await expect(review.get_by_label('Merchant',exact=True)).to_have_value('Corrected cafe')
    await expect(image).to_be_visible()
    await dialog.get_by_role('button',name='Looks right',exact=True).click()
