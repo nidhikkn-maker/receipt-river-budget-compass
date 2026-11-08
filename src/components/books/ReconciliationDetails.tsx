@@ -11,10 +11,12 @@ import { useState } from 'react';
 /** Existing audit treatment, exact records and existing review/download paths only. */
 export function ReconciliationDetails({item,entries,docs,download}:{item:AuditItem;entries:Expense[];docs:VaultDoc[];download:(path:string,name:string)=>Promise<void>}){
  const c=item.comparison;
- const [pdf,setPdf]=useState<Blob|null>(null);
+ const [pdf,setPdf]=useState<{blob:Blob;key:string}|null>(null);
  if(!c)return null;
  const report=()=>reconciliationManifestReport([item]);
- return <details id={reconciliationAnchor(item.key)} className="mt-2 border-t pt-2" open={typeof window!=='undefined'&&decodeURIComponent(window.location.hash.slice(1))===decodeURIComponent(reconciliationAnchor(item.key))}>
+ const key=JSON.stringify(c);
+ const matchingAnchor=typeof window!=='undefined'&&(window.location.hash.slice(1)===reconciliationAnchor(item.key)||window.location.hash.slice(1)===encodeURIComponent(reconciliationAnchor(item.key)));
+ return <details id={reconciliationAnchor(item.key)} className="mt-2 border-t pt-2" open={matchingAnchor}>
   <summary className="cursor-pointer text-xs font-medium">Compared records · {c.registration??c.recordId} · {item.fy??c.to}</summary>
   <div className="mt-2 space-y-3 text-xs">
    <p>{c.from} → {c.to} · difference {c.difference.toFixed(c.family==='investment'?6:2)}{c.family==='investment'?' units':' INR'}</p>
@@ -32,7 +34,7 @@ export function ReconciliationDetails({item,entries,docs,download}:{item:AuditIt
    <div className="flex flex-wrap gap-2">
     <Button variant="outline" size="sm" onClick={()=>downloadBlob(new Blob([toCsv(report())],{type:'text/csv'}),'comparison-evidence.csv')}>CSV</Button>
     <Button variant="outline" size="sm" onClick={async()=>downloadBlob(await toExcel(report()),'comparison-evidence.xlsx')}>Excel</Button>
-    <Button variant="outline" size="sm" onClick={async()=>{if(pdf)downloadBlob(pdf,'comparison-evidence.pdf');else setPdf(await toPdf(report(),`${item.entity} · FY ${item.fy??''} · saved-record comparison, not certification`));}}>{pdf?'Download PDF':'Prepare PDF'}</Button>
+    <Button variant="outline" size="sm" onClick={async()=>{if(pdf?.key===key)downloadBlob(pdf.blob,'comparison-evidence.pdf');else setPdf({blob:await toPdf(report(),`${item.entity} · FY ${item.fy??''} · saved-record comparison, not certification`),key});}}>{pdf?.key===key?'Download PDF':'Prepare PDF'}</Button>
     <Button variant="outline" size="sm" onClick={()=>downloadBlob(new Blob([JSON.stringify(reconciliationManifest([item]),null,2)],{type:'application/json'}),'comparison-manifest.json')}>Full evidence</Button>
    </div>
   </div>
