@@ -2,6 +2,14 @@ import { it, expect } from 'vitest';
 import { investmentRecon, supplierRecon, customerRecon, allocatePayments } from './recon';
 import type { GstInvoice } from './types';
 import { withStates } from './audit';
+import { reconciliationExceptions } from './reconciliation-exceptions';
+import { emptyBooks } from './types';
+it('retained loan, investment and intercompany differences all enter the same source-linked queue',()=>{
+ const accounts=[{id:'loan',name:'Loan',kind:'loan' as const,openingBalance:500,archived:false}];
+ const doc={id:'lender',loanId:'l',docType:'loan_statement',docDate:'2026-10-01',amount:400};
+ const result=reconciliationExceptions({today:'2026-11-08',entities:[],accounts,docs:[doc] as unknown as import('../documents').VaultDoc[],books:{...emptyBooks(),entityAccounts:{A:['a'],B:['b']}},entries:[{id:'move',txnType:'transfer',accountId:'a',toAccountId:'b',amount:50}] as import('../expenses').Expense[],loans:[{id:'l',name:'Loan',accountId:'loan'}],holdings:[{isin:'I',name:'Fund',quantity:20,asOf:null,statementValue:null,sources:['demat'],gains:[],lots:[{date:'2026-10-01',side:'buy',quantity:10,price:null,amount:null,source:'trades'}]}]});
+ expect(result.map(r=>r.key)).toEqual(['recon:loan:l:2026-10-01','recon:investment:I','recon:inter:A:B']);expect(result[0]?.evidence).toBe('lender');expect(result[1]?.evidence).toBe('demat');
+});
 it('a saved resolved note cannot suppress a still-present financial difference or missing invoice',()=>{
  const finding={key:'recon:source',type:'Reconciliation' as const,entity:'A',account:null,fy:null,risk:'high' as const,text:'Difference',evidence:'source',to:'/audit'};
  expect(withStates([finding],[{key:finding.key,status:'resolved',note:'Not evidence',at:'2026-11-08'}]).open).toEqual([finding]);
