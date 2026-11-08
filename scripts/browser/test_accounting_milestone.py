@@ -35,7 +35,7 @@ async def main():
    await page.goto('http://localhost:8080/report-centre',wait_until='networkidle');await page.get_by_role('combobox').first.select_option('company-profit-loss');await page.get_by_label('Accounting company').select_option('A');await page.get_by_text('Opening balances & adjusting entries',exact=True).click()
   await page.goto('http://localhost:8080/statements',wait_until='networkidle');await page.get_by_label('Company financial original').set_input_files('/tmp/browser/accounting-document/invoice.png')
   await page.get_by_text('Tick to confirm it belongs to this company.',exact=False).locator('..').get_by_role('checkbox').check()
-  await page.get_by_role('button',name='Confirm and save',exact=True).click();await expect(page.get_by_text('Interrupted committed intake',exact=True)).to_be_visible();await page.get_by_role('button',name='Retry',exact=True).click();await expect(page.get_by_text('Saved',exact=True)).to_be_visible()
+  await page.get_by_role('button',name='Confirm and save',exact=True).click();await page.screenshot(path='/tmp/browser/accounting-milestone/intake.png');print(await page.locator('body').inner_text());await expect(page.get_by_text('Interrupted committed intake',exact=True)).to_be_visible();await page.get_by_role('button',name='Retry',exact=True).click();await expect(page.get_by_text('Saved',exact=True)).to_be_visible()
   intake=await page.evaluate("JSON.parse(sessionStorage.getItem('intake'))");assert all(d.get('docId') for d in intake['books']['fyRecords'][-1]['details'])
   await open_company();await page.get_by_text('Detailed opening schedules · 2025-26',exact=True).click();await page.locator('summary').filter(has_text='trialBalance').click()
   labels=read['details'][0]['lines'];assert len(labels)>=6
