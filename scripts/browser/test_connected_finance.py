@@ -30,8 +30,6 @@ async def main():
   await page.get_by_role('button',name='Apply everything (2 to save)').click()
   await expect(page.get_by_role('button',name='Undo this upload (2 saved)')).to_be_visible()
   await page.locator('nav').get_by_role('link',name='Inbox',exact=True).click()
-  await page.wait_for_timeout(1000)
-  print('inbox observed',page.url,(await page.locator('body').inner_text())[:900])
   await expect(page.get_by_role('heading',name='Review',exact=True)).to_be_visible()
   await page.screenshot(path=str(OUT/'inbox.png'))
   await page.locator('nav').get_by_role('link',name='Reconciliation',exact=True).click()
@@ -50,6 +48,20 @@ async def main():
   async with page.expect_download() as pending:await page.get_by_role('button',name='Export All expenses CSV').click()
   report=await pending.value;await report.save_as(OUT/'report.csv');text=(OUT/'report.csv').read_text();assert '250.00' in text and '480.00' in text
   await page.screenshot(path=str(OUT/'reports.png'))
+  # Separate bounded historical criterion: all three requested report families, both formats.
+  await page.evaluate('''() => {deskFixture.transactions.push({id:'synthetic-reimbursement',title:'Received reimbursement',merchant:'Controlled employer',txnType:'reimbursement',amount:40,originalAmount:40,fxRate:1,currency:'INR',date:'2026-10-04',scope:'personal',memberId:null,splits:[],receipts:[],tags:[],description:'',paymentMethod:'bank_transfer',accountId:'desk-account',reconciledAt:null,statementRef:null});sessionStorage.setItem('controlled-desk-ledger',JSON.stringify(deskFixture.transactions));}''')
+  await page.reload()
+  for title,values in [('All expenses',['250.00','480.00']),('Reimbursement payments',['40.00']),('Department budgets',['730.00'])]:
+   async with page.expect_download() as pending:await page.get_by_role('button',name=f'Export {title} CSV',exact=True).click()
+   d=await pending.value;target=OUT/f'{title}.csv';await d.save_as(target);text=target.read_text()
+   assert all(v in text for v in values)
+   await page.get_by_role('button',name=f'Prepare {title} PDF',exact=True).click()
+   async with page.expect_download() as pending:await page.get_by_role('button',name=f'Download {title} PDF',exact=True).click()
+   d=await pending.value;target=OUT/f'{title}.pdf';await d.save_as(target)
+   from pypdf import PdfReader
+   pdftext=' '.join(p.extract_text() or '' for p in PdfReader(target).pages)
+   assert all(v in pdftext for v in values)
+  print('PASS HC-0031: actual CSV/PDF download contents for expenses, actual reimbursement receipt and department spending, 730/40/730; transfers/payments not double-counted.')
   assert not errors,errors
   print('PASS actual Statement Desk → Inbox → Account Reconciliation → DocuRepo reload/original bytes → Reports; synthetic local adapters, audit/historical fetches stubbed; hosted/entity isolation not certified.')
   await browser.close()
