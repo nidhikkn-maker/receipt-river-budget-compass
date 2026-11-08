@@ -10,6 +10,7 @@ import type { BooksData } from './types';
 import { effectiveEntity, ownerOf } from './entity-accounts';
 import type { Report } from '../reports';
 import { accountingErrors, balancedGroups, journalAccountDelta, journalFromEntry } from './accounting-journal';
+import {accountingCanonical} from './accounting-post';
 
 export const CORPORATE_TYPES = ['company-trial-balance','company-profit-loss','company-balance-sheet','company-cash-flow','company-audit-schedules'] as const;
 export type CorporateType = typeof CORPORATE_TYPES[number];
@@ -26,6 +27,10 @@ export interface CorporateWorking {
   profit: number; assets: number; liabilities: number; equity: number; unclassified: number;
   trialDifference: number; balanceDifference: number;
   cash: { opening: number; operating: number; investing: number; financing: number; unclassified: number; closing: number; difference: number };
+}
+/** Readiness is source-based; balanced arithmetic alone never clears unexplained facts. */
+export function corporateCloseErrors(workings:CorporateWorking[]):string[]{
+ return workings.flatMap(w=>[...w.issues.map(i=>`${w.entityName}: ${i.message}`),...(w.trialDifference!==0||w.balanceDifference!==0||w.cash.difference!==0?[`${w.entityName}: Financial statements do not agree.`]:[])]);
 }
 const cashKinds = ['savings','current','cash','wallet'];
 const roleOf = (a: Account): BookRole => isLiability(a.kind) ? 'liability' : 'asset';
@@ -76,10 +81,14 @@ export function corporateStatements(p: { entityId: string; entities: EntityProfi
     if(members.some(e=>JSON.stringify(journalFromEntry(e)?.journal)!==JSON.stringify(j)||e.date!==j.date))errors.push('Journal evidence changed between canonical legs.');
     for(const l of linked){const candidates=members.filter(e=>e.accountId===l.accountId);const a=p.accounts.find(a=>a.id===l.accountId);if(candidates.length!==1||!a||accountBalance({...a,openingBalance:0},candidates)!==journalAccountDelta(l))errors.push('Journal and canonical account movement differ.');}
     if(!linked.length&&members.some(e=>e.accountId||e.toAccountId))errors.push('Noncash journal unexpectedly moves a money account.');
+    if(j.settlement&&j.kind!=='reversal'){
+      const bank=entries.get(j.settlement.entryId);const s=j.settlement.snapshot;
+      if(!bank||bank.entityId!==entity.id||bank.amount!==s.amount||bank.date!==s.date||bank.accountId!==s.accountId||(bank.txnType??'expense')!==s.txnType||bank.category!==s.category||accountingCanonical(bank.allocations??[])!==accountingCanonical(s.allocations))errors.push('Settlement bank source changed or is unavailable; recover original evidence.');
+    }
     if(errors.length){errors.forEach(message=>issue(id,message));continue;}
     members.forEach(e=>journalEntries.add(e.id));
     const docs=p.documents.filter(d=>j.documentIds.includes(d.id));
-    for(const l of j.legs)emit(`journal:${id}`,j.kind==='opening'?j.date.slice(0,4)+'-03-31':j.date,l.code,l.label,l.role,subtractMoney(l.debit,l.credit),primary[0]??null,docs.map(d=>d.id),docs.map(d=>d.filePath),`${j.kind}: ${j.description}${j.reversesId?`; exact reversal of ${j.reversesId}`:''}`);
+    for(const l of j.legs)emit(`journal:${id}`,j.kind==='opening'?j.date.slice(0,4)+'-03-31':j.date,l.code,l.label,l.role,subtractMoney(l.debit,l.credit),primary[0]??null,docs.map(d=>d.id),docs.map(d=>d.filePath),`${j.kind}: ${j.description}${j.reversesId?`; exact reversal of ${j.reversesId}`:''}${j.settlement?`; bank source ${j.settlement.entryId}; accrued source ${j.settlement.journalId}`:''}`);
   }
   for (const e of entries.values()) {
     if(journalEntries.has(e.id))continue;

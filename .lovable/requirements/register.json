@@ -300,17 +300,18 @@
       "modules": [],
       "dependencies": [],
       "status": "PARTIAL",
-      "requiredWork": "Add a disposable-store integration test for the complete 1. Financial accounting. workflow, including document-derived records, entity isolation, persistence, reconciliation and evidence traceability; existing calculation/proposal tests do not prove the whole module. Project edits/new src tests were prohibited by sandbox instructions; missing focused tests were not added.",
+      "requiredWork": "Implemented extracted aggregate FY opening proposals, payable/receivable bank reclassification settlements with exact snapshots/caps/reversal order, accountant access/review screens and corporate close readiness/frozen workings. Remaining detailed account-level ledger and supporting-schedule extraction/mapping, recurring accrual/prepayment schedules, accountant verified identity selection and durable note recovery, full single upload-to-post-to-reconcile-to-regenerate-to-close browser journey, statutory chart/schedules and isolated hosted authority/access acceptance. Production staged authority remains uninstalled.",
       "verificationMethod": "Source-to-code audit followed by applicable unit/database/integration/real-route checks; hosted/device evidence separately required.",
       "finalTestResult": {
         "result": "PARTIAL",
         "evidence": [
           "Register audit context (not independently sufficient test proof): src/lib/books/depreciation.ts prepares accounting journals; src/lib/books/books.test.ts covers journal/ledger integrity rules, not the full financial accounting workflow.",
-          "src/lib/books/books.test.ts \u2014 PASS on rerun; concrete assertions recorded in /tmp/verify-b1-tests.log. Scope is limited to the component rules/fixtures in this file, not the entire clause."
+          "src/lib/books/books.test.ts \u2014 PASS on rerun; concrete assertions recorded in /tmp/verify-b1-tests.log. Scope is limited to the component rules/fixtures in this file, not the entire clause.",
+          "8 Nov 08:01 connected accountant batch: actual non-mocked synthetic trial-balance reading retained, extracted opening review, payable/receivable settlements reversing exact bank classification, immutable source snapshots and correction ordering, accountant grant/revoke/review UI, corporate close readiness and frozen workings. 30 distinct focused tests; disposable disk opening/accrual/settlement/reversal/owner-denial/close retry and actual review/encrypted settlement reload pass. Not hosted; full uninterrupted same-file upload-to-close acceptance and detailed multi-account opening schedules remain open. docs/evidence/accountant-connected-2026-11-08.md"
         ]
       },
       "category": "B",
-      "nextAction": "Add a disposable-store integration test for the complete 1. Financial accounting. workflow, including document-derived records, entity isolation, persistence, reconciliation and evidence traceability; existing calculation/proposal tests do not prove the whole module. Project edits/new src tests were prohibited by sandbox instructions; missing focused tests were not added."
+      "nextAction": "Stay in Milestone 1: detailed printed debit/credit account mappings with provenance and supporting-ledger conflicts, recurring schedules and complete same-file upload-to-close acceptance; hosted authority needs an isolated backend, production installation needs explicit deployment/access approval."
     },
     {
       "id": "V60-0014",
@@ -635,7 +636,7 @@
       "modules": [],
       "dependencies": [],
       "status": "PARTIAL",
-      "requiredWork": "Five company statements now include complete source-bound opening/accrual journals, canonical account-delta validation, frozen report recovery and existing Audit exceptions. Staged atomic authority is not installed. Remaining automatic historical opening mapping, accrual cash settlement without double recognition, recurring schedules, accountant app review, statutory schedules, full interrupted upload-to-posting-to-close acceptance, specialized provenance and hosted owner/entity/access acceptance.",
+      "requiredWork": "Implemented extracted aggregate FY opening proposals, payable/receivable bank reclassification settlements with exact snapshots/caps/reversal order, accountant access/review screens and corporate close readiness/frozen workings. Remaining detailed account-level ledger and supporting-schedule extraction/mapping, recurring accrual/prepayment schedules, accountant verified identity selection and durable note recovery, full single upload-to-post-to-reconcile-to-regenerate-to-close browser journey, statutory chart/schedules and isolated hosted authority/access acceptance. Production staged authority remains uninstalled.",
       "verificationMethod": "Source-to-code audit followed by applicable unit/database/integration/real-route checks; hosted/device evidence separately required.",
       "finalTestResult": {
         "result": "PARTIAL",
@@ -652,11 +653,12 @@
           "8 Nov capture/claims/recovery: shared eight-context capture, in-place exact-entry claim edits, encrypted expenditure recovery, durable source retry; focused automated and actual browser boundary/PDF checks. Scope and blockers: docs/evidence/capture-claims-recovery-2026-11-08.md",
           "8 Nov consolidated completion: exact prior-FY/company/registration comparison membership, loan date-bound inputs, investment retained originals/actions, deduplicated exact intercompany pairs, Inbox exact Audit anchors and complete comparison manifests. Account/cashflow figure dependencies frozen through disk owner-RLS report history lost reply/restart and actual report page retry. 41 distinct focused checks PASS and connected browser PASS; local evidence only. docs/evidence/consolidated-completion-2026-11-08.md",
           "8 Nov corporate milestone: five company working statement families, canonical debit/credit projection, company boundary dues, loan interest/principal and posted depreciation, explicit unknown counterparts, frozen CSV/XLSX/PDF and 18-file audit ZIP with hash-bound actual originals. 17 distinct targeted tests passed including disposable disk owner-denied report recovery; actual report controls/reload/retry/changed-source frozen exports and ZIP pass. Full document-to-close and hosted evidence remain unverified; no promotion. docs/evidence/corporate-accounting-2026-11-08.md",
-          "8 Nov foundation: balanced opening/accrual/invoice proposals, staged atomic canonical journals/exact reversals/original preservation/accountant permission notes, encrypted locked retry and source-complete statement/Audit integration. 22 focused tests and isolated real-route journal interrupted reply/reload/report evidence pass; authority uninstalled, no full upload-to-close or hosted certification. No promotion. docs/evidence/accounting-foundation-2026-11-08.md"
+          "8 Nov foundation: balanced opening/accrual/invoice proposals, staged atomic canonical journals/exact reversals/original preservation/accountant permission notes, encrypted locked retry and source-complete statement/Audit integration. 22 focused tests and isolated real-route journal interrupted reply/reload/report evidence pass; authority uninstalled, no full upload-to-close or hosted certification. No promotion. docs/evidence/accounting-foundation-2026-11-08.md",
+          "8 Nov 08:01 connected accountant batch: actual non-mocked synthetic trial-balance reading retained, extracted opening review, payable/receivable settlements reversing exact bank classification, immutable source snapshots and correction ordering, accountant grant/revoke/review UI, corporate close readiness and frozen workings. 30 distinct focused tests; disposable disk opening/accrual/settlement/reversal/owner-denial/close retry and actual review/encrypted settlement reload pass. Not hosted; full uninterrupted same-file upload-to-close acceptance and detailed multi-account opening schedules remain open. docs/evidence/accountant-connected-2026-11-08.md"
         ]
       },
       "category": "B",
-      "nextAction": "Remain in Corporate Milestone1: automatic complete historical opening mapping, accrual settlement/reclassification, accountant app grant/review and full interrupted-upload-to-journal-to-regenerated-statements-to-close. Authority installation requires approval; do not activate production or infer hosted acceptance."
+      "nextAction": "Stay in Milestone 1: detailed printed debit/credit account mappings with provenance and supporting-ledger conflicts, recurring schedules and complete same-file upload-to-close acceptance; hosted authority needs an isolated backend, production installation needs explicit deployment/access approval."
     },
     {
       "id": "V60-0027",

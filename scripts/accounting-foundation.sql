@@ -67,15 +67,32 @@ BEGIN
   deb:=deb+(l->>'debit')::numeric;cred:=cred+(l->>'credit')::numeric;
  END LOOP;
  IF deb<>cred THEN RAISE EXCEPTION 'Unbalanced journal; differences cannot be accepted'; END IF;
- IF _journal->>'invoiceId' IS NOT NULL THEN
+ IF _journal->>'invoiceId' IS NOT NULL AND _journal->>'kind'<>'reversal' THEN
   IF NOT EXISTS(SELECT 1 FROM jsonb_array_elements(coalesce(prefs->'books'->'gstInvoices','[]')) i WHERE i->>'id'=_journal->>'invoiceId' AND (i->>'transactionId' IS NULL) AND _journal->'documentIds' ? (i->>'docId') AND coalesce((SELECT e->'gstins' FROM jsonb_array_elements(prefs->'entities') e WHERE e->>'id'=ent),'[]') ? (i->>'gstin')) THEN RAISE EXCEPTION 'Invoice source or company differs, or already linked'; END IF;
   IF EXISTS(SELECT 1 FROM public.accounting_journal_evidence WHERE owner_id=uid AND journal->>'invoiceId'=_journal->>'invoiceId' AND journal->>'kind'<>'reversal') THEN RAISE EXCEPTION 'Invoice already posted; correct with source-preserving reversal'; END IF;
+ END IF;
+ IF _journal->'settlement' IS NOT NULL AND _journal->>'kind'<>'reversal' THEN
+  SELECT * INTO prior FROM public.accounting_journal_evidence WHERE id=(_journal->'settlement'->>'journalId')::uuid AND owner_id=uid AND entity_id=ent;
+  IF NOT FOUND OR prior.journal->>'kind' IN ('opening','reversal') OR dt<(prior.journal->>'date')::date OR EXISTS(SELECT 1 FROM public.accounting_journal_evidence WHERE owner_id=uid AND journal->>'reversesId'=prior.id::text) THEN RAISE EXCEPTION 'Accrual source unavailable or reversed'; END IF;
+  IF EXISTS(SELECT 1 FROM public.accounting_journal_evidence s WHERE s.owner_id=uid AND s.journal->'settlement'->>'entryId'=_journal->'settlement'->>'entryId' AND s.journal->>'kind'<>'reversal' AND NOT EXISTS(SELECT 1 FROM public.accounting_journal_evidence r WHERE r.owner_id=uid AND r.journal->>'reversesId'=s.id::text)) THEN RAISE EXCEPTION 'Bank transaction already settled'; END IF;
+  IF NOT EXISTS(SELECT 1 FROM public.expenses e WHERE e.id=(_journal->'settlement'->>'entryId')::uuid AND e.employee_id=uid AND e.entity_id=ent AND e.expense_date=dt AND e.account_id::text=_journal->'settlement'->'snapshot'->>'accountId' AND e.amount=(_journal->'settlement'->>'amount')::numeric AND e.amount=(_journal->'settlement'->'snapshot'->>'amount')::numeric AND e.currency='INR' AND e.category=_journal->'settlement'->'snapshot'->>'category' AND e.txn_type=_journal->'settlement'->'snapshot'->>'txnType' AND e.receipt_details->'accounting' IS NULL) THEN RAISE EXCEPTION 'Bank settlement snapshot changed'; END IF;
+  IF NOT EXISTS(SELECT 1 FROM public.expenses e WHERE e.id=(_journal->'settlement'->>'entryId')::uuid AND coalesce(to_jsonb(e)->'allocations','[]'::jsonb)=coalesce(_journal->'settlement'->'snapshot'->'allocations','[]'::jsonb)) THEN RAISE EXCEPTION 'Bank allocation snapshot changed'; END IF;
+  IF EXISTS(SELECT 1 FROM jsonb_array_elements(_journal->'legs') x WHERE x->>'accountId' IS NOT NULL) THEN RAISE EXCEPTION 'Settlement cannot move bank money again'; END IF;
+  SELECT * INTO l FROM jsonb_array_elements(prior.journal->'legs') x WHERE x->>'code'=_journal->'settlement'->>'balanceCode';
+  IF l IS NULL OR l->>'role' NOT IN ('asset','liability') OR l->>'accountId' IS NOT NULL THEN RAISE EXCEPTION 'Outstanding balance unavailable'; END IF;
+  amount:=CASE WHEN l->>'role'='liability' THEN (l->>'credit')::numeric-(l->>'debit')::numeric ELSE (l->>'debit')::numeric-(l->>'credit')::numeric END;
+  amount:=amount-coalesce((SELECT sum((s.journal->'settlement'->>'amount')::numeric) FROM public.accounting_journal_evidence s WHERE s.owner_id=uid AND s.journal->'settlement'->>'journalId'=prior.id::text AND s.journal->'settlement'->>'balanceCode'=l->>'code' AND s.journal->>'kind'<>'reversal' AND NOT EXISTS(SELECT 1 FROM public.accounting_journal_evidence r WHERE r.owner_id=uid AND r.journal->>'reversesId'=s.id::text)),0);
+  IF (_journal->'settlement'->>'amount')::numeric<=0 OR (_journal->'settlement'->>'amount')::numeric>amount THEN RAISE EXCEPTION 'Settlement exceeds outstanding balance'; END IF;
+  IF NOT EXISTS(SELECT 1 FROM jsonb_array_elements(_journal->'legs') x WHERE x->>'code'=l->>'code' AND x->>'role'=l->>'role' AND (x->>'debit')::numeric=(CASE WHEN l->>'role'='liability' THEN (_journal->'settlement'->>'amount')::numeric ELSE 0 END) AND (x->>'credit')::numeric=(CASE WHEN l->>'role'='asset' THEN (_journal->'settlement'->>'amount')::numeric ELSE 0 END)) THEN RAISE EXCEPTION 'Settlement balance legs differ'; END IF;
+  IF (SELECT count(*) FROM jsonb_array_elements(_journal->'legs'))<>1+(SELECT jsonb_array_length(CASE WHEN jsonb_array_length(coalesce(to_jsonb(e)->'allocations','[]'))>0 THEN to_jsonb(e)->'allocations' ELSE jsonb_build_array(jsonb_build_object('category',e.category,'amount',e.amount)) END) FROM public.expenses e WHERE e.id=(_journal->'settlement'->>'entryId')::uuid) THEN RAISE EXCEPTION 'Settlement classification legs differ'; END IF;
+  IF EXISTS(SELECT 1 FROM public.expenses e, jsonb_array_elements(CASE WHEN jsonb_array_length(coalesce(to_jsonb(e)->'allocations','[]'))>0 THEN to_jsonb(e)->'allocations' ELSE jsonb_build_array(jsonb_build_object('category',e.category,'amount',e.amount)) END) part WHERE e.id=(_journal->'settlement'->>'entryId')::uuid AND (e.txn_type<>CASE WHEN l->>'role'='liability' THEN 'expense' ELSE 'income' END OR NOT EXISTS(SELECT 1 FROM jsonb_array_elements(_journal->'legs') x WHERE x->>'code'=e.txn_type||':'||(part->>'category') AND x->>'role'=e.txn_type AND (x->>'debit')::numeric=CASE WHEN e.txn_type='income' THEN (part->>'amount')::numeric ELSE 0 END AND (x->>'credit')::numeric=CASE WHEN e.txn_type='expense' THEN (part->>'amount')::numeric ELSE 0 END))) THEN RAISE EXCEPTION 'Settlement must reverse the exact bank income or expense classification'; END IF;
  END IF;
  IF _journal->>'kind'='opening' AND EXISTS(SELECT 1 FROM public.accounting_journal_evidence WHERE owner_id=uid AND entity_id=ent AND journal->>'kind'='opening' AND (journal->>'date')::date=dt) THEN RAISE EXCEPTION 'Opening already posted for this date'; END IF;
  IF _journal->>'reversesId' IS NOT NULL THEN
   SELECT * INTO prior FROM public.accounting_journal_evidence WHERE id=(_journal->>'reversesId')::uuid AND owner_id=uid AND entity_id=ent;
   IF NOT FOUND OR _journal->>'kind'<>'reversal' OR dt<(prior.journal->>'date')::date THEN RAISE EXCEPTION 'Invalid reversal'; END IF;
   IF EXISTS(SELECT 1 FROM public.accounting_journal_evidence WHERE owner_id=uid AND journal->>'reversesId'=_journal->>'reversesId') THEN RAISE EXCEPTION 'Journal already reversed'; END IF;
+  IF EXISTS(SELECT 1 FROM public.accounting_journal_evidence s WHERE s.owner_id=uid AND s.journal->'settlement'->>'journalId'=prior.id::text AND s.journal->>'kind'<>'reversal' AND NOT EXISTS(SELECT 1 FROM public.accounting_journal_evidence r WHERE r.owner_id=uid AND r.journal->>'reversesId'=s.id::text)) THEN RAISE EXCEPTION 'Reverse retained settlements before correcting the accrual'; END IF;
   IF (SELECT jsonb_agg(jsonb_set(jsonb_set(x,'{debit}',x->'credit'),'{credit}',x->'debit') ORDER BY x->>'code') FROM jsonb_array_elements(prior.journal->'legs') x) IS DISTINCT FROM (SELECT jsonb_agg(x ORDER BY x->>'code') FROM jsonb_array_elements(_journal->'legs') x) THEN RAISE EXCEPTION 'Reversal must exactly swap original legs'; END IF;
  END IF;
  -- Only linked money legs affect accountBalance. Noncash journals retain one zero-delta canonical anchor.
@@ -112,6 +129,7 @@ BEGIN
   RETURN NEW;
  END IF;
  IF OLD.receipt_details->'accounting' IS NOT NULL OR NEW.receipt_details->'accounting' IS NOT NULL THEN RAISE EXCEPTION 'Posted accounting evidence is immutable; use an exact reversal and replacement'; END IF;
+ IF EXISTS(SELECT 1 FROM public.accounting_journal_evidence WHERE owner_id=OLD.employee_id AND journal->'settlement'->>'entryId'=OLD.id::text) THEN RAISE EXCEPTION 'Settlement source is retained; reverse and replace without editing the original'; END IF;
  RETURN coalesce(NEW,OLD);
 END $$;
 CREATE TRIGGER accounting_entry_immutable BEFORE INSERT OR UPDATE OR DELETE ON public.expenses FOR EACH ROW EXECUTE FUNCTION public.guard_accounting_entry();
