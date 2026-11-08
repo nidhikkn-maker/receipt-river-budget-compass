@@ -96,6 +96,8 @@ function ReportCentre() {
       });
       if (cancelled.current) return;
       setStage(2);
+      // Background completion uses the queued source snapshot, not later ledger values.
+      if(navigator.onLine){const queued=await supabase.from('report_jobs').insert({id:jobId,owner_id:store.userId,kind:t,filters:{...filters,snapshot:doc} as never,style,status:'running',lease_until:new Date(Date.now()+120e3).toISOString()});if(queued.error)throw Error('Could not queue this report safely. Please retry.');}
       const { renderReportPdf } = await import("@/lib/report-pdf");
       const blob = await renderReportPdf(doc, style, new Date());
       if (cancelled.current) return;
@@ -127,6 +129,7 @@ function ReportCentre() {
     if(saved.error||!saved.data)throw Error('Saved report bytes could not be confirmed. Retry without replacing your PDF.');
     const verified=new Uint8Array(await saved.data.arrayBuffer());
     if(verified.length!==job.bytes.length||verified.some((b,i)=>b!==job.bytes[i]))throw Error('Saved PDF bytes differ. Evidence retained for checking.');
+    const done=await supabase.rpc('finish_my_report_job',{_id:job.id});if(done.error)throw Error('PDF saved; completion status needs retry. Your saved evidence remains unchanged.');
     await clearLocalClaimReport(store.userId,'centre-report');pending.current=null;
     setReady(r=>({...r,[job.id]:blob}));await loadHistory();
   }
