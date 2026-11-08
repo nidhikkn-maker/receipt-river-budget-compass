@@ -8,6 +8,8 @@ import {postAccountingWithRecovery,type AccountingReceipt} from './accounting-po
 import {corporateStatements,CORPORATE_TYPES,corporateReport} from './corporate-statements';
 import {reverseAccountingJournal,type AccountingJournal} from './accounting-journal';
 import {settlementProposal} from './accounting-settlement';
+import {extractedOpening} from './opening-extraction';
+import {openingJournalProposal} from './opening-journal';
 import {emptyBooks} from './types';
 import type {Expense} from '../expenses';
 import type {VaultDoc} from '../documents';
@@ -27,7 +29,9 @@ it('isolated opening → accrual → correction → disk restart → frozen stat
  GRANT SELECT,INSERT,UPDATE,DELETE ON expenses TO authenticated;ALTER TABLE expenses ENABLE ROW LEVEL SECURITY;CREATE POLICY own_expenses ON expenses TO authenticated USING(employee_id=auth.uid()) WITH CHECK(employee_id=auth.uid());`);
  await db.query('INSERT INTO finance_preferences(owner_id,data) VALUES($1,$2)',[owner,JSON.stringify(prefs)]);await db.query('INSERT INTO accounts VALUES($1,$2,$3,false)',[bank,owner,'current']);await db.query('INSERT INTO documents(id,owner_id,entity_id,file_path) VALUES($1,$2,$3,$4)',[document,owner,'A',`${owner}/audited.pdf`]);
  await db.exec(readFileSync('scripts/accounting-foundation.sql','utf8'));await user(owner);
- const opening:AccountingJournal={id:uuid(10),entityId:'A',date:'2026-04-01',kind:'opening',description:'Audited company opening trial balance',documentIds:[document],legs:[{code:`account:${bank}`,accountId:bank,label:'Bank',role:'asset',debit:100000,credit:0},{code:'asset:machine',label:'Machine',role:'asset',debit:50000,credit:0},{code:'receivable',label:'Debtors',role:'asset',debit:10000,credit:0},{code:'loan',label:'Loan',role:'liability',debit:0,credit:20000},{code:'payable',label:'Creditors',role:'liability',debit:0,credit:5000},{code:'capital',label:'Capital',role:'equity',debit:0,credit:135000}]};
+ const realRead=JSON.parse(readFileSync('scripts/browser/fixtures/accounting-opening-real-read.json','utf8')).result.audited as {fy:string;lines:{head:string;amount:number}[]};
+ const extracted=extractedOpening({id:'source-fy',entityId:'A',fy:realRead.fy,audited:Object.fromEntries(realRead.lines.map(l=>[l.head,l.amount])),docIds:[document],schedules:[],qualifications:[],filedReturns:[],lossesCarriedForward:[]},[{id:bank,name:'Bank',kind:'current',openingBalance:0,archived:false}],[bank]);expect(extracted.gaps).toEqual([]);
+ const opening=openingJournalProposal({id:uuid(10),entityId:'A',date:extracted.date,description:'Audited company opening trial balance',documentIds:[document],targets:extracted.targets,current:[]});
  const attempt={owner,requestId:uuid(11),expected:0,journal:opening};let writes=0,lose=false;
  const io={read:async()=>{if(lose){lose=false;throw Error('Interrupted readback');}return (await db.query<AccountingReceipt>('SELECT owner_id,request_id,journal,entry_ids FROM accounting_journal_evidence WHERE id=$1',[opening.id])).rows[0]??null;},post:async()=>{writes++;await post(opening,11);lose=true;throw Error('Lost committed reply');}};
  await expect(postAccountingWithRecovery(attempt,io)).rejects.toThrow('unknown');await db.close();db=new PGlite(join(dir,'db'));await user(owner);await postAccountingWithRecovery(attempt,io);expect(writes).toBe(1);
@@ -51,6 +55,10 @@ it('isolated opening → accrual → correction → disk restart → frozen stat
  const payment={id:uuid(70),title:'Rent paid',date:'2026-05-03',amount:500,originalAmount:500,currency:'INR',accountId:bank,entityId:'A',entitySource:'manual',category:'rent',allocations:[],txnType:'expense',receipts:[],splits:[],scope:'business',fxRate:1,paymentMethod:'other',description:'',merchant:null,memberId:null,reconciledAt:'2026-05-03',statementRef:'statement line 1'} as Expense;
  await db.query('INSERT INTO expenses(id,employee_id,title,category,amount,original_amount,currency,expense_date,txn_type,account_id,entity_id,entity_source) VALUES($1,$2,$3,$4,500,500,$5,$6,$7,$8,$9,$10)',[payment.id,owner,payment.title,payment.category,'INR',payment.date,'expense',bank,'A','manual']);
  const settlement=settlementProposal({id:uuid(71),accrual:rent,balanceCode:'payable',entry:payment,journals:[rent],documentIds:[document]});await post(settlement,72);await post(settlement,72);
+ const fake={...settlement,id:uuid(90),settlement:{...settlement.settlement,entryId:uuid(91)}};
+ await db.query('INSERT INTO expenses(id,employee_id,title,category,amount,original_amount,currency,expense_date,txn_type,account_id,entity_id,entity_source) VALUES($1,$2,$3,$4,500,500,$5,$6,$7,$8,$9,$10)',[uuid(91),owner,payment.title,payment.category,'INR',payment.date,'expense',bank,'A','manual']);
+ await expect(post({...fake,legs:fake.legs.map(l=>l.role==='expense'?{...l,code:'expense:invented'}:l)} as AccountingJournal,92)).rejects.toThrow('exact bank');
+ await db.query('DELETE FROM expenses WHERE id=$1',[uuid(91)]);
  await expect(post({...settlement,id:uuid(73)},74)).rejects.toThrow('already settled');
  await expect(db.query('UPDATE expenses SET amount=499 WHERE id=$1',[payment.id])).rejects.toThrow('retained');
  const settled=corporateStatements({entityId:'A',entities:prefs.entities as never,books:prefs.books,accounts:[{id:bank,name:'Bank',kind:'current',openingBalance:0,archived:false}],documents:[{id:document,entityId:'A',filePath:`${owner}/audited.pdf`} as VaultDoc],entries:await entries(),from:'2026-04-01',to:'2027-03-31'});
