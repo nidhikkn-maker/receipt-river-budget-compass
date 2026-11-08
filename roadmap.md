@@ -1,7 +1,9 @@
 ## Consolidated complete-application mandate — 8 Nov 2026 06:55 UTC
-- [ ] Consolidate every v6/historical unfinished clause into dependency milestones and verified-only module percentages against the checked-out revision; remote GitHub parity remains unverified.
-- [ ] Implement the highest-priority connected accounting group, then record focused financial/source/ownership/recovery acceptance without promoting broad incomplete clauses.
-- [ ] Record remaining functionality, precise hosted/approval blockers, effort ranges and measured credits; prior cap withdrawn, no credit purchase, UIX, production migration, real-record, activation or publishing changes.
+- [x] Consolidate every v6/historical unfinished clause into dependency milestones and verified-only module percentages against the checked-out revision; remote GitHub parity remains unverified.
+- [x] Implement the highest-priority connected accounting group, then record focused financial/source/ownership/recovery acceptance without promoting broad incomplete clauses.
+- [x] Record remaining functionality, precise hosted/approval blockers, effort ranges and measured credits; prior cap withdrawn, no credit purchase, UIX, production migration, real-record, activation or publishing changes.
+
+- [ ] Next milestone: document/FY schedule → reviewed opening/account mapping → current corporate statement workings, then financed loan/asset handoff; full non-GST resolution/hosted acceptance remains separate.
 
 ## Larger-batch completion — 8 Nov 2026
 - [ ] Next functional group: source-backed loan proposal/linking and saved loan/asset journey; finish remaining non-Centre material export inputs. Broad acceptance/hosted blockers remain explicit; no repeated prior GST/report audit.
