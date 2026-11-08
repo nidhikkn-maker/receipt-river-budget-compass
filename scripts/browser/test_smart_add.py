@@ -112,7 +112,7 @@ async def main():
    await dialog.get_by_role('button',name="It's something I own",exact=True).click()
    asset=dialog.get_by_role('region',name='Asset from saved purchase')
    await asset.get_by_label('Asset name',exact=True).fill('Controlled computer')
-   await asset.get_by_label('Kind',exact=True).select_option('computer')
+   await asset.get_by_label('Asset kind',exact=True).select_option('computer')
    await asset.get_by_role('button',name='Link saved purchase to asset',exact=True).dblclick()
    await expect(asset.get_by_text('Already linked to Things I own.',exact=True)).to_be_visible()
    prefs=await page.evaluate('JSON.parse(sessionStorage.getItem("expense-browser-preferences"))')

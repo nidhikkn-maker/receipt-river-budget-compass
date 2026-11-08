@@ -21,7 +21,7 @@ export function ReceiptAssetHandoff({ entryId }: { entryId: string }) {
     <p className="text-sm text-muted-foreground">The saved payment and its original bill stay linked. This does not make another payment.</p>
     {existing || saved ? <p role="status">Already linked to Things I own.</p> : <>
       <label className="block text-sm">Asset name<Input value={name} onChange={e => setName(e.target.value)} /></label>
-      <label className="block text-sm">Kind<select className="h-11 w-full rounded-md border bg-background px-2" value={kind} onChange={e => setKind(e.target.value as AssetKind)}>{Object.entries(ASSET_KINDS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></label>
+      <label className="block text-sm">Kind<select aria-label="Asset kind" className="h-11 w-full rounded-md border bg-background px-2" value={kind} onChange={e => setKind(e.target.value as AssetKind)}>{Object.entries(ASSET_KINDS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></label>
       <label className="block text-sm">Put to use<Input type="date" value={date} onChange={e => setDate(e.target.value)} /></label>
       {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
       <Button disabled={!name.trim() || !/^\d{4}-\d{2}-\d{2}$/.test(date)} onClick={async () => {
