@@ -1,0 +1,225 @@
+{
+  "ok": true,
+  "result": {
+    "title": "Alpha Limited trial balance 2025-26",
+    "docType": "trial_balance",
+    "merchant": "Alpha Limited",
+    "date": "2026-03-31",
+    "expiresOn": null,
+    "amount": 160000,
+    "currency": "INR",
+    "notes": "Synthetic test document; closing trial balance for FY 2025-26 with total debits and credits of INR 160000 each.",
+    "text": "SYNTHETIC COMPANY - ISOLATED TEST ONLY\nAlpha Limited\nTrial Balance as at 31 March 2026\nFinancial Year 2025-26\nINR\n\nAccount | Debit | Credit\nBank current account | 100000.00 |\nMachinery | 50000.00 |\nTrade receivables | 10000.00 |\nTerm loan | | 20000.00\nTrade payables | | 5000.00\nShare capital and reserves | | 135000.00\nTOTAL | 160000.00 | 160000.00\n\nAll amounts are printed closing balances.\nNo real company records are used.",
+    "fields": [
+      {
+        "label": "Company",
+        "value": "Alpha Limited",
+        "originalValue": "Alpha Limited",
+        "page": 1,
+        "quote": "Alpha Limited",
+        "confidence": "high"
+      },
+      {
+        "label": "Trial balance date",
+        "value": "2026-03-31",
+        "originalValue": "31 March 2026",
+        "page": 1,
+        "quote": "Trial Balance as at 31 March 2026",
+        "confidence": "high"
+      },
+      {
+        "label": "Financial year",
+        "value": "2025-26",
+        "originalValue": "2025-26",
+        "page": 1,
+        "quote": "Financial Year 2025-26",
+        "confidence": "high"
+      },
+      {
+        "label": "Currency",
+        "value": "INR",
+        "originalValue": "INR",
+        "page": 1,
+        "quote": "INR",
+        "confidence": "high"
+      },
+      {
+        "label": "Bank current account closing balance",
+        "value": "100000.00",
+        "originalValue": "100000.00",
+        "page": 1,
+        "quote": "Bank current account 100000.00",
+        "confidence": "high"
+      },
+      {
+        "label": "Machinery closing balance",
+        "value": "50000.00",
+        "originalValue": "50000.00",
+        "page": 1,
+        "quote": "Machinery 50000.00",
+        "confidence": "high"
+      },
+      {
+        "label": "Trade receivables closing balance",
+        "value": "10000.00",
+        "originalValue": "10000.00",
+        "page": 1,
+        "quote": "Trade receivables 10000.00",
+        "confidence": "high"
+      },
+      {
+        "label": "Term loan closing balance",
+        "value": "20000.00",
+        "originalValue": "20000.00",
+        "page": 1,
+        "quote": "Term loan 20000.00",
+        "confidence": "high"
+      },
+      {
+        "label": "Trade payables closing balance",
+        "value": "5000.00",
+        "originalValue": "5000.00",
+        "page": 1,
+        "quote": "Trade payables 5000.00",
+        "confidence": "high"
+      },
+      {
+        "label": "Share capital and reserves",
+        "value": "135000.00",
+        "originalValue": "135000.00",
+        "page": 1,
+        "quote": "Share capital and reserves 135000.00",
+        "confidence": "high"
+      },
+      {
+        "label": "Total debit",
+        "value": "160000.00",
+        "originalValue": "160000.00",
+        "page": 1,
+        "quote": "TOTAL 160000.00 160000.00",
+        "confidence": "high"
+      },
+      {
+        "label": "Total credit",
+        "value": "160000.00",
+        "originalValue": "160000.00",
+        "page": 1,
+        "quote": "TOTAL 160000.00 160000.00",
+        "confidence": "high"
+      },
+      {
+        "label": "Document status",
+        "value": "SYNTHETIC COMPANY - ISOLATED TEST ONLY",
+        "originalValue": "SYNTHETIC COMPANY - ISOLATED TEST ONLY",
+        "page": 1,
+        "quote": "SYNTHETIC COMPANY - ISOLATED TEST ONLY",
+        "confidence": "high"
+      }
+    ],
+    "possiblyIncomplete": false,
+    "obligations": [],
+    "entity": null,
+    "asset": null,
+    "property": null,
+    "lease": null,
+    "audited": {
+      "entity": "Alpha Limited",
+      "pan": null,
+      "fy": "2025-26",
+      "lines": [
+        {
+          "head": "bank",
+          "amount": 100000
+        },
+        {
+          "head": "fixedAssets",
+          "amount": 50000
+        },
+        {
+          "head": "receivables",
+          "amount": 10000
+        },
+        {
+          "head": "loans",
+          "amount": 20000
+        },
+        {
+          "head": "payables",
+          "amount": 5000
+        },
+        {
+          "head": "capitalReserves",
+          "amount": 135000
+        }
+      ],
+      "totalAssets": null,
+      "totalLiabilities": null,
+      "schedules": [
+        "trialBalance"
+      ],
+      "details": [
+        {
+          "schedule": "trialBalance",
+          "lines": [
+            {
+              "label": "Bank current account",
+              "amount": 100000,
+              "page": 1,
+              "quote": "Bank current account 100000.00"
+            },
+            {
+              "label": "Machinery",
+              "amount": 50000,
+              "page": 1,
+              "quote": "Machinery 50000.00"
+            },
+            {
+              "label": "Trade receivables",
+              "amount": 10000,
+              "page": 1,
+              "quote": "Trade receivables 10000.00"
+            },
+            {
+              "label": "Term loan",
+              "amount": 20000,
+              "page": 1,
+              "quote": "Term loan 20000.00"
+            },
+            {
+              "label": "Trade payables",
+              "amount": 5000,
+              "page": 1,
+              "quote": "Trade payables 5000.00"
+            },
+            {
+              "label": "Share capital and reserves",
+              "amount": 135000,
+              "page": 1,
+              "quote": "Share capital and reserves 135000.00"
+            },
+            {
+              "label": "TOTAL Debit",
+              "amount": 160000,
+              "page": 1,
+              "quote": "TOTAL 160000.00 160000.00"
+            },
+            {
+              "label": "TOTAL Credit",
+              "amount": 160000,
+              "page": 1,
+              "quote": "TOTAL 160000.00 160000.00"
+            }
+          ]
+        }
+      ],
+      "losses": [],
+      "qualifications": [],
+      "filedForm": null,
+      "ackNo": null,
+      "filedOn": null
+    },
+    "gstInvoice": null,
+    "taxStatement": null,
+    "fund": null
+  }
+}
