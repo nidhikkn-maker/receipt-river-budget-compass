@@ -9,7 +9,7 @@ const working=()=>corporateStatements({entityId:'A',entities:[{id:'A',name:'Synt
 it('audit pack contains five matching CSV/Excel/PDF statements and hash-bound actual originals without extra ledger writes',async()=>{
  const w=working();let signs=0;const original=new TextEncoder().encode('%PDF- synthetic original bytes');
  const blob=await corporateAuditPack(w,[],async()=>{signs++;return 'https://isolated.example/original'},async()=>new Response(original) as never);
- const zip=unzipSync(new Uint8Array(await blob.arrayBuffer()));expect(signs).toBe(1);expect(Object.keys(zip)).toHaveLength(18);
+ const zip=unzipSync(new Uint8Array(await blob.arrayBuffer()));expect(signs).toBe(1);expect(Object.keys(zip)).toHaveLength(20);
  expect(strFromU8(zip['company-profit-loss.csv']??new Uint8Array())).toContain('-100.00');
  const manifest=JSON.parse(strFromU8(zip['accounting-evidence.json']??new Uint8Array()));expect(manifest.working.profit).toBe(-100);expect(manifest.originals[0].sha256).toHaveLength(64);
  expect(zip[manifest.originals[0].zipPath]).toEqual(original);expect(w.lines).toHaveLength(2);

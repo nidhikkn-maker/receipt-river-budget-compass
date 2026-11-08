@@ -3,6 +3,7 @@ import { fetchPrivateFile,sha256Hex } from '../private-files';
 import { toCsv,toExcel,toPdf } from '../reports';
 import { corporateReport,CORPORATE_TYPES,type CorporateWorking } from './corporate-statements';
 import type { VaultDoc } from '../documents';
+import {statutorySchedules} from './statutory-mappings';
 
 /** All-or-nothing bundle from frozen working; private originals recheck current access. */
 export async function corporateAuditPack(w:CorporateWorking,visible:VaultDoc[],sign:(path:string)=>Promise<string|null>,fetcher:typeof fetch=fetch):Promise<Blob>{
@@ -22,5 +23,8 @@ export async function corporateAuditPack(w:CorporateWorking,visible:VaultDoc[],s
  }
  files['accounting-evidence.json']=strToU8(JSON.stringify({version:1,working:w,originals:hashes},null,2));
  files['unresolved-checks.csv']=strToU8(toCsv({title:'Unresolved checks',headers:['Record ID','Check'],rows:w.issues.map(i=>[i.recordId,i.message])}));
+ const schedules=statutorySchedules(w);
+ files['statutory-roll-forwards.csv']=strToU8(toCsv({title:'Statutory working schedules',headers:['Head','Opening','Increases','Decreases','Closing','Source line IDs'],rows:schedules.rows.map(r=>[r.label,r.opening,r.increases,r.decreases,r.closing,r.lineIds.join('; ')])}));
+ files['statutory-review-required.json']=strToU8(JSON.stringify({issues:schedules.issues,requiredDisclosures:schedules.disclosures,verification:'Working preparation only; not statutory certification'},null,2));
  return new Blob([new Uint8Array(zipSync(files))],{type:'application/zip'});
 }

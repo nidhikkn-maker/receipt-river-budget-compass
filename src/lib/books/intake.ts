@@ -279,8 +279,9 @@ export function proposeTaxStatement(read: TaxStatementRead, entities: EntityProf
 export function suggestLinks(text: string, accounts: { id: string; lastFour?: string | null | undefined; archived?: boolean }[], loans: { id: string; name: string; refs?: string[] | undefined }[]): { accountId: string | null; loanId: string | null } {
   const t = text.toUpperCase();
   const accHits = accounts.filter((a) => !a.archived && a.lastFour && /^\d{4}$/.test(a.lastFour) && new RegExp(`(?:X{2,}|\\*{2,}|A/C(?:\\s*NO\\.?)?\\s*[:\\-]?\\s*\\d*|ACCOUNT\\s*(?:NO\\.?|NUMBER)?\\s*[:\\-]?\\s*\\d*|CARD\\s*(?:NO\\.?)?\\s*[:\\-]?\\s*[X*\\d\\s]*)${a.lastFour}\\b`).test(t));
-  const loanHits = loans.filter((l) => (l.name.trim().length >= 4 && t.includes(l.name.trim().toUpperCase())) || (l.refs ?? []).some((r) => r.trim().length >= 4 && t.includes(r.trim().toUpperCase())));
-  return { accountId: accHits.length === 1 ? accHits[0]!.id : null, loanId: loanHits.length === 1 ? loanHits[0]!.id : null };
+  const printedToken=(value:string)=>{const key=value.trim().toUpperCase();if(key.length<4)return false;const escaped=key.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');return new RegExp(`(?:^|[^A-Z0-9])${escaped}(?=$|[^A-Z0-9])`).test(t);};
+  const loanHits = loans.filter((l) => printedToken(l.name) || (l.refs ?? []).some(printedToken));
+  return { accountId: accHits.length === 1 ? accHits[0]?.id??null : null, loanId: loanHits.length === 1 ? loanHits[0]?.id??null : null };
 }
 
 /**
