@@ -75,6 +75,7 @@ BEGIN
   IF (SELECT jsonb_agg(jsonb_set(jsonb_set(x,'{debit}',x->'credit'),'{credit}',x->'debit') ORDER BY x->>'code') FROM jsonb_array_elements(prior.journal->'legs') x) IS DISTINCT FROM (SELECT jsonb_agg(x ORDER BY x->>'code') FROM jsonb_array_elements(_journal->'legs') x) THEN RAISE EXCEPTION 'Reversal must exactly swap original legs'; END IF;
  END IF;
  -- Only linked money legs affect accountBalance. Noncash journals retain one zero-delta canonical anchor.
+ PERFORM set_config('ledgerline.accounting_request',_request::text,true);
  FOR l IN SELECT * FROM jsonb_array_elements(_journal->'legs') LOOP
   n:=n+1;IF l->>'accountId' IS NULL THEN CONTINUE; END IF;linked:=linked+1;
   amount:=(l->>'debit')::numeric-(l->>'credit')::numeric;
@@ -94,6 +95,7 @@ BEGIN
  UPDATE public.documents SET evidence_locked=true WHERE owner_id=uid AND id IN(SELECT value::uuid FROM jsonb_array_elements_text(_journal->'documentIds'));
  INSERT INTO public.accounting_journal_evidence(id,owner_id,entity_id,request_id,journal,entry_ids,actor_id) VALUES(jid,uid,ent,_request,_journal,ids,uid);
  UPDATE public.finance_preferences SET revision=revision+1,updated_at=now() WHERE owner_id=uid;
+ PERFORM set_config('ledgerline.accounting_request','',true);
  RETURN ids;
 END $$;
 REVOKE ALL ON FUNCTION public.post_accounting_journal(uuid,jsonb,bigint) FROM PUBLIC,anon;
@@ -101,10 +103,20 @@ GRANT EXECUTE ON FUNCTION public.post_accounting_journal(uuid,jsonb,bigint) TO a
 
 CREATE FUNCTION public.guard_accounting_entry() RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path=public AS $$
 BEGIN
- IF OLD.receipt_details->'accounting' IS NOT NULL THEN RAISE EXCEPTION 'Posted accounting evidence is immutable; use an exact reversal and replacement'; END IF;
+ IF TG_OP='INSERT' THEN
+  IF NEW.receipt_details->'accounting' IS NOT NULL AND coalesce(current_setting('ledgerline.accounting_request',true),'') IS DISTINCT FROM NEW.receipt_details->'accounting'->>'requestId' THEN RAISE EXCEPTION 'Accounting evidence requires atomic journal posting'; END IF;
+  RETURN NEW;
+ END IF;
+ IF OLD.receipt_details->'accounting' IS NOT NULL OR NEW.receipt_details->'accounting' IS NOT NULL THEN RAISE EXCEPTION 'Posted accounting evidence is immutable; use an exact reversal and replacement'; END IF;
  RETURN coalesce(NEW,OLD);
 END $$;
-CREATE TRIGGER accounting_entry_immutable BEFORE UPDATE OR DELETE ON public.expenses FOR EACH ROW EXECUTE FUNCTION public.guard_accounting_entry();
+CREATE TRIGGER accounting_entry_immutable BEFORE INSERT OR UPDATE OR DELETE ON public.expenses FOR EACH ROW EXECUTE FUNCTION public.guard_accounting_entry();
+CREATE FUNCTION public.guard_accounting_original() RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path=public AS $$
+BEGIN
+ IF EXISTS(SELECT 1 FROM public.accounting_journal_evidence WHERE owner_id=OLD.owner_id AND journal->'documentIds' ? OLD.id::text) AND (TG_OP='DELETE' OR NEW.file_path IS DISTINCT FROM OLD.file_path OR NEW.owner_id IS DISTINCT FROM OLD.owner_id OR NEW.entity_id IS DISTINCT FROM OLD.entity_id OR NOT NEW.evidence_locked) THEN RAISE EXCEPTION 'Accounting original is retained; save corrections as new evidence'; END IF;
+ RETURN coalesce(NEW,OLD);
+END $$;
+CREATE TRIGGER accounting_original_immutable BEFORE UPDATE OR DELETE ON public.documents FOR EACH ROW EXECUTE FUNCTION public.guard_accounting_original();
 CREATE FUNCTION public.review_accounting_exception(_id uuid,_owner uuid,_journal uuid,_finding text,_note text) RETURNS void LANGUAGE plpgsql SECURITY DEFINER SET search_path=public AS $$
 DECLARE uid uuid:=auth.uid(); ent text; prev public.accounting_exception_reviews;
 BEGIN

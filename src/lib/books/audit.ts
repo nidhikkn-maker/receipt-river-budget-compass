@@ -21,6 +21,7 @@ import { missingInvoices } from '../gst-recon';
 import { REQUIRED_SCHEDULES } from "./intake";
 import { ledgerTaxPayments, obligations, type Obligation } from "./compliance";
 import type { FindingState } from "./types";
+import {corporateStatements} from './corporate-statements';
 
 export type IssueType = "Reconciliation" | "Unreconciled bank" | "Classification" | "Missing invoice" | "Duplicate" | "Asset register" | "Depreciation" | "Property/rent" | "Tax" | "GST" | "Investment cost basis" | "Investment overlap" | "Intercompany" | "Missing document" | "Profile" | "Opening balance" | "Missing source";
 export interface AuditItem { key: string; type: IssueType; entity: string; account: string | null; fy: string | null; risk: "high" | "medium" | "low"; text: string; evidence: string; to: string; comparison?: import('./reconciliation-context').ReconciliationContext }
@@ -32,6 +33,12 @@ export function continuousAudit(p: { today: string; entities: EntityProfile[]; a
   const ent = (id?: string) => p.entities.find((e) => e.id === id)?.name ?? "Personal";
   const acc = (id?: string | null) => p.accounts.find((a) => a.id === id)?.name ?? null;
   const fy = fyOf(p.today);
+  for(const entity of p.entities){
+    const from=`${Number(fy.slice(0,4))}-04-01`;
+    const w=corporateStatements({entityId:entity.id,entities:p.entities,entries:p.entries,accounts:p.accounts,books:p.books,documents:p.docs,from,to:p.today});
+    for(const finding of w.issues)out.push({key:`accounting:${entity.id}:${finding.recordId}:${finding.message}`,type:'Reconciliation',entity:entity.name,account:null,fy,risk:'high',text:finding.message,evidence:`Company accounting input ${finding.recordId}`,to:'/report-centre'});
+    for(const [label,value] of [['Trial Balance',w.trialDifference],['Balance Sheet',w.balanceDifference],['Cash Flow',w.cash.difference]] as const)if(value!==0)out.push({key:`accounting-difference:${entity.id}:${label}`,type:'Reconciliation',entity:entity.name,account:null,fy,risk:'high',text:`${label} differs by ₹${value.toFixed(2)}`,evidence:'Canonical accounting legs',to:'/report-centre'});
+  }
   for (const f of auditFindings(p.today, p.entities, p.assets, p.entries, p.docs).filter(f => f.area !== 'Invoices'))
     out.push({ key: `a:${f.key}`, type: MAP[f.area] ?? "Missing document", entity: f.text.split(":")[0] ?? "", account: null, fy: /FY (\d{4}-\d{2})/.exec(f.text)?.[1] ?? null, risk: f.severity, text: f.text, evidence: "Saved records", to: f.to });
   for (const e of missingInvoices(p.entries,p.docs)) out.push({ key: `invoice:${e.id}`, type: 'Missing invoice', entity: ent(e.entityId ?? undefined), account: acc(e.accountId), fy: fyOf(e.date), risk: e.amount >= 10000 ? 'high' : 'medium', text: `${e.merchant || e.title}: missing bill; tax and audit evidence require checking`, evidence: `Ledger entry ${e.id}`, to: '/gst-check' });
