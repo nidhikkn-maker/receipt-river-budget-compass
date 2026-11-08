@@ -1,4 +1,5 @@
 import { effectiveEntity } from "@/lib/books/entity-accounts";
+import { companyReportEntries } from '@/lib/books/company-report';
 import { SectionTabs } from "@/components/SectionTabs";
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
@@ -57,10 +58,14 @@ function Reports() {
   const [catShown, setCatShown] = useState(50);
   const [scope,setScope]=useState<Scope|"all">("all");const [account,setAccount]=useState("all");const [payment,setPayment]=useState("all");const [query,setQuery]=useState("");
   const [department,setDepartment]=useState("all");const [status,setStatus]=useState("all");const [receipt,setReceipt]=useState("all");
-  const filterKey = [from, to, member, selectedCategory, scope, account, payment, query, department, status, receipt, JSON.stringify(tagGroup)].join("|");
+  const [company,setCompany]=useState('all');
+  const companyEntries=companyReportEntries(transactions,company,preferences.books?.entityAccounts??{});
+  const companyLabel=company==='all'?'All companies':company==='personal'?'Personal':preferences.entities?.find(e=>e.id===company)?.name??'Unavailable company';
+  const fileStem=(kind:ReportKind)=>`ledgerline-${kind}${company==='all'?'':`-${companyLabel.replace(/[^\w-]+/g,'_')}`}-${stamp}`;
+  const filterKey = [company,from, to, member, selectedCategory, scope, account, payment, query, department, status, receipt, JSON.stringify(tagGroup)].join("|");
   useEffect(() => setCatShown(50), [filterKey]);
   const departmentOptions=[...new Set([...Object.keys(departmentBudgets),...transactions.map(e=>e.department?.trim()||"").filter(Boolean)])].sort();
-  const filtered = applyFilters(transactions, { from, to, memberId: member, scope, accountId:account, paymentMethod:payment, query, tagAll:Object.values(tagGroup).filter(v=>v!=="all"), department, receipt: receipt as "all" | "with" | "without" })
+  const filtered = applyFilters(companyEntries, { from, to, memberId: member, scope, accountId:account, paymentMethod:payment, query, tagAll:Object.values(tagGroup).filter(v=>v!=="all"), department, receipt: receipt as "all" | "with" | "without" })
     .filter(e=>status==="all"||(status==="none"?!isTracked(e):isTracked(e)&&stageOf(e)===status));
   const list=filtered.filter(e=>(e.txnType??"expense")==="expense");
   const tagGroups=[...new Set(preferences.tags.map(t=>t.group))];
@@ -84,12 +89,12 @@ function Reports() {
       return { name, spent, limit, remaining: limit === undefined ? 0 : Math.round((limit - spent) * 100) / 100, pct: limit && limit > 0 ? Math.round(spent / limit * 1000) / 10 : 0 };
     });
   })();
-  const report = (k: ReportKind) => buildReport(k, filtered, memberName, budgets, { departmentBudgets, budgetMonth, claims: transactions, accountName: id => accounts.find(a => a.id === id)?.name ?? "Unassigned", ...((preferences.entities ?? []).length ? { companyOf: (e: import("@/lib/expenses").Expense) => { const k = effectiveEntity(e, preferences.books?.entityAccounts ?? {}); return k ? (preferences.entities ?? []).find(x => x.id === k)?.name ?? "" : "Personal"; } } : {}) });
-  const csv = (k: ReportKind) => void deliverFile(new Blob(["\uFEFF", toCsv(report(k))], { type: "text/csv;charset=utf-8" }), `ledgerline-${k}-${stamp}.csv`).catch(() => toast.error("Couldn't download the CSV"));
+  const report = (k: ReportKind) => {const r=buildReport(k, filtered, memberName, budgets, { departmentBudgets, budgetMonth, claims: companyEntries, accountName: id => accounts.find(a => a.id === id)?.name ?? "Unassigned", ...((preferences.entities ?? []).length ? { companyOf: (e: import("@/lib/expenses").Expense) => { const k = effectiveEntity(e, preferences.books?.entityAccounts ?? {}); return k ? (preferences.entities ?? []).find(x => x.id === k)?.name ?? "" : "Personal"; } } : {}) });return company==='all'?r:{...r,title:`${r.title} — ${companyLabel}`};};
+  const csv = (k: ReportKind) => void deliverFile(new Blob(["\uFEFF", toCsv(report(k))], { type: "text/csv;charset=utf-8" }), `${fileStem(k)}.csv`).catch(() => toast.error("Couldn't download the CSV"));
   const pdf = async (k: ReportKind) => {
     const r = report(k), key = JSON.stringify([r, subtitle]);
     const ready = prepared[k];
-    if (ready?.key === key) { await deliverFile(ready.blob, `ledgerline-${k}-${stamp}.pdf`); return; }
+    if (ready?.key === key) { await deliverFile(ready.blob, `${fileStem(k)}.pdf`); return; }
     setPreparing(k);
     try { const blob = await toPdf(r, subtitle); setPrepared(p => ({ ...p, [k]: { blob, key } })); } catch { toast.error("Couldn't create the PDF"); } finally { setPreparing(null); }
   };
@@ -98,6 +103,7 @@ function Reports() {
     <div className="uix-family-reports">
       <SectionTabs group="reports" active="charts" /><PageTitle eyebrow="Insights" title="Spending & reports" />
       <details className="report-filters mb-6 border-y py-4"><summary className="font-medium">Filter report records</summary><div className="mt-4 grid gap-4 sm:grid-cols-4 sm:items-end">
+        {(preferences.entities??[]).length>0&&<Select value={company} onValueChange={setCompany}><SelectTrigger aria-label="Filter reports by company"><SelectValue/></SelectTrigger><SelectContent><SelectItem value="all">All companies</SelectItem><SelectItem value="personal">Personal</SelectItem>{preferences.entities?.map(e=><SelectItem key={e.id} value={e.id}>{e.name}</SelectItem>)}</SelectContent></Select>}
         <div className="grid gap-1"><Label htmlFor="from">From</Label><Input id="from" type="date" value={from} onChange={(e) => setFrom(e.target.value)} /></div>
         <div className="grid gap-1"><Label htmlFor="to">To</Label><Input id="to" type="date" value={to} onChange={(e) => setTo(e.target.value)} /></div>
         <div className="grid gap-1">
@@ -150,7 +156,7 @@ function Reports() {
             <p className="mt-1 flex-1 text-sm text-muted-foreground">{k.desc}</p>
             <div className="mt-4 flex flex-wrap gap-2">
               <Button variant="outline" size="sm" aria-label={`Export ${k.title} CSV`} disabled={k.kind === "departments" && departmentBudgetError} onClick={() => csv(k.kind)}><FileSpreadsheet className="mr-1 h-4 w-4" />CSV</Button>
-              <Button variant="outline" size="sm" aria-label={`Export ${k.title} Excel`} disabled={k.kind === "departments" && departmentBudgetError} onClick={async () => { try { await deliverFile(await toExcel(report(k.kind)), `ledgerline-${k.kind}-${stamp}.xlsx`); } catch { toast.error("Couldn't download Excel"); } }}><FileSpreadsheet className="mr-1 h-4 w-4" />Excel</Button>
+              <Button variant="outline" size="sm" aria-label={`Export ${k.title} Excel`} disabled={k.kind === "departments" && departmentBudgetError} onClick={async () => { try { await deliverFile(await toExcel(report(k.kind)), `${fileStem(k.kind)}.xlsx`); } catch { toast.error("Couldn't download Excel"); } }}><FileSpreadsheet className="mr-1 h-4 w-4" />Excel</Button>
               <Button size="sm" aria-label={`${prepared[k.kind]?.key === JSON.stringify([report(k.kind), subtitle]) ? "Download" : "Prepare"} ${k.title} PDF`} disabled={preparing !== null || (k.kind === "departments" && departmentBudgetError)} onClick={() => void pdf(k.kind).catch(() => toast.error("Couldn't download the PDF"))}>{prepared[k.kind]?.key === JSON.stringify([report(k.kind), subtitle]) ? <Download className="mr-1 h-4 w-4" /> : <FileText className="mr-1 h-4 w-4" />}{preparing === k.kind ? "Preparing…" : prepared[k.kind]?.key === JSON.stringify([report(k.kind), subtitle]) ? "Download PDF" : "Prepare PDF"}</Button>
             </div>
           </div>
