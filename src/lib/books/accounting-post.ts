@@ -2,7 +2,7 @@ import {assertAccountingJournal,type AccountingJournal} from './accounting-journ
 import type {Account} from '../ledger';
 import type {VaultDoc} from '../documents';
 import type {BooksData} from './types';
-export interface AccountingAttempt {owner:string;requestId:string;expected:number;journal:AccountingJournal}
+export interface AccountingAttempt {owner:string;requestId:string;expected:number;journal:AccountingJournal;attempted?:boolean}
 export interface AccountingReceipt {owner_id:string;request_id:string;journal:AccountingJournal;entry_ids:string[]}
 export const accountingCanonical=(value:unknown):string=>JSON.stringify(value,(_key,v)=>v&&typeof v==='object'&&!Array.isArray(v)?Object.fromEntries(Object.keys(v).sort().map(k=>[k,v[k]])):v);
 /** Check the same immutable payload after both acknowledgements and unknown outcomes. */

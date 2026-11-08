@@ -13,5 +13,5 @@ export function invoiceAccrualProposal(invoice:GstInvoice,p:{id:string;entityId:
  const legs=[leg(p.balance,purchase?-total:total),leg(p.net,(purchase?1:-1)*(p.taxEligible?invoice.taxable:total))];
  if(p.taxEligible&&tax&&p.tax)legs.push(leg(p.tax,(purchase?1:-1)*tax));
  if(subtractMoney(sumMoney(legs.map(l=>l.debit)),sumMoney(legs.map(l=>l.credit)))!==0)throw Error('Invoice journal does not balance.');
- return {id:p.id,entityId:p.entityId,date:invoice.date,kind:'accrual',description:p.description,documentIds:[invoice.docId],legs};
+ return {id:p.id,entityId:p.entityId,date:invoice.date,kind:'accrual',description:p.description,documentIds:[invoice.docId],invoiceId:invoice.id,legs};
 }
