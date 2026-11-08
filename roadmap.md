@@ -1,7 +1,9 @@
 ## Six-requirement completion acceptance — 8 Nov 2026
-- [ ] Read exact V60-0016/0026/0058/0066/0082/0716 source criteria; reconcile prior status, close actual connected-screen gaps and classify external acceptance separately.
-- [ ] Complete claim interruption/reopen/retry/deduplication and compare original records/documents/downloads.
-- [ ] Promote only complete acceptance; continue directly related independently completable historical criteria; maintain reserve and release holds.
+- [x] Exact six criteria read; V60-0058 was already VERIFIED COMPLETE (prior chat incorrectly called it partial). Actual Statement Desk → Inbox → Account Reconciliation → DocuRepo → Reports driven with one persisted synthetic dataset; hosted portions remain explicit blockers.
+- [x] Claim wrong-source restore and recovery overwrite fixed; advance retained; encrypted frozen PDF checkpoint survives reload and retries one report with identical bytes; claim mounting retained across follow-up switching. 29 targeted tests and connected/claim/invoice browser acceptance pass.
+- [x] HC-0031 promoted after actual CSV/PDF downloads for expenses, received reimbursements and department summaries agree with records. Other broad six remain partial or blocked by exact external acceptance; no artificial promotions.
+- [ ] V60-0016/0026: isolated owner/entity persistence and full exception/frozen report acceptance. V60-0066: all-stage failures across bank/non-bank plus immutable upload authority. V60-0082: authorised hosted storage reads/denial/revocation/expiry. V60-0716: non-mocked invoice extraction plus saved actual asset/vault screens; tested file-to-review with mocked extraction is not enough.
+- [ ] Claim recovery remains device-local for frozen PDFs; hosted/cross-device acceptance and pre-checkpoint interruption need further verification. Full in-sheet integration test still open; underlying real builder recovery passed.
 
 ## P1 source handoffs and connected exports — 8 Nov 2026
 - [x] Asset follow-up links the existing payment in place; repeat/double click creates no second asset/payment. Claim follow-up reuses the existing builder and exact saved entry ID; full in-sheet claim PDF/resume acceptance remains open.
