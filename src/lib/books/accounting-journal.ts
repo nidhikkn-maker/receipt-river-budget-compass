@@ -7,8 +7,8 @@ import type { BooksData } from './types';
 import { ownerOf } from './entity-accounts';
 import { periodBlocker } from './periods';
 export type AccountingRole = 'asset'|'liability'|'equity'|'income'|'expense';
-export interface AccountingLeg { code:string; label:string; role:AccountingRole; debit:number; credit:number; accountId?:string|undefined; cashFlow?:'operating'|'investing'|'financing'|undefined }
-export interface AccountingJournal { id:string; entityId:string; date:string; kind:'opening'|'accrual'|'advance'|'prepayment'|'depreciation'|'adjustment'|'reversal'; description:string; documentIds:string[]; legs:AccountingLeg[]; reversesId?:string; invoiceId?:string; settlement?:import('./accounting-settlement').SettlementSource }
+export interface AccountingLeg { code:string; label:string; role:AccountingRole; debit:number; credit:number; accountId?:string|undefined; cashFlow?:'operating'|'investing'|'financing'|undefined; statutory?:import('./statutory-mappings').StatutoryMapping; source?:{docId:string;page:number|null;quote:string;head:string;detail:number;line:number;printedAmount:number}; }
+export interface AccountingJournal { id:string; entityId:string; date:string; kind:'opening'|'accrual'|'advance'|'prepayment'|'depreciation'|'adjustment'|'reversal'; description:string; documentIds:string[]; legs:AccountingLeg[]; reversesId?:string; invoiceId?:string; settlement?:import('./accounting-settlement').SettlementSource; recurrence?:import('./accounting-recurring').AccountingRecurrence; recurringSource?:{templateId:string;date:string;amount:number}; }
 export interface AccountingAttachment { journal:AccountingJournal; primary:boolean; requestId:string }
 export function accountingErrors(j:AccountingJournal,accounts:Account[],books:BooksData,documents:VaultDoc[]):string[]{
  const out:string[]=[];
