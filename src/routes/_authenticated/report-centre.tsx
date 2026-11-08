@@ -57,6 +57,7 @@ function ReportCentre() {
   const cancelled = useRef(false);
   const pending = useRef<ClaimReportJob | null>(null);
   const [recovering,setRecovering] = useState(true);
+  const [recoveryError,setRecoveryError] = useState(false);
 
   const range = periodRange(period, today(), custom);
   const currencies = useMemo(() => [...new Set(store.transactions.map((e) => e.currency))].sort(), [store.transactions]);
@@ -69,7 +70,7 @@ function ReportCentre() {
     setHistory((data ?? []) as HistoryRow[]);
   };
   useEffect(() => { void loadHistory(); }, []);
-  useEffect(() => { let active=true;setRecovering(true);void loadLocalClaimReport(store.userId,'centre-report').then(job=>{if(!active)return;pending.current=job;if(job){const doc=(job.row.filters as unknown as {snapshot:ReportDoc}).snapshot;const blob=new Blob([new Uint8Array(job.bytes)],{type:'application/pdf'});setResult({blob,doc,name:job.name,url:URL.createObjectURL(blob)});setFailed(true);setStage(3);}}).catch(()=>{if(active){setFailed(true);toast.error('Could not recover the saved report. Please reopen this page before preparing another.');}}).finally(()=>{if(active)setRecovering(false);});return()=>{active=false;}; },[store.userId]);
+  useEffect(() => { let active=true;setRecovering(true);setRecoveryError(false);void loadLocalClaimReport(store.userId,'centre-report').then(job=>{if(!active)return;pending.current=job;if(job){const doc=(job.row.filters as unknown as {snapshot:ReportDoc}).snapshot;const blob=new Blob([new Uint8Array(job.bytes)],{type:'application/pdf'});setResult({blob,doc,name:job.name,url:URL.createObjectURL(blob)});setFailed(true);setStage(3);}}).catch(()=>{if(active){setRecoveryError(true);setFailed(true);toast.error('Could not recover the saved report. Please reopen this page before preparing another.');}}).finally(()=>{if(active)setRecovering(false);});return()=>{active=false;}; },[store.userId]);
   useEffect(() => () => { if (result) URL.revokeObjectURL(result.url); }, [result]);
 
   async function generate(override?: { type: ReportType; filters: ReportFilters }) {
@@ -116,7 +117,12 @@ function ReportCentre() {
   async function persistReport(job:ClaimReportJob){
     if(job.row.owner_id!==store.userId)throw Error('Report owner differs; saved evidence was not changed.');
     const blob=new Blob([new Uint8Array(job.bytes)],{type:'application/pdf'});
-    await savePreparedReport({id:job.id,owner:store.userId,path:job.path,size:blob.size},{read:async()=>supabase.from('report_history').select('id,owner_id,file_path,file_size').eq('id',job.id).eq('owner_id',store.userId).maybeSingle(),upload:async()=>supabase.storage.from('receipts').upload(job.path,blob,{contentType:'application/pdf',upsert:false}),insert:async()=>supabase.from('report_history').insert(job.row)});
+    await savePreparedReport({id:job.id,owner:store.userId,path:job.path,size:blob.size},{read:async()=>supabase.from('report_history').select('id,owner_id,file_path,file_size').eq('id',job.id).eq('owner_id',store.userId).maybeSingle(),upload:async()=>{
+      const existing=await supabase.storage.from('receipts').download(job.path);
+      if(existing.data){const bytes=new Uint8Array(await existing.data.arrayBuffer());if(bytes.length!==job.bytes.length||bytes.some((b,i)=>b!==job.bytes[i]))throw Error('Saved PDF bytes differ. Nothing was replaced.');return {error:null};}
+      if(existing.error&&!/not found|404|does not exist/i.test(existing.error.message))return {error:existing.error};
+      return supabase.storage.from('receipts').upload(job.path,blob,{contentType:'application/pdf',upsert:false});
+    },insert:async()=>supabase.from('report_history').insert(job.row)});
     await clearLocalClaimReport(store.userId,'centre-report');pending.current=null;
     setReady(r=>({...r,[job.id]:blob}));await loadHistory();
   }
@@ -194,7 +200,7 @@ function ReportCentre() {
           <label className="flex items-center gap-1"><input type="radio" checked={style === "mono"} onChange={() => setStyle("mono")} /> Printer-friendly</label>
         </div>
 
-        <Button className="w-full" onClick={() => generate()} disabled={busy||recovering}><FileText className="mr-1 h-4 w-4" />{pending.current?'Retry saving PDF':'Generate PDF'}</Button>
+        <Button className="w-full" onClick={() => generate()} disabled={busy||recovering||recoveryError}><FileText className="mr-1 h-4 w-4" />{pending.current?'Retry saving PDF':'Generate PDF'}</Button>
         <p className="text-xs text-muted-foreground">Reports are prepared on this device. Keep this page open until the PDF is ready.</p>
       </section>
 
