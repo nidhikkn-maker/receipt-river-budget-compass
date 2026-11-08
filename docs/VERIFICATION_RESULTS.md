@@ -1,5 +1,9 @@
 # Verification results (executed evidence only)
 
+## Connected accountant workflow — 8 Nov 2026 08:01 UTC
+8 Nov 08:01 connected accountant batch: actual non-mocked synthetic trial-balance reading retained, extracted opening review, payable/receivable settlements reversing exact bank classification, immutable source snapshots and correction ordering, accountant grant/revoke/review UI, corporate close readiness and frozen workings. 30 distinct focused tests; disposable disk opening/accrual/settlement/reversal/owner-denial/close retry and actual review/encrypted settlement reload pass. Not hosted; full uninterrupted same-file upload-to-close acceptance and detailed multi-account opening schedules remain open. docs/evidence/accountant-connected-2026-11-08.md
+Measured workspace893.75→882.89 (10.86 decline; later charges excluded). Tested financial source revision f59fbde3821e77a92497e81f1fbfe04e13def2da on edit/edt-5441e69c-84e7-4c44-bcb6-58f2026333b0; available origin/main1821d274 is five commits afterbc9d45ee with no accounting-engine diff. GitHub service parity unverified; only internal remotes exposed. No new IDs;0066/0082 blocked,0058/0716 retained, no production/UIX/release changes.
+
 ## Corporate foundation — 8 Nov 2026
 22/22 changed-path tests pass; disposable disk atomic opening/accrual/reversal/owner/revoked-accountant/stale/forgery/original preservation; real-route encrypted locked retry and report history recovery/downloaded accrual figures pass with isolated adapters. No unresolved executed failures. Headless PDF iframe legibility, hosted signing and full source-upload-to-close not verified. No new IDs; evidence docs/evidence/accounting-foundation-2026-11-08.md.
 

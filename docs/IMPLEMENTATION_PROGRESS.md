@@ -1,5 +1,9 @@
 # Implementation progress — top 15 gaps (baseline: Ledgerline_v6_Requirements_Checklist.md)
 
+## Connected accountant workflow — 8 Nov 2026 08:01 UTC
+8 Nov 08:01 connected accountant batch: actual non-mocked synthetic trial-balance reading retained, extracted opening review, payable/receivable settlements reversing exact bank classification, immutable source snapshots and correction ordering, accountant grant/revoke/review UI, corporate close readiness and frozen workings. 30 distinct focused tests; disposable disk opening/accrual/settlement/reversal/owner-denial/close retry and actual review/encrypted settlement reload pass. Not hosted; full uninterrupted same-file upload-to-close acceptance and detailed multi-account opening schedules remain open. docs/evidence/accountant-connected-2026-11-08.md
+Measured workspace893.75→882.89 (10.86 decline; later charges excluded). Tested financial source revision f59fbde3821e77a92497e81f1fbfe04e13def2da on edit/edt-5441e69c-84e7-4c44-bcb6-58f2026333b0; available origin/main1821d274 is five commits afterbc9d45ee with no accounting-engine diff. GitHub service parity unverified; only internal remotes exposed. No new IDs;0066/0082 blocked,0058/0716 retained, no production/UIX/release changes.
+
 ## Corporate foundation — 8 Nov 2026
 Source-bound balanced journal/invoice/opening proposals, immutable staged atomic canonical postings/reversals, original protection, accountant permission notes, encrypted retry review and statement/Audit integration built.22 focused tests and isolated route recovery/report acceptance pass; authority not installed, no ID promotion. Full remaining Milestone1 functions/credits/Git evidence in docs/evidence/accounting-foundation-2026-11-08.md.
 
