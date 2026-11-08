@@ -4,6 +4,7 @@ import { PGlite } from '@electric-sql/pglite';
 import { mkdtempSync,readFileSync,writeFileSync,rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { execFileSync } from 'node:child_process';
 import { expect,it } from 'vitest';
 import { PDFDocument } from 'pdf-lib';
 import { buildReportDoc,emptyFilters,type ReportData } from './report-centre';
@@ -33,7 +34,9 @@ it('owner/entity source figures freeze in a real PDF; lost insert and readback r
   const bytes=new Uint8Array(await pdf.arrayBuffer());
   expect((await PDFDocument.load(bytes)).getPageCount()).toBeGreaterThan(0);
   // Real jsPDF table values are text operators, not a mocked PDF prefix.
-  const text=new TextDecoder().decode(bytes);expect(text).toContain('Synthetic');expect(text).toContain('200.25');expect(text).not.toMatch(/OTHER-ENTITY|OTHER-OWNER|999.99|888.88/);
+  writeFileSync(join(dir,'rendered.pdf'),bytes);
+  const text=execFileSync('python3',['-c','from pypdf import PdfReader; import sys; print("\\n".join(p.extract_text() or "" for p in PdfReader(sys.argv[1]).pages))',join(dir,'rendered.pdf')],{encoding:'utf8'});
+  expect(text).toContain('Synthetic');expect(text).toContain('200.25');expect(text).not.toMatch(/OTHER-ENTITY|OTHER-OWNER|999\.99|888\.88/);
   const frozenHash=await crypto.subtle.digest('SHA-256',bytes);
   const expected={id,path,size:pdf.size,owner};let uploads=0,inserts=0,loseRead=false;
   const adapter={
