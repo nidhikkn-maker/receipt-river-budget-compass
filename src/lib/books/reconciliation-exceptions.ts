@@ -20,7 +20,7 @@ export function reconciliationExceptions(p: { today: string; entities: EntityPro
  const documentInput = (d: VaultDoc): ReconciliationInput => ({kind:'document',id:d.id,label:d.title,date:d.docDate,amount:d.amount??0,documentIds:[d.id],sourceRefs:[d.filePath]});
  const compared = (key:string,text:string,comparison:ReconciliationContext,extra:Partial<AuditItem>={}) => {
   const inputs=[...comparison.left.inputs,...comparison.right.inputs];
-  add(key,text,'/audit',[...new Set(inputs.flatMap(i=>[...i.documentIds,...i.sourceRefs]))].join(', ')||'No retained original linked',{...extra,comparison});
+  add(key,text,'/audit',[...new Set(inputs.flatMap(i=>[...i.documentIds,...i.sourceRefs]).filter(Boolean))].join(', ')||'No retained original linked',{...extra,comparison});
  };
  const years = [...new Set(p.books.gstInvoices.map(i => fyOf(i.date)))];
  for (const year of years) {
