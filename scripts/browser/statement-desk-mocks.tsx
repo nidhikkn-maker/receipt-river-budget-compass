@@ -56,7 +56,7 @@ export function useStore() {
     save: async (input: Record<string, unknown>, opts?: { createId?: string }) => {
       const id = opts?.createId ?? crypto.randomUUID();
       await saveWithRecovery(async () => {
-      if (!fixture.transactions.some((t) => t.id === id)) fixture.transactions.push({ ...input, id, originalAmount: input.amount, currency: "INR", splits: [], reconciledAt: null, statementRef: null, correctionRevision: 0 });
+      if (!fixture.transactions.some((t) => t.id === id)) fixture.transactions.push({ ...input, id, originalAmount: input.amount, currency: "INR", fxRate: 1, receipts: [], tags: [], splits: [], reconciledAt: null, statementRef: null, correctionRevision: 0 });
       fixture.saves.push(id);
       sessionStorage.setItem("controlled-desk-ledger", JSON.stringify(fixture.transactions));
       if (fixture.loseSaveResponse) { fixture.loseSaveResponse = false; throw Error('Saved response interrupted'); }
