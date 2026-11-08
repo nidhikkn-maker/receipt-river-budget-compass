@@ -31,7 +31,7 @@ export function gstReconciliation(books:BooksData,entities:EntityProfile[],entri
   for(const w of workings){
    for(const filing of books.gstFilings.filter(f=>f.gstin===gstin&&f.period===w.period&&f.form==='GSTR-3B')){
     const doc=docs.find(d=>d.id===filing.docId&&d.docType==='gst_return'&&owner&&d.entityId===owner.id);
-    const figures=doc?gstReturnFigures(doc):{};
+    const figures:Partial<ReturnType<typeof gstReturnFigures>>=doc?gstReturnFigures(doc):{};
     const missing=['outputTax','itcClaimed','netPayable'].filter(k=>typeof figures[k as keyof typeof figures]!=='number');
     if(missing.length)add(w.period,`return:${filing.id}`,`GSTR-3B filing amounts are not comparable; link company return evidence with confirmed totals`,filing.docId??filing.id);
     else {const diffs=(['outputTax','itcClaimed','netPayable'] as const).filter(k=>Math.abs(subtractMoney(figures[k]??0,w.three[k]))>0.01);if(diffs.length)add(w.period,`return:${filing.id}`,`GSTR-3B filed figures differ from current invoices (${diffs.join(', ')})`,`${doc?.id}, ${sources(w.period)}`);}

@@ -1,7 +1,7 @@
 import {it,expect} from 'vitest';
 import {buildReportDoc,emptyFilters,type ReportData} from './report-centre';
 import type {Expense} from './expenses';
-const e:Expense={id:'outside-window',title:'Historical balance source',category:'Food',merchant:null,scope:'personal',memberId:null,splits:[],receipts:[],amount:200,originalAmount:200,currency:'INR',fxRate:1,date:'2026-09-01',description:'',paymentMethod:'cash',accountId:'a',statementRef:'old-statement'};
+const e:Expense={id:'outside-window',title:'Historical balance source',category:'Food',merchant:null,scope:'personal',memberId:null,splits:[],receipts:[],amount:200,originalAmount:200,currency:'INR',fxRate:1,date:'2026-09-01',description:'',paymentMethod:'cash',accountId:'a',statementRef:'old-statement',reconciledAt:null};
 const loan={id:'la',accountId:'a',name:'Alpha loan',principal:1250.25,rate:9,emi:100,nextDue:'2026-11-05',provider:'Bank',status:'active',payments:[]};
 const data:ReportData={transactions:[e],accounts:[{id:'a',name:'Alpha',kind:'savings',openingBalance:1000,archived:false}],valuations:[],loans:[loan,{...loan,id:'lb',accountId:'b',name:'Excluded loan',principal:9999}],commitments:[],trips:[],drafts:[],budgets:{},memberName:()=>'',accountName:id=>id??'',today:'2026-10-31'};
 it('filtered loan figures exclude another company account and unlinked loans',()=>{
