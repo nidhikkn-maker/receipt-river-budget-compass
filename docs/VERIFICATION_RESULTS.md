@@ -1,5 +1,5 @@
 # 8 Nov 2026 — annual accounting demonstration
-26 distinct focused tests and actual report export/retry browser passed; annual figures reconcile but full document-to-close acceptance remains PARTIAL. Cash reconciliation/loan-interest fixes, statutory roll-forwards and Milestone2 literal lender matching implemented. No IDs closed; exact results/gaps: docs/evidence/accounting-annual-2026-11-08.md.
+29 distinct focused tests and actual report export/retry browser passed; annual figures reconcile but full document-to-close acceptance remains PARTIAL. Cash reconciliation/loan-interest fixes, statutory roll-forwards and Milestone2 literal lender matching implemented. No IDs closed; exact results/gaps: docs/evidence/accounting-annual-2026-11-08.md.
 
 # 8 Nov 2026 08:33 — accounting schedules
 52 distinct changed-path/dependency tests passed; fresh real reader synthetic trial-balance result and actual uploaded-source/retry/detailed-opening/settlement/encrypted-note browser acceptance passed. Final14/14; build OK. Initial test/harness failures corrected; full same-browser authoritative close remains unverified, not an executed pass. See docs/evidence/accounting-schedules-2026-11-08.md.
