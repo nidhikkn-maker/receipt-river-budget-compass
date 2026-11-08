@@ -79,9 +79,9 @@ interface Loaded {
 }
 
 /** Smart Add hosts the same Statement Desk engine in place for statements and documents. */
-export function StatementDeskPage({ embedded }: { embedded?: { files: File[] } } = {}) {
+export function StatementDeskPage({ embedded }: { embedded?: { files: File[]; context?: 'assets' | undefined } } = {}) {
   const routeSearch = useSearch({ strict: false }) as { tab?: "accountant"; context?: IntakeContext; replaces?: string };
-  const { tab, context, replaces } = embedded ? { tab: undefined, context: undefined, replaces: undefined } : routeSearch;
+  const { tab, context, replaces } = embedded ? { tab: undefined, context: embedded.context, replaces: undefined } : routeSearch;
   /** Non-bank documents (company papers, deeds, leases, audited accounts, invoices) — reviewed here, stored in DocuRepo. */
   const [docs, setDocs] = useState<{ key: string; file: File; resume?: ResumeState; context?: IntakeContext | undefined }[]>([]);
   const store = useStore();
