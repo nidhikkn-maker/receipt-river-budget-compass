@@ -3,6 +3,7 @@ import { expect,it,vi } from 'vitest';
 vi.mock('@/lib/store',()=>({useStore:()=>({preferences:{entities:[],assets:[]},transactions:[],accounts:[],loans:[],documents:[]})}));
 vi.mock('./useBooks',()=>({useBooks:()=>({books:{properties:[],leases:[],propertyCosts:[]},save:vi.fn(),preferences:{entities:[],assets:[]}})}));
 vi.mock('@/lib/investments/holdings-store',()=>({loadDemat:async()=>[]}));
+vi.mock('@tanstack/react-router',()=>({useRouterState:()=>''}));
 import { PropertyPanel } from './PropertyPanel';
 import { DematHoldings } from '../DematHoldings';
 it('the actual Investments Add holdings action opens the shared desk with investment context',async()=>{
