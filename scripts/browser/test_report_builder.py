@@ -92,4 +92,4 @@ async def main():
             print(json.dumps({'mode':mode,'format':format,'viewport':[width,height],'actual_builder_original_pdf_history_download':'PASS','missing_evidence_ordering':'PASS' if mode=='claim' else 'not applicable','sha256':hashlib.sha256(actual).hexdigest(),'bytes':len(actual),'original_page_preserved':True,'lost_response_readback':'PASS','runtime_errors':errors,'storage':'local mocked adapter; NOT hosted'}))
             await context.close()
         await browser.close()
-asyncio.run(main())
+if __name__=='__main__': asyncio.run(main())

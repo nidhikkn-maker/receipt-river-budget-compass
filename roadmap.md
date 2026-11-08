@@ -1,8 +1,15 @@
+## Six-requirement completion acceptance — 8 Nov 2026
+- [x] Exact six criteria read; V60-0058 was already VERIFIED COMPLETE (prior chat incorrectly called it partial). Actual Statement Desk → Inbox → Account Reconciliation → DocuRepo → Reports driven with one persisted synthetic dataset; hosted portions remain explicit blockers.
+- [x] Claim wrong-source restore and recovery overwrite fixed; advance retained; encrypted frozen PDF checkpoint survives reload and retries one report with identical bytes; claim mounting retained across follow-up switching. 29 targeted tests and connected/claim/invoice browser acceptance pass.
+- [x] HC-0031 promoted after actual CSV/PDF downloads for expenses, received reimbursements and department summaries agree with records. Other broad six remain partial or blocked by exact external acceptance; no artificial promotions.
+- [ ] V60-0016/0026: isolated owner/entity persistence and full exception/frozen report acceptance. V60-0066: all-stage failures across bank/non-bank plus immutable upload authority. V60-0082: authorised hosted storage reads/denial/revocation/expiry. V60-0716: non-mocked invoice extraction plus saved actual asset/vault screens; tested file-to-review with mocked extraction is not enough.
+- [ ] Claim recovery remains device-local for frozen PDFs; hosted/cross-device acceptance and pre-checkpoint interruption need further verification. Full in-sheet integration test still open; underlying real builder recovery passed.
+
 ## P1 source handoffs and connected exports — 8 Nov 2026
 - [x] Asset follow-up links the existing payment in place; repeat/double click creates no second asset/payment. Claim follow-up reuses the existing builder and exact saved entry ID; full in-sheet claim PDF/resume acceptance remains open.
 - [x] Same CSV original → 2 saved lines → Inbox/reconciliation/DocuRepo pure readback → actual Reports CSV/Excel/PDF downloads → Undo restoring 1000 balance passes in synthetic browser. Separate asset maintenance originals/retry and claim/report PDF annexures pass; not a full connected-screen/hosted claim.
 - [x] 41 focused tests, 18 Statement Desk browser cases, 3 Smart Add widths, 5 PDF builder cases and document-search/asset-document browser checks pass; requirements remain partial. Reserve and P0 holds retained.
-- [ ] Remaining P1: actual Inbox/reconciliation/DocuRepo screen continuity with the same dataset, in-sheet claim PDF/resume and supporting-document addition, asset-invoice/holdings PDF intake, owner-isolated hosted persistence/downloads and safe lifecycle Undo for asset links.
+- [ ] Remaining P1: in-sheet claim PDF/resume and supporting-document addition, non-mocked asset-invoice/holdings PDF intake with actual asset/vault readback, owner-isolated hosted persistence/downloads and safe lifecycle Undo for asset links. Connected Inbox/reconciliation/DocuRepo/Reports screen continuity now passes with synthetic adapters.
 
 ## P1 connected intake continuation — 8 Nov 2026
 - [x] Explicit document intent accepts scanned photos; asset invoice entry point opens Smart Add and preserves the existing asset intake context. Ordinary payment screenshots remain single-entry review. Batch statement shortcut stays in place.
