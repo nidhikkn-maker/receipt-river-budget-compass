@@ -1,0 +1,46 @@
+// @vitest-environment node
+import {it,expect} from 'vitest';
+import {PGlite} from '@electric-sql/pglite';
+import {readFileSync,mkdtempSync,rmSync} from 'node:fs';
+import {tmpdir} from 'node:os';
+import {join} from 'node:path';
+import {postAccountingWithRecovery,type AccountingReceipt} from './accounting-post';
+import {corporateStatements,CORPORATE_TYPES,corporateReport} from './corporate-statements';
+import {reverseAccountingJournal,type AccountingJournal} from './accounting-journal';
+import {emptyBooks} from './types';
+import type {Expense} from '../expenses';
+import type {VaultDoc} from '../documents';
+it('isolated opening → accrual → correction → disk restart → frozen statements; exact owner/accountant review, revoked denial and unknown acknowledgement recovery',async()=>{
+ const dir=mkdtempSync(join(tmpdir(),'accounting-foundation-'));let db=new PGlite(join(dir,'db'));
+ const owner='00000000-0000-0000-0000-000000000001',other='00000000-0000-0000-0000-000000000002',accountant='00000000-0000-0000-0000-000000000003',bank='00000000-0000-0000-0000-000000000004',document='00000000-0000-0000-0000-000000000005';
+ const uuid=(n:number)=>`00000000-0000-0000-0000-${String(n).padStart(12,'0')}`;
+ const prefs={entities:[{id:'A',name:'Realistic isolated Ltd',kind:'company',pan:'',gstins:[],booksFrom:'2026-27'}],books:{...emptyBooks(),entityAccounts:{A:[bank]}}};
+ const user=async(id:string)=>{await db.exec('RESET ROLE');await db.query("SELECT set_config('app.uid',$1,false)",[id]);await db.exec('SET ROLE authenticated');};
+ const post=async(j:AccountingJournal,n:number)=>{const rev=(await db.query<{revision:number}>('SELECT revision FROM finance_preferences')).rows[0]?.revision??0;return db.query('SELECT post_accounting_journal($1,$2::jsonb,$3)',[uuid(n),JSON.stringify(j),rev]);};
+ try{
+ await db.exec(`CREATE ROLE authenticated;CREATE ROLE anon;CREATE ROLE service_role;CREATE SCHEMA auth;CREATE FUNCTION auth.uid() RETURNS uuid LANGUAGE sql STABLE AS $$SELECT nullif(current_setting('app.uid',true),'')::uuid$$;GRANT USAGE ON SCHEMA auth TO authenticated;
+ CREATE TABLE finance_preferences(owner_id uuid PRIMARY KEY,data jsonb,revision bigint DEFAULT 0,updated_at timestamptz);GRANT SELECT ON finance_preferences TO authenticated;ALTER TABLE finance_preferences ENABLE ROW LEVEL SECURITY;CREATE POLICY own_preferences ON finance_preferences TO authenticated USING(owner_id=auth.uid());
+ CREATE TABLE accounts(id uuid PRIMARY KEY,owner_id uuid,kind text,archived boolean DEFAULT false);GRANT SELECT ON accounts TO authenticated;ALTER TABLE accounts ENABLE ROW LEVEL SECURITY;CREATE POLICY own_accounts ON accounts TO authenticated USING(owner_id=auth.uid());
+ CREATE TABLE documents(id uuid PRIMARY KEY,owner_id uuid,entity_id text,file_path text,evidence_locked boolean DEFAULT false);
+ CREATE TABLE expenses(id uuid PRIMARY KEY,employee_id uuid,title text,category text,amount numeric CHECK(amount>0),original_amount numeric,currency text,expense_date date,description text,payment_method text,scope text,txn_type text,account_id uuid,adjustment_sign int,entity_id text,entity_source text,receipt_details jsonb);
+ GRANT SELECT,UPDATE,DELETE ON expenses TO authenticated;ALTER TABLE expenses ENABLE ROW LEVEL SECURITY;CREATE POLICY own_expenses ON expenses TO authenticated USING(employee_id=auth.uid());`);
+ await db.query('INSERT INTO finance_preferences(owner_id,data) VALUES($1,$2)',[owner,JSON.stringify(prefs)]);await db.query('INSERT INTO accounts VALUES($1,$2,$3,false)',[bank,owner,'current']);await db.query('INSERT INTO documents(id,owner_id,entity_id,file_path) VALUES($1,$2,$3,$4)',[document,owner,'A',`${owner}/audited.pdf`]);
+ await db.exec(readFileSync('scripts/accounting-foundation.sql','utf8'));await user(owner);
+ const opening:AccountingJournal={id:uuid(10),entityId:'A',date:'2026-04-01',kind:'opening',description:'Audited company opening trial balance',documentIds:[document],legs:[{code:`account:${bank}`,accountId:bank,label:'Bank',role:'asset',debit:100000,credit:0},{code:'asset:machine',label:'Machine',role:'asset',debit:50000,credit:0},{code:'receivable',label:'Debtors',role:'asset',debit:10000,credit:0},{code:'loan',label:'Loan',role:'liability',debit:0,credit:20000},{code:'payable',label:'Creditors',role:'liability',debit:0,credit:5000},{code:'capital',label:'Capital',role:'equity',debit:0,credit:135000}]};
+ const attempt={owner,requestId:uuid(11),expected:0,journal:opening};let writes=0,lose=false;
+ const io={read:async()=>{if(lose){lose=false;throw Error('Interrupted readback');}return (await db.query<AccountingReceipt>('SELECT owner_id,request_id,journal,entry_ids FROM accounting_journal_evidence WHERE id=$1',[opening.id])).rows[0]??null;},post:async()=>{writes++;await post(opening,11);lose=true;throw Error('Lost committed reply');}};
+ await expect(postAccountingWithRecovery(attempt,io)).rejects.toThrow('unknown');await db.close();db=new PGlite(join(dir,'db'));await user(owner);await postAccountingWithRecovery(attempt,io);expect(writes).toBe(1);
+ const accrual:AccountingJournal={...opening,id:uuid(20),date:'2026-04-30',kind:'accrual',description:'April unpaid premises rent',legs:[{code:'expense:rent',label:'Rent',role:'expense',debit:1200,credit:0},{code:'payable',label:'Creditors',role:'liability',debit:0,credit:1200}]};await post(accrual,21);
+ const sale={...accrual,id:uuid(22),description:'April outstanding service income',legs:[{code:'receivable',label:'Debtors',role:'asset' as const,debit:3000,credit:0},{code:'income:service',label:'Service income',role:'income' as const,debit:0,credit:3000}]};await post(sale,23);
+ const invalid={...accrual,id:uuid(24),legs:accrual.legs.map((l,i)=>i?{...l,credit:1199.99}:l)};await expect(post(invalid,25)).rejects.toThrow('Unbalanced');
+ await expect(db.exec("UPDATE expenses SET amount=1")).rejects.toThrow('immutable');
+ const reversal=reverseAccountingJournal(accrual,uuid(30),'2026-05-01','Correct original rent to 1000');await post(reversal,31);await post({...accrual,id:uuid(32),date:'2026-05-01',description:'Corrected premises rent',legs:accrual.legs.map(l=>({...l,debit:l.debit?1000:0,credit:l.credit?1000:0}))},33);
+ const entries=async()=> (await db.query<Record<string,unknown>>('SELECT * FROM expenses')).rows.map(r=>({id:r.id,title:r.title,category:r.category,scope:r.scope,amount:Number(r.amount),originalAmount:Number(r.original_amount),date:String(r.expense_date).slice(0,10),txnType:r.txn_type,accountId:r.account_id,adjustmentSign:r.adjustment_sign,entityId:r.entity_id,entitySource:r.entity_source,receiptDetails:r.receipt_details,merchant:null,memberId:null,splits:[],receipts:[],currency:'INR',fxRate:1,reconciledAt:null,statementRef:null,description:r.description,paymentMethod:'other'} as Expense));
+ const w=corporateStatements({entityId:'A',entities:prefs.entities as never,books:prefs.books,accounts:[{id:bank,name:'Bank',kind:'current',openingBalance:0,archived:false}],documents:[{id:document,entityId:'A',filePath:`${owner}/audited.pdf`} as VaultDoc],entries:await entries(),from:'2026-04-01',to:'2027-03-31'});expect(w.profit).toBe(2000);expect(w.assets).toBe(163000);expect(w.liabilities).toBe(26000);expect(w.equity).toBe(137000);expect(w.trialDifference).toBe(0);expect(w.balanceDifference).toBe(0);expect(w.cash).toMatchObject({opening:100000,closing:100000,difference:0,operating:0});
+ const frozen=JSON.parse(JSON.stringify(w));for(const t of CORPORATE_TYPES)expect(corporateReport(frozen,t).rows.length).toBeGreaterThan(0);
+ await db.query('INSERT INTO accounting_review_grants(owner_id,accountant_id,entity_id) VALUES($1,$2,$3)',[owner,accountant,'A']);await user(accountant);expect((await db.query('SELECT * FROM accounting_journal_evidence')).rows).toHaveLength(5);expect((await db.query('SELECT * FROM expenses')).rows).toHaveLength(0);await db.query('SELECT review_accounting_exception($1,$2,$3,$4,$5)',[uuid(40),owner,accrual.id,'unpaid-rent','Review confirmed original remains unpaid']);await expect(post({...accrual,id:uuid(41)},42)).rejects.toThrow('Owner preferences');
+ await user(owner);await db.query('UPDATE accounting_review_grants SET revoked_at=now() WHERE accountant_id=$1',[accountant]);await user(accountant);expect((await db.query('SELECT * FROM accounting_journal_evidence')).rows).toHaveLength(0);await expect(db.query('SELECT review_accounting_exception($1,$2,$3,$4,$5)',[uuid(43),owner,accrual.id,'rent','No longer authorised'])).rejects.toThrow('not authorised');await user(other);expect((await db.query('SELECT * FROM accounting_journal_evidence')).rows).toHaveLength(0);
+ await user(owner);await db.exec('RESET ROLE');await db.query("UPDATE finance_preferences SET data=jsonb_set(data,'{books,closedPeriods}',$1::jsonb)",[JSON.stringify([{from:'2026-05-01',to:'2026-05-31',entityId:'A'}])]);await user(owner);await expect(post({...accrual,id:uuid(50),date:'2026-05-02'},51)).rejects.toThrow('closed');
+ expect(frozen.profit).toBe(2000);expect((await db.query('SELECT * FROM accounting_exception_reviews')).rows).toHaveLength(1);
+ }finally{await db.close();rmSync(dir,{recursive:true,force:true});}
+},60000);
