@@ -19,7 +19,7 @@ type Stage =
   | { kind: 'classify'; files: File[] }
   | { kind: 'receipt'; files: File[]; search: QuickEntrySearch; key: number }
   | { kind: 'statement'; files: File[]; key: number; context?: 'assets' | undefined }
-  | { kind: 'done'; id?: string | undefined; label: string; followUp?: 'asset' | 'claim' };
+  | { kind: 'done'; id?: string | undefined; label: string; followUp?: 'asset' | 'claim'; claimOpened?: boolean };
 
 export const SMART_ADD_ACCEPT = 'image/*,application/pdf,.pdf,.csv,.xls,.xlsx';
 
@@ -126,11 +126,11 @@ export function SmartAdd({ open, onOpenChange, scope }: { open: boolean; onOpenC
             <p className="text-sm text-muted-foreground">{stage.label}. The original bill is attached to it.</p>
             {stage.id && <div className="mx-auto grid max-w-sm gap-2 text-left" aria-label="Suggested next steps">
               <p className="text-xs font-medium text-muted-foreground">Also, if this applies:</p>
-              <Button variant="ghost" onClick={() => setStage({ ...stage, followUp: 'claim' })}><ReceiptText />Claim it back<ChevronRight /></Button>
+              <Button variant="ghost" onClick={() => setStage({ ...stage, followUp: 'claim', claimOpened: true })}><ReceiptText />Claim it back<ChevronRight /></Button>
               <Button variant="ghost" onClick={() => setStage({ ...stage, followUp: 'asset' })}><Package />It's something I own<ChevronRight /></Button>
             </div>}
             {stage.id && stage.followUp === 'asset' && <ReceiptAssetHandoff entryId={stage.id} />}
-            {stage.id && stage.followUp === 'claim' && <Suspense fallback={<p role="status">Opening claim preparation…</p>}><ClaimReview mode="claim" embedded search={{ entry: stage.id }} /></Suspense>}
+            {stage.id && stage.claimOpened && <div hidden={stage.followUp !== 'claim'}><Suspense fallback={<p role="status">Opening claim preparation…</p>}><ClaimReview mode="claim" embedded search={{ entry: stage.id }} /></Suspense></div>}
             <div className="flex flex-wrap justify-center gap-2">
               <Button asChild variant="outline"><Link to="/expenses" onClick={() => { onOpenChange(false); reset(); }}>View in Activity</Link></Button>
               <Button onClick={reset}>Add another</Button>

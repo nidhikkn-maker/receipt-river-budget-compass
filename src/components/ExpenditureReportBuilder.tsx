@@ -21,6 +21,7 @@ import { ClaimExpenseDetails } from './ClaimExpenseDetails';
 import { ClaimSearchSelect } from './ClaimSearchSelect';
 import { useClaimPreparation } from './useClaimPreparation';
 import type { ClaimPreparationData } from '@/lib/claim-preparations';
+import { saveLocalClaimReport, loadLocalClaimReport, clearLocalClaimReport, type ClaimReportJob } from '@/lib/claim-preparations';
 import type { Expense } from '@/lib/expenses';
 import { DEFAULT_DECLARATION, maskedText, organisationStatement, profileClaimant, reimbursementAccountLabel, resolveReimbursementProfile, responsibilityShares } from '@/lib/reimbursement-profiles';
 
@@ -70,9 +71,10 @@ export function ExpenditureReportBuilder({ mode, search, embedded = false }: { e
   const [historyState, setHistoryState] = useState<'local' | 'saving' | 'saved'>('local');
   const pendingSave = useRef<(() => Promise<void>) | null>(null);
   const cancelled = useRef(false);
+  const generating = useRef(false);
   const [documentChecks, setDocumentChecks] = useState<ReportDocumentCheck[] | null>(null);
   const documentDecision = useRef<((proceed: boolean) => void) | null>(null);
-  useEffect(() => () => { documentDecision.current?.(false); }, []);
+  useEffect(() => () => { cancelled.current = true; documentDecision.current?.(false); }, []);
   const initializedActivity = useRef('');
   const restoredProfile = useRef(false);
   const [rejected,setRejected]=useState<string[]>([]),[detail,setDetail]=useState<Expense|null>(null),[reviewSearch,setReviewSearch]=useState(''),[reviewSort,setReviewSort]=useState('date'),[priorClaimIds,setPriorClaimIds]=useState<string[]>([]),[allowRepeat,setAllowRepeat]=useState(false),[historyCheck,setHistoryCheck]=useState<'loading'|'ready'|'error'>('loading'),[advanceInput,setAdvanceInput]=useState(''),[priorAdvance,setPriorAdvance]=useState<Record<string,number>>({});
@@ -87,6 +89,25 @@ export function ExpenditureReportBuilder({ mode, search, embedded = false }: { e
   const selectedTrip = choice.startsWith('trip:') ? trips.find(t => t.id === choice.slice(5)) : undefined;
   const fallbackOrg = selectedTrip?.organisation ?? '';
   const activity = choice === 'entries' ? `entries:${[...picked].sort().join(',')}` : choice;
+  async function saveReportJob(job:ClaimReportJob) {
+    const blob = new Blob([new Uint8Array(job.bytes)], { type:'application/pdf' });
+    await savePreparedReport({ id:job.id,owner:store.userId,path:job.path,size:blob.size }, {
+      read:async()=>{const {data,error}=await supabase.from('report_history').select('id,owner_id,file_path,file_size').eq('id',job.id).eq('owner_id',store.userId).maybeSingle();return {data,error};},
+      upload:async()=>supabase.storage.from('receipts').upload(job.path,blob,{contentType:'application/pdf',upsert:true}),
+      insert:async()=>supabase.from('report_history').insert(job.row),
+    });
+    await clearLocalClaimReport(store.userId);
+  }
+  useEffect(()=>{
+    if(!claimMode)return;let active=true;
+    void loadLocalClaimReport(store.userId).then(job=>{
+      if(!active||!job||job.activity!==activity)return;
+      const blob=new Blob([new Uint8Array(job.bytes)],{type:'application/pdf'});
+      setResult({blob,url:URL.createObjectURL(blob),name:job.name,missing:job.missing});
+      pendingSave.current=()=>saveReportJob(job);setHistoryState('local');setStage(-1);
+    }).catch(()=>{if(active)toast.error('Saved claim PDF could not be restored. Your preparation is unchanged.');});
+    return()=>{active=false;};
+  },[store.userId,activity,claimMode]);
   const profile = resolveReimbursementProfile(settings, { organisation: org, activity, ...(profileId ? { explicitId: profileId } : {}), ...(selectedTrip?.primaryWorkspace ? { workspace: selectedTrip.primaryWorkspace } : {}) }).profile;
   useEffect(() => {
     if (store.loading || initializedActivity.current === activity || (choice.startsWith('trip:') && !selectedTrip)) return;
@@ -106,8 +127,8 @@ export function ExpenditureReportBuilder({ mode, search, embedded = false }: { e
     setRouteId(profile?.defaultRouteId ?? ''); setReceivingAccountId(profile?.accountId ?? ''); setClaimFormat(profile?.format ?? settings.lastFormat); setConfirmed(false);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [profile?.id, claimMode, store.name]);
-  const preparationData:ClaimPreparationData={choice,picked,excluded,organisation:org,profileId,routeId,accountId:receivingAccountId,claimant,purpose,from,to,format:claimFormat,rejected};
-  const restorePreparation=(d:ClaimPreparationData)=>{restoredProfile.current=true;initializedActivity.current=d.choice==='entries'?`entries:${[...d.picked].sort().join(',')}`:d.choice;setChoice(d.choice);setPicked(d.picked);setExcluded(d.excluded);setOrg(d.organisation);setProfileId(d.profileId);setRouteId(d.routeId);setReceivingAccountId(d.accountId);setClaimant(d.claimant);setPurpose(d.purpose);setFrom(d.from);setTo(d.to);setClaimFormat(d.format);setRejected(d.rejected??[]);setConfirmed(false);};
+  const preparationData:ClaimPreparationData={choice,picked,excluded,organisation:org,profileId,routeId,accountId:receivingAccountId,claimant,purpose,from,to,format:claimFormat,rejected,advanceInput};
+  const restorePreparation=(d:ClaimPreparationData)=>{restoredProfile.current=true;initializedActivity.current=d.choice==='entries'?`entries:${[...d.picked].sort().join(',')}`:d.choice;setChoice(d.choice);setPicked(d.picked);setExcluded(d.excluded);setOrg(d.organisation);setProfileId(d.profileId);setRouteId(d.routeId);setReceivingAccountId(d.accountId);setClaimant(d.claimant);setPurpose(d.purpose);setFrom(d.from);setTo(d.to);setClaimFormat(d.format);setRejected(d.rejected??[]);setAdvanceInput(d.advanceInput??'');setConfirmed(false);};
   const preparation=useClaimPreparation(store.userId,claimMode&&!store.loading,preparationData,restorePreparation,!!(search.trip||search.tag||search.entry||search.entries));
   useEffect(()=>{if(!claimMode)return;let active=true;setHistoryCheck('loading');void (async()=>{const ids:string[]=[];const applied:Record<string,number>={};for(let start=0;;start+=250){const {data,error}=await supabase.from('report_history').select('filters').eq('kind','claim-submission').order('created_at',{ascending:false}).range(start,start+249);if(error){if(active)setHistoryCheck('error');return;}for(const h of data??[]){const filters=h.filters as {organisation?:string;subject?:{kind?:string;id?:string};snapshot?:{items?:{id:string}[];totals?:{advanceApplied?:number}}};if(filters.subject?.kind==='trip'&&filters.subject.id)applied[filters.subject.id]=(applied[filters.subject.id]??0)+(filters.snapshot?.totals?.advanceApplied??0);if(filters.organisation===org)ids.push(...(filters.snapshot?.items??[]).map(i=>i.id));}if(!data||data.length<250)break;}if(active){setPriorAdvance(applied);setPriorClaimIds([...new Set(ids)]);setHistoryCheck('ready');}})();return()=>{active=false;};},[claimMode,org]);
   const pickFormat = async (f: 'detailed' | 'summary') => { setClaimFormat(f); try { await store.savePreferences({ ...store.preferences, reimbursementSettings: { ...settings, lastFormat: f } }); } catch { toast.error('Format changed for this claim but could not be saved.'); } };
@@ -126,6 +147,8 @@ export function ExpenditureReportBuilder({ mode, search, embedded = false }: { e
   useEffect(() => { setConfirmed(false); }, [org, profile?.id, claimant, receivingAccountId, claimFormat, from, to, purpose, selectedClaimTotal, excluded, JSON.stringify(scopedStatement.rows.map(r => [r.id, r.eligible, r.reimbursed, r.outstanding]))]);
 
   async function generate() {
+    if (generating.current) return;
+    generating.current = true;
     cancelled.current = false; setFailed(false); setResult(null); setHistoryState('local'); pendingSave.current = null; setStage(0);
     try {
       if (!included.length) throw new Error("Choose at least one transaction.");
@@ -182,6 +205,13 @@ export function ExpenditureReportBuilder({ mode, search, embedded = false }: { e
       if(previous?.error)throw Error('Could not check report versions. Your PDF is ready locally but was not saved.');
       const same = (previous?.data ?? []).filter(h => { const f = h.filters as { activity?: string; organisation?: string }; return f?.activity === activity && f?.organisation === org; });
       const version = 1 + Math.max(0, ...same.map(h => h.version));
+      if(claim){
+        const job:ClaimReportJob={id,path,name,activity,bytes:Array.from(new Uint8Array(await blob.arrayBuffer())),missing,
+          row:{id,owner_id:store.userId,kind:'claim-submission',title:`Expense Claim Submission · ${org} · v${version} — ${subjectName}`,period_from:st.start,period_to:st.end,workspace:'all',filters:{subject,excluded,reference,activity,organisation:org,profileId:profile?.id,format:claimFormat,snapshot:claim} as never,file_path:path,file_size:blob.size,version}};
+        await saveLocalClaimReport(store.userId,job);
+        pendingSave.current=()=>saveReportJob(job);
+        await saveReportJob(job);return;
+      }
       await savePreparedReport({ id, owner: store.userId, path, size: blob.size }, {
         read: async () => { const { data, error } = await supabase.from('report_history').select('id,owner_id,file_path,file_size').eq('id', id).eq('owner_id', store.userId).maybeSingle(); return { data, error }; },
         upload: async () => supabase.storage.from('receipts').upload(path, blob, { contentType: 'application/pdf', upsert: true }),
@@ -191,6 +221,7 @@ export function ExpenditureReportBuilder({ mode, search, embedded = false }: { e
       await retryHistory();
       setStage(-1);
     } catch (e) { setFailed(true); toast.error(e instanceof Error ? e.message : "Couldn't prepare the statement"); }
+    finally { generating.current = false; }
   }
   async function retryHistory() {
     const save = pendingSave.current;
@@ -205,7 +236,7 @@ export function ExpenditureReportBuilder({ mode, search, embedded = false }: { e
   return (
     <div className="space-y-5 pb-[calc(7rem+env(safe-area-inset-bottom))] [&_button:not([role=checkbox])]:min-h-11">
       {!embedded && <PageTitle title={claimMode ? "Expense Claim Submission" : "Detailed Expenditure Statement"} sub={claimMode ? "A formal reimbursement request for your organisation's accounts team: claimed items, declaration, approval lines and the original bills." : "A complete record of what was spent, how it was paid and what is still to be reimbursed, with every original bill attached."} />}
-      {claimMode&&<div className="flex flex-wrap items-center justify-between gap-2 text-xs"><span role="status">{preparation.status}</span><div className="flex gap-2">{preparation.recover&&<Button size="sm" variant="outline" onClick={preparation.resume}>Resume saved preparation</Button>}<Button size="sm" variant="ghost" onClick={preparation.saveNow}>Save preparation</Button></div></div>}
+      {claimMode&&<div className="flex flex-wrap items-center justify-between gap-2 text-xs"><span role="status">{preparation.status}</span><div className="flex gap-2">{preparation.recover&&<><Button size="sm" variant="outline" onClick={preparation.resume}>Resume saved preparation</Button><Button size="sm" variant="outline" onClick={preparation.startNew}>Start this claim</Button></>}<Button size="sm" variant="ghost" onClick={preparation.saveNow}>Save preparation</Button></div></div>}
       <div className={cn(claimMode&&'grid min-w-0 gap-6 min-[1000px]:grid-cols-[minmax(280px,.8fr)_minmax(0,1.4fr)] min-[1600px]:grid-cols-[minmax(280px,.75fr)_minmax(420px,1.2fr)_minmax(360px,1fr)]')}>
       <div className="min-w-0 space-y-4">
       <section className={cn('space-y-3', !claimMode && 'rounded-xl border bg-card p-4')}>

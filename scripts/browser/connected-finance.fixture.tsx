@@ -1,0 +1,22 @@
+import { createRoot } from 'react-dom/client';
+import { createRootRoute, createRoute, createRouter, Outlet, RouterProvider, Link } from '@tanstack/react-router';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { Route as Desk } from '../../src/routes/_authenticated/statements';
+import { Route as Inbox } from '../../src/routes/_authenticated/inbox';
+import { Route as Recon } from '../../src/routes/_authenticated/account-reconciliation';
+import { Route as Vault } from '../../src/routes/_authenticated/vault';
+import { Route as Reports } from '../../src/routes/_authenticated/reports';
+import { Toaster } from '../../src/components/ui/sonner';
+import '../../src/styles.css';
+const query = new QueryClient();
+const root = createRootRoute({ component: () => <QueryClientProvider client={query}><nav className="flex gap-4 p-4"><Link to="/statements">Statements</Link><Link to="/inbox">Inbox</Link><Link to="/account-reconciliation">Reconciliation</Link><Link to="/vault">DocuRepo</Link><Link to="/reports">Reports</Link></nav><main className="p-4"><Outlet /></main><Toaster /></QueryClientProvider> });
+const auth = createRoute({ getParentRoute: () => root, id: '_authenticated', component: Outlet });
+const desk = Desk.update({ id: '/statements', path: '/statements', getParentRoute: () => auth });
+const inbox = Inbox.update({ id: '/inbox', path: '/inbox', getParentRoute: () => auth });
+const recon = Recon.update({ id: '/account-reconciliation', path: '/account-reconciliation', getParentRoute: () => auth });
+const vault = Vault.update({ id: '/vault', path: '/vault', getParentRoute: () => auth });
+const reports = Reports.update({ id: '/reports', path: '/reports', getParentRoute: () => auth });
+const router = createRouter({ routeTree: root.addChildren([auth.addChildren([desk, inbox, recon, vault, reports])]) });
+const element = document.getElementById('root');
+const state = window as Window & { connectedMounted?: boolean };
+if (element && !state.connectedMounted) { state.connectedMounted = true; createRoot(element).render(<RouterProvider router={router} />); }

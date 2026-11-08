@@ -12,7 +12,7 @@ function Fixture() {
   const [file, setFile] = useState<File | null>(null);
   const [records, setRecords] = useState(state());
   const asset = records.preferences.assets[0] as Asset | undefined;
-  return <main className="mx-auto max-w-3xl space-y-4 p-4"><input type="file" aria-label="Maintenance original" onChange={e => setFile(e.target.files?.[0] ?? null)} />{file && <DocumentIntake file={file} onClose={() => setFile(null)} />}<Button onClick={() => setRecords(state())}>Read saved asset</Button>{asset && <output aria-label="Saved asset figures">Assets {records.preferences.assets.length} · Cost {asset.cost} · Book {annualBook(asset, "2026-27").nbv} · Tax {taxSchedule(asset, "2026-27")[0]?.closing} · Documents {records.documents.length}</output>}<Toaster /></main>;
+  return <main className="mx-auto max-w-3xl space-y-4 p-4"><input type="file" aria-label="Maintenance original" onChange={e => setFile(e.target.files?.[0] ?? null)} />{file && <DocumentIntake file={file} context={location.search.includes('invoice')?'assets':undefined} onClose={() => setFile(null)} />}<Button onClick={() => setRecords(state())}>Read saved asset</Button>{asset && <output aria-label="Saved asset figures">Assets {records.preferences.assets.length} · Cost {asset.cost} · Book {annualBook(asset, "2026-27").nbv} · Tax {taxSchedule(asset, "2026-27")[0]?.closing} · Documents {records.documents.length}</output>}<Toaster /></main>;
 }
 const rootRoute = createRootRoute({ component: Fixture });
 const router = createRouter({ routeTree: rootRoute });

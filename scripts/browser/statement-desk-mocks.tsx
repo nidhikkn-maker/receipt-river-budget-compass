@@ -35,7 +35,7 @@ export function useStore() {
   const [preferences, setPreferences] = useState<FinancePreferences>({ ...defaultPreferences(), categories: [{ name: "Food", archived: false }, { name: "Other", archived: false }], statementUploads: fixture.uploads });
   const refresh = async () => bump((n) => n + 1);
   return {
-    userId: "controlled-statement-owner",
+    userId: "controlled-statement-owner", loading: false, pendingCount: 0, transferCounterparts: [], name: 'Controlled owner',
     accounts: [...fixture.accounts], transactions: fixture.transactions.map((t) => ({ ...t })), expenses: fixture.transactions.filter(t => t.txnType === 'expense'), preferences, loans: [], commitments: [], documents: fixture.documents, valuations: [], budgets: {}, departmentBudgets: {}, departmentBudgetError: false, members: [], memberName: () => 'Controlled owner',
     addDocument: async (_file: File, meta: Record<string, unknown>) => {
       if (typeof meta.id !== "string") throw new Error("Original must have a stable identity");
@@ -46,6 +46,17 @@ export function useStore() {
       return meta.id;
     },
     confirmTransfer: async () => {},
+    signedUrl: async (path: string) => {
+      const doc = fixture.documents.find(d => d.filePath === path);
+      if (!doc) throw Error('Unknown controlled document');
+      return URL.createObjectURL(new Blob([new Uint8Array(doc.original as number[])], { type: String(doc.mimeType) }));
+    },
+    downloadFile: async (path: string, name: string) => {
+      const doc = fixture.documents.find(d => d.filePath === path);
+      if (!doc) throw Error('Unknown controlled document');
+      const { downloadBlob } = await import('../../src/lib/reports');
+      downloadBlob(new Blob([new Uint8Array(doc.original as number[])], { type: String(doc.mimeType) }), name);
+    },
     savePreferences: async (next: FinancePreferences) => { if (fixture.failHistoryRemoval) throw Error('History cleanup interrupted'); fixture.uploads = next.statementUploads ?? []; sessionStorage.setItem('controlled-desk-uploads', JSON.stringify(fixture.uploads)); setPreferences(next); },
     saveStatementUpload: async (upload: StatementUpload) => {
       if (upload.status === 'undone' && fixture.failHistoryRemoval) throw Error('History cleanup interrupted');

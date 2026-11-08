@@ -2,7 +2,7 @@ import { act, renderHook, waitFor, cleanup } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ClaimPreparation, ClaimPreparationData } from '@/lib/claim-preparations';
 const api=vi.hoisted(()=>({loadLocalPreparation:vi.fn(),loadCloudPreparation:vi.fn(),saveLocalPreparation:vi.fn(),saveCloudPreparation:vi.fn()}));
-vi.mock('@/lib/claim-preparations',()=>api);
+vi.mock('@/lib/claim-preparations',async orig=>({ ...await orig<typeof import('@/lib/claim-preparations')>(), ...api }));
 import { useClaimPreparation } from './useClaimPreparation';
 import { useState } from 'react';
 const data:ClaimPreparationData={choice:'trip:t',picked:[],excluded:[],organisation:'AET',profileId:'',routeId:'',accountId:'',claimant:{name:'Test',designation:'Role',employeeId:'',department:'',email:'',approver:'',bankDetails:''},purpose:'Original',from:'',to:'',format:'summary',rejected:[]};
@@ -10,6 +10,15 @@ const initial:ClaimPreparation={id:'draft',data,revision:1,mutationId:'first',up
 beforeEach(()=>{vi.resetAllMocks();api.loadLocalPreparation.mockResolvedValue(initial);api.loadCloudPreparation.mockResolvedValue(initial);api.saveLocalPreparation.mockResolvedValue(undefined);api.saveCloudPreparation.mockImplementation(async(_owner,p)=>({...p,revision:p.revision+1}));Object.defineProperty(navigator,'onLine',{configurable:true,value:true});});
 afterEach(()=>cleanup());
 describe('Claim preparation save recovery',()=>{
+ it('does not replace an explicitly selected purchase with another entries preparation',async()=>{
+  api.loadLocalPreparation.mockResolvedValue({...initial,data:{...data,choice:'entries',picked:['older-payment']}});
+  api.loadCloudPreparation.mockResolvedValue(null);
+  const restore=vi.fn();
+  const {result}=renderHook(()=>useClaimPreparation('owner',true,{...data,choice:'entries',picked:['new-payment']},restore,true));
+  await waitFor(()=>expect(result.current.ready).toBe(true));
+  expect(restore).not.toHaveBeenCalled();expect(result.current.recover?.data.picked).toEqual(['older-payment']);
+  await act(async()=>{await result.current.saveNow();});expect(api.saveLocalPreparation).not.toHaveBeenCalled();
+ });
  it('preserves a newer edit while an earlier account save finishes',async()=>{
   let complete:(p:ClaimPreparation)=>void=()=>{};
   api.saveCloudPreparation.mockImplementationOnce(()=>new Promise<ClaimPreparation>(r=>{complete=r;}));
