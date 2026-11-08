@@ -28,7 +28,8 @@ export function ReceiptAssetHandoff({ entryId }: { entryId: string }) {
         try {
           setError('');
           const asset = receiptAsset(entry, preferences.assets ?? [], documents, id, kind);
-          await savePreferences({ ...preferences, assets: [...(preferences.assets ?? []), { ...asset, name: name.trim(), inUse: date }] });
+          const next = { ...asset, name: name.trim(), inUse: date };
+          await savePreferences({ ...preferences, assets: [...(preferences.assets ?? []).filter(a => a.id !== asset.id), next] });
           setSaved(true);
         } catch (e) { setError(e instanceof Error ? e.message : 'Could not link the asset. Your details are kept.'); }
       }}>Link saved purchase to asset</Button>
