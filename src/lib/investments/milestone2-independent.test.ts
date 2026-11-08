@@ -94,3 +94,11 @@ describe("Milestone 2 — independent bank EMI debits against a financed-asset l
     expect(matchEmiDebit(line("2025-08-05", 20000, "ACH DR"), [loan])).toBeNull();
   });
 });
+
+describe("Milestone 2 — partial-lot sale order independence", () => {
+  it("gains-then-trades and trades-then-gains give the same 20-unit history", () => {
+    const d = parseInvestmentDoc(DEMAT)!, t = parseInvestmentDoc(TXN)!, g = parseInvestmentDoc(GAINS)!;
+    const a = mergeInvestmentDoc(mergeInvestmentDoc(mergeInvestmentDoc([], d, "d").holdings, g, "g").holdings, t, "t").holdings;
+    expect(netQuantity(a.find((x) => x.isin === "INE009A01021")!.lots)).toBe(20);
+  });
+});
