@@ -28,7 +28,7 @@ describe("independent bank statement against separately entered books", () => {
   const out = matchLines(bank, books, 3, "cub");
 
   it("printed running balance adds up on its own", () => {
-    expect(balanceAddsUp(200000, 243189.5, bank).ok).toBe(true);
+    expect(balanceAddsUp(200000, 243189.5, bank)).toBe(0);
   });
 
   it("matches each bank line to the right document entry, one-to-one", () => {
