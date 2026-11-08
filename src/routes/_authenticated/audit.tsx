@@ -27,6 +27,7 @@ import { fyRange, fyOf } from "@/lib/entities";
 import { effectiveEntity } from '@/lib/books/entity-accounts';
 import { ReconciliationDetails } from '@/components/books/ReconciliationDetails';
 import { reconciliationAnchor } from '@/lib/books/reconciliation-context';
+import {corporateStatements} from '@/lib/books/corporate-statements';
 const inr = (n: number) => `₹${Math.round(n).toLocaleString("en-IN")}`;
 
 export const Route = createFileRoute("/_authenticated/audit")({
@@ -59,12 +60,15 @@ function Audit() {
     const request = periodRequest?.key === key ? periodRequest : { key, id: crypto.randomUUID(), period: period ?? crypto.randomUUID() };
     setPeriodRequest(request);
     // Freeze the calculated figures with the close evidence so the closed period stays reproducible.
-    const figures = action === 'closed' ? buildPeriodFigures({
+    const corporate=action==='closed'?entities.filter(e=>e.kind==='company').map(e=>corporateStatements({entityId:e.id,entities,entries:transactions,accounts,books,documents,from:start,to:end})):[];
+    const unresolved=corporate.flatMap(w=>w.issues.map(i=>`${w.entityName}: ${i.message}`));
+    if(unresolved.length)throw Error(`Company accounts need review before closing: ${unresolved.slice(0,4).join('; ')}`);
+    const figures = action === 'closed' ? {...buildPeriodFigures({
       from: start, to: end,
       entries: transactions.map((t) => ({ date: t.date, amount: t.amount, txnType: t.txnType ?? "expense", reconciled: !!t.reconciledAt })),
       accounts: accounts.map((a) => ({ id: a.id, balanceAt: (upto: string) => balanceAsOf(a, transactions, upto) })),
       invoices: books.gstInvoices, journals: books.journals,
-    }) : null;
+    }),corporate} : null;
     const { error } = await supabase.rpc('change_accounting_period', {
       _id: request.id, _action: action, _period: request.period, _from: start, _to: end, _reason: reason,
       _expected: { closedPeriods: books.closedPeriods, periodLog: books.periodLog } as unknown as Json,
