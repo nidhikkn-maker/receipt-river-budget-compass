@@ -4,7 +4,7 @@ from playwright.async_api import async_playwright,expect
 ns={};exec(Path('/dev-server/scripts/browser/test_exception_reports.py').read_text().split('async def main():')[0],ns)
 STORE=ns['STORE'].replace("documents:fixed?[", "documents:[").replace("text:'Printed invoice 250.25'}]:[]", "filePath:'owner/original.pdf',text:'Printed invoice 250.25'}]")
 STORE=STORE.replace("const fixed=sessionStorage.getItem('fixed')==='yes'", "const fixed=sessionStorage.getItem('fixed')==='yes'")
-STORE=STORE.replace("departmentBudgets:{}","signedUrl:async(path)=>'http://localhost:8080/isolated-original.pdf',departmentBudgets:{}")
+STORE=STORE.replace("departmentBudgets:{}","accountingAvailable:async()=>false,signedUrl:async(path)=>'http://localhost:8080/isolated-original.pdf',departmentBudgets:{}")
 OUT=Path('/tmp/browser/corporate')
 async def main():
  async with async_playwright() as p:
@@ -38,7 +38,7 @@ async def main():
   dl=await event.value;await dl.save_as(OUT/'audit.zip')
   import zipfile
   with zipfile.ZipFile(OUT/'audit.zip') as z:
-   assert len(z.namelist())==18;assert '799.75' in z.read('company-trial-balance.csv').decode();assert z.read('originals/0001-original.pdf')==b'%PDF- synthetic original bytes'
+   assert len(z.namelist())==20;assert 'statutory-roll-forwards.csv' in z.namelist();assert '799.75' in z.read('company-trial-balance.csv').decode();assert z.read('originals/0001-original.pdf')==b'%PDF- synthetic original bytes'
   assert await page.evaluate("sessionStorage.getItem('uploads')==='1' && sessionStorage.getItem('inserts')==='1'")
   await page.screenshot(path=str(OUT/'corporate.png'));assert not errors,errors
   print('PASS actual company report → PDF → interrupted history → encrypted reload → retry → frozen original/CSV/XLSX/PDF after source changes; one upload/history; zero page errors; isolated adapters NOT hosted')

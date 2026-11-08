@@ -300,7 +300,7 @@
       "modules": [],
       "dependencies": [],
       "status": "PARTIAL",
-      "requiredWork": "Detailed source-backed openings, recurring accrual/prepaid recognition and reversals, verified accountant identity grants, encrypted interrupted notes and statutory working mappings implemented. Remaining full same-browser actual extraction/canonical database posting/reconciliation/regenerated reports/authoritative close; complete statutory layouts/notes/tax chart/professional review; multi-invoice/FX settlement allocation and separate-account hosted originals/cross-device acceptance. Staged protection installation remains held.",
+      "requiredWork": "Full actual upload/extraction/classification to canonical posting, independently sourced reconciliation, same annual frozen-report/accountant/authoritative-close browser journey; complete statutory disclosures/professional review, annual history interruption, multi-invoice/FX allocation and hosted owner/device originals. Annual isolated canonical figures/recovery and statutory roll-forwards now pass; staged close checks do not independently recompute all source figures and remain uninstalled.",
       "verificationMethod": "Source-to-code audit followed by applicable unit/database/integration/real-route checks; hosted/device evidence separately required.",
       "finalTestResult": {
         "result": "PARTIAL",
@@ -308,11 +308,12 @@
           "Register audit context (not independently sufficient test proof): src/lib/books/depreciation.ts prepares accounting journals; src/lib/books/books.test.ts covers journal/ledger integrity rules, not the full financial accounting workflow.",
           "src/lib/books/books.test.ts \u2014 PASS on rerun; concrete assertions recorded in /tmp/verify-b1-tests.log. Scope is limited to the component rules/fixtures in this file, not the entire clause.",
           "8 Nov 08:01 connected accountant batch: actual non-mocked synthetic trial-balance reading retained, extracted opening review, payable/receivable settlements reversing exact bank classification, immutable source snapshots and correction ordering, accountant grant/revoke/review UI, corporate close readiness and frozen workings. 30 distinct focused tests; disposable disk opening/accrual/settlement/reversal/owner-denial/close retry and actual review/encrypted settlement reload pass. Not hosted; full uninterrupted same-file upload-to-close acceptance and detailed multi-account opening schedules remain open. docs/evidence/accountant-connected-2026-11-08.md",
-          "8 Nov 08:33:52 distinct focused tests and isolated real upload\u2192retained non-mocked reader output\u2192company/source confirmation\u2192interrupted intake retry\u2192detailed opening\u2192accrual\u2192bank settlement\u2192encrypted accountant-note retry passed. Full same-browser authoritative close not established. docs/evidence/accounting-schedules-2026-11-08.md"
+          "8 Nov 08:33:52 distinct focused tests and isolated real upload\u2192retained non-mocked reader output\u2192company/source confirmation\u2192interrupted intake retry\u2192detailed opening\u2192accrual\u2192bank settlement\u2192encrypted accountant-note retry passed. Full same-browser authoritative close not established. docs/evidence/accounting-schedules-2026-11-08.md",
+          "8 Nov annual disposable company:117 journals/135 canonical entries/65 real-CSV bank rows; TB2353000 each, profit286600, assets1439600, liabilities388000, equity1051600, closing cash946000. Source ZIP, correction/retry/owner/accountant/revocation/unresolved-close guards passed. Not full automatic-extraction/independent-statement/same-browser annual workflow; remains PARTIAL. docs/evidence/accounting-annual-2026-11-08.md"
         ]
       },
       "category": "B",
-      "nextAction": "Finish remaining same-browser canonical close acceptance and statutory schedule coverage without repeating passed accounting audits; then financed asset/loan milestone. Hosted checks require isolated backend, staged installation requires compatible deployment/access approval."
+      "nextAction": "Continue Milestone 2 lender/financed-asset/investment source handoff while retaining exact annual full-flow gaps and production holds; no broad acceptance promotion."
     },
     {
       "id": "V60-0014",
@@ -562,18 +563,19 @@
       "modules": [],
       "dependencies": [],
       "status": "PARTIAL",
-      "requiredWork": "Detailed source-backed openings, recurring accrual/prepaid recognition and reversals, verified accountant identity grants, encrypted interrupted notes and statutory working mappings implemented. Remaining full same-browser actual extraction/canonical database posting/reconciliation/regenerated reports/authoritative close; complete statutory layouts/notes/tax chart/professional review; multi-invoice/FX settlement allocation and separate-account hosted originals/cross-device acceptance. Staged protection installation remains held.",
+      "requiredWork": "Full actual upload/extraction/classification to canonical posting, independently sourced reconciliation, same annual frozen-report/accountant/authoritative-close browser journey; complete statutory disclosures/professional review, annual history interruption, multi-invoice/FX allocation and hosted owner/device originals. Annual isolated canonical figures/recovery and statutory roll-forwards now pass; staged close checks do not independently recompute all source figures and remain uninstalled.",
       "verificationMethod": "Source-to-code audit followed by applicable unit/database/integration/real-route checks; hosted/device evidence separately required.",
       "finalTestResult": {
         "result": "PARTIAL",
         "evidence": [
           "Register audit context (not independently sufficient test proof): src/components/books/ItrHandoff.tsx; src/lib/books/itr-handoff.test.ts covers component rules, not the full enumerated module workflow.",
           "src/lib/books/itr-handoff.test.ts \u2014 PASS on rerun; concrete assertions recorded in /tmp/verify-b1-tests.log. Scope is limited to the component rules/fixtures in this file, not the entire clause.",
-          "8 Nov 08:33:52 distinct focused tests and isolated real upload\u2192retained non-mocked reader output\u2192company/source confirmation\u2192interrupted intake retry\u2192detailed opening\u2192accrual\u2192bank settlement\u2192encrypted accountant-note retry passed. Full same-browser authoritative close not established. docs/evidence/accounting-schedules-2026-11-08.md"
+          "8 Nov 08:33:52 distinct focused tests and isolated real upload\u2192retained non-mocked reader output\u2192company/source confirmation\u2192interrupted intake retry\u2192detailed opening\u2192accrual\u2192bank settlement\u2192encrypted accountant-note retry passed. Full same-browser authoritative close not established. docs/evidence/accounting-schedules-2026-11-08.md",
+          "8 Nov annual disposable company:117 journals/135 canonical entries/65 real-CSV bank rows; TB2353000 each, profit286600, assets1439600, liabilities388000, equity1051600, closing cash946000. Source ZIP, correction/retry/owner/accountant/revocation/unresolved-close guards passed. Not full automatic-extraction/independent-statement/same-browser annual workflow; remains PARTIAL. docs/evidence/accounting-annual-2026-11-08.md"
         ]
       },
       "category": "B",
-      "nextAction": "Finish remaining same-browser canonical close acceptance and statutory schedule coverage without repeating passed accounting audits; then financed asset/loan milestone. Hosted checks require isolated backend, staged installation requires compatible deployment/access approval."
+      "nextAction": "Continue Milestone 2 lender/financed-asset/investment source handoff while retaining exact annual full-flow gaps and production holds; no broad acceptance promotion."
     },
     {
       "id": "V60-0024",
@@ -638,7 +640,7 @@
       "modules": [],
       "dependencies": [],
       "status": "PARTIAL",
-      "requiredWork": "Detailed source-backed openings, recurring accrual/prepaid recognition and reversals, verified accountant identity grants, encrypted interrupted notes and statutory working mappings implemented. Remaining full same-browser actual extraction/canonical database posting/reconciliation/regenerated reports/authoritative close; complete statutory layouts/notes/tax chart/professional review; multi-invoice/FX settlement allocation and separate-account hosted originals/cross-device acceptance. Staged protection installation remains held.",
+      "requiredWork": "Full actual upload/extraction/classification to canonical posting, independently sourced reconciliation, same annual frozen-report/accountant/authoritative-close browser journey; complete statutory disclosures/professional review, annual history interruption, multi-invoice/FX allocation and hosted owner/device originals. Annual isolated canonical figures/recovery and statutory roll-forwards now pass; staged close checks do not independently recompute all source figures and remain uninstalled.",
       "verificationMethod": "Source-to-code audit followed by applicable unit/database/integration/real-route checks; hosted/device evidence separately required.",
       "finalTestResult": {
         "result": "PARTIAL",
@@ -657,11 +659,12 @@
           "8 Nov corporate milestone: five company working statement families, canonical debit/credit projection, company boundary dues, loan interest/principal and posted depreciation, explicit unknown counterparts, frozen CSV/XLSX/PDF and 18-file audit ZIP with hash-bound actual originals. 17 distinct targeted tests passed including disposable disk owner-denied report recovery; actual report controls/reload/retry/changed-source frozen exports and ZIP pass. Full document-to-close and hosted evidence remain unverified; no promotion. docs/evidence/corporate-accounting-2026-11-08.md",
           "8 Nov foundation: balanced opening/accrual/invoice proposals, staged atomic canonical journals/exact reversals/original preservation/accountant permission notes, encrypted locked retry and source-complete statement/Audit integration. 22 focused tests and isolated real-route journal interrupted reply/reload/report evidence pass; authority uninstalled, no full upload-to-close or hosted certification. No promotion. docs/evidence/accounting-foundation-2026-11-08.md",
           "8 Nov 08:01 connected accountant batch: actual non-mocked synthetic trial-balance reading retained, extracted opening review, payable/receivable settlements reversing exact bank classification, immutable source snapshots and correction ordering, accountant grant/revoke/review UI, corporate close readiness and frozen workings. 30 distinct focused tests; disposable disk opening/accrual/settlement/reversal/owner-denial/close retry and actual review/encrypted settlement reload pass. Not hosted; full uninterrupted same-file upload-to-close acceptance and detailed multi-account opening schedules remain open. docs/evidence/accountant-connected-2026-11-08.md",
-          "8 Nov 08:33:52 distinct focused tests and isolated real upload\u2192retained non-mocked reader output\u2192company/source confirmation\u2192interrupted intake retry\u2192detailed opening\u2192accrual\u2192bank settlement\u2192encrypted accountant-note retry passed. Full same-browser authoritative close not established. docs/evidence/accounting-schedules-2026-11-08.md"
+          "8 Nov 08:33:52 distinct focused tests and isolated real upload\u2192retained non-mocked reader output\u2192company/source confirmation\u2192interrupted intake retry\u2192detailed opening\u2192accrual\u2192bank settlement\u2192encrypted accountant-note retry passed. Full same-browser authoritative close not established. docs/evidence/accounting-schedules-2026-11-08.md",
+          "8 Nov annual disposable company:117 journals/135 canonical entries/65 real-CSV bank rows; TB2353000 each, profit286600, assets1439600, liabilities388000, equity1051600, closing cash946000. Source ZIP, correction/retry/owner/accountant/revocation/unresolved-close guards passed. Not full automatic-extraction/independent-statement/same-browser annual workflow; remains PARTIAL. docs/evidence/accounting-annual-2026-11-08.md"
         ]
       },
       "category": "B",
-      "nextAction": "Finish remaining same-browser canonical close acceptance and statutory schedule coverage without repeating passed accounting audits; then financed asset/loan milestone. Hosted checks require isolated backend, staged installation requires compatible deployment/access approval."
+      "nextAction": "Continue Milestone 2 lender/financed-asset/investment source handoff while retaining exact annual full-flow gaps and production holds; no broad acceptance promotion."
     },
     {
       "id": "V60-0027",
