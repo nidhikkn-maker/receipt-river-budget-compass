@@ -89,7 +89,7 @@ function Audit() {
   const fyNow = fyOf(today);
   const recon = useMemo(() => {
     const ledgerAt = (id: string, date: string) => { const a = accounts.find((x) => x.id === id); return a ? accountBalance(a, transactions.filter((t) => t.date <= date)) : 0; };
-    const partyRows = (kind:'purchase'|'sales') => [...new Set(books.gstInvoices.map(i=>i.gstin))].flatMap(registration=>{
+    const partyRows = (kind:'purchase'|'sales') => [...new Set(books.gstInvoices.map(i=>i.gstin))].flatMap<ReturnType<typeof supplierRecon>[number] | ReturnType<typeof customerRecon>[number]>(registration=>{
       const matches=entities.filter(e=>e.gstins.includes(registration));const entity=matches.length===1?matches[0]?.id:undefined;
       const entries=matches.length>1?[]:transactions.filter(t=>entity?effectiveEntity(t,books.entityAccounts??{})===entity:!effectiveEntity(t,books.entityAccounts??{}));
       const payments=entries.filter(t=>(t.txnType??'expense')===(kind==='purchase'?'expense':'income')).map(t=>({id:t.id,amount:t.amount,date:t.date,text:`${t.title} ${t.merchant??''} ${t.description}`}));
