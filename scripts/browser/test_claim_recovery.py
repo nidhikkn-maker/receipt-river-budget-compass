@@ -26,6 +26,7 @@ async def main():
    await route.continue_()
   await context.route('**/*',isolate)
   await page.goto('http://localhost:8080/?mode=claim')
+  print("startup errors",errors);print((await page.locator("body").inner_text())[:1000])
   await expect(page.get_by_role('button',name='Save preparation')).to_be_visible()
   await page.get_by_role('button',name='Save preparation').click()
   await expect(page.get_by_text('Saved to account',exact=True)).to_be_visible()
