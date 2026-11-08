@@ -1,4 +1,7 @@
-## Six-requirement completion acceptance — 8 Nov 2026
+## Larger-batch completion — 8 Nov 2026
+- [ ] Finish buildable reconciliation/report coverage: registration-isolated settlement, retained investment events/precision, filtered report balances and frozen source comparisons.
+- [ ] Connect unresolved reconciliation and missing-invoice exceptions to existing Inbox actions; verify resolution/reload without financial writes.
+- [ ] Record exact acceptance and measured credits; preserve hosted/authority blockers, verified 0716/0058, UIX and production holds.
 - [x] 04:36 grouped functionality: company-filtered CSV/Excel/PDF, shared-company Excel, reconciliation evidence exports, current-invoice/unique-party reconciliation, full-list GST integrity and differing-rate allocation implemented. 51 distinct changed-path tests plus actual download browser checks pass. No new broad IDs closed; no UIX redesign or production changes. Evidence: docs/evidence/grouped-finance-2026-11-08.md.
 - [ ] Continue remaining essential register: full in-sheet claim/source recovery, complete broad V60-0016/0026 and material figure traceability; retain genuine authority/isolated hosted blockers,0716 verified and300 reserve.
 - [x] 04:31 targeted isolated acceptance: V60-0016 checkpoint exception/restart/replay and V60-0026 real frozen PDF/owner-source comparison/interrupted readback pass (26 tests); both broad clauses remain PARTIAL. V60-0716 newly verified through real synthetic invoice extraction and actual saved Assets/DocuRepo reload. V60-0058 unchanged. Evidence: docs/evidence/prioritised-acceptance-2026-11-08.md.
