@@ -3,7 +3,7 @@ import type {Expense} from '../expenses';
 import {categoryParts} from '../expenses';
 import {subtractMoney,sumMoney} from '../money';
 import type {AccountingJournal} from './accounting-journal';
-export interface SettlementSource {entryId:string; journalId:string; balanceCode:string; amount:number; snapshot:{date:string;amount:number;accountId:string;txnType:string;category:string;allocations:Expense['allocations']};}
+export interface SettlementSource {entryId:string; journalId:string; balanceCode:string; amount:number; snapshot:{date:string;amount:number;accountId:string;txnType:string;category:string;allocations:NonNullable<Expense['allocations']>};}
 export function outstandingAccrual(j:AccountingJournal,code:string,journals:AccountingJournal[]):number{
  const balance=j.legs.find(l=>l.code===code);
  if(!balance||!['asset','liability'].includes(balance.role)||balance.accountId)throw Error('Choose an outstanding noncash receivable or payable.');
@@ -22,6 +22,6 @@ export function settlementProposal(p:{id:string;accrual:AccountingJournal;balanc
  if(p.journals.some(r=>r.kind!=='reversal'&&!reversed.has(r.id)&&r.settlement?.entryId===e.id))throw Error('Bank transaction already settled.');
  if(!(e.amount>0)||e.amount>outstandingAccrual(j,p.balanceCode,p.journals))throw Error('Payment exceeds the outstanding accrual; split or review the difference first.');
  const parts=categoryParts(e);if(sumMoney(parts.map(l=>l.amount))!==e.amount)throw Error('Bank category allocation differs from its amount.');
- const role=payable?'expense':'income';
- return {id:p.id,entityId:j.entityId,date:e.date,kind:'adjustment',description:`Settle ${j.description} against ${e.title}`,documentIds:[...new Set([...j.documentIds,...p.documentIds])],settlement:{entryId:e.id,journalId:j.id,balanceCode:p.balanceCode,amount:e.amount,snapshot:{date:e.date,amount:e.amount,accountId:e.accountId,txnType:kind,category:e.category,allocations:e.allocations??null}},legs:[{code:balance.code,label:balance.label,role:balance.role,debit:payable?e.amount:0,credit:payable?0:e.amount},...parts.map(l=>({code:`${role}:${l.category}`,label:l.category,role,debit:payable?0:l.amount,credit:payable?l.amount:0}))]};
+ const role:'expense'|'income'=payable?'expense':'income';
+ return {id:p.id,entityId:j.entityId,date:e.date,kind:'adjustment',description:`Settle ${j.description} against ${e.title}`,documentIds:[...new Set([...j.documentIds,...p.documentIds])],settlement:{entryId:e.id,journalId:j.id,balanceCode:p.balanceCode,amount:e.amount,snapshot:{date:e.date,amount:e.amount,accountId:e.accountId,txnType:kind,category:e.category,allocations:e.allocations??[]}},legs:[{code:balance.code,label:balance.label,role:balance.role,debit:payable?e.amount:0,credit:payable?0:e.amount},...parts.map(l=>({code:`${role}:${l.category}`,label:l.category,role,debit:payable?0:l.amount,credit:payable?l.amount:0}))]};
 }
