@@ -204,6 +204,7 @@ function FigureSources({ assets, books, docs, titleOf }: { assets: import("@/lib
           <div className="mt-1 max-h-80 space-y-1 overflow-y-auto">{derived.map((d) => <details key={d.id} className="rounded-lg border px-2 py-1">
             <summary className="flex cursor-pointer flex-wrap justify-between gap-2"><span className="min-w-0">{d.label}{d.unsourced > 0 && <span className="text-destructive"> · {d.unsourced} input{d.unsourced === 1 ? "" : "s"} without a source</span>}</span><span className="font-mono">{inr(d.amount)}</span></summary>
             <div className="mt-1 divide-y border-t">{d.inputs.map((i, n) => <div key={n} className="flex flex-wrap justify-between gap-2 py-1"><span className="min-w-0 text-muted-foreground">{i.label}<span className="block">{i.source ? `${i.source.kind === "document" ? "Document" : "Entry"}: ${i.source.title}` : "No source — attach the document"}</span></span><span className="font-mono">{inr(i.amount)}</span></div>)}</div>
+            {!!d.omittedInputs&&<p className="text-muted-foreground">{d.omittedInputs} additional inputs retained in the register; this list shows the first 100.</p>}
           </details>)}</div>
         </details>}
         <p className="text-muted-foreground">Read-only. A figure counts as traced only when its record names a document, a document is linked to it, or it is linked to a ledger entry.</p>

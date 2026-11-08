@@ -375,7 +375,7 @@
       "modules": [],
       "dependencies": [],
       "status": "PARTIAL",
-      "requiredWork": "Complete full source-backed all-kind reconciliation acceptance (GST liability/payment/return comparisons remain); hosted owner/entity acceptance requires authorized isolated environment. Connected local persistence/recovery now verified.",
+      "requiredWork": "Local GST liability/payment/frozen-working/confirmed filed-original comparison completed. Remaining: source-backed connected acceptance for every reconciliation family and independent closing evidence, plus hosted owner/entity isolation. Authorized isolated hosted project/session with synthetic accounts and documents required; no Live fixtures.",
       "verificationMethod": "Source-to-code audit followed by applicable unit/database/integration/real-route checks; hosted/device evidence separately required.",
       "finalTestResult": {
         "result": "PARTIAL",
@@ -387,11 +387,12 @@
           "8 Nov 03:38 continuation: 36 focused tests; actual encrypted claim version-lookup interruption/reload/upload interruption/reload/same-byte retry with one report; five real PDF builder cases and connected statement-to-report export workflow pass using synthetic adapters. Exact gaps/severity/next actions in docs/evidence/six-target-continuation-2026-11-08.md. No new six-ID promotion.",
           "8 Nov prioritised acceptance: 26/26 focused tests; isolated reconciliation exception/checkpoint restart/stale revision, real frozen PDF/source-owner comparisons and interrupted-save recovery; actual non-mocked synthetic invoice reader -> real review -> committed lost response/retry -> actual Assets/DocuRepo route reload. Scope and blockers: docs/evidence/prioritised-acceptance-2026-11-08.md. Hosted auth/storage not certified.",
           "8 Nov 04:42 grouped functionality: company-filtered CSV/XLSX/PDF, shared-company Excel, source-linked reconciliation exports, effective-invoice/unique-party matching and full-list differing-rate GST allocations. 51 changed-path tests and actual download browser checks pass; disposable owner-RLS disk retry/reload covers six report families. Broad clauses remain partial; no hosted certification. docs/evidence/grouped-finance-2026-11-08.md",
-          "8 Nov 04:55 connected batch: registration/company isolated reconciliation, retained investment events and six-decimal units, exact encrypted Reports Centre retry with downloaded-byte verification and queued frozen source snapshots; eight actual PDF families/owner-RLS disk restart and real Inbox/audit/supplier/report routes verified. Principal94/94, last13/13 targeted tests passed; local adapters NOT hosted. docs/evidence/connected-completion-2026-11-08.md"
+          "8 Nov 04:55 connected batch: registration/company isolated reconciliation, retained investment events and six-decimal units, exact encrypted Reports Centre retry with downloaded-byte verification and queued frozen source snapshots; eight actual PDF families/owner-RLS disk restart and real Inbox/audit/supplier/report routes verified. Principal94/94, last13/13 targeted tests passed; local adapters NOT hosted. docs/evidence/connected-completion-2026-11-08.md",
+          "8 Nov 05:43 connected GST/report batch: ended-period liability/payment/frozen-working/filed-original differences enter existing Inbox, unique company payments and stable working refresh; actual Inbox -> Tax -> save -> reload passes. Remaining 23 Reports Centre families have real PDF/frozen metadata/lost-reply/restart owner-RLS acceptance. Loan filtering/historical balance sources and shared GST credit/source chains fixed. 104 distinct targeted tests pass; local adapters only, not hosted. docs/evidence/gst-report-completion-2026-11-08.md"
         ]
       },
       "category": "B",
-      "nextAction": "Complete full source-backed all-kind reconciliation acceptance (GST liability/payment/return comparisons remain); hosted owner/entity acceptance requires authorized isolated environment. Connected local persistence/recovery now verified."
+      "nextAction": "Local GST liability/payment/frozen-working/confirmed filed-original comparison completed. Remaining: source-backed connected acceptance for every reconciliation family and independent closing evidence, plus hosted owner/entity isolation. Authorized isolated hosted project/session with synthetic accounts and documents required; no Live fixtures."
     },
     {
       "id": "V60-0017",
@@ -506,18 +507,19 @@
       "modules": [],
       "dependencies": [],
       "status": "PARTIAL",
-      "requiredWork": "Add a disposable-store integration test for the complete 9. GST. workflow, including document-derived records, entity isolation, persistence, reconciliation and evidence traceability; existing calculation/proposal tests do not prove the whole module. Project edits/new src tests were prohibited by sandbox instructions; missing focused tests were not added.",
+      "requiredWork": "Connected GST reconciliation and working refresh are implemented and tested. Remaining full document identification/extraction/review-save-to-register, official return comparisons and broader GST-module hosted acceptance.",
       "verificationMethod": "Source-to-code audit followed by applicable unit/database/integration/real-route checks; hosted/device evidence separately required.",
       "finalTestResult": {
         "result": "PARTIAL",
         "evidence": [
           "Register audit context (not independently sufficient test proof): src/lib/books/gst.ts; src/lib/books/books.test.ts covers component rules, not the full enumerated module workflow.",
           "src/lib/books/books.test.ts — PASS on rerun; concrete assertions recorded in /tmp/verify-b1-tests.log. Scope is limited to the component rules/fixtures in this file, not the entire clause.",
-          "8 Nov 04:42 grouped functionality: company-filtered CSV/XLSX/PDF, shared-company Excel, source-linked reconciliation exports, effective-invoice/unique-party matching and full-list differing-rate GST allocations. 51 changed-path tests and actual download browser checks pass; disposable owner-RLS disk retry/reload covers six report families. Broad clauses remain partial; no hosted certification. docs/evidence/grouped-finance-2026-11-08.md"
+          "8 Nov 04:42 grouped functionality: company-filtered CSV/XLSX/PDF, shared-company Excel, source-linked reconciliation exports, effective-invoice/unique-party matching and full-list differing-rate GST allocations. 51 changed-path tests and actual download browser checks pass; disposable owner-RLS disk retry/reload covers six report families. Broad clauses remain partial; no hosted certification. docs/evidence/grouped-finance-2026-11-08.md",
+          "8 Nov 05:43 connected GST/report batch: ended-period liability/payment/frozen-working/filed-original differences enter existing Inbox, unique company payments and stable working refresh; actual Inbox -> Tax -> save -> reload passes. Remaining 23 Reports Centre families have real PDF/frozen metadata/lost-reply/restart owner-RLS acceptance. Loan filtering/historical balance sources and shared GST credit/source chains fixed. 104 distinct targeted tests pass; local adapters only, not hosted. docs/evidence/gst-report-completion-2026-11-08.md"
         ]
       },
       "category": "B",
-      "nextAction": "Add a disposable-store integration test for the complete 9. GST. workflow, including document-derived records, entity isolation, persistence, reconciliation and evidence traceability; existing calculation/proposal tests do not prove the whole module. Project edits/new src tests were prohibited by sandbox instructions; missing focused tests were not added."
+      "nextAction": "Connected GST reconciliation and working refresh are implemented and tested. Remaining full document identification/extraction/review-save-to-register, official return comparisons and broader GST-module hosted acceptance."
     },
     {
       "id": "V60-0022",
@@ -632,7 +634,7 @@
       "modules": [],
       "dependencies": [],
       "status": "PARTIAL",
-      "requiredWork": "Complete specialized report-family source-to-history coverage and hosted owner/entity acceptance; eight actual frozen PDF families, 32 builder dependency cases and actual Reports Centre interruption/reload/retry now pass.",
+      "requiredWork": "Reports Centre all 31 families now have frozen PDF/history persistence evidence across current and previous batches. Remaining: specialized exports outside Reports Centre and per-material-figure provenance (including opening/valuation/planning sources), hosted owner/entity/access acceptance. Isolated hosted project with authenticated synthetic owners, private storage and existing migrations required.",
       "verificationMethod": "Source-to-code audit followed by applicable unit/database/integration/real-route checks; hosted/device evidence separately required.",
       "finalTestResult": {
         "result": "PARTIAL",
@@ -644,11 +646,12 @@
           "8 Nov 03:38 continuation: 36 focused tests; actual encrypted claim version-lookup interruption/reload/upload interruption/reload/same-byte retry with one report; five real PDF builder cases and connected statement-to-report export workflow pass using synthetic adapters. Exact gaps/severity/next actions in docs/evidence/six-target-continuation-2026-11-08.md. No new six-ID promotion.",
           "8 Nov prioritised acceptance: 26/26 focused tests; isolated reconciliation exception/checkpoint restart/stale revision, real frozen PDF/source-owner comparisons and interrupted-save recovery; actual non-mocked synthetic invoice reader -> real review -> committed lost response/retry -> actual Assets/DocuRepo route reload. Scope and blockers: docs/evidence/prioritised-acceptance-2026-11-08.md. Hosted auth/storage not certified.",
           "8 Nov 04:42 grouped functionality: company-filtered CSV/XLSX/PDF, shared-company Excel, source-linked reconciliation exports, effective-invoice/unique-party matching and full-list differing-rate GST allocations. 51 changed-path tests and actual download browser checks pass; disposable owner-RLS disk retry/reload covers six report families. Broad clauses remain partial; no hosted certification. docs/evidence/grouped-finance-2026-11-08.md",
-          "8 Nov 04:55 connected batch: registration/company isolated reconciliation, retained investment events and six-decimal units, exact encrypted Reports Centre retry with downloaded-byte verification and queued frozen source snapshots; eight actual PDF families/owner-RLS disk restart and real Inbox/audit/supplier/report routes verified. Principal94/94, last13/13 targeted tests passed; local adapters NOT hosted. docs/evidence/connected-completion-2026-11-08.md"
+          "8 Nov 04:55 connected batch: registration/company isolated reconciliation, retained investment events and six-decimal units, exact encrypted Reports Centre retry with downloaded-byte verification and queued frozen source snapshots; eight actual PDF families/owner-RLS disk restart and real Inbox/audit/supplier/report routes verified. Principal94/94, last13/13 targeted tests passed; local adapters NOT hosted. docs/evidence/connected-completion-2026-11-08.md",
+          "8 Nov 05:43 connected GST/report batch: ended-period liability/payment/frozen-working/filed-original differences enter existing Inbox, unique company payments and stable working refresh; actual Inbox -> Tax -> save -> reload passes. Remaining 23 Reports Centre families have real PDF/frozen metadata/lost-reply/restart owner-RLS acceptance. Loan filtering/historical balance sources and shared GST credit/source chains fixed. 104 distinct targeted tests pass; local adapters only, not hosted. docs/evidence/gst-report-completion-2026-11-08.md"
         ]
       },
       "category": "B",
-      "nextAction": "Complete specialized report-family source-to-history coverage and hosted owner/entity acceptance; eight actual frozen PDF families, 32 builder dependency cases and actual Reports Centre interruption/reload/retry now pass."
+      "nextAction": "Reports Centre all 31 families now have frozen PDF/history persistence evidence across current and previous batches. Remaining: specialized exports outside Reports Centre and per-material-figure provenance (including opening/valuation/planning sources), hosted owner/entity/access acceptance. Isolated hosted project with authenticated synthetic owners, private storage and existing migrations required."
     },
     {
       "id": "V60-0027",
@@ -1621,11 +1624,11 @@
       "interpretation": "Account for this source clause in the context of 3. Statement Desk processing sequence; verify each enumerated feature and applicable safeguard, not merely screen presence.",
       "modules": [],
       "dependencies": [],
-      "status": "PARTIAL",
-      "requiredWork": "Inject failure at every pipeline stage for both bank/card and non-bank intake; assert no partial financial records, successful retry behavior, and explicit recoverable error state. Project edits/new src tests were prohibited by sandbox instructions; missing focused tests were not added.",
+      "status": "BLOCKED",
+      "requiredWork": "Explicit approval to install immutable upload-bound operation authority and compatible atomic Undo safeguards in an isolated hosted environment; then all-stage interruption/cross-device acceptance. No production installation authorized.",
       "verificationMethod": "Source-to-code audit followed by applicable unit/database/integration/real-route checks; hosted/device evidence separately required.",
       "finalTestResult": {
-        "result": "PARTIAL",
+        "result": "BLOCKED",
         "evidence": [
           "Register audit context (not independently sufficient test proof): src/lib/books/intake.ts STEPS and src/components/DocumentIntake.tsx trace processing; statements.tsx saves statement originals after posting and tolerates storage failure; complete universal sequence not verified.",
           "src/lib/books/intake.ts STEPS/trail describe the pipeline; src/routes/_authenticated/statements.tsx separately saves statement evidence after import; a trail alone is not an atomic workflow.",
@@ -1643,7 +1646,7 @@
         ]
       },
       "category": "D",
-      "nextAction": "Complete exact remaining criteria/prerequisites listed per ID in docs/evidence/six-requirements-2026-11-08.md; no obsolete sandbox editing prohibition."
+      "nextAction": "Explicit approval to install immutable upload-bound operation authority and compatible atomic Undo safeguards in an isolated hosted environment; then all-stage interruption/cross-device acceptance. No production installation authorized."
     },
     {
       "id": "V60-0067",
@@ -2015,11 +2018,11 @@
       "interpretation": "Account for this source clause in the context of 5. Dedicated DocuRepo module; verify each enumerated feature and applicable safeguard, not merely screen presence.",
       "modules": [],
       "dependencies": [],
-      "status": "PARTIAL",
-      "requiredWork": "Source-first bank originals, stable content IDs and line references now implemented with controlled browser/persistence coverage. Remaining actual private storage, all company tagging and edit-member file permissions, all document readers and durable cross-device operation history.",
+      "status": "BLOCKED",
+      "requiredWork": "Open the existing independently backed Hosted workflow acceptance draft with authenticated isolated owner/member contexts and private storage; test original download bytes, denied access, revocation and issued-URL expiry. Main shares Live and must not host fixtures.",
       "verificationMethod": "Source-to-code audit followed by applicable unit/database/integration/real-route checks; hosted/device evidence separately required.",
       "finalTestResult": {
-        "result": "PARTIAL",
+        "result": "BLOCKED",
         "evidence": [
           "Register audit context (not independently sufficient test proof): src/components/DocumentIntake.tsx uses reviewed atomic record commit (intake-revision-sql.test.ts; docs/VERIFICATION_RESULTS.md), but statements.tsx posts before storing originals and catches storage failure; full financial-record/evidence atomicity is incomplete.",
           "src/lib/books/intake.ts STEPS/trail describe the pipeline; src/routes/_authenticated/statements.tsx separately saves statement evidence after import; a trail alone is not an atomic workflow.",
@@ -2038,7 +2041,7 @@
         ]
       },
       "category": "D",
-      "nextAction": "Complete exact remaining criteria/prerequisites listed per ID in docs/evidence/six-requirements-2026-11-08.md; no obsolete sandbox editing prohibition."
+      "nextAction": "Open the existing independently backed Hosted workflow acceptance draft with authenticated isolated owner/member contexts and private storage; test original download bytes, denied access, revocation and issued-URL expiry. Main shares Live and must not host fixtures."
     },
     {
       "id": "V60-0083",
@@ -7454,18 +7457,19 @@
       "modules": [],
       "dependencies": [],
       "status": "PARTIAL",
-      "requiredWork": "Complete all-kind source-backed exception workflow acceptance, including GST liability/payment/return differences; current loan/party/investment/intercompany/allocation and bank discrepancy routing verified.",
+      "requiredWork": "GST liability/payment/frozen-return and unavailable or differing filed-document evidence now join source-linked Inbox; saved working refresh clears tested variance after reload. Remaining: full connected source-backed acceptance for each non-GST exception family, not merely helper routing; avoid claiming all-kind completion.",
       "verificationMethod": "Source-to-code audit followed by applicable unit/database/integration/real-route checks; hosted/device evidence separately required.",
       "finalTestResult": {
         "result": "PARTIAL",
         "evidence": [
           "src/lib/books/recon.ts: computes reconciliation differences; src/lib/books/audit.ts: continuousAudit builds missing-invoice and unreconciled-bank findings.",
           "PASS src/lib/books/recon.test.ts: concrete loan/supplier/investment differences; PASS src/lib/gst-recon.test.ts: business spends without receipt or linked document are flagged.",
-          "8 Nov 04:55 connected batch: registration/company isolated reconciliation, retained investment events and six-decimal units, exact encrypted Reports Centre retry with downloaded-byte verification and queued frozen source snapshots; eight actual PDF families/owner-RLS disk restart and real Inbox/audit/supplier/report routes verified. Principal94/94, last13/13 targeted tests passed; local adapters NOT hosted. docs/evidence/connected-completion-2026-11-08.md"
+          "8 Nov 04:55 connected batch: registration/company isolated reconciliation, retained investment events and six-decimal units, exact encrypted Reports Centre retry with downloaded-byte verification and queued frozen source snapshots; eight actual PDF families/owner-RLS disk restart and real Inbox/audit/supplier/report routes verified. Principal94/94, last13/13 targeted tests passed; local adapters NOT hosted. docs/evidence/connected-completion-2026-11-08.md",
+          "8 Nov 05:43 connected GST/report batch: ended-period liability/payment/frozen-working/filed-original differences enter existing Inbox, unique company payments and stable working refresh; actual Inbox -> Tax -> save -> reload passes. Remaining 23 Reports Centre families have real PDF/frozen metadata/lost-reply/restart owner-RLS acceptance. Loan filtering/historical balance sources and shared GST credit/source chains fixed. 104 distinct targeted tests pass; local adapters only, not hosted. docs/evidence/gst-report-completion-2026-11-08.md"
         ]
       },
       "category": "B",
-      "nextAction": "Complete all-kind source-backed exception workflow acceptance, including GST liability/payment/return differences; current loan/party/investment/intercompany/allocation and bank discrepancy routing verified."
+      "nextAction": "GST liability/payment/frozen-return and unavailable or differing filed-document evidence now join source-linked Inbox; saved working refresh clears tested variance after reload. Remaining: full connected source-backed acceptance for each non-GST exception family, not merely helper routing; avoid claiming all-kind completion."
     },
     {
       "id": "V60-0313",
@@ -17220,18 +17224,19 @@
       "modules": [],
       "dependencies": [],
       "status": "PARTIAL",
-      "requiredWork": "Inventory every material report figure and prove complete source/printed-value chains, including opening balances, investments, property, liabilities and tax adjustments; fail or visibly qualify unsourced figures and test persisted report drill-through. Current chains cover only selected figures.",
+      "requiredWork": "GST source chain now matches reviewed ITC eligibility and dated reverse-charge credit, retains held originals and exposes truncated inputs. Remaining full material-figure provenance and persisted drill-through across opening balances, valuations, property, liabilities, planning and adjustments.",
       "verificationMethod": "Source-to-code audit followed by applicable unit/database/integration/real-route checks; hosted/device evidence separately required.",
       "finalTestResult": {
         "result": "PARTIAL",
         "evidence": [
           "src/lib/books/evidence.ts resolves sources; derived-evidence.ts chains GST and posted depreciation inputs and counts unsourced inputs.",
           "PASS evidence.test.ts (6), derived-evidence.test.ts (4), books.test.ts source-resolution case; unsourced figures remain allowed.",
-          "8 Nov 04:42 grouped functionality: company-filtered CSV/XLSX/PDF, shared-company Excel, source-linked reconciliation exports, effective-invoice/unique-party matching and full-list differing-rate GST allocations. 51 changed-path tests and actual download browser checks pass; disposable owner-RLS disk retry/reload covers six report families. Broad clauses remain partial; no hosted certification. docs/evidence/grouped-finance-2026-11-08.md"
+          "8 Nov 04:42 grouped functionality: company-filtered CSV/XLSX/PDF, shared-company Excel, source-linked reconciliation exports, effective-invoice/unique-party matching and full-list differing-rate GST allocations. 51 changed-path tests and actual download browser checks pass; disposable owner-RLS disk retry/reload covers six report families. Broad clauses remain partial; no hosted certification. docs/evidence/grouped-finance-2026-11-08.md",
+          "8 Nov 05:43 connected GST/report batch: ended-period liability/payment/frozen-working/filed-original differences enter existing Inbox, unique company payments and stable working refresh; actual Inbox -> Tax -> save -> reload passes. Remaining 23 Reports Centre families have real PDF/frozen metadata/lost-reply/restart owner-RLS acceptance. Loan filtering/historical balance sources and shared GST credit/source chains fixed. 104 distinct targeted tests pass; local adapters only, not hosted. docs/evidence/gst-report-completion-2026-11-08.md"
         ]
       },
       "category": "B",
-      "nextAction": "Inventory every material report figure and prove complete source/printed-value chains, including opening balances, investments, property, liabilities and tax adjustments; fail or visibly qualify unsourced figures and test persisted report drill-through. Current chains cover only selected figures."
+      "nextAction": "GST source chain now matches reviewed ITC eligibility and dated reverse-charge credit, retains held originals and exposes truncated inputs. Remaining full material-figure provenance and persisted drill-through across opening balances, valuations, property, liabilities, planning and adjustments."
     },
     {
       "id": "V60-0732",

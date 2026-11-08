@@ -90,7 +90,8 @@ export function matchGstPayments(liabilities: { period: string; amount: number }
   const used = new Set<string>();
   const windowEnd = (period: string) => { const [y, m] = period.split("-").map(Number) as [number, number]; const d = new Date(Date.UTC(y, m + 2, 0)); return d.toISOString().slice(0, 10); };
   return liabilities.map((l) => {
-    const p = pool.find((x) => !used.has(x.id) && Math.abs(x.amount - l.amount) <= 1 && x.date >= `${l.period}-01` && x.date <= windowEnd(l.period));
+    const candidates = [...new Map(pool.filter((x) => !used.has(x.id) && Math.abs(x.amount - l.amount) <= 1 && x.date >= `${l.period}-01` && x.date <= windowEnd(l.period)).map(x=>[x.id,x])).values()];
+    const p = candidates.length === 1 ? candidates[0] : undefined;
     if (p) used.add(p.id);
     return { ...l, paymentId: p?.id ?? null, paidOn: p?.date ?? null };
   });

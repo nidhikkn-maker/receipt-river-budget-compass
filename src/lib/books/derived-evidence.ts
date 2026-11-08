@@ -8,9 +8,10 @@ import type { Asset } from "../assets";
 import type { BooksData } from "./types";
 import { effectiveInvoices, gstPayable, periodOf, taxOf } from "./gst";
 import { makeResolver, type EvidenceRef } from "./evidence";
+import { itcReview } from './compliance';
 
 export interface DerivedInput { label: string; amount: number; source: EvidenceRef | null }
-export interface DerivedFigure { id: string; label: string; amount: number; to: string; inputs: DerivedInput[]; unsourced: number }
+export interface DerivedFigure { id: string; label: string; amount: number; to: string; inputs: DerivedInput[]; unsourced: number; omittedInputs?: number }
 
 const r2 = (n: number) => Math.round(n * 100) / 100;
 const MAX_INPUTS = 100;
@@ -18,7 +19,7 @@ const MAX_INPUTS = 100;
 export function derivedEvidence(p: { assets: Asset[]; books: BooksData; docs: { id: string; title: string }[]; entryTitle?: (id: string) => string | undefined }): DerivedFigure[] {
   const resolve = makeResolver(p);
   const out: DerivedFigure[] = [];
-  const push = (f: DerivedFigure) => { f.unsourced = f.inputs.filter((i) => !i.source).length; f.inputs = f.inputs.slice(0, MAX_INPUTS); out.push(f); };
+  const push = (f: DerivedFigure) => { f.unsourced = f.inputs.filter((i) => !i.source).length; f.omittedInputs = Math.max(0,f.inputs.length-MAX_INPUTS); f.inputs = f.inputs.slice(0, MAX_INPUTS); out.push(f); };
 
   // GST net payable per registration and month, chained to the invoices and advances behind it.
   const periods = new Set<string>();
@@ -26,12 +27,17 @@ export function derivedEvidence(p: { assets: Asset[]; books: BooksData; docs: { 
   for (const a of p.books.gstAdvances ?? []) { periods.add(`${a.gstin}|${periodOf(a.date)}`); for (const x of a.adjustments) periods.add(`${a.gstin}|${periodOf(x.date)}`); }
   for (const key of [...periods].sort()) {
     const [gstin, period] = key.split("|") as [string, string];
-    const payable = gstPayable(p.books.gstInvoices, gstin, period, undefined, undefined, p.books.gstAdvances ?? []);
+    const eligible=new Set(itcReview(p.books.gstInvoices,gstin,period).lines.filter(l=>l.eligible).map(l=>`${l.invoice.partyGstin}|${l.invoice.number.trim().toUpperCase()}`));
+    const payable = gstPayable(p.books.gstInvoices, gstin, period, eligible, undefined, p.books.gstAdvances ?? []);
     const inputs: DerivedInput[] = [];
     for (const i of effectiveInvoices(p.books.gstInvoices).filter((x) => x.gstin === gstin && periodOf(x.date) === period)) {
       const tax = taxOf(i);
-      inputs.push({ label: `${i.kind === "sales" ? "Sale" : "Purchase"} ${i.number} · ${i.party}${i.note ? ` (${i.note} note)` : ""}`, amount: i.kind === "sales" ? tax : -tax, source: resolve(i.id, i.docId, i.transactionId) });
+      const held=i.kind==='purchase'&&i.treatment!=='reverse_charge'&&!i.note&&!eligible.has(`${i.partyGstin}|${i.number.trim().toUpperCase()}`);
+      const reverse=i.treatment==='reverse_charge';
+      inputs.push({ label: `${i.kind === "sales" ? "Sale" : "Purchase"} ${i.number} · ${i.party}${i.note ? ` (${i.note} note)` : ""}${held?' (credit held)':reverse?' (reverse-charge cash)':''}`, amount: i.kind === "sales"||reverse ? tax : held?0:-tax, source: resolve(i.id, i.docId, i.transactionId) });
+      if(reverse&&i.rcmPaymentId&&i.rcmPaidOn?.startsWith(period))inputs.push({label:`Paid reverse-charge credit ${i.number}`,amount:-tax,source:resolve(i.id,i.docId,i.rcmPaymentId)});
     }
+    for(const i of effectiveInvoices(p.books.gstInvoices).filter(i=>i.gstin===gstin&&i.treatment==='reverse_charge'&&!i.date.startsWith(period)&&i.rcmPaymentId&&i.rcmPaidOn?.startsWith(period)))inputs.push({label:`Paid reverse-charge credit ${i.number}`,amount:-taxOf(i),source:resolve(i.id,i.docId,i.rcmPaymentId)});
     for (const a of (p.books.gstAdvances ?? []).filter((x) => x.gstin === gstin && x.supply === "services")) {
       if (periodOf(a.date) === period) inputs.push({ label: `Advance ${a.number} · ${a.party}`, amount: r2(a.igst + a.cgst + a.sgst + a.cess), source: resolve(a.id, a.docId) });
       for (const x of a.adjustments.filter((x) => periodOf(x.date) === period)) {
