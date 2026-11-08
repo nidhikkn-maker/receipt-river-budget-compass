@@ -5,6 +5,20 @@ import {saveLocalPreparation,loadLocalPreparation,clearLocalPreparations,saveLoc
 globalThis.indexedDB=indexedDB;
 const draft:ClaimPreparation={id:'test',revision:2,mutationId:'test',updatedAt:'2026-11-01T06:00:00Z',data:{choice:'trip:t',picked:['e'],excluded:['excluded'],organisation:'AET',profileId:'role',routeId:'route',accountId:'bank',claimant:{name:'Private claimant',designation:'Director',employeeId:'',department:'',email:'',approver:'',bankDetails:''},purpose:'Meeting',from:'2026-10-01',to:'2026-10-03',format:'summary',rejected:['wrong']}};
 describe('Encrypted claim preparation recovery',()=>{
+ it('expenditure recovery preserves frozen bytes independently of claims and Centre reports across cleanup',async()=>{
+  const job:ClaimReportJob={id:'expenditure',path:'expense-owner/reports/expenditure.pdf',name:'expenditure.pdf',activity:'entries:e',bytes:[37,80,68,70,45],missing:['A-2'],row:{id:'expenditure',owner_id:'expense-owner',kind:'expenditure-statement',title:'Statement',file_path:'expense-owner/reports/expenditure.pdf',file_size:5}};
+  await saveLocalClaimReport('expense-owner',job,'expenditure-report');
+  await saveLocalClaimReport('expense-owner',{...job,id:'claim'},'report');
+  expect(await loadLocalClaimReport('expense-owner','expenditure-report')).toEqual(job);
+  expect((await loadLocalClaimReport('expense-owner'))?.id).toBe('claim');
+  expect(await loadLocalClaimReport('other-expense-owner','expenditure-report')).toBeNull();
+  await clearLocalClaimReport('expense-owner','expenditure-report');
+  expect(await loadLocalClaimReport('expense-owner','expenditure-report')).toBeNull();
+  expect((await loadLocalClaimReport('expense-owner'))?.id).toBe('claim');
+  await saveLocalClaimReport('expense-owner',job,'expenditure-report');
+  await clearLocalPreparations('expense-owner');
+  expect(await loadLocalClaimReport('expense-owner','expenditure-report')).toBeNull();
+ });
  it('Reports Centre recovery has a separate encrypted slot and owner cleanup removes both pending reports',async()=>{
   const job:ClaimReportJob={id:'centre',path:'slot-owner/reports/centre.pdf',name:'monthly.pdf',activity:'monthly',bytes:[37,80,68,70],missing:[],row:{id:'centre',owner_id:'slot-owner',kind:'monthly',title:'Monthly',file_path:'slot-owner/reports/centre.pdf',file_size:4}};
   await saveLocalClaimReport('slot-owner',job,'centre-report');await saveLocalClaimReport('slot-owner',{...job,id:'claim'});
