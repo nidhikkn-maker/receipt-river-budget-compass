@@ -1,4 +1,5 @@
 import { downloadBlob } from "@/lib/reports";
+import { openSmartAdd } from '@/lib/smart-add-event';
 /** Tax & audit centre sections: past-year onboarding, tax profiles, GST returns and rule register (v6 §17–20, §45–51). */
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "@tanstack/react-router";
@@ -41,7 +42,7 @@ export function FyOnboarding() {
   return (
     <Fold id="past-years" title="Financial year onboarding" hint={`${books.fyRecords.length} past year${books.fyRecords.length === 1 ? "" : "s"} on record`}>
       <div className="space-y-3 text-sm">
-        <Link to="/statements" search={{ context: "fy" }} className="inline-block rounded-md border px-3 py-2 font-semibold text-primary">Upload audited accounts, trial balance or return</Link>
+        <Button variant="outline" className="inline-block whitespace-normal rounded-md border px-3 py-2 font-semibold text-primary" onClick={() => openSmartAdd('fy')}>Upload audited accounts, trial balance or return</Button>
         <p className="text-xs text-muted-foreground">Balance sheet, P&L, trial balance, cash flow, notes, auditor's report, fixed-asset and depreciation schedules, loan/receivable/payable/investment schedules, tax computation and GST reconciliation. Each one fills in what it contains; nothing missing is filled in for you.</p>
         {books.fyRecords.map((r) => {
           const ent = entities.find((e) => e.id === r.entityId);
@@ -144,7 +145,7 @@ export function GstReturns({ fy }: { fy: string }) {
         <div className="flex flex-wrap gap-2">
           <select aria-label="GSTIN" className="rounded-md border bg-background px-2 py-1" value={gstin} onChange={(e) => setGstin(e.target.value)}>{gstins.map((x) => <option key={x.g} value={x.g}>{x.name} · {x.g}</option>)}</select>
           <select aria-label="Month" className="rounded-md border bg-background px-2 py-1" value={period} onChange={(e) => setPeriod(e.target.value)}>{months.map((m) => <option key={m}>{m}</option>)}</select>
-          <Link to="/statements" search={{ context: "gst" }} className="rounded-md border px-2 py-1 text-primary">Upload invoice or return</Link>
+          <Button size="sm" variant="outline" className="rounded-md border px-2 py-1 text-primary" onClick={() => openSmartAdd('gst')}>Upload invoice or return</Button>
         </div>
         <div className="grid gap-2 sm:grid-cols-2">
           <div className="rounded-xl border p-3 text-xs"><p className="font-semibold">GSTR-1 draft · {period}</p><p>B2B: {r1.b2b.count} invoices · taxable {inr(r1.b2b.taxable)} · tax {inr(r1.b2b.igst + r1.b2b.cgst + r1.b2b.sgst + r1.b2b.cess)}</p><p>B2C: {r1.b2c.count} invoices · taxable {inr(r1.b2c.taxable)}</p></div>

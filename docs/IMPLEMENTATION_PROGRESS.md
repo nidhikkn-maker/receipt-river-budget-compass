@@ -1,5 +1,11 @@
 # Implementation progress — top 15 gaps (baseline: Ledgerline_v6_Requirements_Checklist.md)
 
+## Connected capture/claims/recovery — 06:25 UTC
+- Shared eight-context capture, in-place exact-entry claim bill editing, separate encrypted expenditure recovery and checkpointed document retry completed. V60-0072/0073 newly verified narrowly; broader IDs partial,0066/0082 blocked.
+- Focused tests and actual eight-context/PDF/reload/duplicate checks pass; local adapters only. Exact evidence and remaining source/hosted criteria: `docs/evidence/capture-claims-recovery-2026-11-08.md`.
+- Measured941.97 workspace;11.34 decline; conservative cap837.97 includes protected300; no UIX redesign, production records/policies/migrations/publishing.
+
+
 ## Credit-controlled checkpoint — 7 Nov 2026
 - 18:47 owner-approved UIX: global Smart Add and Spaces navigation integrated; receipt Canvas reuses existing review, statement Canvas reuses batch plan. 33 targeted automated checks, responsive chooser matrix, four receipt browser cases and one card batch case PASS (controlled data, not hosted). No historical/v6 promotions. Evidence: docs/evidence/uix-smart-add-2026-11-07.md.
 - Emergency owner cap 1,100 credits supersedes sequential expansion; P0/P1 first, P2/P3 deferred. Existing release holds unchanged.

@@ -1,6 +1,8 @@
 import { AccountingDetails } from "@/components/AccountingDetails";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
+import { openSmartAdd } from '@/lib/smart-add-event';
+import { Button } from '@/components/ui/button';
 import { PageTitle } from "@/components/AppShell";
 import { useStore } from "@/lib/store";
 import { fyOf, yearsSince } from "@/lib/entities";
@@ -64,7 +66,7 @@ function Tax() {
       <GstReturns fy={fy} />
       <FyOnboarding />
       <RulesRegister />
-      <Link to="/statements" search={{ context: "tax" }} className="block text-sm font-semibold text-primary underline">Upload salary, rent, investment or tax documents</Link>
+      <Button variant="link" className="block whitespace-normal text-left text-sm font-semibold text-primary underline" onClick={() => openSmartAdd('tax')}>Upload salary, rent, investment or tax documents</Button>
       <p className="text-xs text-muted-foreground">GST input only counts tax printed on bills you attached; claimable credit depends on supplier filings (GSTR-2B), which aren't connected.</p>
     </div>
   );

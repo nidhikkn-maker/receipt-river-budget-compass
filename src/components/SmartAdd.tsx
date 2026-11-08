@@ -1,6 +1,7 @@
 import { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import { Camera, FileUp, Mic, PencilLine, MessageSquare, X, ChevronLeft, CheckCircle2, Images, ChevronRight, ReceiptText, Package } from 'lucide-react';
-import { SMART_ADD_EVENT, type SmartAddIntent } from '@/lib/smart-add-event';
+import { SMART_ADD_EVENT, smartAddContext, type SmartAddIntent } from '@/lib/smart-add-event';
+import type { IntakeContext } from '@/lib/books/intake';
 import night from '@/assets/companion-add-night.jpg';
 import { Link } from '@tanstack/react-router';
 import { Button } from './ui/button';
@@ -18,7 +19,7 @@ type Stage =
   | { kind: 'choose' }
   | { kind: 'classify'; files: File[] }
   | { kind: 'receipt'; files: File[]; search: QuickEntrySearch; key: number }
-  | { kind: 'statement'; files: File[]; key: number; context?: 'assets' | undefined }
+  | { kind: 'statement'; files: File[]; key: number; context?: IntakeContext | undefined }
   | { kind: 'done'; id?: string | undefined; label: string; followUp?: 'asset' | 'claim'; claimOpened?: boolean };
 
 export const SMART_ADD_ACCEPT = 'image/*,application/pdf,.pdf,.csv,.xls,.xlsx';
@@ -26,7 +27,7 @@ export const SMART_ADD_ACCEPT = 'image/*,application/pdf,.pdf,.csv,.xls,.xlsx';
 /** Decides where picked files are reviewed: photos are receipts, spreadsheets are statements, a PDF is the owner's call. */
 export function routeFiles(files: File[], intent?: SmartAddIntent): 'receipt' | 'statement' | 'ask' {
   if (!files.length) return 'ask';
-  if (intent === 'document' || intent === 'assets') return 'statement';
+  if (smartAddContext(intent)) return 'statement';
   const kinds = files.map(sourceKind);
   if (kinds.every((k) => k === 'image')) return 'receipt';
   if (kinds.some((k) => k === 'sheet')) return 'statement';
@@ -59,7 +60,7 @@ export function SmartAdd({ open, onOpenChange, scope }: { open: boolean; onOpenC
     setShown(0);
     const where = routeFiles(files, intent);
     if (where === 'receipt') setStage({ kind: 'receipt', files, search: { ...base, mode: 'scan' }, key: Date.now() });
-    else if (where === 'statement') setStage({ kind: 'statement', files, key: Date.now(), context: intent === 'assets' ? 'assets' : undefined });
+    else if (where === 'statement') setStage({ kind: 'statement', files, key: Date.now(), context: smartAddContext(intent) });
     else setStage({ kind: 'classify', files });
   };
   const typed = (mode: 'voice' | 'quick' | 'message') => setStage({ kind: 'receipt', files: [], search: { ...base, mode }, key: Date.now() });
