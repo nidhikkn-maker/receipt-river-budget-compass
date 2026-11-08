@@ -55,7 +55,7 @@ export function useStore() {
     save: async (input: Record<string, unknown>, opts?: { createId?: string }) => {
       const id = opts?.createId ?? crypto.randomUUID();
       await saveWithRecovery(async () => {
-      if (!fixture.transactions.some((t) => t.id === id)) fixture.transactions.push({ ...input, id, originalAmount: input.amount, currency: "INR", splits: [], reconciledAt: null, statementRef: null });
+      if (!fixture.transactions.some((t) => t.id === id)) fixture.transactions.push({ ...input, id, originalAmount: input.amount, currency: "INR", splits: [], reconciledAt: null, statementRef: null, correctionRevision: 0 });
       fixture.saves.push(id);
       sessionStorage.setItem("controlled-desk-ledger", JSON.stringify(fixture.transactions));
       if (fixture.loseSaveResponse) { fixture.loseSaveResponse = false; throw Error('Saved response interrupted'); }
@@ -70,7 +70,7 @@ export function useStore() {
       if (fixture.failReconcile) { fixture.failReconcile = false; throw Error('Evidence linking interrupted'); }
       const entry = fixture.transactions.find(t => t.id === id);
       if (!entry) throw new Error("Missing saved statement entry");
-      Object.assign(entry, { statementRef: ref, reconciledAt: ref ? new Date().toISOString() : null });
+      Object.assign(entry, { statementRef: ref, reconciledAt: ref ? new Date().toISOString() : null, correctionRevision: Number(entry.correctionRevision ?? 0) + 1 });
       sessionStorage.setItem("controlled-desk-ledger", JSON.stringify(fixture.transactions));
       if (fixture.loseEvidenceResponse) { fixture.loseEvidenceResponse = false; throw Error('Evidence committed; response interrupted'); }
     },
@@ -105,7 +105,7 @@ export const supabase = {
       let id: string | undefined;
       const q = chain(async () => fixture.transactions.map(t => ({ id: t.id })));
       q.eq = (key: string, value: string) => { if (key === 'id') id = value; return q; };
-      q.maybeSingle = async () => { const t = fixture.transactions.find(t => t.id === id); return { data: t ? { statement_ref: t.statementRef, reconciled_at: t.reconciledAt } : null, error: null }; };
+      q.maybeSingle = async () => { const t = fixture.transactions.find(t => t.id === id); return { data: t ? { id:t.id, statement_ref: t.statementRef, reconciled_at: t.reconciledAt, correction_revision:t.correctionRevision ?? 0 } : null, error: null }; };
       return q;
     } };
     if (table === "transfer_links" || table === "expense_drafts") return { select: () => chain(async () => []) };
