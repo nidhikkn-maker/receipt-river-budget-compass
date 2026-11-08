@@ -1,7 +1,7 @@
 import type {FyRecord,OpeningHead} from './types';
 import type {AccountingLeg} from './accounting-journal';
 import {sumMoney} from '../money';
-export interface OpeningScheduleRow {head:OpeningHead; detail:number; line:number; code:string; role:AccountingLeg['role']; accountId?:string; credit:boolean;}
+export interface OpeningScheduleRow {head:OpeningHead; detail:number; line:number; code:string; role:AccountingLeg['role']; accountId?:string|undefined; credit:boolean;}
 /** Each printed detail appears once; aggregate/schedule disagreements remain blockers. */
 export function detailedOpening(rec:FyRecord,rows:OpeningScheduleRow[]){
  const gaps:string[]=[];const seen=new Set<string>();
