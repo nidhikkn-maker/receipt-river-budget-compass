@@ -76,6 +76,9 @@ interface Ctx {
   preferencesRevision: number | null;
   accountingAvailable: () => Promise<boolean>;
   postAccounting: (attempt: AccountingAttempt) => Promise<void>;
+  accountantData: () => Promise<import('@/components/books/AccountantReviews').AccountantData>;
+  setAccountantGrant: (entity:string,accountant:string,revoke:boolean) => Promise<void>;
+  reviewAccounting: (p:{id:string;owner:string;journal:string;finding:string;note:string}) => Promise<void>;
   /** Opening entries for one entity/year, posted atomically; same id = no duplicate [§19]. */
   postOpening: (x: { id: string; entityId: string; fy: string; date: string; lines: { txnId: string; accountId: string; amount: number; sign: 1 | -1; title: string; description: string; head: string; target: number; current: number }[]; exceptions: { line: string; reason: string }[]; docId: string | null }) => Promise<void>;
   undoOpening: (id: string) => Promise<void>;
@@ -493,6 +496,16 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
     await refresh();
   };
   const undoOpening: Ctx["undoOpening"] = async (id) => { check((await supabase.rpc("undo_opening_balances", { _id: id })).error); await refresh(); };
+  const accountantData:Ctx['accountantData']=async()=>{
+    if(!await accountingAvailable())throw Error('Accountant access is on hold pending the approved accounting installation.');
+    const [g,e,r]=await Promise.all([supabase.from('accounting_review_grants' as never).select('*'),supabase.from('accounting_journal_evidence' as never).select('id,owner_id,entity_id,journal'),supabase.from('accounting_exception_reviews' as never).select('*').order('created_at')]);
+    check(g.error);check(e.error);check(r.error);return {grants:g.data??[],evidence:e.data??[],reviews:r.data??[]} as unknown as import('@/components/books/AccountantReviews').AccountantData;
+  };
+  const setAccountantGrant:Ctx['setAccountantGrant']=async(entity,accountant,revoke)=>{
+    if(!preferences.entities?.some(e=>e.id===entity)||accountant===userId||!/^[0-9a-f-]{36}$/i.test(accountant))throw Error('Choose this owner’s company and a different verified accountant account.');
+    check((await supabase.from('accounting_review_grants' as never).upsert({owner_id:userId,accountant_id:accountant,entity_id:entity,revoked_at:revoke?new Date().toISOString():null} as never)).error);
+  };
+  const reviewAccounting:Ctx['reviewAccounting']=async p=>{check((await supabase.rpc('review_accounting_exception' as never,{_id:p.id,_owner:p.owner,_journal:p.journal,_finding:p.finding,_note:p.note} as never)).error);};
   const openingPostings: Ctx["openingPostings"] = async () => {
     const r = await supabase.from("opening_postings").select("id,entity_id,fy,opening_date,posted_at,undone_at,txn_ids,lines,exceptions").order("posted_at", { ascending: false });
     check(r.error); return (r.data ?? []) as never;
@@ -878,7 +891,7 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
     <StoreCtx.Provider value={{
       departmentBudgets, departmentBudgetError,
       saveStatementUpload,
-      accountingAvailable,postAccounting,
+      accountingAvailable,postAccounting,accountantData,setAccountantGrant,reviewAccounting,
       pendingCount, pendingItems, retrySync: (id?: string) => syncRef.current(id), discardPending: async (id: string) => { await removePending(id); setPendingItems((prev) => prev.filter((p) => p.id !== id)); setPendingCount((await pendingEntries(userId)).length); }, setTags, manageTripExpenses, applyReviewMapping, applyReviewMetadata, undoReviewMetadata, reviewMetadataHistory, saveRecurringReview, preferences, preferencesRevision: preferencesRevision.current, savePreferences, commitDocumentRecords, postOpening, undoOpening, openingPostings, ensureCategory, moveCategory, bulkSetCategory, categoryHistory, undoCategoryBatch, correctFinancialEntries, undoFinancialCorrection, financialCorrectionHistory, userId, name, updateName, members, memberName,
       expenses: expenses.filter((x) => (x.txnType ?? "expense") === "expense"), transactions: expenses.filter((x) => !x.transferCounterpartOf), transferCounterparts: expenses.filter((x) => !!x.transferCounterpartOf), confirmTransfer, cancelTransfer, accounts, addAccount, setArchived, adjustBalance,
       commitments, loans, goals, valuations, documents, saveCommitment, confirmIrregular, removeCommitment, confirmCommitment, saveLoan, removeLoan, recordLoanPayment, convertToEmi,
