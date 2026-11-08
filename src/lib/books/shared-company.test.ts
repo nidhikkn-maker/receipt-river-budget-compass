@@ -1,3 +1,4 @@
+// @vitest-environment node
 import { describe, it, expect } from "vitest";
 import { filterShared, rowsFor, sharedCompanyCsv, sharedCompanyPdfData, sharedCompanyExcel, type SharedCompany, type SharedTxn, type SharedDoc } from "./shared-company";
 

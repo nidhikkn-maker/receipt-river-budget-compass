@@ -4,9 +4,23 @@ import { roundMoney, addMoney, subtractMoney, sumMoney } from "../money";
  * differences are reported for review and nothing is posted or adjusted.
  */
 import type { GstInvoice } from "./types";
+import { effectiveInvoices } from './gst';
 
 const r2 = roundMoney;
 const words = (s: string) => s.toLowerCase().replace(/\b(private|pvt|limited|ltd|llp|the|and|co|company)\b/g, " ").replace(/[^a-z0-9 ]/g, " ").replace(/\s+/g, " ").trim();
+/** A narration is evidence only for one distinct party; ambiguous payments remain unallocated. */
+function partyPayments<T extends {party:string;gstin:string}>(parties:T[],payments:{id:string;amount:number;text:string;date:string}[],from:string,to:string){
+ const result=new Map<T,typeof payments>();
+ for(const p of payments.filter(p=>p.date>=from&&p.date<=to)){
+  const text=` ${words(p.text)} `;
+  const exact=parties.filter(s=>s.gstin&&p.text.toUpperCase().includes(s.gstin.toUpperCase()));
+  const candidates=exact.length?exact:parties.filter(s=>{const name=words(s.party);return name.length>=3&&text.includes(` ${name} `);});
+  if(candidates.length!==1)continue;
+  const party=candidates[0];if(!party)continue;
+  const current=result.get(party)??[];if(!current.some(x=>x.id===p.id))result.set(party,[...current,p]);
+ }
+ return result;
+}
 
 export interface LoanReconRow { loanId: string; name: string; statementDate: string; lender: number; ledger: number; difference: number }
 /**
@@ -29,18 +43,17 @@ export interface SupplierReconRow { party: string; gstin: string; invoiced: numb
 /** Supplier: purchase invoices (incl. tax) per supplier vs payments naming that supplier, per GSTIN. */
 export function supplierRecon(invoices: GstInvoice[], payments: { id: string; amount: number; text: string; date: string }[], from: string, to: string, order: AllocationOrder = "oldest"): SupplierReconRow[] {
   const by = new Map<string, { party: string; gstin: string; invoiced: number; invoices: number }>();
-  for (const i of invoices) {
+  for (const i of effectiveInvoices(invoices)) {
     if (i.kind !== "purchase" || i.date < from || i.date > to) continue;
     const k = i.partyGstin || words(i.party);
     const cur = by.get(k) ?? { party: i.party, gstin: i.partyGstin, invoiced: 0, invoices: 0 };
     cur.invoiced = addMoney(cur.invoiced, i.taxable, i.igst, i.cgst, i.sgst, i.cess); cur.invoices++;
     by.set(k, cur);
   }
-  const used = new Set<string>();
-  return [...by.values()].map((s) => {
+  const parties=[...by.values()],paymentsByParty=partyPayments(parties,payments,from,to);
+  return parties.map((s) => {
     const name = words(s.party);
-    const mine = name.length >= 3 ? payments.filter((p) => !used.has(p.id) && p.date >= from && p.date <= to && words(p.text).includes(name)) : [];
-    for (const p of mine) used.add(p.id);
+    const mine = paymentsByParty.get(s)??[];
     const paid = sumMoney(mine.map(p => p.amount));
     return { party: s.party, gstin: s.gstin, invoiced: s.invoiced, paid, difference: subtractMoney(s.invoiced, paid), invoices: s.invoices, payments: mine.length, allocation: allocatePayments(invoices.filter((i) => i.kind === "purchase" && i.date >= from && i.date <= to && (i.partyGstin || words(i.party)) === (s.gstin || name)), mine, to, order) };
   }).filter((r) => Math.abs(r.difference) > 1);
@@ -50,18 +63,17 @@ export interface CustomerReconRow { party: string; gstin: string; invoiced: numb
 /** Customer: sales invoices (incl. tax) per customer vs receipts naming that customer; each receipt is used once. */
 export function customerRecon(invoices: GstInvoice[], receipts: { id: string; amount: number; text: string; date: string }[], from: string, to: string, order: AllocationOrder = "oldest"): CustomerReconRow[] {
   const by = new Map<string, { party: string; gstin: string; invoiced: number; invoices: number }>();
-  for (const i of invoices) {
+  for (const i of effectiveInvoices(invoices)) {
     if (i.kind !== "sales" || i.date < from || i.date > to) continue;
     const k = i.partyGstin || words(i.party);
     const cur = by.get(k) ?? { party: i.party, gstin: i.partyGstin, invoiced: 0, invoices: 0 };
     cur.invoiced = addMoney(cur.invoiced, i.taxable, i.igst, i.cgst, i.sgst, i.cess); cur.invoices++;
     by.set(k, cur);
   }
-  const used = new Set<string>();
-  return [...by.values()].sort((a, b) => words(b.party).length - words(a.party).length).map((s) => {
+  const parties=[...by.values()],receiptsByParty=partyPayments(parties,receipts,from,to);
+  return parties.map((s) => {
     const name = words(s.party);
-    const mine = name.length >= 3 ? receipts.filter((p) => !used.has(p.id) && p.date >= from && p.date <= to && words(p.text).includes(name)) : [];
-    for (const p of mine) used.add(p.id);
+    const mine = receiptsByParty.get(s)??[];
     const received = sumMoney(mine.map(p => p.amount));
     return { party: s.party, gstin: s.gstin, invoiced: s.invoiced, received, outstanding: subtractMoney(s.invoiced, received), invoices: s.invoices, receipts: mine.length, allocation: allocatePayments(invoices.filter((i) => i.kind === "sales" && i.date >= from && i.date <= to && (i.partyGstin || words(i.party)) === (s.gstin || name)), mine, to, order) };
   }).filter((r) => Math.abs(r.outstanding) > 1);
