@@ -14,8 +14,8 @@ describe("derivedEvidence", () => {
     const books = { ...emptyBooks(), gstInvoices: [inv({}), inv({ id: "i2", kind: "purchase", number: "P1", taxable: 500, igst: 0, cgst: 45, sgst: 45, docId: "d2" })] };
     const rows = derivedEvidence({ assets: [], books, docs: [{ id: "d2", title: "Purchase bill" }] });
     const gst = rows.find((r) => r.id === "gst:G|2026-06");
-    expect(gst?.amount).toBe(90); // 180 output − 90 credit
-    expect(gst?.inputs.map((i) => i.amount)).toEqual([180, -90]);
+    expect(gst?.amount).toBe(180); // missing supplier identity holds credit, same as Tax Centre
+    expect(gst?.inputs.map((i) => i.amount)).toEqual([180, 0]);
     expect(gst?.inputs[0]?.source).toBeNull();
     expect(gst?.inputs[1]?.source).toMatchObject({ kind: "document", id: "d2" });
     expect(gst?.unsourced).toBe(1);
