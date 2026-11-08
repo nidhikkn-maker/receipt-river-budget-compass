@@ -501,10 +501,13 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
     check(g.error);check(e.error);check(r.error);return {grants:g.data??[],evidence:e.data??[],reviews:r.data??[]} as unknown as import('@/components/books/AccountantReviews').AccountantData;
   };
   const setAccountantGrant:Ctx['setAccountantGrant']=async(entity,accountant,revoke)=>{
-    if(!preferences.entities?.some(e=>e.id===entity)||accountant===userId||!/^[0-9a-f-]{36}$/i.test(accountant))throw Error('Choose this owner’s company and a different verified accountant account.');
-    check((await supabase.from('accounting_review_grants' as never).upsert({owner_id:userId,accountant_id:accountant,entity_id:entity,revoked_at:revoke?new Date().toISOString():null} as never)).error);
+    if(!preferences.entities?.some(e=>e.id===entity))throw Error('Choose this owner’s company.');
+    check((await supabase.rpc('set_accounting_review_grant' as never,{_entity:entity,_identity:accountant,_revoke:revoke} as never)).error);
   };
-  const reviewAccounting:Ctx['reviewAccounting']=async p=>{check((await supabase.rpc('review_accounting_exception' as never,{_id:p.id,_owner:p.owner,_journal:p.journal,_finding:p.finding,_note:p.note} as never)).error);};
+  const reviewAccounting:Ctx['reviewAccounting']=async p=>{
+    const {saveAccountantNote}=await import('./books/accountant-notes');
+    await saveAccountantNote(p,{write:async()=>{check((await supabase.rpc('review_accounting_exception' as never,{_id:p.id,_owner:p.owner,_journal:p.journal,_finding:p.finding,_note:p.note} as never)).error);},read:async()=>{const r=await supabase.from('accounting_exception_reviews' as never).select('*').eq('id',p.id).maybeSingle();check(r.error);const row=r.data as unknown as {id:string;owner_id:string;journal_id:string;finding:string;note:string;actor_id:string}|null;if(!row)return null;if(row.actor_id!==userId)throw Error('Review identity differs.');return {id:row.id,owner:row.owner_id,journal:row.journal_id,finding:row.finding,note:row.note};}});
+  };
   const openingPostings: Ctx["openingPostings"] = async () => {
     const r = await supabase.from("opening_postings").select("id,entity_id,fy,opening_date,posted_at,undone_at,txn_ids,lines,exceptions").order("posted_at", { ascending: false });
     check(r.error); return (r.data ?? []) as never;
