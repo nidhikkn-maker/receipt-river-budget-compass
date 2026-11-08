@@ -18,15 +18,14 @@ async def main():
    if path=='/src/lib/statement-pipeline/atomic-undo.functions.ts':await route.fulfill(body='export {undoStatement} from "/scripts/browser/statement-desk-mocks.tsx";',content_type='application/javascript');return
    if path=='/src/components/DocumentIntake.tsx':await route.fulfill(body='export const DocumentIntake=({context,file})=>{window.__capture={context,name:file.name};return context;};',content_type='application/javascript');return
    if route.request.method not in ['GET','HEAD']:
-    print('BLOCKED',path,flush=True);await route.abort();return
+    await route.abort();return
    await route.continue_()
   await context.route('**/*',isolate)
   for module in ['assets','entity','fy','property','tax','gst','documents']:
    await page.goto('http://localhost:8080/capture')
    await page.get_by_role('button',name=module,exact=True).click()
-   await page.get_by_label('Choose files',exact=True).set_input_files(files=[{'name':'original.png','mimeType':'image/png','buffer':b'synthetic original'}])
+   await page.get_by_label('Choose files',exact=True).set_input_files(files=[{'name':'original.png','mimeType':'image/png','buffer':__import__('base64').b64decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jRZkAAAAASUVORK5CYII=')}])
    await expect(page.get_by_role('dialog',name='Smart Add')).to_be_visible()
-   await page.screenshot(path=str(OUT/(module+'-debug.png')));print(module,errors,await page.locator('body').inner_text(),flush=True)
    await page.wait_for_function('window.__capture!==undefined')
    assert await page.evaluate('window.__capture')=={'context':module,'name':'original.png'}
    assert page.url=='http://localhost:8080/capture'
