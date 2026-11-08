@@ -32,6 +32,26 @@ it('a failed parked upload never creates an accepted run', async () => {
   await expect(startRun('new', new File([bytes], 'invoice.pdf'), '')).rejects.toThrow('safely stored');
   expect(cloud.insert).not.toHaveBeenCalled();
 });
+it('unknown saved-run lookup never overwrites the parked source or creates another run',async()=>{
+ cloud.select.mockResolvedValue({data:null,error:{message:'offline'}});
+ await expect(startRun('run',new File([bytes],'invoice.pdf'),'assets')).rejects.toThrow('could not be checked');
+ expect(cloud.upload).not.toHaveBeenCalled();expect(cloud.insert).not.toHaveBeenCalled();expect(cloud.update).not.toHaveBeenCalled();
+});
+it('retry refuses a different original and another owner before modifying the existing run',async()=>{
+ const data={size:bytes.size,sha256:await sha256Hex(await bytes.arrayBuffer())};
+ cloud.select.mockResolvedValue({data:{owner_id:'synthetic-owner',status:'failed',data},error:null});
+ await expect(startRun('run',new File(['modified invoice'],'invoice.pdf'),'assets')).rejects.toThrow('integrity check failed');
+ cloud.select.mockResolvedValue({data:{owner_id:'someone-else',status:'failed',data},error:null});
+ await expect(startRun('run',new File([bytes],'invoice.pdf'),'assets')).rejects.toThrow('another owner');
+ expect(cloud.upload).not.toHaveBeenCalled();expect(cloud.update).not.toHaveBeenCalled();
+});
+it('finished and pending-cleanup runs cannot be restarted as extraction',async()=>{
+ for(const record of [{status:'done',data:{}},{status:'cancelled',data:{}},{status:'waiting',data:{cleanupPending:'done'}}]){
+  cloud.select.mockResolvedValue({data:{owner_id:'synthetic-owner',...record},error:null});
+  await expect(startRun('run',new File([bytes],'invoice.pdf'),'assets')).rejects.toThrow('awaiting cleanup');
+ }
+ expect(cloud.upload).not.toHaveBeenCalled();expect(cloud.update).not.toHaveBeenCalled();
+});
 it('failed cleanup keeps the parked path available and successful retry closes once', async () => {
   const run = { ...base, data: { stashPath: 'synthetic-owner/runs/run' } };
   cloud.remove.mockResolvedValueOnce({ error: { message: 'outage' } }).mockResolvedValueOnce({ error: null });
