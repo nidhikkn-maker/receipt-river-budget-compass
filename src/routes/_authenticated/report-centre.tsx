@@ -103,7 +103,7 @@ function ReportCentre() {
       setResult({ blob, url: URL.createObjectURL(blob), name, doc });
       setStage(3);
         const id = jobId, path = `${store.userId}/reports/${id}.pdf`;
-        const prior = history.filter((h) => h.kind === t && h.period_from === filters.from && h.period_to === filters.to).length;
+        const prior = Math.max(0,...history.filter((h) => h.kind === t && h.period_from === filters.from && h.period_to === filters.to).map(h=>h.version));
         const job:ClaimReportJob={id,path,name,activity:t,missing:[],bytes:Array.from(new Uint8Array(await blob.arrayBuffer())),row:{id,owner_id:store.userId,kind:t,title:reportLabel(t),period_from:filters.from,period_to:filters.to,workspace:filters.workspaces.join(',')||'all',filters:{...filters,style,snapshot:doc} as never,file_path:path,file_size:blob.size,version:prior+1}};
         await saveLocalClaimReport(store.userId,job,'centre-report');pending.current=job;
         if(!navigator.onLine)throw Error('Your PDF is saved on this device. Retry saving when connected.');
@@ -123,6 +123,10 @@ function ReportCentre() {
       if(existing.error&&!/not found|404|does not exist/i.test(existing.error.message))return {error:existing.error};
       return supabase.storage.from('receipts').upload(job.path,blob,{contentType:'application/pdf',upsert:false});
     },insert:async()=>supabase.from('report_history').insert(job.row)});
+    const saved=await supabase.storage.from('receipts').download(job.path);
+    if(saved.error||!saved.data)throw Error('Saved report bytes could not be confirmed. Retry without replacing your PDF.');
+    const verified=new Uint8Array(await saved.data.arrayBuffer());
+    if(verified.length!==job.bytes.length||verified.some((b,i)=>b!==job.bytes[i]))throw Error('Saved PDF bytes differ. Evidence retained for checking.');
     await clearLocalClaimReport(store.userId,'centre-report');pending.current=null;
     setReady(r=>({...r,[job.id]:blob}));await loadHistory();
   }

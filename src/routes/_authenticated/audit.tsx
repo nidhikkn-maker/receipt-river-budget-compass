@@ -24,6 +24,7 @@ import { receivableStatus } from "@/lib/receivables";
 import { useAuditAll } from "@/components/books/useAudit";
 import { useBooks } from "@/components/books/useBooks";
 import { fyRange, fyOf } from "@/lib/entities";
+import { effectiveEntity } from '@/lib/books/entity-accounts';
 const inr = (n: number) => `₹${Math.round(n).toLocaleString("en-IN")}`;
 
 export const Route = createFileRoute("/_authenticated/audit")({
@@ -88,14 +89,21 @@ function Audit() {
   const fyNow = fyOf(today);
   const recon = useMemo(() => {
     const ledgerAt = (id: string, date: string) => { const a = accounts.find((x) => x.id === id); return a ? accountBalance(a, transactions.filter((t) => t.date <= date)) : 0; };
+    const partyRows = (kind:'purchase'|'sales') => [...new Set(books.gstInvoices.map(i=>i.gstin))].flatMap(registration=>{
+      const matches=entities.filter(e=>e.gstins.includes(registration));const entity=matches.length===1?matches[0]?.id:undefined;
+      const entries=matches.length>1?[]:transactions.filter(t=>entity?effectiveEntity(t,books.entityAccounts??{})===entity:!effectiveEntity(t,books.entityAccounts??{}));
+      const payments=entries.filter(t=>(t.txnType??'expense')===(kind==='purchase'?'expense':'income')).map(t=>({id:t.id,amount:t.amount,date:t.date,text:`${t.title} ${t.merchant??''} ${t.description}`}));
+      const invoices=books.gstInvoices.filter(i=>i.gstin===registration);
+      return kind==='purchase'?supplierRecon(invoices,payments,fyRange(fyNow).start,fyRange(fyNow).end,books.allocationOrder):customerRecon(invoices,payments,fyRange(fyNow).start,fyRange(fyNow).end,books.allocationOrder);
+    });
     return {
       loan: loanRecon(loans, documents.filter((d) => d.docType === "loan_statement").map((d) => ({ loanId: d.loanId ?? null, date: d.docDate, outstanding: d.amount })), ledgerAt).filter((r) => Math.abs(r.difference) > 1),
-      supplier: supplierRecon(books.gstInvoices, transactions.filter((t) => (t.txnType ?? "expense") === "expense").map((t) => ({ id: t.id, amount: t.amount, date: t.date, text: `${t.title} ${t.merchant ?? ""} ${t.description}` })), fyRange(fyNow).start, fyRange(fyNow).end, books.allocationOrder),
-      customer: customerRecon(books.gstInvoices, transactions.filter((t) => t.txnType === "income").map((t) => ({ id: t.id, amount: t.amount, date: t.date, text: `${t.title} ${t.merchant ?? ""} ${t.description}` })), fyRange(fyNow).start, fyRange(fyNow).end, books.allocationOrder),
+      supplier: partyRows('purchase').filter((r): r is ReturnType<typeof supplierRecon>[number] => 'paid' in r),
+      customer: partyRows('sales').filter((r): r is ReturnType<typeof customerRecon>[number] => 'received' in r),
       investment: investmentRecon((demat ?? []).flatMap((d) => d.holdings)),
       inter: intercompanyRecon(transactions, books.entityAccounts ?? {}),
     };
-  }, [loans, documents, accounts, transactions, books, demat, fyNow]);
+  }, [loans, documents, accounts, transactions, books, demat, fyNow, entities]);
   const entName = (id: string) => entities.find((e) => e.id === id)?.name ?? id;
   const groups = groupBy(items, by);
   const pending = books.proposedFields.filter((f) => f.status === "proposed");

@@ -1,6 +1,11 @@
 import { it, expect } from 'vitest';
 import { investmentRecon, supplierRecon, customerRecon, allocatePayments } from './recon';
 import type { GstInvoice } from './types';
+import { withStates } from './audit';
+it('a saved resolved note cannot suppress a still-present financial difference or missing invoice',()=>{
+ const finding={key:'recon:source',type:'Reconciliation' as const,entity:'A',account:null,fy:null,risk:'high' as const,text:'Difference',evidence:'source',to:'/audit'};
+ expect(withStates([finding],[{key:finding.key,status:'resolved',note:'Not evidence',at:'2026-11-08'}]).open).toEqual([finding]);
+});
 const invoice = (id:string,gstin:string,kind:GstInvoice['kind']='purchase'):GstInvoice => ({id,gstin,kind,number:id,date:'2026-10-01',party:'Acme Traders',partyGstin:'33ABCDE1234F1Z5',taxable:100,igst:0,cgst:0,sgst:0,cess:0});
 it('same supplier across registrations cannot share or combine one ambiguous payment',()=>{
  const rows=supplierRecon([invoice('A','GA'),invoice('B','GB')],[{id:'p',amount:100,date:'2026-10-02',text:'Acme Traders'}],'2026-10-01','2026-10-31');
