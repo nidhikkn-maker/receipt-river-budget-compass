@@ -12,7 +12,7 @@ export interface InvestDoc { kind: InvestDocKind; broker: string; dpId: string; 
 const EVENT_RE: [RegExp, InvestEventKind][] = [[/\bdividend\b/i, "dividend"], [/\bredemption|redeem/i, "redemption"], [/\bbonus\b/i, "bonus"], [/\b(split|sub-?division)\b/i, "split"], [/\brights?\b/i, "rights"], [/\b(merger|amalgamation|demerger)\b/i, "merger"], [/\bbrokerage\b/i, "brokerage"]];
 export function eventKindOf(row: string): InvestEventKind | null { return EVENT_RE.find(([re]) => re.test(row))?.[1] ?? null; }
 
-export interface Lot { date: string; side: "buy" | "sell"; quantity: number; price: number | null; amount: number | null; source: string }
+export interface Lot { date: string; side: "buy" | "sell"; quantity: number; price: number | null; amount: number | null; source: string; /** Lot inferred from a capital-gains row rather than printed as a trade. */ fromGains?: boolean }
 export interface StoredHolding { isin: string; name: string; quantity: number; asOf: string | null; statementValue: number | null; lots: Lot[]; gains: (GainLine & { source: string })[]; sources: string[]; events?: (InvestEvent & { source: string })[] }
 
 const ISIN = /\b(IN[A-Z0-9]{9}\d)\b/;
@@ -149,6 +149,8 @@ export function mergeInvestmentDoc(existing: StoredHolding[], doc: InvestDoc, so
     if (!cur) { unmatched.set(t.isin, t.name); continue; }
     const lot: Lot = { date: t.date, side: t.side, quantity: t.quantity, price: t.price, amount: t.amount, source };
     if (cur.lots.some((l) => lotKey(l) === lotKey(lot))) { duplicatesSkipped++; continue; }
+    // A printed trade supersedes lots inferred from a gains row on the same date/side (partial-lot sales).
+    cur.lots = cur.lots.filter((l) => !(l.fromGains && l.side === lot.side && l.date === lot.date && l.quantity <= lot.quantity));
     cur.lots.push(lot); touch(cur); added.lots++;
   }
   for (const g of doc.gains) {
@@ -157,11 +159,12 @@ export function mergeInvestmentDoc(existing: StoredHolding[], doc: InvestDoc, so
     if (cur.gains.some((x) => gainKey(x) === gainKey(g))) { duplicatesSkipped++; continue; }
     cur.gains.push({ ...g, source }); touch(cur); added.gains++;
     // A gains statement also evidences the buy (when dated) and the sell, filling purchase history.
-    const sell: Lot = { date: g.sellDate, side: "sell", quantity: g.quantity, price: null, amount: g.proceeds, source };
-    if (!cur.lots.some((l) => l.side === "sell" && l.date === sell.date && l.quantity === sell.quantity)) { cur.lots.push(sell); added.lots++; }
+    const sell: Lot = { date: g.sellDate, side: "sell", quantity: g.quantity, price: null, amount: g.proceeds, source, fromGains: true };
+    if (!cur.lots.some((l) => l.side === "sell" && l.date === sell.date && l.quantity >= sell.quantity)) { cur.lots.push(sell); added.lots++; }
     if (g.buyDate) {
-      const buy: Lot = { date: g.buyDate, side: "buy", quantity: g.quantity, price: g.cost != null && g.quantity ? round(g.cost / g.quantity) : null, amount: g.cost, source };
-      if (!cur.lots.some((l) => l.side === "buy" && l.date === buy.date && l.quantity === buy.quantity)) { cur.lots.push(buy); added.lots++; }
+      const buy: Lot = { date: g.buyDate, side: "buy", quantity: g.quantity, price: g.cost != null && g.quantity ? round(g.cost / g.quantity) : null, amount: g.cost, source, fromGains: true };
+      // A sale of part of a larger printed purchase is already covered by that purchase lot.
+      if (!cur.lots.some((l) => l.side === "buy" && l.date === buy.date && l.quantity >= buy.quantity)) { cur.lots.push(buy); added.lots++; }
     }
   }
   for (const event of doc.events ?? []) {
