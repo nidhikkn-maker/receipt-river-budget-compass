@@ -20,7 +20,7 @@ export function useAuditAll() {
     today: new Date().toISOString().slice(0, 10), entities: preferences.entities ?? [], assets: preferences.assets ?? [], entries: transactions, docs: documents, accounts,
     books: preferences.books ?? emptyBooks(),
     holdingsWithoutCost: (demat ?? []).flatMap((d) => d.holdings).filter((h) => !h.lots.some((l) => l.side === "buy") || Math.abs(netQuantity(h.lots) - h.quantity) > 1e-6).map((h) => ({ name: h.name, isin: h.isin })),
-  }), ...reconciliationExceptions({today: new Date().toISOString().slice(0,10),entries:transactions,docs:documents,accounts,books:preferences.books??emptyBooks(),loans,holdings:(demat??[]).flatMap(d=>d.holdings)})], preferences.books?.findings), [preferences, transactions, documents, accounts, loans, demat]);
+  }), ...reconciliationExceptions({today: new Date().toISOString().slice(0,10),entities:preferences.entities??[],entries:transactions,docs:documents,accounts,books:preferences.books??emptyBooks(),loans,holdings:(demat??[]).flatMap(d=>d.holdings)})], preferences.books?.findings), [preferences, transactions, documents, accounts, loans, demat]);
 }
 
 /** Audit findings as Financial Inbox items — one queue [§53]. Items already covered by the Inbox are skipped. */
