@@ -1,0 +1,39 @@
+import asyncio,json
+from pathlib import Path
+from playwright.async_api import async_playwright,expect
+ns={};exec(Path('/dev-server/scripts/browser/test_exception_reports.py').read_text().split('async def main():')[0],ns)
+read=json.loads(Path('/dev-server/scripts/browser/fixtures/accounting-opening-real-read.json').read_text())['result']['audited']
+STORE=ns['STORE'].replace("p.books={", "p.books={").replace("gstInvoices:[", "fyRecords:["+json.dumps({'id':'fy-real-read','entityId':'A','fy':read['fy'],'audited':{r['head']:r['amount'] for r in read['lines']},'docIds':['doc-a'],'schedules':read['schedules'],'details':read['details'],'qualifications':[],'filedReturns':[],'lossesCarriedForward':[]})+"],gstInvoices:[")
+STORE=STORE.replace("const transactions=[base,", "const transactions=[...JSON.parse(sessionStorage.getItem('journals')||'[]'),{...base,id:'bank-rent',title:'Bank rent payment',entityId:'A',entitySource:'manual',category:'rent',amount:500,originalAmount:500,date:'2026-11-02',txnType:'expense'},base,")
+STORE=STORE.replace("openingBalance:1000,","openingBalance:0,").replace("{id:'bank-b',", "{id:'loan-a',name:'Loan',kind:'loan',openingBalance:0,archived:false},{id:'bank-b',")
+STORE=STORE.replace("entityAccounts:{A:['bank-a']}","entityAccounts:{A:['bank-a','loan-a']}")
+STORE=STORE.replace('documents:fixed?[','documents:[').replace("text:'Printed invoice 250.25'}]:[]", "entityId:'A',filePath:'owner/original.pdf',text:'Printed invoice 250.25'}]")
+STORE=STORE.replace('departmentBudgets:{}',"""preferencesRevision:0,accountingAvailable:async()=>true,accountantData:async()=>({grants:JSON.parse(sessionStorage.getItem('grants')||'[]'),evidence:JSON.parse(sessionStorage.getItem('journals')||'[]').map(e=>({id:e.receiptDetails.accounting.journal.id,owner_id:'isolated-report-owner',entity_id:'A',journal:e.receiptDetails.accounting.journal})),reviews:JSON.parse(sessionStorage.getItem('notes')||'[]')}),setAccountantGrant:async(entity,accountant,revoke)=>{sessionStorage.setItem('grants',JSON.stringify([{entity_id:entity,owner_id:'isolated-report-owner',accountant_id:accountant,revoked_at:revoke?'2026-11-08':null}]))},reviewAccounting:async p=>{const rows=JSON.parse(sessionStorage.getItem('notes')||'[]');if(!rows.some(r=>r.id===p.id))rows.push({...p,journal_id:p.journal,actor_id:'isolated-accountant',created_at:'2026-11-08'});sessionStorage.setItem('notes',JSON.stringify(rows))},postAccounting:async attempt=>{const rows=JSON.parse(sessionStorage.getItem('journals')||'[]');if(!rows.some(r=>r.id===attempt.journal.id)){const linked=attempt.journal.legs.filter(l=>l.accountId);for(const [n,l] of (linked.length?linked:[null]).entries())rows.push({...base,id:attempt.journal.id+(n?':'+n:''),accountId:l?.accountId||null,amount:l?Math.abs(l.debit-l.credit):100,adjustmentSign:l?((l.role==='liability'?l.credit-l.debit:l.debit-l.credit)>0?1:-1):1,txnType:'adjustment',entityId:'A',entitySource:'manual',date:attempt.journal.date,receiptDetails:{accounting:{journal:attempt.journal,primary:n===0,requestId:attempt.requestId}}});sessionStorage.setItem('journals',JSON.stringify(rows));if(attempt.journal.kind==='adjustment')throw Error('Interrupted committed settlement');}},departmentBudgets:{}""")
+async def main():
+ async with async_playwright() as p:
+  b=await p.chromium.launch(headless=True);c=await b.new_context(viewport={'width':1280,'height':1800},accept_downloads=True);page=await c.new_page();errors=[];page.on('pageerror',lambda e:errors.append(str(e)))
+  async def isolate(route):
+   q=route.request;path=q.url.split('localhost:8080')[-1].split('?')[0]
+   if not q.url.startswith('http://localhost:8080'):await route.abort();return
+   if q.is_navigation_request():await route.fulfill(body=ns['HTML'],content_type='text/html');return
+   stubs={'/src/lib/store.tsx':STORE,'/src/integrations/supabase/client.ts':ns['CLIENT'],'/src/components/BackgroundReports.tsx':'export const BackgroundReports=()=>null;'}
+   if path in stubs:await route.fulfill(body=stubs[path],content_type='application/javascript');return
+   if q.method not in ['GET','HEAD']:raise AssertionError('External writes blocked')
+   await route.continue_()
+  await c.route('**/*',isolate)
+  async def open_company():
+   await page.goto('http://localhost:8080/report-centre',wait_until='networkidle');await page.get_by_role('combobox').first.select_option('company-profit-loss');await page.get_by_label('Accounting company').select_option('A');await page.get_by_text('Opening balances & adjusting entries',exact=True).click()
+  await open_company();await page.get_by_role('button',name='Review extracted opening').click();await expect(page.get_by_label('Debit 1',exact=True)).to_have_value('100000');await page.get_by_role('button',name='Confirm balanced journal').click();await expect(page.get_by_role('dialog')).not_to_be_visible()
+  await page.reload(wait_until='networkidle');await page.get_by_role('combobox').first.select_option('company-profit-loss');await page.get_by_label('Accounting company').select_option('A');await page.get_by_text('Opening balances & adjusting entries',exact=True).click();await page.get_by_role('button',name='Prepare journal',exact=True).click()
+  await page.get_by_label('Journal date',exact=True).fill('2026-11-01');await page.get_by_label('Journal explanation').fill('Unpaid November rent');await page.get_by_label('Journal original').select_option('doc-a')
+  for i,code,label,role,field in [(1,'expense:rent','Rent','expense','Debit'),(2,'payable:rent','Rent payable','liability','Credit')]:
+   await page.get_by_label(f'Account code {i}',exact=True).fill(code);await page.get_by_label(f'Account label {i}',exact=True).fill(label);await page.get_by_label(f'Account role {i}',exact=True).select_option(role);await page.get_by_label(f'{field} {i}',exact=True).fill('1200')
+  await page.get_by_role('button',name='Confirm balanced journal').click();await expect(page.get_by_role('dialog')).not_to_be_visible();await open_company()
+  await page.get_by_text('Settle · Unpaid November rent',exact=True).click();await page.locator('select[aria-label^="Bank settlement"]').select_option('bank-rent');await expect(page.get_by_label('Debit 1',exact=True)).to_have_value('500');await page.get_by_role('button',name='Confirm balanced journal').click();await expect(page.get_by_text('Interrupted committed settlement',exact=True)).to_be_visible()
+  await open_company();await page.get_by_role('button',name='Resume journal').click();await page.get_by_role('button',name='Confirm balanced journal').click();await expect(page.get_by_role('dialog')).not_to_be_visible();await open_company();await page.get_by_text('Settle · Unpaid November rent',exact=True).click();await expect(page.get_by_text('Rent payable · outstanding 700.00',exact=True)).to_be_visible()
+  await page.get_by_text('Accountant review & access',exact=True).last.click();await page.get_by_label('Accountant account ID').fill('00000000-0000-0000-0000-000000000003');await page.get_by_role('button',name='Grant review access').click();await expect(page.get_by_role('button',name='Revoke access')).to_be_visible();await page.get_by_role('button',name='Revoke access').click();await expect(page.get_by_role('button',name='Restore access')).to_be_visible()
+  await page.screenshot(path='/tmp/browser/accounting-connected/review.png');assert not errors,errors
+  journals=await page.evaluate("JSON.parse(sessionStorage.getItem('journals'))");assert len({e['receiptDetails']['accounting']['journal']['id'] for e in journals})==3
+  print('PASS: actual non-mocked extraction output → opening review/save/reload → accrual → partial bank settlement → interrupted reply/encrypted retry → 700 outstanding → accountant grant/revoke. Local adapters only; no hosted writes.')
+  await b.close()
+asyncio.run(main())
