@@ -20,7 +20,7 @@ it('saved company ledger → all five frozen statements → owner-denied read �
  const e:Expense={id:'bill',title:'Synthetic original bill',merchant:'Supplier',category:'Office',scope:'business',memberId:null,splits:[],receipts:[{path:`${owner}/original.pdf`,name:'original.pdf',type:'application/pdf'}],amount:100.25,originalAmount:100.25,currency:'INR',fxRate:1,date:'2026-04-10',description:'',paymentMethod:'bank_transfer',accountId:'bank',statementRef:'line-1',reconciledAt:'2026-04-30'};
  const user=async(who:string)=>{await db.exec('RESET ROLE');await db.query("SELECT set_config('app.uid',$1,false)",[who]);await db.exec('SET ROLE authenticated');};
  try{
-  await db.exec(`CREATE ROLE authenticated;CREATE SCHEMA auth;CREATE FUNCTION auth.uid() RETURNS uuid LANGUAGE sql STABLE AS $$SELECT nullif(current_setting('app.uid',true),'')::uuid$$;GRANT USAGE ON SCHEMA auth TO authenticated;
+  await db.exec(`CREATE ROLE authenticated;CREATE ROLE service_role;CREATE SCHEMA auth;CREATE FUNCTION auth.uid() RETURNS uuid LANGUAGE sql STABLE AS $$SELECT nullif(current_setting('app.uid',true),'')::uuid$$;GRANT USAGE ON SCHEMA auth TO authenticated;
   CREATE TABLE records(id text PRIMARY KEY,owner uuid,data jsonb);ALTER TABLE records ENABLE ROW LEVEL SECURITY;GRANT SELECT,INSERT,UPDATE ON records TO authenticated;CREATE POLICY own ON records TO authenticated USING(owner=auth.uid()) WITH CHECK(owner=auth.uid());`);
   await db.exec(readFileSync('drizzle/migrations/0028_report_history.sql','utf8').split('CREATE OR REPLACE FUNCTION public.delete_my_finance_data')[0]??'');
   await user(owner);await db.query('INSERT INTO records VALUES($1,$2,$3::jsonb)',['bill',owner,JSON.stringify(e)]);
