@@ -1,4 +1,5 @@
 ## Corporate-accounting milestone — 8 Nov 2026 07:11 UTC
+- [ ] Foundation batch: balanced opening/accrual journal proposals, canonical atomic postings and reversals, statement integration, accountant exception access and isolated recovery acceptance. Production installation remains held.
 - [x] Record available checkout SHA; remote GitHub parity remains blocked by unavailable connection/status access, never inferred from local revision.
 - [x] Complete connected company working statements and frozen accounting evidence/audit ZIP using existing ledger/report history, preserving UIX and production holds.
 - [x] Run changed-path isolated financial/source/ownership/recovery acceptance; no broad promotions, exact unfinished functions and credits recorded.
