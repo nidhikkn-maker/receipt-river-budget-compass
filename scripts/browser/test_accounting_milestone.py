@@ -26,7 +26,7 @@ async def main():
    if q.is_navigation_request():await route.fulfill(body=ns['HTML'].replace('exception-reports.fixture.tsx','accounting-journey.fixture.tsx'),content_type='text/html');return
    stubs={'/src/lib/store.tsx':STORE,'/src/lib/books/runs.ts':"export const documentIdForRun=id=>id;export const startRun=async()=>({data:{}});export const updateRun=async()=>{};export const closeRun=async()=>{};",'/src/lib/document-extract.functions.ts':'export const extractDocument=()=>{};','/src/integrations/supabase/client.ts':ns['CLIENT'],'/src/components/BackgroundReports.tsx':'export const BackgroundReports=()=>null;'}
    if 'tanstack_react-start' in path or 'tanstack/react-start/dist/esm/index.js' in path:
-    await route.fulfill(body='export const createMiddleware=()=>({server:()=>({})});export const createServerFn=()=>{const b={middleware:()=>b,inputValidator:()=>b,handler:()=>()=>({})};return b};export const useServerFn=()=>async()=>('+json.dumps(json.loads(Path('/tmp/browser/accounting-document/extracted.json').read_text()))+');',content_type='application/javascript');return
+    await route.fulfill(body='export const createMiddleware=()=>{const m={middleware:()=>m,server:()=>m,client:()=>m};return m};export const createServerFn=()=>{const b={middleware:()=>b,inputValidator:()=>b,handler:()=>()=>({})};return b};export const useServerFn=()=>async()=>('+json.dumps(json.loads(Path('/tmp/browser/accounting-document/extracted.json').read_text()))+');',content_type='application/javascript');return
    if path in stubs:await route.fulfill(body=stubs[path],content_type='application/javascript');return
    if q.method not in ['GET','HEAD']:raise AssertionError('External writes blocked')
    await route.continue_()
