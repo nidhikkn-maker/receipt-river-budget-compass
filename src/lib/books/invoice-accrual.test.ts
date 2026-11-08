@@ -1,0 +1,7 @@
+import {it,expect} from 'vitest';
+import {invoiceAccrualProposal} from './invoice-accrual';
+import type {GstInvoice} from './types';
+const invoice:GstInvoice={id:'invoice',gstin:'G',kind:'purchase',number:'I1',date:'2026-04-10',party:'Supplier',partyGstin:'',taxable:1000,igst:180,cgst:0,sgst:0,cess:0,docId:'doc'};
+const mapping={id:'journal',entityId:'A',description:'Unpaid invoice I1',balance:{code:'payable',label:'Supplier',role:'liability' as const},net:{code:'expense:office',label:'Office',role:'expense' as const},taxEligible:false};
+it('printed unpaid invoice includes tax in cost unless credit eligibility is explicitly confirmed',()=>{expect(invoiceAccrualProposal(invoice,mapping).legs.map(l=>[l.debit,l.credit])).toEqual([[0,1180],[1180,0]]);expect(invoiceAccrualProposal(invoice,{...mapping,taxEligible:true,tax:{code:'tax:input',label:'Reviewed input tax',role:'asset'}}).legs.map(l=>[l.debit,l.credit])).toEqual([[0,1180],[1000,0],[180,0]]);});
+it('credit notes reverse exact invoice totals and linked or original-less invoices never post again',()=>{expect(invoiceAccrualProposal({...invoice,note:'credit'},mapping).legs.map(l=>[l.debit,l.credit])).toEqual([[1180,0],[0,1180]]);expect(()=>invoiceAccrualProposal({...invoice,transactionId:'existing'},mapping)).toThrow('already');expect(()=>invoiceAccrualProposal({...invoice,docId:undefined},mapping)).toThrow('original');});

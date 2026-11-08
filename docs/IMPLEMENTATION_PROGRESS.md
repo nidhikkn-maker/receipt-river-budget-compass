@@ -1,5 +1,8 @@
 # Implementation progress — top 15 gaps (baseline: Ledgerline_v6_Requirements_Checklist.md)
 
+## Corporate foundation — 8 Nov 2026
+Source-bound balanced journal/invoice/opening proposals, immutable staged atomic canonical postings/reversals, original protection, accountant permission notes, encrypted retry review and statement/Audit integration built.22 focused tests and isolated route recovery/report acceptance pass; authority not installed, no ID promotion. Full remaining Milestone1 functions/credits/Git evidence in docs/evidence/accounting-foundation-2026-11-08.md.
+
 ## Corporate-accounting milestone — 8 Nov 2026
 Five company working statements, canonical debit/credit/source projection, frozen report CSV/Excel/PDF/full JSON and checksum-bound private-original audit ZIP implemented; company year coverage isolated.17 distinct targeted checks and actual report interruption/reload/export/ZIP flow pass. No broad ID promotion; opening/accrual/statutory/full intake-to-close/hosted criteria remain. See docs/evidence/corporate-accounting-2026-11-08.md. Measured credits910.55; production/UIX/release unchanged.
 

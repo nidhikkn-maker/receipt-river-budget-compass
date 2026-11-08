@@ -35,6 +35,8 @@ export interface Member { id: string; name: string; relation: string }
 
 export interface Receipt { name: string; type: string; path: string }
 export interface ReceiptDetails {
+  /** Balanced accounting evidence committed atomically with canonical entry legs. */
+  accounting?: import('./books/accounting-journal').AccountingAttachment;
   subtotal?: number | null;
   tax?: number | null;
   tip?: number | null;
