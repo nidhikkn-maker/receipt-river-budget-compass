@@ -194,6 +194,7 @@ export function ExpenditureReportBuilder({ mode, search, embedded = false }: { e
       await retryHistory();
       setStage(-1);
     } catch (e) { setFailed(true); toast.error(e instanceof Error ? e.message : "Couldn't prepare the statement"); }
+    finally { generating.current = false; }
   }
   async function retryHistory() {
     const save = pendingSave.current;
