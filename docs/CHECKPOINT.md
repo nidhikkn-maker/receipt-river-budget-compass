@@ -1,5 +1,13 @@
 # Ledgerline continuation checkpoint — 8 Nov 2026 six-requirement acceptance
 
+## Latest connected larger batch — 04:55 UTC
+- Completed registration/company-isolated party reconciliation, six-decimal retained investment-event checks, amended-note/payment-ID safety, filtered report balance/forecast/wealth totals and source snapshots.
+- Reports Centre now uses encrypted exact-byte pending PDFs, owner metadata+download readback, reload/retry with stable ID, no unknown-outcome file removal, queued frozen source snapshots for background completion. Actual page interruption/reload/retry/download passes with synthetic local adapters.
+- Inbox receives reconciliation differences and per-entry missing-bill audit/tax exceptions, including mixed business shares; existing resolving links work and saved evidence clears exceptions after reload. Unresolved differences cannot be dismissed merely with a note.
+- V60-0316 newly VERIFIED COMPLETE for read-only exception lifecycle; V60-0016/0026/0312 remain partial for exact broader/hosted criteria,0066/0082 blocked,0716/0058 unchanged. Next essential group: GST liability/payment/return differences into shared reconciliation/Inbox, then complete remaining specialized source-to-frozen-report acceptance (not another broad audit).
+- Principal run94/94; last targeted13/13 pass; browser zero runtime errors, actual source PDF/one upload/one history. Preview build OK04:54:08. Evidence docs/evidence/connected-completion-2026-11-08.md.
+- Last workspace967.35; observed decline12.19 from979.54 (workspace-wide, later charges excluded); conservative cap863.34 including protected300. No live records, production migrations/policies/publishing or UIX changes.
+
 ## Latest grouped functionality — 04:42 UTC
 - Implemented company-selectable CSV/Excel/PDF, shared-company Excel, reconciliation evidence exports with source/entry IDs, unique-party matching and effective amendments/credit notes, full-list GST target validation and differing-rate capped allocations.
 - 51 distinct changed-path tests passed; actual Reports/reconciliation CSV/Excel/PDF downloads checked with isolated records. Added owner-scoped disposable disk save/reload across all six report families and reviewed allocation replay. No old 0716/claim/statement acceptance reruns.
