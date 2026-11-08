@@ -18,6 +18,6 @@ function Journey() {
 const rootRoute = createRootRoute({
   component: Journey,
 });
-const router = createRouter({ routeTree: rootRoute, defaultNotFoundComponent: rootRoute.options.component });
+const router = createRouter({ routeTree: rootRoute, defaultNotFoundComponent: () => null });
 const root = document.getElementById("root");
 if (root) createRoot(root).render(<RouterProvider router={router} />);
