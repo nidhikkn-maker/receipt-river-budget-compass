@@ -22,4 +22,5 @@ const statementRoute = createRoute({ getParentRoute: () => rootRoute, path: '/st
 const smartRoute = createRoute({ getParentRoute: () => rootRoute, path: '/smart', component: () => null });
 const router = createRouter({ routeTree: rootRoute.addChildren([statementRoute, smartRoute]), defaultNotFoundComponent: () => null });
 const root = document.getElementById("root");
-if (root) createRoot(root).render(<RouterProvider router={router} />);
+const mounted = window as Window & { controlledDeskMounted?: boolean };
+if (root && !mounted.controlledDeskMounted) { mounted.controlledDeskMounted = true; createRoot(root).render(<RouterProvider router={router} />); }
