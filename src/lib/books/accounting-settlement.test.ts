@@ -8,7 +8,7 @@ import {extractedOpening} from './opening-extraction';
 import type {Expense} from '../expenses';
 import type {VaultDoc} from '../documents';
 const accrual:AccountingJournal={id:'rent',entityId:'A',date:'2026-04-30',kind:'accrual',description:'April rent unpaid',documentIds:['doc'],legs:[{code:'expense:rent',label:'Rent',role:'expense',debit:1200,credit:0},{code:'payable:rent',label:'Rent payable',role:'liability',debit:0,credit:1200}]};
-const payment={id:'bank-payment',title:'Rent paid',date:'2026-05-02',entityId:'A',entitySource:'manual',accountId:'bank',amount:500,originalAmount:500,currency:'INR',category:'rent',txnType:'expense',allocations:null,receipts:[],splits:[],scope:'business',fxRate:1,paymentMethod:'other',description:'',merchant:null,memberId:null,reconciledAt:'2026-05-03'} as Expense;
+const payment={id:'bank-payment',title:'Rent paid',date:'2026-05-02',entityId:'A',entitySource:'manual',accountId:'bank',amount:500,originalAmount:500,currency:'INR',category:'rent',txnType:'expense',allocations:[],receipts:[],splits:[],scope:'business',fxRate:1,paymentMethod:'other',description:'',merchant:null,memberId:null,reconciledAt:'2026-05-03',statementRef:'test-bank-line'} as Expense;
 const anchor=(j:AccountingJournal)=>({...payment,id:j.id,date:j.date,accountId:null,txnType:'adjustment',receiptDetails:{accounting:{journal:j,primary:true,requestId:j.id}}}) as Expense;
 it('partial settlement recognises rent once, moves cash once and preserves exact reversible source history',()=>{
  const settlement=settlementProposal({id:'settlement',accrual,balanceCode:'payable:rent',entry:payment,journals:[accrual],documentIds:['bank-doc']});
