@@ -56,15 +56,15 @@ async def main():
   await page.locator('details').filter(has=page.get_by_label('Accountant email or account ID')).last.evaluate('(e)=>e.open=true');await page.get_by_label('Accountant email or account ID').fill('00000000-0000-0000-0000-000000000003');await page.get_by_role('button',name='Grant review access').click();await expect(page.get_by_role('button',name='Revoke access')).to_be_visible();await page.get_by_role('button',name='Revoke access').click();await expect(page.get_by_role('button',name='Restore access')).to_be_visible()
   await open_company();await page.locator('details').filter(has=page.get_by_label('Accountant email or account ID')).last.evaluate('(e)=>e.open=true')
   evidence=page.locator('details').filter(has=page.locator('input[aria-label^="Review note"]')).last
-  await evidence.locator('summary').first.click()
+  await page.locator('details').evaluate_all('(rows)=>rows.forEach(e=>e.open=true)')
   note=page.locator('input[aria-label^="Review note"]').last;await note.fill('Retained original and accounting classification inspected')
   await page.wait_for_timeout(400);await open_company();await page.locator('details').filter(has=page.get_by_label('Accountant email or account ID')).last.evaluate('(e)=>e.open=true')
-  evidence=page.locator('details').filter(has=page.locator('input[aria-label^="Review note"]')).last;await evidence.locator('summary').first.click()
+  evidence=page.locator('details').filter(has=page.locator('input[aria-label^="Review note"]')).last;await page.locator('details').evaluate_all('(rows)=>rows.forEach(e=>e.open=true)')
   await expect(page.locator('input[aria-label^="Review note"]').last).to_have_value('Retained original and accounting classification inspected')
   await page.get_by_role('button',name='Save review note',exact=True).last.click()
   await expect(page.get_by_text('Interrupted committed note',exact=True).first).to_be_visible()
   await open_company();await page.locator('details').filter(has=page.get_by_label('Accountant email or account ID')).last.evaluate('(e)=>e.open=true')
-  evidence=page.locator('details').filter(has=page.locator('input[aria-label^="Review note"]')).last;await evidence.locator('summary').first.click()
+  evidence=page.locator('details').filter(has=page.locator('input[aria-label^="Review note"]')).last;await page.locator('details').evaluate_all('(rows)=>rows.forEach(e=>e.open=true)')
   await expect(page.locator('input[aria-label^="Review note"]').last).to_be_disabled();await page.get_by_role('button',name='Retry same review').click()
   assert await page.evaluate("JSON.parse(sessionStorage.getItem('notes')).length") == 1
   await page.screenshot(path='/tmp/browser/accounting-milestone/review.png');assert not errors,errors
