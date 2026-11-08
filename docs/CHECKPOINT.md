@@ -1,5 +1,11 @@
 # Ledgerline continuation checkpoint — 8 Nov 2026 six-requirement acceptance
 
+## Corporate-accounting milestone — 8 Nov 2026 07:22 UTC
+- Completed five company working statements with canonical double-entry projection, explicit unknown counterparts, boundary dues, principal/interest and posted depreciation; existing frozen-report recovery now retains full accounting sources. Added saved CSV/Excel and private-original audit ZIP.
+- Fixed company-specific financial-year coverage. 17 distinct targeted checks and actual Reports Centre encrypted interruption/reload/frozen CSV/XLSX/PDF/ZIP flow pass; local adapters/disposable disk owner-RLS, not hosted or complete extraction-to-close acceptance.
+- No IDs newly verified. V60-0026 remains PARTIAL for opening capital/accrual/tax chart mappings/statutory schedules/full corporate intake-to-close/hosted acceptance;0066/0082 blocked,0058/0716 retained. Next: confirmed opening/account and source-backed loan/asset/accrual handoff.
+- Initial checkout9794997512db4dc6056a06f6ef067b73320b4022; GitHub parity unavailable/unverified. Measured921.16→910.55,10.61 workspace decline;300 reserve feasible. All production/UIX/release holds unchanged. Evidence docs/evidence/corporate-accounting-2026-11-08.md.
+
 ## Consolidated completion mandate — 8 Nov 2026 07:06 UTC
 - Full899-clause register and historical scope consolidated in docs/COMPLETION_PLAN.md with verified-only percentages, complete unfinished-ID inventory, dependency milestones and provisional15–26-batch effort range; remote GitHub parity unverified.
 - Implemented exact prior-FY supplier/customer, lender/account, holding/trade/action and intercompany comparison inputs → Inbox/Audit → retained private-original handler / existing entry review / CSV/Excel/PDF/full JSON evidence. Material comparison tiles no longer say Clear based only on missing-invoice counts.

@@ -1,3 +1,9 @@
+## Corporate-accounting milestone — 8 Nov 2026 07:11 UTC
+- [x] Record available checkout SHA; remote GitHub parity remains blocked by unavailable connection/status access, never inferred from local revision.
+- [x] Complete connected company working statements and frozen accounting evidence/audit ZIP using existing ledger/report history, preserving UIX and production holds.
+- [x] Run changed-path isolated financial/source/ownership/recovery acceptance; no broad promotions, exact unfinished functions and credits recorded.
+- [ ] Next corporate group: confirmed dated opening capital/account mapping, source-backed loan/asset/accrual statements integration and full actual document-to-close workflow. Hosted/activation acceptance remains externally gated.
+
 ## Consolidated complete-application mandate — 8 Nov 2026 06:55 UTC
 - [x] Consolidate every v6/historical unfinished clause into dependency milestones and verified-only module percentages against the checked-out revision; remote GitHub parity remains unverified.
 - [x] Implement the highest-priority connected accounting group, then record focused financial/source/ownership/recovery acceptance without promoting broad incomplete clauses.
