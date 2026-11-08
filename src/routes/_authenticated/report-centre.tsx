@@ -16,6 +16,7 @@ import { PERIOD_LABEL, REPORT_TYPES, buildReportDoc, emptyFilters, needsTrip, or
 import { downloadBlob, deliverFile, toCsv, toExcel } from "@/lib/reports";
 import { corporateReport, type CorporateType } from '@/lib/books/corporate-statements';
 import { corporateAuditPack } from '@/lib/books/corporate-audit-pack';
+import {AccountingJournalReview} from '@/components/books/AccountingJournalReview';
 import { listDrafts } from "@/lib/drafts";
 import { localDrafts } from "@/lib/offline";
 import type { TravelTrip } from "@/lib/travel";
@@ -181,6 +182,7 @@ function ReportCentre() {
         </label>
 
         {type.startsWith('company-')&&<label className="block text-sm font-semibold">Company<select aria-label="Accounting company" className={cn(sel,'mt-1 w-full')} value={f.entityId??''} onChange={e=>setF({...f,entityId:e.target.value||null})}><option value="">Choose company</option>{store.preferences.entities?.map(e=><option key={e.id} value={e.id}>{e.name}</option>)}</select></label>}
+        {type.startsWith('company-')&&f.entityId&&<AccountingJournalReview key={f.entityId} entityId={f.entityId}/>}
 
         <div>
           <div className="mb-1 text-sm font-semibold">Period</div>
