@@ -27,7 +27,7 @@ import { fyRange, fyOf } from "@/lib/entities";
 import { effectiveEntity } from '@/lib/books/entity-accounts';
 import { ReconciliationDetails } from '@/components/books/ReconciliationDetails';
 import { reconciliationAnchor } from '@/lib/books/reconciliation-context';
-import {corporateStatements} from '@/lib/books/corporate-statements';
+import {corporateStatements,corporateCloseErrors} from '@/lib/books/corporate-statements';
 const inr = (n: number) => `₹${Math.round(n).toLocaleString("en-IN")}`;
 
 export const Route = createFileRoute("/_authenticated/audit")({
@@ -61,7 +61,7 @@ function Audit() {
     setPeriodRequest(request);
     // Freeze the calculated figures with the close evidence so the closed period stays reproducible.
     const corporate=action==='closed'?entities.filter(e=>e.kind==='company').map(e=>corporateStatements({entityId:e.id,entities,entries:transactions,accounts,books,documents,from:start,to:end})):[];
-    const unresolved=corporate.flatMap(w=>w.issues.map(i=>`${w.entityName}: ${i.message}`));
+    const unresolved=corporateCloseErrors(corporate);
     if(unresolved.length)throw Error(`Company accounts need review before closing: ${unresolved.slice(0,4).join('; ')}`);
     const figures = action === 'closed' ? {...buildPeriodFigures({
       from: start, to: end,

@@ -2,7 +2,7 @@
 import {it,expect} from 'vitest';
 import {settlementProposal,outstandingAccrual} from './accounting-settlement';
 import {reverseAccountingJournal,type AccountingJournal} from './accounting-journal';
-import {corporateStatements} from './corporate-statements';
+import {corporateStatements,corporateCloseErrors} from './corporate-statements';
 import {emptyBooks} from './types';
 import {extractedOpening} from './opening-extraction';
 import type {Expense} from '../expenses';
@@ -16,6 +16,16 @@ it('partial settlement recognises rent once, moves cash once and preserves exact
  const w=corporateStatements({...args,entries:[anchor(accrual),payment,anchor(settlement)]});expect(w.profit).toBe(-1200);expect(w.cash.operating).toBe(-500);expect(w.liabilities).toBe(700);expect(w.trialDifference).toBe(0);expect(w.balanceDifference).toBe(0);expect(w.cash.difference).toBe(0);expect(outstandingAccrual(accrual,'payable:rent',[accrual,settlement])).toBe(700);
  expect(()=>settlementProposal({id:'again',accrual,balanceCode:'payable:rent',entry:payment,journals:[accrual,settlement],documentIds:[]})).toThrow('already settled');
  const reversal=reverseAccountingJournal(settlement,'reverse','2026-05-04','Correct settlement attribution');expect(outstandingAccrual(accrual,'payable:rent',[accrual,settlement,reversal])).toBe(1200);expect(reversal.settlement?.snapshot.amount).toBe(500);
+ expect(corporateCloseErrors([w])).toEqual([]);
+ expect(corporateCloseErrors([{...w,issues:[{recordId:'missing-original',message:'Retained original unavailable'}]}])).toContain('Test Ltd: Retained original unavailable');
+ expect(corporateCloseErrors([{...w,trialDifference:0.01}])).toContain('Test Ltd: Financial statements do not agree.');
+});
+it('receivable settlement removes duplicate cash income, not accrued revenue, and keeps cash flow once',()=>{
+ const sale:AccountingJournal={...accrual,id:'sale',legs:[{code:'receivable',label:'Customer',role:'asset',debit:3000,credit:0},{code:'income:sales',label:'Sales',role:'income',debit:0,credit:3000}]};
+ const receipt={...payment,id:'receipt',amount:1000,originalAmount:1000,txnType:'income' as const,category:'sales'};
+ const s=settlementProposal({id:'receipt-settle',accrual:sale,balanceCode:'receivable',entry:receipt,journals:[sale],documentIds:['bank-doc']});
+ const w=corporateStatements({entityId:'A',entities:[{id:'A',name:'Test Ltd',kind:'company',pan:'',gstins:[],booksFrom:'2026-27'}],accounts:[{id:'bank',name:'Bank',kind:'current',openingBalance:0,archived:false}],books:{...emptyBooks(),entityAccounts:{A:['bank']}},documents:[{id:'doc',entityId:'A',filePath:'owner/sale.pdf'},{id:'bank-doc',entityId:'A',filePath:'owner/bank.pdf',transactionId:receipt.id}] as VaultDoc[],entries:[anchor(sale),receipt,anchor(s)],from:'2026-04-01',to:'2027-03-31'});
+ expect(w.profit).toBe(3000);expect(w.cash.operating).toBe(1000);expect(w.balances.find(b=>b.code==='receivable')?.closing).toBe(2000);expect(w.trialDifference).toBe(0);expect(w.balanceDifference).toBe(0);expect(w.cash.difference).toBe(0);
 });
 it('rejects overpayment and cross-company settlement without silently accepting differences',()=>{
  expect(()=>settlementProposal({id:'s',accrual,balanceCode:'payable:rent',entry:{...payment,amount:1200.01},journals:[accrual],documentIds:[]})).toThrow('exceeds');
