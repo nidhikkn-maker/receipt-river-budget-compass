@@ -17,3 +17,9 @@ it('failed reading retries the same parked run and checkpoints extraction before
  expect(cloud.read).toHaveBeenCalledTimes(2);expect(cloud.start.mock.calls[0]?.[0]).toBe(cloud.start.mock.calls[1]?.[0]);
  await waitFor(()=>expect(cloud.update).toHaveBeenCalledWith(cloud.start.mock.calls[0]?.[0],expect.objectContaining({stage:'Validate',data:expect.objectContaining({read:expect.objectContaining({text:'source'}),stashPath:'owner/runs/original'})})));
 });
+it('reopens a checkpointed reading without calling extraction again',async()=>{
+ cloud.read.mockClear();cloud.start.mockResolvedValue({data:{stashPath:'owner/runs/kept',read:{docType:'other',fields:[],text:'retained source',date:null,amount:null,currency:'INR'},docType:'other',fields:[]}});
+ render(<DocumentIntake file={new File(['b'],'kept.png',{type:'image/png'})} context="investments" onClose={()=>{}} />);
+ await screen.findByRole('button',{name:'Save to DocuRepo'});
+ expect(cloud.read).not.toHaveBeenCalled();
+});
