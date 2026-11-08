@@ -130,7 +130,7 @@ export function SmartAdd({ open, onOpenChange, scope }: { open: boolean; onOpenC
               <Button variant="ghost" onClick={() => setStage({ ...stage, followUp: 'asset' })}><Package />It's something I own<ChevronRight /></Button>
             </div>}
             {stage.id && stage.followUp === 'asset' && <ReceiptAssetHandoff entryId={stage.id} />}
-            {stage.id && stage.followUp === 'claim' && <Suspense fallback={<p role="status">Opening claim preparation…</p>}><ClaimReview mode="claim" embedded search={{ entry: stage.id }} /></Suspense>}
+            {stage.id && stage.followUp && <div hidden={stage.followUp !== 'claim'}><Suspense fallback={<p role="status">Opening claim preparation…</p>}><ClaimReview mode="claim" embedded search={{ entry: stage.id }} /></Suspense></div>}
             <div className="flex flex-wrap justify-center gap-2">
               <Button asChild variant="outline"><Link to="/expenses" onClick={() => { onOpenChange(false); reset(); }}>View in Activity</Link></Button>
               <Button onClick={reset}>Add another</Button>

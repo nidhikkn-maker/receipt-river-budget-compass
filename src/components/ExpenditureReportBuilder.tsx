@@ -70,6 +70,7 @@ export function ExpenditureReportBuilder({ mode, search, embedded = false }: { e
   const [historyState, setHistoryState] = useState<'local' | 'saving' | 'saved'>('local');
   const pendingSave = useRef<(() => Promise<void>) | null>(null);
   const cancelled = useRef(false);
+  const generating = useRef(false);
   const [documentChecks, setDocumentChecks] = useState<ReportDocumentCheck[] | null>(null);
   const documentDecision = useRef<((proceed: boolean) => void) | null>(null);
   useEffect(() => () => { documentDecision.current?.(false); }, []);
@@ -106,8 +107,8 @@ export function ExpenditureReportBuilder({ mode, search, embedded = false }: { e
     setRouteId(profile?.defaultRouteId ?? ''); setReceivingAccountId(profile?.accountId ?? ''); setClaimFormat(profile?.format ?? settings.lastFormat); setConfirmed(false);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [profile?.id, claimMode, store.name]);
-  const preparationData:ClaimPreparationData={choice,picked,excluded,organisation:org,profileId,routeId,accountId:receivingAccountId,claimant,purpose,from,to,format:claimFormat,rejected};
-  const restorePreparation=(d:ClaimPreparationData)=>{restoredProfile.current=true;initializedActivity.current=d.choice==='entries'?`entries:${[...d.picked].sort().join(',')}`:d.choice;setChoice(d.choice);setPicked(d.picked);setExcluded(d.excluded);setOrg(d.organisation);setProfileId(d.profileId);setRouteId(d.routeId);setReceivingAccountId(d.accountId);setClaimant(d.claimant);setPurpose(d.purpose);setFrom(d.from);setTo(d.to);setClaimFormat(d.format);setRejected(d.rejected??[]);setConfirmed(false);};
+  const preparationData:ClaimPreparationData={choice,picked,excluded,organisation:org,profileId,routeId,accountId:receivingAccountId,claimant,purpose,from,to,format:claimFormat,rejected,advanceInput};
+  const restorePreparation=(d:ClaimPreparationData)=>{restoredProfile.current=true;initializedActivity.current=d.choice==='entries'?`entries:${[...d.picked].sort().join(',')}`:d.choice;setChoice(d.choice);setPicked(d.picked);setExcluded(d.excluded);setOrg(d.organisation);setProfileId(d.profileId);setRouteId(d.routeId);setReceivingAccountId(d.accountId);setClaimant(d.claimant);setPurpose(d.purpose);setFrom(d.from);setTo(d.to);setClaimFormat(d.format);setRejected(d.rejected??[]);setAdvanceInput(d.advanceInput??'');setConfirmed(false);};
   const preparation=useClaimPreparation(store.userId,claimMode&&!store.loading,preparationData,restorePreparation,!!(search.trip||search.tag||search.entry||search.entries));
   useEffect(()=>{if(!claimMode)return;let active=true;setHistoryCheck('loading');void (async()=>{const ids:string[]=[];const applied:Record<string,number>={};for(let start=0;;start+=250){const {data,error}=await supabase.from('report_history').select('filters').eq('kind','claim-submission').order('created_at',{ascending:false}).range(start,start+249);if(error){if(active)setHistoryCheck('error');return;}for(const h of data??[]){const filters=h.filters as {organisation?:string;subject?:{kind?:string;id?:string};snapshot?:{items?:{id:string}[];totals?:{advanceApplied?:number}}};if(filters.subject?.kind==='trip'&&filters.subject.id)applied[filters.subject.id]=(applied[filters.subject.id]??0)+(filters.snapshot?.totals?.advanceApplied??0);if(filters.organisation===org)ids.push(...(filters.snapshot?.items??[]).map(i=>i.id));}if(!data||data.length<250)break;}if(active){setPriorAdvance(applied);setPriorClaimIds([...new Set(ids)]);setHistoryCheck('ready');}})();return()=>{active=false;};},[claimMode,org]);
   const pickFormat = async (f: 'detailed' | 'summary') => { setClaimFormat(f); try { await store.savePreferences({ ...store.preferences, reimbursementSettings: { ...settings, lastFormat: f } }); } catch { toast.error('Format changed for this claim but could not be saved.'); } };
@@ -126,6 +127,8 @@ export function ExpenditureReportBuilder({ mode, search, embedded = false }: { e
   useEffect(() => { setConfirmed(false); }, [org, profile?.id, claimant, receivingAccountId, claimFormat, from, to, purpose, selectedClaimTotal, excluded, JSON.stringify(scopedStatement.rows.map(r => [r.id, r.eligible, r.reimbursed, r.outstanding]))]);
 
   async function generate() {
+    if (generating.current) return;
+    generating.current = true;
     cancelled.current = false; setFailed(false); setResult(null); setHistoryState('local'); pendingSave.current = null; setStage(0);
     try {
       if (!included.length) throw new Error("Choose at least one transaction.");
