@@ -23,7 +23,7 @@ import { ledgerTaxPayments, obligations, type Obligation } from "./compliance";
 import type { FindingState } from "./types";
 
 export type IssueType = "Reconciliation" | "Unreconciled bank" | "Classification" | "Missing invoice" | "Duplicate" | "Asset register" | "Depreciation" | "Property/rent" | "Tax" | "GST" | "Investment cost basis" | "Investment overlap" | "Intercompany" | "Missing document" | "Profile" | "Opening balance" | "Missing source";
-export interface AuditItem { key: string; type: IssueType; entity: string; account: string | null; fy: string | null; risk: "high" | "medium" | "low"; text: string; evidence: string; to: string }
+export interface AuditItem { key: string; type: IssueType; entity: string; account: string | null; fy: string | null; risk: "high" | "medium" | "low"; text: string; evidence: string; to: string; comparison?: import('./reconciliation-context').ReconciliationContext }
 
 const MAP: Record<string, IssueType> = { Profiles: "Profile", Invoices: "Missing invoice", Assets: "Asset register", Years: "Missing document" };
 
@@ -163,14 +163,15 @@ export function readinessTiles(p: { accounts: Account[]; entries: Expense[]; ite
 /** Reconciliation hub [§24]: one row per kind with its open count and the page that resolves it. */
 export function reconHub(items: AuditItem[], extra: { cardUnrec: number; loanUnrec: number; suppliersMissing: number; customersOpen: number }) {
   const n = (t: IssueType) => items.filter((i) => i.type === t).length;
+  const comparisons=(family:import('./reconciliation-context').ReconciliationContext['family'])=>items.filter(i=>i.comparison?.family===family).length;
   return [
     { kind: "Bank", open: n("Unreconciled bank"), to: "/statements" },
     { kind: "Card", open: extra.cardUnrec, to: "/statements" },
-    { kind: "Loan", open: extra.loanUnrec, to: "/wealth" },
-    { kind: "Supplier", open: extra.suppliersMissing, to: "/gst-check" },
-    { kind: "Customer", open: extra.customersOpen, to: "/receivables" },
-    { kind: "Investment", open: n("Investment cost basis"), to: "/wealth" },
-    { kind: "Intercompany", open: n("Intercompany"), to: "/transfers" },
+    { kind: "Loan", open: extra.loanUnrec+comparisons('loan'), to: "/wealth" },
+    { kind: "Supplier", open: extra.suppliersMissing+comparisons('supplier'), to: "/gst-check" },
+    { kind: "Customer", open: extra.customersOpen+comparisons('customer'), to: "/receivables" },
+    { kind: "Investment", open: n("Investment cost basis")+comparisons('investment'), to: "/wealth" },
+    { kind: "Intercompany", open: n("Intercompany")+comparisons('intercompany'), to: "/transfers" },
     { kind: "GST", open: n("GST"), to: "/tax" },
   ];
 }

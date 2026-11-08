@@ -39,7 +39,7 @@ export function loanRecon(loans: { id: string; name: string; accountId: string |
   return out;
 }
 
-export interface SupplierReconRow { party: string; gstin: string; registration: string; invoiced: number; paid: number; difference: number; invoices: number; payments: number; allocation?: ReturnType<typeof allocatePayments> | undefined }
+export interface SupplierReconRow { party: string; gstin: string; registration: string; invoiced: number; paid: number; difference: number; invoices: number; payments: number; invoiceIds: string[]; paymentIds: string[]; allocation?: ReturnType<typeof allocatePayments> | undefined }
 /** Supplier: purchase invoices (incl. tax) per supplier vs payments naming that supplier, per GSTIN. */
 export function supplierRecon(invoices: GstInvoice[], payments: { id: string; amount: number; text: string; date: string }[], from: string, to: string, order: AllocationOrder = "oldest"): SupplierReconRow[] {
   const by = new Map<string, { party: string; gstin: string; registration: string; invoiced: number; invoices: number }>();
@@ -55,11 +55,12 @@ export function supplierRecon(invoices: GstInvoice[], payments: { id: string; am
     const name = words(s.party);
     const mine = paymentsByParty.get(s)??[];
     const paid = sumMoney(mine.map(p => p.amount));
-    return { party: s.party, gstin: s.gstin, registration: s.registration, invoiced: s.invoiced, paid, difference: subtractMoney(s.invoiced, paid), invoices: s.invoices, payments: mine.length, allocation: allocatePayments(invoices.filter((i) => i.gstin === s.registration && i.kind === "purchase" && i.date >= from && i.date <= to && (i.partyGstin || words(i.party)) === (s.gstin || name)), mine, to, order) };
+    const bills = effectiveInvoices(invoices).filter((i) => i.gstin === s.registration && i.kind === 'purchase' && i.date >= from && i.date <= to && (i.partyGstin || words(i.party)) === (s.gstin || name));
+    return { party: s.party, gstin: s.gstin, registration: s.registration, invoiced: s.invoiced, paid, difference: subtractMoney(s.invoiced, paid), invoices: s.invoices, payments: mine.length, invoiceIds: bills.map(i=>i.id), paymentIds: mine.map(i=>i.id), allocation: allocatePayments(bills, mine, to, order) };
   }).filter((r) => Math.abs(r.difference) > 1);
 }
 
-export interface CustomerReconRow { party: string; gstin: string; registration: string; invoiced: number; received: number; outstanding: number; invoices: number; receipts: number; allocation?: ReturnType<typeof allocatePayments> | undefined }
+export interface CustomerReconRow { party: string; gstin: string; registration: string; invoiced: number; received: number; outstanding: number; invoices: number; receipts: number; invoiceIds: string[]; paymentIds: string[]; allocation?: ReturnType<typeof allocatePayments> | undefined }
 /** Customer: sales invoices (incl. tax) per customer vs receipts naming that customer; each receipt is used once. */
 export function customerRecon(invoices: GstInvoice[], receipts: { id: string; amount: number; text: string; date: string }[], from: string, to: string, order: AllocationOrder = "oldest"): CustomerReconRow[] {
   const by = new Map<string, { party: string; gstin: string; registration: string; invoiced: number; invoices: number }>();
@@ -75,7 +76,8 @@ export function customerRecon(invoices: GstInvoice[], receipts: { id: string; am
     const name = words(s.party);
     const mine = receiptsByParty.get(s)??[];
     const received = sumMoney(mine.map(p => p.amount));
-    return { party: s.party, gstin: s.gstin, registration: s.registration, invoiced: s.invoiced, received, outstanding: subtractMoney(s.invoiced, received), invoices: s.invoices, receipts: mine.length, allocation: allocatePayments(invoices.filter((i) => i.gstin === s.registration && i.kind === "sales" && i.date >= from && i.date <= to && (i.partyGstin || words(i.party)) === (s.gstin || name)), mine, to, order) };
+    const bills = effectiveInvoices(invoices).filter((i) => i.gstin === s.registration && i.kind === 'sales' && i.date >= from && i.date <= to && (i.partyGstin || words(i.party)) === (s.gstin || name));
+    return { party: s.party, gstin: s.gstin, registration: s.registration, invoiced: s.invoiced, received, outstanding: subtractMoney(s.invoiced, received), invoices: s.invoices, receipts: mine.length, invoiceIds: bills.map(i=>i.id), paymentIds: mine.map(i=>i.id), allocation: allocatePayments(bills, mine, to, order) };
   }).filter((r) => Math.abs(r.outstanding) > 1);
 }
 
@@ -144,7 +146,7 @@ export function investmentRecon(holdings: { isin: string; name: string; quantity
   }).filter((r) => Math.abs(r.difference) > 0.000001 || r.unresolved.length > 0);
 }
 
-export interface IntercompanyRow { a: string; b: string; aToB: number; bToA: number; net: number; unconfirmed: number }
+export interface IntercompanyRow { a: string; b: string; aToB: number; bToA: number; net: number; unconfirmed: number; aToBIds: string[]; bToAIds: string[] }
 /**
  * Intercompany: transfers between accounts linked to two different companies/people, by pair. Net shows who
  * owes whom; unconfirmed counts movements not yet reconciled on both statements.
@@ -157,8 +159,9 @@ export function intercompanyRecon(entries: { id: string; amount: number; txnType
     const from = owner.get(t.accountId), to = owner.get(t.toAccountId);
     if (!from || !to || from === to) continue;
     const [a, b] = from < to ? [from, to] : [to, from];
-    const row = m.get(`${a}|${b}`) ?? { a, b, aToB: 0, bToA: 0, net: 0, unconfirmed: 0 };
-    if (from === a) row.aToB = addMoney(row.aToB, t.amount); else row.bToA = addMoney(row.bToA, t.amount);
+    const row = m.get(`${a}|${b}`) ?? { a, b, aToB: 0, bToA: 0, net: 0, unconfirmed: 0, aToBIds: [], bToAIds: [] };
+    if (row.aToBIds.includes(t.id) || row.bToAIds.includes(t.id)) continue;
+    if (from === a) { row.aToB = addMoney(row.aToB, t.amount); row.aToBIds.push(t.id); } else { row.bToA = addMoney(row.bToA, t.amount); row.bToAIds.push(t.id); }
     if (!t.reconciledAt) row.unconfirmed++;
     row.net = subtractMoney(row.aToB, row.bToA);
     m.set(`${a}|${b}`, row);

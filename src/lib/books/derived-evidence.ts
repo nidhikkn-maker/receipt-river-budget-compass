@@ -11,7 +11,7 @@ import { makeResolver, type EvidenceRef } from "./evidence";
 import { itcReview } from './compliance';
 
 export interface DerivedInput { label: string; amount: number; source: EvidenceRef | null }
-export interface DerivedFigure { id: string; label: string; amount: number; to: string; inputs: DerivedInput[]; unsourced: number; omittedInputs?: number }
+export interface DerivedFigure { id: string; label: string; amount: number; to: string; inputs: DerivedInput[]; allInputs?: DerivedInput[]; unsourced: number; omittedInputs?: number }
 
 const r2 = (n: number) => Math.round(n * 100) / 100;
 const MAX_INPUTS = 100;
@@ -19,7 +19,7 @@ const MAX_INPUTS = 100;
 export function derivedEvidence(p: { assets: Asset[]; books: BooksData; docs: { id: string; title: string }[]; entryTitle?: (id: string) => string | undefined }): DerivedFigure[] {
   const resolve = makeResolver(p);
   const out: DerivedFigure[] = [];
-  const push = (f: DerivedFigure) => { f.unsourced = f.inputs.filter((i) => !i.source).length; f.omittedInputs = Math.max(0,f.inputs.length-MAX_INPUTS); f.inputs = f.inputs.slice(0, MAX_INPUTS); out.push(f); };
+  const push = (f: DerivedFigure) => { f.allInputs = [...f.inputs]; f.unsourced = f.inputs.filter((i) => !i.source).length; f.omittedInputs = Math.max(0,f.inputs.length-MAX_INPUTS); f.inputs = f.inputs.slice(0, MAX_INPUTS); out.push(f); };
 
   // GST net payable per registration and month, chained to the invoices and advances behind it.
   const periods = new Set<string>();

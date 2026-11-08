@@ -223,6 +223,7 @@ function ReportCentre() {
             <Button variant="outline" onClick={() => downloadBlob(result.blob, result.name)}><Download className="mr-1 h-4 w-4" />Download</Button>
             <Button onClick={() => { void deliverFile(result.blob, result.name); }}><Share2 className="mr-1 h-4 w-4" />Share</Button>
           </div>
+          {!!result.doc.figureEvidence?.length&&<Button variant="outline" onClick={()=>downloadBlob(new Blob([JSON.stringify(result.doc.figureEvidence,null,2)],{type:'application/json'}),'report-figure-evidence.json')}>Download figure evidence</Button>}
         </section>
       )}
 
@@ -236,6 +237,7 @@ function ReportCentre() {
               <div className="flex justify-between gap-2"><span className="font-semibold">{h.title}{h.version > 1 ? ` · v${h.version}` : ""}</span><span className="text-xs text-muted-foreground">{kb(h.file_size)}</span></div>
               <div className="text-xs text-muted-foreground">{h.period_from} to {h.period_to} · {h.workspace === "all" ? "All workspaces" : h.workspace.split(",").map((w) => SCOPE_LABEL[w as Scope] ?? w).join(", ")} · generated {new Date(h.created_at).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" })} · {h.status === "ready" ? "Ready" : "Failed"}</div>
               <div className="mt-2 flex flex-wrap gap-1.5">
+                {!!(h.filters as {snapshot?:ReportDoc})?.snapshot?.figureEvidence?.length&&<Button size="sm" variant="outline" onClick={()=>downloadBlob(new Blob([JSON.stringify((h.filters as {snapshot:ReportDoc}).snapshot.figureEvidence,null,2)],{type:'application/json'}),'saved-report-figure-evidence.json')}>Figure evidence</Button>}
                 <Button size="sm" variant="outline" disabled={!b} onClick={() => b && openPreview(b)}><Eye className="mr-1 h-3.5 w-3.5" />Preview</Button>
                 <Button size="sm" variant="outline" disabled={!b} onClick={() => b && downloadBlob(b, name)}><Download className="mr-1 h-3.5 w-3.5" />Download</Button>
                 <Button size="sm" variant="outline" disabled={!b} onClick={() => { if (b) void deliverFile(b, name); }}><Share2 className="mr-1 h-3.5 w-3.5" />Share</Button>
