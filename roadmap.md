@@ -1052,3 +1052,8 @@
 - [ ] Wording passes for Trip budget, Document intake, Balance verification, Asset/Tax books, Audit, Payment methods, Receivables, Settings, DocuRepo; app-wide toasts/validation text (see docs/UIX_PLAIN_LANGUAGE_COVERAGE.md).
 - [x] Smart Add in place: real photo/PDF/spreadsheet preview, receipt review and statement batch review inside the sheet, no page jump; browser-verified with fixtures.
 - [ ] Smart Add on a real phone camera and hosted save/DocuRepo read-back; remaining plain-language screens listed above.
+
+## Independent-input Milestone 1 + Milestone 2 batch — 8 Nov 2026 10:10 UTC
+- [x] Independent bank-vs-books matching check (separately authored statement and documents): one-to-one matches, duplicate bank debit, unrecorded charges and short receipt all stay visible (5 tests).
+- [ ] Actual-extraction upload→review→post→reconcile→statements→close screen journey with accountant change/interruption; statutory disclosures; V60-0013/0026/0023 acceptance. Not done this turn.
+- [ ] Milestone 2: loan statement extraction, principal/interest split, EMI matching, financed assets, depreciation, investment holdings reconciliation, net worth. Not started this turn.
