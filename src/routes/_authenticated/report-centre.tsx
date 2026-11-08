@@ -13,7 +13,8 @@ import { useStore } from "@/lib/store";
 import { supabase } from "@/integrations/supabase/client";
 import { ACTIVE_SCOPES, SCOPE_LABEL, type Scope } from "@/lib/expenses";
 import { PERIOD_LABEL, REPORT_TYPES, buildReportDoc, emptyFilters, needsTrip, orgOf, periodRange, reportLabel, type DraftLite, type Period, type ReportDoc, type ReportFilters, type ReportType, type StatusFilter } from "@/lib/report-centre";
-import { downloadBlob, deliverFile } from "@/lib/reports";
+import { downloadBlob, deliverFile, toCsv, toExcel } from "@/lib/reports";
+import { corporateReport, type CorporateType } from '@/lib/books/corporate-statements';
 import { listDrafts } from "@/lib/drafts";
 import { localDrafts } from "@/lib/offline";
 import type { TravelTrip } from "@/lib/travel";
@@ -93,6 +94,7 @@ function ReportCentre() {
         transactions: store.transactions, accounts: store.accounts, valuations: store.valuations, commitments: store.commitments, loans: store.loans,
         budgets: store.budgets as Record<string, number>, trips, drafts, memberName: (id) => (id === "me" ? store.memberName(null) : store.memberName(id)),
         accountName: (id) => store.accounts.find((a) => a.id === id)?.name ?? "No account", today: today(),
+        books:store.preferences.books,entities:store.preferences.entities,documents:store.documents,
       });
       if (cancelled.current) return;
       setStage(2);
@@ -105,7 +107,7 @@ function ReportCentre() {
       setResult({ blob, url: URL.createObjectURL(blob), name, doc });
       setStage(3);
         const id = jobId, path = `${store.userId}/reports/${id}.pdf`;
-        const prior = Math.max(0,...history.filter((h) => h.kind === t && h.period_from === filters.from && h.period_to === filters.to).map(h=>h.version));
+        const prior = Math.max(0,...history.filter((h) => h.kind === t && h.period_from === filters.from && h.period_to === filters.to && ((h.filters as ReportFilters)?.entityId??null)===(filters.entityId??null)).map(h=>h.version));
         const job:ClaimReportJob={id,path,name,activity:t,missing:[],bytes:Array.from(new Uint8Array(await blob.arrayBuffer())),row:{id,owner_id:store.userId,kind:t,title:reportLabel(t),period_from:filters.from,period_to:filters.to,workspace:filters.workspaces.join(',')||'all',filters:{...filters,style,snapshot:doc} as never,file_path:path,file_size:blob.size,version:prior+1}};
         await saveLocalClaimReport(store.userId,job,'centre-report');pending.current=job;
         if(!navigator.onLine)throw Error('Your PDF is saved on this device. Retry saving when connected.');
@@ -151,6 +153,13 @@ function ReportCentre() {
   const openPreview = (b: Blob) => { const u = URL.createObjectURL(b); window.open(u, "_blank"); setTimeout(() => URL.revokeObjectURL(u), 60_000); };
   const busy = stage >= 0 && !failed;
   const toggleWs = (s: Scope) => setF((x) => ({ ...x, workspaces: x.workspaces.includes(s) ? x.workspaces.filter((w) => w !== s) : [...x.workspaces, s] }));
+  const corporateDownload = async (doc:ReportDoc,format:'csv'|'excel'|'evidence') => {
+    if(!doc.corporateWorking)return;
+    if(format==='evidence'){downloadBlob(new Blob([JSON.stringify(doc.corporateWorking,null,2)],{type:'application/json'}),'company-accounting-evidence.json');return;}
+    const r=corporateReport(doc.corporateWorking,doc.type as CorporateType);
+    const blob=format==='excel'?await toExcel(r):new Blob(['\uFEFF',toCsv(r)],{type:'text/csv;charset=utf-8'});
+    await deliverFile(blob,`ledgerline-${doc.type}-${doc.corporateWorking.entityId}.${format==='excel'?'xlsx':'csv'}`);
+  };
 
   return (
     <div className="uix-family-reports space-y-6 pb-24">
@@ -168,6 +177,8 @@ function ReportCentre() {
             ))}
           </select>
         </label>
+
+        {type.startsWith('company-')&&<label className="block text-sm font-semibold">Company<select aria-label="Accounting company" className={cn(sel,'mt-1 w-full')} value={f.entityId??''} onChange={e=>setF({...f,entityId:e.target.value||null})}><option value="">Choose company</option>{store.preferences.entities?.map(e=><option key={e.id} value={e.id}>{e.name}</option>)}</select></label>}
 
         <div>
           <div className="mb-1 text-sm font-semibold">Period</div>
@@ -224,6 +235,7 @@ function ReportCentre() {
             <Button onClick={() => { void deliverFile(result.blob, result.name); }}><Share2 className="mr-1 h-4 w-4" />Share</Button>
           </div>
           {!!result.doc.figureEvidence?.length&&<Button variant="outline" onClick={()=>downloadBlob(new Blob([JSON.stringify(result.doc.figureEvidence,null,2)],{type:'application/json'}),'report-figure-evidence.json')}>Download figure evidence</Button>}
+          {result.doc.corporateWorking&&<div className="flex flex-wrap gap-2"><Button variant="outline" onClick={()=>corporateDownload(result.doc,'csv')}>CSV</Button><Button variant="outline" onClick={()=>corporateDownload(result.doc,'excel')}>Excel</Button><Button variant="outline" onClick={()=>corporateDownload(result.doc,'evidence')}>Accounting evidence</Button></div>}
         </section>
       )}
 
@@ -237,6 +249,7 @@ function ReportCentre() {
               <div className="flex justify-between gap-2"><span className="font-semibold">{h.title}{h.version > 1 ? ` · v${h.version}` : ""}</span><span className="text-xs text-muted-foreground">{kb(h.file_size)}</span></div>
               <div className="text-xs text-muted-foreground">{h.period_from} to {h.period_to} · {h.workspace === "all" ? "All workspaces" : h.workspace.split(",").map((w) => SCOPE_LABEL[w as Scope] ?? w).join(", ")} · generated {new Date(h.created_at).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" })} · {h.status === "ready" ? "Ready" : "Failed"}</div>
               <div className="mt-2 flex flex-wrap gap-1.5">
+                {(h.filters as {snapshot?:ReportDoc})?.snapshot?.corporateWorking&&<><Button size="sm" variant="outline" onClick={()=>corporateDownload((h.filters as {snapshot:ReportDoc}).snapshot,'csv')}>Saved CSV</Button><Button size="sm" variant="outline" onClick={()=>corporateDownload((h.filters as {snapshot:ReportDoc}).snapshot,'excel')}>Saved Excel</Button><Button size="sm" variant="outline" onClick={()=>corporateDownload((h.filters as {snapshot:ReportDoc}).snapshot,'evidence')}>Accounting evidence</Button></>}
                 {!!(h.filters as {snapshot?:ReportDoc})?.snapshot?.figureEvidence?.length&&<Button size="sm" variant="outline" onClick={()=>downloadBlob(new Blob([JSON.stringify((h.filters as {snapshot:ReportDoc}).snapshot.figureEvidence,null,2)],{type:'application/json'}),'saved-report-figure-evidence.json')}>Figure evidence</Button>}
                 <Button size="sm" variant="outline" disabled={!b} onClick={() => b && openPreview(b)}><Eye className="mr-1 h-3.5 w-3.5" />Preview</Button>
                 <Button size="sm" variant="outline" disabled={!b} onClick={() => b && downloadBlob(b, name)}><Download className="mr-1 h-3.5 w-3.5" />Download</Button>

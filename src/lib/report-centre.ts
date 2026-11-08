@@ -9,9 +9,15 @@ import { monthlyCost, occurrences, addDays, type Commitment } from "./planning";
 import { outstandingOf, receivedOf, isTracked } from "./reimbursements";
 import { decimal, roundMoney, addMoney, subtractMoney, multiplyMoney, sumMoney, proportionMoney } from "./money";
 import { reportFigureEvidence, type ReportFigureEvidence } from './report-figure-evidence';
+import { corporateStatements, corporateReport, CORPORATE_TYPES, type CorporateType, type CorporateWorking } from './books/corporate-statements';
+import type { BooksData } from './books/types';
+import type { EntityProfile } from './entities';
+import type { VaultDoc } from './documents';
 
 export type ReportGroup = "Financial" | "Workspace" | "Travel" | "Operational";
 export const REPORT_TYPES = [
+  ['company-trial-balance','Company Trial Balance','Financial'], ['company-profit-loss','Company Profit & Loss','Financial'],
+  ['company-balance-sheet','Company Balance Sheet','Financial'], ['company-cash-flow','Company Cash Flow','Financial'], ['company-audit-schedules','Company Audit Supporting Schedules','Financial'],
   ["monthly", "Monthly Financial Summary", "Financial"], ["income", "Income Report", "Financial"], ["expense", "Expense Report", "Financial"],
   ["category", "Category-wise Expenditure", "Financial"], ["account", "Account-wise Transactions", "Financial"], ["card", "Credit Card Report", "Financial"],
   ["budget", "Budget Report", "Financial"], ["subscription", "Subscription Report", "Financial"], ["loan", "Loan and EMI Report", "Financial"],
@@ -44,6 +50,7 @@ export function periodRange(p: Period, today: string, custom?: { from: string; t
 
 export type StatusFilter = "all" | "reconciled" | "unreconciled" | "reimbursement_pending";
 export interface ReportFilters {
+  entityId?: string | null;
   from: string; to: string;
   workspaces: Scope[]; accountIds: string[]; categories: string[]; tags: string[]; memberIds: string[];
   tripId: string | null; currency: string | null; status: StatusFilter; organisation: string | null;
@@ -52,13 +59,14 @@ export const emptyFilters = (from: string, to: string): ReportFilters => ({ from
 
 export interface DraftLite { id: string; status: string; updatedAt: string; data: { amount?: string | number; merchant?: string; date?: string; category?: string; scope?: string } ; localOnly?: boolean }
 export interface ReportData {
+  books?: BooksData; entities?: EntityProfile[]; documents?: VaultDoc[];
   transactions: Expense[]; accounts: Account[]; valuations: Valuation[]; commitments: Commitment[];
   loans: { id: string; name: string; principal: number; rate: number; emi: number; nextDue: string; provider: string; status: string; accountId?: string | null; payments: { date: string; principal: number; interest: number; total: number }[] }[];
   budgets: Record<string, number>; trips: TravelTrip[]; drafts: DraftLite[];
   memberName: (id: string | null) => string; accountName: (id: string | null) => string; today: string;
 }
 export interface Section { title: string; headers: string[]; rows: string[][]; total?: string[]; align?: ("l" | "r")[]; wide?: boolean; chart?: { label: string; value: number }[] }
-export interface ReportDoc { type: ReportType; title: string; period: string; filterLines: string[]; summary: [string, string][]; sections: Section[]; notes: string[]; landscape: boolean; rowCount: number; sourceEntryIds?: string[]; sourceDocumentRefs?: string[]; figureEvidence?: ReportFigureEvidence[] }
+export interface ReportDoc { type: ReportType; title: string; period: string; filterLines: string[]; summary: [string, string][]; sections: Section[]; notes: string[]; landscape: boolean; rowCount: number; sourceEntryIds?: string[]; sourceDocumentRefs?: string[]; figureEvidence?: ReportFigureEvidence[]; corporateWorking?: CorporateWorking }
 
 const r2 = roundMoney;
 const IN = new Intl.NumberFormat("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -169,6 +177,16 @@ export function filterLines(f: ReportFilters, d: ReportData): string[] {
 }
 
 export function buildReportDoc(type: ReportType, filters: ReportFilters, d: ReportData): ReportDoc {
+  if (CORPORATE_TYPES.includes(type as CorporateType)) {
+    if (!filters.entityId || !d.books || !d.entities || !d.documents) throw Error('Choose a company with available book records. Corporate statements require the complete company ledger.');
+    const w = corporateStatements({entityId:filters.entityId,entities:d.entities,entries:d.transactions,accounts:d.accounts,books:d.books,documents:d.documents,from:filters.from,to:filters.to});
+    const r = corporateReport(w,type as CorporateType);
+    return {type,title:r.title,period:`${filters.from} to ${filters.to}`,filterLines:[`Company: ${w.entityName}`,'All linked company accounts and historical balance inputs; spending filters do not truncate accounts.'],
+      summary:[['Period profit / loss',amt(w.profit)],['Trial balance difference',amt(w.trialDifference)],['Balance equation difference',amt(w.balanceDifference)],['Cash movement difference',amt(w.cash.difference)],['Unresolved accounting/evidence checks',String(w.issues.length)]],
+      sections:[{title:r.title,headers:r.headers,rows:r.rows.map(row=>row.map(String)),wide:true},{title:'Unresolved accounting and evidence checks',headers:['Record ID','Check'],rows:w.issues.map(i=>[i.recordId,i.message])}],
+      notes:['Working statements projected from the canonical ledger, not audited or statutory accounts.','Unclassified opening/adjustment counterparts are shown explicitly and never treated as capital or profit.','Register-only invoices and unposted journals are not silently posted. GST recovery, accrual completeness and statutory Schedule III classification require confirmed accounting inputs.'],
+      landscape:true,rowCount:r.rows.length,sourceEntryIds:[...new Set(w.lines.flatMap(l=>l.entryId?[l.entryId]:[]))],sourceDocumentRefs:[...new Set(w.lines.flatMap(l=>l.originalPaths))],corporateWorking:w};
+  }
   let f = filters;
   if (type.startsWith("ws-")) f = { ...f, workspaces: [type.slice(3) as Scope] };
   if (type === "consolidated") f = { ...f, workspaces: [] };
