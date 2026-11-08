@@ -491,8 +491,7 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
   const postAccounting:Ctx['postAccounting']=async attempt=>{
     if(attempt.owner!==userId)throw Error('Accounting owner differs.');
     if(!navigator.onLine)throw Error('Reconnect to confirm this journal. Your draft is retained.');
-    validateAccountingAttempt(attempt,accounts,preferences.books??{closedPeriods:[]} as never,documents);
-    await postAccountingWithRecovery(attempt,{read:async()=>{const r=await supabase.from('accounting_journal_evidence' as never).select('owner_id,request_id,journal,entry_ids').eq('id',attempt.journal.id).eq('owner_id',userId).maybeSingle();check(r.error);return r.data as unknown as AccountingReceipt|null;},post:async()=>{const r=await supabase.rpc('post_accounting_journal' as never,{_request:attempt.requestId,_journal:attempt.journal,_expected:attempt.expected} as never);check(r.error);}});
+    await postAccountingWithRecovery(attempt,{read:async()=>{const r=await supabase.from('accounting_journal_evidence' as never).select('owner_id,request_id,journal,entry_ids').eq('id',attempt.journal.id).eq('owner_id',userId).maybeSingle();check(r.error);return r.data as unknown as AccountingReceipt|null;},post:async()=>{validateAccountingAttempt(attempt,accounts,preferences.books??{closedPeriods:[]} as never,documents);const r=await supabase.rpc('post_accounting_journal' as never,{_request:attempt.requestId,_journal:attempt.journal,_expected:attempt.expected} as never);check(r.error);}});
     await refresh();
   };
   const undoOpening: Ctx["undoOpening"] = async (id) => { check((await supabase.rpc("undo_opening_balances", { _id: id })).error); await refresh(); };
