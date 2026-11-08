@@ -71,6 +71,7 @@ it('full-list validation rejects invalid targets on untouched advances and inval
  expect(advanceCrossProblems([a],[invoice({note:'credit'})])).toContain('A1: Adjustment requires a current sales invoice for the same GSTIN');
  expect(advanceCrossProblems([a],[invoice({partyGstin:'DIFFERENT'})])).toContain('A1: Adjustment requires an invoice for the same customer GSTIN');
  expect(advanceCrossProblems([{...a,adjustments:[{...a.adjustments[0],invoiceId:'sale',date:'2026-10-01',taxable:-500,igst:0,cgst:0,sgst:0,cess:0}]}],[invoice({})])).toContain('A1: taxable: adjustment amount must be nonnegative');
+ expect(advanceCrossProblems([{...a,adjustments:[{invoiceId:'sale',date:'2026-10-01',taxable:NaN,igst:0,cgst:0,sgst:0,cess:0}]}],[invoice({})])).toContain('A1: taxable: adjustment amount must be nonnegative');
 });
 it('different invoice rates propose only supported heads, preserve residual advance tax and refuse over-allocation',()=>{
  const a={id:'a',gstin:'G',number:'A1',date:'2026-09-01',party:'A',partyGstin:'',supply:'services' as const,taxable:1000,igst:180,cgst:0,sgst:0,cess:0,adjustments:[]};

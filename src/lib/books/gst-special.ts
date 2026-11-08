@@ -26,8 +26,8 @@ export function specialProblems(i:GstInvoice):string[]{
 export function advanceProblems(a:GstAdvance,invoices:GstInvoice[]):string[]{
  const out:string[]=[];
  for(const k of ['taxable','igst','cgst','sgst','cess'] as const){
-  if(!Number.isFinite(a[k])||a[k]<0)out.push(`${k}: amount must be nonnegative`);
-  if(a.adjustments.some(x=>!Number.isFinite(x[k])||x[k]<0))out.push(`${k}: adjustment amount must be nonnegative`);
+  if(!Number.isFinite(a[k])||a[k]<0){out.push(`${k}: amount must be nonnegative`);continue;}
+  if(a.adjustments.some(x=>!Number.isFinite(x[k])||x[k]<0)){out.push(`${k}: adjustment amount must be nonnegative`);continue;}
   if(sumMoney(a.adjustments.map(x=>x[k]))>addMoney(a[k],0.01))out.push(`${k}: adjustments exceed advance`);
  }
  for(const x of a.adjustments){const inv=invoices.find(i=>i.id===x.invoiceId);
@@ -48,7 +48,7 @@ export function advanceCrossProblems(list:GstAdvance[],invoices:GstInvoice[]):st
  for(const a of list)for(const x of a.adjustments)byInvoice.set(x.invoiceId,[...(byInvoice.get(x.invoiceId)??[]),x]);
  for(const [invoiceId,xs] of byInvoice){const inv=invoices.find(i=>i.id===invoiceId);if(!inv)continue;
   for(const k of ['taxable','igst','cgst','sgst','cess'] as const){
-   if(sumMoney(xs.map(x=>x[k]))>addMoney(inv[k],0.01))out.push(`${inv.number}: advances adjust more ${k} than the invoice carries`);
+   if(xs.every(x=>Number.isFinite(x[k]))&&Number.isFinite(inv[k])&&sumMoney(xs.map(x=>x[k]))>addMoney(inv[k],0.01))out.push(`${inv.number}: advances adjust more ${k} than the invoice carries`);
   }
  }
  return out;
