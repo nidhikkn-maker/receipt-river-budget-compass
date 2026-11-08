@@ -1,5 +1,11 @@
 # Ledgerline continuation checkpoint — 8 Nov 2026 six-requirement acceptance
 
+## Latest prioritised continuation — 04:31 UTC
+- Newly verified V60-0716: one actual existing AI read of synthetic invoice, real review and lost-reply retry, one source-linked asset/document, actual Assets/DocuRepo reload; local persistence/auth adapters, not hosted evidence. V60-0058 retained.
+- 26/26 focused tests pass: disk-backed reconciliation exception/restart/stale recovery plus real frozen PDF/source-owner comparison and interrupted history readback. V60-0016/0026 broad clauses remain PARTIAL.
+- V60-0066 authority/activation approval and V60-0082 isolated hosted session explicitly blocked. No real records/activation/publication. Evidence: docs/evidence/prioritised-acceptance-2026-11-08.md.
+- Workspace measured990.33, conservative cap remaining886.33 including protected300 reserve; later tool/chat charges not included. Next executable work: remaining broad reconciliation/report comparison and full in-sheet claim/source acceptance, not repeated audits or redesign.
+
 ## Latest continuation — 03:38 UTC
 - Fixed pre-version-lookup frozen claim loss and prevented replacing pending PDFs; all report saves now require exact owner/id/path/size persisted readback.
 - 36 focused tests, actual encrypted claim interruption/reload/retry, five PDF builder cases and connected statement-to-report screens pass with synthetic adapters. Live app opens /auth without fresh page errors; latest build OK 03:37:55Z.
