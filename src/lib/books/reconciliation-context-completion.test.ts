@@ -20,7 +20,7 @@ it('old-year comparison retains exact registration, invoice and unique payment; 
 it('between-company evidence excludes every unrelated pair and repeated ledger identity',()=>{
  const p=input();const tx=[entry('AB',20,{txnType:'transfer',toAccountId:'b'}),entry('AC',30,{txnType:'transfer',toAccountId:'c'}),entry('AB',20,{txnType:'transfer',toAccountId:'b'})];
  const f=reconciliationExceptions({...p,entries:tx,books:{...emptyBooks(),entityAccounts:{A:['a'],B:['b'],C:['c']}}}).find(i=>i.key==='recon:inter:A:B');
- expect(f?.comparison?.left.amount).toBe(20);expect(f?.comparison?.left.inputs.map(i=>i.id)).toEqual(['AB','AB']);
+ expect(f?.comparison?.left.amount).toBe(20);expect(f?.comparison?.left.inputs.map(i=>i.id)).toEqual(['AB']);
  expect(f?.evidence).not.toContain('original:AC');
 });
 it('balance and cashflow dependencies reproduce decimal figures and exclude future and receiving-side duplicates',()=>{
