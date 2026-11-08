@@ -21,6 +21,7 @@ import { ClaimExpenseDetails } from './ClaimExpenseDetails';
 import { ClaimSearchSelect } from './ClaimSearchSelect';
 import { useClaimPreparation } from './useClaimPreparation';
 import type { ClaimPreparationData } from '@/lib/claim-preparations';
+import { saveLocalClaimReport, loadLocalClaimReport, clearLocalClaimReport, type ClaimReportJob } from '@/lib/claim-preparations';
 import type { Expense } from '@/lib/expenses';
 import { DEFAULT_DECLARATION, maskedText, organisationStatement, profileClaimant, reimbursementAccountLabel, resolveReimbursementProfile, responsibilityShares } from '@/lib/reimbursement-profiles';
 
@@ -88,6 +89,25 @@ export function ExpenditureReportBuilder({ mode, search, embedded = false }: { e
   const selectedTrip = choice.startsWith('trip:') ? trips.find(t => t.id === choice.slice(5)) : undefined;
   const fallbackOrg = selectedTrip?.organisation ?? '';
   const activity = choice === 'entries' ? `entries:${[...picked].sort().join(',')}` : choice;
+  async function saveReportJob(job:ClaimReportJob) {
+    const blob = new Blob([new Uint8Array(job.bytes)], { type:'application/pdf' });
+    await savePreparedReport({ id:job.id,owner:store.userId,path:job.path,size:blob.size }, {
+      read:async()=>{const {data,error}=await supabase.from('report_history').select('id,owner_id,file_path,file_size').eq('id',job.id).eq('owner_id',store.userId).maybeSingle();return {data,error};},
+      upload:async()=>supabase.storage.from('receipts').upload(job.path,blob,{contentType:'application/pdf',upsert:true}),
+      insert:async()=>supabase.from('report_history').insert(job.row),
+    });
+    await clearLocalClaimReport(store.userId);
+  }
+  useEffect(()=>{
+    if(!claimMode)return;let active=true;
+    void loadLocalClaimReport(store.userId).then(job=>{
+      if(!active||!job||job.activity!==activity)return;
+      const blob=new Blob([new Uint8Array(job.bytes)],{type:'application/pdf'});
+      setResult({blob,url:URL.createObjectURL(blob),name:job.name,missing:job.missing});
+      pendingSave.current=()=>saveReportJob(job);setHistoryState('local');setStage(-1);
+    }).catch(()=>{if(active)toast.error('Saved claim PDF could not be restored. Your preparation is unchanged.');});
+    return()=>{active=false;};
+  },[store.userId,activity,claimMode]);
   const profile = resolveReimbursementProfile(settings, { organisation: org, activity, ...(profileId ? { explicitId: profileId } : {}), ...(selectedTrip?.primaryWorkspace ? { workspace: selectedTrip.primaryWorkspace } : {}) }).profile;
   useEffect(() => {
     if (store.loading || initializedActivity.current === activity || (choice.startsWith('trip:') && !selectedTrip)) return;
@@ -185,6 +205,13 @@ export function ExpenditureReportBuilder({ mode, search, embedded = false }: { e
       if(previous?.error)throw Error('Could not check report versions. Your PDF is ready locally but was not saved.');
       const same = (previous?.data ?? []).filter(h => { const f = h.filters as { activity?: string; organisation?: string }; return f?.activity === activity && f?.organisation === org; });
       const version = 1 + Math.max(0, ...same.map(h => h.version));
+      if(claim){
+        const job:ClaimReportJob={id,path,name,activity,bytes:Array.from(new Uint8Array(await blob.arrayBuffer())),missing,
+          row:{id,owner_id:store.userId,kind:'claim-submission',title:`Expense Claim Submission · ${org} · v${version} — ${subjectName}`,period_from:st.start,period_to:st.end,workspace:'all',filters:{subject,excluded,reference,activity,organisation:org,profileId:profile?.id,format:claimFormat,snapshot:claim} as never,file_path:path,file_size:blob.size,version}};
+        await saveLocalClaimReport(store.userId,job);
+        pendingSave.current=()=>saveReportJob(job);
+        await saveReportJob(job);return;
+      }
       await savePreparedReport({ id, owner: store.userId, path, size: blob.size }, {
         read: async () => { const { data, error } = await supabase.from('report_history').select('id,owner_id,file_path,file_size').eq('id', id).eq('owner_id', store.userId).maybeSingle(); return { data, error }; },
         upload: async () => supabase.storage.from('receipts').upload(path, blob, { contentType: 'application/pdf', upsert: true }),
