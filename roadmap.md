@@ -1,3 +1,8 @@
+## P1 source handoffs and connected exports — 8 Nov 2026
+- [ ] Complete source-preserving asset/claim follow-up from Smart Add without duplicate posting.
+- [ ] Verify invoice/receipt/document links and connected statement, Inbox, reconciliation, DocuRepo and report exports using synthetic records.
+- [ ] Record targeted results and full-criteria requirement decisions; retain P0 and release holds and 300-credit reserve.
+
 ## P1 connected intake continuation — 8 Nov 2026
 - [x] Explicit document intent accepts scanned photos; asset invoice entry point opens Smart Add and preserves the existing asset intake context. Ordinary payment screenshots remain single-entry review. Batch statement shortcut stays in place.
 - [x] Synthetic real-component photo preview matches uploaded bytes; merchant/date correction, hide/reopen, failed save/retry and double-click single source-linked entry verified at 390/834/1280. Statement recovery suite 17 passed; targeted document/asset/claim/report checks 29 passed.
