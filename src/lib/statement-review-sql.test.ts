@@ -93,6 +93,7 @@ it('saved exception survives restart; reviewed source resolves it once, stale re
  expect((await db.query<{n:number}>('SELECT count(*)::int n FROM statement_checkpoints WHERE id=$1',['00000000-0000-0000-0000-000000000103'])).rows[0]?.n).toBe(0);
  await db.close();db=new PGlite(join(storage,'postgres'));await user(uid);
  const final=(await db.query<StatementCheckpoint>('SELECT * FROM statement_checkpoints WHERE id=$1',[resolved.args[0]])).rows[0];expect(final?.result).toEqual(resolved.result);
+ if(!final)throw Error('Persisted resolved checkpoint missing');
  await db.exec('RESET ROLE');
  const revision=(await db.query<{correction_revision:number}>('SELECT correction_revision FROM expenses WHERE id=$1',[entry.id])).rows[0]?.correction_revision;
  expect(revision).toBe(1);
