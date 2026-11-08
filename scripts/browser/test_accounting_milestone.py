@@ -1,13 +1,7 @@
 import asyncio,json
 from pathlib import Path
 from playwright.async_api import async_playwright,expect
-ns={};exec(Path('/dev-server/scripts/browser/test_exception_reports.py').read_text().split('
-STORE=STORE.replace('return {userId:', "const intake=JSON.parse(sessionStorage.getItem('intake')||'null');if(intake)p.books={...p.books,...intake.books,fyRecords:intake.books.fyRecords.filter(r=>r.id!=='fy-real-read')};return {userId:")
-STORE=STORE.replace('documents:[',"documents:[...JSON.parse(sessionStorage.getItem('uploadedDocs')||'[]'),")
-STORE=STORE.replace('fyRecords:[','fyRecords:[')
-STORE=STORE.replace('preferencesRevision:0,',"""preferencesRevision:0,addDocument:async(file,meta)=>{const docs=JSON.parse(sessionStorage.getItem('uploadedDocs')||'[]');if(!docs.some(d=>d.id===meta.id))docs.push({...meta,filePath:'synthetic/'+meta.id+'/'+file.name,fileName:file.name,size:file.size,mimeType:file.type,createdAt:'2026-11-08',fields:meta.fields||[]});sessionStorage.setItem('uploadedDocs',JSON.stringify(docs));return meta.id},updateDocument:async()=>{},commitDocumentRecords:async(id,data)=>{sessionStorage.setItem('intake',JSON.stringify(data));if(!sessionStorage.getItem('intakeLost')){sessionStorage.setItem('intakeLost','yes');throw Error('Interrupted committed intake')}},""")
-
-async def main():')[0],ns)
+ns={};exec(Path('/dev-server/scripts/browser/test_exception_reports.py').read_text().split('async def main():')[0],ns)
 read=json.loads(Path('/tmp/browser/accounting-document/extracted.json').read_text())['result']['audited']
 STORE=ns['STORE'].replace("p.books={", "p.books={").replace("gstInvoices:[", "fyRecords:["+json.dumps({'id':'fy-real-read','entityId':'A','fy':read['fy'],'audited':{r['head']:r['amount'] for r in read['lines']},'docIds':['doc-a'],'schedules':read['schedules'],'details':[{**d,'docId':'doc-a'} for d in read['details']],'qualifications':[],'filedReturns':[],'lossesCarriedForward':[]})+"],gstInvoices:[")
 STORE=STORE.replace("const transactions=[base,", "const transactions=[...JSON.parse(sessionStorage.getItem('journals')||'[]'),{...base,id:'bank-rent',title:'Bank rent payment',entityId:'A',entitySource:'manual',category:'rent',amount:500,originalAmount:500,date:'2026-11-02',txnType:'expense'},base,")
@@ -32,7 +26,7 @@ async def main():
    if q.is_navigation_request():await route.fulfill(body=ns['HTML'].replace('exception-reports.fixture.tsx','accounting-journey.fixture.tsx'),content_type='text/html');return
    stubs={'/src/lib/store.tsx':STORE,'/src/lib/books/runs.ts':"export const documentIdForRun=id=>id;export const startRun=async()=>({data:{}});export const updateRun=async()=>{};export const closeRun=async()=>{};",'/src/lib/document-extract.functions.ts':'export const extractDocument=()=>{};','/src/integrations/supabase/client.ts':ns['CLIENT'],'/src/components/BackgroundReports.tsx':'export const BackgroundReports=()=>null;'}
    if 'tanstack_react-start' in path or 'tanstack/react-start/dist/esm/index.js' in path:
-    await route.fulfill(body='export const useServerFn=()=>async()=>'+json.dumps(json.loads(Path('/tmp/browser/accounting-document/extracted.json').read_text()))+';',content_type='application/javascript');return
+    await route.fulfill(body='export const useServerFn=()=>async()=>('+json.dumps(json.loads(Path('/tmp/browser/accounting-document/extracted.json').read_text()))+');',content_type='application/javascript');return
    if path in stubs:await route.fulfill(body=stubs[path],content_type='application/javascript');return
    if q.method not in ['GET','HEAD']:raise AssertionError('External writes blocked')
    await route.continue_()
