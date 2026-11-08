@@ -5,6 +5,11 @@ import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { beforeAll,afterAll,it,expect } from 'vitest';
+import { accountStatementStatus, type StatementStatusEvidence } from './account-statement-status';
+import { checkpointHash, checkpointSnapshot, type StatementCheckpoint } from './statement-checkpoint';
+import { defaultPreferences } from './preferences';
+import type { Expense } from './expenses';
+import type { Account } from './ledger';
 const storage=mkdtempSync(join(tmpdir(),'ledgerline-reconciliation-'));
 let db=new PGlite(join(storage,'postgres'));
 const uid='00000000-0000-0000-0000-000000000001',other='00000000-0000-0000-0000-000000000002',bank='00000000-0000-0000-0000-000000000010',batch='00000000-0000-0000-0000-000000000020';
@@ -47,3 +52,53 @@ it('reopening isolated reconciliation storage does not invent ledger entries or 
  expect((await db.query('SELECT count(*)::int AS n FROM expenses')).rows).toEqual([{n:0}]);
  expect((await db.query('SELECT id,opening_balance FROM accounts')).rows).toEqual([{id:bank,opening_balance:'1000'}]);
 });
+it('saved exception survives restart; reviewed source resolves it once, stale revisions fail closed and other accounts remain separate',async()=>{
+ await db.exec('RESET ROLE; ALTER TABLE expenses ADD COLUMN data jsonb');
+ const entry:Expense={id:'00000000-0000-0000-0000-000000000030',title:'Synthetic bill',merchant:null,category:'Other',scope:'business',memberId:null,splits:[],receipts:[],amount:200,originalAmount:200,currency:'INR',fxRate:1,paymentMethod:'upi',date:'2026-10-02',description:'Original debit',accountId:bank,correctionRevision:0,reconciledAt:null,statementRef:'original page 1'};
+ const account:Account={id:bank,name:'IDFC Bank',kind:'savings',openingBalance:1000,archived:false};
+ const row={id:'00000000-0000-0000-0000-000000000040',fingerprint:'source-row',line:{date:entry.date,amount:200,description:'Original debit',direction:'debit' as const,ref:'INV-1'},proposal:entry,decision:'approved' as const,duplicate_kind:'exact' as const,duplicate_id:entry.id,review_group:'ready' as const,confidence:'high' as const};
+ await db.query('INSERT INTO expenses(id,employee_id,account_id,correction_revision,data) VALUES($1,$2,$3,0,$4::jsonb)',[entry.id,uid,bank,JSON.stringify(entry)]);
+ await db.query('INSERT INTO import_rows(id,owner_id,batch_id,line,proposal,decision,duplicate_kind,duplicate_id,fingerprint) VALUES($1,$2,$3,$4::jsonb,$5::jsonb,$6,$7,$8,$9)',[row.id,uid,batch,JSON.stringify(row.line),JSON.stringify(entry),row.decision,row.duplicate_kind,row.duplicate_id,row.fingerprint]);
+ // A second entity/account has distinguishable money; it must not enter this comparison.
+ await db.query('INSERT INTO expenses(id,employee_id,account_id,correction_revision,data) VALUES($1,$2,$3,0,$4::jsonb)',['00000000-0000-0000-0000-000000000031',uid,'00000000-0000-0000-0000-000000000011',JSON.stringify({...entry,id:'other-entity',accountId:'other-bank',amount:999})]);
+ async function evidence():Promise<StatementStatusEvidence>{
+  const b=(await db.query<StatementStatusEvidence['batch']>("SELECT *,to_char(period_from,'YYYY-MM-DD') period_from,to_char(period_to,'YYYY-MM-DD') period_to FROM import_batches WHERE id=$1",[batch])).rows[0];
+  if(!b)throw Error('Missing persisted statement');
+  return {batch:b,rows:[row],posted:[]};
+ }
+ async function save(id:string){
+  const e=await evidence();const snapshot=checkpointSnapshot(e,account,[entry]);const hash=await checkpointHash(snapshot);
+  const s=accountStatementStatus(account,[e],[entry],defaultPreferences(),'2026-11-01',true);
+  const result={reconciliation:s.reconciliation,balance:s.balance,difference:s.difference,unresolved:s.unresolved,matched:s.matched};
+  const args=[id,uid,batch,JSON.stringify(snapshot.expected),JSON.stringify(snapshot.ledger),JSON.stringify(snapshot.rows),JSON.stringify(snapshot.posts),hash,JSON.stringify(result)];
+  await db.query('SELECT record_statement_checkpoint($1,$2,$3,$4::jsonb,$5::jsonb,$6::jsonb,$7::jsonb,$8,$9::jsonb)',args);
+  return {args,result,hash};
+ }
+ const unresolved=await save('00000000-0000-0000-0000-000000000101');
+ expect(unresolved.result).toMatchObject({reconciliation:'Requires Review',balance:'Not Verified',matched:1,unresolved:0});
+ await db.close();db=new PGlite(join(storage,'postgres'));
+ await user(uid);
+ const persisted=(await db.query<StatementCheckpoint>('SELECT * FROM statement_checkpoints WHERE id=$1',[unresolved.args[0]])).rows[0];
+ expect(persisted?.result).toEqual(unresolved.result);
+ await user(other);expect((await db.query('SELECT * FROM statement_checkpoints')).rows).toEqual([]);
+ await db.exec('RESET ROLE');
+ await db.query("UPDATE import_batches SET opening_balance=1000,closing_balance=800,balance_verification=$1::jsonb WHERE id=$2",[JSON.stringify({checkedOriginal:true,sourceOpening:1000,sourceClosing:800,sourceReference:'Synthetic original page 1: opening 1000; debit 200; closing 800'}),batch]);
+ const resolved=await save('00000000-0000-0000-0000-000000000102');
+ expect(resolved.result).toEqual({reconciliation:'Reconciled',balance:'Verified',difference:0,unresolved:0,matched:1});
+ // Lost reply followed by replay keeps one immutable logical checkpoint.
+ await db.query('SELECT record_statement_checkpoint($1,$2,$3,$4::jsonb,$5::jsonb,$6::jsonb,$7::jsonb,$8,$9::jsonb)',resolved.args);
+ expect((await db.query<{n:number}>('SELECT count(*)::int n FROM statement_checkpoints WHERE id=$1',[resolved.args[0]])).rows[0]?.n).toBe(1);
+ await db.query('UPDATE expenses SET correction_revision=1 WHERE account_id=$1',[bank]);
+ await expect(db.query('SELECT record_statement_checkpoint($1,$2,$3,$4::jsonb,$5::jsonb,$6::jsonb,$7::jsonb,$8,$9::jsonb)',['00000000-0000-0000-0000-000000000103',...resolved.args.slice(1)])).rejects.toThrow('Ledger changed');
+ expect((await db.query<{n:number}>('SELECT count(*)::int n FROM statement_checkpoints WHERE id=$1',['00000000-0000-0000-0000-000000000103'])).rows[0]?.n).toBe(0);
+ await db.close();db=new PGlite(join(storage,'postgres'));await user(uid);
+ const final=(await db.query<StatementCheckpoint>('SELECT * FROM statement_checkpoints WHERE id=$1',[resolved.args[0]])).rows[0];expect(final?.result).toEqual(resolved.result);
+ if(!final)throw Error('Persisted resolved checkpoint missing');
+ await db.exec('RESET ROLE');
+ const revision=(await db.query<{correction_revision:number}>('SELECT correction_revision FROM expenses WHERE id=$1',[entry.id])).rows[0]?.correction_revision;
+ expect(revision).toBe(1);
+ if(revision===undefined)throw Error('Persisted correction revision missing');
+ const changed={...entry,correctionRevision:revision};
+ const e=await evidence();e.checkpoint=final;e.currentHash=await checkpointHash(checkpointSnapshot(e,account,[changed]));
+ expect(accountStatementStatus(account,[e],[changed],defaultPreferences(),'2026-11-01')).toMatchObject({reconciliation:'Requires Review',balance:'Not Verified'});
+},20000);
