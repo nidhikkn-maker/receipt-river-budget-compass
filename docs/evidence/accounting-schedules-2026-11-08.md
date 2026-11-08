@@ -1,0 +1,29 @@
+# Corporate Accounting Milestone 1 — detailed schedules and recognition
+
+## Completed functionality
+- Detailed opening review maps each printed asset/liability/equity/customer/supplier/lender schedule row to an explicit account, debit/credit side and control head. Head totals must match the printed aggregate, duplicate source rows/codes and missing heads block preparation. No balancing capital is inferred. Journal evidence retains page, quote, printed amount and source identity.
+- Fixed two discovered document connections: reviewed FY documents now retain the confirmed company tag; their detailed schedules retain the actual uploaded original ID. Prior code omitted these connections, preventing source-bound opening confirmation.
+- Recurring noncash accrual/prepayment templates produce ended-month proposals through the existing atomic journal path. Stable source/month IDs prevent repeats; the accrual template month is already recognised. Prepaid recognition is capped at unreleased original cost, retaining residual cents. Optional next-day accrual reversals retain exact legs; template corrections require occurrence reversals first. Posting remains explicit, not automatic.
+- Staged verified accountant identity lookup accepts confirmed email/account ID and owner-company grants; direct client grant writes are revoked. Existing review-only evidence permissions remain unchanged. Notes checkpoint encrypted stable payloads before saving; reload/retry confirms identical readback, not duplicate appends.
+- Per-company journal legs retain explicit Schedule III Division I working heads, basis and confirmation state. Unsupported/role-conflicting/history-conflicting classifications are flagged. Balance-sheet exports label missing classifications for professional review. These are working classifications, not a complete Schedule III filing or certification.
+
+## Tests and actual evidence
+- 52 distinct focused tests passed: workflows6, authority1, settlement4, corporate-statements8, audit-pack2, intake-fixtures24, foundation7. Repeated changed-path runs are not counted twice. Final14/14 pass; build OK08:32:46UTC.
+- Disposable disk SQL: balanced opening160000/160000, rent correction, outstanding income,500 partial bank settlement, preserved profit2000/cash99500/liabilities25500, immutable source/correction ordering, denied unrelated/revoked accountant, period-close same-ID restart, recurring12000 insurance releases1000+1000 with duplicate/forgery denial and disk readback.
+- One fresh existing non-mocked reader invocation on realistic synthetic trial-balance image returned the six exact printed balances. Actual DocumentIntake upload → company confirmation → interrupted committed intake/retry → detailed schedule mapping → opening posting/reload → accrual1200 → bank500 settlement/interruption/encrypted retry →700 outstanding → grants → interrupted accountant note/reload/retry passed in `scripts/browser/test_accounting_milestone.py`. Browser data/auth/posting adapters are isolated, not hosted evidence. Reader output is replayed on identical synthetic content; browser itself does not call the hosted reader. Original image/output and screenshots are under `/tmp/browser/accounting-document` and `/tmp/browser/accounting-milestone`.
+- Initial optional-account typing, reversal-template validation and browser-only adapter/selectors failed and were corrected. No unresolved executed targeted-test failures. Full same-browser upload-to-authoritative-close is still not established; do not represent the combined browser/disk layers as that evidence.
+
+## Status and remaining gaps
+- No newly VERIFIED COMPLETE requirement IDs. V60-0013/0026/0023 remain PARTIAL: full same-browser extraction-to-database-reconciliation-regenerated-report-close acceptance; full statutory layouts/notes/tax classifications and professional review; separate-account private original retrieval and hosted/cross-device acceptance. Multi-invoice/FX/overpayment settlement allocation remains unsupported and refused, not guessed.
+- V60-0066/0082 remain BLOCKED: immutable upload authority/deployment approval and an isolated hosted environment with separate authenticated owners/accountants for access, revocation and signed-link expiry acceptance. Accounting SQL is staged only; compatible deployment and explicit access/protection installation approval are required. No production migration, posting, protection activation, UIX redesign or publication occurred.
+- V60-0058/0716 remain verified and were not reopened.
+- Next milestone is source-linked financed assets/loans, not another accounting audit; Milestone1 remaining buildable acceptance must not be silently declared complete.
+
+## GitHub / deployment identity
+- User confirms f59fbde exists in GitHub history and main is four commits ahead; this is user-supplied GitHub evidence, not a new independent provider read.
+- Tested checkout branch `edit/edt-2c879196-1401-44ec-a50d-c43b0e6afc9c`; source revision at browser acceptance `44b0c15c83dd7b1d4144250c7476c49c6b892003`. Later documentation revisions do not redefine the tested implementation.
+- Hosted parity remains UNVERIFIED until a deployment identity is supplied/confirmed; GitHub commit presence does not establish the version served at ledgerline.biz.
+- SHA256 recurring engine `9c6b141972952580a17b4a4cda553144031e1f1962260ff130a519991a9ba8b3`; opening schedules `ee778597cd23461c0421ce58840df0f57e6e86efb96d270178295948ee2b5299`; staged authority `14351816f2fc442b2b0b70251f421117c0a1ef973da2d67107d5cf41b535dc30`.
+
+## Credits
+Measured workspace880.79→868.46; decline12.33. Recorded usage2893.187722354→2905.518610321, growth12.330887967. Workspace-wide measurement, not exclusive task attribution; later charges excluded. No purchases.

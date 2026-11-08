@@ -1,3 +1,6 @@
+# 8 Nov 2026 08:33 — accounting schedules
+52 distinct changed-path/dependency tests passed; fresh real reader synthetic trial-balance result and actual uploaded-source/retry/detailed-opening/settlement/encrypted-note browser acceptance passed. Final14/14; build OK. Initial test/harness failures corrected; full same-browser authoritative close remains unverified, not an executed pass. See docs/evidence/accounting-schedules-2026-11-08.md.
+
 # Verification results (executed evidence only)
 
 ## Connected accountant workflow — 8 Nov 2026 08:01 UTC
