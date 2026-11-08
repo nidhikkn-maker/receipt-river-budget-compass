@@ -57,3 +57,8 @@ it('same report identity cannot certify evidence prepared with different workspa
  await expect(completeReportJob(h.db,{...job,filters:{...job.filters,workspaces:['business']}})).rejects.toThrow(/identity differs/);
  expect(h.writes).toHaveLength(before);expect(await h.files.get('owner/reports/job.pdf')?.text()).toBe('%PDF-original');
 });
+it('background completion preserves the queued frozen source snapshot rather than rebuilding changed records',async()=>{
+ const h=adapter();const snapshot={type:'monthly',title:'Frozen source',period:'2026-11',filterLines:[],summary:[['Total','250.25']],sections:[],notes:[],landscape:false,rowCount:0,sourceEntryIds:['source-a']};
+ const frozenJob={...job,filters:{...job.filters,snapshot}};await completeReportJob(h.db,frozenJob);expect(h.getHistory()?.['filters']).toMatchObject({snapshot});
+ await completeReportJob(h.db,frozenJob);expect(h.files.size).toBe(1);expect(h.writes.filter(x=>(x as {id?:string}).id==='job')).toHaveLength(1);
+});

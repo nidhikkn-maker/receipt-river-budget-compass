@@ -93,8 +93,9 @@ export async function completeReportJob(db: SupabaseClient<any>, job: { id: stri
     if (orphan.data) { blob = orphan.data; await validatePdf(blob); }
     else {
       const today = new Date().toISOString().slice(0, 10);
-      const data = await loadOwnerReportData(db, job.owner_id, today);
-      const doc = buildReportDoc(job.kind as ReportType, filters, data as any);
+      const snapshot = job.filters?.snapshot;
+      const data = snapshot ? null : await loadOwnerReportData(db, job.owner_id, today);
+      const doc = snapshot ?? buildReportDoc(job.kind as ReportType, filters, data as any);
       const { renderReportPdf } = await import("./report-pdf");
       blob = await renderReportPdf(doc, job.style as any, new Date());
       await validatePdf(blob);
