@@ -1,5 +1,8 @@
 # Ledgerline continuation checkpoint — 8 Nov 2026 six-requirement acceptance
 
+## Corporate foundation — 8 Nov 2026 07:45 UTC
+Balanced opening/accrual/invoice/depreciation proposals, staged atomic canonical posting/reversal/evidence protections, encrypted locked retry drafts, company statement integration and existing Audit exceptions implemented.22/22 focused tests and isolated real-route journal→interruption→reload→report evidence pass; no new verified IDs. Production installation and hosted0066/0082 remain blocked; automatic opening mapping, accrual settlement, accountant app review and full upload-to-close remain unfinished. Local tested HEADbc9d45ee56c376ed6634cbe1a7a7d4ff0ea7d082, branch edit/edt-be946b8b-ee13-43be-a70c-cd6ac11826d5; GitHub parity unverified because only internal remotes/status unavailable. Measured908.55→896.55 (12.00 decline). See docs/evidence/accounting-foundation-2026-11-08.md; remain in Milestone1, no release changes.
+
 ## Corporate-accounting milestone — 8 Nov 2026 07:22 UTC
 - Completed five company working statements with canonical double-entry projection, explicit unknown counterparts, boundary dues, principal/interest and posted depreciation; existing frozen-report recovery now retains full accounting sources. Added saved CSV/Excel and private-original audit ZIP.
 - Fixed company-specific financial-year coverage. 17 distinct targeted checks and actual Reports Centre encrypted interruption/reload/frozen CSV/XLSX/PDF/ZIP flow pass; local adapters/disposable disk owner-RLS, not hosted or complete extraction-to-close acceptance.
