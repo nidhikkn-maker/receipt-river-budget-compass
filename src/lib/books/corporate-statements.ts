@@ -93,7 +93,7 @@ export function corporateStatements(p: { entityId: string; entities: EntityProfi
     }
     members.forEach(e=>journalEntries.add(e.id));
     for(const l of j.legs){if(l.statutory)statutoryErrors(l).forEach(message=>issue(id,message));}
-    const docs=p.documents.filter(d=>j.documentIds.includes(d.id));
+    const docs=p.documents.filter(d=>j.documentIds.includes(d.id)||members.some(e=>e.statementRef?.startsWith(d.id+':')));
     for(const l of j.legs){emit(`journal:${id}`,j.kind==='opening'?j.date.slice(0,4)+'-03-31':j.date,l.code,l.label,l.role,subtractMoney(l.debit,l.credit),primary[0]??null,docs.map(d=>d.id),docs.map(d=>d.filePath),`${j.kind}: ${j.description}${j.reversesId?`; exact reversal of ${j.reversesId}`:''}${j.settlement?`; bank source ${j.settlement.entryId}; accrued source ${j.settlement.journalId}`:''}${j.recurringSource?`; recognition template ${j.recurringSource.templateId}`:''}`);const line=lines.at(-1);if(line?.groupId===`journal:${id}`){if(l.source)line.source=l.source;if(l.statutory)line.statutory=l.statutory;}}
   }
   for (const e of entries.values()) {
@@ -176,6 +176,9 @@ export function corporateStatements(p: { entityId: string; entities: EntityProfi
     if(group.startsWith('journal:')){
       const source=[...entries.values()].find(e=>journalFromEntry(e)?.journal.id===group.slice(8));const j=source?journalFromEntry(source)?.journal:undefined;
       const bucket=j?.legs.find(l=>l.accountId&&cashIds.has(l.code))?.cashFlow;
+      const principal=sumMoney(j?.legs.filter(l=>l.accountId&&p.accounts.some(a=>a.id===l.accountId&&a.kind==='loan')).map(l=>subtractMoney(l.debit,l.credit))??[]);
+      const interest=sumMoney(j?.legs.filter(l=>l.code==='expense:interest'&&l.role==='expense').map(l=>subtractMoney(l.debit,l.credit))??[]);
+      if(bucket==='financing'&&delta<0&&principal>0&&interest>0&&addMoney(principal,interest)===-delta){cash.operating=addMoney(cash.operating,-interest);cash.financing=addMoney(cash.financing,-principal);continue;}
       cash[bucket??'unclassified']=addMoney(cash[bucket??'unclassified'],delta);
       if(!bucket)issue(group,'Cash journal has no confirmed cash-flow classification.');
       continue;
