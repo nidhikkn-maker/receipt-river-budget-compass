@@ -1,5 +1,8 @@
 # Verification results (executed evidence only)
 
+## Corporate-accounting milestone — 8 Nov 2026
+17 distinct focused tests passed; disposable disk owner-RLS persistence, five frozen real-PDF families and same-ID lost-reply recovery; real Reports Centre company/PDF/encrypted reload/retry/frozen CSV/XLSX/PDF/private-original audit ZIP passed with zero runtime errors. Final build OK. Initial test/harness failures corrected; no unresolved executed failures. No new verified IDs; full document-to-close/hosted acceptance unverified. Evidence docs/evidence/corporate-accounting-2026-11-08.md.
+
 ## Consolidated completion mandate — 8 Nov 2026 07:06 UTC
 - Full899-clause register and historical scope consolidated in docs/COMPLETION_PLAN.md with verified-only percentages, complete unfinished-ID inventory, dependency milestones and provisional15–26-batch effort range; remote GitHub parity unverified.
 - Implemented exact prior-FY supplier/customer, lender/account, holding/trade/action and intercompany comparison inputs → Inbox/Audit → retained private-original handler / existing entry review / CSV/Excel/PDF/full JSON evidence. Material comparison tiles no longer say Clear based only on missing-invoice counts.
