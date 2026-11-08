@@ -163,6 +163,9 @@ BEGIN
   IF NEW.receipt_details->'accounting' IS NOT NULL AND coalesce(current_setting('ledgerline.accounting_request',true),'') IS DISTINCT FROM NEW.receipt_details->'accounting'->>'requestId' THEN RAISE EXCEPTION 'Accounting evidence requires atomic journal posting'; END IF;
   RETURN NEW;
  END IF;
+ -- Statement reconciliation metadata may change, but never canonical amounts, ownership or journal evidence.
+ IF TG_OP='UPDATE' AND OLD.receipt_details->'accounting' IS NOT NULL
+ AND (to_jsonb(NEW)-'reconciled_at'-'statement_ref')=(to_jsonb(OLD)-'reconciled_at'-'statement_ref') THEN RETURN NEW; END IF;
  IF OLD.receipt_details->'accounting' IS NOT NULL OR NEW.receipt_details->'accounting' IS NOT NULL THEN RAISE EXCEPTION 'Posted accounting evidence is immutable; use an exact reversal and replacement'; END IF;
  IF EXISTS(SELECT 1 FROM public.accounting_journal_evidence WHERE owner_id=OLD.employee_id AND journal->'settlement'->>'entryId'=OLD.id::text) THEN RAISE EXCEPTION 'Settlement source is retained; reverse and replace without editing the original'; END IF;
  RETURN coalesce(NEW,OLD);
