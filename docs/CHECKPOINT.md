@@ -1,5 +1,12 @@
 # Ledgerline continuation checkpoint — 8 Nov 2026 six-requirement acceptance
 
+## Latest continuation — 03:38 UTC
+- Fixed pre-version-lookup frozen claim loss and prevented replacing pending PDFs; all report saves now require exact owner/id/path/size persisted readback.
+- 36 focused tests, actual encrypted claim interruption/reload/retry, five PDF builder cases and connected statement-to-report screens pass with synthetic adapters. Live app opens /auth without fresh page errors; latest build OK 03:37:55Z.
+- No newly completed IDs: V60-0058 remains verified; five targets remain partial. Exact P0/P1 gaps and blockers: docs/evidence/six-target-continuation-2026-11-08.md.
+- Actual workspace 1002.46; conservative cap remaining 898.45 including protected300; planning598.45. No live records/activation/publication.
+- Next executable work remains non-mocked invoice extraction with real asset/vault readback and full in-sheet claim/source integration. Six-target batch is not closed; do not imply next essential workflow has begun.
+
 ## Latest six-requirement batch
 - Real connected Statement Desk → Inbox → Account Reconciliation → DocuRepo reload/original-byte retrieval → Reports passed with one synthetic dataset, external writes blocked. Not hosted certification.
 - Claim wrong-entry recovery/overwrite fixed, advance retained, frozen PDF encrypted checkpoint/reload/retry uses identical bytes/one report. 29 focused tests pass; connected, claim recovery and invoice proposal browser cases pass. Latest preview build OK 03:23:35 UTC. No manual build/typecheck/full-suite repetition.
