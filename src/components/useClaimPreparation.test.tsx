@@ -17,6 +17,7 @@ describe('Claim preparation save recovery',()=>{
   const {result}=renderHook(()=>useClaimPreparation('owner',true,{...data,choice:'entries',picked:['new-payment']},restore,true));
   await waitFor(()=>expect(result.current.ready).toBe(true));
   expect(restore).not.toHaveBeenCalled();expect(result.current.recover?.data.picked).toEqual(['older-payment']);
+  await act(async()=>{await result.current.saveNow();});expect(api.saveLocalPreparation).not.toHaveBeenCalled();
  });
  it('preserves a newer edit while an earlier account save finishes',async()=>{
   let complete:(p:ClaimPreparation)=>void=()=>{};
