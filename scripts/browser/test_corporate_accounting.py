@@ -38,7 +38,7 @@ async def main():
   dl=await event.value;await dl.save_as(OUT/'audit.zip')
   import zipfile
   with zipfile.ZipFile(OUT/'audit.zip') as z:
-   assert len(z.namelist())==18;assert '799.75' in z.read('company-trial-balance.csv').decode();assert z.read('originals/0001-original.pdf')==b'%PDF- synthetic original bytes'
+   assert len(z.namelist())==20;assert 'statutory-roll-forwards.csv' in z.namelist();assert '799.75' in z.read('company-trial-balance.csv').decode();assert z.read('originals/0001-original.pdf')==b'%PDF- synthetic original bytes'
   assert await page.evaluate("sessionStorage.getItem('uploads')==='1' && sessionStorage.getItem('inserts')==='1'")
   await page.screenshot(path=str(OUT/'corporate.png'));assert not errors,errors
   print('PASS actual company report → PDF → interrupted history → encrypted reload → retry → frozen original/CSV/XLSX/PDF after source changes; one upload/history; zero page errors; isolated adapters NOT hosted')
