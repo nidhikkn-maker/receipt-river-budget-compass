@@ -8,6 +8,7 @@ import { supplierRecon, customerRecon, loanRecon, investmentRecon, intercompanyR
 import type { BooksData } from './types';
 import type { StoredHolding } from '../investments/demat';
 import type { AuditItem } from './audit';
+import { advanceCrossProblems } from './gst-special';
 export function reconciliationExceptions(p: { today: string; entities: EntityProfile[]; entries: Expense[]; accounts: Account[]; docs: VaultDoc[]; books: BooksData; loans: { id: string; name: string; accountId: string | null }[]; holdings: StoredHolding[] }): AuditItem[] {
  const out: AuditItem[] = [];
  const add = (key:string,text:string,to:string,evidence:string,extra:Partial<AuditItem>={}) => out.push({key:`recon:${key}`,type:'Reconciliation',entity:'',account:null,fy:null,risk:'high',text,to,evidence,...extra});
@@ -29,5 +30,6 @@ export function reconciliationExceptions(p: { today: string; entities: EntityPro
  for(const r of loanRecon(loans,p.docs.filter(d=>d.docType==='loan_statement').map(d=>({loanId:d.loanId??null,date:d.docDate,outstanding:d.amount})),(id,date)=>{const a=p.accounts.find(a=>a.id===id);return a?accountBalance(a,p.entries.filter(e=>e.date<=date)):0;})) if(Math.abs(r.difference)>1) add(`loan:${r.loanId}:${r.statementDate}`,`${r.name}: lender and ledger differ by INR ${r.difference.toFixed(2)}`,'/audit',p.docs.filter(d=>d.loanId===r.loanId&&d.docDate===r.statementDate).map(d=>d.id).join(', '),{fy:fyOf(r.statementDate)});
  for(const r of investmentRecon(p.holdings)) add(`investment:${r.isin}`,`${r.name}: holding difference ${r.difference}${r.unresolved.length?`; ${r.unresolved.length} action quantities need checking`:''}`,'/wealth',p.holdings.filter(h=>h.isin===r.isin).flatMap(h=>h.sources).join(', '));
  for(const r of intercompanyRecon(p.entries,p.books.entityAccounts??{})) if(r.unconfirmed) add(`inter:${r.a}:${r.b}`,`${r.a} / ${r.b}: ${r.unconfirmed} between-company transfers not confirmed`,'/transfers',p.entries.filter(e=>e.txnType==='transfer'&&!e.reconciledAt).map(e=>e.statementRef||e.id).join(', '),{entity:`${r.a} / ${r.b}`});
+ for(const problem of advanceCrossProblems(p.books.gstAdvances??[],p.books.gstInvoices)) add(`gst:${problem}`,`GST invoice allocation: ${problem}`,'/tax','Saved GST advance / invoice register',{type:'GST'});
  return out;
 }
