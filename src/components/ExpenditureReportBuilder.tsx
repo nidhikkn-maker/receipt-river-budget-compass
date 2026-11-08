@@ -74,7 +74,7 @@ export function ExpenditureReportBuilder({ mode, search, embedded = false }: { e
   const generating = useRef(false);
   const [documentChecks, setDocumentChecks] = useState<ReportDocumentCheck[] | null>(null);
   const documentDecision = useRef<((proceed: boolean) => void) | null>(null);
-  useEffect(() => () => { documentDecision.current?.(false); }, []);
+  useEffect(() => () => { cancelled.current = true; documentDecision.current?.(false); }, []);
   const initializedActivity = useRef('');
   const restoredProfile = useRef(false);
   const [rejected,setRejected]=useState<string[]>([]),[detail,setDetail]=useState<Expense|null>(null),[reviewSearch,setReviewSearch]=useState(''),[reviewSort,setReviewSort]=useState('date'),[priorClaimIds,setPriorClaimIds]=useState<string[]>([]),[allowRepeat,setAllowRepeat]=useState(false),[historyCheck,setHistoryCheck]=useState<'loading'|'ready'|'error'>('loading'),[advanceInput,setAdvanceInput]=useState(''),[priorAdvance,setPriorAdvance]=useState<Record<string,number>>({});
