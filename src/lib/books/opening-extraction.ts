@@ -13,7 +13,7 @@ export function extractedOpening(rec:FyRecord,accounts:Account[],linked:string[]
   if(!rule){if(amount!==0)gaps.push(`${head}: confirm asset/liability direction and detailed account mapping`);continue;}
   if(amount===0)continue;
   const fit=accounts.filter(a=>!a.archived&&linked.includes(a.id)&&rule.kinds?.includes(a.kind));
-  if(rule.kinds&&fit.length!==1){gaps.push(`${head}: choose the exact company money account`);continue;}
+  if(rule.kinds&&fit.length!==1&&!(head==='loans'&&fit.length===0)){gaps.push(`${head}: choose the exact company money account`);continue;}
   const account=fit[0];
   targets.push({code:account?`account:${account.id}`:`opening:${head}`,label:account?.name??head,role:rule.role,...(account?{accountId:account.id}:{}),signedTarget:(rule.credit?-1:1)*amount});
  }
