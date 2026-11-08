@@ -61,7 +61,7 @@ BEGIN
   IF l->>'accountId' IS NOT NULL THEN
    SELECT * INTO a FROM public.accounts WHERE id=(l->>'accountId')::uuid AND owner_id=uid AND NOT archived;
    IF NOT FOUND OR NOT coalesce(prefs->'books'->'entityAccounts'->ent,'[]') ? (l->>'accountId') OR l->>'code'<>'account:'||(l->>'accountId') THEN RAISE EXCEPTION 'Linked company account unavailable'; END IF;
-   IF l->>'role'<>CASE WHEN a.kind IN ('loan','other_liability','credit_card') THEN 'liability' ELSE 'asset' END THEN RAISE EXCEPTION 'Account role differs'; END IF;
+   IF l->>'role'<>(CASE WHEN a.kind IN ('loan','other_liability','credit_card') THEN 'liability' ELSE 'asset' END) THEN RAISE EXCEPTION 'Account role differs'; END IF;
   ELSIF l->>'code' LIKE 'account:%' THEN RAISE EXCEPTION 'Account code requires a link'; END IF;
   IF EXISTS(SELECT 1 FROM public.accounting_journal_evidence e, jsonb_array_elements(e.journal->'legs') old WHERE e.owner_id=uid AND e.entity_id=ent AND old->>'code'=l->>'code' AND old->>'role'<>l->>'role') THEN RAISE EXCEPTION 'Account role changed; use a distinct account code'; END IF;
   deb:=deb+(l->>'debit')::numeric;cred:=cred+(l->>'credit')::numeric;
