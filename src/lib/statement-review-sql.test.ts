@@ -88,11 +88,14 @@ it('saved exception survives restart; reviewed source resolves it once, stale re
  // Lost reply followed by replay keeps one immutable logical checkpoint.
  await db.query('SELECT record_statement_checkpoint($1,$2,$3,$4::jsonb,$5::jsonb,$6::jsonb,$7::jsonb,$8,$9::jsonb)',resolved.args);
  expect((await db.query<{n:number}>('SELECT count(*)::int n FROM statement_checkpoints WHERE id=$1',[resolved.args[0]])).rows[0]?.n).toBe(1);
- await db.exec('UPDATE expenses SET correction_revision=1 WHERE account_id=\''+bank+'\'');
- await expect(db.query('SELECT record_statement_checkpoint($1,$2,$3,$4::jsonb,$5::jsonb,$6::jsonb,$7::jsonb,$8,$9::jsonb)',[...resolved.args.slice(0,0),'00000000-0000-0000-0000-000000000103',...resolved.args.slice(1)])).rejects.toThrow('Ledger changed');
+ await db.query('UPDATE expenses SET correction_revision=1 WHERE account_id=$1',[bank]);
+ await expect(db.query('SELECT record_statement_checkpoint($1,$2,$3,$4::jsonb,$5::jsonb,$6::jsonb,$7::jsonb,$8,$9::jsonb)',['00000000-0000-0000-0000-000000000103',...resolved.args.slice(1)])).rejects.toThrow('Ledger changed');
  expect((await db.query<{n:number}>('SELECT count(*)::int n FROM statement_checkpoints WHERE id=$1',['00000000-0000-0000-0000-000000000103'])).rows[0]?.n).toBe(0);
  await db.close();db=new PGlite(join(storage,'postgres'));await user(uid);
  const final=(await db.query<StatementCheckpoint>('SELECT * FROM statement_checkpoints WHERE id=$1',[resolved.args[0]])).rows[0];expect(final?.result).toEqual(resolved.result);
- const e=await evidence();e.checkpoint=final;e.currentHash=resolved.hash;
- expect(accountStatementStatus(account,[e],[entry],defaultPreferences(),'2026-11-01')).toMatchObject({reconciliation:'Requires Review',balance:'Not Verified'}); // changed DB revision must be reflected before certification
+ const revision=(await db.query<{correction_revision:number}>('SELECT correction_revision FROM expenses WHERE id=$1',[entry.id])).rows[0]?.correction_revision;
+ expect(revision).toBe(1);
+ const changed={...entry,correctionRevision:revision};
+ const e=await evidence();e.checkpoint=final;e.currentHash=await checkpointHash(checkpointSnapshot(e,account,[changed]));
+ expect(accountStatementStatus(account,[e],[changed],defaultPreferences(),'2026-11-01')).toMatchObject({reconciliation:'Requires Review',balance:'Not Verified'});
 },20000);
