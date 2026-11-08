@@ -1,5 +1,8 @@
 # Implementation progress — top 15 gaps (baseline: Ledgerline_v6_Requirements_Checklist.md)
 
+## Corporate-accounting milestone — 8 Nov 2026
+Five company working statements, canonical debit/credit/source projection, frozen report CSV/Excel/PDF/full JSON and checksum-bound private-original audit ZIP implemented; company year coverage isolated.17 distinct targeted checks and actual report interruption/reload/export/ZIP flow pass. No broad ID promotion; opening/accrual/statutory/full intake-to-close/hosted criteria remain. See docs/evidence/corporate-accounting-2026-11-08.md. Measured credits910.55; production/UIX/release unchanged.
+
 ## Consolidated completion mandate — 8 Nov 2026 07:06 UTC
 - Full899-clause register and historical scope consolidated in docs/COMPLETION_PLAN.md with verified-only percentages, complete unfinished-ID inventory, dependency milestones and provisional15–26-batch effort range; remote GitHub parity unverified.
 - Implemented exact prior-FY supplier/customer, lender/account, holding/trade/action and intercompany comparison inputs → Inbox/Audit → retained private-original handler / existing entry review / CSV/Excel/PDF/full JSON evidence. Material comparison tiles no longer say Clear based only on missing-invoice counts.
