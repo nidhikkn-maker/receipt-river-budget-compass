@@ -25,6 +25,8 @@ import { useAuditAll } from "@/components/books/useAudit";
 import { useBooks } from "@/components/books/useBooks";
 import { fyRange, fyOf } from "@/lib/entities";
 import { effectiveEntity } from '@/lib/books/entity-accounts';
+import { ReconciliationDetails } from '@/components/books/ReconciliationDetails';
+import { reconciliationAnchor } from '@/lib/books/reconciliation-context';
 const inr = (n: number) => `₹${Math.round(n).toLocaleString("en-IN")}`;
 
 export const Route = createFileRoute("/_authenticated/audit")({
@@ -42,7 +44,7 @@ const LEVEL = { automatic: "Done automatically", confirm: "Needs your confirmati
 type By = "risk" | "type" | "entity" | "fy" | "account" | "evidence";
 
 function Audit() {
-  const { transactions, documents, accounts, preferences, loans, refresh } = useStore();
+  const { transactions, documents, accounts, preferences, loans, refresh, downloadFile } = useStore();
   const demat = useDemat();
   const { books, save } = useBooks();
   const { open: items, reviewed } = useAuditAll();
@@ -135,10 +137,11 @@ function Audit() {
       <div className="flex flex-wrap gap-1 text-xs">{(["risk", "type", "entity", "fy", "account", "evidence"] as By[]).map((b) => <button key={b} type="button" onClick={() => setBy(b)} className={`rounded-full border px-3 py-1 ${by === b ? "bg-primary text-primary-foreground" : "bg-card"}`}>By {b === "fy" ? "year" : b}</button>)}</div>
       {groups.map((g) => <section key={g.name} className="space-y-1"><h2 className="text-xs font-semibold uppercase text-muted-foreground">{g.name} · {g.items.length}</h2>
         {g.items.map((f) => <div key={f.key} className="rounded-2xl border bg-card px-4 py-3 text-sm">
-          <Link to={f.to} className="flex items-start justify-between gap-2">
+          <Link to={f.to} hash={f.comparison?reconciliationAnchor(f.key):undefined} className="flex items-start justify-between gap-2">
             <span className="min-w-0 break-words"><span className="mr-2 text-xs text-muted-foreground">{f.type}</span>{f.text}<span className="block text-[11px] text-muted-foreground">Evidence: {f.evidence}{f.fy ? ` · FY ${f.fy}` : ""}</span></span>
             <span className={`shrink-0 rounded-full px-2 py-0.5 text-xs ${f.risk === "high" ? "bg-destructive/10 text-destructive" : "bg-secondary text-muted-foreground"}`}>{f.risk === "high" ? "Important" : f.risk === "medium" ? "Check" : "Low"}</span>
           </Link>
+          <ReconciliationDetails key={JSON.stringify(f.comparison)} item={f} entries={transactions} docs={documents} download={downloadFile}/>
           <div className="mt-1 flex gap-1"><Button size="sm" variant="ghost" className="h-7 px-2 text-xs" onClick={() => decide(f.key, "resolved")}>Mark fixed</Button><Button size="sm" variant="ghost" className="h-7 px-2 text-xs" onClick={() => decide(f.key, "accepted")}>Accept with note</Button></div>
         </div>)}</section>)}
 
@@ -201,6 +204,7 @@ function FigureSources({ assets, books, docs, titleOf }: { assets: import("@/lib
         {rows.length > 0 && <div className="max-h-80 divide-y overflow-y-auto rounded-lg border">{rows.map((r, i) => <div key={`${r.recordId}:${i}`} className="flex flex-wrap justify-between gap-2 px-2 py-1"><span className="min-w-0">{r.register} · {r.label}<span className="block text-muted-foreground">{r.source ? `${r.source.kind === "document" ? "Document" : "Entry"}: ${r.source.title}` : "No source — attach the document"}</span></span><span className="font-mono">{inr(r.amount)}</span></div>)}</div>}
         {rows.length > 0 && <Button size="sm" variant="outline" onClick={() => downloadBlob(new Blob([evidenceCsv(rows)], { type: "text/csv" }), "figure-sources.csv")}>Download CSV</Button>}
         {derived.length > 0 && <details><summary className="cursor-pointer text-muted-foreground">Calculated figures · {derived.length} — what each one is made of</summary>
+          <Button size="sm" variant="outline" onClick={()=>downloadBlob(new Blob([JSON.stringify(derived.map(d=>({...d,inputs:d.allInputs??d.inputs})),null,2)],{type:'application/json'}),'calculated-figure-dependencies.json')}>Download full inputs</Button>
           <div className="mt-1 max-h-80 space-y-1 overflow-y-auto">{derived.map((d) => <details key={d.id} className="rounded-lg border px-2 py-1">
             <summary className="flex cursor-pointer flex-wrap justify-between gap-2"><span className="min-w-0">{d.label}{d.unsourced > 0 && <span className="text-destructive"> · {d.unsourced} input{d.unsourced === 1 ? "" : "s"} without a source</span>}</span><span className="font-mono">{inr(d.amount)}</span></summary>
             <div className="mt-1 divide-y border-t">{d.inputs.map((i, n) => <div key={n} className="flex flex-wrap justify-between gap-2 py-1"><span className="min-w-0 text-muted-foreground">{i.label}<span className="block">{i.source ? `${i.source.kind === "document" ? "Document" : "Entry"}: ${i.source.title}` : "No source — attach the document"}</span></span><span className="font-mono">{inr(i.amount)}</span></div>)}</div>
