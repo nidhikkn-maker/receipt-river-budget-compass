@@ -25,6 +25,8 @@ import { useAuditAll } from "@/components/books/useAudit";
 import { useBooks } from "@/components/books/useBooks";
 import { fyRange, fyOf } from "@/lib/entities";
 import { effectiveEntity } from '@/lib/books/entity-accounts';
+import { ReconciliationDetails } from '@/components/books/ReconciliationDetails';
+import { reconciliationAnchor } from '@/lib/books/reconciliation-context';
 const inr = (n: number) => `₹${Math.round(n).toLocaleString("en-IN")}`;
 
 export const Route = createFileRoute("/_authenticated/audit")({
@@ -42,7 +44,7 @@ const LEVEL = { automatic: "Done automatically", confirm: "Needs your confirmati
 type By = "risk" | "type" | "entity" | "fy" | "account" | "evidence";
 
 function Audit() {
-  const { transactions, documents, accounts, preferences, loans, refresh } = useStore();
+  const { transactions, documents, accounts, preferences, loans, refresh, downloadFile } = useStore();
   const demat = useDemat();
   const { books, save } = useBooks();
   const { open: items, reviewed } = useAuditAll();
@@ -87,6 +89,7 @@ function Audit() {
   }), [items, transactions, accounts, documents, preferences.receivables, today]);
   // Figure-level reconciliations [§24]; differences are for review only.
   const fyNow = fyOf(today);
+  const [reconFy,setReconFy]=useState(fyNow);
   const recon = useMemo(() => {
     const ledgerAt = (id: string, date: string) => { const a = accounts.find((x) => x.id === id); return a ? accountBalance(a, transactions.filter((t) => t.date <= date)) : 0; };
     const partyRows = (kind:'purchase'|'sales') => [...new Set(books.gstInvoices.map(i=>i.gstin))].flatMap<ReturnType<typeof supplierRecon>[number] | ReturnType<typeof customerRecon>[number]>(registration=>{
@@ -94,7 +97,7 @@ function Audit() {
       const entries=matches.length>1?[]:transactions.filter(t=>entity?effectiveEntity(t,books.entityAccounts??{})===entity:!effectiveEntity(t,books.entityAccounts??{}));
       const payments=entries.filter(t=>(t.txnType??'expense')===(kind==='purchase'?'expense':'income')).map(t=>({id:t.id,amount:t.amount,date:t.date,text:`${t.title} ${t.merchant??''} ${t.description}`}));
       const invoices=books.gstInvoices.filter(i=>i.gstin===registration);
-      return kind==='purchase'?supplierRecon(invoices,payments,fyRange(fyNow).start,fyRange(fyNow).end,books.allocationOrder):customerRecon(invoices,payments,fyRange(fyNow).start,fyRange(fyNow).end,books.allocationOrder);
+      return kind==='purchase'?supplierRecon(invoices,payments,fyRange(reconFy).start,fyRange(reconFy).end,books.allocationOrder):customerRecon(invoices,payments,fyRange(reconFy).start,fyRange(reconFy).end,books.allocationOrder);
     });
     return {
       loan: loanRecon(loans, documents.filter((d) => d.docType === "loan_statement").map((d) => ({ loanId: d.loanId ?? null, date: d.docDate, outstanding: d.amount })), ledgerAt).filter((r) => Math.abs(r.difference) > 1),
@@ -103,7 +106,7 @@ function Audit() {
       investment: investmentRecon((demat ?? []).flatMap((d) => d.holdings)),
       inter: intercompanyRecon(transactions, books.entityAccounts ?? {}),
     };
-  }, [loans, documents, accounts, transactions, books, demat, fyNow, entities]);
+  }, [loans, documents, accounts, transactions, books, demat, reconFy, entities]);
   const entName = (id: string) => entities.find((e) => e.id === id)?.name ?? id;
   const groups = groupBy(items, by);
   const pending = books.proposedFields.filter((f) => f.status === "proposed");
@@ -118,6 +121,7 @@ function Audit() {
       <Fold title="Balance checks" hint="Bank, card, loan, supplier, customer, investment, between-company and GST (reconciliations)" defaultOpen>
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">{hub.map((h) => <Link key={h.kind} to={h.to} className="rounded-xl border px-3 py-2 text-sm"><span className="block text-xs text-muted-foreground">{h.kind}</span><b className={h.open ? "text-destructive" : "text-primary"}>{h.open ? `${h.open} open` : "Clear"}</b></Link>)}</div>
         <div className="mt-3 space-y-2 text-xs">
+          <label className="flex items-center gap-2">Comparison financial year<select aria-label="Comparison financial year" className="rounded-md border bg-background px-2 py-1" value={reconFy} onChange={e=>setReconFy(e.target.value)}>{[...new Set([fyNow,...books.gstInvoices.map(i=>fyOf(i.date))])].sort().reverse().map(y=><option key={y} value={y}>{y}</option>)}</select></label>
           <label className="flex flex-wrap items-center gap-2">Payments settle unnamed invoices
             <select className="rounded-md border bg-background px-2 py-1" value={books.allocationOrder ?? "oldest"} onChange={async (e) => { try { await save({ allocationOrder: e.target.value as "oldest" | "largest" | "smallest" }); toast.success("Settlement order saved"); } catch (err) { toast.error((err as Error).message); } }}>
               <option value="oldest">oldest first</option><option value="largest">largest first</option><option value="smallest">smallest first</option>
@@ -125,8 +129,8 @@ function Audit() {
             <span className="text-muted-foreground">A payment naming an invoice always settles that invoice first.</span>
           </label>
           <details><summary className="cursor-pointer">Loan vs lender statement · {recon.loan.length ? `${recon.loan.length} differ` : "agree or no statement"}</summary>{recon.loan.map((r) => <p key={r.loanId} className="break-words">{r.name} on {r.statementDate}: lender {inr(r.lender)} · ledger {inr(r.ledger)} · <b className="text-destructive">difference {inr(r.difference)}</b></p>)}{!recon.loan.length && <p className="text-muted-foreground">Upload the lender's statement on Statement Desk and link it to the loan to compare.</p>}</details>
-          <details><summary className="cursor-pointer">Supplier invoices vs payments · FY {fyNow} · {recon.supplier.length} differ</summary>{recon.supplier.map((r) => <div key={r.gstin + r.party}><p className="break-words">{r.party} {r.gstin}: invoiced {inr(r.invoiced)} ({r.invoices}) · paid {inr(r.paid)} ({r.payments}) · <b className={r.difference > 0 ? "text-destructive" : ""}>{r.difference > 0 ? `${inr(r.difference)} unpaid` : `${inr(-r.difference)} paid without invoice`}</b></p>{r.allocation && r.allocation.lines.length > 0 && <ul className="ml-3 text-muted-foreground">{r.allocation.lines.map((l) => <li key={l.number + l.date}>{l.number} · {l.date} · {inr(l.amount)} · {l.status === "paid" ? "settled" : l.status === "part" ? `part paid, ${inr(l.outstanding)} due` : `unpaid ${inr(l.outstanding)}`}{l.ageDays ? ` · ${l.ageDays} days` : ""}</li>)}{r.allocation.unallocated > 1 && <li>Unallocated / advance {inr(r.allocation.unallocated)}</li>}</ul>}</div>)}</details>
-          <details><summary className="cursor-pointer">Customer invoices vs receipts · FY {fyNow} · {recon.customer.length} differ</summary>{recon.customer.map((r) => <div key={r.gstin + r.party}><p className="break-words">{r.party} {r.gstin}: invoiced {inr(r.invoiced)} ({r.invoices}) · received {inr(r.received)} ({r.receipts}) · <b className={r.outstanding > 0 ? "text-destructive" : ""}>{r.outstanding > 0 ? `${inr(r.outstanding)} still owed` : `${inr(-r.outstanding)} received without invoice`}</b></p>{r.allocation && r.allocation.lines.length > 0 && <ul className="ml-3 text-muted-foreground">{r.allocation.lines.map((l) => <li key={l.number + l.date}>{l.number} · {l.date} · {inr(l.amount)} · {l.status === "paid" ? "settled" : l.status === "part" ? `part paid, ${inr(l.outstanding)} due` : `unpaid ${inr(l.outstanding)}`}{l.ageDays ? ` · ${l.ageDays} days` : ""}</li>)}{r.allocation.unallocated > 1 && <li>Unallocated / advance {inr(r.allocation.unallocated)}</li>}</ul>}</div>)}</details>
+          <details><summary className="cursor-pointer">Supplier invoices vs payments · FY {reconFy} · {recon.supplier.length} differ</summary>{recon.supplier.map((r) => <div key={r.gstin + r.party}><p className="break-words">{r.party} {r.gstin}: invoiced {inr(r.invoiced)} ({r.invoices}) · paid {inr(r.paid)} ({r.payments}) · <b className={r.difference > 0 ? "text-destructive" : ""}>{r.difference > 0 ? `${inr(r.difference)} unpaid` : `${inr(-r.difference)} paid without invoice`}</b></p>{r.allocation && r.allocation.lines.length > 0 && <ul className="ml-3 text-muted-foreground">{r.allocation.lines.map((l) => <li key={l.number + l.date}>{l.number} · {l.date} · {inr(l.amount)} · {l.status === "paid" ? "settled" : l.status === "part" ? `part paid, ${inr(l.outstanding)} due` : `unpaid ${inr(l.outstanding)}`}{l.ageDays ? ` · ${l.ageDays} days` : ""}</li>)}{r.allocation.unallocated > 1 && <li>Unallocated / advance {inr(r.allocation.unallocated)}</li>}</ul>}</div>)}</details>
+          <details><summary className="cursor-pointer">Customer invoices vs receipts · FY {reconFy} · {recon.customer.length} differ</summary>{recon.customer.map((r) => <div key={r.gstin + r.party}><p className="break-words">{r.party} {r.gstin}: invoiced {inr(r.invoiced)} ({r.invoices}) · received {inr(r.received)} ({r.receipts}) · <b className={r.outstanding > 0 ? "text-destructive" : ""}>{r.outstanding > 0 ? `${inr(r.outstanding)} still owed` : `${inr(-r.outstanding)} received without invoice`}</b></p>{r.allocation && r.allocation.lines.length > 0 && <ul className="ml-3 text-muted-foreground">{r.allocation.lines.map((l) => <li key={l.number + l.date}>{l.number} · {l.date} · {inr(l.amount)} · {l.status === "paid" ? "settled" : l.status === "part" ? `part paid, ${inr(l.outstanding)} due` : `unpaid ${inr(l.outstanding)}`}{l.ageDays ? ` · ${l.ageDays} days` : ""}</li>)}{r.allocation.unallocated > 1 && <li>Unallocated / advance {inr(r.allocation.unallocated)}</li>}</ul>}</div>)}</details>
           <details><summary className="cursor-pointer">Holdings vs transaction history · {recon.investment.length} differ</summary>{recon.investment.map((r) => <p key={r.isin} className="break-words">{r.name} ({r.isin}): statement {r.statement} · from transactions {r.fromTransactions} · difference {r.difference}{r.unresolved.length ? ` · ${r.unresolved.length} action quantities need checking` : ''}</p>)}</details>
           <details><summary className="cursor-pointer">Between companies · {recon.inter.length} pair{recon.inter.length === 1 ? "" : "s"}</summary>{recon.inter.map((r) => <p key={r.a + r.b} className="break-words">{entName(r.a)} → {entName(r.b)} {inr(r.aToB)} · {entName(r.b)} → {entName(r.a)} {inr(r.bToA)} · net {r.net >= 0 ? `${entName(r.b)} owes ${entName(r.a)}` : `${entName(r.a)} owes ${entName(r.b)}`} {inr(Math.abs(r.net))}{r.unconfirmed ? ` · ${r.unconfirmed} not confirmed` : ""}</p>)}{!recon.inter.length && <p className="text-muted-foreground">Link accounts to each company in its tax profile to see transfers between them.</p>}</details>
         </div>
@@ -135,10 +139,11 @@ function Audit() {
       <div className="flex flex-wrap gap-1 text-xs">{(["risk", "type", "entity", "fy", "account", "evidence"] as By[]).map((b) => <button key={b} type="button" onClick={() => setBy(b)} className={`rounded-full border px-3 py-1 ${by === b ? "bg-primary text-primary-foreground" : "bg-card"}`}>By {b === "fy" ? "year" : b}</button>)}</div>
       {groups.map((g) => <section key={g.name} className="space-y-1"><h2 className="text-xs font-semibold uppercase text-muted-foreground">{g.name} · {g.items.length}</h2>
         {g.items.map((f) => <div key={f.key} className="rounded-2xl border bg-card px-4 py-3 text-sm">
-          <Link to={f.to} className="flex items-start justify-between gap-2">
+          <Link to={f.to} {...(f.comparison?{hash:reconciliationAnchor(f.key)}:{})} className="flex items-start justify-between gap-2">
             <span className="min-w-0 break-words"><span className="mr-2 text-xs text-muted-foreground">{f.type}</span>{f.text}<span className="block text-[11px] text-muted-foreground">Evidence: {f.evidence}{f.fy ? ` · FY ${f.fy}` : ""}</span></span>
             <span className={`shrink-0 rounded-full px-2 py-0.5 text-xs ${f.risk === "high" ? "bg-destructive/10 text-destructive" : "bg-secondary text-muted-foreground"}`}>{f.risk === "high" ? "Important" : f.risk === "medium" ? "Check" : "Low"}</span>
           </Link>
+          <ReconciliationDetails key={JSON.stringify(f.comparison)} item={f} entries={transactions} docs={documents} download={downloadFile}/>
           <div className="mt-1 flex gap-1"><Button size="sm" variant="ghost" className="h-7 px-2 text-xs" onClick={() => decide(f.key, "resolved")}>Mark fixed</Button><Button size="sm" variant="ghost" className="h-7 px-2 text-xs" onClick={() => decide(f.key, "accepted")}>Accept with note</Button></div>
         </div>)}</section>)}
 
@@ -201,6 +206,7 @@ function FigureSources({ assets, books, docs, titleOf }: { assets: import("@/lib
         {rows.length > 0 && <div className="max-h-80 divide-y overflow-y-auto rounded-lg border">{rows.map((r, i) => <div key={`${r.recordId}:${i}`} className="flex flex-wrap justify-between gap-2 px-2 py-1"><span className="min-w-0">{r.register} · {r.label}<span className="block text-muted-foreground">{r.source ? `${r.source.kind === "document" ? "Document" : "Entry"}: ${r.source.title}` : "No source — attach the document"}</span></span><span className="font-mono">{inr(r.amount)}</span></div>)}</div>}
         {rows.length > 0 && <Button size="sm" variant="outline" onClick={() => downloadBlob(new Blob([evidenceCsv(rows)], { type: "text/csv" }), "figure-sources.csv")}>Download CSV</Button>}
         {derived.length > 0 && <details><summary className="cursor-pointer text-muted-foreground">Calculated figures · {derived.length} — what each one is made of</summary>
+          <Button size="sm" variant="outline" onClick={()=>downloadBlob(new Blob([JSON.stringify(derived.map(d=>({...d,inputs:d.allInputs??d.inputs})),null,2)],{type:'application/json'}),'calculated-figure-dependencies.json')}>Download full inputs</Button>
           <div className="mt-1 max-h-80 space-y-1 overflow-y-auto">{derived.map((d) => <details key={d.id} className="rounded-lg border px-2 py-1">
             <summary className="flex cursor-pointer flex-wrap justify-between gap-2"><span className="min-w-0">{d.label}{d.unsourced > 0 && <span className="text-destructive"> · {d.unsourced} input{d.unsourced === 1 ? "" : "s"} without a source</span>}</span><span className="font-mono">{inr(d.amount)}</span></summary>
             <div className="mt-1 divide-y border-t">{d.inputs.map((i, n) => <div key={n} className="flex flex-wrap justify-between gap-2 py-1"><span className="min-w-0 text-muted-foreground">{i.label}<span className="block">{i.source ? `${i.source.kind === "document" ? "Document" : "Entry"}: ${i.source.title}` : "No source — attach the document"}</span></span><span className="font-mono">{inr(i.amount)}</span></div>)}</div>

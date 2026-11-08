@@ -8,6 +8,7 @@ import { tripTag } from "./intelligence";
 import { monthlyCost, occurrences, addDays, type Commitment } from "./planning";
 import { outstandingOf, receivedOf, isTracked } from "./reimbursements";
 import { decimal, roundMoney, addMoney, subtractMoney, multiplyMoney, sumMoney, proportionMoney } from "./money";
+import { reportFigureEvidence, type ReportFigureEvidence } from './report-figure-evidence';
 
 export type ReportGroup = "Financial" | "Workspace" | "Travel" | "Operational";
 export const REPORT_TYPES = [
@@ -57,7 +58,7 @@ export interface ReportData {
   memberName: (id: string | null) => string; accountName: (id: string | null) => string; today: string;
 }
 export interface Section { title: string; headers: string[]; rows: string[][]; total?: string[]; align?: ("l" | "r")[]; wide?: boolean; chart?: { label: string; value: number }[] }
-export interface ReportDoc { type: ReportType; title: string; period: string; filterLines: string[]; summary: [string, string][]; sections: Section[]; notes: string[]; landscape: boolean; rowCount: number; sourceEntryIds?: string[]; sourceDocumentRefs?: string[] }
+export interface ReportDoc { type: ReportType; title: string; period: string; filterLines: string[]; summary: [string, string][]; sections: Section[]; notes: string[]; landscape: boolean; rowCount: number; sourceEntryIds?: string[]; sourceDocumentRefs?: string[]; figureEvidence?: ReportFigureEvidence[] }
 
 const r2 = roundMoney;
 const IN = new Intl.NumberFormat("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -180,7 +181,8 @@ export function buildReportDoc(type: ReportType, filters: ReportFilters, d: Repo
   const balanceTypes = ['monthly','consolidated','ws-personal','ws-family','ws-business','ws-official','account','card','forecast','wealth'];
   const sources = balanceTypes.includes(type) ? [...new Map([...all,...d.transactions.filter(e=>selectedAccounts.some(a=>a.id===e.accountId||a.id===e.toAccountId))].map(e=>[e.id,e])).values()] : all;
   const doc: ReportDoc = { type, title: reportLabel(type), period: `${f.from} to ${f.to}`, filterLines: filterLines(f, d), summary: [], sections: [], notes: [...STD_NOTES], landscape: false, rowCount: 0,
-    sourceEntryIds: sources.map(e => e.id), sourceDocumentRefs: [...new Set(sources.flatMap(e => [e.statementRef, ...e.receipts.map(r => r.path)].filter((s): s is string => !!s)))] };
+    sourceEntryIds: sources.map(e => e.id), sourceDocumentRefs: [...new Set(sources.flatMap(e => [e.statementRef, ...e.receipts.map(r => r.path)].filter((s): s is string => !!s)))],
+    figureEvidence: reportFigureEvidence(selectedAccounts,d.transactions,win.map(e=>({...e,amount:shareIn(e,ws)})),f) };
   const exec = () => {
     const live = selectedAccounts.filter((a) => !a.archived && !isLiability(a.kind));
     const avail = sumMoney(live.map(a => accountBalance(a, d.transactions)));

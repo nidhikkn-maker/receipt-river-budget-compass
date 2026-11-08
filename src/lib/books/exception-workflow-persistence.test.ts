@@ -32,7 +32,8 @@ it('company differences/missing bills persist, resolve from saved evidence, and 
  await user(owner);let saved=await reload();
  const accounts:ReportData['accounts']=[{id:'bank-a',name:'Alpha bank',kind:'savings',openingBalance:1000,archived:false},{id:'bank-b',name:'Excluded Beta bank',kind:'savings',openingBalance:10000,archived:false}];
  const input=()=>({today:'2026-10-31',entities,entries:saved.entries,docs:saved.docs,books:saved.books,accounts,loans:[],holdings:[]});
- expect(reconciliationExceptions(input())).toHaveLength(1);expect(reconciliationExceptions(input())[0]).toMatchObject({entity:'A',evidence:'doc-a',key:'recon:supplier:GA:Acme Traders:2026-27'});
+ expect(reconciliationExceptions(input())).toHaveLength(1);expect(reconciliationExceptions(input())[0]).toMatchObject({entity:'A',evidence:'statement-a',key:'recon:supplier:GA:Acme Traders:2026-27'});
+ expect(reconciliationExceptions(input())[0]?.comparison?.left.inputs[0]?.documentIds).toEqual([]); // absent original is never claimed visible
  expect(continuousAudit({...input(),assets:[],holdingsWithoutCost:[]}).filter(i=>i.type==='Missing invoice')).toHaveLength(2);
  await db.close();db=new PGlite(join(dir,'pg'));await user(owner);saved=await reload();expect(reconciliationExceptions(input())[0]?.text).toContain('50.00');
  const payment={...base,id:'payment',title:'Acme Traders remainder',amount:50,originalAmount:50};await persist('payment',payment);await persist('payment',payment);
@@ -44,10 +45,12 @@ it('company differences/missing bills persist, resolve from saved evidence, and 
  const kinds=['monthly','expense','category','account','wealth','unreconciled','imports','budget'] as const;
  for(const [index,kind] of kinds.entries()){
   const report=buildReportDoc(kind,filters,data);expect(JSON.stringify(report)).not.toMatch(/Excluded Beta|999\.99|888\.88/);expect(report.sourceEntryIds).toEqual(['a','payment']);
+  expect(report.figureEvidence?.find(f=>f.id==='balance:bank-a')).toMatchObject({amount:749.75,inputs:[{id:'bank-a',amount:1000},{id:'a',amount:-200.25},{id:'payment',amount:-50}]});
   const pdf=await renderReportPdf(report,'mono',new Date('2026-10-31T12:00:00Z'));const bytes=new Uint8Array(await pdf.arrayBuffer());const id=`00000000-0000-0000-0000-${String(index+101).padStart(12,'0')}`,path=`${owner}/reports/${id}.pdf`;let uploads=0,inserts=0,lose=false;
   const adapter={read:async()=>{if(lose){lose=false;return {data:null,error:Error('Interrupted read')};}return {data:(await db.query<{id:string;owner_id:string;file_path:string;file_size:number}>('SELECT id,owner_id,file_path,file_size FROM report_history WHERE id=$1',[id])).rows[0]??null,error:null};},upload:async()=>{uploads++;writeFileSync(join(dir,`${kind}.pdf`),bytes);return {error:null};},insert:async()=>{inserts++;await db.query('INSERT INTO report_history(id,owner_id,kind,title,filters,file_path,file_size) VALUES($1,$2,$3,$4,$5::jsonb,$6,$7)',[id,owner,kind,report.title,JSON.stringify({snapshot:report}),path,pdf.size]);lose=true;throw Error('Lost response');}};
   await expect(savePreparedReport({id,owner,path,size:pdf.size},adapter)).rejects.toThrow('Evidence retained');
   await db.close();db=new PGlite(join(dir,'pg'));await user(owner);await savePreparedReport({id,owner,path,size:pdf.size},adapter);expect(uploads).toBe(1);expect(inserts).toBe(1);
+  expect((await db.query<{filters:{snapshot:typeof report}}>('SELECT filters FROM report_history WHERE id=$1',[id])).rows[0]?.filters.snapshot.figureEvidence).toEqual(report.figureEvidence);
   const retained=readFileSync(join(dir,`${kind}.pdf`));expect(retained).toEqual(Buffer.from(bytes));
   const text=execFileSync('python3',['-c','from pypdf import PdfReader; import sys; print("\\n".join(p.extract_text() or "" for p in PdfReader(sys.argv[1]).pages))',join(dir,`${kind}.pdf`)],{encoding:'utf8'});expect(text).not.toMatch(/Excluded Beta|999\.99|888\.88/);expect(text).toMatch(/250\.25|749\.75/);
  }

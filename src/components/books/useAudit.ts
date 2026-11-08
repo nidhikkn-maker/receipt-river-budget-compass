@@ -5,7 +5,7 @@ import { emptyBooks } from "@/lib/books/types";
 import type { InboxItem } from "@/lib/inbox";
 import { netQuantity } from "@/lib/investments/demat";
 import { useDemat } from "./useBooks";
-import { reconciliationExceptions } from '@/lib/books/reconciliation-exceptions';
+import { reconciliationExceptions, reconciliationDestination } from '@/lib/books/reconciliation-exceptions';
 
 /** Open continuous-audit findings (reviewed ones excluded) from saved records. */
 export function useAudit(): AuditItem[] {
@@ -27,6 +27,6 @@ export function useAuditAll() {
 export function auditInboxItems(items: AuditItem[]): InboxItem[] {
   return items.filter((i) => !["Unreconciled bank", "Classification", "Duplicate"].includes(i.type)).map((i) => ({
     key: `audit:${i.key}`, type: "audit", title: `${i.type}${i.entity ? ` · ${i.entity}` : ""}`, description: i.text, amount: null, accountName: i.account, date: null,
-    priority: i.risk, action: "Open", destination: i.to,
+    priority: i.risk, action: "Open", destination: reconciliationDestination(i),
   }));
 }

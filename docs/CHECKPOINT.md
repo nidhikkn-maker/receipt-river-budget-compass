@@ -1,5 +1,13 @@
 # Ledgerline continuation checkpoint — 8 Nov 2026 six-requirement acceptance
 
+## Consolidated completion mandate — 8 Nov 2026 07:06 UTC
+- Full899-clause register and historical scope consolidated in docs/COMPLETION_PLAN.md with verified-only percentages, complete unfinished-ID inventory, dependency milestones and provisional15–26-batch effort range; remote GitHub parity unverified.
+- Implemented exact prior-FY supplier/customer, lender/account, holding/trade/action and intercompany comparison inputs → Inbox/Audit → retained private-original handler / existing entry review / CSV/Excel/PDF/full JSON evidence. Material comparison tiles no longer say Clear based only on missing-invoice counts.
+- Frozen reports retain account/cashflow figure dependencies; full GST/depreciation evidence exports beyond100 displayed inputs. No broad ID promotion:0016/0026/0312/0731 PARTIAL,0058/0716 VERIFIED,0066/0082 BLOCKED.
+- 41 distinct focused tests eventually PASS (changed paths and dependencies); connected browser PASS, zero page errors, one upload/history after interrupted save/reload/retry. Local adapters/disposable owner-RLS database, not hosted or physical-device evidence. Initial stale assertions/optional hash error and browser fixture issues corrected. Evidence: docs/evidence/consolidated-completion-2026-11-08.md.
+- Credits measured940.07→924.16,15.91 workspace balance decline; recorded period usage growth15.916. Cap withdrawn; no purchase. UIX/redesign, production migrations/real records/policies/activation/publication untouched.
+
+
 ## Latest capture/claims/recovery batch — 06:25 UTC
 - Shared eight-context capture, in-place exact-entry claim bill editing, separate encrypted expenditure recovery and checkpointed document retry completed. V60-0072/0073 newly verified narrowly; broader IDs partial,0066/0082 blocked.
 - Focused tests and actual eight-context/PDF/reload/duplicate checks pass; local adapters only. Exact evidence and remaining source/hosted criteria: `docs/evidence/capture-claims-recovery-2026-11-08.md`.

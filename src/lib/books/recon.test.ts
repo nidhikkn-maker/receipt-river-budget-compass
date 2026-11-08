@@ -21,6 +21,6 @@ describe("§24 reconciliations compare figures", () => {
       { id: "2", amount: 200, txnType: "transfer", accountId: "b1", toAccountId: "a1", reconciledAt: "x" },
       { id: "3", amount: 50, txnType: "transfer", accountId: "a1", toAccountId: "a2" },
     ], { A: ["a1", "a2"], B: ["b1"] });
-    expect(r).toEqual([{ a: "A", b: "B", aToB: 500, bToA: 200, net: 300, unconfirmed: 1 }]);
+    expect(r).toEqual([{ a: "A", b: "B", aToB: 500, bToA: 200, aToBIds: ['1'], bToAIds: ['2'], net: 300, unconfirmed: 1 }]);
   });
 });
