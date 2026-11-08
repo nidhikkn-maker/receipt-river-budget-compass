@@ -6,6 +6,7 @@ vi.mock('@tanstack/react-router', () => ({ useNavigate: () => navigate, Link: ({
 vi.mock('@/routes/_authenticated/new', () => ({ NewExpense: (p: { embedded: { search: unknown; files: File[] } }) => { seen.receipt.push(p.embedded); return <p>receipt review</p>; } }));
 vi.mock('@/routes/_authenticated/statements', () => ({ StatementDeskPage: (p: { embedded: { files: File[] } }) => { seen.statement.push(p.embedded); return <p>statement review</p>; } }));
 vi.mock('./SourcePreview', async (orig) => ({ ...(await orig<typeof import('./SourcePreview')>()), SourcePreview: ({ file }: { file: File }) => <p>preview {file.name}</p> }));
+vi.mock('./ReceiptAssetHandoff', () => ({ ReceiptAssetHandoff: () => null }));
 import { SmartAdd, routeFiles } from './SmartAdd';
 
 const f = (name: string, type: string) => new File(['x'], name, { type });
