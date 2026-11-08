@@ -12,6 +12,7 @@ import { advanceCrossProblems } from './gst-special';
 import { gstReconciliation } from './gst-reconciliation';
 import { reconciliationAnchor, type ReconciliationContext, type ReconciliationInput } from './reconciliation-context';
 import { addMoney } from '../money';
+import { effectiveInvoices } from './gst';
 export function reconciliationExceptions(p: { today: string; entities: EntityProfile[]; entries: Expense[]; accounts: Account[]; docs: VaultDoc[]; books: BooksData; loans: { id: string; name: string; accountId: string | null }[]; holdings: StoredHolding[] }): AuditItem[] {
  const out: AuditItem[] = [];
  p={...p,entries:[...new Map(p.entries.map(e=>[e.id,e])).values()]};
@@ -32,7 +33,7 @@ export function reconciliationExceptions(p: { today: string; entities: EntityPro
    // With no explicit company mapping, matching cannot borrow another company's payment.
    const entries=matches.length>1?[]:p.entries.filter(e=>entity ? effectiveEntity(e,p.books.entityAccounts ?? {})===entity : !effectiveEntity(e,p.books.entityAccounts ?? {}));
    const payments=(kind:string)=>entries.filter(e=>(e.txnType??'expense')===kind).map(e=>({id:e.id,amount:e.amount,date:e.date,text:`${e.title} ${e.merchant??''} ${e.description}`}));
-   const invoiceInputs = (ids:string[]):ReconciliationInput[] => invoices.filter(i=>ids.includes(i.id)).map(i=>({kind:'invoice',id:i.id,label:`${i.party} · ${i.number}${i.note?` (${i.note})`:''}`,date:i.date,amount:addMoney(i.taxable,i.igst,i.cgst,i.sgst,i.cess),documentIds:i.docId&&p.docs.some(d=>d.id===i.docId)?[i.docId]:[],sourceRefs:[]}));
+   const invoiceInputs = (ids:string[]):ReconciliationInput[] => effectiveInvoices(invoices).filter(i=>ids.includes(i.id)).map(i=>({kind:'invoice',id:i.id,label:`${i.party} · ${i.number}${i.note?` (${i.note})`:''}`,date:i.date,amount:addMoney(i.taxable,i.igst,i.cgst,i.sgst,i.cess),documentIds:i.docId&&p.docs.some(d=>d.id===i.docId)?[i.docId]:[],sourceRefs:[]}));
    const partyContext = (family:'supplier'|'customer',r:{gstin:string;party:string;invoiced:number;invoiceIds:string[];paymentIds:string[]},paid:number,difference:number):ReconciliationContext => ({family,registration,recordId:r.gstin||r.party,from:range.start,to:range.end,left:{label:'Invoices (including tax)',amount:r.invoiced,inputs:invoiceInputs(r.invoiceIds)},right:{label:family==='supplier'?'Payments':'Receipts',amount:paid,inputs:entries.filter(e=>r.paymentIds.includes(e.id)).map(entryInput)},difference,unresolved:matches.length>1?['Registration belongs to multiple companies; payment matching is withheld']:[]});
    for (const r of supplierRecon(invoices,payments('expense'),range.start,range.end,p.books.allocationOrder)) compared(`supplier:${registration}:${r.gstin||r.party}:${year}`,`${r.party}: supplier invoices and payments differ by INR ${r.difference.toFixed(2)}`,partyContext('supplier',r,r.paid,r.difference),{entity:entity??registration,fy:year});
    for (const r of customerRecon(invoices,payments('income'),range.start,range.end,p.books.allocationOrder)) compared(`customer:${registration}:${r.gstin||r.party}:${year}`,`${r.party}: customer invoices and receipts differ by INR ${r.outstanding.toFixed(2)}`,partyContext('customer',r,r.received,r.outstanding),{entity:entity??registration,fy:year});

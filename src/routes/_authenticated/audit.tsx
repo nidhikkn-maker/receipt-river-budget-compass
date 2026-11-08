@@ -89,6 +89,7 @@ function Audit() {
   }), [items, transactions, accounts, documents, preferences.receivables, today]);
   // Figure-level reconciliations [§24]; differences are for review only.
   const fyNow = fyOf(today);
+  const [reconFy,setReconFy]=useState(fyNow);
   const recon = useMemo(() => {
     const ledgerAt = (id: string, date: string) => { const a = accounts.find((x) => x.id === id); return a ? accountBalance(a, transactions.filter((t) => t.date <= date)) : 0; };
     const partyRows = (kind:'purchase'|'sales') => [...new Set(books.gstInvoices.map(i=>i.gstin))].flatMap<ReturnType<typeof supplierRecon>[number] | ReturnType<typeof customerRecon>[number]>(registration=>{
@@ -96,7 +97,7 @@ function Audit() {
       const entries=matches.length>1?[]:transactions.filter(t=>entity?effectiveEntity(t,books.entityAccounts??{})===entity:!effectiveEntity(t,books.entityAccounts??{}));
       const payments=entries.filter(t=>(t.txnType??'expense')===(kind==='purchase'?'expense':'income')).map(t=>({id:t.id,amount:t.amount,date:t.date,text:`${t.title} ${t.merchant??''} ${t.description}`}));
       const invoices=books.gstInvoices.filter(i=>i.gstin===registration);
-      return kind==='purchase'?supplierRecon(invoices,payments,fyRange(fyNow).start,fyRange(fyNow).end,books.allocationOrder):customerRecon(invoices,payments,fyRange(fyNow).start,fyRange(fyNow).end,books.allocationOrder);
+      return kind==='purchase'?supplierRecon(invoices,payments,fyRange(reconFy).start,fyRange(reconFy).end,books.allocationOrder):customerRecon(invoices,payments,fyRange(reconFy).start,fyRange(reconFy).end,books.allocationOrder);
     });
     return {
       loan: loanRecon(loans, documents.filter((d) => d.docType === "loan_statement").map((d) => ({ loanId: d.loanId ?? null, date: d.docDate, outstanding: d.amount })), ledgerAt).filter((r) => Math.abs(r.difference) > 1),
@@ -105,7 +106,7 @@ function Audit() {
       investment: investmentRecon((demat ?? []).flatMap((d) => d.holdings)),
       inter: intercompanyRecon(transactions, books.entityAccounts ?? {}),
     };
-  }, [loans, documents, accounts, transactions, books, demat, fyNow, entities]);
+  }, [loans, documents, accounts, transactions, books, demat, reconFy, entities]);
   const entName = (id: string) => entities.find((e) => e.id === id)?.name ?? id;
   const groups = groupBy(items, by);
   const pending = books.proposedFields.filter((f) => f.status === "proposed");
@@ -120,6 +121,7 @@ function Audit() {
       <Fold title="Balance checks" hint="Bank, card, loan, supplier, customer, investment, between-company and GST (reconciliations)" defaultOpen>
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">{hub.map((h) => <Link key={h.kind} to={h.to} className="rounded-xl border px-3 py-2 text-sm"><span className="block text-xs text-muted-foreground">{h.kind}</span><b className={h.open ? "text-destructive" : "text-primary"}>{h.open ? `${h.open} open` : "Clear"}</b></Link>)}</div>
         <div className="mt-3 space-y-2 text-xs">
+          <label className="flex items-center gap-2">Comparison financial year<select aria-label="Comparison financial year" className="rounded-md border bg-background px-2 py-1" value={reconFy} onChange={e=>setReconFy(e.target.value)}>{[...new Set([fyNow,...books.gstInvoices.map(i=>fyOf(i.date))])].sort().reverse().map(y=><option key={y} value={y}>{y}</option>)}</select></label>
           <label className="flex flex-wrap items-center gap-2">Payments settle unnamed invoices
             <select className="rounded-md border bg-background px-2 py-1" value={books.allocationOrder ?? "oldest"} onChange={async (e) => { try { await save({ allocationOrder: e.target.value as "oldest" | "largest" | "smallest" }); toast.success("Settlement order saved"); } catch (err) { toast.error((err as Error).message); } }}>
               <option value="oldest">oldest first</option><option value="largest">largest first</option><option value="smallest">smallest first</option>
