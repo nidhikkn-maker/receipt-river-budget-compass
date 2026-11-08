@@ -1,4 +1,5 @@
 ## Corporate-accounting milestone — 8 Nov 2026 07:11 UTC
+- [ ] Current connected batch: extracted FY opening review, bank-linked accrual settlement/reversal, owner accountant grants and review history, isolated persistence/report/close acceptance, exact five-commit baseline evidence. No production installation or UIX redesign.
 - [x] Foundation batch: balanced opening/accrual proposals, staged canonical atomic posting/reversals, source protections, statement/Audit integration and isolated recovery acceptance; evidence recorded. Authority not installed.
 - [ ] Milestone1 remaining: automatic opening schedule mapping, invoice settlement/reclassification, recurring accrual schedules, accountant grant/review app screens and full interrupted-upload→journal→correction→regenerated statements→close acceptance. Hosted/production approval remain blockers; do not advance milestone.
 - [x] Record available checkout SHA; remote GitHub parity remains blocked by unavailable connection/status access, never inferred from local revision.
