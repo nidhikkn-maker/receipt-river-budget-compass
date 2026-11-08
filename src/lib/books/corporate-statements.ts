@@ -28,6 +28,10 @@ export interface CorporateWorking {
   trialDifference: number; balanceDifference: number;
   cash: { opening: number; operating: number; investing: number; financing: number; unclassified: number; closing: number; difference: number };
 }
+/** Readiness is source-based; balanced arithmetic alone never clears unexplained facts. */
+export function corporateCloseErrors(workings:CorporateWorking[]):string[]{
+ return workings.flatMap(w=>[...w.issues.map(i=>`${w.entityName}: ${i.message}`),...(w.trialDifference!==0||w.balanceDifference!==0||w.cash.difference!==0?[`${w.entityName}: Financial statements do not agree.`]:[])]);
+}
 const cashKinds = ['savings','current','cash','wallet'];
 const roleOf = (a: Account): BookRole => isLiability(a.kind) ? 'liability' : 'asset';
 const normalBalance = (role: BookRole, signed: number) => ['liability','equity','income'].includes(role) ? -signed : signed;
