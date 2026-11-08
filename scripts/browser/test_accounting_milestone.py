@@ -65,7 +65,7 @@ async def main():
   await expect(page.get_by_text('Interrupted committed note',exact=True).first).to_be_visible()
   await open_company();await page.locator('details').filter(has=page.get_by_label('Accountant email or account ID')).last.evaluate('(e)=>e.open=true')
   evidence=page.locator('details').filter(has=page.locator('input[aria-label^="Review note"]')).last;await page.locator('details').evaluate_all('(rows)=>rows.forEach(e=>e.open=true)')
-  await expect(page.locator('input[aria-label^="Review note"]').last).to_be_disabled();await page.get_by_role('button',name='Retry same review').click()
+  await expect(page.locator('input[aria-label^="Review note"]').last).to_be_disabled();await page.get_by_role('button',name='Retry same review').last.click()
   assert await page.evaluate("JSON.parse(sessionStorage.getItem('notes')).length") == 1
   await page.screenshot(path='/tmp/browser/accounting-milestone/review.png');assert not errors,errors
   journals=await page.evaluate("JSON.parse(sessionStorage.getItem('journals'))");assert len({e['receiptDetails']['accounting']['journal']['id'] for e in journals})==3
