@@ -21,7 +21,7 @@ async def main():
     await route.abort();return
    await route.continue_()
   await context.route('**/*',isolate)
-  for module in ['assets','entity','fy','property','tax','gst','documents']:
+  for module in ['investments','assets','entity','fy','property','tax','gst','documents']:
    await page.goto('http://localhost:8080/capture')
    await page.get_by_role('button',name=module,exact=True).click()
    await page.get_by_label('Choose files',exact=True).set_input_files(files=[{'name':'original.png','mimeType':'image/png','buffer':__import__('base64').b64decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jRZkAAAAASUVORK5CYII=')}])
@@ -31,6 +31,6 @@ async def main():
    assert page.url=='http://localhost:8080/capture'
    await page.screenshot(path=str(OUT/f'{module}.png'))
   assert not errors,errors
-  print('PASS seven contexts: real event -> Smart Add -> Statement Desk -> document review boundary; same page, no writes. Reader stub not extraction acceptance.')
+  print('PASS eight contexts: real event -> Smart Add -> Statement Desk -> document review boundary; same page, no writes. Reader stub not extraction acceptance.')
   await browser.close()
 if __name__=='__main__':asyncio.run(main())
