@@ -6,6 +6,7 @@ import {corporateStatements,corporateReport,CORPORATE_TYPES} from './corporate-s
 import {emptyBooks} from './types';
 import type {VaultDoc} from '../documents';
 import type {Expense} from '../expenses';
+import {continuousAudit} from './audit';
 const doc={id:'doc',entityId:'A',filePath:'owner/original.pdf'} as VaultDoc;
 const accounts=[{id:'bank',name:'Company bank',kind:'current' as const,openingBalance:0,archived:false}];
 const books={...emptyBooks(),entityAccounts:{A:['bank']}};
@@ -13,6 +14,9 @@ const source={id:'s',entityId:'A',date:'2026-04-10',documentIds:['doc'],descript
 const anchor=(j:AccountingJournal):Expense=>({id:j.id,title:j.description,merchant:null,category:'Accounting',scope:'business',memberId:null,splits:[],receipts:[],amount:100,originalAmount:100,currency:'INR',fxRate:1,date:j.date,description:j.description,paymentMethod:'other',reconciledAt:null,statementRef:null,txnType:'adjustment',entityId:'A',entitySource:'manual',receiptDetails:{accounting:{journal:j,primary:true,requestId:j.id}}});
 const working=(entries:Expense[])=>corporateStatements({entityId:'A',entities:[{id:'A',name:'Isolated company',kind:'company',pan:'',gstins:[],booksFrom:'2026-27'}],accounts,books,documents:[doc],entries,from:'2026-04-01',to:'2027-03-31'});
 describe('Accounting foundation financial rules',()=>{
+ it('automatically keeps missing originals and unexplained opening balances visible in company audit exceptions',()=>{
+  const items=continuousAudit({today:'2026-11-08',entities:[{id:'A',name:'Isolated company',kind:'company',pan:'',gstins:[],booksFrom:'2026-27'}],assets:[],entries:[],docs:[],accounts:[{...accounts[0],id:'bank',name:'Bank',kind:'current',archived:false,openingBalance:1000}],books,holdingsWithoutCost:[]});expect(items.some(i=>i.key.startsWith('accounting:A:bank')&&i.text.includes('unclassified'))).toBe(true);
+ });
  it('requires exact balanced opening assets, liabilities, equity, loans, receivables and payables without inventing capital',()=>{
   const targets=[{code:'fixed',label:'Machine',role:'asset' as const,signedTarget:50000},{code:'receivable',label:'Debtors',role:'asset' as const,signedTarget:10000},{code:'loan',label:'Loan',role:'liability' as const,signedTarget:-20000},{code:'payable',label:'Creditors',role:'liability' as const,signedTarget:-5000},{code:'capital',label:'Capital',role:'equity' as const,signedTarget:-35000}];
   const j=openingJournalProposal({...source, date:'2026-04-01',targets,current:[]});expect(accountingErrors(j,accounts,books,[doc])).toEqual([]);const w=working([anchor(j)]);expect(w.profit).toBe(0);expect(w.assets).toBe(60000);expect(w.liabilities).toBe(25000);expect(w.equity).toBe(35000);expect(w.trialDifference).toBe(0);expect(w.cash.operating).toBe(0);
