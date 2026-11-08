@@ -11,7 +11,7 @@ All899 v6 clauses examined through grouped code investigation;570 VERIFIED/325 P
 
 ## Executed checks
 41 distinct tests passed eventually across9 files, not41 freshly invented workflows:
-- reconciliation-context-completion5, recon-completion6, recon-ambiguity2, exception-workflow-persistence1, report-scope-completion4, gst-source-chain-completion3, recon4, recon-extra10, report-jobs-recovery7.
+- reconciliation-context-completion4, recon-completion6, recon-ambiguity2, exception-workflow-persistence1, report-scope-completion4, gst-source-chain-completion3, recon4, recon-extra10, report-jobs-recovery7.
 - Persistence test extends existing disposable PGlite real report_history/RLS/disk restart and lost-ack path with exact frozen figure readback, linked-source figures and owner denial. Eight-family PDF rerun was only because the changed report dependency contract enters these reports;31-family campaign was not repeated.
 - scripts/browser/test_comparison_completion.py PASS: actual Inbox→old-FY exact Audit finding→original handler→manifest→saved correction/reload; real report PDF→lost acknowledgement→encrypted reload→same-ID retry→figure manifest, one upload/one history, zero page errors. Synthetic browser adapters; original handler exercised, not hosted byte retrieval or owner permission certification. Screenshots /tmp/browser/comparison-completion/comparison.png and report.png inspected.
 - Manifest105 inputs retained with100 display rows/5 omitted; decimal balance1200.25 and cashflow300.25; loan500 opening minus100 principal=400 versus printed300 gives100 variance, later payment excluded; other-company60 does not settle source invoice100 minus paid40.
