@@ -1,5 +1,5 @@
 import { it,expect } from 'vitest';
-import { advanceCrossProblems,advanceHeads,advanceProblems,specialProblems } from './gst-special';
+import { advanceCrossProblems,advanceHeads,advanceProblems,specialProblems,proposeAdvanceAdjustment } from './gst-special';
 import { gstr1,gstr1Json,gstr3b,gstr3bJson,gstr9,gstr9Heads,gstPayable } from './gst';
 import type { GstInvoice } from './types';
 const invoice=(patch:Partial<GstInvoice>):GstInvoice=>({id:'sale',gstin:'G',kind:'sales',number:'S1',date:'2026-10-01',party:'A',partyGstin:'',taxable:1000,igst:180,cgst:0,sgst:0,cess:0,...patch});
@@ -63,4 +63,20 @@ it('per-head review flags credit on invoices that was never claimed',()=>{
  expect(h.itc.igst).toBe(0);
  expect(h.checks.some(c=>c.startsWith('IGST:'))).toBe(true);
  expect(h.checks.some(c=>c.startsWith('CGST:'))).toBe(false);
+});
+it('full-list validation rejects invalid targets on untouched advances and invalid adjustment money',()=>{
+ const a={id:'a',gstin:'G',number:'A1',date:'2026-09-01',party:'A',partyGstin:'CUSTOMER',supply:'services' as const,taxable:1000,igst:180,cgst:0,sgst:0,cess:0,adjustments:[{invoiceId:'sale',date:'2026-10-01',taxable:500,igst:90,cgst:0,sgst:0,cess:0}]};
+ expect(advanceCrossProblems([a],[invoice({gstin:'OTHER'})])).toContain('A1: Adjustment requires a current sales invoice for the same GSTIN');
+ expect(advanceCrossProblems([a],[invoice({kind:'purchase'})])).toContain('A1: Adjustment requires a current sales invoice for the same GSTIN');
+ expect(advanceCrossProblems([a],[invoice({note:'credit'})])).toContain('A1: Adjustment requires a current sales invoice for the same GSTIN');
+ expect(advanceCrossProblems([a],[invoice({partyGstin:'DIFFERENT'})])).toContain('A1: Adjustment requires an invoice for the same customer GSTIN');
+ expect(advanceCrossProblems([{...a,adjustments:[{...a.adjustments[0],invoiceId:'sale',date:'2026-10-01',taxable:-500,igst:0,cgst:0,sgst:0,cess:0}]}],[invoice({})])).toContain('A1: taxable: adjustment amount must be nonnegative');
+ expect(advanceCrossProblems([{...a,adjustments:[{invoiceId:'sale',date:'2026-10-01',taxable:NaN,igst:0,cgst:0,sgst:0,cess:0}]}],[invoice({})])).toContain('A1: taxable: adjustment amount must be nonnegative');
+});
+it('different invoice rates propose only supported heads, preserve residual advance tax and refuse over-allocation',()=>{
+ const a={id:'a',gstin:'G',number:'A1',date:'2026-09-01',party:'A',partyGstin:'',supply:'services' as const,taxable:1000,igst:180,cgst:0,sgst:0,cess:0,adjustments:[]};
+ const lower=invoice({taxable:500,igst:60});const x=proposeAdvanceAdjustment(a,lower,500,[a]);expect(x).toEqual({invoiceId:'sale',date:'2026-10-01',taxable:500,igst:60,cgst:0,sgst:0,cess:0});
+ const next={...a,adjustments:[x]};expect(advanceCrossProblems([next],[lower])).toEqual([]);expect(advanceHeads([next],'G','2026-10').igst).toBe(-60);
+ expect(()=>proposeAdvanceAdjustment(next,lower,1,[next])).toThrow('remaining advance or invoice');
+ const higher=invoice({taxable:500,igst:140});expect(proposeAdvanceAdjustment(a,higher,500,[a]).igst).toBe(90);
 });
