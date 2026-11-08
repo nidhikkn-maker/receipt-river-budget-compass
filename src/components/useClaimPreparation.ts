@@ -14,7 +14,7 @@ export function useClaimPreparation(owner:string,enabled:boolean,data:ClaimPrepa
  // One owner session only; changes do not reset recovery.
  // eslint-disable-next-line react-hooks/exhaustive-deps
  },[owner,enabled]);
- async function persist(){if(!enabled||!ready||conflict.current)return;if(saving.current){pending.current=true;return;}saving.current=true;const session=generation.current;let deviceSaved=false;
+ async function persist(){if(!enabled||!ready||recover||conflict.current)return;if(saving.current){pending.current=true;return;}saving.current=true;const session=generation.current;let deviceSaved=false;
   try{const d=latest.current;const previous=draft.current;const unchanged=previous&&JSON.stringify(previous.data)===JSON.stringify(d);const next:ClaimPreparation={id:previous?.id??crypto.randomUUID(),data:d,revision:previous?.revision??0,mutationId:unchanged?previous.mutationId:crypto.randomUUID(),updatedAt:unchanged?previous.updatedAt:new Date().toISOString()};draft.current=next;cloudPending.current=true;await writeLocal(next);deviceSaved=true;if(session!==generation.current)return;if(active.current)setStatus(navigator.onLine?'Saving…':'Saved on device · waiting for connection');
    if(navigator.onLine){const saved=await saveCloudPreparation(owner,next);if(session!==generation.current)return;const current=draft.current;
     if(current&&current.mutationId!==next.mutationId){draft.current={...current,revision:saved.revision};pending.current=true;await writeLocal(draft.current);}
@@ -23,11 +23,11 @@ export function useClaimPreparation(owner:string,enabled:boolean,data:ClaimPrepa
   }catch(e){if(session!==generation.current)return;const message=e instanceof Error?e.message:'Could not save';if(/another device|removed|unavailable/i.test(message)&&deviceSaved){conflict.current=true;if(active.current)setStatus('Changed elsewhere · device edits kept · reload before saving');}else if(active.current)setStatus(deviceSaved?'Saved on device · cloud save failed · retry save':'Device save failed · keep page open');}
   finally{saving.current=false;if(session===generation.current&&pending.current){pending.current=false;void persist();}}
  }
- useEffect(()=>{if(!enabled||!ready||signature.current===sig)return;
+ useEffect(()=>{if(!enabled||!ready||recover||signature.current===sig)return;
   const previous=draft.current;const next:ClaimPreparation={id:previous?.id??crypto.randomUUID(),data:latest.current,revision:previous?.revision??0,mutationId:crypto.randomUUID(),updatedAt:new Date().toISOString()};draft.current=next;
   cloudPending.current=true;if(saving.current)pending.current=true;void writeLocal(next).catch(()=>{if(active.current)setStatus('Device save failed · keep page open');});
-  const timer=setTimeout(()=>void persist(),700);return()=>clearTimeout(timer);},[sig,ready,enabled]);
+  const timer=setTimeout(()=>void persist(),700);return()=>clearTimeout(timer);},[sig,ready,enabled,recover]);
  useEffect(()=>{const online=()=>void persist();window.addEventListener('online',online);return()=>window.removeEventListener('online',online);});
  useEffect(()=>{if(!enabled||!ready||!cloudPending.current||!navigator.onLine)return;const timer=setTimeout(()=>void persist(),0);return()=>clearTimeout(timer);},[enabled,ready]);
- return {status,ready,recover,resume:()=>{if(recover){draft.current=recover;restore.current(recover.data);signature.current=JSON.stringify(recover.data);setRecover(null);}},saveNow:persist};
+ return {status,ready,recover,resume:()=>{if(recover){draft.current=recover;restore.current(recover.data);signature.current=JSON.stringify(recover.data);cloudPending.current=true;setRecover(null);}},startNew:()=>{draft.current=null;signature.current='';setRecover(null);setStatus('Not saved yet');},saveNow:persist};
 }
