@@ -256,10 +256,10 @@ export function DocumentIntake({ file, context, onClose, resume, replacesId, onS
       await step("Save");
       const fieldsOut = fields.map((f) => ({ ...f, originalValue: f.originalValue ?? f.value }));
       if (!dup) {
-        await addDocument(file, { id: docId, title, docType, docDate: isIso(x?.date) ? x!.date : null, amount: x?.amount ?? null, currency: x?.currency || "INR", merchant: x?.merchant ?? null, notes: x?.notes ?? "", text: x?.text ?? "", transactionId: null, accountId: linkAcc || null, loanId: linkLoan || null, expiresOn: isIso(x?.expiresOn) ? x!.expiresOn : null, fields: fieldsOut, replacesId: replacesId ?? runData.current.replacesId ?? null });
+        await addDocument(file, { id: docId, title, docType, docDate: isIso(x?.date) ? x!.date : null, amount: x?.amount ?? null, currency: x?.currency || "INR", merchant: x?.merchant ?? null, notes: x?.notes ?? "", text: x?.text ?? "", transactionId: null, accountId: linkAcc || null, loanId: linkLoan || null, expiresOn: isIso(x?.expiresOn) ? x!.expiresOn : null, fields: fieldsOut, replacesId: replacesId ?? runData.current.replacesId ?? null,...(c.route==='fy'?{entityId:c.record.entityId}:{}) });
       }
       await updateRun(runId, { documentId: docId }).catch(() => undefined);
-      const withDoc: Confirmed = c.route === "asset" ? { ...c, asset: { ...c.asset, docId: c.asset.docId ?? docId } } : c.route === "lease" ? { ...c, lease: { ...c.lease, docId } } : c.route === "fy" ? { ...c, record: { ...c.record, docIds: [...new Set([...c.record.docIds, docId])] } } : c;
+      const withDoc: Confirmed = c.route === "asset" ? { ...c, asset: { ...c.asset, docId: c.asset.docId ?? docId } } : c.route === "lease" ? { ...c, lease: { ...c.lease, docId } } : c.route === "fy" ? { ...c, record: { ...c.record, docIds: [...new Set([...c.record.docIds, docId])],details:c.record.details?.map(d=>({...d,docId:d.docId??docId})) } } : c;
       at = "Reconcile"; await step("Reconcile");
       const next = commitIntake({ entities, assets: preferences.assets ?? [], books }, withDoc, { id: docId, title, docType, fieldLabels: fields.map((f) => f.label) }, today(), () => crypto.randomUUID());
       const known = new Set(preferences.contractObligations.map((o) => o.docId));
