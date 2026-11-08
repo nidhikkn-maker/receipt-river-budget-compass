@@ -61,6 +61,14 @@ export function toCsv(r: Report): string {
   return [r.headers, ...r.rows].map((row) => row.map(esc).join(",")).join("\n");
 }
 
+/** Same reviewed rows as CSV/PDF, stored as literal cells, never spreadsheet formulas. */
+export async function toExcel(r: Report): Promise<Blob> {
+  const { utils, write } = await import('xlsx');
+  const workbook = utils.book_new();
+  utils.book_append_sheet(workbook, utils.aoa_to_sheet([r.headers, ...r.rows]), 'Report');
+  return new Blob([write(workbook, { type: 'array', bookType: 'xlsx' })], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+}
+
 export function downloadBlob(blob: Blob, filename: string) {
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");

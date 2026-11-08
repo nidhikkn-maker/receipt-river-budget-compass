@@ -13,7 +13,7 @@ const createFixture = () => ({
   removes: [] as string[],
   uploads: JSON.parse(sessionStorage.getItem('controlled-desk-uploads') ?? '[]') as StatementUpload[],
   moves: [] as { id: string; before: Record<string, unknown>[] }[],
-  documents: [] as Record<string, unknown>[],
+  documents: JSON.parse(sessionStorage.getItem('controlled-desk-documents') ?? '[]') as Record<string, unknown>[],
   originalAttempts: [] as string[],
   failOriginals: false,
   failCompletion: false,
@@ -36,12 +36,13 @@ export function useStore() {
   const refresh = async () => bump((n) => n + 1);
   return {
     userId: "controlled-statement-owner",
-    accounts: [...fixture.accounts], transactions: fixture.transactions.map((t) => ({ ...t })), preferences, loans: [], commitments: [], documents: [],
+    accounts: [...fixture.accounts], transactions: fixture.transactions.map((t) => ({ ...t })), expenses: fixture.transactions.filter(t => t.txnType === 'expense'), preferences, loans: [], commitments: [], documents: fixture.documents, valuations: [], budgets: {}, departmentBudgets: {}, departmentBudgetError: false, members: [], memberName: () => 'Controlled owner',
     addDocument: async (_file: File, meta: Record<string, unknown>) => {
       if (typeof meta.id !== "string") throw new Error("Original must have a stable identity");
       fixture.originalAttempts.push(meta.id);
       if (fixture.failOriginals) throw new Error("Controlled storage outage");
-      if (!fixture.documents.some((d) => d.id === meta.id)) fixture.documents.push(meta);
+      if (!fixture.documents.some((d) => d.id === meta.id)) fixture.documents.push({ ...meta, filePath: `controlled/${meta.id}/${_file.name}`, fileName: _file.name, mimeType: _file.type, original: Array.from(new Uint8Array(await _file.arrayBuffer())) });
+      sessionStorage.setItem('controlled-desk-documents', JSON.stringify(fixture.documents));
       return meta.id;
     },
     confirmTransfer: async () => {},
@@ -55,7 +56,7 @@ export function useStore() {
     save: async (input: Record<string, unknown>, opts?: { createId?: string }) => {
       const id = opts?.createId ?? crypto.randomUUID();
       await saveWithRecovery(async () => {
-      if (!fixture.transactions.some((t) => t.id === id)) fixture.transactions.push({ ...input, id, originalAmount: input.amount, currency: "INR", splits: [], reconciledAt: null, statementRef: null, correctionRevision: 0 });
+      if (!fixture.transactions.some((t) => t.id === id)) fixture.transactions.push({ ...input, id, originalAmount: input.amount, currency: "INR", fxRate: 1, receipts: [], tags: [], splits: [], reconciledAt: null, statementRef: null, correctionRevision: 0 });
       fixture.saves.push(id);
       sessionStorage.setItem("controlled-desk-ledger", JSON.stringify(fixture.transactions));
       if (fixture.loseSaveResponse) { fixture.loseSaveResponse = false; throw Error('Saved response interrupted'); }

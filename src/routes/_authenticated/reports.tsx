@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { applyFilters } from "@/lib/expenses";
-import { buildReport, deliverFile, toCsv, toPdf, type ReportKind } from "@/lib/reports";
+import { buildReport, deliverFile, toCsv, toExcel, toPdf, type ReportKind } from "@/lib/reports";
 import { useStore } from "@/lib/store";
 import { BarChart, Bar, XAxis, Tooltip, ResponsiveContainer, LineChart, Line, YAxis } from "recharts";
 import { tagValue } from "@/lib/preferences";
@@ -148,8 +148,9 @@ function Reports() {
           <div key={k.kind} className="flex flex-col rounded-lg border bg-card p-5">
             <h2 className="font-display text-xl font-bold">{k.title}</h2>
             <p className="mt-1 flex-1 text-sm text-muted-foreground">{k.desc}</p>
-            <div className="mt-4 flex gap-2">
+            <div className="mt-4 flex flex-wrap gap-2">
               <Button variant="outline" size="sm" aria-label={`Export ${k.title} CSV`} disabled={k.kind === "departments" && departmentBudgetError} onClick={() => csv(k.kind)}><FileSpreadsheet className="mr-1 h-4 w-4" />CSV</Button>
+              <Button variant="outline" size="sm" aria-label={`Export ${k.title} Excel`} disabled={k.kind === "departments" && departmentBudgetError} onClick={async () => { try { await deliverFile(await toExcel(report(k.kind)), `ledgerline-${k.kind}-${stamp}.xlsx`); } catch { toast.error("Couldn't download Excel"); } }}><FileSpreadsheet className="mr-1 h-4 w-4" />Excel</Button>
               <Button size="sm" aria-label={`${prepared[k.kind]?.key === JSON.stringify([report(k.kind), subtitle]) ? "Download" : "Prepare"} ${k.title} PDF`} disabled={preparing !== null || (k.kind === "departments" && departmentBudgetError)} onClick={() => void pdf(k.kind).catch(() => toast.error("Couldn't download the PDF"))}>{prepared[k.kind]?.key === JSON.stringify([report(k.kind), subtitle]) ? <Download className="mr-1 h-4 w-4" /> : <FileText className="mr-1 h-4 w-4" />}{preparing === k.kind ? "Preparing…" : prepared[k.kind]?.key === JSON.stringify([report(k.kind), subtitle]) ? "Download PDF" : "Prepare PDF"}</Button>
             </div>
           </div>

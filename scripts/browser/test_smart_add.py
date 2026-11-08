@@ -108,6 +108,20 @@ async def main():
    assert await page.evaluate('expenseBrowserFixture.saves.length')==1
    assert page.url.endswith('/dashboard'),page.url
    await dialog.screenshot(path=str(OUT/f'{width}-saved-linked-source.png'))
+   # Explicit asset-register handoff uses the same saved payment; no second ledger save.
+   await dialog.get_by_role('button',name="It's something I own",exact=True).click()
+   asset=dialog.get_by_role('region',name='Asset from saved purchase')
+   await asset.get_by_label('Asset name',exact=True).fill('Controlled computer')
+   await asset.screenshot(path=str(OUT/f'{width}-asset-before-kind.png'))
+   await asset.get_by_label('Asset kind',exact=True).select_option('computer')
+   await asset.get_by_role('button',name='Link saved purchase to asset',exact=True).dblclick()
+   await expect(asset.get_by_text('Already linked to Things I own.',exact=True)).to_be_visible()
+   prefs=await page.evaluate('JSON.parse(sessionStorage.getItem("expense-browser-preferences"))')
+   assert len(prefs['assets'])==1 and prefs['assets'][0]['transactionId']==entries[0]['id']
+   assert prefs['assets'][0]['paymentId']==entries[0]['id'] and prefs['assets'][0]['cost']==432.1
+   assert await page.evaluate('expenseBrowserFixture.saves.length')==1
+   await dialog.screenshot(path=str(OUT/f'{width}-asset-source-link.png'))
+   assert page.url.endswith('/dashboard'),page.url
    assert not errors, errors
    assert not blocked, blocked
    print(f'{width}: plus, Escape, three typed modes in place, photo/file pickers, no page jump/auto save/overflow PASS')
