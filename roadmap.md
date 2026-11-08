@@ -1,3 +1,8 @@
+## Connected 12-month accounting acceptance — 8 Nov 2026 08:49 UTC
+- [ ] Execute a disposable 12-month company with original documents, canonical journal posting/replay, statements, corrections, permissions and interruption recovery; report independent expected figures and exact gaps, never infer complete extraction/UI/hosted acceptance.
+- [ ] Complete buildable statutory supporting schedules and fail-closed cash-journal reconciliation checks without changing UIX or installing production authority.
+- [ ] Continue Milestone 2 lender-source linking after recording the Milestone 1 disposition; leave broad IDs partial unless every criterion passes.
+
 ## Corporate-accounting milestone — 8 Nov 2026 08:33 UTC
 - [x] Detailed printed opening mappings with head controls/provenance, recurring accrual/prepaid recognition and reversals, verified-identity grant authority, encrypted interrupted accountant-note recovery and statutory working classification added. 52 distinct focused tests passed; actual upload/read-output/retry/detailed-opening/accrual/settlement/note browser journey passed. No broad ID promotion.
 - [ ] Remaining milestone acceptance: full same-browser actual extraction → canonical database posting → reconciliation → regenerated frozen reports → authoritative close; separate-account hosted originals/notes/cross-device and full statutory schedules remain unverified. Staged installation requires compatible deployment/access approval;0066/0082 stay blocked.
