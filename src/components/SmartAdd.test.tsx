@@ -1,4 +1,4 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import { vi, describe, it, expect } from 'vitest';
 const navigate = vi.hoisted(() => vi.fn());
 const seen = vi.hoisted(() => ({ receipt: [] as unknown[], statement: [] as unknown[] }));
@@ -26,11 +26,9 @@ describe('Smart Add stays in place', () => {
   });
   it('keeps an asset upload context through the in-place handoff', async () => {
     render(<SmartAdd open onOpenChange={() => {}} />);
-    window.dispatchEvent(new CustomEvent('ledgerline:smart-add', { detail: { intent: 'assets' } }));
-    await waitFor(() => {
-      fireEvent.change(screen.getByLabelText('Choose files'), { target: { files: [f('invoice.jpg', 'image/jpeg')] } });
-      expect(seen.statement.at(-1)).toMatchObject({ context: 'assets' });
-    });
+    act(() => { window.dispatchEvent(new CustomEvent('ledgerline:smart-add', { detail: { intent: 'assets' } })); });
+    fireEvent.change(screen.getByLabelText('Choose files'), { target: { files: [f('invoice.jpg', 'image/jpeg')] } });
+    await waitFor(() => expect(seen.statement.at(-1)).toMatchObject({ context: 'assets' }));
     expect(navigate).not.toHaveBeenCalled();
   });
   it('a photo opens preview and receipt review inside the sheet without navigating', async () => {
