@@ -105,7 +105,7 @@ export function corporateStatements(p: { entityId: string; entities: EntityProfi
       // Cross-boundary money belongs to a due-from/to account, never company profit.
       post(`due:${counter>0?'from':'to'}:${external}`,`Due ${counter>0?'from':'to'} ${byAccount.get(external)?.name??'unidentified counterparty'}`,counter>0?'asset':'liability',counter,'Transfer across company boundary; never sales or spending');
       if(external==='unknown')issue(e.id,'Transfer destination/source is missing; intercompany classification is unverified.');
-    } else if(kind==='adjustment' && p.books.journals.some(j=>j.status==='posted'&&j.transactionId===e.id) && net<0) {
+    } else if(kind==='adjustment' && company===entity.id && p.books.journals.some(j=>j.status==='posted'&&j.transactionId===e.id) && net<0) {
       post('expense:depreciation','Posted book depreciation','expense',counter,'Existing posted depreciation journal; no second asset/ledger entry');
     } else {
       post(`unclassified:${kind}`,`${kind} counterpart — requires accounting classification`,'unclassified',counter,'Unclassified counterpart of canonical movement, not a balancing profit');
@@ -133,6 +133,9 @@ export function corporateStatements(p: { entityId: string; entities: EntityProfi
   for(const group of [...new Set(lines.filter(l=>l.date>=p.from).map(l=>l.groupId))]){
     const ls=lines.filter(l=>l.groupId===group);const delta=sumMoney(ls.filter(l=>cashIds.has(l.code)).map(l=>subtractMoney(l.debit,l.credit)));if(!delta)continue;
     const e=entries.get(group);const other=e?[byAccount.get(e.accountId??''),byAccount.get(e.toAccountId??'')].filter((a):a is Account=>!!a&&!cashKinds.includes(a.kind)):[];
+    if(e?.txnType==='loan_repayment'&&ids.has(e.accountId??'')&&ids.has(e.toAccountId??'')){
+      const interest=repaymentParts(e).interest;cash.operating=addMoney(cash.operating,-interest);cash.financing=addMoney(cash.financing,delta,interest);continue;
+    }
     const bucket=ls.some(l=>l.role==='unclassified')?'unclassified':other.some(a=>['investment','fixed_deposit','other_asset'].includes(a.kind))?'investing':other.some(a=>['loan','other_liability'].includes(a.kind))||ls.some(l=>l.code.startsWith('due:'))?'financing':'operating';
     cash[bucket]=addMoney(cash[bucket],delta);
   }
