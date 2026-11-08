@@ -30,6 +30,8 @@ async def main():
   await page.get_by_role('button',name='Apply everything (2 to save)').click()
   await expect(page.get_by_role('button',name='Undo this upload (2 saved)')).to_be_visible()
   await page.locator('nav').get_by_role('link',name='Inbox',exact=True).click()
+  await page.wait_for_timeout(1000)
+  print('inbox observed',page.url,(await page.locator('body').inner_text())[:900])
   await expect(page.get_by_role('heading',name='Review',exact=True)).to_be_visible()
   await page.screenshot(path=str(OUT/'inbox.png'))
   await page.locator('nav').get_by_role('link',name='Reconciliation',exact=True).click()
