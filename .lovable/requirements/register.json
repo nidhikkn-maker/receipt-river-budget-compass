@@ -384,11 +384,12 @@
           "src/lib/books/recon.test.ts — PASS on rerun; concrete assertions recorded in /tmp/verify-b1-tests.log. Scope is limited to the component rules/fixtures in this file, not the entire clause.",
           "8 Nov 2026 P1 handoffs: source-linked asset follow-up in Smart Add, claim builder receives saved entry in place; same CSV source -> two saved lines -> pure Inbox/reconciliation/DocuRepo checks -> actual Reports CSV/Excel/PDF downloads -> Undo balances 1000/270/1000. 41 focused tests, 18 statement browser cases, 3 Smart Add viewports, 5 PDF builder cases pass with synthetic adapters. Full connected screens, hosted isolation and full in-sheet claim acceptance remain open; no promotion. docs/evidence/p1-handoffs-2026-11-08.md",
           "8 Nov six-ID acceptance: actual connected Statement Desk/Inbox/Account Reconciliation/DocuRepo/Reports with same saved dataset/original download; real encrypted claim preparation and frozen PDF reload/retry; asset-invoice file-to-proposal with mocked extractor. 29 focused tests pass. No full-criterion promotion; hosted isolation/access/all-stage/non-mocked invoice gaps listed individually in docs/evidence/six-requirements-2026-11-08.md. V60-0058 already verified before this batch; retained.",
-          "8 Nov 03:38 continuation: 36 focused tests; actual encrypted claim version-lookup interruption/reload/upload interruption/reload/same-byte retry with one report; five real PDF builder cases and connected statement-to-report export workflow pass using synthetic adapters. Exact gaps/severity/next actions in docs/evidence/six-target-continuation-2026-11-08.md. No new six-ID promotion."
+          "8 Nov 03:38 continuation: 36 focused tests; actual encrypted claim version-lookup interruption/reload/upload interruption/reload/same-byte retry with one report; five real PDF builder cases and connected statement-to-report export workflow pass using synthetic adapters. Exact gaps/severity/next actions in docs/evidence/six-target-continuation-2026-11-08.md. No new six-ID promotion.",
+          "8 Nov prioritised acceptance: 26/26 focused tests; isolated reconciliation exception/checkpoint restart/stale revision, real frozen PDF/source-owner comparisons and interrupted-save recovery; actual non-mocked synthetic invoice reader -> real review -> committed lost response/retry -> actual Assets/DocuRepo route reload. Scope and blockers: docs/evidence/prioritised-acceptance-2026-11-08.md. Hosted auth/storage not certified."
         ]
       },
       "category": "B",
-      "nextAction": "Complete exact remaining criteria/prerequisites listed per ID in docs/evidence/six-requirements-2026-11-08.md; no obsolete sandbox editing prohibition."
+      "nextAction": "Complete broad source-clause and hosted owner/entity acceptance; targeted isolated persistence/recovery now passes. See docs/evidence/prioritised-acceptance-2026-11-08.md."
     },
     {
       "id": "V60-0017",
@@ -637,11 +638,12 @@
           "src/lib/reports.test.ts — PASS on rerun; concrete assertions recorded in /tmp/verify-b1-tests.log. Scope is limited to the component rules/fixtures in this file, not the entire clause.",
           "8 Nov 2026 P1 handoffs: source-linked asset follow-up in Smart Add, claim builder receives saved entry in place; same CSV source -> two saved lines -> pure Inbox/reconciliation/DocuRepo checks -> actual Reports CSV/Excel/PDF downloads -> Undo balances 1000/270/1000. 41 focused tests, 18 statement browser cases, 3 Smart Add viewports, 5 PDF builder cases pass with synthetic adapters. Full connected screens, hosted isolation and full in-sheet claim acceptance remain open; no promotion. docs/evidence/p1-handoffs-2026-11-08.md",
           "8 Nov six-ID acceptance: actual connected Statement Desk/Inbox/Account Reconciliation/DocuRepo/Reports with same saved dataset/original download; real encrypted claim preparation and frozen PDF reload/retry; asset-invoice file-to-proposal with mocked extractor. 29 focused tests pass. No full-criterion promotion; hosted isolation/access/all-stage/non-mocked invoice gaps listed individually in docs/evidence/six-requirements-2026-11-08.md. V60-0058 already verified before this batch; retained.",
-          "8 Nov 03:38 continuation: 36 focused tests; actual encrypted claim version-lookup interruption/reload/upload interruption/reload/same-byte retry with one report; five real PDF builder cases and connected statement-to-report export workflow pass using synthetic adapters. Exact gaps/severity/next actions in docs/evidence/six-target-continuation-2026-11-08.md. No new six-ID promotion."
+          "8 Nov 03:38 continuation: 36 focused tests; actual encrypted claim version-lookup interruption/reload/upload interruption/reload/same-byte retry with one report; five real PDF builder cases and connected statement-to-report export workflow pass using synthetic adapters. Exact gaps/severity/next actions in docs/evidence/six-target-continuation-2026-11-08.md. No new six-ID promotion.",
+          "8 Nov prioritised acceptance: 26/26 focused tests; isolated reconciliation exception/checkpoint restart/stale revision, real frozen PDF/source-owner comparisons and interrupted-save recovery; actual non-mocked synthetic invoice reader -> real review -> committed lost response/retry -> actual Assets/DocuRepo route reload. Scope and blockers: docs/evidence/prioritised-acceptance-2026-11-08.md. Hosted auth/storage not certified."
         ]
       },
       "category": "B",
-      "nextAction": "Complete exact remaining criteria/prerequisites listed per ID in docs/evidence/six-requirements-2026-11-08.md; no obsolete sandbox editing prohibition."
+      "nextAction": "Complete broad source-clause and hosted owner/entity acceptance; targeted isolated persistence/recovery now passes. See docs/evidence/prioritised-acceptance-2026-11-08.md."
     },
     {
       "id": "V60-0027",
@@ -16843,11 +16845,11 @@
       "interpretation": "Account for this source clause in the context of 71. Mandatory tests; verify each enumerated feature and applicable safeguard, not merely screen presence.",
       "modules": [],
       "dependencies": [],
-      "status": "PARTIAL",
-      "requiredWork": "Add actual isolated file-upload/extraction fixtures proving asset invoice upload to proposed asset, then review/persist and assert source links and exact values. Existing tests inject already-parsed reads and cannot prove the upload requirement.",
+      "status": "VERIFIED COMPLETE",
+      "requiredWork": "Literal mandatory isolated invoice upload/proposal/save/reload acceptance complete; hosted auth/storage remains separate V60-0082 blocker.",
       "verificationMethod": "Source-to-code audit followed by applicable unit/database/integration/real-route checks; hosted/device evidence separately required.",
       "finalTestResult": {
-        "result": "PARTIAL",
+        "result": "PASS",
         "evidence": [
           "src/lib/books/intake.ts and commit.ts implement parsed-read proposals and upserts; src/components/DocumentIntake.tsx orchestrates review.",
           "PASS src/lib/books/books.test.ts mandatory cases 1–8 prove supplied parsed-data transformations, not file extraction; typed-intake-sql.test.ts proves disposable-store commit boundaries.",
@@ -16855,11 +16857,12 @@
           "8 Nov 2026 P1 intake: explicit scanned-document and asset-photo intent retained in Smart Add; asset invoice entry opens in-place with existing asset context; batch shortcut no longer navigates. Actual component synthetic photo byte preview, merchant/date corrections, hide/reopen, failed-save retry and double-click source-linked single entry pass at 390/834/1280. 29 targeted automated and 17 statement browser cases pass. Asset/holdings PDF end-to-end and hosted DocuRepo remain unverified; no full promotion. Evidence docs/evidence/p1-intake-2026-11-08.md.",
           "8 Nov 2026 P1 handoffs: source-linked asset follow-up in Smart Add, claim builder receives saved entry in place; same CSV source -> two saved lines -> pure Inbox/reconciliation/DocuRepo checks -> actual Reports CSV/Excel/PDF downloads -> Undo balances 1000/270/1000. 41 focused tests, 18 statement browser cases, 3 Smart Add viewports, 5 PDF builder cases pass with synthetic adapters. Full connected screens, hosted isolation and full in-sheet claim acceptance remain open; no promotion. docs/evidence/p1-handoffs-2026-11-08.md",
           "8 Nov six-ID acceptance: actual connected Statement Desk/Inbox/Account Reconciliation/DocuRepo/Reports with same saved dataset/original download; real encrypted claim preparation and frozen PDF reload/retry; asset-invoice file-to-proposal with mocked extractor. 29 focused tests pass. No full-criterion promotion; hosted isolation/access/all-stage/non-mocked invoice gaps listed individually in docs/evidence/six-requirements-2026-11-08.md. V60-0058 already verified before this batch; retained.",
-          "8 Nov 03:38 continuation: 36 focused tests; actual encrypted claim version-lookup interruption/reload/upload interruption/reload/same-byte retry with one report; five real PDF builder cases and connected statement-to-report export workflow pass using synthetic adapters. Exact gaps/severity/next actions in docs/evidence/six-target-continuation-2026-11-08.md. No new six-ID promotion."
+          "8 Nov 03:38 continuation: 36 focused tests; actual encrypted claim version-lookup interruption/reload/upload interruption/reload/same-byte retry with one report; five real PDF builder cases and connected statement-to-report export workflow pass using synthetic adapters. Exact gaps/severity/next actions in docs/evidence/six-target-continuation-2026-11-08.md. No new six-ID promotion.",
+          "8 Nov prioritised acceptance: 26/26 focused tests; isolated reconciliation exception/checkpoint restart/stale revision, real frozen PDF/source-owner comparisons and interrupted-save recovery; actual non-mocked synthetic invoice reader -> real review -> committed lost response/retry -> actual Assets/DocuRepo route reload. Scope and blockers: docs/evidence/prioritised-acceptance-2026-11-08.md. Hosted auth/storage not certified."
         ]
       },
       "category": "B",
-      "nextAction": "Complete exact remaining criteria/prerequisites listed per ID in docs/evidence/six-requirements-2026-11-08.md; no obsolete sandbox editing prohibition."
+      "nextAction": "No reopen of mandatory invoice proposal test; preserve separate hosted access/persistence release holds."
     },
     {
       "id": "V60-0717",
