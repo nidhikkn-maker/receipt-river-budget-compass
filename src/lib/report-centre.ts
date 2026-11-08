@@ -57,7 +57,7 @@ export interface ReportData {
   memberName: (id: string | null) => string; accountName: (id: string | null) => string; today: string;
 }
 export interface Section { title: string; headers: string[]; rows: string[][]; total?: string[]; align?: ("l" | "r")[]; wide?: boolean; chart?: { label: string; value: number }[] }
-export interface ReportDoc { type: ReportType; title: string; period: string; filterLines: string[]; summary: [string, string][]; sections: Section[]; notes: string[]; landscape: boolean; rowCount: number }
+export interface ReportDoc { type: ReportType; title: string; period: string; filterLines: string[]; summary: [string, string][]; sections: Section[]; notes: string[]; landscape: boolean; rowCount: number; sourceEntryIds?: string[]; sourceDocumentRefs?: string[] }
 
 const r2 = roundMoney;
 const IN = new Intl.NumberFormat("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -176,11 +176,13 @@ export function buildReportDoc(type: ReportType, filters: ReportFilters, d: Repo
   const win = inWindow(all, f);
   const spend = win.filter((e) => kind(e) === "expense");
   const cf = totalsFor(win, ws);
-  const doc: ReportDoc = { type, title: reportLabel(type), period: `${f.from} to ${f.to}`, filterLines: filterLines(f, d), summary: [], sections: [], notes: [...STD_NOTES], landscape: false, rowCount: 0 };
+  const selectedAccounts = d.accounts.filter(a => !f.accountIds.length || f.accountIds.includes(a.id));
+  const doc: ReportDoc = { type, title: reportLabel(type), period: `${f.from} to ${f.to}`, filterLines: filterLines(f, d), summary: [], sections: [], notes: [...STD_NOTES], landscape: false, rowCount: 0,
+    sourceEntryIds: all.map(e => e.id), sourceDocumentRefs: [...new Set(all.flatMap(e => [e.statementRef, ...e.receipts.map(r => r.path)].filter((s): s is string => !!s)))] };
   const exec = () => {
-    const live = d.accounts.filter((a) => !a.archived && !isLiability(a.kind));
+    const live = selectedAccounts.filter((a) => !a.archived && !isLiability(a.kind));
     const avail = sumMoney(live.map(a => accountBalance(a, d.transactions)));
-    const upcoming = occurrences(d.commitments.filter((c) => c.status === "active"), d.today, addDays(d.today, 30)).filter((o) => o.direction === "out").map(o => o.amount).reduce((s, value) => addMoney(s,value), 0);
+    const upcoming = occurrences(d.commitments.filter((c) => c.status === "active" && (!f.accountIds.length || f.accountIds.includes(c.accountId ?? ""))), d.today, addDays(d.today, 30)).filter((o) => o.direction === "out").map(o => o.amount).reduce((s, value) => addMoney(s,value), 0);
     const budget = sumMoney(Object.values(d.budgets).map(v => v ?? 0));
     doc.summary.push(["Total income", amt(cf.income)], ["Total expenses", amt(cf.spent)], ["Net cash flow", amt(cf.net)], ["Available balances (today)", amt(avail)], ["Upcoming commitments (30 days)", amt(upcoming) + " (scheduled, not spent)"]);
     if (budget > 0) doc.summary.push(["Monthly budget utilisation", `${(cf.spent / budget * 100).toFixed(1)}% of ${amt(budget)}`]);
@@ -243,7 +245,7 @@ export function buildReportDoc(type: ReportType, filters: ReportFilters, d: Repo
       break;
     }
     case "subscription": {
-      const subs = d.commitments.filter((c) => c.kind === "subscription" && c.status !== "cancelled");
+      const subs = d.commitments.filter((c) => c.kind === "subscription" && c.status !== "cancelled" && (!f.accountIds.length || f.accountIds.includes(c.accountId ?? "")));
       doc.summary.push(["Active subscriptions", String(subs.filter((s) => s.status === "active").length)], ["Monthly cost", amt(subs.filter((s) => s.status === "active").map(c => monthlyCost(c)).reduce((s,value) => addMoney(s,value),0))]);
       doc.sections.push({ title: "Subscriptions", headers: ["Name", "Frequency", "Amount", "Monthly cost", "Next due", "Status"], align: ["l", "l", "r", "r", "l", "l"], rows: subs.map((c) => [c.name, c.frequency, num(c.amount), num(monthlyCost(c)), c.nextDue, c.status]) });
       break;
@@ -258,18 +260,18 @@ export function buildReportDoc(type: ReportType, filters: ReportFilters, d: Repo
     }
     case "forecast": {
       const to = addDays(d.today, 90);
-      const occ = occurrences(d.commitments.filter((c) => c.status === "active"), d.today, to);
+      const occ = occurrences(d.commitments.filter((c) => c.status === "active" && (!f.accountIds.length || f.accountIds.includes(c.accountId ?? ""))), d.today, to);
       const inflow = occ.filter((o) => o.direction === "in").map(o => o.amount).reduce((s, value) => addMoney(s,value), 0), outflow = occ.filter((o) => o.direction === "out").map(o => o.amount).reduce((s, value) => addMoney(s,value), 0);
-      const avail = d.accounts.filter((a) => !a.archived && !isLiability(a.kind) && ["savings", "current", "cash", "wallet"].includes(a.kind)).map(a => accountBalance(a,d.transactions)).reduce((s,value)=>addMoney(s,value),0);
+      const avail = selectedAccounts.filter((a) => !a.archived && !isLiability(a.kind) && ["savings", "current", "cash", "wallet"].includes(a.kind)).map(a => accountBalance(a,d.transactions)).reduce((s,value)=>addMoney(s,value),0);
       doc.summary.push(["Cash available today", amt(avail)], ["Scheduled inflows (90 days)", amt(inflow)], ["Scheduled outflows (90 days)", amt(outflow)], ["Projected cash in 90 days (estimate)", amt(subtractMoney(addMoney(avail,inflow),outflow))]);
       doc.sections.push({ title: "Scheduled items (next 90 days)", headers: ["Date", "Item", "Direction", "Amount", "Confirmed"], align: ["l", "l", "l", "r", "l"], rows: occ.map((o) => [o.date, o.name, o.direction === "in" ? "In" : "Out", num(o.amount), o.confirmed ? "Yes" : "Estimate"]) });
       doc.notes.unshift("This forecast is an estimate based on your scheduled commitments; it is not a record of actual transactions.");
       break;
     }
     case "wealth": {
-      const nw = netWorth(d.accounts.filter((a) => !a.archived), d.transactions, d.valuations);
+      const nw = netWorth(selectedAccounts.filter((a) => !a.archived), d.transactions, d.valuations);
       doc.summary.push(["Assets", amt(nw.assets)], ["Liabilities", amt(nw.liabilities)], ["Net worth", amt(nw.net)]);
-      doc.sections.push({ title: "Accounts and assets", headers: ["Account", "Kind", "Type", "Value (INR)", "Valued on"], align: ["l", "l", "l", "r", "l"], rows: d.accounts.filter((a) => !a.archived).map((a) => { const v = accountValue(a, d.transactions, d.valuations); return [a.name, a.kind.replace(/_/g, " "), isLiability(a.kind) ? "Liability" : "Asset", num(v.value), v.valuedOn ?? "Ledger balance"]; }) });
+      doc.sections.push({ title: "Accounts and assets", headers: ["Account", "Kind", "Type", "Value (INR)", "Valued on"], align: ["l", "l", "l", "r", "l"], rows: selectedAccounts.filter((a) => !a.archived).map((a) => { const v = accountValue(a, d.transactions, d.valuations); return [a.name, a.kind.replace(/_/g, " "), isLiability(a.kind) ? "Liability" : "Asset", num(v.value), v.valuedOn ?? "Ledger balance"]; }) });
       doc.notes.unshift("Investment and asset values use your latest saved valuation; values without one use the ledger balance and may be out of date.");
       break;
     }
@@ -330,7 +332,7 @@ export function buildReportDoc(type: ReportType, filters: ReportFilters, d: Repo
       break;
     }
     case "commitments": {
-      const occ = occurrences(d.commitments.filter((c) => c.status === "active"), f.from < d.today ? d.today : f.from, f.to > d.today ? f.to : addDays(d.today, 60)).filter((o) => o.direction === "out");
+      const occ = occurrences(d.commitments.filter((c) => c.status === "active" && (!f.accountIds.length || f.accountIds.includes(c.accountId ?? ""))), f.from < d.today ? d.today : f.from, f.to > d.today ? f.to : addDays(d.today, 60)).filter((o) => o.direction === "out");
       const bookings = d.trips.flatMap((t) => (t.bookings ?? []).filter((b) => bookingOutstanding(b, d.transactions) > 0).map((b) => [b.date, `${t.name}: ${b.provider || b.kind}`, "Unpaid booking", num(bookingOutstanding(b, d.transactions))]));
       const rows = [...occ.map((o) => [o.date, o.name, o.overdue ? "Overdue" : "Scheduled", num(o.amount)]), ...bookings].sort((a, b) => a[0]!.localeCompare(b[0]!));
       doc.summary.push(["Pending commitments", String(rows.length)], ["Total", amt(sumMoney(rows.map(r => Number((r[3] ?? "0").replace(/,/g, "")))))]);

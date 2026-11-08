@@ -18,6 +18,8 @@ import { listDrafts } from "@/lib/drafts";
 import { localDrafts } from "@/lib/offline";
 import type { TravelTrip } from "@/lib/travel";
 import { cn } from "@/lib/utils";
+import { savePreparedReport } from '@/lib/report-save';
+import { saveLocalClaimReport, loadLocalClaimReport, clearLocalClaimReport, type ClaimReportJob } from '@/lib/claim-preparations';
 
 export const Route = createFileRoute("/_authenticated/report-centre")({
   head: () => ({ meta: [
@@ -53,6 +55,9 @@ function ReportCentre() {
   const [ready, setReady] = useState<Record<string, Blob>>({});
   const [confirmDel, setConfirmDel] = useState<HistoryRow | null>(null);
   const cancelled = useRef(false);
+  const pending = useRef<ClaimReportJob | null>(null);
+  const [recovering,setRecovering] = useState(true);
+  const [recoveryError,setRecoveryError] = useState(false);
 
   const range = periodRange(period, today(), custom);
   const currencies = useMemo(() => [...new Set(store.transactions.map((e) => e.currency))].sort(), [store.transactions]);
@@ -65,9 +70,11 @@ function ReportCentre() {
     setHistory((data ?? []) as HistoryRow[]);
   };
   useEffect(() => { void loadHistory(); }, []);
+  useEffect(() => { let active=true;setRecovering(true);setRecoveryError(false);void loadLocalClaimReport(store.userId,'centre-report').then(job=>{if(!active)return;pending.current=job;if(job){const doc=(job.row.filters as unknown as {snapshot:ReportDoc}).snapshot;const blob=new Blob([new Uint8Array(job.bytes)],{type:'application/pdf'});setResult({blob,doc,name:job.name,url:URL.createObjectURL(blob)});setFailed(true);setStage(3);}}).catch(()=>{if(active){setRecoveryError(true);setFailed(true);toast.error('Could not recover the saved report. Please reopen this page before preparing another.');}}).finally(()=>{if(active)setRecovering(false);});return()=>{active=false;}; },[store.userId]);
   useEffect(() => () => { if (result) URL.revokeObjectURL(result.url); }, [result]);
 
   async function generate(override?: { type: ReportType; filters: ReportFilters }) {
+    if(pending.current){setFailed(false);setStage(3);try{await persistReport(pending.current);setStage(-1);}catch(e){setFailed(true);toast.error((e as Error).message);}return;}
     cancelled.current = false; setFailed(false); setResult(null); setStage(0);
     try {
       const t = override?.type ?? type;
@@ -81,7 +88,6 @@ function ReportCentre() {
       }
       // Record the job first: if the app closes before the PDF is saved, the server finishes it.
       const jobId = crypto.randomUUID();
-      if (navigator.onLine) await supabase.from("report_jobs").insert({ id: jobId, owner_id: store.userId, kind: t, filters: filters as never, style, status: "running", lease_until: new Date(Date.now() + 120e3).toISOString() });
       setStage(1);
       const doc = buildReportDoc(t, filters, {
         transactions: store.transactions, accounts: store.accounts, valuations: store.valuations, commitments: store.commitments, loans: store.loans,
@@ -90,28 +96,42 @@ function ReportCentre() {
       });
       if (cancelled.current) return;
       setStage(2);
+      // Background completion uses the queued source snapshot, not later ledger values.
+      if(navigator.onLine){const queued=await supabase.from('report_jobs').insert({id:jobId,owner_id:store.userId,kind:t,filters:{...filters,snapshot:doc} as never,style,status:'running',lease_until:new Date(Date.now()+120e3).toISOString()});if(queued.error)throw Error('Could not queue this report safely. Please retry.');}
       const { renderReportPdf } = await import("@/lib/report-pdf");
       const blob = await renderReportPdf(doc, style, new Date());
       if (cancelled.current) return;
       const name = `ledgerline-${t}-${filters.from}-to-${filters.to}.pdf`;
       setResult({ blob, url: URL.createObjectURL(blob), name, doc });
       setStage(3);
-      if (navigator.onLine) {
         const id = jobId, path = `${store.userId}/reports/${id}.pdf`;
-        const prior = history.filter((h) => h.kind === t && h.period_from === filters.from && h.period_to === filters.to).length;
-        const up = await supabase.storage.from("receipts").upload(path, blob, { contentType: "application/pdf", upsert: true });
-        if (up.error) throw new Error("The PDF is ready, but it couldn't be saved to report history.");
-        const { error } = await supabase.from("report_history").insert({ id, owner_id: store.userId, kind: t, title: reportLabel(t), period_from: filters.from, period_to: filters.to, workspace: filters.workspaces.join(",") || "all", filters: { ...filters, style } as never, file_path: path, file_size: blob.size, version: prior + 1 });
-        if (error && error.code !== "23505") { await supabase.storage.from("receipts").remove([path]); throw new Error("The PDF is ready, but it couldn't be saved to report history."); }
-        await supabase.rpc("finish_my_report_job", { _id: id });
-        setReady((r) => ({ ...r, [id]: blob }));
-        await loadHistory();
-      } else toast.message("You're offline — the PDF is ready but wasn't saved to history.");
+        const prior = Math.max(0,...history.filter((h) => h.kind === t && h.period_from === filters.from && h.period_to === filters.to).map(h=>h.version));
+        const job:ClaimReportJob={id,path,name,activity:t,missing:[],bytes:Array.from(new Uint8Array(await blob.arrayBuffer())),row:{id,owner_id:store.userId,kind:t,title:reportLabel(t),period_from:filters.from,period_to:filters.to,workspace:filters.workspaces.join(',')||'all',filters:{...filters,style,snapshot:doc} as never,file_path:path,file_size:blob.size,version:prior+1}};
+        await saveLocalClaimReport(store.userId,job,'centre-report');pending.current=job;
+        if(!navigator.onLine)throw Error('Your PDF is saved on this device. Retry saving when connected.');
+        await persistReport(job);
       setStage(-1);
       toast.success(`${doc.title} is ready`, { description: "Saved in report history.", action: { label: "Open", onClick: () => void navigate({ to: "/report-centre" }) } });
     } catch (e) {
       setFailed(true); toast.error(e instanceof Error ? e.message : "Couldn't prepare the report");
     }
+  }
+  async function persistReport(job:ClaimReportJob){
+    if(job.row.owner_id!==store.userId)throw Error('Report owner differs; saved evidence was not changed.');
+    const blob=new Blob([new Uint8Array(job.bytes)],{type:'application/pdf'});
+    await savePreparedReport({id:job.id,owner:store.userId,path:job.path,size:blob.size},{read:async()=>supabase.from('report_history').select('id,owner_id,file_path,file_size').eq('id',job.id).eq('owner_id',store.userId).maybeSingle(),upload:async()=>{
+      const existing=await supabase.storage.from('receipts').download(job.path);
+      if(existing.data){const bytes=new Uint8Array(await existing.data.arrayBuffer());if(bytes.length!==job.bytes.length||bytes.some((b,i)=>b!==job.bytes[i]))throw Error('Saved PDF bytes differ. Nothing was replaced.');return {error:null};}
+      if(existing.error&&!/not found|404|does not exist/i.test(existing.error.message))return {error:existing.error};
+      return supabase.storage.from('receipts').upload(job.path,blob,{contentType:'application/pdf',upsert:false});
+    },insert:async()=>supabase.from('report_history').insert(job.row)});
+    const saved=await supabase.storage.from('receipts').download(job.path);
+    if(saved.error||!saved.data)throw Error('Saved report bytes could not be confirmed. Retry without replacing your PDF.');
+    const verified=new Uint8Array(await saved.data.arrayBuffer());
+    if(verified.length!==job.bytes.length||verified.some((b,i)=>b!==job.bytes[i]))throw Error('Saved PDF bytes differ. Evidence retained for checking.');
+    const done=await supabase.rpc('finish_my_report_job',{_id:job.id});if(done.error)throw Error('PDF saved; completion status needs retry. Your saved evidence remains unchanged.');
+    await clearLocalClaimReport(store.userId,'centre-report');pending.current=null;
+    setReady(r=>({...r,[job.id]:blob}));await loadHistory();
   }
 
   // Fetch stored PDFs ahead of the tap so Download/Share keep the user's tap on iPhone.
@@ -187,7 +207,7 @@ function ReportCentre() {
           <label className="flex items-center gap-1"><input type="radio" checked={style === "mono"} onChange={() => setStyle("mono")} /> Printer-friendly</label>
         </div>
 
-        <Button className="w-full" onClick={() => generate()} disabled={busy}><FileText className="mr-1 h-4 w-4" />Generate PDF</Button>
+        <Button className="w-full" onClick={() => generate()} disabled={busy||recovering||recoveryError}><FileText className="mr-1 h-4 w-4" />{pending.current?'Retry saving PDF':'Generate PDF'}</Button>
         <p className="text-xs text-muted-foreground">Reports are prepared on this device. Keep this page open until the PDF is ready.</p>
       </section>
 

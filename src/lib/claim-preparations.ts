@@ -18,7 +18,7 @@ export async function saveCloudPreparation(owner:string,p:ClaimPreparation){
  const operation=previous.catch(()=>{}).then(async()=>{const {data,error}=await supabase.rpc('save_claim_preparation',{_id:p.id,_data:p.data as unknown as Json,_expected:p.revision,_mutation:p.mutationId});if(error)throw Error(error.message);if(!data)throw Error('Preparation was not saved');return {...p,revision:data.revision,updatedAt:data.updated_at};});
  inFlight.set(key,operation);try{return await operation;}finally{if(inFlight.get(key)===operation)inFlight.delete(key);}
 }
-export async function clearLocalPreparations(owner:string){const db=await localDB();try{await new Promise<void>((resolve,reject)=>{const tx=db.transaction('drafts','readwrite');tx.objectStore('drafts').delete(owner);tx.objectStore('drafts').delete(`${owner}:report`);tx.oncomplete=()=>resolve();tx.onerror=()=>reject(tx.error);});}finally{db.close();}}
+export async function clearLocalPreparations(owner:string){const db=await localDB();try{await new Promise<void>((resolve,reject)=>{const tx=db.transaction('drafts','readwrite');tx.objectStore('drafts').delete(owner);tx.objectStore('drafts').delete(`${owner}:report`);tx.objectStore('drafts').delete(`${owner}:centre-report`);tx.oncomplete=()=>resolve();tx.onerror=()=>reject(tx.error);});}finally{db.close();}}
 export interface ClaimReportJob { id:string;path:string;name:string;activity:string;bytes:number[];missing:string[];versionPending?:boolean;row:Database['public']['Tables']['report_history']['Insert'] }
 /** Freeze the bytes before any network read; old checkpoints already contain a resolved version. */
 export async function resolveClaimReportVersion(job:ClaimReportJob,read:()=>Promise<number>,checkpoint:(job:ClaimReportJob)=>Promise<void>){
@@ -28,6 +28,6 @@ export async function resolveClaimReportVersion(job:ClaimReportJob,read:()=>Prom
  const resolved:ClaimReportJob={...job,versionPending:false,row:{...job.row,version,title:job.row.title.replace(' · v1 —',` · v${version} —`)}};
  await checkpoint(resolved);return resolved;
 }
-export async function saveLocalClaimReport(owner:string,job:ClaimReportJob){await localOp('readwrite',`${owner}:report`,await encryptOffline(owner,job));}
-export async function loadLocalClaimReport(owner:string){const sealed=await localOp<Awaited<ReturnType<typeof encryptOffline>>|undefined>('readonly',`${owner}:report`);return sealed?decryptOffline<ClaimReportJob>(owner,sealed):null;}
-export async function clearLocalClaimReport(owner:string){const db=await localDB();try{await new Promise<void>((resolve,reject)=>{const tx=db.transaction('drafts','readwrite');tx.objectStore('drafts').delete(`${owner}:report`);tx.oncomplete=()=>resolve();tx.onerror=()=>reject(tx.error);});}finally{db.close();}}
+export async function saveLocalClaimReport(owner:string,job:ClaimReportJob,slot:'report'|'centre-report'='report'){await localOp('readwrite',`${owner}:${slot}`,await encryptOffline(owner,job));}
+export async function loadLocalClaimReport(owner:string,slot:'report'|'centre-report'='report'){const sealed=await localOp<Awaited<ReturnType<typeof encryptOffline>>|undefined>('readonly',`${owner}:${slot}`);return sealed?decryptOffline<ClaimReportJob>(owner,sealed):null;}
+export async function clearLocalClaimReport(owner:string,slot:'report'|'centre-report'='report'){const db=await localDB();try{await new Promise<void>((resolve,reject)=>{const tx=db.transaction('drafts','readwrite');tx.objectStore('drafts').delete(`${owner}:${slot}`);tx.oncomplete=()=>resolve();tx.onerror=()=>reject(tx.error);});}finally{db.close();}}
