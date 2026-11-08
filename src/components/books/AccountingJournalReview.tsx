@@ -8,6 +8,7 @@ import {accountingErrors,type AccountingJournal,type AccountingLeg,reverseAccoun
 import type {AccountingAttempt} from '@/lib/books/accounting-post';
 import {getSnapshot,putSnapshot} from '@/lib/offline';
 import {emptyBooks} from '@/lib/books/types';
+import {invoiceAccrualProposal} from '@/lib/books/invoice-accrual';
 const roles=['asset','liability','equity','income','expense'] as const;
 const newLeg=():AccountingLeg=>({code:'',label:'',role:'asset',debit:0,credit:0});
 export function AccountingJournalReview({entityId}:{entityId:string}){
@@ -21,9 +22,12 @@ export function AccountingJournalReview({entityId}:{entityId:string}){
  const start=()=>keep({id:crypto.randomUUID(),entityId,date:new Date().toISOString().slice(0,10),kind:'accrual',description:'',documentIds:[],legs:[newLeg(),newLeg()]}).then(()=>setOpen(true));
  const edit=(i:number,patch:Partial<AccountingLeg>)=>{if(j)void keep({...j,legs:j.legs.map((l,n)=>n===i?{...l,...patch}:l)}).catch(e=>toast.error(e.message));};
  const journals=store.transactions.flatMap(e=>{const a=journalFromEntry(e);return a?.primary&&a.journal.entityId===entityId?[a.journal]:[];});
+ const entity=store.preferences.entities?.find(e=>e.id===entityId);
+ const unpaid=store.preferences.books?.gstInvoices.filter(i=>entity?.gstins.includes(i.gstin)&&i.docId&&!i.transactionId&&!journals.some(j=>j.documentIds.includes(i.docId??'')))??[];
  return <details className="rounded-lg border p-3"><summary className="cursor-pointer text-sm font-semibold">Opening balances & adjusting entries</summary><div className="mt-3 space-y-3">
  {!available&&<p className="text-sm text-muted-foreground">Posting is on hold. The accounting protections require an approved installation.</p>}
  <Button variant="outline" disabled={!loaded} onClick={()=>attempt?setOpen(true):start()}>{attempt?'Resume journal':'Prepare journal'}</Button>
+ {unpaid.map(invoice=><div key={invoice.id} className="flex flex-wrap items-center justify-between gap-2 text-sm"><span>{invoice.number} · {invoice.party} · no linked posting</span><Button size="sm" variant="outline" disabled={!!attempt||!loaded} onClick={()=>{try{const purchase=invoice.kind==='purchase';const proposal=invoiceAccrualProposal(invoice,{id:crypto.randomUUID(),entityId,description:`${invoice.kind} invoice ${invoice.number} · ${invoice.party}`,balance:{code:`${purchase?'payable':'receivable'}:${invoice.party}`,label:invoice.party,role:purchase?'liability':'asset'},net:{code:purchase?'expense:unclassified-invoice':'income:unclassified-invoice',label:purchase?'Invoice cost — confirm classification':'Invoice income — confirm classification',role:purchase?'expense':'income'},taxEligible:false});void keep(proposal).then(()=>setOpen(true));}catch(e){toast.error((e as Error).message);}}}>Review invoice accrual</Button></div>)}
  {journals.map(row=><div key={row.id} className="flex flex-wrap items-center justify-between gap-2 text-sm"><span>{row.date} · {row.description}</span><Button size="sm" variant="outline" disabled={!!attempt} onClick={()=>{const reason=window.prompt('Reason for reversing this journal');if(!reason)return;void keep(reverseAccountingJournal(row,crypto.randomUUID(),new Date().toISOString().slice(0,10),reason)).then(()=>setOpen(true));}}>Prepare reversal</Button></div>)}
  <Dialog open={open} onOpenChange={setOpen}><DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-3xl"><DialogTitle>Company journal</DialogTitle><DialogDescription>Confirmed source amounts · balanced debits and credits</DialogDescription>
  {j&&<div className="space-y-3"><div className="grid gap-2 sm:grid-cols-2"><Input aria-label="Journal date" type="date" value={j.date} onChange={e=>void keep({...j,date:e.target.value})}/><select aria-label="Journal type" className="rounded-md border bg-background p-2" value={j.kind} onChange={e=>void keep({...j,kind:e.target.value as AccountingJournal['kind']})}>{['opening','accrual','advance','prepayment','depreciation','adjustment','reversal'].map(k=><option key={k}>{k}</option>)}</select></div><Input aria-label="Journal explanation" value={j.description} onChange={e=>void keep({...j,description:e.target.value})}/>

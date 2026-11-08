@@ -14,7 +14,7 @@ export function accountingErrors(j:AccountingJournal,accounts:Account[],books:Bo
  const out:string[]=[];
  if(!j.id||!j.entityId||!j.description?.trim())out.push('Journal identity, company and explanation are required.');
  if(!/^\d{4}-\d{2}-\d{2}$/.test(j.date)||Number.isNaN(Date.parse(j.date+'T00:00:00Z'))||new Date(j.date+'T00:00:00Z').toISOString().slice(0,10)!==j.date)out.push('Choose a valid journal date.');
- const lock=periodBlocker(books.closedPeriods,j.date);if(lock)out.push(lock);
+ const lock=periodBlocker(books.closedPeriods.filter(p=>!p.entityId||p.entityId===j.entityId),j.date);if(lock)out.push(lock);
  if(!j.documentIds.length||j.documentIds.some(id=>!documents.some(d=>d.id===id&&d.entityId===j.entityId&&!!d.filePath)))out.push('Retained company originals are required for every journal.');
  if(j.legs.length<2)out.push('A journal requires at least two accounting legs.');
  const seen=new Set<string>();
