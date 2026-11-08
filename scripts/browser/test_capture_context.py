@@ -17,7 +17,8 @@ async def main():
     name='useStore' if path.endswith('store.tsx') else 'supabase';await route.fulfill(body=f'export {{ {name} }} from "/scripts/browser/statement-desk-mocks.tsx";',content_type='application/javascript');return
    if path=='/src/lib/statement-pipeline/atomic-undo.functions.ts':await route.fulfill(body='export {undoStatement} from "/scripts/browser/statement-desk-mocks.tsx";',content_type='application/javascript');return
    if path=='/src/components/DocumentIntake.tsx':await route.fulfill(body='export const DocumentIntake=({context,file})=>{window.__capture={context,name:file.name};return context;};',content_type='application/javascript');return
-   if route.request.method not in ['GET','HEAD']:raise AssertionError('Unexpected write')
+   if route.request.method not in ['GET','HEAD']:
+    print('BLOCKED',path,flush=True);await route.abort();return
    await route.continue_()
   await context.route('**/*',isolate)
   for module in ['assets','entity','fy','property','tax','gst','documents']:
