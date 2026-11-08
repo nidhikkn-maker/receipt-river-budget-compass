@@ -137,7 +137,7 @@ function Audit() {
       <div className="flex flex-wrap gap-1 text-xs">{(["risk", "type", "entity", "fy", "account", "evidence"] as By[]).map((b) => <button key={b} type="button" onClick={() => setBy(b)} className={`rounded-full border px-3 py-1 ${by === b ? "bg-primary text-primary-foreground" : "bg-card"}`}>By {b === "fy" ? "year" : b}</button>)}</div>
       {groups.map((g) => <section key={g.name} className="space-y-1"><h2 className="text-xs font-semibold uppercase text-muted-foreground">{g.name} · {g.items.length}</h2>
         {g.items.map((f) => <div key={f.key} className="rounded-2xl border bg-card px-4 py-3 text-sm">
-          <Link to={f.to} hash={f.comparison?reconciliationAnchor(f.key):undefined} className="flex items-start justify-between gap-2">
+          <Link to={f.to} {...(f.comparison?{hash:reconciliationAnchor(f.key)}:{})} className="flex items-start justify-between gap-2">
             <span className="min-w-0 break-words"><span className="mr-2 text-xs text-muted-foreground">{f.type}</span>{f.text}<span className="block text-[11px] text-muted-foreground">Evidence: {f.evidence}{f.fy ? ` · FY ${f.fy}` : ""}</span></span>
             <span className={`shrink-0 rounded-full px-2 py-0.5 text-xs ${f.risk === "high" ? "bg-destructive/10 text-destructive" : "bg-secondary text-muted-foreground"}`}>{f.risk === "high" ? "Important" : f.risk === "medium" ? "Check" : "Low"}</span>
           </Link>
