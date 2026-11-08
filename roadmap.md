@@ -1,3 +1,9 @@
+## P1 connected intake continuation — 8 Nov 2026
+- [x] Explicit document intent accepts scanned photos; asset invoice entry point opens Smart Add and preserves the existing asset intake context. Ordinary payment screenshots remain single-entry review. Batch statement shortcut stays in place.
+- [x] Synthetic real-component photo preview matches uploaded bytes; merchant/date correction, hide/reopen, failed save/retry and double-click single source-linked entry verified at 390/834/1280. Statement recovery suite 17 passed; targeted document/asset/claim/report checks 29 passed.
+- [ ] Remaining P1: representative payment-screen OCR, PDF/holdings and asset invoice end-to-end in-place acceptance, claim/asset post-save association and DocuRepo hosted readback. No full requirement promotion.
+- [ ] P0 remains external/activation-dependent as documented below; no repeated hosted investigation. Unidentified intermittent failure remains unresolved; targeted runs did not reproduce it.
+
 ## P0 checkpoint continuation — 8 Nov 2026
 - [x] Upload-time owner-read revision/reference baselines persisted; later same-source edits block Undo, and server ignores client-supplied replacement baselines. Legacy/missing baselines fail closed.
 - [x] Isolated CSV Smart Add preview → review → double confirmation → save → reload/re-upload and interrupted-evidence recovery; no navigation or duplicate entries. 17 browser cases passed, synthetic local adapters only.
