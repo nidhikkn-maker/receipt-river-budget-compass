@@ -1,4 +1,5 @@
 ## Six-requirement completion acceptance — 8 Nov 2026
+- [x] Continuation: frozen claim bytes now checkpoint before version lookup; lookup failure/reload/upload failure/reload retry verified without regeneration. Report insert acknowledgements require exact persisted readback. Target statuses remain unchanged pending full criteria.
 - [x] Exact six criteria read; V60-0058 was already VERIFIED COMPLETE (prior chat incorrectly called it partial). Actual Statement Desk → Inbox → Account Reconciliation → DocuRepo → Reports driven with one persisted synthetic dataset; hosted portions remain explicit blockers.
 - [x] Claim wrong-source restore and recovery overwrite fixed; advance retained; encrypted frozen PDF checkpoint survives reload and retries one report with identical bytes; claim mounting retained across follow-up switching. 29 targeted tests and connected/claim/invoice browser acceptance pass.
 - [x] HC-0031 promoted after actual CSV/PDF downloads for expenses, received reimbursements and department summaries agree with records. Other broad six remain partial or blocked by exact external acceptance; no artificial promotions.
