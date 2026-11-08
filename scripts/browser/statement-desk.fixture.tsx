@@ -1,15 +1,22 @@
-import React from "react";
+import React, { useState } from "react";
 import { createRoot } from "react-dom/client";
 import { createRootRoute, createRouter, RouterProvider } from "@tanstack/react-router";
 import { Route as DeskRoute } from "../../src/routes/_authenticated/statements";
 import { SmartAdd } from "../../src/components/SmartAdd";
+import { Route as ReportsRoute } from '../../src/routes/_authenticated/reports';
+import { Button } from '../../src/components/ui/button';
 import { Toaster } from "../../src/components/ui/sonner";
 import "../../src/styles.css";
 
 // Render the real route component and real controls, with only its data layer replaced.
 const Desk = DeskRoute.options.component;
+const Reports = ReportsRoute.options.component;
+function Journey() {
+  const [reports, setReports] = useState(false);
+  return <main><Button onClick={() => setReports(v => !v)}>{reports ? 'Back to statement' : 'Reports for saved statement'}</Button>{reports ? Reports && <Reports /> : location.pathname === '/smart' ? <SmartAdd open onOpenChange={() => {}} /> : Desk && <Desk />}<Toaster duration={60000} /></main>;
+}
 const rootRoute = createRootRoute({
-  component: () => <main>{location.pathname === "/smart" ? <SmartAdd open onOpenChange={() => {}} /> : Desk && <Desk />}<Toaster duration={60000} /></main>,
+  component: Journey,
 });
 const router = createRouter({ routeTree: rootRoute, defaultNotFoundComponent: rootRoute.options.component });
 const root = document.getElementById("root");
