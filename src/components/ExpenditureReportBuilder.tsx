@@ -21,7 +21,7 @@ import { ClaimExpenseDetails } from './ClaimExpenseDetails';
 import { ClaimSearchSelect } from './ClaimSearchSelect';
 import { useClaimPreparation } from './useClaimPreparation';
 import type { ClaimPreparationData } from '@/lib/claim-preparations';
-import { saveLocalClaimReport, loadLocalClaimReport, clearLocalClaimReport, type ClaimReportJob } from '@/lib/claim-preparations';
+import { saveLocalClaimReport, loadLocalClaimReport, clearLocalClaimReport, resolveClaimReportVersion, type ClaimReportJob } from '@/lib/claim-preparations';
 import type { Expense } from '@/lib/expenses';
 import { DEFAULT_DECLARATION, maskedText, organisationStatement, profileClaimant, reimbursementAccountLabel, resolveReimbursementProfile, responsibilityShares } from '@/lib/reimbursement-profiles';
 
@@ -90,6 +90,13 @@ export function ExpenditureReportBuilder({ mode, search, embedded = false }: { e
   const fallbackOrg = selectedTrip?.organisation ?? '';
   const activity = choice === 'entries' ? `entries:${[...picked].sort().join(',')}` : choice;
   async function saveReportJob(job:ClaimReportJob) {
+    job=await resolveClaimReportVersion(job,async()=>{
+      const organisation=(job.row.filters as {organisation?:string}|null)?.organisation;
+      const {data,error}=await supabase.from('report_history').select('version').eq('owner_id',store.userId).eq('kind','claim-submission').contains('filters',{activity:job.activity,organisation}).order('version',{ascending:false}).limit(1);
+      if(error)throw Error('Could not check report versions. Your saved PDF remains available for retry.');
+      return 1+Math.max(0,...(data??[]).map(h=>h.version));
+    },resolved=>saveLocalClaimReport(store.userId,resolved));
+    pendingSave.current=()=>saveReportJob(job);
     const blob = new Blob([new Uint8Array(job.bytes)], { type:'application/pdf' });
     await savePreparedReport({ id:job.id,owner:store.userId,path:job.path,size:blob.size }, {
       read:async()=>{const {data,error}=await supabase.from('report_history').select('id,owner_id,file_path,file_size').eq('id',job.id).eq('owner_id',store.userId).maybeSingle();return {data,error};},
@@ -200,24 +207,19 @@ export function ExpenditureReportBuilder({ mode, search, embedded = false }: { e
       setResult({ blob, url: URL.createObjectURL(blob), name, missing });
       setStage(4);
       const path = `${store.userId}/reports/${id}.pdf`;
-      pendingSave.current = async () => {
-      const previous = claim ? await supabase.from('report_history').select('id,version,filters').eq('kind', 'claim-submission').contains('filters', { activity, organisation: org }).order('version', { ascending: false }).limit(1) : null;
-      if(previous?.error)throw Error('Could not check report versions. Your PDF is ready locally but was not saved.');
-      const same = (previous?.data ?? []).filter(h => { const f = h.filters as { activity?: string; organisation?: string }; return f?.activity === activity && f?.organisation === org; });
-      const version = 1 + Math.max(0, ...same.map(h => h.version));
       if(claim){
-        const job:ClaimReportJob={id,path,name,activity,bytes:Array.from(new Uint8Array(await blob.arrayBuffer())),missing,
-          row:{id,owner_id:store.userId,kind:'claim-submission',title:`Expense Claim Submission · ${org} · v${version} — ${subjectName}`,period_from:st.start,period_to:st.end,workspace:'all',filters:{subject,excluded,reference,activity,organisation:org,profileId:profile?.id,format:claimFormat,snapshot:claim} as never,file_path:path,file_size:blob.size,version}};
+        const job:ClaimReportJob={id,path,name,activity,bytes:Array.from(new Uint8Array(await blob.arrayBuffer())),missing,versionPending:true,
+          row:{id,owner_id:store.userId,kind:'claim-submission',title:`Expense Claim Submission · ${org} · v1 — ${subjectName}`,period_from:st.start,period_to:st.end,workspace:'all',filters:{subject,excluded,reference,activity,organisation:org,profileId:profile?.id,format:claimFormat,snapshot:claim} as never,file_path:path,file_size:blob.size,version:1}};
         await saveLocalClaimReport(store.userId,job);
         pendingSave.current=()=>saveReportJob(job);
-        await saveReportJob(job);return;
-      }
+      }else{
+      pendingSave.current = async () => {
       await savePreparedReport({ id, owner: store.userId, path, size: blob.size }, {
         read: async () => { const { data, error } = await supabase.from('report_history').select('id,owner_id,file_path,file_size').eq('id', id).eq('owner_id', store.userId).maybeSingle(); return { data, error }; },
         upload: async () => supabase.storage.from('receipts').upload(path, blob, { contentType: 'application/pdf', upsert: true }),
-        insert: async () => supabase.from('report_history').insert({ id, owner_id: store.userId, kind: claim ? 'claim-submission' : 'expenditure-statement', title: `${claim ? `Expense Claim Submission · ${org} · v${version}` : 'Detailed Expenditure Statement'} — ${subjectName}`, period_from: st.start, period_to: st.end, workspace: 'all', filters: { subject, excluded, reference, activity, organisation: org, profileId: profile?.id, format: claimFormat, snapshot: claim ?? st } as never, file_path: path, file_size: blob.size, version }),
+        insert: async () => supabase.from('report_history').insert({ id, owner_id: store.userId, kind: 'expenditure-statement', title: `Detailed Expenditure Statement — ${subjectName}`, period_from: st.start, period_to: st.end, workspace: 'all', filters: { subject, excluded, reference, activity, organisation: org, profileId: profile?.id, format: claimFormat, snapshot: st } as never, file_path: path, file_size: blob.size, version:1 }),
       });
-      };
+      };}
       await retryHistory();
       setStage(-1);
     } catch (e) { setFailed(true); toast.error(e instanceof Error ? e.message : "Couldn't prepare the statement"); }
@@ -300,7 +302,7 @@ export function ExpenditureReportBuilder({ mode, search, embedded = false }: { e
       {claimMode && <section className="space-y-3 border-y py-4"><h2 className="font-semibold">Review & generate</h2><p className="text-lg font-semibold tabular-nums">Outstanding claim · {money(selectedClaimTotal)}</p><p className="text-sm">{org || 'Paying organisation required'} · {maskedText(claimant.name)} · {purpose || 'Purpose not supplied'}</p><p className="text-xs text-muted-foreground">{previewClaim.items.filter(i => i.billRef === 'Bill Not Attached').length} expenses need bills · {previewClaim.excluded.length} excluded · {claimant.approver ? `Proposed approver: ${claimant.approver} (not approved)` : 'Approving authority not supplied'}</p><label className="flex items-start gap-2 text-sm"><Checkbox checked={confirmed} onCheckedChange={v => setConfirmed(v === true)} />I reviewed this organisation, profile and outstanding expenses. A repeated report is a new version, not another reimbursement.</label></section>}
 
       {claimMode&&historyCheck==='error'&&<p role="alert" className="text-sm text-destructive">Could not check previous claims. Reconnect and reload before generating.</p>}
-      <Button className="w-full" onClick={generate} disabled={busy || !included.length || (claimMode && (!confirmed || !org || selectedClaimTotal <= 0 || !advanceChosen||historyCheck!=='ready'))}><FileText className="mr-1 h-4 w-4" />{claimMode ? "Generate claim PDF" : "Generate statement PDF"}</Button>
+      <Button className="w-full" onClick={generate} disabled={busy || !included.length || (claimMode && ((result !== null && historyState !== 'saved') || !confirmed || !org || selectedClaimTotal <= 0 || !advanceChosen||historyCheck!=='ready'))}><FileText className="mr-1 h-4 w-4" />{claimMode ? "Generate claim PDF" : "Generate statement PDF"}</Button>
       <p className="text-xs text-muted-foreground">Prepared on this device — keep this page open until it's ready.</p>
       {stage >= 0 && <ProcessingPanel title={failed ? "Statement not finished" : "Preparing your statement… you can keep using the app; we'll tell you when it's ready"} stages={stagesAt(STAGES, stage, failed)} {...(busy ? { onCancel: () => { cancelled.current = true; setStage(-1); } } : {})} />}
       </div><div className={cn('min-w-0',claimMode&&'min-[1000px]:col-span-2 min-[1600px]:col-span-1')}>

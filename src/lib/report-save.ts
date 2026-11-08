@@ -19,7 +19,7 @@ export async function savePreparedReport(expected: { id: string; path: string; s
   let insert: { error: unknown };
   try { insert = await adapter.insert(); }
   catch (error) { insert = { error }; }
-  if (!insert.error) return;
+  // A successful acknowledgement is not read-back evidence; verify every insert outcome.
   const after = await adapter.read().catch(error => ({ data: null, error }));
   if (!after.error && matches(after.data)) return;
   // Never delete an object after an unknown database outcome: the row may exist.

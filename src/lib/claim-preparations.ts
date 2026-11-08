@@ -19,7 +19,15 @@ export async function saveCloudPreparation(owner:string,p:ClaimPreparation){
  inFlight.set(key,operation);try{return await operation;}finally{if(inFlight.get(key)===operation)inFlight.delete(key);}
 }
 export async function clearLocalPreparations(owner:string){const db=await localDB();try{await new Promise<void>((resolve,reject)=>{const tx=db.transaction('drafts','readwrite');tx.objectStore('drafts').delete(owner);tx.objectStore('drafts').delete(`${owner}:report`);tx.oncomplete=()=>resolve();tx.onerror=()=>reject(tx.error);});}finally{db.close();}}
-export interface ClaimReportJob { id:string;path:string;name:string;activity:string;bytes:number[];missing:string[];row:Database['public']['Tables']['report_history']['Insert'] }
+export interface ClaimReportJob { id:string;path:string;name:string;activity:string;bytes:number[];missing:string[];versionPending?:boolean;row:Database['public']['Tables']['report_history']['Insert'] }
+/** Freeze the bytes before any network read; old checkpoints already contain a resolved version. */
+export async function resolveClaimReportVersion(job:ClaimReportJob,read:()=>Promise<number>,checkpoint:(job:ClaimReportJob)=>Promise<void>){
+ if(!job.versionPending)return job;
+ const version=await read();
+ if(!Number.isInteger(version)||version<1)throw Error('Could not check report versions. Your saved PDF remains available for retry.');
+ const resolved:ClaimReportJob={...job,versionPending:false,row:{...job.row,version,title:job.row.title.replace(' · v1 —',` · v${version} —`)}};
+ await checkpoint(resolved);return resolved;
+}
 export async function saveLocalClaimReport(owner:string,job:ClaimReportJob){await localOp('readwrite',`${owner}:report`,await encryptOffline(owner,job));}
 export async function loadLocalClaimReport(owner:string){const sealed=await localOp<Awaited<ReturnType<typeof encryptOffline>>|undefined>('readonly',`${owner}:report`);return sealed?decryptOffline<ClaimReportJob>(owner,sealed):null;}
 export async function clearLocalClaimReport(owner:string){const db=await localDB();try{await new Promise<void>((resolve,reject)=>{const tx=db.transaction('drafts','readwrite');tx.objectStore('drafts').delete(`${owner}:report`);tx.oncomplete=()=>resolve();tx.onerror=()=>reject(tx.error);});}finally{db.close();}}

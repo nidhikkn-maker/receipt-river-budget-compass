@@ -21,6 +21,7 @@
 - Saved payment methods (UPI IDs, cards, wallets, cash) live in owner-scoped finance_preferences.paymentInstruments with pure tested rules in src/lib/payment-instruments.ts; each is linked to an account of a compatible kind and entries keep the method id plus the general payment type, so balances still flow through the linked account.
 - Currency conversion happens server-side in src/lib/fx.functions.ts (Frankfurter/ECB rates for the bill date) so stored INR amounts can't be faked by the client.
 - Reports are generated in the browser (src/lib/reports.ts) from data the user can already see, so RLS scoping applies automatically.
+- Report history saves require exact owner/id/path/size readback even after an acknowledged insert; unknown outcomes retain evidence and retry the same identity.
 - Vault document scanning uses a server function (src/lib/document-extract.functions.ts) gated by the same AI privacy settings; extracted fields are always reviewed before saving.
 - Category splits live in expenses.allocations and all category reporting goes through categoryTotals/categoryParts so a split transaction is counted once.
 - Mutual fund NAVs are authenticated server-fetched daily quotes; reviewed units create dated valuation snapshots, never income or expense entries, so net worth reuses the ledger engine.
