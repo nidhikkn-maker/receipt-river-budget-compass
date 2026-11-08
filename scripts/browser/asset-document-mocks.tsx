@@ -13,6 +13,7 @@ export const extractDocument = async () => undefined;
 export const useServerFn = () => async ({ data }: { data: { dataUrl: string; mimeType: string } }) => {
   if (!data.dataUrl.startsWith("data:image/png;base64,") || data.mimeType !== "image/png") throw new Error("Original image was not passed to reader");
   const s = state(); s.reads++; write(s);
+  if (location.search.includes('invoice')) return {ok:true,result:{docType:'asset_invoice',title:'Generator invoice',date:'2026-04-01',amount:150000,currency:'INR',merchant:'Engineering Works',text:'Generator 150000 invoice 1 April 2026',notes:'',fields:[{label:'Purchase cost',value:'150000',page:1,quote:'Generator 150000',confidence:'high'}],asset:{name:'Invoice generator',kind:'machinery',cost:150000,purchaseDate:'2026-04-01',owner:null,supplier:'Engineering Works',serial:null},obligations:[]}};
   return { ok: true, result: { docType: "maintenance", title: "Generator annual service", date: "2026-10-02", amount: 8000, merchant: "Engineering Works", currency: "INR", notes: "Annual service", text: "Serial GEN-44. Service 8000", fields: [{ label: "Serial number", value: "GEN-44", originalValue: "GEN-44", page: 1, quote: "Serial GEN-44", confidence: "high" }], asset: { name: "Generator", serial: "GEN-44", kind: "machinery", owner: null, cost: null, purchaseDate: null, supplier: "Engineering Works", warrantyUntil: null, insurance: null }, obligations: [] } };
 };
 export const documentIdForRun = (id: string) => id;
