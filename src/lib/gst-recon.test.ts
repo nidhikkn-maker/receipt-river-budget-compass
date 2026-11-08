@@ -7,6 +7,10 @@ const e = (id: string, o: Partial<Expense> = {}) => ({ id, title: "x", merchant:
 const doc = (txn: string, text: string) => ({ id: "d" + txn, transactionId: txn, text, fields: [] }) as unknown as VaultDoc;
 
 describe("gst-recon", () => {
+  it('a personal-ledger entry with a business share still requires a retained invoice',()=>{
+    const mixed=e('split',{scope:'personal',originalAmount:1000,workspaceAllocations:[{workspace:'personal',amount:600},{workspace:'business',amount:400}]});
+    expect(missingInvoices([mixed],[]).map(x=>x.id)).toEqual(['split']);expect(missingInvoices([mixed],[doc('split','')])).toEqual([]);
+  });
   it("flags business spends with no bill or linked document only", () => {
     const list = [e("a"), e("b", { receipts: [{ name: "r", type: "image/jpeg", path: "p" }] }), e("c"), e("d", { scope: "personal" }), e("t", { txnType: "transfer" })];
     expect(missingInvoices(list, [doc("c", "")]).map((x) => x.id)).toEqual(["a"]);

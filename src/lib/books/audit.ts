@@ -106,7 +106,7 @@ export function entityObligations(p: ObligationInput, entityId: string): Obligat
 export function withStates(items: AuditItem[], states: FindingState[] | undefined) {
   const by = new Map((states ?? []).map((s) => [s.key, s]));
   const open: AuditItem[] = [], reviewed: (AuditItem & { state: FindingState })[] = [];
-  for (const i of items) { const s = by.get(i.key); if (s && s.status !== "open") reviewed.push({ ...i, state: s }); else open.push(i); }
+  for (const i of items) { const s = by.get(i.key); if (s && s.status !== "open" && !['Reconciliation','Missing invoice'].includes(i.type)) reviewed.push({ ...i, state: s }); else open.push(i); }
   return { open, reviewed };
 }
 /** Record a decision; reopening keeps the history line. */
