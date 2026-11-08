@@ -2,7 +2,9 @@ import { supabase } from '@/integrations/supabase/client';
 import { encryptOffline,decryptOffline } from './offline';
 import type { Json } from '@/integrations/supabase/types';
 import type { Claimant } from './expense-claim';
-export interface ClaimPreparationData { choice:string;picked:string[];excluded:string[];organisation:string;profileId:string;routeId:string;accountId:string;claimant:Claimant;purpose:string;from:string;to:string;format:'detailed'|'summary';rejected:string[] }
+export interface ClaimPreparationData { choice:string;picked:string[];excluded:string[];organisation:string;profileId:string;routeId:string;accountId:string;claimant:Claimant;purpose:string;from:string;to:string;format:'detailed'|'summary';rejected:string[];advanceInput?:string }
+/** Explicit purchases must match as a set; "entries" alone cannot identify a preparation. */
+export function sameClaimSubject(a:ClaimPreparationData,b:ClaimPreparationData){return a.choice===b.choice&&(a.choice!=='entries'||JSON.stringify([...new Set(a.picked)].sort())===JSON.stringify([...new Set(b.picked)].sort()));}
 export interface ClaimPreparation { id:string;data:ClaimPreparationData;revision:number;mutationId:string;updatedAt:string }
 const inFlight=new Map<string,Promise<unknown>>();
 function localDB():Promise<IDBDatabase>{return new Promise((resolve,reject)=>{const r=indexedDB.open('ledgerline-claim-preparations',1);r.onupgradeneeded=()=>r.result.createObjectStore('drafts');r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error);});}

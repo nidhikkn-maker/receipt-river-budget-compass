@@ -1,5 +1,5 @@
 import { useEffect,useRef,useState } from 'react';
-import { loadCloudPreparation,loadLocalPreparation,saveLocalPreparation,saveCloudPreparation,type ClaimPreparation,type ClaimPreparationData } from '@/lib/claim-preparations';
+import { loadCloudPreparation,loadLocalPreparation,saveLocalPreparation,saveCloudPreparation,sameClaimSubject,type ClaimPreparation,type ClaimPreparationData } from '@/lib/claim-preparations';
 export function useClaimPreparation(owner:string,enabled:boolean,data:ClaimPreparationData,onRestore:(d:ClaimPreparationData)=>void,hasExplicit:boolean){
  const [status,setStatus]=useState('Loading saved preparation…');const [ready,setReady]=useState(false);const [recover,setRecover]=useState<ClaimPreparation|null>(null);
  const draft=useRef<ClaimPreparation|null>(null),latest=useRef(data),restore=useRef(onRestore),signature=useRef(''),saving=useRef(false),pending=useRef(false),conflict=useRef(false),active=useRef(true),localQueue=useRef<Promise<unknown>>(Promise.resolve()),cloudPending=useRef(false),generation=useRef(0);
@@ -9,7 +9,7 @@ export function useClaimPreparation(owner:string,enabled:boolean,data:ClaimPrepa
  useEffect(()=>{generation.current+=1;active.current=enabled;draft.current=null;signature.current='';conflict.current=false;cloudPending.current=false;setRecover(null);if(!enabled){setReady(false);return;}setReady(false);let cancelled=false;
   void (async()=>{try{const local=await loadLocalPreparation(owner);let cloud:ClaimPreparation|null=null;try{cloud=await loadCloudPreparation(owner,local?.id);}catch{setStatus('Cloud unavailable · device copy only');}
    if(cancelled)return;const preferred=local&&(!cloud||local.updatedAt>cloud.updatedAt)?local:cloud;
-   if(preferred){draft.current=preferred;if(!hasExplicit||preferred.data.choice===latest.current.choice){signature.current=JSON.stringify(preferred.data);restore.current(preferred.data);cloudPending.current=!cloud||preferred.mutationId!==cloud.mutationId;setStatus(cloudPending.current?'Saved on device · waiting to sync':'Saved to account');}else{setRecover(preferred);draft.current=null;setStatus('Saved preparation available');}}else setStatus('Not saved yet');
+   if(preferred){draft.current=preferred;if(!hasExplicit||sameClaimSubject(preferred.data,latest.current)){signature.current=JSON.stringify(preferred.data);restore.current(preferred.data);cloudPending.current=!cloud||preferred.mutationId!==cloud.mutationId;setStatus(cloudPending.current?'Saved on device · waiting to sync':'Saved to account');}else{setRecover(preferred);draft.current=null;setStatus('Saved preparation available');}}else setStatus('Not saved yet');
   }catch{setStatus('Could not restore preparation');}finally{if(!cancelled)setReady(true);}})();return()=>{cancelled=true;active.current=false;};
  // One owner session only; changes do not reset recovery.
  // eslint-disable-next-line react-hooks/exhaustive-deps
