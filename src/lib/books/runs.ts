@@ -43,7 +43,11 @@ async function owner(): Promise<string> {
 export async function startRun(id: string, file: File, context: string, extra: RunData = {}): Promise<DocRun> {
   const uid = await owner();
   const existing = await supabase.from("document_runs").select("*").eq("id", id).maybeSingle();
+  if (existing.error) throw new Error('Saved upload could not be checked. Original retained; retry when connected.');
   if (existing.data) {
+    if (existing.data.owner_id !== uid) throw new Error('This upload belongs to another owner. Nothing was changed.');
+    if (existing.data.status === 'done' || existing.data.status === 'cancelled' || (existing.data.data as RunData)?.cleanupPending) throw new Error('This upload has already finished or is awaiting cleanup. Use the unfinished-document cleanup action.');
+    await verifyRunOriginal(file, existing.data.data as RunData);
     const up = await supabase.from("document_runs").update({ status: "running", error: null, attempts: existing.data.attempts + 1, updated_at: new Date().toISOString() }).eq("id", id).select("*").single();
     if (up.error) throw new Error(up.error.message);
     return toRun(up.data);
