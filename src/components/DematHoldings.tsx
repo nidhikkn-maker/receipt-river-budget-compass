@@ -14,7 +14,7 @@ export function DematHoldings() {
     <section className="cmp-section mb-6">
       <div className="flex items-center justify-between gap-3">
         <h2 className="font-display text-lg font-bold">Demat holdings</h2>
-        <Button variant="outline" size="sm" onClick={() => openSmartAdd('document')}><Upload className="h-4 w-4" />Add holdings</Button>
+        <Button variant="outline" size="sm" onClick={() => openSmartAdd('investments')}><Upload className="h-4 w-4" />Add holdings</Button>
       </div>
       {!rows.length && <p className="mt-2 text-sm text-muted-foreground">No holdings yet. Tap Add holdings and choose your demat holding statement; you check what was read before anything is saved.</p>}
       {rows.map((d) => {

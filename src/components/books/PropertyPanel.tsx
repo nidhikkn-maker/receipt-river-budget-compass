@@ -1,6 +1,6 @@
 /** Property management (v6 §35–41): Owner → Property → Building → Floor → Unit, leases, tenant ledger, costs, occupancy. */
 import { useMemo, useState } from "react";
-import { Link } from "@tanstack/react-router";
+import { openSmartAdd } from '@/lib/smart-add-event';
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -38,8 +38,8 @@ export function PropertyPanel() {
     <Fold id="property" title="Property management" hint={`${books.properties.length} properties · ${books.leases.length} leases`} defaultOpen={books.properties.length > 0}>
       <div className="space-y-3 text-sm">
         <div className="flex flex-wrap gap-2">
-          <Link to="/statements" search={{ context: "property" }} className="rounded-md border px-3 py-2 font-semibold text-primary">Add property from deed</Link>
-          <Link to="/statements" search={{ context: "property" }} className="rounded-md border px-3 py-2 text-primary">Upload lease, tax or utility bill</Link>
+          <Button variant="outline" className="rounded-md border px-3 py-2 font-semibold text-primary" onClick={() => openSmartAdd('property')}>Add property from deed</Button>
+          <Button variant="outline" className="rounded-md border px-3 py-2 text-primary" onClick={() => openSmartAdd('property')}>Upload lease, tax or utility bill</Button>
         </div>
         <div className="flex gap-2"><Input aria-label="New property name" placeholder="Or type a property name" value={newName} onChange={(e) => setNewName(e.target.value)} /><Button variant="outline" disabled={!newName.trim()} onClick={async () => { await save({ properties: [...books.properties, { id: crypto.randomUUID(), name: newName.trim(), address: "", buildings: [], docIds: [] }] }); setNewName(""); }}>Add</Button></div>
         {alloc.ambiguous.length > 0 && <p className="text-xs text-destructive">{alloc.ambiguous.length} receipt(s) fit more than one lease equally and are left unallocated — add the rent account to each lease to separate them.</p>}

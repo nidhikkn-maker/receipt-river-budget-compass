@@ -41,6 +41,16 @@ describe('Smart Add stays in place', () => {
     await waitFor(() => expect(seen.statement.at(-1)).toMatchObject({ context: 'assets' }));
     expect(navigate).not.toHaveBeenCalled();
   });
+  it.each(['investments','property','tax','entity','fy','gst','documents'] as const)('preserves the %s module for scanned documents through hide and reopen', async context => {
+    const { rerender } = render(<SmartAdd open onOpenChange={() => {}} />);
+    act(() => { window.dispatchEvent(new CustomEvent('ledgerline:smart-add', {detail:{intent:context}})); });
+    fireEvent.change(screen.getByLabelText('Choose files'), {target:{files:[f('source.jpg','image/jpeg')]}});
+    await waitFor(() => expect(seen.statement.at(-1)).toMatchObject({context}));
+    rerender(<SmartAdd open={false} onOpenChange={() => {}} />);
+    rerender(<SmartAdd open onOpenChange={() => {}} />);
+    await waitFor(() => expect(seen.statement.at(-1)).toMatchObject({context}));
+    expect(navigate).not.toHaveBeenCalled();
+  });
   it('a photo opens preview and receipt review inside the sheet without navigating', async () => {
     render(<SmartAdd open onOpenChange={() => {}} scope="business" />);
     fireEvent.change(screen.getByLabelText('Take a photo'), { target: { files: [f('bill.jpg', 'image/jpeg')] } });

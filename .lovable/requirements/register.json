@@ -634,7 +634,7 @@
       "modules": [],
       "dependencies": [],
       "status": "PARTIAL",
-      "requiredWork": "Reports Centre all 31 families now have frozen PDF/history persistence evidence across current and previous batches. Remaining: specialized exports outside Reports Centre and per-material-figure provenance (including opening/valuation/planning sources), hosted owner/entity/access acceptance. Isolated hosted project with authenticated synthetic owners, private storage and existing migrations required.",
+      "requiredWork": "Centre31 families plus detailed expenditure frozen-PDF/reload/retry now locally accepted. Remaining specialized export/material-figure source chains and hosted owner/entity/access acceptance.",
       "verificationMethod": "Source-to-code audit followed by applicable unit/database/integration/real-route checks; hosted/device evidence separately required.",
       "finalTestResult": {
         "result": "PARTIAL",
@@ -647,7 +647,8 @@
           "8 Nov prioritised acceptance: 26/26 focused tests; isolated reconciliation exception/checkpoint restart/stale revision, real frozen PDF/source-owner comparisons and interrupted-save recovery; actual non-mocked synthetic invoice reader -> real review -> committed lost response/retry -> actual Assets/DocuRepo route reload. Scope and blockers: docs/evidence/prioritised-acceptance-2026-11-08.md. Hosted auth/storage not certified.",
           "8 Nov 04:42 grouped functionality: company-filtered CSV/XLSX/PDF, shared-company Excel, source-linked reconciliation exports, effective-invoice/unique-party matching and full-list differing-rate GST allocations. 51 changed-path tests and actual download browser checks pass; disposable owner-RLS disk retry/reload covers six report families. Broad clauses remain partial; no hosted certification. docs/evidence/grouped-finance-2026-11-08.md",
           "8 Nov 04:55 connected batch: registration/company isolated reconciliation, retained investment events and six-decimal units, exact encrypted Reports Centre retry with downloaded-byte verification and queued frozen source snapshots; eight actual PDF families/owner-RLS disk restart and real Inbox/audit/supplier/report routes verified. Principal94/94, last13/13 targeted tests passed; local adapters NOT hosted. docs/evidence/connected-completion-2026-11-08.md",
-          "8 Nov 05:43 connected GST/report batch: ended-period liability/payment/frozen-working/filed-original differences enter existing Inbox, unique company payments and stable working refresh; actual Inbox -> Tax -> save -> reload passes. Remaining 23 Reports Centre families have real PDF/frozen metadata/lost-reply/restart owner-RLS acceptance. Loan filtering/historical balance sources and shared GST credit/source chains fixed. 104 distinct targeted tests pass; local adapters only, not hosted. docs/evidence/gst-report-completion-2026-11-08.md"
+          "8 Nov 05:43 connected GST/report batch: ended-period liability/payment/frozen-working/filed-original differences enter existing Inbox, unique company payments and stable working refresh; actual Inbox -> Tax -> save -> reload passes. Remaining 23 Reports Centre families have real PDF/frozen metadata/lost-reply/restart owner-RLS acceptance. Loan filtering/historical balance sources and shared GST credit/source chains fixed. 104 distinct targeted tests pass; local adapters only, not hosted. docs/evidence/gst-report-completion-2026-11-08.md",
+          "8 Nov capture/claims/recovery: shared eight-context capture, in-place exact-entry claim edits, encrypted expenditure recovery, durable source retry; focused automated and actual browser boundary/PDF checks. Scope and blockers: docs/evidence/capture-claims-recovery-2026-11-08.md"
         ]
       },
       "category": "B",
@@ -917,7 +918,8 @@
         "evidence": [
           "Register audit context (not independently sufficient test proof): src/routes/_authenticated/statements.tsx centralizes intake, but src/routes/_authenticated/new.tsx has a separate receipt capture/upload workflow; universal Statement Desk-only processing is not satisfied.",
           "src/routes/_authenticated/new.tsx retains receipt capture; src/routes/_authenticated/statements.tsx is the main intake route. Shared helpers do not prove a single entry-point policy.",
-          "2026-11-07d: Demat context corrected; controlled ZIP selection/access/size/provenance tests added. Full navigation/hosted export acceptance remains pending. docs/evidence/workstream-1-batch-2026-11-07d.md"
+          "2026-11-07d: Demat context corrected; controlled ZIP selection/access/size/provenance tests added. Full navigation/hosted export acceptance remains pending. docs/evidence/workstream-1-batch-2026-11-07d.md",
+          "8 Nov capture/claims/recovery: shared eight-context capture, in-place exact-entry claim edits, encrypted expenditure recovery, durable source retry; focused automated and actual browser boundary/PDF checks. Scope and blockers: docs/evidence/capture-claims-recovery-2026-11-08.md"
         ]
       },
       "category": "B",
@@ -1683,7 +1685,7 @@
       "modules": [],
       "dependencies": [],
       "status": "PARTIAL",
-      "requiredWork": "Inject failure at every pipeline stage for both bank/card and non-bank intake; assert no partial financial records, successful retry behavior, and explicit recoverable error state. Connected review/persistence evidence added 7 Nov; retain PARTIAL until actual reader/file storage, applicable full permission paths and remaining original-clause conditions are verified. Controlled fixtures do not certify hosted saves or real-document accuracy.",
+      "requiredWork": "Extraction checkpoint/retry now implemented and locally tested. Remaining all-stage bank/card/non-bank fault coverage, source permissions and hosted storage acceptance; see docs/evidence/capture-claims-recovery-2026-11-08.md",
       "verificationMethod": "Source-to-code audit followed by applicable unit/database/integration/real-route checks; hosted/device evidence separately required.",
       "finalTestResult": {
         "result": "PARTIAL",
@@ -1693,11 +1695,12 @@
           "src/lib/books/books.test.ts — PASS on rerun; concrete assertions recorded in /tmp/verify-b1-tests.log. Scope is limited to the component rules/fixtures in this file, not the entire clause.",
           "src/lib/books/intake-revision-sql.test.ts — PASS on rerun; concrete assertions recorded in /tmp/verify-b1-tests.log. Scope is limited to the component rules/fixtures in this file, not the entire clause.",
           "src/lib/books/typed-intake-sql.test.ts — PASS on rerun; concrete assertions recorded in /tmp/verify-b1-tests.log. Scope is limited to the component rules/fixtures in this file, not the entire clause.",
-          "2026-11-07 connected verification batch: Database validation failure changes neither preferences, lock nor audit; corrected approved retry succeeds. Statement original failure now retained encrypted across reload and later uploads; stable ids prevent duplicate original attempts."
+          "2026-11-07 connected verification batch: Database validation failure changes neither preferences, lock nor audit; corrected approved retry succeeds. Statement original failure now retained encrypted across reload and later uploads; stable ids prevent duplicate original attempts.",
+          "8 Nov capture/claims/recovery: shared eight-context capture, in-place exact-entry claim edits, encrypted expenditure recovery, durable source retry; focused automated and actual browser boundary/PDF checks. Scope and blockers: docs/evidence/capture-claims-recovery-2026-11-08.md"
         ]
       },
       "category": "D",
-      "nextAction": "Blocked by staged approval trigger / hosted cross-device recovery acceptance; resume once that dependency passes."
+      "nextAction": "Extraction checkpoint/retry now implemented and locally tested. Remaining all-stage bank/card/non-bank fault coverage, source permissions and hosted storage acceptance; see docs/evidence/capture-claims-recovery-2026-11-08.md"
     },
     {
       "id": "V60-0069",
@@ -1740,7 +1743,8 @@
         "result": "PARTIAL",
         "evidence": [
           "Register audit context (not independently sufficient test proof): src/routes/_authenticated/statements.tsx centralizes intake, but src/routes/_authenticated/new.tsx has a separate receipt capture/upload workflow; universal Statement Desk-only processing is not satisfied.",
-          "src/routes/_authenticated/new.tsx retains receipt capture; src/routes/_authenticated/statements.tsx is the main intake route. Shared helpers do not prove a single entry-point policy."
+          "src/routes/_authenticated/new.tsx retains receipt capture; src/routes/_authenticated/statements.tsx is the main intake route. Shared helpers do not prove a single entry-point policy.",
+          "8 Nov capture/claims/recovery: shared eight-context capture, in-place exact-entry claim edits, encrypted expenditure recovery, durable source retry; focused automated and actual browser boundary/PDF checks. Scope and blockers: docs/evidence/capture-claims-recovery-2026-11-08.md"
         ]
       },
       "category": "B",
@@ -1778,20 +1782,26 @@
       },
       "original": "* Upload from Investments opens Statement Desk.",
       "interpretation": "Account for this source clause in the context of 4. No duplicated upload workflows; verify each enumerated feature and applicable safeguard, not merely screen presence.",
-      "modules": [],
+      "modules": [
+        "src/components/DematHoldings.tsx",
+        "src/lib/smart-add-event.ts",
+        "src/components/SmartAdd.tsx",
+        "src/routes/_authenticated/statements.tsx"
+      ],
       "dependencies": [],
-      "status": "PARTIAL",
-      "requiredWork": "Add a rendered navigation test for \"Upload from Investments opens Statement Desk.\" asserting the destination, preselected context and usable review/upload flow; verify no mandatory blank registration form blocks document onboarding. Project edits/new src tests were prohibited by sandbox instructions; missing focused tests were not added.",
+      "status": "VERIFIED COMPLETE",
+      "requiredWork": "None — narrow actual module-action/context/shared Statement Desk navigation criterion verified; no broader extraction or hosted-save claim.",
       "verificationMethod": "Source-to-code audit followed by applicable unit/database/integration/real-route checks; hosted/device evidence separately required.",
       "finalTestResult": {
-        "result": "PARTIAL",
+        "result": "PASS",
         "evidence": [
           "Register audit context (not independently sufficient test proof): src/components/books/MarketPanel.tsx links to /statements with the appropriate context; no focused module-to-intake route verification found.",
-          "Navigation implementation: src/components/books/MarketPanel.tsx (investments), PropertyPanel.tsx (property), TaxCentre.tsx (FY), src/routes/_authenticated/assets.tsx (assets), tax.tsx (tax), entities.tsx (entity), vault.tsx (DocuRepo). These are source observations, not passing navigation tests."
+          "Navigation implementation: src/components/books/MarketPanel.tsx (investments), PropertyPanel.tsx (property), TaxCentre.tsx (FY), src/routes/_authenticated/assets.tsx (assets), tax.tsx (tax), entities.tsx (entity), vault.tsx (DocuRepo). These are source observations, not passing navigation tests.",
+          "8 Nov capture/claims/recovery: shared eight-context capture, in-place exact-entry claim edits, encrypted expenditure recovery, durable source retry; focused automated and actual browser boundary/PDF checks. Scope and blockers: docs/evidence/capture-claims-recovery-2026-11-08.md"
         ]
       },
       "category": "B",
-      "nextAction": "Add a rendered navigation test for \"Upload from Investments opens Statement Desk.\" asserting the destination, preselected context and usable review/upload flow; verify no mandatory blank registration form blocks document onboarding. Project edits/new src tests were prohibited by sandbox instructions; missing focused tests were not added."
+      "nextAction": "None — verified."
     },
     {
       "id": "V60-0073",
@@ -1803,20 +1813,26 @@
       },
       "original": "* Upload from Property Management opens Statement Desk.",
       "interpretation": "Account for this source clause in the context of 4. No duplicated upload workflows; verify each enumerated feature and applicable safeguard, not merely screen presence.",
-      "modules": [],
+      "modules": [
+        "src/components/books/PropertyPanel.tsx",
+        "src/lib/smart-add-event.ts",
+        "src/components/SmartAdd.tsx",
+        "src/routes/_authenticated/statements.tsx"
+      ],
       "dependencies": [],
-      "status": "PARTIAL",
-      "requiredWork": "Add a rendered navigation test for \"Upload from Property Management opens Statement Desk.\" asserting the destination, preselected context and usable review/upload flow; verify no mandatory blank registration form blocks document onboarding. Project edits/new src tests were prohibited by sandbox instructions; missing focused tests were not added.",
+      "status": "VERIFIED COMPLETE",
+      "requiredWork": "None — narrow actual module-action/context/shared Statement Desk navigation criterion verified; no broader extraction or hosted-save claim.",
       "verificationMethod": "Source-to-code audit followed by applicable unit/database/integration/real-route checks; hosted/device evidence separately required.",
       "finalTestResult": {
-        "result": "PARTIAL",
+        "result": "PASS",
         "evidence": [
           "Register audit context (not independently sufficient test proof): src/components/books/PropertyPanel.tsx links to /statements with the appropriate context; no focused module-to-intake route verification found.",
-          "Navigation implementation: src/components/books/MarketPanel.tsx (investments), PropertyPanel.tsx (property), TaxCentre.tsx (FY), src/routes/_authenticated/assets.tsx (assets), tax.tsx (tax), entities.tsx (entity), vault.tsx (DocuRepo). These are source observations, not passing navigation tests."
+          "Navigation implementation: src/components/books/MarketPanel.tsx (investments), PropertyPanel.tsx (property), TaxCentre.tsx (FY), src/routes/_authenticated/assets.tsx (assets), tax.tsx (tax), entities.tsx (entity), vault.tsx (DocuRepo). These are source observations, not passing navigation tests.",
+          "8 Nov capture/claims/recovery: shared eight-context capture, in-place exact-entry claim edits, encrypted expenditure recovery, durable source retry; focused automated and actual browser boundary/PDF checks. Scope and blockers: docs/evidence/capture-claims-recovery-2026-11-08.md"
         ]
       },
       "category": "B",
-      "nextAction": "Add a rendered navigation test for \"Upload from Property Management opens Statement Desk.\" asserting the destination, preselected context and usable review/upload flow; verify no mandatory blank registration form blocks document onboarding. Project edits/new src tests were prohibited by sandbox instructions; missing focused tests were not added."
+      "nextAction": "None — verified."
     },
     {
       "id": "V60-0074",
@@ -1837,7 +1853,8 @@
         "result": "PARTIAL",
         "evidence": [
           "Register audit context (not independently sufficient test proof): src/routes/_authenticated/assets.tsx links to /statements with the appropriate context; no focused module-to-intake route verification found.",
-          "Navigation implementation: src/components/books/MarketPanel.tsx (investments), PropertyPanel.tsx (property), TaxCentre.tsx (FY), src/routes/_authenticated/assets.tsx (assets), tax.tsx (tax), entities.tsx (entity), vault.tsx (DocuRepo). These are source observations, not passing navigation tests."
+          "Navigation implementation: src/components/books/MarketPanel.tsx (investments), PropertyPanel.tsx (property), TaxCentre.tsx (FY), src/routes/_authenticated/assets.tsx (assets), tax.tsx (tax), entities.tsx (entity), vault.tsx (DocuRepo). These are source observations, not passing navigation tests.",
+          "8 Nov capture/claims/recovery: shared eight-context capture, in-place exact-entry claim edits, encrypted expenditure recovery, durable source retry; focused automated and actual browser boundary/PDF checks. Scope and blockers: docs/evidence/capture-claims-recovery-2026-11-08.md"
         ]
       },
       "category": "B",
@@ -1862,7 +1879,8 @@
         "result": "PARTIAL",
         "evidence": [
           "Register audit context (not independently sufficient test proof): src/routes/_authenticated/tax.tsx links to /statements with the appropriate context; no focused module-to-intake route verification found.",
-          "Navigation implementation: src/components/books/MarketPanel.tsx (investments), PropertyPanel.tsx (property), TaxCentre.tsx (FY), src/routes/_authenticated/assets.tsx (assets), tax.tsx (tax), entities.tsx (entity), vault.tsx (DocuRepo). These are source observations, not passing navigation tests."
+          "Navigation implementation: src/components/books/MarketPanel.tsx (investments), PropertyPanel.tsx (property), TaxCentre.tsx (FY), src/routes/_authenticated/assets.tsx (assets), tax.tsx (tax), entities.tsx (entity), vault.tsx (DocuRepo). These are source observations, not passing navigation tests.",
+          "8 Nov capture/claims/recovery: shared eight-context capture, in-place exact-entry claim edits, encrypted expenditure recovery, durable source retry; focused automated and actual browser boundary/PDF checks. Scope and blockers: docs/evidence/capture-claims-recovery-2026-11-08.md"
         ]
       },
       "category": "B",
@@ -1887,7 +1905,8 @@
         "result": "PARTIAL",
         "evidence": [
           "Register audit context (not independently sufficient test proof): src/routes/_authenticated/statements.tsx centralizes intake, but src/routes/_authenticated/new.tsx has a separate receipt capture/upload workflow; universal Statement Desk-only processing is not satisfied.",
-          "src/routes/_authenticated/new.tsx retains receipt capture; src/routes/_authenticated/statements.tsx is the main intake route. Shared helpers do not prove a single entry-point policy."
+          "src/routes/_authenticated/new.tsx retains receipt capture; src/routes/_authenticated/statements.tsx is the main intake route. Shared helpers do not prove a single entry-point policy.",
+          "8 Nov capture/claims/recovery: shared eight-context capture, in-place exact-entry claim edits, encrypted expenditure recovery, durable source retry; focused automated and actual browser boundary/PDF checks. Scope and blockers: docs/evidence/capture-claims-recovery-2026-11-08.md"
         ]
       },
       "category": "B",
@@ -21428,14 +21447,7 @@
     }
   ],
   "latestVerification": {
-    "at": "2026-11-07T11:57:00Z",
-    "result": "565 VERIFIED COMPLETE / 332 PARTIAL / 0 MISSING / 2 BLOCKED; no promotions. Full 241/1853 PASS, browser 4 PASS. Isolated hosted draft: delegated 9 API PASS, empty browser download FAIL; detailed draft evidence not merged. Approval guard disabled, Main records unchanged, publication held.",
-    "promoted": [],
-    "evidence": [
-      "docs/evidence/connected-workflow-acceptance-2026-11-07.md",
-      "docs/VERIFICATION_RESULTS.md",
-      "src/components/investment-review-persistence.test.tsx",
-      "src/lib/statement-pipeline/history-persistence.test.ts"
-    ]
+    "at": "2026-11-08T06:25:26.394217+00:00",
+    "result": "Newly verified V60-0072/0073 narrow navigation clauses; broad0016/0026/0312 partial;0066/0082 blocked; focused local evidence docs/evidence/capture-claims-recovery-2026-11-08.md"
   }
 }

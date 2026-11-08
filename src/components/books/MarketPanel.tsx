@@ -1,5 +1,6 @@
 /** v6.1 holdings beyond demat, prices with their real freshness, gold, alerts and dated snapshots. */
 import { useState } from "react";
+import { openSmartAdd } from '@/lib/smart-add-event';
 import { Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
@@ -74,7 +75,7 @@ export function MarketPanel() {
           <Button size="sm" variant="outline" onClick={() => setEdit(blank())}>Add holding</Button>
           <Button size="sm" variant="outline" onClick={refreshNavs} disabled={!books.holdings.some((h) => h.schemeCode)}>Refresh NAVs</Button>
           <Button size="sm" variant="outline" onClick={snapshot}>Save today's valuation</Button>
-          <Link to="/statements" search={{ context: "investments" }} className="inline-flex items-center rounded-md px-3 text-sm font-medium text-primary underline">Upload statement</Link>
+          <Button size="sm" variant="link" className="inline-flex items-center rounded-md px-3 text-sm font-medium text-primary underline" onClick={() => openSmartAdd('investments')}>Upload statement</Button>
         </div>
         {edit && <div className="grid grid-cols-2 gap-2 rounded-xl border p-3">
           <select aria-label="Holding type" className="col-span-2 rounded-md border bg-background px-2 py-2" value={edit.kind} onChange={(e) => setEdit({ ...edit, kind: e.target.value as HoldingKind })}>{Object.entries(KIND).map(([k, l]) => <option key={k} value={k}>{l}</option>)}</select>
