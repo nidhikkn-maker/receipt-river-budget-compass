@@ -8,6 +8,20 @@ GRANT ALL ON public.accounting_review_grants TO service_role;
 ALTER TABLE public.accounting_review_grants ENABLE ROW LEVEL SECURITY;
 CREATE POLICY owner_grants ON public.accounting_review_grants TO authenticated USING(owner_id=auth.uid()) WITH CHECK(owner_id=auth.uid());
 CREATE POLICY accountant_own_grant ON public.accounting_review_grants FOR SELECT TO authenticated USING(accountant_id=auth.uid());
+-- Identity is verified by the server; profile names never grant a role.
+CREATE FUNCTION public.set_accounting_review_grant(_entity text,_identity text,_revoke boolean) RETURNS void
+LANGUAGE plpgsql SECURITY DEFINER SET search_path=public AS $$
+DECLARE uid uuid:=auth.uid(); target uuid;
+BEGIN
+ IF uid IS NULL OR NOT EXISTS(SELECT 1 FROM public.finance_preferences p,jsonb_array_elements(p.data->'entities') e WHERE p.owner_id=uid AND e->>'id'=_entity) THEN RAISE EXCEPTION 'Owner company unavailable';END IF;
+ SELECT id INTO target FROM auth.users WHERE email_confirmed_at IS NOT NULL AND (lower(email)=lower(trim(_identity)) OR id::text=_identity);
+ IF target IS NULL OR target=uid THEN RAISE EXCEPTION 'Choose a different verified accountant account';END IF;
+ INSERT INTO public.accounting_review_grants(owner_id,accountant_id,entity_id,revoked_at) VALUES(uid,target,_entity,CASE WHEN _revoke THEN now() END)
+ ON CONFLICT(owner_id,accountant_id,entity_id) DO UPDATE SET revoked_at=excluded.revoked_at;
+END $$;
+REVOKE ALL ON FUNCTION public.set_accounting_review_grant(text,text,boolean) FROM PUBLIC,anon;
+GRANT EXECUTE ON FUNCTION public.set_accounting_review_grant(text,text,boolean) TO authenticated;
+REVOKE INSERT,UPDATE,DELETE ON public.accounting_review_grants FROM authenticated;
 CREATE TABLE public.accounting_journal_evidence (
  id uuid PRIMARY KEY, owner_id uuid NOT NULL, entity_id text NOT NULL, request_id uuid UNIQUE NOT NULL,
  journal jsonb NOT NULL, entry_ids uuid[] NOT NULL, created_at timestamptz NOT NULL DEFAULT now(), actor_id uuid NOT NULL
@@ -67,6 +81,24 @@ BEGIN
   deb:=deb+(l->>'debit')::numeric;cred:=cred+(l->>'credit')::numeric;
  END LOOP;
  IF deb<>cred THEN RAISE EXCEPTION 'Unbalanced journal; differences cannot be accepted'; END IF;
+ IF _journal->'recurrence' IS NOT NULL THEN
+  IF _journal->>'kind' NOT IN ('accrual','prepayment') OR jsonb_array_length(_journal->'legs')<>2 OR EXISTS(SELECT 1 FROM jsonb_array_elements(_journal->'legs') x WHERE x->>'accountId' IS NOT NULL) OR (_journal->'recurrence'->>'months')::int NOT BETWEEN 1 AND 120 OR (_journal->'recurrence'->>'monthlyAmount')::numeric<=0 OR round((_journal->'recurrence'->>'monthlyAmount')::numeric,2)<>(_journal->'recurrence'->>'monthlyAmount')::numeric OR (_journal->'recurrence'->>'start')::date::text<>_journal->'recurrence'->>'start' OR extract(day from (_journal->'recurrence'->>'start')::date)<>1 THEN RAISE EXCEPTION 'Invalid recurring recognition schedule';END IF;
+ END IF;
+ IF _journal->'recurringSource' IS NOT NULL AND _journal->>'kind'<>'reversal' THEN
+  SELECT * INTO prior FROM public.accounting_journal_evidence WHERE id=(_journal->'recurringSource'->>'templateId')::uuid AND owner_id=uid AND entity_id=ent;
+  IF NOT FOUND OR prior.journal->'recurrence' IS NULL OR EXISTS(SELECT 1 FROM public.accounting_journal_evidence WHERE owner_id=uid AND journal->>'reversesId'=prior.id::text) THEN RAISE EXCEPTION 'Recurring source unavailable or reversed';END IF;
+  IF dt::text<>_journal->'recurringSource'->>'date' OR dt<>((date_trunc('month',dt)+interval '1 month - 1 day')::date) OR date_trunc('month',dt)<(prior.journal->'recurrence'->>'start')::date OR date_trunc('month',dt)>=(prior.journal->'recurrence'->>'start')::date+make_interval(months=>(prior.journal->'recurrence'->>'months')::int) OR dt<(prior.journal->>'date')::date THEN RAISE EXCEPTION 'Recurring occurrence date differs';END IF;
+  IF EXISTS(SELECT 1 FROM public.accounting_journal_evidence WHERE owner_id=uid AND entity_id=ent AND journal->'recurringSource'->>'templateId'=prior.id::text AND journal->'recurringSource'->>'date'=dt::text AND journal->>'kind'<>'reversal') THEN RAISE EXCEPTION 'Recurring occurrence already posted';END IF;
+  IF _journal->'documentIds' IS DISTINCT FROM prior.journal->'documentIds' OR _journal->>'kind' IS DISTINCT FROM prior.journal->>'kind' OR jsonb_array_length(_journal->'legs')<>2 THEN RAISE EXCEPTION 'Recurring source identity differs';END IF;
+  amount:=(prior.journal->'recurrence'->>'monthlyAmount')::numeric;
+  IF prior.journal->>'kind'='prepayment' THEN
+   SELECT x INTO l FROM jsonb_array_elements(prior.journal->'legs') x WHERE x->>'role'='asset' AND (x->>'debit')::numeric>0;
+   IF l IS NULL OR coalesce((prior.journal->'recurrence'->>'reverseNextDay')::boolean,false) THEN RAISE EXCEPTION 'Unsupported prepaid release';END IF;
+   amount:=least(amount,(l->>'debit')::numeric-coalesce((SELECT sum((s.journal->'recurringSource'->>'amount')::numeric) FROM public.accounting_journal_evidence s WHERE s.owner_id=uid AND s.journal->'recurringSource'->>'templateId'=prior.id::text AND s.journal->>'kind'<>'reversal' AND NOT EXISTS(SELECT 1 FROM public.accounting_journal_evidence r WHERE r.owner_id=uid AND r.journal->>'reversesId'=s.id::text)),0));
+  END IF;
+  IF amount<=0 OR amount<>(_journal->'recurringSource'->>'amount')::numeric THEN RAISE EXCEPTION 'Recurring amount exceeds schedule or prepaid balance';END IF;
+  IF EXISTS(SELECT 1 FROM jsonb_array_elements(prior.journal->'legs') old WHERE NOT EXISTS(SELECT 1 FROM jsonb_array_elements(_journal->'legs') x WHERE (x-'debit'-'credit')=(old-'debit'-'credit') AND (x->>'debit')::numeric=CASE WHEN ((old->>'debit')::numeric>0)<>(prior.journal->>'kind'='prepayment') THEN amount ELSE 0 END AND (x->>'credit')::numeric=CASE WHEN ((old->>'credit')::numeric>0)<>(prior.journal->>'kind'='prepayment') THEN amount ELSE 0 END)) THEN RAISE EXCEPTION 'Recurring legs differ from retained template';END IF;
+ END IF;
  IF _journal->>'invoiceId' IS NOT NULL AND _journal->>'kind'<>'reversal' THEN
   IF NOT EXISTS(SELECT 1 FROM jsonb_array_elements(coalesce(prefs->'books'->'gstInvoices','[]')) i WHERE i->>'id'=_journal->>'invoiceId' AND (i->>'transactionId' IS NULL) AND _journal->'documentIds' ? (i->>'docId') AND coalesce((SELECT e->'gstins' FROM jsonb_array_elements(prefs->'entities') e WHERE e->>'id'=ent),'[]') ? (i->>'gstin')) THEN RAISE EXCEPTION 'Invoice source or company differs, or already linked'; END IF;
   IF EXISTS(SELECT 1 FROM public.accounting_journal_evidence WHERE owner_id=uid AND journal->>'invoiceId'=_journal->>'invoiceId' AND journal->>'kind'<>'reversal') THEN RAISE EXCEPTION 'Invoice already posted; correct with source-preserving reversal'; END IF;
@@ -93,6 +125,7 @@ BEGIN
   IF NOT FOUND OR _journal->>'kind'<>'reversal' OR dt<(prior.journal->>'date')::date THEN RAISE EXCEPTION 'Invalid reversal'; END IF;
   IF EXISTS(SELECT 1 FROM public.accounting_journal_evidence WHERE owner_id=uid AND journal->>'reversesId'=_journal->>'reversesId') THEN RAISE EXCEPTION 'Journal already reversed'; END IF;
   IF EXISTS(SELECT 1 FROM public.accounting_journal_evidence s WHERE s.owner_id=uid AND s.journal->'settlement'->>'journalId'=prior.id::text AND s.journal->>'kind'<>'reversal' AND NOT EXISTS(SELECT 1 FROM public.accounting_journal_evidence r WHERE r.owner_id=uid AND r.journal->>'reversesId'=s.id::text)) THEN RAISE EXCEPTION 'Reverse retained settlements before correcting the accrual'; END IF;
+  IF EXISTS(SELECT 1 FROM public.accounting_journal_evidence s WHERE s.owner_id=uid AND s.journal->'recurringSource'->>'templateId'=prior.id::text AND s.journal->>'kind'<>'reversal' AND NOT EXISTS(SELECT 1 FROM public.accounting_journal_evidence r WHERE r.owner_id=uid AND r.journal->>'reversesId'=s.id::text)) THEN RAISE EXCEPTION 'Reverse recognition occurrences before correcting the template';END IF;
   IF (SELECT jsonb_agg(jsonb_set(jsonb_set(x,'{debit}',x->'credit'),'{credit}',x->'debit') ORDER BY x->>'code') FROM jsonb_array_elements(prior.journal->'legs') x) IS DISTINCT FROM (SELECT jsonb_agg(x ORDER BY x->>'code') FROM jsonb_array_elements(_journal->'legs') x) THEN RAISE EXCEPTION 'Reversal must exactly swap original legs'; END IF;
  END IF;
  -- Only linked money legs affect accountBalance. Noncash journals retain one zero-delta canonical anchor.
