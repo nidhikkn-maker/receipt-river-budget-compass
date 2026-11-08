@@ -9,7 +9,7 @@
 - [x] Asset follow-up links the existing payment in place; repeat/double click creates no second asset/payment. Claim follow-up reuses the existing builder and exact saved entry ID; full in-sheet claim PDF/resume acceptance remains open.
 - [x] Same CSV original → 2 saved lines → Inbox/reconciliation/DocuRepo pure readback → actual Reports CSV/Excel/PDF downloads → Undo restoring 1000 balance passes in synthetic browser. Separate asset maintenance originals/retry and claim/report PDF annexures pass; not a full connected-screen/hosted claim.
 - [x] 41 focused tests, 18 Statement Desk browser cases, 3 Smart Add widths, 5 PDF builder cases and document-search/asset-document browser checks pass; requirements remain partial. Reserve and P0 holds retained.
-- [ ] Remaining P1: actual Inbox/reconciliation/DocuRepo screen continuity with the same dataset, in-sheet claim PDF/resume and supporting-document addition, asset-invoice/holdings PDF intake, owner-isolated hosted persistence/downloads and safe lifecycle Undo for asset links.
+- [ ] Remaining P1: in-sheet claim PDF/resume and supporting-document addition, non-mocked asset-invoice/holdings PDF intake with actual asset/vault readback, owner-isolated hosted persistence/downloads and safe lifecycle Undo for asset links. Connected Inbox/reconciliation/DocuRepo/Reports screen continuity now passes with synthetic adapters.
 
 ## P1 connected intake continuation — 8 Nov 2026
 - [x] Explicit document intent accepts scanned photos; asset invoice entry point opens Smart Add and preserves the existing asset intake context. Ordinary payment screenshots remain single-entry review. Batch statement shortcut stays in place.

@@ -1,4 +1,11 @@
-# Ledgerline continuation checkpoint — 8 Nov 2026 P1 handoffs and exports
+# Ledgerline continuation checkpoint — 8 Nov 2026 six-requirement acceptance
+
+## Latest six-requirement batch
+- Real connected Statement Desk → Inbox → Account Reconciliation → DocuRepo reload/original-byte retrieval → Reports passed with one synthetic dataset, external writes blocked. Not hosted certification.
+- Claim wrong-entry recovery/overwrite fixed, advance retained, frozen PDF encrypted checkpoint/reload/retry uses identical bytes/one report. 29 focused tests pass; connected, claim recovery and invoice proposal browser cases pass. Latest preview build OK 03:23:35 UTC. No manual build/typecheck/full-suite repetition.
+- V60-0058 already VERIFIED before batch; retained. Other five target IDs remain PARTIAL with per-ID executable gaps and external prerequisites. HC-0031 newly VERIFIED after six actual CSV/PDF downloads and content comparisons; register now566 verified/331 partial/2 blocked. H-7591 not promoted.
+- Measured credits1009.74, conservative cap905.74 including protected300; planning605.74; observed workspace decline11.23, not exact task attribution. No real records/policies/approvals/migrations/publication.
+- Full details and retained screenshots/logs: docs/evidence/six-requirements-2026-11-08.md and adjacent evidence folder. Continue non-mocked invoice extraction and actual saved asset/vault acceptance, then full in-sheet claim integration; hosted portions retain isolated endpoint/authority prerequisites.
 
 ## Latest P1 batch
 - Smart Add asset follow-up links the same payment/transaction; receipt originals remain in DocuRepo through existing vaultItems. Claim follow-up opens the existing builder in the sheet with the saved entry ID, not a route jump. No second original upload/payment.
@@ -34,5 +41,5 @@
 - Owner's six iPhone screenshots never received; real iPhone/iPad checks pending.
 
 ## Exact next action
-1. Verify asset invoice / holdings PDF through Smart Add → existing DocumentIntake/InvestmentReview → source-linked persisted readback with isolated fixtures.
-2. Verify in-sheet claim preparation/PDF/recovery with saved receipt source; continue the same synthetic dataset through actual Inbox/reconciliation/DocuRepo screens. Preserve current UIX; no broad redesign.
+1. Complete non-mocked invoice / holdings PDF intake and actual source-linked asset/vault screens; current invoice proposal uses a mocked extractor.
+2. Full in-sheet claim preparation/PDF/recovery with saved receipt source remains open; underlying builder checkpoint recovery and connected same-data Inbox/reconciliation/DocuRepo/Reports now pass. Preserve current UIX; no broad redesign.
