@@ -51,7 +51,7 @@ async def main():
   for i,code,label,role,field in [(1,'expense:rent','Rent','expense','Debit'),(2,'payable:rent','Rent payable','liability','Credit')]:
    await page.get_by_label(f'Account code {i}',exact=True).fill(code);await page.get_by_label(f'Account label {i}',exact=True).fill(label);await page.get_by_label(f'Account role {i}',exact=True).select_option(role);await page.get_by_label(f'{field} {i}',exact=True).fill('1200')
   await page.get_by_role('button',name='Confirm balanced journal').click();await expect(page.get_by_role('dialog')).not_to_be_visible();await open_company()
-  await page.get_by_text('Settle · Unpaid November rent',exact=True).click();await page.locator('select[aria-label^="Bank settlement"]').select_option('bank-rent');await expect(page.get_by_label('Debit 1',exact=True)).to_have_value('500');await page.get_by_role('button',name='Confirm balanced journal').click();await expect(page.get_by_text('Interrupted committed settlement',exact=True)).to_be_visible()
+  await page.get_by_text('Settle · Unpaid November rent',exact=True).click();await page.locator('select[aria-label^="Bank settlement"]').select_option('bank-rent');await expect(page.get_by_label('Debit 1',exact=True)).to_have_value('500');await page.get_by_role('button',name='Confirm balanced journal').click();await expect(page.get_by_text('Interrupted committed settlement',exact=True).first).to_be_visible()
   await open_company();await page.get_by_role('button',name='Resume journal').click();await page.get_by_role('button',name='Confirm balanced journal').click();await expect(page.get_by_role('dialog')).not_to_be_visible();await open_company();await page.get_by_text('Settle · Unpaid November rent',exact=True).click();await expect(page.get_by_text('Rent payable · outstanding 700.00',exact=True)).to_be_visible()
   await page.get_by_text('Accountant review & access',exact=True).last.click();await page.get_by_label('Accountant email or account ID').fill('00000000-0000-0000-0000-000000000003');await page.get_by_role('button',name='Grant review access').click();await expect(page.get_by_role('button',name='Revoke access')).to_be_visible();await page.get_by_role('button',name='Revoke access').click();await expect(page.get_by_role('button',name='Restore access')).to_be_visible()
   await open_company();await page.get_by_text('Accountant review & access',exact=True).last.click()
@@ -62,7 +62,7 @@ async def main():
   evidence=page.locator('details').filter(has=page.locator('input[aria-label^="Review note"]')).last;await evidence.locator('summary').first.click()
   await expect(page.locator('input[aria-label^="Review note"]').last).to_have_value('Retained original and accounting classification inspected')
   await page.get_by_role('button',name='Save review note',exact=True).last.click()
-  await expect(page.get_by_text('Interrupted committed note',exact=True)).to_be_visible()
+  await expect(page.get_by_text('Interrupted committed note',exact=True).first).to_be_visible()
   await open_company();await page.get_by_text('Accountant review & access',exact=True).last.click()
   evidence=page.locator('details').filter(has=page.locator('input[aria-label^="Review note"]')).last;await evidence.locator('summary').first.click()
   await expect(page.locator('input[aria-label^="Review note"]').last).to_be_disabled();await page.get_by_role('button',name='Retry same review').click()
