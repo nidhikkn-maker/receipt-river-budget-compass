@@ -2,6 +2,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { expect, it, vi } from 'vitest';
 const cloud=vi.hoisted(()=>({read:vi.fn(),start:vi.fn(),update:vi.fn()}));
 vi.mock('@tanstack/react-start',()=>({useServerFn:()=>cloud.read}));
+vi.mock('@/lib/document-extract.functions',()=>({extractDocument:vi.fn()}));
 vi.mock('@tanstack/react-router',()=>({Link:({children}:{children:React.ReactNode})=><>{children}</>}));
 vi.mock('@/lib/store',()=>({useStore:()=>({preferences:{entities:[],assets:[],contractObligations:[]},documents:[],accounts:[],loans:[],transactions:[]})}));
 vi.mock('@/lib/image-prep',()=>({prepareForReading:async()=>({dataUrl:'data:image/png;base64,a',mimeType:'image/png'})}));
