@@ -31,6 +31,7 @@ import { validateCompleteAllocations } from './trip-budget';
 import { PreferenceReview } from '@/components/PreferenceReview';
 import { checkpointUpload } from './statement-pipeline/history';
 import type { StatementUpload } from './preferences';
+import {postAccountingWithRecovery,validateAccountingAttempt,type AccountingAttempt,type AccountingReceipt} from './books/accounting-post';
 
 export interface Loan {
   id: string; name: string;
@@ -73,6 +74,8 @@ interface Ctx {
   /** Saves records from a document and locks it as evidence in one database transaction [v6 §3]. */
   commitDocumentRecords: (documentId: string, p: FinancePreferences, lock: boolean, attempt?: { id: string; expected: number }) => Promise<void>;
   preferencesRevision: number | null;
+  accountingAvailable: () => Promise<boolean>;
+  postAccounting: (attempt: AccountingAttempt) => Promise<void>;
   /** Opening entries for one entity/year, posted atomically; same id = no duplicate [§19]. */
   postOpening: (x: { id: string; entityId: string; fy: string; date: string; lines: { txnId: string; accountId: string; amount: number; sign: 1 | -1; title: string; description: string; head: string; target: number; current: number }[]; exceptions: { line: string; reason: string }[]; docId: string | null }) => Promise<void>;
   undoOpening: (id: string) => Promise<void>;
@@ -478,6 +481,17 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
     check((await supabase.rpc("post_opening_balances", { _id: x.id, _entity: x.entityId, _fy: x.fy, _date: x.date, _lines: x.lines as unknown as Json, _exceptions: x.exceptions as unknown as Json, ...(x.docId ? { _doc: x.docId } : {}) } as never)).error);
     await refresh();
   };
+  const accountingAvailable:Ctx['accountingAvailable']=async()=>{
+    const result=await supabase.from('accounting_journal_evidence' as never).select('id').limit(0);
+    if(result.error){if(/does not exist|schema cache|not find/i.test(result.error.message))return false;throw result.error;}return true;
+  };
+  const postAccounting:Ctx['postAccounting']=async attempt=>{
+    if(attempt.owner!==userId)throw Error('Accounting owner differs.');
+    if(!navigator.onLine)throw Error('Reconnect to confirm this journal. Your draft is retained.');
+    validateAccountingAttempt(attempt,accounts,preferences.books??{closedPeriods:[]} as never,documents);
+    await postAccountingWithRecovery(attempt,{read:async()=>{const r=await supabase.from('accounting_journal_evidence' as never).select('owner_id,request_id,journal,entry_ids').eq('id',attempt.journal.id).eq('owner_id',userId).maybeSingle();check(r.error);return r.data as unknown as AccountingReceipt|null;},post:async()=>{const r=await supabase.rpc('post_accounting_journal' as never,{_request:attempt.requestId,_journal:attempt.journal,_expected:attempt.expected} as never);check(r.error);}});
+    await refresh();
+  };
   const undoOpening: Ctx["undoOpening"] = async (id) => { check((await supabase.rpc("undo_opening_balances", { _id: id })).error); await refresh(); };
   const openingPostings: Ctx["openingPostings"] = async () => {
     const r = await supabase.from("opening_postings").select("id,entity_id,fy,opening_date,posted_at,undone_at,txn_ids,lines,exceptions").order("posted_at", { ascending: false });
@@ -864,6 +878,7 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
     <StoreCtx.Provider value={{
       departmentBudgets, departmentBudgetError,
       saveStatementUpload,
+      accountingAvailable,postAccounting,
       pendingCount, pendingItems, retrySync: (id?: string) => syncRef.current(id), discardPending: async (id: string) => { await removePending(id); setPendingItems((prev) => prev.filter((p) => p.id !== id)); setPendingCount((await pendingEntries(userId)).length); }, setTags, manageTripExpenses, applyReviewMapping, applyReviewMetadata, undoReviewMetadata, reviewMetadataHistory, saveRecurringReview, preferences, preferencesRevision: preferencesRevision.current, savePreferences, commitDocumentRecords, postOpening, undoOpening, openingPostings, ensureCategory, moveCategory, bulkSetCategory, categoryHistory, undoCategoryBatch, correctFinancialEntries, undoFinancialCorrection, financialCorrectionHistory, userId, name, updateName, members, memberName,
       expenses: expenses.filter((x) => (x.txnType ?? "expense") === "expense"), transactions: expenses.filter((x) => !x.transferCounterpartOf), transferCounterparts: expenses.filter((x) => !!x.transferCounterpartOf), confirmTransfer, cancelTransfer, accounts, addAccount, setArchived, adjustBalance,
       commitments, loans, goals, valuations, documents, saveCommitment, confirmIrregular, removeCommitment, confirmCommitment, saveLoan, removeLoan, recordLoanPayment, convertToEmi,

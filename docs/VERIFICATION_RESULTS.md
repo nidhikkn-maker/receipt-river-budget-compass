@@ -1,5 +1,8 @@
 # Verification results (executed evidence only)
 
+## Corporate foundation — 8 Nov 2026
+22/22 changed-path tests pass; disposable disk atomic opening/accrual/reversal/owner/revoked-accountant/stale/forgery/original preservation; real-route encrypted locked retry and report history recovery/downloaded accrual figures pass with isolated adapters. No unresolved executed failures. Headless PDF iframe legibility, hosted signing and full source-upload-to-close not verified. No new IDs; evidence docs/evidence/accounting-foundation-2026-11-08.md.
+
 ## Corporate-accounting milestone — 8 Nov 2026
 17 distinct focused tests passed; disposable disk owner-RLS persistence, five frozen real-PDF families and same-ID lost-reply recovery; real Reports Centre company/PDF/encrypted reload/retry/frozen CSV/XLSX/PDF/private-original audit ZIP passed with zero runtime errors. Final build OK. Initial test/harness failures corrected; no unresolved executed failures. No new verified IDs; full document-to-close/hosted acceptance unverified. Evidence docs/evidence/corporate-accounting-2026-11-08.md.
 
