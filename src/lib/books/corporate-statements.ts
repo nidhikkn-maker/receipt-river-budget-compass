@@ -3,7 +3,7 @@ import type { Expense } from '../expenses';
 import { categoryParts } from '../expenses';
 import type { Account } from '../ledger';
 import { accountBalance, isLiability, repaymentParts } from '../ledger';
-import { addMoney, subtractMoney, sumMoney, roundMoney } from '../money';
+import { addMoney, subtractMoney, sumMoney, roundMoney, proportionMoney } from '../money';
 import type { VaultDoc } from '../documents';
 import type { EntityProfile } from '../entities';
 import type { BooksData } from './types';
@@ -85,7 +85,7 @@ export function corporateStatements(p: { entityId: string; entities: EntityProfi
       if (['expense','income','refund','reimbursement'].includes(kind)) {
         const moneyIn=['income','refund','reimbursement'].includes(kind);
         const payer=e.accountId??'unknown';
-        post(`due:${payer}`,`Due ${moneyIn?'from':'to'} ${byAccount.get(payer)?.name??'unidentified payer'}`,moneyIn?'asset':'liability',moneyIn?e.amount:-e.amount,'Manually assigned company event paid outside company accounts');
+        post(`due:${moneyIn?'from':'to'}:${payer}`,`Due ${moneyIn?'from':'to'} ${byAccount.get(payer)?.name??'unidentified payer'}`,moneyIn?'asset':'liability',moneyIn?e.amount:-e.amount,'Manually assigned company event paid outside company accounts');
         net=moneyIn?e.amount:-e.amount;
       } else {issue(e.id,'Manually assigned movement has no linked company account; classification requires review.');continue;}
     }
@@ -96,15 +96,17 @@ export function corporateStatements(p: { entityId: string; entities: EntityProfi
       const parts=categoryParts(e);
       if(sumMoney(parts.map(x=>x.amount))!==roundMoney(e.amount)){issue(e.id,'Category allocation does not equal the original entry; counterpart remains unclassified.');post('unclassified:allocation','Invalid category allocation','unclassified',counter,'Unclassified counterpart of ledger movement');continue;}
       let allocated=0;
-      parts.forEach((part,i)=>{const value=i===parts.length-1?subtractMoney(counter,allocated):roundMoney(counter*part.amount/(e.amount||1));allocated=addMoney(allocated,value);post(`${role}:${part.category}`,part.category,role,value,'Saved category allocation; total equals ledger counterpart');});
+      parts.forEach((part,i)=>{const value=i===parts.length-1?subtractMoney(counter,allocated):proportionMoney(counter,part.amount,e.amount||1);allocated=addMoney(allocated,value);post(`${role}:${part.category}`,part.category,role,value,'Saved category allocation; total equals ledger counterpart');});
     } else if (kind==='loan_repayment' && company===entity.id && ids.has(e.accountId??'')&&ids.has(e.toAccountId??'')) {
       post('expense:loan-interest','Loan interest','expense',counter,'Stored INR repayment interest; principal already reduces the loan');
       if(counter!==repaymentParts(e).interest)issue(e.id,'Loan interest differs from the saved repayment split.');
     } else if (['transfer','investment','card_payment','loan_repayment'].includes(kind)) {
       const external=[e.accountId,e.toAccountId].find(id=>!!id&&!ids.has(id))??'unknown';
       // Cross-boundary money belongs to a due-from/to account, never company profit.
-      post(`due:${external}`,`Due ${counter>0?'from':'to'} ${byAccount.get(external)?.name??'unidentified counterparty'}`,counter>0?'asset':'liability',counter,'Transfer across company boundary; never sales or spending');
+      post(`due:${counter>0?'from':'to'}:${external}`,`Due ${counter>0?'from':'to'} ${byAccount.get(external)?.name??'unidentified counterparty'}`,counter>0?'asset':'liability',counter,'Transfer across company boundary; never sales or spending');
       if(external==='unknown')issue(e.id,'Transfer destination/source is missing; intercompany classification is unverified.');
+    } else if(kind==='adjustment' && p.books.journals.some(j=>j.status==='posted'&&j.transactionId===e.id) && net<0) {
+      post('expense:depreciation','Posted book depreciation','expense',counter,'Existing posted depreciation journal; no second asset/ledger entry');
     } else {
       post(`unclassified:${kind}`,`${kind} counterpart — requires accounting classification`,'unclassified',counter,'Unclassified counterpart of canonical movement, not a balancing profit');
       issue(e.id,`${kind} has no confirmed accounting counterpart; not treated as income or expense.`);
@@ -113,7 +115,7 @@ export function corporateStatements(p: { entityId: string; entities: EntityProfi
   }
   // Registers are supporting schedules, not extra postings. Their absence must not imply completeness.
   for(const i of p.books.gstInvoices)if(entity.gstins.includes(i.gstin)&&i.date<=p.to&&!i.transactionId)issue(i.id,'Invoice is register-only: accrual/settlement has not been posted to the ledger.');
-  for(const j of p.books.journals)if(j.status==='prepared'&&j.period<=p.to.slice(0,7))issue(j.id,'Prepared depreciation is not posted; financial statements exclude it.');
+  for(const j of p.books.journals)if(j.status==='prepared'&&j.period<=p.to.slice(0,7)&&p.books.docLinks.some(l=>l.kind==='asset'&&l.targetId===j.assetId&&p.documents.some(d=>d.id===l.docId&&d.entityId===entity.id)))issue(j.id,'Prepared depreciation is not posted; financial statements exclude it.');
   const balances:CorporateBalance[]=[];
   for(const code of [...new Set(lines.map(l=>l.code))]){
     const all=lines.filter(l=>l.code===code);const first=all[0];if(!first)continue;
@@ -144,7 +146,7 @@ export function corporateReport(w:CorporateWorking,type:CorporateType):Report {
   const heads=['Code','Account / figure','Opening debit (+) / credit (-)','Period debit','Period credit','Closing debit','Closing credit','Input line IDs'];
   if(type==='company-trial-balance')return {title,headers:heads,rows:w.balances.map(b=>[b.code,b.label,f(b.opening),f(b.debit),f(b.credit),f(Math.max(0,b.closing)),f(Math.max(0,-b.closing)),b.lineIds.join('; ')])};
   if(type==='company-profit-loss')return {title,headers:['Role','Account / figure','Amount (INR)','Input line IDs'],rows:[...w.balances.filter(b=>['income','expense'].includes(b.role)).map(b=>[b.role,b.label,f(b.role==='income'?subtractMoney(b.credit,b.debit):subtractMoney(b.debit,b.credit)),b.lineIds.join('; ')]),['profit','Period profit / loss',f(w.profit),'Income less expense; unclassified excluded']]};
-  if(type==='company-balance-sheet')return {title,headers:['Role','Account / figure','Amount (INR)','Input line IDs'],rows:[...w.balances.filter(b=>!['income','expense'].includes(b.role)).map(b=>[b.role,b.label,f(normalBalance(b.role,b.closing)),b.lineIds.join('; ')]),['equity','Cumulative recorded profit / loss',f(sumMoney(w.balances.filter(b=>b.role==='income').map(b=>-b.closing))-sumMoney(w.balances.filter(b=>b.role==='expense').map(b=>b.closing))),'Historical income/expense ledger inputs'],['check','Balance equation difference (including unclassified)',f(w.balanceDifference),'Assets + debit unclassified − liabilities − equity']]};
+  if(type==='company-balance-sheet')return {title,headers:['Role','Account / figure','Amount (INR)','Input line IDs'],rows:[...w.balances.filter(b=>!['income','expense'].includes(b.role)).map(b=>[b.role,b.label,f(normalBalance(b.role,b.closing)),b.lineIds.join('; ')]),['equity','Cumulative recorded profit / loss',f(subtractMoney(sumMoney(w.balances.filter(b=>b.role==='income').map(b=>-b.closing)),sumMoney(w.balances.filter(b=>b.role==='expense').map(b=>b.closing)))),'Historical income/expense ledger inputs'],['check','Balance equation difference (including unclassified)',f(w.balanceDifference),'Assets + debit unclassified − liabilities − equity']]};
   if(type==='company-cash-flow')return {title,headers:['Cash flow','Amount (INR)','Basis'],rows:Object.entries(w.cash).map(([k,v])=>[k,f(v),'Company cash-account ledger legs; internal cash transfers cancel'])};
   return {title,headers:['Date','Group ID','Entry ID','Code','Account','Role','Debit','Credit','Document IDs','Original paths','Original amount','Currency','Formula'],rows:w.lines.map(l=>[l.date,l.groupId,l.entryId??'',l.code,l.label,l.role,f(l.debit),f(l.credit),l.documentIds.join('; '),l.originalPaths.join('; '),l.originalAmount??'',l.currency,l.formula])};
 }
