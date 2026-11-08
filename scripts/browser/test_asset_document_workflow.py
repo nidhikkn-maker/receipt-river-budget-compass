@@ -59,7 +59,6 @@ async def main():
   cap=review.get_by_role('checkbox',name='Capitalise this as a fixed asset',exact=False)
   if await cap.count():await cap.check()
   await review.get_by_role('button',name='Confirm and save').click()
-  print('invoice after save',(await page.locator('body').inner_text())[-1600:])
   await expect(review.get_by_text('Saved',exact=True)).to_be_visible()
   saved=json.loads(await page.evaluate('localStorage.getItem("controlled-asset-document")'))
   assert len(saved['preferences']['assets'])==1 and len(saved['documents'])==1
