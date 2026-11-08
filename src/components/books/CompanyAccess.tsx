@@ -7,7 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useStore } from "@/lib/store";
 import { companyDocuments, type EntityAccounts } from "@/lib/books/entity-accounts";
 import { confirmAction } from "@/lib/confirm";
-import { filterShared, rowsFor, sharedCompanyCsv, sharedCompanyPdf, type SharedCompany, type SharedDoc, type SharedTxn } from "@/lib/books/shared-company";
+import { filterShared, rowsFor, sharedCompanyCsv, sharedCompanyPdf, sharedCompanyExcel, type SharedCompany, type SharedDoc, type SharedTxn } from "@/lib/books/shared-company";
 import { uploadCompanyDocument } from "@/lib/books/company-upload";
 
 type Grant = { id: string; member_email: string; created_at: string; can_write: boolean };
@@ -123,6 +123,7 @@ export function SharedWithMe() {
                   const blob = await sharedCompanyPdf(c, txns, docs);
                   downloadBlob(blob, `${c.company_name.replace(/[^\w-]+/g, "_")}.pdf`);
                 }}>Download PDF</Button>
+                <Button size="sm" variant="outline" onClick={async()=>{try{downloadBlob(await sharedCompanyExcel(c,txns,docs),`${c.company_name.replace(/[^\w-]+/g,'_')}.xlsx`);}catch{toast.error('Could not create the company Excel file');}}}>Download Excel</Button>
                 {c.can_write && (
                   <Button size="sm" variant="outline" onClick={() => document.getElementById(`shared-upload-${c.grant_id}`)?.click()}>Add document</Button>
                 )}

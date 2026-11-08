@@ -1,5 +1,11 @@
 # Ledgerline continuation checkpoint — 8 Nov 2026 six-requirement acceptance
 
+## Latest grouped functionality — 04:42 UTC
+- Implemented company-selectable CSV/Excel/PDF, shared-company Excel, reconciliation evidence exports with source/entry IDs, unique-party matching and effective amendments/credit notes, full-list GST target validation and differing-rate capped allocations.
+- 51 distinct changed-path tests passed; actual Reports/reconciliation CSV/Excel/PDF downloads checked with isolated records. Added owner-scoped disposable disk save/reload across all six report families and reviewed allocation replay. No old 0716/claim/statement acceptance reruns.
+- No new broad requirement IDs promoted; V60-0016/0026/0021/0696/0731 advance but remain partial. V60-0716/0058 retained;0066 authority and0082 isolated hosted blockers unchanged. Next: full in-sheet claims and remaining material figure/workflow register gaps.
+- Measured workspace981.14; observed batch decline7.09, not exclusive attribution; conservative cap877.13 including protected300. No real records, production migrations/policies/approvals, publish or UIX redesign. Evidence: docs/evidence/grouped-finance-2026-11-08.md.
+
 ## Latest prioritised continuation — 04:31 UTC
 - Newly verified V60-0716: one actual existing AI read of synthetic invoice, real review and lost-reply retry, one source-linked asset/document, actual Assets/DocuRepo reload; local persistence/auth adapters, not hosted evidence. V60-0058 retained.
 - 26/26 focused tests pass: disk-backed reconciliation exception/restart/stale recovery plus real frozen PDF/source-owner comparison and interrupted history readback. V60-0016/0026 broad clauses remain PARTIAL.
