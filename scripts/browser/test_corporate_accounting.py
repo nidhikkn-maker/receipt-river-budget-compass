@@ -4,7 +4,7 @@ from playwright.async_api import async_playwright,expect
 ns={};exec(Path('/dev-server/scripts/browser/test_exception_reports.py').read_text().split('async def main():')[0],ns)
 STORE=ns['STORE'].replace("documents:fixed?[", "documents:[").replace("text:'Printed invoice 250.25'}]:[]", "filePath:'owner/original.pdf',text:'Printed invoice 250.25'}]")
 STORE=STORE.replace("const fixed=sessionStorage.getItem('fixed')==='yes'", "const fixed=sessionStorage.getItem('fixed')==='yes'")
-STORE=STORE.replace("departmentBudgets:{}","signedUrl:async(path)=>'http://localhost:8080/isolated-original.pdf',departmentBudgets:{}")
+STORE=STORE.replace("departmentBudgets:{}","accountingAvailable:async()=>false,signedUrl:async(path)=>'http://localhost:8080/isolated-original.pdf',departmentBudgets:{}")
 OUT=Path('/tmp/browser/corporate')
 async def main():
  async with async_playwright() as p:
