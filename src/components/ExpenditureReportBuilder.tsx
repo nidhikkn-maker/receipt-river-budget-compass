@@ -212,8 +212,11 @@ export function ExpenditureReportBuilder({ mode, search, embedded = false }: { e
       const path = `${store.userId}/reports/${id}.pdf`;
       const job:ClaimReportJob={id,path,name,activity,bytes:Array.from(new Uint8Array(await blob.arrayBuffer())),missing,versionPending:!!claim,
         row:{id,owner_id:store.userId,kind:claim?'claim-submission':'expenditure-statement',title:claim?`Expense Claim Submission · ${org} · v1 — ${subjectName}`:`Detailed Expenditure Statement — ${subjectName}`,period_from:st.start,period_to:st.end,workspace:'all',filters:{subject,excluded,reference,activity,organisation:org,profileId:profile?.id,format:claimFormat,snapshot:claim??st} as never,file_path:path,file_size:blob.size,version:1}};
+      pendingSave.current=async()=>{
+        await saveLocalClaimReport(store.userId,job,recoverySlot);
+        await saveReportJob(job);
+      };
       await saveLocalClaimReport(store.userId,job,recoverySlot);
-      pendingSave.current=()=>saveReportJob(job);
       await retryHistory();
       setStage(-1);
     } catch (e) { setFailed(true); toast.error(e instanceof Error ? e.message : "Couldn't prepare the statement"); }

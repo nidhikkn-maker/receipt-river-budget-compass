@@ -144,7 +144,7 @@ export function StatementDeskPage({ embedded }: { embedded?: { files: File[]; co
         if (inv) { setInvest((p) => [...p.filter((x) => x.file.name !== f.name), { key: `${f.name}-${f.size}-${f.lastModified}`, file: f, doc: inv }]); continue; }
         const asDoc = () => setDocs((p) => [...p.filter((x) => x.file.name !== f.name), { key: `${f.name}-${f.size}-${f.lastModified}`, file: f }]);
         const docLike = /\.(pdf|png|jpe?g|webp)$/i.test(f.name);
-        if (!asStatement && context && context !== "investments" && docLike) { asDoc(); continue; }
+        if (!asStatement && context && docLike) { asDoc(); continue; }
         let read: Awaited<ReturnType<typeof readStatementFile>>;
         try { read = await readStatementFile(f, serverRead); }
         catch (e) { if (docLike) { asDoc(); continue; } throw e; }
