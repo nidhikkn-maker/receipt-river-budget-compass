@@ -89,13 +89,16 @@ export function ExpenditureReportBuilder({ mode, search, embedded = false }: { e
   const selectedTrip = choice.startsWith('trip:') ? trips.find(t => t.id === choice.slice(5)) : undefined;
   const fallbackOrg = selectedTrip?.organisation ?? '';
   const activity = choice === 'entries' ? `entries:${[...picked].sort().join(',')}` : choice;
+  const recoverySlot = claimMode ? 'report' : 'expenditure-report';
+  const [recoveringReport, setRecoveringReport] = useState(true);
+  const [reportRecoveryError, setReportRecoveryError] = useState(false);
   async function saveReportJob(job:ClaimReportJob) {
     job=await resolveClaimReportVersion(job,async()=>{
       const organisation=(job.row.filters as {organisation?:string}|null)?.organisation;
       const {data,error}=await supabase.from('report_history').select('version').eq('owner_id',store.userId).eq('kind','claim-submission').contains('filters',{activity:job.activity,organisation}).order('version',{ascending:false}).limit(1);
       if(error)throw Error('Could not check report versions. Your saved PDF remains available for retry.');
       return 1+Math.max(0,...(data??[]).map(h=>h.version));
-    },resolved=>saveLocalClaimReport(store.userId,resolved));
+    },resolved=>saveLocalClaimReport(store.userId,resolved,recoverySlot));
     pendingSave.current=()=>saveReportJob(job);
     const blob = new Blob([new Uint8Array(job.bytes)], { type:'application/pdf' });
     await savePreparedReport({ id:job.id,owner:store.userId,path:job.path,size:blob.size }, {
@@ -103,18 +106,18 @@ export function ExpenditureReportBuilder({ mode, search, embedded = false }: { e
       upload:async()=>supabase.storage.from('receipts').upload(job.path,blob,{contentType:'application/pdf',upsert:true}),
       insert:async()=>supabase.from('report_history').insert(job.row),
     });
-    await clearLocalClaimReport(store.userId);
+    await clearLocalClaimReport(store.userId,recoverySlot);
   }
   useEffect(()=>{
-    if(!claimMode)return;let active=true;
-    void loadLocalClaimReport(store.userId).then(job=>{
-      if(!active||!job||job.activity!==activity)return;
+    let active=true;setRecoveringReport(true);setReportRecoveryError(false);
+    void loadLocalClaimReport(store.userId,recoverySlot).then(job=>{
+      if(!active||!job)return;
       const blob=new Blob([new Uint8Array(job.bytes)],{type:'application/pdf'});
       setResult({blob,url:URL.createObjectURL(blob),name:job.name,missing:job.missing});
       pendingSave.current=()=>saveReportJob(job);setHistoryState('local');setStage(-1);
-    }).catch(()=>{if(active)toast.error('Saved claim PDF could not be restored. Your preparation is unchanged.');});
+    }).catch(()=>{if(active){setReportRecoveryError(true);toast.error('Saved PDF could not be restored. Reopen this page before preparing another.');}}).finally(()=>{if(active)setRecoveringReport(false);});
     return()=>{active=false;};
-  },[store.userId,activity,claimMode]);
+  },[store.userId,recoverySlot]);
   const profile = resolveReimbursementProfile(settings, { organisation: org, activity, ...(profileId ? { explicitId: profileId } : {}), ...(selectedTrip?.primaryWorkspace ? { workspace: selectedTrip.primaryWorkspace } : {}) }).profile;
   useEffect(() => {
     if (store.loading || initializedActivity.current === activity || (choice.startsWith('trip:') && !selectedTrip)) return;
@@ -207,19 +210,10 @@ export function ExpenditureReportBuilder({ mode, search, embedded = false }: { e
       setResult({ blob, url: URL.createObjectURL(blob), name, missing });
       setStage(4);
       const path = `${store.userId}/reports/${id}.pdf`;
-      if(claim){
-        const job:ClaimReportJob={id,path,name,activity,bytes:Array.from(new Uint8Array(await blob.arrayBuffer())),missing,versionPending:true,
-          row:{id,owner_id:store.userId,kind:'claim-submission',title:`Expense Claim Submission · ${org} · v1 — ${subjectName}`,period_from:st.start,period_to:st.end,workspace:'all',filters:{subject,excluded,reference,activity,organisation:org,profileId:profile?.id,format:claimFormat,snapshot:claim} as never,file_path:path,file_size:blob.size,version:1}};
-        await saveLocalClaimReport(store.userId,job);
-        pendingSave.current=()=>saveReportJob(job);
-      }else{
-      pendingSave.current = async () => {
-      await savePreparedReport({ id, owner: store.userId, path, size: blob.size }, {
-        read: async () => { const { data, error } = await supabase.from('report_history').select('id,owner_id,file_path,file_size').eq('id', id).eq('owner_id', store.userId).maybeSingle(); return { data, error }; },
-        upload: async () => supabase.storage.from('receipts').upload(path, blob, { contentType: 'application/pdf', upsert: true }),
-        insert: async () => supabase.from('report_history').insert({ id, owner_id: store.userId, kind: 'expenditure-statement', title: `Detailed Expenditure Statement — ${subjectName}`, period_from: st.start, period_to: st.end, workspace: 'all', filters: { subject, excluded, reference, activity, organisation: org, profileId: profile?.id, format: claimFormat, snapshot: st } as never, file_path: path, file_size: blob.size, version:1 }),
-      });
-      };}
+      const job:ClaimReportJob={id,path,name,activity,bytes:Array.from(new Uint8Array(await blob.arrayBuffer())),missing,versionPending:!!claim,
+        row:{id,owner_id:store.userId,kind:claim?'claim-submission':'expenditure-statement',title:claim?`Expense Claim Submission · ${org} · v1 — ${subjectName}`:`Detailed Expenditure Statement — ${subjectName}`,period_from:st.start,period_to:st.end,workspace:'all',filters:{subject,excluded,reference,activity,organisation:org,profileId:profile?.id,format:claimFormat,snapshot:claim??st} as never,file_path:path,file_size:blob.size,version:1}};
+      await saveLocalClaimReport(store.userId,job,recoverySlot);
+      pendingSave.current=()=>saveReportJob(job);
       await retryHistory();
       setStage(-1);
     } catch (e) { setFailed(true); toast.error(e instanceof Error ? e.message : "Couldn't prepare the statement"); }
@@ -302,7 +296,7 @@ export function ExpenditureReportBuilder({ mode, search, embedded = false }: { e
       {claimMode && <section className="space-y-3 border-y py-4"><h2 className="font-semibold">Review & generate</h2><p className="text-lg font-semibold tabular-nums">Outstanding claim · {money(selectedClaimTotal)}</p><p className="text-sm">{org || 'Paying organisation required'} · {maskedText(claimant.name)} · {purpose || 'Purpose not supplied'}</p><p className="text-xs text-muted-foreground">{previewClaim.items.filter(i => i.billRef === 'Bill Not Attached').length} expenses need bills · {previewClaim.excluded.length} excluded · {claimant.approver ? `Proposed approver: ${claimant.approver} (not approved)` : 'Approving authority not supplied'}</p><label className="flex items-start gap-2 text-sm"><Checkbox checked={confirmed} onCheckedChange={v => setConfirmed(v === true)} />I reviewed this organisation, profile and outstanding expenses. A repeated report is a new version, not another reimbursement.</label></section>}
 
       {claimMode&&historyCheck==='error'&&<p role="alert" className="text-sm text-destructive">Could not check previous claims. Reconnect and reload before generating.</p>}
-      <Button className="w-full" onClick={generate} disabled={busy || !included.length || (claimMode && ((result !== null && historyState !== 'saved') || !confirmed || !org || selectedClaimTotal <= 0 || !advanceChosen||historyCheck!=='ready'))}><FileText className="mr-1 h-4 w-4" />{claimMode ? "Generate claim PDF" : "Generate statement PDF"}</Button>
+      <Button className="w-full" onClick={generate} disabled={busy || recoveringReport || reportRecoveryError || (result !== null && historyState !== 'saved') || !included.length || (claimMode && (!confirmed || !org || selectedClaimTotal <= 0 || !advanceChosen||historyCheck!=='ready'))}><FileText className="mr-1 h-4 w-4" />{claimMode ? "Generate claim PDF" : "Generate statement PDF"}</Button>
       <p className="text-xs text-muted-foreground">Prepared on this device — keep this page open until it's ready.</p>
       {stage >= 0 && <ProcessingPanel title={failed ? "Statement not finished" : "Preparing your statement… you can keep using the app; we'll tell you when it's ready"} stages={stagesAt(STAGES, stage, failed)} {...(busy ? { onCancel: () => { cancelled.current = true; setStage(-1); } } : {})} />}
       </div><div className={cn('min-w-0',claimMode&&'min-[1000px]:col-span-2 min-[1600px]:col-span-1')}>
