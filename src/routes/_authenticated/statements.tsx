@@ -200,6 +200,11 @@ export function StatementDeskPage({ embedded }: { embedded?: { files: File[] } }
   const api = () => {
     const s = storeRef.current;
     return { save: s.save, remove: s.remove, reconcile: s.reconcile, addAccount: s.addAccount, setArchived: s.setArchived, refresh: s.refresh, transactions: s.transactions, linkDraft: linkDraftToTransaction, unlinkDraft,
+      readUndoRow: async (id: string) => {
+        const { data, error } = await supabase.from('expenses').select('id,statement_ref,correction_revision').eq('employee_id', s.userId).eq('id', id).maybeSingle();
+        if (error || !data) throw Error('Upload-time safety snapshot is unavailable. Recovery history is retained.');
+        return { id: data.id, ref: data.statement_ref, revision: data.correction_revision };
+      },
       readEvidence: async (id: string) => {
         const { data, error } = await supabase.from('expenses').select('statement_ref,reconciled_at').eq('employee_id', s.userId).eq('id', id).maybeSingle();
         if (error || !data) return null;
@@ -404,11 +409,7 @@ export function StatementDeskPage({ embedded }: { embedded?: { files: File[] } }
       if (!target) throw Error('Upload history is required for safe Undo. Review the saved records first.');
       const currentApi = api();
       const { left } = await undoUpload(r, { ...currentApi, atomicUndo: async result => {
-        const ids = [...new Set([...result.posted, ...result.reconciled])];
-        const expected = ids.flatMap(id => {
-          const entry = currentApi.transactions.find(t => t.id === id);
-          return entry ? [{ id, ref: entry.statementRef, revision: entry.correctionRevision ?? 0 }] : [];
-        });
+        const expected = initial.find(u => u.id === target)?.undoRows ?? [];
         await undoStatementFn({ data: { id: target, posted: result.posted, reconciled: result.reconciled, evidence: result.evidence ?? [], expected } });
       } });
       setResult(null);
