@@ -87,9 +87,13 @@ export function corporateStatements(p: { entityId: string; entities: EntityProfi
       if(!bank||bank.entityId!==entity.id||bank.amount!==s.amount||bank.date!==s.date||bank.accountId!==s.accountId||(bank.txnType??'expense')!==s.txnType||bank.category!==s.category||accountingCanonical(bank.allocations??[])!==accountingCanonical(s.allocations))errors.push('Settlement bank source changed or is unavailable; recover original evidence.');
     }
     if(errors.length){errors.forEach(message=>issue(id,message));continue;}
+    for(const member of members){
+      const account=p.accounts.find(a=>a.id===member.accountId);
+      if(j.kind!=='opening'&&account&&cashKinds.includes(account.kind)&&(!member.reconciledAt||!member.statementRef))issue(id,'Cash journal has not been reconciled to a retained statement line.');
+    }
     members.forEach(e=>journalEntries.add(e.id));
     for(const l of j.legs){if(l.statutory)statutoryErrors(l).forEach(message=>issue(id,message));}
-    const docs=p.documents.filter(d=>j.documentIds.includes(d.id));
+    const docs=p.documents.filter(d=>j.documentIds.includes(d.id)||members.some(e=>e.statementRef?.startsWith(d.id+':')));
     for(const l of j.legs){emit(`journal:${id}`,j.kind==='opening'?j.date.slice(0,4)+'-03-31':j.date,l.code,l.label,l.role,subtractMoney(l.debit,l.credit),primary[0]??null,docs.map(d=>d.id),docs.map(d=>d.filePath),`${j.kind}: ${j.description}${j.reversesId?`; exact reversal of ${j.reversesId}`:''}${j.settlement?`; bank source ${j.settlement.entryId}; accrued source ${j.settlement.journalId}`:''}${j.recurringSource?`; recognition template ${j.recurringSource.templateId}`:''}`);const line=lines.at(-1);if(line?.groupId===`journal:${id}`){if(l.source)line.source=l.source;if(l.statutory)line.statutory=l.statutory;}}
   }
   for (const e of entries.values()) {
@@ -172,6 +176,9 @@ export function corporateStatements(p: { entityId: string; entities: EntityProfi
     if(group.startsWith('journal:')){
       const source=[...entries.values()].find(e=>journalFromEntry(e)?.journal.id===group.slice(8));const j=source?journalFromEntry(source)?.journal:undefined;
       const bucket=j?.legs.find(l=>l.accountId&&cashIds.has(l.code))?.cashFlow;
+      const principal=sumMoney(j?.legs.filter(l=>l.accountId&&p.accounts.some(a=>a.id===l.accountId&&a.kind==='loan')).map(l=>subtractMoney(l.debit,l.credit))??[]);
+      const interest=sumMoney(j?.legs.filter(l=>l.code==='expense:interest'&&l.role==='expense').map(l=>subtractMoney(l.debit,l.credit))??[]);
+      if(bucket==='financing'&&delta<0&&principal>0&&interest>0&&addMoney(principal,interest)===-delta){cash.operating=addMoney(cash.operating,-interest);cash.financing=addMoney(cash.financing,-principal);continue;}
       cash[bucket??'unclassified']=addMoney(cash[bucket??'unclassified'],delta);
       if(!bucket)issue(group,'Cash journal has no confirmed cash-flow classification.');
       continue;
@@ -195,5 +202,5 @@ export function corporateReport(w:CorporateWorking,type:CorporateType):Report {
   if(type==='company-profit-loss')return {title,headers:['Role','Account / figure','Amount (INR)','Input line IDs'],rows:[...w.balances.filter(b=>['income','expense'].includes(b.role)).map(b=>[b.role,b.label,f(b.role==='income'?subtractMoney(b.credit,b.debit):subtractMoney(b.debit,b.credit)),b.lineIds.join('; ')]),['profit','Period profit / loss',f(w.profit),'Income less expense; unclassified excluded']]};
   if(type==='company-balance-sheet')return {title,headers:['Role','Account / figure','Amount (INR)','Input line IDs','Statutory working classification'],rows:[...w.balances.filter(b=>!['income','expense'].includes(b.role)).map(b=>[b.role,b.label,f(normalBalance(b.role,b.closing)),b.lineIds.join('; '),b.statutory?.status==='confirmed'?STATUTORY_HEADS[b.statutory.head]:'Professional review required']),['equity','Cumulative recorded profit / loss',f(subtractMoney(sumMoney(w.balances.filter(b=>b.role==='income').map(b=>-b.closing)),sumMoney(w.balances.filter(b=>b.role==='expense').map(b=>b.closing)))),'Historical income/expense ledger inputs','Professional review required'],['check','Balance equation difference (including unclassified)',f(w.balanceDifference),'Assets + debit unclassified − liabilities − equity','Working statement, not statutory certification']]};
   if(type==='company-cash-flow')return {title,headers:['Cash flow','Amount (INR)','Basis'],rows:Object.entries(w.cash).map(([k,v])=>[k,f(v),'Company cash-account ledger legs; internal cash transfers cancel'])};
-  return {title,headers:['Date','Group ID','Entry ID','Code','Account','Role','Debit','Credit','Document IDs','Original paths','Original amount','Currency','Formula'],rows:w.lines.map(l=>[l.date,l.groupId,l.entryId??'',l.code,l.label,l.role,f(l.debit),f(l.credit),l.documentIds.join('; '),l.originalPaths.join('; '),l.originalAmount??'',l.currency,l.formula])};
+  return {title,headers:['Date','Group ID','Entry ID','Code','Account','Role','Debit','Credit','Document IDs','Original paths','Original amount','Currency','Formula','Statutory working head','Classification basis','Review status','Source page','Source quote'],rows:w.lines.map(l=>[l.date,l.groupId,l.entryId??'',l.code,l.label,l.role,f(l.debit),f(l.credit),l.documentIds.join('; '),l.originalPaths.join('; '),l.originalAmount??'',l.currency,l.formula,l.statutory?STATUTORY_HEADS[l.statutory.head]:'',l.statutory?.basis??'',l.statutory?.status??'Professional review required',l.source?.page??'',l.source?.quote??''])};
 }
