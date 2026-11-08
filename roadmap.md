@@ -1,3 +1,8 @@
+## Corporate-accounting milestone — 8 Nov 2026 07:11 UTC
+- [ ] Record available checkout SHA and verify GitHub parity where accessible; do not imply remote parity from a local commit.
+- [ ] Complete connected company statements/accounting evidence functionality using existing intake, posting and ledger paths, preserving UIX and production holds.
+- [ ] Run changed-path connected isolated financial/source/ownership/recovery acceptance; update only fully accepted IDs and report exact unfinished functions/credits.
+
 ## Consolidated complete-application mandate — 8 Nov 2026 06:55 UTC
 - [x] Consolidate every v6/historical unfinished clause into dependency milestones and verified-only module percentages against the checked-out revision; remote GitHub parity remains unverified.
 - [x] Implement the highest-priority connected accounting group, then record focused financial/source/ownership/recovery acceptance without promoting broad incomplete clauses.
