@@ -46,6 +46,7 @@ export function DocumentIntake({ file, context, onClose, resume, replacesId, onS
   const [failed, setFailed] = useState<{ step: Step; note: string } | null>(null);
   const [stage, setStage] = useState<Step>(resume?.read ? "Confirm" : "Upload");
   const [saving, setSaving] = useState(false);
+  const [retryRead, setRetryRead] = useState(0);
   const [done, setDone] = useState<string | null>(null);
   const [cleanupError, setCleanupError] = useState<string | null>(null);
   const [edit, setEdit] = useState<Record<string, string>>({});
@@ -81,6 +82,9 @@ export function DocumentIntake({ file, context, onClose, resume, replacesId, onS
         if (!out.ok) throw new Error(out.error);
         const fs: DocField[] = (out.result.fields ?? []).map((f) => ({ ...f, originalValue: (f as { originalValue?: string }).originalValue ?? f.value, status: "read" as const }));
         const type = !context || out.result.docType !== "other" ? out.result.docType : docType;
+        // Checkpoint the reading before advancing: a failed later step must not lose paid extraction.
+        runData.current = { ...runData.current, read: out.result, docType: type, fields: fs };
+        await updateRun(runId, { stage: 'Validate', status: 'waiting', data: runData.current });
         setX(out.result); setFields(fs); setDocType(type);
         at = "Validate"; await step("Validate");
         at = "Match"; await step("Match");
@@ -96,7 +100,7 @@ export function DocumentIntake({ file, context, onClose, resume, replacesId, onS
       }
     })();
     return () => { live = false; };
-  }, [file]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [file,retryRead]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const route = ROUTE_OF[docType];
   const supportingAsset = docType === "maintenance" || docType === "warranty";
@@ -288,7 +292,7 @@ export function DocumentIntake({ file, context, onClose, resume, replacesId, onS
         {steps.map((s) => <li key={s.step} title={s.note} className={`flex items-center gap-1 rounded-full px-2 py-0.5 ${s.state === "done" ? "bg-primary/10 text-primary" : s.state === "failed" ? "bg-destructive/10 text-destructive" : s.state === "active" ? "bg-secondary font-semibold" : "text-muted-foreground"}`}>{s.state === "done" ? <Check className="size-3" /> : s.state === "failed" ? <AlertTriangle className="size-3" /> : <CircleDashed className="size-3" />}{s.step}</li>)}
       </ol>
       {failed && <p role="alert" className="text-destructive">{failed.step}: {failed.note}</p>}
-      {failed && !x && <p className="text-xs text-muted-foreground">This document is listed under “Unfinished documents” so you can retry it later without uploading again.</p>}
+      {failed && !x && <div className="space-y-2"><p className="text-xs text-muted-foreground">This document is listed under “Unfinished documents” so you can retry it later without uploading again.</p><Button variant="outline" onClick={()=>{setFailed(null);setRetryRead(n=>n+1);}}>Retry reading document</Button></div>}
       {x && !done && <>
         <label className="block">Document type
           <select className="mt-1 w-full rounded-md border bg-background px-3 py-2" value={docType} onChange={(e) => setDocType(e.target.value as DocType)}>{DOC_TYPES.map((t) => <option key={t} value={t}>{DOC_LABEL[t]}</option>)}</select>
