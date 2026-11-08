@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { createRoot } from "react-dom/client";
-import { createRootRoute, createRouter, RouterProvider } from "@tanstack/react-router";
+import { createRootRoute, createRoute, createRouter, RouterProvider } from "@tanstack/react-router";
 import { Route as DeskRoute } from "../../src/routes/_authenticated/statements";
 import { SmartAdd } from "../../src/components/SmartAdd";
 import { Route as ReportsRoute } from '../../src/routes/_authenticated/reports';
@@ -18,6 +18,8 @@ function Journey() {
 const rootRoute = createRootRoute({
   component: Journey,
 });
-const router = createRouter({ routeTree: rootRoute, defaultNotFoundComponent: () => null });
+const statementRoute = createRoute({ getParentRoute: () => rootRoute, path: '/statements', component: () => null });
+const smartRoute = createRoute({ getParentRoute: () => rootRoute, path: '/smart', component: () => null });
+const router = createRouter({ routeTree: rootRoute.addChildren([statementRoute, smartRoute]), defaultNotFoundComponent: () => null });
 const root = document.getElementById("root");
 if (root) createRoot(root).render(<RouterProvider router={router} />);
