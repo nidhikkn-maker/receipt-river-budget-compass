@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { filterShared, rowsFor, sharedCompanyCsv, sharedCompanyPdfData, type SharedCompany, type SharedTxn, type SharedDoc } from "./shared-company";
+import { filterShared, rowsFor, sharedCompanyCsv, sharedCompanyPdfData, sharedCompanyExcel, type SharedCompany, type SharedTxn, type SharedDoc } from "./shared-company";
 
 const c: SharedCompany = { grant_id: "g", owner_id: "o1", entity_id: "c1", company_name: "Krupa Pvt Ltd", owner_email: "o@x.in", can_write: false };
 const t = (id: string, owner: string, ent: string | null): SharedTxn => ({ id, employee_id: owner, entity_id: ent, title: id, merchant: null, category: "Office", amount: 100, currency: "INR", expense_date: "2026-10-01", txn_type: "expense" });
@@ -45,4 +45,9 @@ describe("shared company PDF data", () => {
   it("labels edit access clearly", () => {
     expect(sharedCompanyPdfData({ ...c, can_write: true }, [], []).lines.join(" ")).toContain("Can edit");
   });
+});
+it('real Excel contains only exact owner/company rows, numeric INR and literal formula-like text',async()=>{
+ const blob=await sharedCompanyExcel(c,[{...t('keep','o1','c1'),amount:200.25,title:'=HYPERLINK(1)'},t('leak','o2','c1')],[d('doc-ok','o1','c1'),d('doc-leak','o1','c2')]);
+ const {read,utils}=await import('xlsx');const w=read(await blob.arrayBuffer(),{type:'array'});const entries=w.Sheets['Entries'],docs=w.Sheets['Documents'];if(!entries||!docs)throw Error('Missing sheets');
+ expect(utils.sheet_to_json(entries,{header:1})).toContainEqual(['keep','2026-10-01','expense','=HYPERLINK(1)','','Office',200.25]);expect(entries['D2']?.f).toBeUndefined();expect(JSON.stringify(utils.sheet_to_json(docs,{header:1}))).toContain('doc-ok');expect(JSON.stringify(w)).not.toContain('leak');
 });
