@@ -4,9 +4,10 @@ import type {VaultDoc} from '../documents';
 import type {BooksData} from './types';
 export interface AccountingAttempt {owner:string;requestId:string;expected:number;journal:AccountingJournal}
 export interface AccountingReceipt {owner_id:string;request_id:string;journal:AccountingJournal;entry_ids:string[]}
+export const accountingCanonical=(value:unknown):string=>JSON.stringify(value,(_key,v)=>v&&typeof v==='object'&&!Array.isArray(v)?Object.fromEntries(Object.keys(v).sort().map(k=>[k,v[k]])):v);
 /** Check the same immutable payload after both acknowledgements and unknown outcomes. */
 export async function postAccountingWithRecovery(attempt:AccountingAttempt,io:{read:()=>Promise<AccountingReceipt|null>;post:()=>Promise<unknown>}){
- const verify=(r:AccountingReceipt)=>{if(r.owner_id!==attempt.owner||r.request_id!==attempt.requestId||JSON.stringify(r.journal)!==JSON.stringify(attempt.journal)||!r.entry_ids.length)throw Error('Saved accounting evidence differs. Nothing was replaced.');return r;};
+ const verify=(r:AccountingReceipt)=>{if(r.owner_id!==attempt.owner||r.request_id!==attempt.requestId||accountingCanonical(r.journal)!==accountingCanonical(attempt.journal)||!r.entry_ids.length)throw Error('Saved accounting evidence differs. Nothing was replaced.');return r;};
  const existing=await io.read();if(existing)return verify(existing);
  let failure:unknown;try{await io.post();}catch(e){failure=e;}
  let saved:AccountingReceipt|null;try{saved=await io.read();}catch{throw Error('Accounting outcome is unknown. Keep this journal and retry the same request.');}
