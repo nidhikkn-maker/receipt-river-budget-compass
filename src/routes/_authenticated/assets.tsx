@@ -11,6 +11,7 @@ import { AssetLifecycle, DepreciationBooks } from "@/components/books/AssetBooks
 import { AssetCheck } from "@/components/books/AssetCheck";
 import { Link } from "@tanstack/react-router";
 import { DEFAULT_LIFE } from "@/lib/books/intake";
+import { openSmartAdd } from "@/lib/smart-add-event";
 import { assetFollowUps, ASSET_KINDS, TAX_RATES, bookSchedule, rentCheck, shareValue, taxSchedule, type Asset, type AssetKind } from "@/lib/assets";
 
 export const Route = createFileRoute("/_authenticated/assets")({
@@ -52,7 +53,7 @@ function Assets() {
     <div className="mx-auto max-w-2xl space-y-4 p-4">
       <PageTitle title="Property & assets" sub={`Your share of book value now: ${inr(total)} · FY ${fy}`} />
       <PropertyPanel />
-      {!edit && <div className="flex flex-wrap gap-2"><Link to="/statements" search={{ context: "assets" }} className="inline-flex items-center rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground">Add asset from invoice</Link><Button variant="outline" onClick={() => setEdit(blank())}>Add manually</Button><AssetCheck /></div>}
+      {!edit && <div className="flex flex-wrap gap-2"><Button onClick={() => openSmartAdd('assets')}>Add asset from invoice</Button><Button variant="outline" onClick={() => setEdit(blank())}>Add manually</Button><AssetCheck /></div>}
 
       {edit && (
         <div className="space-y-3 rounded-2xl border bg-card p-4 text-sm">
