@@ -44,4 +44,4 @@ Initial annual test failed because DATE adapter used a locale string; corrected 
 Read-only checkout at verification: a66effbd66cf27e8c81017b21871de52688dce30 on edit/edt-6462995d-4190-4c9a-887b-63bc3d7c11b5; subsequent edits may receive managed commits. User-supplied GitHub f59fbde/main-ahead evidence retained; no independent deployment identity, so hosted/GitHub parity unverified. No live records, production migrations, protection activation, publishing or UIX edits.
 
 ## Credits
-Workspace snapshots866.16→858.57,7.59-credit decline measured so far; later charges excluded. No credit purchase; reserve remains available.
+Workspace snapshots866.16→857.27,8.89-credit decline measured so far; later charges excluded. No credit purchase; reserve remains available.
