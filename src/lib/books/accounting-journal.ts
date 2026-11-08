@@ -19,6 +19,7 @@ export function accountingErrors(j:AccountingJournal,accounts:Account[],books:Bo
  if(j.legs.length<2)out.push('A journal requires at least two accounting legs.');
  const seen=new Set<string>();
  for(const l of j.legs){
+  if(l.source&&!j.documentIds.includes(l.source.docId))out.push('Schedule originals must be included in the journal evidence.');
   if(!l.code||!l.label||!['asset','liability','equity','income','expense'].includes(l.role))out.push('Every leg needs an account code, label and accounting role.');
   if(!Number.isFinite(l.debit)||!Number.isFinite(l.credit)||l.debit<0||l.credit<0||roundMoney(l.debit)!==l.debit||roundMoney(l.credit)!==l.credit||(l.debit>0)===(l.credit>0))out.push('Every leg requires one positive debit or credit, to two decimal places.');
   if(seen.has(l.code))out.push('Combine repeated accounting codes before posting.');seen.add(l.code);
