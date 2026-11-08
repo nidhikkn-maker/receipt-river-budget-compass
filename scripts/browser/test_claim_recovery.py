@@ -4,8 +4,8 @@ from pathlib import Path
 from playwright.async_api import async_playwright,expect
 from scripts.browser.test_report_builder import STORE,HTML,original_pdf
 OUT=Path('/tmp/browser/claim-recovery')
-CLIENT='''const key='isolated-claim-service';const s=JSON.parse(sessionStorage.getItem(key)||'{"preparation":null,"report":null,"attempts":0}');const write=()=>sessionStorage.setItem(key,JSON.stringify(s));
-export const supabase={rpc:async(name,p)=>{s.preparation={id:p._id,data:p._data,revision:1,mutation_id:p._mutation,updated_at:new Date().toISOString()};write();return {data:{revision:1,updated_at:s.preparation.updated_at},error:null};},storage:{from:()=>({upload:async(path,blob)=>{s.attempts++;write();if(s.attempts===1)return {error:Error('Controlled upload interrupted')};window.__bytes=Array.from(new Uint8Array(await blob.arrayBuffer()));return {error:null};}})},from:table=>{const q={};for(const m of ['select','eq','order','range','contains','limit'])q[m]=()=>q;q.then=done=>Promise.resolve({data:[],error:null}).then(done);q.maybeSingle=async()=>({data:table==='claim_preparations'?s.preparation:s.report,error:null});q.insert=async row=>{s.report=row;write();return {error:null};};return q;}};'''
+CLIENT='''const key='isolated-claim-service';const s=JSON.parse(sessionStorage.getItem(key)||'{"preparation":null,"report":null,"attempts":0,"versionReads":0}');const write=()=>sessionStorage.setItem(key,JSON.stringify(s));
+export const supabase={rpc:async(name,p)=>{s.preparation={id:p._id,data:p._data,revision:1,mutation_id:p._mutation,updated_at:new Date().toISOString()};write();return {data:{revision:1,updated_at:s.preparation.updated_at},error:null};},storage:{from:()=>({upload:async(path,blob)=>{s.attempts++;write();if(s.attempts===1)return {error:Error('Controlled upload interrupted')};window.__bytes=Array.from(new Uint8Array(await blob.arrayBuffer()));return {error:null};}})},from:table=>{const q={};let version=false;for(const m of ['select','eq','order','range','contains','limit'])q[m]=value=>{if(m==='select'&&value==='version')version=true;return q;};q.then=done=>{if(version){s.versionReads++;write();if(s.versionReads===1)return Promise.resolve({data:null,error:Error('Controlled version lookup interrupted')}).then(done);}return Promise.resolve({data:[],error:null}).then(done);};q.maybeSingle=async()=>({data:table==='claim_preparations'?s.preparation:s.report,error:null});q.insert=async row=>{s.report=row;write();return {error:null};};return q;}};'''
 async def main():
  OUT.mkdir(parents=True,exist_ok=True)
  module=urllib.request.urlopen('http://localhost:8080/scripts/browser/report-builder.fixture.tsx').read().decode();react=re.search(r'(/node_modules/\.vite/deps/react\.js\?v=[^"\s]+)',module)
@@ -37,12 +37,19 @@ async def main():
   await page.screenshot(path=str(OUT/'interrupted.png'))
   await page.reload()
   await expect(page.get_by_text('Ready on this device; history save not confirmed.',exact=True)).to_be_visible(timeout=15000)
+  await expect(page.get_by_role('button',name='Generate claim PDF')).to_be_disabled()
+  state=json.loads(await page.evaluate('sessionStorage.getItem("isolated-claim-service")'))
+  assert state['attempts']==0 and state['versionReads']==1
+  await page.get_by_role('button',name='Retry saving to history',exact=False).click()
+  await expect(page.get_by_text('Ready on this device; history save not confirmed.',exact=True)).to_be_visible()
+  await page.reload()
+  await expect(page.get_by_text('Ready on this device; history save not confirmed.',exact=True)).to_be_visible(timeout=15000)
   await page.get_by_role('button',name='Retry saving to history',exact=False).click()
   await expect(page.get_by_text('Saved in Reports Centre → Report history.',exact=True)).to_be_visible()
   async with page.expect_download() as pending:await page.get_by_role('button',name='Download',exact=True).click()
   d=await pending.value;await d.save_as(OUT/'claim.pdf')
   state=json.loads(await page.evaluate('sessionStorage.getItem("isolated-claim-service")'))
-  assert state['attempts']==2 and state['report']['filters']['snapshot']['totals']['claimed']==37.02
+  assert state['attempts']==2 and state['versionReads']==2 and state['report']['filters']['snapshot']['totals']['claimed']==37.02
   assert (OUT/'claim.pdf').read_bytes()==bytes(await page.evaluate('window.__bytes'))
   await page.screenshot(path=str(OUT/'recovered.png'));assert not errors,errors
   print('PASS real claim builder/preparation encrypted recovery, interrupted upload, reload same frozen PDF/id, one report, byte-identical download; Cloud adapter synthetic.')

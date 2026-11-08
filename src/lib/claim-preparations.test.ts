@@ -1,10 +1,20 @@
 import {describe,it,expect,vi} from 'vitest';
 import {indexedDB} from 'fake-indexeddb';
 vi.mock('@/integrations/supabase/client',()=>({supabase:{}}));
-import {saveLocalPreparation,loadLocalPreparation,clearLocalPreparations,saveLocalClaimReport,loadLocalClaimReport,clearLocalClaimReport,type ClaimPreparation,type ClaimReportJob} from './claim-preparations';
+import {saveLocalPreparation,loadLocalPreparation,clearLocalPreparations,saveLocalClaimReport,loadLocalClaimReport,clearLocalClaimReport,resolveClaimReportVersion,type ClaimPreparation,type ClaimReportJob} from './claim-preparations';
 globalThis.indexedDB=indexedDB;
 const draft:ClaimPreparation={id:'test',revision:2,mutationId:'test',updatedAt:'2026-11-01T06:00:00Z',data:{choice:'trip:t',picked:['e'],excluded:['excluded'],organisation:'AET',profileId:'role',routeId:'route',accountId:'bank',claimant:{name:'Private claimant',designation:'Director',employeeId:'',department:'',email:'',approver:'',bankDetails:''},purpose:'Meeting',from:'2026-10-01',to:'2026-10-03',format:'summary',rejected:['wrong']}};
 describe('Encrypted claim preparation recovery',()=>{
+ it('retains frozen bytes after failed version lookup and resolves one version on retry',async()=>{
+  const job:ClaimReportJob={id:'version-report',path:'version-owner/reports/version-report.pdf',name:'claim.pdf',activity:'entries:e',bytes:[37,80,68,70],missing:[],versionPending:true,row:{id:'version-report',owner_id:'version-owner',kind:'claim-submission',title:'Claim · v1 — Purchase',file_path:'version-owner/reports/version-report.pdf',file_size:4,version:1}};
+  await saveLocalClaimReport('version-owner',job);
+  await expect(resolveClaimReportVersion(job,async()=>{throw Error('Interrupted');},j=>saveLocalClaimReport('version-owner',j))).rejects.toThrow('Interrupted');
+  expect(await loadLocalClaimReport('version-owner')).toEqual(job);
+  const read=vi.fn(async()=>3);const resolved=await resolveClaimReportVersion(job,read,j=>saveLocalClaimReport('version-owner',j));
+  expect(resolved.row.version).toBe(3);expect(resolved.bytes).toEqual([37,80,68,70]);expect(resolved.id).toBe('version-report');
+  expect(await loadLocalClaimReport('version-owner')).toEqual(resolved);
+  await resolveClaimReportVersion(resolved,read,async()=>{});expect(read).toHaveBeenCalledTimes(1);
+ });
  it('keeps the exact frozen PDF and identity owner-private for interrupted retry',async()=>{
   const job:ClaimReportJob={id:'report',path:'owner/reports/report.pdf',name:'claim.pdf',activity:'entries:e',bytes:[37,80,68,70],missing:[],row:{id:'report',owner_id:'job-owner',kind:'claim-submission',title:'Claim',file_path:'owner/reports/report.pdf',file_size:4}};
   await saveLocalClaimReport('job-owner',job);expect(await loadLocalClaimReport('job-owner')).toEqual(job);expect(await loadLocalClaimReport('other-owner')).toBeNull();await clearLocalClaimReport('job-owner');expect(await loadLocalClaimReport('job-owner')).toBeNull();
