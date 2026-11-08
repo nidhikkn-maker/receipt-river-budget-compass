@@ -79,6 +79,53 @@ class StatementDeskFlow(unittest.IsolatedAsyncioTestCase):
         await expect(sheet.get_by_role("button", name="Undo this upload (2 saved)")).to_be_visible()
         self.assertEqual(len(await self.page.evaluate("deskFixture.saves")), 2)
         self.assertTrue(self.page.url.endswith("/smart"))
+        snapshots = await self.page.evaluate('deskFixture.uploads[0].undoRows')
+        self.assertEqual([r['revision'] for r in snapshots], [1, 1])
+        await self.page.reload()
+        sheet = self.page.get_by_role('dialog', name='Smart Add')
+        await self.page.get_by_label('Choose files', exact=True).set_input_files(files=[{'name':'smart.csv','mimeType':'text/csv','buffer':csv.encode()}])
+        await sheet.locator('select').first.select_option('desk-account')
+        await expect(sheet.get_by_role('button', name='Accept all 2 asking items')).to_have_count(0)
+        self.assertEqual(await self.page.evaluate('deskFixture.transactions.length'), 2)
+        self.assertEqual(await self.page.evaluate('deskFixture.uploads[0].undoRows'), snapshots)
+        self.assertTrue(self.page.url.endswith('/smart'))
+
+    async def test_smart_add_interrupted_evidence_recovers_in_place_without_double_posting(self):
+        await self.page.goto(BASE + '/smart', wait_until='domcontentloaded')
+        await self.page.evaluate('deskFixture.failReconcile = true')
+        csv = 'Date,Description,Debit,Credit\n2026-10-02,SWIGGY ORDER,250,\n2026-10-03,AMAZON PURCHASE,480,\n'
+        async def review():
+            await self.page.get_by_label('Choose files', exact=True).set_input_files(files=[{'name':'retry.csv','mimeType':'text/csv','buffer':csv.encode()}])
+            sheet = self.page.get_by_role('dialog', name='Smart Add')
+            await sheet.locator('select').first.select_option('desk-account')
+            return sheet
+        sheet = await review()
+        await sheet.get_by_role('button', name='Accept all 2 asking items').click()
+        await sheet.get_by_role('button', name='Apply everything (2 to save)').click()
+        await expect(sheet.get_by_label('Recent uploads')).to_contain_text('interrupted')
+        self.assertEqual(await self.page.evaluate('deskFixture.transactions.length'), 1)
+        await self.page.reload()
+        sheet = await review()
+        await sheet.get_by_role('button', name='Accept all 1 asking items').click()
+        await sheet.get_by_role('button', name='Apply everything (1 to save)').dblclick()
+        await expect(sheet.get_by_role('button', name='Undo this upload (1 saved)')).to_be_visible()
+        self.assertEqual(await self.page.evaluate('deskFixture.transactions.length'), 2)
+        self.assertEqual(await self.page.evaluate('new Set(deskFixture.transactions.map(t => t.id)).size'), 2)
+        self.assertTrue(self.page.url.endswith('/smart'))
+
+    async def test_later_same_source_edit_cannot_be_used_as_the_upload_snapshot(self):
+        csv = 'Date,Description,Debit,Credit\n2026-10-02,SWIGGY ORDER,250,\n'
+        await self.page.get_by_label('Statement files').set_input_files(files=[{'name':'baseline.csv','mimeType':'text/csv','buffer':csv.encode()}])
+        await self.page.locator('select').first.select_option('desk-account')
+        await self.page.get_by_role('button', name='Accept all 1 asking items').click()
+        await self.page.get_by_role('button', name='Apply everything (1 to save)').click()
+        await expect(self.page.get_by_role('button', name='Undo this upload (1 saved)')).to_be_visible()
+        await self.page.evaluate("deskFixture.transactions[0].amount=251;deskFixture.transactions[0].correctionRevision=2;sessionStorage.setItem('controlled-desk-ledger',JSON.stringify(deskFixture.transactions))")
+        await self.page.reload()
+        await self.page.get_by_label('Recent uploads').get_by_role('button', name='Undo', exact=True).click()
+        await expect(self.page.get_by_label('Recent uploads')).to_contain_text('Undo unfinished')
+        self.assertEqual(await self.page.evaluate('deskFixture.atomicCalls'), 0)
+        self.assertEqual(await self.page.evaluate('deskFixture.transactions[0].amount'), 251)
 
     async def test_upload_review_apply_and_undo(self):
         csv = "Date,Description,Debit,Credit\n2026-10-02,SWIGGY ORDER,250.00,\n2026-10-03,AMAZON PURCHASE,480.00,\n"
