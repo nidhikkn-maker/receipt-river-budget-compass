@@ -1,4 +1,5 @@
 ## Larger-batch completion — 8 Nov 2026
+- [ ] Active 05:32 batch: GST liability/payment/frozen-return exceptions and saved-draft refresh; specialized report source scope and disk history acceptance; next connected register gaps. No UIX/production changes.
 - [x] Registration/company-isolated settlement, retained investment events/precision, filtered report balances, exact encrypted Reports Centre retry and eight-family frozen PDF/source comparisons completed; final 94/94 plus last 13/13 targeted tests pass.
 - [x] Existing Inbox now opens resolving pages for derived reconciliation/missing-invoice exceptions; saved evidence clears them after reload. V60-0316 verified; V60-0312 remains partial for all-kind coverage.
 - [x] Evidence and measured credits recorded in docs/evidence/connected-completion-2026-11-08.md; 0016/0026 retain broad/hosted gaps,0066/0082 blocked; no production/UIX/release changes.
