@@ -33,6 +33,7 @@ async def main():
   await expect(review.get_by_label('Cost',exact=True)).to_have_value('150000')
   await review.screenshot(path=str(ROOT/'actual-invoice-review.png'))
   await review.get_by_role('button',name='Confirm and save').click()
+  await review.screenshot(path=str(ROOT/'save-state.png'));print(await review.inner_text(),flush=True)
   await expect(review.get_by_role('button',name='Retry',exact=True)).to_be_visible();await review.get_by_role('button',name='Retry',exact=True).click()
   await expect(review.get_by_text('Saved',exact=True)).to_be_visible()
   saved=json.loads(await page.evaluate('localStorage.getItem("controlled-asset-document")'))
