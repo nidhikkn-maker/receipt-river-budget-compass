@@ -17,12 +17,12 @@ Object.assign(window, { expenseBrowserFixture: fixture });
 const Context = ((window as unknown as { isolatedExpenseContext?: ReturnType<typeof createContext<ReturnType<typeof makeStore> | null>> }).isolatedExpenseContext ??= createContext<ReturnType<typeof makeStore> | null>(null));
 const history = async () => [];
 const signedUrl = async (path: string) => `/controlled-receipt/${path.split("/").pop()}`;
-function makeStore(transactions: Expense[], update: (next: Expense[]) => void) {
+function makeStore(transactions: Expense[], update: (next: Expense[]) => void, preferences = defaultPreferences(), setPreferences: (next: ReturnType<typeof defaultPreferences>) => void = () => {}) {
   return {
     userId: "controlled-owner", name: 'Alex', loading: false, syncState: 'current', pendingCount: 0, lastSyncedAt: null, refresh: async () => {}, transactions, expenses: transactions, members: [], loans: [], documents: [], commitments: [], goals: [], valuations: [], budgets: {},
     accounts: [{ id: "controlled-account", name: "Controlled bank", kind: "savings", openingBalance: 10000, archived: false }],
-    preferences: defaultPreferences(), memberName: () => "Me", history, signedUrl,
-    savePreferences: async () => {},
+    preferences, memberName: () => "Me", history, signedUrl,
+    savePreferences: async (next: ReturnType<typeof defaultPreferences>) => { sessionStorage.setItem('expense-browser-preferences', JSON.stringify(next)); setPreferences(next); },
     save: async (input: ExpenseInput, options: { id?: string; createId?: string; files: File[] }) => {
       if (fixture.failNextSave) { fixture.failNextSave = false; throw new Error("Controlled save failure"); }
       validateExpense(input);
@@ -41,7 +41,8 @@ function makeStore(transactions: Expense[], update: (next: Expense[]) => void) {
 }
 export function StoreFixture({ children }: { children: ReactNode }) {
   const [transactions, update] = useState(fixture.transactions);
-  return <Context.Provider value={makeStore(transactions, update)}>{children}</Context.Provider>;
+  const [preferences, setPreferences] = useState(() => JSON.parse(sessionStorage.getItem('expense-browser-preferences') ?? JSON.stringify(defaultPreferences())) as ReturnType<typeof defaultPreferences>);
+  return <Context.Provider value={makeStore(transactions, update, preferences, setPreferences)}>{children}</Context.Provider>;
 }
 export function useStore() {
   const store = useContext(Context);

@@ -3,13 +3,23 @@ import { vi, describe, it, expect } from 'vitest';
 const navigate = vi.hoisted(() => vi.fn());
 const seen = vi.hoisted(() => ({ receipt: [] as unknown[], statement: [] as unknown[] }));
 vi.mock('@tanstack/react-router', () => ({ useNavigate: () => navigate, Link: ({ children }: { children: unknown }) => children }));
-vi.mock('@/routes/_authenticated/new', () => ({ NewExpense: (p: { embedded: { search: unknown; files: File[] } }) => { seen.receipt.push(p.embedded); return <p>receipt review</p>; } }));
+vi.mock('@/routes/_authenticated/new', () => ({ NewExpense: (p: { embedded: { search: unknown; files: File[]; onExit: (saved: { id: string; label: string }) => void } }) => { seen.receipt.push(p.embedded); return <><p>receipt review</p><button onClick={() => p.embedded.onExit({ id: 'saved-payment', label: 'Purchase' })}>Confirm test save</button></>; } }));
 vi.mock('@/routes/_authenticated/statements', () => ({ StatementDeskPage: (p: { embedded: { files: File[] } }) => { seen.statement.push(p.embedded); return <p>statement review</p>; } }));
 vi.mock('./SourcePreview', async (orig) => ({ ...(await orig<typeof import('./SourcePreview')>()), SourcePreview: ({ file }: { file: File }) => <p>preview {file.name}</p> }));
+vi.mock('./ReceiptAssetHandoff', () => ({ ReceiptAssetHandoff: () => null }));
+vi.mock('./ExpenditureReportBuilder', () => ({ ExpenditureReportBuilder: ({ search }: { search: { entry?: string } }) => <p>Claim source {search.entry}</p> }));
 import { SmartAdd, routeFiles } from './SmartAdd';
 
 const f = (name: string, type: string) => new File(['x'], name, { type });
 describe('Smart Add stays in place', () => {
+  it('opens claim preparation with exactly the saved entry without navigating or saving again', async () => {
+    render(<SmartAdd open onOpenChange={() => {}} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Quick Entry' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Confirm test save' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Claim it back' }));
+    expect(await screen.findByText('Claim source saved-payment')).toBeTruthy();
+    expect(navigate).not.toHaveBeenCalled();
+  });
   it('routes photos to receipt review, spreadsheets to statements and asks for PDFs', () => {
     expect(routeFiles([f('a.jpg', 'image/jpeg')])).toBe('receipt');
     expect(routeFiles([f('s.csv', 'text/csv')])).toBe('statement');

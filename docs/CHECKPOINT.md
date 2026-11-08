@@ -1,10 +1,10 @@
-# Ledgerline continuation checkpoint — 8 Nov 2026 P1 intake batch
+# Ledgerline continuation checkpoint — 8 Nov 2026 P1 handoffs and exports
 
 ## Latest P1 batch
-- Smart Add now retains explicit document intent for scanned images and asset context for invoice entry; asset Add from invoice opens the sheet, not a page. The batch-statement shortcut also opens the in-place file picker.
-- 29 targeted automated checks passed; Statement Desk 17 browser cases passed. Photo raw-byte preview/corrections/hide-resume/failed-save retry/double click linked single-entry save passed at 390/834/1280 with synthetic adapters only.
-- Existing claim/asset post-save suggestions are not a completed source association; representative payment OCR, asset/PDF/holdings in-place end-to-end and hosted DocuRepo readback remain open.
-- Credit observation: workspace 1,029.88, conservative cap 925.87 including protected 300 reserve; usable planning allowance 625.87. See docs/evidence/p1-intake-2026-11-08.md.
+- Smart Add asset follow-up links the same payment/transaction; receipt originals remain in DocuRepo through existing vaultItems. Claim follow-up opens the existing builder in the sheet with the saved entry ID, not a route jump. No second original upload/payment.
+- 41 focused tests, 18 statement cases, Smart Add asset/receipt browser at 390/834/1280, 5 PDF builder cases and asset-document/document-search browser checks pass. Same-statement CSV/Excel/PDF download and balance 1000→270→Undo 1000 verified with synthetic adapters.
+- Full in-sheet claim PDF/resume, actual same-data Inbox/reconciliation/DocuRepo screens, asset-invoice/holdings PDF and hosted readback remain open. No requirement promoted.
+- Latest workspace 1,020.97; conservative cap 916.97 including protected 300 reserve; available planning allowance 616.97. See docs/evidence/p1-handoffs-2026-11-08.md.
 
 ## Latest P0 batch
 - Upload-time owner-read Undo baseline retained, same-source later edits blocked, server uses saved owner upload history. Preferences are not immutable authority; staged database release still pending.
@@ -35,4 +35,4 @@
 
 ## Exact next action
 1. Verify asset invoice / holdings PDF through Smart Add → existing DocumentIntake/InvestmentReview → source-linked persisted readback with isolated fixtures.
-2. Finish source-aware asset and claim post-save handoffs without a second financial posting. Preserve current UIX; no broad redesign.
+2. Verify in-sheet claim preparation/PDF/recovery with saved receipt source; continue the same synthetic dataset through actual Inbox/reconciliation/DocuRepo screens. Preserve current UIX; no broad redesign.

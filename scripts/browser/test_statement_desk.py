@@ -147,6 +147,55 @@ class StatementDeskFlow(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(await self.page.evaluate("deskFixture.transactions.length"), 0)
         self.assertEqual(len(await self.page.evaluate("deskFixture.removes")), 2)
 
+    async def test_same_statement_source_balance_and_report_downloads(self):
+        csv = 'Date,Description,Debit,Credit\n2026-10-02,SWIGGY ORDER,250.00,\n2026-10-03,AMAZON PURCHASE,480.00,\n'
+        await self.page.get_by_label('Statement files').set_input_files(files=[{'name':'journey.csv','mimeType':'text/csv','buffer':csv.encode()}])
+        await self.page.locator('select').first.select_option('desk-account')
+        await self.page.get_by_role('button',name='Accept all 2 asking items').click()
+        await self.page.get_by_role('button',name='Apply everything (2 to save)').click()
+        await expect(self.page.get_by_role('button',name='Undo this upload (2 saved)')).to_be_visible()
+        observed = await self.page.evaluate('''async () => {
+          const {accountBalance}=await import('/src/lib/ledger.ts');
+          const {vaultItems}=await import('/src/lib/documents.ts');
+          const {inboxItems,duplicatePairs}=await import('/src/lib/inbox.ts');
+          const {defaultPreferences}=await import('/src/lib/preferences.ts');
+          const f=deskFixture, prefs=defaultPreferences();prefs.categories=[{name:'Food',archived:false},{name:'Other',archived:false}];
+          return {balance:accountBalance(f.accounts[0],f.transactions), duplicates:duplicatePairs(f.transactions).length,
+            imports:inboxItems({transactions:f.transactions,accounts:f.accounts,commitments:[],prefs,today:'2026-11-08',pendingCount:0}).filter(x=>x.type==='unverified_import').length,
+            items:vaultItems(f.documents,f.transactions.map(t=>({...t,receipts:t.receipts??[],description:t.description??''}))), refs:f.transactions.map(t=>t.statementRef), docs:f.documents};
+        }''')
+        self.assertEqual(observed['balance'],270)
+        self.assertEqual(observed['duplicates'],0)
+        self.assertEqual(observed['imports'],0)
+        self.assertEqual(len(observed['docs']),1)
+        self.assertEqual(bytes(observed['docs'][0]['original']),csv.encode())
+        self.assertEqual(observed['items'][0]['docId'],observed['docs'][0]['id'])
+        self.assertTrue(all(observed['docs'][0]['id'] in ref for ref in observed['refs']))
+        await self.page.get_by_role('button',name='Reports for saved statement').click()
+        for fmt in ['CSV','Excel']:
+            async with self.page.expect_download() as pending:
+                await self.page.get_by_role('button',name=f'Export All expenses {fmt}',exact=True).click()
+            download=await pending.value
+            destination=EVIDENCE / download.suggested_filename
+            await download.save_as(destination)
+            self.assertGreater(destination.stat().st_size,100)
+            if fmt=='CSV':
+                text=destination.read_text(encoding='utf-8-sig');self.assertIn('250.00',text);self.assertIn('480.00',text)
+            else:
+                import zipfile
+                with zipfile.ZipFile(destination) as book:
+                    cells=book.read('xl/worksheets/sheet1.xml').decode();self.assertIn('250.00',cells);self.assertIn('480.00',cells)
+        await self.page.get_by_role('button',name='Prepare All expenses PDF',exact=True).click()
+        async with self.page.expect_download() as pending:
+            await self.page.get_by_role('button',name='Download All expenses PDF',exact=True).click()
+        download=await pending.value;destination=EVIDENCE / download.suggested_filename;await download.save_as(destination)
+        self.assertTrue(destination.read_bytes().startswith(b'%PDF'))
+        await self.page.screenshot(path=str(EVIDENCE/'same-record-exports.png'))
+        await self.page.get_by_role('button',name='Back to statement').click()
+        await self.page.get_by_label('Recent uploads').get_by_role('button',name='Undo',exact=True).click()
+        self.assertEqual(await self.page.evaluate('deskFixture.transactions.length'),0)
+        self.assertEqual(await self.page.evaluate("import('/src/lib/ledger.ts').then(m=>m.accountBalance(deskFixture.accounts[0],deskFixture.transactions))"),1000)
+
     async def test_late_checkpoint_after_undo_cannot_resurrect_upload(self):
         csv = 'Date,Description,Debit,Credit\n2026-10-02,SWIGGY ORDER,250,\n'
         await self.page.get_by_label('Statement files').set_input_files(files=[{'name': 'terminal.csv', 'mimeType': 'text/csv', 'buffer': csv.encode()}])

@@ -1,10 +1,19 @@
 import { describe, expect, it } from "vitest";
-import { buildReport, toCsv } from "./reports";
+import { buildReport, toCsv, toExcel } from "./reports";
 import { applyFilters, type Expense } from "./expenses";
 
 const e = (patch: Partial<Expense>): Expense => ({ id: "expense", title: "Lunch", merchant: "Cafe", category: "Meals", scope: "business", memberId: null, splits: [], amount: 100, originalAmount: 100, currency: "INR", fxRate: 1, paymentMethod: "upi", date: "2026-10-31", reconciledAt: null, statementRef: null, receipts: [], description: "", department: "Sales", ...patch });
 const name = () => "Me";
 describe("requested exports", () => {
+  it('Excel keeps report rows exact and formula-looking text literal', async () => {
+    const { read, utils } = await import('xlsx');
+    const blob = await toExcel({ title: 'Test', headers: ['Name', 'INR'], rows: [['=SUM(1,2)', '432.10']] });
+    const bytes = await new Promise<ArrayBuffer>((resolve, reject) => { const reader = new FileReader(); reader.onload = () => resolve(reader.result as ArrayBuffer); reader.onerror = reject; reader.readAsArrayBuffer(blob); });
+    const book = read(bytes, { type: 'array' });
+    const sheet = book.Sheets['Report'];
+    expect(sheet?.['A2']?.f).toBeUndefined();
+    expect(sheet && utils.sheet_to_json(sheet, { header: 1 })).toEqual([['Name', 'INR'], ['=SUM(1,2)', '432.10']]);
+  });
   it("expenses exclude transfers and reimbursement payments", () => {
     const r = buildReport("expenses", [e({}), e({ txnType: "transfer" }), e({ txnType: "reimbursement" })], name, {});
     expect(r.rows).toHaveLength(1);
