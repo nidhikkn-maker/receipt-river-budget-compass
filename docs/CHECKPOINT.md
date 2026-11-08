@@ -1,5 +1,13 @@
 # Ledgerline continuation checkpoint — 8 Nov 2026 six-requirement acceptance
 
+## Latest connected GST/report batch — 05:43 UTC
+- Implemented GST liability/payment/frozen-working/filed-document variance -> existing Inbox/Tax. Unique owner/company matching, multi-registration fail-closed behavior, stable draft refresh, explicit return document link and unavailable-evidence warnings.
+- Remaining 23 Reports Centre PDF families persisted with actual bytes/frozen source metadata/interrupted reply/retry and disk restart; all31 centre families now covered alongside prior8. Loan account scope and historical balance dependencies corrected.
+- Next connected register group advanced: GST material source chains now reuse reviewed ITC eligibility, include dated reverse-charge credit and retained originals; truncated input list is qualified. V60-0731/0021 remain partial.
+- No IDs newly verified:0016/0026/0312 retain exact broad-source/hosted gaps;0066/0082 marked BLOCKED consistently with user directive;0058/0716 unchanged. See docs/evidence/gst-report-completion-2026-11-08.md.
+- 104 distinct targeted tests passed (32 initial,6 targeted including overlap,71 dependency tests; count excludes duplicated5), browser finalPASS zero runtime errors. Known jsdom canvas diagnostic only. Initial test type errors/fixture load failures corrected. No live records/UIX/policies/migrations/publish.
+- Measured workspace955.61; batch decline10.31 workspace-wide; conservative cap851.60 includes protected300, usable551.60; later charges excluded.
+
 ## Latest connected larger batch — 04:55 UTC
 - Completed registration/company-isolated party reconciliation, six-decimal retained investment-event checks, amended-note/payment-ID safety, filtered report balance/forecast/wealth totals and source snapshots.
 - Reports Centre now uses encrypted exact-byte pending PDFs, owner metadata+download readback, reload/retry with stable ID, no unknown-outcome file removal, queued frozen source snapshots for background completion. Actual page interruption/reload/retry/download passes with synthetic local adapters.
