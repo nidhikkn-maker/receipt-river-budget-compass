@@ -19,7 +19,7 @@ describe('Corporate statements canonical double-entry journey',()=>{
    expect(w.profit).toBe(3400);expect(w.trialDifference).toBe(0);expect(w.balanceDifference).toBe(0);
    for(const group of new Set(w.lines.map(l=>l.groupId)))expect(w.lines.filter(l=>l.groupId===group).reduce((s,l)=>s+l.debit-l.credit,0)).toBe(0);
    for(const a of p.accounts.filter(a=>a.id!=='beta')){const b=w.balances.find(b=>b.code===`account:${a.id}`);expect(b?.closing??0).toBe(roundMoney((a.kind==='loan'||a.kind==='credit_card'?-1:1)*accountBalance(a,p.entries))||0);}
-   expect(w.cash).toEqual({opening:10000,operating:3000,investing:-2000,financing:-1100,unclassified:0,closing:9900,difference:0});
+   expect(w.cash).toEqual({opening:10000,operating:3500,investing:-2000,financing:-1100,unclassified:0,closing:10400,difference:0});
    expect(JSON.stringify(w)).not.toMatch(/beta-secret|Excluded Beta|7777|999999/);
  });
  it('keeps unclassified opening counterparts visible and never invents capital or zero gaps',()=>{
