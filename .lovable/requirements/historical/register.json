@@ -168338,8 +168338,14 @@
         "date": "2026-10-31 07:50"
       },
       "original": "Add CSV and PDF exports for my expenses, reimbursement payments, and department budget summaries.",
-      "status": "NOT YET AUDITED",
-      "nextAction": "Audit; superseded/excluded items (approvals removed, Yaba, official workspace) must be marked SUPERSEDED with the later message."
+      "status": "VERIFIED COMPLETE",
+      "nextAction": "None for bounded CSV/PDF export criterion; broader hosted reporting is tracked separately.",
+      "finalTestResult": {
+        "result": "PASS",
+        "evidence": [
+          "Actual Reports controls downloaded six CSV/PDF files for same synthetic dataset: expenses250/480, actual reimbursement40, department730; parsed PDF/CSV contents verified, docs/evidence/six-requirements-2026-11-08.md; external writes blocked."
+        ]
+      }
     },
     {
       "id": "HC-0032",
