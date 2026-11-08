@@ -1,6 +1,6 @@
 /** Supplementary GST working. Explicit owner-entered treatment, never inferred from party names. */
 import type { GstInvoice } from './types';
-import { addMoney,subtractMoney,sumMoney,roundMoney } from '../money';
+import { addMoney,subtractMoney,sumMoney,roundMoney,proportionMoney } from '../money';
 export interface GstSpecial {
  treatment?: 'domestic'|'export_paid'|'export_lut'|'reverse_charge'|undefined;
  supply?: 'goods'|'services';
@@ -50,6 +50,18 @@ export function advanceCrossProblems(list:GstAdvance[],invoices:GstInvoice[]):st
   for(const k of ['taxable','igst','cgst','sgst','cess'] as const){
    if(sumMoney(xs.map(x=>x[k]))>addMoney(inv[k],0.01))out.push(`${inv.number}: advances adjust more ${k} than the invoice carries`);
   }
+ }
+ return out;
+}
+/** Reviewed allocation proposal uses the lower advance/invoice head and remaining capacity.
+ * Excess advance tax stays on the advance, never silently disappears when invoice rates differ. */
+export function proposeAdvanceAdjustment(a:GstAdvance,invoice:GstInvoice,taxable:number,list:GstAdvance[]):GstAdvance['adjustments'][number]{
+ if(!Number.isFinite(taxable)||taxable<=0||a.taxable<=0||invoice.taxable<=0)throw Error('Enter a positive taxable allocation');
+ const prior=list.flatMap(x=>x.adjustments).filter(x=>x.invoiceId===invoice.id);
+ if(taxable>subtractMoney(a.taxable,sumMoney(a.adjustments.map(x=>x.taxable)))+0.005||taxable>subtractMoney(invoice.taxable,sumMoney(prior.map(x=>x.taxable)))+0.005)throw Error('Allocation exceeds the remaining advance or invoice');
+ const out={invoiceId:invoice.id,date:invoice.date>a.date?invoice.date:a.date,taxable:roundMoney(taxable),igst:0,cgst:0,sgst:0,cess:0};
+ for(const k of ['igst','cgst','sgst','cess'] as const){
+  out[k]=Math.max(0,Math.min(proportionMoney(a[k],taxable,a.taxable),proportionMoney(invoice[k],taxable,invoice.taxable),subtractMoney(a[k],sumMoney(a.adjustments.map(x=>x[k]))),subtractMoney(invoice[k],sumMoney(prior.map(x=>x[k])))));
  }
  return out;
 }
