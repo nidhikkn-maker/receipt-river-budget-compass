@@ -7,6 +7,7 @@ import {join} from 'node:path';
 import {postAccountingWithRecovery,type AccountingReceipt} from './accounting-post';
 import {corporateStatements,CORPORATE_TYPES,corporateReport} from './corporate-statements';
 import {reverseAccountingJournal,type AccountingJournal} from './accounting-journal';
+import {settlementProposal} from './accounting-settlement';
 import {emptyBooks} from './types';
 import type {Expense} from '../expenses';
 import type {VaultDoc} from '../documents';
@@ -45,5 +46,16 @@ it('isolated opening → accrual → correction → disk restart → frozen stat
  await user(owner);await db.query('UPDATE accounting_review_grants SET revoked_at=now() WHERE accountant_id=$1',[accountant]);await user(accountant);expect((await db.query('SELECT * FROM accounting_journal_evidence')).rows).toHaveLength(0);await expect(db.query('SELECT review_accounting_exception($1,$2,$3,$4,$5)',[uuid(43),owner,accrual.id,'rent','No longer authorised'])).rejects.toThrow('not authorised');await user(other);expect((await db.query('SELECT * FROM accounting_journal_evidence')).rows).toHaveLength(0);
  await user(owner);await db.exec('RESET ROLE');await db.query("UPDATE finance_preferences SET data=jsonb_set(data,'{books,closedPeriods}',$1::jsonb)",[JSON.stringify([{from:'2026-05-01',to:'2026-05-31',entityId:'A'}])]);await user(owner);await expect(post({...accrual,id:uuid(50),date:'2026-05-02'},51)).rejects.toThrow('closed');
  expect(frozen.profit).toBe(2000);expect((await db.query('SELECT * FROM accounting_exception_reviews')).rows).toHaveLength(1);
+ await db.exec('RESET ROLE');await db.exec("UPDATE finance_preferences SET data=jsonb_set(data,'{books,closedPeriods}','[]'::jsonb)");await user(owner);
+ const rent=(await entries()).map(e=>e.receiptDetails?.accounting?.journal).find(j=>j?.id===uuid(32));if(!rent)throw Error('Corrected rent missing');
+ const payment={id:uuid(70),title:'Rent paid',date:'2026-05-03',amount:500,originalAmount:500,currency:'INR',accountId:bank,entityId:'A',entitySource:'manual',category:'rent',allocations:[],txnType:'expense',receipts:[],splits:[],scope:'business',fxRate:1,paymentMethod:'other',description:'',merchant:null,memberId:null,reconciledAt:'2026-05-03',statementRef:'statement line 1'} as Expense;
+ await db.query('INSERT INTO expenses(id,employee_id,title,category,amount,original_amount,currency,expense_date,txn_type,account_id,entity_id,entity_source) VALUES($1,$2,$3,$4,500,500,$5,$6,$7,$8,$9,$10)',[payment.id,owner,payment.title,payment.category,'INR',payment.date,'expense',bank,'A','manual']);
+ const settlement=settlementProposal({id:uuid(71),accrual:rent,balanceCode:'payable',entry:payment,journals:[rent],documentIds:[document]});await post(settlement,72);await post(settlement,72);
+ await expect(post({...settlement,id:uuid(73)},74)).rejects.toThrow('already settled');
+ await expect(db.query('UPDATE expenses SET amount=499 WHERE id=$1',[payment.id])).rejects.toThrow('retained');
+ const settled=corporateStatements({entityId:'A',entities:prefs.entities as never,books:prefs.books,accounts:[{id:bank,name:'Bank',kind:'current',openingBalance:0,archived:false}],documents:[{id:document,entityId:'A',filePath:`${owner}/audited.pdf`} as VaultDoc],entries:await entries(),from:'2026-04-01',to:'2027-03-31'});
+ expect(settled.profit).toBe(2000);expect(settled.liabilities).toBe(25500);expect(settled.cash.closing).toBe(99500);expect(settled.cash.operating).toBe(-500);expect(settled.trialDifference).toBe(0);expect(settled.balanceDifference).toBe(0);
+ await post(reverseAccountingJournal(settlement,uuid(75),'2026-05-04','Correct settlement link, retain source'),76);
+ await post({...settlement,id:uuid(77)},78);expect((await db.query('SELECT * FROM accounting_journal_evidence WHERE id=$1',[settlement.id])).rows).toHaveLength(1);
  }finally{await db.close();rmSync(dir,{recursive:true,force:true});}
 },60000);
