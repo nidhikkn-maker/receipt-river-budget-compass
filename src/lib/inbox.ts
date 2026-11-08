@@ -90,7 +90,7 @@ export const INBOX_LABEL: Record<InboxType, string> = {
 export type Priority = "high" | "medium" | "low";
 export interface InboxItem {
   key: string; type: InboxType; title: string; description: string; amount: number | null; accountName: string | null; date: string | null;
-  priority: Priority; action: string; transactionId?: string; accountId?: string; commitmentId?: string;
+  priority: Priority; action: string; transactionId?: string; accountId?: string; commitmentId?: string; destination?: string;
 }
 
 export interface InboxInput {
