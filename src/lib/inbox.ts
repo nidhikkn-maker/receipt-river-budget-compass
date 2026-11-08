@@ -90,7 +90,7 @@ export const INBOX_LABEL: Record<InboxType, string> = {
 export type Priority = "high" | "medium" | "low";
 export interface InboxItem {
   key: string; type: InboxType; title: string; description: string; amount: number | null; accountName: string | null; date: string | null;
-  priority: Priority; action: string; transactionId?: string; accountId?: string; commitmentId?: string;
+  priority: Priority; action: string; transactionId?: string; accountId?: string; commitmentId?: string; destination?: string;
 }
 
 export interface InboxInput {
@@ -128,6 +128,10 @@ export function inboxItems(i: InboxInput): InboxItem[] {
   for (const f of freshnessSummary(i.accounts, i.transactions, i.prefs, i.today).rows) if (f.status !== "current") {
     const d = discrepancy(i.accounts.find((a) => a.id === f.accountId)!, i.transactions, i.prefs);
     items.push({ key: `stale:${f.accountId}:${f.lastReconciliation ?? "never"}:${f.lastBalanceConfirmation ?? "never"}`, type: "unreconciled_account", title: f.name, description: f.daysSinceVerified == null ? "Never reconciled" : `Not verified for ${f.daysSinceVerified} days`, amount: d.difference, accountName: f.name, date: f.lastReconciliation, priority: f.status === "outdated" ? "high" : "medium", action: "Reconcile or confirm balance", accountId: f.accountId });
+  }
+  for (const a of i.accounts.filter(a=>!a.archived)) {
+    const d=discrepancy(a,i.transactions,i.prefs);
+    if(d.difference!=null&&Math.abs(d.difference)>=1)items.push({key:`balance:${a.id}:${d.statementDate}`,type:'inconsistency',title:a.name,description:d.action,amount:d.difference,accountName:a.name,date:d.statementDate,priority:'high',action:'Check statement',destination:'/account-reconciliation'});
   }
   for (const c of i.commitments) {
     const s = dueStatus(c, i.today);

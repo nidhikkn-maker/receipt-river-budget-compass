@@ -17,11 +17,12 @@ import { leaseAlerts, tenantLedger } from "./property";
 import { pastRetention } from "./docrepo";
 import { openingProposal } from "./fy";
 import { brokerCashOverlap } from "./recon";
+import { missingInvoices } from '../gst-recon';
 import { REQUIRED_SCHEDULES } from "./intake";
 import { ledgerTaxPayments, obligations, type Obligation } from "./compliance";
 import type { FindingState } from "./types";
 
-export type IssueType = "Unreconciled bank" | "Classification" | "Missing invoice" | "Duplicate" | "Asset register" | "Depreciation" | "Property/rent" | "Tax" | "GST" | "Investment cost basis" | "Investment overlap" | "Intercompany" | "Missing document" | "Profile" | "Opening balance" | "Missing source";
+export type IssueType = "Reconciliation" | "Unreconciled bank" | "Classification" | "Missing invoice" | "Duplicate" | "Asset register" | "Depreciation" | "Property/rent" | "Tax" | "GST" | "Investment cost basis" | "Investment overlap" | "Intercompany" | "Missing document" | "Profile" | "Opening balance" | "Missing source";
 export interface AuditItem { key: string; type: IssueType; entity: string; account: string | null; fy: string | null; risk: "high" | "medium" | "low"; text: string; evidence: string; to: string }
 
 const MAP: Record<string, IssueType> = { Profiles: "Profile", Invoices: "Missing invoice", Assets: "Asset register", Years: "Missing document" };
@@ -31,8 +32,9 @@ export function continuousAudit(p: { today: string; entities: EntityProfile[]; a
   const ent = (id?: string) => p.entities.find((e) => e.id === id)?.name ?? "Personal";
   const acc = (id?: string | null) => p.accounts.find((a) => a.id === id)?.name ?? null;
   const fy = fyOf(p.today);
-  for (const f of auditFindings(p.today, p.entities, p.assets, p.entries, p.docs))
+  for (const f of auditFindings(p.today, p.entities, p.assets, p.entries, p.docs).filter(f => f.area !== 'Invoices'))
     out.push({ key: `a:${f.key}`, type: MAP[f.area] ?? "Missing document", entity: f.text.split(":")[0] ?? "", account: null, fy: /FY (\d{4}-\d{2})/.exec(f.text)?.[1] ?? null, risk: f.severity, text: f.text, evidence: "Saved records", to: f.to });
+  for (const e of missingInvoices(p.entries,p.docs)) out.push({ key: `invoice:${e.id}`, type: 'Missing invoice', entity: ent(e.entityId ?? undefined), account: acc(e.accountId), fy: fyOf(e.date), risk: e.amount >= 10000 ? 'high' : 'medium', text: `${e.merchant || e.title}: missing bill; tax and audit evidence require checking`, evidence: `Ledger entry ${e.id}`, to: '/gst-check' });
   // Findings keep their real entity (via account mapping) and financial year [§53].
   const ownerOfAcc = new Map<string, string>(); for (const [eid, ids] of Object.entries(p.books.entityAccounts ?? {})) for (const id of ids) ownerOfAcc.set(id, eid);
   const entOfEntry = (e: { accountId?: string | null | undefined }) => ent(e.accountId ? ownerOfAcc.get(e.accountId) : undefined);
@@ -104,7 +106,7 @@ export function entityObligations(p: ObligationInput, entityId: string): Obligat
 export function withStates(items: AuditItem[], states: FindingState[] | undefined) {
   const by = new Map((states ?? []).map((s) => [s.key, s]));
   const open: AuditItem[] = [], reviewed: (AuditItem & { state: FindingState })[] = [];
-  for (const i of items) { const s = by.get(i.key); if (s && s.status !== "open") reviewed.push({ ...i, state: s }); else open.push(i); }
+  for (const i of items) { const s = by.get(i.key); if (s && s.status !== "open" && !['Reconciliation','Missing invoice'].includes(i.type)) reviewed.push({ ...i, state: s }); else open.push(i); }
   return { open, reviewed };
 }
 /** Record a decision; reopening keeps the history line. */
