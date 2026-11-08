@@ -16,13 +16,15 @@ type Stage =
   | { kind: 'choose' }
   | { kind: 'classify'; files: File[] }
   | { kind: 'receipt'; files: File[]; search: QuickEntrySearch; key: number }
-  | { kind: 'statement'; files: File[]; key: number }
+  | { kind: 'statement'; files: File[]; key: number; context?: 'assets' | undefined }
   | { kind: 'done'; id?: string | undefined; label: string };
 
 export const SMART_ADD_ACCEPT = 'image/*,application/pdf,.pdf,.csv,.xls,.xlsx';
 
 /** Decides where picked files are reviewed: photos are receipts, spreadsheets are statements, a PDF is the owner's call. */
-export function routeFiles(files: File[]): 'receipt' | 'statement' | 'ask' {
+export function routeFiles(files: File[], intent?: SmartAddIntent): 'receipt' | 'statement' | 'ask' {
+  if (!files.length) return 'ask';
+  if (intent === 'document' || intent === 'assets') return 'statement';
   const kinds = files.map(sourceKind);
   if (kinds.every((k) => k === 'image')) return 'receipt';
   if (kinds.some((k) => k === 'sheet')) return 'statement';
@@ -53,10 +55,9 @@ export function SmartAdd({ open, onOpenChange, scope }: { open: boolean; onOpenC
   const take = (list: FileList | null) => {
     const files = Array.from(list ?? []); if (!files.length) return;
     setShown(0);
-    const routed = routeFiles(files);
-    const where = routed === 'ask' && intent === 'document' ? 'statement' : routed;
+    const where = routeFiles(files, intent);
     if (where === 'receipt') setStage({ kind: 'receipt', files, search: { ...base, mode: 'scan' }, key: Date.now() });
-    else if (where === 'statement') setStage({ kind: 'statement', files, key: Date.now() });
+    else if (where === 'statement') setStage({ kind: 'statement', files, key: Date.now(), context: intent === 'assets' ? 'assets' : undefined });
     else setStage({ kind: 'classify', files });
   };
   const typed = (mode: 'voice' | 'quick' | 'message') => setStage({ kind: 'receipt', files: [], search: { ...base, mode }, key: Date.now() });
@@ -92,7 +93,7 @@ export function SmartAdd({ open, onOpenChange, scope }: { open: boolean; onOpenC
               <button type="button" aria-label="Voice Entry" className="cmp-pearl-row" onClick={() => typed('voice')}><span className="cmp-icon"><Mic /></span><span className="min-w-0 flex-1"><b>Voice Entry</b><small>Say what you spent</small></span><ChevronRight /></button>
               <button type="button" aria-label="Quick Entry" className="cmp-pearl-row" onClick={() => typed('quick')}><span className="cmp-icon"><PencilLine /></span><span className="min-w-0 flex-1"><b>Quick Entry</b><small>Type an amount and a note</small></span><ChevronRight /></button>
             </div>
-            <p className="cmp-night-link mt-auto text-sm">Also: <button type="button" onClick={() => galleryRef.current?.click()}><Images className="mr-1 inline size-4" />choose from photos</button> · <button type="button" aria-label="From Message" onClick={() => typed('message')}><MessageSquare className="mr-1 inline size-4" />paste a bank message</button> · <Link to="/statements" onClick={() => onOpenChange(false)}>many statements at once</Link></p>
+            <p className="cmp-night-link mt-auto text-sm">Also: <button type="button" onClick={() => galleryRef.current?.click()}><Images className="mr-1 inline size-4" />choose from photos</button> · <button type="button" aria-label="From Message" onClick={() => typed('message')}><MessageSquare className="mr-1 inline size-4" />paste a bank message</button> · <Button variant="link" onClick={() => { setIntent('document'); fileRef.current?.click(); }}>many statements at once</Button></p>
           </div>}
 
           {stage.kind === 'classify' && <div className="grid gap-6 lg:grid-cols-2">
@@ -112,7 +113,7 @@ export function SmartAdd({ open, onOpenChange, scope }: { open: boolean; onOpenC
               <div className="smart-add-review min-w-0">
                 {stage.kind === 'receipt'
                   ? <ReceiptReview key={stage.key} embedded={{ search: stage.search, files: stage.files, onExit: (saved) => saved ? setStage({ kind: 'done', id: saved.id, label: saved.label }) : reset() }} />
-                  : <StatementReview key={stage.key} embedded={{ files: stage.files }} />}
+                  : <StatementReview key={stage.key} embedded={{ files: stage.files, context: stage.context }} />}
               </div>
             </Suspense>
           </div>}

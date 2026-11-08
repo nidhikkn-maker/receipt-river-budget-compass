@@ -1,4 +1,10 @@
-# Ledgerline continuation checkpoint — 8 Nov 2026 01:22 UTC
+# Ledgerline continuation checkpoint — 8 Nov 2026 P1 intake batch
+
+## Latest P1 batch
+- Smart Add now retains explicit document intent for scanned images and asset context for invoice entry; asset Add from invoice opens the sheet, not a page. The batch-statement shortcut also opens the in-place file picker.
+- 29 targeted automated checks passed; Statement Desk 17 browser cases passed. Photo raw-byte preview/corrections/hide-resume/failed-save retry/double click linked single-entry save passed at 390/834/1280 with synthetic adapters only.
+- Existing claim/asset post-save suggestions are not a completed source association; representative payment OCR, asset/PDF/holdings in-place end-to-end and hosted DocuRepo readback remain open.
+- Credit observation: workspace 1,029.88, conservative cap 925.87 including protected 300 reserve; usable planning allowance 625.87. See docs/evidence/p1-intake-2026-11-08.md.
 
 ## Latest P0 batch
 - Upload-time owner-read Undo baseline retained, same-source later edits blocked, server uses saved owner upload history. Preferences are not immutable authority; staged database release still pending.
@@ -28,5 +34,5 @@
 - Owner's six iPhone screenshots never received; real iPhone/iPad checks pending.
 
 ## Exact next action
-1. Add a statement CSV fixture to scripts/browser/test_journal_uix.py: upload via Smart Add → batch review → confirm once → assert one save, no navigation.
-2. Then style the embedded Statement Desk review with cmp-* classes.
+1. Verify asset invoice / holdings PDF through Smart Add → existing DocumentIntake/InvestmentReview → source-linked persisted readback with isolated fixtures.
+2. Finish source-aware asset and claim post-save handoffs without a second financial posting. Preserve current UIX; no broad redesign.
