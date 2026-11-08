@@ -1,4 +1,5 @@
 import { csvCell } from "@/lib/csv-safe";
+import { roundMoney, sumMoney } from '@/lib/money';
 
 /** Rows another owner shared through a company grant. Only rows the database already allowed are passed in. */
 export type SharedTxn = { id: string; employee_id: string; entity_id: string | null; title: string; merchant: string | null; category: string; amount: number; currency: string; expense_date: string; txn_type: string };
@@ -21,8 +22,8 @@ export function filterShared<T>(rows: T[], query: string, text: (r: T) => (strin
 export function sharedCompanyPdfData(c: SharedCompany, txns: SharedTxn[], docs: SharedDoc[]) {
   const t = rowsFor(txns, c, (r) => r.employee_id).sort((a, b) => a.expense_date.localeCompare(b.expense_date));
   const d = rowsFor(docs, c, (r) => r.owner_id);
-  const inr = (n: number) => `INR ${new Intl.NumberFormat("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(Math.round(n * 100) / 100)}`;
-  const total = t.filter((r) => r.txn_type === "expense").reduce((s, r) => s + r.amount, 0);
+  const inr = (n: number) => `INR ${new Intl.NumberFormat("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(roundMoney(n))}`;
+  const total = sumMoney(t.filter((r) => r.txn_type === "expense").map(r=>r.amount));
   return {
     title: `${c.company_name} — shared records`,
     lines: [`Shared by: ${c.owner_email}`, `Access: ${c.can_write ? "Can edit" : "View only"}`],
@@ -66,4 +67,12 @@ export function sharedCompanyCsv(c: SharedCompany, txns: SharedTxn[], docs: Shar
     ...d.map((r) => [r.doc_date ?? "", r.doc_type, r.title]),
   ];
   return lines.map((l) => l.map((v) => csvCell(v as string | number)).join(",")).join("\n");
+}
+/** Separate literal-cell sheets preserve visible entry/document IDs without leaking other owners. */
+export async function sharedCompanyExcel(c:SharedCompany,txns:SharedTxn[],docs:SharedDoc[]):Promise<Blob>{
+ const {utils,write}=await import('xlsx');const w=utils.book_new();
+ utils.book_append_sheet(w,utils.aoa_to_sheet([['Company',c.company_name],['Shared by',c.owner_email],['Access',c.can_write?'Can edit':'View only']]),'Company');
+ utils.book_append_sheet(w,utils.aoa_to_sheet([['Entry ID','Date','Type','Description','Party','Category','Amount (INR)'],...rowsFor(txns,c,r=>r.employee_id).map(r=>[r.id,r.expense_date,r.txn_type,r.title,r.merchant??'',r.category,r.amount])]),'Entries');
+ utils.book_append_sheet(w,utils.aoa_to_sheet([['Document ID','Date','Type','Title','Original filename'],...rowsFor(docs,c,r=>r.owner_id).map(r=>[r.id,r.doc_date??'',r.doc_type,r.title,r.file_name??''])]),'Documents');
+ return new Blob([write(w,{type:'array',bookType:'xlsx'})],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
 }

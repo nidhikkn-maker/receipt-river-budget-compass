@@ -1,5 +1,6 @@
 /** Supplementary GST working. Explicit owner-entered treatment, never inferred from party names. */
 import type { GstInvoice } from './types';
+import { addMoney,subtractMoney,sumMoney,roundMoney } from '../money';
 export interface GstSpecial {
  treatment?: 'domestic'|'export_paid'|'export_lut'|'reverse_charge'|undefined;
  supply?: 'goods'|'services';
@@ -12,7 +13,7 @@ export interface GstAdvance {
  adjustments:{invoiceId:string;date:string;taxable:number;igst:number;cgst:number;sgst:number;cess:number}[];
  docId?:string;
 }
-const money=(n:number)=>Math.round(n*100)/100;
+const money=roundMoney;
 export function specialProblems(i:GstInvoice):string[]{
  const out:string[]=[];
  if(i.treatment==='export_lut'&&(i.igst||i.cgst||i.sgst||i.cess))out.push('Export under LUT has no output tax');
@@ -26,10 +27,12 @@ export function advanceProblems(a:GstAdvance,invoices:GstInvoice[]):string[]{
  const out:string[]=[];
  for(const k of ['taxable','igst','cgst','sgst','cess'] as const){
   if(!Number.isFinite(a[k])||a[k]<0)out.push(`${k}: amount must be nonnegative`);
-  if(a.adjustments.reduce((s,x)=>s+x[k],0)>a[k]+0.01)out.push(`${k}: adjustments exceed advance`);
+  if(a.adjustments.some(x=>!Number.isFinite(x[k])||x[k]<0))out.push(`${k}: adjustment amount must be nonnegative`);
+  if(sumMoney(a.adjustments.map(x=>x[k]))>addMoney(a[k],0.01))out.push(`${k}: adjustments exceed advance`);
  }
  for(const x of a.adjustments){const inv=invoices.find(i=>i.id===x.invoiceId);
-  if(!inv||inv.gstin!==a.gstin||inv.kind!=='sales'||inv.note)out.push('Adjustment requires a sales invoice for the same GSTIN');
+  if(!inv||inv.gstin!==a.gstin||inv.kind!=='sales'||inv.note||invoices.some(i=>i.amendsId===inv.id))out.push('Adjustment requires a current sales invoice for the same GSTIN');
+  if(inv&&a.partyGstin&&inv.partyGstin!==a.partyGstin)out.push('Adjustment requires an invoice for the same customer GSTIN');
   if(x.date<a.date||inv&&x.date<inv.date)out.push('Adjustment cannot precede the advance or invoice');
   // Rate consistency: an adjustment may carry less tax than the advance's pro-rata share (the remainder
   // stays on the advance), but never more — that would claim tax the advance never paid.
@@ -41,11 +44,11 @@ export function advanceProblems(a:GstAdvance,invoices:GstInvoice[]):string[]{
 }
 /** Cross-record checks: adjustments from every advance together must not exceed the invoice they settle. */
 export function advanceCrossProblems(list:GstAdvance[],invoices:GstInvoice[]):string[]{
- const out:string[]=[];const byInvoice=new Map<string,GstAdvance['adjustments']>();
+ const out:string[]=list.flatMap(a=>advanceProblems(a,invoices).map(p=>`${a.number}: ${p}`));const byInvoice=new Map<string,GstAdvance['adjustments']>();
  for(const a of list)for(const x of a.adjustments)byInvoice.set(x.invoiceId,[...(byInvoice.get(x.invoiceId)??[]),x]);
  for(const [invoiceId,xs] of byInvoice){const inv=invoices.find(i=>i.id===invoiceId);if(!inv)continue;
   for(const k of ['taxable','igst','cgst','sgst','cess'] as const){
-   if(xs.reduce((s,x)=>s+x[k],0)>inv[k]+0.01)out.push(`${inv.number}: advances adjust more ${k} than the invoice carries`);
+   if(sumMoney(xs.map(x=>x[k]))>addMoney(inv[k],0.01))out.push(`${inv.number}: advances adjust more ${k} than the invoice carries`);
   }
  }
  return out;
@@ -54,8 +57,8 @@ export function advanceHeads(list:GstAdvance[],gstin:string,period:string){
  const h={taxable:0,igst:0,cgst:0,sgst:0,cess:0};
  for(const a of list.filter(a=>a.gstin===gstin&&a.supply==='services')){
   for(const k of ['taxable','igst','cgst','sgst','cess'] as const){
-   if(a.date.slice(0,7)===period)h[k]+=a[k];
-   for(const x of a.adjustments)if(x.date.slice(0,7)===period)h[k]-=x[k];
+   if(a.date.slice(0,7)===period)h[k]=addMoney(h[k],a[k]);
+   for(const x of a.adjustments)if(x.date.slice(0,7)===period)h[k]=subtractMoney(h[k],x[k]);
   }
  }
  return Object.fromEntries(Object.entries(h).map(([k,v])=>[k,money(v)])) as typeof h;
