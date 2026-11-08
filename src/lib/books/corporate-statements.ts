@@ -90,7 +90,7 @@ export function corporateStatements(p: { entityId: string; entities: EntityProfi
     members.forEach(e=>journalEntries.add(e.id));
     for(const l of j.legs){if(l.statutory)statutoryErrors(l).forEach(message=>issue(id,message));}
     const docs=p.documents.filter(d=>j.documentIds.includes(d.id));
-    for(const l of j.legs)emit(`journal:${id}`,j.kind==='opening'?j.date.slice(0,4)+'-03-31':j.date,l.code,l.label,l.role,subtractMoney(l.debit,l.credit),primary[0]??null,docs.map(d=>d.id),docs.map(d=>d.filePath),`${j.kind}: ${j.description}${j.reversesId?`; exact reversal of ${j.reversesId}`:''}${j.settlement?`; bank source ${j.settlement.entryId}; accrued source ${j.settlement.journalId}`:''}`);
+    for(const l of j.legs){emit(`journal:${id}`,j.kind==='opening'?j.date.slice(0,4)+'-03-31':j.date,l.code,l.label,l.role,subtractMoney(l.debit,l.credit),primary[0]??null,docs.map(d=>d.id),docs.map(d=>d.filePath),`${j.kind}: ${j.description}${j.reversesId?`; exact reversal of ${j.reversesId}`:''}${j.settlement?`; bank source ${j.settlement.entryId}; accrued source ${j.settlement.journalId}`:''}${j.recurringSource?`; recognition template ${j.recurringSource.templateId}`:''}`);const line=lines.at(-1);if(line?.groupId===`journal:${id}`){if(l.source)line.source=l.source;if(l.statutory)line.statutory=l.statutory;}}
   }
   for (const e of entries.values()) {
     if(journalEntries.has(e.id))continue;
