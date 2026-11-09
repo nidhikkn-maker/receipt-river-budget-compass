@@ -2,10 +2,10 @@
 import json, collections
 d=json.load(open('.lovable/requirements/register.json')); r=d['requirements']
 c=collections.Counter(x['status'] for x in r)
-out=['# Ledgerline v6.0 + v6.1 master requirements register','',
+out=['# Thapal (formerly Ledgerline) v6.0 + v6.1 master requirements register','',
  'Generated from `.lovable/requirements/register.json`; edit the register, then run `python3 scripts/requirements/render_docs.py`.',
  'Status rule: VERIFIED COMPLETE only with connected code, enforced security, executed tests and recorded evidence. NOT AUDITED means the individual clause has not yet been assessed; MISSING means an audit found no implementation. PARTIAL retains the remaining development or verification work.','',
- '| Status | Count |','|---|---|']+[f'| {k} | {v} |' for k,v in sorted(c.items())]+['']
+ 'HEADING rows are section titles or lead-in lines (kind=heading); they are not requirements and are excluded from completion counts.','','| Status | Count |','|---|---|']+[f'| {k} | {v} |' for k,v in sorted(c.items())]+['',f"Functional clauses: {sum(1 for x in r if x.get('kind','functional')=='functional')} · headings: {sum(1 for x in r if x.get('kind')=='heading')}",'']
 cur=None
 for x in r:
   s=x['source']; key=f"{s['document']} — {s['section']}"

@@ -1,0 +1,675 @@
+Thapal V3.1 Development Ready Gap Closure and Acceptance
+Contract
+Owner: KK
+Date: 9 November 2026
+Status: Controlling addendum for Claude’s GitHub audit and subsequent development; not permission
+to publish.
+Source master: Thapal Master Specification V3, 182 pages, supplied 9 November 2026.
+Design authority: Signature Flow Concept 06, approved visual direction 10/10, subject to the exact-
+reference limitations below.
+
+1. Decision and precedence
+
+V3 remains the comprehensive product requirements master. This V3.1 addendum closes
+documentation gaps, adds the 111-screen register, establishes technical handoff schemas, and makes
+acceptance measurable. Nothing in this document deletes or weakens an approved V3 requirement.
+Where requirements conflict, Claude must issue a Decision Needed record with both references and
+stop that affected implementation. The hierarchy is: KK’s explicit later decision; applicable law and
+authoritative forms (subject to review); V3.1 technical acceptance clarifications; V3 functional
+requirements; approved Signature Flow screenshots for visual questions; existing production behavior
+only where compatible and safe. Never silently choose between conflicts.
+
+Authorization boundary: Claude may audit the connected GitHub repository and prepare changes in
+an isolated branch or preview. No migration of live records, production data repair, external filing or
+payment, transfer of ownership, deployment, DNS cutover, or publication without a separate explicit
+authorization from KK. Keep ledgerline.biz operational and untouched.
+
+Honesty rule: A requirement can be specified, coded, tested, deployed, or production-verified; these are
+different states. Do not label any item completed merely because it appears in V3, a screenshot, a unit
+test or a developer’s summary. All 50 decisions in V3 are marked Agreed; a proposal must never silently
+replace one.
+
+2. Immediate Claude audit deliverables
+
+Deliver the following before feature development is authorised. Preserve evidence links and revisions
+for every row:
+
+  1.   Existing Application Architecture Register: route; source file; UI component; API/service;
+       database table; migration version; relationships; owner boundary; row-level policy; posting
+       mechanism; background job; existing tests; implemented/partial/missing/blocked; defect;
+       proposed change.
+  2.   111-Screen Coverage Register: ID from Section 8; route or panel; parent navigation; entry and
+       exit; purpose; canonical data source; actions; approvals; device layouts; required states;
+       screenshot; tests; owner review status.
+  3.   Requirement Completion Register: permanent REQ-AREA-NNN ID; V3 section/page; V3.1
+       contract; priority; dependency; implementation file; evidence; tests; financial verification;
+       security verification; device verification; production status and known limits. Never reuse IDs.
+  4.   Financial Event and Module Blueprint Register: input evidence; document identity; entity
+       owner; financial account; event deduplication key; double-entry posting; match/reconciliation;
+       reversal; period lock; output reports; permissions; exception queue; test.
+  5.   Integration Feasibility Register: provider; offered API/format; approval and licensing; data
+       permissions; cost; frequency; timestamp; stale/failure behavior; retry/backoff; deduplication;
+       sandbox availability; status with proof. Unsupported is a valid result.
+  6.   Visual Baseline Register: the exact prototype screenshot for each demonstrated screen;
+       typography, icons, tokens, spacing, responsive breakpoint; visual diff; unapproved extension
+       screens clearly marked.
+  7.   Release and Recovery Evidence Register: backups, restore point, migration
+       roll-forward/rollback, audit-log continuity, deployment parity, critical journey results, security
+       findings, explicit owner approval.
+
+Every register must be available for Excel/CSV export. A blank or undocumented field is an open task,
+not a pass.
+
+3. Product shape and boundary
+
+Thapal is Home, Money, To-do, Records, with one central Add action. Reports is a direct rail
+destination on wider layouts and accessible within two taps on iPhone. Calendar, Search, Notifications,
+workspace selection, Help and Settings are globally accessible. All deeper functional modules live under
+those entry points without separate, competing top-level navigation. Keep the current Statement Desk
+ingestion engine as the sole authoritative financial-document intake. The apparent entry doors (Add,
+email, file picker, scheduled upload link and module action) must converge on the same source, parsing,
+deduplication and posting path.
+
+All workspaces (personal, adult family members, minors, companies, trusts, HUFs and supported
+organisations) must be legally and technically isolated. Combined group views show ownership and
+explicit consolidation assumptions; they are not substitutes for separate entity books. An owner of one
+entity does not automatically obtain another adult’s private data.
+
+4. Exact design contract
+
+Frozen direction: Signature Flow Concept 06—calm editorial hierarchy, restrained off-white canvas,
+deep forest-green emphasis, limited soft surfaces, flat rows, thin separators, contextual next action and
+clear language. No generic card grid, ERP dashboard redesign, gradients, glowing glass panels or
+decorative finance icon clutter.
+
+Brand: Always Thapal (capital T, no final dot). Option 02: minimalist single-stroke T plus modern
+wordmark. The existing prototype’s thapal. and T. are placeholders; they are not approved production
+artwork. Do not fabricate a replacement logo. Obtain and review actual editable SVG assets, kerning and
+small-size legibility before final sign-off. Manrope with properly licensed deployment; Noto Sans Tamil
+and Noto Sans Devanagari fallbacks as V3 Decision 47. iPhone central Add is deep green #223B35 as
+agreed Decision 48; blue in an early capture is a known prototype slip.
+Reference palette: Ink #222923, Muted #778178, Soft #F5F5F0, Line #E7E8E1, Deep #223B35, Mint
+#D3E8DC, Copper #AD7756, Canvas #FBFBF8. Use semantic tokens and measure contrast in every state.
+
+Responsive acceptance: iPhone widths 320/375/390/430 and landscape; iPad 768/820/1024/1180, both
+orientations and Split View; desktop 1280/1440/1728 and narrow windows. Minimum 44px touch
+targets, keyboard and screen-reader operation, visible focus, 200% text zoom, reduced motion, safe
+areas, no forced keyboard on opening Search. Every screen gets real-device evidence where applicable.
+The desktop and phone prototype captures exist; an accurate iPad capture and actual device checks
+remain outstanding.
+
+Navigation invariant: Every action preserves workspace, filters, scroll and return context. Browser
+Back/Forward, deep links, Cancel, Resume draft, breadcrumb and notification links all resolve to the
+same record with correct permissions. No hidden redirect from Smart Add to a second entry
+experience.
+
+5. End-to-end accounting data contract
+
+The canonical chain is source file → document version → extracted observations → economic event →
+ownership and account mapping → approval policy → balanced posting → bank/card reconciliation →
+derived module views → statutory drafts → reports and reminders → audit evidence.
+
+Required immutable IDs: workspace; legal entity; person; account/card; source; document version;
+parse attempt; financial event; accounting posting; posting line; match; expense; reimbursement; trip;
+asset; property; investment lot; loan; tax working; calendar event; report; approval; audit event. Reuse
+valid existing IDs and never overwrite history.
+
+Database-level invariants: signed exact-decimal amounts; debits equal credits per posting, legal entity
+and currency; unique idempotency key per economic event; no reuse of an invoice as full settlement for
+two duplicate debits; partial receipts leave the balance due; card settlement does not create an expense;
+inter-account transfer does not create income; same economic event appears once despite multiple
+source files; reconciled amounts agree with independent statement balances; posted entries cannot be
+silently edited; locked-period changes require authorised correcting entries; cross-workspace references
+cannot bypass row-level permissions.
+
+Posting policy: Unknown owner, account, currency, conflicting document values or unsupported tax
+treatment creates a To-do exception, not a fabricated posting. Graduated automatic posting begins only
+after the per-document and per-issuer evidence gate of V3 Decision 4 passes and KK’s policy permits
+that event class. Payroll, property sale, taxes, unusual journals, locked periods and consequential
+approvals retain their higher gates regardless of model confidence.
+
+Reprocessing: Store parser/model version and extracted field provenance. New parsing of the same
+source creates a new parse attempt and comparison, not a second posting. Recover from interruption by
+idempotent resume, reversible drafts and durable job state.
+
+6. Module connection and exception matrix
+Module                    Authoritative evidence        Accounting effect              Matching/exception proof
+
+                          Statements, alerts, opening                                  Independent closing
+Bank and cash                                           Cash, clearing and transfers
+                          schedules                                                    balance; alerts are
+Module                        Authoritative evidence          Accounting effect               Matching/exception proof
+
+                                                                                              estimated until statement-
+                                                                                              confirmed
+                                                              Liability; expense at           No duplicate expense;
+                              Card statement, receipts
+Credit cards                                                  purchase; settlement at         outstanding due and
+                              and bank payment
+                                                              payment                         unmatched charge surfaced
+                                                                                              Actual payer, beneficiary,
+                              Receipt, bill, invoice or       Expense/income,
+Expenses and income                                                                           legal owner, tax and
+                              bank row                        receivable/payable, tax
+                                                                                              document link
+                                                              Interparty                      Partial reimbursement
+                              Claim tied to original
+Reimbursements                                                receivable/payable, later       remains open; approval
+                              expense and bank payout
+                                                              settlement                      trail
+                                                                                              Journey and financial
+                              Tickets, itinerary, expense     Derived ledger views, no
+Travel                                                                                        statuses separate; Trip Pack
+                              links and refunds               duplicate trip postings
+                                                                                              source-complete
+                              Sanction, repayment             Principal, interest, accrual,   EMI split, maturity,
+Loans and deposits
+                              schedule, lender/FD advice      TDS                             statement variance
+                                                                                              Cash/units reconcile; source
+                              CAS, demat, broker,             Holdings, lots, income,
+Investments and forex                                                                         and valuation date; stale
+                              FX/remittance evidence          gains, fees, FX effects
+                                                                                              flags
+                                                                                              Bank, funding and
+                              Purchase, contractor            Asset, CWIP, depreciation,
+Assets and projects                                                                           certification linked; no
+                              certification, register         disposal
+                                                                                              double capitalisation
+                                                                                              Tenant, ownership, TDS,
+                              Deed, lease, invoices, bank     Property, rent, deposits,
+Property and leases                                                                           loan and rental
+                              rents                           liabilities and expenses
+                                                                                              reconciliation
+                                                                                              Number uniqueness, tax
+                              Sales invoice, supplier bill,   AR/AP, revenue, expense,
+Sales and purchasing                                                                          invoice validity,
+                              credit note                     GST/TDS as applicable
+                                                                                              receipts/payments
+                                                                                              Staff payments and
+                                                              Salary expense, payables,
+Payroll                       Uploaded salary register                                        statutory deposits; no full
+                                                              tax/statutory liabilities
+                                                                                              payroll engine claim
+                                                                                              Effective-date rule,
+                              Books and authoritative         Working tax balances
+Tax, trusts and governance                                                                    professional signoff, filing
+                              returns/forms                   where appropriate
+                                                                                              and challan evidence
+                                                                                              Source-linked, permission-
+Calendar, notifications and   Derived links from valid        No independent financial
+                                                                                              scoped, timestamped and
+reports                       records                         posting
+                                                                                              retryable
+
+
+Status discipline: Unknown, Estimated, Source-confirmed, Reconciled, Reviewed, Filed, Paid and
+Locked are not interchangeable. Filing is not payment; OCR is not financial verification; an email alert is
+not a bank statement; a market quote is not an audited balance. Screens must display scope and as-of
+date in plain language.
+
+7. Automation acceptance and measurement
+
+The 99.9% no-touch target remains a goal, not a release assertion. Record denominator, issuer, format,
+field, period, confidence, human correction, exception and any delayed match. Keep separate measures
+for amount, date, currency, entity, paying account, category, tax, duplicate detection, card match, bank
+reconciliation and posting. Financially consequential fields require explicit control checks, not just a
+general AI confidence score.
+
+The existing 200-row issuer sample and 99.5% amount/date / 97% category thresholds are eligibility
+screening minima, not statistical proof of a 0.1% end-to-end error rate. Use independent holdout
+documents across formats and time, publish confidence intervals and failure examples, require zero
+unexplained financial discrepancies in the acceptance set, and step down automation when corrections
+or drift exceed the approved policy. Never use a test dataset to train the rule being tested. An accuracy
+dashboard must display numerator, denominator and date.
+
+8. Every screen is required
+
+The following 111 IDs, labels and functional contracts are taken from the approved Signature Flow
+master. They are embedded here because V3 refers to a separate Screen Inventory tab that was not
+present in its 182-page PDF export. Each ID is a required deliverable, even where it uses a shared screen
+component. Claude must maintain row-level route, data, states, visual screenshot and test references.
+No individual screen in the list is presumed already implemented or visually approved.
+
+8A. Complete 111-screen inventory
+
+Each numbered screen below is required. Claude must produce a screen-by-screen implementation
+checklist, not merely create the five navigation tabs. Individual subpages may share reusable templates
+but must still have purposeful fields, states and actions. Every displayed figure links to its authoritative
+source, has a valuation/as-of date where needed and does not imply false accuracy.
+
+Total coverage: 111 explicitly identified screens or functional subpages across 11 areas. This is a
+traceability inventory, not a proposal to clutter the navigation with 111 menu entries. Claude must map
+each ID to a route or purposeful modal/panel, a reusable layout archetype, an authoritative data source,
+the allowed actions, empty/error/review states, a responsive screenshot and its end-to-end tests. Every
+ID must be marked Implemented, Partial, Missing, Blocked or Not applicable with evidence; none may
+be silently omitted.
+
+                                                                                    Main visual / interaction
+Area                     Screen IDs                                         Count
+                                                                                    pattern
+
+                                                                                    Calm step-based setup;
+                                                                                    original vs extracted
+Onboarding and access    A01–A06                                                6
+                                                                                    documents; progress and
+                                                                                    recovery
+                                                                                    Editorial Home, global
+                                                                                    search, calendar,
+Home and universal       B01–B08                                                8
+                                                                                    notifications, workspace
+                                                                                    context
+                                                                                    Account-first
+                                                                                    index/detail, transaction
+Money and accounts       C01–C12                                               12
+                                                                                    evidence, money and
+                                                                                    liabilities
+Inbox and Statement                                                                 Attention queue, source-
+                         D01–D10                                               10
+Desk                                                                                vs-parsed comparison,
+                                                                                  Main visual / interaction
+Area                     Screen IDs                                       Count
+                                                                                  pattern
+                                                                                  match and exception
+                                                                                  review
+                                                                                  Full source-visible
+                                                                                  Intelligent Canvas and
+Expenses and Smart Add   E01–E11                                             11
+                                                                                  draft-to-confirmation
+                                                                                  journey
+                                                                                  Document viewer,
+DocuRepo and
+                         F01–F09                                              9   relationship panel, entity
+organizations
+                                                                                  master and projects
+                                                                                  Trip tabs, itinerary
+Travel and
+                         G01–G11                                             11   versus finance status,
+reimbursements
+                                                                                  claim and settlement
+                                                                                  Holdings lists, dated
+Investments              H01–H08                                              8   prices, tax lots, net-worth
+                                                                                  composition
+                                                                                  Registers, property detail,
+Assets and property      I01–I10                                             10   ownership and valuation
+                                                                                  paths
+                                                                                  Scope builder, preview,
+Reports and statutory    J01–J14                                             14   background export,
+                                                                                  professional close
+                                                                                  Plain-language settings,
+                                                                                  integration health,
+Settings and trust       K01–K12                                             12
+                                                                                  scoped roles and
+                                                                                  recovery
+                                                                                  Each screen receives
+                                                                                  desktop, iPad and
+Total                    A01–K12                                            111
+                                                                                  iPhone acceptance
+                                                                                  evidence
+
+A. Onboarding and access
+
+A01 Welcome and Sign in. Clean brand mark, Google sign-in, secure session states, terms/privacy links,
+account recovery; no intrusive marketing. A02 Workspace setup. Select personal, family, organization
+or trust; add organization by uploading registration documents; extracted values previewed and
+confirmed with cited document fields. A03 Invite and access. Owner, member, preparer, reviewer,
+verified accountant, auditor read-only; invitation, expiration, revocation, grants and role explanation.
+A04 Setup progress. Import sources, confirm account ownership, choose accounting period, unfinished
+setup recovery. A05 Opening balances. Source-backed schedules, validation and unresolved opening
+differences. A06 Welcome tour. Short optional, skippable, never blocks core work.
+
+B. Home and universal tools
+
+B01 Home: Signature header and personalized greeting; estimated net worth with as-of label; cash,
+investments, cards, pending counts; priority/next best action; upcoming events; recent transactions;
+quiet shortcuts to Statement Desk, Travel, Records and Reports. B02 Global search: category-grouped
+results, recent records, natural-language query and direct routes; keyboard activation intentional. B03
+Calendar month and agenda: due dates, premiums, subscriptions, trips, document expiry, approvals,
+tax deadlines, loan EMIs and property events; each event opens its linked source. B04 Calendar item:
+details, owner, source, reminder schedule, recurrence, snooze and external calendar sync status. B05
+Notifications center: grouped actionable notices, severity, unread/read, mark all, snooze, thresholds
+and destination. B06 Notification preferences: per type/channel/workspace and quiet hours. B07
+Workspace selector: account/entity boundary, accessible switch and confirmation of unsaved work.
+B08 Global command/help: Find anything, voice-to-text with transcription review, context help and
+shortcut discovery.
+
+C. Money, accounts and financial operations
+
+C01 Money overview: separate verified cash, cards, receivables/payables, loans, investments, assets
+and liabilities; net-worth calculation must avoid double counting. C02 Bank account index and C03
+Bank account detail: masked identifiers, institution, account owner, source freshness, running
+balances, statement history, transaction list, reconciliation state and account reports. C04 Credit card
+index and C05 Card detail: statement cycle, posted vs pending, due date, minimum/total due, linked
+payments, unmatched items and installment details. C06 Transaction detail: source line, attachments,
+original amount/currency, classification, entity, merchant, linked invoice, trip/property/asset, audit
+history, split and reviewer decision. C07 Transfer and card payment review: from/to accounts, third-
+party distinction, duplicate protection, linked debit/credit, reversals and reconciliation; no fake expense
+on card payment. C08 Loans and EMIs: lender, liability, schedule, principal/interest breakdown,
+collateral, upcoming due and statements. C09 Cash and wallet accounts: opening balance, movements
+and reconciliation. C10 Net worth: dated composition, group/entity boundaries, pricing freshness and
+transparent inclusions/exclusions. C11 Recurring payment manager: detection, confirmation, future
+cash requirements, reminders and cancellations. C12 Account settings: owner/company mapping,
+permissions, sync, historical import, currency and export.
+
+D. Financial Inbox and Statement Desk
+
+D01 Financial Inbox overview: grouped pending action by workspace, account, entity and importance,
+not an unbounded raw import list. D02 Smart Review: review queues with bulk select and select all
+within explicit scope; confidence and source reasons, safe approve/reject/undo. D03 Statement Desk
+intake: preserve the existing authoritative statement-centric entry model. Upload PDF/CSV/XLSX/image
+statement, choose/create account, detect source period, show extracted lines and balances, deduplicate,
+then stage. D04 Statement comparison: original document visibly beside parsed lines; opening/closing
+balance proof, chronology, running totals, missing lines, currency and duplicates. D05 Match
+suggestions: possible invoice/bill/receipt/transfer matches, confidence and reason, no reuse of a single
+invoice for duplicate debits, no forced match of partial payments. D06 Account reconciliation: opening
++ credits – debits = closing, differences, bank fees/interest, source gap and independent check. D07
+Transfers and Card Payments queue: precise two-sided linking and third-party exceptions. D08
+Review history: who changed what, before/after, evidence, time and undoability. D09 Background job
+progress: imports survive navigation/reload; resumable, retryable and cancellable where safe; never
+pretend work completed. D10 Exception resolution: missing statement, suspicious duplicate, unclear
+merchant, partial payment, unmatched invoice, unauthorized import and conflicting owner.
+E. Expenses and intelligent intake
+
+E01 Universal Expense entry: Smart Add or optional accessible quick correction, not an accountant-
+heavy form; voice, photo, upload, email-forward and share sheet when supported. E02 Smart Add
+source selection: choose file/camera/voice/drag-and-drop, batch indicator, supported formats, clear
+privacy notice. E03 Intelligent Canvas extraction: original source permanently visible, suggested
+vendor, amount, date, taxes, currency, payment account, category, entity, project/trip/property/asset,
+reimbursement and confidence. E04 Canvas exception/duplicate review: side-by-side evidence and
+candidate links; edit, split, defer, assign, reject, clear reason; user can inspect source field crop. E05
+Canvas confirmation: explicit proposed changes, destination and effects; user approves only safe
+authorized actions. E06 Draft and processing history: where the file went, job status, corrections,
+failures, duplicate handling, and undo. E07 Expense list: fast search, filters, bulk category, grouped
+activity and download. E08 Expense detail: original evidence and all accounting links. E09
+Income/receipt detail: bank source, payer, invoice and tax status. E10 Merchant/category rules:
+suggestion review, history, merge preview and undo. E11 Splits and multi-currency: allocation by
+amount/percentage, precision, exchange source/date and stale exchange flag.
+
+F. Documents and organizations
+
+F01 DocuRepo index: folder-free search plus filters by entity, record type, date, ownership and expiry.
+F02 Document viewer: PDF/image/spreadsheet preview, extracted text, source metadata, versions,
+access, linked records and immutable original. F03 Document relationship view: one source to
+accounts, expenses, trips, assets, property, accounting entries, report and audit trail. F04 Document
+requests: missing evidence request, assignee, due date and permission. F05 Documents lifecycle:
+replacement, superseding, retention, deletion permission and audit. F06 Company/entity index: group
+relationships, legal identity, tax registration, owners and mapping. F07 Company profile: document
+extraction, legal names, period, bank accounts, staff roles, statutory status and contacts. F08
+Projects/activities: linked expenses, budget, reimbursement and detailed statement. F09
+Contact/merchant directory: deduplicated and ownership scoped.
+
+G. Travel and reimbursements
+
+G01 Travel Manager index: trips grouped by upcoming, active, completed, with independent financial
+status. G02 Trip overview: destination, dates, purpose, travelers, owning workspace, itinerary status
+and financial settlement status. G03 Itinerary: flights, accommodation, transport, meetings, documents,
+schedule and calendar. G04 Trip budget: planned vs committed vs spent, by currency/entity/account;
+compact, never double count credit card payment. G05 Trip expenses: source-linked payments,
+allocations and account/card filters. G06 Travel receipts: original invoices and booking proof. G07
+Reimbursement claim: original expense reference, policy, claimant, submitted/approved/paid status.
+G08 Approval and payment: who can approve, separation of duties, bank settlement and partial
+payment. G09 Refund and trip closing: track cancellations, refunds, open card settlements and
+outstanding claims independently of completed itinerary. G10 Trip report and evidence: detailed
+expenditure statement, traveler/role, company, account, dates, currency, settlement and
+PDFs/CSV/XLSX. G11 Trip collaborator settings: roles, privacy, approvals and change log.
+H. Investments and net worth
+
+H01 Portfolio overview: holdings by demat/provider, asset class and owner. H02 Import statements:
+ICICI Direct and other supported brokers, equities, mutual funds, gold, distributions, corporate actions
+and opening holdings. H03 Holding detail: units, cost lots, transactions, market price/as-of, income,
+realized/unrealized gain, evidence and stale-data badge. H04 Valuation history: authoritative,
+licensed/available feed, provider provenance and last update; never invent ‘live’ when delayed/stale.
+H05 Capital gains and corporate actions: splits, bonuses, dividends, transfers and tax lots. H06
+Manual market-rate fallback: explicit manual source and stale indicator. H07 Net worth
+reconciliation: bank + investments + property/asset ownership + liabilities with consolidation
+adjustments and no duplicate asset book-value/market-value inclusion. H08 Portfolio reports:
+positions, holdings, flows, realized gains and source pack.
+
+I. Assets and property
+
+I01 Asset register: entity, classification, code, acquisition date, cost, funding account, location,
+custodian and status. I02 Asset detail: invoices, ownership, depreciation method/life, accumulated
+depreciation, impairment, maintenance, transfers and disposal. I03 Asset import review: Excel/PDF
+register extraction, duplicate detection and approval. I04 Depreciation working: books vs tax methods,
+dates, reversals and change history. I05 Asset disposal/transfer: gain/loss, buyer, sale evidence,
+account settlement and no silent deletes. I06 Property index: owner, property, group, rental/operating
+status. I07 Property detail: deed, acquisition/funding, valuation date, linked loan, rent receipts, tenants,
+occupancy, insurance, tax and maintenance. I08 Property cash flow: rent, expenses, dues, loan and
+account reconciliation. I09 Property calendar: renewal, tenancy, tax, insurance and compliance. I10
+Asset/property relationship: associated equipment mapped to buildings without double counting the
+property plus component assets.
+
+J. Reports, tax and statutory work
+
+J01 Report studio: discover via global search, entity/account/trip/property/period selectors and saved
+configurations. J02 Report preview: clear scope, totals, source links, provisional badges and validation
+status. J03 Export dialog: PDF/XLSX/CSV/ZIP, date range, currency, entity, included evidence and
+redaction. J04 Export jobs and history: background generation, retry, completed download
+integrity/hash, access and expiry. J05 Personal reports: cash flow, spending, income, budget, debts,
+recurring, net worth, investments and tax prep. J06 Business books: general ledger, trial balance,
+balance sheet, P&L, cash flow, journal, vouchers and period close. J07 Account reports: statements,
+reconciliation, credit card and outstanding. J08 Expenses/projects/travel: detailed expenditure, budget
+variance, reimbursement settlement and evidence. J09 Assets/property/investments: registers,
+depreciation, rental statements, gains, holdings, valuations and source packs. J10 Tax working center:
+statutory calendar, classification, drafts, source-linked schedules, professional review and sign-off. J11
+India-specific reporting templates: GST, TDS/TCS, income tax and Companies Act as applicable to each
+entity, period and currently verified rules. J12 Malaysia/multi-jurisdiction scope: activate only for
+entities with applicable profiles; rules and formats must be verified separately. J13 Period close and
+audit readiness: reconcile, unresolved exceptions, opening schedules, accruals/prepayments, reversals,
+lock/unlock permissions and evidence pack. J14 Regulatory monitor: provenance, effective date,
+change log and professional-approval gates. Never auto-file or claim regulatory conformity without a
+verified template and approval.
+K. Settings, integrations and trust
+
+K01 Settings home: clear categories, account/workspace context. K02 Accounts and payment
+methods: linked account management, import permissions and mapping. K03 Organization and
+ownership: company group, personal/family/trust, relationships, accounting period and currency. K04
+Roles and accountant grants: invitation, identity recheck, scoped access, expiry, revoke and full log.
+K05 Integrations: bank feeds, demat, document storage, email, calendars, notifications,
+WhatsApp/share sheet where permitted, with connection health and graceful fallback. K06 Import and
+automation rules: explain/approve merchant classifications, recurrence and matching thresholds. K07
+Accessibility and language: font sizing, contrast, reduced motion, language and voice entry. K08
+Security: Google sign-in, sessions, MFA where supported, revocation and activity. K09 Data and
+recovery: export, backups, restore drills, deleted-document recovery, retention and legal holds. K10
+Release/version information: environment, build, service health and known limitations. K11
+Support/help: plain-English glossary, context help, error reporting and guided recovery. K12 Privacy
+and consent: sensitive document handling, scopes, audit history and deletion policy.
+
+9. Required interaction states and test coverage
+
+For each of the 111 screens: loading, empty, populated, partial/stale, offline, permission denied,
+recoverable error, hard failure, cancelled, unsaved draft and success, where meaningful. All actions
+need visible feedback, source link, idempotent retry and safe undo or correcting action. Confirm focus
+order, screen-reader labels, table headers, touch targets, dynamic text, time zone, INR grouping,
+negative/refund distinctions, multi-currency precision and context-preserving Back.
+
+Nine compulsory cross-module journeys
+  1.   Company creation from registration documents: source preview, extracted legal details,
+       permissions, account mapping, verified opening balances, provisional flags.
+  2.   Bank month and expense review: independent statement balance, charge/receipt matching,
+       duplicate card debit, partial invoice payment, fee not on books, completed reconciliation.
+  3.   Smart Add / Intelligent Canvas: camera/file/email/voice/batch, readable original, field
+       provenance, payment instrument detection, uncertainty, duplicate, split, review, save and
+       cancellation.
+  4.   Travel lifecycle: itinerary and calendar, multi-currency budget, trip-related expenses, two-
+       entity claim, partial settlement, refund, finance close and zipped evidence.
+  5.   Property and asset lifecycle: invoice/deed, owner and funding, ledger, depreciation,
+       rental/cash movements, insurance/reminders, valuation, disposal and net-worth exclusions.
+  6.   Investment lifecycle: broker/CAS import, lots, corporate action, cash reconciliation,
+       delayed/absent prices, taxes, historical and current net worth.
+  7.   Tax and close: versioned official rules, GST/TDS/income-tax working, unresolved findings,
+       professional review, exports, challan evidence, period lock, reversal.
+  8.   Calendar, notifications and integrations: one derived event, Home and Calendar deep links,
+       snooze/reschedule, sync status, failed delivery and retry.
+  9.   Roles, security and disaster recovery: independent adult privacy, accountant
+       invite/expiry/revoke, blocked cross-entity access, interrupted job resume, backup restore and no
+       duplicate posting.
+These do not replace V3’s 149 acceptance cases; Claude must preserve and map all of them, including
+the 15 original and later additions, to requirement IDs and reproducible fixtures. No fake/sample
+documents may be represented as real-world verification.
+
+10. Integration decision contract
+                                                                                        Required stop/exception
+Integration               Approved initial behavior      Later capability
+                                                                                        behavior
+
+                          Upload and statement-
+                                                         Read-only AA only after        No false “live balance”; no
+Banks and cards           based reconciliation; alert
+                                                         separate approval              bank credential scraping
+                          emails may estimate
+                                                                                        Preserve receipt, classify
+                                                         Direct read-only scopes
+Gmail and Outlook         Forwarding/intake rules                                       missed sync, revoke tokens,
+                                                         after provider approval
+                                                                                        manual upload fallback
+                          Licensed/official end-of-day                                  Date, exchange,
+                                                         Intraday only with
+Market data               close and NAV where                                           stale/unavailable, no
+                                                         approved feed
+                          permitted                                                     invented quote
+                                                                                        Never imply auto-filed, paid
+                                                         Direct intermediary
+                          Prepare, validate and                                         or certified without
+Government tax/MCA                                       integration only after phase
+                          export                                                        authoritative
+                                                         approval
+                                                                                        acknowledgement
+                          Private revocable ICS by       Two-way Google/Outlook in      Delay and stale indicators;
+Calendars
+                          workspace                      approved phase                 duplicate event protection
+                                                                                        Transcript shown before
+                          English, then validated
+Voice                                                    Approved speech provider       any action, no voice
+                          Tamil/Hindi
+                                                                                        approval
+                                                                                        Channel delivery status
+                                                         Provider consent, templates
+WhatsApp/SMS              Not launch-critical                                           never conflated with
+                                                         and cost approval
+                                                                                        financial completion
+                                                                                        Checksum, quota/failure,
+                          Original files and complete
+Storage and exports                                      External cloud choices         recovery and scoped
+                          local export
+                                                                                        permissions
+
+
+Provider register must be evidence-backed: capability; URL/docs and revision date; credential owner;
+data permissions; regional hosting and processor terms; per-action cost; test account; approved
+environment; sync interval; retry budget; failure states; feature flag; owner approval. An unavailable
+external service cannot block core offline/manual processing.
+
+11. Legal and regulatory validation contract
+
+The relevant Income-tax Act, 2025 commences on 1 April 2026; historic periods require their applicable
+rules. This does not by itself certify any generated tax schedule. For every entity, assessment/tax year
+and filing type, version the rule source, official form/schema, effective date, applicability, amendment
+history, validation result, professional reviewer, submission and acknowledgement, and later payment
+proof. Do not adopt a secondary article as the authoritative format. Repeat the same process for GST,
+TDS/TCS, trust and 80G records, Companies Act/MCA, payroll statutory data, Malaysia-specific reporting
+only when the entity is enabled, and DPDP privacy obligations according to their phased
+commencement.
+The term “regulatory-ready” is earned only when the specific official form/schema and a qualified
+reviewer confirm its applicability. Any rule change that alters money, filing content or classification
+requires explicit approval and regression tests. A harmless government due-date extension may follow
+V3 Decision 16 only after authoritative-source authentication, effective-date check, audit record and
+reversibility.
+
+12. Permissions, privacy, security and recovery
+
+Roles from V3 are owner, adult family member, delegate, bookkeeper, accountant, auditor, company
+secretary, authorised reviewer and administrator. Enforce scoped permissions on the server and
+database for view, upload, draft edit, propose, post, approve, export, share, delete unposted, manage
+access and reopen. Professional verification is not delegated to a cosmetic label. Adult family members
+opt into shared visibility. Cross-entity testing attempts direct record IDs, exports, search, background
+jobs and share links.
+
+Google sign-in, passkeys, biometric-backed platform authenticators and a local four-digit quick unlock
+must not become a weaker path to privileged actions. The PIN is device-bound, rate-limited, revocable,
+not a substitute for server authentication, and never permits consequential approvals or sensitive
+exports. Timeouts: 5 minutes phone, 15 minutes desktop, with step-up for privileged activity. Verify
+session expiry and revocation across tabs and downloaded report links.
+
+RPO of 15 minutes and RTO of four hours are targets conditional on purchased capabilities and
+demonstrated restores, not claims. Test independent database and object-storage copies, point-in-time
+recovery, checksum validation, encryption keys, identity and permission restoration, reconciled totals,
+job resume and recovery of original evidence. Quarterly isolated restore drills and monthly full owner
+exports remain mandatory. Security minimums belong to Phase 0—not postponed to Phase 5.
+
+13. Release gates and sequencing
+
+Gate 1: GitHub/database application map, all registers populated, current architecture and defects
+evidenced.
+Gate 2: finance integrity tests (balanced journals, duplicate protection, entity ownership, reversals,
+locks) pass before automation expansion.
+Gate 3: real-document field quality and no-touch metrics with explicit graduated autopilot threshold.
+Gate 4: one-event cross-module agreement (expense, claim, investment, loan, asset, property, tax, net
+worth, reports).
+Gate 5: external provider feasibility plus safe failure and retry evidence.
+Gate 6: official statutory schemas, effective-date rules and professional validation for the specific
+feature.
+Gate 7: 111-screen audit, Signature Flow visual regression and iPhone/iPad/desktop accessibility and
+usability checks.
+Gate 8: access control, penetration/regression checks, production-like restore and performance under
+load.
+Gate 9: KK’s explicit release decision after the exact build, changelog, test results, database
+migration/rollback and preview are presented.
+Retain V3’s phased roadmap. Before each build batch, write the exact REQ IDs, affected screen IDs,
+dependencies and non-regression tests. Small isolated commits only; do not rebuild existing modules
+that pass. Gate 1 must finish before features expand. One vertical slice must run source → books →
+reconciliation → reports with evidence before another feature family can be declared integrated.
+
+14. Performance and reliability budgets
+
+Maintain the agreed interaction targets: Home, Inbox and Expenses 2 seconds; Statement Desk 2.5
+seconds in the agreed benchmark environment. Measure p50/p95 cold and warm, data size, device and
+network; display progressive skeletons and actionable status for longer processes. Imports, OCR, report
+jobs and bulk changes run durably in background with progress and resume. No optimistic success for
+unsaved writes, unverified balances, undelivered notifications or incomplete exports. Failed exports
+retry under a stable job ID and preserve integrity checks.
+
+15. Sign-off checklist
+  •     ☐ V3 requirements mapped without loss; all 50 Agreed decisions preserved.
+  •     ☐ All 111 screen IDs have owners, routes, data contracts, action/state specifications and real-
+        device screenshot evidence or explicit Blocked status.
+  •     ☐ Exact approved visuals used for demonstrated screens; other screens approved separately by
+        KK.
+  •     ☐ Final Thapal Option 02 SVG/wordmark reviewed in all contexts; no placeholder logo or
+        lowercase name.
+  •     ☐ Existing database, code, permissions, history and upload engine audited; no second ledger or
+        intake source.
+  •     ☐ Independent ledger and bank statement reconciliation, duplicate/partial/refund cases pass.
+  •     ☐ Integrated journeys pass in personal, family, company and trust contexts; no cross-workspace
+        leakage.
+  •     ☐ Real-document automation metrics and exceptions reviewed by owner.
+  •     ☐ Market and statutory sources dated, licensed or verified; no unsupported “live” or “filed”
+        claim.
+  •     ☐ 149 V3 acceptance cases mapped to actual tests and evidence; failures remain open.
+  •     ☐ Security, backup, restore and release parity verified.
+  •     ☐ All blocking findings resolved and KK explicitly authorises the intended deployment.
+
+16. Paste-ready instruction for Claude
+      You are auditing and implementing Thapal against its 182-page V3 master and this V3.1 gap-
+      closure contract. Preserve every original V3 requirement, all 50 decisions, the Signature Flow
+      visual target, the central Statement Desk intake engine and the existing financial records. First
+      produce the seven evidence-backed registers in Section 2 from the actual repository and
+      database. Do not claim that documentation means implementation. Reconcile every one of the
+      111 UIX IDs and every V3 acceptance case to code, routes, data, screenshots and tests. Raise
+      conflicts or missing evidence to KK with specific options, impact and a recommendation.
+      Work in isolated previews and small tested vertical slices. Never invent an account, balance,
+      price, transaction, tax rule, source, provider capability or completion status. Never touch
+     production data, post consequential entries, file, pay, deploy, rename the live domain or
+     publish without explicit owner authorisation. After each batch give changed files, register IDs,
+     passing/failing tests, financial integrity results, visual comparisons, unresolved blockers,
+     rollback and preview. Treat approval as separate from implementation, testing and
+     publication.
+
+17. Known items still awaiting evidence
+
+The connected Claude audit is in progress. Therefore this document cannot certify: actual code-to-
+requirement coverage; completed architecture register; real database-level posting and permission
+invariants; the final Option 02 vector; 111 approved designs; physical device testing; market-feed
+licences; provider approvals; tested government templates; production backups and recovery; or
+release parity. These are explicit blocking evidence tasks, not specification omissions. V3.1 is therefore
+complete as a development contract and not yet verified as a finished application.
+
