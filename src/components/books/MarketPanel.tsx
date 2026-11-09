@@ -17,6 +17,8 @@ import { PriceOverrides } from "./PriceOverrides";
 import { useStore } from "@/lib/store";
 import { investmentFlows } from "@/lib/books/investment-flows";
 import { bondProblem, type BondTerms } from "@/lib/books/bonds";
+import { ArchiveDialog, type ArchiveRequest } from "@/components/ArchiveDialog";
+import { archiveEventLine, archiveHistory, archiveInList, isArchived, restoreInList } from "@/lib/archive";
 
 const KIND: Record<HoldingKind, string> = { mutual_fund: "Mutual fund", etf: "ETF", gold_etf: "Gold ETF", sgb: "Sovereign Gold Bond", physical_gold: "Physical gold", bond: "Bond", broker_cash: "Cash with broker", other: "Other" };
 const blank = (): Holding => ({ id: crypto.randomUUID(), kind: "mutual_fund", name: "", quantity: 0, sharePct: 100, source: "entered by you" });
@@ -24,7 +26,17 @@ const blank = (): Holding => ({ id: crypto.randomUUID(), kind: "mutual_fund", na
 export function MarketPanel() {
   const { books, save } = useBooks();
   const nw = useNetWorth();
-  const { accounts, transactions, documents } = useStore();
+  const { accounts, transactions, documents, userId } = useStore();
+  const [archiveReq, setArchiveReq] = useState<ArchiveRequest | null>(null);
+  // No remove: a holding is archived (who/when/why) and stays valued and counted in net worth (P0-001).
+  const archiveOrRestore = async (req: ArchiveRequest, reason: string) => {
+    setArchiveReq(null);
+    const who = { by: userId, at: new Date().toISOString(), reason };
+    try {
+      await save({ holdings: req.mode === "archive" ? archiveInList(books.holdings, req.id, who) : restoreInList(books.holdings, req.id, who) });
+      toast.success(req.mode === "archive" ? "Holding archived — still counted in net worth" : "Holding restored");
+    } catch (e) { toast.error((e as Error).message || "Nothing was changed. Try again."); }
+  };
   const nav = useServerFn(getFundNav);
   const [edit, setEdit] = useState<Holding | null>(null);
     const [gold, setGold] = useState(books.goldRate ? String(books.goldRate.perGram24k) : "");
@@ -115,14 +127,18 @@ export function MarketPanel() {
           </div>
         </div>}
         {nw.valued.map((v) => <div key={v.holding.id} className="rounded-xl border p-3">
-          <div className="flex justify-between gap-2"><span className="min-w-0"><b className="block truncate">{v.holding.name}</b><span className="text-[11px] text-muted-foreground">{KIND[v.holding.kind]}{v.holding.exchange ? ` · ${v.holding.exchange}` : ""} · {v.holding.kind === "physical_gold" ? `${v.holding.grams ?? "?"} g` : `${v.holding.quantity} units`}{v.holding.sharePct !== 100 ? ` · ${v.holding.sharePct}% yours` : ""}</span></span>
+          <div className="flex justify-between gap-2"><span className="min-w-0"><b className="block truncate">{v.holding.name}{isArchived(v.holding) && <span className="ml-1 rounded-full bg-secondary px-2 py-0.5 text-xs font-normal text-secondary-foreground">Archived</span>}</b><span className="text-[11px] text-muted-foreground">{KIND[v.holding.kind]}{v.holding.exchange ? ` · ${v.holding.exchange}` : ""} · {v.holding.kind === "physical_gold" ? `${v.holding.grams ?? "?"} g` : `${v.holding.quantity} units`}{v.holding.sharePct !== 100 ? ` · ${v.holding.sharePct}% yours` : ""}</span></span>
             <span className="text-right"><b className="font-mono">{v.value == null ? "—" : money(v.value)}</b><span className={`block text-[11px] ${v.stale ? "text-destructive" : "text-muted-foreground"}`}>{v.stale ? "Stale · " : ""}{v.note}</span></span></div>
           {v.quote && <p className="mt-1 text-[11px] text-muted-foreground">{FRESHNESS_LABEL[v.quote.freshness]} price {v.quote.price} as of {v.quote.at.slice(0, 16).replace("T", " ")} · refreshed {v.quote.refreshedAt.slice(0, 10)}</p>}
+          {isArchived(v.holding) && <p className="mt-1 text-[11px] text-muted-foreground">{archiveHistory(v.holding).filter((e) => e.action === "archived").slice(-1).map((e) => `${archiveEventLine(e, userId)} · Reason: ${e.reason}`).join("")} · still valued and counted</p>}
           <div className="mt-2 flex flex-wrap gap-2">
-            <Button size="sm" variant="ghost" onClick={() => setEdit(v.holding)}>Edit</Button>
-            <Button size="sm" variant="ghost" className="text-destructive" onClick={() => save({ holdings: books.holdings.filter((h) => h.id !== v.holding.id) })}>Remove</Button>
+            {isArchived(v.holding)
+              ? <Button size="sm" variant="ghost" onClick={() => setArchiveReq({ mode: "restore", id: v.holding.id, name: v.holding.name, noun: "holding" })}>Restore</Button>
+              : <><Button size="sm" variant="ghost" onClick={() => setEdit(v.holding)}>Edit</Button>
+                <Button size="sm" variant="ghost" onClick={() => setArchiveReq({ mode: "archive", id: v.holding.id, name: v.holding.name, noun: "holding" })}>Archive</Button></>}
           </div>
         </div>)}
+        <ArchiveDialog request={archiveReq} onCancel={() => setArchiveReq(null)} onConfirm={(reason) => { if (archiveReq) void archiveOrRestore(archiveReq, reason); }} />
         <PriceOverrides books={books} save={save} demat={nw.dematRows} />
         <div className="flex flex-wrap items-end gap-2 rounded-xl border p-3">
           <label className="text-xs">Physical gold rate per gram (24k)<Input type="number" value={gold} onChange={(e) => setGold(e.target.value)} /></label>

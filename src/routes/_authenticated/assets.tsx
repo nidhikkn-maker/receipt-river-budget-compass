@@ -13,6 +13,9 @@ import { Link } from "@tanstack/react-router";
 import { DEFAULT_LIFE } from "@/lib/books/intake";
 import { openSmartAdd } from "@/lib/smart-add-event";
 import { assetFollowUps, ASSET_KINDS, TAX_RATES, bookSchedule, rentCheck, shareValue, taxSchedule, type Asset, type AssetKind } from "@/lib/assets";
+import { Fold } from "@/components/Fold";
+import { ArchiveDialog, type ArchiveRequest } from "@/components/ArchiveDialog";
+import { archiveEventLine, archiveHistory, archiveInList, isArchived, restoreInList } from "@/lib/archive";
 
 export const Route = createFileRoute("/_authenticated/assets")({
   head: () => ({ meta: [
@@ -30,8 +33,12 @@ const today = () => new Date().toISOString().slice(0, 10);
 const blank = (): Asset => ({ id: crypto.randomUUID(), name: "", kind: "property", cost: 0, inUse: today(), sharePct: 100, bookMethod: "slm", bookRatePct: 0 });
 
 function Assets() {
-  const { preferences, savePreferences, transactions, documents } = useStore();
+  const { preferences, savePreferences, transactions, documents, userId } = useStore();
   const list = preferences.assets ?? [];
+  // Archived assets keep every figure: they stay in book value, depreciation and net worth (P0-001).
+  const active = list.filter((a) => !isArchived(a));
+  const archived = list.filter((a) => isArchived(a));
+  const [archiveReq, setArchiveReq] = useState<ArchiveRequest | null>(null);
   const entities = preferences.entities ?? [];
   const [edit, setEdit] = useState<Asset | null>(null);
   const [open, setOpen] = useState<string | null>(null);
@@ -46,12 +53,22 @@ function Assets() {
     const next = list.some((x) => x.id === edit.id) ? list.map((x) => (x.id === edit.id ? edit : x)) : [...list, edit];
     await savePreferences({ ...preferences, assets: next }); toast.success("Asset saved"); setEdit(null);
   };
-  const remove = async (id: string) => { await savePreferences({ ...preferences, assets: list.filter((x) => x.id !== id) }); setEdit(null); };
+  // No delete: an asset is archived (status + who/when/why) and can be restored; nothing else in the record changes.
+  const archiveOrRestore = async (req: ArchiveRequest, reason: string) => {
+    setArchiveReq(null);
+    const who = { by: userId, at: new Date().toISOString(), reason };
+    try {
+      const assets = req.mode === "archive" ? archiveInList(list, req.id, who) : restoreInList(list, req.id, who);
+      await savePreferences({ ...preferences, assets });
+      toast.success(req.mode === "archive" ? "Asset archived — figures unchanged" : "Asset restored");
+      setEdit(null);
+    } catch (e) { toast.error((e as Error).message || "Nothing was changed. Try again."); }
+  };
   const num = (v: string) => Math.max(0, Number(v) || 0);
 
   return (
     <div className="mx-auto max-w-2xl space-y-4 p-4">
-      <PageTitle title="Property & assets" sub={`Your share of book value now: ${inr(total)} · FY ${fy}`} />
+      <PageTitle title="Property & assets" sub={`Your share of book value now: ${inr(total)} · FY ${fy}${archived.length ? ` · includes ${archived.length} archived` : ""}`} />
       <PropertyPanel />
       {!edit && <div className="flex flex-wrap gap-2"><Button onClick={() => openSmartAdd('assets')}>Add asset from invoice</Button><Button variant="outline" onClick={() => setEdit(blank())}>Add manually</Button><AssetCheck /></div>}
 
@@ -107,13 +124,13 @@ function Assets() {
           <div className="flex flex-wrap gap-2">
             <Button onClick={save} disabled={!valid}>Save</Button>
             <Button variant="ghost" onClick={() => setEdit(null)}>Cancel</Button>
-            {list.some((x) => x.id === edit.id) && <Button variant="ghost" className="text-destructive" onClick={() => remove(edit.id)}>Delete</Button>}
+            {list.some((x) => x.id === edit.id && !isArchived(x)) && <Button variant="ghost" onClick={() => setArchiveReq({ mode: "archive", id: edit.id, name: edit.name, noun: "asset" })}>Archive</Button>}
           </div>
         </div>
       )}
 
       {list.length === 0 && !edit && <p className="text-sm text-muted-foreground">Add property deeds, vehicles, computers and other assets to see ownership and depreciation.</p>}
-      {list.map((a) => {
+      {active.map((a) => {
         const book = bookSchedule(a, fy), tax = taxSchedule(a, fy), rent = rentCheck(a, income, months);
         const doc = documents.find((d) => d.id === a.docId);
         return (
@@ -142,6 +159,40 @@ function Assets() {
           </div>
         );
       })}
+      <Fold id="archived-assets" title={`Archived assets (${archived.length})`} hint="Still counted in book value, depreciation and net worth">
+        <div className="space-y-2 text-sm">
+          {archived.length === 0 && <p className="text-xs text-muted-foreground">No archived assets. Archive keeps a record you no longer use; it never deletes it.</p>}
+          {archived.map((a) => {
+            const book = bookSchedule(a, fy), tax = taxSchedule(a, fy);
+            const doc = documents.find((d) => d.id === a.docId);
+            const history = archiveHistory(a);
+            const current = history.filter((e) => e.action === "archived").at(-1);
+            return (
+              <div key={a.id} className="space-y-2 rounded-2xl border bg-card p-4">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <p className="font-semibold">{a.name}{a.soldOn ? " (sold)" : ""} <span className="ml-1 rounded-full bg-secondary px-2 py-0.5 text-xs font-normal text-secondary-foreground">Archived</span></p>
+                    <p className="text-xs text-muted-foreground">{ASSET_KINDS[a.kind]} · cost {inr(a.cost)} · {a.sharePct}% yours · now {inr(shareValue(a, fy))}{doc ? ` · ${doc.title}` : " · no deed/invoice linked"}</p>
+                  </div>
+                  <Button size="sm" variant="outline" onClick={() => setArchiveReq({ mode: "restore", id: a.id, name: a.name, noun: "asset" })}>Restore</Button>
+                </div>
+                {current && <p className="text-xs">{archiveEventLine(current, userId)} · Reason: {a.archiveReason ?? current.reason}</p>}
+                <details className="text-xs"><summary className="cursor-pointer text-muted-foreground">Archive history ({history.length})</summary>
+                  <ul className="mt-1 space-y-0.5">{history.map((e, i) => <li key={`${e.at}-${i}`}>{archiveEventLine(e, userId)} · {e.reason}</li>)}</ul>
+                </details>
+                {(book.length > 0 || tax.length > 0) && <Button size="sm" variant="ghost" onClick={() => setOpen(open === a.id ? null : a.id)}>{open === a.id ? "Hide" : "Show"} depreciation</Button>}
+                {open === a.id && (
+                  <table className="w-full text-xs">
+                    <thead><tr className="text-muted-foreground"><th className="text-left">FY</th><th className="text-right">Book</th><th className="text-right">Book value</th><th className="text-right">Tax ({TAX_RATES[a.kind]}%)</th><th className="text-right">Tax WDV</th></tr></thead>
+                    <tbody>{book.map((b, i) => <tr key={b.fy}><td>{b.fy}</td><td className="text-right">{inr(b.depreciation)}</td><td className="text-right">{inr(b.closing)}</td><td className="text-right">{tax[i] ? inr(tax[i]!.depreciation) : "—"}</td><td className="text-right">{tax[i] ? inr(tax[i]!.closing) : "—"}</td></tr>)}</tbody>
+                  </table>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </Fold>
+      <ArchiveDialog request={archiveReq} onCancel={() => setArchiveReq(null)} onConfirm={(reason) => { if (archiveReq) void archiveOrRestore(archiveReq, reason); }} />
       <DepreciationBooks />
       <p className="text-xs text-muted-foreground">Tax figures use standard block rates as a guide; confirm with your accountant before filing.</p>
     </div>

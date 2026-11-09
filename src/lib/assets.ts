@@ -1,6 +1,7 @@
 /** Fixed assets, property ownership and depreciation (v6). Pure rules; saved in owner preferences. */
 import { fyOf, fyRange } from "./entities";
 import { decimal, moneyNumber, roundMoney, subtractMoney, sumMoney, proportionMoney } from "./money";
+import type { ArchiveState } from "./archive";
 
 export const ASSET_KINDS = { property: "Property / land", building: "Building", vehicle: "Vehicle", machinery: "Plant & machinery", computer: "Computer", furniture: "Furniture", other: "Other" } as const;
 export type AssetKind = keyof typeof ASSET_KINDS;
@@ -8,7 +9,8 @@ export type AssetKind = keyof typeof ASSET_KINDS;
 /** Default income-tax block rates (WDV) per kind; land is never depreciated. */
 export const TAX_RATES: Record<AssetKind, number> = { property: 0, building: 10, vehicle: 15, machinery: 15, computer: 40, furniture: 10, other: 15 };
 
-export interface Asset {
+/** Archive fields (archive.ts) are status only: an archived asset keeps every figure and stays in books and net worth. */
+export interface Asset extends ArchiveState {
   id: string;
   name: string;
   kind: AssetKind;

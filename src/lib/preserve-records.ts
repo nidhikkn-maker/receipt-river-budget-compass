@@ -10,6 +10,7 @@
 //     preservedRecords so nothing the owner never saw is lost.
 import { normalizePreferences, type FinancePreferences } from "./preferences";
 import { PREFERENCE_RETENTION } from "./retention";
+import { withArchiveFieldsOf, withoutArchiveFields } from "./archive";
 
 export interface PreservedRecord { path: string; reason: "replaced-after-display-adjustment" | "unreadable-archive"; savedAt: string; record: unknown }
 
@@ -58,6 +59,13 @@ export function reconcileList(path: string, raw: unknown, view: unknown, next: u
   const out = next.map((n) => {
     const cand = (pairs.get(recordKey(n)) ?? []).find((p) => !used.has(p.raw) && canonical(p.view) === canonical(n));
     if (cand) { used.add(cand.raw); return cand.raw; }
+    // Archive / restore changes only the archive fields: apply them to the stored original, so the rest of the
+    // record stays byte-identical even when its displayed form had been tidied (P0-001).
+    if (isObj(n)) {
+      const bare = canonical(withoutArchiveFields(n));
+      const arch = (pairs.get(recordKey(n)) ?? []).find((p) => !used.has(p.raw) && isObj(p.raw) && isObj(p.view) && canonical(withoutArchiveFields(p.view)) === bare);
+      if (arch && isObj(arch.raw)) { used.add(arch.raw); return withArchiveFieldsOf(arch.raw, n); }
+    }
     return n;
   });
   // Stored originals that were tidied for display and are now replaced or removed: keep a copy.

@@ -14,6 +14,7 @@ import { applyEvent, depreciationEntry, depreciationEntryKey, depreciationExcept
 import { supabase } from "@/integrations/supabase/client";
 import { requiresApproval, type AssetEventKind } from "@/lib/books/types";
 import { useBooks } from "./useBooks";
+import { isArchived } from "@/lib/archive";
 
 const inr = (n: number) => "₹" + n.toLocaleString("en-IN", { maximumFractionDigits: 0 });
 const today = () => new Date().toISOString().slice(0, 10);
@@ -180,7 +181,7 @@ export function DepreciationBooks() {
           <tbody>{blocks.map((b) => <tr key={b.kind}><td>{ASSET_KINDS[b.kind]} {b.rate}%</td><td className="text-right">{inr(b.opening)}</td><td className="text-right">{inr(b.additionsFull + b.additionsHalf)}{b.additionsHalf ? "*" : ""}</td><td className="text-right">{inr(b.disposals)}</td><td className="text-right">{inr(b.depreciation)}</td><td className="text-right">{inr(b.closing)}</td></tr>)}</tbody></table></div>
         <p className="text-muted-foreground">* used under 180 days in the year — half rate.</p>
         <p className="font-semibold">Book vs tax · FY {fy}</p>
-        <div className="space-y-1">{vs.map((v) => { const a = assets.find((x) => x.id === v.assetId)!; return <div key={v.assetId} className="flex flex-wrap justify-between gap-2 border-b py-1"><span>{v.name}</span><span>book {inr(v.book)} · tax {inr(v.tax)} · diff {inr(v.difference)} · NBV {inr(annualBook(a, fy).nbv)}</span></div>; })}</div>
+        <div className="space-y-1">{vs.map((v) => { const a = assets.find((x) => x.id === v.assetId)!; return <div key={v.assetId} className="flex flex-wrap justify-between gap-2 border-b py-1"><span>{v.name}{isArchived(a) ? " (archived)" : ""}</span><span>book {inr(v.book)} · tax {inr(v.tax)} · diff {inr(v.difference)} · NBV {inr(annualBook(a, fy).nbv)}</span></div>; })}</div>
         {prepared.length > 0 && <Button size="sm" loading={busy} onClick={approve}>{requiresApproval(books.policy, "postDepreciation") ? "Approve & add" : "Add"} {prepared.length} value change{prepared.length === 1 ? "" : "s"} to my records</Button>}
         {pendingEv.length > 0 && <div className="space-y-1 rounded-lg border p-2"><p className="font-semibold">Value reductions & items sold or scrapped — waiting for your approval</p>{pendingEv.map(({ id, p }) => <p key={id}>{p.date} · {p.title} · {inr(p.amount)} — lowers the asset account (non-cash)</p>)}<Button size="sm" loading={evBusy} onClick={postEvents}>{requiresApproval(books.policy, "postDepreciation") ? "Approve & add" : "Add"} {pendingEv.length} to my records</Button></div>}
         {evProblems.length > 0 && <p className="text-destructive">{[...new Set(evProblems)].join(" · ")}</p>}

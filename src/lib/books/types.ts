@@ -4,6 +4,7 @@ import { cleanOverrides } from "./price-overrides";
  * Everything here is a register or proposal around the one shared ledger — never a second ledger.
  */
 import type { DocType } from "../documents";
+import type { ArchiveState } from "../archive";
 
 export type Iso = string; // YYYY-MM-DD
 
@@ -53,7 +54,7 @@ export interface FyRecord {
 export interface Unit { id: string; name: string; areaSqft?: number | undefined }
 export interface Floor { id: string; name: string; units: Unit[] }
 export interface Building { id: string; name: string; floors: Floor[] }
-export interface Property {
+export interface Property extends ArchiveState {
   id: string; name: string; ownerEntityId?: string | undefined; address: string;
   /** The asset register row that carries cost and depreciation — valuation lives in one place [§41]. */
   assetId?: string | undefined;
@@ -105,7 +106,8 @@ export interface FyVersion { at: string; reason: string; audited: Partial<Record
 
 /** Investments beyond demat equities [§42, v6.1 §8]. */
 export type HoldingKind = "mutual_fund" | "etf" | "gold_etf" | "sgb" | "physical_gold" | "bond" | "broker_cash" | "other";
-export interface Holding {
+/** Archive fields (archive.ts) are status only: an archived holding is still valued and counted. */
+export interface Holding extends ArchiveState {
   id: string; kind: HoldingKind; name: string; isin?: string | undefined; symbol?: string | undefined; exchange?: "NSE" | "BSE" | undefined; schemeCode?: string | undefined;
   quantity: number; ownerEntityId?: string | undefined; sharePct: number;
   /** Physical gold: grams and purity in karat. */
