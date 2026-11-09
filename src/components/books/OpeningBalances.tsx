@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { useStore } from "@/lib/store";
 import { fyRange } from "@/lib/entities";
 import { ACCOUNT_LABEL, accountBalance, type AccountKind } from "@/lib/ledger";
-import { HEAD_LABEL, nextFy, openingBalanceSheet, openingPlan, POSTABLE_HEADS, stableId, type OpeningLink } from "@/lib/books/fy";
+import { HEAD_LABEL, nextFy, openingBalanceSheet, openingPlan, openingPostingId, POSTABLE_HEADS, type OpeningLink } from "@/lib/books/fy";
 import { periodBlocker } from "@/lib/books/periods";
 import type { FyRecord, OpeningHead } from "@/lib/books/types";
 import { useBooks } from "./useBooks";
@@ -23,7 +23,7 @@ type Posting = Awaited<ReturnType<ReturnType<typeof useStore>["openingPostings"]
 
 export function OpeningBalances({ rec, missingSchedules }: { rec: FyRecord; missingSchedules: string[] }) {
   const { books } = useBooks();
-  const { accounts, transactions, postOpening, undoOpening, openingPostings } = useStore();
+  const { accounts, transactions, postOpening, undoOpening, openingPostings, userId } = useStore();
   const entityAccounts = useMemo(() => new Set(books.entityAccounts?.[rec.entityId] ?? []), [books.entityAccounts, rec.entityId]);
   const fyEnd = fyRange(rec.fy).end;
   const upTo = useMemo(() => transactions.filter((t) => t.date <= fyEnd), [transactions, fyEnd]);
@@ -51,7 +51,7 @@ export function OpeningBalances({ rec, missingSchedules }: { rec: FyRecord; miss
   const setLine = (h: OpeningHead, i: number, v: Partial<OpeningLink>) => setLinks((l) => ({ ...l, [h]: (l[h] ?? []).map((x, j) => (j === i ? { ...x, ...v } : x)) }));
 
   const post = async () => {
-    const id = stableId(`opening-post|${rec.entityId}|${rec.fy}|${(posted ?? []).length}`);
+    const id = openingPostingId(userId, rec.entityId, rec.fy, (posted ?? []).length);
     await postOpening({
       id, entityId: rec.entityId, fy: rec.fy, date: plan.openingDate, docId: rec.docIds[0] ?? null,
       exceptions: Object.entries(why).filter(([, v]) => (v ?? "").trim().length >= 5).map(([line, reason]) => ({ line, reason: reason!.trim() })),

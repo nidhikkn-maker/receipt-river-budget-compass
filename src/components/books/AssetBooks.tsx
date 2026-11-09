@@ -10,7 +10,8 @@ import { fyOf } from "@/lib/entities";
 import { useStore } from "@/lib/store";
 import { saveExpense } from "@/lib/fx.functions";
 import { annualBook, blockSchedule, bookVsTax, monthlyBook, prepareJournals } from "@/lib/books/depreciation";
-import { applyEvent, depreciationEntry, depreciationEntryKey, depreciationExceptions, disposalResult, dueMonths, eventPostings, stableUuid, suggestPayment } from "@/lib/books/assets-ledger";
+import { applyEvent, depreciationEntry, depreciationEntryKey, depreciationExceptions, disposalResult, dueMonths, eventPostings, postingIdFor, resolvePostingIds, suggestPayment } from "@/lib/books/assets-ledger";
+import { supabase } from "@/integrations/supabase/client";
 import { requiresApproval, type AssetEventKind } from "@/lib/books/types";
 import { useBooks } from "./useBooks";
 
@@ -84,9 +85,20 @@ export function AssetLifecycle({ a }: { a: Asset }) {
   );
 }
 
+/** Which of these ids are the owner's own saved entries (owner-filtered read; never guesses on failure). */
+async function savedEntryIds(owner: string, ids: string[]): Promise<Set<string>> {
+  const found = new Set<string>();
+  for (let i = 0; i < ids.length; i += 100) {
+    const { data, error } = await supabase.from("expenses").select("id").eq("employee_id", owner).in("id", ids.slice(i, i + 100));
+    if (error) throw Error("Couldn't check which entries are already posted. Nothing was posted; try again.");
+    for (const r of data ?? []) found.add(r.id);
+  }
+  return found;
+}
+
 export function DepreciationBooks() {
   const { books, save, preferences } = useBooks();
-  const { ensureCategory, transactions: allTx } = useStore();
+  const { ensureCategory, transactions: allTx, userId } = useStore();
   const [evBusy, setEvBusy] = useState(false);
   const [pendingEv, setPendingEv] = useState<{ id: string; p: import("@/lib/books/assets-ledger").EventPosting }[]>([]);
   const [evProblems, setEvProblems] = useState<string[]>([]);
@@ -116,32 +128,38 @@ export function DepreciationBooks() {
     let live = true;
     void (async () => {
       const have = new Set(allTx.map((t) => t.id)); const out: { id: string; p: import("@/lib/books/assets-ledger").EventPosting }[] = []; const probs: string[] = [];
-      for (const a of assets) { const r = eventPostings(a, books.closedPeriods); probs.push(...r.problems); for (const p of r.postings) { const id = await stableUuid(...p.key); if (!have.has(id)) out.push({ id, p }); } }
+      for (const a of assets) { const r = eventPostings(a, books.closedPeriods); probs.push(...r.problems); for (const p of r.postings) { const { id, posted } = await postingIdFor(userId, p.key, have); if (!posted) out.push({ id, p }); } }
       if (live) { setPendingEv(out); setEvProblems(probs); }
-    })();
+    })().catch(() => { if (live) setPendingEv([]); });
     return () => { live = false; };
-  }, [assets, allTx, books.closedPeriods]);
+  }, [assets, allTx, books.closedPeriods, userId]);
   const postEvents = async () => {
     setEvBusy(true); let ok = 0; const problems: string[] = [];
     try {
       for (const c of ["Impairment", "Asset disposal"]) await ensureCategory(c).catch(() => undefined);
-      for (const { id, p } of pendingEv) {
+      // Re-check against saved records: the list on screen may not hold every entry (legacy ids are reused).
+      const ids = await resolvePostingIds(userId, pendingEv.map(({ p }) => p.key), (x) => savedEntryIds(userId, x));
+      for (const [i, { p }] of pendingEv.entries()) {
+        const { id, posted } = ids[i]!;
+        if (posted) continue;
         const res = await post({ data: { id: null, createId: id, title: p.title, merchant: null, category: p.kind === "impairment" ? "Impairment" : "Asset disposal", scope: "business", workspaceAllocations: [], memberId: null, splits: [], currency: "INR", originalAmount: p.amount, date: p.date, description: p.description, paymentMethod: "other", txnType: "adjustment", reimbursementStatus: "none", adjustmentSign: -1, accountId: p.accountId, toAccountId: null, paymentInstrumentId: null, payeeId: null, tripId: null, principal: null, interest: null, tags: [p.kind] } });
         if (res.ok) ok++; else problems.push(`${p.title}: ${res.error}`);
       }
       if (ok) toast.success(`${ok} write-down/disposal entr${ok === 1 ? "y" : "ies"} posted`);
       if (problems.length) toast.error(problems.slice(0, 3).join(" · "));
-    } finally { setEvBusy(false); }
+    } catch (e) { toast.error((e as Error).message); } finally { setEvBusy(false); }
   };
   const approve = async () => {
     setBusy(true);
     const posted: Record<string, { tx: string; on: string }> = {}; const problems: string[] = [];
     try {
       await ensureCategory("Depreciation").catch(() => undefined);
-      for (const j of prepared) {
+      // Ids are checked against saved records so a legacy entry is reused even when it is not on screen.
+      const ids = await resolvePostingIds(userId, prepared.map((j) => depreciationEntryKey(j.assetId, j.period)), (x) => savedEntryIds(userId, x));
+      for (const [i, j] of prepared.entries()) {
         const r = depreciationEntry(j, assets.find((a) => a.id === j.assetId), books.closedPeriods);
         if (!r.ok) { problems.push(r.reason); continue; }
-        const id = await stableUuid(...depreciationEntryKey(j.assetId, j.period));
+        const { id } = ids[i]!;
         const res = await post({ data: { id: null, createId: id, title: r.entry.title, merchant: null, category: r.entry.category, scope: "business", workspaceAllocations: [], memberId: null, splits: [], currency: "INR", originalAmount: r.entry.amount, date: r.entry.date, description: r.entry.description, paymentMethod: "other", txnType: "adjustment", reimbursementStatus: "none", adjustmentSign: -1, accountId: r.entry.accountId, toAccountId: null, paymentInstrumentId: null, payeeId: null, tripId: null, principal: null, interest: null, tags: ["depreciation"] } });
         if (!res.ok) { problems.push(`${j.period}: ${res.error}`); continue; }
         posted[j.id] = { tx: id, on: today() };
@@ -149,7 +167,7 @@ export function DepreciationBooks() {
       if (Object.keys(posted).length) await save({ journals: books.journals.map((j) => (posted[j.id] ? { ...j, status: "posted" as const, postedOn: posted[j.id]!.on, transactionId: posted[j.id]!.tx } : j)) });
       if (Object.keys(posted).length) toast.success(`${Object.keys(posted).length} depreciation entr${Object.keys(posted).length === 1 ? "y" : "ies"} posted to your records`);
       if (problems.length) toast.error([...new Set(problems)].slice(0, 3).join(" · "));
-    } finally { setBusy(false); }
+    } catch (e) { toast.error((e as Error).message); } finally { setBusy(false); }
   };
 
   return (

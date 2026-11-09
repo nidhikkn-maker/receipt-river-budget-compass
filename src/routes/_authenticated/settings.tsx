@@ -22,9 +22,9 @@ import { RoleBadge, TeamAccessSettings } from "@/components/TeamAccess";
 import { SmartDefaultsSettings } from "@/components/SmartDefaultsSettings";
 import { ReceiptProblemReports } from "@/components/ReceiptProblemReports";
 import { useStore } from "@/lib/store";
-import { BACKUP_TABLES, createBackupZip, prepareRestore, readBackup, type Backup } from "@/lib/backup";
+import { BACKUP_TABLES, BACKUP_VERSION, createBackupZip, describeRestoreReport, investmentTablesToWrite, planRestore, readBackup, type Backup } from "@/lib/backup";
 import { downloadBlob } from "@/lib/reports";
-import type { Json } from "@/integrations/supabase/types";
+import type { Database, Json } from "@/integrations/supabase/types";
 import { UnreadableRecordsNotice } from "@/components/UnreadableRecordsNotice";
 import { AccountRecovery, PasskeyDevices, SignOutOtherDevices } from "@/components/DeviceSecurity";
 import { withStepUp } from "@/lib/step-up";
@@ -84,7 +84,7 @@ function Settings() {
         if (bytes > 140 * 1024 * 1024) throw Error("Files exceed the 140 MB backup limit");
         files[path] = new Uint8Array(await data.arrayBuffer());
       }
-      const zip = createBackupZip({ app: "ledgerline", version: 2, owner: userId, name, exportedAt: new Date().toISOString(), data: out }, files);
+      const zip = createBackupZip({ app: "ledgerline", version: BACKUP_VERSION, owner: userId, name, exportedAt: new Date().toISOString(), data: out }, files);
       downloadBlob(new Blob([new Uint8Array(zip).buffer], { type: "application/zip" }), `ledgerline-backup-${new Date().toISOString().slice(0, 10)}.zip`);
       toast.success("Backup downloaded");
     } catch (e) { toast.error((e as Error).message); } finally { setBusy(false); }
@@ -98,8 +98,9 @@ function Settings() {
     try {
       if (f.size > 150 * 1024 * 1024) throw Error("Backup must be under 150 MB");
       const { backup: j, files } = readBackup(new Uint8Array(await f.arrayBuffer()), /\.zip$/i.test(f.name));
-      const { data: restored, paths } = prepareRestore(j, userId, undefined, true);
-      if (!await confirmAction("Restore this backup into your account? Existing matching records will be updated. Current closed periods stay protected; backup closing history is retained as an unverified copy.")) return;
+      const { data: restored, paths, report } = await planRestore(j, userId, { stageFiles: true });
+      const summary = describeRestoreReport(report);
+      if (!await confirmAction(`Restore this backup into your account? Existing matching records will be updated. Current closed periods stay protected; backup closing history is retained as an unverified copy.${summary ? ` ${summary}.` : ""}`)) return;
       // Confirm before staging files so a long restore can't stop midway for re-confirmation.
       await ensureStepUp("restore_finance_backup");
       for (const [oldPath, newPath] of paths) {
@@ -117,10 +118,22 @@ function Settings() {
       const { data, error } = await withStepUp(() => supabase.rpc("restore_finance_backup", { payload: restored as Json, ...(j.name?.trim() ? { display_name: j.name.trim() } : {}) }));
       if (error) throw Error("Restore stopped; your existing records are unchanged. Check the backup and try again.");
       committed = true;
-      const counts = (data as { counts: Record<string, number> }).counts;
+      const counts = { ...(data as { counts: Record<string, number> }).counts };
+      // Older server restore functions only know the original tables: write investment rows afterwards, under the
+      // same owner-only row security. Ids are deterministic, so retrying the whole restore is safe.
+      let investmentError = "";
+      for (const t of investmentTablesToWrite(restored, counts)) {
+        const rows = restored[t] ?? [];
+        const { error: invError } = t === "demat_accounts"
+          ? await supabase.from("demat_accounts").upsert(rows as unknown as Database["public"]["Tables"]["demat_accounts"]["Insert"][], { onConflict: "id" })
+          : await supabase.from("security_holdings").upsert(rows as unknown as Database["public"]["Tables"]["security_holdings"]["Insert"][], { onConflict: "id" });
+        if (invError) { investmentError = invError.message; break; }
+        counts[t] = rows.length;
+      }
       const n = Object.values(counts).reduce((sum, count) => sum + count, 0);
       await refresh();
-      toast.success(`Restored ${n} records`);
+      if (investmentError) toast.error(`Restored ${n} records, but demat holdings could not be restored (${investmentError}). They are still in your backup file; restoring it again is safe.`);
+      else toast.success(`Restored ${n} records${summary ? `. ${summary}` : ""}`);
     } catch (e) { toast.error((e as Error).message); } finally {
       if (!committed) for (let i = 0; i < staged.length; i += 100) await supabase.storage.from("receipts").remove(staged.slice(i, i + 100));
       setBusy(false); if (file.current) file.current.value = "";

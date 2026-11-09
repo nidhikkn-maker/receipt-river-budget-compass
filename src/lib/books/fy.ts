@@ -78,6 +78,17 @@ export function stableId(text: string): string {
 }
 
 /**
+ * Id of the n-th opening-balance posting run of one owner's company and year. opening_postings.id is a
+ * GLOBAL primary key and entity keys are the same text under different owners (they survive a
+ * cross-account restore), so the owner is part of the derivation; otherwise a second owner's first post
+ * for the same company key and year collides and post_opening_balances fails. Stable for retries.
+ * Runs saved before this rule keep their stored ids (only new runs use it).
+ */
+export function openingPostingId(owner: string, entityId: string, fy: string, n: number): string {
+  return stableId(`opening-post|${owner}|${entityId}|${fy}|${n}`);
+}
+
+/**
  * Opening-entry plan for the year after rec.fy [§19]: each audited head is linked to accounts with a target
  * per account; the entry posted is exactly target − balance at the year end, dated 1 April. Nothing is
  * forced: unbalanced figures, missing schedules, unlinked heads or splits that don't add up block posting

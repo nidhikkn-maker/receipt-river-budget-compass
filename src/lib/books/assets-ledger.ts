@@ -16,6 +16,77 @@ export async function stableUuid(...parts: string[]): Promise<string> {
   return `${h.slice(0, 8)}-${h.slice(8, 12)}-${h.slice(12, 16)}-${h.slice(16, 20)}-${h.slice(20)}`;
 }
 export const depreciationEntryKey = (assetId: string, month: string) => ["depreciation", assetId, month] as const;
+export const impairmentKey = (assetId: string, date: string, amount: number) => ["impairment", assetId, date, String(amount)] as const;
+export const disposalKey = (assetId: string, soldOn: string) => ["disposal", assetId, soldOn] as const;
+
+/**
+ * Owner-scoped id for a posting derived from an asset (depreciation, impairment, disposal). Asset ids are owner-local
+ * JSON ids that a cross-account restore keeps, so the legacy key-only id is the same for two owners and collides on
+ * the global expenses primary key (R12). New postings therefore include the owner.
+ */
+export function ownerPostingId(owner: string, key: readonly string[]): Promise<string> {
+  if (!owner) throw Error("Sign in again before posting asset entries");
+  return stableUuid("posting", owner, ...key);
+}
+
+/**
+ * The id a derived posting uses. An entry already saved under the legacy key-only id keeps that id (stored ids are
+ * never renumbered, and a retry after a partial save still finds it); otherwise the owner-scoped id is used.
+ * `existing` must hold every entry id the owner has; when the loaded list may be incomplete use resolvePostingIds.
+ */
+export async function postingIdFor(owner: string, key: readonly string[], existing: ReadonlySet<string>): Promise<{ id: string; posted: boolean }> {
+  const legacy = await stableUuid(...key);
+  if (existing.has(legacy)) return { id: legacy, posted: true };
+  const id = await ownerPostingId(owner, key);
+  return { id, posted: existing.has(id) };
+}
+
+/**
+ * Posting ids checked against the saved records rather than the entries a screen happens to have loaded: `saved`
+ * returns which of the given ids exist as the owner's own entries (owner-filtered read). A legacy id the owner already
+ * saved is reused even when it is not on screen, so the original owner's retries stay idempotent exactly as before.
+ * A failed read throws — guessing could post a second copy.
+ */
+export async function resolvePostingIds(owner: string, keys: readonly (readonly string[])[], saved: (ids: string[]) => Promise<ReadonlySet<string>>): Promise<{ id: string; posted: boolean }[]> {
+  const pairs = await Promise.all(keys.map(async (key) => ({ legacy: await stableUuid(...key), scoped: await ownerPostingId(owner, key) })));
+  const found = pairs.length ? await saved([...new Set(pairs.flatMap((p) => [p.legacy, p.scoped]))]) : new Set<string>();
+  return pairs.map(({ legacy, scoped }) => (found.has(legacy) ? { id: legacy, posted: true } : { id: scoped, posted: found.has(scoped) }));
+}
+
+const recs = (v: unknown): Record<string, unknown>[] => (Array.isArray(v) ? v.filter((x): x is Record<string, unknown> => !!x && typeof x === "object" && !Array.isArray(x)) : []);
+/** Every derived-posting key the stored registers can produce (read tolerantly from raw stored preferences). */
+export function derivedPostingKeys(rawPrefs: unknown): (readonly string[])[] {
+  const p = (rawPrefs && typeof rawPrefs === "object" ? rawPrefs : {}) as Record<string, unknown>;
+  const books = (p["books"] && typeof p["books"] === "object" ? p["books"] : {}) as Record<string, unknown>;
+  const keys: (readonly string[])[] = [];
+  for (const j of recs(books["journals"])) if (typeof j["assetId"] === "string" && typeof j["period"] === "string") keys.push(depreciationEntryKey(j["assetId"], j["period"]));
+  for (const a of recs(p["assets"])) {
+    if (typeof a["id"] !== "string") continue;
+    for (const adj of recs(a["adjustments"])) if (adj["kind"] === "impairment" && typeof adj["amount"] === "number" && adj["amount"] < 0 && typeof adj["date"] === "string") keys.push(impairmentKey(a["id"], adj["date"], Math.round(-adj["amount"] * 100) / 100));
+    if (typeof a["soldOn"] === "string") keys.push(disposalKey(a["id"], a["soldOn"]));
+  }
+  return keys;
+}
+
+/**
+ * Cross-account restore: derived postings in the backup (saved under the old owner's legacy or owner-scoped id) get
+ * the NEW owner's owner-scoped id, so the restored owner's pages recognise them as already posted (no duplicate).
+ * If the backup holds two entries for one posting key (a legacy and an owner-scoped copy), only the first gets the
+ * posting id; the other keeps its ordinary restore id so both rows survive (two rows must never share one id).
+ */
+export async function restoredPostingIds(rawPrefs: unknown, entryIds: ReadonlySet<string>, oldOwner: string, newOwner: string): Promise<Map<string, string>> {
+  const out = new Map<string, string>();
+  const used = new Set<string>();
+  for (const key of derivedPostingKeys(rawPrefs)) {
+    const next = await ownerPostingId(newOwner, key);
+    const olds = [await stableUuid(...key), ...(oldOwner ? [await ownerPostingId(oldOwner, key)] : [])];
+    for (const old of olds) {
+      if (!entryIds.has(old) || out.has(old) || used.has(next)) continue;
+      out.set(old, next); used.add(next);
+    }
+  }
+  return out;
+}
 
 const monthEnd = (m: string) => new Date(Date.UTC(Number(m.slice(0, 4)), Number(m.slice(5, 7)), 0)).toISOString().slice(0, 10);
 
@@ -151,9 +222,9 @@ export function eventPostings(a: Asset, closed: ClosedPeriod[]): { postings: Eve
   };
   for (const adj of a.adjustments ?? []) if (adj.kind === "impairment" && adj.amount < 0) {
     const amt = Math.round(-adj.amount * 100) / 100;
-    add({ key: ["impairment", a.id, adj.date, String(amt)], kind: "impairment", title: `Impairment · ${a.name}`, date: adj.date, amount: amt, description: `Write-down (non-cash)${adj.note ? `: ${adj.note}` : ""}. Asset ${a.tag || a.id}.` });
+    add({ key: [...impairmentKey(a.id, adj.date, amt)], kind: "impairment", title: `Impairment · ${a.name}`, date: adj.date, amount: amt, description: `Write-down (non-cash)${adj.note ? `: ${adj.note}` : ""}. Asset ${a.tag || a.id}.` });
   }
   const d = disposalResult(a);
-  if (a.soldOn && d) add({ key: ["disposal", a.id, a.soldOn], kind: "disposal", title: `Disposal · ${a.name}`, date: a.soldOn, amount: Math.round(d.nbv * 100) / 100, description: `Book value removed on disposal (non-cash); proceeds ${d.proceeds}, ${d.gain >= 0 ? "gain" : "loss"} ${Math.abs(d.gain)}. Asset ${a.tag || a.id}.` });
+  if (a.soldOn && d) add({ key: [...disposalKey(a.id, a.soldOn)], kind: "disposal", title: `Disposal · ${a.name}`, date: a.soldOn, amount: Math.round(d.nbv * 100) / 100, description: `Book value removed on disposal (non-cash); proceeds ${d.proceeds}, ${d.gain >= 0 ? "gain" : "loss"} ${Math.abs(d.gain)}. Asset ${a.tag || a.id}.` });
   return { postings, problems };
 }
