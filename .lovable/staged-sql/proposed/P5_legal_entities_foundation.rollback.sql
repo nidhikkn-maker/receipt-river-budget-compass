@@ -11,7 +11,8 @@
 --   * the nine P5 tables are MOVED (never dropped) to security_rollback_archive with a UTC suffix,
 --     with no client or service_role access, so entities, assignments, relationships, readable IDs,
 --     counters, register records, ownership shares and backfill history are kept as evidence.
--- Run BEFORE the P4 rollback (which refuses while P5 is installed). No pre-existing column value changes.
+-- Run BEFORE the P4 rollback (which refuses while P5 is installed) and AFTER the P6 rollback (this file
+-- refuses while P6 is installed). No pre-existing column value changes.
 -- ============================================================================================
 BEGIN;
 
@@ -19,6 +20,9 @@ DO $pre$
 BEGIN
   IF to_regnamespace('phase2_p5') IS NULL OR to_regclass('public.legal_entities') IS NULL THEN
     RAISE EXCEPTION 'P5 is not installed';
+  END IF;
+  IF to_regnamespace('phase2_p6') IS NOT NULL OR to_regclass('public.assets') IS NOT NULL THEN
+    RAISE EXCEPTION 'Roll back P6 (P6_registers.rollback.sql) before P5';
   END IF;
 END $pre$;
 
