@@ -115,6 +115,20 @@ export async function scheduledRun(assets: Asset[], journals: Journal[], closed:
   return { journals: all, added, exceptions };
 }
 
+/**
+ * The stored books after a scheduled run: the STORED journal list (every record, readable or not, uncapped)
+ * plus only the newly prepared journals not already stored. Returns null when the stored journals are present
+ * but not a list, so the caller skips the write instead of replacing history it cannot read (V4 FND-05).
+ */
+export function withPreparedJournals(rawBooks: unknown, added: Journal[]): Record<string, unknown> | null {
+  const books = (rawBooks && typeof rawBooks === "object" && !Array.isArray(rawBooks) ? rawBooks : {}) as Record<string, unknown>;
+  const stored = books["journals"];
+  if (stored !== undefined && !Array.isArray(stored)) return null;
+  const list = (stored ?? []) as unknown[];
+  const have = new Set(list.map((j) => (j && typeof j === "object" ? (j as { id?: unknown }).id : undefined)).filter((id): id is string => typeof id === "string"));
+  return { ...books, journals: [...list, ...added.filter((j) => !have.has(j.id))] };
+}
+
 /** What the Inbox card shows: prepared journals waiting for approval, grouped by month. */
 export function preparedSummary(journals: Journal[]): { month: string; count: number; total: number }[] {
   const by = new Map<string, { count: number; total: number }>();

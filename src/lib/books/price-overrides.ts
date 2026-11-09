@@ -50,5 +50,5 @@ export const activeOverride = (list: PriceOverride[] | undefined, key: string | 
 
 export function cleanOverrides(raw: unknown): PriceOverride[] {
   if (!Array.isArray(raw)) return [];
-  return raw.filter((o): o is PriceOverride => !!o && typeof o.key === "string" && typeof o.price === "number" && o.price > 0 && typeof o.priceDate === "string" && typeof o.source === "string" && typeof o.active === "boolean" && Array.isArray(o.history)).slice(0, 2000);
+  return raw.filter((o): o is PriceOverride => !!o && typeof o.key === "string" && typeof o.price === "number" && o.price > 0 && typeof o.priceDate === "string" && typeof o.source === "string" && typeof o.active === "boolean" && Array.isArray(o.history));
 }

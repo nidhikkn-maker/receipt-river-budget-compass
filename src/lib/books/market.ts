@@ -147,9 +147,9 @@ export function dynamicNetWorth(parts: { bank: number; bankBasis: string; invest
   };
 }
 
-/** One dated snapshot per day; saving one never touches the ledger [v6.1 §12]. */
+/** One dated snapshot per day; saving one never touches the ledger [v6.1 §12]. History is never capped (V4 FND-05). */
 export function addSnapshot(list: Snapshot[], s: Snapshot): Snapshot[] {
-  return [...list.filter((x) => x.date !== s.date), s].sort((a, b) => a.date.localeCompare(b.date)).slice(-1500);
+  return [...list.filter((x) => x.date !== s.date), s].sort((a, b) => a.date.localeCompare(b.date));
 }
 
 export interface AllocationMove { kind: string; from: number; to: number; change: number; shareFrom: number; shareTo: number; shareChange: number }

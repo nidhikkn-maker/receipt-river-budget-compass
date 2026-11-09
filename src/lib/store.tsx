@@ -27,6 +27,7 @@ import { recurringDuplicates } from './review-recurring';
 import { metadataStillCurrent, type MetadataPreview } from './review-metadata';
 import { validateBankBalance } from './loan-funding';
 import { alignUnchangedSections, preferenceReviewSections } from './preference-review';
+import { preserveForSave, unreadableRecords, type UnreadableRecord } from './preserve-records';
 import { validateCompleteAllocations } from './trip-budget';
 import { PreferenceReview } from '@/components/PreferenceReview';
 import { checkpointUpload } from './statement-pipeline/history';
@@ -59,6 +60,8 @@ export interface DocumentMeta { title: string; docType: DocType; docDate: string
 interface Snapshot { name: string; members: Member[]; expenses: Expense[]; accounts: Account[]; commitments: Commitment[]; rawLoans: Loan[]; goals: Goal[]; budgets: Budgets; preferences: FinancePreferences; valuations: Valuation[]; documents: VaultDoc[] }
 
 interface Ctx {
+  /** Stored records the app cannot display. They stay in storage unchanged and are listed for the owner to review. */
+  unreadableRecords: UnreadableRecord[];
   departmentBudgets: Record<string, number>;
   departmentBudgetError: boolean;
   pendingCount: number;
@@ -202,7 +205,9 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
   const preferencesRevision = useRef<number | null>(null);
   /** Settings exactly as stored, so unchanged protected sections are sent back untouched. */
   const storedPreferences = useRef<Record<string, unknown> | null>(null);
-  const intakeRequests = useRef(new Map<string, { id: string; key: string; expected: number }>());
+  // Same stored copy as state, so the unreadable-record list re-derives whenever it changes.
+  const [storedSnapshot, setStoredSnapshot] = useState<Record<string, unknown> | null>(null);
+  const intakeRequests = useRef(new Map<string, { id: string; key: string; expected: number; payload: FinancePreferences }>());
   const [reviewSections,setReviewSections]=useState<string[]|null>(null);
   const reviewDecision=useRef<((approved:boolean)=>void)|null>(null);
   const preferenceRequest=useRef<{id:string;key:string;expected:number|null}|null>(null);
@@ -266,7 +271,7 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
     if (firstError) toast.error("Some records couldn't load — pull to refresh or try again");
     setPreferences(normalizePreferences(pref.data?.data as unknown as Partial<FinancePreferences>));
     preferencesRevision.current = pref.error ? null : pref.data?.revision ?? null;
-    if (!pref.error) storedPreferences.current = (pref.data?.data ?? null) as Record<string, unknown> | null;
+    if (!pref.error) { storedPreferences.current = (pref.data?.data ?? null) as Record<string, unknown> | null; setStoredSnapshot(storedPreferences.current); }
     setCommitments((c.data ?? []).map((x) => ({ id: x.id, name: x.name, kind: x.kind as CommitmentKind, direction: x.direction as "in" | "out", amount: Number(x.amount),
       frequency: x.frequency as Frequency, intervalDays: x.interval_days, nextDue: x.next_due, accountId: x.account_id, category: x.category,
       confirmed: x.confirmed, essential: x.essential, status: x.status as CommitmentStatus })));
@@ -434,7 +439,8 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
       const approved=await new Promise<boolean>(resolve=>{reviewDecision.current=resolve;setReviewSections(sections);});
       if(!approved)throw new Error('Changes were not approved; nothing saved');
     }
-    const payload=alignUnchangedSections(storedPreferences.current,p,sections);
+    // Never write the display view back as stored data: untouched and unreadable records keep their stored form (V4 FND-05).
+    const payload=alignUnchangedSections(storedPreferences.current,preserveForSave(storedPreferences.current,p),sections);
     const key=JSON.stringify(payload);
     const prior=preferenceRequest.current;
     const request=prior?.key===key?prior:{id:crypto.randomUUID(),key,expected:preferencesRevision.current};
@@ -442,7 +448,7 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
     setPreferences(p);
     try {
       const result = await supabase.rpc('save_reviewed_preferences',{_id:request.id,_data:payload as unknown as Json,_expected:(request.expected == null || request.expected < 0 ? null : request.expected) as number,_approved:sections.length>0});
-      check(result.error); preferencesRevision.current = result.data; storedPreferences.current = payload as unknown as Record<string, unknown>; preferenceRequest.current=null;
+      check(result.error); preferencesRevision.current = result.data; storedPreferences.current = payload as unknown as Record<string, unknown>; setStoredSnapshot(storedPreferences.current); preferenceRequest.current=null;
     }
     catch(e){setPreferences(previous);throw e;}
   };
@@ -458,7 +464,7 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
       },
       write: async (data, revision, id) => {
         const result = await supabase.rpc('save_reviewed_preferences', { _id:id, _data:data as unknown as Json, _expected:(revision < 0 ? null : revision) as number, _approved:false });
-        check(result.error); preferencesRevision.current = result.data; storedPreferences.current = data as unknown as Record<string, unknown>; setPreferences(normalizePreferences(data));
+        check(result.error); preferencesRevision.current = result.data; storedPreferences.current = data as unknown as Record<string, unknown>; setStoredSnapshot(storedPreferences.current); setPreferences(normalizePreferences(data));
       },
     });
   };
@@ -468,12 +474,13 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
     if (expected == null) throw new Error('Refresh your records before reviewing this document');
     const key = JSON.stringify([p, lock]);
     const prior = intakeRequests.current.get(documentId);
-    const request = attempt ? { id: attempt.id, key, expected } : prior?.key === key ? prior : { id: crypto.randomUUID(), key, expected };
+    // The stored payload is fixed per request so a retry sends identical data (retry-safe review id).
+    const request = attempt ? { id: attempt.id, key, expected, payload: prior?.key === key && prior.payload ? prior.payload : preserveForSave(storedPreferences.current, p) } : prior?.key === key ? prior : { id: crypto.randomUUID(), key, expected, payload: preserveForSave(storedPreferences.current, p) };
     intakeRequests.current.set(documentId, request);
     const previous = preferences;
     setPreferences(p);
     try {
-      const result = await supabase.rpc("commit_document_intake_reviewed", { _id: request.id, _document: documentId, _data: p as unknown as Json, _lock: lock, _expected: request.expected });
+      const result = await supabase.rpc("commit_document_intake_reviewed", { _id: request.id, _document: documentId, _data: request.payload as unknown as Json, _lock: lock, _expected: request.expected });
       check(result.error); preferencesRevision.current = result.data;
     }
     catch (e) { setPreferences(previous); throw e; }
@@ -889,8 +896,11 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
     downloadBlob(await fetchPrivateFile(url, expected), fileName || path.split("/").pop() || "document");
   }, [signedUrl]);
 
+  const unreadable = useMemo(() => unreadableRecords(storedSnapshot), [storedSnapshot]);
+
   return (
     <StoreCtx.Provider value={{
+      unreadableRecords: unreadable,
       departmentBudgets, departmentBudgetError,
       saveStatementUpload,
       accountingAvailable,postAccounting,accountantData,setAccountantGrant,reviewAccounting,

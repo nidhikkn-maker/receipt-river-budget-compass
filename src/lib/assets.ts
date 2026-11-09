@@ -157,6 +157,6 @@ export function rentCheck(a: Asset, income: { date: string; amount: number; text
 export function cleanAssets(raw: unknown): Asset[] {
   if (!Array.isArray(raw)) return [];
   return raw.filter((x): x is Asset => !!x && typeof x.id === "string" && typeof x.name === "string" && x.kind in ASSET_KINDS && Number.isFinite(x.cost) && /^\d{4}-\d{2}-\d{2}$/.test(x.inUse))
-    .map((x) => ({ ...x, sharePct: Math.min(100, Math.max(0, Number(x.sharePct) || 100)), bookMethod: (x.bookMethod === "wdv" ? "wdv" : "slm") as Asset["bookMethod"], bookRatePct: Math.min(100, Math.max(0, Number(x.bookRatePct) || 0)) }))
-    .slice(0, 200);
+    .map((x) => ({ ...x, sharePct: Math.min(100, Math.max(0, Number(x.sharePct) || 100)), bookMethod: (x.bookMethod === "wdv" ? "wdv" : "slm") as Asset["bookMethod"], bookRatePct: Math.min(100, Math.max(0, Number(x.bookRatePct) || 0)) }));
+  // No count cap (was 200: later assets were hidden and never depreciated). Clamps are display-only; storage keeps originals.
 }

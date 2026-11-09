@@ -19,6 +19,7 @@ import { cleanShortcuts, DEFAULT_SHORTCUTS, type ShortcutId } from "./home-short
 import { ACTIVE_SCOPES, CATEGORIES, memberShares, categoryParts, SCOPES, type Expense, type Scope } from "./expenses";
 import { decimal, moneyNumber, sumMoney, addMoney, subtractMoney } from "./money";
 import { cleanThemeName, type ThemeName } from "./themes";
+import type { PreservedRecord } from "./preserve-records";
 import { defaultEmergency, type BriefSettings, type EmergencySettings, type MerchantAliases, type Milestone, type Trip, type WeeklyBrief } from "./intelligence";
 
 export interface CategorySetting { name: string; archived: boolean }
@@ -160,6 +161,8 @@ export interface FinancePreferences {
   favouriteEntries: string[];
   /** Guided setup assistant: shown until finished or dismissed; reopenable from Settings. */
   setupAssistant: "pending" | "done";
+  /** Stored originals kept when an edit replaced a record that had been tidied for display (never shown as data). */
+  preservedRecords?: PreservedRecord[];
   /** Trip budget utilisation % at which the "Approaching Limit" warning starts (100% = fully utilised). */
   tripBudgetWarnPct: number;
 }
@@ -196,7 +199,7 @@ export function normalizePreferences(raw: Partial<FinancePreferences> | null | u
   if (!Array.isArray(p.budgets)) p.budgets = [];
   if (!Array.isArray(p.homeHidden)) p.homeHidden = [];
   p.savedViews = sanitizeSavedViews(p.savedViews);
-  { const b = p.statementBatches && typeof p.statementBatches === "object" ? p.statementBatches : {}; p.statementBatches = Object.fromEntries(Object.entries(b).filter(([k, v]) => k.length <= 64 && Array.isArray(v)).slice(0, 50).map(([k, v]) => [k, (v as unknown[]).filter((x): x is string => typeof x === "string" && x.length <= 64).slice(0, 2000)])); }
+  { const b = p.statementBatches && typeof p.statementBatches === "object" ? p.statementBatches : {}; p.statementBatches = Object.fromEntries(Object.entries(b).filter(([k, v]) => k.length <= 64 && Array.isArray(v)).map(([k, v]) => [k, (v as unknown[]).filter((x): x is string => typeof x === "string" && x.length <= 64)])); }
   p.statementUploads = cleanStatementUploads(p.statementUploads);
   p.entities = cleanEntities(p.entities);
   p.assets = cleanAssets(p.assets);
@@ -237,14 +240,12 @@ export function normalizePreferences(raw: Partial<FinancePreferences> | null | u
   p.emergency = { ...defaultEmergency(), ...(p.emergency ?? {}) };
   p.emergency.targetMonths = Number.isFinite(p.emergency.targetMonths) ? Math.min(24, Math.max(1, p.emergency.targetMonths)) : 6;
   for (const k of ["irregularRejected", "irregularConfirmed", "milestones", "trips", "briefs", "paymentInstruments", "allocationPlans", "rules", "ruleDismissed", "coolingOff", "contractObligations", "decisions", "mapLinks"] as const) if (!Array.isArray(p[k])) (p as unknown as Record<string, unknown[]>)[k] = [];
-  p.allocationPlans = p.allocationPlans.slice(0, 60);
   p.ruleDismissed = p.ruleDismissed.slice(-500);
   p.coolingOff = p.coolingOff.slice(-200);
-  p.contractObligations = p.contractObligations.slice(-300);
-  p.decisions = p.decisions.slice(-300);
   p.mapLinks = p.mapLinks.slice(-500);
   p.mapPositions = cleanMapPositions(p.mapPositions);
   p.setupAssistant = p.setupAssistant === "done" ? "done" : "pending";
+  p.preservedRecords = Array.isArray(p.preservedRecords) ? p.preservedRecords : [];
   p.favouriteEntries = Array.isArray(p.favouriteEntries) ? [...new Set(p.favouriteEntries.filter((x): x is string => typeof x === "string"))].slice(-30) : [];
   if (!p.autopilotActions || typeof p.autopilotActions !== "object" || Array.isArray(p.autopilotActions)) p.autopilotActions = {};
   p.autopilotActions = Object.fromEntries(Object.entries(p.autopilotActions).slice(-300));
@@ -305,20 +306,21 @@ export function cleanMapPositions(raw: unknown): Record<string, { x: number; y: 
 }
 
 export interface StatementUpload { id: string; at: string; label: string; posted: string[]; reconciled: string[]; createdAccounts: { id: string; name: string }[]; status?: 'interrupted' | 'complete' | 'undone'; undoError?: string; sources?: { documentId: string; accountId: string; file: string }[]; linkedDrafts?: { draftId: string; transactionId: string }[]; evidence?: { id: string; ref: string }[]; undoRows?: { id: string; ref: string | null; revision: number }[]; expected?: { posted: number; reconciled: number; drafts?: number } }
-const ids = (v: unknown, max: number) => (Array.isArray(v) ? v.filter((x): x is string => typeof x === "string" && x.length <= 64).slice(0, max) : []);
+// Upload history is undo/recovery evidence: ids and references are never capped or shortened (V4 FND-05).
+const ids = (v: unknown) => (Array.isArray(v) ? v.filter((x): x is string => typeof x === "string" && x.length <= 64) : []);
 export function cleanStatementUploads(v: unknown): StatementUpload[] {
   if (!Array.isArray(v)) return [];
   return v.flatMap<StatementUpload>((u) => {
     if (!u || typeof u !== "object") return [];
     const o = u as { undoRows?: unknown; undoError?: unknown; id?: unknown; at?: unknown; label?: unknown; posted?: unknown; reconciled?: unknown; createdAccounts?: unknown; status?: unknown; sources?: unknown; linkedDrafts?: unknown; expected?: unknown; evidence?: unknown };
     if (typeof o.id !== "string" || o.id.length > 64 || typeof o.at !== "string") return [];
-    const created = Array.isArray(o.createdAccounts) ? o.createdAccounts.flatMap((c) => (c && typeof c === "object" && typeof (c as { id?: unknown }).id === "string" ? [{ id: String((c as { id: string }).id).slice(0, 64), name: String((c as { name?: unknown }).name ?? "").slice(0, 80) }] : [])).slice(0, 50) : [];
-    const sources = Array.isArray(o.sources) ? o.sources.flatMap(s => s && typeof s.documentId==='string' && typeof s.accountId==='string' && typeof s.file==='string' ? [{documentId:s.documentId.slice(0,64),accountId:s.accountId.slice(0,64),file:s.file.slice(0,200)}] : []).slice(0,50) : [];
-    const linkedDrafts = Array.isArray(o.linkedDrafts) ? o.linkedDrafts.flatMap(s => s && typeof s.draftId==='string' && typeof s.transactionId==='string' ? [{draftId:s.draftId.slice(0,64),transactionId:s.transactionId.slice(0,64)}] : []).slice(0,3000) : [];
-    const evidence = Array.isArray(o.evidence) ? o.evidence.flatMap(e => e && typeof e.id === 'string' && typeof e.ref === 'string' ? [{ id: e.id.slice(0,64), ref: e.ref.slice(0,1000) }] : []) : undefined;
-    const undoRows = Array.isArray(o.undoRows) ? o.undoRows.flatMap(r => r && typeof r.id === 'string' && (r.ref === null || typeof r.ref === 'string') && Number.isSafeInteger(r.revision) && r.revision >= 0 ? [{ id: r.id.slice(0,64), ref: r.ref === null ? null : r.ref.slice(0,1000), revision: r.revision }] : []).slice(0,3000) : undefined;
+    const created = Array.isArray(o.createdAccounts) ? o.createdAccounts.flatMap((c) => (c && typeof c === "object" && typeof (c as { id?: unknown }).id === "string" ? [{ id: String((c as { id: string }).id), name: String((c as { name?: unknown }).name ?? "") }] : [])) : [];
+    const sources = Array.isArray(o.sources) ? o.sources.flatMap(s => s && typeof s.documentId==='string' && typeof s.accountId==='string' && typeof s.file==='string' ? [{documentId:s.documentId,accountId:s.accountId,file:s.file}] : []) : [];
+    const linkedDrafts = Array.isArray(o.linkedDrafts) ? o.linkedDrafts.flatMap(s => s && typeof s.draftId==='string' && typeof s.transactionId==='string' ? [{draftId:s.draftId,transactionId:s.transactionId}] : []) : [];
+    const evidence = Array.isArray(o.evidence) ? o.evidence.flatMap(e => e && typeof e.id === 'string' && typeof e.ref === 'string' ? [{ id: e.id, ref: e.ref }] : []) : undefined;
+    const undoRows = Array.isArray(o.undoRows) ? o.undoRows.flatMap(r => r && typeof r.id === 'string' && (r.ref === null || typeof r.ref === 'string') && Number.isSafeInteger(r.revision) && r.revision >= 0 ? [{ id: r.id, ref: r.ref, revision: r.revision }] : []) : undefined;
     const ex = o.expected as { posted?: unknown; reconciled?: unknown; drafts?: unknown } | undefined;
-    const expected = ex && Number.isInteger(ex.posted) && Number.isInteger(ex.reconciled) && (ex.posted as number) >= 0 && (ex.reconciled as number) >= 0 ? { expected: { posted: Math.min(ex.posted as number, 3000), reconciled: Math.min(ex.reconciled as number, 3000), ...(Number.isInteger(ex.drafts) && (ex.drafts as number) >= 0 ? { drafts: ex.drafts as number } : {}) } } : {};
-    return [{ id: o.id, at: o.at.slice(0, 40), label: String(o.label ?? "").slice(0, 200), posted: ids(o.posted, 3000), reconciled: ids(o.reconciled, 3000), createdAccounts: created, ...(o.status==='interrupted'||o.status==='complete'||o.status==='undone'?{status:o.status}:{}), ...(typeof o.undoError === 'string' ? { undoError: o.undoError.slice(0, 500) } : {}), sources, linkedDrafts, ...(evidence ? { evidence } : {}), ...(undoRows ? { undoRows } : {}), ...expected }];
+    const expected = ex && Number.isInteger(ex.posted) && Number.isInteger(ex.reconciled) && (ex.posted as number) >= 0 && (ex.reconciled as number) >= 0 ? { expected: { posted: ex.posted as number, reconciled: ex.reconciled as number, ...(Number.isInteger(ex.drafts) && (ex.drafts as number) >= 0 ? { drafts: ex.drafts as number } : {}) } } : {};
+    return [{ id: o.id, at: o.at, label: String(o.label ?? ""), posted: ids(o.posted), reconciled: ids(o.reconciled), createdAccounts: created, ...(o.status==='interrupted'||o.status==='complete'||o.status==='undone'?{status:o.status}:{}), ...(typeof o.undoError === 'string' ? { undoError: o.undoError } : {}), sources, linkedDrafts, ...(evidence ? { evidence } : {}), ...(undoRows ? { undoRows } : {}), ...expected }];
   }).filter((u,i,all)=>u.status==='undone'||u.status==='interrupted'||!!u.undoError||all.slice(0,i+1).filter(x=>x.status!=='undone'&&x.status!=='interrupted'&&!x.undoError).length<=10);
 }

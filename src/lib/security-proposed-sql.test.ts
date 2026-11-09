@@ -1,6 +1,4 @@
 // @vitest-environment node
-// @ts-nocheck -- SQL acceptance harness: row lookups like rows[0].n trip noUncheckedIndexedAccess on
-// every query; correctness is asserted at runtime by the expectations below, not by the type checker.
 // Acceptance tests for the PROPOSED security package (.lovable/staged-sql/proposed/P1*, P2*).
 // Everything runs in isolated in-memory PGlite built from drizzle/migrations 0000-0088
 // (src/test/full-schema-pglite.ts). Nothing here connects to Lovable Cloud or any hosted database.
@@ -47,6 +45,10 @@ const PATH = {
 
 type Db = PGlite;
 const q = async <R = Record<string, unknown>>(db: Db, sql: string, params: unknown[] = []) => (await db.query<R>(sql, params)).rows;
+/** First row of a result; fails the test (rather than reading undefined) when the query returned no row. */
+function first<R>(rows: readonly R[], what = "row"): R { const r = rows[0]; if (r === undefined) throw new Error(`Expected a ${what}, got none`); return r; }
+/** Test-user email; fails loudly if a user id is not part of the fixture. */
+const email = (u: string): string => { const e = EMAIL[u]; if (!e) throw new Error(`No fixture email for ${u}`); return e; };
 
 /** Run fn as uid inside a transaction that is always rolled back, so probes never leak state. */
 async function attempt<R>(db: Db, uid: string | null, fn: () => Promise<R>, opts: { anon?: boolean; role?: string } = {}) {
@@ -67,7 +69,7 @@ async function as<R>(db: Db, uid: string, fn: () => Promise<R>, opts: { anon?: b
 
 async function seedScenario(db: Db) {
   const { GUEST, ...real } = U;
-  await addUsers(db, Object.fromEntries(Object.values(real).map((u) => [u, EMAIL[u]])));
+  await addUsers(db, Object.fromEntries(Object.values(real).map((u) => [u, email(u)])));
   await q(db, "INSERT INTO auth.users(id,email,is_anonymous) VALUES ($1,NULL,true)", [GUEST]);
   const prefs = (entities: object[], profiles: object[]) => JSON.stringify({ entities, books: { entityTaxProfiles: profiles } });
   await q(db, `INSERT INTO public.finance_preferences(owner_id,data) VALUES ($1,$2::jsonb),($3,$4::jsonb)
@@ -101,7 +103,7 @@ async function seedScenario(db: Db) {
     await q(db, "SELECT public.grant_entity_access('c1',$1,false)", [EMAIL[U.R]]);
     await q(db, "SELECT public.grant_entity_access('c1',$1,false)", [EMAIL[U.G]]);
     await q(db, "SELECT public.grant_entity_access('c1',$1,true)", [EMAIL[U.W]]);
-    const [x] = await q<{ g: string }>(db, "SELECT public.grant_entity_access('c2',$1,false) g", [EMAIL[U.X]]);
+    const x = first(await q<{ g: string }>(db, "SELECT public.grant_entity_access('c2',$1,false) g", [EMAIL[U.X]]));
     await q(db, "SELECT public.revoke_entity_access($1)", [x.g]);
   });
 }
@@ -127,7 +129,7 @@ const PROBES: { id: string; what: string; alreadyBlocked?: true; run: (db: Db) =
     return r.ok && r.value.length > 0; } },
   { id: "H-1c", what: "finance with no grant reads every owner's company PAN via team_company_tax()", run: async (db) => {
     const r = await attempt(db, U.F, () => q(db, "SELECT profiles::text p FROM public.team_company_tax()"));
-    return r.ok && r.value.some((x) => /AAAC/.test(String(x.p))); } },
+    return r.ok && r.value.some((x) => /AAAC/.test(String(x["p"]))); } },
   { id: "H-1d", what: "finance with only a c1 grant reads personal (no-entity) and c2 rows", run: async (db) => {
     const r = await attempt(db, U.G, () => q(db, "SELECT 1 FROM public.expenses WHERE employee_id <> $1 AND entity_id IS DISTINCT FROM 'c1'", [U.G]));
     return r.ok && r.value.length > 0; } },
@@ -166,13 +168,13 @@ const PROBES: { id: string; what: string; alreadyBlocked?: true; run: (db: Db) =
   { id: "L-3", what: "has_role() answers for another user (role oracle) to a stranger and to anon", run: async (db) => {
     const a = await attempt(db, U.X, () => q<{ r: boolean }>(db, "SELECT public.has_role($1,'finance') r", [U.F]));
     const b = await attempt(db, null, () => q<{ r: boolean }>(db, "SELECT public.has_role($1,'finance') r", [U.F]), { role: "anon" });
-    return (a.ok && a.value[0].r === true) || (b.ok && b.value[0].r === true); } },
+    return (a.ok && first(a.value).r === true) || (b.ok && first(b.value).r === true); } },
   { id: "ERASE", what: "delete_my_finance_data leaves preference_approvals and entity_members behind", run: async (db) => {
     const r = await attempt(db, U.O, async () => {
       await q(db, "SELECT public.delete_my_finance_data()");
       await db.exec("RESET ROLE");
       return q<{ n: number }>(db, "SELECT (SELECT count(*) FROM public.preference_approvals WHERE owner_id=$1)+(SELECT count(*) FROM public.entity_members WHERE owner_id=$1 OR member_id=$1) n", [U.O]); });
-    return r.ok && Number(r.value[0].n) > 0; } },
+    return r.ok && Number(first(r.value).n) > 0; } },
 ];
 
 describe("0088 baseline: every finding reproduces (isolated PGlite)", () => {
@@ -196,11 +198,11 @@ describe.each([["P1", [P1]], ["P1+P2", [P1, P2]]])("after %s: legitimate flows",
 
   it("owner CRUD on own expenses, documents and files is unaffected", async () => {
     const r = await attempt(db, U.O, async () => {
-      const [e] = await q<{ id: string }>(db, `INSERT INTO public.expenses(employee_id,title,merchant,category,amount,currency,expense_date) VALUES ($1,'new','Shop','Food',10,'INR',current_date) RETURNING id`, [U.O]);
+      const e = first(await q<{ id: string }>(db, `INSERT INTO public.expenses(employee_id,title,merchant,category,amount,currency,expense_date) VALUES ($1,'new','Shop','Food',10,'INR',current_date) RETURNING id`, [U.O]));
       expect(await q(db, "UPDATE public.expenses SET title='renamed', entity_id='c2', receipts='[]' WHERE id=$1 RETURNING 1", [e.id])).toHaveLength(1);
       expect(await q(db, "DELETE FROM public.expenses WHERE id=$1 RETURNING 1", [e.id])).toHaveLength(1);
       await q(db, "INSERT INTO storage.objects(bucket_id,name,owner_id) VALUES ('receipts',$1,$2)", [`${U.O}/docs/new.pdf`, U.O]);
-      const [d] = await q<{ id: string }>(db, "INSERT INTO public.documents(owner_id,title,file_path,file_name) VALUES ($1,'new',$2,'n.pdf') RETURNING id", [U.O, `${U.O}/docs/new.pdf`]);
+      const d = first(await q<{ id: string }>(db, "INSERT INTO public.documents(owner_id,title,file_path,file_name) VALUES ($1,'new',$2,'n.pdf') RETURNING id", [U.O, `${U.O}/docs/new.pdf`]));
       expect(await q(db, "UPDATE public.documents SET file_path=$2, entity_id='c1' WHERE id=$1 RETURNING 1", [d.id, PATH.c2doc])).toHaveLength(1);
       expect(await q(db, "SELECT 1 FROM public.expenses WHERE employee_id=$1", [U.O])).toHaveLength(3);
       expect(await q(db, "SELECT name FROM storage.objects WHERE split_part(name,'/',1)=$1", [U.O])).toHaveLength(8);
@@ -214,8 +216,8 @@ describe.each([["P1", [P1]], ["P1+P2", [P1, P2]]])("after %s: legitimate flows",
     const up = `${C1}aaaaaaaa-0000-4000-8000-000000000001-new.pdf`, spare = `${C1}aaaaaaaa-0000-4000-8000-000000000002-spare.pdf`;
     const r = await attempt(db, U.M, async () => {
       expect((await q<{ title: string }>(db, "SELECT title FROM public.documents ORDER BY 1")).map((x) => x.title)).toEqual(["c1 invoice"]);
-      expect((await objectsVisible(db, Object.values(PATH))).map((x) => x.name)).toEqual([PATH.c1doc]);
-      expect((await q<{ ok: boolean }>(db, "SELECT public.can_access_entity($1,'c1',true) ok", [U.O]))[0].ok).toBe(true);
+      expect((await objectsVisible(db, Object.values(PATH))).map((x) => x["name"])).toEqual([PATH.c1doc]);
+      expect(first(await q<{ ok: boolean }>(db, "SELECT public.can_access_entity($1,'c1',true) ok", [U.O])).ok).toBe(true);
       await q(db, "INSERT INTO storage.objects(bucket_id,name,owner_id) VALUES ('receipts',$1,$3),('receipts',$2,$3)", [up, spare, U.M]);
       expect(await objectsVisible(db, [up, spare])).toHaveLength(2); // own pending uploads
       await q(db, "INSERT INTO public.documents(owner_id,title,file_path,file_name,entity_id) VALUES ($1,'new',$2,'new.pdf','c1')", [U.O, up]);
@@ -238,7 +240,7 @@ describe.each([["P1", [P1]], ["P1+P2", [P1, P2]]])("after %s: legitimate flows",
   it("read-only member reads c1 documents and files but cannot write", async () => {
     const r = await attempt(db, U.R, async () => ({
       docs: (await q(db, "SELECT title FROM public.documents")).length,
-      files: (await objectsVisible(db, Object.values(PATH))).map((x) => x.name),
+      files: (await objectsVisible(db, Object.values(PATH))).map((x) => x["name"]),
       edit: (await q(db, "UPDATE public.documents SET title='x' RETURNING 1")).length,
     }));
     expect(r).toEqual({ ok: true, value: { docs: 1, files: [PATH.c1doc], edit: 0 } });
@@ -248,7 +250,7 @@ describe.each([["P1", [P1]], ["P1+P2", [P1, P2]]])("after %s: legitimate flows",
   it("legacy finance with a c1 grant sees only c1 rows, the referenced c1 receipt and c1 tax profile", async () => {
     const r = await attempt(db, U.G, async () => ({
       exp: (await q<{ title: string }>(db, "SELECT title FROM public.expenses WHERE employee_id<>$1 ORDER BY 1", [U.G])).map((x) => x.title),
-      files: (await objectsVisible(db, Object.values(PATH))).map((x) => x.name).sort(),
+      files: (await objectsVisible(db, Object.values(PATH))).map((x) => x["name"]).sort(),
       tax: await q<{ owner_id: string; entities: unknown; profiles: unknown }>(db, "SELECT owner_id, entities, profiles FROM public.team_company_tax()"),
       names: (await q<{ id: string }>(db, "SELECT id FROM public.team_names()")).map((x) => x.id),
     }));
@@ -267,7 +269,7 @@ describe.each([["P1", [P1]], ["P1+P2", [P1, P2]]])("after %s: legitimate flows",
         files: (await q(db, "SELECT 1 FROM storage.objects WHERE split_part(name,'/',1)<>$1", [u])).length,
         names: (await q(db, "SELECT 1 FROM public.team_names()")).length,
         own: (await q(db, "SELECT 1 FROM public.expenses WHERE employee_id=$1", [u])).length,
-        role: (await q<{ r: string }>(db, "SELECT public.my_team_role()::text r"))[0].r,
+        role: first(await q<{ r: string }>(db, "SELECT public.my_team_role()::text r")).r,
       }));
       expect(r).toEqual({ ok: true, value: { others: 0, files: 0, names: 0, own: u === U.F ? 1 : 0, role: u === U.F ? "finance" : "manager" } });
     }
@@ -289,7 +291,7 @@ describe.each([["P1", [P1]], ["P1+P2", [P1, P2]]])("after %s: legitimate flows",
       return {
         team: team.length > 5,
         roleRows: (await q(db, "SELECT 1 FROM public.role_permissions")).length,
-        history: (await q(db, "SELECT change FROM public.role_permission_audit ORDER BY created_at")).map((x) => x.change),
+        history: (await q(db, "SELECT change FROM public.role_permission_audit ORDER BY created_at")).map((x) => x["change"]),
         others: (await q(db, "SELECT 1 FROM public.expenses")).length,
         files: (await q(db, "SELECT 1 FROM storage.objects")).length,
         budgetEdit: (await q(db, "UPDATE public.department_budgets SET amount=amount RETURNING 1")).length,
@@ -310,14 +312,14 @@ describe.each([["P1", [P1]], ["P1+P2", [P1, P2]]])("after %s: legitimate flows",
     const before = await attempt(db, U.M, async () => (await objectsVisible(db, [PATH.c1doc, pending])).length);
     expect(before).toEqual({ ok: true, value: 2 });
     const r = await attempt(db, U.O, async () => {
-      const [g] = await q<{ id: string }>(db, "SELECT id FROM public.entity_members WHERE member_id=$1 AND revoked_at IS NULL", [U.M]);
+      const g = first(await q<{ id: string }>(db, "SELECT id FROM public.entity_members WHERE member_id=$1 AND revoked_at IS NULL", [U.M]));
       await q(db, "SELECT public.revoke_entity_access($1)", [g.id]);
       await q(db, "SELECT set_config('test.uid',$1,false)", [U.M]); // next statement as the member
       return {
         docs: (await q(db, "SELECT 1 FROM public.documents")).length,
         files: (await objectsVisible(db, [PATH.c1doc, pending])).length,
         companies: (await q(db, "SELECT 1 FROM public.my_shared_companies()")).length,
-        write: (await q<{ ok: boolean }>(db, "SELECT public.can_access_entity($1,'c1',true) ok", [U.O]))[0].ok,
+        write: first(await q<{ ok: boolean }>(db, "SELECT public.can_access_entity($1,'c1',true) ok", [U.O])).ok,
         cleanup: (await q(db, "DELETE FROM storage.objects WHERE name=$1 RETURNING 1", [pending])).length,
       };
     });
@@ -329,18 +331,18 @@ describe.each([["P1", [P1]], ["P1+P2", [P1, P2]]])("after %s: legitimate flows",
   it("family flow: invite, verified acceptance, request with evidence, owner reads evidence and decides", async () => {
     const evidence = `${U.KID}/requests/e1.jpg`;
     const r = await attempt(db, U.O, async () => {
-      const [m] = await q<{ id: string }>(db, "INSERT INTO public.family_members(owner_id,name) VALUES ($1,'Kid') RETURNING id", [U.O]);
-      const [i] = await q<{ id: string }>(db, "INSERT INTO public.family_invites(owner_id,member_id,email) VALUES ($1,$2,$3) RETURNING id", [U.O, m.id, EMAIL[U.KID]]);
+      const m = first(await q<{ id: string }>(db, "INSERT INTO public.family_members(owner_id,name) VALUES ($1,'Kid') RETURNING id", [U.O]));
+      const i = first(await q<{ id: string }>(db, "INSERT INTO public.family_invites(owner_id,member_id,email) VALUES ($1,$2,$3) RETURNING id", [U.O, m.id, EMAIL[U.KID]]));
       await q(db, "SELECT set_config('test.uid',$1,false)", [U.KID]);
       await q(db, "SELECT public.accept_family_invite($1)", [i.id]);
       await q(db, "INSERT INTO storage.objects(bucket_id,name,owner_id) VALUES ('receipts',$1,$2)", [evidence, U.KID]);
-      const [req] = await q<{ id: string }>(db, "INSERT INTO public.family_requests(owner_id,requester_id,invite_id,title,amount,evidence_path) VALUES ($1,$2,$3,'Books',500,$4) RETURNING id", [U.O, U.KID, i.id, evidence]);
+      const req = first(await q<{ id: string }>(db, "INSERT INTO public.family_requests(owner_id,requester_id,invite_id,title,amount,evidence_path) VALUES ($1,$2,$3,'Books',500,$4) RETURNING id", [U.O, U.KID, i.id, evidence]));
       const kidSeesOwner = (await q(db, "SELECT 1 FROM public.expenses WHERE employee_id=$1", [U.O])).length + (await q(db, "SELECT 1 FROM public.documents")).length;
       await q(db, "SELECT set_config('test.uid',$1,false)", [U.O]);
       const ownerEvidence = (await objectsVisible(db, [evidence])).length;
       await q(db, "SELECT public.decide_family_request($1,'approved','ok')", [req.id]);
       await q(db, "SELECT set_config('test.uid',$1,false)", [U.KID]);
-      const status = (await q<{ status: string }>(db, "SELECT status FROM public.family_requests"))[0].status;
+      const status = first(await q<{ status: string }>(db, "SELECT status FROM public.family_requests")).status;
       return { kidSeesOwner, ownerEvidence, status };
     });
     expect(r).toEqual({ ok: true, value: { kidSeesOwner: 0, ownerEvidence: 1, status: "approved" } });
@@ -370,7 +372,7 @@ async function seedAllTables(db: Db, owners: string[]) {
   const cols = await q<{ t: string; n: string; u: string; ty: string; nn: boolean; d: string | null }>(db,
     "SELECT table_name t, column_name n, udt_name u, data_type ty, is_nullable='NO' nn, column_default d FROM information_schema.columns WHERE table_schema='public' ORDER BY table_name, ordinal_position");
   const checks = await q<{ t: string; d: string }>(db, "SELECT conrelid::regclass::text t, pg_get_constraintdef(oid) d FROM pg_constraint WHERE contype='c' AND connamespace='public'::regnamespace");
-  const enumFirst = async (u: string) => (await q<{ v: string }>(db, `SELECT (enum_range(NULL::public.${u}))[1]::text v`))[0].v;
+  const enumFirst = async (u: string) => first(await q<{ v: string }>(db, `SELECT (enum_range(NULL::public.${u}))[1]::text v`)).v;
   const failed: string[] = [];
   await db.exec("SET session_replication_role = replica");
   try {
@@ -382,7 +384,7 @@ async function seedAllTables(db: Db, owners: string[]) {
         if (!own && (c.d !== null || !c.nn)) continue;
         const m = ck.match(new RegExp(`\\(?${c.n}\\)?(?:::text)? = ANY \\(\\(?ARRAY\\[([^\\]]+)\\]`)) ?? ck.match(new RegExp(`${c.n}(?:::text)? IN \\(([^)]+)\\)`));
         let v: string | null = null;
-        if (m) v = `'${m[1].split(",")[0].trim().replace(/::text.*/, "").replace(/^'+|'+$/g, "")}'`;
+        if (m) v = `'${(m[1] ?? "").split(",")[0]?.trim().replace(/::text.*/, "").replace(/^'+|'+$/g, "") ?? ""}'`;
         else if (c.u === "uuid") v = own ? `'${owner}'` : "gen_random_uuid()";
         else if (c.u === "text" || c.u === "varchar") v = /path$/.test(c.n) ? `'${owner}/seed/${t}.pdf'` : /email/.test(c.n) ? `'seed${oi}@${t.replace(/_/g, "")}.in'` : c.n === "month" ? "'2026-04'" : `'${t}-${c.n}-${oi}'`;
         else if (/^(int|numeric|float)/.test(c.u)) v = String(oi + 1);
@@ -395,7 +397,7 @@ async function seedAllTables(db: Db, owners: string[]) {
         if (v === null) continue;
         names.push(`"${c.n}"`); vals.push(v);
       }
-      if (t === "entity_members") { names.splice(0, names.length, '"owner_id"', '"entity_id"', '"member_id"', '"member_email"'); vals.splice(0, vals.length, `'${owner}'`, "'seed'", `'${owners[(oi + 1) % owners.length]}'`, `'${EMAIL[owners[(oi + 1) % owners.length]] ?? "seed@x.in"}'`); }
+      if (t === "entity_members") { names.splice(0, names.length, '"owner_id"', '"entity_id"', '"member_id"', '"member_email"'); vals.splice(0, vals.length, `'${owner}'`, "'seed'", `'${first(owners.slice((oi + 1) % owners.length))}'`, `'${EMAIL[first(owners.slice((oi + 1) % owners.length))] ?? "seed@x.in"}'`); }
       try { await db.exec(`INSERT INTO public.${t}(${names.join(",")}) VALUES (${vals.join(",")})`); }
       catch (e) { failed.push(`${t}: ${(e as Error).message}`); }
     }
@@ -407,7 +409,7 @@ async function dataSnapshot(db: Db, tables: string[]) {
   await actAs(db, null);
   const out: Record<string, string> = {};
   for (const t of [...tables.map((x) => `public.${x}`), "storage.objects", "auth.users"]) {
-    const [r] = await q<{ n: number; h: string }>(db, `SELECT count(*)::int n, md5(coalesce(string_agg(x::text, '|' ORDER BY x::text), '')) h FROM ${t} x`);
+    const r = first(await q<{ n: number; h: string }>(db, `SELECT count(*)::int n, md5(coalesce(string_agg(x::text, '|' ORDER BY x::text), '')) h FROM ${t} x`));
     out[t] = `${r.n}:${r.h}`;
   }
   return out;
@@ -453,7 +455,7 @@ describe("data preservation and exact rollback", () => {
     expect(await dataSnapshot(db, tables)).toEqual(D0);
     const backfilled = await q<{ n: number }>(db, "SELECT count(*)::int n FROM public.access_grants WHERE source='entity_members'");
     const members = await q<{ n: number }>(db, "SELECT count(*)::int n FROM public.entity_members");
-    expect(backfilled[0].n).toBe(members[0].n);
+    expect(first(backfilled).n).toBe(first(members).n);
     // P1 rollback refuses to run while P2 is installed
     await expect(db.exec(readSql(P1_RB))).rejects.toThrow(/Roll back P2/);
     await db.exec("ROLLBACK").catch(() => undefined);
@@ -464,7 +466,7 @@ describe("data preservation and exact rollback", () => {
     expect(await dataSnapshot(db, tables)).toEqual(D0);
     // P2 history is archived, not lost
     const archived = await q<{ n: number }>(db, "SELECT count(*)::int n FROM pg_tables WHERE schemaname='security_rollback_archive'");
-    expect(archived[0].n).toBe(3);
+    expect(first(archived).n).toBe(3);
     // and the package can be re-applied after a rollback
     await db.exec(readSql(P1)); await db.exec(readSql(P2));
     expect(await dataSnapshot(db, tables)).toEqual(D0);
@@ -475,7 +477,7 @@ describe("erasure coverage (delete_my_finance_data)", () => {
   const KEPT = new Set(["profiles", "user_roles", "app_admins", "role_permission_audit", "expense_history", "demo_sessions", "device_passkeys", "passkey_challenges"]);
   async function erase(files: string[]) {
     const db = await fullSchemaDb(files);
-    await addUsers(db, { [U.O]: EMAIL[U.O], [U.V]: EMAIL[U.V] });
+    await addUsers(db, { [U.O]: email(U.O), [U.V]: email(U.V) });
     const { tables, failed } = await seedAllTables(db, [U.O, U.V]);
     expect(failed.filter((f) => !/duplicate key/.test(f))).toEqual([]);
     const ownerCols = await q<{ t: string; c: string }>(db, `SELECT table_name t, column_name c FROM information_schema.columns
@@ -484,7 +486,7 @@ describe("erasure coverage (delete_my_finance_data)", () => {
       const res: Record<string, number> = {};
       for (const t of tables) {
         const cs = ownerCols.filter((x) => x.t === t).map((x) => x.c);
-        if (cs.length) res[t] = (await q<{ n: number }>(db, `SELECT count(*)::int n FROM public.${t} WHERE ${cs.map((c) => `${c}=$1`).join(" OR ")}`, [u]))[0].n;
+        if (cs.length) res[t] = first(await q<{ n: number }>(db, `SELECT count(*)::int n FROM public.${t} WHERE ${cs.map((c) => `${c}=$1`).join(" OR ")}`, [u])).n;
       }
       return res;
     };
@@ -511,7 +513,7 @@ describe("erasure coverage (delete_my_finance_data)", () => {
 
   it("P1 keeps the delete_my_finance_data contract (no args, void, definer, authenticated only)", async () => {
     const db = await fullSchemaDb([P1]);
-    const [f] = await q<{ args: string; ret: string; def: boolean; acl: string }>(db, `SELECT pg_get_function_identity_arguments(p.oid) args, p.prorettype::regtype::text ret, p.prosecdef def, array_to_string(p.proacl, ',') acl FROM pg_proc p WHERE p.oid='public.delete_my_finance_data'::regproc`);
+    const f = first(await q<{ args: string; ret: string; def: boolean; acl: string }>(db, `SELECT pg_get_function_identity_arguments(p.oid) args, p.prorettype::regtype::text ret, p.prosecdef def, array_to_string(p.proacl, ',') acl FROM pg_proc p WHERE p.oid='public.delete_my_finance_data'::regproc`));
     expect(f).toMatchObject({ args: "", ret: "void", def: true });
     expect(f.acl).not.toMatch(/(^|,)=X|anon=/);
     expect(await attempt(db, null, () => q(db, "SELECT public.delete_my_finance_data()"), { role: "anon" })).toMatchObject({ ok: false });
@@ -551,6 +553,8 @@ const MATRIX: Record<string, readonly string[]> = {
   authorised_reviewer: ["view", "approve", "export"],
   administrator: ["manage_access"],
 };
+/** Expected permissions for a role; fails loudly for a role missing from the matrix. */
+const matrix = (role: string): readonly string[] => { const m = MATRIX[role]; if (!m) throw new Error(`No expected permissions for ${role}`); return m; };
 
 describe("P2 V3.1 scoped grants", () => {
   let db: Db;
@@ -567,7 +571,7 @@ describe("P2 V3.1 scoped grants", () => {
     await addUsers(db, { [id(200)]: "idn@pro.in", [id(201)]: "other@pro.in", [id(203)]: "exp@pro.in", [id(204)]: "scope@pro.in" });
     await q(db, "INSERT INTO auth.users(id,email) VALUES ($1,'idn2@pro.in')", [id(202)]); // unconfirmed
     for (const [i, r] of roles.entries()) {
-      const [g] = await as(db, U.O, () => q<{ g: string }>(db, "SELECT public.invite_access($1,NULL,$2,$3,NULL) g", [U.O, `${r}@pro.in`, r]));
+      const g = first(await as(db, U.O, () => q<{ g: string }>(db, "SELECT public.invite_access($1,NULL,$2,$3,NULL) g", [U.O, `${r}@pro.in`, r])));
       await as(db, roleUser(i), () => q(db, "SELECT public.accept_access($1)", [g!.g]));
     }
   }, T);
@@ -583,14 +587,14 @@ describe("P2 V3.1 scoped grants", () => {
 
   it("has_permission follows the matrix for every role; owner has all; strangers none", async () => {
     expect(await perms(U.O, U.O, "c1")).toEqual([...ACTIONS]);
-    for (const [i, role] of Object.keys(MATRIX).filter((r) => r !== "owner").entries()) expect(await perms(roleUser(i), U.O, "c1"), role).toEqual([...MATRIX[role]]);
+    for (const [i, role] of Object.keys(MATRIX).filter((r) => r !== "owner").entries()) expect(await perms(roleUser(i), U.O, "c1"), role).toEqual([...matrix(role)]);
     expect(await perms(U.X, U.O, "c1")).toEqual([]);
     expect(await perms(roleUser(0), U.V, null)).toEqual([]); // grant is per workspace owner
     expect((await attempt(db, null, () => q(db, "SELECT public.has_permission($1,'c1','view')", [U.O]), { role: "anon" })).ok).toBe(false);
   }, T);
 
   it("entity scope: a company grant never reaches another company or personal (no-entity) records", async () => {
-    const [g] = await as(db, U.O, () => q<{ g: string }>(db, "SELECT public.invite_access($1,'c1','scope@pro.in','accountant',NULL) g", [U.O]));
+    const g = first(await as(db, U.O, () => q<{ g: string }>(db, "SELECT public.invite_access($1,'c1','scope@pro.in','accountant',NULL) g", [U.O])));
     await as(db, id(204), () => q(db, "SELECT public.accept_access($1)", [g!.g]));
     expect(await perms(id(204), U.O, "c1")).toEqual([...MATRIX["accountant"]!]);
     expect(await perms(id(204), U.O, "c2")).toEqual([]);
@@ -598,7 +602,7 @@ describe("P2 V3.1 scoped grants", () => {
   }, T);
 
   it("revocation and expiry take effect on the very next statement", async () => {
-    const [g] = await as(db, U.O, () => q<{ g: string }>(db, "SELECT public.invite_access($1,NULL,'exp@pro.in','auditor',now() + interval '1 day') g", [U.O]));
+    const g = first(await as(db, U.O, () => q<{ g: string }>(db, "SELECT public.invite_access($1,NULL,'exp@pro.in','auditor',now() + interval '1 day') g", [U.O])));
     await as(db, id(203), () => q(db, "SELECT public.accept_access($1)", [g!.g]));
     expect(await perms(id(203), U.O, "c1")).toEqual(["view", "export"]);
     await q(db, "UPDATE public.access_grants SET created_at=now()-interval '2 days', expires_at=now()-interval '1 second' WHERE id=$1", [g!.g]);
@@ -608,7 +612,7 @@ describe("P2 V3.1 scoped grants", () => {
     const same = await attempt(db, U.O, async () => {
       await q(db, "SELECT public.revoke_access($1)", [g!.g]);
       await q(db, "SELECT set_config('test.uid',$1,false)", [id(203)]);
-      return (await q<{ ok: boolean }>(db, "SELECT public.has_permission($1,'c1','view') ok", [U.O]))[0].ok;
+      return first(await q<{ ok: boolean }>(db, "SELECT public.has_permission($1,'c1','view') ok", [U.O])).ok;
     });
     expect(same).toEqual({ ok: true, value: false });
     await as(db, id(203), () => q(db, "SELECT public.revoke_access($1)", [g!.g])); // grantee may leave
@@ -620,7 +624,7 @@ describe("P2 V3.1 scoped grants", () => {
   }, T);
 
   it("acceptance requires the signed-in account's confirmed email to match the invite", async () => {
-    const [g] = await as(db, U.O, () => q<{ g: string }>(db, "SELECT public.invite_access($1,'c1','IDN@pro.in ','bookkeeper',NULL) g", [U.O]));
+    const g = first(await as(db, U.O, () => q<{ g: string }>(db, "SELECT public.invite_access($1,'c1','IDN@pro.in ','bookkeeper',NULL) g", [U.O])));
     expect((await attempt(db, id(201), () => q(db, "SELECT public.accept_access($1)", [g!.g]))).ok).toBe(false); // other email
     await q(db, "UPDATE auth.users SET email='idn@pro.in' WHERE id=$1", [id(202)]); // same address, unconfirmed account
     expect((await attempt(db, id(202), () => q(db, "SELECT public.accept_access($1)", [g!.g]))).ok).toBe(false);
@@ -632,7 +636,7 @@ describe("P2 V3.1 scoped grants", () => {
     await as(db, id(200), () => q(db, "SELECT public.accept_access($1)", [g!.g]));
     await as(db, id(200), () => q(db, "SELECT public.accept_access($1)", [g!.g])); // idempotent
     expect(await perms(id(200), U.O, "c1")).toEqual([...MATRIX["bookkeeper"]!]);
-    const [row] = await q<{ identity_check: string; grantee_id: string }>(db, "SELECT identity_check, grantee_id FROM public.access_grants WHERE id=$1", [g!.g]);
+    const row = first(await q<{ identity_check: string; grantee_id: string }>(db, "SELECT identity_check, grantee_id FROM public.access_grants WHERE id=$1", [g!.g]));
     expect(row).toEqual({ identity_check: "confirmed_email_match", grantee_id: id(200) });
   }, T);
 
@@ -668,7 +672,7 @@ describe("P2 V3.1 scoped grants", () => {
   }, T);
 
   it("transition sync: grant_entity_access / revoke_entity_access are mirrored immediately", async () => {
-    const [x] = await as(db, U.O, () => q<{ g: string }>(db, "SELECT public.grant_entity_access('c2',$1,true) g", [EMAIL[U.KID]]));
+    const x = first(await as(db, U.O, () => q<{ g: string }>(db, "SELECT public.grant_entity_access('c2',$1,true) g", [EMAIL[U.KID]])));
     expect(await perms(U.KID, U.O, "c2")).toEqual([...MATRIX["bookkeeper"]!]);
     await as(db, U.O, () => q(db, "SELECT public.grant_entity_access('c2',$1,false)", [EMAIL[U.KID]]));
     expect(await perms(U.KID, U.O, "c2")).toEqual([...MATRIX["auditor"]!]);

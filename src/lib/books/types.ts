@@ -197,7 +197,9 @@ export function emptyBooks(): BooksData {
   return { closedPeriods: [], periodLog: [], docLinks: [], proposedFields: [], retentionYears: {}, fyRecords: [], properties: [], leases: [], propertyCosts: [], assetEvents: [], journals: [], holdings: [], quotes: [], snapshots: [], alerts: { ...DEFAULT_ALERTS }, taxProfiles: [], gstInvoices: [], gstFilings: [], rules: [] };
 }
 
-const arr = <T,>(v: unknown, ok: (x: any) => boolean, max: number): T[] => (Array.isArray(v) ? (v.filter((x) => x && typeof x === "object" && ok(x)) as T[]).slice(-max) : []);
+// Screens see only records they can read. Nothing is capped by count: history is never truncated (V4 FND-05).
+// Unreadable records stay in storage (preserve-records.ts keeps them on save and lists them for review).
+const arr = <T,>(v: unknown, ok: (x: any) => boolean): T[] => (Array.isArray(v) ? (v.filter((x) => x && typeof x === "object" && ok(x)) as T[]) : []);
 const isDate = (v: unknown) => typeof v === "string" && /^\d{4}-\d{2}-\d{2}$/.test(v);
 const fin = (v: unknown) => typeof v === "number" && Number.isFinite(v);
 
@@ -207,40 +209,40 @@ export function cleanBooks(raw: unknown): BooksData {
   const d = emptyBooks();
   return {
     priceOverrides: cleanOverrides(r['priceOverrides']),
-    loanBalances: arr<import('./loan-balances').LoanBalanceEvidence>(r['loanBalances'], (x) => typeof x.id === 'string' && typeof x.loanId === 'string' && fin(x.amount) && x.amount >= 0 && isDate(x.asOf) && typeof x.docId === 'string' && typeof x.sourceQuote === 'string' && typeof x.confirmedAt === 'string', 2000),
-    closedPeriods: arr<ClosedPeriod>(r["closedPeriods"], (x) => typeof x.id === "string" && isDate(x.from) && isDate(x.to) && x.from <= x.to, 200),
-    periodLog: arr<PeriodEvent>(r["periodLog"], (x) => typeof x.periodId === "string" && (x.action === "closed" || x.action === "reopened"), 500),
-    docLinks: arr<DocLink>(r["docLinks"], (x) => typeof x.docId === "string" && typeof x.targetId === "string" && typeof x.kind === "string", 3000),
-    proposedFields: arr<ProposedField>(r["proposedFields"], (x) => typeof x.label === "string", 300),
+    loanBalances: arr<import('./loan-balances').LoanBalanceEvidence>(r['loanBalances'], (x) => typeof x.id === 'string' && typeof x.loanId === 'string' && fin(x.amount) && x.amount >= 0 && isDate(x.asOf) && typeof x.docId === 'string' && typeof x.sourceQuote === 'string' && typeof x.confirmedAt === 'string'),
+    closedPeriods: arr<ClosedPeriod>(r["closedPeriods"], (x) => typeof x.id === "string" && isDate(x.from) && isDate(x.to) && x.from <= x.to),
+    periodLog: arr<PeriodEvent>(r["periodLog"], (x) => typeof x.periodId === "string" && (x.action === "closed" || x.action === "reopened")),
+    docLinks: arr<DocLink>(r["docLinks"], (x) => typeof x.docId === "string" && typeof x.targetId === "string" && typeof x.kind === "string"),
+    proposedFields: arr<ProposedField>(r["proposedFields"], (x) => typeof x.label === "string"),
     retentionYears: r["retentionYears"] && typeof r["retentionYears"] === "object" ? Object.fromEntries(Object.entries(r["retentionYears"] as object).filter(([, v]) => fin(v) && v >= 0 && v <= 100)) : {},
-    fyRecords: arr<FyRecord>(r["fyRecords"], (x) => typeof x.id === "string" && typeof x.fy === "string", 200).map((x) => ({ ...x, audited: x.audited ?? {}, schedules: x.schedules ?? [], qualifications: x.qualifications ?? [], filedReturns: x.filedReturns ?? [], lossesCarriedForward: x.lossesCarriedForward ?? [], docIds: x.docIds ?? [] })),
-    properties: arr<Property>(r["properties"], (x) => typeof x.id === "string" && typeof x.name === "string", 200).map((x) => ({ ...x, address: x.address ?? "", buildings: Array.isArray(x.buildings) ? x.buildings : [], docIds: x.docIds ?? [] })),
-    leases: arr<Lease>(r["leases"], (x) => typeof x.id === "string" && isDate(x.start) && isDate(x.end) && fin(x.rent), 500),
-    propertyCosts: arr<PropertyCost>(r["propertyCosts"], (x) => typeof x.id === "string" && isDate(x.date) && fin(x.amount), 3000),
-    assetEvents: arr<AssetEvent>(r["assetEvents"], (x) => typeof x.id === "string" && isDate(x.date), 3000),
-    journals: arr<Journal>(r["journals"], (x) => typeof x.id === "string" && fin(x.amount), 5000),
-    holdings: arr<Holding>(r["holdings"], (x) => typeof x.id === "string" && fin(x.quantity), 500).map((x) => ({ ...x, sharePct: fin(x.sharePct) ? Math.min(100, Math.max(0, x.sharePct)) : 100, source: x.source ?? "entered by you" })),
-    quotes: arr<Quote>(r["quotes"], (x) => typeof x.key === "string" && fin(x.price) && x.price > 0, 1000),
-    snapshots: arr<Snapshot>(r["snapshots"], (x) => isDate(x.date) && fin(x.netWorth), 1500),
+    fyRecords: arr<FyRecord>(r["fyRecords"], (x) => typeof x.id === "string" && typeof x.fy === "string").map((x) => ({ ...x, audited: x.audited ?? {}, schedules: x.schedules ?? [], qualifications: x.qualifications ?? [], filedReturns: x.filedReturns ?? [], lossesCarriedForward: x.lossesCarriedForward ?? [], docIds: x.docIds ?? [] })),
+    properties: arr<Property>(r["properties"], (x) => typeof x.id === "string" && typeof x.name === "string").map((x) => ({ ...x, address: x.address ?? "", buildings: Array.isArray(x.buildings) ? x.buildings : [], docIds: x.docIds ?? [] })),
+    leases: arr<Lease>(r["leases"], (x) => typeof x.id === "string" && isDate(x.start) && isDate(x.end) && fin(x.rent)),
+    propertyCosts: arr<PropertyCost>(r["propertyCosts"], (x) => typeof x.id === "string" && isDate(x.date) && fin(x.amount)),
+    assetEvents: arr<AssetEvent>(r["assetEvents"], (x) => typeof x.id === "string" && isDate(x.date)),
+    journals: arr<Journal>(r["journals"], (x) => typeof x.id === "string" && fin(x.amount)),
+    holdings: arr<Holding>(r["holdings"], (x) => typeof x.id === "string" && fin(x.quantity)).map((x) => ({ ...x, sharePct: fin(x.sharePct) ? Math.min(100, Math.max(0, x.sharePct)) : 100, source: x.source ?? "entered by you" })),
+    quotes: arr<Quote>(r["quotes"], (x) => typeof x.key === "string" && fin(x.price) && x.price > 0),
+    snapshots: arr<Snapshot>(r["snapshots"], (x) => isDate(x.date) && fin(x.netWorth)),
     alerts: { ...d.alerts, ...(r["alerts"] && typeof r["alerts"] === "object" ? (r["alerts"] as AlertSettings) : {}) },
     ...(r["goldRate"] && fin((r["goldRate"] as GoldRate).perGram24k) ? { goldRate: r["goldRate"] as GoldRate } : {}),
-    fxRates: arr<FxRate>(r["fxRates"], (x) => typeof x.from === "string" && /^[A-Z]{3}$/.test(x.from) && x.from !== "INR" && fin(x.rate) && x.rate > 0 && isDate(x.date) && typeof x.source === "string", 200),
-    taxProfiles: arr<TaxProfile>(r["taxProfiles"], (x) => typeof x.entityId === "string", 100),
-    gstInvoices: arr<GstInvoice>(r["gstInvoices"], (x) => typeof x.id === "string" && isDate(x.date) && fin(x.taxable), 10000),
-    gstAdvances: arr<import('./gst-special').GstAdvance>(r['gstAdvances'],x=>typeof x.id==='string'&&typeof x.gstin==='string'&&isDate(x.date)&&fin(x.taxable)&&Array.isArray(x.adjustments),2000),
-    gstFilings: arr<GstFiling>(r["gstFilings"], (x) => typeof x.id === "string", 2000),
-    rules: arr<RuleVersion>(r["rules"], (x) => typeof x.id === "string" && isDate(x.effectiveFrom), 1000),
+    fxRates: arr<FxRate>(r["fxRates"], (x) => typeof x.from === "string" && /^[A-Z]{3}$/.test(x.from) && x.from !== "INR" && fin(x.rate) && x.rate > 0 && isDate(x.date) && typeof x.source === "string"),
+    taxProfiles: arr<TaxProfile>(r["taxProfiles"], (x) => typeof x.entityId === "string"),
+    gstInvoices: arr<GstInvoice>(r["gstInvoices"], (x) => typeof x.id === "string" && isDate(x.date) && fin(x.taxable)),
+    gstAdvances: arr<import('./gst-special').GstAdvance>(r['gstAdvances'],x=>typeof x.id==='string'&&typeof x.gstin==='string'&&isDate(x.date)&&fin(x.taxable)&&Array.isArray(x.adjustments)),
+    gstFilings: arr<GstFiling>(r["gstFilings"], (x) => typeof x.id === "string"),
+    rules: arr<RuleVersion>(r["rules"], (x) => typeof x.id === "string" && isDate(x.effectiveFrom)),
     policy: cleanPolicy(r["policy"]),
-    findings: arr<FindingState>(r["findings"], (x) => typeof x.key === "string" && ["open", "resolved", "accepted"].includes(x.status), 3000),
-    ruleDecisions: arr<{ changeId: string; status: "approved" | "dismissed"; at: string }>(r["ruleDecisions"], (x) => typeof x.changeId === "string", 1000),
+    findings: arr<FindingState>(r["findings"], (x) => typeof x.key === "string" && ["open", "resolved", "accepted"].includes(x.status)),
+    ruleDecisions: arr<{ changeId: string; status: "approved" | "dismissed"; at: string }>(r["ruleDecisions"], (x) => typeof x.changeId === "string"),
     entityAccounts: r["entityAccounts"] && typeof r["entityAccounts"] === "object" ? Object.fromEntries(Object.entries(r["entityAccounts"] as Record<string, unknown>).filter(([, v]) => Array.isArray(v)).map(([k, v]) => [k, (v as unknown[]).filter((s): s is string => typeof s === "string")])) : {},
     fieldMappings: r["fieldMappings"] && typeof r["fieldMappings"] === "object" ? Object.fromEntries(Object.entries(r["fieldMappings"] as Record<string, unknown>).filter(([, v]) => typeof v === "string")) as Record<string, string> : {},
-    salaryEvidence: arr<{ entityId: string; fy: string; amount: number; docId: string }>(r["salaryEvidence"], (x) => typeof x.entityId === "string" && typeof x.fy === "string" && fin(x.amount), 500),
-    entityTaxProfiles: arr<import("./entity-tax-profile").EntityTaxYear>(r["entityTaxProfiles"], (x) => typeof x.id === "string" && typeof x.entityId === "string" && /^\d{4}-\d{2}$/.test(String(x.fy)), 2000),
-    itrHandoffs: arr<import("./itr-handoff").HandoffRecord>(r["itrHandoffs"], (x) => typeof x.id === "string" && typeof x.docId === "string" && typeof x.fy === "string" && ["prepared", "sent", "questions", "filed"].includes(x.status), 500),
-    savedDrafts: arr<SavedDraft>(r["savedDrafts"], (x) => typeof x.id === "string" && typeof x.form === "string" && typeof x.period === "string", 500),
-    taxDeductions: arr<TaxDeduction>(r["taxDeductions"], (x) => typeof x.id === "string" && typeof x.entityId === "string" && typeof x.fy === "string" && fin(x.amount) && x.amount > 0 && typeof x.evidence === "string" && x.evidence.trim().length >= 3, 1000),
-    taxCredits: arr<TaxCredit>(r["taxCredits"], (x) => typeof x.id === "string" && typeof x.entityId === "string" && typeof x.fy === "string" && fin(x.amount) && x.amount > 0 && ["tds", "tcs", "advance", "self_assessment"].includes(x.kind), 2000),
+    salaryEvidence: arr<{ entityId: string; fy: string; amount: number; docId: string }>(r["salaryEvidence"], (x) => typeof x.entityId === "string" && typeof x.fy === "string" && fin(x.amount)),
+    entityTaxProfiles: arr<import("./entity-tax-profile").EntityTaxYear>(r["entityTaxProfiles"], (x) => typeof x.id === "string" && typeof x.entityId === "string" && /^\d{4}-\d{2}$/.test(String(x.fy))),
+    itrHandoffs: arr<import("./itr-handoff").HandoffRecord>(r["itrHandoffs"], (x) => typeof x.id === "string" && typeof x.docId === "string" && typeof x.fy === "string" && ["prepared", "sent", "questions", "filed"].includes(x.status)),
+    savedDrafts: arr<SavedDraft>(r["savedDrafts"], (x) => typeof x.id === "string" && typeof x.form === "string" && typeof x.period === "string"),
+    taxDeductions: arr<TaxDeduction>(r["taxDeductions"], (x) => typeof x.id === "string" && typeof x.entityId === "string" && typeof x.fy === "string" && fin(x.amount) && x.amount > 0 && typeof x.evidence === "string" && x.evidence.trim().length >= 3),
+    taxCredits: arr<TaxCredit>(r["taxCredits"], (x) => typeof x.id === "string" && typeof x.entityId === "string" && typeof x.fy === "string" && fin(x.amount) && x.amount > 0 && ["tds", "tcs", "advance", "self_assessment"].includes(x.kind)),
     allocationOrder: ["oldest", "largest", "smallest"].includes(String(r["allocationOrder"])) ? (r["allocationOrder"] as import("./recon").AllocationOrder) : undefined,
   };
 }

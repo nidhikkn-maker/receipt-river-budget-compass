@@ -23,6 +23,8 @@ import { ExpenseDialog } from '@/components/ExpenseDialog';
 import { DepreciationInboxCard } from '@/components/books/DepreciationInboxCard';
 import { CompanionReview } from '@/components/CompanionReview';
 import type { Expense } from '@/lib/expenses';
+import { UnreadableRecordsNotice } from "@/components/UnreadableRecordsNotice";
+
 
 export const Route = createFileRoute('/_authenticated/inbox')({
   validateSearch: (s: Record<string, unknown>): { section?: string; filter?: ReviewFilter } => typeof s['section'] === 'string' && ['statements','review','history'].includes(s['section']) ? { section: s['section'],...(typeof s['filter']==='string'&&s['filter'] in REVIEW_FILTERS?{filter:s['filter'] as ReviewFilter}:{}) } : {},
@@ -58,6 +60,7 @@ function Inbox() {
       : <Link to="/inbox" search={{ section: 'review', filter: f.filter }} className="cmp-row"><span className="min-w-0 flex-1"><b>{f.label}</b><small>{f.count} payments</small></span><ChevronRight /></Link>}
     </div>)}{counts.ready > 0 && <Link to="/inbox" search={{ section: 'review', filter: 'confirmable' }} className="cmp-row"><span className="min-w-0 flex-1"><b>{counts.ready} ready to confirm</b><small>Already filled in · nothing saves until you confirm</small></span><ChevronRight /></Link>}</div></section>}
     {rulesError && <p role="alert" className="text-sm text-warning">Your automatic sorting rules didn't load, so some suggestions may be missing. Your records are unaffected.<Button variant="ghost" size="sm" onClick={async () => { try { setRules(await listImportRules()); setRulesError(false); } catch { setRulesError(true); } }}>Retry rules</Button></p>}
+    <UnreadableRecordsNotice />
     <section aria-label="Other things" className="cmp-section"><h2 className="cmp-section-title">Other things</h2><div className="cmp-panel !p-1.5">
       {reminderGroups.map(g => <details key={g.label} className="cmp-fold"><summary className="cmp-row"><span className="min-w-0 flex-1"><b>{g.label}</b><small>{g.items.length} reminder{g.items.length === 1 ? '' : 's'}</small></span><ChevronRight /></summary><ul className="cmp-fold-body">{g.items.map(i => <li key={i.key} className="flex items-center justify-between gap-3 py-2.5"><div className="min-w-0"><p className="truncate text-sm font-medium">{i.title}</p>{i.description && i.description !== i.title && <p className="line-clamp-2 text-xs text-muted-foreground">{i.description}</p>}</div><div className="flex shrink-0 items-center gap-2">{i.amount != null && <span className="tabular-nums text-sm">{money(i.amount)}</span>}{(i.destination || i.commitmentId) && <Button asChild size="sm" variant="outline"><Link to={i.destination || '/plan'}>Open</Link></Button>}</div></li>)}</ul></details>)}
       <details className="cmp-fold"><summary className="cmp-row"><span className="min-w-0 flex-1"><b>Drafts, imports & reports</b><small>Unfinished work and recent reports</small></span><ChevronRight /></summary><div className="cmp-fold-body"><InboxWork /></div></details>

@@ -110,6 +110,6 @@ export function cleanEntities(raw: unknown): EntityProfile[] {
       ...(Array.isArray(x.activities) ? { activities: x.activities.filter((q) => typeof q === "string").slice(0, 20) } : {}),
       ...(typeof x.fyEnd === "string" && /^\d{2}-\d{2}$/.test(x.fyEnd) ? { fyEnd: x.fyEnd } : {}),
       ...(Array.isArray(x.related) ? { related: x.related.filter((q) => q && typeof q.name === "string").slice(0, 30).map((q) => ({ name: String(q.name).slice(0, 160), relation: String(q.relation ?? "").slice(0, 60), pan: typeof q.pan === "string" ? q.pan : null, cin: typeof q.cin === "string" ? q.cin : null })) } : {}),
-      ...(Array.isArray(x.verified) ? { verified: x.verified.filter((q) => typeof q === "string").slice(0, 40) } : {}) }))
-    .slice(0, 50);
+      ...(Array.isArray(x.verified) ? { verified: x.verified.filter((q) => typeof q === "string").slice(0, 40) } : {}) }));
+  // No count cap: every stored company stays visible. Display tidying above never reaches storage (preserve-records.ts).
 }

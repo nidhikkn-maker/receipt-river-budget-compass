@@ -25,6 +25,8 @@ import { useStore } from "@/lib/store";
 import { BACKUP_TABLES, createBackupZip, prepareRestore, readBackup, type Backup } from "@/lib/backup";
 import { downloadBlob } from "@/lib/reports";
 import type { Json } from "@/integrations/supabase/types";
+import { UnreadableRecordsNotice } from "@/components/UnreadableRecordsNotice";
+
 
 export const Route = createFileRoute("/_authenticated/settings")({
   head: () => ({
@@ -150,7 +152,7 @@ function Settings() {
       <Fold id="notifications" title="Notifications" hint="Phone alerts, reminder types and advance timing"><PushSettings /></Fold>
       <Fold id="speed" title="Speed check" hint="How fast main pages open on this device"><SpeedCheck /></Fold>
       <Fold id="problems" title="Problem reports" hint="Things you flagged in the receipt viewer"><ReceiptProblemReports /></Fold>
-      <Fold id="data" title="Data, backups & reports" hint="Back up, restore, export or delete"><div className="grid gap-3 sm:grid-cols-2">
+      <Fold id="data" title="Data, backups & reports" hint="Back up, restore, export or delete"><UnreadableRecordsNotice /><div className="grid gap-3 sm:grid-cols-2">
         <Card title="Back up everything" body="Accounts, entries, budgets, valuations, family and original receipt and document files.">
           <Button onClick={backup} disabled={busy}><Download className="h-4 w-4" />Download backup</Button>
         </Card>

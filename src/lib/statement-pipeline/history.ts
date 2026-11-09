@@ -8,13 +8,16 @@ export interface UploadHistoryApi {
 /** Confirmed progress is monotone. A late partial checkpoint cannot erase a later completion. */
 export function mergeUploadHistory(data: FinancePreferences, next: StatementUpload): FinancePreferences {
   const history = data.statementUploads ?? [];
-  const previous = history.find(u => u.id === next.id);
+  const previous = cleanStatementUploads(history.filter(u => u && typeof u === 'object' && (u as { id?: unknown }).id === next.id))[0];
   // Terminal markers survive late checkpoints from another device.
   if (previous?.status === 'undone') return data;
-  if (next.status === 'undone') return { ...data, statementUploads: cleanStatementUploads([
-    { id: next.id, at: next.at, label: next.label, status: 'undone', posted: [], reconciled: [], createdAccounts: [] },
-    ...history.filter(u => u.id !== next.id),
-  ]) };
+  // Only the upload being written is tidied; every other stored upload (including any the app cannot read) is kept
+  // exactly as stored, so a checkpoint can never drop or shorten older history (V4 FND-05).
+  const others = history.filter(u => !(u && typeof u === 'object' && (u as { id?: unknown }).id === next.id));
+  if (next.status === 'undone') return { ...data, statementUploads: [
+    ...cleanStatementUploads([{ id: next.id, at: next.at, label: next.label, status: 'undone', posted: [], reconciled: [], createdAccounts: [] }]),
+    ...others,
+  ] };
   const unique = <T,>(items: T[], key: (item: T) => string): T[] => [...new Map(items.map(item => [key(item), item])).values()];
   const merged: StatementUpload = previous ? {
     ...previous, ...next,
@@ -33,7 +36,7 @@ export function mergeUploadHistory(data: FinancePreferences, next: StatementUplo
       return n && p.ref === null && n.ref !== null && n.revision === p.revision + 1 && next.evidence?.some(e => e.id === n.id && e.ref === n.ref) ? n : p;
     }),
   } : next;
-  return { ...data, statementUploads: cleanStatementUploads([merged, ...history.filter(u => u.id !== next.id)]) };
+  return { ...data, statementUploads: [...cleanStatementUploads([merged]), ...others] };
 }
 
 /** Fresh owner read + existing revision-checked RPC. Retry conflicts/lost responses from a fresh read.

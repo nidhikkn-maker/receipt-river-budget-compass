@@ -14,7 +14,7 @@ export const Route = createFileRoute("/api/public/jobs/monthly-depreciation")({
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { cleanAssets } = await import("@/lib/assets");
     const { cleanBooks } = await import("@/lib/books/types");
-    const { scheduledRun } = await import("@/lib/books/assets-ledger");
+    const { scheduledRun, withPreparedJournals } = await import("@/lib/books/assets-ledger");
     const today = new Date().toISOString().slice(0, 10);
     const ready: string[] = [];
     let owners = 0, prepared = 0, conflicts = 0;
@@ -28,7 +28,10 @@ export const Route = createFileRoute("/api/public/jobs/monthly-depreciation")({
         const books = cleanBooks(raw["books"]);
         const run = await scheduledRun(assets, books.journals, books.closedPeriods, today);
         if (!run.added.length) continue;
-        const next = { ...raw, books: { ...((raw["books"] as object | undefined) ?? {}), journals: run.journals } };
+        // Append to the stored journals; never write back the cleaned view (which hides unreadable records).
+        const storedBooks = withPreparedJournals(raw["books"], run.added);
+        if (!storedBooks) { conflicts++; continue; }
+        const next = { ...raw, books: storedBooks };
         // Revision check: if the owner saved in the meantime, skip — the page or next run prepares it.
         const upd = await supabaseAdmin.from("finance_preferences").update({ data: next as never, updated_at: new Date().toISOString() }).eq("owner_id", row.owner_id).eq("updated_at", row.updated_at).select("owner_id");
         if (upd.error || !upd.data?.length) { conflicts++; continue; }

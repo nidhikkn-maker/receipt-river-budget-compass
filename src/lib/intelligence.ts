@@ -198,9 +198,9 @@ export function milestoneProgress(m: Milestone, x: Metrics, today: string) {
   const onTrack = m.targetDate ? (eta ? eta <= m.targetDate : false) : null;
   return { value, start, pct, remaining, done, eta, onTrack };
 }
-/** Add today's value to history (one point per day, latest 120). */
+/** Add today's value to history (one point per day; history is never capped, V4 FND-05). */
 export function recordProgress(m: Milestone, value: number, today: string): Milestone {
-  const history = [...m.history.filter((p) => p.date !== today), { date: today, value: r2(value) }].sort((a, b) => a.date.localeCompare(b.date)).slice(-120);
+  const history = [...m.history.filter((p) => p.date !== today), { date: today, value: r2(value) }].sort((a, b) => a.date.localeCompare(b.date));
   return { ...m, history };
 }
 

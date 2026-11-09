@@ -216,7 +216,8 @@ export function unmappedFields(labels: string[], docType: DocType, known: Propos
     if (at >= 0) out[at] = { ...out[at]!, seen: out[at]!.seen + 1 };
     else out.push({ label, docType, seen: 1, status: "proposed" });
   }
-  return out.slice(-300);
+  // Proposed fields are kept as data for approval [§15]; never dropped by count (V4 FND-05).
+  return out;
 }
 
 /**
