@@ -15,6 +15,12 @@ BEGIN
   IF to_regclass('security_p4.guarded_functions') IS NULL OR to_regclass('public.step_up_grants') IS NULL THEN
     RAISE EXCEPTION 'P4 is not installed';
   END IF;
+  IF to_regclass('public.legal_entities') IS NOT NULL OR to_regnamespace('phase2_p5') IS NOT NULL THEN
+    RAISE EXCEPTION 'Roll back P5 (P5_legal_entities_foundation.rollback.sql) before P4';
+  END IF;
+  IF to_regnamespace('phase2_p5b') IS NOT NULL THEN
+    RAISE EXCEPTION 'Roll back P5b (P5b_restore_investments.rollback.sql) before P4';
+  END IF;
 END $pre$;
 
 -- 1. Policies (exact names created by P4)
