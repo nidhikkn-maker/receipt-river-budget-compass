@@ -20,7 +20,7 @@ export async function renderReportPdf(r: ReportDoc, style: PdfStyle, generatedAt
   // Header block
   doc.setFillColor(...ink); doc.roundedRect(M, 12, 9, 9, 1.5, 1.5, "F");
   doc.setTextColor(255, 255, 255); doc.setFont("helvetica", "bold"); doc.setFontSize(10); doc.text("L", M + 3.1, 18.2);
-  doc.setTextColor(...ink); doc.setFontSize(11); doc.text("THAPAL", M + 12, 18.2);
+  doc.setTextColor(...ink); doc.setFontSize(11); doc.text("Thapal", M + 12, 18.2);
   doc.setDrawColor(...accent); doc.setLineWidth(0.6); doc.line(M, 24, W - M, 24);
   doc.setFontSize(18); textU(doc, r.title, M, 33);
   doc.setFont("helvetica", "normal"); doc.setFontSize(9); doc.setTextColor(70, 70, 70);
