@@ -17,9 +17,14 @@ import { verifyDevicePassword } from "@/lib/device-reauth";
 import { rememberDeviceUnlock } from "@/lib/device-unlock";
 import { PinPad } from "@/components/PinPad";
 import { hasMpin, verifyMpin } from "@/lib/mpin";
+import { GUEST_IDLE_NOTICE } from "@/lib/idle-policy";
+import { StepUpHost } from "@/components/StepUpHost";
 
 export const Route = createFileRoute("/auth")({
-  validateSearch: (s: Record<string, unknown>): { next?: string } => typeof s["next"] === "string" ? { next: s["next"] } : {},
+  validateSearch: (s: Record<string, unknown>): { next?: string; ended?: "guest-idle" } => ({
+    ...(typeof s["next"] === "string" ? { next: s["next"] } : {}),
+    ...(s["ended"] === "guest-idle" ? { ended: "guest-idle" as const } : {}),
+  }),
   head: () => ({ meta: [
     { title: "Sign in — Thapal" },
     { name: "description", content: "Securely access your Thapal financial account with sign-in and Face ID device unlock." },
@@ -31,7 +36,7 @@ export const Route = createFileRoute("/auth")({
 });
 function Auth() {
   const nav = useNavigate();
-  const rawNext = Route.useSearch().next;
+  const { next: rawNext, ended } = Route.useSearch();
   const next = rawNext ? oauthReturnPath(rawNext) : null;
   const go = async () => { if (next && next !== "/") { window.location.assign(next); return; } await nav({ to: "/dashboard" }); };
   const back = () => window.location.origin + "/auth" + (next && next !== "/" ? "?next=" + encodeURIComponent(next) : "");
@@ -54,6 +59,11 @@ function Auth() {
   const [mpinOn, setMpinOn] = useState(false);
   const [demoOpen, setDemoOpen] = useState(false);
   const [demoEmail, setDemoEmail] = useState("");
+  // Re-confirmation dialog for the post-sign-in Face ID offer only: mounted while that offer runs, for a
+  // session the server has just confirmed, and never while the remembered-account (locked) screen is shown.
+  const [stepUpOpen, setStepUpOpen] = useState(false);
+  const stepUpReady = useRef<(() => void) | null>(null);
+  const mountStepUp = () => signedEmail ? Promise.reject(new Error("locked screen")) : new Promise<void>((resolve) => { stepUpReady.current = resolve; setStepUpOpen(true); });
   useEffect(() => {
     let active = true;
     // Paint from the session saved on this device (no network wait), then let the server check correct it.
@@ -115,8 +125,10 @@ function Auth() {
     const id = (await supabase.auth.getUser()).data.user?.id;
     if (!id || localStorage.getItem(`ll-face-offer-${id}`)) return;
     if (!await confirmAction("Set up Face ID on this device? Next time Thapal opens with one scan — no password needed.")) { localStorage.setItem(`ll-face-offer-${id}`, "later"); return; }
-    try { await passkey("register"); localStorage.setItem(`ll-lock-${id}`, "1"); }
+    // Adding a passkey needs a fresh re-confirmation (passkey, password or emailed code; never the MPIN).
+    try { await mountStepUp(); await passkey("register"); localStorage.setItem(`ll-lock-${id}`, "1"); }
     catch { localStorage.setItem(`ll-face-offer-${id}`, "later"); }
+    finally { stepUpReady.current = null; setStepUpOpen(false); }
   };
   const submit = async (e: React.FormEvent) => {
     e.preventDefault(); setAuthError(""); setBusy(true);
@@ -168,8 +180,10 @@ function Auth() {
     finally { setBusy(false); }
   };
   return <AuthFrame creator>
+    {stepUpOpen && !signedEmail && <StepUpHost onReady={() => stepUpReady.current?.()} />}
     <h2 className="mb-2 text-2xl font-semibold">{signedEmail ? "Welcome back" : signup ? "Create your account" : "Welcome to Thapal"}</h2>
     <p className="mb-6 text-sm text-muted-foreground">{signedEmail ? "Continue with your remembered account." : signup ? "A clearer picture starts here." : "Sign in to your financial companion."}</p>
+    {ended === "guest-idle" && !signedEmail && !anonymous && <p role="status" className="mb-4 rounded-lg border p-3 text-sm text-muted-foreground">{GUEST_IDLE_NOTICE}</p>}
     {checking ? <p role="status" className="text-sm text-muted-foreground">Checking your account…</p> : signedEmail ? <>
       <div className="mb-5 flex items-center justify-center gap-3"><span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-primary text-sm font-semibold text-primary-foreground">{signedEmail[0]?.toUpperCase()}</span><span className="min-w-0 truncate text-sm">{signedEmail}</span></div>
       {mpinOn && !passwordMode ? <div className="grid gap-2">

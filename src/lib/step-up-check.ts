@@ -12,9 +12,16 @@ export function rpcUntyped(name: string, args?: Record<string, unknown>): Promis
   return Promise.resolve(call.call(supabase, name, args));
 }
 
-/** true/false from the database, or null when this database has no step-up support yet. */
-export async function hasRecentStepUp(): Promise<boolean | null> {
-  const r = await rpcUntyped("has_recent_step_up");
+/** The action an emailed code may confirm (besides passkey/password). Mirrors REGISTER_PASSKEY in step-up-server.ts. */
+export const REGISTER_PASSKEY_ACTION = "register_passkey";
+
+/**
+ * true/false from the database, or null when this database has no step-up support yet.
+ * Passkey registration asks has_recent_step_up_for, which also accepts an emailed-code grant; every other
+ * action asks has_recent_step_up (passkey/password grants only). Both are bound to this session.
+ */
+export async function hasRecentStepUp(action?: string): Promise<boolean | null> {
+  const r = action === REGISTER_PASSKEY_ACTION ? await rpcUntyped("has_recent_step_up_for", { _action: action }) : await rpcUntyped("has_recent_step_up");
   if (r.error) return isMissingFunction(r.error) ? null : false;
   return r.data === true;
 }
@@ -26,7 +33,7 @@ export async function hasRecentStepUp(): Promise<boolean | null> {
  */
 export async function ensureStepUp(action: string, opts: { always?: boolean; prompt?: StepUpPrompt } = {}): Promise<void> {
   let fresh: boolean | null;
-  try { fresh = await hasRecentStepUp(); } catch { fresh = false; }
+  try { fresh = await hasRecentStepUp(action); } catch { fresh = false; }
   if (fresh === true) return;
   if (fresh === null && !opts.always) return;
   if (!await (opts.prompt ?? requestStepUp)(action)) throw new StepUpCancelled();

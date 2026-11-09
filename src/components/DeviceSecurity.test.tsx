@@ -10,7 +10,7 @@ vi.mock("@/integrations/supabase/client", () => ({ supabase: {
   auth: { signOut: m.signOut },
   from: () => ({
     select: () => ({ eq: () => ({ order: async () => ({ data: m.rows, error: null }) }) }),
-    delete: () => ({ eq: (_c1: string, v1: string) => ({ eq: (_c2: string, v2: string) => m.del(v1, v2) }) }),
+    delete: () => ({ eq: (_c1: string, v1: string) => ({ eq: (_c2: string, v2: string) => ({ select: () => m.del(v1, v2) }) }) }),
   }),
 } }));
 import { AccountRecovery, PasskeyDevices, SignOutOtherDevices } from "./DeviceSecurity";
@@ -19,13 +19,13 @@ import { removePasskey, transportLabel } from "@/lib/passkey-devices";
 beforeEach(() => {
   for (const f of [m.rpc, m.del, m.signOut, m.confirm, m.ensure]) f.mockReset();
   m.confirm.mockResolvedValue(true); m.ensure.mockResolvedValue(undefined);
-  m.del.mockResolvedValue({ error: null }); m.signOut.mockResolvedValue({ error: null });
+  m.del.mockResolvedValue({ data: [{ credential_id: "a" }], error: null }); m.signOut.mockResolvedValue({ error: null });
 });
 afterEach(cleanup);
 
 it("lists this account's passkeys with created date, transports and last use when available", async () => {
   m.rows = [
-    { credential_id: "a", created_at: "2026-10-01T00:00:00Z", transports: ["internal", "hybrid"], last_used_at: "2026-11-08T00:00:00Z", id: "11111111-1111-1111-1111-111111111111" },
+    { credential_id: "a", created_at: "2026-10-01T00:00:00Z", transports: ["internal", "hybrid"], last_used_at: "2026-11-08T00:00:00Z" },
     { credential_id: "b", created_at: "2026-09-02T00:00:00Z", transports: [] },
   ];
   render(<PasskeyDevices />);
@@ -35,30 +35,44 @@ it("lists this account's passkeys with created date, transports and last use whe
   expect(screen.getAllByRole("button", { name: /Remove passkey/ })).toHaveLength(2);
 });
 
-it("removes a passkey through remove_device_passkey after step-up", async () => {
-  m.rows = [{ credential_id: "a", created_at: "2026-10-01T00:00:00Z", transports: ["internal"], id: "11111111-1111-1111-1111-111111111111" }];
+it("removes a passkey through remove_device_passkey(_credential_id) after step-up", async () => {
+  m.rows = [{ credential_id: "a", created_at: "2026-10-01T00:00:00Z", transports: ["internal"] }];
   m.rpc.mockResolvedValue({ data: null, error: null });
   render(<PasskeyDevices />);
   fireEvent.click(await screen.findByRole("button", { name: /Remove passkey/ }));
-  await waitFor(() => expect(m.rpc).toHaveBeenCalledWith("remove_device_passkey", { _id: "11111111-1111-1111-1111-111111111111" }));
+  await waitFor(() => expect(m.rpc).toHaveBeenCalledWith("remove_device_passkey", { _credential_id: "a" }));
   expect(m.ensure).toHaveBeenCalledWith("remove_device_passkey", { always: true });
   expect(m.del).not.toHaveBeenCalled();
 });
 
-it("falls back to the owner-only delete on a database without remove_device_passkey, still after re-confirmation", async () => {
-  m.rpc.mockResolvedValue({ data: null, error: { code: "PGRST202", message: "Could not find the function" } });
-  await removePasskey({ credential_id: "a", created_at: "", transports: [], id: "x" }, "owner");
+it("falls back to the owner-only delete only when remove_device_passkey is missing (today's schema), still after re-confirmation", async () => {
+  for (const missing of [{ code: "PGRST202", message: "Could not find the function" }, { code: "42883", message: "function public.remove_device_passkey(text) does not exist" }]) {
+    m.rpc.mockReset(); m.del.mockClear();
+    m.rpc.mockResolvedValue({ data: null, error: missing });
+    await removePasskey({ credential_id: "a", created_at: "", transports: [] }, "owner");
+    expect(m.rpc).toHaveBeenCalledWith("remove_device_passkey", { _credential_id: "a" });
+    expect(m.del).toHaveBeenCalledWith("owner", "a");
+  }
   expect(m.ensure).toHaveBeenCalled();
-  expect(m.del).toHaveBeenCalledWith("owner", "a");
-  m.del.mockClear(); m.rpc.mockClear();
-  await removePasskey({ credential_id: "b", created_at: "", transports: [] }, "owner");
-  expect(m.rpc).not.toHaveBeenCalled();
-  expect(m.del).toHaveBeenCalledWith("owner", "b");
+});
+
+it("surfaces every other error and never falls back to a direct delete", async () => {
+  m.rpc.mockResolvedValue({ data: null, error: { code: "P0002", message: "Passkey not found" } });
+  await expect(removePasskey({ credential_id: "gone", created_at: "", transports: [] }, "owner")).rejects.toThrow("isn't on your account");
+  m.rpc.mockResolvedValue({ data: null, error: { code: "42501", message: "permission denied" } });
+  await expect(removePasskey({ credential_id: "a", created_at: "", transports: [] }, "owner")).rejects.toThrow("Couldn't remove");
+  expect(m.del).not.toHaveBeenCalled();
+});
+
+it("the fallback delete must remove exactly one row (a blocked or empty delete is an error)", async () => {
+  m.rpc.mockResolvedValue({ data: null, error: { code: "PGRST202", message: "Could not find the function" } });
+  m.del.mockResolvedValue({ data: [], error: null });
+  await expect(removePasskey({ credential_id: "a", created_at: "", transports: [] }, "owner")).rejects.toThrow("Couldn't remove");
 });
 
 it("never removes when re-confirmation is cancelled", async () => {
   m.ensure.mockRejectedValue(new Error("Confirmation wasn't completed"));
-  await expect(removePasskey({ credential_id: "a", created_at: "", transports: [], id: "x" }, "owner")).rejects.toThrow();
+  await expect(removePasskey({ credential_id: "a", created_at: "", transports: [] }, "owner")).rejects.toThrow();
   expect(m.rpc).not.toHaveBeenCalled();
   expect(m.del).not.toHaveBeenCalled();
 });

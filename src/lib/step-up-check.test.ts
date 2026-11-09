@@ -29,3 +29,13 @@ it("keeps today's behaviour on the current production schema", async () => {
   await ensureStepUp("sign_out_other_devices", { always: true, prompt });
   expect(prompt).toHaveBeenCalledWith("sign_out_other_devices");
 });
+it("passkey registration asks has_recent_step_up_for (an emailed-code grant counts there) and always prompts on today's schema", async () => {
+  mocks.rpc.mockResolvedValue({ data: true, error: null });
+  const prompt = vi.fn().mockResolvedValue(true);
+  await ensureStepUp("register_passkey", { always: true, prompt });
+  expect(mocks.rpc).toHaveBeenCalledWith("has_recent_step_up_for", { _action: "register_passkey" });
+  expect(prompt).not.toHaveBeenCalled();
+  mocks.rpc.mockResolvedValue({ data: null, error: { code: "PGRST202", message: "Could not find the function public.has_recent_step_up_for" } });
+  await ensureStepUp("register_passkey", { always: true, prompt });
+  expect(prompt).toHaveBeenCalledWith("register_passkey");
+});

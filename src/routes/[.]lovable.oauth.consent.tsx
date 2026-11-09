@@ -3,6 +3,7 @@ import { AuthFrame } from "@/components/AuthFrame";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
+import { OwnerLock } from "@/components/OwnerLock";
 
 interface AuthDetails { client?: { name?: string; client_name?: string; redirect_uri?: string } | null; redirect_uri?: string; scope?: string; redirect_url?: string; redirect_to?: string }
 interface OAuthResult { data: AuthDetails | null; error: { message: string } | null }
@@ -31,7 +32,7 @@ export const Route = createFileRoute("/.lovable/oauth/consent")({
     const immediate = data?.redirect_url ?? data?.redirect_to;
     if (immediate && !data?.client) throw redirect({ href: immediate });
     const { data: u } = await supabase.auth.getUser();
-    return { details: data, email: u.user?.email ?? "" };
+    return { details: data, email: u.user?.email ?? "", ownerId: u.user?.id ?? "" };
   },
   component: Consent,
   errorComponent: ({ error }) => (
@@ -45,7 +46,7 @@ export const Route = createFileRoute("/.lovable/oauth/consent")({
 const SCOPE_LABEL: Record<string, string> = { openid: "Confirm who you are", email: "Share your email address", profile: "Share your basic profile" };
 
 function Consent() {
-  const { details, email } = Route.useLoaderData();
+  const { details, email, ownerId } = Route.useLoaderData();
   const { authorization_id } = Route.useSearch();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -67,6 +68,8 @@ function Consent() {
 
   return (
     <AuthFrame>
+      {/* An idle or locked device must be unlocked before it can approve an assistant. */}
+      <OwnerLock ownerId={ownerId}>
       <div>
         <h1 className="font-display text-2xl font-bold">Connect {name} to Thapal</h1>
         <p className="mt-2 text-sm">This lets {name} use Thapal as you{email ? <> (<b>{email}</b>)</> : null}.</p>
@@ -84,6 +87,7 @@ function Consent() {
           <Button variant="outline" disabled={busy} onClick={() => decide(false)}>Cancel connection</Button>
         </div>
       </div>
+      </OwnerLock>
     </AuthFrame>
   );
 }
