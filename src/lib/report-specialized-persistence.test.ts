@@ -6,10 +6,13 @@ import {join} from 'node:path';
 import {execFileSync} from 'node:child_process';
 import {it,expect} from 'vitest';
 import {REPORT_TYPES,buildReportDoc,emptyFilters,type ReportData} from './report-centre';
+import {CORPORATE_TYPES} from './books/corporate-statements';
 import {renderReportPdf} from './report-pdf';
 import {savePreparedReport} from './report-save';
 import type {Expense} from './expenses';
 const done=new Set(['monthly','expense','category','account','wealth','unreconciled','imports','budget']);
+// Company statements refuse a personal ledger by design; they are built from a company ledger in report-centre-all and corporate-statements tests.
+const skip=new Set<string>([...done,...CORPORATE_TYPES]);
 it('remaining report families freeze real PDFs and saved source records through lost replies and owner-isolated restart',async()=>{
  const dir=mkdtempSync(join(tmpdir(),'specialized-reports-'));let db=new PGlite(join(dir,'db'));
  const owner='00000000-0000-0000-0000-000000000001';
@@ -24,7 +27,7 @@ it('remaining report families freeze real PDFs and saved source records through 
  const saved=(await db.query<{data:Expense[]}>('SELECT data FROM sources')).rows[0]?.data??[];
  const data:ReportData={transactions:saved,accounts:[{id:'a',name:'Isolated account',kind:'savings',openingBalance:1000,archived:false}],valuations:[],loans:[{id:'loan',accountId:'a',name:'Synthetic loan',principal:1200.25,rate:9,emi:100.25,nextDue:'2026-11-05',provider:'Lender',status:'active',payments:[{date:'2026-10-10',principal:80,interest:20.25,total:100.25}]}],budgets:{Food:500},commitments:[{id:'sub',name:'Synthetic subscription',kind:'subscription',direction:'out',amount:100.25,frequency:'monthly',intervalDays:null,nextDue:'2026-11-05',accountId:'a',category:'Food',confirmed:true,essential:false,status:'active'}],trips:[{id:'trip',name:'Isolated trip',destination:'Synthetic',start:'2026-10-01',end:'2026-10-31',budget:500,currencies:['INR'],bookings:[{id:'booking',kind:'hotel',provider:'Synthetic hotel',ref:'BOOK1',date:'2026-10-10',amount:300.25,status:'unpaid',expenseId:'bill'}],advances:[{id:'advance',date:'2026-10-01',amount:150,source:'Synthetic employer'}]}],drafts:[{id:'draft',status:'ready',updatedAt:'2026-10-10',data:{merchant:'Synthetic draft',amount:75.25}}],memberName:()=> 'Owner',accountName:()=> 'Isolated account',today:'2026-10-31'};
  let count=0;
- for(const [kind] of REPORT_TYPES.filter(([kind])=>!done.has(kind))){
+ for(const [kind] of REPORT_TYPES.filter(([kind])=>!skip.has(kind))){
   const report=buildReportDoc(kind,{...emptyFilters('2026-10-01','2026-10-31'),accountIds:['a']},data);
   expect(report.sourceEntryIds).toEqual(['bill','salary']);expect(report.sourceDocumentRefs).toContain('owner/bill-original');
   const blob=await renderReportPdf(report,'mono',new Date('2026-10-31T12:00:00Z'));const bytes=new Uint8Array(await blob.arrayBuffer());
@@ -42,7 +45,7 @@ it('remaining report families freeze real PDFs and saved source records through 
   if(kind==='subscription')expect(text).toContain('100.25');
   if(kind==='drafts')expect(text).toContain('75.25');
  }
- expect((await db.query('SELECT * FROM report_history')).rows).toHaveLength(REPORT_TYPES.length-done.size);
+ expect((await db.query('SELECT * FROM report_history')).rows).toHaveLength(REPORT_TYPES.length-skip.size);
  await db.close();db=new PGlite(join(dir,'db'));await asOwner(owner);expect((await db.query('SELECT * FROM report_history')).rows).toHaveLength(count);
  await asOwner('00000000-0000-0000-0000-000000000002');expect((await db.query('SELECT * FROM report_history')).rows).toEqual([]);expect((await db.query('SELECT * FROM sources')).rows).toHaveLength(1);
  }finally{await db.close();rmSync(dir,{recursive:true,force:true});}

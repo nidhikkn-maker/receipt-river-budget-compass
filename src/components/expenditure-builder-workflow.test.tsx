@@ -2,6 +2,7 @@
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, expect, it, vi } from 'vitest';
 import { PDFDocument, StandardFonts } from 'pdf-lib';
+import { IDBFactory } from 'fake-indexeddb';
 import { defaultPreferences } from '@/lib/preferences';
 import type { Expense } from '@/lib/expenses';
 import { newReimbursementProfile } from '@/lib/reimbursement-profiles';
@@ -27,6 +28,8 @@ async function bytes(blob: Blob) {
   return new Uint8Array(await new Promise<ArrayBuffer>((resolve, reject) => { const reader = new FileReader(); reader.onload = () => reader.result instanceof ArrayBuffer ? resolve(reader.result) : reject(Error('Missing bytes')); reader.onerror = reject; reader.readAsArrayBuffer(blob); }));
 }
 async function prepare() {
+  // Fresh in-memory IndexedDB per test so the builder's encrypted local PDF recovery runs for real.
+  vi.stubGlobal('indexedDB', new IDBFactory());
   local.uploaded = null; local.history = null; local.loseReply = true; local.offline = false; local.download.mockReset();
   vi.stubGlobal('URL', Object.assign(URL, { createObjectURL: vi.fn(() => 'blob:isolated-report'), revokeObjectURL: vi.fn() }));
   const original = await PDFDocument.create(); const page = original.addPage([321, 456]); const font = await original.embedFont(StandardFonts.Helvetica); page.drawText('ISOLATED ORIGINAL BILL', { x: 20, y: 100, font });
@@ -42,6 +45,8 @@ afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
 it('actual statement builder verifies fetched originals, saves exact PDF despite lost response, and downloads identical bytes', async () => {
   const entry = await prepare(); const snapshot = JSON.stringify(entry);
   render(<ExpenditureReportBuilder mode="statement" search={{ entry: 'e' }} />);
+  // Generation stays disabled until the encrypted local-recovery check has finished.
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Generate statement PDF' })).toBeEnabled());
   fireEvent.click(screen.getByRole('button', { name: 'Generate statement PDF' }));
   await screen.findByRole('button', { name: 'Confirm documents & generate' });
   expect(local.uploaded).toBeNull(); expect(local.history).toBeNull();
@@ -58,6 +63,7 @@ it('actual statement builder verifies fetched originals, saves exact PDF despite
 });
 it('actual builder cancel creates no PDF/history; failed upload keeps local PDF and retries the same history identity', async () => {
   await prepare(); render(<ExpenditureReportBuilder mode="statement" search={{ entry: 'e' }} />);
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Generate statement PDF' })).toBeEnabled());
   fireEvent.click(screen.getByRole('button', { name: 'Generate statement PDF' }));
   await screen.findByRole('button', { name: 'Confirm documents & generate' });
   fireEvent.click(screen.getByRole('button', { name: /^Cancel$/ }));
