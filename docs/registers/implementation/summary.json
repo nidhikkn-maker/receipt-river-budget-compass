@@ -1,10 +1,10 @@
 {
- "commit": "b7b8920",
+ "commit": "9ec8fb8",
  "tests": {
-  "files": 339,
-  "passed_files": 339,
-  "total": 2580,
-  "passed": 2580,
+  "files": 347,
+  "passed_files": 347,
+  "total": 2657,
+  "passed": 2657,
   "failed": 0
  },
  "completion": {
@@ -16,8 +16,8 @@
  },
  "state": {
   "Not started": 476,
-  "Tested (local)": 804,
-  "Coded": 220,
+  "Tested (local)": 809,
+  "Coded": 215,
   "Blocked": 36
  },
  "completion_p0": {
@@ -32,5 +32,5 @@
  },
  "missing_code_refs": 0,
  "missing_test_refs": 0,
- "manual_rechecks": 294
+ "manual_rechecks": 302
 }
