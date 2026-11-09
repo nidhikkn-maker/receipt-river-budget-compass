@@ -85,3 +85,5 @@ For each of C11, C13 and C14:
 - choose A, B or C, or give another instruction;
 - for C13, the retention period;
 - for C14, the thapal.in timing.
+
+**Decided by KK on 10 Nov 2026:** C11 Option B, C13 Option B with safeguards (production policy needs legal and accounting validation), C14 Option A. See the decision register.
