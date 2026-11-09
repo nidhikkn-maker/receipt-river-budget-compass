@@ -6,6 +6,12 @@
 -- Clients lose all access to the archived tables. Run BEFORE P1 rollback.
 -- ============================================================================================
 BEGIN;
+DO $pre$
+BEGIN
+  IF to_regclass('public.step_up_grants') IS NOT NULL THEN
+    RAISE EXCEPTION 'Roll back P4 (P4_step_up_and_assistant_limits.rollback.sql) before P2';
+  END IF;
+END $pre$;
 CREATE SCHEMA IF NOT EXISTS security_rollback_archive;
 REVOKE ALL ON SCHEMA security_rollback_archive FROM PUBLIC, anon, authenticated;
 

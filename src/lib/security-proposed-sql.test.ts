@@ -553,6 +553,12 @@ const MATRIX: Record<string, readonly string[]> = {
   authorised_reviewer: ["view", "approve", "export"],
   administrator: ["manage_access"],
 };
+/** Legacy entity_members roles (backfill/sync only, never invitable): exactly today's grant rights. */
+const LEGACY: Record<string, readonly string[]> = {
+  legacy_company_editor: ["view", "upload", "draft_edit", "export"],
+  legacy_company_viewer: ["view", "export"],
+};
+const legacy = (role: string): readonly string[] => { const m = LEGACY[role]; if (!m) throw new Error(`No expected permissions for ${role}`); return m; };
 /** Expected permissions for a role; fails loudly for a role missing from the matrix. */
 const matrix = (role: string): readonly string[] => { const m = MATRIX[role]; if (!m) throw new Error(`No expected permissions for ${role}`); return m; };
 
@@ -576,13 +582,14 @@ describe("P2 V3.1 scoped grants", () => {
     }
   }, T);
 
-  it("the stored matrix equals the documented V3.1 matrix", async () => {
+  it("the stored matrix equals the documented V3.1 matrix plus the two legacy roles", async () => {
     const rows = await q<{ role: string; action: string }>(db, "SELECT role, action FROM public.access_role_permissions WHERE allowed ORDER BY 1,2");
     const stored: Record<string, string[]> = {};
     for (const r of rows) (stored[r.role] ??= []).push(r.action);
-    expect(Object.keys(stored).sort()).toEqual(Object.keys(MATRIX).sort());
-    for (const [role, acts] of Object.entries(MATRIX)) expect(stored[role], role).toEqual([...acts].sort());
-    expect((await q(db, "SELECT 1 FROM public.access_role_permissions")).length).toBe(9 * 11);
+    const expected = { ...MATRIX, ...LEGACY };
+    expect(Object.keys(stored).sort()).toEqual(Object.keys(expected).sort());
+    for (const [role, acts] of Object.entries(expected)) expect(stored[role], role).toEqual([...acts].sort());
+    expect((await q(db, "SELECT 1 FROM public.access_role_permissions")).length).toBe(11 * 11);
   }, T);
 
   it("has_permission follows the matrix for every role; owner has all; strangers none", async () => {
@@ -643,6 +650,8 @@ describe("P2 V3.1 scoped grants", () => {
   it("only the owner or a manage_access holder may invite; no escalation to owner/administrator; clients cannot write grants directly", async () => {
     expect((await attempt(db, U.X, () => q(db, "SELECT public.invite_access($1,NULL,'z@pro.in','auditor',NULL)", [U.O]))).ok).toBe(false);
     expect((await attempt(db, U.O, () => q(db, "SELECT public.invite_access($1,NULL,'z@pro.in','owner',NULL)", [U.O]))).ok).toBe(false);
+    for (const lr of Object.keys(LEGACY)) expect((await attempt(db, U.O, () => q(db, "SELECT public.invite_access($1,'c1','z@pro.in',$2,NULL)", [U.O, lr]))).ok, lr).toBe(false);
+    expect((await attempt(db, null, () => q(db, "INSERT INTO public.access_grants(workspace_owner_id,role,grantee_email,granted_by) VALUES ($1,'legacy_company_editor','q@pro.in',$1)", [U.O]))).ok).toBe(false);
     expect((await attempt(db, U.O, () => q(db, "SELECT public.invite_access($1,'nope','z@pro.in','auditor',NULL)", [U.O]))).ok).toBe(false);
     expect((await attempt(db, U.O, () => q(db, "SELECT public.invite_access($1,NULL,'z@pro.in','auditor',now()-interval '1 hour')", [U.O]))).ok).toBe(false);
     const admin = roleUser(Object.keys(MATRIX).filter((r) => r !== "owner").indexOf("administrator"));
@@ -656,15 +665,15 @@ describe("P2 V3.1 scoped grants", () => {
     expect(vis).toEqual({ ok: true, value: [] });
   }, T);
 
-  it("backfill copied entity_members (can_write->bookkeeper, read-only->auditor) and did not map legacy user_roles", async () => {
+  it("backfill copied entity_members (can_write->legacy_company_editor, read-only->legacy_company_viewer) and did not map legacy user_roles", async () => {
     const rows = await q<{ grantee_id: string; role: string; entity_id: string; revoked: boolean; accepted: boolean }>(db,
       "SELECT grantee_id, role, entity_id, revoked_at IS NOT NULL revoked, accepted_at IS NOT NULL accepted FROM public.access_grants WHERE source='entity_members' ORDER BY grantee_id");
     expect(rows).toEqual([
-      { grantee_id: U.M, role: "bookkeeper", entity_id: "c1", revoked: false, accepted: true },
-      { grantee_id: U.R, role: "auditor", entity_id: "c1", revoked: false, accepted: true },
-      { grantee_id: U.G, role: "auditor", entity_id: "c1", revoked: false, accepted: true },
-      { grantee_id: U.X, role: "auditor", entity_id: "c2", revoked: true, accepted: true },
-      { grantee_id: U.W, role: "bookkeeper", entity_id: "c1", revoked: false, accepted: true },
+      { grantee_id: U.M, role: "legacy_company_editor", entity_id: "c1", revoked: false, accepted: true },
+      { grantee_id: U.R, role: "legacy_company_viewer", entity_id: "c1", revoked: false, accepted: true },
+      { grantee_id: U.G, role: "legacy_company_viewer", entity_id: "c1", revoked: false, accepted: true },
+      { grantee_id: U.X, role: "legacy_company_viewer", entity_id: "c2", revoked: true, accepted: true },
+      { grantee_id: U.W, role: "legacy_company_editor", entity_id: "c1", revoked: false, accepted: true },
     ]);
     expect(await q(db, "SELECT 1 FROM public.access_grants WHERE grantee_id = ANY($1)", [[U.F, U.MGR, U.ADM]])).toEqual([]);
     expect((await q<{ n: number }>(db, "SELECT count(*)::int n FROM public.user_roles"))[0]?.n).toBe(4); // legacy rows untouched
@@ -673,12 +682,12 @@ describe("P2 V3.1 scoped grants", () => {
 
   it("transition sync: grant_entity_access / revoke_entity_access are mirrored immediately", async () => {
     const x = first(await as(db, U.O, () => q<{ g: string }>(db, "SELECT public.grant_entity_access('c2',$1,true) g", [EMAIL[U.KID]])));
-    expect(await perms(U.KID, U.O, "c2")).toEqual([...MATRIX["bookkeeper"]!]);
+    expect(await perms(U.KID, U.O, "c2")).toEqual([...legacy("legacy_company_editor")]);
     await as(db, U.O, () => q(db, "SELECT public.grant_entity_access('c2',$1,false)", [EMAIL[U.KID]]));
-    expect(await perms(U.KID, U.O, "c2")).toEqual([...MATRIX["auditor"]!]);
+    expect(await perms(U.KID, U.O, "c2")).toEqual([...legacy("legacy_company_viewer")]);
     await as(db, U.O, () => q(db, "SELECT public.revoke_entity_access($1)", [x!.g]));
     expect(await perms(U.KID, U.O, "c2")).toEqual([]);
-    expect(await perms(U.M, U.O, "c1")).toEqual([...MATRIX["bookkeeper"]!]);
+    expect(await perms(U.M, U.O, "c1")).toEqual([...legacy("legacy_company_editor")]);
   }, T);
 
   it("P2 does not switch live policies: database reach still comes from entity_members only", async () => {

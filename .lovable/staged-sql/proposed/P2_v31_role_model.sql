@@ -6,7 +6,28 @@
 --     entity_members (P1) until a later, separately approved step.
 --   * Legacy user_roles are NOT mapped (needs owner confirmation; H-2).
 --   * entity_members are copied (not moved) into access_grants with source='entity_members':
---     can_write -> bookkeeper, read-only -> auditor. entity_members is left untouched.
+--     can_write -> legacy_company_editor, read-only -> legacy_company_viewer (V4 FND-04, decision
+--     V4-P2MAP). entity_members is left untouched.
+--   * The two legacy roles carry EXACTLY the rights an entity_members grant has at 0088+P1, never more
+--     (derived from the applied policies 0075/0076/0078 and P1, proved action by action in
+--     src/lib/security-phase1-sql.test.ts):
+--       legacy_company_viewer = view, export
+--         view:   "Entity members read documents" + "Entity members read document files" (company docs
+--                 and their originals; company transactions are additionally gated by the 0066/P1
+--                 RESTRICTIVE expenses policy, so a grant alone never exposes ledger rows).
+--         export: the SharedWithMe CSV/PDF/Excel downloads are built in the browser from exactly the
+--                 rows the grant can view; there is no server export path, so export == read.
+--       legacy_company_editor = view, export, upload, draft_edit
+--         upload:     "Entity editors upload document files" (P1: <owner>/companies/<hex>/<file> only),
+--                     "Entity editors add company documents", cleanup of the editor's OWN unlinked
+--                     uploads (part of uploading, not delete_unposted).
+--         draft_edit: "Entity editors update company documents" (title/notes/metadata; P1 forbids
+--                     changing owner, company, file, links and evidence lock).
+--       Never granted: propose (no proposal mechanism), post (no INSERT on the owner's ledger and no
+--       owner-scoped RPC accepts a member), approve, share, manage_access (grant/revoke are owner-only),
+--       delete_unposted (no DELETE policy for members), reopen (period operations are owner-only).
+--     Legacy roles cannot be invited (invite_access refuses them) and exist only on backfilled or
+--     synced rows (CHECK: role LIKE 'legacy_%' requires source='entity_members').
 -- Rollback: P2_v31_role_model.rollback.sql (archives the new tables, never drops their rows).
 -- ============================================================================================
 BEGIN;
@@ -21,12 +42,12 @@ END $pre$;
 
 -- 1. Role catalogue and permission matrix (fixed; changed only by a reviewed migration)
 CREATE TABLE IF NOT EXISTS public.access_role_permissions (
-  role text NOT NULL CHECK (role IN ('owner','adult_family_member','delegate','bookkeeper','accountant','auditor','company_secretary','authorised_reviewer','administrator')),
+  role text NOT NULL CHECK (role IN ('owner','adult_family_member','delegate','bookkeeper','accountant','auditor','company_secretary','authorised_reviewer','administrator','legacy_company_editor','legacy_company_viewer')),
   action text NOT NULL CHECK (action IN ('view','upload','draft_edit','propose','post','approve','export','share','delete_unposted','manage_access','reopen')),
   allowed boolean NOT NULL,
   PRIMARY KEY (role, action)
 );
-COMMENT ON TABLE public.access_role_permissions IS 'V3.1 role x action matrix (P2). Read-only to clients; not yet used by row policies.';
+COMMENT ON TABLE public.access_role_permissions IS 'V3.1 role x action matrix (P2) plus the two legacy entity_members roles. Read-only to clients; not yet used by row policies.';
 INSERT INTO public.access_role_permissions(role, action, allowed)
 SELECT r.role, a.action, a.action = ANY (r.actions)
 FROM (VALUES
@@ -38,7 +59,10 @@ FROM (VALUES
   ('auditor',             ARRAY['view','export']),
   ('company_secretary',   ARRAY['view','upload','draft_edit','propose','export']),
   ('authorised_reviewer', ARRAY['view','approve','export']),
-  ('administrator',       ARRAY['manage_access'])
+  ('administrator',       ARRAY['manage_access']),
+  -- Legacy entity_members grants: exactly today's effective rights (see header), never more.
+  ('legacy_company_editor', ARRAY['view','upload','draft_edit','export']),
+  ('legacy_company_viewer', ARRAY['view','export'])
 ) AS r(role, actions)
 CROSS JOIN (VALUES ('view'),('upload'),('draft_edit'),('propose'),('post'),('approve'),('export'),('share'),('delete_unposted'),('manage_access'),('reopen')) AS a(action)
 ON CONFLICT (role, action) DO NOTHING;
@@ -56,7 +80,7 @@ CREATE TABLE IF NOT EXISTS public.access_grants (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   workspace_owner_id uuid NOT NULL,
   entity_id text,
-  role text NOT NULL CHECK (role IN ('adult_family_member','delegate','bookkeeper','accountant','auditor','company_secretary','authorised_reviewer','administrator')),
+  role text NOT NULL CHECK (role IN ('adult_family_member','delegate','bookkeeper','accountant','auditor','company_secretary','authorised_reviewer','administrator','legacy_company_editor','legacy_company_viewer')),
   grantee_email text NOT NULL CHECK (grantee_email = lower(btrim(grantee_email)) AND grantee_email <> ''),
   grantee_id uuid,
   granted_by uuid NOT NULL,
@@ -72,7 +96,8 @@ CREATE TABLE IF NOT EXISTS public.access_grants (
   CHECK ((accepted_at IS NULL) = (grantee_id IS NULL)),
   CHECK (accepted_at IS NULL OR identity_check IS NOT NULL),
   CHECK (expires_at IS NULL OR expires_at > created_at),
-  CHECK ((source = 'entity_members') = (source_ref IS NOT NULL))
+  CHECK ((source = 'entity_members') = (source_ref IS NOT NULL)),
+  CHECK (role NOT IN ('legacy_company_editor','legacy_company_viewer') OR source = 'entity_members')
 );
 CREATE UNIQUE INDEX IF NOT EXISTS access_grants_source_ref_idx ON public.access_grants(source, source_ref) WHERE source_ref IS NOT NULL;
 CREATE UNIQUE INDEX IF NOT EXISTS access_grants_active_scope_idx ON public.access_grants(workspace_owner_id, coalesce(entity_id, ''), grantee_email) WHERE revoked_at IS NULL;
@@ -214,7 +239,7 @@ GRANT EXECUTE ON FUNCTION public.has_permission(uuid, text, text), public.guard_
 --    revoke_entity_access), mirror each change onto its backfilled grant so V3.1 revocation is
 --    immediate too. entity_members itself is never changed by this trigger.
 CREATE OR REPLACE FUNCTION public.sync_entity_member_grant() RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp AS $$
-DECLARE gid uuid; new_role text := CASE WHEN NEW.can_write THEN 'bookkeeper' ELSE 'auditor' END;
+DECLARE gid uuid; new_role text := CASE WHEN NEW.can_write THEN 'legacy_company_editor' ELSE 'legacy_company_viewer' END;
 BEGIN
   IF TG_OP = 'INSERT' THEN
     INSERT INTO public.access_grants(workspace_owner_id, entity_id, role, grantee_email, grantee_id, granted_by,
@@ -251,7 +276,7 @@ CREATE TRIGGER sync_entity_member_grant AFTER INSERT OR UPDATE ON public.entity_
 WITH ins AS (
   INSERT INTO public.access_grants(workspace_owner_id, entity_id, role, grantee_email, grantee_id, granted_by,
                                    created_at, accepted_at, identity_check, revoked_at, source, source_ref)
-  SELECT m.owner_id, m.entity_id, CASE WHEN m.can_write THEN 'bookkeeper' ELSE 'auditor' END,
+  SELECT m.owner_id, m.entity_id, CASE WHEN m.can_write THEN 'legacy_company_editor' ELSE 'legacy_company_viewer' END,
          lower(btrim(m.member_email)), m.member_id, m.owner_id,
          m.created_at, m.created_at, 'entity_members_verified_email', m.revoked_at, 'entity_members', m.id
   FROM public.entity_members m

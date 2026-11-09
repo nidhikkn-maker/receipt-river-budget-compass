@@ -1,4 +1,4 @@
-# Security migration plan, 2026-11-09 (P1 containment + P2 V3.1 role model)
+# Security migration plan, 2026-11-09 (P1 containment + P2 V3.1 role model + P4 step-up and assistant limits)
 
 > **Nothing has been applied.** No live, hosted or Lovable Cloud database was queried or changed. No file was added to `drizzle/migrations`, no existing migration or staged file was edited, and nothing was committed or pushed. Every result below comes from the isolated in-memory PGlite harness (`src/test/full-schema-pglite.ts`), which replays `drizzle/migrations/0000–0088` with Supabase-like stubs.
 
@@ -19,6 +19,9 @@ Inputs: `docs/SECURITY_REVIEW_2026-11-09.md` (H-1, H-2, H-3, M-1, M-2, M-4, Lows
 | `.lovable/staged-sql/proposed/P2_v31_role_model.sql` | Additive V3.1 grants, matrix, audit, `has_permission`, invite/accept/revoke, backfill and transition sync. |
 | `.lovable/staged-sql/proposed/P2_v31_role_model.rollback.sql` | Drops the P2 functions and triggers. **Archives** (does not drop) the three P2 tables into `security_rollback_archive`. |
 | `src/lib/security-proposed-sql.test.ts` | 80 isolated acceptance tests (§6). |
+| `.lovable/staged-sql/proposed/P4_step_up_and_assistant_limits.sql` (+ `.rollback.sql`) | Phase 1 contract (`docs/plans/PHASE1_SECURITY_CONTRACT_2026-11-09.md`): database step-up, external-assistant limits and revocation, append-only audit history (§13). |
+| `.lovable/staged-sql/proposed/P4b_api_pre_request.sql` (+ `.rollback.sql`) | Optional PostgREST pre-request hook. **Not** part of the automatic order; needs hosted verification (§13.6). |
+| `src/lib/security-phase1-sql.test.ts` | 72 isolated acceptance tests for P1+P2+P4 (§13.8). |
 
 Both SQL files run as one `BEGIN … COMMIT` and start with a preflight `DO` block that aborts on an unexpected schema.
 
@@ -66,7 +69,7 @@ Both SQL files run as one `BEGIN … COMMIT` and start with a preflight `DO` blo
 
 | Object | Description |
 |---|---|
-| `access_role_permissions(role, action, allowed)` | A 9 × 11 matrix of the roles `owner`, `adult_family_member`, `delegate`, `bookkeeper`, `accountant`, `auditor`, `company_secretary`, `authorised_reviewer` and `administrator` against the actions `view`, `upload`, `draft_edit`, `propose`, `post`, `approve`, `export`, `share`, `delete_unposted`, `manage_access` and `reopen`. Clients can read it; only migrations change it. |
+| `access_role_permissions(role, action, allowed)` | An 11 × 11 matrix of the roles `owner`, `adult_family_member`, `delegate`, `bookkeeper`, `accountant`, `auditor`, `company_secretary`, `authorised_reviewer`, `administrator` and the two legacy roles `legacy_company_editor` and `legacy_company_viewer` against the actions `view`, `upload`, `draft_edit`, `propose`, `post`, `approve`, `export`, `share`, `delete_unposted`, `manage_access` and `reopen`. Clients can read it; only migrations change it. |
 | `access_grants` | Columns: `workspace_owner_id`, optional `entity_id` (NULL = whole workspace), `role` (never `owner`), `grantee_email`, `grantee_id`, `granted_by`, `created_at`, `expires_at`, `accepted_at`, `identity_check`, `revoked_at`, `revoked_by`, `source` (`invite`/`entity_members`) and `source_ref`. CHECKs: not self; accepted ⇔ grantee set; accepted ⇒ identity check recorded; expiry after creation. One active grant per person per scope. Clients get SELECT only (owner or grantee). |
 | `access_grant_audit` | Append-only: UPDATE is always refused, and DELETE only during `delete_my_finance_data`. Events are `invited`, `accepted`, `revoked`, `backfilled` and `role_changed`. |
 | `has_permission(_owner, _entity, _action)` | Definer. The owner has every action. A grantee needs an accepted, unrevoked, unexpired grant whose scope is the whole workspace or exactly `_entity`, plus a matrix allow. Anonymous sessions are refused. Checked on every call (no caching), so revocation and expiry take effect on the next statement. |
@@ -89,6 +92,8 @@ Both SQL files run as one `BEGIN … COMMIT` and start with a preflight `DO` blo
 | company_secretary | ✔ | ✔ | ✔ | ✔ | | | ✔ | | | | |
 | authorised_reviewer | ✔ | | | | | ✔ | ✔ | | | | |
 | administrator | | | | | | | | | | ✔ | |
+| legacy_company_editor | ✔ | ✔ | ✔ | | | | ✔ | | | | |
+| legacy_company_viewer | ✔ | | | | | | ✔ | | | | |
 
 Rationale:
 - Only the owner may `share` externally or `reopen` closed periods, which matches "only the Audit operation can close or reopen periods".
@@ -96,9 +101,15 @@ Rationale:
 - `auditor` is read-only (contract A03: "auditor read-only").
 - Professional roles get no `share` or `reopen`.
 
-**Backfill mapping and justification:**
-- **Read-only grant → `auditor`** (view + export). This is an exact match: a read-only member can view the company and download CSV, PDF and Excel.
-- **`can_write` → `bookkeeper`.** The old editor could view, export, upload company documents and edit company rows (titles), and bookkeeper is the closest professional role. Bookkeeper also carries `propose`, `post` and `delete_unposted`, which the old grant never exercised. Nothing enforces the matrix yet, so this gives no new database reach today. **KK should confirm bookkeeper, or choose `company_secretary`** (view/upload/draft_edit/propose/export, no posting), which is a narrower match.
+**Backfill mapping and justification (revised for V4 FND-04 / decision V4-P2MAP; the earlier can_write → bookkeeper, read-only → auditor mapping escalated rights and was replaced):**
+- **`can_write` → `legacy_company_editor`** = view, upload, draft_edit, export. **Read-only → `legacy_company_viewer`** = view, export. Both equal exactly what the grant allows at 0088+P1, derived from the applied policies:
+  - *view*: 0075 "Entity members read documents" and "Entity members read document files". The 0076 company-transaction read/update policies are additionally gated by the 0066/P1 RESTRICTIVE expenses policy (`employee_id = auth.uid() OR can_access_expense(...)`, which needs a legacy finance/manager role), so a company grant alone never exposes ledger rows; that legacy-role reach is not part of the grant and is not mapped.
+  - *export*: the only member export path is the SharedWithMe CSV/PDF/Excel download, built in the browser from the rows the member can read. No server export exists for members, so export == read ("no export beyond read").
+  - *upload* (editors): 0078 "Entity editors add company documents" + P1 "Entity editors upload document files" (`<owner>/companies/<hex>/<file>` only). Cleaning the editor's **own unlinked** upload is part of uploading, not `delete_unposted`.
+  - *draft_edit* (editors): 0076 "Entity editors update company documents" (title/notes/metadata; P1 forbids changing owner, company, file, links and evidence lock).
+  - Never granted: `propose` (no proposal mechanism for members), `post` (no INSERT on the owner's ledger; every money RPC is owner-scoped by `auth.uid()`), `approve`, `share` and `manage_access` (grant/revoke are owner-only), `delete_unposted` (no member DELETE policy), `reopen` (period operations are owner-only).
+- Legacy roles cannot be invited (`invite_access` refuses them) and a CHECK allows them only on rows with `source='entity_members'`. The transition sync maps can_write toggles and revocations onto them immediately.
+- **Proof** (`src/lib/security-phase1-sql.test.ts` §B): for each of the 11 actions a probe runs the real database path (read, upload + link, metadata edit, owner draft, owner ledger insert, owner preference write, grant/invite, revoke, delete, period evidence/closed-period change) at 0088, P1, P1+P2 and P1+P2+P4. The effective set is identical in all four states and equals `has_permission` for the backfilled role; other companies and personal scope give nothing.
 - **Legacy `user_roles` are not mapped** (H-2: holders and origin unknown). Mapping them needs an owner-confirmed list.
 
 **Not done in P2 (a later, separately approved step):** no row or storage policy calls `has_permission` yet (a test asserts this). The live database reach after P2 is exactly P1's.
@@ -121,7 +132,7 @@ Rationale:
 | **H-3** editor takeover | `owner_id` and `employee_id` are immutable for signed-in callers. Non-owners cannot change company, file, links or the evidence lock. | H-3a, H-3b blocked; H-3c control stays blocked |
 | **M-1** pointing at other files | Editors may reference only their own new unlinked upload in the exact company namespace. The restrictive read policy stops document-path tricks on `docs/` and `companies/`. | M-1a, M-1b; "c1 editor…" (foreign or existing file refused) |
 | **M-2** write anywhere | Uploads only to `<owner>/companies/<hex>/<safe-name>`, never to `reports/`, another company, a subfolder or `..`. | M-2; editor flow negative cases |
-| **M-4** MCP token can write | **Not changed by P1 or P2** (see residual risks and the KK items). | — |
+| **M-4** MCP token can write | **Not changed by P1 or P2.** Closed by **P4** (§13): RESTRICTIVE write denial on every table and on files, writer RPCs refuse assistant sessions, revocation is immediate. | `security-phase1-sql.test.ts` M-4 probe, §D |
 | **L-3** role oracle | `has_role` answers only for self, and anon and PUBLIC lose EXECUTE on the role helpers. | L-3 probe (stranger and anon) |
 | **L-4** department budgets | Read only for the caller's own department, or by an admin. | H-2/L-4 probe; admin test |
 | Erasure gap (0092) | Every owner-linked table is cleared except the documented kept list. Other owners' rows are unchanged. | erasure tests |
@@ -181,7 +192,7 @@ H-3c (an editor moves an expense to themself) is a control that 0088 already blo
 - expiry and revocation take effect on the very next statement (including the grantee leaving), and the audit is append-only (UPDATE and DELETE refused);
 - identity-matched acceptance: a different email, an unconfirmed account with the same address, and an anonymous session are all refused; a confirmed match is accepted and idempotent;
 - invite authorization: a stranger cannot invite, and `owner`, a missing company and a past expiry are refused; an administrator can invite but not create an administrator, and has only `manage_access`; direct INSERT, UPDATE and DELETE on grants are refused;
-- backfill: 5 `entity_members` rows (one revoked) became bookkeeper and auditor grants with revocation kept; legacy `user_roles` were not mapped and are untouched;
+- backfill: 5 `entity_members` rows (one revoked) became `legacy_company_editor` and `legacy_company_viewer` grants with revocation kept; legacy `user_roles` were not mapped and are untouched;
 - transition sync: grant, role change and revoke are mirrored immediately;
 - P2 switches no live policy (an accepted workspace accountant sees 0 rows or files, and no policy references `has_permission`).
 
@@ -248,11 +259,7 @@ Do not run any `DELETE` or `UPDATE` against production for this package. All of 
 ## 10. Residual risks
 
 - **Signed URLs already issued** keep working until they expire: 60 s for vault files; 300 s for family evidence and 600 s for draft thumbnails (L-2). Data already loaded into a member's `SharedWithMe` React state, and files already downloaded, stay with that member.
-- **M-4 (MCP OAuth token can write through PostgREST)** is not addressed. P1's guards stop the cross-owner writes, but a leaked token can still write the user's *own* rows until it expires. Options for a later, separately approved step:
-  - restrictive `WITH CHECK ((auth.jwt()->>'client_id') IS NULL)` policies on owner tables;
-  - short access-token lifetimes.
-
-  Both depend on hosted claims that cannot be verified here.
+- **M-4 (MCP OAuth token can write through PostgREST)** is addressed by P4 (§13), assuming hosted assistant tokens carry a `client_id` claim and first-party tokens do not (hosted pre-check H-P4-2).
 - **Legacy role holders are unknown (H-2).** P1 makes their rows inert without an owner grant, but an owner who has *also* granted a legacy finance or manager user a company now exposes that company's rows and referenced receipts to them. That is the intended "explicit grant" path. The rows were never deleted (KK decision).
 - **Existing artefacts:** documents already re-pointed or taken over under H-3 or M-1 before P1 stay as they are (P-6 and P-10 help find them). P1 does not move or delete them.
 - **Same-company linking:** an editor can still link only their *own* new upload. The owner's unlinked files under `companies/<hex>/` stay private to the owner.
@@ -270,8 +277,85 @@ Do not run any `DELETE` or `UPDATE` against production for this package. All of 
 
 1. Apply **P1** (as 0089) after the read-only pre-checks P-1–P-9. Team visibility for legacy finance and manager users drops to explicitly granted companies only; department budget editing needs app admin plus finance.
 2. Confirm that the staged `company-bound-uploads.sql`, `document-storage-boundary.sql` and `entity-member-uploads.sql` are superseded and archived or removed so they can never run after P1.
-3. Apply **P2** (as 0090): confirm the role matrix, and the backfill mapping **can_write → bookkeeper** (or `company_secretary`) and **read-only → auditor**.
+3. Apply **P2** (as 0090): confirm the role matrix and the backfill mapping **can_write → legacy_company_editor** and **read-only → legacy_company_viewer** (exact current rights, §3).
 4. Whether and how legacy `user_roles` should map to V3.1 grants (needs an owner-confirmed list; not automated).
 5. The later step that switches row and storage policies to `has_permission`, and retires the legacy team-expense model once V3.1 replacements are verified.
-6. M-4 MCP write restriction, the L-2 signed-URL windows, and the UI copy updates (outside this SQL package).
+6. Apply **P4** (as 0091) after the hosted pre-checks in §13.7; decide whether to activate P4b. The L-2 signed-URL windows and UI copy updates remain outside this SQL package.
 7. Each rollback, and every production publish, is a separate approval.
+
+## 13. P4: step-up and external-assistant limits (Phase 1 contract, database track)
+
+**Status:** Specified + Tested (isolated). **Not applied.** Requires P1 and P2 (preflight); refuses to run twice.
+
+### 13.1 Objects
+
+| Object | Purpose |
+|---|---|
+| `step_up_grants(id, owner_id, method, created_at, expires_at)` | Recent re-confirmations. `method` ∈ passkey/password; CHECK: expires within 5 minutes of creation. Clients SELECT their own rows only; no client INSERT/UPDATE/DELETE privilege. |
+| `record_step_up(_owner, _method, _seconds DEFAULT 300)` | SECURITY DEFINER; EXECUTE for `service_role` **only**. Validates account, method and 1–300 s. Never called for the PIN (Decision 30). |
+| `has_recent_step_up()` | True when the caller has an unexpired grant; always false for an assistant session. |
+| `require_recent_step_up(_action)` | Raises `STEP_UP_REQUIRED: <action>` (SQLSTATE 42501) without a grant, and always for assistant sessions. Grants are reusable within their lifetime (≤ 5 minutes). |
+| `is_assistant_session()` | `coalesce(auth.jwt()->>'client_id','') <> ''`. |
+| `refuse_assistant_session(_action)` | Raises `ASSISTANT_READ_ONLY: <action>` (42501) for assistant sessions. |
+| `revoked_assistant_clients(owner_id, client_id, revoked_at)` + `revoke_assistant_client(_client_id)` | Step-up guarded revocation; clients SELECT own rows only and cannot un-revoke. |
+| `assistant_client_revoked(_owner)`, `refuse_revoked_assistant(_action)` | Definer helper used by policies: the session's client was revoked by the caller or by the row's owner. |
+| `device_passkeys.id uuid NOT NULL DEFAULT gen_random_uuid()` (unique) + `remove_device_passkey(_id uuid)` | **Choice:** the applied table has no id, so P4 adds this column (additive; existing rows get a random id) to keep the contract's `remove_device_passkey(_id uuid)`. Removal is owner-only, step-up guarded, refused for assistants; a RESTRICTIVE policy refuses direct client DELETE (the app's fallback direct delete therefore stops working once P4 is applied, by design). Registration INSERT and counter UPDATE by the passkey server functions are unchanged. |
+| Policies on **every** RLS table in public (73 after P4) and on `storage.objects` | RESTRICTIVE, `TO anon, authenticated`: "P4 assistants cannot insert/update/delete" (`NOT is_assistant_session()`), "P4 revoked assistants cannot read" (`NOT is_assistant_session() OR NOT assistant_client_revoked(<owner column>)`). Owner column, first match: owner_id, employee_id, user_id, workspace_owner_id. Tables without one (access_role_permissions, department_budgets, expense_history, job_state, market_quotes, profiles, regulatory_changes, regulatory_snapshots, role_permission_audit, role_permissions) get the write denial and caller-only read revocation. No table is skipped (every public table has RLS). Storage files use the path's first segment as owner. |
+| Audit append-only | RESTRICTIVE UPDATE/DELETE `USING (false)` on transaction_audit, role_permission_audit, access_grant_audit, period_close_evidence, imported_period_history, preference_approvals. Definer writers, cascades and `delete_my_finance_data` are unaffected (verified). |
+| `security_p4.guarded_functions` + `security_p4.guard()` | Private registry (name, argument types, mode, technique, original ACL) used by the rollback. |
+
+### 13.2 Guarded functions (same names, signatures, return types, SECURITY mode and grants)
+
+- **Step-up** (`require_recent_step_up`): `grant_entity_access`, `revoke_entity_access`, `admin_set_member`, `admin_set_permission`, `delete_my_finance_data`, `restore_finance_backup`, `change_accounting_period` (every overload; one exists), `invite_access`, `accept_access`, `revoke_access`, `save_reviewed_preferences` **only when `_approved` is not false** (otherwise assistant-refusal only), plus the new `remove_device_passkey` and `revoke_assistant_client`.
+- **Assistant refusal** (every client-callable VOLATILE non-trigger function of 0088+P1+P2 not already step-up guarded; the test re-derives this list from `pg_proc`): `accept_family_invite`, `apply_review_metadata`, `archive_backup_period_history`, `bulk_category_change`, `cancel_transfer`, `commit_document_intake_reviewed`, `confirm_transfer`, `correct_financial_entries`, `decide_family_request`, `finance_operation`, `finish_my_report_job`, `link_activity_expenses`, `manage_trip_expenses`, `move_expense_category`, `post_opening_balances`, `receive_claim_receipt`, `retry_my_report_job`, `review_statement_evidence`, `revise_import_rows`, `save_claim_preparation`, `save_import_balance_review`, `start_demo_workspace`, `undo_category_change`, `undo_financial_correction`, `undo_opening_balances`, `undo_review_metadata`.
+- **Revoked-assistant refusal** for row-returning definer readers that bypass RLS: `admin_team`, `my_access_invites`, `my_family_invites`, `my_shared_companies`, `team_company_tax`, `team_names`.
+- **Technique.** SECURITY DEFINER originals are renamed to `<name>__unguarded` (EXECUTE revoked from PUBLIC, anon, authenticated) and replaced by a definer wrapper that runs the check and delegates. **SECURITY INVOKER originals** (`restore_finance_backup`, `finance_operation`, `move_expense_category`, `receive_claim_receipt`, `save_import_balance_review`) cannot use a delegating wrapper: a definer wrapper would run the body as table owner and bypass RLS, and an invoker wrapper cannot call a copy clients may not execute. They are still renamed to `__unguarded` (clients lose EXECUTE; kept for rollback), and the public name is re-created from the original definition with the check inserted as the first body statement, keeping INVOKER and RLS. P4 refuses to wrap a function that a policy/trigger/view references by oid, and aborts if any unreviewed client-callable writer remains (fail closed on an unexpected hosted catalog).
+
+### 13.3 Order
+
+0000–0088 → P1 → P2 → **P4** → (optional, separate approval) P4b. Rollback: P4b rollback (after deactivating the hook) → **P4 rollback** → P2 rollback (refuses while P4 is installed) → P1 rollback.
+
+### 13.4 Effects
+
+- Normal signed-in users: no change except that the listed sensitive actions need a passkey/password re-confirmation at most 5 minutes old (the app retries once after `STEP_UP_REQUIRED`). PIN unlock never satisfies it.
+- Assistant (OAuth `client_id`) sessions: read the user's own rows exactly as before; every table write, file write and wrapped RPC is refused; a revoked client loses reads on the next statement (also for another member's assistant using that client on the revoking owner's company rows).
+- Data: no existing row value changes (count + md5 of every table identical, `device_passkeys` compared on its original columns).
+
+### 13.5 Rollback steps
+
+1. **KK approval.** Export `step_up_grants` and `revoked_assistant_clients` if needed.
+2. Deactivate and roll back P4b if it was applied.
+3. Run `P4_step_up_and_assistant_limits.rollback.sql` (one transaction): drops the P4 policies, drops each wrapper and renames `__unguarded` back (original oid and body), restores the saved EXECUTE grants, drops the P4 functions, `device_passkeys.id` and the `security_p4` schema, and **moves** the two P4 tables to `security_rollback_archive.<name>_<UTC>`. Proven: the catalog (policies, function definitions and ACLs, triggers, indexes, columns, grants, RLS flags) equals P1+P2 exactly and all data is unchanged.
+4. Effect: step-up and assistant limits stop being enforced (M-4 re-opens).
+
+### 13.6 P4b (optional PostgREST hook)
+
+`public.api_pre_request()` raises for non-GET/HEAD/OPTIONS requests from assistant sessions and for revoked clients. Activation is a separate statement (`ALTER ROLE authenticator SET pgrst.db_pre_request = 'public.api_pre_request'; NOTIFY pgrst, 'reload config';`), **not** run by the file. Unverified on hosted: whether Lovable Cloud allows the setting; PostgREST sends RPC as POST, so assistant read RPCs would need GET (check `src/lib/mcp/` first). P4 does not depend on it.
+
+### 13.7 Hosted pre-checks (read-only; each **requires KK approval**)
+
+| ID | Purpose | Query / action |
+|---|---|---|
+| H-P4-1 | P4 not present; function list matches §13.2 | `SELECT proname FROM pg_proc WHERE pronamespace='public'::regnamespace AND proname IN ('record_step_up','is_assistant_session') OR proname LIKE '%\_\_unguarded';` and `SELECT p.oid::regprocedure FROM pg_proc p WHERE p.pronamespace='public'::regnamespace AND p.provolatile='v' AND p.prorettype<>'trigger'::regtype AND has_function_privilege('authenticated',p.oid,'EXECUTE') ORDER BY 1;` |
+| H-P4-2 | Assistant tokens carry `client_id`; first-party tokens do not | Decode one MCP access token and one app session token on a **draft** (no production data) |
+| H-P4-3 | Definer owner bypasses RLS (wrappers, `remove_device_passkey`, erasure) | `SELECT rolname, rolbypassrls, rolsuper FROM pg_roles WHERE rolname IN ('postgres','supabase_admin');` |
+| H-P4-4 | No other object depends on a guarded function by oid | `SELECT classid::regclass, objid FROM pg_depend WHERE refclassid='pg_proc'::regclass AND refobjid IN (SELECT oid FROM pg_proc WHERE proname IN (...§13.2...)) AND deptype='n';` |
+| H-P4-5 | `regexp_instr` available (PostgreSQL ≥ 15) | `SHOW server_version;` |
+| H-P4-6 | Policy cost on large tables | `EXPLAIN` a 1,000-row expenses read as a test user on a **draft** |
+
+### 13.8 Tests (actually run)
+
+`src/lib/security-phase1-sql.test.ts`, 72 tests: H-1a–f, H-2, H-3a/b, M-1a/b, M-2 and M-4 reproduce at 0088 and are blocked after P1+P2+P4 (26); legacy editor/viewer action matrix identical at 0088/P1/P1+P2/P1+P2+P4 and no escalation (4); each of the 13 guarded functions refuses without step-up, works after `record_step_up`, refuses after expiry and for an assistant session with a fresh grant, plus natural 1-second expiry, approval-only preference guard, service-role-only `record_step_up`, and wrapper signature/grant identity with clients unable to execute `__unguarded` (17); assistant sessions read own rows, every table/file write and every wrapped RPC refused, catalog coverage of every table, revocation immediate, P4b behaviour (7); audit tables append-only even under a hypothetical permissive policy, erasure still works (7); normal flows: own CRUD, finance_operation reimbursement with replay, bulk category change + undo, transfer confirm + cancel, company grant/revoke with step-up and editor upload, family flow, demo guest, passkeys (6); erasure and same/cross-account restore via `prepareRestore` with step-up (3); data preservation and exact rollback P4 → P2 → P1, archive kept, re-apply (1).
+
+Command: `bunx vitest run src/lib/security-phase1-sql.test.ts src/lib/security-proposed-sql.test.ts src/lib/security-proposed-restore-sql.test.ts` — **156/156 passed, 3 consecutive runs.**
+
+### 13.9 Residual risks
+
+- **Client-side exports** (CSV/PDF/Excel built in the browser from readable rows) cannot be step-up enforced by the database; only server actions can.
+- **Passkey registration is not step-up guarded.** A stolen first-party session can insert its own `device_passkeys` row through the user's token (the server registration flow uses the user token) and then satisfy a passkey step-up. Recommended next step (KK): register passkeys through a service-role server function after a password step-up and add a RESTRICTIVE INSERT deny for clients. Password step-up is unaffected.
+- **Definer readers** are refused only for *revoked* assistants; a non-revoked assistant can still call them (read-only).
+- **P4b hook unverified on hosted**; without it, assistant RPC calls to non-wrapped STABLE readers are still allowed (they are read-only).
+- **Revocation does not revoke the OAuth token** at the managed auth server; the database refuses it, and the token still expires normally.
+- **New tables/functions added later** are not covered automatically; the P4 fail-closed check only runs when P4 is applied. Future migrations must add the four assistant policies and wrap new writers.
+- `step_up_grants` rows are not pruned (small; a later housekeeping job may delete rows expired for > 30 days).
+- PGlite is not Supabase (§10).
