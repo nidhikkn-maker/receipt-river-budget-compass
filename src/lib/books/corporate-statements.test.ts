@@ -8,11 +8,7 @@ import type { Expense } from '../expenses';
 import { buildReportDoc,emptyFilters } from '../report-centre';
 import { toCsv,toExcel } from '../reports';
 import type { VaultDoc } from '../documents';
-const entry=(id:string,over:Partial<Expense>={}):Expense=>({id,title:id,merchant:'Synthetic Supplier',category:'Office',scope:'business',memberId:null,splits:[],receipts:[{path:`owner/${id}.pdf`,name:`${id}.pdf`,type:'application/pdf'}],amount:100,originalAmount:100,currency:'INR',fxRate:1,date:'2026-04-10',description:'',paymentMethod:'bank_transfer',reconciledAt:'2026-04-30',statementRef:'source-line',accountId:'bank',...over});
-export const corporateFixture=()=>({entityId:'A',entities:[{id:'A',name:'Synthetic Alpha Ltd',kind:'company' as const,pan:'',gstins:['GA'],booksFrom:'2026-27'},{id:'B',name:'Excluded Beta',kind:'company' as const,pan:'',gstins:['GB'],booksFrom:'2026-27'}],
-  accounts:[{id:'bank',name:'Alpha bank',kind:'current' as const,openingBalance:10000,archived:false},{id:'card',name:'Alpha card',kind:'credit_card' as const,openingBalance:0,archived:false},{id:'loan',name:'Alpha loan',kind:'loan' as const,openingBalance:2000,archived:false},{id:'asset',name:'Alpha machine',kind:'other_asset' as const,openingBalance:0,archived:false},{id:'beta',name:'Excluded Beta bank',kind:'current' as const,openingBalance:999999,archived:false}],
-  books:{...emptyBooks(),entityAccounts:{A:['bank','card','loan','asset'],B:['beta']}},documents:[] as VaultDoc[],from:'2026-04-01',to:'2027-03-31',
-  entries:[entry('sale',{txnType:'income',amount:5000,originalAmount:5000,category:'Sales'}),entry('bill',{amount:1000,originalAmount:1000}),entry('card-bill',{accountId:'card',amount:500,originalAmount:500}),entry('card-payment',{txnType:'card_payment',toAccountId:'card',amount:500,originalAmount:500}),entry('repayment',{txnType:'loan_repayment',toAccountId:'loan',amount:1100,originalAmount:1100,principal:1000,interest:100}),entry('asset-buy',{txnType:'investment',toAccountId:'asset',amount:2000,originalAmount:2000}),entry('beta-secret',{accountId:'beta',amount:7777,originalAmount:7777})]});
+import { corporateFixture,entry } from './corporate-fixture';
 describe('Corporate statements canonical double-entry journey',()=>{
  it('balances every group and agrees with canonical bank/card/loan/assets without counting settlements as spending',()=>{
    const p=corporateFixture(),w=corporateStatements(p);
