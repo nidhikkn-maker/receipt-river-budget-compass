@@ -1,0 +1,160 @@
+test_no,journey,passes_when
+1,New company,"v1 §27 journey (kept unchanged; full text in v1, not reproduced in V4)"
+2,Bank month,"v1 §27 journey (kept unchanged; full text in v1, not reproduced in V4)"
+3,Receipt to books,"v1 §27 journey (kept unchanged; full text in v1, not reproduced in V4)"
+4,Transfer,"v1 §27 journey (kept unchanged; full text in v1, not reproduced in V4)"
+5,Card settlement,"v1 §27 journey (kept unchanged; full text in v1, not reproduced in V4)"
+6,Demat,"v1 §27 journey (kept unchanged; full text in v1, not reproduced in V4)"
+7,Prior-year onboarding,"v1 §27 journey (kept unchanged; full text in v1, not reproduced in V4)"
+8,Asset,"v1 §27 journey (kept unchanged; full text in v1, not reproduced in V4)"
+9,Lease,"v1 §27 journey (kept unchanged; full text in v1, not reproduced in V4)"
+10,Travel reimbursement,"v1 §27 journey (kept unchanged; full text in v1, not reproduced in V4)"
+11,Tax and close,"v1 §27 journey (kept unchanged; full text in v1, not reproduced in V4)"
+12,Security,"v1 §27 journey (kept unchanged; full text in v1, not reproduced in V4)"
+13,Recovery,"v1 §27 journey (kept unchanged; full text in v1, not reproduced in V4)"
+14,Devices,"v1 §27 journey (kept unchanged; full text in v1, not reproduced in V4)"
+15,Release,"v1 §27 journey (kept unchanged; full text in v1, not reproduced in V4)"
+16,Layperson first run,"A non-accountant, unaided, adds a bank statement and clears To-do in 10 minutes or less, then says correctly what cash remains and what is due this week"
+17,Invoice to cash,A GST invoice is created and sent; the bank credit is matched; the invoice appears exactly once in the GST outward data
+18,GST month,"Sales, purchases and GSTR-2B produce a working that ties to the books; the uploaded challan marks it paid and locks the period's documents"
+19,Company secretary year,A board meeting and AGM generate the annual filing tasks with data from the books; SRNs are recorded; the status board turns green
+20,Auditor trace,25 random trial-balance amounts are each traced to source documents in under 2 minutes; no edit is possible from the Audit room
+21,Insurance,"A policy upload creates the register entry, renewal reminders and premium match; a term policy adds nothing to net worth"
+22,Forex and LRS,"A remittance with TCS updates the LRS tracker, and the TCS appears as a credit in the tax summary"
+23,Ask Thapal,20 standard questions return correct figures with their sources; unanswerable questions say so without inventing figures
+24,Personal tax year,"An AIS upload is compared with the books, differences become To-do items, and the draft computation matches the CA's"
+25,Privacy rights,"A user exports, corrects and requests deletion of data; legal retention is explained; consent history is visible"
+26,Role isolation,Each of the eight roles sees only its scope; revoking access takes effect on the next request
+27,Receipt batch,"50 mixed receipts (Indian and foreign, four cards, cash): at least 48 mapped to the right card and entity with no question; all 50 linked to statement rows once statements arrive"
+28,"Paid by, belongs to",A Company A hotel paid on your personal Amex: Company A owes you; the reimbursement transfer is matched; the expense is counted once
+29,Trip Pack,"A 5-day foreign trip built from forwarded emails; the pack holds every ticket, boarding pass, hotel invoice, receipt and photo, cross-referenced, with claims to two entities"
+30,Banking hub,An alert email updates the balance within 10 minutes; the statement later confirms it with no duplicate row
+31,Trust donations,"100 donations produce receipts and PAN requests, and the Form 113 upload file passes the portal's validation"
+32,AI rules watch,"A past due-date extension applies itself; a past rate change is detected, quoted, tested and waits for approval; rollback works"
+33,Action menus,"Deleting a posted expense posts a reversal, restores balances and shows in History; undo brings it back"
+34,Deposits,"An FD advice creates the maturity entry; monthly accrual, interest credit and TDS are matched without typing"
+35,Past filings,"Last year's ITR, GST returns and audited accounts for one company produce carry-forward figures, a compliance calendar and a pre-filled draft, each figure linked to its source page"
+36,Month close,"For you, one company and one trust: documents to a locked month with no typing beyond answered To-do items; statements tie to the trial balance"
+37,Loan and financed asset,A vehicle loan's sanction letter creates the schedule and links the asset and insurance; 12 EMIs split correctly; the lender statement ties
+38,Investments,"Twelve months of CAS: holdings tie, returns and realised gains match the CA's computation, and every value carries a date"
+39,Recovery,A restore drill returns the database to a chosen minute with matching totals; the monthly full export opens in Excel and imports into Tally
+40,One action,"For a month you only scan, upload or forward; everything else is read, posted, matched and closed, and To-do holds only new situations and approvals you chose"
+41,Upload request,"A monthly request to your accountant lists 6 missing statements, ticks each on arrival, rejects a wrong month with a clear message, reminds on days 3 and 5, and the link stops working once complete"
+42,Family umbrella,"Five members, including a minor and an elderly parent: documents route to the right member by name and PAN; a Private account stays out of the family view; revoking access works at once"
+43,Construction project,"A 2,000-line estimate and 40 bills with 6,000 lines import with no typing; duplicates and rate jumps are flagged; the contractor ledger ties to the bank; costs move to the asset register on completion"
+44,Asset from invoice,"An invoice for 20 laptops creates 20 labelled assets with cost, custodian and warranty; depreciation posts monthly; the register ties to the balance sheet"
+45,Physical verification,Staff scan labels across one site on their phones; missing and moved assets are listed; the verification report is ready for the auditor
+46,Maintenance and compliance,"An AMC renewal, a lift inspection and a fault reported from a QR scan each create a reminder or work order, with cost and downtime recorded"
+47,Tenancy,A lease creates the rent schedule; 12 months of rent are invoiced and matched; one escalation applies on its date; tenant TDS ties to AIS; the deposit is refunded at exit after a move-out inspection
+48,Property sale,"Selling a co-owned property splits the capital-gains working by owner, records the buyer's TDS, and moves the asset out of the register"
+49,Passkey sign-in,"Sign in with Google once, turn on Face ID, then sign in and approve with Face ID on iPhone, iPad and Mac; a removed device's passkey stops working at once"
+50,Email fetching,"A month of statements, bills and tickets for all accounts and cards arrives with no manual forwarding; password-protected statements open; mail from unknown senders is never stored"
+51,Bulk upload,"300 files picked at once (photos, PDFs, a ZIP, and a folder on a computer) upload in the background, survive a network drop, and duplicates are skipped"
+52,Two-page receipt,Two photos of one receipt join into one document with the total read from page 2; a 30-receipt PDF splits into 30 documents
+53,Quick lock,After the idle time Thapal locks and Face ID unlocks it; approvals and exports always ask for Face ID again
+54,Money Map,Any rupee in the group is traced from the map to its transaction and document in three taps or fewer; each node's figure equals its report; transfers between own accounts never show as spending
+55,Acting from the map,"Dragging a payee onto a category shows a preview, moves all its items, and undo restores them"
+56,Fingerprint and PIN,"Fingerprint unlocks on an Android phone and a Mac; the PIN unlocks only a signed-in device; five wrong tries force a full sign-in; an approval asks for Face ID or fingerprint, not the PIN"
+57,Every device,"The 20 most common tasks pass on a small iPhone, a large iPhone, iPad in portrait and landscape, a laptop and a wide monitor"
+58,Statement after receipts,A card statement uploaded after 40 receipts matches them with no duplicate expense; uploading it again changes nothing
+59,Card bill,Paying the Amex bill from HDFC settles the card liability and leaves expenditure totals unchanged
+60,"One expense, many views","A hotel bill split between two companies appears in the trip, card, both company, category and merchant views; the group total counts it once"
+61,Personal portion,A hotel bill split 60:40 between two companies with a personal minibar charge posts three shares; each company's statement shows only its share
+62,Many-to-one matching,Six receipts match one consolidated card charge; one invoice matches three part-payments
+63,Partial refund,"A partial card refund reduces the original expense, links to it and appears in the refund register"
+64,Audit-safe correction,"Changing a posted expense's category posts a correction; every view, report and the Money Map update; the old version stays in History"
+65,Bulk change,"Selecting 120 expenses by card and date and assigning a trip shows a preview, applies, and one undo reverses all 120"
+66,Universal statement,"The same filter (Amex during the Dubai trip) gives identical totals in PDF, Excel and CSV; the PDF prints the filters; re-issuing version 1 after later corrections reproduces it exactly"
+67,Reimbursement,"A Company A expense on a personal card creates a draft claim; approval, a 70% payout and the final 30% are matched from bank statements; the claim closes only after the second; the expense counts once"
+68,Duplicate claim,"Adding a receipt that is already on a claim to a second claim is refused, with a link to the first"
+69,Trip from email,"Forwarded flight, hotel and visa emails create one trip with a permanent Trip ID, itinerary and travellers; a revised booking replaces the old one with no duplicate"
+70,Receipts abroad,"30 receipts taken abroad attach to the right trip from date, place, currency and card; uncertain ones ask"
+71,Forex,"A trip paid by forex card, Amex and AED cash shows original amounts, rupees settled, rate source and conversion charges; leftover cash stays as a foreign cash balance"
+72,Travel advance,"A ₹1,00,000 advance with ₹86,500 spent and ₹13,500 returned produces a settlement statement that ties to the company's books"
+73,Group trip,"Four travellers sharing hotel, meals and cabs get a who-owes-whom settlement; transfers between travellers are not expenses"
+74,Two statuses,A trip shows Travel: Completed and Finance: Settlement pending; a hotel refund arriving three weeks later links to the trip and moves the finance status by itself
+75,Closing a trip,"A trip cannot close with an unexplained difference; it can close with an approved, tracked receivable; after closing, any change needs Reopen with approval and issues a new statement version"
+76,Asset register import,"A 5,000-row register imports, matches existing assets by legacy code, compares totals with the ledger and explains every difference; nothing is auto-balanced; rows stay provisional until accepted"
+77,Asset purchase,One invoice for three different assets allocates cost to each and ties to the invoice total; the payment matches its bank row; re-uploading creates nothing
+78,Depreciation tie,"Monthly depreciation posts through the ledger; register, profit-and-loss depreciation and accumulated depreciation agree; tax depreciation is computed separately"
+79,Building and equipment,Equipment linked to a hospital building is not counted twice in net worth or the consolidated balance sheet
+80,Moves and transfers,Moving an asset between rooms changes location only; transferring it to another company records a disposal and an acquisition under the same permanent ID
+81,Rent and property loan,Twelve months of rent match bank credits with no rent recognised twice; the property loan and the property-to-ledger reconciliation tie
+82,Permanent IDs,"An asset bought, financed, moved, maintained, insured, depreciated and sold keeps one ID throughout; no ID is ever reused"
+83,Coming up,"Home shows the next five events from cards, loans, trips, insurance and GST; each opens its record; a card due leaves the list once the statement shows it paid"
+84,Calendar,Events from eight modules show in one calendar; dragging a GST deadline is refused; a rescheduled-flight email updates its event with no duplicate
+85,External calendar,Subscribing in Apple and Google Calendar shows privacy titles; revoking the link stops the feed
+86,Grouping,Four missing documents for Company A show as one group that opens to four; a new-device sign-in alert is never grouped
+87,Acting from a reminder,Approving a claim from a notification asks for Face ID; neither the PIN nor voice alone can approve
+88,Delivery,"A failed push is retried, falls back to email, and the delivery report never shows Delivered unless the provider confirmed it"
+89,Bell count,"The count stays correct after refreshes, retries and a bulk mark-read"
+90,Voice expense,"""Paid 1,500 rupees for parking during the Chennai trip using cash"" creates a correct draft; the same works in Tamil and Hindi once enabled"
+91,Voice reminder and search,"""Remind me to follow up on the Dubai hotel refund"" creates a reminder linked to that refund; an ambiguous command asks first"
+92,Permissions,"An accountant sees only Company A's expenses and claims; a family member's private accounts never appear in another member's views, reports or calendar"
+93,Every device,"Statements, trips, calendar and notifications pass on iPhone, iPad and computer, and downloads work from all three"
+94,Investment import,Twelve months of demat and mutual fund statements import with no duplicate holdings; payments match bank rows; holdings tie to CAS
+95,Corporate action,A split and a bonus adjust quantity and cost with source and date; later gains use the adjusted cost
+96,Gains and XIRR,Realised gains draw on the right tax lots; XIRR matches a hand calculation on actual cash-flow dates
+97,Stale price,"When no current price arrives, the value shows its date and Stale, never Live"
+98,Net worth,"Group net worth counts Company A once, eliminates intercompany loans, and reproduces a past month-end figure exactly"
+99,Two tax laws,A 2025-26 computation uses 1961 Act rules and assessment-year labels; a 2026-27 one uses 2025 Act rules and tax-year labels; both from the same books
+100,Income matching,"Every AIS line is classed Matched, Partly matched, Unmatched, Missing in books or Missing in tax records, and each difference opens a review item"
+101,GSTR-2B,200 purchase invoices are sorted into the seven outcomes and a duplicate claim is caught
+102,TDS quarter,"Deductions, challans and certificates reconcile and the return working matches the ledger"
+103,Filing evidence,"A return shows Filed only with its acknowledgement attached, and Paid only when challan and bank debit match"
+104,Rule rollback,"A wrongly approved rule version is rolled back, affected drafts are recomputed and the old version is kept"
+105,Notice,"A notice creates a calendar deadline, an assigned professional and a reply trail through to closure"
+106,Cross-entity access,Changing a record ID in a link or API call never reveals another entity's data
+107,Posting safeguards,"An unbalanced entry, a duplicate posting and a change to a locked period are all refused and logged"
+108,Restore,"A point-in-time restore matches ledger totals, counts, document links, owners, permissions and reports before it is declared successful"
+109,Interrupted work,A background import stopped midway resumes without duplicates; a pending approval survives a crash
+110,Release control,A release without your approval cannot publish; an approved one is verified in production with its evidence kept
+111,Complete export,"The export opens in Excel, its checksums verify, and re-importing reproduces the same totals"
+112,Environments,Nothing run in preview ever writes to production data
+113,Incident drill,"A simulated suspicious sign-in raises an alert, opens an incident record and produces the evidence pack within the 6-hour window"
+114,Health Centre,Each check turns green only on evidence; uploading a file alone changes nothing
+115,Cross-module agreement,"The daily test shows expenses, travel, claims, assets, properties, investments, loans and tax equal to their ledger control accounts"
+116,Re-reading,"Re-reading 50 invoices with a newer engine shows old and new side by side, posts nothing without approval and creates no duplicates"
+117,Report status,"A report missing a statement shows Incomplete and reaches Final only after reconciliation, review and approval"
+118,Group accounts,"A part-owned entity counts at its share, and related-party transactions are listed"
+119,Prior-period correction,"A correction to a locked month posts in the open month, linked to the original, with the locked statements unchanged"
+120,Non-accountant,A person with no accounting training completes the eight tasks in UIX acceptance unaided
+121,End-to-end journey,"The final acceptance journey passes in personal, family, company and trust workspaces"
+122,UX01 Visual match,"Every screen's type, spacing, alignment, icons, colours and hierarchy match the approved captures within a written tolerance"
+123,UX02 iPhone on real Safari,"Narrow and large iPhones show no clipping, sideways scrolling, keyboard overlap or blocked actions; safe areas and dynamic type are right"
+124,UX03 iPad,"Portrait, landscape and Split View use a purposeful split layout, never a squeezed computer layout"
+125,UX04 Keyboard on a computer,"Full focus order, visible focus, Enter and Escape, browser back, deep links and screen-reader labels all work"
+126,"UX05 Reduced motion, contrast and 200% zoom","Usable without motion, readable, with no hidden controls"
+127,NAV01 Every route,"Each primary and secondary route has the right entry, destination, breadcrumbs and Back, keeping filters and scroll"
+128,NAV02 Global search,Finds modules and records without leaking across workspaces; handles no results and stale data
+129,NAV03 Workspace switching,"Shows the right data scope, refreshes totals and warns about unsaved work"
+130,ADD01 One receipt through Smart Add,"Preview, extraction, correction, account and entity links, kept original, confirmation and the right final state"
+131,"ADD02 Batch of PDF, photo, CSV and XLSX","Formats classified, single failures recoverable, duplicates caught"
+132,"ADD03 Cancel, close, Escape and resume","No orphan dialog, lost data or accidental posting; focus returns to the control that opened it"
+133,ADD04 Voice and correction,"Consent, transcript preview, correction and fallbacks, with no false claim of recording"
+134,STM01 Statement balance proof,"Printed opening, credits, debits and closing reconcile without relying on invoice data"
+135,STM02 Duplicate debit and part-payment,A duplicate invoice match is blocked and the invoice keeps its outstanding balance
+136,STM03 Missing bank fee and unmatched invoice,"Both show as unresolved exceptions, never invented"
+137,"STM04 Long import, reload and retry",The job persists and resumes without duplicate postings
+138,FIN01 Transfer and card settlement,Both account sides are linked; a card payment adds no new spending
+139,FIN02 Net worth with property and assets,No component counted twice; valuation source and date visible
+140,"TRV01 Finished trip, open money","A reimbursement, refund or card balance stays open until settled"
+141,TRV02 Trip report,"Accounts, currencies, expenses, receipts and claims reconcile to source"
+142,INV01 Demat upload and corporate actions,"Holdings, units and cost lots reconcile; stale prices are disclosed"
+143,"RPT01 PDF, XLSX, CSV and ZIP reports","Right scope, format, totals, evidence and file integrity; jobs retry safely"
+144,TAX01 Statutory template and close,"Current rule source, review status, professional approval and period lock are enforced"
+145,SEC01 Workspace and role permissions,"No unauthorised data, API or export access; revoked access ends at once"
+146,SEC02 Backup restore drill,Recovery is verified with an audit trail and no duplicate financial events
+147,PERF01 Speed of main screens,"Home, Money, Inbox and Expenses are usable within 2 seconds on the agreed device and network"
+148,PERF02 Speed of Statement Desk,Usable within 2.5 seconds; long tasks run visibly in the background
+149,REL01 Release match,"The exact commit, tests, migration plan, rollback and deployed match are recorded"
+150,Receipt pages in the Detailed Expenditure Statement,"A trip statement PDF with 30 receipts of mixed sizes shows every receipt two to four to a page, each labelled with its row and readable on printed A4; missing receipts show as missing"
+151,Company created from registration documents,"The source shows beside the extracted legal details; permissions and account mapping are set; opening balances are verified, and anything unproven stays flagged provisional"
+152,A bank month and its expenses,The statement balance proves independently; charges and receipts match; a duplicate card debit and a part-paid invoice are caught; a fee missing from the books is found; reconciliation completes
+153,Smart Add end to end,"Camera, file, email, voice and batch each keep a readable original and field sources; the paying card is detected; uncertainty, duplicates and splits are handled; save and cancel both behave"
+154,A trip's full life,"Itinerary and calendar, a multi-currency budget, linked expenses, a claim split across two entities, part settlement, a refund, finance close and the zipped evidence"
+155,A property's and an asset's full life,"From invoice or deed: owner and funding, books, depreciation, rent and cash, insurance reminders, valuation, disposal and correct net-worth exclusions"
+156,An investment's full life,"Broker or CAS import, lots, a corporate action, cash reconciled, delayed or missing prices labelled, taxes, and historical and current net worth"
+157,Tax and close,"Versioned official rules; GST, TDS and income-tax workings; open findings; professional review; exports; challan evidence; period lock and a reversal"
+158,"Calendar, notifications and integrations",One record creates one event; Home and Calendar open it; snooze and reschedule work; sync status shows; a failed delivery retries
+159,"Roles, security and disaster recovery","Adult privacy holds; an accountant is invited, expires and is revoked; cross-entity access is blocked; an interrupted job resumes; a backup restores with no duplicate posting"

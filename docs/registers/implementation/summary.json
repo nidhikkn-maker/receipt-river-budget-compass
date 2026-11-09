@@ -1,0 +1,34 @@
+{
+ "commit": "722b245",
+ "tests": {
+  "files": 321,
+  "passed_files": 321,
+  "total": 2317,
+  "passed": 2317,
+  "failed": 0
+ },
+ "completion": {
+  "Missing": 498,
+  "Partial": 966,
+  "Blocked": 38,
+  "Complete (local evidence)": 34
+ },
+ "state": {
+  "Not started": 498,
+  "Tested (local)": 790,
+  "Coded": 210,
+  "Blocked": 38
+ },
+ "completion_p0": {
+  "Missing": 58,
+  "Partial": 215,
+  "Complete (local evidence)": 13,
+  "Blocked": 2
+ },
+ "db_flags": {
+  "depends on unapplied SQL": 29
+ },
+ "missing_code_refs": 0,
+ "missing_test_refs": 0,
+ "manual_rechecks": 0
+}

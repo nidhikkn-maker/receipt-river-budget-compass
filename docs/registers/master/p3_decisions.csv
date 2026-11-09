@@ -1,0 +1,15 @@
+decision_id,approved_choice,implementation_condition
+DN-P3-1,A: Reverse and replace posted edits,"After reviewed legacy conversion; immutable original, reason, actor, link and audit trail."
+DN-P3-2,A: Exception only for unknown counterpart,No fabricated balancing line; unresolved item remains in To-do and reconciliation exceptions.
+DN-P3-3,A: Dated source-backed opening journal,Never default silently to opening equity; opening totals reconcile with evidence.
+DN-P3-4,A: Skip closed periods,Issue exception report; separately approved prior-period treatment or controlled reopening.
+DN-P3-5,B: Include personal accounting,Use same central journal and distinct personal accounting scope; do not create a fictitious registered company or parallel ledger.
+DN-P3-6,A: Functional-currency lines and original currency,"Retain amount/currency, rate, date/source, settlement and FX differences; schema must be extensible for true multicurrency."
+DN-P3-7,B: Owner and explicitly authorised accountants initially,No broad company-member reads; expand only after P2 scoped-role review and approval.
+DN-P3-8,B: Company-aware legacy period checks,"Both old and new period checks must evaluate entity, period and posting scope consistently."
+DN-P3-9,A: Cross-account restore exceptions,Never remap journal owner by guesswork; preserve original references and safe repair workflow.
+DN-P3-10,A: Undo by reversal,Never physically delete posted entries or erase their source evidence.
+DN-P3-11,A: Reconciliation metadata only,"Cannot change financial amount, owner, date, GL or currency without reversal/replacement."
+DN-P3-12,A: Preview and confirm re-sync,Version and compare affected mappings; automatic triggers require separate validation later.
+DN-P3-13,Mandatory period-close follow-up,P3 may be developed separately; authoritative journal-backed close cannot release until posting completeness and close/reopen evidence are integrated.
+DN-P3-14,B: Demo guests cannot post journals,"Guests cannot grant, convert or post; test direct API and UI bypass attempts."
