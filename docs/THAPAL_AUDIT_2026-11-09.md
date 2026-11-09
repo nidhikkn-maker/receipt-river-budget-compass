@@ -4,6 +4,8 @@
 **Method:** I ran the CI pipeline for real and read the code area by area. I did not take the requirements register (`.lovable/requirements/register.json`) at its word: I spot-checked its claims against the code.
 **Read-only:** no code, register entries or generated docs were changed. The hosted Cloud project, the published site and physical devices were **not** accessed.
 
+> **Status update (later on 9 Nov 2026):** the Thapal rebrand listed as missing in §5 has since been done on branch `claude/git-up-thapal-audit-bbjy2k`. All user-visible text, the logo wordmark, PDFs, emails, push text, the passkey name and the MCP title now say Thapal. Internal ids stay `ledgerline` on purpose (see `docs/brand-usage.md`). Typecheck and build pass. The same 9 tests in §2 still fail, and no new failures appeared. Not yet merged to `main` or published, so the live site still shows Ledgerline.
+
 ## 1. Scorecard
 
 | Area | Result |
