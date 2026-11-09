@@ -15,7 +15,7 @@ export function DepreciationInboxCard() {
   const groups = preparedSummary(books.journals).filter((g) => !dismissed.has(g.month));
   const blocked = (preferences.assets ?? []).filter((a) => a.kind !== "property" && !a.soldOn).map((a) => ({ a, x: depreciationExceptions(a) })).filter((r) => r.x.length);
   if (!groups.length) return null;
-  const dismiss = (m: string) => savePreferences({ ...preferences, depreciationDismissed: [...dismissed, m].slice(-24) });
+  const dismiss = (m: string) => savePreferences({ ...preferences, depreciationDismissed: [...dismissed, m] }); // audit record: never truncated (retention.ts)
   return (
     <section aria-label="Depreciation ready" className="space-y-2 rounded-2xl border p-4">
       {groups.map((g) => <div key={g.month} className="flex flex-wrap items-center justify-between gap-2">

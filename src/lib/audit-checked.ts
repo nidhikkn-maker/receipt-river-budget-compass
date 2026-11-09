@@ -7,7 +7,8 @@ export function selectVisible(picked: string[], visible: string[]): string[] {
 
 /** Mark keys as checked (on) or restore them to open (off). Never touches records. */
 export function setChecked(current: string[], keys: string[], on: boolean): string[] {
-  if (on) return [...new Set([...current, ...keys])].slice(-3000);
+  // Audit marks are audit records (retention.ts): never truncated.
+  if (on) return [...new Set([...current, ...keys])];
   const drop = new Set(keys);
   return current.filter((k) => !drop.has(k));
 }

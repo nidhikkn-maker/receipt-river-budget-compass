@@ -17,9 +17,9 @@ describe("statement coverage", () => {
 });
 
 describe("cross-device upload history", () => {
-  it("keeps at most ten uploads and drops malformed ones", () => {
+  it("keeps every upload (evidence is never capped) and hides malformed ones from screens", () => {
     const u = Array.from({ length: 12 }, (_, i) => ({ id: `u${i}`, at: "2026-11-01", label: "f", posted: ["p"], reconciled: [], createdAccounts: [] }));
-    expect(cleanStatementUploads([...u, { id: 5 }])).toHaveLength(10);
+    expect(cleanStatementUploads([...u, { id: 5 }])).toHaveLength(12);
     expect(cleanStatementUploads("x")).toEqual([]);
   });
 });

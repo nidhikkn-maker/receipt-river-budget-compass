@@ -9,6 +9,7 @@
 //   * if an edit replaces a record whose stored form had been tidied for display, the stored original is copied to
 //     preservedRecords so nothing the owner never saw is lost.
 import { normalizePreferences, type FinancePreferences } from "./preferences";
+import { PREFERENCE_RETENTION } from "./retention";
 
 export interface PreservedRecord { path: string; reason: "replaced-after-display-adjustment" | "unreadable-archive"; savedAt: string; record: unknown }
 
@@ -82,9 +83,26 @@ export function reconcileMap(raw: unknown, view: unknown, next: unknown): unknow
   return out;
 }
 
-const LIST_SECTIONS = ["assets", "entities", "receivables", "payees", "statementUploads", "decisions", "contractObligations", "allocationPlans", "trips", "merchantGroupingHistory", "preservedRecords"] as const;
-const MAP_SECTIONS = ["statementBatches"] as const;
+// Every non-UI collection in the retention registry (retention.ts) is reconciled record by record.
+const EVIDENCE_SECTIONS = Object.entries(PREFERENCE_RETENTION).filter(([, r]) => r.class !== "ui").map(([k]) => k);
 const BOOK_MAPS = ["entityAccounts", "fieldMappings", "retentionYears"] as const;
+
+/** Reconcile one section whatever its shape: a list, a keyed map, or an object holding lists (e.g. reimbursementSettings). */
+function reconcileSection(path: string, raw: unknown, view: unknown, next: unknown, archive: PreservedRecord[], now: string): unknown {
+  if (Array.isArray(raw) || Array.isArray(next)) return reconcileList(path, raw, view, next, archive, now);
+  if (!isObj(raw) || !isObj(next)) return next;
+  const v = isObj(view) ? view : {};
+  const nestedLists = Object.keys({ ...raw, ...next }).filter((k) => Array.isArray(raw[k]) || Array.isArray(next[k]));
+  if (!nestedLists.length) return reconcileMap(raw, view, next);
+  const out: Record<string, unknown> = { ...next };
+  for (const k of Object.keys(next)) {
+    if (!(k in raw)) continue;
+    if (canonical(next[k]) === canonical(v[k])) out[k] = raw[k];
+    else if (nestedLists.includes(k)) out[k] = reconcileList(`${path}.${k}`, raw[k], v[k], next[k], archive, now);
+  }
+  for (const k of Object.keys(raw)) if (!(k in out)) out[k] = raw[k];
+  return out;
+}
 
 /**
  * The data to store when the app saves `next`, given what is currently stored (`stored`, exactly as read).
@@ -99,8 +117,7 @@ export function preserveForSave(stored: Record<string, unknown> | null | undefin
   for (const k of Object.keys(n)) {
     if (!(k in raw)) continue;
     if (canonical(n[k]) === canonical(base[k])) { out[k] = raw[k]; continue; }
-    if ((LIST_SECTIONS as readonly string[]).includes(k)) out[k] = reconcileList(k, raw[k], base[k], n[k], archive, now);
-    else if ((MAP_SECTIONS as readonly string[]).includes(k)) out[k] = reconcileMap(raw[k], base[k], n[k]);
+    if (EVIDENCE_SECTIONS.includes(k)) out[k] = reconcileSection(k, raw[k], base[k], n[k], archive, now);
   }
   // Keys stored but absent from the app's object (unknown/newer fields) stay as stored.
   for (const k of Object.keys(raw)) if (!(k in out)) out[k] = raw[k];
@@ -142,7 +159,13 @@ export function unreadableRecords(stored: Record<string, unknown> | null | undef
       for (const [k, x] of Object.entries(r)) if (!(k in v)) found.push({ path, index: k, record: x });
     }
   };
-  for (const k of [...LIST_SECTIONS, ...MAP_SECTIONS]) if (k in raw && k !== "preservedRecords") scan(k, raw[k], base[k]);
+  for (const k of EVIDENCE_SECTIONS) {
+    if (!(k in raw) || k === "preservedRecords") continue;
+    const r = raw[k], v = base[k];
+    // Objects that hold lists (e.g. reimbursementSettings.profiles) are scanned list by list.
+    if (isObj(r) && Object.values(r).some(Array.isArray)) { for (const [sk, sv] of Object.entries(r)) if (Array.isArray(sv)) scan(`${k}.${sk}`, sv, isObj(v) ? v[sk] : undefined); }
+    else scan(k, r, v);
+  }
   if (isObj(raw["books"])) {
     const rb = raw["books"], vb = isObj(base["books"]) ? base["books"] : {};
     for (const k of Object.keys(rb)) if (Array.isArray(rb[k]) || (BOOK_MAPS as readonly string[]).includes(k)) scan(`books.${k}`, rb[k], vb[k]);

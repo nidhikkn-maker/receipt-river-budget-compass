@@ -20,6 +20,7 @@ import { ACTIVE_SCOPES, CATEGORIES, memberShares, categoryParts, SCOPES, type Ex
 import { decimal, moneyNumber, sumMoney, addMoney, subtractMoney } from "./money";
 import { cleanThemeName, type ThemeName } from "./themes";
 import type { PreservedRecord } from "./preserve-records";
+import { capFor, retainList } from "./retention";
 import { defaultEmergency, type BriefSettings, type EmergencySettings, type MerchantAliases, type Milestone, type Trip, type WeeklyBrief } from "./intelligence";
 
 export interface CategorySetting { name: string; archived: boolean }
@@ -52,7 +53,7 @@ export interface SavedView { id: string; name: string; filters: Record<string, s
 export function sanitizeSavedViews(raw: unknown): SavedView[] {
   if (!Array.isArray(raw)) return [];
   return raw.filter((v) => v && typeof v.id === "string" && typeof v.name === "string" && v.name.trim() && v.filters && typeof v.filters === "object")
-    .slice(0, 20).map((v) => ({ id: v.id, name: String(v.name).trim().slice(0, 40), filters: Object.fromEntries(Object.entries(v.filters).filter(([, x]) => typeof x === "string" && x !== "")) as Record<string, string> }));
+    .slice(0, capFor("savedViews") ?? undefined).map((v) => ({ id: v.id, name: String(v.name).trim().slice(0, 40), filters: Object.fromEntries(Object.entries(v.filters).filter(([, x]) => typeof x === "string" && x !== "")) as Record<string, string> }));
 }
 
 /** Which New expense fields may be filled from past habits. */
@@ -205,12 +206,13 @@ export function normalizePreferences(raw: Partial<FinancePreferences> | null | u
   p.assets = cleanAssets(p.assets);
   p.receivables = cleanReceivables(p.receivables);
   p.books = cleanBooks(p.books);
-  p.depreciationDismissed = Array.isArray(p.depreciationDismissed) ? p.depreciationDismissed.filter((m) => typeof m === "string" && /^\d{4}-\d{2}$/.test(m)).slice(-24) : [];
-  p.checkedAudit = Array.isArray(p.checkedAudit) ? [...new Set(p.checkedAudit.filter((k) => typeof k === "string" && k.length <= 200))].slice(-3000) : [];
+  // Retention (retention.ts): only UI data may be capped; these are audit/financial records and are never truncated.
+  p.depreciationDismissed = Array.isArray(p.depreciationDismissed) ? p.depreciationDismissed.filter((m) => typeof m === "string" && /^\d{4}-\d{2}$/.test(m)) : [];
+  p.checkedAudit = Array.isArray(p.checkedAudit) ? [...new Set(p.checkedAudit.filter((k) => typeof k === "string" && k.length <= 200))] : [];
   p.payees = cleanPayees(p.payees);
   p.reimbursementSettings = cleanReimbursementSettings(p.reimbursementSettings);
   p.homeShortcuts = cleanShortcuts(p.homeShortcuts);
-  p.travelMessages = Array.isArray(p.travelMessages) ? p.travelMessages.filter((m) => m && typeof m.id === "string" && typeof m.title === "string" && typeof m.text === "string").slice(-300) : [];
+  p.travelMessages = Array.isArray(p.travelMessages) ? p.travelMessages.filter((m) => m && typeof m.id === "string" && typeof m.title === "string" && typeof m.text === "string") : [];
   if (!["daily", "executive", "minimal", "custom"].includes(p.homeMode)) p.homeMode = "custom";
   p.reminderDays = Number.isFinite(p.reminderDays) ? Math.min(30, Math.max(0, Math.round(p.reminderDays))) : d.reminderDays;
   p.notifications = normalizeNotificationSettings(p.notifications);
@@ -221,8 +223,8 @@ export function normalizePreferences(raw: Partial<FinancePreferences> | null | u
   if (!["day", "week", "month", "custom"].includes(p.homePeriod)) p.homePeriod = "month";
   p.themeName = cleanThemeName(p.themeName);
   { const r = p.shopRules && typeof p.shopRules === "object" ? p.shopRules : {}; const str = (v: unknown) => (typeof v === "string" && v.length > 0 && v.length <= 80 ? v : undefined);
-    p.shopRules = Object.fromEntries(Object.entries(r).filter(([k, v]) => k.length > 0 && k.length <= 120 && v && typeof v === "object").slice(0, 500).map(([k, v]) => { const o: ShopRule = {}; for (const f of ["category", "accountId", "paymentMethod", "scope"] as const) { const x = str((v as ShopRule)[f]); if (x) o[f] = x; } return [k, o]; }).filter(([, o]) => Object.keys(o as object).length)); }
-  { const a = p.shopAliases && typeof p.shopAliases === "object" ? p.shopAliases : {}; p.shopAliases = Object.fromEntries(Object.entries(a).filter(([k, v]) => typeof v === "string" && k.length > 0 && k.length <= 120 && v.length > 0 && v.length <= 120 && k !== v).slice(0, 1000)); }
+    p.shopRules = Object.fromEntries(Object.entries(r).filter(([k, v]) => k.length > 0 && k.length <= 120 && v && typeof v === "object").map(([k, v]) => { const o: ShopRule = {}; for (const f of ["category", "accountId", "paymentMethod", "scope"] as const) { const x = str((v as ShopRule)[f]); if (x) o[f] = x; } return [k, o]; }).filter(([, o]) => Object.keys(o as object).length)); }
+  { const a = p.shopAliases && typeof p.shopAliases === "object" ? p.shopAliases : {}; p.shopAliases = Object.fromEntries(Object.entries(a).filter(([k, v]) => typeof v === "string" && k.length > 0 && k.length <= 120 && v.length > 0 && v.length <= 120 && k !== v)); }
   { const sd = (p.smartDefaults ?? {}) as Partial<SmartDefaultSettings>; p.smartDefaults = { category: sd.category !== false, payment: sd.payment !== false, workspace: sd.workspace !== false }; }
   if (p.homeScope !== "all" && !(ACTIVE_SCOPES as readonly string[]).includes(p.homeScope)) p.homeScope = "all";
   const iso = (v: unknown) => (typeof v === "string" && /^\d{4}-\d{2}-\d{2}$/.test(v) ? v : "");
@@ -234,22 +236,16 @@ export function normalizePreferences(raw: Partial<FinancePreferences> | null | u
   p.freshness = { reviewDays: days(f.reviewDays, 14), outdatedDays: days(f.outdatedDays, 45), perAccount: f.perAccount && typeof f.perAccount === "object" ? f.perAccount : {} };
   if (p.freshness.outdatedDays <= p.freshness.reviewDays) p.freshness.outdatedDays = p.freshness.reviewDays + 1;
   if (!Array.isArray(p.inboxDismissed)) p.inboxDismissed = [];
-  p.inboxDismissed = p.inboxDismissed.slice(-500);
   if (!p.statementBalances || typeof p.statementBalances !== "object") p.statementBalances = {};
   if (!Array.isArray(p.splitTemplates)) p.splitTemplates = [];
   p.emergency = { ...defaultEmergency(), ...(p.emergency ?? {}) };
   p.emergency.targetMonths = Number.isFinite(p.emergency.targetMonths) ? Math.min(24, Math.max(1, p.emergency.targetMonths)) : 6;
   for (const k of ["irregularRejected", "irregularConfirmed", "milestones", "trips", "briefs", "paymentInstruments", "allocationPlans", "rules", "ruleDismissed", "coolingOff", "contractObligations", "decisions", "mapLinks"] as const) if (!Array.isArray(p[k])) (p as unknown as Record<string, unknown[]>)[k] = [];
-  p.ruleDismissed = p.ruleDismissed.slice(-500);
-  p.coolingOff = p.coolingOff.slice(-200);
-  p.mapLinks = p.mapLinks.slice(-500);
   p.mapPositions = cleanMapPositions(p.mapPositions);
   p.setupAssistant = p.setupAssistant === "done" ? "done" : "pending";
   p.preservedRecords = Array.isArray(p.preservedRecords) ? p.preservedRecords : [];
-  p.favouriteEntries = Array.isArray(p.favouriteEntries) ? [...new Set(p.favouriteEntries.filter((x): x is string => typeof x === "string"))].slice(-30) : [];
+  p.favouriteEntries = retainList("favouriteEntries", Array.isArray(p.favouriteEntries) ? [...new Set(p.favouriteEntries.filter((x): x is string => typeof x === "string"))] : []);
   if (!p.autopilotActions || typeof p.autopilotActions !== "object" || Array.isArray(p.autopilotActions)) p.autopilotActions = {};
-  p.autopilotActions = Object.fromEntries(Object.entries(p.autopilotActions).slice(-300));
-  p.briefs = p.briefs.slice(0, 26);
   if (!p.merchantAliases || typeof p.merchantAliases !== "object") p.merchantAliases = {};
   p.brief = { ...d.brief, ...(p.brief ?? {}) };
   return p;
@@ -297,7 +293,7 @@ export function scopedBudgetUsage(b: ScopedBudget, entries: Expense[], today: st
 export function cleanMapPositions(raw: unknown): Record<string, { x: number; y: number }> {
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) return {};
   const out: Record<string, { x: number; y: number }> = {};
-  for (const [k, v] of Object.entries(raw as Record<string, unknown>).slice(-800)) {
+  for (const [k, v] of Object.entries(raw as Record<string, unknown>).slice(-(capFor("mapPositions") ?? Infinity))) {
     const o = v as { x?: unknown; y?: unknown } | null;
     if (k.length > 200 || !o || typeof o.x !== "number" || typeof o.y !== "number" || !Number.isFinite(o.x) || !Number.isFinite(o.y)) continue;
     out[k] = { x: Math.min(4000, Math.max(0, Math.round(o.x))), y: Math.min(4000, Math.max(30, Math.round(o.y))) };
@@ -322,5 +318,5 @@ export function cleanStatementUploads(v: unknown): StatementUpload[] {
     const ex = o.expected as { posted?: unknown; reconciled?: unknown; drafts?: unknown } | undefined;
     const expected = ex && Number.isInteger(ex.posted) && Number.isInteger(ex.reconciled) && (ex.posted as number) >= 0 && (ex.reconciled as number) >= 0 ? { expected: { posted: ex.posted as number, reconciled: ex.reconciled as number, ...(Number.isInteger(ex.drafts) && (ex.drafts as number) >= 0 ? { drafts: ex.drafts as number } : {}) } } : {};
     return [{ id: o.id, at: o.at, label: String(o.label ?? ""), posted: ids(o.posted), reconciled: ids(o.reconciled), createdAccounts: created, ...(o.status==='interrupted'||o.status==='complete'||o.status==='undone'?{status:o.status}:{}), ...(typeof o.undoError === 'string' ? { undoError: o.undoError } : {}), sources, linkedDrafts, ...(evidence ? { evidence } : {}), ...(undoRows ? { undoRows } : {}), ...expected }];
-  }).filter((u,i,all)=>u.status==='undone'||u.status==='interrupted'||!!u.undoError||all.slice(0,i+1).filter(x=>x.status!=='undone'&&x.status!=='interrupted'&&!x.undoError).length<=10);
+  }); // Upload history is undo/recovery evidence (retention.ts): every upload is kept; the old ten-completed limit is removed.
 }
