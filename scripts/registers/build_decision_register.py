@@ -43,6 +43,16 @@ KK = [
  ("V4-TEAMUI", "Team Access wording", "Correct Team Access UI wording before P1 activation", "Approved requirement", "V4 FND-04"),
  ("V4-STAGED", "Older staged SQL", "No automatic application of previously staged SQL; compare one by one with P1-P3", "Approved requirement", "V4 §4"),
 ]
+KK += [
+ ("DN-P0-RET", "Retention of stored collections", "Size limits only for genuinely disposable interface data; financial, security, statutory and audit evidence (dismissed reminders, cooling-off, travel approvals, commitments, reimbursement evidence, audit marks) never silently deleted; each collection classified and tested", "Approved; implemented locally (src/lib/retention.ts)", "KK 9 Nov (Phase 0 decision 1)"),
+ ("DN-P0-BASE", "Production historical-baseline check", "Prepare readiness assessment (runtime, impact, data protection, limits, evidence); do not execute on production without separate approval", "Approved preparation only; run not authorised", "KK 9 Nov (Phase 0 decision 2)"),
+ ("DN-P1", "Phase 1 security", "Accepted as completed isolated development with its test evidence; NOT approved as production-ready", "Accepted (isolated only)", "KK 9 Nov (Phase 1 review)"),
+ ("DN-P1-DEPLOY", "P1/P2/P4 production deployment", "Do not apply yet; first prepare production-like migration, rollback, backup, restore, compatibility and access-control verification evidence", "Not authorised", "KK 9 Nov (Phase 1 review, decision 1)"),
+ ("DN-P1-PASSKEY", "Passkey registration", "Fresh strong authentication before registering or replacing a passkey; Google-only accounts use a trusted method without a password; a 4-digit PIN never authorises credential changes", "Approved requirement", "KK 9 Nov (Phase 1 review, decision 2)"),
+ ("DN-P1-HOSTED", "Hosted capability assessment", "Restricted read-only assessment with authorised test credentials and non-sensitive test accounts; no change to hosted auth, database hooks, permissions or records; any state-changing test needs separate approval", "Approved (read-only only)", "KK 9 Nov (Phase 1 review, decision 3)"),
+ ("DN-P1-BLOCKERS", "Phase 1 release blockers", "Six Phase 1 gaps stay open as mandatory production release blockers (docs/registers/blockers/production_release_blockers.csv); requirements not marked fully implemented until evidence exists", "Approved", "KK 9 Nov (Phase 1 review, decision 6)"),
+ ("DN-P2", "Phase 2 database foundation", "Develop in isolated environment only: legal-entity separation, relational structures, permanent record IDs, account linkage, preservation of historical records; backward compatible until migration independently verified; no production data migration, deploy, production-branch merge or Lovable change; stop before Phase 3", "Approved (isolated only)", "KK 9 Nov (Phase 1 review, decision 5)"),
+]
 for i, t, d, s, src in KK: add(id=i, topic=t, decision=d, status=s, source=src, limits=NOT_DEPLOY if i not in ("DN-08",) else "")
 
 PENDING = [
@@ -56,6 +66,9 @@ PENDING = [
  ("APR-LOGO", "Final Option 02 SVG artwork", "Awaiting approved artwork."),
  ("APR-GOLDEN-DOCS", "Golden real-document test sets", "Awaiting KK approval and privacy controls."),
  ("APR-PROVIDERS", "Provider integrations (AA, email intake, licensed prices, filing intermediaries)", "Deferred; approval and verified licensing/accuracy before enabling."),
+ ("C11", "Statement Desk 'Apply everything' vs Decision 4", "Awaiting KK: options and consequences in docs/decisions/OPEN_CONFLICTS_C11_C13_C14_2026-11-09.md"),
+ ("C13", "Audit retention after user erasure (DPDP)", "Awaiting KK: options and consequences in docs/decisions/OPEN_CONFLICTS_C11_C13_C14_2026-11-09.md"),
+ ("C14", "thapal.in domain and passkey re-registration", "Awaiting KK: options and consequences in docs/decisions/OPEN_CONFLICTS_C11_C13_C14_2026-11-09.md"),
  ("APR-MCP-TOKENS", "External assistant token scope/revocation design", "Pending design; implement effective revoke and step-up barrier (V4 §12)."),
 ]
 for i, t, d in PENDING: add(id=i, topic=t, decision=d, status="Pending / not authorised", source="V4 §1, §10, §12; KK 9 Nov")
