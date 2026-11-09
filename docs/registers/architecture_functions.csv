@@ -1,0 +1,52 @@
+function,defined_in_migrations,staged_only,security_definer,called_from
+accept_family_invite,0022,,yes,src/lib/family-requests.ts
+admin_set_member,0066,,yes,src/components/TeamAccess.tsx
+admin_set_permission,0066,,yes,src/components/TeamAccess.tsx
+admin_team,0066,,yes,src/components/TeamAccess.tsx
+apply_review_metadata,0044; 0046,,yes,src/lib/store.tsx
+bulk_category_change,0016,,yes,src/lib/store.tsx
+can_access_entity,0075,,yes,src/components/books/CompanyAccess.tsx
+cancel_transfer,0047; 0049,,yes,src/lib/store.tsx
+change_accounting_period,0070; 0072; 0084,,yes,src/routes/_authenticated/audit.tsx
+claim_import_ai,0033,,yes,src/lib/scanned-import.server.ts
+claim_import_batches,0030; 0033,,yes,src/lib/import-jobs.server.ts
+claim_job,0059,,yes,src/routes/api/public/jobs/closing-prices.ts; src/routes/api/public/jobs/rule-watch.ts
+claim_report_jobs,0029,,yes,src/lib/report-jobs.server.ts
+claim_upload_slot,0052,,yes,src/routes/api/public/upload/$token.ts
+commit_document_intake_reviewed,0071; 0074; 0079,,yes,src/lib/store.tsx
+confirm_transfer,0047; 0049,,yes,src/lib/store.tsx
+correct_financial_entries,0041,,yes,src/lib/store.tsx
+decide_family_request,0022; 0039,,yes,src/lib/family-requests.ts
+delete_my_finance_data,0009; 0011; 0018; 0021; 0022; 0027; 0028; 0058,,yes,src/lib/delete-data.ts
+expired_demo_owners,0050,,yes,src/routes/api/public/jobs/cleanup-demos.ts
+family_invite_owner,0023,,yes,src/lib/family-requests.ts
+finance_operation,0011,,no,src/lib/store.tsx
+finish_my_report_job,0029,,yes,src/routes/_authenticated/report-centre.tsx
+grant_entity_access,0075,,yes,src/components/books/CompanyAccess.tsx
+link_activity_expenses,0040,,yes,src/components/ClaimExpenseDiscovery.tsx; src/lib/store.tsx
+manage_trip_expenses,0034; 0035,,yes,src/lib/store.tsx
+move_expense_category,0007,,no,src/lib/store.tsx
+my_family_invites,0022; 0048,,yes,src/lib/family-requests.ts
+my_shared_companies,0077,,yes,src/components/books/CompanyAccess.tsx
+post_accounting_journal,NOT IN MIGRATIONS,yes,,src/lib/store.tsx
+post_import_rows_secure,0031,,yes,src/lib/historical-import.functions.ts
+post_opening_balances,0061,,yes,src/lib/store.tsx
+record_statement_checkpoint,0042,,yes,src/lib/statement-checkpoint.functions.ts
+restore_finance_backup,0013; 0068; 0072,,no,src/routes/_authenticated/settings.tsx
+retry_my_report_job,0029,,yes,src/components/BackgroundReports.tsx
+review_accounting_exception,NOT IN MIGRATIONS,yes,,src/lib/store.tsx
+review_statement_evidence,0042,,yes,src/lib/statement-checkpoint.functions.ts
+revise_import_rows,0036,,yes,src/lib/import-repository.ts
+revoke_entity_access,0075,,yes,src/components/books/CompanyAccess.tsx
+save_claim_preparation,0040,,yes,src/lib/claim-preparations.ts
+save_import_balance_review,0033,,no,src/components/HistoricalBalanceVerification.tsx
+save_reviewed_preferences,0080,,yes,src/lib/store.tsx
+set_accounting_review_grant,NOT IN MIGRATIONS,yes,,src/lib/store.tsx
+start_demo_workspace,0050; 0051,,yes,src/routes/auth.tsx
+team_company_tax,0066,,yes,src/components/TeamAccess.tsx
+team_names,0067,,yes,src/components/TeamAccess.tsx
+undo_category_change,0016,,yes,src/lib/store.tsx
+undo_financial_correction,0041; 0045,,yes,src/lib/store.tsx
+undo_opening_balances,0061,,yes,src/lib/store.tsx
+undo_review_metadata,0044; 0046,,yes,src/lib/store.tsx
+undo_statement_rows,NOT IN MIGRATIONS,yes,,src/lib/statement-pipeline/atomic-undo.functions.ts
