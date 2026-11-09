@@ -26,6 +26,9 @@ import { BACKUP_TABLES, createBackupZip, prepareRestore, readBackup, type Backup
 import { downloadBlob } from "@/lib/reports";
 import type { Json } from "@/integrations/supabase/types";
 import { UnreadableRecordsNotice } from "@/components/UnreadableRecordsNotice";
+import { AccountRecovery, PasskeyDevices, SignOutOtherDevices } from "@/components/DeviceSecurity";
+import { withStepUp } from "@/lib/step-up";
+import { ensureStepUp } from "@/lib/step-up-check";
 
 
 export const Route = createFileRoute("/_authenticated/settings")({
@@ -97,6 +100,8 @@ function Settings() {
       const { backup: j, files } = readBackup(new Uint8Array(await f.arrayBuffer()), /\.zip$/i.test(f.name));
       const { data: restored, paths } = prepareRestore(j, userId, undefined, true);
       if (!await confirmAction("Restore this backup into your account? Existing matching records will be updated. Current closed periods stay protected; backup closing history is retained as an unverified copy.")) return;
+      // Confirm before staging files so a long restore can't stop midway for re-confirmation.
+      await ensureStepUp("restore_finance_backup");
       for (const [oldPath, newPath] of paths) {
         let bytes = files[oldPath];
         if (!bytes) {
@@ -109,7 +114,7 @@ function Settings() {
         if (error) throw Error("Couldn't restore a file — please try again");
         staged.push(newPath);
       }
-      const { data, error } = await supabase.rpc("restore_finance_backup", { payload: restored as Json, ...(j.name?.trim() ? { display_name: j.name.trim() } : {}) });
+      const { data, error } = await withStepUp(() => supabase.rpc("restore_finance_backup", { payload: restored as Json, ...(j.name?.trim() ? { display_name: j.name.trim() } : {}) }));
       if (error) throw Error("Restore stopped; your existing records are unchanged. Check the backup and try again.");
       committed = true;
       const counts = (data as { counts: Record<string, number> }).counts;
@@ -127,6 +132,8 @@ function Settings() {
     setDeleteError("");
     setBusy(true);
     try {
+      // Re-confirm first so deletion can't stop between listing files and removing records.
+      await ensureStepUp("delete_my_finance_data");
       await deleteAll();
       setDeleteOpen(false);
       setDeleteConfirmation("");
@@ -140,7 +147,7 @@ function Settings() {
       <div className="mb-5 flex flex-wrap gap-2"><Button asChild variant="outline"><Link to="/auth">Sign in / account</Link></Button><Button asChild variant="outline"><Link to="/rules" hash="classification">Transaction classification rules</Link></Button></div>
       <RoleBadge />
       <SettingsDirectory />
-      <Fold id="security" title="Security & device unlock" hint="MPIN, Face ID and device lock"><MpinSettings /><PasskeySettings /></Fold>
+      <Fold id="security" title="Security & device unlock" hint="MPIN, Face ID, devices and account recovery"><MpinSettings /><PasskeySettings /><PasskeyDevices /><SignOutOtherDevices /><AccountRecovery /></Fold>
       <Fold id="appearance" title="Appearance" hint="Theme, light or dark, Home layout"><AppearanceSettings /></Fold>
       <Fold id="finance" title="Finance preferences" hint="Currency, categories, tags, budgets and AI privacy"><FinanceSettings /></Fold>
       <Fold id="smart-defaults" title="Smart defaults" hint="Usual category, payment and workspace on New expense"><SmartDefaultsSettings /></Fold>

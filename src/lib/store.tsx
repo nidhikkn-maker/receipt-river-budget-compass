@@ -6,6 +6,7 @@ import type { Database, Json } from "@/integrations/supabase/types";
 import { queueEntry, pendingEntries, removePending, putSnapshot, getSnapshot } from "./offline";
 import { mergePending, setItem, type PendingItem } from "./pending-sync";
 import { deleteFinanceData } from "./delete-data";
+import { withStepUp } from "./step-up";
 import { privateFileUrl, fetchPrivateFile, type ExpectedFile } from "./private-files";
 import { downloadBlob } from "./reports";
 import { saveExpense } from "./fx.functions";
@@ -447,7 +448,8 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
     preferenceRequest.current=request;
     setPreferences(p);
     try {
-      const result = await supabase.rpc('save_reviewed_preferences',{_id:request.id,_data:payload as unknown as Json,_expected:(request.expected == null || request.expected < 0 ? null : request.expected) as number,_approved:sections.length>0});
+      // An approved (financial) save needs a fresh re-confirmation; the retry reuses the same request id.
+      const result = await withStepUp(() => supabase.rpc('save_reviewed_preferences',{_id:request.id,_data:payload as unknown as Json,_expected:(request.expected == null || request.expected < 0 ? null : request.expected) as number,_approved:sections.length>0}));
       check(result.error); preferencesRevision.current = result.data; storedPreferences.current = payload as unknown as Record<string, unknown>; setStoredSnapshot(storedPreferences.current); preferenceRequest.current=null;
     }
     catch(e){setPreferences(previous);throw e;}

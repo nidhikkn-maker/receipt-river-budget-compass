@@ -13,6 +13,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { verifyDevicePassword } from "@/lib/device-reauth";
 import { consumeDeviceUnlock } from "@/lib/device-unlock";
+import { useIdleLock } from "@/lib/use-idle-lock";
 
 import { useStore } from "@/lib/store";
 import { PinPad } from "./PinPad";
@@ -59,6 +60,20 @@ export function DeviceLock({ children }: { children: ReactNode }) {
   const [passwordMode, setPasswordMode] = useState(false);
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  // The idle lock is mandatory for real accounts. A guest (anonymous) session has no password or account to
+  // verify, so it is idle-locked only once it has an MPIN or Face ID lock; otherwise locking would strand it.
+  const [idleRequired, setIdleRequired] = useState(false);
+  useEffect(() => {
+    let live = true;
+    void Promise.resolve().then(() => supabase.auth.getSession()).then(({ data }) => {
+      const user = data.session?.user;
+      if (live) setIdleRequired(!!user && user.id === userId && (!user.is_anonymous || hasMpin(userId) || localStorage.getItem(`ll-lock-${userId}`) === "1"));
+    }, () => { if (live) setIdleRequired(false); });
+    return () => { live = false; };
+  }, [userId]);
+  // Locks from inactivity don't open Face ID by themselves; the person chooses how to unlock.
+  const autoTried = useRef(false);
+  useIdleLock({ ownerId: userId, enabled: ready && idleRequired, locked, onLock: () => { autoTried.current = true; setPassword(""); setPasswordMode(false); setError(""); setLocked(true); } });
   useEffect(() => {
     setLocked(localStorage.getItem(`ll-lock-${userId}`) === "1" && !consumeDeviceUnlock(userId));
     setReady(true); setPassword(""); setPasswordMode(false); setError("");
@@ -71,7 +86,6 @@ export function DeviceLock({ children }: { children: ReactNode }) {
     return () => { if (timer) clearTimeout(timer); document.removeEventListener("visibilitychange", change); };
   }, [userId]);
   // Ask for Face ID straight away when the app opens locked; MPIN/password stay available if it's cancelled or fails.
-  const autoTried = useRef(false);
   useEffect(() => {
     if (!locked) { autoTried.current = false; return; }
     if (autoTried.current) return;

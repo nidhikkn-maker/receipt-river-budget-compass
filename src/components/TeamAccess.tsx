@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { DEFAULT_SWITCHES, ROLE_LABEL, TEAM_ACTIONS, allowed, changedFromDefault, companyTaxCsv, useTeamAccess, type TeamAction, type TeamRole } from "@/lib/team-access";
 import { money } from "@/lib/expenses";
 import { downloadBlob } from "@/lib/reports";
+import { StepUpCancelled, withStepUp } from "@/lib/step-up";
 
 /** Role badge for Settings → Account. */
 export function RoleBadge() {
@@ -34,17 +35,22 @@ export function TeamAccessSettings() {
   const switches = access.data.switches;
   const refresh = () => Promise.all([qc.invalidateQueries({ queryKey: ["team-access"] }), qc.invalidateQueries({ queryKey: ["admin-team"] }), qc.invalidateQueries({ queryKey: ["admin-history"] })]);
   const setSwitch = async (role: TeamRole, action: TeamAction, value: boolean) => {
-    const { error } = await supabase.rpc("admin_set_permission", { _role: role, _action: action, _allowed: value });
-    if (error) { toast.error("Couldn't change that switch"); return; }
+    let failed = false;
+    try { failed = !!(await withStepUp(() => supabase.rpc("admin_set_permission", { _role: role, _action: action, _allowed: value }))).error; }
+    catch (e) { toast.error(e instanceof StepUpCancelled ? e.message : "Couldn't change that switch"); return false; }
+    if (failed) { toast.error("Couldn't change that switch"); return false; }
     await refresh();
+    return true;
   };
   const reset = async (role: "manager" | "finance") => {
-    for (const a of TEAM_ACTIONS) if (allowed(switches, role, a.key) !== DEFAULT_SWITCHES[role][a.key]) await setSwitch(role, a.key, DEFAULT_SWITCHES[role][a.key]);
+    for (const a of TEAM_ACTIONS) if (allowed(switches, role, a.key) !== DEFAULT_SWITCHES[role][a.key] && !await setSwitch(role, a.key, DEFAULT_SWITCHES[role][a.key])) return;
     toast.success(`${ROLE_LABEL[role]} reset to default`);
   };
   const saveMember = async (id: string, role: string | null, department: string) => {
-    const { error } = await supabase.rpc("admin_set_member", { _user: id, _role: role as string, _department: department });
-    if (error) { toast.error("Couldn't save this person's access"); return; }
+    let failed = false;
+    try { failed = !!(await withStepUp(() => supabase.rpc("admin_set_member", { _user: id, _role: role as string, _department: department }))).error; }
+    catch (e) { toast.error(e instanceof StepUpCancelled ? e.message : "Couldn't save this person's access"); return; }
+    if (failed) { toast.error("Couldn't save this person's access"); return; }
     setEditing(null); await refresh(); toast.success("Access updated");
   };
   const changed = changedFromDefault(switches).length;
@@ -52,7 +58,7 @@ export function TeamAccessSettings() {
     <div className="space-y-6">
       <section>
         <h3 className="mb-2 text-sm font-semibold">What each role may do with other people's records</h3>
-        <p className="mb-3 text-xs text-muted-foreground">Managers act on their own department; finance on everyone. Personal tax is never shared. {changed ? `${changed} switch${changed > 1 ? "es" : ""} changed from default.` : ""}</p>
+        <p className="mb-3 text-xs text-muted-foreground">Team roles only see companies the owner has explicitly shared with them. Personal records are never shared. {changed ? `${changed} switch${changed > 1 ? "es" : ""} changed from default.` : ""}</p>
         <div className="overflow-x-auto rounded-xl border">
           <table className="w-full text-sm"><thead><tr className="border-b text-left text-muted-foreground"><th className="p-2">Action</th><th className="p-2">Manager</th><th className="p-2">Finance</th></tr></thead>
             <tbody>{TEAM_ACTIONS.map((a) => <tr key={a.key} className="border-b last:border-0"><td className="p-2">{a.label}</td>

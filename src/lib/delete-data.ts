@@ -1,6 +1,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import { clearOfflineOwner } from "./offline";
 import { clearLocalPreparations } from './claim-preparations';
+import { StepUpCancelled, withStepUp } from './step-up';
 
 /** Discover all owner files before deleting rows; a failed record deletion never removes files. */
 export async function deleteFinanceData(owner: string): Promise<void> {
@@ -21,7 +22,10 @@ export async function deleteFinanceData(owner: string): Promise<void> {
     }
   };
   await walk(owner);
-  const removed = await supabase.rpc("delete_my_finance_data");
+  // Needs a fresh re-confirmation; if it expired while files were listed, confirm and retry once.
+  let removed;
+  try { removed = await withStepUp(() => supabase.rpc("delete_my_finance_data")); }
+  catch (e) { if (e instanceof StepUpCancelled) throw new Error("Deletion needs you to confirm it's you. Nothing was deleted."); throw e; }
   if (removed.error) throw new Error("Couldn't delete your records. Your files were kept; please retry.");
   let filesFailed = false;
   for (let offset = 0; offset < paths.length; offset += 100) {

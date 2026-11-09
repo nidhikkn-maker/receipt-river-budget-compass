@@ -9,6 +9,7 @@ import { companyDocuments, type EntityAccounts } from "@/lib/books/entity-accoun
 import { confirmAction } from "@/lib/confirm";
 import { filterShared, rowsFor, sharedCompanyCsv, sharedCompanyPdf, sharedCompanyExcel, type SharedCompany, type SharedDoc, type SharedTxn } from "@/lib/books/shared-company";
 import { uploadCompanyDocument } from "@/lib/books/company-upload";
+import { withStepUp } from "@/lib/step-up";
 
 type Grant = { id: string; member_email: string; created_at: string; can_write: boolean };
 
@@ -34,7 +35,7 @@ export function CompanyAccess({ entityId, entityName, links }: { entityId: strin
             <span className="truncate">{g.member_email}<span className="ml-2 text-xs text-muted-foreground">{g.can_write ? "Can edit" : "View only"}</span></span>
             <Button size="sm" variant="ghost" className="text-destructive" onClick={async () => {
               if (!(await confirmAction(`Remove ${g.member_email}'s access to ${entityName}?`))) return;
-              const { error } = await supabase.rpc("revoke_entity_access", { _id: g.id });
+              const { error } = await withStepUp(() => supabase.rpc("revoke_entity_access", { _id: g.id }));
               if (error) toast.error(error.message); else { toast.success("Access removed"); void load(); }
             }}>Remove</Button>
           </div>
@@ -44,7 +45,7 @@ export function CompanyAccess({ entityId, entityName, links }: { entityId: strin
           {([false, true] as const).map((w) => (
             <Button key={String(w)} variant="outline" disabled={!email.includes("@")} onClick={async () => {
               if (w && !(await confirmAction(`Let ${email} change ${entityName}'s entries?`))) return;
-              const { error } = await supabase.rpc("grant_entity_access", { _entity: entityId, _email: email, _write: w });
+              const { error } = await withStepUp(() => supabase.rpc("grant_entity_access", { _entity: entityId, _email: email, _write: w }));
               if (error) toast.error(error.message); else { toast.success(w ? "Edit access given" : "View access given"); setEmail(""); void load(); }
             }}>{w ? "Can edit" : "View only"}</Button>
           ))}

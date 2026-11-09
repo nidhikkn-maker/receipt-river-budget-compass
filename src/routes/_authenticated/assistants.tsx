@@ -6,6 +6,8 @@ import { Bot, Copy, ExternalLink, Loader2, ShieldOff } from "lucide-react";
 import { PageTitle } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
+import { isMissingFunction, withStepUp } from "@/lib/step-up";
+import { ensureStepUp, rpcUntyped } from "@/lib/step-up-check";
 
 export const Route = createFileRoute("/_authenticated/assistants")({
   head: () => ({
@@ -68,6 +70,10 @@ function Assistants() {
     if (!id || !await confirmAction(`Remove access for ${name}? It will need your approval to connect again.`)) return;
     setBusy(id);
     try {
+      await ensureStepUp("revoke_assistant_client");
+      // Blocks the assistant's existing tokens in the database immediately; older databases skip this step.
+      const blocked = await withStepUp(() => rpcUntyped("revoke_assistant_client", { _client_id: id }));
+      if (blocked.error && !isMissingFunction(blocked.error)) throw new Error("Could not remove access. Please try again.");
       await authFetch(`/user/oauth/grants?client_id=${encodeURIComponent(id)}`, "DELETE");
       toast.success(`${name} can no longer access your records`);
       await load();

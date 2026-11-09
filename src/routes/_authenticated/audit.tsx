@@ -28,6 +28,7 @@ import { effectiveEntity } from '@/lib/books/entity-accounts';
 import { ReconciliationDetails } from '@/components/books/ReconciliationDetails';
 import { reconciliationAnchor } from '@/lib/books/reconciliation-context';
 import {corporateStatements,corporateCloseErrors} from '@/lib/books/corporate-statements';
+import { withStepUp } from "@/lib/step-up";
 const inr = (n: number) => `₹${Math.round(n).toLocaleString("en-IN")}`;
 
 export const Route = createFileRoute("/_authenticated/audit")({
@@ -69,11 +70,11 @@ function Audit() {
       accounts: accounts.map((a) => ({ id: a.id, balanceAt: (upto: string) => balanceAsOf(a, transactions, upto) })),
       invoices: books.gstInvoices, journals: books.journals,
     }),corporate} : null;
-    const { error } = await supabase.rpc('change_accounting_period', {
+    const { error } = await withStepUp(() => supabase.rpc('change_accounting_period', {
       _id: request.id, _action: action, _period: request.period, _from: start, _to: end, _reason: reason,
       _expected: { closedPeriods: books.closedPeriods, periodLog: books.periodLog } as unknown as Json,
       ...(figures ? { _figures: figures as unknown as Json } : {}),
-    });
+    }));
     if (error) throw new Error(error.message);
     await refresh(); setPeriodRequest(null); setNote('');
   };

@@ -9,6 +9,7 @@ import { backStep, showBackButton } from "@/lib/back-nav";
 import { useEffect, useState, type ReactNode } from "react";
 import { BarChart3, Bell, Gem, Home, ListFilter, Plus, Settings, Users, Eye, EyeOff, FileText, Inbox, Search, Plane, Menu, X, RefreshCw, CloudOff, Check, TriangleAlert } from "lucide-react";
 import { DeviceLock } from "./DeviceLock";
+import { StepUpHost } from "./StepUpHost";
 import { ThapalBrand } from "./ThapalLogo";
 import { Button } from "./ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "./ui/dialog";
@@ -112,7 +113,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         {!focused && <BackButton />}
         {!loading && <OfflineBanner />}
         {!focused && !loading && <DraftsReminder />}
-        {loading ? <PageSkeleton /> : <DeviceLock>{children}</DeviceLock>}
+        {loading ? <PageSkeleton /> : <DeviceLock>{children}<StepUpHost /></DeviceLock>}
       </main>
 
       <nav hidden={focused} aria-label="Primary" className="journal-bottom fixed inset-x-0 bottom-0 z-30 flex items-center justify-around border-t bg-card/95 px-2 pb-[env(safe-area-inset-bottom)] pt-2 text-muted-foreground md:hidden">
