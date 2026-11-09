@@ -140,7 +140,7 @@ RR = [
 write("release_recovery", [dict(zip(RR_COLS, r)) for r in RR])
 
 # ---------------------------------------------------------------- Decision Needed records
-DN_COLS = ["dn_id", "topic", "v31_reference", "conflicting_reference", "current_state", "options", "impact", "recommendation", "affected_work_stopped"]
+DN_COLS = ["dn_id", "topic", "v31_reference", "conflicting_reference", "current_state", "options", "impact", "recommendation", "affected_work_stopped", "kk_decision", "decision_date", "status"]
 DN = [
  ("DN-01","Logo mark","§4 Option 02 single-stroke T; no fabricated logo","Current Ledgerline folded-pages 'L' mark (docs/brand-usage.md)","Wordmark reads Thapal; mark still 'L'","A) Supply Option 02 editable SVG; B) keep L temporarily, labelled placeholder","Brand sign-off blocked","A; until then keep current mark and mark REQ-BRD-002 Blocked","Final logo/icon generation"),
  ("DN-02","Palette, typography and theme system","§4 Signature Flow palette (#223B35 …), Manrope","AGENTS.md V4.3 theme system (5 families/7 styles, Signature navy/gold default)","V4.3 themes live","A) V3.1 palette becomes default 'Signature', others kept; B) replace theme system with single V3.1 theme; C) keep V4.3","Every screen's visuals","A, after Signature Flow screenshots are supplied","Visual changes"),
@@ -152,7 +152,18 @@ DN = [
  ("DN-08","V3 master availability","§1 V3 182-page master is requirements master","Not supplied to the audit","Requirement register uses V3.1 + legacy v6.0/v6.1 only","Supply V3 PDF","Requirement IDs, 50 decisions, 149 acceptance cases unmapped","Supply V3","REQ mapping to V3"),
  ("DN-09","Legacy team-expense README scope","§3 product shape","README.md still describes a team expense approval app (departments, manager/finance)","Legacy features co-exist","A) Retire legacy department flows; B) keep for companies under scoped roles","Scope clarity, H-1","Decide with DN-05","None"),
 ]
-write("decisions_needed", [dict(zip(DN_COLS, r)) for r in DN])
+KK = {  # KK's instruction of 9 Nov 2026: "Proceed with the recommendations for Decisions 1-9"
+ "DN-01": ("Preserve the Option 02 logo direction; current SVG is not final until approved artwork is supplied", "Decided; artwork awaited"),
+ "DN-02": ("Use the agreed Signature Flow colours and typography; preserve the approved Signature Flow design (handoff to be supplied)", "Decided; handoff awaited"),
+ "DN-03": ("Use the agreed navigation (Home, Money, To-do, Records + central Add)", "Decided; scheduled after security and accounting"),
+ "DN-04": ("Extend the existing accounting engine without creating a second ledger", "Decided; migration plan in preparation"),
+ "DN-05": ("Adopt the V3.1 roles through controlled migration; preserve old team-expense functionality and history until replacements are verified", "Decided; migration plan in preparation"),
+ "DN-06": ("Adopt the V3.1 security requirements (timeouts, step-up) through controlled change", "Decided; plan in preparation"),
+ "DN-07": ("Retain internal identifiers wherever changing them could affect existing data", "Decided"),
+ "DN-08": ("V3 master and approved Signature Flow handoff will be supplied as reference documents", "Awaiting documents"),
+ "DN-09": ("Preserve old team-expense functionality and history until replacements are verified", "Decided"),
+}
+write("decisions_needed", [dict(zip(DN_COLS, [*r, KK[r[0]][0], "2026-11-09", KK[r[0]][1]])) for r in DN])
 
 # ---------------------------------------------------------------- Excel workbook of every register
 book = Workbook(); book.remove(book.active)
