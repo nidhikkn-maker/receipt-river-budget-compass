@@ -12,7 +12,7 @@ CREATE SCHEMA auth; CREATE SCHEMA storage; CREATE SCHEMA extensions;
 CREATE TABLE auth.users(id uuid PRIMARY KEY, email text, email_confirmed_at timestamptz, is_anonymous boolean default false, raw_user_meta_data jsonb default '{}', raw_app_meta_data jsonb default '{}', created_at timestamptz default now(), phone text, last_sign_in_at timestamptz);
 CREATE FUNCTION auth.uid() RETURNS uuid LANGUAGE sql STABLE AS $$ SELECT nullif(current_setting('test.uid',true),'')::uuid $$;
 CREATE FUNCTION auth.role() RETURNS text LANGUAGE sql STABLE AS $$ SELECT current_user::text $$;
-CREATE FUNCTION auth.jwt() RETURNS jsonb LANGUAGE sql STABLE AS $$ SELECT jsonb_build_object('is_anonymous', coalesce(nullif(current_setting('test.anon',true),'')::boolean,false), 'email', current_setting('test.email',true)) $$;
+CREATE FUNCTION auth.jwt() RETURNS jsonb LANGUAGE sql STABLE AS $$ SELECT jsonb_strip_nulls(jsonb_build_object('is_anonymous', coalesce(nullif(current_setting('test.anon',true),'')::boolean,false), 'email', current_setting('test.email',true), 'client_id', nullif(current_setting('test.client_id',true),''))) $$;
 CREATE TABLE storage.buckets(id text primary key, name text, public boolean default false, file_size_limit bigint, allowed_mime_types text[], owner uuid, created_at timestamptz default now(), updated_at timestamptz default now());
 CREATE TABLE storage.objects(id uuid primary key default gen_random_uuid(), bucket_id text, name text, owner uuid, owner_id text, metadata jsonb, created_at timestamptz default now(), updated_at timestamptz default now(), last_accessed_at timestamptz, version text);
 CREATE FUNCTION storage.foldername(name text) RETURNS text[] LANGUAGE sql IMMUTABLE AS $$ SELECT (string_to_array(name,'/'))[1:array_length(string_to_array(name,'/'),1)-1] $$;
@@ -37,10 +37,14 @@ export async function fullSchemaDb(extraSqlFiles: string[] = []) {
   return db;
 }
 
-/** Run as a signed-in user under RLS (role authenticated), or as the superuser when uid is null. */
-export async function actAs(db: PGlite, uid: string | null) {
+/**
+ * Run as a signed-in user under RLS (role authenticated), or as the superuser when uid is null.
+ * clientId simulates an external assistant's OAuth access token (JWT claim client_id).
+ */
+export async function actAs(db: PGlite, uid: string | null, opts: { clientId?: string } = {}) {
   await db.exec("RESET ROLE");
   await db.query("SELECT set_config('test.uid', $1, false)", [uid ?? ""]);
+  await db.query("SELECT set_config('test.client_id', $1, false)", [opts.clientId ?? ""]);
   if (uid) await db.exec("SET ROLE authenticated");
 }
 
