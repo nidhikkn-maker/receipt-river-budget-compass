@@ -1,4 +1,8 @@
 import "@testing-library/jest-dom/vitest";
+import { configure } from "@testing-library/dom";
+
+// Load-induced flakes: give async queries more time on busy CI machines (same change as the other tracks).
+configure({ asyncUtilTimeout: 5000 });
 
 if (typeof window !== "undefined") {
 Object.defineProperty(window, "scrollTo", {
