@@ -1,3 +1,4 @@
+import { loadFailed } from "@/lib/load-state";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { AlertTriangle, ArrowLeft, CheckCircle2 } from "lucide-react";
@@ -26,7 +27,7 @@ export const Route = createFileRoute("/_authenticated/cards/$accountId")({
 
 function CardBalancePage() {
   const { accountId } = Route.useParams();
-  const { accounts, transactions, preferences } = useStore();
+  const { accounts, transactions, preferences, loadErrors } = useStore();
   const [onlyFlagged, setOnlyFlagged] = useState(false);
   const [month, setMonth] = useState("");
   const card = accounts.find((a) => a.id === accountId && a.kind === "credit_card");
@@ -78,7 +79,7 @@ function CardBalancePage() {
       </div>
 
       <ul className="mt-3 divide-y rounded-2xl border bg-card">
-        {lines.length === 0 && <li className="p-4 text-sm text-muted-foreground">No entries here.</li>}
+        {lines.length === 0 && <li className={loadFailed(loadErrors, "transactions") ? "p-4 text-sm text-destructive" : "p-4 text-sm text-muted-foreground"}>{loadFailed(loadErrors, "transactions") ? "Card entries couldn't load. Nothing has been deleted — retry from the notice above." : "No entries here."}</li>}
         {lines.map((l) => (
           <li key={l.txn.id} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-2 p-3 md:grid-cols-[minmax(0,1fr)_auto_auto]">
             <div className="min-w-0 flex-1 [overflow-wrap:anywhere]">

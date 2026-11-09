@@ -12,7 +12,9 @@ export function BackgroundReports({ onDone }: { onDone?: () => void }) {
   const [jobs, setJobs] = useState<Job[]>([]);
   const load = async () => {
     const since = new Date(Date.now() - 3 * 864e5).toISOString();
-    const { data } = await supabase.from("report_jobs").select("id,kind,status,error,created_at").in("status", ["queued", "running", "failed"]).gte("created_at", since).order("created_at", { ascending: false }).limit(10);
+    const { data, error } = await supabase.from("report_jobs").select("id,kind,status,error,created_at").in("status", ["queued", "running", "failed"]).gte("created_at", since).order("created_at", { ascending: false }).limit(10);
+    // A failed read keeps the jobs already shown; it is not a sign that they finished (P0-004).
+    if (error) return;
     setJobs((prev) => { if (prev.some((p) => !(data ?? []).some((d) => d.id === p.id))) onDone?.(); return data ?? []; });
   };
   useEffect(() => { void load(); const t = setInterval(() => void load(), 15000); return () => clearInterval(t); }, []);

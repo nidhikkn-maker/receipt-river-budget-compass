@@ -1,3 +1,4 @@
+import { LoadError } from "./LoadError";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { FileUp } from "lucide-react";
@@ -10,8 +11,11 @@ type Row = { id: string; file_path: string; file_name: string; mime_type: string
 export function AccountantInbox({ onFiles }: { onFiles: (files: File[]) => Promise<void> }) {
   const [rows, setRows] = useState<Row[]>([]);
   const [busy, setBusy] = useState(false);
-  const load = () => supabase.from("accountant_uploads").select("id, file_path, file_name, mime_type, uploaded_at").is("consumed_at", null).order("uploaded_at").then(({ data }) => setRows(data ?? []));
+  const [failed, setFailed] = useState(false);
+  // A failed read must not hide statements waiting from the accountant (P0-004).
+  const load = () => supabase.from("accountant_uploads").select("id, file_path, file_name, mime_type, uploaded_at").is("consumed_at", null).order("uploaded_at").then(({ data, error }) => { setFailed(!!error); if (!error) setRows(data ?? []); });
   useEffect(() => { void load(); }, []);
+  if (failed) return <LoadError what="statements sent by your accountant" onRetry={load} />;
   if (!rows.length) return null;
 
   const readAll = async () => {

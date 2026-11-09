@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { requireSupabaseAuth } from '@/integrations/supabase/auth-middleware';
 import { atomicStatementUndo } from './atomic-undo';
 import { cleanStatementUploads } from '../preferences';
+import { isMissingSchemaObject, undoCapabilityFrom, UNDO_NEEDS_UPDATE, type UndoCapability } from './undo-capability';
 
 const input = z.object({
   id: z.string().uuid(),
@@ -30,7 +31,7 @@ export const undoStatement = createServerFn({ method: 'POST' })
     await atomicStatementUndo(data.id, upload, upload.undoRows ?? [], {
       receipt: async id => {
         const result = await staged.from('statement_undo_receipts').select('id').eq('owner_id', userId).eq('id', id).maybeSingle();
-        if (result.error) throw Error('Safe Undo is awaiting database release approval. Your records and recovery history are unchanged.');
+        if (result.error) throw Error(isMissingSchemaObject(result.error) ? UNDO_NEEDS_UPDATE : 'Saved records could not be checked. Nothing was changed; retry when connected.');
         return !!result.data;
       },
       rows: async ids => {
@@ -44,8 +45,19 @@ export const undoStatement = createServerFn({ method: 'POST' })
       },
       commit: async (id, items) => {
         const result = await staged.rpc('undo_statement_rows', { _id: id, _items: items });
+        if (result.error && isMissingSchemaObject(result.error)) throw Error(UNDO_NEEDS_UPDATE);
         if (result.error || result.data !== id) throw Error('Undo was not confirmed. Recovery history is retained; retry or review changed records.');
       },
     });
     return { ok: true };
+  });
+
+/** Read-only probe so the Undo control reflects what the database can actually do (P0-002). */
+export const statementUndoCapability = createServerFn({ method: 'GET' })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }): Promise<{ state: UndoCapability }> => {
+    const { supabase, userId } = context;
+    const staged = supabase as unknown as { from: (table: 'statement_undo_receipts') => { select: (columns: string) => { eq: (column: string, value: string) => { limit: (n: number) => Promise<{ error: { message: string; code?: string } | null }> } } } };
+    const probe = await staged.from('statement_undo_receipts').select('id').eq('owner_id', userId).limit(1);
+    return { state: undoCapabilityFrom(probe.error) };
   });

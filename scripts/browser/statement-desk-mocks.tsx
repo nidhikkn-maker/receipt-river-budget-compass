@@ -130,6 +130,8 @@ export const supabase = {
   storage: { from: () => ({ download: (path: string) => fetch(`/__fixture/file?path=${encodeURIComponent(path)}`).then(async (r) => ({ data: r.ok ? await r.blob() : null, error: r.ok ? null : new Error("missing") })) }) },
 };
 
+/** Mirrors statementUndoCapability: atomicUnavailable stands for a database without the staged Undo SQL. */
+export async function statementUndoCapability() { return { state: fixture.atomicUnavailable ? 'needs-update' : 'available' }; }
 export async function undoStatement({ data }: { data: { id: string; posted: string[]; reconciled: string[]; evidence: { id: string; ref: string }[]; expected: { id: string; ref: string | null; revision: number }[] } }) {
   await atomicStatementUndo(data.id, data, data.expected, {
     receipt: async id => { if (fixture.atomicUnavailable) throw Error('Safe Undo is awaiting database release approval. Your records and recovery history are unchanged.'); return fixture.undoReceipts.includes(id); },

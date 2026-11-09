@@ -1,0 +1,14 @@
+// P0-004 REPRO (current behaviour): when the holdings query fails, the panel says "No holdings yet".
+import { cleanup, render, screen } from "@testing-library/react";
+import { afterEach, expect, it, vi } from "vitest";
+const h = vi.hoisted(() => ({ load: vi.fn() }));
+vi.mock("@/lib/investments/holdings-store", () => ({ loadDemat: h.load }));
+vi.mock("@/lib/smart-add-event", () => ({ openSmartAdd: vi.fn() }));
+import { DematHoldings } from "./DematHoldings";
+afterEach(cleanup);
+it("P0-004 REPRO: a failed holdings read is shown as 'No holdings yet'", async () => {
+  h.load.mockRejectedValue(new Error("Could not connect to the database"));
+  render(<DematHoldings />);
+  expect(await screen.findByText(/No holdings yet/)).toBeInTheDocument();
+  expect(screen.queryByRole("alert")).toBeNull();
+});

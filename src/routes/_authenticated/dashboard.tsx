@@ -1,3 +1,4 @@
+import { loadFailed } from "@/lib/load-state";
 import { NetWorthCard } from "@/components/books/NetWorthCard";
 import { JournalToday } from '@/components/JournalToday';
 import { HomeModePicker } from "@/components/HomeModePicker";
@@ -44,7 +45,7 @@ export const Route = createFileRoute("/_authenticated/dashboard")({
 type Readiness = { status: "Healthy" | "Attention required" | "Potential shortfall" | "Verification pending" | "Information incomplete"; detail: string; estimated: boolean };
 
 function Overview() {
-  const { expenses, transactions, accounts, preferences, savePreferences, name } = useStore();
+  const { expenses, transactions, accounts, preferences, savePreferences, name, loadErrors } = useStore();
   const today = todayISO();
   const scope: Scope | "all" = preferences.homeScope;
 
@@ -230,7 +231,7 @@ function Overview() {
             <h2 className="font-display text-base font-bold">Spending by category</h2>
             <Link to="/reports" className="flex items-center gap-1 text-sm font-semibold text-primary">Reports <ArrowRight className="h-3.5 w-3.5" /></Link>
           </div>
-          {cats.length === 0 && <p className="py-4 text-sm text-muted-foreground">No spending in this period yet.</p>}
+          {cats.length === 0 && (loadFailed(loadErrors, "transactions") ? <p role="status" className="py-4 text-sm text-destructive">Spending couldn't load. Nothing has been deleted — retry from the notice above.</p> : <p className="py-4 text-sm text-muted-foreground">No spending in this period yet.</p>)}
           <ul className="space-y-2.5">
             {cats.map(([cat, amt]) => (
               <li key={cat}>

@@ -25,7 +25,7 @@ export function FinancialCorrectionPanel({ rows, onSaved }: { rows: FinancialRev
   const [historyError, setHistoryError] = useState("");
   const [restore, setRestore] = useState<string | null>(null);
   const operation = useRef<string | null>(null);
-  const loadHistory = async () => { if (!financialCorrectionHistory) return; try { setHistory(await financialCorrectionHistory()); setHistoryError(""); } catch { setHistoryError("Correction history could not load."); } };
+  const loadHistory = async () => { if (!financialCorrectionHistory) return; try { setHistory((await financialCorrectionHistory()).filter(h => !h.undoneAt)); setHistoryError(""); } catch { setHistoryError("Correction history could not load."); } };
   useEffect(() => { void loadHistory(); }, []);
   const fields = correctionFields(type === "keep" ? undefined : type as TxnType, rows.map(row => row.transaction));
   const destinationAccounts = intent ? scoped.destinations : correctionDestinationAccounts(fields.type, accounts);

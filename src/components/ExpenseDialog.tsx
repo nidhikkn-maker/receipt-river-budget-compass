@@ -1,3 +1,4 @@
+import { LoadError } from "./LoadError";
 import { receiptRoundOffFor } from "@/lib/receipt-reading";
 import { useEffect, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
@@ -40,7 +41,10 @@ export function ExpenseDetail({ expense, onClose }: { expense: Expense; onClose:
   const { memberName, setScope, remove, accounts, setReimbursement, recordReimbursement, convertToEmi, history } = useStore();
   const [audit, setAudit] = useState<AuditEntry[]>([]);
   const [busy,setBusy]=useState(false);
-  useEffect(()=>{setAudit([]);void history(expense.id).then(setAudit).catch(()=>{});},[expense?.id,history]);
+  const [auditFailed,setAuditFailed]=useState(false);
+  const [auditTry,setAuditTry]=useState(0);
+  const loadAudit=()=>setAuditTry(n=>n+1);
+  useEffect(()=>{setAudit([]);setAuditFailed(false);void history(expense.id).then(setAudit).catch(()=>setAuditFailed(true));},[expense?.id,history,auditTry]);
   const nav = useNavigate();
   const [scope, setLocalScope] = useState(expense.scope);
   useEffect(() => { setLocalScope(expense.scope); }, [expense]);
@@ -104,7 +108,7 @@ export function ExpenseDetail({ expense, onClose }: { expense: Expense; onClose:
           <Button variant="ghost" className="text-destructive" onClick={del}>Delete</Button>
           <Button variant="outline" onClick={() => { onClose(); nav({ to: "/new", search: { edit: e.id } }); }}>Edit</Button>
         </div>
-        <details className="border-t pt-3"><summary className="cursor-pointer text-sm">Change history</summary><ul className="mt-2 divide-y text-xs">{audit.map(a=><li key={a.id} className="py-2"><b className="capitalize">{a.action}</b> · {new Date(a.createdAt).toLocaleString()}<div>{a.summary}</div>{Object.entries(a.changes).map(([key,value])=><p key={key} className="break-words text-muted-foreground">{key.replaceAll("_"," ")}: {JSON.stringify(value)}</p>)}</li>)}</ul></details>
+        <details className="border-t pt-3"><summary className="cursor-pointer text-sm">Change history</summary>{auditFailed&&<LoadError className="mt-2" what="the change history" onRetry={loadAudit} />}<ul className="mt-2 divide-y text-xs">{audit.map(a=><li key={a.id} className="py-2"><b className="capitalize">{a.action}</b> · {new Date(a.createdAt).toLocaleString()}<div>{a.summary}</div>{Object.entries(a.changes).map(([key,value])=><p key={key} className="break-words text-muted-foreground">{key.replaceAll("_"," ")}: {JSON.stringify(value)}</p>)}</li>)}</ul></details>
     </div>
   );
 }

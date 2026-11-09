@@ -1,0 +1,14 @@
+=== Run 1 (19:19:00Z)
+ Test Files  30 passed (30)
+      Tests  131 passed (131)
+=== Run 2 (19:20:58Z)
+ Test Files  30 passed (30)
+      Tests  131 passed (131)
+=== Run 3 (19:23:01Z)
+   × actual statement builder verifies fetched originals, saves exact PDF despite lost response, and downloads identical bytes 4008ms
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+ FAIL  src/components/expenditure-builder-workflow.test.tsx > actual statement builder verifies fetched originals, saves exact PDF despite lost response, and downloads identical bytes
+ Test Files  1 failed | 29 passed (30)
+      Tests  1 failed | 130 passed (131)
+=== Isolated re-runs of expenditure-builder-workflow.test.tsx after run-3 failure: 3/3 runs, 3 tests passed each (load-sensitive timing; file and component not modified by this track)
+=== Full suite after fixes (second run): Test Files 356 passed (356); Tests 2678 passed (2678). First full run: 3 load-sensitive failures in FinancialReview.test.tsx / expenditure-builder-workflow.test.tsx, both passing in isolation.

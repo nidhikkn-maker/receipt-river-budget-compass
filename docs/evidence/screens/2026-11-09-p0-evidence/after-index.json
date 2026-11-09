@@ -1,0 +1,50 @@
+[
+ {
+  "file": "after-iphone-p0-002-statement-undo-offered",
+  "note": "Statement Desk: Recent uploads with the Undo control"
+ },
+ {
+  "file": "after-iphone-p0-003-review-history",
+  "note": "Review History: one active and one restored account/type correction exist"
+ },
+ {
+  "file": "after-iphone-p0-004-demat-load-failed",
+  "note": "Wealth: demat holdings query fails"
+ },
+ {
+  "file": "after-iphone-p0-004-report-history-load-failed",
+  "note": "Report Centre: report_history query fails"
+ },
+ {
+  "file": "after-iphone-p0-007-transactions-load-failed",
+  "note": "Transactions: the expenses (ledger) query fails on open"
+ },
+ {
+  "file": "after-iphone-p0-007-home-load-failed",
+  "note": "Home: the expenses (ledger) query fails on open"
+ },
+ {
+  "file": "after-ipad-p0-002-statement-undo-offered",
+  "note": "Statement Desk: Recent uploads with the Undo control"
+ },
+ {
+  "file": "after-ipad-p0-003-review-history",
+  "note": "Review History: one active and one restored account/type correction exist"
+ },
+ {
+  "file": "after-ipad-p0-004-demat-load-failed",
+  "note": "Wealth: demat holdings query fails"
+ },
+ {
+  "file": "after-ipad-p0-004-report-history-load-failed",
+  "note": "Report Centre: report_history query fails"
+ },
+ {
+  "file": "after-ipad-p0-007-transactions-load-failed",
+  "note": "Transactions: the expenses (ledger) query fails on open"
+ },
+ {
+  "file": "after-ipad-p0-007-home-load-failed",
+  "note": "Home: the expenses (ledger) query fails on open"
+ }
+]

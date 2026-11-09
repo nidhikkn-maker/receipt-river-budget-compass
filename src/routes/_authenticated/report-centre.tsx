@@ -1,3 +1,4 @@
+import { LoadError } from "@/components/LoadError";
 import { SectionTabs } from "@/components/SectionTabs";
 import { BackgroundReports } from "@/components/BackgroundReports";
 import { useNavigate } from "@tanstack/react-router";
@@ -69,9 +70,12 @@ function ReportCentre() {
   const orgs = useMemo(() => [...new Set(store.transactions.map(orgOf))].filter((o) => o !== "Unassigned").sort(), [store.transactions]);
   const categories = useMemo(() => store.preferences.categories.filter((c) => !c.archived).map((c) => c.name), [store.preferences.categories]);
 
+  const [historyFailed, setHistoryFailed] = useState(false);
+  // A failed read keeps what was shown and says so; it never reads as an empty history (P0-004).
   const loadHistory = async () => {
-    const { data } = await supabase.from("report_history").select("*").order("created_at", { ascending: false }).limit(50);
-    setHistory((data ?? []) as HistoryRow[]);
+    const { data, error } = await supabase.from("report_history").select("*").order("created_at", { ascending: false }).limit(50);
+    setHistoryFailed(!!error);
+    if (!error) setHistory((data ?? []) as HistoryRow[]);
   };
   useEffect(() => { void loadHistory(); }, []);
   useEffect(() => { let active=true;setRecovering(true);setRecoveryError(false);void loadLocalClaimReport(store.userId,'centre-report').then(job=>{if(!active)return;pending.current=job;if(job){const doc=(job.row.filters as unknown as {snapshot:ReportDoc}).snapshot;const blob=new Blob([new Uint8Array(job.bytes)],{type:'application/pdf'});setResult({blob,doc,name:job.name,url:URL.createObjectURL(blob)});setFailed(true);setStage(3);}}).catch(()=>{if(active){setRecoveryError(true);setFailed(true);toast.error('Could not recover the saved report. Please reopen this page before preparing another.');}}).finally(()=>{if(active)setRecovering(false);});return()=>{active=false;}; },[store.userId]);
@@ -247,7 +251,8 @@ function ReportCentre() {
 
       <section className="space-y-2">
         <h2 className="font-semibold">Report history</h2>
-        {!history.length && <p className="text-sm text-muted-foreground">Reports you generate are kept here, unchanged, until you delete them.</p>}
+        {historyFailed && <LoadError what="your report history" onRetry={loadHistory} />}
+        {!history.length && !historyFailed && <p className="text-sm text-muted-foreground">Reports you generate are kept here, unchanged, until you delete them.</p>}
         {history.map((h) => {
           const b = ready[h.id], name = `ledgerline-${h.kind}-${h.period_from}-to-${h.period_to}-v${h.version}.pdf`;
           return (

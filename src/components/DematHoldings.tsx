@@ -2,13 +2,18 @@ import { useEffect, useState } from "react";
 import { openSmartAdd } from "@/lib/smart-add-event";
 import { Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { LoadError } from "@/components/LoadError";
 import { completeness, netQuantity } from "@/lib/investments/demat";
 import { loadDemat, type DematWithHoldings } from "@/lib/investments/holdings-store";
 
 /** Demat holdings with their completeness status. Statement values are dated figures, not live prices. */
 export function DematHoldings() {
   const [rows, setRows] = useState<DematWithHoldings[] | null>(null);
-  useEffect(() => { loadDemat().then(setRows).catch(() => setRows([])); }, []);
+  const [failed, setFailed] = useState(false);
+  // A failed read is an error with Retry, never "No holdings yet" (P0-004).
+  const load = () => loadDemat().then((r) => { setRows(r); setFailed(false); }).catch(() => setFailed(true));
+  useEffect(() => { void load(); }, []);
+  if (failed) return <section className="cmp-section mb-6"><h2 className="font-display text-lg font-bold">Demat holdings</h2><LoadError className="mt-2" what="your demat holdings" onRetry={load} /></section>;
   if (!rows) return null;
   return (
     <section className="cmp-section mb-6">

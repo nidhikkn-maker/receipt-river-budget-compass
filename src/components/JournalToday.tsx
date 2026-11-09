@@ -1,3 +1,5 @@
+import { loadFailed } from '@/lib/load-state';
+import { useStore } from '@/lib/store';
 import { Link } from '@tanstack/react-router';
 import { Bell, CalendarClock, ChevronRight, CreditCard, Inbox, Plus, Search, Sparkles, Compass } from 'lucide-react';
 import { money, type Expense } from '@/lib/expenses';
@@ -35,6 +37,9 @@ export function JournalToday({ name, today, spending, periodLabel, safe, cardDue
   estimated: boolean; unmatched: number; entries: Expense[];
   upcoming: { name: string; date: string; amount: number }[];
 }) {
+  const { loadErrors } = useStore();
+  // A failed ledger read must not read as "nothing spent" or "nothing waiting" (P0-017).
+  const ledgerMissing = loadFailed(loadErrors, 'transactions', 'accounts');
   const recent = [...entries].sort((a, b) => b.date.localeCompare(a.date) || b.id.localeCompare(a.id)).slice(0, 6);
   const who = shortName(name);
   const hour = new Date().getHours();
@@ -42,7 +47,9 @@ export function JournalToday({ name, today, spending, periodLabel, safe, cardDue
 
   // Up to three grounded next steps, each from saved records only.
   const actions: Action[] = [];
-  actions.push(unmatched
+  actions.push(ledgerMissing
+    ? { key: 'review', icon: Inbox, title: 'Records not loaded yet', sub: 'Retry from the notice above', to: '/inbox' }
+    : unmatched
     ? { key: 'review', icon: Inbox, title: `${unmatched} ${unmatched === 1 ? 'payment' : 'payments'} to check`, sub: 'Confirm what they were', to: '/inbox' }
     : { key: 'review', icon: Inbox, title: 'Nothing waiting for you', sub: 'Your review list is clear', to: '/inbox' });
   if (next) actions.push({ key: 'due', icon: CalendarClock, title: next.name, sub: `Due ${friendlyDay(next.date, today)} · ${money(next.amount)}`, to: '/plan' });
@@ -50,7 +57,9 @@ export function JournalToday({ name, today, spending, periodLabel, safe, cardDue
   if (actions.length < 3) actions.push({ key: 'add', icon: Plus, title: 'Add a receipt or statement', sub: 'Photo, file, voice or a quick note', onClick: openSmartAdd });
   if (actions.length < 3) actions.push({ key: 'start', icon: Compass, title: 'See how Thapal works', sub: 'A two-minute guide', to: '/start' });
 
-  const story = spending > 0
+  const story = ledgerMissing
+    ? `Your transactions couldn't load, so this month's story isn't ready. Nothing has been deleted.`
+    : spending > 0
     ? `You've spent ${money(spending)} ${periodLabel}.${safe !== null ? ` Around ${money(safe)} looks free to spend${estimated ? ', as an estimate' : ''}.` : ''}`
     : `Nothing spent ${periodLabel} yet. Add a receipt or statement and your story begins here.`;
   const periodTitle = periodLabel === 'this month' ? new Date(`${today}T12:00:00`).toLocaleDateString('en-IN', { month: 'long', year: 'numeric' }) : periodLabel.replace(/^in the /, '').replace(/^\w/, c => c.toUpperCase());

@@ -7,7 +7,9 @@ import { SectionTabs } from "@/components/SectionTabs";
 import { AccountantSettings } from "@/components/AccountantSettings";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { settledUpload } from "@/lib/statement-pipeline/history";
-import { undoStatement } from '@/lib/statement-pipeline/atomic-undo.functions';
+import { undoStatement, statementUndoCapability } from '@/lib/statement-pipeline/atomic-undo.functions';
+import { UNDO_CHECK_FAILED, UNDO_NEEDS_UPDATE, type UndoCapability } from '@/lib/statement-pipeline/undo-capability';
+import { LoadError } from '@/components/LoadError';
 import { toast } from "sonner";
 import { Download, Inbox, ShieldCheck, Upload, X } from "lucide-react";
 import { Card } from "@/components/Money";
@@ -111,7 +113,10 @@ export function StatementDeskPage({ embedded }: { embedded?: { files: File[]; co
   const [drafts, setDrafts] = useState<Draft[]>([]);
   /** Line keys whose receipt pairing the owner changed from the default (sure = on, check = off). */
   const [draftFlip, setDraftFlip] = useState<string[]>([]);
-  useEffect(() => { listDrafts().then(setDrafts).catch(() => setDrafts([])); }, []);
+  // Receipt drafts that failed to load must not look like "no drafts": matching would miss them (P0-004).
+  const [draftsFailed, setDraftsFailed] = useState(false);
+  const loadDrafts = () => listDrafts().then((d) => { setDrafts(d); setDraftsFailed(false); }).catch(() => setDraftsFailed(true));
+  useEffect(() => { void loadDrafts(); }, []);
   const [fix, setFix] = useState<{ preview: CorrectionPreview; name: string } | null>(null);
   const fixOp = useRef("");
   const inputRef = useRef<HTMLInputElement>(null);
@@ -282,12 +287,12 @@ export function StatementDeskPage({ embedded }: { embedded?: { files: File[]; co
       }
       setAccepted([]);
       void loadLinks();
-      listDrafts().then(setDrafts).catch(() => {}); setDraftFlip([]);
+      void loadDrafts(); setDraftFlip([]);
       // The ledger writes are confirmed; only the history label may lag. It settles from saved evidence on the next open.
       try { await checkpoint(r,'complete'); }
       catch { setTimeout(() => { void checkpoint(r,'complete').catch(() => {}); }, 3000); }
       toast.success(`${r.posted.length} entries posted · ${r.reconciled.length} records marked as matched${r.createdAccounts.length ? ` · ${r.createdAccounts.length} account${r.createdAccounts.length === 1 ? "" : "s"} created` : ""}`, {
-        action: { label: "Undo", onClick: () => void undo(r) },
+        ...(undoCap === 'needs-update' ? {} : { action: { label: "Undo", onClick: () => void undo(r) } }),
       });
     } catch (e) {
       if (e instanceof PartialUploadError) {
@@ -393,9 +398,28 @@ export function StatementDeskPage({ embedded }: { embedded?: { files: File[]; co
   };
 
   const undoStatementFn = useServerFn(undoStatement);
+  const undoCapabilityFn = useServerFn(statementUndoCapability);
+  // P0-002: Undo is offered only when the database can perform it; otherwise the page says so plainly.
+  const [undoCap, setUndoCap] = useState<UndoCapability>('unknown');
+  const capabilityRef = useRef(undoCapabilityFn);
+  capabilityRef.current = undoCapabilityFn;
+  const checkUndo = async (): Promise<UndoCapability> => {
+    const state = await capabilityRef.current().then((r) => r.state).catch((): UndoCapability => 'unknown');
+    setUndoCap(state); return state;
+  };
+  const hasUploads = (store.preferences.statementUploads ?? []).some((u) => u.status !== 'undone');
+  useEffect(() => {
+    if (!hasUploads) return;
+    let live = true;
+    void capabilityRef.current().then((r) => { if (live) setUndoCap(r.state); }).catch(() => { if (live) setUndoCap('unknown'); });
+    return () => { live = false; };
+  }, [hasUploads]);
   const undoing = useRef(false);
   const undo = async (r: ApplyResult, uploadId?: string) => {
     if (undoing.current) return;
+    const cap = await checkUndo();
+    if (cap === 'needs-update') { toast.info(UNDO_NEEDS_UPDATE); return; }
+    if (cap !== 'available') { toast.error(UNDO_CHECK_FAILED); return; }
     undoing.current = true;
     const initial = storeRef.current.preferences.statementUploads ?? [];
     const target = uploadId ?? initial.find(u => u.posted.join() === r.posted.join() && u.reconciled.join() === r.reconciled.join())?.id;
@@ -709,7 +733,7 @@ export function StatementDeskPage({ embedded }: { embedded?: { files: File[]; co
           <div className="flex flex-wrap items-center gap-2">
             <Button onClick={apply} disabled={!!progress}>{progress ?? `Apply everything (${plan.totals.auto + accepted.length} to save)`}</Button>
             {askKeys.length > 0 && <Button variant="outline" onClick={() => setAccepted(askKeys)}>Accept all {askKeys.length} asking items</Button>}
-            {result && <Button variant="outline" onClick={() => void undo(result)}>Undo this upload ({result.posted.length} saved)</Button>}
+            {result && undoCap !== 'needs-update' && <Button variant="outline" onClick={() => void undo(result)}>Undo this upload ({result.posted.length} saved)</Button>}
             <Button variant="ghost" onClick={exportCsv}><Download className="size-4" /> Export the plan</Button>
           </div>
           {transferHints.length > 0 && (
@@ -730,6 +754,7 @@ export function StatementDeskPage({ embedded }: { embedded?: { files: File[]; co
         </>
       )}
 
+      {draftsFailed && <LoadError what="your receipt drafts" note="Nothing has been deleted. Statement lines can't be matched to receipt drafts until they load." onRetry={loadDrafts} />}
       {failedOriginals.length > 0 && (
         <Card className="space-y-2 border-destructive/50 p-3" aria-label="Statement originals not stored">
           <h3 className="font-semibold text-destructive">Originals not stored · {failedOriginals.length}</h3>
@@ -741,12 +766,13 @@ export function StatementDeskPage({ embedded }: { embedded?: { files: File[]; co
       {(preferences.statementUploads ?? []).some(u => u.status !== 'undone') && (
         <Card className="space-y-2 p-3" aria-label="Recent uploads">
           <h2 className="font-medium">Recent uploads (any device)</h2>
+          {undoCap === 'needs-update' && <p role="note" className="rounded-xl border border-warning/40 bg-warning/5 p-2 text-sm">{UNDO_NEEDS_UPDATE}</p>}
           <ul className="space-y-2">
             {(preferences.statementUploads ?? []).filter(u => u.status !== 'undone').map((u) => (
               <li key={u.id} className="flex flex-wrap items-center justify-between gap-2 text-sm">
-                <span className="min-w-0 flex-1"><span className="block truncate">{u.label || "Upload"}{u.status==='interrupted'?' · interrupted':''}</span><span className="text-xs text-muted-foreground">{new Date(u.at).toLocaleString()} · {u.posted.length} posted · {u.reconciled.length} matched</span>{u.undoError && <span role="alert" className="block text-xs text-destructive">{u.undoError}</span>}</span>
+                <span className="min-w-0 flex-1"><span className="block truncate">{u.label || "Upload"}{u.status==='interrupted'?' · interrupted':''}</span><span className="text-xs text-muted-foreground">{new Date(u.at).toLocaleString()} · {u.posted.length} posted · {u.reconciled.length} matched</span>{u.undoError && undoCap !== 'needs-update' && <span role="alert" className="block text-xs text-destructive">{u.undoError}</span>}</span>
                 {u.status==='interrupted'&&!!u.sources?.length&&<Button size="sm" variant="outline" disabled={!!progress||busy} onClick={()=>recoverUpload(u)}>Review stored originals</Button>}
-                <Button size="sm" variant="outline" disabled={!!progress} onClick={() => void undo(u, u.id)}>Undo</Button>
+                {undoCap !== 'needs-update' && <Button size="sm" variant="outline" disabled={!!progress} onClick={() => void undo(u, u.id)}>Undo</Button>}
               </li>
             ))}
           </ul>

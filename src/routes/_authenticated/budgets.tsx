@@ -1,3 +1,5 @@
+import { LoadError } from "@/components/LoadError";
+import { loadFailed } from "@/lib/load-state";
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -28,7 +30,7 @@ export const Route = createFileRoute("/_authenticated/budgets")({
 const COLORS = ["var(--chart-1)", "var(--chart-2)", "var(--chart-3)", "var(--chart-4)", "var(--chart-5)"];
 
 function Budgets() {
-  const { expenses, budgets, setBudget, preferences } = useStore();
+  const { expenses, budgets, setBudget, preferences, loadErrors, refresh } = useStore();
   const month = new Date().toISOString().slice(0, 7);
   const rows = budgetUsage(expenses, budgets, month);
   const [cat, setCat] = useState<Category>("Groceries");
@@ -54,7 +56,7 @@ function Budgets() {
 
       <div className="grid gap-6 lg:grid-cols-[1.4fr_1fr]">
         <div className="space-y-3">
-          {rows.length === 0 && <p className="rounded-2xl border border-dashed p-8 text-center text-sm text-muted-foreground">No budgets or spending yet this month.</p>}
+          {rows.length === 0 && (loadFailed(loadErrors, "budgets", "transactions", "settings") ? <LoadError what="your budgets and spending" onRetry={refresh} /> : <p className="rounded-2xl border border-dashed p-8 text-center text-sm text-muted-foreground">No budgets or spending yet this month.</p>)}
           {rows.map((r) => {
             const pct = r.budget ? (r.spent / r.budget) * 100 : 0;
             const over = r.budget > 0 && r.spent > r.budget;
