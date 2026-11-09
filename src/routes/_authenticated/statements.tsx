@@ -36,6 +36,7 @@ import { Link } from "@tanstack/react-router";
 import { buildPlan, type AccountPlan, type StatementPlan } from "@/lib/statement-pipeline/plan";
 import { applyUpload, undoUpload, originalId, PartialUploadError, type ApplyResult, type ApplyRequest } from "@/lib/statement-pipeline/apply";
 import { totals, type StmtFile } from "@/lib/statement-pipeline/line";
+import { approve, approvedDecisions, saveApprovedLabel, unapprove, type Approvals } from "@/lib/statement-pipeline/review-gate";
 import { AccountantInbox } from "@/components/AccountantInbox";
 import { emiTargets } from "@/lib/emi-match";
 import { matchDraftsToLines, type DraftMatch } from "@/lib/statement-pipeline/draft-match";
@@ -94,7 +95,8 @@ export function StatementDeskPage({ embedded }: { embedded?: { files: File[]; co
   const [errors, setErrors] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
   const [progress, setProgress] = useState<string | null>(null);
-  const [accepted, setAccepted] = useState<string[]>([]);
+  // C11: every suggested row (auto or ask) is saved only after its own approval tick.
+  const [approvals, setApprovals] = useState<Approvals>({});
   const [destinations, setDestinations] = useState<Record<string, string>>({});
   const [result, setResult] = useState<ApplyResult | null>(null);
   // Statement originals that failed to store in DocuRepo after posting — kept so the owner can retry instead of leaving an untracked import.
@@ -230,7 +232,8 @@ export function StatementDeskPage({ embedded }: { embedded?: { files: File[]; co
     const requests = plan.accounts
       .map((a) => ({
         account: a,
-        decisions: [...a.auto, ...a.ask.filter((d) => accepted.includes(d.line.key))],
+        decisions: approvedDecisions([...a.auto, ...a.ask], approvals),
+        reviewed: approvals,
         destination: destinations[a.file.name] ?? null,
         draftLinks: draftLinksFor(a),
         reconcileIds: a.matched.filter((m) => m.record && !m.record.reconciledAt).map((m) => ({ id: m.record!.id, ref: `${m.line.file} · ${m.line.date} · ${m.line.amount.toFixed(2)}` })),
@@ -273,14 +276,14 @@ export function StatementDeskPage({ embedded }: { embedded?: { files: File[]; co
       const r = await applyUpload(requests, { ...api(), prepareSource, checkpoint }, setProgress);
       setResult(r);
       // One event per saved statement: did the app's balance after saving match the printed closing figure?
-      // Lines still open after saving: asked lines not accepted, held lines and lines saved on another account.
-      const leftOpen = (q: (typeof requests)[number]) => q.account.ask.length - (q.decisions.length - q.account.auto.length) + q.account.later.length + q.account.elsewhere.length;
+      // Lines still open after saving: suggested lines not approved, held lines and lines saved on another account.
+      const leftOpen = (q: (typeof requests)[number]) => q.account.auto.length + q.account.ask.length - q.decisions.length + q.account.later.length + q.account.elsewhere.length;
       for (const q of requests) {
         const sm = reconSummary(q.account);
         const { result: balance } = savedBalanceCheck(q.account, q.decisions.map((d) => d.line));
         window.__lovableEvents?.track?.("project.statement_saved", { balance, statement_adds_up: sm.statementGap === null ? "not_printed" : sm.statementGap === 0 ? "yes" : "no", entries_posted: q.decisions.length, fully_reconciled: balance === "matched" && leftOpen(q) === 0 && sm.wrongKind === 0 && sm.notOnStatement === 0 });
       }
-      setAccepted([]);
+      setApprovals({});
       void loadLinks();
       listDrafts().then(setDrafts).catch(() => {}); setDraftFlip([]);
       // The ledger writes are confirmed; only the history label may lag. It settles from saved evidence on the next open.
@@ -484,13 +487,16 @@ export function StatementDeskPage({ embedded }: { embedded?: { files: File[]; co
     for (const a of plan.accounts) {
       for (const m of a.matched) rows.push([a.file.name, a.name, m.line.date, m.line.description, m.line.amount, m.line.direction, "already recorded", m.reasons.join("; ")].map(q).join(","));
       for (const m of a.wrongKind) rows.push([a.file.name, a.name, m.line.date, m.line.description, m.line.amount, m.line.direction, "saved the wrong way", m.reasons.join("; ")].map(q).join(","));
-      for (const d of [...a.auto, ...a.ask]) rows.push([a.file.name, a.name, d.line.date, d.line.description, d.line.amount, d.line.direction, d.group === "auto" ? "save automatically" : "needs your decision", d.reason].map(q).join(","));
+      for (const d of [...a.auto, ...a.ask]) rows.push([a.file.name, a.name, d.line.date, d.line.description, d.line.amount, d.line.direction, d.group === "auto" ? "suggested (approve to save)" : "needs your decision", d.reason].map(q).join(","));
       for (const l of a.later) rows.push([a.file.name, a.name, l.line.date, l.line.description, l.line.amount, l.line.direction, "held back", l.reason].map(q).join(","));
     }
     downloadBlob(new Blob([rows.join("\n")], { type: "text/csv" }), "statement-desk-plan.csv");
   };
 
-  const askKeys = plan?.accounts.flatMap((a) => a.ask.map((d) => d.line.key)) ?? [];
+  const suggestedKeys = plan?.accounts.flatMap((a) => [...a.auto, ...a.ask].map((d) => d.line.key)) ?? [];
+  const approvedCount = suggestedKeys.filter((k) => approvals[k]).length;
+  const toMatch = plan?.accounts.reduce((n, a) => n + a.matched.filter((m) => m.record && !m.record.reconciledAt).length, 0) ?? 0;
+  const toggleApproval = (key: string, on: boolean) => setApprovals((x) => (on ? approve(x, key) : unapprove(x, key)));
   const embeddedTaken = useRef(false);
   useEffect(() => {
     if (!embedded?.files.length || embeddedTaken.current || !store.userId) return;
@@ -528,7 +534,7 @@ export function StatementDeskPage({ embedded }: { embedded?: { files: File[]; co
           <Button className="mt-2" variant="outline" onClick={() => inputRef.current?.click()}>Choose files</Button>
           <input ref={inputRef} aria-label="Statement files" type="file" multiple accept=".pdf,.csv,.xls,.xlsx,.png,.jpg,.jpeg,.webp" className="hidden" onChange={(e) => { void add(e.target.files); e.target.value = ""; }} />
         </div>
-        <StageStrip stage={statementStage({ files: loaded.length + docs.length, reading: busy, planned: !!plan, pendingDecisions: askKeys.length, confirmedSaved: !!result })} saving={!!progress} />
+        <StageStrip stage={statementStage({ files: loaded.length + docs.length, reading: busy, planned: !!plan, pendingDecisions: suggestedKeys.length - approvedCount, confirmedSaved: !!result })} saving={!!progress} />
         {busy && <p role="status" className="text-sm text-muted-foreground">Reading statements on this device…</p>}
         {progress && <p role="status" className="text-sm text-muted-foreground">{progress}</p>}
         {errors.length > 0 && <ul className="space-y-1 text-sm text-destructive" role="alert">{errors.map((e) => <li key={e}>{e}</li>)}</ul>}
@@ -577,7 +583,7 @@ export function StatementDeskPage({ embedded }: { embedded?: { files: File[]; co
           <div className="grid gap-2 sm:grid-cols-4">
             {[
               { label: "Already in my records", value: plan.totals.matched },
-              { label: "Ready to save when you confirm", value: plan.totals.auto },
+              { label: "Suggested · approve each row", value: plan.totals.auto },
               { label: "Needs your decision", value: plan.totals.ask },
               { label: "Held back", value: plan.totals.later },
             ].map((t) => (
@@ -600,7 +606,7 @@ export function StatementDeskPage({ embedded }: { embedded?: { files: File[]; co
                 <section aria-label="Balance check summary" className={`space-y-2 rounded-xl border-2 p-3 text-sm ${r.ok ? "border-border" : "border-warning bg-warning/10"}`}>
                   <h3 className="font-semibold">{r.ok ? "Before you save · everything agrees" : "Before you save · check these"}</h3>
                   <dl className="grid grid-cols-2 gap-x-4 gap-y-1 sm:grid-cols-4">
-                    {([["Already in the app", r.matched], ["Will save", r.toSave], ["No matching record found", r.unmatchedLines], ["In app, not on statement", r.notOnStatement]] as const).map(([k, v]) => <div key={k}><dt className="text-xs text-muted-foreground">{k}</dt><dd className="font-semibold tabular-nums">{v}</dd></div>)}
+                    {([["Already in the app", r.matched], ["Suggested, approve each", r.toSave], ["No matching record found", r.unmatchedLines], ["In app, not on statement", r.notOnStatement]] as const).map(([k, v]) => <div key={k}><dt className="text-xs text-muted-foreground">{k}</dt><dd className="font-semibold tabular-nums">{v}</dd></div>)}
                   </dl>
                   <ul className="space-y-0.5 text-xs">
                     <li>{r.statementGap === null ? "Statement balances: opening or closing not printed, so the file can't check itself." : r.statementGap === 0 ? "Statement balances: opening + entries = printed closing." : `Statement balances don't add up — off by ${money(Math.abs(r.statementGap), cur)}.`}</li>
@@ -624,11 +630,13 @@ export function StatementDeskPage({ embedded }: { embedded?: { files: File[]; co
                 </section>); })()}
 
               {a.auto.length > 0 && (
-                <section aria-label="Saved automatically">
-                  <h3 className="font-semibold">Saved automatically · {a.auto.length}</h3>
+                <section aria-label="Suggested rows">
+                  <h3 className="font-semibold">Suggested · approve each row · {a.auto.length}</h3>
+                  <p className="text-xs text-muted-foreground">These were classified automatically. Tick each one you have checked; only ticked rows are saved.</p>
                   <Clipped className="mt-1 divide-y divide-border rounded-xl border border-border text-sm" items={a.auto} render={(d) => (
-                      <li key={d.line.key} className="flex items-start justify-between gap-3 p-2">
-                        <span className="min-w-0"><span className="block truncate">{d.line.date} · {d.line.description}</span><span className="text-xs text-muted-foreground">{d.draft.category} · {d.reason}</span></span>
+                      <li key={d.line.key} className="flex items-start gap-3 p-2">
+                        <Checkbox aria-label={`Approve ${d.line.description}`} checked={!!approvals[d.line.key]} onCheckedChange={(v) => toggleApproval(d.line.key, v === true)} />
+                        <span className="min-w-0 flex-1"><span className="block truncate">{d.line.date} · {d.line.description}</span><span className="text-xs text-muted-foreground">{d.draft.category} · {d.reason}</span></span>
                         <span className="shrink-0 tabular-nums">{d.line.direction === "debit" ? "−" : "+"}{money(d.line.amount, d.line.currency)}</span>
                       </li>
                     )} />
@@ -648,7 +656,7 @@ export function StatementDeskPage({ embedded }: { embedded?: { files: File[]; co
                   )}
                   <Clipped className="mt-1 divide-y divide-border rounded-xl border border-border text-sm" items={a.ask} render={(d) => (
                       <li key={d.line.key} className="flex items-start gap-3 p-2">
-                        <Checkbox aria-label={`Save ${d.line.description}`} checked={accepted.includes(d.line.key)} onCheckedChange={(v) => setAccepted((xs) => (v === true ? [...new Set([...xs, d.line.key])] : xs.filter((x) => x !== d.line.key)))} />
+                        <Checkbox aria-label={`Approve ${d.line.description}`} checked={!!approvals[d.line.key]} onCheckedChange={(v) => toggleApproval(d.line.key, v === true)} />
                         <span className="min-w-0 flex-1"><span className="block truncate">{d.line.date} · {d.line.description}</span><span className="block text-xs text-muted-foreground">{d.draft.category} · {d.reason}</span></span>
                         <span className="shrink-0 tabular-nums">{d.line.direction === "debit" ? "−" : "+"}{money(d.line.amount, d.line.currency)}</span>
                       </li>
@@ -707,11 +715,11 @@ export function StatementDeskPage({ embedded }: { embedded?: { files: File[]; co
           </Dialog>
 
           <div className="flex flex-wrap items-center gap-2">
-            <Button onClick={apply} disabled={!!progress}>{progress ?? `Apply everything (${plan.totals.auto + accepted.length} to save)`}</Button>
-            {askKeys.length > 0 && <Button variant="outline" onClick={() => setAccepted(askKeys)}>Accept all {askKeys.length} asking items</Button>}
+            <Button onClick={apply} disabled={!!progress || (approvedCount === 0 && toMatch === 0)}>{progress ?? (approvedCount === 0 && toMatch > 0 ? `Mark ${toMatch} matched record${toMatch === 1 ? "" : "s"}` : saveApprovedLabel(approvedCount))}</Button>
             {result && <Button variant="outline" onClick={() => void undo(result)}>Undo this upload ({result.posted.length} saved)</Button>}
             <Button variant="ghost" onClick={exportCsv}><Download className="size-4" /> Export the plan</Button>
           </div>
+          <p className="text-xs text-muted-foreground" role="note">{approvedCount} of {suggestedKeys.length} suggested rows approved. Each automatically classified row needs your own tick; nothing is saved without it.</p>
           {transferHints.length > 0 && (
             <Card className="space-y-2 p-3" aria-label="Money moved between your accounts">
               <h3 className="font-semibold">Transfers between your accounts · {transferHints.length}</h3>

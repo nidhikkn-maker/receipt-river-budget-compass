@@ -7,6 +7,7 @@ import { queueEntry, pendingEntries, removePending, putSnapshot, getSnapshot } f
 import { mergePending, setItem, type PendingItem } from "./pending-sync";
 import { deleteFinanceData } from "./delete-data";
 import { withStepUp } from "./step-up";
+import { forgetPostingStatus, isPostedEntryError, postingStatus, removalMode, reverseLedgerEntry, ReversalReasonRequired, validReason } from "./posting";
 import { privateFileUrl, fetchPrivateFile, type ExpectedFile } from "./private-files";
 import { downloadBlob } from "./reports";
 import { saveExpense } from "./fx.functions";
@@ -152,7 +153,12 @@ interface Ctx {
   lastSyncedAt: string | null;
   refresh: () => Promise<void>;
   save: (s: ExpenseInput, opts?: { id?: string; files?: File[]; createId?: string; noRefresh?: boolean }) => Promise<void>;
-  remove: (e: Expense) => Promise<void>;
+  /**
+   * Removes an entry from the working ledger. Where the balanced posting layer is active (P7), a posted
+   * entry is reversed through reverse_ledger_entry (reason + re-confirmation; receipts kept); otherwise it
+   * is deleted exactly as before. The database refuses deletes of posted entries either way.
+   */
+  remove: (e: Expense, opts?: { reason?: string; requestId?: string }) => Promise<void>;
   setScope: (id: string, scope: Scope) => Promise<void>;
   /** Changes labels only — amount, currency and stored exchange rate are untouched. */
   setTags: (id: string, tags: string[]) => Promise<void>;
@@ -587,8 +593,16 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
     check(result.error);return (result.data??[]).map(r=>({id:r.id,createdAt:r.created_at,entries:r.entries as unknown as {before:Record<string,unknown>;after:Record<string,unknown>}[]}));
   };
 
-  const remove: Ctx["remove"] = async (e) => {
-    check((await supabase.from("expenses").delete().eq("id", e.id)).error);
+  const remove: Ctx["remove"] = async (e, opts) => {
+    if (removalMode(await postingStatus(userId)) === "reverse") {
+      if (!validReason(opts?.reason)) throw new ReversalReasonRequired();
+      await reverseLedgerEntry({ entryId: e.id, reason: opts?.reason ?? "", requestId: opts?.requestId ?? crypto.randomUUID() });
+      await refresh();
+      return;
+    }
+    const deleted = await supabase.from("expenses").delete().eq("id", e.id);
+    if (deleted.error && isPostedEntryError(deleted.error)) { forgetPostingStatus(); throw new ReversalReasonRequired(); }
+    check(deleted.error);
     if (e.receipts.length) await supabase.storage.from("receipts").remove(e.receipts.map((r) => r.path));
     await refresh();
   };

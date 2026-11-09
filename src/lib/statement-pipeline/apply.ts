@@ -6,6 +6,7 @@ import type { AccountPlan } from "./plan";
 import type { AccountHint, StmtLine } from "./line";
 import type { AccountDetails } from "../ledger";
 import type { UndoRow } from './atomic-undo';
+import { assertReviewed, stampReview, type Approvals } from "./review-gate";
 
 /** Same recipe the statement cross-check already uses, so re-uploading a file never posts it twice. */
 export async function stableId(accountId: string, l: StmtLine): Promise<string> {
@@ -51,6 +52,12 @@ export interface ApplyRequest {
   reconcileIds: { id: string; ref: string }[];
   /** Receipt drafts paired with lines (by line key); the bank amount and date always stay. */
   draftLinks?: Record<string, DraftLink>;
+  /**
+   * C11: the person's explicit row approvals (line key -> approval time). Every saved row is stamped as
+   * automatically classified; a row without an approval here is refused by saveExpense and by the
+   * database posting path. When given, a decision without an approval stops the upload before any write.
+   */
+  reviewed?: Approvals;
 }
 
 export interface DraftLink { draftId: string; overrides: { [K in "title" | "merchant" | "category" | "description" | "receiptDetails"]?: ExpenseInput[K] | undefined }; files: () => Promise<File[]> }
@@ -102,6 +109,7 @@ export async function applyUpload(requests: ApplyRequest[], api: ApplyApi, onPro
     }
   };
 
+  for (const r of wanted) if (r.reviewed) assertReviewed(r.decisions, r.reviewed);
   try { for (const r of wanted) {
     let accountId = r.account.accountId;
     if (!accountId) {
@@ -132,6 +140,7 @@ export async function applyUpload(requests: ApplyRequest[], api: ApplyApi, onPro
       const link = r.draftLinks?.[d.line.key];
       if (link) {
         Object.assign(input, Object.fromEntries(Object.entries(link.overrides).filter(([, v]) => v !== undefined && v !== "")));
+        input.receiptDetails = stampReview(input.receiptDetails, d.line.key, r.reviewed?.[d.line.key]);
         await api.save(input, { createId: id, noRefresh: true, files: await link.files() });
         result.posted.push(id);
         await capture(id, 0, null);
@@ -142,6 +151,7 @@ export async function applyUpload(requests: ApplyRequest[], api: ApplyApi, onPro
         await api.checkpoint?.(structuredClone(result));
         continue;
       }
+      input.receiptDetails = stampReview(input.receiptDetails, d.line.key, r.reviewed?.[d.line.key]);
       await api.save(input, { createId: id, noRefresh: true });
       result.posted.push(id);
       await capture(id, 0, null);
