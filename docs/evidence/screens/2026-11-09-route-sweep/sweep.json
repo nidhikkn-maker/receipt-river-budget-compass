@@ -1,0 +1,1226 @@
+[
+ {
+  "device": "iphone",
+  "route": "account-reconciliation",
+  "landed": "/account-reconciliation",
+  "horizontalOverflow": false,
+  "textChars": 603,
+  "errors": []
+ },
+ {
+  "device": "iphone",
+  "route": "allocation",
+  "landed": "/allocation",
+  "horizontalOverflow": false,
+  "textChars": 419,
+  "errors": []
+ },
+ {
+  "device": "iphone",
+  "route": "assets",
+  "landed": "/assets",
+  "horizontalOverflow": false,
+  "textChars": 521,
+  "errors": []
+ },
+ {
+  "device": "iphone",
+  "route": "assistant",
+  "landed": "/assistant",
+  "horizontalOverflow": false,
+  "textChars": 368,
+  "errors": []
+ },
+ {
+  "device": "iphone",
+  "route": "assistants",
+  "landed": "/assistants",
+  "horizontalOverflow": false,
+  "textChars": 2009,
+  "errors": []
+ },
+ {
+  "device": "iphone",
+  "route": "audit",
+  "landed": "/audit",
+  "horizontalOverflow": false,
+  "textChars": 1276,
+  "errors": []
+ },
+ {
+  "device": "iphone",
+  "route": "brief",
+  "landed": "/brief",
+  "horizontalOverflow": false,
+  "textChars": 929,
+  "errors": []
+ },
+ {
+  "device": "iphone",
+  "route": "budgets",
+  "landed": "/budgets",
+  "horizontalOverflow": false,
+  "textChars": 326,
+  "errors": []
+ },
+ {
+  "device": "iphone",
+  "route": "claim-submission",
+  "landed": "/claim-submission",
+  "horizontalOverflow": false,
+  "textChars": 1695,
+  "errors": []
+ },
+ {
+  "device": "iphone",
+  "route": "company-spending",
+  "landed": "/company-spending",
+  "horizontalOverflow": false,
+  "textChars": 259,
+  "errors": []
+ },
+ {
+  "device": "iphone",
+  "route": "connections",
+  "landed": "/connections",
+  "horizontalOverflow": false,
+  "textChars": 255,
+  "errors": []
+ },
+ {
+  "device": "iphone",
+  "route": "dashboard",
+  "landed": "/dashboard",
+  "horizontalOverflow": false,
+  "textChars": 507,
+  "errors": []
+ },
+ {
+  "device": "iphone",
+  "route": "drafts",
+  "landed": "/drafts",
+  "horizontalOverflow": false,
+  "textChars": 249,
+  "errors": []
+ },
+ {
+  "device": "iphone",
+  "route": "entities",
+  "landed": "/entities",
+  "horizontalOverflow": false,
+  "textChars": 490,
+  "errors": []
+ },
+ {
+  "device": "iphone",
+  "route": "expenditure-statement",
+  "landed": "/expenditure-statement",
+  "horizontalOverflow": false,
+  "textChars": 818,
+  "errors": []
+ },
+ {
+  "device": "iphone",
+  "route": "expenses",
+  "landed": "/expenses",
+  "horizontalOverflow": false,
+  "textChars": 376,
+  "errors": []
+ },
+ {
+  "device": "iphone",
+  "route": "family",
+  "landed": "/family",
+  "horizontalOverflow": false,
+  "textChars": 255,
+  "errors": []
+ },
+ {
+  "device": "iphone",
+  "route": "forecast",
+  "landed": "/forecast",
+  "horizontalOverflow": false,
+  "textChars": 454,
+  "errors": []
+ },
+ {
+  "device": "iphone",
+  "route": "gst-check",
+  "landed": "/gst-check",
+  "horizontalOverflow": false,
+  "textChars": 427,
+  "errors": []
+ },
+ {
+  "device": "iphone",
+  "route": "historical-import",
+  "landed": "/historical-import",
+  "horizontalOverflow": false,
+  "textChars": 155,
+  "errors": []
+ },
+ {
+  "device": "iphone",
+  "route": "inbox",
+  "landed": "/inbox",
+  "horizontalOverflow": false,
+  "textChars": 384,
+  "errors": []
+ },
+ {
+  "device": "iphone",
+  "route": "new",
+  "landed": "/new",
+  "horizontalOverflow": false,
+  "textChars": 509,
+  "errors": []
+ },
+ {
+  "device": "iphone",
+  "route": "offline-receipts",
+  "landed": "/offline-receipts",
+  "horizontalOverflow": false,
+  "textChars": 386,
+  "errors": []
+ },
+ {
+  "device": "iphone",
+  "route": "patterns",
+  "landed": "/patterns",
+  "horizontalOverflow": false,
+  "textChars": 261,
+  "errors": []
+ },
+ {
+  "device": "iphone",
+  "route": "payment-methods",
+  "landed": "/payment-methods",
+  "horizontalOverflow": false,
+  "textChars": 221,
+  "errors": []
+ },
+ {
+  "device": "iphone",
+  "route": "plan",
+  "landed": "/plan",
+  "horizontalOverflow": false,
+  "textChars": 2039,
+  "errors": []
+ },
+ {
+  "device": "iphone",
+  "route": "receivables",
+  "landed": "/receivables",
+  "horizontalOverflow": false,
+  "textChars": 282,
+  "errors": []
+ },
+ {
+  "device": "iphone",
+  "route": "records-check",
+  "landed": "/records-check",
+  "horizontalOverflow": false,
+  "textChars": 425,
+  "errors": []
+ },
+ {
+  "device": "iphone",
+  "route": "reimbursement-settings",
+  "landed": "/reimbursement-settings",
+  "horizontalOverflow": false,
+  "textChars": 316,
+  "errors": []
+ },
+ {
+  "device": "iphone",
+  "route": "report-centre",
+  "landed": "/report-centre",
+  "horizontalOverflow": false,
+  "textChars": 1559,
+  "errors": []
+ },
+ {
+  "device": "iphone",
+  "route": "report-status",
+  "landed": "/report-status",
+  "horizontalOverflow": false,
+  "textChars": 2029,
+  "errors": []
+ },
+ {
+  "device": "iphone",
+  "route": "reports",
+  "landed": "/reports",
+  "horizontalOverflow": false,
+  "textChars": 1629,
+  "errors": []
+ },
+ {
+  "device": "iphone",
+  "route": "review",
+  "landed": "/review",
+  "horizontalOverflow": false,
+  "textChars": 978,
+  "errors": []
+ },
+ {
+  "device": "iphone",
+  "route": "rules",
+  "landed": "/rules",
+  "horizontalOverflow": false,
+  "textChars": 1232,
+  "errors": []
+ },
+ {
+  "device": "iphone",
+  "route": "search",
+  "landed": "/search",
+  "horizontalOverflow": false,
+  "textChars": 499,
+  "errors": []
+ },
+ {
+  "device": "iphone",
+  "route": "settings",
+  "landed": "/settings",
+  "horizontalOverflow": false,
+  "textChars": 2967,
+  "errors": []
+ },
+ {
+  "device": "iphone",
+  "route": "shared",
+  "landed": "/shared",
+  "horizontalOverflow": false,
+  "textChars": 304,
+  "errors": []
+ },
+ {
+  "device": "iphone",
+  "route": "spaces",
+  "landed": "/spaces",
+  "horizontalOverflow": false,
+  "textChars": 455,
+  "errors": []
+ },
+ {
+  "device": "iphone",
+  "route": "start",
+  "landed": "/start",
+  "horizontalOverflow": false,
+  "textChars": 3213,
+  "errors": []
+ },
+ {
+  "device": "iphone",
+  "route": "statement-accounts",
+  "landed": "/statement-accounts",
+  "horizontalOverflow": false,
+  "textChars": 375,
+  "errors": []
+ },
+ {
+  "device": "iphone",
+  "route": "statements",
+  "landed": "/statements",
+  "horizontalOverflow": false,
+  "textChars": 605,
+  "errors": []
+ },
+ {
+  "device": "iphone",
+  "route": "strategy",
+  "landed": "/strategy",
+  "horizontalOverflow": false,
+  "textChars": 598,
+  "errors": []
+ },
+ {
+  "device": "iphone",
+  "route": "sync-queue",
+  "landed": "/sync-queue",
+  "horizontalOverflow": false,
+  "textChars": 247,
+  "errors": []
+ },
+ {
+  "device": "iphone",
+  "route": "tax",
+  "landed": "/tax",
+  "horizontalOverflow": false,
+  "textChars": 1638,
+  "errors": []
+ },
+ {
+  "device": "iphone",
+  "route": "transaction-review",
+  "landed": "/inbox",
+  "horizontalOverflow": false,
+  "textChars": 416,
+  "errors": []
+ },
+ {
+  "device": "iphone",
+  "route": "transfers",
+  "landed": "/transfers",
+  "horizontalOverflow": false,
+  "textChars": 821,
+  "errors": []
+ },
+ {
+  "device": "iphone",
+  "route": "travel-inbox",
+  "landed": "/travel-inbox",
+  "horizontalOverflow": false,
+  "textChars": 174,
+  "errors": []
+ },
+ {
+  "device": "iphone",
+  "route": "trips",
+  "landed": "/trips",
+  "horizontalOverflow": false,
+  "textChars": 328,
+  "errors": []
+ },
+ {
+  "device": "iphone",
+  "route": "upload-requests",
+  "landed": "/upload-requests",
+  "horizontalOverflow": false,
+  "textChars": 114,
+  "errors": []
+ },
+ {
+  "device": "iphone",
+  "route": "vault",
+  "landed": "/vault",
+  "horizontalOverflow": false,
+  "textChars": 363,
+  "errors": []
+ },
+ {
+  "device": "iphone",
+  "route": "wealth",
+  "landed": "/wealth",
+  "horizontalOverflow": false,
+  "textChars": 1125,
+  "errors": []
+ },
+ {
+  "device": "ipad",
+  "route": "account-reconciliation",
+  "landed": "/account-reconciliation",
+  "horizontalOverflow": false,
+  "textChars": 763,
+  "errors": []
+ },
+ {
+  "device": "ipad",
+  "route": "allocation",
+  "landed": "/allocation",
+  "horizontalOverflow": false,
+  "textChars": 518,
+  "errors": []
+ },
+ {
+  "device": "ipad",
+  "route": "assets",
+  "landed": "/assets",
+  "horizontalOverflow": false,
+  "textChars": 620,
+  "errors": []
+ },
+ {
+  "device": "ipad",
+  "route": "assistant",
+  "landed": "/assistant",
+  "horizontalOverflow": false,
+  "textChars": 468,
+  "errors": []
+ },
+ {
+  "device": "ipad",
+  "route": "assistants",
+  "landed": "/assistants",
+  "horizontalOverflow": false,
+  "textChars": 2108,
+  "errors": []
+ },
+ {
+  "device": "ipad",
+  "route": "audit",
+  "landed": "/audit",
+  "horizontalOverflow": false,
+  "textChars": 1376,
+  "errors": []
+ },
+ {
+  "device": "ipad",
+  "route": "brief",
+  "landed": "/brief",
+  "horizontalOverflow": false,
+  "textChars": 1028,
+  "errors": []
+ },
+ {
+  "device": "ipad",
+  "route": "budgets",
+  "landed": "/budgets",
+  "horizontalOverflow": false,
+  "textChars": 426,
+  "errors": []
+ },
+ {
+  "device": "ipad",
+  "route": "claim-submission",
+  "landed": "/claim-submission",
+  "horizontalOverflow": false,
+  "textChars": 1794,
+  "errors": []
+ },
+ {
+  "device": "ipad",
+  "route": "company-spending",
+  "landed": "/company-spending",
+  "horizontalOverflow": false,
+  "textChars": 358,
+  "errors": []
+ },
+ {
+  "device": "ipad",
+  "route": "connections",
+  "landed": "/connections",
+  "horizontalOverflow": false,
+  "textChars": 354,
+  "errors": []
+ },
+ {
+  "device": "ipad",
+  "route": "dashboard",
+  "landed": "/dashboard",
+  "horizontalOverflow": false,
+  "textChars": 618,
+  "errors": []
+ },
+ {
+  "device": "ipad",
+  "route": "drafts",
+  "landed": "/drafts",
+  "horizontalOverflow": false,
+  "textChars": 349,
+  "errors": []
+ },
+ {
+  "device": "ipad",
+  "route": "entities",
+  "landed": "/entities",
+  "horizontalOverflow": false,
+  "textChars": 589,
+  "errors": []
+ },
+ {
+  "device": "ipad",
+  "route": "expenditure-statement",
+  "landed": "/expenditure-statement",
+  "horizontalOverflow": false,
+  "textChars": 917,
+  "errors": []
+ },
+ {
+  "device": "ipad",
+  "route": "expenses",
+  "landed": "/expenses",
+  "horizontalOverflow": false,
+  "textChars": 476,
+  "errors": []
+ },
+ {
+  "device": "ipad",
+  "route": "family",
+  "landed": "/family",
+  "horizontalOverflow": false,
+  "textChars": 354,
+  "errors": []
+ },
+ {
+  "device": "ipad",
+  "route": "forecast",
+  "landed": "/forecast",
+  "horizontalOverflow": false,
+  "textChars": 553,
+  "errors": []
+ },
+ {
+  "device": "ipad",
+  "route": "gst-check",
+  "landed": "/gst-check",
+  "horizontalOverflow": false,
+  "textChars": 526,
+  "errors": []
+ },
+ {
+  "device": "ipad",
+  "route": "historical-import",
+  "landed": "/historical-import",
+  "horizontalOverflow": false,
+  "textChars": 254,
+  "errors": []
+ },
+ {
+  "device": "ipad",
+  "route": "inbox",
+  "landed": "/inbox",
+  "horizontalOverflow": false,
+  "textChars": 484,
+  "errors": []
+ },
+ {
+  "device": "ipad",
+  "route": "new",
+  "landed": "/new",
+  "horizontalOverflow": false,
+  "textChars": 509,
+  "errors": []
+ },
+ {
+  "device": "ipad",
+  "route": "offline-receipts",
+  "landed": "/offline-receipts",
+  "horizontalOverflow": false,
+  "textChars": 485,
+  "errors": []
+ },
+ {
+  "device": "ipad",
+  "route": "patterns",
+  "landed": "/patterns",
+  "horizontalOverflow": false,
+  "textChars": 360,
+  "errors": []
+ },
+ {
+  "device": "ipad",
+  "route": "payment-methods",
+  "landed": "/payment-methods",
+  "horizontalOverflow": false,
+  "textChars": 321,
+  "errors": []
+ },
+ {
+  "device": "ipad",
+  "route": "plan",
+  "landed": "/plan",
+  "horizontalOverflow": false,
+  "textChars": 2151,
+  "errors": []
+ },
+ {
+  "device": "ipad",
+  "route": "receivables",
+  "landed": "/receivables",
+  "horizontalOverflow": false,
+  "textChars": 381,
+  "errors": []
+ },
+ {
+  "device": "ipad",
+  "route": "records-check",
+  "landed": "/records-check",
+  "horizontalOverflow": false,
+  "textChars": 524,
+  "errors": []
+ },
+ {
+  "device": "ipad",
+  "route": "reimbursement-settings",
+  "landed": "/reimbursement-settings",
+  "horizontalOverflow": false,
+  "textChars": 416,
+  "errors": []
+ },
+ {
+  "device": "ipad",
+  "route": "report-centre",
+  "landed": "/report-centre",
+  "horizontalOverflow": false,
+  "textChars": 1658,
+  "errors": []
+ },
+ {
+  "device": "ipad",
+  "route": "report-status",
+  "landed": "/report-status",
+  "horizontalOverflow": false,
+  "textChars": 2128,
+  "errors": []
+ },
+ {
+  "device": "ipad",
+  "route": "reports",
+  "landed": "/reports",
+  "horizontalOverflow": false,
+  "textChars": 1815,
+  "errors": []
+ },
+ {
+  "device": "ipad",
+  "route": "review",
+  "landed": "/review",
+  "horizontalOverflow": false,
+  "textChars": 1078,
+  "errors": []
+ },
+ {
+  "device": "ipad",
+  "route": "rules",
+  "landed": "/rules",
+  "horizontalOverflow": false,
+  "textChars": 1332,
+  "errors": []
+ },
+ {
+  "device": "ipad",
+  "route": "search",
+  "landed": "/search",
+  "horizontalOverflow": false,
+  "textChars": 599,
+  "errors": []
+ },
+ {
+  "device": "ipad",
+  "route": "settings",
+  "landed": "/settings",
+  "horizontalOverflow": false,
+  "textChars": 3166,
+  "errors": []
+ },
+ {
+  "device": "ipad",
+  "route": "shared",
+  "landed": "/shared",
+  "horizontalOverflow": false,
+  "textChars": 403,
+  "errors": []
+ },
+ {
+  "device": "ipad",
+  "route": "spaces",
+  "landed": "/spaces",
+  "horizontalOverflow": false,
+  "textChars": 555,
+  "errors": []
+ },
+ {
+  "device": "ipad",
+  "route": "start",
+  "landed": "/start",
+  "horizontalOverflow": false,
+  "textChars": 3313,
+  "errors": []
+ },
+ {
+  "device": "ipad",
+  "route": "statement-accounts",
+  "landed": "/statement-accounts",
+  "horizontalOverflow": false,
+  "textChars": 475,
+  "errors": []
+ },
+ {
+  "device": "ipad",
+  "route": "statements",
+  "landed": "/statements",
+  "horizontalOverflow": false,
+  "textChars": 704,
+  "errors": []
+ },
+ {
+  "device": "ipad",
+  "route": "strategy",
+  "landed": "/strategy",
+  "horizontalOverflow": false,
+  "textChars": 697,
+  "errors": []
+ },
+ {
+  "device": "ipad",
+  "route": "sync-queue",
+  "landed": "/sync-queue",
+  "horizontalOverflow": false,
+  "textChars": 346,
+  "errors": []
+ },
+ {
+  "device": "ipad",
+  "route": "tax",
+  "landed": "/tax",
+  "horizontalOverflow": false,
+  "textChars": 1737,
+  "errors": []
+ },
+ {
+  "device": "ipad",
+  "route": "transaction-review",
+  "landed": "/inbox",
+  "horizontalOverflow": false,
+  "textChars": 516,
+  "errors": []
+ },
+ {
+  "device": "ipad",
+  "route": "transfers",
+  "landed": "/transfers",
+  "horizontalOverflow": false,
+  "textChars": 921,
+  "errors": []
+ },
+ {
+  "device": "ipad",
+  "route": "travel-inbox",
+  "landed": "/travel-inbox",
+  "horizontalOverflow": false,
+  "textChars": 274,
+  "errors": []
+ },
+ {
+  "device": "ipad",
+  "route": "trips",
+  "landed": "/trips",
+  "horizontalOverflow": false,
+  "textChars": 428,
+  "errors": []
+ },
+ {
+  "device": "ipad",
+  "route": "upload-requests",
+  "landed": "/upload-requests",
+  "horizontalOverflow": false,
+  "textChars": 213,
+  "errors": []
+ },
+ {
+  "device": "ipad",
+  "route": "vault",
+  "landed": "/vault",
+  "horizontalOverflow": false,
+  "textChars": 463,
+  "errors": []
+ },
+ {
+  "device": "ipad",
+  "route": "wealth",
+  "landed": "/wealth",
+  "horizontalOverflow": false,
+  "textChars": 1225,
+  "errors": []
+ },
+ {
+  "device": "desktop",
+  "route": "account-reconciliation",
+  "landed": "/account-reconciliation",
+  "horizontalOverflow": false,
+  "textChars": 777,
+  "errors": []
+ },
+ {
+  "device": "desktop",
+  "route": "allocation",
+  "landed": "/allocation",
+  "horizontalOverflow": false,
+  "textChars": 532,
+  "errors": []
+ },
+ {
+  "device": "desktop",
+  "route": "assets",
+  "landed": "/assets",
+  "horizontalOverflow": false,
+  "textChars": 634,
+  "errors": []
+ },
+ {
+  "device": "desktop",
+  "route": "assistant",
+  "landed": "/assistant",
+  "horizontalOverflow": false,
+  "textChars": 482,
+  "errors": []
+ },
+ {
+  "device": "desktop",
+  "route": "assistants",
+  "landed": "/assistants",
+  "horizontalOverflow": false,
+  "textChars": 2122,
+  "errors": []
+ },
+ {
+  "device": "desktop",
+  "route": "audit",
+  "landed": "/audit",
+  "horizontalOverflow": false,
+  "textChars": 1390,
+  "errors": []
+ },
+ {
+  "device": "desktop",
+  "route": "brief",
+  "landed": "/brief",
+  "horizontalOverflow": false,
+  "textChars": 1042,
+  "errors": []
+ },
+ {
+  "device": "desktop",
+  "route": "budgets",
+  "landed": "/budgets",
+  "horizontalOverflow": false,
+  "textChars": 440,
+  "errors": []
+ },
+ {
+  "device": "desktop",
+  "route": "claim-submission",
+  "landed": "/claim-submission",
+  "horizontalOverflow": false,
+  "textChars": 1808,
+  "errors": []
+ },
+ {
+  "device": "desktop",
+  "route": "company-spending",
+  "landed": "/company-spending",
+  "horizontalOverflow": false,
+  "textChars": 372,
+  "errors": []
+ },
+ {
+  "device": "desktop",
+  "route": "connections",
+  "landed": "/connections",
+  "horizontalOverflow": false,
+  "textChars": 368,
+  "errors": []
+ },
+ {
+  "device": "desktop",
+  "route": "dashboard",
+  "landed": "/dashboard",
+  "horizontalOverflow": false,
+  "textChars": 632,
+  "errors": []
+ },
+ {
+  "device": "desktop",
+  "route": "drafts",
+  "landed": "/drafts",
+  "horizontalOverflow": false,
+  "textChars": 363,
+  "errors": []
+ },
+ {
+  "device": "desktop",
+  "route": "entities",
+  "landed": "/entities",
+  "horizontalOverflow": false,
+  "textChars": 603,
+  "errors": []
+ },
+ {
+  "device": "desktop",
+  "route": "expenditure-statement",
+  "landed": "/expenditure-statement",
+  "horizontalOverflow": false,
+  "textChars": 931,
+  "errors": []
+ },
+ {
+  "device": "desktop",
+  "route": "expenses",
+  "landed": "/expenses",
+  "horizontalOverflow": false,
+  "textChars": 490,
+  "errors": []
+ },
+ {
+  "device": "desktop",
+  "route": "family",
+  "landed": "/family",
+  "horizontalOverflow": false,
+  "textChars": 368,
+  "errors": []
+ },
+ {
+  "device": "desktop",
+  "route": "forecast",
+  "landed": "/forecast",
+  "horizontalOverflow": false,
+  "textChars": 567,
+  "errors": []
+ },
+ {
+  "device": "desktop",
+  "route": "gst-check",
+  "landed": "/gst-check",
+  "horizontalOverflow": false,
+  "textChars": 540,
+  "errors": []
+ },
+ {
+  "device": "desktop",
+  "route": "historical-import",
+  "landed": "/historical-import",
+  "horizontalOverflow": false,
+  "textChars": 268,
+  "errors": []
+ },
+ {
+  "device": "desktop",
+  "route": "inbox",
+  "landed": "/inbox",
+  "horizontalOverflow": false,
+  "textChars": 498,
+  "errors": []
+ },
+ {
+  "device": "desktop",
+  "route": "new",
+  "landed": "/new",
+  "horizontalOverflow": false,
+  "textChars": 509,
+  "errors": []
+ },
+ {
+  "device": "desktop",
+  "route": "offline-receipts",
+  "landed": "/offline-receipts",
+  "horizontalOverflow": false,
+  "textChars": 499,
+  "errors": []
+ },
+ {
+  "device": "desktop",
+  "route": "patterns",
+  "landed": "/patterns",
+  "horizontalOverflow": false,
+  "textChars": 374,
+  "errors": []
+ },
+ {
+  "device": "desktop",
+  "route": "payment-methods",
+  "landed": "/payment-methods",
+  "horizontalOverflow": false,
+  "textChars": 335,
+  "errors": []
+ },
+ {
+  "device": "desktop",
+  "route": "plan",
+  "landed": "/plan",
+  "horizontalOverflow": false,
+  "textChars": 2165,
+  "errors": []
+ },
+ {
+  "device": "desktop",
+  "route": "receivables",
+  "landed": "/receivables",
+  "horizontalOverflow": false,
+  "textChars": 395,
+  "errors": []
+ },
+ {
+  "device": "desktop",
+  "route": "records-check",
+  "landed": "/records-check",
+  "horizontalOverflow": false,
+  "textChars": 538,
+  "errors": []
+ },
+ {
+  "device": "desktop",
+  "route": "reimbursement-settings",
+  "landed": "/reimbursement-settings",
+  "horizontalOverflow": false,
+  "textChars": 430,
+  "errors": []
+ },
+ {
+  "device": "desktop",
+  "route": "report-centre",
+  "landed": "/report-centre",
+  "horizontalOverflow": false,
+  "textChars": 1672,
+  "errors": []
+ },
+ {
+  "device": "desktop",
+  "route": "report-status",
+  "landed": "/report-status",
+  "horizontalOverflow": false,
+  "textChars": 2142,
+  "errors": []
+ },
+ {
+  "device": "desktop",
+  "route": "reports",
+  "landed": "/reports",
+  "horizontalOverflow": false,
+  "textChars": 1825,
+  "errors": []
+ },
+ {
+  "device": "desktop",
+  "route": "review",
+  "landed": "/review",
+  "horizontalOverflow": false,
+  "textChars": 1092,
+  "errors": []
+ },
+ {
+  "device": "desktop",
+  "route": "rules",
+  "landed": "/rules",
+  "horizontalOverflow": false,
+  "textChars": 1346,
+  "errors": []
+ },
+ {
+  "device": "desktop",
+  "route": "search",
+  "landed": "/search",
+  "horizontalOverflow": false,
+  "textChars": 613,
+  "errors": []
+ },
+ {
+  "device": "desktop",
+  "route": "settings",
+  "landed": "/settings",
+  "horizontalOverflow": false,
+  "textChars": 3180,
+  "errors": []
+ },
+ {
+  "device": "desktop",
+  "route": "shared",
+  "landed": "/shared",
+  "horizontalOverflow": false,
+  "textChars": 417,
+  "errors": []
+ },
+ {
+  "device": "desktop",
+  "route": "spaces",
+  "landed": "/spaces",
+  "horizontalOverflow": false,
+  "textChars": 569,
+  "errors": []
+ },
+ {
+  "device": "desktop",
+  "route": "start",
+  "landed": "/start",
+  "horizontalOverflow": false,
+  "textChars": 3327,
+  "errors": []
+ },
+ {
+  "device": "desktop",
+  "route": "statement-accounts",
+  "landed": "/statement-accounts",
+  "horizontalOverflow": false,
+  "textChars": 489,
+  "errors": []
+ },
+ {
+  "device": "desktop",
+  "route": "statements",
+  "landed": "/statements",
+  "horizontalOverflow": false,
+  "textChars": 718,
+  "errors": []
+ },
+ {
+  "device": "desktop",
+  "route": "strategy",
+  "landed": "/strategy",
+  "horizontalOverflow": false,
+  "textChars": 711,
+  "errors": []
+ },
+ {
+  "device": "desktop",
+  "route": "sync-queue",
+  "landed": "/sync-queue",
+  "horizontalOverflow": false,
+  "textChars": 360,
+  "errors": []
+ },
+ {
+  "device": "desktop",
+  "route": "tax",
+  "landed": "/tax",
+  "horizontalOverflow": false,
+  "textChars": 1751,
+  "errors": []
+ },
+ {
+  "device": "desktop",
+  "route": "transaction-review",
+  "landed": "/inbox",
+  "horizontalOverflow": false,
+  "textChars": 641,
+  "errors": []
+ },
+ {
+  "device": "desktop",
+  "route": "transfers",
+  "landed": "/transfers",
+  "horizontalOverflow": false,
+  "textChars": 935,
+  "errors": []
+ },
+ {
+  "device": "desktop",
+  "route": "travel-inbox",
+  "landed": "/travel-inbox",
+  "horizontalOverflow": false,
+  "textChars": 288,
+  "errors": []
+ },
+ {
+  "device": "desktop",
+  "route": "trips",
+  "landed": "/trips",
+  "horizontalOverflow": false,
+  "textChars": 442,
+  "errors": []
+ },
+ {
+  "device": "desktop",
+  "route": "upload-requests",
+  "landed": "/upload-requests",
+  "horizontalOverflow": false,
+  "textChars": 227,
+  "errors": []
+ },
+ {
+  "device": "desktop",
+  "route": "vault",
+  "landed": "/vault",
+  "horizontalOverflow": false,
+  "textChars": 477,
+  "errors": []
+ },
+ {
+  "device": "desktop",
+  "route": "wealth",
+  "landed": "/wealth",
+  "horizontalOverflow": false,
+  "textChars": 1239,
+  "errors": []
+ }
+]
