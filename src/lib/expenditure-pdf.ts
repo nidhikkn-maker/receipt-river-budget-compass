@@ -22,7 +22,7 @@ export async function renderStatementPdf(s: Statement, files: Record<string, Ann
     headStyles: { fillColor: [236, 239, 246], textColor: INK, fontStyle: "bold" }, footStyles: { fillColor: [245, 245, 245], textColor: [20, 20, 20], fontStyle: "bold" }, ...opts }));
 
   // Page 1 — overview
-  doc.setFont("helvetica", "bold"); doc.setFontSize(10); doc.setTextColor(...INK); doc.text("THAPAL", M, 15);
+  doc.setFont("helvetica", "bold"); doc.setFontSize(10); doc.setTextColor(...INK); doc.text("Thapal", M, 15);
   doc.setFontSize(17); textU(doc, s.title, M, 25);
   doc.setDrawColor(...INK); doc.setLineWidth(0.4); doc.line(M, 28, 196, 28);
   table({ startY: 32, theme: "plain", styles: { fontSize: 9, cellPadding: 1.1 }, columnStyles: { 0: { fontStyle: "bold", cellWidth: 42 } }, body: [
