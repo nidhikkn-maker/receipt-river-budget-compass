@@ -65,7 +65,7 @@ export function tripReminderItems(trips: TripReminderSource[], today: string): R
 
 /** Lock-screen notifications deliberately omit names, amounts and account details. */
 export function privateReminderPayload(count: number, test = false) {
-  return { title: "Ledgerline", body: test ? "Notifications are working on this device." : `${count} payment, renewal or trip reminder${count === 1 ? "" : "s"} to review.`, url: "/plan", tag: test ? "ledgerline-test" : "ledgerline-reminders" };
+  return { title: "Thapal", body: test ? "Notifications are working on this device." : `${count} payment, renewal or trip reminder${count === 1 ? "" : "s"} to review.`, url: "/plan", tag: test ? "ledgerline-test" : "ledgerline-reminders" };
 }
 /** Funding warnings have their own daily claim: an earlier ordinary reminder must not suppress them. */
 export function reminderBatches(items: ReminderItem[], deviceId: string) {
@@ -73,7 +73,7 @@ export function reminderBatches(items: ReminderItem[], deviceId: string) {
   const ordinary = items.filter(i => i.kind !== "loanFunding");
   return [
     ...(ordinary.length ? [{ key: `device:${deviceId}`, payload: privateReminderPayload(ordinary.length) }] : []),
-    ...(funding.length ? [{ key: `device:${deviceId}:loan-funding`, payload: { title: "Ledgerline", body: "A loan funding transfer needs review before the next payment.", url: "/plan", tag: "ledgerline-loan-funding" } }] : []),
+    ...(funding.length ? [{ key: `device:${deviceId}:loan-funding`, payload: { title: "Thapal", body: "A loan funding transfer needs review before the next payment.", url: "/plan", tag: "ledgerline-loan-funding" } }] : []),
   ];
 }
 export interface CheckInSource { id: string; closedAt?: string | null; cancelledAt?: string | null; bookings?: { id: string; status: string; checkInAt?: string | null; reminderOff?: boolean }[] }
@@ -91,5 +91,5 @@ export function dueCheckIns(trips: CheckInSource[], nowMs: number, windowMin: nu
   return out;
 }
 export function checkInPayload(count: number) {
-  return { title: "Ledgerline", body: count === 1 ? "A trip check-in is due now." : `${count} trip check-ins are due now.`, url: "/trips", tag: "ledgerline-checkin" };
+  return { title: "Thapal", body: count === 1 ? "A trip check-in is due now." : `${count} trip check-ins are due now.`, url: "/trips", tag: "ledgerline-checkin" };
 }

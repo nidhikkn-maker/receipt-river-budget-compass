@@ -16,9 +16,9 @@ import { assetFollowUps, ASSET_KINDS, TAX_RATES, bookSchedule, rentCheck, shareV
 
 export const Route = createFileRoute("/_authenticated/assets")({
   head: () => ({ meta: [
-    { title: "Things I own — property, vehicles & equipment · Ledgerline" },
+    { title: "Things I own — property, vehicles & equipment · Thapal" },
     { name: "description", content: "Property ownership shares, fixed assets, rent received and book and income-tax depreciation by year." },
-    { property: "og:title", content: "Things I own — property, vehicles & equipment · Ledgerline" },
+    { property: "og:title", content: "Things I own — property, vehicles & equipment · Thapal" },
     { property: "og:description", content: "Property ownership shares, fixed assets, rent received and book and income-tax depreciation by year." },
     { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" },
   ] }),

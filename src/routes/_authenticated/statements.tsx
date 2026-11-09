@@ -58,9 +58,9 @@ export const Route = createFileRoute("/_authenticated/statements")({
   },
   head: () => ({
     meta: [
-      { title: "Statement Desk · Ledgerline" },
-      { name: "description", content: "Upload many bank statements at once and let Ledgerline match, categorise and post them with your say-so." },
-      { property: "og:title", content: "Statement Desk · Ledgerline" },
+      { title: "Statement Desk · Thapal" },
+      { name: "description", content: "Upload many bank statements at once and let Thapal match, categorise and post them with your say-so." },
+      { property: "og:title", content: "Statement Desk · Thapal" },
       { property: "og:description", content: "One upload: matching, categorising, account linking and posting, with every step shown first." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },

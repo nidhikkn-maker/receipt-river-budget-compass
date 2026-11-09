@@ -29,9 +29,9 @@ export const Route = createFileRoute("/_authenticated/trips/$tripId")({
   },
   head: () => ({
     meta: [
-      { title: "Trip · Ledgerline" },
+      { title: "Trip · Thapal" },
       { name: "description", content: "One trip's overview, itinerary, bookings, expenses, budget, settlements and reports." },
-      { property: "og:title", content: "Trip · Ledgerline" },
+      { property: "og:title", content: "Trip · Thapal" },
       { property: "og:description", content: "Trip overview, bookings, itinerary, expenses and reports." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },

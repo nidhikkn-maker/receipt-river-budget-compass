@@ -9,7 +9,7 @@ import { backStep, showBackButton } from "@/lib/back-nav";
 import { useEffect, useState, type ReactNode } from "react";
 import { BarChart3, Bell, Gem, Home, ListFilter, Plus, Settings, Users, Eye, EyeOff, FileText, Inbox, Search, Plane, Menu, X, RefreshCw, CloudOff, Check, TriangleAlert } from "lucide-react";
 import { DeviceLock } from "./DeviceLock";
-import { LedgerlineBrand } from "./LedgerlineLogo";
+import { ThapalBrand } from "./ThapalLogo";
 import { Button } from "./ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "./ui/dialog";
 import { useStore } from "@/lib/store";
@@ -83,9 +83,9 @@ export function AppShell({ children }: { children: ReactNode }) {
     <div className={"journal-shell uix-shell min-h-screen bg-background " + (focused ? '' : 'md:pl-52 xl:pl-64')}>
       <a href="#main-content" className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50 focus:bg-card focus:p-3">Skip to content</a>
       <aside className={"journal-rail fixed inset-y-0 left-0 z-30 hidden w-52 flex-col gap-2 overflow-y-auto bg-sidebar px-4 py-6 text-sidebar-foreground xl:w-64 " + (focused ? '' : 'md:flex')}>
-        <Link to="/dashboard" aria-label="Ledgerline home" className="mb-6 shrink-0"><img src="/app-icon.png" alt="Ledgerline" width={48} height={48} className="h-12 w-12 rounded-2xl shadow-float" /></Link>
+        <Link to="/dashboard" aria-label="Thapal home" className="mb-6 shrink-0"><img src="/app-icon.png" alt="Thapal" width={48} height={48} className="h-12 w-12 rounded-2xl shadow-float" /></Link>
         <Link to="/spaces" className="rail-link" activeProps={{ className: 'rail-link-selected', 'aria-current': 'page' }}><Users className="size-5" />Spaces</Link>
-        <Button aria-label="Smart Add" onClick={() => setSmartOpen(true)} variant="gold" className="rail-add"><Plus className="size-5" />Add to Ledgerline</Button>
+        <Button aria-label="Smart Add" onClick={() => setSmartOpen(true)} variant="gold" className="rail-add"><Plus className="size-5" />Add to Thapal</Button>
         <nav aria-label="Sidebar" className="rail-links">{PRIMARY_LINKS.map(l => <Link key={l.to} to={l.to} className="rail-link" activeProps={{ className: 'rail-link-selected', 'aria-current': 'page' }}><l.icon className="size-5" />{l.label}</Link>)}</nav>
         <Button variant="ghost" className="rail-more" aria-label="More modules" onClick={() => setMoreOpen(true)}><Menu className="size-5" />More</Button>
         <Link to="/settings" className="rail-link mt-auto"><Settings className="size-5" />Settings</Link>
@@ -93,15 +93,15 @@ export function AppShell({ children }: { children: ReactNode }) {
 
       <header hidden={focused} className={(onToday ? "max-md:hidden " : "") + "uix-header sticky top-0 z-20 border-b bg-background/85 backdrop-blur"}>
         <div className="mx-auto flex max-w-[1440px] items-center gap-1 px-4 py-2.5 sm:px-8">
-          <Link to="/dashboard" aria-label="Ledgerline home" className="flex items-center"><LedgerlineBrand /></Link>
+          <Link to="/dashboard" aria-label="Thapal home" className="flex items-center"><ThapalBrand /></Link>
           <div className="ml-auto flex items-center">
             <SyncStatus />
             <Button size="icon" variant="ghost" aria-label="Smart Add" title="Smart Add" className="hidden sm:inline-flex lg:hidden" onClick={() => setSmartOpen(true)}><Plus className="size-5" /></Button>
-            <Link to="/search" aria-label="Search" className="header-search rounded-xl p-3 text-muted-foreground transition hover:text-foreground"><span className="hidden xl:inline">Search Ledgerline</span><Search className="h-5 w-5" /></Link>
+            <Link to="/search" aria-label="Search" className="header-search rounded-xl p-3 text-muted-foreground transition hover:text-foreground"><span className="hidden xl:inline">Search Thapal</span><Search className="h-5 w-5" /></Link>
             <Link to="/inbox" aria-label="Notifications" className="rounded-xl p-3 text-muted-foreground transition hover:text-foreground"><Bell className="h-5 w-5" /></Link>
             <Link to="/spaces" className="mx-1 hidden rounded-full border px-3 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground md:inline-flex">{preferences.homeScope === "all" ? "All spaces" : SCOPE_LABEL[preferences.homeScope]}</Link>
             <Button size="icon" variant="ghost" onClick={() => setHidden((h) => !h)} aria-label={hidden ? "Show amounts" : "Hide amounts"} className="hidden rounded-xl text-muted-foreground sm:inline-flex">{hidden ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}</Button>
-            <Link to="/auth" aria-label={name ? `Account: ${name}` : "Account"} title={name || "Account"} className="cmp-header-avatar">{initials(name || "Ledgerline")}</Link>
+            <Link to="/auth" aria-label={name ? `Account: ${name}` : "Account"} title={name || "Account"} className="cmp-header-avatar">{initials(name || "Thapal")}</Link>
           </div>
         </div>
       </header>

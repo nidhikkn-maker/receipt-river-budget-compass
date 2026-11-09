@@ -542,7 +542,7 @@ html[data-theme="apple-classic"].dark {
   --sidebar-ring: oklch(0.62 0.19 255);
 }
 
-/* Theme 05B — Apple × Ledgerline (preferred alternative) */
+/* Theme 05B — Apple × Thapal (preferred alternative) */
 html[data-theme="apple-ledgerline"] {
   --radius: 1.1rem;
   --background: oklch(0.972 0.004 258);
@@ -921,7 +921,7 @@ html[data-theme="apple-glass"] :where(.bg-card, .bg-popover, .bg-ink) {
 /* Privacy mode: blur amounts */
 .privacy .font-mono, .privacy .financial-amount { filter: blur(7px); transition: filter .2s; }
 
-/* Official Ledgerline logo colours (logo only; app theme unchanged) */
+/* Official Thapal logo colours (logo only; app theme unchanged) */
 :root { --brand-ink: oklch(0.28 0.045 258); --brand-accent: oklch(0.72 0.075 85); }
 .dark, html.dark { --brand-ink: oklch(0.96 0.012 88); --brand-accent: oklch(0.79 0.07 85); }
 
@@ -1070,7 +1070,7 @@ html[data-theme="apple-glass"] :where(.bg-card, .bg-popover, .bg-ink) {
 /* Smart Add hosts the receipt/statement review inside its sheet: keep page-edge bleed inside the pane. */
 .smart-add-review .receipt-desk { margin-inline: 0; }
 
-/* ── Ledgerline Financial Companion (approved five-screen reference) ──────────
+/* ── Thapal Financial Companion (approved five-screen reference) ──────────
    Ivory/cream surfaces, deep navy ink, measured metallic gold. Tokens only;
    pages use the cmp-* classes below so every theme keeps its own colours. */
 :root {

@@ -16,7 +16,7 @@ const oauth = (supabase.auth as unknown as { oauth: {
 export const Route = createFileRoute("/.lovable/oauth/consent")({
   // SSR has no localStorage session and would redirect signed-in users.
   ssr: false,
-  head: () => ({ meta: [{ title: "Connect an assistant — Ledgerline" }, { name: "description", content: "Approve or deny an assistant's access to your Ledgerline account." }, { property: "og:title", content: "Connect an assistant — Ledgerline" }, { property: "og:description", content: "Approve or deny access to your account." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }, { name: "robots", content: "noindex" }] }),
+  head: () => ({ meta: [{ title: "Connect an assistant — Thapal" }, { name: "description", content: "Approve or deny an assistant's access to your Thapal account." }, { property: "og:title", content: "Connect an assistant — Thapal" }, { property: "og:description", content: "Approve or deny access to your account." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }, { name: "robots", content: "noindex" }] }),
   validateSearch: (s: Record<string, unknown>) => ({ authorization_id: typeof s["authorization_id"] === "string" ? s["authorization_id"] : "" }),
   beforeLoad: async ({ search, location }) => {
     if (!search.authorization_id) throw new Error("This connection link is missing its authorization code.");
@@ -68,8 +68,8 @@ function Consent() {
   return (
     <AuthFrame>
       <div>
-        <h1 className="font-display text-2xl font-bold">Connect {name} to Ledgerline</h1>
-        <p className="mt-2 text-sm">This lets {name} use Ledgerline as you{email ? <> (<b>{email}</b>)</> : null}.</p>
+        <h1 className="font-display text-2xl font-bold">Connect {name} to Thapal</h1>
+        <p className="mt-2 text-sm">This lets {name} use Thapal as you{email ? <> (<b>{email}</b>)</> : null}.</p>
         {redirectUri && <p className="mt-1 break-all text-xs text-muted-foreground">Returns to {redirectUri}</p>}
         <h2 className="mt-5 text-sm font-semibold">It will be able to</h2>
         <ul className="mt-1 list-disc pl-5 text-sm">
@@ -77,7 +77,7 @@ function Consent() {
           <li>Read account balances and upcoming payments</li>
           {scopes.map((s) => <li key={s}>{SCOPE_LABEL[s] ?? `Additional permission requested: ${s}`}</li>)}
         </ul>
-        <p className="mt-3 text-xs text-muted-foreground">It cannot add, change or delete anything. This does not bypass Ledgerline's permissions — it only sees your own records.</p>
+        <p className="mt-3 text-xs text-muted-foreground">It cannot add, change or delete anything. This does not bypass Thapal's permissions — it only sees your own records.</p>
         {error && <p role="alert" className="mt-3 text-sm font-semibold text-destructive">{error}</p>}
         <div className="mt-5 grid gap-2">
           <Button variant="gold" disabled={busy} onClick={() => decide(true)}>{busy ? "Please wait…" : "Approve"}</Button>

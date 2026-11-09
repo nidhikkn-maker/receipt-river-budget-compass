@@ -69,7 +69,7 @@ export function TaxWorkpaper({ fy, personalLines }: { fy: string; personalLines:
       await loadPdfFonts().catch(() => undefined);
       const doc = new jsPDF({ unit: "mm", format: "a4" });
       let y = 16; const line = (t: string, x = 14, size = 10, right?: string) => { if (y > 280) { doc.addPage(); y = 16; } doc.setFontSize(size); textU(doc, t, x, y, { maxW: 140 }); if (right) textU(doc, right, 196, y, { align: "right" }); y += size * 0.55; };
-      line(`Tax workpaper — FY ${fy}`, 14, 15); line(`Prepared ${new Date().toISOString().slice(0, 10)} from Ledgerline records · working paper, not a return`, 14, 9);
+      line(`Tax workpaper — FY ${fy}`, 14, 15); line(`Prepared ${new Date().toISOString().slice(0, 10)} from Thapal records · working paper, not a return`, 14, 9);
       for (const s of sections) {
         y += 5; line(`${s.name} · ${s.kind === "personal" ? "Individual" : ENTITY_KINDS[s.kind as keyof typeof ENTITY_KINDS]?.label ?? s.kind}`, 14, 13);
         for (const [k, v] of s.heads) if (v) line(k, 16, 9, inr(v));

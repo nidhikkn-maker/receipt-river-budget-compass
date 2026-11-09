@@ -13,7 +13,7 @@ import type { Expense } from '@/lib/expenses';
 import { todayISO } from '@/lib/use-position';
 export const Route = createFileRoute('/_authenticated/account-reconciliation')({
   validateSearch: (s: Record<string, unknown>): { section?: string } => ({ section: s['section'] === 'reimbursements' ? 'reimbursements' : 'accounts' }),
-  head: () => ({ meta: [{ title: 'Check my balances — Ledgerline' }, { name: 'description', content: 'Review saved statement coverage, verified balances and account reconciliation evidence.' }, { property: 'og:title', content: 'Check my balances — Ledgerline' }, { property: 'og:description', content: 'Independent statement, balance and reconciliation checks.' }, { property: 'og:type', content: 'website' }, { name: 'twitter:card', content: 'summary' }] }),
+  head: () => ({ meta: [{ title: 'Check my balances — Thapal' }, { name: 'description', content: 'Review saved statement coverage, verified balances and account reconciliation evidence.' }, { property: 'og:title', content: 'Check my balances — Thapal' }, { property: 'og:description', content: 'Independent statement, balance and reconciliation checks.' }, { property: 'og:type', content: 'website' }, { name: 'twitter:card', content: 'summary' }] }),
   component: Reconciliation,
 });
 function Reconciliation() {

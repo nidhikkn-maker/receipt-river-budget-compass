@@ -11,9 +11,9 @@ import type { UploadRequest } from "@/lib/upload-link";
 
 export const Route = createFileRoute("/_authenticated/upload-requests")({
   head: () => ({ meta: [
-    { title: "Statement upload requests — Ledgerline" },
+    { title: "Statement upload requests — Thapal" },
     { name: "description", content: "Each month's accountant upload link: whether it was emailed, opened, used, and reminded." },
-    { property: "og:title", content: "Statement upload requests — Ledgerline" },
+    { property: "og:title", content: "Statement upload requests — Thapal" },
     { property: "og:description", content: "Each month's accountant upload link: whether it was emailed, opened, used, and reminded." },
     { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" },
   ] }),

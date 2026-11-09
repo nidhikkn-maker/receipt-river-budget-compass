@@ -22,7 +22,7 @@ export async function renderStatementPdf(s: Statement, files: Record<string, Ann
     headStyles: { fillColor: [236, 239, 246], textColor: INK, fontStyle: "bold" }, footStyles: { fillColor: [245, 245, 245], textColor: [20, 20, 20], fontStyle: "bold" }, ...opts }));
 
   // Page 1 — overview
-  doc.setFont("helvetica", "bold"); doc.setFontSize(10); doc.setTextColor(...INK); doc.text("LEDGERLINE", M, 15);
+  doc.setFont("helvetica", "bold"); doc.setFontSize(10); doc.setTextColor(...INK); doc.text("Thapal", M, 15);
   doc.setFontSize(17); textU(doc, s.title, M, 25);
   doc.setDrawColor(...INK); doc.setLineWidth(0.4); doc.line(M, 28, 196, 28);
   table({ startY: 32, theme: "plain", styles: { fontSize: 9, cellPadding: 1.1 }, columnStyles: { 0: { fontStyle: "bold", cellWidth: 42 } }, body: [
@@ -95,7 +95,7 @@ export async function appendAnnexures(body: Uint8Array, s: Statement, files: Rec
     } catch {
       missing.push(a.no);
       const page = out.addPage(A4); await header(page, a, " - NOT READABLE");
-      await drawTextU(out, page, `The attached file "${a.name}" could not be included. Retrieval or reading failed; check the original in Ledgerline.`, { x: 36, y: 760, size: 10, font, color: rgb(0, 0, 0), rgb255: [0, 0, 0] });
+      await drawTextU(out, page, `The attached file "${a.name}" could not be included. Retrieval or reading failed; check the original in Thapal.`, { x: 36, y: 760, size: 10, font, color: rgb(0, 0, 0), rgb255: [0, 0, 0] });
     }
   }
   // Insert after the claim body and before the first annexure, including files that
@@ -111,7 +111,7 @@ export async function appendAnnexures(body: Uint8Array, s: Statement, files: Rec
     for (const [i, gap] of gaps.slice(start, start + 25).entries()) await drawTextU(out, page, gap, { x: 36, y: 770 - i * 27, size: 9, font, color: rgb(0, 0, 0), rgb255: [0, 0, 0], maxChars: 108 });
   }
   const total = out.getPageCount();
-  for (const [i, p] of out.getPages().entries()) await drawTextU(out, p, `Ledgerline - ${s.reference} - Page ${i + 1} of ${total}`, { x: 36, y: 14, size: 7, font, color: rgb(0.5, 0.5, 0.5), rgb255: [128, 128, 128] });
+  for (const [i, p] of out.getPages().entries()) await drawTextU(out, p, `Thapal - ${s.reference} - Page ${i + 1} of ${total}`, { x: 36, y: 14, size: 7, font, color: rgb(0.5, 0.5, 0.5), rgb255: [128, 128, 128] });
   const bytes = await out.save();
   return { blob: new Blob([bytes as BlobPart], { type: "application/pdf" }), missing };
 }

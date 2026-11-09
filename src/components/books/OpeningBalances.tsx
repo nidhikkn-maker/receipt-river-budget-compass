@@ -56,7 +56,7 @@ export function OpeningBalances({ rec, missingSchedules }: { rec: FyRecord; miss
       id, entityId: rec.entityId, fy: rec.fy, date: plan.openingDate, docId: rec.docIds[0] ?? null,
       exceptions: Object.entries(why).filter(([, v]) => (v ?? "").trim().length >= 5).map(([line, reason]) => ({ line, reason: reason!.trim() })),
       lines: plan.postings.map((x) => ({ txnId: x.txnId, accountId: x.accountId, amount: x.amount, sign: x.sign, head: x.head, target: x.target, current: x.current,
-        title: `Opening balance FY ${nextFy(rec.fy)} — ${name(x.accountId)}`, description: `${HEAD_LABEL[x.head]}: ${inr(x.current)} in Ledgerline at ${fyEnd} set to audited ${inr(x.target)}` })),
+        title: `Opening balance FY ${nextFy(rec.fy)} — ${name(x.accountId)}`, description: `${HEAD_LABEL[x.head]}: ${inr(x.current)} in Thapal at ${fyEnd} set to audited ${inr(x.target)}` })),
     });
     toast.success(plan.postings.length ? `${plan.postings.length} starting balance${plan.postings.length > 1 ? "s" : ""} saved for ${plan.openingDate}` : "Opening balances recorded — every account already agrees");
     await load();
@@ -89,7 +89,7 @@ export function OpeningBalances({ rec, missingSchedules }: { rec: FyRecord; miss
               <select aria-label={`${HEAD_LABEL[r.head]} account`} className="min-w-0 rounded-md border bg-background px-1 py-1" value={l.accountId} onChange={(e) => setLine(r.head, i, { accountId: e.target.value })}>{choices(r.head).map((a) => <option key={a.id} value={a.id}>{a.name} · {ACCOUNT_LABEL[a.kind]}</option>)}</select>
               <Input aria-label="Opening amount for this account" className="h-8" type="number" value={String(l.target)} onChange={(e) => setLine(r.head, i, { target: Number(e.target.value) || 0 })} />
               <button type="button" className="px-1 text-muted-foreground" aria-label="Remove account" onClick={() => setLinks((x) => ({ ...x, [r.head]: (x[r.head] ?? []).filter((_, j) => j !== i) }))}>×</button>
-              <p className="col-span-3 text-muted-foreground">In Ledgerline at {fyEnd}: {inr(cur)} → entry {Math.abs(l.target - cur) < 0.005 ? "not needed" : `${l.target > cur ? "+" : "−"}${inr(Math.abs(l.target - cur))}`}</p>
+              <p className="col-span-3 text-muted-foreground">In Thapal at {fyEnd}: {inr(cur)} → entry {Math.abs(l.target - cur) < 0.005 ? "not needed" : `${l.target > cur ? "+" : "−"}${inr(Math.abs(l.target - cur))}`}</p>
             </div>; })}
           {choices(r.head).length > 0 && <button type="button" className="text-primary underline" onClick={() => { const left = (r.audited ?? 0) - (links[r.head] ?? []).reduce((s, x) => s + x.target, 0); setLinks((x) => ({ ...x, [r.head]: [...(x[r.head] ?? []), { accountId: choices(r.head)[0]!.id, target: Math.round(left * 100) / 100 }] })); }}>+ Link an account</button>}
           {(r.status === "unlinked" || r.status === "split mismatch" || r.status === "exception" || why[r.head]) && <Input aria-label={`Reason for ${HEAD_LABEL[r.head]}`} className="h-8" placeholder="Or write why this line is left as it is" value={why[r.head] ?? ""} onChange={(e) => setWhy({ ...why, [r.head]: e.target.value })} />}

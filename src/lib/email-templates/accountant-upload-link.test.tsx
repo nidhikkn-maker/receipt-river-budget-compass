@@ -22,7 +22,7 @@ describe('accountant upload-link email rendering', () => {
     const { template, document } = await renderEmail(data)
     const subject = typeof template.subject === 'function' ? template.subject(data) : template.subject
     expect(subject).toBe('Statements upload link from Krupanidhi')
-    expect(document.body.textContent).toContain('Ledgerline')
+    expect(document.body.textContent).toContain('Thapal')
     expect(document.querySelector('h1')?.textContent).toBe('Statements upload link')
     expect(document.body.textContent).toContain('Dear Mr. Durai,')
     expect(document.body.textContent).toContain("Krupanidhi has asked you to upload this month's bank and card statements.")

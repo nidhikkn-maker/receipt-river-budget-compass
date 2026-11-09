@@ -27,9 +27,9 @@ import { saveLocalClaimReport, loadLocalClaimReport, clearLocalClaimReport, type
 
 export const Route = createFileRoute("/_authenticated/report-centre")({
   head: () => ({ meta: [
-    { title: "Reports Centre — Ledgerline" },
+    { title: "Reports Centre — Thapal" },
     { name: "description", content: "Generate, preview, download and share PDF financial, workspace and travel reports." },
-    { property: "og:title", content: "Reports Centre — Ledgerline" },
+    { property: "og:title", content: "Reports Centre — Thapal" },
     { property: "og:description", content: "Generate, preview, download and share PDF financial, workspace and travel reports." },
     { property: "og:type", content: "website" },
     { name: "twitter:card", content: "summary" },

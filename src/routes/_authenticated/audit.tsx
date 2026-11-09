@@ -32,9 +32,9 @@ const inr = (n: number) => `₹${Math.round(n).toLocaleString("en-IN")}`;
 
 export const Route = createFileRoute("/_authenticated/audit")({
   head: () => ({ meta: [
-    { title: "Audit dashboard — Ledgerline" },
+    { title: "Audit dashboard — Thapal" },
     { name: "description", content: "Audit readiness from verified records: reconciliations, open exceptions, closed periods and approvals in one place." },
-    { property: "og:title", content: "Audit dashboard — Ledgerline" },
+    { property: "og:title", content: "Audit dashboard — Thapal" },
     { property: "og:description", content: "Audit readiness from verified records: reconciliations, open exceptions, closed periods and approvals in one place." },
     { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" },
   ] }),

@@ -32,7 +32,7 @@ describe('receipt problem report email rendering', () => {
     const { template, document } = await renderEmail(data)
     const subject = typeof template.subject === 'function' ? template.subject(data) : template.subject
     expect(subject).toBe('Receipt viewer problem: Dragging didn\'t work')
-    expect(document.body.textContent).toContain('Ledgerline')
+    expect(document.body.textContent).toContain('Thapal')
     expect(document.querySelector('h1')?.textContent).toBe('Receipt viewer problem reported')
     expect(document.body.textContent).toContain('Hi Krupanidhi,')
     expect(document.body.textContent).toContain('“hdfc-statement.pdf”')

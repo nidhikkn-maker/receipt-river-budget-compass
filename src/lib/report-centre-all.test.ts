@@ -8,6 +8,8 @@ import { workspaceTotals } from "./workspaces";
 import { tripFinance, advanceReconciliation, bookingOutstanding, type TravelTrip } from "./travel";
 import { monthlyCost, type Commitment } from "./planning";
 import type { Expense } from "./expenses";
+import { CORPORATE_TYPES, type CorporateType } from "./books/corporate-statements";
+import { corporateFixture } from "./books/corporate-fixture";
 
 const base = { title: "Entry", merchant: null, category: "Food", scope: "personal", memberId: null, splits: [], currency: "INR", fxRate: 1, paymentMethod: "upi", reconciledAt: null, statementRef: null, description: "", receipts: [], tags: [] } as const;
 const e = (id: string, amount: number, x: Partial<Expense> = {}): Expense => ({ ...base, id, amount, originalAmount: amount, date: "2026-10-10", ...x } as Expense);
@@ -52,13 +54,37 @@ const rowVal = (d: ReportDoc, sec: string, key: string, col = 1) => N(section(d,
 const build = (t: ReportType, x = f) => buildReportDoc(t, x, data);
 const expected = cashflow(inOct);
 
+// Company statements need a company's complete ledger, so they are exercised below with a
+// company fixture; the personal ledger here must never be accepted as a company ledger.
+const PERSONAL_TYPES = REPORT_TYPES.map((r) => r[0]).filter((t) => !CORPORATE_TYPES.includes(t as CorporateType));
+
 describe("every report type", () => {
-  it.each(REPORT_TYPES.map((r) => r[0]))("%s builds a complete document and PDF", async (t) => {
+  it("covers every Reports Centre type across the personal and company groups", () => {
+    expect(PERSONAL_TYPES.length + CORPORATE_TYPES.length).toBe(REPORT_TYPES.length);
+    for (const t of CORPORATE_TYPES) expect(REPORT_TYPES.map((r) => r[0])).toContain(t);
+  });
+  it.each(PERSONAL_TYPES)("%s builds a complete document and PDF", async (t) => {
     const d = build(t);
     expect(d.title).not.toBe("");
     expect(d.sections.length).toBeGreaterThan(0);
     expect(d.filterLines[0]).toMatch(/^Workspace:/);
     for (const s of d.sections) for (const r of s.rows) expect(r.length).toBe(s.headers.length);
+    const blob = await renderReportPdf(d, "colour", new Date("2026-10-31T10:00:00Z"));
+    expect(blob.size).toBeGreaterThan(1000);
+  });
+  it.each(CORPORATE_TYPES)("%s refuses to build without a company ledger", (t) => {
+    expect(() => build(t)).toThrow("Choose a company with available book records");
+    expect(() => buildReportDoc(t, { ...f, entityId: "A" }, data)).toThrow("Choose a company with available book records");
+  });
+  it.each(CORPORATE_TYPES)("%s builds a complete company document and PDF from the company ledger", async (t) => {
+    const p = corporateFixture();
+    const company: ReportData = { ...data, transactions: p.entries, accounts: p.accounts, entities: p.entities, books: p.books, documents: p.documents } as ReportData;
+    const d = buildReportDoc(t, { ...emptyFilters(p.from, p.to), entityId: "A" }, company);
+    expect(d.title).not.toBe("");
+    expect(d.sections.length).toBeGreaterThan(0);
+    expect(d.filterLines[0]).toBe("Company: Synthetic Alpha Ltd");
+    for (const s of d.sections) for (const r of s.rows) expect(r.length).toBe(s.headers.length);
+    expect(JSON.stringify(d)).not.toMatch(/beta-secret|Excluded Beta|7777|999999/);
     const blob = await renderReportPdf(d, "colour", new Date("2026-10-31T10:00:00Z"));
     expect(blob.size).toBeGreaterThan(1000);
   });

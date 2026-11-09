@@ -10,7 +10,7 @@ const Email = ({ name, ownerName, url }: Props) => (
     <Preview>{`Reminder: statements for ${ownerName || 'your client'}`}</Preview>
     <Body style={main}>
       <Container style={container}>
-        <Text style={brand}>Ledgerline</Text>
+        <Text style={brand}>Thapal</Text>
         <Heading style={h1}>A gentle reminder</Heading>
         <Text style={text}>{name ? `Dear ${name},` : 'Hello,'}</Text>
         <Text style={text}>

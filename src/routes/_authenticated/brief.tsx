@@ -17,9 +17,9 @@ import { todayISO, usePosition } from "@/lib/use-position";
 export const Route = createFileRoute("/_authenticated/brief")({
   head: () => ({
     meta: [
-      { title: "Weekly financial brief · Ledgerline" },
+      { title: "Weekly financial brief · Thapal" },
       { name: "description", content: "Your week in one page: spending, income, upcoming payments, attention items and up to three recommendations." },
-      { property: "og:title", content: "Weekly brief · Ledgerline" },
+      { property: "og:title", content: "Weekly brief · Thapal" },
       { property: "og:description", content: "A concise weekly executive summary of your finances." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
@@ -55,7 +55,7 @@ function Brief() {
     const rows = [["Snapshot", "Spent", money(b.snapshot.spent)], ["Snapshot", "Income", money(b.snapshot.income)], ["Snapshot", "Net", money(b.snapshot.net)], ["Snapshot", "Previous week spent", money(b.snapshot.prevSpent)],
       ...b.highlights.significant.map((t) => ["Significant", `${t.date} ${t.title}`, money(t.amount)]), ...b.upcoming.due.map((u) => ["Due", `${u.date} ${u.name}`, money(u.amount)]), ...b.upcoming.income.map((u) => ["Income expected", `${u.date} ${u.name}`, money(u.amount)]),
       ...b.recommendations.map((r, k) => ["Recommendation", `${k + 1}. ${r}`, ""])];
-    downloadBlob(await toPdf({ title: `Weekly brief ${b.period.start} – ${b.period.end}`, headers: ["Section", "Item", "Amount"], rows }, "Verified figures from Ledgerline"), `weekly-brief-${b.period.end}.pdf`);
+    downloadBlob(await toPdf({ title: `Weekly brief ${b.period.start} – ${b.period.end}`, headers: ["Section", "Item", "Amount"], rows }, "Verified figures from Thapal"), `weekly-brief-${b.period.end}.pdf`);
   };
   useWebMCP({
     name: "read_weekly_brief",

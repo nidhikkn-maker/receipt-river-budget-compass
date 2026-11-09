@@ -88,7 +88,7 @@ export async function dispatchDepreciationReminders(db: SupabaseClient<Database>
     if (!devices?.length) { skipped++; continue; }
     const { error: claim } = await db.from("push_reminder_log").insert({ owner_id: owner, sent_on: today, item_key: key });
     if (claim) { skipped++; continue; }
-    const payload = { title: "Ledgerline", body: "Last month's depreciation is ready for your approval.", url: "/inbox", tag: key };
+    const payload = { title: "Thapal", body: "Last month's depreciation is ready for your approval.", url: "/inbox", tag: key };
     for (const device of devices) {
       try { const r = await sendDevicePush(seed, device, payload); if (r.expired) await db.from("push_subscriptions").delete().eq("id", device.id); else if (r.ok) sent++; } catch { /* other devices still try */ }
     }

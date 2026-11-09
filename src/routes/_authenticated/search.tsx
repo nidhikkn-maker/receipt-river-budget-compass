@@ -11,9 +11,9 @@ import { Search as SearchIcon } from "lucide-react";
 export const Route = createFileRoute("/_authenticated/search")({
   head: () => ({
     meta: [
-      { title: "Search everything — Ledgerline" },
+      { title: "Search everything — Thapal" },
       { name: "description", content: "Search all your financial records in plain language: transactions, accounts, documents, loans, payments and reimbursements." },
-      { property: "og:title", content: "Search everything — Ledgerline" },
+      { property: "og:title", content: "Search everything — Thapal" },
       { property: "og:description", content: "Search all your financial records in plain language." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },

@@ -16,9 +16,9 @@ import { AUDIT_FROM, AUDIT_LABEL, auditRecords, type AuditFinding, type AuditIss
 export const Route = createFileRoute("/_authenticated/records-check")({
   head: () => ({
     meta: [
-      { title: "Records check · Ledgerline" },
+      { title: "Records check · Thapal" },
       { name: "description", content: "Read-only review of records from April 2026 against your uploaded statements." },
-      { property: "og:title", content: "Records check · Ledgerline" },
+      { property: "og:title", content: "Records check · Thapal" },
       { property: "og:description", content: "Find misclassified transfers, duplicates and statement gaps without changing data." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },

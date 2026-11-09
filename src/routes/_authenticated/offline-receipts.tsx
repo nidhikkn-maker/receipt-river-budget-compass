@@ -10,9 +10,9 @@ import { offlineScanRows, removeFailedOfflineScans, removeOfflineScan, requestSc
 
 export const Route = createFileRoute("/_authenticated/offline-receipts")({
   head: () => ({ meta: [
-    { title: "Offline receipt photos — Ledgerline" },
+    { title: "Offline receipt photos — Thapal" },
     { name: "description", content: "Receipt photos saved on this phone, any upload or reading problem, whether each is waiting to retry, and a way to drop ones you no longer need." },
-    { property: "og:title", content: "Offline receipt photos — Ledgerline" },
+    { property: "og:title", content: "Offline receipt photos — Thapal" },
     { property: "og:description", content: "Receipt photos saved on this phone, any upload or reading problem, whether each is waiting to retry, and a way to drop ones you no longer need." },
     { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" },
   ] }),

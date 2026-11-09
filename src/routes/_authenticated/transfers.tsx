@@ -18,9 +18,9 @@ import { PassThroughReview } from '@/components/PassThroughReview';
 export const Route = createFileRoute("/_authenticated/transfers")({
   head: () => ({
     meta: [
-      { title: "Money moved between my accounts · Ledgerline" },
+      { title: "Money moved between my accounts · Thapal" },
       { name: "description", content: "Link both sides of a transfer between your own accounts as one movement." },
-      { property: "og:title", content: "Money moved between my accounts · Ledgerline" },
+      { property: "og:title", content: "Money moved between my accounts · Thapal" },
       { property: "og:description", content: "Safe, confirmed linking of transfers between your own accounts." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
@@ -86,7 +86,7 @@ function TransfersPage() {
       <h1 className="font-display text-2xl sm:text-3xl font-bold tracking-tight">Money moved between my accounts</h1>
       <div className="my-4"><FinancialInboxNav active="transfers"/></div>
       <section className="space-y-2 border-y py-4" aria-label="Credit card payments"><h2 className="text-lg font-semibold">Credit card payments</h2>{accounts.filter(a=>a.kind==='credit_card'&&!a.archived).map(card=>{const balance=cardLedger(card,transactions);return <Button asChild key={card.id} variant="outline" className="mr-2 h-auto min-h-10 whitespace-normal"><Link to="/cards/$accountId" params={{accountId:card.id}}>{card.name} · {balance.unreconciled.count} payments requiring evidence</Link></Button>;})}</section>
-      <p className="mt-1 text-sm text-muted-foreground">When you move money from one of your accounts to another, it shows up twice — once going out, once coming in. Linking the two tells Ledgerline it's one move, not spending or income. Nothing is linked until you confirm.</p>
+      <p className="mt-1 text-sm text-muted-foreground">When you move money from one of your accounts to another, it shows up twice — once going out, once coming in. Linking the two tells Thapal it's one move, not spending or income. Nothing is linked until you confirm.</p>
       {error && <p role="alert" className="mt-3 text-sm text-destructive">{error} <Button size="sm" variant="ghost" onClick={() => void load()}>Retry</Button></p>}
       {!links && !error && <p className="mt-4 text-sm text-muted-foreground">Looking for money that moved between your accounts…</p>}
 

@@ -89,7 +89,7 @@ export function SmartAdd({ open, onOpenChange, scope }: { open: boolean; onOpenC
         </header>
         <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 pb-[calc(env(safe-area-inset-bottom)+1rem)] pt-4">
           {stage.kind === 'choose' && <div className="flex min-h-full flex-col gap-6 pb-4 pt-6 sm:pt-10">
-            <div><p className="cmp-add-title cmp-serif" aria-hidden>Add to Ledgerline</p><p className="cmp-add-sub">Show me a receipt or statement, or just tell me. Nothing is saved until you confirm.{scope ? ` Adding to ${scope.charAt(0).toUpperCase()}${scope.slice(1)}.` : ''}</p></div>
+            <div><p className="cmp-add-title cmp-serif" aria-hidden>Add to Thapal</p><p className="cmp-add-sub">Show me a receipt or statement, or just tell me. Nothing is saved until you confirm.{scope ? ` Adding to ${scope.charAt(0).toUpperCase()}${scope.slice(1)}.` : ''}</p></div>
             <div className="grid gap-3">
               <button type="button" aria-label="Scan or Photo" className="cmp-pearl-row" onClick={() => cameraRef.current?.click()}><span className="cmp-icon"><Camera /></span><span className="min-w-0 flex-1"><b>Scan or Photo</b><small>Snap a receipt or bill</small></span><ChevronRight /></button>
               <button type="button" aria-label="Upload File" className="cmp-pearl-row" onClick={() => fileRef.current?.click()}><span className="cmp-icon"><FileUp /></span><span className="min-w-0 flex-1"><b>Upload File</b><small>PDF, statement, spreadsheet or photo</small></span><ChevronRight /></button>

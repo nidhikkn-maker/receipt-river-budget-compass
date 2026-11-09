@@ -24,9 +24,9 @@ import { bulkTotals, markableKey, markableUpcoming } from "@/lib/mark-done";
 export const Route = createFileRoute("/_authenticated/plan")({
   head: () => ({
     meta: [
-      { title: "Plan — safe-to-spend & forecast — Ledgerline" },
+      { title: "Plan — safe-to-spend & forecast — Thapal" },
       { name: "description", content: "Safe-to-spend, cash forecast, upcoming payments, recurring bills and subscriptions." },
-      { property: "og:title", content: "Plan — Ledgerline" },
+      { property: "og:title", content: "Plan — Thapal" },
       { property: "og:description", content: "Safe-to-spend, cash forecast, upcoming payments, recurring bills and subscriptions." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },

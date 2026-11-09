@@ -20,9 +20,9 @@ import { cn } from "@/lib/utils";
 export const Route = createFileRoute("/_authenticated/review")({
   head: () => ({
     meta: [
-      { title: "Monthly review & health score — Ledgerline" },
+      { title: "Monthly review & health score — Thapal" },
       { name: "description", content: "Your verified monthly money review with AI explanations, and a transparent financial health score." },
-      { property: "og:title", content: "Monthly review & health score — Ledgerline" },
+      { property: "og:title", content: "Monthly review & health score — Thapal" },
       { property: "og:description", content: "Verified monthly figures, AI explanations and a transparent health score." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
@@ -98,11 +98,11 @@ function Monthly() {
       ...shown.recommendations.map((x) => ["Recommendation", x, ""]),
       ...(latest?.narrative ? [["AI explanation (not a calculation)", latest.narrative.replace(/[#*]/g, "").slice(0, 1500), ""]] : []),
     ];
-    try { downloadBlob(await toPdf({ title: `Monthly review ${month}`, headers: ["Section", "Item", "Amount"], rows }, `Generated ${new Date().toLocaleString()} · verified figures from Ledgerline`), `ledgerline-review-${month}.pdf`); }
+    try { downloadBlob(await toPdf({ title: `Monthly review ${month}`, headers: ["Section", "Item", "Amount"], rows }, `Generated ${new Date().toLocaleString()} · verified figures from Thapal`), `ledgerline-review-${month}.pdf`); }
     catch { toast.error("Couldn't create the PDF"); }
   };
   const share = async () => {
-    const text = `Ledgerline review ${month}: income ${money(shown.income)}, spending ${money(shown.expenditure)}, net ${money(shown.netCashFlow)}.`;
+    const text = `Thapal review ${month}: income ${money(shown.income)}, spending ${money(shown.expenditure)}, net ${money(shown.netCashFlow)}.`;
     try { if (navigator.share) await navigator.share({ title: `Review ${month}`, text }); else { await navigator.clipboard.writeText(text); toast.success("Summary copied"); } } catch { /* cancelled */ }
   };
   const drillRows = drill ? inputs.transactions.filter((t) => (t.txnType ?? "expense") === "expense" && t.date.startsWith(month) && categoryParts(t).some((p) => p.category === drill)) : [];

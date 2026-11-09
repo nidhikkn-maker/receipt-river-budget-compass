@@ -67,7 +67,7 @@ export function AppearanceSettings() {
           );
         })}
       </div>
-      <p className="mt-4 text-sm text-muted-foreground">Themes change only how Ledgerline looks — your records, figures and permissions are untouched. Your choice syncs across signed-in devices.</p>
+      <p className="mt-4 text-sm text-muted-foreground">Themes change only how Thapal looks — your records, figures and permissions are untouched. Your choice syncs across signed-in devices.</p>
     </section>
   );
 }

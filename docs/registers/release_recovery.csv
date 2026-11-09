@@ -1,0 +1,11 @@
+item,evidence,status,owner_approval
+Backups (hosted database and object storage),Not visible from repository; Lovable Cloud capability unknown,Open,Needed
+Restore point / point-in-time recovery,Not evidenced,Open,Needed
+Owner ZIP backup and restore,"src/lib/backup.ts, restore_finance_backup; backup.test.ts, brand-compat.test.ts pass locally",Tested (local),n/a
+Migration roll-forward / rollback,docs/MIGRATION_PROPOSAL_2026-11-09.md gives rollback SQL per staged file; nothing applied,Specified,Required per migration
+Audit-log continuity,"transaction_audit, role_permission_audit, period evidence append-only (migrations)",Coded,n/a
+Deployment parity (published build vs main),Published site ledgerline.biz last owner-approved publish 'through 0086' per IMPLEMENTATION_PROGRESS.md; current main has 0087-0088,Open: parity not verified,Needed
+Critical journey results,"Full local suite 2,214 passed / 0 failed (9 Nov); nine V3.1 journeys not built",Partial,n/a
+Security findings,"docs/SECURITY_REVIEW_2026-11-09.md: 3 High (H-1, H-2, H-3), 4 Medium open",Open,Fix approval needed
+Rebrand branch,claude/git-up-thapal-audit-bbjy2k; not merged; storage ids pinned by brand-compat.test.ts,Tested (local),Merge/publish approval needed
+Explicit owner release approval,None given for this branch,Not granted,Needed

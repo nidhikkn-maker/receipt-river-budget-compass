@@ -2,7 +2,7 @@ import { Link } from '@tanstack/react-router';
 import { Bell, CalendarClock, ChevronRight, CreditCard, Inbox, Plus, Search, Sparkles, Compass } from 'lucide-react';
 import { money, type Expense } from '@/lib/expenses';
 import { TXN_LABEL } from '@/lib/ledger';
-import { LedgerlineSymbol } from './LedgerlineLogo';
+import { ThapalSymbol } from './ThapalLogo';
 import sunrise from '@/assets/companion-sunrise.jpg';
 
 /** Opens the shell's in-place Smart Add sheet from anywhere on the page. */
@@ -48,7 +48,7 @@ export function JournalToday({ name, today, spending, periodLabel, safe, cardDue
   if (next) actions.push({ key: 'due', icon: CalendarClock, title: next.name, sub: `Due ${friendlyDay(next.date, today)} · ${money(next.amount)}`, to: '/plan' });
   if (cardDue > 0.005) actions.push({ key: 'cards', icon: CreditCard, title: 'Card balances to pay', sub: money(cardDue), to: '/wealth' });
   if (actions.length < 3) actions.push({ key: 'add', icon: Plus, title: 'Add a receipt or statement', sub: 'Photo, file, voice or a quick note', onClick: openSmartAdd });
-  if (actions.length < 3) actions.push({ key: 'start', icon: Compass, title: 'See how Ledgerline works', sub: 'A two-minute guide', to: '/start' });
+  if (actions.length < 3) actions.push({ key: 'start', icon: Compass, title: 'See how Thapal works', sub: 'A two-minute guide', to: '/start' });
 
   const story = spending > 0
     ? `You've spent ${money(spending)} ${periodLabel}.${safe !== null ? ` Around ${money(safe)} looks free to spend${estimated ? ', as an estimate' : ''}.` : ''}`
@@ -59,11 +59,11 @@ export function JournalToday({ name, today, spending, periodLabel, safe, cardDue
     <section className="cmp-hero" aria-label="Greeting">
       <img src={sunrise} alt="" width={1536} height={1152} fetchPriority="high" />
       <div className="cmp-hero-bar">
-        <Link to="/dashboard" aria-label="Ledgerline home" className="!w-auto !rounded-lg"><LedgerlineSymbol className="h-7 w-auto" /></Link>
+        <Link to="/dashboard" aria-label="Thapal home" className="!w-auto !rounded-lg"><ThapalSymbol className="h-7 w-auto" /></Link>
         <span className="flex-1" />
         <Link to="/search" aria-label="Search"><Search className="size-5" /></Link>
         <Link to="/inbox" aria-label="Notifications"><Bell className="size-5" /></Link>
-        <Link to="/auth" aria-label={name ? `Account: ${name}` : 'Account'} className="cmp-avatar">{initials(name || 'Ledgerline')}</Link>
+        <Link to="/auth" aria-label={name ? `Account: ${name}` : 'Account'} className="cmp-avatar">{initials(name || 'Thapal')}</Link>
       </div>
       <h1 className="cmp-greeting cmp-serif">{greetingFor(hour)}{who ? `, ${who}` : ''}</h1>
       <p className="cmp-greeting-sub">{new Date(`${today}T12:00:00`).toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long' })} · here's your day</p>

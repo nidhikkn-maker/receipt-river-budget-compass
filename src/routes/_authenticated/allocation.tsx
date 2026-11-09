@@ -14,9 +14,9 @@ import { Trash2 } from "lucide-react";
 export const Route = createFileRoute("/_authenticated/allocation")({
   head: () => ({
     meta: [
-      { title: "Plan where income goes — Ledgerline" },
+      { title: "Plan where income goes — Thapal" },
       { name: "description", content: "Plan how to distribute incoming money across commitments, cards, loans, reserves and goals. Plans never move money." },
-      { property: "og:title", content: "Plan where income goes — Ledgerline" },
+      { property: "og:title", content: "Plan where income goes — Thapal" },
       { property: "og:description", content: "Plan how to distribute incoming money across commitments, cards, loans, reserves and goals." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },

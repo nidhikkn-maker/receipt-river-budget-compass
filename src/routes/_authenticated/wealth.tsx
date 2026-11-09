@@ -26,9 +26,9 @@ import band from "@/assets/companion-wealth-band.jpg";
 export const Route = createFileRoute("/_authenticated/wealth")({
   head: () => ({
     meta: [
-      { title: "Wealth & accounts — Ledgerline" },
+      { title: "Wealth & accounts — Thapal" },
       { name: "description", content: "Track accounts, net worth and dated mutual fund portfolio values and gains." },
-      { property: "og:title", content: "Wealth & accounts — Ledgerline" },
+      { property: "og:title", content: "Wealth & accounts — Thapal" },
       { property: "og:description", content: "Track accounts, net worth and dated mutual fund portfolio values and gains." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },

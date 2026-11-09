@@ -1,7 +1,7 @@
 # Brand/auth acceptance — preview only
 
 ## Changed files
-- src/components/LedgerlineLogo.tsx, AuthFrame.tsx
+- src/components/ThapalLogo.tsx, AuthFrame.tsx
 - src/routes/auth.tsx, reset-password.tsx, [.]lovable.oauth.consent.tsx, __root.tsx
 - src/styles.css, vite.config.ts (manifest colour only)
 - public/brand/*.svg, app-icon.png, app-icon-large.png, apple-touch-icon.png, favicon.png, splash/*.png

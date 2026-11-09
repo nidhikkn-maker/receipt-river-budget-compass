@@ -21,9 +21,9 @@ import { hasMpin, verifyMpin } from "@/lib/mpin";
 export const Route = createFileRoute("/auth")({
   validateSearch: (s: Record<string, unknown>): { next?: string } => typeof s["next"] === "string" ? { next: s["next"] } : {},
   head: () => ({ meta: [
-    { title: "Sign in — Ledgerline" },
-    { name: "description", content: "Securely access your Ledgerline financial account with sign-in and Face ID device unlock." },
-    { property: "og:title", content: "Sign in — Ledgerline" },
+    { title: "Sign in — Thapal" },
+    { name: "description", content: "Securely access your Thapal financial account with sign-in and Face ID device unlock." },
+    { property: "og:title", content: "Sign in — Thapal" },
     { property: "og:description", content: "Access your accounts and financial records securely across devices." },
     { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" },
   ] }),
@@ -114,7 +114,7 @@ function Auth() {
     if (faceEnabled || anonymous || signup) return;
     const id = (await supabase.auth.getUser()).data.user?.id;
     if (!id || localStorage.getItem(`ll-face-offer-${id}`)) return;
-    if (!await confirmAction("Set up Face ID on this device? Next time Ledgerline opens with one scan — no password needed.")) { localStorage.setItem(`ll-face-offer-${id}`, "later"); return; }
+    if (!await confirmAction("Set up Face ID on this device? Next time Thapal opens with one scan — no password needed.")) { localStorage.setItem(`ll-face-offer-${id}`, "later"); return; }
     try { await passkey("register"); localStorage.setItem(`ll-lock-${id}`, "1"); }
     catch { localStorage.setItem(`ll-face-offer-${id}`, "later"); }
   };
@@ -168,7 +168,7 @@ function Auth() {
     finally { setBusy(false); }
   };
   return <AuthFrame creator>
-    <h2 className="mb-2 text-2xl font-semibold">{signedEmail ? "Welcome back" : signup ? "Create your account" : "Welcome to Ledgerline"}</h2>
+    <h2 className="mb-2 text-2xl font-semibold">{signedEmail ? "Welcome back" : signup ? "Create your account" : "Welcome to Thapal"}</h2>
     <p className="mb-6 text-sm text-muted-foreground">{signedEmail ? "Continue with your remembered account." : signup ? "A clearer picture starts here." : "Sign in to your financial companion."}</p>
     {checking ? <p role="status" className="text-sm text-muted-foreground">Checking your account…</p> : signedEmail ? <>
       <div className="mb-5 flex items-center justify-center gap-3"><span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-primary text-sm font-semibold text-primary-foreground">{signedEmail[0]?.toUpperCase()}</span><span className="min-w-0 truncate text-sm">{signedEmail}</span></div>
@@ -185,7 +185,7 @@ function Auth() {
           try { await verifyDevicePassword(ownerId, password); rememberDeviceUnlock(ownerId); await go(); }
           catch (e) { setFaceError(e instanceof Error ? e.message : "Couldn't verify your password."); }
           finally { setPassword(""); setBusy(false); }
-        }}><Label htmlFor="unlock-password">Account password</Label><Input id="unlock-password" type="password" autoComplete="current-password" required disabled={busy} value={password} onChange={e => setPassword(e.target.value)} /><Button disabled={busy || !password}>Verify password and open</Button></form> : <Button variant="outline" disabled={busy} onClick={() => faceEnabled ? setPasswordMode(true) : void go()}>{faceEnabled ? "Use account password" : "Open Ledgerline"}</Button>}
+        }}><Label htmlFor="unlock-password">Account password</Label><Input id="unlock-password" type="password" autoComplete="current-password" required disabled={busy} value={password} onChange={e => setPassword(e.target.value)} /><Button disabled={busy || !password}>Verify password and open</Button></form> : <Button variant="outline" disabled={busy} onClick={() => faceEnabled ? setPasswordMode(true) : void go()}>{faceEnabled ? "Use account password" : "Open Thapal"}</Button>}
         <Button variant="link" disabled={busy} onClick={() => void signOut()}>Sign out and use another sign-in method</Button>
       </div>}
     </> : <>

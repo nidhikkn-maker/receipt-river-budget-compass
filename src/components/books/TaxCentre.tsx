@@ -52,7 +52,7 @@ export function FyOnboarding() {
           const missing = REQUIRED_SCHEDULES.filter((s) => !r.schedules.includes(s));
           return <div key={r.id} className="space-y-2 rounded-xl border p-3">
             <p className="font-semibold">{ent?.name ?? "Unknown entity"} · FY {r.fy} → opening FY {nextFy(r.fy)}</p>
-            <div className="overflow-x-auto"><table className="w-full min-w-[22rem] text-xs"><thead><tr className="text-muted-foreground"><th className="text-left">Balance</th><th className="text-right">Audited closing</th><th className="text-right">In Ledgerline</th><th className="text-right">Difference</th></tr></thead>
+            <div className="overflow-x-auto"><table className="w-full min-w-[22rem] text-xs"><thead><tr className="text-muted-foreground"><th className="text-left">Balance</th><th className="text-right">Audited closing</th><th className="text-right">In Thapal</th><th className="text-right">Difference</th></tr></thead>
               <tbody>{op.lines.filter((l) => l.audited != null || l.books != null).map((l) => <tr key={l.head}><td>{HEAD_LABEL[l.head]}</td><td className="text-right">{l.audited == null ? "not in upload" : inr(l.audited)}</td><td className="text-right">{l.books == null ? "—" : inr(l.books)}</td><td className={`text-right ${l.difference ? "text-destructive" : ""}`}>{l.difference == null ? "—" : inr(l.difference)}</td></tr>)}</tbody></table></div>
             {op.balanced === false && <p className="text-xs text-destructive">Audited figures don't balance by {inr(op.gap ?? 0)} — upload the missing schedule rather than adjusting.</p>}
             {op.totalsCheck && <p className="text-xs text-destructive">{op.totalsCheck}</p>}
@@ -200,7 +200,7 @@ export function GstReturns({ fy }: { fy: string }) {
             <Input aria-label="Filed on" className="h-8 w-36" type="date" value={filing.filedOn} onChange={(e) => setFiling({ ...filing, filedOn: e.target.value })} />
             <select aria-label="Filed return document" className="rounded-md border bg-background px-1" value={filing.docId} onChange={e=>setFiling({...filing,docId:e.target.value})}><option value="">No return document linked</option>{documents.filter(d=>d.docType==='gst_return'&&d.entityId===owner?.id).map(d=><option key={d.id} value={d.id}>{d.title}</option>)}</select>
             <Button size="sm" variant="outline" disabled={filing.arn.trim().length < 6} onClick={() => save({ gstFilings: [...books.gstFilings, { id: crypto.randomUUID(), gstin, period, ...filing }] })}>Record filing for {period}</Button></div>
-          <p className="mt-1 text-[11px] text-muted-foreground">Ledgerline never files returns. File on the GST portal, then record the ARN here as evidence.</p>
+          <p className="mt-1 text-[11px] text-muted-foreground">Thapal never files returns. File on the GST portal, then record the ARN here as evidence.</p>
         </details>
       </div>
     </Fold>
@@ -384,7 +384,7 @@ export function FilingCalendar({ fy }: { fy: string }) {
         {missing.length > 0 && <p className="text-destructive">Set a tax profile for {missing.map((e) => e.name).join(", ")} to see its returns.</p>}
         {list.length === 0 && missing.length === 0 && <p className="text-muted-foreground">Add a company or person on Companies & years to see its returns.</p>}
         {list.map((o) => <div key={`${o.entityId}${o.gstin}${o.form}${o.period}`} className="flex items-start justify-between gap-2 border-b py-1"><span className="min-w-0 break-words"><b>{o.form}</b> {o.period} · {o.name}{o.gstin ? ` · ${o.gstin}` : ""}<span className="block text-[11px] text-muted-foreground">{o.basis}</span></span><span className={`shrink-0 text-right ${tone[o.status]}`}>{o.status === "filed" ? o.evidence : `due ${o.due}`}<span className="block">{o.status}</span></span></div>)}
-        <p className="text-[11px] text-muted-foreground">Drafts are prepared here; Ledgerline never files. After you or your accountant file, record the acknowledgement or ARN so the return shows as filed.</p>
+        <p className="text-[11px] text-muted-foreground">Drafts are prepared here; Thapal never files. After you or your accountant file, record the acknowledgement or ARN so the return shows as filed.</p>
       </div>
     </Fold>
   );

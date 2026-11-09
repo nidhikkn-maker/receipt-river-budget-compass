@@ -13,9 +13,9 @@ import { cn } from "@/lib/utils";
 export const Route = createFileRoute("/_authenticated/assistant")({
   head: () => ({
     meta: [
-      { title: "AI assistant — Ledgerline" },
+      { title: "AI assistant — Thapal" },
       { name: "description", content: "Ask about your spending, upcoming payments, safe-to-spend and loans." },
-      { property: "og:title", content: "AI assistant — Ledgerline" },
+      { property: "og:title", content: "AI assistant — Thapal" },
       { property: "og:description", content: "Ask about your spending, upcoming payments, safe-to-spend and loans." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },

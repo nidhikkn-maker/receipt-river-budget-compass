@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { LedgerlineSymbol } from "./LedgerlineLogo";
+import { ThapalSymbol } from "./ThapalLogo";
 import { useServerFn } from "@tanstack/react-start";
 
 
@@ -100,7 +100,7 @@ export function DeviceLock({ children }: { children: ReactNode }) {
     finally { setBusy(false); }
   };
   if (hasMpin(userId) && !passwordMode) return <div className="flex min-h-[80vh] flex-col items-center justify-center gap-2 px-4">
-    <LedgerlineSymbol className="mb-2 h-10 w-auto" />
+    <ThapalSymbol className="mb-2 h-10 w-auto" />
     <h1 className="mb-2 text-center font-display text-xl font-semibold">Welcome back</h1>
     <PinPad busy={busy} error={error} onFaceId={() => void face()} onComplete={async (pin) => {
       setBusy(true); setError("");
@@ -110,9 +110,9 @@ export function DeviceLock({ children }: { children: ReactNode }) {
     <Button variant="link" disabled={busy} onClick={() => setPasswordMode(true)}>Use account password</Button>
   </div>;
   return <div className="flex min-h-[70vh] flex-col items-center justify-center gap-4 px-4">
-    <LedgerlineSymbol className="h-10 w-auto" />
+    <ThapalSymbol className="h-10 w-auto" />
     <Fingerprint className="h-10 w-10 text-primary" />
-    <h1 className="text-center font-display text-2xl font-bold">Ledgerline is locked</h1>
+    <h1 className="text-center font-display text-2xl font-bold">Thapal is locked</h1>
     <Button disabled={busy} className="max-w-full whitespace-normal" onClick={async () => {
       setBusy(true); setError("");
       try { await passkey("unlock"); setLocked(false); setPassword(""); }
