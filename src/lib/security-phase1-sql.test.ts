@@ -51,7 +51,7 @@ const PATH = {
   victimReceipt: `${U.V}/receipts/v-medical.jpg`,
   victimStatement: `${U.V}/statements/v.pdf`,
 };
-const PASSKEY_ID = id(900);
+const PASSKEY_ID = "cred-o-1"; // device_passkeys is keyed by credential_id (applied schema 0008)
 const MCP = "mcp-client-1", MCP2 = "mcp-client-2";
 
 type Db = PGlite;
@@ -142,12 +142,11 @@ async function seedScenario(db: Db) {
   });
 }
 
-/** Scenario seeded at 0088, then the proposed files applied in order (P4 also gives the fixture passkey a known id). */
+/** Scenario seeded at 0088, then the proposed files applied in order. */
 async function scenarioDb(after: string[] = []) {
   const db = await fullSchemaDb();
   await seedScenario(db);
   for (const f of after) await db.exec(readSql(f));
-  if (after.includes(P4)) await q(db, "UPDATE public.device_passkeys SET id=$1 WHERE credential_id='cred-o-1'", [PASSKEY_ID]);
   return db;
 }
 
@@ -394,7 +393,7 @@ describe("C. step-up: every guarded function refuses without a fresh re-confirma
       };
     });
     expect(r).toEqual({ ok: true, value: { mine: [U.O], upd: "permission denied for table step_up_grants", del: "permission denied for table step_up_grants" } });
-    for (const [args, msg] of [[[U.O, "pin", 60], /passkey or password/], [[U.O, "password", 301], /between 1 and 300/], [[U.O, "password", 0], /between 1 and 300/], [[id(999), "password", 60], /Unknown account/]] as const) {
+    for (const [args, msg] of [[[U.O, "pin", 60], /passkey, password or email_otp/], [[U.O, "password", 301], /between 1 and 300/], [[U.O, "password", 0], /between 1 and 300/], [[id(999), "password", 60], /Unknown account/]] as const) {
       const bad = await attempt(db, null, () => q(db, "SELECT public.record_step_up($1,$2,$3)", [...args]), { role: "service_role" });
       expect(bad.ok ? "" : bad.error).toMatch(msg);
     }
@@ -500,7 +499,8 @@ describe("D. assistant sessions: read own rows, never write, revocable immediate
       ["delete file", "DELETE FROM storage.objects WHERE name=$1 RETURNING 1", [PATH.personalReceipt]],
     ];
     for (const [what, sql, params] of probes) {
-      const human = await attempt(db, U.O, () => q(db, sql, params));
+      // the human control holds a fresh step-up (passkey registration needs one after P4)
+      const human = await attempt(db, U.O, async () => { await stepUp(db, U.O); return q(db, sql, params); });
       const bot = await attempt(db, U.O, () => q(db, sql, params), { clientId: MCP });
       expect(bot.ok ? bot.value.length : 0, what).toBe(0);
       if (what.startsWith("insert")) {
@@ -644,12 +644,12 @@ async function seedAllTables(db: Db, owners: string[]) {
   return { tables, failed: failed.filter((f) => !/duplicate key/.test(f)) };
 }
 
-/** Per-table count + md5 of every row. P4 adds device_passkeys.id; it is excluded so original columns are compared. */
+/** Per-table count + md5 of every row. */
 async function dataSnapshot(db: Db, tables: string[]) {
   await actAs(db, null);
   const out: Record<string, string> = {};
   for (const t of [...tables.map((x) => `public.${x}`), "storage.objects", "auth.users"]) {
-    const row = t === "public.device_passkeys" ? "(to_jsonb(x) - 'id')::text" : "to_jsonb(x)::text";
+    const row = "to_jsonb(x)::text";
     const r = first(await q<{ n: number; h: string }>(db, `SELECT count(*)::int n, md5(coalesce(string_agg(${row}, '|' ORDER BY ${row}), '')) h FROM ${t} x`));
     out[t] = `${r.n}:${r.h}`;
   }
@@ -669,6 +669,7 @@ async function fullCatalog(db: Db) {
     tables: await j("SELECT c.relname, c.relrowsecurity FROM pg_class c WHERE c.relnamespace='public'::regnamespace AND c.relkind='r' ORDER BY 1"),
     columns: await j("SELECT table_name, column_name, data_type, column_default, is_nullable FROM information_schema.columns WHERE table_schema='public' ORDER BY 1, ordinal_position"),
     grants: await j("SELECT table_name, grantee, privilege_type FROM information_schema.role_table_grants WHERE table_schema='public' ORDER BY 1,2,3"),
+    columnGrants: await j("SELECT table_name, column_name, grantee, privilege_type FROM information_schema.column_privileges WHERE table_schema='public' ORDER BY 1,2,3,4"),
     schemas: await j("SELECT nspname FROM pg_namespace WHERE nspname NOT LIKE 'pg_%' AND nspname NOT IN ('information_schema','security_rollback_archive') ORDER BY 1"),
   };
 }
@@ -815,22 +816,29 @@ describe("F. normal flows after P1+P2+P4", () => {
     expect(r).toEqual({ ok: true, value: { own: true, others: 0 } });
   }, T);
 
-  it("passkeys: registration and counter updates keep working; removal only through remove_device_passkey with step-up", async () => {
+  it("passkeys: registration needs step-up, counter updates keep working, keys cannot be replaced in place; removal only through remove_device_passkey(credential_id)", async () => {
     const r = await attempt(db, U.O, async () => {
+      const noGrant = await errorOf(db, () => q(db, "INSERT INTO public.device_passkeys(owner_id,credential_id,public_key) VALUES ($1,'cred-x','pkx')", [U.O]));
+      await stepUp(db, U.O);
       await q(db, "INSERT INTO public.device_passkeys(owner_id,credential_id,public_key) VALUES ($1,'cred-o-2','pk2')", [U.O]);
+      await expireStepUp(db, U.O); // counter updates need no step-up
       const counter = (await q(db, "UPDATE public.device_passkeys SET counter=counter+1 WHERE credential_id='cred-o-2' RETURNING 1")).length;
+      const replaceKey = await errorOf(db, () => q(db, "UPDATE public.device_passkeys SET public_key='attacker' WHERE credential_id='cred-o-2'"));
+      const replaceId = await errorOf(db, () => q(db, "UPDATE public.device_passkeys SET credential_id='attacker' WHERE credential_id='cred-o-2'"));
       const direct = (await q(db, "DELETE FROM public.device_passkeys WHERE owner_id=$1 RETURNING 1", [U.O])).length;
       const bot = await errorOf(db, async () => { await setClient(db, MCP); await stepUp(db, U.O); await q(db, "SELECT public.remove_device_passkey($1)", [PASSKEY_ID]); });
       await setClient(db, "");
-      const ids = (await q<{ id: string }>(db, "SELECT id FROM public.device_passkeys ORDER BY credential_id")).map((x) => x.id);
       await stepUp(db, U.O);
       await q(db, "SELECT public.remove_device_passkey($1)", [PASSKEY_ID]);
       await setUid(db, U.V); await stepUp(db, U.V);
-      const foreign = await errorOf(db, () => q(db, "SELECT public.remove_device_passkey($1)", [ids[1]]));
+      const foreign = await errorOf(db, () => q(db, "SELECT public.remove_device_passkey('cred-o-2')"));
       await setUid(db, U.O);
-      return { counter, direct, bot, left: (await q(db, "SELECT credential_id FROM public.device_passkeys")).map((x) => x["credential_id"]), foreign, idsUnique: new Set(ids).size === 2 };
+      return { noGrant, counter, replaceKey, replaceId, direct, bot, left: (await q(db, "SELECT credential_id FROM public.device_passkeys")).map((x) => x["credential_id"]), foreign };
     });
-    expect(r).toEqual({ ok: true, value: { counter: 1, direct: 0, bot: "STEP_UP_REQUIRED: remove_device_passkey", left: ["cred-o-2"], foreign: "Passkey not found", idsUnique: true } });
+    expect(r).toEqual({ ok: true, value: {
+      noGrant: 'new row violates row-level security policy "P4 passkey registration needs a fresh step-up" for table "device_passkeys"', counter: 1,
+      replaceKey: "permission denied for table device_passkeys", replaceId: "permission denied for table device_passkeys",
+      direct: 0, bot: "STEP_UP_REQUIRED: remove_device_passkey", left: ["cred-o-2"], foreign: "Passkey not found" } });
   }, T);
 });
 
@@ -895,7 +903,7 @@ describe("G. erasure and restore work with step-up after P1+P2+P4", () => {
 
   it("erasure with step-up leaves no owner-linked row outside the documented kept tables; other owners keep theirs", async () => {
     const KEPT = new Set(["profiles", "user_roles", "app_admins", "role_permission_audit", "expense_history", "demo_sessions", "device_passkeys", "passkey_challenges",
-      "step_up_grants", "revoked_assistant_clients"]);
+      "step_up_grants", "revoked_assistant_clients", "step_up_attempts", "security_events"]);
     const db = await fullSchemaDb(ALL);
     await addUsers(db, { [U.O]: email(U.O), [U.V]: email(U.V) });
     const { tables, failed } = await seedAllTables(db, [U.O, U.V]);
@@ -940,7 +948,6 @@ describe("H. data preservation and exact rollback", () => {
     await db.exec(readSql(P4));
     expect(await dataSnapshot(db, tables)).toEqual(D0);
     expect(await q(db, "SELECT owner_id, credential_id, public_key, counter FROM public.device_passkeys ORDER BY 2")).toEqual(passkeysBefore);
-    expect(first(await q<{ n: number }>(db, "SELECT count(DISTINCT id)::int n FROM public.device_passkeys")).n).toBe(passkeysBefore.length);
     // some P4 state that must be archived, not lost
     await as(db, U.O, async () => { await stepUp(db, U.O); await q(db, "SELECT public.revoke_assistant_client($1)", [MCP]); });
     expect(await fullCatalog(db)).not.toEqual(S2);
@@ -956,9 +963,12 @@ describe("H. data preservation and exact rollback", () => {
     for (const k of Object.keys(S2) as (keyof typeof S2)[]) expect(S2b[k], `after P4 rollback: ${k}`).toEqual(S2[k]);
     expect(await dataSnapshot(db, tables)).toEqual(D0);
     const archived = await q<{ t: string }>(db, "SELECT tablename t FROM pg_tables WHERE schemaname='security_rollback_archive' ORDER BY 1");
-    expect(archived.map((r) => r.t.replace(/_\d{8}T\d{6}$/, ""))).toEqual(["revoked_assistant_clients", "step_up_grants"]);
+    expect(archived.map((r) => r.t.replace(/_\d{8}T\d{6}$/, ""))).toEqual(["revoked_assistant_clients", "security_events", "step_up_attempts", "step_up_grants"]);
     const kept = first(await q<{ n: number }>(db, `SELECT count(*)::int n FROM security_rollback_archive."${first(archived).t}"`)).n;
     expect(kept).toBe(1);
+    // audit evidence survives the rollback: step_up_recorded, sensitive_action_authorised, assistant_client_revoked
+    const events = await q<{ e: string }>(db, `SELECT event e FROM security_rollback_archive."${archived[1]?.t ?? ""}" ORDER BY created_at`);
+    expect(events.map((x) => x.e)).toEqual(["step_up_recorded", "sensitive_action_authorised", "assistant_client_revoked"]);
 
     await db.exec(readSql(P2_RB));
     await db.exec(readSql(P1_RB));

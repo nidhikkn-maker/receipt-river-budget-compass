@@ -5,14 +5,22 @@
 -- Requires P1_security_containment.sql and P2_v31_role_model.sql (preflight checks both).
 -- Rollback: P4_step_up_and_assistant_limits.rollback.sql (restores the exact P1+P2 objects; archives
 -- step_up_grants and revoked_assistant_clients, never drops their rows).
--- Data: changes NO existing row value. Adds one column (device_passkeys.id, a new random uuid per
--- existing passkey, needed by the contract's remove_device_passkey(_id uuid)); every other change is
--- functions, policies, grants and two new tables.
+-- Data: changes NO existing row value and adds NO column to an existing table. Changes are
+-- functions, policies, grants, one audit trigger and four new tables.
 --
 --  1. Step-up ("re-confirmation") enforced in the database:
---       step_up_grants, record_step_up (service_role only), has_recent_step_up,
---       require_recent_step_up  -> raises 'STEP_UP_REQUIRED: <action>' (SQLSTATE 42501), and always
---       for external-assistant sessions.
+--       step_up_grants (method passkey|password|email_otp, scope all|credential, optional session_id),
+--       record_step_up (service_role only), has_recent_step_up, has_recent_step_up_for(_action),
+--       require_recent_step_up -> raises 'STEP_UP_REQUIRED: <action>' (SQLSTATE 42501), and always for
+--       external-assistant sessions. A grant recorded with a session id only authorises that session
+--       (auth.jwt()->>'session_id'). Scope 'credential' (email one-time code) authorises ONLY
+--       passkey registration ('register_passkey'), never a guarded function.
+--  1b. Shared rate limit for step-up verification (all server instances): step_up_attempts +
+--       begin_step_up_attempt / finish_step_up_attempt (service_role only). 5 failed or unfinished
+--       attempts per owner in 15 minutes (counted since the owner's last success) refuse further
+--       attempts; begin returns NULL instead of raising so the 'step_up_rate_limited' audit row is kept.
+--  1c. Audit: security_events (append-only; owner reads own rows; written only by SECURITY DEFINER
+--       functions and the passkey registration trigger).
 --  2. External assistants (OAuth tokens carrying a client_id claim):
 --       is_assistant_session, refuse_assistant_session ('ASSISTANT_READ_ONLY: <action>', 42501),
 --       revoked_assistant_clients + revoke_assistant_client, assistant_client_revoked,
@@ -30,10 +38,15 @@
 --         name is re-created from the original definition with the check inserted as the first
 --         statement of its body. Behaviour, RLS and grants are otherwise identical.
 --  4. Audit history (transaction_audit, role_permission_audit, access_grant_audit,
---     period_close_evidence, imported_period_history, preference_approvals) is append-only for
---     clients (RESTRICTIVE UPDATE/DELETE deny). delete_my_finance_data (SECURITY DEFINER, now
---     step-up guarded) keeps its erasure behaviour (KK decision C13 pending).
---  5. Device passkeys can be removed only through remove_device_passkey (step-up guarded).
+--     period_close_evidence, imported_period_history, preference_approvals, security_events) is
+--     append-only for clients (RESTRICTIVE UPDATE/DELETE deny). delete_my_finance_data (SECURITY
+--     DEFINER, now step-up guarded) keeps its erasure behaviour (KK decision C13 pending); it does not
+--     touch step_up_grants, step_up_attempts or security_events (kept like role_permission_audit).
+--  5. Device passkeys (applied table keyed by credential_id; no id column is added):
+--       removal only through remove_device_passkey(_credential_id text) (step-up guarded, owner only,
+--       exactly one row); registration (INSERT) needs a fresh grant for 'register_passkey' (any scope);
+--       clients may UPDATE only the counter column, which can never decrease (trigger, every role); every
+--       registration writes 'passkey_registered'.
 -- Every object is created in dependency order below; nothing relies on alphabetical order.
 -- ============================================================================================
 BEGIN;
@@ -52,6 +65,12 @@ BEGIN
   END IF;
 END $pre$;
 
+-- Private schema for P4 bookkeeping used by the rollback (guarded-function registry, saved ACLs).
+CREATE SCHEMA security_p4;
+REVOKE ALL ON SCHEMA security_p4 FROM PUBLIC, anon, authenticated;
+CREATE TABLE security_p4.saved_acl (relname text PRIMARY KEY, acl aclitem[]);
+REVOKE ALL ON security_p4.saved_acl FROM PUBLIC, anon, authenticated;
+
 -- --------------------------------------------------------------------------------------------
 -- 1. Session helpers
 -- --------------------------------------------------------------------------------------------
@@ -61,19 +80,63 @@ LANGUAGE sql STABLE SECURITY INVOKER SET search_path = public, pg_temp AS $$
   SELECT coalesce(auth.jwt()->>'client_id', '') <> ''
 $$;
 
+-- The Supabase auth session that issued the caller's access token (claim session_id), or NULL.
+CREATE FUNCTION public.jwt_session_id() RETURNS uuid
+LANGUAGE sql STABLE SECURITY INVOKER SET search_path = public, pg_temp AS $$
+  SELECT CASE WHEN (auth.jwt()->>'session_id') ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
+    THEN (auth.jwt()->>'session_id')::uuid END
+$$;
+
 -- --------------------------------------------------------------------------------------------
--- 2. Step-up grants
+-- 2. Security audit log (append-only). Rows are written only by the SECURITY DEFINER functions below
+--    and the passkey registration trigger; clients have SELECT on their own rows and nothing else.
+-- --------------------------------------------------------------------------------------------
+CREATE TABLE public.security_events (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  seq bigserial NOT NULL UNIQUE, -- write order (several events can share one timestamp)
+  owner_id uuid NOT NULL,
+  event text NOT NULL CHECK (event IN ('step_up_recorded', 'step_up_failed', 'step_up_rate_limited', 'sensitive_action_authorised',
+    'passkey_removed', 'passkey_registered', 'assistant_client_revoked')),
+  action text,
+  method text CHECK (method IN ('passkey', 'password', 'email_otp')),
+  session_id uuid,
+  client_id text,
+  created_at timestamptz NOT NULL DEFAULT clock_timestamp(),
+  detail jsonb NOT NULL DEFAULT '{}'::jsonb
+);
+CREATE INDEX security_events_owner_idx ON public.security_events(owner_id, created_at DESC);
+COMMENT ON TABLE public.security_events IS 'P4: append-only security audit (step-up, rate limit, sensitive actions, passkeys, assistant revocation). Owner reads own rows; written only by SECURITY DEFINER functions. Kept by delete_my_finance_data pending KK decision C13.';
+REVOKE ALL ON public.security_events FROM PUBLIC, anon, authenticated, service_role;
+GRANT SELECT ON public.security_events TO authenticated, service_role;
+ALTER TABLE public.security_events ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Owner reads own security events" ON public.security_events FOR SELECT TO authenticated
+  USING (owner_id = auth.uid());
+
+-- Internal writer (no client or service_role EXECUTE): client_id is the caller's own claim (NULL for
+-- first-party sessions), never a parameter.
+CREATE FUNCTION public.log_security_event(_owner uuid, _event text, _action text, _method text, _session uuid, _detail jsonb DEFAULT '{}'::jsonb) RETURNS void
+LANGUAGE plpgsql VOLATILE SECURITY DEFINER SET search_path = public, pg_temp AS $$
+BEGIN
+  INSERT INTO public.security_events(owner_id, event, action, method, session_id, client_id, detail)
+  VALUES (_owner, _event, _action, _method, _session, nullif(auth.jwt()->>'client_id', ''), coalesce(_detail, '{}'::jsonb));
+END $$;
+
+-- --------------------------------------------------------------------------------------------
+-- 3. Step-up grants
 -- --------------------------------------------------------------------------------------------
 CREATE TABLE public.step_up_grants (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   owner_id uuid NOT NULL,
-  method text NOT NULL CHECK (method IN ('passkey', 'password')),
+  method text NOT NULL CHECK (method IN ('passkey', 'password', 'email_otp')),
+  scope text NOT NULL DEFAULT 'all' CHECK (scope IN ('all', 'credential')),
+  session_id uuid,
   created_at timestamptz NOT NULL DEFAULT clock_timestamp(),
   expires_at timestamptz NOT NULL,
-  CHECK (expires_at > created_at AND expires_at <= created_at + interval '5 minutes')
+  CHECK (expires_at > created_at AND expires_at <= created_at + interval '5 minutes'),
+  CHECK (method <> 'email_otp' OR scope = 'credential')
 );
 CREATE INDEX step_up_grants_owner_idx ON public.step_up_grants(owner_id, expires_at DESC);
-COMMENT ON TABLE public.step_up_grants IS 'P4: recent re-confirmations (passkey/password) recorded by server functions via record_step_up. Clients read their own rows only.';
+COMMENT ON TABLE public.step_up_grants IS 'P4: recent re-confirmations recorded by server functions via record_step_up. scope all = passkey/password (every guarded action); scope credential = email code (passkey registration only). session_id binds the grant to one auth session. Clients read their own rows only.';
 -- Supabase default privileges grant ALL on new tables to anon/authenticated: remove them explicitly.
 REVOKE ALL ON public.step_up_grants FROM PUBLIC, anon, authenticated;
 GRANT SELECT ON public.step_up_grants TO authenticated;
@@ -82,41 +145,142 @@ ALTER TABLE public.step_up_grants ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Owner reads own step-up grants" ON public.step_up_grants FOR SELECT TO authenticated
   USING (owner_id = auth.uid());
 
--- Called by server functions (service role) after verifying a passkey or the account password.
--- The 4-digit device PIN never calls this (Decision 30).
-CREATE FUNCTION public.record_step_up(_owner uuid, _method text, _seconds int DEFAULT 300) RETURNS void
+-- Called by server functions (service role) after verifying a passkey, the account password or an
+-- email one-time code. The 4-digit device PIN never calls this (Decision 30); 'pin' is refused.
+-- _scope NULL derives it: passkey/password -> 'all', email_otp -> 'credential' (email_otp can never be 'all').
+-- _session: the auth session id of the token that confirmed (claim session_id); NULL = any session of
+-- the owner (backward compatible with callers that pass three arguments).
+CREATE FUNCTION public.record_step_up(_owner uuid, _method text, _seconds int DEFAULT 300, _session uuid DEFAULT NULL, _scope text DEFAULT NULL) RETURNS void
 LANGUAGE plpgsql VOLATILE SECURITY DEFINER SET search_path = public, pg_temp AS $$
+DECLARE sc text := coalesce(_scope, CASE WHEN _method = 'email_otp' THEN 'credential' ELSE 'all' END); ts timestamptz;
 BEGIN
   IF _owner IS NULL OR NOT EXISTS (SELECT 1 FROM auth.users u WHERE u.id = _owner) THEN
     RAISE EXCEPTION 'Unknown account for step-up';
   END IF;
-  IF _method IS NULL OR _method NOT IN ('passkey', 'password') THEN
-    RAISE EXCEPTION 'Step-up method must be passkey or password';
+  IF _method IS NULL OR _method NOT IN ('passkey', 'password', 'email_otp') THEN
+    RAISE EXCEPTION 'Step-up method must be passkey, password or email_otp';
+  END IF;
+  IF sc NOT IN ('all', 'credential') THEN RAISE EXCEPTION 'Step-up scope must be all or credential'; END IF;
+  IF _method = 'email_otp' AND sc <> 'credential' THEN
+    RAISE EXCEPTION 'An email code can only confirm passkey registration (scope credential)';
   END IF;
   IF _seconds IS NULL OR _seconds < 1 OR _seconds > 300 THEN
     RAISE EXCEPTION 'Step-up lifetime must be between 1 and 300 seconds';
   END IF;
-  INSERT INTO public.step_up_grants(owner_id, method, created_at, expires_at)
-  VALUES (_owner, _method, clock_timestamp(), clock_timestamp() + make_interval(secs => _seconds));
+  -- One timestamp for both columns: two clock_timestamp() calls differ by microseconds, which would make a
+  -- 300-second grant exceed the "expires within 5 minutes of creation" CHECK.
+  ts := clock_timestamp();
+  INSERT INTO public.step_up_grants(owner_id, method, scope, session_id, created_at, expires_at)
+  VALUES (_owner, _method, sc, _session, ts, ts + make_interval(secs => _seconds));
+  PERFORM public.log_security_event(_owner, 'step_up_recorded', NULL, _method, _session, jsonb_build_object('scope', sc, 'seconds', _seconds));
 END $$;
 
--- True when the caller (never an assistant session) holds an unexpired grant.
-CREATE FUNCTION public.has_recent_step_up() RETURNS boolean
+-- True when the caller (never an assistant session) holds an unexpired grant for _action from this
+-- session (or an unbound grant). Scope 'credential' counts only for _action = 'register_passkey'.
+CREATE FUNCTION public.has_recent_step_up_for(_action text) RETURNS boolean
 LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public, pg_temp AS $$
   SELECT auth.uid() IS NOT NULL AND NOT public.is_assistant_session()
-    AND EXISTS (SELECT 1 FROM public.step_up_grants g WHERE g.owner_id = auth.uid() AND g.expires_at > clock_timestamp())
+    AND EXISTS (SELECT 1 FROM public.step_up_grants g
+      WHERE g.owner_id = auth.uid() AND g.expires_at > clock_timestamp()
+        AND (g.session_id IS NULL OR g.session_id = public.jwt_session_id())
+        AND (g.scope = 'all' OR (g.scope = 'credential' AND coalesce(_action, '') = 'register_passkey')))
 $$;
 
+-- True when the caller holds a grant that satisfies every guarded action (scope 'all').
+CREATE FUNCTION public.has_recent_step_up() RETURNS boolean
+LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public, pg_temp AS $$
+  SELECT public.has_recent_step_up_for(NULL)
+$$;
+
+-- Guard for sensitive actions. VOLATILE because a successful check writes a
+-- 'sensitive_action_authorised' audit row; that row rolls back with the action if the action fails.
+-- Only registered sensitive actions are accepted, so the audit log cannot carry made-up action names.
 CREATE FUNCTION public.require_recent_step_up(_action text) RETURNS void
-LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path = public, pg_temp AS $$
+LANGUAGE plpgsql VOLATILE SECURITY DEFINER SET search_path = public, pg_temp AS $$
+DECLARE act text := coalesce(_action, 'action'); g record;
 BEGIN
-  IF public.is_assistant_session() OR NOT public.has_recent_step_up() THEN
-    RAISE EXCEPTION 'STEP_UP_REQUIRED: %', coalesce(_action, 'action') USING ERRCODE = '42501';
+  IF public.is_assistant_session() OR auth.uid() IS NULL THEN
+    RAISE EXCEPTION 'STEP_UP_REQUIRED: %', act USING ERRCODE = '42501';
+  END IF;
+  IF act NOT IN ('remove_device_passkey', 'revoke_assistant_client')
+     AND NOT EXISTS (SELECT 1 FROM security_p4.guarded_functions f WHERE f.proname = act AND f.mode IN ('step_up', 'step_up_if_approved')) THEN
+    RAISE EXCEPTION 'Unknown sensitive action %', act USING ERRCODE = '22023';
+  END IF;
+  SELECT x.id, x.method INTO g FROM public.step_up_grants x
+  WHERE x.owner_id = auth.uid() AND x.expires_at > clock_timestamp() AND x.scope = 'all'
+    AND (x.session_id IS NULL OR x.session_id = public.jwt_session_id())
+  ORDER BY x.created_at DESC LIMIT 1;
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'STEP_UP_REQUIRED: %', act USING ERRCODE = '42501';
+  END IF;
+  PERFORM public.log_security_event(auth.uid(), 'sensitive_action_authorised', act, g.method, public.jwt_session_id(), jsonb_build_object('grant_id', g.id));
+END $$;
+
+-- --------------------------------------------------------------------------------------------
+-- 3b. Shared step-up rate limit (replaces the per-server-instance in-memory counter)
+--     Rule: per owner, across methods, attempts in the last 15 minutes that failed OR never finished
+--     (fail closed) and started after the owner's latest success. At 5, begin_step_up_attempt logs
+--     'step_up_rate_limited' and returns NULL (no attempt row). A success keeps all rows as evidence.
+--     pg_advisory_xact_lock serialises concurrent begins per owner across connections and instances.
+-- --------------------------------------------------------------------------------------------
+CREATE TABLE public.step_up_attempts (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  owner_id uuid NOT NULL,
+  method text NOT NULL CHECK (method IN ('passkey', 'password', 'email_otp')),
+  session_id uuid,
+  started_at timestamptz NOT NULL DEFAULT clock_timestamp(),
+  finished_at timestamptz,
+  outcome text CHECK (outcome IN ('ok', 'fail')),
+  CHECK ((outcome IS NULL) = (finished_at IS NULL)),
+  CHECK (finished_at IS NULL OR finished_at >= started_at)
+);
+CREATE INDEX step_up_attempts_owner_idx ON public.step_up_attempts(owner_id, started_at DESC);
+COMMENT ON TABLE public.step_up_attempts IS 'P4: step-up verification attempts for the shared rate limit. No client access; used only through begin_step_up_attempt / finish_step_up_attempt (service_role).';
+REVOKE ALL ON public.step_up_attempts FROM PUBLIC, anon, authenticated, service_role;
+ALTER TABLE public.step_up_attempts ENABLE ROW LEVEL SECURITY;
+
+CREATE FUNCTION public.begin_step_up_attempt(_owner uuid, _method text, _session uuid DEFAULT NULL) RETURNS uuid
+LANGUAGE plpgsql VOLATILE SECURITY DEFINER SET search_path = public, pg_temp AS $$
+DECLARE last_ok timestamptz; n int; new_id uuid; now_ts timestamptz;
+BEGIN
+  IF _owner IS NULL OR NOT EXISTS (SELECT 1 FROM auth.users u WHERE u.id = _owner) THEN
+    RAISE EXCEPTION 'Unknown account for step-up';
+  END IF;
+  IF _method IS NULL OR _method NOT IN ('passkey', 'password', 'email_otp') THEN
+    RAISE EXCEPTION 'Step-up method must be passkey, password or email_otp';
+  END IF;
+  PERFORM pg_advisory_xact_lock(hashtextextended('public.step_up_attempts:' || _owner::text, 0));
+  now_ts := clock_timestamp();
+  SELECT max(a.finished_at) INTO last_ok FROM public.step_up_attempts a WHERE a.owner_id = _owner AND a.outcome = 'ok';
+  SELECT count(*) INTO n FROM public.step_up_attempts a
+  WHERE a.owner_id = _owner AND a.outcome IS DISTINCT FROM 'ok'
+    AND a.started_at > now_ts - interval '15 minutes'
+    AND (last_ok IS NULL OR a.started_at > last_ok);
+  IF n >= 5 THEN
+    PERFORM public.log_security_event(_owner, 'step_up_rate_limited', NULL, _method, _session,
+      jsonb_build_object('recent_failures', n, 'limit', 5, 'window_minutes', 15));
+    RETURN NULL;
+  END IF;
+  INSERT INTO public.step_up_attempts(owner_id, method, session_id, started_at) VALUES (_owner, _method, _session, now_ts)
+  RETURNING id INTO new_id;
+  RETURN new_id;
+END $$;
+
+CREATE FUNCTION public.finish_step_up_attempt(_id uuid, _ok boolean) RETURNS void
+LANGUAGE plpgsql VOLATILE SECURITY DEFINER SET search_path = public, pg_temp AS $$
+DECLARE a record;
+BEGIN
+  UPDATE public.step_up_attempts SET outcome = CASE WHEN _ok THEN 'ok' ELSE 'fail' END, finished_at = greatest(clock_timestamp(), started_at)
+  WHERE id = _id AND outcome IS NULL
+  RETURNING owner_id, method, session_id INTO a;
+  IF NOT FOUND THEN RAISE EXCEPTION 'Unknown or already finished step-up attempt'; END IF;
+  IF _ok IS NOT TRUE THEN
+    PERFORM public.log_security_event(a.owner_id, 'step_up_failed', NULL, a.method, a.session_id, jsonb_build_object('attempt_id', _id));
   END IF;
 END $$;
 
 -- --------------------------------------------------------------------------------------------
--- 3. Assistant revocation
+-- 4. Assistant revocation
 -- --------------------------------------------------------------------------------------------
 CREATE TABLE public.revoked_assistant_clients (
   owner_id uuid NOT NULL,
@@ -167,48 +331,97 @@ BEGIN
   IF cid = '' OR length(cid) > 255 THEN RAISE EXCEPTION 'Unknown assistant'; END IF;
   INSERT INTO public.revoked_assistant_clients(owner_id, client_id) VALUES (uid, cid)
   ON CONFLICT (owner_id, client_id) DO NOTHING;
+  PERFORM public.log_security_event(uid, 'assistant_client_revoked', 'revoke_assistant_client', NULL, public.jwt_session_id(),
+    jsonb_build_object('revoked_client_id', cid, 'already_revoked', NOT FOUND));
 END $$;
 
 -- --------------------------------------------------------------------------------------------
--- 4. Device passkeys: a stable id for removal, removal only through the guarded function
+-- 5. Device passkeys (applied table: credential_id text PRIMARY KEY; no column is added)
 -- --------------------------------------------------------------------------------------------
-ALTER TABLE public.device_passkeys ADD COLUMN id uuid NOT NULL DEFAULT gen_random_uuid();
-CREATE UNIQUE INDEX device_passkeys_id_idx ON public.device_passkeys(id);
-
-CREATE FUNCTION public.remove_device_passkey(_id uuid) RETURNS void
+-- Removes exactly the caller's row with this credential id; anything else raises and deletes nothing.
+CREATE FUNCTION public.remove_device_passkey(_credential_id text) RETURNS void
 LANGUAGE plpgsql VOLATILE SECURITY DEFINER SET search_path = public, pg_temp AS $$
-DECLARE uid uuid := auth.uid();
+DECLARE uid uuid := auth.uid(); n int;
 BEGIN
-  PERFORM public.require_recent_step_up('remove_device_passkey');
+  PERFORM public.require_recent_step_up('remove_device_passkey'); -- also refuses assistant sessions
   IF uid IS NULL THEN RAISE EXCEPTION 'Sign in required'; END IF;
-  DELETE FROM public.device_passkeys WHERE id = _id AND owner_id = uid;
-  IF NOT FOUND THEN RAISE EXCEPTION 'Passkey not found'; END IF;
+  DELETE FROM public.device_passkeys WHERE credential_id = _credential_id AND owner_id = uid;
+  GET DIAGNOSTICS n = ROW_COUNT;
+  IF n <> 1 THEN RAISE EXCEPTION 'Passkey not found' USING ERRCODE = 'P0002'; END IF;
+  PERFORM public.log_security_event(uid, 'passkey_removed', 'remove_device_passkey', NULL, public.jwt_session_id(),
+    jsonb_build_object('credential_id', _credential_id));
 END $$;
 
--- Direct client deletes would bypass the step-up; registration (INSERT) and the counter UPDATE done
--- by the passkey server functions with the user's token keep working.
+-- Direct client deletes would bypass the step-up.
 CREATE POLICY "P4 passkeys are removed through remove_device_passkey" ON public.device_passkeys
   AS RESTRICTIVE FOR DELETE TO anon, authenticated USING (false);
+-- Registration (INSERT with the user's token by the passkey server function) needs a fresh grant for
+-- 'register_passkey' from this session: passkey/password ('all') or an email code ('credential').
+CREATE POLICY "P4 passkey registration needs a fresh step-up" ON public.device_passkeys
+  AS RESTRICTIVE FOR INSERT TO anon, authenticated WITH CHECK (public.has_recent_step_up_for('register_passkey'));
+-- Clients may update only the signature counter (unlock / step-up); credential_id, public_key and owner_id
+-- can never be replaced in place (replacement = remove + register, both step-up guarded).
+INSERT INTO security_p4.saved_acl(relname, acl) SELECT 'device_passkeys', relacl FROM pg_class WHERE oid = 'public.device_passkeys'::regclass;
+REVOKE UPDATE ON public.device_passkeys FROM PUBLIC, anon, authenticated;
+GRANT UPDATE (counter) ON public.device_passkeys TO authenticated;
+
+-- Audit every registration; runs as the definer so the row cannot be forged or skipped by the client.
+CREATE FUNCTION public.log_passkey_registered() RETURNS trigger
+LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp AS $$
+DECLARE m text;
+BEGIN
+  SELECT g.method INTO m FROM public.step_up_grants g
+  WHERE g.owner_id = NEW.owner_id AND g.expires_at > clock_timestamp()
+    AND (g.session_id IS NULL OR g.session_id = public.jwt_session_id())
+  ORDER BY g.created_at DESC LIMIT 1;
+  PERFORM public.log_security_event(NEW.owner_id, 'passkey_registered', 'register_passkey', m, public.jwt_session_id(),
+    jsonb_build_object('credential_id', NEW.credential_id));
+  RETURN NULL;
+END $$;
+CREATE TRIGGER p4_passkey_registered_audit AFTER INSERT ON public.device_passkeys
+  FOR EACH ROW EXECUTE FUNCTION public.log_passkey_registered();
+
+-- The signature counter only moves forward (a lowered counter would let a cloned authenticator's
+-- assertions pass the counter-regression check), and a stored key is never rewritten in place. Applies to
+-- every role, including the service role and definer functions; the column grant above already limits clients.
+CREATE FUNCTION public.guard_device_passkey_update() RETURNS trigger
+LANGUAGE plpgsql SET search_path = public, pg_temp AS $$
+BEGIN
+  IF NEW.counter < OLD.counter THEN
+    RAISE EXCEPTION 'PASSKEY_COUNTER_REGRESSION: the signature counter cannot decrease' USING ERRCODE = '42501';
+  END IF;
+  IF NEW.owner_id IS DISTINCT FROM OLD.owner_id OR NEW.credential_id IS DISTINCT FROM OLD.credential_id OR NEW.public_key IS DISTINCT FROM OLD.public_key THEN
+    RAISE EXCEPTION 'PASSKEY_IMMUTABLE: register a new passkey instead of changing a stored one' USING ERRCODE = '42501';
+  END IF;
+  RETURN NEW;
+END $$;
+CREATE TRIGGER p4_passkey_counter_monotonic BEFORE UPDATE ON public.device_passkeys
+  FOR EACH ROW EXECUTE FUNCTION public.guard_device_passkey_update();
 
 -- --------------------------------------------------------------------------------------------
--- 5. Grants on the new functions
+-- 6. Grants on the new functions
 -- --------------------------------------------------------------------------------------------
-REVOKE ALL ON FUNCTION public.is_assistant_session(), public.record_step_up(uuid, text, int), public.has_recent_step_up(),
-  public.require_recent_step_up(text), public.assistant_client_revoked(uuid), public.refuse_assistant_session(text),
-  public.refuse_revoked_assistant(text), public.revoke_assistant_client(text), public.remove_device_passkey(uuid)
+REVOKE ALL ON FUNCTION public.is_assistant_session(), public.jwt_session_id(),
+  public.log_security_event(uuid, text, text, text, uuid, jsonb), public.record_step_up(uuid, text, int, uuid, text),
+  public.has_recent_step_up_for(text), public.has_recent_step_up(), public.require_recent_step_up(text),
+  public.begin_step_up_attempt(uuid, text, uuid), public.finish_step_up_attempt(uuid, boolean),
+  public.assistant_client_revoked(uuid), public.refuse_assistant_session(text), public.refuse_revoked_assistant(text),
+  public.revoke_assistant_client(text), public.remove_device_passkey(text), public.log_passkey_registered(), public.guard_device_passkey_update()
   FROM PUBLIC, anon, authenticated, service_role;
-GRANT EXECUTE ON FUNCTION public.record_step_up(uuid, text, int) TO service_role;
+-- Server-only (service role): grants and the shared rate limit.
+GRANT EXECUTE ON FUNCTION public.record_step_up(uuid, text, int, uuid, text), public.begin_step_up_attempt(uuid, text, uuid),
+  public.finish_step_up_attempt(uuid, boolean) TO service_role;
 -- Policy helpers must be executable by every role that RLS evaluates them for.
-GRANT EXECUTE ON FUNCTION public.is_assistant_session(), public.assistant_client_revoked(uuid) TO anon, authenticated, service_role;
+GRANT EXECUTE ON FUNCTION public.is_assistant_session(), public.assistant_client_revoked(uuid), public.has_recent_step_up_for(text)
+  TO anon, authenticated, service_role;
 GRANT EXECUTE ON FUNCTION public.has_recent_step_up(), public.require_recent_step_up(text), public.refuse_assistant_session(text),
-  public.refuse_revoked_assistant(text), public.revoke_assistant_client(text), public.remove_device_passkey(uuid)
+  public.refuse_revoked_assistant(text), public.revoke_assistant_client(text), public.remove_device_passkey(text)
   TO authenticated, service_role;
+-- jwt_session_id, log_security_event, log_passkey_registered and guard_device_passkey_update: no EXECUTE for any client or service role.
 
 -- --------------------------------------------------------------------------------------------
--- 6. Function guards (registry + generator in a private schema; dropped by the rollback)
+-- 7. Function guards (registry + generator in the private schema; dropped by the rollback)
 -- --------------------------------------------------------------------------------------------
-CREATE SCHEMA security_p4;
-REVOKE ALL ON SCHEMA security_p4 FROM PUBLIC, anon, authenticated;
 CREATE TABLE security_p4.guarded_functions (
   seq serial PRIMARY KEY,
   proname text NOT NULL,
@@ -292,7 +505,7 @@ REVOKE ALL ON FUNCTION security_p4.guard(regprocedure, text) FROM PUBLIC, anon, 
 DO $guard$
 DECLARE f record; n int;
 BEGIN
-  -- 6a. Step-up (contract): company/admin access changes, erasure, restore, period close/reopen, V3.1
+  -- 7a. Step-up (contract): company/admin access changes, erasure, restore, period close/reopen, V3.1
   --     invite/accept/revoke. change_accounting_period: every overload.
   FOR f IN
     SELECT p.oid::regprocedure sig, CASE WHEN p.proname = 'save_reviewed_preferences' THEN 'step_up_if_approved' ELSE 'step_up' END mode
@@ -305,9 +518,9 @@ BEGIN
   SELECT count(*) INTO n FROM security_p4.guarded_functions;
   IF n < 11 THEN RAISE EXCEPTION 'P4: expected at least 11 step-up functions, found %', n; END IF;
 
-  -- 6b. Writers callable by authenticated that must refuse assistant sessions (enumerated from the
+  -- 7b. Writers callable by authenticated that must refuse assistant sessions (enumerated from the
   --     0088+P1+P2 catalog: SECURITY DEFINER or INVOKER, VOLATILE, not a trigger, EXECUTE for
-  --     authenticated). INVOKER ones are also stopped by the RESTRICTIVE table policies (section 7);
+  --     authenticated). INVOKER ones are also stopped by the RESTRICTIVE table policies (section 8);
   --     the guard gives a clear, early refusal.
   FOR f IN
     SELECT p.oid::regprocedure sig FROM pg_proc p WHERE p.pronamespace = 'public'::regnamespace AND p.prokind = 'f' AND p.proname IN (
@@ -321,26 +534,26 @@ BEGIN
     ORDER BY p.proname, p.oid
   LOOP PERFORM security_p4.guard(f.sig, 'assistant'); END LOOP;
 
-  -- 6c. Row-returning SECURITY DEFINER readers bypass RLS, so a revoked assistant is refused here too.
+  -- 7c. Row-returning SECURITY DEFINER readers bypass RLS, so a revoked assistant is refused here too.
   FOR f IN
     SELECT p.oid::regprocedure sig FROM pg_proc p WHERE p.pronamespace = 'public'::regnamespace AND p.prokind = 'f' AND p.proname IN (
       'admin_team', 'my_access_invites', 'my_family_invites', 'my_shared_companies', 'team_company_tax', 'team_names')
     ORDER BY p.proname, p.oid
   LOOP PERFORM security_p4.guard(f.sig, 'revoked_read'); END LOOP;
 
-  -- 6d. Fail closed on an unexpected catalog (e.g. a hosted-only function): every remaining client-
+  -- 7d. Fail closed on an unexpected catalog (e.g. a hosted-only function): every remaining client-
   --     callable volatile function that is not a trigger and not a P4 helper must be reviewed first.
   SELECT count(*) INTO n FROM pg_proc p
   WHERE p.pronamespace = 'public'::regnamespace AND p.prokind = 'f' AND p.provolatile = 'v'
     AND p.prorettype <> 'trigger'::regtype AND p.proname NOT LIKE '%\_\_unguarded'
     AND has_function_privilege('authenticated', p.oid, 'EXECUTE')
-    AND p.proname NOT IN ('revoke_assistant_client', 'remove_device_passkey')
+    AND p.proname NOT IN ('revoke_assistant_client', 'remove_device_passkey', 'require_recent_step_up')
     AND NOT EXISTS (SELECT 1 FROM security_p4.guarded_functions g WHERE g.proname = p.proname);
   IF n > 0 THEN RAISE EXCEPTION 'P4: % unreviewed client-callable writer function(s) in public; review before applying', n; END IF;
 END $guard$;
 
 -- --------------------------------------------------------------------------------------------
--- 7. RESTRICTIVE assistant policies on every RLS table in public (+ storage.objects)
+-- 8. RESTRICTIVE assistant policies on every RLS table in public (+ storage.objects)
 --    Owner column, first match: owner_id, employee_id, user_id, workspace_owner_id. Tables without
 --    one (profiles, expense_history, department_budgets, job_state, market_quotes, regulatory_*,
 --    role_permissions, role_permission_audit, access_role_permissions) still get the write denial;
@@ -374,13 +587,13 @@ CREATE POLICY "P4 revoked assistants cannot read files" ON storage.objects AS RE
     CASE WHEN split_part(name, '/', 1) ~ '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$' THEN split_part(name, '/', 1)::uuid END));
 
 -- --------------------------------------------------------------------------------------------
--- 8. Audit history is append-only for clients. SECURITY DEFINER writers (triggers, period and
+-- 9. Audit history is append-only for clients. SECURITY DEFINER writers (triggers, period and
 --    access functions, delete_my_finance_data) and referential cascades are not subject to RLS.
 -- --------------------------------------------------------------------------------------------
 DO $audit$
 DECLARE t text;
 BEGIN
-  FOREACH t IN ARRAY ARRAY['transaction_audit', 'role_permission_audit', 'access_grant_audit', 'period_close_evidence', 'imported_period_history', 'preference_approvals'] LOOP
+  FOREACH t IN ARRAY ARRAY['transaction_audit', 'role_permission_audit', 'access_grant_audit', 'period_close_evidence', 'imported_period_history', 'preference_approvals', 'security_events'] LOOP
     IF to_regclass('public.' || t) IS NULL THEN RAISE EXCEPTION 'P4: audit table % missing', t; END IF;
     EXECUTE format('CREATE POLICY "P4 audit history cannot be changed" ON public.%I AS RESTRICTIVE FOR UPDATE TO anon, authenticated USING (false) WITH CHECK (false)', t);
     EXECUTE format('CREATE POLICY "P4 audit history cannot be deleted" ON public.%I AS RESTRICTIVE FOR DELETE TO anon, authenticated USING (false)', t);
