@@ -1,28 +1,28 @@
 {
- "commit": "22fbcf7",
+ "commit": "2bc58de",
  "tests": {
-  "files": 324,
-  "passed_files": 324,
-  "total": 2337,
-  "passed": 2337,
+  "files": 334,
+  "passed_files": 334,
+  "total": 2497,
+  "passed": 2497,
   "failed": 0
  },
  "completion": {
-  "Missing": 474,
-  "Partial": 974,
+  "Missing": 469,
+  "Partial": 979,
   "Blocked": 46,
   "Complete (local evidence)": 35,
   "Unverified": 7
  },
  "state": {
-  "Not started": 482,
-  "Tested (local)": 794,
-  "Coded": 224,
+  "Not started": 477,
+  "Tested (local)": 803,
+  "Coded": 220,
   "Blocked": 36
  },
  "completion_p0": {
-  "Missing": 34,
-  "Partial": 223,
+  "Missing": 29,
+  "Partial": 228,
   "Unverified": 7,
   "Complete (local evidence)": 14,
   "Blocked": 10
@@ -32,5 +32,5 @@
  },
  "missing_code_refs": 0,
  "missing_test_refs": 0,
- "manual_rechecks": 291
+ "manual_rechecks": 294
 }
