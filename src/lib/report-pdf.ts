@@ -3,7 +3,7 @@ import { cell as uCell, loadPdfFonts, plain, withUnicode , textU } from "./pdf-u
 import type { ReportDoc } from "./report-centre";
 
 export type PdfStyle = "colour" | "mono";
-const BRAND: [number, number, number] = [22, 44, 110]; // Ledgerline deep blue
+const BRAND: [number, number, number] = [22, 44, 110]; // Thapal deep blue
 const GOLD: [number, number, number] = [196, 152, 52];
 
 export async function renderReportPdf(r: ReportDoc, style: PdfStyle, generatedAt: Date): Promise<Blob> {
@@ -20,7 +20,7 @@ export async function renderReportPdf(r: ReportDoc, style: PdfStyle, generatedAt
   // Header block
   doc.setFillColor(...ink); doc.roundedRect(M, 12, 9, 9, 1.5, 1.5, "F");
   doc.setTextColor(255, 255, 255); doc.setFont("helvetica", "bold"); doc.setFontSize(10); doc.text("L", M + 3.1, 18.2);
-  doc.setTextColor(...ink); doc.setFontSize(11); doc.text("LEDGERLINE", M + 12, 18.2);
+  doc.setTextColor(...ink); doc.setFontSize(11); doc.text("THAPAL", M + 12, 18.2);
   doc.setDrawColor(...accent); doc.setLineWidth(0.6); doc.line(M, 24, W - M, 24);
   doc.setFontSize(18); textU(doc, r.title, M, 33);
   doc.setFont("helvetica", "normal"); doc.setFontSize(9); doc.setTextColor(70, 70, 70);
@@ -67,7 +67,7 @@ export async function renderReportPdf(r: ReportDoc, style: PdfStyle, generatedAt
   const pages = doc.getNumberOfPages();
   for (let i = 1; i <= pages; i++) {
     doc.setPage(i); doc.setFont("helvetica", "normal"); doc.setFontSize(7.5); doc.setTextColor(130, 130, 130);
-    textU(doc, `Ledgerline - ${r.title} - ${r.period}`, M, H - 8, { maxW: 150 });
+    textU(doc, `Thapal - ${r.title} - ${r.period}`, M, H - 8, { maxW: 150 });
     doc.text(`Page ${i} of ${pages}`, W - M, H - 8, { align: "right" });
   }
   return doc.output("blob");

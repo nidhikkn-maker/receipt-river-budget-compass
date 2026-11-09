@@ -7,9 +7,9 @@ import { fileProblem } from "@/lib/upload-link";
 export const Route = createFileRoute("/u/$token")({
   head: () => ({
     meta: [
-      { title: "Upload statements · Ledgerline" },
-      { name: "description", content: "Securely upload bank and card statements to your client's Ledgerline." },
-      { property: "og:title", content: "Upload statements · Ledgerline" },
+      { title: "Upload statements · Thapal" },
+      { name: "description", content: "Securely upload bank and card statements to your client's Thapal." },
+      { property: "og:title", content: "Upload statements · Thapal" },
       { property: "og:description", content: "A private upload link for statements. No sign-in needed." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
@@ -60,7 +60,7 @@ function UploadPage() {
 
   return (
     <main className="mx-auto min-h-screen max-w-lg px-5 py-10">
-      <p className="text-sm font-semibold tracking-wide text-primary">Ledgerline</p>
+      <p className="text-sm font-semibold tracking-wide text-primary">Thapal</p>
       {!info ? <p className="mt-8 text-muted-foreground">Checking link…</p> : !info.active ? (
         <div className="mt-8 rounded-xl border bg-card p-6">
           <h1 className="text-xl font-semibold">This link is no longer active</h1>
@@ -91,7 +91,7 @@ function UploadPage() {
               </ul>
             </div>
           )}
-          {done > 0 && !busy && <p className="mt-4 text-sm text-muted-foreground">Thank you — {info.ownerName} will review them in Ledgerline.</p>}
+          {done > 0 && !busy && <p className="mt-4 text-sm text-muted-foreground">Thank you — {info.ownerName} will review them in Thapal.</p>}
         </>
       )}
     </main>

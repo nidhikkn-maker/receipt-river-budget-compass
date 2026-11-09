@@ -17,9 +17,9 @@ import { ENTITY_KINDS, fyOf, gstinProblem, panProblem, yearStatuses, type Entity
 
 export const Route = createFileRoute("/_authenticated/entities")({
   head: () => ({ meta: [
-    { title: "Companies & financial years — Ledgerline" },
+    { title: "Companies & financial years — Thapal" },
     { name: "description", content: "Your companies and personal profiles with PAN, GSTIN and which past financial years are on record." },
-    { property: "og:title", content: "Companies & financial years — Ledgerline" },
+    { property: "og:title", content: "Companies & financial years — Thapal" },
     { property: "og:description", content: "Your companies and personal profiles with PAN, GSTIN and which past financial years are on record." },
     { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" },
   ] }),

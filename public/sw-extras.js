@@ -29,7 +29,7 @@
   });
 })();
 
-/* Share to Ledgerline: files shared from WhatsApp, Photos or Files are kept on this phone only
+/* Share to Thapal: files shared from WhatsApp, Photos or Files are kept on this phone only
    (never uploaded here) and the shared page asks what to do with them. */
 (function () {
   var SHARED = "ledgerline-shared";

@@ -21,9 +21,9 @@ export const Route = createFileRoute("/_authenticated/trips/")({
   validateSearch: (search: Record<string, unknown>): { trip?: string; status?: "upcoming" } => ({ ...(typeof search["trip"] === "string" ? { trip: search["trip"] } : {}), ...(search["status"] === "upcoming" ? { status: "upcoming" as const } : {}) }),
   head: () => ({
     meta: [
-      { title: "Travel Manager · Ledgerline" },
+      { title: "Travel Manager · Thapal" },
       { name: "description", content: "All trips at a glance — budgets, spending, advances and alerts. Open a trip for bookings, itinerary, expenses and reports." },
-      { property: "og:title", content: "Travel Manager · Ledgerline" },
+      { property: "og:title", content: "Travel Manager · Thapal" },
       { property: "og:description", content: "Compact trip overview with budgets, advances and alerts." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },

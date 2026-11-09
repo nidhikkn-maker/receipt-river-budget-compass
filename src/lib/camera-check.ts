@@ -5,7 +5,7 @@ export async function cameraBlocked(): Promise<string | null> {
     const perms = (navigator as Navigator & { permissions?: Permissions }).permissions;
     if (perms?.query) {
       const st = await perms.query({ name: "camera" as PermissionName }).catch(() => null);
-      if (st?.state === "denied") return "Camera access is turned off for Ledgerline";
+      if (st?.state === "denied") return "Camera access is turned off for Thapal";
     }
     if (navigator.mediaDevices?.enumerateDevices) {
       const devices = await navigator.mediaDevices.enumerateDevices();

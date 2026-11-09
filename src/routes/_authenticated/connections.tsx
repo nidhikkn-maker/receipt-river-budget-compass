@@ -15,9 +15,9 @@ import { buildGraph, filterGraph, linkTargets, neighbours, unlinked, validateCus
 export const Route = createFileRoute("/_authenticated/connections")({
   head: () => ({
     meta: [
-      { title: "Money map — how your accounts, cards, loans and bills link · Ledgerline" },
+      { title: "Money map — how your accounts, cards, loans and bills link · Thapal" },
       { name: "description", content: "See, filter and edit how accounts, cards, payment methods, family, loans, bills and documents connect." },
-      { property: "og:title", content: "Money map · Ledgerline" },
+      { property: "og:title", content: "Money map · Thapal" },
       { property: "og:description", content: "Explore and edit links between your accounts, cards, loans, bills and documents." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },

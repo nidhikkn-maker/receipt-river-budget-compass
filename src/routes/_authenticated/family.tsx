@@ -12,9 +12,9 @@ import { FamilyRequests } from "@/components/FamilyRequests";
 export const Route = createFileRoute("/_authenticated/family")({
   head: () => ({
     meta: [
-      { title: "Family — Ledgerline" },
+      { title: "Family — Thapal" },
       { name: "description", content: "Add family members to track who each expense was for." },
-      { property: "og:title", content: "Family — Ledgerline" },
+      { property: "og:title", content: "Family — Thapal" },
       { property: "og:description", content: "Add family members to track who each expense was for." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },

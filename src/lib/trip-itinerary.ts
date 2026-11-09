@@ -106,7 +106,7 @@ export function tripCalendar(t: TravelTrip, stamp: string, edits: Record<string,
     const title = o.title ?? e.title, note = o.note ?? e.note, alarm = o.alarm !== undefined ? o.alarm : e.alarm;
     return ["BEGIN:VEVENT", `UID:${e.uid}@ledgerline`, `DTSTAMP:${icsStamp(stamp)}`, e.start, e.end, `SUMMARY:${icsText(title)}`, ...(note ? [`DESCRIPTION:${icsText(note)}`] : []), ...(e.location ? [`LOCATION:${icsText(e.location)}`] : []), ...alarmBlock(alarm, title), "END:VEVENT"].join("\r\n");
   });
-  return ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Ledgerline//Trip//EN", `X-WR-CALNAME:${icsText(t.name)}`, ...ev, "END:VCALENDAR", ""].join("\r\n");
+  return ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Thapal//Trip//EN", `X-WR-CALNAME:${icsText(t.name)}`, ...ev, "END:VCALENDAR", ""].join("\r\n");
 }
 
 /** Trip with calendar wording and reminders saved for future exports. Values equal to the default are cleared, so plan/booking changes still flow through. */

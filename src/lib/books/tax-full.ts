@@ -123,7 +123,7 @@ export function entityLiability(c: TaxComputation, kind: "company" | "firm", opt
 export function itrComputationJson(p: { fy: string; pan: string | null; name: string; form: string; c: TaxComputation; l: Liability }) {
   const ay = `${Number(p.fy.slice(0, 4)) + 1}-${String((Number(p.fy.slice(0, 4)) + 2) % 100).padStart(2, "0")}`;
   return {
-    _note: "Ledgerline working file in ITR part layout — not an official upload file. Review with your accountant.",
+    _note: "Thapal working file in ITR part layout — not an official upload file. Review with your accountant.",
     AssessmentYear: ay, Form: p.form, PAN: p.pan, Name: p.name, Regime: p.l.regime === "old" ? "Old" : p.l.regime === "new" ? "New (115BAC)" : p.l.regime,
     "PartB-TI": { Salaries: p.c.salary, IncomeFromHP: p.c.houseProperty.net, ProfBusGain: p.c.business.net, CapGain: { ShortTerm111A: p.c.capitalGains.short, LongTerm112A: p.c.capitalGains.long }, IncFromOS: p.c.otherSources, GrossTotalIncome: p.c.gross, BFLossSetOff: p.c.lossesSetOff, DeductionsUnderScheduleVIA: p.l.deductions, TotalIncome: p.l.taxableIncome },
     "PartB-TTI": { TaxAtNormalRates: p.l.slabTax, TaxAtSpecialRates: addMoney(p.l.specialTax.stcg,p.l.specialTax.ltcg), Rebate87A: p.l.rebate, Surcharge: p.l.surcharge, MarginalRelief: p.l.marginalRelief, EducationCess: p.l.cess, GrossTaxLiability: p.l.total, TaxesPaid: p.l.credits, BalTaxPayable: Math.max(0, p.l.balance), RefundDue: Math.max(0, -p.l.balance) },

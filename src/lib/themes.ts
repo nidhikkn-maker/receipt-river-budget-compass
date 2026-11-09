@@ -1,5 +1,5 @@
 /**
- * Ledgerline theme catalog (Version 4.3).
+ * Thapal theme catalog (Version 4.3).
  * Five families, seven selectable styles; each style supports light, dark and
  * follow-system appearances. Values live as design tokens in src/styles.css —
  * this module is the single source of truth for names, grouping and previews.
@@ -29,12 +29,12 @@ export interface ThemeStyle {
 }
 
 export const THEME_STYLES: ThemeStyle[] = [
-  { name: "signature", family: "Signature Blue & Gold", label: "Signature", hint: "The classic Ledgerline navy with gold highlights.", swatch: ["#F5F7FC", "#FFFFFF", "#14265D", "#E6B43A"] },
+  { name: "signature", family: "Signature Blue & Gold", label: "Signature", hint: "The classic Thapal navy with gold highlights.", swatch: ["#F5F7FC", "#FFFFFF", "#14265D", "#E6B43A"] },
   { name: "forest", family: "Forest Green & Mint", label: "Forest", hint: "Calm, modern green with a soft mint accent.", swatch: ["#F8FAF9", "#FFFFFF", "#176452", "#A5E2C9"] },
   { name: "midnight", family: "Midnight Blue & Champagne Gold", label: "Midnight", hint: "A luxurious dark interface with champagne gold.", swatch: ["#0C1429", "#182844", "#243C68", "#D8B66A"], darkFirst: true },
   { name: "graphite", family: "Graphite & Platinum", label: "Graphite", hint: "Neutral executive clarity, understated and precise.", swatch: ["#F7F8FA", "#FFFFFF", "#20252C", "#DDE2E8"] },
   { name: "apple-classic", family: "Apple-Inspired Minimal", label: "Apple Classic", hint: "Clean neutrals with a subtle blue accent.", swatch: ["#F5F5F7", "#FFFFFF", "#007AFF", "#E5E5EA"] },
-  { name: "apple-ledgerline", family: "Apple-Inspired Minimal", label: "Apple × Ledgerline", hint: "Apple-inspired simplicity with Ledgerline navy and gold.", swatch: ["#F7F8FB", "#FFFFFF", "#14265D", "#E6B43A"] },
+  { name: "apple-ledgerline", family: "Apple-Inspired Minimal", label: "Apple × Thapal", hint: "Apple-inspired simplicity with Thapal navy and gold.", swatch: ["#F7F8FB", "#FFFFFF", "#14265D", "#E6B43A"] },
   { name: "apple-glass", family: "Apple-Inspired Minimal", label: "Apple Glass", hint: "Layered translucent surfaces, restrained and readable.", swatch: ["#EEF1F6", "#FFFFFF", "#007AFF", "#E6B43A"] },
 ];
 

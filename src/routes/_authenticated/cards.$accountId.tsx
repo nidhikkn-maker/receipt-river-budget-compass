@@ -13,9 +13,9 @@ import { todayISO } from "@/lib/use-position";
 export const Route = createFileRoute("/_authenticated/cards/$accountId")({
   head: () => ({
     meta: [
-      { title: "Card balance · Ledgerline" },
+      { title: "Card balance · Thapal" },
       { name: "description", content: "How spends and payments change what you owe on a credit card, with unreconciled payments flagged." },
-      { property: "og:title", content: "Card balance · Ledgerline" },
+      { property: "og:title", content: "Card balance · Thapal" },
       { property: "og:description", content: "Running credit-card outstanding with payment reconciliation status." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },

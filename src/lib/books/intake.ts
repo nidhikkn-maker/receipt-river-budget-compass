@@ -188,7 +188,7 @@ export function autoName(p: { entity?: string | null | undefined; date?: string 
   return [p.entity?.trim() || "Personal", p.date ? `FY ${fyOf(p.date)}` : null, p.typeLabel, p.identifier?.trim() || null].filter(Boolean).join(" / ");
 }
 
-/** Labels Ledgerline already stores somewhere; anything else becomes a proposed field, never a new column [§15]. */
+/** Labels Thapal already stores somewhere; anything else becomes a proposed field, never a new column [§15]. */
 const CANONICAL = /^(pan|gstin|cin|llpin|tan|name|legal name|date|amount|total|tax|cgst|sgst|igst|cess|address|registered address|director|partner|trustee|tenant|rent|monthly rent|deposit|security deposit|lease start|lease end|notice period|escalation|cost|purchase cost|supplier|vendor|warranty|policy number|account number|ifsc|isin|quantity|survey number|owner|owner share|interest rate|emi|due date|period|financial year|assessment year|invoice number|place of supply|hsn|sac|depreciation rate|useful life)\b/i;
 /** Common printed spellings mapped to an existing canonical field before anything is proposed [§15]. */
 export const SYNONYMS: Record<string, string> = {

@@ -14,9 +14,9 @@ import { cn } from "@/lib/utils";
 export const Route = createFileRoute("/_authenticated/budgets")({
   head: () => ({
     meta: [
-      { title: "Budgets — Ledgerline" },
+      { title: "Budgets — Thapal" },
       { name: "description", content: "Set monthly budgets per category and see where the money goes." },
-      { property: "og:title", content: "Budgets — Ledgerline" },
+      { property: "og:title", content: "Budgets — Thapal" },
       { property: "og:description", content: "Set monthly budgets per category and see where the money goes." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },

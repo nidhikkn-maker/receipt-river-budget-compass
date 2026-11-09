@@ -11,9 +11,9 @@ import { canRemove, type PendingStatus } from "@/lib/pending-sync";
 
 export const Route = createFileRoute("/_authenticated/sync-queue")({
   head: () => ({ meta: [
-    { title: "Waiting to sync — Ledgerline" },
+    { title: "Waiting to sync — Thapal" },
     { name: "description", content: "Entries saved on this device and whether each has reached your account." },
-    { property: "og:title", content: "Waiting to sync — Ledgerline" },
+    { property: "og:title", content: "Waiting to sync — Thapal" },
     { property: "og:description", content: "Entries saved on this device and whether each has reached your account." },
     { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" },
   ] }),

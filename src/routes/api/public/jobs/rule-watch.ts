@@ -18,7 +18,7 @@ export const Route = createFileRoute("/api/public/jobs/rule-watch")({
         for (const [i, s] of OFFICIAL_SOURCES.entries()) {
           const id = `src${i}:${s.area}`;
           try {
-            const r = await fetch(s.url, { headers: { "User-Agent": "Mozilla/5.0 (Ledgerline rule watch)" }, signal: AbortSignal.timeout(15000) });
+            const r = await fetch(s.url, { headers: { "User-Agent": "Mozilla/5.0 (Thapal rule watch)" }, signal: AbortSignal.timeout(15000) });
             if (!r.ok) { report[id] = `HTTP ${r.status}`; continue; }
             const lines = headlines(await r.text());
             if (!lines.length) { report[id] = "no headlines found"; continue; }

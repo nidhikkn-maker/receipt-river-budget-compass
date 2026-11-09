@@ -10,7 +10,7 @@ const Email = ({ ownerName, accountantName, fileName, url }: Props) => (
     <Preview>{`${accountantName || 'Your accountant'} uploaded statements`}</Preview>
     <Body style={main}>
       <Container style={container}>
-        <Text style={brand}>Ledgerline</Text>
+        <Text style={brand}>Thapal</Text>
         <Heading style={h1}>New statements uploaded</Heading>
         <Text style={text}>{ownerName ? `Hi ${ownerName},` : 'Hi,'}</Text>
         <Text style={text}>

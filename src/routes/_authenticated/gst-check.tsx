@@ -8,9 +8,9 @@ import { matchGstr2b, parseGstr2b, type G2bInvoice } from "@/lib/gstr2b";
 
 export const Route = createFileRoute("/_authenticated/gst-check")({
   head: () => ({ meta: [
-    { title: "Suppliers & missing invoices — Ledgerline" },
+    { title: "Suppliers & missing invoices — Thapal" },
     { name: "description", content: "Business suppliers with GST captured, GSTIN on file and business spends that still need an invoice." },
-    { property: "og:title", content: "Suppliers & missing invoices — Ledgerline" },
+    { property: "og:title", content: "Suppliers & missing invoices — Thapal" },
     { property: "og:description", content: "Business suppliers with GST captured, GSTIN on file and business spends that still need an invoice." },
     { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" },
   ] }),

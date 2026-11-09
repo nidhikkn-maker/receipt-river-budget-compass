@@ -24,9 +24,9 @@ import { PAYMENT_METHODS, PAYMENT_LABEL, type Scope } from "@/lib/expenses";
 export const Route = createFileRoute("/_authenticated/reports")({
   head: () => ({
     meta: [
-      { title: "Reports — Ledgerline" },
+      { title: "Reports — Thapal" },
       { name: "description", content: "Export expenses, actual reimbursement payments and department budget summaries as CSV or PDF." },
-      { property: "og:title", content: "Reports — Ledgerline" },
+      { property: "og:title", content: "Reports — Thapal" },
       { property: "og:description", content: "Download expense entries, reimbursement payments and department budget summaries." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },

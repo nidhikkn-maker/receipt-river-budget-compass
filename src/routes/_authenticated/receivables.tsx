@@ -9,9 +9,9 @@ import { receivableStatus, type Receivable } from "@/lib/receivables";
 
 export const Route = createFileRoute("/_authenticated/receivables")({
   head: () => ({ meta: [
-    { title: "Customers owing — Ledgerline" },
+    { title: "Customers owing — Thapal" },
     { name: "description", content: "Track invoices customers owe you; payments are matched from your income entries." },
-    { property: "og:title", content: "Customers owing — Ledgerline" },
+    { property: "og:title", content: "Customers owing — Thapal" },
     { property: "og:description", content: "Track invoices customers owe you; payments are matched from your income entries." },
     { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" },
   ] }),

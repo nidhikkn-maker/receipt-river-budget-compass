@@ -14,9 +14,9 @@ import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_authenticated/drafts")({
   head: () => ({ meta: [
-    { title: "Drafts — Ledgerline" },
+    { title: "Drafts — Thapal" },
     { name: "description", content: "Unfinished expenses and captured receipts waiting to be completed." },
-    { property: "og:title", content: "Drafts — Ledgerline" },
+    { property: "og:title", content: "Drafts — Thapal" },
     { property: "og:description", content: "Unfinished expenses and captured receipts waiting to be completed." },
     { property: "og:type", content: "website" },
     { name: "twitter:card", content: "summary" },

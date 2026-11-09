@@ -10,8 +10,8 @@ const desc = "Bills, receipts and payment screenshots shared from WhatsApp or ot
 export const Route = createFileRoute("/_authenticated/shared")({
   validateSearch: (s: Record<string, unknown>) => ({ batch: validBatch(s["batch"]) ? s["batch"] : undefined, error: typeof s["error"] === "string" ? s["error"] : undefined }),
   head: () => ({ meta: [
-    { title: "Shared files — Ledgerline" }, { name: "description", content: desc },
-    { property: "og:title", content: "Shared files — Ledgerline" }, { property: "og:description", content: desc },
+    { title: "Shared files — Thapal" }, { name: "description", content: desc },
+    { property: "og:title", content: "Shared files — Thapal" }, { property: "og:description", content: desc },
     { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" },
   ] }),
   component: Shared,
@@ -30,11 +30,11 @@ function Shared() {
   return (
     <div className="mx-auto max-w-xl space-y-4 p-4">
       <PageTitle title="Shared files" />
-      {error && <p className="rounded-md border border-destructive/40 p-3 text-sm text-destructive">The app wasn't ready to receive that share. Open Ledgerline once while online, then share again.</p>}
+      {error && <p className="rounded-md border border-destructive/40 p-3 text-sm text-destructive">The app wasn't ready to receive that share. Open Thapal once while online, then share again.</p>}
       {files === null ? <p className="text-sm text-muted-foreground">Opening shared files…</p> : files.length === 0 ? (
         <div className="space-y-2 text-sm text-muted-foreground">
           <p>No shared files waiting.</p>
-          <p>On Android, add Ledgerline to your home screen, then choose it from the Share menu in WhatsApp or Photos. On iPhone, the Share menu doesn't list web apps yet — save the image, then use Scan receipt or Upload.</p>
+          <p>On Android, add Thapal to your home screen, then choose it from the Share menu in WhatsApp or Photos. On iPhone, the Share menu doesn't list web apps yet — save the image, then use Scan receipt or Upload.</p>
         </div>
       ) : (
         <>

@@ -22,6 +22,6 @@ describe("Web-standard push encryption",()=>{
     expect(await sendDevicePush("test-only-seed-not-a-production-credential",{endpoint:"https://fcm.googleapis.com/a",p256dh:encode(pub),auth:encode(new Uint8Array(16).fill(3))},privateReminderPayload(1))).toEqual({ok:true,expired:false});
     const init=fetchMock.mock.calls[0]?.[1] as RequestInit|undefined;
     expect(init?.redirect).toBe("error");expect((init?.headers as Record<string,string>)["content-encoding"]).toBe("aes128gcm");
-    expect(new TextDecoder().decode(init?.body as Uint8Array)).not.toContain("Ledgerline");
+    expect(new TextDecoder().decode(init?.body as Uint8Array)).not.toContain("Thapal");
   });
 });

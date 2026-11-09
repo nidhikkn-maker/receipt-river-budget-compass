@@ -17,9 +17,9 @@ import { merchantGroupingChanges, merchantEntrySnapshot, merchantReviewSnapshot,
 export const Route = createFileRoute("/_authenticated/patterns")({
   head: () => ({
     meta: [
-      { title: "Spending patterns & merchants · Ledgerline" },
+      { title: "Spending patterns & merchants · Thapal" },
       { name: "description", content: "Factual spending patterns with supporting entries, and merchant profiles with merge and unmerge." },
-      { property: "og:title", content: "Spending patterns · Ledgerline" },
+      { property: "og:title", content: "Spending patterns · Thapal" },
       { property: "og:description", content: "Behaviour analysis and merchant intelligence from your own records." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },

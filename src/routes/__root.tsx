@@ -85,8 +85,8 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { name: "viewport", content: "width=device-width, initial-scale=1" },
       { name: "apple-mobile-web-app-capable", content: "yes" },
       { name: "mobile-web-app-capable", content: "yes" },
-      { name: "apple-mobile-web-app-title", content: "Ledgerline" },
-      { title: "Ledgerline — Personal finance" },
+      { name: "apple-mobile-web-app-title", content: "Thapal" },
+      { title: "Thapal — Personal finance" },
       { name: "description", content: "Private accounts, family spending, budgets and financial planning." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
@@ -167,7 +167,7 @@ function AuthListener() {
 /* Same look as the iPhone launch screen, so tapping the icon flows straight into the app without a blank or text-only frame. */
 function LaunchScreen() {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background" aria-label="Opening Ledgerline" role="status">
+    <div className="flex min-h-screen items-center justify-center bg-background" aria-label="Opening Thapal" role="status">
       <img src="/app-icon-large.png" alt="" width={96} height={96} className="-mt-10 h-24 w-24 rounded-[22px]" />
     </div>
   );

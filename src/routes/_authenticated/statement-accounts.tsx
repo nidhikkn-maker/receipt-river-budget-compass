@@ -15,9 +15,9 @@ import { statementCoverage } from "@/lib/statement-pipeline/coverage";
 export const Route = createFileRoute("/_authenticated/statement-accounts")({
   head: () => ({
     meta: [
-      { title: "Statement coverage · Ledgerline" },
+      { title: "Statement coverage · Thapal" },
       { name: "description", content: "See which statements are missing for each account, how current each one is, and move entries saved on the wrong account." },
-      { property: "og:title", content: "Statement coverage · Ledgerline" },
+      { property: "og:title", content: "Statement coverage · Thapal" },
       { property: "og:description", content: "Missing statements, account freshness and safe account moves in one place." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },

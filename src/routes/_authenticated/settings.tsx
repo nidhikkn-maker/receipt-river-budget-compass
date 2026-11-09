@@ -29,9 +29,9 @@ import type { Json } from "@/integrations/supabase/types";
 export const Route = createFileRoute("/_authenticated/settings")({
   head: () => ({
     meta: [
-      { title: "Settings & backup — Ledgerline" },
+      { title: "Settings & backup — Thapal" },
       { name: "description", content: "Back up, restore, export or delete your financial records." },
-      { property: "og:title", content: "Settings & backup — Ledgerline" },
+      { property: "og:title", content: "Settings & backup — Thapal" },
       { property: "og:description", content: "Back up, restore, export or delete your financial records." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
@@ -154,7 +154,7 @@ function Settings() {
         <Card title="Back up everything" body="Accounts, entries, budgets, valuations, family and original receipt and document files.">
           <Button onClick={backup} disabled={busy}><Download className="h-4 w-4" />Download backup</Button>
         </Card>
-        <Card title="Restore from a backup" body="Pick a Ledgerline backup file. Records are added back (or updated if they already exist).">
+        <Card title="Restore from a backup" body="Pick a Thapal backup file. Records are added back (or updated if they already exist).">
           <Button variant="secondary" onClick={() => file.current?.click()} disabled={busy}><Upload className="h-4 w-4" />Choose backup file</Button>
           <input ref={file} type="file" accept="application/zip,application/json,.zip,.json" className="sr-only" aria-label="Backup file" onChange={(e) => restore(e.target.files?.[0])} />
         </Card>

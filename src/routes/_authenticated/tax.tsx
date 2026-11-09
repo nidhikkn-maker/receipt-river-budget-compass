@@ -14,9 +14,9 @@ import { TeamCompanyTax } from "@/components/TeamAccess";
 
 export const Route = createFileRoute("/_authenticated/tax")({
   head: () => ({ meta: [
-    { title: "Income tax & GST working — Ledgerline" },
+    { title: "Income tax & GST working — Thapal" },
     { name: "description", content: "Draft yearly income, business spending, GST input on bills and depreciation to share with your accountant." },
-    { property: "og:title", content: "Income tax & GST working — Ledgerline" },
+    { property: "og:title", content: "Income tax & GST working — Thapal" },
     { property: "og:description", content: "Draft yearly income, business spending, GST input on bills and depreciation to share with your accountant." },
     { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" },
   ] }),
@@ -38,7 +38,7 @@ function Tax() {
 
   return (
     <div className="mx-auto max-w-2xl space-y-4 p-4">
-      <PageTitle title="Tax & audit" sub="Working drafts from your records — never filed by Ledgerline. Your accountant files with your approval." />
+      <PageTitle title="Tax & audit" sub="Working drafts from your records — never filed by Thapal. Your accountant files with your approval." />
       <p className="mb-3 text-sm text-muted-foreground">In everyday terms: this shows how much tax your records suggest, what GST you paid that may be claimed back, and which documents your accountant will need. Official form names and tax heads are kept exactly as the law uses them, so your accountant sees the correct terms.</p>
       <AccountingDetails terms={['inputCredit','depreciation','accrual','payable','receivable']} />
       <div className="flex flex-wrap gap-2">
