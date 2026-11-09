@@ -16,7 +16,7 @@ import { DOC_TYPES, DOC_LABEL, earlierVersions, expiringDocuments, searchVault, 
 import { todayISO } from "@/lib/use-position";
 import { VaultBooks } from "@/components/books/VaultBooks";
 import { useBooks } from "@/components/books/useBooks";
-export const Route=createFileRoute("/_authenticated/vault")({head:()=>({meta:[{title:"DocuRepo — Ledgerline"},{name:"description",content:"Search receipts and every financial document filed through Statement Desk."},{property:"og:title",content:"DocuRepo — Ledgerline"},{property:"og:description",content:"Receipts, statements, insurance and warranties with renewal dates."},{property:"og:type",content:"website"},{name:"twitter:card",content:"summary"}]}),component:Vault});
+export const Route=createFileRoute("/_authenticated/vault")({head:()=>({meta:[{title:"DocuRepo — Thapal"},{name:"description",content:"Search receipts and every financial document filed through Statement Desk."},{property:"og:title",content:"DocuRepo — Thapal"},{property:"og:description",content:"Receipts, statements, insurance and warranties with renewal dates."},{property:"og:type",content:"website"},{name:"twitter:card",content:"summary"}]}),component:Vault});
 function Vault() {
   const { accounts, transactions, documents, updateDocument, removeDocument, signedUrl, downloadFile } = useStore();
   const [q, setQ] = useState(""); const [from, setFrom] = useState(""); const [to, setTo] = useState("");

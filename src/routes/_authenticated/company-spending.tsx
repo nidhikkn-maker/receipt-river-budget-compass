@@ -9,9 +9,9 @@ import { money } from "@/lib/expenses";
 
 export const Route = createFileRoute("/_authenticated/company-spending")({
   head: () => ({ meta: [
-    { title: "Spending by company — Ledgerline" },
+    { title: "Spending by company — Thapal" },
     { name: "description", content: "Compare spending across your companies and personal accounts, with top categories and monthly trend." },
-    { property: "og:title", content: "Spending by company — Ledgerline" },
+    { property: "og:title", content: "Spending by company — Thapal" },
     { property: "og:description", content: "Compare spending across your companies and personal accounts." },
     { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" },
   ] }),

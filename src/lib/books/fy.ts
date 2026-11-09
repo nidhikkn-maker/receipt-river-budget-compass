@@ -41,7 +41,7 @@ export function confirmOpening(rec: FyRecord, today: string, chosen?: Partial<Re
 }
 
 /**
- * What Ledgerline holds at a year end for one entity, head by head, using only that entity's linked
+ * What Thapal holds at a year end for one entity, head by head, using only that entity's linked
  * accounts and owned assets [§19, §63]. Heads with no linked source stay undefined (not zero).
  */
 export function booksHeads(p: { accounts: Account[]; txns: Txn[]; assets: Asset[]; accountIds: Set<string>; entityId: string; fyEnd: string; fy: string }): Partial<Record<OpeningHead, number>> {

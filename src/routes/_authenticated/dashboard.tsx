@@ -30,9 +30,9 @@ const CardTrendChart = lazy(() => import("@/components/CardTrendChart").then((m)
 export const Route = createFileRoute("/_authenticated/dashboard")({
   head: () => ({
     meta: [
-      { title: "Home — Ledgerline" },
+      { title: "Home — Thapal" },
       { name: "description", content: "Your personal, family and business spending at a glance." },
-      { property: "og:title", content: "Home — Ledgerline" },
+      { property: "og:title", content: "Home — Thapal" },
       { property: "og:description", content: "Your personal, family and business spending at a glance." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },

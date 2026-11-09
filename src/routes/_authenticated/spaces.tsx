@@ -6,9 +6,9 @@ import band from '@/assets/companion-spaces-band.jpg';
 
 export const Route = createFileRoute('/_authenticated/spaces')({
   head: () => ({ meta: [
-    { title: 'My Spaces — Ledgerline' },
+    { title: 'My Spaces — Thapal' },
     { name: 'description', content: 'Switch between personal, family and business money, or open travel and investments.' },
-    { property: 'og:title', content: 'My Spaces — Ledgerline' },
+    { property: 'og:title', content: 'My Spaces — Thapal' },
     { property: 'og:description', content: 'Personal, family, business, travel and investments in one calm place.' },
     { property: 'og:type', content: 'website' },
     { name: 'twitter:card', content: 'summary' },

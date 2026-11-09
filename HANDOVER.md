@@ -1,4 +1,4 @@
-# Ledgerline — Developer Handover
+# Thapal (formerly Ledgerline) — Developer Handover
 
 ## Architecture
 - TanStack Start (React 19, Vite) on edge workers; Lovable Cloud (Postgres, auth, storage) backend.

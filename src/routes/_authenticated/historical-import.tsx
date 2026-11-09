@@ -12,9 +12,9 @@ const importsQuery = queryOptions({ queryKey: ['historical-imports'], queryFn: l
 export const Route = createFileRoute('/_authenticated/historical-import')({
   validateSearch: importBatchSearch,
   head: () => ({ meta: [
-    { title: 'Past statement imports — Ledgerline' },
+    { title: 'Past statement imports — Thapal' },
     { name: 'description', content: 'Read-only history of saved statement imports and recorded coverage.' },
-    { property: 'og:title', content: 'Past statement imports — Ledgerline' },
+    { property: 'og:title', content: 'Past statement imports — Thapal' },
     { property: 'og:description', content: 'Saved import periods, statuses and overlaps; new statement work stays in Statement Desk.' },
     { property: 'og:type', content: 'website' }, { name: 'twitter:card', content: 'summary' },
   ] }),

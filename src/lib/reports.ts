@@ -92,7 +92,7 @@ export async function toPdf(r: Report, subtitle: string): Promise<Blob> {
   const doc = new jsPDF({ orientation: r.headers.length > 6 ? "landscape" : "portrait" });
   const {loadPdfFonts,textU,withUnicode,cell}=await import('./pdf-unicode');await loadPdfFonts();
   const width=doc.internal.pageSize.getWidth()-28;
-  doc.setFontSize(18);const titleLines=doc.splitTextToSize(`Ledgerline - ${r.title}`,width) as string[];
+  doc.setFontSize(18);const titleLines=doc.splitTextToSize(`Thapal - ${r.title}`,width) as string[];
   let y=18;for(const line of titleLines){textU(doc,line,14,y,{maxW:width});y+=8;}
   doc.setFontSize(10);const subLines=doc.splitTextToSize(subtitle,width) as string[];for(const line of subLines){textU(doc,line,14,y,{maxW:width});y+=5;}
   autoTable(doc, withUnicode(doc,{ startY: y+2, head: [r.headers.map(cell)], body: r.rows.map((x) => x.map(v=>cell(String(v)))), styles: { fontSize: 7.5 }, headStyles: { fillColor: [38, 72, 200] } }));

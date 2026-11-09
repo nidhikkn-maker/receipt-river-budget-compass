@@ -2,7 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { PageTitle } from "@/components/AppShell";
 import { REQUIRED_REPORTS, reportCounts, type ReportState } from "@/lib/report-status";
 
-const TITLE = "Required reports — Ledgerline";
+const TITLE = "Required reports — Thapal";
 const DESC = "Status of each required report with links to its supporting evidence and tests.";
 export const Route = createFileRoute("/_authenticated/report-status")({
   head: () => ({ meta: [

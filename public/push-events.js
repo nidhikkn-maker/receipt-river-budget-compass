@@ -4,8 +4,8 @@ self.addEventListener("push", event => {
   try { data = event.data?.json(); } catch { data = null; }
   // Only display the app's private generic message, never arbitrary provider payload contents.
   const test = data?.tag === "ledgerline-test";
-  const count = /^\d{1,5} payment or renewal reminders? to review\.$/.test(data?.body ?? "") ? data.body : "Open Ledgerline to review your reminders.";
-  event.waitUntil(self.registration.showNotification("Ledgerline", {
+  const count = /^\d{1,5} payment or renewal reminders? to review\.$/.test(data?.body ?? "") ? data.body : "Open Thapal to review your reminders.";
+  event.waitUntil(self.registration.showNotification("Thapal", {
     body: test ? "Notifications are working on this device." : count,
     icon: "/app-icon.png", badge: "/app-icon.png", tag: test ? "ledgerline-test" : "ledgerline-reminders",
     data: { url: "/plan" },

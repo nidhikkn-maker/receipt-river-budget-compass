@@ -14,9 +14,9 @@ import { advice, categoryBaseline, inflationFor, project, realValue } from "@/li
 
 export const Route = createFileRoute("/_authenticated/forecast")({
   head: () => ({ meta: [
-    { title: "10-year prediction — Ledgerline" },
+    { title: "10-year prediction — Thapal" },
     { name: "description", content: "Project inflation, category spending and savings for the next 10 years with suggestions." },
-    { property: "og:title", content: "10-year prediction — Ledgerline" },
+    { property: "og:title", content: "10-year prediction — Thapal" },
     { property: "og:description", content: "Where your expenses and savings could be in 10 years, and what to do now." },
     { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" },
   ] }),

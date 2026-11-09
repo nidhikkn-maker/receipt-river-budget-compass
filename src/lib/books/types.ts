@@ -1,6 +1,6 @@
 import { cleanOverrides } from "./price-overrides";
 /**
- * Ledgerline v6 "books" records kept in owner-scoped preferences (finance_preferences.data.books).
+ * Thapal v6 "books" records kept in owner-scoped preferences (finance_preferences.data.books).
  * Everything here is a register or proposal around the one shared ledger — never a second ledger.
  */
 import type { DocType } from "../documents";
@@ -19,7 +19,7 @@ export interface PeriodEvent { at: string; action: "closed" | "reopened"; period
 export type LinkKind = "entity" | "asset" | "property" | "lease" | "loan" | "transaction" | "supplier" | "investment" | "insurance" | "fy" | "gst";
 export interface DocLink { docId: string; kind: LinkKind; targetId: string; label: string }
 
-/** A field seen on a document that Ledgerline has no canonical place for [§15]; kept as data, proposed for approval. */
+/** A field seen on a document that Thapal has no canonical place for [§15]; kept as data, proposed for approval. */
 export interface ProposedField { label: string; docType: DocType; seen: number; status: "proposed" | "approved" | "rejected"; plan?: string | undefined; compatible?: boolean | undefined; decidedOn?: string | undefined }
 
 /** Audited prior-year figures for one entity and financial year [§17–20]. */

@@ -5,9 +5,9 @@ import { FirstUseGuide } from "@/components/FirstUseGuide";
 export const Route = createFileRoute("/_authenticated/start")({
   head: () => ({
     meta: [
-      { title: "Getting started · Ledgerline" },
-      { name: "description", content: "See, in everyday words, how Ledgerline handles receipts, statements, transfers, card bills, things you own and money paid back." },
-      { property: "og:title", content: "Getting started · Ledgerline" },
+      { title: "Getting started · Thapal" },
+      { name: "description", content: "See, in everyday words, how Thapal handles receipts, statements, transfers, card bills, things you own and money paid back." },
+      { property: "og:title", content: "Getting started · Thapal" },
       { property: "og:description", content: "Everyday money, explained without accounting jargon." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },

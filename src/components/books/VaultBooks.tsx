@@ -66,7 +66,7 @@ export function VaultBooks() {
         {renew.length > 0 && <div className="text-xs"><b>Renewals coming up</b>{renew.map((r) => <p key={r.key}>{r.title}</p>)}<p className="text-muted-foreground">These also appear in your reminders.</p></div>}
         <details className="text-xs"><summary className="cursor-pointer text-muted-foreground">Retention policy{old.length ? ` · ${old.length} past retention` : ""}</summary>
           <div className="mt-2 grid grid-cols-2 gap-1 sm:grid-cols-3">{(Object.keys(DEFAULT_RETENTION) as DocType[]).map((t) => <label key={t}>{DOC_LABEL[t]}<Input type="number" min={0} className="h-8" value={books.retentionYears[t] ?? DEFAULT_RETENTION[t] ?? 8} onChange={(e) => save({ retentionYears: { ...books.retentionYears, [t]: Math.max(0, Number(e.target.value) || 0) } })} /></label>)}</div>
-          <p className="mt-1 text-muted-foreground">Years kept after the financial year ends; 0 keeps permanently. Documents past retention are listed for you to review — Ledgerline never deletes them on its own.</p>
+          <p className="mt-1 text-muted-foreground">Years kept after the financial year ends; 0 keeps permanently. Documents past retention are listed for you to review — Thapal never deletes them on its own.</p>
           {old.map((d) => <p key={d.id}>{d.title} · {d.docDate ?? d.createdAt.slice(0, 10)}</p>)}
         </details>
       </div>

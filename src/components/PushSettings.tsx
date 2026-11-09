@@ -86,7 +86,7 @@ export function PushSettings() {
         <Step done={delivery.state==="shown"} failed={delivery.state==="unconfirmed"} label={delivery.state==="unconfirmed"?"Not confirmed on this device within 30 seconds":"Shown on this device"}/>
       </ol>
       {delivery.state==="failed"&&<p className="mt-2 text-destructive">{delivery.detail}</p>}
-      {delivery.state==="unconfirmed"&&<p className="mt-2 text-muted-foreground">If you saw the notification, it's working. If not, check Settings → Notifications → Ledgerline on your phone, and that Focus mode is off.</p>}
+      {delivery.state==="unconfirmed"&&<p className="mt-2 text-muted-foreground">If you saw the notification, it's working. If not, check Settings → Notifications → Thapal on your phone, and that Focus mode is off.</p>}
     </div>}
     <fieldset disabled={loading || saving} className="mt-6 min-w-0 divide-y">
       <div className="flex items-center justify-between gap-4 py-4"><Label htmlFor="all-reminders">All reminders</Label><Switch id="all-reminders" checked={preferences.reminders} disabled={saving} onCheckedChange={value=>void update({reminders:value})}/></div>

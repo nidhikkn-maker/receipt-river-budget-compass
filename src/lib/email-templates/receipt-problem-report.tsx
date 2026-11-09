@@ -19,7 +19,7 @@ const Email = ({ ownerName, kindLabel, note, deviceLines, receiptName, receiptTy
     <Preview>{`Receipt viewer problem: ${kindLabel || 'something else'}`}</Preview>
     <Body style={main}>
       <Container style={container}>
-        <Text style={brand}>Ledgerline</Text>
+        <Text style={brand}>Thapal</Text>
         <Heading style={h1}>Receipt viewer problem reported</Heading>
         <Text style={text}>{ownerName ? `Hi ${ownerName},` : 'Hi,'}</Text>
         <Text style={text}>

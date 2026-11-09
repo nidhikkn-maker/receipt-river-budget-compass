@@ -4,7 +4,7 @@
 export const MANAGE_CHOICES = [
   { key: "personal", title: "My money", body: "Your own spending, bank accounts, cards, savings and investments." },
   { key: "family", title: "Family", body: "Household money shared with people you invite. Each person signs in with their own account." },
-  { key: "business", title: "Business", body: "A company, shop or professional work. Start by adding its documents — Ledgerline reads them and asks before saving anything." },
+  { key: "business", title: "Business", body: "A company, shop or professional work. Start by adding its documents — Thapal reads them and asks before saving anything." },
 ] as const;
 export type ManageChoice = (typeof MANAGE_CHOICES)[number]["key"];
 
@@ -27,7 +27,7 @@ export const JOURNEYS: Journey[] = [
     next: { label: "Scan a receipt", to: "/new", search: { mode: "scan" } }, technical: "Expense entry with attached source document", spaces: ["personal", "family", "business"] },
   { key: "transfer", title: "Money moved between my accounts", situation: "You sent money from your savings account to another account of yours.",
     ledgerlineSays: "“This went from one of your accounts to another. It isn't spending or income.”",
-    youDo: "Confirm both accounts are yours. Ledgerline links the money going out and coming in as one move.", safeguard: "If the receiving account isn't confirmed, it stays in Review instead of being counted as spending.",
+    youDo: "Confirm both accounts are yours. Thapal links the money going out and coming in as one move.", safeguard: "If the receiving account isn't confirmed, it stays in Review instead of being counted as spending.",
     next: { label: "Review moves between my accounts", to: "/transfers" }, technical: "Contra entry / internal transfer", spaces: ["personal", "family", "business"] },
   { key: "card_payment", title: "Paying my credit card bill", situation: "You paid your card bill from your bank account.",
     ledgerlineSays: "“This pays off your card. The purchases were already counted when you made them, so this isn't new spending.”",

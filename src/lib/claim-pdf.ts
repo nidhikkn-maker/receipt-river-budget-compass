@@ -35,7 +35,7 @@ export async function renderClaimPdf(c: Claim, files: Record<string, AnnexFile |
     styles: { fontSize: 9, cellPadding: 1.5, lineColor: [200, 200, 200], lineWidth: 0.1, textColor: [25, 25, 25], overflow: "linebreak" },
     headStyles: { fillColor: [236, 239, 246], textColor: INK, fontStyle: "bold" }, footStyles: { fillColor: [245, 245, 245], textColor: [20, 20, 20], fontStyle: "bold" }, ...o }));
 
-  doc.setFont("helvetica", "bold"); doc.setFontSize(10); doc.setTextColor(...INK); doc.text("LEDGERLINE", M, 15);
+  doc.setFont("helvetica", "bold"); doc.setFontSize(10); doc.setTextColor(...INK); doc.text("THAPAL", M, 15);
   doc.setFontSize(16); doc.text("Expense Claim Submission", M, 25);
   doc.setFont("helvetica", "normal"); doc.setFontSize(9); doc.setTextColor(80, 80, 80); textU(doc, `To: ${c.organisation} - Accounts Department`, M, 31);
   doc.setDrawColor(...INK); doc.setLineWidth(0.4); doc.line(M, 34, 196, 34);

@@ -15,9 +15,9 @@ import { Bell, BellOff, Plus, Trash2 } from "lucide-react";
 export const Route = createFileRoute("/_authenticated/rules")({
   head: () => ({
     meta: [
-      { title: "Financial rules — Ledgerline" },
+      { title: "Financial rules — Thapal" },
       { name: "description", content: "Build your own money-monitoring rules: spending limits, large transactions, duplicate payments, reserve and card-use alerts." },
-      { property: "og:title", content: "Financial rules — Ledgerline" },
+      { property: "og:title", content: "Financial rules — Thapal" },
       { property: "og:description", content: "Build your own money-monitoring rules without programming." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },

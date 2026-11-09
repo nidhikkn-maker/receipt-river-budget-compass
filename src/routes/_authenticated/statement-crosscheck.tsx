@@ -4,9 +4,9 @@ import { createFileRoute, redirect } from "@tanstack/react-router";
 export const Route = createFileRoute("/_authenticated/statement-crosscheck")({
   beforeLoad: () => { throw redirect({ to: "/statements", replace: true }); },
   head: () => ({ meta: [
-    { title: "Statement Desk — Ledgerline" },
+    { title: "Statement Desk — Thapal" },
     { name: "description", content: "Bank statements are uploaded and matched in Statement Desk." },
-    { property: "og:title", content: "Statement Desk — Ledgerline" },
+    { property: "og:title", content: "Statement Desk — Thapal" },
     { property: "og:description", content: "Upload and match every bank statement in one place." },
     { property: "og:type", content: "website" },
     { name: "twitter:card", content: "summary" },

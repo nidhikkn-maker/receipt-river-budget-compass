@@ -19,9 +19,9 @@ import { DecisionMemory } from "@/components/DecisionMemory";
 export const Route = createFileRoute("/_authenticated/strategy")({
   head: () => ({
     meta: [
-      { title: "Strategy — simulator, emergency fund & milestones · Ledgerline" },
+      { title: "Strategy — simulator, emergency fund & milestones · Thapal" },
       { name: "description", content: "Test money decisions safely, check emergency coverage, plan irregular bills and track milestones." },
-      { property: "og:title", content: "Strategy · Ledgerline" },
+      { property: "og:title", content: "Strategy · Thapal" },
       { property: "og:description", content: "Decision simulator, emergency fund, irregular expenses and milestones." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },

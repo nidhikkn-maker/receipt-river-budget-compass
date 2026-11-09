@@ -19,7 +19,7 @@ export function readBackup(bytes: Uint8Array, zipped: boolean): { backup: Backup
   const json = files["backup.json"];
   if (!json) throw Error("Backup records are missing");
   const backup = JSON.parse(strFromU8(json)) as Backup;
-  if (backup.app !== "ledgerline" || ![1, 2].includes(backup.version) || !backup.data || typeof backup.data !== "object") throw Error("That isn't a Ledgerline backup");
+  if (backup.app !== "ledgerline" || ![1, 2].includes(backup.version) || !backup.data || typeof backup.data !== "object") throw Error("That isn't a Thapal backup");
   for (const t of BACKUP_TABLES) if (backup.data[t] !== undefined && (!Array.isArray(backup.data[t]) || backup.data[t]?.some(r => !r || typeof r !== "object" || Array.isArray(r)))) throw Error("Backup contains invalid records");
   return { backup, files: Object.fromEntries(Object.entries(files).filter(([p]) => p.startsWith("files/")).map(([p, v]) => [p.slice(6), v])) };
 }

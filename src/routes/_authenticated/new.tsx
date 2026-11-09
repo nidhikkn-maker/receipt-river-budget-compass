@@ -70,9 +70,9 @@ export const Route = createFileRoute("/_authenticated/new")({
   validateSearch: quickEntrySearch,
   head: () => ({
     meta: [
-      { title: "Add expense — Ledgerline" },
+      { title: "Add expense — Thapal" },
       { name: "description", content: "Scan a bill in any currency and tag it business or personal." },
-      { property: "og:title", content: "Add expense — Ledgerline" },
+      { property: "og:title", content: "Add expense — Thapal" },
       { property: "og:description", content: "Scan a bill in any currency and tag it business or personal." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },

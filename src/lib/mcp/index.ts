@@ -9,7 +9,7 @@ const projectRef = import.meta.env["VITE_SUPABASE_PROJECT_ID"] ?? "project-ref-u
 
 export default defineMcp({
   name: "receipt-river-budget-compass",
-  title: "Receipt River Budget Compass",
+  title: "Thapal",
   version: "0.1.0",
   instructions: "Read-only access to the signed-in user's personal finance records: transactions, monthly spending by category, account balances and upcoming payments. Amounts are INR.",
   auth: auth.oauth.issuer({ issuer: `https://${projectRef}.supabase.co/auth/v1`, acceptedAudiences: "authenticated", requireOAuthClientClaim: true }),

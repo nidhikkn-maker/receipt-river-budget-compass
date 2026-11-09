@@ -10,9 +10,9 @@ import { supabase } from "@/integrations/supabase/client";
 export const Route = createFileRoute("/_authenticated/assistants")({
   head: () => ({
     meta: [
-      { title: "Connected assistants · Ledgerline" },
-      { name: "description", content: "Review AI assistants connected to your Ledgerline account and revoke their access." },
-      { property: "og:title", content: "Connected assistants · Ledgerline" },
+      { title: "Connected assistants · Thapal" },
+      { name: "description", content: "Review AI assistants connected to your Thapal account and revoke their access." },
+      { property: "og:title", content: "Connected assistants · Thapal" },
       { property: "og:description", content: "Review and revoke AI assistant access to your records." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
@@ -94,13 +94,13 @@ function Assistants() {
         </div>
         <ol className="list-decimal space-y-2 pl-5 text-sm">
           <li>In ChatGPT, open <strong>Settings → Apps</strong>. If available, turn on <strong>Developer mode</strong> in Advanced settings. A workspace administrator may need to enable it.</li>
-          <li>Choose <strong>Create</strong> (workspace administrators: <strong>Workspace settings → Apps → Create</strong>). Name the app <strong>Ledgerline</strong>, enter the address above and select <strong>OAuth</strong>. Use automatic registration if offered; do not paste an account token or API key.</li>
-          <li>Sign in to Ledgerline with the account holding your expenses. Review the request and choose <strong>Approve</strong>, then return to ChatGPT and finish creating the app.</li>
-          <li>Start a chat, select Ledgerline from the apps menu and ask: <strong>“Show my spending by category for October 2026.”</strong></li>
+          <li>Choose <strong>Create</strong> (workspace administrators: <strong>Workspace settings → Apps → Create</strong>). Name the app <strong>Thapal</strong>, enter the address above and select <strong>OAuth</strong>. Use automatic registration if offered; do not paste an account token or API key.</li>
+          <li>Sign in to Thapal with the account holding your expenses. Review the request and choose <strong>Approve</strong>, then return to ChatGPT and finish creating the app.</li>
+          <li>Start a chat, select Thapal from the apps menu and ask: <strong>“Show my spending by category for October 2026.”</strong></li>
         </ol>
         <h3 className="mt-4 mb-2 font-display text-base font-bold">Verify the connection</h3>
         <ol className="list-decimal space-y-2 pl-5 text-sm">
-          <li>In ChatGPT, start a new chat and open the apps menu. <strong>Ledgerline</strong> should appear and show as connected.</li>
+          <li>In ChatGPT, start a new chat and open the apps menu. <strong>Thapal</strong> should appear and show as connected.</li>
           <li>Ask: <strong>“List my five most recent expenses.”</strong> The answer should match the entries on your Expenses page here.</li>
           <li>Come back to this page and reload it. <strong>ChatGPT should appear in the list below</strong> with the date you approved it.</li>
           <li>To confirm revoking works, tap <strong>Revoke</strong> below, then ask the same question in ChatGPT—it should no longer return your records. Reconnect by repeating the steps above.</li>

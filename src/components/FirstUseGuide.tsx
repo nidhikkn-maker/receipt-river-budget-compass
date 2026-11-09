@@ -28,7 +28,7 @@ export function FirstUseGuide() {
       </section>
 
       <section aria-labelledby="journeys-h" className="space-y-3">
-        <h2 id="journeys-h" className="font-display text-xl font-semibold">How Ledgerline handles everyday money</h2>
+        <h2 id="journeys-h" className="font-display text-xl font-semibold">How Thapal handles everyday money</h2>
         <p className="text-sm text-muted-foreground">These are explanations, not your records. Each button opens the real screen; nothing is saved until you confirm there.</p>
         <ol className="divide-y rounded-2xl border bg-card">
           {journeys.map((j) => (

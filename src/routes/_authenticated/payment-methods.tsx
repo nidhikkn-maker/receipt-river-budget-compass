@@ -5,9 +5,9 @@ import { PaymentMethodsManager } from "@/components/PaymentMethodsManager";
 export const Route = createFileRoute("/_authenticated/payment-methods")({
   head: () => ({
     meta: [
-      { title: "Payment methods — Ledgerline" },
+      { title: "Payment methods — Thapal" },
       { name: "description", content: "Save your UPI IDs, debit and credit cards, wallets and cash, each linked to its bank account." },
-      { property: "og:title", content: "Payment methods — Ledgerline" },
+      { property: "og:title", content: "Payment methods — Thapal" },
       { property: "og:description", content: "Save your UPI IDs, debit and credit cards, wallets and cash, each linked to its bank account." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },

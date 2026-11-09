@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { authenticateCronRequest } from "@/integrations/supabase/cron-auth";
 import { bseUrl, candidateDays, nseUrl, parseBhavcopy, type ClosingRow } from "@/lib/market/bhavcopy";
 
-const UA = { "User-Agent": "Mozilla/5.0 (Ledgerline closing prices)", Accept: "*/*" };
+const UA = { "User-Agent": "Mozilla/5.0 (Thapal closing prices)", Accept: "*/*" };
 
 async function fetchDay(d: Date): Promise<{ rows: ClosingRow[]; notes: string[] }> {
   const notes: string[] = []; const rows: ClosingRow[] = [];
