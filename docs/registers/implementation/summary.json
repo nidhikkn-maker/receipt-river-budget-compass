@@ -1,5 +1,5 @@
 {
- "commit": "722b245",
+ "commit": "4c07823",
  "tests": {
   "files": 321,
   "passed_files": 321,
@@ -8,27 +8,29 @@
   "failed": 0
  },
  "completion": {
-  "Missing": 498,
-  "Partial": 966,
-  "Blocked": 38,
-  "Complete (local evidence)": 34
+  "Missing": 474,
+  "Partial": 974,
+  "Blocked": 46,
+  "Complete (local evidence)": 35,
+  "Unverified": 7
  },
  "state": {
-  "Not started": 498,
-  "Tested (local)": 790,
-  "Coded": 210,
-  "Blocked": 38
+  "Not started": 482,
+  "Tested (local)": 793,
+  "Coded": 225,
+  "Blocked": 36
  },
  "completion_p0": {
-  "Missing": 58,
-  "Partial": 215,
-  "Complete (local evidence)": 13,
-  "Blocked": 2
+  "Missing": 34,
+  "Partial": 223,
+  "Unverified": 7,
+  "Complete (local evidence)": 14,
+  "Blocked": 10
  },
  "db_flags": {
   "depends on unapplied SQL": 29
  },
  "missing_code_refs": 0,
  "missing_test_refs": 0,
- "manual_rechecks": 0
+ "manual_rechecks": 288
 }
