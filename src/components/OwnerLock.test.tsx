@@ -33,7 +33,11 @@ const guest: TestUser = { id: OWNER, is_anonymous: true, identities: [], app_met
 
 const lastActivity = (minutesAgo: number) => localStorage.setItem(activityKey(OWNER), String(Date.now() - minutesAgo * MIN));
 const view = () => render(<OwnerLock ownerId={OWNER}><p>Private ledger</p></OwnerLock>);
-const pressPin = (pin: string) => { for (const d of pin) fireEvent.click(screen.getByRole("button", { name: d })); };
+// The keypad is disabled while the previous PIN is being checked; wait until it is ready so keypresses are not dropped.
+const pressPin = async (pin: string) => {
+  await waitFor(() => expect(screen.getByRole("button", { name: "1" })).toBeEnabled());
+  for (const d of pin) fireEvent.click(screen.getByRole("button", { name: d }));
+};
 
 beforeEach(() => {
   vi.useFakeTimers({ toFake: ["Date"] });
@@ -130,7 +134,7 @@ describe("guests", () => {
     expect(await screen.findByText("Enter your MPIN")).toBeInTheDocument();
     expect(m.signOut).not.toHaveBeenCalled();
     expect(screen.queryByRole("button", { name: "Use account password" })).not.toBeInTheDocument();
-    pressPin("2580");
+    await pressPin("2580");
     expect(await screen.findByText("Private ledger")).toBeInTheDocument();
   });
 });
@@ -188,10 +192,10 @@ describe("unlock methods", () => {
     view();
     await screen.findByText("Enter your MPIN");
     for (let left = 4; left >= 1; left--) {
-      pressPin("1357");
+      await pressPin("1357");
       expect(await screen.findByText(`Wrong MPIN. ${left} ${left === 1 ? "try" : "tries"} left.`)).toBeInTheDocument();
     }
-    pressPin("1357");
+    await pressPin("1357");
     expect(await screen.findByText(/Too many wrong tries, so the MPIN was removed\. Use your account password or a code sent to your email\./)).toBeInTheDocument();
     expect(hasMpin(OWNER)).toBe(false);
     expect(screen.queryByText("Enter your MPIN")).not.toBeInTheDocument();
@@ -207,10 +211,10 @@ describe("unlock methods", () => {
     view();
     await screen.findByText("Enter your MPIN");
     for (let left = 4; left >= 1; left--) {
-      pressPin("1357");
+      await pressPin("1357");
       await screen.findByText(`Wrong MPIN. ${left} ${left === 1 ? "try" : "tries"} left.`);
     }
-    pressPin("1357");
+    await pressPin("1357");
     await waitFor(() => expect(m.nav).toHaveBeenCalledWith({ to: "/auth", search: { ended: "guest-idle" }, replace: true }), { timeout: 10_000 }); // five PBKDF2 checks can be slow under parallel load
     expect(screen.queryByText("Private ledger")).not.toBeInTheDocument();
   }, 20_000);

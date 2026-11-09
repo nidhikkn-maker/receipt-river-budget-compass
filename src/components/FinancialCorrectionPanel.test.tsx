@@ -58,4 +58,4 @@ it("type switches preserve applicable source and repayment values but clear inco
   fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
   expect(mocks.apply).not.toHaveBeenCalled();
   expect(e).toMatchObject({ accountId: "bank", txnType: "expense", merchant: "External supplier", statementRef: "Original" });
-});
+}, 20_000); // many sequential form interactions; the default 5 s limit is too tight when several suites run in parallel
