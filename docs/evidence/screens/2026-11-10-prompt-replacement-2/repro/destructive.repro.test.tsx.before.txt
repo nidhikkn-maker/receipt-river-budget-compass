@@ -1,0 +1,69 @@
+// REPRODUCTION (before the fix): destructive financial actions ask with a browser pop-up (window.confirm/prompt).
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import type { Account } from "@/lib/ledger";
+import type { Expense } from "@/lib/expenses";
+import type { TravelTrip } from "@/lib/travel";
+import { defaultPreferences } from "@/lib/preferences";
+import { callsOf, reset, spy } from "../records-archive/harness";
+
+const posting = vi.hoisted(() => ({ status: { installed: false, active: false, guest: false, canPost: false } }));
+vi.mock("@/lib/store", async () => ({ useStore: (await import("../records-archive/harness")).useStoreMock }));
+vi.mock("@tanstack/react-router", async () => (await import("../records-archive/harness")).routerMock);
+vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn(), message: vi.fn() } }));
+vi.mock("@/lib/posting", async (orig) => ({ ...(await orig<typeof import("@/lib/posting")>()), usePostingStatus: () => posting.status }));
+import { ExpenseDetail } from "@/components/ExpenseDialog";
+import { TripClosureCard } from "@/components/trip/TripSections";
+
+const card: Account = { id: "acc-card", name: "Amex card", kind: "credit_card", openingBalance: 0, archived: false };
+const bank: Account = { id: "acc-bank", name: "HDFC savings", kind: "savings", openingBalance: 0, archived: false };
+const lunch = {
+  id: "e-1", title: "Team lunch", merchant: "Toit", category: "Food", scope: "personal", memberId: null, amount: 2400,
+  originalAmount: 2400, currency: "INR", fxRate: 1, date: "2026-11-02", description: "", paymentMethod: "card",
+  txnType: "expense", accountId: "acc-card", receipts: [{ path: "owner/r.jpg", name: "r.jpg", type: "application/pdf" }],
+  tags: [], reimbursementStatus: "pending",
+} as unknown as Expense;
+const trip: TravelTrip = { id: "t-1", name: "Goa offsite", destination: "Goa", start: "2026-12-01", end: "2026-12-04", budget: 50000, currencies: ["INR"], travellers: [], bookings: [], itinerary: [], advances: [] };
+
+const store = (extra: Record<string, unknown> = {}) => reset(defaultPreferences() as unknown as Record<string, unknown>, {
+  accounts: [card, bank], memberName: () => "Me", history: async () => [], signedUrl: async () => null,
+  remove: spy("remove"), setScope: spy("setScope"), setReimbursement: spy("setReimbursement"),
+  recordReimbursement: spy("recordReimbursement"), convertToEmi: spy("convertToEmi"), ...extra,
+});
+let confirmSpy: ReturnType<typeof vi.spyOn>;
+let promptSpy: ReturnType<typeof vi.spyOn>;
+beforeEach(() => {
+  confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(false);
+  promptSpy = vi.spyOn(window, "prompt").mockReturnValue(null);
+});
+afterEach(() => { cleanup(); vi.restoreAllMocks(); });
+
+describe("REPRO: destructive financial actions use browser pop-ups", () => {
+  it("Expense → Delete (posting not active) asks window.confirm('Delete this expense and its receipts?')", async () => {
+    store();
+    render(<ExpenseDetail expense={lunch} onClose={() => {}} />);
+    fireEvent.click(screen.getByRole("button", { name: "Delete" }));
+    expect(confirmSpy).toHaveBeenCalledWith("Delete this expense and its receipts?");
+    expect(callsOf("remove")).toHaveLength(0);
+  });
+  it("Expense → Record reimbursement asks the account name with window.prompt", () => {
+    store();
+    render(<ExpenseDetail expense={lunch} onClose={() => {}} />);
+    fireEvent.click(screen.getByRole("button", { name: "Record reimbursement" }));
+    expect(promptSpy).toHaveBeenCalledWith("Received into which account? Enter its name: HDFC savings");
+  });
+  it("Expense → Convert to EMI asks term, rate and fee with three window.prompt calls", () => {
+    promptSpy.mockReturnValueOnce("6").mockReturnValueOnce("12").mockReturnValueOnce(null);
+    store();
+    render(<ExpenseDetail expense={lunch} onClose={() => {}} />);
+    fireEvent.click(screen.getByRole("button", { name: "Convert to EMI" }));
+    expect(promptSpy.mock.calls.map((c) => c[0])).toEqual(["EMI term in months (2–60)", "Annual EMI interest %", "Processing fee (₹)"]);
+    expect(callsOf("convertToEmi")).toHaveLength(0);
+  });
+  it("Trip → Cancel trip asks window.confirm", () => {
+    store({ transactions: [] });
+    render(<TripClosureCard trip={trip} />);
+    fireEvent.click(screen.getByRole("button", { name: "Cancel trip" }));
+    expect(confirmSpy).toHaveBeenCalledWith("Cancel this trip? Records stay; the trip is marked cancelled.");
+  });
+});

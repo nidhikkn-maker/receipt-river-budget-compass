@@ -1,0 +1,98 @@
+// REPRODUCTION (before the fix): approvals ask with a browser pop-up (window.confirm/prompt).
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { defaultPreferences } from "@/lib/preferences";
+import { emptyBooks } from "@/lib/books/types";
+import { callsOf, reset, spy } from "../records-archive/harness";
+import { fake, resetFake } from "./fake-supabase";
+
+vi.mock("@/lib/store", async () => ({ useStore: (await import("../records-archive/harness")).useStoreMock }));
+vi.mock("@tanstack/react-router", async () => (await import("../records-archive/harness")).routerMock);
+vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn(), message: vi.fn(), info: vi.fn() } }));
+vi.mock("@/integrations/supabase/client", async () => (await import("./fake-supabase")).supabaseMock);
+vi.mock("@/lib/offline", () => ({ localDrafts: async () => [], putLocalDraft: async () => undefined, removeLocalDraft: async () => undefined }));
+vi.mock("@/components/books/AccountantReviews", () => ({ AccountantReviews: () => null }));
+vi.mock("@/components/AppShell", () => ({ PageTitle: ({ title }: { title: string }) => <h1>{title}</h1> }));
+vi.mock("@/components/SectionTabs", () => ({ SectionTabs: () => null }));
+vi.mock("@/components/StrategyStressCooling", () => ({ CoolingOff: () => null, StressTest: () => null }));
+vi.mock("@/components/DecisionMemory", () => ({ DecisionMemory: () => null }));
+vi.mock("@/lib/use-intelligence", async () => {
+  const h = await import("../records-archive/harness");
+  return {
+    useIntelligence: () => ({
+      store: h.harness.store, today: "2026-11-10", emis: 0, metrics: {},
+      ef: { reserves: 0, coverage: 0, target: 0, months: 6, monthly: 0, gap: 0, accounts: [] },
+      p: { cash: 200000, minBalance: 10000, reserves: 0, flow: { income: 120000, spent: 80000 } },
+    }),
+  };
+});
+import { AccountingJournalReview } from "@/components/books/AccountingJournalReview";
+import { SharedWithMe } from "@/components/books/CompanyAccess";
+import { RulesRegister } from "@/components/books/TaxCentre";
+import { Route as StrategyRoute } from "@/routes/_authenticated/strategy";
+const Strategy = (StrategyRoute as unknown as { component: () => React.ReactElement }).component;
+
+const journal = {
+  id: "j-1", entityId: "ent-1", date: "2026-10-31", kind: "accrual", description: "October audit fee accrual", documentIds: [],
+  legs: [
+    { code: "expense:audit", label: "Audit fee", role: "expense", debit: 50000, credit: 0 },
+    { code: "payable:auditor", label: "Auditor", role: "liability", debit: 0, credit: 50000 },
+  ],
+};
+const journalEntry = {
+  id: "e-j1", title: "Audit fee accrual", amount: 0, date: "2026-10-31", txnType: "adjustment", receipts: [], tags: [],
+  receiptDetails: { accounting: { primary: true, journal } },
+};
+const company = {
+  grant_id: "g-1", owner_id: "own-2", entity_id: "ent-9", company_name: "Acme Traders", owner_email: "owner@example.test", can_write: true,
+};
+const sharedTxn = {
+  id: "st-1", employee_id: "own-2", entity_id: "ent-9", title: "Office rent", merchant: "Landlord", category: "Rent",
+  amount: 40000, currency: "INR", expense_date: "2026-10-05", txn_type: "expense",
+};
+const rule = {
+  id: "r-1", area: "income_tax", key: "custom.threshold", title: "New threshold", value: "5000",
+  sourceUrl: "https://incometax.gov.in/notice", publishedOn: "2024-03-01", effectiveFrom: "2024-04-01",
+  appliesTo: [], status: "proposed", tests: [],
+};
+const closedFy = { id: "cp-1", from: "2024-04-01", to: "2025-03-31", closedOn: "2025-06-30", note: "FY 2024-25 audited" };
+
+let confirmSpy: ReturnType<typeof vi.spyOn>;
+let promptSpy: ReturnType<typeof vi.spyOn>;
+beforeEach(() => {
+  resetFake();
+  confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(false);
+  promptSpy = vi.spyOn(window, "prompt").mockReturnValue(null);
+});
+afterEach(() => { cleanup(); vi.restoreAllMocks(); });
+
+describe("REPRO: approvals use browser pop-ups", () => {
+  it("Company journal → Prepare reversal asks the reason with window.prompt", async () => {
+    reset(defaultPreferences() as unknown as Record<string, unknown>, { transactions: [journalEntry], accountingAvailable: async () => true, documents: [] });
+    render(<AccountingJournalReview entityId="ent-1" />);
+    fireEvent.click(await screen.findByRole("button", { name: "Prepare reversal" }));
+    expect(promptSpy).toHaveBeenCalledWith("Reason for reversing this journal");
+  });
+  it("Shared company → Edit asks the description with window.prompt", async () => {
+    resetFake({ expenses: [sharedTxn], documents: [] }, { my_shared_companies: [company] });
+    reset(defaultPreferences() as unknown as Record<string, unknown>, {});
+    render(<SharedWithMe />);
+    fireEvent.click(await screen.findByRole("button", { name: "Edit" }));
+    expect(promptSpy).toHaveBeenCalledWith("Description", "Office rent");
+    expect(fake.writes).toHaveLength(0);
+  });
+  it("Rules → Approve a rule reaching into a closed year asks window.confirm", async () => {
+    reset({ ...defaultPreferences(), books: { ...emptyBooks(), rules: [rule], closedPeriods: [closedFy] } } as unknown as Record<string, unknown>, {});
+    render(<RulesRegister />);
+    fireEvent.click(await screen.findByRole("button", { name: "Approve" }));
+    expect(confirmSpy).toHaveBeenCalledWith(expect.stringContaining("This rule reaches back into FY 2024-25"));
+  });
+  it("Strategy → Save as planned payment asks window.confirm", async () => {
+    reset(defaultPreferences() as unknown as Record<string, unknown>, { saveCommitment: spy("saveCommitment") });
+    render(<Strategy />);
+    fireEvent.change(screen.getByPlaceholderText("0"), { target: { value: "45000" } });
+    fireEvent.click(screen.getByRole("button", { name: "Save as planned payment…" }));
+    expect(confirmSpy).toHaveBeenCalledWith(expect.stringContaining("as a planned payment? It will appear in your Plan and forecast."));
+    expect(callsOf("saveCommitment")).toHaveLength(0);
+  });
+});

@@ -1,0 +1,91 @@
+{
+ "shots": [
+  {
+   "name": "iphone-before-01-expense-delete.jpg",
+   "note": "Expense: Delete asks with a browser pop-up (window.confirm: \"Delete this expense and its receipts?\") that names nothing and cannot be styled"
+  },
+  {
+   "name": "iphone-before-02-trip-cancel.jpg",
+   "note": "Trip: Cancel trip asks with a browser pop-up (window.confirm)"
+  },
+  {
+   "name": "ipad-before-01-expense-delete.jpg",
+   "note": "Expense: Delete asks with a browser pop-up (window.confirm: \"Delete this expense and its receipts?\") that names nothing and cannot be styled"
+  },
+  {
+   "name": "ipad-before-02-trip-cancel.jpg",
+   "note": "Trip: Cancel trip asks with a browser pop-up (window.confirm)"
+  },
+  {
+   "name": "desktop-before-01-expense-delete.jpg",
+   "note": "Expense: Delete asks with a browser pop-up (window.confirm: \"Delete this expense and its receipts?\") that names nothing and cannot be styled"
+  },
+  {
+   "name": "desktop-before-02-trip-cancel.jpg",
+   "note": "Trip: Cancel trip asks with a browser pop-up (window.confirm)"
+  },
+  {
+   "name": "desktop-before-03-period-close-freeze.jpg",
+   "note": "Audit → Closed periods: Close period and Freeze FY ask with browser pop-ups (window.confirm); nothing to type, no statement of who can reopen"
+  }
+ ],
+ "browserPrompts": [
+  {
+   "tag": "iphone",
+   "type": "confirm",
+   "message": "Delete this expense and its receipts?",
+   "defaultValue": ""
+  },
+  {
+   "tag": "iphone",
+   "tableWrites": [],
+   "preferenceSaves": 0
+  },
+  {
+   "tag": "ipad",
+   "type": "confirm",
+   "message": "Delete this expense and its receipts?",
+   "defaultValue": ""
+  },
+  {
+   "tag": "ipad",
+   "tableWrites": [],
+   "preferenceSaves": 0
+  },
+  {
+   "tag": "desktop",
+   "type": "confirm",
+   "message": "Delete this expense and its receipts?",
+   "defaultValue": ""
+  },
+  {
+   "tag": "desktop",
+   "type": "confirm",
+   "message": "Cancel this trip? Records stay; the trip is marked cancelled.",
+   "defaultValue": ""
+  },
+  {
+   "tag": "desktop",
+   "type": "confirm",
+   "message": "Close 2025-04-01 to 2026-03-31 and retain the saved records as evidence?",
+   "defaultValue": ""
+  },
+  {
+   "tag": "desktop",
+   "type": "confirm",
+   "message": "Freeze FY 2025-26? Entries, opening balances and GST invoices dated 1 April 2025 – 31 March 2026 can't be changed until it is reopened with a reason.",
+   "defaultValue": ""
+  },
+  {
+   "tag": "desktop",
+   "type": "prompt",
+   "message": "Reopening a closed period needs a reason (kept permanently):",
+   "defaultValue": ""
+  },
+  {
+   "tag": "desktop",
+   "tableWrites": [],
+   "preferenceSaves": 0
+  }
+ ]
+}

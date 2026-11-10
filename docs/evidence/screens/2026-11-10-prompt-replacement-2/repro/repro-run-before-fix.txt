@@ -1,0 +1,20 @@
+9bf2b6a
+ ✓ src/components/prompt-replacement/approvals.repro.test.tsx > REPRO: approvals use browser pop-ups > Company journal → Prepare reversal asks the reason with window.prompt 484ms
+ ✓ src/components/prompt-replacement/approvals.repro.test.tsx > REPRO: approvals use browser pop-ups > Shared company → Edit asks the description with window.prompt 80ms
+ ✓ src/components/prompt-replacement/approvals.repro.test.tsx > REPRO: approvals use browser pop-ups > Rules → Approve a rule reaching into a closed year asks window.confirm 215ms
+ ✓ src/components/prompt-replacement/approvals.repro.test.tsx > REPRO: approvals use browser pop-ups > Strategy → Save as planned payment asks window.confirm 136ms
+ ✓ src/components/prompt-replacement/destructive.repro.test.tsx > REPRO: destructive financial actions use browser pop-ups > Expense → Delete (posting not active) asks window.confirm('Delete this expense and its receipts?') 676ms
+ ✓ src/components/prompt-replacement/destructive.repro.test.tsx > REPRO: destructive financial actions use browser pop-ups > Expense → Record reimbursement asks the account name with window.prompt 192ms
+ ✓ src/components/prompt-replacement/destructive.repro.test.tsx > REPRO: destructive financial actions use browser pop-ups > Expense → Convert to EMI asks term, rate and fee with three window.prompt calls 212ms
+ ✓ src/components/prompt-replacement/destructive.repro.test.tsx > REPRO: destructive financial actions use browser pop-ups > Trip → Cancel trip asks window.confirm 34ms
+ ✓ src/components/prompt-replacement/values2.repro.test.tsx > REPRO: remaining value edits use window.prompt > Property → + building / + floor / + unit / Renew each ask with window.prompt 431ms
+ ✓ src/components/prompt-replacement/values2.repro.test.tsx > REPRO: remaining value edits use window.prompt > Settings → Rename category asks with window.prompt 1024ms
+ ✓ src/components/prompt-replacement/values2.repro.test.tsx > REPRO: remaining value edits use window.prompt > Organisations → Rename asks with window.prompt 25ms
+ ✓ src/components/prompt-replacement/values2.repro.test.tsx > REPRO: remaining value edits use window.prompt > Split → Save as template asks the name with window.prompt 29ms
+ ✓ src/components/prompt-replacement/values2.repro.test.tsx > REPRO: remaining value edits use window.prompt > Goals → Update asks 'Saved so far (₹)' with window.prompt 25ms
+ ✓ src/components/prompt-replacement/period-closing.repro.test.tsx > REPRO: period closing uses browser pop-ups > Close period asks window.confirm and nothing is sent on Cancel 251ms
+ ✓ src/components/prompt-replacement/period-closing.repro.test.tsx > REPRO: period closing uses browser pop-ups > Freeze FY asks window.confirm 114ms
+ ✓ src/components/prompt-replacement/period-closing.repro.test.tsx > REPRO: period closing uses browser pop-ups > Reopen a closed period asks the reason with window.prompt 75ms
+ ✓ src/components/prompt-replacement/period-closing.repro.test.tsx > REPRO: period closing uses browser pop-ups > Mark fixed asks the note with window.prompt 75ms
+ Test Files  4 passed (4)
+      Tests  17 passed (17)

@@ -6,7 +6,9 @@ import { toast } from "sonner";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { correctionToday, removalMode, usePostingStatus, validReason } from "@/lib/posting";
+import { correctionToday, removalMode, ReversalReasonRequired, usePostingStatus, validReason } from "@/lib/posting";
+import { ConfirmDialog } from "./ConfirmDialog";
+import { emiProblems } from "@/lib/value-edits";
 import { Input } from "@/components/ui/input";
 import { isReversalHistory } from "@/lib/ledger";
 import { Button } from "@/components/ui/button";
@@ -53,6 +55,10 @@ export function ExpenseDetail({ expense, onClose }: { expense: Expense; onClose:
   const [requestId, setRequestId] = useState(() => crypto.randomUUID());
   const [audit, setAudit] = useState<AuditEntry[]>([]);
   const [busy,setBusy]=useState(false);
+  // In-app dialogs (never a browser pop-up): delete when posting is not active, reimbursement account, card EMI terms.
+  const [ask,setAsk]=useState<null|"delete"|"reimburse"|"emi">(null);
+  const [reimburseTo,setReimburseTo]=useState("");
+  const [emi,setEmi]=useState({months:"6",rate:"12",fee:"0"});
   const [auditFailed,setAuditFailed]=useState(false);
   const [auditTry,setAuditTry]=useState(0);
   const loadAudit=()=>setAuditTry(n=>n+1);
@@ -70,11 +76,22 @@ export function ExpenseDetail({ expense, onClose }: { expense: Expense; onClose:
     try { await remove(e, { reason, requestId, correctionDate }); toast.success("Entry reversed on the correction date. The original, its reversal, the audit record and receipts are all kept."); setReverseOpen(false); onClose(); }
     catch (err) { toast.error((err as Error).message); }
   };
-  const del = async () => {
-    if (reverse) { setReason(""); setCorrectionDate(correctionToday()); setRequestId(crypto.randomUUID()); setReverseOpen(true); return; }
-    if (!confirm("Delete this expense and its receipts?")) return;
-    try { await remove(e); toast.success("Expense deleted"); onClose(); } catch (err) { toast.error((err as Error).message); }
+  const openReverse = () => { setReason(""); setCorrectionDate(correctionToday()); setRequestId(crypto.randomUUID()); setReverseOpen(true); };
+  const del = () => {
+    if (reverse) { openReverse(); return; }
+    setAsk("delete");
   };
+  // Same store call as before (remove without a reason). If the database says the entry is posted after all, nothing
+  // was deleted: the reversal dialog takes over, as the delete dialog says it will.
+  const deleteNow = async () => {
+    try { await remove(e); }
+    catch (err) { if (err instanceof ReversalReasonRequired) { setAsk(null); openReverse(); return; } throw err; }
+    toast.success("Expense deleted"); onClose();
+  };
+  const noun = (e.txnType ?? "expense") === "expense" ? "expense" : "entry";
+  const cashAccounts = accounts.filter(a=>!a.archived&&["savings","current","cash","wallet"].includes(a.kind));
+  const emiCheck = emiProblems(emi);
+  const today = new Date().toLocaleDateString("en-CA");
 
   return (
     <div className="space-y-4">
@@ -100,7 +117,7 @@ export function ExpenseDetail({ expense, onClose }: { expense: Expense; onClose:
         <ScopeToggle value={scope} onChange={changeScope} />
         {e.description && <p className="text-sm">{e.description}</p>}
         {e.reconciledAt && <p className="text-sm text-success">Matched to bank statement: {e.statementRef}</p>}
-        {(e.txnType??"expense")==="expense"&&<div className="flex flex-wrap gap-2 border-t pt-3"><span className="w-full text-sm">{REIMBURSEMENT_LABEL[e.reimbursementStatus??"none"]}</span><Button size="sm" variant="outline" disabled={busy} onClick={async()=>{setBusy(true);try{await setReimbursement(e.id,e.reimbursementStatus==="pending"?"none":"pending");toast.success("Reimbursement status updated");onClose();}catch(err){toast.error((err as Error).message);}finally{setBusy(false);}}}>{e.reimbursementStatus==="pending"?"Remove claim":"Mark reimbursable"}</Button>{e.reimbursementStatus==="pending"&&<Button size="sm" disabled={busy} onClick={async()=>{const candidates=accounts.filter(a=>!a.archived&&["savings","current","cash","wallet"].includes(a.kind));const selected=window.prompt(`Received into which account? Enter its name: ${candidates.map(a=>a.name).join(", ")}`);if(!selected)return;const account=candidates.find(a=>a.name.toLowerCase()===selected.toLowerCase());if(!account){toast.error("Choose one of your cash or bank accounts");return;}setBusy(true);try{await recordReimbursement([e.id],account.id,new Date().toLocaleDateString("en-CA"));toast.success("Reimbursement received");onClose();}catch(err){toast.error((err as Error).message);}finally{setBusy(false);}}}>Record reimbursement</Button>}{accounts.find(a=>a.id===e.accountId)?.kind==="credit_card"&&<Button size="sm" variant="outline" disabled={busy} onClick={async()=>{const months=window.prompt("EMI term in months (2–60)","6");if(!months)return;const rate=window.prompt("Annual EMI interest %","12");if(rate===null)return;const fee=window.prompt("Processing fee (₹)","0");if(fee===null)return;setBusy(true);try{await convertToEmi(e,{months:Number(months),rate:Number(rate),fee:Number(fee)});toast.success("Purchase converted to EMI");onClose();}catch(err){toast.error((err as Error).message);}finally{setBusy(false);}}}>Convert to EMI</Button>}</div>}
+        {(e.txnType??"expense")==="expense"&&<div className="flex flex-wrap gap-2 border-t pt-3"><span className="w-full text-sm">{REIMBURSEMENT_LABEL[e.reimbursementStatus??"none"]}</span><Button size="sm" variant="outline" disabled={busy} onClick={async()=>{setBusy(true);try{await setReimbursement(e.id,e.reimbursementStatus==="pending"?"none":"pending");toast.success("Reimbursement status updated");onClose();}catch(err){toast.error((err as Error).message);}finally{setBusy(false);}}}>{e.reimbursementStatus==="pending"?"Remove claim":"Mark reimbursable"}</Button>{e.reimbursementStatus==="pending"&&<Button size="sm" disabled={busy} onClick={()=>{setReimburseTo(cashAccounts.length===1?cashAccounts[0]!.id:"");setAsk("reimburse");}}>Record reimbursement</Button>}{accounts.find(a=>a.id===e.accountId)?.kind==="credit_card"&&<Button size="sm" variant="outline" disabled={busy} onClick={()=>{setEmi({months:"6",rate:"12",fee:"0"});setAsk("emi");}}>Convert to EMI</Button>}</div>}
         {(e.txnType??"expense")==="expense"&&<details className="border-t pt-3" open={!!e.allocations?.length}><summary className="cursor-pointer text-sm font-semibold">{e.allocations?.length?`Split across ${e.allocations.length} categories`:"Split by category"}</summary><div className="mt-2"><AllocationEditor e={e} onDone={onClose}/></div></details>}
         {(e.txnType??"expense")==="expense"&&<details className="border-t pt-3"><summary className="cursor-pointer text-sm font-semibold">Reimbursement claim details</summary><div className="mt-2"><ReimbursementEditor e={e} onDone={onClose}/></div></details>}
         {e.receipts.length > 0 && (
@@ -131,6 +148,63 @@ export function ExpenseDetail({ expense, onClose }: { expense: Expense; onClose:
         </div>
         )}
         <details className="border-t pt-3"><summary className="cursor-pointer text-sm">Change history</summary>{auditFailed&&<LoadError className="mt-2" what="the change history" onRetry={loadAudit} />}<ul className="mt-2 divide-y text-xs">{audit.map(a=><li key={a.id} className="py-2"><b className="capitalize">{a.action}</b> · {new Date(a.createdAt).toLocaleString()}<div>{a.summary}</div>{Object.entries(a.changes).map(([key,value])=><p key={key} className="break-words text-muted-foreground">{key.replaceAll("_"," ")}: {JSON.stringify(value)}</p>)}</li>)}</ul></details>
+        <ConfirmDialog
+          open={ask==="delete"}
+          destructive
+          title={`Delete “${e.title}”?`}
+          description={`This ${noun} is deleted, not reversed: posting to your books is not active for it, so it is removed from your records together with its receipt files. This can't be undone.`}
+          consequences={[
+            `${money(e.originalAmount, e.currency)} on ${e.date}${accounts.find(a=>a.id===e.accountId) ? ` · ${accounts.find(a=>a.id===e.accountId)!.name}` : ""} is removed from balances and reports`,
+            e.receipts.length ? `${e.receipts.length} receipt file${e.receipts.length===1?" is":"s are"} deleted` : "No receipt files are attached",
+            "If it turns out to be posted to your books, nothing is deleted and you are asked to reverse it with a reason instead",
+          ]}
+          confirmLabel={`Delete ${noun}`}
+          cancelLabel={`Keep ${noun}`}
+          onConfirm={deleteNow}
+          onClose={()=>setAsk(null)}
+        />
+        <ConfirmDialog
+          open={ask==="reimburse"}
+          title="Record reimbursement received"
+          description={`Records the money paid back for “${e.title}” as a reimbursement entry dated today (${today}) into the account you choose. It settles this claim and is not counted as income.`}
+          confirmLabel="Record reimbursement"
+          ready={cashAccounts.some(a=>a.id===reimburseTo)}
+          onConfirm={async()=>{await recordReimbursement([e.id],reimburseTo,today);toast.success("Reimbursement received");onClose();}}
+          onClose={()=>setAsk(null)}
+        >
+          {cashAccounts.length ? (
+            <fieldset className="space-y-1">
+              <legend className="mb-1 text-sm font-medium">Received into</legend>
+              {cashAccounts.map(a=>(
+                <label key={a.id} className="flex min-h-11 cursor-pointer items-center gap-3 rounded-xl border px-3 text-sm">
+                  <input type="radio" name="reimburse-account" value={a.id} checked={reimburseTo===a.id} onChange={()=>setReimburseTo(a.id)} className="size-4" />
+                  <span className="break-words">{a.name}</span>
+                </label>
+              ))}
+            </fieldset>
+          ) : (
+            <p role="alert" className="text-sm text-destructive">Choose one of your cash or bank accounts — add a savings, current, cash or wallet account first.</p>
+          )}
+        </ConfirmDialog>
+        <ConfirmDialog
+          open={ask==="emi"}
+          title={`Convert “${e.title}” to EMI`}
+          description={`A card EMI plan is created for this ${money(e.amount)} purchase with the term and rate below, repaid monthly on the card. A processing fee above zero is recorded as a separate "Financial charges" expense on the card today. The purchase itself is not changed.`}
+          confirmLabel="Convert to EMI"
+          ready={!emiCheck.months&&!emiCheck.rate&&!emiCheck.fee}
+          onConfirm={async()=>{await convertToEmi(e,{months:Number(emi.months),rate:Number(emi.rate),fee:Number(emi.fee)});toast.success("Purchase converted to EMI");onClose();}}
+          onClose={()=>setAsk(null)}
+        >
+          <div className="grid gap-3 sm:grid-cols-3">
+            {([["months","EMI term in months (2–60)"],["rate","Annual EMI interest %"],["fee","Processing fee (₹)"]] as const).map(([k,label])=>(
+              <div key={k} className="space-y-1">
+                <Label htmlFor={`emi-${k}`}>{label}</Label>
+                <Input id={`emi-${k}`} inputMode={k==="months"?"numeric":"decimal"} value={emi[k]} aria-invalid={emiCheck[k]?true:undefined} aria-describedby={`emi-${k}-note`} onChange={ev=>setEmi({...emi,[k]:ev.target.value})} />
+                <p id={`emi-${k}-note`} className={emiCheck[k]?"text-sm text-destructive":"text-xs text-muted-foreground"}>{emiCheck[k]??""}</p>
+              </div>
+            ))}
+          </div>
+        </ConfirmDialog>
         <Dialog open={reverseOpen} onOpenChange={(o) => { if (!o) setReverseOpen(false); }}>
           <DialogContent aria-label="Reverse entry" className="max-h-[85dvh] overflow-y-auto sm:max-w-md">
             <DialogHeader>

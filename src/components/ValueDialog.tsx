@@ -26,6 +26,10 @@ export interface ValueDialogProps {
   initialValue?: string;
   /** "decimal" brings up the number keypad on phones; the text is still parsed by the caller exactly as typed. */
   inputMode?: "text" | "decimal";
+  /** "date" shows the date picker; the value is still YYYY-MM-DD text checked by `validate`. */
+  type?: "text" | "date";
+  /** Longest value the field accepts. */
+  maxLength?: number;
   placeholder?: string;
   /** Shown under the field while there is no problem. */
   hint?: string;
@@ -45,6 +49,8 @@ export function ValueDialog({
   label,
   initialValue = "",
   inputMode = "text",
+  type = "text",
+  maxLength,
   placeholder,
   hint,
   confirmLabel,
@@ -123,7 +129,9 @@ export function ValueDialog({
               ref={input}
               id={`${id}-value`}
               value={value}
+              type={type}
               inputMode={inputMode}
+              maxLength={maxLength}
               placeholder={placeholder}
               autoComplete="off"
               disabled={busy}

@@ -5,6 +5,8 @@ import { Input } from "@/components/ui/input";
 import { allocateByPercent, money, validateAllocations, type Allocation, type Expense } from "@/lib/expenses";
 import { REIMB_STAGES, REIMB_STAGE_LABEL, outstandingOf, receivedOf, reimbursableOf, stageOf, type ReimbStage } from "@/lib/reimbursements";
 import { useStore } from "@/lib/store";
+import { ValueDialog } from "@/components/ValueDialog";
+import { requiredText } from "@/lib/value-edits";
 
 const today = () => new Date().toLocaleDateString("en-CA");
 
@@ -17,6 +19,7 @@ export function AllocationEditor({ e, onDone }: { e: Expense; onDone?: () => voi
   const [mode, setMode] = useState<"amount" | "pct">("amount");
   const [pcts, setPcts] = useState<number[]>(start.map((l) => Math.round((l.amount / e.amount) * 10000) / 100));
   const [busy, setBusy] = useState(false);
+  const [naming, setNaming] = useState(false);
   const current = mode === "amount" ? lines : (() => { try { return allocateByPercent(e.amount, lines.map((l, i) => ({ category: l.category, pct: pcts[i] ?? 0 }))).map((a, i) => ({ ...lines[i]!, amount: a.amount })); } catch { return lines.map((l) => ({ ...l, amount: 0 })); } })();
   const sum = Math.round(current.reduce((s, l) => s + l.amount, 0) * 100) / 100;
   const left = Math.round((e.amount - sum) * 100) / 100;
@@ -44,7 +47,18 @@ export function AllocationEditor({ e, onDone }: { e: Expense; onDone?: () => voi
         <Button type="button" size="sm" variant="outline" onClick={() => { setLines([...lines, { category: cats[0] ?? e.category, amount: Math.max(0, left) }]); setPcts([...pcts, 0]); }}>Add line</Button>
         <Button type="button" size="sm" variant="gold" disabled={busy || left !== 0} onClick={() => save(current)}>Save split</Button>
         {!!e.allocations?.length && <Button type="button" size="sm" variant="ghost" disabled={busy} onClick={() => save([])}>Remove split</Button>}
-        <Button type="button" size="sm" variant="ghost" disabled={left !== 0} onClick={async () => { const name = window.prompt("Template name"); if (!name) return; await savePreferences({ ...preferences, splitTemplates: [...preferences.splitTemplates.filter((t) => t.name !== name), { name, lines: current.map((l) => ({ category: l.category, pct: Math.round((l.amount / e.amount) * 10000) / 100 })) }] }); toast.success("Template saved"); }}>Save as template</Button>
+        <Button type="button" size="sm" variant="ghost" disabled={left !== 0} onClick={() => setNaming(true)}>Save as template</Button>
+        <ValueDialog
+          open={naming}
+          title="Save split as a template"
+          description="Saves these categories and their percentages so you can apply the same split to another entry. This entry is not changed."
+          label="Template name"
+          hint={preferences.splitTemplates.length ? "A template with the same name is replaced." : ""}
+          confirmLabel="Save template"
+          validate={requiredText("Name the template")}
+          onSubmit={async (name) => { await savePreferences({ ...preferences, splitTemplates: [...preferences.splitTemplates.filter((t) => t.name !== name), { name, lines: current.map((l) => ({ category: l.category, pct: Math.round((l.amount / e.amount) * 10000) / 100 })) }] }); toast.success("Template saved"); }}
+          onClose={() => setNaming(false)}
+        />
       </div>
       {preferences.splitTemplates.length > 0 && <div className="flex flex-wrap gap-1 text-xs"><span className="self-center text-muted-foreground">Templates:</span>{preferences.splitTemplates.map((t) => <Button key={t.name} type="button" size="sm" variant="outline" onClick={() => { try { const fixed = t.lines.map((l, i) => i === t.lines.length - 1 ? { ...l, pct: Math.round((100 - t.lines.slice(0, -1).reduce((s, x) => s + x.pct, 0)) * 100) / 100 } : l); setLines(allocateByPercent(e.amount, fixed)); setPcts(fixed.map((l) => l.pct)); setMode("amount"); } catch (err) { toast.error((err as Error).message); } }}>{t.name}</Button>)}</div>}
     </div>

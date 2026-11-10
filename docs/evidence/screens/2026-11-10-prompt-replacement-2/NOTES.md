@@ -1,0 +1,18 @@
+# Progress notes (Track C, prompt replacement 2)
+- [x] ff-merged integration/phase2-3-p0 -> 9bf2b6a
+- [x] src/components/ConfirmDialog.tsx written (reason / typed / children / destructive; native-sheet)
+- Plan: repro test src/components/prompt-replacement/confirms.repro.test.tsx (browser confirm/prompt called) -> save .before.txt -> fix -> regression
+- [x] repro tests written (4 files, 17 tests, all pass on 9bf2b6a = every pop-up reproduced); saved to repro/*.before.txt + repro-run-before-fix.txt
+- [x] acceptance test made strict (prompt+confirm); before-fix run saved (2 failing, 12 files)
+- [ ] before screenshots (capture script) — next
+- [x] before captures done (all 3 viewports; desktop in index-before.json, iphone/ipad re-run in index-before-iphone-ipad.json). Dev server PID in scratchpad vite8084.pid (port 8084, fixture env).
+- [ ] fixes: value-edits rules, ValueDialog type, ExpenseDialog, Trip, approvals, audit, value prompts
+- [x] ExpenseDialog (delete/reimburse/EMI) + TripSections cancel fixed; destructive regression 7/7
+- [x] approvals fixed (journal reversal, shared company edit, rules approve, strategy) — regression 5/5
+- [x] audit.tsx fixed (close/freeze typed, reopen reason, finding note) — regression test next
+- [x] period-closing regression 6/6 (finding note rule: >=3 chars, setFindingState)
+- [x] value prompts fixed (Property x4, FinanceSettings, Organisations, Split template, Goal saved); values2 regression next
+- [x] values2 regression 6/6
+- [x] regression run saved; period-close browser scripts updated to in-app dialogs (not run: need real session)
+- [x] after captures (iPad/desktop index-after.json; iPhone re-run index-after-iphone.json after trip overflow fix); server 8084 stopped by PID
+- [x] README written

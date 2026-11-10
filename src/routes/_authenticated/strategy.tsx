@@ -15,6 +15,7 @@ import { addMonths } from "@/lib/planning";
 import { useIntelligence } from "@/lib/use-intelligence";
 import { CoolingOff, StressTest } from "@/components/StrategyStressCooling";
 import { DecisionMemory } from "@/components/DecisionMemory";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { archiveInList, restoreInList } from "@/lib/archive";
 import { recordIsArchived, type Archivable } from "@/lib/records-archive";
 import { ArchivedRecords, useArchiveFlow } from "@/components/ArchivedRecords";
@@ -72,9 +73,13 @@ function Simulator() {
   }), [p, store.commitments, store.goals, store.loans, today, flow]);
   const r = s.amount > 0 ? simulate(input, s) : null;
   const set = (patch: Partial<Scenario>) => setS({ ...s, ...patch });
-  const savePlan = async () => {
+  const [asking, setAsking] = useState(false);
+  const savePlan = () => {
+    if (saving || !r) return;
+    setAsking(true);
+  };
+  const confirmPlan = async () => {
     if (saving) return;
-    if (!r || !confirm(`Save "${SCENARIO_LABEL[s.kind]}" of ${money(s.amount)} as a planned payment? It will appear in your Plan and forecast.`)) return;
     setSaving(true);
     try {
       const plan = plannedScenario(s);
@@ -122,6 +127,14 @@ function Simulator() {
             {r.notes.map((n) => <p key={n} className="mt-2 text-xs text-muted-foreground">{n}</p>)}
             {r.after.shortDays > 0 && <p className="mt-2 text-sm font-semibold text-destructive">This would take you below your safety balance on {r.after.shortDays} days.</p>}
             {["purchase", "postpone", "new_recurring"].includes(s.kind) && <Button variant="gold" className="mt-3 w-full" disabled={saving} onClick={savePlan}>Save as planned payment…</Button>}
+            <ConfirmDialog
+              open={asking}
+              title={`Save “${SCENARIO_LABEL[s.kind]}” of ${money(s.amount)} as a planned payment?`}
+              description="It will appear in your Plan and forecast as an upcoming payment. Nothing is paid and no money moves; you can edit or remove it in Plan."
+              confirmLabel="Save to plan"
+              onConfirm={confirmPlan}
+              onClose={() => setAsking(false)}
+            />
           </Card>
         </>
       )}

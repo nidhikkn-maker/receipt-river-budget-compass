@@ -30,12 +30,14 @@ async def main():
   await page.goto('http://localhost:8080'); await page.evaluate('([k,v])=>localStorage.setItem(k,v)',[m['storage_key'],json.dumps(m['session'])]); await page.goto('http://localhost:8080/audit#periods')
   await page.get_by_role('button',name='Close period',exact=True).wait_for(timeout=60000)
   await page.get_by_label('From',exact=True).fill('2025-04-01'); await page.get_by_label('To',exact=True).fill('2026-03-31'); await page.get_by_placeholder('Note (e.g. FY audited and filed)').fill('Controlled review')
-  page.on('dialog',lambda d:d.accept('Accountant correction') if d.type=='prompt' else d.accept())
-  await page.get_by_role('button',name='Close period',exact=True).click(); await page.get_by_text('Saved closing evidence (1)',exact=True).wait_for(); await page.get_by_text('Saved closing evidence (1)',exact=True).click(); await page.get_by_text('2 entries · 1 reconciled',exact=False).wait_for()
+  # Closing and reopening use in-app dialogs (typed period, required reason); any browser pop-up is a failure.
+  page.on('dialog',lambda d:(errors.append('browser dialog: '+d.message),asyncio.ensure_future(d.dismiss())))
+  await page.get_by_role('button',name='Close period',exact=True).click(); dlg=page.get_by_role('dialog')
+  await dlg.get_by_label('Type the period').fill('2025-04-01 to 2026-03-31'); await dlg.get_by_role('button',name='Close period',exact=True).click(); await page.get_by_text('Saved closing evidence (1)',exact=True).wait_for(); await page.get_by_text('Saved closing evidence (1)',exact=True).click(); await page.get_by_text('2 entries · 1 reconciled',exact=False).wait_for()
   async with page.expect_download() as dl: await page.get_by_role('button',name='Download evidence',exact=True).click()
   await (await dl.value).save_as(ROOT/'evidence.json'); data=json.loads((ROOT/'evidence.json').read_text()); assert data['entryCount']==2 and len(data['ledgerRevision'])==64
   await page.locator('#periods').screenshot(path=str(ROOT/'closed.png'))
-  await page.reload(); await page.get_by_text('Saved closing evidence (1)',exact=True).wait_for(timeout=60000); await page.locator('#periods').get_by_role('button',name='Reopen',exact=True).click(); await page.get_by_text('Saved closing evidence (2)',exact=True).wait_for(); assert len(state['evidence'])==2 and state['evidence'][1]['evidence']==data
+  await page.reload(); await page.get_by_text('Saved closing evidence (1)',exact=True).wait_for(timeout=60000); await page.locator('#periods').get_by_role('button',name='Reopen',exact=True).click(); await page.get_by_role('dialog').get_by_label('Reason for reopening (kept permanently)').fill('Accountant correction'); await page.get_by_role('dialog').get_by_role('button',name='Reopen period',exact=True).click(); await page.get_by_text('Saved closing evidence (2)',exact=True).wait_for(); assert len(state['evidence'])==2 and state['evidence'][1]['evidence']==data
   await page.locator('#periods').screenshot(path=str(ROOT/'reopened.png')); assert not errors,errors
   print('PASS isolated /audit: close with saved counts; evidence JSON download; reload; reasoned reopen retains old evidence. No real financial writes.'); await b.close()
 asyncio.run(main())
