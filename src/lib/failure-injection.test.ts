@@ -448,6 +448,9 @@ import { accountBalance, cashflow, ledgerView, LEDGER_COLUMNS, netWorth, txnFrom
 import { loadOwnerReportData } from "./report-jobs.server";
 import { readAssistantFacts } from "./assistant-facts.server";
 import { atomicStatementUndo } from "./statement-pipeline/atomic-undo";
+import { guardedRestore, previousRestoreLine, type RestoreDb } from "./restore-guard";
+import { BACKUP_TABLES, planRestore, type Backup, type BackupRow } from "./backup";
+import type { Json } from "@/integrations/supabase/types";
 
 // ---------------------------------------------------------------------------------------------------------------------------
 // App flows, wired exactly as the app wires them.
@@ -1984,3 +1987,132 @@ for (const withP10 of [false, true]) {
     );
   });
 }
+
+// ---------------------------------------------------------------------------------------------------------------------------
+// P0-023 (KK, binding): "Repeated backup restoration must be detected and never execute silently. Default to no change, show
+// previous restore evidence and require explicit authorised action." + P0-033 (an older backup never resurrects a withdrawn
+// entry). The REAL app restore step (restore-guard.ts guardedRestore, what Settings → Restore runs after planning) over
+// PostgREST-shaped requests as the signed-in owner; with P11 the database functions decide.
+const P11 = ".lovable/staged-sql/proposed/P11_backup_restore_receipts.sql";
+const R_MODES = [
+  { name: "applied schema (app rule; history in owner preferences)", extra: [P9], p10: false, p11: false },
+  { name: "with P10", extra: [P9, P10], p10: true, p11: false },
+  { name: "with P10 + P11 (database decides)", extra: [P9, P10, P11], p10: true, p11: true },
+] as const;
+async function exportOwner(db: Db, owner: string): Promise<Backup> {
+  const data: Backup["data"] = {};
+  for (const t of BACKUP_TABLES)
+    data[t] = (await sql1<{ j: BackupRow }>(db, `SELECT to_jsonb(x) j FROM public.${t} x WHERE ${t === "expenses" ? "employee_id" : "owner_id"} = $1 ORDER BY 1`, [owner])).map((r) => r.j);
+  return { app: "ledgerline", version: 3, owner, exportedAt: "2026-11-10", data };
+}
+const restoreApi = () => api() as unknown as RestoreDb;
+for (const mode of R_MODES) {
+  describe(`P0-023 repeated backup restore / P0-033 withdrawn entries — ${mode.name}`, () => {
+    let db: Db;
+    beforeAll(async () => {
+      db = await fullSchemaDb([...mode.extra]);
+      await seedUsers(db);
+    }, T);
+
+    it(
+      "R1. the same backup again: nothing changes and the earlier restore is shown; only an explicit re-restore with a reason proceeds, and is recorded",
+      async () => {
+        // Expected: 1st restore → "restored"; the owner then edits Lunch 450.00 → 500.00; the same backup again → previously_restored,
+        // changed false, 1 earlier restore (by the owner, record count = rows in the backup), Lunch still 500.00; re-restore with
+        // reason → restored_again, Lunch 450.00, 2 restore records (first, again + reason); a short reason is refused, nothing written.
+        reset(db);
+        const f = await seedWithdrawFixture(db);
+        const backup = await exportOwner(db, O);
+        const plan = await planRestore(backup, O, { stageFiles: true });
+        const total = Object.values(plan.data).reduce((s, r) => s + (r?.length ?? 0), 0);
+        const first = await guardedRestore({ owner: O, data: plan.data }, restoreApi());
+        expect(first).toMatchObject({ status: "restored", changed: true, previous: [] });
+        expect((await api().from("expenses").update({ amount: 500, original_amount: 500 }).eq("id", f.lunch).select("id")).error).toBeNull();
+        const again = await guardedRestore({ owner: O, data: (await planRestore(backup, O, { stageFiles: true })).data }, restoreApi());
+        expect(again.status).toBe("previously_restored");
+        expect(again.changed).toBe(false);
+        expect(again.previous).toHaveLength(1);
+        expect(again.previous[0]).toMatchObject({ by: O, mode: "first", reason: null });
+        expect(total).toBe(4); // preferences 1 + account 1 + entries 2
+        expect(again.previous[0]!.records).toBe(4);
+        expect(previousRestoreLine(again.previous, O)).toMatch(/^Restored on .* by you \(\d+ records\)$/);
+        expect((await rowOf(db, f.lunch))?.j["amount"]).toBe(500);
+        await expect(guardedRestore({ owner: O, data: plan.data, rerestoreReason: "abc" }, restoreApi())).rejects.toThrow(/at least 5 characters/);
+        expect((await rowOf(db, f.lunch))?.j["amount"]).toBe(500);
+        const re = await guardedRestore({ owner: O, data: plan.data, rerestoreReason: "Edited Lunch by mistake" }, restoreApi());
+        expect(re).toMatchObject({ status: "restored_again", changed: true });
+        expect((await rowOf(db, f.lunch))?.j["amount"]).toBe(450);
+        const recs = mode.p11
+          ? await sql1<{ mode: string; reason: string | null }>(db, "SELECT mode, reason FROM public.backup_restore_receipts WHERE owner_id = $1 ORDER BY restored_at", [O])
+          : ((await storedPrefs(db, O))["restoreHistory"] as { mode: string; reason: string | null }[]).map((r) => ({ mode: r.mode, reason: r.reason }));
+        expect(recs).toEqual([{ mode: "first", reason: null }, { mode: "again", reason: "Edited Lunch by mistake" }]);
+      },
+      T,
+    );
+
+    it(
+      "R2. P0-033: an older backup (taken before the withdrawal) never resurrects a withdrawn entry; a restored entry keeps its withdrawal history",
+      async () => {
+        // Expected (hand-calculated): fixture balance 8,315.50; Lunch 450.00 withdrawn → 8,765.50; restoring the older backup (first time)
+        // → Lunch still withdrawn, balance 8,765.50; Groceries restored then re-withdrawn/restored history is kept as stored.
+        reset(db);
+        const f = await seedWithdrawFixture(db);
+        const older = await exportOwner(db, O);
+        expect(await withdrawCall(f.lunch, "Entered twice by mistake")).toMatchObject({ ok: true });
+        expect(await withdrawCall(f.groceries, "Wrong account")).toMatchObject({ ok: true });
+        expect(await withdrawCall(f.groceries, "Right account after all", "restore")).toMatchObject({ ok: true });
+        const before = await figures(f.acc);
+        expect(before.balance).toBe(8765.5); // 10,000.00 − 1,234.50 (Lunch 450.00 withdrawn)
+        const r = await guardedRestore({ owner: O, data: (await planRestore(older, O, { stageFiles: true })).data }, restoreApi());
+        expect(r.status).toBe("restored");
+        expect(((await rowOf(db, f.lunch))?.rd["withdrawal"] as { state: string }).state).toBe("withdrawn");
+        expect(((await rowOf(db, f.groceries))?.rd["withdrawal"] as { history: unknown[] }).history).toHaveLength(2);
+        expect(await figures(f.acc)).toEqual(before);
+      },
+      T,
+    );
+
+    it(
+      "R3. direct API call of the unchecked restore: refused with P11; recorded as a gap without P11",
+      async () => {
+        reset(db);
+        await seedWithdrawFixture(db);
+        const plan = await planRestore(await exportOwner(db, O), O, { stageFiles: true });
+        const direct = await supabase.rpc("restore_finance_backup", { payload: plan.data as unknown as Json });
+        if (mode.p11) expect(direct.error?.message).toMatch(/P11_RESTORE_CHECK_REQUIRED/);
+        // Without P11 the database cannot tell a repeat (gap closed by P11). With P10 alone the direct call still fails closed here,
+        // because the payload stages new receipt paths onto an entry withdrawn in R2 (frozen while withdrawn); guardedRestore keeps it.
+        else if (mode.p10) expect(direct.error?.message).toMatch(/P10_WITHDRAWN/);
+        else expect(direct.error?.message ?? null).toBeNull();
+      },
+      T,
+    );
+  });
+}
+const storedPrefs = async (db: Db, owner: string) =>
+  ((await sql1<{ d: Record<string, unknown> }>(db, "SELECT data d FROM public.finance_preferences WHERE owner_id = $1", [owner]))[0]?.d ?? {}) as Record<string, unknown>;
+
+describe("R-P10-1: activating balanced books after a withdrawal — P1..P9 + P10", () => {
+  it(
+    "W5. a withdrawn entry stays unposted through the posting backfill; Restore posts it; once posted it can no longer be withdrawn",
+    async () => {
+      // Expected: two unposted entries before activation (Lunch 450.00 withdrawn, Groceries 1,234.50 kept); after the backfill
+      // 1 posting event (Groceries only), journal balanced; Restore of Lunch posts it → 2 events; withdrawing a posted entry refused.
+      const db = await fullSchemaDb([...STACK, P9, P10]);
+      await seedUsers(db);
+      reset(db);
+      const f = await seedWithdrawFixture(db);
+      expect(await withdrawCall(f.lunch, "Entered twice by mistake")).toMatchObject({ ok: true });
+      await activateBooks(db, f.acc);
+      const events = async (id: string) => (await sql1<{ n: number }>(db, "SELECT count(*)::int n FROM public.posting_events WHERE owner_id = $1 AND event_key = $2", [O, `ledger_entry:${id}`]))[0]!.n;
+      expect(await events(f.lunch)).toBe(0);
+      expect(await events(f.groceries)).toBe(1);
+      expect(await sql1(db, "SELECT batch_id FROM public.posting_lines GROUP BY batch_id, currency HAVING sum(debit) <> sum(credit)")).toEqual([]);
+      expect(await withdrawCall(f.lunch, "Withdrawn by mistake", "restore")).toMatchObject({ ok: true });
+      expect(await events(f.lunch)).toBe(1);
+      expect(await withdrawCall(f.lunch, "Entered twice by mistake")).toMatchObject({ ok: false, error: expect.stringMatching(/^P10_POSTED/) });
+      await db.close();
+    },
+    T,
+  );
+});

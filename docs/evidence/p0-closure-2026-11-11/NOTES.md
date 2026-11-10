@@ -57,3 +57,18 @@ KK binding: Withdraw only for unposted AND unreconciled entries; posted -> Rever
 - P0-033 recorded (older same-account backup reinstates a withdrawn entry on today's schema; P10 keeps it).
 
 ## 4. Register — p0_defects.tsv: P0-005a, P0-027 updated; P0-032, P0-033, P0-034 added (11 columns, 33 rows).
+
+## 5. P0-023 repeated backup restore + P0-033 + R-P10-1 — DONE (11 Nov, after ff to 50fdc0d)
+- Note: the register's P0-023 row was about undo_financial_correction replay; KK's decision is about backup restore. Backup
+  restore is implemented; correction-undo replay remains UI-mitigated (flagged to lead).
+- App: src/lib/restore-guard.ts guardedRestore (Settings → Restore). Fingerprint = SHA-256 of the planned payload without staged
+  paths / restoreHistory. P11 present → restore_finance_backup_checked decides; else history in owner preferences
+  (restoreHistory, written inside the same restore). Repeat → previously_restored, nothing written; "Restore again" needs a
+  reason; recorded. P0-033: stored withdrawals win (withdrawn row kept as stored; restored row keeps its history).
+- P11 SQL (+rollback): backup_restore_receipts (append-only for clients), restore_finance_backup_checked, phase3_p11
+  payload_fingerprint / keep_withdrawals, check injected into the current restore_finance_backup (P4 step-up kept);
+  rollback restores the saved definition, refuses while receipts exist unless approved.
+- Finding: with P10 alone, a direct restore that re-stages receipt paths onto a withdrawn entry fails closed (P10_WITHDRAWN);
+  guardedRestore avoids it by keeping the stored row.
+- R-P10-1: P7 derive_entry skips withdrawn entries (one guarded line in P7_balanced_posting.sql). W5 before/after.
+- Before-runs: p0-023-033-restore.before.txt, r-p10-1-backfill.before.txt.

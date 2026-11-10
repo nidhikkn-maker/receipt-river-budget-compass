@@ -99,8 +99,8 @@ describe("reader inventory (decision 1): every ledger reader applies the same vi
     const files = execSync("grep -rl 'from(\"expenses\")' src/lib --include=*.ts --include=*.tsx", { encoding: "utf8" }).split("\n").filter((x) => x && !x.includes(".test."));
     // Readers that do not sum money: the Statement Desk Undo snapshot read, the import job, posting checks, and the Statement
     // Inbox check of a pending line's existing entry and reference (statement-line-claims.ts, P0-027), and the Withdraw / Restore
-    // server check of one entry (withdrawal.server.ts, RB-LED-01).
-    const NOT_SUMMING = ["src/lib/statement-pipeline/atomic-undo.functions.ts", "src/lib/import-jobs.server.ts", "src/lib/fx.functions.ts", "src/lib/mcp/tools/list-transactions.ts", "src/lib/statement-line-claims.ts", "src/lib/withdrawal.server.ts"];
+    // server check of one entry (withdrawal.server.ts, RB-LED-01), and the restore guard's read of stored withdrawals (restore-guard.ts, P0-033).
+    const NOT_SUMMING = ["src/lib/statement-pipeline/atomic-undo.functions.ts", "src/lib/import-jobs.server.ts", "src/lib/fx.functions.ts", "src/lib/mcp/tools/list-transactions.ts", "src/lib/statement-line-claims.ts", "src/lib/withdrawal.server.ts", "src/lib/restore-guard.ts"];
     expect(files.filter((f) => !READERS.includes(f) && !NOT_SUMMING.includes(f))).toEqual([]);
   });
 });
