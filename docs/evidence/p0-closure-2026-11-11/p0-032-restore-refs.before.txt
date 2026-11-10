@@ -1,0 +1,44 @@
+# P0-029 (new) before-run: cross-account restore keeps source-owner ids embedded in statement references (original backup-remap.ts).
+# Command: bunx vitest run src/lib/backup-restore-sql.test.ts -t 'cross-account restore integrity'  (2026-11-10T13:18:04Z)
+# The hand-calculated figures for A pass; the plan reports 4 unclassified references kept unchanged: A's bank account id inside
+# the statement line reference (RB-STM-01 format) and A's document id inside Statement Desk 'document:<id> · ...' references on the
+# entry, the upload evidence and the undo rows -> B's restored rows would point at A's account/document.
+ RUN  v4.1.12 /home/user/thapal-p3c
+ ❯ src/lib/backup-restore-sql.test.ts (10 tests | 1 failed | 9 skipped) 2763ms
+     × B's restored copy has A's hand-calculated figures; every embedded id is B's own; A is untouched; a failed restore changes nothing 2761ms
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+ FAIL  src/lib/backup-restore-sql.test.ts > cross-account restore integrity: figures, embedded references, source untouched, failed restore > B's restored copy has A's hand-calculated figures; every embedded id is B's own; A is untouched; a failed restore changes nothing
+AssertionError: expected [ { …(2) }, { …(2) }, { …(2) }, …(1) ] to deeply equal []
+- Expected
++ Received
+- []
++ [
++   {
++     "path": "finance_preferences[0].data.statementUploads[0].evidence[0].ref",
++     "value": "10000000-0000-4000-8000-000000000071",
++   },
++   {
++     "path": "finance_preferences[0].data.statementUploads[0].undoRows[0].ref",
++     "value": "10000000-0000-4000-8000-000000000071",
++   },
++   {
++     "path": "expenses[0].statement_ref",
++     "value": "10000000-0000-4000-8000-000000000002",
++   },
++   {
++     "path": "expenses[1].statement_ref",
++     "value": "10000000-0000-4000-8000-000000000071",
++   },
++ ]
+ ❯ src/lib/backup-restore-sql.test.ts:285:38
+    283|     const plan = await planRestore(fromA, OWNER_B, { stageFiles: true …
+    284|     expect(plan.report.unmapped).toEqual([]);
+    285|     expect(plan.report.unclassified).toEqual([]);
+       |                                      ^
+    286|     await restore(db, OWNER_B, plan.data);
+    287|     const toB = await exportBackup(db, OWNER_B);
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+ Test Files  1 failed (1)
+      Tests  1 failed | 9 skipped (10)
+   Start at  13:18:04
+   Duration  3.76s (transform 496ms, setup 139ms, import 675ms, tests 2.76s, environment 0ms)

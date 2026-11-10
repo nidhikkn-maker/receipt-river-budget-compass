@@ -62,6 +62,10 @@ export const PREFERENCE_REFS: readonly RefRule[] = [
   { path: "statementUploads[].linkedDrafts[].transactionId", table: "expenses", why: "Entry the draft became" },
   { path: "statementUploads[].evidence[].id", table: "expenses", why: "Entry carrying statement evidence" },
   { path: "statementUploads[].undoRows[].id", table: "expenses", why: "Revision-checked undo row" },
+  // P0-032: Statement Desk references ("document:<id> · ...") and statement line references (RB-STM-01, "... · account <id>")
+  // name the restoring owner's own document/account, exactly as the entry's statement_ref does, so evidence keeps matching.
+  { path: "statementUploads[].evidence[].ref", encoding: "embedded", why: "Statement reference of the evidence entry (document / account ids inside)" },
+  { path: "statementUploads[].undoRows[].ref", encoding: "embedded", why: "Statement reference the undo row expects (document / account ids inside)" },
   { path: "assets[].accountId", table: "accounts", why: "Ledger asset account depreciation reduces" },
   { path: "assets[].transactionId", table: "expenses", why: "Purchase entry" },
   { path: "assets[].paymentId", table: "expenses", why: "Matched bank payment" },
@@ -161,6 +165,8 @@ export const COLUMN_JSON_REFS: Partial<Record<string, readonly RefRule[]>> = {
     { path: "reimbursement.reversedReceipts[].txnId", table: "expenses", why: "Claim money-back entry that was later reversed (P7 r2, history)" },
     { path: "reimbursement.reversedReceipts[].id", table: "expenses", when: (p) => p["id"] === p["txnId"], why: "Receipt id that equals its money-back entry id" },
     { path: "reimbursement.reversedReceipts[].reversal.entryId", table: "expenses", why: "Reversal entry of a reversed money-back entry" },
+    // P0-032: the statement reference text names a document ("document:<id> · ...") or the statement account ("... · account <id>").
+    { path: "statement_ref", encoding: "embedded", why: "Statement reference (document / account ids inside the text)" },
     { path: "receipt_details.reversal.of", table: "expenses", why: "Readable copy of the reversal link (P7 r2)" },
     { path: "receipt_details.accounting.journal.documentIds[]", table: "documents", why: "Accounting evidence originals" },
     { path: "receipt_details.accounting.journal.legs[].accountId", table: "accounts", why: "Accounting leg account" },

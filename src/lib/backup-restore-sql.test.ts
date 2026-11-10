@@ -11,6 +11,10 @@ import { COLUMN_JSON_REFS, COLUMN_NOT_REMAPPED, COLUMN_REFS, JSON_COLUMNS_NO_REF
 import { depreciationEntryKey, ownerPostingId, postingIdFor, resolvePostingIds, stableUuid } from "./books/assets-ledger";
 import { ID, OWNER_A, OWNER_B, buildBackupFixture, fixtureFiles } from "../test/backup-fixture";
 import { moneyTotals, orphans } from "../test/backup-refs";
+import { accountValue, ledgerView, netWorth, txnFromRow, type Account, type LedgerRow } from "./ledger";
+import { outstandingOf } from "./reimbursements";
+import { fingerprintLines } from "./statement-fingerprint";
+import { statementLineRef } from "./statement-line-claims";
 
 const ownerCol = (t: string) => (t === "expenses" ? "employee_id" : "owner_id");
 
@@ -220,4 +224,142 @@ describe("restore_finance_backup with the realistic fixture (applied schema)", (
     expect((await rowCounts(db, OWNER_B))["expenses"]).toBe(fromA.data.expenses?.length);
     await db.close();
   }, 120000);
+});
+
+// ---------------------------------------------------------------------------------------------------------------------------
+// P0 closure (Track A, KK: "cross-account backup restore integrity ... must be resolved before production eligibility").
+// The realistic fixture plus three statement/withdrawal rows, restored from owner A into owner B through the REAL
+// restore_finance_backup transaction (row security as B). Every figure is recomputed from each owner's own database rows by
+// the REAL readers (txnFromRow → ledgerView → accountBalance / netWorth / outstandingOf) and compared with hand-calculated values.
+describe("cross-account restore integrity: figures, embedded references, source untouched, failed restore", () => {
+  // Hand-calculated (fixture, after ledgerView): HDFC Savings 50,000.00 − 2,500.00 groceries + 16,600.00 bounced − 16,600.00 its
+  // reversal + 16,600.00 claim back + 1,000,000.00 loan disbursal − 3,000.00 maintenance (the 5,000.00 "Card bill" is a transfer
+  // counterpart row, never counted) = 1,061,100.00; then the rows added here: − 1,234.50 (statement line) − 649.00 (Statement
+  // Desk document line); the withdrawn 450.00 is excluded → 1,059,216.50. HDFC Visa owes 16,600.00 (hotel). KR Current 250,000.00
+  // − 120,000.00 − 18,305.08 = 111,694.92. Fixed assets: valuation 112,000.00 (30 Jun) is the account value. USD wallet 0.
+  // Net worth = 1,059,216.50 + 111,694.92 + 112,000.00 + 0 − 16,600.00 = 1,266,311.42. Loan outstanding (loans row) 950,000.00.
+  // Claims outstanding: the hotel claim is received in full → 0.00.
+  const HAND = { "HDFC Savings": 1059216.5, "HDFC Visa": 16600, "KR Current": 111694.92, "Fixed assets": 112000, "USD wallet": 0 } as Record<string, number>;
+  const SL = "00000000-0000-4000-8000-00000000c101", DOCREF = "00000000-0000-4000-8000-00000000c102", WD = "00000000-0000-4000-8000-00000000c103";
+  async function figuresOf(db: PGlite, owner: string) {
+    await actAs(db, owner);
+    const rows = (await db.query<{ j: LedgerRow & Record<string, unknown> }>("SELECT to_jsonb(e) j FROM public.expenses e WHERE employee_id = $1", [owner])).rows.map((r) => r.j);
+    const accounts = (await db.query<{ j: Record<string, unknown> }>("SELECT to_jsonb(a) j FROM public.accounts a WHERE owner_id = $1", [owner])).rows.map((r) => ({ id: String(r.j["id"]), name: String(r.j["name"]), kind: r.j["kind"] as Account["kind"], openingBalance: Number(r.j["opening_balance"]), archived: !!r.j["archived"] }));
+    const valuations = (await db.query<{ j: Record<string, unknown> }>("SELECT to_jsonb(v) j FROM public.asset_valuations v WHERE owner_id = $1", [owner])).rows.map((r) => ({ accountId: String(r.j["account_id"]), value: Number(r.j["value"]), valuedOn: String(r.j["valued_on"]), source: String(r.j["source"]) }));
+    const loans = (await db.query<{ p: string }>("SELECT coalesce(sum(principal_outstanding),0)::text p FROM public.loans WHERE owner_id = $1", [owner])).rows[0]!.p;
+    await actAs(db, null);
+    const view = ledgerView(rows.map(txnFromRow));
+    const claims = rows.filter((r) => r["reimbursement_status"] !== "none" && r["txn_type"] === "expense").map((r) => outstandingOf({ amount: Number(r["amount"]), reimbursementStatus: r["reimbursement_status"], reimbursement: r["reimbursement"] } as never));
+    return {
+      balances: Object.fromEntries(accounts.map((a) => [a.name, accountValue(a, view, valuations).value])),
+      netWorth: netWorth(accounts, view, valuations).net,
+      loanOutstanding: Number(loans),
+      claimsOutstanding: claims.reduce((s, x) => s + x, 0),
+      entries: view.length,
+    };
+  }
+
+  it("B's restored copy has A's hand-calculated figures; every embedded id is B's own; A is untouched; a failed restore changes nothing", async () => {
+    const { db } = await seeded();
+    await actAs(db, null);
+    const fps = fingerprintLines([{ ref: "1", date: "2026-04-11", description: "UPI/SWIGGY/412345678901", amount: 1234.5, direction: "debit" }], ID.bank);
+    const lineRef = statementLineRef(fps[0]!);
+    const docRef = `document:${ID.statement} · 2026-04-12 · NETFLIX SUBSCRIPTION`;
+    const withdrawal = { state: "withdrawn", at: "2026-04-13T10:00:00.000Z", by: OWNER_A, reason: "Entered twice by mistake", history: [{ action: "withdrawn", at: "2026-04-13T10:00:00.000Z", by: OWNER_A, reason: "Entered twice by mistake" }] };
+    const add = "INSERT INTO public.expenses(id,employee_id,title,category,amount,original_amount,currency,expense_date,account_id,description,statement_ref,reconciled_at,receipt_details) VALUES ($1,$2,$3,'Food and beverages',$4,$4,'INR',$5,$6,'',$7,$8,$9::jsonb)";
+    await db.query(add, [SL, OWNER_A, "Swiggy", 1234.5, "2026-04-11", ID.bank, lineRef, "2026-04-12T00:00:00Z", "{}"]);
+    await db.query(add, [DOCREF, OWNER_A, "Netflix", 649, "2026-04-12", ID.bank, docRef, "2026-04-12T00:00:00Z", "{}"]);
+    await db.query(add, [WD, OWNER_A, "Lunch", 450, "2026-04-13", ID.bank, null, null, JSON.stringify({ withdrawal })]);
+    // A Statement Desk upload whose evidence and undo rows carry the same document reference.
+    await db.query("UPDATE public.finance_preferences SET data = jsonb_set(data, '{statementUploads}', $2::jsonb) WHERE owner_id = $1", [OWNER_A, JSON.stringify([{ id: "00000000-0000-4000-8000-00000000c1a0", label: "hdfc-apr.pdf", at: "2026-04-12T00:00:00Z", posted: [DOCREF], reconciled: [], sources: [{ documentId: ID.statement, accountId: ID.bank }], evidence: [{ id: DOCREF, ref: docRef }], undoRows: [{ id: DOCREF, ref: docRef, revision: 0 }] }])]);
+
+    const figA = await figuresOf(db, OWNER_A);
+    expect(figA.balances).toEqual(HAND);
+    expect(figA.netWorth).toBe(1266311.42);
+    expect(figA.loanOutstanding).toBe(950000);
+    expect(figA.claimsOutstanding).toBe(0);
+
+    const fromA = await exportBackup(db, OWNER_A);
+    const plan = await planRestore(fromA, OWNER_B, { stageFiles: true });
+    expect(plan.report.unmapped).toEqual([]);
+    expect(plan.report.unclassified).toEqual([]);
+    await restore(db, OWNER_B, plan.data);
+    const toB = await exportBackup(db, OWNER_B);
+    const figB = await figuresOf(db, OWNER_B);
+    expect(figB).toEqual(figA);
+
+    // Every owner-linked row id of A is replaced in B's rows (verbatim closure archives excepted: unverified history by design).
+    const aIds = new Set(BACKUP_TABLES.flatMap((t) => (fromA.data[t] ?? []).map((r) => r["id"]).filter((x): x is string => typeof x === "string")));
+    // PREFERENCE_VERBATIM sections (preserved originals, frozen return drafts, closure history) are archived as saved, by design.
+    const withoutVerbatim = (r: Record<string, unknown>) => { const d = { ...(r["data"] as Record<string, unknown>) }; delete d["preservedRecords"]; d["books"] = { ...(d["books"] as Record<string, unknown>), savedDrafts: undefined, closedPeriods: undefined, periodLog: undefined }; return { ...r, data: d }; };
+    const leaks: string[] = [];
+    for (const t of BACKUP_TABLES) {
+      if ((VERBATIM_TABLES as readonly string[]).includes(t)) continue;
+      for (const r of toB.data[t] ?? []) for (const m of JSON.stringify(t === "finance_preferences" ? withoutVerbatim(r) : r).match(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/g) ?? []) if (aIds.has(m)) leaks.push(`${t}:${m}`);
+    }
+    expect(leaks).toEqual([]);
+    // The statement references follow the restored rows: the account and document named in them are B's own.
+    const bId = (t: "accounts" | "documents", old: string) => plan.data[t]![(fromA.data[t] ?? []).findIndex((x) => x["id"] === old)]!["id"] as string;
+    const bRows = (toB.data["expenses"] ?? []) as Record<string, unknown>[];
+    const bBank = bId("accounts", ID.bank), bStatement = bId("documents", ID.statement);
+    expect(bRows.map((r) => r["statement_ref"])).toContain(lineRef.replace(ID.bank, bBank));
+    expect(bRows.map((r) => r["statement_ref"])).toContain(docRef.replace(ID.statement, bStatement));
+    const bUpload = ((toB.data["finance_preferences"]![0]!["data"] as Record<string, unknown>)["statementUploads"] as { evidence: { id: string; ref: string }[]; undoRows: { id: string; ref: string }[] }[])[0]!;
+    const bDocEntry = bRows.find((r) => r["statement_ref"] === docRef.replace(ID.statement, bStatement))!;
+    expect(bUpload.evidence).toEqual([{ id: bDocEntry["id"], ref: bDocEntry["statement_ref"] }]); // evidence still matches its entry
+    expect(bUpload.undoRows[0]).toMatchObject({ id: bDocEntry["id"], ref: bDocEntry["statement_ref"] });
+    // The withdrawn entry stays withdrawn with its history (actor = the person who withdrew it), excluded from B's figures.
+    const bWd = bRows.find((r) => (r["receipt_details"] as { withdrawal?: unknown } | null)?.withdrawal);
+    expect((bWd!["receipt_details"] as { withdrawal: unknown }).withdrawal).toEqual(withdrawal);
+    // Archive entries follow their rows (recordArchive ids "<table>:<B row id>").
+    const bArchive = ((toB.data["finance_preferences"]![0]!["data"] as Record<string, unknown>)["recordArchive"] as { id: string; recordId: string }[]);
+    for (const e of bArchive) { expect(aIds.has(e.recordId)).toBe(false); expect(e.id.endsWith(e.recordId)).toBe(true); }
+    // A is untouched.
+    expect(await exportBackup(db, OWNER_A)).toEqual(fromA);
+    expect(await figuresOf(db, OWNER_A)).toEqual(figA);
+
+    // Failure injection: a restore whose last table holds an invalid row fails inside the transaction → B and A exactly as before.
+    const broken = { ...plan.data, documents: [...(plan.data["documents"] ?? []), { id: "00000000-0000-4000-8000-00000000c1ff", title: null, file_path: null }] };
+    await expect(restore(db, OWNER_B, broken)).rejects.toThrow();
+    expect(await exportBackup(db, OWNER_B)).toEqual(toB);
+    expect(await figuresOf(db, OWNER_B)).toEqual(figB);
+    expect(await exportBackup(db, OWNER_A)).toEqual(fromA);
+    await db.close();
+  }, 180000);
+});
+
+describe("restore and withdrawn entries (RB-LED-01 / P0-033), with and without proposed P10", () => {
+  for (const withP10 of [false, true]) {
+    it(`${withP10 ? "with P10" : "applied schema"}: cross-account restore keeps a withdrawal with its history; an older same-account backup ${withP10 ? "never reinstates" : "REINSTATES (recorded gap)"} a withdrawn entry`, async () => {
+      const db = await fullSchemaDb(withP10 ? [".lovable/staged-sql/proposed/P10_unposted_entry_withdrawal.sql"] : []);
+      await addUsers(db, { [OWNER_A]: "a@x.in", [OWNER_B]: "b@x.in" });
+      await actAs(db, null);
+      await db.query("INSERT INTO public.finance_preferences(owner_id, data) VALUES ($1,'{}')", [OWNER_A]);
+      await db.query("INSERT INTO public.accounts(id, owner_id, name, kind, opening_balance) VALUES ($1,$2,'HDFC Savings','savings',10000)", [ID.bank, OWNER_A]);
+      const E1 = "00000000-0000-4000-8000-00000000d001";
+      await db.query("INSERT INTO public.expenses(id,employee_id,title,category,amount,original_amount,currency,expense_date,account_id,description) VALUES ($1,$2,'Lunch','Food and beverages',450,450,'INR','2026-11-09',$3,'')", [E1, OWNER_A, ID.bank]);
+      const older = await exportBackup(db, OWNER_A); // taken before the withdrawal
+      // Withdraw (P10 function, or the app's pre-P10 server path: the same receipt_details shape)
+      const w = { state: "withdrawn", at: "2026-11-10T10:00:00.000Z", by: OWNER_A, reason: "Entered twice by mistake", history: [{ action: "withdrawn", at: "2026-11-10T10:00:00.000Z", by: OWNER_A, reason: "Entered twice by mistake" }] };
+      if (withP10) { await actAs(db, OWNER_A); await db.query("SELECT public.withdraw_entry($1, 'Entered twice by mistake')", [E1]); }
+      else await db.query("UPDATE public.expenses SET receipt_details = jsonb_build_object('withdrawal', $2::jsonb) WHERE id = $1", [E1, JSON.stringify(w)]);
+      const balance = async (owner: string) => { await actAs(db, owner); const rows = (await db.query<{ j: LedgerRow }>("SELECT to_jsonb(e) j FROM public.expenses e WHERE employee_id = $1", [owner])).rows.map((r) => r.j); const acc = (await db.query<{ id: string }>("SELECT id FROM public.accounts WHERE owner_id = $1", [owner])).rows[0]!; return accountValue({ id: acc.id, name: "x", kind: "savings", openingBalance: 10000, archived: false }, ledgerView(rows.map(txnFromRow))).value; };
+      expect(await balance(OWNER_A)).toBe(10000); // 10,000.00; the withdrawn 450.00 is excluded
+      // cross-account: B gets the entry still withdrawn, history intact (INSERT with a complete valid history is accepted by P10)
+      const now = await exportBackup(db, OWNER_A);
+      await restore(db, OWNER_B, (await planRestore(now, OWNER_B, { stageFiles: true })).data);
+      await actAs(db, OWNER_B);
+      const bw = (await db.query<{ w: { state: string; history: unknown[] } }>("SELECT receipt_details->'withdrawal' w FROM public.expenses WHERE employee_id = $1", [OWNER_B])).rows[0]!.w;
+      expect(bw.state).toBe("withdrawn");
+      expect(bw.history).toHaveLength(1);
+      expect(await balance(OWNER_B)).toBe(10000);
+      // same-account restore of the OLDER backup (taken before the withdrawal)
+      await restore(db, OWNER_A, older.data);
+      await actAs(db, OWNER_A);
+      const aw = (await db.query<{ w: { state: string } | null }>("SELECT receipt_details->'withdrawal' w FROM public.expenses WHERE id = $1", [E1])).rows[0]!.w;
+      if (withP10) { expect(aw?.state).toBe("withdrawn"); expect(await balance(OWNER_A)).toBe(10000); }
+      else { expect(aw).toBeNull(); expect(await balance(OWNER_A)).toBe(9550); } // recorded: the entry counts again (P0-033; closed by P10)
+      await db.close();
+    }, 180000);
+  }
 });

@@ -1,4 +1,5 @@
 import { LoadError } from "@/components/LoadError";
+import { Fold } from "@/components/Fold";
 import { SavedViews } from "@/components/SavedViews";
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
@@ -31,7 +32,7 @@ export const Route = createFileRoute("/_authenticated/expenses")({
 });
 
 function Expenses() {
-  const { transactions: expenses, members, accounts, preferences, bulkSetCategory, categoryHistory, undoCategoryBatch } = useStore();
+  const { transactions: expenses, withdrawn, members, accounts, preferences, bulkSetCategory, categoryHistory, undoCategoryBatch } = useStore();
   const [f, setF] = useState<Filters>({ scope: "all", memberId: "all", category: "all" });
   const [company, setCompany] = useState("all");
   const [selecting, setSelecting] = useState(false);
@@ -132,6 +133,7 @@ function Expenses() {
       </section>}
       <ExpenseTable items={list.slice(0, shown)} empty="No expenses match these filters." selected={selecting ? picked : undefined} onToggle={selecting ? togglePick : undefined} />
       {list.length > shown && <div className="mt-4 flex flex-col items-center gap-1"><Button variant="outline" onClick={() => setShown((n) => n + 50)}>Show 50 more</Button><span className="text-xs text-muted-foreground">Showing {shown} of {list.length}</span></div>}
+      {withdrawn.length > 0 && <div className="mt-6"><Fold id="withdrawn" title={`Withdrawn entries (${withdrawn.length})`} hint="Kept in history with receipts; left out of every total. Open one to see why or restore it."><ExpenseTable items={withdrawn} empty="No withdrawn entries." /></Fold></div>}
       <TeamExpenses />
     </>
   );

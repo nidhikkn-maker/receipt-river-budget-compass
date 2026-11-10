@@ -21,6 +21,59 @@ export function fingerprintLines(lines: StatementLine[], accountKey: string): st
   });
 }
 
+/**
+ * RB-STM-01 (P0-027 residual; KK: "stable source identity including account/workspace scope and content evidence, not filename
+ * alone"). The statement reference saved on an entry (expenses.statement_ref, which P7 binds as its statement_row source key per
+ * owner) is derived from the line's fingerprint ONLY: statement account + date + direction + amount + bank reference or normalised
+ * narration + occurrence index for identical same-day lines. The uploaded file's name is not part of it, so
+ *   - identical lines in two accounts' statements uploaded under the same file name are two sources;
+ *   - the same line re-downloaded under another file name for the same account is the same source.
+ * Workspace scope: P7 keys sources per owner (owner_id), and the account key is the account's globally unique id, which fixes the
+ * entity/workspace the account belongs to without copying an assignment that can later be edited (that would make the identity
+ * unstable). The text stays readable: "Statement line · 2026-11-03 · debit 2999.00 · POS AMAZON RETAIL · #2 · account <id>".
+ * References stored before this change ("<file> · <date> · <description>[ · <direction> <amount>[ · #n]]") are kept as stored and
+ * still read by statementRefOrigin / isLineSourceRef.
+ */
+export const LINE_SOURCE_PREFIX = "Statement line · ";
+const MAX_REF = 300;
+
+/** Small synchronous 53-bit string hash (cyrb53), only used to keep an over-long narration distinct after shortening. */
+function hash53(str: string): string {
+  let h1 = 0xdeadbeef, h2 = 0x41c6ce57;
+  for (let i = 0; i < str.length; i++) { const ch = str.charCodeAt(i); h1 = Math.imul(h1 ^ ch, 2654435761); h2 = Math.imul(h2 ^ ch, 1597334677); }
+  h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507) ^ Math.imul(h2 ^ (h2 >>> 13), 3266489909);
+  h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909);
+  return (4294967296 * (2097151 & h2) + (h1 >>> 0)).toString(16).padStart(14, "0");
+}
+
+/** The stable source identity of one statement line, from its fingerprint (see fingerprintLines). Pure; same input, same text. */
+export function statementLineSourceRef(fingerprint: string): string {
+  const parts = fingerprint.split("|");
+  if (parts.length < 5) throw Error("Not a statement line fingerprint");
+  const [date, direction, amount, last] = parts.slice(-4) as [string, string, string, string];
+  const account = parts.slice(0, -4).join("|");
+  if (!account) throw Error("Not a statement line fingerprint");
+  const m = /^(.*)#(\d+)$/.exec(last);
+  const evidenceRaw = m ? m[1]! : last;
+  const order = m ? Number(m[2]) : 0;
+  const evidence = evidenceRaw.startsWith("R") ? `ref ${evidenceRaw.slice(1)}` : evidenceRaw.slice(1);
+  const head = `${LINE_SOURCE_PREFIX}${date} · ${direction} ${amount} · `;
+  const tail = `${order > 0 ? ` · #${order + 1}` : ""} · account ${account}`;
+  const room = MAX_REF - head.length - tail.length;
+  if (room < 20) throw Error("Statement account key is too long for a statement reference");
+  const shown = evidence.length <= room ? evidence : `${evidence.slice(0, room - 16)} ~${hash53(evidence)}`;
+  return `${head}${shown}${tail}`;
+}
+
+/** True for a reference written by statementLineSourceRef. Older references (file-name prefixed) return false and are kept as stored. */
+export const isLineSourceRef = (ref: string | null | undefined) => !!ref && ref.startsWith(LINE_SOURCE_PREFIX);
+
+/** Where an imported entry came from, for the Inbox wording: the statement line, or the file name an older reference starts with. */
+export function statementRefOrigin(ref: string): string {
+  if (isLineSourceRef(ref)) return `the statement line of ${ref.slice(LINE_SOURCE_PREFIX.length).split(" · ")[0]}`;
+  return ref.split(" ·")[0]!;
+}
+
 export interface SplitResult {
   fresh: StatementLine[];
   alreadyImported: StatementLine[];

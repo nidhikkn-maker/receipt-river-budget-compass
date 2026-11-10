@@ -1,3 +1,4 @@
+import { withdrawnAtOfRow } from '../withdrawal';
 import type { ApplyResult } from './apply';
 
 export interface UndoRow { id: string; ref: string | null; revision: number }
@@ -19,6 +20,8 @@ export async function atomicStatementUndo(id: string, result: Pick<ApplyResult, 
   const items = ids.map(rowId => {
     const snapshot = rows.find(r => r['id'] === rowId);
     const before = expected.find(r => r['id'] === rowId);
+    // RB-LED-01: a withdrawn entry is kept history; Undo never removes it (the revision check below refuses it too).
+    if (snapshot && withdrawnAtOfRow(snapshot)) throw Error('An entry from this upload was withdrawn. It is kept in history and Undo changes nothing; restore or review that entry first.');
     if (!snapshot || !before || Number(snapshot['correction_revision']) !== before.revision || (snapshot['statement_ref'] ?? null) !== before.ref) throw Error('Records changed; refresh and review before Undo');
     const evidence = result.evidence?.find(e => e.id === rowId);
     if (evidence && snapshot['statement_ref'] !== evidence.ref && !(result.posted.includes(rowId) && snapshot['statement_ref'] == null)) throw Error('Source evidence changed');

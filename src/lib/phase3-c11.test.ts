@@ -173,8 +173,10 @@ describe("P7 app wiring: capability check and reversal instead of hard delete", 
     const store = readFileSync("src/lib/store.tsx", "utf8");
     const body = store.slice(store.indexOf('const remove: Ctx["remove"]'), store.indexOf('const setScope: Ctx["setScope"]'));
     expect(body.indexOf("removalMode(await postingStatus(userId))")).toBeGreaterThan(-1);
-    expect(body.indexOf("reverseLedgerEntry(")).toBeLessThan(body.indexOf('.from("expenses").delete()'));
-    expect(body).toMatch(/isPostedEntryError/);
+    // RB-LED-01: the store never deletes an entry; posted → reverse, unposted → withdraw (entry-removal.ts removeEntry).
+    expect(body).not.toMatch(/\.from\("expenses"\)\.delete\(\)/);
+    expect(body).not.toMatch(/storage\.from\("receipts"\)\.remove/);
+    expect(body).toMatch(/removeEntry\(e, opts, \{ mode: .*reverse: async \(p\) => \{ await reverseLedgerEntry\(p\); \}/);
     const dialog = readFileSync("src/components/ExpenseDialog.tsx", "utf8");
     expect(dialog).toMatch(/Reverse entry/);
     expect(dialog).toMatch(/disabled=\{!validReason\(reason\)\}/);

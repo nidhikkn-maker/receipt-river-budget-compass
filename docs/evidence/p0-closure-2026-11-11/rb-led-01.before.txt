@@ -1,0 +1,74 @@
+# RB-LED-01 before-run: removeEntry temporarily implemented as store.tsx remove at c397e1b (unposted path = DELETE row + remove receipt files).
+# The original store code (verbatim) is appended at the end. Command: bunx vitest run src/lib/failure-injection.test.ts -t 'W1|W4'  (2026-11-10T13:11:44Z)
+# W1 x2: the original sends DELETE /expenses (and removes the receipt files) -> rejected by the new test (pre-P10: 'delete:expenses#1' sent;
+#   with P10: the database refuses the DELETE, P10_WITHDRAW_ONLY). W4 + P10: the original DELETE of a posted entry hits P10_WITHDRAW_ONLY
+#   instead of the Reverse path. W4 without P10 passes with the original code because P7 already refuses deleting posted entries.
+ RUN  v4.1.12 /home/user/thapal-p3c
+ ❯ src/lib/failure-injection.test.ts (30 tests | 3 failed | 26 skipped) 9867ms
+     × W1. Withdraw (app removal path): row and receipt files kept, no DELETE sent, excluded from every reader; Restore counts it again 144ms
+     × W1. Withdraw (app removal path): row and receipt files kept, no DELETE sent, excluded from every reader; Restore counts it again 177ms
+     × W4. a posted entry: Withdraw refused (P10_POSTED → Reverse entry) by the server and the app rule; posting and row unchanged 69ms
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 3 ⎯⎯⎯⎯⎯⎯⎯
+ FAIL  src/lib/failure-injection.test.ts > RB-LED-01 withdraw instead of delete (unposted entries) — before P10 (server function decides) > W1. Withdraw (app removal path): row and receipt files kept, no DELETE sent, excluded from every reader; Restore counts it again
+AssertionError: expected [ 'main:delete:expenses#1', …(1) ] to deeply equal []
+- Expected
++ Received
+- []
++ [
++   "main:delete:expenses#1",
++   "main:remove:receipts#1",
++ ]
+ ❯ src/lib/failure-injection.test.ts:1846:82
+    1844|         const row0 = await rowOf(db, f.lunch);
+    1845|         expect(await appRemove(f.lunch, "Entered twice by mistake")).t…
+    1846|         expect(net.log.filter((x) => /delete:expenses|remove:receipts/…
+       |                                                                                  ^
+    1847|         const row1 = await rowOf(db, f.lunch);
+    1848|         expect(row1?.j).toEqual(row0?.j); // byte-identical apart from…
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/3]⎯
+ FAIL  src/lib/failure-injection.test.ts > RB-LED-01 withdraw instead of delete (unposted entries) — with P10 (database decides) > W1. Withdraw (app removal path): row and receipt files kept, no DELETE sent, excluded from every reader; Restore counts it again
+Error: P10_WITHDRAW_ONLY: entries are withdrawn (unposted) or reversed (posted), never deleted. Both keep who, when and why.
+ ❯ Module.removeEntry src/lib/entry-removal.ts:23:28
+     21|   const deleted = await supabase.from("expenses").delete().eq("id", e.…
+     22|   if (deleted.error && isPostedEntryError(deleted.error)) throw new Re…
+     23|   if (deleted.error) throw Error(deleted.error.message);
+       |                            ^
+     24|   if (receipts.length) await supabase.storage.from("receipts").remove(…
+     25|   return "withdrawn";
+ ❯ src/lib/failure-injection.test.ts:1845:16
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/3]⎯
+ FAIL  src/lib/failure-injection.test.ts > RB-LED-01 posted entries are reversed, never withdrawn — P1..P9 + P10 > W4. a posted entry: Withdraw refused (P10_POSTED → Reverse entry) by the server and the app rule; posting and row unchanged
+AssertionError: expected Error: P10_WITHDRAW_ONLY: entries are wit… to be an instance of ReversalReasonRequired
+ ❯ src/lib/failure-injection.test.ts:1977:67
+    1975|         expect(await events()).toBe(1);
+    1976|         expect(await withdrawCall(entry, "Entered twice by mistake")).…
+    1977|         await expect(appRemove(entry, "Entered twice by mistake")).rej…
+       |                                                                   ^
+    1978|         expect(await events()).toBe(1);
+    1979|         expect((await rowOf(db, entry))?.rd?.["withdrawal"]).toBeUndef…
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/3]⎯
+ Test Files  1 failed (1)
+      Tests  3 failed | 1 passed | 26 skipped (30)
+   Start at  13:11:20
+   Duration  11.02s (transform 693ms, setup 165ms, import 837ms, tests 9.87s, environment 0ms)
+
+# ---- store.tsx remove at c397e1b ----
+  const remove: Ctx["remove"] = async (e, opts) => {
+    if (removalMode(await postingStatus(userId)) === "reverse") {
+      if (!validReason(opts?.reason)) throw new ReversalReasonRequired();
+      try {
+        // Decision 1: the entry stays; a linked reversal is recorded on the correction date (decision 2).
+        await reverseLedgerEntry({ entryId: e.id, reason: opts?.reason ?? "", requestId: opts?.requestId ?? crypto.randomUUID(), ...(opts?.correctionDate ? { correctionDate: opts.correctionDate } : {}) });
+        await refresh();
+        return;
+      } catch (err) {
+        // A listed exception that never posted follows today's rule: it is deleted (receipts kept below).
+        if (!isNotPostedError(err)) throw err;
+      }
+    }
+    const deleted = await supabase.from("expenses").delete().eq("id", e.id);
+    if (deleted.error && isPostedEntryError(deleted.error)) { forgetPostingStatus(); throw new ReversalReasonRequired(); }
+    check(deleted.error);
+    if (e.receipts.length) await supabase.storage.from("receipts").remove(e.receipts.map((r) => r.path));
+    await refresh();
+  };
