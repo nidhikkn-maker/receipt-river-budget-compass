@@ -1,0 +1,8 @@
+# P0-026 repro: src/components/records-archive/pending-documents.repro.test.tsx run against unmodified src/routes/_authenticated/new.tsx at f6b2580 (10 Nov 2026). Fails: the 'Delete bill.jpg' one-tap X button exists (it calls store.removeDocument, which hard-deletes the documents row and the receipts file).
+ ❯ src/components/records-archive/pending-documents.repro.test.tsx (1 test | 1 failed) 431ms
+     × offers no one-tap Delete; Archive needs a reason, keeps the row and file, and Restore brings it back with history 428ms
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+ FAIL  src/components/records-archive/pending-documents.repro.test.tsx > P0-026 pending documents on New entry: archive with reason, never one-tap delete > offers no one-tap Delete; Archive needs a reason, keeps the row and file, and Restore brings it back with history
+AssertionError: expected <button …(3)>…(1)</button> to be null
+ ❯ src/components/records-archive/pending-documents.repro.test.tsx:30:71
+      Tests  1 failed (1)
