@@ -24,7 +24,7 @@ const walk = (dir: string): string[] => readdirSync(dir, { withFileTypes: true }
 
 describe("V4 acceptance (Part G)", () => {
   it("1. keeps one universal expense-entry component", () => {
-    const forms = [...walk("src/routes"), ...walk("src/components")].filter((f) => f.endsWith(".tsx") && readFileSync(f, "utf8").includes('htmlFor="a"'));
+    const forms = [...walk("src/routes"), ...walk("src/components")].filter((f) => f.endsWith(".tsx") && !f.endsWith(".test.tsx") && readFileSync(f, "utf8").includes('htmlFor="a"')); // test doubles are not product forms
     expect(forms).toEqual(["src/routes/_authenticated/new.tsx"]);
     // Travel opens that same form with trip context instead of building its own;
     // the dashboard's entry point is the shell's floating + button (V4.3).

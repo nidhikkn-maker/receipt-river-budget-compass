@@ -11,6 +11,8 @@ export default defineConfig({
     include: ["src/**/*.{test,spec}.{ts,tsx}"],
     // Several suites run in parallel on shared machines; 5 s per test made correct UI tests fail intermittently.
     testTimeout: 15_000,
+    // Setup hooks that start an in-memory Postgres (PGlite) can exceed the 10 s default under parallel load.
+    hookTimeout: 30_000,
   },
   resolve: {
     alias: { "@": path.resolve(__dirname, "./src") },

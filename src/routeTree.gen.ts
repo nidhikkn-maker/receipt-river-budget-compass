@@ -17,6 +17,7 @@ import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as ShareTargetRouteImport } from './routes/share-target'
 import { Route as Char91DotwellKnownChar93OauthProtectedResourceRouteImport } from './routes/[.well-known]/oauth-protected-resource'
 import { Route as AuthenticatedAccountReconciliationRouteImport } from './routes/_authenticated/account-reconciliation'
+import { Route as AuthenticatedAddRouteImport } from './routes/_authenticated/add'
 import { Route as AuthenticatedAllocationRouteImport } from './routes/_authenticated/allocation'
 import { Route as AuthenticatedAssetsRouteImport } from './routes/_authenticated/assets'
 import { Route as AuthenticatedAssistantRouteImport } from './routes/_authenticated/assistant'
@@ -24,6 +25,7 @@ import { Route as AuthenticatedAssistantsRouteImport } from './routes/_authentic
 import { Route as AuthenticatedAuditRouteImport } from './routes/_authenticated/audit'
 import { Route as AuthenticatedBriefRouteImport } from './routes/_authenticated/brief'
 import { Route as AuthenticatedBudgetsRouteImport } from './routes/_authenticated/budgets'
+import { Route as AuthenticatedCalendarRouteImport } from './routes/_authenticated/calendar'
 import { Route as AuthenticatedClaimSubmissionRouteImport } from './routes/_authenticated/claim-submission'
 import { Route as AuthenticatedClassificationRulesRouteImport } from './routes/_authenticated/classification-rules'
 import { Route as AuthenticatedCompanySpendingRouteImport } from './routes/_authenticated/company-spending'
@@ -38,14 +40,18 @@ import { Route as AuthenticatedForecastRouteImport } from './routes/_authenticat
 import { Route as AuthenticatedForexReconcileRouteImport } from './routes/_authenticated/forex-reconcile'
 import { Route as AuthenticatedGstCheckRouteImport } from './routes/_authenticated/gst-check'
 import { Route as AuthenticatedHistoricalImportRouteImport } from './routes/_authenticated/historical-import'
+import { Route as AuthenticatedHomeRouteImport } from './routes/_authenticated/home'
 import { Route as AuthenticatedInboxRouteImport } from './routes/_authenticated/inbox'
+import { Route as AuthenticatedMoneyRouteImport } from './routes/_authenticated/money'
 import { Route as AuthenticatedNewRouteImport } from './routes/_authenticated/new'
+import { Route as AuthenticatedNotificationsRouteImport } from './routes/_authenticated/notifications'
 import { Route as AuthenticatedOfflineReceiptsRouteImport } from './routes/_authenticated/offline-receipts'
 import { Route as AuthenticatedPatternsRouteImport } from './routes/_authenticated/patterns'
 import { Route as AuthenticatedPaymentMethodsRouteImport } from './routes/_authenticated/payment-methods'
 import { Route as AuthenticatedPlanRouteImport } from './routes/_authenticated/plan'
 import { Route as AuthenticatedReceivablesRouteImport } from './routes/_authenticated/receivables'
 import { Route as AuthenticatedReconcileRouteImport } from './routes/_authenticated/reconcile'
+import { Route as AuthenticatedRecordsRouteImport } from './routes/_authenticated/records'
 import { Route as AuthenticatedRecordsCheckRouteImport } from './routes/_authenticated/records-check'
 import { Route as AuthenticatedReimbursementSettingsRouteImport } from './routes/_authenticated/reimbursement-settings'
 import { Route as AuthenticatedReportCentreRouteImport } from './routes/_authenticated/report-centre'
@@ -63,6 +69,7 @@ import { Route as AuthenticatedStatementCrosscheckRouteImport } from './routes/_
 import { Route as AuthenticatedStatementsRouteImport } from './routes/_authenticated/statements'
 import { Route as AuthenticatedStrategyRouteImport } from './routes/_authenticated/strategy'
 import { Route as AuthenticatedSyncQueueRouteImport } from './routes/_authenticated/sync-queue'
+import { Route as AuthenticatedTasksRouteImport } from './routes/_authenticated/tasks'
 import { Route as AuthenticatedTaxRouteImport } from './routes/_authenticated/tax'
 import { Route as AuthenticatedTransactionReviewRouteImport } from './routes/_authenticated/transaction-review'
 import { Route as AuthenticatedTransfersRouteImport } from './routes/_authenticated/transfers'
@@ -127,6 +134,11 @@ const AuthenticatedAccountReconciliationRoute =
     path: '/account-reconciliation',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedAddRoute = AuthenticatedAddRouteImport.update({
+  id: '/add',
+  path: '/add',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedAllocationRoute = AuthenticatedAllocationRouteImport.update({
   id: '/allocation',
   path: '/allocation',
@@ -160,6 +172,11 @@ const AuthenticatedBriefRoute = AuthenticatedBriefRouteImport.update({
 const AuthenticatedBudgetsRoute = AuthenticatedBudgetsRouteImport.update({
   id: '/budgets',
   path: '/budgets',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedCalendarRoute = AuthenticatedCalendarRouteImport.update({
+  id: '/calendar',
+  path: '/calendar',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedClaimSubmissionRoute =
@@ -239,9 +256,19 @@ const AuthenticatedHistoricalImportRoute =
     path: '/historical-import',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedHomeRoute = AuthenticatedHomeRouteImport.update({
+  id: '/home',
+  path: '/home',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedInboxRoute = AuthenticatedInboxRouteImport.update({
   id: '/inbox',
   path: '/inbox',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedMoneyRoute = AuthenticatedMoneyRouteImport.update({
+  id: '/money',
+  path: '/money',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedNewRoute = AuthenticatedNewRouteImport.update({
@@ -249,6 +276,12 @@ const AuthenticatedNewRoute = AuthenticatedNewRouteImport.update({
   path: '/new',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedNotificationsRoute =
+  AuthenticatedNotificationsRouteImport.update({
+    id: '/notifications',
+    path: '/notifications',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedOfflineReceiptsRoute =
   AuthenticatedOfflineReceiptsRouteImport.update({
     id: '/offline-receipts',
@@ -280,6 +313,11 @@ const AuthenticatedReceivablesRoute =
 const AuthenticatedReconcileRoute = AuthenticatedReconcileRouteImport.update({
   id: '/reconcile',
   path: '/reconcile',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedRecordsRoute = AuthenticatedRecordsRouteImport.update({
+  id: '/records',
+  path: '/records',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedRecordsCheckRoute =
@@ -371,6 +409,11 @@ const AuthenticatedStrategyRoute = AuthenticatedStrategyRouteImport.update({
 const AuthenticatedSyncQueueRoute = AuthenticatedSyncQueueRouteImport.update({
   id: '/sync-queue',
   path: '/sync-queue',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedTasksRoute = AuthenticatedTasksRouteImport.update({
+  id: '/tasks',
+  path: '/tasks',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedTaxRoute = AuthenticatedTaxRouteImport.update({
@@ -503,6 +546,7 @@ export interface FileRoutesByFullPath {
   '/share-target': typeof ShareTargetRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/account-reconciliation': typeof AuthenticatedAccountReconciliationRoute
+  '/add': typeof AuthenticatedAddRoute
   '/allocation': typeof AuthenticatedAllocationRoute
   '/assets': typeof AuthenticatedAssetsRoute
   '/assistant': typeof AuthenticatedAssistantRoute
@@ -510,6 +554,7 @@ export interface FileRoutesByFullPath {
   '/audit': typeof AuthenticatedAuditRoute
   '/brief': typeof AuthenticatedBriefRoute
   '/budgets': typeof AuthenticatedBudgetsRoute
+  '/calendar': typeof AuthenticatedCalendarRoute
   '/claim-submission': typeof AuthenticatedClaimSubmissionRoute
   '/classification-rules': typeof AuthenticatedClassificationRulesRoute
   '/company-spending': typeof AuthenticatedCompanySpendingRoute
@@ -524,14 +569,18 @@ export interface FileRoutesByFullPath {
   '/forex-reconcile': typeof AuthenticatedForexReconcileRoute
   '/gst-check': typeof AuthenticatedGstCheckRoute
   '/historical-import': typeof AuthenticatedHistoricalImportRoute
+  '/home': typeof AuthenticatedHomeRoute
   '/inbox': typeof AuthenticatedInboxRoute
+  '/money': typeof AuthenticatedMoneyRoute
   '/new': typeof AuthenticatedNewRoute
+  '/notifications': typeof AuthenticatedNotificationsRoute
   '/offline-receipts': typeof AuthenticatedOfflineReceiptsRoute
   '/patterns': typeof AuthenticatedPatternsRoute
   '/payment-methods': typeof AuthenticatedPaymentMethodsRoute
   '/plan': typeof AuthenticatedPlanRoute
   '/receivables': typeof AuthenticatedReceivablesRoute
   '/reconcile': typeof AuthenticatedReconcileRoute
+  '/records': typeof AuthenticatedRecordsRoute
   '/records-check': typeof AuthenticatedRecordsCheckRoute
   '/reimbursement-settings': typeof AuthenticatedReimbursementSettingsRoute
   '/report-centre': typeof AuthenticatedReportCentreRoute
@@ -549,6 +598,7 @@ export interface FileRoutesByFullPath {
   '/statements': typeof AuthenticatedStatementsRoute
   '/strategy': typeof AuthenticatedStrategyRoute
   '/sync-queue': typeof AuthenticatedSyncQueueRoute
+  '/tasks': typeof AuthenticatedTasksRoute
   '/tax': typeof AuthenticatedTaxRoute
   '/transaction-review': typeof AuthenticatedTransactionReviewRoute
   '/transfers': typeof AuthenticatedTransfersRoute
@@ -580,6 +630,7 @@ export interface FileRoutesByTo {
   '/share-target': typeof ShareTargetRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/account-reconciliation': typeof AuthenticatedAccountReconciliationRoute
+  '/add': typeof AuthenticatedAddRoute
   '/allocation': typeof AuthenticatedAllocationRoute
   '/assets': typeof AuthenticatedAssetsRoute
   '/assistant': typeof AuthenticatedAssistantRoute
@@ -587,6 +638,7 @@ export interface FileRoutesByTo {
   '/audit': typeof AuthenticatedAuditRoute
   '/brief': typeof AuthenticatedBriefRoute
   '/budgets': typeof AuthenticatedBudgetsRoute
+  '/calendar': typeof AuthenticatedCalendarRoute
   '/claim-submission': typeof AuthenticatedClaimSubmissionRoute
   '/classification-rules': typeof AuthenticatedClassificationRulesRoute
   '/company-spending': typeof AuthenticatedCompanySpendingRoute
@@ -601,14 +653,18 @@ export interface FileRoutesByTo {
   '/forex-reconcile': typeof AuthenticatedForexReconcileRoute
   '/gst-check': typeof AuthenticatedGstCheckRoute
   '/historical-import': typeof AuthenticatedHistoricalImportRoute
+  '/home': typeof AuthenticatedHomeRoute
   '/inbox': typeof AuthenticatedInboxRoute
+  '/money': typeof AuthenticatedMoneyRoute
   '/new': typeof AuthenticatedNewRoute
+  '/notifications': typeof AuthenticatedNotificationsRoute
   '/offline-receipts': typeof AuthenticatedOfflineReceiptsRoute
   '/patterns': typeof AuthenticatedPatternsRoute
   '/payment-methods': typeof AuthenticatedPaymentMethodsRoute
   '/plan': typeof AuthenticatedPlanRoute
   '/receivables': typeof AuthenticatedReceivablesRoute
   '/reconcile': typeof AuthenticatedReconcileRoute
+  '/records': typeof AuthenticatedRecordsRoute
   '/records-check': typeof AuthenticatedRecordsCheckRoute
   '/reimbursement-settings': typeof AuthenticatedReimbursementSettingsRoute
   '/report-centre': typeof AuthenticatedReportCentreRoute
@@ -626,6 +682,7 @@ export interface FileRoutesByTo {
   '/statements': typeof AuthenticatedStatementsRoute
   '/strategy': typeof AuthenticatedStrategyRoute
   '/sync-queue': typeof AuthenticatedSyncQueueRoute
+  '/tasks': typeof AuthenticatedTasksRoute
   '/tax': typeof AuthenticatedTaxRoute
   '/transaction-review': typeof AuthenticatedTransactionReviewRoute
   '/transfers': typeof AuthenticatedTransfersRoute
@@ -658,6 +715,7 @@ export interface FileRoutesById {
   '/share-target': typeof ShareTargetRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/_authenticated/account-reconciliation': typeof AuthenticatedAccountReconciliationRoute
+  '/_authenticated/add': typeof AuthenticatedAddRoute
   '/_authenticated/allocation': typeof AuthenticatedAllocationRoute
   '/_authenticated/assets': typeof AuthenticatedAssetsRoute
   '/_authenticated/assistant': typeof AuthenticatedAssistantRoute
@@ -665,6 +723,7 @@ export interface FileRoutesById {
   '/_authenticated/audit': typeof AuthenticatedAuditRoute
   '/_authenticated/brief': typeof AuthenticatedBriefRoute
   '/_authenticated/budgets': typeof AuthenticatedBudgetsRoute
+  '/_authenticated/calendar': typeof AuthenticatedCalendarRoute
   '/_authenticated/claim-submission': typeof AuthenticatedClaimSubmissionRoute
   '/_authenticated/classification-rules': typeof AuthenticatedClassificationRulesRoute
   '/_authenticated/company-spending': typeof AuthenticatedCompanySpendingRoute
@@ -679,14 +738,18 @@ export interface FileRoutesById {
   '/_authenticated/forex-reconcile': typeof AuthenticatedForexReconcileRoute
   '/_authenticated/gst-check': typeof AuthenticatedGstCheckRoute
   '/_authenticated/historical-import': typeof AuthenticatedHistoricalImportRoute
+  '/_authenticated/home': typeof AuthenticatedHomeRoute
   '/_authenticated/inbox': typeof AuthenticatedInboxRoute
+  '/_authenticated/money': typeof AuthenticatedMoneyRoute
   '/_authenticated/new': typeof AuthenticatedNewRoute
+  '/_authenticated/notifications': typeof AuthenticatedNotificationsRoute
   '/_authenticated/offline-receipts': typeof AuthenticatedOfflineReceiptsRoute
   '/_authenticated/patterns': typeof AuthenticatedPatternsRoute
   '/_authenticated/payment-methods': typeof AuthenticatedPaymentMethodsRoute
   '/_authenticated/plan': typeof AuthenticatedPlanRoute
   '/_authenticated/receivables': typeof AuthenticatedReceivablesRoute
   '/_authenticated/reconcile': typeof AuthenticatedReconcileRoute
+  '/_authenticated/records': typeof AuthenticatedRecordsRoute
   '/_authenticated/records-check': typeof AuthenticatedRecordsCheckRoute
   '/_authenticated/reimbursement-settings': typeof AuthenticatedReimbursementSettingsRoute
   '/_authenticated/report-centre': typeof AuthenticatedReportCentreRoute
@@ -704,6 +767,7 @@ export interface FileRoutesById {
   '/_authenticated/statements': typeof AuthenticatedStatementsRoute
   '/_authenticated/strategy': typeof AuthenticatedStrategyRoute
   '/_authenticated/sync-queue': typeof AuthenticatedSyncQueueRoute
+  '/_authenticated/tasks': typeof AuthenticatedTasksRoute
   '/_authenticated/tax': typeof AuthenticatedTaxRoute
   '/_authenticated/transaction-review': typeof AuthenticatedTransactionReviewRoute
   '/_authenticated/transfers': typeof AuthenticatedTransfersRoute
@@ -737,6 +801,7 @@ export interface FileRouteTypes {
     | '/share-target'
     | '/.well-known/oauth-protected-resource'
     | '/account-reconciliation'
+    | '/add'
     | '/allocation'
     | '/assets'
     | '/assistant'
@@ -744,6 +809,7 @@ export interface FileRouteTypes {
     | '/audit'
     | '/brief'
     | '/budgets'
+    | '/calendar'
     | '/claim-submission'
     | '/classification-rules'
     | '/company-spending'
@@ -758,14 +824,18 @@ export interface FileRouteTypes {
     | '/forex-reconcile'
     | '/gst-check'
     | '/historical-import'
+    | '/home'
     | '/inbox'
+    | '/money'
     | '/new'
+    | '/notifications'
     | '/offline-receipts'
     | '/patterns'
     | '/payment-methods'
     | '/plan'
     | '/receivables'
     | '/reconcile'
+    | '/records'
     | '/records-check'
     | '/reimbursement-settings'
     | '/report-centre'
@@ -783,6 +853,7 @@ export interface FileRouteTypes {
     | '/statements'
     | '/strategy'
     | '/sync-queue'
+    | '/tasks'
     | '/tax'
     | '/transaction-review'
     | '/transfers'
@@ -814,6 +885,7 @@ export interface FileRouteTypes {
     | '/share-target'
     | '/.well-known/oauth-protected-resource'
     | '/account-reconciliation'
+    | '/add'
     | '/allocation'
     | '/assets'
     | '/assistant'
@@ -821,6 +893,7 @@ export interface FileRouteTypes {
     | '/audit'
     | '/brief'
     | '/budgets'
+    | '/calendar'
     | '/claim-submission'
     | '/classification-rules'
     | '/company-spending'
@@ -835,14 +908,18 @@ export interface FileRouteTypes {
     | '/forex-reconcile'
     | '/gst-check'
     | '/historical-import'
+    | '/home'
     | '/inbox'
+    | '/money'
     | '/new'
+    | '/notifications'
     | '/offline-receipts'
     | '/patterns'
     | '/payment-methods'
     | '/plan'
     | '/receivables'
     | '/reconcile'
+    | '/records'
     | '/records-check'
     | '/reimbursement-settings'
     | '/report-centre'
@@ -860,6 +937,7 @@ export interface FileRouteTypes {
     | '/statements'
     | '/strategy'
     | '/sync-queue'
+    | '/tasks'
     | '/tax'
     | '/transaction-review'
     | '/transfers'
@@ -891,6 +969,7 @@ export interface FileRouteTypes {
     | '/share-target'
     | '/.well-known/oauth-protected-resource'
     | '/_authenticated/account-reconciliation'
+    | '/_authenticated/add'
     | '/_authenticated/allocation'
     | '/_authenticated/assets'
     | '/_authenticated/assistant'
@@ -898,6 +977,7 @@ export interface FileRouteTypes {
     | '/_authenticated/audit'
     | '/_authenticated/brief'
     | '/_authenticated/budgets'
+    | '/_authenticated/calendar'
     | '/_authenticated/claim-submission'
     | '/_authenticated/classification-rules'
     | '/_authenticated/company-spending'
@@ -912,14 +992,18 @@ export interface FileRouteTypes {
     | '/_authenticated/forex-reconcile'
     | '/_authenticated/gst-check'
     | '/_authenticated/historical-import'
+    | '/_authenticated/home'
     | '/_authenticated/inbox'
+    | '/_authenticated/money'
     | '/_authenticated/new'
+    | '/_authenticated/notifications'
     | '/_authenticated/offline-receipts'
     | '/_authenticated/patterns'
     | '/_authenticated/payment-methods'
     | '/_authenticated/plan'
     | '/_authenticated/receivables'
     | '/_authenticated/reconcile'
+    | '/_authenticated/records'
     | '/_authenticated/records-check'
     | '/_authenticated/reimbursement-settings'
     | '/_authenticated/report-centre'
@@ -937,6 +1021,7 @@ export interface FileRouteTypes {
     | '/_authenticated/statements'
     | '/_authenticated/strategy'
     | '/_authenticated/sync-queue'
+    | '/_authenticated/tasks'
     | '/_authenticated/tax'
     | '/_authenticated/transaction-review'
     | '/_authenticated/transfers'
@@ -1040,6 +1125,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAccountReconciliationRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/add': {
+      id: '/_authenticated/add'
+      path: '/add'
+      fullPath: '/add'
+      preLoaderRoute: typeof AuthenticatedAddRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/allocation': {
       id: '/_authenticated/allocation'
       path: '/allocation'
@@ -1087,6 +1179,13 @@ declare module '@tanstack/react-router' {
       path: '/budgets'
       fullPath: '/budgets'
       preLoaderRoute: typeof AuthenticatedBudgetsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/calendar': {
+      id: '/_authenticated/calendar'
+      path: '/calendar'
+      fullPath: '/calendar'
+      preLoaderRoute: typeof AuthenticatedCalendarRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/claim-submission': {
@@ -1187,6 +1286,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedHistoricalImportRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/home': {
+      id: '/_authenticated/home'
+      path: '/home'
+      fullPath: '/home'
+      preLoaderRoute: typeof AuthenticatedHomeRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/inbox': {
       id: '/_authenticated/inbox'
       path: '/inbox'
@@ -1194,11 +1300,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedInboxRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/money': {
+      id: '/_authenticated/money'
+      path: '/money'
+      fullPath: '/money'
+      preLoaderRoute: typeof AuthenticatedMoneyRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/new': {
       id: '/_authenticated/new'
       path: '/new'
       fullPath: '/new'
       preLoaderRoute: typeof AuthenticatedNewRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/notifications': {
+      id: '/_authenticated/notifications'
+      path: '/notifications'
+      fullPath: '/notifications'
+      preLoaderRoute: typeof AuthenticatedNotificationsRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/offline-receipts': {
@@ -1241,6 +1361,13 @@ declare module '@tanstack/react-router' {
       path: '/reconcile'
       fullPath: '/reconcile'
       preLoaderRoute: typeof AuthenticatedReconcileRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/records': {
+      id: '/_authenticated/records'
+      path: '/records'
+      fullPath: '/records'
+      preLoaderRoute: typeof AuthenticatedRecordsRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/records-check': {
@@ -1360,6 +1487,13 @@ declare module '@tanstack/react-router' {
       path: '/sync-queue'
       fullPath: '/sync-queue'
       preLoaderRoute: typeof AuthenticatedSyncQueueRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/tasks': {
+      id: '/_authenticated/tasks'
+      path: '/tasks'
+      fullPath: '/tasks'
+      preLoaderRoute: typeof AuthenticatedTasksRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/tax': {
@@ -1534,6 +1668,7 @@ const AuthenticatedTripsRouteWithChildren =
 
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedAccountReconciliationRoute: typeof AuthenticatedAccountReconciliationRoute
+  AuthenticatedAddRoute: typeof AuthenticatedAddRoute
   AuthenticatedAllocationRoute: typeof AuthenticatedAllocationRoute
   AuthenticatedAssetsRoute: typeof AuthenticatedAssetsRoute
   AuthenticatedAssistantRoute: typeof AuthenticatedAssistantRoute
@@ -1541,6 +1676,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedAuditRoute: typeof AuthenticatedAuditRoute
   AuthenticatedBriefRoute: typeof AuthenticatedBriefRoute
   AuthenticatedBudgetsRoute: typeof AuthenticatedBudgetsRoute
+  AuthenticatedCalendarRoute: typeof AuthenticatedCalendarRoute
   AuthenticatedClaimSubmissionRoute: typeof AuthenticatedClaimSubmissionRoute
   AuthenticatedClassificationRulesRoute: typeof AuthenticatedClassificationRulesRoute
   AuthenticatedCompanySpendingRoute: typeof AuthenticatedCompanySpendingRoute
@@ -1555,14 +1691,18 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedForexReconcileRoute: typeof AuthenticatedForexReconcileRoute
   AuthenticatedGstCheckRoute: typeof AuthenticatedGstCheckRoute
   AuthenticatedHistoricalImportRoute: typeof AuthenticatedHistoricalImportRoute
+  AuthenticatedHomeRoute: typeof AuthenticatedHomeRoute
   AuthenticatedInboxRoute: typeof AuthenticatedInboxRoute
+  AuthenticatedMoneyRoute: typeof AuthenticatedMoneyRoute
   AuthenticatedNewRoute: typeof AuthenticatedNewRoute
+  AuthenticatedNotificationsRoute: typeof AuthenticatedNotificationsRoute
   AuthenticatedOfflineReceiptsRoute: typeof AuthenticatedOfflineReceiptsRoute
   AuthenticatedPatternsRoute: typeof AuthenticatedPatternsRoute
   AuthenticatedPaymentMethodsRoute: typeof AuthenticatedPaymentMethodsRoute
   AuthenticatedPlanRoute: typeof AuthenticatedPlanRoute
   AuthenticatedReceivablesRoute: typeof AuthenticatedReceivablesRoute
   AuthenticatedReconcileRoute: typeof AuthenticatedReconcileRoute
+  AuthenticatedRecordsRoute: typeof AuthenticatedRecordsRoute
   AuthenticatedRecordsCheckRoute: typeof AuthenticatedRecordsCheckRoute
   AuthenticatedReimbursementSettingsRoute: typeof AuthenticatedReimbursementSettingsRoute
   AuthenticatedReportCentreRoute: typeof AuthenticatedReportCentreRoute
@@ -1580,6 +1720,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedStatementsRoute: typeof AuthenticatedStatementsRoute
   AuthenticatedStrategyRoute: typeof AuthenticatedStrategyRoute
   AuthenticatedSyncQueueRoute: typeof AuthenticatedSyncQueueRoute
+  AuthenticatedTasksRoute: typeof AuthenticatedTasksRoute
   AuthenticatedTaxRoute: typeof AuthenticatedTaxRoute
   AuthenticatedTransactionReviewRoute: typeof AuthenticatedTransactionReviewRoute
   AuthenticatedTransfersRoute: typeof AuthenticatedTransfersRoute
@@ -1594,6 +1735,7 @@ interface AuthenticatedRouteRouteChildren {
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAccountReconciliationRoute:
     AuthenticatedAccountReconciliationRoute,
+  AuthenticatedAddRoute: AuthenticatedAddRoute,
   AuthenticatedAllocationRoute: AuthenticatedAllocationRoute,
   AuthenticatedAssetsRoute: AuthenticatedAssetsRoute,
   AuthenticatedAssistantRoute: AuthenticatedAssistantRoute,
@@ -1601,6 +1743,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAuditRoute: AuthenticatedAuditRoute,
   AuthenticatedBriefRoute: AuthenticatedBriefRoute,
   AuthenticatedBudgetsRoute: AuthenticatedBudgetsRoute,
+  AuthenticatedCalendarRoute: AuthenticatedCalendarRoute,
   AuthenticatedClaimSubmissionRoute: AuthenticatedClaimSubmissionRoute,
   AuthenticatedClassificationRulesRoute: AuthenticatedClassificationRulesRoute,
   AuthenticatedCompanySpendingRoute: AuthenticatedCompanySpendingRoute,
@@ -1616,14 +1759,18 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedForexReconcileRoute: AuthenticatedForexReconcileRoute,
   AuthenticatedGstCheckRoute: AuthenticatedGstCheckRoute,
   AuthenticatedHistoricalImportRoute: AuthenticatedHistoricalImportRoute,
+  AuthenticatedHomeRoute: AuthenticatedHomeRoute,
   AuthenticatedInboxRoute: AuthenticatedInboxRoute,
+  AuthenticatedMoneyRoute: AuthenticatedMoneyRoute,
   AuthenticatedNewRoute: AuthenticatedNewRoute,
+  AuthenticatedNotificationsRoute: AuthenticatedNotificationsRoute,
   AuthenticatedOfflineReceiptsRoute: AuthenticatedOfflineReceiptsRoute,
   AuthenticatedPatternsRoute: AuthenticatedPatternsRoute,
   AuthenticatedPaymentMethodsRoute: AuthenticatedPaymentMethodsRoute,
   AuthenticatedPlanRoute: AuthenticatedPlanRoute,
   AuthenticatedReceivablesRoute: AuthenticatedReceivablesRoute,
   AuthenticatedReconcileRoute: AuthenticatedReconcileRoute,
+  AuthenticatedRecordsRoute: AuthenticatedRecordsRoute,
   AuthenticatedRecordsCheckRoute: AuthenticatedRecordsCheckRoute,
   AuthenticatedReimbursementSettingsRoute:
     AuthenticatedReimbursementSettingsRoute,
@@ -1642,6 +1789,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedStatementsRoute: AuthenticatedStatementsRoute,
   AuthenticatedStrategyRoute: AuthenticatedStrategyRoute,
   AuthenticatedSyncQueueRoute: AuthenticatedSyncQueueRoute,
+  AuthenticatedTasksRoute: AuthenticatedTasksRoute,
   AuthenticatedTaxRoute: AuthenticatedTaxRoute,
   AuthenticatedTransactionReviewRoute: AuthenticatedTransactionReviewRoute,
   AuthenticatedTransfersRoute: AuthenticatedTransfersRoute,

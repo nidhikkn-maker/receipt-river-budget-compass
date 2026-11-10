@@ -28,3 +28,25 @@ export function ThapalBrand({ className = "" }: { className?: string }) {
     <ThapalLogo className="hidden h-7 w-auto sm:block" />
   </span>;
 }
+
+/*
+ * Signature Flow identity slots (Track B, batch B1). Option 02 — a single-stroke capital T with a clean
+ * sans-serif "Thapal" wordmark — is approved as a direction, but the final vector artwork has not been
+ * supplied. Until it is, the mark below is a PLACEHOLDER: a plain T set in the wordmark font. Replace the
+ * contents of ThapalTMark with the delivered SVG outlines; do not treat this glyph as final artwork.
+ */
+export const T_MARK_IS_PLACEHOLDER = true;
+
+/** Placeholder T mark slot (final Option 02 artwork pending). */
+export function ThapalTMark({ className = "" }: { className?: string }) {
+  return (
+    <span className={`sf-tmark ${className}`} role="img" aria-label="Thapal" title="Placeholder T mark — final artwork pending" data-artwork={T_MARK_IS_PLACEHOLDER ? "placeholder" : "final"}>
+      <span aria-hidden>T</span>
+    </span>
+  );
+}
+
+/** Text wordmark: always "Thapal" — capital T, no full stop. */
+export function ThapalWordmark({ className = "" }: { className?: string }) {
+  return <span className={`sf-wordmark ${className}`}>Thapal</span>;
+}
