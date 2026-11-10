@@ -1,0 +1,100 @@
+# Thapal GitLab CI (approved by KK, 10 Nov 2026).
+# - Verification only: frozen-lockfile install, typecheck, production build, automated tests.
+# - NO deployment stages. NO production database connections or secrets: the Supabase variables below point at
+#   a non-existent fixture host and override the committed .env (Vite gives existing environment variables priority).
+# - Runs for merge requests and integration branches only; skipped when a change touches documentation only.
+# - Superseded pipelines are cancelled (interruptible jobs, auto-cancel on new commits).
+# - Never targets or modifies the protected main branch.
+
+workflow:
+  auto_cancel:
+    on_new_commit: interruptible
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    # Integration branches, unless an open merge request already runs the same commit (avoids duplicates).
+    - if: $CI_COMMIT_BRANCH =~ /^integration\// && $CI_OPEN_MERGE_REQUESTS == null
+    - when: never
+
+stages:
+  - verify
+
+variables:
+  BUN_VERSION: "1.4.4"
+  BUN_INSTALL_CACHE_DIR: "$CI_PROJECT_DIR/.bun-cache"
+  # Fixture-only backend (never the hosted project).
+  SUPABASE_URL: "https://fixture.supabase.invalid"
+  VITE_SUPABASE_URL: "https://fixture.supabase.invalid"
+  SUPABASE_PROJECT_ID: "fixture"
+  VITE_SUPABASE_PROJECT_ID: "fixture"
+  SUPABASE_PUBLISHABLE_KEY: "fixture-anon"
+  VITE_SUPABASE_PUBLISHABLE_KEY: "fixture-anon"
+  SUPABASE_SERVICE_ROLE_KEY: "fixture-service"
+
+# Paths that can change behaviour. A change limited to docs/ or Markdown does not trigger the full suite.
+.code_paths: &code_paths
+  - src/**/*
+  - scripts/**/*
+  - public/**/*
+  - drizzle/**/*
+  - supabase/**/*
+  - patches/**/*
+  - .lovable/staged-sql/**/*
+  - package.json
+  - bun.lock
+  - "*.config.ts"
+  - "*.config.js"
+  - tsconfig*.json
+  - .gitlab-ci.yml
+
+.bun: &bun
+  image: node:22-bookworm
+  interruptible: true
+  cache:
+    key:
+      files: [bun.lock]
+    paths: [.bun-cache/]
+  before_script:
+    - npm install -g "bun@${BUN_VERSION}"
+    - bun --version && node --version
+    - bun install --frozen-lockfile
+
+verify:
+  <<: *bun
+  stage: verify
+  timeout: 45 minutes
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      changes: *code_paths
+    - if: $CI_COMMIT_BRANCH
+      changes: *code_paths
+  script:
+    - bun run typecheck
+    - bun run build
+    - mkdir -p reports
+    - bunx vitest run --reporter=default --reporter=junit --outputFile.junit=reports/junit.xml --reporter=json --outputFile.json=reports/vitest.json
+  artifacts:
+    when: always
+    expire_in: 30 days
+    paths:
+      - reports/
+    reports:
+      junit: reports/junit.xml
+
+# Read-only dependency advisories (never applies fixes); only when dependencies change; never blocks.
+dependency-advisories:
+  <<: *bun
+  stage: verify
+  allow_failure: true
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      changes: [package.json, bun.lock]
+    - if: $CI_COMMIT_BRANCH
+      changes: [package.json, bun.lock]
+  script:
+    - sha256sum bun.lock > bun-lock.sha256
+    - set -o pipefail; bun audit 2>&1 | tee dependency-advisories.txt || echo "Advisories reported or audit unavailable; no fixes applied."
+    - sha256sum --check bun-lock.sha256
+  artifacts:
+    when: always
+    expire_in: 30 days
+    paths: [dependency-advisories.txt]

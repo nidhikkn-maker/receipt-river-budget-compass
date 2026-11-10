@@ -74,3 +74,14 @@ All open: RB-P1-01..07 and RB-DEC-C11 (C11 enforced locally in P7, release evide
 - `modules/connections` (Track C)
 
 Each merges into `integration/phase2-3-p0` only after its own verification, then the integration commit is re-verified (Track D).
+
+## CI (enabled 10 Nov 2026, KK approval)
+- **Pipeline:** `.gitlab-ci.yml` runs on merge requests and `integration/*` branches, and only when code paths change. It does frozen-lockfile install, typecheck, build and tests, and keeps JUnit and JSON reports for 30 days.
+- **Restrictions:** no deploy stage; fixture Supabase variables only; never targets `main`.
+- **Verified before enabling:**
+  - YAML parsed;
+  - the exact job run in a clean clone with Bun 1.4.4 on Node 22 and the fixture variables;
+  - install, typecheck and build passed, with no production address in the build;
+  - 2,761 / 2,761 tests, with JUnit and JSON reports produced.
+  - GitLab's lint API was not reachable without an API token, so the first real pipeline is the final check.
+- **Runner minutes:** reported per pipeline in this dashboard from the GitLab pipeline durations.
