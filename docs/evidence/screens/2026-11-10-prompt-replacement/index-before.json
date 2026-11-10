@@ -1,0 +1,114 @@
+{
+ "shots": [
+  {
+   "name": "iphone-before-01-plan-edit-amount.jpg",
+   "note": "Plan: Edit amount opens a browser pop-up (window.prompt) with no label, rules or Cancel guidance"
+  },
+  {
+   "name": "iphone-before-02-account-rename-adjust.jpg",
+   "note": "Account settings: Rename account and Adjust to statement balance both open browser pop-ups"
+  },
+  {
+   "name": "iphone-before-03-vault-rename.jpg",
+   "note": "DocuRepo: Rename opens a browser pop-up"
+  },
+  {
+   "name": "ipad-before-01-plan-edit-amount.jpg",
+   "note": "Plan: Edit amount opens a browser pop-up (window.prompt) with no label, rules or Cancel guidance"
+  },
+  {
+   "name": "ipad-before-02-account-rename-adjust.jpg",
+   "note": "Account settings: Rename account and Adjust to statement balance both open browser pop-ups"
+  },
+  {
+   "name": "ipad-before-03-vault-rename.jpg",
+   "note": "DocuRepo: Rename opens a browser pop-up"
+  },
+  {
+   "name": "desktop-before-01-plan-edit-amount.jpg",
+   "note": "Plan: Edit amount opens a browser pop-up (window.prompt) with no label, rules or Cancel guidance"
+  },
+  {
+   "name": "desktop-before-02-account-rename-adjust.jpg",
+   "note": "Account settings: Rename account and Adjust to statement balance both open browser pop-ups"
+  },
+  {
+   "name": "desktop-before-03-vault-rename.jpg",
+   "note": "DocuRepo: Rename opens a browser pop-up"
+  }
+ ],
+ "browserPrompts": [
+  {
+   "tag": "iphone",
+   "type": "prompt",
+   "message": "New amount for Flat rent (₹)",
+   "defaultValue": "32000"
+  },
+  {
+   "tag": "iphone",
+   "type": "prompt",
+   "message": "Account name",
+   "defaultValue": "Amex card ••1009"
+  },
+  {
+   "tag": "iphone",
+   "type": "prompt",
+   "message": "Actual balance shown on your statement (₹)",
+   "defaultValue": ""
+  },
+  {
+   "tag": "iphone",
+   "type": "prompt",
+   "message": "Document title",
+   "defaultValue": "HDFC statement Oct 2026"
+  },
+  {
+   "tag": "ipad",
+   "type": "prompt",
+   "message": "New amount for Flat rent (₹)",
+   "defaultValue": "32000"
+  },
+  {
+   "tag": "ipad",
+   "type": "prompt",
+   "message": "Account name",
+   "defaultValue": "Amex card ••1009"
+  },
+  {
+   "tag": "ipad",
+   "type": "prompt",
+   "message": "Actual balance shown on your statement (₹)",
+   "defaultValue": ""
+  },
+  {
+   "tag": "ipad",
+   "type": "prompt",
+   "message": "Document title",
+   "defaultValue": "HDFC statement Oct 2026"
+  },
+  {
+   "tag": "desktop",
+   "type": "prompt",
+   "message": "New amount for Flat rent (₹)",
+   "defaultValue": "32000"
+  },
+  {
+   "tag": "desktop",
+   "type": "prompt",
+   "message": "Account name",
+   "defaultValue": "Amex card ••1009"
+  },
+  {
+   "tag": "desktop",
+   "type": "prompt",
+   "message": "Actual balance shown on your statement (₹)",
+   "defaultValue": ""
+  },
+  {
+   "tag": "desktop",
+   "type": "prompt",
+   "message": "Document title",
+   "defaultValue": "HDFC statement Oct 2026"
+  }
+ ]
+}

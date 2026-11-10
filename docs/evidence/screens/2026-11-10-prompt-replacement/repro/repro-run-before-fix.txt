@@ -1,0 +1,12 @@
+
+ RUN  v4.1.12 /home/user/thapal-modc
+
+ ✓ src/components/prompt-replacement/prompts.repro.test.tsx > before the fix: value edits use window.prompt > Plan → Edit amount calls window.prompt and saves its answer 277ms
+ ✓ src/components/prompt-replacement/prompts.repro.test.tsx > before the fix: value edits use window.prompt > Account → Rename account and Adjust to statement balance call window.prompt 41ms
+ ✓ src/components/prompt-replacement/prompts.repro.test.tsx > before the fix: value edits use window.prompt > DocuRepo → Rename calls window.prompt 90ms
+
+ Test Files  1 passed (1)
+      Tests  3 passed (3)
+   Start at  09:33:26
+   Duration  1.99s (transform 587ms, setup 129ms, import 939ms, tests 411ms, environment 366ms)
+

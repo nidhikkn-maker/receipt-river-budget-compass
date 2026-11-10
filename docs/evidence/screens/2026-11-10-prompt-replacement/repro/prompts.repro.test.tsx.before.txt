@@ -1,0 +1,61 @@
+// Reproduction (before the fix): the four value edits still open a browser pop-up (window.prompt).
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import type { Account } from "@/lib/ledger";
+import { defaultPreferences } from "@/lib/preferences";
+import { callsOf, reset, spy } from "../records-archive/harness";
+
+vi.mock("@/lib/store", async () => ({ useStore: (await import("../records-archive/harness")).useStoreMock }));
+vi.mock("@tanstack/react-router", async () => (await import("../records-archive/harness")).routerMock);
+vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn(), message: vi.fn() } }));
+vi.mock("@/components/AppShell", () => ({ PageTitle: ({ title }: { title: string }) => <h1>{title}</h1>, Stat: ({ label }: { label: string }) => <p>{label}</p> }));
+vi.mock("@/components/SectionTabs", () => ({ SectionTabs: () => null }));
+vi.mock("@/components/PlanCalendar", () => ({ PlanCalendar: () => null }));
+vi.mock("recharts", () => ({ ResponsiveContainer: () => null, AreaChart: () => null, Area: () => null, ReferenceLine: () => null, XAxis: () => null, YAxis: () => null, Tooltip: () => null }));
+vi.mock("@/lib/use-position", () => ({ todayISO: () => "2026-11-10", usePosition: () => ({ forecast: { shortDates: [], series: [] }, safe: { amount: 0, lowest: 0, lowestDate: "2026-11-10", steps: [] }, upcoming: [], cash: 0, minBalance: 0, reserves: 0, subscriptions: { monthly: 0, annual: 0, active: 0, detected: [], summary: { increases: [], duplicates: [] } }, income: { received: 0, expectedRemaining: 0, expectedConfirmed: 0, bySource: {}, late: [] } }) }));
+vi.mock("@/components/ContractObligations", () => ({ ContractObligations: () => null, NoticeDeadlines: () => null }));
+vi.mock("@/components/books/VaultBooks", () => ({ VaultBooks: () => null }));
+vi.mock("@/components/ExpenseDialog", () => ({ ExpenseDialog: () => null }));
+vi.mock("@/components/MutualFundTools", () => ({ MutualFundTools: () => null }));
+vi.mock("@/components/BankBalanceEditor", () => ({ BankBalanceEditor: () => null }));
+vi.mock("@/components/BelongsTo", () => ({ BelongsTo: () => null }));
+import { Route as PlanRoute } from "@/routes/_authenticated/plan";
+import { Route as VaultRoute } from "@/routes/_authenticated/vault";
+import { AccountTools } from "@/components/AccountTools";
+const Plan = (PlanRoute as unknown as { component: () => React.ReactElement }).component;
+const Vault = (VaultRoute as unknown as { component: () => React.ReactElement }).component;
+
+const rent = { id: "c-1", name: "Flat rent", kind: "rent", direction: "out", amount: 32000, frequency: "monthly", intervalDays: null, nextDue: "2026-12-01", accountId: null, category: "Rent", confirmed: true, essential: true, status: "active" };
+const card: Account = { id: "acc-card", name: "Amex card", kind: "credit_card", openingBalance: 0, archived: false };
+const doc = { id: "doc-1", title: "LIC policy 2026", docType: "insurance", filePath: "owner/docs/lic.pdf", fileName: "lic.pdf", mimeType: "application/pdf", size: 1000, docDate: "2026-04-01", amount: 24000, currency: "INR", merchant: "LIC", notes: "", text: "", transactionId: null, accountId: null, loanId: null, expiresOn: null, createdAt: "2026-04-02T00:00:00Z", fields: [] };
+afterEach(() => { cleanup(); vi.restoreAllMocks(); });
+
+describe("before the fix: value edits use window.prompt", () => {
+  it("Plan → Edit amount calls window.prompt and saves its answer", async () => {
+    reset(defaultPreferences() as unknown as Record<string, unknown>, { commitments: [rent], saveCommitment: spy("saveCommitment") });
+    const prompt = vi.spyOn(window, "prompt").mockReturnValue("33000");
+    render(<Plan />);
+    fireEvent.click(screen.getByRole("button", { name: "Edit amount" }));
+    expect(prompt).toHaveBeenCalledWith("New amount for Flat rent (₹)", "32000");
+    await waitFor(() => expect(callsOf("saveCommitment")).toHaveLength(1));
+  });
+  it("Account → Rename account and Adjust to statement balance call window.prompt", async () => {
+    reset({}, { accounts: [card], valuations: [], updateAccount: spy("updateAccount"), adjustBalance: spy("adjustBalance") });
+    const prompt = vi.spyOn(window, "prompt").mockReturnValueOnce("Amex Platinum").mockReturnValueOnce("-1500");
+    render(<AccountTools a={card} />);
+    fireEvent.click(screen.getByRole("button", { name: "Rename account" }));
+    await waitFor(() => expect(callsOf("updateAccount")).toHaveLength(1));
+    fireEvent.click(screen.getByRole("button", { name: "Adjust to statement balance" }));
+    await waitFor(() => expect(callsOf("adjustBalance")).toHaveLength(1));
+    expect(prompt).toHaveBeenNthCalledWith(1, "Account name", "Amex card");
+    expect(prompt).toHaveBeenNthCalledWith(2, "Actual balance shown on your statement (₹)");
+  });
+  it("DocuRepo → Rename calls window.prompt", async () => {
+    reset({}, { documents: [doc], updateDocument: spy("updateDocument"), signedUrl: async () => null, downloadFile: async () => undefined });
+    const prompt = vi.spyOn(window, "prompt").mockReturnValue("LIC policy 2026-27");
+    render(<Vault />);
+    fireEvent.click(screen.getByRole("button", { name: "Rename" }));
+    expect(prompt).toHaveBeenCalledWith("Document title", "LIC policy 2026");
+    await waitFor(() => expect(callsOf("updateDocument")).toHaveLength(1));
+  });
+});

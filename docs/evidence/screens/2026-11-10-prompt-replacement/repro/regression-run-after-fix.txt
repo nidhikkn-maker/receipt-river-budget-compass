@@ -1,0 +1,19 @@
+
+ RUN  v4.1.12 /home/user/thapal-modc
+
+ ✓ src/lib/no-browser-prompt.acceptance.test.ts > acceptance: no browser pop-up prompts for value edits > the detector finds window.prompt( and bare prompt( and ignores a local function named prompt 13ms
+ ✓ src/lib/no-browser-prompt.acceptance.test.ts > acceptance: no browser pop-up prompts for value edits > Plan, account settings and DocuRepo contain no window.prompt( or browser prompt( call 120ms
+ ✓ src/components/prompt-replacement/prompts.repro.test.tsx > value edits use the in-app dialog, never window.prompt > Plan → Edit amount: labelled field prefilled and focused; the store's amount rule shown inline; saves the same commitment with the new amount 679ms
+ ✓ src/components/prompt-replacement/prompts.repro.test.tsx > value edits use the in-app dialog, never window.prompt > Plan → Edit amount: Cancel and Escape save nothing 398ms
+ ✓ src/components/prompt-replacement/prompts.repro.test.tsx > value edits use the in-app dialog, never window.prompt > Plan → Edit amount: a failed save keeps the dialog open with the reason next to the field 196ms
+ ✓ src/components/prompt-replacement/prompts.repro.test.tsx > value edits use the in-app dialog, never window.prompt > Account → Rename account: prefilled; empty and duplicate names explained inline; saves updateAccount(id, { name }) 136ms
+ ✓ src/components/prompt-replacement/prompts.repro.test.tsx > value edits use the in-app dialog, never window.prompt > Account → Adjust to statement balance: starts empty; blank or non-numbers explained inline; saves adjustBalance(account, number, today) 109ms
+ ✓ src/components/prompt-replacement/prompts.repro.test.tsx > value edits use the in-app dialog, never window.prompt > DocuRepo → Rename: prefilled title; a blank title is explained inline; saves updateDocument(id, { title }); Cancel saves nothing 204ms
+ ✓ src/components/prompt-replacement/prompts.repro.test.tsx > value edits use the in-app dialog, never window.prompt > inline rules are the store's own save rules (same messages), and amounts parse exactly as the prompt path did 1ms
+ ✓ src/lib/no-browser-prompt.acceptance.test.ts > acceptance: no browser pop-up prompts for value edits > no browser prompt anywhere in src outside the shrinking list of known remaining ones 2857ms
+
+ Test Files  2 passed (2)
+      Tests  10 passed (10)
+   Start at  09:47:12
+   Duration  4.30s (transform 1.29s, setup 286ms, import 2.40s, tests 4.72s, environment 746ms)
+

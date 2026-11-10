@@ -22,6 +22,8 @@ import { confirmAction } from "@/lib/confirm";
 import { bulkTotals, markableKey, markableUpcoming } from "@/lib/mark-done";
 import { ArchivedTableRecords, TableArchiveButton } from "@/components/ArchivedRecords";
 import { commitmentArchiveProblem, splitByTableArchive } from "@/lib/records-archive";
+import { ValueDialog } from "@/components/ValueDialog";
+import { commitmentAmountProblem } from "@/lib/value-edits";
 
 export const Route = createFileRoute("/_authenticated/plan")({
   head: () => ({
@@ -57,6 +59,8 @@ function Plan() {
   const markKeys = new Set(markable.map(markableKey));
   const [picked, setPicked] = useState<string[]>([]);
   const [bulkBusy, setBulkBusy] = useState<string | null>(null);
+  // Edit amount: in-app dialog (was a browser pop-up); saves the same commitment with only the amount changed.
+  const [amountFor, setAmountFor] = useState<Commitment | null>(null);
   const chosen = markable.filter((u) => picked.includes(markableKey(u)));
   const markChosen = async () => {
     const t = bulkTotals(chosen);
@@ -183,7 +187,7 @@ function Plan() {
                     <div className="text-xs text-muted-foreground">{KIND_LABEL[c.kind]} · {FREQ_LABEL[c.frequency]} · next {c.nextDue} · {money(monthlyCost(c))}/mo</div>
                   </div>
                   <span className={cn("rounded-full px-2 py-0.5 text-[11px]", STATUS_STYLE[st])}>{STATUS_LABEL[st] ?? st}</span>
-                  <Button size="sm" variant="ghost" onClick={()=>{const v=window.prompt(`New amount for ${c.name} (₹)`,String(c.amount));if(v!==null)void saveCommitment({...c,amount:Number(v)}).catch(e=>toast.error(e.message));}}>Edit amount</Button>
+                  <Button size="sm" variant="ghost" aria-label={`Edit amount for ${c.name}`} onClick={() => setAmountFor(c)}>Edit amount</Button>
                   <Button size="icon" variant="ghost" aria-label={c.status === "active" ? `Pause ${c.name}` : `Resume ${c.name}`}
                     onClick={() => saveCommitment({ ...c, status: c.status === "active" ? "paused" : "active" }).catch((e) => toast.error(e.message))}>
                     {c.status === "active" ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
@@ -220,6 +224,12 @@ function Plan() {
         </div>
         <CommitmentForm />
       </section>
+      <ValueDialog open={amountFor !== null} title={`Edit amount for ${amountFor?.name ?? ""}`}
+        description="Changes the amount for this and future due dates. Past entries stay as they are."
+        label="Amount (₹)" inputMode="decimal" initialValue={amountFor ? String(amountFor.amount) : ""} confirmLabel="Save amount"
+        validate={commitmentAmountProblem}
+        onSubmit={(v) => amountFor ? saveCommitment({ ...amountFor, amount: Number(v) }) : Promise.resolve()}
+        onClose={() => setAmountFor(null)} />
     </>
   );
 }
