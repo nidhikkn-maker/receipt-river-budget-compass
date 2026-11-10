@@ -9,7 +9,9 @@ import { amortize, goalProgress, prepayment, closureDate, addMonths, LOAN_TYPES,
 import { cardCycle, CARD_STATUS_LABEL } from "@/lib/cards";
 import { cardEmisOf } from "@/lib/position";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
-import { useStore, type Loan } from "@/lib/store";
+import { useStore, type Goal, type Loan } from "@/lib/store";
+import { ValueDialog } from "./ValueDialog";
+import { goalSavedProblem } from "@/lib/value-edits";
 import { loanHistory, loanBalanceChart, loanHistoryRows, payoffProjection } from "@/lib/loan-history";
 import { downloadBlob } from "@/lib/reports";
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip } from "recharts";
@@ -181,6 +183,7 @@ export function GoalsPanel() {
   // Archive instead of delete (P0-013): archived goals stay stored and, if a reserve, still held back from safe-to-spend.
   const goals = useGoalsSplit();
   const [f, setF] = useState({ name: "", target: "", saved: "0", monthly: "", reserve: false });
+  const [updating, setUpdating] = useState<Goal | null>(null);
   const today = todayISO();
   const add = (e: React.FormEvent) => {
     e.preventDefault();
@@ -191,13 +194,25 @@ export function GoalsPanel() {
   return (
     <section className="space-y-3">
       <h2 className="font-display text-lg font-bold">Goals & reserves</h2>
+      <ValueDialog
+        open={!!updating}
+        title={`Update “${updating?.name ?? ""}”`}
+        description={`How much is set aside for this goal now (target ${money(updating?.target ?? 0)}). This updates the goal's progress only; no money moves and no entry is recorded.`}
+        label="Saved so far (₹)"
+        inputMode="decimal"
+        initialValue={String(updating?.saved ?? "")}
+        confirmLabel="Save amount"
+        validate={goalSavedProblem}
+        onSubmit={(v) => updating ? saveGoal({ ...updating, saved: Number(v) }) : Promise.resolve()}
+        onClose={() => setUpdating(null)}
+      />
       {goals.active.map((g) => {
         const p = goalProgress(g, today);
         return (
           <div key={g.id} className="rounded-2xl border bg-card p-4">
             <div className="flex items-center gap-2">
               <div className="flex-1 font-medium">{g.name}{g.reserve && <span className="ml-2 rounded-full bg-secondary px-2 text-[11px]">held back from safe-to-spend</span>}</div>
-              <Button size="sm" variant="ghost" onClick={() => { const v = window.prompt("Saved so far (₹)", String(g.saved)); if (v !== null) saveGoal({ ...g, saved: Number(v) }).catch((e) => toast.error(e.message)); }}>Update</Button>
+              <Button size="sm" variant="ghost" aria-label={`Update saved so far for ${g.name}`} onClick={() => setUpdating(g)}>Update</Button>
               <TableArchiveButton table="goals" id={g.id} name={g.name} noun="goal" />
             </div>
             <div className="mt-2 h-2 overflow-hidden rounded-full bg-muted"><div className="h-full bg-primary" style={{ width: `${p.pct}%` }} /></div>

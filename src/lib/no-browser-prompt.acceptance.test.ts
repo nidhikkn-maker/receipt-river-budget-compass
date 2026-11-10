@@ -1,7 +1,8 @@
-// Acceptance: value edits never open a browser pop-up (window.prompt). Pop-ups are blocked in the preview frame and some
-// installed apps, cannot be styled, labelled or validated, and silently return null. Scans every source file in src
-// (tests excluded) with the TypeScript parser, so a call is found however it is formatted and a local function or
-// parameter that happens to be named `prompt` (e.g. step-up.ts) is not mistaken for the browser one.
+// Acceptance: nothing in the app opens a browser pop-up (window.prompt or window.confirm). Pop-ups are blocked in the
+// preview frame and some installed apps (where they silently return null/false), cannot be styled, labelled or
+// validated, and cannot state what an action does. Scans every source file in src (tests excluded) with the TypeScript
+// parser, so a call is found however it is formatted, and a local function or parameter that happens to be named
+// `prompt` or `confirm` (e.g. step-up.ts, ArchivedRecords.tsx) is not mistaken for the browser one.
 import { readFileSync, readdirSync } from "node:fs";
 import ts from "typescript";
 import { describe, expect, it } from "vitest";
@@ -14,8 +15,8 @@ const isTest = (f: string) => /\.(test|spec)\.tsx?$/.test(f) || f.startsWith("sr
 const sources = () =>
   walk("src").filter((f) => /\.tsx?$/.test(f) && !f.endsWith(".d.ts") && !isTest(f));
 
-/** Lines of browser prompt calls in `text`: window/globalThis/self.prompt(...) or a bare prompt(...) that is not a local binding. */
-function browserPromptCalls(file: string, text: string): number[] {
+/** Lines of browser pop-up calls in `text`: window/globalThis/self.<name>(...) or a bare <name>(...) that is not a local binding. */
+function browserCalls(name: "prompt" | "confirm", file: string, text: string): number[] {
   const src = ts.createSourceFile(
     file,
     text,
@@ -23,20 +24,20 @@ function browserPromptCalls(file: string, text: string): number[] {
     true,
     file.endsWith(".tsx") ? ts.ScriptKind.TSX : ts.ScriptKind.TS,
   );
-  let localPrompt = false;
+  let localBinding = false;
   const calls: ts.CallExpression[] = [];
   const visit = (n: ts.Node) => {
     if (
       (ts.isParameter(n) || ts.isVariableDeclaration(n) || ts.isBindingElement(n)) &&
       ts.isIdentifier(n.name) &&
-      n.name.text === "prompt"
+      n.name.text === name
     )
-      localPrompt = true;
+      localBinding = true;
     if (
       (ts.isFunctionDeclaration(n) || ts.isImportSpecifier(n) || ts.isImportClause(n)) &&
-      n.name?.text === "prompt"
+      n.name?.text === name
     )
-      localPrompt = true;
+      localBinding = true;
     if (ts.isCallExpression(n)) calls.push(n);
     ts.forEachChild(n, visit);
   };
@@ -46,35 +47,37 @@ function browserPromptCalls(file: string, text: string): number[] {
     .filter(
       ({ expression: e }) =>
         (ts.isPropertyAccessExpression(e) &&
-          e.name.text === "prompt" &&
+          e.name.text === name &&
           ts.isIdentifier(e.expression) &&
           ["window", "globalThis", "self"].includes(e.expression.text)) ||
-        (ts.isIdentifier(e) && e.text === "prompt" && !localPrompt),
+        (ts.isIdentifier(e) && e.text === name && !localBinding),
     )
     .map(line);
 }
+const browserPromptCalls = (file: string, text: string) => browserCalls("prompt", file, text);
+const browserConfirmCalls = (file: string, text: string) => browserCalls("confirm", file, text);
 
-// Fixed here: the value edits on Plan, account settings and DocuRepo use the in-app ValueDialog.
+// Fixed in the first pass (Plan, account settings, DocuRepo) and the second (destructive actions, approvals, period
+// closing and the remaining value edits). Each must stay free of both kinds of pop-up.
 const FIXED = [
   "src/routes/_authenticated/plan.tsx",
   "src/components/AccountTools.tsx",
   "src/routes/_authenticated/vault.tsx",
+  "src/components/ExpenseDialog.tsx",
+  "src/components/trip/TripSections.tsx",
+  "src/components/books/AccountingJournalReview.tsx",
+  "src/components/books/CompanyAccess.tsx",
+  "src/components/books/TaxCentre.tsx",
+  "src/routes/_authenticated/strategy.tsx",
+  "src/routes/_authenticated/audit.tsx",
+  "src/components/books/PropertyPanel.tsx",
+  "src/components/FinanceSettings.tsx",
+  "src/components/OrganisationDirectory.tsx",
+  "src/components/SplitAndClaim.tsx",
+  "src/components/WealthPanels.tsx",
 ];
-// Browser prompts still to be replaced, by file and count. This list may only shrink: a new prompt anywhere fails, and
-// replacing one fails until its count here is lowered, so the list always matches the code.
-const KNOWN_REMAINING: Record<string, number> = {
-  "src/components/ExpenseDialog.tsx": 4,
-  "src/components/FinanceSettings.tsx": 1,
-  "src/components/OrganisationDirectory.tsx": 1,
-  "src/components/SplitAndClaim.tsx": 1,
-  "src/components/WealthPanels.tsx": 1,
-  "src/components/books/AccountingJournalReview.tsx": 1,
-  "src/components/books/CompanyAccess.tsx": 1,
-  "src/components/books/PropertyPanel.tsx": 4,
-  "src/routes/_authenticated/audit.tsx": 2,
-};
 
-describe("acceptance: no browser pop-up prompts for value edits", () => {
+describe("acceptance: no browser pop-ups (window.prompt / window.confirm) anywhere in the app", () => {
   it("the detector finds window.prompt( and bare prompt( and ignores a local function named prompt", () => {
     expect(
       browserPromptCalls(
@@ -93,20 +96,39 @@ describe("acceptance: no browser pop-up prompts for value edits", () => {
     ).toEqual([]);
   });
 
-  it("Plan, account settings and DocuRepo contain no window.prompt( or browser prompt( call", () => {
+  it("the detector finds window.confirm( and bare confirm( and ignores a local function named confirm", () => {
+    expect(
+      browserConfirmCalls(
+        "d.tsx",
+        'if (!window.confirm("Delete?")) return;\nif (confirm("Cancel?")) go();\nself.confirm("x");',
+      ),
+    ).toEqual([1, 2, 3]);
+    expect(
+      browserConfirmCalls(
+        "e.tsx",
+        "const confirm = async (r: string) => save(r);\nvoid confirm(reason);",
+      ),
+    ).toEqual([]);
+    expect(browserConfirmCalls("f.ts", 'await confirmAction("ok"); store.confirm(x);')).toEqual([]);
+  });
+
+  it("every screen fixed so far contains no window.prompt(, window.confirm( or browser prompt(/confirm( call", () => {
     for (const f of FIXED) {
       const text = readFileSync(f, "utf8");
-      expect(text, f).not.toMatch(/window\.prompt\(/);
+      expect(/window\.(prompt|confirm)\(/.test(text), f).toBe(false);
       expect(browserPromptCalls(f, text), f).toEqual([]);
+      expect(browserConfirmCalls(f, text), f).toEqual([]);
     }
   });
 
-  it("no browser prompt anywhere in src outside the shrinking list of known remaining ones", () => {
-    const found: Record<string, number> = {};
+  it("strict: no browser prompt or confirm anywhere in src outside tests", () => {
+    const found: Record<string, { prompt: number[]; confirm: number[] }> = {};
     for (const f of sources()) {
-      const n = browserPromptCalls(f, readFileSync(f, "utf8")).length;
-      if (n) found[f] = n;
+      const text = readFileSync(f, "utf8");
+      const prompt = browserPromptCalls(f, text);
+      const confirm = browserConfirmCalls(f, text);
+      if (prompt.length || confirm.length) found[f] = { prompt, confirm };
     }
-    expect(found).toEqual(KNOWN_REMAINING);
+    expect(found).toEqual({});
   });
 });

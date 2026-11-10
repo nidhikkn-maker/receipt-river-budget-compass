@@ -8,13 +8,16 @@ import { Input } from "@/components/ui/input";
 import { useStore } from "@/lib/store";
 import { organisationUsage, renameTagIn } from "@/lib/master-data";
 import { Pencil } from "lucide-react";
+import { ValueDialog } from "@/components/ValueDialog";
+import { organisationRenameProblem } from "@/lib/value-edits";
 
 export function OrganisationDirectory() {
   const { preferences: p, savePreferences, transactions, setTags } = useStore();
-  const rename = async (old: string) => {
-    const n = window.prompt(`Rename “${old}” to`, old)?.trim().slice(0, 24);
+  const [renaming, setRenaming] = useState<string | null>(null);
+  const rename = async (old: string, value: string) => {
+    const n = value.trim().slice(0, 24);
     if (!n || n === old) return;
-    if (list.some((o) => o.name.toLowerCase() === n.toLowerCase() && o.name !== old)) { toast.error(`“${n}” already exists`); return; }
+    if (list.some((o) => o.name.toLowerCase() === n.toLowerCase() && o.name !== old)) throw Error(`“${n}” already exists`);
     await savePreferences({ ...p, tags: p.tags.map((t) => (t.group === "Organisation" && t.name === old ? { ...t, name: n } : t)), reimbursementSettings: { ...p.reimbursementSettings, profiles: p.reimbursementSettings.profiles.map(r => r.organisation === old ? { ...r, organisation: n } : r), mappings: p.reimbursementSettings.mappings.map(m => m.organisation === old ? { ...m, organisation: n } : m), responsibilities: p.reimbursementSettings.responsibilities.map(r => ({ ...r, shares: r.shares.map(s => s.organisation === old ? { ...s, organisation: n } : s) })) } });
     const from = `Organisation: ${old}`, to = `Organisation: ${n}`;
     for (const e of transactions) if ((e.tags ?? []).includes(from)) await setTags(e.id, renameTagIn(e.tags ?? [], from, to));
@@ -30,12 +33,25 @@ export function OrganisationDirectory() {
   return (
     <section id="organisations" className="mb-6 scroll-mt-20 rounded-3xl border bg-card p-5">
       <h2 className="font-display text-lg font-bold">Organisations</h2>
+      <ValueDialog
+        open={renaming !== null}
+        title={`Rename “${renaming ?? ""}”`}
+        description="Renames it everywhere: entries tagged with it, claim profiles and shared responsibilities."
+        label="Organisation name"
+        initialValue={renaming ?? ""}
+        maxLength={24}
+        hint="Up to 24 characters."
+        confirmLabel="Rename organisation"
+        validate={(v) => organisationRenameProblem(v, renaming ?? "", list.map((o) => o.name))}
+        onSubmit={(v) => rename(renaming ?? "", v)}
+        onClose={() => setRenaming(null)}
+      />
       <p className="mb-3 text-sm text-muted-foreground">Employers, clients and companies reused in entries, claims and reports.</p>
       <div className="mb-3 flex gap-2"><Input aria-label="New organisation" maxLength={24} placeholder="Organisation name" value={name} onChange={(e) => setName(e.target.value)} />
         <Button size="icon" aria-label="Add organisation" disabled={!name.trim()} onClick={() => void add().catch((e: Error) => toast.error(e.message))}><Plus /></Button></div>
       {list.length ? <ul className="divide-y">{list.map((o) => (
         <li key={o.name} className="flex items-center justify-between py-1.5 text-sm"><span>{o.name} <span className="text-xs text-muted-foreground">· {o.uses} {o.uses === 1 ? "entry" : "entries"}</span></span>
-          <span className="flex"><Button variant="ghost" size="icon" aria-label={`Rename ${o.name}`} onClick={() => void rename(o.name).catch((e: Error) => toast.error(e.message))}><Pencil className="h-4 w-4" /></Button>
+          <span className="flex"><Button variant="ghost" size="icon" aria-label={`Rename ${o.name}`} onClick={() => setRenaming(o.name)}><Pencil className="h-4 w-4" /></Button>
           <Button variant="ghost" size="icon" disabled={o.uses > 0} title={o.uses ? "In use by entries — kept for history" : undefined} aria-label={`Remove ${o.name}`}
             onClick={() => void savePreferences({ ...p, tags: p.tags.filter((t) => !(t.group === "Organisation" && t.name === o.name)) }).catch((e: Error) => toast.error(e.message))}><Trash2 className="h-4 w-4" /></Button></span></li>
       ))}</ul> : <p className="text-sm text-muted-foreground">No organisations yet.</p>}

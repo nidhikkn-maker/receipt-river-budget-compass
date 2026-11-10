@@ -11,6 +11,8 @@ import { shareValue } from "@/lib/assets";
 import { fyOf, fyRange } from "@/lib/entities";
 import { leaseUnknowns, type Lease, type Property, type PropertyCostKind } from "@/lib/books/types";
 import { useBooks } from "./useBooks";
+import { ValueDialog } from "@/components/ValueDialog";
+import { leaseRenewProblem, requiredText } from "@/lib/value-edits";
 
 const optNum = (v: string) => (v.trim() === "" || !Number.isFinite(Number(v)) ? undefined : Number(v));
 const inr = (n: number) => "₹" + n.toLocaleString("en-IN", { maximumFractionDigits: 0 });
@@ -24,6 +26,16 @@ export function PropertyPanel() {
   const assets = preferences.assets ?? [];
   const [newName, setNewName] = useState("");
   const [lease, setLease] = useState<Lease | null>(null);
+  // Names and the renewal date are asked in an in-app dialog (never a browser pop-up); the saved change is the same as before.
+  const [ask, setAsk] = useState<null | { kind: "building"; property: Property; where: string } | { kind: "floor"; property: Property; building: string; where: string } | { kind: "unit"; property: Property; building: string; floor: string; where: string } | { kind: "renew"; lease: Lease }>(null);
+  const ASK = { building: ["Add building", "Building name", "Main block"], floor: ["Add floor", "Floor name (e.g. Ground)", "Ground"], unit: ["Add unit", "Unit name (e.g. 2A)", "2A"] } as const;
+  const addPart = async (n: string) => {
+    if (!ask || ask.kind === "renew") return;
+    const p = ask.property;
+    if (ask.kind === "building") await upd({ ...p, buildings: [...p.buildings, { id: crypto.randomUUID(), name: n, floors: [] }] });
+    else if (ask.kind === "floor") await upd({ ...p, buildings: p.buildings.map((x) => (x.id === ask.building ? { ...x, floors: [...x.floors, { id: crypto.randomUUID(), name: n, units: [] }] } : x)) });
+    else await upd({ ...p, buildings: p.buildings.map((x) => (x.id === ask.building ? { ...x, floors: x.floors.map((y) => (y.id === ask.floor ? { ...y, units: [...y.units, { id: crypto.randomUUID(), name: n }] } : y)) } : x)) });
+  };
   const [cost, setCost] = useState<Record<string, { kind: PropertyCostKind; vendor: string; amount: string; date: string; txId?: string; docId?: string }>>({});
   const months = useMemo(() => [5, 4, 3, 2, 1, 0].map((i) => { const d = new Date(); d.setDate(15); d.setMonth(d.getMonth() - i); return d.toISOString().slice(0, 7); }), []);
   // Every credit is a candidate (not only entries already tagged income), so a deposit misfiled as income is still kept apart [§39].
@@ -37,6 +49,29 @@ export function PropertyPanel() {
   return (
     <Fold id="property" title="Property management" hint={`${books.properties.length} properties · ${books.leases.length} leases`} defaultOpen={books.properties.length > 0}>
       <div className="space-y-3 text-sm">
+        {ask && ask.kind !== "renew" && <ValueDialog
+          open
+          title={`${ASK[ask.kind][0]} · ${ask.where}`}
+          description={`Adds a ${ask.kind} to ${ask.where}. Leases, rent and costs are not changed.`}
+          label={ASK[ask.kind][1]}
+          placeholder={ASK[ask.kind][2]}
+          confirmLabel={ASK[ask.kind][0]}
+          validate={requiredText(`Name the ${ask.kind}`)}
+          onSubmit={addPart}
+          onClose={() => setAsk(null)}
+        />}
+        <ValueDialog
+          open={ask?.kind === "renew"}
+          title={ask?.kind === "renew" ? `Renew lease · ${ask.lease.tenant}` : "Renew lease"}
+          description={ask?.kind === "renew" ? `Extends the lease end from ${ask.lease.end}. Rent, deposit and other terms stay as they are; edit the lease to change them.` : ""}
+          label="Renew until"
+          type="date"
+          initialValue={ask?.kind === "renew" ? ask.lease.end : ""}
+          confirmLabel="Renew lease"
+          validate={(d) => ask?.kind === "renew" ? leaseRenewProblem(d, ask.lease.end) : null}
+          onSubmit={async (d) => { if (ask?.kind === "renew") { const id = ask.lease.id; await save({ leases: books.leases.map((x) => (x.id === id ? { ...x, end: d.trim() } : x)) }); } }}
+          onClose={() => setAsk(null)}
+        />
         <div className="flex flex-wrap gap-2">
           <Button variant="outline" className="rounded-md border px-3 py-2 font-semibold text-primary" onClick={() => openSmartAdd('property')}>Add property from deed</Button>
           <Button variant="outline" className="rounded-md border px-3 py-2 text-primary" onClick={() => openSmartAdd('property')}>Upload lease, tax or utility bill</Button>
@@ -60,9 +95,9 @@ export function PropertyPanel() {
             </div>
             <details className="text-xs"><summary className="cursor-pointer text-muted-foreground">Buildings, floors & units ({units.length})</summary>
               {p.buildings.map((b) => <div key={b.id} className="ml-2 mt-1"><b>{b.name}</b>{b.floors.map((f) => <div key={f.id} className="ml-3">{f.name}: {f.units.map((u) => u.name).join(", ") || "no units"}
-                <Button size="sm" variant="ghost" className="h-6" onClick={() => { const n = window.prompt("Unit name (e.g. 2A)"); if (n) void upd({ ...p, buildings: p.buildings.map((x) => (x.id === b.id ? { ...x, floors: x.floors.map((y) => (y.id === f.id ? { ...y, units: [...y.units, { id: crypto.randomUUID(), name: n }] } : y)) } : x)) }); }}>+ unit</Button></div>)}
-                <Button size="sm" variant="ghost" className="h-6" onClick={() => { const n = window.prompt("Floor name (e.g. Ground)"); if (n) void upd({ ...p, buildings: p.buildings.map((x) => (x.id === b.id ? { ...x, floors: [...x.floors, { id: crypto.randomUUID(), name: n, units: [] }] } : x)) }); }}>+ floor</Button></div>)}
-              <Button size="sm" variant="ghost" className="h-6" onClick={() => { const n = window.prompt("Building name"); if (n) void upd({ ...p, buildings: [...p.buildings, { id: crypto.randomUUID(), name: n, floors: [] }] }); }}>+ building</Button>
+                <Button size="sm" variant="ghost" className="h-6" aria-label={`Add unit to ${b.name} ${f.name}`} onClick={() => setAsk({ kind: "unit", property: p, building: b.id, floor: f.id, where: `${p.name} · ${b.name} · ${f.name}` })}>+ unit</Button></div>)}
+                <Button size="sm" variant="ghost" className="h-6" aria-label={`Add floor to ${b.name}`} onClick={() => setAsk({ kind: "floor", property: p, building: b.id, where: `${p.name} · ${b.name}` })}>+ floor</Button></div>)}
+              <Button size="sm" variant="ghost" className="h-6" aria-label={`Add building to ${p.name}`} onClick={() => setAsk({ kind: "building", property: p, where: p.name })}>+ building</Button>
               <label className="mt-1 block">Linked asset (cost & depreciation live there)<select className="w-full rounded-md border bg-background px-1 py-1" value={p.assetId ?? ""} onChange={(e) => upd({ ...p, assetId: e.target.value || undefined })}><option value="">None</option>{assets.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}</select></label>
               <div className="mt-1 grid grid-cols-2 gap-1">
                 <label>Property loan<select className="w-full rounded-md border bg-background px-1 py-1" value={links.loanId ?? ""} onChange={(e) => upd({ ...p, links: { ...links, loanId: e.target.value || undefined } })}><option value="">None</option>{loans.map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}</select></label>
@@ -80,7 +115,7 @@ export function PropertyPanel() {
               {unknown.length > 0 && <p className="text-destructive">Needs answer: {unknown.join(", ")} — not printed on the lease. <button className="underline" onClick={() => setLease(l)}>Answer</button></p>}
               {al.length > 0 && <p className="text-destructive">{al.join(" · ")}</p>}
               <div className="mt-1 flex flex-wrap gap-1">{led.filter((r) => r.status !== "none").map((r) => <span key={r.month} className={`rounded-full px-2 py-0.5 ${r.status === "paid" || r.status === "advance" ? "bg-primary/10 text-primary" : "bg-destructive/10 text-destructive"}`}>{r.month}: {inr(r.rent)}/{inr(r.due)}{r.balance > 0 ? ` · ${inr(r.balance)} due` : r.balance < 0 ? ` · ${inr(-r.balance)} ahead` : ""}{r.deposit ? ` · deposit ${inr(r.deposit)}` : ""}</span>)}</div>
-              <div className="mt-1 flex gap-1"><Button size="sm" variant="ghost" className="h-6" onClick={() => setLease(l)}>Edit</Button><Button size="sm" variant="ghost" className="h-6" onClick={() => { const d = window.prompt("Renew until (YYYY-MM-DD)", l.end); if (d && /^\d{4}-\d{2}-\d{2}$/.test(d) && d > l.end) void save({ leases: books.leases.map((x) => (x.id === l.id ? { ...x, end: d } : x)) }); }}>Renew</Button></div>
+              <div className="mt-1 flex gap-1"><Button size="sm" variant="ghost" className="h-6" onClick={() => setLease(l)}>Edit</Button><Button size="sm" variant="ghost" className="h-6" aria-label={`Renew lease for ${l.tenant}`} onClick={() => setAsk({ kind: "renew", lease: l })}>Renew</Button></div>
             </div>; })}
             <Button size="sm" variant="outline" onClick={() => setLease({ id: crypto.randomUUID(), propertyId: p.id, tenant: "", start: today(), end: today(), rent: 0, paymentTerms: "" })}>Add tenant manually</Button>
             <details className="text-xs"><summary className="cursor-pointer text-muted-foreground">Costs FY {fy}: running {inr(cs.running)} · improvements {inr(cs.capital)}</summary>

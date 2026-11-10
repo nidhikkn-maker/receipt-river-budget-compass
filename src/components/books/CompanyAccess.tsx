@@ -10,6 +10,8 @@ import { confirmAction } from "@/lib/confirm";
 import { filterShared, rowsFor, sharedCompanyCsv, sharedCompanyPdf, sharedCompanyExcel, type SharedCompany, type SharedDoc, type SharedTxn } from "@/lib/books/shared-company";
 import { uploadCompanyDocument } from "@/lib/books/company-upload";
 import { withStepUp } from "@/lib/step-up";
+import { ValueDialog } from "@/components/ValueDialog";
+import { requiredText } from "@/lib/value-edits";
 
 type Grant = { id: string; member_email: string; created_at: string; can_write: boolean };
 
@@ -68,6 +70,7 @@ export function SharedWithMe() {
   const [txns, setTxns] = useState<SharedTxn[]>([]);
   const [docs, setDocs] = useState<SharedDoc[]>([]);
   const [queries, setQueries] = useState<Record<string, string>>({});
+  const [editing, setEditing] = useState<{ id: string; title: string; company: string } | null>(null);
   const load = useCallback(async () => {
     const { data: cs } = await supabase.rpc("my_shared_companies");
     const list = (cs ?? []) as SharedCompany[];
@@ -136,7 +139,7 @@ export function SharedWithMe() {
                 <div key={r.id} className="flex items-center justify-between gap-2">
                   <span className="truncate">{r.title}<span className="block text-xs text-muted-foreground">{r.expense_date} · {r.category}</span></span>
                   <span className="flex items-center gap-1 tabular-nums">₹{Number(r.amount).toLocaleString("en-IN")}
-                    {c.can_write && <Button size="sm" variant="ghost" onClick={() => { const v = window.prompt("Description", r.title); if (v && v.trim() && v !== r.title) void rename(r.id, v.trim()); }}>Edit</Button>}
+                    {c.can_write && <Button size="sm" variant="ghost" aria-label={`Edit description of ${r.title}`} onClick={() => setEditing({ id: r.id, title: r.title, company: c.company_name })}>Edit</Button>}
                   </span>
                 </div>
               ))}
@@ -145,6 +148,17 @@ export function SharedWithMe() {
           </details>
         );
       })}
+      <ValueDialog
+        open={!!editing}
+        title="Edit entry description"
+        description={`Changes the description of this entry in ${editing?.company ?? "the company"}'s records (shared with you to edit). The amount, date and category stay as they are.`}
+        label="Description"
+        initialValue={editing?.title ?? ""}
+        confirmLabel="Save description"
+        validate={requiredText("Write a description")}
+        onSubmit={async (v) => { if (editing && v !== editing.title) await rename(editing.id, v.trim()); }}
+        onClose={() => setEditing(null)}
+      />
     </div>
   );
 }

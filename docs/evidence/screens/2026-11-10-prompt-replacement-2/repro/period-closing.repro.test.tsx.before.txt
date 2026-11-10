@@ -1,0 +1,62 @@
+// REPRODUCTION (before the fix): period closing and audit notes ask with a browser pop-up (window.confirm/prompt).
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { defaultPreferences } from "@/lib/preferences";
+import { emptyBooks } from "@/lib/books/types";
+import { reset } from "../records-archive/harness";
+import { fake, resetFake } from "./fake-supabase";
+
+vi.mock("@/lib/store", async () => ({ useStore: (await import("../records-archive/harness")).useStoreMock }));
+vi.mock("@tanstack/react-router", async () => (await import("../records-archive/harness")).routerMock);
+vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn(), message: vi.fn() } }));
+vi.mock("@/integrations/supabase/client", async () => (await import("./fake-supabase")).supabaseMock);
+vi.mock("@/lib/step-up", () => ({ withStepUp: (fn: () => unknown) => fn() }));
+vi.mock("@/components/AppShell", () => ({ PageTitle: ({ title }: { title: string }) => <h1>{title}</h1> }));
+vi.mock("@/components/books/PeriodEvidence", () => ({ PeriodEvidence: () => null }));
+vi.mock("@/components/books/ReconciliationDetails", () => ({ ReconciliationDetails: () => null }));
+vi.mock("@/components/books/useBooks", async (orig) => ({ ...(await orig<typeof import("@/components/books/useBooks")>()), useDemat: () => [] }));
+vi.mock("@/components/books/useAudit", () => ({
+  useAuditAll: () => ({ open: [{ key: "f-1", to: "/inbox", type: "Bank", text: "HDFC balance differs from statement", evidence: "Statement", risk: "high" }], reviewed: [] }),
+}));
+import { Route as AuditRoute } from "@/routes/_authenticated/audit";
+const Audit = (AuditRoute as unknown as { component: () => React.ReactElement }).component;
+
+const closed = { id: "cp-1", from: "2024-04-01", to: "2025-03-31", closedOn: "2025-06-30", note: "FY 2024-25 audited" };
+const store = () => reset({ ...defaultPreferences(), books: { ...emptyBooks(), closedPeriods: [closed] } } as unknown as Record<string, unknown>, { refresh: async () => undefined });
+
+let confirmSpy: ReturnType<typeof vi.spyOn>;
+let promptSpy: ReturnType<typeof vi.spyOn>;
+beforeEach(() => {
+  resetFake();
+  confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(false);
+  promptSpy = vi.spyOn(window, "prompt").mockReturnValue(null);
+});
+afterEach(() => { cleanup(); vi.restoreAllMocks(); });
+
+describe("REPRO: period closing uses browser pop-ups", () => {
+  it("Close period asks window.confirm and nothing is sent on Cancel", () => {
+    store();
+    render(<Audit />);
+    fireEvent.click(screen.getByRole("button", { name: "Close period" }));
+    expect(confirmSpy).toHaveBeenCalledWith("Close 2025-04-01 to 2026-03-31 and retain the saved records as evidence?");
+    expect(fake.rpcCalls).toHaveLength(0);
+  });
+  it("Freeze FY asks window.confirm", () => {
+    store();
+    render(<Audit />);
+    fireEvent.click(screen.getByRole("button", { name: "Freeze FY 2025-26" }));
+    expect(confirmSpy).toHaveBeenCalledWith(expect.stringContaining("Freeze FY 2025-26?"));
+  });
+  it("Reopen a closed period asks the reason with window.prompt", () => {
+    store();
+    render(<Audit />);
+    fireEvent.click(screen.getByRole("button", { name: "Reopen" }));
+    expect(promptSpy).toHaveBeenCalledWith("Reopening a closed period needs a reason (kept permanently):");
+  });
+  it("Mark fixed asks the note with window.prompt", () => {
+    store();
+    render(<Audit />);
+    fireEvent.click(screen.getByRole("button", { name: "Mark fixed" }));
+    expect(promptSpy).toHaveBeenCalledWith("What fixed it? (kept with the finding)");
+  });
+});

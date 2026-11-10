@@ -1,0 +1,71 @@
+// REPRODUCTION (before the fix): the remaining value edits ask with a browser pop-up (window.prompt).
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { defaultPreferences } from "@/lib/preferences";
+import { emptyBooks } from "@/lib/books/types";
+import type { Expense } from "@/lib/expenses";
+import { callsOf, reset, spy } from "../records-archive/harness";
+import { resetFake } from "./fake-supabase";
+
+vi.mock("@/lib/store", async () => ({ useStore: (await import("../records-archive/harness")).useStoreMock }));
+vi.mock("@tanstack/react-router", async () => (await import("../records-archive/harness")).routerMock);
+vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn(), message: vi.fn() } }));
+vi.mock("@/integrations/supabase/client", async () => (await import("./fake-supabase")).supabaseMock);
+vi.mock("@/components/HomeModePicker", () => ({ HomeModePicker: () => null }));
+vi.mock("@/components/CategoryMergePreview", () => ({ CategoryMergePreview: () => null }));
+import { PropertyPanel } from "@/components/books/PropertyPanel";
+import { FinanceSettings } from "@/components/FinanceSettings";
+import { OrganisationDirectory } from "@/components/OrganisationDirectory";
+import { AllocationEditor } from "@/components/SplitAndClaim";
+import { GoalsPanel } from "@/components/WealthPanels";
+
+const property = {
+  id: "p-1", name: "Indiranagar house", address: "12th Main", docIds: [],
+  buildings: [{ id: "b-1", name: "Main block", floors: [{ id: "f-1", name: "Ground", units: [{ id: "u-1", name: "G1" }] }] }],
+};
+const lease = { id: "l-1", propertyId: "p-1", unitId: "u-1", tenant: "R. Rao", start: "2025-12-01", end: "2026-11-30", rent: 45000, paymentTerms: "monthly" };
+const groceries = {
+  id: "e-2", title: "Big basket", category: "Groceries", amount: 3000, originalAmount: 3000, currency: "INR", fxRate: 1,
+  date: "2026-11-03", txnType: "expense", receipts: [], tags: [],
+  allocations: [{ category: "Groceries", amount: 2000 }, { category: "Household", amount: 1000 }],
+} as unknown as Expense;
+const goal = { id: "g-1", name: "Emergency fund", target: 300000, saved: 120000, monthly: 10000, reserve: true };
+
+let promptSpy: ReturnType<typeof vi.spyOn>;
+beforeEach(() => { resetFake(); promptSpy = vi.spyOn(window, "prompt").mockReturnValue(null); });
+afterEach(() => { cleanup(); vi.restoreAllMocks(); });
+
+describe("REPRO: remaining value edits use window.prompt", () => {
+  it("Property → + building / + floor / + unit / Renew each ask with window.prompt", () => {
+    reset({ ...defaultPreferences(), books: { ...emptyBooks(), properties: [property], leases: [lease] } } as unknown as Record<string, unknown>, {});
+    render(<PropertyPanel />);
+    for (const name of ["+ building", "+ floor", "+ unit", "Renew"]) fireEvent.click(screen.getByRole("button", { name }));
+    expect(promptSpy.mock.calls.map((c) => c[0])).toEqual(["Building name", "Floor name (e.g. Ground)", "Unit name (e.g. 2A)", "Renew until (YYYY-MM-DD)"]);
+  });
+  it("Settings → Rename category asks with window.prompt", () => {
+    reset(defaultPreferences() as unknown as Record<string, unknown>, { moveCategory: spy("moveCategory"), name: "KK", updateName: spy("updateName"), loading: false });
+    render(<FinanceSettings />);
+    fireEvent.click(screen.getAllByRole("button", { name: /^Rename / })[0]!);
+    expect(promptSpy).toHaveBeenCalledWith("New category name", expect.any(String));
+    expect(callsOf("moveCategory")).toHaveLength(0);
+  });
+  it("Organisations → Rename asks with window.prompt", () => {
+    reset({ ...defaultPreferences(), tags: [{ group: "Organisation", name: "Acme" }] } as unknown as Record<string, unknown>, { setTags: spy("setTags") });
+    render(<OrganisationDirectory />);
+    fireEvent.click(screen.getByRole("button", { name: "Rename Acme" }));
+    expect(promptSpy).toHaveBeenCalledWith("Rename “Acme” to", "Acme");
+  });
+  it("Split → Save as template asks the name with window.prompt", () => {
+    reset(defaultPreferences() as unknown as Record<string, unknown>, { setAllocations: spy("setAllocations") });
+    render(<AllocationEditor e={groceries} />);
+    fireEvent.click(screen.getByRole("button", { name: "Save as template" }));
+    expect(promptSpy).toHaveBeenCalledWith("Template name");
+  });
+  it("Goals → Update asks 'Saved so far (₹)' with window.prompt", () => {
+    reset(defaultPreferences() as unknown as Record<string, unknown>, { goals: [goal], saveGoal: spy("saveGoal") });
+    render(<GoalsPanel />);
+    fireEvent.click(screen.getByRole("button", { name: "Update" }));
+    expect(promptSpy).toHaveBeenCalledWith("Saved so far (₹)", "120000");
+    expect(callsOf("saveGoal")).toHaveLength(0);
+  });
+});

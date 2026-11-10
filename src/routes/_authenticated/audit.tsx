@@ -29,6 +29,9 @@ import { ReconciliationDetails } from '@/components/books/ReconciliationDetails'
 import { reconciliationAnchor } from '@/lib/books/reconciliation-context';
 import {corporateStatements,corporateCloseErrors} from '@/lib/books/corporate-statements';
 import { withStepUp } from "@/lib/step-up";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
+import { findingNoteProblem, fyLabel, periodLabel, requiredText } from "@/lib/value-edits";
+import type { ClosedPeriod } from "@/lib/books/types";
 const inr = (n: number) => `₹${Math.round(n).toLocaleString("en-IN")}`;
 
 export const Route = createFileRoute("/_authenticated/audit")({
@@ -81,10 +84,14 @@ function Audit() {
   const obligations = useMemo(() => entities.flatMap((e) => entityObligations({ today, entities, books }, e.id)), [entities, books, today]);
   const tiles = useMemo(() => readinessTiles({ accounts, entries: transactions, items, books, docsMissing: missingInvoices(transactions, documents, 0).length, today, obligations, entitiesWithoutProfile: entities.filter((e) => !books.taxProfiles.some((p) => p.entityId === e.id)).length }), [accounts, transactions, items, books, documents, today, obligations, entities]);
   const history = useMemo(() => approvalHistory(books), [books]);
-  const decide = async (key: string, status: "resolved" | "accepted" | "open") => {
-    const note = status === "open" ? "" : window.prompt(status === "resolved" ? "What fixed it? (kept with the finding)" : "Why is this acceptable? (kept with the finding)") ?? "";
-    if (status !== "open" && !note) return;
-    try { await save({ findings: setFindingState(books.findings, key, status, note, new Date().toISOString()) }); toast.success(status === "open" ? "Finding reopened" : "Saved with your note"); } catch (e) { toast.error((e as Error).message); }
+  // Notes, reasons and period closing are asked in in-app dialogs (never a browser pop-up); Cancel/Escape change nothing.
+  const [ask, setAsk] = useState<PeriodAsk>(null);
+  const setFinding = async (key: string, status: "resolved" | "accepted" | "open", note: string) => {
+    await save({ findings: setFindingState(books.findings, key, status, note, new Date().toISOString()) }); toast.success(status === "open" ? "Finding reopened" : "Saved with your note");
+  };
+  const decide = async (key: string, status: "resolved" | "accepted" | "open", text = "") => {
+    if (status !== "open") { setAsk({ kind: "finding", key, text, status }); return; }
+    try { await setFinding(key, status, ""); } catch (e) { toast.error((e as Error).message); }
   };
   const hub = useMemo(() => reconHub(items, {
     cardUnrec: transactions.filter((t) => t.statementRef && !t.reconciledAt && accounts.find((a) => a.id === t.accountId)?.kind === "credit_card").length,
@@ -149,7 +156,7 @@ function Audit() {
             <span className={`shrink-0 rounded-full px-2 py-0.5 text-xs ${f.risk === "high" ? "bg-destructive/10 text-destructive" : "bg-secondary text-muted-foreground"}`}>{f.risk === "high" ? "Important" : f.risk === "medium" ? "Check" : "Low"}</span>
           </Link>
           <ReconciliationDetails key={JSON.stringify(f.comparison)} item={f} entries={transactions} docs={documents} download={downloadFile}/>
-          <div className="mt-1 flex gap-1"><Button size="sm" variant="ghost" className="h-7 px-2 text-xs" onClick={() => decide(f.key, "resolved")}>Mark fixed</Button><Button size="sm" variant="ghost" className="h-7 px-2 text-xs" onClick={() => decide(f.key, "accepted")}>Accept with note</Button></div>
+          <div className="mt-1 flex gap-1"><Button size="sm" variant="ghost" className="h-7 px-2 text-xs" onClick={() => decide(f.key, "resolved", f.text)}>Mark fixed</Button><Button size="sm" variant="ghost" className="h-7 px-2 text-xs" onClick={() => decide(f.key, "accepted", f.text)}>Accept with note</Button></div>
         </div>)}</section>)}
 
       {reviewed.length > 0 && <Fold title="Reviewed findings" hint={`${reviewed.length} marked fixed or accepted — still checked every time`}>
@@ -159,11 +166,16 @@ function Audit() {
       <Fold id="periods" title="Closed periods" hint={`${books.closedPeriods.length} closed · entries inside can't be changed`}>
         <div className="space-y-2 text-sm">
           {books.closedPeriods.map((p) => <div key={p.id} className="flex items-center justify-between gap-2 rounded-xl border px-3 py-2"><span>{p.from} → {p.to}<span className="block text-[11px] text-muted-foreground">Closed {p.closedOn}{p.note ? ` · ${p.note}` : ""}</span></span>
-            <Button size="sm" variant="ghost" onClick={async () => { const reason = window.prompt("Reopening a closed period needs a reason (kept permanently):"); if (!reason) return; try { await changePeriod('reopened', p.from, p.to, reason, p.id); toast.success("Period reopened"); } catch (e) { toast.error((e as Error).message); } }}>Reopen</Button></div>)}
+            <Button size="sm" variant="ghost" onClick={() => setAsk({ kind: "reopen", period: p })}>Reopen</Button></div>)}
           <div className="grid grid-cols-2 gap-2"><label className="text-xs">From<Input type="date" value={from} onChange={(e) => setFrom(e.target.value)} /></label><label className="text-xs">To<Input type="date" value={to} onChange={(e) => setTo(e.target.value)} /></label>
             <Input className="col-span-2" placeholder="Note (e.g. FY audited and filed)" value={note} onChange={(e) => setNote(e.target.value)} /></div>
-          <Button size="sm" onClick={async () => { if (!window.confirm(`Close ${from} to ${to} and retain the saved records as evidence?`)) return; try { await changePeriod('closed', from, to, note); toast.success("Period closed with evidence"); } catch (e) { toast.error((e as Error).message); } }}>Close period</Button>
-          {closableYears(books.closedPeriods, today).length > 0 && <div className="flex flex-wrap items-center gap-1 text-xs"><span className="text-muted-foreground">Freeze a whole year:</span>{closableYears(books.closedPeriods, today).map((fy) => <Button key={fy} size="sm" variant="outline" className="h-7" onClick={async () => { if (!window.confirm(`Freeze FY ${fy}? Entries, opening balances and GST invoices dated 1 April ${fy.slice(0, 4)} – 31 March ${Number(fy.slice(0, 4)) + 1} can't be changed until it is reopened with a reason.`)) return; try { const r = fyRange(fy); await changePeriod('closed', r.start, r.end, note || `FY ${fy} frozen`); toast.success(`FY ${fy} frozen`); } catch (e) { toast.error((e as Error).message); } }}>Freeze FY {fy}</Button>)}</div>}
+          <Button size="sm" onClick={() => setAsk({ kind: "close" })}>Close period</Button>
+          {closableYears(books.closedPeriods, today).length > 0 && <div className="flex flex-wrap items-center gap-1 text-xs"><span className="text-muted-foreground">Freeze a whole year:</span>{closableYears(books.closedPeriods, today).map((fy) => <Button key={fy} size="sm" variant="outline" className="h-7" onClick={() => setAsk({ kind: "freeze", fy })}>Freeze FY {fy}</Button>)}</div>}
+          <PeriodClosingDialogs ask={ask} from={from} to={to} note={note} onClose={() => setAsk(null)}
+            onClosePeriod={async () => { await changePeriod('closed', from, to, note); toast.success("Period closed with evidence"); }}
+            onFreeze={async (fy) => { const r = fyRange(fy); await changePeriod('closed', r.start, r.end, note || `FY ${fy} frozen`); toast.success(`FY ${fy} frozen`); }}
+            onReopen={async (p, reason) => { await changePeriod('reopened', p.from, p.to, reason, p.id); toast.success("Period reopened"); }}
+            onFinding={(key, status, text) => setFinding(key, status, text)} />
           <PeriodEvidence revision={JSON.stringify(books.periodLog)} />
           {books.periodLog.length > 0 && <details className="text-xs"><summary className="cursor-pointer text-muted-foreground">History ({books.periodLog.length})</summary>{books.periodLog.slice().reverse().map((l, i) => <p key={i}>{l.at} · {l.action} · {l.reason}</p>)}</details>}
         </div>
@@ -222,4 +234,65 @@ function FigureSources({ assets, books, docs, titleOf }: { assets: import("@/lib
       </div>
     </Fold>
   );
+}
+
+type PeriodAsk = null | { kind: "close" } | { kind: "freeze"; fy: string } | { kind: "reopen"; period: ClosedPeriod } | { kind: "finding"; key: string; text: string; status: "resolved" | "accepted" };
+const LOCKED = (from: string, to: string) => `Entries, opening balances and GST invoices dated ${from} to ${to} can't be added, changed or removed while it is closed`;
+const REOPEN_ONLY = "Only the Audit operation can reopen it: Reopen on this page, with a reason that is kept permanently";
+
+/** Period closing, reopening and finding notes: in-app dialogs that name the period or year, state the consequences and,
+ * for closing, require typing the period or FY label. The operations are the page's own (changePeriod / setFindingState). */
+function PeriodClosingDialogs({ ask, from, to, note, onClose, onClosePeriod, onFreeze, onReopen, onFinding }: {
+  ask: PeriodAsk; from: string; to: string; note: string; onClose: () => void;
+  onClosePeriod: () => Promise<void>; onFreeze: (fy: string) => Promise<void>;
+  onReopen: (p: ClosedPeriod, reason: string) => Promise<void>;
+  onFinding: (key: string, status: "resolved" | "accepted", note: string) => Promise<void>;
+}) {
+  const fy = ask?.kind === "freeze" ? ask.fy : "";
+  const fyFrom = fy ? `${fy.slice(0, 4)}-04-01` : "", fyTo = fy ? `${Number(fy.slice(0, 4)) + 1}-03-31` : "";
+  const evidence = "The period's figures (balances, totals and company statements) are saved with the close as evidence";
+  return <>
+    <ConfirmDialog
+      open={ask?.kind === "close"}
+      destructive
+      title={`Close ${periodLabel(from, to)}?`}
+      description="Closing locks this period and keeps its saved records as evidence. You may be asked to confirm it is you."
+      consequences={[LOCKED(from, to), evidence, REOPEN_ONLY, note.trim() ? `Note kept with the close: “${note.trim()}”` : "No note — add one above the button if you want it kept with the close"]}
+      typed={{ phrase: periodLabel(from, to), label: "Type the period" }}
+      confirmLabel="Close period"
+      onConfirm={onClosePeriod}
+      onClose={onClose}
+    />
+    <ConfirmDialog
+      open={ask?.kind === "freeze"}
+      destructive
+      title={`Freeze ${fyLabel(fy)}?`}
+      description={`Freezes the whole financial year, 1 April ${fy.slice(0, 4)} to 31 March ${Number(fy.slice(0, 4)) + 1}, and keeps its saved records as evidence. You may be asked to confirm it is you.`}
+      consequences={[LOCKED(fyFrom, fyTo), evidence, REOPEN_ONLY, `Note kept with the close: “${note.trim() || `FY ${fy} frozen`}”`]}
+      typed={{ phrase: fyLabel(fy), label: "Type the year" }}
+      confirmLabel={`Freeze ${fyLabel(fy)}`}
+      onConfirm={() => onFreeze(fy)}
+      onClose={onClose}
+    />
+    <ConfirmDialog
+      open={ask?.kind === "reopen"}
+      title={ask?.kind === "reopen" ? `Reopen ${periodLabel(ask.period.from, ask.period.to)}?` : "Reopen period?"}
+      description="Reopening unlocks entries, opening balances and GST invoices in this period so they can be changed again. The close evidence stays, and the reason is kept permanently in the period history. You may be asked to confirm it is you."
+      reason={{ label: "Reason for reopening (kept permanently)", placeholder: "For example: auditor asked for a late invoice", validate: requiredText("Give the reason for reopening") }}
+      confirmLabel="Reopen period"
+      onConfirm={(reason) => ask?.kind === "reopen" ? onReopen(ask.period, reason) : Promise.resolve()}
+      onClose={onClose}
+    />
+    <ConfirmDialog
+      open={ask?.kind === "finding"}
+      title={ask?.kind === "finding" && ask.status === "accepted" ? "Accept this finding with a note" : "Mark this finding fixed"}
+      description={ask?.kind === "finding" ? `${ask.text} — the note is kept with the finding, which is still checked every time.` : ""}
+      reason={ask?.kind === "finding" && ask.status === "accepted"
+        ? { label: "Why is this acceptable? (kept with the finding)", validate: findingNoteProblem, hint: "At least three characters." }
+        : { label: "What fixed it? (kept with the finding)", validate: findingNoteProblem, hint: "At least three characters." }}
+      confirmLabel={ask?.kind === "finding" && ask.status === "accepted" ? "Accept with note" : "Mark fixed"}
+      onConfirm={(text) => ask?.kind === "finding" ? onFinding(ask.key, ask.status, text) : Promise.resolve()}
+      onClose={onClose}
+    />
+  </>;
 }

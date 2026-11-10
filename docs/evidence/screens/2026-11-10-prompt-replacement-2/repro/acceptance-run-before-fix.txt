@@ -1,0 +1,22 @@
+9bf2b6a
+ ✓ src/lib/no-browser-prompt.acceptance.test.ts > acceptance: no browser pop-ups (window.prompt / window.confirm) anywhere in the app > the detector finds window.prompt( and bare prompt( and ignores a local function named prompt 26ms
+ ✓ src/lib/no-browser-prompt.acceptance.test.ts > acceptance: no browser pop-ups (window.prompt / window.confirm) anywhere in the app > the detector finds window.confirm( and bare confirm( and ignores a local function named confirm 4ms
+ × src/lib/no-browser-prompt.acceptance.test.ts > acceptance: no browser pop-ups (window.prompt / window.confirm) anywhere in the app > every screen fixed so far contains no window.prompt(, window.confirm( or browser prompt(/confirm( call 171ms
+ × src/lib/no-browser-prompt.acceptance.test.ts > acceptance: no browser pop-ups (window.prompt / window.confirm) anywhere in the app > strict: no browser prompt or confirm anywhere in src outside tests 4849ms
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+AssertionError: src/components/ExpenseDialog.tsx: expected true to be false // Object.is equality
+AssertionError: expected { …(12) } to deeply equal {}
++   "src/components/ExpenseDialog.tsx": {
++   "src/components/FinanceSettings.tsx": {
++   "src/components/OrganisationDirectory.tsx": {
++   "src/components/SplitAndClaim.tsx": {
++   "src/components/WealthPanels.tsx": {
++   "src/components/books/AccountingJournalReview.tsx": {
++   "src/components/books/CompanyAccess.tsx": {
++   "src/components/books/PropertyPanel.tsx": {
++   "src/components/books/TaxCentre.tsx": {
++   "src/components/trip/TripSections.tsx": {
++   "src/routes/_authenticated/audit.tsx": {
++   "src/routes/_authenticated/strategy.tsx": {
+ Test Files  1 failed (1)
+      Tests  2 failed | 2 passed (4)

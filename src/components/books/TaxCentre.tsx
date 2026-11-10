@@ -16,7 +16,8 @@ import { ItrHandoff } from "./ItrHandoff";
 import { REQUIRED_SCHEDULES } from "@/lib/books/intake";
 import { invoiceRegister, gstPayable, annualSummary, duplicateInvoices, gstr1, gstr1Json, gstr3b, gstr3bJson, gstr9, gstr9Heads, invoiceProblems, noteProblems, validateGstJson, matchGstPayments, unfiledPeriods } from "@/lib/books/gst";
 import { activateRule, OFFICIAL_SOURCES, proposeRule, ruleOn, validateRule, formFor, validateReturnDraft, ayOf } from "@/lib/books/regulatory";
-import type { GstInvoice, OpeningHead, RuleArea, TaxProfile } from "@/lib/books/types";
+import type { GstInvoice, OpeningHead, RuleArea, RuleVersion, TaxProfile } from "@/lib/books/types";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { supabase } from "@/integrations/supabase/client";
 import { useBooks, useDemat } from "./useBooks";
 import { taxComputation } from "@/lib/books/taxcomp";
@@ -245,9 +246,21 @@ export function RulesRegister() {
   const decide = (id: string, status: "approved" | "dismissed") => save({ ruleDecisions: [...(books.ruleDecisions ?? []), { changeId: id, status, at: new Date().toISOString() }] });
   const [d, setD] = useState({ area: "income_tax" as RuleArea, key: "", title: "", value: "", sourceUrl: "", publishedOn: today(), effectiveFrom: today(), ambiguity: "", appliesTo: [] as string[] });
   const proposed = books.rules.filter((r) => r.status === "proposed");
+  // A rule that reaches into closed or filed years is approved only after an in-app confirmation naming those years.
+  const [approving, setApproving] = useState<{ rule: RuleVersion; years: { fy: string; why: string[] }[] } | null>(null);
+  const approveRule = async (id: string) => { try { await save({ rules: activateRule(books.rules, id, today()) }); toast.success("Rule approved and active from its effective date"); } catch (e) { toast.error((e as Error).message); } };
   return (
     <Fold id="rules" title="Regulatory intelligence" hint={`${books.rules.filter((r) => r.status === "active").length} active · ${proposed.length} waiting for approval`}>
       <div className="space-y-3 text-sm">
+        <ConfirmDialog
+          open={!!approving}
+          title={`Approve “${approving?.rule.title ?? ""}” for open periods only?`}
+          description={`This rule (${approving?.rule.key ?? ""}: ${approving?.rule.value ?? ""} from ${approving?.rule.effectiveFrom ?? ""}) reaches back into ${approving?.years.map((y) => `FY ${y.fy}`).join(", ") ?? ""}, which ${(approving?.years.length ?? 0) > 1 ? "are" : "is"} closed or filed. Those years keep their earlier treatment; it applies from its effective date in open periods only.`}
+          consequences={(approving?.years ?? []).map((y) => `FY ${y.fy} keeps its earlier treatment (${y.why.join(", ")}) — nothing there is changed`)}
+          confirmLabel="Approve for open periods"
+          onConfirm={() => approveRule(approving?.rule.id ?? "")}
+          onClose={() => setApproving(null)}
+        />
         <div className="text-xs"><b>Official sources watched (read-only)</b>{OFFICIAL_SOURCES.map((s) => <a key={s.url} href={s.url} target="_blank" rel="noopener noreferrer" className="block text-primary underline">{s.name}</a>)}</div>
         {detected.failed ? <LoadError what="the latest changes found on official pages" onRetry={detected.retry} /> : <p className="text-[11px] text-muted-foreground">Checked weekly: {detected.job?.last_success ? `last ${detected.job.last_success.slice(0, 10)}` : "not run yet"}{detected.job?.reason ? ` · ${detected.job.reason}` : ""}</p>}
         {open.map((c) => <div key={c.id} className="rounded-xl border border-primary/40 p-3 text-xs">
@@ -267,7 +280,7 @@ export function RulesRegister() {
             {imp.protectedYears.map((y) => <p key={y.fy} className="text-destructive">FY {y.fy} keeps its earlier treatment ({y.why.join(", ")}) — nothing there is changed.</p>)}
           </div>; })()}
           {r.status === "proposed" && <><ul className="mt-1">{tests.map((t) => <li key={t.name} className={t.passed ? "" : "text-destructive"}>{t.passed ? "✓" : "✗"} {t.name}</li>)}</ul>
-            <div className="mt-1 flex gap-1"><Button size="sm" disabled={tests.some((t) => !t.passed)} onClick={async () => { const imp = ruleImpact(r, { entities: preferences.entities ?? [], closedPeriods: books.closedPeriods, fyRecords: books.fyRecords, gstFilings: books.gstFilings, today: today() }); if (imp.protectedYears.length && !window.confirm(`This rule reaches back into ${imp.protectedYears.map((y) => `FY ${y.fy}`).join(", ")}, which ${imp.protectedYears.length > 1 ? "are" : "is"} closed or filed. Those years will keep their earlier treatment. Approve for the open periods only?`)) return; try { await save({ rules: activateRule(books.rules, r.id, today()) }); toast.success("Rule approved and active from its effective date"); } catch (e) { toast.error((e as Error).message); } }}>Approve</Button>
+            <div className="mt-1 flex gap-1"><Button size="sm" disabled={tests.some((t) => !t.passed)} onClick={async () => { const imp = ruleImpact(r, { entities: preferences.entities ?? [], closedPeriods: books.closedPeriods, fyRecords: books.fyRecords, gstFilings: books.gstFilings, today: today() }); if (imp.protectedYears.length) { setApproving({ rule: r, years: imp.protectedYears }); return; } await approveRule(r.id); }}>Approve</Button>
               <Button size="sm" variant="ghost" onClick={() => save({ rules: books.rules.map((x) => (x.id === r.id ? { ...x, status: "rejected" } : x)) })}>Reject</Button></div></>}
         </div>; })}
         <details open={Boolean(d.sourceUrl) || undefined}><summary className="cursor-pointer text-muted-foreground">Record a rule change</summary>

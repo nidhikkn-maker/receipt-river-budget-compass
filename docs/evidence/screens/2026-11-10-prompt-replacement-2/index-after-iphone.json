@@ -1,0 +1,39 @@
+{
+ "shots": [
+  {
+   "name": "iphone-after-01-expense-delete.jpg",
+   "note": "Delete expense: names the entry, amount, date and receipt count, says it is deleted (not reversed) and cannot be undone; destructive Delete expense, Keep expense"
+  },
+  {
+   "name": "iphone-after-02-trip-cancel.jpg",
+   "note": "Cancel trip: records stay, trip marked cancelled, can be undone; Keep trip or Cancel trip"
+  },
+  {
+   "name": "iphone-after-03-period-close.jpg",
+   "note": "Close period: names the period, lists what is locked and that only the Audit operation (Reopen with a reason) can reopen it; Close period stays off until the period is typed"
+  },
+  {
+   "name": "iphone-after-04-period-close-typed.jpg",
+   "note": "Close period: the typed period matches, so Close period is enabled (nothing is sent until it is pressed)"
+  },
+  {
+   "name": "iphone-after-05-freeze-fy.jpg",
+   "note": "Freeze FY: names the year and its dates, lists what is locked and who can reopen it; type the FY label to enable Freeze"
+  },
+  {
+   "name": "iphone-after-06-period-reopen.jpg",
+   "note": "Reopen a closed period: names the period; the reason is required and kept permanently"
+  },
+  {
+   "name": "iphone-after-07-period-reopen-error.jpg",
+   "note": "Reopen: an empty reason is explained inline; nothing sent"
+  }
+ ],
+ "browserPrompts": [
+  {
+   "tag": "iphone",
+   "tableWrites": [],
+   "preferenceSaves": 0
+  }
+ ]
+}

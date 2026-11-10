@@ -21,6 +21,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { archiveInList, restoreInList } from "@/lib/archive";
 import { recordIsArchived, type Archivable } from "@/lib/records-archive";
 import { ArchivedRecords, useArchiveFlow } from "@/components/ArchivedRecords";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 import type { ItineraryItem } from "@/lib/travel";
 
 const sel = "h-10 rounded-xl border bg-background px-2 text-sm";
@@ -59,7 +60,7 @@ export function TripOverviewSection({ trip, onOpenBudget }: { trip: TravelTrip; 
         </div>
         <TripBudgetMini trip={trip} onOpen={onOpenBudget} />
         {(() => { const r = tripReadiness(trip); return <div className="mt-3 rounded-xl bg-secondary p-3 text-sm"><b>Trip readiness {r.done}/{r.total}</b>{r.missing.length ? <span className="block text-xs text-muted-foreground">Still to do: {r.missing.join(" · ")}</span> : <span className="block text-xs text-muted-foreground">All set.</span>}</div>; })()}
-        {!closed && missingCats.length > 0 && <Button variant="outline" className="mt-3 w-full" onClick={() => void savePreferences({ ...pr, categories: [...pr.categories, ...missingCats.map((name) => ({ name, archived: false }))] }).then(() => toast.success("Travel categories added"))}>Add travel categories ({missingCats.join(", ")})</Button>}
+        {!closed && missingCats.length > 0 && <Button variant="outline" className="mt-3 h-auto w-full whitespace-normal break-words py-2" onClick={() => void savePreferences({ ...pr, categories: [...pr.categories, ...missingCats.map((name) => ({ name, archived: false }))] }).then(() => toast.success("Travel categories added"))}>Add travel categories ({missingCats.join(", ")})</Button>}
         {!closed && <Button asChild variant="gold" className="mt-3 w-full"><Link to="/new" search={{ trip: trip.id }}>Add an expense to this trip</Link></Button>}
       </Card>
       {insights.length > 0 && <Card title="Trip insights"><ul className="list-disc space-y-1 pl-5 text-sm">{insights.map((i) => <li key={i}>{i}</li>)}</ul></Card>}
@@ -333,12 +334,23 @@ export function TripClosureCard({ trip }: { trip: TravelTrip }) {
   const cancelled = !!trip.cancelledAt;
   const blockers = useMemo(() => closeBlockers(trip, transactions), [trip, transactions]);
   const f = useMemo(() => tripFinance(trip, transactions), [trip, transactions]);
+  const [ask, setAsk] = useState(false);
   if (cancelled) return <Card title="Trip cancelled"><p className="text-sm">Cancelled on {trip.cancelledAt?.slice(0, 10)}. Records are unchanged.</p><Button variant="outline" className="mt-2" onClick={() => void put({ cancelledAt: null }, "Cancellation removed")}>Undo cancellation</Button></Card>;
   return (
     <Card title={closed ? "Trip completed" : "Complete trip"}>
       {closed ? <><p className="text-sm">Completed on {trip.closedAt?.slice(0, 10)}. Final spend {money(f.total)}. Completing didn't add any entries.</p><Button variant="outline" className="mt-2" onClick={() => void put({ closedAt: null }, "Trip reopened")}>Reopen</Button></>
         : <>{blockers.length ? <><p className="text-xs text-muted-foreground">Reminders — you can still complete the trip:</p><ul className="list-disc pl-5 text-sm text-muted-foreground">{blockers.map((b) => <li key={b}>{b}</li>)}</ul></> : <p className="text-sm text-muted-foreground">Everything is settled.</p>}
-          <div className="mt-2 flex gap-2"><Button className="flex-1" onClick={() => void put({ closedAt: new Date().toISOString() }, "Trip marked completed")}>Mark trip completed</Button><Button variant="ghost" onClick={() => { if (confirm("Cancel this trip? Records stay; the trip is marked cancelled.")) void put({ cancelledAt: new Date().toISOString() }, "Trip cancelled"); }}>Cancel trip</Button></div></>}
+          <div className="mt-2 flex gap-2"><Button className="flex-1" onClick={() => void put({ closedAt: new Date().toISOString() }, "Trip marked completed")}>Mark trip completed</Button><Button variant="ghost" onClick={() => setAsk(true)}>Cancel trip</Button></div></>}
+      <ConfirmDialog
+        open={ask}
+        destructive
+        title={`Cancel “${trip.name}”?`}
+        description="The trip is marked cancelled. Records stay: no expenses, bookings or payments are changed or removed, and you can undo the cancellation later."
+        confirmLabel="Cancel trip"
+        cancelLabel="Keep trip"
+        onConfirm={() => put({ cancelledAt: new Date().toISOString() }, "Trip cancelled")}
+        onClose={() => setAsk(false)}
+      />
     </Card>
   );
 }
