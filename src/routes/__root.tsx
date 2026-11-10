@@ -15,6 +15,7 @@ import { registerOfflineApp, recoverStaleAppFiles } from "@/lib/pwa";
 import { supabase } from "@/integrations/supabase/client";
 import { Toaster } from "@/components/ui/sonner";
 import { ConfirmHost } from "@/components/ConfirmHost";
+import { PreviewInfoPanel } from "@/components/PreviewInfoPanel";
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 
@@ -183,6 +184,8 @@ function RootComponent() {
       <ClientOnly fallback={<LaunchScreen />}><Outlet /></ClientOnly>
       <Toaster />
       <ConfirmHost />
+      {/* Preview-only build identity (renders nothing unless VITE_PREVIEW_ENV=preview). */}
+      <ClientOnly><PreviewInfoPanel /></ClientOnly>
     </QueryClientProvider>
   );
 }
