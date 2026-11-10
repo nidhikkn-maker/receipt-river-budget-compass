@@ -210,6 +210,7 @@ export function StatementDeskPage({ embedded }: { embedded?: { files: File[]; co
   const api = () => {
     const s = storeRef.current;
     return { save: s.save, remove: s.remove, reconcile: s.reconcile, addAccount: s.addAccount, setArchived: s.setArchived, refresh: s.refresh, transactions: s.transactions, linkDraft: linkDraftToTransaction, unlinkDraft,
+      withdrawnIds: new Set(s.withdrawn.map((x) => x.id)),
       readUndoRow: async (id: string) => {
         const { data, error } = await supabase.from('expenses').select('id,statement_ref,correction_revision').eq('employee_id', s.userId).eq('id', id).maybeSingle();
         if (error || !data) throw Error('Upload-time safety snapshot is unavailable. Recovery history is retained.');
@@ -300,6 +301,8 @@ export function StatementDeskPage({ embedded }: { embedded?: { files: File[]; co
       toast.success(`${r.posted.length} entries posted · ${r.reconciled.length} records marked as matched${r.createdAccounts.length ? ` · ${r.createdAccounts.length} account${r.createdAccounts.length === 1 ? "" : "s"} created` : ""}`, {
         ...(undoCap === 'needs-update' ? {} : { action: { label: "Undo", onClick: () => void undo(r) } }),
       });
+      // P0-034: lines whose entry was withdrawn earlier are not saved again; restoring that entry is the way back.
+      if (r.withdrawnLines?.length) toast.info(`${r.withdrawnLines.length} line${r.withdrawnLines.length === 1 ? " was" : "s were"} withdrawn earlier (for example by Undo) and ${r.withdrawnLines.length === 1 ? "was" : "were"} not added again. Restore ${r.withdrawnLines.length === 1 ? "it" : "them"} from Withdrawn entries to count ${r.withdrawnLines.length === 1 ? "it" : "them"}.`);
     } catch (e) {
       if (e instanceof PartialUploadError) {
         setResult(e.result);

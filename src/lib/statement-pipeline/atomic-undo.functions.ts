@@ -39,6 +39,14 @@ export const undoStatement = createServerFn({ method: 'POST' })
       rpc: (name: 'reverse_statement_upload', args: { _request: string; _upload: string; _items: unknown; _reason: string }) => Promise<{ data: StatementUndoReport | null; error: { message: string } | null }>;
     };
     const reversalReceipt = await p7.from('statement_upload_reversals').select('id,result').eq('owner_id', userId).eq('id', data.id).maybeSingle();
+    // P0-034: rows this upload created are withdrawn (P16), never deleted. Without P16 an Undo that would reach the
+    // never-posted DELETE branch is refused before any write; a recorded Undo still replays from its receipt.
+    const withdrawsCreated = async () => {
+      if (!upload.posted.length) return;
+      const probe = await (supabase as unknown as { rpc: (name: 'statement_undo_withdraws') => Promise<{ data: boolean | null; error: { message: string; code?: string } | null }> }).rpc('statement_undo_withdraws');
+      if (probe.error) throw Error(isMissingSchemaObject(probe.error) ? UNDO_NEEDS_UPDATE : 'Saved records could not be checked. Nothing was changed; retry when connected.');
+      if (probe.data !== true) throw Error(UNDO_NEEDS_UPDATE);
+    };
     if (!reversalReceipt.error) {
       let report: StatementUndoReport | null = reversalReceipt.data?.result ?? null;
       await atomicStatementUndo(data.id, upload, upload.undoRows ?? [], {
@@ -50,6 +58,7 @@ export const undoStatement = createServerFn({ method: 'POST' })
         },
         rows: async ids => readRows(ids),
         commit: async (id, items) => {
+          await withdrawsCreated();
           const result = await p7.rpc('reverse_statement_upload', { _request: id, _upload: data.id, _items: statementUndoItems(items), _reason: undoReason(upload.label) });
           if (result.error) throw Error(result.error.message);
           if (!result.data || result.data.request !== id) throw Error('Undo was not confirmed. Recovery history is retained; retry or review changed records.');
@@ -72,6 +81,8 @@ export const undoStatement = createServerFn({ method: 'POST' })
       },
       rows: async ids => readRows(ids),
       commit: async (id, items) => {
+        // The staged function deletes created rows (P0-034): only an Undo that just clears matches may use it.
+        if (items.some(x => x.action === 'delete')) throw Error(UNDO_NEEDS_UPDATE);
         const result = await staged.rpc('undo_statement_rows', { _id: id, _items: items });
         if (result.error && isMissingSchemaObject(result.error)) throw Error(UNDO_NEEDS_UPDATE);
         if (result.error || result.data !== id) throw Error('Undo was not confirmed. Recovery history is retained; retry or review changed records.');
@@ -88,7 +99,9 @@ export const statementUndoCapability = createServerFn({ method: 'GET' })
     const staged = supabase as unknown as { from: (table: 'statement_undo_receipts' | 'statement_upload_reversals') => { select: (columns: string) => { eq: (column: string, value: string) => { limit: (n: number) => Promise<{ error: { message: string; code?: string } | null }> } } } };
     // P7 r2 (audited per-entry reversal) first; the older staged undo second.
     const p7 = await staged.from('statement_upload_reversals').select('id').eq('owner_id', userId).limit(1);
-    if (!p7.error || !isMissingSchemaObject(p7.error)) return { state: undoCapabilityFrom(p7.error) };
-    const probe = await staged.from('statement_undo_receipts').select('id').eq('owner_id', userId).limit(1);
-    return { state: undoCapabilityFrom(probe.error) };
+    if (p7.error && !isMissingSchemaObject(p7.error)) return { state: 'unknown' };
+    // P0-034: Undo is offered only where created rows are withdrawn (P16), never deleted (P7 alone / staged undo).
+    if (p7.error) return { state: 'needs-update' };
+    const p16 = await (supabase as unknown as { rpc: (name: 'statement_undo_withdraws') => Promise<{ data: boolean | null; error: { message: string; code?: string } | null }> }).rpc('statement_undo_withdraws');
+    return { state: p16.error ? undoCapabilityFrom(p16.error) : p16.data === true ? 'available' : 'needs-update' };
   });

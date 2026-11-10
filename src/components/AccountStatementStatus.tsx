@@ -12,6 +12,7 @@ import { reconciliationReport } from '@/lib/reconciliation-report';
 import { toCsv, toExcel, toPdf } from '@/lib/reports';
 import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "./ui/dialog";
+import { backgroundAllowed } from '@/lib/lock-gate';
 
 export function AccountStatementStatus({ onAttention }: { onAttention?: (count: number | null) => void } = {}) {
   const { accounts, transactions: ledgerTransactions, transferCounterparts, preferences, refresh } = useStore();
@@ -37,8 +38,9 @@ export function AccountStatementStatus({ onAttention }: { onAttention?: (count: 
   useEffect(() => {
     // Initial load comes from the records effect below. The timer re-reads statement evidence only;
     // a full records refresh runs on focus, reconnect or a statement update.
-    const tick = () => { if (document.visibilityState === "visible") void load(true); };
-    const timer = window.setInterval(() => { if (document.visibilityState === "visible") void load(); }, 20000); window.addEventListener("focus", tick); window.addEventListener("online", tick);window.addEventListener("ledgerline:statement-updated",tick);
+    // P0-029: focus, reconnect and timer reads are skipped while the app is locked.
+    const tick = () => { if (document.visibilityState === "visible" && backgroundAllowed()) void load(true); };
+    const timer = window.setInterval(() => { if (document.visibilityState === "visible" && backgroundAllowed()) void load(); }, 20000); window.addEventListener("focus", tick); window.addEventListener("online", tick);window.addEventListener("ledgerline:statement-updated",tick);
     return () => { generation.current++; clearInterval(timer); window.removeEventListener("focus", tick); window.removeEventListener("online", tick);window.removeEventListener("ledgerline:statement-updated",tick); };
   }, []);
   useEffect(()=>{const t=window.setTimeout(()=>void load(),150);return()=>clearTimeout(t);},[transactions,accounts]);

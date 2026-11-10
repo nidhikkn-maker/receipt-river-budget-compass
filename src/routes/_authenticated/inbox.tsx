@@ -24,6 +24,7 @@ import { DepreciationInboxCard } from '@/components/books/DepreciationInboxCard'
 import { CompanionReview } from '@/components/CompanionReview';
 import type { Expense } from '@/lib/expenses';
 import { UnreadableRecordsNotice } from "@/components/UnreadableRecordsNotice";
+import { backgroundAllowed } from '@/lib/lock-gate';
 
 
 export const Route = createFileRoute('/_authenticated/inbox')({
@@ -39,7 +40,7 @@ function Inbox() {
   const items = useMemo(() => [...inboxItems({ transactions: store.transactions, accounts: store.accounts, commitments: store.commitments, prefs: store.preferences, today, pendingCount: store.pendingCount }), ...auditInboxItems(audit)], [store.transactions, store.accounts, store.commitments, store.preferences, today, store.pendingCount, audit]);
   const [rules, setRules] = useState<ImportRule[]>([]);
   const [rulesError, setRulesError] = useState(false);
-  useEffect(() => { let active = true; const load = () => { void listImportRules().then(r => { if (active) { setRules(r); setRulesError(false); } }).catch(() => { if (active) setRulesError(true); }); }; load(); window.addEventListener('focus', load); return () => { active = false; window.removeEventListener('focus', load); }; }, []);
+  useEffect(() => { let active = true; const load = () => { void listImportRules().then(r => { if (active) { setRules(r); setRulesError(false); } }).catch(() => { if (active) setRulesError(true); }); }; load(); const onFocus = () => { if (backgroundAllowed()) load(); }; window.addEventListener('focus', onFocus); return () => { active = false; window.removeEventListener('focus', onFocus); }; }, []);
   const categories = store.preferences.categories.filter(c => !c.archived).map(c => c.name);
   const rows = applyReviewRules(centreReview(items, store.transactions, store.accounts, categories), rules, categories);
   const counts = reviewCounts(rows);
