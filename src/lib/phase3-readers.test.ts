@@ -89,8 +89,9 @@ describe("reader inventory (decision 1): every ledger reader applies the same vi
   it("no server or MCP reader of expenses is missing from the inventory", () => {
     const { execSync } = require("node:child_process") as typeof import("node:child_process");
     const files = execSync("grep -rl 'from(\"expenses\")' src/lib --include=*.ts --include=*.tsx", { encoding: "utf8" }).split("\n").filter((x) => x && !x.includes(".test."));
-    // Readers that do not sum money: the Statement Desk Undo snapshot read, the import job, posting checks.
-    const NOT_SUMMING = ["src/lib/statement-pipeline/atomic-undo.functions.ts", "src/lib/import-jobs.server.ts", "src/lib/fx.functions.ts", "src/lib/mcp/tools/list-transactions.ts"];
+    // Readers that do not sum money: the Statement Desk Undo snapshot read, the import job, posting checks, and the Statement
+    // Inbox check of a pending line's existing entry and reference (statement-line-claims.ts, P0-027).
+    const NOT_SUMMING = ["src/lib/statement-pipeline/atomic-undo.functions.ts", "src/lib/import-jobs.server.ts", "src/lib/fx.functions.ts", "src/lib/mcp/tools/list-transactions.ts", "src/lib/statement-line-claims.ts"];
     expect(files.filter((f) => !READERS.includes(f) && !NOT_SUMMING.includes(f))).toEqual([]);
   });
 });

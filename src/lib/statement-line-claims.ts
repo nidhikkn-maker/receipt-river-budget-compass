@@ -70,7 +70,27 @@ export async function claimStatementLines(p: { accountKey: string; batchId: stri
   return { claims, enforced: true };
 }
 
-export interface RegisterResult { registered: string[]; alreadyImported: string[]; failed: { ref: string; title: string }[] }
+export interface RegisterResult {
+  /** Lines saved and reconciled by this attempt (new lines and retried pending lines). */
+  registered: string[];
+  /** Of `registered`, the lines whose entry did not exist before this attempt: what the user sees as "added". */
+  added: string[];
+  alreadyImported: string[];
+  failed: { ref: string; title: string }[];
+}
+
+/**
+ * P0-027: the statement reference stored on the entry (expenses.statement_ref, also P7's statement_row source key) is unique per
+ * statement line: file · date · description, then the same discriminators the fingerprint uses (direction, amount and, for identical
+ * same-day lines, their #n order). Identical lines (two real 2,999.00 purchases at one shop on one day) therefore no longer share a
+ * reference and are both posted. The readable "file · date · description" prefix is kept, so screens that show it, and refs stored
+ * before this change, read as before. A line keeps the reference it was first reconciled with (see registerStatementDrafts).
+ */
+export function statementLineRef(fileName: string, line: { date: string; description: string; amount: number; direction?: "debit" | "credit" | undefined }, fingerprint: string): string {
+  const order = Number(/#(\d+)$/.exec(fingerprint)?.[1] ?? 0);
+  const suffix = ` · ${line.direction ?? "debit"} ${line.amount.toFixed(2)}${order > 0 ? ` · #${order + 1}` : ""}`;
+  return `${fileName} · ${line.date} · ${line.description}`.slice(0, 300 - suffix.length) + suffix;
+}
 
 /** Registers each draft once: claim first, save with the claimed entry id, then confirm the saved ids. */
 export async function registerStatementDrafts(p: { owner: string; accountKey: string; fileName: string; drafts: StatementDraft[]; fingerprints: Map<string, string>; known: Set<string> }, deps: { save: (input: ExpenseInput, entryId: string) => Promise<void>; reconcile: (entryId: string, ref: string) => Promise<void> }): Promise<RegisterResult> {
@@ -80,15 +100,25 @@ export async function registerStatementDrafts(p: { owner: string; accountKey: st
     return { draft: d, fingerprint, lineDate: d.line.date, entryId: await stableLineEntryId(p.owner, fingerprint) };
   }));
   const { claims, enforced } = await claimStatementLines({ accountKey: p.accountKey, batchId: crypto.randomUUID(), fileLabel: filePattern(p.fileName), known: p.known, lines });
-  const out: RegisterResult = { registered: [], alreadyImported: [], failed: [] };
+  const out: RegisterResult = { registered: [], added: [], alreadyImported: [], failed: [] };
   const saved: string[] = [];
   for (const l of lines) {
     const claim = claims.get(l.fingerprint);
     if (!claim || claim.outcome === "registered" || !claim.entryId) { out.alreadyImported.push(l.draft.line.ref); continue; }
     try {
+      // A pending line (claimed earlier, never confirmed) may already have its entry, and even its reference, from that attempt.
+      // Its existing reference is kept, so a retry from a re-downloaded file never moves the line's source key.
+      let existingRef: string | null = null; let existed = false;
+      if (enforced && claim.outcome === "pending") {
+        const r = await supabase.from("expenses").select("id,statement_ref").eq("id", claim.entryId).limit(1);
+        if (r.error) throw Error("Couldn't check the earlier attempt");
+        const row = r.data?.[0];
+        existed = !!row; existingRef = row?.statement_ref ?? null;
+      }
       await deps.save(draftToInput(l.draft), claim.entryId);
-      await deps.reconcile(claim.entryId, `${p.fileName} · ${l.draft.line.date} · ${l.draft.line.description}`.slice(0, 300));
+      if (!existingRef) await deps.reconcile(claim.entryId, statementLineRef(p.fileName, l.draft.line, l.fingerprint));
       out.registered.push(l.draft.line.ref); saved.push(claim.entryId);
+      if (!existed) out.added.push(l.draft.line.ref);
     } catch { out.failed.push({ ref: l.draft.line.ref, title: l.draft.title }); }
   }
   // A lost confirmation is safe: the line stays pending and the next attempt reuses the same entry id.

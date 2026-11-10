@@ -51,6 +51,15 @@
 --    restore of an older backup) keeps the stored entry; a save that rewrites history is refused.
 --    0069 guard_books_registers is NOT changed: it guards data.books.* and data.assets only, and
 --    recordArchive is a top-level key it never reads, so no archive-field exemption is needed there.
+--    P0-028 (failure-injection, 10 Nov 2026): the append-only comparison needs the stored row, so the
+--    owner-preferences row itself cannot be deleted by signed-in users either (a DELETE, or DELETE then
+--    INSERT with a forged recordArchive, erased or rewrote every archive history). Allowed paths are the
+--    same as for the archive-controlled rows: confirmed erasure of the caller's own data
+--    (ledgerline.erasing) and the service / operator path (demo cleanup cron, auth-user cascades). App
+--    saves and backup restore UPDATE the existing row, so keep_record_archive still applies to them.
+--    TRUNCATE (which ignores RLS) is refused for signed-in roles on finance_preferences and expenses too.
+--    Hosted check item for RB-P1-06: confirm whether hosted roles anon/authenticated hold TRUNCATE on
+--    public tables (the PGlite harness grants it through default privileges); revoke it there if so.
 -- ============================================================================================
 BEGIN;
 
@@ -309,6 +318,27 @@ DROP TRIGGER IF EXISTS p9_keep_record_archive ON public.finance_preferences;
 CREATE TRIGGER p9_keep_record_archive BEFORE INSERT OR UPDATE ON public.finance_preferences FOR EACH ROW EXECUTE FUNCTION phase3_p9.keep_record_archive();
 
 -- --------------------------------------------------------------------------------------------
+-- B3. The owner-preferences row (holds recordArchive) is never deleted by signed-in users (P0-028)
+-- --------------------------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION phase3_p9.guard_preferences_delete() RETURNS trigger
+LANGUAGE plpgsql SET search_path = public, pg_temp AS $$
+BEGIN
+  IF current_setting('ledgerline.erasing', true) = 'on' AND (auth.uid() IS NULL OR OLD.owner_id = auth.uid()) THEN RETURN OLD; END IF;
+  IF auth.uid() IS NULL AND current_user NOT IN ('authenticated', 'anon') THEN RETURN OLD; END IF;
+  RAISE EXCEPTION 'P9_PREFERENCES_KEPT: owner preferences hold the archive history and are removed only by confirmed data deletion' USING ERRCODE = '42501';
+END $$;
+DROP TRIGGER IF EXISTS p9_preferences_kept ON public.finance_preferences;
+CREATE TRIGGER p9_preferences_kept BEFORE DELETE ON public.finance_preferences FOR EACH ROW EXECUTE FUNCTION phase3_p9.guard_preferences_delete();
+DO $t$
+DECLARE t text;
+BEGIN
+  FOREACH t IN ARRAY ARRAY['finance_preferences', 'expenses'] LOOP
+    EXECUTE format('DROP TRIGGER IF EXISTS p9_no_truncate ON public.%I', t);
+    EXECUTE format('CREATE TRIGGER p9_no_truncate BEFORE TRUNCATE ON public.%I FOR EACH STATEMENT EXECUTE FUNCTION phase3_p9.guard_archive_truncate()', t);
+  END LOOP;
+END $t$;
+
+-- --------------------------------------------------------------------------------------------
 -- Grants
 -- --------------------------------------------------------------------------------------------
 REVOKE ALL ON FUNCTION public.claim_statement_lines(text, uuid, text, jsonb), public.confirm_statement_lines(uuid[]),
@@ -316,5 +346,5 @@ REVOKE ALL ON FUNCTION public.claim_statement_lines(text, uuid, text, jsonb), pu
 GRANT EXECUTE ON FUNCTION public.claim_statement_lines(text, uuid, text, jsonb), public.confirm_statement_lines(uuid[]),
   public.pending_statement_lines(text), public.discard_used_pending_document(uuid) TO authenticated, service_role;
 REVOKE ALL ON FUNCTION phase3_p9.guard_line_claims(), phase3_p9.guard_archive_delete(), phase3_p9.guard_archive_truncate(),
-  phase3_p9.archive_change(jsonb, jsonb, boolean), phase3_p9.keep_record_archive() FROM PUBLIC, anon, authenticated;
+  phase3_p9.archive_change(jsonb, jsonb, boolean), phase3_p9.keep_record_archive(), phase3_p9.guard_preferences_delete() FROM PUBLIC, anon, authenticated;
 COMMIT;

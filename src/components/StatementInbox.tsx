@@ -156,8 +156,11 @@ export function StatementInbox() {
       await refresh();
       // Failed lines are not remembered, so they show again and are retried with the same entry id.
       await markSeen(new Set(r.failed.map((f) => f.ref)));
-      const done = r.registered.length;
+      // Count only entries this tap added; lines finished from an earlier attempt are reported as already saved.
+      const done = r.added.length;
+      const finished = r.registered.length - done;
       if (done) toast.success(`${done} ${done === 1 ? "expense" : "expenses"} registered from ${fileName}`);
+      if (finished) toast.info(`${finished} saved by an earlier attempt — finished, not added again`);
       if (r.alreadyImported.length) toast.info(`${r.alreadyImported.length} already imported — not registered again`);
       if (r.failed.length) toast.error(`${r.failed.length} couldn't be registered — tap Register again to retry them`);
       else { setLines([]); setExcluded({}); setOverrides({}); setIncludeDups({}); }
