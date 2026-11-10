@@ -54,7 +54,8 @@ export function position(i: PositionInput) {
   const minBalance = sumMoney(cashAccounts.map(a => a.minBalance ?? 0));
   const reserves = sumMoney(i.goals.filter(g => g.reserve).map(g => g.saved));
   const emis = cardEmisOf(i.loans);
-  const cards = live.filter((a) => a.kind === "credit_card").map((a) => {
+  // An archived card that still carries a balance keeps its dues and alerts until it is paid off (KK archive rule).
+  const cards = i.accounts.filter((a) => a.kind === "credit_card" && (!a.archived || accountBalance(a, i.transactions) !== 0)).map((a) => {
     const cycle = cardCycle(a, i.transactions, emis, i.today, i.cardAlertPct ?? 30);
     return {
       id: a.id, name: a.name, due: cycle.owed, limit: a.creditLimit ?? null, utilisation: cycle.utilisation,

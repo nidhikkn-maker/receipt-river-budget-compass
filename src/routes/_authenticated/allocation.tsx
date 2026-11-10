@@ -44,7 +44,8 @@ function AllocationPage() {
   const [shortfall, setShortfall] = useState(0);
 
   const live = accounts.filter((a) => !a.archived);
-  const cards = live.filter((a) => a.kind === "credit_card");
+  // Archived cards still owing money keep their dues in the plan (KK archive rule).
+  const cards = accounts.filter((a) => a.kind === "credit_card" && (!a.archived || accountBalance(a, transactions) !== 0));
   const cardDues = cards.map((a) => ({ name: a.name, amount: Math.max(0, accountBalance(a, transactions)) })).filter((c) => c.amount > 0);
   const loanEmis = loans.filter((l) => l.status !== "closed" && l.loanType !== "credit_card_emi").map((l) => ({ name: l.name, amount: l.emi }));
   const reserves = goals.filter((g) => g.reserve);

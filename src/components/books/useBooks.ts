@@ -73,13 +73,24 @@ export function useNetWorth() {
   const demat = useDemat();
   const dematHoldings = (demat ?? []).flatMap((x) => x.holdings);
   const closes = useClosingPrices([...books.holdings.map((h) => h.isin ?? ""), ...dematHoldings.map((h) => h.isin)]);
-  return useMemo(() => {
+  return useMemo(() => computeNetWorth({ accounts, transactions, valuations, loans, documents, books, assets: preferences.assets ?? [], demat, dematHoldings, closes }),
+    [accounts, transactions, valuations, loans, books, demat, preferences.assets, closes, documents]); // eslint-disable-line react-hooks/exhaustive-deps
+}
+
+type NetWorthInput = {
+  accounts: ReturnType<typeof useStore>["accounts"]; transactions: ReturnType<typeof useStore>["transactions"]; valuations: ReturnType<typeof useStore>["valuations"];
+  loans: ReturnType<typeof useStore>["loans"]; documents: ReturnType<typeof useStore>["documents"]; books: BooksData;
+  assets: NonNullable<ReturnType<typeof useStore>["preferences"]["assets"]>; demat: ReturnType<typeof useDemat>; dematHoldings: DematWithHoldings["holdings"]; closes: ClosingPrices;
+};
+/** Pure ownership-aware net worth (the body of useNetWorth), exported so it can be checked against hand-calculated figures. */
+export function computeNetWorth({ accounts, transactions, valuations, loans, documents, books, assets, demat, dematHoldings, closes }: NetWorthInput) {
     const live = accounts.filter((a) => !a.archived);
     // Each ledger account is counted in exactly one component [v6.1 §9]: accounts that carry a registered
     // asset are valued through the asset/property register, investment accounts under investments.
-    const assetLinked = new Set((preferences.assets ?? []).map((a) => a.accountId).filter(Boolean));
+    const assetLinked = new Set(assets.map((a) => a.accountId).filter(Boolean));
     const raw = { assets: 0, investments: 0, other: 0, liabilities: 0 };
-    for (const a of live) {
+    // KK rule (P0-024): archiving hides an account; its value stays in net worth until a real disposal or closing entry.
+    for (const a of accounts) {
       if (assetLinked.has(a.id)) continue;
       const v = accountValue(a, transactions, valuations).value;
       if (isLiability(a.kind)) raw.liabilities += v; else if (a.kind === "investment" || a.kind === "fixed_deposit") raw.investments += v; else if (a.kind === "other_asset") raw.other += v; else raw.assets += v;
@@ -116,7 +127,6 @@ export function useNetWorth() {
     const dematDate = dematHoldings.map((h) => h.asOf ?? "").sort().pop();
     const closeDate = [...closes.byIsin.values()].map((c) => c.date).sort().pop();
     const fy = fyOf(now.toISOString().slice(0, 10));
-    const assets = preferences.assets ?? [];
     // Property counted once: a property's own valuation, else its linked asset; unlinked assets counted separately.
     const linked = new Set(books.properties.map((p) => p.assetId).filter(Boolean));
     const propVal = books.properties.reduce((s, p) => { const a = assets.find((x) => x.id === p.assetId); return s + (propertyValue(p, a ? shareValue(a, fy) : null).value ?? 0); }, 0)
@@ -133,5 +143,5 @@ export function useNetWorth() {
     // Market movement excludes money you put in or took out since the last snapshot [v6.1 §12].
     const flows = last ? investmentFlows(transactions, accounts, last.date) : 0;
     return { ...nw, quality: [...nw.quality, ...(closes.failed ? ["Couldn't load saved closing prices: share values may use statement prices until you retry"] : []), ...(lender.missing.length ? [`Incomplete net worth: ${lender.missing.join(', ')} needs dated lender balance evidence (liability excluded, not zero)`] : [])], valued, portfolio, liquid: raw.assets, movement: last ? Math.round(portfolio - last.portfolio - flows) : null, flowsSinceSnapshot: Math.round(flows), lastSnapshot: last?.date ?? null, demat, dematRows, dematMissing, duplicates, closeJob: closes.job, pricesFailed: closes.failed, retryPrices: closes.retry, pricesAsOf: closeDate ?? null, recordsAsOf: transactions.reduce((m, t) => (t.date > m ? t.date : m), "") || null };
-  }, [accounts, transactions, valuations, loans, books, demat, preferences.assets, closes, documents]); // eslint-disable-line react-hooks/exhaustive-deps
 }
+
