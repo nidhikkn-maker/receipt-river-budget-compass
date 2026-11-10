@@ -87,3 +87,11 @@ KK binding: Withdraw only for unposted AND unreconciled entries; posted -> Rever
   requests); otherwise the entry was left unposted.
 - Before: p0-015-disposal.before.txt. Tests: failure-injection D1-D4, p14-asset-disposal-sql.test.ts (2).
 - Existing UI paths (assets.tsx Sold-on edit, Lifecycle disposal event, AssetBooks disposal posting) are refused under P14 by design.
+
+## 8. P0-006 / RB-P1-02 export authorisation — DONE (server gate + proposed P15)
+- src/lib/exports.ts (kinds, server rules), exports.functions.ts (authoriseExport, exportBackupData), export-gate.ts
+  (exportFile / exportDeliver: hash + rows + server authorisation + step-up before download/share). 31 call sites routed.
+- P15 (+rollback): export_audit (append-only), authorise_export (own / shared company via P2 'export' or entity_members /
+  Finance company tax; step-up for sensitive kinds where P4).
+- Before: p0-006-exports.before.txt. Tests: failure-injection X1-X4; p15-export-sql.test.ts (inventory + SQL).
+- Not done: server-produced file bytes for PDFs/CSVs (authorised + hashed only); MCP has no file exports.

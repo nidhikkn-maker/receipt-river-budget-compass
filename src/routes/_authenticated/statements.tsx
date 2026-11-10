@@ -1,6 +1,7 @@
 import { StageStrip } from "@/components/StageStrip";
+import { exportFile } from "@/lib/export-gate";
 import { canvasNarrative, statementStage } from "@/lib/plain-language";
-import { downloadBlob } from "@/lib/reports";
+
 import { csvCell } from "@/lib/csv-safe";
 import { createFileRoute, useSearch } from "@tanstack/react-router";
 import { SectionTabs } from "@/components/SectionTabs";
@@ -519,7 +520,7 @@ export function StatementDeskPage({ embedded }: { embedded?: { files: File[]; co
       for (const d of [...a.auto, ...a.ask]) rows.push([a.file.name, a.name, d.line.date, d.line.description, d.line.amount, d.line.direction, d.group === "auto" ? "suggested (approve to save)" : "needs your decision", d.reason].map(q).join(","));
       for (const l of a.later) rows.push([a.file.name, a.name, l.line.date, l.line.description, l.line.amount, l.line.direction, "held back", l.reason].map(q).join(","));
     }
-    downloadBlob(new Blob([rows.join("\n")], { type: "text/csv" }), "statement-desk-plan.csv");
+    void exportFile({ kind: "ledger_csv" }, new Blob([rows.join("\n")], { type: "text/csv" }), "statement-desk-plan.csv");
   };
 
   const suggestedKeys = plan?.accounts.flatMap((a) => [...a.auto, ...a.ask].map((d) => d.line.key)) ?? [];

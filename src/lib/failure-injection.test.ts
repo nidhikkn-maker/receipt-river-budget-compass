@@ -451,6 +451,8 @@ import { atomicStatementUndo } from "./statement-pipeline/atomic-undo";
 import { guardedRestore, previousRestoreLine, type RestoreDb } from "./restore-guard";
 import { decideEntryChange, listEntryChanges, requestEntryChange } from "./entry-requests";
 import { decideAssetDisposal, requestAssetDisposal } from "./asset-disposal.functions";
+import { authoriseExport, exportBackupData } from "./exports.functions";
+import { sha256Hex, type ExportKind, type ExportRequest } from "./exports";
 import { BACKUP_TABLES, planRestore, type Backup, type BackupRow } from "./backup";
 import type { Json } from "@/integrations/supabase/types";
 
@@ -2356,6 +2358,132 @@ describe("P0-015 on active books: the approved disposal posts a balanced batch �
       await sql1(db, "INSERT INTO public.expenses(id,employee_id,title,category,amount,original_amount,currency,expense_date,account_id,description,txn_type,adjustment_sign,tags) VALUES ($1,$2,'Disposal · Desk','Asset disposal',900,900,'INR','2026-10-31',$3,'','adjustment',-1,ARRAY['disposal'])", [stray, O, s.assetAcc]);
       expect((await sql1<{ n: number }>(db, "SELECT count(*)::int n FROM public.posting_batches b JOIN public.posting_events ev ON ev.id = b.event_id WHERE ev.event_key = $1", [`ledger_entry:${stray}`]))[0]!.n).toBe(0);
       expect(await sql1(db, "SELECT batch_id FROM public.posting_lines GROUP BY batch_id, currency HAVING sum(debit) <> sum(credit)")).toEqual([]);
+      await db.close();
+    },
+    T,
+  );
+});
+
+// ---------------------------------------------------------------------------------------------------------------------------
+// P0-006 / RB-P1-02 (KK 9 Nov): sensitive exports authorised server-side with workspace / company isolation, step-up where the
+// pattern requires it, and an append-only export audit. The REAL server functions (exports.functions.ts → exports.ts) and
+// PostgREST-shaped requests as each signed-in user: owner O, other user V, company member M (company c1 only), Finance F
+// (company-tax switch), a family member G granted view without export (P2).
+const P15 = ".lovable/staged-sql/proposed/P15_export_authorisation.sql";
+const G = id(6);
+const fileReq = async (kind: ExportKind, text: string, extra: Partial<ExportRequest> = {}) => {
+  const bytes = new TextEncoder().encode(text);
+  return { kind, fileName: `${kind}.csv`, rows: Math.max(0, text.split("\n").length - 1), bytes: bytes.length, sha256: await sha256Hex(bytes), ...extra };
+};
+const audit = (db: Db) => sql1<{ actor_id: string; owner_id: string | null; entity_id: string | null; kind: string; row_count: number; byte_count: number; sha256: string; step_up: boolean }>(db, "SELECT actor_id, owner_id, entity_id, kind, row_count, byte_count::int AS byte_count, sha256, step_up FROM public.export_audit ORDER BY created_at");
+async function seedExportPeople(db: Db) {
+  await seedUsers(db);
+  await addUsers(db, { [M]: "m@x.in", [F]: "f@x.in", [G]: "g@x.in" });
+  await sql1(db, "INSERT INTO public.user_roles(user_id, role) VALUES ($1,'manager'),($2,'finance')", [M, F]);
+  await sql1(db, "UPDATE public.role_permissions SET allowed = true WHERE role = 'finance' AND action IN ('view_expenses','view_company_tax')");
+  await sql1(db, "INSERT INTO public.entity_members(owner_id, entity_id, member_id, member_email, can_write) VALUES ($1,'c1',$2,'m@x.in',false)", [O, M]);
+}
+for (const mode of [{ name: "applied schema WITHOUT P15 (server rule, not audited)", extra: [P9], p15: false }, { name: "P9 + P15 (database decides and audits)", extra: [P9, P15], p15: true }] as const) {
+  describe(`P0-006 export authorisation — ${mode.name}`, () => {
+    let db: Db;
+    beforeAll(async () => {
+      db = await fullSchemaDb([...mode.extra]);
+      await seedExportPeople(db);
+    }, T);
+
+    it(
+      "X1. own exports pass and (with P15) are audited with rows, bytes and SHA-256; another person's records under an 'own' kind are refused",
+      async () => {
+        reset(db);
+        const csv = "Date,Amount\n2026-11-01,450.00\n2026-11-02,1234.50";
+        const r = await authoriseExport({ data: await fileReq("report", csv) });
+        expect(r).toMatchObject({ ok: true, audited: mode.p15 });
+        net.uid = V;
+        expect(await authoriseExport({ data: await fileReq("report", csv, { ownerId: O }) })).toMatchObject({ ok: false, error: expect.stringMatching(/your own records only/) });
+        net.uid = O;
+        if (mode.p15) {
+          const bytes = new TextEncoder().encode(csv);
+          expect(await audit(db)).toEqual([{ actor_id: O, owner_id: O, entity_id: null, kind: "report", row_count: 2, byte_count: bytes.length, sha256: await sha256Hex(bytes), step_up: false }]);
+          // append-only: no client update / delete path, TRUNCATE refused
+          expect((await api().from("export_audit").update({ kind: "personal" }).eq("actor_id", O).select("id")).data ?? []).toEqual([]);
+          expect((await api().from("export_audit").delete().eq("actor_id", O).select("id")).data ?? []).toEqual([]);
+          expect(await probe(db, O, "TRUNCATE public.export_audit")).toMatch(/P15_AUDIT_KEPT|permission denied/);
+          net.uid = V;
+          expect((await api().from("export_audit").select("id")).data).toEqual([]); // another user sees nothing
+          net.uid = O;
+        }
+      },
+      T,
+    );
+
+    it(
+      "X2. shared company: a member exports the company they are granted (c1); another company (c2), another owner's personal records and a non-member are refused",
+      async () => {
+        reset(db);
+        net.uid = M;
+        const ok = await authoriseExport({ data: await fileReq("shared_company", "a,b\n1,2", { ownerId: O, entityId: "c1" }) });
+        expect(ok).toMatchObject({ ok: true, audited: mode.p15 });
+        expect(await authoriseExport({ data: await fileReq("shared_company", "a,b\n1,2", { ownerId: O, entityId: "c2" }) })).toMatchObject({ ok: false, error: expect.stringMatching(/not granted export/) });
+        expect(await authoriseExport({ data: await fileReq("shared_company", "a,b\n1,2", { ownerId: O, entityId: null }) })).toMatchObject({ ok: false });
+        expect(await authoriseExport({ data: await fileReq("ledger_csv", "a,b\n1,2", { ownerId: O }) })).toMatchObject({ ok: false, error: expect.stringMatching(/your own records only/) });
+        net.uid = V;
+        expect(await authoriseExport({ data: await fileReq("shared_company", "a,b\n1,2", { ownerId: O, entityId: "c1" }) })).toMatchObject({ ok: false, error: expect.stringMatching(/not granted export/) });
+        net.uid = O;
+        if (mode.p15) expect((await audit(db)).filter((a) => a.kind === "shared_company").map((a) => [a.actor_id, a.owner_id, a.entity_id])).toEqual([[M, O, "c1"]]);
+      },
+      T,
+    );
+
+    it(
+      "X3. Finance company-tax list: Finance with the switch passes; a manager without it is refused; the backup records are read and audited server-side for the caller only",
+      async () => {
+        reset(db);
+        net.uid = F;
+        expect(await authoriseExport({ data: await fileReq("team_company_tax", "Company,FY\nAlpha,2026-27") })).toMatchObject({ ok: true });
+        net.uid = M;
+        expect(await authoriseExport({ data: await fileReq("team_company_tax", "Company,FY\nAlpha,2026-27") })).toMatchObject({ ok: false, error: expect.stringMatching(/exported by Finance/) });
+        // Backup: O's records only (V's rows never included), hash and row count audited
+        net.uid = O;
+        await seedWithdrawFixture(db);
+        net.uid = V;
+        const vAcc = await freshAccount(db, V);
+        await sql1(db, "INSERT INTO public.expenses(id,employee_id,title,category,amount,original_amount,currency,expense_date,account_id,description) VALUES (gen_random_uuid(),$1,'Rent','Housing',15000,15000,'INR','2026-11-01',$2,'')", [V, vAcc]);
+        net.uid = O;
+        const b = await exportBackupData({ data: { fileName: "ledgerline-backup.zip" } });
+        expect(b).toMatchObject({ ok: true, audited: mode.p15 });
+        const data = JSON.parse((b as { json: string }).json) as Backup["data"];
+        expect((data.expenses ?? []).every((e) => e["employee_id"] === O)).toBe(true);
+        expect((data.accounts ?? []).every((a) => a["owner_id"] === O)).toBe(true);
+        expect((b as { sha256: string }).sha256).toBe(await sha256Hex(new TextEncoder().encode((b as { json: string }).json)));
+        if (mode.p15) {
+          const row = (await audit(db)).find((a) => a.kind === "backup")!;
+          expect(row).toMatchObject({ actor_id: O, owner_id: O, row_count: Object.values(data).reduce((s, x) => s + (x?.length ?? 0), 0), sha256: (b as { sha256: string }).sha256 });
+        }
+      },
+      T,
+    );
+  });
+}
+
+describe("P0-006 on the whole proposed stack (P2 'export' permission, P4 step-up) — P1..P14 + P15", () => {
+  it(
+    "X4. sensitive export without step-up refused, with step-up audited (step_up true); P2: a viewer without 'export' is refused, a granted company member passes, cross-company refused",
+    async () => {
+      const db = await fullSchemaDb([...STACK, P9, P10, P11, P13, P14, P15]);
+      await seedExportPeople(db);
+      reset(db);
+      expect(await authoriseExport({ data: await fileReq("backup", "x\n1") })).toMatchObject({ ok: false, error: expect.stringMatching(/^STEP_UP_REQUIRED/) });
+      expect(await authoriseExport({ data: await fileReq("report", "x\n1") })).toMatchObject({ ok: true }); // not sensitive
+      await exclusive(async () => { await actAs(db, null); await db.exec("SET ROLE service_role"); await db.query("SELECT public.record_step_up($1,'password',300)", [O]); await actAs(db, null); });
+      expect(await authoriseExport({ data: await fileReq("tax_filing", "x\n1") })).toMatchObject({ ok: true, audited: true });
+      expect((await audit(db)).map((a) => [a.kind, a.step_up])).toEqual([["report", false], ["tax_filing", true]]);
+      // P2 grants: G is an adult family member of O (view, no export) for c1; M's entity_members grant was synced as legacy viewer (view, export)
+      await sql1(db, "INSERT INTO public.access_grants(workspace_owner_id, entity_id, role, grantee_email, grantee_id, granted_by, accepted_at, identity_check) VALUES ($1,'c1','adult_family_member','g@x.in',$2,$1,now(),'confirmed_email_match')", [O, G]);
+      net.uid = G;
+      expect(await authoriseExport({ data: await fileReq("shared_company", "a\n1", { ownerId: O, entityId: "c1" }) })).toMatchObject({ ok: false, error: expect.stringMatching(/not granted export/) });
+      net.uid = M;
+      expect(await authoriseExport({ data: await fileReq("shared_company", "a\n1", { ownerId: O, entityId: "c1" }) })).toMatchObject({ ok: true, audited: true });
+      expect(await authoriseExport({ data: await fileReq("shared_company", "a\n1", { ownerId: O, entityId: "c2" }) })).toMatchObject({ ok: false, error: expect.stringMatching(/not granted export/) });
       await db.close();
     },
     T,

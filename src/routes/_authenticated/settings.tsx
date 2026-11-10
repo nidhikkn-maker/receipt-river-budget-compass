@@ -1,4 +1,6 @@
 import { confirmAction } from "@/lib/confirm";
+import { exportBackupData } from "@/lib/exports.functions";
+import { exportProblem } from "@/lib/exports";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useRef, useState } from "react";
 import { toast } from "sonner";
@@ -22,7 +24,7 @@ import { RoleBadge, TeamAccessSettings } from "@/components/TeamAccess";
 import { SmartDefaultsSettings } from "@/components/SmartDefaultsSettings";
 import { ReceiptProblemReports } from "@/components/ReceiptProblemReports";
 import { useStore } from "@/lib/store";
-import { BACKUP_TABLES, BACKUP_VERSION, createBackupZip, describeRestoreReport, investmentTablesToWrite, planRestore, readBackup, type Backup } from "@/lib/backup";
+import { BACKUP_VERSION, createBackupZip, describeRestoreReport, investmentTablesToWrite, planRestore, readBackup, type Backup } from "@/lib/backup";
 import { downloadBlob } from "@/lib/reports";
 import type { Database, Json } from "@/integrations/supabase/types";
 import { UnreadableRecordsNotice } from "@/components/UnreadableRecordsNotice";
@@ -59,20 +61,11 @@ function Settings() {
   const backup = async () => {
     setBusy(true);
     try {
-      const out: Backup["data"] = {};
-      for (const t of BACKUP_TABLES) {
-        out[t] = [];
-        for (let start = 0; ; start += 500) {
-          const order = t === "finance_preferences" ? "owner_id" : t === "category_budgets" ? "category" : "id";
-          const query = t === "expenses"
-            ? supabase.from("expenses").select("*").eq("employee_id", userId)
-            : supabase.from(t).select("*").eq("owner_id", userId);
-          const { data, error } = await query.order(order).range(start, start + 499);
-          if (error) throw new Error(error.message);
-          out[t]?.push(...(data ?? []));
-          if (!data || data.length < 500) break;
-        }
-      }
+      // P0-006: the records are read, authorised (step-up where required) and audited on the server; the browser adds the files.
+      const zipName = `ledgerline-backup-${new Date().toISOString().slice(0, 10)}.zip`;
+      const served = await withStepUp(() => exportBackupData({ data: { fileName: zipName } }));
+      if (!served.ok) throw Error(exportProblem(served.error));
+      const out = JSON.parse(served.json) as Backup["data"];
       const paths = new Set<string>();
       for (const e of out.expenses ?? []) for (const r of (e["receipts"] ?? []) as { path: string }[]) paths.add(r.path);
       for (const d of out.expense_drafts ?? []) for (const r of (d["receipts"] ?? []) as { path: string }[]) paths.add(r.path);
@@ -87,7 +80,7 @@ function Settings() {
         files[path] = new Uint8Array(await data.arrayBuffer());
       }
       const zip = createBackupZip({ app: "ledgerline", version: BACKUP_VERSION, owner: userId, name, exportedAt: new Date().toISOString(), data: out }, files);
-      downloadBlob(new Blob([new Uint8Array(zip).buffer], { type: "application/zip" }), `ledgerline-backup-${new Date().toISOString().slice(0, 10)}.zip`);
+      downloadBlob(new Blob([new Uint8Array(zip).buffer], { type: "application/zip" }), zipName); // authorised + audited above (records hash)
       toast.success("Backup downloaded");
     } catch (e) { toast.error((e as Error).message); } finally { setBusy(false); }
   };

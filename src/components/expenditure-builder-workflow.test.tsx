@@ -6,12 +6,14 @@ import { IDBFactory } from 'fake-indexeddb';
 import { defaultPreferences } from '@/lib/preferences';
 import type { Expense } from '@/lib/expenses';
 import { newReimbursementProfile } from '@/lib/reimbursement-profiles';
-const local = vi.hoisted(() => ({ store: {} as Record<string, unknown>, uploaded: null as Blob | null, history: null as Record<string, unknown> | null, loseReply: true, offline: false, download: vi.fn() }));
+const local = vi.hoisted(() => ({ store: {} as Record<string, unknown>, uploaded: null as Blob | null, history: null as Record<string, unknown> | null, loseReply: true, offline: false, download: vi.fn(), authorised: [] as { kind: string }[] }));
 vi.mock('@/lib/store', () => ({ useStore: () => local.store }));
 vi.mock('@tanstack/react-router', () => ({ useNavigate: () => vi.fn(), Link: ({ children }: { children: React.ReactNode }) => <a>{children}</a> }));
 vi.mock('@/components/AppShell', () => ({ PageTitle: ({ title }: { title: string }) => <h1>{title}</h1> }));
 vi.mock('./useClaimPreparation', () => ({ useClaimPreparation: () => ({ status: '', saveNow: vi.fn() }) }));
 vi.mock('@/lib/reports', async importOriginal => ({ ...await importOriginal<typeof import('@/lib/reports')>(), downloadBlob: local.download }));
+// P0-006: the file is handed over only after the server authorises (and, with P15, audits) it.
+vi.mock('@/lib/exports.functions', () => ({ authoriseExport: async ({ data }: { data: { kind: string } }) => { local.authorised.push(data); return { ok: true, exportId: null, audited: false }; } }));
 vi.mock('@/integrations/supabase/client', () => ({ supabase: {
   storage: { from: () => ({ upload: async (_path: string, blob: Blob) => { if (local.offline) return { error: Error('Offline') }; local.uploaded = blob; return { error: null }; } }) },
   from: () => {
@@ -58,6 +60,8 @@ it('actual statement builder verifies fetched originals, saves exact PDF despite
   expect(local.history).toMatchObject({ owner_id: 'isolated', kind: 'expenditure-statement', file_size: blob.size });
   expect((local.history?.['filters'] as { snapshot: { summary: { total: number } } }).snapshot.summary.total).toBe(12.34);
   fireEvent.click(screen.getByRole('button', { name: 'Download' }));
+  await vi.waitFor(() => expect(local.download).toHaveBeenCalled());
+  expect(local.authorised.at(-1)).toMatchObject({ kind: 'report' });
   expect(await bytes(local.download.mock.calls[0]?.[0])).toEqual(await bytes(blob));
   expect(JSON.stringify(entry)).toBe(snapshot);
 });
@@ -105,6 +109,8 @@ it('actual claim builder includes missing-document evidence and source pages wit
   expect(claim.totals.claimed).toBe(12.64);
   expect(claim.items.map(i => i.id)).toEqual(['e', 'missing']);
   fireEvent.click(screen.getByRole('button', { name: 'Download' }));
+  await vi.waitFor(() => expect(local.download).toHaveBeenCalled());
+  expect(local.authorised.at(-1)).toMatchObject({ kind: 'report' });
   expect(await bytes(local.download.mock.calls[0]?.[0])).toEqual(await bytes(blob));
   expect(JSON.stringify([entry, missing])).toBe(snapshot);
 });

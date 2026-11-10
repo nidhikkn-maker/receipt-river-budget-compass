@@ -1,11 +1,12 @@
 import { Link } from '@tanstack/react-router';
+import { exportFile } from "@/lib/export-gate";
 import { Button } from '@/components/ui/button';
 import type { AuditItem } from '@/lib/books/audit';
 import type { Expense } from '@/lib/expenses';
 import type { VaultDoc } from '@/lib/documents';
 import { reconciliationAnchor } from '@/lib/books/reconciliation-context';
 import { reconciliationManifest, reconciliationManifestReport } from '@/lib/books/reconciliation-manifest';
-import { downloadBlob, toCsv, toExcel, toPdf } from '@/lib/reports';
+import { toCsv, toExcel, toPdf } from '@/lib/reports';
 import { useState } from 'react';
 
 /** Existing audit treatment, exact records and existing review/download paths only. */
@@ -32,10 +33,10 @@ export function ReconciliationDetails({item,entries,docs,download}:{item:AuditIt
     </li>)}</ul>
    </div>)}
    <div className="flex flex-wrap gap-2">
-    <Button variant="outline" size="sm" onClick={()=>downloadBlob(new Blob([toCsv(report())],{type:'text/csv'}),'comparison-evidence.csv')}>CSV</Button>
-    <Button variant="outline" size="sm" onClick={async()=>downloadBlob(await toExcel(report()),'comparison-evidence.xlsx')}>Excel</Button>
-    <Button variant="outline" size="sm" onClick={async()=>{if(pdf?.key===key)downloadBlob(pdf.blob,'comparison-evidence.pdf');else setPdf({blob:await toPdf(report(),`${item.entity} · FY ${item.fy??''} · saved-record comparison, not certification`),key});}}>{pdf?.key===key?'Download PDF':'Prepare PDF'}</Button>
-    <Button variant="outline" size="sm" onClick={()=>downloadBlob(new Blob([JSON.stringify(reconciliationManifest([item]),null,2)],{type:'application/json'}),'comparison-manifest.json')}>Full evidence</Button>
+    <Button variant="outline" size="sm" onClick={()=>void exportFile({kind:'evidence'},new Blob([toCsv(report())],{type:'text/csv'}),'comparison-evidence.csv')}>CSV</Button>
+    <Button variant="outline" size="sm" onClick={async()=>exportFile({kind:'evidence'},await toExcel(report()),'comparison-evidence.xlsx')}>Excel</Button>
+    <Button variant="outline" size="sm" onClick={async()=>{if(pdf?.key===key)await exportFile({kind:'evidence'},pdf.blob,'comparison-evidence.pdf');else setPdf({blob:await toPdf(report(),`${item.entity} · FY ${item.fy??''} · saved-record comparison, not certification`),key});}}>{pdf?.key===key?'Download PDF':'Prepare PDF'}</Button>
+    <Button variant="outline" size="sm" onClick={()=>void exportFile({kind:'evidence'},new Blob([JSON.stringify(reconciliationManifest([item]),null,2)],{type:'application/json'}),'comparison-manifest.json')}>Full evidence</Button>
    </div>
   </div>
  </details>;

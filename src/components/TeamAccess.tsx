@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { exportFile } from "@/lib/export-gate";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -10,7 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DEFAULT_SWITCHES, ROLE_LABEL, TEAM_ACTIONS, allowed, changedFromDefault, companyTaxCsv, useTeamAccess, type TeamAction, type TeamRole } from "@/lib/team-access";
 import { money } from "@/lib/expenses";
-import { downloadBlob } from "@/lib/reports";
+
 import { StepUpCancelled, withStepUp } from "@/lib/step-up";
 
 /** Role badge for Settings → Account. */
@@ -153,7 +154,7 @@ export function TeamCompanyTax() {
   const exportCsv = () => {
     const rows = shown.flatMap((c) => c.years.map((y) => ({ company: c.name, owner: c.owner, kind: c.kind, fy: y.fy, bookProfit: y.bookProfit, accumulatedProfits: y.accumulatedProfits, ownershipPct: y.ownershipPct })));
     const selectedYear = year === "all" ? "All years" : year;
-    downloadBlob(new Blob([companyTaxCsv(rows, { exportedOn: new Date().toISOString().slice(0, 10), selectedYear })], { type: "text/csv;charset=utf-8" }), `company-tax-${year === "all" ? "all-years" : year}.csv`);
+    void exportFile({ kind: "team_company_tax", rows: rows.length }, new Blob([companyTaxCsv(rows, { exportedOn: new Date().toISOString().slice(0, 10), selectedYear })], { type: "text/csv;charset=utf-8" }), `company-tax-${year === "all" ? "all-years" : year}.csv`);
     window.__lovableEvents?.track?.("project.company_tax_csv_exported", { year: selectedYear, rows: rows.length });
   };
   return (

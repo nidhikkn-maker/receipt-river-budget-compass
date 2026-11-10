@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { exportFile } from "@/lib/export-gate";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { PageTitle } from "@/components/AppShell";
@@ -8,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { budgetUsage, money } from "@/lib/expenses";
 import { freshnessSummary, inboxCounts, inboxItems } from "@/lib/inbox";
 import { briefDue, weeklyBrief, type WeeklyBrief } from "@/lib/intelligence";
-import { downloadBlob, toPdf } from "@/lib/reports";
+import { toPdf } from "@/lib/reports";
 import { useStore } from "@/lib/store";
 import { useWebMCP } from "use-webmcp-tool";
 import { runWebMCPTool } from "@/lib/webmcp-telemetry";
@@ -55,7 +56,7 @@ function Brief() {
     const rows = [["Snapshot", "Spent", money(b.snapshot.spent)], ["Snapshot", "Income", money(b.snapshot.income)], ["Snapshot", "Net", money(b.snapshot.net)], ["Snapshot", "Previous week spent", money(b.snapshot.prevSpent)],
       ...b.highlights.significant.map((t) => ["Significant", `${t.date} ${t.title}`, money(t.amount)]), ...b.upcoming.due.map((u) => ["Due", `${u.date} ${u.name}`, money(u.amount)]), ...b.upcoming.income.map((u) => ["Income expected", `${u.date} ${u.name}`, money(u.amount)]),
       ...b.recommendations.map((r, k) => ["Recommendation", `${k + 1}. ${r}`, ""])];
-    downloadBlob(await toPdf({ title: `Weekly brief ${b.period.start} – ${b.period.end}`, headers: ["Section", "Item", "Amount"], rows }, "Verified figures from Thapal"), `weekly-brief-${b.period.end}.pdf`);
+    await exportFile({ kind: "personal", rows: rows.length }, await toPdf({ title: `Weekly brief ${b.period.start} – ${b.period.end}`, headers: ["Section", "Item", "Amount"], rows }, "Verified figures from Thapal"), `weekly-brief-${b.period.end}.pdf`);
   };
   useWebMCP({
     name: "read_weekly_brief",

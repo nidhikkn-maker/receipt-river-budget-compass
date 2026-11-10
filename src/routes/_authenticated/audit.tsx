@@ -1,10 +1,11 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { exportFile } from "@/lib/export-gate";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { PageTitle } from "@/components/AppShell";
 import { evidenceCsv, registerEvidence } from "@/lib/books/evidence";
 import { derivedEvidence } from "@/lib/books/derived-evidence";
-import { downloadBlob } from "@/lib/reports";
+
 import { Fold } from "@/components/Fold";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -221,9 +222,9 @@ function FigureSources({ assets, books, docs, titleOf }: { assets: import("@/lib
     <Fold title="Where each figure came from" hint={rows.length ? `${rows.length - missing} of ${rows.length} register figures traced to a document or entry` : "No register figures yet"}>
       <div className="space-y-2 text-xs">
         {rows.length > 0 && <div className="max-h-80 divide-y overflow-y-auto rounded-lg border">{rows.map((r, i) => <div key={`${r.recordId}:${i}`} className="flex flex-wrap justify-between gap-2 px-2 py-1"><span className="min-w-0">{r.register} · {r.label}<span className="block text-muted-foreground">{r.source ? `${r.source.kind === "document" ? "Document" : "Entry"}: ${r.source.title}` : "No source — attach the document"}</span></span><span className="font-mono">{inr(r.amount)}</span></div>)}</div>}
-        {rows.length > 0 && <Button size="sm" variant="outline" onClick={() => downloadBlob(new Blob([evidenceCsv(rows)], { type: "text/csv" }), "figure-sources.csv")}>Download CSV</Button>}
+        {rows.length > 0 && <Button size="sm" variant="outline" onClick={() => void exportFile({ kind: "evidence" }, new Blob([evidenceCsv(rows)], { type: "text/csv" }), "figure-sources.csv")}>Download CSV</Button>}
         {derived.length > 0 && <details><summary className="cursor-pointer text-muted-foreground">Calculated figures · {derived.length} — what each one is made of</summary>
-          <Button size="sm" variant="outline" onClick={()=>downloadBlob(new Blob([JSON.stringify(derived.map(d=>({...d,inputs:d.allInputs??d.inputs})),null,2)],{type:'application/json'}),'calculated-figure-dependencies.json')}>Download full inputs</Button>
+          <Button size="sm" variant="outline" onClick={()=>void exportFile({kind:'evidence'},new Blob([JSON.stringify(derived.map(d=>({...d,inputs:d.allInputs??d.inputs})),null,2)],{type:'application/json'}),'calculated-figure-dependencies.json')}>Download full inputs</Button>
           <div className="mt-1 max-h-80 space-y-1 overflow-y-auto">{derived.map((d) => <details key={d.id} className="rounded-lg border px-2 py-1">
             <summary className="flex cursor-pointer flex-wrap justify-between gap-2"><span className="min-w-0">{d.label}{d.unsourced > 0 && <span className="text-destructive"> · {d.unsourced} input{d.unsourced === 1 ? "" : "s"} without a source</span>}</span><span className="font-mono">{inr(d.amount)}</span></summary>
             <div className="mt-1 divide-y border-t">{d.inputs.map((i, n) => <div key={n} className="flex flex-wrap justify-between gap-2 py-1"><span className="min-w-0 text-muted-foreground">{i.label}<span className="block">{i.source ? `${i.source.kind === "document" ? "Document" : "Entry"}: ${i.source.title}` : "No source — attach the document"}</span></span><span className="font-mono">{inr(i.amount)}</span></div>)}</div>
