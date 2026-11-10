@@ -1,6 +1,7 @@
 -- ============================================================================================
 -- P14_asset_disposal_approval.rollback.sql (PROPOSED ONLY: NOT APPLIED anywhere)
--- Restores the exact pre-P14 catalog: guards, functions, the request table and phase3_p14 are dropped, and
+-- Restores the exact pre-P14 catalog: guards, functions (incl. preview_asset_disposal and the P14-a book-value working in
+-- phase3_p14), the request table and phase3_p14 are dropped, and
 -- phase3_p7.classify_adjustment (P8's hook, if P14 wrapped it) gets back the definition saved at install. Assets
 -- disposed through P14 keep their soldOn / saleValue / disposal record and their disposal entries (app data).
 -- Disposal requests are audit evidence: the rollback refuses while any exist unless the operator (KK approval, after
@@ -31,6 +32,7 @@ DROP TRIGGER IF EXISTS p14_disposal_entry ON public.expenses;
 DROP FUNCTION public.request_asset_disposal(text, text, date, numeric, uuid, uuid[], text, numeric, uuid, jsonb);
 DROP FUNCTION public.decide_asset_disposal(uuid, boolean, text, numeric);
 DROP FUNCTION public.cancel_asset_disposal(uuid, text);
+DROP FUNCTION public.preview_asset_disposal(text, date, numeric);
 DROP TABLE public.asset_disposal_requests CASCADE;
 DROP SCHEMA phase3_p14 CASCADE;
 COMMIT;

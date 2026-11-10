@@ -450,7 +450,7 @@ import { readAssistantFacts } from "./assistant-facts.server";
 import { atomicStatementUndo } from "./statement-pipeline/atomic-undo";
 import { guardedRestore, previousRestoreLine, type RestoreDb } from "./restore-guard";
 import { decideEntryChange, listEntryChanges, requestEntryChange } from "./entry-requests";
-import { decideAssetDisposal, requestAssetDisposal } from "./asset-disposal.functions";
+import { decideAssetDisposal, previewAssetDisposal, requestAssetDisposal } from "./asset-disposal.functions";
 import { authoriseExport, exportBackupData } from "./exports.functions";
 import { sha256Hex, type ExportKind, type ExportRequest } from "./exports";
 import { BACKUP_TABLES, planRestore, type Backup, type BackupRow } from "./backup";
@@ -2250,10 +2250,14 @@ const accountBalanceOf = async (db: Db, owner: string, accId: string, kind: Acco
 const disposalInput = (s: Awaited<ReturnType<typeof seedAsset>>, extra: Record<string, unknown> = {}) =>
   ({ assetId: s.asset.id, method: "sale" as const, date: "2026-10-31", proceeds: 50000, proceedsEntryId: s.proceedsEntry, evidence: [s.doc], reason: "Sold to the dealer, invoice attached", ...extra });
 
-describe("P0-015 asset disposal approval — P9 + P14 (applied schema)", () => {
+// P14-a: approval needs a recent step-up (P4); without P4 approvals fail closed (p14-asset-disposal-sql.test.ts), so the
+// approval flows run on the proposed stack with P4 and each approver confirms it's them first.
+const stepUpFor = (db: Db, uid: string) =>
+  exclusive(async () => { await actAs(db, null); await db.exec("SET ROLE service_role"); await db.query("SELECT public.record_step_up($1,'password',300)", [uid]); await actAs(db, null); });
+describe("P0-015 asset disposal approval — P1..P9 + P14 (P4 step-up installed)", () => {
   let db: Db;
   beforeAll(async () => {
-    db = await fullSchemaDb([P9, P14]);
+    db = await fullSchemaDb([...STACK, P9, P14]);
     await seedUsers(db);
     await addUsers(db, { [M]: "m@x.in", [F]: "f@x.in", [X]: "x@x.in" });
     await sql1(db, "INSERT INTO public.user_roles(user_id, role) VALUES ($1,'manager'),($2,'finance')", [M, F]);
@@ -2287,14 +2291,24 @@ describe("P0-015 asset disposal approval — P9 + P14 (applied schema)", () => {
       const s = await seedAsset(db);
       expect(await requestAssetDisposal({ data: disposalInput(s, { evidence: [crypto.randomUUID()] }) })).toMatchObject({ ok: false, error: expect.stringMatching(/disposal evidence/) });
       expect(await requestAssetDisposal({ data: { ...disposalInput(s), reason: "abc" } }).catch((e: Error) => ({ ok: false, error: e.message }))).toMatchObject({ ok: false });
+      // R-E-I14: the read-only preview shows the server's plan, the entry it would write and the database's own check; nothing is written
+      const counts = async () => (await sql1<{ r: number; e: number; p: string }>(db, "SELECT (SELECT count(*)::int FROM public.asset_disposal_requests) r, (SELECT count(*)::int FROM public.expenses) e, (SELECT md5(data::text) FROM public.finance_preferences WHERE owner_id = $1) p", [O]))[0];
+      const before = await counts();
+      const pre = await previewAssetDisposal({ data: { assetId: s.asset.id, date: "2026-10-31", proceeds: 50000 } });
+      expect(pre).toMatchObject({ ok: true, bookValue: 53000, proceeds: 50000, gain: -3000, problems: [], database: { bookValue: 53000, problems: [] },
+        entries: [{ amount: 53000, accountId: s.assetAcc, date: "2026-10-31", lines: [{ code: "expense:Loss on asset disposal (book value)", debit: 53000, credit: 0 }, { code: `account:${s.assetAcc}`, debit: 0, credit: 53000 }] }] });
+      expect(await counts()).toEqual(before);
       const req = await requestAssetDisposal({ data: disposalInput(s) });
       expect(req).toMatchObject({ ok: true, plan: { bookValue: 53000, proceeds: 50000, gain: -3000, problems: [] } });
+      expect((req as { entryId: string }).entryId).toBe((pre as { entryId: string }).entryId);
       const requestId = (req as { requestId: string }).requestId;
       expect(await requestAssetDisposal({ data: disposalInput(s) })).toMatchObject({ ok: false, error: expect.stringMatching(/already has an open disposal request/) });
       net.uid = X;
       expect(await decideAssetDisposal({ data: { requestId, approve: true, reason: "Looks fine to me" } })).toMatchObject({ ok: false, error: expect.stringMatching(/Only the owner/) });
       expect((await api().from("asset_disposal_requests").select("id")).data).toEqual([]);
       net.uid = O;
+      expect(await decideAssetDisposal({ data: { requestId, approve: true, reason: "Approved: invoice checked" } })).toMatchObject({ ok: false, error: expect.stringMatching(/Confirm it's you/) });
+      await stepUpFor(db, O);
       const dec = await decideAssetDisposal({ data: { requestId, approve: true, reason: "Approved: invoice checked" } });
       expect(dec).toMatchObject({ ok: true, status: "approved", entry: (req as { entryId: string }).entryId, replayed: false });
       expect(await assetNow(db, O, s.asset.id)).toMatchObject({ soldOn: "2026-10-31", saleValue: 50000, disposal: { requestId, method: "sale", approvedBy: O, bookValue: 53000, proceeds: 50000, gain: -3000, evidence: [s.doc], proceedsEntryId: s.proceedsEntry } });
@@ -2316,11 +2330,15 @@ describe("P0-015 asset disposal approval — P9 + P14 (applied schema)", () => {
     async () => {
       reset(db);
       const s = await seedAsset(db);
+      // P1 company scope: the asset belongs to company c1 and F holds an active write grant for it from the owner
+      await sql1(db, "UPDATE public.finance_preferences p SET data = jsonb_set(p.data, '{assets}', (SELECT jsonb_agg(CASE WHEN a->>'id' = $2 THEN a || '{\"ownerEntityId\":\"c1\"}' ELSE a END) FROM jsonb_array_elements(p.data->'assets') a)) WHERE owner_id = $1", [O, s.asset.id]);
+      await sql1(db, "INSERT INTO public.entity_members(owner_id, entity_id, member_id, member_email, can_write) VALUES ($1,'c1',$2,'f@x.in',true) ON CONFLICT DO NOTHING", [O, F]);
       const r1 = (await requestAssetDisposal({ data: disposalInput(s) })) as { requestId: string };
       // the register changes (cost corrected) after the request → approval refused, nothing written
       const prefs = await prefsOf(O);
       expect((await writePrefs(O, { ...prefs, assets: (prefs.assets as unknown as Record<string, unknown>[]).map((a) => (a["id"] === s.asset.id ? { ...a, cost: 61000 } : a)) })).error).toBeNull();
       net.uid = F;
+      await stepUpFor(db, F);
       expect(await decideAssetDisposal({ data: { requestId: r1.requestId, approve: true, reason: "Checked the invoice" } })).toMatchObject({ ok: false, error: expect.stringMatching(/changed since the request/) });
       expect(await decideAssetDisposal({ data: { requestId: r1.requestId, approve: false, reason: "Cost changed, ask again" } })).toMatchObject({ ok: true, status: "rejected" });
       net.uid = O;

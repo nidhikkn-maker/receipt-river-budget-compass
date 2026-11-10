@@ -8,7 +8,7 @@
 -- evidence, reason, disposal date, proceeds, accounting entries and audit trail. Archiving never constitutes disposal."
 --
 -- Depends on the applied migrations 0000-0088. Works with or without P1/P4/P7/P8/P11:
---   * P4 installed: every approval needs a recent step-up (has_recent_step_up);
+--   * P4 installed: every decision needs a recent step-up (has_recent_step_up); P4 absent: approvals are refused (fail closed);
 --   * P1 installed: Finance approval is checked for the asset's company (can_access_expense 3-argument form);
 --   * P7 + P8 installed: phase3_p7.classify_adjustment (P8's hook) is wrapped so an APPROVED disposal entry posts a
 --     balanced batch (Dr expense:Loss on asset disposal (book value) / Cr the asset's ledger account) in the asset
@@ -32,8 +32,15 @@
 -- C. Guards: soldOn / saleValue / disposal of an asset change ONLY through B (P14_DISPOSAL_APPROVAL_REQUIRED), and a
 --    disposal-tagged entry is inserted ONLY by B. Archiving (archived / archive status / recordArchive) never touches
 --    these fields, so archiving can never dispose. Erasure and the service path are exempt.
--- Known limit (KK review): the book value is computed by the server function, not re-derived in SQL (depreciation
--- rules live in the app, as for P8); the request keeps the inputs used. 0069's closed-period register guard still
+-- P14-a (fixed 10 Nov 2026, WS-E batch 6-8 check): the database no longer trusts the caller's book value. It works the
+--   book value out itself from the stored register (phase3_p14.book_value: the app's uniform monthly working at full
+--   precision, KK decision 4) and refuses a request or approval whose figure differs by more than 0.50 + 0.005 per month
+--   worked (P14_BOOK_VALUE); assets whose working it cannot reproduce (recorded prospective estimate changes, a property's
+--   building policy, missing method/rate) are refused, never trusted (P14_UNVERIFIABLE). Approval needs a recent step-up:
+--   with P4 every decision needs it; WITHOUT P4 approvals fail closed (P14_STEP_UP_UNAVAILABLE), rejections still work.
+--   preview_asset_disposal (STABLE, read-only) returns the database's working for the I05 preview (R-E-I14).
+-- Known limit (KK review): the app engine stays the source of the posted paise figure; the database bounds it within the
+-- tolerance above rather than running a second posting engine. 0069's closed-period register guard still
 -- applies to the asset change: an asset bought before a closed period cannot be changed (also not disposed) until
 -- that period rule is made disposal-date aware.
 -- ============================================================================================
@@ -72,6 +79,65 @@ LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public, pg_temp AS $$
   SELECT a FROM public.finance_preferences p, jsonb_array_elements(CASE WHEN jsonb_typeof(p.data->'assets') = 'array' THEN p.data->'assets' ELSE '[]'::jsonb END) a
    WHERE p.owner_id = _owner AND jsonb_typeof(a) = 'object' AND a->>'id' = _asset LIMIT 1
 $$;
+-- P14-a: the database derives the book value from the stored register itself and checks the server function's figure
+-- against it (it never trusts a caller-supplied book value). Mirrors the app's uniform monthly working (books/
+-- depreciation.ts monthlyBook; WS-E books/monthly-engine.ts uniformMonthlyBook): day-prorated first and disposal months,
+-- straight line on (cost - residual) / life or cost x rate, written down on the carrying amount at the life-implied or
+-- stated rate, never below residual, imported opening WDV, impairment / revaluation adjustments. It keeps full precision
+-- (KK decision 4) and returns the carrying amount rounded to paise; the app posts paise with the rounding carried forward
+-- (the retired engine rounded per month), so the check allows 0.50 + 0.005 per month worked. Shapes this working does not
+-- reproduce (recorded prospective estimate changes, a property's building policy, missing/invalid inputs) return
+-- 'unverifiable' and the request is refused (fail closed) rather than trusting the caller.
+CREATE FUNCTION phase3_p14.num(_v jsonb) RETURNS numeric
+LANGUAGE sql IMMUTABLE SET search_path = public, pg_temp AS $$ SELECT CASE WHEN jsonb_typeof(_v) = 'number' THEN (_v #>> '{}')::numeric END $$;
+CREATE FUNCTION phase3_p14.book_value(_a jsonb, _date date) RETURNS jsonb
+LANGUAGE plpgsql STABLE SET search_path = public, pg_temp AS $$
+DECLARE cost numeric := phase3_p14.num(_a->'cost'); in_use date; method text := _a->>'bookMethod';
+  rp numeric := coalesce(phase3_p14.num(_a->'residualPct'), 0); life numeric := coalesce(phase3_p14.num(_a->'usefulLifeYears'), 0);
+  rate numeric := phase3_p14.num(_a->'bookRatePct'); residual numeric; annual numeric; wrate numeric := 0; x numeric; m date; start date;
+  last date := date_trunc('month', _date)::date; dim int; dfrom int; dto int; raw numeric; d numeric; n int := 0; adj record; ob jsonb := _a->'openingWdv';
+BEGIN
+  IF cost IS NULL OR coalesce(_a->>'inUse', '') !~ '^\d{4}-\d{2}-\d{2}$' THEN RETURN jsonb_build_object('unverifiable', 'the asset has no cost or put-to-use date'); END IF;
+  in_use := (_a->>'inUse')::date;
+  IF EXISTS (SELECT 1 FROM jsonb_array_elements(CASE WHEN jsonb_typeof(_a->'policyHistory') = 'array' THEN _a->'policyHistory' ELSE '[]' END) c
+              WHERE c->>'field' IN ('bookMethod', 'bookRatePct', 'usefulLifeYears', 'residualPct') AND coalesce(c->>'effectiveFrom', '') ~ '^\d{4}-\d{2}$' AND c ? 'toRaw') THEN
+    RETURN jsonb_build_object('unverifiable', 'the asset has recorded prospective estimate changes');
+  END IF;
+  IF _a->>'kind' = 'property' THEN
+    IF jsonb_typeof(_a->'buildingPolicy') = 'array' AND jsonb_array_length(_a->'buildingPolicy') > 0 THEN
+      RETURN jsonb_build_object('unverifiable', 'the property has a building depreciation policy');
+    END IF;
+    RETURN jsonb_build_object('value', round(cost, 2), 'months', 0, 'tolerance', 0.50);   -- land / undepreciated property: cost
+  END IF;
+  IF cost <= 0 THEN RETURN jsonb_build_object('value', round(cost, 2), 'months', 0, 'tolerance', 0.50); END IF;
+  IF method NOT IN ('slm', 'wdv') OR rp < 0 OR life < 0 OR (rate IS NULL AND NOT (life > 0)) OR (method = 'wdv' AND rate IS NULL AND NOT (life > 0 AND rp > 0)) THEN
+    RETURN jsonb_build_object('unverifiable', 'the asset has no valid book method, useful life or rate');
+  END IF;
+  residual := round(cost * rp / 100, 2);
+  annual := CASE WHEN life > 0 THEN (cost - residual) / life ELSE cost * rate / 100 END;
+  IF method = 'wdv' THEN wrate := CASE WHEN life > 0 AND residual > 0 THEN 1 - power(residual / cost, 1 / life) ELSE rate / 100 END; END IF;
+  x := cost; start := date_trunc('month', in_use)::date;
+  IF jsonb_typeof(ob) = 'object' AND phase3_p14.num(ob->'book') >= 0 AND coalesce(ob->>'fy', '') ~ '^\d{4}-\d{2}$'
+     AND make_date(left(ob->>'fy', 4)::int, 4, 1) > start THEN
+    start := make_date(left(ob->>'fy', 4)::int, 4, 1); x := phase3_p14.num(ob->'book');
+  END IF;
+  m := start;
+  WHILE m <= last AND n < 600 LOOP
+    FOR adj IN SELECT phase3_p14.num(j->'amount') amount FROM jsonb_array_elements(CASE WHEN jsonb_typeof(_a->'adjustments') = 'array' THEN _a->'adjustments' ELSE '[]' END) j
+                WHERE left(coalesce(j->>'date', ''), 7) = to_char(m, 'YYYY-MM') AND phase3_p14.num(j->'amount') IS NOT NULL ORDER BY j->>'date' LOOP
+      x := greatest(residual, x + adj.amount);
+    END LOOP;
+    dim := extract(day FROM (m + interval '1 month' - interval '1 day'))::int;
+    dfrom := CASE WHEN m = date_trunc('month', in_use)::date THEN extract(day FROM in_use)::int ELSE 1 END;
+    dto := CASE WHEN m = last THEN extract(day FROM _date)::int ELSE dim END;
+    raw := CASE WHEN method = 'wdv' THEN x * wrate / 12 ELSE annual / 12 END * greatest(0, dto - dfrom + 1) / dim;
+    d := least(greatest(raw, 0), greatest(x - residual, 0));
+    x := x - d; n := n + 1;
+    EXIT WHEN x <= residual + 0.0000000001;
+    m := (m + interval '1 month')::date;
+  END LOOP;
+  RETURN jsonb_build_object('value', round(x, 2), 'months', n, 'tolerance', round(0.50 + 0.005 * n, 2));
+END $$;
 
 -- --------------------------------------------------------------------------------------------
 -- A. Requests
@@ -113,7 +179,7 @@ CREATE POLICY "Disposal requests: owner and approvers read" ON public.asset_disp
 CREATE FUNCTION public.request_asset_disposal(p_asset text, p_method text, p_date date, p_proceeds numeric, p_proceeds_entry uuid,
   p_evidence uuid[], p_reason text, p_book_value numeric, p_entry uuid, p_inputs jsonb DEFAULT '{}'::jsonb) RETURNS uuid
 LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp AS $$
-DECLARE uid uuid := auth.uid(); a jsonb; why text := btrim(coalesce(p_reason, '')); rid uuid; acc uuid;
+DECLARE uid uuid := auth.uid(); a jsonb; why text := btrim(coalesce(p_reason, '')); rid uuid; acc uuid; b jsonb;
 BEGIN
   IF uid IS NULL THEN RAISE EXCEPTION 'Unauthorized' USING ERRCODE = '42501'; END IF;
   a := phase3_p14.asset_of(uid, p_asset);
@@ -126,6 +192,12 @@ BEGIN
   END IF;
   IF p_proceeds IS NULL OR p_proceeds < 0 OR (p_method = 'sale' AND p_proceeds = 0) THEN RAISE EXCEPTION 'P14_INVALID: a sale needs its proceeds' USING ERRCODE = '22023'; END IF;
   IF p_book_value IS NULL OR p_book_value < 0 THEN RAISE EXCEPTION 'P14_INVALID: book value' USING ERRCODE = '22023'; END IF;
+  -- P14-a: the database works the book value out from the stored register; a caller's figure is only accepted within tolerance.
+  b := phase3_p14.book_value(a, p_date);
+  IF b ? 'unverifiable' THEN RAISE EXCEPTION 'P14_UNVERIFIABLE: the database cannot check this asset''s book value (%); nothing was requested', b->>'unverifiable' USING ERRCODE = '22023'; END IF;
+  IF abs(round(p_book_value, 2) - (b->>'value')::numeric) > (b->>'tolerance')::numeric THEN
+    RAISE EXCEPTION 'P14_BOOK_VALUE: the book value % does not follow from the register (the database works out %)', round(p_book_value, 2), b->>'value' USING ERRCODE = '22023';
+  END IF;
   acc := nullif(a->>'accountId', '')::uuid;
   IF p_book_value > 0 AND (acc IS NULL OR NOT EXISTS (SELECT 1 FROM public.accounts x WHERE x.id = acc AND x.owner_id = uid)) THEN
     RAISE EXCEPTION 'P14_INVALID: link the asset to its ledger asset account first' USING ERRCODE = '22023';
@@ -141,7 +213,7 @@ BEGIN
     evidence_document_ids, reason, book_value, gain, entry_id, inputs, requested_by)
   VALUES (uid, p_asset, left(coalesce(a->>'name', p_asset), 200), nullif(coalesce(nullif(a->>'ownerEntityId', ''), a->>'entityId'), ''), p_method, p_date,
     round(p_proceeds, 2), p_proceeds_entry, p_evidence, why, round(p_book_value, 2), round(p_proceeds, 2) - round(p_book_value, 2), p_entry,
-    coalesce(p_inputs, '{}') || jsonb_build_object('asset', a), uid)
+    coalesce(p_inputs, '{}') || jsonb_build_object('asset', a, 'database', b), uid)
   RETURNING id INTO rid;
   RETURN rid;
 EXCEPTION WHEN unique_violation THEN
@@ -150,7 +222,7 @@ END $$;
 
 CREATE FUNCTION public.decide_asset_disposal(p_request uuid, p_approve boolean, p_reason text, p_book_value numeric DEFAULT NULL) RETURNS jsonb
 LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp AS $$
-DECLARE uid uuid := auth.uid(); r public.asset_disposal_requests; a jsonb; why text := btrim(coalesce(p_reason, '')); acc uuid; d jsonb; list jsonb;
+DECLARE uid uuid := auth.uid(); r public.asset_disposal_requests; a jsonb; why text := btrim(coalesce(p_reason, '')); acc uuid; d jsonb; list jsonb; b jsonb;
 BEGIN
   IF uid IS NULL THEN RAISE EXCEPTION 'Unauthorized' USING ERRCODE = '42501'; END IF;
   IF length(why) < 5 OR length(why) > 500 THEN RAISE EXCEPTION 'P14_REASON: give a reason of at least 5 characters' USING ERRCODE = '22023'; END IF;
@@ -160,6 +232,11 @@ BEGIN
   END IF;
   IF r.requested_by = uid AND r.owner_id <> uid THEN RAISE EXCEPTION 'P14_NOT_PERMITTED: a Finance user does not approve their own request' USING ERRCODE = '42501'; END IF;
   IF r.status <> 'pending' THEN RETURN jsonb_build_object('request', r.id, 'status', r.status, 'replayed', true); END IF;
+  -- P14-a: an approval always needs a recent step-up. Without P4 there is no step-up, so approvals fail closed (rejections,
+  -- which dispose nothing, stay possible); with P4 every decision needs it.
+  IF p_approve AND to_regprocedure('public.has_recent_step_up()') IS NULL THEN
+    RAISE EXCEPTION 'P14_STEP_UP_UNAVAILABLE: approving a disposal needs the step-up check (P4), which is not installed' USING ERRCODE = '42501';
+  END IF;
   IF NOT phase3_p14.step_up_ok() THEN RAISE EXCEPTION 'STEP_UP_REQUIRED: decide_asset_disposal' USING ERRCODE = '42501'; END IF;
   PERFORM set_config('phase3_p14.writing', 'on', true);
   -- The request is closed first: the posting hook (P7/P8) posts the disposal entry only for an APPROVED request.
@@ -170,6 +247,11 @@ BEGIN
     IF a IS NULL OR nullif(a->>'soldOn', '') IS NOT NULL THEN RAISE EXCEPTION 'P14_CHANGED: the asset is no longer in the register or is already disposed' USING ERRCODE = '40001'; END IF;
     IF p_book_value IS NULL OR round(p_book_value, 2) <> r.book_value OR (a - 'archived' - 'archivedAt' - 'archivedBy' - 'archiveReason' - 'archiveHistory') IS DISTINCT FROM ((r.inputs->'asset') - 'archived' - 'archivedAt' - 'archivedBy' - 'archiveReason' - 'archiveHistory') THEN
       RAISE EXCEPTION 'P14_CHANGED: the asset or its book value changed since the request; prepare a new request' USING ERRCODE = '40001';
+    END IF;
+    b := phase3_p14.book_value(a, r.disposal_date);
+    IF b ? 'unverifiable' THEN RAISE EXCEPTION 'P14_UNVERIFIABLE: the database cannot check this asset''s book value (%)', b->>'unverifiable' USING ERRCODE = '22023'; END IF;
+    IF abs(r.book_value - (b->>'value')::numeric) > (b->>'tolerance')::numeric THEN
+      RAISE EXCEPTION 'P14_BOOK_VALUE: the request''s book value % does not follow from the register (the database works out %)', r.book_value, b->>'value' USING ERRCODE = '22023';
     END IF;
     IF EXISTS (SELECT 1 FROM unnest(r.evidence_document_ids) x WHERE NOT EXISTS (SELECT 1 FROM public.documents y WHERE y.id = x AND y.owner_id = r.owner_id)) THEN
       RAISE EXCEPTION 'P14_EVIDENCE: a piece of disposal evidence is no longer available' USING ERRCODE = '40001';
@@ -193,6 +275,30 @@ BEGIN
   END IF;
   PERFORM set_config('phase3_p14.writing', '', true);
   RETURN jsonb_build_object('request', r.id, 'status', CASE WHEN p_approve THEN 'approved' ELSE 'rejected' END, 'entry', CASE WHEN p_approve AND r.book_value > 0 THEN r.entry_id END, 'replayed', false);
+END $$;
+
+-- R-E-I14: read-only preview of what a request would record (STABLE: it cannot write). The server function adds the app
+-- engine's paise figure and the planned entries; this returns the database's own check so the screen shows both.
+CREATE FUNCTION public.preview_asset_disposal(p_asset text, p_date date, p_proceeds numeric) RETURNS jsonb
+LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path = public, pg_temp AS $$
+DECLARE uid uuid := auth.uid(); a jsonb; b jsonb; acc uuid; problems text[] := '{}';
+BEGIN
+  IF uid IS NULL THEN RAISE EXCEPTION 'Unauthorized' USING ERRCODE = '42501'; END IF;
+  a := phase3_p14.asset_of(uid, p_asset);
+  IF a IS NULL THEN RAISE EXCEPTION 'P14_NOT_FOUND: that asset is not in your register' USING ERRCODE = 'P0002'; END IF;
+  IF p_date IS NULL THEN RAISE EXCEPTION 'P14_INVALID: the disposal date' USING ERRCODE = '22023'; END IF;
+  IF nullif(a->>'soldOn', '') IS NOT NULL THEN problems := problems || format('This asset was disposed on %s', a->>'soldOn'); END IF;
+  IF p_date > current_date + 31 OR p_date < coalesce(nullif(a->>'inUse', '')::date, p_date) THEN problems := problems || 'The disposal date must be on or after the date the asset was put to use'::text; END IF;
+  IF p_proceeds IS NULL OR p_proceeds < 0 THEN problems := problems || 'Enter the proceeds (0 if nothing was received)'::text; END IF;
+  IF EXISTS (SELECT 1 FROM public.asset_disposal_requests q WHERE q.owner_id = uid AND q.asset_id = p_asset AND q.status = 'pending') THEN problems := problems || 'This asset already has an open disposal request'::text; END IF;
+  b := phase3_p14.book_value(a, p_date);
+  IF b ? 'unverifiable' THEN problems := problems || format('The database cannot check this asset''s book value (%s)', b->>'unverifiable'); END IF;
+  acc := nullif(a->>'accountId', '')::uuid;
+  IF coalesce((b->>'value')::numeric, 0) > 0 AND (acc IS NULL OR NOT EXISTS (SELECT 1 FROM public.accounts x WHERE x.id = acc AND x.owner_id = uid)) THEN
+    problems := problems || 'Link the asset to its ledger asset account first'::text;
+  END IF;
+  RETURN jsonb_build_object('bookValue', (b->>'value')::numeric, 'tolerance', (b->>'tolerance')::numeric, 'months', (b->>'months')::int,
+    'gain', CASE WHEN b ? 'value' AND p_proceeds IS NOT NULL THEN round(p_proceeds, 2) - (b->>'value')::numeric END, 'accountId', acc, 'problems', to_jsonb(problems));
 END $$;
 
 CREATE FUNCTION public.cancel_asset_disposal(p_request uuid, p_reason text) RETURNS jsonb
@@ -298,6 +404,9 @@ REVOKE ALL ON FUNCTION public.request_asset_disposal(text, text, date, numeric, 
   public.decide_asset_disposal(uuid, boolean, text, numeric), public.cancel_asset_disposal(uuid, text) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.request_asset_disposal(text, text, date, numeric, uuid, uuid[], text, numeric, uuid, jsonb),
   public.decide_asset_disposal(uuid, boolean, text, numeric), public.cancel_asset_disposal(uuid, text) TO authenticated;
+REVOKE ALL ON FUNCTION public.preview_asset_disposal(text, date, numeric) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.preview_asset_disposal(text, date, numeric) TO authenticated;
+REVOKE ALL ON FUNCTION phase3_p14.num(jsonb), phase3_p14.book_value(jsonb, date) FROM PUBLIC, anon, authenticated;
 GRANT USAGE ON SCHEMA phase3_p14 TO authenticated; -- the SELECT policy and the guards call the helpers below
 REVOKE ALL ON FUNCTION phase3_p14.asset_of(uuid, text), phase3_p14.guard_asset_disposal_fields(), phase3_p14.guard_disposal_entry() FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION phase3_p14.may_approve(uuid, text), phase3_p14.step_up_ok(), phase3_p14.exempt(), phase3_p14.guard_requests() FROM PUBLIC, anon;
