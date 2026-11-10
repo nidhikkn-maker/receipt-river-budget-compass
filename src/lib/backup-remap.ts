@@ -140,7 +140,7 @@ export const PREFERENCE_VERBATIM: readonly { path: string; why: string }[] = [
  * PREFERENCE_REFS and PREFERENCE_VERBATIM this must cover every section (completeness test).
  */
 export const PREFERENCE_NO_REFS: Readonly<Record<string, string>> = {
-  smartDefaults: "Booleans", shopAliases: "Shop name → shop key", payees: "Owner-local payee directory (ids preserved)",
+  restoreHistory: "Restore receipts of this account before P11 (payload fingerprints, actors, counts); replaced by the restoring account's own history on every restore (P0-023)", smartDefaults: "Booleans", shopAliases: "Shop name → shop key", payees: "Owner-local payee directory (ids preserved)",
   homeShortcuts: "UI order", travelMessages: "Text with owner-local trip ids", savedViews: "Filter strings", entities: "Owner-local legal entities (ids preserved)",
   receivables: "Invoices; payment is matched by amount and name, not id", depreciationDismissed: "Months", homeMode: "UI", categories: "Category names",
   tags: "Tag names", homeHidden: "UI", homeOrder: "UI", theme: "UI", themeName: "UI", homeScope: "Workspace name", reminders: "Boolean",

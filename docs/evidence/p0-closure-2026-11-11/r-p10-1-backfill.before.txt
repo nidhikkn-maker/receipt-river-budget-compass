@@ -1,0 +1,24 @@
+# R-P10-1 before-run: P7 as at 50fdc0d (derive_entry does not read the withdrawal). bunx vitest run src/lib/failure-injection.test.ts -t W5 (2026-11-10T14:06:06Z)
+# The withdrawn Lunch entry is posted by the books backfill (1 posting event instead of 0).
+ RUN  v4.1.12 /home/user/thapal-p3c
+ ❯ src/lib/failure-injection.test.ts (40 tests | 1 failed | 39 skipped) 4757ms
+     × W5. a withdrawn entry stays unposted through the posting backfill; Restore posts it; the backfill preview does not count it 4753ms
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+ FAIL  src/lib/failure-injection.test.ts > R-P10-1: activating balanced books after a withdrawal — P1..P9 + P10 > W5. a withdrawn entry stays unposted through the posting backfill; Restore posts it; the backfill preview does not count it
+AssertionError: expected 1 to be +0 // Object.is equality
+- Expected
++ Received
+- 0
++ 1
+ ❯ src/lib/failure-injection.test.ts:2108:37
+    2106|       await activateBooks(db, f.acc);
+    2107|       const events = async (id: string) => (await sql1<{ n: number }>(…
+    2108|       expect(await events(f.lunch)).toBe(0);
+       |                                     ^
+    2109|       expect(await events(f.groceries)).toBe(1);
+    2110|       expect(await sql1(db, "SELECT batch_id FROM public.posting_lines…
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+ Test Files  1 failed (1)
+      Tests  1 failed | 39 skipped (40)
+   Start at  14:05:59
+   Duration  6.40s (transform 1.05s, setup 164ms, import 1.30s, tests 4.76s, environment 0ms)
