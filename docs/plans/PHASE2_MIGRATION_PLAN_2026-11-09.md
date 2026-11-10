@@ -5,6 +5,7 @@
 - SQL: `.lovable/staged-sql/proposed/P5_legal_entities_foundation.sql` and `.rollback.sql`.
 - Order: `0000–0088 → P1 → P2 → P4 → P5`. The P5 preflight refuses to run without all three, refuses to run twice, and refuses if the three functions it replaces differ from the applied 0058/0083 bodies (pinned md5).
 - Rollback order: **P5b rollback and P5 rollback (either order) → P4 rollback → P2 rollback → P1 rollback**. The P4 rollback now refuses while P5 or P5b is installed.
+- Stage 2 (normalised registers, P6): `P6_registers.sql` / `.rollback.sql`, sections 15–22. The P5 rollback refuses while P6 is installed.
 - Companion file: `P5b_restore_investments.sql` / `.rollback.sql` (backup format 3 investments inside the restore transaction, §12). It is independent of P5 and needs only P4.
 - Tests: `src/lib/phase2-entities-sql.test.ts` (24 tests, section 8) and `src/lib/phase2-restore-investments-sql.test.ts` (8 tests, §12–13).
 - Inputs: `PHASE2_DATA_INVENTORY_2026-11-09.md` (§8 design, §8.4 compatibility, §8.5 acceptance); V4 master FND-02, FND-03, FND-05 and "Permanent IDs (revision 8)"; P3 decisions DN-P3-5 B and DN-P3-8 B; `SECURITY_MIGRATION_PLAN_2026-11-09.md` §13.
@@ -276,3 +277,273 @@ Production sequence (each step a separate KK approval): restored-copy rehearsal 
 | `readable_id_formats`, `readable_id_counters` | Global formats and counters; never backed up |
 
 - **R11. P3 on top of P5b.** P3's restore wrapper renames whichever public function exists, so P3 applied after P5b would wrap the P5b body (verified by reading only; not executed in this phase).
+
+---
+
+## 15. P6: normalised registers (Phase 2 stage 2)
+
+**Status:** proposed SQL, tested **in isolated PGlite only**. Not applied anywhere. Nothing deployed, merged, pushed or committed. No production data migrated. The app still reads and writes the JSON registers. There is no read switch and no write switch.
+
+- SQL: `.lovable/staged-sql/proposed/P6_registers.sql` and `.rollback.sql`.
+- Order: `0000–0088 → P1 → P2 → P4 → P5 → P6`. The preflight refuses to run without all four, and refuses to run twice.
+- Rollback order: **P6 rollback → P5 rollback (and P5b) → P4 → P2 → P1**. The P5 rollback now refuses while P6 is installed (`Roll back P6 … before P5`). This is the only change to an earlier file.
+- Tests: `src/lib/phase2-registers-sql.test.ts` (20 tests, §20).
+- Inputs:
+  - inventory §2, §5, §7 and §8;
+  - this plan §5 (the generic framework) and §14;
+  - V4 FND-03, FND-05 and "Permanent IDs (revision 8)";
+  - Signature Flow 4 (travel) and Flow 5 (assets and property);
+  - KK's DN-P2-IDS and P0-001 (archive, never delete);
+  - the security plan §13.
+
+All five slices in the brief are delivered and tested: assets, properties, trips, holdings with receivables, and projects. The work not delivered is listed in §21.
+
+### 15.1 Objects per register
+
+The common contract applies to every table:
+
+- **ID:** a uuid primary key, permanent and never regenerated.
+- **Owner:** `owner_id`.
+- **Scope:** a legal entity. For assets and properties the scope is the `register_records` scope.
+- **Readable number:** issued per KK's rule.
+- **Provenance:**
+  - `legacy_id`;
+  - `legacy_element`, the raw JSON element, read-only, so no field is ever lost;
+  - `source`: path, element sha256, source sha256, revision, run id and capture time.
+- **Money:** descriptive columns plus references by id to ledger entries, accounts and documents. Legacy money is held only in read-only `legacy_*` columns for the compare stage.
+- **Archive:** archive only.
+- **Access:** RLS on, SELECT only for clients, P4 RESTRICTIVE assistant policies, and RESTRICTIVE "P6 history cannot be changed/deleted by clients".
+
+| Slice | Table | Purpose / key rules |
+|---|---|---|
+| 1 | `assets` | `id` = `register_records.id` (owner-composite FK). There is one permanent id and one `AST-NNNNNN` per asset, in the owning entity's scope. Scope and archive state live on `register_records` only. References: `purchase_entry_id` (legacy `transactionId`), `payment_entry_id`, `ledger_account_id` and `document_ids`. Legacy copies: `legacy_cost`, `legacy_opening_wdv`, `legacy_adjustments`, `legacy_sale_value`, `legacy_monthly_rent` and `legacy_deposit`. The JSON `sharePct` becomes a dated, confirmed `record_ownerships` share of the owning entity (valid from the purchase or put-to-use date) |
+| 1 | `asset_events` | Append-only lifecycle events. `legacy_value` is a compare copy |
+| 1 | `depreciation_journals` | Prepared and posted journals. `entry_id` is the posted ledger entry; `legacy_amount` is a compare copy. `UNIQUE(asset_id, period, journal_kind)` means no duplicate depreciation. New owner-scoped uuids are used; the legacy `stableUuid` stays in `legacy_id` (inventory R12) |
+| 2 | `properties` | `id` = `register_records.id`, with one `PRP-NNNN` across every co-owner. References: loan, deposit account, and deed, insurance and tax documents. `legacy_valuation` is a compare copy |
+| 2 | `property_units` | Building → floor → unit tree. Legacy ids and paths are kept; it is idempotent by `(property, legacy_path)` |
+| 2 | `property_assets` | Dated containment (`carrying_asset` from `Property.assetId`, or `component`). `included_in_property_value` controls valuation. An asset is in one property at a time; a trigger with an advisory lock enforces this for every role. A range is ended once and never deleted |
+| 2 | `register_valuations` | Append-only, dated valuation observations: value, currency, basis and source. They are never income and never a ledger amount |
+| 2 | `leases` | Lease terms. `LSE-NNNN` is issued in the property's scope. `legacy_rent` and `legacy_deposit` are compare copies. Rent receipts remain ledger entries |
+| 3 | `trips` | `TRP-YYYY-NNNN`. **`itinerary_status` (planned/cancelled) is separate from `finance_status` (open/finance_complete)**: legacy `cancelledAt` maps to the itinerary and `closedAt` maps to finance (Flow 4). Budgets are kept as a `plan` (allowed). Labels (`organisation_label`, `primary_workspace_label`) are never entities. `legacy_tag` holds `Trip: <name>` |
+| 3 | `trip_bookings` | Bookings are plans or commitments. `legacy_amount` and the original amount and rate are compare copies. Payments are entry links |
+| 3 | `trip_advances` | `entry_id` is linked explicitly later and is never matched by amount. `legacy_amount` is a compare copy |
+| 3/5 | `register_entry_links` | Append-only links by id from a trip, booking or project to a ledger entry. The basis is one of `trip_id_column`, `trip_tag`, `booking_expense_id` or `project_tag`. **Tags on entries are never touched** |
+| 4 | `investment_holdings` | `HLD-NNNNNN` in the owning entity's scope. `demat_holding_id` links to `security_holdings` by an exact, unique ISIN, so one source is counted and never both. `legacy_quantity` and `legacy_cost_basis` are compare copies |
+| 4 | `receivables` | `RCV-YYYY-NNNN` (invoice year). `settled_by_entry_id` is explicit; the app's fuzzy paid-match is not migrated. `legacy_amount` and `legacy_gst` are compare copies |
+| 5 | `projects` | `PRJ-NNNN` (F08, additive). Created from `budgets[kind=project]`. `tag` is the exact entry tag the budget matches today. The budget is kept as a `plan`. Entries link through `register_entry_links` |
+| shared | `register_legacy_copies` | A co-owner's own JSON copy of a jointly owned property, attached to the **one** shared record. This is allowed only while that account holds a confirmed share (trigger) |
+| shared | `register_archive_events` | Append-only archive history. It is written by trigger whenever a register record is archived, through any path (P6 or P5 `archive_register_record`) |
+
+**Readable formats added:**
+
+- `LSE` (4), `HLD` (6), `RCV` (yearly, 4) and `PRJ` (4).
+- Assets, properties and trips reuse P5's `AST`, `PRP` and `TRP`.
+- Numbers are issued by P5's `assign_readable_id` trigger in the scope entity.
+- Child rows (events, journals, units, bookings, advances, valuations and links) get no number of their own. Their parent's number plus their legacy id identifies them.
+
+**Functions:**
+
+| Function | Guard |
+|---|---|
+| `preview_register_backfill(_register, _options)` | P4 assistant refusal |
+| `commit_register_backfill(_register, _source_sha256, _options)` | P4 step-up; anonymous guests refused |
+| `register_backfill_report(_register)` | assistant refusal |
+| `register_valuation_report(_as_of)` | assistant refusal |
+| `attach_asset_to_property(...)` | assistant refusal (descriptive link, no money) |
+| `end_asset_containment(_id, _to)` | step-up (history) |
+| `archive_register_item(_register, _id, _reason)` | step-up |
+| `p6_*` helpers, plans, guards, eraser | internal; no client EXECUTE |
+
+The P4 fail-closed catalog check is re-run at the end of P6.
+
+**Triggers on existing tables:**
+
+- `p6_log_archive` (AFTER UPDATE on `register_records`).
+- `a_p6_erase_owner_registers` (AFTER DELETE on `finance_preferences`). It is named to fire before P5's eraser. If P5 then refuses a co-owned erasure, the whole erasure rolls back.
+
+No existing table, column, function, trigger or policy is altered.
+
+### 15.2 Rules
+
+- **References instead of totals (FND-03).** Money lives in ledger entries; registers point to them by id.
+  - The ids are checked on insert by `p6_guard_references` (the owner's own rows only).
+  - There is **no FK** to expenses, accounts, documents, loans or security holdings, so a delete that is valid today is never refused.
+  - A later delete shows up as an orphan in the compare report.
+- **Identity is fixed for every role, the table owner included** (`p6_guard_register_row`):
+  - The only changes allowed are archiving once (`archived_at/by/reason` from NULL) and ending a containment once (`valid_to`).
+  - Deletes happen only by confirmed erasure (`ledgerline.erasing`).
+- **Never guessed:**
+  - an unknown `ownerEntityId` (a deleted or merged company);
+  - a trip name shared by two trips (no tag links for either);
+  - an advance's or receivable's ledger entry;
+  - a holding whose ISIN matches several demat rows.
+
+  Each of these is an exception. An error blocks that item only.
+- **Labels never become entities** (FND-02, R1). Trips, receivables and projects default to the owner's personal scope, and an info exception is raised where the JSON carries an organisation or workspace label.
+- **Joint property (DN-P2-IDS item 3).**
+  - One `register_records` row and one PRP number.
+  - The administrator's `properties` row is the shared register row.
+  - Co-owners hold dated shares in `record_ownerships` (P5 consent: requested by the entity's own account, confirmed by the administrator, at most 100% per date).
+  - A co-owner's legacy JSON copy attaches through `_options.attach = {<legacy id>: <record uuid>}` into `register_legacy_copies`.
+- **No double counting (Flow 5).**
+  - In `register_valuation_report`, every valued property counts its latest valuation once.
+  - An asset inside a valued property with `included_in_property_value` is excluded and listed with `counted_within`.
+  - Ending the containment counts the asset on its own from that date.
+- **Readable numbers.** They are scope-local, issued in the commit transaction, never reused (archived numbers stay taken) and stable across re-commits. A new JSON item later gets the next number.
+
+## 16. Stages (FND-03 order) for P6
+
+| Stage | In P6? | What happens |
+|---|---|---|
+| 1. Additive schema | yes | 17 tables, formats, triggers on the new tables, two AFTER triggers, policies |
+| 2. Dual-read | yes | The JSON stays the app's source. Nothing reads the tables yet. Tags, `trip_id` and the JSON are untouched |
+| 3. Previewed backfill | yes | The plan reads the **raw** stored JSON (one pass per list, linear for 5,000+ items) and returns rows to create or existing, exceptions, the legacy "before" map and `source_sha256` (sha256 of the sections read; checked independently with node:crypto in the test). The owner commits under the owner advisory lock and preference row lock. The commit refuses a changed source (`BACKFILL_SOURCE_CHANGED`, 40001), inserts only `create` rows (so it spends no number on conflicts), is idempotent, and logs `legacy_backfill_runs` (kind = register). It needs the P5 company backfill first |
+| 4. Compare | yes | `register_backfill_report` gives: counts (pending/existing); legacy money per `section|entity|currency` before (JSON) versus after (`legacy_*` columns); orphans (dangling ids); links per role and basis; exceptions; drift since the last run. Status is `match` only when the maps are identical, there are zero orphans and nothing is pending |
+| 5. Read switch | **no** | Separate approval. Readers prefer the tables; trip and project readers use `register_entry_links` instead of name tags |
+| 6. Write switch | **no** | Separate approval. Writers: preferences save, intake, monthly depreciation cron, trip SQL (0034/0035), restore. Advances and receivable settlements get explicit entry ids. Descriptive edit writers are added |
+| 7. JSON cleanup | **no** | Only after separate approval |
+
+Dependency order per owner: P5 `commit_entity_backfill`, then `assets`, then `properties` (containment needs the assets; a missing asset is a warning that resolves on the next commit), then `trips`, `holdings`, `receivables` and `projects`, in any order.
+
+## 17. Preservation evidence (isolated)
+
+- **Pre-existing rows unchanged.** Every table that existed before P5 (`public` tables at P1+P2+P4, minus the P4 tables written by the tests, plus `storage.objects` and `auth.users`) is hashed per row (count + md5, excluding P5's `legal_entity_id`). The hash is identical after every step:
+  - P6 apply;
+  - each preview;
+  - each refused commit;
+  - each commit and re-commit;
+  - containment;
+  - joint-property attach;
+  - archive;
+  - V's erasure (for the other owners);
+  - the P6 rollback.
+- **Each owner's JSON unchanged.** It is hashed separately (`legacy_sha256(data)`) and stays identical.
+- **P5 rows unchanged.** Every P5 row that existed before P6 stays byte-identical; P6 only adds rows to `register_records`, `record_ownerships`, the registry and backfill runs.
+- **Money identical.** Counts and money match per `section|entity|currency`. The only differences are the items reported as exceptions: the orphan-company asset, the invalid element, the unknown-asset event, the duplicate journal and the unknown-property lease. Money is also checked independently in TypeScript for assets (cost per entity), holdings (cost basis per entity), bookings and advances.
+
+## 18. Rollback
+
+1. **KK approval.** Export the P6 tables if needed.
+2. Run `P6_registers.rollback.sql` (one transaction). It:
+   - unguards and drops the 7 entry points (their registry rows are removed; their `security_events` are kept);
+   - drops the two triggers on existing tables;
+   - **moves** the 17 tables to `security_rollback_archive.p6_<table>_<UTC ms>`. Before the move it removes their policies, triggers, links to live tables and grants, and gives their indexes unique names so a later rollback cannot collide;
+   - drops the P6 functions and the `phase2_p6` schema.
+3. It **keeps on purpose** (P5 tables):
+   - the `register_records` and `record_ownerships` anchors created by the backfill;
+   - the `LSE/HLD/RCV/PRJ` formats, counters and registry rows;
+   - the P6 `legacy_backfill_runs` rows.
+
+   As a result, a re-applied P6 re-attaches assets and properties to the **same uuids and AST/PRP numbers** (tested). Registers without an anchor (trips and the others) get **new** uuids and numbers on re-apply. A number is never reissued (tested); restoring them from the archive is a separate step (R-P6-5).
+4. Then, if wanted, run the P5 rollback, which now succeeds (tested).
+
+## 19. Production pre-checks (read-only; each **requires KK approval**; none run)
+
+| ID | Purpose | Query / action |
+|---|---|---|
+| H-P6-1 | P5 installed and P6 absent; formats `LSE/HLD/RCV/PRJ` free or identical | `SELECT to_regnamespace('phase2_p5'), to_regnamespace('phase2_p6'), to_regclass('public.assets'); SELECT * FROM readable_id_formats WHERE prefix IN ('LSE','HLD','RCV','PRJ');` |
+| H-P6-2 | Register sizes and id shapes per owner (ids over 200 characters, duplicate ids, non-object elements) | `SELECT owner_id, jsonb_array_length(data->'assets'), jsonb_array_length(data->'trips'), jsonb_array_length(data->'books'->'properties') … FROM finance_preferences;` plus duplicate-id counts with `jsonb_array_elements` |
+| H-P6-3 | Exceptions per owner (orphan companies, ambiguous trip names, missing entries and documents) | Run the plan functions on a **restored copy** for every owner (they cannot run as a service against production) |
+| H-P6-4 | Plan and commit cost for the largest owners (5,000+ assets; FND-03 bulk) | `EXPLAIN ANALYZE` the preview on a restored copy or draft |
+| H-P6-5 | Trip names shared by several trips (tag links withheld) | `SELECT owner_id, x->>'name', count(*) FROM finance_preferences, jsonb_array_elements(data->'trips') x GROUP BY 1,2 HAVING count(*) > 1;` |
+| H-P6-6 | Jointly owned properties known to KK (which accounts, which shares) | Owner interviews; these are recorded through P5 shares and `attach`, never inferred |
+| H-P6-7 | Holdings whose ISIN is also in demat (double-count risk) | Join `books.holdings[].isin` with `security_holdings.isin` per owner on a restored copy |
+| H-P6-8 | Containment advisory-lock overlap protection under real concurrency | Two-connection script on a draft project (as H-P5-6) |
+
+## 20. Tests (`src/lib/phase2-registers-sql.test.ts`, 20 tests; 3 consecutive runs, 20/20 each)
+
+**Seed.** The app's real JSON shapes for five accounts: O owner; V another owner who uses O's company key; G a P2 grantee of O's C1; J the co-owner; X a stranger. O has:
+
+- 8 asset elements:
+  - an identical duplicate;
+  - a string element;
+  - an asset of a deleted company;
+  - a 50% building asset;
+  - assets carrying a purchase entry, an account and a document;
+- asset events, including an event for an unknown asset;
+- posted and prepared journals, plus a duplicate period;
+- two properties with a building/floor/unit tree, a valuation, a loan and a deposit account;
+- two leases, one for an unknown property;
+- five trips:
+  - organisation and workspace labels;
+  - a cancelled trip with an open advance;
+  - a closed trip;
+  - two trips named "Pune";
+  - bookings with payment ids;
+  - advances;
+- entries linked by `trip_id` and by tags;
+- three holdings, one ISIN also in demat;
+- two receivables;
+- a project budget and a category budget.
+
+| Test | Proves |
+|---|---|
+| 1a | Assets preview: exact rows to create, exceptions, the dated 50% share, `source_sha256` equal to an independent node:crypto hash. Nothing changes |
+| 1b | Commit is refused: without step-up; for an assistant even with step-up; for an anonymous guest; before the company backfill; for an unknown register; after the source changed |
+| 1c | One anchor and asset row each. AST numbers are scope-local (C1 has 000001–000003, C2 and personal each have 000001). References by id. Legacy copies are read-only; the raw element and provenance are stored (element sha256 checked independently). Journals link the posted entry. Data unchanged |
+| 1d | The compare report differs only on the reported exception keys. Money per entity matches an independent TypeScript sum |
+| 1e | Re-commit is idempotent: nothing to create, counters and registry unchanged |
+| 2a | Properties: PRP per scope, unit tree, valuation event, carrying-asset containment, lease LSE-0001 in C1 with its unit, account and document. The report differs only on the unknown-property lease |
+| 2b | Containment and valuation: assistant and other-owner attach refused; overlap refused; C1 counted once (90 L property + 9 L van, not +50 L +8 L); ending the containment (step-up, once) counts the lift on its own from that date; the containment row is never deleted or edited |
+| 2c | Joint property: attach refused without a share; with dated 50/50 shares there is ONE record, ONE property row and ONE number; the co-owner reads it and a stranger does not; the co-owner's report is `match`; more than 100% is refused; ending the share keeps the copy |
+| 3a | TRP numbers per year (2025-0001; 2026-0001…0004). Itinerary and finance status are separate (cancelled + open; planned + finance_complete) and cannot be rewritten. Bookings and advances keep compare copies; the advance entry is never guessed |
+| 3b | Links by id (trip_id, exact tag, booking payment). Ambiguous "Pune" and another owner's tagged entry are not linked. Tags are untouched. The report is `match` with link counts; a newly tagged entry shows as pending (dual-read drift) |
+| 4 | Holdings: HLD per entity, demat link by ISIN, `match`. Receivables: RCV-2026-0001/0002, settlement not migrated (info), `match` |
+| 5 | Projects: PRJ-0001, plan, tag links, `match`. Every register is idempotent. Independent money checks for bookings, advances and holdings |
+| 6a | Another owner's backfill touches only its own rows. The same legacy id under V is a different record with its own AST-000001. V cannot archive O's trip |
+| 6b | A P2 grantee of C1 reads only C1's assets, journals, property, lease and holding; never personal trips, receivables, projects or archive history. A stranger reads nothing on any of the 17 tables |
+| 6c | An assistant reads the owner's rows. Preview, report and valuation are refused; archive and commit are refused even with step-up. No client may insert, update or delete on any P6 table. A revoked assistant reads 0 rows everywhere |
+| 7 | Archive needs step-up and happens once. The record, number and links are kept. History rows come from P6 and from the register_records path. Delete, un-archive, rename, renumber and editing a legacy amount are refused for the table owner too. History is never deleted |
+| 8 | A new JSON trip gets TRP-2026-0005. Earlier and archived numbers are unchanged and never reused |
+| 9 | Erasure removes only the erasing owner's P6 rows; counters are kept. The administrator of a co-owned record cannot erase (P5 `ERASURE_BLOCKED_COOWNED`) and nothing changes |
+| Rollback | P6 cannot run twice. The P5 rollback refuses while P6 is installed. The P6 rollback restores the exact P5 catalog (policies, functions + ACLs, triggers, indexes, constraints, tables, columns, grants, schemas, P4 guard registry). Pre-P5 data is identical and P5 rows are kept. 17 archive tables hold every row. Clients have no archive access. Re-apply gives the same asset anchors and numbers, and new trip numbers (no reuse). A second P6 rollback works, and P5 then rolls back |
+| Backup | Every owner-scoped table P6 adds has exactly one decision (§22); none is listed in `backup.ts` yet |
+
+Regression suites run once after the change: phase2-entities-sql (24), phase2-independent (2), phase2-restore-investments-sql (8), security-phase1-sql (72), security-phase1-e2e (20) and security-proposed-sql (80). All 206 pass. `bun run typecheck` is clean.
+
+## 21. Not delivered, deviations and residual risks
+
+**Not delivered (next slices):**
+
+- `books.propertyCosts`, GST invoices, filings and advances, tax workpapers, `fyRecords`, `loanBalances` and `docLinks`.
+- Itinerary items as a table: they are kept as `trips.itinerary` jsonb.
+- The co-owner `attach` option for **assets**: the table supports it, but only the properties plan offers it.
+- "Project:" tags that have no project budget.
+- Writers for descriptive edits, explicit advance and receivable entry links, and sale, disposal and transfer workflows. These are out of scope by decision.
+
+**Deviations:**
+
+- **D-P6-1.** New formats `LSE`, `HLD`, `RCV` and `PRJ` are not in the revision 8 list. They need KK confirmation.
+- **D-P6-2.** Archive state and scope for assets and properties live once, on `register_records`.
+- **D-P6-3.** Child rows carry no readable number.
+- **D-P6-4.** Legacy trips are numbered by the year of their start date, because the JSON has no creation date. Trips without a valid start use the year of the backfill.
+- **D-P6-5.** Trips, receivables and projects default to personal books (info exception) because the JSON names no entity.
+- **D-P6-6.** References are checked on insert, without FKs, so today's valid deletes are never refused; orphans are reported instead.
+- **D-P6-7.** The full raw JSON element is stored (`legacy_element`).
+- **D-P6-8.** The valuation report uses the administrator's scope at 100%, ignoring shares. Assets without a valuation event use the legacy cost, marked `legacy_cost_compare_only`.
+- **D-P6-9.** The rollback keeps P5 anchors and numbers (§18).
+- **D-P6-10.** Tag links reproduce the app's `tripSummary` rule (trip_id OR exact tag), except for ambiguous names.
+
+**Residual risks:**
+
+- **R-P6-1.** PGlite is not Supabase. Definer ownership, advisory locks across connections and performance on large owners (H-P6-4) need checking.
+- **R-P6-2. Dual-read drift.**
+  - JSON edits made after a commit to an *existing* item are seen only in the money compare (legacy amounts). A purely descriptive edit is not flagged; `source.element_sha256` is stored for a later "changed since backfill" check.
+  - New items and links show as pending.
+- **R-P6-3.** The monthly depreciation cron, intake and trip SQL still write JSON only (inventory R13). Their records reach the tables only through a new reviewed commit until the write switch.
+- **R-P6-4.** Backup and restore do not carry P6 tables (format 4, §22). A cross-account restore of preferences would need a fresh reviewed backfill under the restoring owner.
+- **R-P6-5.** Rollback → re-apply gives registers without an anchor new uuids and numbers. Restoring them from the archive needs a separate script.
+- **R-P6-6.** Erasure of a co-owned record waits on KK decision C13 (P5 D6).
+- **R-P6-7.** P5's own rollback still uses second-resolution archive names and unsuffixed index names. A P5 rollback → re-apply → rollback in the same database would collide (P6 avoids this for its own tables).
+- **R-P6-8.** Assistants can read registers (read-only, by P4 design), including legacy money copies.
+
+## 22. Backup decisions for P6 tables
+
+These are recorded in `P6_BACKUP_DECISIONS` (`src/lib/phase2-registers-sql.test.ts`) and checked against the real P6 schema. `backup.ts` is not changed. The decisions move there when P6 becomes an applied migration.
+
+| Table | Decision |
+|---|---|
+| `assets`, `asset_events`, `depreciation_journals`, `properties`, `property_units`, `register_valuations`, `leases`, `trips`, `trip_bookings`, `trip_advances`, `register_entry_links`, `investment_holdings`, `receivables`, `projects` | Derived by the reviewed backfill from JSON that is already backed up, until the gated write switch. Then backup format 4: readable numbers claimed with `claim_readable_id`; account, entry and document ids remapped; journals get new owner-scoped ids |
+| `property_assets` | Owner containment decisions. Format 4 with properties and assets |
+| `register_legacy_copies` | A co-owner's own JSON copy. Never copied into another account; re-attached by the reviewed backfill |
+| `register_archive_events` | Server audit. Stays with the source account |
