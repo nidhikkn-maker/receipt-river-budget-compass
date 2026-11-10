@@ -39,7 +39,10 @@ import { validateCompleteAllocations } from './trip-budget';
 import { PreferenceReview } from '@/components/PreferenceReview';
 import { checkpointUpload } from './statement-pipeline/history';
 import type { StatementUpload } from './preferences';
-import type { LoadArea } from './load-state';
+import { ALL_LOAD_AREAS, areaReadState, areaStatus as statusOf, isDeniedRead, readDeniedMarker, writeDeniedMarker, type AreaReadState, type AreaStatusInfo, type LoadArea, type LoadErrorKind } from './load-state';
+
+const ALL_AREAS: LoadArea[] = [...ALL_LOAD_AREAS];
+import { assertNotLockedEvidence } from './evidence-lock';
 import {postAccountingWithRecovery,validateAccountingAttempt,type AccountingAttempt,type AccountingReceipt} from './books/accounting-post';
 
 export interface Loan {
@@ -155,6 +158,15 @@ interface Ctx {
   syncState: "syncing" | "synced" | "offline" | "error";
   /** Record groups whose last cloud read failed; their previous values are kept, never replaced by empty lists (P0-004/P0-017). */
   loadErrors: LoadArea[];
+  /**
+   * R14: the subset of loadErrors whose read was refused for permission (RLS/42501, 401/403, rejected token, locked
+   * session). Screens render UnauthorizedState for these, never an empty state; use useReadState(...areas).
+   */
+  deniedAreas: LoadArea[];
+  /** 'denied' / 'failed' for an area whose last cloud read did not succeed, else null. */
+  loadErrorKind: (area: LoadArea) => LoadErrorKind | null;
+  /** R14: loading | offline | denied | failed | empty | ready for one area (load-state.ts areaStatus); offline carries a note when the last online read was denied. */
+  areaStatus: (area: LoadArea) => AreaStatusInfo;
   lastSyncedAt: string | null;
   refresh: () => Promise<void>;
   save: (s: ExpenseInput, opts?: { id?: string; files?: File[]; createId?: string; noRefresh?: boolean }) => Promise<void>;
@@ -226,6 +238,15 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
   const [syncState, setSyncState] = useState<"syncing" | "synced" | "offline" | "error">("syncing");
   const [lastSyncedAt, setLastSyncedAt] = useState<string | null>(null);
   const [loadErrors, setLoadErrors] = useState<LoadArea[]>([]);
+  const [deniedAreas, setDeniedAreas] = useState<LoadArea[]>([]);
+  // R14: areas with a painted value this session (device copy, or a cloud read that succeeded or failed).
+  const [settledAreas, setSettledAreas] = useState<LoadArea[]>([]);
+  const [online, setOnline] = useState(() => typeof navigator === "undefined" || navigator.onLine);
+  useEffect(() => {
+    const up = () => setOnline(true), down = () => setOnline(false);
+    window.addEventListener("online", up); window.addEventListener("offline", down);
+    return () => { window.removeEventListener("online", up); window.removeEventListener("offline", down); };
+  }, []);
   const [pendingCount, setPendingCount] = useState(0);
   const [pendingItems, setPendingItems] = useState<PendingItem[]>([]);
   const syncRef = useRef<(only?: string, skipRefresh?: boolean) => Promise<void>>(async () => {});
@@ -265,7 +286,31 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
     const run = gate.begin();
     try { await loadRun(run); } finally { run.end(); }
   }
+  // R14: a denied area's records leave memory at once (a failed read keeps them; a denied one must not show them).
+  const clearArea: Record<LoadArea, () => void> = {
+    transactions: () => { setExpenses([]); setWithdrawnEntries([]); }, accounts: () => setAccounts([]), payments: () => setCommitments([]),
+    loans: () => setLoans([]), settings: () => setPreferences(defaultPreferences()), budgets: () => setBudgets({}), goals: () => setGoals([]),
+    valuations: () => setValuations([]), documents: () => setDocuments([]), family: () => setMembers([]), profile: () => setName(""),
+  };
+  const denyAreas = (areas: readonly LoadArea[]) => {
+    for (const a of areas) clearArea[a]();
+    setDeniedAreas([...areas]); setLoadErrors((was) => [...new Set([...was, ...areas])]);
+  };
   async function loadRun(run: GateRun) {
+    // R14: no signed-in session for this owner (signed out, another account, expired): every area is denied, nothing
+    // from the device copy or memory is shown. Mocked clients without auth skip this check.
+    // A getSession error (e.g. an offline token refresh) is not a denial: offline access keeps working as before.
+    const getSession = (supabase as { auth?: { getSession?: () => Promise<{ data: { session: { user: { id: string } } | null }; error?: unknown }> } }).auth?.getSession;
+    if (getSession) {
+      const sess = await getSession.call(supabase.auth).catch(() => null);
+      if (!run.live()) return;
+      if (sess && !sess.error && sess.data.session?.user.id !== userId) {
+        firstLoad.current = false;
+        denyAreas(ALL_AREAS); writeDeniedMarker(userId, ALL_AREAS); setSettledAreas(ALL_AREAS);
+        setLoading(false); setSyncState(navigator.onLine ? "error" : "offline"); if (!navigator.onLine) setOnline(false);
+        return;
+      }
+    }
     // Show this device's saved copy straight away, then refresh from the cloud.
     if (!navigator.onLine || firstLoad.current) {
       const cached = await getSnapshot<Snapshot>(userId).catch(() => undefined);
@@ -276,11 +321,18 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
         setName(cached.name); setMembers(cached.members); setExpenses(cached.expenses); setAccounts(cached.accounts); setCommitments(cached.commitments);
         setLoans(cached.rawLoans ?? []); setGoals(cached.goals); setBudgets(cached.budgets); setPreferences(normalizePreferences(cached.preferences));
         setValuations(cached.valuations ?? []); setDocuments(cached.documents ?? []);
+        setSettledAreas(ALL_AREAS);
+      }
+      // Areas denied at the last online check are not painted from the device copy while they stay denied.
+      const stillDenied = readDeniedMarker(userId);
+      if (stillDenied.length) { denyAreas(stillDenied); setSettledAreas(ALL_AREAS); }
+      if (cached) {
         setLoading(false);
       }
-      if (!navigator.onLine) { setLoading(false); setSyncState("offline"); return; }
+      if (!navigator.onLine) { setOnline(false); setLoading(false); setSyncState("offline"); return; }
     }
     setSyncState("syncing");
+    setOnline(true);
     try {
     // Essential records first; the rest load in the background so the first screen is not held up.
     const restP = Promise.all([
@@ -312,7 +364,11 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
     if (!run.live()) return;
     // A failed read keeps the last known records (device copy or earlier load) and is reported, never shown as empty.
     const failed = new Set<LoadArea>();
-    const mark = (r: { error: unknown }, area: LoadArea) => { if (r.error) failed.add(area); return !r.error; };
+    const denied = new Set<LoadArea>();
+    type ReadResult = { error: unknown; status?: number | null };
+    const refuse = (r: ReadResult, area: LoadArea) => { failed.add(area); if (isDeniedRead(r.error as Parameters<typeof isDeniedRead>[0], r.status)) denied.add(area); };
+    const mark = (r: ReadResult, area: LoadArea) => { if (r.error) refuse(r, area); return !r.error; };
+    const flushDenied = () => { if (denied.size) denyAreas([...denied]); };
     if ([e, a, c, l].some((x) => x.error)) toast.error("Some records couldn't load — pull to refresh or try again");
     if (mark(pref, "settings")) {
       setPreferences(normalizePreferences(pref.data?.data as unknown as Partial<FinancePreferences>));
@@ -356,12 +412,14 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
       for (const x of b.data ?? []) bud[x.category as Category] = Number(x.monthly_amount);
       setBudgets(bud);
     }
+    flushDenied();
+    setSettledAreas((was) => [...new Set<LoadArea>([...was, "settings", "payments", "loans", "accounts", "profile", "transactions", "budgets"])]);
     setLoading(false);
     if (fullP) {
       const full = await fullP;
       if (!run.live()) return;
-      if (full.error) { failed.add("transactions"); toast.error("Some records couldn't load — pull to refresh or try again"); }
-      else { showLedger(full.data ?? []); failed.delete("transactions"); }
+      if (full.error) { refuse(full, "transactions"); flushDenied(); toast.error("Some records couldn't load — pull to refresh or try again"); }
+      else { showLedger(full.data ?? []); failed.delete("transactions"); denied.delete("transactions"); }
       liteActive.current = false;
     }
     const [m, g, v, d, db] = await restP;
@@ -379,7 +437,12 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
     })));
     if (mark(m, "family")) setMembers(m.data ?? []);
     hadSnapshot.current = true;
+    flushDenied();
     setLoadErrors([...failed]);
+    setDeniedAreas([...denied]);
+    // Remember denials for the next start; an area that has since read successfully is forgotten.
+    writeDeniedMarker(userId, [...denied, ...readDeniedMarker(userId).filter((a) => failed.has(a))]);
+    setSettledAreas(ALL_AREAS);
     setSyncState(failed.size ? "error" : "synced");
     if (!failed.size) setLastSyncedAt(new Date().toISOString());
     } catch (err) {
@@ -935,11 +998,22 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
     check((await supabase.from("documents").update(row).eq("id", id).eq("owner_id", userId)).error);
     await refresh();
   };
+  const loadErrorKind: Ctx["loadErrorKind"] = (area) => deniedAreas.includes(area) ? "denied" : loadErrors.includes(area) ? "failed" : null;
+  const areaEmpty: Record<LoadArea, boolean> = {
+    transactions: !expenses.length && !withdrawnEntries.length, accounts: !accounts.length, payments: !commitments.length, loans: !rawLoans.length,
+    settings: false, budgets: !Object.keys(budgets).length, goals: !goals.length, valuations: !valuations.length, documents: !documents.length,
+    family: !members.length, profile: !name,
+  };
+  const areaStatus: Ctx["areaStatus"] = (area) => statusOf({ settled: settledAreas.includes(area), online, errors: loadErrors, denied: deniedAreas, empty: areaEmpty[area] }, area);
   const removeDocument: Ctx["removeDocument"] = async (d) => {
+    // D8: a locked original is audit evidence; refuse before touching the row or the file (P17 refuses it server-side too).
+    assertNotLockedEvidence(d);
     // P0-026: only the staging copy of a used "saved to add later" receipt is ever removed (see pending-documents.ts).
     await discardUsedPendingDocument(d);
     const rm = await supabase.storage.from("receipts").remove([d.filePath]);
     if (rm.error) throw new Error(`Record removed but the file could not be deleted: ${rm.error.message}`);
+    // Storage reports a policy refusal as "nothing removed", not as an error.
+    if (Array.isArray(rm.data) && rm.data.length === 0) throw new Error("Record removed but the file was kept: the server refused to delete it.");
     await refresh();
   };
   const history: Ctx["history"] = useCallback(async (id) => {
@@ -987,7 +1061,7 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
       expenses: expenses.filter((x) => (x.txnType ?? "expense") === "expense"), transactions: expenses.filter((x) => !x.transferCounterpartOf), transferCounterparts: expenses.filter((x) => !!x.transferCounterpartOf), confirmTransfer, cancelTransfer, accounts, addAccount, setArchived, adjustBalance,
       commitments, loans, goals, valuations, documents, saveCommitment, confirmIrregular, confirmCommitment, saveLoan, recordLoanPayment, convertToEmi,
       saveGoal, updateAccount, addValuation, addDocument, updateDocument, removeDocument, history, setReimbursement, recordReimbursement, deleteAll,
-      budgets, loading, syncState, loadErrors, lastSyncedAt, refresh, save, remove, withdraw, restoreWithdrawn, withdrawn: withdrawnEntries, payCard, setScope, reconcile, addMember, removeMember, updateMember, setBudget, signedUrl, downloadFile,
+      budgets, loading, syncState, loadErrors, deniedAreas, loadErrorKind, areaStatus, lastSyncedAt, refresh, save, remove, withdraw, restoreWithdrawn, withdrawn: withdrawnEntries, payCard, setScope, reconcile, addMember, removeMember, updateMember, setBudget, signedUrl, downloadFile,
       setAllocations, updateReimbursement, addReimbursementReceipt, listReviews, saveReview,
     }}>
       {children}
@@ -1000,4 +1074,18 @@ export function useStore() {
   const c = useContext(StoreCtx);
   if (!c) throw new Error("useStore outside provider");
   return c;
+}
+
+/**
+ * R14: how the given record areas last read: 'denied' (render UnauthorizedState), 'failed' (render ErrorState with
+ * Retry) or 'ok' (records, or a genuine empty state). A denied or failed read is never shown as empty data.
+ */
+export function useReadState(...areas: LoadArea[]): AreaReadState {
+  const { loadErrors, deniedAreas } = useStore();
+  return areaReadState(loadErrors, deniedAreas, ...areas);
+}
+
+/** R14: the full status of one area (loading, offline + note, denied, failed, empty, ready); see load-state.ts areaStatus. */
+export function useAreaStatus(area: LoadArea): AreaStatusInfo {
+  return useStore().areaStatus(area);
 }
