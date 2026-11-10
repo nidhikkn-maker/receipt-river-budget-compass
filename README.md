@@ -24,3 +24,9 @@ cd <repository-name>
 npm i
 npm run dev
 ```
+
+## Fonts and licences
+
+- **Manrope** (Signature Flow interface typeface) is self-hosted from the `@fontsource-variable/manrope` package (latin and latin-ext subsets, which include the rupee sign). Licence: SIL Open Font License 1.1, copy in `public/fonts/LICENSE-Manrope-OFL.txt`.
+- **Noto Sans Devanagari** (Hindi fallback in Signature Flow) is self-hosted from `@fontsource-variable/noto-sans-devanagari`. The browser downloads it only when Devanagari text appears. Licence: SIL Open Font License 1.1, copy in `public/fonts/LICENSE-NotoSansDevanagari-OFL.txt`.
+- **Noto Sans Tamil** and **Space Grotesk** still load as before, through the stylesheet link in `src/routes/__root.tsx`.

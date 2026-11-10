@@ -1,0 +1,342 @@
+{
+ "screens": {
+  "01-home": {
+   "before-asis": {
+    "pixels_differing": 0.1748,
+    "mean_abs_diff": 25.53
+   },
+   "before-manrope": {
+    "pixels_differing": 0.1726,
+    "mean_abs_diff": 25.1
+   },
+   "after-asis": {
+    "pixels_differing": 0.1121,
+    "mean_abs_diff": 12.72
+   }
+  },
+  "02-home-iphone": {
+   "before-asis": {
+    "pixels_differing": 0.3556,
+    "mean_abs_diff": 44.92
+   },
+   "before-manrope": {
+    "pixels_differing": 0.3656,
+    "mean_abs_diff": 48.87
+   },
+   "after-asis": {
+    "pixels_differing": 0.2093,
+    "mean_abs_diff": 22.17
+   }
+  },
+  "03-money": {
+   "before-asis": {
+    "pixels_differing": 0.1737,
+    "mean_abs_diff": 10.96
+   },
+   "before-manrope": {
+    "pixels_differing": 0.1719,
+    "mean_abs_diff": 10.67
+   },
+   "after-asis": {
+    "pixels_differing": 0.1494,
+    "mean_abs_diff": 9.03
+   }
+  },
+  "04-statement-desk": {
+   "before-asis": {
+    "pixels_differing": 0.1563,
+    "mean_abs_diff": 10.43
+   },
+   "before-manrope": {
+    "pixels_differing": 0.1556,
+    "mean_abs_diff": 10.25
+   },
+   "after-asis": {
+    "pixels_differing": 0.1529,
+    "mean_abs_diff": 9.84
+   }
+  },
+  "05-records": {
+   "before-asis": {
+    "pixels_differing": 0.0933,
+    "mean_abs_diff": 10.37
+   },
+   "before-manrope": {
+    "pixels_differing": 0.0917,
+    "mean_abs_diff": 10.06
+   },
+   "after-asis": {
+    "pixels_differing": 0.0756,
+    "mean_abs_diff": 7.78
+   }
+  },
+  "06-travel": {
+   "before-asis": {
+    "pixels_differing": 0.0825,
+    "mean_abs_diff": 9.01
+   },
+   "before-manrope": {
+    "pixels_differing": 0.0813,
+    "mean_abs_diff": 8.77
+   },
+   "after-asis": {
+    "pixels_differing": 0.0786,
+    "mean_abs_diff": 8.36
+   }
+  },
+  "07-reports": {
+   "before-asis": {
+    "pixels_differing": 0.096,
+    "mean_abs_diff": 12.19
+   },
+   "before-manrope": {
+    "pixels_differing": 0.0946,
+    "mean_abs_diff": 11.96
+   },
+   "after-asis": {
+    "pixels_differing": 0.0905,
+    "mean_abs_diff": 11.55
+   }
+  },
+  "08-smart-add-source": {
+   "before-asis": {
+    "pixels_differing": 0.7585,
+    "mean_abs_diff": 62.67
+   },
+   "before-manrope": {
+    "pixels_differing": 0.7573,
+    "mean_abs_diff": 62.48
+   },
+   "after-asis": {
+    "pixels_differing": 0.1434,
+    "mean_abs_diff": 14.04
+   }
+  },
+  "09-smart-add-review": {
+   "before-asis": {
+    "pixels_differing": 0.7789,
+    "mean_abs_diff": 96.45
+   },
+   "before-manrope": {
+    "pixels_differing": 0.7786,
+    "mean_abs_diff": 96.36
+   },
+   "after-asis": {
+    "pixels_differing": 0.6747,
+    "mean_abs_diff": 90.37
+   }
+  },
+  "10-smart-add-confirm": {
+   "before-asis": {
+    "pixels_differing": 0.8568,
+    "mean_abs_diff": 70.47
+   },
+   "before-manrope": {
+    "pixels_differing": 0.8564,
+    "mean_abs_diff": 70.41
+   },
+   "after-asis": {
+    "pixels_differing": 0.249,
+    "mean_abs_diff": 23.06
+   }
+  }
+ },
+ "regions": {
+  "home-header": {
+   "before-asis": {
+    "pixels_differing": 0.0709,
+    "mean_abs_diff": 6.82
+   },
+   "before-manrope": {
+    "pixels_differing": 0.0701,
+    "mean_abs_diff": 6.6
+   },
+   "after-asis": {
+    "pixels_differing": 0.0626,
+    "mean_abs_diff": 5.46
+   }
+  },
+  "home-rail": {
+   "before-asis": {
+    "pixels_differing": 0.0723,
+    "mean_abs_diff": 7.88
+   },
+   "before-manrope": {
+    "pixels_differing": 0.0718,
+    "mean_abs_diff": 7.74
+   },
+   "after-asis": {
+    "pixels_differing": 0.0491,
+    "mean_abs_diff": 4.47
+   }
+  },
+  "home-heading": {
+   "before-asis": {
+    "pixels_differing": 0.1693,
+    "mean_abs_diff": 23.54
+   },
+   "before-manrope": {
+    "pixels_differing": 0.1663,
+    "mean_abs_diff": 23.0
+   },
+   "after-asis": {
+    "pixels_differing": 0.0971,
+    "mean_abs_diff": 8.6
+   }
+  },
+  "home-networth-panel": {
+   "before-asis": {
+    "pixels_differing": 0.282,
+    "mean_abs_diff": 45.43
+   },
+   "before-manrope": {
+    "pixels_differing": 0.278,
+    "mean_abs_diff": 44.72
+   },
+   "after-asis": {
+    "pixels_differing": 0.1786,
+    "mean_abs_diff": 24.86
+   }
+  },
+  "home-coming-up": {
+   "before-asis": {
+    "pixels_differing": 0.1397,
+    "mean_abs_diff": 15.65
+   },
+   "before-manrope": {
+    "pixels_differing": 0.1353,
+    "mean_abs_diff": 14.7
+   },
+   "after-asis": {
+    "pixels_differing": 0.1304,
+    "mean_abs_diff": 14.21
+   }
+  },
+  "home-next-step": {
+   "before-asis": {
+    "pixels_differing": 0.3288,
+    "mean_abs_diff": 51.18
+   },
+   "before-manrope": {
+    "pixels_differing": 0.3285,
+    "mean_abs_diff": 51.06
+   },
+   "after-asis": {
+    "pixels_differing": 0.1657,
+    "mean_abs_diff": 12.95
+   }
+  },
+  "iphone-header": {
+   "before-asis": {
+    "pixels_differing": 0.1757,
+    "mean_abs_diff": 20.81
+   },
+   "before-manrope": {
+    "pixels_differing": 0.1759,
+    "mean_abs_diff": 20.5
+   },
+   "after-asis": {
+    "pixels_differing": 0.1632,
+    "mean_abs_diff": 18.4
+   }
+  },
+  "iphone-heading": {
+   "before-asis": {
+    "pixels_differing": 0.4736,
+    "mean_abs_diff": 69.37
+   },
+   "before-manrope": {
+    "pixels_differing": 0.4654,
+    "mean_abs_diff": 67.85
+   },
+   "after-asis": {
+    "pixels_differing": 0.2278,
+    "mean_abs_diff": 21.08
+   }
+  },
+  "iphone-networth-panel": {
+   "before-asis": {
+    "pixels_differing": 0.4976,
+    "mean_abs_diff": 60.81
+   },
+   "before-manrope": {
+    "pixels_differing": 0.5298,
+    "mean_abs_diff": 73.01
+   },
+   "after-asis": {
+    "pixels_differing": 0.2625,
+    "mean_abs_diff": 27.54
+   }
+  },
+  "iphone-bottom-nav": {
+   "before-asis": {
+    "pixels_differing": 0.2156,
+    "mean_abs_diff": 20.1
+   },
+   "before-manrope": {
+    "pixels_differing": 0.2121,
+    "mean_abs_diff": 18.58
+   },
+   "after-asis": {
+    "pixels_differing": 0.1742,
+    "mean_abs_diff": 17.8
+   }
+  },
+  "page-header-money": {
+   "before-asis": {
+    "pixels_differing": 0.0967,
+    "mean_abs_diff": 12.72
+   },
+   "before-manrope": {
+    "pixels_differing": 0.0935,
+    "mean_abs_diff": 12.3
+   },
+   "after-asis": {
+    "pixels_differing": 0.0842,
+    "mean_abs_diff": 9.84
+   }
+  },
+  "canvas-08-source": {
+   "before-asis": {
+    "pixels_differing": 0.2846,
+    "mean_abs_diff": 27.18
+   },
+   "before-manrope": {
+    "pixels_differing": 0.2817,
+    "mean_abs_diff": 26.56
+   },
+   "after-asis": {
+    "pixels_differing": 0.2175,
+    "mean_abs_diff": 19.4
+   }
+  },
+  "canvas-09-review": {
+   "before-asis": {
+    "pixels_differing": 0.3425,
+    "mean_abs_diff": 27.6
+   },
+   "before-manrope": {
+    "pixels_differing": 0.3412,
+    "mean_abs_diff": 27.16
+   },
+   "after-asis": {
+    "pixels_differing": 0.3207,
+    "mean_abs_diff": 26.39
+   }
+  },
+  "canvas-10-confirm": {
+   "before-asis": {
+    "pixels_differing": 0.4994,
+    "mean_abs_diff": 29.1
+   },
+   "before-manrope": {
+    "pixels_differing": 0.4983,
+    "mean_abs_diff": 28.58
+   },
+   "after-asis": {
+    "pixels_differing": 0.416,
+    "mean_abs_diff": 23.03
+   }
+  }
+ }
+}
