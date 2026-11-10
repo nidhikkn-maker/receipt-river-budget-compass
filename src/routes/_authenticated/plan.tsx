@@ -3,7 +3,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Area, AreaChart, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
-import { Check, Pause, Play, Trash2, X } from "lucide-react";
+import { Check, Pause, Play, X } from "lucide-react";
 import { PageTitle, Stat } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,6 +20,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { confirmAction } from "@/lib/confirm";
 import { bulkTotals, markableKey, markableUpcoming } from "@/lib/mark-done";
+import { ArchivedTableRecords, TableArchiveButton } from "@/components/ArchivedRecords";
+import { commitmentArchiveProblem, splitByTableArchive } from "@/lib/records-archive";
 
 export const Route = createFileRoute("/_authenticated/plan")({
   head: () => ({
@@ -46,7 +48,9 @@ function Plan() {
   const [days, setDays] = useReviewView("forecast-days", 30);
   const [withUnconfirmed, setWithUnconfirmed] = useReviewView("forecast-unconfirmed", false);
   const p = usePosition(days, withUnconfirmed);
-  const { commitments, saveCommitment, removeCommitment, confirmCommitment, preferences } = useStore();
+  const { commitments, saveCommitment, confirmCommitment, preferences } = useStore();
+  // No delete: an ended (cancelled) payment can be archived; its row and history stay, and the plan does not change (P0-013).
+  const { active: listed, archived: archivedCommitments } = splitByTableArchive(preferences, "commitments", commitments);
   const today = todayISO();
   const short = p.forecast.shortDates;
   const markable = markableUpcoming(p.upcoming.slice(0, 40), commitments);
@@ -170,7 +174,7 @@ function Plan() {
         <div className="min-w-0">
           <h2 className="mb-2 font-display text-lg font-bold">Recurring & subscriptions</h2>
           <ul className="space-y-2">
-            {commitments.map((c) => {
+            {listed.map((c) => {
               const st = dueStatus(c, today);
               return (
                 <li key={c.id} id={`commitment-${c.id}`} className="scroll-mt-28 flex flex-wrap items-center gap-2 rounded-2xl border bg-card p-3">
@@ -187,11 +191,12 @@ function Plan() {
                   {c.status !== "cancelled" && (
                     <Button size="icon" variant="ghost" aria-label={`Cancel ${c.name}`} onClick={() => saveCommitment({ ...c, status: "cancelled" }).catch((e) => toast.error(e.message))}><X className="h-4 w-4" /></Button>
                   )}
-                  <Button size="icon" variant="ghost" aria-label={`Delete ${c.name}`} onClick={() => removeCommitment(c.id).catch((e) => toast.error(e.message))}><Trash2 className="h-4 w-4" /></Button>
+                  {c.status === "cancelled" && <TableArchiveButton table="commitments" id={c.id} name={c.name} noun="scheduled payment" disabledReason={commitmentArchiveProblem(c)} />}
                 </li>
               );
             })}
           </ul>
+          <div className="mt-3"><ArchivedTableRecords id="archived-commitments" table="commitments" rows={archivedCommitments} noun="scheduled payment" title={`Archived scheduled payments (${archivedCommitments.length})`} nameOf={(c) => c.name} describe={(c) => `${KIND_LABEL[c.kind]} · ${FREQ_LABEL[c.frequency]} · ${money(c.amount)} · ${STATUS_LABEL[c.status] ?? c.status}`} /></div>
 
           {p.subscriptions.detected.length > 0 && (
             <div className="mt-5">

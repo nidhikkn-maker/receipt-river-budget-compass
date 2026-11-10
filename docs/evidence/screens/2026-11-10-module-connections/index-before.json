@@ -1,0 +1,88 @@
+{
+ "shots": [
+  {
+   "name": "iphone-before-01-receivables-one-tap-remove.jpg",
+   "note": "Receivables: one-tap Remove beside each invoice (no confirmation, reason or record)"
+  },
+  {
+   "name": "iphone-before-02-receivables-after-remove.jpg",
+   "note": "After one tap: Kaveri Foods invoice is gone from storage; no archive, no history"
+  },
+  {
+   "name": "iphone-before-03-entities-delete.jpg",
+   "note": "Companies & years: Delete beside Edit"
+  },
+  {
+   "name": "iphone-before-04-entities-generic-confirm.jpg",
+   "note": "Generic 'Delete this profile?' — no reason; profile, tax years and account links are dropped"
+  },
+  {
+   "name": "iphone-before-05-vault-delete-icon.jpg",
+   "note": "DocuRepo: bin icon deletes the document row and its file"
+  },
+  {
+   "name": "iphone-before-06-vault-generic-confirm.jpg",
+   "note": "Generic 'Delete … and its file?' confirmation, no reason"
+  },
+  {
+   "name": "iphone-before-07-plan-delete-icon.jpg",
+   "note": "Plan: bin icon on a scheduled payment hard-deletes it in one tap"
+  },
+  {
+   "name": "ipad-before-01-receivables-one-tap-remove.jpg",
+   "note": "Receivables: one-tap Remove beside each invoice (no confirmation, reason or record)"
+  },
+  {
+   "name": "ipad-before-02-receivables-after-remove.jpg",
+   "note": "After one tap: Kaveri Foods invoice is gone from storage; no archive, no history"
+  },
+  {
+   "name": "ipad-before-03-entities-delete.jpg",
+   "note": "Companies & years: Delete beside Edit"
+  },
+  {
+   "name": "ipad-before-04-entities-generic-confirm.jpg",
+   "note": "Generic 'Delete this profile?' — no reason; profile, tax years and account links are dropped"
+  },
+  {
+   "name": "ipad-before-05-vault-delete-icon.jpg",
+   "note": "DocuRepo: bin icon deletes the document row and its file"
+  },
+  {
+   "name": "ipad-before-06-vault-generic-confirm.jpg",
+   "note": "Generic 'Delete … and its file?' confirmation, no reason"
+  },
+  {
+   "name": "ipad-before-07-plan-delete-icon.jpg",
+   "note": "Plan: bin icon on a scheduled payment hard-deletes it in one tap"
+  },
+  {
+   "name": "desktop-before-01-receivables-one-tap-remove.jpg",
+   "note": "Receivables: one-tap Remove beside each invoice (no confirmation, reason or record)"
+  },
+  {
+   "name": "desktop-before-02-receivables-after-remove.jpg",
+   "note": "After one tap: Kaveri Foods invoice is gone from storage; no archive, no history"
+  },
+  {
+   "name": "desktop-before-03-entities-delete.jpg",
+   "note": "Companies & years: Delete beside Edit"
+  },
+  {
+   "name": "desktop-before-04-entities-generic-confirm.jpg",
+   "note": "Generic 'Delete this profile?' — no reason; profile, tax years and account links are dropped"
+  },
+  {
+   "name": "desktop-before-05-vault-delete-icon.jpg",
+   "note": "DocuRepo: bin icon deletes the document row and its file"
+  },
+  {
+   "name": "desktop-before-06-vault-generic-confirm.jpg",
+   "note": "Generic 'Delete … and its file?' confirmation, no reason"
+  },
+  {
+   "name": "desktop-before-07-plan-delete-icon.jpg",
+   "note": "Plan: bin icon on a scheduled payment hard-deletes it in one tap"
+  }
+ ]
+}

@@ -2,7 +2,7 @@ import { SectionTabs } from "@/components/SectionTabs";
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
-import { Check, Trash2, X } from "lucide-react";
+import { Check, X } from "lucide-react";
 import { PageTitle } from "@/components/AppShell";
 import { Bar, Card, Row, fieldCls } from "@/components/Money";
 import { Button } from "@/components/ui/button";
@@ -15,6 +15,9 @@ import { addMonths } from "@/lib/planning";
 import { useIntelligence } from "@/lib/use-intelligence";
 import { CoolingOff, StressTest } from "@/components/StrategyStressCooling";
 import { DecisionMemory } from "@/components/DecisionMemory";
+import { archiveInList, restoreInList } from "@/lib/archive";
+import { recordIsArchived, type Archivable } from "@/lib/records-archive";
+import { ArchivedRecords, useArchiveFlow } from "@/components/ArchivedRecords";
 
 export const Route = createFileRoute("/_authenticated/strategy")({
   head: () => ({
@@ -220,28 +223,32 @@ function Milestones() {
   const { store, metrics, today } = useIntelligence();
   const { preferences: pr, savePreferences } = store;
   const [form, setForm] = useState({ name: "", metric: "emergency_amount" as MilestoneMetric, target: 0, targetDate: "", loanName: "", notify: false });
-  const list = pr.milestones;
-  // Record today's verified value once per day so progress history builds up automatically.
+  const all: Archivable<Milestone>[] = pr.milestones;
+  // No delete (P0-016): a milestone is archived with who/when/why; its progress history is kept and no longer updated.
+  const list = all.filter((m) => !recordIsArchived(m));
+  const archived = all.filter((m) => recordIsArchived(m));
+  const flow = useArchiveFlow(async (req, who) => { await savePreferences({ ...pr, milestones: req.mode === "archive" ? archiveInList(all, req.id, who) : restoreInList(all, req.id, who) }); });
+  // Record today's verified value once per day so progress history builds up automatically (archived milestones stay as stored).
   useEffect(() => {
     if (!list.length || list.every((m) => m.history.some((h) => h.date === today))) return;
-    void savePreferences({ ...pr, milestones: list.map((m) => recordProgress(m, metricValue(m, metrics), today)) }).catch(() => {});
+    void savePreferences({ ...pr, milestones: all.map((m) => (recordIsArchived(m) ? m : recordProgress(m, metricValue(m, metrics), today))) }).catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [list.length, today]);
   const add = async () => {
     if (!form.name.trim() || !Number.isFinite(form.target) || form.target < 0 || (!["card_debt", "loan_balance"].includes(form.metric) && form.target === 0) || (form.metric === "loan_balance" && !form.loanName)) { toast.error("Enter a name, valid target and loan where needed"); return; }
     const m: Milestone = { id: crypto.randomUUID(), name: form.name, metric: form.metric, target: form.target, targetDate: form.targetDate || null, loanName: form.loanName || undefined, notify: form.notify, history: [], createdAt: today, manual: form.metric === "custom" ? 0 : undefined };
     const start = metricValue(m, metrics);
-    try { await savePreferences({ ...pr, milestones: [...list, recordProgress({ ...m, start }, start, today)] }); setForm({ ...form, name: "", target: 0 }); toast.success("Milestone added"); } catch (e) { toast.error((e as Error).message); }
+    try { await savePreferences({ ...pr, milestones: [...all, recordProgress({ ...m, start }, start, today)] }); setForm({ ...form, name: "", target: 0 }); toast.success("Milestone added"); } catch (e) { toast.error((e as Error).message); }
   };
   const update = async (id: string, patch: Partial<Milestone>) => {
     if (patch.manual !== undefined && (!Number.isFinite(patch.manual) || patch.manual < 0)) { toast.error("Progress cannot be negative"); return; }
-    try { await savePreferences({ ...pr, milestones: list.map((m) => m.id === id ? recordProgress({ ...m, ...patch }, metricValue({ ...m, ...patch }, metrics), today) : m) }); } catch (e) { toast.error((e as Error).message); }
+    try { await savePreferences({ ...pr, milestones: all.map((m) => m.id === id ? recordProgress({ ...m, ...patch }, metricValue({ ...m, ...patch }, metrics), today) : m) }); } catch (e) { toast.error((e as Error).message); }
   };
   const presets: [string, MilestoneMetric, number][] = [["First ₹1 lakh emergency reserve", "emergency_amount", 100000], ["3 months emergency cover", "emergency_months", 3], ["Clear credit card dues", "card_debt", 0], ["₹10 lakh net worth", "net_worth", 1000000]];
   return (
     <>
       {list.map((m) => { const pg = milestoneProgress(m, metrics, today); const months = m.metric === "emergency_months"; const fmt = (n: number) => (months ? `${n} mo` : money(n)); return (
-        <Card key={m.id} title={m.name} action={<Button size="icon" variant="ghost" aria-label="Delete milestone" onClick={() => confirm("Delete this milestone?") && savePreferences({ ...pr, milestones: list.filter((x) => x.id !== m.id) })}><Trash2 className="h-4 w-4" /></Button>}>
+        <Card key={m.id} title={m.name} action={<Button size="sm" variant="ghost" aria-label={`Archive milestone ${m.name}`} onClick={() => flow.ask({ mode: "archive", id: m.id, name: m.name, noun: "milestone" })}>Archive</Button>}>
           <Bar pct={pg.pct} />
           <div className="mt-1 text-xs text-muted-foreground">{pg.done ? "Achieved 🎉" : `${pg.pct}% · ${METRIC_LABEL[m.metric]}`}</div>
           <Row label="Current" value={fmt(pg.value)} strong />
@@ -254,6 +261,10 @@ function Milestones() {
           <label className="mt-2 flex items-center gap-2 text-xs"><input type="checkbox" checked={m.notify} onChange={(e) => update(m.id, { notify: e.target.checked })} /> Celebrate on Home when achieved</label>
         </Card>
       ); })}
+      <ArchivedRecords id="archived-milestones" title={`Archived milestones (${archived.length})`} noun="milestone" userId={flow.userId}
+        items={archived.map((m) => ({ id: m.id, name: m.name, detail: `${METRIC_LABEL[m.metric]} · target ${m.metric === "emergency_months" ? `${m.target} mo` : money(m.target)} · ${m.history.length} progress record${m.history.length === 1 ? "" : "s"}`, state: m }))}
+        onRestore={(it) => flow.ask({ mode: "restore", id: it.id, name: it.name, noun: "milestone" })} />
+      {flow.dialog}
       <Card title="New milestone">
         <div className="mb-3 flex flex-wrap gap-2">{presets.map(([n, mt, t]) => <Button key={n} size="sm" variant="outline" onClick={() => setForm({ ...form, name: n, metric: mt, target: t })}>{n}</Button>)}</div>
         <div className="grid gap-3 sm:grid-cols-2">

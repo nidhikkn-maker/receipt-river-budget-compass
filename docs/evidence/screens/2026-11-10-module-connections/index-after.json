@@ -1,0 +1,148 @@
+{
+ "shots": [
+  {
+   "name": "iphone-after-01-receivables-archive.jpg",
+   "note": "Receivables: Archive instead of Remove; totals include archived"
+  },
+  {
+   "name": "iphone-after-02-receivables-archive-confirm.jpg",
+   "note": "Archive confirmation with a required reason"
+  },
+  {
+   "name": "iphone-after-03-receivables-archived-view.jpg",
+   "note": "Archived invoices: who, when, why, history and Restore; figures unchanged"
+  },
+  {
+   "name": "iphone-after-04-entities-archive.jpg",
+   "note": "Companies & years: Archive replaces Delete; tax years and links are kept"
+  },
+  {
+   "name": "iphone-after-05-entities-archive-confirm.jpg",
+   "note": "Archive profile confirmation with a required reason"
+  },
+  {
+   "name": "iphone-after-06-entities-archived-view.jpg",
+   "note": "Archived profiles with tax years kept and Restore"
+  },
+  {
+   "name": "iphone-after-07-vault-archive.jpg",
+   "note": "DocuRepo: Archive instead of the bin icon; file and links are kept"
+  },
+  {
+   "name": "iphone-after-08-vault-archive-confirm.jpg",
+   "note": "Archive document confirmation with a required reason"
+  },
+  {
+   "name": "iphone-after-09-vault-archived-view.jpg",
+   "note": "Archived documents with who/when/why and Restore"
+  },
+  {
+   "name": "iphone-after-10-plan-archive.jpg",
+   "note": "Plan: Archive on a cancelled payment only; an active one shows Cancel first"
+  },
+  {
+   "name": "iphone-after-11-plan-archive-confirm.jpg",
+   "note": "Archive scheduled payment confirmation"
+  },
+  {
+   "name": "iphone-after-12-plan-archived-view.jpg",
+   "note": "Archived scheduled payments with Restore"
+  },
+  {
+   "name": "ipad-after-01-receivables-archive.jpg",
+   "note": "Receivables: Archive instead of Remove; totals include archived"
+  },
+  {
+   "name": "ipad-after-02-receivables-archive-confirm.jpg",
+   "note": "Archive confirmation with a required reason"
+  },
+  {
+   "name": "ipad-after-03-receivables-archived-view.jpg",
+   "note": "Archived invoices: who, when, why, history and Restore; figures unchanged"
+  },
+  {
+   "name": "ipad-after-04-entities-archive.jpg",
+   "note": "Companies & years: Archive replaces Delete; tax years and links are kept"
+  },
+  {
+   "name": "ipad-after-05-entities-archive-confirm.jpg",
+   "note": "Archive profile confirmation with a required reason"
+  },
+  {
+   "name": "ipad-after-06-entities-archived-view.jpg",
+   "note": "Archived profiles with tax years kept and Restore"
+  },
+  {
+   "name": "ipad-after-07-vault-archive.jpg",
+   "note": "DocuRepo: Archive instead of the bin icon; file and links are kept"
+  },
+  {
+   "name": "ipad-after-08-vault-archive-confirm.jpg",
+   "note": "Archive document confirmation with a required reason"
+  },
+  {
+   "name": "ipad-after-09-vault-archived-view.jpg",
+   "note": "Archived documents with who/when/why and Restore"
+  },
+  {
+   "name": "ipad-after-10-plan-archive.jpg",
+   "note": "Plan: Archive on a cancelled payment only; an active one shows Cancel first"
+  },
+  {
+   "name": "ipad-after-11-plan-archive-confirm.jpg",
+   "note": "Archive scheduled payment confirmation"
+  },
+  {
+   "name": "ipad-after-12-plan-archived-view.jpg",
+   "note": "Archived scheduled payments with Restore"
+  },
+  {
+   "name": "desktop-after-01-receivables-archive.jpg",
+   "note": "Receivables: Archive instead of Remove; totals include archived"
+  },
+  {
+   "name": "desktop-after-02-receivables-archive-confirm.jpg",
+   "note": "Archive confirmation with a required reason"
+  },
+  {
+   "name": "desktop-after-03-receivables-archived-view.jpg",
+   "note": "Archived invoices: who, when, why, history and Restore; figures unchanged"
+  },
+  {
+   "name": "desktop-after-04-entities-archive.jpg",
+   "note": "Companies & years: Archive replaces Delete; tax years and links are kept"
+  },
+  {
+   "name": "desktop-after-05-entities-archive-confirm.jpg",
+   "note": "Archive profile confirmation with a required reason"
+  },
+  {
+   "name": "desktop-after-06-entities-archived-view.jpg",
+   "note": "Archived profiles with tax years kept and Restore"
+  },
+  {
+   "name": "desktop-after-07-vault-archive.jpg",
+   "note": "DocuRepo: Archive instead of the bin icon; file and links are kept"
+  },
+  {
+   "name": "desktop-after-08-vault-archive-confirm.jpg",
+   "note": "Archive document confirmation with a required reason"
+  },
+  {
+   "name": "desktop-after-09-vault-archived-view.jpg",
+   "note": "Archived documents with who/when/why and Restore"
+  },
+  {
+   "name": "desktop-after-10-plan-archive.jpg",
+   "note": "Plan: Archive on a cancelled payment only; an active one shows Cancel first"
+  },
+  {
+   "name": "desktop-after-11-plan-archive-confirm.jpg",
+   "note": "Archive scheduled payment confirmation"
+  },
+  {
+   "name": "desktop-after-12-plan-archived-view.jpg",
+   "note": "Archived scheduled payments with Restore"
+  }
+ ]
+}

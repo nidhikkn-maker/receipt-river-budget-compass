@@ -1,4 +1,5 @@
 /** Company and person profiles (v6 "Companies and past years"). Pure rules; saved in owner preferences. */
+import type { ArchiveState } from "./archive";
 
 export const ENTITY_KINDS = {
   individual: { label: "Individual", panType: "P" },
@@ -11,7 +12,8 @@ export const ENTITY_KINDS = {
 } as const;
 export type EntityKind = keyof typeof ENTITY_KINDS;
 
-export interface EntityProfile {
+/** Archive fields (P0-011) ride on the profile and are kept by cleanEntities. */
+export interface EntityProfile extends ArchiveState {
   id: string;
   name: string;
   kind: EntityKind;
@@ -110,6 +112,11 @@ export function cleanEntities(raw: unknown): EntityProfile[] {
       ...(Array.isArray(x.activities) ? { activities: x.activities.filter((q) => typeof q === "string").slice(0, 20) } : {}),
       ...(typeof x.fyEnd === "string" && /^\d{2}-\d{2}$/.test(x.fyEnd) ? { fyEnd: x.fyEnd } : {}),
       ...(Array.isArray(x.related) ? { related: x.related.filter((q) => q && typeof q.name === "string").slice(0, 30).map((q) => ({ name: String(q.name).slice(0, 160), relation: String(q.relation ?? "").slice(0, 60), pan: typeof q.pan === "string" ? q.pan : null, cin: typeof q.cin === "string" ? q.cin : null })) } : {}),
-      ...(Array.isArray(x.verified) ? { verified: x.verified.filter((q) => typeof q === "string").slice(0, 40) } : {}) }));
+      ...(Array.isArray(x.verified) ? { verified: x.verified.filter((q) => typeof q === "string").slice(0, 40) } : {}),
+      // Archive status and its append-only history are shown exactly as stored (P0-011).
+      ...(typeof x.archivedAt === "string" ? { archivedAt: x.archivedAt } : {}),
+      ...(typeof x.archivedBy === "string" ? { archivedBy: x.archivedBy } : {}),
+      ...(typeof x.archiveReason === "string" ? { archiveReason: x.archiveReason } : {}),
+      ...(Array.isArray(x.archiveHistory) ? { archiveHistory: x.archiveHistory } : {}) }));
   // No count cap: every stored company stays visible. Display tidying above never reaches storage (preserve-records.ts).
 }

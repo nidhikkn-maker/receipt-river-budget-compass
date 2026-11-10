@@ -77,6 +77,9 @@ export const PREFERENCE_REFS: readonly RefRule[] = [
   { path: "savedViews[].filters.memberId", table: "family_members", ignore: ["all", "me"], why: "Saved Transactions view filtered by family member" },
   { path: "merchantGroupingHistory[].entryIds[]", table: "expenses", why: "Entries bound to a grouping decision" },
   { path: "merchantGroupingHistory[].entrySnapshot[].id", table: "expenses", why: "Entry snapshot used for reversal" },
+  // Archive status of table rows (records-archive.ts, P0-008/012/013/014): the row id and the "<table>:<id>" entry key follow the row.
+  ...(["loans", "goals", "commitments", "asset_valuations", "documents"] as const).map((t): RefRule => ({ path: "recordArchive[].recordId", table: t, when: (x) => x["table"] === t, why: `Archive status of a ${t} row` })),
+  { path: "recordArchive[].id", encoding: "embedded", why: "Archive entry key \"<table>:<row id>\"" },
   { path: "mapLinks[].from", encoding: "node-key", why: "Owner-drawn money-map link" },
   { path: "mapLinks[].to", encoding: "node-key", why: "Owner-drawn money-map link" },
   { path: "mapPositions{key}", encoding: "node-key", why: "Money-map card position" },

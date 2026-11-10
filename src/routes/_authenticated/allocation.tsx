@@ -10,6 +10,9 @@ import { accountBalance, isLiability } from "@/lib/ledger";
 import { todayISO } from "@/lib/use-position";
 import { suggestAllocation, validateAllocation, plannedVsActual, type AllocationLine, type AllocationPlan, type Bucket } from "@/lib/allocation";
 import { Trash2 } from "lucide-react";
+import { archiveInList, restoreInList } from "@/lib/archive";
+import { recordIsArchived, type Archivable } from "@/lib/records-archive";
+import { ArchivedRecords, useArchiveFlow } from "@/components/ArchivedRecords";
 
 export const Route = createFileRoute("/_authenticated/allocation")({
   head: () => ({
@@ -28,6 +31,12 @@ export const Route = createFileRoute("/_authenticated/allocation")({
 function AllocationPage() {
   const { transactions, accounts, commitments, loans, goals, budgets, preferences, savePreferences } = useStore();
   const today = todayISO();
+  // No delete (P0-016): a saved plan is archived with who/when/why and can be restored. Plans never move money.
+  const activePlans = preferences.allocationPlans.filter((p) => !recordIsArchived(p));
+  const archivedPlans: Archivable<AllocationPlan>[] = preferences.allocationPlans.filter((p) => recordIsArchived(p));
+  const planFlow = useArchiveFlow(async (req, who) => {
+    await savePreferences({ ...preferences, allocationPlans: req.mode === "archive" ? archiveInList(preferences.allocationPlans, req.id, who) : restoreInList(preferences.allocationPlans, req.id, who) });
+  });
   const [amount, setAmount] = useState("");
   const [title, setTitle] = useState("Salary");
   const [horizon, setHorizon] = useState(30);
@@ -59,7 +68,7 @@ function AllocationPage() {
     try {
       validateAllocation(lines, amt);
       const plan: AllocationPlan = { id: crypto.randomUUID(), title: title.trim() || "Income", incomeDate: today, amount: amt, lines, carryForward: true, createdAt: new Date().toISOString() };
-      await savePreferences({ ...preferences, allocationPlans: [plan, ...preferences.allocationPlans].slice(0, 60) });
+      await savePreferences({ ...preferences, allocationPlans: [plan, ...preferences.allocationPlans] }); // never capped: saved plans are kept (retention.ts)
       setLines(null); setAmount("");
       toast.success("Plan saved — no money was moved");
     } catch (e) { toast.error(e instanceof Error ? e.message : "Couldn't save the plan"); }
@@ -107,16 +116,19 @@ function AllocationPage() {
 
       <section className="rounded-3xl border bg-card p-5">
         <h2 className="mb-3 font-display text-lg font-bold">Saved plans</h2>
-        {!preferences.allocationPlans.length && <p className="text-sm text-muted-foreground">No plans yet. Enter an income amount above and tap “Suggest a plan”.</p>}
+        {!activePlans.length && <p className="text-sm text-muted-foreground">{preferences.allocationPlans.length ? "No active plans. Archived ones are listed below." : "No plans yet. Enter an income amount above and tap “Suggest a plan”."}</p>}
         <ul className="divide-y">
-          {preferences.allocationPlans.map((p) => <PlanRow key={p.id} plan={p} onDelete={async () => { await savePreferences({ ...preferences, allocationPlans: preferences.allocationPlans.filter((x) => x.id !== p.id) }); toast.success("Plan removed"); }} />)}
+          {activePlans.map((p) => <PlanRow key={p.id} plan={p} onArchive={() => planFlow.ask({ mode: "archive", id: p.id, name: p.title, noun: "allocation plan" })} />)}
         </ul>
+        <div className="mt-3"><ArchivedRecords id="archived-plans" title={`Archived plans (${archivedPlans.length})`} noun="allocation plan" userId={planFlow.userId}
+          items={archivedPlans.map((p) => ({ id: p.id, name: p.title, detail: `${p.incomeDate} · ${money(p.amount)} received`, state: p }))} onRestore={(it) => planFlow.ask({ mode: "restore", id: it.id, name: it.name, noun: "allocation plan" })} /></div>
+        {planFlow.dialog}
       </section>
     </div>
   );
 }
 
-function PlanRow({ plan, onDelete }: { plan: AllocationPlan; onDelete: () => void }) {
+function PlanRow({ plan, onArchive }: { plan: AllocationPlan; onArchive: () => void }) {
   const { transactions, accounts, budgets, commitments } = useStore();
   const [open, setOpen] = useState(false);
   const actual = useMemo(() => {
@@ -169,7 +181,7 @@ function PlanRow({ plan, onDelete }: { plan: AllocationPlan; onDelete: () => voi
               ))}
             </tbody>
           </table>
-          <Button size="sm" variant="outline" className="mt-2" onClick={onDelete}>Delete plan</Button>
+          <Button size="sm" variant="outline" className="mt-2" onClick={onArchive}>Archive plan</Button>
         </div>
       )}
     </li>

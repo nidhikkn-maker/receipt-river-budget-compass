@@ -1,0 +1,41 @@
+// P0-008 / P0-013 (goals) repro (before fix): Wealth > Loans and Goals delete in one tap; the store hard-deletes rows.
+import { readFileSync } from "node:fs";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { defaultPreferences } from "@/lib/preferences";
+import { callsOf, reset, spy } from "./harness";
+
+vi.mock("@/lib/store", async () => ({ useStore: (await import("./harness")).useStoreMock }));
+vi.mock("../LoanFundingPanel", () => ({ LoanFundingPanel: () => null }));
+vi.mock("../books/LoanBalanceReview", () => ({ LoanBalanceReview: () => null }));
+vi.mock("recharts", () => ({ ResponsiveContainer: () => null, LineChart: () => null, Line: () => null, XAxis: () => null, YAxis: () => null, Tooltip: () => null }));
+import { GoalsPanel, LoansPanel } from "../WealthPanels";
+
+const loan = { id: "loan-1", name: "SBI home loan", accountId: "acc-loan", principal: 2400000, rate: 8.5, emi: 24000, nextDue: "2026-12-05", provider: "SBI", loanType: "home", original: 3000000, startDate: "2021-01-01", prepaymentTerms: "", foreclosurePct: 0, sourceTransactionId: null, payments: [], status: "active" };
+const goal = { id: "goal-1", name: "School fees", target: 200000, saved: 50000, monthly: 10000, reserve: true };
+beforeEach(() => reset(defaultPreferences() as unknown as Record<string, unknown>, { loans: [loan], goals: [goal], removeLoan: spy("removeLoan"), removeGoal: spy("removeGoal"), saveLoan: spy("saveLoan"), saveGoal: spy("saveGoal"), recordLoanPayment: spy("recordLoanPayment") }));
+afterEach(cleanup);
+const src = readFileSync("src/lib/store.tsx", "utf8");
+const body = (name: string) => src.slice(src.indexOf(`const ${name}:`), src.indexOf(`const ${name}:`) + 400);
+
+describe("P0-008 repro: loans", () => {
+  it("the Delete icon on a loan calls removeLoan at once — no confirmation, no reason", () => {
+    render(<LoansPanel />);
+    fireEvent.click(screen.getByRole("button", { name: `Delete ${loan.name}` }));
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(callsOf("removeLoan").map((c) => c.args[0])).toEqual([loan.id]);
+  });
+  it("store.removeLoan hard-deletes the loans row and archives the linked account as a side effect", () => {
+    expect(body("removeLoan")).toMatch(/from\("loans"\)\.delete\(\)/);
+    expect(body("removeLoan")).toMatch(/update\(\{ archived: true \}\)/);
+  });
+});
+
+describe("P0-013 repro: goals", () => {
+  it("the Delete icon on a goal calls removeGoal at once, and the store hard-deletes the goals row", () => {
+    render(<GoalsPanel />);
+    fireEvent.click(screen.getByRole("button", { name: `Delete ${goal.name}` }));
+    expect(callsOf("removeGoal").map((c) => c.args[0])).toEqual([goal.id]);
+    expect(body("removeGoal")).toMatch(/from\("goals"\)\.delete\(\)/);
+  });
+});

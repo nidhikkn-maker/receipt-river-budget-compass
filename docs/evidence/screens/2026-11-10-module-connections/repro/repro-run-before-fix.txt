@@ -1,0 +1,18 @@
+ ✓ src/components/records-archive/commitments.repro.test.tsx > P0-013 repro: scheduled payments > the Delete icon calls removeCommitment at once (no confirmation) and the store hard-deletes the row 558ms
+ ✓ src/components/records-archive/loans-goals.repro.test.tsx > P0-008 repro: loans > the Delete icon on a loan calls removeLoan at once — no confirmation, no reason 462ms
+ ✓ src/components/records-archive/loans-goals.repro.test.tsx > P0-008 repro: loans > store.removeLoan hard-deletes the loans row and archives the linked account as a side effect 1ms
+ ✓ src/components/records-archive/loans-goals.repro.test.tsx > P0-013 repro: goals > the Delete icon on a goal calls removeGoal at once, and the store hard-deletes the goals row 47ms
+ ✓ src/components/records-archive/tax-records.repro.test.tsx > P0-009 repro: GST invoices > Remove in the invoice register deletes the invoice with no confirmation or reason 376ms
+ ✓ src/components/records-archive/tax-records.repro.test.tsx > P0-010 repro: tax deductions and credits > Remove deletes a deduction line and a tax-credit line in one tap each 128ms
+ ✓ src/components/records-archive/vault.repro.test.tsx > P0-012 repro: vault documents > Delete calls store.removeDocument after a generic confirm, with no reason 482ms
+ ✓ src/components/records-archive/vault.repro.test.tsx > P0-012 repro: vault documents > store.removeDocument deletes the documents row and the stored file 1ms
+ ✓ src/components/records-archive/valuations.repro.test.tsx > P0-014 repro: valuations and lender evidence > Remove on a valuation calls store.removeValuation (hard delete of the asset_valuations row) after a generic confirm 345ms
+ ✓ src/components/records-archive/valuations.repro.test.tsx > P0-014 repro: valuations and lender evidence > Remove on a lender balance uses window.confirm, then drops the observation from storage 51ms
+ ✓ src/components/records-archive/planning.repro.test.tsx > P0-016 repro: planning records > allocation plan: Delete plan removes the saved plan in one tap 495ms
+ ✓ src/components/records-archive/planning.repro.test.tsx > P0-016 repro: planning records > milestone: Delete uses the browser confirm (blocked in installed apps) and then removes it with its history 164ms
+ ✓ src/components/records-archive/planning.repro.test.tsx > P0-016 repro: planning records > itinerary: Remove drops an item (even one linked to a booking) in one tap 87ms
+ ✓ src/components/records-archive/receivables.repro.test.tsx > P0-007 repro: receivables > one tap on Remove deletes the invoice from storage: no dialog, no reason, no archive record 181ms
+ ✓ src/components/records-archive/entities.repro.test.tsx > P0-011 repro: company profiles > Delete (generic yes/no, no reason) removes the profile, its tax years and its account links 203ms
+ Test Files  8 passed (8)
+      Tests  15 passed (15)
+git 6e532f5 (unmodified routes/components), 2026-11-10T03:22:16Z
