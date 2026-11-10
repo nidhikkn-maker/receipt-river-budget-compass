@@ -1,4 +1,4 @@
-import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore, type DragEvent, type FormEvent } from "react";
+import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore, type DragEvent, type FormEvent } from "react";
 import { Link } from "@tanstack/react-router";
 import { ArrowLeft, ArrowRight, Camera, Check, CheckCircle2, ChevronRight, Columns2, FileStack, FileUp, Mic, Package, PencilLine, Plane, ReceiptText, X } from "lucide-react";
 import { useStore } from "@/lib/store";
@@ -25,6 +25,8 @@ type Phase =
   | { kind: "done"; id?: string | undefined; label: string; followUp?: "asset" | "claim"; claimOpened?: boolean };
 
 const KIND_ICON: Record<CanvasKind, typeof ReceiptText> = { receipt: ReceiptText, statement: FileStack, travel: Plane, asset: Package };
+
+const useIsoLayoutEffect = typeof window === "undefined" ? useEffect : useLayoutEffect;
 
 /** Wide screens (KK decision 5): only there may the owner open the original side by side with the details. */
 const WIDE_QUERY = "(min-width: 1100px)";
@@ -100,11 +102,14 @@ export function IntelligentCanvas({ open, onOpenChange, scope }: { open: boolean
   useEffect(() => { const back = () => setConfirming(null); window.addEventListener("popstate", back); return () => window.removeEventListener("popstate", back); }, []);
 
   // The sticky "Continue to confirmation" mirrors the review's own button: enabled only when the review allows saving.
+  // Re-read after every render (before paint) and on every change the observer reports; the click handler reads it
+  // again, so the footer can never act while the review's own button is unavailable.
+  const ownSubmit = useCallback(() => [...(fieldsRef.current?.querySelectorAll<HTMLButtonElement>('form button[type="submit"]') ?? [])].pop() ?? null, []);
+  useIsoLayoutEffect(() => { const b = ownSubmit(); setReviewReady(!!b && !b.disabled); });
   useEffect(() => {
     const host = fieldsRef.current;
     if (!host) return;
-    const sync = () => { const b = [...host.querySelectorAll<HTMLButtonElement>('form button[type="submit"]')].pop(); setReviewReady(!!b && !b.disabled); };
-    sync();
+    const sync = () => { const b = ownSubmit(); setReviewReady(!!b && !b.disabled); };
     const o = new MutationObserver(sync);
     o.observe(host, { subtree: true, childList: true, attributes: true, attributeFilter: ["disabled"] });
     return () => o.disconnect();
@@ -162,9 +167,16 @@ export function IntelligentCanvas({ open, onOpenChange, scope }: { open: boolean
     formRef.current = form;
     setConfirming(readReviewForm(form, phase.kind === "receipt" ? phase.files : []));
   };
+  // A tap that arrives before the footer has caught up with the review never does nothing silently: it shows and
+  // announces why Continue is unavailable and moves focus to that reason.
+  const whyRef = useRef<HTMLParagraphElement>(null);
+  const [explain, setExplain] = useState(0);
+  useEffect(() => { if (explain) whyRef.current?.focus(); }, [explain]);
   const continueToConfirmation = () => {
     if (pending.current) return;
-    const form = fieldsRef.current?.querySelector("form");
+    const own = ownSubmit();
+    if (!own || own.disabled) { setReviewReady(false); setExplain((n) => n + 1); return; }
+    const form = own.form ?? fieldsRef.current?.querySelector("form");
     if (form) form.requestSubmit();
   };
   const confirmSave = () => {
@@ -318,7 +330,7 @@ export function IntelligentCanvas({ open, onOpenChange, scope }: { open: boolean
           {(phase.kind === "receipt" || phase.kind === "statement") && !confirming && <>
             <button type="button" className="sf-btn sf-btn-outline" disabled={saving} onClick={reset}><ArrowLeft aria-hidden />Start over</button>
             {phase.kind === "receipt" && <button type="button" className="sf-btn sf-btn-deep" disabled={!reviewReady || saving} aria-describedby={!reviewReady ? "sf-continue-why" : undefined} onClick={continueToConfirmation}>{saving ? "Saving…" : "Continue to confirmation"}<ArrowRight aria-hidden /></button>}
-            {phase.kind === "receipt" && !reviewReady && !saving && <p id="sf-continue-why" className="sf-foot-note">Finish the checks in Details first (e.g. “Looks right”).</p>}
+            {phase.kind === "receipt" && !reviewReady && !saving && <p id="sf-continue-why" ref={whyRef} tabIndex={-1} role="status" className="sf-foot-note">Finish the checks in Details first (e.g. “Looks right”).</p>}
             {phase.kind === "statement" && <p className="sf-foot-note">Confirm posting inside Statement Desk.</p>}
           </>}
           {confirming && <>

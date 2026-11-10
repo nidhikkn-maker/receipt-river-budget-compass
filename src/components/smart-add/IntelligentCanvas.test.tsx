@@ -113,6 +113,7 @@ describe("Intelligent Canvas steps", () => {
     expect(screen.getByLabelText("Merchant").closest("form")!.querySelector('button[type="submit"]')).toHaveTextContent("Continue to confirmation");
     expect(screen.queryByText(/Use the review's Save button/)).toBeNull();
     expect(footerContinue()).toHaveTextContent("Continue to confirmation");
+    await waitFor(() => expect(footerContinue()).toBeEnabled());
     fireEvent.click(footerContinue());
     expect(current()).toBe("3 · Confirm");
     expect(local.save).not.toHaveBeenCalled();
@@ -384,7 +385,7 @@ describe("narrow review with an optional side-by-side original (wide screens)", 
     // The reason Continue is unavailable stays, as one short line tied to the button.
     const source = readFileSync("src/components/smart-add/IntelligentCanvas.tsx", "utf8");
     expect(source).toMatch(/aria-describedby=\{!reviewReady \? "sf-continue-why" : undefined\}/);
-    expect(source).toMatch(/id="sf-continue-why" className="sf-foot-note">Finish the checks in Details first \(e\.g\. “Looks right”\)\.</);
+    expect(source).toMatch(/id="sf-continue-why"[^>]*className="sf-foot-note">Finish the checks in Details first \(e\.g\. “Looks right”\)\.</);
   });
 });
 
@@ -401,5 +402,29 @@ describe("guidance and keyboard rules", () => {
     expect(keyboardInset(852, 800, 0)).toBe(0);
     expect(keyboardInset(852, 516, 0)).toBe(336);
     expect(keyboardInset(852, 516, 40)).toBe(296);
+  });
+});
+
+describe("the footer never acts while the review's own button is unavailable", () => {
+  it("a tap in the gap before the footer catches up shows and focuses the reason, and saves nothing", async () => {
+    render(<IntelligentCanvas open onOpenChange={() => {}} />);
+    await open();
+    await waitFor(() => expect(footerContinue()).toBeEnabled());
+    const own = screen.getByLabelText("Merchant").closest("form")!.querySelector<HTMLButtonElement>('button[type="submit"]')!;
+    // Disable the review's own button and tap the footer in the same task, before the MutationObserver can run.
+    act(() => { own.disabled = true; fireEvent.click(footerContinue()); });
+    expect(current()).toBe("2 · Review");
+    const why = document.getElementById("sf-continue-why")!;
+    expect(why).toHaveTextContent("Finish the checks in Details first");
+    expect(why).toHaveAttribute("role", "status");
+    await waitFor(() => expect(document.activeElement).toBe(why));
+    expect(footerContinue()).toBeDisabled();
+    expect(footerContinue()).toHaveAttribute("aria-describedby", "sf-continue-why");
+    expect(local.save).not.toHaveBeenCalled();
+    act(() => { own.disabled = false; });
+    await waitFor(() => expect(footerContinue()).toBeEnabled());
+    fireEvent.click(footerContinue());
+    expect(current()).toBe("3 · Confirm");
+    expect(local.save).not.toHaveBeenCalled();
   });
 });
