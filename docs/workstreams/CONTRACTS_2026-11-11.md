@@ -13,6 +13,7 @@ A change to anything below needs a lead-approved contract change. Workstreams co
 - **`src/components/shell/SplitView.tsx`:** `SplitView({ label, items: SplitItem[], selectedId, onSelect, renderDetail, empty?, className? })`. This is the list/detail template for every index → detail screen.
 - **`src/components/shell/States.tsx`:** `LoadingState`, `EmptyState`, `ErrorState({ what, onRetry? })`, `OfflineState`, `UnauthorizedState`, `StaleState`, `UnsavedDraftState`, `ProposedBadge`.
   - **Every screen renders loading, empty, error (with Retry), offline and unauthorised states.** A failed read never looks like empty data (P0-004).
+  - **Denied reads (R14):** `useReadState(...areas)` from `src/lib/store.tsx` returns `'denied'` (render `UnauthorizedState`), `'failed'` (render `ErrorState` with Retry) or `'ok'`; the store also exposes `deniedAreas` and `loadErrorKind(area)`. Denied areas stay in `loadErrors`, so existing `loadFailed` checks still never show them as empty.
 - **Dialogs:**
   - `src/components/ConfirmDialog.tsx`: destructive, approval and typed confirmation.
   - `src/components/ValueDialog.tsx`: single-value edits.
