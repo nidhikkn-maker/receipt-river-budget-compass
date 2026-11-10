@@ -1,0 +1,104 @@
+{
+ "body": {
+  "count": 1,
+  "text": "Skip to content\nK\nGood afternoon, KK\n\nTuesday, 10 November · here's your day\n\nTo",
+  "rect": {
+   "x": 0,
+   "y": 0,
+   "w": 372,
+   "h": 1538.9
+  },
+  "style": {
+   "font-family": "-apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, Helvetica, Arial, \"Noto Sans Tamil\", sans-serif",
+   "font-weight": "400",
+   "font-size": "16px",
+   "line-height": "23.2px",
+   "letter-spacing": "normal",
+   "font-variant-numeric": "normal",
+   "border-radius": "0px",
+   "padding-top": "0px",
+   "padding-left": "0px",
+   "height": "1538.94px",
+   "width": "372px",
+   "background-color": "oklch(0.977 0.009 88)",
+   "color": "oklch(0.25 0.06 268)"
+  },
+  "platformFonts": []
+ },
+ "classicH1": {
+  "count": 1,
+  "text": "Good afternoon, KK",
+  "rect": {
+   "x": 18,
+   "y": 90,
+   "w": 336,
+   "h": 30.8
+  },
+  "style": {
+   "font-family": "\"Iowan Old Style\", \"Palatino Linotype\", \"Book Antiqua\", Georgia, serif",
+   "font-weight": "400",
+   "font-size": "27.528px",
+   "line-height": "30.8314px",
+   "letter-spacing": "-0.13764px",
+   "font-variant-numeric": "normal",
+   "border-radius": "0px",
+   "padding-top": "0px",
+   "padding-left": "0px",
+   "height": "30.8281px",
+   "width": "336px",
+   "background-color": "rgba(0, 0, 0, 0)",
+   "color": "oklch(0.985 0.006 85)"
+  },
+  "platformFonts": [
+   {
+    "familyName": "Liberation Serif",
+    "postScriptName": "LiberationSerif",
+    "isCustomFont": false,
+    "glyphCount": 18
+   }
+  ]
+ },
+ "__fonts": [
+  "Noto Sans Tamil 400 unloaded U+964-965, U+B82-BFA, U+",
+  "Noto Sans Tamil 400 unloaded U+100-2BA, U+2BD-2C5, U+",
+  "Noto Sans Tamil 400 unloaded U+0-FF, U+131, U+152-153",
+  "Noto Sans Tamil 600 unloaded U+964-965, U+B82-BFA, U+",
+  "Noto Sans Tamil 600 unloaded U+100-2BA, U+2BD-2C5, U+",
+  "Noto Sans Tamil 600 unloaded U+0-FF, U+131, U+152-153",
+  "Space Grotesk 700 unloaded U+102-103, U+110-111, U+",
+  "Space Grotesk 700 unloaded U+100-2BA, U+2BD-2C5, U+",
+  "Space Grotesk 700 unloaded U+0-FF, U+131, U+152-153",
+  "Lovable Camera 400 unloaded U+0-10FFFF"
+ ],
+ "__preloads": [
+  "image http://localhost:8088/app-icon-large.png"
+ ],
+ "__fontRequests": [],
+ "__smallTargets": [
+  "a \"Skip to content\" 1x1",
+  "a \"Thapal home\" 31x40",
+  "a \"Search\" 40x40",
+  "a \"Notifications\" 40x40",
+  "a \"Account: KK\" 34x34",
+  "a \"See the full story\" 133x21",
+  "a \"View all\" 47x20",
+  "input \"Take a photo of a receipt\" 1x1",
+  "a \"Open financial position\" 107x19",
+  "a \"Open investments\" 74x19",
+  "a \"\" 39x20",
+  "a \"\" 48x20",
+  "a \"\" 71x20",
+  "a \"\" 74x20",
+  "a \"\" 71x20",
+  "a \"\" 67x19",
+  "a \"\" 304x28",
+  "a \"\" 71x20",
+  "input \"Take a photo\" 1x1",
+  "input \"Choose photos\" 1x1",
+  "input \"Choose files\" 1x1"
+ ],
+ "__overflow": {
+  "docScrollW": 372,
+  "innerW": 372
+ }
+}

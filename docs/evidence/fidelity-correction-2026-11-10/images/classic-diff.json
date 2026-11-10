@@ -1,0 +1,38 @@
+{
+ "classic-desktop-dashboard.png": {
+  "size": "1283x794",
+  "pixels_changed": 0,
+  "fraction_changed": 0.0,
+  "max_channel_delta": 0
+ },
+ "classic-desktop-expenses.png": {
+  "size": "1283x794",
+  "pixels_changed": 0,
+  "fraction_changed": 0.0,
+  "max_channel_delta": 0
+ },
+ "classic-desktop-reports.png": {
+  "size": "1283x794",
+  "pixels_changed": 0,
+  "fraction_changed": 0.0,
+  "max_channel_delta": 0
+ },
+ "classic-iphone-dashboard.png": {
+  "size": "372x793",
+  "pixels_changed": 0,
+  "fraction_changed": 0.0,
+  "max_channel_delta": 0
+ },
+ "classic-iphone-expenses.png": {
+  "size": "372x793",
+  "pixels_changed": 0,
+  "fraction_changed": 0.0,
+  "max_channel_delta": 0
+ },
+ "classic-iphone-reports.png": {
+  "size": "372x793",
+  "pixels_changed": 0,
+  "fraction_changed": 0.0,
+  "max_channel_delta": 0
+ }
+}
