@@ -1,4 +1,6 @@
 import { confirmAction } from "@/lib/confirm";
+import { exportBackupData } from "@/lib/exports.functions";
+import { exportProblem } from "@/lib/exports";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useRef, useState } from "react";
 import { toast } from "sonner";
@@ -22,12 +24,14 @@ import { RoleBadge, TeamAccessSettings } from "@/components/TeamAccess";
 import { SmartDefaultsSettings } from "@/components/SmartDefaultsSettings";
 import { ReceiptProblemReports } from "@/components/ReceiptProblemReports";
 import { useStore } from "@/lib/store";
-import { BACKUP_TABLES, BACKUP_VERSION, createBackupZip, describeRestoreReport, investmentTablesToWrite, planRestore, readBackup, type Backup } from "@/lib/backup";
+import { BACKUP_VERSION, createBackupZip, describeRestoreReport, investmentTablesToWrite, planRestore, readBackup, type Backup } from "@/lib/backup";
 import { downloadBlob } from "@/lib/reports";
 import type { Database, Json } from "@/integrations/supabase/types";
 import { UnreadableRecordsNotice } from "@/components/UnreadableRecordsNotice";
 import { AccountRecovery, PasskeyDevices, SignOutOtherDevices } from "@/components/DeviceSecurity";
 import { withStepUp } from "@/lib/step-up";
+import { guardedRestore, previousRestoreLine, type GuardedRestoreResult, type RestoreDb } from "@/lib/restore-guard";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { ensureStepUp } from "@/lib/step-up-check";
 
 
@@ -57,20 +61,11 @@ function Settings() {
   const backup = async () => {
     setBusy(true);
     try {
-      const out: Backup["data"] = {};
-      for (const t of BACKUP_TABLES) {
-        out[t] = [];
-        for (let start = 0; ; start += 500) {
-          const order = t === "finance_preferences" ? "owner_id" : t === "category_budgets" ? "category" : "id";
-          const query = t === "expenses"
-            ? supabase.from("expenses").select("*").eq("employee_id", userId)
-            : supabase.from(t).select("*").eq("owner_id", userId);
-          const { data, error } = await query.order(order).range(start, start + 499);
-          if (error) throw new Error(error.message);
-          out[t]?.push(...(data ?? []));
-          if (!data || data.length < 500) break;
-        }
-      }
+      // P0-006: the records are read, authorised (step-up where required) and audited on the server; the browser adds the files.
+      const zipName = `ledgerline-backup-${new Date().toISOString().slice(0, 10)}.zip`;
+      const served = await withStepUp(() => exportBackupData({ data: { fileName: zipName } }));
+      if (!served.ok) throw Error(exportProblem(served.error));
+      const out = JSON.parse(served.json) as Backup["data"];
       const paths = new Set<string>();
       for (const e of out.expenses ?? []) for (const r of (e["receipts"] ?? []) as { path: string }[]) paths.add(r.path);
       for (const d of out.expense_drafts ?? []) for (const r of (d["receipts"] ?? []) as { path: string }[]) paths.add(r.path);
@@ -85,12 +80,15 @@ function Settings() {
         files[path] = new Uint8Array(await data.arrayBuffer());
       }
       const zip = createBackupZip({ app: "ledgerline", version: BACKUP_VERSION, owner: userId, name, exportedAt: new Date().toISOString(), data: out }, files);
-      downloadBlob(new Blob([new Uint8Array(zip).buffer], { type: "application/zip" }), `ledgerline-backup-${new Date().toISOString().slice(0, 10)}.zip`);
+      downloadBlob(new Blob([new Uint8Array(zip).buffer], { type: "application/zip" }), zipName); // authorised + audited above (records hash)
       toast.success("Backup downloaded");
     } catch (e) { toast.error((e as Error).message); } finally { setBusy(false); }
   };
 
-  const restore = async (f: File | undefined) => {
+  // P0-023: a backup restored before is never restored silently again: nothing changes and the earlier restore is shown;
+  // "Restore again" needs a reason (and the usual step-up), and is recorded.
+  const [repeat, setRepeat] = useState<{ file: File; line: string } | null>(null);
+  const restore = async (f: File | undefined, rerestoreReason: string | null = null) => {
     if (!f) return;
     setBusy(true);
     const staged: string[] = [];
@@ -100,7 +98,7 @@ function Settings() {
       const { backup: j, files } = readBackup(new Uint8Array(await f.arrayBuffer()), /\.zip$/i.test(f.name));
       const { data: restored, paths, report } = await planRestore(j, userId, { stageFiles: true });
       const summary = describeRestoreReport(report);
-      if (!await confirmAction(`Restore this backup into your account? Existing matching records will be updated. Current closed periods stay protected; backup closing history is retained as an unverified copy.${summary ? ` ${summary}.` : ""}`)) return;
+      if (!rerestoreReason && !await confirmAction(`Restore this backup into your account? Existing matching records will be updated. Current closed periods stay protected; backup closing history is retained as an unverified copy.${summary ? ` ${summary}.` : ""}`)) return;
       // Confirm before staging files so a long restore can't stop midway for re-confirmation.
       await ensureStepUp("restore_finance_backup");
       for (const [oldPath, newPath] of paths) {
@@ -115,10 +113,20 @@ function Settings() {
         if (error) throw Error("Couldn't restore a file — please try again");
         staged.push(newPath);
       }
-      const { data, error } = await withStepUp(() => supabase.rpc("restore_finance_backup", { payload: restored as Json, ...(j.name?.trim() ? { display_name: j.name.trim() } : {}) }));
-      if (error) throw Error("Restore stopped; your existing records are unchanged. Check the backup and try again.");
+      let outcome: GuardedRestoreResult;
+      try {
+        outcome = await withStepUp(() => guardedRestore({ owner: userId, data: restored, displayName: j.name?.trim() || undefined, rerestoreReason }, supabase as unknown as RestoreDb));
+      } catch (e) {
+        if (/reason of at least 5/.test((e as Error).message)) throw e;
+        throw Error("Restore stopped; your existing records are unchanged. Check the backup and try again.");
+      }
+      if (outcome.status === "previously_restored") {
+        // Nothing was written (staged files are removed below); show the earlier restore and offer an explicit re-restore.
+        setRepeat({ file: f, line: previousRestoreLine(outcome.previous, userId) });
+        return;
+      }
       committed = true;
-      const counts = { ...(data as { counts: Record<string, number> }).counts };
+      const counts = { ...outcome.counts };
       // Older server restore functions only know the original tables: write investment rows afterwards, under the
       // same owner-only row security. Ids are deterministic, so retrying the whole restore is safe.
       let investmentError = "";
@@ -179,6 +187,17 @@ function Settings() {
         <Card title="Restore from a backup" body="Pick a Thapal backup file. Records are added back (or updated if they already exist).">
           <Button variant="secondary" onClick={() => file.current?.click()} disabled={busy}><Upload className="h-4 w-4" />Choose backup file</Button>
           <input ref={file} type="file" accept="application/zip,application/json,.zip,.json" className="sr-only" aria-label="Backup file" onChange={(e) => restore(e.target.files?.[0])} />
+          <ConfirmDialog
+            open={!!repeat}
+            title="This backup was already restored"
+            description={`Nothing was changed. ${repeat?.line ?? ""}.`}
+            consequences={["Restoring it again updates matching records to the backup's copies (withdrawn entries stay as they are)", "The repeat is recorded with your reason"]}
+            reason={{ label: "Reason for restoring again", placeholder: "For example: records were changed by mistake", validate: (v) => (v.trim().length >= 5 ? null : "Give a reason of at least 5 characters") }}
+            confirmLabel="Restore again"
+            cancelLabel="Keep my records"
+            onConfirm={async (why) => { const f = repeat?.file; setRepeat(null); await restore(f, why); }}
+            onClose={() => setRepeat(null)}
+          />
         </Card>
         <Card title="Payment methods" body="Your UPI IDs, debit and credit cards, wallets and cash, each linked to its bank account.">
           <Button asChild variant="secondary"><Link to="/payment-methods">Manage payment methods</Link></Button>

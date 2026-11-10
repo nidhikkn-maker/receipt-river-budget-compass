@@ -4,8 +4,12 @@ import { Check, CloudOff, RefreshCw, TriangleAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useStore } from "@/lib/store";
 
-/** Small header pill showing whether saved figures are refreshing, current, offline or failed. Tap to refresh. */
-export function SyncStatus() {
+/**
+ * Small header pill showing whether saved figures are refreshing, current, offline or failed. Tap to refresh.
+ * `compact` (Signature Flow header): a 44 px icon button with the reference header's icon metrics; the words stay
+ * visible only when something needs attention (offline, failed or waiting), otherwise they are the accessible name.
+ */
+export function SyncStatus({ compact = false }: { compact?: boolean } = {}) {
   const { syncState, lastSyncedAt, pendingCount, refresh } = useStore();
   const navigate = useNavigate();
   const [, tick] = useState(0);
@@ -18,11 +22,21 @@ export function SyncStatus() {
     pendingCount > 0 ? `${pendingCount} waiting to sync` :
     mins == null || mins < 1 ? "Up to date" : `Updated ${mins} min ago`;
   const Icon = syncState === "syncing" ? RefreshCw : syncState === "offline" ? CloudOff : syncState === "error" ? TriangleAlert : Check;
+  const attention = syncState === "error" || syncState === "offline" || pendingCount > 0;
+  const go = () => (pendingCount > 0 ? void navigate({ to: "/sync-queue" }) : void refresh());
+  if (compact) {
+    return (
+      <button type="button" onClick={go} title={label} data-sync-state={syncState} data-attention={attention || undefined} className="sf-sync-btn">
+        <Icon aria-hidden className={syncState === "syncing" ? "animate-spin" : undefined} />
+        <span className={attention ? "sf-sync-label" : "sr-only"} aria-live="polite">{label}</span>
+      </button>
+    );
+  }
   return (
     <Button
       variant="ghost"
       type="button"
-      onClick={() => (pendingCount > 0 ? void navigate({ to: "/sync-queue" }) : void refresh())}
+      onClick={go}
       aria-live="polite"
       title={label}
       className={"flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold transition " +

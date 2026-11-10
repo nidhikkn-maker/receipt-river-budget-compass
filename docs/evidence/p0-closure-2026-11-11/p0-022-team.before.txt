@@ -1,0 +1,50 @@
+# P0-022 before-run: failure-injection T1-T3 on P9 + P10 WITHOUT P13 (the database as proposed before this change).
+# Command: bunx vitest run src/lib/failure-injection.test.ts -t P0-022 (2026-11-10T14:48:23Z). On today's applied schema (no P10) the team DELETE also succeeds
+# (policy 'Team expenses: delete', 0066:79); see p13-team-requests-sql.test.ts for the recorded P10-only refusal.
+ RUN  v4.1.12 /home/user/thapal-p3c
+ ❯ src/lib/failure-injection.test.ts (43 tests | 3 failed | 40 skipped) 3432ms
+     × T1. a team member's API DELETE and money edit are refused; audit rows cannot be deleted or truncated; the owner's figures are unchanged 69ms
+     × T2. withdrawal request → owner approves: withdrawn with requester and approver recorded, excluded from figures; the requester cannot decide; others cannot see or ask 17ms
+     × T3. correction request → Finance approves (consequential amount change); a rejected request changes nothing; reconciled entries keep amount and date 24ms
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 3 ⎯⎯⎯⎯⎯⎯⎯
+ FAIL  src/lib/failure-injection.test.ts > P0-022 team users: no deletes, permission-scoped requests, authorised approval — P9 + P10 + P13 > T1. a team member's API DELETE and money edit are refused; audit rows cannot be deleted or truncated; the owner's figures are unchanged
+AssertionError: expected 'Invalid account' to match /P13_REQUEST_REQUIRED/
+- Expected:
+/P13_REQUEST_REQUIRED/
++ Received:
+"Invalid account"
+ ❯ src/lib/failure-injection.test.ts:2148:134
+    2146|       const del = await supabase.from("expenses").delete().eq("id", f.…
+    2147|       expect(del.error?.message ?? `deleted ${JSON.stringify(del.data)…
+    2148|       expect((await api().from("expenses").update({ amount: 1, origina…
+       |                                                                                                                                      ^
+    2149|       expect((await api().from("transaction_audit").delete().eq("trans…
+    2150|       expect(await probe(db, M, "TRUNCATE public.transaction_audit")).…
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/3]⎯
+ FAIL  src/lib/failure-injection.test.ts > P0-022 team users: no deletes, permission-scoped requests, authorised approval — P9 + P10 + P13 > T2. withdrawal request → owner approves: withdrawn with requester and approver recorded, excluded from figures; the requester cannot decide; others cannot see or ask
+AssertionError: expected [Function] to throw error matching /can't ask for or decide/ but got 'Team change requests need an approved…'
+- Expected:
+/can't ask for or decide/
++ Received:
+"Team change requests need an approved database update (P13). Nothing was changed; the owner can still withdraw or correct their own entries."
+ ❯ src/lib/failure-injection.test.ts:2166:106
+    2164|       const f = await seedWithdrawFixture(db);
+    2165|       net.uid = X;
+    2166|       await expect(requestEntryChange({ entryId: f.lunch, kind: "withd…
+       |                                                                                                          ^
+    2167|       net.uid = M;
+    2168|       const rid = await requestEntryChange({ entryId: f.lunch, kind: "…
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/3]⎯
+ FAIL  src/lib/failure-injection.test.ts > P0-022 team users: no deletes, permission-scoped requests, authorised approval — P9 + P10 + P13 > T3. correction request → Finance approves (consequential amount change); a rejected request changes nothing; reconciled entries keep amount and date
+AssertionError: expected [Function] to throw error matching /cannot be changed by a correction req…/ but got 'Team change requests need an approved…'
+- Expected:
+/cannot be changed by a correction request/
++ Received:
+"Team change requests need an approved database update (P13). Nothing was changed; the owner can still withdraw or correct their own entries."
+ ❯ src/lib/failure-injection.test.ts:2195:146
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/3]⎯
+ Test Files  1 failed (1)
+      Tests  3 failed | 40 skipped (43)
+   Start at  14:48:18
+   Duration  5.08s (transform 1.03s, setup 194ms, import 1.23s, tests 3.43s, environment 0ms)
+# Probe on today's applied schema (drizzle 0000-0088, no proposed SQL): a manager with 'delete_expenses' switched on runs DELETE FROM public.expenses WHERE id = <owner's entry> as role authenticated -> 1 row deleted (policy 'Team expenses: delete', 0066:79). (2026-11-10T14:48:52Z)

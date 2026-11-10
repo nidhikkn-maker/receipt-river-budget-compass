@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { readFileSync } from "node:fs";
 import path from "node:path";
-import { PREVIEW_PANEL_POSITION, PreviewInfoPanel } from "./PreviewInfoPanel";
+import { PREVIEW_PANEL_POSITION, PREVIEW_PILL_HIDDEN_KEY, PreviewInfoPanel } from "./PreviewInfoPanel";
 import { buildVersion, classifyDataSource, parseBuiltAt, readPreviewInfo, SAMPLE_DATA_LABEL, UNKNOWN_DATA_LABEL } from "@/lib/preview-info";
 
 const SHA = "69ab3e2d4c1f0a9b8e7d6c5b4a39281706f5e4d3";
@@ -89,6 +89,27 @@ describe("PreviewInfoPanel", () => {
     fireEvent.click(screen.getByRole("button", { name: /^Preview build/ }));
     fireEvent.pointerDown(screen.getByText("page"));
     expect(screen.queryByRole("region", { name: "Preview build details" })).toBeNull();
+  });
+});
+
+describe("PreviewInfoPanel is small and can be hidden for the session", () => {
+  it("draws a 24 px pill inside its 44 px box, and Hide keeps it away for the rest of the session", () => {
+    sessionStorage.removeItem(PREVIEW_PILL_HIDDEN_KEY);
+    const first = render(<PreviewInfoPanel env={base} />);
+    const pill = screen.getByRole("button", { name: /^Preview build/ });
+    expect(pill.firstElementChild?.className).toMatch(/(?:^|\s)h-6(?:\s|$)/);
+    expect(pill.firstElementChild?.className).toMatch(/text-\[10px\]/);
+    const hide = screen.getByRole("button", { name: "Hide preview build details for this session" });
+    expect(hide.className).toMatch(/min-h-11/);
+    expect(hide.className).toMatch(/min-w-11/);
+    fireEvent.click(hide);
+    expect(screen.queryByRole("button", { name: /^Preview build/ })).toBeNull();
+    expect(sessionStorage.getItem(PREVIEW_PILL_HIDDEN_KEY)).toBe("1");
+    first.unmount();
+    // A new page in the same session (sessionStorage kept) does not show it again.
+    render(<PreviewInfoPanel env={base} />);
+    expect(screen.queryByRole("button", { name: /^Preview build/ })).toBeNull();
+    sessionStorage.removeItem(PREVIEW_PILL_HIDDEN_KEY);
   });
 });
 

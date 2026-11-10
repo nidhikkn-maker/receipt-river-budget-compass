@@ -40,7 +40,7 @@ export const THEME_STYLES: ThemeStyle[] = [
   { name: "apple-ledgerline", family: "Apple-Inspired Minimal", label: "Apple × Thapal", hint: "Apple-inspired simplicity with Thapal navy and gold.", swatch: ["#F7F8FB", "#FFFFFF", "#14265D", "#E6B43A"] },
   { name: "apple-glass", family: "Apple-Inspired Minimal", label: "Apple Glass", hint: "Layered translucent surfaces, restrained and readable.", swatch: ["#EEF1F6", "#FFFFFF", "#007AFF", "#E6B43A"] },
   // Batch B1: the approved Signature Flow look with its own navigation shell. Proposed until KK approves the build.
-  { name: "signature-flow", family: "Signature Flow (proposed)", label: "Signature Flow (proposed)", hint: "Forest ink on a calm canvas, with the new Home, Money, To-do and Records navigation. Awaiting visual approval.", swatch: ["#FBFBF8", "#F5F5F0", "#223B35", "#D3E8DC"], proposed: true },
+  { name: "signature-flow", family: "Signature Flow (proposed)", label: "Signature Flow (proposed)", hint: "Forest ink on a calm canvas, with the new Home, Money, To-do and Records navigation. Awaiting visual approval.", swatch: ["#F9F9F7", "#F5F5F0", "#26565A", "#D3E8DC"], proposed: true },
 ];
 
 export const THEME_FAMILIES = ["Signature Blue & Gold", "Forest Green & Mint", "Midnight Blue & Champagne Gold", "Graphite & Platinum", "Apple-Inspired Minimal", "Signature Flow (proposed)"] as const;

@@ -1,4 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
+import { isWithdrawn, withdrawalOfRow } from "./withdrawal";
+import type { Json } from "@/integrations/supabase/types";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { ReceiptDetailsSchema, receiptBreakdownError } from "./receipt-reading";
@@ -83,7 +85,7 @@ export const saveExpense = createServerFn({ method: "POST" })
       if (reuse) return { ok: false as const, error: reuse };
     }
     // Who resolved a possible duplicate comes from the signed-in account, never from the browser.
-    const receiptDetails = data.receiptDetails ? stampDuplicateReview(data.receiptDetails, userId) : undefined;
+    const stampedDetails = data.receiptDetails ? stampDuplicateReview(data.receiptDetails, userId) : undefined;
     if (data.receipts?.some((r) => !r.path.startsWith(`${userId}/`))) return { ok: false as const, error: "Invalid receipt" };
     if (data.splits.length) {
       const sum = Math.round(data.splits.reduce((a, x) => a + x.amount, 0) * 100) / 100;
@@ -99,6 +101,18 @@ export const saveExpense = createServerFn({ method: "POST" })
         return { ok: false as const, error: "Principal and interest must add up to the payment" };
       }
     }
+    // RB-LED-01: a withdrawn entry is read-only until restored, and an edit never drops its withdrawal history.
+    let keptWithdrawal: Json | undefined = undefined;
+    if (data.id) {
+      const stored = await supabase.from("expenses").select("id,receipt_details").eq("id", data.id).eq("employee_id", userId).maybeSingle();
+      if (stored.error) return { ok: false as const, error: "Couldn't save the expense" };
+      const w = stored.data ? withdrawalOfRow(stored.data) : null;
+      if (isWithdrawn(w)) return { ok: false as const, error: "This entry is withdrawn. Restore it before editing." };
+      const rd = stored.data?.receipt_details;
+      if (w && rd && typeof rd === "object" && !Array.isArray(rd)) keptWithdrawal = rd["withdrawal"];
+    }
+    // The stored details are the server-stamped review plus any withdrawal history kept from the saved row.
+    const receiptDetails = stampedDetails && keptWithdrawal !== undefined ? { ...stampedDetails, withdrawal: keptWithdrawal } : stampedDetails;
     let fx: { rate: number; date: string };
     try {
       fx = await fetchRate(data.currency, data.date);
@@ -134,8 +148,11 @@ export const saveExpense = createServerFn({ method: "POST" })
       return { ok: false as const, error: "Couldn't save the expense" };
     }
     if (!data.id && data.createId && Array.isArray(result.data) && !result.data.length) {
-      const existing = await supabase.from("expenses").select("id").eq("id", data.createId).eq("employee_id", userId).single();
+      const existing = await supabase.from("expenses").select("id,receipt_details").eq("id", data.createId).eq("employee_id", userId).single();
       if (existing.error) return { ok: false as const, error: "Couldn't save the expense" };
+      // P0-034: the same line again after its entry was withdrawn (e.g. Statement Desk Undo): never a second entry and
+      // never a silent reactivation. Restore entry (reason recorded) is the only way back.
+      if (isWithdrawn(withdrawalOfRow(existing.data))) return { ok: false as const, error: "This entry was withdrawn (kept in history). Restore it from Withdrawn entries instead of saving it again." };
     }
     return { ok: true as const };
   });

@@ -1,11 +1,15 @@
 import { Toaster as Sonner } from "sonner";
 import { useToastPlacement } from "@/lib/toast-placement";
+import { useAppLocked } from "@/lib/app-lock-state";
 
 type ToasterProps = React.ComponentProps<typeof Sonner>;
 
 const Toaster = ({ ...props }: ToasterProps) => {
   // While a sheet with a sticky footer is open (Smart Add), toasts move to the top so they never cover its actions.
   const placement = useToastPlacement();
+  // While the app is locked no notification is shown or kept (UIX §16.4); the lock dismisses the ones on screen.
+  const locked = useAppLocked();
+  if (locked) return null;
   return (
     <Sonner
       className="toaster group"

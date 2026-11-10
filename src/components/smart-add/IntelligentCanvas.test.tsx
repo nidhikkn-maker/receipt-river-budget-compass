@@ -4,6 +4,7 @@
 // single-flight rule and one draft id reused on retry.
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { useState } from "react";
+import { readFileSync } from "node:fs";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { defaultPreferences } from "@/lib/preferences";
 
@@ -63,7 +64,7 @@ vi.mock("@/routes/_authenticated/statements", () => ({
 }));
 
 import { IntelligentCanvas } from "./IntelligentCanvas";
-import { canConfirm, canvasRoute, readReviewForm, stepOf } from "./canvas-model";
+import { canConfirm, canvasRoute, keyboardInset, kindHint, readReviewForm, stepOf } from "./canvas-model";
 import { SMART_ADD_EVENT } from "@/lib/smart-add-event";
 
 const photo = (name = "blue-tokai.png") => new File(["x"], name, { type: "image/png" });
@@ -112,6 +113,7 @@ describe("Intelligent Canvas steps", () => {
     expect(screen.getByLabelText("Merchant").closest("form")!.querySelector('button[type="submit"]')).toHaveTextContent("Continue to confirmation");
     expect(screen.queryByText(/Use the review's Save button/)).toBeNull();
     expect(footerContinue()).toHaveTextContent("Continue to confirmation");
+    await waitFor(() => expect(footerContinue()).toBeEnabled());
     fireEvent.click(footerContinue());
     expect(current()).toBe("3 · Confirm");
     expect(local.save).not.toHaveBeenCalled();
@@ -322,5 +324,107 @@ describe("canvas rules", () => {
     form.setAttribute("data-account-state", "confirmed");
     expect(canConfirm(readReviewForm(form, []))).toBe(true);
     expect(readReviewForm(null, []).original).toBe("Typed or spoken entry");
+  });
+});
+
+// KK decision 5: the desktop review is the narrow canvas (reference 09); the original opens side by side only when
+// the owner asks, and only on wide screens. Decision 8: one short guidance line per state.
+const setWide = (wide: boolean) => {
+  Object.defineProperty(window, "matchMedia", { configurable: true, writable: true, value: (query: string) => ({ matches: wide && query === "(min-width: 1100px)", media: query, addEventListener: () => {}, removeEventListener: () => {} }) });
+};
+describe("narrow review with an optional side-by-side original (wide screens)", () => {
+  afterEach(() => { Reflect.deleteProperty(window, "matchMedia"); });
+
+  it("opens narrow with Details/Original tabs; side by side widens it and keeps edits; one column narrows it again", async () => {
+    setWide(true);
+    render(<IntelligentCanvas open onOpenChange={() => {}} />);
+    await open();
+    const dialog = screen.getByRole("dialog");
+    expect(dialog).not.toHaveClass("sf-canvas-wide");
+    expect(screen.getByRole("tab", { name: "Details" })).toHaveAttribute("aria-selected", "true");
+    const merchant = screen.getByLabelText("Merchant") as HTMLInputElement;
+    fireEvent.change(merchant, { target: { value: "Edited before widening" } });
+    fireEvent.click(screen.getByRole("button", { name: "Original side by side" }));
+    expect(dialog).toHaveClass("sf-canvas-wide");
+    expect(screen.queryByRole("tablist")).toBeNull();
+    expect(dialog.querySelector(".sf-canvas-split")).toHaveAttribute("data-side", "true");
+    expect(screen.getByText("Preview of blue-tokai.png")).toBeInTheDocument();
+    expect(screen.getByLabelText("Merchant")).toBe(merchant);
+    expect(merchant.value).toBe("Edited before widening");
+    fireEvent.click(screen.getByRole("button", { name: "One column" }));
+    expect(dialog).not.toHaveClass("sf-canvas-wide");
+    expect(screen.getByRole("tab", { name: "Original" })).toBeInTheDocument();
+    expect(merchant.value).toBe("Edited before widening");
+    expect(local.save).not.toHaveBeenCalled();
+  });
+
+  it("offers no side-by-side view below the wide breakpoint, and Statement Desk keeps its wide comparison", async () => {
+    setWide(false);
+    render(<IntelligentCanvas open onOpenChange={() => {}} />);
+    await open();
+    expect(screen.queryByRole("button", { name: /side by side/ })).toBeNull();
+    expect(screen.getByRole("dialog")).not.toHaveClass("sf-canvas-wide");
+    fireEvent.click(screen.getByRole("button", { name: /Start over/ }));
+    fireEvent.click(screen.getByRole("radio", { name: "Statement" }));
+    pick([sheet()]);
+    fireEvent.click(screen.getByRole("button", { name: /Continue to review/ }));
+    await screen.findByText(/Statement Desk with 1 file/);
+    expect(screen.getByRole("dialog")).toHaveClass("sf-canvas-wide");
+  });
+
+  it("keeps each state's guidance to one short line and keeps the reason Continue is unavailable", async () => {
+    render(<IntelligentCanvas open onOpenChange={() => {}} />);
+    const ledes = () => [...document.querySelectorAll(".sf-canvas-lede, .sf-canvas-hint")].filter((e) => !e.closest("[hidden]")).map((e) => e.textContent ?? "");
+    expect(ledes()).toEqual(["Give us a receipt, statement, travel booking or asset register. Your source remains visible for checking."]);
+    fireEvent.click(screen.getByRole("radio", { name: "Travel" }));
+    expect(ledes()[1]).toBe("Tagged to your trip “Mumbai visit”.");
+    fireEvent.click(screen.getByRole("radio", { name: "Receipt" }));
+    await open();
+    expect(ledes()).toEqual(["Check the suggested account and classification before saving."]);
+    for (const t of ledes()) expect(t.length).toBeLessThanOrEqual(110);
+    // The reason Continue is unavailable stays, as one short line tied to the button.
+    const source = readFileSync("src/components/smart-add/IntelligentCanvas.tsx", "utf8");
+    expect(source).toMatch(/aria-describedby=\{!reviewReady \? "sf-continue-why" : undefined\}/);
+    expect(source).toMatch(/id="sf-continue-why"[^>]*className="sf-foot-note">Finish the checks in Details first \(e\.g\. “Looks right”\)\.</);
+  });
+});
+
+describe("guidance and keyboard rules", () => {
+  it("one hint per choice: none for a receipt, the trip for travel, the purpose for a statement", () => {
+    expect(kindHint("receipt")).toBe("");
+    expect(kindHint("statement")).toBe("Checked line by line in Statement Desk.");
+    expect(kindHint("statement", "Assets")).toBe("Checked in Statement Desk for Assets.");
+    expect(kindHint("travel", null, "Dubai")).toBe("Tagged to your trip “Dubai”.");
+    expect(kindHint("travel")).toBe("No current trip, so it is saved as an ordinary expense.");
+  });
+  it("treats a covered bottom of 80 px or more as the keyboard, less as browser chrome", () => {
+    expect(keyboardInset(852, 852, 0)).toBe(0);
+    expect(keyboardInset(852, 800, 0)).toBe(0);
+    expect(keyboardInset(852, 516, 0)).toBe(336);
+    expect(keyboardInset(852, 516, 40)).toBe(296);
+  });
+});
+
+describe("the footer never acts while the review's own button is unavailable", () => {
+  it("a tap in the gap before the footer catches up shows and focuses the reason, and saves nothing", async () => {
+    render(<IntelligentCanvas open onOpenChange={() => {}} />);
+    await open();
+    await waitFor(() => expect(footerContinue()).toBeEnabled());
+    const own = screen.getByLabelText("Merchant").closest("form")!.querySelector<HTMLButtonElement>('button[type="submit"]')!;
+    // Disable the review's own button and tap the footer in the same task, before the MutationObserver can run.
+    act(() => { own.disabled = true; fireEvent.click(footerContinue()); });
+    expect(current()).toBe("2 · Review");
+    const why = document.getElementById("sf-continue-why")!;
+    expect(why).toHaveTextContent("Finish the checks in Details first");
+    expect(why).toHaveAttribute("role", "status");
+    await waitFor(() => expect(document.activeElement).toBe(why));
+    expect(footerContinue()).toBeDisabled();
+    expect(footerContinue()).toHaveAttribute("aria-describedby", "sf-continue-why");
+    expect(local.save).not.toHaveBeenCalled();
+    act(() => { own.disabled = false; });
+    await waitFor(() => expect(footerContinue()).toBeEnabled());
+    fireEvent.click(footerContinue());
+    expect(current()).toBe("3 · Confirm");
+    expect(local.save).not.toHaveBeenCalled();
   });
 });

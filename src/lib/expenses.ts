@@ -106,6 +106,9 @@ export interface Expense {
   reversesEntryId?: string | null;
   /** Set by ledgerView on an original that has a reversal row (both are read-only history). */
   reversedBy?: string | null;
+  /** RB-LED-01: withdrawn (never posted, kept with receipts and history, excluded from figures). See withdrawal.ts. */
+  withdrawnAt?: string | null;
+  withdrawal?: import("./withdrawal").Withdrawal | null;
   /** Advances/settlements: the trip they belong to (no tag needed). */
   tripId?: string | null;
   /** Loan repayments: principal and interest parts; both set or both empty. */

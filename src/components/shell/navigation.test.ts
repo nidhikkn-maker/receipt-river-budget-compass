@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { activeDestination, backTarget, BOTTOM_BAR, breadcrumbs, emptyTrail, IPHONE_REPORTS_PATH, ownsHeader, RAIL, sectionOf, showsBack, stepTrail, titleOf, trailFrom } from "./navigation";
+import { activeDestination, backTarget, BOTTOM_BAR, breadcrumbs, emptyTrail, IPHONE_REPORTS_PATH, ownsHeader, RAIL, RECORDS_TABS, recordsTabOf, sectionOf, showsBack, stepTrail, titleOf, trailFrom } from "./navigation";
 
 describe("Signature Flow destinations", () => {
   it("desktop and iPad rail: Home, Money, To-do, Records, Reports, Add (capture 01)", () => {
@@ -87,5 +87,33 @@ describe("navigation trail", () => {
     for (let i = 0; i < 80; i++) t = stepTrail(t, "PUSH", `/p${i}`);
     expect(t.entries).toHaveLength(50);
     expect(trailFrom(emptyTrail("/x"))).toBeNull();
+  });
+});
+
+// KK decision 7: Travel sits under Records, with Records as its contextual parent; its URLs are unchanged.
+describe("Travel under Records", () => {
+  it("highlights Records in the rail and the iPhone bar for every Travel address", () => {
+    for (const p of ["/trips", "/trips/t1", "/trips?status=upcoming", "/travel-inbox"]) expect(activeDestination(p)).toBe("records");
+  });
+  it("breadcrumbs always lead back through Records, whichever page opened Travel", () => {
+    expect(breadcrumbs("/trips")).toEqual([{ label: "Home", to: "/home" }, { label: "Records", to: "/records" }, { label: "Travel" }]);
+    expect(breadcrumbs("/trips", "/money")).toEqual([{ label: "Home", to: "/home" }, { label: "Records", to: "/records" }, { label: "Travel" }]);
+    expect(breadcrumbs("/trips/t1", "/trips")).toEqual([{ label: "Home", to: "/home" }, { label: "Records", to: "/records" }, { label: "Travel", to: "/trips" }, { label: "Trip" }]);
+    expect(breadcrumbs("/travel-inbox")).toEqual([{ label: "Home", to: "/home" }, { label: "Records", to: "/records" }, { label: "Travel", to: "/trips" }, { label: "Travel inbox" }]);
+  });
+  it("Back returns to the real origin, else to Records", () => {
+    expect(backTarget("/trips", "/money")).toEqual({ to: "/money", label: "Money" });
+    expect(backTarget("/trips")).toEqual({ to: "/records", label: "Records" });
+    expect(backTarget("/trips/t1")).toEqual({ to: "/records", label: "Records" });
+  });
+  it("shows the Records sub-navigation with Travel current on Travel pages, not on the Records hub", () => {
+    expect(RECORDS_TABS.map((t) => t.label)).toEqual(["Overview", "Documents", "Travel", "Assets", "Reimbursements"]);
+    expect(RECORDS_TABS.find((t) => t.key === "travel")?.to).toBe("/trips");
+    expect(recordsTabOf("/trips")).toBe("travel");
+    expect(recordsTabOf("/trips/t1?tab=financial")).toBe("travel");
+    expect(recordsTabOf("/travel-inbox")).toBe("travel");
+    expect(recordsTabOf("/vault")).toBe("documents");
+    expect(recordsTabOf("/records")).toBeNull();
+    expect(recordsTabOf("/money")).toBeNull();
   });
 });

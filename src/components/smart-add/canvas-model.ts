@@ -5,12 +5,29 @@ import { displayDate } from "@/lib/date-display";
 
 export type CanvasKind = "receipt" | "statement" | "travel" | "asset";
 
+/** One short helper line per choice (KK decision 8); a receipt needs none, as in reference 08. */
 export const CANVAS_KINDS: readonly { id: CanvasKind; label: string; hint: string }[] = [
-  { id: "receipt", label: "Receipt", hint: "A bill or receipt becomes one entry, read automatically and checked by you." },
-  { id: "statement", label: "Statement", hint: "Bank and card statements go to Statement Desk, which checks every line." },
-  { id: "travel", label: "Travel", hint: "A trip receipt is read like any bill and tagged to your trip." },
-  { id: "asset", label: "Asset register", hint: "Asset registers and invoices go to Statement Desk for assets." },
+  { id: "receipt", label: "Receipt", hint: "" },
+  { id: "statement", label: "Statement", hint: "Checked line by line in Statement Desk." },
+  { id: "travel", label: "Travel", hint: "Read like any bill and tagged to your trip." },
+  { id: "asset", label: "Asset register", hint: "Checked in Statement Desk for assets." },
 ];
+
+/** The one helper line under the choices: a statement's purpose, or the trip a travel bill is tagged to. */
+export function kindHint(kind: CanvasKind, contextLabel?: string | null, tripName?: string | null): string {
+  if (kind === "statement" && contextLabel) return `Checked in Statement Desk for ${contextLabel}.`;
+  if (kind === "travel") return tripName ? `Tagged to your trip “${tripName}”.` : "No current trip, so it is saved as an ordinary expense.";
+  return CANVAS_KINDS.find((k) => k.id === kind)?.hint ?? "";
+}
+
+/**
+ * Height of an on-screen keyboard (and its accessory bar) covering the bottom of the layout viewport, from the
+ * visual viewport. Below 80 px it is treated as browser chrome, not a keyboard.
+ */
+export function keyboardInset(innerHeight: number, viewportHeight: number, viewportTop: number): number {
+  const covered = Math.round(innerHeight - viewportHeight - viewportTop);
+  return covered >= 80 ? covered : 0;
+}
 
 export const STEP_LABELS = ["Add", "Review", "Confirm"] as const;
 

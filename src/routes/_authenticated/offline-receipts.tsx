@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { confirmAction } from "@/lib/confirm";
 import { useStore } from "@/lib/store";
 import { offlineScanRows, removeFailedOfflineScans, removeOfflineScan, requestScanRetry, type OfflineScanRow } from "@/lib/offline-scan";
+import { backgroundAllowed } from "@/lib/lock-gate";
 
 export const Route = createFileRoute("/_authenticated/offline-receipts")({
   head: () => ({ meta: [
@@ -35,7 +36,7 @@ function OfflineReceipts() {
   useEffect(() => {
     const net = () => setOnline(navigator.onLine);
     void load();
-    const t = setInterval(() => void load(), 4000);
+    const t = setInterval(() => { if (backgroundAllowed()) void load(); }, 4000);
     window.addEventListener("online", net); window.addEventListener("offline", net);
     return () => { clearInterval(t); urls.current.forEach(URL.revokeObjectURL); urls.current = []; window.removeEventListener("online", net); window.removeEventListener("offline", net); };
   }, [load]);

@@ -4,6 +4,7 @@ import { dueStatus, type Commitment } from "./planning";
 import type { Expense } from "./expenses";
 import type { FinancePreferences } from "./preferences";
 import { outstandingOf } from "./reimbursements";
+import { statementRefOrigin } from "./statement-fingerprint";
 
 const r2 = (n: number) => Math.round(n * 100) / 100;
 const daysBetween = (a: string, b: string) => Math.floor((Date.parse(b.slice(0, 10)) - Date.parse(a.slice(0, 10))) / 86_400_000);
@@ -109,7 +110,7 @@ export function inboxItems(i: InboxInput): InboxItem[] {
     if (kind === "expense" && !t.allocations?.length && (t.category === "Miscellaneous" || !active.has(t.category)))
       items.push({ ...base, key: `uncategorised:${t.id}`, type: "uncategorised", title: t.title, description: t.category === "Miscellaneous" ? "Filed under Miscellaneous" : `"${t.category}" is not an active category`, priority: "medium", action: "Categorise" });
     if (t.statementRef && !t.reconciledAt)
-      items.push({ ...base, key: `unverified:${t.id}`, type: "unverified_import", title: t.title, description: `Imported from ${t.statementRef.split(" ·")[0]} but not confirmed`, priority: "medium", action: "Review and confirm" });
+      items.push({ ...base, key: `unverified:${t.id}`, type: "unverified_import", title: t.title, description: `Imported from ${statementRefOrigin(t.statementRef)} but not confirmed`, priority: "medium", action: "Review and confirm" });
     if (kind === "expense" && !t.accountId)
       items.push({ ...base, key: `missing:${t.id}`, type: "missing_details", title: t.title, description: "No account recorded, so balances can't include it", priority: "low", action: "Edit to add the account" });
     if (["transfer", "card_payment", "loan_repayment", "investment"].includes(kind) && (!t.accountId || !t.toAccountId || !i.accounts.some(a => a.id === t.accountId && !a.archived) || !i.accounts.some(a => a.id === t.toAccountId && !a.archived)))

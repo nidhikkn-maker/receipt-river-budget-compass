@@ -111,7 +111,7 @@ describe("guests", () => {
     view();
     expect(await screen.findByText("Private ledger")).toBeInTheDocument();
     act(() => { vi.setSystemTime(T0 + 15 * MIN); document.dispatchEvent(new Event("visibilitychange")); });
-    await waitFor(() => expect(m.nav).toHaveBeenCalledWith({ to: "/auth", search: { ended: "guest-idle" }, replace: true }));
+    await waitFor(() => expect(m.nav).toHaveBeenCalledWith({ to: "/auth", search: { ended: "guest-idle" }, replace: true, ignoreBlocker: true }));
     expect(m.signOut).toHaveBeenCalledWith({ scope: "local" });
     expect(m.clearOffline).toHaveBeenCalledWith(OWNER);
     expect(m.clearPreparations).toHaveBeenCalledWith(OWNER);
@@ -122,7 +122,7 @@ describe("guests", () => {
   it("a guest reopening the app after a long absence is signed out, not shown the app", async () => {
     m.user = guest; lastActivity(30);
     view();
-    await waitFor(() => expect(m.nav).toHaveBeenCalledWith({ to: "/auth", search: { ended: "guest-idle" }, replace: true }));
+    await waitFor(() => expect(m.nav).toHaveBeenCalledWith({ to: "/auth", search: { ended: "guest-idle" }, replace: true, ignoreBlocker: true }));
     expect(screen.queryByText("Private ledger")).not.toBeInTheDocument();
   });
 
@@ -215,7 +215,75 @@ describe("unlock methods", () => {
       await screen.findByText(`Wrong MPIN. ${left} ${left === 1 ? "try" : "tries"} left.`);
     }
     await pressPin("1357");
-    await waitFor(() => expect(m.nav).toHaveBeenCalledWith({ to: "/auth", search: { ended: "guest-idle" }, replace: true }), { timeout: 10_000 }); // five PBKDF2 checks can be slow under parallel load
+    await waitFor(() => expect(m.nav).toHaveBeenCalledWith({ to: "/auth", search: { ended: "guest-idle" }, replace: true, ignoreBlocker: true }), { timeout: 10_000 }); // five PBKDF2 checks can be slow under parallel load
     expect(screen.queryByText("Private ledger")).not.toBeInTheDocument();
   }, 20_000);
+});
+
+// P0-029 (UIX §16.4): while locked nothing outside the lock is reachable by pointer, keyboard or assistive technology,
+// nothing financial stays in the accessibility tree, notifications are dismissed, and everything returns after unlock.
+import { setAppLocked, isAppLocked } from "@/lib/app-lock-state";
+describe("lock isolation", () => {
+  const shell = () => <div data-testid="shell">
+    <nav aria-label="Tab bar"><a href="/home">Home</a><a href="/money">Money</a></nav>
+    <header><button type="button">Workspace: Personal</button><button type="button">Account: KK</button></header>
+    <p>Available money ₹3,42,180</p>
+  </div>;
+  const tabbable = () => [...document.querySelectorAll<HTMLElement>("a[href], button, input, select, textarea, [tabindex]")]
+    .filter((e) => !e.closest("[inert]") && !(e as HTMLButtonElement).disabled && e.tabIndex >= 0);
+  afterEach(() => setAppLocked(false));
+
+  it("locks the whole page: only the lock's own controls are reachable, nothing else is in the tree, toasts are dismissed", async () => {
+    m.user = passwordUser; lastActivity(30);
+    const unlocked = vi.fn();
+    render(<>{shell()}<OwnerLock ownerId={OWNER} onUnlock={unlocked}><p>Private ledger</p></OwnerLock></>);
+    const dialog = await screen.findByRole("dialog", { name: "Thapal is locked" });
+    expect(isAppLocked()).toBe(true);
+    expect(dialog.closest("[data-app-lock]")?.parentElement).toBe(document.body);
+    // Accessibility tree: no shell landmarks or controls, no figures; only the lock dialog and its controls.
+    expect(screen.queryByRole("navigation", { name: "Tab bar" })).toBeNull();
+    expect(screen.queryByRole("link", { name: "Home" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Account: KK" })).toBeNull();
+    expect(screen.queryByText(/₹3,42,180/, { ignore: "[aria-hidden=true] *" })).toBeNull();
+    expect(screen.getByTestId("shell").closest("[inert]")).not.toBeNull();
+    expect(screen.getByTestId("shell").closest("[aria-hidden=true]")).not.toBeNull();
+    // Keyboard: every element Tab can reach is inside the lock.
+    const reach = tabbable();
+    expect(reach.length).toBeGreaterThan(0);
+    for (const e of reach) expect(dialog.contains(e)).toBe(true);
+    expect(reach.map((e) => e.textContent?.trim())).toEqual(expect.arrayContaining(["Use account password", "Get a code by email", "Sign out"]));
+    // One primary path at most, recovery kept apart from unlocking, and no claim about methods not yet verified.
+    expect(dialog).toHaveTextContent("Unlocking only reopens Thapal on this device. To recover your account, sign out and use the sign-in page.");
+    expect(dialog).not.toHaveTextContent(/Google/);
+    // A toast raised while locked is not added to the page outside the lock either.
+    const late = document.createElement("section"); late.setAttribute("aria-label", "Notifications ₹99"); document.body.appendChild(late);
+    await waitFor(() => expect(late).toHaveAttribute("aria-hidden", "true"));
+    expect(late).toHaveAttribute("inert");
+    late.remove();
+  });
+
+  it("unlocking restores the page, re-runs the route and data checks, and clears the lock state", async () => {
+    m.user = passwordUser; lastActivity(30);
+    m.passwordSignIn.mockResolvedValue({ data: { user: { id: OWNER } }, error: null });
+    const unlocked = vi.fn();
+    render(<>{shell()}<OwnerLock ownerId={OWNER} onUnlock={unlocked}><p>Private ledger</p></OwnerLock></>);
+    await screen.findByRole("dialog", { name: "Thapal is locked" });
+    fireEvent.click(screen.getByRole("button", { name: "Use account password" }));
+    fireEvent.change(screen.getByLabelText("Account password"), { target: { value: "correct horse" } });
+    fireEvent.click(screen.getByRole("button", { name: "Verify password and unlock" }));
+    expect(await screen.findByText("Private ledger")).toBeInTheDocument();
+    expect(unlocked).toHaveBeenCalledTimes(1);
+    expect(isAppLocked()).toBe(false);
+    expect(document.querySelector("[data-app-lock]")).toBeNull();
+    expect(screen.getByTestId("shell").closest("[inert]")).toBeNull();
+    expect(screen.getByRole("navigation", { name: "Tab bar" })).toBeInTheDocument();
+  });
+
+  it("keeps the shell hidden while the start-up check is still deciding", async () => {
+    m.user = passwordUser; lastActivity(1);
+    render(<OwnerLock ownerId={OWNER}><p>Private ledger</p></OwnerLock>);
+    expect(isAppLocked()).toBe(true);
+    expect(await screen.findByText("Private ledger")).toBeInTheDocument();
+    expect(isAppLocked()).toBe(false);
+  });
 });

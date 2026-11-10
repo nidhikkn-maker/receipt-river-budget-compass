@@ -654,6 +654,11 @@ BEGIN
   -- r2: a reversal row is posted as the mirrored reversal of its original (sync_entry of the original).
   IF _e.reverses_entry_id IS NOT NULL THEN RETURN jsonb_build_object('skip', true, 'reversalOf', _e.reverses_entry_id); END IF;
   IF _e.transfer_counterpart_of IS NOT NULL THEN RETURN jsonb_build_object('skip', true); END IF;
+  -- R-P10-1 (11 Nov 2026): a withdrawn entry (receipt_details.withdrawal, RB-LED-01 / P10; only unposted entries can be
+  -- withdrawn) is never posted, by a backfill or a later sync; Restore makes it postable again.
+  IF jsonb_typeof(_e.receipt_details) = 'object' AND _e.receipt_details->'withdrawal'->>'state' = 'withdrawn' THEN
+    RETURN jsonb_build_object('skip', true, 'withdrawn', true);
+  END IF;
   IF _e.account_id IS NOT NULL THEN
     SELECT a.kind INTO ka FROM public.accounts a WHERE a.id = _e.account_id AND a.owner_id = _e.employee_id;
     ra := phase3_p7.account_role(ka); ea := phase3_p7.account_entity(_e.employee_id, _e.account_id, _e.expense_date);

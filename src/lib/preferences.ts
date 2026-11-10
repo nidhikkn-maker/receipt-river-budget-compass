@@ -61,6 +61,8 @@ export interface SmartDefaultSettings { category: boolean; payment: boolean; wor
 /** Per-shop override of learned suggestions: missing = learn from history, "off" = never suggest, other = always use this. */
 export interface ShopRule { category?: string; accountId?: string; paymentMethod?: string; scope?: string }
 export interface FinancePreferences {
+  /** P0-023 (before P11): one record per completed backup restore; see restore-guard.ts. */
+  restoreHistory?: import("./restore-guard").RestoreRecord[];
   smartDefaults?: SmartDefaultSettings;
   /** Keyed by lower-cased, trimmed shop name. */
   shopRules?: Record<string, ShopRule>;

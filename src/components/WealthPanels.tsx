@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { exportFile } from "@/lib/export-gate";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,7 +14,7 @@ import { useStore, type Goal, type Loan } from "@/lib/store";
 import { ValueDialog } from "./ValueDialog";
 import { goalSavedProblem } from "@/lib/value-edits";
 import { loanHistory, loanBalanceChart, loanHistoryRows, payoffProjection } from "@/lib/loan-history";
-import { downloadBlob } from "@/lib/reports";
+
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip } from "recharts";
 import { todayISO } from "@/lib/use-position";
 import { emiReconciliation, emiTargets, matchEmiDebit, type EmiRowStatus } from "@/lib/emi-match";
@@ -142,7 +143,7 @@ function LoanCard({ l }: { l: Loan }) {
       </div>}
       {hist.rows.length > 0 && <details className="mt-3 rounded-xl border p-2">
         <summary className="cursor-pointer text-sm font-medium">Repayment history · {hist.rows.length} · principal {money(hist.totalPrincipal)} · interest {money(hist.totalInterest)}</summary>
-        <div className="mt-2 flex justify-end"><Button size="sm" variant="outline" onClick={() => downloadBlob(new Blob([loanHistoryRows(hist, l.principal).map((r) => r.map((c) => `"${c.replace(/"/g, '""')}"`).join(",")).join("\n")], { type: "text/csv" }), `loan-${l.name.replace(/\W+/g, "-")}-repayments.csv`)}>Export CSV</Button></div>
+        <div className="mt-2 flex justify-end"><Button size="sm" variant="outline" onClick={() => void exportFile({ kind: "personal" }, new Blob([loanHistoryRows(hist, l.principal).map((r) => r.map((c) => `"${c.replace(/"/g, '""')}"`).join(",")).join("\n")], { type: "text/csv" }), `loan-${l.name.replace(/\W+/g, "-")}-repayments.csv`)}>Export CSV</Button></div>
         <div className="mt-2">
           <ResponsiveContainer width="100%" height={180}>
             <LineChart data={chart} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>

@@ -1,4 +1,5 @@
-import { downloadBlob } from "@/lib/reports";
+
+import { exportFile } from "@/lib/export-gate";
 import { useEffect, useMemo, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useStore } from '@/lib/store';
@@ -67,7 +68,7 @@ export function PeriodEvidence({ revision }: { revision: string }) {
           </span>
           <Button size="sm" variant="outline" onClick={() => {
             const blob = (new Blob([JSON.stringify(row.evidence, null, 2)], { type: 'application/json' }));
-            downloadBlob(blob, `Thapal_close_evidence_${row.id}.json`);
+            void exportFile({ kind: "evidence" }, blob, `Thapal_close_evidence_${row.id}.json`);
           }}>Download evidence</Button>
         </div>
         {row.action === 'closed' && stored && (
@@ -88,7 +89,7 @@ export function PeriodEvidence({ revision }: { revision: string }) {
       <span className="text-muted-foreground">Imported closing history · {row.imported_at.slice(0, 10)}<span className="block">Unverified backup copy; not an active closure or authoritative snapshot</span></span>
       <Button size="sm" variant="outline" onClick={() => {
         const blob = (new Blob([JSON.stringify({ verification: 'Unverified imported backup history', importedAt: row.imported_at, history: row.history }, null, 2)], { type: 'application/json' }));
-        downloadBlob(blob, `Thapal_imported_closing_history_${row.id}.json`);
+        void exportFile({ kind: "evidence" }, blob, `Thapal_imported_closing_history_${row.id}.json`);
       }}>Download imported history</Button>
     </div>)}
   </details>;

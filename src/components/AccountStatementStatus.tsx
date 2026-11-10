@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { exportDeliver, exportFile } from "@/lib/export-gate";
 import { Link } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { listImports, statementEvidence } from "@/lib/import-repository";
@@ -8,9 +9,10 @@ import { money } from "@/lib/expenses";
 import { statementCoverage } from "@/lib/statement-pipeline/coverage";
 import { Button } from "./ui/button";
 import { reconciliationReport } from '@/lib/reconciliation-report';
-import { toCsv,toExcel,toPdf,deliverFile } from '@/lib/reports';
+import { toCsv, toExcel, toPdf } from '@/lib/reports';
 import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "./ui/dialog";
+import { backgroundAllowed } from '@/lib/lock-gate';
 
 export function AccountStatementStatus({ onAttention }: { onAttention?: (count: number | null) => void } = {}) {
   const { accounts, transactions: ledgerTransactions, transferCounterparts, preferences, refresh } = useStore();
@@ -36,8 +38,9 @@ export function AccountStatementStatus({ onAttention }: { onAttention?: (count: 
   useEffect(() => {
     // Initial load comes from the records effect below. The timer re-reads statement evidence only;
     // a full records refresh runs on focus, reconnect or a statement update.
-    const tick = () => { if (document.visibilityState === "visible") void load(true); };
-    const timer = window.setInterval(() => { if (document.visibilityState === "visible") void load(); }, 20000); window.addEventListener("focus", tick); window.addEventListener("online", tick);window.addEventListener("ledgerline:statement-updated",tick);
+    // P0-029: focus, reconnect and timer reads are skipped while the app is locked.
+    const tick = () => { if (document.visibilityState === "visible" && backgroundAllowed()) void load(true); };
+    const timer = window.setInterval(() => { if (document.visibilityState === "visible" && backgroundAllowed()) void load(); }, 20000); window.addEventListener("focus", tick); window.addEventListener("online", tick);window.addEventListener("ledgerline:statement-updated",tick);
     return () => { generation.current++; clearInterval(timer); window.removeEventListener("focus", tick); window.removeEventListener("online", tick);window.removeEventListener("ledgerline:statement-updated",tick); };
   }, []);
   useEffect(()=>{const t=window.setTimeout(()=>void load(),150);return()=>clearTimeout(t);},[transactions,accounts]);
@@ -50,7 +53,7 @@ export function AccountStatementStatus({ onAttention }: { onAttention?: (count: 
   const exportFile=async(format:'csv'|'xlsx'|'pdf')=>{try{
     if(format==='pdf'&&preparedExport?.key!==exportKey){setPreparedExport({key:exportKey,blob:await toPdf(exportReport,`Saved evidence as of ${today}; unavailable checks remain unverified`)});return;}
     const blob=format==='pdf'?preparedExport?.blob:format==='csv'?new Blob([toCsv(exportReport)],{type:'text/csv'}):await toExcel(exportReport);
-    if(blob)await deliverFile(blob,`ledgerline-reconciliation-${today}.${format}`);
+    if(blob)await exportDeliver({kind:"ledger_csv"},blob,`ledgerline-reconciliation-${today}.${format}`);
   }catch{toast.error('Could not prepare reconciliation export; saved checks are unchanged');}};
   useEffect(() => { onAttention?.(status ? null : summary.attention); }, [status, summary.attention, onAttention]);
   if (status) return <div className="flex flex-wrap items-center gap-2 py-4 text-sm" role="status"><p>{status}</p><Button size="sm" variant="outline" onClick={() => load(true)}>Retry account checks</Button></div>;

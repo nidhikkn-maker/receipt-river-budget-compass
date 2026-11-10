@@ -7,6 +7,10 @@ import { queueEntry, pendingEntries, removePending, putSnapshot, getSnapshot } f
 import { mergePending, setItem, type PendingItem } from "./pending-sync";
 import { deleteFinanceData } from "./delete-data";
 import { withStepUp } from "./step-up";
+import { withdrawalOfRow, withdrawnAtOfRow } from "./withdrawal";
+import { removeEntry } from "./entry-removal";
+import { createLockGate, type GateRun } from "./lock-gate";
+import { setEntryWithdrawal } from "./withdrawal.functions";
 import { forgetPostingStatus, isNotPostedError, recordCardPayment, type CardPaymentInput, type CardPaymentResult, isPostedEntryError, postingStatus, removalMode, reverseLedgerEntry, ReversalReasonRequired, validReason } from "./posting";
 import { privateFileUrl, fetchPrivateFile, type ExpectedFile } from "./private-files";
 import { downloadBlob } from "./reports";
@@ -155,11 +159,20 @@ interface Ctx {
   refresh: () => Promise<void>;
   save: (s: ExpenseInput, opts?: { id?: string; files?: File[]; createId?: string; noRefresh?: boolean }) => Promise<void>;
   /**
-   * Removes an entry from the working ledger. Where the balanced posting layer is active (P7), a posted
-   * entry is reversed through reverse_ledger_entry (reason + re-confirmation; receipts kept); otherwise it
-   * is deleted exactly as before. The database refuses deletes of posted entries either way.
+   * Removes an entry from the working ledger, never physically. Where the balanced posting layer is active (P7), a posted
+   * entry is reversed through reverse_ledger_entry (reason + re-confirmation; receipts kept); an unposted entry is
+   * withdrawn with the same reason (RB-LED-01, withdrawal.ts): kept with receipts and history, excluded from figures.
    */
   remove: (e: Expense, opts?: { reason?: string; requestId?: string; correctionDate?: string }) => Promise<void>;
+  /**
+   * RB-LED-01: entries withdrawn with a reason (never posted; never physically removed). They keep their receipt files and history,
+   * are left out of every figure (ledgerView) and can be restored. Not part of `transactions`.
+   */
+  withdrawn: Expense[];
+  /** Withdraws an unposted entry with a reason (who and when recorded); receipt files are kept. Posted entries are reversed instead. */
+  withdraw: (e: Expense, reason: string) => Promise<void>;
+  /** Restores a withdrawn entry with a reason; it counts again in every figure. */
+  restoreWithdrawn: (e: Expense, reason: string) => Promise<void>;
   /**
    * P0-005b: records ONE card payment (bank -> card). Idempotent by requestId (create it once per payment
    * form and reuse it on retry): the database action record_card_payment where installed, else save() with
@@ -185,7 +198,8 @@ interface Ctx {
 }
 export interface SavedReview { id: string; month: string; figures: unknown; dataHash: string; narrative: string; dataCutoff: string; generatedAt: string }
 // Columns Home needs for balances, dues and monthly totals; omits receipts, notes and receipt details.
-const LITE_COLUMNS = "id,category_revision,correction_revision,department,title,merchant,category,scope,member_id,splits,amount,currency,original_amount,fx_rate,payment_method,reconciled_at,statement_ref,updated_at,expense_date,txn_type,account_id,to_account_id,payment_instrument_id,payee_id,entity_id,entity_source,tags,workspace_allocations,reimbursement_status,adjustment_sign,allocations,reimbursement,transfer_counterpart_of,trip_id,principal,interest,created_at,reversal:receipt_details->reversal";
+const LITE_COLUMNS_BASE = "id,category_revision,correction_revision,department,title,merchant,category,scope,member_id,splits,amount,currency,original_amount,fx_rate,payment_method,reconciled_at,statement_ref,updated_at,expense_date,txn_type,account_id,to_account_id,payment_instrument_id,payee_id,entity_id,entity_source,tags,workspace_allocations,reimbursement_status,adjustment_sign,allocations,reimbursement,transfer_counterpart_of,trip_id,principal,interest,created_at,reversal:receipt_details->reversal";
+const LITE_COLUMNS = `${LITE_COLUMNS_BASE},withdrawal:receipt_details->withdrawal`;
 // Keep one context identity across hot reloads; otherwise a re-executed module
 // creates a new context and mounted consumers throw "useStore outside provider".
 const g = globalThis as unknown as { __ledgerlineStoreCtx?: import("react").Context<Ctx | null> };
@@ -198,6 +212,7 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
   const [name, setName] = useState("");
   const [members, setMembers] = useState<Member[]>([]);
   const [expenses, setExpenses] = useState<Expense[]>([]);
+  const [withdrawnEntries, setWithdrawnEntries] = useState<Expense[]>([]);
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [commitments, setCommitments] = useState<Commitment[]>([]);
   const [rawLoans, setLoans] = useState<Loan[]>([]);
@@ -213,7 +228,7 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
   const [loadErrors, setLoadErrors] = useState<LoadArea[]>([]);
   const [pendingCount, setPendingCount] = useState(0);
   const [pendingItems, setPendingItems] = useState<PendingItem[]>([]);
-  const syncRef = useRef<(only?: string) => Promise<void>>(async () => {});
+  const syncRef = useRef<(only?: string, skipRefresh?: boolean) => Promise<void>>(async () => {});
   const syncing = useRef(false);
   const deleting = useRef(false);
   const [preferences, setPreferences] = useState<FinancePreferences>(defaultPreferences);
@@ -233,18 +248,29 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
   const liteActive = useRef(false);
   const inFlight = useRef<Promise<void> | null>(null);
   const queued = useRef<Promise<void> | null>(null);
+  // P0-029: while the app is locked nothing refreshes, flushes or paints; one refresh follows the authorised unlock
+  // (after any offline entries are flushed), and a load the lock interrupted never paints its result.
+  const resumeRef = useRef<() => Promise<void>>(async () => {});
+  const [gate] = useState(() => createLockGate(() => resumeRef.current()));
+  useEffect(() => gate.attach(), [gate]);
   // Overlapping refresh calls share requests; a call made mid-load gets one follow-up load so saves are never missed.
   const refresh = useCallback((): Promise<void> => {
+    if (gate.paused()) { gate.defer(); return Promise.resolve(); }
     if (!inFlight.current) { inFlight.current = load().finally(() => { inFlight.current = null; }); return inFlight.current; }
     if (!queued.current) queued.current = inFlight.current.catch(() => {}).then(() => { queued.current = null; return refresh(); });
     return queued.current;
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId]);
   async function load() {
+    const run = gate.begin();
+    try { await loadRun(run); } finally { run.end(); }
+  }
+  async function loadRun(run: GateRun) {
     // Show this device's saved copy straight away, then refresh from the cloud.
     if (!navigator.onLine || firstLoad.current) {
-      firstLoad.current = false;
       const cached = await getSnapshot<Snapshot>(userId).catch(() => undefined);
+      if (!run.live()) return;
+      firstLoad.current = false;
       if (cached) {
         hadSnapshot.current = true;
         setName(cached.name); setMembers(cached.members); setExpenses(cached.expenses); setAccounts(cached.accounts); setCommitments(cached.commitments);
@@ -282,6 +308,8 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
       supabase.from("loans").select("*").order("created_at"),
       supabase.from("finance_preferences").select("data,revision").eq("owner_id", userId).maybeSingle(),
     ]);
+    // Locked while these were arriving: nothing is painted; the unlock refresh reads them again.
+    if (!run.live()) return;
     // A failed read keeps the last known records (device copy or earlier load) and is reported, never shown as empty.
     const failed = new Set<LoadArea>();
     const mark = (r: { error: unknown }, area: LoadArea) => { if (r.error) failed.add(area); return !r.error; };
@@ -317,10 +345,12 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
       adjustmentSign: x.adjustment_sign === -1 ? -1 : 1,
       allocations: (x.allocations as unknown as Allocation[]) ?? [], reimbursement: (x.reimbursement as unknown as ReimbursementInfo) ?? {},
       transferCounterpartOf: x.transfer_counterpart_of ?? null, tripId: x.trip_id, principal: x.principal == null ? null : Number(x.principal), interest: x.interest == null ? null : Number(x.interest),
-      reversesEntryId: reversalOfRow(x),
+      reversesEntryId: reversalOfRow(x), withdrawal: withdrawalOfRow(x), withdrawnAt: withdrawnAtOfRow(x),
     });
+    // RB-LED-01: withdrawn entries are kept (listed for Restore) but ledgerView leaves them out of every figure.
+    const showLedger = (rows: NonNullable<typeof e.data>) => { const all = rows.map(toExpense); setExpenses(ledgerView(all)); setWithdrawnEntries(all.filter((x) => !!x.withdrawnAt)); };
     // Decision 1: a reversal row cancels its original on its own date (ledger.ts ledgerView).
-    if (mark(e, "transactions")) setExpenses(ledgerView((e.data ?? []).map(toExpense)));
+    if (mark(e, "transactions")) showLedger(e.data ?? []);
     if (mark(b, "budgets")) {
       const bud: Budgets = {};
       for (const x of b.data ?? []) bud[x.category as Category] = Number(x.monthly_amount);
@@ -329,11 +359,13 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
     setLoading(false);
     if (fullP) {
       const full = await fullP;
+      if (!run.live()) return;
       if (full.error) { failed.add("transactions"); toast.error("Some records couldn't load — pull to refresh or try again"); }
-      else { setExpenses(ledgerView((full.data ?? []).map(toExpense))); failed.delete("transactions"); }
+      else { showLedger(full.data ?? []); failed.delete("transactions"); }
       liteActive.current = false;
     }
     const [m, g, v, d, db] = await restP;
+    if (!run.live()) return;
     if ([g, v, d].some((x) => x.error)) toast.error("Some records couldn't load — pull to refresh or try again");
     setDepartmentBudgetError(!!db.error);
     setDepartmentBudgets(Object.fromEntries((db.data ?? []).map((x) => [x.department, Number(x.amount)])));
@@ -351,6 +383,7 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
     setSyncState(failed.size ? "error" : "synced");
     if (!failed.size) setLastSyncedAt(new Date().toISOString());
     } catch (err) {
+      if (!run.live()) return;
       setLoading(false);
       setSyncState(navigator.onLine ? "error" : "offline");
       throw err;
@@ -417,7 +450,9 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
 
   useEffect(() => {
     let active = true;
-    const sync = async (only?: string) => {
+    const sync = async (only?: string, skipRefresh?: boolean) => {
+      // Locked: the offline queue waits for the authorised unlock.
+      if (gate.paused()) { gate.defer(); return; }
       const entries = await pendingEntries(userId).catch(() => [] as Awaited<ReturnType<typeof pendingEntries>>);
       if (!active) return;
       setPendingCount(entries.length);
@@ -429,6 +464,7 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
         for (const entry of entries) {
           if (only && entry.id !== only) continue;
           if (!navigator.onLine || deleting.current) break;
+          if (gate.paused()) { gate.defer(); break; }
           setPendingItems((prev) => setItem(prev, entry.id, { status: "saving", error: undefined }));
           try {
             await save(entry.input, { createId: entry.id, files: entry.files, noRefresh: true });
@@ -441,11 +477,13 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
           }
         }
         if (active) setPendingCount((await pendingEntries(userId)).length);
-        if (saved) { toast.success(`${saved} offline ${saved === 1 ? "entry" : "entries"} synced`); void refresh(); }
+        if (saved) { toast.success(`${saved} offline ${saved === 1 ? "entry" : "entries"} synced`); if (!skipRefresh) void refresh(); }
         if (failed) toast.error(`${failed} offline ${failed === 1 ? "entry" : "entries"} couldn't sync — open Waiting to sync to retry`);
       } finally { syncing.current = false; }
     };
     syncRef.current = sync;
+    // Authorised unlock: flush waiting offline entries without their own refresh, then refresh exactly once.
+    resumeRef.current = async () => { await sync(undefined, true); await refresh(); };
     const onOnline = () => void sync();
     void sync(); window.addEventListener("online", onOnline);
     return () => { active = false; window.removeEventListener("online", onOnline); };
@@ -614,25 +652,25 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
     check(result.error);return (result.data??[]).map(r=>({id:r.id,createdAt:r.created_at,undoneAt:r.undone_at,entries:r.entries as unknown as {before:Record<string,unknown>;after:Record<string,unknown>}[]}));
   };
 
+  // RB-LED-01: never a DELETE and never a receipt-file removal: posted -> reverse, unposted -> withdraw (entry-removal.ts).
+  const withdrawRequest = (entryId: string, reason: string, action: "withdraw" | "restore" = "withdraw") => setEntryWithdrawal({ data: { id: entryId, action, reason } });
   const remove: Ctx["remove"] = async (e, opts) => {
-    if (removalMode(await postingStatus(userId)) === "reverse") {
-      if (!validReason(opts?.reason)) throw new ReversalReasonRequired();
-      try {
-        // Decision 1: the entry stays; a linked reversal is recorded on the correction date (decision 2).
-        await reverseLedgerEntry({ entryId: e.id, reason: opts?.reason ?? "", requestId: opts?.requestId ?? crypto.randomUUID(), ...(opts?.correctionDate ? { correctionDate: opts.correctionDate } : {}) });
-        await refresh();
-        return;
-      } catch (err) {
-        // A listed exception that never posted follows today's rule: it is deleted (receipts kept below).
-        if (!isNotPostedError(err)) throw err;
-      }
-    }
-    const deleted = await supabase.from("expenses").delete().eq("id", e.id);
-    if (deleted.error && isPostedEntryError(deleted.error)) { forgetPostingStatus(); throw new ReversalReasonRequired(); }
-    check(deleted.error);
-    if (e.receipts.length) await supabase.storage.from("receipts").remove(e.receipts.map((r) => r.path));
+    try {
+      await removeEntry(e, opts, { mode: async () => (removalMode(await postingStatus(userId)) === "reverse" ? "reverse" : "withdraw"), reverse: async (p) => { await reverseLedgerEntry(p); }, withdraw: withdrawRequest });
+    } catch (err) { if (err instanceof ReversalReasonRequired) forgetPostingStatus(); throw err; }
     await refresh();
   };
+  /** Server-decided (setEntryWithdrawal; with P10 the database functions): unposted and unreconciled entries only. */
+  const changeWithdrawal = async (e: Expense, reason: string, action: "withdraw" | "restore") => {
+    const r = await withdrawRequest(e.id, reason, action);
+    if (!r.ok) {
+      if (/^P10_POSTED|P7_POSTED/.test(r.error)) { forgetPostingStatus(); throw new ReversalReasonRequired(); }
+      throw Error(r.error.replace(/^P10_[A-Z_]+: /, ""));
+    }
+    await refresh();
+  };
+  const withdraw: Ctx["withdraw"] = (e, reason) => changeWithdrawal(e, reason, "withdraw");
+  const restoreWithdrawn: Ctx["restoreWithdrawn"] = (e, reason) => changeWithdrawal(e, reason, "restore");
   const payCard: Ctx["payCard"] = async (p) => {
     const card = accounts.find((a) => a.id === p.cardAccountId);
     const out = await recordCardPayment(p, undefined, (createId) => save({ title: `${card?.name ?? "Card"} bill payment`, merchant: card?.issuer || null, category: "Card payment", scope: "personal", memberId: null,
@@ -949,7 +987,7 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
       expenses: expenses.filter((x) => (x.txnType ?? "expense") === "expense"), transactions: expenses.filter((x) => !x.transferCounterpartOf), transferCounterparts: expenses.filter((x) => !!x.transferCounterpartOf), confirmTransfer, cancelTransfer, accounts, addAccount, setArchived, adjustBalance,
       commitments, loans, goals, valuations, documents, saveCommitment, confirmIrregular, confirmCommitment, saveLoan, recordLoanPayment, convertToEmi,
       saveGoal, updateAccount, addValuation, addDocument, updateDocument, removeDocument, history, setReimbursement, recordReimbursement, deleteAll,
-      budgets, loading, syncState, loadErrors, lastSyncedAt, refresh, save, remove, payCard, setScope, reconcile, addMember, removeMember, updateMember, setBudget, signedUrl, downloadFile,
+      budgets, loading, syncState, loadErrors, lastSyncedAt, refresh, save, remove, withdraw, restoreWithdrawn, withdrawn: withdrawnEntries, payCard, setScope, reconcile, addMember, removeMember, updateMember, setBudget, signedUrl, downloadFile,
       setAllocations, updateReimbursement, addReimbursementReceipt, listReviews, saveReview,
     }}>
       {children}

@@ -1,6 +1,7 @@
 import { StageStrip } from "@/components/StageStrip";
+import { exportFile } from "@/lib/export-gate";
 import { canvasNarrative, statementStage } from "@/lib/plain-language";
-import { downloadBlob } from "@/lib/reports";
+
 import { csvCell } from "@/lib/csv-safe";
 import { createFileRoute, useSearch } from "@tanstack/react-router";
 import { SectionTabs } from "@/components/SectionTabs";
@@ -209,6 +210,7 @@ export function StatementDeskPage({ embedded }: { embedded?: { files: File[]; co
   const api = () => {
     const s = storeRef.current;
     return { save: s.save, remove: s.remove, reconcile: s.reconcile, addAccount: s.addAccount, setArchived: s.setArchived, refresh: s.refresh, transactions: s.transactions, linkDraft: linkDraftToTransaction, unlinkDraft,
+      withdrawnIds: new Set(s.withdrawn.map((x) => x.id)),
       readUndoRow: async (id: string) => {
         const { data, error } = await supabase.from('expenses').select('id,statement_ref,correction_revision').eq('employee_id', s.userId).eq('id', id).maybeSingle();
         if (error || !data) throw Error('Upload-time safety snapshot is unavailable. Recovery history is retained.');
@@ -299,6 +301,8 @@ export function StatementDeskPage({ embedded }: { embedded?: { files: File[]; co
       toast.success(`${r.posted.length} entries posted · ${r.reconciled.length} records marked as matched${r.createdAccounts.length ? ` · ${r.createdAccounts.length} account${r.createdAccounts.length === 1 ? "" : "s"} created` : ""}`, {
         ...(undoCap === 'needs-update' ? {} : { action: { label: "Undo", onClick: () => void undo(r) } }),
       });
+      // P0-034: lines whose entry was withdrawn earlier are not saved again; restoring that entry is the way back.
+      if (r.withdrawnLines?.length) toast.info(`${r.withdrawnLines.length} line${r.withdrawnLines.length === 1 ? " was" : "s were"} withdrawn earlier (for example by Undo) and ${r.withdrawnLines.length === 1 ? "was" : "were"} not added again. Restore ${r.withdrawnLines.length === 1 ? "it" : "them"} from Withdrawn entries to count ${r.withdrawnLines.length === 1 ? "it" : "them"}.`);
     } catch (e) {
       if (e instanceof PartialUploadError) {
         setResult(e.result);
@@ -519,7 +523,7 @@ export function StatementDeskPage({ embedded }: { embedded?: { files: File[]; co
       for (const d of [...a.auto, ...a.ask]) rows.push([a.file.name, a.name, d.line.date, d.line.description, d.line.amount, d.line.direction, d.group === "auto" ? "suggested (approve to save)" : "needs your decision", d.reason].map(q).join(","));
       for (const l of a.later) rows.push([a.file.name, a.name, l.line.date, l.line.description, l.line.amount, l.line.direction, "held back", l.reason].map(q).join(","));
     }
-    downloadBlob(new Blob([rows.join("\n")], { type: "text/csv" }), "statement-desk-plan.csv");
+    void exportFile({ kind: "ledger_csv" }, new Blob([rows.join("\n")], { type: "text/csv" }), "statement-desk-plan.csv");
   };
 
   const suggestedKeys = plan?.accounts.flatMap((a) => [...a.auto, ...a.ask].map((d) => d.line.key)) ?? [];

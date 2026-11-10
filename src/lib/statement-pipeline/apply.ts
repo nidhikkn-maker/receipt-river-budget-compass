@@ -8,15 +8,29 @@ import type { AccountDetails } from "../ledger";
 import type { UndoRow } from './atomic-undo';
 import { assertReviewed, stampReview, type Approvals } from "./review-gate";
 
-/** Same recipe the statement cross-check already uses, so re-uploading a file never posts it twice. */
-export async function stableId(accountId: string, l: StmtLine): Promise<string> {
+const lineSignature = (l: StmtLine) => `${l.date}|${l.direction}|${l.amount.toFixed(2)}|${(l.balance ?? 0).toFixed(2)}|${l.description}`;
+
+/**
+ * Same recipe the statement cross-check already uses, so re-uploading a file never posts it twice. `occurrence`
+ * tells identical lines in one file apart (two real same-day purchases with no running balance): the first keeps the
+ * original identity (#0 adds nothing, so earlier uploads keep their ids), later ones add `|#n`. Reordering a file
+ * keeps every identity: identical lines are interchangeable and numbered in the order they appear.
+ */
+export async function stableId(accountId: string, l: StmtLine, occurrence = 0): Promise<string> {
   const digest = new Uint8Array(
-    await crypto.subtle.digest("SHA-256", new TextEncoder().encode(`${accountId}|${l.date}|${l.direction}|${l.amount.toFixed(2)}|${(l.balance ?? 0).toFixed(2)}|${l.description}`)),
+    await crypto.subtle.digest("SHA-256", new TextEncoder().encode(`${accountId}|${lineSignature(l)}${occurrence > 0 ? `|#${occurrence}` : ""}`)),
   ).slice(0, 16);
   digest[6] = ((digest[6] ?? 0) & 0x0f) | 0x50;
   digest[8] = ((digest[8] ?? 0) & 0x3f) | 0x80;
   const hex = [...digest].map((b) => b.toString(16).padStart(2, "0")).join("");
   return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+}
+
+/** Occurrence of each line among identical lines of its file (by line key), in file order. */
+export function lineOccurrences(lines: readonly StmtLine[]): Map<string, number> {
+  const seen = new Map<string, number>(), out = new Map<string, number>();
+  for (const l of lines) { const sig = lineSignature(l); const n = seen.get(sig) ?? 0; out.set(l.key, n); seen.set(sig, n + 1); }
+  return out;
 }
 
 export interface ApplyApi {
@@ -42,6 +56,9 @@ export interface ApplyApi {
   atomicUndo?: (result: ApplyResult) => Promise<void>;
   /** Owner read during posting, never a baseline reconstructed at Undo time. */
   readUndoRow?: (id: string) => Promise<UndoRow | null>;
+  /** P0-034: entries kept as withdrawn (e.g. by an earlier Undo). A line whose stable entry is one of them is never
+   *  saved again, matched or reactivated: it is reported so the person can restore that entry instead. */
+  withdrawnIds?: ReadonlySet<string>;
 }
 
 /** One account's accepted part of an upload: the lines to post, the destination for movements, the records to mark. */
@@ -70,6 +87,8 @@ export interface ApplyResult {
   sources?: { documentId: string; accountId: string; file: string }[];
   evidence?: { id: string; ref: string }[];
   undoRows?: UndoRow[];
+  /** P0-034: lines skipped because their entry is withdrawn (restore it to count it again). Never part of Undo. */
+  withdrawnLines?: { id: string; description: string }[];
 }
 
 export class PartialUploadError extends Error {
@@ -124,19 +143,28 @@ export async function applyUpload(requests: ApplyRequest[], api: ApplyApi, onPro
     const source = await api.prepareSource?.(r, accountId);
     if (source) (result.sources ??= []).push({ documentId: source, accountId, file: r.account.file.name });
     const refs = new Map<string, string>();
+    const occurrence = lineOccurrences(r.account.file.lines);
+    const idOf = (l: StmtLine) => stableId(accountId, l, occurrence.get(l.key) ?? 0);
+    // P0-034: a line whose entry was withdrawn (an earlier Undo, or Withdraw) is neither duplicated nor reactivated.
+    const decisions: LineDecision[] = [];
     for (const d of r.decisions) {
-      const id = await stableId(accountId, d.line);
+      const id = await idOf(d.line);
+      if (api.withdrawnIds?.has(id)) { (result.withdrawnLines ??= []).push({ id, description: d.line.description.slice(0, 120) }); done++; continue; }
+      decisions.push(d);
+    }
+    for (const d of decisions) {
+      const id = await idOf(d.line);
       if (source) refs.set(id, `document:${source} · ${d.line.key} · ${d.line.date} · ${d.line.amount.toFixed(2)}`);
     }
     for (const m of r.reconcileIds) refs.set(m.id, source ? `document:${source} · ${m.ref}` : m.ref);
     (result.evidence ??= []).push(...Array.from(refs, ([id, ref]) => ({ id, ref })));
     await api.checkpoint?.(structuredClone(result));
-    for (const d of r.decisions) {
+    for (const d of decisions) {
       onProgress?.(`Saving ${++done} of ${total}…`);
       if (d.needsDestination && !r.destination) throw Error(`Choose where “${d.line.description.slice(0, 60)}” went before posting.`);
       const input = decisionInput(d, { statementAccountId: accountId, destination: r.destination ?? null });
       if (!input.accountId && !d.needsDestination) input.accountId = accountId;
-      const id = await stableId(accountId, d.line);
+      const id = await idOf(d.line);
       const link = r.draftLinks?.[d.line.key];
       if (link) {
         Object.assign(input, Object.fromEntries(Object.entries(link.overrides).filter(([, v]) => v !== undefined && v !== "")));

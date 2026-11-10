@@ -1,0 +1,159 @@
+{
+ "device": "iphone15",
+ "shell": "signature-flow",
+ "history": {
+  "length": 6,
+  "path": "/home"
+ },
+ "toastBefore": "no sonner module",
+ "locked": {
+  "lockShown": true,
+  "lockText": "Thapal\nThapal is locked\n\nUnlock this app on this device to continue.\n\nUse account password\nGet a code by email\nSign out\n\nUnlocking only reopens Thapal on this device. To recover your account, sign out and use the sign-in page. Face ID and the MPIN can't recover an account.",
+  "outsideAllInert": true,
+  "notInert": [],
+  "shellInDom": false,
+  "canvasOpen": false,
+  "toastsInDom": 0,
+  "rupeeVisibleOutsideLock": false,
+  "url": "/home"
+ },
+ "aria": "- dialog \"Thapal is locked\":\n  - img \"Thapal\"\n  - heading \"Thapal is locked\" [level=1]\n  - paragraph: Unlock this app on this device to continue.\n  - button \"Use account password\"\n  - button \"Get a code by email\"\n  - button \"Sign out\"\n  - paragraph: Unlocking only reopens Thapal on this device. To recover your account, sign out and use the sign-in page. Face ID and the MPIN can't recover an account.",
+ "tabOrder": [
+  {
+   "inLock": true,
+   "browserChrome": false,
+   "tag": "BUTTON",
+   "name": "Use account password"
+  },
+  {
+   "inLock": true,
+   "browserChrome": false,
+   "tag": "BUTTON",
+   "name": "Get a code by email"
+  },
+  {
+   "inLock": true,
+   "browserChrome": false,
+   "tag": "BUTTON",
+   "name": "Sign out"
+  },
+  {
+   "inLock": false,
+   "browserChrome": true,
+   "tag": "BODY",
+   "name": "Skip to content\nThapal\nThapal is locked\n"
+  },
+  {
+   "inLock": true,
+   "browserChrome": false,
+   "tag": "BUTTON",
+   "name": "Use account password"
+  },
+  {
+   "inLock": true,
+   "browserChrome": false,
+   "tag": "BUTTON",
+   "name": "Get a code by email"
+  },
+  {
+   "inLock": true,
+   "browserChrome": false,
+   "tag": "BUTTON",
+   "name": "Sign out"
+  },
+  {
+   "inLock": false,
+   "browserChrome": true,
+   "tag": "BODY",
+   "name": "Skip to content\nThapal\nThapal is locked\n"
+  },
+  {
+   "inLock": true,
+   "browserChrome": false,
+   "tag": "BUTTON",
+   "name": "Use account password"
+  },
+  {
+   "inLock": true,
+   "browserChrome": false,
+   "tag": "BUTTON",
+   "name": "Get a code by email"
+  },
+  {
+   "inLock": true,
+   "browserChrome": false,
+   "tag": "BUTTON",
+   "name": "Sign out"
+  },
+  {
+   "inLock": false,
+   "browserChrome": true,
+   "tag": "BODY",
+   "name": "Skip to content\nThapal\nThapal is locked\n"
+  },
+  {
+   "inLock": true,
+   "browserChrome": false,
+   "tag": "BUTTON",
+   "name": "Use account password"
+  },
+  {
+   "inLock": true,
+   "browserChrome": false,
+   "tag": "BUTTON",
+   "name": "Get a code by email"
+  }
+ ],
+ "toastWhileLocked": "no sonner module",
+ "afterToast": {
+  "lockShown": true,
+  "lockText": "Thapal\nThapal is locked\n\nUnlock this app on this device to continue.\n\nUse account password\nGet a code by email\nSign out\n\nUnlocking only reopens Thapal on this device. To recover your account, sign out and use the sign-in page. Face ID and the MPIN can't recover an account.",
+  "outsideAllInert": true,
+  "notInert": [],
+  "shellInDom": false,
+  "canvasOpen": false,
+  "toastsInDom": 0,
+  "rupeeVisibleOutsideLock": false,
+  "url": "/home"
+ },
+ "afterBack": {
+  "lockShown": true,
+  "lockText": "Thapal\nThapal is locked\n\nUnlock this app on this device to continue.\n\nUse account password\nGet a code by email\nSign out\n\nUnlocking only reopens Thapal on this device. To recover your account, sign out and use the sign-in page. Face ID and the MPIN can't recover an account.",
+  "outsideAllInert": true,
+  "notInert": [],
+  "shellInDom": false,
+  "canvasOpen": false,
+  "toastsInDom": 0,
+  "rupeeVisibleOutsideLock": false,
+  "url": "/home"
+ },
+ "afterForward": {
+  "lockShown": true,
+  "lockText": "Thapal\nThapal is locked\n\nUnlock this app on this device to continue.\n\nUse account password\nGet a code by email\nSign out\n\nUnlocking only reopens Thapal on this device. To recover your account, sign out and use the sign-in page. Face ID and the MPIN can't recover an account.",
+  "outsideAllInert": true,
+  "notInert": [],
+  "shellInDom": false,
+  "canvasOpen": false,
+  "toastsInDom": 0,
+  "rupeeVisibleOutsideLock": false,
+  "url": "/home"
+ },
+ "urlBefore": "/home",
+ "deepLink": {
+  "lockShown": true,
+  "lockText": "Thapal\nThapal is locked\n\nUnlock this app on this device to continue.\n\nUse account password\nGet a code by email\nSign out\n\nUnlocking only reopens Thapal on this device. To recover your account, sign out and use the sign-in page. Face ID and the MPIN can't recover an account.",
+  "outsideAllInert": true,
+  "notInert": [],
+  "shellInDom": false,
+  "canvasOpen": false,
+  "toastsInDom": 0,
+  "rupeeVisibleOutsideLock": false,
+  "url": "/trips"
+ },
+ "afterUnlock": {
+  "url": "/trips",
+  "lockShown": false,
+  "shellInDom": true,
+  "heading": "Your travels"
+ }
+}

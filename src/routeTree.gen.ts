@@ -84,6 +84,7 @@ import { Route as UTokenRouteImport } from './routes/u.$token'
 import { Route as DotlovableOauthConsentRouteImport } from './routes/[.]lovable.oauth.consent'
 import { Route as AuthenticatedBankAccountAccountIdRouteImport } from './routes/_authenticated/bank-account.$accountId'
 import { Route as AuthenticatedCardsAccountIdRouteImport } from './routes/_authenticated/cards.$accountId'
+import { Route as AuthenticatedRecordsTravelRouteImport } from './routes/_authenticated/records_.travel'
 import { Route as AuthenticatedTripsIndexRouteImport } from './routes/_authenticated/trips.index'
 import { Route as AuthenticatedTripsTripIdRouteImport } from './routes/_authenticated/trips.$tripId'
 import { Route as ApiPublicJobsAccountantLinksRouteImport } from './routes/api/public/jobs/accountant-links'
@@ -495,6 +496,12 @@ const AuthenticatedCardsAccountIdRoute =
     path: '/cards/$accountId',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedRecordsTravelRoute =
+  AuthenticatedRecordsTravelRouteImport.update({
+    id: '/records_/travel',
+    path: '/records/travel',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedTripsIndexRoute = AuthenticatedTripsIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -633,6 +640,7 @@ export interface FileRoutesByFullPath {
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/bank-account/$accountId': typeof AuthenticatedBankAccountAccountIdRoute
   '/cards/$accountId': typeof AuthenticatedCardsAccountIdRoute
+  '/records/travel': typeof AuthenticatedRecordsTravelRoute
   '/trips/$tripId': typeof AuthenticatedTripsTripIdRoute
   '/trips/': typeof AuthenticatedTripsIndexRoute
   '/api/public/jobs/accountant-links': typeof ApiPublicJobsAccountantLinksRoute
@@ -719,6 +727,7 @@ export interface FileRoutesByTo {
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/bank-account/$accountId': typeof AuthenticatedBankAccountAccountIdRoute
   '/cards/$accountId': typeof AuthenticatedCardsAccountIdRoute
+  '/records/travel': typeof AuthenticatedRecordsTravelRoute
   '/trips/$tripId': typeof AuthenticatedTripsTripIdRoute
   '/trips': typeof AuthenticatedTripsIndexRoute
   '/api/public/jobs/accountant-links': typeof ApiPublicJobsAccountantLinksRoute
@@ -808,6 +817,7 @@ export interface FileRoutesById {
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/_authenticated/bank-account/$accountId': typeof AuthenticatedBankAccountAccountIdRoute
   '/_authenticated/cards/$accountId': typeof AuthenticatedCardsAccountIdRoute
+  '/_authenticated/records_/travel': typeof AuthenticatedRecordsTravelRoute
   '/_authenticated/trips/$tripId': typeof AuthenticatedTripsTripIdRoute
   '/_authenticated/trips/': typeof AuthenticatedTripsIndexRoute
   '/api/public/jobs/accountant-links': typeof ApiPublicJobsAccountantLinksRoute
@@ -897,6 +907,7 @@ export interface FileRouteTypes {
     | '/.lovable/oauth/consent'
     | '/bank-account/$accountId'
     | '/cards/$accountId'
+    | '/records/travel'
     | '/trips/$tripId'
     | '/trips/'
     | '/api/public/jobs/accountant-links'
@@ -983,6 +994,7 @@ export interface FileRouteTypes {
     | '/.lovable/oauth/consent'
     | '/bank-account/$accountId'
     | '/cards/$accountId'
+    | '/records/travel'
     | '/trips/$tripId'
     | '/trips'
     | '/api/public/jobs/accountant-links'
@@ -1071,6 +1083,7 @@ export interface FileRouteTypes {
     | '/.lovable/oauth/consent'
     | '/_authenticated/bank-account/$accountId'
     | '/_authenticated/cards/$accountId'
+    | '/_authenticated/records_/travel'
     | '/_authenticated/trips/$tripId'
     | '/_authenticated/trips/'
     | '/api/public/jobs/accountant-links'
@@ -1632,6 +1645,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedCardsAccountIdRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/records_/travel': {
+      id: '/_authenticated/records_/travel'
+      path: '/records/travel'
+      fullPath: '/records/travel'
+      preLoaderRoute: typeof AuthenticatedRecordsTravelRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/trips/': {
       id: '/_authenticated/trips/'
       path: '/'
@@ -1792,6 +1812,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedWealthRoute: typeof AuthenticatedWealthRoute
   AuthenticatedBankAccountAccountIdRoute: typeof AuthenticatedBankAccountAccountIdRoute
   AuthenticatedCardsAccountIdRoute: typeof AuthenticatedCardsAccountIdRoute
+  AuthenticatedRecordsTravelRoute: typeof AuthenticatedRecordsTravelRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
@@ -1865,6 +1886,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedBankAccountAccountIdRoute:
     AuthenticatedBankAccountAccountIdRoute,
   AuthenticatedCardsAccountIdRoute: AuthenticatedCardsAccountIdRoute,
+  AuthenticatedRecordsTravelRoute: AuthenticatedRecordsTravelRoute,
 }
 
 const AuthenticatedRouteRouteWithChildren =

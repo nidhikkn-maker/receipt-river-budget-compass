@@ -4,6 +4,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { REPORT_TYPES, buildReportDoc, reportLabel, type ReportFilters, type ReportType, type DraftLite } from "./report-centre";
 import { accountBalance, ledgerView, reversalOfRow } from "./ledger";
+import { withdrawnAtOfRow } from "./withdrawal";
 import { normalizePreferences } from "./preferences";
 import type { TravelTrip } from "./travel";
 import { sha256Hex } from "./private-files";
@@ -32,7 +33,7 @@ export async function loadOwnerReportData(db: SupabaseClient<any>, owner: string
     txnType: x.txn_type, accountId: x.account_id, toAccountId: x.to_account_id, paymentInstrumentId: x.payment_instrument_id, tags: x.tags ?? [], workspaceAllocations: x.workspace_allocations ?? [],
     receiptDetails: x.receipt_details, reimbursementStatus: x.reimbursement_status, adjustmentSign: x.adjustment_sign === -1 ? -1 : 1,
     allocations: x.allocations ?? [], reimbursement: x.reimbursement ?? {}, tripId: x.trip_id, principal: n(x.principal), interest: n(x.interest),
-    transferCounterpartOf: x.transfer_counterpart_of ?? null, reversesEntryId: reversalOfRow(x),
+    transferCounterpartOf: x.transfer_counterpart_of ?? null, reversesEntryId: reversalOfRow(x), withdrawnAt: withdrawnAtOfRow(x),
   })));
   const accounts = (a.data ?? []).map((x: any) => ({
     id: x.id, name: x.name, kind: x.kind, openingBalance: Number(x.opening_balance), archived: x.archived, creditLimit: n(x.credit_limit), dueDay: x.due_day, minBalance: Number(x.min_balance),

@@ -60,3 +60,33 @@ Direct database and API evidence, on a real hosted Supabase/PostgREST stack rath
 1. Create, or authorise, the `thapal-staging` project, and provide its keys through the secure credential form (Stage A).
 2. Create the staging-only test users. I can create these through the staging project's auth once its keys are provided.
 3. Later and separately: the restored, sanitised rehearsal (Stage B).
+
+## 6. Complete project configuration (Stage A, for approval; nothing created)
+
+| Item | Configuration |
+|---|---|
+| Provider | Separate Supabase project in a **separate organisation** from production (no shared members, keys or billing alerts). A separate Lovable project with its own Cloud backend is the alternative if KK prefers Lovable billing. |
+| Name / region | `thapal-staging`, same region as production for timing parity. No connection to the production project. |
+| Auth | Email/password only. Signups disabled; the 3 staging test users are created by the admin script. SMTP set to a sink (no real email), Google OAuth off, MFA as in production. |
+| Storage | Buckets `receipts`, `documents` and `statement-uploads` created by migration, holding synthetic files only. |
+| Secrets | Anon key, service role key and URL entered only through the secure credential form (never in chat or the repository). The service role is used only by the migration and rollback script. |
+| Network | Allowed from the verification session to the staging host only. I will propose removing the production host from this session's allow-list before Stage A starts. |
+| Data | Deterministic synthetic fixtures (`src/test/backup-fixture.ts`, failure-injection statements, cross-module rows), loaded by a seed script after migration. |
+| Guards | The seed and verify scripts refuse to run unless `STAGING_URL` matches the staging host. A hard-coded denylist includes the production project ref. Every report records the target host and project ref. |
+| Migrations | `drizzle/migrations` 0000–0088, then proposed P1, P2, P4, P5, P5b, P6, P7, P8, P9 (and P10/P11 once accepted), each recorded with its checksum. |
+| Rollback | The reverse rollback files, run in order, verified by catalog and figure parity with the pre-migration snapshot. The project can be deleted outright afterwards. |
+| Evidence | JSON and Markdown report per run: git commit, migration checksums, every API request with expected and observed results, timings. |
+
+## 7. Estimated cost
+
+Source: Supabase's official pricing page, checked 10 Nov 2026; please confirm on the page before approving.
+
+| Option | Monthly cost | Notes |
+|---|---|---|
+| Free organisation (Stage A, synthetic data) | **$0** | Up to 2 free projects per organisation. Free projects pause after inactivity, which is acceptable for staging. |
+| Pro organisation, one Micro project | **≈ $25/month** | Plan fee; the included $10 compute credit covers one Micro instance. |
+| Each additional Micro project on Pro (e.g. the rehearsal) | **≈ $10/month**, billed hourly | The rehearsal project exists for hours, not months, so it costs a fraction of this. Delete it after the report. |
+| Database branching (not proposed) | $0.01344 per branch-hour | Listed for completeness. |
+| Vercel (existing Hobby preview) | $0 | Unchanged. |
+
+If production is on Lovable Cloud, a Lovable-hosted staging project is billed through Lovable's plan instead; I can't see that pricing from here.

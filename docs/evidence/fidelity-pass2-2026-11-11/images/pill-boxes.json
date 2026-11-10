@@ -1,0 +1,214 @@
+{
+ "before/pill-iphone-home": {
+  "pill_root": {
+   "text": "Preview\n0aea59b",
+   "x": 12,
+   "y": 677,
+   "w": 132.2,
+   "h": 44,
+   "bottom": 721
+  },
+  "pill_button": {
+   "text": "Preview build 0aea59b on uix/signature-shell, sample data",
+   "x": 12,
+   "y": 677,
+   "w": 132.2,
+   "h": 44,
+   "bottom": 721
+  },
+  "coming_up_heading": {
+   "text": "Coming up\nFull calendar",
+   "x": 20,
+   "y": 546.2,
+   "w": 332,
+   "h": 57,
+   "bottom": 603.2
+  },
+  "tabbar": {
+   "text": "Tab bar",
+   "x": 0,
+   "y": 735,
+   "w": 372,
+   "h": 58,
+   "bottom": 793
+  },
+  "overlap_heading_px2": 0.0,
+  "overlap_tabbar_px2": 0.0,
+  "painted_note": "root box includes 44 px hit areas; painted pill is 24 px tall in after"
+ },
+ "before/pill-iphone15-home": {
+  "pill_root": {
+   "text": "Preview\n0aea59b",
+   "x": 12,
+   "y": 736,
+   "w": 132.2,
+   "h": 44,
+   "bottom": 780
+  },
+  "pill_button": {
+   "text": "Preview build 0aea59b on uix/signature-shell, sample data",
+   "x": 12,
+   "y": 736,
+   "w": 132.2,
+   "h": 44,
+   "bottom": 780
+  },
+  "coming_up_heading": {
+   "text": "Coming up\nFull calendar",
+   "x": 20,
+   "y": 620.2,
+   "w": 353,
+   "h": 57,
+   "bottom": 677.2
+  },
+  "tabbar": {
+   "text": "Tab bar",
+   "x": 0,
+   "y": 794,
+   "w": 393,
+   "h": 58,
+   "bottom": 852
+  },
+  "overlap_heading_px2": 0.0,
+  "overlap_tabbar_px2": 0.0,
+  "painted_note": "root box includes 44 px hit areas; painted pill is 24 px tall in after"
+ },
+ "after/pill-iphone-home-dismissed": {
+  "pill_root": null,
+  "pill_button": null,
+  "coming_up_heading": {
+   "text": "Coming up\nFull calendar",
+   "x": 20,
+   "y": 546.2,
+   "w": 332,
+   "h": 57,
+   "bottom": 603.2
+  },
+  "tabbar": {
+   "text": "Tab bar",
+   "x": 0,
+   "y": 735,
+   "w": 372,
+   "h": 58,
+   "bottom": 793
+  },
+  "overlap_heading_px2": 0.0,
+  "overlap_tabbar_px2": 0.0,
+  "painted_note": "root box includes 44 px hit areas; painted pill is 24 px tall in after"
+ },
+ "after/pill-iphone-home": {
+  "pill_root": {
+   "text": "Preview\n0aea59b",
+   "x": 12,
+   "y": 677,
+   "w": 154.4,
+   "h": 44,
+   "bottom": 721
+  },
+  "pill_button": null,
+  "coming_up_heading": {
+   "text": "Coming up\nFull calendar",
+   "x": 20,
+   "y": 546.2,
+   "w": 332,
+   "h": 57,
+   "bottom": 603.2
+  },
+  "tabbar": {
+   "text": "Tab bar",
+   "x": 0,
+   "y": 735,
+   "w": 372,
+   "h": 58,
+   "bottom": 793
+  },
+  "overlap_heading_px2": 0.0,
+  "overlap_tabbar_px2": 0.0,
+  "painted_note": "root box includes 44 px hit areas; painted pill is 24 px tall in after"
+ },
+ "after/pill-iphone-money-after-dismiss": {
+  "pill_root": null,
+  "pill_button": null,
+  "coming_up_heading": null,
+  "tabbar": {
+   "text": "Tab bar",
+   "x": 0,
+   "y": 735,
+   "w": 372,
+   "h": 58,
+   "bottom": 793
+  },
+  "overlap_heading_px2": 0.0,
+  "overlap_tabbar_px2": 0.0,
+  "painted_note": "root box includes 44 px hit areas; painted pill is 24 px tall in after"
+ },
+ "after/pill-iphone15-home-dismissed": {
+  "pill_root": null,
+  "pill_button": null,
+  "coming_up_heading": {
+   "text": "Coming up\nFull calendar",
+   "x": 20,
+   "y": 620.2,
+   "w": 353,
+   "h": 57,
+   "bottom": 677.2
+  },
+  "tabbar": {
+   "text": "Tab bar",
+   "x": 0,
+   "y": 794,
+   "w": 393,
+   "h": 58,
+   "bottom": 852
+  },
+  "overlap_heading_px2": 0.0,
+  "overlap_tabbar_px2": 0.0,
+  "painted_note": "root box includes 44 px hit areas; painted pill is 24 px tall in after"
+ },
+ "after/pill-iphone15-home": {
+  "pill_root": {
+   "text": "Preview\n0aea59b",
+   "x": 12,
+   "y": 736,
+   "w": 154.4,
+   "h": 44,
+   "bottom": 780
+  },
+  "pill_button": null,
+  "coming_up_heading": {
+   "text": "Coming up\nFull calendar",
+   "x": 20,
+   "y": 620.2,
+   "w": 353,
+   "h": 57,
+   "bottom": 677.2
+  },
+  "tabbar": {
+   "text": "Tab bar",
+   "x": 0,
+   "y": 794,
+   "w": 393,
+   "h": 58,
+   "bottom": 852
+  },
+  "overlap_heading_px2": 0.0,
+  "overlap_tabbar_px2": 0.0,
+  "painted_note": "root box includes 44 px hit areas; painted pill is 24 px tall in after"
+ },
+ "after/pill-iphone15-money-after-dismiss": {
+  "pill_root": null,
+  "pill_button": null,
+  "coming_up_heading": null,
+  "tabbar": {
+   "text": "Tab bar",
+   "x": 0,
+   "y": 794,
+   "w": 393,
+   "h": 58,
+   "bottom": 852
+  },
+  "overlap_heading_px2": 0.0,
+  "overlap_tabbar_px2": 0.0,
+  "painted_note": "root box includes 44 px hit areas; painted pill is 24 px tall in after"
+ }
+}

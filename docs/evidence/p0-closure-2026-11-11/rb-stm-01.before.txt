@@ -1,0 +1,52 @@
+# RB-STM-01 before-run: ORIGINAL statementLineRef (HEAD c397e1b), new cases 2c/2d in src/lib/failure-injection.test.ts
+# command: bunx vitest run src/lib/failure-injection.test.ts -t P7   (2026-11-10T12:44:05Z)
+# 2d fails at its first check because its line's reference collides with the SAME line already posted in another
+# account (test 2/3 (P7), same file name) -> reconcile refused P7_DUPLICATE_SOURCE, statement_ref left NULL.
+
+ RUN  v4.1.12 /home/user/thapal-p3c
+
+ ❯ src/lib/failure-injection.test.ts (22 tests | 2 failed | 18 skipped) 3621ms
+     × 2c (P7). two accounts, statements uploaded under the SAME file name with an identical line → each account's line posted once; re-import adds nothing 122ms
+     × 2d (P7). the same line re-downloaded under a DIFFERENT file name for the same account (after Forget last upload) is the SAME source: no new row, reference unchanged 64ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/lib/failure-injection.test.ts > failure injection on the whole proposed stack (P1, P2, P4, P5, P5b, P6, P7, P8) + P9 > 2c (P7). two accounts, statements uploaded under the SAME file name with an identical line → each account's line posted once; re-import adds nothing
+AssertionError: expected [ Array(1) ] to deeply equal []
+
+- Expected
++ Received
+
+- []
++ [
++   "reconcile-error:P7_DUPLICATE_SOURCE: statement_row statement.csv · 2026-11-03 · POS AMAZON RETAIL · debit 2999.00 is already posted as another economic event",
++ ]
+
+ ❯ src/lib/failure-injection.test.ts:1612:60
+    1610|       const ra = await importStatement(a, "statement.csv", [AMAZON]);
+    1611|       const rb = await importStatement(b, "statement.csv", [AMAZON]);
+    1612|       expect(net.log.filter((x) => x.includes("-error:"))).toEqual([]);
+       |                                                            ^
+    1613|       expect(ra.failed).toEqual([]);
+    1614|       expect(rb.failed).toEqual([]);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+ FAIL  src/lib/failure-injection.test.ts > failure injection on the whole proposed stack (P1, P2, P4, P5, P5b, P6, P7, P8) + P9 > 2d (P7). the same line re-downloaded under a DIFFERENT file name for the same account (after Forget last upload) is the SAME source: no new row, reference unchanged
+AssertionError: the given combination of arguments (null and string) is invalid for this assertion. You can use an array, a map, an object, a set, a string, or a weakset instead of a string
+ ❯ src/lib/failure-injection.test.ts:1651:44
+    1649|       expect(l).toMatchObject({ n: 1, total: 2999 });
+    1650|       const before = await refsOf(l.ids);
+    1651|       expect(before[0]!.statement_ref).not.toContain("HDFC_Statement");
+       |                                            ^
+    1652|       const forget = await supabase.from("statement_line_imports").del…
+    1653|       expect(forget.error).toBeNull();
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  2 failed | 2 passed | 18 skipped (22)
+   Start at  12:43:44
+   Duration  4.47s (transform 414ms, setup 135ms, import 531ms, tests 3.62s, environment 0ms)
+

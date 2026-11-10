@@ -1,4 +1,5 @@
 import { effectiveEntity } from "@/lib/books/entity-accounts";
+import { exportDeliver } from "@/lib/export-gate";
 import { companyReportEntries } from '@/lib/books/company-report';
 import { SectionTabs } from "@/components/SectionTabs";
 import { createFileRoute } from "@tanstack/react-router";
@@ -11,7 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { applyFilters } from "@/lib/expenses";
-import { buildReport, deliverFile, toCsv, toExcel, toPdf, type ReportKind } from "@/lib/reports";
+import { buildReport, toCsv, toExcel, toPdf, type ReportKind } from "@/lib/reports";
 import { useStore } from "@/lib/store";
 import { BarChart, Bar, XAxis, Tooltip, ResponsiveContainer, LineChart, Line, YAxis } from "recharts";
 import { tagValue } from "@/lib/preferences";
@@ -90,11 +91,11 @@ function Reports() {
     });
   })();
   const report = (k: ReportKind) => {const r=buildReport(k, filtered, memberName, budgets, { departmentBudgets, budgetMonth, claims: companyEntries, accountName: id => accounts.find(a => a.id === id)?.name ?? "Unassigned", ...((preferences.entities ?? []).length ? { companyOf: (e: import("@/lib/expenses").Expense) => { const k = effectiveEntity(e, preferences.books?.entityAccounts ?? {}); return k ? (preferences.entities ?? []).find(x => x.id === k)?.name ?? "" : "Personal"; } } : {}) });return company==='all'?r:{...r,title:`${r.title} — ${companyLabel}`};};
-  const csv = (k: ReportKind) => void deliverFile(new Blob(["\uFEFF", toCsv(report(k))], { type: "text/csv;charset=utf-8" }), `${fileStem(k)}.csv`).catch(() => toast.error("Couldn't download the CSV"));
+  const csv = (k: ReportKind) => void exportDeliver({ kind: "report" }, new Blob(["\uFEFF", toCsv(report(k))], { type: "text/csv;charset=utf-8" }), `${fileStem(k)}.csv`).catch(() => toast.error("Couldn't download the CSV"));
   const pdf = async (k: ReportKind) => {
     const r = report(k), key = JSON.stringify([r, subtitle]);
     const ready = prepared[k];
-    if (ready?.key === key) { await deliverFile(ready.blob, `${fileStem(k)}.pdf`); return; }
+    if (ready?.key === key) { await exportDeliver({ kind: "report" }, ready.blob, `${fileStem(k)}.pdf`); return; }
     setPreparing(k);
     try { const blob = await toPdf(r, subtitle); setPrepared(p => ({ ...p, [k]: { blob, key } })); } catch { toast.error("Couldn't create the PDF"); } finally { setPreparing(null); }
   };
@@ -156,7 +157,7 @@ function Reports() {
             <p className="mt-1 flex-1 text-sm text-muted-foreground">{k.desc}</p>
             <div className="mt-4 flex flex-wrap gap-2">
               <Button variant="outline" size="sm" aria-label={`Export ${k.title} CSV`} disabled={k.kind === "departments" && departmentBudgetError} onClick={() => csv(k.kind)}><FileSpreadsheet className="mr-1 h-4 w-4" />CSV</Button>
-              <Button variant="outline" size="sm" aria-label={`Export ${k.title} Excel`} disabled={k.kind === "departments" && departmentBudgetError} onClick={async () => { try { await deliverFile(await toExcel(report(k.kind)), `${fileStem(k.kind)}.xlsx`); } catch { toast.error("Couldn't download Excel"); } }}><FileSpreadsheet className="mr-1 h-4 w-4" />Excel</Button>
+              <Button variant="outline" size="sm" aria-label={`Export ${k.title} Excel`} disabled={k.kind === "departments" && departmentBudgetError} onClick={async () => { try { await exportDeliver({ kind: "report" }, await toExcel(report(k.kind)), `${fileStem(k.kind)}.xlsx`); } catch { toast.error("Couldn't download Excel"); } }}><FileSpreadsheet className="mr-1 h-4 w-4" />Excel</Button>
               <Button size="sm" aria-label={`${prepared[k.kind]?.key === JSON.stringify([report(k.kind), subtitle]) ? "Download" : "Prepare"} ${k.title} PDF`} disabled={preparing !== null || (k.kind === "departments" && departmentBudgetError)} onClick={() => void pdf(k.kind).catch(() => toast.error("Couldn't download the PDF"))}>{prepared[k.kind]?.key === JSON.stringify([report(k.kind), subtitle]) ? <Download className="mr-1 h-4 w-4" /> : <FileText className="mr-1 h-4 w-4" />}{preparing === k.kind ? "Preparing…" : prepared[k.kind]?.key === JSON.stringify([report(k.kind), subtitle]) ? "Download PDF" : "Prepare PDF"}</Button>
             </div>
           </div>

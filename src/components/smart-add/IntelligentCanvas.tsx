@@ -1,6 +1,6 @@
-import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState, type DragEvent, type FormEvent } from "react";
+import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore, type DragEvent, type FormEvent } from "react";
 import { Link } from "@tanstack/react-router";
-import { ArrowLeft, ArrowRight, Camera, Check, CheckCircle2, ChevronRight, FileStack, FileUp, Mic, Package, PencilLine, Plane, ReceiptText, X } from "lucide-react";
+import { ArrowLeft, ArrowRight, Camera, Check, CheckCircle2, ChevronRight, Columns2, FileStack, FileUp, Mic, Package, PencilLine, Plane, ReceiptText, X } from "lucide-react";
 import { useStore } from "@/lib/store";
 import { SMART_ADD_EVENT, smartAddContext, type SmartAddIntent } from "@/lib/smart-add-event";
 import { CONTEXTS, type IntakeContext } from "@/lib/books/intake";
@@ -11,7 +11,7 @@ import { holdToastsClearOfFooter } from "@/lib/toast-placement";
 import { SourcePreview, sourceKind } from "@/components/SourcePreview";
 import { ReceiptAssetHandoff } from "@/components/ReceiptAssetHandoff";
 import { SMART_ADD_ACCEPT } from "@/components/SmartAdd";
-import { canConfirm, canvasRoute, CANVAS_KINDS, readReviewForm, STEP_LABELS, stepOf, type CanvasKind, type ReviewSummary } from "./canvas-model";
+import { canConfirm, canvasRoute, CANVAS_KINDS, keyboardInset, kindHint, readReviewForm, STEP_LABELS, stepOf, type CanvasKind, type ReviewSummary } from "./canvas-model";
 
 // The same review and intake screens the app already uses — no second parser, classifier or save path.
 const ReceiptReview = lazy(() => import("@/routes/_authenticated/new").then((m) => ({ default: m.NewExpense })));
@@ -25,6 +25,38 @@ type Phase =
   | { kind: "done"; id?: string | undefined; label: string; followUp?: "asset" | "claim"; claimOpened?: boolean };
 
 const KIND_ICON: Record<CanvasKind, typeof ReceiptText> = { receipt: ReceiptText, statement: FileStack, travel: Plane, asset: Package };
+
+const useIsoLayoutEffect = typeof window === "undefined" ? useEffect : useLayoutEffect;
+
+/** Wide screens (KK decision 5): only there may the owner open the original side by side with the details. */
+const WIDE_QUERY = "(min-width: 1100px)";
+function useWideScreen(): boolean {
+  return useSyncExternalStore(
+    (on) => { if (typeof window === "undefined" || !window.matchMedia) return () => {}; const m = window.matchMedia(WIDE_QUERY); m.addEventListener("change", on); return () => m.removeEventListener("change", on); },
+    () => typeof window !== "undefined" && !!window.matchMedia && window.matchMedia(WIDE_QUERY).matches,
+    () => false,
+  );
+}
+
+/**
+ * iPhone keyboard (KK decision 9): keep the sheet, and so its one sticky action, inside the visible part of the
+ * screen when the on-screen keyboard and its accessory bar are up. Writes the visual viewport to CSS variables.
+ */
+function useVisualViewportBox(layer: HTMLDivElement | null, open: boolean) {
+  useEffect(() => {
+    const vv = typeof window === "undefined" ? undefined : window.visualViewport;
+    if (!open || !layer || !vv) return;
+    const apply = () => {
+      const kb = keyboardInset(window.innerHeight, vv.height, vv.offsetTop);
+      layer.style.setProperty("--sf-vv-top", `${Math.round(vv.offsetTop)}px`);
+      layer.style.setProperty("--sf-vv-h", `${Math.round(vv.height)}px`);
+      layer.dataset["keyboard"] = kb ? "open" : "closed";
+    };
+    apply();
+    vv.addEventListener("resize", apply); vv.addEventListener("scroll", apply);
+    return () => { vv.removeEventListener("resize", apply); vv.removeEventListener("scroll", apply); layer.style.removeProperty("--sf-vv-top"); layer.style.removeProperty("--sf-vv-h"); delete layer.dataset["keyboard"]; };
+  }, [layer, open]);
+}
 
 /**
  * Signature Flow Smart Add — the Intelligent Canvas (UIX master §6 E01–E05, §8 Flow 3, §15 Journey C; captures 08–10).
@@ -43,6 +75,11 @@ export function IntelligentCanvas({ open, onOpenChange, scope }: { open: boolean
   const [phase, setPhase] = useState<Phase>({ kind: "add" });
   const [confirming, setConfirming] = useState<ReviewSummary | null>(null);
   const [view, setView] = useState<"details" | "original">("details");
+  // Desktop review is the narrow canvas of reference 09; the owner may open the original beside the details.
+  const [sideBySide, setSideBySide] = useState(false);
+  const wideScreen = useWideScreen();
+  const [layer, setLayer] = useState<HTMLDivElement | null>(null);
+  useVisualViewportBox(layer, open);
   const [shown, setShown] = useState(0);
   const [dragging, setDragging] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
@@ -51,7 +88,7 @@ export function IntelligentCanvas({ open, onOpenChange, scope }: { open: boolean
   const fileRef = useRef<HTMLInputElement>(null);
   const cameraRef = useRef<HTMLInputElement>(null);
 
-  const reset = useCallback(() => { if (pending.current) return; setPhase({ kind: "add" }); setPicked([]); setConfirming(null); setView("details"); setShown(0); }, []);
+  const reset = useCallback(() => { if (pending.current) return; setPhase({ kind: "add" }); setPicked([]); setConfirming(null); setView("details"); setSideBySide(false); setShown(0); }, []);
   const pending = useRef(false);
   const [saving, setSaving] = useState(false);
   const fieldsRef = useRef<HTMLDivElement>(null);
@@ -65,11 +102,14 @@ export function IntelligentCanvas({ open, onOpenChange, scope }: { open: boolean
   useEffect(() => { const back = () => setConfirming(null); window.addEventListener("popstate", back); return () => window.removeEventListener("popstate", back); }, []);
 
   // The sticky "Continue to confirmation" mirrors the review's own button: enabled only when the review allows saving.
+  // Re-read after every render (before paint) and on every change the observer reports; the click handler reads it
+  // again, so the footer can never act while the review's own button is unavailable.
+  const ownSubmit = useCallback(() => [...(fieldsRef.current?.querySelectorAll<HTMLButtonElement>('form button[type="submit"]') ?? [])].pop() ?? null, []);
+  useIsoLayoutEffect(() => { const b = ownSubmit(); setReviewReady(!!b && !b.disabled); });
   useEffect(() => {
     const host = fieldsRef.current;
     if (!host) return;
-    const sync = () => { const b = [...host.querySelectorAll<HTMLButtonElement>('form button[type="submit"]')].pop(); setReviewReady(!!b && !b.disabled); };
-    sync();
+    const sync = () => { const b = ownSubmit(); setReviewReady(!!b && !b.disabled); };
     const o = new MutationObserver(sync);
     o.observe(host, { subtree: true, childList: true, attributes: true, attributeFilter: ["disabled"] });
     return () => o.disconnect();
@@ -127,9 +167,16 @@ export function IntelligentCanvas({ open, onOpenChange, scope }: { open: boolean
     formRef.current = form;
     setConfirming(readReviewForm(form, phase.kind === "receipt" ? phase.files : []));
   };
+  // A tap that arrives before the footer has caught up with the review never does nothing silently: it shows and
+  // announces why Continue is unavailable and moves focus to that reason.
+  const whyRef = useRef<HTMLParagraphElement>(null);
+  const [explain, setExplain] = useState(0);
+  useEffect(() => { if (explain) whyRef.current?.focus(); }, [explain]);
   const continueToConfirmation = () => {
     if (pending.current) return;
-    const form = fieldsRef.current?.querySelector("form");
+    const own = ownSubmit();
+    if (!own || own.disabled) { setReviewReady(false); setExplain((n) => n + 1); return; }
+    const form = own.form ?? fieldsRef.current?.querySelector("form");
     if (form) form.requestSubmit();
   };
   const confirmSave = () => {
@@ -163,14 +210,18 @@ export function IntelligentCanvas({ open, onOpenChange, scope }: { open: boolean
   const files = phase.kind === "receipt" || phase.kind === "statement" ? phase.files : [];
   const current = files[Math.min(shown, files.length - 1)];
   const title = phase.kind === "done" ? "Saved to your records." : step === 1 ? "Add anything. Effortlessly." : step === 2 ? "Here’s what we understood." : "Ready for confirmation.";
-  const wide = (phase.kind === "receipt" || phase.kind === "statement") && !confirming;
+  // Statement Desk is a full line-by-line comparison and keeps the wide canvas; a receipt is reviewed in the narrow
+  // canvas unless the owner opens its original side by side on a wide screen. Edits are kept either way: the review
+  // stays mounted and only its layout changes.
+  const sideShown = phase.kind === "receipt" && files.length > 0 && sideBySide && wideScreen;
+  const wide = !confirming && (phase.kind === "statement" || sideShown);
 
   const onDrop = (e: DragEvent<HTMLDivElement>) => { e.preventDefault(); setDragging(false); add(e.dataTransfer.files); };
 
   return <>
     <input ref={fileRef} type="file" accept={SMART_ADD_ACCEPT} multiple className="sr-only" tabIndex={-1} aria-label="Choose files" onChange={(e) => { add(e.target.files); e.target.value = ""; }} />
     <input ref={cameraRef} type="file" accept="image/*" capture="environment" className="sr-only" tabIndex={-1} aria-label="Take a photo" onChange={(e) => { add(e.target.files); e.target.value = ""; }} />
-    <div hidden={!open} className="sf-canvas-layer">
+    <div hidden={!open} ref={setLayer} className="sf-canvas-layer">
       <div className="sf-canvas-scrim" aria-hidden onClick={() => onOpenChange(false)} />
       <div ref={panelRef} tabIndex={-1} role="dialog" aria-modal="true" aria-labelledby="sf-canvas-title" className={"sf-canvas" + (wide ? " sf-canvas-wide" : "")} data-step={step}>
         <header className="sf-canvas-head">
@@ -190,13 +241,13 @@ export function IntelligentCanvas({ open, onOpenChange, scope }: { open: boolean
 
         <div className="sf-canvas-body">
           {phase.kind === "add" && <div className="sf-canvas-add">
-            <p className="sf-canvas-lede">Give us a receipt, statement, travel booking or asset register. Your source remains visible for checking, and nothing is saved until you confirm.</p>
+            <p className="sf-canvas-lede">Give us a receipt, statement, travel booking or asset register. Your source remains visible for checking.</p>
             <div className="sf-chips" role="radiogroup" aria-label="What are you adding?">
               {CANVAS_KINDS.map((k) => { const Icon = KIND_ICON[k.id]; return (
                 <button key={k.id} type="button" role="radio" aria-checked={kind === k.id} className="sf-chip" onClick={() => { setKind(k.id); if (k.id !== "statement") setContext(undefined); }}><Icon aria-hidden />{k.label}</button>
               ); })}
             </div>
-            <p className="sf-canvas-hint">{CANVAS_KINDS.find((k) => k.id === kind)?.hint}{kind === "statement" && context ? ` For ${CONTEXTS[context]}.` : ""}{kind === "travel" ? (activeTrip ? ` Linked to “${activeTrip.name}”.` : " No current trip, so it is added as an ordinary expense.") : ""}</p>
+            {(() => { const hint = kindHint(kind, kind === "statement" && context ? CONTEXTS[context] : null, activeTrip?.name ?? null); return hint ? <p className="sf-canvas-hint">{hint}</p> : null; })()}
             <div className={"sf-drop" + (dragging ? " sf-drop-active" : "")} onDragOver={(e) => { e.preventDefault(); setDragging(true); }} onDragLeave={() => setDragging(false)} onDrop={onDrop}>
               <FileUp aria-hidden className="sf-drop-icon" />
               <p className="sf-drop-title">Choose document or photo</p>
@@ -217,18 +268,21 @@ export function IntelligentCanvas({ open, onOpenChange, scope }: { open: boolean
           </div>}
 
           {(phase.kind === "receipt" || phase.kind === "statement") && <div className={"sf-canvas-review" + (files.length ? " sf-has-source" : "")} hidden={!!confirming}>
-            {phase.kind === "statement" && <p className="sf-canvas-lede">Statement Desk is the one place statements and registers are entered. It checks every line, and you confirm before anything is posted.</p>}
-            {phase.kind === "receipt" && <p className="sf-canvas-lede">Read automatically from your source. Check the suggested account and classification, then continue — nothing is saved yet.</p>}
-            {files.length > 0 && <div className="sf-view-toggle" role="tablist" aria-label="Show">
-              <button type="button" role="tab" id="sf-tab-details" aria-controls="sf-canvas-details" aria-selected={view === "details"} onClick={() => setView("details")}>Details</button>
-              <button type="button" role="tab" id="sf-tab-original" aria-controls="sf-canvas-original" aria-selected={view === "original"} onClick={() => setView("original")}>Original</button>
+            {phase.kind === "statement" && <p className="sf-canvas-lede">Statement Desk checks every line; you confirm before anything is posted.</p>}
+            {phase.kind === "receipt" && <p className="sf-canvas-lede">Check the suggested account and classification before saving.</p>}
+            {files.length > 0 && <div className="sf-view-bar">
+              {!sideShown && <div className="sf-view-toggle" role="tablist" aria-label="Show">
+                <button type="button" role="tab" id="sf-tab-details" aria-controls="sf-canvas-details" aria-selected={view === "details"} onClick={() => setView("details")}>Details</button>
+                <button type="button" role="tab" id="sf-tab-original" aria-controls="sf-canvas-original" aria-selected={view === "original"} onClick={() => setView("original")}>Original</button>
+              </div>}
+              {phase.kind === "receipt" && wideScreen && <button type="button" className="sf-side-toggle" aria-pressed={sideShown} onClick={() => setSideBySide((v) => !v)}><Columns2 aria-hidden />{sideShown ? "One column" : "Original side by side"}</button>}
             </div>}
-            <div className="sf-canvas-split" data-view={view}>
-              {current && <section className="sf-canvas-source" id="sf-canvas-original" role="tabpanel" aria-labelledby="sf-tab-original" aria-label="Your original">
+            <div className="sf-canvas-split" data-view={view} data-side={sideShown || phase.kind === "statement" ? "true" : undefined}>
+              {current && <section className="sf-canvas-source" id="sf-canvas-original" role={sideShown ? undefined : "tabpanel"} aria-labelledby={sideShown ? undefined : "sf-tab-original"} aria-label="Your original">
                 <SourcePreview file={current} />
                 {files.length > 1 && <div className="sf-chips" role="group" aria-label="Choose which file to view">{files.map((f, i) => <button key={i} type="button" className="sf-chip" aria-pressed={i === shown} onClick={() => setShown(i)}>{i + 1}. {f.name.slice(0, 18)}</button>)}</div>}
               </section>}
-              <div className="sf-canvas-fields" id="sf-canvas-details" role={files.length ? "tabpanel" : undefined} aria-labelledby={files.length ? "sf-tab-details" : undefined} ref={fieldsRef} onSubmitCapture={holdSave}>
+              <div className="sf-canvas-fields" id="sf-canvas-details" role={files.length && !sideShown ? "tabpanel" : undefined} aria-labelledby={files.length && !sideShown ? "sf-tab-details" : undefined} ref={fieldsRef} onSubmitCapture={holdSave}>
                 <Suspense fallback={<p role="status" className="sf-state-hint">Opening review…</p>}>
                   <div className="smart-add-review min-w-0">
                     {phase.kind === "receipt"
@@ -241,7 +295,7 @@ export function IntelligentCanvas({ open, onOpenChange, scope }: { open: boolean
           </div>}
 
           {confirming && <div className="sf-canvas-confirm">
-            <p className="sf-canvas-lede">Nothing is entered into the books without confirmation. Check the summary, then confirm to save it with its original attached.</p>
+            <p className="sf-canvas-lede">Nothing is saved until you confirm. The original stays attached.</p>
             <div className="sf-confirm-card">
               <span className="sf-confirm-tick" aria-hidden><Check /></span>
               <div className="min-w-0"><b>{confirming.headline}</b><small>{confirming.subline}</small></div>
@@ -276,8 +330,8 @@ export function IntelligentCanvas({ open, onOpenChange, scope }: { open: boolean
           {(phase.kind === "receipt" || phase.kind === "statement") && !confirming && <>
             <button type="button" className="sf-btn sf-btn-outline" disabled={saving} onClick={reset}><ArrowLeft aria-hidden />Start over</button>
             {phase.kind === "receipt" && <button type="button" className="sf-btn sf-btn-deep" disabled={!reviewReady || saving} aria-describedby={!reviewReady ? "sf-continue-why" : undefined} onClick={continueToConfirmation}>{saving ? "Saving…" : "Continue to confirmation"}<ArrowRight aria-hidden /></button>}
-            {phase.kind === "receipt" && !reviewReady && !saving && <p id="sf-continue-why" className="sf-foot-note">Finish the checks in Details first — for example “Looks right”, or answer a possible duplicate.</p>}
-            {phase.kind === "statement" && <p className="sf-foot-note">Step 3: confirm posting inside Statement Desk.</p>}
+            {phase.kind === "receipt" && !reviewReady && !saving && <p id="sf-continue-why" ref={whyRef} tabIndex={-1} role="status" className="sf-foot-note">Finish the checks in Details first (e.g. “Looks right”).</p>}
+            {phase.kind === "statement" && <p className="sf-foot-note">Confirm posting inside Statement Desk.</p>}
           </>}
           {confirming && <>
             <button type="button" className="sf-btn sf-btn-outline" onClick={() => setConfirming(null)}><ArrowLeft aria-hidden />Change</button>

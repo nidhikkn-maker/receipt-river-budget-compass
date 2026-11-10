@@ -1,9 +1,12 @@
-import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
+import { createPortal } from "react-dom";
+import { toast } from "sonner";
 import type { User } from "@supabase/supabase-js";
-import { Fingerprint, Mail } from "lucide-react";
+import { Mail } from "lucide-react";
 import { useNavigate } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
-import { ThapalSymbol } from "./ThapalLogo";
+import { ThapalLogo } from "./ThapalLogo";
+import { isolate, setAppLocked } from "@/lib/app-lock-state";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
@@ -67,12 +70,42 @@ function otherWaysHint(methods: UnlockMethod[]) {
 
 type Screen = "pin" | "choose" | "password" | "code";
 
+const useIsoLayoutEffect = typeof window === "undefined" ? useEffect : useLayoutEffect;
+
+/**
+ * The lock screen surface (UIX §16.4, P0-029): an opaque full-screen layer with the sign-in logo and tokens, rendered
+ * outside the app so that, while it shows, everything else on the page (shell, navigation, toasts, portals) is inert
+ * and hidden from assistive technology. Notifications already on screen are dismissed.
+ */
+function LockSurface({ children }: { children: ReactNode }) {
+  const [host, setHost] = useState<HTMLElement | null>(null);
+  useIsoLayoutEffect(() => {
+    const el = document.createElement("div");
+    el.setAttribute("data-app-lock", "");
+    document.body.appendChild(el);
+    const undo = isolate(el);
+    toast.dismiss();
+    setHost(el);
+    return () => { undo(); el.remove(); };
+  }, []);
+  if (!host) return null;
+  return createPortal(
+    <div role="dialog" aria-modal="true" aria-labelledby="app-lock-title" className="app-lock fixed inset-0 z-[70] overflow-y-auto bg-background text-foreground">
+      <div className="mx-auto flex min-h-full w-full max-w-sm flex-col items-center justify-center gap-3 px-5 pb-[max(24px,env(safe-area-inset-bottom))] pt-[max(24px,env(safe-area-inset-top))]">
+        <ThapalLogo className="mb-2 h-10 w-auto" />
+        {children}
+      </div>
+    </div>,
+    host,
+  );
+}
+
 /**
  * Inactivity and device lock for one signed-in owner. Locks after 5 idle minutes on phones / narrow screens and
  * 15 on computers for every session (accounts and guests), whether or not device lock is switched on, and also
  * when the app is reopened after that long. Unlock only reopens this session; it never signs in or recovers.
  */
-export function OwnerLock({ ownerId, children }: { ownerId: string; children: ReactNode }) {
+export function OwnerLock({ ownerId, children, onUnlock }: { ownerId: string; children: ReactNode; onUnlock?: () => void }) {
   const passkey = useDevicePasskey();
   const nav = useNavigate();
   const query = useQueryClient();
@@ -90,13 +123,18 @@ export function OwnerLock({ ownerId, children }: { ownerId: string; children: Re
   const factsRef = useRef<Facts | null>(null);
   const autoPasskey = useRef(false);
   const passkeyRef = useRef(passkey);
+  const onUnlockRef = useRef(onUnlock);
+  useEffect(() => { onUnlockRef.current = onUnlock; });
   useEffect(() => { passkeyRef.current = passkey; });
+  // Shells hide their navigation, workspace, avatar and reminders until the start-up check has decided, and while locked.
+  useIsoLayoutEffect(() => { setAppLocked(!ready || locked || ending); }, [ready, locked, ending]);
+  useIsoLayoutEffect(() => () => setAppLocked(false), []);
 
   const endGuest = useCallback(async () => {
     setEnding(true); setLocked(true);
     try { await query.cancelQueries(); query.clear(); } catch { /* nothing to cancel */ }
     await endGuestSession(ownerId);
-    try { await nav({ to: "/auth", search: { ended: "guest-idle" }, replace: true }); }
+    try { await nav({ to: "/auth", search: { ended: "guest-idle" }, replace: true, ignoreBlocker: true }); }
     catch { window.location.assign("/auth?ended=guest-idle"); }
   }, [ownerId, nav, query]);
 
@@ -122,6 +160,7 @@ export function OwnerLock({ ownerId, children }: { ownerId: string; children: Re
   const opened = useCallback(() => {
     recordActivity(ownerId);
     setLocked(false); setError(""); setPassword(""); setCode(""); setCodeSent(false);
+    onUnlockRef.current?.();
   }, [ownerId]);
 
   // Fresh start: decide from how long this device has been away, not from when this screen mounted.
@@ -190,7 +229,7 @@ export function OwnerLock({ ownerId, children }: { ownerId: string; children: Re
   }, [locked, screen, waitMs]);
 
   if (!ready) return null;
-  if (ending) return <p role="status" className="flex min-h-[60vh] items-center justify-center px-4 text-center text-sm text-muted-foreground">Ending guest session…</p>;
+  if (ending) return <LockSurface><h1 id="app-lock-title" className="sr-only">Thapal is locked</h1><p role="status" className="text-center text-sm text-muted-foreground">Ending guest session…</p></LockSurface>;
   if (!locked) return children;
 
   const f = facts ?? NO_FACTS;
@@ -207,7 +246,7 @@ export function OwnerLock({ ownerId, children }: { ownerId: string; children: Re
       const result = await supabase.auth.signOut({ scope: "local" });
       if (result.error) throw result.error;
       // Keep device lock enabled: returning to this account still requires verification.
-      await nav({ to: "/auth", replace: true });
+      await nav({ to: "/auth", replace: true, ignoreBlocker: true });
     } catch { setError("Couldn't sign out. Check your connection and try again."); }
     finally { setBusy(false); }
   };
@@ -240,19 +279,21 @@ export function OwnerLock({ ownerId, children }: { ownerId: string; children: Re
     finally { setBusy(false); }
   };
 
-  if (screen === "pin" && methods.includes("pin")) return <div className="flex min-h-[80vh] flex-col items-center justify-center gap-2 px-4">
-    <ThapalSymbol className="mb-2 h-10 w-auto" />
-    <h1 className="mb-2 text-center font-display text-xl font-semibold">Welcome back</h1>
+  if (screen === "pin" && methods.includes("pin")) return <LockSurface>
+    <h1 id="app-lock-title" className="text-center font-display text-xl font-semibold">Thapal is locked</h1>
+    <p className="mb-1 text-center text-sm text-muted-foreground">Unlock this app on this device.</p>
     <PinPad busy={busy} error={error} {...(methods.includes("passkey") ? { onFaceId: () => void face() } : {})} onComplete={onPin} />
     {full.length > 0 && <Button variant="link" disabled={busy} onClick={() => show("choose")}>Use another way</Button>}
     <Button variant="link" disabled={busy} onClick={() => void signOut()}>{f.isAnonymous ? "End guest session" : "Sign out"}</Button>
-  </div>;
+  </LockSurface>;
 
-  return <div className="flex min-h-[70vh] flex-col items-center justify-center gap-4 px-4">
-    <ThapalSymbol className="h-10 w-auto" />
-    <Fingerprint className="h-10 w-10 text-primary" />
-    <h1 className="text-center font-display text-2xl font-bold">Thapal is locked</h1>
-    {methods.includes("passkey") && <Button disabled={busy} className="max-w-full whitespace-normal" onClick={() => void face()}>Unlock with Face ID / passkey</Button>}
+  // One primary action at a time: Face ID when this device has it, unless the password or code form is open.
+  const formOpen = screen === "password" || screen === "code";
+  return <LockSurface>
+    <h1 id="app-lock-title" className="text-center font-display text-2xl font-bold">Thapal is locked</h1>
+    <p className="text-center text-sm text-muted-foreground">Unlock this app on this device to continue.</p>
+    {!facts && <p role="status" className="text-center text-sm text-muted-foreground">Checking how this device can be unlocked…</p>}
+    {methods.includes("passkey") && <Button variant={formOpen ? "outline" : "default"} disabled={busy} className="w-full max-w-full whitespace-normal" onClick={() => void face()}>Unlock with Face ID / passkey</Button>}
     {error && <p role="alert" className="max-w-sm text-center text-sm text-destructive">{error}</p>}
     {methods.includes("password") && (screen === "password" ? <form className="grid w-full max-w-sm gap-3" onSubmit={async e => {
       e.preventDefault(); setBusy(true); setError("");
@@ -263,7 +304,7 @@ export function OwnerLock({ ownerId, children }: { ownerId: string; children: Re
       <Label htmlFor="device-password">Account password</Label>
       <Input id="device-password" type="password" autoComplete="current-password" required value={password} disabled={busy} onChange={e => setPassword(e.target.value)} />
       <Button disabled={busy || !password}>{busy ? "Verifying…" : "Verify password and unlock"}</Button>
-    </form> : <Button variant="outline" disabled={busy} onClick={() => show("password")}>Use account password</Button>)}
+    </form> : <Button variant="outline" className="w-full" disabled={busy} onClick={() => show("password")}>Use account password</Button>)}
     {methods.includes("email-code") && f.email && (screen === "code" ? <form className="grid w-full max-w-sm gap-3" onSubmit={async e => {
       e.preventDefault(); setBusy(true); setError("");
       try { await verifyDeviceUnlockCode(ownerId, code); codeSentAt.delete(ownerId); opened(); }
@@ -279,11 +320,11 @@ export function OwnerLock({ ownerId, children }: { ownerId: string; children: Re
         <p className="text-center text-sm text-muted-foreground">We'll email a one-time code to {maskEmail(f.email)}.</p>
         <Button type="button" disabled={busy || waitMs > 0} onClick={() => void sendCode()}>{waitMs > 0 ? `Send a code in ${Math.ceil(waitMs / 1000)} s` : "Email me a code"}</Button>
       </>}
-    </form> : <Button variant="outline" disabled={busy} onClick={() => show("code")}><Mail className="h-4 w-4" />Get a code by email</Button>)}
+    </form> : <Button variant="outline" className="w-full" disabled={busy} onClick={() => show("code")}><Mail className="h-4 w-4" />Get a code by email</Button>)}
     {methods.includes("pin") && <Button variant="link" disabled={busy} onClick={() => show("pin")}>Use MPIN</Button>}
     <Button variant="link" disabled={busy} onClick={() => void signOut()}>{f.isAnonymous ? "End guest session" : "Sign out"}</Button>
     <p className="max-w-sm text-center text-xs text-muted-foreground">{f.isAnonymous
       ? "A guest session can't be recovered. Ending it removes this device's guest data."
-      : "Can't unlock? Sign out, then use “Forgot password?” or Continue with Google on the sign-in page. The MPIN can't recover an account."}</p>
-  </div>;
+      : "Unlocking only reopens Thapal on this device. To recover your account, sign out and use the sign-in page. Face ID and the MPIN can't recover an account."}</p>
+  </LockSurface>;
 }

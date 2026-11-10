@@ -1,0 +1,55 @@
+# P0-023 / P0-033 before-run: guardedRestore temporarily = the original Settings restore step (restore_finance_backup called directly every time).
+# Command: bunx vitest run src/lib/failure-injection.test.ts -t 'R1|R2'  (2026-11-10T14:04:18Z), all three modes.
+# R1: the same backup restores again silently ('restored', the owner's later edit 500.00 overwritten).
+# R2: restoring an older backup resurrects the withdrawn entry (applied schema), or fails with P10_WITHDRAWN (P10), or P11 refuses the direct call.
+ RUN  v4.1.12 /home/user/thapal-p3c
+ ❯ src/lib/failure-injection.test.ts (39 tests | 6 failed | 33 skipped) 7632ms
+     × R1. the same backup again: nothing changes and the earlier restore is shown; only an explicit re-restore with a reason proceeds, and is recorded 195ms
+     × R2. P0-033: an older backup (taken before the withdrawal) never resurrects a withdrawn entry; a restored entry keeps its withdrawal history 282ms
+     × R1. the same backup again: nothing changes and the earlier restore is shown; only an explicit re-restore with a reason proceeds, and is recorded 136ms
+     × R2. P0-033: an older backup (taken before the withdrawal) never resurrects a withdrawn entry; a restored entry keeps its withdrawal history 158ms
+     × R1. the same backup again: nothing changes and the earlier restore is shown; only an explicit re-restore with a reason proceeds, and is recorded 53ms
+     × R2. P0-033: an older backup (taken before the withdrawal) never resurrects a withdrawn entry; a restored entry keeps its withdrawal history 128ms
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 6 ⎯⎯⎯⎯⎯⎯⎯
+ FAIL  src/lib/failure-injection.test.ts > P0-023 repeated backup restore / P0-033 withdrawn entries — applied schema (app rule; history in owner preferences) > R1. the same backup again: nothing changes and the earlier restore is shown; only an explicit re-restore with a reason proceeds, and is recorded
+ FAIL  src/lib/failure-injection.test.ts > P0-023 repeated backup restore / P0-033 withdrawn entries — with P10 > R1. the same backup again: nothing changes and the earlier restore is shown; only an explicit re-restore with a reason proceeds, and is recorded
+AssertionError: expected 'restored' to be 'previously_restored' // Object.is equality
+Expected: "previously_restored"
+Received: "restored"
+ ❯ src/lib/failure-injection.test.ts:2032:30
+    2030|         expect((await api().from("expenses").update({ amount: 500, ori…
+    2031|         const again = await guardedRestore({ owner: O, data: (await pl…
+    2032|         expect(again.status).toBe("previously_restored");
+       |                              ^
+    2033|         expect(again.changed).toBe(false);
+    2034|         expect(again.previous).toHaveLength(1);
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/6]⎯
+ FAIL  src/lib/failure-injection.test.ts > P0-023 repeated backup restore / P0-033 withdrawn entries — applied schema (app rule; history in owner preferences) > R2. P0-033: an older backup (taken before the withdrawal) never resurrects a withdrawn entry; a restored entry keeps its withdrawal history
+TypeError: Cannot read properties of undefined (reading 'state')
+ ❯ src/lib/failure-injection.test.ts:2068:84
+    2066|         const r = await guardedRestore({ owner: O, data: (await planRe…
+    2067|         expect(r.status).toBe("restored");
+    2068|         expect(((await rowOf(db, f.lunch))?.rd["withdrawal"] as { stat…
+       |                                                                                    ^
+    2069|         expect(((await rowOf(db, f.groceries))?.rd["withdrawal"] as { …
+    2070|         expect(await figures(f.acc)).toEqual(before);
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/6]⎯
+ FAIL  src/lib/failure-injection.test.ts > P0-023 repeated backup restore / P0-033 withdrawn entries — with P10 > R2. P0-033: an older backup (taken before the withdrawal) never resurrects a withdrawn entry; a restored entry keeps its withdrawal history
+Error: P10_WITHDRAWN: this entry is withdrawn. Restore it before changing it.
+ ❯ Module.guardedRestore src/lib/restore-guard.ts:58:24
+ ❯ src/lib/failure-injection.test.ts:2066:19
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/6]⎯
+ FAIL  src/lib/failure-injection.test.ts > P0-023 repeated backup restore / P0-033 withdrawn entries — with P10 + P11 (database decides) > R1. the same backup again: nothing changes and the earlier restore is shown; only an explicit re-restore with a reason proceeds, and is recorded
+Error: P11_RESTORE_CHECK_REQUIRED: backups are restored through restore_finance_backup_checked, which detects a repeated restore
+ ❯ Module.guardedRestore src/lib/restore-guard.ts:58:24
+ ❯ src/lib/failure-injection.test.ts:2028:23
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/6]⎯
+ FAIL  src/lib/failure-injection.test.ts > P0-023 repeated backup restore / P0-033 withdrawn entries — with P10 + P11 (database decides) > R2. P0-033: an older backup (taken before the withdrawal) never resurrects a withdrawn entry; a restored entry keeps its withdrawal history
+Error: P11_RESTORE_CHECK_REQUIRED: backups are restored through restore_finance_backup_checked, which detects a repeated restore
+ ❯ Module.guardedRestore src/lib/restore-guard.ts:58:24
+ ❯ src/lib/failure-injection.test.ts:2066:19
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/6]⎯
+ Test Files  1 failed (1)
+      Tests  6 failed | 33 skipped (39)
+   Start at  14:03:59
+   Duration  9.04s (transform 865ms, setup 177ms, import 1.07s, tests 7.63s, environment 0ms)

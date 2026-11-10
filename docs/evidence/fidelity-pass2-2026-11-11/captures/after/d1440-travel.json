@@ -1,0 +1,986 @@
+{
+ "wordmark": {
+  "count": 1,
+  "text": "Thapal",
+  "rect": {
+   "x": 143,
+   "y": 27.5,
+   "w": 64.3,
+   "h": 20
+  },
+  "style": {
+   "font-family": "Manrope, \"Manrope Fallback\", -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, Helvetica, Arial, \"Noto Sans Tamil\", \"Noto Sans Devanagari\", sans-serif",
+   "font-weight": "800",
+   "font-size": "20px",
+   "line-height": "20px",
+   "letter-spacing": "-0.4px",
+   "font-variant-numeric": "normal",
+   "border-radius": "0px",
+   "padding-top": "0px",
+   "padding-left": "0px",
+   "height": "20px",
+   "width": "64.25px",
+   "background-color": "rgba(0, 0, 0, 0)",
+   "color": "oklch(0.272 0.015 149.3)"
+  },
+  "platformFonts": [
+   {
+    "familyName": "Manrope ExtraLight",
+    "postScriptName": "Manrope-ExtraLight",
+    "isCustomFont": true,
+    "glyphCount": 6
+   }
+  ]
+ },
+ "tmark": {
+  "count": 1,
+  "text": "T",
+  "rect": {
+   "x": 27.5,
+   "y": 24,
+   "w": 44,
+   "h": 44
+  },
+  "style": {
+   "font-family": "Manrope, \"Manrope Fallback\", -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, Helvetica, Arial, \"Noto Sans Tamil\", \"Noto Sans Devanagari\", sans-serif",
+   "font-weight": "800",
+   "font-size": "25px",
+   "line-height": "25px",
+   "letter-spacing": "-1.5px",
+   "font-variant-numeric": "normal",
+   "border-radius": "0px",
+   "padding-top": "0px",
+   "padding-left": "0px",
+   "height": "44px",
+   "width": "44px",
+   "background-color": "rgba(0, 0, 0, 0)",
+   "color": "rgb(38, 86, 90)"
+  },
+  "platformFonts": [
+   {
+    "familyName": "Manrope ExtraLight",
+    "postScriptName": "Manrope-ExtraLight",
+    "isCustomFont": true,
+    "glyphCount": 1
+   }
+  ]
+ },
+ "workspace": {
+  "count": 1,
+  "text": "Personal",
+  "rect": {
+   "x": 1120,
+   "y": 15.5,
+   "w": 92,
+   "h": 44
+  },
+  "style": {
+   "font-family": "Manrope, \"Manrope Fallback\", -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, Helvetica, Arial, \"Noto Sans Tamil\", \"Noto Sans Devanagari\", sans-serif",
+   "font-weight": "600",
+   "font-size": "11px",
+   "line-height": "16.5px",
+   "letter-spacing": "normal",
+   "font-variant-numeric": "normal",
+   "border-radius": "999px",
+   "padding-top": "0px",
+   "padding-left": "14px",
+   "height": "44px",
+   "width": "91.9688px",
+   "background-color": "rgba(0, 0, 0, 0)",
+   "color": "oklch(0.272 0.015 149.3)"
+  },
+  "platformFonts": [
+   {
+    "familyName": "Manrope ExtraLight",
+    "postScriptName": "Manrope-ExtraLight",
+    "isCustomFont": true,
+    "glyphCount": 8
+   }
+  ]
+ },
+ "avatar": {
+  "count": 1,
+  "text": "KK",
+  "rect": {
+   "x": 1354,
+   "y": 15.5,
+   "w": 44,
+   "h": 44
+  },
+  "style": {
+   "font-family": "Manrope, \"Manrope Fallback\", -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, Helvetica, Arial, \"Noto Sans Tamil\", \"Noto Sans Devanagari\", sans-serif",
+   "font-weight": "600",
+   "font-size": "0px",
+   "line-height": "0px",
+   "letter-spacing": "normal",
+   "font-variant-numeric": "normal",
+   "border-radius": "999px",
+   "padding-top": "0px",
+   "padding-left": "0px",
+   "height": "44px",
+   "width": "44px",
+   "background-color": "rgba(0, 0, 0, 0)",
+   "color": "rgba(0, 0, 0, 0)"
+  },
+  "platformFonts": [
+   {
+    "familyName": "Manrope ExtraLight",
+    "postScriptName": "Manrope-ExtraLight",
+    "isCustomFont": true,
+    "glyphCount": 2
+   }
+  ]
+ },
+ "rail": {
+  "count": 1,
+  "text": "T\nHome\nMoney\nTo-do\nRecords\nReports\nAdd",
+  "rect": {
+   "x": 0,
+   "y": 0,
+   "w": 100,
+   "h": 900
+  },
+  "style": {
+   "font-family": "Manrope, \"Manrope Fallback\", -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, Helvetica, Arial, \"Noto Sans Tamil\", \"Noto Sans Devanagari\", sans-serif",
+   "font-weight": "400",
+   "font-size": "16px",
+   "line-height": "24px",
+   "letter-spacing": "normal",
+   "font-variant-numeric": "normal",
+   "border-radius": "0px",
+   "padding-top": "24px",
+   "padding-left": "0px",
+   "height": "900px",
+   "width": "100px",
+   "background-color": "rgb(249, 249, 247)",
+   "color": "oklch(0.272 0.015 149.3)"
+  },
+  "platformFonts": []
+ },
+ "railLabel": {
+  "count": 6,
+  "text": "Home",
+  "rect": {
+   "x": 35.5,
+   "y": 163,
+   "w": 27.9,
+   "h": 15
+  },
+  "style": {
+   "font-family": "Manrope, \"Manrope Fallback\", -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, Helvetica, Arial, \"Noto Sans Tamil\", \"Noto Sans Devanagari\", sans-serif",
+   "font-weight": "600",
+   "font-size": "10px",
+   "line-height": "15px",
+   "letter-spacing": "normal",
+   "font-variant-numeric": "normal",
+   "border-radius": "0px",
+   "padding-top": "0px",
+   "padding-left": "0px",
+   "height": "15px",
+   "width": "27.9219px",
+   "background-color": "rgba(0, 0, 0, 0)",
+   "color": "oklch(0.525 0.017 148.6)"
+  },
+  "platformFonts": [
+   {
+    "familyName": "Manrope ExtraLight",
+    "postScriptName": "Manrope-ExtraLight",
+    "isCustomFont": true,
+    "glyphCount": 4
+   }
+  ]
+ },
+ "header": {
+  "count": 1,
+  "text": "Thapal\nUp to date\nPersonal\nKK",
+  "rect": {
+   "x": 100,
+   "y": 0,
+   "w": 1340,
+   "h": 76
+  },
+  "style": {
+   "font-family": "Manrope, \"Manrope Fallback\", -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, Helvetica, Arial, \"Noto Sans Tamil\", \"Noto Sans Devanagari\", sans-serif",
+   "font-weight": "400",
+   "font-size": "16px",
+   "line-height": "24px",
+   "letter-spacing": "normal",
+   "font-variant-numeric": "normal",
+   "border-radius": "0px",
+   "padding-top": "0px",
+   "padding-left": "43px",
+   "height": "76px",
+   "width": "1340px",
+   "background-color": "oklab(0.981556 -0.00070259 0.00255078 / 0.94)",
+   "color": "oklch(0.272 0.015 149.3)"
+  },
+  "platformFonts": []
+ },
+ "back": {
+  "count": 1,
+  "text": "Back",
+  "rect": {
+   "x": 209.5,
+   "y": 112,
+   "w": 53.1,
+   "h": 44
+  },
+  "style": {
+   "font-family": "Manrope, \"Manrope Fallback\", -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, Helvetica, Arial, \"Noto Sans Tamil\", \"Noto Sans Devanagari\", sans-serif",
+   "font-weight": "800",
+   "font-size": "11.5px",
+   "line-height": "17.25px",
+   "letter-spacing": "normal",
+   "font-variant-numeric": "normal",
+   "border-radius": "0px",
+   "padding-top": "0px",
+   "padding-left": "4px",
+   "height": "44px",
+   "width": "53.0938px",
+   "background-color": "rgba(0, 0, 0, 0)",
+   "color": "rgb(38, 86, 90)"
+  },
+  "platformFonts": [
+   {
+    "familyName": "Manrope ExtraLight",
+    "postScriptName": "Manrope-ExtraLight",
+    "isCustomFont": true,
+    "glyphCount": 4
+   }
+  ]
+ },
+ "find": {
+  "count": 1,
+  "text": "Find anything",
+  "rect": {
+   "x": 1210.2,
+   "y": 112,
+   "w": 119.3,
+   "h": 44
+  },
+  "style": {
+   "font-family": "Manrope, \"Manrope Fallback\", -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, Helvetica, Arial, \"Noto Sans Tamil\", \"Noto Sans Devanagari\", sans-serif",
+   "font-weight": "800",
+   "font-size": "11.5px",
+   "line-height": "17.25px",
+   "letter-spacing": "normal",
+   "font-variant-numeric": "normal",
+   "border-radius": "12px",
+   "padding-top": "0px",
+   "padding-left": "10px",
+   "height": "44px",
+   "width": "119.312px",
+   "background-color": "rgba(0, 0, 0, 0)",
+   "color": "rgb(38, 86, 90)"
+  },
+  "platformFonts": [
+   {
+    "familyName": "Manrope ExtraLight",
+    "postScriptName": "Manrope-ExtraLight",
+    "isCustomFont": true,
+    "glyphCount": 13
+   }
+  ]
+ },
+ "body": {
+  "count": 1,
+  "text": "Skip to content\nT\nHome\nMoney\nTo-do\nRecords\nReports\nAdd\nThapal\nUp to date\nPersona",
+  "rect": {
+   "x": 0,
+   "y": 0,
+   "w": 1440,
+   "h": 1009.4
+  },
+  "style": {
+   "font-family": "Manrope, \"Manrope Fallback\", -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, Helvetica, Arial, \"Noto Sans Tamil\", \"Noto Sans Devanagari\", sans-serif",
+   "font-weight": "400",
+   "font-size": "16px",
+   "line-height": "23.2px",
+   "letter-spacing": "normal",
+   "font-variant-numeric": "normal",
+   "border-radius": "0px",
+   "padding-top": "0px",
+   "padding-left": "0px",
+   "height": "1009.44px",
+   "width": "1440px",
+   "background-color": "rgb(249, 249, 247)",
+   "color": "oklch(0.272 0.015 149.3)"
+  },
+  "platformFonts": []
+ },
+ "classicH1": {
+  "count": 1,
+  "text": "Your travels",
+  "rect": {
+   "x": 149,
+   "y": 279.3,
+   "w": 1241,
+   "h": 43.2
+  },
+  "style": {
+   "font-family": "Manrope, \"Manrope Fallback\", -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, Helvetica, Arial, \"Noto Sans Tamil\", \"Noto Sans Devanagari\", sans-serif",
+   "font-weight": "600",
+   "font-size": "36px",
+   "line-height": "43.2px",
+   "letter-spacing": "normal",
+   "font-variant-numeric": "normal",
+   "border-radius": "0px",
+   "padding-top": "0px",
+   "padding-left": "0px",
+   "height": "43.1875px",
+   "width": "1241px",
+   "background-color": "rgba(0, 0, 0, 0)",
+   "color": "oklch(0.272 0.015 149.3)"
+  },
+  "platformFonts": [
+   {
+    "familyName": "Manrope ExtraLight",
+    "postScriptName": "Manrope-ExtraLight",
+    "isCustomFont": true,
+    "glyphCount": 12
+   }
+  ]
+ },
+ "sync": {
+  "count": 1,
+  "text": "Up to date",
+  "rect": {
+   "x": 1076,
+   "y": 15.5,
+   "w": 44,
+   "h": 44
+  },
+  "style": {
+   "font-family": "Manrope, \"Manrope Fallback\", -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, Helvetica, Arial, \"Noto Sans Tamil\", \"Noto Sans Devanagari\", sans-serif",
+   "font-weight": "400",
+   "font-size": "16px",
+   "line-height": "24px",
+   "letter-spacing": "normal",
+   "font-variant-numeric": "normal",
+   "border-radius": "0px",
+   "padding-top": "0px",
+   "padding-left": "0px",
+   "height": "44px",
+   "width": "44px",
+   "background-color": "rgba(0, 0, 0, 0)",
+   "color": "oklch(0.272 0.015 149.3)"
+  },
+  "platformFonts": []
+ },
+ "headerSearch": {
+  "count": 1,
+  "text": "",
+  "rect": {
+   "x": 1218,
+   "y": 15.5,
+   "w": 44,
+   "h": 44
+  },
+  "style": {
+   "font-family": "Manrope, \"Manrope Fallback\", -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, Helvetica, Arial, \"Noto Sans Tamil\", \"Noto Sans Devanagari\", sans-serif",
+   "font-weight": "400",
+   "font-size": "16px",
+   "line-height": "24px",
+   "letter-spacing": "normal",
+   "font-variant-numeric": "normal",
+   "border-radius": "12px",
+   "padding-top": "0px",
+   "padding-left": "0px",
+   "height": "44px",
+   "width": "44px",
+   "background-color": "rgba(0, 0, 0, 0)",
+   "color": "oklch(0.525 0.017 148.6)"
+  },
+  "platformFonts": []
+ },
+ "headerIcon": {
+  "count": 3,
+  "text": "",
+  "rect": {
+   "x": 1232,
+   "y": 29.5,
+   "w": 16,
+   "h": 16
+  },
+  "style": {
+   "font-family": "Manrope, \"Manrope Fallback\", -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, Helvetica, Arial, \"Noto Sans Tamil\", \"Noto Sans Devanagari\", sans-serif",
+   "font-weight": "400",
+   "font-size": "16px",
+   "line-height": "24px",
+   "letter-spacing": "normal",
+   "font-variant-numeric": "normal",
+   "border-radius": "0px",
+   "padding-top": "0px",
+   "padding-left": "0px",
+   "height": "16px",
+   "width": "16px",
+   "background-color": "rgba(0, 0, 0, 0)",
+   "color": "oklch(0.525 0.017 148.6)"
+  },
+  "platformFonts": []
+ },
+ "railActive": {
+  "count": 1,
+  "text": "",
+  "rect": {
+   "x": 30.5,
+   "y": 365,
+   "w": 38,
+   "h": 42
+  },
+  "style": {
+   "font-family": "Manrope, \"Manrope Fallback\", -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, Helvetica, Arial, \"Noto Sans Tamil\", \"Noto Sans Devanagari\", sans-serif",
+   "font-weight": "800",
+   "font-size": "10px",
+   "line-height": "15px",
+   "letter-spacing": "normal",
+   "font-variant-numeric": "normal",
+   "border-radius": "13px",
+   "padding-top": "0px",
+   "padding-left": "0px",
+   "height": "42px",
+   "width": "38px",
+   "background-color": "rgb(224, 238, 238)",
+   "color": "rgb(38, 86, 90)"
+  },
+  "platformFonts": []
+ },
+ "recordsTabs": {
+  "count": 1,
+  "text": "Overview\nDocuments\nTravel\nAssets\nReimbursements",
+  "rect": {
+   "x": 209.5,
+   "y": 187,
+   "w": 1120,
+   "h": 44
+  },
+  "style": {
+   "font-family": "Manrope, \"Manrope Fallback\", -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, Helvetica, Arial, \"Noto Sans Tamil\", \"Noto Sans Devanagari\", sans-serif",
+   "font-weight": "400",
+   "font-size": "16px",
+   "line-height": "24px",
+   "letter-spacing": "normal",
+   "font-variant-numeric": "normal",
+   "border-radius": "0px",
+   "padding-top": "0px",
+   "padding-left": "0px",
+   "height": "44px",
+   "width": "1120px",
+   "background-color": "rgba(0, 0, 0, 0)",
+   "color": "oklch(0.272 0.015 149.3)"
+  },
+  "platformFonts": []
+ },
+ "__fonts": [
+  "Manrope 200 800 loaded U+0-FF, U+131, U+152-153",
+  "Manrope 200 800 loaded U+100-2BA, U+2BD-2C5, U+",
+  "Manrope Fallback normal loaded U+0-10FFFF",
+  "Noto Sans Devanagari 100 900 unloaded U+900-97F, U+1CD0-1CF9, ",
+  "Noto Sans Tamil 400 unloaded U+964-965, U+B82-BFA, U+",
+  "Noto Sans Tamil 400 unloaded U+100-2BA, U+2BD-2C5, U+",
+  "Noto Sans Tamil 400 unloaded U+0-FF, U+131, U+152-153",
+  "Noto Sans Tamil 600 unloaded U+964-965, U+B82-BFA, U+",
+  "Noto Sans Tamil 600 unloaded U+100-2BA, U+2BD-2C5, U+",
+  "Noto Sans Tamil 600 unloaded U+0-FF, U+131, U+152-153",
+  "Space Grotesk 700 unloaded U+102-103, U+110-111, U+",
+  "Space Grotesk 700 unloaded U+100-2BA, U+2BD-2C5, U+",
+  "Space Grotesk 700 unloaded U+0-FF, U+131, U+152-153",
+  "Lovable Camera 400 unloaded U+0-10FFFF"
+ ],
+ "__preloads": [
+  "image http://localhost:8088/app-icon-large.png",
+  "font http://localhost:8088/node_modules/@fontsource-variable/manrope/files/manrope-latin-wght-normal.woff2"
+ ],
+ "__fontRequests": [
+  "/node_modules/@fontsource-variable/manrope/files/manrope-latin-wght-normal.woff2?import&url",
+  "/node_modules/@fontsource-variable/manrope/files/manrope-latin-wght-normal.woff2",
+  "/node_modules/@fontsource-variable/manrope/files/manrope-latin-ext-wght-normal.woff2"
+ ],
+ "__smallTargets": [
+  "a \"Skip to content\" 1x1",
+  "a \"Home\" 30x44",
+  "a \"Records\" 42x44",
+  "input \"Choose files\" 1x1",
+  "input \"Take a photo\" 1x1"
+ ],
+ "__contrast": [
+  {
+   "fg": "#97670C",
+   "bg": "#F9F9F7",
+   "ratio": 4.67,
+   "size": 10,
+   "weight": 500,
+   "large": false,
+   "need": 4.5,
+   "pass": true,
+   "disabled": false,
+   "bgImage": false,
+   "el": "span.text-warning",
+   "owner": "sf-main",
+   "sample": "1",
+   "count": 6
+  },
+  {
+   "fg": "#646D65",
+   "bg": "#F9F9F7",
+   "ratio": 5.09,
+   "size": 10,
+   "weight": 600,
+   "large": false,
+   "need": 4.5,
+   "pass": true,
+   "disabled": false,
+   "bgImage": false,
+   "el": "span",
+   "owner": "sf-rail-item",
+   "sample": "Home",
+   "count": 5
+  },
+  {
+   "fg": "#646D65",
+   "bg": "#F9F9F7",
+   "ratio": 5.09,
+   "size": 11,
+   "weight": 400,
+   "large": false,
+   "need": 4.5,
+   "pass": true,
+   "disabled": false,
+   "bgImage": false,
+   "el": "a",
+   "owner": "sf-crumbs-trail",
+   "sample": "Home",
+   "count": 2
+  },
+  {
+   "fg": "#646D65",
+   "bg": "#F9F9F7",
+   "ratio": 5.09,
+   "size": 11.5,
+   "weight": 600,
+   "large": false,
+   "need": 4.5,
+   "pass": true,
+   "disabled": false,
+   "bgImage": false,
+   "el": "a",
+   "owner": "sf-subnav",
+   "sample": "Overview",
+   "count": 4
+  },
+  {
+   "fg": "#646D65",
+   "bg": "#F9F9F7",
+   "ratio": 5.09,
+   "size": 14,
+   "weight": 500,
+   "large": false,
+   "need": 4.5,
+   "pass": true,
+   "disabled": false,
+   "bgImage": false,
+   "el": "div.text-xs.text-primary",
+   "owner": "sf-main",
+   "sample": "Travel",
+   "count": 1
+  },
+  {
+   "fg": "#646D65",
+   "bg": "#F9F9F7",
+   "ratio": 5.09,
+   "size": 15,
+   "weight": 400,
+   "large": false,
+   "need": 4.5,
+   "pass": true,
+   "disabled": false,
+   "bgImage": false,
+   "el": "p.text-sm.text-muted-foreground",
+   "owner": "sf-main",
+   "sample": "Plans, bookings and money for every jour",
+   "count": 1
+  },
+  {
+   "fg": "#646D65",
+   "bg": "#F9F9F7",
+   "ratio": 5.09,
+   "size": 13,
+   "weight": 400,
+   "large": false,
+   "need": 4.5,
+   "pass": true,
+   "disabled": false,
+   "bgImage": false,
+   "el": "div.text-xs.text-muted-foreground",
+   "owner": "sf-main",
+   "sample": "Mumbai",
+   "count": 22
+  },
+  {
+   "fg": "#646D65",
+   "bg": "#F9F9F7",
+   "ratio": 5.09,
+   "size": 13,
+   "weight": 500,
+   "large": false,
+   "need": 4.5,
+   "pass": true,
+   "disabled": false,
+   "bgImage": false,
+   "el": "span.text-xs",
+   "owner": "sf-main",
+   "sample": "26",
+   "count": 12
+  },
+  {
+   "fg": "#8E5F42",
+   "bg": "#F9F9F7",
+   "ratio": 5.15,
+   "size": 18,
+   "weight": 600,
+   "large": false,
+   "need": 4.5,
+   "pass": true,
+   "disabled": false,
+   "bgImage": false,
+   "el": "div.text-lg.text-gold-strong",
+   "owner": "sf-main",
+   "sample": "₹0.00",
+   "count": 1
+  },
+  {
+   "fg": "#B23B2E",
+   "bg": "#F9F9F7",
+   "ratio": 5.6,
+   "size": 14,
+   "weight": 500,
+   "large": false,
+   "need": 4.5,
+   "pass": true,
+   "disabled": false,
+   "bgImage": false,
+   "el": "button.text-sm.text-destructive",
+   "owner": "sf-main",
+   "sample": "Delete trip",
+   "count": 1
+  },
+  {
+   "fg": "#26565A",
+   "bg": "#D3E8DC",
+   "ratio": 6.38,
+   "size": 14,
+   "weight": 500,
+   "large": false,
+   "need": 4.5,
+   "pass": true,
+   "disabled": false,
+   "bgImage": false,
+   "el": "button.text-sm.text-gold-foreground",
+   "owner": "sf-main",
+   "sample": "Create trip",
+   "count": 1
+  },
+  {
+   "fg": "#26565A",
+   "bg": "#E0EEEE",
+   "ratio": 6.89,
+   "size": 11.5,
+   "weight": 800,
+   "large": false,
+   "need": 4.5,
+   "pass": true,
+   "disabled": false,
+   "bgImage": false,
+   "el": "a",
+   "owner": "sf-subnav",
+   "sample": "Travel",
+   "count": 1
+  },
+  {
+   "fg": "#26565A",
+   "bg": "#E9F2EC",
+   "ratio": 7.18,
+   "size": 11.5,
+   "weight": 800,
+   "large": false,
+   "need": 4.5,
+   "pass": true,
+   "disabled": false,
+   "bgImage": false,
+   "el": "button.sf-find",
+   "owner": "sf-find",
+   "sample": "Find anything",
+   "count": 1
+  },
+  {
+   "fg": "#26565A",
+   "bg": "#F5F5F0",
+   "ratio": 7.5,
+   "size": 13,
+   "weight": 500,
+   "large": false,
+   "need": 4.5,
+   "pass": true,
+   "disabled": false,
+   "bgImage": false,
+   "el": "span.text-xs",
+   "owner": "sf-main",
+   "sample": "10",
+   "count": 1
+  },
+  {
+   "fg": "#26565A",
+   "bg": "#F9F9F7",
+   "ratio": 7.78,
+   "size": 25,
+   "weight": 800,
+   "large": true,
+   "need": 3,
+   "pass": true,
+   "disabled": false,
+   "bgImage": false,
+   "el": "span",
+   "owner": "sf-tmark",
+   "sample": "T",
+   "count": 1
+  },
+  {
+   "fg": "#26565A",
+   "bg": "#F9F9F7",
+   "ratio": 7.78,
+   "size": 10,
+   "weight": 800,
+   "large": false,
+   "need": 4.5,
+   "pass": true,
+   "disabled": false,
+   "bgImage": false,
+   "el": "span",
+   "owner": "sf-rail-item",
+   "sample": "Records",
+   "count": 1
+  },
+  {
+   "fg": "#26565A",
+   "bg": "#F9F9F7",
+   "ratio": 7.78,
+   "size": 11.5,
+   "weight": 800,
+   "large": false,
+   "need": 4.5,
+   "pass": true,
+   "disabled": false,
+   "bgImage": false,
+   "el": "button.sf-back",
+   "owner": "sf-back",
+   "sample": "Back",
+   "count": 1
+  },
+  {
+   "fg": "#F9F9F7",
+   "bg": "#26565A",
+   "ratio": 7.78,
+   "size": 14,
+   "weight": 500,
+   "large": false,
+   "need": 4.5,
+   "pass": true,
+   "disabled": false,
+   "bgImage": false,
+   "el": "button.text-primary-foreground.text-sm",
+   "owner": "sf-main",
+   "sample": "All 1",
+   "count": 1
+  },
+  {
+   "fg": "#F9F9F7",
+   "bg": "#26565A",
+   "ratio": 7.78,
+   "size": 10.5,
+   "weight": 600,
+   "large": false,
+   "need": 4.5,
+   "pass": true,
+   "disabled": false,
+   "bgImage": false,
+   "el": "button.sf-avatar::before",
+   "owner": "sf-avatar",
+   "sample": "KK",
+   "count": 1
+  },
+  {
+   "fg": "#222923",
+   "bg": "#F5F5F0",
+   "ratio": 13.62,
+   "size": 13,
+   "weight": 600,
+   "large": false,
+   "need": 4.5,
+   "pass": true,
+   "disabled": false,
+   "bgImage": false,
+   "el": "span.text-[11px].text-secondary-foreground",
+   "owner": "sf-main",
+   "sample": "Completed",
+   "count": 1
+  },
+  {
+   "fg": "#222923",
+   "bg": "#F9F9F6",
+   "ratio": 14.13,
+   "size": 20,
+   "weight": 800,
+   "large": true,
+   "need": 3,
+   "pass": true,
+   "disabled": false,
+   "bgImage": false,
+   "el": "span.sf-wordmark",
+   "owner": "sf-wordmark",
+   "sample": "Thapal",
+   "count": 1
+  },
+  {
+   "fg": "#222923",
+   "bg": "#F9F9F7",
+   "ratio": 14.13,
+   "size": 11,
+   "weight": 600,
+   "large": false,
+   "need": 4.5,
+   "pass": true,
+   "disabled": false,
+   "bgImage": false,
+   "el": "span",
+   "owner": "sf-crumbs-trail",
+   "sample": "Travel",
+   "count": 1
+  },
+  {
+   "fg": "#222923",
+   "bg": "#F9F9F7",
+   "ratio": 14.13,
+   "size": 36,
+   "weight": 600,
+   "large": true,
+   "need": 3,
+   "pass": true,
+   "disabled": false,
+   "bgImage": false,
+   "el": "h1.text-3xl",
+   "owner": "sf-main",
+   "sample": "Your travels",
+   "count": 1
+  },
+  {
+   "fg": "#222923",
+   "bg": "#F9F9F7",
+   "ratio": 14.13,
+   "size": 14,
+   "weight": 500,
+   "large": false,
+   "need": 4.5,
+   "pass": true,
+   "disabled": false,
+   "bgImage": false,
+   "el": "a.text-sm.text-foreground",
+   "owner": "sf-main",
+   "sample": "Travel inbox",
+   "count": 10
+  },
+  {
+   "fg": "#222923",
+   "bg": "#F9F9F7",
+   "ratio": 14.13,
+   "size": 18,
+   "weight": 700,
+   "large": false,
+   "need": 4.5,
+   "pass": true,
+   "disabled": false,
+   "bgImage": false,
+   "el": "div.text-lg",
+   "owner": "sf-main",
+   "sample": "Mumbai client visit",
+   "count": 3
+  },
+  {
+   "fg": "#222923",
+   "bg": "#F9F9F7",
+   "ratio": 14.13,
+   "size": 13,
+   "weight": 500,
+   "large": false,
+   "need": 4.5,
+   "pass": true,
+   "disabled": false,
+   "bgImage": false,
+   "el": "span.text-xs",
+   "owner": "sf-main",
+   "sample": "1",
+   "count": 29
+  },
+  {
+   "fg": "#222923",
+   "bg": "#F9F9F7",
+   "ratio": 14.13,
+   "size": 10,
+   "weight": 500,
+   "large": false,
+   "need": 4.5,
+   "pass": true,
+   "disabled": false,
+   "bgImage": false,
+   "el": "span.text-[10px]",
+   "owner": "sf-main",
+   "sample": "1",
+   "count": 12
+  },
+  {
+   "fg": "#222923",
+   "bg": "#FDFDFC",
+   "ratio": 14.64,
+   "size": 11,
+   "weight": 600,
+   "large": false,
+   "need": 4.5,
+   "pass": true,
+   "disabled": false,
+   "bgImage": false,
+   "el": "span",
+   "owner": "sf-workspace",
+   "sample": "Personal",
+   "count": 1
+  }
+ ],
+ "__boxes": {
+  "viewport": {
+   "w": 1440,
+   "h": 900,
+   "vvH": 900
+  },
+  "continueButtons": [],
+  "canvasFoot": [],
+  "toasts": [],
+  "previewPill": [],
+  "previewRoot": [],
+  "tabbar": [],
+  "comingHead": [],
+  "header": [
+   {
+    "text": "Thapal\nUp to date\nPersonal\nKK",
+    "x": 100,
+    "y": 0,
+    "w": 1340,
+    "h": 76,
+    "bottom": 76
+   }
+  ],
+  "footNote": [],
+  "canvas": []
+ },
+ "__overflow": {
+  "docScrollW": 1440,
+  "innerW": 1440
+ }
+}

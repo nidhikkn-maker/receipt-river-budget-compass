@@ -48,7 +48,8 @@ export function holdToastsClearOfFooter(footer?: Element | null): () => void {
   let observer: ResizeObserver | null = null;
   if (footer) {
     measure();
-    if (typeof ResizeObserver !== "undefined") { observer = new ResizeObserver(measure); observer.observe(footer); }
+    // The footer moves when the sheet around it resizes (a centred sheet changing height between steps), so watch both.
+    if (typeof ResizeObserver !== "undefined") { observer = new ResizeObserver(measure); observer.observe(footer); if (footer.parentElement) observer.observe(footer.parentElement); }
     window.addEventListener("resize", measure);
   }
   update();

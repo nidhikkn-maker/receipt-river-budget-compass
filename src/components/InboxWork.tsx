@@ -4,6 +4,7 @@ import { FileText, PencilLine } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { listDrafts } from "@/lib/drafts";
 import { groupImportInbox, type ImportInboxItem } from '@/lib/import-inbox';
+import { backgroundAllowed } from '@/lib/lock-gate';
 
 /** V5.0 §4: unfinished drafts and recently generated reports alongside review items. */
 export function InboxWork() {
@@ -18,7 +19,7 @@ export function InboxWork() {
       const {data,error}=await supabase.from('import_batches').select('id,file_name,status').in('status',['review','queued','processing','failed','paused','refused']).order('created_at',{ascending:false}).limit(30);
       if(!live)return;setImportError(!!error);if(!error)setImports(data??[]);busy=(data??[]).some(b=>b.status==='queued'||b.status==='processing');
     };
-    void refreshImports();const timer=window.setInterval(()=>{if(busy&&document.visibilityState==='visible')void refreshImports();},5000);const onFocus=()=>void refreshImports();window.addEventListener('focus',onFocus);
+    void refreshImports();const timer=window.setInterval(()=>{if(busy&&document.visibilityState==='visible'&&backgroundAllowed())void refreshImports();},5000);const onFocus=()=>{if(backgroundAllowed())void refreshImports();};window.addEventListener('focus',onFocus);
     listDrafts().then((d) => live && setDrafts(d.filter((x) => x.status !== "saved").length)).catch(() => live && setDrafts(0));
     const since = new Date(Date.now() - 7 * 864e5).toISOString();
     supabase.from("report_history").select("id,title,created_at").gte("created_at", since).order("created_at", { ascending: false }).limit(3)

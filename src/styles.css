@@ -1281,6 +1281,12 @@ input[type="date"], input[type="month"] { min-width: 0; max-width: 100%; }
 .cmp-segments button { font-size: clamp(12.5px, 3.6vw, 14px); white-space: nowrap; padding-inline: 4px; }
 
 /* ===========================================================================
+ * P0-029 (UIX §16.4): while the app lock shows, notifications are not shown over it (both shells, all themes).
+ * The lock layer itself makes everything else inert and hidden from assistive technology (OwnerLock / app-lock-state).
+ * ------------------------------------------------------------------------- */
+body:has(> [data-app-lock]) [data-sonner-toaster] { display: none !important; }
+
+/* ===========================================================================
  * Signature Flow (Track B, batch B1) — PROPOSED, awaiting KK visual approval.
  * Approved palette (V4 master "Approved UIX: Signature Flow", UIX master §3.2) mapped onto the existing
  * semantic tokens, so every page keeps working: Ink #222923, Muted #778178 (darkened to #646D65 for AA text),
@@ -2069,3 +2075,120 @@ html[data-theme="signature-flow"] .sf-account-block { font-size: 12px; }
 /* Toasts never cover the canvas's persistent actions: while the canvas is open they sit above its footer. */
 html[data-theme="signature-flow"] body:has(.sf-canvas-layer:not([hidden])) [data-sonner-toaster][data-y-position="bottom"] { bottom: calc(var(--sf-toast-clear, 116px) + env(safe-area-inset-bottom, 0px)) !important; }
 @media (max-width: 767px) { html[data-theme="signature-flow"] body:has(.sf-canvas-layer:not([hidden])) { --sf-toast-clear: 168px; } }
+
+/* ===========================================================================
+ * B1e: Signature Flow fidelity pass 2 (KK decisions, 11 Nov 2026). Evidence: docs/evidence/fidelity-pass2-2026-11-11.
+ * Every rule is scoped to html[data-theme="signature-flow"]; the classic UI and the other themes are untouched.
+ * ------------------------------------------------------------------------- */
+
+/* ---- Decision 2: reference colours as Signature Flow tokens (light appearance; measured in the register) ----
+ * Text pairs on them are measured in the evidence (decision 6: every pair >= WCAG AA). The muted text colour stays
+ * #646D65 (5.1:1 on the canvas) rather than the reference #778178 (3.8:1, fails AA). Dark keeps its own values. */
+html[data-theme="signature-flow"] {
+  --sf-panel: var(--sf-deep);
+  --sf-action-deep: var(--sf-deep);
+  --sf-rail-active: var(--accent);
+  --sf-step-on: var(--accent);
+  --sf-step-off: var(--secondary);
+  --sf-next-bg: color-mix(in oklab, var(--accent) 80%, var(--background));
+  --sf-add: var(--sf-deep);
+}
+html[data-theme="signature-flow"]:not(.dark) {
+  --sf-canvas: #F9F9F7;        /* FD-053 app canvas */
+  --sf-deep: #26565A;          /* FD-052 teal: primary buttons, avatar, links, active labels */
+  --sf-deep-2: #2E6569;        /* its hover tone */
+  --sf-panel: #29493E;         /* FD-028 net-worth panel */
+  --sf-action-deep: #2C5341;   /* FD-052 "Review now" in the next-step band */
+  --sf-rail-active: #E0EEEE;   /* FD-016 active rail tile */
+  --sf-step-on: #DFEDE0;       /* FD-096 current/done step */
+  --sf-step-off: #EDF2EC;      /* FD-096 later step */
+  --sf-next-bg: #EDF3EF;       /* next-step band */
+  --sf-add: #223B35;           /* iPhone central Add keeps the deep green (KK: the reference's blue Add is not adopted) */
+  /* Warning keeps its hue and chroma; only its lightness moves 0.561 -> 0.55 so warning text stays AA on the lighter
+   * canvas (#97670C, 4.7:1 on #F9F9F7; was 4.48:1). Error, success and disabled are unchanged. */
+  --warning: oklch(0.55 0.112 75.8);
+}
+html[data-theme="signature-flow"] .sf-tab-add { background: var(--sf-add); }
+html[data-theme="signature-flow"] .sf-worth { background: var(--sf-panel); }
+html[data-theme="signature-flow"] .sf-next { background: var(--sf-next-bg); }
+html[data-theme="signature-flow"] .sf-next .sf-btn-deep { --sf-pill-bg: var(--sf-action-deep); --sf-pill-line: var(--sf-action-deep); }
+@media (min-width: 768px) {
+  html[data-theme="signature-flow"] .sf-rail-item[aria-current="page"] .sf-nav-icon { background: var(--sf-rail-active); }
+}
+html[data-theme="signature-flow"] .sf-steps li { background: var(--sf-step-off); }
+html[data-theme="signature-flow"] .sf-steps li:is([data-state="done"], [data-state="current"]) { background: var(--sf-step-on); }
+
+/* ---- Decision 1: tabular financial numerals everywhere money is shown (hero and panel included); Manrope kept ---- */
+html[data-theme="signature-flow"] :is(.sf-worth-figure, .sf-worth-metrics dd, .sf-row-amount) { font-variant-numeric: tabular-nums; }
+
+/* ---- Decision 3: header Search and sync status with the reference header's icon metrics (16 px glyphs in 44 px boxes) ---- */
+html[data-theme="signature-flow"] .sf-sync-btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-width: 44px; height: 44px; padding: 0 10px; border-radius: 12px; color: var(--muted-foreground); font-size: 11px; font-weight: 600; white-space: nowrap; }
+html[data-theme="signature-flow"] .sf-sync-btn:hover { color: var(--foreground); background: var(--secondary); }
+html[data-theme="signature-flow"] .sf-sync-btn svg { width: 16px; height: 16px; stroke-width: 1.6; flex-shrink: 0; }
+html[data-theme="signature-flow"] .sf-sync-btn[data-attention] { color: var(--foreground); }
+html[data-theme="signature-flow"] .sf-sync-btn[data-sync-state="error"] { color: var(--destructive); }
+@media (min-width: 768px) {
+  html[data-theme="signature-flow"] .sf-header .sf-icon-btn svg { width: 16px; height: 16px; stroke-width: 1.7; }
+  html[data-theme="signature-flow"] .sf-header-tools { gap: 0; }
+}
+
+/* ---- Decision 4: Coming up amounts in a labelled, right-aligned tabular column; titles wrap to two lines ---- */
+html[data-theme="signature-flow"] .sf-clamp-2 { white-space: normal; overflow: hidden; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow-wrap: anywhere; line-height: 1.3; }
+html[data-theme="signature-flow"] .sf-coming-amount { display: grid; justify-items: end; flex-shrink: 0; min-width: 84px; text-align: right; }
+html[data-theme="signature-flow"] .sf-coming-amount small { margin-top: 2px !important; font-size: 10px !important; font-weight: 500; color: var(--muted-foreground); }
+
+/* ---- Decision 7: Records sub-navigation on Travel and the other Records modules ---- */
+html[data-theme="signature-flow"] .sf-subnav { display: flex; gap: 6px; margin: -8px 0 20px; overflow-x: auto; scrollbar-width: none; }
+html[data-theme="signature-flow"] .sf-subnav::-webkit-scrollbar { display: none; }
+html[data-theme="signature-flow"] .sf-subnav a { display: inline-flex; align-items: center; flex-shrink: 0; min-height: 44px; padding: 0 12px; border-radius: 10px; font-size: 11.5px; font-weight: 600; color: var(--muted-foreground); }
+html[data-theme="signature-flow"] .sf-subnav a:hover { color: var(--foreground); background: var(--secondary); }
+html[data-theme="signature-flow"] .sf-subnav a[aria-current="page"] { color: var(--primary); font-weight: 800; background: var(--sf-rail-active); }
+
+/* ---- Decision 5: narrow review canvas by default (reference 09); the original opens beside the details only on
+ * request on wide screens. Details/Original tabs stay; the review stays mounted, so edits are never lost. ---- */
+html[data-theme="signature-flow"] .sf-view-bar { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; }
+html[data-theme="signature-flow"] .sf-view-bar .sf-view-toggle { flex: 1 1 auto; margin-bottom: 0; }
+/* The tabs stay in view while the review scrolls (the review scrolls its "found" card into view on open). */
+html[data-theme="signature-flow"] .sf-view-bar { position: sticky; top: -12px; z-index: 2; margin-inline: -4px; padding: 6px 4px; background: var(--background); }
+html[data-theme="signature-flow"] .sf-canvas-fields :where(*) { scroll-margin-top: 64px; }
+@media (min-width: 768px) { html[data-theme="signature-flow"] .sf-view-bar { top: -16px; background: var(--card); } }
+html[data-theme="signature-flow"] .sf-side-toggle { display: none; align-items: center; gap: 6px; min-height: 44px; padding: 0 12px; border-radius: 10px; font-size: 11.5px; font-weight: 800; color: var(--primary); white-space: nowrap; }
+html[data-theme="signature-flow"] .sf-side-toggle svg { width: 14px; height: 14px; }
+html[data-theme="signature-flow"] .sf-side-toggle:hover { background: var(--secondary); }
+@media (min-width: 768px) {
+  html[data-theme="signature-flow"] .sf-view-toggle { display: grid; }
+  html[data-theme="signature-flow"] .sf-canvas-split:not([data-side="true"]) { grid-template-columns: minmax(0, 1fr); }
+  html[data-theme="signature-flow"] .sf-canvas-split[data-view="details"]:not([data-side="true"]) > .sf-canvas-source { display: none; }
+  html[data-theme="signature-flow"] .sf-canvas-split[data-view="original"]:not([data-side="true"]) > .sf-canvas-fields { display: none; }
+  html[data-theme="signature-flow"] .sf-canvas-split:not([data-side="true"]) > .sf-canvas-source { position: static; }
+}
+@media (min-width: 1100px) {
+  html[data-theme="signature-flow"] .sf-side-toggle { display: inline-flex; margin-left: auto; }
+}
+
+/* ---- Decision 8: one short guidance line per state ---- */
+html[data-theme="signature-flow"] .sf-canvas-lede { margin-bottom: 12px; }
+
+/* ---- Decision 9: one persistent, unobstructed action on the iPhone review ----
+ * The sheet follows the visual viewport, so the keyboard and its accessory bar never cover the footer; the footer is
+ * one row (Start over, Continue to confirmation) with a one-line reason above it, and pads for the home indicator
+ * unless the keyboard is up. Toasts are raised above the measured footer (toast-placement.ts). */
+@media (max-width: 767px) {
+  html[data-theme="signature-flow"] .sf-canvas-layer { inset: var(--sf-vv-top, 0px) 0 auto 0; height: var(--sf-vv-h, 100dvh); }
+  html[data-theme="signature-flow"] .sf-canvas-foot { flex-wrap: wrap; row-gap: 4px; }
+  html[data-theme="signature-flow"] .sf-canvas-foot .sf-foot-note { font-size: 11px; line-height: 16px; }
+  html[data-theme="signature-flow"] .sf-canvas-layer[data-keyboard="open"] .sf-canvas-foot { padding-bottom: 8px; }
+}
+/* Toasts use the measured clearance above the canvas footer (toast-placement.ts), not a fixed distance: the narrow,
+ * centred desktop review's footer sits well above the viewport bottom, so a fixed 116 px put toasts on its actions. */
+html[data-theme="signature-flow"] body:has(.sf-canvas-layer:not([hidden])) [data-sonner-toaster][data-y-position="bottom"] { bottom: var(--offset-bottom) !important; }
+@media (max-width: 600px) { html[data-theme="signature-flow"] body:has(.sf-canvas-layer:not([hidden])) [data-sonner-toaster][data-y-position="bottom"] { bottom: var(--mobile-offset-bottom) !important; } }
+
+/* ---- iPhone navigation proportions (reference 02): lighter workspace label, 16 px header glyphs, 18 px bar glyphs ---- */
+@media (max-width: 767px) {
+  html[data-theme="signature-flow"] .sf-workspace { font-size: 14px; font-weight: 500; color: var(--muted-foreground); }
+  html[data-theme="signature-flow"] .sf-header .sf-icon-btn svg { width: 16px; height: 16px; stroke-width: 1.5; }
+  html[data-theme="signature-flow"] .sf-tab .sf-nav-icon svg { width: 18px; height: 18px; stroke-width: 1.5; }
+  html[data-theme="signature-flow"] .sf-tab-add .sf-nav-icon svg { width: 18px; height: 18px; stroke-width: 2; }
+}
+

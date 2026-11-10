@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { exportFile } from "@/lib/export-gate";
 import { Link } from "@tanstack/react-router";
 import { toast } from "sonner";
 import { Bar as RBar, BarChart, ResponsiveContainer, Tooltip, XAxis } from "recharts";
@@ -9,7 +10,7 @@ import { Label } from "@/components/ui/label";
 import { SCOPE_LABEL, CURRENCIES, money, type Scope } from "@/lib/expenses";
 import { advanceReconRows, advanceReconciliation, TRAVEL_CATEGORIES, bookingMatches, bookingPaid, bookingOutstanding, tripInsights, tripReportRows, BOOKING_KINDS, TRIP_TYPES, closeBlockers, tripFinance, bookingPaymentIds, type Booking, type BookingKind, type TravelTrip, type TripType } from "@/lib/travel";
 import { useStore } from "@/lib/store";
-import { downloadBlob, toPdf } from "@/lib/reports";
+import { toPdf } from "@/lib/reports";
 import { todayISO } from "@/lib/use-position";
 import { tripSummary, tripTag } from "@/lib/intelligence";
 import { TripBudgetCard, EditBudgetDialog, BudgetBreakdown, ReimbursementBreakdownCard, TripBudgetMini } from "./TripBudget";
@@ -29,7 +30,7 @@ const sel = "h-10 rounded-xl border bg-background px-2 text-sm";
 const localInput = (iso: string) => { const d = new Date(iso); return new Date(d.getTime() - d.getTimezoneOffset() * 60_000).toISOString().slice(0, 16); };
 const slug = (name: string) => name.replace(/\W+/g, "-");
 /** Rows to a CSV download, quoting every cell. */
-const saveCsv = (rows: string[][], filename: string) => downloadBlob(new Blob([rows.map((r) => r.map((c) => `"${c.replace(/"/g, '""')}"`).join(",")).join("\n")], { type: "text/csv" }), filename);
+const saveCsv = (rows: string[][], filename: string) => void exportFile({ kind: "personal" }, new Blob([rows.map((r) => r.map((c) => `"${c.replace(/"/g, '""')}"`).join(",")).join("\n")], { type: "text/csv" }), filename);
 
 export function useTripPut(trip: TravelTrip) {
   const { preferences: pr, savePreferences } = useStore();
@@ -157,7 +158,7 @@ export function TripItinerarySection({ trip }: { trip: TravelTrip }) {
   const [calSave, setCalSave] = useState(true);
   const events = calendarEvents(liveTrip);
   const openCalendar = () => { setCalEdits(Object.fromEntries(events.map((e) => [e.uid, { title: e.title, note: e.note, alarm: e.alarm }]))); setCalOpen(true); };
-  const downloadCalendar = async () => { if (calSave && !closed) await put(applyCalendarEdits(trip, calEdits), "Calendar wording and reminders saved for future exports"); downloadBlob(new Blob([tripCalendar(liveTrip, new Date().toISOString(), calEdits)], { type: "text/calendar;charset=utf-8" }), `trip-${slug(trip.name)}.ics`); setCalOpen(false); };
+  const downloadCalendar = async () => { if (calSave && !closed) await put(applyCalendarEdits(trip, calEdits), "Calendar wording and reminders saved for future exports"); void exportFile({ kind: "personal" }, new Blob([tripCalendar(liveTrip, new Date().toISOString(), calEdits)], { type: "text/calendar;charset=utf-8" }), `trip-${slug(trip.name)}.ics`); setCalOpen(false); };
   const preparePdf = async () => { setPdfBlob(await toPdf({ title: `Itinerary: ${trip.name}`, headers: ["Day", "Time", "Plan / booking"], rows: itineraryPdfRows(liveTrip) }, `${trip.destination || ""} · ${trip.start} to ${trip.end}`)); };
   const nextDay = (d: string) => new Date(Date.parse(d + "T00:00:00Z") + 864e5).toISOString().slice(0, 10);
   return (
@@ -166,7 +167,7 @@ export function TripItinerarySection({ trip }: { trip: TravelTrip }) {
       {(live.length > 0 || (trip.bookings ?? []).length > 0) && <div className="mb-3 flex flex-wrap gap-2">
         <Button size="sm" variant={compact ? "default" : "outline"} onClick={() => setCompact((c) => !c)} aria-pressed={compact}>{compact ? "Full view" : "Compact days"}</Button>
         <Button size="sm" variant="outline" onClick={openCalendar}>Add to calendar (.ics)</Button>
-        {pdfBlob ? <Button size="sm" variant="gold" onClick={() => { downloadBlob(pdfBlob, `itinerary-${slug(trip.name)}.pdf`); setPdfBlob(null); }}>Download itinerary PDF</Button> : <Button size="sm" variant="outline" onClick={preparePdf}>Prepare shareable PDF</Button>}
+        {pdfBlob ? <Button size="sm" variant="gold" onClick={() => { void exportFile({ kind: "personal" }, pdfBlob, `itinerary-${slug(trip.name)}.pdf`); setPdfBlob(null); }}>Download itinerary PDF</Button> : <Button size="sm" variant="outline" onClick={preparePdf}>Prepare shareable PDF</Button>}
       </div>}
       <Dialog open={calOpen} onOpenChange={setCalOpen}>
         <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-lg" aria-label="Edit calendar events">
@@ -311,7 +312,7 @@ export function TripReportsSection({ trip }: { trip: TravelTrip }) {
     const rows = [["Summary", "Total", money(s.total)], ["Summary", "Per day", money(s.perDay)], ["Summary", "Budget variance", money(s.variance)], ["Summary", "Reimbursable", money(s.reimbursable)],
       ...s.categories.map((c) => ["Category", c.category, money(c.amount)]), ...s.currencies.map((c) => ["Currency", `${c.currency} ${c.original} @ ${c.rates.join("/") || "1"}`, money(c.inr)]),
       ...s.entries.map((e) => ["Entry", `${e.date} ${e.merchant ?? e.title} (${e.currency} ${e.originalAmount} @ ${e.fxRate})`, money(e.amount)])];
-    downloadBlob(await toPdf({ title: `Trip: ${trip.name}`, headers: ["Section", "Item", "INR"], rows }, `${trip.destination} · ${trip.start} to ${trip.end}`), `trip-${slug(trip.name)}.pdf`);
+    await exportFile({ kind: "personal", rows: rows.length }, await toPdf({ title: `Trip: ${trip.name}`, headers: ["Section", "Item", "INR"], rows }, `${trip.destination} · ${trip.start} to ${trip.end}`), `trip-${slug(trip.name)}.pdf`);
   };
   return (
     <Card title="Trip reports">
