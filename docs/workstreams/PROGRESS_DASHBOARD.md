@@ -1,7 +1,7 @@
 # Thapal V4 progress dashboard (persistent; updated at every integration checkpoint)
 
-**Last update:** 10 Nov 2026.
-**Verified integration baseline:** `integration/phase2-3-p0` @ `a8a84b3`.
+**Last update:** 10 Nov 2026 (after Track A and Track C merges).
+**Verified integration head:** `integration/phase2-3-p0`, 2,862 / 2,862 tests ×3, build and typecheck clean. Earlier baseline: `a8a84b3`.
 
 ## Implementation status vs verification status
 Implementation register: `docs/registers/implementation/requirements_status.csv`, 1,536 V4 requirements.
@@ -31,7 +31,7 @@ Implementation register: `docs/registers/implementation/requirements_status.csv`
 - Whole-stack SQL check: `src/lib/integration-stack.test.ts` (P1, P2, P4, P5, P5b, P6, P7 together; end-to-end flow; balanced; sources unchanged; full reverse rollback).
 
 ## Open P0 issues (`docs/registers/implementation/p0_defects.tsv`)
-**Fixed locally:** P0-001, P0-002, P0-004, P0-017, P0-018, P0-019.
+**Fixed locally:** P0-001, P0-002, P0-004, P0-005b, P0-007..P0-016 (archive), P0-017, P0-018, P0-019, P0-024.
 
 **Open:**
 
@@ -56,22 +56,33 @@ All open: RB-P1-01..07 and RB-DEC-C11 (C11 enforced locally in P7, release evide
 
 ## CI
 - `.github/workflows/ci.yml` exists, but GitHub is suspended.
-- **GitLab has no pipeline (`.gitlab-ci.yml` absent).** Proposal awaiting KK: add a GitLab pipeline mirroring the GitHub one (install with frozen lockfile, typecheck, build, tests). It would use GitLab runner minutes.
+- GitLab pipeline: see the CI section below. The first pipeline could not start until the account owner completes GitLab identity verification (no runner minutes used).
 
 ## Commits by branch (verified)
 | Branch | Head | Verified |
 |---|---|---|
-| `integration/phase2-3-p0` | `a8a84b3` | 2,760/2,760 ×3, build, typecheck |
+| `integration/phase2-3-p0` | this commit's parent `386cbf2` | 2,862/2,862 ×3, build, typecheck |
+| `uix/signature-shell` | `937cfaf` | 2,877/2,877 ×3 |
+| `modules/connections` | `978dd11` | 2,800/2,800 ×3 |
+| `phase3/completion` | `cf09bb6` | 2,804/2,804 ×3 |
 | `phase3/balanced-accounting` | `986c461` | 2,703/2,703 ×3 |
 | `phase2/registers` | `27eccf0` | 2,678/2,678 ×3 |
 | `p0/financial-integrity` | `babadb5` | 2,678/2,678 ×3 |
 | `uix/screen-verification` | `4a19c38` | 2,672/2,672 ×3 |
 | `phase1/security` | `b08c3a0` | 2,580/2,580 ×3 |
 
-## Pending integration
-- `phase3/completion` (Track A)
-- `uix/signature-shell` (Track B)
-- `modules/connections` (Track C)
+## Integration log (10 Nov 2026)
+- Merged `phase3/completion` (Track A, `cf09bb6`, 2,804 ×3) and `modules/connections` (Track C, `978dd11`, 2,800 ×3).
+- Wired Track C into shared files: loans and goals archive with a reason in WealthPanels; store hard-delete methods for loans, goals, commitments and valuations removed; links to About, calendar item detail, bank account detail and the notification centre; remaining P0-004 load-error items.
+- **Cross-module consistency test** (`src/lib/cross-module-consistency.test.ts`, hand-calculated figures): reversals, loan principal/interest, card payments, part-paid claim (₹20,000 / ₹12,000 / ₹8,000), archived asset in net worth, bank detail and reconciliation, cash/accrual labels. It found **P0-024** (archived accounts dropped from net worth; no basis label), now fixed. Evidence: `docs/evidence/cross-module/README.md`.
+- Still to integrate: `uix/signature-shell` (Track B, `937cfaf`, 2,877 ×3), only after KK's final Signature Flow approval. Its `/notifications` route overlaps Track C's notification centre and will be resolved at that merge.
+
+## Follow-ups found during integration (not yet fixed)
+- `new.tsx` "saved to add later" list: one-tap delete of a pending, unlinked vault document. Fix with the documents archive button after Track B merges.
+- `StatementInbox` `loadKnown`: a failed read of imported lines lets already-imported lines be registered again. Needs error, Retry and a blocked Register.
+- Draft open error in `new.tsx` shows a toast without Retry.
+- `window.prompt` still used in `plan.tsx`, `AccountTools.tsx`, `vault.tsx`.
+- Track A: database delete guard and archive columns for loans, goals, commitments, valuations and documents.
 
 Each merges into `integration/phase2-3-p0` only after its own verification, then the integration commit is re-verified (Track D).
 
