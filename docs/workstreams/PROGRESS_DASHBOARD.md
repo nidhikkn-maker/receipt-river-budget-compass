@@ -86,7 +86,21 @@ All open: RB-P1-01..07 and RB-DEC-C11 (C11 enforced locally in P7, release evide
 
 Each merges into `integration/phase2-3-p0` only after its own verification, then the integration commit is re-verified (Track D).
 
-## CI (enabled 10 Nov 2026, KK approval)
+## Verified state (10 Nov 2026, evening)
+| Branch | Head | Verification by the coordinator |
+|---|---|---|
+| `integration/phase2-3-p0` | `c3f9a7a` + registers commit | 2,953 / 2,953 tests ×3, typecheck, build |
+| `uix/signature-shell` | `0aea59b` | 2,942 / 2,942 tests ×3, typecheck, build; preview gate passed |
+| `uix/fidelity` | `9abf182` | Merged into `uix/signature-shell` |
+| Preview `preview.thapal.app` and `signature.thapal.app` | `dpl_3GYpMeoMnAXPmdMLr8qe6WS91J9w` = `0aea59b` | Vercel sign-in (302 without); 0/277 JS files with the production reference; hosts reached: preview, fixture backend, fonts.googleapis.com, vercel.live (toolbar now disabled for new builds); Manrope rendered (CDP custom font); panel shows the commit |
+
+**Scorecard:** `docs/workstreams/FINANCIAL_INTEGRITY_SCORECARD_2026-11-10.md`.
+
+**Release blockers:** 12 open — RB-P1-01..07, RB-DEC-C11, RB-CI-01, RB-LED-01, RB-UIX-01, RB-STM-01.
+
+## CI (enabled 10 Nov 2026, KK approval) — STATUS: UNVERIFIED
+Pipelines marked success (8–49 s) carry no visible jobs or test reports and match Vercel's build timing. CI is treated as unverified until a `verify` job log and its artifacts are obtained (RB-CI-01).
+
 - **Pipeline:** `.gitlab-ci.yml` runs on merge requests and `integration/*` branches, and only when code paths change. It does frozen-lockfile install, typecheck, build and tests, and keeps JUnit and JSON reports for 30 days.
 - **Restrictions:** no deploy stage; fixture Supabase variables only; never targets `main`.
 - **Verified before enabling:**
