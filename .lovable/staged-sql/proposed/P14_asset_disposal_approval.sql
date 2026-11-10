@@ -14,7 +14,7 @@
 --     balanced batch (Dr expense:Loss on asset disposal (book value) / Cr the asset's ledger account) in the asset
 --     account's entity; any other disposal-tagged entry stays the P8 exception 'asset_disposal_workflow'. Apply P14
 --     after P8 and roll it back before P8's rollback;
---   * P11 installed: a checked backup restore (phase3_p11.checked) may carry disposals recorded in the backup.
+--   * P11 installed: a checked backup restore (P11's transaction-bound ticket) may carry disposals recorded in the backup.
 -- Rollback: P14_asset_disposal_approval.rollback.sql (exact pre-P14 catalog; refuses while requests exist unless
 -- approved). No existing row or value is changed.
 --
@@ -331,11 +331,19 @@ LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public, pg_temp AS $$
 $$;
 REVOKE ALL ON FUNCTION phase3_p14.writing_now() FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION phase3_p14.writing_now() TO authenticated;
+-- P0-038: P11's checked restore is recognised by its transaction-bound ticket (phase3_p11.restoring()), never a session
+-- setting. plpgsql so that P14 installs and works without P11 (the call is planned only when P11 exists).
+CREATE FUNCTION phase3_p14.p11_restoring() RETURNS boolean
+LANGUAGE plpgsql STABLE SET search_path = public, pg_temp AS $$
+BEGIN
+  IF to_regprocedure('phase3_p11.restoring()') IS NULL THEN RETURN false; END IF;
+  RETURN phase3_p11.restoring();
+END $$;
 CREATE FUNCTION phase3_p14.exempt() RETURNS boolean
 LANGUAGE sql STABLE SET search_path = public, pg_temp AS $$
   SELECT current_setting('ledgerline.erasing', true) = 'on'
       OR phase3_p14.writing_now()   -- decide/cancel's own transaction (privilege-bound row, not a session setting)
-      OR coalesce(current_setting('phase3_p11.checked', true), '') = 'on'   -- checked backup restore (P11)
+      OR phase3_p14.p11_restoring()   -- checked backup restore (P11 ticket, not a session setting)
       OR (auth.uid() IS NULL AND current_user NOT IN ('authenticated', 'anon'))
 $$;
 CREATE FUNCTION phase3_p14.guard_asset_disposal_fields() RETURNS trigger
@@ -421,7 +429,7 @@ GRANT EXECUTE ON FUNCTION public.preview_asset_disposal(text, date, numeric) TO 
 REVOKE ALL ON FUNCTION phase3_p14.num(jsonb), phase3_p14.book_value(jsonb, date) FROM PUBLIC, anon, authenticated;
 GRANT USAGE ON SCHEMA phase3_p14 TO authenticated; -- the SELECT policy and the guards call the helpers below
 REVOKE ALL ON FUNCTION phase3_p14.asset_of(uuid, text), phase3_p14.guard_asset_disposal_fields(), phase3_p14.guard_disposal_entry() FROM PUBLIC, anon, authenticated;
-REVOKE ALL ON FUNCTION phase3_p14.may_approve(uuid, text), phase3_p14.step_up_ok(), phase3_p14.exempt(), phase3_p14.guard_requests() FROM PUBLIC, anon;
-GRANT EXECUTE ON FUNCTION phase3_p14.may_approve(uuid, text), phase3_p14.exempt(), phase3_p14.guard_requests() TO authenticated;
+REVOKE ALL ON FUNCTION phase3_p14.may_approve(uuid, text), phase3_p14.step_up_ok(), phase3_p14.exempt(), phase3_p14.p11_restoring(), phase3_p14.guard_requests() FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION phase3_p14.may_approve(uuid, text), phase3_p14.exempt(), phase3_p14.p11_restoring(), phase3_p14.guard_requests() TO authenticated;
 REVOKE ALL ON phase3_p14.saved_functions FROM PUBLIC, anon, authenticated;
 COMMIT;

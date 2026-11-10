@@ -79,10 +79,10 @@ BEGIN
     END IF;
   END LOOP;
   result := jsonb_build_object('request', _request, 'upload', _upload, 'reversed', reversed, 'deleted', deleted, 'unreconciled', unmatched, 'replayed', false);
-  PERFORM set_config('phase3_p7.writer', 'on', true);
+  PERFORM phase3_p7.grant_authority('writer');
   INSERT INTO public.statement_upload_reversals(id, owner_id, upload_id, items_sha256, result, reason, actor_id, session_id)
   VALUES (_request, uid, _upload, sha, result, rr, uid, public.jwt_session_id());
-  PERFORM set_config('phase3_p7.writer', '', true);
+  PERFORM phase3_p7.end_authority('writer');
   RETURN result;
 END $$;
 $body$, '__TARGET__', target);

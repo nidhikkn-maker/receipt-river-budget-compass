@@ -29,6 +29,7 @@
 --      * stored withdrawals win over the payload (P0-033): a currently withdrawn entry is kept exactly as stored;
 --        a restored entry keeps its stored withdrawal history.
 -- C. public.restore_finance_backup refuses direct calls (P11_RESTORE_CHECK_REQUIRED): every restore goes through B.
+-- P0-038: the authority is a transaction-bound ticket (phase3_p11.restore_authority), not a session setting.
 -- ============================================================================================
 BEGIN;
 
@@ -100,9 +101,43 @@ BEGIN
   RETURN jsonb_set(_payload, '{expenses}', out);
 END $$;
 
-CREATE FUNCTION public.restore_finance_backup_checked(payload jsonb, display_name text DEFAULT NULL, rerestore_reason text DEFAULT NULL)
-RETURNS jsonb LANGUAGE plpgsql SECURITY INVOKER SET search_path = public, pg_temp AS $$
-DECLARE uid uuid := auth.uid(); fp text; prev jsonb; res jsonb; n integer; why text := nullif(btrim(coalesce(rerestore_reason, '')), '');
+-- P0-038: the checked restore's authority is a transaction-bound ticket, not the session setting phase3_p11.checked
+-- (any role can SET / set_config a custom setting, so a client in plain SQL could call the direct restore and skip the
+-- repeat check, or open P14's restore exemption). The ticket is written only by open_restore (SECURITY DEFINER; the
+-- table has no client privilege), bound to the caller (auth.uid()), this transaction (txid_current()) and the SHA-256
+-- of the exact payload to restore; the direct restore claims it (claim_restore) and close_restore records the receipt
+-- and removes it before returning. A deferred constraint trigger refuses COMMIT while a ticket is still open, so a
+-- restore can never commit without its receipt. restore_finance_backup_checked runs as the caller (RLS-scoped restore),
+-- so the three steps are separately callable: called directly, in order, they do exactly what the checked restore does.
+CREATE TABLE phase3_p11.restore_authority (
+  transaction_id bigint NOT NULL,
+  actor_id uuid NOT NULL,
+  fingerprint text NOT NULL,
+  payload_sha text NOT NULL,
+  mode text NOT NULL CHECK (mode IN ('first', 'again')),
+  reason text,
+  previous jsonb NOT NULL DEFAULT '[]',
+  claimed boolean NOT NULL DEFAULT false,
+  PRIMARY KEY (transaction_id, actor_id)
+);
+REVOKE ALL ON phase3_p11.restore_authority FROM PUBLIC, anon, authenticated, service_role;
+CREATE FUNCTION phase3_p11.ticket_closed() RETURNS trigger
+LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp AS $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM phase3_p11.restore_authority a WHERE a.transaction_id = NEW.transaction_id AND a.actor_id = NEW.actor_id) THEN
+    RAISE EXCEPTION 'P11_RESTORE_UNRECORDED: a checked restore was opened but its receipt was not recorded; nothing is saved' USING ERRCODE = '42501';
+  END IF;
+  RETURN NULL;
+END $$;
+CREATE CONSTRAINT TRIGGER p11_ticket_closed AFTER INSERT ON phase3_p11.restore_authority DEFERRABLE INITIALLY DEFERRED
+  FOR EACH ROW EXECUTE FUNCTION phase3_p11.ticket_closed();
+
+CREATE FUNCTION phase3_p11.payload_sha(_payload jsonb) RETURNS text
+LANGUAGE sql IMMUTABLE SET search_path = public, pg_temp AS $$ SELECT encode(sha256(convert_to(_payload::text, 'UTF8')), 'hex') $$;
+
+CREATE FUNCTION phase3_p11.open_restore(payload jsonb, rerestore_reason text DEFAULT NULL) RETURNS jsonb
+LANGUAGE plpgsql VOLATILE SECURITY DEFINER SET search_path = public, pg_temp AS $$
+DECLARE uid uuid := auth.uid(); fp text; prev jsonb; kp jsonb; why text := nullif(btrim(coalesce(rerestore_reason, '')), '');
 BEGIN
   IF uid IS NULL THEN RAISE EXCEPTION 'Sign in to restore a backup' USING ERRCODE = '42501'; END IF;
   IF jsonb_typeof(payload) IS DISTINCT FROM 'object' THEN RAISE EXCEPTION 'Invalid or oversized backup records'; END IF;
@@ -115,13 +150,54 @@ BEGIN
   END IF;
   IF why IS NOT NULL AND length(why) < 5 THEN RAISE EXCEPTION 'P11_REASON: give a reason of at least 5 characters for restoring again' USING ERRCODE = '22023'; END IF;
   IF why IS NOT NULL AND jsonb_array_length(prev) = 0 THEN why := NULL; END IF; -- first restore: no reason needed
-  PERFORM set_config('phase3_p11.checked', 'on', true);
-  res := public.restore_finance_backup(phase3_p11.keep_withdrawals(payload, uid), display_name);
-  PERFORM set_config('phase3_p11.checked', '', true);
+  kp := phase3_p11.keep_withdrawals(payload, uid);
+  IF EXISTS (SELECT 1 FROM phase3_p11.restore_authority a WHERE a.transaction_id = txid_current() AND a.actor_id = uid) THEN
+    RAISE EXCEPTION 'P11_RESTORE_OPEN: a checked restore is already open in this transaction' USING ERRCODE = '55000';
+  END IF;
+  INSERT INTO phase3_p11.restore_authority(transaction_id, actor_id, fingerprint, payload_sha, mode, reason, previous)
+  VALUES (txid_current(), uid, fp, phase3_p11.payload_sha(kp), CASE WHEN why IS NULL THEN 'first' ELSE 'again' END, why, prev);
+  RETURN jsonb_build_object('status', 'open', 'fingerprint', fp, 'previous', prev, 'payload', kp);
+END $$;
+
+-- Called first by the direct restore: the open ticket of this caller and transaction for exactly this payload, once.
+CREATE FUNCTION phase3_p11.claim_restore(payload jsonb) RETURNS void
+LANGUAGE plpgsql VOLATILE SECURITY DEFINER SET search_path = public, pg_temp AS $$
+BEGIN
+  UPDATE phase3_p11.restore_authority a SET claimed = true
+   WHERE a.transaction_id = txid_current() AND a.actor_id = auth.uid() AND NOT a.claimed AND a.payload_sha = phase3_p11.payload_sha(payload);
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'P11_RESTORE_CHECK_REQUIRED: backups are restored through restore_finance_backup_checked, which detects a repeated restore' USING ERRCODE = '42501';
+  END IF;
+END $$;
+
+CREATE FUNCTION phase3_p11.close_restore(res jsonb) RETURNS jsonb
+LANGUAGE plpgsql VOLATILE SECURITY DEFINER SET search_path = public, pg_temp AS $$
+DECLARE uid uuid := auth.uid(); t phase3_p11.restore_authority; n integer;
+BEGIN
+  SELECT * INTO t FROM phase3_p11.restore_authority a WHERE a.transaction_id = txid_current() AND a.actor_id = uid AND a.claimed FOR UPDATE;
+  IF NOT FOUND THEN RAISE EXCEPTION 'P11_RESTORE_CHECK_REQUIRED: no checked restore ran in this transaction' USING ERRCODE = '42501'; END IF;
   SELECT coalesce(sum(value::text::integer), 0) INTO n FROM jsonb_each(coalesce(res->'counts', '{}'::jsonb));
   INSERT INTO public.backup_restore_receipts(owner_id, fingerprint, mode, reason, records, counts, restored_by)
-  VALUES (uid, fp, CASE WHEN why IS NULL THEN 'first' ELSE 'again' END, why, n, coalesce(res->'counts', '{}'::jsonb), uid);
-  RETURN res || jsonb_build_object('status', CASE WHEN why IS NULL THEN 'restored' ELSE 'restored_again' END, 'changed', true, 'fingerprint', fp, 'previous', prev);
+  VALUES (uid, t.fingerprint, t.mode, t.reason, n, coalesce(res->'counts', '{}'::jsonb), uid);
+  DELETE FROM phase3_p11.restore_authority a WHERE a.transaction_id = t.transaction_id AND a.actor_id = uid;
+  RETURN coalesce(res, '{}'::jsonb) || jsonb_build_object('status', CASE WHEN t.mode = 'first' THEN 'restored' ELSE 'restored_again' END, 'changed', true,
+    'fingerprint', t.fingerprint, 'previous', t.previous);
+END $$;
+
+-- P14 (asset disposal) lets the direct restore write the disposals a backup carries: true only inside a claimed ticket.
+CREATE FUNCTION phase3_p11.restoring() RETURNS boolean
+LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public, pg_temp AS $$
+  SELECT auth.uid() IS NOT NULL AND EXISTS (SELECT 1 FROM phase3_p11.restore_authority a WHERE a.transaction_id = txid_current() AND a.actor_id = auth.uid() AND a.claimed)
+$$;
+
+CREATE FUNCTION public.restore_finance_backup_checked(payload jsonb, display_name text DEFAULT NULL, rerestore_reason text DEFAULT NULL)
+RETURNS jsonb LANGUAGE plpgsql SECURITY INVOKER SET search_path = public, pg_temp AS $$
+DECLARE o jsonb; res jsonb;
+BEGIN
+  o := phase3_p11.open_restore(payload, rerestore_reason);
+  IF o->>'status' = 'previously_restored' THEN RETURN o; END IF;
+  res := public.restore_finance_backup(o->'payload', display_name);
+  RETURN phase3_p11.close_restore(res);
 END $$;
 
 -- --------------------------------------------------------------------------------------------
@@ -130,7 +206,7 @@ END $$;
 -- --------------------------------------------------------------------------------------------
 DO $c$
 DECLARE fn regprocedure := 'public.restore_finance_backup(jsonb,text)'::regprocedure; def text; body_at int; inj int;
-  chk text := $chk$IF coalesce(current_setting('phase3_p11.checked', true), '') <> 'on' THEN RAISE EXCEPTION 'P11_RESTORE_CHECK_REQUIRED: backups are restored through restore_finance_backup_checked, which detects a repeated restore' USING ERRCODE = '42501'; END IF;$chk$;
+  chk text := $chk$PERFORM phase3_p11.claim_restore($1);$chk$; -- P0-038: a claimed ticket, not a session setting
 BEGIN
   def := pg_get_functiondef(fn);
   INSERT INTO phase3_p11.saved_functions(signature, definition) VALUES (fn::text, def);
@@ -145,6 +221,9 @@ REVOKE ALL ON FUNCTION public.restore_finance_backup_checked(jsonb, text, text) 
 GRANT EXECUTE ON FUNCTION public.restore_finance_backup_checked(jsonb, text, text) TO authenticated;
 GRANT USAGE ON SCHEMA phase3_p11 TO authenticated; -- the checked restore runs as the caller and uses the two helpers below
 REVOKE ALL ON phase3_p11.saved_functions FROM PUBLIC, anon, authenticated;
-REVOKE ALL ON FUNCTION phase3_p11.payload_fingerprint(jsonb), phase3_p11.keep_withdrawals(jsonb, uuid) FROM PUBLIC, anon;
-GRANT EXECUTE ON FUNCTION phase3_p11.payload_fingerprint(jsonb), phase3_p11.keep_withdrawals(jsonb, uuid) TO authenticated;
+REVOKE ALL ON FUNCTION phase3_p11.payload_fingerprint(jsonb), phase3_p11.keep_withdrawals(jsonb, uuid), phase3_p11.payload_sha(jsonb),
+  phase3_p11.open_restore(jsonb, text), phase3_p11.claim_restore(jsonb), phase3_p11.close_restore(jsonb), phase3_p11.restoring() FROM PUBLIC, anon;
+REVOKE ALL ON FUNCTION phase3_p11.ticket_closed() FROM PUBLIC, anon, authenticated, service_role;
+GRANT EXECUTE ON FUNCTION phase3_p11.payload_fingerprint(jsonb), phase3_p11.keep_withdrawals(jsonb, uuid), phase3_p11.payload_sha(jsonb),
+  phase3_p11.open_restore(jsonb, text), phase3_p11.claim_restore(jsonb), phase3_p11.close_restore(jsonb), phase3_p11.restoring() TO authenticated;
 COMMIT;

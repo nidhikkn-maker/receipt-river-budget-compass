@@ -318,7 +318,7 @@ describe("Phase 3 completion (P7 r2): KK decisions 1-5 and remaining items", () 
       expect(errorText(await attempt(db, U.O, () => q(db, "INSERT INTO public.posting_delegations(id, owner_id, entity_key, grantee_id, actions) VALUES ($1,$2,$3,$4,ARRAY['post'])", [id(7501), U.O, C1, U.A])))).toMatch(/P7_WRITER_ONLY|permission denied/);
       await actAs(db, null);
       await db.exec("BEGIN");
-      await q(db, "SELECT set_config('phase3_p7.writer','on',true)");
+      await q(db, "SELECT phase3_p7.grant_authority('writer')");
       await q(db, "INSERT INTO public.posting_delegations(id, owner_id, entity_key, grantee_id, actions) VALUES ($1,$2,$3,$4,ARRAY['post','approve']), ($5,$2,$3,$6,ARRAY['post','approve'])", [id(7502), U.O, C1, U.A, id(7503), U.M]);
       const a = await may(U.A, "post", ent.c1), a2 = await may(U.A, "post", ent.c2), m = await may(U.M, "post", ent.c1), g = await may(U.G, "post", ent.c1, { anon: true });
       await db.exec("ROLLBACK");

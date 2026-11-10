@@ -21,7 +21,7 @@ const allBatches = (db: Db, entry: string) => q<{ kind: string; version: number 
 const count = async (db: Db, sql: string, p: unknown[] = []) => first(await q<{ n: number }>(db, `SELECT count(*)::int n FROM (${sql}) x`, p)).n;
 /** Superuser writer-path insert of an arbitrary batch (bypasses the public functions, not the invariants). */
 async function rawBatch(db: Db, owner: string, entity: string, lines: { code: string; role: string; debit: number | string; credit: number | string; currency?: string }[], key = `raw:${Math.random()}`) {
-  await q(db, "SELECT set_config('phase3_p7.writer','on',true)");
+  await q(db, "SELECT phase3_p7.grant_authority('writer')");
   const ev = id(77000 + Math.floor(Math.random() * 999));
   await q(db, "INSERT INTO public.posting_events(id, owner_id, event_key, source_kind) VALUES ($1::uuid,$2,'journal:' || $1::text,'journal') ON CONFLICT DO NOTHING", [ev, owner]);
   const b = id(78000 + Math.floor(Math.random() * 999));

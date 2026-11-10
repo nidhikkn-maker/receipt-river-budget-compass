@@ -81,6 +81,32 @@ REVOKE ALL ON SCHEMA phase3_p9 FROM PUBLIC, anon, authenticated;
 CREATE TABLE IF NOT EXISTS phase3_p9.installed (installed_at timestamptz NOT NULL DEFAULT clock_timestamp());
 INSERT INTO phase3_p9.installed SELECT WHERE NOT EXISTS (SELECT 1 FROM phase3_p9.installed);
 
+-- P9 line-claim authority (was phase3_p9.claiming) (P0-038): transaction-bound authority instead of a session setting. Any role can SET / set_config a custom
+-- setting, so a guard that trusted one could be opened by a signed-in client in plain SQL. A row here is written only by
+-- this file's SECURITY DEFINER operation (grant_authority / end_authority: no client EXECUTE; the table: no client
+-- privilege), is checked as transaction_id = txid_current() AND actor_id = auth.uid(), and is removed before the
+-- operation returns (a 64-bit txid is never reused, so a row never authorises a later transaction).
+CREATE TABLE IF NOT EXISTS phase3_p9.authority (transaction_id bigint NOT NULL, scope text NOT NULL, item text NOT NULL DEFAULT '', actor_id uuid, context jsonb,
+  PRIMARY KEY (transaction_id, scope, item));
+REVOKE ALL ON phase3_p9.authority FROM PUBLIC, anon, authenticated, service_role;
+CREATE OR REPLACE FUNCTION phase3_p9.grant_authority(_scope text, _item text DEFAULT '', _context jsonb DEFAULT NULL) RETURNS void
+LANGUAGE sql VOLATILE SECURITY DEFINER SET search_path = public, pg_temp AS $$
+  INSERT INTO phase3_p9.authority(transaction_id, scope, item, actor_id, context) VALUES (txid_current(), _scope, coalesce(_item, ''), auth.uid(), _context)
+  ON CONFLICT (transaction_id, scope, item) DO UPDATE SET actor_id = EXCLUDED.actor_id, context = EXCLUDED.context
+$$;
+CREATE OR REPLACE FUNCTION phase3_p9.end_authority(_scope text, _item text DEFAULT '') RETURNS void
+LANGUAGE sql VOLATILE SECURITY DEFINER SET search_path = public, pg_temp AS $$
+  DELETE FROM phase3_p9.authority WHERE transaction_id = txid_current() AND scope = _scope AND item = coalesce(_item, '')
+$$;
+CREATE OR REPLACE FUNCTION phase3_p9.authorised(_scope text, _item text DEFAULT '') RETURNS boolean
+LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public, pg_temp AS $$
+  SELECT EXISTS (SELECT 1 FROM phase3_p9.authority a WHERE a.transaction_id = txid_current() AND a.scope = _scope AND a.item = coalesce(_item, '')
+                   AND a.actor_id IS NOT DISTINCT FROM auth.uid())
+$$;
+REVOKE ALL ON FUNCTION phase3_p9.grant_authority(text, text, jsonb), phase3_p9.end_authority(text, text) FROM PUBLIC, anon, authenticated, service_role;
+REVOKE ALL ON FUNCTION phase3_p9.authorised(text, text) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION phase3_p9.authorised(text, text) TO authenticated, service_role;
+
 -- --------------------------------------------------------------------------------------------
 -- A. Statement line claims
 -- --------------------------------------------------------------------------------------------
@@ -90,11 +116,12 @@ CREATE UNIQUE INDEX IF NOT EXISTS statement_line_imports_owner_entry_uidx ON pub
 CREATE INDEX IF NOT EXISTS statement_line_imports_pending_idx ON public.statement_line_imports (owner_id, account_key) WHERE entry_id IS NOT NULL AND registered_at IS NULL;
 
 -- Direct client writes keep working for plain "seen" rows (markSeen upsert, Forget last upload), but only
--- the P9 functions may set or change the registration columns.
+-- the P9 functions may set or change the registration columns (SECURITY DEFINER: it reads the phase3_p9 authority,
+-- whose schema signed-in roles cannot use).
 CREATE OR REPLACE FUNCTION phase3_p9.guard_line_claims() RETURNS trigger
-LANGUAGE plpgsql SET search_path = public, pg_temp AS $$
+LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp AS $$
 BEGIN
-  IF coalesce(current_setting('phase3_p9.claiming', true), '') = 'on' THEN RETURN NEW; END IF;
+  IF phase3_p9.authorised('claiming') THEN RETURN NEW; END IF;
   IF TG_OP = 'INSERT' THEN NEW.entry_id := NULL; NEW.registered_at := NULL; RETURN NEW; END IF;
   IF NEW.entry_id IS DISTINCT FROM OLD.entry_id OR NEW.registered_at IS DISTINCT FROM OLD.registered_at THEN
     RAISE EXCEPTION 'P9_LINE_CLAIM: statement line registration is recorded only by claim_statement_lines / confirm_statement_lines' USING ERRCODE = '42501';
@@ -128,7 +155,7 @@ BEGIN
     RAISE EXCEPTION 'P9_INVALID: a line or entry id appears twice' USING ERRCODE = '22023';
   END IF;
 
-  PERFORM set_config('phase3_p9.claiming', 'on', true);
+  PERFORM phase3_p9.grant_authority('claiming');
   WITH ins AS (
     INSERT INTO public.statement_line_imports AS s (owner_id, account_key, fingerprint, line_date, batch_id, file_label, entry_id)
     SELECT uid, p_account_key, x->>'fingerprint', (x->>'line_date')::date, p_batch_id, left(coalesce(p_file_label, ''), 200), (x->>'entry_id')::uuid
@@ -136,7 +163,7 @@ BEGIN
     ON CONFLICT DO NOTHING
     RETURNING s.fingerprint
   ) SELECT coalesce(array_agg(ins.fingerprint), '{}') INTO claimed FROM ins;
-  PERFORM set_config('phase3_p9.claiming', '', true);
+  PERFORM phase3_p9.end_authority('claiming');
 
   -- A line with no row now collided on its entry id (one id can register one line only): refuse the call.
   IF EXISTS (SELECT 1 FROM jsonb_array_elements(p_lines) x WHERE NOT EXISTS (
@@ -160,12 +187,12 @@ DECLARE uid uuid := auth.uid(); n integer;
 BEGIN
   IF uid IS NULL THEN RAISE EXCEPTION 'Unauthorized' USING ERRCODE = '42501'; END IF;
   IF coalesce(cardinality(p_entry_ids), 0) > 500 THEN RAISE EXCEPTION 'P9_INVALID: at most 500 entries per call' USING ERRCODE = '22023'; END IF;
-  PERFORM set_config('phase3_p9.claiming', 'on', true);
+  PERFORM phase3_p9.grant_authority('claiming');
   UPDATE public.statement_line_imports s SET registered_at = now()
    WHERE s.owner_id = uid AND s.entry_id = ANY (coalesce(p_entry_ids, '{}')) AND s.registered_at IS NULL
      AND EXISTS (SELECT 1 FROM public.expenses e WHERE e.id = s.entry_id AND e.employee_id = uid);
   GET DIAGNOSTICS n = ROW_COUNT;
-  PERFORM set_config('phase3_p9.claiming', '', true);
+  PERFORM phase3_p9.end_authority('claiming');
   RETURN n;
 END $$;
 
