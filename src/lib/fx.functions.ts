@@ -85,7 +85,7 @@ export const saveExpense = createServerFn({ method: "POST" })
       if (reuse) return { ok: false as const, error: reuse };
     }
     // Who resolved a possible duplicate comes from the signed-in account, never from the browser.
-    const receiptDetails = data.receiptDetails ? stampDuplicateReview(data.receiptDetails, userId) : undefined;
+    const stampedDetails = data.receiptDetails ? stampDuplicateReview(data.receiptDetails, userId) : undefined;
     if (data.receipts?.some((r) => !r.path.startsWith(`${userId}/`))) return { ok: false as const, error: "Invalid receipt" };
     if (data.splits.length) {
       const sum = Math.round(data.splits.reduce((a, x) => a + x.amount, 0) * 100) / 100;
@@ -111,6 +111,8 @@ export const saveExpense = createServerFn({ method: "POST" })
       const rd = stored.data?.receipt_details;
       if (w && rd && typeof rd === "object" && !Array.isArray(rd)) keptWithdrawal = rd["withdrawal"];
     }
+    // The stored details are the server-stamped review plus any withdrawal history kept from the saved row.
+    const receiptDetails = stampedDetails && keptWithdrawal !== undefined ? { ...stampedDetails, withdrawal: keptWithdrawal } : stampedDetails;
     let fx: { rate: number; date: string };
     try {
       fx = await fetchRate(data.currency, data.date);
@@ -133,7 +135,7 @@ export const saveExpense = createServerFn({ method: "POST" })
       workspace_allocations: data.workspaceAllocations,
       updated_at: new Date().toISOString(),
       ...(data.receipts ? { receipts: data.receipts } : {}),
-      ...(receiptDetails ? { receipt_details: keptWithdrawal === undefined ? receiptDetails : { ...receiptDetails, withdrawal: keptWithdrawal } } : {}),
+      ...(receiptDetails ? { receipt_details: receiptDetails } : {}),
     };
     const result = data.id
       ? await supabase.from("expenses").update(row).eq("id", data.id).eq("employee_id", userId).select("id").single()
