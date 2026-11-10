@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { toast } from "sonner";
-import { Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -18,6 +17,7 @@ import { todayISO } from "@/lib/use-position";
 import { emiReconciliation, emiTargets, matchEmiDebit, type EmiRowStatus } from "@/lib/emi-match";
 import { LoanFundingPanel } from "./LoanFundingPanel";
 import { LoanBalanceReview } from './books/LoanBalanceReview';
+import { ArchivedGoals, ArchivedLoans, TableArchiveButton, useGoalsSplit, useLoansSplit } from "./WealthArchive";
 
 const months = (n: number) => (Number.isFinite(n) ? `${Math.floor(n / 12)}y ${n % 12}m` : "never");
 
@@ -76,7 +76,9 @@ export function CardDetails({ a }: { a: Account }) {
 }
 
 export function LoansPanel() {
-  const { loans, saveLoan, removeLoan } = useStore();
+  const { saveLoan } = useStore();
+  // Archive instead of delete (P0-008): archived loans are only listed apart; they stay stored and in what you owe.
+  const loans = useLoansSplit();
   const [f, setF] = useState({ name: "", principal: "", rate: "", emi: "", nextDue: todayISO(), provider: "", loanType: "personal" as LoanType, original: "", startDate: "", prepaymentTerms: "", foreclosure: "0" });
   const add = (e: React.FormEvent) => {
     e.preventDefault();
@@ -87,7 +89,8 @@ export function LoansPanel() {
   return (
     <section className="space-y-3">
       <h2 className="font-display text-lg font-bold">Loans & EMIs</h2>
-      {loans.map((l) => <LoanCard key={l.id} l={l} onRemove={() => removeLoan(l.id).catch((e) => toast.error(e.message))} />)}
+      {loans.active.map((l) => <LoanCard key={l.id} l={l} />)}
+      <ArchivedLoans rows={loans.archived} />
       <details className="cmp-manage"><summary>Add a loan</summary><form onSubmit={add} className="grid grid-cols-2 gap-2 rounded-3xl border bg-card p-4">
         <div className="col-span-2 grid gap-1"><Label htmlFor="ln">Loan</Label><Input id="ln" placeholder="Home loan — SBI" value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} /></div>
         <div className="grid gap-1"><Label htmlFor="loan-provider">Provider</Label><Input id="loan-provider" value={f.provider} onChange={e=>setF({...f,provider:e.target.value})}/></div><div className="grid gap-1"><Label>Loan type</Label><Select value={f.loanType} onValueChange={v=>setF({...f,loanType:v as LoanType})}><SelectTrigger aria-label="Loan type"><SelectValue/></SelectTrigger><SelectContent>{LOAN_TYPES.filter(t=>t!=="credit_card_emi").map(t=><SelectItem key={t} value={t}>{LOAN_TYPE_LABEL[t]}</SelectItem>)}</SelectContent></Select></div>
@@ -103,7 +106,7 @@ export function LoansPanel() {
   );
 }
 
-function LoanCard({ l, onRemove }: { l: Loan; onRemove: () => void }) {
+function LoanCard({ l }: { l: Loan }) {
   const { accounts, recordLoanPayment, transactions } = useStore();
   const hist = loanHistory(l.accountId, l.principal, transactions, l.name);
   const chart = loanBalanceChart(hist.rows);
@@ -121,7 +124,7 @@ function LoanCard({ l, onRemove }: { l: Loan; onRemove: () => void }) {
           <div className="text-xs text-muted-foreground">{money(l.principal)} at {l.rate}% · EMI {money(l.emi)} · next {l.nextDue}</div>
           <div className="text-xs text-muted-foreground">{LOAN_TYPE_LABEL[l.loanType]} · {l.provider || "No provider"} · {l.status} · closes {closureDate(l.nextDue,a.months) ?? "—"}</div>
         </div>
-        <Button size="icon" variant="ghost" aria-label={`Delete ${l.name}`} onClick={onRemove}><Trash2 className="h-4 w-4" /></Button>
+        <TableArchiveButton table="loans" id={l.id} name={l.name} noun="loan" />
       </div>
       {a.payable ? (
         <div className="mt-2 grid grid-cols-2 gap-2 text-sm sm:grid-cols-3">
@@ -174,7 +177,9 @@ function LoanCard({ l, onRemove }: { l: Loan; onRemove: () => void }) {
 }
 
 export function GoalsPanel() {
-  const { goals, saveGoal, removeGoal } = useStore();
+  const { saveGoal } = useStore();
+  // Archive instead of delete (P0-013): archived goals stay stored and, if a reserve, still held back from safe-to-spend.
+  const goals = useGoalsSplit();
   const [f, setF] = useState({ name: "", target: "", saved: "0", monthly: "", reserve: false });
   const today = todayISO();
   const add = (e: React.FormEvent) => {
@@ -186,20 +191,21 @@ export function GoalsPanel() {
   return (
     <section className="space-y-3">
       <h2 className="font-display text-lg font-bold">Goals & reserves</h2>
-      {goals.map((g) => {
+      {goals.active.map((g) => {
         const p = goalProgress(g, today);
         return (
           <div key={g.id} className="rounded-2xl border bg-card p-4">
             <div className="flex items-center gap-2">
               <div className="flex-1 font-medium">{g.name}{g.reserve && <span className="ml-2 rounded-full bg-secondary px-2 text-[11px]">held back from safe-to-spend</span>}</div>
               <Button size="sm" variant="ghost" onClick={() => { const v = window.prompt("Saved so far (₹)", String(g.saved)); if (v !== null) saveGoal({ ...g, saved: Number(v) }).catch((e) => toast.error(e.message)); }}>Update</Button>
-              <Button size="icon" variant="ghost" aria-label={`Delete ${g.name}`} onClick={() => removeGoal(g.id).catch((e) => toast.error(e.message))}><Trash2 className="h-4 w-4" /></Button>
+              <TableArchiveButton table="goals" id={g.id} name={g.name} noun="goal" />
             </div>
             <div className="mt-2 h-2 overflow-hidden rounded-full bg-muted"><div className="h-full bg-primary" style={{ width: `${p.pct}%` }} /></div>
             <div className="mt-1 text-xs text-muted-foreground">{money(g.saved)} of {money(g.target)} · {money(p.remaining)} to go · {p.eta ? `on track for ${p.eta}` : "set a monthly amount to see a date"}</div>
           </div>
         );
       })}
+      <ArchivedGoals rows={goals.archived} />
       <form onSubmit={add} className="grid grid-cols-2 gap-2 rounded-3xl border bg-card p-4">
         <div className="col-span-2 grid gap-1"><Label htmlFor="gn">Goal</Label><Input id="gn" placeholder="Emergency fund, School fees…" value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} /></div>
         <div className="grid gap-1"><Label htmlFor="gt">Target (₹)</Label><Input id="gt" type="number" value={f.target} onChange={(e) => setF({ ...f, target: e.target.value })} /></div>

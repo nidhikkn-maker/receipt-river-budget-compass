@@ -77,7 +77,8 @@ export function position(i: PositionInput) {
   const upcoming = [...occurrences(all, i.today, end), ...cardOut.filter((c) => c.date <= end).map((c) => ({ name: c.name, date: c.date, amount: c.amount, direction: "out" as const, confirmed: true, essential: true, overdue: false, commitmentId: "", kind: "bill" as const }))]
     .sort((a, b) => a.date.localeCompare(b.date));
   const unlinkedLoanOwed = sumMoney(activeLoans.filter(l => !l.accountId).map(l => l.principal));
-  const nw = netWorth(live, i.transactions, i.valuations ?? []);
+  // KK rule (10 Nov 2026): archiving hides an account from active lists; its value stays in net worth until a real disposal.
+  const nw = netWorth(i.accounts, i.transactions, i.valuations ?? []);
   const pending = i.transactions.filter((t) => (t.txnType ?? "expense") === "expense" && isTracked(t) && outstandingOf(t) > 0);
   const subs = subscriptionSummary(i.commitments, i.transactions.filter((t) => (t.txnType ?? "expense") === "expense"), i.today);
   const income = incomeTracking(i.commitments, i.transactions, i.today);

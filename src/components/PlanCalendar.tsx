@@ -8,6 +8,7 @@ import { todayISO } from "@/lib/use-position";
 import { money } from "@/lib/expenses";
 import { cn } from "@/lib/utils";
 import { travelCalendarItems } from "@/lib/travel-calendar";
+import { calendarItemIdOf } from "@/lib/calendar-item";
 import { calendarTarget } from "@/lib/review-navigation";
 import { useReviewView } from "@/lib/use-review-view";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "./ui/dialog";
@@ -56,7 +57,7 @@ export function PlanCalendar() {
     </div>
     <div className="mt-3"><h3 className="text-sm font-medium">{selected}</h3><ul className="divide-y text-sm">{selectedItems.map((item, index) => <li key={index} className="flex justify-between gap-3 py-2">
       <span className="min-w-0 break-words"><Link {...calendarTarget(item)} className="text-primary underline-offset-4 hover:underline">{item.name}</Link><span className={cn("block text-xs", item.reviewStatus === "completed" ? "text-success" : "text-warning")}>{item.reviewStatus === "completed" ? "Completed" : "Pending"} · {item.reviewReason ?? "Scheduled item still needs attention."}</span></span>
-      <span className="shrink-0 font-mono">{item.amount ? `${item.direction === "in" ? "+" : "−"}${money(item.amount)}` : ""}</span>
+      <span className="flex shrink-0 flex-col items-end gap-1"><span className="font-mono">{item.amount ? `${item.direction === "in" ? "+" : "−"}${money(item.amount)}` : ""}</span>{(() => { const id = calendarItemIdOf(item); return id && <Link to="/calendar-item" search={{ id, date: item.date }} aria-label={`Details for ${item.name}`} className="text-xs text-primary underline-offset-4 hover:underline">Details</Link>; })()}</span>
     </li>)}</ul>{selectedItems.length === 0 && <p className="py-2 text-xs text-muted-foreground">Nothing scheduled</p>}</div>
     <Dialog open={!!chooseDate} onOpenChange={open => { if (!open) setChooseDate(null); }}><DialogContent><DialogHeader><DialogTitle>{chooseDate}</DialogTitle><DialogDescription>Scheduled items</DialogDescription></DialogHeader><ul className="divide-y">{planned.filter(item => item.date === chooseDate).map((item, index) => <li key={index} className="py-2"><Button asChild variant="link" className="h-auto max-w-full whitespace-normal text-left"><Link {...calendarTarget(item)} onClick={() => setChooseDate(null)}>{item.name}</Link></Button></li>)}</ul></DialogContent></Dialog>
   </section>;

@@ -100,7 +100,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             <SyncStatus />
             <Button size="icon" variant="ghost" aria-label="Smart Add" title="Smart Add" className="hidden sm:inline-flex lg:hidden" onClick={() => setSmartOpen(true)}><Plus className="size-5" /></Button>
             <Link to="/search" aria-label="Search" className="header-search rounded-xl p-3 text-muted-foreground transition hover:text-foreground"><span className="hidden xl:inline">Search Thapal</span><Search className="h-5 w-5" /></Link>
-            <Link to="/inbox" aria-label="Notifications" className="rounded-xl p-3 text-muted-foreground transition hover:text-foreground"><Bell className="h-5 w-5" /></Link>
+            <Link to="/notifications" aria-label="Notifications" className="rounded-xl p-3 text-muted-foreground transition hover:text-foreground"><Bell className="h-5 w-5" /></Link>
             <Link to="/spaces" className="mx-1 hidden rounded-full border px-3 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground md:inline-flex">{preferences.homeScope === "all" ? "All spaces" : SCOPE_LABEL[preferences.homeScope]}</Link>
             <Button size="icon" variant="ghost" onClick={() => setHidden((h) => !h)} aria-label={hidden ? "Show amounts" : "Hide amounts"} className="hidden rounded-xl text-muted-foreground sm:inline-flex">{hidden ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}</Button>
             <Link to="/auth" aria-label={name ? `Account: ${name}` : "Account"} title={name || "Account"} className="cmp-header-avatar">{initials(name || "Thapal")}</Link>

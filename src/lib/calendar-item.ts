@@ -12,6 +12,13 @@ export const CALENDAR_KINDS = ["commitment", "loan", "document", "trip"] as cons
 export type CalendarKind = (typeof CALENDAR_KINDS)[number];
 export interface CalendarItemRef { kind: CalendarKind; id: string }
 
+/** The /calendar-item `id` search value for a PlanCalendar item (trip bookings and itinerary open their trip), or null. */
+export function calendarItemIdOf(item: { commitmentId?: string | undefined; loanId?: string | undefined; documentId?: string | undefined; tripId?: string | undefined }): string | null {
+  const ref: [CalendarKind, string | undefined] = item.commitmentId ? ["commitment", item.commitmentId] : item.loanId ? ["loan", item.loanId] : item.documentId ? ["document", item.documentId] : ["trip", item.tripId];
+  const id = ref[1] ? `${ref[0]}:${ref[1]}` : null;
+  return id && parseCalendarItemId(id) ? id : null;
+}
+
 export function parseCalendarItemId(v: unknown): CalendarItemRef | null {
   if (typeof v !== "string") return null;
   const at = v.indexOf(":");

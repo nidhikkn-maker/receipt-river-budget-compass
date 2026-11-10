@@ -253,7 +253,7 @@ export function NewExpense({ embedded }: { embedded?: EmbeddedEntry } = {}) {
     if (!search.draft || edit) return;
     let live = true;
     (async () => {
-      const server = navigator.onLine ? await getDraft(search.draft!).catch(() => null) : null;
+      const server = navigator.onLine ? await getDraft(search.draft!, { localFallbackOwner: userId }) : null;
       const local = (await localDrafts(userId).catch(() => [])).find((l) => l.id === search.draft);
       if (!live) return;
       const useLocal = !!local && (!server || (server.status !== "saved" && local.updatedAt > server.updatedAt));

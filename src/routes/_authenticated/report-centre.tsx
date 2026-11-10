@@ -19,8 +19,7 @@ import { corporateReport, type CorporateType } from '@/lib/books/corporate-state
 import { corporateAuditPack } from '@/lib/books/corporate-audit-pack';
 import {AccountingJournalReview} from '@/components/books/AccountingJournalReview';
 import {AccountantReviews} from '@/components/books/AccountantReviews';
-import { listDrafts } from "@/lib/drafts";
-import { localDrafts } from "@/lib/offline";
+import { draftsForReport } from "@/lib/drafts";
 import type { TravelTrip } from "@/lib/travel";
 import { cn } from "@/lib/utils";
 import { savePreparedReport } from '@/lib/report-save';
@@ -89,9 +88,11 @@ function ReportCentre() {
       const filters: ReportFilters = override?.filters ?? { ...f, from: range.from, to: range.to };
       if (needsTrip(t) && !trips.length) throw new Error("Add a trip in Travel Manager first.");
       let drafts: DraftLite[] = [];
+      let draftsIncomplete: string | null = null;
       if (t === "drafts") {
-        const server = navigator.onLine ? await listDrafts().catch(() => []) : [];
-        const local = await localDrafts(store.userId).catch(() => []);
+        const { server, local, incomplete } = await draftsForReport(store.userId, navigator.onLine);
+        draftsIncomplete = incomplete;
+        if (incomplete) toast.warning("The drafts list may be incomplete", { description: `${incomplete} The report says so; retry when connected.` });
         drafts = [...local.map((d) => ({ id: d.id, status: "waiting_to_sync", updatedAt: d.updatedAt, data: d.data as DraftLite["data"], localOnly: true })), ...server.filter((s) => !local.some((l) => l.id === s.id)).map((s) => ({ id: s.id, status: s.status, updatedAt: s.updatedAt, data: s.data as DraftLite["data"] }))];
       }
       // Record the job first: if the app closes before the PDF is saved, the server finishes it.
@@ -99,7 +100,7 @@ function ReportCentre() {
       setStage(1);
       const doc = buildReportDoc(t, filters, {
         transactions: store.transactions, accounts: store.accounts, valuations: store.valuations, commitments: store.commitments, loans: store.loans,
-        budgets: store.budgets as Record<string, number>, trips, drafts, memberName: (id) => (id === "me" ? store.memberName(null) : store.memberName(id)),
+        budgets: store.budgets as Record<string, number>, trips, drafts, draftsIncomplete, memberName: (id) => (id === "me" ? store.memberName(null) : store.memberName(id)),
         accountName: (id) => store.accounts.find((a) => a.id === id)?.name ?? "No account", today: today(),
         books:store.preferences.books,entities:store.preferences.entities,documents:store.documents,
       });

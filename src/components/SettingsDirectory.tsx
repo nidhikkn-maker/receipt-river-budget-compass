@@ -37,6 +37,7 @@ const GROUPS: { title: string; items: Dest[] }[] = [
     { label: "Notifications", desc: "Reminders and device alerts", to: "/settings", hash: "notifications" },
     { label: "Appearance", desc: "Theme family and light/dark mode", to: "/settings", hash: "appearance" },
     { label: "AI", desc: "AI switches and document reading privacy", to: "/settings", hash: "finance" },
+    { label: "About Thapal", desc: "Version, service health and known limitations", to: "/about" },
   ] },
   { title: "Security & data", items: [
     { label: "Security", desc: "Face ID / passkey device unlock", to: "/settings", hash: "security" },

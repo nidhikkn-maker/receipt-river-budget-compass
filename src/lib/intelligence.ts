@@ -296,7 +296,7 @@ export function weeklyBrief(i: BriefInput) {
     highlights: { topCategory: top ? { category: top[0], amount: top[1] } : null, significant, unusual: change !== null && Math.abs(change) > 25 ? `${change > 0 ? "Up" : "Down"} ${Math.abs(change)}% vs the previous week` : null },
     upcoming: { due, income, dueTotal: sum(due.map((x) => x.amount)), incomeTotal: sum(income.map((x) => x.amount)), shortfall, lowest: r2(i.lowest) },
     attention: { staleAccounts: i.staleAccounts, pendingReimbursements: r2(i.pendingReimbursements), missingItems: i.missingItems, budgetWarnings: i.budgetWarnings },
-    recommendations: recs.slice(0, 3), netWorth: netWorth(i.accounts.filter((a) => !a.archived), i.txns, i.valuations ?? []).net,
+    recommendations: recs.slice(0, 3), netWorth: netWorth(i.accounts, i.txns, i.valuations ?? []).net,
   };
 }
 export type WeeklyBrief = ReturnType<typeof weeklyBrief>;

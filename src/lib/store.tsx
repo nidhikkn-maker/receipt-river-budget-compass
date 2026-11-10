@@ -124,22 +124,18 @@ interface Ctx {
   documents: VaultDoc[];
   saveCommitment: (c: Omit<Commitment, "id"> & { id?: string }) => Promise<void>;
   confirmIrregular: (c: { key: string; name: string; category: string; everyMonths: number }, amount: number, date: string) => Promise<void>;
-  removeCommitment: (id: string) => Promise<void>;
   /** Records the actual payment/receipt as a transaction and moves the due date forward. */
   confirmCommitment: (c: Commitment, amount: number, accountId?: string | null) => Promise<void>;
   saveLoan: (l: LoanInput) => Promise<void>;
-  removeLoan: (id: string) => Promise<void>;
   /** Records one EMI: principal as a transfer to the loan account, interest as a financial charge. */
   recordLoanPayment: (l: Loan, p: { fromAccountId: string | null; date: string; principal?: number; interest?: number }) => Promise<void>;
   convertToEmi: (e: Expense, o: { months: number; rate: number; fee: number }) => Promise<void>;
   saveGoal: (g: Omit<Goal, "id"> & { id?: string }) => Promise<void>;
-  removeGoal: (id: string) => Promise<void>;
   updateAccount: (id: string, patch: AccountPatch) => Promise<void>;
   addAccount: (a: NewAccount) => Promise<string>;
   setArchived: (id: string, archived: boolean) => Promise<void>;
   adjustBalance: (a: Account, actual: number, date: string) => Promise<boolean>;
   addValuation: (v: Omit<Valuation, "id">) => Promise<void>;
-  removeValuation: (id: string) => Promise<void>;
   addDocument: (file: File, meta: DocumentMeta) => Promise<string>;
   updateDocument: (id: string, meta: Partial<DocumentMeta>) => Promise<void>;
   removeDocument: (d: VaultDoc) => Promise<void>;
@@ -805,7 +801,6 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
     check((x.id ? await supabase.from("commitments").update(row).eq("id", x.id) : await supabase.from("commitments").insert(row)).error);
     await refresh();
   };
-  const removeCommitment: Ctx["removeCommitment"] = async (id) => { check((await supabase.from("commitments").delete().eq("id", id)).error); await refresh(); };
   const confirmCommitment: Ctx["confirmCommitment"] = async (c, amount, accountId) => {
     await operation("commitment", { id: c.id, expectedDue: c.nextDue, amount, accountId: accountId ?? c.accountId, date: today() });
     await refresh();
@@ -827,12 +822,6 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
     }
     await refresh();
   };
-  const removeLoan: Ctx["removeLoan"] = async (id) => {
-    const l = rawLoans.find((x) => x.id === id);
-    check((await supabase.from("loans").delete().eq("id", id)).error);
-    if (l?.accountId && l.loanType !== "credit_card_emi") await supabase.from("accounts").update({ archived: true }).eq("id", l.accountId);
-    await refresh();
-  };
   const recordLoanPayment: Ctx["recordLoanPayment"] = async (l, p) => {
     await operation("loan_payment", { id: l.id, expectedDue: l.nextDue, ...p });
     await refresh();
@@ -849,7 +838,6 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
     check((x.id ? await supabase.from("goals").update(row).eq("id", x.id) : await supabase.from("goals").insert(row)).error);
     await refresh();
   };
-  const removeGoal: Ctx["removeGoal"] = async (id) => { check((await supabase.from("goals").delete().eq("id", id)).error); await refresh(); };
   const addValuation: Ctx["addValuation"] = async (v) => {
     if (!(v.value >= 0)) throw new Error("Value can't be negative");
     if (!/^\d{4}-\d{2}-\d{2}$/.test(v.valuedOn)) throw new Error("Pick the valuation date");
@@ -857,7 +845,6 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
     check((await supabase.from("asset_valuations").insert({ owner_id: userId, account_id: v.accountId, value: v.value, valued_on: v.valuedOn, source: v.source.slice(0, 80) || "manual", note: (v.note ?? "").slice(0, 300) })).error);
     await refresh();
   };
-  const removeValuation: Ctx["removeValuation"] = async (id) => { check((await supabase.from("asset_valuations").delete().eq("id", id)).error); await refresh(); };
   const addDocument: Ctx["addDocument"] = async (file, meta) => {
     validateDocument({ title: meta.title, size: file.size, docType: meta.docType, amount: meta.amount });
     // A retried Statement Desk run reuses its id, so a second attempt never stores the file twice.
@@ -958,8 +945,8 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
       accountingAvailable,postAccounting,accountantData,setAccountantGrant,reviewAccounting,
       pendingCount, pendingItems, retrySync: (id?: string) => syncRef.current(id), discardPending: async (id: string) => { await removePending(id); setPendingItems((prev) => prev.filter((p) => p.id !== id)); setPendingCount((await pendingEntries(userId)).length); }, setTags, manageTripExpenses, applyReviewMapping, applyReviewMetadata, undoReviewMetadata, reviewMetadataHistory, saveRecurringReview, preferences, preferencesRevision: preferencesRevision.current, savePreferences, commitDocumentRecords, postOpening, undoOpening, openingPostings, ensureCategory, moveCategory, bulkSetCategory, categoryHistory, undoCategoryBatch, correctFinancialEntries, undoFinancialCorrection, financialCorrectionHistory, userId, name, updateName, members, memberName,
       expenses: expenses.filter((x) => (x.txnType ?? "expense") === "expense"), transactions: expenses.filter((x) => !x.transferCounterpartOf), transferCounterparts: expenses.filter((x) => !!x.transferCounterpartOf), confirmTransfer, cancelTransfer, accounts, addAccount, setArchived, adjustBalance,
-      commitments, loans, goals, valuations, documents, saveCommitment, confirmIrregular, removeCommitment, confirmCommitment, saveLoan, removeLoan, recordLoanPayment, convertToEmi,
-      saveGoal, removeGoal, updateAccount, addValuation, removeValuation, addDocument, updateDocument, removeDocument, history, setReimbursement, recordReimbursement, deleteAll,
+      commitments, loans, goals, valuations, documents, saveCommitment, confirmIrregular, confirmCommitment, saveLoan, recordLoanPayment, convertToEmi,
+      saveGoal, updateAccount, addValuation, addDocument, updateDocument, removeDocument, history, setReimbursement, recordReimbursement, deleteAll,
       budgets, loading, syncState, loadErrors, lastSyncedAt, refresh, save, remove, payCard, setScope, reconcile, addMember, removeMember, updateMember, setBudget, signedUrl, downloadFile,
       setAllocations, updateReimbursement, addReimbursementReceipt, listReviews, saveReview,
     }}>

@@ -1,5 +1,7 @@
 import { confirmAction } from "@/lib/confirm";
 import { ProcessingPanel, stagesAt } from "@/components/ProcessingPanel";
+import { LoadError } from "@/components/LoadError";
+import { rememberedStatementAccount } from "@/lib/statement-remembered";
 import { Spinner } from "@/components/ui/button";
 import { Link } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -102,6 +104,16 @@ export function StatementInbox() {
   const queue = [...plan.register, ...plan.possibleDuplicates.filter((d) => includeDups[d.draft.line.ref]).map((d) => d.draft)].filter((d) => !excluded[d.line.ref]);
   const spendingTotal = queue.filter((d) => d.txnType === "expense").reduce((s, d) => s + d.line.amount, 0);
 
+  // P0-004: a failed lookup of last time's account is shown with Retry, never read as "no remembered account".
+  const [rememberFailed, setRememberFailed] = useState<string | null>(null);
+  const applyRemembered = async (name: string) => {
+    try {
+      const remembered = await rememberedStatementAccount(name, accounts.map((a) => a.id));
+      setRememberFailed(null);
+      if (remembered) { setStatementAccount(remembered); toast.info(`Using ${accounts.find((a) => a.id === remembered)?.name} like last time`); }
+    } catch { setRememberFailed(name); }
+  };
+
   const onFile = async (f: File | undefined) => {
     if (!f) return;
     setReading(true); setReadStage({ name: f.name, ai: false, at: 0 });
@@ -119,13 +131,7 @@ export function StatementInbox() {
         parsed = result.lines;
       }
       setReadStage((x) => x && { ...x, at: 1 });
-      let key = accountKey;
-      if (statementAccount === "all") {
-        const { data } = await supabase.from("statement_line_imports").select("account_key").eq("file_label", filePattern(f.name)).neq("account_key", "all").order("created_at", { ascending: false }).limit(1);
-        const remembered = data?.[0]?.account_key;
-        if (remembered && accounts.some((a) => a.id === remembered)) { key = remembered; setStatementAccount(remembered); toast.info(`Using ${accounts.find((a) => a.id === remembered)?.name} like last time`); }
-      }
-      void key;
+      if (statementAccount === "all") await applyRemembered(f.name);
       setLines(parsed); setFileName(f.name); setOverrides({}); setExcluded({}); setShowImported(false); setIncludeDups({});
       toast.success(`${parsed.length} statement lines found`);
     } catch (e) { toast.error((e as Error).message); } finally { setReading(false); setReadStage(null); }
@@ -185,6 +191,7 @@ export function StatementInbox() {
         <Button variant="ghost" className="block h-auto min-w-0 whitespace-normal p-0 text-left" aria-label={`Not matched yet: ${open.length} transactions`} onClick={() => openItems("unmatched")}><Stat label="Not matched yet" value={String(open.length)} hint={money(open.reduce((s, e) => s + e.amount, 0))} /></Button>
       </div>
 
+      {rememberFailed && <LoadError className="mb-3" what="the account this statement used last time" note="The lines are shown under the account picked below. Nothing has been deleted. Retry, or pick the account yourself." onRetry={() => applyRemembered(rememberFailed)} />}
       {readStage && <ProcessingPanel className="mb-3" title={`Reading ${readStage.name}…`} stages={stagesAt([readStage.ai ? "Extracting transactions with AI" : "Reading transactions", "Matching remembered account"], readStage.at)} />}
       <div className="mb-6 flex flex-wrap items-center gap-3 rounded-3xl border-2 border-dashed border-primary/40 bg-secondary/50 p-5">
         <p className="text-sm text-muted-foreground">Statement Desk is the one place to upload bank statements. Matches made there show up here.</p>

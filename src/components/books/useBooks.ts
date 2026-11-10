@@ -1,5 +1,5 @@
 import { activeOverride, applyOverrides } from "@/lib/books/price-overrides";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useStore } from "@/lib/store";
 import { emptyBooks, type BooksData } from "@/lib/books/types";
 import { accountValue, isLiability } from "@/lib/ledger";
@@ -37,26 +37,30 @@ export function useDemat() {
   return d;
 }
 
-export interface ClosingPrices { byIsin: Map<string, SavedClose>; byIsinEx: Map<string, SavedClose>; job: { status: string; lastSuccess: string | null; reason: string | null } | null }
+export interface ClosingPrices { byIsin: Map<string, SavedClose>; byIsinEx: Map<string, SavedClose>; job: { status: string; lastSuccess: string | null; reason: string | null } | null; failed: boolean; retry: () => void }
 /** Official NSE/BSE end-of-day closes saved by the evening job, for the ISINs the owner holds [v6.1 §2–5]. */
 export function useClosingPrices(isins: string[]): ClosingPrices {
   const key = [...new Set(isins.filter((i) => /^IN[A-Z0-9]{10}$/.test(i)))].sort().join(",");
-  const [v, setV] = useState<ClosingPrices>({ byIsin: new Map(), byIsinEx: new Map(), job: null });
+  const [v, setV] = useState<Omit<ClosingPrices, "retry">>({ byIsin: new Map(), byIsinEx: new Map(), job: null, failed: false });
+  const [attempt, setAttempt] = useState(0);
   useEffect(() => {
     let live = true;
     void (async () => {
       const list = key ? key.split(",") : [];
       const [q, j] = await Promise.all([
-        list.length ? supabase.from("market_quotes").select("exchange,isin,close,price_date,symbol,fetched_at").in("isin", list).order("price_date", { ascending: false }).limit(list.length * 6) : Promise.resolve({ data: [] as never[] }),
+        list.length ? supabase.from("market_quotes").select("exchange,isin,close,price_date,symbol,fetched_at").in("isin", list).order("price_date", { ascending: false }).limit(list.length * 6) : Promise.resolve({ data: [] as never[], error: null }),
         supabase.from("job_state").select("status,last_success,reason").eq("name", "closing-prices").maybeSingle(),
       ]);
       if (!live) return;
+      // P0-004: a failed read is not "no closing prices"; keep what was shown and say the read failed.
+      if (q.error || j.error) { setV((prev) => ({ ...prev, failed: true })); return; }
       const rows = q.data ?? [];
-      setV({ byIsin: latestByIsin(rows), byIsinEx: latestByIsinExchange(rows), job: j.data ? { status: j.data.status, lastSuccess: j.data.last_success, reason: j.data.reason } : null });
-    })().catch(() => undefined);
+      setV({ byIsin: latestByIsin(rows), byIsinEx: latestByIsinExchange(rows), job: j.data ? { status: j.data.status, lastSuccess: j.data.last_success, reason: j.data.reason } : null, failed: false });
+    })().catch(() => { if (live) setV((prev) => ({ ...prev, failed: true })); });
     return () => { live = false; };
-  }, [key]);
-  return v;
+  }, [key, attempt]);
+  const retry = useCallback(() => setAttempt((n) => n + 1), []);
+  return useMemo(() => ({ ...v, retry }), [v, retry]);
 }
 /** Closing price as a quote for the valuation rules; end-of-day, never live. */
 export const closeQuote = (isin: string, c: { exchange: string; close: number; date: string; fetchedAt?: string }): Quote => ({ key: `isin:${isin}`, price: c.close, at: c.date, provider: `${c.exchange} official closing price`, freshness: "eod", refreshedAt: c.fetchedAt ?? "" });
@@ -128,6 +132,6 @@ export function useNetWorth() {
     const last = books.snapshots.at(-1);
     // Market movement excludes money you put in or took out since the last snapshot [v6.1 §12].
     const flows = last ? investmentFlows(transactions, accounts, last.date) : 0;
-    return { ...nw, quality: [...nw.quality, ...(lender.missing.length ? [`Incomplete net worth: ${lender.missing.join(', ')} needs dated lender balance evidence (liability excluded, not zero)`] : [])], valued, portfolio, liquid: raw.assets, movement: last ? Math.round(portfolio - last.portfolio - flows) : null, flowsSinceSnapshot: Math.round(flows), lastSnapshot: last?.date ?? null, demat, dematRows, dematMissing, duplicates, closeJob: closes.job, pricesAsOf: closeDate ?? null, recordsAsOf: transactions.reduce((m, t) => (t.date > m ? t.date : m), "") || null };
+    return { ...nw, quality: [...nw.quality, ...(closes.failed ? ["Couldn't load saved closing prices: share values may use statement prices until you retry"] : []), ...(lender.missing.length ? [`Incomplete net worth: ${lender.missing.join(', ')} needs dated lender balance evidence (liability excluded, not zero)`] : [])], valued, portfolio, liquid: raw.assets, movement: last ? Math.round(portfolio - last.portfolio - flows) : null, flowsSinceSnapshot: Math.round(flows), lastSnapshot: last?.date ?? null, demat, dematRows, dematMissing, duplicates, closeJob: closes.job, pricesFailed: closes.failed, retryPrices: closes.retry, pricesAsOf: closeDate ?? null, recordsAsOf: transactions.reduce((m, t) => (t.date > m ? t.date : m), "") || null };
   }, [accounts, transactions, valuations, loans, books, demat, preferences.assets, closes, documents]); // eslint-disable-line react-hooks/exhaustive-deps
 }

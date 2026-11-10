@@ -20,6 +20,7 @@ import { FundPortfolio } from "@/components/FundPortfolio";
 import { DematHoldings } from "@/components/DematHoldings";
 import { MarketPanel } from "@/components/books/MarketPanel";
 import { useNetWorth } from "@/components/books/useBooks";
+import { isBankAccount } from "@/lib/bank-account-detail";
 import { ChevronRight, Scale, LineChart, Target, CalendarRange } from "lucide-react";
 import band from "@/assets/companion-wealth-band.jpg";
 
@@ -95,6 +96,7 @@ function Wealth() {
                 </div>
               </div>
               {a.kind === "credit_card" && <Link to="/cards/$accountId" params={{ accountId: a.id }} className="mt-2 inline-flex min-h-11 items-center text-sm font-medium text-primary">Card bill & payments <ChevronRight className="size-4" /></Link>}
+              {isBankAccount(a) && <Link to="/bank-account/$accountId" params={{ accountId: a.id }} aria-label={`Account details for ${a.name}`} className="mt-2 inline-flex min-h-11 items-center text-sm font-medium text-primary">Account details <ChevronRight className="size-4" /></Link>}
               <details className="cmp-manage"><summary>Manage account</summary>
               <p className="pt-2 text-xs text-muted-foreground">{accountKindNote(a.kind)}{a.archived ? " · archived" : ""}</p>
               <Button variant="outline" size="sm" className="mt-2" onClick={() => setArchived(a.id, !a.archived).catch((e) => toast.error(e.message))}>

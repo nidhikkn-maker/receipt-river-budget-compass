@@ -50,8 +50,28 @@ export function listDrafts(): Promise<Draft[]> {
     return (data as Row[]).map(fromRow);
   });
 }
-export async function getDraft(id: string): Promise<Draft | null> {
-  const { data } = await supabase.from("expense_drafts").select("*").eq("id", id).maybeSingle();
+/**
+ * Drafts for the Drafts report: account drafts plus this device's own. A failed account read (or being offline) is
+ * reported as `incomplete` so the report says its list may be incomplete instead of showing fewer drafts (P0-004).
+ */
+export async function draftsForReport(owner: string, online: boolean): Promise<{ server: Draft[]; local: LocalDraft[]; incomplete: string | null }> {
+  let incomplete: string | null = online ? null : "You were offline, so drafts saved to your account were not checked.";
+  const server = online ? await listDrafts().catch(() => { incomplete = "Drafts saved to your account couldn't be loaded."; return [] as Draft[]; }) : [];
+  const local = await localDrafts(owner).catch(() => { incomplete = incomplete ? `${incomplete} Drafts kept on this device couldn't be read either.` : "Drafts kept on this device couldn't be read."; return [] as LocalDraft[]; });
+  return { server, local, incomplete };
+}
+/**
+ * The account copy of one draft, or null when there is none. A failed read throws (P0-004): it is never "no draft",
+ * so device sync cannot overwrite a newer or already-saved account copy, and opening a draft cannot claim it is gone.
+ * With `localFallbackOwner`, a failed read returns null only when this device holds its own copy to open instead.
+ */
+export async function getDraft(id: string, opts: { localFallbackOwner?: string } = {}): Promise<Draft | null> {
+  const { data, error } = await supabase.from("expense_drafts").select("*").eq("id", id).maybeSingle();
+  if (error) {
+    const owner = opts.localFallbackOwner;
+    if (owner && (await localDrafts(owner).catch(() => [])).some((l) => l.id === id)) return null;
+    throw new Error("Couldn't open that draft. Nothing has been deleted. Check your connection and retry.");
+  }
   return data ? fromRow(data as Row) : null;
 }
 export async function upsertDraft(id: string, owner: string, data: DraftData, receipts: DraftReceipt[], status: DraftStatus) {

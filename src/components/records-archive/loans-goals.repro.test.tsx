@@ -1,6 +1,6 @@
-// P0-008 / P0-013 (goals). WealthPanels.tsx is Track A's file, so the fix ships as ready-made pieces in WealthArchive.tsx
-// for Track D to wire. These tests (1) prove the pieces archive loans and goals without touching their rows or any figure
-// and (2) keep a tripwire on the still-open WealthPanels Delete icons, which must flip once Track D wires the pieces.
+// P0-008 / P0-013 (goals). The fix ships as pieces in WealthArchive.tsx, now wired into WealthPanels (integration).
+// These tests (1) prove the pieces archive loans and goals without touching their rows or any figure and (2) guard that
+// WealthPanels offers Archive (reason required) instead of the old one-tap Delete, and the store has no hard-delete left.
 import { readFileSync } from "node:fs";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
@@ -25,7 +25,7 @@ const documents = [{ id: "doc-ls", loanId: loan.id, docType: "loan_statement" }]
 beforeEach(() => reset({ ...(defaultPreferences() as unknown as Record<string, unknown>), books: { loanBalances: [evidence] } }, { loans: [loan], goals: [goal], documents, removeLoan: spy("removeLoan"), removeGoal: spy("removeGoal"), saveLoan: spy("saveLoan"), saveGoal: spy("saveGoal"), recordLoanPayment: spy("recordLoanPayment") }));
 afterEach(cleanup);
 
-/** What Track D wires into WealthPanels: active rows listed with Archive, archived rows below with Restore. */
+/** What WealthPanels wires in: active rows listed with Archive, archived rows below with Restore. */
 function WiredLoansAndGoals() {
   const loans = useLoansSplit(), goals = useGoalsSplit();
   return <>
@@ -64,13 +64,27 @@ describe("P0-008 / P0-013 loans and goals: archive pieces for WealthPanels", () 
     expect(owed()).toBe(owedBefore);
   });
 
-  it("OPEN until Track D wires WealthArchive: WealthPanels still deletes loans/goals in one tap (tripwire)", () => {
+  it("regression (integration wiring): WealthPanels archives loans/goals with a reason instead of deleting in one tap", async () => {
+    const rows = JSON.stringify({ loans: harness.store["loans"], goals: harness.store["goals"] }), owedBefore = owed();
     render(<><LoansPanel /><GoalsPanel /></>);
-    fireEvent.click(screen.getByRole("button", { name: `Delete ${loan.name}` }));
-    fireEvent.click(screen.getByRole("button", { name: `Delete ${goal.name}` }));
-    expect(callsOf("removeLoan").map((c) => c.args[0])).toEqual([loan.id]);
-    expect(callsOf("removeGoal").map((c) => c.args[0])).toEqual([goal.id]);
+    expect(screen.queryByRole("button", { name: `Delete ${loan.name}` })).toBeNull();
+    expect(screen.queryByRole("button", { name: `Delete ${goal.name}` })).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: `Archive ${loan.name}` }));
+    await confirmInDialog("Duplicate of the HDFC loan entry", /^Archive loan$/);
+    fireEvent.click(screen.getByRole("button", { name: `Archive ${goal.name}` }));
+    await confirmInDialog("Fees paid from the bonus instead", /^Archive goal$/);
+    expect(callsOf("removeLoan")).toHaveLength(0);
+    expect(callsOf("removeGoal")).toHaveLength(0);
+    expect(JSON.stringify({ loans: harness.store["loans"], goals: harness.store["goals"] })).toBe(rows);
+    expect(owed()).toBe(owedBefore);
+    expect(screen.queryByRole("button", { name: `Archive ${loan.name}` })).toBeNull();
+    expect(screen.getByText(/^Archived loans \(1\)/)).toBeInTheDocument();
+    expect(screen.getByText(/^Archived goals \(1\)/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: `Restore ${goal.name}` }));
+    await confirmInDialog("Archived by mistake", /^Restore goal$/);
+    expect(screen.getByRole("button", { name: `Archive ${goal.name}` })).toBeInTheDocument();
     const src = readFileSync("src/lib/store.tsx", "utf8");
-    expect(src.slice(src.indexOf("const removeLoan:"), src.indexOf("const removeLoan:") + 400)).toMatch(/from\("loans"\)\.delete\(\)/);
+    for (const table of ["loans", "goals", "commitments", "asset_valuations"]) expect(src).not.toMatch(new RegExp(`from\\("${table}"\\)\\.delete\\(\\)`));
+    expect(src).not.toMatch(/removeLoan|removeGoal|removeCommitment|removeValuation/);
   });
 });

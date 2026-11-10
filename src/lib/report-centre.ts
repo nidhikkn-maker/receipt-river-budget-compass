@@ -63,6 +63,8 @@ export interface ReportData {
   transactions: Expense[]; accounts: Account[]; valuations: Valuation[]; commitments: Commitment[];
   loans: { id: string; name: string; principal: number; rate: number; emi: number; nextDue: string; provider: string; status: string; accountId?: string | null; payments: { date: string; principal: number; interest: number; total: number }[] }[];
   budgets: Record<string, number>; trips: TravelTrip[]; drafts: DraftLite[];
+  /** Set when some drafts could not be read: the Drafts report then says its list may be incomplete (P0-004). */
+  draftsIncomplete?: string | null | undefined;
   memberName: (id: string | null) => string; accountName: (id: string | null) => string; today: string;
 }
 export interface Section { title: string; headers: string[]; rows: string[][]; total?: string[]; align?: ("l" | "r")[]; wide?: boolean; chart?: { label: string; value: number }[] }
@@ -142,6 +144,8 @@ function trendSection(d: ReportData, f: ReportFilters, ws: Scope[]): Section {
   return { title: "Six-month trend", headers: ["Month", "Income", "Spending", "Net"], align: ["l", "r", "r", "r"], rows };
 }
 
+/** KK decision (Track A review): cash and accrual figures are both available, always labelled, never mixed. Personal reports are cash basis. */
+export const CASH_BASIS_LINE = (f: Pick<ReportFilters, "from" | "to">) => `Basis: Cash (counted on the date money moved) · Period ${f.from} to ${f.to}`;
 const STD_NOTES = [
   "Amounts in INR use the exchange rate saved on each entry when it was recorded; today's rates never rewrite history.",
   "Transfers, credit card bill payments, loan repayments and investments move money between your own accounts and are not counted as income or spending.",
@@ -181,7 +185,7 @@ export function buildReportDoc(type: ReportType, filters: ReportFilters, d: Repo
     if (!filters.entityId || !d.books || !d.entities || !d.documents) throw Error('Choose a company with available book records. Corporate statements require the complete company ledger.');
     const w = corporateStatements({entityId:filters.entityId,entities:d.entities,entries:d.transactions,accounts:d.accounts,books:d.books,documents:d.documents,from:filters.from,to:filters.to});
     const r = corporateReport(w,type as CorporateType);
-    return {type,title:r.title,period:`${filters.from} to ${filters.to}`,filterLines:[`Company: ${w.entityName}`,'All linked company accounts and historical balance inputs; spending filters do not truncate accounts.'],
+    return {type,title:r.title,period:`${filters.from} to ${filters.to}`,filterLines:[`Company: ${w.entityName}`,'All linked company accounts and historical balance inputs; spending filters do not truncate accounts.',`Basis: Accrual (working company statements) · Period ${filters.from} to ${filters.to}`],
       summary:[['Period profit / loss',amt(w.profit)],['Trial balance difference',amt(w.trialDifference)],['Balance equation difference',amt(w.balanceDifference)],['Cash movement difference',amt(w.cash.difference)],['Unresolved accounting/evidence checks',String(w.issues.length)]],
       sections:[{title:r.title,headers:r.headers,rows:r.rows.map(row=>row.map(String)),wide:true},{title:'Unresolved accounting and evidence checks',headers:['Record ID','Check'],rows:w.issues.map(i=>[i.recordId,i.message])}],
       notes:['Working statements projected from the canonical ledger, not audited or statutory accounts.','Unclassified opening/adjustment counterparts are shown explicitly and never treated as capital or profit.','Register-only invoices and unposted journals are not silently posted. GST recovery, accrual completeness and statutory Schedule III classification require confirmed accounting inputs.'],
@@ -198,7 +202,7 @@ export function buildReportDoc(type: ReportType, filters: ReportFilters, d: Repo
   const selectedAccounts = d.accounts.filter(a => !f.accountIds.length || f.accountIds.includes(a.id));
   const balanceTypes = ['monthly','consolidated','ws-personal','ws-family','ws-business','ws-official','account','card','forecast','wealth'];
   const sources = balanceTypes.includes(type) ? [...new Map([...all,...d.transactions.filter(e=>selectedAccounts.some(a=>a.id===e.accountId||a.id===e.toAccountId))].map(e=>[e.id,e])).values()] : all;
-  const doc: ReportDoc = { type, title: reportLabel(type), period: `${f.from} to ${f.to}`, filterLines: filterLines(f, d), summary: [], sections: [], notes: [...STD_NOTES], landscape: false, rowCount: 0,
+  const doc: ReportDoc = { type, title: reportLabel(type), period: `${f.from} to ${f.to}`, filterLines: [...filterLines(f, d), CASH_BASIS_LINE(f)], summary: [], sections: [], notes: [...STD_NOTES], landscape: false, rowCount: 0,
     sourceEntryIds: sources.map(e => e.id), sourceDocumentRefs: [...new Set(sources.flatMap(e => [e.statementRef, ...e.receipts.map(r => r.path)].filter((s): s is string => !!s)))],
     figureEvidence: reportFigureEvidence(selectedAccounts,d.transactions,win.map(e=>({...e,amount:shareIn(e,ws)})),f) };
   const exec = () => {
@@ -291,9 +295,10 @@ export function buildReportDoc(type: ReportType, filters: ReportFilters, d: Repo
       break;
     }
     case "wealth": {
-      const nw = netWorth(selectedAccounts.filter((a) => !a.archived), d.transactions, d.valuations);
+      // Archived accounts stay in net worth until a real disposal (KK rule); they are listed and marked.
+      const nw = netWorth(selectedAccounts, d.transactions, d.valuations);
       doc.summary.push(["Assets", amt(nw.assets)], ["Liabilities", amt(nw.liabilities)], ["Net worth", amt(nw.net)]);
-      doc.sections.push({ title: "Accounts and assets", headers: ["Account", "Kind", "Type", "Value (INR)", "Valued on"], align: ["l", "l", "l", "r", "l"], rows: selectedAccounts.filter((a) => !a.archived).map((a) => { const v = accountValue(a, d.transactions, d.valuations); return [a.name, a.kind.replace(/_/g, " "), isLiability(a.kind) ? "Liability" : "Asset", num(v.value), v.valuedOn ?? "Ledger balance"]; }) });
+      doc.sections.push({ title: "Accounts and assets", headers: ["Account", "Kind", "Type", "Value (INR)", "Valued on"], align: ["l", "l", "l", "r", "l"], rows: selectedAccounts.filter((a) => !a.archived || accountValue(a, d.transactions, d.valuations).value !== 0).map((a) => { const v = accountValue(a, d.transactions, d.valuations); return [a.archived ? `${a.name} (archived)` : a.name, a.kind.replace(/_/g, " "), isLiability(a.kind) ? "Liability" : "Asset", num(v.value), v.valuedOn ?? "Ledger balance"]; }) });
       doc.notes.unshift("Investment and asset values use your latest saved valuation; values without one use the ledger balance and may be out of date.");
       break;
     }
@@ -367,6 +372,7 @@ export function buildReportDoc(type: ReportType, filters: ReportFilters, d: Repo
       doc.summary.push(["Drafts waiting", String(l.length)]);
       doc.sections.push({ title: "Expense drafts (not in the ledger)", headers: ["Last edited", "Merchant", "Date", "Workspace", "Amount", "Status", "Where"], align: ["l", "l", "l", "l", "r", "l", "l"], rows: l.map((x) => [x.updatedAt.slice(0, 10), x.data.merchant || "—", x.data.date || "—", x.data.scope ? SCOPE_LABEL[x.data.scope as Scope] ?? x.data.scope : "—", x.data.amount ? num(Number(x.data.amount)) : "—", x.status.replace(/_/g, " "), x.localOnly ? "This device" : "Account"]) });
       doc.notes.unshift("Drafts are unconfirmed and are never included in any financial totals.");
+      if (d.draftsIncomplete) { doc.summary.push(["List complete", "No — may be incomplete"]); doc.notes.unshift(`This list may be incomplete: ${d.draftsIncomplete} Retry when connected before relying on it.`); }
       break;
     }
     case "imports": {

@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Fold } from "@/components/Fold";
+import { LoadError } from "@/components/LoadError";
 import { money } from "@/lib/expenses";
 import { getFundNav } from "@/lib/mutual-funds.functions";
 import { statementActionAlerts } from "@/lib/books/investment-alerts";
@@ -78,7 +79,8 @@ export function MarketPanel() {
           <div className="flex justify-between px-3 py-2 font-semibold"><span>My total financial position · {nw.label}</span><span className="font-mono">{money(nw.net)}</span></div>
         </div>
         {nw.duplicates.length > 0 && <p className="rounded-xl bg-secondary p-2 text-xs">Counted once from your demat statement: {nw.duplicates.join(", ")}</p>}
-        <p className="text-[11px] text-muted-foreground">Closing prices: {nw.closeJob?.lastSuccess ? `last saved ${nw.closeJob.lastSuccess.slice(0, 16).replace("T", " ")} UTC` : "not fetched yet"}{nw.closeJob?.status === "failed" ? ` · last attempt failed (${nw.closeJob.reason ?? "unknown"}) — earlier prices kept` : ""}</p>
+        {nw.pricesFailed && <LoadError what="the saved closing prices" note="Values below may use statement prices instead. Nothing has been deleted. Check your connection and retry." onRetry={nw.retryPrices} />}
+        {!nw.pricesFailed && <p className="text-[11px] text-muted-foreground">Closing prices: {nw.closeJob?.lastSuccess ? `last saved ${nw.closeJob.lastSuccess.slice(0, 16).replace("T", " ")} UTC` : "not fetched yet"}{nw.closeJob?.status === "failed" ? ` · last attempt failed (${nw.closeJob.reason ?? "unknown"}) — earlier prices kept` : ""}</p>}
         {nw.dematRows.length > 0 && <details className="text-xs"><summary className="cursor-pointer text-muted-foreground">Demat holdings ({nw.dematRows.length})</summary>
           <div className="mt-1 divide-y">{nw.dematRows.map((h) => <div key={h.id} className="flex justify-between gap-2 py-1"><span className="min-w-0 truncate">{h.name}<span className="block text-muted-foreground">{h.quantity} · {h.basis}</span></span><b className="font-mono">{h.value == null ? "no price" : money(h.value)}</b></div>)}</div></details>}
         {alerts.length > 0 && <ul className="space-y-1 rounded-xl bg-secondary p-3 text-xs">{alerts.map((a) => <li key={a}>{a}</li>)}</ul>}
@@ -86,7 +88,7 @@ export function MarketPanel() {
         <div className="flex flex-wrap gap-2">
           <Button size="sm" variant="outline" onClick={() => setEdit(blank())}>Add holding</Button>
           <Button size="sm" variant="outline" onClick={refreshNavs} disabled={!books.holdings.some((h) => h.schemeCode)}>Refresh NAVs</Button>
-          <Button size="sm" variant="outline" onClick={snapshot}>Save today's valuation</Button>
+          <Button size="sm" variant="outline" onClick={snapshot} disabled={nw.pricesFailed} title={nw.pricesFailed ? "Retry loading closing prices first" : undefined}>Save today's valuation</Button>
           <Button size="sm" variant="link" className="inline-flex items-center rounded-md px-3 text-sm font-medium text-primary underline" onClick={() => openSmartAdd('investments')}>Upload statement</Button>
         </div>
         {edit && <div className="grid grid-cols-2 gap-2 rounded-xl border p-3">
