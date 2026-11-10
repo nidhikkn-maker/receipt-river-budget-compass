@@ -1,7 +1,9 @@
 /** Money customers owe: invoices kept in owner preferences, paid status derived from income entries. */
 import type { Expense } from "./expenses";
+import type { ArchiveState } from "./archive";
 
-export interface Receivable { id: string; customer: string; invoiceNo?: string; date: string; dueDate?: string; amount: number; /** GST charged on the invoice (included in amount). */ gst?: number }
+/** Archive fields (P0-007) ride on the record; cleanReceivables keeps every stored field. */
+export interface Receivable extends ArchiveState { id: string; customer: string; invoiceNo?: string; date: string; dueDate?: string; amount: number; /** GST charged on the invoice (included in amount). */ gst?: number }
 export type ReceivableStatus = { r: Receivable; paidBy: Expense | undefined; overdueDays: number };
 
 const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, "");

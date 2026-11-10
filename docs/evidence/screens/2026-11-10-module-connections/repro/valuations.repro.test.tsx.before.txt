@@ -1,0 +1,37 @@
+// P0-014 repro (before fix): account valuations are hard-deleted; lender balance evidence is removed after window.confirm.
+import { readFileSync } from "node:fs";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { callsOf, harness, reset, spy } from "./harness";
+
+vi.mock("@/lib/store", async () => ({ useStore: (await import("./harness")).useStoreMock }));
+vi.mock("@/components/MutualFundTools", () => ({ MutualFundTools: () => null }));
+vi.mock("@/components/BankBalanceEditor", () => ({ BankBalanceEditor: () => null }));
+vi.mock("@/components/BelongsTo", () => ({ BelongsTo: () => null }));
+vi.mock("@/lib/confirm", () => ({ confirmAction: vi.fn(async () => true) }));
+import { AccountTools } from "@/components/AccountTools";
+import { LoanBalanceReview } from "@/components/books/LoanBalanceReview";
+
+const gold = { id: "acc-gold", name: "Gold locker", kind: "other_asset", openingBalance: 0, archived: false };
+const val = { id: "v-1", accountId: gold.id, value: 640000, valuedOn: "2026-10-01", source: "manual", note: "" };
+const loan = { id: "loan-p", name: "Bajaj personal loan", accountId: null, status: "active" };
+const evidence = { id: "e-1", loanId: loan.id, amount: 180000, asOf: "2026-09-30", docId: "doc-ls", sourceQuote: "Principal outstanding 1,80,000 (p.1)", confirmedAt: "2026-10-02T00:00:00Z" };
+beforeEach(() => reset({ books: { loanBalances: [evidence] } }, { accounts: [gold], valuations: [val], removeValuation: spy("removeValuation"), addValuation: spy("addValuation"), documents: [{ id: "doc-ls", loanId: loan.id, docType: "loan_statement", title: "Bajaj statement Sep 2026", docDate: "2026-09-30", fields: [] }] }));
+afterEach(() => { cleanup(); vi.restoreAllMocks(); });
+
+describe("P0-014 repro: valuations and lender evidence", () => {
+  it("Remove on a valuation calls store.removeValuation (hard delete of the asset_valuations row) after a generic confirm", async () => {
+    render(<AccountTools a={gold as never} />);
+    fireEvent.click(screen.getByRole("button", { name: "Remove" }));
+    await vi.waitFor(() => expect(callsOf("removeValuation").map((c) => c.args[0])).toEqual([val.id]));
+    const src = readFileSync("src/lib/store.tsx", "utf8");
+    expect(src.slice(src.indexOf("const removeValuation:"), src.indexOf("const removeValuation:") + 200)).toMatch(/from\("asset_valuations"\)\.delete\(\)/);
+  });
+  it("Remove on a lender balance uses window.confirm, then drops the observation from storage", async () => {
+    const confirm = vi.spyOn(window, "confirm").mockReturnValue(true);
+    render(<LoanBalanceReview loan={loan} />);
+    fireEvent.click(screen.getByRole("button", { name: "Remove" }));
+    expect(confirm).toHaveBeenCalled();
+    await vi.waitFor(() => expect((harness.stored["books"] as Record<string, unknown[]>)["loanBalances"]).toEqual([]));
+  });
+});

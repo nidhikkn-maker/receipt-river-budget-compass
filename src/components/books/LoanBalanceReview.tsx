@@ -4,12 +4,18 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useStore } from '@/lib/store';
 import { useBooks } from './useBooks';
-import { proposePrintedBalance, standaloneLoanBalances, validateLoanBalance } from '@/lib/books/loan-balances';
+import { proposePrintedBalance, standaloneLoanBalances, validateLoanBalance, withConfirmedBalance, type LoanBalanceEvidence } from '@/lib/books/loan-balances';
+import { archiveInList, restoreInList } from '@/lib/archive';
+import { recordIsArchived, type Archivable } from '@/lib/records-archive';
+import { ArchivedRecords, useArchiveFlow } from '@/components/ArchivedRecords';
 import { money } from '@/lib/expenses';
 export function LoanBalanceReview({ loan }: { loan: { id: string; name: string; accountId: string | null; status: string } }) {
  const { documents }=useStore(); const { books,save }=useBooks();
  const [docId,setDocId]=useState(''); const [amount,setAmount]=useState(''); const [asOf,setAsOf]=useState(''); const [quote,setQuote]=useState(''); const [confirmed,setConfirmed]=useState(false);
  const today=new Date().toISOString().slice(0,10);
+ // No delete (P0-014): an observation is archived (still used, kept with who/when/why); a same-date confirmation supersedes it.
+ const all: Archivable<LoanBalanceEvidence>[] = books.loanBalances ?? [];
+ const flow = useArchiveFlow(async (req, who) => { await save({ loanBalances: req.mode === 'archive' ? archiveInList(all, req.id, who) : restoreInList(all, req.id, who) }); });
  const row=standaloneLoanBalances([loan],books.loanBalances??[],documents,today).rows[0];
  if(loan.accountId || loan.status==='closed') return null;
  const sources=documents.filter(d=>d.loanId===loan.id && d.docType==='loan_statement');
@@ -21,9 +27,13 @@ export function LoanBalanceReview({ loan }: { loan: { id: string; name: string; 
    <label>Printed balance line / page<Input aria-label={`Balance source for ${loan.name}`} value={quote} onChange={e=>{setQuote(e.target.value);setConfirmed(false);}}/></label>
    <label className="flex gap-2"><input type="checkbox" checked={confirmed} onChange={e=>setConfirmed(e.target.checked)}/>I checked this outstanding balance and date against the lender statement.</label>
    <Button size="sm" variant="outline" disabled={!confirmed||amount.trim()===''} onClick={async()=>{
-    try{const e={id:crypto.randomUUID(),loanId:loan.id,amount:Number(amount),asOf,docId,sourceQuote:quote,confirmedAt:new Date().toISOString()};validateLoanBalance(e,loan.id,documents,today);await save({loanBalances:[...(books.loanBalances??[]).filter(x=>!(x.loanId===loan.id&&x.asOf===asOf)),e]});setConfirmed(false);toast.success('Dated lender balance saved');}catch(e){toast.error((e as Error).message);}
+    try{const e={id:crypto.randomUUID(),loanId:loan.id,amount:Number(amount),asOf,docId,sourceQuote:quote,confirmedAt:new Date().toISOString()};validateLoanBalance(e,loan.id,documents,today);await save({loanBalances:withConfirmedBalance(all,e)});setConfirmed(false);toast.success('Dated lender balance saved');}catch(e){toast.error((e as Error).message);}
    }}>Confirm lender balance</Button>
   </div>
-  {(books.loanBalances??[]).filter(e=>e.loanId===loan.id).map(e=><div className="flex items-center justify-between gap-2 border-b py-2" key={e.id}><span>{money(e.amount)} · {e.asOf}<span className="block text-muted-foreground">{e.sourceQuote}</span></span><Button size="sm" variant="ghost" onClick={async()=>{if(!window.confirm('Remove this lender balance observation?'))return;await save({loanBalances:(books.loanBalances??[]).filter(x=>x.id!==e.id)});}}>Remove</Button></div>)}
+  {all.filter(e=>e.loanId===loan.id && !recordIsArchived(e)).map(e=><div className="flex items-center justify-between gap-2 border-b py-2" key={e.id}><span>{money(e.amount)} · {e.asOf}{e.supersededBy?' · replaced by a later confirmation':''}<span className="block text-muted-foreground">{e.sourceQuote}</span></span><Button size="sm" variant="ghost" aria-label={`Archive lender balance ${e.asOf}`} onClick={()=>flow.ask({mode:'archive',id:e.id,name:`${loan.name} · ${money(e.amount)} as of ${e.asOf}`,noun:'lender balance'})}>Archive</Button></div>)}
+  <ArchivedRecords plain title="Archived lender balances · still used for what you owe" noun="lender balance" userId={flow.userId}
+   items={all.filter(e=>e.loanId===loan.id && recordIsArchived(e)).map(e=>({id:e.id,name:`${loan.name} · ${money(e.amount)} as of ${e.asOf}`,detail:e.sourceQuote,state:e}))}
+   onRestore={(it)=>flow.ask({mode:'restore',id:it.id,name:it.name,noun:'lender balance'})} />
+  {flow.dialog}
  </details>;
 }

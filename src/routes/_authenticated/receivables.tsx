@@ -6,6 +6,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useStore } from "@/lib/store";
 import { receivableStatus, type Receivable } from "@/lib/receivables";
+import { archiveInList, restoreInList } from "@/lib/archive";
+import { recordIsArchived } from "@/lib/records-archive";
+import { ArchivedRecords, useArchiveFlow } from "@/components/ArchivedRecords";
 
 export const Route = createFileRoute("/_authenticated/receivables")({
   head: () => ({ meta: [
@@ -26,7 +29,14 @@ function Receivables() {
   const list = preferences.receivables ?? [];
   const [f, setF] = useState({ customer: "", invoiceNo: "", date: today(), dueDate: "", amount: "", gst: "" });
   const rows = useMemo(() => receivableStatus(list, transactions, today()), [list, transactions]);
+  // Archived invoices stay in every figure (unpaid total, payment matching); they are only listed separately (P0-007).
   const open = rows.filter((x) => !x.paidBy);
+  const archivedOpen = open.filter((x) => recordIsArchived(x.r)).length;
+  const active = rows.filter((x) => !recordIsArchived(x.r));
+  const archived = rows.filter((x) => recordIsArchived(x.r));
+  const { ask, dialog, userId } = useArchiveFlow(async (req, who) => {
+    await savePreferences({ ...preferences, receivables: req.mode === "archive" ? archiveInList(list, req.id, who) : restoreInList(list, req.id, who) });
+  });
 
   const add = async () => {
     const amount = Number(f.amount);
@@ -35,11 +45,10 @@ function Receivables() {
     await savePreferences({ ...preferences, receivables: [...list, r] });
     setF({ customer: "", invoiceNo: "", date: today(), dueDate: "", amount: "", gst: "" }); toast.success("Invoice added");
   };
-  const remove = async (id: string) => savePreferences({ ...preferences, receivables: list.filter((x) => x.id !== id) });
 
   return (
     <div className="mx-auto max-w-2xl space-y-4 p-4">
-      <PageTitle title="Customers owing" sub={`${open.length} unpaid · ${inr(open.reduce((s, x) => s + x.r.amount, 0))}`} />
+      <PageTitle title="Customers owing" sub={`${open.length} unpaid · ${inr(open.reduce((s, x) => s + x.r.amount, 0))}${archivedOpen ? ` · includes ${archivedOpen} archived` : ""}`} />
       <div className="grid grid-cols-2 gap-2 rounded-2xl border bg-card p-3">
         <Input placeholder="Customer" value={f.customer} onChange={(e) => setF({ ...f, customer: e.target.value })} />
         <Input placeholder="Invoice no." value={f.invoiceNo} onChange={(e) => setF({ ...f, invoiceNo: e.target.value })} />
@@ -50,8 +59,8 @@ function Receivables() {
         <Button onClick={add}>Add invoice</Button>
       </div>
       <div className="divide-y rounded-2xl border bg-card">
-        {rows.length === 0 && <p className="p-4 text-sm text-muted-foreground">No invoices yet.</p>}
-        {[...rows].reverse().map(({ r, paidBy, overdueDays }) => (
+        {active.length === 0 && <p className="p-4 text-sm text-muted-foreground">{rows.length ? "No active invoices. Archived ones are listed below." : "No invoices yet."}</p>}
+        {[...active].reverse().map(({ r, paidBy, overdueDays }) => (
           <div key={r.id} className="flex items-center justify-between gap-2 px-4 py-3 text-sm">
             <div className="min-w-0">
               <div className="font-medium">{r.customer}{r.invoiceNo ? ` · ${r.invoiceNo}` : ""}</div>
@@ -59,10 +68,14 @@ function Receivables() {
                 {paidBy ? `Paid ${paidBy.date}` : overdueDays > 0 ? `${overdueDays} days overdue` : `Due ${r.dueDate ?? r.date}`}
               </div>
             </div>
-            <div className="flex items-center gap-2"><b>{inr(r.amount)}</b><Button size="sm" variant="ghost" onClick={() => remove(r.id)}>Remove</Button></div>
+            <div className="flex items-center gap-2"><b>{inr(r.amount)}</b><Button size="sm" variant="ghost" aria-label={`Archive invoice ${r.customer}${r.invoiceNo ? ` ${r.invoiceNo}` : ""}`} onClick={() => ask({ mode: "archive", id: r.id, name: `${r.customer}${r.invoiceNo ? ` · ${r.invoiceNo}` : ""}`, noun: "invoice" })}>Archive</Button></div>
           </div>
         ))}
       </div>
+      <ArchivedRecords id="archived-invoices" title={`Archived invoices (${archived.length})`} hint="Still counted in what customers owe you" noun="invoice" userId={userId}
+        items={[...archived].reverse().map(({ r, paidBy }) => ({ id: r.id, name: `${r.customer}${r.invoiceNo ? ` · ${r.invoiceNo}` : ""}`, detail: `${inr(r.amount)} · ${paidBy ? `paid ${paidBy.date}` : `due ${r.dueDate ?? r.date}`}`, state: r }))}
+        onRestore={(it) => ask({ mode: "restore", id: it.id, name: it.name, noun: "invoice" })} />
+      {dialog}
       <p className="text-xs text-muted-foreground">An invoice counts as paid when an income entry of the same amount, on or after the invoice date, names the customer. Nothing is saved to your ledger from here.</p>
     </div>
   );

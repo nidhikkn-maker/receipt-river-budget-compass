@@ -1,6 +1,8 @@
 import type { VaultDoc } from '../documents';
 import { sumMoney } from '../money';
-export interface LoanBalanceEvidence { id: string; loanId: string; amount: number; asOf: string; docId: string; sourceQuote: string; confirmedAt: string }
+/** A confirmed lender balance. `supersededAt/By` mark an observation replaced by a later confirmation for the same date (P0-014):
+ * it is kept for the record but no longer used, exactly as if it had been replaced. */
+export interface LoanBalanceEvidence { id: string; loanId: string; amount: number; asOf: string; docId: string; sourceQuote: string; confirmedAt: string; supersededAt?: string | undefined; supersededBy?: string | undefined }
 type LoanRef = { id: string; name: string; accountId: string | null; status: string };
 type DocRef = Pick<VaultDoc, 'id' | 'loanId' | 'docType'>;
 export function validateLoanBalance(e: LoanBalanceEvidence, loanId: string, documents: DocRef[], today: string): void {
@@ -11,7 +13,7 @@ export function validateLoanBalance(e: LoanBalanceEvidence, loanId: string, docu
 }
 export function standaloneLoanBalances(loans: LoanRef[], evidence: LoanBalanceEvidence[], documents: DocRef[], today: string) {
  const rows=loans.filter(l=>!l.accountId && l.status!=='closed').map(loan=>{
-  const candidates=evidence.filter(e=>e.loanId===loan.id).filter(e=>{try{validateLoanBalance(e,loan.id,documents,today);return true;}catch{return false;}}).sort((a,b)=>b.asOf.localeCompare(a.asOf)||b.confirmedAt.localeCompare(a.confirmedAt));
+  const candidates=evidence.filter(e=>e.loanId===loan.id && !e.supersededBy).filter(e=>{try{validateLoanBalance(e,loan.id,documents,today);return true;}catch{return false;}}).sort((a,b)=>b.asOf.localeCompare(a.asOf)||b.confirmedAt.localeCompare(a.confirmedAt));
   const latest=candidates[0]; const rival=latest && candidates.some(e=>e.asOf===latest.asOf && e.amount!==latest.amount);
   return {loan,evidence:rival?null:latest??null,conflict:!!rival};
  });
@@ -42,4 +44,10 @@ export function proposePrintedBalance(doc: Pick<VaultDoc,'docType'|'docDate'|'fi
  const asOf=dateField?isoDate(dateField.value):(doc.docDate&&isoDate(doc.docDate))||null;
  const where=h.f.page?` (page ${h.f.page})`:h.f.section?` (${h.f.section})`:'';
  return {amount:h.n as number,asOf,sourceQuote:`${(h.f.quote||`${h.f.label} ${h.f.originalValue??h.f.value}`).trim()}${where}`,ambiguous:false};
+}
+
+/** Confirm a lender balance without losing the earlier one: a confirmation for the same loan and date supersedes the older
+ * observation (kept with supersededAt/supersededBy) instead of deleting it. Figures match the old replace-in-place rule. */
+export function withConfirmedBalance(list: readonly LoanBalanceEvidence[], e: LoanBalanceEvidence): LoanBalanceEvidence[] {
+ return [...list.map(x=>x.loanId===e.loanId && x.asOf===e.asOf && !x.supersededBy ? { ...x, supersededAt: e.confirmedAt, supersededBy: e.id } : x), e];
 }

@@ -18,6 +18,10 @@ import { TripExpenseActions } from "./TripExpenseActions";
 import { reviewedBooking, type bookingDraft } from "@/lib/booking-import";
 import { applyCalendarEdits, calendarEvents, CALENDAR_ALARMS, copyItem, itineraryConflicts, itineraryDays, itineraryPdfRows, mapLink, tripCalendar, outsideTrip, tripReadiness } from "@/lib/trip-itinerary";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { archiveInList, restoreInList } from "@/lib/archive";
+import { recordIsArchived, type Archivable } from "@/lib/records-archive";
+import { ArchivedRecords, useArchiveFlow } from "@/components/ArchivedRecords";
+import type { ItineraryItem } from "@/lib/travel";
 
 const sel = "h-10 rounded-xl border bg-background px-2 text-sm";
 /** ISO moment → value for a datetime-local input in this device's time zone. */
@@ -135,24 +139,30 @@ export function TripItinerarySection({ trip }: { trip: TravelTrip }) {
   const closed = !!trip.closedAt;
   const [showForm, setShowForm] = useState(false);
   const [it, setIt] = useState({ date: trip.start, time: "", title: "", place: "", who: "", note: "", booking: "", document: "" });
-  const all = trip.itinerary ?? [];
-  const days = itineraryDays(all);
-  const clashes = itineraryConflicts(all);
-  const outside = outsideTrip(trip, all);
+  // No delete (P0-016): an item is archived with who/when/why and leaves the day plan, clash checks and exports;
+  // it stays stored with its booking and document links and can be restored. Edits always map the full list.
+  const all: Archivable<ItineraryItem>[] = trip.itinerary ?? [];
+  const live = all.filter((x) => !recordIsArchived(x));
+  const archivedItems = all.filter((x) => recordIsArchived(x));
+  const liveTrip: TravelTrip = { ...trip, itinerary: live };
+  const flow = useArchiveFlow(async (req, who) => { await put({ itinerary: req.mode === "archive" ? archiveInList(all, req.id, who) : restoreInList(all, req.id, who) }); });
+  const days = itineraryDays(live);
+  const clashes = itineraryConflicts(live);
+  const outside = outsideTrip(trip, live);
   const [compact, setCompact] = useState(false);
   const [pdfBlob, setPdfBlob] = useState<Blob | null>(null);
   const [calOpen, setCalOpen] = useState(false);
   const [calEdits, setCalEdits] = useState<Record<string, { title: string; note: string; alarm: number | null }>>({});
   const [calSave, setCalSave] = useState(true);
-  const events = calendarEvents(trip);
+  const events = calendarEvents(liveTrip);
   const openCalendar = () => { setCalEdits(Object.fromEntries(events.map((e) => [e.uid, { title: e.title, note: e.note, alarm: e.alarm }]))); setCalOpen(true); };
-  const downloadCalendar = async () => { if (calSave && !closed) await put(applyCalendarEdits(trip, calEdits), "Calendar wording and reminders saved for future exports"); downloadBlob(new Blob([tripCalendar(trip, new Date().toISOString(), calEdits)], { type: "text/calendar;charset=utf-8" }), `trip-${slug(trip.name)}.ics`); setCalOpen(false); };
-  const preparePdf = async () => { setPdfBlob(await toPdf({ title: `Itinerary: ${trip.name}`, headers: ["Day", "Time", "Plan / booking"], rows: itineraryPdfRows(trip) }, `${trip.destination || ""} · ${trip.start} to ${trip.end}`)); };
+  const downloadCalendar = async () => { if (calSave && !closed) await put(applyCalendarEdits(trip, calEdits), "Calendar wording and reminders saved for future exports"); downloadBlob(new Blob([tripCalendar(liveTrip, new Date().toISOString(), calEdits)], { type: "text/calendar;charset=utf-8" }), `trip-${slug(trip.name)}.ics`); setCalOpen(false); };
+  const preparePdf = async () => { setPdfBlob(await toPdf({ title: `Itinerary: ${trip.name}`, headers: ["Day", "Time", "Plan / booking"], rows: itineraryPdfRows(liveTrip) }, `${trip.destination || ""} · ${trip.start} to ${trip.end}`)); };
   const nextDay = (d: string) => new Date(Date.parse(d + "T00:00:00Z") + 864e5).toISOString().slice(0, 10);
   return (
     <Card title="Itinerary" action={!closed && <Button size="sm" variant="gold" onClick={() => setShowForm((s) => !s)} aria-expanded={showForm}>{showForm ? "Close form" : "Add item"}</Button>}>
-      {all.length === 0 && !showForm && <p className="text-sm text-muted-foreground">No plans yet. Add day-by-day activities, linked bookings and notes.</p>}
-      {(all.length > 0 || (trip.bookings ?? []).length > 0) && <div className="mb-3 flex flex-wrap gap-2">
+      {live.length === 0 && !showForm && <p className="text-sm text-muted-foreground">No plans yet. Add day-by-day activities, linked bookings and notes.</p>}
+      {(live.length > 0 || (trip.bookings ?? []).length > 0) && <div className="mb-3 flex flex-wrap gap-2">
         <Button size="sm" variant={compact ? "default" : "outline"} onClick={() => setCompact((c) => !c)} aria-pressed={compact}>{compact ? "Full view" : "Compact days"}</Button>
         <Button size="sm" variant="outline" onClick={openCalendar}>Add to calendar (.ics)</Button>
         {pdfBlob ? <Button size="sm" variant="gold" onClick={() => { downloadBlob(pdfBlob, `itinerary-${slug(trip.name)}.pdf`); setPdfBlob(null); }}>Download itinerary PDF</Button> : <Button size="sm" variant="outline" onClick={preparePdf}>Prepare shareable PDF</Button>}
@@ -190,7 +200,7 @@ export function TripItinerarySection({ trip }: { trip: TravelTrip }) {
                 {!closed && <div className="flex w-full gap-1 sm:w-auto">
                   <Input aria-label={`Move ${i.title} to date`} type="date" className="h-8 min-w-0 flex-1 sm:w-36 sm:flex-none" value={i.date} onChange={(e) => e.target.value && void put({ itinerary: all.map((x) => x.id === i.id ? { ...x, date: e.target.value } : x) }, "Moved")} />
                   <Button size="sm" variant="ghost" onClick={() => void put({ itinerary: [...all, copyItem(i, nextDay(i.date), crypto.randomUUID())] }, "Copied to next day")}>Copy</Button>
-                  <Button size="sm" variant="ghost" onClick={() => void put({ itinerary: all.filter((x) => x.id !== i.id) })}>Remove</Button>
+                  <Button size="sm" variant="ghost" aria-label={`Archive ${i.title}`} onClick={() => flow.ask({ mode: "archive", id: i.id, name: i.title, noun: "itinerary item" })}>Archive</Button>
                 </div>}
               </div>
               {i.bookingId && <div className="text-xs text-muted-foreground">Booking: {(trip.bookings ?? []).find(b => b.id === i.bookingId)?.ref || (trip.bookings ?? []).find(b => b.id === i.bookingId)?.provider}</div>}
@@ -199,6 +209,10 @@ export function TripItinerarySection({ trip }: { trip: TravelTrip }) {
           ))}
         </div>
       ))}
+      {archivedItems.length > 0 && <div className="mt-2"><ArchivedRecords plain title={`Archived plan items (${archivedItems.length})`} noun="itinerary item" userId={flow.userId}
+        items={archivedItems.map((i) => ({ id: i.id, name: i.title, detail: `${i.date}${i.time ? ` ${i.time}` : ""}${i.bookingId ? " · booking kept" : ""}${i.documentIds?.length ? ` · ${i.documentIds.length} document link(s) kept` : ""}`, state: i }))}
+        onRestore={(it) => { if (!closed) flow.ask({ mode: "restore", id: it.id, name: it.name, noun: "itinerary item" }); }} /></div>}
+      {flow.dialog}
       {!closed && showForm && <div className="mt-2 grid gap-2 border-t pt-3 sm:grid-cols-4">
         <Input className="h-10" type="date" value={it.date} onChange={(e) => setIt({ ...it, date: e.target.value })} />
         <Input className="h-10" type="time" value={it.time} onChange={(e) => setIt({ ...it, time: e.target.value })} />

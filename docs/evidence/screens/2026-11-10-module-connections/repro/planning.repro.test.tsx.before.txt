@@ -1,0 +1,50 @@
+// P0-016 repro (before fix): allocation plans, milestones and trip itinerary items are removed without archive.
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { defaultPreferences } from "@/lib/preferences";
+import { harness, reset, useStoreMock } from "./harness";
+
+vi.mock("@/lib/store", async () => ({ useStore: (await import("./harness")).useStoreMock }));
+vi.mock("@tanstack/react-router", async () => (await import("./harness")).routerMock);
+vi.mock("@/components/AppShell", () => ({ PageTitle: ({ title }: { title: string }) => <h1>{title}</h1> }));
+vi.mock("@/components/SectionTabs", () => ({ SectionTabs: () => null }));
+vi.mock("@/components/StrategyStressCooling", () => ({ CoolingOff: () => null, StressTest: () => null }));
+vi.mock("@/components/DecisionMemory", () => ({ DecisionMemory: () => null }));
+vi.mock("@/lib/use-intelligence", () => ({ useIntelligence: () => ({ store: useStoreMock(), today: "2026-11-10", metrics: { emergencyAmount: 0, emergencyMonths: 0, netWorth: 0, savings: 0, cardDebt: 0, loans: [] } }) }));
+import { Route as AllocationRoute } from "@/routes/_authenticated/allocation";
+import { Route as StrategyRoute } from "@/routes/_authenticated/strategy";
+import { TripItinerarySection } from "@/components/trip/TripSections";
+const Allocation = (AllocationRoute as unknown as { component: () => React.ReactElement }).component;
+const Strategy = (StrategyRoute as unknown as { component: () => React.ReactElement }).component;
+function Milestones() { window.history.replaceState(null, "", "/strategy?tab=milestones"); return <Strategy />; }
+
+const base = defaultPreferences() as unknown as Record<string, unknown>;
+const plan = { id: "ap-1", title: "October salary", incomeDate: "2026-10-01", amount: 150000, lines: [{ bucket: "mandatory", label: "Rent", amount: 32000 }], carryForward: false, createdAt: "2026-10-01" };
+const milestone = { id: "m-1", name: "First ₹1 lakh emergency reserve", metric: "custom", target: 100000, targetDate: null, manual: 25000, notify: false, history: [{ date: "2026-11-10", value: 25000 }], createdAt: "2026-10-01" };
+const trip = { id: "trip-1", name: "Madurai visit", destination: "Madurai", start: "2026-12-20", end: "2026-12-23", budget: 30000, currencies: ["INR"], itinerary: [{ id: "it-1", date: "2026-12-20", time: "07:30", title: "Vaigai Express to Madurai", bookingId: "bk-1" }] };
+afterEach(cleanup);
+
+describe("P0-016 repro: planning records", () => {
+  it("allocation plan: Delete plan removes the saved plan in one tap", async () => {
+    reset({ ...base, allocationPlans: [plan] });
+    render(<Allocation />);
+    fireEvent.click(screen.getByRole("button", { name: /Compare/ }));
+    fireEvent.click(screen.getByRole("button", { name: "Delete plan" }));
+    await vi.waitFor(() => expect(harness.stored["allocationPlans"]).toEqual([]));
+  });
+  it("milestone: Delete uses the browser confirm (blocked in installed apps) and then removes it with its history", async () => {
+    reset({ ...base, milestones: [milestone] });
+    const confirm = vi.spyOn(window, "confirm").mockReturnValue(true);
+    render(<Milestones />);
+    fireEvent.click(screen.getByRole("button", { name: "Delete milestone" }));
+    expect(confirm).toHaveBeenCalledWith("Delete this milestone?");
+    await vi.waitFor(() => expect(harness.stored["milestones"]).toEqual([]));
+    confirm.mockRestore();
+  });
+  it("itinerary: Remove drops an item (even one linked to a booking) in one tap", async () => {
+    reset({ ...base, trips: [trip] });
+    render(<TripItinerarySection trip={trip as never} />);
+    fireEvent.click(screen.getByRole("button", { name: "Remove" }));
+    await vi.waitFor(() => expect((harness.stored["trips"] as { itinerary: unknown[] }[])[0]!.itinerary).toEqual([]));
+  });
+});

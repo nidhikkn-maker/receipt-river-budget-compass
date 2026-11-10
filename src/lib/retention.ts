@@ -49,6 +49,7 @@ export const PREFERENCE_RETENTION: Record<string, Retention> = {
   depreciationDismissed: keep("audit", "Dismissed depreciation months"),
   mapLinks: keep("financial", "Owner-made links between financial records"),
   preservedRecords: keep("audit", "Stored originals kept after display tidying"),
+  recordArchive: keep("audit", "Archive status and history of table records (loans, goals, scheduled payments, valuations, documents)"),
   statementBalances: keep("evidence", "Statement balances entered by the owner"),
   // Genuinely disposable interface data (bounded)
   mapPositions: ui(800, "Money Map card positions on screen"),

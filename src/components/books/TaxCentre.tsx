@@ -30,6 +30,10 @@ import { fyOf } from "@/lib/entities";
 import { GstAdvances } from './GstAdvances';
 import { specialProblems,specialSummary } from '@/lib/books/gst-special';
 import { gstReconciliation, replaceGstDrafts } from '@/lib/books/gst-reconciliation';
+import { archiveInList, restoreInList } from "@/lib/archive";
+import { activeOnly, archivedOnly, type Archivable } from "@/lib/records-archive";
+import { ArchivedRecords, useArchiveFlow } from "@/components/ArchivedRecords";
+import { LoadError } from "@/components/LoadError";
 
 const inr = (n: number) => "₹" + n.toLocaleString("en-IN", { maximumFractionDigits: 0 });
 const today = () => new Date().toISOString().slice(0, 10);
@@ -121,6 +125,7 @@ export function GstReturns({ fy }: { fy: string }) {
   const [filing, setFiling] = useState({ form: "GSTR-3B", arn: "", filedOn: today(), docId: '' });
   useEffect(()=>{if(!gstins.some(x=>x.g===gstin))setGstin(gstins[0]?.g??'');},[gstin,gstins.map(x=>x.g).join('|')]);
   useEffect(()=>{if(!months.includes(period))setPeriod(months.at(-1)??'');},[period,months]);
+  const invFlow = useArchiveFlow(async (req, who) => { await save({ gstInvoices: req.mode === "archive" ? archiveInList(books.gstInvoices, req.id, who) : restoreInList(books.gstInvoices, req.id, who) }); });
   if (!gstins.length) return <Fold title="GST returns" hint="Add a GSTIN to a company first"><p className="text-sm text-muted-foreground">Add GSTINs on <Link to="/entities" className="underline">Companies & years</Link>.</p></Fold>;
   const owner = (preferences.entities ?? []).find((e) => e.gstins.includes(gstin));
   const profile = books.taxProfiles.find((p) => p.entityId === owner?.id);
@@ -136,9 +141,13 @@ export function GstReturns({ fy }: { fy: string }) {
   const g9h = gstr9Heads(books.gstInvoices, gstin, Number(fy.slice(0, 4)), annualEligible, books.gstAdvances);
   const yr = annualSummary(books.gstInvoices, gstin, Number(fy.slice(0, 4)));
   const unfiled: { form: string; period: string; due?: string; status?: string }[] = profile ? due.filter((o) => o.status === "overdue" || o.status === "due") : unfiledPeriods(books.gstFilings, gstin, "GSTR-3B", months).map((m) => ({ form: "GSTR-3B", period: m }));
-  const list = invoiceRegister(books.gstInvoices,gstin,period);
+  // Archived invoices stay in every draft, return and total (P0-009); they are only listed separately.
+  const register: Archivable<GstInvoice>[] = invoiceRegister(books.gstInvoices,gstin,period);
+  const list = activeOnly(register);
+  const archivedInv = archivedOnly(register);
   const dups = duplicateInvoices(invoiceRegister(books.gstInvoices,gstin,period));
   const n = (v: string) => Math.max(0, Number(v) || 0);
+  const invName = (i: GstInvoice) => `${i.kind === "sales" ? "Sale" : "Purchase"} ${i.number} · ${i.party}`;
   return (
     <Fold id="gst" title="GST returns (drafts)" hint={profile ? `${unfiled.length} return${unfiled.length === 1 ? "" : "s"} due or overdue · ${profile.gstScheme === "qrmp" ? "quarterly (QRMP)" : profile.gstScheme === "composition" ? "composition" : profile.gstScheme === "regular" ? "monthly" : "not registered"}` : "Set the filing scheme in the tax profile"}>
       <div className="space-y-3 text-sm">
@@ -175,7 +184,11 @@ export function GstReturns({ fy }: { fy: string }) {
         {differences.length>0&&<div className="text-xs">{differences.map(i=><p key={i.key} className="text-destructive">{i.text}</p>)}</div>}
         {pay.length > 0 && <div className="text-xs"><b>GST payments</b>{pay.map((p) => <p key={p.period}>{p.period}: {inr(p.amount)} — {p.paymentId ? `paid ${p.paidOn}` : <span className="text-destructive">no matching payment found</span>}</p>)}</div>}
         <details><summary className="cursor-pointer text-muted-foreground">Invoice register · {list.length} in {period}{dups.length ? ` · ${dups.length} duplicate number${dups.length > 1 ? "s" : ""}` : ""}</summary>
-          {list.map((i) => <div key={i.id} className="flex justify-between gap-2 border-b py-1 text-xs"><span>{i.kind === "sales" ? "Sale" : "Purchase"}{i.note ? ` ${i.note} note` : ""} {i.number}{i.originalNumber ? ` (against ${i.originalNumber})` : ""} · {i.party} {i.partyGstin}{books.gstInvoices.some((x) => x.amendsId === i.id) ? " · replaced by amendment" : ""}{i.amendsId ? " · amendment" : ""}<span className="block text-destructive">{[...invoiceProblems(i), ...noteProblems(i, books.gstInvoices)].join(" · ")}</span></span><span>{inr(i.taxable)} + {inr(i.igst + i.cgst + i.sgst + i.cess)}<Button size="sm" variant="ghost" className="h-6" onClick={() => setInv(i)}>Edit</Button><Button size="sm" variant="ghost" className="h-6" onClick={() => setInv({ ...i, id: crypto.randomUUID(), amendsId: i.id })}>Amend</Button><Button size="sm" variant="ghost" className="h-6" onClick={() => save({ gstInvoices: books.gstInvoices.filter((x) => x.id !== i.id) })}>Remove</Button></span></div>)}
+          {list.map((i) => <div key={i.id} className="flex justify-between gap-2 border-b py-1 text-xs"><span>{i.kind === "sales" ? "Sale" : "Purchase"}{i.note ? ` ${i.note} note` : ""} {i.number}{i.originalNumber ? ` (against ${i.originalNumber})` : ""} · {i.party} {i.partyGstin}{books.gstInvoices.some((x) => x.amendsId === i.id) ? " · replaced by amendment" : ""}{i.amendsId ? " · amendment" : ""}<span className="block text-destructive">{[...invoiceProblems(i), ...noteProblems(i, books.gstInvoices)].join(" · ")}</span></span><span>{inr(i.taxable)} + {inr(i.igst + i.cgst + i.sgst + i.cess)}<Button size="sm" variant="ghost" className="h-6" onClick={() => setInv(i)}>Edit</Button><Button size="sm" variant="ghost" className="h-6" onClick={() => setInv({ ...i, id: crypto.randomUUID(), amendsId: i.id })}>Amend</Button><Button size="sm" variant="ghost" className="h-6" aria-label={`Archive GST invoice ${i.number}`} onClick={() => invFlow.ask({ mode: "archive", id: i.id, name: invName(i), noun: "GST invoice" })}>Archive</Button></span></div>)}
+          {archivedInv.length > 0 && <div className="mt-2"><ArchivedRecords plain title={`Archived invoices in ${period} (${archivedInv.length}) · still in every draft`} noun="GST invoice" userId={invFlow.userId}
+            items={archivedInv.map((i) => ({ id: i.id, name: invName(i), detail: `${inr(i.taxable)} + ${inr(i.igst + i.cgst + i.sgst + i.cess)} tax · ${i.date}`, state: i }))}
+            onRestore={(it) => invFlow.ask({ mode: "restore", id: it.id, name: it.name, noun: "GST invoice" })} /></div>}
+          {invFlow.dialog}
           {!inv && <Button size="sm" variant="outline" className="mt-2" onClick={() => setInv(blankInv(gstin))}>Add invoice</Button>}
           {inv && <div className="mt-2 grid grid-cols-2 gap-2 text-xs">
             <select aria-label="Invoice kind" className="rounded-md border bg-background px-1" value={inv.kind} onChange={(e) => setInv({ ...inv, kind: e.target.value as "sales" })}><option value="sales">Sale</option><option value="purchase">Purchase</option></select>
@@ -210,16 +223,18 @@ export function GstReturns({ fy }: { fy: string }) {
 interface DetectedChange { id: string; url: string; summary: string; detected_at: string; proposals: unknown }
 /** Changes the weekly watch found on official pages, waiting for the owner to record or dismiss [§49–51]. */
 function useDetectedChanges() {
-  const [v, setV] = useState<{ changes: DetectedChange[]; job: { status: string; last_success: string | null; reason: string | null } | null }>({ changes: [], job: null });
+  // A failed read is reported as a load error, never as "no changes found" (P0-004).
+  const [v, setV] = useState<{ changes: DetectedChange[]; job: { status: string; last_success: string | null; reason: string | null } | null; failed: boolean }>({ changes: [], job: null, failed: false });
+  const [attempt, setAttempt] = useState(0);
   useEffect(() => {
     let live = true;
     void Promise.all([
       supabase.from("regulatory_changes").select("id,url,summary,detected_at,proposals").order("detected_at", { ascending: false }).limit(30),
       supabase.from("job_state").select("status,last_success,reason").eq("name", "rule-watch").maybeSingle(),
-    ]).then(([c, j]) => { if (live) setV({ changes: (c.data ?? []) as DetectedChange[], job: j.data ?? null }); }).catch(() => undefined);
+    ]).then(([c, j]) => { if (live) setV({ changes: (c.data ?? []) as DetectedChange[], job: j.data ?? null, failed: !!c.error || !!j.error }); }).catch(() => { if (live) setV((x) => ({ ...x, failed: true })); });
     return () => { live = false; };
-  }, []);
-  return v;
+  }, [attempt]);
+  return { ...v, retry: () => setAttempt((n) => n + 1) };
 }
 
 export function RulesRegister() {
@@ -234,7 +249,7 @@ export function RulesRegister() {
     <Fold id="rules" title="Regulatory intelligence" hint={`${books.rules.filter((r) => r.status === "active").length} active · ${proposed.length} waiting for approval`}>
       <div className="space-y-3 text-sm">
         <div className="text-xs"><b>Official sources watched (read-only)</b>{OFFICIAL_SOURCES.map((s) => <a key={s.url} href={s.url} target="_blank" rel="noopener noreferrer" className="block text-primary underline">{s.name}</a>)}</div>
-        <p className="text-[11px] text-muted-foreground">Checked weekly: {detected.job?.last_success ? `last ${detected.job.last_success.slice(0, 10)}` : "not run yet"}{detected.job?.reason ? ` · ${detected.job.reason}` : ""}</p>
+        {detected.failed ? <LoadError what="the latest changes found on official pages" onRetry={detected.retry} /> : <p className="text-[11px] text-muted-foreground">Checked weekly: {detected.job?.last_success ? `last ${detected.job.last_success.slice(0, 10)}` : "not run yet"}{detected.job?.reason ? ` · ${detected.job.reason}` : ""}</p>}
         {open.map((c) => <div key={c.id} className="rounded-xl border border-primary/40 p-3 text-xs">
           <p className="font-semibold">{c.summary} <span className="font-normal text-muted-foreground">· found {c.detected_at.slice(0, 10)}</span></p>
           <ul className="ml-4 list-disc">{(Array.isArray(c.proposals) ? (c.proposals as string[]) : []).slice(0, 8).map((x) => <li key={x}>{x}</li>)}</ul>
@@ -327,6 +342,11 @@ export function TaxComputationCard({ fy }: { fy: string }) {
   const recordedTx = new Set((books.taxCredits ?? []).map((x) => x.transactionId).filter(Boolean));
   const challans = ledgerTaxPayments(accountIds ? transactions.filter((t) => t.accountId && accountIds.has(t.accountId)) : transactions, fy).filter((t) => !recordedTx.has(t.id));
   const rows: [string, number][] = [["Salary", c.salary], ["House property (rent − 30% − interest, loss capped ₹2L)", c.houseProperty.net], ["Business / profession", c.business.net], ["Short-term capital gains", c.capitalGains.short], ["Long-term capital gains", c.capitalGains.long], ["Other sources (interest, dividends)", c.otherSources], ["Gross total income", c.gross], ["Losses brought forward set off", c.lossesSetOff ? -c.lossesSetOff : 0], ["Total income", c.total]];
+  // Archived deduction and credit lines stay in the tax working (P0-010); they are only listed separately.
+  const dedActive = activeOnly(dedLines), dedArchived: Archivable<TaxDeduction>[] = archivedOnly(dedLines);
+  const crActive = activeOnly(cr.lines), crArchived: Archivable<(typeof cr.lines)[number]>[] = archivedOnly(cr.lines);
+  const dedFlow = useArchiveFlow(async (req, who) => { const all = books.taxDeductions ?? []; await save({ taxDeductions: req.mode === "archive" ? archiveInList(all, req.id, who) : restoreInList(all, req.id, who) }); });
+  const crFlow = useArchiveFlow(async (req, who) => { const all = books.taxCredits ?? []; await save({ taxCredits: req.mode === "archive" ? archiveInList(all, req.id, who) : restoreInList(all, req.id, who) }); });
   const addCredit = (x: { kind: CreditKind; amount: number; source: string; transactionId?: string }) => save({ taxCredits: [...(books.taxCredits ?? []), { id: crypto.randomUUID(), entityId: creditKey, fy, ...x }] });
   return (
     <Fold title="Tax computation by head" hint={`FY ${fy} · ${ent?.name ?? "You (personal)"} · total income ${inr(c.total)}`}>
@@ -346,7 +366,10 @@ export function TaxComputationCard({ fy }: { fy: string }) {
           <Button size="sm" variant="outline" className="mt-2" onClick={() => { const j = itrComputationJson({ fy, pan: ent?.pan ?? null, name: ent?.name ?? "You", form: itrForm, c, l: liab }); const b = new Blob([JSON.stringify(j, null, 1)], { type: "application/json" }); downloadBlob(b, `${itrForm}_computation_${fy}.json`); }}>Download {itrForm} computation (JSON)</Button>
         </div> : <p className="text-xs text-muted-foreground">{unconfirmed ? "Tax is shown once the profile is confirmed." : "Choose the company tax option in its tax profile — no tax figure is shown rather than a guess."}</p>}
         {personal && !unconfirmed && <div className="rounded-xl border p-3 text-xs"><p className="font-semibold">Deductions with proof (old regime) · {dedLines.length}</p>
-          {dedLines.map((d) => <p key={d.id} className="flex justify-between gap-2"><span className="break-words">{d.section} · {d.evidence}</span><span className="shrink-0">{inr(d.amount)}<Button size="sm" variant="ghost" className="h-6" onClick={() => save({ taxDeductions: (books.taxDeductions ?? []).filter((x) => x.id !== d.id) })}>Remove</Button></span></p>)}
+          {dedActive.map((d) => <p key={d.id} className="flex justify-between gap-2"><span className="break-words">{d.section} · {d.evidence}</span><span className="shrink-0">{inr(d.amount)}<Button size="sm" variant="ghost" className="h-6" aria-label={`Archive deduction ${d.section} ${d.evidence}`} onClick={() => dedFlow.ask({ mode: "archive", id: d.id, name: `${d.section} · ${d.evidence}`, noun: "deduction" })}>Archive</Button></span></p>)}
+          {dedArchived.length > 0 && <div className="mt-2"><ArchivedRecords plain title={`Archived deductions (${dedArchived.length}) · still counted above`} noun="deduction" userId={dedFlow.userId}
+            items={dedArchived.map((d) => ({ id: d.id, name: `${d.section} · ${d.evidence}`, detail: inr(d.amount), state: d }))} onRestore={(it) => dedFlow.ask({ mode: "restore", id: it.id, name: it.name, noun: "deduction" })} /></div>}
+          {dedFlow.dialog}
           <div className="mt-1 flex flex-wrap gap-1"><select aria-label="Deduction section" className="rounded-md border bg-background px-1" value={ded.section} onChange={(e) => setDed({ ...ded, section: e.target.value as TaxDeduction["section"] })}>{(Object.keys(DEDUCTION_CAP) as TaxDeduction["section"][]).map((k) => <option key={k} value={k}>{k}{Number.isFinite(DEDUCTION_CAP[k]) ? ` (max ${inr(DEDUCTION_CAP[k])})` : ""}</option>)}</select>
             <Input aria-label="Deduction amount" className="h-8 w-28" type="number" placeholder="Amount" value={ded.amount} onChange={(e) => setDed({ ...ded, amount: e.target.value })} />
             <Input aria-label="Deduction proof" className="h-8 min-w-0 flex-1" placeholder="Proof, e.g. LIC premium receipt" value={ded.evidence} onChange={(e) => setDed({ ...ded, evidence: e.target.value })} />
@@ -354,7 +377,10 @@ export function TaxComputationCard({ fy }: { fy: string }) {
           <p className="mt-1 text-[11px] text-muted-foreground">Only used in the old regime; each section is capped by law.</p></div>}
         <div className="rounded-xl border p-3 text-xs">
           <p className="font-semibold">Taxes already paid · {inr(cr.total)}</p>
-          {cr.lines.map((l) => <p key={l.id} className="flex justify-between gap-2"><span className="break-words">{CREDIT_LABEL[l.kind]} · {l.source}</span><span className="shrink-0">{inr(l.amount)}<Button size="sm" variant="ghost" className="h-6" onClick={() => save({ taxCredits: (books.taxCredits ?? []).filter((x) => x.id !== l.id) })}>Remove</Button></span></p>)}
+          {crActive.map((l) => <p key={l.id} className="flex justify-between gap-2"><span className="break-words">{CREDIT_LABEL[l.kind]} · {l.source}</span><span className="shrink-0">{inr(l.amount)}<Button size="sm" variant="ghost" className="h-6" aria-label={`Archive tax credit ${l.source}`} onClick={() => crFlow.ask({ mode: "archive", id: l.id, name: `${CREDIT_LABEL[l.kind]} · ${l.source}`, noun: "tax credit" })}>Archive</Button></span></p>)}
+          {crArchived.length > 0 && <div className="mt-2"><ArchivedRecords plain title={`Archived tax credits (${crArchived.length}) · still counted above`} noun="tax credit" userId={crFlow.userId}
+            items={crArchived.map((l) => ({ id: l.id, name: `${CREDIT_LABEL[l.kind]} · ${l.source}`, detail: inr(l.amount), state: l }))} onRestore={(it) => crFlow.ask({ mode: "restore", id: it.id, name: it.name, noun: "tax credit" })} /></div>}
+          {crFlow.dialog}
           {challans.map((t) => <p key={t.id} className="mt-1 flex items-center justify-between gap-2"><span className="break-words">Bank debit {t.date}: {t.text.slice(0, 60)} · {inr(t.amount)}</span><Button size="sm" variant="outline" className="h-7 shrink-0" onClick={() => addCredit({ kind: t.kind, amount: t.amount, source: `Bank debit ${t.date}`, transactionId: t.id })}>Count as {t.kind === "self_assessment" ? "self-assessment" : "advance"} tax</Button></p>)}
           <div className="mt-2 flex flex-wrap gap-1"><select aria-label="Credit type" className="rounded-md border bg-background px-1" value={credit.kind} onChange={(e) => setCredit({ ...credit, kind: e.target.value as CreditKind })}>{(Object.keys(CREDIT_LABEL) as CreditKind[]).map((k) => <option key={k} value={k}>{CREDIT_LABEL[k]}</option>)}</select>
             <Input aria-label="Credit amount" className="h-8 w-28" type="number" placeholder="Amount" value={credit.amount} onChange={(e) => setCredit({ ...credit, amount: e.target.value })} />

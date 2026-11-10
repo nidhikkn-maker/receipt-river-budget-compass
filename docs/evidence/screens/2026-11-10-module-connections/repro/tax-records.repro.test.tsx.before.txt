@@ -1,0 +1,43 @@
+// P0-009 / P0-010 repro (before fix): GST invoices, tax deductions and tax credits are removed in one tap.
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
+import { harness, reset } from "./harness";
+
+vi.mock("@/lib/store", async () => ({ useStore: (await import("./harness")).useStoreMock }));
+vi.mock("@tanstack/react-router", async () => (await import("./harness")).routerMock);
+vi.mock("@/lib/investments/holdings-store", () => ({ loadDemat: async () => [] }));
+vi.mock("@/integrations/supabase/client", () => ({ supabase: { from: () => { const q: Record<string, unknown> = { then: (done: (x: unknown) => unknown) => Promise.resolve(done({ data: [], error: null })) }; for (const n of ["select", "in", "order", "limit", "eq", "maybeSingle"]) q[n] = () => q; return q; } } }));
+vi.mock("@/components/books/ItrHandoff", () => ({ ItrHandoff: () => null }));
+vi.mock("@/components/books/TaxWorkpaper", () => ({ TaxWorkpaper: () => null }));
+import { GstReturns, TaxComputationCard } from "@/components/books/TaxCentre";
+
+const GSTIN = "33AAACT1234F1Z5";
+const month = new Date().toISOString().slice(0, 7);
+const sale = { id: "inv-1", gstin: GSTIN, kind: "sales", number: "TH/26/041", date: `${month}-02`, party: "Sundaram Traders", partyGstin: "33AABCS1429B1ZB", taxable: 100000, igst: 0, cgst: 9000, sgst: 9000, cess: 0 };
+const fy = (() => { const d = new Date(); const y = d.getMonth() >= 3 ? d.getFullYear() : d.getFullYear() - 1; return `${y}-${String((y + 1) % 100).padStart(2, "0")}`; })();
+const ded = { id: "d-1", entityId: "personal", fy, section: "80C", amount: 150000, evidence: "LIC premium receipt" };
+const credit = { id: "t-1", entityId: "personal", fy, kind: "tds", amount: 42000, source: "Form 16 from employer" };
+beforeEach(() => reset({ entities: [{ id: "ent-1", name: "Thapal Ventures Pvt Ltd", kind: "company", pan: "AAACT1234F", gstins: [GSTIN], booksFrom: "2024-25" }], books: { gstInvoices: [sale], taxDeductions: [ded], taxCredits: [credit] } }));
+afterEach(cleanup);
+const books = () => harness.stored["books"] as Record<string, unknown[]>;
+
+describe("P0-009 repro: GST invoices", () => {
+  it("Remove in the invoice register deletes the invoice with no confirmation or reason", async () => {
+    render(<GstReturns fy={fy} />);
+    const row = screen.getByText(/TH\/26\/041/).closest("div")!;
+    fireEvent.click(within(row).getByRole("button", { name: "Remove" }));
+    expect(screen.queryByRole("dialog")).toBeNull();
+    await vi.waitFor(() => expect(books()["gstInvoices"]).toEqual([]));
+  });
+});
+
+describe("P0-010 repro: tax deductions and credits", () => {
+  it("Remove deletes a deduction line and a tax-credit line in one tap each", async () => {
+    render(<TaxComputationCard fy={fy} />);
+    fireEvent.click(within(screen.getByText(/LIC premium receipt/).closest("p")!).getByRole("button", { name: "Remove" }));
+    await vi.waitFor(() => expect(books()["taxDeductions"]).toEqual([]));
+    fireEvent.click(within(screen.getByText(/Form 16 from employer/).closest("p")!).getByRole("button", { name: "Remove" }));
+    await vi.waitFor(() => expect(books()["taxCredits"]).toEqual([]));
+    expect(harness.saves).toBe(2);
+  });
+});

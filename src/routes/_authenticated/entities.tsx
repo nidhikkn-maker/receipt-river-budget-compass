@@ -6,13 +6,15 @@ import { PageTitle } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useStore } from "@/lib/store";
-import { dropEntity, linkAccounts, mergeEntity, needsDetails, unlinkAccount } from "@/lib/books/entity-accounts";
+import { linkAccounts, mergeEntity, needsDetails, unlinkAccount } from "@/lib/books/entity-accounts";
 import { emptyBooks } from "@/lib/books/types";
 import { companyYearEvidence } from '@/lib/books/company-report';
 import { confirmAction } from "@/lib/confirm";
 import { CompanyTaxProfile } from "@/components/books/CompanyTaxProfile";
 import { CompanyAccess, SharedWithMe } from "@/components/books/CompanyAccess";
-import { dropEntityYears, mergeEntityYears } from "@/lib/books/entity-tax-profile";
+import { archiveInList, restoreInList } from "@/lib/archive";
+import { mergeYearsKeepingAll, recordIsArchived } from "@/lib/records-archive";
+import { ArchivedRecords, useArchiveFlow } from "@/components/ArchivedRecords";
 import { ENTITY_KINDS, fyOf, gstinProblem, panProblem, yearStatuses, type EntityKind, type EntityProfile } from "@/lib/entities";
 
 export const Route = createFileRoute("/_authenticated/entities")({
@@ -38,6 +40,13 @@ function Entities() {
   const saveLinks = async (entityAccounts: Record<string, string[]>, entities = list, msg = "Saved") => { await savePreferences({ ...preferences, entities, books: { ...books, entityAccounts } }); toast.success(msg); };
   const accName = (id: string) => accounts.find((a) => a.id === id)?.name ?? "Removed account";
   const list = preferences.entities ?? [];
+  // Archived profiles keep their PAN, GST numbers, tax years and account links; they are only listed separately (P0-011).
+  const active = list.filter((x) => !recordIsArchived(x));
+  const archived = list.filter((x) => recordIsArchived(x));
+  const { ask, dialog, userId } = useArchiveFlow(async (req, who) => {
+    await savePreferences({ ...preferences, entities: req.mode === "archive" ? archiveInList(list, req.id, who) : restoreInList(list, req.id, who) });
+    setEdit(null);
+  });
   const [edit, setEdit] = useState<EntityProfile | null>(null);
   const [gst, setGst] = useState("");
   const today = new Date().toISOString().slice(0, 10);
@@ -54,13 +63,14 @@ function Entities() {
     if (isNew) window.__lovableEvents?.track?.("project.company_created", { source: "companies_page", kind: fixed.kind });
     toast.success("Profile saved"); setEdit(null);
   };
-  const remove = async (id: string) => {
-    if (!(await confirmAction({ title: "Delete this profile?", message: "Linked accounts are unlinked, not deleted. Entries stay as they are.", confirmLabel: "Delete" }))) return;
-    await savePreferences({ ...preferences, entities: list.filter((x) => x.id !== id), books: { ...books, entityAccounts: dropEntity(links, id), entityTaxProfiles: dropEntityYears(books.entityTaxProfiles, id) } }); toast.success("Profile deleted"); setEdit(null);
-  };
+  const askArchive = (p: EntityProfile) => ask({ mode: "archive", id: p.id, name: p.name || "Unnamed company", noun: "profile" });
+  // Merge moves accounts and tax years to the chosen company and archives this profile (never deletes it).
+  // A year the chosen company already has stays with the archived profile instead of being dropped.
   const merge = async (from: string, into: string) => {
-    if (!into || !(await confirmAction({ title: "Merge companies?", message: "Accounts move to the chosen company and this profile is removed. Entries are not changed.", confirmLabel: "Merge" }))) return;
-    await savePreferences({ ...preferences, entities: list.filter((x) => x.id !== from), books: { ...books, entityAccounts: mergeEntity(links, from, into), entityTaxProfiles: mergeEntityYears(books.entityTaxProfiles, from, into) } }); toast.success("Merged");
+    const target = list.find((x) => x.id === into);
+    if (!into || !target || !(await confirmAction({ title: "Merge companies?", message: `Accounts and tax years move to ${target.name}. This profile is archived with its details kept. Entries are not changed.`, confirmLabel: "Merge" }))) return;
+    const entities = archiveInList(list, from, { by: userId, at: new Date().toISOString(), reason: `Merged into ${target.name}` });
+    await savePreferences({ ...preferences, entities, books: { ...books, entityAccounts: mergeEntity(links, from, into), entityTaxProfiles: mergeYearsKeepingAll(books.entityTaxProfiles, from, into) } }); toast.success("Merged — the old profile is archived");
   };
 
   return (
@@ -101,14 +111,14 @@ function Entities() {
           <div className="flex flex-wrap gap-2">
             <Button onClick={save}>Save</Button>
             <Button variant="ghost" onClick={() => setEdit(null)}>Cancel</Button>
-            {list.some((x) => x.id === edit.id) && <Button variant="ghost" className="text-destructive" onClick={() => remove(edit.id)}>Delete profile</Button>}
+            {active.some((x) => x.id === edit.id) && <Button variant="ghost" onClick={() => askArchive(edit)}>Archive profile</Button>}
           </div>
         </div>
       )}
 
       {!edit && <SharedWithMe />}
-      {list.length === 0 && !edit && <p className="text-sm text-muted-foreground">No profiles yet. Add yourself and each company to track PAN, GST and past years.</p>}
-      {list.map((p) => (
+      {active.length === 0 && !edit && <p className="text-sm text-muted-foreground">{list.length ? "No active profiles. Archived ones are listed below." : "No profiles yet. Add yourself and each company to track PAN, GST and past years."}</p>}
+      {active.map((p) => (
         <div key={p.id} className="space-y-3 rounded-2xl border bg-card p-4">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div className="min-w-0 flex-1">
@@ -118,7 +128,7 @@ function Entities() {
               {!!p.people?.length && <p className="text-xs text-muted-foreground">{p.people.map((x) => `${x.name} (${x.role})`).join(", ")}</p>}
               {!!p.shareholding?.length && <p className="text-xs text-muted-foreground">Shareholding: {p.shareholding.map((x) => `${x.name} ${x.pct}%`).join(", ")}</p>}
             </div>
-            <div className="flex shrink-0 gap-1"><Button size="sm" variant="outline" onClick={() => setEdit(p)}>Edit</Button><Button size="sm" variant="ghost" className="text-destructive" onClick={() => void remove(p.id)}>Delete</Button></div>
+            <div className="flex shrink-0 gap-1"><Button size="sm" variant="outline" onClick={() => setEdit(p)}>Edit</Button><Button size="sm" variant="ghost" onClick={() => askArchive(p)}>Archive</Button></div>
           </div>
           {p.kind !== "individual" && p.kind !== "huf" && <CompanyTaxProfile entity={p} />}
           {p.kind !== "individual" && <CompanyAccess entityId={p.id} entityName={p.name} links={links} />}
@@ -130,7 +140,7 @@ function Entities() {
                 <div className="flex shrink-0 items-center gap-1">
                   <select aria-label="Move to" className="max-w-full min-w-0 rounded-lg border bg-background px-2 py-1 text-sm" value="" onChange={(e) => { const to = e.target.value || null; void saveLinks(linkAccounts(links, to, [id]), list, "Moved").then(() => window.__lovableEvents?.track?.("project.account_company_linked", { action: to ? "move" : "unlink", source: "companies_page" })); }}>
                     <option value="">Move to…</option>
-                    {list.filter((x) => x.id !== p.id).map((x) => <option key={x.id} value={x.id}>{x.name}</option>)}
+                    {active.filter((x) => x.id !== p.id).map((x) => <option key={x.id} value={x.id}>{x.name}</option>)}
                   </select>
                   <Button size="sm" variant="ghost" onClick={() => void saveLinks(unlinkAccount(links, id), list, "Unlinked").then(() => window.__lovableEvents?.track?.("project.account_company_linked", { action: "unlink", source: "companies_page" }))}>Unlink</Button>
                 </div>
@@ -144,7 +154,7 @@ function Entities() {
                 <div className="flex gap-2"><Button size="sm" disabled={!pick.length} onClick={() => void saveLinks(linkAccounts(links, p.id, pick), list, "Linked").then(() => { window.__lovableEvents?.track?.("project.account_company_linked", { action: "link", source: "companies_page" }); setPicking(null); setPick([]); })}>Link {pick.length || ""}</Button><Button size="sm" variant="ghost" onClick={() => { setPicking(null); setPick([]); }}>Cancel</Button></div>
               </div>
             ) : <div className="flex flex-wrap gap-2"><Button size="sm" variant="outline" onClick={() => { setPicking(p.id); setPick([]); }}>Link accounts</Button>
-              {list.length > 1 && <select aria-label="Merge into" className="max-w-full min-w-0 rounded-lg border bg-background px-2 py-1 text-sm" value="" onChange={(e) => void merge(p.id, e.target.value)}><option value="">Merge into…</option>{list.filter((x) => x.id !== p.id).map((x) => <option key={x.id} value={x.id}>{x.name}</option>)}</select>}</div>}
+              {active.length > 1 && <select aria-label="Merge into" className="max-w-full min-w-0 rounded-lg border bg-background px-2 py-1 text-sm" value="" onChange={(e) => void merge(p.id, e.target.value)}><option value="">Merge into…</option>{active.filter((x) => x.id !== p.id).map((x) => <option key={x.id} value={x.id}>{x.name}</option>)}</select>}</div>}
           </div>
           <div className="space-y-1">
             <p className="text-xs font-semibold text-muted-foreground">Financial years on record</p>
@@ -158,6 +168,10 @@ function Entities() {
           </div>
         </div>
       ))}
+      {!edit && <ArchivedRecords id="archived-profiles" title={`Archived profiles (${archived.length})`} hint="Tax years, GST numbers and account links are kept" noun="profile" userId={userId}
+        items={archived.map((p) => ({ id: p.id, name: p.name, detail: `${ENTITY_KINDS[p.kind].label}${p.pan ? ` · PAN ${p.pan}` : ""} · ${(links[p.id] ?? []).length} linked account${(links[p.id] ?? []).length === 1 ? "" : "s"} · ${(books.entityTaxProfiles ?? []).filter((y) => y.entityId === p.id).length} tax year record(s)`, state: p }))}
+        onRestore={(it) => ask({ mode: "restore", id: it.id, name: it.name, noun: "profile" })} />}
+      {dialog}
     </div>
   );
 }

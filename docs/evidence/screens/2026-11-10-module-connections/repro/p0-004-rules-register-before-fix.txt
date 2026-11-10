@@ -1,0 +1,5 @@
+     × shows a load error with Retry instead of 'not run yet', and recovers on Retry 5061ms
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+TestingLibraryElementError: Unable to find an element with the text: Couldn't load the latest changes found on official pages.. This could be because the text is broken up by multiple elements. In this case, you can provide a function for your text matcher to make your matcher more flexible.
+      Tests  1 failed (1)
+Before the fix the section rendered 'Checked weekly: not run yet' on a failed read (error swallowed by useDetectedChanges, TaxCentre.tsx:219 at 6e532f5). Run with TaxCentre.tsx stashed to 6e532f5, 2026-11-10T04:01:02Z.
