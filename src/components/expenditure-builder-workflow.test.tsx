@@ -6,7 +6,7 @@ import { IDBFactory } from 'fake-indexeddb';
 import { defaultPreferences } from '@/lib/preferences';
 import type { Expense } from '@/lib/expenses';
 import { newReimbursementProfile } from '@/lib/reimbursement-profiles';
-const local = vi.hoisted(() => ({ store: {} as Record<string, unknown>, uploaded: null as Blob | null, history: null as Record<string, unknown> | null, loseReply: true, offline: false, download: vi.fn(), authorised: [] as { kind: string }[] }));
+const local = vi.hoisted(() => ({ store: {} as Record<string, unknown>, uploaded: null as Blob | null, history: null as Record<string, unknown> | null, inserts: 0, loseReply: true, offline: false, download: vi.fn(), authorised: [] as { kind: string }[] }));
 vi.mock('@/lib/store', () => ({ useStore: () => local.store }));
 vi.mock('@tanstack/react-router', () => ({ useNavigate: () => vi.fn(), Link: ({ children }: { children: React.ReactNode }) => <a>{children}</a> }));
 vi.mock('@/components/AppShell', () => ({ PageTitle: ({ title }: { title: string }) => <h1>{title}</h1> }));
@@ -21,7 +21,7 @@ vi.mock('@/integrations/supabase/client', () => ({ supabase: {
     for (const method of ['select', 'eq', 'order', 'range', 'contains', 'limit']) q[method] = () => q;
     q['then'] = (done: (r: unknown) => unknown) => Promise.resolve({ data: [], error: null }).then(done);
     q['maybeSingle'] = async () => ({ data: local.history, error: null });
-    q['insert'] = async (row: Record<string, unknown>) => { local.history = row; if (local.loseReply) { local.loseReply = false; return { error: Error('Lost response') }; } return { error: null }; };
+    q['insert'] = async (row: Record<string, unknown>) => { local.inserts += 1; local.history = row; if (local.loseReply) { local.loseReply = false; return { error: Error('Lost response') }; } return { error: null }; };
     return q;
   },
 } }));
@@ -32,7 +32,7 @@ async function bytes(blob: Blob) {
 async function prepare() {
   // Fresh in-memory IndexedDB per test so the builder's encrypted local PDF recovery runs for real.
   vi.stubGlobal('indexedDB', new IDBFactory());
-  local.uploaded = null; local.history = null; local.loseReply = true; local.offline = false; local.download.mockReset();
+  local.uploaded = null; local.history = null; local.inserts = 0; local.loseReply = true; local.offline = false; local.download.mockReset();
   vi.stubGlobal('URL', Object.assign(URL, { createObjectURL: vi.fn(() => 'blob:isolated-report'), revokeObjectURL: vi.fn() }));
   const original = await PDFDocument.create(); const page = original.addPage([321, 456]); const font = await original.embedFont(StandardFonts.Helvetica); page.drawText('ISOLATED ORIGINAL BILL', { x: 20, y: 100, font });
   const originalBytes = await original.save();
@@ -81,6 +81,28 @@ it('actual builder cancel creates no PDF/history; failed upload keeps local PDF 
   local.offline = false; fireEvent.click(screen.getByRole('button', { name: 'Retry saving to history' }));
   await screen.findByText('Saved in Reports Centre → Report history.');
   expect(local.history?.['file_size']).toBe(local.uploaded?.size);
+});
+// Regression: under load an earlier version showed "Retry saving to history" between the PDF appearing and the automatic
+// save starting (the job bytes and the encrypted device copy are prepared in between). A click there started a second
+// save of the same report; the first one then finished after the screen had gone, writing a history row later.
+it('actual builder offers no history retry until its automatic save has finished, so one report is saved once', async () => {
+  await prepare(); render(<ExpenditureReportBuilder mode="statement" search={{ entry: 'e' }} />);
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Generate statement PDF' })).toBeEnabled());
+  fireEvent.click(screen.getByRole('button', { name: 'Generate statement PDF' }));
+  await screen.findByRole('button', { name: 'Confirm documents & generate' });
+  // Hold every byte read after confirmation: the PDF is shown, but its job bytes stay unread until released.
+  let release = () => {}; const held = new Promise<void>(resolve => { release = resolve; });
+  const read = Object.getOwnPropertyDescriptor(Blob.prototype, 'arrayBuffer')?.value as (this: Blob) => Promise<ArrayBuffer>;
+  Object.defineProperty(Blob.prototype, 'arrayBuffer', { configurable: true, value: function(this: Blob) { return held.then(() => read.call(this)); } });
+  fireEvent.click(screen.getByRole('button', { name: 'Confirm documents & generate' }));
+  await screen.findByRole('button', { name: 'Download' });
+  expect(screen.queryByRole('button', { name: 'Retry saving to history' })).toBeNull();
+  expect(screen.getByText('Saving to report history…')).toBeInTheDocument();
+  expect(local.uploaded).toBeNull(); expect(local.history).toBeNull();
+  release();
+  await screen.findByText('Saved in Reports Centre → Report history.');
+  expect(local.history).toMatchObject({ kind: 'expenditure-statement', file_size: local.uploaded?.size });
+  expect(local.inserts).toBe(1);
 });
 it('actual claim builder includes missing-document evidence and source pages without saving reimbursement payments', async () => {
   const entry = await prepare();

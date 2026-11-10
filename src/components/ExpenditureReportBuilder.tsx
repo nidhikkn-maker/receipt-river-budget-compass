@@ -73,6 +73,7 @@ export function ExpenditureReportBuilder({ mode, search, embedded = false }: { e
   const pendingSave = useRef<(() => Promise<void>) | null>(null);
   const cancelled = useRef(false);
   const generating = useRef(false);
+  const savingHistory = useRef(false);
   const [documentChecks, setDocumentChecks] = useState<ReportDocumentCheck[] | null>(null);
   const documentDecision = useRef<((proceed: boolean) => void) | null>(null);
   useEffect(() => () => { cancelled.current = true; documentDecision.current?.(false); }, []);
@@ -208,6 +209,9 @@ export function ExpenditureReportBuilder({ mode, search, embedded = false }: { e
       const { blob, missing } = claim ? await renderClaimPdf(claim, files, claimFormat) : await renderStatementPdf(st, files);
       if (cancelled.current) return;
       const name = `ledgerline-${claim ? "claim" : "expenditure"}-${subjectName.replace(/[^a-z0-9]+/gi, "-").toLowerCase()}-${claim ? claim.reference : reference}.pdf`;
+      // The automatic save owns the history state from here: showing "Retry" before it has run would let a second,
+      // concurrent save of the same report start (and outlive this screen).
+      setHistoryState('saving');
       setResult({ blob, url: URL.createObjectURL(blob), name, missing });
       setStage(4);
       const path = `${store.userId}/reports/${id}.pdf`;
@@ -220,15 +224,17 @@ export function ExpenditureReportBuilder({ mode, search, embedded = false }: { e
       await saveLocalClaimReport(store.userId,job,recoverySlot);
       await retryHistory();
       setStage(-1);
-    } catch (e) { setFailed(true); toast.error(e instanceof Error ? e.message : "Couldn't prepare the statement"); }
+    } catch (e) { setFailed(true); setHistoryState(h => h === 'saving' ? 'local' : h); toast.error(e instanceof Error ? e.message : "Couldn't prepare the statement"); }
     finally { generating.current = false; }
   }
   async function retryHistory() {
     const save = pendingSave.current;
-    if (!save) return;
+    if (!save || savingHistory.current) return;
+    savingHistory.current = true;
     setHistoryState('saving');
     try { await save(); setHistoryState('saved'); toast.success('Saved in Reports Centre history.'); }
     catch (error) { setHistoryState('local'); toast.error(error instanceof Error ? error.message : 'PDF ready locally; history save failed.'); }
+    finally { savingHistory.current = false; }
   }
   const busy = (stage >= 0 && !failed) || documentChecks !== null;
   const openPreview = (b: Blob) => { const u = URL.createObjectURL(b); window.open(u, "_blank"); setTimeout(() => URL.revokeObjectURL(u), 60_000); };
