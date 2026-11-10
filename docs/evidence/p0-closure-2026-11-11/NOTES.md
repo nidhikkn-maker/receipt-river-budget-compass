@@ -72,3 +72,26 @@ KK binding: Withdraw only for unposted AND unreconciled entries; posted -> Rever
   guardedRestore avoids it by keeping the stored row.
 - R-P10-1: P7 derive_entry skips withdrawn entries (one guarded line in P7_balanced_posting.sql). W5 before/after.
 - Before-runs: p0-023-033-restore.before.txt, r-p10-1-backfill.before.txt.
+
+## 6. P0-022 team users — DONE (after ff to 557c3cd)
+- Proposed P13 (+rollback; requires P10; P12 is security's): team delete policy dropped; team money/date/account/evidence
+  edits only via approved requests; entry_change_requests with request/decide/cancel functions (entity-scoped with P1);
+  audit tables append-only incl. TRUNCATE; transaction_audit.actor_id.
+- App: src/lib/entry-requests.ts; team switch labels; contract docs/workstreams/contracts/entry-change-requests.md.
+- Before: p0-022-team.before.txt (applied schema probe: manager deletes owner's entry; no request path without P13).
+- Tests: failure-injection T1-T3 (API level), p13-team-requests-sql.test.ts (2).
+
+## 7. P0-015 asset disposal approval — DONE (server + proposed P14; I05 screen is WS-E's)
+- Server functions src/lib/asset-disposal(.functions).ts; P14 (+rollback); contract docs/workstreams/contracts/disposal-approval.md.
+- Fix during testing: the request must be closed BEFORE the disposal entry is inserted (the P7/P8 hook posts only approved
+  requests); otherwise the entry was left unposted.
+- Before: p0-015-disposal.before.txt. Tests: failure-injection D1-D4, p14-asset-disposal-sql.test.ts (2).
+- Existing UI paths (assets.tsx Sold-on edit, Lifecycle disposal event, AssetBooks disposal posting) are refused under P14 by design.
+
+## 8. P0-006 / RB-P1-02 export authorisation — DONE (server gate + proposed P15)
+- src/lib/exports.ts (kinds, server rules), exports.functions.ts (authoriseExport, exportBackupData), export-gate.ts
+  (exportFile / exportDeliver: hash + rows + server authorisation + step-up before download/share). 31 call sites routed.
+- P15 (+rollback): export_audit (append-only), authorise_export (own / shared company via P2 'export' or entity_members /
+  Finance company tax; step-up for sensitive kinds where P4).
+- Before: p0-006-exports.before.txt. Tests: failure-injection X1-X4; p15-export-sql.test.ts (inventory + SQL).
+- Not done: server-produced file bytes for PDFs/CSVs (authorised + hashed only); MCP has no file exports.

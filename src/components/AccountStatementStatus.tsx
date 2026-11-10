@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { exportDeliver, exportFile } from "@/lib/export-gate";
 import { Link } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { listImports, statementEvidence } from "@/lib/import-repository";
@@ -8,7 +9,7 @@ import { money } from "@/lib/expenses";
 import { statementCoverage } from "@/lib/statement-pipeline/coverage";
 import { Button } from "./ui/button";
 import { reconciliationReport } from '@/lib/reconciliation-report';
-import { toCsv,toExcel,toPdf,deliverFile } from '@/lib/reports';
+import { toCsv, toExcel, toPdf } from '@/lib/reports';
 import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "./ui/dialog";
 
@@ -50,7 +51,7 @@ export function AccountStatementStatus({ onAttention }: { onAttention?: (count: 
   const exportFile=async(format:'csv'|'xlsx'|'pdf')=>{try{
     if(format==='pdf'&&preparedExport?.key!==exportKey){setPreparedExport({key:exportKey,blob:await toPdf(exportReport,`Saved evidence as of ${today}; unavailable checks remain unverified`)});return;}
     const blob=format==='pdf'?preparedExport?.blob:format==='csv'?new Blob([toCsv(exportReport)],{type:'text/csv'}):await toExcel(exportReport);
-    if(blob)await deliverFile(blob,`ledgerline-reconciliation-${today}.${format}`);
+    if(blob)await exportDeliver({kind:"ledger_csv"},blob,`ledgerline-reconciliation-${today}.${format}`);
   }catch{toast.error('Could not prepare reconciliation export; saved checks are unchanged');}};
   useEffect(() => { onAttention?.(status ? null : summary.attention); }, [status, summary.attention, onAttention]);
   if (status) return <div className="flex flex-wrap items-center gap-2 py-4 text-sm" role="status"><p>{status}</p><Button size="sm" variant="outline" onClick={() => load(true)}>Retry account checks</Button></div>;

@@ -7,8 +7,8 @@ import { supabase } from "@/integrations/supabase/client";
 
 export const TEAM_ACTIONS = [
   { key: "view_expenses", label: "View team expenses" },
-  { key: "edit_expenses", label: "Edit team expenses" },
-  { key: "delete_expenses", label: "Delete team expenses" },
+  { key: "edit_expenses", label: "Edit team expenses (money, dates and accounts by approved request)" },
+  { key: "delete_expenses", label: "Request withdrawal of team expenses (never deleted; owner or Finance approves)" },
   { key: "change_category", label: "Change category" },
   { key: "approve", label: "Approve / return" },
   { key: "view_receipts", label: "View receipts" },

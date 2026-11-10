@@ -1,4 +1,5 @@
 import { useNavigate } from "@tanstack/react-router";
+import { exportDeliver, exportFile } from "@/lib/export-gate";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Download, Eye, FileText, Paperclip, Share2 } from "lucide-react";
@@ -11,7 +12,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { money } from "@/lib/expenses";
 import { GROUP_TAG, NOT_RECORDED, buildStatement, paymentInfo, statementReference, subjectEntries, type Subject } from "@/lib/expenditure-statement";
 import type { AnnexFile } from "@/lib/expenditure-pdf";
-import { downloadBlob, deliverFile } from "@/lib/reports";
+
 import type { TravelTrip } from "@/lib/travel";
 import { cn } from "@/lib/utils";
 import { ClaimProfilePanel } from './ClaimProfilePanel';
@@ -309,8 +310,8 @@ export function ExpenditureReportBuilder({ mode, search, embedded = false }: { e
           <iframe title="Statement preview" src={result.url} className="h-[70vh] w-full rounded-md border bg-background" />
           <div className="grid grid-cols-3 gap-2">
             <Button variant="outline" onClick={() => openPreview(result.blob)}><Eye className="mr-1 h-4 w-4" />Open</Button>
-            <Button variant="outline" onClick={() => downloadBlob(result.blob, result.name)}><Download className="mr-1 h-4 w-4" />Download</Button>
-            <Button onClick={() => { void deliverFile(result.blob, result.name); }}><Share2 className="mr-1 h-4 w-4" />Share</Button>
+            <Button variant="outline" onClick={() => void exportFile({ kind: "report" }, result.blob, result.name)}><Download className="mr-1 h-4 w-4" />Download</Button>
+            <Button onClick={() => { void exportDeliver({ kind: "report" }, result.blob, result.name); }}><Share2 className="mr-1 h-4 w-4" />Share</Button>
           </div>
           <p role="status" className="text-xs text-muted-foreground">{historyState === 'saved' ? 'Saved in Reports Centre → Report history.' : historyState === 'saving' ? 'Saving to report history…' : 'Ready on this device; history save not confirmed.'}</p>
           {historyState === 'local' && <Button variant="outline" onClick={retryHistory}>Retry saving to history</Button>}

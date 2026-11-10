@@ -1,4 +1,5 @@
 import { LoadError } from "@/components/LoadError";
+import { exportFile } from "@/lib/export-gate";
 import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useMemo, useState } from "react";
@@ -13,7 +14,7 @@ import { categoryParts, money, type Expense } from "@/lib/expenses";
 import { healthHistory, healthScore } from "@/lib/health";
 import { freshnessSummary } from "@/lib/inbox";
 import { monthlyReview, prevMonth, reviewHash, type MonthlyReview } from "@/lib/monthly-review";
-import { downloadBlob, toPdf } from "@/lib/reports";
+import { toPdf } from "@/lib/reports";
 import { useStore, type SavedReview } from "@/lib/store";
 import { todayISO } from "@/lib/use-position";
 import { cn } from "@/lib/utils";
@@ -100,7 +101,7 @@ function Monthly() {
       ...shown.recommendations.map((x) => ["Recommendation", x, ""]),
       ...(latest?.narrative ? [["AI explanation (not a calculation)", latest.narrative.replace(/[#*]/g, "").slice(0, 1500), ""]] : []),
     ];
-    try { downloadBlob(await toPdf({ title: `Monthly review ${month}`, headers: ["Section", "Item", "Amount"], rows }, `Generated ${new Date().toLocaleString()} · verified figures from Thapal`), `ledgerline-review-${month}.pdf`); }
+    try { await exportFile({ kind: "personal", rows: rows.length }, await toPdf({ title: `Monthly review ${month}`, headers: ["Section", "Item", "Amount"], rows }, `Generated ${new Date().toLocaleString()} · verified figures from Thapal`), `ledgerline-review-${month}.pdf`); }
     catch { toast.error("Couldn't create the PDF"); }
   };
   const share = async () => {

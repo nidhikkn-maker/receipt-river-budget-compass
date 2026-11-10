@@ -1,4 +1,5 @@
 import { LoadError } from "@/components/LoadError";
+import { exportDeliver, exportFile } from "@/lib/export-gate";
 import { SectionTabs } from "@/components/SectionTabs";
 import { BackgroundReports } from "@/components/BackgroundReports";
 import { useNavigate } from "@tanstack/react-router";
@@ -14,7 +15,7 @@ import { useStore } from "@/lib/store";
 import { supabase } from "@/integrations/supabase/client";
 import { ACTIVE_SCOPES, SCOPE_LABEL, type Scope } from "@/lib/expenses";
 import { PERIOD_LABEL, REPORT_TYPES, buildReportDoc, emptyFilters, needsTrip, orgOf, periodRange, reportLabel, type DraftLite, type Period, type ReportDoc, type ReportFilters, type ReportType, type StatusFilter } from "@/lib/report-centre";
-import { downloadBlob, deliverFile, toCsv, toExcel } from "@/lib/reports";
+import { toCsv, toExcel } from "@/lib/reports";
 import { corporateReport, type CorporateType } from '@/lib/books/corporate-statements';
 import { corporateAuditPack } from '@/lib/books/corporate-audit-pack';
 import {AccountingJournalReview} from '@/components/books/AccountingJournalReview';
@@ -163,11 +164,11 @@ function ReportCentre() {
   const toggleWs = (s: Scope) => setF((x) => ({ ...x, workspaces: x.workspaces.includes(s) ? x.workspaces.filter((w) => w !== s) : [...x.workspaces, s] }));
   const corporateDownload = async (doc:ReportDoc,format:'csv'|'excel'|'evidence'|'pack') => {
     if(!doc.corporateWorking)return;
-    if(format==='pack'){await deliverFile(await corporateAuditPack(doc.corporateWorking,store.documents,store.signedUrl),`ledgerline-company-audit-${doc.corporateWorking.entityId}.zip`);return;}
-    if(format==='evidence'){downloadBlob(new Blob([JSON.stringify(doc.corporateWorking,null,2)],{type:'application/json'}),'company-accounting-evidence.json');return;}
+    if(format==='pack'){await exportDeliver({kind:'company_pack'},await corporateAuditPack(doc.corporateWorking,store.documents,store.signedUrl),`ledgerline-company-audit-${doc.corporateWorking.entityId}.zip`);return;}
+    if(format==='evidence'){await exportFile({kind:'company_pack'},new Blob([JSON.stringify(doc.corporateWorking,null,2)],{type:'application/json'}),'company-accounting-evidence.json');return;}
     const r=corporateReport(doc.corporateWorking,doc.type as CorporateType);
     const blob=format==='excel'?await toExcel(r):new Blob(['\uFEFF',toCsv(r)],{type:'text/csv;charset=utf-8'});
-    await deliverFile(blob,`ledgerline-${doc.type}-${doc.corporateWorking.entityId}.${format==='excel'?'xlsx':'csv'}`);
+    await exportDeliver({kind:'company_pack'},blob,`ledgerline-${doc.type}-${doc.corporateWorking.entityId}.${format==='excel'?'xlsx':'csv'}`);
   };
 
   return (
@@ -242,10 +243,10 @@ function ReportCentre() {
           <p className="text-xs text-muted-foreground">On iPhone the preview may show only the first page — use Open to see every page.</p>
           <div className="grid grid-cols-3 gap-2">
             <Button variant="outline" onClick={() => openPreview(result.blob)}><Eye className="mr-1 h-4 w-4" />Open</Button>
-            <Button variant="outline" onClick={() => downloadBlob(result.blob, result.name)}><Download className="mr-1 h-4 w-4" />Download</Button>
-            <Button onClick={() => { void deliverFile(result.blob, result.name); }}><Share2 className="mr-1 h-4 w-4" />Share</Button>
+            <Button variant="outline" onClick={() => void exportFile({ kind: "report" }, result.blob, result.name)}><Download className="mr-1 h-4 w-4" />Download</Button>
+            <Button onClick={() => { void exportDeliver({ kind: "report" }, result.blob, result.name); }}><Share2 className="mr-1 h-4 w-4" />Share</Button>
           </div>
-          {!!result.doc.figureEvidence?.length&&<Button variant="outline" onClick={()=>downloadBlob(new Blob([JSON.stringify(result.doc.figureEvidence,null,2)],{type:'application/json'}),'report-figure-evidence.json')}>Download figure evidence</Button>}
+          {!!result.doc.figureEvidence?.length&&<Button variant="outline" onClick={()=>void exportFile({kind:'evidence'},new Blob([JSON.stringify(result.doc.figureEvidence,null,2)],{type:'application/json'}),'report-figure-evidence.json')}>Download figure evidence</Button>}
           {result.doc.corporateWorking&&<div className="flex flex-wrap gap-2"><Button variant="outline" onClick={()=>corporateDownload(result.doc,'csv')}>CSV</Button><Button variant="outline" onClick={()=>corporateDownload(result.doc,'excel')}>Excel</Button><Button variant="outline" onClick={()=>corporateDownload(result.doc,'evidence')}>Accounting evidence</Button><Button variant="outline" onClick={()=>corporateDownload(result.doc,'pack').catch(e=>toast.error((e as Error).message))}>Audit pack</Button></div>}
         </section>
       )}
@@ -262,10 +263,10 @@ function ReportCentre() {
               <div className="text-xs text-muted-foreground">{h.period_from} to {h.period_to} · {h.workspace === "all" ? "All workspaces" : h.workspace.split(",").map((w) => SCOPE_LABEL[w as Scope] ?? w).join(", ")} · generated {new Date(h.created_at).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" })} · {h.status === "ready" ? "Ready" : "Failed"}</div>
               <div className="mt-2 flex flex-wrap gap-1.5">
                 {(h.filters as {snapshot?:ReportDoc})?.snapshot?.corporateWorking&&<><Button size="sm" variant="outline" onClick={()=>corporateDownload((h.filters as {snapshot:ReportDoc}).snapshot,'csv')}>Saved CSV</Button><Button size="sm" variant="outline" onClick={()=>corporateDownload((h.filters as {snapshot:ReportDoc}).snapshot,'excel')}>Saved Excel</Button><Button size="sm" variant="outline" onClick={()=>corporateDownload((h.filters as {snapshot:ReportDoc}).snapshot,'evidence')}>Accounting evidence</Button><Button size="sm" variant="outline" onClick={()=>corporateDownload((h.filters as {snapshot:ReportDoc}).snapshot,'pack').catch(e=>toast.error((e as Error).message))}>Audit pack</Button></>}
-                {!!(h.filters as {snapshot?:ReportDoc})?.snapshot?.figureEvidence?.length&&<Button size="sm" variant="outline" onClick={()=>downloadBlob(new Blob([JSON.stringify((h.filters as {snapshot:ReportDoc}).snapshot.figureEvidence,null,2)],{type:'application/json'}),'saved-report-figure-evidence.json')}>Figure evidence</Button>}
+                {!!(h.filters as {snapshot?:ReportDoc})?.snapshot?.figureEvidence?.length&&<Button size="sm" variant="outline" onClick={()=>void exportFile({kind:'evidence'},new Blob([JSON.stringify((h.filters as {snapshot:ReportDoc}).snapshot.figureEvidence,null,2)],{type:'application/json'}),'saved-report-figure-evidence.json')}>Figure evidence</Button>}
                 <Button size="sm" variant="outline" disabled={!b} onClick={() => b && openPreview(b)}><Eye className="mr-1 h-3.5 w-3.5" />Preview</Button>
-                <Button size="sm" variant="outline" disabled={!b} onClick={() => b && downloadBlob(b, name)}><Download className="mr-1 h-3.5 w-3.5" />Download</Button>
-                <Button size="sm" variant="outline" disabled={!b} onClick={() => { if (b) void deliverFile(b, name); }}><Share2 className="mr-1 h-3.5 w-3.5" />Share</Button>
+                <Button size="sm" variant="outline" disabled={!b} onClick={() => { if (b) void exportFile({ kind: "report" }, b, name); }}><Download className="mr-1 h-3.5 w-3.5" />Download</Button>
+                <Button size="sm" variant="outline" disabled={!b} onClick={() => { if (b) void exportDeliver({ kind: "report" }, b, name); }}><Share2 className="mr-1 h-3.5 w-3.5" />Share</Button>
                 {!b && <Button size="sm" variant="ghost" onClick={() => prepare(h)}>Load</Button>}
                 {h.kind !== "expenditure-statement" && h.kind !== "claim-submission" && <Button size="sm" variant="outline" disabled={busy} onClick={() => { const fl = h.filters as ReportFilters & { style?: "colour" | "mono" }; if (fl.style) setStyle(fl.style); setType(h.kind as ReportType); return generate({ type: h.kind as ReportType, filters: fl }); }}><RefreshCw className="mr-1 h-3.5 w-3.5" />Regenerate</Button>}
                 <Button size="sm" variant="ghost" aria-label="Delete report" onClick={() => setConfirmDel(h)}><Trash2 className="h-3.5 w-3.5" /></Button>

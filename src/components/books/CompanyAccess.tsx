@@ -1,4 +1,5 @@
-import { downloadBlob } from "@/lib/reports";
+
+import { exportFile } from "@/lib/export-gate";
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -121,13 +122,13 @@ export function SharedWithMe() {
                 <Input aria-label={`Search ${c.company_name}`} placeholder="Search entries and documents" className="h-8 max-w-56" value={queries[c.grant_id] ?? ""} onChange={(e) => setQueries((s) => ({ ...s, [c.grant_id]: e.target.value }))} />
                 <Button size="sm" variant="outline" onClick={() => {
                   const blob = new Blob([sharedCompanyCsv(c, txns, docs)], { type: "text/csv" });
-                  downloadBlob(blob, `${c.company_name.replace(/[^\w-]+/g, "_")}.csv`);
+                  void exportFile({ kind: "shared_company", ownerId: c.owner_id, entityId: c.entity_id }, blob, `${c.company_name.replace(/[^\w-]+/g, "_")}.csv`);
                 }}>Download CSV</Button>
                 <Button size="sm" variant="outline" onClick={async () => {
                   const blob = await sharedCompanyPdf(c, txns, docs);
-                  downloadBlob(blob, `${c.company_name.replace(/[^\w-]+/g, "_")}.pdf`);
+                  await exportFile({ kind: "shared_company", ownerId: c.owner_id, entityId: c.entity_id }, blob, `${c.company_name.replace(/[^\w-]+/g, "_")}.pdf`);
                 }}>Download PDF</Button>
-                <Button size="sm" variant="outline" onClick={async()=>{try{downloadBlob(await sharedCompanyExcel(c,txns,docs),`${c.company_name.replace(/[^\w-]+/g,'_')}.xlsx`);}catch{toast.error('Could not create the company Excel file');}}}>Download Excel</Button>
+                <Button size="sm" variant="outline" onClick={async()=>{try{await exportFile({kind:'shared_company',ownerId:c.owner_id,entityId:c.entity_id},await sharedCompanyExcel(c,txns,docs),`${c.company_name.replace(/[^\w-]+/g,'_')}.xlsx`);}catch{toast.error('Could not create the company Excel file');}}}>Download Excel</Button>
                 {c.can_write && (
                   <Button size="sm" variant="outline" onClick={() => document.getElementById(`shared-upload-${c.grant_id}`)?.click()}>Add document</Button>
                 )}

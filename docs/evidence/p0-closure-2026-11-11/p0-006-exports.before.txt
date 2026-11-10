@@ -1,0 +1,113 @@
+# P0-006 before-run: authoriseExportFor temporarily = the original behaviour (no server check: every file was built and handed over in the browser, no audit).
+# Command: bunx vitest run src/lib/failure-injection.test.ts -t P0-006 (2026-11-10T15:29:23Z). On today's applied schema there is no export audit table and no authorise_export.
+ RUN  v4.1.12 /home/user/thapal-p3c
+ ❯ src/lib/failure-injection.test.ts (54 tests | 7 failed | 47 skipped) 7178ms
+     × X1. own exports pass and (with P15) are audited with rows, bytes and SHA-256; another person's records under an 'own' kind are refused 24ms
+     × X2. shared company: a member exports the company they are granted (c1); another company (c2), another owner's personal records and a non-member are refused 5ms
+     × X3. Finance company-tax list: Finance with the switch passes; a manager without it is refused; the backup records are read and audited server-side for the caller only 2ms
+     × X1. own exports pass and (with P15) are audited with rows, bytes and SHA-256; another person's records under an 'own' kind are refused 6ms
+     × X2. shared company: a member exports the company they are granted (c1); another company (c2), another owner's personal records and a non-member are refused 3ms
+     × X3. Finance company-tax list: Finance with the switch passes; a manager without it is refused; the backup records are read and audited server-side for the caller only 2ms
+     × X4. sensitive export without step-up refused, with step-up audited (step_up true); P2: a viewer without 'export' is refused, a granted company member passes, cross-company refused 2654ms
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 7 ⎯⎯⎯⎯⎯⎯⎯
+ FAIL  src/lib/failure-injection.test.ts > P0-006 export authorisation — applied schema WITHOUT P15 (server rule, not audited) > X1. own exports pass and (with P15) are audited with rows, bytes and SHA-256; another person's records under an 'own' kind are refused
+AssertionError: expected { ok: true, exportId: null, …(1) } to match object { ok: false, error: StringMatching{…} }
+(2 matching properties omitted from actual)
+- Expected
++ Received
+  {
+-   "error": StringMatching /your own records only/,
+-   "ok": false,
++   "ok": true,
+  }
+ ❯ src/lib/failure-injection.test.ts:2402:95
+    2400|         expect(r).toMatchObject({ ok: true, audited: mode.p15 });
+    2401|         net.uid = V;
+    2402|         expect(await authoriseExport({ data: await fileReq("report", c…
+       |                                                                                               ^
+    2403|         net.uid = O;
+    2404|         if (mode.p15) {
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/7]⎯
+ FAIL  src/lib/failure-injection.test.ts > P0-006 export authorisation — applied schema WITHOUT P15 (server rule, not audited) > X2. shared company: a member exports the company they are granted (c1); another company (c2), another owner's personal records and a non-member are refused
+AssertionError: expected { ok: true, exportId: null, …(1) } to match object { ok: false, error: StringMatching{…} }
+(2 matching properties omitted from actual)
+- Expected
++ Received
+  {
+-   "error": StringMatching /not granted export/,
+-   "ok": false,
++   "ok": true,
+  }
+ ❯ src/lib/failure-injection.test.ts:2426:126
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/7]⎯
+ FAIL  src/lib/failure-injection.test.ts > P0-006 export authorisation — applied schema WITHOUT P15 (server rule, not audited) > X3. Finance company-tax list: Finance with the switch passes; a manager without it is refused; the backup records are read and audited server-side for the caller only
+ FAIL  src/lib/failure-injection.test.ts > P0-006 export authorisation — P9 + P15 (database decides and audits) > X3. Finance company-tax list: Finance with the switch passes; a manager without it is refused; the backup records are read and audited server-side for the caller only
+AssertionError: expected { ok: true, exportId: null, …(1) } to match object { ok: false, error: StringMatching{…} }
+(2 matching properties omitted from actual)
+- Expected
++ Received
+  {
+-   "error": StringMatching /exported by Finance/,
+-   "ok": false,
++   "ok": true,
+  }
+ ❯ src/lib/failure-injection.test.ts:2444:113
+    2442|         expect(await authoriseExport({ data: await fileReq("team_compa…
+    2443|         net.uid = M;
+    2444|         expect(await authoriseExport({ data: await fileReq("team_compa…
+       |                                                                                                                 ^
+    2445|         // Backup: O's records only (V's rows never included), hash an…
+    2446|         net.uid = O;
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/7]⎯
+ FAIL  src/lib/failure-injection.test.ts > P0-006 export authorisation — P9 + P15 (database decides and audits) > X1. own exports pass and (with P15) are audited with rows, bytes and SHA-256; another person's records under an 'own' kind are refused
+AssertionError: expected { ok: true, exportId: null, …(1) } to match object { ok: true, audited: true }
+(1 matching property omitted from actual)
+- Expected
++ Received
+  {
+-   "audited": true,
++   "audited": false,
+    "ok": true,
+  }
+ ❯ src/lib/failure-injection.test.ts:2400:19
+    2398|         const csv = "Date,Amount\n2026-11-01,450.00\n2026-11-02,1234.5…
+    2399|         const r = await authoriseExport({ data: await fileReq("report"…
+    2400|         expect(r).toMatchObject({ ok: true, audited: mode.p15 });
+       |                   ^
+    2401|         net.uid = V;
+    2402|         expect(await authoriseExport({ data: await fileReq("report", c…
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/7]⎯
+ FAIL  src/lib/failure-injection.test.ts > P0-006 export authorisation — P9 + P15 (database decides and audits) > X2. shared company: a member exports the company they are granted (c1); another company (c2), another owner's personal records and a non-member are refused
+AssertionError: expected { ok: true, exportId: null, …(1) } to match object { ok: true, audited: true }
+(1 matching property omitted from actual)
+- Expected
++ Received
+  {
+-   "audited": true,
++   "audited": false,
+    "ok": true,
+  }
+ ❯ src/lib/failure-injection.test.ts:2425:20
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/7]⎯
+ FAIL  src/lib/failure-injection.test.ts > P0-006 on the whole proposed stack (P2 'export' permission, P4 step-up) — P1..P14 + P15 > X4. sensitive export without step-up refused, with step-up audited (step_up true); P2: a viewer without 'export' is refused, a granted company member passes, cross-company refused
+AssertionError: expected { ok: true, exportId: null, …(1) } to match object { ok: false, error: StringMatching{…} }
+(2 matching properties omitted from actual)
+- Expected
++ Received
+  {
+-   "error": StringMatching /^STEP_UP_REQUIRED/,
+-   "ok": false,
++   "ok": true,
+  }
+ ❯ src/lib/failure-injection.test.ts:2475:80
+    2473|       await seedExportPeople(db);
+    2474|       reset(db);
+    2475|       expect(await authoriseExport({ data: await fileReq("backup", "x\…
+       |                                                                                ^
+    2476|       expect(await authoriseExport({ data: await fileReq("report", "x\…
+    2477|       await exclusive(async () => { await actAs(db, null); await db.ex…
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/7]⎯
+ Test Files  1 failed (1)
+      Tests  7 failed | 47 skipped (54)
+   Start at  15:29:15
+   Duration  8.51s (transform 862ms, setup 127ms, import 1.06s, tests 7.18s, environment 0ms)

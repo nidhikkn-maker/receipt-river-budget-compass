@@ -3,9 +3,11 @@ import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, expect, it, vi } from 'vitest';
 import { defaultPreferences } from '@/lib/preferences';
 import { accountBalance, type Account } from '@/lib/ledger';
-const local = vi.hoisted(() => ({ store: {} as Record<string, unknown>, download: vi.fn() }));
+const local = vi.hoisted(() => ({ store: {} as Record<string, unknown>, download: vi.fn(), authorised: [] as { kind: string; sha256: string; fileName: string }[] }));
 vi.mock('@/lib/store', () => ({ useStore: () => local.store }));
 vi.mock('@/lib/reports', () => ({ downloadBlob: local.download }));
+// P0-006: the file is handed over only after the server authorises (and, with P15, audits) it.
+vi.mock('@/lib/exports.functions', () => ({ authoriseExport: async ({ data }: { data: { kind: string; sha256: string; fileName: string } }) => { local.authorised.push(data); return { ok: true, exportId: null, audited: false }; } }));
 vi.mock('./LoanFundingPanel', () => ({ LoanFundingPanel: () => null }));
 vi.mock('./books/LoanBalanceReview', () => ({ LoanBalanceReview: () => null }));
 vi.mock('recharts', () => ({ ResponsiveContainer: () => null, LineChart: () => null, Line: () => null, XAxis: () => null, YAxis: () => null, Tooltip: () => null }));
@@ -20,7 +22,10 @@ it('exports the actual loan CSV button with ledger-consistent FX principal, inte
   render(<LoansPanel />);
   fireEvent.click(screen.getByText(/Repayment history/));
   fireEvent.click(screen.getByRole('button', { name: 'Export CSV' }));
+  await vi.waitFor(() => expect(local.download).toHaveBeenCalled());
   const [blob, name] = local.download.mock.calls[0] ?? [];
+  expect(local.authorised).toMatchObject([{ kind: 'personal', fileName: 'loan-Test-loan-repayments.csv' }]);
+  expect(local.authorised[0]!.sha256).toBe(Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', new Uint8Array(await new Response(blob).arrayBuffer()))), (b) => b.toString(16).padStart(2, '0')).join(''));
   expect(name).toBe('loan-Test-loan-repayments.csv'); expect(blob.type).toBe('text/csv');
   const text = await new Promise<string>((resolve, reject) => { const r = new FileReader(); r.onload = () => resolve(String(r.result)); r.onerror = reject; r.readAsText(blob); });
   expect(text).toContain('"2026-10-05","83","74.7","8.3","425.3"');
