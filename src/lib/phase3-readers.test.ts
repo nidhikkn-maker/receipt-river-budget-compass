@@ -81,6 +81,14 @@ describe("reader inventory (decision 1): every ledger reader applies the same vi
     expect(src).toMatch(/ledgerView\(/);
     expect(src).toMatch(/reversalOfRow\(|txnFromRow/);
   });
+  // RB-LED-01: every reader maps the withdrawal (txnFromRow, or withdrawnAtOfRow on its own mapping) before ledgerView drops it.
+  it.each(READERS)("%s maps withdrawn entries so ledgerView leaves them out", (f) => {
+    const src = readFileSync(f, "utf8");
+    expect(src).toMatch(/withdrawnAtOfRow\(|txnFromRow/);
+  });
+  it("the transaction list tool leaves withdrawn entries out", () => {
+    expect(readFileSync("src/lib/mcp/tools/list-transactions.ts", "utf8")).toMatch(/filter\(\(r\) => !withdrawnAtOfRow\(r\)\)/);
+  });
   it("the transaction list tool shows reversals as negative, linked entries", () => {
     const src = readFileSync("src/lib/mcp/tools/list-transactions.ts", "utf8");
     expect(src).toMatch(/reversalOfRow\(r\)/);
@@ -90,8 +98,9 @@ describe("reader inventory (decision 1): every ledger reader applies the same vi
     const { execSync } = require("node:child_process") as typeof import("node:child_process");
     const files = execSync("grep -rl 'from(\"expenses\")' src/lib --include=*.ts --include=*.tsx", { encoding: "utf8" }).split("\n").filter((x) => x && !x.includes(".test."));
     // Readers that do not sum money: the Statement Desk Undo snapshot read, the import job, posting checks, and the Statement
-    // Inbox check of a pending line's existing entry and reference (statement-line-claims.ts, P0-027).
-    const NOT_SUMMING = ["src/lib/statement-pipeline/atomic-undo.functions.ts", "src/lib/import-jobs.server.ts", "src/lib/fx.functions.ts", "src/lib/mcp/tools/list-transactions.ts", "src/lib/statement-line-claims.ts"];
+    // Inbox check of a pending line's existing entry and reference (statement-line-claims.ts, P0-027), and the Withdraw / Restore
+    // server check of one entry (withdrawal.server.ts, RB-LED-01).
+    const NOT_SUMMING = ["src/lib/statement-pipeline/atomic-undo.functions.ts", "src/lib/import-jobs.server.ts", "src/lib/fx.functions.ts", "src/lib/mcp/tools/list-transactions.ts", "src/lib/statement-line-claims.ts", "src/lib/withdrawal.server.ts"];
     expect(files.filter((f) => !READERS.includes(f) && !NOT_SUMMING.includes(f))).toEqual([]);
   });
 });

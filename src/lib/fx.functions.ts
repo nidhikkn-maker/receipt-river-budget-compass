@@ -1,4 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
+import { isWithdrawn, withdrawalOfRow } from "./withdrawal";
+import type { Json } from "@/integrations/supabase/types";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { ReceiptDetailsSchema, receiptBreakdownError } from "./receipt-reading";
@@ -88,6 +90,16 @@ export const saveExpense = createServerFn({ method: "POST" })
         return { ok: false as const, error: "Principal and interest must add up to the payment" };
       }
     }
+    // RB-LED-01: a withdrawn entry is read-only until restored, and an edit never drops its withdrawal history.
+    let keptWithdrawal: Json | undefined = undefined;
+    if (data.id) {
+      const stored = await supabase.from("expenses").select("id,receipt_details").eq("id", data.id).eq("employee_id", userId).maybeSingle();
+      if (stored.error) return { ok: false as const, error: "Couldn't save the expense" };
+      const w = stored.data ? withdrawalOfRow(stored.data) : null;
+      if (isWithdrawn(w)) return { ok: false as const, error: "This entry is withdrawn. Restore it before editing." };
+      const rd = stored.data?.receipt_details;
+      if (w && rd && typeof rd === "object" && !Array.isArray(rd)) keptWithdrawal = rd["withdrawal"];
+    }
     let fx: { rate: number; date: string };
     try {
       fx = await fetchRate(data.currency, data.date);
@@ -110,7 +122,7 @@ export const saveExpense = createServerFn({ method: "POST" })
       workspace_allocations: data.workspaceAllocations,
       updated_at: new Date().toISOString(),
       ...(data.receipts ? { receipts: data.receipts } : {}),
-      ...(data.receiptDetails ? { receipt_details: data.receiptDetails } : {}),
+      ...(data.receiptDetails ? { receipt_details: keptWithdrawal === undefined ? data.receiptDetails : { ...data.receiptDetails, withdrawal: keptWithdrawal } } : {}),
     };
     const result = data.id
       ? await supabase.from("expenses").update(row).eq("id", data.id).eq("employee_id", userId).select("id").single()

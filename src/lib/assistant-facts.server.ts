@@ -2,6 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
 import type { Expense } from "./expenses";
 import { accountBalance, ledgerView, reversalOfRow, type Account } from "./ledger";
+import { withdrawnAtOfRow } from "./withdrawal";
 import { assistantFacts, type PositionInput } from "./position";
 import { freshnessSummary } from "./inbox";
 import type { FinancePreferences } from "./preferences";
@@ -21,7 +22,7 @@ export async function readAssistantFacts(sb: SupabaseClient<Database>, owner: st
       reimbursement: (x.reimbursement ?? {}) as NonNullable<Expense["reimbursement"]>, allocations: (x.allocations ?? []) as unknown as NonNullable<Expense["allocations"]>,
       principal: x.principal == null ? null : Number(x.principal), interest: x.interest == null ? null : Number(x.interest),
       transferCounterpartOf: x.transfer_counterpart_of ?? null, workspaceAllocations: (x.workspace_allocations ?? []) as unknown as NonNullable<Expense["workspaceAllocations"]>,
-      reversesEntryId: reversalOfRow(x),
+      reversesEntryId: reversalOfRow(x), withdrawnAt: withdrawnAtOfRow(x),
     });
     if (r.data.length < 500) break;
   }

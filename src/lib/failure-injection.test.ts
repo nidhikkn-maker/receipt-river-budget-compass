@@ -114,12 +114,28 @@ const ident = (s: string) => {
   if (!/^[a-z_][a-z0-9_]*$/.test(s)) throw new Error(`bad identifier ${s}`);
   return `"${s}"`;
 };
+/** A column or a PostgREST JSON path (receipt_details->reversal->>of) as SQL, every part validated. */
+const colExpr = (k: string) => {
+  const parts = k.split(/(->>?)/);
+  if (parts.length === 1) return ident(k);
+  let out = ident(parts[0]!);
+  for (let i = 1; i < parts.length; i += 2) {
+    if (!/^[a-z_][a-z0-9_]*$/.test(parts[i + 1]!)) throw new Error(`bad path ${k}`);
+    out += `${parts[i]}'${parts[i + 1]}'`;
+  }
+  return out;
+};
 const cols = (s: string) =>
   s.trim() === "*"
     ? "*"
     : s
         .split(",")
-        .map((c) => ident(c.trim()))
+        .map((c) => {
+          // PostgREST "alias:column->key" selects (the app's narrow readers) as well as plain columns
+          const m = /^(?:([a-z_][a-z0-9_]*):)?(.+)$/.exec(c.trim())!;
+          const expr = colExpr(m[2]!);
+          return m[1] ? `${expr} AS ${ident(m[1])}` : m[2]!.includes("->") ? `${expr} AS ${ident(m[2]!.split(/->>?/).at(-1)!)}` : expr;
+        })
         .join(", ");
 
 class Query implements PromiseLike<ApiResult> {
@@ -162,7 +178,7 @@ class Query implements PromiseLike<ApiResult> {
     return this;
   }
   eq(k: string, v: unknown) {
-    this.where.push({ sql: (i) => `${ident(k)} = $${i}`, value: v });
+    this.where.push({ sql: (i) => `${colExpr(k)} = $${i}`, value: v });
     return this;
   }
   neq(k: string, v: unknown) {
@@ -425,6 +441,13 @@ import { validateExpense, type ExpenseInput, type StatementLine } from "./expens
 import { discardUsedPendingDocument, PENDING_RECEIPT } from "./pending-documents";
 import { archiveTableRecord, restoreTableRecord } from "./records-archive";
 import { supabase } from "@/integrations/supabase/client";
+import { setEntryWithdrawal } from "./withdrawal.functions";
+import { removeEntry } from "./entry-removal";
+import { ReversalReasonRequired } from "./posting";
+import { accountBalance, cashflow, ledgerView, LEDGER_COLUMNS, netWorth, txnFromRow, type Account, type LedgerRow, type Txn } from "./ledger";
+import { loadOwnerReportData } from "./report-jobs.server";
+import { readAssistantFacts } from "./assistant-facts.server";
+import { atomicStatementUndo } from "./statement-pipeline/atomic-undo";
 
 // ---------------------------------------------------------------------------------------------------------------------------
 // App flows, wired exactly as the app wires them.
@@ -979,7 +1002,8 @@ for (const mode of MODES) {
         reset(db);
         const b = await freshAccount(db);
         hook({ op: "server:saveExpense", kind: "lose", nth: 2 });
-        hook({ op: "select:expenses", kind: "fail", nth: 1 });
+        // select:expenses #1 is registerStatementDrafts' read of references the entries already hold (RB-STM-01); #2 is L2's read-back.
+        hook({ op: "select:expenses", kind: "fail", nth: 2 });
         const r2 = await importStatement(b, "HDFC_Statement_05112026.csv", NOV);
         expect(r2.failed.map((f) => f.ref)).toEqual(["2"]);
         expect(await ledger(db, b)).toMatchObject({ n: 5, total: NOV_TOTAL });
@@ -1572,6 +1596,118 @@ describe("failure injection on the whole proposed stack (P1, P2, P4, P5, P5b, P6
     T,
   );
 
+  // RB-STM-01 (P0-027 residual, KK: "stable source identity including account/workspace scope and content evidence, not filename
+  // alone"). The statement_row source key P7 binds is expenses.statement_ref, so it must identify the line by owner (P7 scope) +
+  // statement account + content evidence, never by the uploaded file's name.
+  const addToBooks = (a: string) =>
+    sql1(
+      db,
+      "UPDATE public.finance_preferences SET data = jsonb_set(data, '{books,entityAccounts,c1}', (data#>'{books,entityAccounts,c1}') || to_jsonb($2::text)) WHERE owner_id = $1",
+      [O, a],
+    );
+  const postedEvents = (ids: string[]) =>
+    sql1<{ n: number }>(
+      db,
+      "SELECT count(*)::int n FROM public.posting_events WHERE owner_id = $1 AND event_key = ANY($2)",
+      [O, ids.map((x) => `ledger_entry:${x}`)],
+    ).then((r) => r[0]!.n);
+  const refsOf = (ids: string[]) =>
+    sql1<{ id: string; statement_ref: string | null }>(
+      db,
+      "SELECT id, statement_ref FROM public.expenses WHERE id = ANY($1) ORDER BY id",
+      [ids],
+    );
+  const AMAZON: StatementLine = { ref: "1", date: "2026-11-03", description: "POS AMAZON RETAIL", amount: 2999, direction: "debit" };
+
+  it(
+    "2c (P7). two accounts, statements uploaded under the SAME file name with an identical line → each account's line posted once; re-import adds nothing",
+    async () => {
+      // Injected: two different statement accounts (savings A, savings B, both in the active books) whose downloads share the file
+      // name "statement.csv" and contain the identical line 2026-11-03 POS AMAZON RETAIL 2,999.00 debit (no bank reference).
+      // Expected (hand-calculated): A 1 row 2,999.00, B 1 row 2,999.00; 2 posting events; 2 distinct statement_row sources; no
+      // reconcile error; then the same two files again → 0 new rows, still 2 events, references unchanged.
+      reset(db);
+      const a = await freshAccount(db);
+      const b = await freshAccount(db);
+      await addToBooks(a);
+      await addToBooks(b);
+      const ra = await importStatement(a, "statement.csv", [AMAZON]);
+      const rb = await importStatement(b, "statement.csv", [AMAZON]);
+      expect(net.log.filter((x) => x.includes("-error:"))).toEqual([]);
+      expect(ra.failed).toEqual([]);
+      expect(rb.failed).toEqual([]);
+      const la = await ledger(db, a);
+      const lb = await ledger(db, b);
+      expect(la).toMatchObject({ n: 1, total: 2999 });
+      expect(lb).toMatchObject({ n: 1, total: 2999 });
+      const ids = [...la.ids, ...lb.ids];
+      expect(await postedEvents(ids)).toBe(2);
+      const refs = await refsOf(ids);
+      expect(refs.every((r) => !!r.statement_ref)).toBe(true);
+      expect(new Set(refs.map((r) => r.statement_ref)).size).toBe(2);
+      const again = [await importStatement(a, "statement.csv", [AMAZON]), await importStatement(b, "statement.csv", [AMAZON])];
+      for (const r of again) {
+        expect(r.fresh).toBe(0);
+        expect(r.registered).toEqual([]);
+      }
+      expect(await ledger(db, a)).toMatchObject({ n: 1, total: 2999 });
+      expect(await ledger(db, b)).toMatchObject({ n: 1, total: 2999 });
+      expect(await postedEvents(ids)).toBe(2);
+      expect(await refsOf(ids)).toEqual(refs);
+    },
+    T,
+  );
+
+  it(
+    "2d (P7). the same line re-downloaded under a DIFFERENT file name for the same account (after Forget last upload) is the SAME source: no new row, reference unchanged",
+    async () => {
+      // Injected: register the line from "HDFC_Statement_05112026.csv", Forget last upload (the owner's DELETE of the line rows),
+      // then upload the bank's re-download "HDFC_Statement_07112026.csv" with the same line.
+      // Expected: 1 row 2,999.00 and 1 posting event throughout; the stored statement_ref (the source identity) is unchanged and
+      // contains neither file name; one active statement_row source for the entry.
+      reset(db);
+      const a = await freshAccount(db);
+      await addToBooks(a);
+      await importStatement(a, "HDFC_Statement_05112026.csv", [AMAZON]);
+      const l = await ledger(db, a);
+      expect(l).toMatchObject({ n: 1, total: 2999 });
+      const before = await refsOf(l.ids);
+      expect(before[0]!.statement_ref).not.toContain("HDFC_Statement");
+      const forget = await supabase.from("statement_line_imports").delete().eq("account_key", a).select("id");
+      expect(forget.error).toBeNull();
+      const r = await importStatement(a, "HDFC_Statement_07112026.csv", [AMAZON]);
+      expect(r.failed).toEqual([]);
+      expect(await ledger(db, a)).toMatchObject({ n: 1, total: 2999 });
+      expect(await postedEvents(l.ids)).toBe(1);
+      expect(await refsOf(l.ids)).toEqual(before);
+      expect(
+        (
+          await sql1<{ n: number }>(
+            db,
+            "SELECT count(*)::int n FROM public.posting_event_sources WHERE owner_id = $1 AND source_kind = 'statement_row' AND source_key = $2 AND released_at IS NULL",
+            [O, before[0]!.statement_ref],
+          )
+        )[0]!.n,
+      ).toBe(1);
+      // An entry reconciled BEFORE this change holds an older, file-name prefixed reference: it is recognised and kept as stored.
+      const old = `HDFC_Statement_05112026.csv · 2026-11-04 · POS DMART · debit 812.40`;
+      const b = await freshAccount(db);
+      await addToBooks(b);
+      const DMART: StatementLine = { ref: "1", date: "2026-11-04", description: "POS DMART", amount: 812.4, direction: "debit" };
+      await importStatement(b, "HDFC_Statement_05112026.csv", [DMART]);
+      const lb = await ledger(db, b);
+      await storeReconcile(lb.ids[0]!, old);
+      expect((await supabase.from("statement_line_imports").delete().eq("account_key", b).select("id")).error).toBeNull();
+      const rb = await importStatement(b, "HDFC_Statement_08112026.csv", [DMART]);
+      expect(rb.failed).toEqual([]);
+      expect(rb.added).toEqual([]); // the entry already existed: nothing added
+      expect(await ledger(db, b)).toMatchObject({ n: 1, total: 812.4 });
+      expect((await refsOf(lb.ids))[0]!.statement_ref).toBe(old);
+      expect(await postedEvents(lb.ids)).toBe(1);
+    },
+    T,
+  );
+
   it(
     "5 (P7). API DELETE of posted entries and of archive-controlled rows is refused on active books; another user matches nothing",
     async () => {
@@ -1631,3 +1767,220 @@ describe("failure injection on the whole proposed stack (P1, P2, P4, P5, P5b, P6
     T,
   );
 });
+
+// ---------------------------------------------------------------------------------------------------------------------------
+// RB-LED-01 / P0-005a (unposted path). KK (binding): "For unposted financial records, implement a recoverable Withdraw action
+// with reason, retained evidence and audit history. Posted and reconciled records require proper reversal/correction workflows.
+// Enforce the distinction server-side." Every case below calls the REAL server function (setEntryWithdrawal → withdrawal.server.ts,
+// which calls the P10 functions when installed) and the REAL app removal rule (entry-removal.ts removeEntry, what store.remove
+// runs), or sends PostgREST-shaped requests as the signed-in user, against isolated PGlite. The figures are recomputed by the REAL
+// readers (txnFromRow + ledgerView + accountBalance / cashflow / netWorth; report-jobs loadOwnerReportData; assistant
+// readAssistantFacts) and compared with hand-calculated values.
+const P10 = ".lovable/staged-sql/proposed/P10_unposted_entry_withdrawal.sql";
+const W_MODES = [
+  { name: "before P10 (server function decides)", extra: [P9], p10: false },
+  { name: "with P10 (database decides)", extra: [P9, P10], p10: true },
+] as const;
+const withdrawCall = (id: string, reason: string, action: "withdraw" | "restore" = "withdraw") =>
+  setEntryWithdrawal({ data: { id, action, reason } });
+const appRemove = (entryId: string, reason: string) =>
+  removeEntry({ id: entryId }, { reason }, { mode: async () => "withdraw", reverse: async () => { throw new Error("not posted"); }, withdraw: (id, r) => withdrawCall(id, r) });
+async function seedWithdrawFixture(db: Db) {
+  // Hand-calculated fixture: HDFC Savings opening 10,000.00; Lunch 450.00 (2 receipt files) and Groceries 1,234.50, both unposted,
+  // unreconciled. Balance 10,000.00 − 450.00 − 1,234.50 = 8,315.50; spent 1,684.50; net worth 8,315.50.
+  const acc = id(++accSeq);
+  await sql1(db, "INSERT INTO public.accounts(id, owner_id, name, kind, opening_balance) VALUES ($1, $2, 'HDFC Savings', 'savings', 10000)", [acc, O]);
+  const lunch = crypto.randomUUID(), groceries = crypto.randomUUID();
+  const files = [`${O}/${lunch}-bill.jpg`, `${O}/${lunch}-upi.png`];
+  for (const f of files)
+    await sql1(db, "INSERT INTO storage.objects(bucket_id, name, owner_id, metadata) VALUES ('receipts', $1, $2, '{\"size\": 2048}')", [f, O]);
+  const ins = "INSERT INTO public.expenses(id,employee_id,title,merchant,category,amount,original_amount,currency,expense_date,account_id,description,receipts,receipt_details) VALUES ($1,$2,$3,$4,$5,$6,$6,'INR',$7,$8,'',$9::jsonb,$10::jsonb)";
+  await sql1(db, ins, [lunch, O, "Lunch", "Saravana Bhavan", "Food and beverages", 450, "2026-11-09", acc, JSON.stringify(files.map((p, i) => ({ name: i ? "upi.png" : "bill.jpg", type: i ? "image/png" : "image/jpeg", path: p }))), JSON.stringify({ tax: 21.43 })]);
+  await sql1(db, ins, [groceries, O, "Groceries", "Big Bazaar", "Groceries", 1234.5, "2026-11-08", acc, "[]", "{}"]);
+  return { acc, lunch, groceries, files };
+}
+/** Every figure the app shows, recomputed by the real readers from the database as the signed-in owner. */
+async function figures(acc: string) {
+  const rows = await supabase.from("expenses").select(LEDGER_COLUMNS).eq("employee_id", net.uid);
+  if (rows.error) throw new Error(rows.error.message);
+  const view = ledgerView(((rows.data ?? []) as unknown as LedgerRow[]).map(txnFromRow));
+  const account: Account = { id: acc, name: "HDFC Savings", kind: "savings", openingBalance: 10000, archived: false };
+  const report = await loadOwnerReportData(api() as never, net.uid, "2026-11-10");
+  const reportAcc = report.accounts.find((a: { id: string }) => a.id === acc)!;
+  const facts = await readAssistantFacts(api() as never, net.uid, defaultPreferences());
+  const factAcc = (facts.actual.accounts as { name: string; balance: number }[]).find((a) => a.name === "HDFC Savings");
+  return {
+    balance: accountBalance(account, view),
+    spent: cashflow(view, "2026-11-01", "2026-11-30").spent,
+    netWorth: netWorth([account], view).net,
+    report: accountBalance(reportAcc as Account, report.transactions as unknown as Txn[]),
+    assistant: factAcc?.balance ?? null,
+    count: view.length,
+  };
+}
+const rowOf = async (db: Db, entry: string) =>
+  (await sql1<Row>(db, "SELECT to_jsonb(e) - 'correction_revision' - 'updated_at' - 'receipt_details' AS j, receipt_details AS rd FROM public.expenses e WHERE id = $1", [entry]))[0] as { j: Row; rd: Row } | undefined;
+const objects = async (db: Db, paths: string[]) =>
+  (await sql1<{ n: number }>(db, "SELECT count(*)::int n FROM storage.objects WHERE bucket_id = 'receipts' AND name = ANY($1)", [paths]))[0]!.n;
+
+for (const mode of W_MODES) {
+  describe(`RB-LED-01 withdraw instead of delete (unposted entries) — ${mode.name}`, () => {
+    let db: Db;
+    beforeAll(async () => {
+      db = await fullSchemaDb([...mode.extra]);
+      await seedUsers(db);
+    }, T);
+
+    it(
+      "W1. Withdraw (app removal path): row and receipt files kept, no DELETE sent, excluded from every reader; Restore counts it again",
+      async () => {
+        // Expected (hand-calculated): before 8,315.50 / spent 1,684.50 / net worth 8,315.50 in every reader; after withdrawing Lunch
+        // (450.00) 8,765.50 / 1,234.50 / 8,765.50; the row is unchanged except receipt_details.withdrawal (who, when, reason) and the
+        // revision; both 2,048-byte files remain; no "delete:expenses" or "remove:receipts" request. After Restore 8,315.50 again.
+        reset(db);
+        const f = await seedWithdrawFixture(db);
+        const before = { balance: 8315.5, spent: 1684.5, netWorth: 8315.5, report: 8315.5, assistant: 8315.5, count: 2 };
+        expect(await figures(f.acc)).toEqual(before);
+        const row0 = await rowOf(db, f.lunch);
+        expect(await appRemove(f.lunch, "Entered twice by mistake")).toBe("withdrawn");
+        expect(net.log.filter((x) => /delete:expenses|remove:receipts/.test(x))).toEqual([]);
+        const row1 = await rowOf(db, f.lunch);
+        expect(row1?.j).toEqual(row0?.j); // byte-identical apart from the withdrawal itself
+        expect(row1?.rd["tax"]).toBe(21.43); // other receipt details kept
+        const w = row1?.rd["withdrawal"] as { state: string; by: string; reason: string; at: string; history: unknown[] };
+        expect(w).toMatchObject({ state: "withdrawn", by: O, reason: "Entered twice by mistake" });
+        expect(w.at).toMatch(/^2\d{3}-/);
+        expect(w.history).toHaveLength(1);
+        expect(await objects(db, f.files)).toBe(2);
+        expect(await figures(f.acc)).toEqual({ balance: 8765.5, spent: 1234.5, netWorth: 8765.5, report: 8765.5, assistant: 8765.5, count: 1 });
+        // A withdrawn entry cannot be edited (server) until restored.
+        const edit = await saveExpense({ data: { id: f.lunch, title: "Lunch", merchant: null, category: "Food and beverages", scope: "personal", memberId: null, splits: [], currency: "INR", originalAmount: 999, date: "2026-11-09", description: "", paymentMethod: "upi", txnType: "expense", accountId: f.acc, toAccountId: null, tags: [], receiptDetails: {} } });
+        expect(edit).toEqual({ ok: false, error: "This entry is withdrawn. Restore it before editing." });
+        expect(await withdrawCall(f.lunch, "Withdrawn by mistake", "restore")).toEqual({ ok: true, replayed: false });
+        expect(await figures(f.acc)).toEqual(before);
+        const h = (await rowOf(db, f.lunch))?.rd["withdrawal"] as { state: string; history: { action: string }[] };
+        expect(h.state).toBe("restored");
+        expect(h.history.map((x) => x.action)).toEqual(["withdrawn", "restored"]);
+        // An edit after restore keeps the withdrawal history (receipt_details is replaced by the form's copy).
+        const edit2 = await saveExpense({ data: { id: f.lunch, title: "Lunch", merchant: null, category: "Food and beverages", scope: "personal", memberId: null, splits: [], currency: "INR", originalAmount: 450, date: "2026-11-09", description: "", paymentMethod: "upi", txnType: "expense", accountId: f.acc, toAccountId: null, tags: [], receiptDetails: { tax: 21.43 } } });
+        expect(edit2).toEqual({ ok: true });
+        expect(((await rowOf(db, f.lunch))?.rd["withdrawal"] as { history: unknown[] }).history).toHaveLength(2);
+        expect(await objects(db, f.files)).toBe(2);
+      },
+      T,
+    );
+
+    it(
+      "W2. server distinction: reconciled → refused (correction); repeat → idempotent; other user → refused; short reason → refused",
+      async () => {
+        reset(db);
+        const f = await seedWithdrawFixture(db);
+        await sql1(db, "UPDATE public.expenses SET statement_ref = 'Statement line · 2026-11-08 · debit 1234.50 · BIG BAZAAR · account x', reconciled_at = now() WHERE id = $1", [f.groceries]);
+        const reconciled = await withdrawCall(f.groceries, "Not mine, wrong account");
+        expect(reconciled).toMatchObject({ ok: false, error: expect.stringMatching(/^P10_RECONCILED: .*correction workflow/) });
+        await expect(appRemove(f.groceries, "Not mine, wrong account")).rejects.toThrow(/matched to a bank statement line/);
+        expect((await rowOf(db, f.groceries))?.rd["withdrawal"]).toBeUndefined();
+        expect(await withdrawCall(f.lunch, "Entered twice")).toEqual({ ok: true, replayed: false });
+        expect(await withdrawCall(f.lunch, "Entered twice")).toEqual({ ok: true, replayed: true }); // lost response + retry
+        expect(await withdrawCall(f.lunch, "Another reason")).toEqual({ ok: true, replayed: true }); // already withdrawn
+        expect(((await rowOf(db, f.lunch))?.rd["withdrawal"] as { history: unknown[] }).history).toHaveLength(1);
+        expect(await withdrawCall(f.lunch, "abc")).toMatchObject({ ok: false, error: expect.stringMatching(/^P10_REASON/) });
+        net.uid = V;
+        expect(await withdrawCall(f.groceries, "Somebody else's entry")).toMatchObject({ ok: false, error: expect.stringMatching(/^P10_NOT_FOUND/) });
+        expect(await withdrawCall(f.lunch, "Somebody else's entry", "restore")).toMatchObject({ ok: false, error: expect.stringMatching(/^P10_NOT_FOUND/) });
+        net.uid = O;
+        expect(((await rowOf(db, f.lunch))?.rd["withdrawal"] as { state: string }).state).toBe("withdrawn");
+        expect(await withdrawCall(f.groceries, "Never withdrawn", "restore")).toMatchObject({ ok: false, error: expect.stringMatching(/^P10_NOT_WITHDRAWN/) });
+      },
+      T,
+    );
+
+    it(
+      "W3. API bypass: DELETE /expenses, forged/dropped withdrawal via PATCH, Statement Desk Undo of a withdrawn entry",
+      async () => {
+        // Expected with P10: DELETE refused (P10_WITHDRAW_ONLY), forged withdrawal refused, a dropped one kept, a frozen field edit
+        // refused; before P10 the database accepts these (recorded in rolled-back probes): the protection is the server function.
+        reset(db);
+        const f = await seedWithdrawFixture(db);
+        await withdrawCall(f.lunch, "Entered twice by mistake");
+        if (mode.p10) {
+          expect((await supabase.from("expenses").delete().eq("id", f.lunch).select("id")).error?.message).toMatch(/P10_WITHDRAW_ONLY/);
+          expect((await supabase.from("expenses").delete().eq("id", f.groceries).select("id")).error?.message).toMatch(/P10_WITHDRAW_ONLY/);
+          const forged = await api().from("expenses").update({ receipt_details: { withdrawal: { state: "restored", at: "2026-01-01", by: O, reason: "forged!", history: [] } } }).eq("id", f.lunch).select("id");
+          expect(forged.error?.message).toMatch(/P10_WITHDRAWAL_ONLY_BY_FUNCTION/);
+          const dropped = await api().from("expenses").update({ receipt_details: {} }).eq("id", f.lunch).select("id");
+          expect(dropped.error).toBeNull();
+          expect(((await rowOf(db, f.lunch))?.rd["withdrawal"] as { state: string }).state).toBe("withdrawn");
+          expect((await api().from("expenses").update({ amount: 1 }).eq("id", f.lunch).select("id")).error?.message).toMatch(/P10_WITHDRAWN/);
+          expect((await api().from("expenses").update({ receipt_details: { withdrawal: { state: "withdrawn" } } }).eq("id", f.groceries).select("id")).error?.message).toMatch(/P10_WITHDRAWAL_ONLY_BY_FUNCTION/);
+          expect(await probe(db, O, "TRUNCATE public.expenses CASCADE")).toMatch(/P10_WITHDRAW_ONLY|P9_/);
+          // INSERT: a forged withdrawal is refused; a complete valid history (backup restore keeps history) is accepted.
+          const base = { employee_id: O, title: "x", category: "Groceries", amount: 10, original_amount: 10, currency: "INR", expense_date: "2026-11-01", description: "" };
+          expect((await api().from("expenses").insert({ ...base, id: crypto.randomUUID(), receipt_details: { withdrawal: { state: "withdrawn" } } }).select("id")).error?.message).toMatch(/P10_WITHDRAWAL_ONLY_BY_FUNCTION/);
+          const ev = { action: "withdrawn", at: "2026-11-01T10:00:00.000Z", by: O, reason: "Entered twice" };
+          expect((await api().from("expenses").insert({ ...base, id: crypto.randomUUID(), receipt_details: { withdrawal: { state: "withdrawn", at: ev.at, by: O, reason: ev.reason, history: [ev] } } }).select("id")).error).toBeNull();
+        } else {
+          expect(await probe(db, O, "DELETE FROM public.expenses WHERE id = $1", [f.lunch])).toBe("ok:1"); // gap closed by P10
+          expect(await probe(db, O, "UPDATE public.expenses SET receipt_details = '{}' WHERE id = $1", [f.lunch])).toBe("ok:1");
+        }
+        expect(await present(db, "expenses", f.lunch)).toBe(1);
+        expect(await present(db, "expenses", f.groceries)).toBe(1);
+        // Statement Desk Undo of an upload whose entry was later withdrawn: refused, nothing committed.
+        const rows = (await supabase.from("expenses").select("*").in("id", [f.lunch])).data as Row[];
+        let committed = false;
+        await expect(atomicStatementUndo("00000000-0000-4000-8000-00000000aa01", { posted: [f.lunch], reconciled: [] }, [{ id: f.lunch, ref: null, revision: 0 }], {
+          receipt: async () => false, rows: async () => rows, commit: async () => { committed = true; },
+        })).rejects.toThrow(/was withdrawn\. It is kept in history/);
+        expect(committed).toBe(false);
+      },
+      T,
+    );
+  });
+}
+
+/** Books activated exactly as the P7 describe above does: entities → registers → postings, each with a step-up. */
+async function activateBooks(db: Db, acc: string) {
+  await sql1(db, "UPDATE public.finance_preferences SET data = $2::jsonb WHERE owner_id = $1", [O, JSON.stringify({ entities: [{ id: "c1", name: "Alpha Pvt Ltd", kind: "company" }], books: { entityAccounts: { c1: [acc] } } })]);
+  const stepUp = () => exclusive(async () => { await actAs(db, null); await db.exec("SET ROLE service_role"); await db.query("SELECT public.record_step_up($1,'password',300)", [O]); await actAs(db, null); });
+  const asO = <R>(q: string, p: unknown[] = []) => exclusive(async () => { await actAs(db, O); try { return (await db.query<R>(q, p)).rows[0]!; } finally { await actAs(db, null); } });
+  const ep = (await asO<{ p: { source_sha256: string } }>("SELECT public.preview_entity_backfill(false) p")).p;
+  await stepUp();
+  await asO("SELECT public.commit_entity_backfill($1,false)", [ep.source_sha256]);
+  const ap = (await asO<{ p: { source_sha256: string } }>("SELECT public.preview_register_backfill('assets','{}') p")).p;
+  await stepUp();
+  await asO("SELECT public.commit_register_backfill('assets',$1,'{}')", [ap.source_sha256]);
+  const pp = (await asO<{ p: { fingerprint: string } }>("SELECT public.preview_posting_backfill() p")).p;
+  await stepUp();
+  await asO("SELECT public.commit_posting_backfill($1,$2)", [crypto.randomUUID(), pp.fingerprint]);
+}
+for (const withP10 of [false, true]) {
+  describe(`RB-LED-01 posted entries are reversed, never withdrawn — P1..P9${withP10 ? " + P10" : " (server function decides)"}`, () => {
+    let db: Db;
+    let acc: string;
+    beforeAll(async () => {
+      db = await fullSchemaDb([...STACK, P9, ...(withP10 ? [P10] : [])]);
+      await seedUsers(db);
+      acc = await freshAccount(db);
+      await activateBooks(db, acc);
+    }, T);
+    it(
+      "W4. a posted entry: Withdraw refused (P10_POSTED → Reverse entry) by the server and the app rule; posting and row unchanged",
+      async () => {
+        // Expected: the entry (450.00 on the books account) has 1 posting event; withdraw → refused; removeEntry asks for a
+        // reversal reason (ReversalReasonRequired); still 1 event, no withdrawal stored. With P10 a raw DELETE is refused too.
+        reset(db);
+        const entry = crypto.randomUUID();
+        await storeSave({ title: "Lunch", merchant: "Saravana Bhavan", category: "Food and beverages", scope: "personal", memberId: null, amount: 450, currency: "INR", paymentMethod: "upi", date: "2026-11-09", description: "", txnType: "expense", accountId: acc, toAccountId: null, tags: [] }, { createId: entry });
+        const events = async () => (await sql1<{ n: number }>(db, "SELECT count(*)::int n FROM public.posting_events WHERE owner_id = $1 AND event_key = $2", [O, `ledger_entry:${entry}`]))[0]!.n;
+        expect(await events()).toBe(1);
+        expect(await withdrawCall(entry, "Entered twice by mistake")).toMatchObject({ ok: false, error: expect.stringMatching(/^P10_POSTED: .*Reverse/) });
+        await expect(appRemove(entry, "Entered twice by mistake")).rejects.toBeInstanceOf(ReversalReasonRequired);
+        expect(await events()).toBe(1);
+        expect((await rowOf(db, entry))?.rd?.["withdrawal"]).toBeUndefined();
+        if (withP10) expect((await supabase.from("expenses").delete().eq("id", entry).select("id")).error?.message).toMatch(/P10_WITHDRAW_ONLY|P7_POSTED_ENTRY/);
+        expect(await present(db, "expenses", entry)).toBe(1);
+      },
+      T,
+    );
+  });
+}

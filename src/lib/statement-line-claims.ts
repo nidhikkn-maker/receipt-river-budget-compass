@@ -8,7 +8,7 @@
 //   registered. Without P9 the caller falls back to the fully read "known" set; a failed read never falls back.
 import { supabase } from "@/integrations/supabase/client";
 import { draftToInput, type StatementDraft } from "./statement-auto";
-import { filePattern } from "./statement-fingerprint";
+import { filePattern, statementLineSourceRef } from "./statement-fingerprint";
 import type { ExpenseInput } from "./expenses";
 import { isMissingFunction } from "./step-up";
 import { rpcUntyped } from "./step-up-check";
@@ -80,16 +80,25 @@ export interface RegisterResult {
 }
 
 /**
- * P0-027: the statement reference stored on the entry (expenses.statement_ref, also P7's statement_row source key) is unique per
- * statement line: file · date · description, then the same discriminators the fingerprint uses (direction, amount and, for identical
- * same-day lines, their #n order). Identical lines (two real 2,999.00 purchases at one shop on one day) therefore no longer share a
- * reference and are both posted. The readable "file · date · description" prefix is kept, so screens that show it, and refs stored
- * before this change, read as before. A line keeps the reference it was first reconciled with (see registerStatementDrafts).
+ * P0-027 / RB-STM-01: the statement reference stored on the entry (expenses.statement_ref, also P7's statement_row source key) is
+ * the line's stable source identity: statement account + content evidence (date, direction, amount, bank reference or normalised
+ * narration, #n for identical same-day lines), never the file name (statementLineSourceRef). Identical lines in two accounts'
+ * statements are two sources; a re-download of the same line under a new file name is the same source. A line keeps the reference
+ * its entry already holds, so older stored references (file-name prefixed) are never rewritten (see registerStatementDrafts).
  */
-export function statementLineRef(fileName: string, line: { date: string; description: string; amount: number; direction?: "debit" | "credit" | undefined }, fingerprint: string): string {
-  const order = Number(/#(\d+)$/.exec(fingerprint)?.[1] ?? 0);
-  const suffix = ` · ${line.direction ?? "debit"} ${line.amount.toFixed(2)}${order > 0 ? ` · #${order + 1}` : ""}`;
-  return `${fileName} · ${line.date} · ${line.description}`.slice(0, 300 - suffix.length) + suffix;
+export function statementLineRef(fingerprint: string): string {
+  return statementLineSourceRef(fingerprint);
+}
+
+/** The reference each entry already holds (null = the entry exists without one; absent = no entry yet). Throws on a failed read. */
+async function existingRefs(ids: string[]): Promise<Map<string, string | null>> {
+  const out = new Map<string, string | null>();
+  for (let i = 0; i < ids.length; i += 200) {
+    const r = await supabase.from("expenses").select("id,statement_ref").in("id", ids.slice(i, i + 200));
+    if (r.error) throw Error("Couldn't check the earlier attempt — nothing more was registered. Try again.");
+    for (const row of r.data ?? []) out.set(row.id, row.statement_ref ?? null);
+  }
+  return out;
 }
 
 /** Registers each draft once: claim first, save with the claimed entry id, then confirm the saved ids. */
@@ -102,21 +111,18 @@ export async function registerStatementDrafts(p: { owner: string; accountKey: st
   const { claims, enforced } = await claimStatementLines({ accountKey: p.accountKey, batchId: crypto.randomUUID(), fileLabel: filePattern(p.fileName), known: p.known, lines });
   const out: RegisterResult = { registered: [], added: [], alreadyImported: [], failed: [] };
   const saved: string[] = [];
+  // Entries that already exist for these lines (a pending retry, a re-import after "Forget last upload", a pre-P9 repeat) keep the
+  // statement reference they hold, so a line's source key never moves and older stored references stay recognised.
+  const toSave = lines.filter((l) => { const c = claims.get(l.fingerprint); return !!c && c.outcome !== "registered" && !!c.entryId; });
+  const before = await existingRefs(toSave.map((l) => claims.get(l.fingerprint)!.entryId));
   for (const l of lines) {
     const claim = claims.get(l.fingerprint);
     if (!claim || claim.outcome === "registered" || !claim.entryId) { out.alreadyImported.push(l.draft.line.ref); continue; }
     try {
-      // A pending line (claimed earlier, never confirmed) may already have its entry, and even its reference, from that attempt.
-      // Its existing reference is kept, so a retry from a re-downloaded file never moves the line's source key.
-      let existingRef: string | null = null; let existed = false;
-      if (enforced && claim.outcome === "pending") {
-        const r = await supabase.from("expenses").select("id,statement_ref").eq("id", claim.entryId).limit(1);
-        if (r.error) throw Error("Couldn't check the earlier attempt");
-        const row = r.data?.[0];
-        existed = !!row; existingRef = row?.statement_ref ?? null;
-      }
+      const existed = before.has(claim.entryId);
+      const existingRef = before.get(claim.entryId) ?? null;
       await deps.save(draftToInput(l.draft), claim.entryId);
-      if (!existingRef) await deps.reconcile(claim.entryId, statementLineRef(p.fileName, l.draft.line, l.fingerprint));
+      if (!existingRef) await deps.reconcile(claim.entryId, statementLineRef(l.fingerprint));
       out.registered.push(l.draft.line.ref); saved.push(claim.entryId);
       if (!existed) out.added.push(l.draft.line.ref);
     } catch { out.failed.push({ ref: l.draft.line.ref, title: l.draft.title }); }

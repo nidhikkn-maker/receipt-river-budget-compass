@@ -1,6 +1,7 @@
 import { defineTool, ToolError } from "@lovable.dev/mcp-js";
 import { z } from "zod";
 import { reversalOfRow } from "@/lib/ledger";
+import { withdrawnAtOfRow } from "@/lib/withdrawal";
 import { supabaseForUser } from "../supabase";
 
 const date = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Use YYYY-MM-DD");
@@ -21,7 +22,7 @@ export default defineTool({
   handler: async ({ from, to, type, category, merchant, limit }, ctx) => {
     if (!ctx.isAuthenticated()) throw new ToolError("Not signed in");
     let q = supabaseForUser(ctx).from("expenses")
-      .select("id, expense_date, title, merchant, category, txn_type, amount, currency, original_amount, fx_rate, payment_method, scope, tags, reversal:receipt_details->reversal")
+      .select("id, expense_date, title, merchant, category, txn_type, amount, currency, original_amount, fx_rate, payment_method, scope, tags, reversal:receipt_details->reversal, withdrawal:receipt_details->withdrawal")
       .eq("employee_id", ctx.getUserId() ?? "").order("expense_date", { ascending: false }).limit(limit ?? 50);
     if (from) q = q.gte("expense_date", from);
     if (to) q = q.lte("expense_date", to);
@@ -31,7 +32,8 @@ export default defineTool({
     const { data, error } = await q;
     if (error) throw new ToolError(error.message);
     // Decision 1: a reversal entry is listed as the negative of the entry it reverses (both stay listed).
-    const rows = (data ?? []).map((r) => { const of = reversalOfRow(r); const sign = of ? -1 : 1; return { id: r.id, date: r.expense_date, title: r.title, merchant: r.merchant, category: r.category, type: r.txn_type, amountInr: sign * Number(r.amount), currency: r.currency, originalAmount: r.original_amount == null ? null : sign * Number(r.original_amount), fxRate: r.fx_rate, paymentMethod: r.payment_method, scope: r.scope, tags: r.tags ?? [], reversalOf: of }; });
+    // RB-LED-01: withdrawn entries are kept in the app's history but are not part of the ledger, so they are not listed.
+    const rows = (data ?? []).filter((r) => !withdrawnAtOfRow(r)).map((r) => { const of = reversalOfRow(r); const sign = of ? -1 : 1; return { id: r.id, date: r.expense_date, title: r.title, merchant: r.merchant, category: r.category, type: r.txn_type, amountInr: sign * Number(r.amount), currency: r.currency, originalAmount: r.original_amount == null ? null : sign * Number(r.original_amount), fxRate: r.fx_rate, paymentMethod: r.payment_method, scope: r.scope, tags: r.tags ?? [], reversalOf: of }; });
     const text = rows.length ? rows.map((r) => `${r.date} · ${r.type}${r.reversalOf ? ` (reversal of ${r.reversalOf})` : ""} · ${r.merchant ?? r.title} · ${r.category} · ₹${r.amountInr}`).join("\n") : "No matching entries.";
     return { content: [{ type: "text", text }], structuredContent: { transactions: rows } };
   },

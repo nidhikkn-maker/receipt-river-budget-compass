@@ -1,5 +1,5 @@
 // @vitest-environment node
-// P0-027 regression: identical same-day statement lines (two real purchases) got the same statement_ref, which P7 uses as the
+// P0-027 / RB-STM-01 regression: identical same-day statement lines (two real purchases) got the same statement_ref, which P7 uses as the
 // statement_row source key, so the second line's reconcile was refused (P7_DUPLICATE_SOURCE) on every attempt and its P9 claim
 // stayed pending. statementLineRef makes the reference unique per line (same discriminators as the fingerprint) while keeping the
 // readable "file · date · description" prefix. The end-to-end app path (save, reconcile, post, re-import) is covered by
@@ -7,7 +7,7 @@
 import { describe, expect, it } from "vitest";
 import { actAs, addUsers, fullSchemaDb } from "@/test/full-schema-pglite";
 import { statementLineRef } from "./statement-line-claims";
-import { fingerprintLines } from "./statement-fingerprint";
+import { fingerprintLines, isLineSourceRef, statementRefOrigin } from "./statement-fingerprint";
 import type { StatementLine } from "./expenses";
 
 const ACC = "00000000-0000-4000-8000-000000000101";
@@ -51,24 +51,41 @@ const LINES: StatementLine[] = [
 ];
 const refs = (lines: StatementLine[]) => {
   const fps = fingerprintLines(lines, ACC);
-  return lines.map((l, i) => statementLineRef(FILE, l, fps[i]!));
+  return lines.map((_, i) => statementLineRef(fps[i]!));
 };
 
 describe("P0-027 statementLineRef", () => {
   it("is unique per statement line, stable for the same line, readable, and at most 300 characters", () => {
     const r = refs(LINES);
     expect(new Set(r).size).toBe(LINES.length);
-    expect(r[0]).toBe(`${FILE} · 2026-11-03 · POS AMAZON RETAIL · debit 2999.00`);
-    expect(r[1]).toBe(`${FILE} · 2026-11-03 · POS AMAZON RETAIL · debit 2999.00 · #2`);
+    expect(r[0]).toBe(`Statement line · 2026-11-03 · debit 2999.00 · POS AMAZON RETAIL · account ${ACC}`);
+    expect(r[1]).toBe(`Statement line · 2026-11-03 · debit 2999.00 · POS AMAZON RETAIL · #2 · account ${ACC}`);
+    expect(r[4]).toBe(`Statement line · 2026-11-05 · debit 649.00 · ref 412345678905 · account ${ACC}`);
     expect(refs(LINES)).toEqual(r); // the same file again gives the same references
-    for (const x of r) expect(x.split(" ·")[0]).toBe(FILE); // inbox.ts "Imported from <file>" still reads the file name
-    const long = statementLineRef(
-      FILE,
-      { date: "2026-11-03", description: "X".repeat(400), amount: 1, direction: "debit" },
-      `${ACC}|x#3`,
-    );
-    expect(long.length).toBe(300);
-    expect(long.endsWith(" · debit 1.00 · #4")).toBe(true);
+    for (const x of r) expect(isLineSourceRef(x)).toBe(true);
+    expect(statementRefOrigin(r[0]!)).toBe("the statement line of 2026-11-03"); // inbox.ts wording
+    const longFp = (d: string) => fingerprintLines([{ ref: "x", date: "2026-11-03", description: d, amount: 1, direction: "debit" }], ACC)[0]!;
+    const a = statementLineRef(longFp("X".repeat(400)));
+    const b = statementLineRef(longFp(`${"X".repeat(399)}Y`));
+    expect(a.length).toBeLessThanOrEqual(300);
+    expect(b.length).toBeLessThanOrEqual(300);
+    expect(a).not.toBe(b); // shortened narrations stay distinct
+    expect(a.endsWith(` · account ${ACC}`)).toBe(true);
+  });
+
+  it("RB-STM-01: identity = account + content evidence, never the file name", () => {
+    const OTHER = "00000000-0000-4000-8000-000000000102";
+    const line = [LINES[0]!];
+    // two accounts, same file name, identical line → two different sources
+    expect(statementLineRef(fingerprintLines(line, ACC)[0]!)).not.toBe(statementLineRef(fingerprintLines(line, OTHER)[0]!));
+    // the same line re-downloaded (any file name: it is not an input) with different narration punctuation → the same source
+    const redownload = [{ ...LINES[0]!, ref: "z", description: "pos  amazon-retail" }];
+    expect(statementLineRef(fingerprintLines(redownload, ACC)[0]!)).toBe(statementLineRef(fingerprintLines(line, ACC)[0]!));
+    for (const x of refs(LINES)) expect(x).not.toContain(FILE);
+    // older stored references are still read as before
+    expect(isLineSourceRef(`${FILE} · 2026-11-03 · POS AMAZON RETAIL`)).toBe(false);
+    expect(statementRefOrigin(`${FILE} · 2026-11-03 · POS AMAZON RETAIL · debit 2999.00 · #2`)).toBe(FILE);
+    expect(() => statementLineRef("not-a-fingerprint")).toThrow();
   });
 
   it("on active P7 books both identical lines post once each; a true duplicate source is still refused", async () => {

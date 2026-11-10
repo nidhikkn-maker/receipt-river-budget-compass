@@ -1,4 +1,5 @@
 import { decimal, moneyNumber, roundMoney, addMoney, subtractMoney, proportionMoney } from "./money";
+import { withdrawnAtOfRow } from "./withdrawal";
 // Accounts + ledger rules (pure, tested). Balances are derived from transactions, never stored.
 
 export const ACCOUNT_KINDS = ["savings", "current", "cash", "credit_card", "wallet", "investment", "fixed_deposit", "loan", "other_asset", "other_liability"] as const;
@@ -57,6 +58,8 @@ export interface Txn {
   originalAmount?: number;
   /** Decision 1 (P7 r2): this row is the audited reversal of that original entry (see ledgerView). */
   reversesEntryId?: string | null;
+  /** RB-LED-01: set when the entry is withdrawn (withdrawal.ts); ledgerView leaves it out of every figure. */
+  withdrawnAt?: string | null;
   /** Set by ledgerView on an original that has a reversal row. */
   reversedBy?: string | null;
 }
@@ -91,15 +94,17 @@ export function repaymentParts(t: Txn) {
  * the posted journal. Pure and idempotent (an already negated row is left as it is).
  */
 export interface Reversible {
-  id: string; amount: number; reversesEntryId?: string | null; reversedBy?: string | null; originalAmount?: number;
+  id: string; amount: number; reversesEntryId?: string | null; reversedBy?: string | null; originalAmount?: number; withdrawnAt?: string | null;
   principal?: number | null; interest?: number | null;
   allocations?: { amount: number }[]; splits?: { amount: number }[]; workspaceAllocations?: { amount: number }[];
 }
 const neg = <L extends { amount: number }>(lines: L[] | undefined) => lines?.map((l) => ({ ...l, amount: -l.amount }));
+// RB-LED-01: a withdrawn entry (withdrawal.ts; never posted, kept with its receipts and history) is left out of the view, so no
+// balance, cash flow, net worth, budget, report, assistant, MCP or push figure counts it; Restore brings it back.
 export function ledgerView<T extends Reversible>(list: readonly T[]): T[] {
   const reversedBy = new Map<string, string>();
   for (const t of list) if (t.reversesEntryId) reversedBy.set(t.reversesEntryId, t.id);
-  return list.map((t) => {
+  return list.filter((t) => !t.withdrawnAt).map((t) => {
     if (t.reversesEntryId) {
       if (t.amount < 0) return t;
       return {
@@ -132,7 +137,7 @@ export function reversalOfRow(row: object): string | null {
   return d && typeof d === "object" && !Array.isArray(d) ? of((d as { reversal?: unknown }).reversal) : null;
 }
 /** The columns every balance reader needs (narrow selects); the reversal link travels as its readable copy. */
-export const LEDGER_COLUMNS = "id, expense_date, txn_type, amount, original_amount, account_id, to_account_id, adjustment_sign, transfer_counterpart_of, principal, interest, reversal:receipt_details->reversal";
+export const LEDGER_COLUMNS = "id, expense_date, txn_type, amount, original_amount, account_id, to_account_id, adjustment_sign, transfer_counterpart_of, principal, interest, reversal:receipt_details->reversal, withdrawal:receipt_details->withdrawal";
 export interface LedgerRow {
   id: string; expense_date: string; txn_type: string | null; amount: number | string; original_amount?: number | string | null;
   account_id?: string | null; to_account_id?: string | null; adjustment_sign?: number | null; transfer_counterpart_of?: string | null;
@@ -145,7 +150,7 @@ export function txnFromRow(r: LedgerRow): Txn {
   return {
     id: r.id, date: r.expense_date, txnType: (r.txn_type ?? "expense") as TxnType, amount: Number(r.amount), accountId: r.account_id ?? null, toAccountId: r.to_account_id ?? null,
     adjustmentSign: r.adjustment_sign === -1 ? -1 : 1, transferCounterpartOf: r.transfer_counterpart_of ?? null, principal: num(r.principal), interest: num(r.interest),
-    ...(original == null ? {} : { originalAmount: original }), reversesEntryId: reversalOfRow(r),
+    ...(original == null ? {} : { originalAmount: original }), reversesEntryId: reversalOfRow(r), withdrawnAt: withdrawnAtOfRow(r),
   };
 }
 

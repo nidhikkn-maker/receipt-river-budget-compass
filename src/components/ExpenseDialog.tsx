@@ -1,4 +1,5 @@
 import { LoadError } from "./LoadError";
+import { withdrawReasonProblem } from "@/lib/withdrawal";
 import { receiptRoundOffFor } from "@/lib/receipt-reading";
 import { useEffect, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
@@ -45,7 +46,7 @@ export function ExpenseDialog({ expense, onClose }: { expense: Expense | null; o
 
 /** Expense detail body, shared by the modal dialog and the iPad-landscape side pane. */
 export function ExpenseDetail({ expense, onClose }: { expense: Expense; onClose: () => void }) {
-  const { memberName, setScope, remove, accounts, setReimbursement, recordReimbursement, convertToEmi, history, userId } = useStore();
+  const { memberName, setScope, remove, restoreWithdrawn, accounts, setReimbursement, recordReimbursement, convertToEmi, history, userId } = useStore();
   // Balanced posting (P7): where it is active a posted entry is reversed with a reason, never deleted.
   const posting = usePostingStatus(userId);
   const reverse = !!posting && removalMode(posting) === "reverse";
@@ -56,7 +57,7 @@ export function ExpenseDetail({ expense, onClose }: { expense: Expense; onClose:
   const [audit, setAudit] = useState<AuditEntry[]>([]);
   const [busy,setBusy]=useState(false);
   // In-app dialogs (never a browser pop-up): delete when posting is not active, reimbursement account, card EMI terms.
-  const [ask,setAsk]=useState<null|"delete"|"reimburse"|"emi">(null);
+  const [ask,setAsk]=useState<null|"delete"|"restore"|"reimburse"|"emi">(null);
   const [reimburseTo,setReimburseTo]=useState("");
   const [emi,setEmi]=useState({months:"6",rate:"12",fee:"0"});
   const [auditFailed,setAuditFailed]=useState(false);
@@ -81,13 +82,14 @@ export function ExpenseDetail({ expense, onClose }: { expense: Expense; onClose:
     if (reverse) { openReverse(); return; }
     setAsk("delete");
   };
-  // Same store call as before (remove without a reason). If the database says the entry is posted after all, nothing
-  // was deleted: the reversal dialog takes over, as the delete dialog says it will.
-  const deleteNow = async () => {
-    try { await remove(e); }
+  // RB-LED-01: an unposted entry is withdrawn with the reason (never deleted). If the database says the entry is posted
+  // after all, nothing was changed: the reversal dialog takes over, as the withdraw dialog says it will.
+  const withdrawNow = async (why: string) => {
+    try { await remove(e, { reason: why }); }
     catch (err) { if (err instanceof ReversalReasonRequired) { setAsk(null); openReverse(); return; } throw err; }
-    toast.success("Expense deleted"); onClose();
+    toast.success("Entry withdrawn. It is kept in history with its receipts, left out of totals, and can be restored."); onClose();
   };
+  const withdrawn = !!e.withdrawnAt;
   const noun = (e.txnType ?? "expense") === "expense" ? "expense" : "entry";
   const cashAccounts = accounts.filter(a=>!a.archived&&["savings","current","cash","wallet"].includes(a.kind));
   const emiCheck = emiProblems(emi);
@@ -138,12 +140,22 @@ export function ExpenseDetail({ expense, onClose }: { expense: Expense; onClose:
             </div>
           </details>
         )}
-        {isReversalHistory(e) ? (
+        {withdrawn ? (
+          <div role="note" className="space-y-2 rounded-xl border p-3 text-sm">
+            <p className="font-medium">Withdrawn{e.withdrawal?.at ? ` on ${new Date(e.withdrawal.at).toLocaleString()}` : ""}{e.withdrawal?.by ? (e.withdrawal.by === userId ? " by you" : " by another member") : ""}</p>
+            {e.withdrawal?.reason && <p className="break-words text-muted-foreground">Reason: {e.withdrawal.reason}</p>}
+            <p className="text-muted-foreground">Kept in your history with its receipt files; left out of balances, reports and every total. Restore it to count it again.</p>
+            <Button variant="outline" onClick={() => setAsk("restore")}>Restore entry</Button>
+          </div>
+        ) : isReversalHistory(e) ? (
           // KK decision 1: a reversed entry and its reversal are kept as linked history; neither is edited or removed.
           <p role="note" className="rounded-xl border p-2 text-sm text-muted-foreground">{e.reversesEntryId ? `This is the reversal of an earlier entry, recorded on ${e.date}. It cancels that entry; both are kept in your records.` : "This entry was reversed. It stays in your records with its linked reversal; record a new entry for any correction."}</p>
         ) : (
         <div className="flex justify-between gap-2 pt-2">
-          <Button variant="ghost" className="text-destructive" onClick={del}>{reverse ? "Reverse entry" : "Delete"}</Button>
+          {/* KK: Withdraw only for unposted, unreconciled entries; a statement-matched entry goes through correction (the server decides either way). */}
+          {!reverse && (e.reconciledAt || e.statementRef)
+            ? <p className="text-sm text-muted-foreground">Matched to a bank statement line — correct it with Edit instead of withdrawing it.</p>
+            : <Button variant="ghost" className="text-destructive" onClick={del}>{reverse ? "Reverse entry" : "Withdraw entry"}</Button>}
           <Button variant="outline" onClick={() => { onClose(); nav({ to: "/new", search: { edit: e.id } }); }}>Edit</Button>
         </div>
         )}
@@ -151,16 +163,28 @@ export function ExpenseDetail({ expense, onClose }: { expense: Expense; onClose:
         <ConfirmDialog
           open={ask==="delete"}
           destructive
-          title={`Delete “${e.title}”?`}
-          description={`This ${noun} is deleted, not reversed: posting to your books is not active for it, so it is removed from your records together with its receipt files. This can't be undone.`}
+          title={`Withdraw “${e.title}”?`}
+          description={`This ${noun} is withdrawn, not deleted: it is kept in history with who, when and your reason, excluded from totals, and can be restored.`}
           consequences={[
-            `${money(e.originalAmount, e.currency)} on ${e.date}${accounts.find(a=>a.id===e.accountId) ? ` · ${accounts.find(a=>a.id===e.accountId)!.name}` : ""} is removed from balances and reports`,
-            e.receipts.length ? `${e.receipts.length} receipt file${e.receipts.length===1?" is":"s are"} deleted` : "No receipt files are attached",
-            "If it turns out to be posted to your books, nothing is deleted and you are asked to reverse it with a reason instead",
+            `${money(e.originalAmount, e.currency)} on ${e.date}${accounts.find(a=>a.id===e.accountId) ? ` · ${accounts.find(a=>a.id===e.accountId)!.name}` : ""} is left out of balances, reports and every total`,
+            e.receipts.length ? `${e.receipts.length} receipt file${e.receipts.length===1?" is":"s are"} kept with it` : "No receipt files are attached",
+            "Restore brings it back with the same amount, accounts and receipts",
+            "If it turns out to be posted to your books, nothing is changed and you are asked to reverse it with a reason instead",
           ]}
-          confirmLabel={`Delete ${noun}`}
+          reason={{ label: "Reason for withdrawing", placeholder: "For example: entered twice by mistake", validate: withdrawReasonProblem }}
+          confirmLabel="Withdraw entry"
           cancelLabel={`Keep ${noun}`}
-          onConfirm={deleteNow}
+          onConfirm={withdrawNow}
+          onClose={()=>setAsk(null)}
+        />
+        <ConfirmDialog
+          open={ask==="restore"}
+          title={`Restore “${e.title}”?`}
+          description={`This ${noun} counts again in balances, reports and every total, with the same amount, accounts and receipts. The withdrawal stays in its history.`}
+          reason={{ label: "Reason for restoring", placeholder: "For example: withdrawn by mistake", validate: withdrawReasonProblem }}
+          confirmLabel="Restore entry"
+          cancelLabel="Keep withdrawn"
+          onConfirm={async (why)=>{await restoreWithdrawn(e, why);toast.success("Entry restored — it counts again");onClose();}}
           onClose={()=>setAsk(null)}
         />
         <ConfirmDialog

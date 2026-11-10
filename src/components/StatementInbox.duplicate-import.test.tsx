@@ -49,7 +49,7 @@ vi.mock("@/integrations/supabase/client", () => {
       return { data: rows.slice(range[0], range[1] + 1), error: null };
     };
     const q: Record<string, unknown> = {
-      select: () => q, order: () => q, limit: () => q, neq: () => q,
+      select: () => q, order: () => q, limit: () => q, neq: () => q, in: () => q,
       eq: (k: string, v: unknown) => { filters[k] = v; return q; },
       range: (a: number, b: number) => { range = [a, b]; return q; },
       delete: () => { op = "delete"; return q; },

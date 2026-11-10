@@ -46,6 +46,11 @@ describe("backup reference registry completeness", () => {
     const unused = PREFERENCE_REFS.filter((rule) => collectRefs(prefs, [rule]).length === 0 && !(rule.encoding === "embedded")).map((r) => r.path);
     expect(unused).toEqual([]);
     for (const [t, rules] of Object.entries(COLUMN_JSON_REFS)) for (const rule of rules ?? []) {
+      // An embedded rule on a text column (statement_ref, P0-032): the fixture holds such a text with a row id inside.
+      if (rule.encoding === "embedded" && !rule.path.includes(".")) {
+        expect((b.data[t as keyof typeof b.data] ?? []).some((r) => typeof r[rule.path] === "string" && /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/.test(String(r[rule.path]))), `${t}.${rule.path}`).toBe(true);
+        continue;
+      }
       expect(collectRefs(b.data[t as keyof typeof b.data], [{ ...rule, path: `[].${rule.path}` }]).length, `${t}.${rule.path}`).toBeGreaterThan(0);
     }
   });
