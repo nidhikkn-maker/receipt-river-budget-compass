@@ -25,6 +25,22 @@
    - In Safari: Develop → Enter Responsive Design Mode.
    - To use a real iPhone or iPad on the same Wi-Fi, run with `PREVIEW_HOST=0.0.0.0` (see below) and open `http://<laptop-ip>:8090`.
 
+## Windows (PowerShell)
+1. **Install** Node 22 LTS from nodejs.org. Then, in PowerShell: `npm install -g bun@1.4.4`. Check with `bun --version` (should show 1.4.4) and `node --version` (v22.x).
+2. **Get the code and install:**
+   ```powershell
+   git clone https://gitlab.com/krna-group/THAPAL-project.git
+   cd THAPAL-project
+   git checkout <branch or commit given in the latest report>
+   bun install --frozen-lockfile
+   ```
+3. **Start:** `node scripts/dev/local-preview.cjs`. Keep the window open; Ctrl+C stops it.
+4. **Open http://localhost:8090** in Edge or Chrome.
+   - iPhone and iPad layouts: F12, then Ctrl+Shift+M for the device toolbar; pick iPhone 15 or iPad Pro 11.
+5. **Real phone or tablet on the same Wi-Fi:** run `$env:PREVIEW_HOST="0.0.0.0"; node scripts/dev/local-preview.cjs`, then open `http://<laptop-IP>:8090`.
+   - Find the laptop's IP with `ipconfig`.
+   - Windows Firewall will ask to allow Node.js on private networks.
+
 ## What the preview cannot do (missing services)
 | Service | In the preview |
 |---|---|

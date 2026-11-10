@@ -146,7 +146,8 @@ const env = { ...process.env,
   SUPABASE_PROJECT_ID: "fixture", VITE_SUPABASE_PROJECT_ID: "fixture",
   SUPABASE_PUBLISHABLE_KEY: "fixture-anon", VITE_SUPABASE_PUBLISHABLE_KEY: "fixture-anon",
   SUPABASE_SERVICE_ROLE_KEY: "fixture-service" };
-const vite = spawn("bunx", ["vite", "dev", "--host", "127.0.0.1", "--port", String(VITE_PORT), "--strictPort"], { cwd: ROOT, env, stdio: ["ignore", "inherit", "inherit"] });
+// On Windows, bunx is a command shim that only runs through a shell.
+const vite = spawn("bunx", ["vite", "dev", "--host", "127.0.0.1", "--port", String(VITE_PORT), "--strictPort"], { cwd: ROOT, env, stdio: ["ignore", "inherit", "inherit"], shell: process.platform === "win32" });
 vite.on("exit", (code) => { console.error(`[preview] Vite exited (${code})`); process.exit(code ?? 1); });
-for (const s of ["SIGINT", "SIGTERM"]) process.on(s, () => { vite.kill(s); process.exit(0); });
+for (const s of ["SIGINT", "SIGTERM"]) process.on(s, () => { try { vite.kill(); } catch { /* already stopped */ } process.exit(0); });
 server.listen(PREVIEW_PORT, process.env.PREVIEW_HOST || "127.0.0.1", () => console.log(`[preview] Thapal local preview: http://localhost:${PREVIEW_PORT}  (fixture backend at ${PREFIX}; hosted Supabase is never contacted)`));
