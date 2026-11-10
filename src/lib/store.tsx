@@ -9,6 +9,7 @@ import { deleteFinanceData } from "./delete-data";
 import { withStepUp } from "./step-up";
 import { withdrawalOfRow, withdrawnAtOfRow } from "./withdrawal";
 import { removeEntry } from "./entry-removal";
+import { createLockGate, type GateRun } from "./lock-gate";
 import { setEntryWithdrawal } from "./withdrawal.functions";
 import { forgetPostingStatus, isNotPostedError, recordCardPayment, type CardPaymentInput, type CardPaymentResult, isPostedEntryError, postingStatus, removalMode, reverseLedgerEntry, ReversalReasonRequired, validReason } from "./posting";
 import { privateFileUrl, fetchPrivateFile, type ExpectedFile } from "./private-files";
@@ -227,7 +228,7 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
   const [loadErrors, setLoadErrors] = useState<LoadArea[]>([]);
   const [pendingCount, setPendingCount] = useState(0);
   const [pendingItems, setPendingItems] = useState<PendingItem[]>([]);
-  const syncRef = useRef<(only?: string) => Promise<void>>(async () => {});
+  const syncRef = useRef<(only?: string, skipRefresh?: boolean) => Promise<void>>(async () => {});
   const syncing = useRef(false);
   const deleting = useRef(false);
   const [preferences, setPreferences] = useState<FinancePreferences>(defaultPreferences);
@@ -247,18 +248,29 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
   const liteActive = useRef(false);
   const inFlight = useRef<Promise<void> | null>(null);
   const queued = useRef<Promise<void> | null>(null);
+  // P0-029: while the app is locked nothing refreshes, flushes or paints; one refresh follows the authorised unlock
+  // (after any offline entries are flushed), and a load the lock interrupted never paints its result.
+  const resumeRef = useRef<() => Promise<void>>(async () => {});
+  const [gate] = useState(() => createLockGate(() => resumeRef.current()));
+  useEffect(() => gate.attach(), [gate]);
   // Overlapping refresh calls share requests; a call made mid-load gets one follow-up load so saves are never missed.
   const refresh = useCallback((): Promise<void> => {
+    if (gate.paused()) { gate.defer(); return Promise.resolve(); }
     if (!inFlight.current) { inFlight.current = load().finally(() => { inFlight.current = null; }); return inFlight.current; }
     if (!queued.current) queued.current = inFlight.current.catch(() => {}).then(() => { queued.current = null; return refresh(); });
     return queued.current;
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId]);
   async function load() {
+    const run = gate.begin();
+    try { await loadRun(run); } finally { run.end(); }
+  }
+  async function loadRun(run: GateRun) {
     // Show this device's saved copy straight away, then refresh from the cloud.
     if (!navigator.onLine || firstLoad.current) {
-      firstLoad.current = false;
       const cached = await getSnapshot<Snapshot>(userId).catch(() => undefined);
+      if (!run.live()) return;
+      firstLoad.current = false;
       if (cached) {
         hadSnapshot.current = true;
         setName(cached.name); setMembers(cached.members); setExpenses(cached.expenses); setAccounts(cached.accounts); setCommitments(cached.commitments);
@@ -296,6 +308,8 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
       supabase.from("loans").select("*").order("created_at"),
       supabase.from("finance_preferences").select("data,revision").eq("owner_id", userId).maybeSingle(),
     ]);
+    // Locked while these were arriving: nothing is painted; the unlock refresh reads them again.
+    if (!run.live()) return;
     // A failed read keeps the last known records (device copy or earlier load) and is reported, never shown as empty.
     const failed = new Set<LoadArea>();
     const mark = (r: { error: unknown }, area: LoadArea) => { if (r.error) failed.add(area); return !r.error; };
@@ -345,11 +359,13 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
     setLoading(false);
     if (fullP) {
       const full = await fullP;
+      if (!run.live()) return;
       if (full.error) { failed.add("transactions"); toast.error("Some records couldn't load — pull to refresh or try again"); }
       else { showLedger(full.data ?? []); failed.delete("transactions"); }
       liteActive.current = false;
     }
     const [m, g, v, d, db] = await restP;
+    if (!run.live()) return;
     if ([g, v, d].some((x) => x.error)) toast.error("Some records couldn't load — pull to refresh or try again");
     setDepartmentBudgetError(!!db.error);
     setDepartmentBudgets(Object.fromEntries((db.data ?? []).map((x) => [x.department, Number(x.amount)])));
@@ -367,6 +383,7 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
     setSyncState(failed.size ? "error" : "synced");
     if (!failed.size) setLastSyncedAt(new Date().toISOString());
     } catch (err) {
+      if (!run.live()) return;
       setLoading(false);
       setSyncState(navigator.onLine ? "error" : "offline");
       throw err;
@@ -433,7 +450,9 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
 
   useEffect(() => {
     let active = true;
-    const sync = async (only?: string) => {
+    const sync = async (only?: string, skipRefresh?: boolean) => {
+      // Locked: the offline queue waits for the authorised unlock.
+      if (gate.paused()) { gate.defer(); return; }
       const entries = await pendingEntries(userId).catch(() => [] as Awaited<ReturnType<typeof pendingEntries>>);
       if (!active) return;
       setPendingCount(entries.length);
@@ -445,6 +464,7 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
         for (const entry of entries) {
           if (only && entry.id !== only) continue;
           if (!navigator.onLine || deleting.current) break;
+          if (gate.paused()) { gate.defer(); break; }
           setPendingItems((prev) => setItem(prev, entry.id, { status: "saving", error: undefined }));
           try {
             await save(entry.input, { createId: entry.id, files: entry.files, noRefresh: true });
@@ -457,11 +477,13 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
           }
         }
         if (active) setPendingCount((await pendingEntries(userId)).length);
-        if (saved) { toast.success(`${saved} offline ${saved === 1 ? "entry" : "entries"} synced`); void refresh(); }
+        if (saved) { toast.success(`${saved} offline ${saved === 1 ? "entry" : "entries"} synced`); if (!skipRefresh) void refresh(); }
         if (failed) toast.error(`${failed} offline ${failed === 1 ? "entry" : "entries"} couldn't sync — open Waiting to sync to retry`);
       } finally { syncing.current = false; }
     };
     syncRef.current = sync;
+    // Authorised unlock: flush waiting offline entries without their own refresh, then refresh exactly once.
+    resumeRef.current = async () => { await sync(undefined, true); await refresh(); };
     const onOnline = () => void sync();
     void sync(); window.addEventListener("online", onOnline);
     return () => { active = false; window.removeEventListener("online", onOnline); };

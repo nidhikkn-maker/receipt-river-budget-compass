@@ -4,6 +4,7 @@ import { Loader2, AlertTriangle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { reportLabel, type ReportType } from "@/lib/report-centre";
 import { Button } from "./ui/button";
+import { backgroundAllowed } from "@/lib/lock-gate";
 
 type Job = { id: string; kind: string; status: string; error: string | null; created_at: string };
 
@@ -17,7 +18,8 @@ export function BackgroundReports({ onDone }: { onDone?: () => void }) {
     if (error) return;
     setJobs((prev) => { if (prev.some((p) => !(data ?? []).some((d) => d.id === p.id))) onDone?.(); return data ?? []; });
   };
-  useEffect(() => { void load(); const t = setInterval(() => void load(), 15000); return () => clearInterval(t); }, []);
+  // P0-029: no background report reads while the app is locked.
+  useEffect(() => { void load(); const t = setInterval(() => { if (backgroundAllowed()) void load(); }, 15000); return () => clearInterval(t); }, []);
   const old = (j: Job) => Date.now() - Date.parse(j.created_at) > 120e3;
   const shown = jobs.filter((j) => j.status === "failed" || old(j));
   if (!shown.length) return null;
