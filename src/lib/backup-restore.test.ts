@@ -120,6 +120,23 @@ describe("cross-account restore remaps every reference (R5)", () => {
     expect(settlement.snapshot.allocations[0].memberId).toBe(spouse);
   });
 
+  it("a separately-kept possible duplicate's audit evidence points at the restored copies of the entries it was compared with", async () => {
+    const b = await buildBackupFixture();
+    const r = await planRestore(b, OWNER_B);
+    const row = (title: string) => r.data.expenses?.find((e) => e["title"] === title);
+    const review = (row("Second groceries bill")?.["receipt_details"] as Loose).duplicateReview[0];
+    const restored = [row("Groceries")?.["id"], row("Society maintenance")?.["id"]];
+    expect(restored.every((x) => typeof x === "string" && x !== ID.groceries && x !== ID.rent)).toBe(true);
+    expect(review.matchedIds).toEqual(restored);
+    // The reason, time and historical decider are audit text and stay exactly as saved; the account check has no ids.
+    expect(review).toMatchObject({ decision: "separate", check: "same_bill", reason: "Second visit, new bill number BB-2210", decidedAt: "2026-04-10T12:00:00.000Z", decidedBy: OWNER_A });
+    expect((row("Second groceries bill")?.["receipt_details"] as Loose).accountCheck).toEqual((b.data.expenses?.find((e) => e["id"] === ID.secondBill)?.["receipt_details"] as Loose).accountCheck);
+    // A resumed draft's bill evidence follows the account its printed digits matched.
+    const draft = r.data.expense_drafts?.find((d) => d["status"] === "ready")?.["data"] as Loose;
+    expect(draft.billEvidence.suggestedId).toBe(r.data.accounts?.find((a) => a["name"] === "HDFC Visa")?.["id"]);
+    expect(draft.billEvidence.suggestedId).toBe(draft.accountId);
+  });
+
   it("a claim receipt with its own id (not the entry id) keeps that id; a uuid-shaped traveller not in the backup is reported", async () => {
     const b = await buildBackupFixture();
     const own = "50000000-0000-4000-8000-000000000001", gone = "40000000-0000-4000-8000-000000000009";

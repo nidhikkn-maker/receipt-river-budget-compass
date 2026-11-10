@@ -1,0 +1,42 @@
+{
+ "01-home": {
+  "pixels_differing_manrope": 0.175,
+  "pixels_differing_asis": 0.177
+ },
+ "02-home-iphone": {
+  "pixels_differing_manrope": 0.348,
+  "pixels_differing_asis": 0.352
+ },
+ "03-money": {
+  "pixels_differing_manrope": 0.172,
+  "pixels_differing_asis": 0.174
+ },
+ "04-statement-desk": {
+  "pixels_differing_manrope": 0.156,
+  "pixels_differing_asis": 0.156
+ },
+ "05-records": {
+  "pixels_differing_manrope": 0.092,
+  "pixels_differing_asis": 0.093
+ },
+ "06-travel": {
+  "pixels_differing_manrope": 0.081,
+  "pixels_differing_asis": 0.082
+ },
+ "07-reports": {
+  "pixels_differing_manrope": 0.095,
+  "pixels_differing_asis": 0.096
+ },
+ "08-smart-add-source": {
+  "pixels_differing_manrope": 0.757,
+  "pixels_differing_asis": 0.758
+ },
+ "09-smart-add-review": {
+  "pixels_differing_manrope": 0.784,
+  "pixels_differing_asis": 0.784
+ },
+ "10-smart-add-confirm": {
+  "pixels_differing_manrope": 0.856,
+  "pixels_differing_asis": 0.857
+ }
+}

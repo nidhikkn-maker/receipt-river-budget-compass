@@ -51,6 +51,10 @@ export interface ReceiptDetails {
   fingerprint?: string;
   /** What the reader extracted vs what the owner corrected before saving. */
   audit?: import("./receipt-audit").ReceiptAudit;
+  /** How the paying account was settled for a read bill. */
+  accountCheck?: import("./account-evidence").AccountCheck;
+  /** Possible duplicates the owner resolved as separate bills, each with a reason and who decided when. */
+  duplicateReview?: import("./duplicate-decision").DuplicateReview[];
 }
 
 export interface Expense {

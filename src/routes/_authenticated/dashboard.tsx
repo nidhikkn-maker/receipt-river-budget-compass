@@ -17,6 +17,8 @@ import { accountBalance, cashflow, isLiability } from "@/lib/ledger";
 import { usePosition } from "@/lib/use-position";
 import { todayISO, useAssistantFacts } from "@/lib/use-position";
 import { lazy, Suspense, useState } from "react";
+import { SignatureHome } from "@/components/shell/pages/HomePage";
+import { useShellMode } from "@/components/shell/use-shell-mode";
 import { useServerFn } from "@tanstack/react-start";
 import { askAssistant } from "@/lib/assistant.functions";
 import { Button } from "@/components/ui/button";
@@ -39,8 +41,14 @@ export const Route = createFileRoute("/_authenticated/dashboard")({
       { name: "twitter:card", content: "summary" },
     ],
   }),
-  component: Overview,
+  component: Dashboard,
 });
+
+/** /dashboard stays the Home address: today's overview, or the proposed Signature Flow Home when that shell is on. */
+function Dashboard() {
+  const { mode } = useShellMode();
+  return mode === "signature-flow" ? <SignatureHome /> : <Overview />;
+}
 
 type Readiness = { status: "Healthy" | "Attention required" | "Potential shortfall" | "Verification pending" | "Information incomplete"; detail: string; estimated: boolean };
 

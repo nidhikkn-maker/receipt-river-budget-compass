@@ -1,0 +1,207 @@
+[
+ {
+  "name": "iphone-01-home",
+  "note": "Home (B01) on fixture data",
+  "horizontalOverflowPx": 0
+ },
+ {
+  "name": "iphone-02-money",
+  "note": "Money hub (capture 03 layout), account-first",
+  "horizontalOverflowPx": 0
+ },
+ {
+  "name": "iphone-03-money-account-detail",
+  "note": "Money: on iPhone the account detail opens full width with Back to accounts",
+  "horizontalOverflowPx": 0
+ },
+ {
+  "name": "iphone-04-records",
+  "note": "Records hub (capture 05 layout); Reports is one row away",
+  "horizontalOverflowPx": 0
+ },
+ {
+  "name": "iphone-05-todo",
+  "note": "To-do: counts from Financial Inbox rules, rows open existing Inbox sections",
+  "horizontalOverflowPx": 0
+ },
+ {
+  "name": "iphone-06-calendar",
+  "note": "Calendar: existing PlanCalendar inside the new frame",
+  "horizontalOverflowPx": 0
+ },
+ {
+  "name": "iphone-07-notifications",
+  "note": "Notifications: PROPOSED placeholder listing real derived alerts",
+  "horizontalOverflowPx": 0
+ },
+ {
+  "name": "iphone-08-smart-add",
+  "note": "Smart Add sheet (existing component) restyled by the Signature Flow tokens",
+  "horizontalOverflowPx": 0
+ },
+ {
+  "name": "iphone-09-existing-card-detail",
+  "note": "Existing page (card detail) inside the new shell; breadcrumbs show the real path Money \u2192 Card",
+  "horizontalOverflowPx": 0
+ },
+ {
+  "name": "iphone-10-reports-two-taps-step1",
+  "note": "iPhone: Records tab (tap 1) shows the Reports row (tap 2)",
+  "horizontalOverflowPx": 0
+ },
+ {
+  "name": "ipad-portrait-01-home",
+  "note": "Home (B01) on fixture data",
+  "horizontalOverflowPx": 0
+ },
+ {
+  "name": "ipad-portrait-02-money",
+  "note": "Money hub (capture 03 layout), account-first",
+  "horizontalOverflowPx": 0
+ },
+ {
+  "name": "ipad-portrait-03-money-account-split",
+  "note": "Money: list/detail split \u2014 selected account stays beside the list",
+  "horizontalOverflowPx": 0
+ },
+ {
+  "name": "ipad-portrait-04-records",
+  "note": "Records hub (capture 05 layout); Reports is one row away",
+  "horizontalOverflowPx": 0
+ },
+ {
+  "name": "ipad-portrait-05-todo",
+  "note": "To-do: counts from Financial Inbox rules, rows open existing Inbox sections",
+  "horizontalOverflowPx": 0
+ },
+ {
+  "name": "ipad-portrait-06-calendar",
+  "note": "Calendar: existing PlanCalendar inside the new frame",
+  "horizontalOverflowPx": 0
+ },
+ {
+  "name": "ipad-portrait-07-notifications",
+  "note": "Notifications: PROPOSED placeholder listing real derived alerts",
+  "horizontalOverflowPx": 0
+ },
+ {
+  "name": "ipad-portrait-08-smart-add",
+  "note": "Smart Add sheet (existing component) restyled by the Signature Flow tokens",
+  "horizontalOverflowPx": 0
+ },
+ {
+  "name": "ipad-portrait-09-existing-card-detail",
+  "note": "Existing page (card detail) inside the new shell; breadcrumbs show the real path Money \u2192 Card",
+  "horizontalOverflowPx": 0
+ },
+ {
+  "name": "ipad-portrait-10-search-palette",
+  "note": "Find anything palette: existing record search grouped by type",
+  "horizontalOverflowPx": 0
+ },
+ {
+  "name": "ipad-landscape-01-home",
+  "note": "Home (B01) on fixture data",
+  "horizontalOverflowPx": 0
+ },
+ {
+  "name": "ipad-landscape-02-money",
+  "note": "Money hub (capture 03 layout), account-first",
+  "horizontalOverflowPx": 0
+ },
+ {
+  "name": "ipad-landscape-03-money-account-split",
+  "note": "Money: list/detail split \u2014 selected account stays beside the list",
+  "horizontalOverflowPx": 0
+ },
+ {
+  "name": "ipad-landscape-04-records",
+  "note": "Records hub (capture 05 layout); Reports is one row away",
+  "horizontalOverflowPx": 0
+ },
+ {
+  "name": "ipad-landscape-05-todo",
+  "note": "To-do: counts from Financial Inbox rules, rows open existing Inbox sections",
+  "horizontalOverflowPx": 0
+ },
+ {
+  "name": "ipad-landscape-06-calendar",
+  "note": "Calendar: existing PlanCalendar inside the new frame",
+  "horizontalOverflowPx": 0
+ },
+ {
+  "name": "ipad-landscape-07-notifications",
+  "note": "Notifications: PROPOSED placeholder listing real derived alerts",
+  "horizontalOverflowPx": 0
+ },
+ {
+  "name": "ipad-landscape-08-smart-add",
+  "note": "Smart Add sheet (existing component) restyled by the Signature Flow tokens",
+  "horizontalOverflowPx": 0
+ },
+ {
+  "name": "ipad-landscape-09-existing-card-detail",
+  "note": "Existing page (card detail) inside the new shell; breadcrumbs show the real path Money \u2192 Card",
+  "horizontalOverflowPx": 0
+ },
+ {
+  "name": "ipad-landscape-10-search-palette",
+  "note": "Find anything palette: existing record search grouped by type",
+  "horizontalOverflowPx": 0
+ },
+ {
+  "name": "desktop-01-home",
+  "note": "Home (B01) on fixture data",
+  "horizontalOverflowPx": 0
+ },
+ {
+  "name": "desktop-02-money",
+  "note": "Money hub (capture 03 layout), account-first",
+  "horizontalOverflowPx": 0
+ },
+ {
+  "name": "desktop-03-money-account-split",
+  "note": "Money: list/detail split \u2014 selected account stays beside the list",
+  "horizontalOverflowPx": 0
+ },
+ {
+  "name": "desktop-04-records",
+  "note": "Records hub (capture 05 layout); Reports is one row away",
+  "horizontalOverflowPx": 0
+ },
+ {
+  "name": "desktop-05-todo",
+  "note": "To-do: counts from Financial Inbox rules, rows open existing Inbox sections",
+  "horizontalOverflowPx": 0
+ },
+ {
+  "name": "desktop-06-calendar",
+  "note": "Calendar: existing PlanCalendar inside the new frame",
+  "horizontalOverflowPx": 0
+ },
+ {
+  "name": "desktop-07-notifications",
+  "note": "Notifications: PROPOSED placeholder listing real derived alerts",
+  "horizontalOverflowPx": 0
+ },
+ {
+  "name": "desktop-08-smart-add",
+  "note": "Smart Add sheet (existing component) restyled by the Signature Flow tokens",
+  "horizontalOverflowPx": 0
+ },
+ {
+  "name": "desktop-09-existing-card-detail",
+  "note": "Existing page (card detail) inside the new shell; breadcrumbs show the real path Money \u2192 Card",
+  "horizontalOverflowPx": 0
+ },
+ {
+  "name": "desktop-10-search-palette",
+  "note": "Find anything palette: existing record search grouped by type",
+  "horizontalOverflowPx": 0
+ },
+ {
+  "name": "desktop-00-default-current-ui",
+  "note": "Switch off (default): today's UI is unchanged",
+  "horizontalOverflowPx": 0
+ }
+]

@@ -235,11 +235,11 @@ describe("cross-account restore integrity: figures, embedded references, source 
   // Hand-calculated (fixture, after ledgerView): HDFC Savings 50,000.00 − 2,500.00 groceries + 16,600.00 bounced − 16,600.00 its
   // reversal + 16,600.00 claim back + 1,000,000.00 loan disbursal − 3,000.00 maintenance (the 5,000.00 "Card bill" is a transfer
   // counterpart row, never counted) = 1,061,100.00; then the rows added here: − 1,234.50 (statement line) − 649.00 (Statement
-  // Desk document line); the withdrawn 450.00 is excluded → 1,059,216.50. HDFC Visa owes 16,600.00 (hotel). KR Current 250,000.00
+  // Desk document line); the withdrawn 450.00 is excluded → 1,059,216.50. HDFC Visa owes 16,600.00 (hotel) + 2,500.00 (second groceries bill, kept as separate after duplicate review) = 19,100.00. KR Current 250,000.00
   // − 120,000.00 − 18,305.08 = 111,694.92. Fixed assets: valuation 112,000.00 (30 Jun) is the account value. USD wallet 0.
-  // Net worth = 1,059,216.50 + 111,694.92 + 112,000.00 + 0 − 16,600.00 = 1,266,311.42. Loan outstanding (loans row) 950,000.00.
+  // Net worth = 1,059,216.50 + 111,694.92 + 112,000.00 + 0 − 19,100.00 = 1,263,811.42. Loan outstanding (loans row) 950,000.00.
   // Claims outstanding: the hotel claim is received in full → 0.00.
-  const HAND = { "HDFC Savings": 1059216.5, "HDFC Visa": 16600, "KR Current": 111694.92, "Fixed assets": 112000, "USD wallet": 0 } as Record<string, number>;
+  const HAND = { "HDFC Savings": 1059216.5, "HDFC Visa": 19100, "KR Current": 111694.92, "Fixed assets": 112000, "USD wallet": 0 } as Record<string, number>;
   const SL = "00000000-0000-4000-8000-00000000c101", DOCREF = "00000000-0000-4000-8000-00000000c102", WD = "00000000-0000-4000-8000-00000000c103";
   async function figuresOf(db: PGlite, owner: string) {
     await actAs(db, owner);
@@ -275,7 +275,7 @@ describe("cross-account restore integrity: figures, embedded references, source 
 
     const figA = await figuresOf(db, OWNER_A);
     expect(figA.balances).toEqual(HAND);
-    expect(figA.netWorth).toBe(1266311.42);
+    expect(figA.netWorth).toBe(1263811.42);
     expect(figA.loanOutstanding).toBe(950000);
     expect(figA.claimsOutstanding).toBe(0);
 

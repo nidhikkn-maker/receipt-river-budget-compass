@@ -5,6 +5,7 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { ReceiptDetailsSchema, receiptBreakdownError } from "./receipt-reading";
 import { c11ReviewError } from "./statement-pipeline/review-gate";
+import { receiptReuseError, stampDuplicateReview } from "./duplicate-decision";
 
 const BASE = "INR";
 
@@ -75,6 +76,16 @@ export const saveExpense = createServerFn({ method: "POST" })
     // C11: an automatically classified row is saved only with the person's own row approval.
     const reviewError = c11ReviewError(data.receiptDetails);
     if (reviewError) return { ok: false as const, error: reviewError };
+    // A confirmed duplicate stays protected: a new entry can't reuse a receipt file already attached to another entry.
+    const fingerprint = data.receiptDetails?.fingerprint;
+    if (!data.id && fingerprint) {
+      const used = await supabase.from("expenses").select("id").eq("employee_id", userId).eq("receipt_details->>fingerprint", fingerprint).limit(20);
+      if (used.error) return { ok: false as const, error: "Couldn't check whether this receipt is already saved. Try again." };
+      const reuse = receiptReuseError(fingerprint, (used.data ?? []).map((r: { id: string }) => r.id), [data.createId]);
+      if (reuse) return { ok: false as const, error: reuse };
+    }
+    // Who resolved a possible duplicate comes from the signed-in account, never from the browser.
+    const stampedDetails = data.receiptDetails ? stampDuplicateReview(data.receiptDetails, userId) : undefined;
     if (data.receipts?.some((r) => !r.path.startsWith(`${userId}/`))) return { ok: false as const, error: "Invalid receipt" };
     if (data.splits.length) {
       const sum = Math.round(data.splits.reduce((a, x) => a + x.amount, 0) * 100) / 100;
@@ -100,6 +111,8 @@ export const saveExpense = createServerFn({ method: "POST" })
       const rd = stored.data?.receipt_details;
       if (w && rd && typeof rd === "object" && !Array.isArray(rd)) keptWithdrawal = rd["withdrawal"];
     }
+    // The stored details are the server-stamped review plus any withdrawal history kept from the saved row.
+    const receiptDetails = stampedDetails && keptWithdrawal !== undefined ? { ...stampedDetails, withdrawal: keptWithdrawal } : stampedDetails;
     let fx: { rate: number; date: string };
     try {
       fx = await fetchRate(data.currency, data.date);
@@ -122,7 +135,7 @@ export const saveExpense = createServerFn({ method: "POST" })
       workspace_allocations: data.workspaceAllocations,
       updated_at: new Date().toISOString(),
       ...(data.receipts ? { receipts: data.receipts } : {}),
-      ...(data.receiptDetails ? { receipt_details: keptWithdrawal === undefined ? data.receiptDetails : { ...data.receiptDetails, withdrawal: keptWithdrawal } } : {}),
+      ...(receiptDetails ? { receipt_details: receiptDetails } : {}),
     };
     const result = data.id
       ? await supabase.from("expenses").update(row).eq("id", data.id).eq("employee_id", userId).select("id").single()

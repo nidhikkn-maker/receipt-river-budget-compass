@@ -1,4 +1,6 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useState, type ReactNode } from "react";
+import { useRouter } from "@tanstack/react-router";
+import { useAppLocked } from "@/lib/app-lock-state";
 import { toast } from "sonner";
 import { Fingerprint } from "lucide-react";
 import { Button } from "./ui/button";
@@ -37,10 +39,19 @@ export function MpinSettings() {
 export { useDevicePasskey } from "@/lib/device-passkey";
 import { useDevicePasskey } from "@/lib/device-passkey";
 export function PasskeySettings(){const {userId}=useStore();const passkey=useDevicePasskey();return <div className="mb-6 flex flex-wrap gap-3"><Button variant="outline" onClick={async()=>{try{await passkey("register");localStorage.setItem(`ll-lock-${userId}`,"1");toast.success("Face ID / device passkey enabled");}catch(e){toast.error((e as Error).message);}}}><Fingerprint className="h-4 w-4"/>Enable Face ID / device lock</Button><Button variant="ghost" onClick={async()=>{try{await passkey("unlock");localStorage.removeItem(`ll-lock-${userId}`);toast.success("Device lock disabled");}catch(e){toast.error((e as Error).message);}}}>Disable device lock</Button></div>}
-/** The inactivity and device lock for the signed-in owner of the app's data. Rules live in OwnerLock. */
+/**
+ * The inactivity and device lock for the signed-in owner of the app's data. Rules live in OwnerLock.
+ * While locked (UIX §16.4, P0-029) browser Back/Forward and in-app navigation are held, so nothing underneath is
+ * revealed or changed; a deep link opened while locked stays on the lock and shows its page only after unlock. Unlock
+ * refetches the owner's data and re-runs the route checks before the page renders again.
+ */
 export function DeviceLock({ children }: { children: ReactNode }) {
-  const { userId } = useStore();
-  return <OwnerLock ownerId={userId}>{children}</OwnerLock>;
+  const { userId, refresh } = useStore();
+  const router = useRouter();
+  const locked = useAppLocked();
+  useEffect(() => (locked ? router.history.block({ blockerFn: () => true, enableBeforeUnload: false }) : undefined), [locked, router]);
+  const onUnlock = useCallback(() => { void refresh(); void router.invalidate(); }, [refresh, router]);
+  return <OwnerLock ownerId={userId} onUnlock={onUnlock}>{children}</OwnerLock>;
 }
 
 export { OwnerLock };

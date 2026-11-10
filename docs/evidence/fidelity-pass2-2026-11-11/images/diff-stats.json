@@ -1,0 +1,266 @@
+{
+ "screens": {
+  "01-home": {
+   "before": {
+    "pixels_differing": 0.1121,
+    "mean_abs_diff": 12.72
+   },
+   "after": {
+    "pixels_differing": 0.0984,
+    "mean_abs_diff": 9.95
+   }
+  },
+  "02-home-iphone": {
+   "before": {
+    "pixels_differing": 0.2093,
+    "mean_abs_diff": 22.17
+   },
+   "after": {
+    "pixels_differing": 0.1808,
+    "mean_abs_diff": 19.46
+   }
+  },
+  "03-money": {
+   "before": {
+    "pixels_differing": 0.1494,
+    "mean_abs_diff": 9.03
+   },
+   "after": {
+    "pixels_differing": 0.0845,
+    "mean_abs_diff": 7.61
+   }
+  },
+  "04-statement-desk": {
+   "before": {
+    "pixels_differing": 0.1529,
+    "mean_abs_diff": 9.84
+   },
+   "after": {
+    "pixels_differing": 0.1506,
+    "mean_abs_diff": 8.32
+   }
+  },
+  "05-records": {
+   "before": {
+    "pixels_differing": 0.0756,
+    "mean_abs_diff": 7.78
+   },
+   "after": {
+    "pixels_differing": 0.0703,
+    "mean_abs_diff": 6.2
+   }
+  },
+  "06-travel": {
+   "before": {
+    "pixels_differing": 0.0786,
+    "mean_abs_diff": 8.36
+   },
+   "after": {
+    "pixels_differing": 0.0803,
+    "mean_abs_diff": 7.08
+   }
+  },
+  "07-reports": {
+   "before": {
+    "pixels_differing": 0.0905,
+    "mean_abs_diff": 11.55
+   },
+   "after": {
+    "pixels_differing": 0.0857,
+    "mean_abs_diff": 9.99
+   }
+  },
+  "08-smart-add-source": {
+   "before": {
+    "pixels_differing": 0.1434,
+    "mean_abs_diff": 14.04
+   },
+   "after": {
+    "pixels_differing": 0.1142,
+    "mean_abs_diff": 11.63
+   }
+  },
+  "09-smart-add-review": {
+   "before": {
+    "pixels_differing": 0.6737,
+    "mean_abs_diff": 90.36
+   },
+   "after": {
+    "pixels_differing": 0.2454,
+    "mean_abs_diff": 24.7
+   }
+  },
+  "10-smart-add-confirm": {
+   "before": {
+    "pixels_differing": 0.2489,
+    "mean_abs_diff": 23.15
+   },
+   "after": {
+    "pixels_differing": 0.2698,
+    "mean_abs_diff": 30.07
+   }
+  }
+ },
+ "regions": {
+  "home-header": {
+   "before": {
+    "pixels_differing": 0.0626,
+    "mean_abs_diff": 5.46
+   },
+   "after": {
+    "pixels_differing": 0.0546,
+    "mean_abs_diff": 3.67
+   }
+  },
+  "home-rail": {
+   "before": {
+    "pixels_differing": 0.0491,
+    "mean_abs_diff": 4.47
+   },
+   "after": {
+    "pixels_differing": 0.0499,
+    "mean_abs_diff": 3.0
+   }
+  },
+  "home-heading": {
+   "before": {
+    "pixels_differing": 0.0971,
+    "mean_abs_diff": 8.6
+   },
+   "after": {
+    "pixels_differing": 0.0727,
+    "mean_abs_diff": 6.58
+   }
+  },
+  "home-networth-panel": {
+   "before": {
+    "pixels_differing": 0.1786,
+    "mean_abs_diff": 24.86
+   },
+   "after": {
+    "pixels_differing": 0.1476,
+    "mean_abs_diff": 18.28
+   }
+  },
+  "home-coming-up": {
+   "before": {
+    "pixels_differing": 0.1304,
+    "mean_abs_diff": 14.21
+   },
+   "after": {
+    "pixels_differing": 0.1312,
+    "mean_abs_diff": 13.07
+   }
+  },
+  "home-next-step": {
+   "before": {
+    "pixels_differing": 0.1657,
+    "mean_abs_diff": 12.95
+   },
+   "after": {
+    "pixels_differing": 0.1523,
+    "mean_abs_diff": 12.11
+   }
+  },
+  "iphone-header": {
+   "before": {
+    "pixels_differing": 0.1632,
+    "mean_abs_diff": 18.4
+   },
+   "after": {
+    "pixels_differing": 0.1504,
+    "mean_abs_diff": 15.75
+   }
+  },
+  "iphone-heading": {
+   "before": {
+    "pixels_differing": 0.2278,
+    "mean_abs_diff": 21.08
+   },
+   "after": {
+    "pixels_differing": 0.1911,
+    "mean_abs_diff": 18.89
+   }
+  },
+  "iphone-networth-panel": {
+   "before": {
+    "pixels_differing": 0.2625,
+    "mean_abs_diff": 27.54
+   },
+   "after": {
+    "pixels_differing": 0.2107,
+    "mean_abs_diff": 22.89
+   }
+  },
+  "iphone-bottom-nav": {
+   "before": {
+    "pixels_differing": 0.1742,
+    "mean_abs_diff": 17.8
+   },
+   "after": {
+    "pixels_differing": 0.1639,
+    "mean_abs_diff": 16.41
+   }
+  },
+  "page-header-money": {
+   "before": {
+    "pixels_differing": 0.0842,
+    "mean_abs_diff": 9.84
+   },
+   "after": {
+    "pixels_differing": 0.0832,
+    "mean_abs_diff": 8.4
+   }
+  },
+  "canvas-08-source": {
+   "before": {
+    "pixels_differing": 0.2175,
+    "mean_abs_diff": 19.4
+   },
+   "after": {
+    "pixels_differing": 0.1557,
+    "mean_abs_diff": 15.33
+   }
+  },
+  "canvas-09-review": {
+   "before": {
+    "pixels_differing": 0.3186,
+    "mean_abs_diff": 26.21
+   },
+   "after": {
+    "pixels_differing": 0.3217,
+    "mean_abs_diff": 22.87
+   }
+  },
+  "canvas-10-confirm": {
+   "before": {
+    "pixels_differing": 0.416,
+    "mean_abs_diff": 23.03
+   },
+   "after": {
+    "pixels_differing": 0.2814,
+    "mean_abs_diff": 20.12
+   }
+  },
+  "iphone-coming-up": {
+   "before": {
+    "pixels_differing": 0.1275,
+    "mean_abs_diff": 14.37
+   },
+   "after": {
+    "pixels_differing": 0.1289,
+    "mean_abs_diff": 13.84
+   }
+  },
+  "page-header-travel": {
+   "before": {
+    "pixels_differing": 0.065,
+    "mean_abs_diff": 8.0
+   },
+   "after": {
+    "pixels_differing": 0.0764,
+    "mean_abs_diff": 7.6
+   }
+  }
+ }
+}
