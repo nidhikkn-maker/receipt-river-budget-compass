@@ -1,3 +1,4 @@
+import { LoadError } from "@/components/LoadError";
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { toast } from "sonner";
@@ -37,7 +38,10 @@ export function InvestmentReview({ file, doc, onClose, onUploadMore, onReviewCas
   const [cashAccount, setCashAccount] = useState('');
   const [cashStatement, setCashStatement] = useState<{lines:StmtLine[];closing:number|null}|null>(null);
   useEffect(()=>{let live=true;setCashStatement(null);void readStatementFile(file).then(r=>{const part=r.files[0];if(live&&part?.lines.length)setCashStatement({lines:part.lines,closing:part.closing});}).catch(()=>{});return()=>{live=false;};},[file]);
-  useEffect(() => { loadDemat().then(setAccounts).catch(() => setAccounts([])); }, []);
+  // A failed read must not look like "no demat accounts": saving would create a duplicate account (P0-004/P0-018).
+  const [loadFailed, setLoadFailed] = useState(false);
+  const loadAccounts = () => loadDemat().then((r) => { setAccounts(r); setLoadFailed(false); }).catch(() => setLoadFailed(true));
+  useEffect(() => { void loadAccounts(); }, []);
 
   const matched = accounts ? matchDemat(accounts, doc) : null;
   const target = accounts?.find((a) => a.id === (pick || matched?.id)) ?? null;
@@ -49,6 +53,7 @@ export function InvestmentReview({ file, doc, onClose, onUploadMore, onReviewCas
   const needsAccount = doc.kind !== "demat" && !dest;
 
   const save = async () => {
+    if (!accounts) return;
     setBusy(true);
     try {
       const dematId = dest?.id ?? createdAccountId ?? await createDemat(doc);
@@ -83,6 +88,7 @@ export function InvestmentReview({ file, doc, onClose, onUploadMore, onReviewCas
         <Row label="Original document" state={check.original} text={saved ? "Stored in DocuRepo" : "Stored in DocuRepo on save"} />
       </ul>
 
+      {loadFailed && <LoadError className="mt-3" what="your demat accounts" note="Nothing has been deleted. Saving waits until they load, so no duplicate account is created." onRetry={loadAccounts} />}
       {needsAccount && accounts && (
         <div className="mt-3 rounded-2xl bg-muted p-3 text-sm">
           {accounts.length ? (<>
@@ -125,7 +131,7 @@ export function InvestmentReview({ file, doc, onClose, onUploadMore, onReviewCas
       )}
 
       <div className="mt-4 flex flex-wrap gap-2">
-        {!saved ? <Button onClick={save} loading={busy} disabled={needsAccount || !merge.holdings.length}>Save to Investments</Button>
+        {!saved ? <Button onClick={save} loading={busy} disabled={!accounts || needsAccount || !merge.holdings.length}>Save to Investments</Button>
           : <><Button variant="outline" onClick={undo} loading={busy}>Undo</Button><Button asChild variant="ghost"><Link to="/wealth">Open Wealth</Link></Button></>}
       </div>
     </Card>

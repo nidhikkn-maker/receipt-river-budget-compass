@@ -1,3 +1,4 @@
+import { LoadError } from "@/components/LoadError";
 import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useMemo, useState } from "react";
@@ -63,7 +64,8 @@ function Monthly() {
   const [drill, setDrill] = useState<string | null>(null);
   const [open, setOpen] = useState<Expense | null>(null);
   const ask = useServerFn(askAssistant);
-  const load = () => listReviews().then(setArchive).catch(() => {});
+  const [archiveFailed, setArchiveFailed] = useState(false);
+  const load = () => listReviews().then((r) => { setArchive(r); setArchiveFailed(false); }).catch(() => setArchiveFailed(true));
   useEffect(() => { void load(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
   const saved = archive.filter((a) => a.month === month);
   const latest = viewing ?? saved[0] ?? null;
@@ -143,7 +145,7 @@ function Monthly() {
       {latest?.narrative && <section className="rounded-2xl border border-gold/60 p-3"><h3 className="font-display font-bold">AI explanation</h3><p className="text-xs text-muted-foreground">AI-written commentary on the verified figures above — not a calculation. Generated {new Date(latest.generatedAt).toLocaleString()}.</p><p className="mt-2 whitespace-pre-wrap text-sm">{latest.narrative}</p></section>}
 
       <section className="rounded-2xl border p-3"><h3 className="font-display font-bold">Report archive</h3>
-        <ul className="divide-y text-sm">{archive.map((a) => <li key={a.id}><button className="flex w-full justify-between py-1.5" onClick={() => { setMonth(a.month); setViewing(a); }}><span>{a.month}</span><span className="text-xs text-muted-foreground">generated {new Date(a.generatedAt).toLocaleDateString()} · data to {new Date(a.dataCutoff).toLocaleDateString()}</span></button></li>)}{!archive.length && <li className="py-2 text-muted-foreground">No saved reviews yet.</li>}</ul></section>
+        <ul className="divide-y text-sm">{archive.map((a) => <li key={a.id}><button className="flex w-full justify-between py-1.5" onClick={() => { setMonth(a.month); setViewing(a); }}><span>{a.month}</span><span className="text-xs text-muted-foreground">generated {new Date(a.generatedAt).toLocaleDateString()} · data to {new Date(a.dataCutoff).toLocaleDateString()}</span></button></li>)}{!archive.length && !archiveFailed && <li className="py-2 text-muted-foreground">No saved reviews yet.</li>}</ul>{archiveFailed && <LoadError what="your saved reviews" onRetry={load} />}</section>
       <ExpenseDialog expense={open} onClose={() => setOpen(null)} />
     </div>
   );

@@ -1,0 +1,16 @@
+ RUN  v4.1.12 /home/user/thapal-p0
+ ✓ src/lib/store-load-failure.repro.test.tsx > P0-007 REPRO: a failed ledger/preferences read wipes the shown records and the device copy > replaces cached transactions and trips with empty lists, reports synced, and persists the empty copy 156ms
+ ✓ src/lib/statement-pipeline/statement-undo.repro.test.ts > P0-002 REPRO: the database Undo depends on is not installed > applied schema has neither statement_undo_receipts nor undo_statement_rows; the call fails as a missing function 3022ms
+ ✓ src/lib/statement-pipeline/statement-undo.repro.test.ts > P0-002 REPRO: the database Undo depends on is not installed > the generated database types lack both names; only the staged (unapplied) SQL defines them 1ms
+ ✓ src/lib/transaction-deletion.repro.test.ts > P0-005a REPRO: deleting a ledger entry is a hard delete (current behaviour, applied schema 0000-0088) > removes the row permanently; the audit row keeps only amount/date/type/title; links are orphaned; balances change with no reversal 3280ms
+ ✓ src/components/card-payment.repro.test.tsx > P0-005b REPRO: card payment entered by window.prompt and saved outside finance_operation > prompts with window.prompt, then calls save() with no idempotency key and never calls finance_operation 168ms
+ ✓ src/components/card-payment.repro.test.tsx > P0-005b REPRO: card payment entered by window.prompt and saved outside finance_operation > a lost response is reported as a failure; the person's retry posts the payment twice and both reduce the bank balance 2ms
+ ✓ src/components/review-history.repro.test.ts > P0-003 verification: restored correction batches > undo sets undone_at; the store's own filter then hides the batch; a repeat undo is a silent no-op 3108ms
+ ✓ src/components/DematHoldings.load-error.test.tsx > P0-004 REPRO: a failed holdings read is shown as 'No holdings yet' 38ms
+ ✓ src/lib/transaction-deletion.repro.test.ts > P0-005a REPRO: deleting a ledger entry is a hard delete (current behaviour, applied schema 0000-0088) > deleting one side of a confirmed transfer leaves the other side excluded from balances (money vanishes from the wallet) 2389ms
+ ✓ src/lib/transaction-deletion.repro.test.ts > P0-005a REPRO: deleting a ledger entry is a hard delete (current behaviour, applied schema 0000-0088) > deleting a loan's funding entry keeps the loan but drops the link; closed periods are protected; the last delete wipes category undo history 1837ms
+ ✓ src/lib/transaction-deletion.repro.test.ts > P0-005a REPRO: deleting a ledger entry is a hard delete (current behaviour, applied schema 0000-0088) > a team member with the Finance role can hard-delete another person's entry once an admin allows delete_expenses (default off) 1758ms
+ Test Files  6 passed (6)
+      Tests  11 passed (11)
+   Start at  18:54:42
+   Duration  9.64s (transform 1.59s, setup 402ms, import 3.11s, tests 15.78s, environment 1.11s)

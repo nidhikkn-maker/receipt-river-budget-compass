@@ -6,13 +6,17 @@ import { ExpenseDialog, ExpenseDetail } from "./ExpenseDialog";
 import { useStore } from "@/lib/store";
 import { useTabletLandscape } from "@/hooks/use-mobile";
 import { Button } from "./ui/button";
+import { LoadError } from "./LoadError";
+import { loadFailed } from "@/lib/load-state";
 
 /** Expenses as perforated "ticket" cards. Pass selected/onToggle to turn cards into multi-select rows. On iPad landscape the detail opens in a side pane next to the list. */
 export function ExpenseTable({ items, empty = "Nothing here yet.", selected, onToggle }: { items: Expense[]; empty?: string; selected?: Set<string> | undefined; onToggle?: ((id: string) => void) | undefined }) {
-  const { memberName } = useStore();
+  const { memberName, loadErrors, refresh } = useStore();
   const [open, setOpen] = useState<Expense | null>(null);
   const selecting = !!onToggle;
   const sideBySide = useTabletLandscape() && !selecting;
+  // A failed ledger read is never shown as "nothing here" (P0-004/P0-017).
+  if (items.length === 0 && loadFailed(loadErrors, "transactions")) return <LoadError what="your transactions" onRetry={refresh} />;
   if (items.length === 0) return <div className="rounded-2xl border border-dashed p-10 text-center text-sm text-muted-foreground">{empty}</div>;
   const list = (
       <ul className={"grid min-w-0 grid-cols-1 gap-0" + (sideBySide ? "" : "")}>

@@ -11,6 +11,7 @@ export function InboxWork() {
   const [reports, setReports] = useState<{ id: string; title: string; created_at: string }[]>([]);
   const [imports,setImports]=useState<ImportInboxItem[]>([]);
   const [importError,setImportError]=useState(false);
+  const [reportError,setReportError]=useState(false);
   useEffect(() => {
     let live = true;let busy = false;
     const refreshImports=async()=>{
@@ -21,13 +22,14 @@ export function InboxWork() {
     listDrafts().then((d) => live && setDrafts(d.filter((x) => x.status !== "saved").length)).catch(() => live && setDrafts(0));
     const since = new Date(Date.now() - 7 * 864e5).toISOString();
     supabase.from("report_history").select("id,title,created_at").gte("created_at", since).order("created_at", { ascending: false }).limit(3)
-      .then(({ data }) => live && setReports(data ?? []));
+      .then(({ data, error }) => { if (!live) return; setReportError(!!error); if (!error) setReports(data ?? []); });
     return () => { live = false;window.clearInterval(timer);window.removeEventListener('focus',onFocus); };
   }, []);
-  if (!drafts && !reports.length && !imports.length && !importError) return null;
+  if (!drafts && !reports.length && !imports.length && !importError && !reportError) return null;
   return (
     <div className="mb-4 grid gap-2">
       {importError&&<p role="status" className="text-sm text-warning">Could not refresh statement imports.</p>}
+      {reportError&&<p role="status" className="text-sm text-warning">Could not load recent reports. Nothing has been deleted.</p>}
       {!!imports.length && <h2 className="text-lg font-semibold">Statement imports</h2>}
       {groupImportInbox(imports).map(group=><section key={group.label} aria-label={`Imports · ${group.label}`} className="space-y-2"><h3 className="text-xs font-medium text-muted-foreground">{group.label} · {group.items.length}{imports.length === 30 ? ' · latest 30 shown' : ''}</h3>{group.items.slice(0, 4).map(b=><Link key={b.id} to="/historical-import" search={{batch:b.id}} className="flex gap-3 items-center border rounded-lg bg-card p-3"><FileText className="h-5 w-5 shrink-0 text-primary"/><div className="min-w-0"><p className="truncate text-sm font-semibold">{b.file_name}</p><p className="text-xs text-muted-foreground">Statement import · {b.status==='review'?'Ready for review':b.status}</p></div></Link>)}{group.items.length > 4 && <Link to="/historical-import" className="text-sm text-primary underline">View all {group.label.toLowerCase()} imports</Link>}</section>)}
       {!!drafts && (

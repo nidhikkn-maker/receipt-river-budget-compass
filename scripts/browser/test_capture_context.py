@@ -15,7 +15,7 @@ async def main():
    if route.request.is_navigation_request():await route.fulfill(body=HTML,content_type='text/html');return
    if path in ['/src/lib/store.tsx','/src/integrations/supabase/client.ts']:
     name='useStore' if path.endswith('store.tsx') else 'supabase';await route.fulfill(body=f'export {{ {name} }} from "/scripts/browser/statement-desk-mocks.tsx";',content_type='application/javascript');return
-   if path=='/src/lib/statement-pipeline/atomic-undo.functions.ts':await route.fulfill(body='export {undoStatement} from "/scripts/browser/statement-desk-mocks.tsx";',content_type='application/javascript');return
+   if path=='/src/lib/statement-pipeline/atomic-undo.functions.ts':await route.fulfill(body='export {undoStatement, statementUndoCapability} from "/scripts/browser/statement-desk-mocks.tsx";',content_type='application/javascript');return
    if path=='/src/components/DocumentIntake.tsx':await route.fulfill(body='export const DocumentIntake=({context,file})=>{window.__capture={context,name:file.name};return context;};',content_type='application/javascript');return
    if route.request.method not in ['GET','HEAD']:
     await route.abort();return

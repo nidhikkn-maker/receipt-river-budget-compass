@@ -2,6 +2,7 @@
  * Opening-balance workflow for one audited year [v6 §19]: link each audited balance to accounts, see the
  * difference per account, then post dated opening entries (1 April) in one atomic, undoable step.
  */
+import { LoadError } from "@/components/LoadError";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -39,7 +40,9 @@ export function OpeningBalances({ rec, missingSchedules }: { rec: FyRecord; miss
   });
   const [why, setWhy] = useState<Partial<Record<OpeningHead | "balance" | "schedules", string>>>({});
   const [posted, setPosted] = useState<Posting[] | null>(null);
-  const load = () => openingPostings().then((r) => setPosted(r.filter((p) => p.entity_id === rec.entityId && p.fy === rec.fy))).catch(() => setPosted([]));
+  // A failed read must not look like "nothing posted": posting again could duplicate opening entries (P0-004/P0-019).
+  const [postedFailed, setPostedFailed] = useState(false);
+  const load = () => openingPostings().then((r) => { setPosted(r.filter((p) => p.entity_id === rec.entityId && p.fy === rec.fy)); setPostedFailed(false); }).catch(() => setPostedFailed(true));
   useEffect(() => { void load(); }, [rec.entityId, rec.fy]); // eslint-disable-line react-hooks/exhaustive-deps
   const active = posted?.find((p) => !p.undone_at) ?? null;
 
@@ -62,6 +65,7 @@ export function OpeningBalances({ rec, missingSchedules }: { rec: FyRecord; miss
     await load();
   };
 
+  if (postedFailed) return <LoadError what="the opening entries already posted" note="Nothing has been deleted. Posting waits until they load, so nothing is posted twice." onRetry={load} />;
   if (active) {
     const lines = (active.lines as { accountId: string; head: OpeningHead; target: number }[]) ?? [];
     return <div className="space-y-1 rounded-lg bg-secondary p-2 text-xs">

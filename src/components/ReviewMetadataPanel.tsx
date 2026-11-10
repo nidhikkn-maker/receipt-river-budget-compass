@@ -14,7 +14,7 @@ export function ReviewMetadataPanel({rows,onSaved}:{rows:FinancialReview[];onSav
  const [preview,setPreview]=useState<MetadataPreview|null>(null),[restore,setRestore]=useState<string|null>(null);
  const [history,setHistory]=useState<{id:string;createdAt:string;entries:{before:Record<string,unknown>;after:Record<string,unknown>}[]}[]>([]);
  const id=useRef<string|null>(null);
- const load=async()=>{try {setHistory(await store.reviewMetadataHistory());}catch {setError('Mapping history could not load. Retry to check saved changes.');}};
+ const load=async()=>{try {setHistory((await store.reviewMetadataHistory()).filter(h=>!h.undoneAt));}catch {setError('Mapping history could not load. Retry to check saved changes.');}};
  useEffect(()=>{void load();},[]);
  const options: [string,string][]= mode==='organisation' ? store.preferences.tags.filter(t=>t.group==='Organisation').map(t=>[t.name,t.name]) : mode==='scope'?Object.entries(SCOPE_LABEL):mode==='paymentInstrumentId'?store.preferences.paymentInstruments.filter(p=>!p.archived).map(p=>[p.id,p.nickname]):mode==='payeeId'?(store.preferences.payees??[]).filter(p=>!p.archived).map(p=>[p.id,p.name]):mode==='category'?store.preferences.categories.filter(c=>!c.archived).map(c=>[c.name,c.name]):store.preferences.tags.filter(t=>['Project','Event','Purpose','Client'].includes(t.group)).map(t=>[`${t.group}: ${t.name}`,t.name]);
  const prepare=()=>{try {

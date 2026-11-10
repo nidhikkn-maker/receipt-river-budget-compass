@@ -33,6 +33,7 @@ import { validateCompleteAllocations } from './trip-budget';
 import { PreferenceReview } from '@/components/PreferenceReview';
 import { checkpointUpload } from './statement-pipeline/history';
 import type { StatementUpload } from './preferences';
+import type { LoadArea } from './load-state';
 import {postAccountingWithRecovery,validateAccountingAttempt,type AccountingAttempt,type AccountingReceipt} from './books/accounting-post';
 
 export interface Loan {
@@ -54,7 +55,7 @@ export interface AccountPatch {
   name?: string; creditLimit?: number | null; dueDay?: number | null; minBalance?: number; issuer?: string; lastFour?: string | null;
   statementDay?: number | null; interestRate?: number | null; includeInCash?: boolean; details?: AccountDetails;
 }
-export interface FinancialCorrectionHistory { id: string; createdAt: string; count: number; entries: { before: { id: string; title: string; txn_type: TxnType; account_id: string | null; to_account_id: string | null; amount: number; principal: number | null; interest: number | null }; after: { txn_type: TxnType; account_id: string | null; to_account_id: string | null; principal: number | null; interest: number | null; correction_revision: number } }[] }
+export interface FinancialCorrectionHistory { id: string; createdAt: string; undoneAt: string | null; count: number; entries: { before: { id: string; title: string; txn_type: TxnType; account_id: string | null; to_account_id: string | null; amount: number; principal: number | null; interest: number | null }; after: { txn_type: TxnType; account_id: string | null; to_account_id: string | null; principal: number | null; interest: number | null; correction_revision: number } }[] }
 export interface NewAccount { name: string; kind: AccountKind; openingBalance: number; issuer?: string; lastFour?: string | null; creditLimit?: number | null; statementDay?: number | null; dueDay?: number | null; interestRate?: number | null; details?: AccountDetails }
 export interface DocumentMeta { title: string; docType: DocType; docDate: string | null; amount: number | null; currency: string; merchant: string | null; notes: string; text?: string; transactionId: string | null; accountId: string | null; loanId: string | null; expiresOn: string | null; fields?: DocField[]; replacesId?: string | null; id?: string; evidenceLocked?: boolean; entityId?: string | null }
 
@@ -103,7 +104,7 @@ interface Ctx {
   applyReviewMapping: (preview: ReviewMappingPreview) => Promise<void>;
   applyReviewMetadata: (preview: MetadataPreview, id: string) => Promise<void>;
   undoReviewMetadata: (id: string) => Promise<void>;
-  reviewMetadataHistory: () => Promise<{id:string;createdAt:string;entries:{before:Record<string,unknown>;after:Record<string,unknown>}[]}[]>;
+  reviewMetadataHistory: () => Promise<{id:string;createdAt:string;undoneAt:string|null;entries:{before:Record<string,unknown>;after:Record<string,unknown>}[]}[]>;
   saveRecurringReview: (draft: Omit<Commitment, 'id'>, id: string) => Promise<void>;
   userId: string;
   name: string;
@@ -149,6 +150,8 @@ interface Ctx {
   loading: boolean;
   /** "syncing" while saved figures refresh from the cloud; "synced" once up to date. */
   syncState: "syncing" | "synced" | "offline" | "error";
+  /** Record groups whose last cloud read failed; their previous values are kept, never replaced by empty lists (P0-004/P0-017). */
+  loadErrors: LoadArea[];
   lastSyncedAt: string | null;
   refresh: () => Promise<void>;
   save: (s: ExpenseInput, opts?: { id?: string; files?: File[]; createId?: string; noRefresh?: boolean }) => Promise<void>;
@@ -197,6 +200,7 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
   const [loading, setLoading] = useState(true);
   const [syncState, setSyncState] = useState<"syncing" | "synced" | "offline" | "error">("syncing");
   const [lastSyncedAt, setLastSyncedAt] = useState<string | null>(null);
+  const [loadErrors, setLoadErrors] = useState<LoadArea[]>([]);
   const [pendingCount, setPendingCount] = useState(0);
   const [pendingItems, setPendingItems] = useState<PendingItem[]>([]);
   const syncRef = useRef<(only?: string) => Promise<void>>(async () => {});
@@ -268,27 +272,31 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
       supabase.from("loans").select("*").order("created_at"),
       supabase.from("finance_preferences").select("data,revision").eq("owner_id", userId).maybeSingle(),
     ]);
-    const firstError = [e, a, c, l].find((x) => x.error)?.error;
-    if (firstError) toast.error("Some records couldn't load — pull to refresh or try again");
-    setPreferences(normalizePreferences(pref.data?.data as unknown as Partial<FinancePreferences>));
-    preferencesRevision.current = pref.error ? null : pref.data?.revision ?? null;
-    if (!pref.error) { storedPreferences.current = (pref.data?.data ?? null) as Record<string, unknown> | null; setStoredSnapshot(storedPreferences.current); }
-    setCommitments((c.data ?? []).map((x) => ({ id: x.id, name: x.name, kind: x.kind as CommitmentKind, direction: x.direction as "in" | "out", amount: Number(x.amount),
+    // A failed read keeps the last known records (device copy or earlier load) and is reported, never shown as empty.
+    const failed = new Set<LoadArea>();
+    const mark = (r: { error: unknown }, area: LoadArea) => { if (r.error) failed.add(area); return !r.error; };
+    if ([e, a, c, l].some((x) => x.error)) toast.error("Some records couldn't load — pull to refresh or try again");
+    if (mark(pref, "settings")) {
+      setPreferences(normalizePreferences(pref.data?.data as unknown as Partial<FinancePreferences>));
+      preferencesRevision.current = pref.data?.revision ?? null;
+      storedPreferences.current = (pref.data?.data ?? null) as Record<string, unknown> | null; setStoredSnapshot(storedPreferences.current);
+    } else preferencesRevision.current = null;
+    if (mark(c, "payments")) setCommitments((c.data ?? []).map((x) => ({ id: x.id, name: x.name, kind: x.kind as CommitmentKind, direction: x.direction as "in" | "out", amount: Number(x.amount),
       frequency: x.frequency as Frequency, intervalDays: x.interval_days, nextDue: x.next_due, accountId: x.account_id, category: x.category,
       confirmed: x.confirmed, essential: x.essential, status: x.status as CommitmentStatus })));
-    setLoans((l.data ?? []).map((x) => ({
+    if (mark(l, "loans")) setLoans((l.data ?? []).map((x) => ({
       id: x.id, name: x.name, principal: Number(x.principal_outstanding), rate: Number(x.annual_rate), emi: Number(x.emi), nextDue: x.next_due,
       provider: x.provider, loanType: x.loan_type as LoanType, original: Number(x.original_principal ?? x.principal_outstanding), startDate: x.start_date,
       prepaymentTerms: x.prepayment_terms, foreclosurePct: Number(x.foreclosure_pct), accountId: x.account_id, sourceTransactionId: x.source_transaction_id,
       payments: (x.payments as unknown as LoanPayment[]) ?? [], status: x.status === "closed" ? "closed" : "active",
     })));
-    setAccounts((a.data ?? []).map((x) => ({
+    if (mark(a, "accounts")) setAccounts((a.data ?? []).map((x) => ({
       id: x.id, name: x.name, kind: x.kind as AccountKind, openingBalance: Number(x.opening_balance), archived: x.archived,
       creditLimit: x.credit_limit == null ? null : Number(x.credit_limit), dueDay: x.due_day, minBalance: Number(x.min_balance),
       issuer: x.issuer, lastFour: x.last_four, statementDay: x.statement_day, interestRate: x.interest_rate == null ? null : Number(x.interest_rate),
       includeInCash: x.include_in_cash, details: (x.details as unknown as AccountDetails) ?? {},
     })));
-    setName(p.data?.full_name ?? "");
+    if (mark(p, "profile")) setName(p.data?.full_name ?? "");
     const toExpense = (x: NonNullable<typeof e.data>[number]): Expense => ({
       id: x.id, categoryRevision: x.category_revision, correctionRevision: x.correction_revision, department: x.department, title: x.title, merchant: x.merchant, category: x.category as Category, scope: x.scope as Scope, memberId: x.member_id, splits: (x.splits as unknown as Split[]) ?? [],
       amount: Number(x.amount), currency: x.currency, originalAmount: Number(x.original_amount ?? x.amount), fxRate: Number(x.fx_rate),
@@ -300,33 +308,36 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
       allocations: (x.allocations as unknown as Allocation[]) ?? [], reimbursement: (x.reimbursement as unknown as ReimbursementInfo) ?? {},
       transferCounterpartOf: x.transfer_counterpart_of ?? null, tripId: x.trip_id, principal: x.principal == null ? null : Number(x.principal), interest: x.interest == null ? null : Number(x.interest),
     });
-    setExpenses((e.data ?? []).map(toExpense));
-    const bud: Budgets = {};
-    for (const x of b.data ?? []) bud[x.category as Category] = Number(x.monthly_amount);
-    setBudgets(bud);
+    if (mark(e, "transactions")) setExpenses((e.data ?? []).map(toExpense));
+    if (mark(b, "budgets")) {
+      const bud: Budgets = {};
+      for (const x of b.data ?? []) bud[x.category as Category] = Number(x.monthly_amount);
+      setBudgets(bud);
+    }
     setLoading(false);
     if (fullP) {
       const full = await fullP;
-      if (full.error) toast.error("Some records couldn't load — pull to refresh or try again");
-      else setExpenses((full.data ?? []).map(toExpense));
+      if (full.error) { failed.add("transactions"); toast.error("Some records couldn't load — pull to refresh or try again"); }
+      else { setExpenses((full.data ?? []).map(toExpense)); failed.delete("transactions"); }
       liteActive.current = false;
     }
     const [m, g, v, d, db] = await restP;
     if ([g, v, d].some((x) => x.error)) toast.error("Some records couldn't load — pull to refresh or try again");
     setDepartmentBudgetError(!!db.error);
     setDepartmentBudgets(Object.fromEntries((db.data ?? []).map((x) => [x.department, Number(x.amount)])));
-    setGoals((g.data ?? []).map((x) => ({ id: x.id, name: x.name, target: Number(x.target), saved: Number(x.saved), monthly: Number(x.monthly), reserve: x.reserve })));
-    setValuations((v.data ?? []).map((x) => ({ id: x.id, accountId: x.account_id, value: Number(x.value), valuedOn: x.valued_on, source: x.source, note: x.note })));
-    setDocuments((d.data ?? []).map((x) => ({
+    if (mark(g, "goals")) setGoals((g.data ?? []).map((x) => ({ id: x.id, name: x.name, target: Number(x.target), saved: Number(x.saved), monthly: Number(x.monthly), reserve: x.reserve })));
+    if (mark(v, "valuations")) setValuations((v.data ?? []).map((x) => ({ id: x.id, accountId: x.account_id, value: Number(x.value), valuedOn: x.valued_on, source: x.source, note: x.note })));
+    if (mark(d, "documents")) setDocuments((d.data ?? []).map((x) => ({
       id: x.id, title: x.title, docType: x.doc_type as DocType, filePath: x.file_path, fileName: x.file_name, mimeType: x.mime_type, size: x.size_bytes,
       docDate: x.doc_date, amount: x.amount == null ? null : Number(x.amount), currency: x.currency, merchant: x.merchant, notes: x.notes, text: x.extracted_text,
       transactionId: x.transaction_id, accountId: x.account_id, loanId: x.loan_id, expiresOn: x.expires_on, createdAt: x.created_at,
       fields: Array.isArray(x.fields) ? (x.fields as unknown as DocField[]) : [], replacesId: x.replaces_id, evidenceLocked: !!x.evidence_locked, entityId: x.entity_id ?? null,
     })));
-    setMembers(m.data ?? []);
+    if (mark(m, "family")) setMembers(m.data ?? []);
     hadSnapshot.current = true;
-    setSyncState("synced");
-    setLastSyncedAt(new Date().toISOString());
+    setLoadErrors([...failed]);
+    setSyncState(failed.size ? "error" : "synced");
+    if (!failed.size) setLastSyncedAt(new Date().toISOString());
     } catch (err) {
       setLoading(false);
       setSyncState(navigator.onLine ? "error" : "offline");
@@ -336,8 +347,9 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
 
   useEffect(() => { void (inFlight.current ?? refresh()); }, [refresh]);
   useEffect(() => {
-    if (!loading && navigator.onLine) void putSnapshot(userId, { name, members, expenses, accounts, commitments, rawLoans, goals, budgets, preferences, valuations, documents } satisfies Snapshot).catch(() => {});
-  }, [loading, userId, name, members, expenses, accounts, commitments, rawLoans, goals, budgets, preferences, valuations, documents]);
+    // Never overwrite the device copy with a partial load: it is the last known good copy.
+    if (!loading && navigator.onLine && !loadErrors.length) void putSnapshot(userId, { name, members, expenses, accounts, commitments, rawLoans, goals, budgets, preferences, valuations, documents } satisfies Snapshot).catch(() => {});
+  }, [loading, loadErrors, userId, name, members, expenses, accounts, commitments, rawLoans, goals, budgets, preferences, valuations, documents]);
 
   // Loan principal comes from the linked loan account's ledger, so EMI transfers keep it right.
   const loans = useMemo(() => rawLoans.map((l) => {
@@ -429,6 +441,8 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
   }, [userId]);
 
   const savePreferences: Ctx["savePreferences"] = async (p) => {
+    // Saved settings could not be read: saving now could replace them with an older copy.
+    if (loadErrors.includes("settings")) throw new Error("Your saved settings couldn't load. Retry loading before saving changes.");
     const previous=preferences;
     for (const trip of p.trips) {
       const old = previous.trips.find(item => item.id === trip.id);
@@ -572,8 +586,9 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
     check((await supabase.rpc("undo_financial_correction", { _id: id })).error); await refresh();
   };
   const financialCorrectionHistory: Ctx["financialCorrectionHistory"] = async () => {
-    const result = await supabase.from("financial_corrections").select("id,created_at,entries,request").is("undone_at", null).order("created_at", { ascending: false }).limit(20);
-    check(result.error); return (result.data ?? []).filter(r => !(r.request && typeof r.request === 'object' && !Array.isArray(r.request) && r.request['kind'] === 'review_metadata')).map(r => ({ id: r.id, createdAt: r.created_at, count: Array.isArray(r.entries) ? r.entries.length : 0, entries: r.entries as unknown as FinancialCorrectionHistory["entries"] }));
+    // Restored batches are listed with their real undone_at so the history shows them as Restored without Undo (P0-003).
+    const result = await supabase.from("financial_corrections").select("id,created_at,undone_at,entries,request").order("created_at", { ascending: false }).limit(40);
+    check(result.error); return (result.data ?? []).filter(r => !(r.request && typeof r.request === 'object' && !Array.isArray(r.request) && r.request['kind'] === 'review_metadata')).slice(0, 20).map(r => ({ id: r.id, createdAt: r.created_at, undoneAt: r.undone_at, count: Array.isArray(r.entries) ? r.entries.length : 0, entries: r.entries as unknown as FinancialCorrectionHistory["entries"] }));
   };
   const applyReviewMetadata: Ctx['applyReviewMetadata'] = async (preview,id) => {
     if (!navigator.onLine) throw Error('Reconnect before applying mappings.');
@@ -583,8 +598,8 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
   };
   const undoReviewMetadata: Ctx['undoReviewMetadata'] = async id => {check((await supabase.rpc('undo_review_metadata',{_id:id})).error);await refresh();};
   const reviewMetadataHistory: Ctx['reviewMetadataHistory'] = async () => {
-    const result=await supabase.from('financial_corrections').select('id,created_at,entries').eq('request->>kind','review_metadata').is('undone_at',null).order('created_at',{ascending:false}).limit(20);
-    check(result.error);return (result.data??[]).map(r=>({id:r.id,createdAt:r.created_at,entries:r.entries as unknown as {before:Record<string,unknown>;after:Record<string,unknown>}[]}));
+    const result=await supabase.from('financial_corrections').select('id,created_at,undone_at,entries').eq('request->>kind','review_metadata').order('created_at',{ascending:false}).limit(20);
+    check(result.error);return (result.data??[]).map(r=>({id:r.id,createdAt:r.created_at,undoneAt:r.undone_at,entries:r.entries as unknown as {before:Record<string,unknown>;after:Record<string,unknown>}[]}));
   };
 
   const remove: Ctx["remove"] = async (e) => {
@@ -910,7 +925,7 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
       expenses: expenses.filter((x) => (x.txnType ?? "expense") === "expense"), transactions: expenses.filter((x) => !x.transferCounterpartOf), transferCounterparts: expenses.filter((x) => !!x.transferCounterpartOf), confirmTransfer, cancelTransfer, accounts, addAccount, setArchived, adjustBalance,
       commitments, loans, goals, valuations, documents, saveCommitment, confirmIrregular, removeCommitment, confirmCommitment, saveLoan, removeLoan, recordLoanPayment, convertToEmi,
       saveGoal, removeGoal, updateAccount, addValuation, removeValuation, addDocument, updateDocument, removeDocument, history, setReimbursement, recordReimbursement, deleteAll,
-      budgets, loading, syncState, lastSyncedAt, refresh, save, remove, setScope, reconcile, addMember, removeMember, updateMember, setBudget, signedUrl, downloadFile,
+      budgets, loading, syncState, loadErrors, lastSyncedAt, refresh, save, remove, setScope, reconcile, addMember, removeMember, updateMember, setBudget, signedUrl, downloadFile,
       setAllocations, updateReimbursement, addReimbursementReceipt, listReviews, saveReview,
     }}>
       {children}

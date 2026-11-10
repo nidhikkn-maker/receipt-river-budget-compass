@@ -1,3 +1,5 @@
+import { LoadError } from "@/components/LoadError";
+import { loadFailed } from "@/lib/load-state";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { TripLifecycleActions } from "@/components/trip/TripLifecycleActions";
 import { useEffect, useMemo, useState } from "react";
@@ -35,7 +37,7 @@ export const Route = createFileRoute("/_authenticated/trips/")({
 const FILTERS: ("all" | TripStatus)[] = ["all", "upcoming", "active", "completed", "cancelled", "closed"];
 
 function Trips() {
-  const { preferences: pr, transactions } = useStore();
+  const { preferences: pr, transactions, loadErrors, refresh } = useStore();
   const today = todayISO();
   const search = Route.useSearch();
   const navigate = useNavigate();
@@ -96,7 +98,8 @@ function Trips() {
       </div>
       <TripDiscoveryFilters trips={trips} value={filters} onChange={setFilters} />
 
-      {shown.length === 0 && (
+      {shown.length === 0 && loadFailed(loadErrors, "settings") && <LoadError what="your trips" onRetry={refresh} />}
+      {shown.length === 0 && !loadFailed(loadErrors, "settings") && (
         <Card title="No trips here">
           <p className="text-sm text-muted-foreground">{trips.length === 0 ? "Create your first trip to plan bookings, itinerary and travel money." : "No trips match these filters."}</p>
         </Card>

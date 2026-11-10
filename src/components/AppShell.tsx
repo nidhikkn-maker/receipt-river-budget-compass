@@ -1,3 +1,4 @@
+import { StoreLoadNotice } from "./StoreLoadNotice";
 import { OfflineBanner } from "@/components/OfflineBanner";
 import { PageSkeleton } from "@/components/PageSkeleton";
 import { NavProgress } from "@/components/NavProgress";
@@ -112,6 +113,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       <main id="main-content" className={focused ? "uix-content uix-entry mx-auto max-w-5xl px-4 pb-6 pt-2 sm:px-8" : wideClaim ? 'uix-content mx-auto max-w-[1800px] px-4 pb-[calc(8.5rem+env(safe-area-inset-bottom))] pt-5 sm:px-8 md:pb-12' : "uix-content mx-auto max-w-[1440px] px-4 pb-[calc(8.5rem+env(safe-area-inset-bottom))] pt-5 sm:px-8 md:pb-12"}>
         {!focused && <BackButton />}
         {!loading && <OfflineBanner />}
+        {!loading && <StoreLoadNotice />}
         {!focused && !loading && <DraftsReminder />}
         {loading ? <PageSkeleton /> : <DeviceLock>{children}<StepUpHost /></DeviceLock>}
       </main>

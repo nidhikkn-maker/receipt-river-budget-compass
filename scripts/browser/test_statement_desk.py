@@ -44,7 +44,7 @@ class StatementDeskFlow(unittest.IsolatedAsyncioTestCase):
                 name = "useStore" if "store.tsx" in parsed.path else "supabase"
                 await route.fulfill(status=200, content_type="application/javascript", body=f'export {{ {name} }} from "/scripts/browser/statement-desk-mocks.tsx";')
             elif parsed.path == '/src/lib/statement-pipeline/atomic-undo.functions.ts':
-                await route.fulfill(status=200, content_type='application/javascript', body='export { undoStatement } from "/scripts/browser/statement-desk-mocks.tsx";')
+                await route.fulfill(status=200, content_type='application/javascript', body='export { undoStatement, statementUndoCapability } from "/scripts/browser/statement-desk-mocks.tsx";')
             elif request.method not in ("GET", "HEAD"):
                 self.blocked.append("unexpected write")
                 await route.abort()
@@ -476,13 +476,17 @@ class StatementDeskFlow(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(await self.page.evaluate('deskFixture.saves.length'),1)
         await self.page.reload()
         await expect(self.page.get_by_role('heading',name='Statement Desk')).to_be_visible()
+        # P0-002: without the database Undo, pressing Undo says so plainly, removes the control and never marks the upload unfinished.
         await self.page.evaluate('deskFixture.atomicUnavailable = true')
         await self.page.get_by_label('Recent uploads').get_by_role('button',name='Undo',exact=True).click()
-        await expect(self.page.get_by_text('Safe Undo is awaiting database release approval. Your records and recovery history are unchanged.')).to_be_visible()
+        await expect(self.page.get_by_label('Recent uploads')).to_contain_text('Undo for statement uploads needs an approved database update')
+        await expect(self.page.get_by_label('Recent uploads').get_by_role('button',name='Undo',exact=True)).to_have_count(0)
         self.assertEqual(await self.page.evaluate('deskFixture.transactions.length'),1)
         self.assertEqual(await self.page.evaluate('deskFixture.atomicCalls'),0)
-        await expect(self.page.get_by_label('Recent uploads')).to_contain_text('Undo unfinished')
+        await expect(self.page.get_by_label('Recent uploads')).not_to_contain_text('Undo unfinished')
         await self.page.evaluate('deskFixture.atomicUnavailable = false')
+        await self.page.reload()
+        await expect(self.page.get_by_role('heading', name='Statement Desk')).to_be_visible()
         await self.page.get_by_label('Recent uploads').get_by_role('button',name='Undo',exact=True).dblclick()
         await expect(self.page.get_by_label('Recent uploads')).to_have_count(0)
         self.assertEqual(await self.page.evaluate('deskFixture.transactions.length'),0)
