@@ -104,6 +104,18 @@ describe("P14-a: the database derives and checks the disposal book value (direct
     expect(await err(q1(db, O, REQ, [c.a.id, c.doc, 53880, crypto.randomUUID()]))).toMatch(/P14_BOOK_VALUE: the book value 53880.00 does not follow from the register \(the database works out 53883.33\)/);
   });
 
+  it("a session setting no longer opens the disposal guards (phase3_p14.writing is a transaction-bound row only P14's functions write)", async () => {
+    const s = await seed(db, O, {});
+    const sold = "UPDATE public.finance_preferences p SET data = jsonb_set(p.data, '{assets}', (SELECT jsonb_agg(CASE WHEN a->>'id' = $2 THEN a || '{\"soldOn\":\"2026-10-31\",\"saleValue\":1}' ELSE a END) FROM jsonb_array_elements(p.data->'assets') a)) WHERE owner_id = $1";
+    await actAs(db, O);
+    await db.exec("BEGIN");
+    await db.query("SELECT set_config('phase3_p14.writing', 'on', true)");
+    const r = await err(db.query(sold, [O, s.a.id]));
+    await db.exec("ROLLBACK"); await actAs(db, null);
+    expect(r).toMatch(/P14_DISPOSAL_APPROVAL_REQUIRED/);
+    expect(await err(q1(db, O, "INSERT INTO phase3_p14.writing(transaction_id) VALUES (txid_current())"))).toMatch(/permission denied/);
+  });
+
   it("an asset the database cannot price (recorded estimate changes, building policy, no rate) is refused, never trusted", async () => {
     const shapes: Row[] = [
       { policyHistory: [{ field: "bookRatePct", at: "2026-07-01T00:00:00Z", effectiveFrom: "2026-07", fromRaw: 20, toRaw: 40 }] },

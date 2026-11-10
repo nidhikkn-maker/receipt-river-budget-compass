@@ -39,6 +39,8 @@
 --   building policy, missing method/rate) are refused, never trusted (P14_UNVERIFIABLE). Approval needs a recent step-up:
 --   with P4 every decision needs it; WITHOUT P4 approvals fail closed (P14_STEP_UP_UNAVAILABLE), rejections still work.
 --   preview_asset_disposal (STABLE, read-only) returns the database's working for the I05 preview (R-E-I14).
+--   decide/cancel mark their transaction in phase3_p14.writing (a table no client can write) instead of the session
+--   setting phase3_p14.writing, which any role could set to open the guards in C.
 -- Known limit (KK review): the app engine stays the source of the posted paise figure; the database bounds it within the
 -- tolerance above rather than running a second posting engine. 0069's closed-period register guard still
 -- applies to the asset change: an asset bought before a closed period cannot be changed (also not disposed) until
@@ -238,7 +240,7 @@ BEGIN
     RAISE EXCEPTION 'P14_STEP_UP_UNAVAILABLE: approving a disposal needs the step-up check (P4), which is not installed' USING ERRCODE = '42501';
   END IF;
   IF NOT phase3_p14.step_up_ok() THEN RAISE EXCEPTION 'STEP_UP_REQUIRED: decide_asset_disposal' USING ERRCODE = '42501'; END IF;
-  PERFORM set_config('phase3_p14.writing', 'on', true);
+  INSERT INTO phase3_p14.writing(transaction_id) VALUES (txid_current()) ON CONFLICT DO NOTHING;
   -- The request is closed first: the posting hook (P7/P8) posts the disposal entry only for an APPROVED request.
   UPDATE public.asset_disposal_requests SET status = CASE WHEN p_approve THEN 'approved' ELSE 'rejected' END, decided_by = uid, decided_at = clock_timestamp(), decision_reason = why
    WHERE id = r.id;
@@ -273,7 +275,7 @@ BEGIN
         'other', 'adjustment', acc, -1, ARRAY['disposal'], r.entity_id, CASE WHEN r.entity_id IS NULL THEN 'account' ELSE 'manual' END);
     END IF;
   END IF;
-  PERFORM set_config('phase3_p14.writing', '', true);
+  DELETE FROM phase3_p14.writing WHERE transaction_id = txid_current();
   RETURN jsonb_build_object('request', r.id, 'status', CASE WHEN p_approve THEN 'approved' ELSE 'rejected' END, 'entry', CASE WHEN p_approve AND r.book_value > 0 THEN r.entry_id END, 'replayed', false);
 END $$;
 
@@ -310,19 +312,29 @@ BEGIN
   SELECT * INTO r FROM public.asset_disposal_requests WHERE id = p_request AND (requested_by = uid OR owner_id = uid) FOR UPDATE;
   IF NOT FOUND THEN RAISE EXCEPTION 'P14_NOT_PERMITTED: only the requester or the owner cancels a disposal request' USING ERRCODE = '42501'; END IF;
   IF r.status <> 'pending' THEN RETURN jsonb_build_object('request', r.id, 'status', r.status, 'replayed', true); END IF;
-  PERFORM set_config('phase3_p14.writing', 'on', true);
+  INSERT INTO phase3_p14.writing(transaction_id) VALUES (txid_current()) ON CONFLICT DO NOTHING;
   UPDATE public.asset_disposal_requests SET status = 'cancelled', decided_by = uid, decided_at = clock_timestamp(), decision_reason = btrim(p_reason) WHERE id = r.id;
-  PERFORM set_config('phase3_p14.writing', '', true);
+  DELETE FROM phase3_p14.writing WHERE transaction_id = txid_current();
   RETURN jsonb_build_object('request', r.id, 'status', 'cancelled', 'replayed', false);
 END $$;
 
 -- --------------------------------------------------------------------------------------------
 -- C. Guards
 -- --------------------------------------------------------------------------------------------
+-- The approval functions mark their own transaction in a table no client can write (a session setting could be set by
+-- any role with set_config and would open the guards: found while fixing P14-a).
+CREATE TABLE phase3_p14.writing (transaction_id bigint PRIMARY KEY);
+REVOKE ALL ON phase3_p14.writing FROM PUBLIC, anon, authenticated, service_role;
+CREATE FUNCTION phase3_p14.writing_now() RETURNS boolean
+LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public, pg_temp AS $$
+  SELECT EXISTS (SELECT 1 FROM phase3_p14.writing w WHERE w.transaction_id = txid_current())
+$$;
+REVOKE ALL ON FUNCTION phase3_p14.writing_now() FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION phase3_p14.writing_now() TO authenticated;
 CREATE FUNCTION phase3_p14.exempt() RETURNS boolean
 LANGUAGE sql STABLE SET search_path = public, pg_temp AS $$
   SELECT current_setting('ledgerline.erasing', true) = 'on'
-      OR coalesce(current_setting('phase3_p14.writing', true), '') = 'on'
+      OR phase3_p14.writing_now()   -- decide/cancel's own transaction (privilege-bound row, not a session setting)
       OR coalesce(current_setting('phase3_p11.checked', true), '') = 'on'   -- checked backup restore (P11)
       OR (auth.uid() IS NULL AND current_user NOT IN ('authenticated', 'anon'))
 $$;
