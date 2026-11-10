@@ -85,19 +85,21 @@ reads one of the retired settings (rows 1-12 plus `phase3_p9.discarding` and `ph
 
 | # | file:line | setting | what it exempts | legitimate setter | client exploit | status |
 |---|---|---|---|---|---|---|
-| 13 | 0012_harden_finance_operation_validation.sql:16 (RESTRICTIVE INSERT policy on `finance_operations`). Setter injected by 0012:21 into `finance_operation`; read at 0015_atomic_claim_receipts_and_irregular_confirmation.sql:4 (`receive_claim_receipt`). | `app.finance_owner` = own uid | (a) Lets a client insert its own idempotency records into `finance_operations`. (b) Lets a client call `receive_claim_receipt` outside the money-movement workflow. | `finance_operation` (SECURITY INVOKER). Note that it never clears the setting, so the setting stays on for the rest of the transaction. | **Yes, self-scope only.** For (a): `SELECT set_config('app.finance_owner', auth.uid()::text, true); INSERT INTO finance_operations(owner_id, operation_key, result) VALUES (auth.uid(), 'card_payment:<id>', '{}')`. A later real operation with that key then returns the forged result as a replay and saves nothing; P7's `record_card_payment` reads the same table. For (b): a direct `receive_claim_receipt` call skips the idempotency key and the per-owner advisory lock. Both functions run under the caller's RLS, so no other owner's rows are reachable. | **OPEN, not fixed** (see the explanation after this table). |
+| 13 | 0012_harden_finance_operation_validation.sql:16 (RESTRICTIVE INSERT policy on `finance_operations`). Setter injected by 0012:21 into `finance_operation`; read at 0015_atomic_claim_receipts_and_irregular_confirmation.sql:4 (`receive_claim_receipt`). | `app.finance_owner` = own uid | (a) Lets a client insert its own idempotency records into `finance_operations`. (b) Lets a client call `receive_claim_receipt` outside the money-movement workflow. | `finance_operation` (SECURITY INVOKER). Note that it never clears the setting, so the setting stays on for the rest of the transaction. | **Yes, self-scope only.** For (a): `SELECT set_config('app.finance_owner', auth.uid()::text, true); INSERT INTO finance_operations(owner_id, operation_key, result) VALUES (auth.uid(), 'card_payment:<id>', '{}')`. A later real operation with that key then returns the forged result as a replay and saves nothing; P7's `record_card_payment` reads the same table. For (b): a direct `receive_claim_receipt` call skips the idempotency key and the per-owner advisory lock. Both functions run under the caller's RLS, so no other owner's rows are reachable. | **Fixed by proposed P19** (P0-038 row 13, KK Option 1). `finance_operation` and `receive_claim_receipt` are now SECURITY DEFINER with explicit owner predicates. `phase3_p19.authority` replaces the setting. Client writes to `finance_operations` are closed, and each record is bound to the canonical request. See `P19_REVIEW.md`. |
 | 14 | 0058_migration.sql:52 and the eight readers in the row above | `ledgerline.erasing` | erasure | `delete_my_finance_data` | yes | fixed by proposed P18 (P0-036) |
 
-**Why row 13 is still open.** `finance_operation` and `receive_claim_receipt` are SECURITY INVOKER. So any authority
-writer they could call is also callable by the client, and a transaction-bound row cannot tell the workflow apart from
-a client. There are two ways forward, and both need a decision:
-- **Option A (proposed P19):** make `finance_operation` SECURITY DEFINER with explicit `owner = auth.uid()` predicates.
-  This needs a full review of the 0011/0012/0015 body first; 0012 had to add a missing owner predicate, which shows the
-  body relied on RLS. With that change, the authority row written by `finance_operation` replaces the policy and the
-  check.
-- **Option B:** accept the self-scope impact.
-
-No P19 is written yet.
+**How row 13 was closed (P19).**
+- Both functions were SECURITY INVOKER, so a transaction-bound row could not tell the workflow from a client.
+- KK chose Option 1. `.lovable/staged-sql/proposed/P19_finance_operation_authority.sql` (with its rollback) makes
+  both functions SECURITY DEFINER with `search_path = public, pg_temp`.
+- Every ownership predicate that RLS used to supply is re-implemented, and every written row is re-checked.
+- `finance_operation` writes the authority row (txid plus caller) before its money branches and removes it before it
+  returns. `receive_claim_receipt` requires that row and has no client EXECUTE.
+- The 0012 policy is dropped. Clients lose INSERT, UPDATE and DELETE on `finance_operations`.
+- A record with the same key and a different request is refused (`P19_IDEMPOTENCY_CONFLICT`).
+- The install fails closed if any function or policy still reads `app.finance_owner`.
+- Reproduction before P19 and refusal after it, both on the applied schema and on P1..P18:
+  `src/lib/p19-finance-operation-authority-sql.test.ts`.
 
 ## Not an exemption
 
@@ -111,16 +113,17 @@ No P19 is written yet.
 Copies of applied migrations under `.lovable/staged-sql/*.sql` (outside `proposed/`) read `ledgerline.erasing` too.
 Their live copies are the drizzle files, which P18 covers.
 
-## Counts
+## Counts (final state, 10 Nov 2026)
 
-- **Exploitable by a client: 10.**
-  - 9 in proposed SQL (rows 1-9), all fixed here.
-  - 1 applied-only (row 13, `app.finance_owner`, self-scope), still open.
-- **Fixed in this change: 12.** These are the 9 exploitable rows plus 3 not exploitable but fixed for defence in depth
-  (rows 10-12).
+There are 14 inventory rows, plus 4 "not an exemption" groups and 3 "already fixed before this change" items.
+
+- **Exploitable by a client: 10 found; all 10 now fixed in proposed SQL.**
+  - 9 in proposed SQL (rows 1-9), fixed in the files that own them.
+  - 1 applied-only (row 13, `app.finance_owner`, self-scope), fixed by proposed P19.
+- **Not client-exploitable, fixed anyway for defence in depth: 3** (rows 10-12).
 - **Applied-only: 2.**
-  - `app.finance_owner` is open.
-  - `ledgerline.erasing` is fixed by P18 (P0-036).
+  - Row 13, `app.finance_owner`, is fixed by P19.
+  - Row 14, `ledgerline.erasing`, is fixed by P18 (P0-036).
 - **Not an exemption: 4 groups.**
   - `request.method`.
   - JWT identity context.
@@ -128,3 +131,32 @@ Their live copies are the drizzle files, which P18 covers.
   - P1 rollback erasing.
 - **Already fixed before this change: 3.** These are `ledgerline.erasing`, `phase3_p9.discarding` and
   `phase3_p14.writing`.
+- **Status by row:**
+  - Rows 1-12: fixed (proposed).
+  - Row 13: fixed (proposed P19).
+  - Row 14: fixed (proposed P18).
+  - Open: 0.
+
+All of these fixes are **proposed only**. The applied (hosted) database still runs 0012/0015 and the applied
+`ledgerline.erasing` guards until KK approves P18 and P19 and they are installed (P19 last, after P18).
+
+## Remaining exploitable paths
+
+**Through a client-settable session setting: none**, once the proposed stack, including P18 and P19, is installed.
+- Every installed function is checked at install time: P18 for the retired settings and `ledgerline.erasing`; P19
+  for `app.finance_owner` in functions and policies.
+- The whole-stack test confirms that no function reads any of them.
+
+**Until P18 and P19 are applied to the hosted database, the applied schema remains exploitable** in two ways. Both are
+self-scope only, and both need plain SQL as `authenticated` (PostgREST exposes no `set_config`):
+- `ledgerline.erasing` (row 14): it bypasses the applied evidence and archive guards for the caller's own rows. It is
+  closed by P18.
+- `app.finance_owner` (row 13): it lets the caller forge their own idempotency records or call
+  `receive_claim_receipt` outside the workflow. It is closed by P19.
+
+**Related, not a session setting (recorded in `P19_REVIEW.md`):**
+- **Claim JSON is still editable by row edit.** The owner, and company editors through 0075/P1, can still change
+  `expenses.reimbursement` and `reimbursement_status` with an ordinary row edit. The app edits claim details this way
+  by design. The audit trigger records every such edit. The money-back entry and the idempotent receipt still go only
+  through the workflow.
+- **P7 `record_card_payment` replay** is not yet bound to a request hash. Clients can no longer forge its record.
