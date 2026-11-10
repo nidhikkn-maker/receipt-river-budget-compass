@@ -91,10 +91,10 @@ BEGIN
   ev := jsonb_build_object('action', 'withdrawn', 'at', to_jsonb(clock_timestamp())#>>'{}', 'by', _uid::text, 'reason', reason,
     'source', jsonb_build_object('kind', 'statement_undo', 'upload', _upload, 'request', _request, 'statementRef', e.statement_ref, 'reconciledAt', e.reconciled_at));
   w := jsonb_build_object('state', 'withdrawn', 'at', ev->'at', 'by', ev->'by', 'reason', ev->'reason', 'history', h || jsonb_build_array(ev));
-  PERFORM set_config('phase3_p10.writing', e.id::text, true);
+  PERFORM phase3_p10.grant_authority('writing', e.id::text);
   UPDATE public.expenses SET receipt_details = jsonb_set(CASE WHEN jsonb_typeof(receipt_details) = 'object' THEN receipt_details ELSE '{}'::jsonb END, '{withdrawal}', w)
    WHERE id = e.id;
-  PERFORM set_config('phase3_p10.writing', '', true);
+  PERFORM phase3_p10.end_authority('writing', e.id::text);
 END $$;
 
 -- --------------------------------------------------------------------------------------------
@@ -175,10 +175,10 @@ BEGIN
     END IF;
   END LOOP;
   result := jsonb_build_object('request', _request, 'upload', _upload, 'reversed', reversed, 'withdrawn', withdrawn, 'deleted', '[]'::jsonb, 'unreconciled', unmatched, 'replayed', false);
-  PERFORM set_config('phase3_p7.writer', 'on', true);
+  PERFORM phase3_p7.grant_authority('writer');
   INSERT INTO public.statement_upload_reversals(id, owner_id, upload_id, items_sha256, result, reason, actor_id, session_id)
   VALUES (_request, uid, _upload, sha, result, rr, uid, public.jwt_session_id());
-  PERFORM set_config('phase3_p7.writer', '', true);
+  PERFORM phase3_p7.end_authority('writer');
   RETURN result;
 END $$;
 $body$, '__TARGET__', target);

@@ -96,6 +96,32 @@ END $pre$;
 CREATE SCHEMA phase3_p7;
 REVOKE ALL ON SCHEMA phase3_p7 FROM PUBLIC, anon, authenticated;
 
+-- P7 writer / reversal authority (was phase3_p7.writer, .reversal_insert, .reason, .request, .meta) (P0-038): transaction-bound authority instead of a session setting. Any role can SET / set_config a custom
+-- setting, so a guard that trusted one could be opened by a signed-in client in plain SQL. A row here is written only by
+-- this file's SECURITY DEFINER operation (grant_authority / end_authority: no client EXECUTE; the table: no client
+-- privilege), is checked as transaction_id = txid_current() AND actor_id = auth.uid(), and is removed before the
+-- operation returns (a 64-bit txid is never reused, so a row never authorises a later transaction).
+CREATE TABLE phase3_p7.authority (transaction_id bigint NOT NULL, scope text NOT NULL, item text NOT NULL DEFAULT '', actor_id uuid, context jsonb,
+  PRIMARY KEY (transaction_id, scope, item));
+REVOKE ALL ON phase3_p7.authority FROM PUBLIC, anon, authenticated, service_role;
+CREATE FUNCTION phase3_p7.grant_authority(_scope text, _item text DEFAULT '', _context jsonb DEFAULT NULL) RETURNS void
+LANGUAGE sql VOLATILE SECURITY DEFINER SET search_path = public, pg_temp AS $$
+  INSERT INTO phase3_p7.authority(transaction_id, scope, item, actor_id, context) VALUES (txid_current(), _scope, coalesce(_item, ''), auth.uid(), _context)
+  ON CONFLICT (transaction_id, scope, item) DO UPDATE SET actor_id = EXCLUDED.actor_id, context = EXCLUDED.context
+$$;
+CREATE FUNCTION phase3_p7.end_authority(_scope text, _item text DEFAULT '') RETURNS void
+LANGUAGE sql VOLATILE SECURITY DEFINER SET search_path = public, pg_temp AS $$
+  DELETE FROM phase3_p7.authority WHERE transaction_id = txid_current() AND scope = _scope AND item = coalesce(_item, '')
+$$;
+CREATE FUNCTION phase3_p7.authorised(_scope text, _item text DEFAULT '') RETURNS boolean
+LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public, pg_temp AS $$
+  SELECT EXISTS (SELECT 1 FROM phase3_p7.authority a WHERE a.transaction_id = txid_current() AND a.scope = _scope AND a.item = coalesce(_item, '')
+                   AND a.actor_id IS NOT DISTINCT FROM auth.uid())
+$$;
+REVOKE ALL ON FUNCTION phase3_p7.grant_authority(text, text, jsonb), phase3_p7.end_authority(text, text) FROM PUBLIC, anon, authenticated, service_role;
+REVOKE ALL ON FUNCTION phase3_p7.authorised(text, text) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION phase3_p7.authorised(text, text) TO service_role;
+
 -- Decision 1: the reversal of a posted entry is its own working-ledger row, linked to the original.
 -- New nullable column only: no existing value changes. One reversal per original; never self.
 ALTER TABLE public.expenses ADD COLUMN reverses_entry_id uuid REFERENCES public.expenses(id);
@@ -407,7 +433,7 @@ $$;
 CREATE FUNCTION phase3_p7.guard_writer() RETURNS trigger
 LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp AS $$
 BEGIN
-  IF coalesce(current_setting('phase3_p7.writer', true), '') <> 'on' THEN
+  IF NOT phase3_p7.authorised('writer') THEN
     RAISE EXCEPTION 'P7_WRITER_ONLY: postings are written only by the posting function' USING ERRCODE = '42501';
   END IF;
   IF auth.uid() IS NOT NULL AND (public.is_assistant_session() OR phase3_p7.is_guest()) THEN
@@ -468,7 +494,7 @@ CREATE FUNCTION phase3_p7.guard_immutable() RETURNS trigger
 LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp AS $$
 BEGIN
   IF TG_OP = 'DELETE' AND current_setting('ledgerline.erasing', true) = 'on' AND (auth.uid() IS NULL OR OLD.owner_id = auth.uid()) THEN RETURN OLD; END IF;
-  IF TG_OP = 'UPDATE' AND TG_TABLE_NAME = 'posting_event_sources' AND coalesce(current_setting('phase3_p7.writer', true), '') = 'on' THEN
+  IF TG_OP = 'UPDATE' AND TG_TABLE_NAME = 'posting_event_sources' AND phase3_p7.authorised('writer') THEN
     IF to_jsonb(OLD)->>'released_at' IS NULL AND to_jsonb(NEW)->>'released_at' IS NOT NULL
        AND (to_jsonb(NEW) - 'released_at') = (to_jsonb(OLD) - 'released_at') THEN
       RETURN NEW;
@@ -544,7 +570,7 @@ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp AS $$
 DECLARE bid uuid := md5(_owner::text || ':batch:' || _key)::uuid; l jsonb; n int := 0;
 BEGIN
   IF EXISTS (SELECT 1 FROM public.posting_batches WHERE id = bid) THEN RETURN bid; END IF; -- idempotent replay
-  PERFORM set_config('phase3_p7.writer', 'on', true);
+  PERFORM phase3_p7.grant_authority('writer');
   INSERT INTO public.posting_batches(id, owner_id, legal_entity_id, event_id, kind, idempotency_key, version, posting_date, reverses_id,
     source_currency, source_amount, fx_rate, fx_date, fx_source, memo, meta, backfill_run_id, created_by)
   VALUES (bid, _owner, _entity, _event, _kind, _key, _version, _on, _reverses,
@@ -556,7 +582,7 @@ BEGIN
     VALUES (md5(bid::text || ':' || n)::uuid, bid, _owner, n, l->>'code', l->>'role', (l->>'accountId')::uuid, (l->>'counterEntityId')::uuid,
       coalesce(l->>'currency', 'INR'), (l->>'debit')::numeric, (l->>'credit')::numeric, coalesce(l->>'memo', ''));
   END LOOP;
-  PERFORM set_config('phase3_p7.writer', '', true);
+  PERFORM phase3_p7.end_authority('writer');
   RETURN bid;
 END $$;
 
@@ -567,10 +593,10 @@ BEGIN
   SELECT id INTO eid FROM public.posting_events WHERE owner_id = _owner AND event_key = _key;
   IF FOUND THEN RETURN eid; END IF;
   eid := md5(_owner::text || ':event:' || _key)::uuid;
-  PERFORM set_config('phase3_p7.writer', 'on', true);
+  PERFORM phase3_p7.grant_authority('writer');
   INSERT INTO public.posting_events(id, owner_id, event_key, source_kind, source_entry_id, content_sha256, created_by)
   VALUES (eid, _owner, _key, _kind, _entry, _sha, auth.uid());
-  PERFORM set_config('phase3_p7.writer', '', true);
+  PERFORM phase3_p7.end_authority('writer');
   RETURN eid;
 END $$;
 
@@ -587,7 +613,7 @@ CREATE FUNCTION phase3_p7.bind_sources(_owner uuid, _event uuid, _sources jsonb)
 LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp AS $$
 DECLARE s jsonb; cur public.posting_event_sources;
 BEGIN
-  PERFORM set_config('phase3_p7.writer', 'on', true);
+  PERFORM phase3_p7.grant_authority('writer');
   UPDATE public.posting_event_sources x SET released_at = clock_timestamp()
   WHERE x.owner_id = _owner AND x.event_id = _event AND x.released_at IS NULL
     AND NOT EXISTS (SELECT 1 FROM jsonb_array_elements(_sources) y WHERE y->>'kind' = x.source_kind AND y->>'key' = x.source_key);
@@ -600,15 +626,15 @@ BEGIN
     IF FOUND THEN UPDATE public.posting_event_sources x SET released_at = clock_timestamp() WHERE x.owner_id = _owner AND x.source_kind = cur.source_kind AND x.source_key = cur.source_key AND x.released_at IS NULL; END IF;
     INSERT INTO public.posting_event_sources(owner_id, source_kind, source_key, event_id) VALUES (_owner, s->>'kind', s->>'key', _event);
   END LOOP;
-  PERFORM set_config('phase3_p7.writer', '', true);
+  PERFORM phase3_p7.end_authority('writer');
 END $$;
 
 CREATE FUNCTION phase3_p7.release_sources(_owner uuid, _event uuid) RETURNS void
 LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp AS $$
 BEGIN
-  PERFORM set_config('phase3_p7.writer', 'on', true);
+  PERFORM phase3_p7.grant_authority('writer');
   UPDATE public.posting_event_sources SET released_at = clock_timestamp() WHERE owner_id = _owner AND event_id = _event AND released_at IS NULL;
-  PERFORM set_config('phase3_p7.writer', '', true);
+  PERFORM phase3_p7.end_authority('writer');
 END $$;
 
 -- _on: the reversal's posting date (r2, decision 2): the correction date for reversals of posted entries
@@ -997,7 +1023,7 @@ BEGIN
     IF NOT FOUND OR o.employee_id <> NEW.employee_id OR o.reverses_entry_id IS NOT NULL THEN
       RAISE EXCEPTION 'P7_REVERSAL_INVALID: a reversal must point at one of your own original entries' USING ERRCODE = '23514';
     END IF;
-    IF phase3_p7.active(NEW.employee_id) AND current_setting('phase3_p7.reversal_insert', true) IS DISTINCT FROM o.id::text THEN
+    IF phase3_p7.active(NEW.employee_id) AND NOT phase3_p7.authorised('reversal_insert', o.id::text) THEN
       RAISE EXCEPTION 'P7_REVERSAL_ONLY_BY_FUNCTION: reversals are recorded by Reverse entry (reason and re-confirmation)' USING ERRCODE = '42501';
     END IF;
     IF (NEW.amount, NEW.original_amount, NEW.currency, NEW.fx_rate, NEW.fx_date, NEW.txn_type, NEW.account_id, NEW.to_account_id, NEW.category,
@@ -1035,9 +1061,12 @@ CREATE TRIGGER zz_p7_guard_reversals BEFORE INSERT OR UPDATE ON public.expenses 
 CREATE FUNCTION phase3_p7.sync_trigger() RETURNS trigger
 LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp AS $$
 DECLARE owner uuid := coalesce(NEW.employee_id, OLD.employee_id); t uuid;
-  ctx jsonb := jsonb_build_object('reason', coalesce(nullif(current_setting('phase3_p7.reason', true), ''), CASE TG_OP WHEN 'INSERT' THEN 'Ledger entry saved' WHEN 'DELETE' THEN 'Ledger entry removed' ELSE 'Ledger entry changed' END),
-                                  'request', nullif(current_setting('phase3_p7.request', true), ''),
-                                  'meta', coalesce(nullif(current_setting('phase3_p7.meta', true), ''), '{}')::jsonb);
+  -- the reversal's reason / request / meta come from reverse_entry's transaction-bound authority row (never a session setting)
+  rc jsonb := (SELECT a.context FROM phase3_p7.authority a WHERE a.transaction_id = txid_current() AND a.scope = 'reversal_insert'
+                 AND a.actor_id IS NOT DISTINCT FROM auth.uid() ORDER BY a.item LIMIT 1);
+  ctx jsonb := jsonb_build_object('reason', coalesce(nullif(rc->>'reason', ''), CASE TG_OP WHEN 'INSERT' THEN 'Ledger entry saved' WHEN 'DELETE' THEN 'Ledger entry removed' ELSE 'Ledger entry changed' END),
+                                  'request', nullif(rc->>'request', ''),
+                                  'meta', CASE WHEN jsonb_typeof(rc->'meta') = 'object' THEN rc->'meta' ELSE '{}'::jsonb END);
 BEGIN
   IF current_setting('ledgerline.erasing', true) = 'on' OR NOT phase3_p7.active(owner) THEN RETURN NULL; END IF;
   PERFORM phase3_p7.lock_owner(owner);
@@ -1266,9 +1295,9 @@ BEGIN
     posted := posted + 1;
   END LOOP;
   result := jsonb_build_object('run', _run, 'entriesPosted', posted, 'counts', pl->'counts', 'exceptions', pl->'exceptions', 'skippedClosed', pl->'skippedClosed');
-  PERFORM set_config('phase3_p7.writer', 'on', true);
+  PERFORM phase3_p7.grant_authority('writer');
   INSERT INTO public.posting_backfill_runs(id, owner_id, kind, fingerprint, report, actor_id) VALUES (_run, _uid, 'commit', _fingerprint, result, _uid);
-  PERFORM set_config('phase3_p7.writer', '', true);
+  PERFORM phase3_p7.end_authority('writer');
   RETURN result;
 END $$;
 
@@ -1302,12 +1331,12 @@ BEGIN
     ids := ids || rid; n := n + 1;
     PERFORM phase3_p7.release_sources(uid, b.event_id);
   END LOOP;
-  PERFORM set_config('phase3_p7.writer', 'on', true);
+  PERFORM phase3_p7.grant_authority('writer');
   INSERT INTO public.posting_reversals(id, owner_id, target, batch_ids, reversal_batch_ids, reason, actor_id, session_id, correction_date)
   VALUES (md5(_run::text || ':undo-audit')::uuid, uid, 'backfill', '{}', ids, btrim(_reason), uid, public.jwt_session_id(), current_date);
   INSERT INTO public.posting_backfill_runs(id, owner_id, kind, fingerprint, report, actor_id, reason)
   VALUES (md5(_run::text || ':undo')::uuid, uid, 'undo', latest.fingerprint, jsonb_build_object('reversed', n, 'run', _run), uid, btrim(_reason));
-  PERFORM set_config('phase3_p7.writer', '', true);
+  PERFORM phase3_p7.end_authority('writer');
   RETURN jsonb_build_object('reversed', n, 'run', _run);
 END $$;
 
@@ -1315,11 +1344,11 @@ END $$;
 CREATE FUNCTION phase3_p7.link_state(_owner uuid, _entry uuid, _rev uuid, _kind text, _key text, _state text, _before jsonb, _after jsonb) RETURNS jsonb
 LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp AS $$
 BEGIN
-  PERFORM set_config('phase3_p7.writer', 'on', true);
+  PERFORM phase3_p7.grant_authority('writer');
   INSERT INTO public.posting_link_states(id, owner_id, entry_id, reversal_entry_id, link_kind, link_key, state, before, after)
   VALUES (md5(_rev::text || ':' || _kind || ':' || _key)::uuid, _owner, _entry, _rev, _kind, left(_key, 600), _state, _before, _after)
   ON CONFLICT (id) DO NOTHING;
-  PERFORM set_config('phase3_p7.writer', '', true);
+  PERFORM phase3_p7.end_authority('writer');
   RETURN jsonb_build_object('kind', _kind, 'key', _key, 'state', _state);
 END $$;
 
@@ -1432,10 +1461,8 @@ BEGIN
   SELECT coalesce(array_agg(x.id ORDER BY x.id), '{}') INTO olds FROM public.posting_batches x WHERE x.event_id = ev AND x.kind IN ('entry', 'opening')
     AND NOT EXISTS (SELECT 1 FROM public.posting_batches r WHERE r.reverses_id = x.id);
   rid := md5(_owner::text || ':reversal-entry:' || _request::text)::uuid;
-  PERFORM set_config('phase3_p7.reversal_insert', _entry::text, true);
-  PERFORM set_config('phase3_p7.reason', 'Reversed: ' || left(rr, 480), true);
-  PERFORM set_config('phase3_p7.request', _request::text, true);
-  PERFORM set_config('phase3_p7.meta', coalesce(_meta, '{}'::jsonb)::text, true);
+  PERFORM phase3_p7.grant_authority('reversal_insert', _entry::text,
+    jsonb_build_object('reason', 'Reversed: ' || left(rr, 480), 'request', _request::text, 'meta', coalesce(_meta, '{}'::jsonb)));
   INSERT INTO public.expenses SELECT (jsonb_populate_record(NULL::public.expenses, to_jsonb(e) || jsonb_build_object(
     'id', rid, 'expense_date', on_date, 'title', left('Reversal: ' || coalesce(e.title, ''), 200),
     'description', left('Reversal of entry ' || e.id || ' dated ' || e.expense_date || ': ' || rr, 1000),
@@ -1445,17 +1472,14 @@ BEGIN
     'receipt_details', jsonb_build_object('reversal', jsonb_build_object('of', e.id, 'request', _request, 'reason', rr, 'actor', auth.uid(), 'correctionDate', on_date)
                                           || CASE WHEN _meta ? 'priorPeriod' THEN jsonb_build_object('priorPeriod', _meta->'priorPeriod') ELSE '{}'::jsonb END)))).*;
   -- the AFTER trigger has posted the mirrored reversal batches of the original, dated on_date
-  PERFORM set_config('phase3_p7.reversal_insert', '', true);
-  PERFORM set_config('phase3_p7.reason', '', true);
-  PERFORM set_config('phase3_p7.request', '', true);
-  PERFORM set_config('phase3_p7.meta', '', true);
+  PERFORM phase3_p7.end_authority('reversal_insert', _entry::text);
   SELECT coalesce(array_agg(r.id ORDER BY r.reverses_id), '{}') INTO news FROM public.posting_batches r WHERE r.reverses_id = ANY (olds);
   IF cardinality(news) <> cardinality(olds) THEN RAISE EXCEPTION 'P7: reversal batches were not posted'; END IF;
   links := phase3_p7.mark_links(_owner, _entry, rid, rr);
-  PERFORM set_config('phase3_p7.writer', 'on', true);
+  PERFORM phase3_p7.grant_authority('writer');
   INSERT INTO public.posting_reversals(id, owner_id, target, entry_id, reversal_entry_id, correction_date, batch_ids, reversal_batch_ids, entry_snapshot, reason, actor_id, session_id)
   VALUES (_request, _owner, tgt, _entry, rid, on_date, olds, news, to_jsonb(e) || jsonb_build_object('_linked', links, '_meta', _meta), rr, auth.uid(), public.jwt_session_id());
-  PERFORM set_config('phase3_p7.writer', '', true);
+  PERFORM phase3_p7.end_authority('writer');
   RETURN jsonb_build_object('request', _request, 'entryId', _entry, 'reversalEntryId', rid, 'correctionDate', on_date, 'reversalBatches', to_jsonb(news),
     'linked', links, 'replayed', false);
 END $$;
@@ -1550,10 +1574,10 @@ BEGIN
   IF on_date < b.posting_date OR on_date > greatest(current_date, b.posting_date) THEN RAISE EXCEPTION 'P7_CORRECTION_DATE: the correction date must be on or after the journal date and not in the future'; END IF;
   rid := phase3_p7.reverse_batch(b, jsonb_build_object('reason', btrim(_reason), 'request', _request, 'actor', auth.uid()), NULL, on_date);
   PERFORM phase3_p7.release_sources(_uid, b.event_id);
-  PERFORM set_config('phase3_p7.writer', 'on', true);
+  PERFORM phase3_p7.grant_authority('writer');
   INSERT INTO public.posting_reversals(id, owner_id, target, batch_ids, reversal_batch_ids, reason, actor_id, session_id, correction_date)
   VALUES (_request, _uid, 'journal', ARRAY[b.id], ARRAY[rid], btrim(_reason), auth.uid(), public.jwt_session_id(), on_date);
-  PERFORM set_config('phase3_p7.writer', '', true);
+  PERFORM phase3_p7.end_authority('writer');
   RETURN rid;
 END $$;
 
@@ -1712,10 +1736,10 @@ BEGIN
     END IF;
   END LOOP;
   result := jsonb_build_object('request', _request, 'upload', _upload, 'reversed', reversed, 'deleted', deleted, 'unreconciled', unmatched, 'replayed', false);
-  PERFORM set_config('phase3_p7.writer', 'on', true);
+  PERFORM phase3_p7.grant_authority('writer');
   INSERT INTO public.statement_upload_reversals(id, owner_id, upload_id, items_sha256, result, reason, actor_id, session_id)
   VALUES (_request, uid, _upload, sha, result, rr, uid, public.jwt_session_id());
-  PERFORM set_config('phase3_p7.writer', '', true);
+  PERFORM phase3_p7.end_authority('writer');
   RETURN result;
 END $$;
 
@@ -1813,10 +1837,10 @@ BEGIN
   END IF;
   ent := phase3_p7.validate_request(uid, _kind, _payload);
   PERFORM phase3_p7.require_may(uid, ent, 'propose');
-  PERFORM set_config('phase3_p7.writer', 'on', true);
+  PERFORM phase3_p7.grant_authority('writer');
   INSERT INTO public.posting_requests(id, owner_id, kind, legal_entity_id, payload, payload_sha256, reason, requested_by, session_id)
   VALUES (_request, uid, _kind, ent, _payload, sha, btrim(_reason), uid, public.jwt_session_id());
-  PERFORM set_config('phase3_p7.writer', '', true);
+  PERFORM phase3_p7.end_authority('writer');
   RETURN jsonb_build_object('request', _request, 'kind', _kind, 'status', 'pending', 'entityId', ent, 'replayed', false);
 END $$;
 
@@ -1847,10 +1871,10 @@ BEGIN
       WHEN 'prior_period_adjustment' THEN phase3_p7.post_prior_period(uid, r.id, r.payload, r.reason)
     END;
   END IF;
-  PERFORM set_config('phase3_p7.writer', 'on', true);
+  PERFORM phase3_p7.grant_authority('writer');
   INSERT INTO public.posting_request_decisions(request_id, owner_id, decision, note, result, decided_by, session_id)
   VALUES (_request, uid, dec, left(coalesce(_note, ''), 500), res, uid, public.jwt_session_id());
-  PERFORM set_config('phase3_p7.writer', '', true);
+  PERFORM phase3_p7.end_authority('writer');
   RETURN jsonb_build_object('request', _request, 'kind', r.kind, 'status', dec, 'result', res, 'replayed', false);
 END $$;
 

@@ -35,8 +35,11 @@
 -- A later file that re-creates such a guard re-opens the bypass; re-run the check in the preflight block below.
 -- Rollback: P18_erasure_authority.rollback.sql (exact previous functions and grants; refuses while audit rows exist
 -- unless the operator, with KK approval after exporting them, sets phase3_p18.drop_audit = 'on').
--- Not covered (separate finding P0-038): phase3_p11.checked (P11 restore) is still a client-settable exemption. P14's
--- own phase3_p14.writing setting was replaced in P14 itself by a transaction-bound row.
+-- P0-038 (Track A): the other client-settable exemptions (phase3_p11.checked, phase3_p10.writing, phase3_p13.applying /
+-- deciding, phase3_p7.writer / reversal_insert / reason / request / meta, phase3_p9.claiming, ledgerline.posting_writer /
+-- accounting_request / restoring) were replaced in the files that own them (P3/P7/P9/P10/P11/P13/P14) by the same
+-- transaction-bound pattern; the post-install check below also refuses if any installed function still reads one of
+-- them (docs/security/p0-038/GUC_INVENTORY.md). The applied app.finance_owner (0012/0015) is listed there as open.
 -- ============================================================================================
 BEGIN;
 
@@ -196,6 +199,12 @@ BEGIN
   IF EXISTS (SELECT 1 FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
               WHERE n.nspname NOT IN ('pg_catalog', 'information_schema', 'phase3_p18', 'phase3_p18_private') AND p.prosrc LIKE '%current_setting(''ledgerline.erasing''%') THEN
     RAISE EXCEPTION 'P18: a function still reads ledgerline.erasing';
+  END IF;
+  -- P0-038: no installed function may still trust one of the retired client-settable exemption settings.
+  IF EXISTS (SELECT 1 FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+              WHERE n.nspname NOT IN ('pg_catalog', 'information_schema', 'phase3_p18', 'phase3_p18_private')
+                AND p.prosrc ~ 'current_setting\(''(phase3_p11\.checked|phase3_p10\.writing|phase3_p13\.(applying|deciding)|phase3_p7\.(writer|reversal_insert|reason|request|meta)|phase3_p9\.(claiming|discarding)|phase3_p14\.writing|ledgerline\.(posting_writer|accounting_request|restoring))''') THEN
+    RAISE EXCEPTION 'P18: a function still trusts a client-settable exemption setting (P0-038); install the fixed proposed files';
   END IF;
 END $post$;
 COMMIT;

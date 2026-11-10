@@ -27,11 +27,18 @@ GRANT ALL ON storage.objects, storage.buckets TO anon, authenticated, service_ro
 export const appliedMigrations = () => readdirSync(join(ROOT, "drizzle/migrations")).filter((f) => f.endsWith(".sql")).sort();
 export const readSql = (relPath: string) => readFileSync(join(ROOT, relPath), "utf8").replace(/--> statement-breakpoint/g, "");
 
+/**
+ * Opt-in compatibility runs only: TEST_APPEND_SQL (comma-separated repo paths) is installed after the files a test asks
+ * for, e.g. TEST_APPEND_SQL=.lovable/staged-sql/proposed/P19_finance_operation_authority.sql re-runs existing tests with
+ * P19 on top of their stack. Unset (the default and CI) it changes nothing.
+ */
+const APPEND = (process.env["TEST_APPEND_SQL"] ?? "").split(",").map((s) => s.trim()).filter(Boolean);
+
 /** Fresh isolated database with all applied migrations (0000-NNNN). Throws if any migration fails. */
 export async function fullSchemaDb(extraSqlFiles: string[] = []) {
   const db = new PGlite();
   await db.exec(STUBS);
-  for (const f of [...appliedMigrations().map((f) => `drizzle/migrations/${f}`), ...extraSqlFiles]) {
+  for (const f of [...appliedMigrations().map((f) => `drizzle/migrations/${f}`), ...extraSqlFiles, ...APPEND.filter((a) => !extraSqlFiles.includes(a))]) {
     try { await db.exec(readSql(f)); } catch (e) { throw new Error(`${f}: ${(e as Error).message}`); }
   }
   return db;

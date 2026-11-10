@@ -86,7 +86,7 @@ const prefsRevision = async (db: PGlite) => Number((await q<{ revision: number }
 const journal = (over: Partial<AccountingJournal> = {}): AccountingJournal => ({ id: uid(5000), entityId: 'A', date: '2026-05-10', kind: 'accrual', description: 'May unpaid premises rent', documentIds: [DOC],
   legs: [{ code: 'expense:rent', label: 'Rent', role: 'expense', debit: 1200, credit: 0 }, { code: 'payable', label: 'Creditors', role: 'liability', debit: 0, credit: 1200 }], ...over });
 const postJournal = async (db: PGlite, j: AccountingJournal, request: string) => db.query('SELECT public.post_accounting_journal(_request=>$1,_journal=>$2::jsonb,_expected=>$3)', [request, JSON.stringify(j), await prefsRevision(db)]);
-const rawPosting = async (db: PGlite, rawKey: string, lines: { entity?: string; currency?: string; debit: number; credit: number }[], extra = '') => { const key = `raw:${rawKey}`; return db.exec(`BEGIN; SELECT set_config('ledgerline.posting_writer','on',true);
+const rawPosting = async (db: PGlite, rawKey: string, lines: { entity?: string; currency?: string; debit: number; credit: number }[], extra = '') => { const key = `raw:${rawKey}`; return db.exec(`BEGIN; SELECT accounting_private.grant_authority('posting_writer');
   INSERT INTO accounting_postings(id,owner_id,entity_id,posting_date,kind,idempotency_key,journal_id,request_id,journal${extra ? ',reverses_id' : ''}) VALUES (md5('${key}')::uuid,'${OWNER}','A','2026-06-01','journal','${key}',md5('j${key}')::uuid,md5('r${key}')::uuid,'{}'${extra ? `,'${extra}'` : ''});
   ${lines.map((l, i) => `INSERT INTO accounting_posting_lines(id,posting_id,owner_id,line_no,entity_id,currency,code,label,role,debit,credit) VALUES (md5('${key}:${i}')::uuid,md5('${key}')::uuid,'${OWNER}',${i + 1},'${l.entity ?? 'A'}','${l.currency ?? 'INR'}','c${i}','c${i}','${i === 0 ? 'asset' : 'liability'}',${l.debit},${l.credit});`).join('\n')}
   COMMIT;`).catch(async e => { await db.exec('ROLLBACK').catch(() => undefined); throw e; }); };
@@ -172,7 +172,7 @@ describe('P3 proposed accounting posting layer (isolated PGlite, applied 0000-00
     // Database-level: one idempotency key per owner and one active posting per economic event and company.
     await actAs(db, null);
     const existing = await one<{ idempotency_key: string; source_entry_id: string }>(db, "SELECT idempotency_key, source_entry_id::text FROM accounting_postings WHERE kind='entry' AND entity_id='A' LIMIT 1");
-    const dup = (k: string, version: number) => db.exec(`BEGIN; SELECT set_config('ledgerline.posting_writer','on',true);
+    const dup = (k: string, version: number) => db.exec(`BEGIN; SELECT accounting_private.grant_authority('posting_writer');
       INSERT INTO accounting_postings(id,owner_id,entity_id,posting_date,kind,idempotency_key,source_entry_id,entry_version) VALUES (gen_random_uuid(),'${OWNER}','A','2026-04-10','entry','${k}','${existing.source_entry_id}',${version});
       INSERT INTO accounting_posting_lines(id,posting_id,owner_id,line_no,entity_id,code,label,role,debit,credit) SELECT gen_random_uuid(),id,owner_id,n,'A','x'||n,'x','asset',CASE n WHEN 1 THEN 1 ELSE 0 END,CASE n WHEN 2 THEN 1 ELSE 0 END FROM accounting_postings, generate_series(1,2) n WHERE idempotency_key='${k}';
       COMMIT;`).catch(async e => { await db.exec('ROLLBACK').catch(() => undefined); throw e; });
@@ -292,7 +292,7 @@ describe('P3 proposed accounting posting layer (isolated PGlite, applied 0000-00
     await expect(postJournal(db, journal({ id: uid(5303), date: '2026-05-20' }), uid(5304))).rejects.toThrow('closed');
     await expect(postJournal(db, reverseAccountingJournal(j, uid(5305), '2026-05-31', 'Reverse inside closed May'), uid(5306))).rejects.toThrow('closed');
     await actAs(db, null);
-    await expect(db.exec(`BEGIN; SELECT set_config('ledgerline.posting_writer','on',true); INSERT INTO accounting_postings(id,owner_id,entity_id,posting_date,kind,idempotency_key,journal_id,request_id,journal) VALUES (gen_random_uuid(),'${OWNER}','A','2026-05-15','journal','closed-direct',gen_random_uuid(),gen_random_uuid(),'{}'); COMMIT;`).catch(async e => { await db.exec('ROLLBACK'); throw e; })).rejects.toThrow('period is closed');
+    await expect(db.exec(`BEGIN; SELECT accounting_private.grant_authority('posting_writer'); INSERT INTO accounting_postings(id,owner_id,entity_id,posting_date,kind,idempotency_key,journal_id,request_id,journal) VALUES (gen_random_uuid(),'${OWNER}','A','2026-05-15','journal','closed-direct',gen_random_uuid(),gen_random_uuid(),'{}'); COMMIT;`).catch(async e => { await db.exec('ROLLBACK'); throw e; })).rejects.toThrow('period is closed');
     await actAs(db, OWNER);
     // Authorised correcting entry: reversal of the closed-period journal dated in the open period, plus replacement.
     await postJournal(db, reverseAccountingJournal(j, uid(5307), '2026-06-01', 'Correct May rent in June'), uid(5308));

@@ -2343,13 +2343,14 @@ describe("P0-015 asset disposal approval — P1..P9 + P14 (P4 step-up installed)
       expect(await decideAssetDisposal({ data: { requestId: r1.requestId, approve: false, reason: "Cost changed, ask again" } })).toMatchObject({ ok: true, status: "rejected" });
       net.uid = O;
       expect((await assetNow(db, O, s.asset.id))?.["soldOn"]).toBeUndefined();
-      // new request at the corrected cost: 20% of 61,000.00 / 12 = 1,016.67 a month (rounded) × 7 = 7,116.69 → book value 53,883.31
-      const r2 = (await requestAssetDisposal({ data: disposalInput(s) })) as { requestId: string; plan: { bookValue: number } };
-      expect(r2.plan.bookValue).toBe(53883.31);
+      // new request at the corrected cost: the app engine's carried-forward paise give 53,883.31 (checked, within tolerance);
+      // the database's full-precision working 20% of 61,000.00 / 12 × 7 = 7,116.666… → 53,883.33 is what is recorded (R-E-I15)
+      const r2 = (await requestAssetDisposal({ data: disposalInput(s) })) as { requestId: string; plan: { bookValue: number; gain: number }; engineBookValue: number };
+      expect(r2).toMatchObject({ engineBookValue: 53883.31, plan: { bookValue: 53883.33, gain: -3883.33 } });
       net.uid = F;
       expect(await decideAssetDisposal({ data: { requestId: r2.requestId, approve: true, reason: "Checked the invoice" } })).toMatchObject({ ok: true, status: "approved" });
       net.uid = O;
-      expect(await assetNow(db, O, s.asset.id)).toMatchObject({ soldOn: "2026-10-31", disposal: { approvedBy: F, requestedBy: O } });
+      expect(await assetNow(db, O, s.asset.id)).toMatchObject({ soldOn: "2026-10-31", disposal: { approvedBy: F, requestedBy: O, bookValue: 53883.33, gain: -3883.33 } });
     },
     T,
   );

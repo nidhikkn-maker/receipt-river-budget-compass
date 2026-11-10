@@ -56,6 +56,32 @@ REVOKE ALL ON SCHEMA phase3_p10 FROM PUBLIC, anon, authenticated;
 CREATE TABLE IF NOT EXISTS phase3_p10.installed (installed_at timestamptz NOT NULL DEFAULT clock_timestamp());
 INSERT INTO phase3_p10.installed SELECT WHERE NOT EXISTS (SELECT 1 FROM phase3_p10.installed);
 
+-- P10 writer authority (was phase3_p10.writing) (P0-038): transaction-bound authority instead of a session setting. Any role can SET / set_config a custom
+-- setting, so a guard that trusted one could be opened by a signed-in client in plain SQL. A row here is written only by
+-- this file's SECURITY DEFINER operation (grant_authority / end_authority: no client EXECUTE; the table: no client
+-- privilege), is checked as transaction_id = txid_current() AND actor_id = auth.uid(), and is removed before the
+-- operation returns (a 64-bit txid is never reused, so a row never authorises a later transaction).
+CREATE TABLE IF NOT EXISTS phase3_p10.authority (transaction_id bigint NOT NULL, scope text NOT NULL, item text NOT NULL DEFAULT '', actor_id uuid, context jsonb,
+  PRIMARY KEY (transaction_id, scope, item));
+REVOKE ALL ON phase3_p10.authority FROM PUBLIC, anon, authenticated, service_role;
+CREATE OR REPLACE FUNCTION phase3_p10.grant_authority(_scope text, _item text DEFAULT '', _context jsonb DEFAULT NULL) RETURNS void
+LANGUAGE sql VOLATILE SECURITY DEFINER SET search_path = public, pg_temp AS $$
+  INSERT INTO phase3_p10.authority(transaction_id, scope, item, actor_id, context) VALUES (txid_current(), _scope, coalesce(_item, ''), auth.uid(), _context)
+  ON CONFLICT (transaction_id, scope, item) DO UPDATE SET actor_id = EXCLUDED.actor_id, context = EXCLUDED.context
+$$;
+CREATE OR REPLACE FUNCTION phase3_p10.end_authority(_scope text, _item text DEFAULT '') RETURNS void
+LANGUAGE sql VOLATILE SECURITY DEFINER SET search_path = public, pg_temp AS $$
+  DELETE FROM phase3_p10.authority WHERE transaction_id = txid_current() AND scope = _scope AND item = coalesce(_item, '')
+$$;
+CREATE OR REPLACE FUNCTION phase3_p10.authorised(_scope text, _item text DEFAULT '') RETURNS boolean
+LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public, pg_temp AS $$
+  SELECT EXISTS (SELECT 1 FROM phase3_p10.authority a WHERE a.transaction_id = txid_current() AND a.scope = _scope AND a.item = coalesce(_item, '')
+                   AND a.actor_id IS NOT DISTINCT FROM auth.uid())
+$$;
+REVOKE ALL ON FUNCTION phase3_p10.grant_authority(text, text, jsonb), phase3_p10.end_authority(text, text) FROM PUBLIC, anon, authenticated, service_role;
+REVOKE ALL ON FUNCTION phase3_p10.authorised(text, text) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION phase3_p10.authorised(text, text) TO authenticated, service_role;
+
 -- --------------------------------------------------------------------------------------------
 -- Helpers
 -- --------------------------------------------------------------------------------------------
@@ -125,10 +151,10 @@ BEGIN
   END IF;
   ev := jsonb_build_object('action', _action, 'at', to_jsonb(clock_timestamp())#>>'{}', 'by', uid::text, 'reason', reason);
   w := jsonb_build_object('state', _action, 'at', ev->'at', 'by', ev->'by', 'reason', ev->'reason', 'history', h || jsonb_build_array(ev));
-  PERFORM set_config('phase3_p10.writing', e.id::text, true);
+  PERFORM phase3_p10.grant_authority('writing', e.id::text);
   UPDATE public.expenses SET receipt_details = jsonb_set(CASE WHEN jsonb_typeof(receipt_details) = 'object' THEN receipt_details ELSE '{}'::jsonb END, '{withdrawal}', w)
    WHERE id = e.id;
-  PERFORM set_config('phase3_p10.writing', '', true);
+  PERFORM phase3_p10.end_authority('writing', e.id::text);
   RETURN jsonb_build_object('entry', e.id, 'state', _action, 'replayed', false);
 END $$;
 
@@ -153,7 +179,7 @@ BEGIN
     END IF;
     RETURN NEW;
   END IF;
-  IF coalesce(current_setting('phase3_p10.writing', true), '') = OLD.id::text THEN RETURN NEW; END IF;
+  IF phase3_p10.authorised('writing', OLD.id::text) THEN RETURN NEW; END IF;
   ow := CASE WHEN jsonb_typeof(OLD.receipt_details) = 'object' THEN OLD.receipt_details->'withdrawal' END;
   IF nw IS NULL AND ow IS NOT NULL THEN
     -- dropped (e.g. an edit that rewrote receipt_details): the stored withdrawal and its history stay

@@ -37,6 +37,32 @@ CREATE SCHEMA accounting_private;
 REVOKE ALL ON SCHEMA accounting_private FROM PUBLIC;
 GRANT USAGE ON SCHEMA accounting_private TO authenticated, service_role;
 
+-- P3 posting / journal / restore authority (was ledgerline.posting_writer, .accounting_request, .restoring) (P0-038): transaction-bound authority instead of a session setting. Any role can SET / set_config a custom
+-- setting, so a guard that trusted one could be opened by a signed-in client in plain SQL. A row here is written only by
+-- this file's SECURITY DEFINER operation (grant_authority / end_authority: no client EXECUTE; the table: no client
+-- privilege), is checked as transaction_id = txid_current() AND actor_id = auth.uid(), and is removed before the
+-- operation returns (a 64-bit txid is never reused, so a row never authorises a later transaction).
+CREATE TABLE accounting_private.authority (transaction_id bigint NOT NULL, scope text NOT NULL, item text NOT NULL DEFAULT '', actor_id uuid, context jsonb,
+  PRIMARY KEY (transaction_id, scope, item));
+REVOKE ALL ON accounting_private.authority FROM PUBLIC, anon, authenticated, service_role;
+CREATE FUNCTION accounting_private.grant_authority(_scope text, _item text DEFAULT '', _context jsonb DEFAULT NULL) RETURNS void
+LANGUAGE sql VOLATILE SECURITY DEFINER SET search_path = public, pg_temp AS $$
+  INSERT INTO accounting_private.authority(transaction_id, scope, item, actor_id, context) VALUES (txid_current(), _scope, coalesce(_item, ''), auth.uid(), _context)
+  ON CONFLICT (transaction_id, scope, item) DO UPDATE SET actor_id = EXCLUDED.actor_id, context = EXCLUDED.context
+$$;
+CREATE FUNCTION accounting_private.end_authority(_scope text, _item text DEFAULT '') RETURNS void
+LANGUAGE sql VOLATILE SECURITY DEFINER SET search_path = public, pg_temp AS $$
+  DELETE FROM accounting_private.authority WHERE transaction_id = txid_current() AND scope = _scope AND item = coalesce(_item, '')
+$$;
+CREATE FUNCTION accounting_private.authorised(_scope text, _item text DEFAULT '') RETURNS boolean
+LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public, pg_temp AS $$
+  SELECT EXISTS (SELECT 1 FROM accounting_private.authority a WHERE a.transaction_id = txid_current() AND a.scope = _scope AND a.item = coalesce(_item, '')
+                   AND a.actor_id IS NOT DISTINCT FROM auth.uid())
+$$;
+REVOKE ALL ON FUNCTION accounting_private.grant_authority(text, text, jsonb), accounting_private.end_authority(text, text) FROM PUBLIC, anon, authenticated, service_role;
+REVOKE ALL ON FUNCTION accounting_private.authorised(text, text) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION accounting_private.authorised(text, text) TO service_role;
+
 -- ---------------------------------------------------------------------------------------------------------
 -- Tables
 -- ---------------------------------------------------------------------------------------------------------
@@ -181,7 +207,7 @@ CREATE FUNCTION accounting_private.guard_posting_insert() RETURNS trigger
 LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
 DECLARE periods jsonb; orig public.accounting_postings;
 BEGIN
- IF coalesce(current_setting('ledgerline.posting_writer', true), '') <> 'on' THEN
+ IF NOT accounting_private.authorised('posting_writer') THEN
   RAISE EXCEPTION 'Postings are written only by the accounting posting functions';
  END IF;
  IF NOT accounting_private.entity_exists(NEW.owner_id, NEW.entity_id) THEN RAISE EXCEPTION 'Company unavailable for posting'; END IF;
@@ -212,7 +238,7 @@ CREATE FUNCTION accounting_private.guard_line_insert() RETURNS trigger
 LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
 DECLARE p public.accounting_postings;
 BEGIN
- IF coalesce(current_setting('ledgerline.posting_writer', true), '') <> 'on' THEN
+ IF NOT accounting_private.authorised('posting_writer') THEN
   RAISE EXCEPTION 'Postings are written only by the accounting posting functions';
  END IF;
  SELECT * INTO p FROM public.accounting_postings WHERE id = NEW.posting_id;
@@ -290,7 +316,7 @@ CREATE FUNCTION accounting_private.insert_posting(_owner uuid, _entity text, _da
 RETURNS uuid LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
 DECLARE pid uuid := md5(_owner::text || ':' || _key)::uuid; l jsonb; n integer := 0;
 BEGIN
- PERFORM set_config('ledgerline.posting_writer', 'on', true);
+ PERFORM accounting_private.grant_authority('posting_writer');
  INSERT INTO public.accounting_postings(id, owner_id, entity_id, posting_date, kind, idempotency_key, source_entry_id, entry_version, journal_id, request_id, journal, entry_ids, document_ids, settlement_entry_id, reverses_id, backfill_run_id, description, meta, actor_id)
  VALUES (pid, _owner, _entity, _date, _kind, _key, _entry, _version, (_journal->>'id')::uuid, _request, _journal, coalesce(_entry_ids, '{}'), coalesce(_documents, '{}'), _settlement, _reverses, _run, left(coalesce(_description, ''), 500), coalesce(_meta, '{}'), auth.uid());
  FOR l IN SELECT value FROM jsonb_array_elements(_lines) LOOP
@@ -299,7 +325,7 @@ BEGIN
   VALUES (md5(pid::text || ':' || n)::uuid, pid, _owner, n, coalesce(l->>'entityId', _entity), coalesce(l->>'currency', 'INR'), l->>'code', coalesce(l->>'label', l->>'code'), l->>'role',
    (l->>'debit')::numeric, (l->>'credit')::numeric, (l->>'accountId')::uuid, (l->>'entryId')::uuid, l->>'cashFlow', l->>'originalCurrency', (l->>'originalAmount')::numeric, coalesce(l->'meta', '{}'));
  END LOOP;
- PERFORM set_config('ledgerline.posting_writer', '', true);
+ PERFORM accounting_private.end_authority('posting_writer');
  RETURN pid;
 END $$;
 
@@ -479,8 +505,8 @@ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
 BEGIN
  IF current_setting('ledgerline.erasing', true) = 'on' THEN RETURN coalesce(NEW, OLD); END IF;
  IF TG_OP = 'INSERT' THEN
-  IF NEW.receipt_details ? 'accounting' AND coalesce(current_setting('ledgerline.accounting_request', true), '') IS DISTINCT FROM NEW.receipt_details->'accounting'->>'requestId'
-     AND coalesce(current_setting('ledgerline.restoring', true), '') <> 'on' THEN
+  IF NEW.receipt_details ? 'accounting' AND NOT accounting_private.authorised('accounting_request', coalesce(NEW.receipt_details->'accounting'->>'requestId', ''))
+     AND NOT accounting_private.authorised('restoring') THEN
    RAISE EXCEPTION 'Accounting evidence requires atomic journal posting';
   END IF;
   RETURN NEW;
@@ -653,7 +679,7 @@ BEGIN
  ELSIF _journal->>'kind' = 'reversal' THEN RAISE EXCEPTION 'Invalid reversal';
  END IF;
  -- Only linked money legs affect accountBalance. Noncash journals retain one zero-delta canonical anchor.
- PERFORM set_config('ledgerline.accounting_request', _request::text, true);
+ PERFORM accounting_private.grant_authority('accounting_request', _request::text);
  FOR l IN SELECT * FROM jsonb_array_elements(_journal->'legs') LOOP
   n := n + 1;
   tid := NULL;
@@ -681,7 +707,7 @@ BEGIN
  PERFORM accounting_private.insert_posting(uid, ent, dt, 'journal', 'journal:' || _request, plines, _reverses => rev_posting, _description => _journal->>'description',
   _journal => _journal, _request => _request, _entry_ids => ids, _documents => docs, _settlement => (_journal->'settlement'->>'entryId')::uuid);
  UPDATE public.finance_preferences SET revision = revision + 1, updated_at = now() WHERE owner_id = uid;
- PERFORM set_config('ledgerline.accounting_request', '', true);
+ PERFORM accounting_private.end_authority('accounting_request', _request::text);
  RETURN ids;
 END $$;
 
@@ -806,17 +832,34 @@ BEGIN
  RETURN jsonb_build_object('rebuiltJournals', rebuilt, 'exceptions', problems);
 END $$;
 
+-- P0-038: the restore wrapper runs as the caller (the 0072 restore is RLS-scoped), so it opens its exemption through
+-- these two SECURITY DEFINER helpers instead of the client-settable ledgerline.restoring setting. Called directly they
+-- give the caller nothing a restore of a crafted backup would not (the restore accepts accounting evidence rows), and
+-- they require the same signed-in caller and, with P4, the same recent step-up as the restore itself.
+CREATE FUNCTION accounting_private.begin_restore() RETURNS void
+LANGUAGE plpgsql VOLATILE SECURITY DEFINER SET search_path = public, pg_temp AS $$
+DECLARE ok boolean := true;
+BEGIN
+ IF auth.uid() IS NULL THEN RAISE EXCEPTION 'Unauthorized' USING ERRCODE = '42501'; END IF;
+ IF to_regprocedure('public.has_recent_step_up()') IS NOT NULL THEN EXECUTE 'SELECT public.has_recent_step_up()' INTO ok; END IF;
+ IF NOT coalesce(ok, false) THEN RAISE EXCEPTION 'STEP_UP_REQUIRED: confirm your identity again to restore a backup' USING ERRCODE = '42501'; END IF;
+ PERFORM accounting_private.grant_authority('restoring');
+END $$;
+CREATE FUNCTION accounting_private.end_restore() RETURNS void
+LANGUAGE sql VOLATILE SECURITY DEFINER SET search_path = public, pg_temp AS $$ SELECT accounting_private.end_authority('restoring') $$;
+
 -- Lock down P3's private helpers before the 0072 function moves in, so that function keeps its exact ACL.
 REVOKE ALL ON ALL FUNCTIONS IN SCHEMA accounting_private FROM PUBLIC, anon, authenticated, service_role;
+GRANT EXECUTE ON FUNCTION accounting_private.begin_restore(), accounting_private.end_restore() TO authenticated;
 ALTER FUNCTION public.restore_finance_backup(jsonb, text) RENAME TO restore_finance_backup_0072;
 ALTER FUNCTION public.restore_finance_backup_0072(jsonb, text) SET SCHEMA accounting_private;
 CREATE FUNCTION public.restore_finance_backup(payload jsonb, display_name text DEFAULT NULL) RETURNS jsonb
 LANGUAGE plpgsql SECURITY INVOKER SET search_path = public AS $$
 DECLARE result jsonb;
 BEGIN
- PERFORM set_config('ledgerline.restoring', 'on', true);
+ PERFORM accounting_private.begin_restore();
  result := accounting_private.restore_finance_backup_0072(payload, display_name);
- PERFORM set_config('ledgerline.restoring', '', true);
+ PERFORM accounting_private.end_restore();
  IF auth.uid() IS NOT NULL THEN result := result || jsonb_build_object('accounting', accounting_private.rebuild_restored_journals(auth.uid())); END IF;
  RETURN result;
 END $$;

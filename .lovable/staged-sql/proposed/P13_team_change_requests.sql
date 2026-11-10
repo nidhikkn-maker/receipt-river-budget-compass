@@ -46,6 +46,32 @@ REVOKE ALL ON SCHEMA phase3_p13 FROM PUBLIC, anon, authenticated;
 CREATE TABLE phase3_p13.saved_policies (tbl text NOT NULL, name text NOT NULL, cmd text NOT NULL, roles text NOT NULL, qual text, with_check text, permissive text NOT NULL, PRIMARY KEY (tbl, name));
 CREATE TABLE phase3_p13.audit_tables (tbl text PRIMARY KEY);
 
+-- P13 apply / decide authority (was phase3_p13.applying / phase3_p13.deciding) (P0-038): transaction-bound authority instead of a session setting. Any role can SET / set_config a custom
+-- setting, so a guard that trusted one could be opened by a signed-in client in plain SQL. A row here is written only by
+-- this file's SECURITY DEFINER operation (grant_authority / end_authority: no client EXECUTE; the table: no client
+-- privilege), is checked as transaction_id = txid_current() AND actor_id = auth.uid(), and is removed before the
+-- operation returns (a 64-bit txid is never reused, so a row never authorises a later transaction).
+CREATE TABLE phase3_p13.authority (transaction_id bigint NOT NULL, scope text NOT NULL, item text NOT NULL DEFAULT '', actor_id uuid, context jsonb,
+  PRIMARY KEY (transaction_id, scope, item));
+REVOKE ALL ON phase3_p13.authority FROM PUBLIC, anon, authenticated, service_role;
+CREATE FUNCTION phase3_p13.grant_authority(_scope text, _item text DEFAULT '', _context jsonb DEFAULT NULL) RETURNS void
+LANGUAGE sql VOLATILE SECURITY DEFINER SET search_path = public, pg_temp AS $$
+  INSERT INTO phase3_p13.authority(transaction_id, scope, item, actor_id, context) VALUES (txid_current(), _scope, coalesce(_item, ''), auth.uid(), _context)
+  ON CONFLICT (transaction_id, scope, item) DO UPDATE SET actor_id = EXCLUDED.actor_id, context = EXCLUDED.context
+$$;
+CREATE FUNCTION phase3_p13.end_authority(_scope text, _item text DEFAULT '') RETURNS void
+LANGUAGE sql VOLATILE SECURITY DEFINER SET search_path = public, pg_temp AS $$
+  DELETE FROM phase3_p13.authority WHERE transaction_id = txid_current() AND scope = _scope AND item = coalesce(_item, '')
+$$;
+CREATE FUNCTION phase3_p13.authorised(_scope text, _item text DEFAULT '') RETURNS boolean
+LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public, pg_temp AS $$
+  SELECT EXISTS (SELECT 1 FROM phase3_p13.authority a WHERE a.transaction_id = txid_current() AND a.scope = _scope AND a.item = coalesce(_item, '')
+                   AND a.actor_id IS NOT DISTINCT FROM auth.uid())
+$$;
+REVOKE ALL ON FUNCTION phase3_p13.grant_authority(text, text, jsonb), phase3_p13.end_authority(text, text) FROM PUBLIC, anon, authenticated, service_role;
+REVOKE ALL ON FUNCTION phase3_p13.authorised(text, text) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION phase3_p13.authorised(text, text) TO authenticated, service_role;
+
 -- --------------------------------------------------------------------------------------------
 -- Permission helper: entity-scoped where P1 is installed.
 -- --------------------------------------------------------------------------------------------
@@ -77,7 +103,7 @@ BEGIN
   -- different owner columns and expense_history follows its entry by cascade, so the flag itself is the exemption, as in P4).
   IF TG_OP = 'DELETE' AND current_setting('ledgerline.erasing', true) = 'on' THEN RETURN OLD; END IF;
   IF auth.uid() IS NULL AND current_user NOT IN ('authenticated', 'anon') THEN RETURN CASE WHEN TG_OP = 'DELETE' THEN OLD ELSE NEW END; END IF;
-  IF TG_TABLE_NAME = 'entry_change_requests' AND TG_OP = 'UPDATE' AND coalesce(current_setting('phase3_p13.deciding', true), '') = OLD.id::text THEN RETURN NEW; END IF;
+  IF TG_TABLE_NAME = 'entry_change_requests' AND TG_OP = 'UPDATE' AND phase3_p13.authorised('deciding', OLD.id::text) THEN RETURN NEW; END IF;
   RAISE EXCEPTION 'P13_AUDIT_KEPT: % is audit history; it is never changed or deleted', TG_TABLE_NAME USING ERRCODE = '42501';
 END $$;
 CREATE FUNCTION phase3_p13.guard_audit_truncate() RETURNS trigger
@@ -101,7 +127,7 @@ CREATE FUNCTION phase3_p13.guard_team_financial_edit() RETURNS trigger
 LANGUAGE plpgsql SET search_path = public, pg_temp AS $$
 BEGIN
   IF auth.uid() IS NULL OR OLD.employee_id = auth.uid() THEN RETURN NEW; END IF;
-  IF coalesce(current_setting('phase3_p13.applying', true), '') = OLD.id::text THEN RETURN NEW; END IF;
+  IF phase3_p13.authorised('applying', OLD.id::text) THEN RETURN NEW; END IF;
   IF (NEW.amount, NEW.original_amount, NEW.currency, NEW.fx_rate, NEW.expense_date, NEW.txn_type, NEW.account_id, NEW.to_account_id,
       NEW.adjustment_sign, NEW.principal, NEW.interest, NEW.allocations, NEW.splits, NEW.workspace_allocations, NEW.receipts,
       NEW.statement_ref, NEW.reconciled_at, NEW.transfer_counterpart_of, NEW.member_id, NEW.entity_id)
@@ -202,8 +228,8 @@ BEGIN
     ev := jsonb_build_object('action', 'withdrawn', 'at', to_jsonb(clock_timestamp())#>>'{}', 'by', _actor::text, 'reason', r.reason,
                              'requestId', r.id::text, 'requestedBy', r.requested_by::text);
     w := jsonb_build_object('state', 'withdrawn', 'at', ev->'at', 'by', ev->'by', 'reason', ev->'reason', 'history', h || jsonb_build_array(ev));
-    PERFORM set_config('phase3_p10.writing', e.id::text, true);
-    PERFORM set_config('phase3_p13.applying', e.id::text, true);
+    PERFORM phase3_p10.grant_authority('writing', e.id::text);
+    PERFORM phase3_p13.grant_authority('applying', e.id::text);
     UPDATE public.expenses SET receipt_details = jsonb_set(CASE WHEN jsonb_typeof(receipt_details) = 'object' THEN receipt_details ELSE '{}'::jsonb END, '{withdrawal}', w) WHERE id = e.id;
   ELSE
     IF (c ? 'amount' OR c ? 'expense_date') AND (e.reconciled_at IS NOT NULL OR nullif(btrim(coalesce(e.statement_ref, '')), '') IS NOT NULL) THEN
@@ -217,7 +243,7 @@ BEGIN
         RAISE EXCEPTION 'P13_INVALID: a split entry''s amount is re-entered by the owner' USING ERRCODE = '22023';
       END IF;
     END IF;
-    PERFORM set_config('phase3_p13.applying', e.id::text, true);
+    PERFORM phase3_p13.grant_authority('applying', e.id::text);
     UPDATE public.expenses SET
       title = CASE WHEN c ? 'title' THEN left(c->>'title', 200) ELSE title END,
       merchant = CASE WHEN c ? 'merchant' THEN left(c->>'merchant', 200) ELSE merchant END,
@@ -229,8 +255,8 @@ BEGIN
       updated_at = now()
     WHERE id = e.id;
   END IF;
-  PERFORM set_config('phase3_p13.applying', '', true);
-  PERFORM set_config('phase3_p10.writing', '', true);
+  PERFORM phase3_p13.end_authority('applying', e.id::text);
+  PERFORM phase3_p10.end_authority('writing', e.id::text);
   RETURN jsonb_build_object('entry', e.id, 'kind', r.kind, 'before', to_jsonb(e), 'changes', c);
 END $$;
 
@@ -249,10 +275,10 @@ BEGIN
     RETURN jsonb_build_object('request', r.id, 'status', r.status, 'decidedAt', r.decided_at, 'decidedBy', r.decided_by, 'replayed', true);
   END IF;
   IF p_approve THEN res := phase3_p13.apply(r, uid); END IF;
-  PERFORM set_config('phase3_p13.deciding', r.id::text, true);
+  PERFORM phase3_p13.grant_authority('deciding', r.id::text);
   UPDATE public.entry_change_requests SET status = CASE WHEN p_approve THEN 'approved' ELSE 'rejected' END,
     decided_by = uid, decided_at = clock_timestamp(), decision_reason = why, result = res WHERE id = r.id;
-  PERFORM set_config('phase3_p13.deciding', '', true);
+  PERFORM phase3_p13.end_authority('deciding', r.id::text);
   RETURN jsonb_build_object('request', r.id, 'status', CASE WHEN p_approve THEN 'approved' ELSE 'rejected' END, 'replayed', false);
 END $$;
 
@@ -265,9 +291,9 @@ BEGIN
   SELECT * INTO r FROM public.entry_change_requests WHERE id = p_request AND requested_by = uid FOR UPDATE;
   IF NOT FOUND THEN RAISE EXCEPTION 'P13_NOT_PERMITTED: only the requester cancels a request' USING ERRCODE = '42501'; END IF;
   IF r.status <> 'pending' THEN RETURN jsonb_build_object('request', r.id, 'status', r.status, 'replayed', true); END IF;
-  PERFORM set_config('phase3_p13.deciding', r.id::text, true);
+  PERFORM phase3_p13.grant_authority('deciding', r.id::text);
   UPDATE public.entry_change_requests SET status = 'cancelled', decided_by = uid, decided_at = clock_timestamp(), decision_reason = why WHERE id = r.id;
-  PERFORM set_config('phase3_p13.deciding', '', true);
+  PERFORM phase3_p13.end_authority('deciding', r.id::text);
   RETURN jsonb_build_object('request', r.id, 'status', 'cancelled', 'replayed', false);
 END $$;
 
