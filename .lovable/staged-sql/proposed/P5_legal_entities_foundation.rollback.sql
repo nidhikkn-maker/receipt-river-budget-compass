@@ -21,6 +21,10 @@ BEGIN
   IF to_regnamespace('phase2_p5') IS NULL OR to_regclass('public.legal_entities') IS NULL THEN
     RAISE EXCEPTION 'P5 is not installed';
   END IF;
+  -- P8 (asset depreciation posting) builds on P6 and P7: roll P8 back first.
+  IF to_regnamespace('phase3_p8') IS NOT NULL THEN
+    RAISE EXCEPTION 'P5 rollback: P8_asset_depreciation_posting is installed; run P8_asset_depreciation_posting.rollback.sql first';
+  END IF;
   IF to_regnamespace('phase2_p6') IS NOT NULL OR to_regclass('public.assets') IS NOT NULL THEN
     RAISE EXCEPTION 'Roll back P6 (P6_registers.rollback.sql) before P5';
   END IF;
