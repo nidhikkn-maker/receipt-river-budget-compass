@@ -1,0 +1,330 @@
+{
+ "body": {
+  "count": 1,
+  "text": "Skip to content\nUp to date\nK\nBack\nCharts\nPDF reports\nInsights\nSpending & reports",
+  "rect": {
+   "x": 0,
+   "y": 0,
+   "w": 372,
+   "h": 6106.3
+  },
+  "style": {
+   "font-family": "-apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, Helvetica, Arial, \"Noto Sans Tamil\", sans-serif",
+   "font-weight": "400",
+   "font-size": "16px",
+   "line-height": "23.2px",
+   "letter-spacing": "normal",
+   "font-variant-numeric": "normal",
+   "border-radius": "0px",
+   "padding-top": "0px",
+   "padding-left": "0px",
+   "height": "6106.27px",
+   "width": "372px",
+   "background-color": "oklch(0.977 0.009 88)",
+   "color": "oklch(0.25 0.06 268)"
+  },
+  "platformFonts": [
+   {
+    "familyName": "Inter",
+    "postScriptName": "Inter-Regular",
+    "isCustomFont": false,
+    "glyphCount": 6
+   }
+  ]
+ },
+ "classicH1": {
+  "count": 1,
+  "text": "Spending & reports",
+  "rect": {
+   "x": 16,
+   "y": 229.3,
+   "w": 340,
+   "h": 36
+  },
+  "style": {
+   "font-family": "-apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, Helvetica, Arial, \"Noto Sans Tamil\", sans-serif",
+   "font-weight": "600",
+   "font-size": "30px",
+   "line-height": "36px",
+   "letter-spacing": "normal",
+   "font-variant-numeric": "normal",
+   "border-radius": "0px",
+   "padding-top": "0px",
+   "padding-left": "0px",
+   "height": "36px",
+   "width": "340px",
+   "background-color": "rgba(0, 0, 0, 0)",
+   "color": "oklch(0.25 0.06 268)"
+  },
+  "platformFonts": [
+   {
+    "familyName": "Inter SemiBold",
+    "postScriptName": "Inter-SemiBold",
+    "isCustomFont": false,
+    "glyphCount": 18
+   }
+  ]
+ },
+ "__fonts": [
+  "Manrope 200 800 unloaded U+0-FF, U+131, U+152-153",
+  "Manrope 200 800 unloaded U+100-2BA, U+2BD-2C5, U+",
+  "Manrope Fallback normal unloaded U+0-10FFFF",
+  "Noto Sans Devanagari 100 900 unloaded U+900-97F, U+1CD0-1CF9, ",
+  "Noto Sans Tamil 400 unloaded U+964-965, U+B82-BFA, U+",
+  "Noto Sans Tamil 400 unloaded U+100-2BA, U+2BD-2C5, U+",
+  "Noto Sans Tamil 400 unloaded U+0-FF, U+131, U+152-153",
+  "Noto Sans Tamil 600 unloaded U+964-965, U+B82-BFA, U+",
+  "Noto Sans Tamil 600 unloaded U+100-2BA, U+2BD-2C5, U+",
+  "Noto Sans Tamil 600 unloaded U+0-FF, U+131, U+152-153",
+  "Space Grotesk 700 unloaded U+102-103, U+110-111, U+",
+  "Space Grotesk 700 unloaded U+100-2BA, U+2BD-2C5, U+",
+  "Space Grotesk 700 unloaded U+0-FF, U+131, U+152-153",
+  "Lovable Camera 400 unloaded U+0-10FFFF"
+ ],
+ "__preloads": [
+  "image http://localhost:8088/app-icon-large.png"
+ ],
+ "__fontRequests": [
+  "/node_modules/@fontsource-variable/manrope/files/manrope-latin-wght-normal.woff2?import&url"
+ ],
+ "__smallTargets": [
+  "a \"Skip to content\" 1x1",
+  "a \"Thapal home\" 31x28",
+  "button \"Up to date\" 36x44",
+  "a \"Account: KK\" 34x34",
+  "input \"Take a photo\" 1x1",
+  "input \"Choose photos\" 1x1",
+  "input \"Choose files\" 1x1"
+ ],
+ "__contrast": [
+  {
+   "fg": "#5A6475",
+   "bg": "#F8F6F1",
+   "ratio": 5.54,
+   "size": 10,
+   "weight": 500,
+   "large": false,
+   "need": 4.5,
+   "pass": true,
+   "disabled": false,
+   "bgImage": false,
+   "el": "a.text-[10px]",
+   "owner": "",
+   "sample": "Today",
+   "count": 4
+  },
+  {
+   "fg": "#C9A066",
+   "bg": "#14233B",
+   "ratio": 6.53,
+   "size": 12,
+   "weight": 600,
+   "large": false,
+   "need": 4.5,
+   "pass": true,
+   "disabled": false,
+   "bgImage": false,
+   "el": "a.cmp-header-avatar",
+   "owner": "",
+   "sample": "K",
+   "count": 1
+  },
+  {
+   "fg": "#525865",
+   "bg": "#FAF7F1",
+   "ratio": 6.67,
+   "size": 14,
+   "weight": 500,
+   "large": false,
+   "need": 4.5,
+   "pass": true,
+   "disabled": false,
+   "bgImage": false,
+   "el": "button.text-sm.text-muted-foreground",
+   "owner": "",
+   "sample": "Back",
+   "count": 2
+  },
+  {
+   "fg": "#525865",
+   "bg": "#FAF7F1",
+   "ratio": 6.67,
+   "size": 14,
+   "weight": 400,
+   "large": false,
+   "need": 4.5,
+   "pass": true,
+   "disabled": false,
+   "bgImage": false,
+   "el": "p.text-sm.text-muted-foreground",
+   "owner": "",
+   "sample": "6",
+   "count": 5
+  },
+  {
+   "fg": "#525865",
+   "bg": "#FAF7F1",
+   "ratio": 6.67,
+   "size": 13,
+   "weight": 400,
+   "large": false,
+   "need": 4.5,
+   "pass": true,
+   "disabled": false,
+   "bgImage": false,
+   "el": "p.text-xs.text-muted-foreground",
+   "owner": "",
+   "sample": "Tap a bar or row to see the entries behi",
+   "count": 1
+  },
+  {
+   "fg": "#FBF5E6",
+   "bg": "#1C2844",
+   "ratio": 13.44,
+   "size": 14,
+   "weight": 500,
+   "large": false,
+   "need": 4.5,
+   "pass": true,
+   "disabled": false,
+   "bgImage": false,
+   "el": "a.text-sm.text-primary-foreground",
+   "owner": "",
+   "sample": "Charts",
+   "count": 1
+  },
+  {
+   "fg": "#151F3E",
+   "bg": "#FAF7F1",
+   "ratio": 15.14,
+   "size": 30,
+   "weight": 600,
+   "large": true,
+   "need": 3,
+   "pass": true,
+   "disabled": false,
+   "bgImage": false,
+   "el": "h1.text-3xl",
+   "owner": "",
+   "sample": "Spending & reports",
+   "count": 1
+  },
+  {
+   "fg": "#151F3E",
+   "bg": "#FAF7F1",
+   "ratio": 15.14,
+   "size": 16,
+   "weight": 500,
+   "large": false,
+   "need": 4.5,
+   "pass": true,
+   "disabled": false,
+   "bgImage": false,
+   "el": "summary",
+   "owner": "",
+   "sample": "Filter report records",
+   "count": 1
+  },
+  {
+   "fg": "#151F3E",
+   "bg": "#FAF7F1",
+   "ratio": 15.14,
+   "size": 14,
+   "weight": 400,
+   "large": false,
+   "need": 4.5,
+   "pass": true,
+   "disabled": false,
+   "bgImage": false,
+   "el": "span",
+   "owner": "",
+   "sample": "All companies",
+   "count": 36
+  },
+  {
+   "fg": "#151F3E",
+   "bg": "#FAF7F1",
+   "ratio": 15.14,
+   "size": 14,
+   "weight": 500,
+   "large": false,
+   "need": 4.5,
+   "pass": true,
+   "disabled": false,
+   "bgImage": false,
+   "el": "label.text-sm",
+   "owner": "",
+   "sample": "From",
+   "count": 3
+  },
+  {
+   "fg": "#151F3E",
+   "bg": "#FAF7F1",
+   "ratio": 15.14,
+   "size": 18,
+   "weight": 700,
+   "large": false,
+   "need": 4.5,
+   "pass": true,
+   "disabled": false,
+   "bgImage": false,
+   "el": "h2.text-lg",
+   "owner": "",
+   "sample": "Monthly income & spending",
+   "count": 8
+  },
+  {
+   "fg": "#151F3E",
+   "bg": "#FAF7F1",
+   "ratio": 15.14,
+   "size": 16,
+   "weight": 400,
+   "large": false,
+   "need": 4.5,
+   "pass": true,
+   "disabled": false,
+   "bgImage": false,
+   "el": "tspan",
+   "owner": "",
+   "sample": "Jan",
+   "count": 33
+  },
+  {
+   "fg": "#151F3E",
+   "bg": "#FEFDF8",
+   "ratio": 15.89,
+   "size": 14,
+   "weight": 500,
+   "large": false,
+   "need": 4.5,
+   "pass": true,
+   "disabled": false,
+   "bgImage": false,
+   "el": "a.text-sm.text-foreground",
+   "owner": "",
+   "sample": "PDF reports",
+   "count": 1
+  }
+ ],
+ "__boxes": {
+  "viewport": {
+   "w": 372,
+   "h": 793,
+   "vvH": 793
+  },
+  "continueButtons": [],
+  "canvasFoot": [],
+  "toasts": [],
+  "previewPill": [],
+  "previewRoot": [],
+  "tabbar": [],
+  "comingHead": [],
+  "header": [],
+  "footNote": [],
+  "canvas": []
+ },
+ "__overflow": {
+  "docScrollW": 372,
+  "innerW": 372
+ }
+}

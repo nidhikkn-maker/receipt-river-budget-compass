@@ -1,11 +1,15 @@
 import { useEffect, useState } from 'react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { settleConfirm, subscribeConfirm, type ConfirmRequest } from '@/lib/confirm';
+import { useAppLocked } from '@/lib/app-lock-state';
 
 export function ConfirmHost() {
   const [req, setReq] = useState<ConfirmRequest | null>(null);
   useEffect(() => subscribeConfirm(setReq), []);
-  return <AlertDialog open={!!req} onOpenChange={open => { if (!open && req) settleConfirm(false); }}>
+  // A question still open when the app locks is answered "no" and closed: nothing proceeds behind the lock.
+  const locked = useAppLocked();
+  useEffect(() => { if (locked && req) settleConfirm(false); }, [locked, req]);
+  return <AlertDialog open={!!req && !locked} onOpenChange={open => { if (!open && req) settleConfirm(false); }}>
     <AlertDialogContent>
       <AlertDialogHeader>
         <AlertDialogTitle>{req?.title ?? 'Please confirm'}</AlertDialogTitle>

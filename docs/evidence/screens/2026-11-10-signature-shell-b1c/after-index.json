@@ -1,0 +1,175 @@
+[
+ {
+  "name": "after-01-add",
+  "note": "Step 1 · Add",
+  "head": 103,
+  "steps": 28,
+  "chips": 52,
+  "drop": 150,
+  "foot": 97,
+  "minFont": 10,
+  "under44": [],
+  "footBottomGap": 0,
+  "accountState": null
+ },
+ {
+  "name": "after-02-review-details",
+  "note": "Step 2 · Review (Details tab), top",
+  "head": 103,
+  "steps": 28,
+  "chips": null,
+  "drop": null,
+  "foot": 134,
+  "minFont": 10,
+  "under44": [],
+  "footBottomGap": 0,
+  "accountState": "unselected"
+ },
+ {
+  "name": "after-03-review-date",
+  "note": "Step 2 · read date shown unambiguously",
+  "head": 103,
+  "steps": 28,
+  "chips": null,
+  "drop": null,
+  "foot": 134,
+  "minFont": 10,
+  "under44": [],
+  "footBottomGap": 0,
+  "accountState": "unselected"
+ },
+ {
+  "name": "after-04-review-account",
+  "note": "Step 2 · account state after reading (card named without last four digits)",
+  "head": 103,
+  "steps": 28,
+  "chips": null,
+  "drop": null,
+  "foot": 134,
+  "minFont": 10,
+  "under44": [
+   {
+    "t": "",
+    "h": 20,
+    "w": 20
+   }
+  ],
+  "footBottomGap": 0,
+  "accountState": "unselected"
+ },
+ {
+  "name": "after-05-review-original",
+  "note": "Step 2 · Original tab",
+  "head": 103,
+  "steps": 28,
+  "chips": null,
+  "drop": null,
+  "foot": 134,
+  "minFont": 10,
+  "under44": [],
+  "footBottomGap": 0,
+  "accountState": "unselected"
+ },
+ {
+  "name": "after-06-review-details-again",
+  "note": "Step 2 · back on Details: edits and position kept",
+  "head": 103,
+  "steps": 28,
+  "chips": null,
+  "drop": null,
+  "foot": 134,
+  "minFont": 10,
+  "under44": [
+   {
+    "t": "",
+    "h": 20,
+    "w": 20
+   }
+  ],
+  "footBottomGap": 0,
+  "accountState": "unselected"
+ },
+ {
+  "name": "after-06b-review-duplicate-check",
+  "note": "Step 2 · the review's existing duplicate check (unchanged) holds Continue until answered",
+  "head": 103,
+  "steps": 28,
+  "chips": null,
+  "drop": null,
+  "foot": 134,
+  "minFont": 10,
+  "under44": [
+   {
+    "t": "",
+    "h": 20,
+    "w": 20
+   }
+  ],
+  "footBottomGap": 0,
+  "accountState": "unselected"
+ },
+ {
+  "name": "after-06c-review-continue-ready",
+  "note": "Step 2 · persistent Continue to confirmation, enabled",
+  "head": 103,
+  "steps": 28,
+  "chips": null,
+  "drop": null,
+  "foot": 97,
+  "minFont": 10,
+  "under44": [
+   {
+    "t": "",
+    "h": 20,
+    "w": 20
+   }
+  ],
+  "footBottomGap": 0,
+  "accountState": "unselected"
+ },
+ {
+  "name": "after-07-confirm",
+  "note": "Step 3 · blocked: account needs confirmation",
+  "head": 103,
+  "steps": 28,
+  "chips": null,
+  "drop": null,
+  "foot": 97,
+  "minFont": 10,
+  "under44": [],
+  "footBottomGap": 0,
+  "accountState": "unselected"
+ },
+ {
+  "name": "after-08-review-account-chosen",
+  "note": "Step 2 · account chosen by the owner",
+  "head": 103,
+  "steps": 28,
+  "chips": null,
+  "drop": null,
+  "foot": 134,
+  "minFont": 10,
+  "under44": [
+   {
+    "t": "",
+    "h": 20,
+    "w": 20
+   }
+  ],
+  "footBottomGap": 0,
+  "accountState": "confirmed"
+ },
+ {
+  "name": "after-09-confirm-enabled",
+  "note": "Step 3 · account confirmed: Confirm and save enabled (not pressed)",
+  "head": 103,
+  "steps": 28,
+  "chips": null,
+  "drop": null,
+  "foot": 97,
+  "minFont": 10,
+  "under44": [],
+  "footBottomGap": 0,
+  "accountState": "confirmed"
+ }
+]

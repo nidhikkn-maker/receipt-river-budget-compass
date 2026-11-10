@@ -1,0 +1,16 @@
+{
+ "after": {
+  "pairs": 149,
+  "enabled_pairs": 148,
+  "enabled_failing": [],
+  "disabled_pairs_below_AA": 1,
+  "min_enabled_ratio": 4.67
+ },
+ "before": {
+  "pairs": 144,
+  "enabled_pairs": 143,
+  "enabled_failing": [],
+  "disabled_pairs_below_AA": 1,
+  "min_enabled_ratio": 4.56
+ }
+}

@@ -2,6 +2,7 @@
 import asyncio
 import base64
 import io
+import re
 from pathlib import Path
 from urllib.parse import urlparse
 from PIL import Image
@@ -82,7 +83,10 @@ async def main():
    assert await dialog.get_by_role('heading',name='New expense',exact=True).count()==0
    review=dialog.get_by_role('group',name='Review scanned details')
    await review.get_by_label('Merchant',exact=True).fill('Corrected cafe')
-   await review.get_by_label('Date',exact=True).fill('2026-04-03')
+   # The date field shows "02 Apr 2026" and opens a calendar; it never takes ambiguous numeric typing.
+   await review.get_by_label('Date',exact=True).click()
+   await page.get_by_role('dialog',name='Choose date').get_by_role('button',name=re.compile(r'April 3rd, 2026')).click()
+   await expect(review.get_by_label('Date',exact=True)).to_have_attribute('data-value','2026-04-03')
    await review.get_by_role('combobox',name='Receipt category',exact=True).click()
    await page.get_by_role('option',name='Client & Business Meals',exact=True).click()
    await dialog.get_by_role('button',name='Hide Smart Add (your work stays here)',exact=True).click()

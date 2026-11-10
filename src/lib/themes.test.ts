@@ -3,9 +3,11 @@ import { cleanAppearance, cleanThemeName, resolveAppearance, THEME_FAMILIES, THE
 import { defaultPreferences, HOME_SECTIONS, normalizePreferences } from "./preferences";
 
 describe("theme catalog (V4.3)", () => {
-  it("offers five families and seven selectable styles", () => {
-    expect(THEME_FAMILIES).toHaveLength(5);
-    expect(THEME_STYLES).toHaveLength(7);
+  it("offers five approved families and seven selectable styles, plus the proposed Signature Flow", () => {
+    expect(THEME_FAMILIES).toHaveLength(6);
+    expect(THEME_STYLES).toHaveLength(8);
+    expect(THEME_STYLES.filter((t) => !t.proposed)).toHaveLength(7);
+    expect(THEME_STYLES.filter((t) => t.proposed).map((t) => t.name)).toEqual(["signature-flow"]);
   });
   it("the Apple-inspired family has exactly three variations", () => {
     expect(THEME_STYLES.filter((t) => t.family === "Apple-Inspired Minimal").map((t) => t.name)).toEqual(["apple-classic", "apple-ledgerline", "apple-glass"]);

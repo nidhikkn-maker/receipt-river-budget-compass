@@ -1,0 +1,563 @@
+{
+ "wordmark": {
+  "count": 1,
+  "text": "Thapal",
+  "rect": {
+   "x": 124,
+   "y": 25.5,
+   "w": 75.7,
+   "h": 24
+  },
+  "style": {
+   "font-family": "Manrope, Inter, -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, Helvetica, Arial, \"Noto Sans Tamil\", \"Noto Sans Devanagari\", sans-serif",
+   "font-weight": "700",
+   "font-size": "24px",
+   "line-height": "24px",
+   "letter-spacing": "-0.84px",
+   "font-variant-numeric": "normal",
+   "border-radius": "0px",
+   "padding-top": "0px",
+   "padding-left": "0px",
+   "height": "24px",
+   "width": "75.6562px",
+   "background-color": "rgba(0, 0, 0, 0)",
+   "color": "oklch(0.272 0.015 149.3)"
+  },
+  "platformFonts": [
+   {
+    "familyName": "Inter",
+    "postScriptName": "Inter-Bold",
+    "isCustomFont": false,
+    "glyphCount": 6
+   }
+  ]
+ },
+ "tmark": {
+  "count": 1,
+  "text": "T",
+  "rect": {
+   "x": 23.5,
+   "y": 24,
+   "w": 44,
+   "h": 44
+  },
+  "style": {
+   "font-family": "Manrope, Inter, -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, Helvetica, Arial, \"Noto Sans Tamil\", \"Noto Sans Devanagari\", sans-serif",
+   "font-weight": "700",
+   "font-size": "30px",
+   "line-height": "30px",
+   "letter-spacing": "-1.2px",
+   "font-variant-numeric": "normal",
+   "border-radius": "0px",
+   "padding-top": "0px",
+   "padding-left": "0px",
+   "height": "44px",
+   "width": "44px",
+   "background-color": "rgba(0, 0, 0, 0)",
+   "color": "oklch(0.33 0.033 177.2)"
+  },
+  "platformFonts": [
+   {
+    "familyName": "Inter",
+    "postScriptName": "Inter-Bold",
+    "isCustomFont": false,
+    "glyphCount": 1
+   }
+  ]
+ },
+ "workspace": {
+  "count": 1,
+  "text": "Personal",
+  "rect": {
+   "x": 953.5,
+   "y": 17.5,
+   "w": 107.5,
+   "h": 40
+  },
+  "style": {
+   "font-family": "Manrope, Inter, -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, Helvetica, Arial, \"Noto Sans Tamil\", \"Noto Sans Devanagari\", sans-serif",
+   "font-weight": "400",
+   "font-size": "13px",
+   "line-height": "19.5px",
+   "letter-spacing": "normal",
+   "font-variant-numeric": "normal",
+   "border-radius": "999px",
+   "padding-top": "0px",
+   "padding-left": "16px",
+   "height": "40px",
+   "width": "107.5px",
+   "background-color": "oklch(0.995 0.002 106.5)",
+   "color": "oklch(0.272 0.015 149.3)"
+  },
+  "platformFonts": [
+   {
+    "familyName": "Inter",
+    "postScriptName": "Inter-Regular",
+    "isCustomFont": false,
+    "glyphCount": 8
+   }
+  ]
+ },
+ "avatar": {
+  "count": 1,
+  "text": "KK",
+  "rect": {
+   "x": 1211,
+   "y": 15.5,
+   "w": 44,
+   "h": 44
+  },
+  "style": {
+   "font-family": "Manrope, Inter, -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, Helvetica, Arial, \"Noto Sans Tamil\", \"Noto Sans Devanagari\", sans-serif",
+   "font-weight": "600",
+   "font-size": "12px",
+   "line-height": "18px",
+   "letter-spacing": "0.48px",
+   "font-variant-numeric": "normal",
+   "border-radius": "999px",
+   "padding-top": "0px",
+   "padding-left": "0px",
+   "height": "44px",
+   "width": "44px",
+   "background-color": "oklch(0.33 0.033 177.2)",
+   "color": "oklch(0.987 0.004 106.5)"
+  },
+  "platformFonts": [
+   {
+    "familyName": "Inter SemiBold",
+    "postScriptName": "Inter-SemiBold",
+    "isCustomFont": false,
+    "glyphCount": 2
+   }
+  ]
+ },
+ "overline": {
+  "count": 2,
+  "text": "YOUR CONNECTED RECORDS",
+  "rect": {
+   "x": 148,
+   "y": 195,
+   "w": 586.7,
+   "h": 16.5
+  },
+  "style": {
+   "font-family": "Manrope, Inter, -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, Helvetica, Arial, \"Noto Sans Tamil\", \"Noto Sans Devanagari\", sans-serif",
+   "font-weight": "600",
+   "font-size": "11px",
+   "line-height": "16.5px",
+   "letter-spacing": "1.54px",
+   "font-variant-numeric": "normal",
+   "border-radius": "0px",
+   "padding-top": "0px",
+   "padding-left": "0px",
+   "height": "16.5px",
+   "width": "586.688px",
+   "background-color": "rgba(0, 0, 0, 0)",
+   "color": "oklch(0.525 0.017 148.6)"
+  },
+  "platformFonts": [
+   {
+    "familyName": "Inter SemiBold",
+    "postScriptName": "Inter-SemiBold",
+    "isCustomFont": false,
+    "glyphCount": 22
+   }
+  ]
+ },
+ "pageTitle": {
+  "count": 1,
+  "text": "Everything in its place.",
+  "rect": {
+   "x": 148,
+   "y": 221.5,
+   "w": 586.7,
+   "h": 51.5
+  },
+  "style": {
+   "font-family": "Manrope, Inter, -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, Helvetica, Arial, \"Noto Sans Tamil\", \"Noto Sans Devanagari\", sans-serif",
+   "font-weight": "700",
+   "font-size": "46px",
+   "line-height": "51.52px",
+   "letter-spacing": "-1.61px",
+   "font-variant-numeric": "normal",
+   "border-radius": "0px",
+   "padding-top": "0px",
+   "padding-left": "0px",
+   "height": "51.5156px",
+   "width": "586.688px",
+   "background-color": "rgba(0, 0, 0, 0)",
+   "color": "oklch(0.272 0.015 149.3)"
+  },
+  "platformFonts": [
+   {
+    "familyName": "Inter",
+    "postScriptName": "Inter-Bold",
+    "isCustomFont": false,
+    "glyphCount": 24
+   }
+  ]
+ },
+ "lede": {
+  "count": 1,
+  "text": "Organised from your documents and statements. Jump between related items without",
+  "rect": {
+   "x": 148,
+   "y": 281,
+   "w": 586.7,
+   "h": 46.5
+  },
+  "style": {
+   "font-family": "Manrope, Inter, -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, Helvetica, Arial, \"Noto Sans Tamil\", \"Noto Sans Devanagari\", sans-serif",
+   "font-weight": "400",
+   "font-size": "15px",
+   "line-height": "23.25px",
+   "letter-spacing": "normal",
+   "font-variant-numeric": "normal",
+   "border-radius": "0px",
+   "padding-top": "0px",
+   "padding-left": "0px",
+   "height": "46.5px",
+   "width": "586.688px",
+   "background-color": "rgba(0, 0, 0, 0)",
+   "color": "oklch(0.525 0.017 148.6)"
+  },
+  "platformFonts": [
+   {
+    "familyName": "Inter",
+    "postScriptName": "Inter-Regular",
+    "isCustomFont": false,
+    "glyphCount": 104
+   }
+  ]
+ },
+ "sectionTitle": {
+  "count": 1,
+  "text": "Every page",
+  "rect": {
+   "x": 148,
+   "y": 964.8,
+   "w": 99.6,
+   "h": 28.5
+  },
+  "style": {
+   "font-family": "Manrope, Inter, -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, Helvetica, Arial, \"Noto Sans Tamil\", \"Noto Sans Devanagari\", sans-serif",
+   "font-weight": "600",
+   "font-size": "19px",
+   "line-height": "28.5px",
+   "letter-spacing": "-0.38px",
+   "font-variant-numeric": "normal",
+   "border-radius": "0px",
+   "padding-top": "0px",
+   "padding-left": "0px",
+   "height": "28.5px",
+   "width": "99.625px",
+   "background-color": "rgba(0, 0, 0, 0)",
+   "color": "oklch(0.272 0.015 149.3)"
+  },
+  "platformFonts": [
+   {
+    "familyName": "Inter SemiBold",
+    "postScriptName": "Inter-SemiBold",
+    "isCustomFont": false,
+    "glyphCount": 10
+   }
+  ]
+ },
+ "sectionLink": {
+  "count": 1,
+  "text": "Show all",
+  "rect": {
+   "x": 1173.9,
+   "y": 963,
+   "w": 53.1,
+   "h": 32
+  },
+  "style": {
+   "font-family": "Manrope, Inter, -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, Helvetica, Arial, \"Noto Sans Tamil\", \"Noto Sans Devanagari\", sans-serif",
+   "font-weight": "700",
+   "font-size": "13px",
+   "line-height": "19.5px",
+   "letter-spacing": "normal",
+   "font-variant-numeric": "normal",
+   "border-radius": "0px",
+   "padding-top": "0px",
+   "padding-left": "0px",
+   "height": "32px",
+   "width": "53.125px",
+   "background-color": "rgba(0, 0, 0, 0)",
+   "color": "oklch(0.33 0.033 177.2)"
+  },
+  "platformFonts": [
+   {
+    "familyName": "Inter",
+    "postScriptName": "Inter-Bold",
+    "isCustomFont": false,
+    "glyphCount": 8
+   }
+  ]
+ },
+ "rowTitle": {
+  "count": 10,
+  "text": "Document Repository",
+  "rect": {
+   "x": 210,
+   "y": 459.8,
+   "w": 427.5,
+   "h": 22.5
+  },
+  "style": {
+   "font-family": "Manrope, Inter, -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, Helvetica, Arial, \"Noto Sans Tamil\", \"Noto Sans Devanagari\", sans-serif",
+   "font-weight": "600",
+   "font-size": "15px",
+   "line-height": "22.5px",
+   "letter-spacing": "-0.15px",
+   "font-variant-numeric": "normal",
+   "border-radius": "0px",
+   "padding-top": "0px",
+   "padding-left": "0px",
+   "height": "22.5px",
+   "width": "427.5px",
+   "background-color": "rgba(0, 0, 0, 0)",
+   "color": "oklch(0.272 0.015 149.3)"
+  }
+ },
+ "rail": {
+  "count": 1,
+  "text": "T\nHome\nMoney\nTo-do\nRecords\nReports\nAdd",
+  "rect": {
+   "x": 0,
+   "y": 0,
+   "w": 92,
+   "h": 794
+  },
+  "style": {
+   "font-family": "Manrope, Inter, -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, Helvetica, Arial, \"Noto Sans Tamil\", \"Noto Sans Devanagari\", sans-serif",
+   "font-weight": "400",
+   "font-size": "16px",
+   "line-height": "24px",
+   "letter-spacing": "normal",
+   "font-variant-numeric": "normal",
+   "border-radius": "0px",
+   "padding-top": "24px",
+   "padding-left": "0px",
+   "height": "794px",
+   "width": "92px",
+   "background-color": "oklch(0.995 0.002 106.5)",
+   "color": "oklch(0.272 0.015 149.3)"
+  },
+  "platformFonts": []
+ },
+ "railLabel": {
+  "count": 6,
+  "text": "Home",
+  "rect": {
+   "x": 29.3,
+   "y": 176,
+   "w": 32.5,
+   "h": 17.3
+  },
+  "style": {
+   "font-family": "Manrope, Inter, -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, Helvetica, Arial, \"Noto Sans Tamil\", \"Noto Sans Devanagari\", sans-serif",
+   "font-weight": "500",
+   "font-size": "11.5px",
+   "line-height": "17.25px",
+   "letter-spacing": "normal",
+   "font-variant-numeric": "normal",
+   "border-radius": "0px",
+   "padding-top": "0px",
+   "padding-left": "0px",
+   "height": "17.25px",
+   "width": "32.4844px",
+   "background-color": "rgba(0, 0, 0, 0)",
+   "color": "oklch(0.525 0.017 148.6)"
+  },
+  "platformFonts": [
+   {
+    "familyName": "Inter Medium",
+    "postScriptName": "Inter-Medium",
+    "isCustomFont": false,
+    "glyphCount": 4
+   }
+  ]
+ },
+ "header": {
+  "count": 1,
+  "text": "Thapal\nUp to date\nPersonal\nKK",
+  "rect": {
+   "x": 92,
+   "y": 0,
+   "w": 1191,
+   "h": 76
+  },
+  "style": {
+   "font-family": "Manrope, Inter, -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, Helvetica, Arial, \"Noto Sans Tamil\", \"Noto Sans Devanagari\", sans-serif",
+   "font-weight": "400",
+   "font-size": "16px",
+   "line-height": "24px",
+   "letter-spacing": "normal",
+   "font-variant-numeric": "normal",
+   "border-radius": "0px",
+   "padding-top": "0px",
+   "padding-left": "32px",
+   "height": "76px",
+   "width": "1191px",
+   "background-color": "oklab(0.987 -0.00113606 0.00383528 / 0.94)",
+   "color": "oklch(0.272 0.015 149.3)"
+  },
+  "platformFonts": []
+ },
+ "back": {
+  "count": 1,
+  "text": "Back",
+  "rect": {
+   "x": 148,
+   "y": 112,
+   "w": 62.5,
+   "h": 44
+  },
+  "style": {
+   "font-family": "Manrope, Inter, -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, Helvetica, Arial, \"Noto Sans Tamil\", \"Noto Sans Devanagari\", sans-serif",
+   "font-weight": "700",
+   "font-size": "13.5px",
+   "line-height": "20.25px",
+   "letter-spacing": "normal",
+   "font-variant-numeric": "normal",
+   "border-radius": "0px",
+   "padding-top": "0px",
+   "padding-left": "4px",
+   "height": "44px",
+   "width": "62.5469px",
+   "background-color": "rgba(0, 0, 0, 0)",
+   "color": "oklch(0.33 0.033 177.2)"
+  },
+  "platformFonts": [
+   {
+    "familyName": "Inter",
+    "postScriptName": "Inter-Bold",
+    "isCustomFont": false,
+    "glyphCount": 4
+   }
+  ]
+ },
+ "find": {
+  "count": 1,
+  "text": "Find anything",
+  "rect": {
+   "x": 1090.3,
+   "y": 114,
+   "w": 136.7,
+   "h": 40
+  },
+  "style": {
+   "font-family": "Manrope, Inter, -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, Helvetica, Arial, \"Noto Sans Tamil\", \"Noto Sans Devanagari\", sans-serif",
+   "font-weight": "700",
+   "font-size": "13px",
+   "line-height": "19.5px",
+   "letter-spacing": "normal",
+   "font-variant-numeric": "normal",
+   "border-radius": "12px",
+   "padding-top": "0px",
+   "padding-left": "14px",
+   "height": "40px",
+   "width": "136.703px",
+   "background-color": "oklch(0.953 0.012 157)",
+   "color": "oklch(0.33 0.033 177.2)"
+  },
+  "platformFonts": [
+   {
+    "familyName": "Inter",
+    "postScriptName": "Inter-Bold",
+    "isCustomFont": false,
+    "glyphCount": 13
+   }
+  ]
+ },
+ "body": {
+  "count": 1,
+  "text": "Skip to content\nT\nHome\nMoney\nTo-do\nRecords\nReports\nAdd\nThapal\nUp to date\nPersona",
+  "rect": {
+   "x": 0,
+   "y": 0,
+   "w": 1283,
+   "h": 1095.5
+  },
+  "style": {
+   "font-family": "Manrope, Inter, -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, Helvetica, Arial, \"Noto Sans Tamil\", \"Noto Sans Devanagari\", sans-serif",
+   "font-weight": "400",
+   "font-size": "16px",
+   "line-height": "23.2px",
+   "letter-spacing": "normal",
+   "font-variant-numeric": "normal",
+   "border-radius": "0px",
+   "padding-top": "0px",
+   "padding-left": "0px",
+   "height": "1095.52px",
+   "width": "1283px",
+   "background-color": "oklch(0.987 0.004 106.5)",
+   "color": "oklch(0.272 0.015 149.3)"
+  },
+  "platformFonts": []
+ },
+ "classicH1": {
+  "count": 1,
+  "text": "Everything in its place.",
+  "rect": {
+   "x": 148,
+   "y": 221.5,
+   "w": 586.7,
+   "h": 51.5
+  },
+  "style": {
+   "font-family": "Manrope, Inter, -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, Helvetica, Arial, \"Noto Sans Tamil\", \"Noto Sans Devanagari\", sans-serif",
+   "font-weight": "700",
+   "font-size": "46px",
+   "line-height": "51.52px",
+   "letter-spacing": "-1.61px",
+   "font-variant-numeric": "normal",
+   "border-radius": "0px",
+   "padding-top": "0px",
+   "padding-left": "0px",
+   "height": "51.5156px",
+   "width": "586.688px",
+   "background-color": "rgba(0, 0, 0, 0)",
+   "color": "oklch(0.272 0.015 149.3)"
+  },
+  "platformFonts": [
+   {
+    "familyName": "Inter",
+    "postScriptName": "Inter-Bold",
+    "isCustomFont": false,
+    "glyphCount": 24
+   }
+  ]
+ },
+ "__fonts": [
+  "Noto Sans Tamil 400 unloaded U+964-965, U+B82-BFA, U+",
+  "Noto Sans Tamil 400 unloaded U+100-2BA, U+2BD-2C5, U+",
+  "Noto Sans Tamil 400 unloaded U+0-FF, U+131, U+152-153",
+  "Noto Sans Tamil 600 unloaded U+964-965, U+B82-BFA, U+",
+  "Noto Sans Tamil 600 unloaded U+100-2BA, U+2BD-2C5, U+",
+  "Noto Sans Tamil 600 unloaded U+0-FF, U+131, U+152-153",
+  "Space Grotesk 700 unloaded U+102-103, U+110-111, U+",
+  "Space Grotesk 700 unloaded U+100-2BA, U+2BD-2C5, U+",
+  "Space Grotesk 700 unloaded U+0-FF, U+131, U+152-153",
+  "Lovable Camera 400 unloaded U+0-10FFFF"
+ ],
+ "__preloads": [
+  "image http://localhost:8088/app-icon-large.png"
+ ],
+ "__fontRequests": [],
+ "__smallTargets": [
+  "a \"Skip to content\" 1x1",
+  "button \"Workspace: Personal. Change workspace\" 108x40",
+  "a \"Home\" 36x20",
+  "button \"Find anything\" 137x40",
+  "button \"Show all\" 53x32",
+  "input \"Choose files\" 1x1",
+  "input \"Take a photo\" 1x1"
+ ],
+ "__overflow": {
+  "docScrollW": 1283,
+  "innerW": 1283
+ }
+}

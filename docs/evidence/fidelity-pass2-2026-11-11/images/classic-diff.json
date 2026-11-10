@@ -1,0 +1,52 @@
+{
+ "classic-desktop-dashboard.png": {
+  "size": "1283x794",
+  "pixels_changed": 0,
+  "max_channel_delta": 0
+ },
+ "classic-desktop-expenses.png": {
+  "size": "1283x794",
+  "pixels_changed": 0,
+  "max_channel_delta": 0
+ },
+ "classic-desktop-records.png": {
+  "size": "1283x794",
+  "pixels_changed": 0,
+  "max_channel_delta": 0
+ },
+ "classic-desktop-reports.png": {
+  "size": "1283x794",
+  "pixels_changed": 0,
+  "max_channel_delta": 0
+ },
+ "classic-desktop-trips.png": {
+  "size": "1283x794",
+  "pixels_changed": 0,
+  "max_channel_delta": 0
+ },
+ "classic-iphone-dashboard.png": {
+  "size": "372x793",
+  "pixels_changed": 0,
+  "max_channel_delta": 0
+ },
+ "classic-iphone-expenses.png": {
+  "size": "372x793",
+  "pixels_changed": 0,
+  "max_channel_delta": 0
+ },
+ "classic-iphone-records.png": {
+  "size": "372x793",
+  "pixels_changed": 0,
+  "max_channel_delta": 0
+ },
+ "classic-iphone-reports.png": {
+  "size": "372x793",
+  "pixels_changed": 0,
+  "max_channel_delta": 0
+ },
+ "classic-iphone-trips.png": {
+  "size": "372x793",
+  "pixels_changed": 0,
+  "max_channel_delta": 0
+ }
+}

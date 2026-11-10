@@ -15,7 +15,10 @@ import { registerOfflineApp, recoverStaleAppFiles } from "@/lib/pwa";
 import { supabase } from "@/integrations/supabase/client";
 import { Toaster } from "@/components/ui/sonner";
 import { ConfirmHost } from "@/components/ConfirmHost";
+import { PreviewInfoPanel } from "@/components/PreviewInfoPanel";
 import appCss from "../styles.css?url";
+// Signature Flow typeface (Manrope, SIL OFL 1.1, self-hosted). Same file the stylesheet's @font-face uses, so the preload is reused.
+import manropeLatinUrl from "@fontsource-variable/manrope/files/manrope-latin-wght-normal.woff2?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 
 function NotFoundComponent() {
@@ -118,8 +121,8 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         children: `(function(){var l=document.createElement("link");l.rel="stylesheet";l.href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@700&family=Noto+Sans+Tamil:wght@400;600&display=swap";document.head.appendChild(l);})();`,
       },
       {
-        /* Apply the saved theme before first paint to avoid a flash. */
-        children: `try{var t=JSON.parse(localStorage.getItem("ll-theme")||"{}");var e=document.documentElement;e.dataset.theme=t.themeName||"signature";e.classList.toggle("dark",t.appearance==="dark"||(t.appearance!=="light"&&matchMedia("(prefers-color-scheme: dark)").matches));}catch(_){}`,
+        /* Apply the saved theme before first paint to avoid a flash; in Signature Flow, preload its Manrope (latin) file. */
+        children: `try{var t=JSON.parse(localStorage.getItem("ll-theme")||"{}");var e=document.documentElement;e.dataset.theme=t.themeName||"signature";e.classList.toggle("dark",t.appearance==="dark"||(t.appearance!=="light"&&matchMedia("(prefers-color-scheme: dark)").matches));var u=localStorage.getItem("ll-uix");if(((e.dataset.theme==="signature-flow"&&u!=="classic")||u==="signature-flow")&&!document.querySelector('link[rel="preload"][as="font"]')){var p=document.createElement("link");p.rel="preload";p.as="font";p.type="font/woff2";p.crossOrigin="anonymous";p.href=${JSON.stringify(manropeLatinUrl)};document.head.appendChild(p);}}catch(_){}`,
       },
     ],
   }),
@@ -183,6 +186,8 @@ function RootComponent() {
       <ClientOnly fallback={<LaunchScreen />}><Outlet /></ClientOnly>
       <Toaster />
       <ConfirmHost />
+      {/* Preview-only build identity (renders nothing unless VITE_PREVIEW_ENV=preview). */}
+      <ClientOnly><PreviewInfoPanel /></ClientOnly>
     </QueryClientProvider>
   );
 }

@@ -174,12 +174,14 @@ export const COLUMN_JSON_REFS: Partial<Record<string, readonly RefRule[]>> = {
     { path: "receipt_details.accounting.journal.settlement.entryId", table: "expenses", why: "Entry that settled an accrual" },
     { path: "receipt_details.accounting.journal.settlement.snapshot.accountId", table: "accounts", why: "Settling entry's account at settlement" },
     { path: "receipt_details.accounting.journal.settlement.snapshot.allocations[].memberId", table: "family_members", why: "Settling entry's split member at settlement" },
+    { path: "receipt_details.duplicateReview[].matchedIds[]", table: "expenses", why: "Entries a possible duplicate was compared with when the owner kept it as a separate bill (audit evidence)" },
   ],
   expense_drafts: [
     { path: "data.accountId", table: "accounts", why: "Draft account" },
     { path: "data.toAccountId", table: "accounts", why: "Draft receiving account" },
     { path: "data.memberId", table: "family_members", why: "Draft family member" },
     { path: "data.shares{key}", table: "family_members", ignore: ["me"], why: "Draft family split shares" },
+    { path: "data.billEvidence.suggestedId", table: "accounts", why: "Account the read bill's printed card digits matched (compared with the chosen account when the owner confirms)" },
   ],
   security_holdings: [
     { path: "sources[]", table: "documents", why: "Statement originals for the holding" },

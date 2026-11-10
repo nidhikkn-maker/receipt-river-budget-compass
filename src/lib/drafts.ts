@@ -7,6 +7,18 @@ import { localDrafts, localToFile, removeLocalDraft, putLocalDraft, type LocalDr
 
 export type DraftStatus = "draft" | "uploading" | "processing" | "ready" | "info_required" | "failed" | "saved";
 export interface DraftReceipt { name: string; type: string; path: string; fingerprint?: string }
+/**
+ * What a read bill proved about who paid (account-evidence.ts), kept with a draft. Evidence/reason are display text;
+ * suggestedId is an account id (remapped on cross-account restore); card holds only a network and last four digits.
+ */
+export interface DraftBillEvidence {
+  evidence: string | null;
+  reason: string | null;
+  payer?: "own" | "cash" | "other";
+  reimbursable?: boolean;
+  card?: { network: "visa" | "mastercard" | "amex" | "rupay" | "diners" | null; lastFour: string | null };
+  suggestedId?: string | null;
+}
 export interface DraftData {
   txnType?: string; amount?: string; currency?: string; date?: string; category?: string; merchant?: string; title?: string;
   accountId?: string; toAccountId?: string; instrumentId?: string; paymentMethod?: string; scope?: string; tripId?: string;
@@ -14,6 +26,8 @@ export interface DraftData {
   wsSplit?: unknown; splitOn?: boolean; shares?: Record<string, string>; receiptDetails?: unknown; extracted?: boolean; error?: string;
   /** Receipt values read but not yet confirmed, so reopening the draft shows them for review. */
   scan?: { merchant: string; date: string; amount: string; currency: string; category?: string; read?: { merchant: string; date: string; amount: number; currency: string } };
+  /** What the read bill proved about the paying account, so a resumed review shows it (the owner confirms again). */
+  billEvidence?: DraftBillEvidence;
 }
 export interface Draft { localOnly?: boolean; id: string; data: DraftData; receipts: DraftReceipt[]; status: DraftStatus; transactionId: string | null; createdAt: string; updatedAt: string }
 

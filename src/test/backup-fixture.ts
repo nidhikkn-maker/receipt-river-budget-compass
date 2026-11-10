@@ -12,7 +12,7 @@ const local = (n: number) => `20000000-0000-4000-8000-${String(n).padStart(12, "
 
 export const ID = {
   spouse: u(1), bank: u(2), card: u(3), assetAcct: u(4), coBank: u(5), usdWallet: u(6),
-  groceries: u(10), laptop: u(11), hotel: u(12), claimBack: u(13), transferOut: u(14), loanIn: u(16), rent: u(17), gstTax: u(18), bounced: u(19), bouncedReversal: u(21),
+  groceries: u(10), laptop: u(11), hotel: u(12), claimBack: u(13), transferOut: u(14), loanIn: u(16), rent: u(17), gstTax: u(18), bounced: u(19), bouncedReversal: u(21), secondBill: u(22),
   draftOpen: u(20), commitment: u(30), loan: u(40), goal: u(50), valuation: u(60),
   invoice: u(70), statement: u(71), loanDoc: u(72), invoiceRevised: u(73), dematStmt: u(74), lease: u(75), form16: u(76), handoff: u(77),
   demat: u(80), holding: u(81), evidence: u(90),
@@ -122,10 +122,12 @@ export async function buildBackupFixture(): Promise<Backup> {
         expense(dep, { title: "Depreciation · Laptop · 2026-04", category: "Depreciation", amount: 3333.33, expense_date: "2026-04-30", account_id: ID.assetAcct, txn_type: "adjustment", adjustment_sign: -1, scope: "business", tags: ["depreciation"] }),
         expense(ID.loanIn, { title: "Home loan disbursal", category: "Loan", amount: 1000000, expense_date: "2024-04-01", account_id: ID.bank, txn_type: "income" }),
         expense(ID.rent, { title: "Society maintenance", category: "Housing", amount: 3000, expense_date: "2026-04-20", account_id: ID.bank }),
+        // A possible duplicate the owner kept as a separate bill: the audit evidence names the two entries it was compared with.
+        expense(ID.secondBill, { title: "Second groceries bill", merchant: "Big Bazaar", amount: 2500, account_id: ID.card, receipt_details: { duplicateReview: [{ decision: "separate", check: "same_bill", reason: "Second visit, new bill number BB-2210", matchedIds: [ID.groceries, ID.rent], decidedAt: "2026-04-10T12:00:00.000Z", decidedBy: OWNER_A }], accountCheck: { decision: "evidence_confirmed", evidence: "Card ending 4242 printed on the bill matches HDFC Visa", card: { network: "visa", lastFour: "4242" }, confirmedAt: "2026-04-10T12:00:00.000Z" } } }),
         expense(ID.gstTax, { title: "RCM GST", category: "Taxes and duties", amount: 18305.08, expense_date: "2026-04-20", account_id: ID.coBank, scope: "business", entity_id: ID.company, entity_source: "manual", receipt_details: { accounting: { primary: false, requestId: "req-2", journal: { id: local(62), entityId: ID.company, date: "2026-04-20", kind: "adjustment", description: "Settle RCM accrual", documentIds: [ID.invoice], legs: [], settlement: { entryId: ID.laptop, journalId: local(60), balanceCode: "AP", amount: 18305.08, snapshot: { date: "2026-04-20", amount: 18305.08, accountId: ID.coBank, txnType: "expense", category: "Taxes and duties", allocations: [{ category: "Taxes and duties", amount: 18305.08, memberId: ID.spouse }] } } } } } }),
       ],
       expense_drafts: [
-        { id: ID.draftOpen, owner_id: OWNER_A, status: "ready", transaction_id: null, data: { amount: "450", accountId: ID.card, toAccountId: ID.bank, memberId: ID.spouse, instrumentId: ID.instrument, tripId: ID.trip, shares: { me: "200", [ID.spouse]: "250" } }, receipts: [{ path: `${OWNER_A}/drafts/${ID.draftOpen}/photo.jpg`, name: "photo.jpg", type: "image/jpeg" }] },
+        { id: ID.draftOpen, owner_id: OWNER_A, status: "ready", transaction_id: null, data: { amount: "450", accountId: ID.card, toAccountId: ID.bank, memberId: ID.spouse, instrumentId: ID.instrument, tripId: ID.trip, shares: { me: "200", [ID.spouse]: "250" }, billEvidence: { evidence: "Card ending 4242 printed on the bill matches HDFC Visa", reason: null, payer: "own", reimbursable: false, card: { network: null, lastFour: "4242" }, suggestedId: ID.card } }, receipts: [{ path: `${OWNER_A}/drafts/${ID.draftOpen}/photo.jpg`, name: "photo.jpg", type: "image/jpeg" }] },
         { id: ID.groceries, owner_id: OWNER_A, status: "saved", transaction_id: ID.groceries, data: { amount: "2500", accountId: ID.bank }, receipts: [] },
       ],
       commitments: [{ id: ID.commitment, owner_id: OWNER_A, name: "Rent", kind: "bill", direction: "out", amount: 25000, frequency: "monthly", next_due: "2026-05-01", account_id: ID.bank }],

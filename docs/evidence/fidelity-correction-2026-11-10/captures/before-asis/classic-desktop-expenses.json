@@ -1,0 +1,90 @@
+{
+ "body": {
+  "count": 1,
+  "text": "Skip to content\nSpaces\nAdd to Thapal\nToday\nReview\nActivity\nWealth & Plan\nStateme",
+  "rect": {
+   "x": 0,
+   "y": 0,
+   "w": 1283,
+   "h": 1842.1
+  },
+  "style": {
+   "font-family": "-apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, Helvetica, Arial, \"Noto Sans Tamil\", sans-serif",
+   "font-weight": "400",
+   "font-size": "16px",
+   "line-height": "23.2px",
+   "letter-spacing": "normal",
+   "font-variant-numeric": "normal",
+   "border-radius": "0px",
+   "padding-top": "0px",
+   "padding-left": "0px",
+   "height": "1842.09px",
+   "width": "1283px",
+   "background-color": "oklch(0.977 0.009 88)",
+   "color": "oklch(0.25 0.06 268)"
+  },
+  "platformFonts": []
+ },
+ "classicH1": {
+  "count": 1,
+  "text": "Activity",
+  "rect": {
+   "x": 288,
+   "y": 177.3,
+   "w": 963,
+   "h": 43.2
+  },
+  "style": {
+   "font-family": "-apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, Helvetica, Arial, \"Noto Sans Tamil\", sans-serif",
+   "font-weight": "600",
+   "font-size": "36px",
+   "line-height": "43.2px",
+   "letter-spacing": "normal",
+   "font-variant-numeric": "normal",
+   "border-radius": "0px",
+   "padding-top": "0px",
+   "padding-left": "0px",
+   "height": "43.1875px",
+   "width": "963px",
+   "background-color": "rgba(0, 0, 0, 0)",
+   "color": "oklch(0.25 0.06 268)"
+  },
+  "platformFonts": [
+   {
+    "familyName": "Inter SemiBold",
+    "postScriptName": "Inter-SemiBold",
+    "isCustomFont": false,
+    "glyphCount": 8
+   }
+  ]
+ },
+ "__fonts": [
+  "Noto Sans Tamil 400 unloaded U+964-965, U+B82-BFA, U+",
+  "Noto Sans Tamil 400 unloaded U+100-2BA, U+2BD-2C5, U+",
+  "Noto Sans Tamil 400 unloaded U+0-FF, U+131, U+152-153",
+  "Noto Sans Tamil 600 unloaded U+964-965, U+B82-BFA, U+",
+  "Noto Sans Tamil 600 unloaded U+100-2BA, U+2BD-2C5, U+",
+  "Noto Sans Tamil 600 unloaded U+0-FF, U+131, U+152-153",
+  "Space Grotesk 700 unloaded U+102-103, U+110-111, U+",
+  "Space Grotesk 700 unloaded U+100-2BA, U+2BD-2C5, U+",
+  "Space Grotesk 700 unloaded U+0-FF, U+131, U+152-153",
+  "Lovable Camera 400 unloaded U+0-10FFFF"
+ ],
+ "__preloads": [
+  "image http://localhost:8088/app-icon-large.png"
+ ],
+ "__fontRequests": [],
+ "__smallTargets": [
+  "a \"Skip to content\" 1x1",
+  "a \"Thapal home\" 106x28",
+  "a \"Personal\" 76x30",
+  "a \"Account: KK\" 34x34",
+  "input \"Take a photo\" 1x1",
+  "input \"Choose photos\" 1x1",
+  "input \"Choose files\" 1x1"
+ ],
+ "__overflow": {
+  "docScrollW": 1283,
+  "innerW": 1283
+ }
+}
