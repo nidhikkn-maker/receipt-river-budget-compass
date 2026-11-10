@@ -1,0 +1,710 @@
+{
+ "overline": {
+  "count": 2,
+  "text": "YOUR CONNECTED RECORDS",
+  "rect": {
+   "x": 288,
+   "y": 232,
+   "w": 586.7,
+   "h": 16.5
+  },
+  "style": {
+   "font-family": "-apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, Helvetica, Arial, \"Noto Sans Tamil\", sans-serif",
+   "font-weight": "600",
+   "font-size": "11px",
+   "line-height": "16.5px",
+   "letter-spacing": "1.54px",
+   "font-variant-numeric": "normal",
+   "border-radius": "0px",
+   "padding-top": "0px",
+   "padding-left": "0px",
+   "height": "16.5px",
+   "width": "586.688px",
+   "background-color": "rgba(0, 0, 0, 0)",
+   "color": "oklch(0.46 0.022 266)"
+  },
+  "platformFonts": [
+   {
+    "familyName": "Inter SemiBold",
+    "postScriptName": "Inter-SemiBold",
+    "isCustomFont": false,
+    "glyphCount": 22
+   }
+  ]
+ },
+ "pageTitle": {
+  "count": 1,
+  "text": "Everything in its place.",
+  "rect": {
+   "x": 288,
+   "y": 258.5,
+   "w": 586.7,
+   "h": 51.5
+  },
+  "style": {
+   "font-family": "-apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, Helvetica, Arial, \"Noto Sans Tamil\", sans-serif",
+   "font-weight": "700",
+   "font-size": "46px",
+   "line-height": "51.52px",
+   "letter-spacing": "-1.61px",
+   "font-variant-numeric": "normal",
+   "border-radius": "0px",
+   "padding-top": "0px",
+   "padding-left": "0px",
+   "height": "51.5156px",
+   "width": "586.688px",
+   "background-color": "rgba(0, 0, 0, 0)",
+   "color": "oklch(0.25 0.06 268)"
+  },
+  "platformFonts": [
+   {
+    "familyName": "Inter",
+    "postScriptName": "Inter-Bold",
+    "isCustomFont": false,
+    "glyphCount": 24
+   }
+  ]
+ },
+ "lede": {
+  "count": 1,
+  "text": "Organised from your documents and statements. Jump between related items without",
+  "rect": {
+   "x": 288,
+   "y": 318,
+   "w": 586.7,
+   "h": 46.5
+  },
+  "style": {
+   "font-family": "-apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, Helvetica, Arial, \"Noto Sans Tamil\", sans-serif",
+   "font-weight": "400",
+   "font-size": "15px",
+   "line-height": "23.25px",
+   "letter-spacing": "normal",
+   "font-variant-numeric": "normal",
+   "border-radius": "0px",
+   "padding-top": "0px",
+   "padding-left": "0px",
+   "height": "46.5px",
+   "width": "586.688px",
+   "background-color": "rgba(0, 0, 0, 0)",
+   "color": "oklch(0.46 0.022 266)"
+  },
+  "platformFonts": [
+   {
+    "familyName": "Inter",
+    "postScriptName": "Inter-Regular",
+    "isCustomFont": false,
+    "glyphCount": 104
+   }
+  ]
+ },
+ "sectionTitle": {
+  "count": 1,
+  "text": "Every page",
+  "rect": {
+   "x": 288,
+   "y": 1038.3,
+   "w": 99.6,
+   "h": 28.5
+  },
+  "style": {
+   "font-family": "-apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, Helvetica, Arial, \"Noto Sans Tamil\", sans-serif",
+   "font-weight": "600",
+   "font-size": "19px",
+   "line-height": "28.5px",
+   "letter-spacing": "-0.38px",
+   "font-variant-numeric": "normal",
+   "border-radius": "0px",
+   "padding-top": "0px",
+   "padding-left": "0px",
+   "height": "28.5px",
+   "width": "99.625px",
+   "background-color": "rgba(0, 0, 0, 0)",
+   "color": "oklch(0.25 0.06 268)"
+  },
+  "platformFonts": [
+   {
+    "familyName": "Inter SemiBold",
+    "postScriptName": "Inter-SemiBold",
+    "isCustomFont": false,
+    "glyphCount": 10
+   }
+  ]
+ },
+ "sectionLink": {
+  "count": 1,
+  "text": "Show all",
+  "rect": {
+   "x": 1197.9,
+   "y": 1036.6,
+   "w": 53.1,
+   "h": 32
+  },
+  "style": {
+   "font-family": "-apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, Helvetica, Arial, \"Noto Sans Tamil\", sans-serif",
+   "font-weight": "700",
+   "font-size": "13px",
+   "line-height": "19.5px",
+   "letter-spacing": "normal",
+   "font-variant-numeric": "normal",
+   "border-radius": "0px",
+   "padding-top": "0px",
+   "padding-left": "0px",
+   "height": "32px",
+   "width": "53.125px",
+   "background-color": "rgba(0, 0, 0, 0)",
+   "color": "oklch(0.28 0.055 266)"
+  },
+  "platformFonts": [
+   {
+    "familyName": "Inter",
+    "postScriptName": "Inter-Bold",
+    "isCustomFont": false,
+    "glyphCount": 8
+   }
+  ]
+ },
+ "rowTitle": {
+  "count": 10,
+  "text": "Document Repository",
+  "rect": {
+   "x": 350,
+   "y": 493.5,
+   "w": 369.5,
+   "h": 22.5
+  },
+  "style": {
+   "font-family": "-apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, Helvetica, Arial, \"Noto Sans Tamil\", sans-serif",
+   "font-weight": "600",
+   "font-size": "15px",
+   "line-height": "22.5px",
+   "letter-spacing": "-0.15px",
+   "font-variant-numeric": "normal",
+   "border-radius": "0px",
+   "padding-top": "0px",
+   "padding-left": "0px",
+   "height": "22.5px",
+   "width": "369.5px",
+   "background-color": "rgba(0, 0, 0, 0)",
+   "color": "oklch(0.25 0.06 268)"
+  }
+ },
+ "back": {
+  "count": 1,
+  "text": "Back",
+  "rect": {
+   "x": 288,
+   "y": 149,
+   "w": 62.5,
+   "h": 44
+  },
+  "style": {
+   "font-family": "-apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, Helvetica, Arial, \"Noto Sans Tamil\", sans-serif",
+   "font-weight": "700",
+   "font-size": "13.5px",
+   "line-height": "20.25px",
+   "letter-spacing": "normal",
+   "font-variant-numeric": "normal",
+   "border-radius": "0px",
+   "padding-top": "0px",
+   "padding-left": "4px",
+   "height": "44px",
+   "width": "62.5469px",
+   "background-color": "rgba(0, 0, 0, 0)",
+   "color": "oklch(0.28 0.055 266)"
+  },
+  "platformFonts": [
+   {
+    "familyName": "Inter",
+    "postScriptName": "Inter-Bold",
+    "isCustomFont": false,
+    "glyphCount": 4
+   }
+  ]
+ },
+ "find": {
+  "count": 1,
+  "text": "Find anything",
+  "rect": {
+   "x": 1114.3,
+   "y": 151,
+   "w": 136.7,
+   "h": 40
+  },
+  "style": {
+   "font-family": "-apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, Helvetica, Arial, \"Noto Sans Tamil\", sans-serif",
+   "font-weight": "700",
+   "font-size": "13px",
+   "line-height": "19.5px",
+   "letter-spacing": "normal",
+   "font-variant-numeric": "normal",
+   "border-radius": "12px",
+   "padding-top": "0px",
+   "padding-left": "14px",
+   "height": "40px",
+   "width": "136.703px",
+   "background-color": "oklch(0.93 0.025 86)",
+   "color": "oklch(0.28 0.055 266)"
+  },
+  "platformFonts": [
+   {
+    "familyName": "Inter",
+    "postScriptName": "Inter-Bold",
+    "isCustomFont": false,
+    "glyphCount": 13
+   }
+  ]
+ },
+ "body": {
+  "count": 1,
+  "text": "Skip to content\nSpaces\nAdd to Thapal\nToday\nReview\nActivity\nWealth & Plan\nStateme",
+  "rect": {
+   "x": 0,
+   "y": 0,
+   "w": 1283,
+   "h": 1153.1
+  },
+  "style": {
+   "font-family": "-apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, Helvetica, Arial, \"Noto Sans Tamil\", sans-serif",
+   "font-weight": "400",
+   "font-size": "16px",
+   "line-height": "23.2px",
+   "letter-spacing": "normal",
+   "font-variant-numeric": "normal",
+   "border-radius": "0px",
+   "padding-top": "0px",
+   "padding-left": "0px",
+   "height": "1153.08px",
+   "width": "1283px",
+   "background-color": "oklch(0.977 0.009 88)",
+   "color": "oklch(0.25 0.06 268)"
+  },
+  "platformFonts": []
+ },
+ "classicH1": {
+  "count": 1,
+  "text": "Everything in its place.",
+  "rect": {
+   "x": 288,
+   "y": 258.5,
+   "w": 586.7,
+   "h": 51.5
+  },
+  "style": {
+   "font-family": "-apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, Helvetica, Arial, \"Noto Sans Tamil\", sans-serif",
+   "font-weight": "700",
+   "font-size": "46px",
+   "line-height": "51.52px",
+   "letter-spacing": "-1.61px",
+   "font-variant-numeric": "normal",
+   "border-radius": "0px",
+   "padding-top": "0px",
+   "padding-left": "0px",
+   "height": "51.5156px",
+   "width": "586.688px",
+   "background-color": "rgba(0, 0, 0, 0)",
+   "color": "oklch(0.25 0.06 268)"
+  },
+  "platformFonts": [
+   {
+    "familyName": "Inter",
+    "postScriptName": "Inter-Bold",
+    "isCustomFont": false,
+    "glyphCount": 24
+   }
+  ]
+ },
+ "__fonts": [
+  "Manrope 200 800 unloaded U+0-FF, U+131, U+152-153",
+  "Manrope 200 800 unloaded U+100-2BA, U+2BD-2C5, U+",
+  "Manrope Fallback normal unloaded U+0-10FFFF",
+  "Noto Sans Devanagari 100 900 unloaded U+900-97F, U+1CD0-1CF9, ",
+  "Noto Sans Tamil 400 unloaded U+964-965, U+B82-BFA, U+",
+  "Noto Sans Tamil 400 unloaded U+100-2BA, U+2BD-2C5, U+",
+  "Noto Sans Tamil 400 unloaded U+0-FF, U+131, U+152-153",
+  "Noto Sans Tamil 600 unloaded U+964-965, U+B82-BFA, U+",
+  "Noto Sans Tamil 600 unloaded U+100-2BA, U+2BD-2C5, U+",
+  "Noto Sans Tamil 600 unloaded U+0-FF, U+131, U+152-153",
+  "Space Grotesk 700 unloaded U+102-103, U+110-111, U+",
+  "Space Grotesk 700 unloaded U+100-2BA, U+2BD-2C5, U+",
+  "Space Grotesk 700 unloaded U+0-FF, U+131, U+152-153",
+  "Lovable Camera 400 unloaded U+0-10FFFF"
+ ],
+ "__preloads": [
+  "image http://localhost:8088/app-icon-large.png"
+ ],
+ "__fontRequests": [
+  "/node_modules/@fontsource-variable/manrope/files/manrope-latin-wght-normal.woff2?import&url"
+ ],
+ "__smallTargets": [
+  "a \"Skip to content\" 1x1",
+  "a \"Thapal home\" 106x28",
+  "a \"Personal\" 76x30",
+  "a \"Account: KK\" 34x34",
+  "a \"Home\" 36x20",
+  "button \"Find anything\" 137x40",
+  "button \"Show all\" 53x32",
+  "input \"Take a photo\" 1x1",
+  "input \"Choose photos\" 1x1",
+  "input \"Choose files\" 1x1"
+ ],
+ "__contrast": [
+  {
+   "fg": "#C9A066",
+   "bg": "#14233B",
+   "ratio": 6.53,
+   "size": 12,
+   "weight": 600,
+   "large": false,
+   "need": 4.5,
+   "pass": true,
+   "disabled": false,
+   "bgImage": false,
+   "el": "a.cmp-header-avatar",
+   "owner": "",
+   "sample": "K",
+   "count": 1
+  },
+  {
+   "fg": "#525865",
+   "bg": "#FAF7F1",
+   "ratio": 6.67,
+   "size": 15,
+   "weight": 500,
+   "large": false,
+   "need": 4.5,
+   "pass": true,
+   "disabled": false,
+   "bgImage": false,
+   "el": "a",
+   "owner": "",
+   "sample": "Spaces",
+   "count": 11
+  },
+  {
+   "fg": "#525865",
+   "bg": "#FAF7F1",
+   "ratio": 6.67,
+   "size": 16,
+   "weight": 400,
+   "large": false,
+   "need": 4.5,
+   "pass": true,
+   "disabled": false,
+   "bgImage": false,
+   "el": "span",
+   "owner": "",
+   "sample": "Search Thapal",
+   "count": 1
+  },
+  {
+   "fg": "#525865",
+   "bg": "#FAF7F1",
+   "ratio": 6.67,
+   "size": 12,
+   "weight": 500,
+   "large": false,
+   "need": 4.5,
+   "pass": true,
+   "disabled": false,
+   "bgImage": false,
+   "el": "a.text-xs.text-muted-foreground",
+   "owner": "",
+   "sample": "Personal",
+   "count": 1
+  },
+  {
+   "fg": "#525865",
+   "bg": "#FAF7F1",
+   "ratio": 6.67,
+   "size": 14,
+   "weight": 500,
+   "large": false,
+   "need": 4.5,
+   "pass": true,
+   "disabled": false,
+   "bgImage": false,
+   "el": "button.text-sm.text-muted-foreground",
+   "owner": "",
+   "sample": "Back",
+   "count": 1
+  },
+  {
+   "fg": "#525865",
+   "bg": "#FAF7F1",
+   "ratio": 6.67,
+   "size": 13,
+   "weight": 400,
+   "large": false,
+   "need": 4.5,
+   "pass": true,
+   "disabled": false,
+   "bgImage": false,
+   "el": "a",
+   "owner": "sf-crumbs-trail",
+   "sample": "Home",
+   "count": 1
+  },
+  {
+   "fg": "#525865",
+   "bg": "#FAF7F1",
+   "ratio": 6.67,
+   "size": 11,
+   "weight": 600,
+   "large": false,
+   "need": 4.5,
+   "pass": true,
+   "disabled": false,
+   "bgImage": false,
+   "el": "p.sf-overline",
+   "owner": "sf-overline",
+   "sample": "Your connected records",
+   "count": 2
+  },
+  {
+   "fg": "#525865",
+   "bg": "#FAF7F1",
+   "ratio": 6.67,
+   "size": 15,
+   "weight": 400,
+   "large": false,
+   "need": 4.5,
+   "pass": true,
+   "disabled": false,
+   "bgImage": false,
+   "el": "p.sf-lede",
+   "owner": "sf-lede",
+   "sample": "Organised from your documents and statem",
+   "count": 1
+  },
+  {
+   "fg": "#525865",
+   "bg": "#FAF7F1",
+   "ratio": 6.67,
+   "size": 13,
+   "weight": 400,
+   "large": false,
+   "need": 4.5,
+   "pass": true,
+   "disabled": false,
+   "bgImage": false,
+   "el": "small",
+   "owner": "sf-module-row",
+   "sample": "Original evidence, linked to matching bo",
+   "count": 10
+  },
+  {
+   "fg": "#525865",
+   "bg": "#FAF7F1",
+   "ratio": 6.67,
+   "size": 13,
+   "weight": 400,
+   "large": false,
+   "need": 4.5,
+   "pass": true,
+   "disabled": false,
+   "bgImage": false,
+   "el": "p.sf-state-hint",
+   "owner": "sf-state-hint",
+   "sample": "All of Thapal's pages by topic, includin",
+   "count": 1
+  },
+  {
+   "fg": "#1C2844",
+   "bg": "#EFE7D6",
+   "ratio": 11.89,
+   "size": 13,
+   "weight": 700,
+   "large": false,
+   "need": 4.5,
+   "pass": true,
+   "disabled": false,
+   "bgImage": false,
+   "el": "button.sf-find",
+   "owner": "sf-find",
+   "sample": "Find anything",
+   "count": 1
+  },
+  {
+   "fg": "#FBF5E6",
+   "bg": "#1C2844",
+   "ratio": 13.44,
+   "size": 14,
+   "weight": 700,
+   "large": false,
+   "need": 4.5,
+   "pass": true,
+   "disabled": false,
+   "bgImage": false,
+   "el": "button.sf-btn.sf-btn-deep",
+   "owner": "sf-btn",
+   "sample": "Add document",
+   "count": 1
+  },
+  {
+   "fg": "#1C2844",
+   "bg": "#FAF7F1",
+   "ratio": 13.67,
+   "size": 13.5,
+   "weight": 700,
+   "large": false,
+   "need": 4.5,
+   "pass": true,
+   "disabled": false,
+   "bgImage": false,
+   "el": "button.sf-back",
+   "owner": "sf-back",
+   "sample": "Back",
+   "count": 1
+  },
+  {
+   "fg": "#1C2844",
+   "bg": "#FAF7F1",
+   "ratio": 13.67,
+   "size": 13,
+   "weight": 700,
+   "large": false,
+   "need": 4.5,
+   "pass": true,
+   "disabled": false,
+   "bgImage": false,
+   "el": "button.sf-link",
+   "owner": "sf-link",
+   "sample": "Show all",
+   "count": 1
+  },
+  {
+   "fg": "#14233B",
+   "bg": "#FAF7F1",
+   "ratio": 14.73,
+   "size": 14,
+   "weight": 500,
+   "large": false,
+   "need": 4.5,
+   "pass": true,
+   "disabled": false,
+   "bgImage": true,
+   "el": "button.text-sm.text-gold-foreground",
+   "owner": "",
+   "sample": "Add to Thapal",
+   "count": 1
+  },
+  {
+   "fg": "#151F3E",
+   "bg": "#FAF7F1",
+   "ratio": 15.14,
+   "size": 91,
+   "weight": 500,
+   "large": true,
+   "need": 3,
+   "pass": true,
+   "disabled": false,
+   "bgImage": false,
+   "el": "text",
+   "owner": "",
+   "sample": "Thapal",
+   "count": 1
+  },
+  {
+   "fg": "#151F3E",
+   "bg": "#FAF7F1",
+   "ratio": 15.14,
+   "size": 13,
+   "weight": 600,
+   "large": false,
+   "need": 4.5,
+   "pass": true,
+   "disabled": false,
+   "bgImage": false,
+   "el": "span",
+   "owner": "sf-crumbs-trail",
+   "sample": "Records",
+   "count": 1
+  },
+  {
+   "fg": "#151F3E",
+   "bg": "#FAF7F1",
+   "ratio": 15.14,
+   "size": 46,
+   "weight": 700,
+   "large": true,
+   "need": 3,
+   "pass": true,
+   "disabled": false,
+   "bgImage": false,
+   "el": "h1.sf-title",
+   "owner": "sf-title",
+   "sample": "Everything in its place.",
+   "count": 1
+  },
+  {
+   "fg": "#151F3E",
+   "bg": "#FAF7F1",
+   "ratio": 15.14,
+   "size": 15,
+   "weight": 600,
+   "large": false,
+   "need": 4.5,
+   "pass": true,
+   "disabled": false,
+   "bgImage": false,
+   "el": "b",
+   "owner": "sf-module-row",
+   "sample": "Document Repository",
+   "count": 10
+  },
+  {
+   "fg": "#151F3E",
+   "bg": "#FAF7F1",
+   "ratio": 15.14,
+   "size": 19,
+   "weight": 600,
+   "large": false,
+   "need": 4.5,
+   "pass": true,
+   "disabled": false,
+   "bgImage": false,
+   "el": "h2",
+   "owner": "sf-section-head",
+   "sample": "Every page",
+   "count": 1
+  },
+  {
+   "fg": "#151F3E",
+   "bg": "#FEFDF8",
+   "ratio": 15.89,
+   "size": 14,
+   "weight": 700,
+   "large": false,
+   "need": 4.5,
+   "pass": true,
+   "disabled": false,
+   "bgImage": false,
+   "el": "a.sf-btn.sf-btn-outline",
+   "owner": "sf-btn",
+   "sample": "View related reports",
+   "count": 1
+  }
+ ],
+ "__boxes": {
+  "viewport": {
+   "w": 1283,
+   "h": 794,
+   "vvH": 794
+  },
+  "continueButtons": [],
+  "canvasFoot": [],
+  "toasts": [],
+  "previewPill": [],
+  "previewRoot": [],
+  "tabbar": [],
+  "comingHead": [],
+  "header": [],
+  "footNote": [],
+  "canvas": []
+ },
+ "__overflow": {
+  "docScrollW": 1283,
+  "innerW": 1283
+ }
+}

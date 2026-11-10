@@ -96,6 +96,27 @@ export const isSectionRoot = (href: string) => Object.values(SECTION_ROOT).some(
 export interface Crumb { label: string; to?: string }
 
 /**
+ * Records group (KK decision 7): Travel sits under Records with the Records modules as contextual sub-navigation.
+ * Travel keeps its URLs (/trips, /trips/<id>, /travel-inbox), so old links and deep links work unchanged;
+ * /records/travel is an extra Records-scoped address that redirects to /trips.
+ */
+export const RECORDS_TABS: readonly { key: string; label: string; to: string; match: readonly string[] }[] = [
+  { key: "overview", label: "Overview", to: "/records", match: ["records"] },
+  { key: "documents", label: "Documents", to: "/vault", match: ["vault"] },
+  { key: "travel", label: "Travel", to: "/trips", match: ["trips", "travel-inbox"] },
+  { key: "assets", label: "Assets", to: "/assets", match: ["assets"] },
+  { key: "claims", label: "Reimbursements", to: "/claim-submission", match: ["claim-submission"] },
+];
+const TRAVEL_SEGMENTS = new Set(["trips", "travel-inbox"]);
+
+/** The Records sub-navigation tab for a page, or null where the row is not shown (the Records hub draws its own). */
+export function recordsTabOf(path: string): string | null {
+  const seg = segment(path);
+  if (seg === "records") return null;
+  return RECORDS_TABS.find((t) => t.match.includes(seg))?.key ?? null;
+}
+
+/**
  * Breadcrumbs follow the real path (§5.1): a page opened from Reports shows Reports, not Home → page.
  * `from` is the in-app location the person came from, if known.
  */
@@ -103,6 +124,14 @@ export function breadcrumbs(current: string, from?: string | null): Crumb[] {
   if (isHome(current)) return [];
   const here = { label: titleOf(current) };
   const home = { label: "Home", to: "/home" };
+  // Travel always reads Home › Records › Travel (› trip), whichever page opened it; Back still returns to the origin.
+  if (TRAVEL_SEGMENTS.has(segment(current))) {
+    const records = { label: "Records", to: "/records" };
+    const parts = pathOnly(current).split("/").filter(Boolean);
+    if (parts[0] === "trips" && parts.length > 1) return [home, records, { label: "Travel", to: "/trips" }, { label: "Trip" }];
+    if (parts[0] === "travel-inbox") return [home, records, { label: "Travel", to: "/trips" }, here];
+    return [home, records, here];
+  }
   if (isSectionRoot(current)) return [home, here];
   if (from && pathOnly(from) !== pathOnly(current) && !isHome(from)) return [home, { label: titleOf(from), to: from }, here];
   const s = sectionOf(current);

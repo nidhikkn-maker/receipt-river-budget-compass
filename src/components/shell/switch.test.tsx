@@ -40,7 +40,7 @@ describe("Signature Flow theme catalog entry", () => {
     const sf = THEME_STYLES.find((t) => t.name === "signature-flow");
     expect(sf?.label).toBe("Signature Flow (proposed)");
     expect(sf?.proposed).toBe(true);
-    expect(sf?.swatch).toEqual(["#FBFBF8", "#F5F5F0", "#223B35", "#D3E8DC"]);
+    expect(sf?.swatch).toEqual(["#F9F9F7", "#F5F5F0", "#26565A", "#D3E8DC"]);
     expect(DEFAULT_THEME).toBe("signature");
     expect(defaultPreferences().themeName).toBe("signature");
   });

@@ -12,6 +12,16 @@ import { dayOfMonth, greeting, longDate, monthAbbr, shortDate, useAttention, who
 
 const firstName = (name: string) => name.trim().split(/\s+/)[0] ?? "";
 
+interface ComingUp { name: string; date: string; amount: number; direction: "in" | "out"; overdue?: boolean }
+/** The word under a Coming up amount (KK decision 4): what the figure is. */
+export const amountCaption = (u: ComingUp, today: string) => (u.direction === "in" ? "Expected" : u.overdue ? "Overdue" : u.date === today ? "Due today" : "Due");
+/** One spoken sentence per Coming up row, e.g. "SIP. Payment ₹25,000.00 due 11 Nov." */
+export function comingUpLabel(u: ComingUp, today: string): string {
+  const when = shortDate(u.date, false);
+  const what = u.direction === "in" ? `Money in ${money(u.amount)} expected ${when}` : u.overdue ? `Payment ${money(u.amount)} overdue since ${when}` : u.date === today ? `Payment ${money(u.amount)} due today` : `Payment ${money(u.amount)} due ${when}`;
+  return `${u.name}. ${what}.`;
+}
+
 /**
  * B01 Home in the Signature Flow layout (captures 01 and 02), built only from existing figures:
  * net worth from useNetWorth (the same engine as today's Home card), cash/cards/upcoming/alerts from
@@ -91,10 +101,10 @@ export function SignatureHome() {
           {upcoming.length === 0 ? <EmptyState title="Nothing due in the next 30 days" hint="Bills, EMIs and expected income you add in Plan appear here." action={<Link to="/plan" className="sf-link">Add a scheduled payment<ArrowRight aria-hidden /></Link>} />
             : <ul className="sf-rows">{upcoming.map((u, i) => (
               <li key={`${u.date}-${u.name}-${i}`}>
-                <Link to="/calendar" className="sf-date-row">
-                  <span className="sf-date"><small>{monthAbbr(u.date)}</small><b>{dayOfMonth(u.date)}</b></span>
-                  <span className="min-w-0 flex-1"><b className="block truncate">{u.name}</b><small className="block truncate">{u.direction === "in" ? "Money in" : "Payment"}{u.overdue ? " · overdue" : u.date === today ? " · today" : ""}</small></span>
-                  <span className="sf-row-amount financial-amount">{money(u.amount)}</span>
+                <Link to="/calendar" className="sf-date-row" aria-label={comingUpLabel(u, today)}>
+                  <span className="sf-date" aria-hidden><small>{monthAbbr(u.date)}</small><b>{dayOfMonth(u.date)}</b></span>
+                  <span className="min-w-0 flex-1" aria-hidden><b className="block sf-clamp-2">{u.name}</b><small className="block truncate">{u.direction === "in" ? "Money in" : "Payment"}{u.overdue ? " · overdue" : u.date === today ? " · today" : ""}</small></span>
+                  <span className="sf-coming-amount" aria-hidden><span className="sf-row-amount financial-amount">{money(u.amount)}</span><small>{amountCaption(u, today)}</small></span>
                   <ChevronRight aria-hidden className="sf-row-chevron" />
                 </Link>
               </li>))}</ul>}

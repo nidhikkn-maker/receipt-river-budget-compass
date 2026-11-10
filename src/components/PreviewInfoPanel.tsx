@@ -1,10 +1,16 @@
 // Development/preview-only build identity: which commit, branch and build is showing, and whether it is wired to
 // sample data. Renders nothing unless the build set VITE_PREVIEW_ENV=preview, so production never shows it.
-// Placement: a compact pill at the lower left on iPhone (raised above the tab bar and its safe area) and the lower
+// Placement: a small pill at the lower left on iPhone (raised above the tab bar and its safe area) and the lower
 // right on wider screens; it stacks below dialogs, sheets, Smart Add (z-50) and toasts, so it never covers their
-// actions. Mounted once in src/routes/__root.tsx.
+// actions. It can be hidden for the rest of the browser session (sessionStorage). Mounted once in src/routes/__root.tsx.
 import { useEffect, useId, useMemo, useRef, useState } from "react";
+import { X } from "lucide-react";
 import { isPreviewBuild, readPreviewInfo, type PreviewEnv } from "@/lib/preview-info";
+import { useAppLocked } from "@/lib/app-lock-state";
+
+/** Session-only dismissal: the pill stays hidden in this tab until the browser session ends. */
+export const PREVIEW_PILL_HIDDEN_KEY = "ll-preview-pill-hidden";
+const readHidden = () => { try { return sessionStorage.getItem(PREVIEW_PILL_HIDDEN_KEY) === "1"; } catch { return false; } };
 
 const BUILD_ENV: PreviewEnv = {
   VITE_PREVIEW_ENV: import.meta.env["VITE_PREVIEW_ENV"],
@@ -22,12 +28,16 @@ export const PREVIEW_PANEL_POSITION =
   "fixed z-40 left-[max(12px,env(safe-area-inset-left))] bottom-[calc(env(safe-area-inset-bottom,0px)_+_72px)] md:left-auto md:right-[max(16px,env(safe-area-inset-right))] md:bottom-[calc(env(safe-area-inset-bottom,0px)_+_16px)]";
 
 export function PreviewInfoPanel({ env = BUILD_ENV }: { env?: PreviewEnv }) {
-  if (!isPreviewBuild(env)) return null;
+  const locked = useAppLocked();
+  if (!isPreviewBuild(env) || locked) return null;
   return <PreviewInfoCard env={env} />;
 }
 
 function PreviewInfoCard({ env }: { env: PreviewEnv }) {
   const [open, setOpen] = useState(false);
+  // Read after mount so the server render and the first client render agree.
+  const [hidden, setHidden] = useState(false);
+  useEffect(() => { if (readHidden()) setHidden(true); }, []);
   const cardId = useId();
   const rootRef = useRef<HTMLDivElement>(null);
   const toggleRef = useRef<HTMLButtonElement>(null);
@@ -46,10 +56,12 @@ function PreviewInfoCard({ env }: { env: PreviewEnv }) {
   }, [open]);
 
   const sample = info.dataSource === "sample";
+  const hide = () => { setOpen(false); setHidden(true); try { sessionStorage.setItem(PREVIEW_PILL_HIDDEN_KEY, "1"); } catch { /* private mode: hidden until reload */ } };
+  if (hidden) return null;
   const name = `Preview build ${info.shortCommit ?? "unknown commit"} on ${info.branch ?? "unknown branch"}, ${sample ? "sample data" : "unknown data source"}`;
 
   return (
-    <div ref={rootRef} className={PREVIEW_PANEL_POSITION + " flex flex-col items-start gap-2 md:items-end"} data-preview-info="">
+    <div ref={rootRef} className={PREVIEW_PANEL_POSITION + " flex flex-col items-start gap-1 md:items-end"} data-preview-info="">
       {open && (
         <section
           id={cardId}
@@ -73,20 +85,33 @@ function PreviewInfoCard({ env }: { env: PreviewEnv }) {
           </dl>
         </section>
       )}
-      <button
-        ref={toggleRef}
-        type="button"
-        aria-label={name}
-        aria-expanded={open}
-        aria-controls={open ? cardId : undefined}
-        onClick={() => setOpen((o) => !o)}
-        className="inline-flex min-h-11 min-w-11 items-center gap-1.5 rounded-full border border-border bg-card px-3 text-[11px] font-medium text-muted-foreground shadow-sm hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-      >
-        <span aria-hidden className={"h-2 w-2 shrink-0 rounded-full " + (sample ? "bg-primary" : "bg-muted-foreground")} />
-        <span aria-hidden>Preview</span>
-        <span aria-hidden className="tabular-nums">{info.shortCommit ?? "—"}</span>
-        <span aria-hidden className="hidden sm:inline">· {sample ? "Sample data" : "Unknown data"}</span>
-      </button>
+      <div className="flex items-center">
+        <button
+          ref={toggleRef}
+          type="button"
+          aria-label={name}
+          aria-expanded={open}
+          aria-controls={open ? cardId : undefined}
+          onClick={() => setOpen((o) => !o)}
+          className="group inline-flex min-h-11 min-w-11 items-center justify-center focus-visible:outline-none"
+        >
+          <span className="inline-flex h-6 items-center gap-1 rounded-full border border-border bg-card px-2 text-[10px] font-medium leading-none text-muted-foreground shadow-sm group-hover:text-foreground group-focus-visible:ring-2 group-focus-visible:ring-ring">
+            <span aria-hidden className={"h-1.5 w-1.5 shrink-0 rounded-full " + (sample ? "bg-primary" : "bg-muted-foreground")} />
+            <span aria-hidden>Preview</span>
+            <span aria-hidden className="tabular-nums">{info.shortCommit ?? "—"}</span>
+          </span>
+        </button>
+        <button
+          type="button"
+          aria-label="Hide preview build details for this session"
+          onClick={hide}
+          className="group inline-flex min-h-11 min-w-11 items-center justify-center focus-visible:outline-none"
+        >
+          <span className="inline-flex h-6 w-6 items-center justify-center rounded-full border border-border bg-card text-muted-foreground shadow-sm group-hover:text-foreground group-focus-visible:ring-2 group-focus-visible:ring-ring">
+            <X aria-hidden className="h-3 w-3" />
+          </span>
+        </button>
+      </div>
     </div>
   );
 }

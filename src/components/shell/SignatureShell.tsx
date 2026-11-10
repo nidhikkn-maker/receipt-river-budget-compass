@@ -14,8 +14,9 @@ import { ThapalTMark, ThapalWordmark } from "@/components/ThapalLogo";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useStore } from "@/lib/store";
 import { SMART_ADD_EVENT } from "@/lib/smart-add-event";
+import { useAppLocked } from "@/lib/app-lock-state";
 import { activeDestination, BOTTOM_BAR, ownsHeader, emptyTrail, RAIL, stepTrail, trailFrom, type SectionId, type Trail, type TrailAction } from "./navigation";
-import { Breadcrumbs } from "./PageHeader";
+import { Breadcrumbs, RecordsSubnav } from "./PageHeader";
 import { SearchPalette } from "./SearchPalette";
 import { ShellContext } from "./shell-context";
 import { SyncStatus } from "./SyncStatus";
@@ -93,6 +94,8 @@ export function SignatureShell({ children }: { children: ReactNode }) {
   const href = useRouterState({ select: (s) => s.location.href });
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const focused = pathname === "/new";
+  // Locked (or still deciding at start-up): no navigation, workspace, avatar, reminders or sheets (UIX §16.4).
+  const locked = useAppLocked() || loading;
   const active = activeDestination(pathname);
   const [hidden, setHidden] = usePrivacy();
   const [smartOpen, setSmartOpen] = useState(false);
@@ -124,17 +127,17 @@ export function SignatureShell({ children }: { children: ReactNode }) {
     <ShellContext.Provider value={ctx}>
       <div className={"sf-shell uix-shell" + (focused ? " sf-focused" : "")} data-shell="signature-flow">
         <a href="#main-content" className="sr-only focus:not-sr-only focus:fixed focus:left-2 focus:top-2 focus:z-50 focus:bg-card focus:p-3">Skip to content</a>
-        {!focused && <aside className="sf-rail" aria-label="Sidebar">
+        {!focused && !locked && <aside className="sf-rail" aria-label="Sidebar">
           <Link to="/home" className="sf-rail-mark" aria-label="Thapal home"><ThapalTMark /></Link>
           <nav aria-label="Main" className="sf-rail-nav">{RAIL.map((d) => item(d, "sf-rail-item"))}</nav>
           <Link to="/settings" className="sf-rail-settings" aria-label="Settings" aria-current={pathname === "/settings" ? "page" : undefined}><Settings aria-hidden /></Link>
         </aside>}
 
         <div className="sf-frame">
-          {!focused && <header className="sf-header">
+          {!focused && !locked && <header className="sf-header">
             <Link to="/home" aria-label="Thapal home" className="sf-header-brand"><ThapalWordmark /></Link>
             <div className="sf-header-tools">
-              <span className="sf-sync"><SyncStatus /></span>
+              <span className="sf-sync"><SyncStatus compact /></span>
               <WorkspaceSwitcher />
               <button type="button" className="sf-icon-btn sf-header-search" aria-label="Find anything (Ctrl+K)" onClick={() => setSearchOpen(true)}><Search aria-hidden /></button>
               <Link to="/calendar" className="sf-icon-btn" aria-label="Calendar" aria-current={pathname === "/calendar" ? "page" : undefined}><CalendarDays aria-hidden /></Link>
@@ -142,21 +145,21 @@ export function SignatureShell({ children }: { children: ReactNode }) {
               <AccountMenu hidden={hidden} setHidden={setHidden} />
             </div>
           </header>}
-          <NavProgress />
-          <DemoBanner />
+          {!locked && <NavProgress />}
+          {!locked && <DemoBanner />}
           <main id="main-content" className="sf-main uix-content" tabIndex={-1}>
-            {!loading && <OfflineBanner />}
-            {!loading && <StoreLoadNotice />}
-            {!focused && !loading && <DraftsReminder />}
-            {!focused && !loading && !ownsHeader(pathname) && <div className="sf-page sf-legacy-crumbs"><Breadcrumbs /></div>}
+            {!locked && <OfflineBanner />}
+            {!locked && <StoreLoadNotice />}
+            {!focused && !locked && <DraftsReminder />}
+            {!focused && !locked && !ownsHeader(pathname) && <div className="sf-page sf-legacy-crumbs"><Breadcrumbs /><RecordsSubnav /></div>}
             {loading ? <PageSkeleton /> : <DeviceLock>{children}<StepUpHost /></DeviceLock>}
           </main>
         </div>
 
-        {!focused && <nav className="sf-tabbar" aria-label="Tab bar">{BOTTOM_BAR.map((d) => item(d, "sf-tab"))}</nav>}
+        {!focused && !locked && <nav className="sf-tabbar" aria-label="Tab bar">{BOTTOM_BAR.map((d) => item(d, "sf-tab"))}</nav>}
 
-        <IntelligentCanvas open={smartOpen} onOpenChange={setSmartOpen} scope={preferences.homeScope === "all" ? undefined : preferences.homeScope} />
-        <SearchPalette open={searchOpen} onOpenChange={setSearchOpen} />
+        <IntelligentCanvas open={smartOpen && !locked} onOpenChange={setSmartOpen} scope={preferences.homeScope === "all" ? undefined : preferences.homeScope} />
+        <SearchPalette open={searchOpen && !locked} onOpenChange={setSearchOpen} />
       </div>
     </ShellContext.Provider>
   );

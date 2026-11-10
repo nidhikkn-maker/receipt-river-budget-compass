@@ -23,6 +23,7 @@ import { ModuleDirectory } from './ModuleDirectory';
 import { SyncStatus } from "./shell/SyncStatus";
 import { SignatureShell } from "./shell/SignatureShell";
 import { useShellMode } from "./shell/use-shell-mode";
+import { useAppLocked } from "@/lib/app-lock-state";
 
 const PRIMARY_LINKS = [
   { to: '/dashboard', label: 'Today', icon: Home },
@@ -63,22 +64,24 @@ function ClassicShell({ children }: { children: ReactNode }) {
   const [moreOpen, setMoreOpen] = useState(false);
   const [smartOpen, setSmartOpen] = useState(false);
   const onToday = useRouterState({ select: (st) => st.location.pathname === "/dashboard" });
+  // Locked (or still deciding at start-up): no navigation, spaces, avatar, reminders or sheets (UIX §16.4).
+  const locked = useAppLocked() || loading;
   useEffect(() => { const open = () => setSmartOpen(true); window.addEventListener("ledgerline:smart-add", open); return () => window.removeEventListener("ledgerline:smart-add", open); }, []);
   useEffect(() => { setHidden(localStorage.getItem("ll-privacy") === "1"); }, []);
   useEffect(() => { document.documentElement.classList.toggle("privacy", hidden); localStorage.setItem("ll-privacy", hidden ? "1" : "0"); }, [hidden]);
   return (
     <div className={"journal-shell uix-shell min-h-screen bg-background " + (focused ? '' : 'md:pl-52 xl:pl-64')}>
       <a href="#main-content" className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50 focus:bg-card focus:p-3">Skip to content</a>
-      <aside className={"journal-rail fixed inset-y-0 left-0 z-30 hidden w-52 flex-col gap-2 overflow-y-auto bg-sidebar px-4 py-6 text-sidebar-foreground xl:w-64 " + (focused ? '' : 'md:flex')}>
+      {!locked && <aside className={"journal-rail fixed inset-y-0 left-0 z-30 hidden w-52 flex-col gap-2 overflow-y-auto bg-sidebar px-4 py-6 text-sidebar-foreground xl:w-64 " + (focused ? '' : 'md:flex')}>
         <Link to="/dashboard" aria-label="Thapal home" className="mb-6 shrink-0"><img src="/app-icon.png" alt="Thapal" width={48} height={48} className="h-12 w-12 rounded-2xl shadow-float" /></Link>
         <Link to="/spaces" className="rail-link" activeProps={{ className: 'rail-link-selected', 'aria-current': 'page' }}><Users className="size-5" />Spaces</Link>
         <Button aria-label="Smart Add" onClick={() => setSmartOpen(true)} variant="gold" className="rail-add"><Plus className="size-5" />Add to Thapal</Button>
         <nav aria-label="Sidebar" className="rail-links">{PRIMARY_LINKS.map(l => <Link key={l.to} to={l.to} className="rail-link" activeProps={{ className: 'rail-link-selected', 'aria-current': 'page' }}><l.icon className="size-5" />{l.label}</Link>)}</nav>
         <Button variant="ghost" className="rail-more" aria-label="More modules" onClick={() => setMoreOpen(true)}><Menu className="size-5" />More</Button>
         <Link to="/settings" className="rail-link mt-auto"><Settings className="size-5" />Settings</Link>
-      </aside>
+      </aside>}
 
-      <header hidden={focused} className={(onToday ? "max-md:hidden " : "") + "uix-header sticky top-0 z-20 border-b bg-background/85 backdrop-blur"}>
+      {!locked && <header hidden={focused} className={(onToday ? "max-md:hidden " : "") + "uix-header sticky top-0 z-20 border-b bg-background/85 backdrop-blur"}>
         <div className="mx-auto flex max-w-[1440px] items-center gap-1 px-4 py-2.5 sm:px-8">
           <Link to="/dashboard" aria-label="Thapal home" className="flex items-center"><ThapalBrand /></Link>
           <div className="ml-auto flex items-center">
@@ -91,19 +94,19 @@ function ClassicShell({ children }: { children: ReactNode }) {
             <Link to="/auth" aria-label={name ? `Account: ${name}` : "Account"} title={name || "Account"} className="cmp-header-avatar">{initials(name || "Thapal")}</Link>
           </div>
         </div>
-      </header>
+      </header>}
 
-      <NavProgress />
-      <DemoBanner />
+      {!locked && <NavProgress />}
+      {!locked && <DemoBanner />}
       <main id="main-content" className={focused ? "uix-content uix-entry mx-auto max-w-5xl px-4 pb-6 pt-2 sm:px-8" : wideClaim ? 'uix-content mx-auto max-w-[1800px] px-4 pb-[calc(8.5rem+env(safe-area-inset-bottom))] pt-5 sm:px-8 md:pb-12' : "uix-content mx-auto max-w-[1440px] px-4 pb-[calc(8.5rem+env(safe-area-inset-bottom))] pt-5 sm:px-8 md:pb-12"}>
-        {!focused && <BackButton />}
-        {!loading && <OfflineBanner />}
-        {!loading && <StoreLoadNotice />}
-        {!focused && !loading && <DraftsReminder />}
+        {!focused && !locked && <BackButton />}
+        {!locked && <OfflineBanner />}
+        {!locked && <StoreLoadNotice />}
+        {!focused && !locked && <DraftsReminder />}
         {loading ? <PageSkeleton /> : <DeviceLock>{children}<StepUpHost /></DeviceLock>}
       </main>
 
-      <nav hidden={focused} aria-label="Primary" className="journal-bottom fixed inset-x-0 bottom-0 z-30 flex items-center justify-around border-t bg-card/95 px-2 pb-[env(safe-area-inset-bottom)] pt-2 text-muted-foreground md:hidden">
+      {!locked && <nav hidden={focused} aria-label="Primary" className="journal-bottom fixed inset-x-0 bottom-0 z-30 flex items-center justify-around border-t bg-card/95 px-2 pb-[env(safe-area-inset-bottom)] pt-2 text-muted-foreground md:hidden">
         <Link to="/dashboard" className="flex flex-1 flex-col items-center gap-0.5 rounded-2xl py-1.5 text-[10px] font-semibold" activeProps={{ "aria-current": "page" }}>
           <Home className="h-5 w-5" />Today
         </Link>
@@ -115,10 +118,10 @@ function ClassicShell({ children }: { children: ReactNode }) {
         <Button variant="ghost" onClick={() => setMoreOpen(true)} aria-label="More modules" aria-expanded={moreOpen} className="h-12 flex-1 flex-col gap-0.5 text-[10px] text-ink-muted hover:bg-sidebar-accent hover:text-ink-foreground">
           <Menu className="h-5 w-5" />More
         </Button>
-      </nav>
+      </nav>}
 
-      <SmartAdd open={smartOpen} onOpenChange={setSmartOpen} scope={preferences.homeScope === 'all' ? undefined : preferences.homeScope} />
-      <Dialog open={moreOpen} onOpenChange={setMoreOpen}>
+      <SmartAdd open={smartOpen && !locked} onOpenChange={setSmartOpen} scope={preferences.homeScope === 'all' ? undefined : preferences.homeScope} />
+      <Dialog open={moreOpen && !locked} onOpenChange={setMoreOpen}>
         <DialogContent className="native-sheet more-sheet max-h-[85dvh] overflow-y-auto sm:max-w-lg" aria-label="More">
           <DialogHeader>
             <DialogTitle className="pr-12 text-left">More</DialogTitle>

@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { Link, useRouter, useRouterState } from "@tanstack/react-router";
 import { ArrowLeft, ChevronRight, Search } from "lucide-react";
-import { backTarget, breadcrumbs, showsBack } from "./navigation";
+import { backTarget, breadcrumbs, RECORDS_TABS, recordsTabOf, showsBack } from "./navigation";
 import { useShell } from "./shell-context";
 
 /**
@@ -34,6 +34,18 @@ export function Breadcrumbs({ search = true }: { search?: boolean }) {
       </nav>
       {search && <button type="button" className="sf-find" onClick={openSearch}><Search aria-hidden />Find anything</button>}
     </div>
+  );
+}
+
+/** Records sub-navigation (KK decision 7): shown on the Records modules, e.g. Travel, with the current one marked. */
+export function RecordsSubnav() {
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const active = recordsTabOf(pathname);
+  if (!active) return null;
+  return (
+    <nav aria-label="Records sections" className="sf-subnav">
+      {RECORDS_TABS.map((t) => <Link key={t.key} to={t.to} aria-current={t.key === active ? "page" : undefined}>{t.label}</Link>)}
+    </nav>
   );
 }
 

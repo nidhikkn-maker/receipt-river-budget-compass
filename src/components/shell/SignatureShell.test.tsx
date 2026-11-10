@@ -1,5 +1,5 @@
 // Signature Flow shell and hub pages rendered with an isolated store stand-in (fixture figures, no Cloud).
-import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { defaultPreferences } from "@/lib/preferences";
 import type { Account } from "@/lib/ledger";
@@ -31,6 +31,7 @@ vi.mock("@/components/smart-add/IntelligentCanvas", () => ({ IntelligentCanvas: 
 vi.mock("./SyncStatus", () => ({ SyncStatus: () => null }));
 
 import { avatarLetters, SignatureShell } from "./SignatureShell";
+import { setAppLocked } from "@/lib/app-lock-state";
 import { SignatureHome } from "./pages/HomePage";
 import { SignatureRecords } from "./pages/RecordsPage";
 import { SignatureNotifications } from "./pages/UtilityPages";
@@ -200,5 +201,30 @@ describe("hub pages", () => {
     render(<SignatureNotifications />);
     expect(screen.getByRole("note")).toHaveTextContent("The full notification centre is proposed.");
     expect(screen.getByRole("region", { name: "Needs action" })).toHaveTextContent("Property tax was due on 2020-01-05");
+  });
+});
+
+// P0-029 (UIX §16.4): while the app is locked the shell renders no navigation, workspace, avatar, reminders or sheets.
+describe("Signature Flow shell while locked", () => {
+  afterEach(() => setAppLocked(false));
+  it("renders none of its chrome and closes Smart Add; everything returns after unlock", () => {
+    const view = render(<SignatureShell><p>page</p></SignatureShell>);
+    fireEvent.click(screen.getAllByRole("button", { name: "Add (Smart Add)" })[0]!);
+    expect(screen.getByRole("dialog", { name: "Smart Add" })).toBeInTheDocument();
+    act(() => setAppLocked(true));
+    for (const role of ["banner", "complementary", "navigation"] as const) expect(screen.queryByRole(role)).toBeNull();
+    expect(screen.queryByRole("dialog", { name: "Smart Add" })).toBeNull();
+    expect(screen.queryByText("Personal")).toBeNull();
+    expect(screen.queryByText("KK")).toBeNull();
+    expect(view.container.querySelector(".sf-tabbar, .sf-rail, .sf-header, .sf-legacy-crumbs")).toBeNull();
+    act(() => setAppLocked(false));
+    expect(screen.getByRole("banner")).toBeInTheDocument();
+    expect(screen.getByRole("navigation", { name: "Tab bar" })).toBeInTheDocument();
+  });
+  it("hides the chrome while the store is still loading (before the lock decision)", () => {
+    local.store = { ...local.store, loading: true };
+    render(<SignatureShell><p>page</p></SignatureShell>);
+    expect(screen.queryByRole("banner")).toBeNull();
+    expect(screen.queryByRole("navigation", { name: "Tab bar" })).toBeNull();
   });
 });

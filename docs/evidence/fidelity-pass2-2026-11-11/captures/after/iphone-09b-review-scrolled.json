@@ -1,0 +1,2087 @@
+{
+ "wordmark": {
+  "count": 1,
+  "text": "Thapal",
+  "rect": {
+   "x": 20,
+   "y": 23,
+   "w": 51.5,
+   "h": 17
+  },
+  "style": {
+   "font-family": "Manrope, \"Manrope Fallback\", -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, Helvetica, Arial, \"Noto Sans Tamil\", \"Noto Sans Devanagari\", sans-serif",
+   "font-weight": "800",
+   "font-size": "17px",
+   "line-height": "17px",
+   "letter-spacing": "-0.85px",
+   "font-variant-numeric": "normal",
+   "border-radius": "0px",
+   "padding-top": "0px",
+   "padding-left": "0px",
+   "height": "17px",
+   "width": "51.5469px",
+   "background-color": "rgba(0, 0, 0, 0)",
+   "color": "oklch(0.272 0.015 149.3)"
+  },
+  "platformFonts": [
+   {
+    "familyName": "Manrope ExtraLight",
+    "postScriptName": "Manrope-ExtraLight",
+    "isCustomFont": true,
+    "glyphCount": 6
+   }
+  ]
+ },
+ "workspace": {
+  "count": 1,
+  "text": "Personal",
+  "rect": {
+   "x": 152.6,
+   "y": 9.5,
+   "w": 87.4,
+   "h": 44
+  },
+  "style": {
+   "font-family": "Manrope, \"Manrope Fallback\", -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, Helvetica, Arial, \"Noto Sans Tamil\", \"Noto Sans Devanagari\", sans-serif",
+   "font-weight": "500",
+   "font-size": "14px",
+   "line-height": "21px",
+   "letter-spacing": "normal",
+   "font-variant-numeric": "normal",
+   "border-radius": "999px",
+   "padding-top": "0px",
+   "padding-left": "6px",
+   "height": "44px",
+   "width": "87.4219px",
+   "background-color": "rgba(0, 0, 0, 0)",
+   "color": "oklch(0.525 0.017 148.6)"
+  },
+  "platformFonts": [
+   {
+    "familyName": "Manrope ExtraLight",
+    "postScriptName": "Manrope-ExtraLight",
+    "isCustomFont": true,
+    "glyphCount": 8
+   }
+  ]
+ },
+ "avatar": {
+  "count": 1,
+  "text": "KK",
+  "rect": {
+   "x": 316,
+   "y": 9.5,
+   "w": 44,
+   "h": 44
+  },
+  "style": {
+   "font-family": "Manrope, \"Manrope Fallback\", -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, Helvetica, Arial, \"Noto Sans Tamil\", \"Noto Sans Devanagari\", sans-serif",
+   "font-weight": "600",
+   "font-size": "0px",
+   "line-height": "0px",
+   "letter-spacing": "normal",
+   "font-variant-numeric": "normal",
+   "border-radius": "999px",
+   "padding-top": "0px",
+   "padding-left": "0px",
+   "height": "44px",
+   "width": "44px",
+   "background-color": "rgba(0, 0, 0, 0)",
+   "color": "rgb(249, 249, 247)"
+  },
+  "platformFonts": [
+   {
+    "familyName": "Manrope ExtraLight",
+    "postScriptName": "Manrope-ExtraLight",
+    "isCustomFont": true,
+    "glyphCount": 2
+   }
+  ]
+ },
+ "overline": {
+  "count": 2,
+  "text": "TUESDAY, 10 NOVEMBER 2026 · PERSONAL",
+  "rect": {
+   "x": 20,
+   "y": 170,
+   "w": 229.8,
+   "h": 30
+  },
+  "style": {
+   "font-family": "Manrope, \"Manrope Fallback\", -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, Helvetica, Arial, \"Noto Sans Tamil\", \"Noto Sans Devanagari\", sans-serif",
+   "font-weight": "700",
+   "font-size": "10px",
+   "line-height": "15px",
+   "letter-spacing": "1.8px",
+   "font-variant-numeric": "normal",
+   "border-radius": "0px",
+   "padding-top": "0px",
+   "padding-left": "0px",
+   "height": "30px",
+   "width": "229.828px",
+   "background-color": "rgba(0, 0, 0, 0)",
+   "color": "oklch(0.525 0.017 148.6)"
+  },
+  "platformFonts": [
+   {
+    "familyName": "Manrope ExtraLight",
+    "postScriptName": "Manrope-ExtraLight",
+    "isCustomFont": true,
+    "glyphCount": 35
+   }
+  ]
+ },
+ "greeting": {
+  "count": 1,
+  "text": "Good evening, KK.",
+  "rect": {
+   "x": 20,
+   "y": 214,
+   "w": 332,
+   "h": 29.1
+  },
+  "style": {
+   "font-family": "Manrope, \"Manrope Fallback\", -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, Helvetica, Arial, \"Noto Sans Tamil\", \"Noto Sans Devanagari\", sans-serif",
+   "font-weight": "800",
+   "font-size": "26px",
+   "line-height": "29.12px",
+   "letter-spacing": "-1.3px",
+   "font-variant-numeric": "normal",
+   "border-radius": "0px",
+   "padding-top": "0px",
+   "padding-left": "0px",
+   "height": "29.1094px",
+   "width": "332px",
+   "background-color": "rgba(0, 0, 0, 0)",
+   "color": "oklch(0.272 0.015 149.3)"
+  },
+  "platformFonts": [
+   {
+    "familyName": "Manrope ExtraLight",
+    "postScriptName": "Manrope-ExtraLight",
+    "isCustomFont": true,
+    "glyphCount": 17
+   }
+  ]
+ },
+ "lede": {
+  "count": 1,
+  "text": "A clearer picture of everything that matters.",
+  "rect": {
+   "x": 20,
+   "y": 249.1,
+   "w": 229.8,
+   "h": 39
+  },
+  "style": {
+   "font-family": "Manrope, \"Manrope Fallback\", -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, Helvetica, Arial, \"Noto Sans Tamil\", \"Noto Sans Devanagari\", sans-serif",
+   "font-weight": "400",
+   "font-size": "13px",
+   "line-height": "19.5px",
+   "letter-spacing": "normal",
+   "font-variant-numeric": "normal",
+   "border-radius": "0px",
+   "padding-top": "0px",
+   "padding-left": "0px",
+   "height": "39px",
+   "width": "229.828px",
+   "background-color": "rgba(0, 0, 0, 0)",
+   "color": "oklch(0.525 0.017 148.6)"
+  },
+  "platformFonts": [
+   {
+    "familyName": "Manrope ExtraLight",
+    "postScriptName": "Manrope-ExtraLight",
+    "isCustomFont": true,
+    "glyphCount": 43
+   }
+  ]
+ },
+ "homeBtnDeep": {
+  "count": 1,
+  "text": "Smart Add",
+  "rect": {
+   "x": 261.8,
+   "y": 170,
+   "w": 90.2,
+   "h": 44
+  },
+  "style": {
+   "font-family": "Manrope, \"Manrope Fallback\", -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, Helvetica, Arial, \"Noto Sans Tamil\", \"Noto Sans Devanagari\", sans-serif",
+   "font-weight": "800",
+   "font-size": "10.5px",
+   "line-height": "15.75px",
+   "letter-spacing": "normal",
+   "font-variant-numeric": "normal",
+   "border-radius": "12px",
+   "padding-top": "0px",
+   "padding-left": "10px",
+   "height": "44px",
+   "width": "90.1719px",
+   "background-color": "rgba(0, 0, 0, 0)",
+   "color": "rgb(249, 249, 247)"
+  },
+  "platformFonts": [
+   {
+    "familyName": "Manrope ExtraLight",
+    "postScriptName": "Manrope-ExtraLight",
+    "isCustomFont": true,
+    "glyphCount": 9
+   }
+  ]
+ },
+ "worthPanel": {
+  "count": 1,
+  "text": "YOUR ESTIMATED NET WORTH · ALL ACCOUNTS\n\n₹25,65,996\n\nAccount-linked view · balan",
+  "rect": {
+   "x": 20,
+   "y": 306.1,
+   "w": 332,
+   "h": 308.1
+  },
+  "style": {
+   "font-family": "Manrope, \"Manrope Fallback\", -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, Helvetica, Arial, \"Noto Sans Tamil\", \"Noto Sans Devanagari\", sans-serif",
+   "font-weight": "400",
+   "font-size": "16px",
+   "line-height": "24px",
+   "letter-spacing": "normal",
+   "font-variant-numeric": "normal",
+   "border-radius": "18px",
+   "padding-top": "26px",
+   "padding-left": "21px",
+   "height": "308.078px",
+   "width": "332px",
+   "background-color": "rgb(41, 73, 62)",
+   "color": "rgb(249, 249, 247)"
+  },
+  "platformFonts": [
+   {
+    "familyName": "Manrope ExtraLight",
+    "postScriptName": "Manrope-ExtraLight",
+    "isCustomFont": true,
+    "glyphCount": 74
+   }
+  ]
+ },
+ "worthFigure": {
+  "count": 1,
+  "text": "₹25,65,996",
+  "rect": {
+   "x": 41,
+   "y": 360.4,
+   "w": 290,
+   "h": 37.8
+  },
+  "style": {
+   "font-family": "Manrope, \"Manrope Fallback\", -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, Helvetica, Arial, \"Noto Sans Tamil\", \"Noto Sans Devanagari\", sans-serif",
+   "font-weight": "700",
+   "font-size": "36px",
+   "line-height": "37.8px",
+   "letter-spacing": "-1.8px",
+   "font-variant-numeric": "tabular-nums",
+   "border-radius": "0px",
+   "padding-top": "0px",
+   "padding-left": "0px",
+   "height": "37.7969px",
+   "width": "290px",
+   "background-color": "rgba(0, 0, 0, 0)",
+   "color": "rgb(249, 249, 247)"
+  },
+  "platformFonts": [
+   {
+    "familyName": "Manrope ExtraLight",
+    "postScriptName": "Manrope-ExtraLight",
+    "isCustomFont": true,
+    "glyphCount": 10
+   }
+  ]
+ },
+ "worthNote": {
+  "count": 1,
+  "text": "Account-linked view · balances to 9 Nov 2026",
+  "rect": {
+   "x": 41,
+   "y": 404.2,
+   "w": 290,
+   "h": 15.8
+  },
+  "style": {
+   "font-family": "Manrope, \"Manrope Fallback\", -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, Helvetica, Arial, \"Noto Sans Tamil\", \"Noto Sans Devanagari\", sans-serif",
+   "font-weight": "400",
+   "font-size": "10.5px",
+   "line-height": "15.75px",
+   "letter-spacing": "normal",
+   "font-variant-numeric": "normal",
+   "border-radius": "0px",
+   "padding-top": "0px",
+   "padding-left": "0px",
+   "height": "15.75px",
+   "width": "290px",
+   "background-color": "rgba(0, 0, 0, 0)",
+   "color": "oklab(0.981556 -0.00070259 0.00255078 / 0.72)"
+  },
+  "platformFonts": [
+   {
+    "familyName": "Manrope ExtraLight",
+    "postScriptName": "Manrope-ExtraLight",
+    "isCustomFont": true,
+    "glyphCount": 44
+   }
+  ]
+ },
+ "metricLabel": {
+  "count": 3,
+  "text": "Available money",
+  "rect": {
+   "x": 41,
+   "y": 462.9,
+   "w": 88.7,
+   "h": 13.5
+  },
+  "style": {
+   "font-family": "Manrope, \"Manrope Fallback\", -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, Helvetica, Arial, \"Noto Sans Tamil\", \"Noto Sans Devanagari\", sans-serif",
+   "font-weight": "500",
+   "font-size": "9px",
+   "line-height": "13.5px",
+   "letter-spacing": "normal",
+   "font-variant-numeric": "normal",
+   "border-radius": "0px",
+   "padding-top": "0px",
+   "padding-left": "0px",
+   "height": "13.5px",
+   "width": "88.6562px",
+   "background-color": "rgba(0, 0, 0, 0)",
+   "color": "oklab(0.981556 -0.00070259 0.00255078 / 0.72)"
+  },
+  "platformFonts": [
+   {
+    "familyName": "Manrope ExtraLight",
+    "postScriptName": "Manrope-ExtraLight",
+    "isCustomFont": true,
+    "glyphCount": 15
+   }
+  ]
+ },
+ "metricFigure": {
+  "count": 2,
+  "text": "₹6,75,788",
+  "rect": {
+   "x": 41,
+   "y": 480.4,
+   "w": 88.7,
+   "h": 19.5
+  },
+  "style": {
+   "font-family": "Manrope, \"Manrope Fallback\", -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, Helvetica, Arial, \"Noto Sans Tamil\", \"Noto Sans Devanagari\", sans-serif",
+   "font-weight": "700",
+   "font-size": "13px",
+   "line-height": "19.5px",
+   "letter-spacing": "-0.26px",
+   "font-variant-numeric": "tabular-nums",
+   "border-radius": "0px",
+   "padding-top": "0px",
+   "padding-left": "0px",
+   "height": "19.5px",
+   "width": "88.6562px",
+   "background-color": "rgba(0, 0, 0, 0)",
+   "color": "rgb(249, 249, 247)"
+  },
+  "platformFonts": [
+   {
+    "familyName": "Manrope ExtraLight",
+    "postScriptName": "Manrope-ExtraLight",
+    "isCustomFont": true,
+    "glyphCount": 9
+   }
+  ]
+ },
+ "metricSub": {
+  "count": 3,
+  "text": "From recorded balances",
+  "rect": {
+   "x": 41,
+   "y": 503.9,
+   "w": 88.7,
+   "h": 24.3
+  },
+  "style": {
+   "font-family": "Manrope, \"Manrope Fallback\", -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, Helvetica, Arial, \"Noto Sans Tamil\", \"Noto Sans Devanagari\", sans-serif",
+   "font-weight": "500",
+   "font-size": "9px",
+   "line-height": "12.15px",
+   "letter-spacing": "normal",
+   "font-variant-numeric": "tabular-nums",
+   "border-radius": "0px",
+   "padding-top": "0px",
+   "padding-left": "0px",
+   "height": "24.2812px",
+   "width": "88.6562px",
+   "background-color": "rgba(0, 0, 0, 0)",
+   "color": "oklab(0.981556 -0.00070259 0.00255078 / 0.72)"
+  },
+  "platformFonts": [
+   {
+    "familyName": "Manrope ExtraLight",
+    "postScriptName": "Manrope-ExtraLight",
+    "isCustomFont": true,
+    "glyphCount": 21
+   }
+  ]
+ },
+ "worthBtnLight": {
+  "count": 1,
+  "text": "Explore your money",
+  "rect": {
+   "x": 41,
+   "y": 546.2,
+   "w": 138.6,
+   "h": 44
+  },
+  "style": {
+   "font-family": "Manrope, \"Manrope Fallback\", -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, Helvetica, Arial, \"Noto Sans Tamil\", \"Noto Sans Devanagari\", sans-serif",
+   "font-weight": "800",
+   "font-size": "10px",
+   "line-height": "15px",
+   "letter-spacing": "normal",
+   "font-variant-numeric": "normal",
+   "border-radius": "12px",
+   "padding-top": "0px",
+   "padding-left": "10px",
+   "height": "44px",
+   "width": "138.625px",
+   "background-color": "rgba(0, 0, 0, 0)",
+   "color": "rgb(38, 86, 90)"
+  },
+  "platformFonts": [
+   {
+    "familyName": "Manrope ExtraLight",
+    "postScriptName": "Manrope-ExtraLight",
+    "isCustomFont": true,
+    "glyphCount": 18
+   }
+  ]
+ },
+ "sectionTitle": {
+  "count": 3,
+  "text": "Coming up",
+  "rect": {
+   "x": 20,
+   "y": 649.8,
+   "w": 81.6,
+   "h": 24.8
+  },
+  "style": {
+   "font-family": "Manrope, \"Manrope Fallback\", -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, Helvetica, Arial, \"Noto Sans Tamil\", \"Noto Sans Devanagari\", sans-serif",
+   "font-weight": "800",
+   "font-size": "16.5px",
+   "line-height": "24.75px",
+   "letter-spacing": "-0.66px",
+   "font-variant-numeric": "normal",
+   "border-radius": "0px",
+   "padding-top": "0px",
+   "padding-left": "0px",
+   "height": "24.75px",
+   "width": "81.5938px",
+   "background-color": "rgba(0, 0, 0, 0)",
+   "color": "oklch(0.272 0.015 149.3)"
+  },
+  "platformFonts": [
+   {
+    "familyName": "Manrope ExtraLight",
+    "postScriptName": "Manrope-ExtraLight",
+    "isCustomFont": true,
+    "glyphCount": 9
+   }
+  ]
+ },
+ "sectionLink": {
+  "count": 3,
+  "text": "Full calendar",
+  "rect": {
+   "x": 267.3,
+   "y": 640.2,
+   "w": 84.8,
+   "h": 44
+  },
+  "style": {
+   "font-family": "Manrope, \"Manrope Fallback\", -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, Helvetica, Arial, \"Noto Sans Tamil\", \"Noto Sans Devanagari\", sans-serif",
+   "font-weight": "800",
+   "font-size": "11px",
+   "line-height": "16.5px",
+   "letter-spacing": "normal",
+   "font-variant-numeric": "normal",
+   "border-radius": "0px",
+   "padding-top": "0px",
+   "padding-left": "0px",
+   "height": "44px",
+   "width": "84.75px",
+   "background-color": "rgba(0, 0, 0, 0)",
+   "color": "rgb(38, 86, 90)"
+  },
+  "platformFonts": [
+   {
+    "familyName": "Manrope ExtraLight",
+    "postScriptName": "Manrope-ExtraLight",
+    "isCustomFont": true,
+    "glyphCount": 13
+   }
+  ]
+ },
+ "dateRow": {
+  "count": 4,
+  "text": "NOV\n11\nSIP — Parag Parikh Flexi Cap\nPayment\n₹25,000.00\nDue",
+  "rect": {
+   "x": 20,
+   "y": 693.2,
+   "w": 332,
+   "h": 71
+  },
+  "style": {
+   "font-family": "Manrope, \"Manrope Fallback\", -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, Helvetica, Arial, \"Noto Sans Tamil\", \"Noto Sans Devanagari\", sans-serif",
+   "font-weight": "400",
+   "font-size": "16px",
+   "line-height": "24px",
+   "letter-spacing": "normal",
+   "font-variant-numeric": "normal",
+   "border-radius": "0px",
+   "padding-top": "10px",
+   "padding-left": "0px",
+   "height": "71px",
+   "width": "332px",
+   "background-color": "rgba(0, 0, 0, 0)",
+   "color": "oklch(0.272 0.015 149.3)"
+  },
+  "platformFonts": []
+ },
+ "rowTitle": {
+  "count": 13,
+  "text": "SIP — Parag Parikh Flexi Cap",
+  "rect": {
+   "x": 72,
+   "y": 703.8,
+   "w": 156,
+   "h": 31.2
+  },
+  "style": {
+   "font-family": "Manrope, \"Manrope Fallback\", -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, Helvetica, Arial, \"Noto Sans Tamil\", \"Noto Sans Devanagari\", sans-serif",
+   "font-weight": "800",
+   "font-size": "12px",
+   "line-height": "15.6px",
+   "letter-spacing": "normal",
+   "font-variant-numeric": "normal",
+   "border-radius": "0px",
+   "padding-top": "0px",
+   "padding-left": "0px",
+   "height": "31.1875px",
+   "width": "156px",
+   "background-color": "rgba(0, 0, 0, 0)",
+   "color": "oklch(0.272 0.015 149.3)"
+  },
+  "platformFonts": [
+   {
+    "familyName": "Manrope ExtraLight",
+    "postScriptName": "Manrope-ExtraLight",
+    "isCustomFont": true,
+    "glyphCount": 27
+   }
+  ]
+ },
+ "nextBand": {
+  "count": 1,
+  "text": "Suggested next step\n\n6 records need your review · Only unmatched or uncertain re",
+  "rect": {
+   "x": 20,
+   "y": 1003.2,
+   "w": 332,
+   "h": 132.5
+  },
+  "style": {
+   "font-family": "Manrope, \"Manrope Fallback\", -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, Helvetica, Arial, \"Noto Sans Tamil\", \"Noto Sans Devanagari\", sans-serif",
+   "font-weight": "400",
+   "font-size": "16px",
+   "line-height": "24px",
+   "letter-spacing": "normal",
+   "font-variant-numeric": "normal",
+   "border-radius": "16px",
+   "padding-top": "14px",
+   "padding-left": "16px",
+   "height": "132.5px",
+   "width": "332px",
+   "background-color": "rgb(237, 243, 239)",
+   "color": "oklch(0.272 0.015 149.3)"
+  },
+  "platformFonts": []
+ },
+ "nextBtn": {
+  "count": 1,
+  "text": "Review now",
+  "rect": {
+   "x": 221.5,
+   "y": 1047.4,
+   "w": 113.5,
+   "h": 44
+  },
+  "style": {
+   "font-family": "Manrope, \"Manrope Fallback\", -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, Helvetica, Arial, \"Noto Sans Tamil\", \"Noto Sans Devanagari\", sans-serif",
+   "font-weight": "800",
+   "font-size": "11px",
+   "line-height": "16.5px",
+   "letter-spacing": "normal",
+   "font-variant-numeric": "normal",
+   "border-radius": "12px",
+   "padding-top": "0px",
+   "padding-left": "14px",
+   "height": "44px",
+   "width": "113.484px",
+   "background-color": "rgba(0, 0, 0, 0)",
+   "color": "rgb(249, 249, 247)"
+  },
+  "platformFonts": [
+   {
+    "familyName": "Manrope ExtraLight",
+    "postScriptName": "Manrope-ExtraLight",
+    "isCustomFont": true,
+    "glyphCount": 10
+   }
+  ]
+ },
+ "header": {
+  "count": 1,
+  "text": "Thapal\nPersonal\nKK",
+  "rect": {
+   "x": 0,
+   "y": 0,
+   "w": 372,
+   "h": 64
+  },
+  "style": {
+   "font-family": "Manrope, \"Manrope Fallback\", -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, Helvetica, Arial, \"Noto Sans Tamil\", \"Noto Sans Devanagari\", sans-serif",
+   "font-weight": "400",
+   "font-size": "16px",
+   "line-height": "24px",
+   "letter-spacing": "normal",
+   "font-variant-numeric": "normal",
+   "border-radius": "0px",
+   "padding-top": "0px",
+   "padding-left": "20px",
+   "height": "64px",
+   "width": "372px",
+   "background-color": "oklab(0.981556 -0.00070259 0.00255078 / 0.94)",
+   "color": "oklch(0.272 0.015 149.3)"
+  },
+  "platformFonts": []
+ },
+ "tabbar": {
+  "count": 1,
+  "text": "Home\nMoney\nAdd\nTo-do\nRecords",
+  "rect": {
+   "x": 0,
+   "y": 735,
+   "w": 372,
+   "h": 58
+  },
+  "style": {
+   "font-family": "Manrope, \"Manrope Fallback\", -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, Helvetica, Arial, \"Noto Sans Tamil\", \"Noto Sans Devanagari\", sans-serif",
+   "font-weight": "400",
+   "font-size": "16px",
+   "line-height": "24px",
+   "letter-spacing": "normal",
+   "font-variant-numeric": "normal",
+   "border-radius": "0px",
+   "padding-top": "4px",
+   "padding-left": "6px",
+   "height": "58px",
+   "width": "372px",
+   "background-color": "oklch(0.995 0.002 106.5)",
+   "color": "oklch(0.272 0.015 149.3)"
+  },
+  "platformFonts": []
+ },
+ "tabAdd": {
+  "count": 1,
+  "text": "Add",
+  "rect": {
+   "x": 164,
+   "y": 744.5,
+   "w": 44,
+   "h": 44
+  },
+  "style": {
+   "font-family": "Manrope, \"Manrope Fallback\", -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, Helvetica, Arial, \"Noto Sans Tamil\", \"Noto Sans Devanagari\", sans-serif",
+   "font-weight": "500",
+   "font-size": "10px",
+   "line-height": "15px",
+   "letter-spacing": "normal",
+   "font-variant-numeric": "normal",
+   "border-radius": "14px",
+   "padding-top": "0px",
+   "padding-left": "0px",
+   "height": "44px",
+   "width": "44px",
+   "background-color": "rgb(34, 59, 53)",
+   "color": "rgb(249, 249, 247)"
+  },
+  "platformFonts": [
+   {
+    "familyName": "Manrope ExtraLight",
+    "postScriptName": "Manrope-ExtraLight",
+    "isCustomFont": true,
+    "glyphCount": 3
+   }
+  ]
+ },
+ "canvas": {
+  "count": 1,
+  "text": "SMART ADD · INTELLIGENT CANVAS\n\nHere’s what we understood.\n1 · Add\n2 · Review\n3 ",
+  "rect": {
+   "x": 0,
+   "y": 0,
+   "w": 372,
+   "h": 793
+  },
+  "style": {
+   "font-family": "Manrope, \"Manrope Fallback\", -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, Helvetica, Arial, \"Noto Sans Tamil\", \"Noto Sans Devanagari\", sans-serif",
+   "font-weight": "400",
+   "font-size": "16px",
+   "line-height": "24px",
+   "letter-spacing": "normal",
+   "font-variant-numeric": "normal",
+   "border-radius": "0px",
+   "padding-top": "0px",
+   "padding-left": "0px",
+   "height": "793px",
+   "width": "372px",
+   "background-color": "rgb(249, 249, 247)",
+   "color": "oklch(0.272 0.015 149.3)"
+  },
+  "platformFonts": []
+ },
+ "canvasTitle": {
+  "count": 1,
+  "text": "Here’s what we understood.",
+  "rect": {
+   "x": 16,
+   "y": 27,
+   "w": 286,
+   "h": 24.1
+  },
+  "style": {
+   "font-family": "Manrope, \"Manrope Fallback\", -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, Helvetica, Arial, \"Noto Sans Tamil\", \"Noto Sans Devanagari\", sans-serif",
+   "font-weight": "700",
+   "font-size": "21px",
+   "line-height": "24.15px",
+   "letter-spacing": "-1.05px",
+   "font-variant-numeric": "normal",
+   "border-radius": "0px",
+   "padding-top": "0px",
+   "padding-left": "0px",
+   "height": "24.1406px",
+   "width": "286px",
+   "background-color": "rgba(0, 0, 0, 0)",
+   "color": "oklch(0.272 0.015 149.3)"
+  },
+  "platformFonts": [
+   {
+    "familyName": "Manrope ExtraLight",
+    "postScriptName": "Manrope-ExtraLight",
+    "isCustomFont": true,
+    "glyphCount": 26
+   }
+  ]
+ },
+ "footBtnDeep": {
+  "count": 1,
+  "text": "Continue to confirmation",
+  "rect": {
+   "x": 140.7,
+   "y": 741,
+   "w": 215.3,
+   "h": 44
+  },
+  "style": {
+   "font-family": "Manrope, \"Manrope Fallback\", -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, Helvetica, Arial, \"Noto Sans Tamil\", \"Noto Sans Devanagari\", sans-serif",
+   "font-weight": "800",
+   "font-size": "11.5px",
+   "line-height": "17.25px",
+   "letter-spacing": "normal",
+   "font-variant-numeric": "normal",
+   "border-radius": "12px",
+   "padding-top": "0px",
+   "padding-left": "18px",
+   "height": "44px",
+   "width": "215.312px",
+   "background-color": "rgba(0, 0, 0, 0)",
+   "color": "rgb(249, 249, 247)"
+  },
+  "platformFonts": [
+   {
+    "familyName": "Manrope ExtraLight",
+    "postScriptName": "Manrope-ExtraLight",
+    "isCustomFont": true,
+    "glyphCount": 23
+   }
+  ]
+ },
+ "body": {
+  "count": 1,
+  "text": "Skip to content\nThapal\nPersonal\nKK\nYou have 1 expense waiting to be completed.\nR",
+  "rect": {
+   "x": 0,
+   "y": 0,
+   "w": 372,
+   "h": 1946.7
+  },
+  "style": {
+   "font-family": "Manrope, \"Manrope Fallback\", -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, Helvetica, Arial, \"Noto Sans Tamil\", \"Noto Sans Devanagari\", sans-serif",
+   "font-weight": "400",
+   "font-size": "16px",
+   "line-height": "23.2px",
+   "letter-spacing": "normal",
+   "font-variant-numeric": "normal",
+   "border-radius": "0px",
+   "padding-top": "0px",
+   "padding-left": "0px",
+   "height": "1946.69px",
+   "width": "372px",
+   "background-color": "rgb(249, 249, 247)",
+   "color": "oklch(0.272 0.015 149.3)"
+  },
+  "platformFonts": []
+ },
+ "classicH1": {
+  "count": 1,
+  "text": "Good evening, KK.",
+  "rect": {
+   "x": 20,
+   "y": 214,
+   "w": 332,
+   "h": 29.1
+  },
+  "style": {
+   "font-family": "Manrope, \"Manrope Fallback\", -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, Helvetica, Arial, \"Noto Sans Tamil\", \"Noto Sans Devanagari\", sans-serif",
+   "font-weight": "800",
+   "font-size": "26px",
+   "line-height": "29.12px",
+   "letter-spacing": "-1.3px",
+   "font-variant-numeric": "normal",
+   "border-radius": "0px",
+   "padding-top": "0px",
+   "padding-left": "0px",
+   "height": "29.1094px",
+   "width": "332px",
+   "background-color": "rgba(0, 0, 0, 0)",
+   "color": "oklch(0.272 0.015 149.3)"
+  },
+  "platformFonts": [
+   {
+    "familyName": "Manrope ExtraLight",
+    "postScriptName": "Manrope-ExtraLight",
+    "isCustomFont": true,
+    "glyphCount": 17
+   }
+  ]
+ },
+ "headerIcon": {
+  "count": 2,
+  "text": "",
+  "rect": {
+   "x": 251,
+   "y": 23.5,
+   "w": 16,
+   "h": 16
+  },
+  "style": {
+   "font-family": "Manrope, \"Manrope Fallback\", -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, Helvetica, Arial, \"Noto Sans Tamil\", \"Noto Sans Devanagari\", sans-serif",
+   "font-weight": "400",
+   "font-size": "16px",
+   "line-height": "24px",
+   "letter-spacing": "normal",
+   "font-variant-numeric": "normal",
+   "border-radius": "0px",
+   "padding-top": "0px",
+   "padding-left": "0px",
+   "height": "16px",
+   "width": "16px",
+   "background-color": "rgba(0, 0, 0, 0)",
+   "color": "oklch(0.525 0.017 148.6)"
+  },
+  "platformFonts": []
+ },
+ "comingAmount": {
+  "count": 4,
+  "text": "₹25,000.00",
+  "rect": {
+   "x": 257.2,
+   "y": 711.2,
+   "w": 66.8,
+   "h": 18
+  },
+  "style": {
+   "font-family": "Manrope, \"Manrope Fallback\", -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, Helvetica, Arial, \"Noto Sans Tamil\", \"Noto Sans Devanagari\", sans-serif",
+   "font-weight": "700",
+   "font-size": "12px",
+   "line-height": "18px",
+   "letter-spacing": "normal",
+   "font-variant-numeric": "tabular-nums",
+   "border-radius": "0px",
+   "padding-top": "0px",
+   "padding-left": "0px",
+   "height": "18px",
+   "width": "66.7812px",
+   "background-color": "rgba(0, 0, 0, 0)",
+   "color": "oklch(0.272 0.015 149.3)"
+  },
+  "platformFonts": [
+   {
+    "familyName": "Manrope ExtraLight",
+    "postScriptName": "Manrope-ExtraLight",
+    "isCustomFont": true,
+    "glyphCount": 10
+   }
+  ]
+ },
+ "comingTitle": {
+  "count": 4,
+  "text": "SIP — Parag Parikh Flexi Cap",
+  "rect": {
+   "x": 72,
+   "y": 703.8,
+   "w": 156,
+   "h": 31.2
+  },
+  "style": {
+   "font-family": "Manrope, \"Manrope Fallback\", -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, Helvetica, Arial, \"Noto Sans Tamil\", \"Noto Sans Devanagari\", sans-serif",
+   "font-weight": "800",
+   "font-size": "12px",
+   "line-height": "15.6px",
+   "letter-spacing": "normal",
+   "font-variant-numeric": "normal",
+   "border-radius": "0px",
+   "padding-top": "0px",
+   "padding-left": "0px",
+   "height": "31.1875px",
+   "width": "156px",
+   "background-color": "rgba(0, 0, 0, 0)",
+   "color": "oklch(0.272 0.015 149.3)"
+  },
+  "platformFonts": [
+   {
+    "familyName": "Manrope ExtraLight",
+    "postScriptName": "Manrope-ExtraLight",
+    "isCustomFont": true,
+    "glyphCount": 27
+   }
+  ]
+ },
+ "canvasLede": {
+  "count": 1,
+  "text": "Check the suggested account and classification before saving.",
+  "rect": {
+   "x": 16,
+   "y": -936,
+   "w": 340,
+   "h": 41.6
+  },
+  "style": {
+   "font-family": "Manrope, \"Manrope Fallback\", -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, Helvetica, Arial, \"Noto Sans Tamil\", \"Noto Sans Devanagari\", sans-serif",
+   "font-weight": "400",
+   "font-size": "13px",
+   "line-height": "20.8px",
+   "letter-spacing": "normal",
+   "font-variant-numeric": "normal",
+   "border-radius": "0px",
+   "padding-top": "0px",
+   "padding-left": "0px",
+   "height": "41.5938px",
+   "width": "340px",
+   "background-color": "rgba(0, 0, 0, 0)",
+   "color": "oklch(0.525 0.017 148.6)"
+  },
+  "platformFonts": [
+   {
+    "familyName": "Manrope ExtraLight",
+    "postScriptName": "Manrope-ExtraLight",
+    "isCustomFont": true,
+    "glyphCount": 59
+   }
+  ]
+ },
+ "footNote": {
+  "count": 1,
+  "text": "Finish the checks in Details first (e.g. “Looks right”).",
+  "rect": {
+   "x": 16,
+   "y": 721,
+   "w": 340,
+   "h": 16
+  },
+  "style": {
+   "font-family": "Manrope, \"Manrope Fallback\", -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, Helvetica, Arial, \"Noto Sans Tamil\", \"Noto Sans Devanagari\", sans-serif",
+   "font-weight": "400",
+   "font-size": "11px",
+   "line-height": "16px",
+   "letter-spacing": "normal",
+   "font-variant-numeric": "normal",
+   "border-radius": "0px",
+   "padding-top": "0px",
+   "padding-left": "0px",
+   "height": "16px",
+   "width": "340px",
+   "background-color": "rgba(0, 0, 0, 0)",
+   "color": "oklch(0.525 0.017 148.6)"
+  },
+  "platformFonts": [
+   {
+    "familyName": "Manrope ExtraLight",
+    "postScriptName": "Manrope-ExtraLight",
+    "isCustomFont": true,
+    "glyphCount": 55
+   }
+  ]
+ },
+ "canvasFoot": {
+  "count": 1,
+  "text": "Start over\nContinue to confirmation\n\nFinish the checks in Details first (e.g. “L",
+  "rect": {
+   "x": 0,
+   "y": 712,
+   "w": 372,
+   "h": 81
+  },
+  "style": {
+   "font-family": "Manrope, \"Manrope Fallback\", -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, Helvetica, Arial, \"Noto Sans Tamil\", \"Noto Sans Devanagari\", sans-serif",
+   "font-weight": "400",
+   "font-size": "16px",
+   "line-height": "24px",
+   "letter-spacing": "normal",
+   "font-variant-numeric": "normal",
+   "border-radius": "0px",
+   "padding-top": "8px",
+   "padding-left": "16px",
+   "height": "81px",
+   "width": "372px",
+   "background-color": "rgb(249, 249, 247)",
+   "color": "oklch(0.272 0.015 149.3)"
+  },
+  "platformFonts": [
+   {
+    "familyName": "Manrope ExtraLight",
+    "postScriptName": "Manrope-ExtraLight",
+    "isCustomFont": true,
+    "glyphCount": 55
+   }
+  ]
+ },
+ "stepCurrent": {
+  "count": 1,
+  "text": "2 · Review",
+  "rect": {
+   "x": 131,
+   "y": 64,
+   "w": 110,
+   "h": 28
+  },
+  "style": {
+   "font-family": "Manrope, \"Manrope Fallback\", -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, Helvetica, Arial, \"Noto Sans Tamil\", \"Noto Sans Devanagari\", sans-serif",
+   "font-weight": "800",
+   "font-size": "10px",
+   "line-height": "15px",
+   "letter-spacing": "normal",
+   "font-variant-numeric": "normal",
+   "border-radius": "9px",
+   "padding-top": "0px",
+   "padding-left": "0px",
+   "height": "28px",
+   "width": "110px",
+   "background-color": "rgb(223, 237, 224)",
+   "color": "rgb(38, 86, 90)"
+  },
+  "platformFonts": [
+   {
+    "familyName": "Manrope ExtraLight",
+    "postScriptName": "Manrope-ExtraLight",
+    "isCustomFont": true,
+    "glyphCount": 10
+   }
+  ]
+ },
+ "stepNext": {
+  "count": 1,
+  "text": "3 · Confirm",
+  "rect": {
+   "x": 246,
+   "y": 64,
+   "w": 110,
+   "h": 28
+  },
+  "style": {
+   "font-family": "Manrope, \"Manrope Fallback\", -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, Helvetica, Arial, \"Noto Sans Tamil\", \"Noto Sans Devanagari\", sans-serif",
+   "font-weight": "600",
+   "font-size": "10px",
+   "line-height": "15px",
+   "letter-spacing": "normal",
+   "font-variant-numeric": "normal",
+   "border-radius": "9px",
+   "padding-top": "0px",
+   "padding-left": "0px",
+   "height": "28px",
+   "width": "110px",
+   "background-color": "rgb(237, 242, 236)",
+   "color": "oklch(0.525 0.017 148.6)"
+  },
+  "platformFonts": [
+   {
+    "familyName": "Manrope ExtraLight",
+    "postScriptName": "Manrope-ExtraLight",
+    "isCustomFont": true,
+    "glyphCount": 10
+   }
+  ]
+ },
+ "__fonts": [
+  "Manrope 200 800 loaded U+0-FF, U+131, U+152-153",
+  "Manrope 200 800 loaded U+100-2BA, U+2BD-2C5, U+",
+  "Manrope Fallback normal loaded U+0-10FFFF",
+  "Noto Sans Devanagari 100 900 unloaded U+900-97F, U+1CD0-1CF9, ",
+  "Noto Sans Tamil 400 unloaded U+964-965, U+B82-BFA, U+",
+  "Noto Sans Tamil 400 unloaded U+100-2BA, U+2BD-2C5, U+",
+  "Noto Sans Tamil 400 unloaded U+0-FF, U+131, U+152-153",
+  "Noto Sans Tamil 600 unloaded U+964-965, U+B82-BFA, U+",
+  "Noto Sans Tamil 600 unloaded U+100-2BA, U+2BD-2C5, U+",
+  "Noto Sans Tamil 600 unloaded U+0-FF, U+131, U+152-153",
+  "Space Grotesk 700 unloaded U+102-103, U+110-111, U+",
+  "Space Grotesk 700 unloaded U+100-2BA, U+2BD-2C5, U+",
+  "Space Grotesk 700 unloaded U+0-FF, U+131, U+152-153",
+  "Lovable Camera 400 unloaded U+0-10FFFF"
+ ],
+ "__preloads": [
+  "image http://localhost:8088/app-icon-large.png",
+  "font http://localhost:8088/node_modules/@fontsource-variable/manrope/files/manrope-latin-wght-normal.woff2"
+ ],
+ "__fontRequests": [
+  "/node_modules/@fontsource-variable/manrope/files/manrope-latin-wght-normal.woff2?import&url",
+  "/node_modules/@fontsource-variable/manrope/files/manrope-latin-wght-normal.woff2",
+  "/node_modules/@fontsource-variable/manrope/files/manrope-latin-ext-wght-normal.woff2"
+ ],
+ "__smallTargets": [
+  "a \"Skip to content\" 1x1",
+  "a \"Calendar\" 38x44",
+  "a \"Notifications\" 38x44",
+  "a \"Review drafts\" 91x20",
+  "button \"Later\" 31x44",
+  "input \"Choose files\" 1x1",
+  "input \"Take a photo\" 1x1",
+  "input \"Take a photo of a receipt\" 1x1",
+  "input \"Choose receipt photos\" 1x1",
+  "input \"Choose receipt files\" 1x1",
+  "summary \"Check what I read from the receipt\" 1x44",
+  "select \"INR\nUSD\nEUR\nGBP\nAED\nSGD\nJPY\nAUD\nCAD\nCHF\n\" 1x44",
+  "select \"Food and beverages\nGroceries\nShopping\nFa\" 1x44",
+  "select \"Personal\nFamily\nBusiness\" 1x44",
+  "select \"Not confirmed\" 1x44"
+ ],
+ "__contrast": [
+  {
+   "fg": "#859FA1",
+   "bg": "#26565A",
+   "ratio": 2.93,
+   "size": 11.5,
+   "weight": 800,
+   "large": false,
+   "need": 4.5,
+   "pass": false,
+   "disabled": true,
+   "bgImage": false,
+   "el": "button.sf-btn.sf-btn-deep",
+   "owner": "sf-btn",
+   "sample": "Continue to confirmation",
+   "count": 1
+  },
+  {
+   "fg": "#646D65",
+   "bg": "#E9F2EC",
+   "ratio": 4.69,
+   "size": 13,
+   "weight": 400,
+   "large": false,
+   "need": 4.5,
+   "pass": true,
+   "disabled": false,
+   "bgImage": false,
+   "el": "button.text-xs.text-muted-foreground",
+   "owner": "sf-main",
+   "sample": "Later",
+   "count": 1
+  },
+  {
+   "fg": "#646D65",
+   "bg": "#EDF2EC",
+   "ratio": 4.73,
+   "size": 10,
+   "weight": 600,
+   "large": false,
+   "need": 4.5,
+   "pass": true,
+   "disabled": false,
+   "bgImage": false,
+   "el": "li",
+   "owner": "sf-steps",
+   "sample": "3",
+   "count": 3
+  },
+  {
+   "fg": "#646D65",
+   "bg": "#EDF3EF",
+   "ratio": 4.77,
+   "size": 11,
+   "weight": 500,
+   "large": false,
+   "need": 4.5,
+   "pass": true,
+   "disabled": false,
+   "bgImage": false,
+   "el": "p.sf-next-detail",
+   "owner": "sf-next-detail",
+   "sample": "6 records need your review · Only unmatc",
+   "count": 1
+  },
+  {
+   "fg": "#646D65",
+   "bg": "#F5F5F0",
+   "ratio": 4.9,
+   "size": 13,
+   "weight": 600,
+   "large": false,
+   "need": 4.5,
+   "pass": true,
+   "disabled": false,
+   "bgImage": false,
+   "el": "button",
+   "owner": "sf-view-toggle",
+   "sample": "Original",
+   "count": 1
+  },
+  {
+   "fg": "#646D65",
+   "bg": "#F9F9F6",
+   "ratio": 5.08,
+   "size": 14,
+   "weight": 500,
+   "large": false,
+   "need": 4.5,
+   "pass": true,
+   "disabled": false,
+   "bgImage": false,
+   "el": "span",
+   "owner": "sf-workspace",
+   "sample": "Personal",
+   "count": 1
+  },
+  {
+   "fg": "#646D65",
+   "bg": "#F9F9F7",
+   "ratio": 5.09,
+   "size": 10,
+   "weight": 700,
+   "large": false,
+   "need": 4.5,
+   "pass": true,
+   "disabled": false,
+   "bgImage": false,
+   "el": "p.sf-overline",
+   "owner": "sf-overline",
+   "sample": "Tuesday, 10 November 2026",
+   "count": 4
+  },
+  {
+   "fg": "#646D65",
+   "bg": "#F9F9F7",
+   "ratio": 5.09,
+   "size": 13,
+   "weight": 400,
+   "large": false,
+   "need": 4.5,
+   "pass": true,
+   "disabled": false,
+   "bgImage": false,
+   "el": "p.sf-lede",
+   "owner": "sf-lede",
+   "sample": "A clearer picture of everything that mat",
+   "count": 1
+  },
+  {
+   "fg": "#646D65",
+   "bg": "#F9F9F7",
+   "ratio": 5.09,
+   "size": 10,
+   "weight": 500,
+   "large": false,
+   "need": 4.5,
+   "pass": true,
+   "disabled": false,
+   "bgImage": false,
+   "el": "small",
+   "owner": "sf-date",
+   "sample": "NOV",
+   "count": 4
+  },
+  {
+   "fg": "#646D65",
+   "bg": "#F9F9F7",
+   "ratio": 5.09,
+   "size": 11,
+   "weight": 500,
+   "large": false,
+   "need": 4.5,
+   "pass": true,
+   "disabled": false,
+   "bgImage": false,
+   "el": "small",
+   "owner": "sf-date-row",
+   "sample": "Payment",
+   "count": 4
+  },
+  {
+   "fg": "#646D65",
+   "bg": "#F9F9F7",
+   "ratio": 5.09,
+   "size": 10,
+   "weight": 500,
+   "large": false,
+   "need": 4.5,
+   "pass": true,
+   "disabled": false,
+   "bgImage": false,
+   "el": "small",
+   "owner": "sf-coming-amount",
+   "sample": "Due",
+   "count": 4
+  },
+  {
+   "fg": "#646D65",
+   "bg": "#F9F9F7",
+   "ratio": 5.09,
+   "size": 11,
+   "weight": 500,
+   "large": false,
+   "need": 4.5,
+   "pass": true,
+   "disabled": false,
+   "bgImage": false,
+   "el": "small",
+   "owner": "sf-list-row",
+   "sample": "9 Nov",
+   "count": 24
+  },
+  {
+   "fg": "#646D65",
+   "bg": "#F9F9F7",
+   "ratio": 5.09,
+   "size": 11,
+   "weight": 400,
+   "large": false,
+   "need": 4.5,
+   "pass": true,
+   "disabled": false,
+   "bgImage": false,
+   "el": "p.sf-foot-note",
+   "owner": "sf-foot-note",
+   "sample": "Finish the checks in Details first (e.g.",
+   "count": 1
+  },
+  {
+   "fg": "#2F7A4F",
+   "bg": "#FDFDFC",
+   "ratio": 5.14,
+   "size": 12,
+   "weight": 400,
+   "large": false,
+   "need": 4.5,
+   "pass": true,
+   "disabled": false,
+   "bgImage": false,
+   "el": "span.text-xs.text-success",
+   "owner": "sf-canvas-fields",
+   "sample": "High reading confidence",
+   "count": 4
+  },
+  {
+   "fg": "#646D65",
+   "bg": "#FDFDFC",
+   "ratio": 5.27,
+   "size": 10,
+   "weight": 500,
+   "large": false,
+   "need": 4.5,
+   "pass": true,
+   "disabled": false,
+   "bgImage": false,
+   "el": "span",
+   "owner": "sf-tab",
+   "sample": "Money",
+   "count": 3
+  },
+  {
+   "fg": "#646D65",
+   "bg": "#FDFDFC",
+   "ratio": 5.27,
+   "size": 12,
+   "weight": 400,
+   "large": false,
+   "need": 4.5,
+   "pass": true,
+   "disabled": false,
+   "bgImage": false,
+   "el": "p.text-xs.text-muted-foreground",
+   "owner": "sf-canvas-fields",
+   "sample": "No service charge, packing, delivery or ",
+   "count": 7
+  },
+  {
+   "fg": "#C1CAC5",
+   "bg": "#304F44",
+   "ratio": 5.39,
+   "size": 9.5,
+   "weight": 800,
+   "large": false,
+   "need": 4.5,
+   "pass": true,
+   "disabled": false,
+   "bgImage": false,
+   "el": "p.sf-overline.sf-on-deep",
+   "owner": "sf-overline",
+   "sample": "Your estimated net worth · all accounts",
+   "count": 1
+  },
+  {
+   "fg": "#C1CAC5",
+   "bg": "#304F44",
+   "ratio": 5.39,
+   "size": 10.5,
+   "weight": 400,
+   "large": false,
+   "need": 4.5,
+   "pass": true,
+   "disabled": false,
+   "bgImage": false,
+   "el": "p.sf-worth-note",
+   "owner": "sf-worth-note",
+   "sample": "· balances to 9 Nov 2026",
+   "count": 1
+  },
+  {
+   "fg": "#C1CAC5",
+   "bg": "#304F44",
+   "ratio": 5.39,
+   "size": 9,
+   "weight": 500,
+   "large": false,
+   "need": 4.5,
+   "pass": true,
+   "disabled": false,
+   "bgImage": false,
+   "el": "dt",
+   "owner": "sf-worth-metrics",
+   "sample": "Available money",
+   "count": 3
+  },
+  {
+   "fg": "#C1CAC5",
+   "bg": "#304F44",
+   "ratio": 5.39,
+   "size": 9,
+   "weight": 500,
+   "large": false,
+   "need": 4.5,
+   "pass": true,
+   "disabled": false,
+   "bgImage": false,
+   "el": "dd.sf-worth-sub",
+   "owner": "sf-worth-sub",
+   "sample": "From recorded balances",
+   "count": 6
+  },
+  {
+   "fg": "#26565A",
+   "bg": "#D3E8DC",
+   "ratio": 6.38,
+   "size": 14,
+   "weight": 500,
+   "large": false,
+   "need": 4.5,
+   "pass": true,
+   "disabled": false,
+   "bgImage": false,
+   "el": "button.text-sm.text-gold-foreground",
+   "owner": "sf-canvas-fields",
+   "sample": "Looks right",
+   "count": 1
+  },
+  {
+   "fg": "#26565A",
+   "bg": "#DFEDE0",
+   "ratio": 6.77,
+   "size": 10,
+   "weight": 600,
+   "large": false,
+   "need": 4.5,
+   "pass": true,
+   "disabled": false,
+   "bgImage": false,
+   "el": "li",
+   "owner": "sf-steps",
+   "sample": "1",
+   "count": 3
+  },
+  {
+   "fg": "#26565A",
+   "bg": "#DFEDE0",
+   "ratio": 6.77,
+   "size": 10,
+   "weight": 800,
+   "large": false,
+   "need": 4.5,
+   "pass": true,
+   "disabled": false,
+   "bgImage": false,
+   "el": "li",
+   "owner": "sf-steps",
+   "sample": "2",
+   "count": 3
+  },
+  {
+   "fg": "#F9F9F7",
+   "bg": "#405D52",
+   "ratio": 6.9,
+   "size": 10,
+   "weight": 800,
+   "large": false,
+   "need": 4.5,
+   "pass": true,
+   "disabled": false,
+   "bgImage": false,
+   "el": "a.sf-btn.sf-btn-ghost-deep",
+   "owner": "sf-btn",
+   "sample": "Reports & downloads",
+   "count": 1
+  },
+  {
+   "fg": "#26565A",
+   "bg": "#E9F2EC",
+   "ratio": 7.18,
+   "size": 14,
+   "weight": 600,
+   "large": false,
+   "need": 4.5,
+   "pass": true,
+   "disabled": false,
+   "bgImage": false,
+   "el": "a.text-primary",
+   "owner": "sf-main",
+   "sample": "Review drafts",
+   "count": 1
+  },
+  {
+   "fg": "#26565A",
+   "bg": "#E9F2EC",
+   "ratio": 7.18,
+   "size": 10,
+   "weight": 800,
+   "large": false,
+   "need": 4.5,
+   "pass": true,
+   "disabled": false,
+   "bgImage": false,
+   "el": "a.sf-btn.sf-btn-light",
+   "owner": "sf-btn",
+   "sample": "Explore your money",
+   "count": 1
+  },
+  {
+   "fg": "#F9F9F7",
+   "bg": "#26565A",
+   "ratio": 7.78,
+   "size": 10.5,
+   "weight": 800,
+   "large": false,
+   "need": 4.5,
+   "pass": true,
+   "disabled": false,
+   "bgImage": false,
+   "el": "button.sf-btn.sf-btn-deep",
+   "owner": "sf-btn",
+   "sample": "Smart Add",
+   "count": 1
+  },
+  {
+   "fg": "#26565A",
+   "bg": "#F9F9F7",
+   "ratio": 7.78,
+   "size": 11,
+   "weight": 800,
+   "large": false,
+   "need": 4.5,
+   "pass": true,
+   "disabled": false,
+   "bgImage": false,
+   "el": "a.sf-link",
+   "owner": "sf-link",
+   "sample": "Full calendar",
+   "count": 3
+  },
+  {
+   "fg": "#F9F9F7",
+   "bg": "#26565A",
+   "ratio": 7.78,
+   "size": 11,
+   "weight": 600,
+   "large": false,
+   "need": 4.5,
+   "pass": true,
+   "disabled": false,
+   "bgImage": false,
+   "el": "button.sf-avatar::before",
+   "owner": "sf-avatar",
+   "sample": "KK",
+   "count": 1
+  },
+  {
+   "fg": "#26565A",
+   "bg": "#FDFDFC",
+   "ratio": 8.06,
+   "size": 10,
+   "weight": 700,
+   "large": false,
+   "need": 4.5,
+   "pass": true,
+   "disabled": false,
+   "bgImage": false,
+   "el": "span",
+   "owner": "sf-tab",
+   "sample": "Home",
+   "count": 1
+  },
+  {
+   "fg": "#F9F9F7",
+   "bg": "#2C5341",
+   "ratio": 8.23,
+   "size": 11,
+   "weight": 800,
+   "large": false,
+   "need": 4.5,
+   "pass": true,
+   "disabled": false,
+   "bgImage": false,
+   "el": "a.sf-btn.sf-btn-deep",
+   "owner": "sf-btn",
+   "sample": "Review now",
+   "count": 1
+  },
+  {
+   "fg": "#F9F9F7",
+   "bg": "#304F44",
+   "ratio": 8.59,
+   "size": 36,
+   "weight": 700,
+   "large": true,
+   "need": 3,
+   "pass": true,
+   "disabled": false,
+   "bgImage": false,
+   "el": "p.sf-worth-figure.financial-amount",
+   "owner": "sf-worth-figure",
+   "sample": "₹25,65,996",
+   "count": 1
+  },
+  {
+   "fg": "#F9F9F7",
+   "bg": "#304F44",
+   "ratio": 8.59,
+   "size": 10.5,
+   "weight": 700,
+   "large": false,
+   "need": 4.5,
+   "pass": true,
+   "disabled": false,
+   "bgImage": false,
+   "el": "b",
+   "owner": "sf-worth-note",
+   "sample": "Account-linked view",
+   "count": 1
+  },
+  {
+   "fg": "#F9F9F7",
+   "bg": "#304F44",
+   "ratio": 8.59,
+   "size": 13,
+   "weight": 700,
+   "large": false,
+   "need": 4.5,
+   "pass": true,
+   "disabled": false,
+   "bgImage": false,
+   "el": "dd.financial-amount",
+   "owner": "sf-worth-metrics",
+   "sample": "₹6,75,788",
+   "count": 5
+  },
+  {
+   "fg": "#222923",
+   "bg": "#E9F2EC",
+   "ratio": 13.04,
+   "size": 14,
+   "weight": 400,
+   "large": false,
+   "need": 4.5,
+   "pass": true,
+   "disabled": false,
+   "bgImage": false,
+   "el": "span",
+   "owner": "sf-main",
+   "sample": "You have",
+   "count": 4
+  },
+  {
+   "fg": "#222923",
+   "bg": "#EDF3EF",
+   "ratio": 13.24,
+   "size": 12,
+   "weight": 800,
+   "large": false,
+   "need": 4.5,
+   "pass": true,
+   "disabled": false,
+   "bgImage": false,
+   "el": "p.sf-next-title",
+   "owner": "sf-next-title",
+   "sample": "Suggested next step",
+   "count": 1
+  },
+  {
+   "fg": "#222923",
+   "bg": "#F9F9F6",
+   "ratio": 14.13,
+   "size": 17,
+   "weight": 800,
+   "large": false,
+   "need": 4.5,
+   "pass": true,
+   "disabled": false,
+   "bgImage": false,
+   "el": "span.sf-wordmark",
+   "owner": "sf-wordmark",
+   "sample": "Thapal",
+   "count": 1
+  },
+  {
+   "fg": "#222923",
+   "bg": "#F9F9F7",
+   "ratio": 14.13,
+   "size": 26,
+   "weight": 800,
+   "large": true,
+   "need": 3,
+   "pass": true,
+   "disabled": false,
+   "bgImage": false,
+   "el": "h1.sf-hero-title",
+   "owner": "sf-hero-title",
+   "sample": "Good evening",
+   "count": 3
+  },
+  {
+   "fg": "#222923",
+   "bg": "#F9F9F7",
+   "ratio": 14.13,
+   "size": 16.5,
+   "weight": 800,
+   "large": false,
+   "need": 4.5,
+   "pass": true,
+   "disabled": false,
+   "bgImage": false,
+   "el": "h2",
+   "owner": "sf-section-head",
+   "sample": "Coming up",
+   "count": 3
+  },
+  {
+   "fg": "#222923",
+   "bg": "#F9F9F7",
+   "ratio": 14.13,
+   "size": 21,
+   "weight": 700,
+   "large": true,
+   "need": 3,
+   "pass": true,
+   "disabled": false,
+   "bgImage": false,
+   "el": "b",
+   "owner": "sf-date",
+   "sample": "11",
+   "count": 4
+  },
+  {
+   "fg": "#222923",
+   "bg": "#F9F9F7",
+   "ratio": 14.13,
+   "size": 12,
+   "weight": 800,
+   "large": false,
+   "need": 4.5,
+   "pass": true,
+   "disabled": false,
+   "bgImage": false,
+   "el": "b.sf-clamp-2",
+   "owner": "sf-clamp-2",
+   "sample": "SIP — Parag Parikh Flexi Cap",
+   "count": 4
+  },
+  {
+   "fg": "#222923",
+   "bg": "#F9F9F7",
+   "ratio": 14.13,
+   "size": 12,
+   "weight": 700,
+   "large": false,
+   "need": 4.5,
+   "pass": true,
+   "disabled": false,
+   "bgImage": false,
+   "el": "span.sf-row-amount.financial-amount",
+   "owner": "sf-row-amount",
+   "sample": "₹25,000.00",
+   "count": 14
+  },
+  {
+   "fg": "#222923",
+   "bg": "#F9F9F7",
+   "ratio": 14.13,
+   "size": 12,
+   "weight": 800,
+   "large": false,
+   "need": 4.5,
+   "pass": true,
+   "disabled": false,
+   "bgImage": false,
+   "el": "b",
+   "owner": "sf-list-row",
+   "sample": "Swiggy",
+   "count": 9
+  },
+  {
+   "fg": "#222923",
+   "bg": "#F9F9F7",
+   "ratio": 14.13,
+   "size": 21,
+   "weight": 700,
+   "large": true,
+   "need": 3,
+   "pass": true,
+   "disabled": false,
+   "bgImage": false,
+   "el": "h2.sf-canvas-title",
+   "owner": "sf-canvas-title",
+   "sample": "Here’s what we understood.",
+   "count": 1
+  },
+  {
+   "fg": "#222923",
+   "bg": "#F9F9F7",
+   "ratio": 14.13,
+   "size": 14,
+   "weight": 400,
+   "large": false,
+   "need": 4.5,
+   "pass": true,
+   "disabled": false,
+   "bgImage": false,
+   "el": "span",
+   "owner": "sf-canvas-fields",
+   "sample": "Personal",
+   "count": 2
+  },
+  {
+   "fg": "#222923",
+   "bg": "#FDFDFC",
+   "ratio": 14.64,
+   "size": 13,
+   "weight": 600,
+   "large": false,
+   "need": 4.5,
+   "pass": true,
+   "disabled": false,
+   "bgImage": false,
+   "el": "button",
+   "owner": "sf-view-toggle",
+   "sample": "Details",
+   "count": 1
+  },
+  {
+   "fg": "#222923",
+   "bg": "#FDFDFC",
+   "ratio": 14.64,
+   "size": 14,
+   "weight": 500,
+   "large": false,
+   "need": 4.5,
+   "pass": true,
+   "disabled": false,
+   "bgImage": false,
+   "el": "label.text-sm",
+   "owner": "sf-canvas-fields",
+   "sample": "Charges and discounts",
+   "count": 25
+  },
+  {
+   "fg": "#222923",
+   "bg": "#FDFDFC",
+   "ratio": 14.64,
+   "size": 12,
+   "weight": 400,
+   "large": false,
+   "need": 4.5,
+   "pass": true,
+   "disabled": false,
+   "bgImage": false,
+   "el": "dd",
+   "owner": "sf-canvas-fields",
+   "sample": "Money spent",
+   "count": 6
+  },
+  {
+   "fg": "#222923",
+   "bg": "#FDFDFC",
+   "ratio": 14.64,
+   "size": 12,
+   "weight": 500,
+   "large": false,
+   "need": 4.5,
+   "pass": true,
+   "disabled": false,
+   "bgImage": false,
+   "el": "summary",
+   "owner": "sf-canvas-fields",
+   "sample": "Where this came from",
+   "count": 1
+  },
+  {
+   "fg": "#222923",
+   "bg": "#FDFDFC",
+   "ratio": 14.64,
+   "size": 14,
+   "weight": 600,
+   "large": false,
+   "need": 4.5,
+   "pass": true,
+   "disabled": false,
+   "bgImage": false,
+   "el": "summary",
+   "owner": "sf-canvas-fields",
+   "sample": "Receipt items (",
+   "count": 3
+  },
+  {
+   "fg": "#222923",
+   "bg": "#FDFDFC",
+   "ratio": 14.64,
+   "size": 11.5,
+   "weight": 800,
+   "large": false,
+   "need": 4.5,
+   "pass": true,
+   "disabled": false,
+   "bgImage": false,
+   "el": "button.sf-btn.sf-btn-outline",
+   "owner": "sf-btn",
+   "sample": "Start over",
+   "count": 1
+  }
+ ],
+ "__boxes": {
+  "viewport": {
+   "w": 372,
+   "h": 793,
+   "vvH": 793
+  },
+  "continueButtons": [
+   {
+    "text": "Continue to confirmation",
+    "inFooter": true,
+    "disabled": true,
+    "x": 140.7,
+    "y": 741,
+    "w": 215.3,
+    "h": 44,
+    "bottom": 785
+   }
+  ],
+  "canvasFoot": [
+   {
+    "text": "Start over\nContinue to confirmation\n\nFinish the checks in De",
+    "x": 0,
+    "y": 712,
+    "w": 372,
+    "h": 81,
+    "bottom": 793
+   }
+  ],
+  "toasts": [],
+  "previewPill": [],
+  "previewRoot": [],
+  "tabbar": [
+   {
+    "text": "Tab bar",
+    "x": 0,
+    "y": 735,
+    "w": 372,
+    "h": 58,
+    "bottom": 793
+   }
+  ],
+  "comingHead": [
+   {
+    "text": "Coming up\nFull calendar",
+    "x": 20,
+    "y": 636.2,
+    "w": 332,
+    "h": 57,
+    "bottom": 693.2
+   }
+  ],
+  "header": [
+   {
+    "text": "Thapal\nPersonal\nKK",
+    "x": 0,
+    "y": 0,
+    "w": 372,
+    "h": 64,
+    "bottom": 64
+   }
+  ],
+  "footNote": [
+   {
+    "text": "Finish the checks in Details first (e.g. “Looks right”).",
+    "x": 16,
+    "y": 721,
+    "w": 340,
+    "h": 16,
+    "bottom": 737
+   }
+  ],
+  "canvas": [
+   {
+    "text": "SMART ADD · INTELLIGENT CANVAS\n\nHere’s what we understood.\n1",
+    "x": 0,
+    "y": 0,
+    "w": 372,
+    "h": 793,
+    "bottom": 793
+   }
+  ]
+ },
+ "__overflow": {
+  "docScrollW": 372,
+  "innerW": 372
+ }
+}

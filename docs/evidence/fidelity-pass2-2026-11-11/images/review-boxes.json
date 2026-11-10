@@ -1,0 +1,2941 @@
+{
+ "before/d1440-09-smart-add-review": {
+  "viewport": {
+   "w": 1440,
+   "h": 900,
+   "vvH": 900
+  },
+  "primary_actions_visible": 1,
+  "in_footer": 1,
+  "action": {
+   "text": "Continue to confirmation",
+   "inFooter": true,
+   "disabled": true,
+   "x": 271.7,
+   "y": 810,
+   "w": 201.9,
+   "h": 44,
+   "bottom": 854
+  },
+  "footer": {
+   "text": "Start over\nContinue to confirmation\n\nFinish the checks in De",
+   "x": 112,
+   "y": 798,
+   "w": 1216,
+   "h": 78,
+   "bottom": 876
+  },
+  "footer_height": 78,
+  "toasts": [
+   {
+    "text": "Bill read \u2014 check the key details",
+    "x": 542,
+    "y": 730.5,
+    "w": 356,
+    "h": 53.5,
+    "bottom": 784
+   }
+  ],
+  "preview_pill": [],
+  "tabbar": [],
+  "action_covered_by_toast_px2": 0,
+  "footer_covered_by_toast_px2": 0,
+  "action_covered_by_pill_px2": 0,
+  "action_inside_viewport": true
+ },
+ "before/d1440-10-smart-add-confirm": {
+  "viewport": {
+   "w": 1440,
+   "h": 900,
+   "vvH": 900
+  },
+  "primary_actions_visible": 1,
+  "in_footer": 1,
+  "action": {
+   "text": "Confirm and save",
+   "inFooter": true,
+   "disabled": true,
+   "x": 822.4,
+   "y": 701,
+   "w": 156.1,
+   "h": 44,
+   "bottom": 745
+  },
+  "footer": {
+   "text": "Change\nConfirm and save",
+   "x": 428.5,
+   "y": 689,
+   "w": 583,
+   "h": 78,
+   "bottom": 767
+  },
+  "footer_height": 78,
+  "toasts": [],
+  "preview_pill": [],
+  "tabbar": [],
+  "action_covered_by_toast_px2": 0,
+  "footer_covered_by_toast_px2": 0,
+  "action_covered_by_pill_px2": 0,
+  "action_inside_viewport": true
+ },
+ "before/desktop-09-smart-add-review": {
+  "viewport": {
+   "w": 1283,
+   "h": 794,
+   "vvH": 794
+  },
+  "primary_actions_visible": 1,
+  "in_footer": 1,
+  "action": {
+   "text": "Continue to confirmation",
+   "inFooter": true,
+   "disabled": true,
+   "x": 193.2,
+   "y": 704,
+   "w": 201.9,
+   "h": 44,
+   "bottom": 748
+  },
+  "footer": {
+   "text": "Start over\nContinue to confirmation\n\nFinish the checks in De",
+   "x": 33.5,
+   "y": 692,
+   "w": 1216,
+   "h": 78,
+   "bottom": 770
+  },
+  "footer_height": 78,
+  "toasts": [
+   {
+    "text": "Bill read \u2014 check the key details",
+    "x": 463.5,
+    "y": 624.5,
+    "w": 356,
+    "h": 53.5,
+    "bottom": 678
+   }
+  ],
+  "preview_pill": [],
+  "tabbar": [],
+  "action_covered_by_toast_px2": 0,
+  "footer_covered_by_toast_px2": 0.0,
+  "action_covered_by_pill_px2": 0,
+  "action_inside_viewport": true
+ },
+ "before/desktop-09b-review-scrolled": {
+  "viewport": {
+   "w": 1283,
+   "h": 794,
+   "vvH": 794
+  },
+  "primary_actions_visible": 1,
+  "in_footer": 1,
+  "action": {
+   "text": "Continue to confirmation",
+   "inFooter": true,
+   "disabled": true,
+   "x": 193.2,
+   "y": 704,
+   "w": 201.9,
+   "h": 44,
+   "bottom": 748
+  },
+  "footer": {
+   "text": "Start over\nContinue to confirmation\n\nFinish the checks in De",
+   "x": 33.5,
+   "y": 692,
+   "w": 1216,
+   "h": 78,
+   "bottom": 770
+  },
+  "footer_height": 78,
+  "toasts": [
+   {
+    "text": "Bill read \u2014 check the key details",
+    "x": 463.5,
+    "y": 624.5,
+    "w": 356,
+    "h": 53.5,
+    "bottom": 678
+   }
+  ],
+  "preview_pill": [],
+  "tabbar": [],
+  "action_covered_by_toast_px2": 0,
+  "footer_covered_by_toast_px2": 0.0,
+  "action_covered_by_pill_px2": 0,
+  "action_inside_viewport": true
+ },
+ "before/desktop-09c-review-toast": {
+  "viewport": {
+   "w": 1283,
+   "h": 794,
+   "vvH": 794
+  },
+  "primary_actions_visible": 1,
+  "in_footer": 1,
+  "action": {
+   "text": "Continue to confirmation",
+   "inFooter": true,
+   "disabled": true,
+   "x": 193.2,
+   "y": 704,
+   "w": 201.9,
+   "h": 44,
+   "bottom": 748
+  },
+  "footer": {
+   "text": "Start over\nContinue to confirmation\n\nFinish the checks in De",
+   "x": 33.5,
+   "y": 692,
+   "w": 1216,
+   "h": 78,
+   "bottom": 770
+  },
+  "footer_height": 78,
+  "toasts": [
+   {
+    "text": "Saved draft \u00b7 nothing is entered yet",
+    "x": 463.5,
+    "y": 624.5,
+    "w": 356,
+    "h": 53.5,
+    "bottom": 678
+   },
+   {
+    "text": "Bill read \u2014 check the key details",
+    "x": 472.4,
+    "y": 611.8,
+    "w": 338.2,
+    "h": 50.8,
+    "bottom": 662.7
+   }
+  ],
+  "preview_pill": [],
+  "tabbar": [],
+  "action_covered_by_toast_px2": 0,
+  "footer_covered_by_toast_px2": 0.0,
+  "action_covered_by_pill_px2": 0,
+  "action_inside_viewport": true
+ },
+ "before/desktop-10-smart-add-confirm": {
+  "viewport": {
+   "w": 1283,
+   "h": 794,
+   "vvH": 794
+  },
+  "primary_actions_visible": 1,
+  "in_footer": 1,
+  "action": {
+   "text": "Confirm and save",
+   "inFooter": true,
+   "disabled": true,
+   "x": 743.9,
+   "y": 648,
+   "w": 156.1,
+   "h": 44,
+   "bottom": 692
+  },
+  "footer": {
+   "text": "Change\nConfirm and save",
+   "x": 350,
+   "y": 636,
+   "w": 583,
+   "h": 78,
+   "bottom": 714
+  },
+  "footer_height": 78,
+  "toasts": [
+   {
+    "text": "Saved draft \u00b7 nothing is entered yet",
+    "x": 463.5,
+    "y": 624.5,
+    "w": 356,
+    "h": 53.5,
+    "bottom": 678
+   }
+  ],
+  "preview_pill": [],
+  "tabbar": [],
+  "action_covered_by_toast_px2": 2268.0,
+  "footer_covered_by_toast_px2": 14952.0,
+  "action_covered_by_pill_px2": 0,
+  "action_inside_viewport": true
+ },
+ "before/ipadpro11-09-smart-add-review": {
+  "viewport": {
+   "w": 834,
+   "h": 1194,
+   "vvH": 1194
+  },
+  "primary_actions_visible": 1,
+  "in_footer": 1,
+  "action": {
+   "text": "Continue to confirmation",
+   "inFooter": true,
+   "disabled": true,
+   "x": 575.1,
+   "y": 952.5,
+   "w": 201.9,
+   "h": 44,
+   "bottom": 996.5
+  },
+  "footer": {
+   "text": "Start over\nContinue to confirmation\n\nFinish the checks in De",
+   "x": 24,
+   "y": 940.5,
+   "w": 786,
+   "h": 104.5,
+   "bottom": 1045
+  },
+  "footer_height": 104.5,
+  "toasts": [
+   {
+    "text": "Bill read \u2014 check the key details",
+    "x": 239,
+    "y": 1024.5,
+    "w": 356,
+    "h": 53.5,
+    "bottom": 1078
+   }
+  ],
+  "preview_pill": [],
+  "tabbar": [],
+  "action_covered_by_toast_px2": 0.0,
+  "footer_covered_by_toast_px2": 7298.0,
+  "action_covered_by_pill_px2": 0,
+  "action_inside_viewport": true
+ },
+ "before/ipadpro11-10-smart-add-confirm": {
+  "viewport": {
+   "w": 834,
+   "h": 1194,
+   "vvH": 1194
+  },
+  "primary_actions_visible": 1,
+  "in_footer": 1,
+  "action": {
+   "text": "Confirm and save",
+   "inFooter": true,
+   "disabled": true,
+   "x": 519.4,
+   "y": 848,
+   "w": 156.1,
+   "h": 44,
+   "bottom": 892
+  },
+  "footer": {
+   "text": "Change\nConfirm and save",
+   "x": 125.5,
+   "y": 836,
+   "w": 583,
+   "h": 78,
+   "bottom": 914
+  },
+  "footer_height": 78,
+  "toasts": [],
+  "preview_pill": [],
+  "tabbar": [],
+  "action_covered_by_toast_px2": 0,
+  "footer_covered_by_toast_px2": 0,
+  "action_covered_by_pill_px2": 0,
+  "action_inside_viewport": true
+ },
+ "before/iphone-09-smart-add-review": {
+  "viewport": {
+   "w": 372,
+   "h": 793,
+   "vvH": 793
+  },
+  "primary_actions_visible": 1,
+  "in_footer": 1,
+  "action": {
+   "text": "Continue to confirmation",
+   "inFooter": true,
+   "disabled": true,
+   "x": 140.7,
+   "y": 741,
+   "w": 215.3,
+   "h": 44,
+   "bottom": 785
+  },
+  "footer": {
+   "text": "Start over\nContinue to confirmation\n\nFinish the checks in De",
+   "x": 0,
+   "y": 696.3,
+   "w": 372,
+   "h": 96.7,
+   "bottom": 793
+  },
+  "footer_height": 96.7,
+  "toasts": [
+   {
+    "text": "Bill read \u2014 check the key details",
+    "x": 16,
+    "y": 571.5,
+    "w": 340,
+    "h": 53.5,
+    "bottom": 625
+   }
+  ],
+  "preview_pill": [],
+  "tabbar": [
+   {
+    "text": "Tab bar",
+    "x": 0,
+    "y": 735,
+    "w": 372,
+    "h": 58,
+    "bottom": 793
+   }
+  ],
+  "action_covered_by_toast_px2": 0.0,
+  "footer_covered_by_toast_px2": 0,
+  "action_covered_by_pill_px2": 0,
+  "action_inside_viewport": true
+ },
+ "before/iphone-09b-review-scrolled": {
+  "viewport": {
+   "w": 372,
+   "h": 793,
+   "vvH": 793
+  },
+  "primary_actions_visible": 1,
+  "in_footer": 1,
+  "action": {
+   "text": "Continue to confirmation",
+   "inFooter": true,
+   "disabled": true,
+   "x": 140.7,
+   "y": 741,
+   "w": 215.3,
+   "h": 44,
+   "bottom": 785
+  },
+  "footer": {
+   "text": "Start over\nContinue to confirmation\n\nFinish the checks in De",
+   "x": 0,
+   "y": 696.3,
+   "w": 372,
+   "h": 96.7,
+   "bottom": 793
+  },
+  "footer_height": 96.7,
+  "toasts": [],
+  "preview_pill": [],
+  "tabbar": [
+   {
+    "text": "Tab bar",
+    "x": 0,
+    "y": 735,
+    "w": 372,
+    "h": 58,
+    "bottom": 793
+   }
+  ],
+  "action_covered_by_toast_px2": 0,
+  "footer_covered_by_toast_px2": 0,
+  "action_covered_by_pill_px2": 0,
+  "action_inside_viewport": true
+ },
+ "before/iphone-09c-review-toast": {
+  "viewport": {
+   "w": 372,
+   "h": 793,
+   "vvH": 793
+  },
+  "primary_actions_visible": 1,
+  "in_footer": 1,
+  "action": {
+   "text": "Continue to confirmation",
+   "inFooter": true,
+   "disabled": true,
+   "x": 140.7,
+   "y": 741,
+   "w": 215.3,
+   "h": 44,
+   "bottom": 785
+  },
+  "footer": {
+   "text": "Start over\nContinue to confirmation\n\nFinish the checks in De",
+   "x": 0,
+   "y": 696.3,
+   "w": 372,
+   "h": 96.7,
+   "bottom": 793
+  },
+  "footer_height": 96.7,
+  "toasts": [
+   {
+    "text": "Saved draft \u00b7 nothing is entered yet",
+    "x": 16,
+    "y": 571.5,
+    "w": 340,
+    "h": 53.5,
+    "bottom": 625
+   }
+  ],
+  "preview_pill": [],
+  "tabbar": [
+   {
+    "text": "Tab bar",
+    "x": 0,
+    "y": 735,
+    "w": 372,
+    "h": 58,
+    "bottom": 793
+   }
+  ],
+  "action_covered_by_toast_px2": 0.0,
+  "footer_covered_by_toast_px2": 0,
+  "action_covered_by_pill_px2": 0,
+  "action_inside_viewport": true
+ },
+ "before/iphone-09d-review-original": {
+  "viewport": {
+   "w": 372,
+   "h": 793,
+   "vvH": 793
+  },
+  "primary_actions_visible": 1,
+  "in_footer": 1,
+  "action": {
+   "text": "Continue to confirmation",
+   "inFooter": true,
+   "disabled": true,
+   "x": 140.7,
+   "y": 741,
+   "w": 215.3,
+   "h": 44,
+   "bottom": 785
+  },
+  "footer": {
+   "text": "Start over\nContinue to confirmation\n\nFinish the checks in De",
+   "x": 0,
+   "y": 696.3,
+   "w": 372,
+   "h": 96.7,
+   "bottom": 793
+  },
+  "footer_height": 96.7,
+  "toasts": [
+   {
+    "text": "Saved draft \u00b7 nothing is entered yet",
+    "x": 16,
+    "y": 571.5,
+    "w": 340,
+    "h": 53.5,
+    "bottom": 625
+   }
+  ],
+  "preview_pill": [],
+  "tabbar": [
+   {
+    "text": "Tab bar",
+    "x": 0,
+    "y": 735,
+    "w": 372,
+    "h": 58,
+    "bottom": 793
+   }
+  ],
+  "action_covered_by_toast_px2": 0.0,
+  "footer_covered_by_toast_px2": 0,
+  "action_covered_by_pill_px2": 0,
+  "action_inside_viewport": true
+ },
+ "before/iphone-10-smart-add-confirm": {
+  "viewport": {
+   "w": 372,
+   "h": 793,
+   "vvH": 793
+  },
+  "primary_actions_visible": 1,
+  "in_footer": 1,
+  "action": {
+   "text": "Confirm and save",
+   "inFooter": true,
+   "disabled": true,
+   "x": 128.1,
+   "y": 741,
+   "w": 227.9,
+   "h": 44,
+   "bottom": 785
+  },
+  "footer": {
+   "text": "Change\nConfirm and save",
+   "x": 0,
+   "y": 732,
+   "w": 372,
+   "h": 61,
+   "bottom": 793
+  },
+  "footer_height": 61,
+  "toasts": [
+   {
+    "text": "Saved draft \u00b7 nothing is entered yet",
+    "x": 16,
+    "y": 571.5,
+    "w": 340,
+    "h": 53.5,
+    "bottom": 625
+   }
+  ],
+  "preview_pill": [],
+  "tabbar": [
+   {
+    "text": "Tab bar",
+    "x": 0,
+    "y": 735,
+    "w": 372,
+    "h": 58,
+    "bottom": 793
+   }
+  ],
+  "action_covered_by_toast_px2": 0.0,
+  "footer_covered_by_toast_px2": 0,
+  "action_covered_by_pill_px2": 0,
+  "action_inside_viewport": true
+ },
+ "before/iphone15-09-smart-add-review": {
+  "viewport": {
+   "w": 393,
+   "h": 852,
+   "vvH": 852
+  },
+  "primary_actions_visible": 1,
+  "in_footer": 1,
+  "action": {
+   "text": "Continue to confirmation",
+   "inFooter": true,
+   "disabled": true,
+   "x": 140.7,
+   "y": 800,
+   "w": 236.3,
+   "h": 44,
+   "bottom": 844
+  },
+  "footer": {
+   "text": "Start over\nContinue to confirmation\n\nFinish the checks in De",
+   "x": 0,
+   "y": 755.3,
+   "w": 393,
+   "h": 96.7,
+   "bottom": 852
+  },
+  "footer_height": 96.7,
+  "toasts": [
+   {
+    "text": "Bill read \u2014 check the key details",
+    "x": 16,
+    "y": 630.5,
+    "w": 361,
+    "h": 53.5,
+    "bottom": 684
+   }
+  ],
+  "preview_pill": [],
+  "tabbar": [
+   {
+    "text": "Tab bar",
+    "x": 0,
+    "y": 794,
+    "w": 393,
+    "h": 58,
+    "bottom": 852
+   }
+  ],
+  "action_covered_by_toast_px2": 0.0,
+  "footer_covered_by_toast_px2": 0,
+  "action_covered_by_pill_px2": 0,
+  "action_inside_viewport": true
+ },
+ "before/iphone15-09b-review-scrolled": {
+  "viewport": {
+   "w": 393,
+   "h": 852,
+   "vvH": 852
+  },
+  "primary_actions_visible": 1,
+  "in_footer": 1,
+  "action": {
+   "text": "Continue to confirmation",
+   "inFooter": true,
+   "disabled": true,
+   "x": 140.7,
+   "y": 800,
+   "w": 236.3,
+   "h": 44,
+   "bottom": 844
+  },
+  "footer": {
+   "text": "Start over\nContinue to confirmation\n\nFinish the checks in De",
+   "x": 0,
+   "y": 755.3,
+   "w": 393,
+   "h": 96.7,
+   "bottom": 852
+  },
+  "footer_height": 96.7,
+  "toasts": [],
+  "preview_pill": [],
+  "tabbar": [
+   {
+    "text": "Tab bar",
+    "x": 0,
+    "y": 794,
+    "w": 393,
+    "h": 58,
+    "bottom": 852
+   }
+  ],
+  "action_covered_by_toast_px2": 0,
+  "footer_covered_by_toast_px2": 0,
+  "action_covered_by_pill_px2": 0,
+  "action_inside_viewport": true
+ },
+ "before/iphone15-09c-review-toast": {
+  "viewport": {
+   "w": 393,
+   "h": 852,
+   "vvH": 852
+  },
+  "primary_actions_visible": 1,
+  "in_footer": 1,
+  "action": {
+   "text": "Continue to confirmation",
+   "inFooter": true,
+   "disabled": true,
+   "x": 140.7,
+   "y": 800,
+   "w": 236.3,
+   "h": 44,
+   "bottom": 844
+  },
+  "footer": {
+   "text": "Start over\nContinue to confirmation\n\nFinish the checks in De",
+   "x": 0,
+   "y": 755.3,
+   "w": 393,
+   "h": 96.7,
+   "bottom": 852
+  },
+  "footer_height": 96.7,
+  "toasts": [
+   {
+    "text": "Saved draft \u00b7 nothing is entered yet",
+    "x": 16,
+    "y": 630.5,
+    "w": 361,
+    "h": 53.5,
+    "bottom": 684
+   }
+  ],
+  "preview_pill": [],
+  "tabbar": [
+   {
+    "text": "Tab bar",
+    "x": 0,
+    "y": 794,
+    "w": 393,
+    "h": 58,
+    "bottom": 852
+   }
+  ],
+  "action_covered_by_toast_px2": 0.0,
+  "footer_covered_by_toast_px2": 0,
+  "action_covered_by_pill_px2": 0,
+  "action_inside_viewport": true
+ },
+ "before/iphone15-09d-review-original": {
+  "viewport": {
+   "w": 393,
+   "h": 852,
+   "vvH": 852
+  },
+  "primary_actions_visible": 1,
+  "in_footer": 1,
+  "action": {
+   "text": "Continue to confirmation",
+   "inFooter": true,
+   "disabled": true,
+   "x": 140.7,
+   "y": 800,
+   "w": 236.3,
+   "h": 44,
+   "bottom": 844
+  },
+  "footer": {
+   "text": "Start over\nContinue to confirmation\n\nFinish the checks in De",
+   "x": 0,
+   "y": 755.3,
+   "w": 393,
+   "h": 96.7,
+   "bottom": 852
+  },
+  "footer_height": 96.7,
+  "toasts": [
+   {
+    "text": "Saved draft \u00b7 nothing is entered yet",
+    "x": 16,
+    "y": 630.5,
+    "w": 361,
+    "h": 53.5,
+    "bottom": 684
+   }
+  ],
+  "preview_pill": [],
+  "tabbar": [
+   {
+    "text": "Tab bar",
+    "x": 0,
+    "y": 794,
+    "w": 393,
+    "h": 58,
+    "bottom": 852
+   }
+  ],
+  "action_covered_by_toast_px2": 0.0,
+  "footer_covered_by_toast_px2": 0,
+  "action_covered_by_pill_px2": 0,
+  "action_inside_viewport": true
+ },
+ "before/iphone15-10-smart-add-confirm": {
+  "viewport": {
+   "w": 393,
+   "h": 852,
+   "vvH": 852
+  },
+  "primary_actions_visible": 1,
+  "in_footer": 1,
+  "action": {
+   "text": "Confirm and save",
+   "inFooter": true,
+   "disabled": true,
+   "x": 128.1,
+   "y": 800,
+   "w": 248.9,
+   "h": 44,
+   "bottom": 844
+  },
+  "footer": {
+   "text": "Change\nConfirm and save",
+   "x": 0,
+   "y": 791,
+   "w": 393,
+   "h": 61,
+   "bottom": 852
+  },
+  "footer_height": 61,
+  "toasts": [
+   {
+    "text": "Saved draft \u00b7 nothing is entered yet",
+    "x": 16,
+    "y": 630.5,
+    "w": 361,
+    "h": 53.5,
+    "bottom": 684
+   }
+  ],
+  "preview_pill": [],
+  "tabbar": [
+   {
+    "text": "Tab bar",
+    "x": 0,
+    "y": 794,
+    "w": 393,
+    "h": 58,
+    "bottom": 852
+   }
+  ],
+  "action_covered_by_toast_px2": 0.0,
+  "footer_covered_by_toast_px2": 0,
+  "action_covered_by_pill_px2": 0,
+  "action_inside_viewport": true
+ },
+ "before/pill-iphone-09-smart-add-review": {
+  "viewport": {
+   "w": 372,
+   "h": 793,
+   "vvH": 793
+  },
+  "primary_actions_visible": 1,
+  "in_footer": 1,
+  "action": {
+   "text": "Continue to confirmation",
+   "inFooter": true,
+   "disabled": true,
+   "x": 140.7,
+   "y": 741,
+   "w": 215.3,
+   "h": 44,
+   "bottom": 785
+  },
+  "footer": {
+   "text": "Start over\nContinue to confirmation\n\nFinish the checks in De",
+   "x": 0,
+   "y": 696.3,
+   "w": 372,
+   "h": 96.7,
+   "bottom": 793
+  },
+  "footer_height": 96.7,
+  "toasts": [
+   {
+    "text": "Bill read \u2014 check the key details",
+    "x": 16,
+    "y": 571.5,
+    "w": 340,
+    "h": 53.5,
+    "bottom": 625
+   }
+  ],
+  "preview_pill": [
+   {
+    "text": "Preview\n0aea59b",
+    "x": 12,
+    "y": 677,
+    "w": 132.2,
+    "h": 44,
+    "bottom": 721
+   }
+  ],
+  "tabbar": [
+   {
+    "text": "Tab bar",
+    "x": 0,
+    "y": 735,
+    "w": 372,
+    "h": 58,
+    "bottom": 793
+   }
+  ],
+  "action_covered_by_toast_px2": 0.0,
+  "footer_covered_by_toast_px2": 0,
+  "action_covered_by_pill_px2": 0.0,
+  "action_inside_viewport": true
+ },
+ "before/pill-iphone-09b-review-scrolled": {
+  "viewport": {
+   "w": 372,
+   "h": 793,
+   "vvH": 793
+  },
+  "primary_actions_visible": 1,
+  "in_footer": 1,
+  "action": {
+   "text": "Continue to confirmation",
+   "inFooter": true,
+   "disabled": true,
+   "x": 140.7,
+   "y": 741,
+   "w": 215.3,
+   "h": 44,
+   "bottom": 785
+  },
+  "footer": {
+   "text": "Start over\nContinue to confirmation\n\nFinish the checks in De",
+   "x": 0,
+   "y": 696.3,
+   "w": 372,
+   "h": 96.7,
+   "bottom": 793
+  },
+  "footer_height": 96.7,
+  "toasts": [],
+  "preview_pill": [
+   {
+    "text": "Preview\n0aea59b",
+    "x": 12,
+    "y": 677,
+    "w": 132.2,
+    "h": 44,
+    "bottom": 721
+   }
+  ],
+  "tabbar": [
+   {
+    "text": "Tab bar",
+    "x": 0,
+    "y": 735,
+    "w": 372,
+    "h": 58,
+    "bottom": 793
+   }
+  ],
+  "action_covered_by_toast_px2": 0,
+  "footer_covered_by_toast_px2": 0,
+  "action_covered_by_pill_px2": 0.0,
+  "action_inside_viewport": true
+ },
+ "before/pill-iphone-09c-review-toast": {
+  "viewport": {
+   "w": 372,
+   "h": 793,
+   "vvH": 793
+  },
+  "primary_actions_visible": 1,
+  "in_footer": 1,
+  "action": {
+   "text": "Continue to confirmation",
+   "inFooter": true,
+   "disabled": true,
+   "x": 140.7,
+   "y": 741,
+   "w": 215.3,
+   "h": 44,
+   "bottom": 785
+  },
+  "footer": {
+   "text": "Start over\nContinue to confirmation\n\nFinish the checks in De",
+   "x": 0,
+   "y": 696.3,
+   "w": 372,
+   "h": 96.7,
+   "bottom": 793
+  },
+  "footer_height": 96.7,
+  "toasts": [
+   {
+    "text": "Saved draft \u00b7 nothing is entered yet",
+    "x": 16,
+    "y": 571.5,
+    "w": 340,
+    "h": 53.5,
+    "bottom": 625
+   }
+  ],
+  "preview_pill": [
+   {
+    "text": "Preview\n0aea59b",
+    "x": 12,
+    "y": 677,
+    "w": 132.2,
+    "h": 44,
+    "bottom": 721
+   }
+  ],
+  "tabbar": [
+   {
+    "text": "Tab bar",
+    "x": 0,
+    "y": 735,
+    "w": 372,
+    "h": 58,
+    "bottom": 793
+   }
+  ],
+  "action_covered_by_toast_px2": 0.0,
+  "footer_covered_by_toast_px2": 0,
+  "action_covered_by_pill_px2": 0.0,
+  "action_inside_viewport": true
+ },
+ "before/pill-iphone-09d-review-original": {
+  "viewport": {
+   "w": 372,
+   "h": 793,
+   "vvH": 793
+  },
+  "primary_actions_visible": 1,
+  "in_footer": 1,
+  "action": {
+   "text": "Continue to confirmation",
+   "inFooter": true,
+   "disabled": true,
+   "x": 140.7,
+   "y": 741,
+   "w": 215.3,
+   "h": 44,
+   "bottom": 785
+  },
+  "footer": {
+   "text": "Start over\nContinue to confirmation\n\nFinish the checks in De",
+   "x": 0,
+   "y": 696.3,
+   "w": 372,
+   "h": 96.7,
+   "bottom": 793
+  },
+  "footer_height": 96.7,
+  "toasts": [
+   {
+    "text": "Saved draft \u00b7 nothing is entered yet",
+    "x": 16,
+    "y": 571.5,
+    "w": 340,
+    "h": 53.5,
+    "bottom": 625
+   }
+  ],
+  "preview_pill": [
+   {
+    "text": "Preview\n0aea59b",
+    "x": 12,
+    "y": 677,
+    "w": 132.2,
+    "h": 44,
+    "bottom": 721
+   }
+  ],
+  "tabbar": [
+   {
+    "text": "Tab bar",
+    "x": 0,
+    "y": 735,
+    "w": 372,
+    "h": 58,
+    "bottom": 793
+   }
+  ],
+  "action_covered_by_toast_px2": 0.0,
+  "footer_covered_by_toast_px2": 0,
+  "action_covered_by_pill_px2": 0.0,
+  "action_inside_viewport": true
+ },
+ "before/pill-iphone-10-smart-add-confirm": {
+  "viewport": {
+   "w": 372,
+   "h": 793,
+   "vvH": 793
+  },
+  "primary_actions_visible": 1,
+  "in_footer": 1,
+  "action": {
+   "text": "Confirm and save",
+   "inFooter": true,
+   "disabled": true,
+   "x": 128.1,
+   "y": 741,
+   "w": 227.9,
+   "h": 44,
+   "bottom": 785
+  },
+  "footer": {
+   "text": "Change\nConfirm and save",
+   "x": 0,
+   "y": 732,
+   "w": 372,
+   "h": 61,
+   "bottom": 793
+  },
+  "footer_height": 61,
+  "toasts": [
+   {
+    "text": "Saved draft \u00b7 nothing is entered yet",
+    "x": 16,
+    "y": 571.5,
+    "w": 340,
+    "h": 53.5,
+    "bottom": 625
+   }
+  ],
+  "preview_pill": [
+   {
+    "text": "Preview\n0aea59b",
+    "x": 12,
+    "y": 677,
+    "w": 132.2,
+    "h": 44,
+    "bottom": 721
+   }
+  ],
+  "tabbar": [
+   {
+    "text": "Tab bar",
+    "x": 0,
+    "y": 735,
+    "w": 372,
+    "h": 58,
+    "bottom": 793
+   }
+  ],
+  "action_covered_by_toast_px2": 0.0,
+  "footer_covered_by_toast_px2": 0,
+  "action_covered_by_pill_px2": 0.0,
+  "action_inside_viewport": true
+ },
+ "before/pill-iphone15-09-smart-add-review": {
+  "viewport": {
+   "w": 393,
+   "h": 852,
+   "vvH": 852
+  },
+  "primary_actions_visible": 1,
+  "in_footer": 1,
+  "action": {
+   "text": "Continue to confirmation",
+   "inFooter": true,
+   "disabled": true,
+   "x": 140.7,
+   "y": 800,
+   "w": 236.3,
+   "h": 44,
+   "bottom": 844
+  },
+  "footer": {
+   "text": "Start over\nContinue to confirmation\n\nFinish the checks in De",
+   "x": 0,
+   "y": 755.3,
+   "w": 393,
+   "h": 96.7,
+   "bottom": 852
+  },
+  "footer_height": 96.7,
+  "toasts": [
+   {
+    "text": "Bill read \u2014 check the key details",
+    "x": 16,
+    "y": 630.5,
+    "w": 361,
+    "h": 53.5,
+    "bottom": 684
+   }
+  ],
+  "preview_pill": [
+   {
+    "text": "Preview\n0aea59b",
+    "x": 12,
+    "y": 736,
+    "w": 132.2,
+    "h": 44,
+    "bottom": 780
+   }
+  ],
+  "tabbar": [
+   {
+    "text": "Tab bar",
+    "x": 0,
+    "y": 794,
+    "w": 393,
+    "h": 58,
+    "bottom": 852
+   }
+  ],
+  "action_covered_by_toast_px2": 0.0,
+  "footer_covered_by_toast_px2": 0,
+  "action_covered_by_pill_px2": 0.0,
+  "action_inside_viewport": true
+ },
+ "before/pill-iphone15-09b-review-scrolled": {
+  "viewport": {
+   "w": 393,
+   "h": 852,
+   "vvH": 852
+  },
+  "primary_actions_visible": 1,
+  "in_footer": 1,
+  "action": {
+   "text": "Continue to confirmation",
+   "inFooter": true,
+   "disabled": true,
+   "x": 140.7,
+   "y": 800,
+   "w": 236.3,
+   "h": 44,
+   "bottom": 844
+  },
+  "footer": {
+   "text": "Start over\nContinue to confirmation\n\nFinish the checks in De",
+   "x": 0,
+   "y": 755.3,
+   "w": 393,
+   "h": 96.7,
+   "bottom": 852
+  },
+  "footer_height": 96.7,
+  "toasts": [],
+  "preview_pill": [
+   {
+    "text": "Preview\n0aea59b",
+    "x": 12,
+    "y": 736,
+    "w": 132.2,
+    "h": 44,
+    "bottom": 780
+   }
+  ],
+  "tabbar": [
+   {
+    "text": "Tab bar",
+    "x": 0,
+    "y": 794,
+    "w": 393,
+    "h": 58,
+    "bottom": 852
+   }
+  ],
+  "action_covered_by_toast_px2": 0,
+  "footer_covered_by_toast_px2": 0,
+  "action_covered_by_pill_px2": 0.0,
+  "action_inside_viewport": true
+ },
+ "before/pill-iphone15-09c-review-toast": {
+  "viewport": {
+   "w": 393,
+   "h": 852,
+   "vvH": 852
+  },
+  "primary_actions_visible": 1,
+  "in_footer": 1,
+  "action": {
+   "text": "Continue to confirmation",
+   "inFooter": true,
+   "disabled": true,
+   "x": 140.7,
+   "y": 800,
+   "w": 236.3,
+   "h": 44,
+   "bottom": 844
+  },
+  "footer": {
+   "text": "Start over\nContinue to confirmation\n\nFinish the checks in De",
+   "x": 0,
+   "y": 755.3,
+   "w": 393,
+   "h": 96.7,
+   "bottom": 852
+  },
+  "footer_height": 96.7,
+  "toasts": [
+   {
+    "text": "Saved draft \u00b7 nothing is entered yet",
+    "x": 16,
+    "y": 630.5,
+    "w": 361,
+    "h": 53.5,
+    "bottom": 684
+   }
+  ],
+  "preview_pill": [
+   {
+    "text": "Preview\n0aea59b",
+    "x": 12,
+    "y": 736,
+    "w": 132.2,
+    "h": 44,
+    "bottom": 780
+   }
+  ],
+  "tabbar": [
+   {
+    "text": "Tab bar",
+    "x": 0,
+    "y": 794,
+    "w": 393,
+    "h": 58,
+    "bottom": 852
+   }
+  ],
+  "action_covered_by_toast_px2": 0.0,
+  "footer_covered_by_toast_px2": 0,
+  "action_covered_by_pill_px2": 0.0,
+  "action_inside_viewport": true
+ },
+ "before/pill-iphone15-09d-review-original": {
+  "viewport": {
+   "w": 393,
+   "h": 852,
+   "vvH": 852
+  },
+  "primary_actions_visible": 1,
+  "in_footer": 1,
+  "action": {
+   "text": "Continue to confirmation",
+   "inFooter": true,
+   "disabled": true,
+   "x": 140.7,
+   "y": 800,
+   "w": 236.3,
+   "h": 44,
+   "bottom": 844
+  },
+  "footer": {
+   "text": "Start over\nContinue to confirmation\n\nFinish the checks in De",
+   "x": 0,
+   "y": 755.3,
+   "w": 393,
+   "h": 96.7,
+   "bottom": 852
+  },
+  "footer_height": 96.7,
+  "toasts": [
+   {
+    "text": "Saved draft \u00b7 nothing is entered yet",
+    "x": 16,
+    "y": 630.5,
+    "w": 361,
+    "h": 53.5,
+    "bottom": 684
+   }
+  ],
+  "preview_pill": [
+   {
+    "text": "Preview\n0aea59b",
+    "x": 12,
+    "y": 736,
+    "w": 132.2,
+    "h": 44,
+    "bottom": 780
+   }
+  ],
+  "tabbar": [
+   {
+    "text": "Tab bar",
+    "x": 0,
+    "y": 794,
+    "w": 393,
+    "h": 58,
+    "bottom": 852
+   }
+  ],
+  "action_covered_by_toast_px2": 0.0,
+  "footer_covered_by_toast_px2": 0,
+  "action_covered_by_pill_px2": 0.0,
+  "action_inside_viewport": true
+ },
+ "before/pill-iphone15-10-smart-add-confirm": {
+  "viewport": {
+   "w": 393,
+   "h": 852,
+   "vvH": 852
+  },
+  "primary_actions_visible": 1,
+  "in_footer": 1,
+  "action": {
+   "text": "Confirm and save",
+   "inFooter": true,
+   "disabled": true,
+   "x": 128.1,
+   "y": 800,
+   "w": 248.9,
+   "h": 44,
+   "bottom": 844
+  },
+  "footer": {
+   "text": "Change\nConfirm and save",
+   "x": 0,
+   "y": 791,
+   "w": 393,
+   "h": 61,
+   "bottom": 852
+  },
+  "footer_height": 61,
+  "toasts": [
+   {
+    "text": "Saved draft \u00b7 nothing is entered yet",
+    "x": 16,
+    "y": 630.5,
+    "w": 361,
+    "h": 53.5,
+    "bottom": 684
+   }
+  ],
+  "preview_pill": [
+   {
+    "text": "Preview\n0aea59b",
+    "x": 12,
+    "y": 736,
+    "w": 132.2,
+    "h": 44,
+    "bottom": 780
+   }
+  ],
+  "tabbar": [
+   {
+    "text": "Tab bar",
+    "x": 0,
+    "y": 794,
+    "w": 393,
+    "h": 58,
+    "bottom": 852
+   }
+  ],
+  "action_covered_by_toast_px2": 0.0,
+  "footer_covered_by_toast_px2": 0,
+  "action_covered_by_pill_px2": 0.0,
+  "action_inside_viewport": true
+ },
+ "after/d1440-09-smart-add-review": {
+  "viewport": {
+   "w": 1440,
+   "h": 900,
+   "vvH": 900
+  },
+  "primary_actions_visible": 1,
+  "in_footer": 1,
+  "action": {
+   "text": "Continue to confirmation",
+   "inFooter": true,
+   "disabled": true,
+   "x": 776.6,
+   "y": 725.5,
+   "w": 201.9,
+   "h": 44,
+   "bottom": 769.5
+  },
+  "footer": {
+   "text": "Start over\nContinue to confirmation\n\nFinish the checks in De",
+   "x": 428.5,
+   "y": 713.5,
+   "w": 583,
+   "h": 104.5,
+   "bottom": 818
+  },
+  "footer_height": 104.5,
+  "toasts": [
+   {
+    "text": "Bill read \u2014 check the key details",
+    "x": 542,
+    "y": 651.5,
+    "w": 356,
+    "h": 53.5,
+    "bottom": 705
+   }
+  ],
+  "preview_pill": [],
+  "tabbar": [],
+  "action_covered_by_toast_px2": 0.0,
+  "footer_covered_by_toast_px2": 0,
+  "action_covered_by_pill_px2": 0,
+  "action_inside_viewport": true
+ },
+ "after/d1440-10-smart-add-confirm": {
+  "viewport": {
+   "w": 1440,
+   "h": 900,
+   "vvH": 900
+  },
+  "primary_actions_visible": 1,
+  "in_footer": 1,
+  "action": {
+   "text": "Confirm and save",
+   "inFooter": true,
+   "disabled": true,
+   "x": 822.4,
+   "y": 689.6,
+   "w": 156.1,
+   "h": 44,
+   "bottom": 733.6
+  },
+  "footer": {
+   "text": "Change\nConfirm and save",
+   "x": 428.5,
+   "y": 677.6,
+   "w": 583,
+   "h": 78,
+   "bottom": 755.6
+  },
+  "footer_height": 78,
+  "toasts": [],
+  "preview_pill": [],
+  "tabbar": [],
+  "action_covered_by_toast_px2": 0,
+  "footer_covered_by_toast_px2": 0,
+  "action_covered_by_pill_px2": 0,
+  "action_inside_viewport": true
+ },
+ "after/desktop-09-smart-add-review": {
+  "viewport": {
+   "w": 1283,
+   "h": 794,
+   "vvH": 794
+  },
+  "primary_actions_visible": 1,
+  "in_footer": 1,
+  "action": {
+   "text": "Continue to confirmation",
+   "inFooter": true,
+   "disabled": true,
+   "x": 698.1,
+   "y": 672.5,
+   "w": 201.9,
+   "h": 44,
+   "bottom": 716.5
+  },
+  "footer": {
+   "text": "Start over\nContinue to confirmation\n\nFinish the checks in De",
+   "x": 350,
+   "y": 660.5,
+   "w": 583,
+   "h": 104.5,
+   "bottom": 765
+  },
+  "footer_height": 104.5,
+  "toasts": [
+   {
+    "text": "Bill read \u2014 check the key details",
+    "x": 463.5,
+    "y": 598.5,
+    "w": 356,
+    "h": 53.5,
+    "bottom": 652
+   }
+  ],
+  "preview_pill": [],
+  "tabbar": [],
+  "action_covered_by_toast_px2": 0.0,
+  "footer_covered_by_toast_px2": 0.0,
+  "action_covered_by_pill_px2": 0,
+  "action_inside_viewport": true
+ },
+ "after/desktop-09b-review-scrolled": {
+  "viewport": {
+   "w": 1283,
+   "h": 794,
+   "vvH": 794
+  },
+  "primary_actions_visible": 1,
+  "in_footer": 1,
+  "action": {
+   "text": "Continue to confirmation",
+   "inFooter": true,
+   "disabled": true,
+   "x": 698.1,
+   "y": 672.5,
+   "w": 201.9,
+   "h": 44,
+   "bottom": 716.5
+  },
+  "footer": {
+   "text": "Start over\nContinue to confirmation\n\nFinish the checks in De",
+   "x": 350,
+   "y": 660.5,
+   "w": 583,
+   "h": 104.5,
+   "bottom": 765
+  },
+  "footer_height": 104.5,
+  "toasts": [],
+  "preview_pill": [],
+  "tabbar": [],
+  "action_covered_by_toast_px2": 0,
+  "footer_covered_by_toast_px2": 0,
+  "action_covered_by_pill_px2": 0,
+  "action_inside_viewport": true
+ },
+ "after/desktop-09c-review-toast": {
+  "viewport": {
+   "w": 1283,
+   "h": 794,
+   "vvH": 794
+  },
+  "primary_actions_visible": 1,
+  "in_footer": 1,
+  "action": {
+   "text": "Continue to confirmation",
+   "inFooter": true,
+   "disabled": true,
+   "x": 698.1,
+   "y": 672.5,
+   "w": 201.9,
+   "h": 44,
+   "bottom": 716.5
+  },
+  "footer": {
+   "text": "Start over\nContinue to confirmation\n\nFinish the checks in De",
+   "x": 350,
+   "y": 660.5,
+   "w": 583,
+   "h": 104.5,
+   "bottom": 765
+  },
+  "footer_height": 104.5,
+  "toasts": [
+   {
+    "text": "Saved draft \u00b7 nothing is entered yet",
+    "x": 463.5,
+    "y": 598.5,
+    "w": 356,
+    "h": 53.5,
+    "bottom": 652
+   }
+  ],
+  "preview_pill": [],
+  "tabbar": [],
+  "action_covered_by_toast_px2": 0.0,
+  "footer_covered_by_toast_px2": 0.0,
+  "action_covered_by_pill_px2": 0,
+  "action_inside_viewport": true
+ },
+ "after/desktop-09d-review-original": {
+  "viewport": {
+   "w": 1283,
+   "h": 794,
+   "vvH": 794
+  },
+  "primary_actions_visible": 1,
+  "in_footer": 1,
+  "action": {
+   "text": "Continue to confirmation",
+   "inFooter": true,
+   "disabled": true,
+   "x": 698.1,
+   "y": 672.5,
+   "w": 201.9,
+   "h": 44,
+   "bottom": 716.5
+  },
+  "footer": {
+   "text": "Start over\nContinue to confirmation\n\nFinish the checks in De",
+   "x": 350,
+   "y": 660.5,
+   "w": 583,
+   "h": 104.5,
+   "bottom": 765
+  },
+  "footer_height": 104.5,
+  "toasts": [
+   {
+    "text": "Saved draft \u00b7 nothing is entered yet",
+    "x": 463.5,
+    "y": 598.5,
+    "w": 356,
+    "h": 53.5,
+    "bottom": 652
+   }
+  ],
+  "preview_pill": [],
+  "tabbar": [],
+  "action_covered_by_toast_px2": 0.0,
+  "footer_covered_by_toast_px2": 0.0,
+  "action_covered_by_pill_px2": 0,
+  "action_inside_viewport": true
+ },
+ "after/desktop-10-smart-add-confirm": {
+  "viewport": {
+   "w": 1283,
+   "h": 794,
+   "vvH": 794
+  },
+  "primary_actions_visible": 1,
+  "in_footer": 1,
+  "action": {
+   "text": "Continue to confirmation",
+   "inFooter": true,
+   "disabled": true,
+   "x": 698.1,
+   "y": 672.5,
+   "w": 201.9,
+   "h": 44,
+   "bottom": 716.5
+  },
+  "footer": {
+   "text": "Start over\nContinue to confirmation\n\nFinish the checks in De",
+   "x": 350,
+   "y": 660.5,
+   "w": 583,
+   "h": 104.5,
+   "bottom": 765
+  },
+  "footer_height": 104.5,
+  "toasts": [
+   {
+    "text": "Saved draft \u00b7 nothing is entered yet",
+    "x": 463.5,
+    "y": 598.5,
+    "w": 356,
+    "h": 53.5,
+    "bottom": 652
+   }
+  ],
+  "preview_pill": [],
+  "tabbar": [],
+  "action_covered_by_toast_px2": 0.0,
+  "footer_covered_by_toast_px2": 0.0,
+  "action_covered_by_pill_px2": 0,
+  "action_inside_viewport": true
+ },
+ "after/ipadpro11-09-smart-add-review": {
+  "viewport": {
+   "w": 834,
+   "h": 1194,
+   "vvH": 1194
+  },
+  "primary_actions_visible": 1,
+  "in_footer": 1,
+  "action": {
+   "text": "Continue to confirmation",
+   "inFooter": true,
+   "disabled": true,
+   "x": 473.6,
+   "y": 872.5,
+   "w": 201.9,
+   "h": 44,
+   "bottom": 916.5
+  },
+  "footer": {
+   "text": "Start over\nContinue to confirmation\n\nFinish the checks in De",
+   "x": 125.5,
+   "y": 860.5,
+   "w": 583,
+   "h": 104.5,
+   "bottom": 965
+  },
+  "footer_height": 104.5,
+  "toasts": [
+   {
+    "text": "Bill read \u2014 check the key details",
+    "x": 239,
+    "y": 798.5,
+    "w": 356,
+    "h": 53.5,
+    "bottom": 852
+   }
+  ],
+  "preview_pill": [],
+  "tabbar": [],
+  "action_covered_by_toast_px2": 0.0,
+  "footer_covered_by_toast_px2": 0,
+  "action_covered_by_pill_px2": 0,
+  "action_inside_viewport": true
+ },
+ "after/ipadpro11-10-smart-add-confirm": {
+  "viewport": {
+   "w": 834,
+   "h": 1194,
+   "vvH": 1194
+  },
+  "primary_actions_visible": 1,
+  "in_footer": 1,
+  "action": {
+   "text": "Confirm and save",
+   "inFooter": true,
+   "disabled": true,
+   "x": 519.4,
+   "y": 836.6,
+   "w": 156.1,
+   "h": 44,
+   "bottom": 880.6
+  },
+  "footer": {
+   "text": "Change\nConfirm and save",
+   "x": 125.5,
+   "y": 824.6,
+   "w": 583,
+   "h": 78,
+   "bottom": 902.6
+  },
+  "footer_height": 78,
+  "toasts": [],
+  "preview_pill": [],
+  "tabbar": [],
+  "action_covered_by_toast_px2": 0,
+  "footer_covered_by_toast_px2": 0,
+  "action_covered_by_pill_px2": 0,
+  "action_inside_viewport": true
+ },
+ "after/iphone-09-smart-add-review": {
+  "viewport": {
+   "w": 372,
+   "h": 793,
+   "vvH": 793
+  },
+  "primary_actions_visible": 1,
+  "in_footer": 1,
+  "action": {
+   "text": "Continue to confirmation",
+   "inFooter": true,
+   "disabled": true,
+   "x": 140.7,
+   "y": 741,
+   "w": 215.3,
+   "h": 44,
+   "bottom": 785
+  },
+  "footer": {
+   "text": "Start over\nContinue to confirmation\n\nFinish the checks in De",
+   "x": 0,
+   "y": 712,
+   "w": 372,
+   "h": 81,
+   "bottom": 793
+  },
+  "footer_height": 81,
+  "toasts": [
+   {
+    "text": "Bill read \u2014 check the key details",
+    "x": 16,
+    "y": 650.5,
+    "w": 340,
+    "h": 53.5,
+    "bottom": 704
+   }
+  ],
+  "preview_pill": [],
+  "tabbar": [
+   {
+    "text": "Tab bar",
+    "x": 0,
+    "y": 735,
+    "w": 372,
+    "h": 58,
+    "bottom": 793
+   }
+  ],
+  "action_covered_by_toast_px2": 0.0,
+  "footer_covered_by_toast_px2": 0,
+  "action_covered_by_pill_px2": 0,
+  "action_inside_viewport": true
+ },
+ "after/iphone-09b-review-scrolled": {
+  "viewport": {
+   "w": 372,
+   "h": 793,
+   "vvH": 793
+  },
+  "primary_actions_visible": 1,
+  "in_footer": 1,
+  "action": {
+   "text": "Continue to confirmation",
+   "inFooter": true,
+   "disabled": true,
+   "x": 140.7,
+   "y": 741,
+   "w": 215.3,
+   "h": 44,
+   "bottom": 785
+  },
+  "footer": {
+   "text": "Start over\nContinue to confirmation\n\nFinish the checks in De",
+   "x": 0,
+   "y": 712,
+   "w": 372,
+   "h": 81,
+   "bottom": 793
+  },
+  "footer_height": 81,
+  "toasts": [],
+  "preview_pill": [],
+  "tabbar": [
+   {
+    "text": "Tab bar",
+    "x": 0,
+    "y": 735,
+    "w": 372,
+    "h": 58,
+    "bottom": 793
+   }
+  ],
+  "action_covered_by_toast_px2": 0,
+  "footer_covered_by_toast_px2": 0,
+  "action_covered_by_pill_px2": 0,
+  "action_inside_viewport": true
+ },
+ "after/iphone-09c-review-toast": {
+  "viewport": {
+   "w": 372,
+   "h": 793,
+   "vvH": 793
+  },
+  "primary_actions_visible": 1,
+  "in_footer": 1,
+  "action": {
+   "text": "Continue to confirmation",
+   "inFooter": true,
+   "disabled": true,
+   "x": 140.7,
+   "y": 741,
+   "w": 215.3,
+   "h": 44,
+   "bottom": 785
+  },
+  "footer": {
+   "text": "Start over\nContinue to confirmation\n\nFinish the checks in De",
+   "x": 0,
+   "y": 712,
+   "w": 372,
+   "h": 81,
+   "bottom": 793
+  },
+  "footer_height": 81,
+  "toasts": [
+   {
+    "text": "Saved draft \u00b7 nothing is entered yet",
+    "x": 16,
+    "y": 650.5,
+    "w": 340,
+    "h": 53.5,
+    "bottom": 704
+   }
+  ],
+  "preview_pill": [],
+  "tabbar": [
+   {
+    "text": "Tab bar",
+    "x": 0,
+    "y": 735,
+    "w": 372,
+    "h": 58,
+    "bottom": 793
+   }
+  ],
+  "action_covered_by_toast_px2": 0.0,
+  "footer_covered_by_toast_px2": 0,
+  "action_covered_by_pill_px2": 0,
+  "action_inside_viewport": true
+ },
+ "after/iphone-09d-review-original": {
+  "viewport": {
+   "w": 372,
+   "h": 793,
+   "vvH": 793
+  },
+  "primary_actions_visible": 1,
+  "in_footer": 1,
+  "action": {
+   "text": "Continue to confirmation",
+   "inFooter": true,
+   "disabled": true,
+   "x": 140.7,
+   "y": 741,
+   "w": 215.3,
+   "h": 44,
+   "bottom": 785
+  },
+  "footer": {
+   "text": "Start over\nContinue to confirmation\n\nFinish the checks in De",
+   "x": 0,
+   "y": 712,
+   "w": 372,
+   "h": 81,
+   "bottom": 793
+  },
+  "footer_height": 81,
+  "toasts": [
+   {
+    "text": "Saved draft \u00b7 nothing is entered yet",
+    "x": 16,
+    "y": 650.5,
+    "w": 340,
+    "h": 53.5,
+    "bottom": 704
+   }
+  ],
+  "preview_pill": [],
+  "tabbar": [
+   {
+    "text": "Tab bar",
+    "x": 0,
+    "y": 735,
+    "w": 372,
+    "h": 58,
+    "bottom": 793
+   }
+  ],
+  "action_covered_by_toast_px2": 0.0,
+  "footer_covered_by_toast_px2": 0,
+  "action_covered_by_pill_px2": 0,
+  "action_inside_viewport": true
+ },
+ "after/iphone-10-smart-add-confirm": {
+  "viewport": {
+   "w": 372,
+   "h": 793,
+   "vvH": 793
+  },
+  "primary_actions_visible": 1,
+  "in_footer": 1,
+  "action": {
+   "text": "Continue to confirmation",
+   "inFooter": true,
+   "disabled": true,
+   "x": 140.7,
+   "y": 741,
+   "w": 215.3,
+   "h": 44,
+   "bottom": 785
+  },
+  "footer": {
+   "text": "Start over\nContinue to confirmation\n\nFinish the checks in De",
+   "x": 0,
+   "y": 712,
+   "w": 372,
+   "h": 81,
+   "bottom": 793
+  },
+  "footer_height": 81,
+  "toasts": [
+   {
+    "text": "Saved draft \u00b7 nothing is entered yet",
+    "x": 16,
+    "y": 650.5,
+    "w": 340,
+    "h": 53.5,
+    "bottom": 704
+   }
+  ],
+  "preview_pill": [],
+  "tabbar": [
+   {
+    "text": "Tab bar",
+    "x": 0,
+    "y": 735,
+    "w": 372,
+    "h": 58,
+    "bottom": 793
+   }
+  ],
+  "action_covered_by_toast_px2": 0.0,
+  "footer_covered_by_toast_px2": 0,
+  "action_covered_by_pill_px2": 0,
+  "action_inside_viewport": true
+ },
+ "after/iphone15-09-smart-add-review": {
+  "viewport": {
+   "w": 393,
+   "h": 852,
+   "vvH": 852
+  },
+  "primary_actions_visible": 1,
+  "in_footer": 1,
+  "action": {
+   "text": "Continue to confirmation",
+   "inFooter": true,
+   "disabled": true,
+   "x": 140.7,
+   "y": 800,
+   "w": 236.3,
+   "h": 44,
+   "bottom": 844
+  },
+  "footer": {
+   "text": "Start over\nContinue to confirmation\n\nFinish the checks in De",
+   "x": 0,
+   "y": 771,
+   "w": 393,
+   "h": 81,
+   "bottom": 852
+  },
+  "footer_height": 81,
+  "toasts": [
+   {
+    "text": "Bill read \u2014 check the key details",
+    "x": 16,
+    "y": 709.5,
+    "w": 361,
+    "h": 53.5,
+    "bottom": 763
+   }
+  ],
+  "preview_pill": [],
+  "tabbar": [
+   {
+    "text": "Tab bar",
+    "x": 0,
+    "y": 794,
+    "w": 393,
+    "h": 58,
+    "bottom": 852
+   }
+  ],
+  "action_covered_by_toast_px2": 0.0,
+  "footer_covered_by_toast_px2": 0,
+  "action_covered_by_pill_px2": 0,
+  "action_inside_viewport": true
+ },
+ "after/iphone15-09b-review-scrolled": {
+  "viewport": {
+   "w": 393,
+   "h": 852,
+   "vvH": 852
+  },
+  "primary_actions_visible": 1,
+  "in_footer": 1,
+  "action": {
+   "text": "Continue to confirmation",
+   "inFooter": true,
+   "disabled": true,
+   "x": 140.7,
+   "y": 800,
+   "w": 236.3,
+   "h": 44,
+   "bottom": 844
+  },
+  "footer": {
+   "text": "Start over\nContinue to confirmation\n\nFinish the checks in De",
+   "x": 0,
+   "y": 771,
+   "w": 393,
+   "h": 81,
+   "bottom": 852
+  },
+  "footer_height": 81,
+  "toasts": [],
+  "preview_pill": [],
+  "tabbar": [
+   {
+    "text": "Tab bar",
+    "x": 0,
+    "y": 794,
+    "w": 393,
+    "h": 58,
+    "bottom": 852
+   }
+  ],
+  "action_covered_by_toast_px2": 0,
+  "footer_covered_by_toast_px2": 0,
+  "action_covered_by_pill_px2": 0,
+  "action_inside_viewport": true
+ },
+ "after/iphone15-09c-review-toast": {
+  "viewport": {
+   "w": 393,
+   "h": 852,
+   "vvH": 852
+  },
+  "primary_actions_visible": 1,
+  "in_footer": 1,
+  "action": {
+   "text": "Continue to confirmation",
+   "inFooter": true,
+   "disabled": true,
+   "x": 140.7,
+   "y": 800,
+   "w": 236.3,
+   "h": 44,
+   "bottom": 844
+  },
+  "footer": {
+   "text": "Start over\nContinue to confirmation\n\nFinish the checks in De",
+   "x": 0,
+   "y": 771,
+   "w": 393,
+   "h": 81,
+   "bottom": 852
+  },
+  "footer_height": 81,
+  "toasts": [
+   {
+    "text": "Saved draft \u00b7 nothing is entered yet",
+    "x": 16,
+    "y": 709.5,
+    "w": 361,
+    "h": 53.5,
+    "bottom": 763
+   }
+  ],
+  "preview_pill": [],
+  "tabbar": [
+   {
+    "text": "Tab bar",
+    "x": 0,
+    "y": 794,
+    "w": 393,
+    "h": 58,
+    "bottom": 852
+   }
+  ],
+  "action_covered_by_toast_px2": 0.0,
+  "footer_covered_by_toast_px2": 0,
+  "action_covered_by_pill_px2": 0,
+  "action_inside_viewport": true
+ },
+ "after/iphone15-09d-review-original": {
+  "viewport": {
+   "w": 393,
+   "h": 852,
+   "vvH": 852
+  },
+  "primary_actions_visible": 1,
+  "in_footer": 1,
+  "action": {
+   "text": "Continue to confirmation",
+   "inFooter": true,
+   "disabled": true,
+   "x": 140.7,
+   "y": 800,
+   "w": 236.3,
+   "h": 44,
+   "bottom": 844
+  },
+  "footer": {
+   "text": "Start over\nContinue to confirmation\n\nFinish the checks in De",
+   "x": 0,
+   "y": 771,
+   "w": 393,
+   "h": 81,
+   "bottom": 852
+  },
+  "footer_height": 81,
+  "toasts": [
+   {
+    "text": "Saved draft \u00b7 nothing is entered yet",
+    "x": 16,
+    "y": 709.5,
+    "w": 361,
+    "h": 53.5,
+    "bottom": 763
+   }
+  ],
+  "preview_pill": [],
+  "tabbar": [
+   {
+    "text": "Tab bar",
+    "x": 0,
+    "y": 794,
+    "w": 393,
+    "h": 58,
+    "bottom": 852
+   }
+  ],
+  "action_covered_by_toast_px2": 0.0,
+  "footer_covered_by_toast_px2": 0,
+  "action_covered_by_pill_px2": 0,
+  "action_inside_viewport": true
+ },
+ "after/iphone15-10-smart-add-confirm": {
+  "viewport": {
+   "w": 393,
+   "h": 852,
+   "vvH": 852
+  },
+  "primary_actions_visible": 1,
+  "in_footer": 1,
+  "action": {
+   "text": "Continue to confirmation",
+   "inFooter": true,
+   "disabled": true,
+   "x": 140.7,
+   "y": 800,
+   "w": 236.3,
+   "h": 44,
+   "bottom": 844
+  },
+  "footer": {
+   "text": "Start over\nContinue to confirmation\n\nFinish the checks in De",
+   "x": 0,
+   "y": 771,
+   "w": 393,
+   "h": 81,
+   "bottom": 852
+  },
+  "footer_height": 81,
+  "toasts": [
+   {
+    "text": "Saved draft \u00b7 nothing is entered yet",
+    "x": 16,
+    "y": 709.5,
+    "w": 361,
+    "h": 53.5,
+    "bottom": 763
+   }
+  ],
+  "preview_pill": [],
+  "tabbar": [
+   {
+    "text": "Tab bar",
+    "x": 0,
+    "y": 794,
+    "w": 393,
+    "h": 58,
+    "bottom": 852
+   }
+  ],
+  "action_covered_by_toast_px2": 0.0,
+  "footer_covered_by_toast_px2": 0,
+  "action_covered_by_pill_px2": 0,
+  "action_inside_viewport": true
+ },
+ "after/pill-iphone-09-smart-add-review": {
+  "viewport": {
+   "w": 372,
+   "h": 793,
+   "vvH": 793
+  },
+  "primary_actions_visible": 1,
+  "in_footer": 1,
+  "action": {
+   "text": "Continue to confirmation",
+   "inFooter": true,
+   "disabled": true,
+   "x": 140.7,
+   "y": 741,
+   "w": 215.3,
+   "h": 44,
+   "bottom": 785
+  },
+  "footer": {
+   "text": "Start over\nContinue to confirmation\n\nFinish the checks in De",
+   "x": 0,
+   "y": 712,
+   "w": 372,
+   "h": 81,
+   "bottom": 793
+  },
+  "footer_height": 81,
+  "toasts": [
+   {
+    "text": "Bill read \u2014 check the key details",
+    "x": 16,
+    "y": 650.5,
+    "w": 340,
+    "h": 53.5,
+    "bottom": 704
+   }
+  ],
+  "preview_pill": [
+   {
+    "text": "Preview\n0aea59b",
+    "x": 12,
+    "y": 677,
+    "w": 154.4,
+    "h": 44,
+    "bottom": 721
+   }
+  ],
+  "tabbar": [
+   {
+    "text": "Tab bar",
+    "x": 0,
+    "y": 735,
+    "w": 372,
+    "h": 58,
+    "bottom": 793
+   }
+  ],
+  "action_covered_by_toast_px2": 0.0,
+  "footer_covered_by_toast_px2": 0,
+  "action_covered_by_pill_px2": 0.0,
+  "action_inside_viewport": true
+ },
+ "after/pill-iphone-09b-review-scrolled": {
+  "viewport": {
+   "w": 372,
+   "h": 793,
+   "vvH": 793
+  },
+  "primary_actions_visible": 1,
+  "in_footer": 1,
+  "action": {
+   "text": "Continue to confirmation",
+   "inFooter": true,
+   "disabled": true,
+   "x": 140.7,
+   "y": 741,
+   "w": 215.3,
+   "h": 44,
+   "bottom": 785
+  },
+  "footer": {
+   "text": "Start over\nContinue to confirmation\n\nFinish the checks in De",
+   "x": 0,
+   "y": 712,
+   "w": 372,
+   "h": 81,
+   "bottom": 793
+  },
+  "footer_height": 81,
+  "toasts": [],
+  "preview_pill": [
+   {
+    "text": "Preview\n0aea59b",
+    "x": 12,
+    "y": 677,
+    "w": 154.4,
+    "h": 44,
+    "bottom": 721
+   }
+  ],
+  "tabbar": [
+   {
+    "text": "Tab bar",
+    "x": 0,
+    "y": 735,
+    "w": 372,
+    "h": 58,
+    "bottom": 793
+   }
+  ],
+  "action_covered_by_toast_px2": 0,
+  "footer_covered_by_toast_px2": 0,
+  "action_covered_by_pill_px2": 0.0,
+  "action_inside_viewport": true
+ },
+ "after/pill-iphone-09c-review-toast": {
+  "viewport": {
+   "w": 372,
+   "h": 793,
+   "vvH": 793
+  },
+  "primary_actions_visible": 1,
+  "in_footer": 1,
+  "action": {
+   "text": "Continue to confirmation",
+   "inFooter": true,
+   "disabled": true,
+   "x": 140.7,
+   "y": 741,
+   "w": 215.3,
+   "h": 44,
+   "bottom": 785
+  },
+  "footer": {
+   "text": "Start over\nContinue to confirmation\n\nFinish the checks in De",
+   "x": 0,
+   "y": 712,
+   "w": 372,
+   "h": 81,
+   "bottom": 793
+  },
+  "footer_height": 81,
+  "toasts": [
+   {
+    "text": "Saved draft \u00b7 nothing is entered yet",
+    "x": 16,
+    "y": 650.5,
+    "w": 340,
+    "h": 53.5,
+    "bottom": 704
+   }
+  ],
+  "preview_pill": [
+   {
+    "text": "Preview\n0aea59b",
+    "x": 12,
+    "y": 677,
+    "w": 154.4,
+    "h": 44,
+    "bottom": 721
+   }
+  ],
+  "tabbar": [
+   {
+    "text": "Tab bar",
+    "x": 0,
+    "y": 735,
+    "w": 372,
+    "h": 58,
+    "bottom": 793
+   }
+  ],
+  "action_covered_by_toast_px2": 0.0,
+  "footer_covered_by_toast_px2": 0,
+  "action_covered_by_pill_px2": 0.0,
+  "action_inside_viewport": true
+ },
+ "after/pill-iphone-09d-review-original": {
+  "viewport": {
+   "w": 372,
+   "h": 793,
+   "vvH": 793
+  },
+  "primary_actions_visible": 1,
+  "in_footer": 1,
+  "action": {
+   "text": "Continue to confirmation",
+   "inFooter": true,
+   "disabled": true,
+   "x": 140.7,
+   "y": 741,
+   "w": 215.3,
+   "h": 44,
+   "bottom": 785
+  },
+  "footer": {
+   "text": "Start over\nContinue to confirmation\n\nFinish the checks in De",
+   "x": 0,
+   "y": 712,
+   "w": 372,
+   "h": 81,
+   "bottom": 793
+  },
+  "footer_height": 81,
+  "toasts": [
+   {
+    "text": "Saved draft \u00b7 nothing is entered yet",
+    "x": 16,
+    "y": 650.5,
+    "w": 340,
+    "h": 53.5,
+    "bottom": 704
+   }
+  ],
+  "preview_pill": [
+   {
+    "text": "Preview\n0aea59b",
+    "x": 12,
+    "y": 677,
+    "w": 154.4,
+    "h": 44,
+    "bottom": 721
+   }
+  ],
+  "tabbar": [
+   {
+    "text": "Tab bar",
+    "x": 0,
+    "y": 735,
+    "w": 372,
+    "h": 58,
+    "bottom": 793
+   }
+  ],
+  "action_covered_by_toast_px2": 0.0,
+  "footer_covered_by_toast_px2": 0,
+  "action_covered_by_pill_px2": 0.0,
+  "action_inside_viewport": true
+ },
+ "after/pill-iphone-10-smart-add-confirm": {
+  "viewport": {
+   "w": 372,
+   "h": 793,
+   "vvH": 793
+  },
+  "primary_actions_visible": 1,
+  "in_footer": 1,
+  "action": {
+   "text": "Continue to confirmation",
+   "inFooter": true,
+   "disabled": true,
+   "x": 140.7,
+   "y": 741,
+   "w": 215.3,
+   "h": 44,
+   "bottom": 785
+  },
+  "footer": {
+   "text": "Start over\nContinue to confirmation\n\nFinish the checks in De",
+   "x": 0,
+   "y": 712,
+   "w": 372,
+   "h": 81,
+   "bottom": 793
+  },
+  "footer_height": 81,
+  "toasts": [
+   {
+    "text": "Saved draft \u00b7 nothing is entered yet",
+    "x": 16,
+    "y": 650.5,
+    "w": 340,
+    "h": 53.5,
+    "bottom": 704
+   }
+  ],
+  "preview_pill": [
+   {
+    "text": "Preview\n0aea59b",
+    "x": 12,
+    "y": 677,
+    "w": 154.4,
+    "h": 44,
+    "bottom": 721
+   }
+  ],
+  "tabbar": [
+   {
+    "text": "Tab bar",
+    "x": 0,
+    "y": 735,
+    "w": 372,
+    "h": 58,
+    "bottom": 793
+   }
+  ],
+  "action_covered_by_toast_px2": 0.0,
+  "footer_covered_by_toast_px2": 0,
+  "action_covered_by_pill_px2": 0.0,
+  "action_inside_viewport": true
+ },
+ "after/pill-iphone15-09-smart-add-review": {
+  "viewport": {
+   "w": 393,
+   "h": 852,
+   "vvH": 852
+  },
+  "primary_actions_visible": 1,
+  "in_footer": 1,
+  "action": {
+   "text": "Continue to confirmation",
+   "inFooter": true,
+   "disabled": true,
+   "x": 140.7,
+   "y": 800,
+   "w": 236.3,
+   "h": 44,
+   "bottom": 844
+  },
+  "footer": {
+   "text": "Start over\nContinue to confirmation\n\nFinish the checks in De",
+   "x": 0,
+   "y": 771,
+   "w": 393,
+   "h": 81,
+   "bottom": 852
+  },
+  "footer_height": 81,
+  "toasts": [
+   {
+    "text": "Bill read \u2014 check the key details",
+    "x": 16,
+    "y": 709.5,
+    "w": 361,
+    "h": 53.5,
+    "bottom": 763
+   }
+  ],
+  "preview_pill": [
+   {
+    "text": "Preview\n0aea59b",
+    "x": 12,
+    "y": 736,
+    "w": 154.4,
+    "h": 44,
+    "bottom": 780
+   }
+  ],
+  "tabbar": [
+   {
+    "text": "Tab bar",
+    "x": 0,
+    "y": 794,
+    "w": 393,
+    "h": 58,
+    "bottom": 852
+   }
+  ],
+  "action_covered_by_toast_px2": 0.0,
+  "footer_covered_by_toast_px2": 0,
+  "action_covered_by_pill_px2": 0.0,
+  "action_inside_viewport": true
+ },
+ "after/pill-iphone15-09b-review-scrolled": {
+  "viewport": {
+   "w": 393,
+   "h": 852,
+   "vvH": 852
+  },
+  "primary_actions_visible": 1,
+  "in_footer": 1,
+  "action": {
+   "text": "Continue to confirmation",
+   "inFooter": true,
+   "disabled": true,
+   "x": 140.7,
+   "y": 800,
+   "w": 236.3,
+   "h": 44,
+   "bottom": 844
+  },
+  "footer": {
+   "text": "Start over\nContinue to confirmation\n\nFinish the checks in De",
+   "x": 0,
+   "y": 771,
+   "w": 393,
+   "h": 81,
+   "bottom": 852
+  },
+  "footer_height": 81,
+  "toasts": [],
+  "preview_pill": [
+   {
+    "text": "Preview\n0aea59b",
+    "x": 12,
+    "y": 736,
+    "w": 154.4,
+    "h": 44,
+    "bottom": 780
+   }
+  ],
+  "tabbar": [
+   {
+    "text": "Tab bar",
+    "x": 0,
+    "y": 794,
+    "w": 393,
+    "h": 58,
+    "bottom": 852
+   }
+  ],
+  "action_covered_by_toast_px2": 0,
+  "footer_covered_by_toast_px2": 0,
+  "action_covered_by_pill_px2": 0.0,
+  "action_inside_viewport": true
+ },
+ "after/pill-iphone15-09c-review-toast": {
+  "viewport": {
+   "w": 393,
+   "h": 852,
+   "vvH": 852
+  },
+  "primary_actions_visible": 1,
+  "in_footer": 1,
+  "action": {
+   "text": "Continue to confirmation",
+   "inFooter": true,
+   "disabled": true,
+   "x": 140.7,
+   "y": 800,
+   "w": 236.3,
+   "h": 44,
+   "bottom": 844
+  },
+  "footer": {
+   "text": "Start over\nContinue to confirmation\n\nFinish the checks in De",
+   "x": 0,
+   "y": 771,
+   "w": 393,
+   "h": 81,
+   "bottom": 852
+  },
+  "footer_height": 81,
+  "toasts": [
+   {
+    "text": "Saved draft \u00b7 nothing is entered yet",
+    "x": 16,
+    "y": 709.5,
+    "w": 361,
+    "h": 53.5,
+    "bottom": 763
+   }
+  ],
+  "preview_pill": [
+   {
+    "text": "Preview\n0aea59b",
+    "x": 12,
+    "y": 736,
+    "w": 154.4,
+    "h": 44,
+    "bottom": 780
+   }
+  ],
+  "tabbar": [
+   {
+    "text": "Tab bar",
+    "x": 0,
+    "y": 794,
+    "w": 393,
+    "h": 58,
+    "bottom": 852
+   }
+  ],
+  "action_covered_by_toast_px2": 0.0,
+  "footer_covered_by_toast_px2": 0,
+  "action_covered_by_pill_px2": 0.0,
+  "action_inside_viewport": true
+ },
+ "after/pill-iphone15-09d-review-original": {
+  "viewport": {
+   "w": 393,
+   "h": 852,
+   "vvH": 852
+  },
+  "primary_actions_visible": 1,
+  "in_footer": 1,
+  "action": {
+   "text": "Continue to confirmation",
+   "inFooter": true,
+   "disabled": true,
+   "x": 140.7,
+   "y": 800,
+   "w": 236.3,
+   "h": 44,
+   "bottom": 844
+  },
+  "footer": {
+   "text": "Start over\nContinue to confirmation\n\nFinish the checks in De",
+   "x": 0,
+   "y": 771,
+   "w": 393,
+   "h": 81,
+   "bottom": 852
+  },
+  "footer_height": 81,
+  "toasts": [
+   {
+    "text": "Saved draft \u00b7 nothing is entered yet",
+    "x": 16,
+    "y": 709.5,
+    "w": 361,
+    "h": 53.5,
+    "bottom": 763
+   }
+  ],
+  "preview_pill": [
+   {
+    "text": "Preview\n0aea59b",
+    "x": 12,
+    "y": 736,
+    "w": 154.4,
+    "h": 44,
+    "bottom": 780
+   }
+  ],
+  "tabbar": [
+   {
+    "text": "Tab bar",
+    "x": 0,
+    "y": 794,
+    "w": 393,
+    "h": 58,
+    "bottom": 852
+   }
+  ],
+  "action_covered_by_toast_px2": 0.0,
+  "footer_covered_by_toast_px2": 0,
+  "action_covered_by_pill_px2": 0.0,
+  "action_inside_viewport": true
+ },
+ "after/pill-iphone15-10-smart-add-confirm": {
+  "viewport": {
+   "w": 393,
+   "h": 852,
+   "vvH": 852
+  },
+  "primary_actions_visible": 1,
+  "in_footer": 1,
+  "action": {
+   "text": "Continue to confirmation",
+   "inFooter": true,
+   "disabled": true,
+   "x": 140.7,
+   "y": 800,
+   "w": 236.3,
+   "h": 44,
+   "bottom": 844
+  },
+  "footer": {
+   "text": "Start over\nContinue to confirmation\n\nFinish the checks in De",
+   "x": 0,
+   "y": 771,
+   "w": 393,
+   "h": 81,
+   "bottom": 852
+  },
+  "footer_height": 81,
+  "toasts": [
+   {
+    "text": "Saved draft \u00b7 nothing is entered yet",
+    "x": 16,
+    "y": 709.5,
+    "w": 361,
+    "h": 53.5,
+    "bottom": 763
+   }
+  ],
+  "preview_pill": [
+   {
+    "text": "Preview\n0aea59b",
+    "x": 12,
+    "y": 736,
+    "w": 154.4,
+    "h": 44,
+    "bottom": 780
+   }
+  ],
+  "tabbar": [
+   {
+    "text": "Tab bar",
+    "x": 0,
+    "y": 794,
+    "w": 393,
+    "h": 58,
+    "bottom": 852
+   }
+  ],
+  "action_covered_by_toast_px2": 0.0,
+  "footer_covered_by_toast_px2": 0,
+  "action_covered_by_pill_px2": 0.0,
+  "action_inside_viewport": true
+ }
+}
