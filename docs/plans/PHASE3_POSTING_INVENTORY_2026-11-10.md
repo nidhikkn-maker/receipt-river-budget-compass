@@ -14,7 +14,7 @@
 |---|---|---|---|---|
 | A1 | `store.save` `src/lib/store.tsx:358` → `saveExpense` `src/lib/fx.functions.ts:66` (insert/upsert/update `expenses` at :116–:119) | `expenses` INSERT/UPDATE | New, edited or retried entry (stable `createId` = draft id / statement line id) | Yes, by trigger. Retries carry the same id and post once. Edits post a reversal plus a replacement (DN-P3-1). C11 server check added at `fx.functions.ts:74` |
 | A2 | Offline queue `store.tsx:366` → later A1 | same as A1 | Entry saved offline | Yes (via A1) |
-| A3 | `store.remove` `store.tsx:596` (formerly hard `DELETE` at :591) | `expenses` DELETE, or `reverse_ledger_entry` | Removal of an entry | **Changed.** Capability check: missing function or inactive owner = delete as today. Active owner = audited reversal (reason + step-up). The database refuses a posted delete (`P7_POSTED_ENTRY`) |
+| A3 | `store.remove` `store.tsx:596` (formerly hard `DELETE` at :591) | `expenses` DELETE, or `reverse_ledger_entry` | Removal of an entry | **Changed.** Capability check: missing function or inactive owner = delete as today. Active owner = audited reversal (reason + step-up + correction date); r2: the entry STAYS and a linked reversal row is added. The database refuses a posted delete (`P7_POSTED_ENTRY`); an unposted exception is deleted as today (`P7_NOT_POSTED` fallback) |
 | A4 | `ExpenseDialog` delete `src/components/ExpenseDialog.tsx` (was :54 `confirm` + `remove`) | A3 | User removes an entry | **Changed.** Shows "Reverse entry" with a reason dialog when posting is active |
 | A5 | `DuplicateCompare.drop` `src/components/DuplicateCompare.tsx:27` | A3 | Duplicate removal | **Changed.** Passes the reason "Duplicate of entry … (kept)" |
 | A6 | `store.setScope/setTags` `store.tsx:610/614` | `expenses` UPDATE (metadata) | None (presentation) | Trigger re-derives; no new batch (DN-P3-11) |
@@ -28,7 +28,7 @@
 | A14 | `manage_trip_expenses`, `link_activity_expenses` `store.tsx:618/625`, `ClaimExpenseDiscovery.tsx:22` | UPDATE (tags, trip) | None | No new batch |
 | A15 | `post_opening_balances` / `undo_opening_balances` `store.tsx:499/512` | 0061: INSERT adjustment entries, then `opening_postings` | Opening balances | Posted as an `opening` batch only with a source document (DN-P3-3). The new `zz_p7_sync_opening` trigger is needed because the row arrives after the entries. **Undo of a posted opening is refused** (`P7_POSTED_ENTRY`): reverse it instead |
 | A16 | Statement Desk `applyUpload` `src/lib/statement-pipeline/apply.ts:85` via `statements.tsx:229` (`apply`; button now at :718) → A1/A8 | A1, A8 | Statement rows | Yes. **C11**: approvals stamped per row, the old one-tap "Apply everything" removed |
-| A17 | Statement atomic Undo `undo_statement_rows` `atomic-undo.functions.ts:46` (staged authority) | DELETE/UPDATE of rows | Upload undo | Pre-activation: unchanged. **After activation, deleting posted rows is refused**; Undo must become per-row reversal (listed in Remaining) |
+| A17 | Statement atomic Undo `undo_statement_rows` `atomic-undo.functions.ts:46` (staged authority) | DELETE/UPDATE of rows | Upload undo | r2: **`reverse_statement_upload`** (step-up): posted rows are reversed one by one (linked reversal rows, reason, today's date), unposted rows deleted as today, matches cleared; exact report; replay by id. The staged hard-deleting SQL is no longer used where P7 is installed |
 | A18 | Historical import `post_import_rows_secure` `historical-import.functions.ts:64` | 0031/0037 INSERT (+ `import_posts` fingerprints) | Imported statement rows (explicitly reviewed) | Yes, by trigger. The fingerprint and `statement_row` source give one effect |
 | A19 | `commit_document_intake_reviewed` `store.tsx:491` | document intake (no expense write in 0088) | Documents | Evidence only |
 | A20 | `restore_finance_backup` `settings.tsx:118` | 0072 INSERT of missing rows | Restore | Pre-activation: unchanged. Active owner: restored new rows post as new events (keyed by entry id, so they never post twice); journals are never copied (DN-P3-9) |
@@ -36,6 +36,7 @@
 | A22 | Demo cleanup cron `src/routes/api/public/jobs/cleanup-demos.ts:21` (service role) | DELETE guest rows | Cleanup | Unaffected (guest owners are never active) |
 | A23 | `delete_my_finance_data` `delete-data.ts:27` | DELETE all owner rows (`ledgerline.erasing`) | Erasure | P7 rows cascade; all guards honour erasure (tested) |
 | A24 | `change_accounting_period` `audit.tsx:73` | 0084: `finance_preferences` + `period_close_evidence` | Period close/reopen | **Changed** (DN-P3-13): active owners cannot close a period that has unposted, exception or awaiting-review entries; the evidence of every close and reopen carries a posting snapshot |
+| A26 | Card payment `WealthPanels.tsx` `CardDetails` → `store.payCard` | r2: `record_card_payment` (or `save()` with `createId` = payment id) | Card bill settlement | Posted once by the trigger; retry with the same id replays (P0-005b) |
 | A25 | Foundation journal UI `post_accounting_journal`, `set_accounting_review_grant`, `review_accounting_exception` `store.tsx:509/520/524` | Not installed anywhere (`accountingAvailable()` probes `accounting_journal_evidence`) | Manual journals | Stays fail-closed, as in production. The P7 replacement is `post_journal_batch` / `reverse_journal_batch`; the UI mapping is listed in Remaining |
 
 ## 2. Database write objects on `public.expenses` (0088 + P1 + P2 + P4 + P5 catalog)
@@ -63,11 +64,27 @@
 
 P7 keeps all of them unchanged. Asset depreciation journals in JSON stay the asset register's own records. They are not posted by P7, and they are listed as residual in the plan.
 
-## 3. Events and derived reports (read side; unchanged by P7)
+## 3. Events and derived reports (read side)
+
+**Revision 2 (KK decision 1, 10 Nov 2026).** A reversed posted entry is no longer removed from `expenses`: the original stays and a linked reversal row (`reverses_entry_id`, plus its immutable copy `receipt_details.reversal`) is added, dated on the correction date. Every reader that sums the working ledger now applies ONE rule, `ledger.ts ledgerView` (the reversal row counts as the exact negative of its original on its own date; the original is marked `reversedBy`), so nothing is double counted and no history is dropped. Reader inventory (enforced by `src/lib/phase3-readers.test.ts`, which also fails when a new `from("expenses")` reader appears outside this list):
+
+| Reader | File | r2 change |
+|---|---|---|
+| App store (every screen: balances, cash flow, net worth, budgets, categories, workspaces, reports, Home, Wealth, claims) | `src/lib/store.tsx` | `reversalOfRow` in `toExpense`; `ledgerView` on both the first-paint (lite) and the full load; the lite select reads `reversal:receipt_details->reversal` |
+| Assistant facts | `src/lib/assistant-facts.server.ts` | `ledgerView`; also maps `transfer_counterpart_of` and workspace splits (it previously counted linked transfers twice) |
+| Report jobs / PDFs | `src/lib/report-jobs.server.ts` | `ledgerView`; `transfer_counterpart_of` mapped |
+| Push reminders (card due, balances) | `src/lib/push-dispatch.server.ts` | shared `txnFromRow` + `ledgerView` |
+| Statement checkpoint (balance vs statement) | `src/lib/statement-checkpoint.functions.ts` | `ledgerView`; counterparts mapped |
+| MCP `list_accounts` | `src/lib/mcp/tools/list-accounts.ts` | `LEDGER_COLUMNS` + `txnFromRow` + `ledgerView` (also fixes counterparts and loan interest, previously ignored) |
+| MCP `spending_summary` | `src/lib/mcp/tools/spending-summary.ts` | same; a correction shows in the month it was made |
+| MCP `list_transactions` (listing) | `src/lib/mcp/tools/list-transactions.ts` | reversal rows listed negative with `reversalOf` |
+| Statement import duplicate check (no sums) | `src/lib/import-jobs.server.ts` | reversal rows are never duplicate candidates |
+| Database reconciliation reader | P7 `phase3_p7.legacy_movements` | reversal rows count negatively |
+| Statement Desk Undo snapshot, saves (no sums) | `atomic-undo.functions.ts`, `fx.functions.ts` | unchanged |
 
 | Report | Source | Notes |
 |---|---|---|
-| Balances, cash flow, net worth | `src/lib/ledger.ts` `accountBalance` (:82), `cashflow`, `position.ts` | Browser-side pure functions over `store.transactions`. Reversed entries leave `expenses`, so these stay correct with no change |
+| Balances, cash flow, net worth | `src/lib/ledger.ts` `accountBalance`, `cashflow`, `position.ts` | Browser-side pure functions over `store.transactions` after `ledgerView` (net zero for a reversed pair; the original stays in its own period) |
 | Company statements | `src/lib/books/corporate-statements.ts`, `accounting-journal.ts`, `accounting-post.ts` | TypeScript double entry for companies. P7's derivation differs only where V3.1/DN-P3-2 require exceptions instead of `unclassified` lines |
 | Reports Centre, PDFs, exports | `src/lib/reports.ts`, `report-jobs.server.ts` | Unchanged |
 | Assistant / MCP facts | `assistant-facts.server.ts`, `src/lib/mcp/tools/*` | Read-only. RLS plus P4 assistant policies apply to the new tables |

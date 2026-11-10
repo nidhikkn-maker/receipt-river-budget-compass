@@ -140,13 +140,23 @@ describe("P7 balanced posting (proposed SQL)", () => {
       expect(out["replayed"]).toBe(false);
       const replay = first(await as(db, U.O, async () => { await stepUp(db, U.O); return call(); })).r;
       expect(replay["replayed"]).toBe(true);
-      expect(await count(db, "SELECT 1 FROM public.expenses WHERE id = $1", [e(25)])).toBe(0);
-      const audit = first(await q<{ reason: string; actor_id: string; snap: Record<string, unknown>; n: number; m: number }>(db,
-        "SELECT reason, actor_id, entry_snapshot snap, cardinality(batch_ids) n, cardinality(reversal_batch_ids) m FROM public.posting_reversals WHERE id = $1", [REQ]));
-      expect(audit).toMatchObject({ reason: "Duplicate of bank import", actor_id: U.O, n: 1, m: 1 });
+      // r2 (KK decision 1): the original stays in the working ledger, unchanged; a linked reversal row is added
+      expect(await count(db, "SELECT 1 FROM public.expenses WHERE id = $1 AND reverses_entry_id IS NULL", [e(25)])).toBe(1);
+      expect(out["reversalEntryId"]).toBeTruthy();
+      const rev = first(await q<{ of: string; d: string; today: string; amount: string; t: string; acc: string; receipts: unknown[] }>(db,
+        "SELECT reverses_entry_id::text \"of\", expense_date::text d, current_date::text today, amount::text, txn_type t, account_id::text acc, receipts FROM public.expenses WHERE id = $1", [out["reversalEntryId"]]));
+      expect(rev).toMatchObject({ of: e(25), amount: "1800.00", t: "expense", acc: ACC.P2, receipts: [] });
+      expect(rev.d).toBe(rev.today); // decision 2: dated on the correction date (default today, open period)
+      const audit = first(await q<{ reason: string; actor_id: string; snap: Record<string, unknown>; n: number; m: number; rid: string; cd: string }>(db,
+        "SELECT reason, actor_id, entry_snapshot snap, cardinality(batch_ids) n, cardinality(reversal_batch_ids) m, reversal_entry_id::text rid, correction_date::text cd FROM public.posting_reversals WHERE id = $1", [REQ]));
+      expect(audit).toMatchObject({ reason: "Duplicate of bank import", actor_id: U.O, n: 1, m: 1, rid: out["reversalEntryId"], cd: rev.today });
       expect(audit.snap["id"]).toBe(e(25));
       expect((audit.snap["receipts"] as { path: string }[])[0]?.path).toBe(`${U.O}/receipts/r-25.jpg`); // source evidence kept
-      expect(Object.keys(audit.snap["_linked"] as object).sort()).toEqual(["categoryBatches", "documents", "drafts", "expenseHistory", "importPosts", "loans"]); // P0-005a links archived
+      expect(Array.isArray(audit.snap["_linked"])).toBe(true); // link states (P0-005a R4) recorded with the audit
+      // a reversed original and its reversal are history: neither can be edited financially or deleted
+      expect(errorText(await attempt(db, U.O, () => q(db, "UPDATE public.expenses SET amount = 1 WHERE id = $1", [e(25)])))).toMatch(/^P7_REVERSED_ENTRY/);
+      expect(errorText(await attempt(db, U.O, () => q(db, "DELETE FROM public.expenses WHERE id = $1", [out["reversalEntryId"]])))).toMatch(/^P7_REVERSAL_HISTORY/);
+      expect((await attempt(db, U.O, () => q(db, "UPDATE public.expenses SET tags = ARRAY['reviewed'] WHERE id = $1", [e(25)]))).ok).toBe(true); // metadata (DN-P3-11)
       expect(await allBatches(db, e(25))).toHaveLength(2); // original + mirror, nothing erased
       const after = await journalTb(db, U.O);
       expect(after[PERSONAL]?.["expense:Dining"]).toBeUndefined();
@@ -166,10 +176,17 @@ describe("P7 balanced posting (proposed SQL)", () => {
         await actAs(db, U.O); await stepUp(db, U.O);
         return fn();
       });
-      const rev = (entry: string) => () => q(db, "SELECT public.reverse_ledger_entry($1,$2,'Closed period probe')", [id(6100), entry]);
-      expect(errorText(await withClose([{ id: "c1-apr", from: "2026-04-01", to: "2026-04-30", entityId: C1 }], rev(e(5))))).toMatch(/closed period/i);
-      expect((await withClose([{ id: "c1-apr", from: "2026-04-01", to: "2026-04-30", entityId: C1 }], rev(e(7)))).ok).toBe(true); // personal April stays open
-      expect(errorText(await attempt(db, U.O, async () => { await stepUp(db, U.O); return rev(e(23))(); }))).toMatch(/linked transfer/);
+      const rev = (entry: string, on: string | null = null) => () => q(db, "SELECT public.reverse_ledger_entry($1,$2,'Closed period probe',$3::date)", [id(6100), entry, on]);
+      const c1Apr = [{ id: "c1-apr", from: "2026-04-01", to: "2026-04-30", entityId: C1 }];
+      // r2 (decision 2): a correction dated inside the closed period is refused; nothing reopens automatically ...
+      expect(errorText(await withClose(c1Apr, rev(e(5), "2026-04-20")))).toMatch(/^P7_CLOSED_PERIOD: the correction date 2026-04-20/);
+      // ... and the same correction on today's date (open period) is allowed without reopening April
+      const ok = await withClose(c1Apr, async () => { await rev(e(5))(); return q<{ n: number }>(db, "SELECT count(*)::int n FROM public.posting_batches WHERE owner_id = $1 AND kind = 'reversal' AND posting_date BETWEEN '2026-04-01' AND '2026-04-30'", [U.O]); });
+      expect(ok).toEqual({ ok: true, value: [{ n: 0 }] }); // nothing posted into the closed April
+      expect((await withClose(c1Apr, rev(e(7), "2026-04-20"))).ok).toBe(true); // personal April stays open
+      // a linked transfer is reversed as ONE movement from its debit side; its receiving side cannot be reversed alone
+      expect(errorText(await attempt(db, U.O, async () => { await stepUp(db, U.O); return rev(e(24))(); }))).toMatch(/^P7_COUNTERPART/);
+      expect((await attempt(db, U.O, async () => { await stepUp(db, U.O); return rev(e(23))(); })).ok).toBe(true);
     });
 
     it("journal reversal is step-up, audited, exact mirror, once", async () => {
@@ -219,10 +236,11 @@ describe("P7 balanced posting (proposed SQL)", () => {
       expect(r).toEqual({ ok: true, value: { before: -900, after: undefined, active: 0 } });
     });
 
-    it("reimbursement retries through finance_operation produce one entry and one posting; never income", async () => {
+    it("reimbursement retries through finance_operation produce one entry and one posting; never income; the gross expense stays (decision 4)", async () => {
       const r = await attempt(db, U.O, async () => {
-        await q(db, "UPDATE public.expenses SET reimbursement_status = 'pending', reimbursement = '{\"reimbursable\": 1200}'::jsonb WHERE id = $1", [e(15)]);
-        const payload = JSON.stringify({ operationId: "claim-op-1", id: e(15), amount: 500, date: "2026-07-05", accountId: ACC.P1, note: "Part payment" });
+        await q(db, INSERT_EXPENSE, exParams({ id: id(5501), acc: ACC.P2, date: "2026-07-01", amount: 2000, category: "Medical", title: "Hospital (insurance claim)",
+          reimb: { kind: "insurance", payer: "Star Health", reimbursable: 1500, receipts: [] }, reimbStatus: "pending" }));
+        const payload = JSON.stringify({ operationId: "claim-op-1", id: id(5501), amount: 500, date: "2026-07-05", accountId: ACC.P1, note: "Part payment" });
         await q(db, "SELECT public.finance_operation('claim_receipt', $1::jsonb)", [payload]);
         await q(db, "SELECT public.finance_operation('claim_receipt', $1::jsonb)", [payload]);
         const ids = await q<{ id: string }>(db, "SELECT id FROM public.expenses WHERE employee_id = $1 AND txn_type = 'reimbursement' AND expense_date = '2026-07-05'", [U.O]);
@@ -232,8 +250,12 @@ describe("P7 balanced posting (proposed SQL)", () => {
       if (!r.ok) throw new Error(r.error);
       expect(r.value.n).toBe(1);
       expect(r.value.batches).toBe(1);
-      expect(r.value.tb?.["expense:Medical"]).toBe(-500); // 1,200 claim fully reimbursed earlier (net 0) then 500 more: contra-expense, not income
-      expect(Object.keys(r.value.tb ?? {}).filter((k) => k.startsWith("income:Medical"))).toEqual([]);
+      expect(r.value.tb?.["expense:Medical"]).toBe(3200); // gross expenses preserved: 1,200 (employee claim e15) + 2,000 (insurance claim)
+      expect(r.value.tb?.["recovery:employer:Medical"]).toBe(-1200);  // separate recovery, not a reduction of the expense
+      expect(r.value.tb?.["recovery:insurance:Medical"]).toBe(-1500);
+      expect(r.value.tb?.[`receivable:claim:${id(5501)}`]).toBe(1000); // 1,500 claim less 500 received; settled, never income
+      expect(r.value.tb?.[`receivable:claim:${e(15)}`]).toBeUndefined(); // fully received
+      expect(Object.keys(r.value.tb ?? {}).filter((k) => k.startsWith("income:"))).not.toContain("income:Medical");
     });
 
     it("commit replays idempotently and a stale preview is refused", async () => {
@@ -342,8 +364,8 @@ describe("P7 balanced posting (proposed SQL)", () => {
         if (!r.ok) throw new Error(r.error);
         expect(r.value.length).toBeGreaterThan(15);
         expect(r.value.filter((x) => x.legacy !== x.p7)).toEqual([]);
-        // a personal-only period is not representable in the legacy guard; both guards ignore it alike
-        expect(r.value.some((x) => x.legacy)).toBe(!periods.some((p) => (p as { entityId?: string }).entityId === PERSONAL));
+        // r2 (KK decision 3): a personal-only period is enforced by BOTH guards (it was ignored by both before)
+        expect(r.value.some((x) => x.legacy)).toBe(true);
       }
     });
 
@@ -484,19 +506,21 @@ describe("P7 historical preservation, install order and rollback", () => {
   it("installing P7, previewing, committing the backfill and rolling back never changes a pre-existing row; catalog returns exactly", async () => {
     const db = await seededDb([]);
     const tables = await publicTables(db, SECURITY_LOGS);
+    const ADDED = ["reverses_entry_id"]; // the one column P7 r2 adds (decision 1); NULL on every pre-existing row
     const before = await dataSnapshot(db, tables);
     const cat0 = await catalog(db);
     await actAs(db, null);
     await db.exec(readSql(P7));
-    expect(await dataSnapshot(db, tables)).toEqual(before); // install alone
+    expect(await dataSnapshot(db, tables, ADDED)).toEqual(before); // install alone
+    expect(await count(db, "SELECT 1 FROM public.expenses WHERE reverses_entry_id IS NOT NULL")).toBe(0);
     expect(errorText(await attempt(db, null, () => db.exec(readSql(P7))))).toMatch(/already installed/);
     await preview(db, U.O);
     await activate(db, U.O); await activate(db, U.V);
-    expect(await dataSnapshot(db, tables)).toEqual(before); // reviewed backfill writes only P7 tables
+    expect(await dataSnapshot(db, tables, ADDED)).toEqual(before); // reviewed backfill writes only P7 tables
     const batches = await count(db, "SELECT 1 FROM public.posting_batches");
     expect(batches).toBeGreaterThan(20);
     // per-row hash of every pre-existing ledger row, before vs after
-    const rowHashes = async () => q<{ id: string; h: string }>(db, "SELECT id::text, md5(to_jsonb(x)::text) h FROM public.expenses x ORDER BY id");
+    const rowHashes = async () => q<{ id: string; h: string }>(db, "SELECT id::text, md5((to_jsonb(x) - 'reverses_entry_id')::text) h FROM public.expenses x ORDER BY id");
     const rows = await rowHashes();
     expect(rows.length).toBe(LEDGER.length + 1);
     // P5 rollback refuses while P7 is installed; P7 rollback refuses without the archive flag
@@ -508,7 +532,8 @@ describe("P7 historical preservation, install order and rollback", () => {
     expect(await rowHashes()).toEqual(rows);
     expect(await catalog(db)).toEqual(cat0);
     const archived = await q<{ t: string }>(db, "SELECT relname t FROM pg_class WHERE relnamespace = 'security_rollback_archive'::regnamespace AND relkind = 'r' AND relname LIKE 'p7_%' ORDER BY 1");
-    expect(archived.map((r) => r.t.replace(/_\d{8}T\d{12}$/i, ""))).toEqual(["p7_posting_backfill_runs", "p7_posting_batches", "p7_posting_event_sources", "p7_posting_events", "p7_posting_lines", "p7_posting_reversals"]);
+    expect(archived.map((r) => r.t.replace(/_\d{8}T\d{12}$/i, ""))).toEqual(["p7_posting_backfill_runs", "p7_posting_batches", "p7_posting_delegations", "p7_posting_event_sources", "p7_posting_events",
+      "p7_posting_lines", "p7_posting_link_states", "p7_posting_request_decisions", "p7_posting_requests", "p7_posting_reversals", "p7_statement_upload_reversals"]);
     expect(first(await q<{ n: number }>(db, `SELECT count(*)::int n FROM security_rollback_archive."${archived.find((r) => r.t.startsWith("p7_posting_batches"))!.t}"`)).n).toBe(batches);
     // reinstall works after rollback; P5 rollback then works once P7 is gone
     await db.exec(readSql(P7));

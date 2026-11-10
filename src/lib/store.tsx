@@ -7,7 +7,7 @@ import { queueEntry, pendingEntries, removePending, putSnapshot, getSnapshot } f
 import { mergePending, setItem, type PendingItem } from "./pending-sync";
 import { deleteFinanceData } from "./delete-data";
 import { withStepUp } from "./step-up";
-import { forgetPostingStatus, isPostedEntryError, postingStatus, removalMode, reverseLedgerEntry, ReversalReasonRequired, validReason } from "./posting";
+import { forgetPostingStatus, isNotPostedError, recordCardPayment, type CardPaymentInput, type CardPaymentResult, isPostedEntryError, postingStatus, removalMode, reverseLedgerEntry, ReversalReasonRequired, validReason } from "./posting";
 import { privateFileUrl, fetchPrivateFile, type ExpectedFile } from "./private-files";
 import { downloadBlob } from "./reports";
 import { saveExpense } from "./fx.functions";
@@ -16,7 +16,7 @@ import {
   CHARGES_CATEGORY, validateAllocations, validateBudget, validateExpense, type Allocation,
   type Budgets, type Category, type Expense, type ExpenseInput, type Member, type PaymentMethod, type Receipt, type ReceiptDetails, type ReimbursementStatus, type Scope, type Split,
 } from "./expenses";
-import { accountBalance, adjustmentToMatch, type Account, type AccountDetails, type AccountKind, type TxnType, type Valuation } from "./ledger";
+import { accountBalance, adjustmentToMatch, ledgerView, reversalOfRow, type Account, type AccountDetails, type AccountKind, type TxnType, type Valuation } from "./ledger";
 import { statusColumn, validateReceipt, type ReimbursementInfo } from "./reimbursements";
 import { normalizePreferences, defaultPreferences, validateActiveCategory, type FinancePreferences } from "./preferences";
 import { addMonths, emiFor, emiSplit, nextAfter, type Commitment, type CommitmentKind, type CommitmentStatus, type Frequency, type LoanType } from "./planning";
@@ -161,7 +161,13 @@ interface Ctx {
    * entry is reversed through reverse_ledger_entry (reason + re-confirmation; receipts kept); otherwise it
    * is deleted exactly as before. The database refuses deletes of posted entries either way.
    */
-  remove: (e: Expense, opts?: { reason?: string; requestId?: string }) => Promise<void>;
+  remove: (e: Expense, opts?: { reason?: string; requestId?: string; correctionDate?: string }) => Promise<void>;
+  /**
+   * P0-005b: records ONE card payment (bank -> card). Idempotent by requestId (create it once per payment
+   * form and reuse it on retry): the database action record_card_payment where installed, else save() with
+   * createId = requestId. A lost response followed by a retry therefore records the payment once.
+   */
+  payCard: (p: CardPaymentInput) => Promise<CardPaymentResult>;
   setScope: (id: string, scope: Scope) => Promise<void>;
   /** Changes labels only — amount, currency and stored exchange rate are untouched. */
   setTags: (id: string, tags: string[]) => Promise<void>;
@@ -181,7 +187,7 @@ interface Ctx {
 }
 export interface SavedReview { id: string; month: string; figures: unknown; dataHash: string; narrative: string; dataCutoff: string; generatedAt: string }
 // Columns Home needs for balances, dues and monthly totals; omits receipts, notes and receipt details.
-const LITE_COLUMNS = "id,category_revision,correction_revision,department,title,merchant,category,scope,member_id,splits,amount,currency,original_amount,fx_rate,payment_method,reconciled_at,statement_ref,updated_at,expense_date,txn_type,account_id,to_account_id,payment_instrument_id,payee_id,entity_id,entity_source,tags,workspace_allocations,reimbursement_status,adjustment_sign,allocations,reimbursement,transfer_counterpart_of,trip_id,principal,interest,created_at";
+const LITE_COLUMNS = "id,category_revision,correction_revision,department,title,merchant,category,scope,member_id,splits,amount,currency,original_amount,fx_rate,payment_method,reconciled_at,statement_ref,updated_at,expense_date,txn_type,account_id,to_account_id,payment_instrument_id,payee_id,entity_id,entity_source,tags,workspace_allocations,reimbursement_status,adjustment_sign,allocations,reimbursement,transfer_counterpart_of,trip_id,principal,interest,created_at,reversal:receipt_details->reversal";
 // Keep one context identity across hot reloads; otherwise a re-executed module
 // creates a new context and mounted consumers throw "useStore outside provider".
 const g = globalThis as unknown as { __ledgerlineStoreCtx?: import("react").Context<Ctx | null> };
@@ -313,8 +319,10 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
       adjustmentSign: x.adjustment_sign === -1 ? -1 : 1,
       allocations: (x.allocations as unknown as Allocation[]) ?? [], reimbursement: (x.reimbursement as unknown as ReimbursementInfo) ?? {},
       transferCounterpartOf: x.transfer_counterpart_of ?? null, tripId: x.trip_id, principal: x.principal == null ? null : Number(x.principal), interest: x.interest == null ? null : Number(x.interest),
+      reversesEntryId: reversalOfRow(x),
     });
-    if (mark(e, "transactions")) setExpenses((e.data ?? []).map(toExpense));
+    // Decision 1: a reversal row cancels its original on its own date (ledger.ts ledgerView).
+    if (mark(e, "transactions")) setExpenses(ledgerView((e.data ?? []).map(toExpense)));
     if (mark(b, "budgets")) {
       const bud: Budgets = {};
       for (const x of b.data ?? []) bud[x.category as Category] = Number(x.monthly_amount);
@@ -324,7 +332,7 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
     if (fullP) {
       const full = await fullP;
       if (full.error) { failed.add("transactions"); toast.error("Some records couldn't load — pull to refresh or try again"); }
-      else { setExpenses((full.data ?? []).map(toExpense)); failed.delete("transactions"); }
+      else { setExpenses(ledgerView((full.data ?? []).map(toExpense))); failed.delete("transactions"); }
       liteActive.current = false;
     }
     const [m, g, v, d, db] = await restP;
@@ -611,15 +619,28 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
   const remove: Ctx["remove"] = async (e, opts) => {
     if (removalMode(await postingStatus(userId)) === "reverse") {
       if (!validReason(opts?.reason)) throw new ReversalReasonRequired();
-      await reverseLedgerEntry({ entryId: e.id, reason: opts?.reason ?? "", requestId: opts?.requestId ?? crypto.randomUUID() });
-      await refresh();
-      return;
+      try {
+        // Decision 1: the entry stays; a linked reversal is recorded on the correction date (decision 2).
+        await reverseLedgerEntry({ entryId: e.id, reason: opts?.reason ?? "", requestId: opts?.requestId ?? crypto.randomUUID(), ...(opts?.correctionDate ? { correctionDate: opts.correctionDate } : {}) });
+        await refresh();
+        return;
+      } catch (err) {
+        // A listed exception that never posted follows today's rule: it is deleted (receipts kept below).
+        if (!isNotPostedError(err)) throw err;
+      }
     }
     const deleted = await supabase.from("expenses").delete().eq("id", e.id);
     if (deleted.error && isPostedEntryError(deleted.error)) { forgetPostingStatus(); throw new ReversalReasonRequired(); }
     check(deleted.error);
     if (e.receipts.length) await supabase.storage.from("receipts").remove(e.receipts.map((r) => r.path));
     await refresh();
+  };
+  const payCard: Ctx["payCard"] = async (p) => {
+    const card = accounts.find((a) => a.id === p.cardAccountId);
+    const out = await recordCardPayment(p, undefined, (createId) => save({ title: `${card?.name ?? "Card"} bill payment`, merchant: card?.issuer || null, category: "Card payment", scope: "personal", memberId: null,
+      amount: p.amount, currency: "INR", date: p.date, description: p.note?.trim() || "Credit card settlement", paymentMethod: "bank_transfer", txnType: "card_payment", accountId: p.fromAccountId, toAccountId: p.cardAccountId }, { createId, noRefresh: true }));
+    await refresh();
+    return out;
   };
   const setScope: Ctx["setScope"] = async (id, scope) => {
     check((await supabase.from("expenses").update({ scope }).eq("id", id)).error);
@@ -939,7 +960,7 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
       expenses: expenses.filter((x) => (x.txnType ?? "expense") === "expense"), transactions: expenses.filter((x) => !x.transferCounterpartOf), transferCounterparts: expenses.filter((x) => !!x.transferCounterpartOf), confirmTransfer, cancelTransfer, accounts, addAccount, setArchived, adjustBalance,
       commitments, loans, goals, valuations, documents, saveCommitment, confirmIrregular, removeCommitment, confirmCommitment, saveLoan, removeLoan, recordLoanPayment, convertToEmi,
       saveGoal, removeGoal, updateAccount, addValuation, removeValuation, addDocument, updateDocument, removeDocument, history, setReimbursement, recordReimbursement, deleteAll,
-      budgets, loading, syncState, loadErrors, lastSyncedAt, refresh, save, remove, setScope, reconcile, addMember, removeMember, updateMember, setBudget, signedUrl, downloadFile,
+      budgets, loading, syncState, loadErrors, lastSyncedAt, refresh, save, remove, payCard, setScope, reconcile, addMember, removeMember, updateMember, setBudget, signedUrl, downloadFile,
       setAllocations, updateReimbursement, addReimbursementReceipt, listReviews, saveReview,
     }}>
       {children}

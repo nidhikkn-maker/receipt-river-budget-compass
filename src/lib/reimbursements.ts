@@ -9,9 +9,26 @@ export const REIMB_STAGE_LABEL: Record<ReimbStage, string> = {
   received: "Fully received", rejected: "Rejected", written_off: "Written off",
 };
 export interface ReimbReceipt { id: string; date: string; amount: number; txnId?: string | null; note?: string }
+/**
+ * KK decision 4 (Phase 3): who pays the money back decides the accounting. A claim keeps the gross expense
+ * and records a separate recovery plus a receivable that the money back settles (never income, never a
+ * second expense); an advance claim settles against the advance received instead. A merchant refund is NOT
+ * a claim: it is a 'refund' entry, the only money back that reduces the purchase itself.
+ */
+export const RECOVERY_KINDS = ["employer", "insurance", "party", "advance"] as const;
+export type RecoveryKind = (typeof RECOVERY_KINDS)[number];
+export const RECOVERY_LABEL: Record<RecoveryKind, string> = {
+  employer: "Employer reimbursement", insurance: "Insurance claim", party: "Paid on someone's behalf (they pay back)", advance: "Spent from an advance received",
+};
+/** A money-back entry that was reversed after the fact (e.g. a bounced payment): kept as history, no longer received. */
+export interface ReversedReimbReceipt extends ReimbReceipt { reversal?: { entryId: string; at: string; reason: string } }
 export interface ReimbursementInfo {
   stage?: ReimbStage; reimbursable?: number; payer?: string; purpose?: string;
   submittedOn?: string | null; expectedOn?: string | null; receipts?: ReimbReceipt[]; remarks?: string;
+  /** Decision 4: the kind of claim (unset on older claims: a generic claim, still gross-preserving). */
+  kind?: RecoveryKind;
+  /** Receipts whose money-back entry was reversed (moved here by the database; they no longer count as received). */
+  reversedReceipts?: ReversedReimbReceipt[];
 }
 
 const r2 = (n: number) => Math.round(n * 100) / 100;

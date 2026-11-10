@@ -98,6 +98,10 @@ export interface Expense {
   allocations?: Allocation[];
   workspaceAllocations?: import("./workspaces").WorkspaceShare[];
   reimbursement?: import("./reimbursements").ReimbursementInfo;
+  /** Decision 1 (P7 r2): this row is the audited reversal of that original; see ledger.ts ledgerView. */
+  reversesEntryId?: string | null;
+  /** Set by ledgerView on an original that has a reversal row (both are read-only history). */
+  reversedBy?: string | null;
   /** Advances/settlements: the trip they belong to (no tag needed). */
   tripId?: string | null;
   /** Loan repayments: principal and interest parts; both set or both empty. */

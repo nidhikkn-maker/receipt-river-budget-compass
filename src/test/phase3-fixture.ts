@@ -77,14 +77,16 @@ export type Ex = {
   id: string; acc?: string | null; to?: string | null; date: string; amount: number; type?: string; manual?: string; cur?: string; orig?: number; rate?: number;
   category?: string; allocations?: { category: string; amount: number }[]; principal?: number; interest?: number; adjSign?: 1 | -1; ref?: string | null;
   counterpartOf?: string; receipts?: { name: string; type: string; path: string }[]; details?: Record<string, unknown>; owner?: string; title?: string;
+  /** Reimbursement claim JSON (expenses.reimbursement) and its derived status column. */
+  reimb?: Record<string, unknown>; reimbStatus?: "none" | "pending" | "received"; tags?: string[];
 };
 const COLS = `id, employee_id, title, merchant, category, amount, original_amount, currency, fx_rate, fx_date, expense_date, account_id, to_account_id,
-  txn_type, entity_source, entity_id, scope, allocations, principal, interest, adjustment_sign, statement_ref, transfer_counterpart_of, receipts, receipt_details, payment_method`;
+  txn_type, entity_source, entity_id, scope, allocations, principal, interest, adjustment_sign, statement_ref, transfer_counterpart_of, receipts, receipt_details, payment_method, reimbursement, reimbursement_status, tags`;
 export const exParams = (x: Ex) => [x.id, x.owner ?? U.O, x.title ?? `entry ${x.id.slice(-4)}`, x.category ?? "General", x.amount, x.orig ?? x.amount, x.cur ?? "INR", x.rate ?? 1,
   x.cur && x.cur !== "INR" ? x.date : null, x.date, x.acc ?? null, x.to ?? null, x.type ?? "expense", x.manual ? "manual" : "account", x.manual ?? null,
   "personal", JSON.stringify(x.allocations ?? []), x.principal ?? null, x.interest ?? null, x.adjSign ?? 1, x.ref ?? null, x.counterpartOf ?? null,
-  JSON.stringify(x.receipts ?? []), JSON.stringify(x.details ?? {}), "other"];
-export const INSERT_EXPENSE = `INSERT INTO public.expenses(${COLS}) VALUES ($1,$2,$3,'Shop',$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17::jsonb,$18,$19,$20,$21,$22,$23::jsonb,$24::jsonb,$25)`;
+  JSON.stringify(x.receipts ?? []), JSON.stringify(x.details ?? {}), "other", JSON.stringify(x.reimb ?? {}), x.reimbStatus ?? "none", x.tags ?? []];
+export const INSERT_EXPENSE = `INSERT INTO public.expenses(${COLS}) VALUES ($1,$2,$3,'Shop',$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17::jsonb,$18,$19,$20,$21,$22,$23::jsonb,$24::jsonb,$25,$26::jsonb,$27,$28::text[])`;
 export async function insertExpense(db: Db, x: Ex) { await q(db, INSERT_EXPENSE, exParams(x)); }
 
 export const OWNER_DATA = {
@@ -121,7 +123,8 @@ export const LEDGER: Ex[] = [
   { id: e(12), acc: ACC.P2, date: "2026-05-10", amount: 4500, cur: "EUR", orig: 50, rate: 90, manual: C1, category: "Travel", title: "Client dinner paid personally" },
   { id: e(13), acc: ACC.A1, to: ACC.P1, date: "2026-05-20", amount: 40000, type: "transfer", category: "Transfer", title: "Director withdrawal" },
   { id: e(14), acc: ACC.P2, date: "2026-05-12", amount: 999.5, type: "refund", category: "Groceries", title: "Supermarket refund" },
-  { id: e(15), acc: ACC.P2, date: "2026-05-14", amount: 1200, category: "Medical", title: "Clinic (claim)" },
+  { id: e(15), acc: ACC.P2, date: "2026-05-14", amount: 1200, category: "Medical", title: "Clinic (claim)", reimbStatus: "received",
+    reimb: { kind: "employer", payer: "Alpha Traders Pvt Ltd", reimbursable: 1200, receipts: [{ id: e(16), txnId: e(16), date: "2026-05-25", amount: 1200 }] } }, // employee claim, settled by e16
   { id: e(16), acc: ACC.P1, date: "2026-05-25", amount: 1200, type: "reimbursement", category: "Medical", title: "Reimbursement: Clinic" },
   { id: e(17), acc: ACC.B1, date: "2026-06-01", amount: 7500, category: "Audit fees", title: "Statutory audit" },
   { id: e(18), acc: ACC.B1, date: "2026-06-02", amount: 12345.67, type: "income", category: "Interest", title: "FD interest" },
@@ -201,12 +204,16 @@ export async function journalTb(db: Db, owner: string) {
   return out;
 }
 
-/** count + md5 of every row of every listed table (stable ordering), for preservation proofs. */
-export async function dataSnapshot(db: Db, tables: string[]) {
+/**
+ * count + md5 of every row of every listed table (stable ordering), for preservation proofs. `added`
+ * names columns a proposal ADDS (e.g. P7 r2 expenses.reverses_entry_id): they are left out so the hash
+ * covers exactly the pre-existing columns' values (callers separately assert the new column is NULL).
+ */
+export async function dataSnapshot(db: Db, tables: string[], added: string[] = []) {
   await actAs(db, null);
   const out: Record<string, string> = {};
   for (const t of tables) {
-    const r = first(await q<{ n: number; h: string }>(db, `SELECT count(*)::int n, md5(coalesce(string_agg(to_jsonb(x)::text, '|' ORDER BY to_jsonb(x)::text), '')) h FROM ${t} x`));
+    const r = first(await q<{ n: number; h: string }>(db, `SELECT count(*)::int n, md5(coalesce(string_agg((to_jsonb(x) - $1::text[])::text, '|' ORDER BY (to_jsonb(x) - $1::text[])::text), '')) h FROM ${t} x`, [added]));
     out[t] = `${r.n}:${r.h}`;
   }
   return out;

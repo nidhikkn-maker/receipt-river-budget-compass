@@ -6,7 +6,7 @@ import { accountStatementStatus, type StatementStatusEvidence } from "./account-
 import { checkpointHash, checkpointSnapshot } from "./statement-checkpoint";
 import { normalizePreferences, type FinancePreferences } from "./preferences";
 import type { Expense } from "./expenses";
-import type { Account } from "./ledger";
+import { ledgerView, reversalOfRow, type Account } from "./ledger";
 import type { ImportBatch, ImportRow } from "./historical-import";
 import { identityCandidates, statementReviewBlockers, type StatementReview } from "./statement-evidence";
 
@@ -64,9 +64,11 @@ export const runStatementCheckpoint = createServerFn({ method: "POST" }).middlew
   for (let from = 0;; from += 1000) {
     const r = await db.from("expenses").select("*").eq("employee_id", context.userId).or(`account_id.eq.${account.id},to_account_id.eq.${account.id}`).order("id").range(from, from + 999);
     if (r.error) throw Error("Ledger unavailable");
-    transactions.push(...r.data.map(t => ({ id: t.id, correctionRevision: t.correction_revision, title: t.title, merchant: t.merchant, category: t.category, scope: t.scope as Expense["scope"], memberId: t.member_id, splits: [], receipts: [], amount: Number(t.amount), originalAmount: Number(t.original_amount ?? t.amount), currency: t.currency, fxRate: Number(t.fx_rate), paymentMethod: t.payment_method as Expense["paymentMethod"], date: t.expense_date, description: t.description, txnType: t.txn_type as NonNullable<Expense["txnType"]>, accountId: t.account_id, toAccountId: t.to_account_id, principal: t.principal == null ? null : Number(t.principal), interest: t.interest == null ? null : Number(t.interest), adjustmentSign: t.adjustment_sign === -1 ? -1 as const : 1 as const, reconciledAt: t.reconciled_at, statementRef: t.statement_ref })));
+    transactions.push(...r.data.map(t => ({ id: t.id, correctionRevision: t.correction_revision, title: t.title, merchant: t.merchant, category: t.category, scope: t.scope as Expense["scope"], memberId: t.member_id, splits: [], receipts: [], amount: Number(t.amount), originalAmount: Number(t.original_amount ?? t.amount), currency: t.currency, fxRate: Number(t.fx_rate), paymentMethod: t.payment_method as Expense["paymentMethod"], date: t.expense_date, description: t.description, txnType: t.txn_type as NonNullable<Expense["txnType"]>, accountId: t.account_id, toAccountId: t.to_account_id, principal: t.principal == null ? null : Number(t.principal), interest: t.interest == null ? null : Number(t.interest), adjustmentSign: t.adjustment_sign === -1 ? -1 as const : 1 as const, reconciledAt: t.reconciled_at, statementRef: t.statement_ref, transferCounterpartOf: t.transfer_counterpart_of ?? null, reversesEntryId: reversalOfRow(t) })));
     if (r.data.length < 1000) break;
   }
+  // Decision 1: a reversal row cancels its original on its own date.
+  transactions.splice(0, transactions.length, ...ledgerView(transactions));
   const prefs = await db.from("finance_preferences").select("data").eq("owner_id", context.userId).maybeSingle();
   if (prefs.error) throw Error("Account policy unavailable");
   const evidence: StatementStatusEvidence = { batch: b.data as unknown as ImportBatch, rows, posted };

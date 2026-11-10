@@ -8,6 +8,8 @@ import { AccountantSettings } from "@/components/AccountantSettings";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { settledUpload } from "@/lib/statement-pipeline/history";
 import { undoStatement, statementUndoCapability } from '@/lib/statement-pipeline/atomic-undo.functions';
+import { undoSummary, type StatementUndoReport } from '@/lib/statement-pipeline/atomic-undo';
+import { withStepUp } from '@/lib/step-up';
 import { UNDO_CHECK_FAILED, UNDO_NEEDS_UPDATE, type UndoCapability } from '@/lib/statement-pipeline/undo-capability';
 import { LoadError } from '@/components/LoadError';
 import { toast } from "sonner";
@@ -435,16 +437,19 @@ export function StatementDeskPage({ embedded }: { embedded?: { files: File[]; co
       await storeRef.current.refresh();
       if (!target) throw Error('Upload history is required for safe Undo. Review the saved records first.');
       const currentApi = api();
+      let report: StatementUndoReport | null = null;
       const { left } = await undoUpload(r, { ...currentApi, atomicUndo: async result => {
         const expected = initial.find(u => u.id === target)?.undoRows ?? [];
-        await undoStatementFn({ data: { id: target, posted: result.posted, reconciled: result.reconciled, evidence: result.evidence ?? [], expected } });
+        // Posted rows are reversed (audited, re-confirmed), never deleted (KK decision 1).
+        const done = await withStepUp(() => undoStatementFn({ data: { id: target, posted: result.posted, reconciled: result.reconciled, evidence: result.evidence ?? [], expected } }));
+        report = done.report;
       } });
       setResult(null);
       const s = storeRef.current;
       const completed = initial.find(u => u.id === target);
       if (completed && !left.length) await s.saveStatementUpload({ ...completed, status: 'undone' });
       if (left.length) toast.error(`${left.length} item${left.length === 1 ? "" : "s"} need review or cleanup. Changed evidence and unconfirmed saves are kept; review saved records and the original before retrying Undo.`);
-      else toast.success("Upload reversed — your records are as they were");
+      else toast.success(undoSummary(report));
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Couldn’t reverse the upload.");
     } finally {
