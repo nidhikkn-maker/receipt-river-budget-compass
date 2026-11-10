@@ -455,6 +455,12 @@ import { authoriseExport, exportBackupData } from "./exports.functions";
 import { sha256Hex, type ExportKind, type ExportRequest } from "./exports";
 import { BACKUP_TABLES, planRestore, type Backup, type BackupRow } from "./backup";
 import type { Json } from "@/integrations/supabase/types";
+import { applyUpload, PartialUploadError, undoUpload, type ApplyApi, type ApplyResult } from "./statement-pipeline/apply";
+import { buildPlan } from "./statement-pipeline/plan";
+import { fromStatementLines, type StmtFile } from "./statement-pipeline/line";
+import { undoStatement, statementUndoCapability } from "./statement-pipeline/atomic-undo.functions";
+import { UNDO_NEEDS_UPDATE } from "./statement-pipeline/undo-capability";
+import type { Expense } from "./expenses";
 
 // ---------------------------------------------------------------------------------------------------------------------------
 // App flows, wired exactly as the app wires them.
@@ -2485,6 +2491,353 @@ describe("P0-006 on the whole proposed stack (P2 'export' permission, P4 step-up
       expect(await authoriseExport({ data: await fileReq("shared_company", "a\n1", { ownerId: O, entityId: "c1" }) })).toMatchObject({ ok: true, audited: true });
       expect(await authoriseExport({ data: await fileReq("shared_company", "a\n1", { ownerId: O, entityId: "c2" }) })).toMatchObject({ ok: false, error: expect.stringMatching(/not granted export/) });
       await db.close();
+    },
+    T,
+  );
+});
+
+// ---------------------------------------------------------------------------------------------------------------------------
+// P0-034 (KK, approved): Statement Desk Undo withdraws (recoverable) the unposted, unreconciled entries an upload created;
+// posted entries get the authorised linked reversal (P7); entries reconciled since go through correction; entries the upload
+// merely matched only lose that match. Every case drives the REAL Statement Desk code: buildPlan → applyUpload (store save with
+// the stable line id, reconcile, upload-time Undo snapshots, upload history checkpoint) and Undo through undoUpload → the REAL
+// undoStatement server function (atomic-undo.functions.ts) → reverse_statement_upload (P7 body + P16) as the signed-in owner,
+// over PostgREST-shaped requests against isolated PGlite, with faults injected at the request boundary.
+const P16 = ".lovable/staged-sql/proposed/P16_statement_undo_withdraw.sql";
+const DESK_CATS = [{ name: "Food and beverages", archived: false }, { name: "Shopping", archived: false }, { name: "Utilities", archived: false }, { name: "Other", archived: false }];
+const DESK_ACCOUNT = (acc: string): Account => ({ id: acc, name: "HDFC Savings", kind: "savings", openingBalance: 10000, archived: false });
+/** November statement, no running balance. L2/L3 are two identical, legitimate same-day purchases. L4 is the electricity bill
+ *  already entered by hand (matched, never created). Created by the upload: 450.00 + 2,999.00 + 2,999.00 + 649.00 = 7,097.00. */
+const DESK_LINES = [
+  { ref: "1", date: "2026-11-01", description: "UPI/SWIGGY/412345678901", amount: 450, direction: "debit" as const },
+  { ref: "2", date: "2026-11-03", description: "POS AMAZON RETAIL", amount: 2999, direction: "debit" as const },
+  { ref: "3", date: "2026-11-03", description: "POS AMAZON RETAIL", amount: 2999, direction: "debit" as const },
+  { ref: "4", date: "2026-11-04", description: "BESCOM ELECTRICITY", amount: 1200, direction: "debit" as const },
+  { ref: "5", date: "2026-11-05", description: "NETFLIX SUBSCRIPTION 412345678905", amount: 649, direction: "debit" as const },
+];
+const deskStepUp = (db: Db) => exclusive(async () => { await actAs(db, null); await db.exec("SET ROLE service_role"); await db.query("SELECT public.record_step_up($1,'password',300)", [O]); await actAs(db, null); });
+/** store.transactions as Statement Desk sees it: the owner's rows through ledgerView (withdrawn entries left out). */
+async function deskTransactions(): Promise<{ live: Expense[]; withdrawn: Set<string> }> {
+  const r = await supabase.from("expenses").select("*").eq("employee_id", net.uid);
+  if (r.error) throw new Error(r.error.message);
+  const all = ((r.data ?? []) as Row[]).map((x) => ({
+    ...txnFromRow(x as unknown as LedgerRow), title: x["title"], merchant: x["merchant"], category: x["category"], currency: x["currency"], fxRate: Number(x["fx_rate"]),
+    statementRef: x["statement_ref"] ?? null, reconciledAt: x["reconciled_at"] ?? null, correctionRevision: Number(x["correction_revision"]), receipts: x["receipts"] ?? [],
+    tags: x["tags"] ?? [], splits: x["splits"] ?? [], allocations: x["allocations"] ?? [], description: x["description"] ?? "", paymentMethod: x["payment_method"], scope: x["scope"],
+  })) as unknown as Expense[];
+  return { live: ledgerView(all as unknown as Txn[]) as unknown as Expense[], withdrawn: new Set(all.filter((x) => x.withdrawnAt).map((x) => x.id)) };
+}
+/** One Statement Desk upload + Save, wired as statements.tsx apply() wires it. Returns the upload id and the ApplyResult. */
+async function deskUpload(db: Db, acc: string, fileName: string, lines: typeof DESK_LINES, opts: { stopOnError?: boolean } = {}) {
+  const { live, withdrawn } = await deskTransactions();
+  const file: StmtFile = { name: fileName, accountId: acc, hint: null, currency: "INR", opening: null, closing: null, lines: fromStatementLines(fileName, lines) };
+  const plan = buildPlan([file], [DESK_ACCOUNT(acc)], live, DESK_CATS).accounts[0]!;
+  const decisions = [...plan.auto, ...plan.ask];
+  const approvals = Object.fromEntries(decisions.map((d) => [d.line.key, "2026-11-10T09:00:00.000Z"]));
+  const request = { account: plan, decisions, reviewed: approvals, destination: null, draftLinks: {},
+    reconcileIds: plan.matched.filter((m) => m.record && !m.record.reconciledAt).map((m) => ({ id: m.record!.id, ref: `${m.line.file} · ${m.line.date} · ${m.line.amount.toFixed(2)}` })) };
+  const uploadId = crypto.randomUUID(), at = "2026-11-10T09:00:00.000Z";
+  const expected = { posted: decisions.length, reconciled: request.reconcileIds.length, drafts: 0 };
+  const checkpoint = async (r: ApplyResult, status: "interrupted" | "complete" = "interrupted") => {
+    const prefs = await prefsOf(O);
+    const uploads = ((prefs as { statementUploads?: { id: string }[] }).statementUploads ?? []).filter((u) => u.id !== uploadId);
+    const w = await writePrefs(O, { ...prefs, statementUploads: [...uploads, { ...structuredClone(r), id: uploadId, at, label: fileName, status, expected }] });
+    if (w.error) throw new Error(w.error.message);
+  };
+  // The original statement is kept as a private document before the first financial write (prepareSource).
+  const docId = crypto.randomUUID(), path = `${O}/statements/${docId}-${fileName}`;
+  const api: ApplyApi = {
+    transactions: live, withdrawnIds: withdrawn, addAccount: async () => { throw new Error("no new account"); }, setArchived: async () => {},
+    save: async (input, o) => storeSave(input, { createId: o!.createId! }),
+    reconcile: async (rowId, ref) => { const r = await supabase.from("expenses").update({ statement_ref: ref, reconciled_at: ref ? new Date().toISOString() : null }).eq("id", rowId); if (r.error) throw new Error(r.error.message); },
+    remove: async () => { throw new Error("Statement Desk never removes rows outside the atomic Undo"); },
+    refresh: async () => {},
+    readUndoRow: async (rowId) => { const r = await supabase.from("expenses").select("id,statement_ref,correction_revision").eq("employee_id", O).eq("id", rowId).maybeSingle(); const d = r.data as Row | null; if (r.error || !d) throw new Error("snapshot unavailable"); return { id: String(d["id"]), ref: (d["statement_ref"] as string | null) ?? null, revision: Number(d["correction_revision"]) }; },
+    readEvidence: async (rowId) => { const r = await supabase.from("expenses").select("statement_ref,reconciled_at").eq("employee_id", O).eq("id", rowId).maybeSingle(); const d = r.data as Row | null; return d ? { statementRef: (d["statement_ref"] as string | null) ?? null, reconciledAt: (d["reconciled_at"] as string | null) ?? null } : null; },
+    prepareSource: async () => {
+      await sql1(db, "INSERT INTO storage.objects(bucket_id, name, owner_id, metadata) VALUES ('documents', $1, $2, '{\"size\": 4096}') ON CONFLICT DO NOTHING", [path, O]);
+      await sql1(db, "INSERT INTO public.documents(id, owner_id, title, file_path, file_name, size_bytes, notes, evidence_locked) VALUES ($1,$2,$3,$4,$5,4096,'Statement Desk source',true)", [docId, O, `Statement · ${fileName}`, path, fileName]);
+      return docId;
+    },
+    checkpoint,
+  };
+  await checkpoint({ posted: [], reconciled: [], createdAccounts: [] });
+  let result: ApplyResult;
+  try { result = await applyUpload([request], api); await checkpoint(result, "complete"); }
+  catch (e) { if (!(e instanceof PartialUploadError) || opts.stopOnError) throw e; result = e.result; await checkpoint(result); }
+  return { uploadId, result, docId, path, decisions: decisions.length, matched: request.reconcileIds.map((m) => m.id) };
+}
+/** Statement Desk Undo exactly as statements.tsx undo() runs it: undoUpload preflight → atomicUndo → the undoStatement server function. */
+async function deskUndo(db: Db, uploadId: string) {
+  const prefs = await prefsOf(O);
+  const upload = ((prefs as { statementUploads?: (ApplyResult & { id: string; undoRows?: { id: string; ref: string | null; revision: number }[] })[] }).statementUploads ?? []).find((u) => u.id === uploadId)!;
+  const { live } = await deskTransactions();
+  let report: unknown = null;
+  await deskStepUp(db);
+  const { left } = await undoUpload(upload, {
+    transactions: live, save: async () => {}, reconcile: async () => {}, remove: async () => {}, addAccount: async () => "", setArchived: async () => {}, refresh: async () => {},
+    readExistingIds: async (ids) => ((await supabase.from("expenses").select("id").eq("employee_id", O).in("id", ids)).data as Row[]).map((r) => String(r["id"])),
+    atomicUndo: async (r) => { report = (await undoStatement({ data: { id: uploadId, posted: r.posted, reconciled: r.reconciled, evidence: r.evidence ?? [], expected: upload.undoRows ?? [] } })).report; },
+  });
+  return { left, report: report as { reversed: { entryId: string }[]; withdrawn: string[]; deleted: string[]; unreconciled: string[]; replayed: boolean } | null };
+}
+const entryRow = async (db: Db, entry: string) => (await sql1<{ j: Row }>(db, "SELECT to_jsonb(e) j FROM public.expenses e WHERE id = $1", [entry]))[0]?.j;
+const withdrawalOf = (row: Row | undefined) => ((row?.["receipt_details"] as Row | null)?.["withdrawal"] ?? null) as null | { state: string; by: string; at: string; reason: string; history: { action: string; by: string; reason: string; source?: Row }[] };
+async function deskFixture(db: Db) {
+  const acc = id(++accSeq);
+  await sql1(db, "INSERT INTO public.accounts(id, owner_id, name, kind, opening_balance) VALUES ($1, $2, 'HDFC Savings', 'savings', 10000)", [acc, O]);
+  const bill = crypto.randomUUID();
+  await sql1(db, "INSERT INTO public.expenses(id,employee_id,title,merchant,category,amount,original_amount,currency,expense_date,account_id,description) VALUES ($1,$2,'Electricity','BESCOM','Utilities',1200,1200,'INR','2026-11-04',$3,'Typed in by hand')", [bill, O, acc]);
+  return { acc, bill };
+}
+/** Per-account figures (owner-wide spending also includes the other cases' accounts). */
+// (The assistant reads accounts by name and every case adds an "HDFC Savings"; U1 checks it on the only one.)
+const acct = (x: Awaited<ReturnType<typeof figures>>) => ({ balance: x.balance, netWorth: x.netWorth, report: x.report });
+const acctAt = (n: number) => ({ balance: n, netWorth: n, report: n });
+const undoCapability = () => (statementUndoCapability as unknown as (x: { data?: unknown }) => Promise<{ state: string }>)({});
+/** The same Undo request again from a second device / double tap: straight to the server function with the saved manifest. */
+async function deskUndoAgain(db: Db, uploadId: string) {
+  const prefs = await prefsOf(O);
+  const u = ((prefs as { statementUploads?: (ApplyResult & { id: string; undoRows?: { id: string; ref: string | null; revision: number }[] })[] }).statementUploads ?? []).find((x) => x.id === uploadId)!;
+  await deskStepUp(db);
+  return (await undoStatement({ data: { id: uploadId, posted: u.posted, reconciled: u.reconciled, evidence: u.evidence ?? [], expected: u.undoRows ?? [] } })) as { report: unknown };
+}
+
+describe("P0-034 Statement Desk Undo withdraws what the upload created — P1..P9 + P10 + P16", () => {
+  let db: Db;
+  beforeAll(async () => {
+    db = await fullSchemaDb([...STACK, P9, P10, P16]);
+    await seedUsers(db);
+  }, T);
+
+  it(
+    "U1. Undo: created unposted rows withdrawn with reason/actor/time/source (rows, receipts, statement ref and original kept); the matched bill only loses its match; figures back; repeat Undo replays",
+    async () => {
+      // Hand-calculated: opening 10,000.00 − bill 1,200.00 = 8,800.00 before; the upload creates 450.00 + 2,999.00 + 2,999.00 + 649.00
+      // = 7,097.00 → 1,703.00 and spent 8,297.00; after Undo 8,800.00 / spent 1,200.00 / one live entry in every reader.
+      reset(db);
+      const f = await deskFixture(db);
+      expect(await figures(f.acc)).toMatchObject({ balance: 8800, spent: 1200, netWorth: 8800, report: 8800, assistant: 8800, count: 1 });
+      const up = await deskUpload(db, f.acc, "hdfc-nov.csv", DESK_LINES);
+      expect(up.decisions).toBe(4);
+      expect(up.matched).toEqual([f.bill]);
+      expect(new Set(up.result.posted).size).toBe(4); // the two identical purchases are two entries
+      expect(await figures(f.acc)).toMatchObject({ balance: 1703, spent: 8297, netWorth: 1703, report: 1703, assistant: 1703, count: 5 });
+      const before = Object.fromEntries(await Promise.all(up.result.posted.map(async (x) => [x, await entryRow(db, x)] as const)));
+      net.log = [];
+      const { left, report } = await deskUndo(db, up.uploadId);
+      expect(left).toEqual([]);
+      expect(report).toMatchObject({ reversed: [], deleted: [], unreconciled: [f.bill], replayed: false });
+      expect([...report!.withdrawn].sort()).toEqual([...up.result.posted].sort());
+      expect(net.log.filter((x) => /delete:|remove:/.test(x))).toEqual([]); // no DELETE request, no file removed
+      for (const x of up.result.posted) {
+        const row = await entryRow(db, x);
+        const w = withdrawalOf(row)!;
+        expect(w).toMatchObject({ state: "withdrawn", by: O, reason: 'Statement upload undone: Statement Desk Undo of "hdfc-nov.csv"' });
+        expect(w.history).toHaveLength(1);
+        expect(w.history[0]!.source).toMatchObject({ kind: "statement_undo", upload: up.uploadId, request: up.uploadId, statementRef: before[x]!["statement_ref"] });
+        // Everything but the withdrawal (and the revision it bumps) is byte-identical: amount, date, account, statement ref, receipts.
+        const strip = (r: Row) => { const { receipt_details: rd, correction_revision: _c, updated_at: _u, ...rest } = r; return { ...rest, rd: { ...(rd as Row), withdrawal: undefined } }; };
+        expect(strip(row!)).toEqual(strip(before[x]!));
+        expect(String(row!["statement_ref"])).toMatch(new RegExp(`^document:${up.docId} · `));
+      }
+      // The matched bill is not withdrawn: only this upload's match is cleared.
+      const bill = await entryRow(db, f.bill);
+      expect(withdrawalOf(bill)).toBeNull();
+      expect([bill!["statement_ref"], bill!["reconciled_at"], bill!["amount"]]).toEqual([null, null, 1200]);
+      // The original statement and its stored file are kept.
+      expect(await present(db, "documents", up.docId)).toBe(1);
+      expect((await sql1<{ n: number }>(db, "SELECT count(*)::int n FROM storage.objects WHERE name = $1", [up.path]))[0]!.n).toBe(1);
+      expect(await figures(f.acc)).toMatchObject({ balance: 8800, spent: 1200, netWorth: 8800, report: 8800, assistant: 8800, count: 1 });
+      // Audit receipt: reason, actor and time of the whole Undo.
+      const receipt = (await sql1<{ reason: string; actor_id: string; created_at: string; result: Row }>(db, "SELECT reason, actor_id, created_at::text, result FROM public.statement_upload_reversals WHERE id = $1", [up.uploadId]))[0]!;
+      expect(receipt).toMatchObject({ reason: 'Statement Desk Undo of "hdfc-nov.csv"', actor_id: O });
+      // Repeat Undo (double tap, a second device still showing the upload): the server answers from the receipt, changes nothing.
+      const again = (await deskUndoAgain(db, up.uploadId)).report as { withdrawn: string[] };
+      expect([...again.withdrawn].sort()).toEqual([...report!.withdrawn].sort());
+      expect((await sql1<{ n: number }>(db, "SELECT count(*)::int n FROM public.statement_upload_reversals WHERE upload_id = $1", [up.uploadId]))[0]!.n).toBe(1);
+      for (const x of up.result.posted) expect(withdrawalOf(await entryRow(db, x))!.history).toHaveLength(1);
+      expect(acct(await figures(f.acc))).toEqual(acctAt(8800));
+    },
+    T,
+  );
+
+  it(
+    "U2. interrupted import, failed and lost Undo responses, then a re-import: only confirmed rows withdrawn once; the same lines are neither duplicated nor reactivated",
+    async () => {
+      reset(db);
+      const f = await deskFixture(db);
+      // Injected: the 3rd save never reaches the server → the upload stops with 2 confirmed rows (450.00, 2,999.00).
+      // (The bill line is left out: a matched record whose match step never ran keeps a partial upload under review.)
+      const lines = DESK_LINES.filter((l) => l.ref !== "4");
+      hook({ op: "server:saveExpense", kind: "fail", nth: 3 });
+      const up = await deskUpload(db, f.acc, "hdfc-nov.csv", lines);
+      net.hooks = [];
+      expect(up.result.posted).toHaveLength(2);
+      // Injected: the Undo transaction never reaches the database → nothing changed, recovery kept.
+      hook({ op: "rpc:reverse_statement_upload", kind: "fail" });
+      await expect(deskUndo(db, up.uploadId)).rejects.toThrow();
+      for (const x of up.result.posted) expect(withdrawalOf(await entryRow(db, x))).toBeNull();
+      // Injected: the Undo commits and the response is lost → the durable receipt confirms it; no second withdrawal.
+      net.hooks = [];
+      hook({ op: "rpc:reverse_statement_upload", kind: "lose" });
+      const lost = await deskUndo(db, up.uploadId);
+      net.hooks = [];
+      expect(lost.left).toEqual([]);
+      for (const x of up.result.posted) expect(withdrawalOf(await entryRow(db, x))).toMatchObject({ state: "withdrawn" });
+      expect((await sql1<{ n: number }>(db, "SELECT count(*)::int n FROM public.statement_upload_reversals WHERE id = $1", [up.uploadId]))[0]!.n).toBe(1);
+      expect(acct(await figures(f.acc))).toEqual(acctAt(8800));
+      // Re-import of the same file: the 2 withdrawn lines are reported, not saved again; the 2 never-created lines are added once.
+      const re = await deskUpload(db, f.acc, "hdfc-nov.csv", lines);
+      expect(re.result.withdrawnLines?.map((x) => x.id).sort()).toEqual([...up.result.posted].sort());
+      expect(re.result.posted).toHaveLength(2);
+      expect(re.result.posted.some((x) => up.result.posted.includes(x))).toBe(false);
+      for (const x of up.result.posted) expect(withdrawalOf(await entryRow(db, x))!.state).toBe("withdrawn");
+      expect((await sql1<{ n: number }>(db, "SELECT count(*)::int n FROM public.expenses WHERE account_id = $1", [f.acc]))[0]!.n).toBe(1 + 2 + 2);
+      // 8,800.00 − 2,999.00 − 649.00 = 5,152.00 (the 2nd Amazon purchase and Netflix; Swiggy and the 1st Amazon stay withdrawn)
+      expect(acct(await figures(f.acc))).toEqual(acctAt(5152));
+      // Direct API: saving a withdrawn line's stable id again is refused (server), never a silent reactivation.
+      const { live } = await deskTransactions();
+      void live;
+      const direct = await saveExpense({ data: { id: null, createId: up.result.posted[0]!, title: "Swiggy", merchant: null, category: "Food and beverages", scope: "personal", memberId: null, splits: [], currency: "INR", originalAmount: 450, date: "2026-11-01", description: "", paymentMethod: "upi", txnType: "expense", accountId: f.acc, toAccountId: null, tags: [], receiptDetails: {} } });
+      expect(direct).toEqual({ ok: false, error: expect.stringMatching(/withdrawn \(kept in history\)\. Restore it/) });
+    },
+    T,
+  );
+
+  it(
+    "U3. reordered statement and a different file with the same name: identities come from the lines, never the file; each Undo touches only its own upload",
+    async () => {
+      reset(db);
+      const f = await deskFixture(db);
+      const a = await deskUpload(db, f.acc, "statement.csv", DESK_LINES);
+      expect((await deskUndo(db, a.uploadId)).left).toEqual([]);
+      // The same lines in reverse order (bank re-download): every line meets its withdrawn entry; nothing added.
+      const reordered = await deskUpload(db, f.acc, "statement.csv", [...DESK_LINES].reverse().map((l, i) => ({ ...l, ref: `r${i}` })));
+      expect(reordered.result.posted).toEqual([]);
+      expect(reordered.result.withdrawnLines?.map((x) => x.id).sort()).toEqual([...a.result.posted].sort());
+      // A different statement saved under the same file name: new lines, new entries.
+      const other = await deskUpload(db, f.acc, "statement.csv", [
+        { ref: "x1", date: "2026-11-07", description: "UPI/ZOMATO/412345678907", amount: 380, direction: "debit" },
+        { ref: "x2", date: "2026-11-08", description: "UPI/UBER/412345678908", amount: 212.5, direction: "debit" },
+      ]);
+      expect(other.result.posted).toHaveLength(2);
+      expect(acct(await figures(f.acc))).toEqual(acctAt(8207.5)); // 8,800.00 − 380.00 − 212.50
+      const u = await deskUndo(db, other.uploadId);
+      expect([...u.report!.withdrawn].sort()).toEqual([...other.result.posted].sort());
+      for (const x of a.result.posted) expect(withdrawalOf(await entryRow(db, x))!.history).toHaveLength(1); // first upload untouched
+      expect(withdrawalOf(await entryRow(db, f.bill))).toBeNull();
+      expect(acct(await figures(f.acc))).toEqual(acctAt(8800));
+    },
+    T,
+  );
+
+  it(
+    "U4. controlled paths: a created row matched to other statement evidence since → correction (refused, nothing changed); a closed period → refused; the app refuses Undo without P16",
+    async () => {
+      reset(db);
+      const f = await deskFixture(db);
+      const up = await deskUpload(db, f.acc, "hdfc-nov.csv", DESK_LINES);
+      const target = up.result.posted[0]!;
+      const snapshot = async () => Object.fromEntries(await Promise.all([...up.result.posted, f.bill].map(async (x) => [x, JSON.stringify(await entryRow(db, x))] as const)));
+      // A later statement reconciles one created row against its own line (different evidence).
+      expect((await api().from("expenses").update({ statement_ref: "document:later · L0001 · 2026-11-01 · 450.00", reconciled_at: new Date().toISOString() }).eq("id", target).select("id")).error).toBeNull();
+      // The app preflight already keeps it for review; the database refuses the same manifest on its own.
+      const s0 = await snapshot();
+      expect((await deskUndo(db, up.uploadId)).left).toEqual([target]);
+      const prefs = await prefsOf(O);
+      const upload = (prefs as { statementUploads: (ApplyResult & { id: string; undoRows: { id: string; ref: string | null; revision: number }[] })[] }).statementUploads.find((u) => u.id === up.uploadId)!;
+      const rows = ((await supabase.from("expenses").select("*").in("id", [...upload.posted, ...upload.reconciled])).data ?? []) as Row[];
+      const items = rows.map((r) => ({ action: upload.posted.includes(String(r["id"])) ? "remove" : "unreconcile", ref: upload.undoRows.find((u) => u.id === r["id"])!.ref, snapshot: r }));
+      await deskStepUp(db);
+      expect((await api().rpc("reverse_statement_upload", { _request: up.uploadId, _upload: up.uploadId, _items: items, _reason: "Wrong statement" })).error?.message).toMatch(/^P16_RECONCILED: .*correction workflow/);
+      expect(await snapshot()).toEqual(s0);
+      // A row the upload created in a period closed since: the Undo is refused before any write (correction path).
+      const oct = await deskUpload(db, f.acc, "hdfc-oct.csv", [
+        { ref: "o1", date: "2026-10-20", description: "UPI/IRCTC/412345678920", amount: 1500, direction: "debit" },
+        { ref: "o2", date: "2026-10-21", description: "UPI/OLA/412345678921", amount: 310, direction: "debit" },
+      ]);
+      const octRows = async () => Object.fromEntries(await Promise.all(oct.result.posted.map(async (x) => [x, JSON.stringify(await entryRow(db, x))] as const)));
+      const setClosed = async (periods: unknown[]) => {
+        await sql1(db, "ALTER TABLE public.finance_preferences DISABLE TRIGGER USER");
+        try { await sql1(db, "UPDATE public.finance_preferences SET data = jsonb_set(data, '{books}', coalesce(data->'books','{}') || jsonb_build_object('closedPeriods', $2::jsonb)) WHERE owner_id = $1", [O, JSON.stringify(periods)]); }
+        finally { await sql1(db, "ALTER TABLE public.finance_preferences ENABLE TRIGGER USER"); }
+      };
+      const s1 = await octRows();
+      await setClosed([{ from: "2026-10-01", to: "2026-10-31" }]);
+      try { await expect(deskUndo(db, oct.uploadId)).rejects.toThrow(/^P16_CLOSED_PERIOD: .*correction workflow/); }
+      finally { await setClosed([]); }
+      expect(await octRows()).toEqual(s1);
+      // Without P16 (probe missing) the app refuses before any write: no DELETE path, no sequential fallback.
+      await sql1(db, "ALTER FUNCTION public.statement_undo_withdraws() RENAME TO statement_undo_withdraws_off");
+      try {
+        expect(await undoCapability()).toEqual({ state: "needs-update" });
+        await expect(deskUndo(db, oct.uploadId)).rejects.toThrow(UNDO_NEEDS_UPDATE);
+        expect(await octRows()).toEqual(s1);
+      } finally { await sql1(db, "ALTER FUNCTION public.statement_undo_withdraws_off() RENAME TO statement_undo_withdraws"); }
+      expect(await undoCapability()).toEqual({ state: "available" });
+      expect((await deskUndo(db, oct.uploadId)).left).toEqual([]);
+      for (const x of oct.result.posted) expect(withdrawalOf(await entryRow(db, x))!.state).toBe("withdrawn");
+    },
+    T,
+  );
+
+  it(
+    "U5. restore only through the authorised operation; an older backup cannot reactivate; a later Undo replay never re-withdraws a restored entry",
+    async () => {
+      reset(db);
+      const f = await deskFixture(db);
+      const up = await deskUpload(db, f.acc, "hdfc-nov.csv", DESK_LINES);
+      const older = await exportOwner(db, O); // taken after the import, before the Undo
+      await deskUndo(db, up.uploadId);
+      const swiggy = up.result.posted[0]!;
+      // Not by a forged PATCH, not by another user.
+      expect((await api().from("expenses").update({ receipt_details: { withdrawal: { state: "restored", at: "2026-11-10", by: O, reason: "forged!", history: [] } } }).eq("id", swiggy).select("id")).error?.message).toMatch(/P10_WITHDRAWAL_ONLY_BY_FUNCTION/);
+      net.uid = V;
+      expect(await withdrawCall(swiggy, "Someone else's entry", "restore")).toMatchObject({ ok: false, error: expect.stringMatching(/^P10_NOT_FOUND/) });
+      net.uid = O;
+      // An older backup (from before the Undo) restored with the real restore step: nothing comes back.
+      const r = await guardedRestore({ owner: O, data: (await planRestore(older, O, { stageFiles: true })).data }, restoreApi());
+      expect(r.status).toBe("restored");
+      for (const x of up.result.posted) expect(withdrawalOf(await entryRow(db, x))!.state).toBe("withdrawn");
+      expect(acct(await figures(f.acc))).toEqual(acctAt(8800));
+      // The owner restores one entry with a reason: it counts again, statement reference intact, history kept.
+      expect(await withdrawCall(swiggy, "Swiggy order was real", "restore")).toEqual({ ok: true, replayed: false });
+      const w = withdrawalOf(await entryRow(db, swiggy))!;
+      expect(w.history.map((h) => h.action)).toEqual(["withdrawn", "restored"]);
+      expect(acct(await figures(f.acc))).toEqual(acctAt(8350)); // 8,800.00 − 450.00
+      // Repeating the Undo replays the receipt: the restored entry is not withdrawn again.
+      expect((await deskUndoAgain(db, up.uploadId)).report).toMatchObject({ withdrawn: expect.arrayContaining([swiggy]) });
+      expect(withdrawalOf(await entryRow(db, swiggy))!.state).toBe("restored");
+      expect(withdrawalOf(await entryRow(db, swiggy))!.history).toHaveLength(2);
+    },
+    T,
+  );
+
+  it(
+    "U6. R-P10-1 / P7: activating balanced books after an Undo never posts the withdrawn rows; on active books a later Undo reverses posted rows (linked reversal), withdraws none",
+    async () => {
+      reset(db);
+      const f = await deskFixture(db);
+      const up = await deskUpload(db, f.acc, "hdfc-nov.csv", DESK_LINES);
+      await deskUndo(db, up.uploadId);
+      await activateBooks(db, f.acc);
+      const events = async (x: string) => (await sql1<{ n: number }>(db, "SELECT count(*)::int n FROM public.posting_events WHERE owner_id = $1 AND event_key = $2", [O, `ledger_entry:${x}`]))[0]!.n;
+      for (const x of up.result.posted) expect(await events(x)).toBe(0);
+      expect(await events(f.bill)).toBe(1);
+      expect(await sql1(db, "SELECT batch_id FROM public.posting_lines GROUP BY batch_id, currency HAVING sum(debit) <> sum(credit)")).toEqual([]);
+      // A new upload on active books posts its rows; its Undo reverses them (kept + linked reversal), withdraws nothing.
+      const next = await deskUpload(db, f.acc, "hdfc-dec.csv", [
+        { ref: "d1", date: "2026-11-09", description: "UPI/ZOMATO/412345678909", amount: 380, direction: "debit" },
+      ]);
+      expect(next.result.posted).toHaveLength(1);
+      expect(await events(next.result.posted[0]!)).toBe(1);
+      const u = await deskUndo(db, next.uploadId);
+      expect(u.report).toMatchObject({ withdrawn: [], deleted: [] });
+      expect(u.report!.reversed.map((x) => x.entryId)).toEqual(next.result.posted);
+      expect(withdrawalOf(await entryRow(db, next.result.posted[0]!))).toBeNull();
+      expect(await sql1(db, "SELECT batch_id FROM public.posting_lines GROUP BY batch_id, currency HAVING sum(debit) <> sum(credit)")).toEqual([]);
+      expect(acct(await figures(f.acc))).toEqual(acctAt(8800));
     },
     T,
   );

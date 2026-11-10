@@ -135,8 +135,11 @@ export const saveExpense = createServerFn({ method: "POST" })
       return { ok: false as const, error: "Couldn't save the expense" };
     }
     if (!data.id && data.createId && Array.isArray(result.data) && !result.data.length) {
-      const existing = await supabase.from("expenses").select("id").eq("id", data.createId).eq("employee_id", userId).single();
+      const existing = await supabase.from("expenses").select("id,receipt_details").eq("id", data.createId).eq("employee_id", userId).single();
       if (existing.error) return { ok: false as const, error: "Couldn't save the expense" };
+      // P0-034: the same line again after its entry was withdrawn (e.g. Statement Desk Undo): never a second entry and
+      // never a silent reactivation. Restore entry (reason recorded) is the only way back.
+      if (isWithdrawn(withdrawalOfRow(existing.data))) return { ok: false as const, error: "This entry was withdrawn (kept in history). Restore it from Withdrawn entries instead of saving it again." };
     }
     return { ok: true as const };
   });
