@@ -72,3 +72,11 @@ KK binding: Withdraw only for unposted AND unreconciled entries; posted -> Rever
   guardedRestore avoids it by keeping the stored row.
 - R-P10-1: P7 derive_entry skips withdrawn entries (one guarded line in P7_balanced_posting.sql). W5 before/after.
 - Before-runs: p0-023-033-restore.before.txt, r-p10-1-backfill.before.txt.
+
+## 6. P0-022 team users — DONE (after ff to 557c3cd)
+- Proposed P13 (+rollback; requires P10; P12 is security's): team delete policy dropped; team money/date/account/evidence
+  edits only via approved requests; entry_change_requests with request/decide/cancel functions (entity-scoped with P1);
+  audit tables append-only incl. TRUNCATE; transaction_audit.actor_id.
+- App: src/lib/entry-requests.ts; team switch labels; contract docs/workstreams/contracts/entry-change-requests.md.
+- Before: p0-022-team.before.txt (applied schema probe: manager deletes owner's entry; no request path without P13).
+- Tests: failure-injection T1-T3 (API level), p13-team-requests-sql.test.ts (2).

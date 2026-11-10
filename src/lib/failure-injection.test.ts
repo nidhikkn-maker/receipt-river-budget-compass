@@ -449,6 +449,7 @@ import { loadOwnerReportData } from "./report-jobs.server";
 import { readAssistantFacts } from "./assistant-facts.server";
 import { atomicStatementUndo } from "./statement-pipeline/atomic-undo";
 import { guardedRestore, previousRestoreLine, type RestoreDb } from "./restore-guard";
+import { decideEntryChange, listEntryChanges, requestEntryChange } from "./entry-requests";
 import { BACKUP_TABLES, planRestore, type Backup, type BackupRow } from "./backup";
 import type { Json } from "@/integrations/supabase/types";
 
@@ -2112,6 +2113,103 @@ describe("R-P10-1: activating balanced books after a withdrawal — P1..P9 + P10
       expect(await events(f.lunch)).toBe(1);
       expect(await withdrawCall(f.lunch, "Entered twice by mistake")).toMatchObject({ ok: false, error: expect.stringMatching(/^P10_POSTED/) });
       await db.close();
+    },
+    T,
+  );
+});
+
+// ---------------------------------------------------------------------------------------------------------------------------
+// P0-022 (KK, binding): "Team users cannot permanently delete financial records or audit history. Allow permission-scoped
+// requests for withdrawal or correction, with authorised approval where consequential. Enforce permissions server-side and
+// preserve entity separation." Each request below is a PostgREST-shaped call as that signed-in user (owner O, manager M with
+// the edit/delete switches, Finance F with "approve", unrelated user X), through the app helpers in entry-requests.ts.
+const P13 = ".lovable/staged-sql/proposed/P13_team_change_requests.sql";
+const M = id(3), F = id(4), X = id(5);
+describe("P0-022 team users: no deletes, permission-scoped requests, authorised approval — P9 + P10 + P13", () => {
+  let db: Db;
+  beforeAll(async () => {
+    db = await fullSchemaDb([P9, P10, P13]);
+    await seedUsers(db);
+    await addUsers(db, { [M]: "m@x.in", [F]: "f@x.in", [X]: "x@x.in" });
+    await sql1(db, "INSERT INTO public.user_roles(user_id, role) VALUES ($1,'manager'),($2,'finance')", [M, F]);
+    await sql1(db, "UPDATE public.role_permissions SET allowed = true WHERE (role = 'manager' AND action IN ('view_expenses','edit_expenses','delete_expenses')) OR (role = 'finance' AND action IN ('view_expenses','approve'))");
+  }, T);
+
+  it(
+    "T1. a team member's API DELETE and money edit are refused; audit rows cannot be deleted or truncated; the owner's figures are unchanged",
+    async () => {
+      // Expected (hand-calculated): owner's HDFC Savings 10,000.00 − 450.00 − 1,234.50 = 8,315.50 before and after every attempt.
+      reset(db);
+      const f = await seedWithdrawFixture(db);
+      net.uid = M;
+      expect((await supabase.from("expenses").select("id").eq("id", f.lunch)).data).toEqual([{ id: f.lunch }]); // can view (switch)
+      const del = await supabase.from("expenses").delete().eq("id", f.lunch).select("id");
+      expect(del.error?.message ?? `deleted ${JSON.stringify(del.data)}`).toMatch(/P10_WITHDRAW_ONLY|deleted \[\]/);
+      expect((await api().from("expenses").update({ amount: 1, original_amount: 1 }).eq("id", f.lunch).select("id")).error?.message).toMatch(/P13_REQUEST_REQUIRED/);
+      expect((await api().from("transaction_audit").delete().eq("transaction_id", f.lunch).select("id")).data ?? []).toEqual([]);
+      expect(await probe(db, M, "TRUNCATE public.transaction_audit")).toMatch(/P13_AUDIT_KEPT|permission denied/);
+      net.uid = O;
+      expect(await probe(db, O, "TRUNCATE public.expense_history CASCADE")).toMatch(/P13_AUDIT_KEPT|permission denied/);
+      expect(await present(db, "expenses", f.lunch)).toBe(1);
+      expect((await figures(f.acc)).balance).toBe(8315.5);
+    },
+    T,
+  );
+
+  it(
+    "T2. withdrawal request → owner approves: withdrawn with requester and approver recorded, excluded from figures; the requester cannot decide; others cannot see or ask",
+    async () => {
+      // Expected: after approval HDFC Savings 10,000.00 − 1,234.50 = 8,765.50; Lunch's withdrawal names approver O and requester M.
+      reset(db);
+      const f = await seedWithdrawFixture(db);
+      net.uid = X;
+      await expect(requestEntryChange({ entryId: f.lunch, kind: "withdraw", reason: "Duplicate entry" })).rejects.toThrow(/can't ask for or decide/);
+      net.uid = M;
+      const rid = await requestEntryChange({ entryId: f.lunch, kind: "withdraw", reason: "Duplicate of the Swiggy order" });
+      await expect(requestEntryChange({ entryId: f.lunch, kind: "withdraw", reason: "Again please" })).rejects.toThrow(/already has a request waiting/);
+      await expect(decideEntryChange({ requestId: rid, approve: true, reason: "Approving my own" })).rejects.toThrow(/can't ask for or decide/);
+      expect((await listEntryChanges("pending")).map((r) => r.id)).toEqual([rid]);
+      net.uid = X;
+      expect(await listEntryChanges()).toEqual([]);
+      net.uid = O;
+      expect((await listEntryChanges("pending")).map((r) => [r.kind, r.requestedBy])).toEqual([["withdraw", M]]);
+      expect(await decideEntryChange({ requestId: rid, approve: true, reason: "Agreed, it is a duplicate" })).toMatchObject({ status: "approved", replayed: false });
+      const w = (await rowOf(db, f.lunch))?.rd["withdrawal"] as { state: string; by: string; history: { requestId: string; requestedBy: string }[] };
+      expect(w).toMatchObject({ state: "withdrawn", by: O });
+      expect(w.history[0]).toMatchObject({ requestId: rid, requestedBy: M });
+      expect((await figures(f.acc)).balance).toBe(8765.5);
+      expect(await objects(db, f.files)).toBe(2); // receipt files kept
+      expect(await decideEntryChange({ requestId: rid, approve: false, reason: "Second click" })).toMatchObject({ status: "approved", replayed: true });
+    },
+    T,
+  );
+
+  it(
+    "T3. correction request → Finance approves (consequential amount change); a rejected request changes nothing; reconciled entries keep amount and date",
+    async () => {
+      // Expected: Groceries 1,234.50 → 1,250.00 after Finance approves: balance 10,000.00 − 450.00 − 1,250.00 = 8,300.00;
+      // a rejected title change leaves the title; a reconciled entry's amount request is refused at approval (P10_RECONCILED).
+      reset(db);
+      const f = await seedWithdrawFixture(db);
+      net.uid = M;
+      await expect(requestEntryChange({ entryId: f.groceries, kind: "correct", reason: "Wrong account", changes: { account_id: "x" } as never })).rejects.toThrow(/cannot be changed by a correction request/);
+      const r1 = await requestEntryChange({ entryId: f.groceries, kind: "correct", reason: "Bill says 1,250.00", changes: { amount: 1250 } });
+      net.uid = F;
+      expect(await decideEntryChange({ requestId: r1, approve: true, reason: "Checked against the bill" })).toMatchObject({ status: "approved" });
+      expect((await rowOf(db, f.groceries))?.j).toMatchObject({ amount: 1250, original_amount: 1250 });
+      net.uid = O;
+      expect((await figures(f.acc)).balance).toBe(8300);
+      net.uid = M;
+      const r2 = await requestEntryChange({ entryId: f.lunch, kind: "correct", reason: "Better title", changes: { title: "Team lunch" } });
+      net.uid = O;
+      expect(await decideEntryChange({ requestId: r2, approve: false, reason: "Title is right as it is" })).toMatchObject({ status: "rejected" });
+      expect((await rowOf(db, f.lunch))?.j["title"]).toBe("Lunch");
+      await sql1(db, "UPDATE public.expenses SET statement_ref = 'Statement line · 2026-11-09 · debit 450.00 · SARAVANA · account x', reconciled_at = now() WHERE id = $1", [f.lunch]);
+      net.uid = M;
+      const r3 = await requestEntryChange({ entryId: f.lunch, kind: "correct", reason: "Bill says 470.00", changes: { amount: 470 } });
+      net.uid = O;
+      await expect(decideEntryChange({ requestId: r3, approve: true, reason: "Approve anyway" })).rejects.toThrow(/corrected, not withdrawn|matched to a bank statement/);
+      expect((await rowOf(db, f.lunch))?.j["amount"]).toBe(450);
     },
     T,
   );
