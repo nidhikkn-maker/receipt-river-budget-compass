@@ -1,0 +1,68 @@
+# P0-015 before-run: failure-injection D1-D4 WITHOUT P14 (applied schema + P9; and P1..P9 for D4). bunx vitest run src/lib/failure-injection.test.ts -t P0-015 (2026-11-10T15:09:25Z)
+# D1: an ordinary preferences save sets Sold on / sale value (no approval), and a disposal-tagged entry is accepted; D2-D4: no request/approval path exists.
+ RUN  v4.1.12 /home/user/thapal-p3c
+ ❯ src/lib/failure-injection.test.ts (47 tests | 4 failed | 43 skipped) 7571ms
+     × D1. no disposal outside the approval: a direct Sold-on edit, a disposal entry and archiving never dispose; the asset and figures are unchanged 127ms
+     × D2. request (evidence, reason, date, proceeds) → owner approves: asset disposed with its record, one disposal entry 53,000.00, asset account 0.00, audit kept 65ms
+     × D3. Finance approval: a Finance user with 'approve' decides; a register change after the request refuses approval; a rejection disposes nothing 69ms
+     × D4. step-up required for approval; after approval P7 posts Dr Loss on asset disposal 53,000.00 / Cr Fixed assets 53,000.00; an unapproved disposal entry never posts 3532ms
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 4 ⎯⎯⎯⎯⎯⎯⎯
+ FAIL  src/lib/failure-injection.test.ts > P0-015 asset disposal approval — P9 + P14 (applied schema) > D1. no disposal outside the approval: a direct Sold-on edit, a disposal entry and archiving never dispose; the asset and figures are unchanged
+TypeError: .toMatch() expects to receive a string, but got undefined
+ ❯ src/lib/failure-injection.test.ts:2262:58
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/4]⎯
+ FAIL  src/lib/failure-injection.test.ts > P0-015 asset disposal approval — P9 + P14 (applied schema) > D2. request (evidence, reason, date, proceeds) → owner approves: asset disposed with its record, one disposal entry 53,000.00, asset account 0.00, audit kept
+AssertionError: expected { ok: false, …(1) } to match object { ok: false, error: StringMatching{…} }
+- Expected
++ Received
+  {
+-   "error": StringMatching /disposal evidence/,
++   "error": "Asset disposal approval needs an approved database update (P14). Nothing was changed.",
+    "ok": false,
+  }
+ ❯ src/lib/failure-injection.test.ts:2280:107
+    2278|       reset(db);
+    2279|       const s = await seedAsset(db);
+    2280|       expect(await requestAssetDisposal({ data: disposalInput(s, { evi…
+       |                                                                                                           ^
+    2281|       expect(await requestAssetDisposal({ data: { ...disposalInput(s),…
+    2282|       const req = await requestAssetDisposal({ data: disposalInput(s) …
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/4]⎯
+ FAIL  src/lib/failure-injection.test.ts > P0-015 asset disposal approval — P9 + P14 (applied schema) > D3. Finance approval: a Finance user with 'approve' decides; a register change after the request refuses approval; a rejection disposes nothing
+ZodError: [
+  {
+    "expected": "string",
+    "code": "invalid_type",
+    "path": [
+      "requestId"
+    ],
+    "message": "Invalid input: expected string, received undefined"
+  }
+]
+ ❯ src/lib/asset-disposal.functions.ts:26:47
+     24| export const decideAssetDisposal = createServerFn({ method: "POST" })
+     25|   .middleware([requireSupabaseAuth])
+     26|   .inputValidator((d: unknown) => DecideInput.parse(d))
+       |                                               ^
+     27|   .handler(async ({ data, context }) => wrap(() => decideDisposal(cont…
+     28|
+ ❯ src/lib/failure-injection.test.ts:419:30
+ ❯ intercept src/lib/failure-injection.test.ts:109:10
+ ❯ Module.<anonymous> src/lib/failure-injection.test.ts:417:11
+ ❯ src/lib/failure-injection.test.ts:2316:20
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/4]⎯
+ FAIL  src/lib/failure-injection.test.ts > P0-015 on active books: the approved disposal posts a balanced batch — P1..P9 + P14 > D4. step-up required for approval; after approval P7 posts Dr Loss on asset disposal 53,000.00 / Cr Fixed assets 53,000.00; an unapproved disposal entry never posts
+AssertionError: expected { ok: false, …(1) } to match object { ok: true }
+(1 matching property omitted from actual)
+- Expected
++ Received
+  {
+-   "ok": true,
++   "ok": false,
+  }
+ ❯ src/lib/failure-injection.test.ts:2343:19
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/4]⎯
+ Test Files  1 failed (1)
+      Tests  4 failed | 43 skipped (47)
+   Start at  15:09:16
+   Duration  9.41s (transform 1.19s, setup 195ms, import 1.41s, tests 7.57s, environment 0ms)

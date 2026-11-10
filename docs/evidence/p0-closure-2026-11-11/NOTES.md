@@ -80,3 +80,10 @@ KK binding: Withdraw only for unposted AND unreconciled entries; posted -> Rever
 - App: src/lib/entry-requests.ts; team switch labels; contract docs/workstreams/contracts/entry-change-requests.md.
 - Before: p0-022-team.before.txt (applied schema probe: manager deletes owner's entry; no request path without P13).
 - Tests: failure-injection T1-T3 (API level), p13-team-requests-sql.test.ts (2).
+
+## 7. P0-015 asset disposal approval — DONE (server + proposed P14; I05 screen is WS-E's)
+- Server functions src/lib/asset-disposal(.functions).ts; P14 (+rollback); contract docs/workstreams/contracts/disposal-approval.md.
+- Fix during testing: the request must be closed BEFORE the disposal entry is inserted (the P7/P8 hook posts only approved
+  requests); otherwise the entry was left unposted.
+- Before: p0-015-disposal.before.txt. Tests: failure-injection D1-D4, p14-asset-disposal-sql.test.ts (2).
+- Existing UI paths (assets.tsx Sold-on edit, Lifecycle disposal event, AssetBooks disposal posting) are refused under P14 by design.

@@ -450,6 +450,7 @@ import { readAssistantFacts } from "./assistant-facts.server";
 import { atomicStatementUndo } from "./statement-pipeline/atomic-undo";
 import { guardedRestore, previousRestoreLine, type RestoreDb } from "./restore-guard";
 import { decideEntryChange, listEntryChanges, requestEntryChange } from "./entry-requests";
+import { decideAssetDisposal, requestAssetDisposal } from "./asset-disposal.functions";
 import { BACKUP_TABLES, planRestore, type Backup, type BackupRow } from "./backup";
 import type { Json } from "@/integrations/supabase/types";
 
@@ -2210,6 +2211,152 @@ describe("P0-022 team users: no deletes, permission-scoped requests, authorised 
       net.uid = O;
       await expect(decideEntryChange({ requestId: r3, approve: true, reason: "Approve anyway" })).rejects.toThrow(/corrected, not withdrawn|matched to a bank statement/);
       expect((await rowOf(db, f.lunch))?.j["amount"]).toBe(450);
+    },
+    T,
+  );
+});
+
+// ---------------------------------------------------------------------------------------------------------------------------
+// P0-015 (KK, binding): "Asset disposal requires owner or explicitly authorised financial approval, with source evidence,
+// reason, disposal date, proceeds, accounting entries and audit trail. Archiving never constitutes disposal." The REAL server
+// functions (asset-disposal.functions.ts → asset-disposal.ts, book value from assets-ledger.ts) and PostgREST-shaped requests
+// as each signed-in user. Hand-calculated fixture: Laptop cost 60,000.00, put to use 2026-04-01, straight line 20% a year =
+// 1,000.00 a month; disposed 2026-10-31 → 7 months → book value 53,000.00; sale proceeds 50,000.00 → loss 3,000.00. Its ledger
+// asset account carries the book value 53,000.00 (depreciation already in the books); after approval it reads 0.00.
+const P14 = ".lovable/staged-sql/proposed/P14_asset_disposal_approval.sql";
+async function seedAsset(db: Db, owner = O) {
+  const assetAcc = id(++accSeq), bank = id(++accSeq), doc = crypto.randomUUID(), proceedsEntry = crypto.randomUUID();
+  await sql1(db, "INSERT INTO public.accounts(id, owner_id, name, kind, opening_balance) VALUES ($1,$3,'Fixed assets','other_asset',53000),($2,$3,'HDFC Current','current',0)", [assetAcc, bank, owner]);
+  await sql1(db, "INSERT INTO public.documents(id, owner_id, title, file_path, file_name, size_bytes, notes) VALUES ($1,$2,'Laptop sale invoice',$3,'sale.pdf',1000,'')", [doc, owner, `${owner}/docs/${doc}-sale.pdf`]);
+  await sql1(db, "INSERT INTO public.expenses(id,employee_id,title,category,amount,original_amount,currency,expense_date,account_id,description,txn_type) VALUES ($1,$2,'Laptop sale proceeds','Asset sale',50000,50000,'INR','2026-10-31',$3,'','income')", [proceedsEntry, owner, bank]);
+  const asset = { id: `ast-${crypto.randomUUID().slice(0, 8)}`, name: "Laptop", kind: "computer", cost: 60000, inUse: "2026-04-01", sharePct: 100, bookMethod: "slm", bookRatePct: 20, accountId: assetAcc, tag: "LAP-1" };
+  await sql1(db, "UPDATE public.finance_preferences SET data = jsonb_set(coalesce(data, '{}'), '{assets}', coalesce(data->'assets', '[]') || $2::jsonb) WHERE owner_id = $1", [owner, JSON.stringify([asset])]);
+  return { asset, assetAcc, bank, doc, proceedsEntry };
+}
+const assetNow = async (db: Db, owner: string, assetId: string) =>
+  (await sql1<{ a: Record<string, unknown> }>(db, "SELECT a FROM public.finance_preferences p, jsonb_array_elements(p.data->'assets') a WHERE p.owner_id = $1 AND a->>'id' = $2", [owner, assetId]))[0]?.a;
+const accountBalanceOf = async (db: Db, owner: string, accId: string, kind: Account["kind"], opening: number) => {
+  const rows = await sql1<{ j: LedgerRow }>(db, "SELECT to_jsonb(e) j FROM public.expenses e WHERE employee_id = $1", [owner]);
+  return accountBalance({ id: accId, name: "x", kind, openingBalance: opening, archived: false }, ledgerView(rows.map((r) => txnFromRow(r.j))));
+};
+const disposalInput = (s: Awaited<ReturnType<typeof seedAsset>>, extra: Record<string, unknown> = {}) =>
+  ({ assetId: s.asset.id, method: "sale" as const, date: "2026-10-31", proceeds: 50000, proceedsEntryId: s.proceedsEntry, evidence: [s.doc], reason: "Sold to the dealer, invoice attached", ...extra });
+
+describe("P0-015 asset disposal approval — P9 + P14 (applied schema)", () => {
+  let db: Db;
+  beforeAll(async () => {
+    db = await fullSchemaDb([P9, P14]);
+    await seedUsers(db);
+    await addUsers(db, { [M]: "m@x.in", [F]: "f@x.in", [X]: "x@x.in" });
+    await sql1(db, "INSERT INTO public.user_roles(user_id, role) VALUES ($1,'manager'),($2,'finance')", [M, F]);
+    await sql1(db, "UPDATE public.role_permissions SET allowed = true WHERE role = 'finance' AND action IN ('view_expenses','approve')");
+  }, T);
+
+  it(
+    "D1. no disposal outside the approval: a direct Sold-on edit, a disposal entry and archiving never dispose; the asset and figures are unchanged",
+    async () => {
+      reset(db);
+      const s = await seedAsset(db);
+      const prefs = await prefsOf(O);
+      const sold = { ...prefs, assets: (prefs.assets as unknown as Record<string, unknown>[]).map((a) => (a["id"] === s.asset.id ? { ...a, soldOn: "2026-10-31", saleValue: 50000 } : a)) };
+      expect((await writePrefs(O, sold)).error?.message).toMatch(/P14_DISPOSAL_APPROVAL_REQUIRED/);
+      const entry = { id: crypto.randomUUID(), employee_id: O, title: "Disposal · Laptop", category: "Asset disposal", amount: 53000, original_amount: 53000, currency: "INR", expense_date: "2026-10-31", account_id: s.assetAcc, description: "", txn_type: "adjustment", adjustment_sign: -1, tags: ["disposal"] };
+      expect((await api().from("expenses").insert(entry).select("id")).error?.message).toMatch(/P14_DISPOSAL_APPROVAL_REQUIRED/);
+      // archiving the asset (status only, with a reason) is accepted and leaves it in the register, not disposed
+      const archived = { ...prefs, assets: (prefs.assets as unknown as Record<string, unknown>[]).map((a) => (a["id"] === s.asset.id ? { ...a, archived: true, archivedAt: "2026-11-01T00:00:00Z", archivedBy: O, archiveReason: "No longer in use" } : a)) };
+      expect((await writePrefs(O, archived)).error).toBeNull();
+      expect(await assetNow(db, O, s.asset.id)).toMatchObject({ archived: true });
+      expect((await assetNow(db, O, s.asset.id))?.["soldOn"]).toBeUndefined();
+      expect(await accountBalanceOf(db, O, s.assetAcc, "other_asset", 53000)).toBe(53000);
+    },
+    T,
+  );
+
+  it(
+    "D2. request (evidence, reason, date, proceeds) → owner approves: asset disposed with its record, one disposal entry 53,000.00, asset account 0.00, audit kept",
+    async () => {
+      reset(db);
+      const s = await seedAsset(db);
+      expect(await requestAssetDisposal({ data: disposalInput(s, { evidence: [crypto.randomUUID()] }) })).toMatchObject({ ok: false, error: expect.stringMatching(/disposal evidence/) });
+      expect(await requestAssetDisposal({ data: { ...disposalInput(s), reason: "abc" } }).catch((e: Error) => ({ ok: false, error: e.message }))).toMatchObject({ ok: false });
+      const req = await requestAssetDisposal({ data: disposalInput(s) });
+      expect(req).toMatchObject({ ok: true, plan: { bookValue: 53000, proceeds: 50000, gain: -3000, problems: [] } });
+      const requestId = (req as { requestId: string }).requestId;
+      expect(await requestAssetDisposal({ data: disposalInput(s) })).toMatchObject({ ok: false, error: expect.stringMatching(/already has an open disposal request/) });
+      net.uid = X;
+      expect(await decideAssetDisposal({ data: { requestId, approve: true, reason: "Looks fine to me" } })).toMatchObject({ ok: false, error: expect.stringMatching(/Only the owner/) });
+      expect((await api().from("asset_disposal_requests").select("id")).data).toEqual([]);
+      net.uid = O;
+      const dec = await decideAssetDisposal({ data: { requestId, approve: true, reason: "Approved: invoice checked" } });
+      expect(dec).toMatchObject({ ok: true, status: "approved", entry: (req as { entryId: string }).entryId, replayed: false });
+      expect(await assetNow(db, O, s.asset.id)).toMatchObject({ soldOn: "2026-10-31", saleValue: 50000, disposal: { requestId, method: "sale", approvedBy: O, bookValue: 53000, proceeds: 50000, gain: -3000, evidence: [s.doc], proceedsEntryId: s.proceedsEntry } });
+      const e = (await sql1<{ j: Record<string, unknown> }>(db, "SELECT to_jsonb(e) j FROM public.expenses e WHERE id = $1", [(req as { entryId: string }).entryId]))[0]!.j;
+      expect(e).toMatchObject({ amount: 53000, txn_type: "adjustment", adjustment_sign: -1, account_id: s.assetAcc, category: "Asset disposal", tags: ["disposal"], expense_date: "2026-10-31" });
+      expect(await accountBalanceOf(db, O, s.assetAcc, "other_asset", 53000)).toBe(0);
+      expect(await accountBalanceOf(db, O, s.bank, "current", 0)).toBe(50000);
+      expect(await decideAssetDisposal({ data: { requestId, approve: false, reason: "Second click" } })).toMatchObject({ ok: true, status: "approved", replayed: true });
+      expect(await requestAssetDisposal({ data: disposalInput(s) })).toMatchObject({ ok: false, error: expect.stringMatching(/disposed on 2026-10-31/) });
+      expect((await api().from("asset_disposal_requests").update({ status: "rejected" }).eq("id", requestId).select("id")).data ?? []).toEqual([]);
+      expect(await probe(db, O, "DELETE FROM public.asset_disposal_requests")).toMatch(/ok:0|P14_AUDIT_KEPT|permission denied/);
+      expect((await sql1<{ s: string }>(db, "SELECT status s FROM public.asset_disposal_requests WHERE id = $1", [requestId]))[0]!.s).toBe("approved");
+    },
+    T,
+  );
+
+  it(
+    "D3. Finance approval: a Finance user with 'approve' decides; a register change after the request refuses approval; a rejection disposes nothing",
+    async () => {
+      reset(db);
+      const s = await seedAsset(db);
+      const r1 = (await requestAssetDisposal({ data: disposalInput(s) })) as { requestId: string };
+      // the register changes (cost corrected) after the request → approval refused, nothing written
+      const prefs = await prefsOf(O);
+      expect((await writePrefs(O, { ...prefs, assets: (prefs.assets as unknown as Record<string, unknown>[]).map((a) => (a["id"] === s.asset.id ? { ...a, cost: 61000 } : a)) })).error).toBeNull();
+      net.uid = F;
+      expect(await decideAssetDisposal({ data: { requestId: r1.requestId, approve: true, reason: "Checked the invoice" } })).toMatchObject({ ok: false, error: expect.stringMatching(/changed since the request/) });
+      expect(await decideAssetDisposal({ data: { requestId: r1.requestId, approve: false, reason: "Cost changed, ask again" } })).toMatchObject({ ok: true, status: "rejected" });
+      net.uid = O;
+      expect((await assetNow(db, O, s.asset.id))?.["soldOn"]).toBeUndefined();
+      // new request at the corrected cost: 20% of 61,000.00 / 12 = 1,016.67 a month (rounded) × 7 = 7,116.69 → book value 53,883.31
+      const r2 = (await requestAssetDisposal({ data: disposalInput(s) })) as { requestId: string; plan: { bookValue: number } };
+      expect(r2.plan.bookValue).toBe(53883.31);
+      net.uid = F;
+      expect(await decideAssetDisposal({ data: { requestId: r2.requestId, approve: true, reason: "Checked the invoice" } })).toMatchObject({ ok: true, status: "approved" });
+      net.uid = O;
+      expect(await assetNow(db, O, s.asset.id)).toMatchObject({ soldOn: "2026-10-31", disposal: { approvedBy: F, requestedBy: O } });
+    },
+    T,
+  );
+});
+
+describe("P0-015 on active books: the approved disposal posts a balanced batch — P1..P9 + P14", () => {
+  it(
+    "D4. step-up required for approval; after approval P7 posts Dr Loss on asset disposal 53,000.00 / Cr Fixed assets 53,000.00; an unapproved disposal entry never posts",
+    async () => {
+      const db = await fullSchemaDb([...STACK, P9, P14]);
+      await seedUsers(db);
+      reset(db);
+      const s = await seedAsset(db);
+      await activateBooks(db, s.assetAcc); // replaces the preferences: put the asset back into the register
+      await sql1(db, "UPDATE public.finance_preferences SET data = jsonb_set(data, '{assets}', $2::jsonb) WHERE owner_id = $1", [O, JSON.stringify([s.asset])]);
+      const req = (await requestAssetDisposal({ data: disposalInput(s, { proceedsEntryId: null }) })) as { ok: boolean; requestId: string; entryId: string };
+      expect(req).toMatchObject({ ok: true });
+      await sql1(db, "DELETE FROM public.step_up_grants WHERE owner_id = $1", [O]); // operator: the activation step-ups have lapsed
+      expect(await decideAssetDisposal({ data: { requestId: req.requestId, approve: true, reason: "Approved: invoice checked" } })).toMatchObject({ ok: false, error: expect.stringMatching(/Confirm it's you/) });
+      await exclusive(async () => { await actAs(db, null); await db.exec("SET ROLE service_role"); await db.query("SELECT public.record_step_up($1,'password',300)", [O]); await actAs(db, null); });
+      expect(await decideAssetDisposal({ data: { requestId: req.requestId, approve: true, reason: "Approved: invoice checked" } })).toMatchObject({ ok: true, status: "approved" });
+      const lines = await sql1<{ code: string; debit: number; credit: number }>(db,
+        "SELECT l.code, l.debit::float8 AS debit, l.credit::float8 AS credit FROM public.posting_lines l JOIN public.posting_batches b ON b.id = l.batch_id JOIN public.posting_events ev ON ev.id = b.event_id WHERE ev.event_key = $1 ORDER BY l.debit DESC", [`ledger_entry:${req.entryId}`]);
+      expect(lines).toEqual([
+        { code: "expense:Loss on asset disposal (book value)", debit: 53000, credit: 0 },
+        { code: `account:${s.assetAcc}`, debit: 0, credit: 53000 },
+      ]);
+      // A disposal-tagged entry written without an approved request (operator path; clients are refused by P14) never posts.
+      const stray = crypto.randomUUID();
+      await sql1(db, "INSERT INTO public.expenses(id,employee_id,title,category,amount,original_amount,currency,expense_date,account_id,description,txn_type,adjustment_sign,tags) VALUES ($1,$2,'Disposal · Desk','Asset disposal',900,900,'INR','2026-10-31',$3,'','adjustment',-1,ARRAY['disposal'])", [stray, O, s.assetAcc]);
+      expect((await sql1<{ n: number }>(db, "SELECT count(*)::int n FROM public.posting_batches b JOIN public.posting_events ev ON ev.id = b.event_id WHERE ev.event_key = $1", [`ledger_entry:${stray}`]))[0]!.n).toBe(0);
+      expect(await sql1(db, "SELECT batch_id FROM public.posting_lines GROUP BY batch_id, currency HAVING sum(debit) <> sum(credit)")).toEqual([]);
+      await db.close();
     },
     T,
   );
