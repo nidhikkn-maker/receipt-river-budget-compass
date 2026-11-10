@@ -1,0 +1,89 @@
+{
+ "shots": [
+  {
+   "name": "iphone-after-01-plan-edit-amount.jpg",
+   "note": "Edit amount: labelled field prefilled with the current amount, Cancel and Save amount"
+  },
+  {
+   "name": "iphone-after-02-plan-amount-error.jpg",
+   "note": "Inline validation: the same rule the save enforces (amount must be greater than zero); nothing saved"
+  },
+  {
+   "name": "iphone-after-03-account-rename.jpg",
+   "note": "Rename account: current name prefilled; duplicate and empty names are explained inline"
+  },
+  {
+   "name": "iphone-after-04-account-rename-duplicate.jpg",
+   "note": "Inline validation: another account already has that name; nothing saved"
+  },
+  {
+   "name": "iphone-after-05-account-adjust.jpg",
+   "note": "Adjust to statement balance: explains that an adjustment entry is added for today; Cancel or Adjust balance"
+  },
+  {
+   "name": "iphone-after-06-vault-rename.jpg",
+   "note": "Rename document: current title prefilled, Cancel and Save title"
+  },
+  {
+   "name": "iphone-after-07-vault-rename-error.jpg",
+   "note": "Inline validation: a title is required; nothing saved"
+  },
+  {
+   "name": "ipad-after-01-plan-edit-amount.jpg",
+   "note": "Edit amount: labelled field prefilled with the current amount, Cancel and Save amount"
+  },
+  {
+   "name": "ipad-after-02-plan-amount-error.jpg",
+   "note": "Inline validation: the same rule the save enforces (amount must be greater than zero); nothing saved"
+  },
+  {
+   "name": "ipad-after-03-account-rename.jpg",
+   "note": "Rename account: current name prefilled; duplicate and empty names are explained inline"
+  },
+  {
+   "name": "ipad-after-04-account-rename-duplicate.jpg",
+   "note": "Inline validation: another account already has that name; nothing saved"
+  },
+  {
+   "name": "ipad-after-05-account-adjust.jpg",
+   "note": "Adjust to statement balance: explains that an adjustment entry is added for today; Cancel or Adjust balance"
+  },
+  {
+   "name": "ipad-after-06-vault-rename.jpg",
+   "note": "Rename document: current title prefilled, Cancel and Save title"
+  },
+  {
+   "name": "ipad-after-07-vault-rename-error.jpg",
+   "note": "Inline validation: a title is required; nothing saved"
+  },
+  {
+   "name": "desktop-after-01-plan-edit-amount.jpg",
+   "note": "Edit amount: labelled field prefilled with the current amount, Cancel and Save amount"
+  },
+  {
+   "name": "desktop-after-02-plan-amount-error.jpg",
+   "note": "Inline validation: the same rule the save enforces (amount must be greater than zero); nothing saved"
+  },
+  {
+   "name": "desktop-after-03-account-rename.jpg",
+   "note": "Rename account: current name prefilled; duplicate and empty names are explained inline"
+  },
+  {
+   "name": "desktop-after-04-account-rename-duplicate.jpg",
+   "note": "Inline validation: another account already has that name; nothing saved"
+  },
+  {
+   "name": "desktop-after-05-account-adjust.jpg",
+   "note": "Adjust to statement balance: explains that an adjustment entry is added for today; Cancel or Adjust balance"
+  },
+  {
+   "name": "desktop-after-06-vault-rename.jpg",
+   "note": "Rename document: current title prefilled, Cancel and Save title"
+  },
+  {
+   "name": "desktop-after-07-vault-rename-error.jpg",
+   "note": "Inline validation: a title is required; nothing saved"
+  }
+ ],
+ "browserPrompts": []
+}
