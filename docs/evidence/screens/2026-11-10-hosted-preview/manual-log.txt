@@ -1,0 +1,9 @@
+iphone-00-sign-in
+iphone-10-review-manual
+iphone-11-review-filled
+iphone-12-review-original
+amount after tab switch: 460
+iphone-13-confirm
+confirm button: enabled
+iphone-14-saved
+hosts: preview.thapal.app=335, fonts.googleapis.com=2, thapal-fixture-backend-krna-group.vercel.app=44

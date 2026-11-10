@@ -1,0 +1,46 @@
+iphone-home  url:/home overflow:false
+iphone-money  url:/money overflow:false
+iphone-tasks  url:/tasks overflow:false
+iphone-records  url:/records overflow:false
+iphone-smart-add-1-add  url:/home overflow:false
+iphone-smart-add-2-review  url:/home overflow:false
+ipad-home  url:/home overflow:false
+ipad-money  url:/money overflow:false
+ipad-tasks  url:/tasks overflow:false
+ipad-records  url:/records overflow:false
+ipad-smart-add-1-add  url:/home overflow:false
+ipad-smart-add-2-review  url:/home overflow:false
+desktop-home  url:/home overflow:false
+desktop-money  url:/money overflow:false
+desktop-tasks  url:/tasks overflow:false
+desktop-records  url:/records overflow:false
+desktop-smart-add-1-add  url:/home overflow:false
+desktop-smart-add-2-review  url:/home overflow:false
+
+Request hosts:
+  preview.thapal.app: 2790
+  fonts.googleapis.com: 18
+  thapal-fixture-backend-krna-group.vercel.app: 318
+
+Failures / 4xx-5xx:
+iphone 404 GET https://preview.thapal.app/__l5e/assets-v1/8d605064-757e-43d5-9d51-22845736afd1/kk-monogram-gold.png
+iphone 404 GET https://preview.thapal.app/sw.js
+iphone 404 GET https://preview.thapal.app/sw.js
+iphone 404 GET https://preview.thapal.app/sw.js
+iphone 404 GET https://preview.thapal.app/sw.js
+iphone 404 GET https://preview.thapal.app/sw.js
+iphone 404 GET https://preview.thapal.app/sw.js
+ipad 404 GET https://preview.thapal.app/__l5e/assets-v1/8d605064-757e-43d5-9d51-22845736afd1/kk-monogram-gold.png
+ipad 404 GET https://preview.thapal.app/sw.js
+ipad 404 GET https://preview.thapal.app/sw.js
+ipad 404 GET https://preview.thapal.app/sw.js
+ipad 404 GET https://preview.thapal.app/sw.js
+ipad 404 GET https://preview.thapal.app/sw.js
+ipad 404 GET https://preview.thapal.app/sw.js
+desktop 404 GET https://preview.thapal.app/__l5e/assets-v1/8d605064-757e-43d5-9d51-22845736afd1/kk-monogram-gold.png
+desktop 404 GET https://preview.thapal.app/sw.js
+desktop 404 GET https://preview.thapal.app/sw.js
+desktop 404 GET https://preview.thapal.app/sw.js
+desktop 404 GET https://preview.thapal.app/sw.js
+desktop 404 GET https://preview.thapal.app/sw.js
+desktop 404 GET https://preview.thapal.app/sw.js
