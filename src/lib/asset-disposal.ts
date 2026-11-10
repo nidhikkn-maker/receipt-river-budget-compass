@@ -53,6 +53,52 @@ export async function requestDisposal(db: DisposalDb, owner: string, input: Disp
   return { requestId: String(r.data), plan, entryId };
 }
 
+export interface DisposalPreviewEntry {
+  id: string; title: string; date: string; amount: number; accountId: string | null; category: "Asset disposal"; txnType: "adjustment"; adjustmentSign: -1;
+  /** Where books are active (P7/P8) the entry posts this balanced batch. */
+  lines: { code: string; debit: number; credit: number }[];
+}
+export interface DisposalPreview extends DisposalPlan {
+  entryId: string;
+  entries: DisposalPreviewEntry[];
+  /** The database's own working (P14-a): its book value, the tolerance it allows the app's paise figure, its problems. */
+  database: { bookValue: number | null; tolerance: number | null; problems: string[] } | null;
+}
+
+/**
+ * R-E-I14: read-only preview of what a request would record — the server's book value, gain or loss, the non-cash disposal
+ * entry and its posting — plus the database's own check. Reads only (the database preview is a STABLE function); nothing
+ * is requested, written or reserved.
+ */
+export async function previewDisposal(db: DisposalDb, owner: string, input: Pick<DisposalInput, "assetId" | "date" | "proceeds">): Promise<DisposalPreview> {
+  const prefs = await db.from("finance_preferences").select("data").eq("owner_id", owner).maybeSingle();
+  if (prefs.error) throw Error("Couldn't read the asset register. Nothing was changed; try again.");
+  const data = isObj(prefs.data) && isObj(prefs.data["data"]) ? prefs.data["data"] : {};
+  const asset = (Array.isArray(data["assets"]) ? data["assets"] : []).find((a): a is Asset => isObj(a) && a["id"] === input.assetId);
+  if (!asset) throw Error("P14_NOT_FOUND: that asset is not in your register");
+  const closed = (isObj(data["books"]) && Array.isArray(data["books"]["closedPeriods"]) ? data["books"]["closedPeriods"] : []) as ClosedPeriod[];
+  const plan = disposalPlan(asset, input, closed);
+  const entryId = await ownerPostingId(owner, disposalKey(asset.id, input.date));
+  const accountId = asset.accountId ?? null;
+  const entries: DisposalPreviewEntry[] = plan.bookValue > 0 ? [{
+    id: entryId, title: `Disposal · ${asset.name}`, date: input.date, amount: plan.bookValue, accountId, category: "Asset disposal", txnType: "adjustment", adjustmentSign: -1,
+    lines: [{ code: "expense:Loss on asset disposal (book value)", debit: plan.bookValue, credit: 0 }, { code: `account:${accountId ?? "(link a ledger asset account)"}`, debit: 0, credit: plan.bookValue }],
+  }] : [];
+  const r = await db.rpc("preview_asset_disposal", { p_asset: asset.id, p_date: input.date, p_proceeds: plan.proceeds });
+  let database: DisposalPreview["database"] = null;
+  const problems = [...plan.problems];
+  if (r.error) { if (!isMissingFunction(r.error)) throw Error(r.error.message); problems.push(DISPOSAL_NOT_INSTALLED); }
+  else {
+    const d = (isObj(r.data) ? r.data : {}) as { bookValue?: number | null; tolerance?: number | null; problems?: string[] };
+    database = { bookValue: d.bookValue == null ? null : Number(d.bookValue), tolerance: d.tolerance == null ? null : Number(d.tolerance), problems: Array.isArray(d.problems) ? d.problems.map(String) : [] };
+    problems.push(...database.problems.filter((p) => !problems.includes(p)));
+    if (database.bookValue != null && database.tolerance != null && Math.abs(database.bookValue - plan.bookValue) > database.tolerance) {
+      problems.push(`The database works out a book value of ${database.bookValue.toFixed(2)}, not ${plan.bookValue.toFixed(2)}; the request would be refused`);
+    }
+  }
+  return { ...plan, problems, entryId, entries, database };
+}
+
 /** The owner (step-up where installed) or a Finance approver for that company decides; the server re-prices the stored snapshot. */
 export async function decideDisposal(db: DisposalDb, input: { requestId: string; approve: boolean; reason: string }): Promise<{ status: string; entry: string | null; replayed: boolean }> {
   const q = await db.from("asset_disposal_requests").select("*").eq("id", input.requestId).maybeSingle();
@@ -94,5 +140,8 @@ export function disposalProblem(message: string): string {
     P14_ALREADY_DISPOSED: rest.replace(/^./, (c) => c.toUpperCase()),
     P14_DISPOSAL_APPROVAL_REQUIRED: "Assets are disposed only through an approved disposal request. Archiving never disposes an asset.",
     STEP_UP_REQUIRED: "Confirm it's you to approve this disposal.",
+    P14_STEP_UP_UNAVAILABLE: "Approving a disposal needs the identity check (step-up), which isn't set up yet. Nothing was changed.",
+    P14_BOOK_VALUE: "The book value doesn't follow from the asset register. Nothing was changed; prepare the request again.",
+    P14_UNVERIFIABLE: `The book value of this asset can't be checked yet (${rest.replace(/^the database cannot check this asset's book value \((.*)\).*$/, "$1")}). Nothing was changed.`,
   } as Record<string, string>)[code ?? ""] ?? rest;
 }
