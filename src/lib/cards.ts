@@ -181,3 +181,67 @@ export function nextEmiInstalment(e: CardEmi, asOf: string) {
   const principal = r2(Math.min(left, Math.max(0, e.emi - interest)));
   return { principal, interest, total: r2(principal + interest), left };
 }
+
+/**
+ * Payment status of a card's latest statement, kept apart from what is outstanding (KK decision, 10 Nov 2026):
+ * statement amount due, minimum due (only when recorded — not held in the ledger today), total outstanding and the
+ * payment status are separate facts. "Overdue" only when the latest statement's due date has passed AND that
+ * statement still has an amount due after the payments recorded up to today (cardCycle). Without a statement
+ * (no statement day saved) nothing is inferred: the status is "not_recorded".
+ */
+export type CardPaymentState = "not_recorded" | "nothing_due" | "paid" | "partly_paid" | "due" | "overdue";
+export interface CardPaymentStatus {
+  state: CardPaymentState;
+  /** Statement amount still due (0 when not recorded). */
+  amountDue: number;
+  /** Paid towards the latest statement so far. */
+  paidTowardsStatement: number;
+  /** Everything outstanding on the card, including unbilled purchases. Never "due". */
+  outstanding: number;
+  dueDate: string | null;
+  minimumDue: number | null;
+}
+export function cardPaymentStatus(cycle: Pick<CardCycle, "owed" | "remainingDue" | "status" | "statementBalance" | "dueDate">): CardPaymentStatus {
+  const outstanding = Math.max(0, r2(cycle.owed));
+  if (cycle.status === "no_statement") return { state: "not_recorded", amountDue: 0, paidTowardsStatement: 0, outstanding, dueDate: null, minimumDue: null };
+  const amountDue = Math.max(0, r2(cycle.remainingDue));
+  const paidTowardsStatement = Math.max(0, r2(cycle.statementBalance - amountDue));
+  const state: CardPaymentState = cycle.status === "no_dues" ? "nothing_due"
+    : amountDue <= 0.009 ? "paid"
+    : cycle.status === "overdue" ? "overdue"
+    : paidTowardsStatement > 0.009 ? "partly_paid" : "due";
+  return { state, amountDue, paidTowardsStatement, outstanding, dueDate: cycle.dueDate, minimumDue: null };
+}
+
+/** Home's single "Card payment" figure across cards: the most urgent statement status, amounts kept separate. */
+export interface CardPaymentSummary {
+  state: CardPaymentState | "no_cards";
+  /** Statement amounts still due, summed over cards with a recorded statement. */
+  amountDue: number;
+  /** Everything outstanding on the cards, including unbilled purchases. */
+  outstanding: number;
+  /** The date that goes with the state: overdue since, or next due. */
+  dueDate: string | null;
+  /** Some of the statement shown was already paid. */
+  partlyPaid: boolean;
+  /** Cards whose statement isn't recorded (nothing inferred for them). */
+  notRecorded: number;
+  minimumDue: number | null;
+}
+export function cardPaymentSummary(cycles: Pick<CardCycle, "owed" | "remainingDue" | "status" | "statementBalance" | "dueDate">[]): CardPaymentSummary {
+  // A card with no statement day and nothing outstanding has nothing to report (and nothing to infer).
+  const all = cycles.map(cardPaymentStatus).filter((c) => !(c.state === "not_recorded" && c.outstanding <= 0.009));
+  const outstanding = r2(all.reduce((s, c) => s + c.outstanding, 0));
+  const recorded = all.filter((c) => c.state !== "not_recorded");
+  const notRecorded = all.length - recorded.length;
+  const amountDue = r2(recorded.reduce((s, c) => s + c.amountDue, 0));
+  const byDate = (xs: CardPaymentStatus[]) => [...xs].sort((a, b) => (a.dueDate ?? "9999").localeCompare(b.dueDate ?? "9999"))[0];
+  const overdue = byDate(recorded.filter((c) => c.state === "overdue"));
+  const open = byDate(recorded.filter((c) => c.state === "due" || c.state === "partly_paid"));
+  const lead = overdue ?? open;
+  const state: CardPaymentSummary["state"] = !all.length ? "no_cards"
+    : lead ? lead.state
+    : recorded.some((c) => c.state === "paid") ? "paid"
+    : recorded.length ? "nothing_due" : "not_recorded";
+  return { state, amountDue, outstanding, dueDate: lead?.dueDate ?? null, partlyPaid: !!lead && lead.paidTowardsStatement > 0.009, notRecorded, minimumDue: null };
+}

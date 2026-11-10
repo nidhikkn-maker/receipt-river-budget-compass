@@ -12,7 +12,8 @@ export type ThemeName =
   | "graphite"
   | "apple-classic"
   | "apple-ledgerline"
-  | "apple-glass";
+  | "apple-glass"
+  | "signature-flow";
 
 export type Appearance = "light" | "dark" | "system";
 
@@ -26,6 +27,8 @@ export interface ThemeStyle {
   swatch: [string, string, string, string];
   /** True when the family's dark appearance is its primary identity. */
   darkFirst?: boolean;
+  /** Built for review and not yet visually approved; never the default. */
+  proposed?: boolean;
 }
 
 export const THEME_STYLES: ThemeStyle[] = [
@@ -36,9 +39,11 @@ export const THEME_STYLES: ThemeStyle[] = [
   { name: "apple-classic", family: "Apple-Inspired Minimal", label: "Apple Classic", hint: "Clean neutrals with a subtle blue accent.", swatch: ["#F5F5F7", "#FFFFFF", "#007AFF", "#E5E5EA"] },
   { name: "apple-ledgerline", family: "Apple-Inspired Minimal", label: "Apple × Thapal", hint: "Apple-inspired simplicity with Thapal navy and gold.", swatch: ["#F7F8FB", "#FFFFFF", "#14265D", "#E6B43A"] },
   { name: "apple-glass", family: "Apple-Inspired Minimal", label: "Apple Glass", hint: "Layered translucent surfaces, restrained and readable.", swatch: ["#EEF1F6", "#FFFFFF", "#007AFF", "#E6B43A"] },
+  // Batch B1: the approved Signature Flow look with its own navigation shell. Proposed until KK approves the build.
+  { name: "signature-flow", family: "Signature Flow (proposed)", label: "Signature Flow (proposed)", hint: "Forest ink on a calm canvas, with the new Home, Money, To-do and Records navigation. Awaiting visual approval.", swatch: ["#FBFBF8", "#F5F5F0", "#223B35", "#D3E8DC"], proposed: true },
 ];
 
-export const THEME_FAMILIES = ["Signature Blue & Gold", "Forest Green & Mint", "Midnight Blue & Champagne Gold", "Graphite & Platinum", "Apple-Inspired Minimal"] as const;
+export const THEME_FAMILIES = ["Signature Blue & Gold", "Forest Green & Mint", "Midnight Blue & Champagne Gold", "Graphite & Platinum", "Apple-Inspired Minimal", "Signature Flow (proposed)"] as const;
 
 export const DEFAULT_THEME: ThemeName = "signature";
 export const DEFAULT_APPEARANCE: Appearance = "system";
@@ -82,4 +87,47 @@ export function earlyTheme(): { themeName: ThemeName; appearance: Appearance } {
   } catch {
     return { themeName: DEFAULT_THEME, appearance: DEFAULT_APPEARANCE };
   }
+}
+
+/* ---------------------------------------------------------------------------
+ * Signature Flow shell switch (Track B, batch B1).
+ * The proposed Signature Flow look is a theme *and* a navigation shell. It is on when the
+ * owner picks "Signature Flow (proposed)" in Settings → Appearance (saved with the other
+ * display preferences), or on this device only through the `?uix=` flag used for review
+ * captures. The flag never writes to the cloud and never touches financial records.
+ * ------------------------------------------------------------------------- */
+
+export const SIGNATURE_FLOW: ThemeName = "signature-flow";
+export type ShellMode = "classic" | "signature-flow";
+/** Device-only override set by `?uix=signature-flow` / `?uix=classic`; `?uix=reset` clears it. */
+export type UixOverride = ShellMode;
+export const UIX_OVERRIDE_KEY = "ll-uix";
+
+/** Reads the `uix` flag from a URL query string. `reset` means "clear the device override". */
+export function parseUixFlag(search: string): UixOverride | "reset" | null {
+  let raw: string | null = null;
+  try { raw = new URLSearchParams(search).get("uix"); } catch { return null; }
+  if (raw == null) return null;
+  const v = raw.trim().toLowerCase();
+  if (v === "signature-flow" || v === "signature" || v === "sf" || v === "on") return "signature-flow";
+  if (v === "classic" || v === "current" || v === "off") return "classic";
+  if (v === "reset" || v === "default" || v === "") return "reset";
+  return null;
+}
+
+export function cleanUixOverride(raw: unknown): UixOverride | null {
+  return raw === "signature-flow" || raw === "classic" ? raw : null;
+}
+
+/** Which shell renders: a device override wins, otherwise the saved theme decides. Default: the current UI. */
+export function resolveShellMode(themeName: ThemeName, override: UixOverride | null): ShellMode {
+  if (override) return override;
+  return themeName === SIGNATURE_FLOW ? "signature-flow" : "classic";
+}
+
+/** The theme actually painted, so the tokens always match the shell that is showing. */
+export function effectiveTheme(themeName: ThemeName, override: UixOverride | null): ThemeName {
+  if (override === "signature-flow") return SIGNATURE_FLOW;
+  if (override === "classic" && themeName === SIGNATURE_FLOW) return DEFAULT_THEME;
+  return themeName;
 }

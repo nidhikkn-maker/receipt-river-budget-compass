@@ -1,4 +1,5 @@
 import { lazy, Suspense, useEffect, useRef, useState } from 'react';
+import { holdToastsClearOfFooter } from "@/lib/toast-placement";
 import { Camera, FileUp, Mic, PencilLine, MessageSquare, X, ChevronLeft, CheckCircle2, Images, ChevronRight, ReceiptText, Package } from 'lucide-react';
 import { SMART_ADD_EVENT, smartAddContext, type SmartAddIntent } from '@/lib/smart-add-event';
 import type { IntakeContext } from '@/lib/books/intake';
@@ -43,6 +44,8 @@ export function SmartAdd({ open, onOpenChange, scope }: { open: boolean; onOpenC
   const busy = stage.kind === 'receipt' || stage.kind === 'statement' || stage.kind === 'classify';
   const [intent, setIntent] = useState<SmartAddIntent | undefined>();
   useEffect(() => { if (!open) setIntent(undefined); }, [open]);
+  // Notifications never cover the review's sticky Save (or the iPhone safe area) while the sheet is open.
+  useEffect(() => (open ? holdToastsClearOfFooter() : undefined), [open]);
   useEffect(() => { const on = (e: Event) => setIntent((e as CustomEvent<{ intent?: SmartAddIntent }>).detail?.intent); window.addEventListener(SMART_ADD_EVENT, on); return () => window.removeEventListener(SMART_ADD_EVENT, on); }, []);
 
   useEffect(() => {

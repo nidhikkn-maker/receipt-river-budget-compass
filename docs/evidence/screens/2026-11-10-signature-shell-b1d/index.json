@@ -1,0 +1,624 @@
+[
+ {
+  "name": "01-add",
+  "note": "Step 1 · Add (unchanged B1c layout)",
+  "viewport": {
+   "width": 393,
+   "height": 659
+  },
+  "footer": {
+   "x": 0,
+   "y": 562,
+   "width": 393,
+   "height": 97
+  },
+  "footerActions": [
+   {
+    "text": "Continue to review",
+    "disabled": true,
+    "x": 16,
+    "y": 571,
+    "width": 361,
+    "height": 46
+   }
+  ],
+  "toasts": [],
+  "toaster": null,
+  "accountState": null,
+  "accountEvidence": null,
+  "dateField": null,
+  "toastOverlapsFooter": false,
+  "toastGapAboveFooterPx": null,
+  "toastInSafeArea": false
+ },
+ {
+  "name": "02-toast-clear-of-footer",
+  "note": "A notification while the sticky footer is visible: it sits just above the footer, clear of the safe areas",
+  "viewport": {
+   "width": 393,
+   "height": 659
+  },
+  "footer": {
+   "x": 0,
+   "y": 525,
+   "width": 393,
+   "height": 134
+  },
+  "footerActions": [
+   {
+    "text": "Start over",
+    "disabled": false,
+    "x": 16,
+    "y": 571,
+    "width": 119,
+    "height": 46
+   },
+   {
+    "text": "Continue to confirmation",
+    "disabled": true,
+    "x": 143,
+    "y": 571,
+    "width": 234,
+    "height": 46
+   }
+  ],
+  "toasts": [
+   {
+    "x": 16,
+    "y": 463,
+    "width": 361,
+    "height": 54
+   }
+  ],
+  "toaster": "bottom",
+  "accountState": "suggested",
+  "accountEvidence": "Card ending 1006 printed on the bill matches Amex Platinum Travel",
+  "dateField": {
+   "shown": "09 Nov 2026",
+   "stored": "2026-11-09",
+   "name": "Date: 09 Nov 2026. Change date",
+   "x": 33,
+   "y": 519,
+   "width": 158,
+   "height": 44
+  },
+  "toastOverlapsFooter": false,
+  "toastGapAboveFooterPx": 8,
+  "toastInSafeArea": false
+ },
+ {
+  "name": "03-review-details",
+  "note": "Step 2 · Review (Details tab), top: the existing duplicate check",
+  "viewport": {
+   "width": 393,
+   "height": 659
+  },
+  "footer": {
+   "x": 0,
+   "y": 525,
+   "width": 393,
+   "height": 134
+  },
+  "footerActions": [
+   {
+    "text": "Start over",
+    "disabled": false,
+    "x": 16,
+    "y": 571,
+    "width": 119,
+    "height": 46
+   },
+   {
+    "text": "Continue to confirmation",
+    "disabled": true,
+    "x": 143,
+    "y": 571,
+    "width": 234,
+    "height": 46
+   }
+  ],
+  "toasts": [
+   {
+    "x": 16,
+    "y": 463,
+    "width": 361,
+    "height": 54
+   }
+  ],
+  "toaster": "bottom",
+  "accountState": "suggested",
+  "accountEvidence": "Card ending 1006 printed on the bill matches Amex Platinum Travel",
+  "dateField": {
+   "shown": "09 Nov 2026",
+   "stored": "2026-11-09",
+   "name": "Date: 09 Nov 2026. Change date",
+   "x": 33,
+   "y": 519,
+   "width": 158,
+   "height": 44
+  },
+  "toastOverlapsFooter": false,
+  "toastGapAboveFooterPx": 8,
+  "toastInSafeArea": false
+ },
+ {
+  "name": "04-review-date-field",
+  "note": "Step 2 · the date field always shows 09 Nov 2026 (stored 2026-11-09)",
+  "viewport": {
+   "width": 393,
+   "height": 659
+  },
+  "footer": {
+   "x": 0,
+   "y": 525,
+   "width": 393,
+   "height": 134
+  },
+  "footerActions": [
+   {
+    "text": "Start over",
+    "disabled": false,
+    "x": 16,
+    "y": 571,
+    "width": 119,
+    "height": 46
+   },
+   {
+    "text": "Continue to confirmation",
+    "disabled": true,
+    "x": 143,
+    "y": 571,
+    "width": 234,
+    "height": 46
+   }
+  ],
+  "toasts": [],
+  "toaster": null,
+  "accountState": "suggested",
+  "accountEvidence": "Card ending 1006 printed on the bill matches Amex Platinum Travel",
+  "dateField": {
+   "shown": "09 Nov 2026",
+   "stored": "2026-11-09",
+   "name": "Date: 09 Nov 2026. Change date",
+   "x": 33,
+   "y": 316,
+   "width": 158,
+   "height": 44
+  },
+  "toastOverlapsFooter": false,
+  "toastGapAboveFooterPx": null,
+  "toastInSafeArea": false
+ },
+ {
+  "name": "05-review-date-picker",
+  "note": "Step 2 · the date field opens a calendar (keyboard: arrows, Enter, Escape)",
+  "viewport": {
+   "width": 393,
+   "height": 659
+  },
+  "footer": {
+   "x": 0,
+   "y": 525,
+   "width": 393,
+   "height": 134
+  },
+  "footerActions": [
+   {
+    "text": "Start over",
+    "disabled": false,
+    "x": 16,
+    "y": 571,
+    "width": 119,
+    "height": 46
+   },
+   {
+    "text": "Continue to confirmation",
+    "disabled": true,
+    "x": 143,
+    "y": 571,
+    "width": 234,
+    "height": 46
+   }
+  ],
+  "toasts": [],
+  "toaster": null,
+  "accountState": "suggested",
+  "accountEvidence": "Card ending 1006 printed on the bill matches Amex Platinum Travel",
+  "dateField": {
+   "shown": "09 Nov 2026",
+   "stored": "2026-11-09",
+   "name": "Date: 09 Nov 2026. Change date",
+   "x": 33,
+   "y": 250,
+   "width": 158,
+   "height": 44
+  },
+  "toastOverlapsFooter": false,
+  "toastGapAboveFooterPx": null,
+  "toastInSafeArea": false
+ },
+ {
+  "name": "06-review-account-suggested",
+  "note": "Step 2 · Amex Platinum Travel suggested from the printed card digits, with evidence and Confirm this account",
+  "viewport": {
+   "width": 393,
+   "height": 659
+  },
+  "footer": {
+   "x": 0,
+   "y": 525,
+   "width": 393,
+   "height": 134
+  },
+  "footerActions": [
+   {
+    "text": "Start over",
+    "disabled": false,
+    "x": 16,
+    "y": 571,
+    "width": 119,
+    "height": 46
+   },
+   {
+    "text": "Continue to confirmation",
+    "disabled": true,
+    "x": 143,
+    "y": 571,
+    "width": 234,
+    "height": 46
+   }
+  ],
+  "toasts": [],
+  "toaster": null,
+  "accountState": "suggested",
+  "accountEvidence": "Card ending 1006 printed on the bill matches Amex Platinum Travel",
+  "dateField": {
+   "shown": "09 Nov 2026",
+   "stored": "2026-11-09",
+   "name": "Date: 09 Nov 2026. Change date",
+   "x": 69,
+   "y": 737,
+   "width": 308,
+   "height": 44
+  },
+  "toastOverlapsFooter": false,
+  "toastGapAboveFooterPx": null,
+  "toastInSafeArea": false
+ },
+ {
+  "name": "07-review-original",
+  "note": "Step 2 · Original tab (source kept)",
+  "viewport": {
+   "width": 393,
+   "height": 659
+  },
+  "footer": {
+   "x": 0,
+   "y": 525,
+   "width": 393,
+   "height": 134
+  },
+  "footerActions": [
+   {
+    "text": "Start over",
+    "disabled": false,
+    "x": 16,
+    "y": 571,
+    "width": 119,
+    "height": 46
+   },
+   {
+    "text": "Continue to confirmation",
+    "disabled": true,
+    "x": 143,
+    "y": 571,
+    "width": 234,
+    "height": 46
+   }
+  ],
+  "toasts": [],
+  "toaster": null,
+  "accountState": "suggested",
+  "accountEvidence": "Card ending 1006 printed on the bill matches Amex Platinum Travel",
+  "dateField": {
+   "shown": "09 Nov 2026",
+   "stored": "2026-11-09",
+   "name": "Date: 09 Nov 2026. Change date",
+   "x": 0,
+   "y": 0,
+   "width": 0,
+   "height": 0
+  },
+  "toastOverlapsFooter": false,
+  "toastGapAboveFooterPx": null,
+  "toastInSafeArea": false
+ },
+ {
+  "name": "08-duplicate-reason-required",
+  "note": "Step 2 · “It's separate” without a reason is refused and asks why",
+  "viewport": {
+   "width": 393,
+   "height": 659
+  },
+  "footer": {
+   "x": 0,
+   "y": 525,
+   "width": 393,
+   "height": 134
+  },
+  "footerActions": [
+   {
+    "text": "Start over",
+    "disabled": false,
+    "x": 16,
+    "y": 571,
+    "width": 119,
+    "height": 46
+   },
+   {
+    "text": "Continue to confirmation",
+    "disabled": true,
+    "x": 143,
+    "y": 571,
+    "width": 234,
+    "height": 46
+   }
+  ],
+  "toasts": [],
+  "toaster": null,
+  "accountState": "suggested",
+  "accountEvidence": "Card ending 1006 printed on the bill matches Amex Platinum Travel",
+  "dateField": {
+   "shown": "09 Nov 2026",
+   "stored": "2026-11-09",
+   "name": "Date: 09 Nov 2026. Change date",
+   "x": 69,
+   "y": 1024,
+   "width": 308,
+   "height": 44
+  },
+  "toastOverlapsFooter": false,
+  "toastGapAboveFooterPx": null,
+  "toastInSafeArea": false
+ },
+ {
+  "name": "09-duplicate-separate-with-reason",
+  "note": "Step 2 · separate bill confirmed with its reason (saved with the entry, with who and when)",
+  "viewport": {
+   "width": 393,
+   "height": 659
+  },
+  "footer": {
+   "x": 0,
+   "y": 562,
+   "width": 393,
+   "height": 97
+  },
+  "footerActions": [
+   {
+    "text": "Start over",
+    "disabled": false,
+    "x": 16,
+    "y": 571,
+    "width": 119,
+    "height": 46
+   },
+   {
+    "text": "Continue to confirmation",
+    "disabled": false,
+    "x": 143,
+    "y": 571,
+    "width": 234,
+    "height": 46
+   }
+  ],
+  "toasts": [],
+  "toaster": null,
+  "accountState": "suggested",
+  "accountEvidence": "Card ending 1006 printed on the bill matches Amex Platinum Travel",
+  "dateField": {
+   "shown": "09 Nov 2026",
+   "stored": "2026-11-09",
+   "name": "Date: 09 Nov 2026. Change date",
+   "x": 69,
+   "y": 952,
+   "width": 308,
+   "height": 44
+  },
+  "toastOverlapsFooter": false,
+  "toastGapAboveFooterPx": null,
+  "toastInSafeArea": false
+ },
+ {
+  "name": "10-confirm-blocked",
+  "note": "Step 3 · blocked: the suggested account is not yet confirmed",
+  "viewport": {
+   "width": 393,
+   "height": 659
+  },
+  "footer": {
+   "x": 0,
+   "y": 562,
+   "width": 393,
+   "height": 97
+  },
+  "footerActions": [
+   {
+    "text": "Change",
+    "disabled": false,
+    "x": 16,
+    "y": 571,
+    "width": 105,
+    "height": 46
+   },
+   {
+    "text": "Confirm and save",
+    "disabled": true,
+    "x": 129,
+    "y": 571,
+    "width": 248,
+    "height": 46
+   }
+  ],
+  "toasts": [],
+  "toaster": null,
+  "accountState": "suggested",
+  "accountEvidence": "Card ending 1006 printed on the bill matches Amex Platinum Travel",
+  "dateField": {
+   "shown": "09 Nov 2026",
+   "stored": "2026-11-09",
+   "name": "Date: 09 Nov 2026. Change date",
+   "x": 0,
+   "y": 0,
+   "width": 0,
+   "height": 0
+  },
+  "toastOverlapsFooter": false,
+  "toastGapAboveFooterPx": null,
+  "toastInSafeArea": false
+ },
+ {
+  "name": "11-review-account-confirmed",
+  "note": "Step 2 · the owner confirmed Amex Platinum Travel",
+  "viewport": {
+   "width": 393,
+   "height": 659
+  },
+  "footer": {
+   "x": 0,
+   "y": 562,
+   "width": 393,
+   "height": 97
+  },
+  "footerActions": [
+   {
+    "text": "Start over",
+    "disabled": false,
+    "x": 16,
+    "y": 571,
+    "width": 119,
+    "height": 46
+   },
+   {
+    "text": "Continue to confirmation",
+    "disabled": false,
+    "x": 143,
+    "y": 571,
+    "width": 234,
+    "height": 46
+   }
+  ],
+  "toasts": [],
+  "toaster": null,
+  "accountState": "confirmed",
+  "accountEvidence": "Card ending 1006 printed on the bill matches Amex Platinum Travel",
+  "dateField": {
+   "shown": "09 Nov 2026",
+   "stored": "2026-11-09",
+   "name": "Date: 09 Nov 2026. Change date",
+   "x": 69,
+   "y": 627,
+   "width": 308,
+   "height": 44
+  },
+  "toastOverlapsFooter": false,
+  "toastGapAboveFooterPx": null,
+  "toastInSafeArea": false
+ },
+ {
+  "name": "12-confirm-enabled",
+  "note": "Step 3 · confirmed: Confirm and save enabled (not pressed)",
+  "viewport": {
+   "width": 393,
+   "height": 659
+  },
+  "footer": {
+   "x": 0,
+   "y": 562,
+   "width": 393,
+   "height": 97
+  },
+  "footerActions": [
+   {
+    "text": "Change",
+    "disabled": false,
+    "x": 16,
+    "y": 571,
+    "width": 105,
+    "height": 46
+   },
+   {
+    "text": "Confirm and save",
+    "disabled": false,
+    "x": 129,
+    "y": 571,
+    "width": 248,
+    "height": 46
+   }
+  ],
+  "toasts": [],
+  "toaster": null,
+  "accountState": "confirmed",
+  "accountEvidence": "Card ending 1006 printed on the bill matches Amex Platinum Travel",
+  "dateField": {
+   "shown": "09 Nov 2026",
+   "stored": "2026-11-09",
+   "name": "Date: 09 Nov 2026. Change date",
+   "x": 0,
+   "y": 0,
+   "width": 0,
+   "height": 0
+  },
+  "toastOverlapsFooter": false,
+  "toastGapAboveFooterPx": null,
+  "toastInSafeArea": false
+ },
+ {
+  "name": "13-variant-amex-printed",
+  "note": "Variant stand-in text “AMEX ****1006”: evidence reads “Amex ending 1006 printed on the bill matches Amex Platinum Travel”",
+  "viewport": {
+   "width": 393,
+   "height": 659
+  },
+  "footer": {
+   "x": 0,
+   "y": 525,
+   "width": 393,
+   "height": 134
+  },
+  "footerActions": [
+   {
+    "text": "Start over",
+    "disabled": false,
+    "x": 16,
+    "y": 571,
+    "width": 119,
+    "height": 46
+   },
+   {
+    "text": "Continue to confirmation",
+    "disabled": true,
+    "x": 143,
+    "y": 571,
+    "width": 234,
+    "height": 46
+   }
+  ],
+  "toasts": [],
+  "toaster": null,
+  "accountState": "suggested",
+  "accountEvidence": "Amex ending 1006 printed on the bill matches Amex Platinum Travel",
+  "dateField": {
+   "shown": "09 Nov 2026",
+   "stored": "2026-11-09",
+   "name": "Date: 09 Nov 2026. Change date",
+   "x": 69,
+   "y": 737,
+   "width": 308,
+   "height": 44
+  },
+  "toastOverlapsFooter": false,
+  "toastGapAboveFooterPx": null,
+  "toastInSafeArea": false
+ }
+]

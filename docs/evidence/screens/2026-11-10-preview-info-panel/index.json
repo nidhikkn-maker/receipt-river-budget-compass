@@ -1,0 +1,260 @@
+[
+  {
+    "name": "iphone15-01-collapsed",
+    "note": "Home, panel collapsed",
+    "viewport": {
+      "width": 393,
+      "height": 659
+    },
+    "pill": {
+      "x": 12,
+      "y": 509,
+      "width": 136,
+      "height": 44
+    },
+    "pillName": "Preview build 69ab3e2 on uix/signature-shell, sample data",
+    "card": null,
+    "cardText": null,
+    "tabbar": {
+      "x": 0,
+      "y": 565,
+      "width": 393,
+      "height": 94
+    },
+    "add": {
+      "x": 173,
+      "y": 575,
+      "width": 46,
+      "height": 46
+    },
+    "smartAddFooter": {
+      "x": 0,
+      "y": 0,
+      "width": 0,
+      "height": 0
+    },
+    "toasts": [],
+    "pillBeneathOverlay": false,
+    "overlaps": {
+      "pillTabbar": false,
+      "cardTabbar": false,
+      "pillAdd": false,
+      "pillSmartAddFooter": false,
+      "pillToasts": false
+    },
+    "pillInSafeArea": false
+  },
+  {
+    "name": "iphone15-02-expanded",
+    "note": "Home, panel expanded (tap/click)",
+    "viewport": {
+      "width": 393,
+      "height": 659
+    },
+    "pill": {
+      "x": 12,
+      "y": 509,
+      "width": 136,
+      "height": 44
+    },
+    "pillName": "Preview build 69ab3e2 on uix/signature-shell, sample data",
+    "card": {
+      "x": 12,
+      "y": 303,
+      "width": 320,
+      "height": 198
+    },
+    "cardText": "Sample data only — not connected to your real records\n\nCommit\n69ab3e271da76349f5268bb5c5745837157926a9\nBranch\nuix/signature-shell\nBuild\n20261110.1118-69ab3e2\nBuilt\n10 Nov 2026, 11:18 UTC\nHost\n127.0.0.1:8085",
+    "tabbar": {
+      "x": 0,
+      "y": 565,
+      "width": 393,
+      "height": 94
+    },
+    "add": {
+      "x": 173,
+      "y": 575,
+      "width": 46,
+      "height": 46
+    },
+    "smartAddFooter": {
+      "x": 0,
+      "y": 0,
+      "width": 0,
+      "height": 0
+    },
+    "toasts": [],
+    "pillBeneathOverlay": false,
+    "overlaps": {
+      "pillTabbar": false,
+      "cardTabbar": false,
+      "pillAdd": false,
+      "pillSmartAddFooter": false,
+      "pillToasts": false
+    },
+    "pillInSafeArea": false
+  },
+  {
+    "name": "iphone15-03-smart-add-open",
+    "note": "Smart Add open: the panel stays beneath it, so its sticky actions are uncovered",
+    "viewport": {
+      "width": 393,
+      "height": 659
+    },
+    "pill": {
+      "x": 12,
+      "y": 509,
+      "width": 136,
+      "height": 44
+    },
+    "pillName": "Preview build 69ab3e2 on uix/signature-shell, sample data",
+    "card": null,
+    "cardText": null,
+    "tabbar": {
+      "x": 0,
+      "y": 565,
+      "width": 393,
+      "height": 94
+    },
+    "add": {
+      "x": 173,
+      "y": 575,
+      "width": 46,
+      "height": 46
+    },
+    "smartAddFooter": {
+      "x": 0,
+      "y": 562,
+      "width": 393,
+      "height": 97
+    },
+    "toasts": [],
+    "pillBeneathOverlay": true,
+    "overlaps": {
+      "pillTabbar": false,
+      "cardTabbar": false,
+      "pillAdd": false,
+      "pillSmartAddFooter": false,
+      "pillToasts": false
+    },
+    "pillInSafeArea": false
+  },
+  {
+    "name": "iphone15-classic-01-collapsed",
+    "note": "Home, panel collapsed",
+    "viewport": {
+      "width": 393,
+      "height": 659
+    },
+    "pill": {
+      "x": 12,
+      "y": 509,
+      "width": 136,
+      "height": 44
+    },
+    "pillName": "Preview build 69ab3e2 on uix/signature-shell, sample data",
+    "card": null,
+    "cardText": null,
+    "tabbar": {
+      "x": 0,
+      "y": 567,
+      "width": 393,
+      "height": 92
+    },
+    "add": null,
+    "smartAddFooter": null,
+    "toasts": [],
+    "pillBeneathOverlay": false,
+    "overlaps": {
+      "pillTabbar": false,
+      "cardTabbar": false,
+      "pillAdd": false,
+      "pillSmartAddFooter": false,
+      "pillToasts": false
+    },
+    "pillInSafeArea": false
+  },
+  {
+    "name": "desktop-1440-01-collapsed",
+    "note": "Home, panel collapsed",
+    "viewport": {
+      "width": 1440,
+      "height": 900
+    },
+    "pill": {
+      "x": 1211,
+      "y": 840,
+      "width": 213,
+      "height": 44
+    },
+    "pillName": "Preview build 69ab3e2 on uix/signature-shell, sample data",
+    "card": null,
+    "cardText": null,
+    "tabbar": null,
+    "add": {
+      "x": 0,
+      "y": 0,
+      "width": 0,
+      "height": 0
+    },
+    "smartAddFooter": {
+      "x": 0,
+      "y": 0,
+      "width": 0,
+      "height": 0
+    },
+    "toasts": [],
+    "pillBeneathOverlay": false,
+    "overlaps": {
+      "pillTabbar": false,
+      "cardTabbar": false,
+      "pillAdd": false,
+      "pillSmartAddFooter": false,
+      "pillToasts": false
+    }
+  },
+  {
+    "name": "desktop-1440-02-expanded",
+    "note": "Home, panel expanded (tap/click)",
+    "viewport": {
+      "width": 1440,
+      "height": 900
+    },
+    "pill": {
+      "x": 1211,
+      "y": 840,
+      "width": 213,
+      "height": 44
+    },
+    "pillName": "Preview build 69ab3e2 on uix/signature-shell, sample data",
+    "card": {
+      "x": 1104,
+      "y": 634,
+      "width": 320,
+      "height": 198
+    },
+    "cardText": "Sample data only — not connected to your real records\n\nCommit\n69ab3e271da76349f5268bb5c5745837157926a9\nBranch\nuix/signature-shell\nBuild\n20261110.1118-69ab3e2\nBuilt\n10 Nov 2026, 11:18 UTC\nHost\n127.0.0.1:8085",
+    "tabbar": null,
+    "add": {
+      "x": 0,
+      "y": 0,
+      "width": 0,
+      "height": 0
+    },
+    "smartAddFooter": {
+      "x": 0,
+      "y": 0,
+      "width": 0,
+      "height": 0
+    },
+    "toasts": [],
+    "pillBeneathOverlay": false,
+    "overlaps": {
+      "pillTabbar": false,
+      "cardTabbar": false,
+      "pillAdd": false,
+      "pillSmartAddFooter": false,
+      "pillToasts": false
+    }
+  }
+]

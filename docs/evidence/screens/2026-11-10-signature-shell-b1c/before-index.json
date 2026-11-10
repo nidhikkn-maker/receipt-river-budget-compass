@@ -1,0 +1,289 @@
+[
+ {
+  "name": "before-01-add",
+  "note": "Step 1 · Add",
+  "head": 126,
+  "steps": 32,
+  "chips": 88,
+  "drop": 182,
+  "foot": 107,
+  "minFont": 10,
+  "under44": [
+   {
+    "t": "Receipt",
+    "h": 40,
+    "w": 98
+   },
+   {
+    "t": "Statement",
+    "h": 40,
+    "w": 116
+   },
+   {
+    "t": "Travel",
+    "h": 40,
+    "w": 90
+   },
+   {
+    "t": "Asset register",
+    "h": 40,
+    "w": 139
+   }
+  ],
+  "footBottomGap": 0,
+  "accountState": null
+ },
+ {
+  "name": "before-02-review-details",
+  "note": "Step 2 · Review (Details tab), top",
+  "head": 153,
+  "steps": 32,
+  "chips": null,
+  "drop": null,
+  "foot": 135,
+  "minFont": 10,
+  "under44": [
+   {
+    "t": "Details",
+    "h": 36,
+    "w": 171
+   },
+   {
+    "t": "Original",
+    "h": 36,
+    "w": 171
+   },
+   {
+    "t": "Spending",
+    "h": 40,
+    "w": 94
+   },
+   {
+    "t": "Card bill",
+    "h": 40,
+    "w": 85
+   },
+   {
+    "t": "Own transfer",
+    "h": 40,
+    "w": 117
+   },
+   {
+    "t": "Money in",
+    "h": 40,
+    "w": 91
+   },
+   {
+    "t": "Remove tax 1",
+    "h": 44,
+    "w": 40
+   },
+   {
+    "t": "Remove tax 2",
+    "h": 44,
+    "w": 40
+   }
+  ],
+  "footBottomGap": 0,
+  "accountState": null
+ },
+ {
+  "name": "before-03-review-date",
+  "note": "Step 2 · read date shown unambiguously",
+  "head": 153,
+  "steps": 32,
+  "chips": null,
+  "drop": null,
+  "foot": 135,
+  "minFont": 10,
+  "under44": [
+   {
+    "t": "Details",
+    "h": 36,
+    "w": 171
+   },
+   {
+    "t": "Original",
+    "h": 36,
+    "w": 171
+   },
+   {
+    "t": "Spending",
+    "h": 40,
+    "w": 94
+   },
+   {
+    "t": "Card bill",
+    "h": 40,
+    "w": 85
+   },
+   {
+    "t": "Own transfer",
+    "h": 40,
+    "w": 117
+   },
+   {
+    "t": "Money in",
+    "h": 40,
+    "w": 91
+   },
+   {
+    "t": "Remove tax 1",
+    "h": 44,
+    "w": 40
+   },
+   {
+    "t": "Remove tax 2",
+    "h": 44,
+    "w": 40
+   }
+  ],
+  "footBottomGap": 0,
+  "accountState": null
+ },
+ {
+  "name": "before-04-review-account",
+  "note": "Step 2 · account state after reading (card named without last four digits)",
+  "head": 153,
+  "steps": 32,
+  "chips": null,
+  "drop": null,
+  "foot": 135,
+  "minFont": 10,
+  "under44": [
+   {
+    "t": "Details",
+    "h": 36,
+    "w": 171
+   },
+   {
+    "t": "Original",
+    "h": 36,
+    "w": 171
+   },
+   {
+    "t": "Spending",
+    "h": 40,
+    "w": 94
+   },
+   {
+    "t": "Card bill",
+    "h": 40,
+    "w": 85
+   },
+   {
+    "t": "Own transfer",
+    "h": 40,
+    "w": 117
+   },
+   {
+    "t": "Money in",
+    "h": 40,
+    "w": 91
+   },
+   {
+    "t": "Change smart defaults or this ",
+    "h": 16,
+    "w": 240
+   },
+   {
+    "t": "",
+    "h": 20,
+    "w": 20
+   }
+  ],
+  "footBottomGap": 0,
+  "accountState": null
+ },
+ {
+  "name": "before-05-review-original",
+  "note": "Step 2 · Original tab",
+  "head": 153,
+  "steps": 32,
+  "chips": null,
+  "drop": null,
+  "foot": 135,
+  "minFont": 10,
+  "under44": [
+   {
+    "t": "Details",
+    "h": 36,
+    "w": 171
+   },
+   {
+    "t": "Original",
+    "h": 36,
+    "w": 171
+   }
+  ],
+  "footBottomGap": 0,
+  "accountState": null
+ },
+ {
+  "name": "before-06-review-details-again",
+  "note": "Step 2 · back on Details: edits and position kept",
+  "head": 153,
+  "steps": 32,
+  "chips": null,
+  "drop": null,
+  "foot": 135,
+  "minFont": 10,
+  "under44": [
+   {
+    "t": "Details",
+    "h": 36,
+    "w": 171
+   },
+   {
+    "t": "Original",
+    "h": 36,
+    "w": 171
+   },
+   {
+    "t": "Spending",
+    "h": 40,
+    "w": 94
+   },
+   {
+    "t": "Card bill",
+    "h": 40,
+    "w": 85
+   },
+   {
+    "t": "Own transfer",
+    "h": 40,
+    "w": 117
+   },
+   {
+    "t": "Money in",
+    "h": 40,
+    "w": 91
+   },
+   {
+    "t": "Change smart defaults or this ",
+    "h": 16,
+    "w": 240
+   },
+   {
+    "t": "",
+    "h": 20,
+    "w": 20
+   }
+  ],
+  "footBottomGap": 0,
+  "accountState": null
+ },
+ {
+  "name": "before-07-confirm",
+  "note": "Step 3 · B1b showed the habit account as if settled",
+  "head": 126,
+  "steps": 32,
+  "chips": null,
+  "drop": null,
+  "foot": 107,
+  "minFont": 10,
+  "under44": [],
+  "footBottomGap": 0,
+  "accountState": null
+ }
+]

@@ -25,6 +25,22 @@ export const ReceiptDetailsSchema = z.object({
   /** C11: how the row was classified (statement suggestions are automatic) and the person's explicit row approval. */
   classification: z.object({ source: z.literal("statement"), automatic: z.literal(true) }).optional(),
   review: z.object({ approvedAt: z.string().min(1).max(40), method: z.literal("row"), key: z.string().max(200) }).optional(),
+  /** How the paying account was settled for a read bill (evidence confirmed, chosen, or not paid from the owner's accounts). */
+  accountCheck: z.object({
+    decision: z.enum(["evidence_confirmed", "chosen", "not_own_account"]),
+    evidence: z.string().max(300).optional(),
+    card: z.object({ network: z.enum(["visa", "mastercard", "amex", "rupay", "diners"]).nullable(), lastFour: z.string().regex(/^\d{4}$/).nullable() }).optional(),
+    confirmedAt: z.string().max(40),
+  }).optional(),
+  /** A possible duplicate the owner resolved as a separate bill: the reason, and who decided when (stamped by the server). */
+  duplicateReview: z.array(z.object({
+    decision: z.literal("separate"),
+    check: z.enum(["same_bill", "matching_entry"]),
+    reason: z.string().trim().min(4).max(300),
+    matchedIds: z.array(z.string().max(64)).max(20),
+    decidedAt: z.string().max(40),
+    decidedBy: z.string().max(64).optional(),
+  })).max(4).optional(),
 });
 
 export const ExtractedReceiptSchema = z.object({
@@ -41,6 +57,8 @@ export const ExtractedReceiptSchema = z.object({
   items: z.array(z.object({ name: z.string(), quantity: z.number().nonnegative(), amount: z.number().nonnegative(), section: z.string().nullable().describe("Printed section heading this item sits under, e.g. Beverages; null if none. Headings are never items"), confidence: ReceiptItemConfidence.describe("Separate reading certainty for this item's name and extended line amount; never a probability") })),
   text: z.string(), currency: z.string().nullable(),
   payment_method: z.enum(["cash", "upi", "credit_card", "debit_card", "forex_card", "company_card", "bank_transfer", "other"]).nullable(),
+  card_network: z.enum(["visa", "mastercard", "amex", "rupay", "diners"]).nullable().describe("Card network printed on the bill (Visa, Mastercard, Amex/American Express, RuPay, Diners); null if not printed. Never guess it from the card digits"),
+  card_last_four: z.string().nullable().describe("Exactly the last 4 digits of the paying card or account as printed (e.g. XXXX XXXX XXXX 1006, Card ending 1006, AMEX ****1006, xx1006 -> 1006); null if not printed. Never return more than 4 digits"),
   description: z.string().nullable(), category: z.string().max(60).nullable(),
   scope: z.enum(["personal", "business"]).nullable(),
 });

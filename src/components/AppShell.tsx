@@ -4,11 +4,11 @@ import { PageSkeleton } from "@/components/PageSkeleton";
 import { NavProgress } from "@/components/NavProgress";
 import { DemoBanner } from "@/components/DemoBanner";
 import { DraftsReminder } from "@/components/DraftsReminder";
-import { Link, useRouter, useRouterState , useNavigate } from "@tanstack/react-router";
+import { Link, useRouter, useRouterState } from "@tanstack/react-router";
 import { ArrowLeft, ArrowRight } from "lucide-react";
 import { backStep, showBackButton } from "@/lib/back-nav";
 import { useEffect, useState, type ReactNode } from "react";
-import { BarChart3, Bell, Gem, Home, ListFilter, Plus, Settings, Users, Eye, EyeOff, FileText, Inbox, Search, Plane, Menu, X, RefreshCw, CloudOff, Check, TriangleAlert } from "lucide-react";
+import { BarChart3, Bell, Gem, Home, ListFilter, Plus, Settings, Users, Eye, EyeOff, FileText, Inbox, Search, Plane, Menu } from "lucide-react";
 import { DeviceLock } from "./DeviceLock";
 import { StepUpHost } from "./StepUpHost";
 import { ThapalBrand } from "./ThapalLogo";
@@ -20,6 +20,9 @@ import { SCOPE_LABEL } from "@/lib/expenses";
 import { initials } from "./JournalToday";
 import { SmartAdd } from './SmartAdd';
 import { ModuleDirectory } from './ModuleDirectory';
+import { SyncStatus } from "./shell/SyncStatus";
+import { SignatureShell } from "./shell/SignatureShell";
+import { useShellMode } from "./shell/use-shell-mode";
 
 const PRIMARY_LINKS = [
   { to: '/dashboard', label: 'Today', icon: Home },
@@ -32,45 +35,27 @@ const PRIMARY_LINKS = [
   { to: '/reports', label: 'Reports', icon: BarChart3 },
 ] as const;
 
-/** Small header pill showing whether saved figures are refreshing, current, offline or failed. Tap to refresh. */
-function SyncStatus() {
-  const { syncState, lastSyncedAt, pendingCount, refresh } = useStore();
-  const navigate = useNavigate();
-  const [, tick] = useState(0);
-  useEffect(() => { const t = setInterval(() => tick((n) => n + 1), 30000); return () => clearInterval(t); }, []);
-  const mins = lastSyncedAt ? Math.max(0, Math.round((Date.now() - new Date(lastSyncedAt).getTime()) / 60000)) : null;
-  const label =
-    syncState === "syncing" ? "Updating…" :
-    syncState === "offline" ? (pendingCount > 0 ? `Offline · ${pendingCount} waiting` : "Offline · saved copy") :
-    syncState === "error" ? "Couldn't update — tap to retry" :
-    pendingCount > 0 ? `${pendingCount} waiting to sync` :
-    mins == null || mins < 1 ? "Up to date" : `Updated ${mins} min ago`;
-  const Icon = syncState === "syncing" ? RefreshCw : syncState === "offline" ? CloudOff : syncState === "error" ? TriangleAlert : Check;
-  return (
-    <Button
-      variant="ghost"
-      type="button"
-      onClick={() => (pendingCount > 0 ? void navigate({ to: "/sync-queue" }) : void refresh())}
-      aria-live="polite"
-      title={label}
-      className={"flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold transition " +
-        (syncState === "error" ? "bg-destructive/10 text-destructive" : syncState === "offline" ? "bg-secondary text-secondary-foreground" : pendingCount > 0 || syncState === "syncing" ? "bg-secondary text-muted-foreground hover:text-foreground" : "bg-transparent text-muted-foreground hover:text-foreground")}
-    >
-      <Icon className={"h-3.5 w-3.5" + (syncState === "syncing" ? " animate-spin" : "")} />
-      <span className={(syncState === "error" || syncState === "offline" || pendingCount > 0 ? "max-w-24" : "sr-only sm:not-sr-only") + " truncate sm:max-w-none"}>{label}</span>
-    </Button>
-  );
-}
-
+/**
+ * Signed-in frame. The current UI stays the default; the proposed Signature Flow shell renders only when the
+ * owner picks "Signature Flow (proposed)" in Settings → Appearance or this device carries the `?uix=` review
+ * flag. Switching changes presentation only — never records, figures or permissions.
+ */
 export function AppShell({ children }: { children: ReactNode }) {
-  const { loading, preferences, name } = useStore();
+  const { preferences } = useStore();
+  const { mode, theme } = useShellMode();
   useEffect(() => {
     const media = window.matchMedia("(prefers-color-scheme: dark)");
-    const apply = () => applyTheme(preferences.themeName, preferences.theme, media.matches);
+    const apply = () => applyTheme(theme, preferences.theme, media.matches);
     apply();
     media.addEventListener("change", apply);
     return () => media.removeEventListener("change", apply);
-  }, [preferences.theme, preferences.themeName]);
+  }, [preferences.theme, theme]);
+  return mode === "signature-flow" ? <SignatureShell>{children}</SignatureShell> : <ClassicShell>{children}</ClassicShell>;
+}
+
+/** Today's shell, unchanged. */
+function ClassicShell({ children }: { children: ReactNode }) {
+  const { loading, preferences, name } = useStore();
   const [hidden, setHidden] = useState(false);
   // Version 4.4: the universal entry opens as a focused screen without the global header or bottom bar.
   const focused = useRouterState({ select: (st) => st.location.pathname === "/new" });
