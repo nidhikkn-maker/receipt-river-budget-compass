@@ -59,7 +59,8 @@ async function seed(db: PGlite, owner: string, asset: Row) {
   await db.query("UPDATE public.finance_preferences SET data = jsonb_set(coalesce(data, '{}'), '{assets}', coalesce(data->'assets', '[]') || $2::jsonb) WHERE owner_id = $1", [owner, JSON.stringify([a])]);
   return { a, acc, doc };
 }
-const REQ = "SELECT public.request_asset_disposal($1,'write_off','2026-10-31'::date,0,NULL,ARRAY[$2]::uuid[],'Written off after the fire',$3,$4) id";
+// named arguments: p_book_value is the optional, last consistency-check argument (R-E-I15)
+const REQ = "SELECT public.request_asset_disposal(p_asset => $1, p_method => 'write_off', p_date => '2026-10-31'::date, p_proceeds => 0, p_proceeds_entry => NULL, p_evidence => ARRAY[$2]::uuid[], p_reason => 'Written off after the fire', p_book_value => $3, p_entry => $4) id";
 const stepUp = async (db: PGlite, uid: string) => { await actAs(db, null); await db.exec("SET ROLE service_role"); await db.query("SELECT public.record_step_up($1,'password',300)", [uid]); await actAs(db, null); };
 
 describe("P14-a: the database derives and checks the disposal book value (direct RPC, whole stack + P14)", () => {
@@ -102,6 +103,51 @@ describe("P14-a: the database derives and checks the disposal book value (direct
     expect(await err(q1(db, O, REQ, [c.a.id, c.doc, 53880, crypto.randomUUID()]))).toMatch(/P14_BOOK_VALUE|P14_PENDING/);
     await q1(db, O, "SELECT public.cancel_asset_disposal($1, 'Test cleanup only')", [id2]);
     expect(await err(q1(db, O, REQ, [c.a.id, c.doc, 53880, crypto.randomUUID()]))).toMatch(/P14_BOOK_VALUE: the book value 53880.00 does not follow from the register \(the database works out 53883.33\)/);
+  });
+
+  // R-E-I15 (P14-a residual, WS-E independent check): an in-tolerance but different caller figure was STORED and posted.
+  // Corrected-cost fixture: the database works out 53,883.33 (tolerance 0.54 for 7 months). 53,883.87 / 53,882.79 are inside.
+  const stored = async (id: string) => (await q1<Row>(db, null, "SELECT book_value::text bv, gain::text g, status FROM public.asset_disposal_requests WHERE id = $1", [id]))[0]!;
+  const assetRow = async (owner: string, assetId: string) => (await q1<{ a: Row }>(db, null, "SELECT a FROM public.finance_preferences p, jsonb_array_elements(p.data->'assets') a WHERE p.owner_id = $1 AND a->>'id' = $2", [owner, assetId]))[0]!.a;
+  it("R-E-I15: an in-tolerance but different book value is ignored; the request stores, the approval records and posts exactly the database figure", async () => {
+    for (const [given, atDecision] of [[53883.87, 53882.79], [53882.79, null]] as const) {
+      const c = await seed(db, O, { cost: 61000, name: "Laptop" });
+      const entry = crypto.randomUUID();
+      const pre = (await q1<{ p: Row }>(db, O, "SELECT public.preview_asset_disposal($1, '2026-10-31', 0) p", [c.a.id]))[0]!.p;
+      const [{ id }] = (await q1<{ id: string }>(db, O, REQ, [c.a.id, c.doc, given, entry])) as [{ id: string }];
+      expect(await stored(id)).toEqual({ bv: "53883.33", g: "-53883.33", status: "pending" });
+      expect(pre["bookValue"]).toBe(53883.33); // the preview equals the stored figure
+      expect(Number(pre["gain"])).toBe(-53883.33);
+      expect((await q1<{ i: Row }>(db, null, "SELECT inputs i FROM public.asset_disposal_requests WHERE id = $1", [id]))[0]!.i).not.toHaveProperty("bookValue");
+      await stepUp(db, O);
+      expect((await q1<{ r: Row }>(db, O, "SELECT public.decide_asset_disposal($1, true, 'Approved after review', $2) r", [id, atDecision]))[0]!.r).toMatchObject({ status: "approved", entry });
+      expect(await stored(id)).toMatchObject({ bv: "53883.33", g: "-53883.33", status: "approved" });
+      const e = (await q1<Row>(db, null, "SELECT amount::text amount, original_amount::text original, adjustment_sign s, account_id::text acc FROM public.expenses WHERE id = $1", [entry]))[0];
+      expect(e).toEqual({ amount: "53883.33", original: "53883.33", s: -1, acc: c.acc });
+      expect((await assetRow(O, c.a.id))["disposal"]).toMatchObject({ bookValue: 53883.33, gain: -53883.33, entryId: entry });
+      // the balanced posting P7/P8 would write for it (P14's classify hook): Dr Loss 53,883.33 / Cr the asset account 53,883.33
+      const post = (await q1<{ j: { lines: { code: string; debit: number; credit: number }[] } }>(db, null, "SELECT phase3_p7.classify_adjustment(e, NULL, 'asset') j FROM public.expenses e WHERE e.id = $1", [entry]))[0]!.j;
+      expect(post.lines.map((l) => [l.code, String(l.debit), String(l.credit)])).toEqual([["expense:Loss on asset disposal (book value)", "53883.33", "0"], [`account:${c.acc}`, "0", "53883.33"]]);
+    }
+  });
+
+  it("R-E-I15: outside the tolerance is refused at request and decision; a register change between request and decision refuses the approval", async () => {
+    const c = await seed(db, O, { cost: 61000, name: "Laptop" });
+    for (const v of [53883.88, 53882.78]) expect(await err(q1(db, O, REQ, [c.a.id, c.doc, v, crypto.randomUUID()]))).toMatch(/P14_BOOK_VALUE: /);
+    const [{ id }] = (await q1<{ id: string }>(db, O, REQ, [c.a.id, c.doc, null, crypto.randomUUID()])) as [{ id: string }];
+    expect(await stored(id)).toMatchObject({ bv: "53883.33" });
+    await stepUp(db, O);
+    expect(await err(q1(db, O, "SELECT public.decide_asset_disposal($1, true, 'Approved after review', 53883.88)", [id]))).toMatch(/P14_BOOK_VALUE: /);
+    // the register changes after the request (cost corrected 61,000.00 -> 61,000.30: inside the request tolerance, still refused)
+    for (const cost of [61000.3, 60000]) {
+      await actAs(db, null);
+      await db.query("UPDATE public.finance_preferences p SET data = jsonb_set(p.data, '{assets}', (SELECT jsonb_agg(CASE WHEN a->>'id' = $2 THEN a || jsonb_build_object('cost', $3::numeric) ELSE a END) FROM jsonb_array_elements(p.data->'assets') a)) WHERE owner_id = $1", [O, c.a.id, cost]);
+      expect(await err(q1(db, O, "SELECT public.decide_asset_disposal($1, true, 'Approved after review', NULL)", [id]))).toMatch(/P14_BOOK_VALUE_CHANGED: the register changed since the request \(book value 53883.33 then, /);
+    }
+    expect(await stored(id)).toMatchObject({ bv: "53883.33", status: "pending" });
+    expect((await assetRow(O, c.a.id))["soldOn"]).toBeUndefined();
+    expect((await q1<Row>(db, null, "SELECT count(*)::int n FROM public.expenses WHERE id = (SELECT entry_id FROM public.asset_disposal_requests WHERE id = $1)", [id]))[0]).toEqual({ n: 0 });
+    await q1(db, O, "SELECT public.cancel_asset_disposal($1, 'Test cleanup only')", [id]);
   });
 
   it("a session setting no longer opens the disposal guards (phase3_p14.writing is a transaction-bound row only P14's functions write)", async () => {

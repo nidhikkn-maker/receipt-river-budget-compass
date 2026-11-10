@@ -1,8 +1,9 @@
 // P0-015 (KK, binding): "Asset disposal requires owner or explicitly authorised financial approval, with source evidence,
 // reason, disposal date, proceeds, accounting entries and audit trail. Archiving never constitutes disposal."
-// Server-side disposal approval over the proposed P14 database functions. The book value and gain/loss are worked out here,
-// on the server, from the stored register with the app's own rules (assets-ledger.ts applyEvent → disposalResult →
-// eventPostings, ownerPostingId(disposalKey)); the database checks who may request/approve, the evidence, the reason, the
+// Server-side disposal approval over the proposed P14 database functions. The server checks the request with the app's own
+// rules (assets-ledger.ts applyEvent → disposalResult → eventPostings: closed periods, ledger account) and the entry id
+// (ownerPostingId(disposalKey)); the database works out, stores and posts the book value itself (P14-a / R-E-I15: the app
+// engine's figure is only a consistency check, never stored), checks who may request/approve, the evidence, the reason, the
 // asset state, records everything and, on approval, writes the asset's disposal and the non-cash disposal entry in one
 // transaction (P7/P8 then post it as a balanced batch). Contract for the I05 screen: docs/workstreams/contracts/disposal-approval.md.
 import type { Asset } from "./assets";
@@ -34,7 +35,7 @@ const isObj = (v: unknown): v is Record<string, unknown> => !!v && typeof v === 
 const fail = (e: { message: string; code?: string }): never => { throw Error(isMissingFunction(e) ? DISPOSAL_NOT_INSTALLED : e.message); };
 
 /** The owner asks for a disposal; the server prices it from the stored register. Returns the request id and the plan. */
-export async function requestDisposal(db: DisposalDb, owner: string, input: DisposalInput): Promise<{ requestId: string; plan: DisposalPlan; entryId: string }> {
+export async function requestDisposal(db: DisposalDb, owner: string, input: DisposalInput): Promise<{ requestId: string; plan: DisposalPlan; entryId: string; engineBookValue: number }> {
   const prefs = await db.from("finance_preferences").select("data").eq("owner_id", owner).maybeSingle();
   if (prefs.error) throw Error("Couldn't read the asset register. Nothing was changed; try again.");
   const data = isObj(prefs.data) && isObj(prefs.data["data"]) ? prefs.data["data"] : {};
@@ -46,11 +47,17 @@ export async function requestDisposal(db: DisposalDb, owner: string, input: Disp
   const entryId = await ownerPostingId(owner, disposalKey(asset.id, input.date));
   const r = await db.rpc("request_asset_disposal", {
     p_asset: asset.id, p_method: input.method, p_date: input.date, p_proceeds: plan.proceeds, p_proceeds_entry: input.proceedsEntryId ?? null,
-    p_evidence: input.evidence, p_reason: input.reason, p_book_value: plan.bookValue, p_entry: entryId,
-    p_inputs: { rule: "assets-ledger.disposalResult", closedPeriods: closed, gain: plan.gain },
+    p_evidence: input.evidence, p_reason: input.reason, p_entry: entryId,
+    p_inputs: { rule: "assets-ledger.disposalResult", closedPeriods: closed },
+    // consistency check only (R-E-I15): the database refuses it outside its tolerance and never stores it
+    p_book_value: plan.bookValue,
   });
   if (r.error) fail(r.error);
-  return { requestId: String(r.data), plan, entryId };
+  const requestId = String(r.data);
+  // the recorded figures are the database's own working: read them back rather than echo the app engine's
+  const back = await db.from("asset_disposal_requests").select("book_value, gain").eq("id", requestId).maybeSingle();
+  if (back.error || !isObj(back.data)) throw Error("The disposal request was recorded, but its figures couldn't be read back. Open the pending disposal requests to see it.");
+  return { requestId, entryId, engineBookValue: plan.bookValue, plan: { ...plan, bookValue: Number(back.data["book_value"]), gain: Number(back.data["gain"]) } };
 }
 
 export interface DisposalPreviewEntry {
@@ -60,6 +67,8 @@ export interface DisposalPreviewEntry {
 }
 export interface DisposalPreview extends DisposalPlan {
   entryId: string;
+  /** The app engine's figure (carried-forward paise); bookValue / gain / entries are the database's figure, which is what is stored and posted. */
+  engineBookValue: number;
   entries: DisposalPreviewEntry[];
   /** The database's own working (P14-a): its book value, the tolerance it allows the app's paise figure, its problems. */
   database: { bookValue: number | null; tolerance: number | null; problems: string[] } | null;
@@ -80,10 +89,6 @@ export async function previewDisposal(db: DisposalDb, owner: string, input: Pick
   const plan = disposalPlan(asset, input, closed);
   const entryId = await ownerPostingId(owner, disposalKey(asset.id, input.date));
   const accountId = asset.accountId ?? null;
-  const entries: DisposalPreviewEntry[] = plan.bookValue > 0 ? [{
-    id: entryId, title: `Disposal · ${asset.name}`, date: input.date, amount: plan.bookValue, accountId, category: "Asset disposal", txnType: "adjustment", adjustmentSign: -1,
-    lines: [{ code: "expense:Loss on asset disposal (book value)", debit: plan.bookValue, credit: 0 }, { code: `account:${accountId ?? "(link a ledger asset account)"}`, debit: 0, credit: plan.bookValue }],
-  }] : [];
   const r = await db.rpc("preview_asset_disposal", { p_asset: asset.id, p_date: input.date, p_proceeds: plan.proceeds });
   let database: DisposalPreview["database"] = null;
   const problems = [...plan.problems];
@@ -96,10 +101,17 @@ export async function previewDisposal(db: DisposalDb, owner: string, input: Pick
       problems.push(`The database works out a book value of ${database.bookValue.toFixed(2)}, not ${plan.bookValue.toFixed(2)}; the request would be refused`);
     }
   }
-  return { ...plan, problems, entryId, entries, database };
+  // R-E-I15: show the figure the database will store and post (its own working); the app engine's figure only where P14 is absent.
+  const bookValue = database?.bookValue ?? plan.bookValue, gain = Math.round((plan.proceeds - bookValue) * 100) / 100;
+  const entries: DisposalPreviewEntry[] = bookValue > 0 ? [{
+    id: entryId, title: `Disposal · ${asset.name}`, date: input.date, amount: bookValue, accountId, category: "Asset disposal", txnType: "adjustment", adjustmentSign: -1,
+    lines: [{ code: "expense:Loss on asset disposal (book value)", debit: bookValue, credit: 0 }, { code: `account:${accountId ?? "(link a ledger asset account)"}`, debit: 0, credit: bookValue }],
+  }] : [];
+  return { ...plan, bookValue, gain, engineBookValue: plan.bookValue, problems, entryId, entries, database };
 }
 
-/** The owner (step-up where installed) or a Finance approver for that company decides; the server re-prices the stored snapshot. */
+/** The owner (step-up where installed) or a Finance approver for that company decides; the database re-derives the book value
+ * and posts only its stored figure; the app engine's re-price of the snapshot is passed as a consistency check only. */
 export async function decideDisposal(db: DisposalDb, input: { requestId: string; approve: boolean; reason: string }): Promise<{ status: string; entry: string | null; replayed: boolean }> {
   const q = await db.from("asset_disposal_requests").select("*").eq("id", input.requestId).maybeSingle();
   if (q.error) { if (/does not exist|could not find the table/i.test(q.error.message)) throw Error(DISPOSAL_NOT_INSTALLED); throw Error("Couldn't read the disposal request. Nothing was changed; try again."); }
@@ -137,6 +149,7 @@ export function disposalProblem(message: string): string {
     P14_REASON: "Give a reason of at least 5 characters.",
     P14_PENDING: "This asset already has an open disposal request.",
     P14_CHANGED: "The asset or its book value changed since the request. Prepare a new request.",
+    P14_BOOK_VALUE_CHANGED: "The asset register changed since the request, so its book value is different now. Nothing was changed; prepare a new request.",
     P14_ALREADY_DISPOSED: rest.replace(/^./, (c) => c.toUpperCase()),
     P14_DISPOSAL_APPROVAL_REQUIRED: "Assets are disposed only through an approved disposal request. Archiving never disposes an asset.",
     STEP_UP_REQUIRED: "Confirm it's you to approve this disposal.",

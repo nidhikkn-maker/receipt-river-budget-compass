@@ -29,7 +29,7 @@ END $r$;
 
 DROP TRIGGER IF EXISTS p14_asset_disposal_fields ON public.finance_preferences;
 DROP TRIGGER IF EXISTS p14_disposal_entry ON public.expenses;
-DROP FUNCTION public.request_asset_disposal(text, text, date, numeric, uuid, uuid[], text, numeric, uuid, jsonb);
+DROP FUNCTION public.request_asset_disposal(text, text, date, numeric, uuid, uuid[], text, uuid, jsonb, numeric);
 DROP FUNCTION public.decide_asset_disposal(uuid, boolean, text, numeric);
 DROP FUNCTION public.cancel_asset_disposal(uuid, text);
 DROP FUNCTION public.preview_asset_disposal(text, date, numeric);
