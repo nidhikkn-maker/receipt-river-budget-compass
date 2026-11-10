@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { ExtractedReceiptSchema, ReceiptDetailsSchema, receiptConfidence, receiptRoundOff, receiptRoundOffFor, receiptBreakdownError, receiptItemConfidence, receiptItemReviewReasons, receiptItemsToReview, receiptItemTotalError, receiptReviewCheck, receiptReviewSignature, type ReceiptAmounts } from "./receipt-reading";
 import { validateExpense, type ExpenseInput } from "./expenses";
 
-const read = { title: "Cafe", merchant: "Cafe", date: "2026-11-02", amount: 432.10, subtotal: 360, tax: 32.10, tip: 40, round_off: null, charges: [], tax_parts: [], confidence: { merchant: "high", date: "low", total: "medium" }, items: [], text: "Cafe", currency: "INR", payment_method: null, description: null, category: "Food and beverages", scope: "personal" };
+const read = { title: "Cafe", merchant: "Cafe", date: "2026-11-02", amount: 432.10, subtotal: 360, tax: 32.10, tip: 40, round_off: null, charges: [], tax_parts: [], confidence: { merchant: "high", date: "low", total: "medium" }, items: [], text: "Cafe", currency: "INR", payment_method: null, card_network: null, card_last_four: null, description: null, category: "Food and beverages", scope: "personal" };
 describe("receipt reading", () => {
   it("preserves separate item name and amount confidence in extracted and saved metadata", () => {
     const item = { name: "Dinner", quantity: 2, amount: 360, section: null, confidence: { name: "high", amount: "low" } };

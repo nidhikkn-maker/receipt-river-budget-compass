@@ -14,6 +14,8 @@ export interface DraftData {
   wsSplit?: unknown; splitOn?: boolean; shares?: Record<string, string>; receiptDetails?: unknown; extracted?: boolean; error?: string;
   /** Receipt values read but not yet confirmed, so reopening the draft shows them for review. */
   scan?: { merchant: string; date: string; amount: string; currency: string; category?: string; read?: { merchant: string; date: string; amount: number; currency: string } };
+  /** What the read bill proved about the paying account, so a resumed review shows it (the owner confirms again). */
+  billEvidence?: unknown;
 }
 export interface Draft { localOnly?: boolean; id: string; data: DraftData; receipts: DraftReceipt[]; status: DraftStatus; transactionId: string | null; createdAt: string; updatedAt: string }
 

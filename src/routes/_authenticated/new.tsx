@@ -36,8 +36,10 @@ import { quickEntrySearch, type QuickEntrySearch } from "@/lib/quick-entry";
 import { useStore } from "@/lib/store";
 import { activeInstruments, applyInstrument, instrumentLabel, lastInstrumentForMerchant } from "@/lib/payment-instruments";
 import { extractReceipt } from "@/lib/receipt-extract.functions";
-import { accountState, receiptAccountEvidence } from "@/lib/account-evidence";
-import { displayDate } from "@/lib/date-display";
+import { accountCheckRecord, accountState, receiptAccountEvidence, type BillPayer, type CardIdentifiers } from "@/lib/account-evidence";
+import { postingBlock, separateDecision, type DuplicateCheck, type DuplicateReview } from "@/lib/duplicate-decision";
+import { DateField } from "@/components/DateField";
+import { DuplicateResolution } from "@/components/DuplicateResolution";
 import { prepareForReading } from "@/lib/image-prep";
 import { getFxRate } from "@/lib/fx.functions";
 import { parseSpokenEntry } from "@/lib/assistant.functions";
@@ -98,11 +100,14 @@ const readFile = async (f: File): Promise<LocalReceipt> => {
   return { file: f, name: f.name, type: f.type, dataUrl, fingerprint };
 };
 
+const NOT_OWN_LABEL = "Not paid from my accounts";
 const isDate = (s: string | null | undefined): s is string => !!s && /^\d{4}-\d{2}-\d{2}$/.test(s);
 
 interface SpeechRec { lang: string; interimResults: boolean; start: () => void; onresult: (e: { results: ArrayLike<ArrayLike<{ transcript: string }>> }) => void; onend: () => void; onerror: () => void }
 
 interface Scan { merchant: string; date: string; amount: string; currency: string }
+/** What a read bill proved about who paid (account-evidence.ts); kept with the draft so a resumed review shows it too. */
+interface BillEvidence { evidence: string | null; reason: string | null; payer?: BillPayer; reimbursable?: boolean; card?: CardIdentifiers; suggestedId?: string | null }
 
 function ReadingIndicator({ value, field }: { value: ReadingConfidence; field?: string }) {
   const label = { high: "High reading confidence", medium: "Double-check · medium confidence", low: "Double-check · low confidence", unknown: "Double-check · confidence unavailable" }[value];
@@ -110,7 +115,7 @@ function ReadingIndicator({ value, field }: { value: ReadingConfidence; field?: 
 }
 
 /** Smart Add hosts this same review in place; `embedded` swaps route navigation for sheet callbacks. */
-export type EmbeddedEntry = { search: QuickEntrySearch; files?: File[]; onExit: (saved?: { id?: string | undefined; label: string }) => void; /** Signature Flow canvas: the review hands over to its own confirmation step. */ submitLabel?: string };
+export type EmbeddedEntry = { search: QuickEntrySearch; files?: File[]; onExit: (saved?: { id?: string | undefined; label: string }) => void; /** Signature Flow canvas: the review hands over to its own confirmation step. */ submitLabel?: string; /** The host holds Save until the owner confirms the account (Signature Flow's Confirm step). */ confirmsAccount?: boolean };
 export function NewExpense({ embedded }: { embedded?: EmbeddedEntry } = {}) {
   const { userId, save, transactions: expenses, members, accounts, loans, preferences, savePreferences, documents, addDocument, removeDocument, signedUrl } = useStore();
   const PENDING = "pending-receipt";
@@ -147,8 +152,12 @@ export function NewExpense({ embedded }: { embedded?: EmbeddedEntry } = {}) {
   /** True only when the owner chose the account (or it was saved before); anything filled automatically is a suggestion. */
   const [accountConfirmed, setAccountConfirmed] = useState(false);
   /** What a scanned bill proved about the paying account; while set, usual choices never fill the account. */
-  const [billEvidence, setBillEvidence] = useState<{ evidence: string | null; reason: string | null } | null>(null);
+  const [billEvidence, setBillEvidence] = useState<BillEvidence | null>(null);
   const billRead = useRef(false);
+  /** The owner confirmed the bill was not paid from their accounts (company card, someone else paid). */
+  const [notOwn, setNotOwn] = useState(false);
+  /** The owner marked a bill that mentions reimbursement as to be claimed back (existing reimbursement model). */
+  const [claimBack, setClaimBack] = useState(false);
   /** "" = follow the paying account's company; "personal" or an entity id = chosen by hand. */
   const [companyPick, setCompanyPick] = useState<string>("");
   const [addAcct, setAddAcct] = useState(false);
@@ -200,8 +209,10 @@ export function NewExpense({ embedded }: { embedded?: EmbeddedEntry } = {}) {
   const [receipts, setReceipts] = useState<LocalReceipt[]>([]);
   const [queue, setQueue] = useState<LocalReceipt[]>([]);
   const [batch, setBatch] = useState<{ done: number; total: number } | null>(null);
-  const [duplicateApproval, setDuplicateApproval] = useState("");
-  const [matchApproval, setMatchApproval] = useState("");
+  /** "It's separate" answers to a possible duplicate, each bound to what was on screen and carrying its reason. */
+  const [separate, setSeparate] = useState<Partial<Record<DuplicateCheck, { sig: string; review: DuplicateReview }>>>({});
+  /** The owner said this IS the same bill as one already saved (bound to what was on screen): never posted. */
+  const [sameBill, setSameBill] = useState("");
   const [reviewApproval, setReviewApproval] = useState("");
   const [reviewDialog, setReviewDialog] = useState(false);
   const [fieldChecks, setFieldChecks] = useState<Partial<Record<ReceiptField, string>>>({});
@@ -212,7 +223,6 @@ export function NewExpense({ embedded }: { embedded?: EmbeddedEntry } = {}) {
   const [scanRead, setScanRead] = useState<ReceiptReadValues | null>(null);
   const [scanCategory, setScanCategory] = useState<string>("");
   const [confirmed, setConfirmed] = useState(true);
-  const [receiptApproval, setReceiptApproval] = useState("");
   const [autoFilled, setAutoFilled] = useState<Set<string>>(new Set());
   const [fx, setFx] = useState<{ rate: number; date: string } | { error: string } | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -276,6 +286,8 @@ export function NewExpense({ embedded }: { embedded?: EmbeddedEntry } = {}) {
       if (x.principal) setPrincipal(x.principal); if (x.interest) setInterest(x.interest);
       if (x.wsSplit) setWsSplit(x.wsSplit as typeof wsSplit); if (x.splitOn) setSplitOn(true); if (x.shares) setShares(x.shares);
       if (x.receiptDetails) setReceiptDetails(x.receiptDetails as ReceiptDetails);
+      // A resumed bill keeps what it proved about the account; the owner confirms the account again before saving.
+      if (x.billEvidence) { billRead.current = true; setBillEvidence(x.billEvidence as BillEvidence); setAccountConfirmed(false); }
       const files: LocalReceipt[] = [];
       if (useLocal && local) for (const f of local.files) files.push({ ...(await readFile(localToFile(f))), ...(f.path ? { path: f.path } : {}) });
       else for (const r of d.receipts) { const f = await draftReceiptFile(r); if (f) files.push({ ...(await readFile(f)), path: r.path }); }
@@ -291,7 +303,7 @@ export function NewExpense({ embedded }: { embedded?: EmbeddedEntry } = {}) {
     return () => { live = false; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [search.draft]);
-  const draftData = (): DraftData => ({ txnType, amount, currency, date, category, merchant, title, accountId, toAccountId, instrumentId, paymentMethod, scope, tripId, tags, description, memberId, principal, interest, wsSplit, splitOn, shares, receiptDetails, extracted: !!scanRead || !!receiptDetails.text, ...(readingError ? { error: readingError } : {}), ...(scan && !confirmed ? { scan: { ...scan, category: scanCategory, ...(scanRead ? { read: scanRead } : {}) } } : {}) });
+  const draftData = (): DraftData => ({ txnType, amount, currency, date, category, merchant, title, accountId, toAccountId, instrumentId, paymentMethod, scope, tripId, tags, description, memberId, principal, interest, wsSplit, splitOn, shares, receiptDetails, extracted: !!scanRead || !!receiptDetails.text, ...(readingError ? { error: readingError } : {}), ...(billEvidence ? { billEvidence } : {}), ...(scan && !confirmed ? { scan: { ...scan, category: scanCategory, ...(scanRead ? { read: scanRead } : {}) } } : {}) });
   const persistDraft = async (auto = false): Promise<boolean> => {
     if (editing || !draftLoaded.current) return false;
     const d = draftData();
@@ -504,9 +516,9 @@ export function NewExpense({ embedded }: { embedded?: EmbeddedEntry } = {}) {
       // The paying account comes only from what the bill proves (matching last digits); otherwise the owner chooses it.
       if (!accountByUser.current && !editing) {
         billRead.current = true;
-        const ev = receiptAccountEvidence({ text: x.text, paymentMethod: x.payment_method }, liveAccounts, savedMethods);
-        setBillEvidence({ evidence: ev.evidence, reason: ev.reason });
-        setAccountConfirmed(false);
+        const ev = receiptAccountEvidence({ text: x.text, paymentMethod: x.payment_method, cardNetwork: x.card_network ?? null, cardLastFour: x.card_last_four ?? null }, liveAccounts, savedMethods);
+        setBillEvidence({ evidence: ev.evidence, reason: ev.reason, payer: ev.payer, reimbursable: ev.reimbursable, card: ev.card, suggestedId: ev.accountId });
+        setAccountConfirmed(false); setNotOwn(false); setClaimBack(false);
         setAccountId(ev.accountId ?? "none");
         setInstrumentId(ev.instrumentId ?? "none");
         if (!ev.accountId) filled.delete("payment");
@@ -613,7 +625,7 @@ export function NewExpense({ embedded }: { embedded?: EmbeddedEntry } = {}) {
   const billIdentity = { merchant: !confirmed && scan ? scan.merchant : merchant, date: !confirmed && scan ? scan.date : date, amount: Number(!confirmed && scan ? scan.amount : amount), currency: !confirmed && scan ? scan.currency : currency };
   const duplicates = txnType === "expense" ? duplicateBills(billIdentity, expenses, edit) : [];
   const duplicateSignature = JSON.stringify([billIdentity, receipts.map(r => r.name), duplicates.map(e => e.id)]);
-  const duplicateBlocked = duplicates.length > 0 && duplicateApproval !== duplicateSignature;
+  const duplicateBlocked = duplicates.length > 0 && separate.same_bill?.sig !== duplicateSignature;
   // Statement Desk rules on this one entry: suggestions only, applied by tap, never saved on their own.
   const deskText = [merchant, title, description].filter(Boolean).join(" ");
   const desk = useMemo(() => suggestForEntry({ id: edit, date, amount: Number(amount) || 0, currency, txnType, text: deskText, accountId: accountId === "none" ? null : accountId }, { transactions: expenses, accounts, categories: preferences.categories }),
@@ -624,15 +636,31 @@ export function NewExpense({ embedded }: { embedded?: EmbeddedEntry } = {}) {
   const deskType = desk.txnType && desk.txnType !== txnType ? desk.txnType : null;
   const deskMatches = desk.matches.filter((m) => !duplicates.some((d) => d.id === m.record.id));
   const matchSignature = JSON.stringify([date, amount, currency, accountId, deskMatches.map((m) => m.record.id)]);
-  const matchBlocked = deskMatches.some((m) => m.exact) && matchApproval !== matchSignature;
+  const matchBlocked = deskMatches.some((m) => m.exact) && separate.matching_entry?.sig !== matchSignature;
   // Same receipt file already attached to another entry (by content fingerprint).
   const receiptReuse = txnType === "expense" && !editing ? receiptFingerprintMatches(receipts[0]?.fingerprint, expenses) : [];
-  const receiptSignature = JSON.stringify([receipts[0]?.fingerprint, receiptReuse.map(e => e.id)]);
-  const receiptBlocked = receiptReuse.length > 0 && receiptApproval !== receiptSignature;
+  // Confirmed duplicates are never posted: the same receipt file, this draft already saved, or "It's the same bill".
+  const block = postingBlock({ draftId: editing ? null : draftId.current, editingId: editing?.id ?? null, fingerprint: receipts[0]?.fingerprint, sameBillIds: sameBill && sameBill === duplicateSignature ? duplicates.map((e) => e.id) : sameBill && sameBill === matchSignature ? deskMatches.map((m) => m.record.id) : [], entries: expenses });
+  const receiptBlocked = receiptReuse.length > 0 || !!block;
+  /** "It's separate" decisions still current for what is on screen; saved with the entry as audit evidence. */
+  const duplicateReview: DuplicateReview[] = [
+    ...(duplicates.length && separate.same_bill?.sig === duplicateSignature ? [separate.same_bill.review] : []),
+    ...(deskMatches.some((m) => m.exact) && separate.matching_entry?.sig === matchSignature ? [separate.matching_entry.review] : []),
+  ];
+  const dropSeparate = (check: DuplicateCheck) => setSeparate((x) => { const next = { ...x }; delete next[check]; return next; });
+  const decideSeparate = (check: DuplicateCheck, sig: string, ids: string[], reason: string) => {
+    try { const review = separateDecision(check, reason, ids, new Date().toISOString()); setSeparate((x) => ({ ...x, [check]: { sig, review } })); }
+    catch (e) { toast.error((e as Error).message); }
+  };
+  // D1: once a bill was read, the classic review (page or classic Smart Add sheet) saves only with an account the owner
+  // chose or confirmed (or their confirmation that it wasn't paid from their accounts). Signature Flow's canvas holds
+  // the same rule at its Confirm step.
+  const acctState = accountState(accountId, accountConfirmed, notOwn);
+  const accountBlocked = !embedded?.confirmsAccount && !editing && !!billEvidence && !isMove(txnType) && acctState !== "confirmed";
   const advanceQueue = async () => {
     const [next, ...rest] = queue;
     setQueue(rest); setBatch(b => next && b ? { done: b.done + 1, total: b.total } : null);
-    setFromInbox([]); setDuplicateApproval(""); setReceiptApproval(""); setReviewApproval(""); setReviewDialog(false); setFieldChecks({}); setReceipts(next ? [next] : []);
+    setFromInbox([]); setSeparate({}); setSameBill(""); setReviewApproval(""); setReviewDialog(false); setFieldChecks({}); setReceipts(next ? [next] : []);
     setTitle(""); setMerchant(""); setAmount(""); setDescription(""); setTags("");
     setReceiptDetails({}); setScan(null); setScanRead(null); setConfirmed(true); setReadingError(""); setReadTarget(null); setAutoFilled(new Set()); setSplitOn(false); setShares({});
     if (next) await runExtraction(next, true);
@@ -661,7 +689,9 @@ export function NewExpense({ embedded }: { embedded?: EmbeddedEntry } = {}) {
     ev.preventDefault();
     if (!confirmed) { toast.error("Confirm the scanned bill details first"); return; }
     if (duplicateBlocked) { toast.error("Review the possible duplicate or skip this bill"); return; }
+    if (block) { toast.error(block.message); return; }
     if (receiptBlocked) { toast.error("This receipt is already used — review it or choose a different file"); return; }
+    if (accountBlocked) { toast.error("Choose or confirm the account that paid before saving"); return; }
     const breakdownError = receiptBreakdownError(Number(amount), receiptDetails, currency);
     if (breakdownError) { toast.error(breakdownError); return; }
     if (saving) return;
@@ -673,6 +703,9 @@ export function NewExpense({ embedded }: { embedded?: EmbeddedEntry } = {}) {
       if (implied) finalDetails.roundOff = implied;
       const fp = receipts[0]?.fingerprint ?? receiptDetails.fingerprint;
       if (fp) finalDetails.fingerprint = fp;
+      // Audit evidence kept with the entry: how the paying account was settled, and why a possible duplicate is separate.
+      if (billEvidence && !editing && !isMove(txnType) && acctState === "confirmed") finalDetails.accountCheck = accountCheckRecord({ accountId, notOwn, suggestedId: billEvidence.suggestedId ?? null, evidence: billEvidence.evidence, card: billEvidence.card ?? null }, new Date().toISOString());
+      if (duplicateReview.length) finalDetails.duplicateReview = duplicateReview;
       const workspaceAllocations = splitShares(wsSplit, Number(amount));
       const wsErr = wsSplit.on ? validateShares(workspaceAllocations, Number(amount)) : null;
       if (wsErr) throw new Error(wsErr);
@@ -680,7 +713,7 @@ export function NewExpense({ embedded }: { embedded?: EmbeddedEntry } = {}) {
       await save(
         { title: title.trim(), amount: Number(amount), currency, paymentMethod, category, date, description, merchant: merchant.trim() || null,
           receiptDetails: finalDetails, workspaceAllocations, scope: wsSplit.on ? (workspaceAllocations.slice().sort((a, b) => b.amount - a.amount)[0]?.workspace ?? scope) : scope, memberId: memberId === "me" ? null : memberId,
-          txnType, accountId: accountId === "none" ? null : accountId, paymentInstrumentId: instrumentId === "none" ? null : instrumentId, entitySource: companyPick ? "manual" : "account", entityId: companyPick && companyPick !== "personal" ? companyPick : null, payeeId: !isMove(txnType) ? (preferences.payees ?? []).find(p => !p.archived && p.name === merchant.trim())?.id ?? null : null, toAccountId: toAccountId === "none" ? null : toAccountId,
+          txnType, accountId: accountId === "none" ? null : accountId, ...(claimBack && txnType === "expense" ? { reimbursementStatus: "pending" as const } : {}), paymentInstrumentId: instrumentId === "none" ? null : instrumentId, entitySource: companyPick ? "manual" : "account", entityId: companyPick && companyPick !== "personal" ? companyPick : null, payeeId: !isMove(txnType) ? (preferences.payees ?? []).find(p => !p.archived && p.name === merchant.trim())?.id ?? null : null, toAccountId: toAccountId === "none" ? null : toAccountId,
           tripId: tripId === "none" ? null : tripId,
           principal: principal.trim() === "" ? null : Number(principal), interest: interest.trim() === "" ? null : Number(interest),
           tags: [...new Set(tags.split(",").map((t) => t.trim()).filter(Boolean))],
@@ -754,7 +787,7 @@ export function NewExpense({ embedded }: { embedded?: EmbeddedEntry } = {}) {
           </Select>
         </div>
       </header>}
-      <form onSubmit={submit} data-account-state={accountState(accountId, accountConfirmed)} data-account-evidence={accountId !== "none" ? billEvidence?.evidence ?? "" : ""} className={panel ? "grid gap-3" : "mx-auto grid max-w-xl gap-3"}>
+      <form onSubmit={submit} data-account-state={acctState} data-account-evidence={accountId !== "none" ? billEvidence?.evidence ?? "" : ""} className={panel ? "grid gap-3" : "mx-auto grid max-w-xl gap-3"}>
         {panel && !reading && (confirmed || scan) && <div role="radiogroup" aria-label="What is this?" className="cmp-kind">
           {(["expense", "card_payment", "transfer", "income"] as const).map((t) => <button key={t} type="button" role="radio" aria-checked={txnType === t} onClick={() => setTxnType(t)}>{({ expense: "Spending", card_payment: "Card bill", transfer: "Own transfer", income: "Money in" } as const)[t]}</button>)}
           {!(["expense", "card_payment", "transfer", "income"] as string[]).includes(txnType) && <button type="button" role="radio" aria-checked>{PLAIN_TXN_LABEL[txnType]}</button>}
@@ -863,7 +896,15 @@ export function NewExpense({ embedded }: { embedded?: EmbeddedEntry } = {}) {
         {duplicates.length > 0 && !reading && <section aria-label="Possible duplicate bills" className="space-y-3 rounded-2xl border border-gold bg-gold-soft p-4">
           <h2 className="font-display font-bold">This bill may already exist</h2>
           <ul className="space-y-2 text-sm">{duplicates.map(e => <li key={e.id} className="flex flex-wrap items-center justify-between gap-2"><span>{e.merchant} · {e.date} · {e.currency} {e.originalAmount.toFixed(2)}</span><Link to="/new" search={{ edit: e.id }} target="_blank" rel="noopener noreferrer" className="text-primary underline">Review existing entry</Link></li>)}</ul>
-          <div className="flex flex-wrap gap-2"><Button type="button" size="sm" variant="outline" disabled={saving} onClick={() => void advanceQueue()}>Skip this bill</Button><Button type="button" size="sm" variant="secondary" disabled={!duplicateBlocked} onClick={() => setDuplicateApproval(duplicateSignature)}>{duplicateBlocked ? "Keep as a separate bill" : "Separate bill confirmed"}</Button></div>
+          <div className="flex flex-wrap gap-2"><Button type="button" size="sm" variant="outline" disabled={saving} onClick={() => void advanceQueue()}>Skip this bill</Button></div>
+          {sameBill === duplicateSignature
+            ? <p role="alert" className="flex flex-wrap items-center gap-2 text-sm"><span><b>Same bill — it won't be posted again.</b> Skip it, or open the existing entry.</span><Button type="button" size="sm" variant="ghost" onClick={() => setSameBill("")}>Change</Button></p>
+            : <DuplicateResolution key={duplicateSignature} disabled={saving} resolved={!duplicateBlocked} reason={separate.same_bill?.review.reason} onSeparate={(r) => decideSeparate("same_bill", duplicateSignature, duplicates.map((e) => e.id), r)} onSame={() => { setSameBill(duplicateSignature); dropSeparate("same_bill"); }} onReopen={() => dropSeparate("same_bill")} />}
+        </section>}
+        {block?.kind === "draft_saved" && !reading && <section role="alert" aria-label="Already saved" className="space-y-2 rounded-2xl border border-gold bg-gold-soft p-4 text-sm">
+          <h2 className="font-display font-bold">This entry is already saved</h2>
+          <p>{block.message}</p>
+          <Link to="/new" search={{ edit: block.ids[0] ?? "" }} className="font-semibold text-primary underline">Open the saved entry</Link>
         </section>}
         {!reading && confirmed && desk.transferDuplicate && <section role="alert" aria-label="Possible transfer duplicate" className="space-y-1 rounded-2xl border border-warning/50 bg-card p-3 text-sm">
           <h2 className="font-semibold">This may repeat a transfer you already saved</h2>
@@ -874,7 +915,7 @@ export function NewExpense({ embedded }: { embedded?: EmbeddedEntry } = {}) {
           <h2 className="font-semibold"><Sparkles className="mr-1 inline h-4 w-4 text-primary" />Suggestions (same rules as Statement Desk)</h2>
           <ul className="space-y-1.5">
             {deskCategory && <li className="flex flex-wrap items-center justify-between gap-2"><span>Category: <b>{deskCategory}</b> <span className="text-muted-foreground">· {desk.categoryReason}</span></span><Button type="button" size="sm" variant="outline" onClick={() => { setCategory(deskCategory as Category); setAutoFilled((x) => new Set([...x, "category"])); }}>Use</Button></li>}
-            {deskAccount && <li className="flex flex-wrap items-center justify-between gap-2"><span>Account: <b>{deskAccount}</b> <span className="text-muted-foreground">· {desk.accountReason}</span></span><Button type="button" size="sm" variant="outline" onClick={() => { accountByUser.current = true; setAccountConfirmed(true); setAccountId(desk.accountId!); setAutoFilled((x) => new Set([...x, "payment"])); }}>Use</Button></li>}
+            {deskAccount && <li className="flex flex-wrap items-center justify-between gap-2"><span>Account: <b>{deskAccount}</b> <span className="text-muted-foreground">· {desk.accountReason}</span></span><Button type="button" size="sm" variant="outline" onClick={() => { accountByUser.current = true; setAccountConfirmed(true); setNotOwn(false); setAccountId(desk.accountId!); setAutoFilled((x) => new Set([...x, "payment"])); }}>Use</Button></li>}
             {deskType && <li className="flex flex-wrap items-center justify-between gap-2"><span>Looks like <b>{PLAIN_TXN_LABEL[deskType].toLowerCase()}</b>{desk.toAccountId ? <> to <b>{acctNameOf(accounts, desk.toAccountId)}</b></> : null} <span className="text-muted-foreground">· {desk.typeReason}</span></span><Button type="button" size="sm" variant="outline" onClick={() => { setTxnType(deskType); if (desk.toAccountId) setToAccountId(desk.toAccountId); }}>Use</Button></li>}
             {desk.opposite && <li className="flex flex-wrap items-center justify-between gap-2"><span>The other side is already saved: <b>{desk.opposite.name}</b> · {desk.opposite.date} · {desk.opposite.currency} {desk.opposite.amount.toFixed(2)}. Open it and set both accounts instead of saving a second copy.</span><Link to="/new" search={{ edit: desk.opposite.id }} className="text-primary underline">Open it</Link></li>}
           </ul>
@@ -883,13 +924,18 @@ export function NewExpense({ embedded }: { embedded?: EmbeddedEntry } = {}) {
         {!reading && deskMatches.length > 0 && <section aria-label="Possible matching entries" className="space-y-3 rounded-2xl border border-gold bg-gold-soft p-4">
           <h2 className="font-display font-bold">This may already be saved</h2>
           <ul className="space-y-2 text-sm">{deskMatches.map((m) => <li key={m.record.id} className="flex flex-wrap items-center justify-between gap-2"><span><b>{m.record.name}</b> · {m.record.date} · {m.record.currency} {m.record.amount.toFixed(2)} <span className="text-muted-foreground">· {m.exact ? "Strong match" : "Possible match"}: {m.reasons.slice(0, 3).join(", ")}</span></span><Link to="/new" search={{ edit: m.record.id }} className="text-primary underline">Open existing</Link></li>)}</ul>
-          <Button type="button" size="sm" variant="secondary" disabled={!matchBlocked} onClick={() => setMatchApproval(matchSignature)}>{matchBlocked ? "It's separate — save anyway" : deskMatches.some((m) => m.exact) ? "Separate entry confirmed" : "Save allowed — check it is separate"}</Button>
+          {sameBill === matchSignature
+            ? <p role="alert" className="flex flex-wrap items-center gap-2 text-sm"><span><b>Same bill — it won't be posted again.</b> Open the existing entry instead.</span><Button type="button" size="sm" variant="ghost" onClick={() => setSameBill("")}>Change</Button></p>
+            : deskMatches.some((m) => m.exact)
+            ? <DuplicateResolution key={matchSignature} disabled={saving} resolved={!matchBlocked} reason={separate.matching_entry?.review.reason} onSeparate={(r) => decideSeparate("matching_entry", matchSignature, deskMatches.map((m) => m.record.id), r)} onSame={() => { setSameBill(matchSignature); dropSeparate("matching_entry"); }} onReopen={() => dropSeparate("matching_entry")} />
+            : <p className="text-xs text-muted-foreground">Save allowed — check it is separate.</p>}
         </section>}
         {batch && duplicates.length === 0 && <Button type="button" variant="ghost" size="sm" disabled={reading || saving} onClick={() => void advanceQueue()}>Skip this bill</Button>}
         {receiptReuse.length > 0 && !reading && <section aria-label="Receipt already used" className="space-y-3 rounded-2xl border border-gold bg-gold-soft p-4">
           <h2 className="font-display font-bold">This receipt is already attached to another entry</h2>
           <ul className="space-y-2 text-sm">{receiptReuse.map(e => <li key={e.id} className="flex flex-wrap items-center justify-between gap-2"><span>{e.merchant ?? e.title} · {e.date} · {e.currency} {e.originalAmount.toFixed(2)}</span><Link to="/new" search={{ edit: e.id }} target="_blank" rel="noopener noreferrer" className="text-primary underline">Review existing entry</Link></li>)}</ul>
-          <div className="flex flex-wrap gap-2"><Button type="button" size="sm" variant="outline" disabled={saving} onClick={() => { setReceipts([]); setReceiptDetails({}); setScan(null); setScanRead(null); setConfirmed(true); setReceiptApproval(""); setReviewApproval(""); setReviewDialog(false); setFieldChecks({}); }}>Remove this receipt</Button><Button type="button" size="sm" variant="secondary" disabled={!receiptBlocked} onClick={() => setReceiptApproval(receiptSignature)}>{receiptBlocked ? "Use this receipt anyway" : "Reused receipt confirmed"}</Button></div>
+          <div className="flex flex-wrap gap-2"><Button type="button" size="sm" variant="outline" disabled={saving} onClick={() => { setReceipts([]); setReceiptDetails({}); setScan(null); setScanRead(null); setConfirmed(true); setReviewApproval(""); setReviewDialog(false); setFieldChecks({}); }}>Remove this receipt</Button></div>
+          <p className="text-xs text-muted-foreground">The same receipt file can't be posted twice. If this is a different bill, add its own receipt.</p>
         </section>}
         {scan && !reading && !confirmed && (
           <section ref={reviewRef} className={cn("rounded-lg border border-primary bg-card p-4", receipts[0] && "canvas-review w-full")} role="group" aria-label="Review scanned details">
@@ -900,7 +946,7 @@ export function NewExpense({ embedded }: { embedded?: EmbeddedEntry } = {}) {
             <details className="canvas-fields" ref={fieldsRef} open={panel || undefined}><summary className={panel ? "sr-only" : "font-medium"}>Check what I read from the receipt</summary><div className="grid gap-4 pt-4">
             <div className="grid gap-1"><Label htmlFor="sm">Merchant</Label><Input id="sm" value={scan.merchant} onChange={(e) => setScan({ ...scan, merchant: e.target.value })} /><ReadingIndicator value={receiptDetails.confidence?.merchant ?? "unknown"} /><FieldCheck f="merchant" /><Corrected f="merchant" /></div>
             <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] items-start gap-3">
-              <div className="grid min-w-0 gap-1"><Label htmlFor="sd">Date</Label><Input id="sd" type="date" aria-describedby="sd-shown" className="h-10 w-full min-w-0 appearance-none" value={scan.date} onChange={(e) => setScan({ ...scan, date: e.target.value })} /><span id="sd-shown" className="date-shown text-xs font-medium" data-date-display>{displayDate(scan.date)}</span><ReadingIndicator value={receiptDetails.confidence?.date ?? "unknown"} /><FieldCheck f="date" /><Corrected f="date" /></div>
+              <div className="grid min-w-0 gap-1"><Label htmlFor="sd">Date</Label><DateField id="sd" label="Date" className="h-10" value={scan.date} onChange={(v) => setScan({ ...scan, date: v })} /><ReadingIndicator value={receiptDetails.confidence?.date ?? "unknown"} /><FieldCheck f="date" /><Corrected f="date" /></div>
               <div className="grid min-w-0 gap-1"><Label>Currency</Label>
                 <Select value={scan.currency} onValueChange={(v) => setScan({ ...scan, currency: v })}>
                   <SelectTrigger aria-label="Scanned currency" className="h-10 w-full min-w-0"><SelectValue /></SelectTrigger>
@@ -925,8 +971,8 @@ export function NewExpense({ embedded }: { embedded?: EmbeddedEntry } = {}) {
             {reviewMessages.length > 0 ? <p role="alert" className="text-sm text-destructive">{reviewMessages.join(" ")}</p> : <p role="status" className="text-xs text-muted-foreground">{receiptDetails.subtotal == null ? "Subtotal not read — total comparison unavailable." : `Subtotal${receiptDetails.charges?.length ? " + charges" : ""} + tax + tip matches the total.`}{roundNote ? ` ${roundNote}` : ""}</p>}
             <div className="grid gap-1"><Label>Suggested category</Label><Select value={scanCategory} onValueChange={setScanCategory}><SelectTrigger aria-label="Receipt category"><SelectValue placeholder="Choose category" /></SelectTrigger><SelectContent>{categoryNames.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent></Select></div>
             <div className="grid gap-1"><Label>Space</Label><Select value={scope} onValueChange={v => setScope(v as Scope)}><SelectTrigger aria-label="Receipt workspace"><SelectValue /></SelectTrigger><SelectContent>{ACTIVE_SCOPES.map(s => <SelectItem key={s} value={s}>{SCOPE_LABEL[s]}</SelectItem>)}</SelectContent></Select></div>
-            <div className="grid gap-1"><Label>Paid with</Label><Select value={instrumentId} onValueChange={v => { if (v === 'none') { setInstrumentId('none'); return; } accountByUser.current = true; setAccountConfirmed(true); pickInstrument(v); }}><SelectTrigger aria-label="Receipt payment instrument"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="none">Not confirmed</SelectItem>{savedMethods.map(p => <SelectItem key={p.id} value={p.id}>{instrumentLabel(p)}</SelectItem>)}</SelectContent></Select></div>
-            <dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-3 gap-y-1 border-t pt-3 text-xs"><dt className="text-muted-foreground">What this is</dt><dd>{PLAIN_TXN_LABEL[txnType]} · {SCOPE_LABEL[scope]}</dd><dt className="text-muted-foreground">Account</dt><dd>{accounts.find(a => a.id === accountId)?.name ?? 'Not chosen'}{accountState(accountId, accountConfirmed) !== 'confirmed' ? ' · needs confirmation' : ''}{accountId !== 'none' && billEvidence?.evidence ? <span className="block text-muted-foreground">From: {billEvidence.evidence}</span> : null}</dd><dt className="text-muted-foreground">Matching payment</dt><dd>{duplicates.length || deskMatches.length ? 'This may already be saved — compare before saving' : 'No matching payment found in your records'}</dd></dl>
+            <div className="grid gap-1"><Label>Paid with</Label><Select value={instrumentId} onValueChange={v => { if (v === 'none') { setInstrumentId('none'); return; } accountByUser.current = true; setAccountConfirmed(true); setNotOwn(false); pickInstrument(v); }}><SelectTrigger aria-label="Receipt payment instrument"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="none">Not confirmed</SelectItem>{savedMethods.map(p => <SelectItem key={p.id} value={p.id}>{instrumentLabel(p)}</SelectItem>)}</SelectContent></Select></div>
+            <dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-3 gap-y-1 border-t pt-3 text-xs"><dt className="text-muted-foreground">What this is</dt><dd>{PLAIN_TXN_LABEL[txnType]} · {SCOPE_LABEL[scope]}</dd><dt className="text-muted-foreground">Account</dt><dd>{accounts.find(a => a.id === accountId)?.name ?? (notOwn ? NOT_OWN_LABEL : 'Not chosen')}{acctState !== 'confirmed' ? ' · needs confirmation' : ''}{accountId !== 'none' && billEvidence?.evidence ? <span className="block text-muted-foreground">From: {billEvidence.evidence}</span> : null}</dd><dt className="text-muted-foreground">Matching payment</dt><dd>{duplicates.length || deskMatches.length ? 'This may already be saved — compare before saving' : 'No matching payment found in your records'}</dd></dl>
             <details className="border-t pt-2 text-xs"><summary className="cursor-pointer font-medium">Where this came from</summary><p className="mt-2 whitespace-pre-wrap break-words text-muted-foreground">{receiptDetails.text || 'No readable source text available'}</p><p className="mt-2 text-muted-foreground">{receipts[0]?.name ?? 'Source unavailable'}</p></details>
             {(receiptDetails.items?.length ?? 0) > 0 && <details open className="min-w-0 text-sm"><summary className="cursor-pointer font-semibold">Receipt items ({receiptDetails.items?.length}){review.items.length > 0 ? ` · ${review.items.length} need your check` : ""}</summary><p className="mt-1 text-xs text-muted-foreground">{review.items.length > 0 ? "Highlighted items were hard to read — check them before saving." : "Every item read clearly."}</p><div className="mt-2 max-h-72 space-y-3 overflow-y-auto">{(receiptDetails.items ?? []).map((item,i)=>{const flagged=review.items.includes(i);const reasons=receiptItemReviewReasons(item);const head=item.section && item.section!==(receiptDetails.items ?? [])[i-1]?.section ? item.section : null;return <div key={i} className="contents">{head && <p className="pt-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">{head}</p>}<div className={cn("grid min-w-0 grid-cols-2 gap-2",flagged?"rounded-2xl border-2 border-warning bg-warning/10 p-2":"border-b pb-3")}><div className="col-span-2"><Label htmlFor={`item-name-${i}`}>Item {i+1} name</Label><Input id={`item-name-${i}`} value={item.name} onChange={e=>setReceiptDetails({...receiptDetails,items:(receiptDetails.items ?? []).map((x,j)=>j===i?{...x,name:e.target.value}:x)})}/><ReadingIndicator field={`Item ${i+1} name confidence`} value={receiptItemConfidence(item).name}/></div><div><Label htmlFor={`item-quantity-${i}`}>Item {i+1} quantity</Label><Input id={`item-quantity-${i}`} type="number" min="0" value={item.quantity} onChange={e=>setReceiptDetails({...receiptDetails,items:(receiptDetails.items ?? []).map((x,j)=>j===i?{...x,quantity:Number(e.target.value)}:x)})}/></div><div><Label htmlFor={`item-amount-${i}`}>Item {i+1} amount</Label><Input id={`item-amount-${i}`} type="number" min="0" step="0.01" value={item.amount} onChange={e=>setReceiptDetails({...receiptDetails,items:(receiptDetails.items ?? []).map((x,j)=>j===i?{...x,amount:Number(e.target.value)}:x)})}/><ReadingIndicator field={`Item ${i+1} amount confidence`} value={receiptItemConfidence(item).amount}/></div>{flagged && <p role="status" className="col-span-2 text-xs font-semibold text-warning">Check the {reasons.join(" and ")} of this item</p>}<Button type="button" variant="ghost" size="sm" className="col-span-2 justify-self-end" aria-label={`Remove item ${i+1}`} onClick={()=>setReceiptDetails({...receiptDetails,items:(receiptDetails.items ?? []).filter((_,j)=>j!==i)})}><X className="h-4 w-4"/>Remove</Button></div></div>;})}</div></details>}
             {includeItems && !receiptDetails.items?.length && <p className="text-xs text-muted-foreground">No readable receipt items found.</p>}
@@ -982,22 +1028,25 @@ export function NewExpense({ embedded }: { embedded?: EmbeddedEntry } = {}) {
           <div className="grid gap-3">
             <div className="receipt-row">
               <Label>{isMove(txnType) ? "From account" : txnType === "advance" ? "Received into" : txnType === "advance_settlement" ? "Returned from" : txnType === "income" ? "Into account" : "Paid with"}{af("payment")}</Label>
-              <Select value={accountId} onValueChange={(v) => { accountByUser.current = true; setAccountConfirmed(v !== "none"); setAccountId(v); setAutoFilled((x) => { const n = new Set(x); n.delete("payment"); return n; }); }}>
-                <SelectTrigger aria-label="Account" className={fieldCls}><SelectValue>{accountId !== "none" && acctById.get(accountId) ? shortAccount(acctById.get(accountId)!.name, ACCOUNT_LABEL[acctById.get(accountId)!.kind]) : "Choose account"}</SelectValue></SelectTrigger>
+              <Select value={accountId} onValueChange={(v) => { accountByUser.current = true; setAccountConfirmed(v !== "none"); if (v !== "none") setNotOwn(false); setAccountId(v); setAutoFilled((x) => { const n = new Set(x); n.delete("payment"); return n; }); }}>
+                <SelectTrigger aria-label="Account" className={fieldCls}><SelectValue>{accountId !== "none" && acctById.get(accountId) ? shortAccount(acctById.get(accountId)!.name, ACCOUNT_LABEL[acctById.get(accountId)!.kind]) : notOwn ? NOT_OWN_LABEL : "Choose account"}</SelectValue></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="none">Choose account</SelectItem>
                   {[...acctOrder.recent, ...acctOrder.rest].map((id) => { const a = acctById.get(id)!; return <SelectItem key={id} value={id}>{a.name} · {ACCOUNT_LABEL[a.kind]}</SelectItem>; })}
                 </SelectContent>
               </Select>
               <button type="button" onClick={() => setAddAcct(true)} className="justify-self-start text-xs font-semibold text-primary underline">+ Add account</button>
-              {(billEvidence || panel) && !isMove(txnType) && accountState(accountId, accountConfirmed) !== "confirmed" && <div role="status" className="account-check grid gap-1 rounded-xl border border-warning/50 bg-warning/10 px-3 py-2 text-xs">
+              {(billEvidence || panel) && !isMove(txnType) && acctState !== "confirmed" && <div role="status" className="account-check grid gap-1 rounded-xl border border-warning/50 bg-warning/10 px-3 py-2 text-xs">
                 <b className="text-sm">Account needs confirmation</b>
                 <span>{accountId === "none" ? `${billEvidence?.reason ? `${billEvidence.reason} ` : ""}Choose the account that paid.` : `Suggested from: ${billEvidence?.evidence ?? "your usual choices — not from this bill"}.`}</span>
                 {accountId !== "none" && <Button type="button" size="sm" variant="outline" className="justify-self-start" onClick={() => { accountByUser.current = true; setAccountConfirmed(true); }}>Confirm this account</Button>}
+                {accountId === "none" && billEvidence && <Button type="button" size="sm" variant="outline" className="justify-self-start" onClick={() => { accountByUser.current = true; setNotOwn(true); if (billEvidence.payer === "other" && paymentMethod !== "company_card") setPaymentMethod("company_card"); }}>Not paid from my accounts</Button>}
               </div>}
+              {notOwn && accountId === "none" && !isMove(txnType) && <p role="status" className="text-xs"><b>Not paid from your accounts</b> (company card or someone else paid) — confirmed by you. No personal account is changed. <button type="button" className="text-primary underline" onClick={() => setNotOwn(false)}>Change</button></p>}
+              {billEvidence?.reimbursable && !isMove(txnType) && <label className="flex items-center gap-2 text-xs"><input type="checkbox" className="h-4 w-4" checked={claimBack} onChange={(e) => setClaimBack(e.target.checked)} />The bill mentions reimbursement — I'll claim this back</label>}
               <Dialog open={addAcct} onOpenChange={setAddAcct}>
                 <DialogContent><DialogHeader><DialogTitle>Add account</DialogTitle></DialogHeader>
-                  <AccountForm compact onCreated={(id) => { accountByUser.current = true; setAccountConfirmed(true); setAccountId(id); setAddAcct(false); }} />
+                  <AccountForm compact onCreated={(id) => { accountByUser.current = true; setAccountConfirmed(true); setNotOwn(false); setAccountId(id); setAddAcct(false); }} />
                 </DialogContent>
               </Dialog>
               {methodNote && <p className="text-xs text-muted-foreground">via {instrumentLabel(methodNote)}</p>}
@@ -1062,8 +1111,7 @@ export function NewExpense({ embedded }: { embedded?: EmbeddedEntry } = {}) {
             suggestion={suggestWorkspace({ merchant, tags: tagList, tripType: ctxTrip?.type ?? null, category }, expenses)} />
           <div className="receipt-row">
             <Label htmlFor="d">Date{af("date")}</Label>
-            <Input id="d" type="date" aria-describedby="d-shown" value={date} onChange={(e) => setDate(e.target.value)} className="h-11 text-sm" />
-            <span id="d-shown" className="date-shown text-xs font-medium" data-date-display>{displayDate(date)}</span>
+            <DateField id="d" label="Date" value={date} onChange={setDate} className="text-sm" />
             <div className="flex justify-end gap-1">
               <Button type="button" size="sm" variant={date === today ? "default" : "outline"} className="h-8 rounded-full px-3 text-xs" onClick={() => setDate(today)}>Today</Button>
               <Button type="button" size="sm" variant={date === yesterday ? "default" : "outline"} className="h-8 rounded-full px-3 text-xs" onClick={() => setDate(yesterday)}>Yesterday</Button>
@@ -1149,7 +1197,7 @@ export function NewExpense({ embedded }: { embedded?: EmbeddedEntry } = {}) {
               )}
               <div className="grid gap-1.5">
                 <Label>Payment method <span className="font-normal text-muted-foreground">(optional detail)</span></Label>
-                <Select value={instrumentId} onValueChange={(v) => { if (v === "none") { setInstrumentId("none"); return; } accountByUser.current = true; setAccountConfirmed(true); pickInstrument(v); }}>
+                <Select value={instrumentId} onValueChange={(v) => { if (v === "none") { setInstrumentId("none"); return; } accountByUser.current = true; setAccountConfirmed(true); setNotOwn(false); pickInstrument(v); }}>
                   <SelectTrigger aria-label="Saved payment method"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="none">{savedMethods.length ? "Choose a saved UPI ID or card" : "No saved methods yet"}</SelectItem>
@@ -1172,8 +1220,9 @@ export function NewExpense({ embedded }: { embedded?: EmbeddedEntry } = {}) {
 
         <div hidden={panel && (!confirmed || reading)} className={panel ? "cmp-entry-foot" : "receipt-desk sticky bottom-0 z-10 -mx-4 px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-2 backdrop-blur sm:mx-0 sm:px-0"}>
           {panel && draftState !== "idle" && !editing && <p aria-live="polite" className="mb-1 text-center text-[11px] text-muted-foreground">{draftState === "saving" ? "Saving draft…" : draftState === "uploading" ? "Keeping your photo safe…" : draftState === "saved" ? "Draft kept — you can close and come back" : draftState === "device" ? "Kept on this phone · syncs when online" : <span className="text-destructive">Draft not saved yet</span>}</p>}
+          {accountBlocked && confirmed && <p id="account-why" className="mb-1 text-center text-xs text-muted-foreground">Choose or confirm the account that paid before saving — the bill alone doesn't settle it.</p>}
           {saveError && !saving && <div role="alert" className="mb-2 flex items-center justify-between gap-2 rounded-xl border border-destructive/40 bg-card px-3 py-2 text-xs"><span className="text-destructive">{saveError}</span><Button type="submit" size="sm" variant="outline">Retry</Button></div>}
-          <Button type="submit" size="lg" variant="gold" loading={saving} loadingText={editing ? "Saving changes…" : `Saving your ${TXN_LABEL[txnType].toLowerCase()}…`} className="h-12 w-full rounded-full text-base font-semibold" disabled={reading || saving || !confirmed || duplicateBlocked || matchBlocked || receiptBlocked || !(Number(amount) > 0)}>
+          <Button type="submit" size="lg" variant="gold" loading={saving} loadingText={editing ? "Saving changes…" : `Saving your ${TXN_LABEL[txnType].toLowerCase()}…`} className="h-12 w-full rounded-full text-base font-semibold" disabled={reading || saving || !confirmed || duplicateBlocked || matchBlocked || receiptBlocked || accountBlocked || !(Number(amount) > 0)} aria-describedby={accountBlocked ? "account-why" : undefined}>
             {editing ? "Save changes" : embedded?.submitLabel ?? `Save ${TXN_LABEL[txnType].toLowerCase()}`}<ArrowRight aria-hidden className="h-4 w-4" />
           </Button>
         </div>

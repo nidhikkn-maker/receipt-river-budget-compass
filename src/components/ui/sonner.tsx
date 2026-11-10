@@ -1,11 +1,17 @@
 import { Toaster as Sonner } from "sonner";
+import { useToastPlacement } from "@/lib/toast-placement";
 
 type ToasterProps = React.ComponentProps<typeof Sonner>;
 
 const Toaster = ({ ...props }: ToasterProps) => {
+  // While a sheet with a sticky footer is open (Smart Add), toasts move to the top so they never cover its actions.
+  const placement = useToastPlacement();
   return (
     <Sonner
       className="toaster group"
+      position={placement.position}
+      offset={placement.offset}
+      mobileOffset={placement.mobileOffset}
       toastOptions={{
         classNames: {
           toast:

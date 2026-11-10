@@ -7,6 +7,7 @@ import { CONTEXTS, type IntakeContext } from "@/lib/books/intake";
 import type { Scope } from "@/lib/expenses";
 import type { QuickEntrySearch } from "@/lib/quick-entry";
 import { todayISO } from "@/lib/use-position";
+import { holdToastsClearOfFooter } from "@/lib/toast-placement";
 import { SourcePreview, sourceKind } from "@/components/SourcePreview";
 import { ReceiptAssetHandoff } from "@/components/ReceiptAssetHandoff";
 import { SMART_ADD_ACCEPT } from "@/components/SmartAdd";
@@ -56,6 +57,9 @@ export function IntelligentCanvas({ open, onOpenChange, scope }: { open: boolean
   const fieldsRef = useRef<HTMLDivElement>(null);
   const [reviewReady, setReviewReady] = useState(false);
 
+  // Notifications never cover the sticky footer actions (or the iPhone safe area) while the sheet is open.
+  const footRef = useRef<HTMLElement>(null);
+  useEffect(() => (open ? holdToastsClearOfFooter(footRef.current) : undefined), [open]);
   // Closing the sheet, or browser Back/Forward, never carries a confirmation over: the owner confirms again.
   useEffect(() => { if (!open) setConfirming(null); }, [open]);
   useEffect(() => { const back = () => setConfirming(null); window.addEventListener("popstate", back); return () => window.removeEventListener("popstate", back); }, []);
@@ -117,6 +121,9 @@ export function IntelligentCanvas({ open, onOpenChange, scope }: { open: boolean
     e.stopPropagation();
     if (pending.current) return;
     const form = e.target instanceof HTMLFormElement ? e.target : null;
+    // Enter in a field can't skip the review's own checks: while its Save is unavailable there is nothing to confirm.
+    const own = form ? [...form.querySelectorAll<HTMLButtonElement>('button[type="submit"]')].pop() : null;
+    if (own?.disabled) return;
     formRef.current = form;
     setConfirming(readReviewForm(form, phase.kind === "receipt" ? phase.files : []));
   };
@@ -225,7 +232,7 @@ export function IntelligentCanvas({ open, onOpenChange, scope }: { open: boolean
                 <Suspense fallback={<p role="status" className="sf-state-hint">Opening review…</p>}>
                   <div className="smart-add-review min-w-0">
                     {phase.kind === "receipt"
-                      ? <ReceiptReview key={phase.key} embedded={{ search: phase.search, files: phase.files, submitLabel: "Continue to confirmation", onExit: (saved) => { setConfirming(null); settle(); if (saved) setPhase({ kind: "done", id: saved.id, label: saved.label }); else reset(); } }} />
+                      ? <ReceiptReview key={phase.key} embedded={{ search: phase.search, files: phase.files, submitLabel: "Continue to confirmation", confirmsAccount: true, onExit: (saved) => { setConfirming(null); settle(); if (saved) setPhase({ kind: "done", id: saved.id, label: saved.label }); else reset(); } }} />
                       : <StatementReview key={phase.key} embedded={{ files: phase.files, context: phase.context }} />}
                   </div>
                 </Suspense>
@@ -264,7 +271,7 @@ export function IntelligentCanvas({ open, onOpenChange, scope }: { open: boolean
           </div>}
         </div>
 
-        <footer className="sf-canvas-foot">
+        <footer ref={footRef} className="sf-canvas-foot">
           {phase.kind === "add" && <button type="button" className="sf-btn sf-btn-deep" disabled={!picked.length} onClick={() => begin(picked)}>Continue to review<ArrowRight aria-hidden /></button>}
           {(phase.kind === "receipt" || phase.kind === "statement") && !confirming && <>
             <button type="button" className="sf-btn sf-btn-outline" disabled={saving} onClick={reset}><ArrowLeft aria-hidden />Start over</button>

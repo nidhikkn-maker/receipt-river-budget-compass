@@ -1553,6 +1553,7 @@ html[data-theme="signature-flow"] .cmp-night-link :is(a, button) { color: var(--
 .sf-worth-note svg { width: 11px; height: 11px; flex-shrink: 0; transform: translateY(1px); }
 .sf-worth-note b { color: var(--sf-on-deep, var(--primary-foreground)); font-weight: 700; }
 .sf-worth-quality { font-size: 11.5px; }
+.sf-worth-metrics dd.sf-worth-sub .sf-worth-overdue { color: var(--sf-on-deep, var(--primary-foreground)); font-weight: 700; }
 .sf-worth-metrics { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); margin-top: 22px; padding-top: 18px; border-top: 1px solid color-mix(in oklab, var(--sf-on-deep, white) 18%, transparent); }
 .sf-worth-metrics > div { min-width: 0; padding: 0 10px; border-left: 1px solid color-mix(in oklab, var(--sf-on-deep, white) 18%, transparent); }
 .sf-worth-metrics > div:first-child { padding-left: 0; border-left: 0; }

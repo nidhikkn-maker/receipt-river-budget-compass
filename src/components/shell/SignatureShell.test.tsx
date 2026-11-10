@@ -144,6 +144,39 @@ describe("hub pages", () => {
     expect(screen.getByRole("region", { name: "Suggested next step" })).toBeInTheDocument();
     for (const [name, href] of [[/Statement Desk/, "/statements"], [/^Travel/, "/trips"], [/^Records/, "/records"], [/^Reports Spending/, "/reports"]] as const) expect(screen.getByRole("link", { name })).toHaveAttribute("href", href);
   });
+  it("Home: card statement amount due, payment status and total outstanding are shown separately (overdue only when unpaid)", () => {
+    // Hand-calculated: the 18 Oct statement (₹30,000) was due 7 Nov and is unpaid; ₹15,679 was spent after it; today is 10 Nov.
+    vi.useFakeTimers({ toFake: ["Date"] }); vi.setSystemTime(new Date(2026, 10, 10, 12));
+    try {
+      const card = account({ id: "c1", name: "HDFC Regalia card", kind: "credit_card", statementDay: 18, dueDay: 7, creditLimit: 500000 });
+      const spend = (id: string, date: string, amount: number) => ({ id, date, amount, originalAmount: amount, currency: "INR", accountId: "c1", txnType: "expense", category: "Shopping", title: id, merchant: null, scope: "personal", tags: [] });
+      local.store = { ...local.store, accounts: [account({ id: "a1", name: "HDFC Savings", kind: "savings", openingBalance: 100000 }), card], transactions: [spend("billed", "2026-10-10", 30000), spend("unbilled", "2026-10-25", 15679)] };
+      const { unmount } = render(<SignatureHome />);
+      let metric = screen.getByText("Card payment").closest("div")!;
+      expect(metric).toHaveAttribute("data-card-state", "overdue");
+      expect(metric).toHaveTextContent("₹30,000");
+      expect(metric).toHaveTextContent("Overdue since 7 Nov · ₹45,679 outstanding");
+      expect(metric).not.toHaveTextContent(/Due 7 Nov/);
+      unmount();
+      // Not yet due (5 Nov): the same statement reads "Due 7 Nov".
+      vi.setSystemTime(new Date(2026, 10, 5, 12));
+      render(<SignatureHome />);
+      metric = screen.getByText("Card payment").closest("div")!;
+      expect(metric).toHaveAttribute("data-card-state", "due");
+      expect(metric).toHaveTextContent("₹30,000");
+      expect(metric).toHaveTextContent("Due 7 Nov · ₹45,679 outstanding");
+      cleanup();
+      // Paid on 6 Nov, today 10 Nov: a past due date alone is never overdue.
+      vi.setSystemTime(new Date(2026, 10, 10, 12));
+      local.store = { ...local.store, transactions: [spend("billed", "2026-10-10", 30000), spend("unbilled", "2026-10-25", 15679), { id: "pay", date: "2026-11-06", amount: 30000, originalAmount: 30000, currency: "INR", accountId: "a1", toAccountId: "c1", txnType: "transfer", category: "Transfer", title: "HDFC card bill", merchant: null, scope: "personal", tags: [] }] };
+      render(<SignatureHome />);
+      metric = screen.getByText("Card payment").closest("div")!;
+      expect(metric).toHaveAttribute("data-card-state", "paid");
+      expect(metric).toHaveTextContent("₹0");
+      expect(metric).toHaveTextContent("Paid · ₹15,679 outstanding");
+      expect(metric).not.toHaveTextContent(/Overdue/);
+    } finally { vi.useRealTimers(); }
+  });
   it("Home: a failed read shows Retry, never an empty ledger", () => {
     local.store = { ...local.store, loadErrors: ["transactions"] };
     render(<SignatureHome />);

@@ -4,6 +4,7 @@ import { useNetWorth } from "@/components/books/useBooks";
 import { useStore } from "@/lib/store";
 import { money, SCOPE_LABEL } from "@/lib/expenses";
 import { loadFailed } from "@/lib/load-state";
+import { cardPaymentSummary } from "@/lib/cards";
 import { todayISO, usePosition } from "@/lib/use-position";
 import { openSmartAdd } from "@/lib/smart-add-event";
 import { EmptyState, ErrorState, StaleState } from "../States";
@@ -26,9 +27,20 @@ export function SignatureHome() {
   const scopeLabel = preferences.homeScope === "all" ? "All spaces" : SCOPE_LABEL[preferences.homeScope];
   const first = firstName(name);
   const hasAccounts = accounts.some((a) => !a.archived);
-  const cardsOwed = pos.cards.filter((c) => c.due > 0);
-  const cardDue = cardsOwed.reduce((s, c) => s + c.due, 0);
-  const nextCardDate = cardsOwed.map((c) => c.dueDate).filter((d): d is string => !!d).sort()[0] ?? null;
+  // Statement amount due, payment status and total outstanding are separate facts (cards.ts cardPaymentSummary).
+  const cardPay = cardPaymentSummary(pos.cards.map((c) => c.cycle));
+  const cardStatus = cardPay.state === "overdue" ? `${cardPay.partlyPaid ? "Partly paid · " : ""}Overdue since ${shortDate(cardPay.dueDate, false)}`
+    : cardPay.state === "partly_paid" ? `Partly paid · Due ${shortDate(cardPay.dueDate, false)}`
+    : cardPay.state === "due" ? (cardPay.dueDate ? `Due ${shortDate(cardPay.dueDate, false)}` : "Due date not recorded")
+    : cardPay.state === "paid" ? "Paid"
+    : cardPay.state === "nothing_due" ? "Nothing due on the statement"
+    : cardPay.state === "not_recorded" ? "Statement not recorded"
+    : "Nothing outstanding";
+  const cardNotes = [
+    cardPay.minimumDue != null ? `${wholeRupees(cardPay.minimumDue)} minimum due` : null,
+    cardPay.outstanding > 0 ? `${wholeRupees(cardPay.outstanding)} outstanding` : null,
+    cardPay.notRecorded && cardPay.state !== "not_recorded" ? `statement not recorded for ${cardPay.notRecorded} card${cardPay.notRecorded === 1 ? "" : "s"}` : null,
+  ].filter(Boolean).join(" · ");
   const upcoming = pos.upcoming.slice(0, 4);
   const recent = [...transactions].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 5);
   const accountName = (id: string | null | undefined) => accounts.find((a) => a.id === id)?.name ?? null;
@@ -65,7 +77,7 @@ export function SignatureHome() {
           {nw.quality.length > 0 && <p className="sf-worth-note sf-worth-quality">{nw.quality[0]}</p>}
           <dl className="sf-worth-metrics">
             <div><dt>Available money</dt><dd className="financial-amount" title={money(pos.cash)}>{hasAccounts ? wholeRupees(pos.cash) : "—"}</dd><dd className="sf-worth-sub">From recorded balances</dd></div>
-            <div><dt>Card payment</dt><dd className="financial-amount" title={money(cardDue)}>{wholeRupees(cardDue)}</dd><dd className="sf-worth-sub">{nextCardDate ? `Due ${shortDate(nextCardDate, false)}` : cardsOwed.length ? "Due date not set" : "Nothing owed"}</dd></div>
+            <div data-card-state={cardPay.state}><dt>Card payment</dt><dd className="financial-amount" title={cardPay.state === "not_recorded" ? "Statement not recorded" : `Statement amount due ${money(cardPay.amountDue)}`}>{cardPay.state === "not_recorded" ? "—" : wholeRupees(cardPay.amountDue)}</dd><dd className="sf-worth-sub">{cardPay.state === "overdue" ? <b className="sf-worth-overdue">{cardStatus}</b> : cardStatus}{cardNotes ? ` · ${cardNotes}` : ""}</dd></div>
             <div><dt>Needs attention</dt><dd>{attention.total} item{attention.total === 1 ? "" : "s"}</dd><dd className="sf-worth-sub">{attention.review} to review{pos.reimbursements.pendingCount ? ` · ${pos.reimbursements.pendingCount} claim${pos.reimbursements.pendingCount === 1 ? "" : "s"}` : ""}</dd></div>
           </dl>
           <div className="sf-worth-actions">

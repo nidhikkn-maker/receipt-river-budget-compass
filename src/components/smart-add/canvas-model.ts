@@ -41,6 +41,9 @@ function fieldValue(form: HTMLFormElement, selector: string): string {
   const el = form.querySelector(selector);
   if (!el) return "";
   if (el instanceof HTMLInputElement || el instanceof HTMLSelectElement || el instanceof HTMLTextAreaElement) return el.value.trim();
+  // A field that shows a formatted value (the date field shows "09 Nov 2026") carries its stored value here.
+  const stored = el.getAttribute("data-value");
+  if (stored != null) return stored.trim();
   return text(el);
 }
 
