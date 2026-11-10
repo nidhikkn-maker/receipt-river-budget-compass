@@ -36,7 +36,7 @@ import { quickEntrySearch, type QuickEntrySearch } from "@/lib/quick-entry";
 import { useStore } from "@/lib/store";
 import { activeInstruments, applyInstrument, instrumentLabel, lastInstrumentForMerchant } from "@/lib/payment-instruments";
 import { extractReceipt } from "@/lib/receipt-extract.functions";
-import { accountCheckRecord, accountState, receiptAccountEvidence, type BillPayer, type CardIdentifiers } from "@/lib/account-evidence";
+import { accountCheckRecord, accountState, receiptAccountEvidence } from "@/lib/account-evidence";
 import { postingBlock, separateDecision, type DuplicateCheck, type DuplicateReview } from "@/lib/duplicate-decision";
 import { DateField } from "@/components/DateField";
 import { DuplicateResolution } from "@/components/DuplicateResolution";
@@ -49,7 +49,7 @@ import { cn } from "@/lib/utils";
 import { ProcessingPanel, stagesAt } from "@/components/ProcessingPanel";
 import { createLatest } from "@/lib/latest-request";
 import { fileToLocal, localDrafts, localToFile, putLocalDraft, removeLocalDraft } from "@/lib/offline";
-import { completeDraft, draftReceiptFile, draftStatus, getDraft, hasDraftContent, upsertDraft, uploadDraftReceipt, type DraftData, type DraftReceipt } from "@/lib/drafts";
+import { completeDraft, draftReceiptFile, draftStatus, getDraft, hasDraftContent, upsertDraft, uploadDraftReceipt, type DraftBillEvidence, type DraftData, type DraftReceipt } from "@/lib/drafts";
 import { ACCOUNT_LABEL, MOVE_TARGET, isMove, TXN_LABEL, TXN_TYPES, frequentMerchants, suggestForMerchant, type TxnType } from "@/lib/ledger";
 
 
@@ -107,7 +107,7 @@ interface SpeechRec { lang: string; interimResults: boolean; start: () => void; 
 
 interface Scan { merchant: string; date: string; amount: string; currency: string }
 /** What a read bill proved about who paid (account-evidence.ts); kept with the draft so a resumed review shows it too. */
-interface BillEvidence { evidence: string | null; reason: string | null; payer?: BillPayer; reimbursable?: boolean; card?: CardIdentifiers; suggestedId?: string | null }
+type BillEvidence = DraftBillEvidence;
 
 function ReadingIndicator({ value, field }: { value: ReadingConfidence; field?: string }) {
   const label = { high: "High reading confidence", medium: "Double-check · medium confidence", low: "Double-check · low confidence", unknown: "Double-check · confidence unavailable" }[value];
@@ -287,7 +287,7 @@ export function NewExpense({ embedded }: { embedded?: EmbeddedEntry } = {}) {
       if (x.wsSplit) setWsSplit(x.wsSplit as typeof wsSplit); if (x.splitOn) setSplitOn(true); if (x.shares) setShares(x.shares);
       if (x.receiptDetails) setReceiptDetails(x.receiptDetails as ReceiptDetails);
       // A resumed bill keeps what it proved about the account; the owner confirms the account again before saving.
-      if (x.billEvidence) { billRead.current = true; setBillEvidence(x.billEvidence as BillEvidence); setAccountConfirmed(false); }
+      if (x.billEvidence) { billRead.current = true; setBillEvidence(x.billEvidence); setAccountConfirmed(false); }
       const files: LocalReceipt[] = [];
       if (useLocal && local) for (const f of local.files) files.push({ ...(await readFile(localToFile(f))), ...(f.path ? { path: f.path } : {}) });
       else for (const r of d.receipts) { const f = await draftReceiptFile(r); if (f) files.push({ ...(await readFile(f)), path: r.path }); }
