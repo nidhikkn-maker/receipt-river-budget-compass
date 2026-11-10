@@ -1,4 +1,5 @@
 import { sourceKind } from "@/components/SourcePreview";
+import { displayDate } from "@/lib/date-display";
 
 /** Pure rules for the Intelligent Canvas: what each choice means, where a source is reviewed, and the step shown. */
 
@@ -30,7 +31,10 @@ export function stepOf(phase: "add" | "receipt" | "statement" | "done", confirmi
   return 2;
 }
 
-export interface ReviewSummary { headline: string; subline: string; original: string; account: string | null; rows: { label: string; value: string }[] }
+export interface ReviewSummary { headline: string; subline: string; original: string; account: string | null; accountState: "unselected" | "suggested" | "confirmed"; accountEvidence: string | null; rows: { label: string; value: string }[] }
+
+/** Confirm and save is allowed only once the owner has chosen or confirmed the account (never a suggestion). */
+export const canConfirm = (s: ReviewSummary | null) => !!s && s.accountState === "confirmed";
 
 const text = (el: Element | null | undefined) => (el?.textContent ?? "").replace(/\s+/g, " ").trim();
 function fieldValue(form: HTMLFormElement, selector: string): string {
@@ -46,23 +50,27 @@ function fieldValue(form: HTMLFormElement, selector: string): string {
  */
 export function readReviewForm(form: HTMLFormElement | null, files: File[]): ReviewSummary {
   const original = files.length ? files.map((f) => f.name).join(", ") : "Typed or spoken entry";
-  if (!form) return { headline: "Your entry", subline: "Check the details, then confirm", original, account: null, rows: [] };
+  if (!form) return { headline: "Your entry", subline: "Check the details, then confirm", original, account: null, accountState: "unselected", accountEvidence: null, rows: [] };
   const amount = fieldValue(form, "#a");
   const currency = fieldValue(form, '[aria-label="Currency"]');
   const merchant = fieldValue(form, "#m") || fieldValue(form, "#sm");
   const note = fieldValue(form, "#t");
   const date = fieldValue(form, "#d") || fieldValue(form, "#sd");
   const category = fieldValue(form, '[aria-label="Category"]');
-  const account = fieldValue(form, '[aria-label="Account"]') || null;
+  const rawState = form.getAttribute("data-account-state");
+  const accountState = rawState === "confirmed" || rawState === "suggested" ? rawState : "unselected";
+  const accountText = fieldValue(form, '[aria-label="Account"]');
+  const account = accountState === "unselected" || !accountText || accountText === "Choose account" ? null : accountText;
+  const accountEvidence = form.getAttribute("data-account-evidence") || null;
   const type = fieldValue(form, '[aria-label="Transaction type"]');
   const whom = fieldValue(form, '[aria-label="For whom"]');
   const what = merchant || note || "Your entry";
   const rows = [
     { label: "Amount", value: amount ? `${currency || "INR"} ${amount}` : "" },
-    { label: "Date", value: date },
+    { label: "Date", value: displayDate(date) },
     { label: "Category", value: category },
     { label: "Type", value: type },
     { label: "For whom", value: whom },
   ].filter((r) => r.value);
-  return { headline: `${type || "Entry"} · ${what}`, subline: [amount && `${currency || "INR"} ${amount}`, date, files.length ? "source linked" : ""].filter(Boolean).join(" · "), original, account, rows };
+  return { headline: `${type || "Entry"} · ${what}`, subline: [amount && `${currency || "INR"} ${amount}`, displayDate(date), files.length ? "source linked" : ""].filter(Boolean).join(" · "), original, account, accountState, accountEvidence, rows };
 }

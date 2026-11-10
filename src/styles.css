@@ -1812,3 +1812,43 @@ html[data-theme="signature-flow"] .cmp-night-link :is(a, button) { color: var(--
   .sf-canvas-source { position: sticky; top: 0; }
   .sf-canvas-review:not(.sf-has-source) .sf-canvas-split { grid-template-columns: minmax(0, 1fr); max-width: 44rem; }
 }
+
+/* ---- B1c: Smart Add review/confirm refinements (KK, 10 Nov 2026) ---- */
+.sf-needs { color: var(--warning); font-weight: 700; }
+.sf-evidence { display: block; margin-top: 2px; font-size: 11.5px; font-weight: 500; color: var(--muted-foreground); }
+.sf-account-block { display: grid; gap: 10px; margin-bottom: 14px; padding: 12px 14px; border: 1px solid color-mix(in oklab, var(--warning) 55%, transparent); border-radius: 14px; background: color-mix(in oklab, var(--warning) 9%, var(--background)); font-size: 13px; }
+.sf-account-block .sf-btn { justify-self: start; min-height: 44px; }
+.sf-canvas .date-shown { display: block; margin-top: 2px; color: var(--foreground); }
+.sf-view-toggle button { min-height: 44px !important; }
+.sf-picked button { width: 44px; height: 44px; min-height: 44px !important; }
+@media (max-width: 767px) {
+  .sf-canvas-head { padding: calc(10px + env(safe-area-inset-top)) 16px 10px; gap: 2px 10px; }
+  .sf-canvas-head .sf-overline { margin-bottom: 2px; font-size: 10px; }
+  .sf-canvas-title { font-size: 21px; line-height: 1.15; }
+  .sf-steps { margin-top: 8px; gap: 5px; }
+  .sf-steps li { min-height: 28px; font-size: 11px; border-radius: 9px; }
+  .sf-canvas-body { padding: 12px 16px 16px; }
+  .sf-canvas-lede { margin-bottom: 10px; font-size: 13px; line-height: 1.45; }
+  .sf-canvas-hint { margin-top: 8px; font-size: 12px; }
+  .sf-chips[role="radiogroup"] { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+  .sf-chips[role="radiogroup"] .sf-chip { flex-direction: column; justify-content: center; gap: 3px; min-height: 52px !important; padding: 4px 2px; font-size: 11.5px; line-height: 1.15; text-align: center; border-radius: 12px; }
+  .sf-drop { margin-top: 10px; padding: 14px 12px; gap: 2px; border-radius: 16px; }
+  .sf-drop-icon { width: 22px; height: 22px; }
+  .sf-drop-actions { margin-top: 8px; }
+  .sf-view-toggle { margin-bottom: 10px; }
+  .sf-canvas-foot { padding: 8px 16px calc(8px + env(safe-area-inset-bottom)); gap: 6px 8px; flex-wrap: wrap; }
+  .sf-canvas-foot .sf-btn-outline { flex: 0 0 auto; }
+  .sf-canvas-foot .sf-btn { min-height: 46px; padding: 0 14px; font-size: 13.5px; }
+  .sf-canvas-foot .sf-btn-deep { flex: 1 1 auto; }
+  .sf-canvas-foot .sf-foot-note { flex: 1 1 100%; order: -1; font-size: 11.5px; line-height: 1.35; }
+  .sf-confirm-card { padding: 12px; }
+  .sf-confirm-grid { margin-top: 12px; }
+  .sf-confirm-grid > div { padding: 8px 0; }
+}
+/* One persistent action in the canvas: the canvas footer's "Continue to confirmation" replaces the review's own
+   sticky button (kept in the DOM, still the single save path; its Retry and draft status stay visible). */
+.sf-canvas .cmp-entry-foot { position: static; box-shadow: none; background: transparent; padding: 0; margin: 0; border: 0; }
+.sf-canvas .cmp-entry-foot > button[type="submit"]:last-child { display: none; }
+/* 44 px touch targets for the review's own small controls when hosted in the canvas. */
+.sf-canvas .cmp-kind button { min-height: 44px !important; }
+.sf-canvas form :where(a, button[aria-label^="Remove"]) { display: inline-flex; align-items: center; min-height: 44px; min-width: 44px; }

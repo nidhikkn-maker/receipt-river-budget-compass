@@ -36,6 +36,8 @@ import { quickEntrySearch, type QuickEntrySearch } from "@/lib/quick-entry";
 import { useStore } from "@/lib/store";
 import { activeInstruments, applyInstrument, instrumentLabel, lastInstrumentForMerchant } from "@/lib/payment-instruments";
 import { extractReceipt } from "@/lib/receipt-extract.functions";
+import { accountState, receiptAccountEvidence } from "@/lib/account-evidence";
+import { displayDate } from "@/lib/date-display";
 import { prepareForReading } from "@/lib/image-prep";
 import { getFxRate } from "@/lib/fx.functions";
 import { parseSpokenEntry } from "@/lib/assistant.functions";
@@ -108,7 +110,7 @@ function ReadingIndicator({ value, field }: { value: ReadingConfidence; field?: 
 }
 
 /** Smart Add hosts this same review in place; `embedded` swaps route navigation for sheet callbacks. */
-export type EmbeddedEntry = { search: QuickEntrySearch; files?: File[]; onExit: (saved?: { id?: string | undefined; label: string }) => void };
+export type EmbeddedEntry = { search: QuickEntrySearch; files?: File[]; onExit: (saved?: { id?: string | undefined; label: string }) => void; /** Signature Flow canvas: the review hands over to its own confirmation step. */ submitLabel?: string };
 export function NewExpense({ embedded }: { embedded?: EmbeddedEntry } = {}) {
   const { userId, save, transactions: expenses, members, accounts, loans, preferences, savePreferences, documents, addDocument, removeDocument, signedUrl } = useStore();
   const PENDING = "pending-receipt";
@@ -142,6 +144,11 @@ export function NewExpense({ embedded }: { embedded?: EmbeddedEntry } = {}) {
   const ctxTrip = (preferences.trips as TravelTrip[]).find((t) => t.id === search.trip);
   const [txnType, setTxnType] = useState<TxnType>("expense");
   const [accountId, setAccountId] = useState<string>("none");
+  /** True only when the owner chose the account (or it was saved before); anything filled automatically is a suggestion. */
+  const [accountConfirmed, setAccountConfirmed] = useState(false);
+  /** What a scanned bill proved about the paying account; while set, usual choices never fill the account. */
+  const [billEvidence, setBillEvidence] = useState<{ evidence: string | null; reason: string | null } | null>(null);
+  const billRead = useRef(false);
   /** "" = follow the paying account's company; "personal" or an entity id = chosen by hand. */
   const [companyPick, setCompanyPick] = useState<string>("");
   const [addAcct, setAddAcct] = useState(false);
@@ -361,7 +368,7 @@ export function NewExpense({ embedded }: { embedded?: EmbeddedEntry } = {}) {
     if (!sdOn.category) d.category = null;
     if (!sdOn.payment) { d.accountId = null; d.paymentMethod = null; }
     if (!sdOn.workspace) d.scope = null;
-    if (accountByUser.current) d.accountId = null;
+    if (accountByUser.current || billRead.current) d.accountId = null;
     if (!d.category && !d.accountId && !d.paymentMethod && !d.scope) { setDefaultsNote(null); return; }
     if (d.category && category === base.category && d.category !== category) { setCategory(d.category as Category); filled.add("category"); }
     if (d.accountId && !search.account && accountId === base.accountId && d.accountId !== accountId) { setAccountId(d.accountId); filled.add("payment"); }
@@ -450,7 +457,7 @@ export function NewExpense({ embedded }: { embedded?: EmbeddedEntry } = {}) {
     setScope(editing.scope); setMemberId(editing.memberId ?? "me");
     const wa = editing.workspaceAllocations ?? [];
     setWsSplit(wa.length > 1 ? { on: true, method: "fixed", values: Object.fromEntries(wa.map((x) => [x.workspace, String(x.amount)])) } : { on: false, method: "fixed", values: {} });
-    setTxnType(editing.txnType ?? "expense"); setAccountId(editing.accountId ?? "none"); setCompanyPick(editing.entitySource === "manual" ? editing.entityId ?? "personal" : ""); setInstrumentId(editing.paymentInstrumentId ?? "none"); setToAccountId(editing.toAccountId ?? "none"); setTags((editing.tags ?? []).join(", "));
+    setTxnType(editing.txnType ?? "expense"); setAccountConfirmed(true); setAccountId(editing.accountId ?? "none"); setCompanyPick(editing.entitySource === "manual" ? editing.entityId ?? "personal" : ""); setInstrumentId(editing.paymentInstrumentId ?? "none"); setToAccountId(editing.toAccountId ?? "none"); setTags((editing.tags ?? []).join(", "));
     setTripId(editing.tripId ?? "none"); setPrincipal(editing.principal == null ? "" : String(editing.principal)); setInterest(editing.interest == null ? "" : String(editing.interest));
     setSplitOn(editing.splits.length > 0);
     setShares(Object.fromEntries(editing.splits.map((x) => [x.memberId ?? "me", String(x.amount)])));
@@ -494,6 +501,16 @@ export function NewExpense({ embedded }: { embedded?: EmbeddedEntry } = {}) {
       const categoryHint = merchantHint ?? x.category;
       setScanCategory(categoryHint && preferences.categories.some(c => !c.archived && c.name === categoryHint) ? categoryHint : "");
       if (x.payment_method) { setPaymentMethod(x.payment_method); filled.add("payment"); }
+      // The paying account comes only from what the bill proves (matching last digits); otherwise the owner chooses it.
+      if (!accountByUser.current && !editing) {
+        billRead.current = true;
+        const ev = receiptAccountEvidence({ text: x.text, paymentMethod: x.payment_method }, liveAccounts, savedMethods);
+        setBillEvidence({ evidence: ev.evidence, reason: ev.reason });
+        setAccountConfirmed(false);
+        setAccountId(ev.accountId ?? "none");
+        setInstrumentId(ev.instrumentId ?? "none");
+        if (!ev.accountId) filled.delete("payment");
+      }
       if (x.description && (fresh || !description)) { setDescription(x.description); filled.add("description"); }
       if (x.scope) { setScope(x.scope); filled.add("scope"); }
       const cur = x.currency && /^[A-Z]{3}$/.test(x.currency.toUpperCase()) ? x.currency.toUpperCase() : currency;
@@ -632,8 +649,8 @@ export function NewExpense({ embedded }: { embedded?: EmbeddedEntry } = {}) {
     if (preferences.categories.some(c=>c.name===hit.category && !c.archived)) { setCategory(hit.category as Category); filled.add("category"); }
     if ((PAYMENT_METHODS as readonly string[]).includes(hit.paymentMethod)) { setPaymentMethod(hit.paymentMethod as PaymentMethod); filled.add("paymentMethod"); }
     if (hit.scope === "business" || hit.scope === "personal") { setScope(hit.scope); filled.add("scope"); }
-    if (!accountByUser.current && hit.accountId && liveAccounts.some((a) => a.id === hit.accountId)) setAccountId(hit.accountId);
-    const usual = accountByUser.current || rule?.accountId || rule?.paymentMethod ? null : lastInstrumentForMerchant(m, expenses, savedMethods);
+    if (!accountByUser.current && !billRead.current && hit.accountId && liveAccounts.some((a) => a.id === hit.accountId)) setAccountId(hit.accountId);
+    const usual = accountByUser.current || billRead.current || rule?.accountId || rule?.paymentMethod ? null : lastInstrumentForMerchant(m, expenses, savedMethods);
     if (usual) { pickInstrument(usual.id); filled.add("paymentMethod"); }
     if (hit.tags.length && !tags.trim()) setTags(hit.tags.join(", "));
     setAutoFilled(filled);
@@ -737,7 +754,7 @@ export function NewExpense({ embedded }: { embedded?: EmbeddedEntry } = {}) {
           </Select>
         </div>
       </header>}
-      <form onSubmit={submit} className={panel ? "grid gap-3" : "mx-auto grid max-w-xl gap-3"}>
+      <form onSubmit={submit} data-account-state={accountState(accountId, accountConfirmed)} data-account-evidence={accountId !== "none" ? billEvidence?.evidence ?? "" : ""} className={panel ? "grid gap-3" : "mx-auto grid max-w-xl gap-3"}>
         {panel && !reading && (confirmed || scan) && <div role="radiogroup" aria-label="What is this?" className="cmp-kind">
           {(["expense", "card_payment", "transfer", "income"] as const).map((t) => <button key={t} type="button" role="radio" aria-checked={txnType === t} onClick={() => setTxnType(t)}>{({ expense: "Spending", card_payment: "Card bill", transfer: "Own transfer", income: "Money in" } as const)[t]}</button>)}
           {!(["expense", "card_payment", "transfer", "income"] as string[]).includes(txnType) && <button type="button" role="radio" aria-checked>{PLAIN_TXN_LABEL[txnType]}</button>}
@@ -857,7 +874,7 @@ export function NewExpense({ embedded }: { embedded?: EmbeddedEntry } = {}) {
           <h2 className="font-semibold"><Sparkles className="mr-1 inline h-4 w-4 text-primary" />Suggestions (same rules as Statement Desk)</h2>
           <ul className="space-y-1.5">
             {deskCategory && <li className="flex flex-wrap items-center justify-between gap-2"><span>Category: <b>{deskCategory}</b> <span className="text-muted-foreground">· {desk.categoryReason}</span></span><Button type="button" size="sm" variant="outline" onClick={() => { setCategory(deskCategory as Category); setAutoFilled((x) => new Set([...x, "category"])); }}>Use</Button></li>}
-            {deskAccount && <li className="flex flex-wrap items-center justify-between gap-2"><span>Account: <b>{deskAccount}</b> <span className="text-muted-foreground">· {desk.accountReason}</span></span><Button type="button" size="sm" variant="outline" onClick={() => { setAccountId(desk.accountId!); setAutoFilled((x) => new Set([...x, "payment"])); }}>Use</Button></li>}
+            {deskAccount && <li className="flex flex-wrap items-center justify-between gap-2"><span>Account: <b>{deskAccount}</b> <span className="text-muted-foreground">· {desk.accountReason}</span></span><Button type="button" size="sm" variant="outline" onClick={() => { accountByUser.current = true; setAccountConfirmed(true); setAccountId(desk.accountId!); setAutoFilled((x) => new Set([...x, "payment"])); }}>Use</Button></li>}
             {deskType && <li className="flex flex-wrap items-center justify-between gap-2"><span>Looks like <b>{PLAIN_TXN_LABEL[deskType].toLowerCase()}</b>{desk.toAccountId ? <> to <b>{acctNameOf(accounts, desk.toAccountId)}</b></> : null} <span className="text-muted-foreground">· {desk.typeReason}</span></span><Button type="button" size="sm" variant="outline" onClick={() => { setTxnType(deskType); if (desk.toAccountId) setToAccountId(desk.toAccountId); }}>Use</Button></li>}
             {desk.opposite && <li className="flex flex-wrap items-center justify-between gap-2"><span>The other side is already saved: <b>{desk.opposite.name}</b> · {desk.opposite.date} · {desk.opposite.currency} {desk.opposite.amount.toFixed(2)}. Open it and set both accounts instead of saving a second copy.</span><Link to="/new" search={{ edit: desk.opposite.id }} className="text-primary underline">Open it</Link></li>}
           </ul>
@@ -883,7 +900,7 @@ export function NewExpense({ embedded }: { embedded?: EmbeddedEntry } = {}) {
             <details className="canvas-fields" ref={fieldsRef} open={panel || undefined}><summary className={panel ? "sr-only" : "font-medium"}>Check what I read from the receipt</summary><div className="grid gap-4 pt-4">
             <div className="grid gap-1"><Label htmlFor="sm">Merchant</Label><Input id="sm" value={scan.merchant} onChange={(e) => setScan({ ...scan, merchant: e.target.value })} /><ReadingIndicator value={receiptDetails.confidence?.merchant ?? "unknown"} /><FieldCheck f="merchant" /><Corrected f="merchant" /></div>
             <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] items-start gap-3">
-              <div className="grid min-w-0 gap-1"><Label htmlFor="sd">Date</Label><Input id="sd" type="date" className="h-10 w-full min-w-0 appearance-none" value={scan.date} onChange={(e) => setScan({ ...scan, date: e.target.value })} /><ReadingIndicator value={receiptDetails.confidence?.date ?? "unknown"} /><FieldCheck f="date" /><Corrected f="date" /></div>
+              <div className="grid min-w-0 gap-1"><Label htmlFor="sd">Date</Label><Input id="sd" type="date" aria-describedby="sd-shown" className="h-10 w-full min-w-0 appearance-none" value={scan.date} onChange={(e) => setScan({ ...scan, date: e.target.value })} /><span id="sd-shown" className="date-shown text-xs font-medium" data-date-display>{displayDate(scan.date)}</span><ReadingIndicator value={receiptDetails.confidence?.date ?? "unknown"} /><FieldCheck f="date" /><Corrected f="date" /></div>
               <div className="grid min-w-0 gap-1"><Label>Currency</Label>
                 <Select value={scan.currency} onValueChange={(v) => setScan({ ...scan, currency: v })}>
                   <SelectTrigger aria-label="Scanned currency" className="h-10 w-full min-w-0"><SelectValue /></SelectTrigger>
@@ -908,8 +925,8 @@ export function NewExpense({ embedded }: { embedded?: EmbeddedEntry } = {}) {
             {reviewMessages.length > 0 ? <p role="alert" className="text-sm text-destructive">{reviewMessages.join(" ")}</p> : <p role="status" className="text-xs text-muted-foreground">{receiptDetails.subtotal == null ? "Subtotal not read — total comparison unavailable." : `Subtotal${receiptDetails.charges?.length ? " + charges" : ""} + tax + tip matches the total.`}{roundNote ? ` ${roundNote}` : ""}</p>}
             <div className="grid gap-1"><Label>Suggested category</Label><Select value={scanCategory} onValueChange={setScanCategory}><SelectTrigger aria-label="Receipt category"><SelectValue placeholder="Choose category" /></SelectTrigger><SelectContent>{categoryNames.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent></Select></div>
             <div className="grid gap-1"><Label>Space</Label><Select value={scope} onValueChange={v => setScope(v as Scope)}><SelectTrigger aria-label="Receipt workspace"><SelectValue /></SelectTrigger><SelectContent>{ACTIVE_SCOPES.map(s => <SelectItem key={s} value={s}>{SCOPE_LABEL[s]}</SelectItem>)}</SelectContent></Select></div>
-            <div className="grid gap-1"><Label>Paid with</Label><Select value={instrumentId} onValueChange={v => v === 'none' ? setInstrumentId('none') : pickInstrument(v)}><SelectTrigger aria-label="Receipt payment instrument"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="none">Not confirmed</SelectItem>{savedMethods.map(p => <SelectItem key={p.id} value={p.id}>{instrumentLabel(p)}</SelectItem>)}</SelectContent></Select></div>
-            <dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-3 gap-y-1 border-t pt-3 text-xs"><dt className="text-muted-foreground">What this is</dt><dd>{PLAIN_TXN_LABEL[txnType]} · {SCOPE_LABEL[scope]}</dd><dt className="text-muted-foreground">Account</dt><dd>{accounts.find(a => a.id === accountId)?.name ?? 'Not confirmed'}</dd><dt className="text-muted-foreground">Matching payment</dt><dd>{duplicates.length || deskMatches.length ? 'This may already be saved — compare before saving' : 'No matching payment found in your records'}</dd></dl>
+            <div className="grid gap-1"><Label>Paid with</Label><Select value={instrumentId} onValueChange={v => { if (v === 'none') { setInstrumentId('none'); return; } accountByUser.current = true; setAccountConfirmed(true); pickInstrument(v); }}><SelectTrigger aria-label="Receipt payment instrument"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="none">Not confirmed</SelectItem>{savedMethods.map(p => <SelectItem key={p.id} value={p.id}>{instrumentLabel(p)}</SelectItem>)}</SelectContent></Select></div>
+            <dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-3 gap-y-1 border-t pt-3 text-xs"><dt className="text-muted-foreground">What this is</dt><dd>{PLAIN_TXN_LABEL[txnType]} · {SCOPE_LABEL[scope]}</dd><dt className="text-muted-foreground">Account</dt><dd>{accounts.find(a => a.id === accountId)?.name ?? 'Not chosen'}{accountState(accountId, accountConfirmed) !== 'confirmed' ? ' · needs confirmation' : ''}{accountId !== 'none' && billEvidence?.evidence ? <span className="block text-muted-foreground">From: {billEvidence.evidence}</span> : null}</dd><dt className="text-muted-foreground">Matching payment</dt><dd>{duplicates.length || deskMatches.length ? 'This may already be saved — compare before saving' : 'No matching payment found in your records'}</dd></dl>
             <details className="border-t pt-2 text-xs"><summary className="cursor-pointer font-medium">Where this came from</summary><p className="mt-2 whitespace-pre-wrap break-words text-muted-foreground">{receiptDetails.text || 'No readable source text available'}</p><p className="mt-2 text-muted-foreground">{receipts[0]?.name ?? 'Source unavailable'}</p></details>
             {(receiptDetails.items?.length ?? 0) > 0 && <details open className="min-w-0 text-sm"><summary className="cursor-pointer font-semibold">Receipt items ({receiptDetails.items?.length}){review.items.length > 0 ? ` · ${review.items.length} need your check` : ""}</summary><p className="mt-1 text-xs text-muted-foreground">{review.items.length > 0 ? "Highlighted items were hard to read — check them before saving." : "Every item read clearly."}</p><div className="mt-2 max-h-72 space-y-3 overflow-y-auto">{(receiptDetails.items ?? []).map((item,i)=>{const flagged=review.items.includes(i);const reasons=receiptItemReviewReasons(item);const head=item.section && item.section!==(receiptDetails.items ?? [])[i-1]?.section ? item.section : null;return <div key={i} className="contents">{head && <p className="pt-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">{head}</p>}<div className={cn("grid min-w-0 grid-cols-2 gap-2",flagged?"rounded-2xl border-2 border-warning bg-warning/10 p-2":"border-b pb-3")}><div className="col-span-2"><Label htmlFor={`item-name-${i}`}>Item {i+1} name</Label><Input id={`item-name-${i}`} value={item.name} onChange={e=>setReceiptDetails({...receiptDetails,items:(receiptDetails.items ?? []).map((x,j)=>j===i?{...x,name:e.target.value}:x)})}/><ReadingIndicator field={`Item ${i+1} name confidence`} value={receiptItemConfidence(item).name}/></div><div><Label htmlFor={`item-quantity-${i}`}>Item {i+1} quantity</Label><Input id={`item-quantity-${i}`} type="number" min="0" value={item.quantity} onChange={e=>setReceiptDetails({...receiptDetails,items:(receiptDetails.items ?? []).map((x,j)=>j===i?{...x,quantity:Number(e.target.value)}:x)})}/></div><div><Label htmlFor={`item-amount-${i}`}>Item {i+1} amount</Label><Input id={`item-amount-${i}`} type="number" min="0" step="0.01" value={item.amount} onChange={e=>setReceiptDetails({...receiptDetails,items:(receiptDetails.items ?? []).map((x,j)=>j===i?{...x,amount:Number(e.target.value)}:x)})}/><ReadingIndicator field={`Item ${i+1} amount confidence`} value={receiptItemConfidence(item).amount}/></div>{flagged && <p role="status" className="col-span-2 text-xs font-semibold text-warning">Check the {reasons.join(" and ")} of this item</p>}<Button type="button" variant="ghost" size="sm" className="col-span-2 justify-self-end" aria-label={`Remove item ${i+1}`} onClick={()=>setReceiptDetails({...receiptDetails,items:(receiptDetails.items ?? []).filter((_,j)=>j!==i)})}><X className="h-4 w-4"/>Remove</Button></div></div>;})}</div></details>}
             {includeItems && !receiptDetails.items?.length && <p className="text-xs text-muted-foreground">No readable receipt items found.</p>}
@@ -965,7 +982,7 @@ export function NewExpense({ embedded }: { embedded?: EmbeddedEntry } = {}) {
           <div className="grid gap-3">
             <div className="receipt-row">
               <Label>{isMove(txnType) ? "From account" : txnType === "advance" ? "Received into" : txnType === "advance_settlement" ? "Returned from" : txnType === "income" ? "Into account" : "Paid with"}{af("payment")}</Label>
-              <Select value={accountId} onValueChange={(v) => { accountByUser.current = true; setAccountId(v); setAutoFilled((x) => { const n = new Set(x); n.delete("payment"); return n; }); }}>
+              <Select value={accountId} onValueChange={(v) => { accountByUser.current = true; setAccountConfirmed(v !== "none"); setAccountId(v); setAutoFilled((x) => { const n = new Set(x); n.delete("payment"); return n; }); }}>
                 <SelectTrigger aria-label="Account" className={fieldCls}><SelectValue>{accountId !== "none" && acctById.get(accountId) ? shortAccount(acctById.get(accountId)!.name, ACCOUNT_LABEL[acctById.get(accountId)!.kind]) : "Choose account"}</SelectValue></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="none">Choose account</SelectItem>
@@ -973,9 +990,14 @@ export function NewExpense({ embedded }: { embedded?: EmbeddedEntry } = {}) {
                 </SelectContent>
               </Select>
               <button type="button" onClick={() => setAddAcct(true)} className="justify-self-start text-xs font-semibold text-primary underline">+ Add account</button>
+              {(billEvidence || panel) && !isMove(txnType) && accountState(accountId, accountConfirmed) !== "confirmed" && <div role="status" className="account-check grid gap-1 rounded-xl border border-warning/50 bg-warning/10 px-3 py-2 text-xs">
+                <b className="text-sm">Account needs confirmation</b>
+                <span>{accountId === "none" ? `${billEvidence?.reason ? `${billEvidence.reason} ` : ""}Choose the account that paid.` : `Suggested from: ${billEvidence?.evidence ?? "your usual choices — not from this bill"}.`}</span>
+                {accountId !== "none" && <Button type="button" size="sm" variant="outline" className="justify-self-start" onClick={() => { accountByUser.current = true; setAccountConfirmed(true); }}>Confirm this account</Button>}
+              </div>}
               <Dialog open={addAcct} onOpenChange={setAddAcct}>
                 <DialogContent><DialogHeader><DialogTitle>Add account</DialogTitle></DialogHeader>
-                  <AccountForm compact onCreated={(id) => { setAccountId(id); setAddAcct(false); }} />
+                  <AccountForm compact onCreated={(id) => { accountByUser.current = true; setAccountConfirmed(true); setAccountId(id); setAddAcct(false); }} />
                 </DialogContent>
               </Dialog>
               {methodNote && <p className="text-xs text-muted-foreground">via {instrumentLabel(methodNote)}</p>}
@@ -1040,7 +1062,8 @@ export function NewExpense({ embedded }: { embedded?: EmbeddedEntry } = {}) {
             suggestion={suggestWorkspace({ merchant, tags: tagList, tripType: ctxTrip?.type ?? null, category }, expenses)} />
           <div className="receipt-row">
             <Label htmlFor="d">Date{af("date")}</Label>
-            <Input id="d" type="date" value={date} onChange={(e) => setDate(e.target.value)} className="h-11 text-sm" />
+            <Input id="d" type="date" aria-describedby="d-shown" value={date} onChange={(e) => setDate(e.target.value)} className="h-11 text-sm" />
+            <span id="d-shown" className="date-shown text-xs font-medium" data-date-display>{displayDate(date)}</span>
             <div className="flex justify-end gap-1">
               <Button type="button" size="sm" variant={date === today ? "default" : "outline"} className="h-8 rounded-full px-3 text-xs" onClick={() => setDate(today)}>Today</Button>
               <Button type="button" size="sm" variant={date === yesterday ? "default" : "outline"} className="h-8 rounded-full px-3 text-xs" onClick={() => setDate(yesterday)}>Yesterday</Button>
@@ -1126,7 +1149,7 @@ export function NewExpense({ embedded }: { embedded?: EmbeddedEntry } = {}) {
               )}
               <div className="grid gap-1.5">
                 <Label>Payment method <span className="font-normal text-muted-foreground">(optional detail)</span></Label>
-                <Select value={instrumentId} onValueChange={(v) => v === "none" ? setInstrumentId("none") : pickInstrument(v)}>
+                <Select value={instrumentId} onValueChange={(v) => { if (v === "none") { setInstrumentId("none"); return; } accountByUser.current = true; setAccountConfirmed(true); pickInstrument(v); }}>
                   <SelectTrigger aria-label="Saved payment method"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="none">{savedMethods.length ? "Choose a saved UPI ID or card" : "No saved methods yet"}</SelectItem>
@@ -1151,7 +1174,7 @@ export function NewExpense({ embedded }: { embedded?: EmbeddedEntry } = {}) {
           {panel && draftState !== "idle" && !editing && <p aria-live="polite" className="mb-1 text-center text-[11px] text-muted-foreground">{draftState === "saving" ? "Saving draft…" : draftState === "uploading" ? "Keeping your photo safe…" : draftState === "saved" ? "Draft kept — you can close and come back" : draftState === "device" ? "Kept on this phone · syncs when online" : <span className="text-destructive">Draft not saved yet</span>}</p>}
           {saveError && !saving && <div role="alert" className="mb-2 flex items-center justify-between gap-2 rounded-xl border border-destructive/40 bg-card px-3 py-2 text-xs"><span className="text-destructive">{saveError}</span><Button type="submit" size="sm" variant="outline">Retry</Button></div>}
           <Button type="submit" size="lg" variant="gold" loading={saving} loadingText={editing ? "Saving changes…" : `Saving your ${TXN_LABEL[txnType].toLowerCase()}…`} className="h-12 w-full rounded-full text-base font-semibold" disabled={reading || saving || !confirmed || duplicateBlocked || matchBlocked || receiptBlocked || !(Number(amount) > 0)}>
-            {editing ? "Save changes" : `Save ${TXN_LABEL[txnType].toLowerCase()}`}<ArrowRight aria-hidden className="h-4 w-4" />
+            {editing ? "Save changes" : embedded?.submitLabel ?? `Save ${TXN_LABEL[txnType].toLowerCase()}`}<ArrowRight aria-hidden className="h-4 w-4" />
           </Button>
         </div>
       </form>

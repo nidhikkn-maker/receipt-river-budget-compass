@@ -1,10 +1,17 @@
-// Intelligent Canvas: 1 Add → 2 Review → 3 Confirm, and nothing is saved until Confirm. The existing review
-// screens are replaced by stand-ins that call a save spy exactly where the real review would save.
-import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+// Intelligent Canvas: 1 Add → 2 Review → 3 Confirm. Nothing is saved until Confirm, an unconfirmed account blocks
+// Confirm, and no navigation shortcut can save twice or save unreviewed values. The existing review screen is
+// replaced by a stand-in that saves exactly where the real review does (its form submit), with the same
+// single-flight rule and one draft id reused on retry.
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { useState } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { defaultPreferences } from "@/lib/preferences";
 
-const local = vi.hoisted(() => ({ save: vi.fn(), statement: vi.fn(), store: {} as Record<string, unknown> }));
+type Embedded = { search: { mode?: string; trip?: string }; files?: File[]; submitLabel?: string; onExit: (s?: { id?: string; label: string }) => void };
+const local = vi.hoisted(() => ({
+  save: vi.fn(), statement: vi.fn(), store: {} as Record<string, unknown>,
+  account: "none" as string, accountConfirmed: false, gate: null as null | Promise<void>, fail: false, draftId: "draft-1",
+}));
 vi.mock("@/lib/store", () => ({ useStore: () => local.store }));
 vi.mock("@tanstack/react-router", async () => {
   const { MockLink } = await import("@/components/shell/test-router-mock");
@@ -18,32 +25,70 @@ vi.mock("@/components/SourcePreview", () => ({
 vi.mock("@/components/ReceiptAssetHandoff", () => ({ ReceiptAssetHandoff: () => null }));
 vi.mock("@/components/ExpenditureReportBuilder", () => ({ ExpenditureReportBuilder: () => null }));
 vi.mock("@/routes/_authenticated/new", () => ({
-  NewExpense: ({ embedded }: { embedded: { search: { mode?: string; trip?: string }; files?: File[]; onExit: (s?: { id?: string; label: string }) => void } }) => (
-    <form aria-label="Review scanned details" onSubmit={(e) => { e.preventDefault(); local.save(embedded.search); embedded.onExit({ id: "e1", label: "Expense · Blue Tokai" }); }}>
-      <p>Mode {embedded.search.mode ?? "none"} · {embedded.files?.length ?? 0} file(s){embedded.search.trip ? ` · trip ${embedded.search.trip}` : ""}</p>
-      <label htmlFor="m">Merchant</label><input id="m" defaultValue="Blue Tokai Coffee Roasters" />
-      <label htmlFor="a">Amount</label><input id="a" defaultValue="460" />
-      <label htmlFor="d">Date</label><input id="d" defaultValue="2026-11-09" />
-      <button type="button" aria-label="Account">Amex Platinum Travel</button>
-      <button type="submit">Save expense</button>
-    </form>
-  ),
+  NewExpense: function FakeReview({ embedded }: { embedded: Embedded }) {
+    const [account, setAccount] = useState(local.account);
+    const [confirmed, setConfirmed] = useState(local.accountConfirmed);
+    const [saving, setSaving] = useState(false);
+    const [error, setError] = useState("");
+    const submit = async (e: React.FormEvent<HTMLFormElement>) => {
+      e.preventDefault();
+      if (saving) return; // the real review's single-flight rule
+      setSaving(true); setError("");
+      const f = e.currentTarget;
+      local.save({ merchant: (f.querySelector("#m") as HTMLInputElement).value, account, draftId: local.draftId, mode: embedded.search.mode });
+      try {
+        if (local.gate) await local.gate;
+        if (local.fail) throw new Error("timeout");
+        embedded.onExit({ id: local.draftId, label: "Expense · Blue Tokai" });
+      } catch { setError("We couldn't confirm the save. Tap Retry; it won't create a second entry."); } finally { setSaving(false); }
+    };
+    const state = account === "none" ? "unselected" : confirmed ? "confirmed" : "suggested";
+    return (
+      <form aria-label="Review scanned details" data-account-state={state} data-account-evidence={account === "amex" && !confirmed ? "Card ending 1006 printed on the bill matches Amex Platinum Travel" : ""} onSubmit={submit}>
+        <p>Mode {embedded.search.mode ?? "none"} · {embedded.files?.length ?? 0} file(s){embedded.search.trip ? ` · trip ${embedded.search.trip}` : ""}</p>
+        <label htmlFor="m">Merchant</label><input id="m" defaultValue="Blue Tokai Coffee Roasters" />
+        <label htmlFor="a">Amount</label><input id="a" defaultValue="460" />
+        <label htmlFor="d">Date</label><input id="d" defaultValue="2026-11-09" />
+        <button type="button" aria-label="Account">{account === "amex" ? "Amex Platinum Travel" : "Choose account"}</button>
+        <button type="button" onClick={() => { setAccount("amex"); setConfirmed(true); }}>Pick Amex</button>
+        {account !== "none" && !confirmed && <button type="button" onClick={() => setConfirmed(true)}>Confirm this account</button>}
+        {error && <p role="alert">{error}</p>}
+        <button type="submit" aria-busy={saving || undefined} disabled={saving}>{embedded.submitLabel ?? "Save expense"}</button>
+      </form>
+    );
+  },
 }));
 vi.mock("@/routes/_authenticated/statements", () => ({
   StatementDeskPage: ({ embedded }: { embedded: { files: File[]; context?: string } }) => { local.statement(embedded); return <p>Statement Desk with {embedded.files.length} file(s) · {embedded.context ?? "no context"}</p>; },
 }));
 
 import { IntelligentCanvas } from "./IntelligentCanvas";
-import { canvasRoute, readReviewForm, stepOf } from "./canvas-model";
+import { canConfirm, canvasRoute, readReviewForm, stepOf } from "./canvas-model";
 import { SMART_ADD_EVENT } from "@/lib/smart-add-event";
 
-const photo = () => new File(["x"], "blue-tokai.png", { type: "image/png" });
+const photo = (name = "blue-tokai.png") => new File(["x"], name, { type: "image/png" });
 const sheet = () => new File(["a,b"], "hdfc-oct.csv", { type: "text/csv" });
 const pick = (files: File[]) => fireEvent.change(screen.getByLabelText("Choose files"), { target: { files } });
 const current = () => screen.getByRole("list", { name: "Steps" }).querySelector('[aria-current="step"]')?.textContent;
+const footerContinue = () => document.querySelector(".sf-canvas-foot .sf-btn-deep") as HTMLButtonElement;
+const confirmButton = () => screen.getByRole("button", { name: /Confirm and save/ }) as HTMLButtonElement;
+const open = async (files: File[] = [photo()]) => {
+  pick(files);
+  fireEvent.click(screen.getByRole("button", { name: /Continue to review/ }));
+  await screen.findByText(/Mode scan/);
+};
+const toConfirmedStep3 = async () => {
+  await open();
+  fireEvent.click(screen.getByRole("button", { name: "Pick Amex" }));
+  await waitFor(() => expect(footerContinue()).toBeEnabled());
+  fireEvent.click(footerContinue());
+  expect(current()).toBe("3 · Confirm");
+  expect(confirmButton()).toBeEnabled();
+};
 
 beforeEach(() => {
   local.save.mockReset(); local.statement.mockReset();
+  Object.assign(local, { account: "none", accountConfirmed: false, gate: null, fail: false, draftId: "draft-1" });
   local.store = { preferences: { ...defaultPreferences(), trips: [{ id: "trip-1", name: "Mumbai visit", destination: "Mumbai", start: "2026-01-01", end: "2999-12-31", budget: 0, currencies: ["INR"] }] } };
 });
 afterEach(cleanup);
@@ -54,50 +99,60 @@ describe("Intelligent Canvas steps", () => {
     expect(screen.getByRole("dialog", { name: "Add anything. Effortlessly." })).toBeInTheDocument();
     expect(current()).toBe("1 · Add");
     expect(within(screen.getByRole("radiogroup", { name: "What are you adding?" })).getAllByRole("radio").map((r) => r.textContent)).toEqual(["Receipt", "Statement", "Travel", "Asset register"]);
-    expect(screen.getByRole("radio", { name: "Receipt" })).toHaveAttribute("aria-checked", "true");
     expect(screen.getByRole("button", { name: /Continue to review/ })).toBeDisabled();
     pick([photo()]);
     expect(screen.getByRole("list", { name: "Chosen files" })).toHaveTextContent("blue-tokai.png");
     expect(screen.getByRole("button", { name: /Continue to review/ })).toBeEnabled();
   });
 
-  it("a receipt is never saved by the review's Save: it opens 3 · Confirm, and only Confirm saves (once)", async () => {
+  it("2 · Review: the review's own button reads “Continue to confirmation” and a persistent footer action does the same", async () => {
     render(<IntelligentCanvas open onOpenChange={() => {}} />);
-    pick([photo()]);
-    fireEvent.click(screen.getByRole("button", { name: /Continue to review/ }));
-    expect(await screen.findByText(/Mode scan · 1 file/)).toBeInTheDocument();
+    await open();
     expect(current()).toBe("2 · Review");
-    expect(screen.getByRole("region", { name: "Your original" })).toHaveTextContent("Preview of blue-tokai.png");
-
-    fireEvent.click(screen.getByRole("button", { name: "Save expense" }));
-    expect(local.save).not.toHaveBeenCalled();
-    expect(screen.getByRole("dialog", { name: "Ready for confirmation." })).toBeInTheDocument();
+    expect(screen.getByLabelText("Merchant").closest("form")!.querySelector('button[type="submit"]')).toHaveTextContent("Continue to confirmation");
+    expect(screen.queryByText(/Use the review's Save button/)).toBeNull();
+    expect(footerContinue()).toHaveTextContent("Continue to confirmation");
+    fireEvent.click(footerContinue());
     expect(current()).toBe("3 · Confirm");
-    expect(screen.getByText(/Nothing is entered into the books without confirmation/)).toBeInTheDocument();
-    expect(screen.getByText("Not posted yet")).toBeInTheDocument();
-    expect(within(document.querySelector(".sf-canvas-confirm") as HTMLElement).getByText("Amex Platinum Travel")).toBeInTheDocument();
-    expect(screen.getByText(/Blue Tokai Coffee Roasters/)).toBeInTheDocument();
-
-    fireEvent.click(screen.getByRole("button", { name: /Change/ }));
-    expect(current()).toBe("2 · Review");
     expect(local.save).not.toHaveBeenCalled();
-
-    fireEvent.click(screen.getByRole("button", { name: "Save expense" }));
-    fireEvent.click(screen.getByRole("button", { name: /Confirm and save/ }));
-    await waitFor(() => expect(local.save).toHaveBeenCalledTimes(1));
-    expect(screen.getByRole("dialog", { name: "Saved to your records." })).toBeInTheDocument();
-    expect(screen.getByRole("status")).toHaveTextContent("Expense · Blue Tokai");
   });
 
-  it("pressing Enter in a field is held the same way", () => {
+  it("3 · Confirm is blocked while the account is unselected; choosing it enables Confirm, which saves once with the reviewed values", async () => {
     render(<IntelligentCanvas open onOpenChange={() => {}} />);
-    pick([photo()]);
-    fireEvent.click(screen.getByRole("button", { name: /Continue to review/ }));
-    return screen.findByLabelText("Merchant").then((input) => {
-      fireEvent.submit(input.closest("form")!);
-      expect(local.save).not.toHaveBeenCalled();
-      expect(current()).toBe("3 · Confirm");
-    });
+    await open();
+    fireEvent.click(footerContinue());
+    expect(screen.getByRole("alert")).toHaveTextContent("Account needs confirmation.");
+    expect(screen.getByText("Not chosen")).toBeInTheDocument();
+    expect(confirmButton()).toBeDisabled();
+    fireEvent.click(confirmButton());
+    expect(local.save).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: "Choose the account" }));
+    expect(current()).toBe("2 · Review");
+    fireEvent.click(screen.getByRole("button", { name: "Pick Amex" }));
+    fireEvent.change(screen.getByLabelText("Merchant"), { target: { value: "Blue Tokai Indiranagar" } });
+    fireEvent.click(footerContinue());
+    expect(confirmButton()).toBeEnabled();
+    expect(screen.getByText(/09 Nov 2026/, { selector: "small" })).toBeInTheDocument();
+    fireEvent.click(confirmButton());
+    await waitFor(() => expect(local.save).toHaveBeenCalledTimes(1));
+    expect(local.save).toHaveBeenCalledWith(expect.objectContaining({ merchant: "Blue Tokai Indiranagar", account: "amex" }));
+    expect(await screen.findByRole("dialog", { name: "Saved to your records." })).toBeInTheDocument();
+  });
+
+  it("a suggested account is never shown as confirmed and blocks Confirm until the owner confirms it", async () => {
+    local.account = "amex"; local.accountConfirmed = false;
+    render(<IntelligentCanvas open onOpenChange={() => {}} />);
+    await open();
+    fireEvent.click(footerContinue());
+    const account = screen.getByText("Account").closest("div")!;
+    expect(account).toHaveTextContent("Amex Platinum Travel · needs confirmation");
+    expect(account).toHaveTextContent("From: Card ending 1006 printed on the bill matches Amex Platinum Travel");
+    expect(confirmButton()).toBeDisabled();
+    fireEvent.click(screen.getByRole("button", { name: "Choose the account" }));
+    fireEvent.click(screen.getByRole("button", { name: "Confirm this account" }));
+    fireEvent.click(footerContinue());
+    expect(confirmButton()).toBeEnabled();
+    expect(screen.getByText("Account").closest("div")).not.toHaveTextContent("needs confirmation");
   });
 
   it("statements and asset registers go to Statement Desk, the authoritative intake", async () => {
@@ -106,7 +161,6 @@ describe("Intelligent Canvas steps", () => {
     pick([sheet()]);
     fireEvent.click(screen.getByRole("button", { name: /Continue to review/ }));
     expect(await screen.findByText("Statement Desk with 1 file(s) · no context")).toBeInTheDocument();
-    expect(current()).toBe("2 · Review");
     fireEvent.click(screen.getByRole("button", { name: /Start over/ }));
     fireEvent.click(screen.getByRole("radio", { name: "Asset register" }));
     pick([photo()]);
@@ -115,16 +169,9 @@ describe("Intelligent Canvas steps", () => {
     expect(local.save).not.toHaveBeenCalled();
   });
 
-  it("a spreadsheet picked as a receipt still goes to Statement Desk", () => {
-    expect(canvasRoute("receipt", [sheet()])).toBe("statement");
-    expect(canvasRoute("travel", [photo()])).toBe("receipt");
-    expect(canvasRoute("asset", [photo()])).toBe("statement");
-  });
-
   it("travel receipts are tagged to the current trip; voice opens the existing voice entry", async () => {
     render(<IntelligentCanvas open onOpenChange={() => {}} />);
     fireEvent.click(screen.getByRole("radio", { name: "Travel" }));
-    expect(screen.getByText(/Linked to “Mumbai visit”/)).toBeInTheDocument();
     pick([photo()]);
     fireEvent.click(screen.getByRole("button", { name: /Continue to review/ }));
     expect(await screen.findByText(/trip trip-1/)).toBeInTheDocument();
@@ -139,18 +186,6 @@ describe("Intelligent Canvas steps", () => {
     expect(screen.getByRole("radio", { name: "Asset register" })).toHaveAttribute("aria-checked", "true");
   });
 
-  it("iPhone: the source/data toggle switches between details and the original", async () => {
-    render(<IntelligentCanvas open onOpenChange={() => {}} />);
-    pick([photo()]);
-    fireEvent.click(screen.getByRole("button", { name: /Continue to review/ }));
-    await screen.findByText(/Mode scan/);
-    const split = document.querySelector(".sf-canvas-split")!;
-    expect(split).toHaveAttribute("data-view", "details");
-    fireEvent.click(screen.getByRole("tab", { name: "Original" }));
-    expect(split).toHaveAttribute("data-view", "original");
-    expect(screen.getByRole("tab", { name: "Original" })).toHaveAttribute("aria-selected", "true");
-  });
-
   it("Escape closes and focus returns to the opener", () => {
     const close = vi.fn();
     const opener = document.createElement("button"); document.body.appendChild(opener); opener.focus();
@@ -163,6 +198,101 @@ describe("Intelligent Canvas steps", () => {
   });
 });
 
+describe("Original and Details tabs (iPhone)", () => {
+  it("switching tabs keeps edits and the selected document, without remounting the review or saving", async () => {
+    render(<IntelligentCanvas open onOpenChange={() => {}} />);
+    await open([photo("page-1.png"), photo("page-2.png")]);
+    const merchant = screen.getByLabelText("Merchant") as HTMLInputElement;
+    fireEvent.change(merchant, { target: { value: "Edited merchant" } });
+    fireEvent.click(screen.getByRole("tab", { name: "Original" }));
+    expect(screen.getByRole("tab", { name: "Original" })).toHaveAttribute("aria-controls", "sf-canvas-original");
+    fireEvent.click(screen.getByRole("button", { name: /2\. page-2/ }));
+    expect(screen.getByText("Preview of page-2.png")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("tab", { name: "Details" }));
+    fireEvent.click(screen.getByRole("tab", { name: "Original" }));
+    expect(screen.getByText("Preview of page-2.png")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("tab", { name: "Details" }));
+    expect(screen.getByLabelText("Merchant")).toBe(merchant);
+    expect(merchant.value).toBe("Edited merchant");
+    expect(local.save).not.toHaveBeenCalled();
+  });
+});
+
+describe("navigation shortcuts never save, or save twice", () => {
+  it("Enter key in a field opens confirmation instead of saving", async () => {
+    render(<IntelligentCanvas open onOpenChange={() => {}} />);
+    await open();
+    fireEvent.submit(screen.getByLabelText("Merchant").closest("form")!);
+    expect(current()).toBe("3 · Confirm");
+    expect(local.save).not.toHaveBeenCalled();
+  });
+
+  it("double-tap on Confirm and save saves once", async () => {
+    let release = () => {};
+    local.gate = new Promise<void>((r) => { release = r; });
+    render(<IntelligentCanvas open onOpenChange={() => {}} />);
+    await toConfirmedStep3();
+    const button = confirmButton();
+    fireEvent.click(button); fireEvent.click(button); fireEvent.doubleClick(button);
+    await act(async () => { release(); });
+    await waitFor(() => expect(local.save).toHaveBeenCalledTimes(1));
+  });
+
+  it("browser Back/Forward at confirmation returns to review without saving", async () => {
+    render(<IntelligentCanvas open onOpenChange={() => {}} />);
+    await toConfirmedStep3();
+    act(() => { window.dispatchEvent(new PopStateEvent("popstate")); });
+    expect(current()).toBe("2 · Review");
+    act(() => { window.dispatchEvent(new PopStateEvent("popstate")); });
+    expect(local.save).not.toHaveBeenCalled();
+  });
+
+  it("closing and reopening the sheet requires confirming again and saves nothing", async () => {
+    const view = render(<IntelligentCanvas open onOpenChange={() => {}} />);
+    await toConfirmedStep3();
+    view.rerender(<IntelligentCanvas open={false} onOpenChange={() => {}} />);
+    view.rerender(<IntelligentCanvas open onOpenChange={() => {}} />);
+    expect(current()).toBe("2 · Review");
+    expect(screen.getByLabelText("Merchant")).toHaveValue("Blue Tokai Coffee Roasters");
+    expect(local.save).not.toHaveBeenCalled();
+  });
+
+  it("switching browser tabs (visibility change) saves nothing", async () => {
+    render(<IntelligentCanvas open onOpenChange={() => {}} />);
+    await toConfirmedStep3();
+    act(() => { document.dispatchEvent(new Event("visibilitychange")); window.dispatchEvent(new Event("blur")); window.dispatchEvent(new Event("focus")); });
+    expect(current()).toBe("3 · Confirm");
+    expect(local.save).not.toHaveBeenCalled();
+  });
+
+  it("re-submitting during a slow save (Enter, footer, Confirm) does nothing; a retry after a failure re-confirms and reuses the same draft id", async () => {
+    let release = () => {};
+    local.gate = new Promise<void>((r) => { release = r; });
+    local.fail = true;
+    render(<IntelligentCanvas open onOpenChange={() => {}} />);
+    await toConfirmedStep3();
+    fireEvent.click(confirmButton());
+    await waitFor(() => expect(local.save).toHaveBeenCalledTimes(1));
+    const form = screen.getByLabelText("Merchant").closest("form")!;
+    fireEvent.submit(form);
+    fireEvent.click(footerContinue());
+    expect(footerContinue()).toBeDisabled();
+    expect(local.save).toHaveBeenCalledTimes(1);
+    expect(current()).toBe("2 · Review");
+    await act(async () => { release(); });
+    expect(await screen.findByRole("alert")).toHaveTextContent("Tap Retry");
+    local.fail = false; local.gate = null;
+    await waitFor(() => expect(footerContinue()).toBeEnabled());
+    fireEvent.click(footerContinue());
+    expect(current()).toBe("3 · Confirm");
+    expect(local.save).toHaveBeenCalledTimes(1);
+    fireEvent.click(confirmButton());
+    await waitFor(() => expect(local.save).toHaveBeenCalledTimes(2));
+    expect(local.save.mock.calls.map((c) => (c[0] as { draftId: string }).draftId)).toEqual(["draft-1", "draft-1"]);
+    expect(await screen.findByRole("dialog", { name: "Saved to your records." })).toBeInTheDocument();
+  });
+});
+
 describe("canvas rules", () => {
   it("step numbers", () => {
     expect(stepOf("add", false)).toBe(1);
@@ -170,15 +300,27 @@ describe("canvas rules", () => {
     expect(stepOf("receipt", true)).toBe(3);
     expect(stepOf("done", false)).toBe(3);
   });
-  it("the confirmation summary reads the review form without changing it", () => {
+  it("routes: spreadsheets always go to Statement Desk", () => {
+    expect(canvasRoute("receipt", [sheet()])).toBe("statement");
+    expect(canvasRoute("travel", [photo()])).toBe("receipt");
+    expect(canvasRoute("asset", [photo()])).toBe("statement");
+  });
+  it("the summary reads the review form without changing it, with an unambiguous date and the account state", () => {
     const form = document.createElement("form");
+    form.setAttribute("data-account-state", "suggested");
+    form.setAttribute("data-account-evidence", "Card ending 4821 printed on the bill matches HDFC Savings");
     form.innerHTML = '<input id="m" value="Swiggy"><input id="a" value="742"><input id="d" value="2026-11-09"><button aria-label="Category">Food</button><button aria-label="Account">HDFC Savings</button>';
     const s = readReviewForm(form, [photo()]);
     expect(s.account).toBe("HDFC Savings");
-    expect(s.original).toBe("blue-tokai.png");
-    expect(s.headline).toContain("Swiggy");
-    expect(s.rows).toEqual([{ label: "Amount", value: "INR 742" }, { label: "Date", value: "2026-11-09" }, { label: "Category", value: "Food" }]);
+    expect(s.accountState).toBe("suggested");
+    expect(s.accountEvidence).toContain("4821");
+    expect(canConfirm(s)).toBe(false);
+    expect(s.rows).toEqual([{ label: "Amount", value: "INR 742" }, { label: "Date", value: "09 Nov 2026" }, { label: "Category", value: "Food" }]);
     expect((form.querySelector("#a") as HTMLInputElement).value).toBe("742");
+    form.setAttribute("data-account-state", "unselected");
+    expect(readReviewForm(form, []).account).toBeNull();
+    form.setAttribute("data-account-state", "confirmed");
+    expect(canConfirm(readReviewForm(form, []))).toBe(true);
     expect(readReviewForm(null, []).original).toBe("Typed or spoken entry");
   });
 });

@@ -10,7 +10,7 @@ import { todayISO } from "@/lib/use-position";
 import { SourcePreview, sourceKind } from "@/components/SourcePreview";
 import { ReceiptAssetHandoff } from "@/components/ReceiptAssetHandoff";
 import { SMART_ADD_ACCEPT } from "@/components/SmartAdd";
-import { canvasRoute, CANVAS_KINDS, readReviewForm, STEP_LABELS, stepOf, type CanvasKind, type ReviewSummary } from "./canvas-model";
+import { canConfirm, canvasRoute, CANVAS_KINDS, readReviewForm, STEP_LABELS, stepOf, type CanvasKind, type ReviewSummary } from "./canvas-model";
 
 // The same review and intake screens the app already uses — no second parser, classifier or save path.
 const ReceiptReview = lazy(() => import("@/routes/_authenticated/new").then((m) => ({ default: m.NewExpense })));
@@ -50,7 +50,26 @@ export function IntelligentCanvas({ open, onOpenChange, scope }: { open: boolean
   const fileRef = useRef<HTMLInputElement>(null);
   const cameraRef = useRef<HTMLInputElement>(null);
 
-  const reset = useCallback(() => { setPhase({ kind: "add" }); setPicked([]); setConfirming(null); setView("details"); setShown(0); }, []);
+  const reset = useCallback(() => { if (pending.current) return; setPhase({ kind: "add" }); setPicked([]); setConfirming(null); setView("details"); setShown(0); }, []);
+  const pending = useRef(false);
+  const [saving, setSaving] = useState(false);
+  const fieldsRef = useRef<HTMLDivElement>(null);
+  const [reviewReady, setReviewReady] = useState(false);
+
+  // Closing the sheet, or browser Back/Forward, never carries a confirmation over: the owner confirms again.
+  useEffect(() => { if (!open) setConfirming(null); }, [open]);
+  useEffect(() => { const back = () => setConfirming(null); window.addEventListener("popstate", back); return () => window.removeEventListener("popstate", back); }, []);
+
+  // The sticky "Continue to confirmation" mirrors the review's own button: enabled only when the review allows saving.
+  useEffect(() => {
+    const host = fieldsRef.current;
+    if (!host) return;
+    const sync = () => { const b = [...host.querySelectorAll<HTMLButtonElement>('form button[type="submit"]')].pop(); setReviewReady(!!b && !b.disabled); };
+    sync();
+    const o = new MutationObserver(sync);
+    o.observe(host, { subtree: true, childList: true, attributes: true, attributeFilter: ["disabled"] });
+    return () => o.disconnect();
+  });
 
   // Other screens open Smart Add with a purpose (DocuRepo, Assets, Investments…): preselect the matching intake.
   useEffect(() => {
@@ -90,20 +109,47 @@ export function IntelligentCanvas({ open, onOpenChange, scope }: { open: boolean
   };
 
   // Step 3 gate: the review's own Save submits its form; hold it here and show the confirmation instead.
+  // Every route to a save (the review's button, Enter, the sticky footer, a Retry) lands here first. While a save
+  // is in flight nothing else may start one; otherwise the confirmation summary is shown and nothing is saved.
   const holdSave = (e: FormEvent<HTMLDivElement>) => {
     if (release.current) return;
     e.preventDefault();
     e.stopPropagation();
+    if (pending.current) return;
     const form = e.target instanceof HTMLFormElement ? e.target : null;
     formRef.current = form;
     setConfirming(readReviewForm(form, phase.kind === "receipt" ? phase.files : []));
   };
+  const continueToConfirmation = () => {
+    if (pending.current) return;
+    const form = fieldsRef.current?.querySelector("form");
+    if (form) form.requestSubmit();
+  };
   const confirmSave = () => {
     const form = formRef.current;
+    if (!form || !confirming || pending.current || !canConfirm(confirming)) return;
+    // Save exactly what was confirmed: if anything changed since the summary was made, show the new summary instead.
+    const now = readReviewForm(form, phase.kind === "receipt" ? phase.files : []);
+    if (JSON.stringify(now) !== JSON.stringify(confirming)) { setConfirming(now); return; }
+    pending.current = true; setSaving(true);
     setConfirming(null);
-    if (!form) return;
     release.current = true;
     try { form.requestSubmit(); } finally { release.current = false; }
+    // The review reports success through onExit; if it never starts or finishes without saving, allow a new attempt.
+    watchSave(form);
+  };
+  const settle = useCallback(() => { pending.current = false; setSaving(false); }, []);
+  const watchSave = (form: HTMLFormElement) => {
+    const button = () => [...form.querySelectorAll<HTMLButtonElement>('button[type="submit"]')].pop();
+    let seenBusy = false;
+    const check = () => {
+      const busy = button()?.getAttribute("aria-busy") === "true";
+      if (busy) seenBusy = true;
+      else if (seenBusy || !form.isConnected) { observer.disconnect(); clearTimeout(timer); settle(); }
+    };
+    const observer = new MutationObserver(check);
+    observer.observe(form, { subtree: true, attributes: true, attributeFilter: ["aria-busy", "disabled"] });
+    const timer = setTimeout(() => { if (!seenBusy) { observer.disconnect(); settle(); } }, 1500);
   };
 
   const step = stepOf(phase.kind, !!confirming);
@@ -167,19 +213,19 @@ export function IntelligentCanvas({ open, onOpenChange, scope }: { open: boolean
             {phase.kind === "statement" && <p className="sf-canvas-lede">Statement Desk is the one place statements and registers are entered. It checks every line, and you confirm before anything is posted.</p>}
             {phase.kind === "receipt" && <p className="sf-canvas-lede">Read automatically from your source. Check the suggested account and classification, then continue — nothing is saved yet.</p>}
             {files.length > 0 && <div className="sf-view-toggle" role="tablist" aria-label="Show">
-              <button type="button" role="tab" aria-selected={view === "details"} onClick={() => setView("details")}>Details</button>
-              <button type="button" role="tab" aria-selected={view === "original"} onClick={() => setView("original")}>Original</button>
+              <button type="button" role="tab" id="sf-tab-details" aria-controls="sf-canvas-details" aria-selected={view === "details"} onClick={() => setView("details")}>Details</button>
+              <button type="button" role="tab" id="sf-tab-original" aria-controls="sf-canvas-original" aria-selected={view === "original"} onClick={() => setView("original")}>Original</button>
             </div>}
             <div className="sf-canvas-split" data-view={view}>
-              {current && <section className="sf-canvas-source" aria-label="Your original">
+              {current && <section className="sf-canvas-source" id="sf-canvas-original" role="tabpanel" aria-labelledby="sf-tab-original" aria-label="Your original">
                 <SourcePreview file={current} />
                 {files.length > 1 && <div className="sf-chips" role="group" aria-label="Choose which file to view">{files.map((f, i) => <button key={i} type="button" className="sf-chip" aria-pressed={i === shown} onClick={() => setShown(i)}>{i + 1}. {f.name.slice(0, 18)}</button>)}</div>}
               </section>}
-              <div className="sf-canvas-fields" onSubmitCapture={holdSave}>
+              <div className="sf-canvas-fields" id="sf-canvas-details" role={files.length ? "tabpanel" : undefined} aria-labelledby={files.length ? "sf-tab-details" : undefined} ref={fieldsRef} onSubmitCapture={holdSave}>
                 <Suspense fallback={<p role="status" className="sf-state-hint">Opening review…</p>}>
                   <div className="smart-add-review min-w-0">
                     {phase.kind === "receipt"
-                      ? <ReceiptReview key={phase.key} embedded={{ search: phase.search, files: phase.files, onExit: (saved) => { setConfirming(null); if (saved) setPhase({ kind: "done", id: saved.id, label: saved.label }); else reset(); } }} />
+                      ? <ReceiptReview key={phase.key} embedded={{ search: phase.search, files: phase.files, submitLabel: "Continue to confirmation", onExit: (saved) => { setConfirming(null); settle(); if (saved) setPhase({ kind: "done", id: saved.id, label: saved.label }); else reset(); } }} />
                       : <StatementReview key={phase.key} embedded={{ files: phase.files, context: phase.context }} />}
                   </div>
                 </Suspense>
@@ -193,9 +239,13 @@ export function IntelligentCanvas({ open, onOpenChange, scope }: { open: boolean
               <span className="sf-confirm-tick" aria-hidden><Check /></span>
               <div className="min-w-0"><b>{confirming.headline}</b><small>{confirming.subline}</small></div>
             </div>
+            {!canConfirm(confirming) && <div id="sf-account-block" role="alert" className="sf-account-block">
+              <p><b>Account needs confirmation.</b> {confirming.account ? "It was suggested for you and hasn't been confirmed." : "The bill doesn't prove which account paid."} Nothing can be saved until you choose or confirm it.</p>
+              <button type="button" className="sf-btn sf-btn-outline" onClick={() => { setConfirming(null); setView("details"); requestAnimationFrame(() => { const t = fieldsRef.current?.querySelector<HTMLElement>('[aria-label="Account"]'); t?.scrollIntoView({ block: "center" }); t?.focus(); }); }}>Choose the account</button>
+            </div>}
             <dl className="sf-confirm-grid">
               <div><dt>Original</dt><dd>{confirming.original}</dd></div>
-              <div><dt>Account</dt><dd>{confirming.account ?? "Not chosen"}</dd></div>
+              <div><dt>Account</dt><dd>{confirming.account ?? "Not chosen"}{confirming.accountState !== "confirmed" && <span className="sf-needs"> · needs confirmation</span>}{confirming.accountEvidence && <small className="sf-evidence">From: {confirming.accountEvidence}</small>}</dd></div>
               <div><dt>Books</dt><dd>Not posted yet</dd></div>
               {confirming.rows.map((r) => <div key={r.label}><dt>{r.label}</dt><dd>{r.value}</dd></div>)}
             </dl>
@@ -217,13 +267,14 @@ export function IntelligentCanvas({ open, onOpenChange, scope }: { open: boolean
         <footer className="sf-canvas-foot">
           {phase.kind === "add" && <button type="button" className="sf-btn sf-btn-deep" disabled={!picked.length} onClick={() => begin(picked)}>Continue to review<ArrowRight aria-hidden /></button>}
           {(phase.kind === "receipt" || phase.kind === "statement") && !confirming && <>
-            <button type="button" className="sf-btn sf-btn-outline" onClick={reset}><ArrowLeft aria-hidden />Start over</button>
-            {phase.kind === "receipt" && <p className="sf-foot-note">Use the review's Save button to continue to confirmation.</p>}
+            <button type="button" className="sf-btn sf-btn-outline" disabled={saving} onClick={reset}><ArrowLeft aria-hidden />Start over</button>
+            {phase.kind === "receipt" && <button type="button" className="sf-btn sf-btn-deep" disabled={!reviewReady || saving} aria-describedby={!reviewReady ? "sf-continue-why" : undefined} onClick={continueToConfirmation}>{saving ? "Saving…" : "Continue to confirmation"}<ArrowRight aria-hidden /></button>}
+            {phase.kind === "receipt" && !reviewReady && !saving && <p id="sf-continue-why" className="sf-foot-note">Finish the checks in Details first — for example “Looks right”, or answer a possible duplicate.</p>}
             {phase.kind === "statement" && <p className="sf-foot-note">Step 3: confirm posting inside Statement Desk.</p>}
           </>}
           {confirming && <>
             <button type="button" className="sf-btn sf-btn-outline" onClick={() => setConfirming(null)}><ArrowLeft aria-hidden />Change</button>
-            <button type="button" className="sf-btn sf-btn-deep" onClick={confirmSave}>Confirm and save<Check aria-hidden /></button>
+            <button type="button" className="sf-btn sf-btn-deep" disabled={!canConfirm(confirming) || saving} aria-describedby={!canConfirm(confirming) ? "sf-account-block" : undefined} onClick={confirmSave}>Confirm and save<Check aria-hidden /></button>
           </>}
           {phase.kind === "done" && <>
             <Link to="/expenses" className="sf-btn sf-btn-outline" onClick={() => { onOpenChange(false); reset(); }}>View in Activity</Link>
