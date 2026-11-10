@@ -1,0 +1,78 @@
+16. Authentication Sign In and Secure Access
+Approved direction: use the light, minimal Signature Flow presentation, forest-green primary actions and approved Option 02 Thapal logo. This section expands A01 and K08 and supplements, rather than replaces, all earlier screens and workflow requirements. These are proposed implementation specifications; no production authentication changes are authorised by this document.
+16.1 Visual contract
+Use a warm off-white surface, deep forest text, restrained dividers, generous breathing room and the existing Signature Flow typography tokens. Avoid gradients, marketing illustrations and oversized cards.
+Show the approved Thapal symbol and exact wordmark, a concise welcome heading, email/password fields, visible password toggle, Forgot password link, primary Sign in button and Google sign-in alternative.
+Only show biometric or device unlock when previously enrolled on this trusted device. Never imply that Face ID, fingerprint or MPIN recovers account ownership.
+Provide accessible input labels, validation immediately adjacent to the affected control, visible focus, keyboard and screen-reader semantics, password-manager support and responsive safe-area handling.
+Do not invent a mandatory tagline; concise supporting text may be reviewed before release. Design each state at iPhone, iPad portrait/landscape and desktop breakpoints.
+16.2 Screen register
+ID
+Screen
+Required behaviour
+A01
+Welcome and sign in
+Brand, email, password, Google, recovery, terms and privacy.
+A01.1
+Google sign in
+Provider redirect or native flow, errors, account linking safeguards.
+A01.2
+Email and password
+Validation, reveal/hide, submit, loading and invalid credentials.
+A01.3
+Forgot password
+Neutral confirmation response, throttling and secure recovery request.
+A01.4
+Email verification
+Expiring single-use link/code, resend and invalid/expired states.
+A01.5
+Biometric enrolment
+Explicit opt-in after authenticated session, revoke control.
+A01.6
+Biometric unlock
+Native device prompt, cancel, lockout and fallback.
+A01.7
+MPIN setup and unlock
+Device-bound unlock only, retry limits and reauthentication.
+A01.8
+Locked or expired session
+Opaque overlay, explanation, fresh sign-in and sign-out.
+A01.9
+New device verification
+Step-up check and trusted-device management.
+A01.10
+Workspace selection
+Only authorised scopes, search and safe switching.
+A01.11
+Sessions and devices
+View and revoke current/other sessions with audit history.
+16.3 End to end navigation
+New user: Welcome → verified identity → enrolment/onboarding → authorised workspace → setup progress → Home. Never create duplicate identity on provider switching.
+Returning user: Open app → valid session? If trusted and lock enabled, biometric/MPIN unlock; otherwise sign in → restore authorised workspace and safe destination.
+Account recovery: Forgot password → generic acknowledgment → single-use expiring email recovery → credential update → invalidate appropriate sessions → sign in.
+Session timeout: Redact underlying app and notifications → lock overlay → password/biometric where policy allows → return to prior route after fresh permission check.
+Workspace switch: Check unsaved changes → list only permitted personal/family/company/trust scopes → switch → refetch every query/cache under new scope → navigate.
+Privileged action: Role/permission check → recent-authentication check → step-up if required → explicit confirmation → execute → audit entry.
+16.4 Lock screen correction from current iPhone capture
+On locked screens, hide the Home, Money, To-do and Records navigation, workspace name, user avatar, pending expense counts, reminders and any cached financial data. Do not leave interactive or focusable controls behind the overlay.
+Use the same logo and visual tokens as sign-in. Show one primary unlock path when available, with clearly secondary Use account password, Get a code by email where policy permits, and Sign out.
+Distinguish an app unlock from account recovery. Email code must be validated server-side; MPIN must not reset credentials or bypass step-up controls.
+Avoid confusing copy such as claiming a sign-in method is available before verifying the account actually supports it. Error and recovery states must be readable in simple language.
+16.5 Security and data boundaries
+Preserve existing provider configuration, identities, role grants, audit records and historic accounting data. Inspect current implementation first; migration requires explicit approval and rollback plan.
+Enforce sessions, MFA where supported, rate limits, credential verification, CSRF/session protections and revocation on the server. Never treat UI hiding as access control.
+Prevent account enumeration in reset or verification messaging. Use expiring single-use tokens and secure storage; never persist raw passwords, PINs or reusable biometric secrets in application storage.
+Keep personal and each legal entity isolated in server queries, caches, exports, notifications and deep links. A reauthenticated session never automatically grants access to a revoked workspace.
+Protect sign-in routes from open redirects. Invalidate stale privileged pages and recheck roles after login, account switch and session refresh.
+Record login, failed attempts, enrolment, security setting changes, device revocation, role grants and sensitive access with appropriate retention and privacy safeguards.
+16.6 Device and accessibility matrix
+iPhone and Android: Single-column thumb-friendly form, native biometric sheet, keyboard avoidance and safe areas.
+iPad: Centred width-limited form in portrait and landscape; hardware keyboard navigation.
+Desktop: Centred authentication layout, password manager support, keyboard focus and accessible errors.
+All devices: Large touch targets, clear disabled/loading states, reduced motion, contrast, localisation and screen-reader labels.
+16.7 Independent acceptance and preview evidence
+Capture and review every screen state at iPhone, iPad and desktop dimensions against approved Signature Flow typography, spacing, logo and palette.
+Test Google login, email/password, account linking, reset, expired codes, resend limits, offline states, refresh and browser back/forward, sign-out and session expiration.
+Verify device lock, biometric decline and lockout, MPIN fallback, new device, revoked user, changed role, expired invitation and cross-workspace deep links.
+Test no financial information appears while locked; all underlying controls are inert and inaccessible to keyboard and assistive technology.
+Run security, accessibility and cross-entity isolation tests independently. Record screen evidence and unresolved differences; obtain KK design sign-off before implementation merge or release.
