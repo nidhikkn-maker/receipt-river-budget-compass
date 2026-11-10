@@ -40,13 +40,15 @@ A change to anything below needs a lead-approved contract change. Workstreams co
 - **Every figure comes from the ledger readers:** `ledgerView` / `txnFromRow` / `accountBalance` / `cashflow` / `netWorth` / `accountValue` (`src/lib/ledger.ts`), `position()` (`src/lib/position.ts`), `computeNetWorth` (`src/components/books/useBooks.ts`), and `cardCycle` / `card-payment-summary` for cards.
 - **Never** re-sum raw `expenses` rows, re-implement balances, or include reversal history twice.
 - Reports state their basis: `CASH_BASIS_LINE` on personal reports, accrual basis on company working statements.
-- **Archived records stay in totals until a real event** (P0-024). Withdrawn records (P10, in progress) are excluded through `ledgerView` only.
+- **Archived records stay in totals until a real event** (P0-024). Withdrawn records are excluded through `ledgerView` only (P10, published on develop/sf-base c616803); every figure must include a test that a withdrawn entry is excluded.
 - **Saves go through the store** (`src/lib/store.tsx`) and server functions. No new direct table writes without the lead's review.
 
 ## 4. Archive, withdraw and reversal (owner A1)
 
 - **Non-ledger records** (loans, goals, commitments, valuations, documents, preference-backed records): archive with a reason and Restore. Use `src/lib/archive.ts`, `src/lib/records-archive.ts` and `ArchivedRecords` / `TableArchiveButton` / `ArchiveDialog`.
-- **Unposted financial entries:** Withdraw with a reason, keeping evidence and history; restorable (P10, in progress). The UI calls the A1 API once it is published.
+- **Unposted financial entries:** Withdraw with a reason, keeping evidence and history; restorable. **Published on develop/sf-base c616803:** call `removeEntry` (`src/lib/entry-removal.ts`; posted → reversal, unposted → withdraw) or `setEntryWithdrawal` (`src/lib/withdrawal.functions.ts`); never write `receipt_details.withdrawal` yourself. Read withdrawn state only through `withdrawalOfRow` / `withdrawnAtOfRow` (`src/lib/withdrawal.ts`).
+- **Asset disposal:** `docs/workstreams/contracts/disposal-approval.md` and `src/lib/asset-disposal.functions.ts` (request → authorised approval → posted result). Archive never disposes (P0-015).
+- **Team change requests:** `docs/workstreams/contracts/entry-change-requests.md` (P0-022).
 - **Posted or reconciled entries:** reversal and correction workflows only (P7). This is enforced on the server.
 - **No hard delete of a financial record.** P9/P10 guards enforce it in the database.
 
