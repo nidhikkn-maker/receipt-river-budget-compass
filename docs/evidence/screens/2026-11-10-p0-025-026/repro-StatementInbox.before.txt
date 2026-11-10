@@ -1,0 +1,34 @@
+# P0-025 repro: src/components/StatementInbox.duplicate-import.test.tsx run against unmodified src/components/StatementInbox.tsx at f6b2580 (10 Nov 2026). All 10 fail: Register stays enabled after a failed read (no error with Retry), re-import after Forget and concurrent double submit create 4 entries for 2 lines, and after a partial failure or lost response the failed line is marked imported and disappears (no retry path).
+ ❯ src/components/StatementInbox.duplicate-import.test.tsx (10 tests | 10 failed) 32056ms
+     × a failed read of already-imported lines shows the error with Retry and blocks Register until the read works 5178ms
+     × re-importing the same statement (also after Forget last upload) creates no second entry 470ms
+     × retry after a partial failure registers only the failed line and never repeats the saved one 5224ms
+     × a concurrent double submit (two open screens) creates one entry per line 220ms
+     × retrying after a timeout (entry saved, response lost) reuses the same entry id 5124ms
+     × a failed read of already-imported lines shows the error with Retry and blocks Register until the read works 5046ms
+     × re-importing the same statement (also after Forget last upload) creates no second entry 323ms
+     × retry after a partial failure registers only the failed line and never repeats the saved one 5127ms
+     × a concurrent double submit (two open screens) creates one entry per line 207ms
+     × retrying after a timeout (entry saved, response lost) reuses the same entry id 5134ms
+⎯⎯⎯⎯⎯⎯ Failed Tests 10 ⎯⎯⎯⎯⎯⎯⎯
+ FAIL  src/components/StatementInbox.duplicate-import.test.tsx > P0-025 Statement Inbox duplicate import (with the P9 database claim) > a failed read of already-imported lines shows the error with Retry and blocks Register until the read works
+ FAIL  src/components/StatementInbox.duplicate-import.test.tsx > P0-025 Statement Inbox duplicate import (without the P9 database claim) > a failed read of already-imported lines shows the error with Retry and blocks Register until the read works
+TestingLibraryElementError: Unable to find an element with the text: /Couldn't load the lines already imported for this account/. This could be because the text is broken up by multiple elements. In this case, you can provide a function for your text matcher to make your matcher more flexible.
+ ❯ src/components/StatementInbox.duplicate-import.test.tsx:155:27
+ FAIL  src/components/StatementInbox.duplicate-import.test.tsx > P0-025 Statement Inbox duplicate import (with the P9 database claim) > re-importing the same statement (also after Forget last upload) creates no second entry
+ FAIL  src/components/StatementInbox.duplicate-import.test.tsx > P0-025 Statement Inbox duplicate import (without the P9 database claim) > re-importing the same statement (also after Forget last upload) creates no second entry
+AssertionError: expected 4 to be 2 // Object.is equality
+ ❯ src/components/StatementInbox.duplicate-import.test.tsx:174:35
+ FAIL  src/components/StatementInbox.duplicate-import.test.tsx > P0-025 Statement Inbox duplicate import (with the P9 database claim) > retry after a partial failure registers only the failed line and never repeats the saved one
+ FAIL  src/components/StatementInbox.duplicate-import.test.tsx > P0-025 Statement Inbox duplicate import (without the P9 database claim) > retry after a partial failure registers only the failed line and never repeats the saved one
+TestingLibraryElementError: Unable to find role="button" and name `/^Register \d+$/`
+ ❯ src/components/StatementInbox.duplicate-import.test.tsx:183:13
+ FAIL  src/components/StatementInbox.duplicate-import.test.tsx > P0-025 Statement Inbox duplicate import (with the P9 database claim) > a concurrent double submit (two open screens) creates one entry per line
+ FAIL  src/components/StatementInbox.duplicate-import.test.tsx > P0-025 Statement Inbox duplicate import (without the P9 database claim) > a concurrent double submit (two open screens) creates one entry per line
+AssertionError: expected 4 to be 2 // Object.is equality
+ ❯ src/components/StatementInbox.duplicate-import.test.tsx:196:35
+ FAIL  src/components/StatementInbox.duplicate-import.test.tsx > P0-025 Statement Inbox duplicate import (with the P9 database claim) > retrying after a timeout (entry saved, response lost) reuses the same entry id
+ FAIL  src/components/StatementInbox.duplicate-import.test.tsx > P0-025 Statement Inbox duplicate import (without the P9 database claim) > retrying after a timeout (entry saved, response lost) reuses the same entry id
+TestingLibraryElementError: Unable to find role="button" and name `/^Register \d+$/`
+ ❯ src/components/StatementInbox.duplicate-import.test.tsx:204:13
+      Tests  10 failed (10)

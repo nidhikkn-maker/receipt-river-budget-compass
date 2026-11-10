@@ -7,6 +7,8 @@ import { Link } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { filePattern, splitNewLines } from "@/lib/statement-fingerprint";
+import { loadImportedLines, registerStatementDrafts } from "@/lib/statement-line-claims";
+import { createLatest } from "@/lib/latest-request";
 import { toast } from "sonner";
 import { BadgeCheck, Sparkles, Upload } from "lucide-react";
 import { Stat } from "@/components/AppShell";
@@ -18,13 +20,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { BASE_CURRENCY, CURRENCIES, autoMatch, matchScore, money, type Match, type StatementLine } from "@/lib/expenses";
 import { StatementEntry } from "@/components/StatementEntry";
 import { readStatement } from "@/lib/statement-import";
-import { draftToInput, planStatementRegistration, existingCardPayment } from "@/lib/statement-auto";
+import { planStatementRegistration, existingCardPayment } from "@/lib/statement-auto";
 import { useStore } from "@/lib/store";
 import { useServerFn } from "@tanstack/react-start";
 import { extractStatement } from "@/lib/statement-extract.functions";
 
 export function StatementInbox() {
-  const { transactions: expenses, accounts, preferences, save, reconcile, refresh } = useStore();
+  const { userId, transactions: expenses, accounts, preferences, save, reconcile, refresh } = useStore();
   const [statementAccount, setStatementAccount] = useReviewView("statement-account", "all");
   const [lines, setLines] = useReviewView<StatementLine[]>("statement-lines", []);
   const [fileName, setFileName] = useReviewView("statement-file", "");
@@ -47,25 +49,28 @@ export function StatementInbox() {
   const [itemLimit, setItemLimit] = useReviewView("statement-limit", 40);
   const openItems = (kind: "matched" | "unmatched") => { setItemQuery(""); setItemLimit(40); setItemList(kind); };
 
+  // P0-025: a failed read of already-imported lines is shown with Retry and blocks Register (never a partial set).
+  const [knownState, setKnownState] = useState<"loading" | "ready" | "failed">("loading");
+  const latestKnown = useMemo(() => createLatest(), []);
   const loadKnown = useCallback(async (key: string) => {
-    const set = new Set<string>(); let top: string | null = null; let batch: string | null = null; let latest = "";
-    for (let from = 0; ; from += 1000) {
-      const { data, error } = await supabase.from("statement_line_imports").select("fingerprint,line_date,batch_id,created_at").eq("account_key", key).range(from, from + 999);
-      if (error) { toast.error("Couldn't check earlier uploads"); break; }
-      for (const r of data) { set.add(r.fingerprint); if (!top || r.line_date > top) top = r.line_date; if (r.created_at > latest) { latest = r.created_at; batch = r.batch_id; } }
-      if (data.length < 1000) break;
-    }
-    setKnown(set); setUpTo(top); setLastBatch(batch);
-  }, []);
+    const call = latestKnown.begin();
+    setKnownState("loading");
+    try {
+      const r = await loadImportedLines(key);
+      if (!call.isCurrent()) return;
+      setKnown(r.known); setUpTo(r.upTo); setLastBatch(r.lastBatch); setKnownState("ready");
+    } catch { if (call.isCurrent()) setKnownState("failed"); }
+  }, [latestKnown]);
   useEffect(() => { void loadKnown(accountKey); }, [accountKey, loadKnown]);
 
   const split = useMemo(() => splitNewLines(lines, accountKey, known, upTo), [lines, accountKey, known, upTo]);
   const freshLines = split.fresh;
 
-  const markSeen = async () => {
-    if (!lines.length) return;
+  const markSeen = async (skip: Set<string> = new Set()) => {
+    const seen = lines.filter((l) => !skip.has(l.ref));
+    if (!seen.length) return;
     const batch = crypto.randomUUID(); const label = filePattern(fileName);
-    const rows = lines.map((l) => ({ account_key: accountKey, fingerprint: split.fingerprints.get(l.ref)!, line_date: l.date, batch_id: batch, file_label: label }));
+    const rows = seen.map((l) => ({ account_key: accountKey, fingerprint: split.fingerprints.get(l.ref)!, line_date: l.date, batch_id: batch, file_label: label }));
     for (let i = 0; i < rows.length; i += 500) {
       const { error } = await supabase.from("statement_line_imports").upsert(rows.slice(i, i + 500), { onConflict: "owner_id,account_key,fingerprint", ignoreDuplicates: true });
       if (error) { toast.error("Couldn't remember this statement — the same lines may show again next time"); return; }
@@ -140,25 +145,23 @@ export function StatementInbox() {
   const matched = matches.filter((m) => m.expense);
 
   const registerAll = async () => {
-    if (!queue.length) return;
+    if (!queue.length || knownState !== "ready") return;
     setBusy(true);
-    let done = 0;
-    const failed: string[] = [];
     try {
-      for (const d of queue) {
-        const id = crypto.randomUUID();
-        try {
-          await save(draftToInput(d), { createId: id, noRefresh: true });
-          await reconcile(id, `${fileName} · ${d.line.date} · ${d.line.description}`.slice(0, 300), { noRefresh: true });
-          done++;
-        } catch { failed.push(d.title); }
-      }
+      // Claim, then save each line with its stable entry id: a repeat, retry or re-import adds no second entry.
+      const r = await registerStatementDrafts({ owner: userId, accountKey, fileName, drafts: queue, fingerprints: split.fingerprints, known }, {
+        save: (input, entryId) => save(input, { createId: entryId, noRefresh: true }),
+        reconcile: (entryId, ref) => reconcile(entryId, ref, { noRefresh: true }),
+      });
       await refresh();
-      await markSeen();
+      // Failed lines are not remembered, so they show again and are retried with the same entry id.
+      await markSeen(new Set(r.failed.map((f) => f.ref)));
+      const done = r.registered.length;
       if (done) toast.success(`${done} ${done === 1 ? "expense" : "expenses"} registered from ${fileName}`);
-      if (failed.length) toast.error(`${failed.length} couldn't be registered — try again`);
-      setLines([]); setExcluded({}); setOverrides({}); setIncludeDups({});
-    } finally { setBusy(false); }
+      if (r.alreadyImported.length) toast.info(`${r.alreadyImported.length} already imported — not registered again`);
+      if (r.failed.length) toast.error(`${r.failed.length} couldn't be registered — tap Register again to retry them`);
+      else { setLines([]); setExcluded({}); setOverrides({}); setIncludeDups({}); }
+    } catch (e) { toast.error((e as Error).message); await loadKnown(accountKey); } finally { setBusy(false); }
   };
 
   const confirmAll = async () => {
@@ -191,6 +194,7 @@ export function StatementInbox() {
         <Button variant="ghost" className="block h-auto min-w-0 whitespace-normal p-0 text-left" aria-label={`Not matched yet: ${open.length} transactions`} onClick={() => openItems("unmatched")}><Stat label="Not matched yet" value={String(open.length)} hint={money(open.reduce((s, e) => s + e.amount, 0))} /></Button>
       </div>
 
+      {knownState === "failed" && <LoadError className="mb-3" what="the lines already imported for this account" note="Register is paused so no line is added twice. Nothing has been deleted. Retry to continue." onRetry={() => loadKnown(accountKey)} />}
       {rememberFailed && <LoadError className="mb-3" what="the account this statement used last time" note="The lines are shown under the account picked below. Nothing has been deleted. Retry, or pick the account yourself." onRetry={() => applyRemembered(rememberFailed)} />}
       {readStage && <ProcessingPanel className="mb-3" title={`Reading ${readStage.name}…`} stages={stagesAt([readStage.ai ? "Extracting transactions with AI" : "Reading transactions", "Matching remembered account"], readStage.at)} />}
       <div className="mb-6 flex flex-wrap items-center gap-3 rounded-3xl border-2 border-dashed border-primary/40 bg-secondary/50 p-5">
@@ -236,7 +240,7 @@ export function StatementInbox() {
                 <h2 className="flex items-center gap-2 font-display text-lg font-bold"><Sparkles className="h-4 w-4 text-gold" /> Register {queue.length} transactions automatically</h2>
                 <p className="text-xs text-muted-foreground">Merchant, date, amount, category and payment method come from the statement. {queue.length ? `${money(spendingTotal)} of spending will be added.` : "Nothing left to register."}</p>
               </div>
-              <Button onClick={registerAll} disabled={busy || queue.length === 0}>Register {queue.length}</Button>
+              <Button onClick={registerAll} disabled={busy || queue.length === 0 || knownState !== "ready"}>Register {queue.length}</Button>
             </div>
             {statementAccount === "all" && accounts.length > 1 && (
               <p className="mt-2 rounded-xl bg-secondary px-3 py-2 text-xs text-muted-foreground">Pick the statement account above and each entry will also update that account's balance.</p>

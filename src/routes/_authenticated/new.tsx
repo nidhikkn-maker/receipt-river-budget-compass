@@ -1,5 +1,7 @@
 import { PLAIN_TXN_LABEL, canvasNarrative } from "@/lib/plain-language";
 import { duplicateDocuments } from "@/lib/documents";
+import { splitByTableArchive } from "@/lib/records-archive";
+import { ArchivedTableRecords, TableArchiveButton } from "@/components/ArchivedRecords";
 import { takePendingScan } from "@/lib/pending-scan";
 import { createFileRoute, Link, useNavigate, useRouter, useSearch } from "@tanstack/react-router";
 import { returnAfterReview } from "@/lib/review-navigation";
@@ -112,7 +114,7 @@ export type EmbeddedEntry = { search: QuickEntrySearch; files?: File[]; onExit: 
 export function NewExpense({ embedded }: { embedded?: EmbeddedEntry } = {}) {
   const { userId, save, transactions: expenses, members, accounts, loans, preferences, savePreferences, documents, addDocument, removeDocument, signedUrl } = useStore();
   const PENDING = "pending-receipt";
-  const inbox = documents.filter((d) => d.notes === PENDING && !d.transactionId);
+  const { active: inbox, archived: archivedInbox } = splitByTableArchive(preferences, "documents", documents.filter((d) => d.notes === PENDING && !d.transactionId));
   const [fromInbox, setFromInbox] = useState<string[]>([]);
   const cameraRef = useRef<HTMLInputElement>(null); const galleryRef = useRef<HTMLInputElement>(null);
   const saveForLater = async () => {
@@ -814,12 +816,14 @@ export function NewExpense({ embedded }: { embedded?: EmbeddedEntry } = {}) {
             <Button type="button" variant="ghost" onClick={() => applySpoken(spoken)} disabled={!spoken.trim() || reading}>Fill</Button>
           </div>
         )}
+        {/* P0-026: a saved receipt is archived with a reason (row and file kept, Restore + history), never deleted in one tap. */}
         {!panel && inbox.length > 0 && (
           <details className="rounded-2xl border bg-card px-3 py-2 text-sm">
             <summary className="flex cursor-pointer items-center gap-2 font-semibold"><Inbox className="h-4 w-4 text-gold" />Saved receipts to add ({inbox.length})</summary>
-            <ul className="mt-1 divide-y">{inbox.map((d) => <li key={d.id} className="flex items-center justify-between gap-2 py-2"><span className="min-w-0 truncate">{d.fileName}</span><span className="flex shrink-0 gap-1"><Button type="button" size="sm" variant="outline" disabled={fromInbox.includes(d.id) || reading} onClick={() => void useSaved(d.id)}>Use</Button><Button type="button" size="icon" variant="ghost" aria-label={`Delete ${d.fileName}`} onClick={() => void removeDocument(d)}><X className="h-4 w-4" /></Button></span></li>)}</ul>
+            <ul className="mt-1 divide-y">{inbox.map((d) => <li key={d.id} className="flex items-center justify-between gap-2 py-2"><span className="min-w-0 truncate">{d.fileName}</span><span className="flex shrink-0 gap-1"><Button type="button" size="sm" variant="outline" disabled={fromInbox.includes(d.id) || reading} onClick={() => void useSaved(d.id)}>Use</Button><TableArchiveButton table="documents" id={d.id} name={d.fileName} noun="document" disabledReason={fromInbox.includes(d.id) ? "In use for this entry" : null} /></span></li>)}</ul>
           </details>
         )}
+        {!panel && archivedInbox.length > 0 && <ArchivedTableRecords table="documents" rows={archivedInbox} noun="document" plain title={`Archived receipts to add (${archivedInbox.length})`} nameOf={(d) => d.fileName} describe={(d) => d.title} />}
         {receipts.length > 0 && !panel && (
           <div className="flex flex-wrap items-center gap-2">
             {receipts.map((r, i) => (

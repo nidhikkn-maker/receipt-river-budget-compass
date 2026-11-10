@@ -12,6 +12,7 @@ import { privateFileUrl, fetchPrivateFile, type ExpectedFile } from "./private-f
 import { downloadBlob } from "./reports";
 import { saveExpense } from "./fx.functions";
 import { saveWithRecovery } from './statement-pipeline/save-recovery';
+import { discardUsedPendingDocument } from './pending-documents';
 import {
   CHARGES_CATEGORY, validateAllocations, validateBudget, validateExpense, type Allocation,
   type Budgets, type Category, type Expense, type ExpenseInput, type Member, type PaymentMethod, type Receipt, type ReceiptDetails, type ReimbursementStatus, type Scope, type Split,
@@ -138,6 +139,7 @@ interface Ctx {
   addValuation: (v: Omit<Valuation, "id">) => Promise<void>;
   addDocument: (file: File, meta: DocumentMeta) => Promise<string>;
   updateDocument: (id: string, meta: Partial<DocumentMeta>) => Promise<void>;
+  /** Clears the staging copy of a used "saved to add later" receipt after its bytes were saved with an entry; nothing else is deleted (archive instead). */
   removeDocument: (d: VaultDoc) => Promise<void>;
   history: (transactionId: string) => Promise<AuditEntry[]>;
   setReimbursement: (id: string, status: ReimbursementStatus) => Promise<void>;
@@ -896,8 +898,8 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
     await refresh();
   };
   const removeDocument: Ctx["removeDocument"] = async (d) => {
-    const del = await supabase.from("documents").delete().eq("id", d.id);
-    if (del.error) throw new Error(/audit evidence/i.test(del.error.message) ? "This original is kept as audit evidence. Unlock it first." : del.error.message);
+    // P0-026: only the staging copy of a used "saved to add later" receipt is ever removed (see pending-documents.ts).
+    await discardUsedPendingDocument(d);
     const rm = await supabase.storage.from("receipts").remove([d.filePath]);
     if (rm.error) throw new Error(`Record removed but the file could not be deleted: ${rm.error.message}`);
     await refresh();
