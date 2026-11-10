@@ -11,8 +11,8 @@
 --   * the nine P5 tables are MOVED (never dropped) to security_rollback_archive with a UTC suffix,
 --     with no client or service_role access, so entities, assignments, relationships, readable IDs,
 --     counters, register records, ownership shares and backfill history are kept as evidence.
--- Run BEFORE the P4 rollback (which refuses while P5 is installed) and AFTER the P6 rollback (this file
--- refuses while P6 is installed). No pre-existing column value changes.
+-- Run BEFORE the P4 rollback (which refuses while P5 is installed) and AFTER the P6 and P7 rollbacks (this file
+-- refuses while P6_registers.sql or P7_balanced_posting.sql is installed). No pre-existing column value changes.
 -- ============================================================================================
 BEGIN;
 
@@ -23,6 +23,10 @@ BEGIN
   END IF;
   IF to_regnamespace('phase2_p6') IS NOT NULL OR to_regclass('public.assets') IS NOT NULL THEN
     RAISE EXCEPTION 'Roll back P6 (P6_registers.rollback.sql) before P5';
+  END IF;
+  -- P7 (balanced posting) builds on legal_entities: roll P7 back first.
+  IF to_regnamespace('phase3_p7') IS NOT NULL OR to_regclass('public.posting_batches') IS NOT NULL THEN
+    RAISE EXCEPTION 'P5 rollback: P7_balanced_posting is installed; run P7_balanced_posting.rollback.sql first';
   END IF;
 END $pre$;
 

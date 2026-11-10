@@ -22,6 +22,9 @@ export const ReceiptDetailsSchema = z.object({
     corrected: z.object({ merchant: z.string().max(200).optional(), date: z.string().max(20).optional(), amount: z.number().nonnegative().optional(), currency: z.string().max(8).optional() }),
     confirmedAt: z.string().max(40),
   }).optional(),
+  /** C11: how the row was classified (statement suggestions are automatic) and the person's explicit row approval. */
+  classification: z.object({ source: z.literal("statement"), automatic: z.literal(true) }).optional(),
+  review: z.object({ approvedAt: z.string().min(1).max(40), method: z.literal("row"), key: z.string().max(200) }).optional(),
 });
 
 export const ExtractedReceiptSchema = z.object({

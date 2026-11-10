@@ -1,3 +1,6 @@
+-- !!! SUPERSEDED 2026-11-10 by P7_balanced_posting.sql (authoritative Phase 3 posting layer, revised for
+-- !!! the 14 approved P3 decisions, P1/P2/P4/P5). Kept for history only. NEVER install this file; its
+-- !!! preflight refuses when P7 is installed and P7's preflight refuses when this file's objects exist.
 -- P3 (PROPOSED, NOT APPLIED): one database-enforced posting layer on the EXISTING ledger (DN-04 option A).
 -- Status: staged for KK review only. Never run against Lovable Cloud / hosted databases without KK approval.
 -- Applies after drizzle/migrations 0000-0088 (and after proposed security P1/P2; see the plan for ordering).
@@ -19,6 +22,9 @@
 --    honours ledgerline.erasing. restore_finance_backup (0072) is kept byte-for-byte and wrapped.
 
 DO $$ BEGIN
+ IF to_regclass('public.posting_batches') IS NOT NULL OR to_regnamespace('phase3_p7') IS NOT NULL THEN
+  RAISE EXCEPTION 'P3 is superseded by P7_balanced_posting.sql, which is installed; never install both';
+ END IF;
  IF to_regclass('public.accounting_journal_evidence') IS NOT NULL OR to_regclass('public.accounting_postings') IS NOT NULL THEN
   RAISE EXCEPTION 'P3: accounting-foundation or P3 objects already exist; stop and review before installing';
  END IF;

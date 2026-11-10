@@ -3,7 +3,10 @@ import { receiptRoundOffFor } from "@/lib/receipt-reading";
 import { useEffect, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { toast } from "sonner";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { removalMode, usePostingStatus, validReason } from "@/lib/posting";
 import { Button } from "@/components/ui/button";
 import { ScopeToggle } from "./ScopeBadge";
 import { AllocationEditor, ReimbursementEditor } from "./SplitAndClaim";
@@ -38,7 +41,13 @@ export function ExpenseDialog({ expense, onClose }: { expense: Expense | null; o
 
 /** Expense detail body, shared by the modal dialog and the iPad-landscape side pane. */
 export function ExpenseDetail({ expense, onClose }: { expense: Expense; onClose: () => void }) {
-  const { memberName, setScope, remove, accounts, setReimbursement, recordReimbursement, convertToEmi, history } = useStore();
+  const { memberName, setScope, remove, accounts, setReimbursement, recordReimbursement, convertToEmi, history, userId } = useStore();
+  // Balanced posting (P7): where it is active a posted entry is reversed with a reason, never deleted.
+  const posting = usePostingStatus(userId);
+  const reverse = !!posting && removalMode(posting) === "reverse";
+  const [reverseOpen, setReverseOpen] = useState(false);
+  const [reason, setReason] = useState("");
+  const [requestId, setRequestId] = useState(() => crypto.randomUUID());
   const [audit, setAudit] = useState<AuditEntry[]>([]);
   const [busy,setBusy]=useState(false);
   const [auditFailed,setAuditFailed]=useState(false);
@@ -54,7 +63,12 @@ export function ExpenseDetail({ expense, onClose }: { expense: Expense; onClose:
     setLocalScope(s);
     try { await setScope(e.id, s); toast.success(`Moved to ${s}`); } catch (err) { toast.error((err as Error).message); }
   };
+  const confirmReverse = async () => {
+    try { await remove(e, { reason, requestId }); toast.success("Entry reversed. Its postings, audit record and receipts are kept."); setReverseOpen(false); onClose(); }
+    catch (err) { toast.error((err as Error).message); }
+  };
   const del = async () => {
+    if (reverse) { setReason(""); setRequestId(crypto.randomUUID()); setReverseOpen(true); return; }
     if (!confirm("Delete this expense and its receipts?")) return;
     try { await remove(e); toast.success("Expense deleted"); onClose(); } catch (err) { toast.error((err as Error).message); }
   };
@@ -105,10 +119,23 @@ export function ExpenseDetail({ expense, onClose }: { expense: Expense; onClose:
           </details>
         )}
         <div className="flex justify-between gap-2 pt-2">
-          <Button variant="ghost" className="text-destructive" onClick={del}>Delete</Button>
+          <Button variant="ghost" className="text-destructive" onClick={del}>{reverse ? "Reverse entry" : "Delete"}</Button>
           <Button variant="outline" onClick={() => { onClose(); nav({ to: "/new", search: { edit: e.id } }); }}>Edit</Button>
         </div>
         <details className="border-t pt-3"><summary className="cursor-pointer text-sm">Change history</summary>{auditFailed&&<LoadError className="mt-2" what="the change history" onRetry={loadAudit} />}<ul className="mt-2 divide-y text-xs">{audit.map(a=><li key={a.id} className="py-2"><b className="capitalize">{a.action}</b> · {new Date(a.createdAt).toLocaleString()}<div>{a.summary}</div>{Object.entries(a.changes).map(([key,value])=><p key={key} className="break-words text-muted-foreground">{key.replaceAll("_"," ")}: {JSON.stringify(value)}</p>)}</li>)}</ul></details>
+        <Dialog open={reverseOpen} onOpenChange={(o) => { if (!o) setReverseOpen(false); }}>
+          <DialogContent aria-label="Reverse entry" className="max-h-[85dvh] overflow-y-auto sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>Reverse this posted entry?</DialogTitle>
+              <DialogDescription>It is already in your books, so it is not deleted. A reversal is posted on the same date and the entry leaves your records. The original posting, an audit record with your reason and the receipts are kept. You will be asked to confirm it is you.</DialogDescription>
+            </DialogHeader>
+            <div className="space-y-1">
+              <Label htmlFor="reverse-reason">Reason (at least five characters)</Label>
+              <Textarea id="reverse-reason" value={reason} maxLength={500} onChange={(ev) => setReason(ev.target.value)} placeholder="For example: duplicate of the bank import" />
+            </div>
+            <DialogFooter className="gap-2"><Button variant="outline" onClick={() => setReverseOpen(false)}>Keep entry</Button><Button variant="destructive" disabled={!validReason(reason)} onClick={confirmReverse}>Reverse entry</Button></DialogFooter>
+          </DialogContent>
+        </Dialog>
     </div>
   );
 }

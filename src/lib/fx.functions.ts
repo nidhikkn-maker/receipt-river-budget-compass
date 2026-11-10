@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { ReceiptDetailsSchema, receiptBreakdownError } from "./receipt-reading";
+import { c11ReviewError } from "./statement-pipeline/review-gate";
 
 const BASE = "INR";
 
@@ -69,6 +70,9 @@ export const saveExpense = createServerFn({ method: "POST" })
     const { supabase, userId } = context;
     const receiptError = receiptBreakdownError(data.originalAmount, data.receiptDetails, data.currency);
     if (receiptError) return { ok: false as const, error: receiptError };
+    // C11: an automatically classified row is saved only with the person's own row approval.
+    const reviewError = c11ReviewError(data.receiptDetails);
+    if (reviewError) return { ok: false as const, error: reviewError };
     if (data.receipts?.some((r) => !r.path.startsWith(`${userId}/`))) return { ok: false as const, error: "Invalid receipt" };
     if (data.splits.length) {
       const sum = Math.round(data.splits.reduce((a, x) => a + x.amount, 0) * 100) / 100;
