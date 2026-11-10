@@ -17,10 +17,16 @@
 --    with read access to the document's company, mirroring the documents SELECT policies) and is false for anything
 --    else. Another owner's objects are refused by the permissive policies regardless (owner folder only; company
 --    editors may clean only files with no documents row), so the false answer never permits a delete.
---  * Account erasure mirrors 0059: delete_my_finance_data deletes the documents rows with ledgerline.erasing = 'on',
---    then the app removes the owner's files (delete-data.ts); with the rows gone nothing is locked any more. The
---    erasing setting is honoured inside the helper too, exactly like guard_evidence_delete. A failed record erasure
---    keeps the rows, so the files stay (as AGENTS.md requires).
+--  * No session-setting exemption. The WS-E draft (and 0059 guard_evidence_delete) trust ledgerline.erasing, which any
+--    role can set with SET / set_config in plain SQL; the attack test proves a GUC-trusting helper would let an owner
+--    delete a locked file. P17 trusts only the documents row. The authorised paths are explicit and tested:
+--      1. the owner unlocks the document (documents UPDATE evidence_locked = false; P1 refuses it for shared editors);
+--      2. account erasure: delete_my_finance_data removes the owner's documents rows in its own transaction, then the
+--         app removes the files (delete-data.ts); with the rows gone nothing is locked. A failed erasure keeps the rows,
+--         so the files stay. Storage needs no exemption, so there is none to audit here; delete_my_finance_data itself
+--         records no audit (gap reported with finding P0-036);
+--      3. server code using the service role (BYPASSRLS in Supabase; never reachable by clients), e.g. the accountant
+--         upload route's cleanup of a failed upload.
 --  * Unlocking stays the owner's authorised documents UPDATE (evidence_locked = false; P1 refuses it for shared
 --    editors); once unlocked, the file follows the ordinary policies again.
 --
@@ -33,7 +39,6 @@ CREATE OR REPLACE FUNCTION public.storage_object_is_locked_evidence(_bucket text
 RETURNS boolean LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public, pg_temp AS $$
   SELECT _bucket IN ('receipts', 'statement-uploads')
      AND auth.uid() IS NOT NULL
-     AND coalesce(current_setting('ledgerline.erasing', true), '') <> 'on'
      AND EXISTS (
        SELECT 1 FROM public.documents d
         WHERE d.file_path = _name AND d.evidence_locked

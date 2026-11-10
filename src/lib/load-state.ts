@@ -38,3 +38,39 @@ export function areaReadState(errors: readonly LoadArea[] | undefined, denied: r
   if (denied?.some((a) => areas.includes(a))) return 'denied';
   return loadFailed(errors, ...areas) ? 'failed' : 'ok';
 }
+
+// R14: one status per record area, in priority order. Screens map them to the shared States:
+//  loading -> LoadingState · offline -> OfflineState (cached values, never "fresh") · denied -> UnauthorizedState ·
+//  failed -> ErrorState with Retry · empty -> EmptyState · ready -> the records.
+// A denied area never reads as empty or ready: its last-known values (device copy / earlier load) stay in memory only as
+// flagged, so screens must not present them as current. Offline wins over denied (no check is possible offline); the
+// note says the last online check was refused.
+export type AreaStatus = 'loading' | 'offline' | 'denied' | 'failed' | 'empty' | 'ready';
+export interface AreaStatusInfo { status: AreaStatus; note: string | null }
+export const DENIED_OFFLINE_NOTE = "Your access was refused at the last online check. Reconnect to check again; nothing shown here is current.";
+
+export function areaStatus(i: {
+  settled: boolean; online: boolean; errors: readonly LoadArea[] | undefined; denied: readonly LoadArea[] | undefined; empty: boolean;
+}, area: LoadArea): AreaStatusInfo {
+  const wasDenied = !!i.denied?.includes(area);
+  if (!i.online) return { status: 'offline', note: wasDenied ? DENIED_OFFLINE_NOTE : null };
+  if (wasDenied) return { status: 'denied', note: null };
+  if (i.errors?.includes(area)) return { status: 'failed', note: null };
+  if (!i.settled) return { status: 'loading', note: null };
+  return { status: i.empty ? 'empty' : 'ready', note: null };
+}
+
+// R14: areas denied on the last online check, remembered per owner on this device so the encrypted device copy is not
+// painted for them on the next start (offline included) until a read of that area succeeds again. Only area names are
+// stored, never records; unavailable storage simply means nothing is remembered (the cloud check still runs).
+export const ALL_LOAD_AREAS: readonly LoadArea[] = ['transactions', 'accounts', 'payments', 'loans', 'settings', 'budgets', 'goals', 'valuations', 'documents', 'family', 'profile'];
+const deniedKey = (owner: string) => `ledgerline.deniedAreas.${owner}`;
+export function readDeniedMarker(owner: string): LoadArea[] {
+  try {
+    const v: unknown = JSON.parse(localStorage.getItem(deniedKey(owner)) ?? '[]');
+    return Array.isArray(v) ? ALL_LOAD_AREAS.filter((a) => v.includes(a)) : [];
+  } catch { return []; }
+}
+export function writeDeniedMarker(owner: string, areas: readonly LoadArea[]): void {
+  try { if (areas.length) localStorage.setItem(deniedKey(owner), JSON.stringify([...new Set(areas)])); else localStorage.removeItem(deniedKey(owner)); } catch { /* nothing remembered */ }
+}
